@@ -175,6 +175,8 @@ func (e *emitter) libraryFile(p *ir.Package, base string, parts []string, import
 		e.line("part '%s';", part)
 	}
 	e.line("")
+	e.writeDescriptors()
+	e.line("")
 	e.writeInit()
 	if p.Name == "main" {
 		e.writeMain()

@@ -41,6 +41,12 @@ func Exported(goName string) bool {
 	return unicode.IsUpper(r)
 }
 
+// Type maps the name of a named type. The Dart class takes a `$` suffix,
+// because an embedded struct field carries the name of its own type.
+func Type(goName string) string {
+	return Package(goName) + "$"
+}
+
 // Package maps a name at package level: a function, a variable, a constant, a
 // type, or a struct field.
 func Package(goName string) string {

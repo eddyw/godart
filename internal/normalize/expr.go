@@ -91,9 +91,47 @@ func (b *builder) hoist(e ir.Expr, pos token.Pos, role string) ([]ir.Stmt, ir.Ex
 	return []ir.Stmt{&ir.Declare{Vars: []*ir.Var{v}, Init: e}}, &ir.Ident{Name: v.Name, Type: v.Type}
 }
 
-// multiValue builds an expression that gives more than 1 value.
+// multiValue builds an expression that gives more than 1 value. A map read, a
+// type assertion, and a channel receive each have a form with 2 values.
 func (b *builder) multiValue(e ast.Expr) ir.Expr {
+	if x, ok := unparenExpr(e).(*ast.TypeAssertExpr); ok {
+		assert := b.typeOf(x.Type)
+		return &ir.TypeAssert{
+			X:      b.expr(x.X),
+			Assert: assert,
+			Comma:  true,
+			Type:   types.NewTuple(anonVar(assert), anonVar(types.Typ[types.Bool])),
+		}
+	}
+	if x, ok := unparenExpr(e).(*ast.IndexExpr); ok {
+		if m := mapType(b.typeOf(x.X)); m != nil {
+			return &ir.MapRead{
+				X:    b.expr(x.X),
+				Key:  b.convert(b.expr(x.Index), m.Key()),
+				Type: types.NewTuple(anonVar(m.Elem()), anonVar(types.Typ[types.Bool])),
+			}
+		}
+	}
 	return b.expr(e)
+}
+
+func unparenExpr(e ast.Expr) ast.Expr {
+	for {
+		p, ok := e.(*ast.ParenExpr)
+		if !ok {
+			return e
+		}
+		e = p.X
+	}
+}
+
+func mapType(t types.Type) *types.Map {
+	m, _ := types.Unalias(t).Underlying().(*types.Map)
+	return m
+}
+
+func anonVar(t types.Type) *types.Var {
+	return types.NewVar(token.NoPos, nil, "", t)
 }
 
 func (b *builder) exprAs(e ast.Expr, want types.Type) ir.Expr {
@@ -162,8 +200,7 @@ func (b *builder) expr(e ast.Expr) ir.Expr {
 	case *ast.FuncLit:
 		return b.funcLit(e)
 	case *ast.TypeAssertExpr:
-		b.fail(e.Pos(), "a type assertion is not supported yet")
-		return nil
+		return &ir.TypeAssert{X: b.expr(e.X), Assert: b.typeOf(e.Type), Type: b.typeOf(e)}
 	}
 	b.fail(e.Pos(), "the expression %T is outside the subset", e)
 	return nil
@@ -253,10 +290,28 @@ func (b *builder) selector(e *ast.SelectorExpr) ir.Expr {
 			return nil
 		}
 		fn, _ := sel.Obj().(*types.Func)
-		return &ir.Method{Recv: x, Obj: fn, Type: sel.Type()}
+		return &ir.Method{Recv: b.embeddedPath(x, sel), Obj: fn, Type: sel.Type()}
 	}
 	b.fail(e.Pos(), "a method expression is not supported yet")
 	return nil
+}
+
+// embeddedPath walks the embedded fields that lead to a promoted method. Dart
+// gives no method promotion, thus the receiver becomes the embedded value.
+func (b *builder) embeddedPath(x ir.Expr, sel *types.Selection) ir.Expr {
+	index := sel.Index()
+	t := x.GoType()
+	for _, i := range index[:len(index)-1] {
+		st := structOf(t)
+		if st == nil {
+			b.fail(token.NoPos, "the method path leaves a struct type")
+			return x
+		}
+		f := st.Field(i)
+		x = &ir.Field{X: x, Name: f.Name(), Type: f.Type()}
+		t = f.Type()
+	}
+	return x
 }
 
 // fieldPath walks the embedded fields that lead to the selected field.

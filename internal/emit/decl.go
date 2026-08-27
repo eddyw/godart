@@ -12,7 +12,7 @@ import (
 // class writes the Dart class of a Go struct type. The class holds the fields,
 // the copy operations that give the struct value semantics, and the methods.
 func (e *emitter) class(obj *types.TypeName, named *types.Named, st *types.Struct) {
-	class := name.Package(obj.Name())
+	class := name.Type(obj.Name())
 	fields := make([]string, st.NumFields())
 	for i := range fields {
 		fields[i] = name.Package(st.Field(i).Name())

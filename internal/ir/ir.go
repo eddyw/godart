@@ -284,6 +284,13 @@ type (
 		Type   types.Type
 	}
 
+	// TypeTest reports whether an interface value holds a type.
+	TypeTest struct {
+		X      Expr
+		Assert types.Type
+		Type   types.Type
+	}
+
 	// Recv reads 1 value from a channel.
 	Recv struct {
 		Chan  Expr
@@ -321,6 +328,7 @@ func (e *Conv) GoType() types.Type       { return e.Type }
 func (e *Composite) GoType() types.Type  { return e.Type }
 func (e *FuncLit) GoType() types.Type    { return e.Type }
 func (e *TypeAssert) GoType() types.Type { return e.Type }
+func (e *TypeTest) GoType() types.Type   { return e.Type }
 func (e *Recv) GoType() types.Type       { return e.Type }
 func (e *Copy) GoType() types.Type       { return e.Type }
 func (e *Record) GoType() types.Type     { return e.Type }
@@ -342,6 +350,7 @@ func (*Conv) isExpr()       {}
 func (*Composite) isExpr()  {}
 func (*FuncLit) isExpr()    {}
 func (*TypeAssert) isExpr() {}
+func (*TypeTest) isExpr()   {}
 func (*Recv) isExpr()       {}
 func (*Copy) isExpr()       {}
 func (*Record) isExpr()     {}

@@ -27,6 +27,8 @@ func (b *builder) rangeStmt(s *ast.RangeStmt, label string) []ir.Stmt {
 		if t.Info()&types.IsInteger != 0 {
 			return b.rangeInt(s, label)
 		}
+	case *types.Map:
+		return b.rangeMap(s, label)
 	}
 	b.fail(s.Pos(), "a range loop over %s is outside the subset", b.typeOf(s.X))
 	return nil
@@ -122,6 +124,40 @@ func (b *builder) rangeString(s *ast.RangeStmt, label string) []ir.Stmt {
 			Y:    &ir.Builtin{Name: "len", Args: []ir.Expr{str}, Type: types.Typ[types.Int]},
 			Type: types.Typ[types.Bool]},
 		Post:  &ir.Assign{Lhs: i, Rhs: &ir.Binary{Op: token.ADD, X: i, Y: size, Type: types.Typ[types.Int]}},
+		Body:  body,
+		Label: label,
+	}
+	return append(pre, loop)
+}
+
+// rangeMap walks the keys of a map. Go does not give a key that the body
+// removes, thus the loop reads the map again for each key.
+func (b *builder) rangeMap(s *ast.RangeStmt, label string) []ir.Stmt {
+	m := mapType(b.typeOf(s.X))
+	pre, container := b.hoist(b.expr(s.X), s.X.Pos(), "range")
+	keyList := types.NewSlice(m.Key())
+	kv := b.tempVar(s.Pos(), "keys", keyList)
+	keys := &ir.Ident{Name: kv.Name, Type: keyList}
+	pre = append(pre, &ir.Declare{Vars: []*ir.Var{kv},
+		Init: &ir.Builtin{Name: "mapkeys", Args: []ir.Expr{container}, Type: keyList}})
+	iv, i := b.intVar(s.Pos(), "i")
+	key := &ir.Index{X: keys, Index: i, Type: m.Key()}
+	body := &ir.Block{}
+	body.List = append(body.List, &ir.If{
+		Cond: &ir.Unary{Op: token.NOT, Type: types.Typ[types.Bool],
+			X: &ir.Builtin{Name: "maphas", Args: []ir.Expr{container, key}, Type: types.Typ[types.Bool]}},
+		Then: &ir.Block{List: []ir.Stmt{&ir.Continue{}}},
+	})
+	body.List = append(body.List, b.bind(s, s.Key, key)...)
+	body.List = append(body.List, b.bind(s, s.Value,
+		b.copyPoint(&ir.Index{X: container, Index: key, Type: m.Elem()}))...)
+	body.List = append(body.List, b.block(s.Body).List...)
+	loop := &ir.For{
+		Init: &ir.Declare{Vars: []*ir.Var{iv}, Init: intConst(0)},
+		Cond: &ir.Binary{Op: token.LSS, X: i,
+			Y:    &ir.Builtin{Name: "len", Args: []ir.Expr{keys}, Type: types.Typ[types.Int]},
+			Type: types.Typ[types.Bool]},
+		Post:  &ir.Assign{Lhs: i, Rhs: &ir.Binary{Op: token.ADD, X: i, Y: intConst(1), Type: types.Typ[types.Int]}},
 		Body:  body,
 		Label: label,
 	}

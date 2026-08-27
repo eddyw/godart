@@ -29,6 +29,12 @@ func (e *emitter) expr(x ir.Expr) string {
 		return e.deref(x.X) + "." + name.Package(x.Name)
 	case *ir.Index:
 		return e.index(x)
+	case *ir.TypeAssert:
+		return e.typeAssert(x)
+	case *ir.TypeTest:
+		return e.typeTest(x.X, x.Assert)
+	case *ir.MapRead:
+		return fmt.Sprintf("%s.get2(%s)", e.expr(x.X), e.expr(x.Key))
 	case *ir.Slice:
 		return e.sliceExpr(x)
 	case *ir.Call:
@@ -193,6 +199,9 @@ func validUTF8(s string) bool {
 // needs the bounds check of the runtime.
 func (e *emitter) index(x *ir.Index) string {
 	container := x.X.GoType()
+	if isMapType(container) {
+		return fmt.Sprintf("%s.get(%s)", e.expr(x.X), e.expr(x.Index))
+	}
 	if isPointerType(container) {
 		return fmt.Sprintf("$arrayIndex(%s, %s)", e.deref(x.X), e.expr(x.Index))
 	}
@@ -434,11 +443,16 @@ func (e *emitter) composite(x *ir.Composite) string {
 		}
 		return fmt.Sprintf("<%s>[%s]", e.dartType(u.Elem()), strings.Join(parts, ", "))
 	case *types.Slice:
-		if list := typedList(u.Elem()); list != "" {
-			return fmt.Sprintf("Slice.of(%s.fromList(<%s>[%s]))",
-				list, e.dartType(u.Elem()), strings.Join(parts, ", "))
+		return e.sliceLiteral(u.Elem(), parts)
+	case *types.Map:
+		var text strings.Builder
+		fmt.Fprintf(&text, "(GoMap<%s, %s>(() => %s)",
+			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
+		for i, key := range x.Keys {
+			fmt.Fprintf(&text, "..set(%s, %s)", e.expr(key), parts[i])
 		}
-		return fmt.Sprintf("Slice.of(<%s>[%s])", e.dartType(u.Elem()), strings.Join(parts, ", "))
+		text.WriteString(")")
+		return text.String()
 	}
 	e.fail("a literal of type %s has no Dart form", x.Type)
 	return "null"

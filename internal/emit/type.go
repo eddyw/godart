@@ -32,7 +32,7 @@ func (e *emitter) dartType(t types.Type) string {
 	case *types.Tuple:
 		return e.recordType(t)
 	case *types.Interface:
-		return "Object?"
+		return "Iface?"
 	case *types.Struct:
 		e.fail("an unnamed struct type is outside the subset")
 		return "Object?"
@@ -115,7 +115,8 @@ func (e *emitter) zero(t types.Type) string {
 	case *types.Array:
 		return e.makeArray(u)
 	case *types.Map:
-		return "GoMap<" + e.dartType(u.Key()) + ", " + e.dartType(u.Elem()) + ">.nil()"
+		return fmt.Sprintf("GoMap<%s, %s>.nil(() => %s)",
+			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
 	case *types.Pointer, *types.Signature, *types.Interface, *types.Chan:
 		return "null"
 	}
@@ -171,7 +172,7 @@ func typedList(t types.Type) string {
 }
 
 func (e *emitter) className(obj *types.TypeName) string {
-	return e.qualify(obj, name.Package(obj.Name()))
+	return e.qualify(obj, name.Type(obj.Name()))
 }
 
 // qualify adds the import prefix when the object belongs to another package.
@@ -228,6 +229,11 @@ func isStructType(t types.Type) bool {
 
 func isArrayType(t types.Type) bool {
 	_, ok := types.Unalias(t).Underlying().(*types.Array)
+	return ok
+}
+
+func isMapType(t types.Type) bool {
+	_, ok := types.Unalias(t).Underlying().(*types.Map)
 	return ok
 }
 

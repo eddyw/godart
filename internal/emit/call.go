@@ -67,6 +67,9 @@ func signatureOf(t types.Type) *types.Signature {
 }
 
 func (e *emitter) methodCall(m *ir.Method, args []string) string {
+	if isInterfaceType(m.Recv.GoType()) {
+		return e.interfaceCall(m, args)
+	}
 	obj := receiverTypeName(m.Recv.GoType())
 	list := strings.Join(args, ", ")
 	if obj != nil && !isStructType(obj.Type()) {
@@ -116,6 +119,18 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 		return fmt.Sprintf("$decodeRune(%s, %s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
 	case "min", "max":
 		return e.minMax(x)
+	case "delete":
+		return fmt.Sprintf("%s.remove(%s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
+	case "clear":
+		if isMapType(x.Args[0].GoType()) {
+			return e.expr(x.Args[0]) + ".clear()"
+		}
+		e.fail("clear does not apply to a slice yet")
+		return "null"
+	case "mapkeys":
+		return e.expr(x.Args[0]) + ".keys()"
+	case "maphas":
+		return fmt.Sprintf("%s.has(%s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
 	}
 	e.fail("the builtin %s has no Dart form yet", x.Name)
 	return "null"
@@ -129,6 +144,8 @@ func (e *emitter) length(x ir.Expr) string {
 	case isSliceType(t):
 		return e.expr(x) + ".len"
 	case isArrayType(t):
+		return e.expr(x) + ".length"
+	case isMapType(t):
 		return e.expr(x) + ".length"
 	case isPointerType(t):
 		return e.deref(x) + ".length"
@@ -196,6 +213,9 @@ func (e *emitter) makeCall(x *ir.Builtin) string {
 		}
 		return fmt.Sprintf("$makeSlice<%s>(%s, %s, %s)",
 			e.dartType(u.Elem()), length, capacity, e.alloc(u.Elem()))
+	case *types.Map:
+		return fmt.Sprintf("GoMap<%s, %s>(() => %s)",
+			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
 	}
 	e.fail("make does not apply to the type %s yet", x.Type)
 	return "null"
@@ -284,6 +304,12 @@ func (e *emitter) conv(x *ir.Conv) string {
 		return e.narrow(to, text)
 	case isString(to) && isString(from):
 		return text
+	}
+	if isInterfaceType(to) {
+		if isInterfaceType(from) {
+			return text
+		}
+		return e.box(x.X, from)
 	}
 	if types.Identical(types.Unalias(from).Underlying(), types.Unalias(to).Underlying()) {
 		if isStructType(to) {

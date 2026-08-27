@@ -44,6 +44,8 @@ func (b *builder) stmt(s ast.Stmt) []ir.Stmt {
 		return b.rangeStmt(s, "")
 	case *ast.SwitchStmt:
 		return b.switchStmt(s, "")
+	case *ast.TypeSwitchStmt:
+		return b.typeSwitch(s, "")
 	case *ast.ReturnStmt:
 		return b.returnStmt(s)
 	case *ast.BranchStmt:
@@ -64,6 +66,8 @@ func (b *builder) labeled(s *ast.LabeledStmt) []ir.Stmt {
 		return b.rangeStmt(inner, label)
 	case *ast.SwitchStmt:
 		return b.switchStmt(inner, label)
+	case *ast.TypeSwitchStmt:
+		return b.typeSwitch(inner, label)
 	}
 	body := b.stmt(s.Stmt)
 	if len(body) == 0 {
@@ -325,6 +329,83 @@ func (b *builder) returnStmt(s *ast.ReturnStmt) []ir.Stmt {
 		values[i] = b.copyPoint(b.exprAs(r, f.Results[i].Type))
 	}
 	return []ir.Stmt{&ir.Return{Values: values}}
+}
+
+// typeSwitch rewrites a type switch into a switch with a type test in each
+// case. The test reads the descriptor of the interface value.
+func (b *builder) typeSwitch(s *ast.TypeSwitchStmt, label string) []ir.Stmt {
+	out := b.stmt(s.Init)
+	subject := typeSwitchSubject(s.Assign)
+	if subject == nil {
+		b.fail(s.Pos(), "the type switch has no subject")
+		return out
+	}
+	t := b.typeOf(subject)
+	v := b.tempVar(s.Pos(), "ts", t)
+	out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: b.expr(subject)})
+	read := &ir.Ident{Name: v.Name, Type: t}
+	node := &ir.Switch{Label: label}
+	for _, clause := range s.Body.List {
+		c, ok := clause.(*ast.CaseClause)
+		if !ok {
+			continue
+		}
+		cs := &ir.Case{}
+		for _, target := range c.List {
+			cs.Values = append(cs.Values, b.typeCase(read, target))
+		}
+		body := &ir.Block{}
+		if obj, ok := b.info.Implicits[c].(*types.Var); ok {
+			bound := b.declareLocal(obj, obj.Name())
+			var init ir.Expr = read
+			if len(c.List) == 1 && !isInterface(obj.Type()) && !isNilCase(c.List[0]) {
+				init = &ir.TypeAssert{X: read, Assert: obj.Type(), Type: obj.Type()}
+			}
+			body.List = append(body.List, &ir.Declare{Vars: []*ir.Var{bound}, Init: init})
+		}
+		for _, st := range c.Body {
+			body.List = append(body.List, b.stmt(st)...)
+		}
+		cs.Body = body
+		node.Cases = append(node.Cases, cs)
+	}
+	return append(out, node)
+}
+
+// typeCase writes the test of 1 case. A case that names nil tests the value,
+// because a nil interface holds no descriptor.
+func (b *builder) typeCase(read ir.Expr, target ast.Expr) ir.Expr {
+	if isNilCase(target) {
+		return &ir.Binary{Op: token.EQL, X: read, Y: &ir.Zero{Type: read.GoType()},
+			Type: types.Typ[types.Bool]}
+	}
+	return &ir.TypeTest{X: read, Assert: b.typeOf(target), Type: types.Typ[types.Bool]}
+}
+
+func isNilCase(e ast.Expr) bool {
+	id, ok := e.(*ast.Ident)
+	return ok && id.Name == "nil"
+}
+
+func isInterface(t types.Type) bool {
+	_, ok := types.Unalias(t).Underlying().(*types.Interface)
+	return ok
+}
+
+func typeSwitchSubject(s ast.Stmt) ast.Expr {
+	switch s := s.(type) {
+	case *ast.ExprStmt:
+		if a, ok := s.X.(*ast.TypeAssertExpr); ok {
+			return a.X
+		}
+	case *ast.AssignStmt:
+		if len(s.Rhs) == 1 {
+			if a, ok := s.Rhs[0].(*ast.TypeAssertExpr); ok {
+				return a.X
+			}
+		}
+	}
+	return nil
 }
 
 func (b *builder) switchStmt(s *ast.SwitchStmt, label string) []ir.Stmt {

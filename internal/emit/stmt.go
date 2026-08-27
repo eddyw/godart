@@ -92,6 +92,10 @@ func (e *emitter) declare(s *ir.Declare) {
 func (e *emitter) assign(lhs, rhs ir.Expr) {
 	t := lhs.GoType()
 	value := e.expr(rhs)
+	if idx, ok := lhs.(*ir.Index); ok && isMapType(idx.X.GoType()) {
+		e.line("%s.set(%s, %s);", e.expr(idx.X), e.expr(idx.Index), value)
+		return
+	}
 	if isStructType(t) {
 		e.line("%s.$assign(%s);", e.expr(lhs), value)
 		return
