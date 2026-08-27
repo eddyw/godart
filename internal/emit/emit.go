@@ -185,7 +185,7 @@ func (e *emitter) libraryFile(p *ir.Package, base string, parts []string, import
 	e.line("")
 	e.writeDescriptors()
 	e.line("")
-	e.writeInit()
+	e.writeInit(sorted)
 	if p.Name == "main" {
 		e.writeMain()
 	}
@@ -194,12 +194,18 @@ func (e *emitter) libraryFile(p *ir.Package, base string, parts []string, import
 
 // writeInit writes the function that gives each package variable its value.
 // Dart holds a top level variable as late, thus the order stays explicit.
-func (e *emitter) writeInit() {
+//
+// Go gives a package its values after each package that it imports, thus the
+// function starts with the imports. The flag stops a second run.
+func (e *emitter) writeInit(imports []Import) {
 	e.line("bool $initDone = false;")
 	e.line("")
 	e.line("void $init() {")
 	e.line("if ($initDone) return;")
 	e.line("$initDone = true;")
+	for _, im := range imports {
+		e.line("%s.$init();", e.prefixes[im.Path])
+	}
 	for _, g := range e.globals {
 		if g.Var.Name == "_" {
 			continue

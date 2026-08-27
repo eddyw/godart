@@ -278,7 +278,7 @@ func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 	case *ir.Call:
 		switch fun := c.Fun.(type) {
 		case *ir.Method:
-			hoisted, recv := b.forceHoist(b.copyPoint(fun.Recv), s.Pos(), "dr")
+			hoisted, recv := b.forceHoist(b.receiverValue(fun), s.Pos(), "dr")
 			pre = append(pre, hoisted...)
 			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type}
 		default:
@@ -309,7 +309,7 @@ func (b *builder) goStmt(s *ast.GoStmt) []ir.Stmt {
 	case *ir.Call:
 		switch fun := c.Fun.(type) {
 		case *ir.Method:
-			hoisted, recv := b.forceHoist(b.copyPoint(fun.Recv), s.Pos(), "gr")
+			hoisted, recv := b.forceHoist(b.receiverValue(fun), s.Pos(), "gr")
 			pre = append(pre, hoisted...)
 			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type}
 		default:
@@ -392,6 +392,20 @@ func (b *builder) selectStmt(s *ast.SelectStmt, label string) []ir.Stmt {
 		node.Cases = append(node.Cases, out)
 	}
 	return append(pre, node)
+}
+
+// receiverValue reads the receiver of a deferred call or of a go statement. Go
+// copies a value receiver at that moment, and it keeps the reference of a
+// pointer receiver.
+func (b *builder) receiverValue(m *ir.Method) ir.Expr {
+	sig, ok := m.Obj.Type().(*types.Signature)
+	if !ok || sig.Recv() == nil {
+		return m.Recv
+	}
+	if _, isPointer := types.Unalias(sig.Recv().Type()).(*types.Pointer); isPointer {
+		return m.Recv
+	}
+	return b.copyPoint(m.Recv)
 }
 
 // directFunc reports whether the callee names a function or holds a fresh

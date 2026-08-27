@@ -229,7 +229,10 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		}
 	}
 	if named, ok := u.(*types.Named); ok {
-		if named.TypeParams() == nil || named.TypeParams().Len() == 0 {
+		// An interface type holds no descriptor of its own, and a predeclared
+		// type belongs to no package.
+		if !isInterfaceType(named) && named.Obj().Pkg() != nil &&
+			(named.TypeParams() == nil || named.TypeParams().Len() == 0) {
 			return e.qualify(named.Obj(), "$desc$"+name.Package(named.Obj().Name()))
 		}
 	}

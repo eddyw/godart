@@ -119,6 +119,16 @@ final class _Send<T> {
   _Send(this.value, this.done);
 }
 
+/// Gives up control for a time. A Go sleep blocks the goroutine, thus the
+/// caller becomes an async function.
+Future<void> $sleep(int nanoseconds) {
+  if (nanoseconds <= 0) return Future<void>.value();
+  return Future<void>.delayed(Duration(microseconds: nanoseconds ~/ 1000));
+}
+
+/// The count of nanoseconds since the start of the Unix epoch.
+int $nowNanos() => DateTime.now().microsecondsSinceEpoch * 1000;
+
 /// Starts a goroutine. Go does not run the body at the point of the statement,
 /// thus the body waits for the event loop.
 void $go(FutureOr<void> Function() body) {

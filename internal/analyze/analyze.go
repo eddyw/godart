@@ -211,6 +211,10 @@ func (a *analyzer) callTargets(s *summary, call *ast.CallExpr) {
 		obj := a.pkg.TypesInfo.Uses[fun]
 		switch obj := obj.(type) {
 		case *types.Func:
+			if blockingIntrinsic(obj) {
+				a.markIntrinsic(s, call)
+				return
+			}
 			keys = append(keys, any(obj))
 		case *types.Builtin:
 			return
@@ -224,6 +228,10 @@ func (a *analyzer) callTargets(s *summary, call *ast.CallExpr) {
 		sel, ok := a.pkg.TypesInfo.Selections[fun]
 		if !ok {
 			if obj, ok := a.pkg.TypesInfo.Uses[fun.Sel].(*types.Func); ok {
+				if blockingIntrinsic(obj) {
+					a.markIntrinsic(s, call)
+					return
+				}
 				keys = append(keys, any(obj))
 			}
 			break
@@ -262,6 +270,29 @@ func (a *analyzer) callTargets(s *summary, call *ast.CallExpr) {
 	s.calls = append(s.calls, call)
 	s.callKeys = append(s.callKeys, keys)
 	s.callSigs = append(s.callSigs, sigKey)
+}
+
+// intrinsicKey marks a call to an interop function that gives up control.
+const intrinsicKey = "$intrinsic"
+
+// markIntrinsic records a call that the compiler replaces with a call to the
+// runtime library. Such a call waits for a result, thus the caller can block.
+func (a *analyzer) markIntrinsic(s *summary, call *ast.CallExpr) {
+	s.direct = true
+	s.calls = append(s.calls, call)
+	s.callKeys = append(s.callKeys, nil)
+	s.callSigs = append(s.callSigs, intrinsicKey)
+	a.result.sigAsync[intrinsicKey] = true
+}
+
+// blockingIntrinsic reports whether an interop function gives up control. The
+// body of such a function holds no block operation, thus the analysis needs
+// this list.
+func blockingIntrinsic(fn *types.Func) bool {
+	if fn.Pkg() == nil || fn.Pkg().Path() != "syscall/dart" {
+		return false
+	}
+	return fn.Name() == "Sleep"
 }
 
 func isInterface(t types.Type) bool {

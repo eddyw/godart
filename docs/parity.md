@@ -49,14 +49,32 @@ The package `fmt` reads it.
 
 ## The standard library
 
-The verifier rejects each package outside the curated surface. The surface holds
-`errors`, `fmt`, and `syscall/dart`.
+The verifier rejects each package outside the curated surface.
 
 | Package | Content |
 |---|---|
 | `errors` | `New`, `Is`, `Unwrap` |
 | `fmt` | `Print`, `Printf`, `Println`, `Sprint`, `Sprintf`, `Sprintln`, `Errorf` |
-| `syscall/dart` | `Print`, `Format`, `Kind`. The compiler replaces each call. |
+| `sort` | `Slice`, `SliceStable`, `Ints`, `Strings`, `Float64s`, `Search`, `SearchInts` |
+| `strconv` | `Itoa`, `Atoi`, `FormatInt`, `ParseInt`, `FormatFloat`, `ParseFloat`, `FormatBool`, `ParseBool`, `Quote` |
+| `strings` | The common operations and `Builder` |
+| `sync` | `Mutex`, `RWMutex`, `WaitGroup`, `Once` |
+| `time` | `Duration`, `Sleep`, `Now`, `Since`, and the operations of `Time` |
+| `syscall/dart` | The interop. The compiler replaces each call. |
+
+Gaps of the standard library surface:
+
+| Item | State |
+|---|---|
+| `sync.RWMutex` | A read lock is equal to a write lock. The single isolate gives no parallel read. |
+| `sync/atomic` | Missing. The single isolate makes a plain operation safe. |
+| `time.Time` format and parse | Missing |
+| `time.Timer` and `time.Ticker` | Missing |
+| `strconv.Unquote` | Missing |
+| `strings.Map`, `strings.Title` | Missing |
+| `sort.Sort` with an interface | Missing. Use `sort.Slice`. |
+| `encoding/json` | Missing |
+| `io`, `os`, `net` | Missing. The interop package needs the file and the network calls. |
 
 The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
 `%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.

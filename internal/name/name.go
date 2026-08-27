@@ -27,9 +27,26 @@ var keywords = map[string]bool{
 	"when": true, "while": true, "with": true, "yield": true,
 }
 
+// reserved holds each Dart name that the emitted code uses. A Go name that is
+// equal to one of them takes a `$` suffix, thus it does not hide the Dart name.
+var reserved = map[string]bool{
+	// The runtime library.
+	"Slice": true, "GoString": true, "GoMap": true, "Chan": true,
+	"Iface": true, "TypeDesc": true, "FieldDesc": true, "Dict": true,
+	"DeferStack": true, "GoPanic": true, "GoError": true,
+	"SelectCase": true, "RecvCase": true, "SendCase": true,
+	// The typed data lists.
+	"Int8List": true, "Int16List": true, "Int32List": true, "Int64List": true,
+	"Uint8List": true, "Uint16List": true, "Uint32List": true,
+	"Uint64List": true, "Float32List": true, "Float64List": true,
+	// The core library and the async library.
+	"Object": true, "List": true, "Map": true, "String": true, "Never": true,
+	"Comparable": true, "Future": true, "FutureOr": true,
+}
+
 // Local maps a local variable, a parameter, or a result.
 func Local(goName string) string {
-	if keywords[goName] {
+	if keywords[goName] || reserved[goName] {
 		return goName + "$"
 	}
 	return goName
@@ -53,7 +70,7 @@ func Package(goName string) string {
 	if !token.IsExported(goName) {
 		return "_" + goName
 	}
-	if keywords[goName] {
+	if keywords[goName] || reserved[goName] {
 		return goName + "$"
 	}
 	return goName

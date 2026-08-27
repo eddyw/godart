@@ -13,6 +13,14 @@ import 'string.dart';
 GoString $goFormat(Iface? value, GoString verb) =>
     GoString.fromString(_format(value, verb.toDartString()));
 
+/// Reads a float from text. The second value is false when the text holds no
+/// float.
+(double, bool) $parseFloat(GoString text) {
+  final double? v = double.tryParse(text.toDartString().trim());
+  if (v == null) return (0.0, false);
+  return (v, true);
+}
+
 /// The kind of the value of an interface, in the words of the package reflect.
 GoString $goKind(Iface? value) =>
     GoString.fromString(value == null ? 'nil' : value.desc.kind);

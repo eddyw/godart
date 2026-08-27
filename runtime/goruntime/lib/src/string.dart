@@ -60,6 +60,14 @@ final class GoString {
   String toString() => toDartString();
 }
 
+/// The text in upper case, with the rules of Unicode.
+GoString $upper(GoString v) =>
+    GoString.fromString(v.toDartString().toUpperCase());
+
+/// The text in lower case, with the rules of Unicode.
+GoString $lower(GoString v) =>
+    GoString.fromString(v.toDartString().toLowerCase());
+
 GoString $concat(GoString a, GoString b) {
   if (a.length == 0) return b;
   if (b.length == 0) return a;

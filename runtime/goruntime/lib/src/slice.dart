@@ -1,3 +1,4 @@
+import 'iface.dart';
 import 'panic.dart';
 
 /// A Go slice: a view on a backing array with a length and a capacity.
@@ -75,6 +76,30 @@ Slice<T> $append<T>(Slice<T> s, List<T> add, List<T> Function(int) alloc) {
     array[s.len + i] = add[i];
   }
   return Slice(array, 0, need, cap);
+}
+
+/// Exchanges 2 elements of a slice. The package sort uses it, because a Go
+/// sort works on a slice of an unknown element type.
+void $swap(Object? value, int i, int j) {
+  final Object? unwrapped = value is Iface ? value.value : value;
+  if (unwrapped is! Slice<Object?>) {
+    $panic(const GoError('sort: the value is not a slice'));
+  }
+  final Slice<Object?> slice = unwrapped;
+  if (i < 0 || i >= slice.len) $panicIndex(i, slice.len);
+  if (j < 0 || j >= slice.len) $panicIndex(j, slice.len);
+  final Object? a = slice.array[slice.off + i];
+  slice.array[slice.off + i] = slice.array[slice.off + j];
+  slice.array[slice.off + j] = a;
+}
+
+/// The length of a slice of an unknown element type.
+int $sliceLen(Object? value) {
+  final Object? unwrapped = value is Iface ? value.value : value;
+  if (unwrapped is! Slice<Object?>) {
+    $panic(const GoError('sort: the value is not a slice'));
+  }
+  return unwrapped.len;
 }
 
 /// The Go builtin `copy`. The assign function writes 1 element. A struct

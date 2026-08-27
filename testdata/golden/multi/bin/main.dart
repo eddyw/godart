@@ -15,6 +15,8 @@ bool $initDone = false;
 void $init() {
   if ($initDone) return;
   $initDone = true;
+  $count.$init();
+  $greet.$init();
 }
 
 void main() {

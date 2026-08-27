@@ -59,6 +59,20 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$goFormat(%s, %s)", args[1], args[0]), true
 	case "Kind":
 		return fmt.Sprintf("$goKind(%s)", args[0]), true
+	case "Upper":
+		return fmt.Sprintf("$upper(%s)", args[0]), true
+	case "Lower":
+		return fmt.Sprintf("$lower(%s)", args[0]), true
+	case "ParseFloat":
+		return fmt.Sprintf("$parseFloat(%s)", args[0]), true
+	case "Sleep":
+		return fmt.Sprintf("$sleep(%s)", args[0]), true
+	case "NowNanos":
+		return "$nowNanos()", true
+	case "SliceLen":
+		return fmt.Sprintf("$sliceLen(%s)", args[0]), true
+	case "SliceSwap":
+		return fmt.Sprintf("$swap(%s, %s, %s)", args[0], args[1], args[2]), true
 	}
 	e.fail("the interop function %s has no runtime form", fn.Name())
 	return "null", true
@@ -238,8 +252,13 @@ func (e *emitter) appendCall(x *ir.Builtin) string {
 		return "null"
 	}
 	if x.Spread {
+		source := e.expr(x.Args[1])
+		if isString(x.Args[1].GoType()) {
+			// Go allows append of a string to a byte slice.
+			source = fmt.Sprintf("$stringToBytes(%s)", source)
+		}
 		return fmt.Sprintf("$appendSlice(%s, %s, %s)",
-			e.expr(x.Args[0]), e.expr(x.Args[1]), e.alloc(slice.Elem()))
+			e.expr(x.Args[0]), source, e.alloc(slice.Elem()))
 	}
 	parts := make([]string, 0, len(x.Args)-1)
 	for _, a := range x.Args[1:] {
