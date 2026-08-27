@@ -1,6 +1,11 @@
 // Package overlay holds the Go source that replaces a standard library
 // package. The build tag `dart` selects the files, thus the go command skips
 // them and the compiler reads them.
+//
+// The directory std holds the curated surface. The directory stub holds a
+// package that the load must replace but the surface does not hold. The go
+// command fixes the import list of a test binary, and a stub keeps that list
+// out of the type check.
 package overlay
 
 import (
@@ -11,7 +16,7 @@ import (
 	"strings"
 )
 
-//go:embed std
+//go:embed std stub
 var tree embed.FS
 
 // Package holds the overlay of 1 standard library package.
@@ -20,6 +25,9 @@ type Package struct {
 	Path string
 	// Name is the package name.
 	Name string
+	// Stub marks a package that the load replaces with an empty package. The
+	// curated surface does not hold such a package.
+	Stub bool
 	// Files holds the base name and the content of each file, in the order of
 	// the base name.
 	Files []File
@@ -33,8 +41,14 @@ type File struct {
 
 // Packages lists each overlay package, in the order of the import path.
 func Packages() []Package {
+	out := append(walk("std", false), walk("stub", true)...)
+	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
+	return out
+}
+
+func walk(root string, stub bool) []Package {
 	byPath := map[string][]File{}
-	err := fs.WalkDir(tree, "std", func(name string, entry fs.DirEntry, err error) error {
+	err := fs.WalkDir(tree, root, func(name string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(name, ".go") {
 			return err
 		}
@@ -42,7 +56,7 @@ func Packages() []Package {
 		if err != nil {
 			return err
 		}
-		pkgPath := path.Dir(strings.TrimPrefix(name, "std/"))
+		pkgPath := path.Dir(strings.TrimPrefix(name, root+"/"))
 		byPath[pkgPath] = append(byPath[pkgPath], File{Name: path.Base(name), Content: content})
 		return nil
 	})
@@ -58,7 +72,7 @@ func Packages() []Package {
 	for _, p := range paths {
 		files := byPath[p]
 		sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
-		out = append(out, Package{Path: p, Name: path.Base(p), Files: files})
+		out = append(out, Package{Path: p, Name: path.Base(p), Stub: stub, Files: files})
 	}
 	return out
 }
@@ -70,12 +84,15 @@ const IntrinsicPath = "syscall/dart"
 // Intrinsic reports whether the compiler replaces each call of the package.
 func Intrinsic(pkgPath string) bool { return pkgPath == IntrinsicPath }
 
-// Paths lists the import path of each overlay package.
+// Paths lists the import path of each package of the curated surface. A stub
+// stays out of the list, thus the verifier rejects an import of it and the
+// build writes no Dart code for it.
 func Paths() []string {
-	pkgs := Packages()
-	out := make([]string, len(pkgs))
-	for i, p := range pkgs {
-		out[i] = p.Path
+	var out []string
+	for _, p := range Packages() {
+		if !p.Stub {
+			out = append(out, p.Path)
+		}
 	}
 	return out
 }

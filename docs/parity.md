@@ -46,6 +46,32 @@ The package `fmt` reads it.
 | A range loop over a function | Rejected |
 | A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
 | A type declaration inside a function | Rejected |
+| An unnamed struct type | Rejected. A table driven test needs a named row type. |
+| A `TestMain` function | Rejected. gart writes the entry point of a test binary. |
+
+## The test command
+
+`gart test` compiles the test variants of each package and writes 1 entry point
+for each test binary. The output holds the format of `go test`.
+
+| Item | Go | godart |
+|---|---|---|
+| The source position of a log line | `file.go:12: text` | Only the text. The overlay reads no position. |
+| `t.Parallel` | Runs the tests in parallel | Does nothing. All Go code runs in 1 isolate. |
+| `t.FailNow`, `t.SkipNow` | `runtime.Goexit` | A throw. Each deferred function still runs, and the subset has no `recover`. |
+| `-run` | A regular expression | Plain text. gart keeps a test whose name holds the text. |
+| A duplicate subtest name | The second name takes `#01` | The 2 names stay equal |
+| `TestMain` | Runs in place of the entry point | Rejected by stage 2 |
+| A benchmark | `go test` with no -bench flag runs none | Equal. The output names no benchmark. |
+| A fuzz target | Runs the seed corpus | Reported as a skipped test |
+| An example with an output comment | Runs and compares the output | Reported as a skipped test |
+| `t.TempDir`, `t.Setenv`, `t.Context` | Present | Missing. The overlay needs the file access. |
+| `-short`, `-count`, `-timeout`, `-cover` | Present | Missing |
+| A panic inside a test | Reports the test and ends the binary | Equal. A panic passes through the harness. |
+
+The type `testing.B` and the type `testing.F` exist, thus a benchmark body and
+a fuzz body type check. Each method of them stops the program, and no path
+reaches such a method.
 
 ## The standard library
 
@@ -59,6 +85,7 @@ The verifier rejects each package outside the curated surface.
 | `strconv` | `Itoa`, `Atoi`, `FormatInt`, `ParseInt`, `FormatFloat`, `ParseFloat`, `FormatBool`, `ParseBool`, `Quote` |
 | `strings` | The common operations and `Builder` |
 | `sync` | `Mutex`, `RWMutex`, `WaitGroup`, `Once` |
+| `testing` | `T`, `TB`, `Verbose`, `Short`. Read the section "The test command". |
 | `time` | `Duration`, `Sleep`, `Now`, `Since`, and the operations of `Time` |
 | `syscall/dart` | The interop. The compiler replaces each call. |
 
@@ -103,6 +130,7 @@ Gaps of the standard library surface:
 | `sort.Sort` with an interface | Missing. Use `sort.Slice`. |
 | `encoding/json` | Missing |
 | `io`, `os`, `net` | Missing. The interop package needs the file and the network calls. |
+| `regexp` | Missing. Thus `-run` reads plain text. |
 
 The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
 `%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.

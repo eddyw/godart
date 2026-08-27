@@ -112,3 +112,85 @@ func write(t *testing.T, path string, change func(string) string) {
 		t.Fatal(err)
 	}
 }
+
+// TestTestCache proves that a test build reads the cache and gives byte equal
+// output. The identifier of a test variant holds the import path of the package
+// under test, thus the cache and the output path read the identifier.
+func TestTestCache(t *testing.T) {
+	source, err := filepath.Abs("../../testdata/tests/basic")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := filepath.Abs("../../runtime/goruntime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := t.TempDir()
+	options := driver.Options{
+		Dir:      source,
+		Patterns: []string{"./..."},
+		Out:      out,
+		Runtime:  runtime,
+		Format:   true,
+		Tests:    true,
+	}
+	first, err := driver.BuildWithStats(options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Compiled) == 0 || len(first.Cached) != 0 {
+		t.Fatalf("the first build gave %v compiled and %v cached", first.Compiled, first.Cached)
+	}
+	for _, want := range []string{
+		"example.com/basic/calc",
+		"example.com/basic/calc [example.com/basic/calc.test]",
+		"example.com/basic/calc_test [example.com/basic/calc.test]",
+		"example.com/basic/calc.test",
+	} {
+		if !slices.Contains(first.Compiled, want) {
+			t.Errorf("the build compiled %v, want the package %q", first.Compiled, want)
+		}
+	}
+	if len(first.Binaries) != 1 || first.Binaries[0].Entry != filepath.Join("bin", "calc_test.dart") {
+		t.Errorf("got the binaries %v, want 1 entry point bin/calc_test.dart", first.Binaries)
+	}
+	before := tree(t, out)
+	second, err := driver.BuildWithStats(options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second.Compiled) != 0 {
+		t.Errorf("the second build compiled %v, want the cache", second.Compiled)
+	}
+	if got := tree(t, out); got != before {
+		t.Error("the 2 builds gave a different output")
+	}
+}
+
+// tree reads each Dart file of a directory and joins the content. Equal inputs
+// must give byte equal output.
+func tree(t *testing.T, root string) string {
+	t.Helper()
+	var b strings.Builder
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".dart") {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		text, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		b.WriteString(rel)
+		b.WriteString("\x00")
+		b.Write(text)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b.String()
+}

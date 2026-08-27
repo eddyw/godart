@@ -226,10 +226,11 @@ func (e *emitter) writeInit(imports []Import) {
 func (e *emitter) writeMain() {
 	async := e.mainFunc != nil && e.mainFunc.Async
 	if async {
-		e.line("Future<void> main() async {")
+		e.line("Future<void> main(List<String> $arguments) async {")
 	} else {
-		e.line("void main() {")
+		e.line("void main(List<String> $arguments) {")
 	}
+	e.line("$setArgs($arguments);")
 	e.line("$goPanic = $fatal;")
 	e.line("$init();")
 	if e.mainFunc != nil {

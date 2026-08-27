@@ -292,7 +292,11 @@ func blockingIntrinsic(fn *types.Func) bool {
 	if fn.Pkg() == nil || fn.Pkg().Path() != "syscall/dart" {
 		return false
 	}
-	return fn.Name() == "Sleep" || fn.Name() == "Worker"
+	switch fn.Name() {
+	case "Sleep", "Worker", "Catch":
+		return true
+	}
+	return false
 }
 
 func isInterface(t types.Type) bool {

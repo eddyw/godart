@@ -25,3 +25,26 @@ func TestPackages(t *testing.T) {
 		}
 	}
 }
+
+// TestStubs proves that a stub package stays out of the curated surface. The
+// load replaces such a package, and the verifier still rejects an import of it.
+func TestStubs(t *testing.T) {
+	paths := overlay.Paths()
+	stubs := map[string]bool{}
+	for _, p := range overlay.Packages() {
+		if p.Stub {
+			stubs[p.Path] = true
+		}
+	}
+	for _, want := range []string{"os", "reflect", "testing/internal/testdeps"} {
+		if !stubs[want] {
+			t.Errorf("the overlay holds no stub of %s", want)
+		}
+		if slices.Contains(paths, want) {
+			t.Errorf("the surface holds the stub %s", want)
+		}
+	}
+	if !slices.Contains(paths, "testing") {
+		t.Errorf("the surface holds %v, want the package testing", paths)
+	}
+}

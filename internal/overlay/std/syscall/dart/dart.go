@@ -71,3 +71,31 @@ func SliceLen(slice any) int {
 func SliceSwap(slice any, i, j int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// Stop stops the call chain of the goroutine. Each deferred function of the
+// chain still runs.
+//
+// The package testing uses it for FailNow. Go stops such a chain with
+// runtime.Goexit.
+func Stop() {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Catch calls f and holds a stop signal.
+//
+// It reports false when f called Stop, and true in each other case. A panic
+// passes through. The call gives up control, thus the caller becomes an async
+// function.
+func Catch(f func()) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Exit ends the program with a status code.
+func Exit(code int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Args gives the arguments of the program, without the name of the program.
+func Args() []string {
+	panic("syscall/dart needs the gart compiler")
+}

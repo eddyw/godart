@@ -7,6 +7,7 @@ library;
 export 'dart:async';
 export 'dart:typed_data';
 
+export 'src/args.dart';
 export 'src/array.dart';
 export 'src/chan.dart';
 export 'src/dict.dart';
@@ -19,3 +20,4 @@ export 'src/print.dart';
 export 'src/select.dart';
 export 'src/slice.dart';
 export 'src/string.dart';
+export 'src/test.dart';

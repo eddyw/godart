@@ -19,7 +19,8 @@ void $init() {
   $greet.$init();
 }
 
-void main() {
+void main(List<String> $arguments) {
+  $setArgs($arguments);
   $goPanic = $fatal;
   $init();
   try {

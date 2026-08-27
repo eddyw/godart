@@ -17,9 +17,14 @@ Dart `int` on the web has no 64 bits.
 make get                      # download the Go and the Dart dependencies
 make build                    # write build/gart
 cd path/to/go/module
-gart build -o dartout -runtime path/to/runtime/goruntime ./...
-cd dartout && dart pub get && dart run bin/main.dart
+gart run -o dartout -runtime path/to/runtime/goruntime ./...
+gart test -o dartout -runtime path/to/runtime/goruntime ./...
 ```
+
+`gart build` writes the Dart package and stops. `gart run` compiles it and runs
+package main with the Dart VM. `gart test` compiles the `_test.go` files and
+runs each test binary with the Dart VM. The output of `gart test` holds the
+format of `go test`.
 
 To run 1 of the example programs of this repository:
 
@@ -27,6 +32,9 @@ To run 1 of the example programs of this repository:
 make programs                 # list the programs of testdata/programs
 make run PROG=ifaces          # compile the program and run the Dart output
 make compare PROG=ifaces      # run it with go and with Dart, and diff
+make suites                   # list the test modules of testdata/tests
+make gart-test SUITE=basic    # run the tests of the module with gart
+make compare-tests SUITE=basic  # run go test and gart test, and diff
 ```
 
 `gart watch` compiles the module again after each change of a Go file. It
@@ -48,9 +56,10 @@ The compiler holds all 6 stages. The subset covers:
 | Concurrency | Goroutine, channel, `select` |
 | Generics | Generic function, generic type, generic method of Go 1.27 |
 | Isolates | `dart.Worker` runs a pure function in a second isolate |
+| Tests | `gart test` runs a `TestXxx` function and a subtest |
 
 The standard library surface holds `errors`, `fmt`, `sort`, `strconv`,
-`strings`, `sync`, `time`, and the interop package `syscall/dart`. An overlay replaces the Go source of such a package. The build
+`strings`, `sync`, `testing`, `time`, and the interop package `syscall/dart`. An overlay replaces the Go source of such a package. The build
 tag `dart` selects the overlay files, thus the go command skips them.
 
 `docs/parity.md` lists each difference between Go and the Dart output.

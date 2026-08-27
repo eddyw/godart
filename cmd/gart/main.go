@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/eddyw/godart/internal/driver"
 	"github.com/eddyw/godart/internal/load"
@@ -22,15 +23,24 @@ Usage:
 The commands are:
 
 	build      compile the packages into a Dart package
+	run        compile the packages and run package main with the Dart VM
+	test       compile the tests and run them with the Dart VM
 	watch      compile the packages again after each change
 	load       load the packages and list them
 	version    print the version of the compiler
 
-The build command takes these flags:
+The build, run, test, and watch commands take these flags:
 
 	-o dir         write the Dart package into dir
 	-runtime dir   the path of the goruntime Dart package
 	-format=false  do not run dart format on the output
+
+The run command passes each argument after -- to the program.
+
+The test command takes 2 more flags:
+
+	-v             write 1 line for each test
+	-run pattern   run only a test whose name holds the text of the pattern
 `
 
 func main() {
@@ -53,6 +63,10 @@ func run(args []string) error {
 		return runBuild(args[1:], false)
 	case "watch":
 		return runBuild(args[1:], true)
+	case "run":
+		return runRun(args[1:])
+	case "test":
+		return runTest(args[1:])
 	case "load":
 		return runLoad(args[1:])
 	default:
@@ -61,33 +75,99 @@ func run(args []string) error {
 	}
 }
 
-func runBuild(args []string, watch bool) error {
-	flags := flag.NewFlagSet("build", flag.ContinueOnError)
-	out := flags.String("o", "dartout", "the output directory")
-	runtime := flags.String("runtime", "", "the path of the goruntime package")
-	doFormat := flags.Bool("format", true, "run dart format on the output")
-	if err := flags.Parse(args); err != nil {
-		return err
+// buildFlags holds the flags that each compile command shares.
+type buildFlags struct {
+	set     *flag.FlagSet
+	out     *string
+	runtime *string
+	format  *bool
+}
+
+func newBuildFlags(name string) *buildFlags {
+	set := flag.NewFlagSet(name, flag.ContinueOnError)
+	return &buildFlags{
+		set:     set,
+		out:     set.String("o", "dartout", "the output directory"),
+		runtime: set.String("runtime", "", "the path of the goruntime package"),
+		format:  set.Bool("format", true, "run dart format on the output"),
+	}
+}
+
+// options parses the flags and gives the input of a build.
+func (f *buildFlags) options(args []string) (driver.Options, error) {
+	if err := f.set.Parse(args); err != nil {
+		return driver.Options{}, err
 	}
 	dir, err := os.Getwd()
 	if err != nil {
-		return err
+		return driver.Options{}, err
 	}
-	patterns := flags.Args()
+	patterns := f.set.Args()
 	if len(patterns) == 0 {
 		patterns = []string{"./..."}
 	}
-	options := driver.Options{
+	return driver.Options{
 		Dir:      dir,
 		Patterns: patterns,
-		Out:      *out,
-		Runtime:  *runtime,
-		Format:   *doFormat,
+		Out:      *f.out,
+		Runtime:  *f.runtime,
+		Format:   *f.format,
+	}, nil
+}
+
+func runBuild(args []string, watch bool) error {
+	options, err := newBuildFlags("build").options(args)
+	if err != nil {
+		return err
 	}
 	if watch {
 		return driver.Watch(options, os.Stdout)
 	}
 	return driver.Build(options)
+}
+
+func runRun(args []string) error {
+	build, program := split(args)
+	options, err := newBuildFlags("run").options(build)
+	if err != nil {
+		return err
+	}
+	code, err := driver.Run(options, program, os.Stdout)
+	if err != nil {
+		return err
+	}
+	if code != 0 {
+		os.Exit(code)
+	}
+	return nil
+}
+
+func runTest(args []string) error {
+	flags := newBuildFlags("test")
+	verbose := flags.set.Bool("v", false, "write 1 line for each test")
+	pattern := flags.set.String("run", "", "run only a test whose name holds this text")
+	options, err := flags.options(args)
+	if err != nil {
+		return err
+	}
+	code, err := driver.Test(options, driver.TestOptions{Verbose: *verbose, Run: *pattern}, os.Stdout)
+	if err != nil {
+		return err
+	}
+	if code != 0 {
+		os.Exit(code)
+	}
+	return nil
+}
+
+// split cuts the arguments at the first -- element. The first part belongs to
+// the compiler, and the second part belongs to the program.
+func split(args []string) ([]string, []string) {
+	k := slices.Index(args, "--")
+	if k < 0 {
+		return args, nil
+	}
+	return args[:k], args[k+1:]
 }
 
 func runLoad(patterns []string) error {

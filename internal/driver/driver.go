@@ -34,12 +34,32 @@ type Options struct {
 	Format   bool
 	// NoCache compiles each package again, also when the cache holds it.
 	NoCache bool
+	// Tests compiles the test variants of each package, and 1 entry point for
+	// each test binary.
+	Tests bool
 }
 
 // Stats reports what the build did. A cached package needs no second compile.
 type Stats struct {
 	Compiled []string
 	Cached   []string
+	// Binaries lists the test binary of each package that holds a test. It is
+	// empty when the build asked for no test.
+	Binaries []TestBinary
+	// NoTests lists each package of the module that holds no test file.
+	NoTests []string
+}
+
+// TestBinary names the Dart entry point of 1 test binary.
+type TestBinary struct {
+	// Package is the import path of the package under test.
+	Package string
+	// Entry is the path of the Dart file, relative to the output directory.
+	Entry string
+	// Tests is the count of test functions of the binary.
+	Tests int
+	// Skips lists each function of a test file that gart does not run.
+	Skips []string
 }
 
 // Build compiles the packages and writes the Dart package into Out.
@@ -50,10 +70,11 @@ func Build(opt Options) error {
 
 // BuildWithStats compiles the packages and reports the state of each one.
 func BuildWithStats(opt Options) (*Stats, error) {
-	roots, err := load.Load(opt.Dir, opt.Patterns...)
+	result, err := loadModule(opt)
 	if err != nil {
 		return nil, err
 	}
+	roots := result.Packages
 	module := moduleOf(roots)
 	if module == "" {
 		return nil, fmt.Errorf("the packages belong to no module")
@@ -71,20 +92,21 @@ func BuildWithStats(opt Options) (*Stats, error) {
 	exports := map[string]string{}
 	files := map[string]string{}
 	for _, p := range pkgs {
-		sources, err := readSources(p)
+		bin := result.Binary(p.ID)
+		sources, err := readSources(p, result.Sources, bin)
 		if err != nil {
 			return nil, err
 		}
 		sourceHash := meta.SourceHash(sources, dependencyHashes(p, module, exports), dartPkg)
 		if !opt.NoCache {
-			if old, ok := store.Read(p.PkgPath); ok && old.SourceHash == sourceHash &&
+			if old, ok := store.Read(p.ID); ok && old.SourceHash == sourceHash &&
 				outputExists(opt.Out, old.Files) {
-				exports[p.PkgPath] = old.ExportHash
-				stats.Cached = append(stats.Cached, p.PkgPath)
+				exports[p.ID] = old.ExportHash
+				stats.Cached = append(stats.Cached, p.ID)
 				continue
 			}
 		}
-		out, err := compile(p, module, dartPkg, blocks)
+		out, err := compile(p, module, dartPkg, blocks, bin)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +124,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		}
 		blocking := blockingExports(p, blocks)
 		archive := &meta.Archive{
-			Path:       p.PkgPath,
+			Path:       p.ID,
 			Name:       p.Name,
 			SourceHash: sourceHash,
 			ExportHash: meta.ExportHash(export, blocking),
@@ -110,11 +132,11 @@ func BuildWithStats(opt Options) (*Stats, error) {
 			Blocking:   blocking,
 			Files:      written,
 		}
-		exports[p.PkgPath] = archive.ExportHash
+		exports[p.ID] = archive.ExportHash
 		if err := store.Write(archive); err != nil {
 			return nil, err
 		}
-		stats.Compiled = append(stats.Compiled, p.PkgPath)
+		stats.Compiled = append(stats.Compiled, p.ID)
 	}
 	runtime, err := runtimePath(opt.Runtime, opt.Out)
 	if err != nil {
@@ -129,17 +151,76 @@ func BuildWithStats(opt Options) (*Stats, error) {
 			return nil, err
 		}
 	}
+	stats.Binaries = testBinaries(result, module)
+	stats.NoTests = withoutTests(result, module)
 	return stats, nil
 }
 
-func readSources(p *packages.Package) (map[string][]byte, error) {
+func loadModule(opt Options) (*load.Result, error) {
+	if opt.Tests {
+		return load.LoadTests(opt.Dir, opt.Patterns...)
+	}
+	pkgs, err := load.Load(opt.Dir, opt.Patterns...)
+	if err != nil {
+		return nil, err
+	}
+	return &load.Result{Packages: pkgs}, nil
+}
+
+// testBinaries names the Dart entry point of each test binary of the build.
+func testBinaries(result *load.Result, module string) []TestBinary {
+	out := make([]TestBinary, 0, len(result.Binaries))
+	for _, b := range result.Binaries {
+		out = append(out, TestBinary{
+			Package: b.Under,
+			Entry:   filepath.Join("bin", testDir(b.Under, module)+"_test.dart"),
+			Tests:   len(b.Tests),
+			Skips:   b.Skips,
+		})
+	}
+	return out
+}
+
+// withoutTests lists each package of the module that holds no test file. The
+// test command reports such a package, exactly as go test does.
+func withoutTests(result *load.Result, module string) []string {
+	tested := map[string]bool{}
+	for _, b := range result.Binaries {
+		tested[b.Under] = true
+	}
+	var out []string
+	for _, p := range result.Packages {
+		if p.ID != p.PkgPath || !strings.HasPrefix(p.PkgPath, module) {
+			continue
+		}
+		if tested[p.PkgPath] || strings.HasSuffix(p.PkgPath, ".test") {
+			continue
+		}
+		out = append(out, p.PkgPath)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// readSources gives the content of each file of a package. The overlay of the
+// load replaces a file of the standard library and the entry point of a test
+// binary, thus the disk holds no such content.
+func readSources(p *packages.Package, sources map[string][]byte, bin *load.Binary) (map[string][]byte, error) {
 	out := make(map[string][]byte, len(p.CompiledGoFiles))
 	for _, name := range p.CompiledGoFiles {
+		key := name
+		if bin != nil && name == bin.File {
+			key = load.TestMainName
+		}
+		if text, ok := sources[name]; ok {
+			out[key] = text
+			continue
+		}
 		text, err := os.ReadFile(name)
 		if err != nil {
 			return nil, err
 		}
-		out[name] = text
+		out[key] = text
 	}
 	return out, nil
 }
@@ -149,11 +230,11 @@ func readSources(p *packages.Package) (map[string][]byte, error) {
 // thus this package keeps its cache.
 func dependencyHashes(p *packages.Package, module string, exports map[string]string) []string {
 	var out []string
-	for path := range p.Imports {
-		if !compiled(path, module) {
+	for _, dep := range p.Imports {
+		if !compiled(dep.PkgPath, module) {
 			continue
 		}
-		out = append(out, path+"="+exports[path])
+		out = append(out, dep.ID+"="+exports[dep.ID])
 	}
 	return out
 }
@@ -205,20 +286,27 @@ func outputExists(out string, files []string) bool {
 	return true
 }
 
-func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result) (*emit.Result, error) {
+func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result,
+	bin *load.Binary) (*emit.Result, error) {
 	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks)
 	if err != nil {
 		return nil, err
 	}
+	if bin != nil {
+		for _, f := range tree.Files {
+			f.Name = load.TestMainName
+		}
+	}
 	var imports []emit.Import
 	for path, dep := range p.Imports {
-		if !compiled(path, module) {
+		if !compiled(dep.PkgPath, module) {
 			continue
 		}
-		imports = append(imports, emit.Import{
-			Path: path,
-			URI:  "package:" + dartPkg + "/" + libPath(dep, module) + ".dart",
-		})
+		uri := libraryURI(dep, module, dartPkg)
+		if uri == "" {
+			continue
+		}
+		imports = append(imports, emit.Import{Path: path, URI: uri})
 	}
 	sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
 	return emit.Package(tree, p.Types, baseName(p, module), imports, blocks)
@@ -239,15 +327,18 @@ func compiled(pkgPath, module string) bool {
 
 // order sorts the packages of the module in dependency order. A package
 // compiles after each package that it imports.
+//
+// The key is the identifier and not the import path, because a test variant
+// carries the import path of the package under test.
 func order(roots []*packages.Package, module string) []*packages.Package {
 	seen := map[string]bool{}
 	var out []*packages.Package
 	var visit func(p *packages.Package)
 	visit = func(p *packages.Package) {
-		if seen[p.PkgPath] || !compiled(p.PkgPath, module) {
+		if seen[p.ID] || !compiled(p.PkgPath, module) {
 			return
 		}
-		seen[p.PkgPath] = true
+		seen[p.ID] = true
 		paths := make([]string, 0, len(p.Imports))
 		for path := range p.Imports {
 			paths = append(paths, path)
@@ -274,32 +365,78 @@ func moduleOf(roots []*packages.Package) string {
 }
 
 // libPath mirrors the Go import path in the Dart directory structure. A
-// standard library package goes under the directory std.
+// standard library package goes under the directory std, and a test variant
+// goes under the directory of its test binary.
 func libPath(p *packages.Package, module string) string {
+	if under := underTest(p.ID); under != "" {
+		return "gart_test/" + testDir(under, module) + "/" + modulePath(p, module)
+	}
 	if !strings.HasPrefix(p.PkgPath, module) {
 		return "std/" + p.PkgPath
 	}
-	rel := strings.TrimPrefix(p.PkgPath, module)
-	rel = strings.TrimPrefix(rel, "/")
+	return modulePath(p, module)
+}
+
+func modulePath(p *packages.Package, module string) string {
+	rel := strings.TrimPrefix(strings.TrimPrefix(p.PkgPath, module), "/")
 	if rel == "" {
 		return p.Name
 	}
 	return rel
 }
 
+// testDir names the directory of 1 test binary. It mirrors the path of the
+// package under test inside the module.
+func testDir(under, module string) string {
+	rel := strings.TrimPrefix(strings.TrimPrefix(under, module), "/")
+	if rel == "" {
+		return "main"
+	}
+	return rel
+}
+
+// underTest reads the package under test from the identifier of a test
+// variant. The result is empty when the identifier names no variant.
+func underTest(id string) string {
+	open := strings.Index(id, " [")
+	if open < 0 || !strings.HasSuffix(id, ".test]") {
+		return ""
+	}
+	return strings.TrimSuffix(id[open+2:len(id)-1], ".test")
+}
+
+// isTestMain reports whether a package is the entry point of a test binary.
+func isTestMain(p *packages.Package) bool {
+	return p.Name == "main" && strings.HasSuffix(p.PkgPath, ".test")
+}
+
 func baseName(p *packages.Package, module string) string {
-	if p.Name == "main" {
+	if isTestMain(p) {
+		return testDir(strings.TrimSuffix(p.PkgPath, ".test"), module) + "_test"
+	}
+	if p.Name == "main" && underTest(p.ID) == "" {
 		return "main"
 	}
 	return filepath.Base(libPath(p, module))
 }
 
 func outputDir(p *packages.Package, module string) string {
-	if p.Name == "main" {
+	if isTestMain(p) {
+		return filepath.Join("bin", filepath.Dir(baseName(p, module)))
+	}
+	if p.Name == "main" && underTest(p.ID) == "" {
 		return "bin"
 	}
-	rel := libPath(p, module)
-	return filepath.Join("lib", filepath.Dir(rel))
+	return filepath.Join("lib", filepath.Dir(libPath(p, module)))
+}
+
+// libraryURI gives the Dart URI of a package. A main package has no URI,
+// because no library imports it.
+func libraryURI(p *packages.Package, module, dartPkg string) string {
+	if isTestMain(p) || (p.Name == "main" && underTest(p.ID) == "") {
+		return ""
+	}
+	return "package:" + dartPkg + "/" + libPath(p, module) + ".dart"
 }
 
 // dartPackageName maps a Go module path to a pub package name. A pub name

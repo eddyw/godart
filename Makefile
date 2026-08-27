@@ -6,8 +6,12 @@ GO_FILES := $(shell find . -name '*.go' -not -path './build/*')
 PROG ?= hello
 DEMO := $(CURDIR)/build/demo/$(PROG)
 
+SUITE ?= basic
+SUITE_OUT := $(CURDIR)/build/suite/$(SUITE)
+
 .PHONY: help get build test vet fmt fmt-check dart-get dart-analyze dart-test \
-	dart-fmt dart-fmt-check ci install clean run compare programs
+	dart-fmt dart-fmt-check ci install clean run compare programs suites \
+	gart-test compare-tests
 
 help:
 	@echo "godart targets:"
@@ -23,6 +27,9 @@ help:
 	@echo "  make programs         List the Go programs of testdata."
 	@echo "  make run PROG=x       Compile testdata/programs/x and run the Dart output."
 	@echo "  make compare PROG=x   Run the program with go and with Dart, and diff."
+	@echo "  make suites           List the test modules of testdata."
+	@echo "  make gart-test SUITE=x        Run the tests of the module with gart."
+	@echo "  make compare-tests SUITE=x    Run go test and gart test, and diff."
 	@echo "  make install          Put the gart command on the PATH."
 	@echo "  make clean            Delete the build directory."
 
@@ -80,6 +87,31 @@ compare: build
 	@cd $(DEMO) && dart pub get > /dev/null && \
 		dart run bin/main.dart > $(CURDIR)/build/dart.txt 2>&1 || true
 	@diff $(CURDIR)/build/go.txt $(CURDIR)/build/dart.txt && echo "$(PROG): the 2 outputs are equal"
+
+suites:
+	@ls testdata/tests
+
+# gart-test compiles the tests of 1 module of testdata and runs them with the
+# Dart VM.
+gart-test: build
+	@cd testdata/tests/$(SUITE) && \
+		$(CURDIR)/build/gart test -o $(SUITE_OUT) -runtime $(CURDIR)/$(RUNTIME) -v ./...
+
+# compare-tests runs the tests with the go toolchain and with gart, and it
+# reports each difference. A log line of go test holds a source position, and a
+# log line of gart holds none, thus the diff cuts the position away.
+compare-tests: build
+	@cd testdata/tests/$(SUITE) && go test -count=1 -v ./... > $(CURDIR)/build/go.txt 2>&1 || true
+	@cd testdata/tests/$(SUITE) && \
+		$(CURDIR)/build/gart test -o $(SUITE_OUT) -runtime $(CURDIR)/$(RUNTIME) -v ./... \
+		> $(CURDIR)/build/dart.txt 2>&1 || true
+	@sed -E -e 's/\([0-9]+\.[0-9][0-9]s\)/(0.00s)/' -e 's/\t[0-9]+\.[0-9]+s/\t0.000s/' \
+		-e 's/^([[:space:]]+)[A-Za-z0-9_./]+\.go:[0-9]+: /\1/' \
+		$(CURDIR)/build/go.txt > $(CURDIR)/build/go.norm.txt
+	@sed -E -e 's/\([0-9]+\.[0-9][0-9]s\)/(0.00s)/' -e 's/\t[0-9]+\.[0-9]+s/\t0.000s/' \
+		$(CURDIR)/build/dart.txt > $(CURDIR)/build/dart.norm.txt
+	@diff $(CURDIR)/build/go.norm.txt $(CURDIR)/build/dart.norm.txt && \
+		echo "$(SUITE): the 2 outputs are equal"
 
 install:
 	go install ./cmd/gart

@@ -27,20 +27,82 @@ const mode = packages.NeedName |
 	packages.NeedTypesInfo |
 	packages.NeedModule
 
-// Load reads the packages that match the patterns in dir. The result holds the
-// root packages in the order of their package path.
+const findMode = packages.NeedName |
+	packages.NeedFiles |
+	packages.NeedCompiledGoFiles |
+	packages.NeedImports |
+	packages.NeedDeps |
+	packages.NeedModule
+
+// Result holds the packages of 1 load.
+type Result struct {
+	// Packages holds the root packages in the order of their identifier.
+	Packages []*packages.Package
+	// Sources gives the content of each file that the overlay replaced. A key
+	// is the file path that the go command reports.
+	Sources map[string][]byte
+	// Binaries lists 1 test binary for each package that holds a test. It is
+	// empty when the load asked for no test.
+	Binaries []*Binary
+}
+
+// Binary reads the test binary of 1 package.
+func (r *Result) Binary(id string) *Binary {
+	for _, b := range r.Binaries {
+		if b.ID == id {
+			return b
+		}
+	}
+	return nil
+}
+
+// Load reads the packages that match the patterns in dir.
 //
 // The load runs 2 times. The first load finds the files of each standard
 // library package, and the second load replaces those files with the overlay.
 func Load(dir string, patterns ...string) ([]*packages.Package, error) {
-	files, err := overlayFiles(dir, patterns)
+	out, err := load(dir, false, patterns)
 	if err != nil {
 		return nil, err
+	}
+	return out.Packages, nil
+}
+
+// LoadTests reads the packages and also each test variant of them. It replaces
+// the test entry point of the go command with the entry point of the compiler.
+func LoadTests(dir string, patterns ...string) (*Result, error) {
+	return load(dir, true, patterns)
+}
+
+func load(dir string, tests bool, patterns []string) (*Result, error) {
+	found, err := packages.Load(&packages.Config{
+		Mode:       findMode,
+		Dir:        dir,
+		BuildFlags: []string{"-tags=" + BuildTag},
+		Tests:      tests,
+	}, patterns...)
+	if err != nil {
+		return nil, err
+	}
+	files, err := overlayFiles(found)
+	if err != nil {
+		return nil, err
+	}
+	var binaries []*Binary
+	if tests {
+		binaries, err = testBinaries(found)
+		if err != nil {
+			return nil, err
+		}
+		for _, b := range binaries {
+			files[b.File] = b.Source
+		}
 	}
 	cfg := &packages.Config{
 		Mode:       mode,
 		Dir:        dir,
 		BuildFlags: []string{"-tags=" + BuildTag},
+		Tests:      tests,
 		Overlay:    files,
 	}
 	pkgs, err := packages.Load(cfg, patterns...)
@@ -53,25 +115,20 @@ func Load(dir string, patterns ...string) ([]*packages.Package, error) {
 	if err := collectErrors(pkgs); err != nil {
 		return nil, err
 	}
-	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].PkgPath < pkgs[j].PkgPath })
-	return pkgs, nil
+	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
+	return &Result{Packages: pkgs, Sources: files, Binaries: binaries}, nil
 }
 
 // overlayFiles maps each file of a standard library package to the file of the
 // overlay. A package that the standard library does not hold takes a new
 // directory inside GOROOT.
-func overlayFiles(dir string, patterns []string) (map[string][]byte, error) {
-	found, err := packages.Load(&packages.Config{
-		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
-			packages.NeedImports | packages.NeedDeps,
-		Dir:        dir,
-		BuildFlags: []string{"-tags=" + BuildTag},
-	}, patterns...)
-	if err != nil {
-		return nil, err
-	}
+func overlayFiles(found []*packages.Package) (map[string][]byte, error) {
 	existing := map[string]*packages.Package{}
-	packages.Visit(found, nil, func(p *packages.Package) { existing[p.PkgPath] = p })
+	packages.Visit(found, nil, func(p *packages.Package) {
+		if p.ID == p.PkgPath && existing[p.PkgPath] == nil {
+			existing[p.PkgPath] = p
+		}
+	})
 	out := map[string][]byte{}
 	for _, o := range overlay.Packages() {
 		p, ok := existing[o.Path]

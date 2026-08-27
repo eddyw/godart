@@ -77,8 +77,23 @@ func (v *verifier) visit(n ast.Node) bool {
 		v.checkCall(n)
 	case *ast.Ident:
 		v.checkComplex(n)
+	case *ast.FuncDecl:
+		v.checkTestMain(n)
 	}
 	return true
+}
+
+// checkTestMain rejects a TestMain function. Such a function replaces the
+// entry point of a test binary, and the compiler writes that entry point.
+func (v *verifier) checkTestMain(d *ast.FuncDecl) {
+	if d.Name.Name != "TestMain" || d.Recv != nil {
+		return
+	}
+	if !strings.HasSuffix(v.fset.Position(d.Pos()).Filename, "_test.go") {
+		return
+	}
+	v.reject(d.Pos(), "gart writes the entry point of a test binary",
+		"the compiler rejects a TestMain function")
 }
 
 // checkComplex rejects a complex number. The runtime library holds no complex

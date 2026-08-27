@@ -1,0 +1,220 @@
+package driver_test
+
+import (
+	"bytes"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"testing"
+
+	"github.com/eddyw/godart/internal/driver"
+)
+
+// TestTests compiles the test binaries of each module of testdata/tests, runs
+// them with the Dart VM, and compares the output with the output of go test.
+//
+// A log line of go test holds a source position, and a log line of gart holds
+// none. The comparison cuts the position and each elapsed time away.
+func TestTests(t *testing.T) {
+	root, err := filepath.Abs("../../testdata/tests")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		// The module unsupported holds a fuzz target and an example. go test
+		// runs them, and gart reports them as a skipped test. Thus the output
+		// differs on purpose, and a separate test reads it.
+		if !entry.IsDir() || entry.Name() == "unsupported" {
+			continue
+		}
+		t.Run(entry.Name(), func(t *testing.T) {
+			t.Parallel()
+			dir := filepath.Join(root, entry.Name())
+			for _, verbose := range []bool{false, true} {
+				name := "plain"
+				if verbose {
+					name = "verbose"
+				}
+				t.Run(name, func(t *testing.T) {
+					want := goTest(t, dir, verbose)
+					got := gartTest(t, dir, driver.TestOptions{Verbose: verbose})
+					if got != want {
+						t.Errorf("the output differs\ngo test:\n%s\ngart test:\n%s", want, got)
+					}
+				})
+			}
+		})
+	}
+}
+
+// TestTestsFilter proves that the -run flag keeps only the tests that match.
+func TestTestsFilter(t *testing.T) {
+	dir, err := filepath.Abs("../../testdata/tests/basic")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := gartTest(t, dir, driver.TestOptions{Verbose: true, Run: "TestAdd"})
+	if !strings.Contains(got, "--- PASS: TestAdd") {
+		t.Errorf("the output holds no result of TestAdd:\n%s", got)
+	}
+	if strings.Contains(got, "TestDouble") {
+		t.Errorf("the filter kept TestDouble:\n%s", got)
+	}
+}
+
+// TestTestsReportsAnUnsupportedFunction proves that a fuzz target and an
+// example reach the output as a skipped test. A benchmark stays out, because
+// go test with no -bench flag also runs no benchmark.
+func TestTestsReportsAnUnsupportedFunction(t *testing.T) {
+	dir, err := filepath.Abs("../../testdata/tests/unsupported")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := gartTest(t, dir, driver.TestOptions{})
+	for _, want := range []string{
+		"--- SKIP: FuzzLength\n    gart runs no fuzz target",
+		"--- SKIP: ExampleLength\n    gart runs no example",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the output holds no %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "BenchmarkLength") {
+		t.Errorf("the output names a benchmark:\n%s", got)
+	}
+}
+
+// TestTestsRejectsTestMain proves that stage 2 rejects a TestMain function.
+func TestTestsRejectsTestMain(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/tm\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(dir, "tm.go"), "package tm\n\n// Value gives a number.\nfunc Value() int { return 1 }\n")
+	writeFile(t, filepath.Join(dir, "tm_test.go"), `package tm
+
+import "testing"
+
+func TestMain(m *testing.M) { _ = m.Run() }
+`)
+	_, err := driver.Test(driver.Options{
+		Dir:      dir,
+		Patterns: []string{"./..."},
+		Out:      t.TempDir(),
+		Runtime:  runtimeDir(t),
+	}, driver.TestOptions{}, &bytes.Buffer{})
+	if err == nil {
+		t.Fatal("got no rejection of TestMain, want one")
+	}
+	if !strings.Contains(err.Error(), "rejects a TestMain function") {
+		t.Errorf("got %q, want a message about TestMain", err.Error())
+	}
+}
+
+func writeFile(t *testing.T, path, text string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(text), 0o666); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func runtimeDir(t *testing.T) string {
+	t.Helper()
+	dir, err := filepath.Abs("../../runtime/goruntime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func goTest(t *testing.T, dir string, verbose bool) string {
+	t.Helper()
+	args := []string{"test", "-count=1"}
+	if verbose {
+		args = append(args, "-v")
+	}
+	cmd := exec.Command("go", append(args, "./...")...)
+	cmd.Dir = dir
+	text, _ := cmd.CombinedOutput()
+	return normalize(string(text))
+}
+
+func gartTest(t *testing.T, dir string, options driver.TestOptions) string {
+	t.Helper()
+	out := &bytes.Buffer{}
+	if _, err := driver.Test(driver.Options{
+		Dir:      dir,
+		Patterns: []string{"./..."},
+		Out:      t.TempDir(),
+		Runtime:  runtimeDir(t),
+		Format:   true,
+	}, options, out); err != nil {
+		t.Fatalf("the test build failed:\n%v", err)
+	}
+	return normalize(out.String())
+}
+
+var (
+	elapsed  = regexp.MustCompile(`\(\d+\.\d\ds\)`)
+	total    = regexp.MustCompile(`\t\d+\.\d+s`)
+	position = regexp.MustCompile(`(?m)^(\s+)[\w./]+\.go:\d+: `)
+)
+
+// normalize cuts each part of the output that a run does not repeat. It also
+// cuts the source position of a log line, because gart writes none.
+func normalize(text string) string {
+	text = elapsed.ReplaceAllString(text, "(0.00s)")
+	text = total.ReplaceAllString(text, "\t0.000s")
+	return position.ReplaceAllString(text, "$1")
+}
+
+// TestRun proves that the run command compiles package main and runs it with
+// the Dart VM. The program reads its arguments through the interop package.
+func TestRun(t *testing.T) {
+	dir, err := filepath.Abs("../../testdata/programs/args")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := &bytes.Buffer{}
+	code, err := driver.Run(driver.Options{
+		Dir:      dir,
+		Patterns: []string{"./..."},
+		Out:      t.TempDir(),
+		Runtime:  runtimeDir(t),
+		Format:   true,
+	}, []string{"one", "two"}, out)
+	if err != nil {
+		t.Fatalf("the run failed:\n%v", err)
+	}
+	if code != 0 {
+		t.Errorf("got the exit code %d, want 0", code)
+	}
+	if got, want := out.String(), "count 2\ntext one,two\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// TestRunReportsTheExitCode proves that a panic gives a status that is not 0.
+func TestRunReportsTheExitCode(t *testing.T) {
+	dir, err := filepath.Abs("../../testdata/programs/panics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, err := driver.Run(driver.Options{
+		Dir:      dir,
+		Patterns: []string{"./..."},
+		Out:      t.TempDir(),
+		Runtime:  runtimeDir(t),
+		Format:   true,
+	}, nil, &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("the run failed:\n%v", err)
+	}
+	if code == 0 {
+		t.Error("got the exit code 0, want a code of a panic")
+	}
+}
