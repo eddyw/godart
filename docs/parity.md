@@ -44,7 +44,7 @@ The package `fmt` reads it.
 | A conversion between 2 struct types | Rejected |
 | A method value of a named type that is not a struct | Rejected |
 | A range loop over a function | Rejected |
-| A complex number | Rejected |
+| A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
 | A type declaration inside a function | Rejected |
 
 ## The standard library

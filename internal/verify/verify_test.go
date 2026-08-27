@@ -114,6 +114,13 @@ func TestNew(t *testing.T) {
 	reject(t, "slice type", "rejects new([]int)", `func f() { _ = new([]int) }`)
 }
 
+func TestComplex(t *testing.T) {
+	reject(t, "variable", "rejects the type complex128", `func f() { var c complex128; _ = c }`)
+	reject(t, "builtin", "rejects the builtin complex", `func f() { _ = complex(1.0, 2.0) }`)
+	reject(t, "real", "rejects the builtin real", `func f(c complex64) { _ = real(c) }`)
+	accept(t, "float", `func f() { var x float64; _ = x }`)
+}
+
 func TestReportsEachRejection(t *testing.T) {
 	err := run(t, head+`func f() {
 	var n int
