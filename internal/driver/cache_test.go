@@ -1,0 +1,114 @@
+package driver_test
+
+import (
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/eddyw/godart/internal/driver"
+)
+
+// TestCache proves the 2 hashes of stage 6. An equal source hash skips the
+// compile, and an equal export hash keeps the cache of the dependents.
+func TestCache(t *testing.T) {
+	source := copyModule(t, "../../testdata/programs/multi")
+	runtime, err := filepath.Abs("../../runtime/goruntime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := t.TempDir()
+	build := func() *driver.Stats {
+		t.Helper()
+		stats, err := driver.BuildWithStats(driver.Options{
+			Dir:      source,
+			Patterns: []string{"./..."},
+			Out:      out,
+			Runtime:  runtime,
+			Format:   false,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return stats
+	}
+
+	first := build()
+	if len(first.Compiled) != 3 || len(first.Cached) != 0 {
+		t.Fatalf("the first build gave %v compiled and %v cached", first.Compiled, first.Cached)
+	}
+
+	second := build()
+	if len(second.Compiled) != 0 || len(second.Cached) != 3 {
+		t.Fatalf("the second build gave %v compiled and %v cached", second.Compiled, second.Cached)
+	}
+
+	// A change inside a function body keeps the exported interface equal, thus
+	// the dependents keep their cache.
+	write(t, filepath.Join(source, "count", "count.go"), func(text string) string {
+		return strings.Replace(text, "n := 0", "n := 0\n\t_ = n", 1)
+	})
+	third := build()
+	if !slices.Equal(third.Compiled, []string{"example.com/multi/count"}) {
+		t.Errorf("a change of a body compiled %v, want only the package itself", third.Compiled)
+	}
+
+	// A change of the exported interface reaches each dependent.
+	write(t, filepath.Join(source, "count", "count.go"), func(text string) string {
+		return strings.Replace(text, "func Runes(text string) int {", "func Runes(text string, extra int) int {", 1)
+	})
+	write(t, filepath.Join(source, "main.go"), func(text string) string {
+		return strings.Replace(text, `count.Runes("héllo")`, `count.Runes("héllo", 0)`, 1)
+	})
+	fourth := build()
+	if !slices.Contains(fourth.Compiled, "example.com/multi") ||
+		!slices.Contains(fourth.Compiled, "example.com/multi/count") {
+		t.Errorf("a change of the interface compiled %v, want the package and its dependent", fourth.Compiled)
+	}
+	if slices.Contains(fourth.Compiled, "example.com/multi/greet") {
+		t.Errorf("the package greet compiled again, want the cache")
+	}
+}
+
+func copyModule(t *testing.T, source string) string {
+	t.Helper()
+	out := t.TempDir()
+	root, err := filepath.Abs(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(out, rel)
+		if entry.IsDir() {
+			return os.MkdirAll(target, 0o777)
+		}
+		text, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, text, 0o666)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+func write(t *testing.T, path string, change func(string) string) {
+	t.Helper()
+	text, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(change(string(text))), 0o666); err != nil {
+		t.Fatal(err)
+	}
+}

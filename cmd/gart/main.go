@@ -22,6 +22,7 @@ Usage:
 The commands are:
 
 	build      compile the packages into a Dart package
+	watch      compile the packages again after each change
 	load       load the packages and list them
 	version    print the version of the compiler
 
@@ -49,7 +50,9 @@ func run(args []string) error {
 		fmt.Println("gart", version)
 		return nil
 	case "build":
-		return runBuild(args[1:])
+		return runBuild(args[1:], false)
+	case "watch":
+		return runBuild(args[1:], true)
 	case "load":
 		return runLoad(args[1:])
 	default:
@@ -58,7 +61,7 @@ func run(args []string) error {
 	}
 }
 
-func runBuild(args []string) error {
+func runBuild(args []string, watch bool) error {
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
 	out := flags.String("o", "dartout", "the output directory")
 	runtime := flags.String("runtime", "", "the path of the goruntime package")
@@ -74,13 +77,17 @@ func runBuild(args []string) error {
 	if len(patterns) == 0 {
 		patterns = []string{"./..."}
 	}
-	return driver.Build(driver.Options{
+	options := driver.Options{
 		Dir:      dir,
 		Patterns: patterns,
 		Out:      *out,
 		Runtime:  *runtime,
 		Format:   *doFormat,
-	})
+	}
+	if watch {
+		return driver.Watch(options, os.Stdout)
+	}
+	return driver.Build(options)
 }
 
 func runLoad(patterns []string) error {
