@@ -1,0 +1,11 @@
+name: goruntime
+description: The runtime library of the godart compiler. It holds the core Go types, the scheduler, and the interface support.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.0
