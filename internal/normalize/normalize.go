@@ -44,6 +44,9 @@ type builder struct {
 	fn    *ir.Func
 	names map[types.Object]string
 	used  map[string]bool
+
+	// gotoLabels holds the label of each goto target of the current function.
+	gotoLabels map[string]bool
 }
 
 // declareLocal gives a local variable a name that is unique in the function.
@@ -169,6 +172,7 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	f := &ir.Func{Name: obj.Name(), Obj: obj, Pos: d.Pos()}
 	b.names = map[types.Object]string{}
 	b.used = map[string]bool{}
+	b.gotoLabels = gotoTargets(d.Body)
 	b.fn = f
 	if d.Recv != nil && len(d.Recv.List) > 0 {
 		f.Recv = b.recvVar(d.Recv.List[0], sig)
@@ -180,8 +184,26 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 		return nil
 	}
 	f.Body = b.block(d.Body)
+	if len(b.gotoLabels) > 0 {
+		f.Body = b.stateMachine(f.Body, d.Pos())
+	}
 	b.fn = nil
 	return f
+}
+
+// gotoTargets lists the label of each goto statement of a function body.
+func gotoTargets(body *ast.BlockStmt) map[string]bool {
+	out := map[string]bool{}
+	ast.Inspect(body, func(n ast.Node) bool {
+		if br, ok := n.(*ast.BranchStmt); ok && br.Tok == token.GOTO && br.Label != nil {
+			out[br.Label.Name] = true
+		}
+		return true
+	})
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func (b *builder) recvVar(field *ast.Field, sig *types.Signature) *ir.Var {

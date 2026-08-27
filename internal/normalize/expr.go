@@ -80,6 +80,17 @@ func (b *builder) lvalue(e ast.Expr) (pre []ir.Stmt, get ir.Expr, set func(ir.Ex
 	return nil, x, func(v ir.Expr) ir.Stmt { return &ir.Assign{Lhs: x, Rhs: v} }
 }
 
+// forceHoist puts an expression into a temporary variable in each case. A
+// defer statement reads its operands at that moment, thus a later write to a
+// variable does not change the deferred call.
+func (b *builder) forceHoist(e ir.Expr, pos token.Pos, role string) ([]ir.Stmt, ir.Expr) {
+	if e == nil {
+		return nil, nil
+	}
+	v := b.tempVar(pos, role, e.GoType())
+	return []ir.Stmt{&ir.Declare{Vars: []*ir.Var{v}, Init: e}}, &ir.Ident{Name: v.Name, Type: v.Type}
+}
+
 // hoist puts an expression into a temporary variable when a second read of the
 // expression would run its side effects again.
 func (b *builder) hoist(e ir.Expr, pos token.Pos, role string) ([]ir.Stmt, ir.Expr) {
@@ -383,6 +394,7 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	out.Params = inner.Params
 	out.Results = inner.Results
 	out.Body = b.block(e.Body)
+	out.Defers = inner.Defers
 	b.fn = prev
 	return out
 }

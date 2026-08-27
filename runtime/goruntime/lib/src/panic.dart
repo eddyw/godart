@@ -39,3 +39,22 @@ Never $panicNil() => throw GoPanic(
 /// Reads a value and drops it. The Go statement `_ = x` runs the read, thus a
 /// bounds check still applies.
 void $drop(Object? value) {}
+
+/// The deferred calls of 1 function. Go runs them in reverse order when the
+/// function returns, and also when a panic leaves the function.
+final class DeferStack {
+  final List<void Function()> _calls = <void Function()>[];
+
+  void push(void Function() call) => _calls.add(call);
+
+  void run() {
+    for (var i = _calls.length - 1; i >= 0; i--) {
+      _calls[i]();
+    }
+  }
+}
+
+/// The end of a function that Go proves unreachable. Dart cannot prove it,
+/// thus the function needs a statement that gives no value.
+Never $unreachable() =>
+    throw GoPanic(const GoError('the function reached its end'));

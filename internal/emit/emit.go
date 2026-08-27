@@ -74,6 +74,10 @@ type emitter struct {
 	// labelSeq numbers the labels that a switch needs. The walk order is
 	// stable, thus the numbers stay equal for equal input.
 	labelSeq int
+	// returnLabel holds the block that a return statement leaves. It is not
+	// empty only in a function that holds a defer statement and a named result.
+	returnLabel string
+	returnVars  []*ir.Var
 }
 
 func (e *emitter) fail(format string, args ...any) {
@@ -213,7 +217,11 @@ func (e *emitter) writeMain() {
 	e.line("void main() {")
 	e.line("$init();")
 	if e.mainFunc != nil {
+		e.line("try {")
 		e.line("_main();")
+		e.line("} on GoPanic catch ($p) {")
+		e.line("$fatal($p);")
+		e.line("}")
 	}
 	e.line("}")
 }

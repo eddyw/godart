@@ -46,8 +46,10 @@ func (e *emitter) stmt(s ir.Stmt) {
 	case *ir.Labeled:
 		e.line("%s:", s.Label)
 		e.stmt(s.Stmt)
+	case *ir.Defer:
+		e.line("$defer.push(() => %s);", e.expr(s.Call))
 	case *ir.Goto:
-		e.fail("goto is not supported yet")
+		e.fail("the label %s of a goto statement is outside the function body", s.Label)
 	default:
 		e.fail("the statement %T has no Dart form", s)
 	}
@@ -242,6 +244,10 @@ func (e *emitter) breakTarget(label string) string {
 }
 
 func (e *emitter) returnStmt(s *ir.Return) {
+	if e.returnLabel != "" {
+		e.namedReturn(s)
+		return
+	}
 	switch len(s.Values) {
 	case 0:
 		e.line("return;")
@@ -254,4 +260,26 @@ func (e *emitter) returnStmt(s *ir.Return) {
 		}
 		e.line("return (%s);", strings.Join(parts, ", "))
 	}
+}
+
+// namedReturn writes the results into their variables and leaves the block. A
+// deferred call runs after this point, thus it can still change a result.
+func (e *emitter) namedReturn(s *ir.Return) {
+	switch {
+	case len(s.Values) == 0:
+	case len(s.Values) == 1 && len(e.returnVars) > 1:
+		parts := make([]string, len(e.returnVars))
+		for i, r := range e.returnVars {
+			parts[i] = r.Name
+		}
+		e.line("(%s) = %s;", strings.Join(parts, ", "), e.expr(s.Values[0]))
+	default:
+		for i, v := range s.Values {
+			if i >= len(e.returnVars) {
+				break
+			}
+			e.assign(&ir.Ident{Name: e.returnVars[i].Name, Type: e.returnVars[i].Type}, v)
+		}
+	}
+	e.line("break %s;", e.returnLabel)
 }

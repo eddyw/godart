@@ -36,6 +36,7 @@ type Func struct {
 	Results []*Var
 	Body    *Block
 	Async   bool
+	Defers  bool
 	Pos     token.Pos
 }
 
@@ -123,6 +124,10 @@ type (
 	Labeled struct {
 		Label string
 		Stmt  Stmt
+
+		// Goto marks a label that a goto statement reaches. Stage 4 turns such
+		// a label into 1 block of a state machine.
+		Goto bool
 	}
 
 	// Switch holds a tag switch. Normalize rewrites a switch with no tag into
@@ -273,6 +278,7 @@ type (
 		Results []*Var
 		Body    *Block
 		Async   bool
+		Defers  bool
 		Type    types.Type
 	}
 

@@ -112,7 +112,10 @@ func (b *builder) builtin(e *ast.CallExpr, fn string) ir.Expr {
 			out.Args = append(out.Args, b.copyPoint(b.exprAs(a, slice.Elem())))
 		}
 		return out
-	case "len", "cap", "copy", "delete", "clear", "panic", "print", "println",
+	case "panic":
+		return &ir.Builtin{Name: fn, Type: t,
+			Args: []ir.Expr{b.convert(b.expr(e.Args[0]), anyType())}}
+	case "len", "cap", "copy", "delete", "clear", "print", "println",
 		"min", "max", "close", "complex", "real", "imag":
 		out := &ir.Builtin{Name: fn, Type: t}
 		for _, a := range e.Args {
@@ -288,6 +291,10 @@ func (b *builder) fieldPathOf(t types.Type, key ast.Expr) []int {
 		current = field.Type()
 	}
 	return path
+}
+
+func anyType() types.Type {
+	return types.Universe.Lookup("any").Type()
 }
 
 func constantInt(tv types.TypeAndValue) (int, bool) {

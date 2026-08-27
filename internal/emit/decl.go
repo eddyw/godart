@@ -238,12 +238,77 @@ func (e *emitter) results(f *ir.Func) string {
 // body writes the statements of a function. A named result becomes a local
 // variable that holds the zero value until a return statement writes it.
 func (e *emitter) body(f *ir.Func) {
-	for _, r := range f.Results {
+	e.emitBody(f.Results, f.Defers, f.Body)
+}
+
+// emitBody writes the statements of a function or of a closure. A function
+// with a defer statement runs the deferred calls through a finally block.
+//
+// Go lets a deferred call change a named result, thus the return statement
+// writes the result variables and leaves a labeled block. The function reads
+// the variables after the finally block.
+func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
+	for _, r := range results {
 		if r.Named {
 			e.line("%s %s = %s;", e.dartType(r.Type), r.Name, e.zero(r.Type))
 		}
 	}
-	for _, s := range f.Body.List {
-		e.stmt(s)
+	if !defers {
+		for _, s := range body.List {
+			e.stmt(s)
+		}
+		e.closeBody(results, body)
+		return
 	}
+	e.line("final DeferStack $defer = DeferStack();")
+	named := false
+	for _, r := range results {
+		named = named || r.Named
+	}
+	e.line("try {")
+	if named {
+		e.line("$body: {")
+		prevLabel, prevVars := e.returnLabel, e.returnVars
+		e.returnLabel, e.returnVars = "$body", results
+		for _, s := range body.List {
+			e.stmt(s)
+		}
+		e.returnLabel, e.returnVars = prevLabel, prevVars
+		e.line("}")
+	} else {
+		for _, s := range body.List {
+			e.stmt(s)
+		}
+	}
+	e.line("} finally {")
+	e.line("$defer.run();")
+	e.line("}")
+	if named {
+		e.line("return %s;", e.resultRead(results))
+		return
+	}
+	e.closeBody(results, body)
+}
+
+// closeBody ends a function that gives a result. Go proves that the end of
+// such a function is unreachable, but the flow analysis of Dart cannot.
+func (e *emitter) closeBody(results []*ir.Var, body *ir.Block) {
+	if len(results) == 0 || len(body.List) == 0 {
+		return
+	}
+	if _, ok := body.List[len(body.List)-1].(*ir.Return); ok {
+		return
+	}
+	e.line("$unreachable();")
+}
+
+func (e *emitter) resultRead(results []*ir.Var) string {
+	if len(results) == 1 {
+		return results[0].Name
+	}
+	parts := make([]string, len(results))
+	for i, r := range results {
+		parts[i] = r.Name
+	}
+	return "(" + strings.Join(parts, ", ") + ")"
 }

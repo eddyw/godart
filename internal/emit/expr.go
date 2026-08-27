@@ -287,14 +287,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	inner := &emitter{pkg: e.pkg, prefixes: e.prefixes, base: e.base,
 		methods: e.methods, inClass: e.inClass, initNames: e.initNames,
 		breakables: e.breakables, labelSeq: e.labelSeq}
-	for _, r := range x.Results {
-		if r.Named {
-			inner.line("%s %s = %s;", inner.dartType(r.Type), r.Name, inner.zero(r.Type))
-		}
-	}
-	for _, s := range x.Body.List {
-		inner.stmt(s)
-	}
+	inner.emitBody(x.Results, x.Defers, x.Body)
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
 	b.WriteString(inner.buf.String())

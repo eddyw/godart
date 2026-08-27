@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -31,7 +32,7 @@ func TestPrograms(t *testing.T) {
 		t.Run(entry.Name(), func(t *testing.T) {
 			t.Parallel()
 			dir := filepath.Join(root, entry.Name())
-			want := run(t, dir, "go", "run", ".")
+			want := runProgram(t, dir, "go", "run", ".")
 			out := t.TempDir()
 			err := driver.Build(driver.Options{
 				Dir:      dir,
@@ -44,12 +45,32 @@ func TestPrograms(t *testing.T) {
 				t.Fatalf("the build failed:\n%v", err)
 			}
 			run(t, out, "dart", "pub", "get")
-			got := run(t, out, "dart", "run", "bin/main.dart")
+			got := runProgram(t, out, "dart", "run", "bin/main.dart")
 			if got != want {
 				t.Errorf("the output differs\nGo:\n%s\nDart:\n%s", want, got)
 			}
 		})
 	}
+}
+
+// runProgram runs a compiled program. A panic writes a stack trace, and the 2
+// runtimes write a different trace, thus the test cuts the trace away.
+func runProgram(t *testing.T, dir string, name string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	text, _ := cmd.CombinedOutput()
+	return cutTrace(string(text))
+}
+
+func cutTrace(text string) string {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, "goroutine ") {
+			return strings.Join(lines[:i], "\n")
+		}
+	}
+	return text
 }
 
 func run(t *testing.T, dir string, name string, args ...string) string {

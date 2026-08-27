@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'panic.dart';
+
 /// The Go builtin `print`. It writes to stderr with no separator.
 void $print(List<String> parts) => stderr.write(parts.join());
 
@@ -38,4 +40,13 @@ String $fstring(double v) {
     return '$sign${digits.substring(0, exponent + 1)}.${digits.substring(exponent + 1)}';
   }
   return '$sign$digits${'0' * (exponent + 1 - digits.length)}';
+}
+
+/// Reports a panic that no function stops, and ends the program. Go writes the
+/// value to stderr and exits with the status 2.
+Never $fatal(GoPanic panic) {
+  stderr.writeln('panic: ${panic.value}');
+  stderr.writeln();
+  stderr.writeln('goroutine 1 [running]:');
+  exit(2);
 }

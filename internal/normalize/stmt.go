@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"fmt"
 	"go/ast"
 	"go/constant"
 	"go/token"
@@ -52,6 +53,8 @@ func (b *builder) stmt(s ast.Stmt) []ir.Stmt {
 		return b.branch(s)
 	case *ast.LabeledStmt:
 		return b.labeled(s)
+	case *ast.DeferStmt:
+		return b.deferStmt(s)
 	}
 	b.fail(s.Pos(), "the statement %T is outside the subset", s)
 	return nil
@@ -59,6 +62,11 @@ func (b *builder) stmt(s ast.Stmt) []ir.Stmt {
 
 func (b *builder) labeled(s *ast.LabeledStmt) []ir.Stmt {
 	label := name.Local(s.Label.Name)
+	if b.gotoLabels[s.Label.Name] {
+		// A goto reaches this label, thus the label marks the start of a block
+		// of the state machine that stage 4 builds.
+		return []ir.Stmt{&ir.Labeled{Label: label, Goto: true, Stmt: &ir.Block{List: b.stmt(s.Stmt)}}}
+	}
 	switch inner := s.Stmt.(type) {
 	case *ast.ForStmt:
 		return b.forStmt(inner, label)
@@ -248,6 +256,49 @@ func (b *builder) assignOne(lhs, rhs ast.Expr) []ir.Stmt {
 	t := b.typeOf(lhs)
 	pre, _, set := b.lvalue(lhs)
 	return append(pre, set(b.copyPoint(b.exprAs(rhs, t))))
+}
+
+// deferStmt reads the function value and each argument at the point of the
+// defer statement, exactly as Go does. The call itself runs later.
+func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
+	if b.fn != nil {
+		b.fn.Defers = true
+	}
+	call := b.expr(s.Call)
+	var pre []ir.Stmt
+	switch c := call.(type) {
+	case *ir.Call:
+		switch fun := c.Fun.(type) {
+		case *ir.Method:
+			hoisted, recv := b.forceHoist(b.copyPoint(fun.Recv), s.Pos(), "dr")
+			pre = append(pre, hoisted...)
+			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type}
+		default:
+			hoisted, value := b.forceHoist(fun, s.Pos(), "df")
+			pre = append(pre, hoisted...)
+			c.Fun = value
+		}
+		pre = append(pre, b.hoistArgs(c.Args, s.Pos())...)
+	case *ir.Builtin:
+		pre = append(pre, b.hoistArgs(c.Args, s.Pos())...)
+	default:
+		if call != nil {
+			b.fail(s.Pos(), "defer needs a call to a function")
+		}
+		return nil
+	}
+	return append(pre, &ir.Defer{Call: call})
+}
+
+// hoistArgs reads each argument at the point of the statement.
+func (b *builder) hoistArgs(args []ir.Expr, pos token.Pos) []ir.Stmt {
+	var pre []ir.Stmt
+	for i, a := range args {
+		hoisted, value := b.forceHoist(a, pos, fmt.Sprintf("da%d", i))
+		pre = append(pre, hoisted...)
+		args[i] = value
+	}
+	return pre
 }
 
 var opAssign = map[token.Token]token.Token{
