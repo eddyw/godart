@@ -3,8 +3,11 @@
 RUNTIME := runtime/goruntime
 GO_FILES := $(shell find . -name '*.go' -not -path './build/*')
 
+PROG ?= hello
+DEMO := $(CURDIR)/build/demo/$(PROG)
+
 .PHONY: help get build test vet fmt fmt-check dart-get dart-analyze dart-test \
-	dart-fmt dart-fmt-check ci install clean
+	dart-fmt dart-fmt-check ci install clean run compare programs
 
 help:
 	@echo "godart targets:"
@@ -17,6 +20,9 @@ help:
 	@echo "  make dart-analyze     Run the Dart analyzer on the runtime library."
 	@echo "  make dart-test        Run the Dart tests of the runtime library."
 	@echo "  make ci               Run the full check that CI runs."
+	@echo "  make programs         List the Go programs of testdata."
+	@echo "  make run PROG=x       Compile testdata/programs/x and run the Dart output."
+	@echo "  make compare PROG=x   Run the program with go and with Dart, and diff."
 	@echo "  make install          Put the gart command on the PATH."
 	@echo "  make clean            Delete the build directory."
 
@@ -55,6 +61,25 @@ dart-test:
 	cd $(RUNTIME) && dart test
 
 ci: fmt-check vet test dart-analyze dart-test
+
+programs:
+	@ls testdata/programs
+
+# run compiles 1 program of testdata and runs the Dart output.
+run: build
+	@cd testdata/programs/$(PROG) && \
+		$(CURDIR)/build/gart build -o $(DEMO) -runtime $(CURDIR)/$(RUNTIME) ./...
+	@cd $(DEMO) && dart pub get > /dev/null && dart run bin/main.dart
+
+# compare runs the program with the Go toolchain and with Dart, and it reports
+# each difference.
+compare: build
+	@cd testdata/programs/$(PROG) && go run . > $(CURDIR)/build/go.txt 2>&1 || true
+	@cd testdata/programs/$(PROG) && \
+		$(CURDIR)/build/gart build -o $(DEMO) -runtime $(CURDIR)/$(RUNTIME) ./...
+	@cd $(DEMO) && dart pub get > /dev/null && \
+		dart run bin/main.dart > $(CURDIR)/build/dart.txt 2>&1 || true
+	@diff $(CURDIR)/build/go.txt $(CURDIR)/build/dart.txt && echo "$(PROG): the 2 outputs are equal"
 
 install:
 	go install ./cmd/gart

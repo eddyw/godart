@@ -21,6 +21,14 @@ gart build -o dartout -runtime path/to/runtime/goruntime ./...
 cd dartout && dart pub get && dart run bin/main.dart
 ```
 
+To run 1 of the example programs of this repository:
+
+```bash
+make programs                 # list the programs of testdata/programs
+make run PROG=ifaces          # compile the program and run the Dart output
+make compare PROG=ifaces      # run it with go and with Dart, and diff
+```
+
 `gart watch` compiles the module again after each change of a Go file. It
 recompiles only the packages that need a second compile.
 
