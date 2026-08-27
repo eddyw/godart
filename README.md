@@ -39,6 +39,7 @@ The compiler holds all 6 stages. The subset covers:
 | Errors | `panic`. The subset has no `recover`. |
 | Concurrency | Goroutine, channel, `select` |
 | Generics | Generic function, generic type, generic method of Go 1.27 |
+| Isolates | `dart.Worker` runs a pure function in a second isolate |
 
 The standard library surface holds `errors`, `fmt`, `sort`, `strconv`,
 `strings`, `sync`, `time`, and the interop package `syscall/dart`. An overlay replaces the Go source of such a package. The build

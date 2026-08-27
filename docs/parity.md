@@ -62,6 +62,34 @@ The verifier rejects each package outside the curated surface.
 | `time` | `Duration`, `Sleep`, `Now`, `Since`, and the operations of `Time` |
 | `syscall/dart` | The interop. The compiler replaces each call. |
 
+## The isolate worker
+
+`dart.Worker` runs a pure function in a second isolate. The 2 isolates share no
+memory, thus the function must not read a package variable and must not write
+one. The input and the result cross the boundary as bytes.
+
+Write 2 files with a build tag, thus the same Go source runs in both builds:
+
+```go
+//go:build dart
+
+func runWorker(f func([]byte) []byte, input []byte) []byte {
+	return dart.Worker(f, input)
+}
+```
+
+```go
+//go:build !dart
+
+func runWorker(f func([]byte) []byte, input []byte) []byte {
+	done := make(chan []byte, 1)
+	go func() { done <- f(input) }()
+	return <-done
+}
+```
+
+`testdata/programs/worker` holds this pattern.
+
 Gaps of the standard library surface:
 
 | Item | State |

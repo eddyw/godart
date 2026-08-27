@@ -73,6 +73,35 @@ func cutTrace(text string) string {
 	return text
 }
 
+// TestAOT proves that the output also compiles ahead of time. The Dart VM and
+// AOT are the 2 targets of the project.
+func TestAOT(t *testing.T) {
+	source, err := filepath.Abs("../../testdata/programs/multi")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := filepath.Abs("../../runtime/goruntime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := runProgram(t, source, "go", "run", ".")
+	out := t.TempDir()
+	if err := driver.Build(driver.Options{
+		Dir:      source,
+		Patterns: []string{"./..."},
+		Out:      out,
+		Runtime:  runtime,
+		Format:   true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	run(t, out, "dart", "pub", "get")
+	run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", "app")
+	if got := runProgram(t, out, filepath.Join(out, "app")); got != want {
+		t.Errorf("the output of the AOT build differs\nGo:\n%s\nDart:\n%s", want, got)
+	}
+}
+
 func run(t *testing.T, dir string, name string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command(name, args...)

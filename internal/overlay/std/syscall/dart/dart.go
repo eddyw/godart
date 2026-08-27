@@ -51,6 +51,17 @@ func NowNanos() int64 {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// Worker runs f in a new isolate and gives the result.
+//
+// The function must be a pure function of its input. It must not read a
+// package variable, and it must not write one. In the Go build, the same API
+// runs the function on a goroutine, thus the result stays equal.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func Worker(f func([]byte) []byte, input []byte) []byte {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // SliceLen gives the length of a slice of an unknown element type.
 func SliceLen(slice any) int {
 	panic("syscall/dart needs the gart compiler")

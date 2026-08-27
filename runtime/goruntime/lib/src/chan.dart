@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'panic.dart';
+import 'slice.dart';
 
 /// A Go channel.
 ///
@@ -117,6 +120,32 @@ final class _Send<T> {
   final Completer<void> done;
 
   _Send(this.value, this.done);
+}
+
+/// Runs a pure function in a new isolate and gives the result.
+///
+/// The 2 isolates share no memory, thus the function must not read a package
+/// variable and must not write one. The input and the result cross the
+/// boundary as bytes, because bytes cross at a low cost.
+Future<Slice<int>> $worker(
+  Slice<int> Function(Slice<int>)? body,
+  Slice<int> input,
+) async {
+  if (body == null) $panicNil();
+  final Slice<int> Function(Slice<int>) run = body;
+  final Uint8List bytes = Uint8List(input.len);
+  for (var i = 0; i < input.len; i++) {
+    bytes[i] = input.array[input.off + i];
+  }
+  final Uint8List out = await Isolate.run(() {
+    final Slice<int> result = run(Slice.of(bytes));
+    final Uint8List copy = Uint8List(result.len);
+    for (var i = 0; i < result.len; i++) {
+      copy[i] = result.array[result.off + i];
+    }
+    return copy;
+  });
+  return Slice.of(out);
 }
 
 /// Gives up control for a time. A Go sleep blocks the goroutine, thus the
