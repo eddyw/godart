@@ -1,18 +1,65 @@
 import 'panic.dart';
 
+/// The description of 1 struct field. It gives the `reflect` subset the name,
+/// the tag, and access to the value.
+final class FieldDesc {
+  final String name;
+  final String tag;
+  final bool exported;
+  final TypeDesc Function() type;
+  final Object? Function(Object?) get;
+  final void Function(Object?, Object?) set;
+
+  const FieldDesc(
+    this.name,
+    this.tag,
+    this.exported,
+    this.type,
+    this.get,
+    this.set,
+  );
+}
+
 /// The run time description of a Go type.
 ///
 /// The name holds the full Go name of the type, for example
 /// `example.com/m.point`. A type assertion and a type switch compare the name,
 /// thus the test needs no identity of the object.
 final class TypeDesc {
+  /// The full name of the type, with the import path of its package. A type
+  /// assertion compares this name, thus it must be unique.
   final String name;
-  final Map<String, Function> methods;
 
-  const TypeDesc(this.name, this.methods);
+  /// The name that Go writes, with the package name and not the import path.
+  final String text;
+
+  /// The kind, in the words of the Go package reflect: `struct`, `int`,
+  /// `string`, `slice`, `map`, `ptr`, and the other kinds.
+  final String kind;
+  final Map<String, Function> methods;
+  final List<FieldDesc> fields;
+
+  /// The element type of a slice, an array, a pointer, a channel, or a map.
+  final TypeDesc Function()? elem;
+
+  /// The key type of a map.
+  final TypeDesc Function()? key;
+
+  const TypeDesc(
+    this.name,
+    this.kind,
+    this.methods, {
+    this.text = '',
+    this.fields = const <FieldDesc>[],
+    this.elem,
+    this.key,
+  });
+
+  /// The name for a message. Go writes the package name, and not the path.
+  String get display => text.isEmpty ? name : text;
 
   @override
-  String toString() => name;
+  String toString() => display;
 }
 
 /// A Go interface value: the type descriptor and the value.
@@ -32,6 +79,34 @@ final class Iface {
   @override
   String toString() => '$value';
 }
+
+const TypeDesc $typeBool = TypeDesc('bool', 'bool', <String, Function>{});
+const TypeDesc $typeInt = TypeDesc('int', 'int', <String, Function>{});
+const TypeDesc $typeInt8 = TypeDesc('int8', 'int8', <String, Function>{});
+const TypeDesc $typeInt16 = TypeDesc('int16', 'int16', <String, Function>{});
+const TypeDesc $typeInt32 = TypeDesc('int32', 'int32', <String, Function>{});
+const TypeDesc $typeInt64 = TypeDesc('int64', 'int64', <String, Function>{});
+const TypeDesc $typeUint = TypeDesc('uint', 'uint', <String, Function>{});
+const TypeDesc $typeUint8 = TypeDesc('uint8', 'uint8', <String, Function>{});
+const TypeDesc $typeUint16 = TypeDesc('uint16', 'uint16', <String, Function>{});
+const TypeDesc $typeUint32 = TypeDesc('uint32', 'uint32', <String, Function>{});
+const TypeDesc $typeUint64 = TypeDesc('uint64', 'uint64', <String, Function>{});
+const TypeDesc $typeUintptr = TypeDesc(
+  'uintptr',
+  'uintptr',
+  <String, Function>{},
+);
+const TypeDesc $typeFloat32 = TypeDesc(
+  'float32',
+  'float32',
+  <String, Function>{},
+);
+const TypeDesc $typeFloat64 = TypeDesc(
+  'float64',
+  'float64',
+  <String, Function>{},
+);
+const TypeDesc $typeString = TypeDesc('string', 'string', <String, Function>{});
 
 /// True when the type holds each method of an interface.
 bool $implements(Iface? x, List<String> methods) {

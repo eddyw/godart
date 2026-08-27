@@ -7,6 +7,7 @@ import (
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
+	"github.com/eddyw/godart/internal/overlay"
 )
 
 func (e *emitter) call(x *ir.Call) string {
@@ -24,6 +25,9 @@ func (e *emitter) call(x *ir.Call) string {
 
 func (e *emitter) callText(x *ir.Call) string {
 	args := e.callArgs(x)
+	if text, ok := e.intrinsic(x, args); ok {
+		return text
+	}
 	targs, dicts := e.typeArguments(x.TypeArgs)
 	args = append(dicts, args...)
 	switch fun := x.Fun.(type) {
@@ -35,6 +39,29 @@ func (e *emitter) callText(x *ir.Call) string {
 		}
 	}
 	return e.expr(x.Fun) + "!(" + strings.Join(args, ", ") + ")"
+}
+
+// intrinsic replaces a call to the interop package with a call to the runtime
+// library.
+func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
+	id, ok := x.Fun.(*ir.Ident)
+	if !ok {
+		return "", false
+	}
+	fn, ok := id.Obj.(*types.Func)
+	if !ok || fn.Pkg() == nil || !overlay.Intrinsic(fn.Pkg().Path()) {
+		return "", false
+	}
+	switch fn.Name() {
+	case "Print":
+		return fmt.Sprintf("$stdout(%s)", args[0]), true
+	case "Format":
+		return fmt.Sprintf("$goFormat(%s, %s)", args[1], args[0]), true
+	case "Kind":
+		return fmt.Sprintf("$goKind(%s)", args[0]), true
+	}
+	e.fail("the interop function %s has no runtime form", fn.Name())
+	return "null", true
 }
 
 // typeArguments writes the type arguments of a call and the dictionary of

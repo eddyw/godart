@@ -10,22 +10,50 @@ part 'greet/greet.dart';
 
 final TypeDesc $desc$Greeter = TypeDesc(
   'example.com/multi/greet.Greeter',
+  'struct',
   <String, Function>{},
+  text: 'greet.Greeter',
+  fields: <FieldDesc>[
+    FieldDesc(
+      'Name',
+      '',
+      true,
+      () => $typeString,
+      ($r) => ($r as Greeter$).Name,
+      ($r, $v) => ($r as Greeter$).Name = $v as GoString,
+    ),
+    FieldDesc(
+      'style',
+      '',
+      false,
+      () => $desc$Style,
+      ($r) => ($r as Greeter$)._style,
+      ($r, $v) => ($r as Greeter$)._style = $v as int,
+    ),
+  ],
 );
 final TypeDesc $descP$Greeter = TypeDesc(
   '*example.com/multi/greet.Greeter',
+  'ptr',
   <String, Function>{
     'SetStyle': (Object? $r, int $a0) => ($r as Greeter$).SetStyle($a0),
     'Text': (Object? $r) => ($r as Greeter$).Text(),
   },
+  text: '*greet.Greeter',
+  elem: () => $desc$Greeter,
 );
 final TypeDesc $desc$Style = TypeDesc(
   'example.com/multi/greet.Style',
+  'int',
   <String, Function>{},
+  text: 'greet.Style',
 );
 final TypeDesc $descP$Style = TypeDesc(
   '*example.com/multi/greet.Style',
+  'ptr',
   <String, Function>{},
+  text: '*greet.Style',
+  elem: () => $desc$Style,
 );
 
 bool $initDone = false;

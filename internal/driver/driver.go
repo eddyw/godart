@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/eddyw/godart/internal/load"
 	"github.com/eddyw/godart/internal/meta"
 	"github.com/eddyw/godart/internal/normalize"
+	"github.com/eddyw/godart/internal/overlay"
 	"github.com/eddyw/godart/internal/verify"
 )
 
@@ -148,7 +150,7 @@ func readSources(p *packages.Package) (map[string][]byte, error) {
 func dependencyHashes(p *packages.Package, module string, exports map[string]string) []string {
 	var out []string
 	for path := range p.Imports {
-		if !strings.HasPrefix(path, module) {
+		if !compiled(path, module) {
 			continue
 		}
 		out = append(out, path+"="+exports[path])
@@ -210,7 +212,7 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 	}
 	var imports []emit.Import
 	for path, dep := range p.Imports {
-		if !strings.HasPrefix(path, module) {
+		if !compiled(path, module) {
 			continue
 		}
 		imports = append(imports, emit.Import{
@@ -222,6 +224,19 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 	return emit.Package(tree, p.Types, baseName(p, module), imports, blocks)
 }
 
+// compiled reports whether the build writes Dart code for a package. The
+// module belongs to the build, and so does each package of the curated
+// standard library surface.
+func compiled(pkgPath, module string) bool {
+	if overlay.Intrinsic(pkgPath) {
+		return false
+	}
+	if strings.HasPrefix(pkgPath, module) {
+		return true
+	}
+	return slices.Contains(overlay.Paths(), pkgPath)
+}
+
 // order sorts the packages of the module in dependency order. A package
 // compiles after each package that it imports.
 func order(roots []*packages.Package, module string) []*packages.Package {
@@ -229,7 +244,7 @@ func order(roots []*packages.Package, module string) []*packages.Package {
 	var out []*packages.Package
 	var visit func(p *packages.Package)
 	visit = func(p *packages.Package) {
-		if seen[p.PkgPath] || !strings.HasPrefix(p.PkgPath, module) {
+		if seen[p.PkgPath] || !compiled(p.PkgPath, module) {
 			return
 		}
 		seen[p.PkgPath] = true
@@ -258,8 +273,12 @@ func moduleOf(roots []*packages.Package) string {
 	return ""
 }
 
-// libPath mirrors the Go import path in the Dart directory structure.
+// libPath mirrors the Go import path in the Dart directory structure. A
+// standard library package goes under the directory std.
 func libPath(p *packages.Package, module string) string {
+	if !strings.HasPrefix(p.PkgPath, module) {
+		return "std/" + p.PkgPath
+	}
 	rel := strings.TrimPrefix(p.PkgPath, module)
 	rel = strings.TrimPrefix(rel, "/")
 	if rel == "" {

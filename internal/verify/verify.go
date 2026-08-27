@@ -10,12 +10,22 @@ import (
 	"go/types"
 	"strconv"
 	"strings"
+
+	"github.com/eddyw/godart/internal/overlay"
 )
 
 // supported lists the standard library packages of the curated surface. A
 // package enters this set when it compiles inside the subset, or when an
 // overlay replaces it.
-var supported = map[string]bool{}
+var supported = supportedSet()
+
+func supportedSet() map[string]bool {
+	out := map[string]bool{}
+	for _, path := range overlay.Paths() {
+		out[path] = true
+	}
+	return out
+}
 
 // Error reports 1 rejected construct.
 type Error struct {

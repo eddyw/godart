@@ -1,0 +1,63 @@
+# Parity
+
+This file lists each place where the Dart output differs from Go. A gap here is
+a known difference. A difference that this file does not list is a bug.
+
+## The reflect subset
+
+The compiler writes a type descriptor for each named type. The descriptor gives
+the name, the kind, the method table, the struct fields, and the struct tags.
+The package `fmt` reads it.
+
+| Feature | State |
+|---|---|
+| Type identity, kind, and name | Present |
+| Struct field name, tag, and value | Present |
+| Method table by name | Present |
+| Element type and key type of a container | Present |
+| `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
+| A descriptor of a generic type | Missing. A value of a generic type does not reach an interface. |
+| `reflect.DeepEqual` | Missing |
+| A method value through reflect | Missing |
+| The size and the alignment of a type | Missing. The target has no memory layout. |
+
+## The runtime
+
+| Item | Go | godart |
+|---|---|---|
+| Map order | Random for each run | The order of the writes |
+| `select` with 2 ready cases | Random | The first case in source order |
+| Deadlock | The runtime reports it and exits | The event loop ends and the program exits |
+| A pointer value in `%v` | An address | `&` and the value, or `<func>` and `<chan>` |
+| `%p` | An address | Not supported |
+| A goroutine on a second thread | Yes | No. All Go code runs in 1 isolate. |
+| `recover` | Present | Outside the subset |
+| `unsafe` and cgo | Present | Outside the subset |
+
+## The subset of the language
+
+| Item | State |
+|---|---|
+| A pointer to a value that is not a struct | Rejected |
+| `new` of a type that is not a struct | Rejected |
+| A goto label inside a nested block | Rejected |
+| A conversion between 2 struct types | Rejected |
+| A method value of a named type that is not a struct | Rejected |
+| A range loop over a function | Rejected |
+| A complex number | Rejected |
+| A type declaration inside a function | Rejected |
+
+## The standard library
+
+The verifier rejects each package outside the curated surface. The surface holds
+`errors`, `fmt`, and `syscall/dart`.
+
+| Package | Content |
+|---|---|
+| `errors` | `New`, `Is`, `Unwrap` |
+| `fmt` | `Print`, `Printf`, `Println`, `Sprint`, `Sprintf`, `Sprintln`, `Errorf` |
+| `syscall/dart` | `Print`, `Format`, `Kind`. The compiler replaces each call. |
+
+The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
+`%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.
+The flag `-` works.

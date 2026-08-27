@@ -40,8 +40,11 @@ The compiler holds all 6 stages. The subset covers:
 | Concurrency | Goroutine, channel, `select` |
 | Generics | Generic function, generic type, generic method of Go 1.27 |
 
-The standard library surface is empty. Read the workstream doc for the plan of
-the overlays.
+The standard library surface holds `errors`, `fmt`, and the interop package
+`syscall/dart`. An overlay replaces the Go source of such a package. The build
+tag `dart` selects the overlay files, thus the go command skips them.
+
+`docs/parity.md` lists each difference between Go and the Dart output.
 
 ## The 6 stages
 
@@ -53,6 +56,9 @@ the overlays.
 | 4 Normalize | `internal/normalize` | Build the intermediate tree of `internal/ir` |
 | 5 Emit | `internal/emit` | Write the Dart source code |
 | 6 Metadata | `internal/meta` | Write the archive with the 2 hashes |
+
+`internal/overlay` holds the Go source of each standard library package of the
+curated surface.
 
 `internal/driver` runs the stages over a module and writes the Dart package.
 `runtime/goruntime` holds the Dart runtime library.

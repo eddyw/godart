@@ -54,8 +54,108 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 		}
 	}
 	sort.Strings(entries)
-	e.line("final TypeDesc %s = TypeDesc('%s', <String, Function>{%s});",
-		variable, types.TypeString(t, nil), strings.Join(entries, ", "))
+	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s);",
+		variable, types.TypeString(t, nil), kindOf(t),
+		strings.Join(entries, ", "), types.TypeString(t, shortQualifier), e.descParts(t))
+}
+
+// descParts writes the fields of a struct type, and the element type and the
+// key type of a container type.
+func (e *emitter) descParts(t types.Type) string {
+	u := types.Unalias(t).Underlying()
+	if p, ok := u.(*types.Pointer); ok {
+		return ", elem: () => " + e.descriptorOf(p.Elem())
+	}
+	switch u := u.(type) {
+	case *types.Struct:
+		return e.fieldDescs(t, u)
+	case *types.Slice:
+		return ", elem: () => " + e.descriptorOf(u.Elem())
+	case *types.Array:
+		return ", elem: () => " + e.descriptorOf(u.Elem())
+	case *types.Chan:
+		return ", elem: () => " + e.descriptorOf(u.Elem())
+	case *types.Map:
+		return fmt.Sprintf(", key: () => %s, elem: () => %s",
+			e.descriptorOf(u.Key()), e.descriptorOf(u.Elem()))
+	}
+	return ""
+}
+
+// fieldDescs writes the description of each struct field. The reflect subset
+// and the fmt package read the name, the tag, and the value.
+func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
+	class := e.dartType(t)
+	parts := make([]string, st.NumFields())
+	for i := range parts {
+		field := st.Field(i)
+		dart := name.Package(field.Name())
+		parts[i] = fmt.Sprintf(
+			"FieldDesc('%s', %s, %t, () => %s, ($r) => ($r as %s).%s, ($r, $v) => ($r as %s).%s = $v as %s)",
+			field.Name(), dartString(st.Tag(i)), field.Exported(),
+			e.descriptorOf(field.Type()), class, dart, class, dart,
+			e.dartType(field.Type()))
+	}
+	return ", fields: <FieldDesc>[" + strings.Join(parts, ", ") + "]"
+}
+
+// shortQualifier writes the package name of a type, and not the import path.
+// The Go verb %v and the Go verb %T both use this form.
+func shortQualifier(p *types.Package) string { return p.Name() }
+
+// kindOf gives the kind of a type, in the words of the Go package reflect.
+func kindOf(t types.Type) string {
+	u := types.Unalias(t).Underlying()
+	switch u := u.(type) {
+	case *types.Basic:
+		switch u.Kind() {
+		case types.Bool, types.UntypedBool:
+			return "bool"
+		case types.String, types.UntypedString:
+			return "string"
+		case types.UnsafePointer:
+			return "unsafe.Pointer"
+		}
+		return u.String()
+	case *types.Slice:
+		return "slice"
+	case *types.Array:
+		return "array"
+	case *types.Map:
+		return "map"
+	case *types.Pointer:
+		return "ptr"
+	case *types.Struct:
+		return "struct"
+	case *types.Chan:
+		return "chan"
+	case *types.Signature:
+		return "func"
+	case *types.Interface:
+		return "interface"
+	}
+	return "invalid"
+}
+
+func dartString(text string) string {
+	var b strings.Builder
+	b.WriteByte('\'')
+	for _, r := range text {
+		switch r {
+		case '\'':
+			b.WriteString(`\'`)
+		case '\\':
+			b.WriteString(`\\`)
+		case '\n':
+			b.WriteString(`\n`)
+		case '$':
+			b.WriteString(`\$`)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('\'')
+	return b.String()
 }
 
 // adapter writes 1 entry of a method table. The entry takes the value of the
@@ -129,9 +229,55 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		}
 	}
 	if named, ok := u.(*types.Named); ok {
-		return e.qualify(named.Obj(), "$desc$"+name.Package(named.Obj().Name()))
+		if named.TypeParams() == nil || named.TypeParams().Len() == 0 {
+			return e.qualify(named.Obj(), "$desc$"+name.Package(named.Obj().Name()))
+		}
 	}
-	return fmt.Sprintf("const TypeDesc('%s', <String, Function>{})", types.TypeString(t, nil))
+	if b, ok := u.(*types.Basic); ok {
+		if text := basicDesc(b); text != "" {
+			return text
+		}
+	}
+	return fmt.Sprintf("TypeDesc('%s', '%s', const <String, Function>{}, text: '%s'%s)",
+		types.TypeString(t, nil), kindOf(t), types.TypeString(t, shortQualifier), e.descParts(t))
+}
+
+// basicDesc names the description of a predeclared type. The runtime library
+// holds 1 constant for each one.
+func basicDesc(b *types.Basic) string {
+	switch b.Kind() {
+	case types.Bool, types.UntypedBool:
+		return "$typeBool"
+	case types.String, types.UntypedString:
+		return "$typeString"
+	case types.Int:
+		return "$typeInt"
+	case types.Int8:
+		return "$typeInt8"
+	case types.Int16:
+		return "$typeInt16"
+	case types.Int32:
+		return "$typeInt32"
+	case types.Int64:
+		return "$typeInt64"
+	case types.Uint:
+		return "$typeUint"
+	case types.Uint8:
+		return "$typeUint8"
+	case types.Uint16:
+		return "$typeUint16"
+	case types.Uint32:
+		return "$typeUint32"
+	case types.Uint64:
+		return "$typeUint64"
+	case types.Uintptr:
+		return "$typeUintptr"
+	case types.Float32:
+		return "$typeFloat32"
+	case types.Float64, types.UntypedFloat:
+		return "$typeFloat64"
+	}
+	return ""
 }
 
 // interfaceMethods lists the method names of an interface type, in order.

@@ -1,6 +1,10 @@
 import 'dart:io';
 
 import 'panic.dart';
+import 'string.dart';
+
+/// Writes text to standard output. The package fmt uses it.
+void $stdout(GoString text) => stdout.write(text.toDartString());
 
 /// The Go builtin `print`. It writes to stderr with no separator.
 void $print(List<String> parts) => stderr.write(parts.join());
