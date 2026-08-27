@@ -55,6 +55,12 @@ func (b *builder) stmt(s ast.Stmt) []ir.Stmt {
 		return b.labeled(s)
 	case *ast.DeferStmt:
 		return b.deferStmt(s)
+	case *ast.GoStmt:
+		return b.goStmt(s)
+	case *ast.SendStmt:
+		return []ir.Stmt{&ir.Send{Chan: b.expr(s.Chan), Value: b.copyPoint(b.exprAs(s.Value, chanElem(b.typeOf(s.Chan))))}}
+	case *ast.SelectStmt:
+		return b.selectStmt(s, "")
 	}
 	b.fail(s.Pos(), "the statement %T is outside the subset", s)
 	return nil
@@ -76,6 +82,8 @@ func (b *builder) labeled(s *ast.LabeledStmt) []ir.Stmt {
 		return b.switchStmt(inner, label)
 	case *ast.TypeSwitchStmt:
 		return b.typeSwitch(inner, label)
+	case *ast.SelectStmt:
+		return b.selectStmt(inner, label)
 	}
 	body := b.stmt(s.Stmt)
 	if len(body) == 0 {
@@ -274,9 +282,11 @@ func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 			pre = append(pre, hoisted...)
 			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type}
 		default:
-			hoisted, value := b.forceHoist(fun, s.Pos(), "df")
-			pre = append(pre, hoisted...)
-			c.Fun = value
+			if !directFunc(fun) {
+				hoisted, value := b.forceHoist(fun, s.Pos(), "df")
+				pre = append(pre, hoisted...)
+				c.Fun = value
+			}
 		}
 		pre = append(pre, b.hoistArgs(c.Args, s.Pos())...)
 	case *ir.Builtin:
@@ -288,6 +298,122 @@ func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 		return nil
 	}
 	return append(pre, &ir.Defer{Call: call})
+}
+
+// goStmt starts a goroutine. Go reads the function value and each argument at
+// the point of the statement, exactly as a defer statement does.
+func (b *builder) goStmt(s *ast.GoStmt) []ir.Stmt {
+	call := b.expr(s.Call)
+	var pre []ir.Stmt
+	switch c := call.(type) {
+	case *ir.Call:
+		switch fun := c.Fun.(type) {
+		case *ir.Method:
+			hoisted, recv := b.forceHoist(b.copyPoint(fun.Recv), s.Pos(), "gr")
+			pre = append(pre, hoisted...)
+			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type}
+		default:
+			if !directFunc(fun) {
+				hoisted, value := b.forceHoist(fun, s.Pos(), "gf")
+				pre = append(pre, hoisted...)
+				c.Fun = value
+			}
+		}
+		pre = append(pre, b.hoistArgs(c.Args, s.Pos())...)
+	case *ir.Builtin:
+		pre = append(pre, b.hoistArgs(c.Args, s.Pos())...)
+	default:
+		if call != nil {
+			b.fail(s.Pos(), "go needs a call to a function")
+		}
+		return nil
+	}
+	return append(pre, &ir.Go{Call: call})
+}
+
+// selectStmt builds 1 select statement. Each case keeps its own body, and the
+// runtime gives the number of the case that it takes.
+func (b *builder) selectStmt(s *ast.SelectStmt, label string) []ir.Stmt {
+	node := &ir.Select{Label: label}
+	var pre []ir.Stmt
+	for _, clause := range s.Body.List {
+		c, ok := clause.(*ast.CommClause)
+		if !ok {
+			continue
+		}
+		out := &ir.SelectClause{Kind: ir.SelectDefault}
+		switch comm := c.Comm.(type) {
+		case nil:
+		case *ast.SendStmt:
+			out.Kind = ir.SelectSend
+			out.Chan = b.expr(comm.Chan)
+			out.Elem = chanElem(b.typeOf(comm.Chan))
+			out.Value = b.copyPoint(b.exprAs(comm.Value, out.Elem))
+		case *ast.ExprStmt:
+			recv, ok := unparenExpr(comm.X).(*ast.UnaryExpr)
+			if !ok || recv.Op != token.ARROW {
+				b.fail(comm.Pos(), "a select case needs a send or a receive")
+				continue
+			}
+			out.Kind = ir.SelectRecv
+			out.Chan = b.expr(recv.X)
+			out.Elem = chanElem(b.typeOf(recv.X))
+		case *ast.AssignStmt:
+			recv, ok := unparenExpr(comm.Rhs[0]).(*ast.UnaryExpr)
+			if !ok || recv.Op != token.ARROW {
+				b.fail(comm.Pos(), "a select case needs a send or a receive")
+				continue
+			}
+			out.Kind = ir.SelectRecv
+			out.Chan = b.expr(recv.X)
+			out.Elem = chanElem(b.typeOf(recv.X))
+			for _, lhs := range comm.Lhs {
+				if comm.Tok == token.DEFINE {
+					id, _ := lhs.(*ast.Ident)
+					obj, _ := b.info.Defs[id].(*types.Var)
+					if obj == nil {
+						out.Vars = append(out.Vars, &ir.Var{Name: "_", Type: b.typeOf(lhs)})
+						continue
+					}
+					out.Vars = append(out.Vars, b.declareLocal(obj, obj.Name()))
+					continue
+				}
+				out.Lhs = append(out.Lhs, b.expr(lhs))
+			}
+		default:
+			b.fail(c.Pos(), "a select case needs a send or a receive")
+			continue
+		}
+		body := &ir.Block{}
+		for _, st := range c.Body {
+			body.List = append(body.List, b.stmt(st)...)
+		}
+		out.Body = body
+		node.Cases = append(node.Cases, out)
+	}
+	return append(pre, node)
+}
+
+// directFunc reports whether the callee names a function or holds a fresh
+// closure. Such a callee needs no temporary variable, because no later write
+// changes it.
+func directFunc(fun ir.Expr) bool {
+	switch fun := fun.(type) {
+	case *ir.FuncLit:
+		return true
+	case *ir.Ident:
+		_, ok := fun.Obj.(*types.Func)
+		return ok
+	}
+	return false
+}
+
+func chanElem(t types.Type) types.Type {
+	c, ok := types.Unalias(t).Underlying().(*types.Chan)
+	if !ok {
+		return nil
+	}
+	return c.Elem()
 }
 
 // hoistArgs reads each argument at the point of the statement.

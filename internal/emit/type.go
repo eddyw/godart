@@ -27,6 +27,8 @@ func (e *emitter) dartType(t types.Type) string {
 		return "List<" + e.dartType(t.Elem()) + ">"
 	case *types.Map:
 		return "GoMap<" + e.dartType(t.Key()) + ", " + e.dartType(t.Elem()) + ">"
+	case *types.Chan:
+		return "Chan<" + e.dartType(t.Elem()) + ">"
 	case *types.Signature:
 		return e.funcType(t) + "?"
 	case *types.Tuple:
@@ -64,7 +66,11 @@ func (e *emitter) funcType(sig *types.Signature) string {
 	for i := range params {
 		params[i] = e.dartType(sig.Params().At(i).Type())
 	}
-	return e.resultType(sig) + " Function(" + strings.Join(params, ", ") + ")"
+	result := e.resultType(sig)
+	if e.blocks != nil && e.blocks.SignatureAsync(sig) {
+		result = "FutureOr<" + result + ">"
+	}
+	return result + " Function(" + strings.Join(params, ", ") + ")"
 }
 
 // resultType gives the Dart type that holds the results. A function with more
@@ -117,7 +123,9 @@ func (e *emitter) zero(t types.Type) string {
 	case *types.Map:
 		return fmt.Sprintf("GoMap<%s, %s>.nil(() => %s)",
 			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
-	case *types.Pointer, *types.Signature, *types.Interface, *types.Chan:
+	case *types.Chan:
+		return fmt.Sprintf("Chan<%s>.nil(() => %s)", e.dartType(u.Elem()), e.zero(u.Elem()))
+	case *types.Pointer, *types.Signature, *types.Interface:
 		return "null"
 	}
 	e.fail("the type %s has no zero value in the subset", t)
@@ -234,6 +242,11 @@ func isArrayType(t types.Type) bool {
 
 func isMapType(t types.Type) bool {
 	_, ok := types.Unalias(t).Underlying().(*types.Map)
+	return ok
+}
+
+func isChanType(t types.Type) bool {
+	_, ok := types.Unalias(t).Underlying().(*types.Chan)
 	return ok
 }
 

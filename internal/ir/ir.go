@@ -143,7 +143,36 @@ type (
 	Go struct{ Call Expr }
 
 	Defer struct{ Call Expr }
+
+	// Select runs 1 case of a select statement.
+	Select struct {
+		Cases []*SelectClause
+		Label string
+	}
 )
+
+// SelectKind names the form of 1 case of a select statement.
+type SelectKind int
+
+const (
+	SelectRecv SelectKind = iota
+	SelectSend
+	SelectDefault
+)
+
+// SelectClause is 1 case of a select statement.
+type SelectClause struct {
+	Kind SelectKind
+	Chan Expr
+	// Value holds the value of a send case.
+	Value Expr
+	// Vars holds the variables that a receive case declares, and Lhs holds the
+	// locations that a receive case writes.
+	Vars []*Var
+	Lhs  []Expr
+	Elem types.Type
+	Body *Block
+}
 
 // Case is 1 case of a switch. An empty Values list marks the default case.
 type Case struct {
@@ -168,6 +197,7 @@ func (*Switch) isStmt()      {}
 func (*Send) isStmt()        {}
 func (*Go) isStmt()          {}
 func (*Defer) isStmt()       {}
+func (*Select) isStmt()      {}
 
 // An Expr is an expression. Each expression carries its Go type.
 type Expr interface {

@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/eddyw/godart/internal/analyze"
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
 )
@@ -28,9 +29,9 @@ type Result struct {
 
 // Package writes the Dart source code of 1 package. Base names the library
 // file, and imports lists the Dart libraries of the Go dependencies.
-func Package(p *ir.Package, tpkg *types.Package, base string, imports []Import) (*Result, error) {
+func Package(p *ir.Package, tpkg *types.Package, base string, imports []Import, blocks *analyze.Result) (*Result, error) {
 	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: base,
-		initNames: map[*ir.Func]string{}}
+		initNames: map[*ir.Func]string{}, blocks: blocks}
 	e.setPrefixes(imports)
 	e.groupMethods(p)
 	out := &Result{Library: base + ".dart", Files: map[string]string{}}
@@ -78,6 +79,9 @@ type emitter struct {
 	// empty only in a function that holds a defer statement and a named result.
 	returnLabel string
 	returnVars  []*ir.Var
+	// blocks holds the result of stage 3. It gives the async form of a
+	// function value and of an interface method.
+	blocks *analyze.Result
 }
 
 func (e *emitter) fail(format string, args ...any) {
@@ -214,11 +218,21 @@ func (e *emitter) writeInit() {
 }
 
 func (e *emitter) writeMain() {
-	e.line("void main() {")
+	async := e.mainFunc != nil && e.mainFunc.Async
+	if async {
+		e.line("Future<void> main() async {")
+	} else {
+		e.line("void main() {")
+	}
+	e.line("$goPanic = $fatal;")
 	e.line("$init();")
 	if e.mainFunc != nil {
 		e.line("try {")
-		e.line("_main();")
+		if async {
+			e.line("await _main();")
+		} else {
+			e.line("_main();")
+		}
 		e.line("} on GoPanic catch ($p) {")
 		e.line("$fatal($p);")
 		e.line("}")

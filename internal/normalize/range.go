@@ -29,6 +29,8 @@ func (b *builder) rangeStmt(s *ast.RangeStmt, label string) []ir.Stmt {
 		}
 	case *types.Map:
 		return b.rangeMap(s, label)
+	case *types.Chan:
+		return b.rangeChan(s, label, t.Elem())
 	}
 	b.fail(s.Pos(), "a range loop over %s is outside the subset", b.typeOf(s.X))
 	return nil
@@ -162,6 +164,28 @@ func (b *builder) rangeMap(s *ast.RangeStmt, label string) []ir.Stmt {
 		Label: label,
 	}
 	return append(pre, loop)
+}
+
+// rangeChan reads a channel until the channel closes.
+func (b *builder) rangeChan(s *ast.RangeStmt, label string, elem types.Type) []ir.Stmt {
+	pre, container := b.hoist(b.expr(s.X), s.X.Pos(), "range")
+	value := b.tempVar(s.Pos(), "v", elem)
+	okVar := b.tempVar(s.Pos(), "ok", types.Typ[types.Bool])
+	ok := &ir.Ident{Name: okVar.Name, Type: types.Typ[types.Bool]}
+	body := &ir.Block{}
+	body.List = append(body.List, &ir.Declare{
+		Vars: []*ir.Var{value, okVar},
+		Init: &ir.Recv{Chan: container, Comma: true,
+			Type: types.NewTuple(anonVar(elem), anonVar(types.Typ[types.Bool]))},
+	})
+	body.List = append(body.List, &ir.If{
+		Cond: &ir.Unary{Op: token.NOT, X: ok, Type: types.Typ[types.Bool]},
+		Then: &ir.Block{List: []ir.Stmt{&ir.Break{Label: label}}},
+	})
+	body.List = append(body.List, b.bind(s, s.Key,
+		b.copyPoint(&ir.Ident{Name: value.Name, Type: elem}))...)
+	body.List = append(body.List, b.block(s.Body).List...)
+	return append(pre, &ir.For{Body: body, Label: label})
 }
 
 func elemType(t types.Type) types.Type {

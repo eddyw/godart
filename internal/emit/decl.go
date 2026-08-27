@@ -140,7 +140,7 @@ func (e *emitter) writeEqual(class string, st *types.Struct, fields []string) {
 
 // method writes a method of a struct class.
 func (e *emitter) method(f *ir.Func) {
-	e.line("%s %s(%s) {", e.results(f), name.Package(f.Name), e.params(f.Params))
+	e.line("%s %s(%s)%s {", e.results(f), name.Package(f.Name), e.params(f.Params), asyncWord(f.Async))
 	e.receiver(f)
 	e.body(f)
 	e.line("}")
@@ -164,7 +164,7 @@ func (e *emitter) funcDecl(f *ir.Func) {
 		e.methodFunc(f)
 		return
 	}
-	e.line("%s %s(%s) {", e.results(f), e.funcName(f), e.params(f.Params))
+	e.line("%s %s(%s)%s {", e.results(f), e.funcName(f), e.params(f.Params), asyncWord(f.Async))
 	e.body(f)
 	e.line("}")
 	e.line("")
@@ -180,7 +180,8 @@ func (e *emitter) methodFunc(f *ir.Func) {
 		return
 	}
 	params := append([]string{e.dartType(f.Recv.Type) + " " + f.Recv.Name}, e.paramList(f.Params)...)
-	e.line("%s %s(%s) {", e.results(f), methodFuncName(obj.Name(), f.Name), strings.Join(params, ", "))
+	e.line("%s %s(%s)%s {", e.results(f), methodFuncName(obj.Name(), f.Name),
+		strings.Join(params, ", "), asyncWord(f.Async))
 	e.body(f)
 	e.line("}")
 	e.line("")
@@ -221,18 +222,37 @@ func (e *emitter) paramList(vars []*ir.Var) []string {
 	return out
 }
 
+func asyncWord(async bool) string {
+	if async {
+		return " async"
+	}
+	return ""
+}
+
 func (e *emitter) results(f *ir.Func) string {
-	switch len(f.Results) {
+	return e.resultText(f.Results, f.Async)
+}
+
+// resultText gives the Dart result type. A function that can block returns a
+// Future, because it compiles to a Dart async function.
+func (e *emitter) resultText(results []*ir.Var, async bool) string {
+	var base string
+	switch len(results) {
 	case 0:
-		return "void"
+		base = "void"
 	case 1:
-		return e.dartType(f.Results[0].Type)
+		base = e.dartType(results[0].Type)
+	default:
+		parts := make([]string, len(results))
+		for i, r := range results {
+			parts[i] = e.dartType(r.Type)
+		}
+		base = "(" + strings.Join(parts, ", ") + ")"
 	}
-	parts := make([]string, len(f.Results))
-	for i, r := range f.Results {
-		parts[i] = e.dartType(r.Type)
+	if async {
+		return "Future<" + base + ">"
 	}
-	return "(" + strings.Join(parts, ", ") + ")"
+	return base
 }
 
 // body writes the statements of a function. A named result becomes a local

@@ -105,6 +105,14 @@ func (b *builder) hoist(e ir.Expr, pos token.Pos, role string) ([]ir.Stmt, ir.Ex
 // multiValue builds an expression that gives more than 1 value. A map read, a
 // type assertion, and a channel receive each have a form with 2 values.
 func (b *builder) multiValue(e ast.Expr) ir.Expr {
+	if x, ok := unparenExpr(e).(*ast.UnaryExpr); ok && x.Op == token.ARROW {
+		elem := b.typeOf(x)
+		return &ir.Recv{
+			Chan:  b.expr(x.X),
+			Comma: true,
+			Type:  types.NewTuple(anonVar(elem), anonVar(types.Typ[types.Bool])),
+		}
+	}
 	if x, ok := unparenExpr(e).(*ast.TypeAssertExpr); ok {
 		assert := b.typeOf(x.Type)
 		return &ir.TypeAssert{
@@ -273,8 +281,7 @@ func isUntyped(t types.Type) bool {
 
 func (b *builder) unary(e *ast.UnaryExpr) ir.Expr {
 	if e.Op == token.ARROW {
-		b.fail(e.Pos(), "a channel receive is not supported yet")
-		return nil
+		return &ir.Recv{Chan: b.expr(e.X), Type: b.typeOf(e)}
 	}
 	x := b.expr(e.X)
 	if x == nil {
@@ -387,7 +394,7 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	if sig == nil {
 		return nil
 	}
-	out := &ir.FuncLit{Type: sig}
+	out := &ir.FuncLit{Type: sig, Async: b.blocks.Blocks(e)}
 	prev := b.fn
 	inner := &ir.Func{Params: b.varsOf(sig.Params()), Results: b.results(sig)}
 	b.fn = inner

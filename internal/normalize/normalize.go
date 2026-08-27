@@ -16,12 +16,13 @@ import (
 
 	"github.com/eddyw/godart/internal/name"
 
+	"github.com/eddyw/godart/internal/analyze"
 	"github.com/eddyw/godart/internal/ir"
 )
 
 // Package builds the intermediate tree of 1 package.
-func Package(fset *token.FileSet, files []*ast.File, info *types.Info, pkg *types.Package) (*ir.Package, error) {
-	b := &builder{fset: fset, info: info, pkg: pkg}
+func Package(fset *token.FileSet, files []*ast.File, info *types.Info, pkg *types.Package, blocks *analyze.Result) (*ir.Package, error) {
+	b := &builder{fset: fset, info: info, pkg: pkg, blocks: blocks}
 	out := &ir.Package{Path: pkg.Path(), Name: pkg.Name()}
 	for _, f := range files {
 		file := &ir.File{Name: filepath.Base(fset.Position(f.Pos()).Filename)}
@@ -47,6 +48,9 @@ type builder struct {
 
 	// gotoLabels holds the label of each goto target of the current function.
 	gotoLabels map[string]bool
+
+	// blocks holds the result of stage 3.
+	blocks *analyze.Result
 }
 
 // declareLocal gives a local variable a name that is unique in the function.
@@ -169,7 +173,7 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 		b.fail(d.Pos(), "a generic function is not supported yet")
 		return nil
 	}
-	f := &ir.Func{Name: obj.Name(), Obj: obj, Pos: d.Pos()}
+	f := &ir.Func{Name: obj.Name(), Obj: obj, Pos: d.Pos(), Async: b.blocks.Blocks(obj)}
 	b.names = map[types.Object]string{}
 	b.used = map[string]bool{}
 	b.gotoLabels = gotoTargets(d.Body)

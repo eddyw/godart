@@ -10,6 +10,19 @@ import (
 )
 
 func (e *emitter) call(x *ir.Call) string {
+	text := e.callText(x)
+	if !x.Async {
+		return text
+	}
+	// Dart rejects a void expression inside parentheses, thus a call with no
+	// result keeps the plain form.
+	if sig := signatureOf(x.Fun.GoType()); sig != nil && sig.Results().Len() == 0 {
+		return "await " + text
+	}
+	return "(await " + text + ")"
+}
+
+func (e *emitter) callText(x *ir.Call) string {
 	args := e.callArgs(x)
 	switch fun := x.Fun.(type) {
 	case *ir.Method:
@@ -129,6 +142,8 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 		return "null"
 	case "mapkeys":
 		return e.expr(x.Args[0]) + ".keys()"
+	case "close":
+		return e.expr(x.Args[0]) + ".close()"
 	case "maphas":
 		return fmt.Sprintf("%s.has(%s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
 	}
@@ -147,6 +162,8 @@ func (e *emitter) length(x ir.Expr) string {
 		return e.expr(x) + ".length"
 	case isMapType(t):
 		return e.expr(x) + ".length"
+	case isChanType(t):
+		return e.expr(x) + ".length"
 	case isPointerType(t):
 		return e.deref(x) + ".length"
 	}
@@ -161,6 +178,8 @@ func (e *emitter) capacity(x ir.Expr) string {
 		return e.expr(x) + ".cap"
 	case isArrayType(t):
 		return e.expr(x) + ".length"
+	case isChanType(t):
+		return e.expr(x) + ".capacity"
 	case isPointerType(t):
 		return e.deref(x) + ".length"
 	}
@@ -216,6 +235,13 @@ func (e *emitter) makeCall(x *ir.Builtin) string {
 	case *types.Map:
 		return fmt.Sprintf("GoMap<%s, %s>(() => %s)",
 			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
+	case *types.Chan:
+		capacity := "0"
+		if len(x.Args) > 0 {
+			capacity = e.expr(x.Args[0])
+		}
+		return fmt.Sprintf("Chan<%s>(%s, () => %s)",
+			e.dartType(u.Elem()), capacity, e.zero(u.Elem()))
 	}
 	e.fail("make does not apply to the type %s yet", x.Type)
 	return "null"

@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/tools/go/packages"
 
+	"github.com/eddyw/godart/internal/analyze"
 	"github.com/eddyw/godart/internal/emit"
 	"github.com/eddyw/godart/internal/load"
 	"github.com/eddyw/godart/internal/normalize"
@@ -37,10 +38,16 @@ func Build(opt Options) error {
 		return fmt.Errorf("the packages belong to no module")
 	}
 	pkgs := order(roots, module)
+	for _, p := range pkgs {
+		if err := verify.Package(p.Fset, p.Syntax, p.TypesInfo); err != nil {
+			return err
+		}
+	}
+	blocks := analyze.Module(pkgs)
 	dartPkg := dartPackageName(module)
 	files := map[string]string{}
 	for _, p := range pkgs {
-		out, err := compile(p, module, dartPkg)
+		out, err := compile(p, module, dartPkg, blocks)
 		if err != nil {
 			return err
 		}
@@ -63,11 +70,8 @@ func Build(opt Options) error {
 	return nil
 }
 
-func compile(p *packages.Package, module, dartPkg string) (*emit.Result, error) {
-	if err := verify.Package(p.Fset, p.Syntax, p.TypesInfo); err != nil {
-		return nil, err
-	}
-	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types)
+func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result) (*emit.Result, error) {
+	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +86,7 @@ func compile(p *packages.Package, module, dartPkg string) (*emit.Result, error) 
 		})
 	}
 	sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
-	return emit.Package(tree, p.Types, baseName(p, module), imports)
+	return emit.Package(tree, p.Types, baseName(p, module), imports, blocks)
 }
 
 // order sorts the packages of the module in dependency order. A package

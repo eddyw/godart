@@ -48,6 +48,12 @@ func (e *emitter) stmt(s ir.Stmt) {
 		e.stmt(s.Stmt)
 	case *ir.Defer:
 		e.line("$defer.push(() => %s);", e.expr(s.Call))
+	case *ir.Send:
+		e.line("await %s.send(%s);", e.expr(s.Chan), e.expr(s.Value))
+	case *ir.Go:
+		e.goStmt(s)
+	case *ir.Select:
+		e.selectStmt(s)
 	case *ir.Goto:
 		e.fail("the label %s of a goto statement is outside the function body", s.Label)
 	default:
@@ -113,6 +119,103 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 		}
 	}
 	e.line("%s = %s;", e.expr(lhs), value)
+}
+
+// goStmt starts a goroutine. Go waits for the scheduler, thus the body does not
+// run at the point of the statement.
+func (e *emitter) goStmt(s *ir.Go) {
+	text := e.expr(s.Call)
+	if call, ok := s.Call.(*ir.Call); ok && call.Async {
+		e.line("$go(() async { %s; });", text)
+		return
+	}
+	e.line("$go(() { %s; });", text)
+}
+
+// selectStmt writes a select statement. The runtime gives the number of the
+// case that it takes, and a labeled block holds the bodies.
+func (e *emitter) selectStmt(s *ir.Select) {
+	label := s.Label
+	if label == "" {
+		e.labelSeq++
+		label = fmt.Sprintf("$sel%d", e.labelSeq)
+	}
+	list := label + "$c"
+	choice := label + "$i"
+	hasDefault := false
+	parts := make([]string, 0, len(s.Cases))
+	for _, c := range s.Cases {
+		switch c.Kind {
+		case ir.SelectRecv:
+			parts = append(parts, fmt.Sprintf("RecvCase<%s>(%s)", e.dartType(c.Elem), e.expr(c.Chan)))
+		case ir.SelectSend:
+			parts = append(parts, fmt.Sprintf("SendCase<%s>(%s, %s)",
+				e.dartType(c.Elem), e.expr(c.Chan), e.expr(c.Value)))
+		default:
+			hasDefault = true
+		}
+	}
+	e.line("%s:", label)
+	e.line("{")
+	e.line("final List<SelectCase> %s = <SelectCase>[%s];", list, strings.Join(parts, ", "))
+	e.line("final int %s = await $select(%s, %t);", choice, list, hasDefault)
+	e.breakables = append(e.breakables, label)
+	index := 0
+	first := true
+	for _, c := range s.Cases {
+		if c.Kind == ir.SelectDefault {
+			continue
+		}
+		keyword := "else if"
+		if first {
+			keyword = "if"
+			first = false
+		}
+		e.line("%s (%s == %d) {", keyword, choice, index)
+		if c.Kind == ir.SelectRecv {
+			e.selectRecvBind(c, list, index, label)
+		}
+		for _, inner := range c.Body.List {
+			e.stmt(inner)
+		}
+		e.line("}")
+		index++
+	}
+	for _, c := range s.Cases {
+		if c.Kind != ir.SelectDefault {
+			continue
+		}
+		if first {
+			e.line("{")
+		} else {
+			e.line("else {")
+		}
+		for _, inner := range c.Body.List {
+			e.stmt(inner)
+		}
+		e.line("}")
+	}
+	e.breakables = e.breakables[:len(e.breakables)-1]
+	e.line("}")
+}
+
+// selectRecvBind writes the value and the ok flag of a receive case.
+func (e *emitter) selectRecvBind(c *ir.SelectClause, list string, index int, label string) {
+	read := fmt.Sprintf("%s$r%d", label, index)
+	e.line("final %s = (%s[%d] as RecvCase<%s>).result!;", read, list, index, e.dartType(c.Elem))
+	fields := []string{read + ".$1", read + ".$2"}
+	for i, v := range c.Vars {
+		if i >= len(fields) || v.Name == "_" {
+			continue
+		}
+		e.line("%s %s = %s;", e.dartType(v.Type), v.Name, fields[i])
+	}
+	for i, lhs := range c.Lhs {
+		if i >= len(fields) {
+			continue
+		}
+		e.line("%s = %s;", e.expr(lhs), fields[i])
+	}
 }
 
 func (e *emitter) ifStmt(s *ir.If) {

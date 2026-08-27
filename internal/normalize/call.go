@@ -34,6 +34,7 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		Fun:      fun,
 		Args:     b.args(e, sig),
 		Type:     b.typeOf(e),
+		Async:    b.blocks.CallAsync(e),
 		Spread:   e.Ellipsis.IsValid(),
 		Variadic: sig != nil && sig.Variadic(),
 	}

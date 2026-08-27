@@ -165,6 +165,9 @@ func (e *emitter) interfaceCall(m *ir.Method, args []string) string {
 		return "null"
 	}
 	result := e.resultType(sig)
+	if e.blocks != nil && e.blocks.MethodAsync(m.Obj.Name(), sig) {
+		result = "FutureOr<" + result + ">"
+	}
 	if isPure(m.Recv) {
 		recv := e.expr(m.Recv)
 		params := []string{"Object?"}

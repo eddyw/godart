@@ -55,6 +55,11 @@ func (e *emitter) expr(x ir.Expr) string {
 		return e.funcLit(x)
 	case *ir.Copy:
 		return e.copyExpr(x)
+	case *ir.Recv:
+		if x.Comma {
+			return fmt.Sprintf("(await %s.receive())", e.expr(x.Chan))
+		}
+		return fmt.Sprintf("(await %s.receive()).$1", e.expr(x.Chan))
 	case *ir.Record:
 		parts := make([]string, len(x.Elems))
 		for i, el := range x.Elems {
@@ -282,7 +287,7 @@ func (e *emitter) copyExpr(x *ir.Copy) string {
 
 func (e *emitter) funcLit(x *ir.FuncLit) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "(%s) {", e.params(x.Params))
+	fmt.Fprintf(&b, "(%s)%s {", e.params(x.Params), asyncWord(x.Async))
 	e.buf.WriteString("")
 	inner := &emitter{pkg: e.pkg, prefixes: e.prefixes, base: e.base,
 		methods: e.methods, inClass: e.inClass, initNames: e.initNames,
