@@ -28,6 +28,12 @@ func (e *emitter) writeDescriptors() {
 		if !ok || isInterfaceType(named) {
 			continue
 		}
+		// A generic type needs 1 descriptor for each instance. The compiler
+		// does not build such a descriptor yet, thus a value of a generic type
+		// does not reach an interface.
+		if named.TypeParams() != nil && named.TypeParams().Len() > 0 {
+			continue
+		}
 		e.descriptor(named, false)
 		e.descriptor(named, true)
 	}
@@ -43,7 +49,9 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 	set := types.NewMethodSet(t)
 	entries := make([]string, 0, set.Len())
 	for i := 0; i < set.Len(); i++ {
-		entries = append(entries, e.adapter(named, set.At(i)))
+		if entry := e.adapter(named, set.At(i)); entry != "" {
+			entries = append(entries, entry)
+		}
 	}
 	sort.Strings(entries)
 	e.line("final TypeDesc %s = TypeDesc('%s', <String, Function>{%s});",
@@ -59,6 +67,11 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection) string {
 	}
 	sig, ok := fn.Type().(*types.Signature)
 	if !ok {
+		return ""
+	}
+	if sig.TypeParams() != nil && sig.TypeParams().Len() > 0 {
+		// Go forbids a type parameter on an interface method, thus a generic
+		// method never reaches a method table.
 		return ""
 	}
 	params := make([]string, sig.Params().Len())

@@ -169,10 +169,6 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	if sig == nil {
 		return nil
 	}
-	if sig.TypeParams() != nil || sig.RecvTypeParams() != nil {
-		b.fail(d.Pos(), "a generic function is not supported yet")
-		return nil
-	}
 	f := &ir.Func{Name: obj.Name(), Obj: obj, Pos: d.Pos(), Async: b.blocks.Blocks(obj)}
 	b.names = map[types.Object]string{}
 	b.used = map[string]bool{}
@@ -181,6 +177,7 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	if d.Recv != nil && len(d.Recv.List) > 0 {
 		f.Recv = b.recvVar(d.Recv.List[0], sig)
 	}
+	f.TypeParams = typeParams(sig.TypeParams())
 	f.Params = b.varsOf(sig.Params())
 	f.Results = b.results(sig)
 	if d.Body == nil {
@@ -193,6 +190,18 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	}
 	b.fn = nil
 	return f
+}
+
+// typeParams lists the type parameters of a signature.
+func typeParams(list *types.TypeParamList) []*types.TypeParam {
+	if list == nil {
+		return nil
+	}
+	out := make([]*types.TypeParam, list.Len())
+	for i := range out {
+		out[i] = list.At(i)
+	}
+	return out
 }
 
 // gotoTargets lists the label of each goto statement of a function body.

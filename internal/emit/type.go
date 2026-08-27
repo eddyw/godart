@@ -16,9 +16,11 @@ func (e *emitter) dartType(t types.Type) string {
 		return basicType(t)
 	case *types.Named:
 		if _, ok := t.Underlying().(*types.Struct); ok {
-			return e.className(t.Obj())
+			return e.className(t.Obj()) + e.typeArgList(t.TypeArgs())
 		}
 		return e.dartType(t.Underlying())
+	case *types.TypeParam:
+		return name.Local(t.Obj().Name())
 	case *types.Pointer:
 		return e.dartType(t.Elem()) + "?"
 	case *types.Slice:
@@ -97,9 +99,13 @@ func (e *emitter) recordType(t *types.Tuple) string {
 // zero gives the Dart text of the zero value of a Go type.
 func (e *emitter) zero(t types.Type) string {
 	u := types.Unalias(t)
+	if tp, ok := u.(*types.TypeParam); ok {
+		return e.dictOf(tp) + ".zero()"
+	}
 	if named, ok := u.(*types.Named); ok {
 		if _, isStruct := named.Underlying().(*types.Struct); isStruct {
-			return e.className(named.Obj()) + ".$zero()"
+			return e.className(named.Obj()) + e.typeArgList(named.TypeArgs()) +
+				".$zero(" + strings.Join(e.dictArgs(named.TypeArgs()), ", ") + ")"
 		}
 		u = named.Underlying()
 	}
@@ -137,9 +143,150 @@ func (e *emitter) makeArray(a *types.Array) string {
 		e.dartType(a.Elem()), a.Len(), e.zero(a.Elem()))
 }
 
+// typeParamBound gives the Dart bound of a type parameter.
+//
+// A Go constraint lists a set of types, and Dart has no such form. The bound
+// takes the Dart type that holds each type of the set, thus an operator of the
+// set still applies.
+func (e *emitter) typeParamBound(tp *types.TypeParam) string {
+	iface, ok := types.Unalias(tp.Constraint()).Underlying().(*types.Interface)
+	if !ok {
+		return ""
+	}
+	var terms []types.Type
+	if !collectTerms(iface, &terms, 0) || len(terms) == 0 {
+		return ""
+	}
+	dart := ""
+	numeric := true
+	for _, t := range terms {
+		text := e.dartType(t)
+		if text != "int" && text != "double" {
+			numeric = false
+		}
+		if dart == "" {
+			dart = text
+			continue
+		}
+		if dart != text {
+			if numeric {
+				dart = "num"
+				continue
+			}
+			return ""
+		}
+	}
+	if dart == "Object?" {
+		return ""
+	}
+	return dart
+}
+
+// collectTerms reads the type set of a constraint.
+func collectTerms(iface *types.Interface, out *[]types.Type, depth int) bool {
+	if depth > 8 {
+		return false
+	}
+	for i := 0; i < iface.NumEmbeddeds(); i++ {
+		switch t := types.Unalias(iface.EmbeddedType(i)).(type) {
+		case *types.Union:
+			for k := 0; k < t.Len(); k++ {
+				*out = append(*out, t.Term(k).Type())
+			}
+		case *types.Interface:
+			if !collectTerms(t, out, depth+1) {
+				return false
+			}
+		case *types.Named:
+			inner, ok := t.Underlying().(*types.Interface)
+			if !ok {
+				return false
+			}
+			if !collectTerms(inner, out, depth+1) {
+				return false
+			}
+		default:
+			*out = append(*out, t)
+		}
+	}
+	return true
+}
+
+// typeArgList writes the type arguments of an instance of a generic type.
+func (e *emitter) typeArgList(args *types.TypeList) string {
+	if args == nil || args.Len() == 0 {
+		return ""
+	}
+	parts := make([]string, args.Len())
+	for i := range parts {
+		parts[i] = e.dartType(args.At(i))
+	}
+	return "<" + strings.Join(parts, ", ") + ">"
+}
+
+// dictArgs writes the dictionary of each type argument.
+func (e *emitter) dictArgs(args *types.TypeList) []string {
+	if args == nil {
+		return nil
+	}
+	out := make([]string, args.Len())
+	for i := range out {
+		out[i] = e.dictOf(args.At(i))
+	}
+	return out
+}
+
+// dictOf gives the run time data of 1 type. A generic function reads the zero
+// value, the equality, and the hash of a type argument from it.
+func (e *emitter) dictOf(t types.Type) string {
+	u := types.Unalias(t)
+	if tp, ok := u.(*types.TypeParam); ok {
+		return "$d" + name.Local(tp.Obj().Name())
+	}
+	if b, ok := u.Underlying().(*types.Basic); ok {
+		switch {
+		case b.Info()&types.IsString != 0:
+			return "$dictString"
+		case b.Info()&types.IsFloat != 0:
+			return "$dictDouble"
+		case b.Kind() == types.Bool || b.Kind() == types.UntypedBool:
+			return "$dictBool"
+		case b.Info()&types.IsInteger != 0:
+			return "$dictInt"
+		}
+	}
+	dart := e.dartType(t)
+	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s)",
+		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t))
+}
+
+// equalText writes the Go equality of 2 values of a type.
+func (e *emitter) equalText(a, b string, t types.Type) string {
+	if isArrayType(t) {
+		return fmt.Sprintf("$equalArray(%s, %s)", a, b)
+	}
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return fmt.Sprintf("%s.equal(%s, %s)", e.dictOf(tp), a, b)
+	}
+	return a + " == " + b
+}
+
+func (e *emitter) hashText(v string, t types.Type) string {
+	if isArrayType(t) {
+		return fmt.Sprintf("Object.hashAll(%s)", v)
+	}
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return fmt.Sprintf("%s.hash(%s)", e.dictOf(tp), v)
+	}
+	return v + ".hashCode"
+}
+
 // alloc gives a Dart function that builds the backing array of a slice. A
 // numeric element type takes a typed data list.
 func (e *emitter) alloc(elem types.Type) string {
+	if tp, ok := types.Unalias(elem).(*types.TypeParam); ok {
+		return e.dictOf(tp) + ".alloc"
+	}
 	if list := typedList(elem); list != "" {
 		return fmt.Sprintf("(n) => %s(n)", list)
 	}
@@ -199,8 +346,8 @@ func (e *emitter) qualify(obj types.Object, dartName string) string {
 // isUnsigned64 reports whether the type needs the unsigned helpers. A narrower
 // unsigned type keeps a value that fits in a Dart int with no sign change.
 func isUnsigned64(t types.Type) bool {
-	b, ok := types.Unalias(t).Underlying().(*types.Basic)
-	if !ok {
+	b := basicOf(t)
+	if b == nil {
 		return false
 	}
 	switch b.Kind() {
@@ -211,23 +358,56 @@ func isUnsigned64(t types.Type) bool {
 }
 
 func isUnsigned(t types.Type) bool {
-	b, ok := types.Unalias(t).Underlying().(*types.Basic)
-	return ok && b.Info()&types.IsUnsigned != 0
+	b := basicOf(t)
+	return b != nil && b.Info()&types.IsUnsigned != 0
 }
 
 func isInteger(t types.Type) bool {
-	b, ok := types.Unalias(t).Underlying().(*types.Basic)
-	return ok && b.Info()&types.IsInteger != 0
+	b := basicOf(t)
+	return b != nil && b.Info()&types.IsInteger != 0
 }
 
 func isFloat(t types.Type) bool {
-	b, ok := types.Unalias(t).Underlying().(*types.Basic)
-	return ok && b.Info()&types.IsFloat != 0
+	b := basicOf(t)
+	return b != nil && b.Info()&types.IsFloat != 0
 }
 
 func isString(t types.Type) bool {
-	b, ok := types.Unalias(t).Underlying().(*types.Basic)
-	return ok && b.Info()&types.IsString != 0
+	b := basicOf(t)
+	return b != nil && b.Info()&types.IsString != 0
+}
+
+// basicOf gives the basic type behind a Go type. A type parameter gives the
+// basic type of its type set, and only when each type of the set agrees.
+func basicOf(t types.Type) *types.Basic {
+	u := types.Unalias(t)
+	if tp, ok := u.(*types.TypeParam); ok {
+		iface, ok := types.Unalias(tp.Constraint()).Underlying().(*types.Interface)
+		if !ok {
+			return nil
+		}
+		var terms []types.Type
+		if !collectTerms(iface, &terms, 0) || len(terms) == 0 {
+			return nil
+		}
+		var out *types.Basic
+		for _, term := range terms {
+			b, ok := types.Unalias(term).Underlying().(*types.Basic)
+			if !ok {
+				return nil
+			}
+			if out == nil {
+				out = b
+				continue
+			}
+			if out.Kind() != b.Kind() {
+				return nil
+			}
+		}
+		return out
+	}
+	b, _ := u.Underlying().(*types.Basic)
+	return b
 }
 
 func isStructType(t types.Type) bool {
@@ -262,8 +442,11 @@ func isPointerType(t types.Type) bool {
 
 // mask gives the runtime function that keeps a value inside a narrow type.
 func mask(t types.Type) string {
-	b, ok := types.Unalias(t).Underlying().(*types.Basic)
-	if !ok {
+	if _, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return ""
+	}
+	b := basicOf(t)
+	if b == nil {
 		return ""
 	}
 	switch b.Kind() {

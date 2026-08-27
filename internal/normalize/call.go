@@ -37,6 +37,61 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		Async:    b.blocks.CallAsync(e),
 		Spread:   e.Ellipsis.IsValid(),
 		Variadic: sig != nil && sig.Variadic(),
+		TypeArgs: b.typeArgs(e.Fun),
+	}
+}
+
+// typeArgs reads the type arguments of a call to a generic function. The type
+// checker records them, also when the source gives none and inference finds
+// them.
+func (b *builder) typeArgs(fun ast.Expr) []types.Type {
+	id := funcIdent(fun)
+	if id == nil {
+		return nil
+	}
+	inst, ok := b.info.Instances[id]
+	if !ok || inst.TypeArgs == nil {
+		return nil
+	}
+	// A method of a generic type also has an instance. Only the type
+	// parameters of the function itself need a type argument here, thus the
+	// list keeps the last ones.
+	want := 0
+	if fn, ok := b.info.Uses[id].(*types.Func); ok {
+		if sig, ok := fn.Origin().Type().(*types.Signature); ok {
+			want = sig.TypeParams().Len()
+		}
+	} else if _, ok := b.info.Uses[id].(*types.TypeName); ok {
+		want = inst.TypeArgs.Len()
+	}
+	if want == 0 || want > inst.TypeArgs.Len() {
+		return nil
+	}
+	out := make([]types.Type, want)
+	start := inst.TypeArgs.Len() - want
+	for i := range out {
+		out[i] = inst.TypeArgs.At(start + i)
+	}
+	return out
+}
+
+// funcIdent finds the name of the called function.
+func funcIdent(e ast.Expr) *ast.Ident {
+	for {
+		switch x := e.(type) {
+		case *ast.ParenExpr:
+			e = x.X
+		case *ast.IndexExpr:
+			e = x.X
+		case *ast.IndexListExpr:
+			e = x.X
+		case *ast.SelectorExpr:
+			return x.Sel
+		case *ast.Ident:
+			return x
+		default:
+			return nil
+		}
 	}
 }
 

@@ -13,31 +13,51 @@ import (
 // the copy operations that give the struct value semantics, and the methods.
 func (e *emitter) class(obj *types.TypeName, named *types.Named, st *types.Struct) {
 	class := name.Type(obj.Name())
+	params := typeParamsOf(named.TypeParams())
+	head := class + e.typeParamDecl(params)
 	fields := make([]string, st.NumFields())
 	for i := range fields {
 		fields[i] = name.Package(st.Field(i).Name())
 	}
-	e.line("final class %s {", class)
+	dicts := make([]string, len(params))
+	for i, tp := range params {
+		dicts[i] = "$d" + name.Local(tp.Obj().Name())
+	}
+	e.line("final class %s {", head)
+	for i, tp := range params {
+		e.line("final Dict<%s> %s;", name.Local(tp.Obj().Name()), dicts[i])
+	}
 	for i, f := range fields {
 		e.line("%s %s;", e.dartType(st.Field(i).Type()), f)
 	}
 	e.line("")
-	if len(fields) == 0 {
+	all := append(append([]string{}, dicts...), fields...)
+	if len(all) == 0 {
 		e.line("%s();", class)
 		e.line("%s.$zero();", class)
 	} else {
-		e.line("%s(%s);", class, "this."+strings.Join(fields, ", this."))
-		zeros := make([]string, len(fields))
+		e.line("%s(%s);", class, "this."+strings.Join(all, ", this."))
+		zeros := make([]string, 0, len(fields))
 		for i, f := range fields {
-			zeros[i] = fmt.Sprintf("%s = %s", f, e.zero(st.Field(i).Type()))
+			zeros = append(zeros, fmt.Sprintf("%s = %s", f, e.zero(st.Field(i).Type())))
 		}
-		e.line("%s.$zero() : %s;", class, strings.Join(zeros, ", "))
+		head := class + ".$zero("
+		if len(dicts) > 0 {
+			head += "this." + strings.Join(dicts, ", this.")
+		}
+		head += ")"
+		if len(zeros) == 0 {
+			e.line("%s;", head)
+		} else {
+			e.line("%s : %s;", head, strings.Join(zeros, ", "))
+		}
 	}
 	e.line("")
-	e.writeCopy(class, st, fields)
-	e.writeAssign(class, st, fields)
+	full := class + e.typeArgsOfParams(params)
+	e.writeCopy(full, st, fields, dicts)
+	e.writeAssign(full, st, fields)
 	if types.Comparable(named) {
-		e.writeEqual(class, st, fields)
+		e.writeEqual(full, st, fields)
 	}
 	for _, m := range e.methods[obj] {
 		e.line("")
@@ -47,13 +67,62 @@ func (e *emitter) class(obj *types.TypeName, named *types.Named, st *types.Struc
 	e.line("")
 }
 
-func (e *emitter) writeCopy(class string, st *types.Struct, fields []string) {
-	parts := make([]string, len(fields))
+func (e *emitter) writeCopy(class string, st *types.Struct, fields, dicts []string) {
+	parts := make([]string, 0, len(fields)+len(dicts))
+	parts = append(parts, dicts...)
 	for i, f := range fields {
-		parts[i] = e.copyOf(f, st.Field(i).Type())
+		parts = append(parts, e.copyOf(f, st.Field(i).Type()))
 	}
 	e.line("%s $copy() => %s(%s);", class, class, strings.Join(parts, ", "))
 	e.line("")
+}
+
+// typeParamDecl writes the type parameters of a declaration.
+func (e *emitter) typeParamDecl(params []*types.TypeParam) string {
+	if len(params) == 0 {
+		return ""
+	}
+	parts := make([]string, len(params))
+	for i, tp := range params {
+		parts[i] = name.Local(tp.Obj().Name())
+		if bound := e.typeParamBound(tp); bound != "" {
+			parts[i] += " extends " + bound
+		}
+	}
+	return "<" + strings.Join(parts, ", ") + ">"
+}
+
+// typeArgsOfParams names the type parameters again, with no bound.
+func (e *emitter) typeArgsOfParams(params []*types.TypeParam) string {
+	if len(params) == 0 {
+		return ""
+	}
+	parts := make([]string, len(params))
+	for i, tp := range params {
+		parts[i] = name.Local(tp.Obj().Name())
+	}
+	return "<" + strings.Join(parts, ", ") + ">"
+}
+
+// dictParams writes 1 dictionary parameter for each type parameter.
+func (e *emitter) dictParams(params []*types.TypeParam) []string {
+	out := make([]string, len(params))
+	for i, tp := range params {
+		n := name.Local(tp.Obj().Name())
+		out[i] = fmt.Sprintf("Dict<%s> $d%s", n, n)
+	}
+	return out
+}
+
+func typeParamsOf(list *types.TypeParamList) []*types.TypeParam {
+	if list == nil {
+		return nil
+	}
+	out := make([]*types.TypeParam, list.Len())
+	for i := range out {
+		out[i] = list.At(i)
+	}
+	return out
 }
 
 // copyOf gives the expression that copies 1 field. A struct and an array hold a
@@ -114,13 +183,8 @@ func (e *emitter) writeEqual(class string, st *types.Struct, fields []string) {
 	hashes := make([]string, 0, len(fields))
 	for i, f := range fields {
 		t := st.Field(i).Type()
-		if isArrayType(t) {
-			parts = append(parts, fmt.Sprintf("$equalArray(%s, $o.%s)", f, f))
-			hashes = append(hashes, fmt.Sprintf("Object.hashAll(%s)", f))
-			continue
-		}
-		parts = append(parts, fmt.Sprintf("%s == $o.%s", f, f))
-		hashes = append(hashes, f)
+		parts = append(parts, e.equalText(f, "$o."+f, t))
+		hashes = append(hashes, e.hashText(f, t))
 	}
 	e.line("@override")
 	if len(parts) == 0 {
@@ -140,7 +204,9 @@ func (e *emitter) writeEqual(class string, st *types.Struct, fields []string) {
 
 // method writes a method of a struct class.
 func (e *emitter) method(f *ir.Func) {
-	e.line("%s %s(%s)%s {", e.results(f), name.Package(f.Name), e.params(f.Params), asyncWord(f.Async))
+	params := append(e.dictParams(f.TypeParams), e.paramList(f.Params)...)
+	e.line("%s %s%s(%s)%s {", e.results(f), name.Package(f.Name),
+		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "), asyncWord(f.Async))
 	e.receiver(f)
 	e.body(f)
 	e.line("}")
@@ -164,7 +230,9 @@ func (e *emitter) funcDecl(f *ir.Func) {
 		e.methodFunc(f)
 		return
 	}
-	e.line("%s %s(%s)%s {", e.results(f), e.funcName(f), e.params(f.Params), asyncWord(f.Async))
+	params := append(e.dictParams(f.TypeParams), e.paramList(f.Params)...)
+	e.line("%s %s%s(%s)%s {", e.results(f), e.funcName(f),
+		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "), asyncWord(f.Async))
 	e.body(f)
 	e.line("}")
 	e.line("")

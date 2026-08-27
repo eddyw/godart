@@ -212,6 +212,8 @@ func (b *builder) expr(e ast.Expr) ir.Expr {
 		return b.selector(e)
 	case *ast.IndexExpr:
 		return b.index(e)
+	case *ast.IndexListExpr:
+		return b.expr(e.X)
 	case *ast.SliceExpr:
 		return b.slice(e)
 	case *ast.CompositeLit:
@@ -359,8 +361,10 @@ func structOf(t types.Type) *types.Struct {
 
 func (b *builder) index(e *ast.IndexExpr) ir.Expr {
 	if tv, ok := b.info.Types[e.Index]; ok && tv.IsType() {
-		b.fail(e.Pos(), "a generic instantiation is not supported yet")
-		return nil
+		// The expression names an instance of a generic function or of a
+		// generic type. The instance reads as the name itself, and the type
+		// arguments reach the call through the info of the type checker.
+		return b.expr(e.X)
 	}
 	x := b.expr(e.X)
 	if x == nil {

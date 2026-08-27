@@ -9,6 +9,7 @@ export 'dart:typed_data';
 
 export 'src/array.dart';
 export 'src/chan.dart';
+export 'src/dict.dart';
 export 'src/iface.dart';
 export 'src/int.dart';
 export 'src/map.dart';

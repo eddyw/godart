@@ -24,15 +24,32 @@ func (e *emitter) call(x *ir.Call) string {
 
 func (e *emitter) callText(x *ir.Call) string {
 	args := e.callArgs(x)
+	targs, dicts := e.typeArguments(x.TypeArgs)
+	args = append(dicts, args...)
 	switch fun := x.Fun.(type) {
 	case *ir.Method:
-		return e.methodCall(fun, args)
+		return e.methodCall(fun, args, targs)
 	case *ir.Ident:
 		if _, ok := fun.Obj.(*types.Func); ok {
-			return e.identExpr(fun) + "(" + strings.Join(args, ", ") + ")"
+			return e.identExpr(fun) + targs + "(" + strings.Join(args, ", ") + ")"
 		}
 	}
 	return e.expr(x.Fun) + "!(" + strings.Join(args, ", ") + ")"
+}
+
+// typeArguments writes the type arguments of a call and the dictionary of
+// each one.
+func (e *emitter) typeArguments(args []types.Type) (string, []string) {
+	if len(args) == 0 {
+		return "", nil
+	}
+	names := make([]string, len(args))
+	dicts := make([]string, len(args))
+	for i, t := range args {
+		names[i] = e.dartType(t)
+		dicts[i] = e.dictOf(t)
+	}
+	return "<" + strings.Join(names, ", ") + ">", dicts
 }
 
 // callArgs writes the arguments. A variadic call packs the last arguments into
@@ -79,7 +96,7 @@ func signatureOf(t types.Type) *types.Signature {
 	return sig
 }
 
-func (e *emitter) methodCall(m *ir.Method, args []string) string {
+func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 	if isInterfaceType(m.Recv.GoType()) {
 		return e.interfaceCall(m, args)
 	}
@@ -90,7 +107,7 @@ func (e *emitter) methodCall(m *ir.Method, args []string) string {
 		return e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) +
 			"(" + strings.Join(all, ", ") + ")"
 	}
-	return fmt.Sprintf("%s.%s(%s)", e.deref(m.Recv), methodName(m.Obj), list)
+	return fmt.Sprintf("%s.%s%s(%s)", e.deref(m.Recv), methodName(m.Obj), targs, list)
 }
 
 // methodValue reads a method without a call. Go binds a copy of the receiver at

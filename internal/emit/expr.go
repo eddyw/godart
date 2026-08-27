@@ -370,7 +370,7 @@ func (e *emitter) binary(x *ir.Binary) string {
 		return e.narrow(t, fmt.Sprintf("(%s & ~%s)", left, right))
 	case token.ADD:
 		if isString(t) {
-			return fmt.Sprintf("$concat(%s, %s)", left, right)
+			return e.narrow(x.Type, fmt.Sprintf("$concat(%s, %s)", left, right))
 		}
 	}
 	return e.narrow(t, fmt.Sprintf("(%s %s %s)", left, x.Op.String(), right))
@@ -400,9 +400,15 @@ func (e *emitter) compare(op token.Token, a, b ir.Expr) string {
 
 // narrow keeps the value of a narrow type inside its range. A Dart int holds 64
 // bits, thus a smaller Go type needs a mask after each operation.
+//
+// A type parameter needs a cast. Go gives the operation the type of the
+// parameter, and Dart gives it the bound of the parameter.
 func (e *emitter) narrow(t types.Type, text string) string {
 	if m := mask(t); m != "" {
 		return m + "(" + text + ")"
+	}
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return "(" + text + " as " + name.Local(tp.Obj().Name()) + ")"
 	}
 	return text
 }
@@ -434,6 +440,9 @@ func (e *emitter) composite(x *ir.Composite) string {
 	}
 	switch u := u.(type) {
 	case *types.Struct:
+		if named, ok := types.Unalias(x.Type).(*types.Named); ok {
+			parts = append(e.dictArgs(named.TypeArgs()), parts...)
+		}
 		return e.dartType(x.Type) + "(" + strings.Join(parts, ", ") + ")"
 	case *types.Array:
 		for len(parts) < int(u.Len()) {

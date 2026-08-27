@@ -38,6 +38,10 @@ type Func struct {
 	Async   bool
 	Defers  bool
 	Pos     token.Pos
+
+	// TypeParams holds the type parameters of a generic function or of a
+	// generic method. The type parameters of the receiver type stay out.
+	TypeParams []*types.TypeParam
 }
 
 // Global is a package level variable.
@@ -258,6 +262,10 @@ type (
 		Async    bool
 		Spread   bool
 		Variadic bool
+
+		// TypeArgs holds the type arguments of a call to a generic function or
+		// to a generic method.
+		TypeArgs []types.Type
 	}
 
 	// Method selects a method on a receiver. It appears as the Fun of a Call.
