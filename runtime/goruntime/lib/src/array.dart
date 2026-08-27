@@ -1,0 +1,42 @@
+import 'panic.dart';
+
+/// A Go array is a fixed length list with value semantics. The compiler emits
+/// a plain Dart list, and it inserts a copy at each copy point.
+List<T> $makeArray<T>(int n, T Function() zero) =>
+    List<T>.generate(n, (_) => zero(), growable: false);
+
+/// Copies an array. The element copy function is not null for a struct
+/// element and for an array element.
+List<T> $copyArray<T>(List<T> a, [T Function(T)? copy]) {
+  if (copy == null) return List<T>.of(a, growable: false);
+  return List<T>.generate(a.length, (i) => copy(a[i]), growable: false);
+}
+
+/// Assigns an array in place. Go writes through the destination, thus a
+/// pointer to an element observes the new value.
+void $assignArray<T>(List<T> dst, List<T> src, [void Function(T, T)? assign]) {
+  if (assign == null) {
+    dst.setRange(0, dst.length, src);
+    return;
+  }
+  for (var i = 0; i < dst.length; i++) {
+    assign(dst[i], src[i]);
+  }
+}
+
+bool $equalArray<T>(List<T> a, List<T> b, [bool Function(T, T)? equal]) {
+  for (var i = 0; i < a.length; i++) {
+    if (equal == null ? a[i] != b[i] : !equal(a[i], b[i])) return false;
+  }
+  return true;
+}
+
+T $arrayIndex<T>(List<T> a, int i) {
+  if (i < 0 || i >= a.length) $panicIndex(i, a.length);
+  return a[i];
+}
+
+void $arraySet<T>(List<T> a, int i, T v) {
+  if (i < 0 || i >= a.length) $panicIndex(i, a.length);
+  a[i] = v;
+}

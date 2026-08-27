@@ -4,4 +4,11 @@
 /// library is per isolate.
 library;
 
+export 'dart:typed_data';
+
+export 'src/array.dart';
+export 'src/int.dart';
+export 'src/panic.dart';
+export 'src/print.dart';
+export 'src/slice.dart';
 export 'src/string.dart';
