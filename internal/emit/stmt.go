@@ -20,6 +20,10 @@ func (e *emitter) stmt(s ir.Stmt) {
 	case *ir.Declare:
 		e.declare(s)
 	case *ir.Assign:
+		if s.Define {
+			e.defineAssign(s)
+			return
+		}
 		e.assign(s.Lhs, s.Rhs)
 	case *ir.AssignMulti:
 		parts := make([]string, len(s.Lhs))
@@ -49,11 +53,18 @@ func (e *emitter) stmt(s ir.Stmt) {
 	case *ir.Defer:
 		e.line("$defer.push(() => %s);", e.expr(s.Call))
 	case *ir.Send:
-		e.line("await %s.send(%s);", e.expr(s.Chan), e.expr(s.Value))
+		e.line("%s.send(%s);", e.expr(s.Chan), e.expr(s.Value))
 	case *ir.Go:
 		e.goStmt(s)
-	case *ir.Select:
-		e.selectStmt(s)
+	case *ir.Jump:
+		e.line("$s = %d;", s.State)
+		e.line("continue $m;")
+	case *ir.Resume:
+		e.resume(s)
+	case *ir.LocalFunc:
+		e.localFunc(s)
+	case *ir.SelectBind:
+		e.selectBind(s)
 	case *ir.Goto:
 		e.fail("the label %s of a goto statement is outside the function body", s.Label)
 	default:
@@ -111,11 +122,29 @@ func (e *emitter) declare(s *ir.Declare) {
 	e.line("var (%s) = %s;", strings.Join(names, ", "), e.expr(s.Init))
 }
 
+// defineAssign writes the value of a declaration that a machine lifted. Go
+// binds a new variable at such a point, thus the write replaces the value and
+// does not write through the old one.
+func (e *emitter) defineAssign(s *ir.Assign) {
+	value := e.expr(s.Rhs)
+	if id, ok := s.Lhs.(*ir.Ident); ok && id.Boxed {
+		e.line("%s = Box(%s);", id.Name, value)
+		return
+	}
+	e.line("%s = %s;", e.expr(s.Lhs), value)
+}
+
 // assign writes 1 value into 1 location. A struct and an array keep their
 // identity, thus the write copies the fields and does not replace the object.
 func (e *emitter) assign(lhs, rhs ir.Expr) {
 	t := lhs.GoType()
 	value := e.expr(rhs)
+	// The case list of a select statement has no Go type, thus it takes the
+	// plain form of an assignment.
+	if t == nil {
+		e.line("%s = %s;", e.expr(lhs), value)
+		return
+	}
 	if idx, ok := lhs.(*ir.Index); ok && isMapType(idx.X.GoType()) {
 		e.line("%s.set(%s, %s);", e.expr(idx.X), e.expr(idx.Index), value)
 		return
@@ -140,98 +169,7 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 // goStmt starts a goroutine. Go waits for the scheduler, thus the body does not
 // run at the point of the statement.
 func (e *emitter) goStmt(s *ir.Go) {
-	text := e.expr(s.Call)
-	if call, ok := s.Call.(*ir.Call); ok && call.Async {
-		e.line("$go(() async { %s; });", text)
-		return
-	}
-	e.line("$go(() { %s; });", text)
-}
-
-// selectStmt writes a select statement. The runtime gives the number of the
-// case that it takes, and a labeled block holds the bodies.
-func (e *emitter) selectStmt(s *ir.Select) {
-	label := s.Label
-	if label == "" {
-		e.labelSeq++
-		label = fmt.Sprintf("$sel%d", e.labelSeq)
-	}
-	list := label + "$c"
-	choice := label + "$i"
-	hasDefault := false
-	parts := make([]string, 0, len(s.Cases))
-	for _, c := range s.Cases {
-		switch c.Kind {
-		case ir.SelectRecv:
-			parts = append(parts, fmt.Sprintf("RecvCase<%s>(%s)", e.dartType(c.Elem), e.expr(c.Chan)))
-		case ir.SelectSend:
-			parts = append(parts, fmt.Sprintf("SendCase<%s>(%s, %s)",
-				e.dartType(c.Elem), e.expr(c.Chan), e.expr(c.Value)))
-		default:
-			hasDefault = true
-		}
-	}
-	e.line("%s:", label)
-	e.line("{")
-	e.line("final List<SelectCase> %s = <SelectCase>[%s];", list, strings.Join(parts, ", "))
-	e.line("final int %s = await $select(%s, %t);", choice, list, hasDefault)
-	e.breakables = append(e.breakables, label)
-	index := 0
-	first := true
-	for _, c := range s.Cases {
-		if c.Kind == ir.SelectDefault {
-			continue
-		}
-		keyword := "else if"
-		if first {
-			keyword = "if"
-			first = false
-		}
-		e.line("%s (%s == %d) {", keyword, choice, index)
-		if c.Kind == ir.SelectRecv {
-			e.selectRecvBind(c, list, index, label)
-		}
-		for _, inner := range c.Body.List {
-			e.stmt(inner)
-		}
-		e.line("}")
-		index++
-	}
-	for _, c := range s.Cases {
-		if c.Kind != ir.SelectDefault {
-			continue
-		}
-		if first {
-			e.line("{")
-		} else {
-			e.line("else {")
-		}
-		for _, inner := range c.Body.List {
-			e.stmt(inner)
-		}
-		e.line("}")
-	}
-	e.breakables = e.breakables[:len(e.breakables)-1]
-	e.line("}")
-}
-
-// selectRecvBind writes the value and the ok flag of a receive case.
-func (e *emitter) selectRecvBind(c *ir.SelectClause, list string, index int, label string) {
-	read := fmt.Sprintf("%s$r%d", label, index)
-	e.line("final %s = (%s[%d] as RecvCase<%s>).result!;", read, list, index, e.dartType(c.Elem))
-	fields := []string{read + ".$1", read + ".$2"}
-	for i, v := range c.Vars {
-		if i >= len(fields) || v.Name == "_" {
-			continue
-		}
-		e.line("%s %s = %s;", e.dartType(v.Type), v.Name, fields[i])
-	}
-	for i, lhs := range c.Lhs {
-		if i >= len(fields) {
-			continue
-		}
-		e.line("%s = %s;", e.expr(lhs), fields[i])
-	}
+	e.line("$go(() { %s; });", e.expr(s.Call))
 }
 
 func (e *emitter) ifStmt(s *ir.If) {
@@ -423,6 +361,10 @@ func (e *emitter) breakTarget(label string) string {
 }
 
 func (e *emitter) returnStmt(s *ir.Return) {
+	if e.machine != nil {
+		e.machineReturn(s)
+		return
+	}
 	if e.returnLabel != "" {
 		e.namedReturn(s)
 		return

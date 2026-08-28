@@ -33,6 +33,11 @@ const (
 type loop struct {
 	kind  loopKind
 	label string
+
+	// flag names the variable that marks a branch that leaves the body of a
+	// range loop over a function and reaches this construct. It is empty when
+	// no such branch exists.
+	flag string
 }
 
 func (b *builder) pushLoop(kind loopKind, label string) {
@@ -65,8 +70,8 @@ func (b *builder) branchTarget(label string, isBreak bool) int {
 // crossesYield reports whether a branch to the construct at index k leaves the
 // body of a range loop over a function.
 //
-// Such a body is a Dart closure. A Dart closure cannot leave a loop outside
-// itself, thus the compiler rejects the branch.
+// Such a body is a Dart closure. A Dart closure leaves no loop outside itself,
+// thus the branch writes a flag and gives false to the sequence.
 func (b *builder) crossesYield(k int) bool {
 	for i := len(b.loops) - 1; i > k; i-- {
 		if b.loops[i].kind == loopYield {
@@ -88,9 +93,7 @@ func (b *builder) breakOrContinue(s *ast.BranchStmt, label string) []ir.Stmt {
 		return nil
 	}
 	if b.crossesYield(k) {
-		b.fail(s.Pos(), "the %s statement leaves the body of a range loop over a "+
-			"function, and such a body is a Dart closure", s.Tok)
-		return nil
+		return b.yieldBranch(k, isBreak)
 	}
 	if b.loops[k].kind == loopYield {
 		return []ir.Stmt{&ir.Return{Values: []ir.Expr{boolConst(isBreak == false)}}}
@@ -171,7 +174,102 @@ func (b *builder) rangeFunc(s *ast.RangeStmt, label string, sig *types.Signature
 	if check := b.returnCheck(); check != nil {
 		out = append(out, check)
 	}
+	return append(out, b.branchChecks()...)
+}
+
+// yieldBranch writes a branch that leaves the body of a range loop over a
+// function.
+//
+// Such a body is a Dart closure. The branch writes the flag of its target and
+// gives false to the sequence. The code after the call of the sequence reads the
+// flag: it gives false again while another such body holds it, and it runs the
+// real branch at the level of the target.
+func (b *builder) yieldBranch(k int, isBreak bool) []ir.Stmt {
+	target := &b.loops[k]
+	if target.label == "" {
+		// An unlabelled branch reaches the innermost construct, and that
+		// construct stands inside the closure.
+		b.fail(b.fn.Pos, "a branch with no label leaves no closure")
+		return nil
+	}
+	if target.flag == "" {
+		target.flag = "$ybr" + target.label
+		b.branchFlags = append(b.branchFlags,
+			&ir.Var{Name: target.flag, Type: types.Typ[types.Int]})
+	}
+	mark := branchBreak
+	if !isBreak {
+		mark = branchContinue
+	}
+	return []ir.Stmt{
+		&ir.Assign{
+			Lhs: &ir.Ident{Name: target.flag, Type: types.Typ[types.Int]},
+			Rhs: intConst(int64(mark)),
+		},
+		&ir.Return{Values: []ir.Expr{boolConst(false)}},
+	}
+}
+
+// The value of a branch flag. 0 marks a body that no branch left.
+const (
+	branchBreak    = 1
+	branchContinue = 2
+)
+
+// branchChecks writes the test of each branch flag after the call of a
+// sequence.
+func (b *builder) branchChecks() []ir.Stmt {
+	inner := -1
+	for i, l := range b.loops {
+		if l.kind == loopYield {
+			inner = i
+		}
+	}
+	var out []ir.Stmt
+	for i := len(b.loops) - 1; i >= 0; i-- {
+		l := b.loops[i]
+		if l.flag == "" {
+			continue
+		}
+		read := &ir.Ident{Name: l.flag, Type: types.Typ[types.Int]}
+		if inner > i {
+			// Another closure stands between this point and the target, thus
+			// the flag travels out 1 more level.
+			out = append(out, &ir.If{
+				Cond: &ir.Binary{Op: token.NEQ, X: read, Y: intConst(0),
+					Type: types.Typ[types.Bool]},
+				Then: &ir.Block{List: []ir.Stmt{
+					&ir.Return{Values: []ir.Expr{boolConst(false)}},
+				}},
+			})
+			continue
+		}
+		out = append(out, b.branchRun(l, read, branchBreak, true))
+		if l.kind != loopSwitch {
+			out = append(out, b.branchRun(l, read, branchContinue, false))
+		}
+	}
 	return out
+}
+
+// branchRun writes the real branch of 1 value of a flag. The flag takes 0
+// again, because the target construct runs its next pass.
+func (b *builder) branchRun(l loop, read ir.Expr, mark int, isBreak bool) ir.Stmt {
+	var jump ir.Stmt = &ir.Continue{Label: l.label}
+	if isBreak {
+		jump = &ir.Break{Label: l.label}
+	}
+	return &ir.If{
+		Cond: &ir.Binary{Op: token.EQL, X: read, Y: intConst(int64(mark)),
+			Type: types.Typ[types.Bool]},
+		Then: &ir.Block{List: []ir.Stmt{
+			&ir.Assign{
+				Lhs: &ir.Ident{Name: l.flag, Type: types.Typ[types.Int]},
+				Rhs: intConst(0),
+			},
+			jump,
+		}},
+	}
 }
 
 func boolConst(v bool) ir.Expr {
@@ -265,15 +363,18 @@ func (b *builder) returnCheck() ir.Stmt {
 // returnState writes the declaration of the flag and of each result variable.
 // The declarations go at the start of the function body.
 func (b *builder) returnState() []ir.Stmt {
-	if b.retFlag == "" {
-		return nil
+	var out []ir.Stmt
+	if b.retFlag != "" {
+		out = append(out, &ir.Declare{
+			Vars: []*ir.Var{{Name: b.retFlag, Type: types.Typ[types.Bool]}},
+			Init: boolConst(false),
+		})
+		for _, v := range b.retVars {
+			out = append(out, &ir.Declare{Vars: []*ir.Var{v}})
+		}
 	}
-	out := []ir.Stmt{&ir.Declare{
-		Vars: []*ir.Var{{Name: b.retFlag, Type: types.Typ[types.Bool]}},
-		Init: boolConst(false),
-	}}
-	for _, v := range b.retVars {
-		out = append(out, &ir.Declare{Vars: []*ir.Var{v}})
+	for _, v := range b.branchFlags {
+		out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: intConst(0)})
 	}
 	return out
 }

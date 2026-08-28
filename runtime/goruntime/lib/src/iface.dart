@@ -49,6 +49,10 @@ final class TypeDesc {
   /// a field of a struct through it.
   final Object? Function()? zero;
 
+  /// make builds a slice of the length, or an empty map. A decoder reads it,
+  /// because the Dart type of the element lives only in the emitted code.
+  final Object? Function(int)? make;
+
   const TypeDesc(
     this.name,
     this.kind,
@@ -58,6 +62,7 @@ final class TypeDesc {
     this.elem,
     this.key,
     this.zero,
+    this.make,
   });
 
   /// The name for a message. Go writes the package name, and not the path.

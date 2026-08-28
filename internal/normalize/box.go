@@ -52,3 +52,101 @@ func (b *builder) boxed(obj types.Object) bool {
 	v, ok := obj.(*types.Var)
 	return ok && b.boxes[v]
 }
+
+// captured collects each variable of a machine that a function literal reads.
+//
+// A machine writes each local into its frame, and a resume reads them into a
+// new call. A closure holds the variable of the first call, thus the 2 calls
+// must share 1 box.
+//
+// A struct and an array need no box. An assignment to such a variable copies
+// the fields into the same object, thus the closure reads the new value.
+func (b *builder) captured(body ast.Node, assigned map[*types.Var]bool) map[*types.Var]bool {
+	out := map[*types.Var]bool{}
+	ast.Inspect(body, func(n ast.Node) bool {
+		lit, ok := n.(*ast.FuncLit)
+		if !ok {
+			return true
+		}
+		inner := map[*types.Var]bool{}
+		ast.Inspect(lit, func(m ast.Node) bool {
+			if id, ok := m.(*ast.Ident); ok {
+				if v, ok := b.info.Defs[id].(*types.Var); ok {
+					inner[v] = true
+				}
+			}
+			return true
+		})
+		ast.Inspect(lit, func(m ast.Node) bool {
+			id, ok := m.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			v, ok := b.info.Uses[id].(*types.Var)
+			if !ok || inner[v] || !needsBox(v.Type()) || !assigned[v] {
+				return true
+			}
+			if v.Parent() != nil && v.Pkg() != nil && v.Parent() == v.Pkg().Scope() {
+				return true
+			}
+			out[v] = true
+			return true
+		})
+		return true
+	})
+	return out
+}
+
+// machineBoxes adds the box of each captured variable when a function of the
+// declaration can block.
+func (b *builder) machineBoxes(body *ast.BlockStmt, blocking bool) {
+	assigned := b.assignedVars(body)
+	if blocking {
+		for v := range b.captured(body, assigned) {
+			b.boxes[v] = true
+		}
+	}
+	ast.Inspect(body, func(n ast.Node) bool {
+		lit, ok := n.(*ast.FuncLit)
+		if !ok || !b.blocks.Blocks(lit) {
+			return true
+		}
+		for v := range b.captured(lit.Body, assigned) {
+			b.boxes[v] = true
+		}
+		return true
+	})
+}
+
+// assignedVars collects each variable that the code writes after its
+// declaration. A variable that keeps its first value needs no box, because each
+// call of a machine reads the same value.
+func (b *builder) assignedVars(body ast.Node) map[*types.Var]bool {
+	out := map[*types.Var]bool{}
+	mark := func(e ast.Expr) {
+		id, ok := unparenExpr(e).(*ast.Ident)
+		if !ok {
+			return
+		}
+		if v, ok := b.info.Uses[id].(*types.Var); ok {
+			out[v] = true
+		}
+	}
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.AssignStmt:
+			for _, l := range n.Lhs {
+				mark(l)
+			}
+		case *ast.IncDecStmt:
+			mark(n.X)
+		case *ast.RangeStmt:
+			if n.Tok == token.ASSIGN {
+				mark(n.Key)
+				mark(n.Value)
+			}
+		}
+		return true
+	})
+	return out
+}

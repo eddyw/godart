@@ -92,4 +92,55 @@ func main() {
 	fmt.Println()
 
 	returns()
+	fmt.Println(breakOuter())
+	fmt.Println(continueOuter())
+	fmt.Println(deep())
+}
+
+// breakOuter leaves a loop outside the body of the sequence. The body is a Dart
+// closure, thus the branch writes a flag and gives false to the sequence.
+func breakOuter() []int {
+	var out []int
+outer:
+	for row := 0; row < 3; row++ {
+		for v := range upTo(3) {
+			if row == 1 && v == 1 {
+				break outer
+			}
+			out = append(out, row*10+v)
+		}
+	}
+	return out
+}
+
+func continueOuter() []int {
+	var out []int
+outer:
+	for row := 0; row < 3; row++ {
+		for v := range upTo(3) {
+			if v == 1 {
+				continue outer
+			}
+			out = append(out, row*10+v)
+		}
+		out = append(out, 99)
+	}
+	return out
+}
+
+// deep leaves 2 bodies. The flag travels out 1 level for each sequence.
+func deep() []int {
+	var out []int
+outer:
+	for row := 0; row < 2; row++ {
+		for a := range upTo(2) {
+			for b := range upTo(2) {
+				if a == 1 && b == 1 {
+					break outer
+				}
+				out = append(out, row*100+a*10+b)
+			}
+		}
+	}
+	return out
 }

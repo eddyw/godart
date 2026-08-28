@@ -90,6 +90,32 @@ type pair[K comparable, V any] struct {
 	value V
 }
 
+// kind reads the real type of a value of a type parameter. The dictionary of
+// the type argument holds the description, thus the value reaches an interface.
+func kind[T string | []byte](s T) int {
+	switch v := any(s).(type) {
+	case string:
+		return len(v)
+	case []byte:
+		return -len(v)
+	}
+	return 0
+}
+
+// describe writes the name of the type argument.
+func describe[T any](v T) string {
+	var x any = v
+	switch x.(type) {
+	case int:
+		return "int"
+	case float64:
+		return "float64"
+	case bool:
+		return "bool"
+	}
+	return "other"
+}
+
 func main() {
 	println(sum([]int{1, 2, 3}))
 	println(sum([]float64{1.5, 2.5}))
@@ -133,4 +159,7 @@ func main() {
 	println(total[int]())
 	rest := []int{4, 5}
 	println(total(rest...))
+
+	println(kind("abc"), kind([]byte("abcd")))
+	println(describe(1), describe(1.5), describe(true), describe("x"))
 }

@@ -12,16 +12,7 @@ import (
 )
 
 func (e *emitter) call(x *ir.Call) string {
-	text := e.callText(x)
-	if !x.Async {
-		return text
-	}
-	// Dart rejects a void expression inside parentheses, thus a call with no
-	// result keeps the plain form.
-	if sig := signatureOf(x.Fun.GoType()); sig != nil && sig.Results().Len() == 0 {
-		return "await " + text
-	}
-	return "(await " + text + ")"
+	return e.callText(x)
 }
 
 func (e *emitter) callText(x *ir.Call) string {
@@ -91,6 +82,8 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return "$monoNanos()", true
 	case "MarshalJSON":
 		return fmt.Sprintf("$jsonMarshal(%s, %s)", args[0], args[1]), true
+	case "UnmarshalJSON":
+		return fmt.Sprintf("$jsonUnmarshal(%s, %s)", args[0], args[1]), true
 	case "Float64Bits":
 		return fmt.Sprintf("$f64ToBits(%s)", args[0]), true
 	case "Float64FromBits":
@@ -257,14 +250,39 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 func (e *emitter) methodValue(m *ir.Method) string {
 	obj := receiverTypeName(m.Recv.GoType())
 	if obj != nil && !isStructType(obj.Type()) {
-		e.fail("a method value of the type %s is not supported yet", obj.Name())
-		return "null"
+		return e.methodFuncValue(m, obj)
 	}
 	sig, _ := m.Obj.Type().(*types.Signature)
 	if sig != nil && sig.Recv() != nil && !isPointerType(sig.Recv().Type()) {
 		return fmt.Sprintf("%s.$copy().%s", e.deref(m.Recv), methodName(m.Obj))
 	}
 	return fmt.Sprintf("%s.%s", e.deref(m.Recv), methodName(m.Obj))
+}
+
+// methodFuncValue reads a method of a named type that is not a struct. Such a
+// method is a top level function, thus the value becomes a closure that gives
+// the receiver as the first argument.
+//
+// Go binds the receiver at the point of the value. The outer closure runs 1
+// time, thus a later write to the source of the receiver does not reach it.
+func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
+	sig, _ := m.Obj.Type().(*types.Signature)
+	if sig == nil {
+		e.fail("the method %s has no signature", m.Obj.Name())
+		return "null"
+	}
+	params := make([]string, sig.Params().Len())
+	args := make([]string, sig.Params().Len()+1)
+	args[0] = "$recv"
+	for i := range params {
+		name := fmt.Sprintf("$a%d", i)
+		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + name
+		args[i+1] = name
+	}
+	call := e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) +
+		"(" + strings.Join(args, ", ") + ")"
+	return fmt.Sprintf("((%s $recv) => (%s) => %s)(%s)",
+		e.dartType(m.Recv.GoType()), strings.Join(params, ", "), call, e.expr(m.Recv))
 }
 
 func (e *emitter) builtin(x *ir.Builtin) string {

@@ -3,22 +3,17 @@ import 'package:test/test.dart';
 
 void main() {
   group('the stop signal', () {
-    test('catch reports false when the body stops', () async {
-      expect(await $catch(() => $stop()), isFalse);
+    test('catch reports false when the body stops', () {
+      expect($catch(() => $stop()), isFalse);
     });
 
-    test('catch reports true when the body returns', () async {
-      expect(await $catch(() {}), isTrue);
+    test('catch reports true when the body returns', () {
+      expect($catch(() {}), isTrue);
     });
 
-    test('catch holds an async body', () async {
-      expect(await $catch(() async => $stop()), isFalse);
-      expect(await $catch(() async {}), isTrue);
-    });
-
-    test('a deferred call runs on the way out', () async {
+    test('a deferred call runs on the way out', () {
       final List<String> order = <String>[];
-      await $catch(() {
+      $catch(() {
         final DeferStack defer = DeferStack();
         try {
           defer.push(() => order.add('defer'));
@@ -31,14 +26,14 @@ void main() {
       expect(order, <String>['body', 'defer']);
     });
 
-    test('a panic passes through', () async {
+    test('a panic passes through', () {
       expect(
         () => $catch(() => $panic(GoString.fromString('stop'))),
         throwsA(isA<GoPanic>()),
       );
     });
 
-    test('catch panics on a nil function', () async {
+    test('catch panics on a nil function', () {
       expect(() => $catch(null), throwsA(isA<GoPanic>()));
     });
   });

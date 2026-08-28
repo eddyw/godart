@@ -4,21 +4,24 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'panic.dart';
+import 'sched.dart';
 import 'slice.dart';
 
 /// A Go channel.
 ///
-/// All goroutines run in 1 Dart isolate and give up control at an await
-/// expression, thus the queues need no lock.
+/// All goroutines run in 1 Dart isolate and give up control only at a channel
+/// operation, at a select statement, at a sleep, and at an isolate worker.
+/// Thus the queues need no lock.
 final class Chan<T> {
   final int capacity;
   final T Function() _zero;
 
-  final ListQueue<T> _buffer = ListQueue<T>();
-  final ListQueue<Completer<(T, bool)>> _receivers =
-      ListQueue<Completer<(T, bool)>>();
-  final ListQueue<_Send<T>> _senders = ListQueue<_Send<T>>();
-  final List<void Function()> _watchers = <void Function()>[];
+  // Each queue takes its value on the first read. The zero value of a channel
+  // type reaches each variable of a frame, thus a nil channel must stay cheap.
+  late final ListQueue<T> _buffer = ListQueue<T>();
+  late final ListQueue<_RecvWait<T>> _receivers = ListQueue<_RecvWait<T>>();
+  late final ListQueue<_SendWait<T>> _senders = ListQueue<_SendWait<T>>();
+  late final List<void Function()> _watchers = <void Function()>[];
   bool _closed = false;
 
   /// True for the zero value of a channel type. A send and a receive on such a
@@ -41,56 +44,67 @@ final class Chan<T> {
   bool get readyToSend =>
       !isNil && (_closed || _receivers.isNotEmpty || _buffer.length < capacity);
 
-  Future<void> send(T value) {
-    if (isNil) return Completer<void>().future;
-    if (readyToSend) {
-      sendNow(value);
-      return Future<void>.value();
+  /// Reads 1 value. The caller reads [$blocked] after the call.
+  (T, bool) receive() {
+    if (isNil) {
+      $park();
+      return (_zero(), false);
     }
-    final _Send<T> waiting = _Send<T>(value, Completer<void>());
-    _senders.add(waiting);
-    return waiting.done.future;
-  }
-
-  /// Sends without a wait. The caller reads readyToSend first.
-  void sendNow(T value) {
-    if (_closed) $panic(const GoError('send on closed channel'));
-    if (_receivers.isNotEmpty) {
-      _receivers.removeFirst().complete((value, true));
-      _wake();
-      return;
-    }
-    _buffer.add(value);
-    _wake();
-  }
-
-  Future<(T, bool)> receive() {
-    if (isNil) return Completer<(T, bool)>().future;
-    if (readyToReceive) return Future<(T, bool)>.value(receiveNow());
-    final Completer<(T, bool)> waiting = Completer<(T, bool)>();
+    if (readyToReceive) return receiveNow();
+    final _RecvWait<T> waiting = _RecvWait<T>($current!, _zero);
     _receivers.add(waiting);
-    return waiting.future;
+    $block(waiting);
+    return (_zero(), false);
   }
 
-  /// Receives without a wait. The caller reads readyToReceive first.
+  /// Receives with no wait. The caller reads readyToReceive first.
   (T, bool) receiveNow() {
     if (_buffer.isNotEmpty) {
       final T value = _buffer.removeFirst();
       if (_senders.isNotEmpty) {
-        final _Send<T> waiting = _senders.removeFirst();
+        final _SendWait<T> waiting = _senders.removeFirst();
         _buffer.add(waiting.value);
-        waiting.done.complete();
+        $ready(waiting.g);
       }
-      _wake();
+      _notify();
       return (value, true);
     }
     if (_senders.isNotEmpty) {
-      final _Send<T> waiting = _senders.removeFirst();
-      waiting.done.complete();
-      _wake();
+      final _SendWait<T> waiting = _senders.removeFirst();
+      $ready(waiting.g);
+      _notify();
       return (waiting.value, true);
     }
     return (_zero(), false);
+  }
+
+  /// Writes 1 value. The caller reads [$blocked] after the call.
+  void send(T value) {
+    if (isNil) {
+      $park();
+      return;
+    }
+    if (readyToSend) {
+      sendNow(value);
+      return;
+    }
+    final _SendWait<T> waiting = _SendWait<T>($current!, value);
+    _senders.add(waiting);
+    $block(waiting);
+  }
+
+  /// Sends with no wait. The caller reads readyToSend first.
+  void sendNow(T value) {
+    if (_closed) $panic(const GoError('send on closed channel'));
+    if (_receivers.isNotEmpty) {
+      final _RecvWait<T> waiting = _receivers.removeFirst();
+      waiting.value = (value, true);
+      $ready(waiting.g);
+      _notify();
+      return;
+    }
+    _buffer.add(value);
+    _notify();
   }
 
   void close() {
@@ -98,16 +112,18 @@ final class Chan<T> {
     if (_closed) $panic(const GoError('close of closed channel'));
     _closed = true;
     while (_receivers.isNotEmpty) {
-      _receivers.removeFirst().complete((_zero(), false));
+      final _RecvWait<T> waiting = _receivers.removeFirst();
+      waiting.value = (_zero(), false);
+      $ready(waiting.g);
     }
-    _wake();
+    _notify();
   }
 
   void watch(void Function() notify) => _watchers.add(notify);
 
   void unwatch(void Function() notify) => _watchers.remove(notify);
 
-  void _wake() {
+  void _notify() {
     if (_watchers.isEmpty) return;
     for (final notify in List<void Function()>.of(_watchers)) {
       notify();
@@ -115,11 +131,35 @@ final class Chan<T> {
   }
 }
 
-final class _Send<T> {
-  final T value;
-  final Completer<void> done;
+/// The frame of a goroutine that waits for a value of a channel.
+final class _RecvWait<T> implements Frame {
+  final Goroutine g;
+  final T Function() _zero;
+  (T, bool)? value;
 
-  _Send(this.value, this.done);
+  _RecvWait(this.g, this._zero);
+
+  @override
+  Object? resume() => value ?? (_zero(), false);
+}
+
+/// The frame of a goroutine that waits to write a value into a channel.
+final class _SendWait<T> implements Frame {
+  final Goroutine g;
+  final T value;
+
+  _SendWait(this.g, this.value);
+
+  @override
+  Object? resume() => null;
+}
+
+/// The frame of a goroutine that waits for the Dart event loop.
+final class _EventWait implements Frame {
+  Object? value;
+
+  @override
+  Object? resume() => value;
 }
 
 /// Runs a pure function in a new isolate and gives the result.
@@ -127,32 +167,45 @@ final class _Send<T> {
 /// The 2 isolates share no memory, thus the function must not read a package
 /// variable and must not write one. The input and the result cross the
 /// boundary as bytes, because bytes cross at a low cost.
-Future<Slice<int>> $worker(
-  Slice<int> Function(Slice<int>)? body,
-  Slice<int> input,
-) async {
+Slice<int> $worker(Slice<int> Function(Slice<int>)? body, Slice<int> input) {
   if (body == null) $panicNil();
   final Slice<int> Function(Slice<int>) run = body;
   final Uint8List bytes = Uint8List(input.len);
   for (var i = 0; i < input.len; i++) {
     bytes[i] = input.array[input.off + i];
   }
-  final Uint8List out = await Isolate.run(() {
-    final Slice<int> result = run(Slice.of(bytes));
-    final Uint8List copy = Uint8List(result.len);
-    for (var i = 0; i < result.len; i++) {
-      copy[i] = result.array[result.off + i];
-    }
-    return copy;
-  });
-  return Slice.of(out);
+  final Goroutine g = $current!;
+  final _EventWait waiting = _EventWait();
+  $holdEvent();
+  unawaited(
+    Isolate.run(() {
+      final Slice<int> result = run(Slice.of(bytes));
+      final Uint8List copy = Uint8List(result.len);
+      for (var i = 0; i < result.len; i++) {
+        copy[i] = result.array[result.off + i];
+      }
+      return copy;
+    }).then((Uint8List out) {
+      waiting.value = Slice.of(out);
+      $freeEvent();
+      $wake(g);
+    }),
+  );
+  $block(waiting);
+  return Slice.of(Uint8List(0));
 }
 
-/// Gives up control for a time. A Go sleep blocks the goroutine, thus the
-/// caller becomes an async function.
-Future<void> $sleep(int nanoseconds) {
-  if (nanoseconds <= 0) return Future<void>.value();
-  return Future<void>.delayed(Duration(microseconds: nanoseconds ~/ 1000));
+/// Gives up control for a time.
+void $sleep(int nanoseconds) {
+  if (nanoseconds <= 0) return;
+  final Goroutine g = $current!;
+  final _EventWait waiting = _EventWait();
+  $holdEvent();
+  Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
+    $freeEvent();
+    $wake(g);
+  });
+  $block(waiting);
 }
 
 /// The count of nanoseconds since the start of the Unix epoch.
@@ -172,21 +225,3 @@ int $monoNanos() {
   if (frequency == 1000000000) return $clock.elapsedTicks;
   return $clock.elapsedTicks * 1000000000 ~/ frequency;
 }
-
-/// Starts a goroutine. Go does not run the body at the point of the statement,
-/// thus the body waits for the event loop.
-void $go(FutureOr<void> Function() body) {
-  scheduleMicrotask(() async {
-    try {
-      await body();
-    } on GoPanic catch (p) {
-      $goPanic(p);
-    }
-  });
-}
-
-/// The report of a panic that leaves a goroutine. The build driver sets it,
-/// because the report needs the entry point of the program.
-void Function(GoPanic) $goPanic = (GoPanic p) {
-  throw p;
-};

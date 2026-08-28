@@ -61,6 +61,10 @@ type builder struct {
 	// such a body writes them.
 	retVars []*ir.Var
 
+	// branchFlags holds 1 variable for each construct that a branch leaves from
+	// inside the body of a range loop over a function.
+	branchFlags []*ir.Var
+
 	// loops holds the construct that a break statement or a continue statement
 	// leaves, from the outermost to the innermost.
 	loops []loop
@@ -70,6 +74,44 @@ type builder struct {
 
 	// blocks holds the result of stage 3.
 	blocks *analyze.Result
+
+	// pending holds the declaration of each function literal that can block.
+	// Such a literal becomes a local function, because the frame of the literal
+	// must name it.
+	pending []ir.Stmt
+}
+
+// frameClass builds the name of the Dart frame class of 1 function. The name
+// comes from the file and the position, thus 2 packages give no collision and
+// the name never depends on a counter.
+func (b *builder) frameClass(pos token.Pos) string {
+	p := b.fset.Position(pos)
+	var out []byte
+	out = append(out, '_')
+	for _, r := range filepath.Base(p.Filename) {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			out = append(out, byte(r))
+			continue
+		}
+		out = append(out, '_')
+	}
+	return fmt.Sprintf("%s_%d_%d$F", out, p.Line, p.Column)
+}
+
+// litName builds the name of the local function of a literal that can block.
+func (b *builder) litName(pos token.Pos) string {
+	p := b.fset.Position(pos)
+	return fmt.Sprintf("$lit%d_%d", p.Line, p.Column)
+}
+
+// addResults gives the frame each result that the Go source names. A deferred
+// call can write such a result, thus it lives as long as the frame.
+func addResults(m *ir.Machine, results []*ir.Var) {
+	for _, r := range results {
+		if r.Named {
+			m.Locals = append(m.Locals, r)
+		}
+	}
 }
 
 // declareLocal gives a local variable a name that is unique in the function.
@@ -212,8 +254,10 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	b.used = map[string]bool{}
 	b.gotoLabels = gotoTargets(d.Body)
 	b.boxes = b.addressed(d.Body)
+	b.machineBoxes(d.Body, f.Async)
 	b.retFlag = ""
 	b.retVars = nil
+	b.branchFlags = nil
 	b.fn = f
 	if d.Recv != nil && len(d.Recv.List) > 0 {
 		f.Recv = b.recvVar(d.Recv.List[0], sig)
@@ -223,8 +267,10 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	f.Results = b.results(sig)
 	f.Body = b.block(d.Body)
 	f.Body.List = append(b.returnState(), f.Body.List...)
-	if len(b.gotoLabels) > 0 {
-		f.Body = b.stateMachine(f.Body, d.Pos())
+	if f.Async || len(b.gotoLabels) > 0 {
+		f.Machine = b.flatten(f.Body, f.Params, f.Recv, f.Async, f.Defers,
+			b.frameClass(d.Pos()), d.Pos())
+		addResults(f.Machine, f.Results)
 	}
 	b.fn = nil
 	return f

@@ -44,9 +44,42 @@ type Func struct {
 	Defers  bool
 	Pos     token.Pos
 
+	// Machine holds the flat state machine of a function that can block.
+	Machine *Machine
+
 	// TypeParams holds the type parameters of a generic function or of a
 	// generic method. The type parameters of the receiver type stay out.
 	TypeParams []*types.TypeParam
+}
+
+// Machine holds the flat state machine of a function that can block.
+//
+// Such a function gives up control with a plain return. It writes each local
+// into a frame, and the scheduler runs the frame again later. Thus the body
+// keeps no structured control flow, and stage 4 rewrites it into numbered
+// states.
+type Machine struct {
+	// States holds the statements of each state, in order.
+	States []*Block
+
+	// Locals holds each variable that the frame keeps. The list holds each
+	// parameter, each local of the body, and each temporary of a call that can
+	// block.
+	Locals []*Var
+
+	// Class names the Dart class of the frame.
+	Class string
+
+	// Recv holds the receiver of a method, and it is nil for a function.
+	Recv *Var
+
+	// Defer marks a function that holds a defer statement. The frame keeps the
+	// stack of the deferred calls.
+	Defer bool
+
+	// Blocking marks a machine of a function that can block. A machine of a
+	// function that holds only a goto statement needs no frame.
+	Blocking bool
 }
 
 // Global is a package level variable.
@@ -85,6 +118,12 @@ type Var struct {
 	// Boxed marks a variable whose address the code takes. Such a variable holds
 	// a box, and a read of it reads the field of the box.
 	Boxed bool
+
+	// Dart holds the Dart type of a variable that no Go type describes, and
+	// DartZero holds its first value. A select statement needs 1 such variable
+	// for its case list.
+	Dart     string
+	DartZero string
 }
 
 // A Stmt is a statement.
@@ -104,7 +143,14 @@ type (
 	}
 
 	// Assign writes 1 value to 1 location.
-	Assign struct{ Lhs, Rhs Expr }
+	Assign struct {
+		Lhs, Rhs Expr
+
+		// Define marks the declaration of a variable that a machine lifted in
+		// front of its loop. Go binds a new variable at such a point, thus the
+		// write replaces the value and does not write through the old one.
+		Define bool
+	}
 
 	// AssignMulti reads a record and writes the parts to the locations.
 	AssignMulti struct {
@@ -162,6 +208,34 @@ type (
 		Cases []*SelectClause
 		Label string
 	}
+
+	// Jump writes the number of the next state and starts the machine again.
+	Jump struct{ State int }
+
+	// Resume re-enters the call of the state before it, and it leaves the
+	// machine when that call gave up control.
+	//
+	// Var holds the result of the call, and it is nil for a call with no
+	// result. State names the state that holds this statement.
+	Resume struct {
+		Var   *Var
+		State int
+	}
+
+	// LocalFunc declares a function inside a function body. A function literal
+	// that can block takes this form, because the frame of the literal must
+	// name it.
+	LocalFunc struct {
+		Name string
+		Lit  *FuncLit
+	}
+
+	// SelectBind writes the value of a receive case into its variables.
+	SelectBind struct {
+		List   Expr
+		Index  int
+		Clause *SelectClause
+	}
 )
 
 // SelectKind names the form of 1 case of a select statement.
@@ -211,6 +285,10 @@ func (*Send) isStmt()        {}
 func (*Go) isStmt()          {}
 func (*Defer) isStmt()       {}
 func (*Select) isStmt()      {}
+func (*Jump) isStmt()        {}
+func (*Resume) isStmt()      {}
+func (*LocalFunc) isStmt()   {}
+func (*SelectBind) isStmt()  {}
 
 // An Expr is an expression. Each expression carries its Go type.
 type Expr interface {
@@ -340,6 +418,23 @@ type (
 		Async   bool
 		Defers  bool
 		Type    types.Type
+
+		// Machine holds the flat state machine of a literal that can block.
+		Machine *Machine
+	}
+
+	// SelectList builds the case list of a select statement.
+	SelectList struct {
+		Cases []*SelectClause
+		Type  types.Type
+	}
+
+	// SelectRun runs a select statement and gives the number of the case that
+	// it takes.
+	SelectRun struct {
+		List       Expr
+		HasDefault bool
+		Type       types.Type
 	}
 
 	// TypeAssert reads the dynamic type of an interface value.
@@ -375,48 +470,61 @@ type (
 		Elems []Expr
 		Type  types.Type
 	}
+
+	// RecordField reads 1 field of a Dart record.
+	RecordField struct {
+		X     Expr
+		Index int
+		Type  types.Type
+	}
 )
 
-func (e *Const) GoType() types.Type      { return e.Type }
-func (e *Ident) GoType() types.Type      { return e.Type }
-func (e *Blank) GoType() types.Type      { return e.Type }
-func (e *Zero) GoType() types.Type       { return e.Type }
-func (e *Field) GoType() types.Type      { return e.Type }
-func (e *Index) GoType() types.Type      { return e.Type }
-func (e *MapRead) GoType() types.Type    { return e.Type }
-func (e *Slice) GoType() types.Type      { return e.Type }
-func (e *Call) GoType() types.Type       { return e.Type }
-func (e *Method) GoType() types.Type     { return e.Type }
-func (e *Builtin) GoType() types.Type    { return e.Type }
-func (e *Binary) GoType() types.Type     { return e.Type }
-func (e *Unary) GoType() types.Type      { return e.Type }
-func (e *Conv) GoType() types.Type       { return e.Type }
-func (e *Composite) GoType() types.Type  { return e.Type }
-func (e *FuncLit) GoType() types.Type    { return e.Type }
-func (e *TypeAssert) GoType() types.Type { return e.Type }
-func (e *TypeTest) GoType() types.Type   { return e.Type }
-func (e *Recv) GoType() types.Type       { return e.Type }
-func (e *Copy) GoType() types.Type       { return e.Type }
-func (e *Record) GoType() types.Type     { return e.Type }
+func (e *Const) GoType() types.Type       { return e.Type }
+func (e *Ident) GoType() types.Type       { return e.Type }
+func (e *Blank) GoType() types.Type       { return e.Type }
+func (e *Zero) GoType() types.Type        { return e.Type }
+func (e *Field) GoType() types.Type       { return e.Type }
+func (e *Index) GoType() types.Type       { return e.Type }
+func (e *MapRead) GoType() types.Type     { return e.Type }
+func (e *Slice) GoType() types.Type       { return e.Type }
+func (e *Call) GoType() types.Type        { return e.Type }
+func (e *Method) GoType() types.Type      { return e.Type }
+func (e *Builtin) GoType() types.Type     { return e.Type }
+func (e *Binary) GoType() types.Type      { return e.Type }
+func (e *Unary) GoType() types.Type       { return e.Type }
+func (e *Conv) GoType() types.Type        { return e.Type }
+func (e *Composite) GoType() types.Type   { return e.Type }
+func (e *FuncLit) GoType() types.Type     { return e.Type }
+func (e *TypeAssert) GoType() types.Type  { return e.Type }
+func (e *TypeTest) GoType() types.Type    { return e.Type }
+func (e *Recv) GoType() types.Type        { return e.Type }
+func (e *Copy) GoType() types.Type        { return e.Type }
+func (e *Record) GoType() types.Type      { return e.Type }
+func (e *RecordField) GoType() types.Type { return e.Type }
+func (e *SelectList) GoType() types.Type  { return e.Type }
+func (e *SelectRun) GoType() types.Type   { return e.Type }
 
-func (*Const) isExpr()      {}
-func (*Ident) isExpr()      {}
-func (*Blank) isExpr()      {}
-func (*Zero) isExpr()       {}
-func (*Field) isExpr()      {}
-func (*Index) isExpr()      {}
-func (*MapRead) isExpr()    {}
-func (*Slice) isExpr()      {}
-func (*Call) isExpr()       {}
-func (*Method) isExpr()     {}
-func (*Builtin) isExpr()    {}
-func (*Binary) isExpr()     {}
-func (*Unary) isExpr()      {}
-func (*Conv) isExpr()       {}
-func (*Composite) isExpr()  {}
-func (*FuncLit) isExpr()    {}
-func (*TypeAssert) isExpr() {}
-func (*TypeTest) isExpr()   {}
-func (*Recv) isExpr()       {}
-func (*Copy) isExpr()       {}
-func (*Record) isExpr()     {}
+func (*Const) isExpr()       {}
+func (*Ident) isExpr()       {}
+func (*Blank) isExpr()       {}
+func (*Zero) isExpr()        {}
+func (*Field) isExpr()       {}
+func (*Index) isExpr()       {}
+func (*MapRead) isExpr()     {}
+func (*Slice) isExpr()       {}
+func (*Call) isExpr()        {}
+func (*Method) isExpr()      {}
+func (*Builtin) isExpr()     {}
+func (*Binary) isExpr()      {}
+func (*Unary) isExpr()       {}
+func (*Conv) isExpr()        {}
+func (*Composite) isExpr()   {}
+func (*FuncLit) isExpr()     {}
+func (*TypeAssert) isExpr()  {}
+func (*TypeTest) isExpr()    {}
+func (*Recv) isExpr()        {}
+func (*Copy) isExpr()        {}
+func (*Record) isExpr()      {}
+func (*RecordField) isExpr() {}
+func (*SelectList) isExpr()  {}
+func (*SelectRun) isExpr()   {}

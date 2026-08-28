@@ -36,11 +36,6 @@ func (r *Result) SignatureAsync(sig *types.Signature) bool {
 	return r.sigAsync[signatureKey(sig)]
 }
 
-// MethodAsync reports whether a method of an interface can block.
-func (r *Result) MethodAsync(name string, sig *types.Signature) bool {
-	return r.methodAsync[name+"|"+signatureKey(sig)]
-}
-
 // summary holds what 1 function does. The fixed point reads it.
 type summary struct {
 	key     any

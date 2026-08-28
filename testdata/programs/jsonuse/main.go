@@ -61,4 +61,32 @@ func main() {
 
 	b, _ = json.MarshalIndent(address{City: "rome", Zip: "1"}, "", "  ")
 	fmt.Println(string(b))
+
+	var back user
+	err = json.Unmarshal([]byte(`{"name":"ann","tags":["x","y"],"home":{"city":"oslo","zip":"7"},"meta":{"k":"v"},"NoTag":3}`), &back)
+	fmt.Println(back.Name, len(back.Tags), back.Tags[1], back.Home.City, back.Meta["k"], back.NoTag, err == nil)
+
+	var pointer *address
+	err = json.Unmarshal([]byte(`{"city":"kiel"}`), &pointer)
+	fmt.Println(pointer.City, err == nil)
+
+	var numbers []int
+	err = json.Unmarshal([]byte(`[3,1,2]`), &numbers)
+	fmt.Println(len(numbers), numbers[0], err == nil)
+
+	var table map[string]int
+	err = json.Unmarshal([]byte(`{"a":1,"b":2}`), &table)
+	fmt.Println(len(table), table["b"], err == nil)
+
+	var loose any
+	err = json.Unmarshal([]byte(`{"n":1.5,"s":"t","b":false,"l":[1,null]}`), &loose)
+	fmt.Println(loose, err == nil)
+
+	var broken address
+	err = json.Unmarshal([]byte(`{`), &broken)
+	fmt.Println(err != nil)
+
+	var mismatch int
+	err = json.Unmarshal([]byte(`"text"`), &mismatch)
+	fmt.Println(err != nil)
 }

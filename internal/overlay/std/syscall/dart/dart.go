@@ -81,6 +81,14 @@ func MarshalJSON(v any, indent string) (string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// UnmarshalJSON reads the JSON form into a value. The target holds a pointer,
+// and the walk reads the type descriptor of the element.
+//
+// The result holds the cause of a failure, and it is empty after a success.
+func UnmarshalJSON(v any, data string) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // MonoNanos gives the count of nanoseconds since the start of the program.
 //
 // The value comes from a monotonic clock. A change of the system time does not

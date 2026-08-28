@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/eddyw/godart/internal/analyze"
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
 )
@@ -36,10 +35,11 @@ type Result struct {
 // package math holds the file bits.go, and the package math/bits also exists.
 const partSuffix = ".part.dart"
 
-func Package(p *ir.Package, tpkg *types.Package, base string, imports []Import, blocks *analyze.Result) (*Result, error) {
+func Package(p *ir.Package, tpkg *types.Package, base string, imports []Import) (*Result, error) {
 	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: base,
-		initNames: map[*ir.Func]string{}, blocks: blocks,
-		anon: map[string]*types.Struct{}, shadowed: map[string]map[string]bool{}}
+		initNames: map[*ir.Func]string{},
+		anon:      map[string]*types.Struct{}, shadowed: map[string]map[string]bool{},
+		nilChans: map[string]types.Type{}}
 	e.setPrefixes(imports)
 	e.groupMethods(p)
 	out := &Result{Library: base + ".dart", Files: map[string]string{}}
@@ -87,15 +87,29 @@ type emitter struct {
 	// empty only in a function that holds a defer statement and a named result.
 	returnLabel string
 	returnVars  []*ir.Var
-	// blocks holds the result of stage 3. It gives the async form of a
-	// function value and of an interface method.
-	blocks *analyze.Result
 	// anon holds each unnamed struct type that the package uses, by the name of
 	// its Dart class. The library file writes 1 class for each entry.
 	anon map[string]*types.Struct
+	// nilChans holds the element type of each nil channel that the package
+	// needs, by the name of its variable. The library file writes 1 variable
+	// for each entry.
+	nilChans map[string]types.Type
 	// shadowed holds the method names of each package that the build reads, by
 	// the import path.
 	shadowed map[string]map[string]bool
+	// machine holds the state machine of the function that the emitter writes.
+	machine *machineCtx
+	// frames holds the class of each frame that the file still needs. Dart
+	// holds no class inside a function, thus each one waits for package level.
+	frames []string
+}
+
+// flushFrames writes the class of each frame that a declaration made.
+func (e *emitter) flushFrames() {
+	for _, text := range e.frames {
+		e.line("%s", text)
+	}
+	e.frames = nil
 }
 
 // topName maps the name of a function, a variable, or a constant at package
@@ -276,9 +290,11 @@ func (e *emitter) libraryFile(p *ir.Package, base string, parts []string, import
 	}
 	e.line("")
 	e.writeAnonClasses()
+	e.writeNilChans()
 	e.writeDescriptors()
 	e.line("")
 	e.writeInit(sorted)
+	e.flushFrames()
 	if p.Name == "main" {
 		e.writeMain()
 	}
@@ -316,23 +332,16 @@ func (e *emitter) writeInit(imports []Import) {
 	e.line("")
 }
 
+// writeMain writes the entry point. Package main runs as the first goroutine,
+// and the scheduler ends when that goroutine returns.
 func (e *emitter) writeMain() {
-	async := e.mainFunc != nil && e.mainFunc.Async
-	if async {
-		e.line("Future<void> main(List<String> $arguments) async {")
-	} else {
-		e.line("void main(List<String> $arguments) {")
-	}
+	e.line("void main(List<String> $arguments) {")
 	e.line("$setArgs($arguments);")
 	e.line("$goPanic = $fatal;")
 	e.line("$init();")
 	if e.mainFunc != nil {
 		e.line("try {")
-		if async {
-			e.line("await _main();")
-		} else {
-			e.line("_main();")
-		}
+		e.line("$boot(() { _main(); });")
 		e.line("} on GoPanic catch ($p) {")
 		e.line("$fatal($p);")
 		e.line("}")
@@ -348,6 +357,7 @@ func (e *emitter) partFile(base string, f *ir.File) string {
 	e.line("")
 	for _, d := range f.Decls {
 		e.decl(d)
+		e.flushFrames()
 	}
 	return e.buf.String()
 }

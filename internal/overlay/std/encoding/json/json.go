@@ -1,6 +1,6 @@
 //go:build dart
 
-// Package json writes the JSON form of a Go value.
+// Package json writes the JSON form of a Go value, and it reads such a form.
 //
 // The compiler cannot read the real source. That source reads the fields of a
 // struct through the package reflect, and the subset holds no general reflect.
@@ -46,6 +46,29 @@ func MarshalIndent(v any, prefix, indent string) ([]byte, error) {
 	}
 	return []byte(text), nil
 }
+
+// Unmarshal reads the JSON form into the value that v points to.
+//
+// A JSON object fills a struct. The name of each member matches the json tag of
+// a field, and the name of the field matches when the tag holds none. A match
+// that differs only in case counts, exactly as in Go. A member with no field
+// stays out.
+//
+// A JSON value fills an empty interface with the types of Go: a bool, a
+// float64, a string, a []interface{}, a map[string]interface{}, or nil.
+func Unmarshal(data []byte, v any) error {
+	if cause := dart.UnmarshalJSON(v, string(data)); cause != "" {
+		return &SyntaxError{Text: cause}
+	}
+	return nil
+}
+
+// SyntaxError names a JSON text that holds no value of the target type.
+type SyntaxError struct {
+	Text string
+}
+
+func (e *SyntaxError) Error() string { return e.Text }
 
 // UnsupportedTypeError names a value that holds no JSON form.
 type UnsupportedTypeError struct {

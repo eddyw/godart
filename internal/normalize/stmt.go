@@ -24,7 +24,20 @@ func (b *builder) block(s *ast.BlockStmt) *ir.Block {
 	return out
 }
 
+// stmt builds 1 statement. A function literal that can block becomes a local
+// function, and its declaration stands in front of the statement that holds
+// it.
 func (b *builder) stmt(s ast.Stmt) []ir.Stmt {
+	out := b.stmtOf(s)
+	if len(b.pending) == 0 {
+		return out
+	}
+	pending := b.pending
+	b.pending = nil
+	return append(pending, out...)
+}
+
+func (b *builder) stmtOf(s ast.Stmt) []ir.Stmt {
 	switch s := s.(type) {
 	case nil, *ast.EmptyStmt:
 		return nil
@@ -287,6 +300,12 @@ func (b *builder) assignOne(lhs, rhs ast.Expr) []ir.Stmt {
 func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 	if b.fn != nil {
 		b.fn.Defers = true
+	}
+	if b.blocks.CallAsync(s.Call) {
+		// The deferred calls run at the return of the function, and a state
+		// machine holds no state at that point. Thus such a call cannot give up
+		// control, and the block would reach no scheduler.
+		b.fail(s.Pos(), "a deferred call that can block is outside the subset")
 	}
 	call := b.expr(s.Call)
 	var pre []ir.Stmt

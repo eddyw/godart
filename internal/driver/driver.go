@@ -312,7 +312,7 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 		imports = append(imports, emit.Import{Path: path, URI: uri})
 	}
 	sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
-	return emit.Package(tree, p.Types, baseName(p, module), imports, blocks)
+	return emit.Package(tree, p.Types, baseName(p, module), imports)
 }
 
 // compiled reports whether the build writes Dart code for a package. The

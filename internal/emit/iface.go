@@ -78,14 +78,16 @@ func (e *emitter) descParts(t types.Type) string {
 	case *types.Struct:
 		return e.fieldDescs(t, u)
 	case *types.Slice:
-		return ", elem: () => " + e.descriptorOf(u.Elem())
+		return fmt.Sprintf(", elem: () => %s, make: ($n) => $makeSlice<%s>($n, $n, %s)",
+			e.descriptorOf(u.Elem()), e.dartType(u.Elem()), e.alloc(u.Elem()))
 	case *types.Array:
 		return ", elem: () => " + e.descriptorOf(u.Elem())
 	case *types.Chan:
 		return ", elem: () => " + e.descriptorOf(u.Elem())
 	case *types.Map:
-		return fmt.Sprintf(", key: () => %s, elem: () => %s",
-			e.descriptorOf(u.Key()), e.descriptorOf(u.Elem()))
+		return fmt.Sprintf(", key: () => %s, elem: () => %s, make: ($n) => GoMap<%s, %s>(() => %s)",
+			e.descriptorOf(u.Key()), e.descriptorOf(u.Elem()),
+			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
 	}
 	return ""
 }
@@ -252,6 +254,11 @@ func structOf(t types.Type) *types.Struct {
 // descriptorOf gives the Dart expression that describes a Go type.
 func (e *emitter) descriptorOf(t types.Type) string {
 	u := types.Unalias(t)
+	// A type parameter reads its description from its dictionary. The caller
+	// gives 1 dictionary for each type argument.
+	if tp, ok := u.(*types.TypeParam); ok {
+		return e.dictOf(tp) + ".desc"
+	}
 	if p, ok := u.(*types.Pointer); ok {
 		if named, ok := types.Unalias(p.Elem()).(*types.Named); ok {
 			return e.qualify(named.Obj(), "$descP$"+name.Package(named.Obj().Name()))
@@ -270,8 +277,9 @@ func (e *emitter) descriptorOf(t types.Type) string {
 			return text
 		}
 	}
-	return fmt.Sprintf("TypeDesc('%s', '%s', const <String, Function>{}, text: '%s'%s)",
-		types.TypeString(t, nil), kindOf(t), types.TypeString(t, shortQualifier), e.descParts(t))
+	return fmt.Sprintf("TypeDesc('%s', '%s', const <String, Function>{}, text: '%s'%s, zero: () => %s)",
+		types.TypeString(t, nil), kindOf(t), types.TypeString(t, shortQualifier),
+		e.descParts(t), e.zero(t))
 }
 
 // basicDesc names the description of a predeclared type. The runtime library
@@ -356,9 +364,6 @@ func (e *emitter) interfaceCall(m *ir.Method, args []string) string {
 		return "null"
 	}
 	result := e.resultType(sig)
-	if e.blocks != nil && e.blocks.MethodAsync(m.Obj.Name(), sig) {
-		result = "FutureOr<" + result + ">"
-	}
 	if isPure(m.Recv) {
 		recv := e.expr(m.Recv)
 		params := []string{"Object?"}

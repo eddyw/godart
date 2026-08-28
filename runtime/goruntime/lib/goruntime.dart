@@ -20,6 +20,7 @@ export 'src/json.dart';
 export 'src/map.dart';
 export 'src/panic.dart';
 export 'src/print.dart';
+export 'src/sched.dart';
 export 'src/select.dart';
 export 'src/slice.dart';
 export 'src/string.dart';

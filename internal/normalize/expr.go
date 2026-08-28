@@ -107,7 +107,9 @@ func (b *builder) hoist(e ir.Expr, pos token.Pos, role string) ([]ir.Stmt, ir.Ex
 // type assertion, and a channel receive each have a form with 2 values.
 func (b *builder) multiValue(e ast.Expr) ir.Expr {
 	if x, ok := unparenExpr(e).(*ast.UnaryExpr); ok && x.Op == token.ARROW {
-		elem := b.typeOf(x)
+		// The type of the expression is already a pair in this context, thus
+		// the element type comes from the channel.
+		elem := chanElem(b.typeOf(x.X))
 		return &ir.Recv{
 			Chan:  b.expr(x.X),
 			Comma: true,
@@ -413,6 +415,8 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	}
 	out := &ir.FuncLit{Type: sig, Async: b.blocks.Blocks(e)}
 	prev := b.fn
+	prevPending := b.pending
+	b.pending = nil
 	inner := &ir.Func{Params: b.varsOf(sig.Params()), Results: b.results(sig)}
 	b.fn = inner
 	out.Params = inner.Params
@@ -420,7 +424,16 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	out.Body = b.block(e.Body)
 	out.Defers = inner.Defers
 	b.fn = prev
-	return out
+	b.pending = prevPending
+	if !out.Async {
+		return out
+	}
+	out.Machine = b.flatten(out.Body, out.Params, nil, true, out.Defers,
+		b.frameClass(e.Pos()), e.Pos())
+	addResults(out.Machine, out.Results)
+	local := b.litName(e.Pos())
+	b.pending = append(b.pending, &ir.LocalFunc{Name: local, Lit: out})
+	return &ir.Ident{Name: local, Type: sig}
 }
 
 func zeroConst(t types.Type) *ir.Const {

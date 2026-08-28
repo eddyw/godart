@@ -215,11 +215,47 @@ func (e *emitter) writeEqual(class string, st *types.Struct, fields []string) {
 // method writes a method of a struct class.
 func (e *emitter) method(f *ir.Func) {
 	params := append(e.dictParams(f.TypeParams), e.paramList(f.Params)...)
-	e.line("%s %s%s(%s)%s {", e.results(f), name.Package(f.Name),
-		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "), asyncWord(f.Async))
+	if p := e.frameParam(f.Machine, f.TypeParams); p != "" {
+		params = append(params, p)
+	}
+	e.line("%s %s%s(%s) {", e.results(f), name.Package(f.Name),
+		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "))
 	e.receiver(f)
 	e.body(f)
 	e.line("}")
+	e.frameOf(f, fmt.Sprintf("%s.%s%s(%s)", frameRecv(f.Recv), name.Package(f.Name),
+		typeArgNames(f.TypeParams),
+		strings.Join(e.frameArgs(f.TypeParams, f.Params), ", ")))
+}
+
+// frameRecv reads the receiver of a frame. A pointer receiver holds a Dart
+// type that accepts null, thus the read needs a null check.
+func frameRecv(v *ir.Var) string {
+	out := varRead(v)
+	if isPointerType(v.Type) {
+		return out + "!"
+	}
+	return out
+}
+
+// frameOf writes the frame class of a function that can block.
+func (e *emitter) frameOf(f *ir.Func, invoke string) {
+	if f.Machine == nil || !f.Machine.Blocking {
+		return
+	}
+	e.writeFrameClass(f.Machine, f.TypeParams, "", invoke, len(f.Results) > 0)
+}
+
+// typeArgNames writes the type arguments of a call to a generic function.
+func typeArgNames(params []*types.TypeParam) string {
+	if len(params) == 0 {
+		return ""
+	}
+	parts := make([]string, len(params))
+	for i, tp := range params {
+		parts[i] = name.Local(tp.Obj().Name())
+	}
+	return "<" + strings.Join(parts, ", ") + ">"
 }
 
 // receiver binds the receiver name. Go gives a value receiver a copy of the
@@ -228,11 +264,17 @@ func (e *emitter) receiver(f *ir.Func) {
 	if f.Recv == nil {
 		return
 	}
+	// A machine writes the receiver into its frame, thus the name takes a new
+	// value on each resume.
+	keyword := "final "
+	if f.Machine != nil {
+		keyword = ""
+	}
 	if isPointerType(f.Recv.Type) {
-		e.line("final %s %s = this;", e.dartType(f.Recv.Type), f.Recv.Name)
+		e.line("%s%s %s = this;", keyword, e.dartType(f.Recv.Type), f.Recv.Name)
 		return
 	}
-	e.line("final %s %s = this.$copy();", e.dartType(f.Recv.Type), f.Recv.Name)
+	e.line("%s%s %s = this.$copy();", keyword, e.dartType(f.Recv.Type), f.Recv.Name)
 }
 
 func (e *emitter) funcDecl(f *ir.Func) {
@@ -241,11 +283,16 @@ func (e *emitter) funcDecl(f *ir.Func) {
 		return
 	}
 	params := append(e.dictParams(f.TypeParams), e.paramList(f.Params)...)
-	e.line("%s %s%s(%s)%s {", e.results(f), e.funcName(f),
-		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "), asyncWord(f.Async))
+	if p := e.frameParam(f.Machine, f.TypeParams); p != "" {
+		params = append(params, p)
+	}
+	e.line("%s %s%s(%s) {", e.results(f), e.funcName(f),
+		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "))
 	e.body(f)
 	e.line("}")
 	e.line("")
+	e.frameOf(f, fmt.Sprintf("%s%s(%s)", e.funcName(f), typeArgNames(f.TypeParams),
+		strings.Join(e.frameArgs(f.TypeParams, f.Params), ", ")))
 }
 
 // methodFunc writes a method of a named type that is not a struct. Such a type
@@ -258,11 +305,16 @@ func (e *emitter) methodFunc(f *ir.Func) {
 		return
 	}
 	params := append([]string{e.dartType(f.Recv.Type) + " " + paramName(f.Recv)}, e.paramList(f.Params)...)
-	e.line("%s %s(%s)%s {", e.results(f), methodFuncName(obj.Name(), f.Name),
-		strings.Join(params, ", "), asyncWord(f.Async))
+	if p := e.frameParam(f.Machine, nil); p != "" {
+		params = append(params, p)
+	}
+	e.line("%s %s(%s) {", e.results(f), methodFuncName(obj.Name(), f.Name),
+		strings.Join(params, ", "))
 	e.body(f)
 	e.line("}")
 	e.line("")
+	e.frameOf(f, fmt.Sprintf("%s(%s)", methodFuncName(obj.Name(), f.Name),
+		strings.Join(e.frameArgs(nil, append([]*ir.Var{f.Recv}, f.Params...)), ", ")))
 }
 
 // methodFuncName builds the name of a method that becomes a top level
@@ -321,27 +373,24 @@ func (e *emitter) boxRecv(v *ir.Var) {
 // boxParams writes the box of each parameter whose address the body takes. A
 // Dart parameter holds the value, thus the box comes at the start of the body.
 func (e *emitter) boxParams(vars []*ir.Var) {
+	keyword := "final "
+	if e.machine != nil {
+		keyword = ""
+	}
 	for _, v := range vars {
 		if v.Boxed {
-			e.line("final Box<%s> %s = Box(%s);", e.dartType(v.Type), v.Name, paramName(v))
+			e.line("%sBox<%s> %s = Box(%s);", keyword, e.dartType(v.Type), v.Name, paramName(v))
 		}
 	}
 }
 
-func asyncWord(async bool) string {
-	if async {
-		return " async"
-	}
-	return ""
-}
-
 func (e *emitter) results(f *ir.Func) string {
-	return e.resultText(f.Results, f.Async)
+	return e.resultText(f.Results)
 }
 
-// resultText gives the Dart result type. A function that can block returns a
-// Future, because it compiles to a Dart async function.
-func (e *emitter) resultText(results []*ir.Var, async bool) string {
+// resultText gives the Dart result type. A function with more than 1 result
+// returns a record.
+func (e *emitter) resultText(results []*ir.Var) string {
 	var base string
 	switch len(results) {
 	case 0:
@@ -355,15 +404,19 @@ func (e *emitter) resultText(results []*ir.Var, async bool) string {
 		}
 		base = "(" + strings.Join(parts, ", ") + ")"
 	}
-	if async {
-		return "Future<" + base + ">"
-	}
 	return base
 }
 
 // body writes the statements of a function. A named result becomes a local
 // variable that holds the zero value until a return statement writes it.
 func (e *emitter) body(f *ir.Func) {
+	if f.Machine != nil {
+		if f.Recv != nil && !e.inClass[f] {
+			e.boxRecv(f.Recv)
+		}
+		e.machineBody(f, "")
+		return
+	}
 	e.boxParams(f.Params)
 	e.boxRecv(f.Recv)
 	e.emitBody(f.Results, f.Defers, f.Body)

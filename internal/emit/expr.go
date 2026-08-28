@@ -58,9 +58,15 @@ func (e *emitter) expr(x ir.Expr) string {
 		return e.copyExpr(x)
 	case *ir.Recv:
 		if x.Comma {
-			return fmt.Sprintf("(await %s.receive())", e.expr(x.Chan))
+			return fmt.Sprintf("%s.receive()", e.expr(x.Chan))
 		}
-		return fmt.Sprintf("(await %s.receive()).$1", e.expr(x.Chan))
+		return fmt.Sprintf("%s.receive().$1", e.expr(x.Chan))
+	case *ir.RecordField:
+		return fmt.Sprintf("%s.$%d", e.expr(x.X), x.Index+1)
+	case *ir.SelectList:
+		return e.selectList(x)
+	case *ir.SelectRun:
+		return fmt.Sprintf("$select(%s, %t)", e.expr(x.List), x.HasDefault)
 	case *ir.Record:
 		parts := make([]string, len(x.Elems))
 		for i, el := range x.Elems {
@@ -295,7 +301,7 @@ func (e *emitter) copyExpr(x *ir.Copy) string {
 
 func (e *emitter) funcLit(x *ir.FuncLit) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "(%s)%s {", e.params(x.Params), asyncWord(x.Async))
+	fmt.Fprintf(&b, "(%s) {", e.params(x.Params))
 	e.buf.WriteString("")
 	// The inner emitter shares each package wide map. A class of an unnamed
 	// struct type and the name of a shadowed function must reach the library
@@ -303,11 +309,12 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	inner := &emitter{pkg: e.pkg, prefixes: e.prefixes, base: e.base,
 		methods: e.methods, inClass: e.inClass, initNames: e.initNames,
 		breakables: e.breakables, labelSeq: e.labelSeq,
-		anon: e.anon, shadowed: e.shadowed, blocks: e.blocks}
+		anon: e.anon, shadowed: e.shadowed, nilChans: e.nilChans}
 	inner.boxParams(x.Params)
 	inner.emitBody(x.Results, x.Defers, x.Body)
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
+	e.frames = append(e.frames, inner.frames...)
 	b.WriteString(inner.buf.String())
 	b.WriteString("}")
 	return b.String()

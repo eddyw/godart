@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'iface.dart';
 import 'int.dart';
 import 'string.dart';
 
@@ -20,7 +21,18 @@ final class Dict<T> {
   /// The function stops the program for a type that Go holds unordered.
   final int Function(T, T) order;
 
-  const Dict(this.zero, this.equal, this.hash, this.alloc, this.order);
+  /// desc describes the type argument. A conversion of a value of the type
+  /// parameter to an interface reads it.
+  final TypeDesc desc;
+
+  const Dict(
+    this.zero,
+    this.equal,
+    this.hash,
+    this.alloc,
+    this.order,
+    this.desc,
+  );
 }
 
 /// $unordered stops the program. Go rejects an order operation on the type,
@@ -52,30 +64,43 @@ bool _equalString(GoString a, GoString b) => a == b;
 int _hashString(GoString v) => v.hashCode;
 List<GoString> _allocString(int n) => List<GoString>.filled(n, GoString.empty);
 
-const Dict<int> $dictInt = Dict<int>(
-  _zeroInt,
-  _equalInt,
-  _hashInt,
-  _allocInt,
-  _orderInt,
-);
+/// A dictionary of an integer type. Each one holds the same operations, and
+/// the description and the order tell them apart. An unsigned 64-bit type
+/// reads the bit pattern as unsigned, thus its order differs.
+Dict<int> _signed(TypeDesc desc) =>
+    Dict<int>(_zeroInt, _equalInt, _hashInt, _allocInt, _orderInt, desc);
 
-/// $dictUint holds an unsigned 64-bit type. Such a type reads the bit pattern
-/// as unsigned, thus its order differs from the order of $dictInt.
-const Dict<int> $dictUint = Dict<int>(
-  _zeroInt,
-  _equalInt,
-  _hashInt,
-  _allocInt,
-  _orderUint,
-);
+Dict<int> _unsigned(TypeDesc desc) =>
+    Dict<int>(_zeroInt, _equalInt, _hashInt, _allocInt, _orderUint, desc);
 
-const Dict<double> $dictDouble = Dict<double>(
+final Dict<int> $dictInt = _signed($typeInt);
+final Dict<int> $dictInt8 = _signed($typeInt8);
+final Dict<int> $dictInt16 = _signed($typeInt16);
+final Dict<int> $dictInt32 = _signed($typeInt32);
+final Dict<int> $dictInt64 = _signed($typeInt64);
+final Dict<int> $dictUint8 = _signed($typeUint8);
+final Dict<int> $dictUint16 = _signed($typeUint16);
+final Dict<int> $dictUint32 = _signed($typeUint32);
+final Dict<int> $dictUint = _unsigned($typeUint);
+final Dict<int> $dictUint64 = _unsigned($typeUint64);
+final Dict<int> $dictUintptr = _unsigned($typeUintptr);
+
+const Dict<double> $dictFloat64 = Dict<double>(
   _zeroDouble,
   _equalDouble,
   _hashDouble,
   _allocDouble,
   _orderDouble,
+  $typeFloat64,
+);
+
+const Dict<double> $dictFloat32 = Dict<double>(
+  _zeroDouble,
+  _equalDouble,
+  _hashDouble,
+  _allocDouble,
+  _orderDouble,
+  $typeFloat32,
 );
 
 const Dict<bool> $dictBool = Dict<bool>(
@@ -84,6 +109,7 @@ const Dict<bool> $dictBool = Dict<bool>(
   _hashBool,
   _allocBool,
   $unordered<bool>,
+  $typeBool,
 );
 
 const Dict<GoString> $dictString = Dict<GoString>(
@@ -92,4 +118,5 @@ const Dict<GoString> $dictString = Dict<GoString>(
   _hashString,
   _allocString,
   $compare,
+  $typeString,
 );

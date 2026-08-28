@@ -1,0 +1,376 @@
+package emit
+
+import (
+	"fmt"
+	"go/types"
+	"strings"
+
+	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/name"
+)
+
+// A function that can block writes each local into a frame and gives up control
+// with a plain return. This file writes that form: the frame class, the
+// preamble that reads a frame, the states, and the epilogue that writes one.
+
+// machineCtx holds the machine of the function that the emitter writes.
+type machineCtx struct {
+	m       *ir.Machine
+	results []*ir.Var
+	// fn names the local function of a literal. The frame keeps it, because a
+	// literal has no name at package level.
+	fn string
+}
+
+// frameType gives the Dart type of a frame with its type arguments.
+func (e *emitter) frameType(m *ir.Machine, tps []*types.TypeParam) string {
+	if len(tps) == 0 {
+		return m.Class
+	}
+	parts := make([]string, len(tps))
+	for i, tp := range tps {
+		parts[i] = name.Local(tp.Obj().Name())
+	}
+	return m.Class + "<" + strings.Join(parts, ", ") + ">"
+}
+
+// frameParam gives the last parameter of a function that can block. A resume
+// passes the frame of the call, and the first call passes nothing.
+func (e *emitter) frameParam(m *ir.Machine, tps []*types.TypeParam) string {
+	if m == nil || !m.Blocking {
+		return ""
+	}
+	return "[" + e.frameType(m, tps) + "? $f]"
+}
+
+// fieldType gives the Dart type of 1 field of a frame.
+func (e *emitter) fieldType(v *ir.Var) string {
+	if v.Dart != "" {
+		return v.Dart
+	}
+	if v.Boxed {
+		return "Box<" + e.dartType(v.Type) + ">"
+	}
+	return e.dartType(v.Type)
+}
+
+// localZero gives the first value of 1 variable of a machine.
+func (e *emitter) localZero(v *ir.Var) string {
+	if v.DartZero != "" {
+		return v.DartZero
+	}
+	if v.Boxed {
+		return "Box(" + e.zero(v.Type) + ")"
+	}
+	return e.zero(v.Type)
+}
+
+// writeFrameClass queues the class of 1 frame. A part file writes it at package
+// level, because Dart holds no class inside a function and no class inside
+// another class.
+func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
+	fnType, invoke string, hasResult bool) {
+	var b strings.Builder
+	w := func(format string, args ...any) {
+		if len(args) == 0 {
+			b.WriteString(format)
+		} else {
+			fmt.Fprintf(&b, format, args...)
+		}
+		b.WriteByte('\n')
+	}
+	w("final class %s%s implements Frame {", m.Class, e.typeParamDecl(tps))
+	w("int $s = 0;")
+	w("bool $c = false;")
+	w("Frame? $r;")
+	if m.Defer {
+		w("late DeferStack $defer;")
+	}
+	if fnType != "" {
+		w("late %s $fn;", fnType)
+	}
+	for _, tp := range tps {
+		n := name.Local(tp.Obj().Name())
+		w("late Dict<%s> $d%s;", n, n)
+	}
+	for _, v := range m.Locals {
+		w("late %s %s;", e.fieldType(v), v.Name)
+	}
+	w("@override")
+	if hasResult {
+		w("Object? resume() => %s;", invoke)
+	} else {
+		w("Object? resume() {")
+		w("%s;", invoke)
+		w("return null;")
+		w("}")
+	}
+	w("}")
+	w("")
+	e.frames = append(e.frames, b.String())
+}
+
+// frameArgs lists the arguments that a resume gives the function again.
+func (e *emitter) frameArgs(tps []*types.TypeParam, params []*ir.Var) []string {
+	out := make([]string, 0, len(tps)+len(params)+1)
+	for _, tp := range tps {
+		n := name.Local(tp.Obj().Name())
+		out = append(out, "$d"+n)
+	}
+	for _, p := range params {
+		if p.Boxed {
+			out = append(out, p.Name+".v")
+			continue
+		}
+		out = append(out, p.Name)
+	}
+	return append(out, "this")
+}
+
+// machineBody writes the body of a function whose form is a state machine.
+func (e *emitter) machineBody(f *ir.Func, fn string) {
+	m := f.Machine
+	prev := e.machine
+	e.machine = &machineCtx{m: m, results: f.Results, fn: fn}
+	e.boxParams(f.Params)
+	skip := map[*ir.Var]bool{f.Recv: true}
+	for _, p := range f.Params {
+		skip[p] = true
+	}
+	for _, v := range m.Locals {
+		if skip[v] {
+			continue
+		}
+		e.line("%s %s = %s;", e.fieldType(v), v.Name, e.localZero(v))
+	}
+	e.line("int $s = 0;")
+	if m.Blocking {
+		e.line("bool $c = false;")
+		e.line("Frame? $r;")
+	}
+	if m.Defer {
+		e.line("DeferStack $defer = DeferStack();")
+	}
+	if m.Blocking {
+		e.line("if ($f != null) {")
+		e.line("$s = $f.$s;")
+		e.line("$c = $f.$c;")
+		e.line("$r = $f.$r;")
+		if m.Defer {
+			e.line("$defer = $f.$defer;")
+		}
+		for _, v := range m.Locals {
+			e.line("%s = $f.%s;", v.Name, v.Name)
+		}
+		e.line("}")
+	}
+	if m.Defer {
+		e.line("try {")
+	}
+	e.line("$m: while (true) {")
+	e.line("switch ($s) {")
+	for i, state := range m.States {
+		e.line("case %d:", i)
+		for _, s := range state.List {
+			e.stmt(s)
+		}
+	}
+	e.line("}")
+	e.line("}")
+	if m.Blocking {
+		e.machineSave(f, fn)
+	}
+	if m.Defer {
+		e.line("} catch ($e) {")
+		e.line("$defer.run();")
+		e.line("rethrow;")
+		e.line("}")
+	}
+	e.machine = prev
+}
+
+// machineSave writes the frame of a call that gave up control.
+func (e *emitter) machineSave(f *ir.Func, fn string) {
+	m := f.Machine
+	tps := f.TypeParams
+	e.line("$blocked = %s()", e.frameType(m, tps))
+	e.line("..$s = $s")
+	e.line("..$c = true")
+	e.line("..$r = $blocked")
+	if m.Defer {
+		e.line("..$defer = $defer")
+	}
+	if fn != "" {
+		e.line("..$fn = %s", fn)
+	}
+	for _, tp := range tps {
+		n := name.Local(tp.Obj().Name())
+		e.line("..$d%s = $d%s", n, n)
+	}
+	for _, v := range m.Locals {
+		e.line("..%s = %s", v.Name, v.Name)
+	}
+	e.line(";")
+	e.line("return %s;", e.zeroResult(f.Results))
+}
+
+// zeroResult gives a result that no code reads. A call that gave up control
+// gives it, and the caller drops it.
+func (e *emitter) zeroResult(results []*ir.Var) string {
+	switch len(results) {
+	case 0:
+		return ""
+	case 1:
+		return e.zero(results[0].Type)
+	}
+	parts := make([]string, len(results))
+	for i, r := range results {
+		parts[i] = e.zero(r.Type)
+	}
+	return "(" + strings.Join(parts, ", ") + ")"
+}
+
+// machineReturn writes a return statement of a machine. Each deferred call runs
+// in front of the return, thus such a call can still write a named result.
+func (e *emitter) machineReturn(s *ir.Return) {
+	ctx := e.machine
+	named := hasNamedResults(ctx.results)
+	switch {
+	case named:
+		e.writeNamedResults(s, ctx.results)
+	case len(s.Values) == 0 && len(ctx.results) > 0:
+		// Go proves that this point is unreachable, and Dart cannot.
+		e.line("$unreachable();")
+		return
+	}
+	if ctx.m.Defer {
+		e.line("$defer.run();")
+	}
+	if named {
+		e.line("return %s;", e.resultRead(ctx.results))
+		return
+	}
+	switch len(s.Values) {
+	case 0:
+		e.line("return;")
+	case 1:
+		e.line("return %s;", e.expr(s.Values[0]))
+	default:
+		parts := make([]string, len(s.Values))
+		for i, v := range s.Values {
+			parts[i] = e.expr(v)
+		}
+		e.line("return (%s);", strings.Join(parts, ", "))
+	}
+}
+
+func hasNamedResults(results []*ir.Var) bool {
+	for _, r := range results {
+		if r.Named {
+			return true
+		}
+	}
+	return false
+}
+
+// writeNamedResults writes the values of a return statement into the result
+// variables.
+func (e *emitter) writeNamedResults(s *ir.Return, results []*ir.Var) {
+	switch {
+	case len(s.Values) == 0:
+	case len(s.Values) == 1 && len(results) > 1:
+		parts := make([]string, len(results))
+		for i, r := range results {
+			parts[i] = varRead(r)
+		}
+		e.line("(%s) = %s;", strings.Join(parts, ", "), e.expr(s.Values[0]))
+	default:
+		for i, v := range s.Values {
+			if i >= len(results) {
+				break
+			}
+			e.line("%s = %s;", varRead(results[i]), e.expr(v))
+		}
+	}
+}
+
+// resume writes the re-entry of the call of the state before it.
+func (e *emitter) resume(s *ir.Resume) {
+	if s.Var != nil {
+		e.line("if ($c) { $c = false; %s = $r!.resume() as %s; }",
+			s.Var.Name, e.fieldType(s.Var))
+	} else {
+		e.line("if ($c) { $c = false; $r!.resume(); }")
+	}
+	e.line("if ($blocked != null) break $m;")
+}
+
+// localFunc writes a function literal that can block. Such a literal becomes a
+// local function, because its frame must name it.
+func (e *emitter) localFunc(s *ir.LocalFunc) {
+	lit := s.Lit
+	m := lit.Machine
+	params := e.paramList(lit.Params)
+	if p := e.frameParam(m, nil); p != "" {
+		params = append(params, p)
+	}
+	result := e.resultText(lit.Results)
+	e.line("%s %s(%s) {", result, s.Name, strings.Join(params, ", "))
+	inner := &ir.Func{
+		Params:  lit.Params,
+		Results: lit.Results,
+		Body:    lit.Body,
+		Machine: m,
+	}
+	e.machineBody(inner, s.Name)
+	e.line("}")
+	types := make([]string, len(lit.Params))
+	for i, p := range lit.Params {
+		types[i] = e.dartType(p.Type)
+	}
+	fnType := fmt.Sprintf("%s Function(%s, [%s?])", result,
+		strings.Join(types, ", "), m.Class)
+	if len(types) == 0 {
+		fnType = fmt.Sprintf("%s Function([%s?])", result, m.Class)
+	}
+	invoke := fmt.Sprintf("$fn(%s)", strings.Join(e.frameArgs(nil, lit.Params), ", "))
+	e.writeFrameClass(m, nil, fnType, invoke, len(lit.Results) > 0)
+}
+
+// selectBind writes the value and the flag of a receive case of a select
+// statement. Each variable of the case lives in the frame, thus the statement
+// writes it and does not declare it.
+func (e *emitter) selectBind(s *ir.SelectBind) {
+	list := e.expr(s.List)
+	read := fmt.Sprintf("(%s[%d] as RecvCase<%s>).result!",
+		list, s.Index, e.dartType(s.Clause.Elem))
+	fields := []string{read + ".$1", read + ".$2"}
+	for i, v := range s.Clause.Vars {
+		if i >= len(fields) || v.Name == "_" {
+			continue
+		}
+		e.line("%s = %s;", varRead(v), fields[i])
+	}
+	for i, lhs := range s.Clause.Lhs {
+		if i >= len(fields) {
+			continue
+		}
+		e.line("%s = %s;", e.expr(lhs), fields[i])
+	}
+}
+
+// selectList writes the case list of a select statement.
+func (e *emitter) selectList(x *ir.SelectList) string {
+	parts := make([]string, 0, len(x.Cases))
+	for _, c := range x.Cases {
+		switch c.Kind {
+		case ir.SelectRecv:
+			parts = append(parts, fmt.Sprintf("RecvCase<%s>(%s)",
+				e.dartType(c.Elem), e.expr(c.Chan)))
+		case ir.SelectSend:
+			parts = append(parts, fmt.Sprintf("SendCase<%s>(%s, %s)",
+				e.dartType(c.Elem), e.expr(c.Chan), e.expr(c.Value)))
+		}
+	}
+	return "<SelectCase>[" + strings.Join(parts, ", ") + "]"
+}

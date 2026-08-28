@@ -59,6 +59,20 @@ end:
 	return x
 }
 
+// gotoNested holds a label inside the body of a loop. The flatten pass of
+// stage 4 gives such a label its own state.
+func gotoNested(n int) int {
+	for i := 0; i < n; i++ {
+		if i == 3 {
+			goto found
+		}
+		continue
+	found:
+		return i
+	}
+	return -1
+}
+
 func main() {
 	order()
 	println(named())
@@ -66,4 +80,5 @@ func main() {
 	withRes()
 	println(gotoSum(5))
 	println(gotoSkip())
+	println(gotoNested(6), gotoNested(2))
 }

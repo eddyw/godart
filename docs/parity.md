@@ -27,7 +27,7 @@ The package `fmt` reads it.
 |---|---|---|
 | Map order | Random for each run | The order of the writes |
 | `select` with 2 ready cases | Random | The first case in source order |
-| Deadlock | The runtime reports it and exits | The event loop ends and the program exits |
+| Deadlock | The runtime reports it and exits | Equal, with no stack trace |
 | A pointer value in `%v` | An address | `&` and the value, or `<func>` and `<chan>` |
 | `%p` | An address | Not supported |
 | A goroutine on a second thread | Yes | No. All Go code runs in 1 isolate. |
@@ -38,13 +38,14 @@ The package `fmt` reads it.
 
 | Item | State |
 |---|---|
-| A pointer to a value that is not a struct | Rejected |
-| `new` of a type that is not a struct | Rejected |
-| A goto label inside a nested block | Rejected |
+| A pointer to a value that is not a struct | Present. It holds a box. |
+| `new` of a type that is not a struct | Present |
+| A goto label inside a nested block | Present |
 | A conversion between 2 struct types | Rejected |
 | `import _ "unsafe"` | Present. A blank import performs no operation. |
-| A method value of a named type that is not a struct | Rejected |
-| A range loop over a function | Rejected |
+| A method value of a named type that is not a struct | Present. It writes a closure. |
+| A range loop over a function | Present. Read the section below. |
+| A deferred call that can block | Rejected by stage 4 |
 | A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
 | A type declaration inside a function, of a struct type | Present. It takes the class of its shape. |
 | A type declaration inside a function, of another type | Rejected |
@@ -59,6 +60,7 @@ reads the real Go source, because that source already stays inside the subset.
 
 | Package | Form | Note |
 |---|---|---|
+| `bytes` | Native, with 1 patch | The patch replaces `buffer.go`, which holds a `recover` call. |
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
 | `errors` | Overlay | |
@@ -90,14 +92,8 @@ A patch replaces 1 file of a native package by its base name. Each other file
 keeps the real Go source. A patch that matches no file stays out, because a
 build tag of the architecture selects the file set of a package.
 
-The 3 causes that block the next candidate:
-
-| Package | Cause |
-|---|---|
-| `bytes` | A `recover` call in `buffer.go`, a `goto` label outside the body of a function, and a method value of a named type that is not a struct. |
-
-`bytes` needs 1 patch of `buffer.go` and 2 compiler changes. Each other file of
-it already compiles.
+The next candidate needs a survey of the rejections of stage 2 over the real
+source of the package.
 
 ## A pointer to a value that is not a struct
 
@@ -155,12 +151,24 @@ walks it.
 | A map key of the type string or int | Present | Equal |
 | The order of a map member | Sorted by the key | Equal |
 | A byte slice | Gives base64 text | Gives a list of numbers |
-| `Unmarshal`, `Decoder`, `Encoder` | Present | Missing |
+| `Unmarshal` | Present | Present. Read the table below. |
+| `Decoder` and `Encoder` | Present | Missing |
 | `Marshaler` and `Unmarshaler` | Present | Missing |
 
-`Unmarshal` needs a write of each field and a fresh value of a nested field. The
-descriptor holds a write and a `zero` factory, thus the work needs no new
-compiler feature.
+`Unmarshal` reads the same descriptor. It writes each field through
+`FieldDesc.set`, and it builds a nested value through `TypeDesc.zero` and
+`TypeDesc.make`.
+
+| Item of Unmarshal | Go | godart |
+|---|---|---|
+| A struct, a slice, an array, a map, a pointer | Present | Equal |
+| A name that matches only in case | Matches | Equal |
+| A member with no field | Stays out | Equal |
+| A value of the type `any` | Gives bool, float64, string, []any, map[string]any | Equal |
+| A type that does not fit the JSON value | Gives an error | Gives an error with another text |
+| A broken text | Gives a `SyntaxError` | Gives an error with another text |
+| `UnmarshalTypeError` and its fields | Present | Missing. Each cause is a `SyntaxError`. |
+| A number with a fraction into an integer field | Gives an error | Gives an error |
 
 ## The file access
 
@@ -212,17 +220,18 @@ seq(func(k K, v V) bool { BODY; return true })
 | A nested switch with its own `break` | Present |
 | A nested sequence | Present |
 | `return` inside the body | Present. A flag carries the result out. |
-| A labelled `break` or `continue` that leaves the body | Rejected by stage 2 |
-| `goto` out of the body | Rejected by stage 2 |
+| A labelled `break` or `continue` that leaves the body | Present. A flag carries the branch out. |
+| `goto` out of the body | Rejected by stage 4 |
 
 A `return` inside the body writes each value into a temporary variable, it sets a
 flag, and it gives false to the sequence. The code after the call of the sequence
 reads the flag. A nested sequence carries the flag out 1 level for each call.
 
-A labelled `break` or `continue` that leaves the body needs 1 flag for each
-target and a check at each level between the closure and the target. The flag
-also needs a reset when the target loop iterates. The compiler rejects the form
-instead.
+A labelled `break` or `continue` that leaves the body writes the flag of its
+target and gives false to the sequence. The code after the call reads the flag:
+it gives false again while another such body holds it, and it runs the real
+branch at the level of the target. The flag takes 0 again at that point, because
+the target construct runs its next pass.
 
 ## The core type of a type parameter
 
@@ -254,6 +263,24 @@ dictionary of the type parameter.
 
 A constraint whose terms give 1 Dart type keeps each operator. `int | int64`
 gives `int` 2 times, thus `+` and `<` work directly.
+
+A conversion of a value of a type parameter to an interface reads `Dict.desc`.
+Thus a type switch over `any(v)` gives the real type argument:
+
+```go
+func kind[T string | []byte](s T) int {
+	switch v := any(s).(type) {
+	case string:
+		return len(v)
+	case []byte:
+		return -len(v)
+	}
+	return 0
+}
+```
+
+A value of a generic named type still reaches no interface. Such a type holds no
+descriptor, because 1 descriptor would serve each instance.
 
 ## A short variable declaration with a mixed left side
 
@@ -342,36 +369,53 @@ value and calls `TestMain`. Go passes the result of `m.Run` to `os.Exit` when
 `testing.F` exists, thus a fuzz body type checks. Each method of it stops the
 program, and no path reaches such a method.
 
-### The cost of the async model
+### The block model
+
+A function that can block gives up control with a plain return. It writes each
+local into a frame object, and each caller on the stack does the same. Thus the
+stack unwinds to the scheduler, and the scheduler runs the chain again when the
+operation is ready. The body of such a function becomes a flat state machine: a
+loop with a switch on a state variable.
+
+The model holds no `Future` and no `await`. A call that gives up no control
+costs 1 state assignment and 2 tests.
 
 `testdata/tests/async` measures a call chain of 20 frames. The chain reads a
-channel 1 time in its last frame, thus stage 3 marks each frame async.
+buffered channel 1 time in its last frame, thus no frame really waits and stage
+3 still marks each frame.
 
-| Chain | Go | godart |
+| Chain of 20 frames | Go | godart |
 |---|---|---|
-| Synchronous | 8.5 ns/op | 28.9 ns/op |
-| Asynchronous | 51.5 ns/op | 3900 ns/op |
+| Synchronous | 8.5 ns/op | 26 ns/op |
+| Asynchronous | 51.5 ns/op | 189 ns/op |
 
-An async frame of Dart costs about 180 nanoseconds, because each `await`
-schedules a microtask. The block analysis keeps a synchronous path for a
-function that cannot block, thus only a chain that can block pays the cost.
+The `async` form of Dart cost 3900 ns/op for the same chain, because each
+`await` schedules a microtask. The unwind model is a factor of 21 faster.
 
-A measurement of 2 Dart forms of the same chain of 20 frames, on an ahead of
-time build:
+The block analysis of stage 3 keeps a synchronous path for a function that
+cannot block, thus only a chain that can block pays the cost.
 
-| Dart form | Cost |
-|---|---|
-| `Future<int> f() async` with `await` at each frame | 2400 ns/op |
-| `FutureOr<int> f()` with a test of `is Future` and `.then` | 107 ns/op |
+These rules follow from the model:
 
-The second form is a factor of 22 faster. The compiler does not write it, because
-such a form needs continuation passing style: each statement after a call becomes
-a closure. The `async` form of Dart writes that transform, and a hand written
-form must write it too.
+- A deferred call must not block. The deferred calls run at the return of a
+  function, and the machine keeps no state at that point. Stage 4 rejects such
+  a call with a position.
+- A local that a closure reads and that the code writes takes a box. A resume
+  reads each local from the frame into a new call, thus the closure and the
+  frame must share 1 value. A struct and an array need no box, because an
+  assignment to such a variable writes the fields of the same object.
+- The emitted Dart of a function that can block no longer follows the shape of
+  its Go source.
 
-A narrow case needs no such transform. A function whose body is
-`return f(x) + 1` holds 1 call and 1 expression, thus `.then` fits directly. The
-compiler writes no such case yet.
+### The end of the program
+
+Package main runs as the first goroutine. Go ends the program when that
+goroutine returns, and the runtime holds the same rule.
+
+The runtime reports a deadlock when no goroutine can run and no timer waits:
+`fatal error: all goroutines are asleep - deadlock!` on the error output, with
+the status code 2. Go writes a stack trace of each goroutine, and the runtime
+writes only the line.
 
 ## The standard library
 

@@ -82,11 +82,7 @@ func (e *emitter) funcType(sig *types.Signature) string {
 	for i := range params {
 		params[i] = e.dartType(sig.Params().At(i).Type())
 	}
-	result := e.resultType(sig)
-	if e.blocks != nil && e.blocks.SignatureAsync(sig) {
-		result = "FutureOr<" + result + ">"
-	}
-	return result + " Function(" + strings.Join(params, ", ") + ")"
+	return e.resultType(sig) + " Function(" + strings.Join(params, ", ") + ")"
 }
 
 // resultType gives the Dart type that holds the results. A function with more
@@ -130,6 +126,13 @@ func (e *emitter) zero(t types.Type) string {
 		return e.anonClass(st) + ".$zero()"
 	}
 	switch u := u.Underlying().(type) {
+	case *types.Tuple:
+		// A channel read gives the value and a flag. The pair is a Dart record.
+		parts := make([]string, u.Len())
+		for i := range parts {
+			parts[i] = e.zero(u.At(i).Type())
+		}
+		return "(" + strings.Join(parts, ", ") + ")"
 	case *types.Basic:
 		switch {
 		case u.Kind() == types.Bool || u.Kind() == types.UntypedBool:
@@ -150,6 +153,9 @@ func (e *emitter) zero(t types.Type) string {
 		return fmt.Sprintf("GoMap<%s, %s>.nil(() => %s)",
 			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
 	case *types.Chan:
+		if !holdsTypeParam(u.Elem()) {
+			return e.nilChan(u.Elem())
+		}
 		return fmt.Sprintf("Chan<%s>.nil(() => %s)", e.dartType(u.Elem()), e.zero(u.Elem()))
 	case *types.Pointer, *types.Signature, *types.Interface:
 		return "null"
@@ -237,22 +243,18 @@ func (e *emitter) dictOf(t types.Type) string {
 		return "$d" + name.Local(tp.Obj().Name())
 	}
 	if b, ok := u.Underlying().(*types.Basic); ok {
-		switch {
-		case b.Info()&types.IsString != 0:
-			return "$dictString"
-		case b.Info()&types.IsFloat != 0:
-			return "$dictDouble"
-		case b.Kind() == types.Bool || b.Kind() == types.UntypedBool:
-			return "$dictBool"
-		case isUnsigned64(t):
-			return "$dictUint"
-		case b.Info()&types.IsInteger != 0:
-			return "$dictInt"
+		// A named type takes the dictionary of its underlying type only when
+		// the description stays equal. A named type holds its own description.
+		if _, named := u.(*types.Named); !named {
+			if text := basicDict(b); text != "" {
+				return text
+			}
 		}
 	}
 	dart := e.dartType(t)
-	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, $unordered<%s>)",
-		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t), dart)
+	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s)",
+		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t),
+		e.orderText(t), e.descriptorOf(t))
 }
 
 // equalText writes the Go equality of 2 values of a type.
@@ -501,4 +503,108 @@ func mask(t types.Type) string {
 		return "$f32"
 	}
 	return ""
+}
+
+// holdsTypeParam reports whether a type reads a type parameter. A value of such
+// a type takes no variable at package level.
+func holdsTypeParam(t types.Type) bool {
+	found := false
+	var walk func(types.Type)
+	seen := map[types.Type]bool{}
+	walk = func(t types.Type) {
+		if t == nil || found || seen[t] {
+			return
+		}
+		seen[t] = true
+		switch t := types.Unalias(t).(type) {
+		case *types.TypeParam:
+			found = true
+		case *types.Slice:
+			walk(t.Elem())
+		case *types.Array:
+			walk(t.Elem())
+		case *types.Pointer:
+			walk(t.Elem())
+		case *types.Chan:
+			walk(t.Elem())
+		case *types.Map:
+			walk(t.Key())
+			walk(t.Elem())
+		case *types.Named:
+			for i := 0; i < t.TypeArgs().Len(); i++ {
+				walk(t.TypeArgs().At(i))
+			}
+		case *types.Struct:
+			for i := 0; i < t.NumFields(); i++ {
+				walk(t.Field(i).Type())
+			}
+		case *types.Signature:
+			for i := 0; i < t.Params().Len(); i++ {
+				walk(t.Params().At(i).Type())
+			}
+			for i := 0; i < t.Results().Len(); i++ {
+				walk(t.Results().At(i).Type())
+			}
+		}
+	}
+	walk(t)
+	return found
+}
+
+// basicDict names the dictionary of a predeclared type. The runtime library
+// holds 1 value for each one.
+func basicDict(b *types.Basic) string {
+	switch b.Kind() {
+	case types.Bool, types.UntypedBool:
+		return "$dictBool"
+	case types.String, types.UntypedString:
+		return "$dictString"
+	case types.Int:
+		return "$dictInt"
+	case types.Int8:
+		return "$dictInt8"
+	case types.Int16:
+		return "$dictInt16"
+	case types.Int32:
+		return "$dictInt32"
+	case types.Int64:
+		return "$dictInt64"
+	case types.Uint:
+		return "$dictUint"
+	case types.Uint8:
+		return "$dictUint8"
+	case types.Uint16:
+		return "$dictUint16"
+	case types.Uint32:
+		return "$dictUint32"
+	case types.Uint64:
+		return "$dictUint64"
+	case types.Uintptr:
+		return "$dictUintptr"
+	case types.Float32:
+		return "$dictFloat32"
+	case types.Float64, types.UntypedFloat:
+		return "$dictFloat64"
+	}
+	return ""
+}
+
+// orderText gives the order function of a dictionary. Go holds no order for
+// each type, thus a type outside the ordered set stops the program.
+func (e *emitter) orderText(t types.Type) string {
+	dart := e.dartType(t)
+	u := types.Unalias(t).Underlying()
+	b, ok := u.(*types.Basic)
+	if !ok {
+		return "$unordered<" + dart + ">"
+	}
+	switch {
+	case b.Info()&types.IsString != 0:
+		return "$compare"
+	case isUnsigned64(t):
+		return "(a, b) => $ult(a, b) ? -1 : (a == b ? 0 : 1)"
+	case b.Info()&(types.IsInteger|types.IsFloat) != 0:
+		return "(a, b) => a < b ? -1 : (a == b ? 0 : 1)"
+	}
+	return "$unordered<" + dart + ">"
 }

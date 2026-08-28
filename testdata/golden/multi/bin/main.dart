@@ -24,7 +24,9 @@ void main(List<String> $arguments) {
   $goPanic = $fatal;
   $init();
   try {
-    _main();
+    $boot(() {
+      _main();
+    });
   } on GoPanic catch ($p) {
     $fatal($p);
   }
