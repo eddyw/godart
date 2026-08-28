@@ -4,6 +4,17 @@ import 'dart:typed_data';
 import 'slice.dart';
 import 'string.dart';
 
+/// The name of the operating system, in the words of the Go constant GOOS.
+GoString $goos() {
+  if (Platform.isMacOS) return GoString.fromString('darwin');
+  if (Platform.isLinux) return GoString.fromString('linux');
+  if (Platform.isWindows) return GoString.fromString('windows');
+  if (Platform.isAndroid) return GoString.fromString('android');
+  if (Platform.isIOS) return GoString.fromString('ios');
+  if (Platform.isFuchsia) return GoString.fromString('fuchsia');
+  return GoString.fromString(Platform.operatingSystem);
+}
+
 /// The open files of the program, by handle.
 ///
 /// A handle is an index into this list. A closed slot holds null, and a new

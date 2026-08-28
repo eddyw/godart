@@ -33,7 +33,10 @@ The package `fmt` reads it.
 | A goroutine on a second thread | Yes | No. All Go code runs in 1 isolate. |
 | `recover` | Present | Outside the subset |
 | `unsafe` and cgo | Present | Outside the subset |
-| `runtime.GOMAXPROCS` | The count of processors | Always 1. All Go code runs in 1 isolate. |
+| `runtime.GOMAXPROCS`, `runtime.NumCPU` | The count of processors | Always 1. All Go code runs in 1 isolate. |
+| `runtime.NumGoroutine` | The count of goroutines | Always 1. The runtime library holds no such count. |
+| `runtime.GOOS` | A constant of the build | A variable. Dart names the system at the start of the program. |
+| `runtime.GOARCH` | A constant of the build | Always `dart64`. A Dart int holds 64 bits on each target. |
 
 ## The subset of the language
 
@@ -74,9 +77,9 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native | |
 | `net` | Overlay | TCP only. Read the section below. |
-| `os` | Overlay | The file access and the process state. Read the section below. |
+| `os` | Overlay | The file access, the temporary names, and the process state. Read the section below. |
 | `path` | Native | |
-| `runtime` | Overlay | `GOMAXPROCS` only. It always gives 1. |
+| `runtime` | Overlay | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOOS`, and `GOARCH`. |
 | `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `fmt` | Overlay | |
@@ -197,11 +200,17 @@ point, thus the block analysis of stage 3 stays simple.
 | `Stdin`, `Stdout`, `Stderr` | Present | Equal. A read of `Stdin` stops at a newline. |
 | `Getenv`, `LookupEnv`, `Environ` | Present | Equal |
 | `Getwd`, `Chdir`, `TempDir` | Present | Equal |
+| `CreateTemp`, `MkdirTemp` | A random name | Equal, with a counter and the clock in place of the random part. |
+| `File.ReadAt` | Present | Equal. The call reads the position first and writes it again. |
 | `Args`, `Exit` | Present | Equal. `Args[0]` is the text `gart`. |
 | `IsNotExist`, `ErrNotExist`, `PathError` | Present | Equal |
 | `FileMode` | Holds the permission bits | The type exists. No operation reads it. |
 | `Chmod`, `Chown`, `Symlink`, `Link` | Present | Missing. Dart gives no such call. |
 | `os.Pipe`, `os.StartProcess` | Present | Missing |
+
+`fmt` holds `Stringer` and `GoStringer`. The formatter reads the method table of
+the type descriptor, thus a value with a `String` method writes that text for
+the verb `%v` and for the verb `%s`.
 
 `fmt` grows `Fprint`, `Fprintln`, and `Fprintf`. The parameter holds the
 interface `fmt.Writer` and not `io.Writer`, because an import of `io` would make
@@ -264,7 +273,8 @@ overlay holds no other part of a calendar.
 | `Duration.String` | `1h2m3s` | Equal |
 | `AfterFunc` | Runs f on a new goroutine | Equal. A Dart timer holds 1 wake source of the scheduler. |
 | `Timer.Stop` | Reports false after the run | Equal |
-| `Timer.C`, `NewTimer`, `Tick`, `NewTicker`, `After` | Present | Missing. The overlay holds no channel form of a timer. |
+| `NewTimer`, `Timer.C`, `Timer.Reset`, `After` | Present | Equal. The channel holds 1 value, thus a write of the timer never blocks. |
+| `NewTicker`, `Ticker.C`, `Ticker.Stop`, `Ticker.Reset`, `Tick` | Present | Equal. Each pass starts the timer of the next pass. |
 | `Time.String` | `2006-01-02 15:04:05.999999999 -0700 MST` | Equal, with no reading of the monotonic clock. Read below. |
 | `Time.Format`, `Parse` | Present | Missing |
 | `Time.Year`, `Month`, `Day`, `Hour` | Present | Missing. The overlay holds no calendar. |
@@ -286,12 +296,11 @@ plain write.
 
 | Item | Go | godart |
 |---|---|---|
-| `Value.Load`, `Store`, `Swap` | Present | Equal, with no check of the type. |
-| `Int32.Load`, `Store`, `Add` | Present | Equal |
+| `Value.Load`, `Store`, `Swap`, `CompareAndSwap` | Present | Equal, with no check of the type. |
+| `Int32`, `Int64`, `Uint32`, `Uint64`, `Bool` | Present | Equal. Each one holds `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
 | A `Store` of a second concrete type | Panics | It writes the value. |
-| `Int64`, `Uint32`, `Uint64`, `Bool`, `Pointer` | Present | Missing |
-| `CompareAndSwap` | Present | Missing |
-| The function form, for example `AddInt32` | Present | Missing |
+| `Pointer` | Present | Missing |
+| The function form, for example `AddInt64` | Present | Equal for `Add`, `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
 
 ## A range loop over a function
 
@@ -452,7 +461,8 @@ for each test binary. The output holds the format of `go test`.
 | A benchmark build | The normal test binary | An ahead of time build. The warm up cost of the Dart VM hides the result. |
 | A fuzz target | Runs the seed corpus | Reported as a skipped test |
 | An example with an output comment | Runs and compares the output | Reported as a skipped test |
-| `t.TempDir`, `t.Setenv`, `t.Context` | Present | Missing. The overlay needs the file access. |
+| `t.TempDir` | A new directory for the test | Equal. The cleanup of the test removes it. |
+| `t.Setenv`, `t.Context` | Present | Missing |
 | `-bench`, `-benchtime`, `-benchcount` | Present | Present. `-benchtime 100x` becomes `-benchcount 100`. |
 | `-benchmem` | Present | Missing. Read the row of `b.ReportAllocs`. |
 | `-short`, `-count`, `-timeout`, `-cover` | Present | Missing |
@@ -549,7 +559,7 @@ The verifier rejects each package outside the curated surface.
 | `errors` | `New`, `Is`, `Unwrap` |
 | `fmt` | `Print`, `Printf`, `Println`, `Sprint`, `Sprintf`, `Sprintln`, `Errorf` |
 | `sort` | `Slice`, `SliceStable`, `Ints`, `Strings`, `Float64s`, `Search`, `SearchInts` |
-| `runtime` | `GOMAXPROCS`. The scheduler lives in the Dart runtime library. |
+| `runtime` | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOOS`, `GOARCH`. The scheduler lives in the Dart runtime library. |
 | `strconv` | `Itoa`, `Atoi`, `AppendInt`, `FormatInt`, `ParseInt`, `FormatFloat`, `ParseFloat`, `FormatBool`, `ParseBool`, `Quote` |
 | `strings` | The common operations and `Builder` |
 | `sync` | `Mutex`, `RWMutex`, `WaitGroup`, `Once` |

@@ -65,6 +65,16 @@ type Writer interface {
 	Write(p []byte) (int, error)
 }
 
+// Stringer holds the method that gives the text of a value.
+type Stringer interface {
+	String() string
+}
+
+// GoStringer holds the method that gives the Go syntax of a value.
+type GoStringer interface {
+	GoString() string
+}
+
 // Fprint writes each value to w. It adds a space between 2 values when neither
 // is a string.
 func Fprint(w Writer, a ...any) (int, error) {

@@ -177,6 +177,42 @@ func (f *File) Read(p []byte) (int, error) {
 	return n, nil
 }
 
+// ReadAt reads at the offset. It does not move the read position of the file,
+// thus the call reads the position first and writes it again.
+func (f *File) ReadAt(p []byte, off int64) (int, error) {
+	if f.std != stdNone {
+		return 0, &PathError{Op: "read", Path: f.name, Err: errors.New("bad file descriptor")}
+	}
+	if off < 0 {
+		return 0, &PathError{Op: "readat", Path: f.name, Err: errors.New("negative offset")}
+	}
+	pos, cause := dart.FileSeek(f.handle, 0, dart.SeekCurrent)
+	if cause != "" {
+		return 0, pathError("readat", f.name, cause)
+	}
+	if _, cause := dart.FileSeek(f.handle, off, dart.SeekStart); cause != "" {
+		return 0, pathError("readat", f.name, cause)
+	}
+	read := 0
+	var err error
+	for read < len(p) {
+		n, cause := dart.FileRead(f.handle, p[read:])
+		if cause != "" {
+			err = pathError("readat", f.name, cause)
+			break
+		}
+		if n == 0 {
+			err = endOfFile
+			break
+		}
+		read += n
+	}
+	if _, cause := dart.FileSeek(f.handle, pos, dart.SeekStart); cause != "" && err == nil {
+		err = pathError("readat", f.name, cause)
+	}
+	return read, err
+}
+
 // endOfFile is the error of the end of a file. The package io holds the same
 // value under the name EOF.
 var endOfFile = errors.New("EOF")
@@ -367,6 +403,67 @@ func Chdir(path string) error {
 
 // TempDir gives the directory that the system holds for a temporary file.
 func TempDir() string { return dart.TempDir() }
+
+// tempSeq numbers each temporary name of the process.
+var tempSeq int
+
+// tempName builds a name that no other call of the process gives. Go reads a
+// random number, and 1 isolate runs each goroutine, thus a counter is enough.
+func tempName(dir, pattern string) string {
+	tempSeq++
+	if dir == "" {
+		dir = TempDir()
+	}
+	prefix, suffix := pattern, ""
+	for i := 0; i < len(pattern); i++ {
+		if pattern[i] == '*' {
+			prefix, suffix = pattern[:i], pattern[i+1:]
+			break
+		}
+	}
+	return dir + dart.PathSeparator() + prefix + itoa(dart.NowNanos()) + itoa(int64(tempSeq)) + suffix
+}
+
+func itoa(v int64) string {
+	if v == 0 {
+		return "0"
+	}
+	out := ""
+	for v > 0 {
+		out = string(rune('0'+v%10)) + out
+		v /= 10
+	}
+	return out
+}
+
+// CreateTemp makes a new file in the directory. An empty directory reads the
+// directory of the system. The last star of the pattern holds the place of the
+// random part, and a pattern with no star takes the part at the end.
+func CreateTemp(dir, pattern string) (*File, error) {
+	for i := 0; i < 100; i++ {
+		name := tempName(dir, pattern)
+		if _, err := Stat(name); err == nil {
+			continue
+		}
+		return Create(name)
+	}
+	return nil, pathError("createtemp", dir, "no free name")
+}
+
+// MkdirTemp makes a new directory. It reads the pattern of CreateTemp.
+func MkdirTemp(dir, pattern string) (string, error) {
+	for i := 0; i < 100; i++ {
+		name := tempName(dir, pattern)
+		if _, err := Stat(name); err == nil {
+			continue
+		}
+		if err := Mkdir(name, 0o700); err != nil {
+			return "", err
+		}
+		return name, nil
+	}
+	return "", pathError("mkdirtemp", dir, "no free name")
+}
 
 // Exit stops the program with a status.
 func Exit(code int) { dart.Exit(code) }

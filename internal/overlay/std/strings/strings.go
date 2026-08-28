@@ -485,6 +485,22 @@ func (r *Reader) ReadRune() (rune, int, error) {
 }
 
 // Reset gives the Reader a new text.
+// ReadAt reads at the offset. It does not move the read position of the
+// reader.
+func (r *Reader) ReadAt(p []byte, off int64) (int, error) {
+	if off < 0 {
+		return 0, errors.New("strings.Reader.ReadAt: negative offset")
+	}
+	if off >= int64(len(r.text)) {
+		return 0, endOfText
+	}
+	n := copy(p, r.text[off:])
+	if n < len(p) {
+		return n, endOfText
+	}
+	return n, nil
+}
+
 func (r *Reader) Reset(s string) {
 	r.text = s
 	r.pos = 0

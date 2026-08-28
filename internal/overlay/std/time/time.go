@@ -198,9 +198,12 @@ func Until(t Time) Duration {
 	return t.Sub(Now())
 }
 
-// Timer runs a function after a time. AfterFunc gives such a timer, and the
-// overlay holds no channel form.
+// Timer runs a function after a time, or it writes the time into its channel.
+// The field C is nil for a timer of AfterFunc, exactly as in Go.
 type Timer struct {
+	C <-chan Time
+
+	send   chan Time
 	handle int
 }
 
@@ -209,9 +212,102 @@ func (t *Timer) Stop() bool {
 	return dart.StopTimer(t.handle)
 }
 
+// Reset stops the timer and starts it again with the new duration. It reports
+// whether the timer was active.
+func (t *Timer) Reset(d Duration) bool {
+	active := dart.StopTimer(t.handle)
+	if t.send == nil {
+		return active
+	}
+	t.handle = dart.StartTimer(int64(d), func() { sendTime(t.send) })
+	return active
+}
+
 // AfterFunc runs f on a new goroutine after the duration.
 func AfterFunc(d Duration, f func()) *Timer {
 	return &Timer{handle: dart.StartTimer(int64(d), f)}
+}
+
+// NewTimer gives a timer that writes the time into its channel after the
+// duration. The channel holds 1 value, thus the write never blocks.
+func NewTimer(d Duration) *Timer {
+	ch := make(chan Time, 1)
+	t := &Timer{C: ch, send: ch}
+	t.handle = dart.StartTimer(int64(d), func() { sendTime(ch) })
+	return t
+}
+
+// After gives a channel that holds the time after the duration.
+func After(d Duration) <-chan Time {
+	return NewTimer(d).C
+}
+
+// sendTime writes the time into the channel. It drops the value when the
+// channel is full, exactly as Go does for a timer.
+func sendTime(ch chan Time) {
+	select {
+	case ch <- Now():
+	default:
+	}
+}
+
+// A Ticker writes the time into its channel at each pass of a period.
+type Ticker struct {
+	C <-chan Time
+
+	send    chan Time
+	handle  int
+	period  Duration
+	stopped bool
+}
+
+// NewTicker gives a ticker of the period.
+func NewTicker(d Duration) *Ticker {
+	if d <= 0 {
+		panic("non-positive interval for NewTicker")
+	}
+	ch := make(chan Time, 1)
+	t := &Ticker{C: ch, send: ch, period: d}
+	t.arm()
+	return t
+}
+
+// Tick gives the channel of a new ticker. The ticker never stops, thus a caller
+// that needs to stop it reads NewTicker.
+func Tick(d Duration) <-chan Time {
+	if d <= 0 {
+		return nil
+	}
+	return NewTicker(d).C
+}
+
+// Stop ends the ticker. It closes no channel, exactly as Go does.
+func (t *Ticker) Stop() {
+	t.stopped = true
+	dart.StopTimer(t.handle)
+}
+
+// Reset stops the ticker and starts it again with the new period.
+func (t *Ticker) Reset(d Duration) {
+	if d <= 0 {
+		panic("non-positive interval for Reset")
+	}
+	dart.StopTimer(t.handle)
+	t.period = d
+	t.stopped = false
+	t.arm()
+}
+
+// arm starts the timer of the next pass. Each pass starts the timer again,
+// because the interop package gives a timer of 1 run.
+func (t *Ticker) arm() {
+	t.handle = dart.StartTimer(int64(t.period), func() {
+		if t.stopped {
+			return
+		}
+		sendTime(t.send)
+		t.arm()
+	})
 }
 
 func itoa(v int64) string {

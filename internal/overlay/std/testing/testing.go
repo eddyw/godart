@@ -104,6 +104,22 @@ func (t *T) Parallel() {}
 
 func (t *T) Cleanup(f func()) { t.cleanups = append(t.cleanups, f) }
 
+// tempSeq numbers each temporary directory of the binary.
+var tempSeq int
+
+// TempDir gives a new directory for the test. The cleanup of the test removes
+// it and each file inside it.
+func (t *T) TempDir() string {
+	tempSeq++
+	dir := dart.TempDir() + dart.PathSeparator() +
+		"gart" + strconv.Itoa(tempSeq) + "_" + strconv.FormatInt(dart.NowNanos(), 10)
+	if cause := dart.Mkdir(dir, true); cause != "" {
+		t.Fatal("TempDir: " + cause)
+	}
+	t.Cleanup(func() { dart.RemoveAll(dir) })
+	return dir
+}
+
 func (t *T) Fail() { t.failed = true }
 
 func (t *T) FailNow() {

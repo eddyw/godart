@@ -30,6 +30,12 @@ func TypeInfo(value any) (string, bool) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// OS names the operating system that runs the program, in the words of the Go
+// constant GOOS.
+func OS() string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Upper gives the text in upper case, with the rules of Unicode.
 func Upper(text string) string {
 	panic("syscall/dart needs the gart compiler")
