@@ -99,6 +99,11 @@ type emitter struct {
 	shadowed map[string]map[string]bool
 	// machine holds the state machine of the function that the emitter writes.
 	machine *machineCtx
+	// renames maps the local of a machine to the copy that a literal reads.
+	// Read the field Captured of ir.FuncLit.
+	renames map[string]string
+	// captures holds the copy that the current state declares.
+	captures []capture
 	// frames holds the class of each frame that the file still needs. Dart
 	// holds no class inside a function, thus each one waits for package level.
 	frames []string

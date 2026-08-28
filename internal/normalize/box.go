@@ -4,6 +4,8 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+
+	"github.com/eddyw/godart/internal/ir"
 )
 
 // addressed collects each variable whose address the code takes.
@@ -97,6 +99,39 @@ func (b *builder) captured(body ast.Node, assigned map[*types.Var]bool) map[*typ
 	return out
 }
 
+// litCaptures gives each boxed variable of an outer scope that the literal
+// reads. The order follows the source, thus 2 equal builds give 1 output.
+func (b *builder) litCaptures(lit *ast.FuncLit) []*ir.Var {
+	inner := map[*types.Var]bool{}
+	ast.Inspect(lit, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok {
+			if v, ok := b.info.Defs[id].(*types.Var); ok {
+				inner[v] = true
+			}
+		}
+		return true
+	})
+	seen := map[*types.Var]bool{}
+	var out []*ir.Var
+	ast.Inspect(lit, func(n ast.Node) bool {
+		id, ok := n.(*ast.Ident)
+		if !ok {
+			return true
+		}
+		v, ok := b.info.Uses[id].(*types.Var)
+		if !ok || inner[v] || seen[v] || !b.boxes[v] {
+			return true
+		}
+		if v.Parent() != nil && v.Pkg() != nil && v.Parent() == v.Pkg().Scope() {
+			return true
+		}
+		seen[v] = true
+		out = append(out, &ir.Var{Name: b.names[v], Obj: v, Type: v.Type(), Boxed: true})
+		return true
+	})
+	return out
+}
+
 // machineBoxes adds the box of each captured variable when a function of the
 // declaration can block.
 func (b *builder) machineBoxes(body *ast.BlockStmt, blocking bool) {
@@ -118,9 +153,12 @@ func (b *builder) machineBoxes(body *ast.BlockStmt, blocking bool) {
 	})
 }
 
-// assignedVars collects each variable that the code writes after its
+// assignedVars collects each variable that the code writes or binds after its
 // declaration. A variable that keeps its first value needs no box, because each
 // call of a machine reads the same value.
+//
+// A declaration binds a new variable at each pass of a loop, thus the set holds
+// the names of a short declaration and of a range clause.
 func (b *builder) assignedVars(body ast.Node) map[*types.Var]bool {
 	out := map[*types.Var]bool{}
 	mark := func(e ast.Expr) {
@@ -128,7 +166,11 @@ func (b *builder) assignedVars(body ast.Node) map[*types.Var]bool {
 		if !ok {
 			return
 		}
-		if v, ok := b.info.Uses[id].(*types.Var); ok {
+		v, ok := b.info.Uses[id].(*types.Var)
+		if !ok {
+			v, ok = b.info.Defs[id].(*types.Var)
+		}
+		if ok {
 			out[v] = true
 		}
 	}
@@ -141,9 +183,13 @@ func (b *builder) assignedVars(body ast.Node) map[*types.Var]bool {
 		case *ast.IncDecStmt:
 			mark(n.X)
 		case *ast.RangeStmt:
-			if n.Tok == token.ASSIGN {
-				mark(n.Key)
-				mark(n.Value)
+			mark(n.Key)
+			mark(n.Value)
+		case *ast.ValueSpec:
+			if len(n.Values) > 0 {
+				for _, name := range n.Names {
+					mark(name)
+				}
 			}
 		}
 		return true

@@ -435,9 +435,7 @@ func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
 		}
 	}
 	if !defers {
-		for _, s := range body.List {
-			e.stmt(s)
-		}
+		e.list(body.List)
 		e.closeBody(results, body)
 		return
 	}
@@ -451,15 +449,11 @@ func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
 		e.line("$body: {")
 		prevLabel, prevVars := e.returnLabel, e.returnVars
 		e.returnLabel, e.returnVars = "$body", results
-		for _, s := range body.List {
-			e.stmt(s)
-		}
+		e.list(body.List)
 		e.returnLabel, e.returnVars = prevLabel, prevVars
 		e.line("}")
 	} else {
-		for _, s := range body.List {
-			e.stmt(s)
-		}
+		e.list(body.List)
 	}
 	e.line("} finally {")
 	e.line("$defer.run();")

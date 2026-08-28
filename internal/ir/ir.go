@@ -156,6 +156,10 @@ type (
 	AssignMulti struct {
 		Lhs []Expr
 		Rhs Expr
+
+		// Define marks the declaration of a variable that a machine lifted.
+		// Read the field Define of Assign.
+		Define bool
 	}
 
 	If struct {
@@ -421,6 +425,12 @@ type (
 
 		// Machine holds the flat state machine of a literal that can block.
 		Machine *Machine
+
+		// Captured holds each boxed variable of an outer scope that the body
+		// reads. A machine keeps such a variable in 1 local and writes a new
+		// box at each pass of a loop, thus the literal takes a copy of the box
+		// of its own pass.
+		Captured []*Var
 	}
 
 	// SelectList builds the case list of a select statement.

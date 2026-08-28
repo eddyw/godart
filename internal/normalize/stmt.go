@@ -517,21 +517,47 @@ func (b *builder) ifStmt(s *ast.IfStmt) []ir.Stmt {
 	return append(out, node)
 }
 
+// forStmt writes a loop with 3 clauses.
+//
+// Go 1.22 gives each iteration its own copy of a variable that the first
+// clause declares. A Dart for loop gives the same copy when the declaration
+// stands in its header, thus the declaration stays inside the loop. A boxed
+// variable holds a reference, and the copy of Dart then shares 1 box, thus the
+// third clause takes a new box in front of it.
 func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
 	out := b.stmt(s.Init)
+	loop := &ir.For{Label: label}
+	if len(out) == 1 {
+		if d, ok := out[0].(*ir.Declare); ok {
+			loop.Init = d
+			out = nil
+		}
+	}
 	b.pushLoop(loopPlain, label)
-	loop := &ir.For{Body: b.block(s.Body), Label: label}
+	loop.Body = b.block(s.Body)
 	b.popLoop()
 	if s.Cond != nil {
 		loop.Cond = b.expr(s.Cond)
 	}
-	if s.Post != nil {
-		post := b.stmt(s.Post)
-		if len(post) == 1 {
-			loop.Post = post[0]
-		} else if len(post) > 1 {
-			loop.Post = &ir.Block{List: post}
+	var post []ir.Stmt
+	if d, ok := loop.Init.(*ir.Declare); ok {
+		for _, v := range d.Vars {
+			if v.Boxed {
+				post = append(post, &ir.Assign{
+					Lhs:    identOf(v),
+					Rhs:    identOf(v),
+					Define: true,
+				})
+			}
 		}
+	}
+	if s.Post != nil {
+		post = append(post, b.stmt(s.Post)...)
+	}
+	if len(post) == 1 {
+		loop.Post = post[0]
+	} else if len(post) > 1 {
+		loop.Post = &ir.Block{List: post}
 	}
 	return append(out, loop)
 }

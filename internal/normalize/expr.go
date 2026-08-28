@@ -432,6 +432,7 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	out.Results = inner.Results
 	out.Body = b.block(e.Body)
 	out.Defers = inner.Defers
+	out.Captured = b.litCaptures(e)
 	b.fn = prev
 	b.pending = prevPending
 	if !out.Async {

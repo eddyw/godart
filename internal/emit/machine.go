@@ -20,6 +20,54 @@ type machineCtx struct {
 	// fn names the local function of a literal. The frame keeps it, because a
 	// literal has no name at package level.
 	fn string
+	// locals holds the name of each local of the frame.
+	locals map[string]bool
+}
+
+// capture holds the copy of 1 box that a state declares.
+type capture struct {
+	name, from, typ string
+}
+
+// captureRenames registers a copy of each box that a literal of a machine
+// reads, and it gives the name of each copy.
+//
+// The machine writes a new box at each pass of a loop, thus a literal that
+// reads the local of the machine reads the box of the last pass. The state
+// declares a copy in front of the statement, and the body of the literal reads
+// that copy.
+func (e *emitter) captureRenames(vars []*ir.Var) map[string]string {
+	if e.machine == nil || len(vars) == 0 {
+		return nil
+	}
+	var out map[string]string
+	for _, v := range vars {
+		if !e.machine.locals[v.Name] || e.renames[v.Name] != "" {
+			continue
+		}
+		if out == nil {
+			out = map[string]string{}
+		}
+		name := "$c" + v.Name
+		out[v.Name] = name
+		e.captures = append(e.captures, capture{name: name, from: v.Name, typ: e.fieldType(v)})
+	}
+	return out
+}
+
+// withRenames gives the map that a literal of the machine reads.
+func (e *emitter) withRenames(add map[string]string) map[string]string {
+	if len(add) == 0 {
+		return e.renames
+	}
+	out := map[string]string{}
+	for k, v := range e.renames {
+		out[k] = v
+	}
+	for k, v := range add {
+		out[k] = v
+	}
+	return out
 }
 
 // frameType gives the Dart type of a frame with its type arguments.
@@ -131,7 +179,11 @@ func (e *emitter) frameArgs(tps []*types.TypeParam, params []*ir.Var) []string {
 func (e *emitter) machineBody(f *ir.Func, fn string) {
 	m := f.Machine
 	prev := e.machine
-	e.machine = &machineCtx{m: m, results: f.Results, fn: fn}
+	locals := make(map[string]bool, len(m.Locals))
+	for _, v := range m.Locals {
+		locals[v.Name] = true
+	}
+	e.machine = &machineCtx{m: m, results: f.Results, fn: fn, locals: locals}
 	e.boxParams(f.Params)
 	skip := map[*ir.Var]bool{f.Recv: true}
 	for _, p := range f.Params {
@@ -171,9 +223,7 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	e.line("switch ($s) {")
 	for i, state := range m.States {
 		e.line("case %d:", i)
-		for _, s := range state.List {
-			e.stmt(s)
-		}
+		e.list(state.List)
 	}
 	e.line("}")
 	e.line("}")
@@ -310,6 +360,9 @@ func (e *emitter) resume(s *ir.Resume) {
 func (e *emitter) localFunc(s *ir.LocalFunc) {
 	lit := s.Lit
 	m := lit.Machine
+	prevNames := e.renames
+	e.renames = e.withRenames(e.captureRenames(lit.Captured))
+	defer func() { e.renames = prevNames }()
 	params := e.paramList(lit.Params)
 	if p := e.frameParam(m, nil); p != "" {
 		params = append(params, p)

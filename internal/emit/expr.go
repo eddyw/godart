@@ -79,6 +79,12 @@ func (e *emitter) expr(x ir.Expr) string {
 }
 
 func (e *emitter) identExpr(x *ir.Ident) string {
+	if to := e.renames[x.Name]; to != "" {
+		if x.Boxed {
+			return to + ".v"
+		}
+		return to
+	}
 	if x.Boxed {
 		return x.Name + ".v"
 	}
@@ -309,7 +315,8 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	inner := &emitter{pkg: e.pkg, prefixes: e.prefixes, base: e.base,
 		methods: e.methods, inClass: e.inClass, initNames: e.initNames,
 		breakables: e.breakables, labelSeq: e.labelSeq,
-		anon: e.anon, shadowed: e.shadowed, nilChans: e.nilChans}
+		anon: e.anon, shadowed: e.shadowed, nilChans: e.nilChans,
+		renames: e.withRenames(e.captureRenames(x.Captured))}
 	inner.boxParams(x.Params)
 	inner.emitBody(x.Results, x.Defers, x.Body)
 	e.errs = append(e.errs, inner.errs...)

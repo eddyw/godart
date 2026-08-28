@@ -233,7 +233,7 @@ func (f *flat) lift(d *ir.Declare) []ir.Stmt {
 	for i, v := range d.Vars {
 		lhs[i] = identOf(v)
 	}
-	return []ir.Stmt{&ir.AssignMulti{Lhs: lhs, Rhs: d.Init}}
+	return []ir.Stmt{&ir.AssignMulti{Lhs: lhs, Rhs: d.Init, Define: true}}
 }
 
 // keep adds each variable that the frame holds. A blank name holds no value.

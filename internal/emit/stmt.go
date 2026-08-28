@@ -8,12 +8,58 @@ import (
 )
 
 func (e *emitter) stmt(s ir.Stmt) {
+	e.list([]ir.Stmt{s})
+}
+
+// list writes each statement of a list.
+//
+// A machine keeps each local in 1 variable and writes a new box at each pass of
+// a loop, thus a literal that a statement builds takes a copy of the box. The
+// copy stands in a block in front of the statement. A local function keeps its
+// name for the statements that follow it, thus the block of such a function
+// ends with the list.
+func (e *emitter) list(stmts []ir.Stmt) {
+	prev := e.captures
+	open := 0
+	for _, s := range stmts {
+		e.captures = nil
+		mark := e.buf.Len()
+		e.stmtOne(s)
+		if len(e.captures) == 0 {
+			continue
+		}
+		e.openCaptures(mark)
+		if _, ok := s.(*ir.LocalFunc); ok {
+			open++
+			continue
+		}
+		e.line("}")
+	}
+	for ; open > 0; open-- {
+		e.line("}")
+	}
+	e.captures = prev
+}
+
+// openCaptures puts the copy of each box in front of the text that starts at
+// the mark, and it leaves the block open.
+func (e *emitter) openCaptures(mark int) {
+	text := e.buf.String()
+	head, body := text[:mark], text[mark:]
+	e.buf.Reset()
+	e.buf.WriteString(head)
+	e.line("{")
+	for _, c := range e.captures {
+		e.line("final %s %s = %s;", c.typ, c.name, c.from)
+	}
+	e.buf.WriteString(body)
+}
+
+func (e *emitter) stmtOne(s ir.Stmt) {
 	switch s := s.(type) {
 	case *ir.Block:
 		e.line("{")
-		for _, inner := range s.List {
-			e.stmt(inner)
-		}
+		e.list(s.List)
 		e.line("}")
 	case *ir.ExprStmt:
 		e.line("%s;", e.statementExpr(s.X))
@@ -26,11 +72,7 @@ func (e *emitter) stmt(s ir.Stmt) {
 		}
 		e.assign(s.Lhs, s.Rhs)
 	case *ir.AssignMulti:
-		parts := make([]string, len(s.Lhs))
-		for i, l := range s.Lhs {
-			parts[i] = e.expr(l)
-		}
-		e.line("(%s) = %s;", strings.Join(parts, ", "), e.expr(s.Rhs))
+		e.assignMulti(s)
 	case *ir.If:
 		e.ifStmt(s)
 	case *ir.For:
@@ -86,11 +128,15 @@ func (e *emitter) statementExpr(x ir.Expr) string {
 // declareOne writes 1 variable with its value. A boxed variable holds a box, and
 // the value goes inside the box.
 func (e *emitter) declareOne(v *ir.Var, value string) {
+	e.line("%s;", e.declareText(v, value))
+}
+
+// declareText writes the declaration of 1 variable with no terminator.
+func (e *emitter) declareText(v *ir.Var, value string) string {
 	if v.Boxed {
-		e.line("Box<%s> %s = Box(%s);", e.dartType(v.Type), v.Name, value)
-		return
+		return fmt.Sprintf("Box<%s> %s = Box(%s)", e.dartType(v.Type), v.Name, value)
 	}
-	e.line("%s %s = %s;", e.dartType(v.Type), v.Name, value)
+	return fmt.Sprintf("%s %s = %s", e.dartType(v.Type), v.Name, value)
 }
 
 func (e *emitter) declare(s *ir.Declare) {
@@ -109,17 +155,56 @@ func (e *emitter) declare(s *ir.Declare) {
 		}
 		return
 	}
+	boxed := false
 	names := make([]string, len(s.Vars))
 	for i, v := range s.Vars {
 		names[i] = v.Name
+		boxed = boxed || v.Boxed
 	}
-	for _, v := range s.Vars {
-		if v.Boxed {
-			e.fail("the address of %s needs a box, and a declaration of "+
-				"multiple values writes no box yet", v.Name)
+	if boxed {
+		e.labelSeq++
+		tmp := fmt.Sprintf("$rec%d", e.labelSeq)
+		e.line("final %s = %s;", tmp, e.expr(s.Init))
+		for i, v := range s.Vars {
+			e.declareOne(v, fmt.Sprintf("%s.$%d", tmp, i+1))
 		}
+		return
 	}
 	e.line("var (%s) = %s;", strings.Join(names, ", "), e.expr(s.Init))
+}
+
+// assignMulti writes each value of a record. A record pattern of Dart takes no
+// boxed variable, thus such a write reads the record from a temporary variable.
+func (e *emitter) assignMulti(s *ir.AssignMulti) {
+	if !anyBoxed(s.Lhs) {
+		parts := make([]string, len(s.Lhs))
+		for i, l := range s.Lhs {
+			parts[i] = e.expr(l)
+		}
+		e.line("(%s) = %s;", strings.Join(parts, ", "), e.expr(s.Rhs))
+		return
+	}
+	e.labelSeq++
+	tmp := fmt.Sprintf("$rec%d", e.labelSeq)
+	e.line("final %s = %s;", tmp, e.expr(s.Rhs))
+	for i, l := range s.Lhs {
+		id, ok := l.(*ir.Ident)
+		if ok && id.Boxed && s.Define {
+			e.line("%s = Box(%s.$%d);", id.Name, tmp, i+1)
+			continue
+		}
+		e.line("%s = %s.$%d;", e.expr(l), tmp, i+1)
+	}
+}
+
+// anyBoxed reports whether 1 target of a multiple assignment holds a box.
+func anyBoxed(list []ir.Expr) bool {
+	for _, l := range list {
+		if id, ok := l.(*ir.Ident); ok && id.Boxed {
+			return true
+		}
+	}
+	return false
 }
 
 // defineAssign writes the value of a declaration that a machine lifted. Go
@@ -174,9 +259,7 @@ func (e *emitter) goStmt(s *ir.Go) {
 
 func (e *emitter) ifStmt(s *ir.If) {
 	e.line("if (%s) {", e.expr(s.Cond))
-	for _, inner := range s.Then.List {
-		e.stmt(inner)
-	}
+	e.list(s.Then.List)
 	if s.Else == nil {
 		e.line("}")
 		return
@@ -247,9 +330,7 @@ func (e *emitter) writeFor(s *ir.For, init, cond, post, flag string) {
 		}
 	}
 	e.breakables = append(e.breakables, "")
-	for _, inner := range s.Body.List {
-		e.stmt(inner)
-	}
+	e.list(s.Body.List)
 	e.breakables = e.breakables[:len(e.breakables)-1]
 	e.line("}")
 }
@@ -258,9 +339,7 @@ func (e *emitter) writeFor(s *ir.For, init, cond, post, flag string) {
 // statement stays visible to the code that follows it.
 func (e *emitter) stmtList(s ir.Stmt) {
 	if block, ok := s.(*ir.Block); ok {
-		for _, inner := range block.List {
-			e.stmt(inner)
-		}
+		e.list(block.List)
 		return
 	}
 	e.stmt(s)
@@ -278,10 +357,13 @@ func (e *emitter) forClause(s ir.Stmt) (string, bool) {
 		}
 		v := s.Vars[0]
 		if s.Init == nil {
-			return fmt.Sprintf("%s %s = %s", e.dartType(v.Type), v.Name, e.zero(v.Type)), true
+			return e.declareText(v, e.zero(v.Type)), true
 		}
-		return fmt.Sprintf("%s %s = %s", e.dartType(v.Type), v.Name, e.expr(s.Init)), true
+		return e.declareText(v, e.expr(s.Init)), true
 	case *ir.Assign:
+		if s.Define {
+			return "", false
+		}
 		if isStructType(s.Lhs.GoType()) {
 			return fmt.Sprintf("%s.$assign(%s)", e.expr(s.Lhs), e.expr(s.Rhs)), true
 		}
@@ -336,9 +418,7 @@ func (e *emitter) switchStmt(s *ir.Switch) {
 	e.breakables = append(e.breakables, label)
 	for i, c := range s.Cases {
 		e.line("if (%s <= %d) {", index, i)
-		for _, inner := range c.Body.List {
-			e.stmt(inner)
-		}
+		e.list(c.Body.List)
 		if !c.Fallthrough {
 			e.line("break %s;", label)
 		}
