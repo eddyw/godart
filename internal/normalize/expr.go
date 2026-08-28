@@ -7,6 +7,7 @@ import (
 	"go/types"
 
 	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // copyPoint inserts a struct copy. Go gives a struct and an array value
@@ -22,7 +23,7 @@ func needsCopy(t types.Type) bool {
 	if t == nil {
 		return false
 	}
-	switch types.Unalias(t).Underlying().(type) {
+	switch typeset.Core(t).(type) {
 	case *types.Struct, *types.Array:
 		return true
 	}
@@ -144,8 +145,20 @@ func unparenExpr(e ast.Expr) ast.Expr {
 	}
 }
 
+// isIfaceType reports whether a value of the type holds an interface pair.
+//
+// A type parameter holds no such pair. Its underlying type is the constraint,
+// and the constraint is an interface.
+func isIfaceType(t types.Type) bool {
+	if _, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return false
+	}
+	_, ok := types.Unalias(t).Underlying().(*types.Interface)
+	return ok
+}
+
 func mapType(t types.Type) *types.Map {
-	m, _ := types.Unalias(t).Underlying().(*types.Map)
+	m, _ := typeset.Core(t).(*types.Map)
 	return m
 }
 
@@ -180,8 +193,8 @@ func (b *builder) convert(x ir.Expr, want types.Type) ir.Expr {
 	if types.Identical(got, want) {
 		return x
 	}
-	if _, ok := types.Unalias(want).Underlying().(*types.Interface); ok {
-		if _, isIface := types.Unalias(got).Underlying().(*types.Interface); !isIface {
+	if isIfaceType(want) {
+		if !isIfaceType(got) {
 			return &ir.Conv{X: x, From: got, Type: want}
 		}
 	}
@@ -351,9 +364,9 @@ func (b *builder) fieldPath(x ir.Expr, sel *types.Selection) ir.Expr {
 }
 
 func structOf(t types.Type) *types.Struct {
-	u := types.Unalias(t).Underlying()
+	u := typeset.Core(t)
 	if p, ok := u.(*types.Pointer); ok {
-		u = types.Unalias(p.Elem()).Underlying()
+		u = typeset.Core(p.Elem())
 	}
 	st, _ := u.(*types.Struct)
 	return st
@@ -371,7 +384,7 @@ func (b *builder) index(e *ast.IndexExpr) ir.Expr {
 		return nil
 	}
 	key := b.expr(e.Index)
-	if m, ok := types.Unalias(x.GoType()).Underlying().(*types.Map); ok {
+	if m, ok := typeset.Core(x.GoType()).(*types.Map); ok {
 		key = b.convert(key, m.Key())
 	} else {
 		key = b.convert(key, types.Typ[types.Int])

@@ -8,6 +8,7 @@ import (
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
 	"github.com/eddyw/godart/internal/overlay"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 func (e *emitter) call(x *ir.Call) string {
@@ -282,8 +283,14 @@ func (e *emitter) capacity(x ir.Expr) string {
 	return "0"
 }
 
+// isUntypedNil reports whether the type is the type of the literal nil.
+func isUntypedNil(t types.Type) bool {
+	b, ok := types.Unalias(t).(*types.Basic)
+	return ok && b.Kind() == types.UntypedNil
+}
+
 func (e *emitter) appendCall(x *ir.Builtin) string {
-	slice, _ := types.Unalias(x.Type).Underlying().(*types.Slice)
+	slice, _ := typeset.Core(x.Type).(*types.Slice)
 	if slice == nil {
 		e.fail("append needs a slice")
 		return "null"
@@ -311,7 +318,7 @@ func (e *emitter) copyCall(x *ir.Builtin) string {
 	if isString(src.GoType()) {
 		source = fmt.Sprintf("$stringToBytes(%s)", source)
 	}
-	slice, _ := types.Unalias(dst.GoType()).Underlying().(*types.Slice)
+	slice, _ := typeset.Core(dst.GoType()).(*types.Slice)
 	if slice != nil && needsElementCopy(slice.Elem()) {
 		return fmt.Sprintf("$copySlice(%s, %s, (a, b) => %s)",
 			e.expr(dst), source, e.assignElem("a", "b", slice.Elem()))
@@ -320,7 +327,7 @@ func (e *emitter) copyCall(x *ir.Builtin) string {
 }
 
 func (e *emitter) makeCall(x *ir.Builtin) string {
-	switch u := types.Unalias(x.Type).Underlying().(type) {
+	switch u := typeset.Core(x.Type).(type) {
 	case *types.Slice:
 		length := "0"
 		if len(x.Args) > 0 {
@@ -443,6 +450,11 @@ func (e *emitter) conv(x *ir.Conv) string {
 			return "null"
 		}
 		return text
+	}
+	// A conversion of nil gives the zero value of the target type. Go writes
+	// `S(nil)` for the nil slice of a type parameter.
+	if isUntypedNil(from) {
+		return e.zero(to)
 	}
 	e.fail("the conversion from %s to %s is not supported yet", from, to)
 	return "null"

@@ -7,14 +7,19 @@ import (
 	"go/types"
 
 	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // rangeStmt rewrites a range loop for the type of its container.
+//
+// A type parameter reads its core type. Go gives such a parameter a core type
+// when each term of its type set shares 1 underlying type, and a range loop
+// then reads that type.
 func (b *builder) rangeStmt(s *ast.RangeStmt, label string) []ir.Stmt {
-	t := types.Unalias(b.typeOf(s.X)).Underlying()
+	t := typeset.Core(b.typeOf(s.X))
 	if p, ok := t.(*types.Pointer); ok {
-		if _, isArray := types.Unalias(p.Elem()).Underlying().(*types.Array); isArray {
-			t = types.Unalias(p.Elem()).Underlying()
+		if _, isArray := typeset.Core(p.Elem()).(*types.Array); isArray {
+			t = typeset.Core(p.Elem())
 		}
 	}
 	switch t := t.(type) {
@@ -189,13 +194,13 @@ func (b *builder) rangeChan(s *ast.RangeStmt, label string, elem types.Type) []i
 }
 
 func elemType(t types.Type) types.Type {
-	switch u := types.Unalias(t).Underlying().(type) {
+	switch u := typeset.Core(t).(type) {
 	case *types.Slice:
 		return u.Elem()
 	case *types.Array:
 		return u.Elem()
 	case *types.Pointer:
-		if a, ok := types.Unalias(u.Elem()).Underlying().(*types.Array); ok {
+		if a, ok := typeset.Core(u.Elem()).(*types.Array); ok {
 			return a.Elem()
 		}
 	case *types.Map:

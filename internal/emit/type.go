@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/eddyw/godart/internal/name"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // dartType gives the Dart type that holds a value of the Go type.
@@ -20,6 +21,14 @@ func (e *emitter) dartType(t types.Type) string {
 		}
 		return e.dartType(t.Underlying())
 	case *types.TypeParam:
+		// A type parameter whose core type is a composite holds 1 Dart type.
+		// `S ~[]E` gives `Slice<E>`, thus the parameter S adds nothing.
+		//
+		// A basic core type keeps the parameter. `~int` and `~string` give 2
+		// Dart types, and the bound of the parameter holds what they share.
+		if core := typeset.Core(t); core != nil && !isBasicType(core) {
+			return e.dartType(core)
+		}
 		return name.Local(t.Obj().Name())
 	case *types.Pointer:
 		return e.dartType(t.Elem()) + "?"
@@ -151,12 +160,8 @@ func (e *emitter) makeArray(a *types.Array) string {
 // takes the Dart type that holds each type of the set, thus an operator of the
 // set still applies.
 func (e *emitter) typeParamBound(tp *types.TypeParam) string {
-	iface, ok := types.Unalias(tp.Constraint()).Underlying().(*types.Interface)
-	if !ok {
-		return ""
-	}
-	var terms []types.Type
-	if !collectTerms(iface, &terms, 0) || len(terms) == 0 {
+	terms, ok := typeset.Terms(tp.Constraint())
+	if !ok || len(terms) == 0 {
 		return ""
 	}
 	dart := ""
@@ -188,51 +193,7 @@ func (e *emitter) typeParamBound(tp *types.TypeParam) string {
 // Dart type. Such a type parameter reads each operation from its dictionary,
 // because no Dart operator fits each type argument.
 func (e *emitter) mixedForm(tp *types.TypeParam) bool {
-	iface, ok := types.Unalias(tp.Constraint()).Underlying().(*types.Interface)
-	if !ok {
-		return false
-	}
-	var terms []types.Type
-	if !collectTerms(iface, &terms, 0) || len(terms) < 2 {
-		return false
-	}
-	first := e.dartType(terms[0])
-	for _, term := range terms[1:] {
-		if e.dartType(term) != first {
-			return true
-		}
-	}
-	return false
-}
-
-// collectTerms reads the type set of a constraint.
-func collectTerms(iface *types.Interface, out *[]types.Type, depth int) bool {
-	if depth > 8 {
-		return false
-	}
-	for i := 0; i < iface.NumEmbeddeds(); i++ {
-		switch t := types.Unalias(iface.EmbeddedType(i)).(type) {
-		case *types.Union:
-			for k := 0; k < t.Len(); k++ {
-				*out = append(*out, t.Term(k).Type())
-			}
-		case *types.Interface:
-			if !collectTerms(t, out, depth+1) {
-				return false
-			}
-		case *types.Named:
-			inner, ok := t.Underlying().(*types.Interface)
-			if !ok {
-				return false
-			}
-			if !collectTerms(inner, out, depth+1) {
-				return false
-			}
-		default:
-			*out = append(*out, t)
-		}
-	}
-	return true
+	return typeset.Core(tp) == nil
 }
 
 // typeArgList writes the type arguments of an instance of a generic type.
@@ -426,12 +387,8 @@ func isString(t types.Type) bool {
 func basicOf(t types.Type) *types.Basic {
 	u := types.Unalias(t)
 	if tp, ok := u.(*types.TypeParam); ok {
-		iface, ok := types.Unalias(tp.Constraint()).Underlying().(*types.Interface)
-		if !ok {
-			return nil
-		}
-		var terms []types.Type
-		if !collectTerms(iface, &terms, 0) || len(terms) == 0 {
+		terms, ok := typeset.Terms(tp.Constraint())
+		if !ok || len(terms) == 0 {
 			return nil
 		}
 		var out *types.Basic
@@ -454,33 +411,42 @@ func basicOf(t types.Type) *types.Basic {
 	return b
 }
 
+// Each predicate below reads the core type. A type parameter whose type set
+// shares 1 underlying type holds that type as its core type, thus an operation
+// of the core type applies to the parameter.
+
+func isBasicType(t types.Type) bool {
+	_, ok := types.Unalias(t).(*types.Basic)
+	return ok
+}
+
 func isStructType(t types.Type) bool {
-	_, ok := types.Unalias(t).Underlying().(*types.Struct)
+	_, ok := typeset.Core(t).(*types.Struct)
 	return ok
 }
 
 func isArrayType(t types.Type) bool {
-	_, ok := types.Unalias(t).Underlying().(*types.Array)
+	_, ok := typeset.Core(t).(*types.Array)
 	return ok
 }
 
 func isMapType(t types.Type) bool {
-	_, ok := types.Unalias(t).Underlying().(*types.Map)
+	_, ok := typeset.Core(t).(*types.Map)
 	return ok
 }
 
 func isChanType(t types.Type) bool {
-	_, ok := types.Unalias(t).Underlying().(*types.Chan)
+	_, ok := typeset.Core(t).(*types.Chan)
 	return ok
 }
 
 func isSliceType(t types.Type) bool {
-	_, ok := types.Unalias(t).Underlying().(*types.Slice)
+	_, ok := typeset.Core(t).(*types.Slice)
 	return ok
 }
 
 func isPointerType(t types.Type) bool {
-	_, ok := types.Unalias(t).Underlying().(*types.Pointer)
+	_, ok := typeset.Core(t).(*types.Pointer)
 	return ok
 }
 

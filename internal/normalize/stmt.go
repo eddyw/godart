@@ -10,6 +10,7 @@ import (
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 func (b *builder) block(s *ast.BlockStmt) *ir.Block {
@@ -435,7 +436,7 @@ func directFunc(fun ir.Expr) bool {
 }
 
 func chanElem(t types.Type) types.Type {
-	c, ok := types.Unalias(t).Underlying().(*types.Chan)
+	c, ok := typeset.Core(t).(*types.Chan)
 	if !ok {
 		return nil
 	}
@@ -591,8 +592,7 @@ func isNilCase(e ast.Expr) bool {
 }
 
 func isInterface(t types.Type) bool {
-	_, ok := types.Unalias(t).Underlying().(*types.Interface)
-	return ok
+	return isIfaceType(t)
 }
 
 func typeSwitchSubject(s ast.Stmt) ast.Expr {

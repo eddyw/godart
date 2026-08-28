@@ -147,16 +147,48 @@ func overlayFiles(found []*packages.Package) (map[string][]byte, error) {
 			return nil, fmt.Errorf("the overlay of %s holds %d files, and the package holds %d",
 				o.Path, len(o.Files), len(p.CompiledGoFiles))
 		}
-		empty := []byte("package " + p.Name + "\n")
-		for i, name := range p.CompiledGoFiles {
-			if i < len(o.Files) {
-				out[name] = o.Files[i].Content
-				continue
-			}
-			out[name] = empty
-		}
+		replaceFiles(out, o, p)
 	}
 	return out, nil
+}
+
+// replaceFiles replaces each file of a standard library package with the file
+// of the overlay. A file that the overlay does not hold becomes empty.
+//
+// A file of the overlay takes the file of the same base name. The output path
+// of a Dart part file comes from the name of the Go file, thus an equal name
+// keeps the 2 paths equal. An overlay file with a new name takes the first free
+// file of the package.
+func replaceFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
+	byBase := map[string]string{}
+	for _, name := range p.CompiledGoFiles {
+		byBase[filepath.Base(name)] = name
+	}
+	taken := map[string]bool{}
+	rest := make([]overlay.File, 0, len(o.Files))
+	for _, f := range o.Files {
+		name, ok := byBase[f.Name]
+		if !ok {
+			rest = append(rest, f)
+			continue
+		}
+		out[name] = f.Content
+		taken[name] = true
+	}
+	free := make([]string, 0, len(p.CompiledGoFiles))
+	for _, name := range p.CompiledGoFiles {
+		if !taken[name] {
+			free = append(free, name)
+		}
+	}
+	empty := []byte("package " + p.Name + "\n")
+	for i, name := range free {
+		if i < len(rest) {
+			out[name] = rest[i].Content
+			continue
+		}
+		out[name] = empty
+	}
 }
 
 // patchFiles replaces 1 file of a package that the compiler reads from the real

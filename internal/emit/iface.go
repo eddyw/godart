@@ -10,7 +10,14 @@ import (
 	"github.com/eddyw/godart/internal/name"
 )
 
+// isInterfaceType reports whether a value of the type holds an interface pair.
+//
+// A type parameter holds no such pair. Its underlying type is the constraint,
+// and the constraint is an interface, thus the check reads the core type first.
 func isInterfaceType(t types.Type) bool {
+	if _, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return false
+	}
 	_, ok := types.Unalias(t).Underlying().(*types.Interface)
 	return ok
 }

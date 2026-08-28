@@ -4,6 +4,8 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // checkTypeParamOp rejects an operation on a value whose type is a type
@@ -44,53 +46,9 @@ func (v *verifier) rejectMixed(pos token.Pos, t types.Type, what string) {
 // mixedDartForm reports whether the type set of a type parameter holds more
 // than 1 Dart form.
 //
-// 2 terms give 1 Dart form when their underlying types are identical. The check
-// stays strict, thus it rejects a case that the emitter cannot write.
+// A type parameter with a core type gives 1 Dart type, thus each operation of
+// the core type applies. A parameter with no core type holds more than 1 Dart
+// type, and no Dart operator fits each one.
 func mixedDartForm(tp *types.TypeParam) bool {
-	iface, ok := types.Unalias(tp.Constraint()).Underlying().(*types.Interface)
-	if !ok {
-		return false
-	}
-	var terms []types.Type
-	if !collectTerms(iface, &terms, 0) || len(terms) < 2 {
-		return false
-	}
-	first := terms[0].Underlying()
-	for _, t := range terms[1:] {
-		if !types.Identical(first, t.Underlying()) {
-			return true
-		}
-	}
-	return false
-}
-
-// collectTerms reads the types of the type set of a constraint. It reports
-// whether the walk found a closed set.
-func collectTerms(iface *types.Interface, out *[]types.Type, depth int) bool {
-	if depth > 8 {
-		return false
-	}
-	for i := 0; i < iface.NumEmbeddeds(); i++ {
-		switch t := types.Unalias(iface.EmbeddedType(i)).(type) {
-		case *types.Union:
-			for k := 0; k < t.Len(); k++ {
-				term := t.Term(k)
-				if inner, ok := types.Unalias(term.Type()).Underlying().(*types.Interface); ok &&
-					!inner.IsMethodSet() {
-					if !collectTerms(inner, out, depth+1) {
-						return false
-					}
-					continue
-				}
-				*out = append(*out, term.Type())
-			}
-		case *types.Interface:
-			if !collectTerms(t, out, depth+1) {
-				return false
-			}
-		default:
-			*out = append(*out, t)
-		}
-	}
-	return true
+	return typeset.Core(tp) == nil
 }

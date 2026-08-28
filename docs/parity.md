@@ -60,9 +60,11 @@ reads the real Go source, because that source already stays inside the subset.
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
 | `errors` | Overlay | |
+| `maps` | Overlay | Each function that gives an iterator stays out. |
 | `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `fmt` | Overlay | |
+| `slices` | Overlay | The sort is a stable merge sort. Each function that gives an iterator stays out. |
 | `sort` | Overlay | |
 | `strconv` | Overlay | |
 | `strings` | Overlay | |
@@ -80,13 +82,27 @@ A patch replaces 1 file of a native package by its base name. Each other file
 keeps the real Go source. A patch that matches no file stays out, because a
 build tag of the architecture selects the file set of a package.
 
-The 3 causes that block the next candidates:
+The 2 causes that block the next candidates:
 
 | Package | Cause |
 |---|---|
-| `slices` | The address of a local integer. Read the row of `&x`. |
-| `maps`, `iter` | A range loop over a function. |
-| `bytes`, `strings`, `path` | The package `internal/bytealg`, and `io`. |
+| `iter` | A range loop over a function. |
+| `bytes`, `path` | The package `internal/bytealg`, and `io`. |
+
+## The core type of a type parameter
+
+Go gives a type parameter a core type when each term of its type set shares 1
+underlying type. `S ~[]E` holds the core type `[]E`, thus each operation of a
+slice applies to a value of the type S.
+
+The compiler reads the core type for each operation: an index, a slice
+expression, a range loop, `len`, `cap`, `make`, `append`, `copy`, `delete`, a
+nil comparison, and a field read.
+
+The Dart type of such a parameter is the Dart type of the core type, and not a
+Dart type parameter. `S ~[]E` gives `Slice<E>`. A parameter whose core type is a
+basic type keeps a Dart type parameter, because `~int` and `~string` give 2
+different Dart types.
 
 ## A type parameter with a mixed constraint
 

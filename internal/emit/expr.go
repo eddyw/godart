@@ -11,6 +11,7 @@ import (
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 func (e *emitter) expr(x ir.Expr) string {
@@ -320,8 +321,7 @@ func (e *emitter) nilTest(x, other ir.Expr) (string, bool) {
 	if _, ok := other.(*ir.Zero); !ok {
 		return "", false
 	}
-	t := x.GoType()
-	switch types.Unalias(t).Underlying().(type) {
+	switch typeset.Core(x.GoType()).(type) {
 	case *types.Slice, *types.Map:
 		return e.expr(x) + ".isNil", true
 	case *types.Pointer, *types.Signature, *types.Chan, *types.Interface:

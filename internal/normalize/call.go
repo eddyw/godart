@@ -6,6 +6,7 @@ import (
 	"go/types"
 
 	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 func (b *builder) call(e *ast.CallExpr) ir.Expr {
@@ -109,7 +110,7 @@ func calleeIdent(e ast.Expr) *ast.Ident {
 }
 
 func signatureOf(t types.Type) *types.Signature {
-	sig, _ := types.Unalias(t).Underlying().(*types.Signature)
+	sig, _ := typeset.Core(t).(*types.Signature)
 	return sig
 }
 
@@ -131,7 +132,7 @@ func (b *builder) paramType(sig *types.Signature, i int, spread bool) types.Type
 	params := sig.Params()
 	last := params.Len() - 1
 	if sig.Variadic() && i >= last && !spread {
-		slice, ok := types.Unalias(params.At(last).Type()).Underlying().(*types.Slice)
+		slice, ok := typeset.Core(params.At(last).Type()).(*types.Slice)
 		if ok {
 			return slice.Elem()
 		}
@@ -158,7 +159,7 @@ func (b *builder) builtin(e *ast.CallExpr, fn string) ir.Expr {
 		return out
 	case "append":
 		out := &ir.Builtin{Name: fn, Type: t, Spread: e.Ellipsis.IsValid()}
-		slice, _ := types.Unalias(t).Underlying().(*types.Slice)
+		slice, _ := typeset.Core(t).(*types.Slice)
 		out.Args = append(out.Args, b.expr(e.Args[0]))
 		for _, a := range e.Args[1:] {
 			if out.Spread {
@@ -185,7 +186,7 @@ func (b *builder) builtin(e *ast.CallExpr, fn string) ir.Expr {
 
 func (b *builder) composite(e *ast.CompositeLit) ir.Expr {
 	t := b.typeOf(e)
-	switch u := types.Unalias(t).Underlying().(type) {
+	switch u := typeset.Core(t).(type) {
 	case *types.Struct:
 		return b.structLit(e, t, u)
 	case *types.Slice:

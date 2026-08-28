@@ -47,6 +47,91 @@ func IndexByte(s string, c byte) int {
 }
 
 // Contains reports whether substr is inside s.
+// Compare gives a negative value, 0, or a positive value. It orders by byte.
+//
+// The 2 operators < and > give the same result. The function exists because a
+// caller needs a value of the type func(a, b string) int.
+func Compare(a, b string) int {
+	if a < b {
+		return -1
+	}
+	if a > b {
+		return 1
+	}
+	return 0
+}
+
+// IndexRune gives the index of the first rune r, in bytes. The result is -1
+// when the text holds no such rune.
+func IndexRune(s string, r rune) int {
+	for i, c := range s {
+		if c == r {
+			return i
+		}
+	}
+	return -1
+}
+
+// ContainsAny reports whether the text holds 1 rune of the set.
+func ContainsAny(s, chars string) bool {
+	for _, c := range s {
+		if IndexRune(chars, c) >= 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// IndexAny gives the index of the first rune of the set, in bytes.
+func IndexAny(s, chars string) int {
+	for i, c := range s {
+		if IndexRune(chars, c) >= 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+// TrimLeft removes each leading rune of the set.
+func TrimLeft(s, cutset string) string {
+	for len(s) > 0 {
+		r, size := decodeFirst(s)
+		if IndexRune(cutset, r) < 0 {
+			break
+		}
+		s = s[size:]
+	}
+	return s
+}
+
+// TrimRight removes each trailing rune of the set.
+func TrimRight(s, cutset string) string {
+	for len(s) > 0 {
+		r, size := decodeLast(s)
+		if IndexRune(cutset, r) < 0 {
+			break
+		}
+		s = s[:len(s)-size]
+	}
+	return s
+}
+
+// CutPrefix removes the prefix and reports whether the text held it.
+func CutPrefix(s, prefix string) (string, bool) {
+	if !HasPrefix(s, prefix) {
+		return s, false
+	}
+	return s[len(prefix):], true
+}
+
+// CutSuffix removes the suffix and reports whether the text held it.
+func CutSuffix(s, suffix string) (string, bool) {
+	if !HasSuffix(s, suffix) {
+		return s, false
+	}
+	return s[:len(s)-len(suffix)], true
+}
+
 func Contains(s, substr string) bool {
 	return Index(s, substr) >= 0
 }
@@ -219,6 +304,25 @@ func TrimSpace(s string) string {
 }
 
 // Trim removes each byte of cutset from the start and from the end of s.
+// decodeFirst reads the first rune of the text with its size in bytes.
+func decodeFirst(s string) (rune, int) {
+	for _, c := range s {
+		return c, len(string(c))
+	}
+	return 0, 0
+}
+
+// decodeLast reads the last rune of the text with its size in bytes.
+func decodeLast(s string) (rune, int) {
+	last := rune(0)
+	size := 0
+	for _, c := range s {
+		last = c
+		size = len(string(c))
+	}
+	return last, size
+}
+
 func Trim(s, cutset string) string {
 	start := 0
 	for start < len(s) && IndexByte(cutset, s[start]) >= 0 {
