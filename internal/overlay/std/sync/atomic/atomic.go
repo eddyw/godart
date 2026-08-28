@@ -165,6 +165,29 @@ func (x *Uint64) CompareAndSwap(old, new uint64) bool {
 	return true
 }
 
+// Pointer holds a pointer to a value of the type parameter.
+type Pointer[T any] struct {
+	v *T
+}
+
+func (x *Pointer[T]) Load() *T { return x.v }
+
+func (x *Pointer[T]) Store(val *T) { x.v = val }
+
+func (x *Pointer[T]) Swap(new *T) *T {
+	old := x.v
+	x.v = new
+	return old
+}
+
+func (x *Pointer[T]) CompareAndSwap(old, new *T) bool {
+	if x.v != old {
+		return false
+	}
+	x.v = new
+	return true
+}
+
 // The function forms. Go holds 1 function for each width, and each one takes
 // the address of the value.
 

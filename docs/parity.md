@@ -68,6 +68,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `bytes` | Native, with 1 patch | The patch replaces `buffer.go`, which holds a `recover` call. |
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
+| `encoding/base64` | Native | The real source needs no patch. |
+| `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
@@ -299,7 +301,7 @@ plain write.
 | `Value.Load`, `Store`, `Swap`, `CompareAndSwap` | Present | Equal, with no check of the type. |
 | `Int32`, `Int64`, `Uint32`, `Uint64`, `Bool` | Present | Equal. Each one holds `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
 | A `Store` of a second concrete type | Panics | It writes the value. |
-| `Pointer` | Present | Missing |
+| `Pointer[T]` | Present | Equal |
 | The function form, for example `AddInt64` | Present | Equal for `Add`, `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
 
 ## A range loop over a function
@@ -463,6 +465,7 @@ for each test binary. The output holds the format of `go test`.
 | An example with an output comment | Runs and compares the output | Reported as a skipped test |
 | `t.TempDir` | A new directory for the test | Equal. The cleanup of the test removes it. |
 | `t.Setenv`, `t.Context` | Present | Missing |
+| `testing.Benchmark` | Gives a BenchmarkResult | Equal. The field T holds a count of nanoseconds, and not a `time.Duration`. |
 | `-bench`, `-benchtime`, `-benchcount` | Present | Present. `-benchtime 100x` becomes `-benchcount 100`. |
 | `-benchmem` | Present | Missing. Read the row of `b.ReportAllocs`. |
 | `-short`, `-count`, `-timeout`, `-cover` | Present | Missing |

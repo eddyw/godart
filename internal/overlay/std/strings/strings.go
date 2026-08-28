@@ -5,7 +5,10 @@ package strings
 
 import "errors"
 
-import "syscall/dart"
+import (
+	"syscall/dart"
+	"unicode"
+)
 
 // Index gives the position of the first substr in s, or -1.
 func Index(s, substr string) int {
@@ -367,6 +370,43 @@ func ToUpper(s string) string {
 // ToLower gives the text in lower case.
 func ToLower(s string) string {
 	return dart.Lower(s)
+}
+
+// ToLowerSpecial gives the text in lower case, with the rules of the case
+// range list.
+func ToLowerSpecial(c unicode.SpecialCase, s string) string {
+	return mapRunes(c.ToLower, s)
+}
+
+// ToUpperSpecial gives the text in upper case, with the rules of the case range
+// list.
+func ToUpperSpecial(c unicode.SpecialCase, s string) string {
+	return mapRunes(c.ToUpper, s)
+}
+
+// ToTitleSpecial gives the text in title case, with the rules of the case range
+// list.
+func ToTitleSpecial(c unicode.SpecialCase, s string) string {
+	return mapRunes(c.ToTitle, s)
+}
+
+// Map gives the text with f on each rune. A negative result drops the rune.
+func Map(f func(rune) rune, s string) string {
+	out := ""
+	for _, r := range s {
+		if v := f(r); v >= 0 {
+			out += string(v)
+		}
+	}
+	return out
+}
+
+func mapRunes(f func(rune) rune, s string) string {
+	out := ""
+	for _, r := range s {
+		out += string(f(r))
+	}
+	return out
 }
 
 // EqualFold reports whether s and t are equal in lower case.

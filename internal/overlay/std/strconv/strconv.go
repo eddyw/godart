@@ -9,6 +9,10 @@ import (
 	"unicode/utf8"
 )
 
+// IntSize is the count of bits of an int. A Dart int holds 64 bits on the VM
+// and with AOT.
+const IntSize = 64
+
 // ErrSyntax reports text that holds no value of the type.
 var ErrSyntax = errors.New("invalid syntax")
 

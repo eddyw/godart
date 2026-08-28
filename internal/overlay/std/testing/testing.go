@@ -612,6 +612,58 @@ func runBenchmark(name string, f func(*B), flags options) bool {
 	return true
 }
 
+// BenchmarkResult holds the outcome of 1 run of Benchmark.
+type BenchmarkResult struct {
+	// N is the count of iterations.
+	N int
+	// T is the measured time of the run, in nanoseconds. Go holds a
+	// time.Duration, and the overlay of testing reads no other package of the
+	// surface.
+	T int64
+	// Bytes is the count of bytes that 1 iteration reads or writes.
+	Bytes int64
+}
+
+// NsPerOp gives the time of 1 iteration, in nanoseconds.
+func (r BenchmarkResult) NsPerOp() int64 {
+	if r.N <= 0 {
+		return 0
+	}
+	return r.T / int64(r.N)
+}
+
+// AllocsPerOp gives 0. The Dart VM gives no count of allocations.
+func (r BenchmarkResult) AllocsPerOp() int64 { return 0 }
+
+// AllocedBytesPerOp gives 0. The Dart VM gives no count of allocations.
+func (r BenchmarkResult) AllocedBytesPerOp() int64 { return 0 }
+
+// String gives the line of the result, in the format of go test.
+func (r BenchmarkResult) String() string {
+	return strconv.Itoa(r.N) + "\t" + strconv.FormatInt(r.NsPerOp(), 10) + " ns/op"
+}
+
+// Benchmark runs 1 benchmark function and gives its result. It writes no line,
+// thus a caller reads the numbers itself.
+func Benchmark(f func(*B)) BenchmarkResult {
+	n := 1
+	last := runIterations("", f, n)
+	for {
+		if last.loopN > 0 || last.common.failed || last.common.skipped || last.sub {
+			break
+		}
+		if last.elapsed >= defaultBenchNanos || n >= 1000000000 {
+			break
+		}
+		n = nextCount(n, last.elapsed, defaultBenchNanos)
+		last = runIterations("", f, n)
+	}
+	if last.common.failed {
+		return BenchmarkResult{}
+	}
+	return BenchmarkResult{N: last.N, T: last.elapsed, Bytes: last.bytes}
+}
+
 // runIterations runs the body 1 time with a fixed count of iterations.
 func runIterations(name string, f func(*B), n int) *B {
 	t := &T{name: name}

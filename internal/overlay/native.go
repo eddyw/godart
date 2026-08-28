@@ -17,6 +17,8 @@ var native = []string{
 	"bytes",
 	"cmp",
 	"container/list",
+	"encoding/base64",
+	"internal/byteorder",
 	"context",
 	"io",
 	"path",
