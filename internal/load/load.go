@@ -8,6 +8,7 @@ import (
 	"go/build"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 
@@ -122,10 +123,19 @@ func load(dir string, tests bool, patterns []string) (*Result, error) {
 // overlayFiles maps each file of a standard library package to the file of the
 // overlay. A package that the standard library does not hold takes a new
 // directory inside GOROOT.
+//
+// A test build can hold a package of the surface only as a test variant,
+// because the package under test imports it. Such a variant reads the files of
+// the real package, thus the overlay replaces them. The variant of the package
+// under test stays out, because its file list also holds each test file.
 func overlayFiles(found []*packages.Package) (map[string][]byte, error) {
 	existing := map[string]*packages.Package{}
 	packages.Visit(found, nil, func(p *packages.Package) {
-		if p.ID == p.PkgPath && existing[p.PkgPath] == nil {
+		if p.ID == p.PkgPath {
+			existing[p.PkgPath] = p
+			return
+		}
+		if existing[p.PkgPath] == nil && !holdsTestFile(p) {
 			existing[p.PkgPath] = p
 		}
 	})
@@ -150,6 +160,18 @@ func overlayFiles(found []*packages.Package) (map[string][]byte, error) {
 		replaceFiles(out, o, p)
 	}
 	return out, nil
+}
+
+// holdsTestFile reports whether the file list of a package holds a test file.
+// The variant of a package under test holds one, and each other variant holds
+// only the files of the real package.
+func holdsTestFile(p *packages.Package) bool {
+	for _, name := range p.CompiledGoFiles {
+		if strings.HasSuffix(name, "_test.go") {
+			return true
+		}
+	}
+	return false
 }
 
 // replaceFiles replaces each file of a standard library package with the file
@@ -210,10 +232,23 @@ func patchFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
 	}
 }
 
-// collectErrors reports the errors of the root packages and of the dependencies.
+// collectErrors reports the errors of the root packages and of the
+// dependencies that the build compiles.
+//
+// An error of a standard library package outside the surface stays out. The
+// overlay of another package gives such an error, and the verifier reports the
+// real cause with a source position: a compiled package imports a package
+// outside the surface.
 func collectErrors(roots []*packages.Package) error {
+	root := map[string]bool{}
+	for _, p := range roots {
+		root[p.ID] = true
+	}
 	var errs []error
 	packages.Visit(roots, nil, func(p *packages.Package) {
+		if !root[p.ID] && overlay.Outside(p.PkgPath) {
+			return
+		}
 		for _, e := range p.Errors {
 			errs = append(errs, e)
 		}

@@ -61,6 +61,11 @@ func FormatInt(i int64, base int) string {
 	return out
 }
 
+// AppendInt adds the text of i in the base to dst.
+func AppendInt(dst []byte, i int64, base int) []byte {
+	return append(dst, FormatInt(i, base)...)
+}
+
 // FormatBool gives "true" or "false".
 func FormatBool(b bool) string {
 	if b {

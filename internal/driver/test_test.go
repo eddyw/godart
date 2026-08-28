@@ -2,6 +2,7 @@ package driver_test
 
 import (
 	"bytes"
+	"go/build"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -142,6 +143,105 @@ func TestValue(t *testing.T) {
 	}
 }
 
+// TestTestsSkipsAnAllocationTest proves that AllocsPerRun reports a skip with
+// the cause. The Dart VM gives no count of allocations for 1 operation, and a
+// result of 0 would make such a test pass.
+func TestTestsSkipsAnAllocationTest(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/alloc\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(dir, "alloc.go"),
+		"package alloc\n\n// Grow gives a new slice.\nfunc Grow() []byte { return make([]byte, 8) }\n")
+	writeFile(t, filepath.Join(dir, "alloc_test.go"), `package alloc
+
+import "testing"
+
+func TestAllocs(t *testing.T) {
+	if n := testing.AllocsPerRun(10, func() { Grow() }); n > 0 {
+		t.Errorf("Grow makes %v allocations, and 0 is the count", n)
+	}
+}
+`)
+	got := gartTest(t, dir, driver.TestOptions{Verbose: true})
+	for _, want := range []string{"--- SKIP: TestAllocs", "gart counts no allocation"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the output holds no %q:\n%s", want, got)
+		}
+	}
+}
+
+// TestTestsOfGoroot proves that the test command runs the real test files of a
+// package of GOROOT. Such a package belongs to no module, and the driver gives
+// it the module std.
+//
+// The test reads the Go installation of the machine. A new Go release can add a
+// test file that falls outside the subset, and the assertion then fails.
+func TestTestsOfGoroot(t *testing.T) {
+	cases := []struct {
+		pkg   string
+		wants []string
+	}{
+		{"path", []string{"--- PASS: TestClean ", "--- SKIP: TestCleanMallocs "}},
+		{"container/list", []string{"--- PASS: TestList ", "--- PASS: TestZeroList "}},
+	}
+	for _, c := range cases {
+		t.Run(c.pkg, func(t *testing.T) {
+			t.Parallel()
+			dir := filepath.Join(build.Default.GOROOT, "src", filepath.FromSlash(c.pkg))
+			if _, err := os.Stat(dir); err != nil {
+				t.Skipf("the machine holds no source of the package %s: %v", c.pkg, err)
+			}
+			out := &bytes.Buffer{}
+			code, err := driver.Test(driver.Options{
+				Dir:      dir,
+				Patterns: []string{"."},
+				Out:      t.TempDir(),
+				Runtime:  runtimeDir(t),
+				Format:   true,
+			}, driver.TestOptions{Verbose: true}, out)
+			if err != nil {
+				t.Fatalf("the test build failed:\n%v", err)
+			}
+			got := out.String()
+			if code != 0 {
+				t.Errorf("got the exit code %d, want 0:\n%s", code, got)
+			}
+			for _, want := range c.wants {
+				if !strings.Contains(got, want) {
+					t.Errorf("the output holds no %q:\n%s", want, got)
+				}
+			}
+		})
+	}
+}
+
+// TestTestsOfANestedPackage proves that the entry point of a test binary lands
+// in the directory of the import path of the package under test. The name of
+// the entry point holds only the base of that path.
+func TestTestsOfANestedPackage(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/nested\n\ngo 1.27\n")
+	pkg := filepath.Join(dir, "a", "b")
+	if err := os.MkdirAll(pkg, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(pkg, "b.go"),
+		"package b\n\n// Value gives a number.\nfunc Value() int { return 2 }\n")
+	writeFile(t, filepath.Join(pkg, "b_test.go"), `package b
+
+import "testing"
+
+func TestValue(t *testing.T) {
+	if Value() != 2 {
+		t.Error("Value gives the wrong number")
+	}
+}
+`)
+	got := gartTest(t, dir, driver.TestOptions{Verbose: true})
+	if !strings.Contains(got, "--- PASS: TestValue") {
+		t.Errorf("the output holds no result of TestValue:\n%s", got)
+	}
+}
+
 func writeFile(t *testing.T, path, text string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(text), 0o666); err != nil {
@@ -276,7 +376,9 @@ func TestBench(t *testing.T) {
 			t.Errorf("the output holds no %q:\n%s", want, got)
 		}
 	}
-	for _, name := range []string{"BenchmarkAdd", "BenchmarkDouble/one", "BenchmarkDouble/big"} {
+	for _, name := range []string{
+		"BenchmarkAdd", "BenchmarkDouble/one", "BenchmarkDouble/big", "BenchmarkLoop",
+	} {
 		if !benchLine(got, name) {
 			t.Errorf("the output holds no result of %s:\n%s", name, got)
 		}

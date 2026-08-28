@@ -78,9 +78,6 @@ func BuildWithStats(opt Options) (*Stats, error) {
 	}
 	roots := result.Packages
 	module := moduleOf(roots)
-	if module == "" {
-		return nil, fmt.Errorf("the packages belong to no module")
-	}
 	pkgs := order(roots, module)
 	for _, p := range pkgs {
 		if err := verify.Package(p.Fset, p.Syntax, p.TypesInfo); err != nil {
@@ -325,7 +322,22 @@ func compiled(pkgPath, module string) bool {
 	if strings.HasPrefix(pkgPath, module) {
 		return true
 	}
+	if module == stdModule && testVariant(pkgPath) {
+		return true
+	}
 	return slices.Contains(overlay.Surface(), pkgPath)
+}
+
+// stdModule is the module of a build of a GOROOT package. No import path of
+// the standard library holds it as a prefix, thus each package of the surface
+// reaches the build through the surface list.
+const stdModule = "std"
+
+// testVariant reports whether a path names the external test package of a
+// GOROOT package, or the entry point of its test binary. The go command
+// reserves both suffixes, thus no other package carries them.
+func testVariant(pkgPath string) bool {
+	return strings.HasSuffix(pkgPath, "_test") || strings.HasSuffix(pkgPath, ".test")
 }
 
 // order sorts the packages of the module in dependency order. A package
@@ -358,13 +370,18 @@ func order(roots []*packages.Package, module string) []*packages.Package {
 	return out
 }
 
+// moduleOf gives the module path of the roots.
+//
+// The go command reports no module for a package of GOROOT, and the file
+// GOROOT/src/go.mod names that module std. Thus a build of such a package takes
+// stdModule.
 func moduleOf(roots []*packages.Package) string {
 	for _, p := range roots {
 		if p.Module != nil {
 			return p.Module.Path
 		}
 	}
-	return ""
+	return stdModule
 }
 
 // libPath mirrors the Go import path in the Dart directory structure. A
@@ -413,9 +430,16 @@ func isTestMain(p *packages.Package) bool {
 	return p.Name == "main" && strings.HasSuffix(p.PkgPath, ".test")
 }
 
+// testMainPath gives the path of the entry point of a test binary, relative to
+// the directory bin. The path mirrors the import path of the package under
+// test.
+func testMainPath(p *packages.Package, module string) string {
+	return testDir(strings.TrimSuffix(p.PkgPath, ".test"), module) + "_test"
+}
+
 func baseName(p *packages.Package, module string) string {
 	if isTestMain(p) {
-		return testDir(strings.TrimSuffix(p.PkgPath, ".test"), module) + "_test"
+		return filepath.Base(testMainPath(p, module))
 	}
 	if p.Name == "main" && underTest(p.ID) == "" {
 		return "main"
@@ -425,7 +449,7 @@ func baseName(p *packages.Package, module string) string {
 
 func outputDir(p *packages.Package, module string) string {
 	if isTestMain(p) {
-		return filepath.Join("bin", filepath.Dir(baseName(p, module)))
+		return filepath.Join("bin", filepath.Dir(testMainPath(p, module)))
 	}
 	if p.Name == "main" && underTest(p.ID) == "" {
 		return "bin"

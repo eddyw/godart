@@ -33,6 +33,7 @@ The package `fmt` reads it.
 | A goroutine on a second thread | Yes | No. All Go code runs in 1 isolate. |
 | `recover` | Present | Outside the subset |
 | `unsafe` and cgo | Present | Outside the subset |
+| `runtime.GOMAXPROCS` | The count of processors | Always 1. All Go code runs in 1 isolate. |
 
 ## The subset of the language
 
@@ -341,6 +342,8 @@ for each test binary. The output holds the format of `go test`.
 | A benchmark | `go test` with no -bench flag runs none | Equal. `gart test -bench <text>` runs them. |
 | `b.RunParallel` | Measures a parallel throughput | Stops the benchmark with an error. All Go code runs in 1 isolate. |
 | `b.ReportAllocs` | Adds allocs/op and B/op | Does nothing. The Dart VM gives no count of allocations for 1 operation. |
+| `testing.AllocsPerRun` | Gives the average count of allocations | Skips the test with the cause. A result of 0 would make such a test pass. |
+| `b.Loop` | Runs the body 1 time and raises the count itself | Equal. The harness calls a body that reads `Loop` only 1 time. |
 | The clock of a benchmark | A monotonic nanosecond clock | `Stopwatch` of Dart. It also ticks each nanosecond. |
 | A benchmark build | The normal test binary | An ahead of time build. The warm up cost of the Dart VM hides the result. |
 | A fuzz target | Runs the seed corpus | Reported as a skipped test |
@@ -368,6 +371,19 @@ value and calls `TestMain`. Go passes the result of `m.Run` to `os.Exit` when
 
 `testing.F` exists, thus a fuzz body type checks. Each method of it stops the
 program, and no path reaches such a method.
+
+`gart test` also reads the real test files of a package of GOROOT. Such a
+package belongs to no module, and the driver gives it the module `std`. The
+command needs no flag for it:
+
+```bash
+cd $(go env GOROOT)/src/path && gart test -o /tmp/x -runtime <path> .
+```
+
+A test file of GOROOT holds code outside the subset in many packages. `recover`,
+`unsafe`, and the address of a byte each appear, and each one stays outside the
+subset. Thus a package reaches a full run only when each of its test files stays
+inside the subset.
 
 ### The block model
 
@@ -426,10 +442,11 @@ The verifier rejects each package outside the curated surface.
 | `errors` | `New`, `Is`, `Unwrap` |
 | `fmt` | `Print`, `Printf`, `Println`, `Sprint`, `Sprintf`, `Sprintln`, `Errorf` |
 | `sort` | `Slice`, `SliceStable`, `Ints`, `Strings`, `Float64s`, `Search`, `SearchInts` |
-| `strconv` | `Itoa`, `Atoi`, `FormatInt`, `ParseInt`, `FormatFloat`, `ParseFloat`, `FormatBool`, `ParseBool`, `Quote` |
+| `runtime` | `GOMAXPROCS`. The scheduler lives in the Dart runtime library. |
+| `strconv` | `Itoa`, `Atoi`, `AppendInt`, `FormatInt`, `ParseInt`, `FormatFloat`, `ParseFloat`, `FormatBool`, `ParseBool`, `Quote` |
 | `strings` | The common operations and `Builder` |
 | `sync` | `Mutex`, `RWMutex`, `WaitGroup`, `Once` |
-| `testing` | `T`, `TB`, `Verbose`, `Short`. Read the section "The test command". |
+| `testing` | `T`, `TB`, `B`, `F`, `Verbose`, `Short`, `AllocsPerRun`. Read the section "The test command". |
 | `time` | `Duration`, `Sleep`, `Now`, `Since`, and the operations of `Time` |
 | `syscall/dart` | The interop. The compiler replaces each call. |
 

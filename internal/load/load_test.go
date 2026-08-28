@@ -1,12 +1,40 @@
 package load_test
 
 import (
+	"go/build"
 	"go/types"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/eddyw/godart/internal/load"
 )
+
+// TestLoadTestsReachesAVariantOfTheSurface proves that the overlay replaces the
+// files of a package of the surface that the load holds only as a test variant.
+//
+// The real package testing imports io, thus a test build of io holds testing
+// only as the variant testing [io.test]. A miss of that variant keeps the real
+// files of testing, and the load then reports a redeclaration.
+//
+// The test files of io hold other gaps, thus the load can still report an error.
+// The assertion reads only the redeclaration.
+func TestLoadTestsReachesAVariantOfTheSurface(t *testing.T) {
+	dir := filepath.Join(build.Default.GOROOT, "src", "io")
+	if _, err := os.Stat(dir); err != nil {
+		t.Skipf("the machine holds no source of the package io: %v", err)
+	}
+	_, err := load.LoadTests(dir, ".")
+	if err == nil {
+		return
+	}
+	for _, mark := range []string{"already declared", "redeclared in this block"} {
+		if strings.Contains(err.Error(), mark) {
+			t.Errorf("the overlay missed a test variant of the surface:\n%v", err)
+		}
+	}
+}
 
 func loadHello(t *testing.T) (pkgPath string, scope *types.Scope) {
 	t.Helper()

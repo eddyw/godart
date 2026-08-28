@@ -9,23 +9,9 @@ import (
 	"go/token"
 	"go/types"
 	"strconv"
-	"strings"
 
 	"github.com/eddyw/godart/internal/overlay"
 )
-
-// supported lists the standard library packages of the curated surface. A
-// package enters this set when it compiles inside the subset, or when an
-// overlay replaces it.
-var supported = supportedSet()
-
-func supportedSet() map[string]bool {
-	out := map[string]bool{}
-	for _, path := range overlay.Surface() {
-		out[path] = true
-	}
-	return out
-}
 
 // Error reports 1 rejected construct.
 type Error struct {
@@ -117,17 +103,10 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	case path == "C":
 		v.reject(spec.Pos(), "Dart cannot link a C object file",
 			"the compiler rejects cgo")
-	case isStandard(path) && !supported[path]:
+	case overlay.Outside(path):
 		v.reject(spec.Pos(), "the standard library surface is curated",
 			"the package %s is outside the supported surface", path)
 	}
-}
-
-// isStandard reports whether path names a standard library package. The first
-// element of a module path always holds a dot, and a standard path never does.
-func isStandard(path string) bool {
-	first, _, _ := strings.Cut(path, "/")
-	return !strings.Contains(first, ".")
 }
 
 // checkAddress rejects the address of a value that is not a struct. A pointer

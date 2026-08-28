@@ -36,6 +36,7 @@ func main() {
 	f, _ := strconv.ParseFloat("2.5", 64)
 	fmt.Println(f, strconv.FormatFloat(3.14159, 'f', 2, 64))
 	fmt.Println(strconv.FormatBool(true), strconv.Quote("a\tb"))
+	fmt.Println(string(strconv.AppendInt([]byte("n="), -7, 10)))
 
 	nums := []int{5, 2, 9, 1}
 	sort.Ints(nums)

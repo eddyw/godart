@@ -26,3 +26,13 @@ func BenchmarkDouble(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkLoop reads the Loop method. Such a body runs 1 time, and Loop raises
+// the count of iterations itself.
+func BenchmarkLoop(b *testing.B) {
+	total := 0
+	for b.Loop() {
+		total = Add(total, 1)
+	}
+	sink = total
+}

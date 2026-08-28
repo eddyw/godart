@@ -1,5 +1,10 @@
 package overlay
 
+import (
+	"strings"
+	"sync"
+)
+
 // native lists each standard library package that the compiler reads from the
 // real Go source. Such a package needs no overlay, because it already stays
 // inside the subset.
@@ -31,3 +36,31 @@ func NativePaths() []string {
 func Surface() []string {
 	return append(Paths(), native...)
 }
+
+// Outside reports whether a path names a standard library package that the
+// curated surface does not hold. The compiler writes no Dart code for such a
+// package, and the verifier rejects an import of it.
+//
+// The first element of a module path always holds a dot, and a standard path
+// never does. A path with the suffix _test names an external test package. The
+// go command reserves that suffix, thus such a package belongs to the build.
+func Outside(pkgPath string) bool {
+	if strings.HasSuffix(pkgPath, "_test") {
+		return false
+	}
+	first, _, _ := strings.Cut(pkgPath, "/")
+	if strings.Contains(first, ".") {
+		return false
+	}
+	return !surfaceSet()[pkgPath]
+}
+
+// surfaceSet holds each package of the surface. A walk of the embedded files
+// for each call of Outside would cost too much.
+var surfaceSet = sync.OnceValue(func() map[string]bool {
+	out := map[string]bool{}
+	for _, p := range Surface() {
+		out[p] = true
+	}
+	return out
+})

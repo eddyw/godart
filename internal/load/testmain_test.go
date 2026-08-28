@@ -34,7 +34,7 @@ func TestLoadTestsFindsTheBinary(t *testing.T) {
 	if strings.Join(bin.Tests, ",") != strings.Join(want, ",") {
 		t.Errorf("got the tests %v, want %v", bin.Tests, want)
 	}
-	wantBench := []string{"BenchmarkAdd", "BenchmarkDouble"}
+	wantBench := []string{"BenchmarkAdd", "BenchmarkDouble", "BenchmarkLoop"}
 	if strings.Join(bin.Benchmarks, ",") != strings.Join(wantBench, ",") {
 		t.Errorf("got the benchmarks %v, want %v", bin.Benchmarks, wantBench)
 	}

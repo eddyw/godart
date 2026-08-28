@@ -9,9 +9,12 @@ DEMO := $(CURDIR)/build/demo/$(PROG)
 SUITE ?= basic
 SUITE_OUT := $(CURDIR)/build/suite/$(SUITE)
 
+STD ?= path
+STD_OUT := $(CURDIR)/build/std/$(STD)
+
 .PHONY: help get build test vet fmt fmt-check dart-get dart-analyze dart-test \
 	dart-fmt dart-fmt-check ci install clean run compare programs suites \
-	gart-test compare-tests bench
+	gart-test compare-tests bench std-test
 
 help:
 	@echo "godart targets:"
@@ -31,6 +34,7 @@ help:
 	@echo "  make gart-test SUITE=x        Run the tests of the module with gart."
 	@echo "  make compare-tests SUITE=x    Run go test and gart test, and diff."
 	@echo "  make bench SUITE=x            Run the benchmarks of the module with gart."
+	@echo "  make std-test STD=x           Run the real tests of a GOROOT package with gart."
 	@echo "  make install          Put the gart command on the PATH."
 	@echo "  make clean            Delete the build directory."
 
@@ -113,6 +117,12 @@ compare-tests: build
 		$(CURDIR)/build/dart.txt > $(CURDIR)/build/dart.norm.txt
 	@diff $(CURDIR)/build/go.norm.txt $(CURDIR)/build/dart.norm.txt && \
 		echo "$(SUITE): the 2 outputs are equal"
+
+# std-test runs the real test files of 1 package of GOROOT with gart. Such a
+# package belongs to no module, and the driver gives it the module std.
+std-test: build
+	@cd $(shell go env GOROOT)/src/$(STD) && \
+		$(CURDIR)/build/gart test -o $(STD_OUT) -runtime $(CURDIR)/$(RUNTIME) -v .
 
 # bench runs the benchmarks of 1 module with gart. It builds ahead of time
 # first, because the warm up cost of the Dart VM hides the result.

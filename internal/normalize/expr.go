@@ -288,6 +288,15 @@ func (b *builder) balance(x, y ir.Expr) (ir.Expr, ir.Expr) {
 	if isUntyped(y.GoType()) && !isUntyped(x.GoType()) {
 		return x, b.convert(y, x.GoType())
 	}
+	// Go asks that 1 operand is assignable to the type of the other. A
+	// concrete operand of a comparison with an interface becomes an interface
+	// value, because Go compares the type and the value.
+	if isIfaceType(x.GoType()) && !isIfaceType(y.GoType()) {
+		return x, b.convert(y, x.GoType())
+	}
+	if isIfaceType(y.GoType()) && !isIfaceType(x.GoType()) {
+		return b.convert(x, y.GoType()), y
+	}
 	return x, y
 }
 

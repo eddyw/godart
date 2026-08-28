@@ -99,4 +99,14 @@ func main() {
 	var a any = rect{1, 2}
 	var b any = rect{1, 2}
 	println(a == b)
+
+	// Go compares the type and the value. A concrete operand becomes an
+	// interface value first.
+	var boxed any = 7
+	plain := 7
+	println(plain == boxed, plain != boxed, boxed == 8)
+	var text any = "x"
+	println("x" == text)
+	values := []any{1, 2}
+	println(values[0] == 1, values[1] == 1)
 }

@@ -48,3 +48,41 @@ func main() {
 		t.Fatalf("the message is %q, and it must hold the position", err.Error())
 	}
 }
+
+// TestRejectReportsTheImport proves that the report names an import outside the
+// surface, and not the type errors of the package behind it.
+//
+// The overlay of another package of the surface breaks such a package. The load
+// holds each error of it back, thus the verifier reports the real cause.
+func TestRejectReportsTheImport(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module reject\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(dir, "main.go"), `package main
+
+import "net/url"
+
+func main() {
+	_, _ = url.Parse("x")
+}
+`)
+	runtime, err := filepath.Abs("../../runtime/goruntime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = driver.Build(driver.Options{
+		Dir:      dir,
+		Patterns: []string{"./..."},
+		Out:      t.TempDir(),
+		Runtime:  runtime,
+	})
+	if err == nil {
+		t.Fatal("the build accepted an import outside the surface")
+	}
+	want := "the package net/url is outside the supported surface"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("the report holds no %q:\n%v", want, err)
+	}
+	if strings.Contains(err.Error(), "/net/url/") {
+		t.Errorf("the report holds a type error of the package:\n%v", err)
+	}
+}

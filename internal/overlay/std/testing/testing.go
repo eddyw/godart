@@ -58,6 +58,23 @@ func Verbose() bool { return verbose }
 // no flag for it, thus the result is always false.
 func Short() bool { return false }
 
+// current holds the test that runs now. AllocsPerRun reads it, because the
+// function takes no TB.
+var current *T
+
+// AllocsPerRun skips the test that runs now.
+//
+// The Dart VM gives no count of allocations for 1 operation. A result of 0
+// would make an allocation test pass, thus the call reports a skip with the
+// cause.
+func AllocsPerRun(runs int, f func()) float64 {
+	if current == nil {
+		panic("testing.AllocsPerRun runs outside a test")
+	}
+	current.Skipf("gart counts no allocation, thus AllocsPerRun skips the test")
+	return 0
+}
+
 // T holds the state of 1 test.
 type T struct {
 	name     string
@@ -307,10 +324,13 @@ func runOne(t *T, call func()) {
 		emit("=== RUN   " + t.name)
 	}
 	start := dart.MonoNanos()
+	parent := current
+	current = t
 	dart.Catch(call)
 	for i := len(t.cleanups) - 1; i >= 0; i-- {
 		dart.Catch(t.cleanups[i])
 	}
+	current = parent
 	head := fmt.Sprintf("%s--- %s: %s (%ss)", indent(t.level), state(t), t.name,
 		seconds(dart.MonoNanos()-start))
 	if verbose {
@@ -393,6 +413,9 @@ type B struct {
 	bytes int64
 	// metrics holds each value that ReportMetric gave, with its unit.
 	metrics []string
+	// loopN counts the iterations that Loop gave. A value above 0 marks a body
+	// that reads Loop, and Loop runs the search itself.
+	loopN int
 }
 
 func (b *B) Name() string  { return b.common.Name() }
@@ -450,6 +473,55 @@ func (b *B) ResetTimer() {
 	b.elapsed = 0
 }
 
+// Loop reports whether the body must run 1 more iteration.
+//
+// The harness calls a body that reads Loop only 1 time. Loop runs the search
+// itself: it raises N until the run time reaches the target, and it stops the
+// timer at the end. Thus N holds the count of iterations of the whole run.
+func (b *B) Loop() bool {
+	if b.loopN > 0 && b.loopN < b.N {
+		b.loopN++
+		return true
+	}
+	return b.loopNext()
+}
+
+// loopNext raises the count of iterations, or it ends the run.
+func (b *B) loopNext() bool {
+	if b.loopN == 0 {
+		b.loopN = 1
+		b.N = 1
+		b.ResetTimer()
+		return true
+	}
+	if benchFlags.count > 0 {
+		if b.N < benchFlags.count {
+			b.N = benchFlags.count
+			b.loopN++
+			return true
+		}
+		b.StopTimer()
+		return false
+	}
+	elapsed := b.measured()
+	if elapsed >= benchFlags.nanoseconds || b.N >= 1000000000 {
+		b.StopTimer()
+		return false
+	}
+	b.N = nextCount(b.N, elapsed, benchFlags.nanoseconds)
+	b.loopN++
+	return true
+}
+
+// measured gives the time of the run up to this point, in nanoseconds. The
+// timer of a run of Loop still runs, thus Loop cannot read elapsed alone.
+func (b *B) measured() int64 {
+	if b.running {
+		return b.elapsed + dart.MonoNanos() - b.start
+	}
+	return b.elapsed
+}
+
 // RunParallel stops the benchmark with an error.
 //
 // The method measures the throughput of a parallel run, and all Go code runs in
@@ -490,6 +562,9 @@ func runBenchmark(name string, f func(*B), flags options) bool {
 	}
 	last := runIterations(name, f, n)
 	for flags.count == 0 {
+		if last.loopN > 0 {
+			break
+		}
 		if last.common.failed || last.common.skipped || last.sub {
 			break
 		}
@@ -516,12 +591,15 @@ func runBenchmark(name string, f func(*B), flags options) bool {
 func runIterations(name string, f func(*B), n int) *B {
 	t := &T{name: name}
 	b := &B{N: n, common: t}
+	parent := current
+	current = t
 	b.StartTimer()
 	dart.Catch(func() { f(b) })
 	b.StopTimer()
 	for i := len(t.cleanups) - 1; i >= 0; i-- {
 		dart.Catch(t.cleanups[i])
 	}
+	current = parent
 	if t.failed || t.skipped {
 		head := indent(t.level) + "--- " + state(t) + ": " + name + " (" +
 			seconds(b.elapsed) + "s)"
