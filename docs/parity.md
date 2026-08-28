@@ -61,6 +61,7 @@ reads the real Go source, because that source already stays inside the subset.
 
 | Package | Form | Note |
 |---|---|---|
+| `bufio` | Native | The real source needs no patch. |
 | `bytes` | Native, with 1 patch | The patch replaces `buffer.go`, which holds a `recover` call. |
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
@@ -72,6 +73,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `io` | Native | |
 | `os` | Overlay | The file access and the process state. Read the section below. |
 | `path` | Native | |
+| `runtime` | Overlay | `GOMAXPROCS` only. It always gives 1. |
 | `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `fmt` | Overlay | |

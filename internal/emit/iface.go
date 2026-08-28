@@ -202,6 +202,11 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection) string {
 		field := st.Field(i)
 		recv += "." + name.Package(field.Name())
 		current = field.Type()
+		if isPointerType(current) && structOf(current) != nil {
+			// A pointer to a struct is the Dart object reference, and that
+			// type accepts null.
+			recv += "!"
+		}
 	}
 	call := fmt.Sprintf("%s.%s(%s)", recv, methodName(fn), strings.Join(args, ", "))
 	switch {
@@ -213,7 +218,7 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection) string {
 		if cast := e.resultCast(sig); cast != "" {
 			call = "(" + call + " as " + cast + ")"
 		}
-	case !isStructType(current):
+	case structOf(current) == nil:
 		owner := receiverTypeName(current)
 		if owner == nil {
 			e.fail("the method %s has no named receiver type", fn.Name())

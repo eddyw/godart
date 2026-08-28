@@ -13,6 +13,7 @@ import (
 // each package that it imports also stays in the surface. A directory of the
 // same path inside std then patches 1 file of the package by its base name.
 var native = []string{
+	"bufio",
 	"bytes",
 	"cmp",
 	"container/list",
