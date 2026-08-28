@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"example.com/anonstructs/shapes"
+)
 
 type point struct{ x, y int }
 
@@ -57,4 +61,22 @@ func main() {
 	q := &rows[0]
 	q.want = 99
 	println(rows[0].want)
+
+	// The 2 packages share 1 class of the shape.
+	r := shapes.Make("from the package", 3)
+	local := struct {
+		Name string
+		N    int
+	}{Name: "from main", N: 4}
+	println(shapes.Text(r), shapes.Text(local), r.N+local.N)
+	println(local == struct {
+		Name string
+		N    int
+	}{Name: "from main", N: 4})
+	var any2 any = local
+	if _, ok := any2.(shapes.Row); ok {
+		println("the type assertion of the shape holds")
+	}
+	println(shapes.Empty() == struct{}{})
+	fmt.Println(r)
 }

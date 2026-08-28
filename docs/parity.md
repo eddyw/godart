@@ -50,7 +50,7 @@ The package `fmt` reads it.
 | A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
 | A type declaration inside a function, of a struct type | Present. It takes the class of its shape. |
 | A type declaration inside a function, of another type | Rejected |
-| An unnamed struct type in an exported declaration | Rejected. Read the section below. |
+| An unnamed struct type with an unexported field, in an exported declaration | Rejected. Read the section below. |
 
 
 ## The standard library surface
@@ -382,9 +382,14 @@ A variable with no initializer takes its zero value first.
 ## An unnamed struct type
 
 `struct{ ... }` with no `type` declaration reaches the output as a Dart class.
-The name comes from a hash of the text of the type, thus 2 equal Go types give 1
-class. The class holds the fields, `$copy`, `$assign`, and the equality
-operations when Go holds the type comparable.
+The name comes from a hash of the text of the type and of the library of each
+field type, thus 2 equal Go types give 1 class. The class holds the fields,
+`$copy`, `$assign`, and the equality operations when Go holds the type
+comparable.
+
+The class stands in `lib/gart_anon/<name>.dart`. The content reads the shape
+only, thus each package that holds the shape writes that file with equal bytes,
+and 2 packages share 1 class.
 
 | Item | Go | godart |
 |---|---|---|
@@ -393,16 +398,19 @@ operations when Go holds the type comparable.
 | A value in an interface | Present | Equal |
 | A type assertion and a type switch | Present | Equal |
 | A map key | Present | Equal |
-| An exported declaration | Present | Rejected. Read the cause below. |
+| An exported declaration, each field exported | Present | Equal |
+| An exported declaration, 1 field unexported | Present | Rejected. Read the cause below. |
 
-A Dart class holds a nominal identity, and Go gives an unnamed struct type a
-structural identity. The compiler writes 1 class into each package that uses the
-type, thus 2 packages give 2 classes that Dart holds apart. Stage 2 rejects an
-unnamed struct type in an exported declaration of a package. A declaration of a
-named type solves it.
+Go gives an unexported field the identity of the package that declares it, and
+Dart holds a name with a leading underscore private to 1 library. Thus the class
+of such a shape stays inside 1 package, and 2 packages give 2 classes that Dart
+holds apart. Stage 2 rejects such a shape in an exported declaration. A
+declaration of a named type solves it, and so does an exported name for each
+field.
 
 The rule reads the exported names only. A local variable, an unexported
-function, and an unexported field all accept an unnamed struct type.
+function, and an unexported field all accept an unnamed struct type with an
+unexported field.
 
 ## The test command
 

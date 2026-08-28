@@ -6,12 +6,15 @@ import (
 	"go/types"
 )
 
-// checkExported rejects an unnamed struct type in an exported declaration.
+// checkExported rejects an unnamed struct type with an unexported field in an
+// exported declaration.
 //
-// Go gives an unnamed struct type a structural identity, and a Dart class holds
-// a nominal identity. The compiler writes 1 class into each package that uses
-// such a type, thus 2 packages give 2 classes that Dart holds apart. A named
-// type has 1 class in 1 library, and it crosses a package boundary.
+// A shape whose fields all carry an exported name reaches a file of its own,
+// and each package that holds the shape writes that file with equal bytes. Go
+// gives an unexported field the identity of the package that declares it, and
+// Dart holds a name with a leading underscore private to 1 library. Thus the
+// class of such a shape stays inside 1 package, and 2 packages give 2 classes
+// that Dart holds apart.
 func (v *verifier) checkExported(n ast.Node) {
 	switch n := n.(type) {
 	case *ast.FuncDecl:
@@ -76,14 +79,15 @@ func (v *verifier) rejectAnon(pos token.Pos, t types.Type, what string) {
 	if !mentionsAnon(t, map[types.Type]bool{}) {
 		return
 	}
-	v.reject(pos, "a Dart class holds a nominal identity, and an unnamed struct "+
-		"type holds a structural identity",
-		"%s gives an unnamed struct type to another package. Declare a named type.",
+	v.reject(pos, "Go gives an unexported field the identity of its package, and "+
+		"Dart holds such a name private to 1 library",
+		"%s gives an unnamed struct type with an unexported field to another "+
+			"package. Declare a named type, or export each field.",
 		what)
 }
 
-// mentionsAnon reports whether another package can reach an unnamed struct
-// type through this type.
+// mentionsAnon reports whether another package can reach an unnamed struct type
+// with an unexported field through this type.
 //
 // A named type stops the walk at its unexported fields. Another package cannot
 // name such a field, thus it never writes the type of the field.
@@ -94,7 +98,13 @@ func mentionsAnon(t types.Type, seen map[types.Type]bool) bool {
 	seen[t] = true
 	switch t := types.Unalias(t).(type) {
 	case *types.Struct:
-		return true
+		for i := 0; i < t.NumFields(); i++ {
+			f := t.Field(i)
+			if !f.Exported() || mentionsAnon(f.Type(), seen) {
+				return true
+			}
+		}
+		return false
 	case *types.Named:
 		for i := 0; i < t.TypeArgs().Len(); i++ {
 			if mentionsAnon(t.TypeArgs().At(i), seen) {

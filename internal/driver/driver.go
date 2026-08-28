@@ -110,11 +110,18 @@ func BuildWithStats(opt Options) (*Stats, error) {
 			return nil, err
 		}
 		dir := outputDir(p, module)
-		written := make([]string, 0, len(out.Files))
+		written := make([]string, 0, len(out.Files)+len(out.Shared))
 		for path, text := range out.Files {
 			full := filepath.Join(dir, path)
 			files[full] = text
 			written = append(written, full)
+		}
+		// A shared file stands outside the directory of the package, and each
+		// package that holds the shape writes it with equal bytes. The archive
+		// lists it, thus a cached package still needs the file on disk.
+		for path, text := range out.Shared {
+			files[path] = text
+			written = append(written, path)
 		}
 		sort.Strings(written)
 		export, err := exportData(p)
@@ -309,7 +316,28 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 		imports = append(imports, emit.Import{Path: path, URI: uri})
 	}
 	sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
-	return emit.Package(tree, p.Types, baseName(p, module), imports)
+	return emit.Package(tree, p.Types, emit.Config{
+		Base:        baseName(p, module),
+		Imports:     imports,
+		DartPackage: dartPkg,
+		URIs:        libraryURIs(p, module, dartPkg),
+	})
+}
+
+// libraryURIs gives the Dart URI of each package that this package can name. A
+// file of an unnamed struct type reads it, because such a file stands outside
+// each package and still imports the type of a field.
+func libraryURIs(p *packages.Package, module, dartPkg string) map[string]string {
+	out := map[string]string{}
+	packages.Visit([]*packages.Package{p}, nil, func(d *packages.Package) {
+		if !compiled(d.PkgPath, module) {
+			return
+		}
+		if uri := libraryURI(d, module, dartPkg); uri != "" {
+			out[d.PkgPath] = uri
+		}
+	})
+	return out
 }
 
 // compiled reports whether the build writes Dart code for a package. The

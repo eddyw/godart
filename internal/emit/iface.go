@@ -283,7 +283,7 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		}
 	}
 	return fmt.Sprintf("TypeDesc('%s', '%s', const <String, Function>{}, text: '%s'%s, zero: () => %s)",
-		types.TypeString(t, nil), kindOf(t), types.TypeString(t, shortQualifier),
+		typeName(t), kindOf(t), types.TypeString(types.Unalias(t), shortQualifier),
 		e.descParts(t), e.zero(t))
 }
 
@@ -399,12 +399,19 @@ func isPure(x ir.Expr) bool {
 	return false
 }
 
+// typeName gives the name that a descriptor holds and that a type test reads.
+// An alias carries the name of its own declaration, thus the name comes from
+// the type behind it.
+func typeName(t types.Type) string {
+	return types.TypeString(types.Unalias(t), nil)
+}
+
 // typeTest writes the test of a type assertion and of a type switch.
 func (e *emitter) typeTest(x ir.Expr, target types.Type) string {
 	if isInterfaceType(target) {
 		return fmt.Sprintf("$implements(%s, %s)", e.expr(x), methodNameList(interfaceMethods(target)))
 	}
-	return fmt.Sprintf("$isType(%s, '%s')", e.expr(x), types.TypeString(target, nil))
+	return fmt.Sprintf("$isType(%s, '%s')", e.expr(x), typeName(target))
 }
 
 func (e *emitter) typeAssert(x *ir.TypeAssert) string {
@@ -412,15 +419,15 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 		if isInterfaceType(x.Assert) {
 			return fmt.Sprintf("$assertIface(%s, %s, '%s')",
 				e.expr(x.X), methodNameList(interfaceMethods(x.Assert)),
-				types.TypeString(x.Assert, nil))
+				typeName(x.Assert))
 		}
 		return fmt.Sprintf("($assertType(%s, '%s') as %s)",
-			e.expr(x.X), types.TypeString(x.Assert, nil), e.dartType(x.Assert))
+			e.expr(x.X), typeName(x.Assert), e.dartType(x.Assert))
 	}
 	if isInterfaceType(x.Assert) {
 		return fmt.Sprintf("(() { final $x = %s; if ($implements($x, %s)) return ($x, true); return (null, false); })()",
 			e.expr(x.X), methodNameList(interfaceMethods(x.Assert)))
 	}
 	return fmt.Sprintf("(() { final $x = %s; if ($isType($x, '%s')) return ($x!.value as %s, true); return (%s, false); })()",
-		e.expr(x.X), types.TypeString(x.Assert, nil), e.dartType(x.Assert), e.zero(x.Assert))
+		e.expr(x.X), typeName(x.Assert), e.dartType(x.Assert), e.zero(x.Assert))
 }

@@ -151,41 +151,60 @@ func TestReportsEachRejection(t *testing.T) {
 }
 
 // TestAnonStructCrossesAPackage proves that stage 2 rejects an unnamed struct
-// type in an exported declaration. Such a type gives 1 Dart class in each
-// package that uses it, and Dart holds the 2 classes apart.
+// type with an unexported field in an exported declaration. Go gives such a
+// field the identity of its package, and Dart holds a name with a leading
+// underscore private to 1 library, thus 2 packages give 2 classes.
 func TestAnonStructCrossesAPackage(t *testing.T) {
-	const want = "unnamed struct type to another package"
+	const want = "unnamed struct type with an unexported field"
 	rejectFile(t, "an exported result", want, `package a
 
-func Make() struct{ N int } { return struct{ N int }{N: 1} }
+func Make() struct{ n int } { return struct{ n int }{n: 1} }
 `)
 	rejectFile(t, "an exported parameter", want, `package a
 
-func Take(v struct{ N int }) int { return v.N }
+func Take(v struct{ n int }) int { return v.n }
 `)
 	rejectFile(t, "an exported variable", want, `package a
 
-var Value struct{ N int }
+var Value struct{ n int }
 `)
 	rejectFile(t, "an exported field", want, `package a
 
 type Box struct {
-	Inner struct{ N int }
+	Inner struct{ n int }
 }
 `)
 	rejectFile(t, "a slice of an unnamed struct", want, `package a
 
-func List() []struct{ N int } { return nil }
+func List() []struct{ n int } { return nil }
 `)
 	rejectFile(t, "an exported method", want, `package a
 
 type Box struct{ n int }
 
-func (b Box) Get() struct{ N int } { return struct{ N int }{N: b.n} }
+func (b Box) Get() struct{ n int } { return struct{ n int }{n: b.n} }
+`)
+	rejectFile(t, "a nested unnamed struct", want, `package a
+
+func Make() struct{ Inner struct{ n int } } {
+	return struct{ Inner struct{ n int } }{}
+}
+`)
+	acceptFile(t, "an exported field of a shape", `package a
+
+func Make() struct{ N int } { return struct{ N int }{N: 1} }
+`)
+	acceptFile(t, "an exported variable of a shape", `package a
+
+var Value struct{ N int }
+`)
+	acceptFile(t, "an empty shape", `package a
+
+func Done() <-chan struct{} { return nil }
 `)
 	acceptFile(t, "an unexported function", `package a
 
-func make1() struct{ N int } { return struct{ N int }{N: 1} }
+func make1() struct{ n int } { return struct{ n int }{n: 1} }
 `)
 	acceptFile(t, "a local variable", `package a
 
@@ -197,20 +216,20 @@ func F() int {
 	acceptFile(t, "an unexported field", `package a
 
 type Box struct {
-	inner struct{ N int }
+	inner struct{ n int }
 }
 `)
 	acceptFile(t, "an unexported method", `package a
 
 type Box struct{ n int }
 
-func (b Box) get() struct{ N int } { return struct{ N int }{N: b.n} }
+func (b Box) get() struct{ n int } { return struct{ n int }{n: b.n} }
 `)
 	acceptFile(t, "a method of an unexported type", `package a
 
 type box struct{ n int }
 
-func (b box) Get() struct{ N int } { return struct{ N int }{N: b.n} }
+func (b box) Get() struct{ n int } { return struct{ n int }{n: b.n} }
 `)
 }
 
