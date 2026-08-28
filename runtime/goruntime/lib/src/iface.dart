@@ -1,4 +1,5 @@
 import 'panic.dart';
+import 'string.dart';
 
 /// The description of 1 struct field. It gives the `reflect` subset the name,
 /// the tag, and access to the value.
@@ -53,6 +54,10 @@ final class TypeDesc {
   /// because the Dart type of the element lives only in the emitted code.
   final Object? Function(int)? make;
 
+  /// True when Go compares 2 values of the type. A slice, a map, and a
+  /// function each give false, and so does a struct that holds one.
+  final bool comparable;
+
   const TypeDesc(
     this.name,
     this.kind,
@@ -63,10 +68,14 @@ final class TypeDesc {
     this.key,
     this.zero,
     this.make,
+    this.comparable = true,
   });
 
   /// The name for a message. Go writes the package name, and not the path.
   String get display => text.isEmpty ? name : text;
+
+  /// The text and the comparable flag, for the package internal/reflectlite.
+  (GoString, bool) get info => (GoString.fromString(display), comparable);
 
   @override
   String toString() => display;

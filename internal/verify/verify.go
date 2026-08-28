@@ -125,11 +125,25 @@ func (v *verifier) checkAddress(e *ast.UnaryExpr) {
 	if t == nil || isStruct(t) || isArray(t) {
 		return
 	}
-	if v.isVariable(e.X) {
+	if !v.isVariable(e.X) {
+		v.reject(e.Pos(), "a value of such a type needs a box, and only a variable holds one",
+			"the compiler rejects the address of %s", types.TypeString(t, nil))
 		return
 	}
-	v.reject(e.Pos(), "a value of such a type needs a box, and only a variable holds one",
-		"the compiler rejects the address of %s", types.TypeString(t, nil))
+	// A package variable that holds a box carries the box in its declaration,
+	// thus each package that reads the variable must know the box. An exported
+	// variable reaches another package, and the archive holds no such field.
+	if id, ok := unparen(e.X).(*ast.Ident); ok && id.IsExported() {
+		if obj, ok := v.info.Uses[id].(*types.Var); ok && isGlobal(obj) {
+			v.reject(e.Pos(), "the box of a package variable does not cross a package boundary",
+				"the compiler rejects the address of the exported package variable %s", id.Name)
+		}
+	}
+}
+
+// isGlobal reports whether the variable stands at package level.
+func isGlobal(obj *types.Var) bool {
+	return obj.Pkg() != nil && obj.Parent() == obj.Pkg().Scope()
 }
 
 // isVariable reports whether the expression names a variable. A parameter and a

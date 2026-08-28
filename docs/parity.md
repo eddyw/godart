@@ -65,7 +65,9 @@ reads the real Go source, because that source already stays inside the subset.
 | `bytes` | Native, with 1 patch | The patch replaces `buffer.go`, which holds a `recover` call. |
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
+| `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | |
+| `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
 | `maps` | Overlay | |
 | `encoding/json` | Overlay | `Marshal` only. Read the section below. |
@@ -249,9 +251,10 @@ The `net` package holds this surface:
 
 ## The clock and the timer
 
-`time` reads the clock of `dart:io` and the scheduler of the runtime. There is
-no time zone, and each value of `Time` holds only a count of nanoseconds after
-the start of the Unix epoch.
+`time` reads the clock of `dart:io` and the scheduler of the runtime. Each value
+of `Time` holds only a count of nanoseconds after the start of the Unix epoch.
+`Time.String` reads the offset and the name of the local zone from Dart, and the
+overlay holds no other part of a calendar.
 
 | Item | Go | godart |
 |---|---|---|
@@ -262,9 +265,19 @@ the start of the Unix epoch.
 | `AfterFunc` | Runs f on a new goroutine | Equal. A Dart timer holds 1 wake source of the scheduler. |
 | `Timer.Stop` | Reports false after the run | Equal |
 | `Timer.C`, `NewTimer`, `Tick`, `NewTicker`, `After` | Present | Missing. The overlay holds no channel form of a timer. |
-| `Time.String`, `Format`, `Parse` | Present | Missing |
+| `Time.String` | `2006-01-02 15:04:05.999999999 -0700 MST` | Equal, with no reading of the monotonic clock. Read below. |
+| `Time.Format`, `Parse` | Present | Missing |
 | `Time.Year`, `Month`, `Day`, `Hour` | Present | Missing. The overlay holds no calendar. |
 | `Location`, `UTC`, `Local` | Present | Missing |
+
+A Go `Time` of `time.Now` also holds a reading of the monotonic clock, and
+`String` writes it as ` m=+1.234567890`. A `Time` of the overlay holds no such
+reading, thus the text ends with the name of the zone.
+
+Go reads the zone of an instant from its own copy of the zone database, and Dart
+reads the zone from the platform. The 2 agree for each date after 1901. A date
+before that year reads a historical offset in Go, for example `+0805 LMT`, and
+Dart gives the modern offset of the zone.
 
 `sync/atomic` holds `Value` with `Load`, `Store`, and `Swap`, and `Int32` with
 `Load`, `Store`, and `Add`. All Go code runs in 1 isolate, and a goroutine gives
@@ -533,6 +546,7 @@ The verifier rejects each package outside the curated surface.
 | `strings` | The common operations and `Builder` |
 | `sync` | `Mutex`, `RWMutex`, `WaitGroup`, `Once` |
 | `testing` | `T`, `TB`, `B`, `F`, `Verbose`, `Short`, `AllocsPerRun`. Read the section "The test command". |
+| `context` | Each function of the package. The real Go source compiles. |
 | `time` | `Duration`, `Sleep`, `Now`, `Since`, and the operations of `Time` |
 | `syscall/dart` | The interop. The compiler replaces each call. |
 

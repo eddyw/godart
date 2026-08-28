@@ -70,6 +70,17 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 // descParts writes the fields of a struct type, and the element type and the
 // key type of a container type.
 func (e *emitter) descParts(t types.Type) string {
+	out := e.descShape(t)
+	// The package internal/reflectlite reads the flag. Go compares 2 values of
+	// each type except a slice, a map, a function, and a type that holds one.
+	if !types.Comparable(t) {
+		out += ", comparable: false"
+	}
+	return out
+}
+
+// descShape writes the element type, the key type, and the fields.
+func (e *emitter) descShape(t types.Type) string {
 	u := types.Unalias(t).Underlying()
 	if p, ok := u.(*types.Pointer); ok {
 		return ", elem: () => " + e.descriptorOf(p.Elem())

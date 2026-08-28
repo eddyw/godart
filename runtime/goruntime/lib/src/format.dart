@@ -1,6 +1,7 @@
 import 'iface.dart';
 import 'int.dart';
 import 'map.dart';
+import 'panic.dart';
 import 'print.dart';
 import 'slice.dart';
 import 'string.dart';
@@ -24,6 +25,13 @@ GoString $goFormat(Iface? value, GoString verb) =>
 /// The kind of the value of an interface, in the words of the package reflect.
 GoString $goKind(Iface? value) =>
     GoString.fromString(value == null ? 'nil' : value.desc.kind);
+
+/// The text of the type of an interface value, and the comparable flag. The
+/// package internal/reflectlite reads it.
+(GoString, bool) $typeInfo(Iface? value) {
+  if (value == null) $panicNil();
+  return value.desc.info;
+}
 
 String _format(Iface? x, String verb) {
   if (verb.endsWith('T')) return x == null ? '<nil>' : x.desc.display;

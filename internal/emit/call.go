@@ -68,6 +68,8 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$goFormat(%s, %s)", args[1], args[0]), true
 	case "Kind":
 		return fmt.Sprintf("$goKind(%s)", args[0]), true
+	case "TypeInfo":
+		return fmt.Sprintf("$typeInfo(%s)", args[0]), true
 	case "Upper":
 		return fmt.Sprintf("$upper(%s)", args[0]), true
 	case "Lower":
@@ -78,6 +80,8 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$sleep(%s)", args[0]), true
 	case "NowNanos":
 		return "$nowNanos()", true
+	case "ZoneOffset":
+		return fmt.Sprintf("$zoneOffset(%s)", args[0]), true
 	case "MonoNanos":
 		return "$monoNanos()", true
 	case "MarshalJSON":

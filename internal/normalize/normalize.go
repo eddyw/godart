@@ -23,6 +23,10 @@ import (
 // Package builds the intermediate tree of 1 package.
 func Package(fset *token.FileSet, files []*ast.File, info *types.Info, pkg *types.Package, blocks *analyze.Result) (*ir.Package, error) {
 	b := &builder{fset: fset, info: info, pkg: pkg, blocks: blocks}
+	b.globalBoxes = map[*types.Var]bool{}
+	for _, f := range files {
+		b.markAddressed(f, b.globalBoxes, true)
+	}
 	out := &ir.Package{Path: pkg.Path(), Name: pkg.Name()}
 	for _, f := range files {
 		file := &ir.File{Name: filepath.Base(fset.Position(f.Pos()).Filename)}
@@ -52,6 +56,11 @@ type builder struct {
 	// boxes holds each variable of the current function whose address the code
 	// takes. Such a variable holds a box.
 	boxes map[*types.Var]bool
+
+	// globalBoxes holds each package variable whose address the code takes. The
+	// set covers the whole package, because each function of the package reads
+	// such a variable through its box.
+	globalBoxes map[*types.Var]bool
 
 	// retFlag names the variable that marks a return statement inside the body
 	// of a range loop over a function. It is empty when the function holds no
@@ -219,7 +228,8 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 		if obj == nil {
 			continue
 		}
-		vars = append(vars, &ir.Var{Name: obj.Name(), Obj: obj, Type: obj.Type()})
+		vars = append(vars, &ir.Var{Name: obj.Name(), Obj: obj, Type: obj.Type(),
+			Boxed: b.globalBoxes[obj]})
 	}
 	switch {
 	case len(spec.Values) == 0:
@@ -254,6 +264,9 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	b.used = map[string]bool{}
 	b.gotoLabels = gotoTargets(d.Body)
 	b.boxes = b.addressed(d.Body)
+	for v := range b.globalBoxes {
+		b.boxes[v] = true
+	}
 	b.machineBoxes(d.Body, f.Async)
 	b.retFlag = ""
 	b.retVars = nil

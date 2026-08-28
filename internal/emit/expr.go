@@ -79,14 +79,17 @@ func (e *emitter) expr(x ir.Expr) string {
 }
 
 func (e *emitter) identExpr(x *ir.Ident) string {
-	if to := e.renames[x.Name]; to != "" {
-		if x.Boxed {
-			return to + ".v"
-		}
-		return to
-	}
 	if x.Boxed {
-		return x.Name + ".v"
+		return e.identName(x) + ".v"
+	}
+	return e.identName(x)
+}
+
+// identName gives the Dart name of an identifier. A package level name takes
+// its prefix and its suffix, and a copy of a box takes the name of the copy.
+func (e *emitter) identName(x *ir.Ident) string {
+	if to := e.renames[x.Name]; to != "" {
+		return to
 	}
 	if x.Obj == nil {
 		return x.Name
@@ -349,9 +352,10 @@ func (e *emitter) nilTest(x, other ir.Expr) (string, bool) {
 		return "", false
 	}
 	switch typeset.Core(x.GoType()).(type) {
-	case *types.Slice, *types.Map:
+	case *types.Slice, *types.Map, *types.Chan:
+		// A slice, a map, and a channel each hold the zero value as an object.
 		return e.expr(x) + ".isNil", true
-	case *types.Pointer, *types.Signature, *types.Chan, *types.Interface:
+	case *types.Pointer, *types.Signature, *types.Interface:
 		return e.expr(x) + " == null", true
 	}
 	return "", false
@@ -449,7 +453,7 @@ func (e *emitter) unary(x *ir.Unary) string {
 		// A box is the address of the variable that holds it. The read of a
 		// boxed variable adds the field, thus the address drops it.
 		if id, ok := x.X.(*ir.Ident); ok && id.Boxed {
-			return id.Name
+			return e.identName(id)
 		}
 		return e.expr(x.X)
 	case token.MUL:

@@ -364,11 +364,15 @@ func (e *emitter) writeInit(imports []Import) {
 		if g.Var.Name == "_" {
 			continue
 		}
-		if g.Init == nil {
-			e.line("%s = %s;", e.topName(e.pkg, g.Var.Name), e.zero(g.Var.Type))
+		value := e.zero(g.Var.Type)
+		if g.Init != nil {
+			value = e.expr(g.Init)
+		}
+		if g.Var.Boxed {
+			e.line("%s = Box(%s);", e.topName(e.pkg, g.Var.Name), value)
 			continue
 		}
-		e.line("%s = %s;", e.topName(e.pkg, g.Var.Name), e.expr(g.Init))
+		e.line("%s = %s;", e.topName(e.pkg, g.Var.Name), value)
 	}
 	for _, f := range e.inits {
 		e.line("%s();", e.initNames[f])
@@ -418,6 +422,10 @@ func (e *emitter) decl(d ir.Decl) {
 		// `var _ Reader = (*T)(nil)`. Go allows many of them in 1 package, thus
 		// the output writes none.
 		if d.Var.Name == "_" {
+			return
+		}
+		if d.Var.Boxed {
+			e.line("late Box<%s> %s;", e.dartType(d.Var.Type), e.topName(e.pkg, d.Var.Name))
 			return
 		}
 		e.line("late %s %s;", e.dartType(d.Var.Type), e.topName(e.pkg, d.Var.Name))

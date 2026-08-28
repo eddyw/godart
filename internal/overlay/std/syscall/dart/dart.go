@@ -24,6 +24,12 @@ func Kind(value any) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// TypeInfo gives the text of the type of a value and the comparable flag. The
+// package internal/reflectlite reads it.
+func TypeInfo(value any) (string, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Upper gives the text in upper case, with the rules of Unicode.
 func Upper(text string) string {
 	panic("syscall/dart needs the gart compiler")
@@ -48,6 +54,12 @@ func Sleep(nanoseconds int64) {
 
 // NowNanos gives the count of nanoseconds since the start of the Unix epoch.
 func NowNanos() int64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ZoneOffset gives the local zone at an instant of the Unix epoch. The 2 values
+// are the offset in seconds east of UTC and the name of the zone.
+func ZoneOffset(nanos int64) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 

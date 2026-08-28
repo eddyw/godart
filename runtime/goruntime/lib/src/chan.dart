@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'panic.dart';
 import 'sched.dart';
 import 'slice.dart';
+import 'string.dart';
 
 /// A Go channel.
 ///
@@ -202,6 +203,15 @@ void $sleep(int nanoseconds) {
 
 /// The count of nanoseconds since the start of the Unix epoch.
 int $nowNanos() => DateTime.now().microsecondsSinceEpoch * 1000;
+
+/// The local zone at an instant of the Unix epoch.
+///
+/// The first value is the offset in seconds east of UTC, and the second value
+/// is the name of the zone. Go writes both in the text of a time.
+(int, GoString) $zoneOffset(int nanos) {
+  final t = DateTime.fromMicrosecondsSinceEpoch(nanos ~/ 1000);
+  return (t.timeZoneOffset.inSeconds, GoString.fromString(t.timeZoneName));
+}
 
 /// The clock of the program. It starts with the isolate.
 final Stopwatch $clock = Stopwatch()..start();

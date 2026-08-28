@@ -17,6 +17,7 @@ var native = []string{
 	"bytes",
 	"cmp",
 	"container/list",
+	"context",
 	"io",
 	"path",
 	"math",

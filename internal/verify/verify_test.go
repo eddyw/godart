@@ -150,6 +150,32 @@ func TestReportsEachRejection(t *testing.T) {
 	}
 }
 
+// TestAddressOfPackageVariable proves that stage 2 accepts the address of an
+// unexported package variable and rejects the address of an exported one. Such
+// a variable holds a box, and the box does not cross a package boundary.
+func TestAddressOfPackageVariable(t *testing.T) {
+	acceptFile(t, "an unexported package variable", `package a
+
+var key int
+
+func Key() *int { return &key }
+`)
+	rejectFile(t, "an exported package variable", "exported package variable", `package a
+
+var Key int
+
+func Ref() *int { return &Key }
+`)
+	acceptFile(t, "an exported struct variable", `package a
+
+type T struct{ n int }
+
+var Value T
+
+func Ref() *T { return &Value }
+`)
+}
+
 // TestAnonStructCrossesAPackage proves that stage 2 rejects an unnamed struct
 // type with an unexported field in an exported declaration. Go gives such a
 // field the identity of its package, and Dart holds a name with a leading

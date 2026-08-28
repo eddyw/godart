@@ -15,7 +15,14 @@ import (
 // read of it reads the field of the box.
 func (b *builder) addressed(body *ast.BlockStmt) map[*types.Var]bool {
 	out := map[*types.Var]bool{}
-	ast.Inspect(body, func(n ast.Node) bool {
+	b.markAddressed(body, out, false)
+	return out
+}
+
+// markAddressed collects each variable of the node whose address the code
+// takes. The global flag selects a package variable, and it drops a local.
+func (b *builder) markAddressed(node ast.Node, out map[*types.Var]bool, global bool) {
+	ast.Inspect(node, func(n ast.Node) bool {
 		u, ok := n.(*ast.UnaryExpr)
 		if !ok || u.Op != token.AND {
 			return true
@@ -28,13 +35,17 @@ func (b *builder) addressed(body *ast.BlockStmt) map[*types.Var]bool {
 		if !ok {
 			v, ok = b.info.Defs[id].(*types.Var)
 		}
-		if !ok || !needsBox(v.Type()) {
+		if !ok || !needsBox(v.Type()) || isGlobalVar(v) != global {
 			return true
 		}
 		out[v] = true
 		return true
 	})
-	return out
+}
+
+// isGlobalVar reports whether the variable stands at package level.
+func isGlobalVar(v *types.Var) bool {
+	return v.Pkg() != nil && v.Parent() == v.Pkg().Scope()
 }
 
 // needsBox reports whether the address of a value of the type needs a box.
