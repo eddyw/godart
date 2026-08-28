@@ -37,8 +37,9 @@ final TypeDesc $descP$Greeter = TypeDesc(
   '*example.com/multi/greet.Greeter',
   'ptr',
   <String, Function>{
-    'SetStyle': (Object? $r, int $a0) => ($r as Greeter$).SetStyle($a0),
-    'Text': (Object? $r) => ($r as Greeter$).Text(),
+    'SetStyle(example.com/multi/greet.Style)': (Object? $r, int $a0) =>
+        ($r as Greeter$).SetStyle($a0),
+    'Text()string': (Object? $r) => ($r as Greeter$).Text(),
   },
   text: '*greet.Greeter',
   elem: () => $desc$Greeter,

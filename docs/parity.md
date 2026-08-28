@@ -13,7 +13,7 @@ The package `fmt` reads it.
 |---|---|
 | Type identity, kind, and name | Present |
 | Struct field name, tag, and value | Present |
-| Method table by name | Present |
+| Method table by name and signature | Present. 2 methods of 1 name and 2 signatures stay apart. |
 | Element type and key type of a container | Present |
 | `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
 | A descriptor of an instance of a generic type | Present. The description stands at the point of the use, and the name holds each type argument. |
@@ -71,7 +71,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `encoding/base64` | Native | The real source needs no patch. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
-| `errors` | Overlay | |
+| `errors` | Overlay | `New`, `Is`, `As`, `AsType`, `Unwrap`, and `Join`. |
 | `flag` | Overlay | The real source reads `reflect` and `runtime.Caller`. |
 | `reflect` | Overlay | `DeepEqual`, `TypeOf`, `Type.String`, `Type.Kind`, and `Type.Comparable`. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |

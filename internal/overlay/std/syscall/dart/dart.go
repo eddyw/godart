@@ -36,6 +36,14 @@ func DeepEqual(x, y any) bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// AssignError writes a value into the target of errors.As. It reports false
+// when the type of the value does not hold the element type of the target.
+//
+// The target holds a pointer, and Go writes such a target through reflect.
+func AssignError(value any, target any) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ZeroText gives the text of the String method of the zero value of the type of
 // a value. An empty text means that the type holds no such method.
 //

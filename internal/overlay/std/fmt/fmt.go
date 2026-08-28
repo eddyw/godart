@@ -150,16 +150,69 @@ func Sprintf(format string, a ...any) string {
 
 // Errorf returns an error that holds the formatted text.
 func Errorf(format string, a ...any) error {
-	return &formatError{text: Sprintf(format, a...)}
+	// The verb %w writes the error and keeps it. Sprintf holds no such verb,
+	// thus the format takes %v in its place.
+	plain := ""
+	var held error
+	for i := 0; i < len(format); i++ {
+		if format[i] != '%' || i+1 >= len(format) {
+			plain += string(format[i])
+			continue
+		}
+		j := i + 1
+		for j < len(format) && (isFlag(format[j]) || isDigit(format[j]) || format[j] == '.') {
+			j++
+		}
+		if j < len(format) && format[j] == 'w' {
+			if k := verbIndex(format, i); k >= 0 && k < len(a) {
+				if err, ok := a[k].(error); ok && held == nil {
+					held = err
+				}
+			}
+			plain += format[i:j] + "v"
+			i = j
+			continue
+		}
+		plain += format[i : j+1]
+		i = j
+	}
+	return &formatError{text: Sprintf(plain, a...), err: held}
+}
+
+// verbIndex counts the verbs in front of the position, thus it gives the index
+// of the argument of the verb at that position.
+func verbIndex(format string, pos int) int {
+	n := 0
+	for i := 0; i < pos; i++ {
+		if format[i] != '%' || i+1 >= len(format) {
+			continue
+		}
+		j := i + 1
+		for j < len(format) && (isFlag(format[j]) || isDigit(format[j]) || format[j] == '.') {
+			j++
+		}
+		if j < len(format) && format[j] == '%' {
+			i = j
+			continue
+		}
+		n++
+		i = j
+	}
+	return n
 }
 
 type formatError struct {
 	text string
+	err  error
 }
 
 func (e *formatError) Error() string {
 	return e.text
 }
+
+// Unwrap gives the error of the verb %w. It gives nil when the format holds no
+// such verb.
+func (e *formatError) Unwrap() error { return e.err }
 
 func isFlag(c byte) bool {
 	return c == '+' || c == '-' || c == '#' || c == ' ' || c == '0'

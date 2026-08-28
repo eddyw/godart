@@ -91,12 +91,41 @@ bool _deepValue(Object? x, Object? y, TypeDesc desc) {
   return x == y;
 }
 
+/// Writes a value into the target of errors.As.
+///
+/// The target holds a pointer, and the write reads the box of it. A target of a
+/// pointer to an interface type panics: the runtime library holds no method
+/// name of such a type, thus the check of the method set has no source.
+bool $assignError(Iface? value, Iface? target) {
+  if (value == null || target == null) return false;
+  final TypeDesc desc = target.desc;
+  if (desc.kind != 'ptr' || desc.elem == null) {
+    $panic(const GoError('errors: target must be a non-nil pointer'));
+  }
+  final TypeDesc elem = desc.elem!();
+  if (elem.kind == 'interface') {
+    $panic(
+      const GoError(
+        'errors.As with a pointer to an interface type is '
+        'outside the subset',
+      ),
+    );
+  }
+  if (elem.name != value.desc.name) return false;
+  final Object? box = target.value;
+  if (box is Box<Object?>) {
+    box.v = value.value;
+    return true;
+  }
+  return false;
+}
+
 /// The text of the String method of the zero value of the type of a value. The
 /// package flag reads it, and Go builds the zero value through reflect.New.
 GoString $zeroText(Iface? value) {
   if (value == null) return GoString.empty;
   final TypeDesc desc = value.desc;
-  final Function? method = desc.methods['String'];
+  final Function? method = desc.methods['String()string'];
   if (method == null) return GoString.empty;
   Object? zero;
   if (desc.kind == 'ptr' && desc.elem != null) {
@@ -193,7 +222,8 @@ String _value(Object? v, TypeDesc type, String verb) {
 /// Reads the text of a value that holds the method Error or String. The Go
 /// package fmt gives such a method the first place.
 String? _viaMethod(Object? v, TypeDesc type, String letter) {
-  for (final name in const <String>['Error', 'String']) {
+  // The key of a method table holds the name and the signature.
+  for (final name in const <String>['Error()string', 'String()string']) {
     final Function? m = type.methods[name];
     if (m == null) continue;
     final Object? text = Function.apply(m, <Object?>[v]);

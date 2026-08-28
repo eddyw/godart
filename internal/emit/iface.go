@@ -262,7 +262,7 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool
 		// An embedded interface field holds an interface pair. The call reads
 		// the method table of that pair.
 		call = fmt.Sprintf("$call(%s, %q, <Object?>[%s])",
-			recv, fn.Name(), strings.Join(args, ", "))
+			recv, methodKey(fn.Name(), sig), strings.Join(args, ", "))
 		if cast := e.resultCast(sig); cast != "" {
 			call = "(" + call + " as " + cast + ")"
 		}
@@ -280,7 +280,7 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool
 	if len(params) > 0 {
 		head += ", " + strings.Join(params, ", ")
 	}
-	return fmt.Sprintf("'%s': (%s) => %s", fn.Name(), head, call)
+	return fmt.Sprintf("'%s': (%s) => %s", methodKey(fn.Name(), sig), head, call)
 }
 
 // resultCast gives the Dart type of the result of a method. The dispatch of an
@@ -388,10 +388,47 @@ func interfaceMethods(t types.Type) []string {
 	}
 	out := make([]string, iface.NumMethods())
 	for i := range out {
-		out[i] = iface.Method(i).Name()
+		m := iface.Method(i)
+		sig, _ := m.Type().(*types.Signature)
+		out[i] = methodKey(m.Name(), sig)
 	}
 	sort.Strings(out)
 	return out
+}
+
+// methodKey names 1 entry of a method table.
+//
+// The key holds the name and the signature. Go compares both, thus an
+// interface with the method `Unwrap() error` and an interface with the method
+// `Unwrap() []error` stay apart.
+func methodKey(name string, sig *types.Signature) string {
+	if sig == nil {
+		return name
+	}
+	var b strings.Builder
+	b.WriteString(name)
+	b.WriteByte('(')
+	for i := 0; i < sig.Params().Len(); i++ {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		if sig.Variadic() && i == sig.Params().Len()-1 {
+			b.WriteString("...")
+			if s, ok := types.Unalias(sig.Params().At(i).Type()).(*types.Slice); ok {
+				b.WriteString(types.TypeString(s.Elem(), nil))
+				continue
+			}
+		}
+		b.WriteString(types.TypeString(sig.Params().At(i).Type(), nil))
+	}
+	b.WriteByte(')')
+	for i := 0; i < sig.Results().Len(); i++ {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(types.TypeString(sig.Results().At(i).Type(), nil))
+	}
+	return b.String()
 }
 
 func methodNameList(names []string) string {
@@ -432,10 +469,11 @@ func (e *emitter) interfaceCall(m *ir.Method, args []string) string {
 		}
 		all := append([]string{recv + "!.value"}, args...)
 		return fmt.Sprintf("($method(%s, '%s') as %s Function(%s))(%s)",
-			recv, m.Obj.Name(), result, strings.Join(params, ", "), strings.Join(all, ", "))
+			recv, methodKey(m.Obj.Name(), sig), result,
+			strings.Join(params, ", "), strings.Join(all, ", "))
 	}
 	call := fmt.Sprintf("$call(%s, '%s', <Object?>[%s])",
-		e.expr(m.Recv), m.Obj.Name(), strings.Join(args, ", "))
+		e.expr(m.Recv), methodKey(m.Obj.Name(), sig), strings.Join(args, ", "))
 	if result == "void" {
 		return call
 	}
@@ -466,7 +504,16 @@ func (e *emitter) typeTest(x ir.Expr, target types.Type) string {
 	if isInterfaceType(target) {
 		return fmt.Sprintf("$implements(%s, %s)", e.expr(x), methodNameList(interfaceMethods(target)))
 	}
-	return fmt.Sprintf("$isType(%s, '%s')", e.expr(x), typeName(target))
+	return fmt.Sprintf("$isType(%s, %s)", e.expr(x), e.typeNameText(target))
+}
+
+// typeNameText writes the name that a type test compares. A type parameter
+// holds no name of its own, thus the name comes from its dictionary.
+func (e *emitter) typeNameText(t types.Type) string {
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return e.dictOf(tp) + ".desc.name"
+	}
+	return "'" + typeName(t) + "'"
 }
 
 func (e *emitter) typeAssert(x *ir.TypeAssert) string {
@@ -476,13 +523,13 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 				e.expr(x.X), methodNameList(interfaceMethods(x.Assert)),
 				typeName(x.Assert))
 		}
-		return fmt.Sprintf("($assertType(%s, '%s') as %s)",
-			e.expr(x.X), typeName(x.Assert), e.dartType(x.Assert))
+		return fmt.Sprintf("($assertType(%s, %s) as %s)",
+			e.expr(x.X), e.typeNameText(x.Assert), e.dartType(x.Assert))
 	}
 	if isInterfaceType(x.Assert) {
 		return fmt.Sprintf("(() { final $x = %s; if ($implements($x, %s)) return ($x, true); return (null, false); })()",
 			e.expr(x.X), methodNameList(interfaceMethods(x.Assert)))
 	}
-	return fmt.Sprintf("(() { final $x = %s; if ($isType($x, '%s')) return ($x!.value as %s, true); return (%s, false); })()",
-		e.expr(x.X), typeName(x.Assert), e.dartType(x.Assert), e.zero(x.Assert))
+	return fmt.Sprintf("(() { final $x = %s; if ($isType($x, %s)) return ($x!.value as %s, true); return (%s, false); })()",
+		e.expr(x.X), e.typeNameText(x.Assert), e.dartType(x.Assert), e.zero(x.Assert))
 }
