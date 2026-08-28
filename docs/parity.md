@@ -62,10 +62,11 @@ for each test binary. The output holds the format of `go test`.
 | `-run` | A regular expression | Plain text. gart keeps a test whose name holds the text. |
 | A duplicate subtest name | The second name takes `#01` | The 2 names stay equal |
 | `TestMain` | Runs in place of the entry point | Rejected by stage 2 |
-| A benchmark | `go test` with no -bench flag runs none | Equal. The output names no benchmark. |
+| A benchmark | `go test` with no -bench flag runs none | Equal. The output names no benchmark. gart has no `-bench` flag yet. |
 | A fuzz target | Runs the seed corpus | Reported as a skipped test |
 | An example with an output comment | Runs and compares the output | Reported as a skipped test |
 | `t.TempDir`, `t.Setenv`, `t.Context` | Present | Missing. The overlay needs the file access. |
+| `-bench`, `-benchtime`, `-benchmem` | Present | Missing. The plan holds the work. |
 | `-short`, `-count`, `-timeout`, `-cover` | Present | Missing |
 | A panic inside a test | Reports the test and ends the binary | Equal. A panic passes through the harness. |
 
