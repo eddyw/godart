@@ -108,7 +108,7 @@ func (e *emitter) typeArguments(args []types.Type) (string, []string) {
 // callArgs writes the arguments. A variadic call packs the last arguments into
 // a slice, exactly as Go does.
 func (e *emitter) callArgs(x *ir.Call) []string {
-	sig := signatureOf(x.Fun.GoType())
+	sig := e.calleeSignature(x)
 	if sig == nil || !x.Variadic || x.Spread {
 		out := make([]string, len(x.Args))
 		for i, a := range x.Args {
@@ -139,6 +139,23 @@ func (e *emitter) sliceLiteral(elem types.Type, parts []string) string {
 			list, e.dartType(elem), strings.Join(parts, ", "))
 	}
 	return fmt.Sprintf("Slice.of(<%s>[%s])", e.dartType(elem), strings.Join(parts, ", "))
+}
+
+// calleeSignature gives the signature of the callee. A call of a generic
+// function reads the identifier of the declaration, thus the signature still
+// holds the type parameters. The type arguments of the call replace them.
+func (e *emitter) calleeSignature(x *ir.Call) *types.Signature {
+	sig := signatureOf(x.Fun.GoType())
+	if sig == nil || len(x.TypeArgs) == 0 ||
+		sig.TypeParams().Len() != len(x.TypeArgs) {
+		return sig
+	}
+	out, err := types.Instantiate(nil, sig, x.TypeArgs, false)
+	if err != nil {
+		e.fail("the call of %s takes no type argument: %v", x.Fun.GoType(), err)
+		return sig
+	}
+	return signatureOf(out)
 }
 
 func signatureOf(t types.Type) *types.Signature {

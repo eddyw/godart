@@ -21,7 +21,7 @@ var supported = supportedSet()
 
 func supportedSet() map[string]bool {
 	out := map[string]bool{}
-	for _, path := range overlay.Paths() {
+	for _, path := range overlay.Surface() {
 		out[path] = true
 	}
 	return out

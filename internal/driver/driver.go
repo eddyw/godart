@@ -325,7 +325,7 @@ func compiled(pkgPath, module string) bool {
 	if strings.HasPrefix(pkgPath, module) {
 		return true
 	}
-	return slices.Contains(overlay.Paths(), pkgPath)
+	return slices.Contains(overlay.Surface(), pkgPath)
 }
 
 // order sorts the packages of the module in dependency order. A package

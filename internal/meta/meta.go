@@ -13,14 +13,38 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Version names the compiler. A new version invalidates each archive.
 const Version = "gart-0.1"
+
+// build gives the identity of the compiler binary. The cache key holds it, thus
+// a new build of the compiler invalidates each archive.
+//
+// The version alone is not enough. The compiler changes many times inside 1
+// version, and a stale archive then holds the output of the old compiler.
+var build = sync.OnceValue(func() string {
+	path, err := os.Executable()
+	if err != nil {
+		return "unknown"
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return "unknown"
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "unknown"
+	}
+	return hex.EncodeToString(h.Sum(nil)[:8])
+})
 
 // Archive holds the metadata of 1 compiled package.
 type Archive struct {
@@ -83,10 +107,10 @@ func (s *Store) Write(a *Archive) error {
 }
 
 // SourceHash covers each input of the compile function: the source files, the
-// export hash of each dependency, the compiler version, and the flags.
+// export hash of each dependency, the identity of the compiler, and the flags.
 func SourceHash(files map[string][]byte, deps []string, flags string) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "version\x00%s\x00", Version)
+	fmt.Fprintf(h, "version\x00%s\x00%s\x00", Version, build())
 	fmt.Fprintf(h, "flags\x00%s\x00", flags)
 	names := make([]string, 0, len(files))
 	for name := range files {

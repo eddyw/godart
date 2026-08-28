@@ -19,6 +19,16 @@ func join[T text](values []T, sep T) T {
 	return out
 }
 
+// total takes a variadic parameter of the type parameter. The call must read
+// the instantiated signature, and not the declaration.
+func total[T number](values ...T) T {
+	var out T
+	for _, v := range values {
+		out += v
+	}
+	return out
+}
+
 func sum[T number](values []T) T {
 	var total T
 	for _, v := range values {
@@ -117,4 +127,10 @@ func main() {
 
 	pairs := []pair[string, int]{{"x", 1}, {"y", 2}}
 	println(len(pairs), pairs[1].key)
+
+	println(total(1, 2, 3))
+	println(total(1.5, 2.5))
+	println(total[int]())
+	rest := []int{4, 5}
+	println(total(rest...))
 }
