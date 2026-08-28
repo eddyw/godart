@@ -249,3 +249,45 @@ type box struct{ n int }
 func (b box) Get() struct{ N int } { return struct{ N int }{N: b.n} }
 `)
 }
+
+// TestRangeFuncBranch proves that stage 2 accepts a range loop over a function,
+// and that a branch which leaves the body of one is rejected. Such a body is a
+// Dart closure, and a Dart closure cannot leave a loop outside itself.
+func TestRangeFuncBranch(t *testing.T) {
+	const head = `package a
+
+func seq(yield func(int) bool) {}
+
+func f() int {
+`
+	acceptFile(t, "a plain loop", head+`	for v := range seq {
+		_ = v
+	}
+	return 0
+}
+`)
+	acceptFile(t, "a break of the loop", head+`	for v := range seq {
+		if v == 1 {
+			break
+		}
+	}
+	return 0
+}
+`)
+	acceptFile(t, "a continue of the loop", head+`	for v := range seq {
+		if v == 1 {
+			continue
+		}
+	}
+	return 0
+}
+`)
+	acceptFile(t, "a break of a nested loop", head+`	for range seq {
+		for i := 0; i < 2; i++ {
+			break
+		}
+	}
+	return 0
+}
+`)
+}

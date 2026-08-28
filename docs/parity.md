@@ -60,11 +60,12 @@ reads the real Go source, because that source already stays inside the subset.
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
 | `errors` | Overlay | |
-| `maps` | Overlay | Each function that gives an iterator stays out. |
+| `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
+| `maps` | Overlay | |
 | `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `fmt` | Overlay | |
-| `slices` | Overlay | The sort is a stable merge sort. Each function that gives an iterator stays out. |
+| `slices` | Overlay | The sort is a stable merge sort. |
 | `sort` | Overlay | |
 | `strconv` | Overlay | |
 | `strings` | Overlay | |
@@ -82,12 +83,40 @@ A patch replaces 1 file of a native package by its base name. Each other file
 keeps the real Go source. A patch that matches no file stays out, because a
 build tag of the architecture selects the file set of a package.
 
-The 2 causes that block the next candidates:
+The cause that blocks the next candidates:
 
 | Package | Cause |
 |---|---|
-| `iter` | A range loop over a function. |
 | `bytes`, `path` | The package `internal/bytealg`, and `io`. |
+
+`io` needs a pointer to a value that is not a struct. `internal/bytealg` needs
+assembly, thus it needs a patch or an overlay.
+
+## A range loop over a function
+
+`for k, v := range seq` accepts a function of the form
+`func(yield func(K, V) bool)`. The compiler writes the body as a Dart closure
+and it passes the closure to the function:
+
+```go
+seq(func(k K, v V) bool { BODY; return true })
+```
+
+| Item | godart |
+|---|---|
+| 0, 1, or 2 loop variables | Present |
+| `break` of the loop | Present. It gives `return false`. |
+| `continue` of the loop | Present. It gives `return true`. |
+| A nested loop with its own `break` | Present |
+| A nested switch with its own `break` | Present |
+| A nested sequence | Present |
+| `return` inside the body | Rejected by stage 2 |
+| A labelled `break` or `continue` that leaves the body | Rejected by stage 2 |
+| `goto` out of the body | Rejected by stage 2 |
+
+The body is a Dart closure. Such a closure cannot leave a loop outside itself,
+and it cannot return from the function that holds it. The 3 rejected forms need
+a flag and a check after the call, and the compiler writes no such flag yet.
 
 ## The core type of a type parameter
 

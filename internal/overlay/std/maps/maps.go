@@ -2,13 +2,11 @@
 
 // Package maps holds the API of the standard library package maps.
 //
-// The compiler cannot read the real source. That source imports the package
-// iter, and each function of it gives an iterator. An iterator needs a range
-// loop over a function, and the subset holds no such loop.
-//
-// This file holds each function of the package that gives no iterator. The 4
-// functions that give one stay out: All, Keys, Values, Insert, and Collect.
+// The compiler cannot read the real source. That source reaches the internal
+// runtime of the map, and this file holds the same behavior inside the subset.
 package maps
+
+import "iter"
 
 func Equal[M1, M2 ~map[K]V, K, V comparable](m1 M1, m2 M2) bool {
 	if len(m1) != len(m2) {
@@ -59,4 +57,51 @@ func DeleteFunc[M ~map[K]V, K comparable, V any](m M, del func(K, V) bool) {
 			delete(m, k)
 		}
 	}
+}
+
+// All gives a sequence of the key and the value of each entry.
+func All[M ~map[K]V, K comparable, V any](m M) iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for k, v := range m {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
+
+// Keys gives a sequence of the key of each entry.
+func Keys[M ~map[K]V, K comparable, V any](m M) iter.Seq[K] {
+	return func(yield func(K) bool) {
+		for k := range m {
+			if !yield(k) {
+				return
+			}
+		}
+	}
+}
+
+// Values gives a sequence of the value of each entry.
+func Values[M ~map[K]V, K comparable, V any](m M) iter.Seq[V] {
+	return func(yield func(V) bool) {
+		for _, v := range m {
+			if !yield(v) {
+				return
+			}
+		}
+	}
+}
+
+// Insert adds each pair of the sequence to the map.
+func Insert[M ~map[K]V, K comparable, V any](m M, seq iter.Seq2[K, V]) {
+	for k, v := range seq {
+		m[k] = v
+	}
+}
+
+// Collect gives a map of each pair of the sequence.
+func Collect[K comparable, V any](seq iter.Seq2[K, V]) map[K]V {
+	out := map[K]V{}
+	Insert(out, seq)
+	return out
 }

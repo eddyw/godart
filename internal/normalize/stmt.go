@@ -99,10 +99,8 @@ func (b *builder) branch(s *ast.BranchStmt) []ir.Stmt {
 		label = name.Local(s.Label.Name)
 	}
 	switch s.Tok {
-	case token.BREAK:
-		return []ir.Stmt{&ir.Break{Label: label}}
-	case token.CONTINUE:
-		return []ir.Stmt{&ir.Continue{Label: label}}
+	case token.BREAK, token.CONTINUE:
+		return b.breakOrContinue(s, label)
 	case token.GOTO:
 		return []ir.Stmt{&ir.Goto{Label: label}}
 	}
@@ -347,6 +345,8 @@ func (b *builder) goStmt(s *ast.GoStmt) []ir.Stmt {
 // selectStmt builds 1 select statement. Each case keeps its own body, and the
 // runtime gives the number of the case that it takes.
 func (b *builder) selectStmt(s *ast.SelectStmt, label string) []ir.Stmt {
+	b.pushLoop(loopSwitch, label)
+	defer b.popLoop()
 	node := &ir.Select{Label: label}
 	var pre []ir.Stmt
 	for _, clause := range s.Body.List {
@@ -495,7 +495,9 @@ func (b *builder) ifStmt(s *ast.IfStmt) []ir.Stmt {
 
 func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
 	out := b.stmt(s.Init)
+	b.pushLoop(loopPlain, label)
 	loop := &ir.For{Body: b.block(s.Body), Label: label}
+	b.popLoop()
 	if s.Cond != nil {
 		loop.Cond = b.expr(s.Cond)
 	}
@@ -511,6 +513,11 @@ func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
 }
 
 func (b *builder) returnStmt(s *ast.ReturnStmt) []ir.Stmt {
+	if b.insideYield() {
+		b.fail(s.Pos(), "a return statement inside a range loop over a function is "+
+			"outside the subset, because such a body is a Dart closure")
+		return nil
+	}
 	f := b.fn
 	if f == nil {
 		return nil
@@ -538,6 +545,8 @@ func (b *builder) returnStmt(s *ast.ReturnStmt) []ir.Stmt {
 // typeSwitch rewrites a type switch into a switch with a type test in each
 // case. The test reads the descriptor of the interface value.
 func (b *builder) typeSwitch(s *ast.TypeSwitchStmt, label string) []ir.Stmt {
+	b.pushLoop(loopSwitch, label)
+	defer b.popLoop()
 	out := b.stmt(s.Init)
 	subject := typeSwitchSubject(s.Assign)
 	if subject == nil {
@@ -612,6 +621,8 @@ func typeSwitchSubject(s ast.Stmt) ast.Expr {
 }
 
 func (b *builder) switchStmt(s *ast.SwitchStmt, label string) []ir.Stmt {
+	b.pushLoop(loopSwitch, label)
+	defer b.popLoop()
 	out := b.stmt(s.Init)
 	node := &ir.Switch{Label: label}
 	if s.Tag != nil {

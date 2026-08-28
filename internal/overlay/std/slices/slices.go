@@ -5,12 +5,12 @@
 // The compiler cannot read the real source. The sort of that package takes the
 // address of a local integer, and only a pointer to a struct or to an array
 // stays in the subset. This file holds the same behavior.
-//
-// Each function that gives an iterator stays out. Such a function needs a range
-// loop over a function, and the subset holds no such loop.
 package slices
 
-import "cmp"
+import (
+	"cmp"
+	"iter"
+)
 
 func Equal[S ~[]E, E comparable](s1, s2 S) bool {
 	if len(s1) != len(s2) {
@@ -375,6 +375,93 @@ func insertionSort[S ~[]E, E any](x S, cmp func(a, b E) int) {
 	for i := 1; i < len(x); i++ {
 		for j := i; j > 0 && cmp(x[j], x[j-1]) < 0; j-- {
 			x[j], x[j-1] = x[j-1], x[j]
+		}
+	}
+}
+
+// All gives a sequence of the index and the value of each element.
+func All[S ~[]E, E any](s S) iter.Seq2[int, E] {
+	return func(yield func(int, E) bool) {
+		for i, v := range s {
+			if !yield(i, v) {
+				return
+			}
+		}
+	}
+}
+
+// Values gives a sequence of the value of each element.
+func Values[S ~[]E, E any](s S) iter.Seq[E] {
+	return func(yield func(E) bool) {
+		for _, v := range s {
+			if !yield(v) {
+				return
+			}
+		}
+	}
+}
+
+// Backward gives a sequence of the index and the value, from the last element to
+// the first.
+func Backward[S ~[]E, E any](s S) iter.Seq2[int, E] {
+	return func(yield func(int, E) bool) {
+		for i := len(s) - 1; i >= 0; i-- {
+			if !yield(i, s[i]) {
+				return
+			}
+		}
+	}
+}
+
+// AppendSeq adds each value of the sequence to the slice.
+func AppendSeq[S ~[]E, E any](s S, seq iter.Seq[E]) S {
+	for v := range seq {
+		s = append(s, v)
+	}
+	return s
+}
+
+// Collect gives a slice of each value of the sequence.
+func Collect[E any](seq iter.Seq[E]) []E {
+	return AppendSeq([]E(nil), seq)
+}
+
+// Sorted gives a sorted slice of each value of the sequence.
+func Sorted[E cmp.Ordered](seq iter.Seq[E]) []E {
+	out := Collect(seq)
+	Sort(out)
+	return out
+}
+
+// SortedFunc gives a slice of each value of the sequence, sorted with the
+// comparison.
+func SortedFunc[E any](seq iter.Seq[E], cmp func(E, E) int) []E {
+	out := Collect(seq)
+	SortFunc(out, cmp)
+	return out
+}
+
+// SortedStableFunc holds the same behavior as SortedFunc. The sort of this
+// package is stable.
+func SortedStableFunc[E any](seq iter.Seq[E], cmp func(E, E) int) []E {
+	return SortedFunc(seq, cmp)
+}
+
+// Chunk gives a sequence of the parts of the slice. Each part holds n elements,
+// and the last part may hold fewer.
+func Chunk[S ~[]E, E any](s S, n int) iter.Seq[S] {
+	if n < 1 {
+		panic("cannot be less than 1")
+	}
+	return func(yield func(S) bool) {
+		for i := 0; i < len(s); i += n {
+			end := i + n
+			if end > len(s) {
+				end = len(s)
+			}
+			if !yield(s[i:end:end]) {
+				return
+			}
 		}
 	}
 }

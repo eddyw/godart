@@ -49,6 +49,10 @@ type builder struct {
 	names map[types.Object]string
 	used  map[string]bool
 
+	// loops holds the construct that a break statement or a continue statement
+	// leaves, from the outermost to the innermost.
+	loops []loop
+
 	// gotoLabels holds the label of each goto target of the current function.
 	gotoLabels map[string]bool
 

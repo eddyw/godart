@@ -22,6 +22,11 @@ func (b *builder) rangeStmt(s *ast.RangeStmt, label string) []ir.Stmt {
 			t = typeset.Core(p.Elem())
 		}
 	}
+	if sig, ok := t.(*types.Signature); ok {
+		return b.rangeFunc(s, label, sig)
+	}
+	b.pushLoop(loopPlain, label)
+	defer b.popLoop()
 	switch t := t.(type) {
 	case *types.Slice, *types.Array:
 		return b.rangeList(s, label)
