@@ -202,6 +202,27 @@ interface `fmt.Writer` and not `io.Writer`, because an import of `io` would make
 a cycle. A caller never names the type, thus a Go source compiles the same way
 with the go command and with gart.
 
+## The network access
+
+The subset holds no `net` package. A program reaches TCP through
+`syscall/dart`, and the Dart side uses `Socket` of `dart:io`.
+
+Each of the first 3 operations below waits for a Dart future. The runtime
+function `$await` writes a frame of the wait, thus the caller becomes a state
+machine and stage 3 marks it.
+
+| Item | Go | godart |
+|---|---|---|
+| A dial of a TCP address | `net.Dial` | `dart.DialTCP` gives a handle and a cause. |
+| A read | `Conn.Read` gives `io.EOF` at the end | `dart.ConnRead` gives 0 with an empty cause. |
+| A write | `Conn.Write` | `dart.ConnWrite` waits for the flush of the socket. |
+| A close | `Conn.Close` | `dart.ConnClose` closes both directions. |
+| The text of a failure | `dial tcp 127.0.0.1:0: connect: ...` | The message of the Dart `SocketException`. |
+| A listener | `net.Listen` and `Accept` | Missing |
+| UDP, a Unix socket, and TLS | Present | Missing |
+| A deadline and a cancel | Present | Missing |
+| An address of the host name | Present | Only a numeric address and a host name that Dart resolves. |
+
 ## A range loop over a function
 
 `for k, v := range seq` accepts a function of the form

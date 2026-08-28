@@ -154,14 +154,6 @@ final class _SendWait<T> implements Frame {
   Object? resume() => null;
 }
 
-/// The frame of a goroutine that waits for the Dart event loop.
-final class _EventWait implements Frame {
-  Object? value;
-
-  @override
-  Object? resume() => value;
-}
-
 /// Runs a pure function in a new isolate and gives the result.
 ///
 /// The 2 isolates share no memory, thus the function must not read a package
@@ -175,7 +167,7 @@ Slice<int> $worker(Slice<int> Function(Slice<int>)? body, Slice<int> input) {
     bytes[i] = input.array[input.off + i];
   }
   final Goroutine g = $current!;
-  final _EventWait waiting = _EventWait();
+  final EventWait waiting = EventWait();
   $holdEvent();
   unawaited(
     Isolate.run(() {
@@ -199,7 +191,7 @@ Slice<int> $worker(Slice<int> Function(Slice<int>)? body, Slice<int> input) {
 void $sleep(int nanoseconds) {
   if (nanoseconds <= 0) return;
   final Goroutine g = $current!;
-  final _EventWait waiting = _EventWait();
+  final EventWait waiting = EventWait();
   $holdEvent();
   Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
     $freeEvent();

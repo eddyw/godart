@@ -277,3 +277,32 @@ func Stderr(text string) {
 func StdinRead(p []byte) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// DialTCP opens a TCP connection to a host and a port, and gives its handle.
+// The second result holds the cause of a failure, and it is empty after a
+// success.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func DialTCP(host string, port int) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ConnRead reads bytes of a connection into the slice and gives the count. A
+// count of 0 with no cause means the end of the stream.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ConnRead(handle int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ConnWrite writes the bytes of the slice to a connection and gives the count.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ConnWrite(handle int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ConnClose closes a connection in both directions.
+func ConnClose(handle int) string {
+	panic("syscall/dart needs the gart compiler")
+}

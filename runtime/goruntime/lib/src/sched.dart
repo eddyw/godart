@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 
@@ -144,6 +145,43 @@ void $holdEvent() => _pending++;
 
 /// Marks the end of a wait on the Dart event loop.
 void $freeEvent() => _pending--;
+
+/// The frame of a goroutine that waits for the Dart event loop.
+///
+/// The value of the operation reaches the caller through the resume, thus the
+/// dead result of the operation itself needs no value.
+final class EventWait implements Frame {
+  Object? value;
+
+  @override
+  Object? resume() => value;
+}
+
+/// Gives up control until the future completes.
+///
+/// The value of the future reaches the caller through the frame. A failure
+/// reaches onError, which writes the Go form of the result. Each operation of
+/// dart:io that gives a future reads this function.
+void $await(Future<Object?> future, Object? Function(Object cause) onError) {
+  final Goroutine g = $current!;
+  final EventWait waiting = EventWait();
+  $holdEvent();
+  unawaited(
+    future.then(
+      (Object? value) {
+        waiting.value = value;
+        $freeEvent();
+        $wake(g);
+      },
+      onError: (Object cause) {
+        waiting.value = onError(cause);
+        $freeEvent();
+        $wake(g);
+      },
+    ),
+  );
+  $block(waiting);
+}
 
 /// Ends the program when package main returns.
 ///

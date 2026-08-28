@@ -18,6 +18,7 @@ export 'src/iface.dart';
 export 'src/int.dart';
 export 'src/json.dart';
 export 'src/map.dart';
+export 'src/net.dart';
 export 'src/panic.dart';
 export 'src/print.dart';
 export 'src/sched.dart';
