@@ -16,8 +16,7 @@ import (
 // TestTests compiles the test binaries of each module of testdata/tests, runs
 // them with the Dart VM, and compares the output with the output of go test.
 //
-// A log line of go test holds a source position, and a log line of gart holds
-// none. The comparison cuts the position and each elapsed time away.
+// The comparison cuts each elapsed time away, because a run does not repeat it.
 func TestTests(t *testing.T) {
 	root, err := filepath.Abs("../../testdata/tests")
 	if err != nil {
@@ -288,15 +287,30 @@ func gartTest(t *testing.T, dir string, options driver.TestOptions) string {
 var (
 	elapsed  = regexp.MustCompile(`\(\d+\.\d\ds\)`)
 	total    = regexp.MustCompile(`\t\d+\.\d+s`)
-	position = regexp.MustCompile(`(?m)^(\s+)[\w./]+\.go:\d+: `)
+	position = regexp.MustCompile(`^(\s+)([\w./-]+\.go):\d+: `)
 )
 
-// normalize cuts each part of the output that a run does not repeat. It also
-// cuts the source position of a log line, because gart writes none.
+// normalize cuts each part of the output that a run does not repeat. The source
+// position of a log line stays, because the compiler writes it.
 func normalize(text string) string {
 	text = elapsed.ReplaceAllString(text, "(0.00s)")
 	text = total.ReplaceAllString(text, "\t0.000s")
-	return position.ReplaceAllString(text, "$1")
+	return cutRuntimePosition(text)
+}
+
+// cutRuntimePosition drops a source position that names a file outside the test
+// files. A deferred log call after Fatal runs on the way out of the goroutine,
+// and Go writes the position of its own runtime for such a line.
+func cutRuntimePosition(text string) string {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		m := position.FindStringSubmatch(line)
+		if m == nil || strings.HasSuffix(m[2], "_test.go") {
+			continue
+		}
+		lines[i] = position.ReplaceAllString(line, "$1")
+	}
+	return strings.Join(lines, "\n")
 }
 
 // TestRun proves that the run command compiles package main and runs it with

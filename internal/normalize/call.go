@@ -1,9 +1,11 @@
 package normalize
 
 import (
+	"fmt"
 	"go/ast"
 	"go/constant"
 	"go/types"
+	"path/filepath"
 	"strconv"
 
 	"github.com/eddyw/godart/internal/ir"
@@ -27,6 +29,7 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 			return b.builtin(e, bi.Name())
 		}
 	}
+	b.logPosition(e)
 	fun := b.expr(e.Fun)
 	if fun == nil {
 		return nil
@@ -44,6 +47,43 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		out.Args = b.args(e, sig)
 	}
 	return out
+}
+
+// logMethods lists each method of the testing package that writes a log line.
+// Go reads the source position of such a call from the stack, and the harness
+// of the overlay reads no stack.
+var logMethods = map[string]bool{
+	"Log": true, "Logf": true,
+	"Error": true, "Errorf": true,
+	"Fatal": true, "Fatalf": true,
+	"Skip": true, "Skipf": true,
+}
+
+// logPosition writes the source position of a log call into the variable that
+// the harness reads. The statement stands in front of the call, and no
+// goroutine gives up control between the 2.
+func (b *builder) logPosition(e *ast.CallExpr) {
+	sel, ok := e.Fun.(*ast.SelectorExpr)
+	if !ok || !logMethods[sel.Sel.Name] {
+		return
+	}
+	fn, ok := b.info.Uses[sel.Sel].(*types.Func)
+	if !ok || fn.Pkg() == nil || fn.Pkg().Path() != "testing" {
+		return
+	}
+	obj := fn.Pkg().Scope().Lookup("LogPos")
+	v, ok := obj.(*types.Var)
+	if !ok {
+		return
+	}
+	p := b.fset.Position(e.Pos())
+	b.pending = append(b.pending, &ir.Assign{
+		Lhs: &ir.Ident{Name: v.Name(), Obj: v, Type: v.Type()},
+		Rhs: &ir.Const{
+			Value: constant.MakeString(fmt.Sprintf("%s:%d", filepath.Base(p.Filename), p.Line)),
+			Type:  types.Typ[types.String],
+		},
+	})
 }
 
 // typeArgs reads the type arguments of a call to a generic function. The type

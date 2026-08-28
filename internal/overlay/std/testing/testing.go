@@ -163,9 +163,18 @@ func (t *T) Run(name string, f func(*T)) bool {
 	return !sub.failed
 }
 
+// LogPos holds the source position of the call that writes a log line. The
+// compiler writes it in front of each such call, because the harness reads no
+// stack trace. Go reads the position from the stack.
+var LogPos string
+
 // write holds 1 log message. Verbose mode writes it at once, and the plain
 // mode writes it only when the test fails.
 func (t *T) write(text string) {
+	if LogPos != "" {
+		text = LogPos + ": " + text
+		LogPos = ""
+	}
 	if !verbose {
 		t.logs = append(t.logs, text)
 		return

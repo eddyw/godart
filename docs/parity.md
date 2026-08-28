@@ -432,7 +432,9 @@ for each test binary. The output holds the format of `go test`.
 
 | Item | Go | godart |
 |---|---|---|
-| The source position of a log line | `file.go:12: text` | Only the text. The overlay reads no position. |
+| The source position of a log line | `file.go:12: text` | Equal. Stage 4 writes the position in front of the call. |
+| The position of a log line of a helper that calls `t.Helper` | The position of the caller | The position of the call inside the helper. |
+| The position of a deferred log line after `Fatal` | The position of the runtime of Go, for example `panic.go:694` | No position. |
 | `t.Parallel` | Runs the tests in parallel | Does nothing. All Go code runs in 1 isolate. |
 | `t.FailNow`, `t.SkipNow` | `runtime.Goexit` | A throw. Each deferred function still runs, and the subset has no `recover`. |
 | `-run` | A regular expression | Plain text. gart keeps a test whose name holds the text. |
