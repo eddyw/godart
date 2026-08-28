@@ -218,3 +218,82 @@ func TestRunReportsTheExitCode(t *testing.T) {
 		t.Error("got the exit code 0, want a code of a panic")
 	}
 }
+
+// TestBench proves that the -bench flag runs the benchmarks and writes a line
+// in the format of go test. benchstat reads that format.
+func TestBench(t *testing.T) {
+	dir, err := filepath.Abs("../../testdata/tests/basic")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := &bytes.Buffer{}
+	code, err := driver.Test(driver.Options{
+		Dir:      dir,
+		Patterns: []string{"./..."},
+		Out:      t.TempDir(),
+		Runtime:  runtimeDir(t),
+		Format:   true,
+	}, driver.TestOptions{Benchmarks: true, BenchCount: 50}, out)
+	if err != nil {
+		t.Fatalf("the benchmark run failed:\n%v", err)
+	}
+	if code != 0 {
+		t.Errorf("got the exit code %d, want 0", code)
+	}
+	got := out.String()
+	for _, want := range []string{
+		"goos: dart",
+		"pkg: example.com/basic/calc",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the output holds no %q:\n%s", want, got)
+		}
+	}
+	for _, name := range []string{"BenchmarkAdd", "BenchmarkDouble/one", "BenchmarkDouble/big"} {
+		if !benchLine(got, name) {
+			t.Errorf("the output holds no result of %s:\n%s", name, got)
+		}
+	}
+	// A benchmark that holds a subbenchmark reports no line of its own, exactly
+	// as go test does.
+	if benchLine(got, "BenchmarkDouble") {
+		t.Errorf("the parent of a subbenchmark reported a line:\n%s", got)
+	}
+}
+
+// TestBenchFilter proves that the -bench flag keeps only a benchmark whose name
+// holds the text.
+func TestBenchFilter(t *testing.T) {
+	dir, err := filepath.Abs("../../testdata/tests/basic")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := &bytes.Buffer{}
+	if _, err := driver.Test(driver.Options{
+		Dir:      dir,
+		Patterns: []string{"./..."},
+		Out:      t.TempDir(),
+		Runtime:  runtimeDir(t),
+		Format:   true,
+	}, driver.TestOptions{Benchmarks: true, Bench: "BenchmarkAdd", BenchCount: 10}, out); err != nil {
+		t.Fatal(err)
+	}
+	got := out.String()
+	if !benchLine(got, "BenchmarkAdd") {
+		t.Errorf("the output holds no result of BenchmarkAdd:\n%s", got)
+	}
+	if strings.Contains(got, "BenchmarkDouble") {
+		t.Errorf("the filter kept BenchmarkDouble:\n%s", got)
+	}
+}
+
+// benchLine reports whether the output holds the result line of a benchmark.
+// The line is <name>-<isolates>\t<count>\t<value> ns/op.
+func benchLine(text, name string) bool {
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(line, name+"-1\t") && strings.HasSuffix(line, " ns/op") {
+			return true
+		}
+	}
+	return false
+}

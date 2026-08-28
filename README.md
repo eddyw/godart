@@ -24,7 +24,8 @@ gart test -o dartout -runtime path/to/runtime/goruntime ./...
 `gart build` writes the Dart package and stops. `gart run` compiles it and runs
 package main with the Dart VM. `gart test` compiles the `_test.go` files and
 runs each test binary with the Dart VM. The output of `gart test` holds the
-format of `go test`.
+format of `go test`. `gart test -bench <text>` runs the benchmarks on an ahead
+of time build.
 
 To run 1 of the example programs of this repository:
 
@@ -35,6 +36,7 @@ make compare PROG=ifaces      # run it with go and with Dart, and diff
 make suites                   # list the test modules of testdata/tests
 make gart-test SUITE=basic    # run the tests of the module with gart
 make compare-tests SUITE=basic  # run go test and gart test, and diff
+make bench SUITE=async        # run the benchmarks of the module with gart
 ```
 
 `gart watch` compiles the module again after each change of a Go file. It
@@ -57,6 +59,7 @@ The compiler holds all 6 stages. The subset covers:
 | Generics | Generic function, generic type, generic method of Go 1.27 |
 | Isolates | `dart.Worker` runs a pure function in a second isolate |
 | Tests | `gart test` runs a `TestXxx` function and a subtest |
+| Benchmarks | `gart test -bench <text>` runs a `BenchmarkXxx` function |
 
 The standard library surface holds `errors`, `fmt`, `sort`, `strconv`,
 `strings`, `sync`, `testing`, `time`, and the interop package `syscall/dart`. An overlay replaces the Go source of such a package. The build

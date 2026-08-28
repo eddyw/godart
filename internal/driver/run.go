@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,16 @@ type TestOptions struct {
 	Verbose bool
 	// Run keeps only a test whose name holds this text.
 	Run string
+	// Benchmarks runs the benchmarks. Bench then keeps only a benchmark whose
+	// name holds its text.
+	Benchmarks bool
+	Bench      string
+	// BenchTime is the length that 1 benchmark targets. It is 1 second when the
+	// caller gives no value.
+	BenchTime time.Duration
+	// BenchCount fixes the count of iterations. It replaces the search when it
+	// is above 0.
+	BenchCount int
 }
 
 // Run compiles the module and runs package main with the Dart VM. The result
@@ -39,8 +50,12 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 	return dartRun(opt.Out, append([]string{mainEntry}, args...), out)
 }
 
-// Test compiles the test binaries and runs each one with the Dart VM. The
-// result is the exit code of the command.
+// Test compiles the test binaries and runs each one. The result is the exit
+// code of the command.
+//
+// A test binary runs on the Dart VM. A benchmark run compiles the binary ahead
+// of time first, because the VM starts a just in time compiler and its warm up
+// cost hides the result.
 func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 	opt.Tests = true
 	stats, err := BuildWithStats(opt)
@@ -61,20 +76,16 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 			}
 			fmt.Fprintf(out, "--- SKIP: %s\n    %s\n", name, load.SkipCause(name))
 		}
-		args := []string{bin.Entry}
-		if testOpt.Verbose {
-			args = append(args, "-test.v")
-		}
-		if testOpt.Run != "" {
-			args = append(args, "-test.run="+testOpt.Run)
+		if testOpt.Benchmarks {
+			writeBenchHeader(out, bin.Package)
 		}
 		start := time.Now()
-		text, code, err := dartOutput(opt.Out, args)
+		text, code, err := runBinary(opt.Out, bin, testOpt)
 		if err != nil {
 			return 1, err
 		}
 		elapsed := seconds(time.Since(start))
-		if code != 0 || testOpt.Verbose {
+		if code != 0 || testOpt.Verbose || testOpt.Benchmarks {
 			fmt.Fprint(out, text)
 		}
 		if code != 0 {
@@ -91,8 +102,65 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 	return 0, nil
 }
 
-// matches reads the filter of the -run flag. The harness holds the same rule,
-// because the subset has no regexp package.
+// writeBenchHeader writes the configuration of a benchmark run. benchstat reads
+// such a line, thus a comparison of 2 runs keeps the context.
+func writeBenchHeader(out io.Writer, pkgPath string) {
+	fmt.Fprintf(out, "goos: dart\n")
+	fmt.Fprintf(out, "goarch: %s\n", runtime.GOARCH)
+	fmt.Fprintf(out, "pkg: %s\n", pkgPath)
+}
+
+// runBinary runs 1 test binary and gives its output and its exit code.
+func runBinary(out string, bin TestBinary, testOpt TestOptions) (string, int, error) {
+	args := binaryArgs(testOpt)
+	if !testOpt.Benchmarks {
+		return dartOutput(out, append([]string{"run", bin.Entry}, args...))
+	}
+	exe, err := compileExe(out, bin.Entry)
+	if err != nil {
+		return "", 1, err
+	}
+	return command(out, exe, args)
+}
+
+// binaryArgs writes the flags that the harness of the binary reads.
+func binaryArgs(testOpt TestOptions) []string {
+	var args []string
+	if testOpt.Verbose {
+		args = append(args, "-test.v")
+	}
+	if testOpt.Run != "" {
+		args = append(args, "-test.run="+testOpt.Run)
+	}
+	if testOpt.Benchmarks {
+		args = append(args, "-test.bench="+testOpt.Bench)
+		if testOpt.BenchCount > 0 {
+			args = append(args, "-test.benchcount="+strconv.Itoa(testOpt.BenchCount))
+		} else if testOpt.BenchTime > 0 {
+			args = append(args, "-test.benchtime="+
+				strconv.FormatInt(testOpt.BenchTime.Nanoseconds(), 10))
+		}
+	}
+	return args
+}
+
+// compileExe builds an ahead of time binary of an entry point and gives its
+// full path.
+func compileExe(out, entry string) (string, error) {
+	exe, err := filepath.Abs(filepath.Join(out, strings.TrimSuffix(entry, ".dart")+".exe"))
+	if err != nil {
+		return "", err
+	}
+	cmd := exec.Command("dart", "compile", "exe", entry, "-o", exe)
+	cmd.Dir = out
+	if text, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("dart compile exe %s: %v\n%s", entry, err, text)
+	}
+	return exe, nil
+}
+
+// matches reads the filter of the -run flag and of the -bench flag. The harness
+// holds the same rule, because the subset has no regexp package.
 func matches(name, pattern string) bool {
 	return pattern == "" || strings.Contains(name, pattern)
 }
@@ -150,7 +218,12 @@ func dartRun(dir string, args []string, out io.Writer) (int, error) {
 // dartOutput runs the Dart VM and holds the output. The test command writes
 // the output only when the binary fails, exactly as go test does.
 func dartOutput(dir string, args []string) (string, int, error) {
-	cmd := exec.Command("dart", append([]string{"run"}, args...)...)
+	return command(dir, "dart", args)
+}
+
+// command runs a program in a directory and holds its output.
+func command(dir, name string, args []string) (string, int, error) {
+	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
 	text, err := cmd.CombinedOutput()
 	if err != nil {

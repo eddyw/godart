@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/eddyw/godart/internal/driver"
 	"github.com/eddyw/godart/internal/load"
@@ -37,10 +38,17 @@ The build, run, test, and watch commands take these flags:
 
 The run command passes each argument after -- to the program.
 
-The test command takes 2 more flags:
+The test command takes these flags:
 
-	-v             write 1 line for each test
-	-run pattern   run only a test whose name holds the text of the pattern
+	-v               write 1 line for each test
+	-run text        run only a test whose name holds the text
+	-bench text      run each benchmark whose name holds the text. The value .
+	                 or an empty value runs each one.
+	-benchtime d     the length that 1 benchmark targets, for example 2s
+	-benchcount n    the fixed count of iterations of 1 benchmark
+
+A benchmark runs on an ahead of time build, because the warm up cost of the
+Dart VM hides the result. The number measures the Dart output, and not Go.
 `
 
 func main() {
@@ -146,11 +154,24 @@ func runTest(args []string) error {
 	flags := newBuildFlags("test")
 	verbose := flags.set.Bool("v", false, "write 1 line for each test")
 	pattern := flags.set.String("run", "", "run only a test whose name holds this text")
+	bench := flags.set.String("bench", "", "run each benchmark whose name holds this text")
+	benchTime := flags.set.Duration("benchtime", time.Second,
+		"the length that 1 benchmark targets")
+	benchCount := flags.set.Int("benchcount", 0,
+		"the fixed count of iterations of 1 benchmark")
 	options, err := flags.options(args)
 	if err != nil {
 		return err
 	}
-	code, err := driver.Test(options, driver.TestOptions{Verbose: *verbose, Run: *pattern}, os.Stdout)
+	testOptions := driver.TestOptions{
+		Verbose:    *verbose,
+		Run:        *pattern,
+		Benchmarks: given(flags.set, "bench"),
+		Bench:      benchText(*bench),
+		BenchTime:  *benchTime,
+		BenchCount: *benchCount,
+	}
+	code, err := driver.Test(options, testOptions, os.Stdout)
 	if err != nil {
 		return err
 	}
@@ -158,6 +179,28 @@ func runTest(args []string) error {
 		os.Exit(code)
 	}
 	return nil
+}
+
+// given reports whether the command line held a flag. The presence of -bench
+// turns the benchmarks on, and its value filters them.
+func given(set *flag.FlagSet, name string) bool {
+	found := false
+	set.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
+}
+
+// benchText reads the value of -bench. go test takes a regular expression, and
+// the value . matches each name. gart reads plain text, thus . becomes an empty
+// filter.
+func benchText(value string) string {
+	if value == "." {
+		return ""
+	}
+	return value
 }
 
 // split cuts the arguments at the first -- element. The first part belongs to

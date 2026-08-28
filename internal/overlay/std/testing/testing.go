@@ -21,6 +21,12 @@ type InternalTest struct {
 	F    func(*T)
 }
 
+// InternalBenchmark names 1 benchmark function. The compiler writes the list.
+type InternalBenchmark struct {
+	Name string
+	F    func(*B)
+}
+
 // TB holds the methods that T, B, and F share.
 type TB interface {
 	Cleanup(f func())
@@ -152,24 +158,19 @@ func (t *T) write(text string) {
 	}
 }
 
-// Main runs each test of a test binary. The compiler writes the call into the
-// entry point of the binary.
+// Main runs each test and each benchmark of a test binary. The compiler writes
+// the call into the entry point of the binary.
 //
 // The flags come from the arguments of the program. gart test writes -test.v
-// for a line for each test, and -test.run=<pattern> for a filter.
-func Main(tests []InternalTest) {
-	pattern := ""
-	for _, arg := range dart.Args() {
-		switch {
-		case arg == "-test.v" || arg == "-test.v=true":
-			verbose = true
-		case strings.HasPrefix(arg, "-test.run="):
-			pattern = strings.TrimPrefix(arg, "-test.run=")
-		}
-	}
+// for a line for each test, -test.run=<pattern> for a filter of the tests,
+// -test.bench=<pattern> for a filter of the benchmarks, and one of
+// -test.benchtime=<nanoseconds> or -test.benchcount=<count> for the length of
+// a benchmark.
+func Main(tests []InternalTest, benchmarks []InternalBenchmark) {
+	flags := readFlags()
 	failed := false
 	for _, tc := range tests {
-		if !matches(tc.Name, pattern) {
+		if !matches(tc.Name, flags.run) {
 			continue
 		}
 		t := &T{name: tc.Name}
@@ -182,12 +183,62 @@ func Main(tests []InternalTest) {
 			failed = true
 		}
 	}
+	if flags.benchmarks {
+		for _, bc := range benchmarks {
+			if !matches(bc.Name, flags.bench) {
+				continue
+			}
+			if !runBenchmark(bc.Name, bc.F, flags) {
+				failed = true
+			}
+		}
+	}
 	if failed {
 		emit("FAIL")
 		dart.Exit(1)
 		return
 	}
 	emit("PASS")
+}
+
+// options holds the flags of a run.
+type options struct {
+	run string
+	// benchmarks reports whether the arguments held -test.bench.
+	benchmarks bool
+	bench      string
+	// nanoseconds is the length that 1 benchmark targets.
+	nanoseconds int64
+	// count fixes the count of iterations. It replaces the search when it is
+	// above 0.
+	count int
+}
+
+// defaultBenchNanos is the length that 1 benchmark targets. Go uses 1 second.
+const defaultBenchNanos = 1000000000
+
+func readFlags() options {
+	out := options{nanoseconds: defaultBenchNanos}
+	for _, arg := range dart.Args() {
+		switch {
+		case arg == "-test.v" || arg == "-test.v=true":
+			verbose = true
+		case strings.HasPrefix(arg, "-test.run="):
+			out.run = strings.TrimPrefix(arg, "-test.run=")
+		case strings.HasPrefix(arg, "-test.bench="):
+			out.benchmarks = true
+			out.bench = strings.TrimPrefix(arg, "-test.bench=")
+		case strings.HasPrefix(arg, "-test.benchtime="):
+			if v, err := strconv.Atoi(strings.TrimPrefix(arg, "-test.benchtime=")); err == nil {
+				out.nanoseconds = int64(v)
+			}
+		case strings.HasPrefix(arg, "-test.benchcount="):
+			if v, err := strconv.Atoi(strings.TrimPrefix(arg, "-test.benchcount=")); err == nil {
+				out.count = v
+			}
+		}
+	}
+	return out
 }
 
 // matches reports whether a test name passes the filter of -test.run.
@@ -206,13 +257,13 @@ func runOne(t *T, call func()) {
 	if verbose {
 		emit("=== RUN   " + t.name)
 	}
-	start := dart.NowNanos()
+	start := dart.MonoNanos()
 	dart.Catch(call)
 	for i := len(t.cleanups) - 1; i >= 0; i-- {
 		dart.Catch(t.cleanups[i])
 	}
 	head := fmt.Sprintf("%s--- %s: %s (%ss)", indent(t.level), state(t), t.name,
-		seconds(dart.NowNanos()-start))
+		seconds(dart.MonoNanos()-start))
 	if verbose {
 		t.report = append([]string{head}, t.report...)
 		return
@@ -273,45 +324,238 @@ func seconds(nanoseconds int64) string {
 
 // B holds the state of 1 benchmark.
 //
-// gart runs no benchmark, exactly as `go test` with no -bench flag. The type
-// exists because a test file declares a benchmark, and that body must type
-// check. Each method stops the program, thus no body gives a wrong result.
+// The loop of a benchmark reads N. The harness runs the body again with a
+// larger N until the run time reaches the target.
 type B struct {
+	// N is the count of iterations that the body must run.
 	N int
+
+	common *T
+	// start holds the time of the last start of the timer.
+	start int64
+	// elapsed holds the measured time of the run, in nanoseconds.
+	elapsed int64
+	running bool
+	// sub marks a benchmark that called Run. Such a benchmark reports no line
+	// of its own, exactly as go test does.
+	sub bool
+	// bytes is the count of bytes that 1 iteration reads or writes. SetBytes
+	// gives it, and the report adds a rate.
+	bytes int64
+	// metrics holds each value that ReportMetric gave, with its unit.
+	metrics []string
 }
 
-const noBenchmark = "gart runs no benchmark"
+func (b *B) Name() string  { return b.common.Name() }
+func (b *B) Failed() bool  { return b.common.Failed() }
+func (b *B) Skipped() bool { return b.common.Skipped() }
 
-func (b *B) Name() string                            { panic(noBenchmark) }
-func (b *B) Failed() bool                            { panic(noBenchmark) }
-func (b *B) Skipped() bool                           { panic(noBenchmark) }
-func (b *B) Helper()                                 { panic(noBenchmark) }
-func (b *B) Parallel()                               { panic(noBenchmark) }
-func (b *B) Cleanup(f func())                        { panic(noBenchmark) }
-func (b *B) Fail()                                   { panic(noBenchmark) }
-func (b *B) FailNow()                                { panic(noBenchmark) }
-func (b *B) SkipNow()                                { panic(noBenchmark) }
-func (b *B) Log(args ...any)                         { panic(noBenchmark) }
-func (b *B) Logf(format string, args ...any)         { panic(noBenchmark) }
-func (b *B) Error(args ...any)                       { panic(noBenchmark) }
-func (b *B) Errorf(format string, args ...any)       { panic(noBenchmark) }
-func (b *B) Fatal(args ...any)                       { panic(noBenchmark) }
-func (b *B) Fatalf(format string, args ...any)       { panic(noBenchmark) }
-func (b *B) Skip(args ...any)                        { panic(noBenchmark) }
-func (b *B) Skipf(format string, args ...any)        { panic(noBenchmark) }
-func (b *B) ResetTimer()                             { panic(noBenchmark) }
-func (b *B) StartTimer()                             { panic(noBenchmark) }
-func (b *B) StopTimer()                              { panic(noBenchmark) }
-func (b *B) ReportAllocs()                           { panic(noBenchmark) }
-func (b *B) SetBytes(n int64)                        { panic(noBenchmark) }
-func (b *B) ReportMetric(value float64, unit string) { panic(noBenchmark) }
-func (b *B) Run(name string, f func(*B)) bool        { panic(noBenchmark) }
-func (b *B) RunParallel(body func(*PB))              { panic(noBenchmark) }
+// Helper does nothing. A log line of gart holds no source position.
+func (b *B) Helper() {}
 
-// PB drives a parallel benchmark. gart runs no benchmark.
+func (b *B) Cleanup(f func())                  { b.common.Cleanup(f) }
+func (b *B) Fail()                             { b.common.Fail() }
+func (b *B) FailNow()                          { b.common.FailNow() }
+func (b *B) SkipNow()                          { b.common.SkipNow() }
+func (b *B) Log(args ...any)                   { b.common.Log(args...) }
+func (b *B) Logf(format string, args ...any)   { b.common.Logf(format, args...) }
+func (b *B) Error(args ...any)                 { b.common.Error(args...) }
+func (b *B) Errorf(format string, args ...any) { b.common.Errorf(format, args...) }
+func (b *B) Fatal(args ...any)                 { b.common.Fatal(args...) }
+func (b *B) Fatalf(format string, args ...any) { b.common.Fatalf(format, args...) }
+func (b *B) Skip(args ...any)                  { b.common.Skip(args...) }
+func (b *B) Skipf(format string, args ...any)  { b.common.Skipf(format, args...) }
+func (b *B) SetBytes(n int64)                  { b.bytes = n }
+func (b *B) ReportMetric(value float64, unit string) {
+	b.metrics = append(b.metrics, strconv.FormatFloat(value, 'f', 4, 64)+" "+unit)
+}
+
+// ReportAllocs does nothing. The Dart VM gives no count of allocations for 1
+// operation, thus gart writes no allocation column.
+func (b *B) ReportAllocs() {}
+
+// StartTimer starts the measurement. The setup of a benchmark stops the timer
+// first, thus the setup stays out of the result.
+func (b *B) StartTimer() {
+	if b.running {
+		return
+	}
+	b.start = dart.MonoNanos()
+	b.running = true
+}
+
+// StopTimer stops the measurement.
+func (b *B) StopTimer() {
+	if !b.running {
+		return
+	}
+	b.elapsed += dart.MonoNanos() - b.start
+	b.running = false
+}
+
+// ResetTimer drops the measured time. The timer keeps its state.
+func (b *B) ResetTimer() {
+	if b.running {
+		b.start = dart.MonoNanos()
+	}
+	b.elapsed = 0
+}
+
+// RunParallel stops the benchmark with an error.
+//
+// The method measures the throughput of a parallel run, and all Go code runs in
+// 1 isolate. A serial run would give a number that says something else, thus
+// gart rejects the call.
+func (b *B) RunParallel(body func(*PB)) {
+	b.Fatalf("gart runs no parallel benchmark, because all Go code runs in 1 isolate")
+}
+
+// PB drives a parallel benchmark. gart runs no parallel benchmark.
 type PB struct{}
 
-func (p *PB) Next() bool { panic(noBenchmark) }
+func (p *PB) Next() bool { panic("gart runs no parallel benchmark") }
+
+// benchFlags holds the flags of the run. Run reads them for a subbenchmark.
+var benchFlags = options{nanoseconds: defaultBenchNanos}
+
+// Run runs a subbenchmark and reports whether it passed.
+func (b *B) Run(name string, f func(*B)) bool {
+	b.sub = true
+	return runBenchmark(b.common.name+"/"+subName(name), f, benchFlags)
+}
+
+// runBenchmark measures 1 benchmark and writes its line. It reports whether the
+// benchmark passed.
+//
+// The search follows go test: the first run takes 1 iteration, and each next
+// count comes from the time of the last run. The count grows by a factor of 100
+// at most, and it stops at 1000 million.
+func runBenchmark(name string, f func(*B), flags options) bool {
+	benchFlags = flags
+	if verbose {
+		emit("=== RUN   " + name)
+	}
+	n := 1
+	if flags.count > 0 {
+		n = flags.count
+	}
+	last := runIterations(name, f, n)
+	for flags.count == 0 {
+		if last.common.failed || last.common.skipped || last.sub {
+			break
+		}
+		if last.elapsed >= flags.nanoseconds || n >= 1000000000 {
+			break
+		}
+		n = nextCount(n, last.elapsed, flags.nanoseconds)
+		last = runIterations(name, f, n)
+	}
+	for _, l := range last.common.report {
+		emit(l)
+	}
+	if last.common.failed {
+		return false
+	}
+	if last.sub || last.common.skipped {
+		return true
+	}
+	emit(benchLine(name, last))
+	return true
+}
+
+// runIterations runs the body 1 time with a fixed count of iterations.
+func runIterations(name string, f func(*B), n int) *B {
+	t := &T{name: name}
+	b := &B{N: n, common: t}
+	b.StartTimer()
+	dart.Catch(func() { f(b) })
+	b.StopTimer()
+	for i := len(t.cleanups) - 1; i >= 0; i-- {
+		dart.Catch(t.cleanups[i])
+	}
+	if t.failed || t.skipped {
+		head := indent(t.level) + "--- " + state(t) + ": " + name + " (" +
+			seconds(b.elapsed) + "s)"
+		out := []string{head}
+		for _, text := range t.logs {
+			out = append(out, indentLines(t.level+1, text)...)
+		}
+		t.report = append(out, t.report...)
+	}
+	return b
+}
+
+// nextCount gives the count of iterations of the next run. It reads the time of
+// the last run, exactly as go test does.
+func nextCount(last int, elapsed, target int64) int {
+	if elapsed <= 0 {
+		elapsed = 1
+	}
+	next := target * int64(last) / elapsed
+	next += next / 5
+	if limit := int64(last) * 100; next > limit {
+		next = limit
+	}
+	if next <= int64(last) {
+		next = int64(last) + 1
+	}
+	if next > 1000000000 {
+		next = 1000000000
+	}
+	return roundUp(int(next))
+}
+
+// roundUp raises a count to the next value of the form 1eX, 2eX, 3eX, or 5eX.
+// go test reports such a count, thus a run is easy to compare.
+func roundUp(n int) int {
+	base := 1
+	for base*10 < n {
+		base *= 10
+	}
+	switch {
+	case n <= base:
+		return base
+	case n <= 2*base:
+		return 2 * base
+	case n <= 3*base:
+		return 3 * base
+	case n <= 5*base:
+		return 5 * base
+	}
+	return 10 * base
+}
+
+// benchLine writes the result line of 1 benchmark. The format is the format of
+// go test, thus benchstat reads the output.
+//
+// The suffix of the name is the count of isolates. All Go code runs in 1
+// isolate, thus the suffix is always 1.
+func benchLine(name string, b *B) string {
+	perOp := float64(b.elapsed) / float64(b.N)
+	line := name + "-1\t" + strconv.Itoa(b.N) + "\t" + amount(perOp) + " ns/op"
+	if b.bytes > 0 && b.elapsed > 0 {
+		rate := float64(b.bytes) * float64(b.N) / 1000000.0 /
+			(float64(b.elapsed) / 1000000000.0)
+		line += "\t" + amount(rate) + " MB/s"
+	}
+	for _, m := range b.metrics {
+		line += "\t" + m
+	}
+	return line
+}
+
+// amount writes a measured value with about 4 digits that carry meaning.
+func amount(v float64) string {
+	switch {
+	case v >= 100:
+		return strconv.FormatFloat(v, 'f', 0, 64)
+	case v >= 10:
+		return strconv.FormatFloat(v, 'f', 1, 64)
+	case v >= 1:
+		return strconv.FormatFloat(v, 'f', 2, 64)
+	}
+	return strconv.FormatFloat(v, 'f', 4, 64)
+}
 
 // F holds the state of 1 fuzz target. gart runs no fuzz target, and Main
 // reports each target as a skipped test.

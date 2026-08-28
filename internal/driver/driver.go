@@ -60,6 +60,8 @@ type TestBinary struct {
 	Tests int
 	// Skips lists each function of a test file that gart does not run.
 	Skips []string
+	// Benchmarks is the count of benchmark functions of the binary.
+	Benchmarks int
 }
 
 // Build compiles the packages and writes the Dart package into Out.
@@ -172,10 +174,11 @@ func testBinaries(result *load.Result, module string) []TestBinary {
 	out := make([]TestBinary, 0, len(result.Binaries))
 	for _, b := range result.Binaries {
 		out = append(out, TestBinary{
-			Package: b.Under,
-			Entry:   filepath.Join("bin", testDir(b.Under, module)+"_test.dart"),
-			Tests:   len(b.Tests),
-			Skips:   b.Skips,
+			Package:    b.Under,
+			Entry:      filepath.Join("bin", testDir(b.Under, module)+"_test.dart"),
+			Tests:      len(b.Tests),
+			Skips:      b.Skips,
+			Benchmarks: len(b.Benchmarks),
 		})
 	}
 	return out

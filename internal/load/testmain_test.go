@@ -34,6 +34,10 @@ func TestLoadTestsFindsTheBinary(t *testing.T) {
 	if strings.Join(bin.Tests, ",") != strings.Join(want, ",") {
 		t.Errorf("got the tests %v, want %v", bin.Tests, want)
 	}
+	wantBench := []string{"BenchmarkAdd", "BenchmarkDouble"}
+	if strings.Join(bin.Benchmarks, ",") != strings.Join(wantBench, ",") {
+		t.Errorf("got the benchmarks %v, want %v", bin.Benchmarks, wantBench)
+	}
 	if len(bin.Skips) != 0 {
 		t.Errorf("got the skips %v, want none", bin.Skips)
 	}
@@ -49,6 +53,7 @@ func TestLoadTestsWritesTheEntryPoint(t *testing.T) {
 		`gartXtest "example.com/basic/calc_test"`,
 		`{Name: "TestAdd", F: gartTest.TestAdd}`,
 		`{Name: "TestJoin", F: gartXtest.TestJoin}`,
+		`{Name: "BenchmarkAdd", F: gartTest.BenchmarkAdd}`,
 		"testing.Main(",
 	} {
 		if !strings.Contains(source, want) {
@@ -64,7 +69,7 @@ func TestLoadTestsGivesTheVariants(t *testing.T) {
 	result := loadTests(t)
 	want := map[string]int{
 		"example.com/basic/calc":                                    1,
-		"example.com/basic/calc [example.com/basic/calc.test]":      2,
+		"example.com/basic/calc [example.com/basic/calc.test]":      3,
 		"example.com/basic/calc_test [example.com/basic/calc.test]": 1,
 		"example.com/basic/calc.test":                               1,
 	}

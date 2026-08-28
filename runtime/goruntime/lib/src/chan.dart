@@ -158,6 +158,21 @@ Future<void> $sleep(int nanoseconds) {
 /// The count of nanoseconds since the start of the Unix epoch.
 int $nowNanos() => DateTime.now().microsecondsSinceEpoch * 1000;
 
+/// The clock of the program. It starts with the isolate.
+final Stopwatch $clock = Stopwatch()..start();
+
+/// The count of nanoseconds since the start of the program.
+///
+/// The value comes from a monotonic clock, thus a change of the system time
+/// does not move it. The clock of the Dart VM ticks each nanosecond, and the
+/// wall clock of DateTime holds only microseconds. A benchmark needs the finer
+/// value.
+int $monoNanos() {
+  final int frequency = $clock.frequency;
+  if (frequency == 1000000000) return $clock.elapsedTicks;
+  return $clock.elapsedTicks * 1000000000 ~/ frequency;
+}
+
 /// Starts a goroutine. Go does not run the body at the point of the statement,
 /// thus the body waits for the event loop.
 void $go(FutureOr<void> Function() body) {

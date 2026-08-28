@@ -11,7 +11,7 @@ SUITE_OUT := $(CURDIR)/build/suite/$(SUITE)
 
 .PHONY: help get build test vet fmt fmt-check dart-get dart-analyze dart-test \
 	dart-fmt dart-fmt-check ci install clean run compare programs suites \
-	gart-test compare-tests
+	gart-test compare-tests bench
 
 help:
 	@echo "godart targets:"
@@ -30,6 +30,7 @@ help:
 	@echo "  make suites           List the test modules of testdata."
 	@echo "  make gart-test SUITE=x        Run the tests of the module with gart."
 	@echo "  make compare-tests SUITE=x    Run go test and gart test, and diff."
+	@echo "  make bench SUITE=x            Run the benchmarks of the module with gart."
 	@echo "  make install          Put the gart command on the PATH."
 	@echo "  make clean            Delete the build directory."
 
@@ -112,6 +113,13 @@ compare-tests: build
 		$(CURDIR)/build/dart.txt > $(CURDIR)/build/dart.norm.txt
 	@diff $(CURDIR)/build/go.norm.txt $(CURDIR)/build/dart.norm.txt && \
 		echo "$(SUITE): the 2 outputs are equal"
+
+# bench runs the benchmarks of 1 module with gart. It builds ahead of time
+# first, because the warm up cost of the Dart VM hides the result.
+bench: build
+	@cd testdata/tests/$(SUITE) && \
+		$(CURDIR)/build/gart test -o $(SUITE_OUT) -runtime $(CURDIR)/$(RUNTIME) \
+		-bench . ./...
 
 install:
 	go install ./cmd/gart

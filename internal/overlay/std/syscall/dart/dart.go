@@ -51,6 +51,15 @@ func NowNanos() int64 {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// MonoNanos gives the count of nanoseconds since the start of the program.
+//
+// The value comes from a monotonic clock. A change of the system time does not
+// move it, and the value holds a finer step than the wall clock. A benchmark
+// reads it.
+func MonoNanos() int64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Worker runs f in a new isolate and gives the result.
 //
 // The function must be a pure function of its input. It must not read a
