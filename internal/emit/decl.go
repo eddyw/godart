@@ -9,11 +9,21 @@ import (
 	"github.com/eddyw/godart/internal/name"
 )
 
-// class writes the Dart class of a Go struct type. The class holds the fields,
-// the copy operations that give the struct value semantics, and the methods.
+// class writes the Dart class of a named Go struct type. The class holds the
+// fields, the copy operations that give the struct value semantics, and the
+// methods.
 func (e *emitter) class(obj *types.TypeName, named *types.Named, st *types.Struct) {
-	class := name.Type(obj.Name())
-	params := typeParamsOf(named.TypeParams())
+	e.structClass(name.Type(obj.Name()), typeParamsOf(named.TypeParams()), st,
+		types.Comparable(named), e.methods[obj])
+}
+
+// structClass writes the Dart class of a Go struct type.
+//
+// An unnamed struct type reaches this function with no type parameter and no
+// method. Go gives such a type a structural identity, thus the name comes from
+// the shape of the struct.
+func (e *emitter) structClass(class string, params []*types.TypeParam,
+	st *types.Struct, comparable bool, methods []*ir.Func) {
 	head := class + e.typeParamDecl(params)
 	fields := make([]string, st.NumFields())
 	for i := range fields {
@@ -56,10 +66,10 @@ func (e *emitter) class(obj *types.TypeName, named *types.Named, st *types.Struc
 	full := class + e.typeArgsOfParams(params)
 	e.writeCopy(full, st, fields, dicts)
 	e.writeAssign(full, st, fields)
-	if types.Comparable(named) {
+	if comparable {
 		e.writeEqual(full, st, fields)
 	}
-	for _, m := range e.methods[obj] {
+	for _, m := range methods {
 		e.line("")
 		e.method(m)
 	}

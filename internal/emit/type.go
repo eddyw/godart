@@ -38,8 +38,7 @@ func (e *emitter) dartType(t types.Type) string {
 	case *types.Interface:
 		return "Iface?"
 	case *types.Struct:
-		e.fail("an unnamed struct type is outside the subset")
-		return "Object?"
+		return e.anonClass(t)
 	}
 	e.fail("the type %s is outside the subset", t)
 	return "Object?"
@@ -108,6 +107,9 @@ func (e *emitter) zero(t types.Type) string {
 				".$zero(" + strings.Join(e.dictArgs(named.TypeArgs()), ", ") + ")"
 		}
 		u = named.Underlying()
+	}
+	if st, ok := u.(*types.Struct); ok {
+		return e.anonClass(st) + ".$zero()"
 	}
 	switch u := u.Underlying().(type) {
 	case *types.Basic:

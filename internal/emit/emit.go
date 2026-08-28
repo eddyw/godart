@@ -31,7 +31,8 @@ type Result struct {
 // file, and imports lists the Dart libraries of the Go dependencies.
 func Package(p *ir.Package, tpkg *types.Package, base string, imports []Import, blocks *analyze.Result) (*Result, error) {
 	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: base,
-		initNames: map[*ir.Func]string{}, blocks: blocks}
+		initNames: map[*ir.Func]string{}, blocks: blocks,
+		anon: map[string]*types.Struct{}}
 	e.setPrefixes(imports)
 	e.groupMethods(p)
 	out := &Result{Library: base + ".dart", Files: map[string]string{}}
@@ -82,6 +83,9 @@ type emitter struct {
 	// blocks holds the result of stage 3. It gives the async form of a
 	// function value and of an interface method.
 	blocks *analyze.Result
+	// anon holds each unnamed struct type that the package uses, by the name of
+	// its Dart class. The library file writes 1 class for each entry.
+	anon map[string]*types.Struct
 }
 
 func (e *emitter) fail(format string, args ...any) {
@@ -183,6 +187,7 @@ func (e *emitter) libraryFile(p *ir.Package, base string, parts []string, import
 		e.line("part '%s';", part)
 	}
 	e.line("")
+	e.writeAnonClasses()
 	e.writeDescriptors()
 	e.line("")
 	e.writeInit(sorted)

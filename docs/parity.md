@@ -46,8 +46,33 @@ The package `fmt` reads it.
 | A range loop over a function | Rejected |
 | A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
 | A type declaration inside a function | Rejected |
-| An unnamed struct type | Rejected. A table driven test needs a named row type. |
+| An unnamed struct type in an exported declaration | Rejected. Read the section below. |
 | A `TestMain` function | Rejected. gart writes the entry point of a test binary. |
+
+## An unnamed struct type
+
+`struct{ ... }` with no `type` declaration reaches the output as a Dart class.
+The name comes from a hash of the text of the type, thus 2 equal Go types give 1
+class. The class holds the fields, `$copy`, `$assign`, and the equality
+operations when Go holds the type comparable.
+
+| Item | Go | godart |
+|---|---|---|
+| A local variable and a table | Present | Equal |
+| A composite literal | Present | Equal |
+| A value in an interface | Present | Equal |
+| A type assertion and a type switch | Present | Equal |
+| A map key | Present | Equal |
+| An exported declaration | Present | Rejected. Read the cause below. |
+
+A Dart class holds a nominal identity, and Go gives an unnamed struct type a
+structural identity. The compiler writes 1 class into each package that uses the
+type, thus 2 packages give 2 classes that Dart holds apart. Stage 2 rejects an
+unnamed struct type in an exported declaration of a package. A declaration of a
+named type solves it.
+
+The rule reads the exported names only. A local variable, an unexported
+function, and an unexported field all accept an unnamed struct type.
 
 ## The test command
 
