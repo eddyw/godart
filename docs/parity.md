@@ -79,8 +79,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `fmt` | Overlay | |
 | `slices` | Overlay | The sort is a stable merge sort. |
-| `sort` | Overlay | |
-| `strconv` | Overlay | |
+| `sort` | Overlay | `Sort`, `Stable`, `Slice`, `SliceStable`, `Search`, `Find`, and the typed forms. |
+| `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. |
 | `strings` | Overlay | |
 | `sync` | Overlay | |
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |

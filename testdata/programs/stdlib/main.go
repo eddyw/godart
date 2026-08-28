@@ -9,6 +9,16 @@ import (
 	"time"
 )
 
+// lengths orders each word by its length. It holds the 3 operations of
+// sort.Interface.
+type lengths []string
+
+func (l lengths) Len() int { return len(l) }
+
+func (l lengths) Less(i, j int) bool { return len(l[i]) < len(l[j]) }
+
+func (l lengths) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
+
 func main() {
 	s := "Hello, World"
 	fmt.Println(strings.ToUpper(s), strings.ToLower(s))
@@ -37,6 +47,11 @@ func main() {
 	fmt.Println(f, strconv.FormatFloat(3.14159, 'f', 2, 64))
 	fmt.Println(strconv.FormatBool(true), strconv.Quote("a\tb"))
 	fmt.Println(string(strconv.AppendInt([]byte("n="), -7, 10)))
+	fmt.Println(strconv.FormatUint(255, 16), strconv.FormatUint(0, 2))
+	fmt.Println(strconv.CanBackquote("plain"), strconv.CanBackquote("a`b"))
+	fmt.Println(strconv.CanBackquote("a\tb"), strconv.CanBackquote("a\nb"))
+	fmt.Println(strconv.QuoteToASCII("a\tb\u00e9\U0001F600"))
+	fmt.Println(strconv.QuoteToASCII("\a\b\f\v\x00\x7f"))
 
 	nums := []int{5, 2, 9, 1}
 	sort.Ints(nums)
@@ -47,6 +62,14 @@ func main() {
 	sort.Slice(nums, func(i, j int) bool { return nums[i] > nums[j] })
 	fmt.Println(nums)
 	fmt.Println(sort.SearchInts([]int{1, 3, 5, 7}, 5))
+	byLength := lengths{"pear", "fig", "apple"}
+	sort.Sort(byLength)
+	fmt.Println(byLength)
+	sort.Stable(lengths{"bb", "a", "cc"})
+	at, found := sort.Find(4, func(i int) int { return 5 - []int{1, 3, 5, 7}[i] })
+	fmt.Println(at, found)
+	_, missing := sort.Find(4, func(i int) int { return 4 - []int{1, 3, 5, 7}[i] })
+	fmt.Println(missing)
 
 	var mu sync.Mutex
 	var wg sync.WaitGroup

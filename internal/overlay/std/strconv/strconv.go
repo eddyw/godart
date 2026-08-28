@@ -6,6 +6,7 @@ package strconv
 import (
 	"errors"
 	"syscall/dart"
+	"unicode/utf8"
 )
 
 // ErrSyntax reports text that holds no value of the type.
@@ -144,6 +145,99 @@ func ParseFloat(text string, bitSize int) (float64, error) {
 // Quote gives the Go text of s inside double quotes.
 func Quote(s string) string {
 	return dart.Format("q", s)
+}
+
+// FormatUint gives the text of i in the base.
+func FormatUint(i uint64, base int) string {
+	if base < 2 || base > 36 {
+		panic("strconv: illegal base")
+	}
+	if i == 0 {
+		return "0"
+	}
+	digits := "0123456789abcdefghijklmnopqrstuvwxyz"
+	out := ""
+	v := i
+	for v > 0 {
+		out = string(digits[int(v%uint64(base))]) + out
+		v /= uint64(base)
+	}
+	return out
+}
+
+// CanBackquote reports whether s fits inside back quotes with no change.
+func CanBackquote(s string) bool {
+	for _, r := range s {
+		if r == 0xFEFF || r == utf8.RuneError {
+			return false
+		}
+		if r > 0x7F {
+			continue
+		}
+		if r < ' ' && r != '\t' || r == '`' || r == 0x7F {
+			return false
+		}
+	}
+	return true
+}
+
+// QuoteToASCII gives the Go text of s inside double quotes. Each rune outside
+// the printable range of ASCII takes an escape form.
+//
+// An invalid byte of UTF-8 reaches the escape of the replacement rune. Go
+// writes the byte itself in the \x form.
+func QuoteToASCII(s string) string {
+	out := "\""
+	for _, r := range s {
+		switch r {
+		case '"':
+			out += "\\\""
+		case '\\':
+			out += "\\\\"
+		case '\a':
+			out += "\\a"
+		case '\b':
+			out += "\\b"
+		case '\f':
+			out += "\\f"
+		case '\n':
+			out += "\\n"
+		case '\r':
+			out += "\\r"
+		case '\t':
+			out += "\\t"
+		case '\v':
+			out += "\\v"
+		default:
+			if r >= ' ' && r < 0x7F {
+				out += string(r)
+				continue
+			}
+			out += escape(r)
+		}
+	}
+	return out + "\""
+}
+
+// escape writes 1 rune in the \x form, the \u form, or the \U form of Go. Go
+// takes the \x form for a control character of ASCII only.
+func escape(r rune) string {
+	if r < ' ' || r == 0x7F {
+		return "\\x" + hex(uint64(r), 2)
+	}
+	if r < 0x10000 {
+		return "\\u" + hex(uint64(r), 4)
+	}
+	return "\\U" + hex(uint64(r), 8)
+}
+
+// hex writes a value in the base 16, with a minimum count of digits.
+func hex(v uint64, width int) string {
+	out := FormatUint(v, 16)
+	for len(out) < width {
+		out = "0" + out
+	}
+	return out
 }
 
 func digitValue(c byte) int {

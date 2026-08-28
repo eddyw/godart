@@ -47,6 +47,48 @@ func partition(x any, less func(i, j int) bool, low, high int) int {
 	return i
 }
 
+// Interface holds the 3 operations that Sort needs.
+type Interface interface {
+	Len() int
+	Less(i, j int) bool
+	Swap(i, j int)
+}
+
+// Sort orders data. The order of 2 equal elements is not stable.
+func Sort(data Interface) {
+	quickData(data, 0, data.Len()-1)
+}
+
+// Stable orders data, and it keeps the order of 2 equal elements.
+func Stable(data Interface) {
+	for i := 1; i < data.Len(); i++ {
+		for j := i; j > 0 && data.Less(j, j-1); j-- {
+			data.Swap(j, j-1)
+		}
+	}
+}
+
+func quickData(data Interface, low, high int) {
+	if low >= high {
+		return
+	}
+	middle := partitionData(data, low, high)
+	quickData(data, low, middle-1)
+	quickData(data, middle+1, high)
+}
+
+func partitionData(data Interface, low, high int) int {
+	i := low
+	for j := low; j < high; j++ {
+		if data.Less(j, high) {
+			data.Swap(i, j)
+			i++
+		}
+	}
+	data.Swap(i, high)
+	return i
+}
+
 // Ints orders a slice of int.
 func Ints(x []int) {
 	Slice(x, func(i, j int) bool { return x[i] < x[j] })
@@ -89,4 +131,12 @@ func Search(n int, f func(int) bool) int {
 // SearchInts gives the position of v in the ordered slice x.
 func SearchInts(x []int, v int) int {
 	return Search(len(x), func(i int) bool { return x[i] >= v })
+}
+
+// Find gives the smallest i in [0, n) where cmp(i) is not positive, and it
+// reports whether cmp(i) is 0. The function cmp compares the target with the
+// element i.
+func Find(n int, cmp func(int) int) (int, bool) {
+	i := Search(n, func(i int) bool { return cmp(i) <= 0 })
+	return i, i < n && cmp(i) == 0
 }
