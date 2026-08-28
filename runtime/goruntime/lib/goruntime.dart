@@ -16,6 +16,7 @@ export 'src/file.dart';
 export 'src/format.dart';
 export 'src/iface.dart';
 export 'src/int.dart';
+export 'src/json.dart';
 export 'src/map.dart';
 export 'src/panic.dart';
 export 'src/print.dart';

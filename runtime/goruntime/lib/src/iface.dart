@@ -45,6 +45,10 @@ final class TypeDesc {
   /// The key type of a map.
   final TypeDesc Function()? key;
 
+  /// zero builds the zero value of the type. A decoder writes a fresh value of
+  /// a field of a struct through it.
+  final Object? Function()? zero;
+
   const TypeDesc(
     this.name,
     this.kind,
@@ -53,6 +57,7 @@ final class TypeDesc {
     this.fields = const <FieldDesc>[],
     this.elem,
     this.key,
+    this.zero,
   });
 
   /// The name for a message. Go writes the package name, and not the path.

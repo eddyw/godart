@@ -1,0 +1,55 @@
+//go:build dart
+
+// Package json writes the JSON form of a Go value.
+//
+// The compiler cannot read the real source. That source reads the fields of a
+// struct through the package reflect, and the subset holds no general reflect.
+//
+// The compiler writes a type descriptor for each named type, and that descriptor
+// holds the name, the json tag, and a read of each field. The Dart side walks
+// that descriptor, thus this package needs no code generator.
+package json
+
+import (
+	"errors"
+	"syscall/dart"
+)
+
+// Marshal gives the JSON form of a value.
+//
+// A struct gives an object. The name of each member comes from the json tag of
+// the field, and the name of the field gives it when the tag holds none. A tag
+// of `-` drops the field, and `omitempty` drops a field that holds the zero
+// value.
+func Marshal(v any) ([]byte, error) {
+	text, cause := dart.MarshalJSON(v, "")
+	if cause != "" {
+		return nil, &UnsupportedTypeError{Text: cause}
+	}
+	return []byte(text), nil
+}
+
+// MarshalIndent gives the JSON form with 1 line for each member.
+//
+// Go takes a prefix and an indent. The Dart encoder holds no prefix, thus this
+// function rejects a prefix that is not empty.
+func MarshalIndent(v any, prefix, indent string) ([]byte, error) {
+	if prefix != "" {
+		return nil, errors.New("json: gart writes no prefix")
+	}
+	if indent == "" {
+		indent = " "
+	}
+	text, cause := dart.MarshalJSON(v, indent)
+	if cause != "" {
+		return nil, &UnsupportedTypeError{Text: cause}
+	}
+	return []byte(text), nil
+}
+
+// UnsupportedTypeError names a value that holds no JSON form.
+type UnsupportedTypeError struct {
+	Text string
+}
+
+func (e *UnsupportedTypeError) Error() string { return e.Text }

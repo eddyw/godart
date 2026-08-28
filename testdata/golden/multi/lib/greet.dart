@@ -31,6 +31,7 @@ final TypeDesc $desc$Greeter = TypeDesc(
       ($r, $v) => ($r as Greeter$)._style = $v as int,
     ),
   ],
+  zero: () => Greeter$.$zero(),
 );
 final TypeDesc $descP$Greeter = TypeDesc(
   '*example.com/multi/greet.Greeter',
@@ -41,12 +42,14 @@ final TypeDesc $descP$Greeter = TypeDesc(
   },
   text: '*greet.Greeter',
   elem: () => $desc$Greeter,
+  zero: () => null,
 );
 final TypeDesc $desc$Style = TypeDesc(
   'example.com/multi/greet.Style',
   'int',
   <String, Function>{},
   text: 'greet.Style',
+  zero: () => 0,
 );
 final TypeDesc $descP$Style = TypeDesc(
   '*example.com/multi/greet.Style',
@@ -54,6 +57,7 @@ final TypeDesc $descP$Style = TypeDesc(
   <String, Function>{},
   text: '*greet.Style',
   elem: () => $desc$Style,
+  zero: () => null,
 );
 
 bool $initDone = false;

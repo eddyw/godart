@@ -61,9 +61,10 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 		}
 	}
 	sort.Strings(entries)
-	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s);",
+	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s);",
 		variable, types.TypeString(t, nil), kindOf(t),
-		strings.Join(entries, ", "), types.TypeString(t, shortQualifier), e.descParts(t))
+		strings.Join(entries, ", "), types.TypeString(t, shortQualifier),
+		e.descParts(t), e.zero(t))
 }
 
 // descParts writes the fields of a struct type, and the element type and the

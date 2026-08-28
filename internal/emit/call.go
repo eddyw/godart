@@ -89,6 +89,8 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return "$nowNanos()", true
 	case "MonoNanos":
 		return "$monoNanos()", true
+	case "MarshalJSON":
+		return fmt.Sprintf("$jsonMarshal(%s, %s)", args[0], args[1]), true
 	case "Float64Bits":
 		return fmt.Sprintf("$f64ToBits(%s)", args[0]), true
 	case "Float64FromBits":

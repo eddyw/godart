@@ -64,6 +64,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `errors` | Overlay | |
 | `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
 | `maps` | Overlay | |
+| `encoding/json` | Overlay | `Marshal` only. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native | |
 | `os` | Overlay | The file access and the process state. Read the section below. |
@@ -133,6 +134,33 @@ and the Dart List of an array already hold a reference.
 `f(g())` where `g` gives more than 1 result passes each result as its own
 argument. The output writes a closure that takes the record of the results, thus
 `g` runs 1 time.
+
+## The JSON form of a value
+
+`encoding/json` writes the JSON form of a value with no code generator and no
+general `reflect`.
+
+The compiler writes a type descriptor for each named type. That descriptor holds
+the name, the struct tag, a read, and a write of each field, thus the Dart side
+walks it.
+
+| Item | Go | godart |
+|---|---|---|
+| `Marshal` | Present | Equal |
+| `MarshalIndent` | Present | Equal, with an empty prefix. |
+| A json tag, `-`, and `omitempty` | Present | Equal |
+| A nil slice and a nil map | Give `null` | Equal |
+| A whole float | Gives `0`, not `0.0` | Equal |
+| A nested struct and a pointer | Present | Equal |
+| A map key of the type string or int | Present | Equal |
+| The order of a map member | Sorted by the key | Equal |
+| A byte slice | Gives base64 text | Gives a list of numbers |
+| `Unmarshal`, `Decoder`, `Encoder` | Present | Missing |
+| `Marshaler` and `Unmarshaler` | Present | Missing |
+
+`Unmarshal` needs a write of each field and a fresh value of a nested field. The
+descriptor holds a write and a `zero` factory, thus the work needs no new
+compiler feature.
 
 ## The file access
 

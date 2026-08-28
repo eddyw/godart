@@ -71,6 +71,16 @@ func Float32FromBits(b uint32) float32 {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// MarshalJSON writes the JSON form of a value. The walk reads the type
+// descriptor of the value, thus the name of each member comes from the json tag
+// of the field.
+//
+// An empty indent gives a compact form. The second result holds the cause of a
+// failure, and it is empty after a success.
+func MarshalJSON(v any, indent string) (string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // MonoNanos gives the count of nanoseconds since the start of the program.
 //
 // The value comes from a monotonic clock. A change of the system time does not
