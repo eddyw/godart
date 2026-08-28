@@ -36,7 +36,7 @@ func TestStubs(t *testing.T) {
 			stubs[p.Path] = true
 		}
 	}
-	for _, want := range []string{"os", "reflect", "testing/internal/testdeps"} {
+	for _, want := range []string{"reflect", "testing/internal/testdeps"} {
 		if !stubs[want] {
 			t.Errorf("the overlay holds no stub of %s", want)
 		}
@@ -44,7 +44,9 @@ func TestStubs(t *testing.T) {
 			t.Errorf("the surface holds the stub %s", want)
 		}
 	}
-	if !slices.Contains(paths, "testing") {
-		t.Errorf("the surface holds %v, want the package testing", paths)
+	for _, want := range []string{"os", "testing"} {
+		if !slices.Contains(paths, want) {
+			t.Errorf("the surface holds %v, want the package %s", paths, want)
+		}
 	}
 }

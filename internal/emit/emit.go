@@ -39,7 +39,7 @@ const partSuffix = ".part.dart"
 func Package(p *ir.Package, tpkg *types.Package, base string, imports []Import, blocks *analyze.Result) (*Result, error) {
 	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: base,
 		initNames: map[*ir.Func]string{}, blocks: blocks,
-		anon: map[string]*types.Struct{}}
+		anon: map[string]*types.Struct{}, shadowed: map[string]map[string]bool{}}
 	e.setPrefixes(imports)
 	e.groupMethods(p)
 	out := &Result{Library: base + ".dart", Files: map[string]string{}}
@@ -93,6 +93,55 @@ type emitter struct {
 	// anon holds each unnamed struct type that the package uses, by the name of
 	// its Dart class. The library file writes 1 class for each entry.
 	anon map[string]*types.Struct
+	// shadowed holds the method names of each package that the build reads, by
+	// the import path.
+	shadowed map[string]map[string]bool
+}
+
+// topName maps the name of a function, a variable, or a constant at package
+// level.
+//
+// A class of the package may hold a method of the same name. Such a member hides
+// the top level name inside the class body, thus the top level name takes a
+// suffix. A type name always takes a suffix, thus a type never collides.
+func (e *emitter) topName(pkg *types.Package, goName string) string {
+	out := name.Package(goName)
+	if e.shadowSet(pkg)[out] {
+		return out + "$f"
+	}
+	return out
+}
+
+// shadowSet gives each Dart method name that a class of the package holds.
+//
+// The set comes from the type information, thus the emitter computes the same
+// set for the package that it compiles and for a package that it imports. Only
+// a method of a struct type reaches a class. A method of another named type
+// becomes a top level function, and such a function shadows nothing.
+func (e *emitter) shadowSet(pkg *types.Package) map[string]bool {
+	if pkg == nil {
+		return nil
+	}
+	if out, ok := e.shadowed[pkg.Path()]; ok {
+		return out
+	}
+	out := map[string]bool{}
+	scope := pkg.Scope()
+	for _, n := range scope.Names() {
+		obj, ok := scope.Lookup(n).(*types.TypeName)
+		if !ok || obj.IsAlias() {
+			continue
+		}
+		named, ok := types.Unalias(obj.Type()).(*types.Named)
+		if !ok || !isStructType(named) {
+			continue
+		}
+		for i := 0; i < named.NumMethods(); i++ {
+			out[name.Package(named.Method(i).Name())] = true
+		}
+	}
+	e.shadowed[pkg.Path()] = out
+	return out
 }
 
 func (e *emitter) fail(format string, args ...any) {
@@ -255,10 +304,10 @@ func (e *emitter) writeInit(imports []Import) {
 			continue
 		}
 		if g.Init == nil {
-			e.line("%s = %s;", name.Package(g.Var.Name), e.zero(g.Var.Type))
+			e.line("%s = %s;", e.topName(e.pkg, g.Var.Name), e.zero(g.Var.Type))
 			continue
 		}
-		e.line("%s = %s;", name.Package(g.Var.Name), e.expr(g.Init))
+		e.line("%s = %s;", e.topName(e.pkg, g.Var.Name), e.expr(g.Init))
 	}
 	for _, f := range e.inits {
 		e.line("%s();", e.initNames[f])
@@ -310,7 +359,7 @@ func (e *emitter) decl(d ir.Decl) {
 	case *ir.ConstDecl:
 		e.constDecl(d)
 	case *ir.Global:
-		e.line("late %s %s;", e.dartType(d.Var.Type), name.Package(d.Var.Name))
+		e.line("late %s %s;", e.dartType(d.Var.Type), e.topName(e.pkg, d.Var.Name))
 	case *ir.Func:
 		if e.inClass[d] {
 			return
@@ -325,7 +374,7 @@ func (e *emitter) constDecl(d *ir.ConstDecl) {
 	if isString(d.Type) {
 		keyword = "final"
 	}
-	e.line("%s %s %s = %s;", keyword, e.dartType(d.Type), name.Package(d.Name), value)
+	e.line("%s %s %s = %s;", keyword, e.dartType(d.Type), e.topName(e.pkg, d.Name), value)
 }
 
 func (e *emitter) typeDecl(d *ir.TypeDecl) {

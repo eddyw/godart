@@ -1,0 +1,318 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'slice.dart';
+import 'string.dart';
+
+/// The open files of the program, by handle.
+///
+/// A handle is an index into this list. A closed slot holds null, and a new
+/// open call takes the first free slot.
+final List<RandomAccessFile?> _open = <RandomAccessFile?>[];
+
+/// The mode of an open call.
+const int $openRead = 0;
+const int $openWrite = 1;
+const int $openAppend = 2;
+
+/// The whence of a seek call.
+const int $seekStart = 0;
+const int $seekCurrent = 1;
+const int $seekEnd = 2;
+
+GoString _empty = GoString.empty;
+
+/// _cause writes the message of a failure. Go reads such a text as the message
+/// of an error value.
+GoString _cause(Object e) {
+  if (e is FileSystemException) {
+    final String os = e.osError?.message ?? '';
+    if (os.isNotEmpty) return GoString.fromString('${e.path}: $os');
+    return GoString.fromString('${e.path}: ${e.message}');
+  }
+  return GoString.fromString(e.toString());
+}
+
+int _slot(RandomAccessFile f) {
+  for (int i = 0; i < _open.length; i++) {
+    if (_open[i] == null) {
+      _open[i] = f;
+      return i;
+    }
+  }
+  _open.add(f);
+  return _open.length - 1;
+}
+
+/// Opens a file and gives its handle. The second result holds the cause of a
+/// failure, and it is empty after a success.
+(int, GoString) $fileOpen(GoString path, int mode) {
+  final String name = path.toDartString();
+  try {
+    final FileMode m = mode == $openWrite
+        ? FileMode.writeOnly
+        : (mode == $openAppend ? FileMode.writeOnlyAppend : FileMode.read);
+    return (_slot(File(name).openSync(mode: m)), _empty);
+  } catch (e) {
+    return (-1, _cause(e));
+  }
+}
+
+/// Reads bytes into the slice and gives the count. A count of 0 with no cause
+/// means the end of the file.
+(int, GoString) $fileRead(int handle, Slice<int> p) {
+  final RandomAccessFile? f = _at(handle);
+  if (f == null) return (0, GoString.fromString('file already closed'));
+  if (p.len == 0) return (0, _empty);
+  try {
+    final Uint8List buf = Uint8List(p.len);
+    final int n = f.readIntoSync(buf);
+    for (int i = 0; i < n; i++) {
+      p.array[p.off + i] = buf[i];
+    }
+    return (n, _empty);
+  } catch (e) {
+    return (0, _cause(e));
+  }
+}
+
+/// Writes the bytes of the slice and gives the count.
+(int, GoString) $fileWrite(int handle, Slice<int> p) {
+  final RandomAccessFile? f = _at(handle);
+  if (f == null) return (0, GoString.fromString('file already closed'));
+  try {
+    f.writeFromSync(_bytes(p));
+    return (p.len, _empty);
+  } catch (e) {
+    return (0, _cause(e));
+  }
+}
+
+/// Moves the read position and gives the new offset from the start.
+(int, GoString) $fileSeek(int handle, int offset, int whence) {
+  final RandomAccessFile? f = _at(handle);
+  if (f == null) return (0, GoString.fromString('file already closed'));
+  try {
+    int target = offset;
+    if (whence == $seekCurrent) target = f.positionSync() + offset;
+    if (whence == $seekEnd) target = f.lengthSync() + offset;
+    f.setPositionSync(target);
+    return (target, _empty);
+  } catch (e) {
+    return (0, _cause(e));
+  }
+}
+
+GoString $fileClose(int handle) {
+  final RandomAccessFile? f = _at(handle);
+  if (f == null) return GoString.fromString('file already closed');
+  _open[handle] = null;
+  try {
+    f.closeSync();
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+GoString $fileSync(int handle) {
+  final RandomAccessFile? f = _at(handle);
+  if (f == null) return GoString.fromString('file already closed');
+  try {
+    f.flushSync();
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+RandomAccessFile? _at(int handle) {
+  if (handle < 0 || handle >= _open.length) return null;
+  return _open[handle];
+}
+
+Uint8List _bytes(Slice<int> p) {
+  final Uint8List out = Uint8List(p.len);
+  for (int i = 0; i < p.len; i++) {
+    out[i] = p.array[p.off + i] & 0xFF;
+  }
+  return out;
+}
+
+/// Reads a whole file.
+(Slice<int>, GoString) $readFile(GoString path) {
+  try {
+    return (Slice.of(File(path.toDartString()).readAsBytesSync()), _empty);
+  } catch (e) {
+    return (Slice<int>.nil(), _cause(e));
+  }
+}
+
+/// Writes a whole file. It replaces the content of an existing file.
+GoString $writeFile(GoString path, Slice<int> data) {
+  try {
+    File(path.toDartString()).writeAsBytesSync(_bytes(data));
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+/// Reads the metadata of a path. The 3 values are the size in bytes, the
+/// directory flag, and the time of the last change in nanoseconds.
+(int, bool, int, GoString) $stat(GoString path) {
+  final String name = path.toDartString();
+  try {
+    final FileStat s = FileStat.statSync(name);
+    if (s.type == FileSystemEntityType.notFound) {
+      return (
+        0,
+        false,
+        0,
+        GoString.fromString('$name: no such file or directory'),
+      );
+    }
+    final bool dir = s.type == FileSystemEntityType.directory;
+    return (s.size, dir, s.modified.microsecondsSinceEpoch * 1000, _empty);
+  } catch (e) {
+    return (0, false, 0, _cause(e));
+  }
+}
+
+GoString $remove(GoString path) {
+  final String name = path.toDartString();
+  try {
+    final FileSystemEntityType t = FileSystemEntity.typeSync(name);
+    if (t == FileSystemEntityType.notFound) {
+      return GoString.fromString('$name: no such file or directory');
+    }
+    if (t == FileSystemEntityType.directory) {
+      Directory(name).deleteSync();
+      return _empty;
+    }
+    File(name).deleteSync();
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+/// Removes a path and each path inside it.
+GoString $removeAll(GoString path) {
+  final String name = path.toDartString();
+  try {
+    final FileSystemEntityType t = FileSystemEntity.typeSync(name);
+    if (t == FileSystemEntityType.notFound) return _empty;
+    if (t == FileSystemEntityType.directory) {
+      Directory(name).deleteSync(recursive: true);
+      return _empty;
+    }
+    File(name).deleteSync();
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+/// Makes a directory. It also makes each parent directory when deep is true.
+GoString $mkdir(GoString path, bool deep) {
+  try {
+    Directory(path.toDartString()).createSync(recursive: deep);
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+GoString $rename(GoString from, GoString to) {
+  try {
+    File(from.toDartString()).renameSync(to.toDartString());
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+/// Reads the names inside a directory. Each name holds no directory part.
+(Slice<GoString>, GoString) $readDir(GoString path) {
+  try {
+    final List<FileSystemEntity> list = Directory(path.toDartString())
+        .listSync(followLinks: false);
+    final List<GoString> names = <GoString>[];
+    for (final FileSystemEntity e in list) {
+      names.add(
+        GoString.fromString(
+          e.uri.pathSegments.where((String s) => s.isNotEmpty).last,
+        ),
+      );
+    }
+    names.sort((GoString a, GoString b) => $compare(a, b));
+    return (Slice.of(names), _empty);
+  } catch (e) {
+    return (Slice<GoString>.nil(), _cause(e));
+  }
+}
+
+/// Reads 1 variable of the environment. The flag is false when the environment
+/// holds no such name.
+(GoString, bool) $getenv(GoString name) {
+  final String? v = Platform.environment[name.toDartString()];
+  if (v == null) return (_empty, false);
+  return (GoString.fromString(v), true);
+}
+
+/// Reads each variable of the environment, in the form name=value.
+Slice<GoString> $environ() {
+  final List<GoString> out = <GoString>[];
+  Platform.environment.forEach((String k, String v) {
+    out.add(GoString.fromString('$k=$v'));
+  });
+  out.sort((GoString a, GoString b) => $compare(a, b));
+  return Slice.of(out);
+}
+
+(GoString, GoString) $getwd() {
+  try {
+    return (GoString.fromString(Directory.current.path), _empty);
+  } catch (e) {
+    return (_empty, _cause(e));
+  }
+}
+
+GoString $chdir(GoString path) {
+  try {
+    Directory.current = Directory(path.toDartString());
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+GoString $tempDir() => GoString.fromString(Directory.systemTemp.path);
+
+GoString $pathSeparator() => GoString.fromString(Platform.pathSeparator);
+
+/// Writes text to standard error.
+void $stderr(GoString text) => stderr.write(text.toDartString());
+
+/// Reads bytes from standard input. A count of 0 means the end of the input.
+///
+/// The read stops at a newline. A terminal gives 1 line for each read, thus the
+/// rule matches Go there. A pipe gives Go the whole buffer, and it gives this
+/// function 1 line.
+(int, GoString) $stdinRead(Slice<int> p) {
+  if (p.len == 0) return (0, _empty);
+  try {
+    int n = 0;
+    while (n < p.len) {
+      final int b = stdin.readByteSync();
+      if (b < 0) break;
+      p.array[p.off + n] = b;
+      n++;
+      if (b == 10) break;
+    }
+    return (n, _empty);
+  } catch (e) {
+    return (0, _cause(e));
+  }
+}

@@ -90,28 +90,55 @@ func TestTestsReportsAnUnsupportedFunction(t *testing.T) {
 	}
 }
 
-// TestTestsRejectsTestMain proves that stage 2 rejects a TestMain function.
-func TestTestsRejectsTestMain(t *testing.T) {
+// TestTestsRunsTestMain proves that a TestMain function replaces the entry
+// point of a test binary. Such a function runs the setup, the tests, and the
+// teardown.
+func TestTestsRunsTestMain(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/tm\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "tm.go"), "package tm\n\n// Value gives a number.\nfunc Value() int { return 1 }\n")
 	writeFile(t, filepath.Join(dir, "tm_test.go"), `package tm
 
-import "testing"
+import (
+	"fmt"
+	"os"
+	"testing"
+)
 
-func TestMain(m *testing.M) { _ = m.Run() }
+func TestMain(m *testing.M) {
+	fmt.Println("before")
+	code := m.Run()
+	fmt.Println("after", code)
+	os.Exit(code)
+}
+
+func TestValue(t *testing.T) {
+	if Value() != 1 {
+		t.Error("Value gives the wrong number")
+	}
+}
 `)
-	_, err := driver.Test(driver.Options{
+	out := &bytes.Buffer{}
+	code, err := driver.Test(driver.Options{
 		Dir:      dir,
 		Patterns: []string{"./..."},
 		Out:      t.TempDir(),
 		Runtime:  runtimeDir(t),
-	}, driver.TestOptions{}, &bytes.Buffer{})
-	if err == nil {
-		t.Fatal("got no rejection of TestMain, want one")
+	}, driver.TestOptions{Verbose: true}, out)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(err.Error(), "rejects a TestMain function") {
-		t.Errorf("got %q, want a message about TestMain", err.Error())
+	if code != 0 {
+		t.Errorf("got the exit code %d, want 0", code)
+	}
+	got := out.String()
+	for _, want := range []string{"before", "=== RUN   TestValue", "PASS", "after 0"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the output holds no %q:\n%s", want, got)
+		}
+	}
+	if k, j := strings.Index(got, "before"), strings.Index(got, "after 0"); k > j {
+		t.Errorf("the setup ran after the teardown:\n%s", got)
 	}
 }
 

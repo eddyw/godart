@@ -83,10 +83,15 @@ type functions struct {
 	tests      []string
 	benchmarks []string
 	skips      []string
+	// testMain marks a TestMain function of the variant. Such a function runs
+	// the tests, thus the entry point calls it.
+	testMain bool
 }
 
 // any reports whether the variant holds a function that the entry point names.
-func (f *functions) any() bool { return len(f.tests) > 0 || len(f.benchmarks) > 0 }
+func (f *functions) any() bool {
+	return len(f.tests) > 0 || len(f.benchmarks) > 0 || f.testMain
+}
 
 // functionsOf reads the test functions of 1 test variant.
 func functionsOf(p *packages.Package) (*functions, error) {
@@ -119,8 +124,8 @@ func functionsOf(p *packages.Package) (*functions, error) {
 			}
 			name := fn.Name.Name
 			switch {
-			case name == "TestMain":
-				// Stage 2 rejects a TestMain function with a source position.
+			case name == "TestMain" && params(fn) == 1:
+				out.testMain = true
 			case isTestName(name, "Test") && params(fn) == 1:
 				out.tests = append(out.tests, name)
 			case isTestName(name, "Benchmark") && params(fn) == 1:
@@ -183,8 +188,14 @@ func testMainSource(inside, outside *functions) []byte {
 		fmt.Fprintf(&b, "\tgartXtest %q\n", outside.pkgPath)
 	}
 	b.WriteString(")\n\n")
+	call := "testing.Main("
+	tail := "\t)\n"
+	if prefix := testMainPrefix(inside, outside); prefix != "" {
+		call = "testing.MainWith("
+		tail = fmt.Sprintf("\t\t%s.TestMain,\n\t)\n", prefix)
+	}
 	b.WriteString("func main() {\n")
-	b.WriteString("\ttesting.Main(\n")
+	fmt.Fprintf(&b, "\t%s\n", call)
 	b.WriteString("\t\t[]testing.InternalTest{\n")
 	writeList(&b, "gartTest", inside.tests)
 	writeList(&b, "gartXtest", outside.tests)
@@ -193,9 +204,23 @@ func testMainSource(inside, outside *functions) []byte {
 	writeList(&b, "gartTest", inside.benchmarks)
 	writeList(&b, "gartXtest", outside.benchmarks)
 	b.WriteString("\t\t},\n")
-	b.WriteString("\t)\n")
+	b.WriteString(tail)
 	b.WriteString("}\n")
 	return b.Bytes()
+}
+
+// testMainPrefix names the import prefix of the variant that holds the TestMain
+// function. The result is empty when no variant holds one.
+//
+// Go rejects a TestMain function in both variants of 1 package.
+func testMainPrefix(inside, outside *functions) string {
+	if inside.testMain {
+		return "gartTest"
+	}
+	if outside.testMain {
+		return "gartXtest"
+	}
+	return ""
 }
 
 func writeList(b *bytes.Buffer, prefix string, names []string) {

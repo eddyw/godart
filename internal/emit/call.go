@@ -80,6 +80,50 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$f32ToBits(%s)", args[0]), true
 	case "Float32FromBits":
 		return fmt.Sprintf("$f32FromBits(%s)", args[0]), true
+	case "FileOpen":
+		return fmt.Sprintf("$fileOpen(%s, %s)", args[0], args[1]), true
+	case "FileRead":
+		return fmt.Sprintf("$fileRead(%s, %s)", args[0], args[1]), true
+	case "FileWrite":
+		return fmt.Sprintf("$fileWrite(%s, %s)", args[0], args[1]), true
+	case "FileSeek":
+		return fmt.Sprintf("$fileSeek(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "FileClose":
+		return fmt.Sprintf("$fileClose(%s)", args[0]), true
+	case "FileSync":
+		return fmt.Sprintf("$fileSync(%s)", args[0]), true
+	case "ReadFile":
+		return fmt.Sprintf("$readFile(%s)", args[0]), true
+	case "WriteFile":
+		return fmt.Sprintf("$writeFile(%s, %s)", args[0], args[1]), true
+	case "Stat":
+		return fmt.Sprintf("$stat(%s)", args[0]), true
+	case "Remove":
+		return fmt.Sprintf("$remove(%s)", args[0]), true
+	case "RemoveAll":
+		return fmt.Sprintf("$removeAll(%s)", args[0]), true
+	case "Mkdir":
+		return fmt.Sprintf("$mkdir(%s, %s)", args[0], args[1]), true
+	case "Rename":
+		return fmt.Sprintf("$rename(%s, %s)", args[0], args[1]), true
+	case "ReadDir":
+		return fmt.Sprintf("$readDir(%s)", args[0]), true
+	case "Getenv":
+		return fmt.Sprintf("$getenv(%s)", args[0]), true
+	case "Environ":
+		return "$environ()", true
+	case "Getwd":
+		return "$getwd()", true
+	case "Chdir":
+		return fmt.Sprintf("$chdir(%s)", args[0]), true
+	case "TempDir":
+		return "$tempDir()", true
+	case "PathSeparator":
+		return "$pathSeparator()", true
+	case "Stderr":
+		return fmt.Sprintf("$stderr(%s)", args[0]), true
+	case "StdinRead":
+		return fmt.Sprintf("$stdinRead(%s)", args[0]), true
 	case "Worker":
 		return fmt.Sprintf("$worker(%s, %s)", args[0], args[1]), true
 	case "Stop":

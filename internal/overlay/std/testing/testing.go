@@ -158,18 +158,29 @@ func (t *T) write(text string) {
 	}
 }
 
-// Main runs each test and each benchmark of a test binary. The compiler writes
-// the call into the entry point of the binary.
-//
-// The flags come from the arguments of the program. gart test writes -test.v
-// for a line for each test, -test.run=<pattern> for a filter of the tests,
-// -test.bench=<pattern> for a filter of the benchmarks, and one of
-// -test.benchtime=<nanoseconds> or -test.benchcount=<count> for the length of
-// a benchmark.
-func Main(tests []InternalTest, benchmarks []InternalBenchmark) {
+// M holds the state of a test binary. A TestMain function reads it.
+type M struct {
+	tests      []InternalTest
+	benchmarks []InternalBenchmark
+	// code holds the exit status after Run.
+	code int
+	// ran marks a call of Run.
+	ran bool
+}
+
+// NewM builds the state of a test binary. The compiler writes the call into the
+// entry point.
+func NewM(tests []InternalTest, benchmarks []InternalBenchmark) *M {
+	return &M{tests: tests, benchmarks: benchmarks}
+}
+
+// Run runs each test and each benchmark, and it gives the exit status. A status
+// of 0 means that each one passed.
+func (m *M) Run() int {
+	m.ran = true
 	flags := readFlags()
 	failed := false
-	for _, tc := range tests {
+	for _, tc := range m.tests {
 		if !matches(tc.Name, flags.run) {
 			continue
 		}
@@ -184,7 +195,7 @@ func Main(tests []InternalTest, benchmarks []InternalBenchmark) {
 		}
 	}
 	if flags.benchmarks {
-		for _, bc := range benchmarks {
+		for _, bc := range m.benchmarks {
 			if !matches(bc.Name, flags.bench) {
 				continue
 			}
@@ -195,10 +206,48 @@ func Main(tests []InternalTest, benchmarks []InternalBenchmark) {
 	}
 	if failed {
 		emit("FAIL")
-		dart.Exit(1)
-		return
+		m.code = 1
+		return 1
 	}
 	emit("PASS")
+	m.code = 0
+	return 0
+}
+
+// Main runs each test and each benchmark of a test binary. The compiler writes
+// the call into the entry point of a binary with no TestMain function.
+//
+// The flags come from the arguments of the program. gart test writes -test.v
+// for a line for each test, -test.run=<pattern> for a filter of the tests,
+// -test.bench=<pattern> for a filter of the benchmarks, and one of
+// -test.benchtime=<nanoseconds> or -test.benchcount=<count> for the length of
+// a benchmark.
+func Main(tests []InternalTest, benchmarks []InternalBenchmark) {
+	m := NewM(tests, benchmarks)
+	Finish(m, m.Run())
+}
+
+// Finish stops the binary with the status of a run. The compiler writes the call
+// after a TestMain function.
+//
+// Go passes the result of m.Run to os.Exit when TestMain returns. A TestMain
+// function that never calls m.Run gives the status 0.
+func Finish(m *M, code int) {
+	if code != 0 {
+		dart.Exit(code)
+	}
+}
+
+// MainWith runs a TestMain function and then stops the binary. The compiler
+// writes the call into the entry point of a binary with such a function.
+func MainWith(tests []InternalTest, benchmarks []InternalBenchmark, f func(*M)) {
+	m := NewM(tests, benchmarks)
+	f(m)
+	if !m.ran {
+		emit("testing: warning: no tests to run")
+		return
+	}
+	Finish(m, m.code)
 }
 
 // options holds the flags of a run.
@@ -581,9 +630,3 @@ func (f *F) Skip(args ...any)                  { panic(noFuzz) }
 func (f *F) Skipf(format string, args ...any)  { panic(noFuzz) }
 func (f *F) Add(args ...any)                   { panic(noFuzz) }
 func (f *F) Fuzz(body any)                     { panic(noFuzz) }
-
-// M holds the state of a test binary. Stage 2 rejects a TestMain function,
-// thus no code reaches the method.
-type M struct{}
-
-func (m *M) Run() int { panic("gart rejects a TestMain function") }

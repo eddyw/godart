@@ -285,7 +285,7 @@ func (e *emitter) funcName(f *ir.Func) string {
 	if n, ok := e.initNames[f]; ok {
 		return n
 	}
-	return name.Package(f.Name)
+	return e.topName(e.pkg, f.Name)
 }
 
 func (e *emitter) params(vars []*ir.Var) string {

@@ -78,9 +78,9 @@ var _ = unsafe.Sizeof(0)
 `)
 	rejectFile(t, "curated surface", "outside the supported surface", `package a
 
-import "os"
+import "net/http"
 
-var _ = os.Args
+var _ = http.StatusOK
 `)
 	accept(t, "no import", "var _ = 1\n")
 }
@@ -132,57 +132,6 @@ func TestReportsEachRejection(t *testing.T) {
 	}
 	if got := strings.Count(err.Error(), "a.go:"); got != 2 {
 		t.Errorf("got %d rejections, want 2:\n%v", got, err)
-	}
-}
-
-// runNamed type checks src under a file name and gives the result of the
-// verifier. The rule for TestMain reads the file name.
-func runNamed(t *testing.T, name, src string) error {
-	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, name, src, 0)
-	if err != nil {
-		t.Fatalf("the source does not parse: %v", err)
-	}
-	info := &types.Info{
-		Types: map[ast.Expr]types.TypeAndValue{},
-		Defs:  map[*ast.Ident]types.Object{},
-		Uses:  map[*ast.Ident]types.Object{},
-	}
-	conf := types.Config{Importer: importer.Default()}
-	if _, err := conf.Check("example.com/a", fset, []*ast.File{file}, info); err != nil {
-		t.Fatalf("the source does not type check: %v", err)
-	}
-	return verify.Package(fset, []*ast.File{file}, info)
-}
-
-func TestTestMain(t *testing.T) {
-	const src = `package a
-
-type m struct{}
-
-func (v *m) Run() int { return 0 }
-
-func TestMain(v *m) { _ = v.Run() }
-`
-	err := runNamed(t, "a_test.go", src)
-	if err == nil {
-		t.Fatal("got no rejection of TestMain, want one")
-	}
-	if !strings.Contains(err.Error(), "rejects a TestMain function") {
-		t.Errorf("got %q, want a message about TestMain", err.Error())
-	}
-	if !strings.Contains(err.Error(), "a_test.go:") {
-		t.Errorf("got %q, want a source position", err.Error())
-	}
-	if err := runNamed(t, "a.go", src); err != nil {
-		t.Errorf("got a rejection outside a test file, want none:\n%v", err)
-	}
-	if err := runNamed(t, "a_test.go", `package a
-
-func TestAdd(v *int) { _ = v }
-`); err != nil {
-		t.Errorf("got a rejection of a test function, want none:\n%v", err)
 	}
 }
 

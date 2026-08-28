@@ -128,3 +128,134 @@ func Exit(code int) {
 func Args() []string {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// The mode of FileOpen.
+const (
+	// OpenRead opens a file for a read.
+	OpenRead = 0
+	// OpenWrite opens a file for a write, and it replaces the content.
+	OpenWrite = 1
+	// OpenAppend opens a file for a write at the end.
+	OpenAppend = 2
+)
+
+// The whence of FileSeek.
+const (
+	SeekStart   = 0
+	SeekCurrent = 1
+	SeekEnd     = 2
+)
+
+// FileOpen opens a file and gives its handle. The second result holds the cause
+// of a failure, and it is empty after a success.
+//
+// Each function below gives such a cause. An empty text means a success.
+func FileOpen(path string, mode int) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FileRead reads bytes into the slice and gives the count. A count of 0 with no
+// cause means the end of the file.
+func FileRead(handle int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FileWrite writes the bytes of the slice and gives the count.
+func FileWrite(handle int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FileSeek moves the read position and gives the new offset from the start.
+func FileSeek(handle int, offset int64, whence int) (int64, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func FileClose(handle int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FileSync writes each held byte of a file to the storage.
+func FileSync(handle int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ReadFile reads a whole file.
+func ReadFile(path string) ([]byte, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// WriteFile writes a whole file. It replaces the content of an existing file.
+func WriteFile(path string, data []byte) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Stat reads the metadata of a path. The 3 values are the size in bytes, the
+// directory flag, and the time of the last change in nanoseconds.
+func Stat(path string) (int64, bool, int64, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func Remove(path string) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// RemoveAll removes a path and each path inside it.
+func RemoveAll(path string) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Mkdir makes a directory. It also makes each parent directory when deep is
+// true.
+func Mkdir(path string, deep bool) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func Rename(from, to string) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ReadDir reads the names inside a directory. Each name holds no directory
+// part, and the list is in the order of the name.
+func ReadDir(path string) ([]string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Getenv reads 1 variable of the environment. The flag is false when the
+// environment holds no such name.
+func Getenv(name string) (string, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Environ reads each variable of the environment, in the form name=value.
+func Environ() []string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func Getwd() (string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func Chdir(path string) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// TempDir gives the directory that the system holds for a temporary file.
+func TempDir() string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// PathSeparator gives the character that separates 2 parts of a path.
+func PathSeparator() string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Stderr writes text to standard error.
+func Stderr(text string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// StdinRead reads bytes from standard input. A count of 0 means the end of the
+// input.
+func StdinRead(p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}

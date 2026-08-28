@@ -47,7 +47,7 @@ The package `fmt` reads it.
 | A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
 | A type declaration inside a function | Rejected |
 | An unnamed struct type in an exported declaration | Rejected. Read the section below. |
-| A `TestMain` function | Rejected. gart writes the entry point of a test binary. |
+
 
 ## The standard library surface
 
@@ -62,6 +62,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `errors` | Overlay | |
 | `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
 | `maps` | Overlay | |
+| `os` | Overlay | The file access and the process state. Read the section below. |
 | `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `fmt` | Overlay | |
@@ -87,10 +88,41 @@ The cause that blocks the next candidates:
 
 | Package | Cause |
 |---|---|
-| `bytes`, `path` | The package `internal/bytealg`, and `io`. |
+| `io` | A pointer to a value that is not a struct. |
+| `bytes`, `path` | The package `internal/bytealg`. |
 
-`io` needs a pointer to a value that is not a struct. `internal/bytealg` needs
-assembly, thus it needs a patch or an overlay.
+`internal/bytealg` needs assembly, thus it needs a patch or an overlay.
+
+## The file access
+
+`os` reaches the file system through `syscall/dart`, and the Dart side uses
+`dart:io`. Each operation is synchronous. Go blocks the goroutine at the same
+point, thus the block analysis of stage 3 stays simple.
+
+| Item | Go | godart |
+|---|---|---|
+| `ReadFile`, `WriteFile` | Present | Equal. The permission argument reaches no operation. |
+| `Open`, `Create`, `OpenFile` | Present | Equal, for a file. |
+| `Open` of a directory | Gives a file | Fails. Dart gives no handle of a directory. |
+| `File.Read`, `Write`, `WriteString` | Present | Equal |
+| `File.Seek`, `Close`, `Sync` | Present | Equal |
+| `Stat`, `Remove`, `RemoveAll`, `Rename` | Present | Equal |
+| `Mkdir`, `MkdirAll` | Present | Equal. The permission argument reaches no operation. |
+| `FileInfo.ModTime` | Gives a `time.Time` | `ModNanos` gives an integer. `os` holds no import of `time`. |
+| `ReadDir` | Gives a slice of `DirEntry` | `ReadNames` gives the names. |
+| `Stdin`, `Stdout`, `Stderr` | Present | Equal. A read of `Stdin` stops at a newline. |
+| `Getenv`, `LookupEnv`, `Environ` | Present | Equal |
+| `Getwd`, `Chdir`, `TempDir` | Present | Equal |
+| `Args`, `Exit` | Present | Equal. `Args[0]` is the text `gart`. |
+| `IsNotExist`, `ErrNotExist`, `PathError` | Present | Equal |
+| `FileMode` | Holds the permission bits | The type exists. No operation reads it. |
+| `Chmod`, `Chown`, `Symlink`, `Link` | Present | Missing. Dart gives no such call. |
+| `os.Pipe`, `os.StartProcess` | Present | Missing |
+
+`fmt` grows `Fprint`, `Fprintln`, and `Fprintf`. The parameter holds the
+interface `fmt.Writer` and not `io.Writer`, because an import of `io` would make
+a cycle. A caller never names the type, thus a Go source compiles the same way
+with the go command and with gart.
 
 ## A range loop over a function
 
@@ -204,7 +236,7 @@ for each test binary. The output holds the format of `go test`.
 | `t.FailNow`, `t.SkipNow` | `runtime.Goexit` | A throw. Each deferred function still runs, and the subset has no `recover`. |
 | `-run` | A regular expression | Plain text. gart keeps a test whose name holds the text. |
 | A duplicate subtest name | The second name takes `#01` | The 2 names stay equal |
-| `TestMain` | Runs in place of the entry point | Rejected by stage 2 |
+| `TestMain` | Runs in place of the entry point | Equal. `testing.M` holds `Run`. |
 | A benchmark | `go test` with no -bench flag runs none | Equal. `gart test -bench <text>` runs them. |
 | `b.RunParallel` | Measures a parallel throughput | Stops the benchmark with an error. All Go code runs in 1 isolate. |
 | `b.ReportAllocs` | Adds allocs/op and B/op | Does nothing. The Dart VM gives no count of allocations for 1 operation. |
@@ -227,6 +259,11 @@ count of isolates, thus it is always 1.
 The number measures the Dart output, and not Go. A comparison with the number of
 `go test` says nothing. A comparison of 2 gart runs finds a regression, and that
 is the purpose.
+
+A `TestMain` function replaces the entry point of a test binary. The compiler
+writes a call of `testing.MainWith`, and that function builds the `testing.M`
+value and calls `TestMain`. Go passes the result of `m.Run` to `os.Exit` when
+`TestMain` returns, and the compiler holds the same rule.
 
 `testing.F` exists, thus a fuzz body type checks. Each method of it stops the
 program, and no path reaches such a method.

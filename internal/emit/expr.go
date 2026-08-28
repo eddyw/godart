@@ -77,7 +77,7 @@ func (e *emitter) identExpr(x *ir.Ident) string {
 		return x.Name
 	}
 	if x.Obj.Pkg() != nil && x.Obj.Parent() == x.Obj.Pkg().Scope() {
-		return e.qualify(x.Obj, name.Package(x.Obj.Name()))
+		return e.qualify(x.Obj, e.topName(x.Obj.Pkg(), x.Obj.Name()))
 	}
 	return x.Name
 }
@@ -290,9 +290,13 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "(%s)%s {", e.params(x.Params), asyncWord(x.Async))
 	e.buf.WriteString("")
+	// The inner emitter shares each package wide map. A class of an unnamed
+	// struct type and the name of a shadowed function must reach the library
+	// file of the package.
 	inner := &emitter{pkg: e.pkg, prefixes: e.prefixes, base: e.base,
 		methods: e.methods, inClass: e.inClass, initNames: e.initNames,
-		breakables: e.breakables, labelSeq: e.labelSeq}
+		breakables: e.breakables, labelSeq: e.labelSeq,
+		anon: e.anon, shadowed: e.shadowed, blocks: e.blocks}
 	inner.emitBody(x.Results, x.Defers, x.Body)
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
