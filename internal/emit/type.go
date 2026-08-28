@@ -16,7 +16,10 @@ func (e *emitter) dartType(t types.Type) string {
 	case *types.Basic:
 		return basicType(t)
 	case *types.Named:
-		if _, ok := t.Underlying().(*types.Struct); ok {
+		if st, ok := t.Underlying().(*types.Struct); ok {
+			if isLocalType(t.Obj()) {
+				return e.anonClass(st)
+			}
 			return e.className(t.Obj()) + e.typeArgList(t.TypeArgs())
 		}
 		return e.dartType(t.Underlying())
@@ -31,6 +34,9 @@ func (e *emitter) dartType(t types.Type) string {
 		}
 		return name.Local(t.Obj().Name())
 	case *types.Pointer:
+		if needsBox(t.Elem()) {
+			return "Box<" + e.dartType(t.Elem()) + ">?"
+		}
 		return e.dartType(t.Elem()) + "?"
 	case *types.Slice:
 		return "Slice<" + e.dartType(t.Elem()) + ">"
@@ -111,7 +117,10 @@ func (e *emitter) zero(t types.Type) string {
 		return e.dictOf(tp) + ".zero()"
 	}
 	if named, ok := u.(*types.Named); ok {
-		if _, isStruct := named.Underlying().(*types.Struct); isStruct {
+		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
+			if isLocalType(named.Obj()) {
+				return e.anonClass(st) + ".$zero()"
+			}
 			return e.className(named.Obj()) + e.typeArgList(named.TypeArgs()) +
 				".$zero(" + strings.Join(e.dictArgs(named.TypeArgs()), ", ") + ")"
 		}
@@ -414,6 +423,22 @@ func basicOf(t types.Type) *types.Basic {
 // Each predicate below reads the core type. A type parameter whose type set
 // shares 1 underlying type holds that type as its core type, thus an operation
 // of the core type applies to the parameter.
+
+// needsBox reports whether a pointer to the type needs a box.
+//
+// The Dart form of a struct and of an array already holds a reference, thus a
+// pointer to one is the object itself. Each other type needs a box.
+func needsBox(t types.Type) bool {
+	return !isStructType(t) && !isArrayType(t)
+}
+
+// isLocalType reports whether a function declares the type.
+//
+// The output holds no class of such a type at package level. A local struct
+// type takes the class of its shape, exactly as an unnamed struct type does.
+func isLocalType(obj *types.TypeName) bool {
+	return obj.Pkg() != nil && obj.Parent() != obj.Pkg().Scope()
+}
 
 func isBasicType(t types.Type) bool {
 	_, ok := types.Unalias(t).(*types.Basic)

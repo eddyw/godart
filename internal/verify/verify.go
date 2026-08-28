@@ -106,6 +106,12 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	}
 	switch {
 	case path == "unsafe":
+		// A blank import performs no operation. The standard library writes it
+		// before a go:linkname directive, and such a directive needs no Dart
+		// form when it only exports a name.
+		if spec.Name != nil && spec.Name.Name == "_" {
+			return
+		}
 		v.reject(spec.Pos(), "the subset has no pointer arithmetic",
 			"the compiler rejects the package unsafe")
 	case path == "C":
@@ -128,13 +134,37 @@ func isStandard(path string) bool {
 // to a struct is the Dart object reference, thus the runtime needs no pointer
 // cell. All other locations hold a Dart value, and a reference to such a
 // location does not exist.
+// checkAddress rejects the address of a value that holds no reference and that
+// is not a variable.
+//
+// A struct and an array give a Dart object, thus a pointer to one is the object
+// itself. Each other value needs a box, and only a variable can hold a box. A
+// field of a struct, an element of a slice, and an element of a map live inside
+// another object, thus the compiler writes no box for them.
 func (v *verifier) checkAddress(e *ast.UnaryExpr) {
 	t := v.typeOf(e.X)
 	if t == nil || isStruct(t) || isArray(t) {
 		return
 	}
-	v.reject(e.Pos(), "only a pointer to a struct or to an array stays in the subset",
+	if v.isVariable(e.X) {
+		return
+	}
+	v.reject(e.Pos(), "a value of such a type needs a box, and only a variable holds one",
 		"the compiler rejects the address of %s", types.TypeString(t, nil))
+}
+
+// isVariable reports whether the expression names a variable. A parameter and a
+// package variable each count as one.
+func (v *verifier) isVariable(e ast.Expr) bool {
+	id, ok := unparen(e).(*ast.Ident)
+	if !ok {
+		return false
+	}
+	if _, ok := v.info.Uses[id].(*types.Var); ok {
+		return true
+	}
+	_, ok = v.info.Defs[id].(*types.Var)
+	return ok
 }
 
 func (v *verifier) checkCall(call *ast.CallExpr) {
@@ -153,22 +183,9 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 	case "recover":
 		v.reject(call.Pos(), "a panic stops the program",
 			"the compiler rejects a call to recover")
-	case "new":
-		v.checkNew(call)
 	case "len", "cap":
 		v.checkTypeParamBuiltin(call, b.Name())
 	}
-}
-
-// checkNew rejects new(T) and new(x) when the result is not a pointer to a
-// struct. Go 1.26 added the expression form of new.
-func (v *verifier) checkNew(call *ast.CallExpr) {
-	p, _ := types.Unalias(v.typeOf(call)).(*types.Pointer)
-	if p == nil || isStruct(p.Elem()) || isArray(p.Elem()) {
-		return
-	}
-	v.reject(call.Pos(), "only a pointer to a struct or to an array stays in the subset",
-		"the compiler rejects new(%s)", types.TypeString(p.Elem(), nil))
 }
 
 func (v *verifier) typeOf(e ast.Expr) types.Type {

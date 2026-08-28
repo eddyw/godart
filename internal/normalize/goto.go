@@ -87,14 +87,15 @@ func hoist(list []ir.Stmt, front *[]ir.Stmt) []ir.Stmt {
 		}
 		if len(d.Vars) == 1 {
 			out = append(out, &ir.Assign{
-				Lhs: &ir.Ident{Name: d.Vars[0].Name, Type: d.Vars[0].Type},
+				Lhs: &ir.Ident{Name: d.Vars[0].Name, Type: d.Vars[0].Type,
+					Boxed: d.Vars[0].Boxed},
 				Rhs: d.Init,
 			})
 			continue
 		}
 		lhs := make([]ir.Expr, len(d.Vars))
 		for i, v := range d.Vars {
-			lhs[i] = &ir.Ident{Name: v.Name, Type: v.Type}
+			lhs[i] = &ir.Ident{Name: v.Name, Type: v.Type, Boxed: v.Boxed}
 		}
 		out = append(out, &ir.AssignMulti{Lhs: lhs, Rhs: d.Init})
 	}

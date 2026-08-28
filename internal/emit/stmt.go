@@ -72,25 +72,41 @@ func (e *emitter) statementExpr(x ir.Expr) string {
 	return "$drop(" + e.expr(x) + ")"
 }
 
+// declareOne writes 1 variable with its value. A boxed variable holds a box, and
+// the value goes inside the box.
+func (e *emitter) declareOne(v *ir.Var, value string) {
+	if v.Boxed {
+		e.line("Box<%s> %s = Box(%s);", e.dartType(v.Type), v.Name, value)
+		return
+	}
+	e.line("%s %s = %s;", e.dartType(v.Type), v.Name, value)
+}
+
 func (e *emitter) declare(s *ir.Declare) {
 	if len(s.Vars) == 1 {
 		v := s.Vars[0]
 		if s.Init == nil {
-			e.line("%s %s = %s;", e.dartType(v.Type), v.Name, e.zero(v.Type))
+			e.declareOne(v, e.zero(v.Type))
 			return
 		}
-		e.line("%s %s = %s;", e.dartType(v.Type), v.Name, e.expr(s.Init))
+		e.declareOne(v, e.expr(s.Init))
 		return
 	}
 	if s.Init == nil {
 		for _, v := range s.Vars {
-			e.line("%s %s = %s;", e.dartType(v.Type), v.Name, e.zero(v.Type))
+			e.declareOne(v, e.zero(v.Type))
 		}
 		return
 	}
 	names := make([]string, len(s.Vars))
 	for i, v := range s.Vars {
 		names[i] = v.Name
+	}
+	for _, v := range s.Vars {
+		if v.Boxed {
+			e.fail("the address of %s needs a box, and a declaration of "+
+				"multiple values writes no box yet", v.Name)
+		}
 	}
 	e.line("var (%s) = %s;", strings.Join(names, ", "), e.expr(s.Init))
 }
@@ -433,6 +449,10 @@ func (e *emitter) namedReturn(s *ir.Return) {
 	case len(s.Values) == 1 && len(e.returnVars) > 1:
 		parts := make([]string, len(e.returnVars))
 		for i, r := range e.returnVars {
+			if r.Boxed {
+				e.fail("the address of the result %s needs a box, and a return "+
+					"of multiple values writes no box yet", r.Name)
+			}
 			parts[i] = r.Name
 		}
 		e.line("(%s) = %s;", strings.Join(parts, ", "), e.expr(s.Values[0]))
@@ -441,7 +461,8 @@ func (e *emitter) namedReturn(s *ir.Return) {
 			if i >= len(e.returnVars) {
 				break
 			}
-			e.assign(&ir.Ident{Name: e.returnVars[i].Name, Type: e.returnVars[i].Type}, v)
+			r := e.returnVars[i]
+			e.assign(&ir.Ident{Name: r.Name, Type: r.Type, Boxed: r.Boxed}, v)
 		}
 	}
 	e.line("break %s;", e.returnLabel)

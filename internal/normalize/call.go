@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/constant"
 	"go/types"
+	"strconv"
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/typeset"
@@ -31,15 +32,18 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		return nil
 	}
 	sig := signatureOf(b.typeOf(e.Fun))
-	return &ir.Call{
+	out := &ir.Call{
 		Fun:      fun,
-		Args:     b.args(e, sig),
 		Type:     b.typeOf(e),
 		Async:    b.blocks.CallAsync(e),
 		Spread:   e.Ellipsis.IsValid(),
 		Variadic: sig != nil && sig.Variadic(),
 		TypeArgs: b.typeArgs(e.Fun),
 	}
+	if !b.spreadResults(out, e, sig) {
+		out.Args = b.args(e, sig)
+	}
+	return out
 }
 
 // typeArgs reads the type arguments of a call to a generic function. The type
@@ -120,6 +124,42 @@ func (b *builder) args(e *ast.CallExpr, sig *types.Signature) []ir.Expr {
 		out[i] = b.copyPoint(b.exprAs(a, b.paramType(sig, i, e.Ellipsis.IsValid())))
 	}
 	return out
+}
+
+// spreadResults fills the arguments of a call whose only argument is a call
+// with multiple results. Go passes each result as its own argument.
+//
+// The emitter writes a closure that takes the record of the results, thus the
+// inner call runs 1 time. Each argument reads 1 field of the record.
+func (b *builder) spreadResults(out *ir.Call, e *ast.CallExpr, sig *types.Signature) bool {
+	if len(e.Args) != 1 || e.Ellipsis.IsValid() {
+		return false
+	}
+	inner, ok := unparenExpr(e.Args[0]).(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	tuple, ok := b.typeOf(inner).(*types.Tuple)
+	if !ok || tuple.Len() < 2 {
+		return false
+	}
+	recv := b.temp(e.Pos(), "sr")
+	args := make([]ir.Expr, tuple.Len())
+	for i := range args {
+		want := b.paramType(sig, i, e.Ellipsis.IsValid())
+		if want == nil {
+			want = tuple.At(i).Type()
+		}
+		read := &ir.Ident{
+			Name: recv + ".$" + strconv.Itoa(i+1),
+			Type: tuple.At(i).Type(),
+		}
+		args[i] = b.convert(read, want)
+	}
+	out.Args = args
+	out.Results = b.expr(inner)
+	out.ResultsVar = recv
+	return true
 }
 
 // paramType gives the type of the parameter that takes argument i. The last

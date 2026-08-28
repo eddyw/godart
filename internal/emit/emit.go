@@ -359,6 +359,12 @@ func (e *emitter) decl(d ir.Decl) {
 	case *ir.ConstDecl:
 		e.constDecl(d)
 	case *ir.Global:
+		// A blank package variable holds a static check, for example
+		// `var _ Reader = (*T)(nil)`. Go allows many of them in 1 package, thus
+		// the output writes none.
+		if d.Var.Name == "_" {
+			return
+		}
 		e.line("late %s %s;", e.dartType(d.Var.Type), e.topName(e.pkg, d.Var.Name))
 	case *ir.Func:
 		if e.inClass[d] {

@@ -49,6 +49,10 @@ type builder struct {
 	names map[types.Object]string
 	used  map[string]bool
 
+	// boxes holds each variable of the current function whose address the code
+	// takes. Such a variable holds a box.
+	boxes map[*types.Var]bool
+
 	// loops holds the construct that a break statement or a continue statement
 	// leaves, from the outermost to the innermost.
 	loops []loop
@@ -63,6 +67,20 @@ type builder struct {
 // declareLocal gives a local variable a name that is unique in the function.
 // Go allows an inner name to shadow an outer name, but Dart does not, thus the
 // stage renames the inner variable.
+// localStructType reports whether a local type declaration names a struct type.
+func (b *builder) localStructType(spec *ast.TypeSpec) bool {
+	obj, ok := b.info.Defs[spec.Name].(*types.TypeName)
+	if !ok || obj.IsAlias() {
+		return false
+	}
+	named, ok := types.Unalias(obj.Type()).(*types.Named)
+	if !ok {
+		return false
+	}
+	_, isStruct := named.Underlying().(*types.Struct)
+	return isStruct
+}
+
 func (b *builder) declareLocal(obj *types.Var, pref string) *ir.Var {
 	base := name.Local(pref)
 	n := base
@@ -73,6 +91,7 @@ func (b *builder) declareLocal(obj *types.Var, pref string) *ir.Var {
 	v := &ir.Var{Name: n, Obj: obj}
 	if obj != nil {
 		v.Type = obj.Type()
+		v.Boxed = b.boxes[obj]
 		b.names[obj] = n
 	}
 	return v
@@ -184,6 +203,7 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	b.names = map[types.Object]string{}
 	b.used = map[string]bool{}
 	b.gotoLabels = gotoTargets(d.Body)
+	b.boxes = b.addressed(d.Body)
 	b.fn = f
 	if d.Recv != nil && len(d.Recv.List) > 0 {
 		f.Recv = b.recvVar(d.Recv.List[0], sig)

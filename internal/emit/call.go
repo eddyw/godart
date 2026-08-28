@@ -25,6 +25,9 @@ func (e *emitter) call(x *ir.Call) string {
 }
 
 func (e *emitter) callText(x *ir.Call) string {
+	if x.Results != nil {
+		return e.spreadCall(x)
+	}
 	args := e.callArgs(x)
 	if text, ok := e.intrinsic(x, args); ok {
 		return text
@@ -40,6 +43,20 @@ func (e *emitter) callText(x *ir.Call) string {
 		}
 	}
 	return e.expr(x.Fun) + "!(" + strings.Join(args, ", ") + ")"
+}
+
+// spreadCall writes a call whose arguments come from the results of another
+// call. Go passes each result of such a call as its own argument.
+//
+// A Dart record holds the results. The closure runs the inner call 1 time, and
+// each argument reads 1 field of the record.
+func (e *emitter) spreadCall(x *ir.Call) string {
+	inner := x.Results
+	x.Results = nil
+	body := e.callText(x)
+	x.Results = inner
+	return fmt.Sprintf("((%s %s) => %s)(%s)",
+		e.dartType(inner.GoType()), x.ResultsVar, body, e.expr(inner))
 }
 
 // intrinsic replaces a call to the interop package with a call to the runtime
@@ -403,6 +420,12 @@ func (e *emitter) newCall(x *ir.Builtin) string {
 	if p == nil {
 		e.fail("new gives a pointer")
 		return "null"
+	}
+	if needsBox(p.Elem()) {
+		if len(x.Args) == 1 {
+			return fmt.Sprintf("Box<%s>(%s)", e.dartType(p.Elem()), e.expr(x.Args[0]))
+		}
+		return fmt.Sprintf("Box<%s>(%s)", e.dartType(p.Elem()), e.zero(p.Elem()))
 	}
 	if len(x.Args) == 1 {
 		return e.expr(x.Args[0]) + ".$copy()"

@@ -117,7 +117,12 @@ func (b *builder) declStmt(s *ast.DeclStmt) []ir.Stmt {
 	for _, spec := range d.Specs {
 		switch spec := spec.(type) {
 		case *ast.TypeSpec:
-			b.fail(spec.Pos(), "a type declaration inside a function is outside the subset")
+			// A local struct type takes the Dart class of its shape, exactly as
+			// an unnamed struct type does, thus the declaration needs no output.
+			if !b.localStructType(spec) {
+				b.fail(spec.Pos(), "a type declaration inside a function is "+
+					"outside the subset, and only a struct type is")
+			}
 		case *ast.ValueSpec:
 			out = append(out, b.localValueSpec(spec, d.Tok)...)
 		}
@@ -526,7 +531,7 @@ func (b *builder) returnStmt(s *ast.ReturnStmt) []ir.Stmt {
 		if hasNamedResult(f) {
 			values := make([]ir.Expr, len(f.Results))
 			for i, r := range f.Results {
-				values[i] = &ir.Ident{Name: r.Name, Type: r.Type}
+				values[i] = &ir.Ident{Name: r.Name, Type: r.Type, Boxed: r.Boxed}
 			}
 			return []ir.Stmt{&ir.Return{Values: values}}
 		}

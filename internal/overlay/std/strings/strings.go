@@ -3,6 +3,8 @@
 // Package strings gives the operations on a Go string.
 package strings
 
+import "errors"
+
 import "syscall/dart"
 
 // Index gives the position of the first substr in s, or -1.
@@ -395,6 +397,16 @@ func (b *Builder) WriteString(s string) (int, error) {
 	return len(s), nil
 }
 
+// Write adds the bytes. The method makes a Builder an io.Writer.
+func (b *Builder) Write(p []byte) (int, error) {
+	b.parts = append(b.parts, p...)
+	return len(p), nil
+}
+
+// Grow reserves room for n more bytes. The method exists for the API only,
+// because a Dart list grows on its own.
+func (b *Builder) Grow(n int) {}
+
 func (b *Builder) WriteByte(c byte) error {
 	b.parts = append(b.parts, c)
 	return nil
@@ -415,3 +427,91 @@ func (b *Builder) Len() int {
 func (b *Builder) Reset() {
 	b.parts = nil
 }
+
+// Reader reads a text. It holds an io.Reader, an io.ByteReader, an
+// io.RuneReader, and an io.Seeker.
+type Reader struct {
+	text string
+	// pos is the offset of the next read, in bytes.
+	pos int
+}
+
+// NewReader gives a Reader of the text.
+func NewReader(s string) *Reader { return &Reader{text: s} }
+
+// Len gives the count of bytes that a read still gives.
+func (r *Reader) Len() int {
+	if r.pos >= len(r.text) {
+		return 0
+	}
+	return len(r.text) - r.pos
+}
+
+// Size gives the count of bytes of the whole text.
+func (r *Reader) Size() int64 { return int64(len(r.text)) }
+
+// Read reads bytes into the slice. It gives the error of the end of the text
+// when the text holds no more byte.
+func (r *Reader) Read(p []byte) (int, error) {
+	if r.pos >= len(r.text) {
+		return 0, endOfText
+	}
+	n := copy(p, r.text[r.pos:])
+	r.pos += n
+	return n, nil
+}
+
+// ReadByte reads 1 byte.
+func (r *Reader) ReadByte() (byte, error) {
+	if r.pos >= len(r.text) {
+		return 0, endOfText
+	}
+	c := r.text[r.pos]
+	r.pos++
+	return c, nil
+}
+
+// ReadRune reads 1 rune with its size in bytes.
+func (r *Reader) ReadRune() (rune, int, error) {
+	if r.pos >= len(r.text) {
+		return 0, 0, endOfText
+	}
+	for _, c := range r.text[r.pos:] {
+		size := len(string(c))
+		r.pos += size
+		return c, size, nil
+	}
+	return 0, 0, endOfText
+}
+
+// Reset gives the Reader a new text.
+func (r *Reader) Reset(s string) {
+	r.text = s
+	r.pos = 0
+}
+
+// Seek moves the read position and gives the new offset from the start. The
+// whence holds 0 for the start, 1 for the position, and 2 for the end.
+func (r *Reader) Seek(offset int64, whence int) (int64, error) {
+	target := offset
+	switch whence {
+	case 1:
+		target = int64(r.pos) + offset
+	case 2:
+		target = int64(len(r.text)) + offset
+	}
+	if target < 0 {
+		return 0, errNegative
+	}
+	r.pos = int(target)
+	return target, nil
+}
+
+// endOfText is the error of the end of a text. The package io holds the same
+// value under the name EOF.
+//
+// An import of io would make a cycle, thus this package holds its own value. A
+// caller that compares an error with io.EOF reads 2 different values.
+var endOfText = errors.New("EOF")
+
+var errNegative = errors.New("strings.Reader.Seek: negative position")

@@ -10,6 +10,8 @@ package overlay
 var native = []string{
 	"cmp",
 	"container/list",
+	"io",
+	"path",
 	"math",
 	"math/bits",
 	"unicode",

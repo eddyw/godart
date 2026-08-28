@@ -73,6 +73,9 @@ func (e *emitter) expr(x ir.Expr) string {
 }
 
 func (e *emitter) identExpr(x *ir.Ident) string {
+	if x.Boxed {
+		return x.Name + ".v"
+	}
 	if x.Obj == nil {
 		return x.Name
 	}
@@ -86,10 +89,14 @@ func (e *emitter) identExpr(x *ir.Ident) string {
 // reference, and the type is nullable, thus the read needs a null check.
 func (e *emitter) deref(x ir.Expr) string {
 	text := e.expr(x)
-	if isPointerType(x.GoType()) {
-		return text + "!"
+	p, ok := typeset.Core(x.GoType()).(*types.Pointer)
+	if !ok {
+		return text
 	}
-	return text
+	if needsBox(p.Elem()) {
+		return text + "!.v"
+	}
+	return text + "!"
 }
 
 func (e *emitter) constant(v constant.Value, t types.Type) string {
@@ -297,6 +304,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		methods: e.methods, inClass: e.inClass, initNames: e.initNames,
 		breakables: e.breakables, labelSeq: e.labelSeq,
 		anon: e.anon, shadowed: e.shadowed, blocks: e.blocks}
+	inner.boxParams(x.Params)
 	inner.emitBody(x.Results, x.Defers, x.Body)
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
@@ -423,6 +431,11 @@ func (e *emitter) narrow(t types.Type, text string) string {
 func (e *emitter) unary(x *ir.Unary) string {
 	switch x.Op {
 	case token.AND:
+		// A box is the address of the variable that holds it. The read of a
+		// boxed variable adds the field, thus the address drops it.
+		if id, ok := x.X.(*ir.Ident); ok && id.Boxed {
+			return id.Name
+		}
 		return e.expr(x.X)
 	case token.MUL:
 		return e.deref(x.X)

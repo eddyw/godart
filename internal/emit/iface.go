@@ -201,7 +201,16 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection) string {
 		current = field.Type()
 	}
 	call := fmt.Sprintf("%s.%s(%s)", recv, methodName(fn), strings.Join(args, ", "))
-	if !isStructType(current) {
+	switch {
+	case isInterfaceType(current):
+		// An embedded interface field holds an interface pair. The call reads
+		// the method table of that pair.
+		call = fmt.Sprintf("$call(%s, %q, <Object?>[%s])",
+			recv, fn.Name(), strings.Join(args, ", "))
+		if cast := e.resultCast(sig); cast != "" {
+			call = "(" + call + " as " + cast + ")"
+		}
+	case !isStructType(current):
 		owner := receiverTypeName(current)
 		if owner == nil {
 			e.fail("the method %s has no named receiver type", fn.Name())
@@ -216,6 +225,18 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection) string {
 		head += ", " + strings.Join(params, ", ")
 	}
 	return fmt.Sprintf("'%s': (%s) => %s", fn.Name(), head, call)
+}
+
+// resultCast gives the Dart type of the result of a method. The dispatch of an
+// interface gives Object?, thus the caller needs a cast.
+func (e *emitter) resultCast(sig *types.Signature) string {
+	switch sig.Results().Len() {
+	case 0:
+		return ""
+	case 1:
+		return e.dartType(sig.Results().At(0).Type())
+	}
+	return e.recordType(sig.Results())
 }
 
 func structOf(t types.Type) *types.Struct {

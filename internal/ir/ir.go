@@ -81,6 +81,10 @@ type Var struct {
 
 	// Named marks a result that the Go source gives a name.
 	Named bool
+
+	// Boxed marks a variable whose address the code takes. Such a variable holds
+	// a box, and a read of it reads the field of the box.
+	Boxed bool
 }
 
 // A Stmt is a statement.
@@ -226,6 +230,10 @@ type (
 		Name string
 		Obj  types.Object
 		Type types.Type
+
+		// Boxed marks a read of a variable that holds a box. Read the field
+		// Boxed of Var.
+		Boxed bool
 	}
 
 	// Blank is the target `_` of an assignment.
@@ -271,6 +279,15 @@ type (
 		// TypeArgs holds the type arguments of a call to a generic function or
 		// to a generic method.
 		TypeArgs []types.Type
+
+		// Results holds a call whose results feed each argument. Go passes each
+		// result of such a call as its own argument.
+		//
+		// The emitter writes a closure that takes the record of the results, and
+		// each argument reads 1 field of it. ResultsVar names that closure
+		// parameter.
+		Results    Expr
+		ResultsVar string
 	}
 
 	// Method selects a method on a receiver. It appears as the Fun of a Call.

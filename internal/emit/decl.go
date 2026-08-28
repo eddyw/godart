@@ -257,7 +257,7 @@ func (e *emitter) methodFunc(f *ir.Func) {
 		e.fail("the method %s has no named receiver type", f.Name)
 		return
 	}
-	params := append([]string{e.dartType(f.Recv.Type) + " " + f.Recv.Name}, e.paramList(f.Params)...)
+	params := append([]string{e.dartType(f.Recv.Type) + " " + paramName(f.Recv)}, e.paramList(f.Params)...)
 	e.line("%s %s(%s)%s {", e.results(f), methodFuncName(obj.Name(), f.Name),
 		strings.Join(params, ", "), asyncWord(f.Async))
 	e.body(f)
@@ -295,9 +295,37 @@ func (e *emitter) params(vars []*ir.Var) string {
 func (e *emitter) paramList(vars []*ir.Var) []string {
 	out := make([]string, len(vars))
 	for i, v := range vars {
-		out[i] = e.dartType(v.Type) + " " + v.Name
+		out[i] = e.dartType(v.Type) + " " + paramName(v)
 	}
 	return out
+}
+
+// paramName gives the Dart name of a parameter. A boxed parameter takes a
+// second name, because the body holds the box under the name of the Go
+// parameter.
+func paramName(v *ir.Var) string {
+	if v.Boxed {
+		return v.Name + "$p"
+	}
+	return v.Name
+}
+
+// boxRecv writes the box of a receiver whose address the body takes.
+func (e *emitter) boxRecv(v *ir.Var) {
+	if v == nil {
+		return
+	}
+	e.boxParams([]*ir.Var{v})
+}
+
+// boxParams writes the box of each parameter whose address the body takes. A
+// Dart parameter holds the value, thus the box comes at the start of the body.
+func (e *emitter) boxParams(vars []*ir.Var) {
+	for _, v := range vars {
+		if v.Boxed {
+			e.line("final Box<%s> %s = Box(%s);", e.dartType(v.Type), v.Name, paramName(v))
+		}
+	}
 }
 
 func asyncWord(async bool) string {
@@ -336,6 +364,8 @@ func (e *emitter) resultText(results []*ir.Var, async bool) string {
 // body writes the statements of a function. A named result becomes a local
 // variable that holds the zero value until a return statement writes it.
 func (e *emitter) body(f *ir.Func) {
+	e.boxParams(f.Params)
+	e.boxRecv(f.Recv)
 	e.emitBody(f.Results, f.Defers, f.Body)
 }
 
@@ -348,7 +378,7 @@ func (e *emitter) body(f *ir.Func) {
 func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
 	for _, r := range results {
 		if r.Named {
-			e.line("%s %s = %s;", e.dartType(r.Type), r.Name, e.zero(r.Type))
+			e.declareOne(r, e.zero(r.Type))
 		}
 	}
 	if !defers {
@@ -402,11 +432,20 @@ func (e *emitter) closeBody(results []*ir.Var, body *ir.Block) {
 
 func (e *emitter) resultRead(results []*ir.Var) string {
 	if len(results) == 1 {
-		return results[0].Name
+		return varRead(results[0])
 	}
 	parts := make([]string, len(results))
 	for i, r := range results {
-		parts[i] = r.Name
+		parts[i] = varRead(r)
 	}
 	return "(" + strings.Join(parts, ", ") + ")"
+}
+
+// varRead reads a variable. A boxed variable holds a box, thus the read takes
+// the field of the box.
+func varRead(v *ir.Var) string {
+	if v.Boxed {
+		return v.Name + ".v"
+	}
+	return v.Name
 }

@@ -106,3 +106,38 @@ func (o *Once) Do(f func()) {
 	o.done = true
 	f()
 }
+
+// Pool holds a set of values that a caller reuses.
+//
+// All Go code runs in 1 Dart isolate, thus the pool needs no lock. Go may drop
+// a held value at any time, and this pool holds each value until a Get takes
+// it.
+type Pool struct {
+	// New builds a value when the pool holds none. A nil field gives a nil
+	// result from Get.
+	New func() any
+
+	held []any
+}
+
+// Get takes a value out of the pool. It builds a value when the pool holds
+// none.
+func (p *Pool) Get() any {
+	if n := len(p.held); n > 0 {
+		out := p.held[n-1]
+		p.held = p.held[:n-1]
+		return out
+	}
+	if p.New == nil {
+		return nil
+	}
+	return p.New()
+}
+
+// Put gives a value back to the pool.
+func (p *Pool) Put(v any) {
+	if v == nil {
+		return
+	}
+	p.held = append(p.held, v)
+}

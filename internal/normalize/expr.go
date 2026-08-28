@@ -253,9 +253,9 @@ func (b *builder) ident(e *ast.Ident) ir.Expr {
 		return &ir.Zero{Type: b.typeOf(e)}
 	}
 	if n, ok := b.names[obj]; ok {
-		return &ir.Ident{Name: n, Obj: obj, Type: obj.Type()}
+		return &ir.Ident{Name: n, Obj: obj, Type: obj.Type(), Boxed: b.boxed(obj)}
 	}
-	return &ir.Ident{Name: obj.Name(), Obj: obj, Type: obj.Type()}
+	return &ir.Ident{Name: obj.Name(), Obj: obj, Type: obj.Type(), Boxed: b.boxed(obj)}
 }
 
 func (b *builder) binary(e *ast.BinaryExpr) ir.Expr {

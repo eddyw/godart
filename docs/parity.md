@@ -42,10 +42,12 @@ The package `fmt` reads it.
 | `new` of a type that is not a struct | Rejected |
 | A goto label inside a nested block | Rejected |
 | A conversion between 2 struct types | Rejected |
+| `import _ "unsafe"` | Present. A blank import performs no operation. |
 | A method value of a named type that is not a struct | Rejected |
 | A range loop over a function | Rejected |
 | A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
-| A type declaration inside a function | Rejected |
+| A type declaration inside a function, of a struct type | Present. It takes the class of its shape. |
+| A type declaration inside a function, of another type | Rejected |
 | An unnamed struct type in an exported declaration | Rejected. Read the section below. |
 
 
@@ -62,7 +64,10 @@ reads the real Go source, because that source already stays inside the subset.
 | `errors` | Overlay | |
 | `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
 | `maps` | Overlay | |
+| `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
+| `io` | Native | |
 | `os` | Overlay | The file access and the process state. Read the section below. |
+| `path` | Native | |
 | `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `fmt` | Overlay | |
@@ -84,14 +89,50 @@ A patch replaces 1 file of a native package by its base name. Each other file
 keeps the real Go source. A patch that matches no file stays out, because a
 build tag of the architecture selects the file set of a package.
 
-The cause that blocks the next candidates:
+The 3 causes that block the next candidate:
 
 | Package | Cause |
 |---|---|
-| `io` | A pointer to a value that is not a struct. |
-| `bytes`, `path` | The package `internal/bytealg`. |
+| `bytes` | A `recover` call in `buffer.go`, a `goto` label outside the body of a function, and a method value of a named type that is not a struct. |
 
-`internal/bytealg` needs assembly, thus it needs a patch or an overlay.
+`bytes` needs 1 patch of `buffer.go` and 2 compiler changes. Each other file of
+it already compiles.
+
+## A pointer to a value that is not a struct
+
+`*int`, `*string`, `*[]byte`, and each other pointer now stays in the subset. The
+Dart form is a `Box<T>`, and the box holds 1 field with the value.
+
+| Item | godart |
+|---|---|
+| `&v` of a local variable | Present |
+| `&v` of a parameter | Present. The body holds the box. |
+| `&v` of a named result | Present |
+| `&v` of a package variable | Present |
+| `&v` of a receiver that is not a struct | Present |
+| `new(T)` | Present |
+| `*p` read and write | Present |
+| `*p += x` and `*p++` | Present |
+| `p == nil` | Present |
+| A pointer to a pointer | Present |
+| The identity of 2 pointers | Present |
+| `&v` of a struct field | Rejected by stage 2 |
+| `&v` of an element of a slice, an array, or a map | Rejected by stage 2 |
+| `&v` of the result of a call | Rejected by stage 2 |
+| `&v` in a declaration of multiple values | Rejected by stage 5 |
+
+The compiler writes a box only for a variable whose address the code takes, thus
+a program that takes no address holds no box. A field, an element, and a call
+result each live inside another object, and the compiler writes no box for one.
+
+A pointer to a struct and to an array holds no box. The Dart object of a struct
+and the Dart List of an array already hold a reference.
+
+## A call that fills each argument
+
+`f(g())` where `g` gives more than 1 result passes each result as its own
+argument. The output writes a closure that takes the record of the results, thus
+`g` runs 1 time.
 
 ## The file access
 

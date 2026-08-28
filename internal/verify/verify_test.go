@@ -82,6 +82,10 @@ import "net/http"
 
 var _ = http.StatusOK
 `)
+	acceptFile(t, "a blank import of unsafe", `package a
+
+import _ "unsafe"
+`)
 	accept(t, "no import", "var _ = 1\n")
 }
 
@@ -100,18 +104,29 @@ type line struct{ a point }
 func f() { var l line; _ = &l.a }
 `)
 	accept(t, "struct element of a slice", `func f(s []point) { _ = &s[0] }`)
-	reject(t, "int variable", "the address of int", `func f() { var n int; _ = &n }`)
+	accept(t, "int variable", `func f() { var n int; _ = &n }`)
+	accept(t, "string variable", `func f() { var s string; _ = &s }`)
+	accept(t, "slice variable", `func f() { var s []int; _ = &s }`)
+	accept(t, "parameter", `func f(n int) { _ = &n }`)
+	accept(t, "package variable", `
+var total int
+
+func f() { _ = &total }
+`)
 	reject(t, "int field", "the address of int", `func f() { var p point; _ = &p.x }`)
 	reject(t, "int element", "the address of int", `func f(s []int) { _ = &s[0] }`)
 	reject(t, "array element", "the address of int", `func f() { var a [2]int; _ = &a[0] }`)
-	reject(t, "string variable", "the address of string", `func f() { var s string; _ = &s }`)
+	reject(t, "a call result", "the address of int",
+		`func g() int { return 1 }
+
+func f() { _ = &[]int{g()}[0] }`)
 }
 
 func TestNew(t *testing.T) {
 	accept(t, "struct type", `func f() { _ = new(point) }`)
-	reject(t, "int type", "rejects new(int)", `func f() { _ = new(int) }`)
-	reject(t, "expression", "rejects new(int)", `func f() { _ = new(1 + 2) }`)
-	reject(t, "slice type", "rejects new([]int)", `func f() { _ = new([]int) }`)
+	accept(t, "int type", `func f() { _ = new(int) }`)
+	accept(t, "expression", `func f() { _ = new(1 + 2) }`)
+	accept(t, "slice type", `func f() { _ = new([]int) }`)
 }
 
 func TestComplex(t *testing.T) {
@@ -122,10 +137,10 @@ func TestComplex(t *testing.T) {
 }
 
 func TestReportsEachRejection(t *testing.T) {
-	err := run(t, head+`func f() {
-	var n int
-	_ = &n
-	_ = new(int)
+	err := run(t, head+`func f(s []int) {
+	var p point
+	_ = &p.x
+	_ = &s[0]
 }`)
 	if err == nil {
 		t.Fatal("got no rejection, want 2")
