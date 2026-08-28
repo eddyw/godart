@@ -16,7 +16,7 @@ The package `fmt` reads it.
 | Method table by name | Present |
 | Element type and key type of a container | Present |
 | `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
-| A descriptor of a generic type | Missing. A value of a generic type does not reach an interface. |
+| A descriptor of an instance of a generic type | Present. The description stands at the point of the use, and the name holds each type argument. |
 | `reflect.DeepEqual` | Missing |
 | A method value through reflect | Missing |
 | The size and the alignment of a type | Missing. The target has no memory layout. |
@@ -371,8 +371,11 @@ func kind[T string | []byte](s T) int {
 }
 ```
 
-A value of a generic named type still reaches no interface. Such a type holds no
-descriptor, because 1 descriptor would serve each instance.
+A value of an instance of a generic named type reaches an interface. The package
+holds a variable for the description of each other named type, and an instance
+reaches the output only through its use, thus the description stands at that
+point. The name of the description holds each type argument, and a type
+assertion compares that name.
 
 ## A short variable declaration with a mixed left side
 

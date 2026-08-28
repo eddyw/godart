@@ -35,15 +35,49 @@ func (e *emitter) writeDescriptors() {
 		if !ok || isInterfaceType(named) {
 			continue
 		}
-		// A generic type needs 1 descriptor for each instance. The compiler
-		// does not build such a descriptor yet, thus a value of a generic type
-		// does not reach an interface.
+		// A generic type needs 1 description for each instance, thus the
+		// package holds no variable for it. Read instanceDesc.
 		if named.TypeParams() != nil && named.TypeParams().Len() > 0 {
 			continue
 		}
 		e.descriptor(named, false)
 		e.descriptor(named, true)
 	}
+}
+
+// isInstance reports whether the named type is an instance of a generic type.
+func isInstance(named *types.Named) bool {
+	return named.TypeArgs() != nil && named.TypeArgs().Len() > 0
+}
+
+// instanceDesc writes the description of 1 instance of a generic named type.
+//
+// The package holds a variable for the description of each other named type. An
+// instance reaches the output only through its use, thus the description stands
+// at that point. The name holds each type argument, and a type assertion
+// compares that name.
+func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
+	t := types.Type(named)
+	if pointer {
+		t = types.NewPointer(named)
+	}
+	return fmt.Sprintf("TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s)",
+		typeName(t), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
+		types.TypeString(types.Unalias(t), shortQualifier), e.descParts(t), e.zero(t))
+}
+
+// methodTable writes the adapter of each method of the type, in the order of
+// the name.
+func (e *emitter) methodTable(named *types.Named, t types.Type) []string {
+	set := types.NewMethodSet(t)
+	entries := make([]string, 0, set.Len())
+	for i := 0; i < set.Len(); i++ {
+		if entry := e.adapter(named, set.At(i)); entry != "" {
+			entries = append(entries, entry)
+		}
+	}
+	sort.Strings(entries)
+	return entries
 }
 
 func (e *emitter) descriptor(named *types.Named, pointer bool) {
@@ -53,17 +87,9 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 		t = types.NewPointer(named)
 		variable = "$descP$" + name.Package(named.Obj().Name())
 	}
-	set := types.NewMethodSet(t)
-	entries := make([]string, 0, set.Len())
-	for i := 0; i < set.Len(); i++ {
-		if entry := e.adapter(named, set.At(i)); entry != "" {
-			entries = append(entries, entry)
-		}
-	}
-	sort.Strings(entries)
 	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s);",
 		variable, types.TypeString(t, nil), kindOf(t),
-		strings.Join(entries, ", "), types.TypeString(t, shortQualifier),
+		strings.Join(e.methodTable(named, t), ", "), types.TypeString(t, shortQualifier),
 		e.descParts(t), e.zero(t))
 }
 
@@ -277,15 +303,22 @@ func (e *emitter) descriptorOf(t types.Type) string {
 	}
 	if p, ok := u.(*types.Pointer); ok {
 		if named, ok := types.Unalias(p.Elem()).(*types.Named); ok {
+			if isInstance(named) {
+				return e.instanceDesc(named, true)
+			}
 			return e.qualify(named.Obj(), "$descP$"+name.Package(named.Obj().Name()))
 		}
 	}
 	if named, ok := u.(*types.Named); ok {
 		// An interface type holds no descriptor of its own, and a predeclared
 		// type belongs to no package.
-		if !isInterfaceType(named) && named.Obj().Pkg() != nil &&
-			(named.TypeParams() == nil || named.TypeParams().Len() == 0) {
-			return e.qualify(named.Obj(), "$desc$"+name.Package(named.Obj().Name()))
+		if !isInterfaceType(named) && named.Obj().Pkg() != nil {
+			if isInstance(named) {
+				return e.instanceDesc(named, false)
+			}
+			if named.TypeParams() == nil || named.TypeParams().Len() == 0 {
+				return e.qualify(named.Obj(), "$desc$"+name.Package(named.Obj().Name()))
+			}
 		}
 	}
 	if b, ok := u.(*types.Basic); ok {
