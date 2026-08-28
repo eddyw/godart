@@ -183,6 +183,48 @@ void $await(Future<Object?> future, Object? Function(Object cause) onError) {
   $block(waiting);
 }
 
+/// The timers of the program, by handle. A slot of a timer that ran or that a
+/// stop cancelled holds null.
+final List<Timer?> _timers = <Timer?>[];
+
+int _timerSlot() {
+  for (int i = 0; i < _timers.length; i++) {
+    if (_timers[i] == null) return i;
+  }
+  _timers.add(null);
+  return _timers.length - 1;
+}
+
+/// Starts a timer that runs a Go function after a time, and gives its handle.
+///
+/// Go runs the function on a new goroutine, thus the function can block. The
+/// timer holds 1 wake source of the scheduler until it runs.
+int $startTimer(int nanoseconds, void Function()? body) {
+  if (body == null) $panicNil();
+  final void Function() run = body;
+  final int handle = _timerSlot();
+  $holdEvent();
+  _timers[handle] = Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
+    _timers[handle] = null;
+    $freeEvent();
+    $go(run);
+    $schedule();
+  });
+  return handle;
+}
+
+/// Cancels a timer. It reports false when the timer ran already, exactly as
+/// the Stop method of Go does.
+bool $stopTimer(int handle) {
+  if (handle < 0 || handle >= _timers.length) return false;
+  final Timer? timer = _timers[handle];
+  if (timer == null) return false;
+  _timers[handle] = null;
+  timer.cancel();
+  $freeEvent();
+  return true;
+}
+
 /// Ends the program when package main returns.
 ///
 /// Go ends the program at that point, and it does not wait for another

@@ -327,3 +327,15 @@ func Accept(handle int) (int, string) {
 func ListenClose(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// StartTimer starts a timer that runs f after a count of nanoseconds, and
+// gives the handle of the timer. Go runs f on a new goroutine, thus f can
+// block.
+func StartTimer(nanoseconds int64, f func()) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// StopTimer cancels a timer. It reports false when the timer ran already.
+func StopTimer(handle int) bool {
+	panic("syscall/dart needs the gart compiler")
+}

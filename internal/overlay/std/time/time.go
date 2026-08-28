@@ -87,6 +87,27 @@ func Since(t Time) Duration {
 	return Now().Sub(t)
 }
 
+// Until gives the duration between t and now.
+func Until(t Time) Duration {
+	return t.Sub(Now())
+}
+
+// Timer runs a function after a time. AfterFunc gives such a timer, and the
+// overlay holds no channel form.
+type Timer struct {
+	handle int
+}
+
+// Stop cancels a timer. It reports false when the timer ran already.
+func (t *Timer) Stop() bool {
+	return dart.StopTimer(t.handle)
+}
+
+// AfterFunc runs f on a new goroutine after the duration.
+func AfterFunc(d Duration, f func()) *Timer {
+	return &Timer{handle: dart.StartTimer(int64(d), f)}
+}
+
 func itoa(v int64) string {
 	if v == 0 {
 		return "0"

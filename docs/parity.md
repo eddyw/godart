@@ -85,7 +85,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `sync` | Overlay | |
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |
 | `testing` | Overlay | |
-| `time` | Overlay | |
+| `sync/atomic` | Overlay | `Value` and `Int32` only. Read the section below. |
+| `time` | Overlay | Read the section below. |
 | `unicode` | Native | |
 | `unicode/utf8` | Overlay | The real source needs an index of a mixed type parameter. |
 
@@ -245,6 +246,39 @@ The `net` package holds this surface:
 | UDP, a Unix socket, and TLS | Present | Missing |
 | A deadline, and `SetDeadline` | Present | Missing |
 | The text of a failure | `dial tcp 127.0.0.1:0: connect: ...` | `dial tcp <address>: ` and the message of the Dart `SocketException`. |
+
+## The clock and the timer
+
+`time` reads the clock of `dart:io` and the scheduler of the runtime. There is
+no time zone, and each value of `Time` holds only a count of nanoseconds after
+the start of the Unix epoch.
+
+| Item | Go | godart |
+|---|---|---|
+| `Now`, `Since`, `Until`, `Sleep` | Present | Equal |
+| `Time.Unix`, `UnixNano`, `Sub`, `Add`, `Before`, `After`, `IsZero` | Present | Equal |
+| `Duration` and its 5 read methods | Present | Equal |
+| `Duration.String` | `1h2m3s` | Equal |
+| `AfterFunc` | Runs f on a new goroutine | Equal. A Dart timer holds 1 wake source of the scheduler. |
+| `Timer.Stop` | Reports false after the run | Equal |
+| `Timer.C`, `NewTimer`, `Tick`, `NewTicker`, `After` | Present | Missing. The overlay holds no channel form of a timer. |
+| `Time.String`, `Format`, `Parse` | Present | Missing |
+| `Time.Year`, `Month`, `Day`, `Hour` | Present | Missing. The overlay holds no calendar. |
+| `Location`, `UTC`, `Local` | Present | Missing |
+
+`sync/atomic` holds `Value` with `Load`, `Store`, and `Swap`, and `Int32` with
+`Load`, `Store`, and `Add`. All Go code runs in 1 isolate, and a goroutine gives
+up control only at a block operation. Thus each operation is a plain read or a
+plain write.
+
+| Item | Go | godart |
+|---|---|---|
+| `Value.Load`, `Store`, `Swap` | Present | Equal, with no check of the type. |
+| `Int32.Load`, `Store`, `Add` | Present | Equal |
+| A `Store` of a second concrete type | Panics | It writes the value. |
+| `Int64`, `Uint32`, `Uint64`, `Bool`, `Pointer` | Present | Missing |
+| `CompareAndSwap` | Present | Missing |
+| The function form, for example `AddInt32` | Present | Missing |
 
 ## A range loop over a function
 

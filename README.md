@@ -59,7 +59,7 @@ The compiler holds all 6 stages. The subset covers:
 | Generics | Generic function, generic type, generic method of Go 1.27 |
 | Isolates | `dart.Worker` runs a pure function in a second isolate |
 | Structs | A named struct and an unnamed struct, with value semantics |
-| Library | `bufio`, `bytes`, `cmp`, `container/list`, `encoding/json`, `errors`, `fmt`, `io`, `iter`, `maps`, `math`, `math/bits`, `net`, `os`, `path`, `runtime`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing`, `time`, `unicode`, `unicode/utf8` |
+| Library | `bufio`, `bytes`, `cmp`, `container/list`, `encoding/json`, `errors`, `fmt`, `io`, `iter`, `maps`, `math`, `math/bits`, `net`, `os`, `path`, `runtime`, `slices`, `sort`, `strconv`, `strings`, `sync`, `sync/atomic`, `testing`, `time`, `unicode`, `unicode/utf8` |
 | Tests | `gart test` runs a `TestXxx` function and a subtest |
 | Iterators | A range loop over a function with `break`, `continue`, and `return` |
 | Files | `os` and `io` read and write a file through `dart:io` |

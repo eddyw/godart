@@ -150,6 +150,10 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$accept(%s)", args[0]), true
 	case "ListenClose":
 		return fmt.Sprintf("$listenClose(%s)", args[0]), true
+	case "StartTimer":
+		return fmt.Sprintf("$startTimer(%s, %s)", args[0], args[1]), true
+	case "StopTimer":
+		return fmt.Sprintf("$stopTimer(%s)", args[0]), true
 	case "Worker":
 		return fmt.Sprintf("$worker(%s, %s)", args[0], args[1]), true
 	case "Stop":
