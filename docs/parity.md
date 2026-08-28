@@ -17,7 +17,7 @@ The package `fmt` reads it.
 | Element type and key type of a container | Present |
 | `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
 | A descriptor of an instance of a generic type | Present. The description stands at the point of the use, and the name holds each type argument. |
-| `reflect.DeepEqual` | Missing |
+| `reflect.DeepEqual` | Present. The walk reads the type descriptor. |
 | A method value through reflect | Missing |
 | The size and the alignment of a type | Missing. The target has no memory layout. |
 
@@ -73,6 +73,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | |
 | `flag` | Overlay | The real source reads `reflect` and `runtime.Caller`. |
+| `reflect` | Overlay | `DeepEqual`, `TypeOf`, `Type.String`, `Type.Kind`, and `Type.Comparable`. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
 | `maps` | Overlay | |

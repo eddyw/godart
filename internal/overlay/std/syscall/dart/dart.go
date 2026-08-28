@@ -30,6 +30,12 @@ func TypeInfo(value any) (string, bool) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// DeepEqual reports whether 2 values are deeply equal. The package reflect
+// reads it, and the walk follows the type descriptor of the runtime.
+func DeepEqual(x, y any) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ZeroText gives the text of the String method of the zero value of the type of
 // a value. An empty text means that the type holds no such method.
 //

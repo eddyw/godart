@@ -1,3 +1,4 @@
+import 'box.dart';
 import 'iface.dart';
 import 'int.dart';
 import 'map.dart';
@@ -25,6 +26,70 @@ GoString $goFormat(Iface? value, GoString verb) =>
 /// The kind of the value of an interface, in the words of the package reflect.
 GoString $goKind(Iface? value) =>
     GoString.fromString(value == null ? 'nil' : value.desc.kind);
+
+/// The deep comparison of the package reflect.
+///
+/// 2 values of 2 types are never equal. A slice, a map, a struct, an array, a
+/// pointer, and an interface each compare their parts, and each other kind
+/// compares with the equality of Go.
+bool $deepEqual(Iface? a, Iface? b) {
+  if (a == null || b == null) return a == null && b == null;
+  if (a.desc.name != b.desc.name) return false;
+  return _deepValue(a.value, b.value, a.desc);
+}
+
+bool _deepValue(Object? x, Object? y, TypeDesc desc) {
+  switch (desc.kind) {
+    case 'slice':
+      if (x is! Slice || y is! Slice) return x == y;
+      if (x.isNil != y.isNil) return false;
+      if (x.len != y.len) return false;
+      final TypeDesc elem = desc.elem!();
+      for (var i = 0; i < x.len; i++) {
+        if (!_deepValue(x[i], y[i], elem)) return false;
+      }
+      return true;
+    case 'array':
+      if (x is! List || y is! List) return x == y;
+      if (x.length != y.length) return false;
+      final TypeDesc elem = desc.elem!();
+      for (var i = 0; i < x.length; i++) {
+        if (!_deepValue(x[i], y[i], elem)) return false;
+      }
+      return true;
+    case 'map':
+      if (x is! GoMap || y is! GoMap) return x == y;
+      if (x.isNil != y.isNil) return false;
+      if (x.length != y.length) return false;
+      final TypeDesc elem = desc.elem!();
+      final Slice<Object?> keys = x.keys() as Slice<Object?>;
+      for (var i = 0; i < keys.len; i++) {
+        final Object? key = keys[i];
+        if (!y.has(key)) return false;
+        if (!_deepValue(x.get(key), y.get(key), elem)) return false;
+      }
+      return true;
+    case 'struct':
+      if (x == null || y == null) return x == y;
+      for (final FieldDesc field in desc.fields) {
+        if (!_deepValue(field.get(x), field.get(y), field.type())) return false;
+      }
+      return true;
+    case 'ptr':
+      if (identical(x, y)) return true;
+      if (x == null || y == null) return false;
+      if (x is Box<Object?> && y is Box<Object?>) {
+        return _deepValue(x.v, y.v, desc.elem!());
+      }
+      return _deepValue(x, y, desc.elem!());
+    case 'interface':
+      return $deepEqual(x as Iface?, y as Iface?);
+    case 'func':
+      return x == null && y == null;
+  }
+  if (x is Iface || y is Iface) return $deepEqual(x as Iface?, y as Iface?);
+  return x == y;
+}
 
 /// The text of the String method of the zero value of the type of a value. The
 /// package flag reads it, and Go builds the zero value through reflect.New.

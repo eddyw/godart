@@ -70,6 +70,8 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$goKind(%s)", args[0]), true
 	case "TypeInfo":
 		return fmt.Sprintf("$typeInfo(%s)", args[0]), true
+	case "DeepEqual":
+		return fmt.Sprintf("$deepEqual(%s, %s)", args[0], args[1]), true
 	case "ZeroText":
 		return fmt.Sprintf("$zeroText(%s)", args[0]), true
 	case "OS":
