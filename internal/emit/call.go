@@ -144,6 +144,12 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$connWrite(%s, %s)", args[0], args[1]), true
 	case "ConnClose":
 		return fmt.Sprintf("$connClose(%s)", args[0]), true
+	case "ListenTCP":
+		return fmt.Sprintf("$listenTCP(%s, %s)", args[0], args[1]), true
+	case "Accept":
+		return fmt.Sprintf("$accept(%s)", args[0]), true
+	case "ListenClose":
+		return fmt.Sprintf("$listenClose(%s)", args[0]), true
 	case "Worker":
 		return fmt.Sprintf("$worker(%s, %s)", args[0], args[1]), true
 	case "Stop":

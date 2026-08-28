@@ -306,3 +306,24 @@ func ConnWrite(handle int, p []byte) (int, string) {
 func ConnClose(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// ListenTCP opens a listener on a host and a port. The 3 results are the
+// handle, the port that the system took, and the cause of a failure. A port of
+// 0 asks the system for a free port.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ListenTCP(host string, port int) (int, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Accept waits for 1 connection of a listener and gives its handle.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func Accept(handle int) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ListenClose closes a listener. Each connection of it stays open.
+func ListenClose(handle int) string {
+	panic("syscall/dart needs the gart compiler")
+}

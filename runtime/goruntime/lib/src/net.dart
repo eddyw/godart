@@ -28,6 +28,22 @@ final class _Conn {
 /// dial takes the first free slot.
 final List<_Conn?> _open = <_Conn?>[];
 
+/// One listener.
+///
+/// The iterator takes 1 connection of the stream at a time. A cancel of the
+/// iterator closes the server socket, and a pending accept then gives no
+/// connection.
+final class _Listener {
+  final ServerSocket server;
+  final StreamIterator<Socket> incoming;
+
+  _Listener(this.server) : incoming = StreamIterator<Socket>(server);
+}
+
+/// The open listeners of the program, by handle. The handles of a listener and
+/// of a connection belong to 2 separate lists.
+final List<_Listener?> _listeners = <_Listener?>[];
+
 final GoString _empty = GoString.empty;
 
 /// _cause writes the message of a failure. Go reads such a text as the message
@@ -55,6 +71,22 @@ int _slot(_Conn c) {
 _Conn? _at(int handle) {
   if (handle < 0 || handle >= _open.length) return null;
   return _open[handle];
+}
+
+int _listenSlot(_Listener l) {
+  for (int i = 0; i < _listeners.length; i++) {
+    if (_listeners[i] == null) {
+      _listeners[i] = l;
+      return i;
+    }
+  }
+  _listeners.add(l);
+  return _listeners.length - 1;
+}
+
+_Listener? _listenerAt(int handle) {
+  if (handle < 0 || handle >= _listeners.length) return null;
+  return _listeners[handle];
 }
 
 GoString _closed() => GoString.fromString('use of closed network connection');
@@ -140,5 +172,43 @@ GoString $connClose(int handle) {
   _open[handle] = null;
   unawaited(c.packets.cancel());
   c.socket.destroy();
+  return _empty;
+}
+
+/// Opens a listener on a host and a port, and gives its handle and the port
+/// that the system took. A port of 0 asks the system for a free port.
+///
+/// The call gives up control, thus the result of the call itself is dead.
+(int, int, GoString) $listenTCP(GoString host, int port) {
+  $await(
+    ServerSocket.bind(
+      host.toDartString(),
+      port,
+    ).then((ServerSocket s) => (_listenSlot(_Listener(s)), s.port, _empty)),
+    (Object cause) => (-1, 0, _cause(cause)),
+  );
+  return (-1, 0, _empty);
+}
+
+/// Waits for 1 connection of a listener and gives its handle.
+(int, GoString) $accept(int handle) {
+  final _Listener? l = _listenerAt(handle);
+  if (l == null) return (-1, _closed());
+  $await(
+    l.incoming.moveNext().then((bool more) {
+      if (!more) return (-1, _closed());
+      return (_slot(_Conn(l.incoming.current)), _empty);
+    }),
+    (Object cause) => (-1, _cause(cause)),
+  );
+  return (-1, _empty);
+}
+
+/// Closes a listener. Each connection of it stays open, exactly as in Go.
+GoString $listenClose(int handle) {
+  final _Listener? l = _listenerAt(handle);
+  if (l == null) return _closed();
+  _listeners[handle] = null;
+  unawaited(l.incoming.cancel());
   return _empty;
 }
