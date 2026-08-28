@@ -31,6 +31,9 @@ func Package(fset *token.FileSet, files []*ast.File, info *types.Info, pkg *type
 		}
 		out.Files = append(out.Files, file)
 	}
+	for _, step := range info.InitOrder {
+		out.InitOrder = append(out.InitOrder, step.Lhs...)
+	}
 	if len(b.errs) > 0 {
 		return nil, errors.Join(b.errs...)
 	}

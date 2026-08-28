@@ -380,6 +380,9 @@ func (e *emitter) binary(x *ir.Binary) string {
 // unsigned value needs the unsigned helper.
 func (e *emitter) compare(op token.Token, a, b ir.Expr) string {
 	left, right := e.expr(a), e.expr(b)
+	if tp, ok := types.Unalias(a.GoType()).(*types.TypeParam); ok && e.mixedForm(tp) {
+		return fmt.Sprintf("(%s.order(%s, %s) %s 0)", e.dictOf(tp), left, right, op.String())
+	}
 	if isString(a.GoType()) {
 		return fmt.Sprintf("($compare(%s, %s) %s 0)", left, right, op.String())
 	}

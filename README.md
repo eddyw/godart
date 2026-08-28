@@ -59,6 +59,7 @@ The compiler holds all 6 stages. The subset covers:
 | Generics | Generic function, generic type, generic method of Go 1.27 |
 | Isolates | `dart.Worker` runs a pure function in a second isolate |
 | Structs | A named struct and an unnamed struct, with value semantics |
+| Library | `cmp`, `container/list`, `errors`, `fmt`, `sort`, `strconv`, `strings`, `sync`, `testing`, `time`, `unicode`, `unicode/utf8` |
 | Tests | `gart test` runs a `TestXxx` function and a subtest |
 | Benchmarks | `gart test -bench <text>` runs a `BenchmarkXxx` function |
 

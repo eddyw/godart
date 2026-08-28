@@ -16,6 +16,11 @@ type Package struct {
 	Path  string
 	Name  string
 	Files []*File
+
+	// InitOrder lists each package variable that holds an initializer, in the
+	// order that Go gives it a value. A variable comes after each variable that
+	// its initializer reads, also through a call.
+	InitOrder []*types.Var
 }
 
 // File is 1 Go file. It becomes 1 Dart part file.

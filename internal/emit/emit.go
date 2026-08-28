@@ -150,6 +150,38 @@ func (e *emitter) groupMethods(p *ir.Package) {
 			}
 		}
 	}
+	e.globals = initOrder(e.globals, p.InitOrder)
+}
+
+// initOrder sorts the package variables into the order that Go gives them a
+// value.
+//
+// A variable with no initializer takes its zero value first. Such a value reads
+// nothing. Each other variable follows the order of the type checker, thus a
+// variable comes after each variable that its initializer reads.
+func initOrder(globals []*ir.Global, order []*types.Var) []*ir.Global {
+	rank := make(map[*types.Var]int, len(order))
+	for i, v := range order {
+		rank[v] = i
+	}
+	out := make([]*ir.Global, 0, len(globals))
+	rest := make([]*ir.Global, 0, len(globals))
+	for _, g := range globals {
+		if g.Init == nil {
+			out = append(out, g)
+			continue
+		}
+		rest = append(rest, g)
+	}
+	sort.SliceStable(rest, func(i, j int) bool {
+		a, aok := rank[rest[i].Var.Obj]
+		b, bok := rank[rest[j].Var.Obj]
+		if aok != bok {
+			return aok
+		}
+		return a < b
+	})
+	return append(out, rest...)
 }
 
 func receiverTypeName(t types.Type) *types.TypeName {

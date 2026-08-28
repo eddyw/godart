@@ -9,6 +9,14 @@ type line struct {
 	b point
 }
 
+type box struct {
+	p *point
+}
+
+type ring struct {
+	next *ring
+}
+
 func (p point) sum() int {
 	return p.x + p.y
 }
@@ -52,4 +60,21 @@ func main() {
 	n := new(point)
 	n.x = 7
 	println(n.x, n.y)
+
+	// Go compares a pointer field by address, and not by the fields behind it.
+	first := &point{1, 1}
+	second := &point{1, 1}
+	println(box{p: first} == box{p: first}, box{p: first} == box{p: second})
+
+	// A cyclic pointer must not make the comparison run forever.
+	var cyc ring
+	cyc.next = &cyc
+	var cyc2 ring
+	cyc2.next = &cyc2
+	println(cyc == cyc2, cyc == cyc)
+
+	keys := map[box]string{}
+	keys[box{p: first}] = "first"
+	keys[box{p: second}] = "second"
+	println(len(keys), keys[box{p: first}])
 }

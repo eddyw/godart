@@ -67,6 +67,7 @@ func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any
 
 func (v *verifier) visit(n ast.Node) bool {
 	v.checkExported(n)
+	v.checkTypeParamOp(n)
 	switch n := n.(type) {
 	case *ast.ImportSpec:
 		v.checkImport(n)
@@ -169,6 +170,8 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 			"the compiler rejects a call to recover")
 	case "new":
 		v.checkNew(call)
+	case "len", "cap":
+		v.checkTypeParamBuiltin(call, b.Name())
 	}
 }
 

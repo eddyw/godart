@@ -184,6 +184,27 @@ func (e *emitter) typeParamBound(tp *types.TypeParam) string {
 	return dart
 }
 
+// mixedForm reports whether the type set of a type parameter holds more than 1
+// Dart type. Such a type parameter reads each operation from its dictionary,
+// because no Dart operator fits each type argument.
+func (e *emitter) mixedForm(tp *types.TypeParam) bool {
+	iface, ok := types.Unalias(tp.Constraint()).Underlying().(*types.Interface)
+	if !ok {
+		return false
+	}
+	var terms []types.Type
+	if !collectTerms(iface, &terms, 0) || len(terms) < 2 {
+		return false
+	}
+	first := e.dartType(terms[0])
+	for _, term := range terms[1:] {
+		if e.dartType(term) != first {
+			return true
+		}
+	}
+	return false
+}
+
 // collectTerms reads the type set of a constraint.
 func collectTerms(iface *types.Interface, out *[]types.Type, depth int) bool {
 	if depth > 8 {
@@ -253,13 +274,15 @@ func (e *emitter) dictOf(t types.Type) string {
 			return "$dictDouble"
 		case b.Kind() == types.Bool || b.Kind() == types.UntypedBool:
 			return "$dictBool"
+		case isUnsigned64(t):
+			return "$dictUint"
 		case b.Info()&types.IsInteger != 0:
 			return "$dictInt"
 		}
 	}
 	dart := e.dartType(t)
-	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s)",
-		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t))
+	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, $unordered<%s>)",
+		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t), dart)
 }
 
 // equalText writes the Go equality of 2 values of a type.
@@ -269,6 +292,9 @@ func (e *emitter) equalText(a, b string, t types.Type) string {
 	}
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
 		return fmt.Sprintf("%s.equal(%s, %s)", e.dictOf(tp), a, b)
+	}
+	if isReference(t) {
+		return fmt.Sprintf("identical(%s, %s)", a, b)
 	}
 	return a + " == " + b
 }
@@ -280,7 +306,23 @@ func (e *emitter) hashText(v string, t types.Type) string {
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
 		return fmt.Sprintf("%s.hash(%s)", e.dictOf(tp), v)
 	}
+	if isReference(t) {
+		return fmt.Sprintf("identityHashCode(%s)", v)
+	}
 	return v + ".hashCode"
+}
+
+// isReference reports whether Go compares 2 values of the type by identity.
+//
+// A pointer, a channel, and a function value hold a reference. The Dart form of
+// a pointer to a struct is the object of the struct, thus the == operator of
+// Dart would read the fields. Go reads the address.
+func isReference(t types.Type) bool {
+	switch types.Unalias(t).Underlying().(type) {
+	case *types.Pointer, *types.Chan, *types.Signature:
+		return true
+	}
+	return false
 }
 
 // alloc gives a Dart function that builds the backing array of a slice. A

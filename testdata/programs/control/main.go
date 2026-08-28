@@ -76,4 +76,44 @@ outer:
 		println("big")
 		break
 	}
+
+	// A for clause that assigns 2 variables needs a block, because each right
+	// side reads the old value.
+	s := []int{1, 2, 3, 4, 5}
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	println(s[0], s[4])
+
+	// A continue statement must run the third clause of such a loop.
+	sum := 0
+	for i, step := 0, 1; i < 10; i, step = i+step, step+1 {
+		if i%2 == 0 {
+			continue
+		}
+		sum += i
+	}
+	println(sum)
+
+	found := 0
+wide:
+	for i, c := 0, 0; i < 4; i, c = i+1, c+2 {
+		for j := 0; j < 4; j++ {
+			if i*j == 6 {
+				found = c
+				break wide
+			}
+			if j == 2 {
+				continue wide
+			}
+		}
+	}
+	println(found)
+
+	steps := 0
+	for a, b := 1, 2; a+b < 20; {
+		steps++
+		a, b = b, a+b
+	}
+	println(steps)
 }

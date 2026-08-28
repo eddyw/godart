@@ -49,6 +49,65 @@ The package `fmt` reads it.
 | An unnamed struct type in an exported declaration | Rejected. Read the section below. |
 | A `TestMain` function | Rejected. gart writes the entry point of a test binary. |
 
+## The standard library surface
+
+The compiler reaches a standard library package 2 ways. An overlay replaces the
+real source with a small file that holds the same behavior. A native package
+reads the real Go source, because that source already stays inside the subset.
+
+| Package | Form | Note |
+|---|---|---|
+| `cmp` | Native | The order of a mixed constraint reads the dictionary. |
+| `container/list` | Native | |
+| `errors` | Overlay | |
+| `fmt` | Overlay | |
+| `sort` | Overlay | |
+| `strconv` | Overlay | |
+| `strings` | Overlay | |
+| `sync` | Overlay | |
+| `syscall/dart` | Intrinsic | The compiler replaces each call. |
+| `testing` | Overlay | |
+| `time` | Overlay | |
+| `unicode` | Native | |
+| `unicode/utf8` | Overlay | The real source needs an index of a mixed type parameter. |
+
+Each other standard library package stays outside the surface. Stage 2 rejects
+an import of it with a source position.
+
+The 4 causes that block the next candidates:
+
+| Package | Cause |
+|---|---|
+| `math` | The address of an array. Read the row of `&x`. |
+| `math/bits` | The package `unsafe`. |
+| `slices` | The address of a value that is not a struct. |
+| `maps`, `iter` | A range loop over a function. |
+
+## A type parameter with a mixed constraint
+
+A constraint that lists `int | string` holds 2 Dart types. `int` and `GoString`
+have no common Dart operator, thus the compiler reads each operation from the
+dictionary of the type parameter.
+
+| Operation | godart |
+|---|---|
+| An assignment, an equality, a call | Present |
+| An order comparison | Present. It reads `Dict.order`. |
+| An index, a slice expression, a range loop | Rejected by stage 2 |
+| `len` and `cap` | Rejected by stage 2 |
+
+A constraint whose terms give 1 Dart type keeps each operator. `int | int64`
+gives `int` 2 times, thus `+` and `<` work directly.
+
+## The order of a package variable
+
+Go gives a package variable its value after each variable that its initializer
+reads, also through a call of a function of the package. The declaration order
+does not control it. The compiler reads `types.Info.InitOrder`, thus the output
+holds the same order.
+
+A variable with no initializer takes its zero value first.
+
 ## An unnamed struct type
 
 `struct{ ... }` with no `type` declaration reaches the output as a Dart class.

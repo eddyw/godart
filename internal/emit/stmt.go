@@ -233,16 +233,65 @@ func (e *emitter) ifStmt(s *ir.If) {
 }
 
 func (e *emitter) forStmt(s *ir.For) {
-	init := e.forClause(s.Init)
-	cond := ""
-	if s.Cond != nil {
-		cond = e.expr(s.Cond)
+	init, initFits := e.forClause(s.Init)
+	post, postFits := e.forClause(s.Post)
+	if initFits && postFits {
+		cond := ""
+		if s.Cond != nil {
+			cond = e.expr(s.Cond)
+		}
+		e.writeFor(s, init, cond, post, "")
+		return
 	}
-	post := e.forClause(s.Post)
+	e.wideFor(s, init, initFits, postFits)
+}
+
+// wideFor writes a loop whose first clause or third clause needs more than 1
+// statement. A Go assignment of 2 variables reads each right side first, thus
+// the normalizer gives it a temporary variable and a block.
+//
+// The third clause moves to the top of the body, behind a flag. A continue
+// statement of Go runs the third clause, and a continue statement of Dart
+// leaves the body, thus the clause cannot stay at the end of the body.
+func (e *emitter) wideFor(s *ir.For, init string, initFits, postFits bool) {
+	e.line("{")
+	if !initFits {
+		e.stmtList(s.Init)
+		init = ""
+	}
+	if postFits {
+		post, _ := e.forClause(s.Post)
+		cond := ""
+		if s.Cond != nil {
+			cond = e.expr(s.Cond)
+		}
+		e.writeFor(s, init, cond, post, "")
+		e.line("}")
+		return
+	}
+	e.labelSeq++
+	flag := fmt.Sprintf("$post%d", e.labelSeq)
+	e.line("bool %s = false;", flag)
+	e.writeFor(s, init, "", "", flag)
+	e.line("}")
+}
+
+// writeFor writes the loop and its body. A flag that is not empty moves the
+// third clause and the condition to the top of the body.
+func (e *emitter) writeFor(s *ir.For, init, cond, post, flag string) {
 	if s.Label != "" {
 		e.line("%s:", s.Label)
 	}
 	e.line("for (%s; %s; %s) {", init, cond, post)
+	if flag != "" {
+		e.line("if (%s) {", flag)
+		e.stmtList(s.Post)
+		e.line("}")
+		e.line("%s = true;", flag)
+		if s.Cond != nil {
+			e.line("if (!(%s)) break;", e.expr(s.Cond))
+		}
+	}
 	e.breakables = append(e.breakables, "")
 	for _, inner := range s.Body.List {
 		e.stmt(inner)
@@ -251,31 +300,42 @@ func (e *emitter) forStmt(s *ir.For) {
 	e.line("}")
 }
 
-// forClause writes the first clause or the third clause of a Dart for loop.
-func (e *emitter) forClause(s ir.Stmt) string {
+// stmtList writes a statement with no block of its own. A variable of the
+// statement stays visible to the code that follows it.
+func (e *emitter) stmtList(s ir.Stmt) {
+	if block, ok := s.(*ir.Block); ok {
+		for _, inner := range block.List {
+			e.stmt(inner)
+		}
+		return
+	}
+	e.stmt(s)
+}
+
+// forClause writes the first clause or the third clause of a Dart for loop. It
+// reports whether the statement fits such a clause.
+func (e *emitter) forClause(s ir.Stmt) (string, bool) {
 	switch s := s.(type) {
 	case nil:
-		return ""
+		return "", true
 	case *ir.Declare:
 		if len(s.Vars) != 1 {
-			e.fail("a for clause holds 1 variable")
-			return ""
+			return "", false
 		}
 		v := s.Vars[0]
 		if s.Init == nil {
-			return fmt.Sprintf("%s %s = %s", e.dartType(v.Type), v.Name, e.zero(v.Type))
+			return fmt.Sprintf("%s %s = %s", e.dartType(v.Type), v.Name, e.zero(v.Type)), true
 		}
-		return fmt.Sprintf("%s %s = %s", e.dartType(v.Type), v.Name, e.expr(s.Init))
+		return fmt.Sprintf("%s %s = %s", e.dartType(v.Type), v.Name, e.expr(s.Init)), true
 	case *ir.Assign:
 		if isStructType(s.Lhs.GoType()) {
-			return fmt.Sprintf("%s.$assign(%s)", e.expr(s.Lhs), e.expr(s.Rhs))
+			return fmt.Sprintf("%s.$assign(%s)", e.expr(s.Lhs), e.expr(s.Rhs)), true
 		}
-		return fmt.Sprintf("%s = %s", e.expr(s.Lhs), e.expr(s.Rhs))
+		return fmt.Sprintf("%s = %s", e.expr(s.Lhs), e.expr(s.Rhs)), true
 	case *ir.ExprStmt:
-		return e.statementExpr(s.X)
+		return e.statementExpr(s.X), true
 	}
-	e.fail("the statement %T does not fit a for clause", s)
-	return ""
+	return "", false
 }
 
 // switchStmt writes a Go switch. Each case takes an index, and the bodies run
