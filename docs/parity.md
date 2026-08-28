@@ -183,13 +183,18 @@ seq(func(k K, v V) bool { BODY; return true })
 | A nested loop with its own `break` | Present |
 | A nested switch with its own `break` | Present |
 | A nested sequence | Present |
-| `return` inside the body | Rejected by stage 2 |
+| `return` inside the body | Present. A flag carries the result out. |
 | A labelled `break` or `continue` that leaves the body | Rejected by stage 2 |
 | `goto` out of the body | Rejected by stage 2 |
 
-The body is a Dart closure. Such a closure cannot leave a loop outside itself,
-and it cannot return from the function that holds it. The 3 rejected forms need
-a flag and a check after the call, and the compiler writes no such flag yet.
+A `return` inside the body writes each value into a temporary variable, it sets a
+flag, and it gives false to the sequence. The code after the call of the sequence
+reads the flag. A nested sequence carries the flag out 1 level for each call.
+
+A labelled `break` or `continue` that leaves the body needs 1 flag for each
+target and a check at each level between the closure and the target. The flag
+also needs a reset when the target loop iterates. The compiler rejects the form
+instead.
 
 ## The core type of a type parameter
 
@@ -319,9 +324,26 @@ channel 1 time in its last frame, thus stage 3 marks each frame async.
 | Synchronous | 8.5 ns/op | 28.9 ns/op |
 | Asynchronous | 51.5 ns/op | 3900 ns/op |
 
-An async frame of Dart costs about 200 nanoseconds, because each `await`
+An async frame of Dart costs about 180 nanoseconds, because each `await`
 schedules a microtask. The block analysis keeps a synchronous path for a
 function that cannot block, thus only a chain that can block pays the cost.
+
+A measurement of 2 Dart forms of the same chain of 20 frames, on an ahead of
+time build:
+
+| Dart form | Cost |
+|---|---|
+| `Future<int> f() async` with `await` at each frame | 2400 ns/op |
+| `FutureOr<int> f()` with a test of `is Future` and `.then` | 107 ns/op |
+
+The second form is a factor of 22 faster. The compiler does not write it, because
+such a form needs continuation passing style: each statement after a call becomes
+a closure. The `async` form of Dart writes that transform, and a hand written
+form must write it too.
+
+A narrow case needs no such transform. A function whose body is
+`return f(x) + 1` holds 1 call and 1 expression, thus `.then` fits directly. The
+compiler writes no such case yet.
 
 ## The standard library
 

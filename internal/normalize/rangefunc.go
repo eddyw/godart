@@ -167,9 +167,113 @@ func (b *builder) rangeFunc(s *ast.RangeStmt, label string, sig *types.Signature
 		Type:  sig.Results(),
 		Async: b.blocks.SignatureAsync(sig),
 	}
-	return []ir.Stmt{&ir.ExprStmt{X: call}}
+	out := []ir.Stmt{&ir.ExprStmt{X: call}}
+	if check := b.returnCheck(); check != nil {
+		out = append(out, check)
+	}
+	return out
 }
 
 func boolConst(v bool) ir.Expr {
 	return &ir.Const{Value: constant.MakeBool(v), Type: types.Typ[types.Bool]}
+}
+
+// yieldReturn rewrites a return statement inside the body of a range loop over a
+// function.
+//
+// Such a body is a Dart closure, thus a return of it leaves the closure and not
+// the function. The statement writes each value into a temporary variable, it
+// sets a flag, and it gives false to the sequence. The code after the call of
+// the sequence reads the flag.
+func (b *builder) yieldReturn(s *ast.ReturnStmt) []ir.Stmt {
+	f := b.fn
+	if f == nil {
+		return nil
+	}
+	b.needReturnState(f)
+	var out []ir.Stmt
+	switch {
+	case len(s.Results) == 0 && hasNamedResult(f):
+		for i, r := range f.Results {
+			out = append(out, &ir.Assign{
+				Lhs: &ir.Ident{Name: b.retVars[i].Name, Type: b.retVars[i].Type},
+				Rhs: &ir.Ident{Name: r.Name, Type: r.Type, Boxed: r.Boxed},
+			})
+		}
+	case len(s.Results) == 1 && len(f.Results) > 1:
+		lhs := make([]ir.Expr, len(b.retVars))
+		for i, v := range b.retVars {
+			lhs[i] = &ir.Ident{Name: v.Name, Type: v.Type}
+		}
+		out = append(out, &ir.AssignMulti{Lhs: lhs, Rhs: b.multiValue(s.Results[0])})
+	default:
+		for i, r := range s.Results {
+			if i >= len(b.retVars) {
+				break
+			}
+			out = append(out, &ir.Assign{
+				Lhs: &ir.Ident{Name: b.retVars[i].Name, Type: b.retVars[i].Type},
+				Rhs: b.copyPoint(b.exprAs(r, f.Results[i].Type)),
+			})
+		}
+	}
+	out = append(out, &ir.Assign{
+		Lhs: &ir.Ident{Name: b.retFlag, Type: types.Typ[types.Bool]},
+		Rhs: boolConst(true),
+	})
+	return append(out, &ir.Return{Values: []ir.Expr{boolConst(false)}})
+}
+
+// needReturnState allocates the flag and the result variables of the function.
+// The call is idempotent, thus each return of the function shares 1 set.
+func (b *builder) needReturnState(f *ir.Func) {
+	if b.retFlag != "" {
+		return
+	}
+	b.retFlag = b.temp(f.Pos, "yret")
+	b.retVars = make([]*ir.Var, len(f.Results))
+	for i, r := range f.Results {
+		b.retVars[i] = &ir.Var{Name: b.temp(f.Pos, "yr"+strconv.Itoa(i)), Type: r.Type}
+	}
+}
+
+// returnCheck writes the statement that reads the flag after the call of a
+// sequence. The result is nil when no return statement of the function reaches
+// the body of a range loop over a function.
+//
+// A call inside another such body gives false to its own sequence, thus the flag
+// travels out 1 level for each call.
+func (b *builder) returnCheck() ir.Stmt {
+	if b.retFlag == "" {
+		return nil
+	}
+	read := &ir.Ident{Name: b.retFlag, Type: types.Typ[types.Bool]}
+	if b.insideYield() {
+		return &ir.If{Cond: read, Then: &ir.Block{List: []ir.Stmt{
+			&ir.Return{Values: []ir.Expr{boolConst(false)}},
+		}}}
+	}
+	values := make([]ir.Expr, len(b.retVars))
+	for i, v := range b.retVars {
+		values[i] = &ir.Ident{Name: v.Name, Type: v.Type}
+	}
+	return &ir.If{Cond: read, Then: &ir.Block{List: []ir.Stmt{
+		&ir.Return{Values: values},
+	}}}
+}
+
+// returnState writes the declaration of the flag and of each result variable.
+// The declarations go at the start of the function body.
+func (b *builder) returnState() []ir.Stmt {
+	if b.retFlag == "" {
+		return nil
+	}
+	out := []ir.Stmt{&ir.Declare{
+		Vars: []*ir.Var{{Name: b.retFlag, Type: types.Typ[types.Bool]}},
+		Init: boolConst(false),
+	}}
+	for _, v := range b.retVars {
+		out = append(out, &ir.Declare{Vars: []*ir.Var{v}})
+	}
+	return out
 }

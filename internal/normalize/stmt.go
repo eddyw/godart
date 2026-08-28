@@ -519,9 +519,7 @@ func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
 
 func (b *builder) returnStmt(s *ast.ReturnStmt) []ir.Stmt {
 	if b.insideYield() {
-		b.fail(s.Pos(), "a return statement inside a range loop over a function is "+
-			"outside the subset, because such a body is a Dart closure")
-		return nil
+		return b.yieldReturn(s)
 	}
 	f := b.fn
 	if f == nil {

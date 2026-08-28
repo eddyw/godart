@@ -90,4 +90,6 @@ func main() {
 		}
 	}
 	fmt.Println()
+
+	returns()
 }

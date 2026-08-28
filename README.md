@@ -61,7 +61,7 @@ The compiler holds all 6 stages. The subset covers:
 | Structs | A named struct and an unnamed struct, with value semantics |
 | Library | `cmp`, `container/list`, `errors`, `fmt`, `io`, `iter`, `maps`, `math`, `math/bits`, `os`, `path`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing`, `time`, `unicode`, `unicode/utf8` |
 | Tests | `gart test` runs a `TestXxx` function and a subtest |
-| Iterators | A range loop over a function, `iter.Seq`, and `iter.Seq2` |
+| Iterators | A range loop over a function with `break`, `continue`, and `return` |
 | Files | `os` and `io` read and write a file through `dart:io` |
 | Pointers | A pointer to any type. A value that is not a struct holds a box. |
 | Benchmarks | `gart test -bench <text>` runs a `BenchmarkXxx` function |

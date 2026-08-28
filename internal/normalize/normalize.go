@@ -53,6 +53,14 @@ type builder struct {
 	// takes. Such a variable holds a box.
 	boxes map[*types.Var]bool
 
+	// retFlag names the variable that marks a return statement inside the body
+	// of a range loop over a function. It is empty when the function holds no
+	// such statement.
+	retFlag string
+	// retVars holds 1 variable for each result of the function. A return inside
+	// such a body writes them.
+	retVars []*ir.Var
+
 	// loops holds the construct that a break statement or a continue statement
 	// leaves, from the outermost to the innermost.
 	loops []loop
@@ -204,6 +212,8 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	b.used = map[string]bool{}
 	b.gotoLabels = gotoTargets(d.Body)
 	b.boxes = b.addressed(d.Body)
+	b.retFlag = ""
+	b.retVars = nil
 	b.fn = f
 	if d.Recv != nil && len(d.Recv.List) > 0 {
 		f.Recv = b.recvVar(d.Recv.List[0], sig)
@@ -212,6 +222,7 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	f.Params = b.varsOf(sig.Params())
 	f.Results = b.results(sig)
 	f.Body = b.block(d.Body)
+	f.Body.List = append(b.returnState(), f.Body.List...)
 	if len(b.gotoLabels) > 0 {
 		f.Body = b.stateMachine(f.Body, d.Pos())
 	}
