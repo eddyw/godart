@@ -181,6 +181,7 @@ func TestTestsOfGoroot(t *testing.T) {
 	}{
 		{"path", []string{"--- PASS: TestClean ", "--- SKIP: TestCleanMallocs "}},
 		{"container/list", []string{"--- PASS: TestList ", "--- PASS: TestZeroList "}},
+		{"unicode", []string{"--- PASS: TestLetterOptimizations ", "--- PASS: TestSpecialCaseNoMapping "}},
 	}
 	for _, c := range cases {
 		t.Run(c.pkg, func(t *testing.T) {

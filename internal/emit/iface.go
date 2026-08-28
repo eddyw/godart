@@ -69,10 +69,11 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 // methodTable writes the adapter of each method of the type, in the order of
 // the name.
 func (e *emitter) methodTable(named *types.Named, t types.Type) []string {
+	_, pointer := types.Unalias(t).(*types.Pointer)
 	set := types.NewMethodSet(t)
 	entries := make([]string, 0, set.Len())
 	for i := 0; i < set.Len(); i++ {
-		if entry := e.adapter(named, set.At(i)); entry != "" {
+		if entry := e.adapter(named, set.At(i), pointer); entry != "" {
 			entries = append(entries, entry)
 		}
 	}
@@ -207,7 +208,11 @@ func dartString(text string) string {
 
 // adapter writes 1 entry of a method table. The entry takes the value of the
 // interface, thus each entry has the same shape of receiver.
-func (e *emitter) adapter(named *types.Named, sel *types.Selection) string {
+//
+// pointer marks the table of a pointer to the type. Such a value holds a box
+// when the base type is not a struct and not an array, thus a method with a
+// value receiver reads the field of the box.
+func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool) string {
 	fn, ok := sel.Obj().(*types.Func)
 	if !ok {
 		return ""
@@ -228,6 +233,12 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection) string {
 		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + args[i]
 	}
 	recv := fmt.Sprintf("($r as %s)", e.dartType(named))
+	if pointer && needsBox(named) {
+		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(named)))
+		if _, ok := types.Unalias(sig.Recv().Type()).(*types.Pointer); !ok {
+			recv += "!.v"
+		}
+	}
 	index := sel.Index()
 	current := types.Type(named)
 	for _, i := range index[:len(index)-1] {

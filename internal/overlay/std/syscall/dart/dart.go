@@ -30,6 +30,15 @@ func TypeInfo(value any) (string, bool) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ZeroText gives the text of the String method of the zero value of the type of
+// a value. An empty text means that the type holds no such method.
+//
+// The package flag reads it. Go builds the zero value through reflect.New, and
+// the type descriptor of the runtime holds the same factory.
+func ZeroText(value any) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // OS names the operating system that runs the program, in the words of the Go
 // constant GOOS.
 func OS() string {

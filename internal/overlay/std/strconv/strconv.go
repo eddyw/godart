@@ -109,19 +109,69 @@ func ParseInt(text string, base, bitSize int) (int64, error) {
 		negative = text[0] == '-'
 		i = 1
 	}
-	if i >= len(text) {
-		return 0, &NumError{Func: "ParseInt", Num: text, Err: ErrSyntax}
-	}
-	var out int64
-	for ; i < len(text); i++ {
-		digit := digitValue(text[i])
-		if digit < 0 || digit >= base {
-			return 0, &NumError{Func: "ParseInt", Num: text, Err: ErrSyntax}
-		}
-		out = out*int64(base) + int64(digit)
+	out, err := parseDigits(text, i, base, "ParseInt")
+	if err != nil {
+		return 0, err
 	}
 	if negative {
 		return -out, nil
+	}
+	return out, nil
+}
+
+// ParseUint reads an unsigned value from text.
+func ParseUint(text string, base, bitSize int) (uint64, error) {
+	out, err := parseDigits(text, 0, base, "ParseUint")
+	if err != nil {
+		return 0, err
+	}
+	return uint64(out), nil
+}
+
+// parseDigits reads the digits of a value. A base of 0 reads the prefix of the
+// text, exactly as Go does, and it accepts an underscore between 2 digits.
+func parseDigits(text string, i, base int, name string) (int64, error) {
+	if i >= len(text) {
+		return 0, &NumError{Func: name, Num: text, Err: ErrSyntax}
+	}
+	underscore := false
+	if base == 0 {
+		underscore = true
+		base = 10
+		if text[i] == '0' {
+			if i+1 == len(text) {
+				return 0, nil
+			}
+			switch text[i+1] {
+			case 'x', 'X':
+				base, i = 16, i+2
+			case 'b', 'B':
+				base, i = 2, i+2
+			case 'o', 'O':
+				base, i = 8, i+2
+			default:
+				base, i = 8, i+1
+			}
+		}
+	}
+	if i >= len(text) {
+		return 0, &NumError{Func: name, Num: text, Err: ErrSyntax}
+	}
+	var out int64
+	digits := 0
+	for ; i < len(text); i++ {
+		if underscore && text[i] == '_' {
+			continue
+		}
+		digit := digitValue(text[i])
+		if digit < 0 || digit >= base {
+			return 0, &NumError{Func: name, Num: text, Err: ErrSyntax}
+		}
+		out = out*int64(base) + int64(digit)
+		digits++
+	}
+	if digits == 0 {
+		return 0, &NumError{Func: name, Num: text, Err: ErrSyntax}
 	}
 	return out, nil
 }

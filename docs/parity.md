@@ -72,6 +72,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | |
+| `flag` | Overlay | The real source reads `reflect` and `runtime.Caller`. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
 | `maps` | Overlay | |
@@ -87,7 +88,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `fmt` | Overlay | |
 | `slices` | Overlay | The sort is a stable merge sort. |
 | `sort` | Overlay | `Sort`, `Stable`, `Slice`, `SliceStable`, `Search`, `Find`, and the typed forms. |
-| `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. |
+| `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. `ParseInt` and `ParseUint` each read a base of 0. |
 | `strings` | Overlay | |
 | `sync` | Overlay | |
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |

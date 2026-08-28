@@ -70,6 +70,8 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$goKind(%s)", args[0]), true
 	case "TypeInfo":
 		return fmt.Sprintf("$typeInfo(%s)", args[0]), true
+	case "ZeroText":
+		return fmt.Sprintf("$zeroText(%s)", args[0]), true
 	case "OS":
 		return "$goos()", true
 	case "Upper":
@@ -561,6 +563,21 @@ func (e *emitter) conv(x *ir.Conv) string {
 			return "null"
 		}
 		return text
+	}
+	// A pointer converts to another pointer when the 2 base types share 1
+	// underlying type. The Dart form of such a pointer is a box or a list, and
+	// the 2 forms are equal, thus the conversion performs no operation.
+	//
+	// A pointer to a struct holds the class of the struct, and 2 named struct
+	// types give 2 classes. Such a conversion stays outside the subset.
+	if pf, ok := types.Unalias(from).Underlying().(*types.Pointer); ok {
+		if pt, ok := types.Unalias(to).Underlying().(*types.Pointer); ok {
+			if !isStructType(pt.Elem()) &&
+				types.Identical(types.Unalias(pf.Elem()).Underlying(),
+					types.Unalias(pt.Elem()).Underlying()) {
+				return text
+			}
+		}
 	}
 	// A conversion of nil gives the zero value of the target type. Go writes
 	// `S(nil)` for the nil slice of a type parameter.

@@ -26,6 +26,22 @@ GoString $goFormat(Iface? value, GoString verb) =>
 GoString $goKind(Iface? value) =>
     GoString.fromString(value == null ? 'nil' : value.desc.kind);
 
+/// The text of the String method of the zero value of the type of a value. The
+/// package flag reads it, and Go builds the zero value through reflect.New.
+GoString $zeroText(Iface? value) {
+  if (value == null) return GoString.empty;
+  final TypeDesc desc = value.desc;
+  final Function? method = desc.methods['String'];
+  if (method == null) return GoString.empty;
+  Object? zero;
+  if (desc.kind == 'ptr' && desc.elem != null) {
+    zero = desc.elem!().zero?.call();
+  } else {
+    zero = desc.zero?.call();
+  }
+  return method(zero) as GoString;
+}
+
 /// The text of the type of an interface value, and the comparable flag. The
 /// package internal/reflectlite reads it.
 (GoString, bool) $typeInfo(Iface? value) {
