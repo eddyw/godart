@@ -103,6 +103,10 @@ func (e *emitter) stmtOne(s ir.Stmt) {
 		e.line("continue $m;")
 	case *ir.Resume:
 		e.resume(s)
+	case *ir.DeferNext:
+		e.deferNext(s)
+	case *ir.DeferEnd:
+		e.deferEnd()
 	case *ir.LocalFunc:
 		e.localFunc(s)
 	case *ir.SelectBind:

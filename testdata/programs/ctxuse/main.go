@@ -8,6 +8,15 @@ import (
 
 type key struct{ name string }
 
+// deferredCancel holds the pattern that most Go code writes. The call of cancel
+// can block, thus the chain of the deferred calls runs inside the machine.
+func deferredCancel() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+	<-ctx.Done()
+	return ctx.Err()
+}
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -42,6 +51,8 @@ func main() {
 	stop3(fmt.Errorf("the caller stopped it"))
 	<-cause.Done()
 	fmt.Println("cause:", cause.Err(), context.Cause(cause))
+
+	fmt.Println("the deferred cancel:", deferredCancel())
 
 	fmt.Println("canceled:", context.Canceled)
 	fmt.Println("exceeded:", context.DeadlineExceeded)

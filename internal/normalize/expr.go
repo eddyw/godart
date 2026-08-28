@@ -439,7 +439,7 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 		return out
 	}
 	out.Machine = b.flatten(out.Body, out.Params, nil, true, out.Defers,
-		b.frameClass(e.Pos()), e.Pos())
+		inner.DeferBlocks, out.Results, b.frameClass(e.Pos()), e.Pos())
 	addResults(out.Machine, out.Results)
 	local := b.litName(e.Pos())
 	b.pending = append(b.pending, &ir.LocalFunc{Name: local, Lit: out})

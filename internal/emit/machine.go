@@ -134,6 +134,9 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	if m.Defer {
 		w("late DeferStack $defer;")
 	}
+	if m.DeferBlocks {
+		w("Object? $p;")
+	}
 	if fnType != "" {
 		w("late %s $fn;", fnType)
 	}
@@ -203,6 +206,9 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	if m.Defer {
 		e.line("DeferStack $defer = DeferStack();")
 	}
+	if m.DeferBlocks {
+		e.line("Object? $p;")
+	}
 	if m.Blocking {
 		e.line("if ($f != null) {")
 		e.line("$s = $f.$s;")
@@ -211,32 +217,63 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 		if m.Defer {
 			e.line("$defer = $f.$defer;")
 		}
+		if m.DeferBlocks {
+			e.line("$p = $f.$p;")
+		}
 		for _, v := range m.Locals {
 			e.line("%s = $f.%s;", v.Name, v.Name)
 		}
 		e.line("}")
 	}
-	if m.Defer {
+	// A machine whose deferred calls can block holds the try inside the loop.
+	// A panic then jumps to the chain of the deferred calls, and such a call
+	// gives up control exactly as each other call does.
+	if m.Defer && !m.DeferBlocks {
 		e.line("try {")
 	}
 	e.line("$m: while (true) {")
+	if m.DeferBlocks {
+		e.line("try {")
+	}
 	e.line("switch ($s) {")
 	for i, state := range m.States {
 		e.line("case %d:", i)
 		e.list(state.List)
 	}
 	e.line("}")
+	if m.DeferBlocks {
+		e.line("} catch ($e) {")
+		e.line("if ($defer.isEmpty || $p != null) rethrow;")
+		e.line("$p = $e;")
+		e.line("$s = %d;", m.DeferState)
+		e.line("continue $m;")
+		e.line("}")
+	}
 	e.line("}")
 	if m.Blocking {
 		e.machineSave(f, fn)
 	}
-	if m.Defer {
+	if m.Defer && !m.DeferBlocks {
 		e.line("} catch ($e) {")
 		e.line("$defer.run();")
 		e.line("rethrow;")
 		e.line("}")
 	}
 	e.machine = prev
+}
+
+// deferNext writes the state that runs the next deferred call.
+func (e *emitter) deferNext(s *ir.DeferNext) {
+	e.line("if ($defer.isEmpty) { $s = %d; continue $m; }", s.Done)
+	e.line("$defer.runNext();")
+	e.line("$s = %d;", s.Body)
+	e.line("continue $m;")
+}
+
+// deferEnd writes the end of the defer chain. A panic that the machine caught
+// reaches the caller here.
+func (e *emitter) deferEnd() {
+	e.line("if ($p != null) { final Object $pv = $p!; $p = null; throw $pv; }")
 }
 
 // machineSave writes the frame of a call that gave up control.
@@ -249,6 +286,9 @@ func (e *emitter) machineSave(f *ir.Func, fn string) {
 	e.line("..$r = $blocked")
 	if m.Defer {
 		e.line("..$defer = $defer")
+	}
+	if m.DeferBlocks {
+		e.line("..$p = $p")
 	}
 	if fn != "" {
 		e.line("..$fn = %s", fn)
@@ -293,7 +333,9 @@ func (e *emitter) machineReturn(s *ir.Return) {
 		e.line("$unreachable();")
 		return
 	}
-	if ctx.m.Defer {
+	// A machine whose deferred calls can block runs the chain in its own
+	// states, thus the return statement of the chain runs no call.
+	if ctx.m.Defer && !ctx.m.DeferBlocks {
 		e.line("$defer.run();")
 	}
 	if named {

@@ -21,18 +21,72 @@ import (
 // blocking marks a body that can block. Such a body needs a frame, and each
 // call that can block needs a resume point.
 func (b *builder) flatten(body *ir.Block, params []*ir.Var, recv *ir.Var,
-	blocking, defers bool, class string, pos token.Pos) *ir.Machine {
-	m := &ir.Machine{Class: class, Recv: recv, Defer: defers, Blocking: blocking}
+	blocking, defers, deferBlocks bool, results []*ir.Var,
+	class string, pos token.Pos) *ir.Machine {
+	m := &ir.Machine{Class: class, Recv: recv, Defer: defers, Blocking: blocking,
+		DeferBlocks: deferBlocks}
 	f := &flat{b: b, m: m, pos: pos, labels: map[string]int{}}
 	if recv != nil {
 		m.Locals = append(m.Locals, recv)
 	}
 	m.Locals = append(m.Locals, params...)
 	f.newState()
+	if deferBlocks {
+		f.openDeferChain(results)
+	}
 	f.markLabels(body.List)
 	f.block(body.List)
+	if deferBlocks {
+		f.writeDeferChain()
+	}
 	f.close()
 	return m
+}
+
+// openDeferChain reserves the 3 states of the defer chain and gives each result
+// a variable of the frame. A return statement writes the variables and jumps to
+// the chain, thus the deferred calls run inside the machine.
+func (f *flat) openDeferChain(results []*ir.Var) {
+	f.m.DeferState = f.state()
+	f.deferBody = f.state()
+	f.deferDone = f.state()
+	for i, r := range results {
+		if r.Named {
+			f.m.ResultVars = append(f.m.ResultVars, r)
+			continue
+		}
+		v := &ir.Var{Name: fmt.Sprintf("$dret%d", i), Type: r.Type}
+		f.m.ResultVars = append(f.m.ResultVars, v)
+		f.m.Locals = append(f.m.Locals, v)
+	}
+}
+
+// writeDeferChain writes the 3 states that run the deferred calls.
+func (f *flat) writeDeferChain() {
+	f.cur = f.m.DeferState
+	f.emit(&ir.DeferNext{Body: f.deferBody, Done: f.deferDone})
+	f.cur = f.deferBody
+	f.emit(&ir.Resume{})
+	f.emit(&ir.Jump{State: f.m.DeferState})
+	f.cur = f.deferDone
+	f.emit(&ir.DeferEnd{})
+	values := make([]ir.Expr, len(f.m.ResultVars))
+	for i, v := range f.m.ResultVars {
+		values[i] = identOf(v)
+	}
+	f.emit(&ir.Return{Values: values})
+}
+
+// deferReturn writes each result into its variable and jumps to the chain of
+// the deferred calls.
+func (f *flat) deferReturn(s *ir.Return) {
+	for i, v := range s.Values {
+		if i >= len(f.m.ResultVars) {
+			break
+		}
+		f.emit(&ir.Assign{Lhs: identOf(f.m.ResultVars[i]), Rhs: v})
+	}
+	f.emit(&ir.Jump{State: f.m.DeferState})
 }
 
 type flat struct {
@@ -43,6 +97,10 @@ type flat struct {
 	seq    int
 	loops  []flatLoop
 	labels map[string]int
+
+	// deferBody runs 1 deferred call, and deferDone ends the chain.
+	deferBody int
+	deferDone int
 }
 
 // flatLoop names the state that a break statement and a continue statement
@@ -100,6 +158,10 @@ func (f *flat) close() {
 	for i := range f.m.States {
 		f.cur = i
 		if f.done() {
+			continue
+		}
+		if f.m.DeferBlocks {
+			f.emit(&ir.Jump{State: f.m.DeferState})
 			continue
 		}
 		f.emit(&ir.Return{})
@@ -168,6 +230,10 @@ func (f *flat) stmt(s ir.Stmt) {
 	case *ir.Continue:
 		f.branch(s.Label, false, s)
 	case *ir.Return:
+		if f.m.DeferBlocks {
+			f.deferReturn(&ir.Return{Values: f.operands(s.Values)})
+			return
+		}
 		f.emit(&ir.Return{Values: f.operands(s.Values)})
 	case *ir.ExprStmt:
 		f.exprStmt(s)

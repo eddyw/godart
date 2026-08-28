@@ -282,7 +282,7 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	f.Body.List = append(b.returnState(), f.Body.List...)
 	if f.Async || len(b.gotoLabels) > 0 {
 		f.Machine = b.flatten(f.Body, f.Params, f.Recv, f.Async, f.Defers,
-			b.frameClass(d.Pos()), d.Pos())
+			f.DeferBlocks, f.Results, b.frameClass(d.Pos()), d.Pos())
 		addResults(f.Machine, f.Results)
 	}
 	b.fn = nil

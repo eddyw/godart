@@ -301,11 +301,10 @@ func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 	if b.fn != nil {
 		b.fn.Defers = true
 	}
-	if b.blocks.CallAsync(s.Call) {
-		// The deferred calls run at the return of the function, and a state
-		// machine holds no state at that point. Thus such a call cannot give up
-		// control, and the block would reach no scheduler.
-		b.fail(s.Pos(), "a deferred call that can block is outside the subset")
+	if b.blocks.CallAsync(s.Call) && b.fn != nil {
+		// The chain of the deferred calls holds states of its own, thus such a
+		// call gives up control like each other call.
+		b.fn.DeferBlocks = true
 	}
 	call := b.expr(s.Call)
 	var pre []ir.Stmt

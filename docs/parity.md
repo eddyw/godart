@@ -46,7 +46,7 @@ The package `fmt` reads it.
 | `import _ "unsafe"` | Present. A blank import performs no operation. |
 | A method value of a named type that is not a struct | Present. It writes a closure. |
 | A range loop over a function | Present. Read the section below. |
-| A deferred call that can block | Rejected by stage 4 |
+| A deferred call that can block | Present. The chain of the deferred calls holds states of its own. |
 | A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
 | A type declaration inside a function, of a struct type | Present. It takes the class of its shape. |
 | A type declaration inside a function, of another type | Rejected |
@@ -512,9 +512,12 @@ cannot block, thus only a chain that can block pays the cost.
 
 These rules follow from the model:
 
-- A deferred call must not block. The deferred calls run at the return of a
-  function, and the machine keeps no state at that point. Stage 4 rejects such
-  a call with a position.
+- A machine whose deferred calls can block holds the chain of those calls in 3
+  states of its own. A return statement writes each result into the frame and
+  jumps to the chain, and the chain runs 1 call for each pass. Such a call
+  gives up control exactly as each other call does. The try block of the panic
+  stands inside the loop of the machine, thus a panic also reaches the chain,
+  and the frame keeps the panic until the last call ends.
 - A local that a closure reads and that the code writes takes a box. A resume
   reads each local from the frame into a new call, thus the closure and the
   frame must share 1 value. A struct and an array need no box, because an

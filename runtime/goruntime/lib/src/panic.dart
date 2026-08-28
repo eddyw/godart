@@ -47,10 +47,20 @@ final class DeferStack {
 
   void push(void Function() call) => _calls.add(call);
 
+  /// True when the stack holds no call.
+  bool get isEmpty => _calls.isEmpty;
+
   void run() {
     for (var i = _calls.length - 1; i >= 0; i--) {
       _calls[i]();
     }
+  }
+
+  /// Runs the last call and drops it. A machine whose deferred calls can block
+  /// reads it, because such a call gives up control between 2 entries.
+  void runNext() {
+    if (_calls.isEmpty) return;
+    _calls.removeLast()();
   }
 }
 

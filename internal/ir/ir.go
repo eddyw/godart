@@ -44,6 +44,10 @@ type Func struct {
 	Defers  bool
 	Pos     token.Pos
 
+	// DeferBlocks marks a function whose defer stack can hold a call that
+	// blocks. The return path and the panic path then run inside the machine.
+	DeferBlocks bool
+
 	// Machine holds the flat state machine of a function that can block.
 	Machine *Machine
 
@@ -76,6 +80,20 @@ type Machine struct {
 	// Defer marks a function that holds a defer statement. The frame keeps the
 	// stack of the deferred calls.
 	Defer bool
+
+	// DeferBlocks marks a machine whose defer stack can hold a call that
+	// blocks. The chain of the deferred calls then holds states of its own,
+	// thus such a call gives up control like each other call.
+	DeferBlocks bool
+
+	// ResultVars holds 1 variable for each result of a machine that holds
+	// DeferBlocks. A return statement writes them, and the end of the defer
+	// chain reads them.
+	ResultVars []*Var
+
+	// DeferState names the first state of the defer chain. A return statement
+	// and a panic each reach it.
+	DeferState int
 
 	// Blocking marks a machine of a function that can block. A machine of a
 	// function that holds only a goto statement needs no frame.
@@ -226,6 +244,17 @@ type (
 		State int
 	}
 
+	// DeferNext runs the next deferred call of a machine. The chain reaches
+	// Done when the stack holds no call.
+	DeferNext struct {
+		Body int
+		Done int
+	}
+
+	// DeferEnd stands at the end of the defer chain. A panic that the machine
+	// caught reaches the caller here.
+	DeferEnd struct{}
+
 	// LocalFunc declares a function inside a function body. A function literal
 	// that can block takes this form, because the frame of the literal must
 	// name it.
@@ -291,6 +320,8 @@ func (*Defer) isStmt()       {}
 func (*Select) isStmt()      {}
 func (*Jump) isStmt()        {}
 func (*Resume) isStmt()      {}
+func (*DeferNext) isStmt()   {}
+func (*DeferEnd) isStmt()    {}
 func (*LocalFunc) isStmt()   {}
 func (*SelectBind) isStmt()  {}
 
