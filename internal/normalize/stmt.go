@@ -222,21 +222,27 @@ func (b *builder) assign(s *ast.AssignStmt) []ir.Stmt {
 }
 
 // assignMulti writes the parts of 1 expression with multiple values.
+//
+// A short variable declaration may hold a name that already exists. Go declares
+// only the new names, thus each name needs its own form.
 func (b *builder) assignMulti(s *ast.AssignStmt) []ir.Stmt {
 	rhs := b.multiValue(s.Rhs[0])
+	var news []*types.Var
 	if s.Tok == token.DEFINE {
+		news = make([]*types.Var, len(s.Lhs))
 		allNew := true
-		vars := make([]*ir.Var, len(s.Lhs))
 		for i, lhs := range s.Lhs {
 			id, _ := lhs.(*ast.Ident)
-			obj, _ := b.info.Defs[id].(*types.Var)
-			if obj == nil {
+			news[i], _ = b.info.Defs[id].(*types.Var)
+			if news[i] == nil {
 				allNew = false
-				break
 			}
-			vars[i] = b.declareLocal(obj, obj.Name())
 		}
 		if allNew {
+			vars := make([]*ir.Var, len(s.Lhs))
+			for i, obj := range news {
+				vars[i] = b.declareLocal(obj, obj.Name())
+			}
 			return []ir.Stmt{&ir.Declare{Vars: vars, Init: rhs}}
 		}
 	}
@@ -250,9 +256,15 @@ func (b *builder) assignMulti(s *ast.AssignStmt) []ir.Stmt {
 		if isBlank(lhs) {
 			continue
 		}
+		read := &ir.Ident{Name: tmps[i].Name, Type: tmps[i].Type}
+		if news != nil && news[i] != nil {
+			v := b.declareLocal(news[i], news[i].Name())
+			out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: read})
+			continue
+		}
 		pre, _, set := b.lvalue(lhs)
 		out = append(out, pre...)
-		out = append(out, set(&ir.Ident{Name: tmps[i].Name, Type: tmps[i].Type}))
+		out = append(out, set(read))
 	}
 	return out
 }

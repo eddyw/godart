@@ -29,6 +29,13 @@ type Result struct {
 
 // Package writes the Dart source code of 1 package. Base names the library
 // file, and imports lists the Dart libraries of the Go dependencies.
+// partSuffix ends the name of each part file.
+//
+// A library file ends with `.dart` only. The 2 forms must differ, because a
+// package may hold a file whose name is the name of a package inside it. The
+// package math holds the file bits.go, and the package math/bits also exists.
+const partSuffix = ".part.dart"
+
 func Package(p *ir.Package, tpkg *types.Package, base string, imports []Import, blocks *analyze.Result) (*Result, error) {
 	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: base,
 		initNames: map[*ir.Func]string{}, blocks: blocks,
@@ -38,7 +45,7 @@ func Package(p *ir.Package, tpkg *types.Package, base string, imports []Import, 
 	out := &Result{Library: base + ".dart", Files: map[string]string{}}
 	var parts []string
 	for _, f := range p.Files {
-		part := base + "/" + strings.TrimSuffix(f.Name, ".go") + ".dart"
+		part := base + "/" + strings.TrimSuffix(f.Name, ".go") + partSuffix
 		out.Files[part] = e.partFile(base, f)
 		parts = append(parts, part)
 	}

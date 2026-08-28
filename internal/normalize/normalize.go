@@ -172,6 +172,10 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	if sig == nil {
 		return nil
 	}
+	if d.Body == nil {
+		b.fail(d.Pos(), "a function with no body is not supported")
+		return nil
+	}
 	f := &ir.Func{Name: obj.Name(), Obj: obj, Pos: d.Pos(), Async: b.blocks.Blocks(obj)}
 	b.names = map[types.Object]string{}
 	b.used = map[string]bool{}
@@ -183,10 +187,6 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	f.TypeParams = typeParams(sig.TypeParams())
 	f.Params = b.varsOf(sig.Params())
 	f.Results = b.results(sig)
-	if d.Body == nil {
-		b.fail(d.Pos(), "a function with no body is not supported")
-		return nil
-	}
 	f.Body = b.block(d.Body)
 	if len(b.gotoLabels) > 0 {
 		f.Body = b.stateMachine(f.Body, d.Pos())

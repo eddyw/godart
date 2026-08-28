@@ -8,7 +8,7 @@ import 'package:goruntime/goruntime.dart';
 import 'package:multi/count.dart' as $count;
 import 'package:multi/greet.dart' as $greet;
 
-part 'main/main.dart';
+part 'main/main.part.dart';
 
 bool $initDone = false;
 

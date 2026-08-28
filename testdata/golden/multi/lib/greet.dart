@@ -6,7 +6,7 @@
 
 import 'package:goruntime/goruntime.dart';
 
-part 'greet/greet.dart';
+part 'greet/greet.part.dart';
 
 final TypeDesc $desc$Greeter = TypeDesc(
   'example.com/multi/greet.Greeter',

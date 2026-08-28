@@ -88,3 +88,32 @@ double $f32(double v) {
   _f32[0] = v;
   return _f32[0];
 }
+
+/// _bits reads the same 8 bytes as a double and as an integer. The 2 views
+/// share 1 buffer, thus a write through 1 view reads back through the other.
+final ByteData _bits = ByteData(8);
+
+/// The IEEE 754 bit pattern of a 64-bit value.
+int $f64ToBits(double v) {
+  _bits.setFloat64(0, v);
+  return _bits.getInt64(0);
+}
+
+/// The 64-bit value of an IEEE 754 bit pattern.
+double $f64FromBits(int b) {
+  _bits.setInt64(0, b);
+  return _bits.getFloat64(0);
+}
+
+/// The IEEE 754 bit pattern of a 32-bit value. The result holds 32 bits, thus
+/// it stays positive in a Dart int.
+int $f32ToBits(double v) {
+  _bits.setFloat32(0, v);
+  return _bits.getUint32(0);
+}
+
+/// The 32-bit value of an IEEE 754 bit pattern.
+double $f32FromBits(int b) {
+  _bits.setUint32(0, b & 0xFFFFFFFF);
+  return _bits.getFloat32(0);
+}

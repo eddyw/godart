@@ -71,6 +71,14 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return "$nowNanos()", true
 	case "MonoNanos":
 		return "$monoNanos()", true
+	case "Float64Bits":
+		return fmt.Sprintf("$f64ToBits(%s)", args[0]), true
+	case "Float64FromBits":
+		return fmt.Sprintf("$f64FromBits(%s)", args[0]), true
+	case "Float32Bits":
+		return fmt.Sprintf("$f32ToBits(%s)", args[0]), true
+	case "Float32FromBits":
+		return fmt.Sprintf("$f32FromBits(%s)", args[0]), true
 	case "Worker":
 		return fmt.Sprintf("$worker(%s, %s)", args[0], args[1]), true
 	case "Stop":

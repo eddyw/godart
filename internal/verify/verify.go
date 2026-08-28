@@ -145,10 +145,10 @@ func isStandard(path string) bool {
 // location does not exist.
 func (v *verifier) checkAddress(e *ast.UnaryExpr) {
 	t := v.typeOf(e.X)
-	if t == nil || isStruct(t) {
+	if t == nil || isStruct(t) || isArray(t) {
 		return
 	}
-	v.reject(e.Pos(), "only a pointer to a struct stays in the subset",
+	v.reject(e.Pos(), "only a pointer to a struct or to an array stays in the subset",
 		"the compiler rejects the address of %s", types.TypeString(t, nil))
 }
 
@@ -179,10 +179,10 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 // struct. Go 1.26 added the expression form of new.
 func (v *verifier) checkNew(call *ast.CallExpr) {
 	p, _ := types.Unalias(v.typeOf(call)).(*types.Pointer)
-	if p == nil || isStruct(p.Elem()) {
+	if p == nil || isStruct(p.Elem()) || isArray(p.Elem()) {
 		return
 	}
-	v.reject(call.Pos(), "only a pointer to a struct stays in the subset",
+	v.reject(call.Pos(), "only a pointer to a struct or to an array stays in the subset",
 		"the compiler rejects new(%s)", types.TypeString(p.Elem(), nil))
 }
 
@@ -196,6 +196,14 @@ func (v *verifier) typeOf(e ast.Expr) types.Type {
 
 func isStruct(t types.Type) bool {
 	_, ok := types.Unalias(t).Underlying().(*types.Struct)
+	return ok
+}
+
+// isArray reports whether the type is an array. The Dart form of an array is a
+// List, and a List already holds a reference, thus the address of an array
+// needs no box.
+func isArray(t types.Type) bool {
+	_, ok := types.Unalias(t).Underlying().(*types.Array)
 	return ok
 }
 

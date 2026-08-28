@@ -1,3 +1,5 @@
+//go:build dart
+
 // Package utf8 holds the API of the standard library package unicode/utf8.
 //
 // The compiler cannot read the real source. The function word of that package

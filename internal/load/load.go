@@ -139,6 +139,10 @@ func overlayFiles(found []*packages.Package) (map[string][]byte, error) {
 			}
 			continue
 		}
+		if o.Patch {
+			patchFiles(out, o, p)
+			continue
+		}
 		if len(o.Files) > len(p.CompiledGoFiles) {
 			return nil, fmt.Errorf("the overlay of %s holds %d files, and the package holds %d",
 				o.Path, len(o.Files), len(p.CompiledGoFiles))
@@ -153,6 +157,25 @@ func overlayFiles(found []*packages.Package) (map[string][]byte, error) {
 		}
 	}
 	return out, nil
+}
+
+// patchFiles replaces 1 file of a package that the compiler reads from the real
+// Go source. Each other file of the package keeps its content.
+//
+// The overlay file matches a file of the package by its base name. A patch that
+// matches nothing stays out, because a build tag of the architecture selects
+// the file set of a package. The package math holds 1 file for each
+// architecture with assembly.
+func patchFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
+	byBase := map[string]string{}
+	for _, name := range p.CompiledGoFiles {
+		byBase[filepath.Base(name)] = name
+	}
+	for _, f := range o.Files {
+		if name, ok := byBase[f.Name]; ok {
+			out[name] = f.Content
+		}
+	}
 }
 
 // collectErrors reports the errors of the root packages and of the dependencies.

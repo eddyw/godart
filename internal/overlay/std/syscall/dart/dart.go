@@ -51,6 +51,26 @@ func NowNanos() int64 {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// Float64Bits gives the IEEE 754 bit pattern of a 64-bit value.
+func Float64Bits(v float64) uint64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Float64FromBits gives the 64-bit value of an IEEE 754 bit pattern.
+func Float64FromBits(b uint64) float64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Float32Bits gives the IEEE 754 bit pattern of a 32-bit value.
+func Float32Bits(v float32) uint32 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Float32FromBits gives the 32-bit value of an IEEE 754 bit pattern.
+func Float32FromBits(b uint32) float32 {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // MonoNanos gives the count of nanoseconds since the start of the program.
 //
 // The value comes from a monotonic clock. A change of the system time does not

@@ -28,6 +28,10 @@ type Package struct {
 	// Stub marks a package that the load replaces with an empty package. The
 	// curated surface does not hold such a package.
 	Stub bool
+	// Patch marks a package that the load reads from the real Go source. The
+	// files of the overlay then replace the file of the same base name, and
+	// each other file of the package keeps its content.
+	Patch bool
 	// Files holds the base name and the content of each file, in the order of
 	// the base name.
 	Files []File
@@ -42,6 +46,10 @@ type File struct {
 // Packages lists each overlay package, in the order of the import path.
 func Packages() []Package {
 	out := append(walk("std", false), walk("stub", true)...)
+	patch := patchSet()
+	for i := range out {
+		out[i].Patch = patch[out[i].Path]
+	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
 	return out
 }
@@ -73,6 +81,14 @@ func walk(root string, stub bool) []Package {
 		files := byPath[p]
 		sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
 		out = append(out, Package{Path: p, Name: path.Base(p), Stub: stub, Files: files})
+	}
+	return out
+}
+
+func patchSet() map[string]bool {
+	out := map[string]bool{}
+	for _, path := range native {
+		out[path] = true
 	}
 	return out
 }

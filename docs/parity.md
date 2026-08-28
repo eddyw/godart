@@ -60,6 +60,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
 | `errors` | Overlay | |
+| `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
+| `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `fmt` | Overlay | |
 | `sort` | Overlay | |
 | `strconv` | Overlay | |
@@ -74,14 +76,17 @@ reads the real Go source, because that source already stays inside the subset.
 Each other standard library package stays outside the surface. Stage 2 rejects
 an import of it with a source position.
 
-The 4 causes that block the next candidates:
+A patch replaces 1 file of a native package by its base name. Each other file
+keeps the real Go source. A patch that matches no file stays out, because a
+build tag of the architecture selects the file set of a package.
+
+The 3 causes that block the next candidates:
 
 | Package | Cause |
 |---|---|
-| `math` | The address of an array. Read the row of `&x`. |
-| `math/bits` | The package `unsafe`. |
-| `slices` | The address of a value that is not a struct. |
+| `slices` | The address of a local integer. Read the row of `&x`. |
 | `maps`, `iter` | A range loop over a function. |
+| `bytes`, `strings`, `path` | The package `internal/bytealg`, and `io`. |
 
 ## A type parameter with a mixed constraint
 
@@ -98,6 +103,15 @@ dictionary of the type parameter.
 
 A constraint whose terms give 1 Dart type keeps each operator. `int | int64`
 gives `int` 2 times, thus `+` and `<` work directly.
+
+## A short variable declaration with a mixed left side
+
+`a, b := f()` may hold a name that already exists. Go declares only the new
+names, and it writes the value to each other name. The compiler holds the same
+rule.
+
+The left side of `:=` accepts only a name, thus a field and an index never
+appear there.
 
 ## The order of a package variable
 

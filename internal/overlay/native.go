@@ -5,10 +5,13 @@ package overlay
 // inside the subset.
 //
 // A package enters this list when stage 2 accepts each file of it, and when
-// each package that it imports also stays in the surface.
+// each package that it imports also stays in the surface. A directory of the
+// same path inside std then patches 1 file of the package by its base name.
 var native = []string{
 	"cmp",
 	"container/list",
+	"math",
+	"math/bits",
 	"unicode",
 }
 

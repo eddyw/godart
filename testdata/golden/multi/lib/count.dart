@@ -6,7 +6,7 @@
 
 import 'package:goruntime/goruntime.dart';
 
-part 'count/count.dart';
+part 'count/count.part.dart';
 
 bool $initDone = false;
 
