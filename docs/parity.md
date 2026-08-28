@@ -71,6 +71,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `encoding/json` | Overlay | `Marshal` only. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native | |
+| `net` | Overlay | TCP only. Read the section below. |
 | `os` | Overlay | The file access and the process state. Read the section below. |
 | `path` | Native | |
 | `runtime` | Overlay | `GOMAXPROCS` only. It always gives 1. |
@@ -206,9 +207,9 @@ with the go command and with gart.
 
 ## The network access
 
-The subset holds no `net` package. A program reaches TCP through
-`syscall/dart`, and the Dart side uses `Socket` and `ServerSocket` of
-`dart:io`.
+`net` reaches TCP through `syscall/dart`, and the Dart side uses `Socket` and
+`ServerSocket` of `dart:io`. A program reads either the `net` package or the
+interop package.
 
 A dial, a read, a write, a listen, and an accept each wait for a Dart future.
 The runtime function `$await` writes a frame of the wait, thus the caller
@@ -225,10 +226,25 @@ nothing.
 | An accept | `Listener.Accept` | `dart.Accept` gives a handle of a connection. |
 | A close of a listener | `Listener.Close` | `dart.ListenClose`. Each connection of it stays open. |
 | The text of a failure | `dial tcp 127.0.0.1:0: connect: ...` | The message of the Dart `SocketException`. |
-| A `net` overlay | `net.Conn` and `net.Listener` | Missing. A program reads the interop package. |
-| UDP, a Unix socket, and TLS | Present | Missing |
-| A deadline and a cancel | Present | Missing |
 | An address of the host name | Present | Only a numeric address and a host name that Dart resolves. |
+
+The `net` package holds this surface:
+
+| Item | Go | godart |
+|---|---|---|
+| `Dial` | Each network | `tcp` only. Each other name gives an error. |
+| `Listen` | Each network | `tcp` only. A port of 0 gives a free port. |
+| `Conn` | 8 methods | `Read`, `Write`, and `Close` only. |
+| `Listener` | `Accept`, `Close`, `Addr` | Equal |
+| `Addr` | `Network` and `String` | Equal |
+| `TCPAddr`, `IP`, `Dialer`, `Resolver` | Present | Missing. A type assertion of an `Addr` gives a compile error, and not a wrong value. |
+| An empty host of `Dial` | The local system | `127.0.0.1` |
+| An empty host of `Listen` | Each interface | `0.0.0.0` |
+| `SplitHostPort` | Accepts an IPv6 host in brackets | Only a host with no bracket. |
+| `JoinHostPort` | Adds brackets for an IPv6 host | It joins the 2 parts with a colon. |
+| UDP, a Unix socket, and TLS | Present | Missing |
+| A deadline, and `SetDeadline` | Present | Missing |
+| The text of a failure | `dial tcp 127.0.0.1:0: connect: ...` | `dial tcp <address>: ` and the message of the Dart `SocketException`. |
 
 ## A range loop over a function
 

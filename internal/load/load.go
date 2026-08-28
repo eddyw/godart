@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/packages"
 
@@ -85,7 +86,11 @@ func load(dir string, tests bool, patterns []string) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	files, err := overlayFiles(found)
+	surface, err := surfacePackages(dir)
+	if err != nil {
+		return nil, err
+	}
+	files, err := overlayFiles(found, surface)
 	if err != nil {
 		return nil, err
 	}
@@ -128,9 +133,9 @@ func load(dir string, tests bool, patterns []string) (*Result, error) {
 // because the package under test imports it. Such a variant reads the files of
 // the real package, thus the overlay replaces them. The variant of the package
 // under test stays out, because its file list also holds each test file.
-func overlayFiles(found []*packages.Package) (map[string][]byte, error) {
+func overlayFiles(found, surface []*packages.Package) (map[string][]byte, error) {
 	existing := map[string]*packages.Package{}
-	packages.Visit(found, nil, func(p *packages.Package) {
+	packages.Visit(append(found, surface...), nil, func(p *packages.Package) {
 		if p.ID == p.PkgPath {
 			existing[p.PkgPath] = p
 			return
@@ -161,6 +166,40 @@ func overlayFiles(found []*packages.Package) (map[string][]byte, error) {
 	}
 	return out, nil
 }
+
+// surfacePackages gives the real file list of each overlay package.
+//
+// The first load reads only the imports of the module. An overlay may import a
+// package that the real source of the module does not reach, and the second
+// load then holds the overlay file of that package next to its real files. Thus
+// the load asks for each overlay package by its path.
+//
+// The list depends only on GOROOT and on the build tag, thus 1 load for each
+// process is enough. A watch build and the end to end test each run many
+// builds in 1 process.
+func surfacePackages(dir string) ([]*packages.Package, error) {
+	surfaceOnce.Do(func() {
+		var paths []string
+		for _, o := range overlay.Packages() {
+			if o.Path == overlay.IntrinsicPath {
+				continue
+			}
+			paths = append(paths, o.Path)
+		}
+		surfaceFound, surfaceErr = packages.Load(&packages.Config{
+			Mode:       findMode,
+			Dir:        dir,
+			BuildFlags: []string{"-tags=" + BuildTag},
+		}, paths...)
+	})
+	return surfaceFound, surfaceErr
+}
+
+var (
+	surfaceOnce  sync.Once
+	surfaceFound []*packages.Package
+	surfaceErr   error
+)
 
 // holdsTestFile reports whether the file list of a package holds a test file.
 // The variant of a package under test holds one, and each other variant holds
