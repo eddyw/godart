@@ -78,9 +78,9 @@ var _ = unsafe.Sizeof(0)
 `)
 	rejectFile(t, "curated surface", "outside the supported surface", `package a
 
-import "net/http"
+import "os/exec"
 
-var _ = http.StatusOK
+var _ = exec.ErrNotFound
 `)
 	acceptFile(t, "a blank import of unsafe", `package a
 

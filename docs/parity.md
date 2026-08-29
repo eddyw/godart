@@ -127,6 +127,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
+| `net/http` | Overlay | An HTTP/1.1 client and an HTTP/1.1 server. Read the section of the HTTP access. |
 | `crypto/tls` | Overlay | A client over the secure socket of Dart. `Dial`, `DialWithDialer`, `Config`, `Conn`, and `ConnectionState`. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
@@ -380,6 +381,38 @@ The `net` package holds this surface:
 | A connected UDP socket | The system drops a datagram of another source | The runtime drops it. Dart gives no connect of a datagram socket. |
 | The text of a failure | `dial tcp 127.0.0.1:0: connect: ...` | `dial tcp <address>: ` and the message of the Dart `SocketException`. |
 | The text of a deadline | `read tcp <local>-><remote>: i/o timeout` | `read tcp: i/o timeout` |
+
+## The HTTP access
+
+The real `net/http` of Go holds 53000 lines. It reads a vendored HTTP/2 stack, a
+cookie jar, a file transport, `mime`, `net/textproto`, and `compress/gzip`. The
+overlay holds an HTTP/1.1 client and an HTTP/1.1 server over the `net` package,
+with about 1500 lines.
+
+| Item | Go | godart |
+|---|---|---|
+| `Get`, `Head`, `Post`, `PostForm`, `Client.Do` | Present | Equal |
+| `NewRequest`, `NewRequestWithContext` | Present | Equal |
+| `Header` with `Get`, `Set`, `Add`, `Del`, `Values`, `Clone`, `Write` | Present | Equal |
+| A redirect | Follows up to 10 | Equal. `CheckRedirect` and `ErrUseLastResponse` work. |
+| `Client.Timeout` | Present | Present. It reaches the deadline of the connection. |
+| `Handler`, `HandlerFunc`, `ResponseWriter`, `Flusher` | Present | Equal |
+| `ServeMux`, `Handle`, `HandleFunc`, `StripPrefix` | Present | The pattern holds a path and a subtree. A method and a wildcard of Go 1.22 stay out. |
+| `Server`, `ListenAndServe`, `Serve`, `Close` | Present | Equal |
+| `Error`, `NotFound`, `Redirect`, `StatusText` | Present | Equal |
+| `Cookie`, `SetCookie`, `Request.Cookies`, `Response.Cookies` | Present | Equal |
+| A chunked body | Present | Equal, for a read and for a write. |
+| Keep alive | Present | Missing. The client opens 1 connection for each request. |
+| HTTP/2 | Present | Missing |
+| `Accept-Encoding: gzip` | The client adds it and reads the answer | Missing. The surface holds no `compress/gzip`. |
+| The type of a body that the handler does not name | `DetectContentType` reads the first 512 bytes | `text/plain; charset=utf-8` for each body |
+| A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
+| `Request.RemoteAddr` | The address of the peer | Empty. The `Conn` of the `net` overlay names no peer. |
+| `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig` only |
+| `httptest`, `CookieJar`, `FileServer`, `multipart` | Present | Missing |
+
+`testdata/programs/httpuse` runs a server and a client in 1 program, and the
+output of `go run` and of the Dart build stays equal.
 
 ## The clock and the timer
 

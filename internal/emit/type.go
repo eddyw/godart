@@ -367,12 +367,44 @@ func (e *emitter) qualify(obj types.Object, dartName string) string {
 	if obj.Pkg() == nil || obj.Pkg() == e.pkg {
 		return dartName
 	}
-	prefix, ok := e.prefixes[obj.Pkg().Path()]
+	path := obj.Pkg().Path()
+	prefix, ok := e.prefixes[path]
 	if !ok {
-		e.fail("the package %s has no import prefix", obj.Pkg().Path())
+		// A package that the Go source does not import can still reach the
+		// output. A composite literal of a struct of another package writes the
+		// zero value of each field, and a field type belongs to a third
+		// package.
+		prefix = e.addImport(path)
+	}
+	if prefix == "" {
+		e.fail("the package %s has no import prefix", path)
 		return dartName
 	}
 	return prefix + "." + dartName
+}
+
+// addImport gives a prefix to a package that the import list does not hold, and
+// it records the import. The library file writes it.
+func (e *emitter) addImport(path string) string {
+	uri := e.cfg.URIs[path]
+	if uri == "" {
+		return ""
+	}
+	base := path
+	if k := strings.LastIndex(base, "/"); k >= 0 {
+		base = base[k+1:]
+	}
+	used := map[string]bool{}
+	for _, p := range e.prefixes {
+		used[p] = true
+	}
+	prefix := "$" + sanitize(base)
+	for i := 1; used[prefix]; i++ {
+		prefix = fmt.Sprintf("$%s$%d", sanitize(base), i)
+	}
+	e.prefixes[path] = prefix
+	e.extra = append(e.extra, Import{Path: path, URI: uri})
+	return prefix
 }
 
 // recvTypeParams gives the type parameters of a named receiver type. The top

@@ -155,6 +155,8 @@ type emitter struct {
 	// goLine holds the source line of the last marker. A statement of the same
 	// line needs no second marker.
 	goLine int
+	// extra holds each import that the emitter added. Read addImport.
+	extra []Import
 }
 
 // The 2 markers of the source map. Each one stands on a line of its own, thus
@@ -405,11 +407,16 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	}
 	body := e.buf.String()
 
+	// The body can add an import, thus the list of the file stands after it. An
+	// added package needs no init call: the package that names its type already
+	// runs it.
+	all := append(append([]Import{}, sorted...), e.extra...)
+	sort.Slice(all, func(i, j int) bool { return all[i].Path < all[j].Path })
 	e.buf.Reset()
 	e.buf.WriteString(header)
 	e.line("")
 	e.line("import 'package:goruntime/goruntime.dart';")
-	for _, im := range sorted {
+	for _, im := range all {
 		e.line("import '%s' as %s;", im.URI, e.prefixes[im.Path])
 	}
 	for _, uri := range e.anonURIs() {

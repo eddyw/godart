@@ -9,12 +9,12 @@ build of a program that imports the package.
 
 ## The import surface
 
-60 packages of the standard library reach the surface. Stage 2 rejects an import
+61 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
 |---|---|
-| `bufio`, `bytes`, `cmp` | `net/http` |
+| `bufio`, `bytes`, `cmp`, `net/http` | `net/http/httptest` |
 | `container/heap`, `container/list`, `container/ring` | `os/exec`, `os/signal` |
 | `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
 | `regexp`, `regexp/syntax` | `text/template`, `html/template` |

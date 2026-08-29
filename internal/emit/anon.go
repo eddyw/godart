@@ -269,7 +269,9 @@ func (e *emitter) anonFile(class string, st *types.Struct) (string, map[string]*
 	inner.buf.WriteString(header)
 	inner.line("")
 	inner.line("import 'package:goruntime/goruntime.dart';")
-	for _, im := range e.anonImports(st) {
+	all := append(e.anonImports(st), inner.extra...)
+	sort.Slice(all, func(i, j int) bool { return all[i].Path < all[j].Path })
+	for _, im := range all {
 		inner.line("import '%s' as %s;", im.URI, inner.prefixes[im.Path])
 	}
 	delete(inner.anon, class)

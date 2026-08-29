@@ -18,10 +18,10 @@ func TestRejectReportsTheImport(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "go.mod"), "module reject\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
 
-import "net/http"
+import "os/exec"
 
 func main() {
-	_, _ = http.Get("x")
+	_ = exec.ErrNotFound
 }
 `)
 	runtime, err := filepath.Abs("../../runtime/goruntime")
@@ -37,11 +37,11 @@ func main() {
 	if err == nil {
 		t.Fatal("the build accepted an import outside the surface")
 	}
-	want := "the package net/http is outside the supported surface"
+	want := "the package os/exec is outside the supported surface"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("the report holds no %q:\n%v", want, err)
 	}
-	if strings.Contains(err.Error(), "/net/http/") {
+	if strings.Contains(err.Error(), "/os/exec/") {
 		t.Errorf("the report holds a type error of the package:\n%v", err)
 	}
 }
