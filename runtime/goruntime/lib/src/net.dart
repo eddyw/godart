@@ -301,6 +301,50 @@ Future<int> _fill(_Conn c) {
   return (-1, _empty);
 }
 
+/// Opens a TLS connection to a host and a port, and gives its handle.
+///
+/// The handle joins the table of the connections, thus each read, each write,
+/// each deadline, and the close of a TCP connection also work on it.
+///
+/// insecure drops the check of the certificate. sni names the host of the check
+/// and of the extension of the name of the server. protos holds the list of
+/// ALPN, and the second result names the protocol that the handshake took.
+(int, GoString, GoString) $dialTLS(
+  GoString host,
+  int port,
+  bool insecure,
+  GoString sni,
+  Slice<GoString> protos,
+) {
+  final String name = sni.length == 0
+      ? host.toDartString()
+      : sni.toDartString();
+  final List<String> alpn = <String>[];
+  for (int i = 0; i < protos.len; i++) {
+    alpn.add(protos[i].toDartString());
+  }
+  $await(
+    Socket.connect(host.toDartString(), port)
+        .then(
+          (Socket s) => SecureSocket.secure(
+            s,
+            host: name,
+            supportedProtocols: alpn.isEmpty ? null : alpn,
+            onBadCertificate: insecure ? (X509Certificate c) => true : null,
+          ),
+        )
+        .then(
+          (SecureSocket s) => (
+            _slot(_Conn(s)),
+            GoString.fromString(s.selectedProtocol ?? ''),
+            _empty,
+          ),
+        ),
+    (Object cause) => (-1, GoString.empty, _cause(cause)),
+  );
+  return (-1, GoString.empty, _empty);
+}
+
 /// Opens a connection to a Unix socket and gives its handle.
 (int, GoString) $dialUnix(GoString path) {
   $await(

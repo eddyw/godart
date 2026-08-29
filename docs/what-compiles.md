@@ -9,7 +9,7 @@ build of a program that imports the package.
 
 ## The import surface
 
-56 packages of the standard library reach the surface. Stage 2 rejects an import
+57 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
@@ -18,9 +18,9 @@ of each other package with a source position.
 | `container/heap`, `container/list`, `container/ring` | `os/exec`, `os/signal` |
 | `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
 | `regexp`, `regexp/syntax` | `text/template`, `html/template` |
-| `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/tls`, `crypto/rand` |
+| `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/rand`, `crypto/x509` |
 | `encoding/csv`, `encoding/hex`, `encoding/json` | `compress/...`, `archive/...` |
-| `crypto/md5`, `crypto/sha256` | `text/tabwriter`, `embed` |
+| `crypto/md5`, `crypto/sha256`, `crypto/tls` | `text/tabwriter`, `embed` |
 | `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `database/sql`, `math/cmplx` |
 | `io`, `io/fs`, `iter`, `maps`, `slices`, `sort` | `go/...` |
 | `math`, `math/bits`, `math/rand`, `math/rand/v2` | `unsafe`, cgo |

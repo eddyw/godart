@@ -29,6 +29,18 @@ func Stack(skip int) []string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// DialTLS opens a TLS connection to a host and a port, and gives its handle.
+// The handle joins the table of the connections, thus ConnRead, ConnWrite,
+// ConnDeadline, and ConnClose each work on it.
+//
+// insecure drops the check of the certificate. The name of the server holds the
+// host of the check, and an empty name reads the host of the address. The list
+// of ALPN holds each protocol that the client offers, and the second result
+// names the protocol that the handshake took.
+func DialTLS(host string, port int, insecure bool, name string, protos []string) (int, string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Kind gives the kind of a value, in the words of the package reflect.
 func Kind(value any) string {
 	panic("syscall/dart needs the gart compiler")

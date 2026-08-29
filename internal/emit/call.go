@@ -66,6 +66,9 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$stdout(%s)", args[0]), true
 	case "Format":
 		return fmt.Sprintf("$goFormat(%s, %s)", args[1], args[0]), true
+	case "DialTLS":
+		return fmt.Sprintf("$dialTLS(%s, %s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3], args[4]), true
 	case "Kind":
 		return fmt.Sprintf("$goKind(%s)", args[0]), true
 	case "Stack":

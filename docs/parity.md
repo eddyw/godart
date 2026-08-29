@@ -125,6 +125,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
+| `crypto/tls` | Overlay | A client over the secure socket of Dart. `Dial`, `DialWithDialer`, `Config`, `Conn`, and `ConnectionState`. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | `New`, `Is`, `As`, `AsType`, `Unwrap`, and `Join`. |
@@ -799,7 +800,7 @@ Gaps of the standard library surface:
 | `strconv.Unquote`, `strconv.UnquoteChar` | Present. The source comes from Go. |
 | `strings.Title` | Missing. Go deprecated it. |
 | `sort.Sort` with an interface | Missing. Use `sort.Slice`. |
-| `crypto/tls` | Missing. Read the section of the network access. |
+| `crypto/tls` | A client only. Read the section of the network access. |
 
 The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
 `%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.
