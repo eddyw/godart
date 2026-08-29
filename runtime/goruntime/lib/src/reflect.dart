@@ -332,3 +332,128 @@ TypeDesc _pointerTo(TypeDesc elem) {
   _pointers[elem.name] = out;
   return out;
 }
+
+/// The count of the parameters of a function type.
+int $descNumIn(int handle) => _typeAt(handle).params.length;
+
+/// The count of the results of a function type.
+int $descNumOut(int handle) => _typeAt(handle).results.length;
+
+/// A handle of the type of 1 parameter of a function type.
+int $descIn(int handle, int index) {
+  final TypeDesc desc = _typeAt(handle);
+  if (index < 0 || index >= desc.params.length) {
+    $panic(const GoError('reflect: the type holds no such parameter'));
+  }
+  return _descHandle(desc.params[index]());
+}
+
+/// A handle of the type of 1 result of a function type.
+int $descOut(int handle, int index) {
+  final TypeDesc desc = _typeAt(handle);
+  if (index < 0 || index >= desc.results.length) {
+    $panic(const GoError('reflect: the type holds no such result'));
+  }
+  return _descHandle(desc.results[index]());
+}
+
+/// Calls a function value with the arguments, and gives each result.
+///
+/// A function that gives up control is outside this call: the Dart form of such
+/// a function gives a sentinel, and the call reads no scheduler.
+Slice<Iface?> $callValue(Iface? fn, Slice<Iface?> args) {
+  if (fn == null) $panicNil();
+  final TypeDesc desc = fn.desc;
+  if (desc.kind != 'func') {
+    $panic(GoError('reflect: Call of ${desc.display}'));
+  }
+  if (args.len != desc.params.length) {
+    $panic(
+      GoError(
+        'reflect: Call with ${args.len} input arguments, '
+        'and the function takes ${desc.params.length}',
+      ),
+    );
+  }
+  final List<Object?> raw = <Object?>[];
+  for (int i = 0; i < args.len; i++) {
+    final Iface? a = args[i];
+    raw.add(desc.params[i]().kind == 'interface' ? a : a?.value);
+  }
+  final Object? out = Function.apply(fn.value as Function, raw);
+  final int n = desc.results.length;
+  final List<Iface?> results = <Iface?>[];
+  if (n == 1) {
+    results.add(_result(desc.results[0](), out));
+  } else if (n > 1) {
+    for (int i = 0; i < n; i++) {
+      results.add(_result(desc.results[i](), _field(out, i, n)));
+    }
+  }
+  return Slice.of(results);
+}
+
+Iface? _result(TypeDesc desc, Object? value) {
+  if (desc.kind == 'interface') return value as Iface?;
+  return Iface(desc, value);
+}
+
+/// Reads 1 field of the record of a call that gives many results. Dart holds no
+/// index of a record, thus the count of the results selects the field.
+Object? _field(Object? record, int index, int count) {
+  final dynamic r = record;
+  switch (index) {
+    case 0:
+      return r.$1;
+    case 1:
+      return r.$2;
+    case 2:
+      return r.$3;
+    case 3:
+      return r.$4;
+    case 4:
+      return r.$5;
+    case 5:
+      return r.$6;
+    case 6:
+      return r.$7;
+    case 7:
+      return r.$8;
+  }
+  $panic(GoError('reflect: a call of $count results is outside the subset'));
+}
+
+/// A map of the type.
+Iface? $makeMap(int handle) {
+  final TypeDesc desc = _typeAt(handle);
+  final Object? Function(int)? make = desc.make;
+  if (make == null) {
+    $panic(GoError('reflect: MakeMap of ${desc.display}'));
+  }
+  return Iface(desc, make(0));
+}
+
+/// A handle of the key type of a map type. Each other type gives 0.
+int $descKey(int handle) {
+  final TypeDesc? desc = _descAt(handle);
+  final TypeDesc Function()? key = desc?.key;
+  if (key == null) return 0;
+  return _descHandle(key());
+}
+
+/// Writes 1 entry of a map. A nil value drops the entry.
+void $mapSet(Iface? target, Iface? key, Iface? value, bool drop) {
+  if (target == null) $panicNil();
+  final Object? m = target.value;
+  if (m is! GoMap<Object?, Object?>) {
+    $panic(GoError('reflect: SetMapIndex of ${target.desc.display}'));
+  }
+  final TypeDesc? keyType = target.desc.key?.call();
+  final TypeDesc? elem = target.desc.elem?.call();
+  final Object? k = keyType?.kind == 'interface' ? key : key?.value;
+  if (drop) {
+    m.remove(k);
+    return;
+  }
+  m.set(k, elem?.kind == 'interface' ? value : value?.value);
+}

@@ -9,7 +9,7 @@ build of a program that imports the package.
 
 ## The import surface
 
-61 packages of the standard library reach the surface. Stage 2 rejects an import
+62 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
@@ -27,8 +27,9 @@ of each other package with a source position.
 | `net`, `net/netip`, `net/url` | |
 | `os`, `path`, `path/filepath` | |
 | `reflect`, `runtime`, `strconv`, `strings` | |
-| `sync`, `sync/atomic`, `testing`, `time` | |
-| `unicode`, `unicode/utf8`, `unique` | |
+| `sync`, `sync/atomic`, `testing`, `testing/quick` | |
+| `time`, `unique` | |
+| `unicode`, `unicode/utf8` | |
 | `encoding`, `internal/godebug`, `internal/byteorder` | |
 | `internal/testhash` | |
 | `testing/internal/testdeps`, `syscall/dart` | |

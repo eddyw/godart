@@ -1,3 +1,4 @@
+import 'dict.dart';
 import 'panic.dart';
 import 'string.dart';
 
@@ -58,6 +59,10 @@ final class TypeDesc {
   /// The count of the elements of an array type. Each other kind holds 0.
   final int length;
 
+  /// The parameter types and the result types of a function type.
+  final List<TypeDesc Function()> params;
+  final List<TypeDesc Function()> results;
+
   /// zero builds the zero value of the type. A decoder writes a fresh value of
   /// a field of a struct through it.
   final Object? Function()? zero;
@@ -79,6 +84,8 @@ final class TypeDesc {
     this.elem,
     this.key,
     this.length = 0,
+    this.params = const <TypeDesc Function()>[],
+    this.results = const <TypeDesc Function()>[],
     this.zero,
     this.make,
     this.comparable = true,
@@ -263,3 +270,37 @@ Object? $call(Iface? x, String name, List<Object?> args) {
 /// another library reaches no such method.
 Never $noMethod(String name) =>
     $panic(GoError('the method $name belongs to another package'));
+
+/// $ifaceMethod stands in the method table of the description of an interface
+/// type. Such a table holds the key of each method that the interface needs,
+/// and no call reaches the value.
+Never $ifaceMethod() =>
+    $panic(const GoError('the method belongs to an interface type'));
+
+/// Reports whether the value holds the type of a dictionary. An interface type
+/// argument reads the method set, and each other type argument reads the name.
+bool $isDictType(Iface? x, TypeDesc d) {
+  if (d.kind == 'interface') return $implements(x, d.methods.keys.toList());
+  return $isType(x, d.name);
+}
+
+/// The value of a type assertion to a type parameter. An interface type
+/// argument keeps the pair, and each other type argument gives the value.
+T $dictValue<T>(Iface? x, Dict<T> d) {
+  if (d.desc.kind == 'interface') return x as T;
+  return x!.value as T;
+}
+
+/// The value of a type assertion to a type parameter with no second result. A
+/// value of another type stops the program.
+T $assertDict<T>(Iface? x, Dict<T> d) {
+  if (!$isDictType(x, d.desc)) {
+    $panic(
+      GoError(
+        'interface conversion: interface {} is '
+        '${x == null ? 'nil' : x.desc.display}, not ${d.desc.display}',
+      ),
+    );
+  }
+  return $dictValue<T>(x, d);
+}

@@ -159,8 +159,25 @@ func (e *emitter) descShape(t types.Type) string {
 		return fmt.Sprintf(", key: () => %s, elem: () => %s, make: ($n) => GoMap<%s, %s>(() => %s)",
 			e.descriptorOf(u.Key()), e.descriptorOf(u.Elem()),
 			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
+	case *types.Signature:
+		return e.signatureShape(u)
 	}
 	return ""
+}
+
+// signatureShape writes the parameter types and the result types of a function
+// type. The package reflect reads them, and Value.Call needs them.
+func (e *emitter) signatureShape(sig *types.Signature) string {
+	params := make([]string, sig.Params().Len())
+	for i := range params {
+		params[i] = "() => " + e.descriptorOf(sig.Params().At(i).Type())
+	}
+	results := make([]string, sig.Results().Len())
+	for i := range results {
+		results[i] = "() => " + e.descriptorOf(sig.Results().At(i).Type())
+	}
+	return fmt.Sprintf(", params: <TypeDesc Function()>[%s], results: <TypeDesc Function()>[%s]",
+		strings.Join(params, ", "), strings.Join(results, ", "))
 }
 
 // fieldDescs writes the description of each struct field. The reflect subset
@@ -408,13 +425,22 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		}
 	}
 	// An unnamed struct type holds the promoted method of each embedded field,
-	// thus its description also needs a method table. Each other type of this
-	// path holds no method: an interface value carries the table of the type
-	// inside it, and a slice, a map, and a channel hold none.
+	// thus its description also needs a method table. An interface type holds
+	// the key of each method that it needs, because a type assertion to a type
+	// parameter reads that set. A slice, a map, and a channel hold no method.
 	table := "const <String, Function>{}"
-	if _, ok := types.Unalias(t).Underlying().(*types.Struct); ok {
+	switch {
+	case isStructUnder(t):
 		if entries := e.methodTable(types.Unalias(t), t); len(entries) > 0 {
 			table = "<String, Function>{" + strings.Join(entries, ", ") + "}"
+		}
+	case isInterfaceType(t):
+		if keys := interfaceMethods(t); len(keys) > 0 {
+			parts := make([]string, len(keys))
+			for i, k := range keys {
+				parts[i] = fmt.Sprintf("%q: $ifaceMethod", k)
+			}
+			table = "<String, Function>{" + strings.Join(parts, ", ") + "}"
 		}
 	}
 	return fmt.Sprintf("TypeDesc('%s', '%s', %s, text: '%s'%s, zero: () => %s)",
@@ -610,10 +636,21 @@ func typeName(t types.Type) string {
 	return types.TypeString(types.Unalias(t), nil)
 }
 
+// isStructUnder reports whether the underlying type is a struct.
+func isStructUnder(t types.Type) bool {
+	_, ok := types.Unalias(t).Underlying().(*types.Struct)
+	return ok
+}
+
 // typeTest writes the test of a type assertion and of a type switch.
 func (e *emitter) typeTest(x ir.Expr, target types.Type) string {
 	if isInterfaceType(target) {
 		return fmt.Sprintf("$implements(%s, %s)", e.expr(x), methodNameList(interfaceMethods(target)))
+	}
+	// A type parameter holds no kind of its own. An interface type argument
+	// needs the test of the method set, thus the test reads the description.
+	if tp, ok := types.Unalias(target).(*types.TypeParam); ok {
+		return fmt.Sprintf("$isDictType(%s, %s.desc)", e.expr(x), e.dictOf(tp))
 	}
 	return fmt.Sprintf("$isType(%s, %s)", e.expr(x), e.typeNameText(target))
 }
@@ -628,11 +665,15 @@ func (e *emitter) typeNameText(t types.Type) string {
 }
 
 func (e *emitter) typeAssert(x *ir.TypeAssert) string {
+	tp, isParam := types.Unalias(x.Assert).(*types.TypeParam)
 	if !x.Comma {
 		if isInterfaceType(x.Assert) {
 			return fmt.Sprintf("$assertIface(%s, %s, '%s')",
 				e.expr(x.X), methodNameList(interfaceMethods(x.Assert)),
 				typeName(x.Assert))
+		}
+		if isParam {
+			return fmt.Sprintf("$assertDict(%s, %s)", e.expr(x.X), e.dictOf(tp))
 		}
 		return fmt.Sprintf("($assertType(%s, %s) as %s)",
 			e.expr(x.X), e.typeNameText(x.Assert), e.dartType(x.Assert))
@@ -640,6 +681,10 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 	if isInterfaceType(x.Assert) {
 		return fmt.Sprintf("(() { final $x = %s; if ($implements($x, %s)) return ($x, true); return (null, false); })()",
 			e.expr(x.X), methodNameList(interfaceMethods(x.Assert)))
+	}
+	if isParam {
+		return fmt.Sprintf("(() { final $x = %s; if ($isDictType($x, %s.desc)) return ($dictValue<%s>($x, %s), true); return (%s.zero(), false); })()",
+			e.expr(x.X), e.dictOf(tp), e.dartType(tp), e.dictOf(tp), e.dictOf(tp))
 	}
 	return fmt.Sprintf("(() { final $x = %s; if ($isType($x, %s)) return ($x!.value as %s, true); return (%s, false); })()",
 		e.expr(x.X), e.typeNameText(x.Assert), e.dartType(x.Assert), e.zero(x.Assert))

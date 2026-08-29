@@ -211,6 +211,53 @@ func (t Type) Field(i int) StructField {
 	return StructField{Name: name, Tag: StructTag(tag), Type: Type{desc: desc}}
 }
 
+// Key gives the key type of a map type. Each other type panics, exactly as in
+// Go.
+func (t Type) Key() Type {
+	key := dart.DescKey(t.desc)
+	if key == 0 {
+		panic("reflect: Key of " + t.String())
+	}
+	return Type{desc: key}
+}
+
+// NumIn gives the count of the parameters of a function type.
+func (t Type) NumIn() int {
+	if t.Kind() != Func {
+		panic("reflect: NumIn of " + t.String())
+	}
+	return dart.DescNumIn(t.desc)
+}
+
+// In gives the type of 1 parameter of a function type.
+func (t Type) In(i int) Type {
+	if t.Kind() != Func {
+		panic("reflect: In of " + t.String())
+	}
+	return Type{desc: dart.DescIn(t.desc, i)}
+}
+
+// NumOut gives the count of the results of a function type.
+func (t Type) NumOut() int {
+	if t.Kind() != Func {
+		panic("reflect: NumOut of " + t.String())
+	}
+	return dart.DescNumOut(t.desc)
+}
+
+// Out gives the type of 1 result of a function type.
+func (t Type) Out(i int) Type {
+	if t.Kind() != Func {
+		panic("reflect: Out of " + t.String())
+	}
+	return Type{desc: dart.DescOut(t.desc, i)}
+}
+
+// IsVariadic reports whether the last parameter of a function type holds a
+// list. The description of the output holds no such flag, thus the result is
+// always false.
+func (t Type) IsVariadic() bool { return false }
+
 // Size gives the count of bytes that a value of the type holds in Go.
 //
 // A struct of Go holds a padding that follows the alignment of the machine. The
@@ -284,18 +331,47 @@ func MakeSlice(t Type, length, capacity int) Value {
 	return Value{value: dart.MakeValue(t.desc, length)}
 }
 
+// MakeMap gives an empty map of the type.
+func MakeMap(t Type) Value {
+	if t.Kind() != Map {
+		panic("reflect: MakeMap of " + t.String())
+	}
+	return Value{value: dart.MakeMap(t.desc)}
+}
+
+// TypeAssert reads the value inside v as the type T. The flag is false when the
+// value holds another type.
+func TypeAssert[T any](v Value) (T, bool) {
+	out, ok := v.read().(T)
+	return out, ok
+}
+
+// read gives the value at the location that v names. A Set writes through the
+// location, thus a read after it gives the new value.
+func (v Value) read() any {
+	switch v.loc {
+	case locPointer:
+		return dart.PointerElem(v.owner)
+	case locField:
+		return dart.FieldRead(v.owner, v.index)
+	case locIndex:
+		return dart.ValueIndex(v.owner, v.index)
+	}
+	return v.value
+}
+
 // IsValid reports whether v holds a value.
-func (v Value) IsValid() bool { return v.value != nil }
+func (v Value) IsValid() bool { return v.read() != nil }
 
 // Interface gives the value of v inside an interface.
-func (v Value) Interface() any { return v.value }
+func (v Value) Interface() any { return v.read() }
 
 // Type gives the type of the value.
-func (v Value) Type() Type { return TypeOf(v.value) }
+func (v Value) Type() Type { return TypeOf(v.read()) }
 
 // Kind gives the class of the type of the value.
 func (v Value) Kind() Kind {
-	if v.value == nil {
+	if v.read() == nil {
 		return Invalid
 	}
 	return v.Type().Kind()
@@ -304,18 +380,20 @@ func (v Value) Kind() Kind {
 // Elem gives the value behind a pointer. The result holds the pointer, thus Set
 // writes through it.
 func (v Value) Elem() Value {
-	return Value{value: dart.PointerElem(v.value), owner: v.value, loc: locPointer}
+	p := v.read()
+	return Value{value: dart.PointerElem(p), owner: p, loc: locPointer}
 }
 
 // Len gives the length of a slice, an array, a string, or a map.
-func (v Value) Len() int { return dart.ValueLen(v.value) }
+func (v Value) Len() int { return dart.ValueLen(v.read()) }
 
 // Index gives 1 element of a slice, an array, or a string. The result of a
 // slice and of an array holds its location, thus Set writes through it.
 func (v Value) Index(i int) Value {
-	out := Value{value: dart.ValueIndex(v.value, i)}
+	owner := v.read()
+	out := Value{value: dart.ValueIndex(owner, i)}
 	if v.Kind() != String {
-		out.owner, out.index, out.loc = v.value, i, locIndex
+		out.owner, out.index, out.loc = owner, i, locIndex
 	}
 	return out
 }
@@ -326,7 +404,8 @@ func (v Value) NumField() int { return v.Type().NumField() }
 // Field gives 1 field of a struct value. The result holds its location, thus
 // Set writes through it.
 func (v Value) Field(i int) Value {
-	return Value{value: dart.FieldRead(v.value, i), owner: v.value,
+	owner := v.read()
+	return Value{value: dart.FieldRead(owner, i), owner: owner,
 		index: i, loc: locField}
 }
 
@@ -338,39 +417,65 @@ func (v Value) CanSet() bool { return v.loc != locNone }
 func (v Value) Set(x Value) {
 	switch v.loc {
 	case locPointer:
-		dart.PointerSet(v.owner, x.value)
+		dart.PointerSet(v.owner, x.read())
 	case locField:
-		dart.FieldWrite(v.owner, v.index, x.value)
+		dart.FieldWrite(v.owner, v.index, x.read())
 	case locIndex:
-		dart.ValueSetIndex(v.owner, v.index, x.value)
+		dart.ValueSetIndex(v.owner, v.index, x.read())
 	default:
 		panic("reflect: Set of a value that holds no address")
 	}
 }
 
 // Int gives the value of a signed integer kind.
-func (v Value) Int() int64 { return dart.AsInt(v.value) }
+func (v Value) Int() int64 { return dart.AsInt(v.read()) }
 
 // Uint gives the value of an unsigned integer kind.
-func (v Value) Uint() uint64 { return uint64(dart.AsInt(v.value)) }
+func (v Value) Uint() uint64 { return uint64(dart.AsInt(v.read())) }
 
 // Float gives the value of a float kind.
-func (v Value) Float() float64 { return dart.AsFloat(v.value) }
+func (v Value) Float() float64 { return dart.AsFloat(v.read()) }
 
 // Bool gives the value of the kind bool.
-func (v Value) Bool() bool { return dart.AsBool(v.value) }
+func (v Value) Bool() bool { return dart.AsBool(v.read()) }
 
 // String gives the text of a value of the kind string. Each other kind gives a
 // description of the value, exactly as in Go.
 func (v Value) String() string {
 	if v.Kind() == String {
-		return dart.AsString(v.value)
+		return dart.AsString(v.read())
 	}
-	if v.value == nil {
+	if v.read() == nil {
 		return "<invalid Value>"
 	}
 	return "<" + v.Type().String() + " Value>"
 }
+
+// Call runs the function that v holds and gives each result.
+//
+// A function that gives up control is outside this call. The Dart form of such
+// a function gives a sentinel of the scheduler, and the call reads no
+// scheduler.
+func (v Value) Call(in []Value) []Value {
+	args := make([]any, len(in))
+	for i, a := range in {
+		args[i] = a.read()
+	}
+	raw := dart.CallValue(v.read(), args)
+	out := make([]Value, len(raw))
+	for i, r := range raw {
+		out[i] = Value{value: r}
+	}
+	return out
+}
+
+// SetMapIndex writes 1 entry of a map. A key with no value drops the entry.
+func (v Value) SetMapIndex(key, value Value) {
+	dart.MapSet(v.read(), key.read(), value.read(), !value.IsValid())
+}
+
+// SetZero writes the zero value of the type into the location that v names.
+func (v Value) SetZero() { v.Set(Zero(v.Type())) }
 
 // SetInt writes a whole number into the location that v names.
 func (v Value) SetInt(x int64) { v.Set(Value{value: dart.WithInt(v.descOf(), x)}) }
@@ -387,4 +492,4 @@ func (v Value) SetBool(x bool) { v.Set(Value{value: dart.WithBool(v.descOf(), x)
 // SetString writes text into the location that v names.
 func (v Value) SetString(x string) { v.Set(Value{value: dart.WithString(v.descOf(), x)}) }
 
-func (v Value) descOf() int { return dart.DescOf(v.value) }
+func (v Value) descOf() int { return dart.DescOf(v.read()) }

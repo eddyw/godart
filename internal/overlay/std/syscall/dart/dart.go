@@ -82,6 +82,46 @@ func DescInfo(handle int) (string, string, bool) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// DescNumIn gives the count of the parameters of a function type.
+func DescNumIn(handle int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescNumOut gives the count of the results of a function type.
+func DescNumOut(handle int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescIn gives a handle of the type of 1 parameter of a function type.
+func DescIn(handle, index int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescOut gives a handle of the type of 1 result of a function type.
+func DescOut(handle, index int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescKey gives a handle of the key type of a map type.
+func DescKey(handle int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// CallValue calls a function value with the arguments and gives each result.
+func CallValue(fn any, args []any) []any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MakeMap gives a map of the type.
+func MakeMap(handle int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MapSet writes 1 entry of a map. The flag drops the entry.
+func MapSet(target, key, value any, drop bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // DescLength gives the count of the elements of an array type.
 func DescLength(handle int) int {
 	panic("syscall/dart needs the gart compiler")

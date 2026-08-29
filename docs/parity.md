@@ -53,6 +53,10 @@ The package `fmt` reads it.
 | `reflect.TypeOf(nil)` | Gives a Type with an empty text and an empty kind. Go gives nil. |
 | `reflect.ValueOf`, `Value.Interface`, `Value.Elem`, `Value.Set`, `reflect.Zero`, `Type.Elem` | Present |
 | `Value.Kind`, `Type`, `Len`, `Index`, `NumField`, `Field`, `CanSet`, `IsValid` | Present |
+| `Value.Call` | Present. A function that gives up control stays out, because the call reads no scheduler. |
+| `Value.SetMapIndex`, `Value.SetZero`, `reflect.MakeMap`, `reflect.TypeAssert` | Present |
+| `Type.NumIn`, `In`, `NumOut`, `Out`, `Key` | Present |
+| `Type.IsVariadic` | Always false. The description of a function type holds no such flag. |
 | `Value.Int`, `Uint`, `Float`, `Bool`, `String`, and each `Set` form of them | Present |
 | `reflect.New`, `reflect.MakeSlice`, `reflect.Indirect` | Present |
 | `Type.NumField`, `Type.Field`, `Type.Len`, `Type.Name`, `StructTag.Get` | Present |
@@ -128,6 +132,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
 | `net/http` | Overlay | An HTTP/1.1 client and an HTTP/1.1 server. Read the section of the HTTP access. |
+| `testing/quick` | Overlay | The source of Go, with no complex case. |
 | `crypto/tls` | Overlay | A client over the secure socket of Dart. `Dial`, `DialWithDialer`, `Config`, `Conn`, and `ConnectionState`. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |

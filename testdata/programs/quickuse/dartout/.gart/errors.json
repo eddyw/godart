@@ -1,0 +1,15 @@
+{
+  "path": "errors",
+  "name": "errors",
+  "sourceHash": "575d65d73501333fedd0f629818fb1ab908768a80e295cedd33e741cb4155375",
+  "exportHash": "54313ece8ab886178132354b4fe343125f5bcd79df01aebc533126cf347cd8f3",
+  "export": "aQNmaSIvdXNyL2xvY2FsL2dvL3NyYy9lcnJvcnMvZXJyb3JzLmdvA2VycgZ0YXJnZXQACEFzVHlwZS5FBGVycnMEdGV4dAZlcnJvcnMCQXMGQXNUeXBlAklzBEpvaW4DTmV3BlVud3JhcEYaugIAAgwjEywnHwEwLgAACS8uRxquAwABMQFAIxMCMC4xDC4AAEYaqgEAAgwjExQnEwE4LgAAAhNGGuoEAAEUOFgBPC4TAUYaRgABED0QATQuEwBGGnoAARwjEwEsLhMAUDauAwAAEwEuQgAHSQBMFC9iUydWOltIX1U=",
+  "blocking": null,
+  "files": [
+    "lib/std/errors.dart",
+    "lib/std/errors.map.dart",
+    "lib/std/errors/errors.part.dart",
+    "lib/std/errors/join.part.dart",
+    "lib/std/errors/wrap.part.dart"
+  ]
+}
