@@ -30,6 +30,10 @@ func main() {
 	fmt.Println("[" + strings.TrimSpace("  pad  ") + "]")
 	fmt.Println(strings.Repeat("ab", 3), strings.Count("cheese", "e"))
 	fmt.Println(strings.Fields(" a  b c "))
+	fmt.Println(strings.FieldsFunc("a1b22c333", func(r rune) bool { return r >= '0' && r <= '9' }))
+	fmt.Println(strings.FieldsFunc("", func(r rune) bool { return true }))
+	fmt.Println(strings.FieldsFunc("xx", func(r rune) bool { return true }))
+	fmt.Println(strings.FieldsFunc("héllo wörld", func(r rune) bool { return r == ' ' }))
 	before, after, found := strings.Cut("key=value", "=")
 	fmt.Println(before, after, found)
 

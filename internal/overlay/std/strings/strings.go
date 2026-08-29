@@ -362,6 +362,29 @@ func Fields(s string) []string {
 	return out
 }
 
+// FieldsFunc cuts s at each run of runes that f accepts. It gives the runs of
+// runes that f rejects.
+func FieldsFunc(s string, f func(rune) bool) []string {
+	out := []string{}
+	start := -1
+	for i, r := range s {
+		if f(r) {
+			if start >= 0 {
+				out = append(out, s[start:i])
+				start = -1
+			}
+			continue
+		}
+		if start < 0 {
+			start = i
+		}
+	}
+	if start >= 0 {
+		out = append(out, s[start:])
+	}
+	return out
+}
+
 // ToUpper gives the text in upper case.
 func ToUpper(s string) string {
 	return dart.Upper(s)

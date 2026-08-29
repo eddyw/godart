@@ -264,9 +264,16 @@ func (b *builder) assignMulti(s *ast.AssignStmt) []ir.Stmt {
 		}
 	}
 	var out []ir.Stmt
+	// Each temporary holds the type of the call, and not the type of the
+	// location. A location of an interface type then takes a conversion.
+	tuple, _ := rhs.GoType().(*types.Tuple)
 	tmps := make([]*ir.Var, len(s.Lhs))
 	for i, lhs := range s.Lhs {
-		tmps[i] = &ir.Var{Name: b.temp(s.Pos(), "m") + strconv.Itoa(i), Type: b.typeOf(lhs)}
+		t := b.typeOf(lhs)
+		if tuple != nil && i < tuple.Len() {
+			t = tuple.At(i).Type()
+		}
+		tmps[i] = &ir.Var{Name: b.temp(s.Pos(), "m") + strconv.Itoa(i), Type: t}
 	}
 	out = append(out, &ir.Declare{Vars: tmps, Init: rhs})
 	for i, lhs := range s.Lhs {
@@ -276,12 +283,12 @@ func (b *builder) assignMulti(s *ast.AssignStmt) []ir.Stmt {
 		read := &ir.Ident{Name: tmps[i].Name, Type: tmps[i].Type}
 		if news != nil && news[i] != nil {
 			v := b.declareLocal(news[i], news[i].Name())
-			out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: read})
+			out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: b.convert(read, news[i].Type())})
 			continue
 		}
 		pre, _, set := b.lvalue(lhs)
 		out = append(out, pre...)
-		out = append(out, set(read))
+		out = append(out, set(b.convert(read, b.typeOf(lhs))))
 	}
 	return out
 }
@@ -580,13 +587,48 @@ func (b *builder) returnStmt(s *ast.ReturnStmt) []ir.Stmt {
 		return []ir.Stmt{&ir.Return{}}
 	}
 	if len(s.Results) == 1 && len(f.Results) > 1 {
-		return []ir.Stmt{&ir.Return{Values: []ir.Expr{b.multiValue(s.Results[0])}}}
+		return b.returnMulti(s.Results[0])
 	}
 	values := make([]ir.Expr, len(s.Results))
 	for i, r := range s.Results {
 		values[i] = b.copyPoint(b.exprAs(r, f.Results[i].Type))
 	}
 	return []ir.Stmt{&ir.Return{Values: values}}
+}
+
+// returnMulti returns each result of 1 call. A result whose type differs from
+// the result of the function needs a conversion, thus the call lands in a
+// variable first and the return builds the tuple again.
+func (b *builder) returnMulti(e ast.Expr) []ir.Stmt {
+	x := b.multiValue(e)
+	f := b.fn
+	tuple, _ := x.GoType().(*types.Tuple)
+	if tuple == nil || tuple.Len() != len(f.Results) {
+		return []ir.Stmt{&ir.Return{Values: []ir.Expr{x}}}
+	}
+	same := true
+	for i := range f.Results {
+		if !types.Identical(tuple.At(i).Type(), f.Results[i].Type) {
+			same = false
+		}
+	}
+	if same {
+		return []ir.Stmt{&ir.Return{Values: []ir.Expr{x}}}
+	}
+	tmps := make([]*ir.Var, tuple.Len())
+	values := make([]ir.Expr, tuple.Len())
+	for i := range tmps {
+		tmps[i] = &ir.Var{
+			Name: b.temp(e.Pos(), "r") + strconv.Itoa(i),
+			Type: tuple.At(i).Type(),
+		}
+		values[i] = b.convert(
+			&ir.Ident{Name: tmps[i].Name, Type: tmps[i].Type}, f.Results[i].Type)
+	}
+	return []ir.Stmt{
+		&ir.Declare{Vars: tmps, Init: x},
+		&ir.Return{Values: values},
+	}
 }
 
 // typeSwitch rewrites a type switch into a switch with a type test in each
