@@ -113,13 +113,15 @@ var total int
 
 func f() { _ = &total }
 `)
-	reject(t, "int field", "the address of int", `func f() { var p point; _ = &p.x }`)
-	reject(t, "int element", "the address of int", `func f(s []int) { _ = &s[0] }`)
-	reject(t, "array element", "the address of int", `func f() { var a [2]int; _ = &a[0] }`)
-	reject(t, "a call result", "the address of int",
-		`func g() int { return 1 }
+	accept(t, "int field", `func f() { var p point; _ = &p.x }`)
+	accept(t, "int element", `func f(s []int) { _ = &s[0] }`)
+	accept(t, "array element", `func f() { var a [2]int; _ = &a[0] }`)
+	accept(t, "an element of a call result",
+		`func g() []int { return nil }
 
-func f() { _ = &[]int{g()}[0] }`)
+func f() { _ = &g()[0] }`)
+	reject(t, "a composite literal", "the address of []int",
+		`func f() { _ = &[]int{1} }`)
 }
 
 func TestNew(t *testing.T) {
@@ -137,10 +139,9 @@ func TestComplex(t *testing.T) {
 }
 
 func TestReportsEachRejection(t *testing.T) {
-	err := run(t, head+`func f(s []int) {
-	var p point
-	_ = &p.x
-	_ = &s[0]
+	err := run(t, head+`func f() {
+	_ = &[]int{1}
+	_ = &[]string{"a"}
 }`)
 	if err == nil {
 		t.Fatal("got no rejection, want 2")

@@ -458,6 +458,9 @@ func (e *emitter) unary(x *ir.Unary) string {
 		if id, ok := x.X.(*ir.Ident); ok && id.Boxed {
 			return e.identName(id)
 		}
+		if p, ok := typeset.Core(x.Type).(*types.Pointer); ok && needsBox(p.Elem()) {
+			return e.addressOf(x.X, p.Elem())
+		}
 		return e.expr(x.X)
 	case token.MUL:
 		return e.deref(x.X)
@@ -472,6 +475,49 @@ func (e *emitter) unary(x *ir.Unary) string {
 	}
 	e.fail("the operator %s has no Dart form", x.Op)
 	return "null"
+}
+
+// addressOf writes a pointer to a field of a struct, or to an element of a
+// slice or an array. Such a location holds a Dart value, thus the pointer holds
+// the object and the index of the location.
+func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
+	switch x := x.(type) {
+	case *ir.Field:
+		owner := x.X.GoType()
+		if p, ok := typeset.Core(owner).(*types.Pointer); ok {
+			owner = p.Elem()
+		}
+		field := name.Package(x.Name)
+		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => $r.%s, ($r, $i, $v) => $r.%s = $v)",
+			e.dartType(owner), e.dartType(elem), e.deref(x.X), fieldIndex(owner, x.Name),
+			field, field)
+	case *ir.Index:
+		container := x.X.GoType()
+		if isPointerType(container) {
+			return fmt.Sprintf("$indexPtr(%s, %s)", e.deref(x.X), e.expr(x.Index))
+		}
+		if isArrayType(container) {
+			return fmt.Sprintf("$indexPtr(%s, %s)", e.expr(x.X), e.expr(x.Index))
+		}
+		return fmt.Sprintf("$elemPtr(%s, %s)", e.expr(x.X), e.expr(x.Index))
+	}
+	e.fail("the address of %T has no Dart form", x)
+	return "null"
+}
+
+// fieldIndex gives the position of a field in its struct. A pointer holds the
+// index, thus 2 pointers to 1 field are equal.
+func fieldIndex(t types.Type, field string) int {
+	st, ok := typeset.Core(t).Underlying().(*types.Struct)
+	if !ok {
+		return -1
+	}
+	for i := 0; i < st.NumFields(); i++ {
+		if st.Field(i).Name() == field {
+			return i
+		}
+	}
+	return -1
 }
 
 func (e *emitter) composite(x *ir.Composite) string {

@@ -137,24 +137,24 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	}
 }
 
-// checkAddress rejects the address of a value that is not a struct. A pointer
-// to a struct is the Dart object reference, thus the runtime needs no pointer
-// cell. All other locations hold a Dart value, and a reference to such a
-// location does not exist.
 // checkAddress rejects the address of a value that holds no reference and that
-// is not a variable.
+// names no location.
 //
 // A struct and an array give a Dart object, thus a pointer to one is the object
-// itself. Each other value needs a box, and only a variable can hold a box. A
-// field of a struct, an element of a slice, and an element of a map live inside
-// another object, thus the compiler writes no box for them.
+// itself. Each other value needs a cell. A variable holds a box, and a field of
+// a struct and an element of a slice or an array hold a Ref of the object and
+// the index. Each other form, for example a composite literal, holds no
+// location, thus the compiler rejects its address.
 func (v *verifier) checkAddress(e *ast.UnaryExpr) {
 	t := v.typeOf(e.X)
 	if t == nil || isStruct(t) || isArray(t) {
 		return
 	}
 	if !v.isVariable(e.X) {
-		v.reject(e.Pos(), "a value of such a type needs a box, and only a variable holds one",
+		if v.isLocation(e.X) {
+			return
+		}
+		v.reject(e.Pos(), "a value of such a type needs a cell, and only a variable or a location holds one",
 			"the compiler rejects the address of %s", types.TypeString(t, nil))
 		return
 	}
@@ -172,6 +172,31 @@ func (v *verifier) checkAddress(e *ast.UnaryExpr) {
 // isGlobal reports whether the variable stands at package level.
 func isGlobal(obj *types.Var) bool {
 	return obj.Pkg() != nil && obj.Parent() == obj.Pkg().Scope()
+}
+
+// isLocation reports whether the expression names a field of a struct, or an
+// element of a slice or an array. A pointer to such a location holds the object
+// and the index.
+func (v *verifier) isLocation(e ast.Expr) bool {
+	switch e := unparen(e).(type) {
+	case *ast.SelectorExpr:
+		obj, ok := v.info.Uses[e.Sel].(*types.Var)
+		return ok && obj.IsField()
+	case *ast.IndexExpr:
+		t := v.typeOf(e.X)
+		if t == nil {
+			return false
+		}
+		u := types.Unalias(t).Underlying()
+		if p, ok := u.(*types.Pointer); ok {
+			u = types.Unalias(p.Elem()).Underlying()
+		}
+		switch u.(type) {
+		case *types.Slice, *types.Array:
+			return true
+		}
+	}
+	return false
 }
 
 // isVariable reports whether the expression names a variable. A parameter and a

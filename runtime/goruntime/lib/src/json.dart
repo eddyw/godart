@@ -251,7 +251,7 @@ void _store(TypeDesc elem, Object? pointer, Object? tree) {
       _fillArray(elem, pointer as List<Object?>, tree);
       return;
   }
-  (pointer as Box<dynamic>).v = _decode(elem, tree);
+  (pointer as $Ptr<dynamic>).v = _decode(elem, tree);
 }
 
 Object? _decode(TypeDesc desc, Object? tree) {

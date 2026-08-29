@@ -185,7 +185,8 @@ source of the package.
 ## A pointer to a value that is not a struct
 
 `*int`, `*string`, `*[]byte`, and each other pointer now stays in the subset. The
-Dart form is a `Box<T>`, and the box holds 1 field with the value.
+Dart form is a `$Ptr<T>`. A pointer to a variable holds a `Box<T>` with the
+value, and a pointer to a field or to an element holds a `$Ref`.
 
 | Item | godart |
 |---|---|
@@ -200,14 +201,16 @@ Dart form is a `Box<T>`, and the box holds 1 field with the value.
 | `p == nil` | Present |
 | A pointer to a pointer | Present |
 | The identity of 2 pointers | Present |
-| `&v` of a struct field | Rejected by stage 2 |
-| `&v` of an element of a slice, an array, or a map | Rejected by stage 2 |
-| `&v` of the result of a call | Rejected by stage 2 |
+| `&v` of a struct field | Present. The pointer holds the object and the index of the field. |
+| `&v` of an element of a slice or an array | Present. The pointer holds the backing list and the index. |
+| `&v` of a composite literal of a type that is not a struct | Rejected by stage 2 |
 | `&v` in a declaration of multiple values | Rejected by stage 5 |
 
 The compiler writes a box only for a variable whose address the code takes, thus
-a program that takes no address holds no box. A field, an element, and a call
-result each live inside another object, and the compiler writes no box for one.
+a program that takes no address holds no box. A field and an element live inside
+another object, thus the pointer holds a `$Ref` of that object and the index.
+Go compares 2 pointers with `==`, and `$Ref` compares the object and the index
+for it.
 
 A pointer to a struct and to an array holds no box. The Dart object of a struct
 and the Dart List of an array already hold a reference.

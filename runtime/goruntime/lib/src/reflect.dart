@@ -76,7 +76,7 @@ Iface? $descZero(int handle) {
 Iface? $pointerElem(Iface? pointer) {
   final TypeDesc elem = _pointerElemDesc(pointer);
   final Object? target = pointer!.value;
-  if (target is Box<Object?>) {
+  if (target is $Ptr<Object?>) {
     if (elem.kind == 'interface') return target.v as Iface?;
     return Iface(elem, target.v);
   }
@@ -92,7 +92,7 @@ void $pointerSet(Iface? pointer, Iface? value) {
   final TypeDesc elem = _pointerElemDesc(pointer);
   final Object? target = pointer!.value;
   final Object? stored = elem.kind == 'interface' ? value : value?.value;
-  if (target is Box<Object?>) {
+  if (target is $Ptr<Object?>) {
     target.v = stored;
     return;
   }

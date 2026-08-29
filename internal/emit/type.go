@@ -40,7 +40,7 @@ func (e *emitter) dartType(t types.Type) string {
 		return name.Local(t.Obj().Name())
 	case *types.Pointer:
 		if needsBox(t.Elem()) {
-			return "Box<" + e.dartType(t.Elem()) + ">?"
+			return "$Ptr<" + e.dartType(t.Elem()) + ">?"
 		}
 		return e.dartType(t.Elem()) + "?"
 	case *types.Slice:

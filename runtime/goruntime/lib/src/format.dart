@@ -78,7 +78,7 @@ bool _deepValue(Object? x, Object? y, TypeDesc desc) {
     case 'ptr':
       if (identical(x, y)) return true;
       if (x == null || y == null) return false;
-      if (x is Box<Object?> && y is Box<Object?>) {
+      if (x is $Ptr<Object?> && y is $Ptr<Object?>) {
         return _deepValue(x.v, y.v, desc.elem!());
       }
       return _deepValue(x, y, desc.elem!());
@@ -113,7 +113,7 @@ bool $assignError(Iface? value, Iface? target) {
   }
   if (elem.name != value.desc.name) return false;
   final Object? box = target.value;
-  if (box is Box<Object?>) {
+  if (box is $Ptr<Object?>) {
     box.v = value.value;
     return true;
   }

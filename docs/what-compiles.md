@@ -37,7 +37,6 @@ of each other package with a source position.
 | `recover` | Rejected. A panic stops the program. |
 | `unsafe` and cgo | Rejected |
 | A complex number | Rejected |
-| A pointer to a field of a type that is not a struct | Rejected |
 | The address of a composite literal of a type that is not a struct | Rejected. A variable first, and the address of the variable. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |
