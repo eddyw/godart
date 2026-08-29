@@ -91,6 +91,9 @@ reads the real Go source, because that source already stays inside the subset.
 | `runtime` | Overlay | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOOS`, and `GOARCH`. |
 | `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
+| `math/rand` | Native, with 1 patch | The patch replaces `rand.go`. `rng.go` holds the algorithm, thus a seeded sequence stays equal. |
+| `math/rand/v2` | Native, with 1 patch | The patch replaces `rand.go`. `pcg.go` and `chacha8.go` hold the 2 algorithms. |
+| `internal/chacha8rand` | Native, with 2 patches | The 2 patches replace the assembly of `block` and the 2 views of 1 memory block. |
 | `fmt` | Overlay | |
 | `slices` | Overlay | The sort is a stable merge sort. |
 | `sort` | Overlay | `Sort`, `Stable`, `Slice`, `SliceStable`, `Search`, `Find`, and the typed forms. |
@@ -653,16 +656,19 @@ Gaps of the standard library surface:
 | Item | State |
 |---|---|
 | `sync.RWMutex` | A read lock is equal to a write lock. The single isolate gives no parallel read. |
-| `sync/atomic` | Missing. The single isolate makes a plain operation safe. |
-| `time.Time` format and parse | Missing |
-| `time.Timer` and `time.Ticker` | Missing |
+| `time.Time.Parse` | Missing. `Format` and `Date` are present. |
+| `time.Time.Year`, `Month`, `Day`, `Hour`, `Weekday` | Missing. `Format` reads the calendar. |
 | `strconv.Unquote` | Missing |
-| `strings.Map`, `strings.Title` | Missing |
+| `strings.Title` | Missing. Go deprecated it. |
 | `sort.Sort` with an interface | Missing. Use `sort.Slice`. |
-| `encoding/json` | Missing |
-| `io`, `os`, `net` | Missing. The interop package needs the file and the network calls. |
+| `math/rand/v2` `N` and `Rand.N` | Missing. The body converts between a type parameter of a mixed type set and uint64, and the compiler holds no such conversion. |
 | `regexp` | Missing. Thus `-run` reads plain text. |
+| `crypto/tls` | Missing. Read the section of the network access. |
 
 The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
 `%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.
 The flag `-` works.
+
+A Dart double holds a `float32` with the precision of 64 bits. `%v` and `%g`
+write the shortest decimal text that reads back as the same 32-bit value, thus
+the text holds the digits that Go writes.

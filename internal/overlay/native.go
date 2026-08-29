@@ -24,6 +24,9 @@ var native = []string{
 	"path",
 	"math",
 	"math/bits",
+	"math/rand",
+	"math/rand/v2",
+	"internal/chacha8rand",
 	"unicode",
 }
 

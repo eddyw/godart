@@ -283,7 +283,12 @@ String _value(Object? v, TypeDesc type, String verb) {
       return _string(v as GoString, letter);
     case 'float32':
     case 'float64':
-      return _float(v as double, letter, _precision(verb));
+      return _float(
+        v as double,
+        letter,
+        _precision(verb),
+        type.kind == 'float32',
+      );
     case 'uint':
     case 'uint64':
     case 'uintptr':
@@ -382,16 +387,30 @@ String _int(int v, String letter, bool unsigned) {
     case 'f':
     case 'e':
     case 'g':
-      return _float(v.toDouble(), letter, -1);
+      return _float(v.toDouble(), letter, -1, false);
   }
   return '%!$letter(int=$v)';
 }
 
-String _float(double v, String letter, int precision) {
+/// The text of a 32-bit float, in the format of Go.
+///
+/// Go writes the shortest decimal text that reads back as the same value of the
+/// width of the value. A Dart double holds a 32-bit value with the precision of
+/// 64 bits, thus the shortest text of 64 bits holds more digits than Go writes.
+String $f32string(double v) {
+  if (v.isNaN || v.isInfinite || v == 0) return $fstring(v);
+  for (int digits = 1; digits <= 9; digits++) {
+    final double short = double.parse(v.toStringAsPrecision(digits));
+    if ($f32FromBits($f32ToBits(short)) == v) return $fstring(short);
+  }
+  return $fstring(v);
+}
+
+String _float(double v, String letter, int precision, bool single) {
   switch (letter) {
     case 'v':
     case 'g':
-      return $fstring(v);
+      return single ? $f32string(v) : $fstring(v);
     case 'f':
       if (v.isNaN) return 'NaN';
       if (v.isInfinite) return v > 0 ? '+Inf' : '-Inf';
