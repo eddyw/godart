@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'chan.dart';
 import 'sched.dart';
 import 'slice.dart';
 import 'string.dart';
@@ -18,6 +19,15 @@ final class _Conn {
 
   /// True after the peer closed the write side. Each read then gives 0.
   bool ended = false;
+
+  /// The read that stands open. A deadline ends the wait of the caller, and
+  /// the read of the stream stays, thus the next read takes the same future.
+  Future<int>? pending;
+
+  /// The 2 deadlines, in nanoseconds after the start of the Unix epoch. A
+  /// value of 0 holds no limit.
+  int readDeadline = 0;
+  int writeDeadline = 0;
 
   _Conn(this.socket) : packets = StreamIterator<Uint8List>(socket);
 }
@@ -37,12 +47,74 @@ final class _Listener {
   final ServerSocket server;
   final StreamIterator<Socket> incoming;
 
-  _Listener(this.server) : incoming = StreamIterator<Socket>(server);
+  /// The path of a Unix socket. A close removes the file, exactly as Go does.
+  /// The value is empty for a TCP listener.
+  final String unixPath;
+
+  _Listener(this.server, [this.unixPath = ''])
+    : incoming = StreamIterator<Socket>(server);
 }
 
-/// The open listeners of the program, by handle. The handles of a listener and
-/// of a connection belong to 2 separate lists.
+/// The open listeners of the program, by handle. The handles of a listener, of
+/// a connection, and of a datagram socket belong to 3 separate lists.
 final List<_Listener?> _listeners = <_Listener?>[];
+
+/// One datagram socket.
+///
+/// The socket gives a stream of events, and a read event holds each datagram
+/// that arrived. The held list keeps a datagram that no read took, thus a
+/// deadline of a read drops nothing.
+final class _Packet {
+  final RawDatagramSocket socket;
+  final List<Datagram> held = <Datagram>[];
+
+  /// The remote address of a socket of a dial. Such a socket drops a datagram
+  /// of another source, exactly as a connected socket of the system does. The
+  /// host is empty for a socket of a listen.
+  String remoteHost = '';
+  int remotePort = 0;
+
+  bool ended = false;
+  Completer<int>? waiter;
+  Future<int>? pending;
+  int readDeadline = 0;
+  int writeDeadline = 0;
+
+  _Packet(this.socket) {
+    socket.listen(_event, onDone: _end, onError: (Object cause) => _end());
+  }
+
+  void _event(RawSocketEvent event) {
+    if (event == RawSocketEvent.closed) {
+      _end();
+      return;
+    }
+    if (event != RawSocketEvent.read) return;
+    for (Datagram? d = socket.receive(); d != null; d = socket.receive()) {
+      if (remoteHost.isNotEmpty &&
+          (d.address.address != remoteHost || d.port != remotePort)) {
+        continue;
+      }
+      held.add(d);
+    }
+    if (held.isNotEmpty) _wake(0);
+  }
+
+  void _end() {
+    ended = true;
+    _wake(1);
+  }
+
+  void _wake(int code) {
+    final Completer<int>? w = waiter;
+    if (w == null) return;
+    waiter = null;
+    w.complete(code);
+  }
+}
+
+/// The open datagram sockets of the program, by handle.
+final List<_Packet?> _packets = <_Packet?>[];
 
 final GoString _empty = GoString.empty;
 
@@ -57,7 +129,43 @@ GoString _cause(Object e) {
   return GoString.fromString(e.toString());
 }
 
+/// True after the release of the network stands in the list of the scheduler.
+bool _released = false;
+
+/// _register asks the scheduler to close each open handle when package main
+/// returns. Go ends the process at that point, and an open socket of Dart
+/// keeps the isolate alive.
+void _register() {
+  if (_released) return;
+  _released = true;
+  $releases.add(_closeAll);
+}
+
+void _closeAll() {
+  for (int i = 0; i < _open.length; i++) {
+    final _Conn? c = _open[i];
+    if (c == null) continue;
+    _open[i] = null;
+    unawaited(c.packets.cancel());
+    c.socket.destroy();
+  }
+  for (int i = 0; i < _listeners.length; i++) {
+    final _Listener? l = _listeners[i];
+    if (l == null) continue;
+    _listeners[i] = null;
+    unawaited(l.incoming.cancel());
+    unawaited(l.server.close());
+  }
+  for (int i = 0; i < _packets.length; i++) {
+    final _Packet? s = _packets[i];
+    if (s == null) continue;
+    _packets[i] = null;
+    s.socket.close();
+  }
+}
+
 int _slot(_Conn c) {
+  _register();
   for (int i = 0; i < _open.length; i++) {
     if (_open[i] == null) {
       _open[i] = c;
@@ -74,6 +182,7 @@ _Conn? _at(int handle) {
 }
 
 int _listenSlot(_Listener l) {
+  _register();
   for (int i = 0; i < _listeners.length; i++) {
     if (_listeners[i] == null) {
       _listeners[i] = l;
@@ -89,7 +198,50 @@ _Listener? _listenerAt(int handle) {
   return _listeners[handle];
 }
 
+int _packetSlot(_Packet s) {
+  _register();
+  for (int i = 0; i < _packets.length; i++) {
+    if (_packets[i] == null) {
+      _packets[i] = s;
+      return i;
+    }
+  }
+  _packets.add(s);
+  return _packets.length - 1;
+}
+
+_Packet? _packetAt(int handle) {
+  if (handle < 0 || handle >= _packets.length) return null;
+  return _packets[handle];
+}
+
 GoString _closed() => GoString.fromString('use of closed network connection');
+
+GoString _timeout() => GoString.fromString('i/o timeout');
+
+/// _limit ends a wait at a deadline. A deadline of 0 holds no limit, and a
+/// deadline that passed already gives the expired value at once.
+///
+/// The source future stays open. Each caller holds it in a field, thus the
+/// next call of the same operation takes the same future.
+Future<T> _limit<T>(Future<T> f, int deadline, T expired) {
+  if (deadline == 0) return f;
+  final int left = deadline - $nowNanos();
+  if (left <= 0) return Future<T>.value(expired);
+  return f.timeout(
+    Duration(microseconds: left ~/ 1000),
+    onTimeout: () => expired,
+  );
+}
+
+/// _address reads a numeric address, or it asks the system for the name.
+Future<InternetAddress> _address(String host) async {
+  final InternetAddress? found = InternetAddress.tryParse(host);
+  if (found != null) return found;
+  final List<InternetAddress> names = await InternetAddress.lookup(host);
+  if (names.isEmpty) throw SocketException('no such host: $host');
+  return names.first;
+}
 
 Uint8List _bytes(Slice<int> p) {
   final Uint8List out = Uint8List(p.len);
@@ -110,6 +262,28 @@ int _take(_Conn c, Slice<int> p) {
   return n;
 }
 
+/// _fill reads the next packet of a connection into its rest. It gives 0 for a
+/// packet and 1 for the end of the stream.
+///
+/// The iterator of a stream holds 1 open read, thus the connection keeps the
+/// future. A read that a deadline ended leaves that future open, and the next
+/// read takes it again.
+Future<int> _fill(_Conn c) {
+  final Future<int>? open = c.pending;
+  if (open != null) return open;
+  final Future<int> next = c.packets.moveNext().then((bool more) {
+    c.pending = null;
+    if (!more) {
+      c.ended = true;
+      return 1;
+    }
+    c.rest = c.packets.current;
+    return 0;
+  });
+  c.pending = next;
+  return next;
+}
+
 /// Opens a TCP connection to a host and a port, and gives its handle. The
 /// second result holds the cause of a failure, and it is empty after a
 /// success.
@@ -127,6 +301,18 @@ int _take(_Conn c, Slice<int> p) {
   return (-1, _empty);
 }
 
+/// Opens a connection to a Unix socket and gives its handle.
+(int, GoString) $dialUnix(GoString path) {
+  $await(
+    Socket.connect(
+      InternetAddress(path.toDartString(), type: InternetAddressType.unix),
+      0,
+    ).then((Socket s) => (_slot(_Conn(s)), _empty)),
+    (Object cause) => (-1, _cause(cause)),
+  );
+  return (-1, _empty);
+}
+
 /// Reads bytes into the slice and gives the count. A count of 0 with no cause
 /// means the end of the stream.
 (int, GoString) $connRead(int handle, Slice<int> p) {
@@ -136,12 +322,9 @@ int _take(_Conn c, Slice<int> p) {
   if (c.rest.isNotEmpty) return (_take(c, p), _empty);
   if (c.ended) return (0, _empty);
   $await(
-    c.packets.moveNext().then((bool more) {
-      if (!more) {
-        c.ended = true;
-        return (0, _empty);
-      }
-      c.rest = c.packets.current;
+    _limit<int>(_fill(c), c.readDeadline, 2).then((int code) {
+      if (code == 2) return (0, _timeout());
+      if (code == 1) return (0, _empty);
       return (_take(c, p), _empty);
     }),
     (Object cause) => (0, _cause(cause)),
@@ -159,7 +342,11 @@ int _take(_Conn c, Slice<int> p) {
   if (p.len == 0) return (0, _empty);
   c.socket.add(_bytes(p));
   $await(
-    c.socket.flush().then((_) => (p.len, _empty)),
+    _limit<(int, GoString)>(
+      c.socket.flush().then((_) => (p.len, _empty)),
+      c.writeDeadline,
+      (0, _timeout()),
+    ),
     (Object cause) => (0, _cause(cause)),
   );
   return (0, _empty);
@@ -172,6 +359,16 @@ GoString $connClose(int handle) {
   _open[handle] = null;
   unawaited(c.packets.cancel());
   c.socket.destroy();
+  return _empty;
+}
+
+/// Writes the 2 deadlines of a connection, in nanoseconds after the start of
+/// the Unix epoch. A value of 0 holds no limit.
+GoString $connDeadline(int handle, int read, int write) {
+  final _Conn? c = _at(handle);
+  if (c == null) return _closed();
+  c.readDeadline = read;
+  c.writeDeadline = write;
   return _empty;
 }
 
@@ -190,6 +387,19 @@ GoString $connClose(int handle) {
   return (-1, 0, _empty);
 }
 
+/// Opens a listener on a Unix socket and gives its handle.
+(int, GoString) $listenUnix(GoString path) {
+  final String name = path.toDartString();
+  $await(
+    ServerSocket.bind(
+      InternetAddress(name, type: InternetAddressType.unix),
+      0,
+    ).then((ServerSocket s) => (_listenSlot(_Listener(s, name)), _empty)),
+    (Object cause) => (-1, _cause(cause)),
+  );
+  return (-1, _empty);
+}
+
 /// Waits for 1 connection of a listener and gives its handle.
 (int, GoString) $accept(int handle) {
   final _Listener? l = _listenerAt(handle);
@@ -205,10 +415,163 @@ GoString $connClose(int handle) {
 }
 
 /// Closes a listener. Each connection of it stays open, exactly as in Go.
+///
+/// A listener of a Unix socket also removes the file of the socket. Go removes
+/// it at the close of a listener that Listen opened.
 GoString $listenClose(int handle) {
   final _Listener? l = _listenerAt(handle);
   if (l == null) return _closed();
   _listeners[handle] = null;
+  // The iterator of a stream subscribes at the first accept. A listener that
+  // accepted nothing holds no subscription, thus the cancel closes no server
+  // socket and the isolate stays alive.
   unawaited(l.incoming.cancel());
+  unawaited(l.server.close());
+  if (l.unixPath.isNotEmpty) {
+    try {
+      File(l.unixPath).deleteSync();
+    } on FileSystemException {
+      // Go also leaves the file when the remove fails.
+    }
+  }
+  return _empty;
+}
+
+/// Opens a datagram socket on a host and a port, and gives its handle and the
+/// port that the system took.
+(int, int, GoString) $listenUDP(GoString host, int port) {
+  $await(
+    _bindUDP(
+      host.toDartString(),
+      port,
+    ).then((_Packet s) => (_packetSlot(s), s.socket.port, _empty)),
+    (Object cause) => (-1, 0, _cause(cause)),
+  );
+  return (-1, 0, _empty);
+}
+
+Future<_Packet> _bindUDP(String host, int port) async {
+  return _Packet(await RawDatagramSocket.bind(await _address(host), port));
+}
+
+/// Opens a datagram socket that holds a remote address, and gives its handle
+/// and the local port that the system took.
+///
+/// The socket drops a datagram of another source, exactly as a connected
+/// socket of the system does.
+(int, int, GoString) $dialUDP(GoString host, int port) {
+  $await(
+    _connectUDP(
+      host.toDartString(),
+      port,
+    ).then((_Packet s) => (_packetSlot(s), s.socket.port, _empty)),
+    (Object cause) => (-1, 0, _cause(cause)),
+  );
+  return (-1, 0, _empty);
+}
+
+Future<_Packet> _connectUDP(String host, int port) async {
+  final InternetAddress target = await _address(host);
+  final RawDatagramSocket socket = await RawDatagramSocket.bind(
+    target.type == InternetAddressType.IPv6
+        ? InternetAddress.anyIPv6
+        : InternetAddress.anyIPv4,
+    0,
+  );
+  final _Packet s = _Packet(socket);
+  s.remoteHost = target.address;
+  s.remotePort = port;
+  return s;
+}
+
+/// _fillPacket waits for 1 datagram. It gives 0 for a datagram and 1 for the
+/// end of the socket.
+Future<int> _fillPacket(_Packet s) {
+  if (s.held.isNotEmpty) return Future<int>.value(0);
+  if (s.ended) return Future<int>.value(1);
+  final Future<int>? open = s.pending;
+  if (open != null) return open;
+  final Completer<int> done = Completer<int>();
+  s.waiter = done;
+  final Future<int> next = done.future.then((int code) {
+    s.pending = null;
+    return code;
+  });
+  s.pending = next;
+  return next;
+}
+
+/// Reads 1 datagram into the slice. The results are the count, the host of the
+/// source, the port of the source, and the cause of a failure.
+///
+/// A datagram that holds more bytes than the slice loses the rest, exactly as
+/// a Go read of a datagram does.
+(int, GoString, int, GoString) $packetRead(int handle, Slice<int> p) {
+  final _Packet? s = _packetAt(handle);
+  if (s == null) return (0, _empty, 0, _closed());
+  $await(
+    _limit<int>(_fillPacket(s), s.readDeadline, 2).then((int code) {
+      if (code == 2) return (0, _empty, 0, _timeout());
+      if (code == 1 && s.held.isEmpty) return (0, _empty, 0, _closed());
+      final Datagram d = s.held.removeAt(0);
+      final int n = d.data.length < p.len ? d.data.length : p.len;
+      for (int i = 0; i < n; i++) {
+        p.array[p.off + i] = d.data[i];
+      }
+      return (n, GoString.fromString(d.address.address), d.port, _empty);
+    }),
+    (Object cause) => (0, _empty, 0, _cause(cause)),
+  );
+  return (0, _empty, 0, _empty);
+}
+
+/// Writes the bytes of the slice to a host and a port, and gives the count.
+(int, GoString) $packetWrite(
+  int handle,
+  Slice<int> p,
+  GoString host,
+  int port,
+) {
+  final _Packet? s = _packetAt(handle);
+  if (s == null) return (0, _closed());
+  $await(
+    _limit<(int, GoString)>(
+      _sendTo(s, _bytes(p), host.toDartString(), port),
+      s.writeDeadline,
+      (0, _timeout()),
+    ),
+    (Object cause) => (0, _cause(cause)),
+  );
+  return (0, _empty);
+}
+
+Future<(int, GoString)> _sendTo(
+  _Packet s,
+  Uint8List bytes,
+  String host,
+  int port,
+) async {
+  final int n = s.socket.send(bytes, await _address(host), port);
+  if (n == 0 && bytes.isNotEmpty) {
+    return (0, GoString.fromString('the send buffer of the socket is full'));
+  }
+  return (n, _empty);
+}
+
+/// Closes a datagram socket.
+GoString $packetClose(int handle) {
+  final _Packet? s = _packetAt(handle);
+  if (s == null) return _closed();
+  _packets[handle] = null;
+  s.socket.close();
+  return _empty;
+}
+
+/// Writes the 2 deadlines of a datagram socket.
+GoString $packetDeadline(int handle, int read, int write) {
+  final _Packet? s = _packetAt(handle);
+  if (s == null) return _closed();
+  s.readDeadline = read;
+  s.writeDeadline = write;
   return _empty;
 }

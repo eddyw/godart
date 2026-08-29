@@ -174,6 +174,25 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$accept(%s)", args[0]), true
 	case "ListenClose":
 		return fmt.Sprintf("$listenClose(%s)", args[0]), true
+	case "DialUnix":
+		return fmt.Sprintf("$dialUnix(%s)", args[0]), true
+	case "ListenUnix":
+		return fmt.Sprintf("$listenUnix(%s)", args[0]), true
+	case "ConnDeadline":
+		return fmt.Sprintf("$connDeadline(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "ListenUDP":
+		return fmt.Sprintf("$listenUDP(%s, %s)", args[0], args[1]), true
+	case "DialUDP":
+		return fmt.Sprintf("$dialUDP(%s, %s)", args[0], args[1]), true
+	case "PacketRead":
+		return fmt.Sprintf("$packetRead(%s, %s)", args[0], args[1]), true
+	case "PacketWrite":
+		return fmt.Sprintf("$packetWrite(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
+	case "PacketClose":
+		return fmt.Sprintf("$packetClose(%s)", args[0]), true
+	case "PacketDeadline":
+		return fmt.Sprintf("$packetDeadline(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "StartTimer":
 		return fmt.Sprintf("$startTimer(%s, %s)", args[0], args[1]), true
 	case "StopTimer":

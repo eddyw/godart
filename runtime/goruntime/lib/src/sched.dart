@@ -225,12 +225,22 @@ bool $stopTimer(int handle) {
   return true;
 }
 
+/// The releases that run when package main returns.
+///
+/// Go ends the process at that point, thus no open handle survives. An open
+/// socket of Dart keeps the isolate alive, thus the network library adds a
+/// release of its own.
+final List<void Function()> $releases = <void Function()>[];
+
 /// Ends the program when package main returns.
 ///
 /// Go ends the program at that point, and it does not wait for another
 /// goroutine. A pending timer keeps the Dart isolate alive, thus the program
 /// needs an explicit exit.
 void _exitMain() {
+  for (final void Function() release in $releases) {
+    release();
+  }
   if (_pending > 0) exit(0);
 }
 

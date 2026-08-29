@@ -289,7 +289,9 @@ func blockingIntrinsic(fn *types.Func) bool {
 	}
 	switch fn.Name() {
 	case "Sleep", "Worker", "Catch",
-		"DialTCP", "ConnRead", "ConnWrite", "ListenTCP", "Accept":
+		"DialTCP", "ConnRead", "ConnWrite", "ListenTCP", "Accept",
+		"DialUnix", "ListenUnix",
+		"DialUDP", "ListenUDP", "PacketRead", "PacketWrite":
 		return true
 	}
 	return false

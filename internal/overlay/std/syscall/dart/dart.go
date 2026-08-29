@@ -398,8 +398,74 @@ func Accept(handle int) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// ListenClose closes a listener. Each connection of it stays open.
+// ListenClose closes a listener. Each connection of it stays open. A listener
+// of a Unix socket also removes the file of the socket.
 func ListenClose(handle int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DialUnix opens a connection to a Unix socket and gives its handle. The
+// handle belongs to the table of the connections.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func DialUnix(path string) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ListenUnix opens a listener on a Unix socket and gives its handle.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ListenUnix(path string) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ConnDeadline writes the 2 deadlines of a connection, in nanoseconds after
+// the start of the Unix epoch. A value of 0 holds no limit.
+func ConnDeadline(handle int, read, write int64) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ListenUDP opens a datagram socket on a host and a port. The results are the
+// handle, the port that the system took, and the cause of a failure.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ListenUDP(host string, port int) (int, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DialUDP opens a datagram socket that holds a remote address. Such a socket
+// drops a datagram of another source. The results are the handle, the local
+// port that the system took, and the cause of a failure.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func DialUDP(host string, port int) (int, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// PacketRead reads 1 datagram into the slice. The results are the count, the
+// host of the source, the port of the source, and the cause of a failure. A
+// datagram that holds more bytes than the slice loses the rest.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func PacketRead(handle int, p []byte) (int, string, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// PacketWrite writes the bytes of the slice to a host and a port, and gives
+// the count.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func PacketWrite(handle int, p []byte, host string, port int) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// PacketClose closes a datagram socket.
+func PacketClose(handle int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// PacketDeadline writes the 2 deadlines of a datagram socket.
+func PacketDeadline(handle int, read, write int64) string {
 	panic("syscall/dart needs the gart compiler")
 }
 

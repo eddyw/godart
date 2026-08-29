@@ -85,7 +85,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `encoding/json` | Overlay | `Marshal` only. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native | |
-| `net` | Overlay | TCP only. Read the section below. |
+| `net` | Overlay | TCP, UDP, and a Unix socket. No TLS. Read the section below. |
 | `os` | Overlay | The file access, the temporary names, and the process state. Read the section below. |
 | `path` | Native | |
 | `runtime` | Overlay | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOOS`, and `GOARCH`. |
@@ -229,9 +229,9 @@ with the go command and with gart.
 
 ## The network access
 
-`net` reaches TCP through `syscall/dart`, and the Dart side uses `Socket` and
-`ServerSocket` of `dart:io`. A program reads either the `net` package or the
-interop package.
+`net` reaches TCP, UDP, and a Unix socket through `syscall/dart`. The Dart side
+uses `Socket`, `ServerSocket`, and `RawDatagramSocket` of `dart:io`. A program
+reads either the `net` package or the interop package.
 
 A dial, a read, a write, a listen, and an accept each wait for a Dart future.
 The runtime function `$await` writes a frame of the wait, thus the caller
@@ -246,7 +246,10 @@ nothing.
 | A close of a connection | `Conn.Close` | `dart.ConnClose` closes both directions. |
 | A listener | `net.Listen` | `dart.ListenTCP` gives a handle and the port that the system took. |
 | An accept | `Listener.Accept` | `dart.Accept` gives a handle of a connection. |
-| A close of a listener | `Listener.Close` | `dart.ListenClose`. Each connection of it stays open. |
+| A close of a listener | `Listener.Close` | `dart.ListenClose`. Each connection of it stays open, and a Unix listener removes its file. |
+| A dial and a listen of a Unix socket | `net.Dial`, `net.Listen` | `dart.DialUnix` and `dart.ListenUnix`. Each other operation reads the table of the connections. |
+| A datagram socket | `net.ListenPacket`, `net.Dial` | `dart.ListenUDP` and `dart.DialUDP`, then `dart.PacketRead` and `dart.PacketWrite`. |
+| A deadline | `Conn.SetReadDeadline` | `dart.ConnDeadline` and `dart.PacketDeadline` write 2 absolute times. |
 | The text of a failure | `dial tcp 127.0.0.1:0: connect: ...` | The message of the Dart `SocketException`. |
 | An address of the host name | Present | Only a numeric address and a host name that Dart resolves. |
 
@@ -254,19 +257,26 @@ The `net` package holds this surface:
 
 | Item | Go | godart |
 |---|---|---|
-| `Dial` | Each network | `tcp` only. Each other name gives an error. |
-| `Listen` | Each network | `tcp` only. A port of 0 gives a free port. |
-| `Conn` | 8 methods | `Read`, `Write`, and `Close` only. |
+| `Dial` | Each network | `tcp`, `udp`, and `unix`. Each other name gives an error. |
+| `Listen` | Each network | `tcp` and `unix`. A port of 0 gives a free port. |
+| `ListenPacket` | Each network | `udp` only. |
+| `Conn` | 8 methods | `Read`, `Write`, `Close`, and the 3 deadline methods. `LocalAddr` and `RemoteAddr` stay out. |
+| `PacketConn` | 7 methods | `ReadFrom`, `WriteTo`, `Close`, `LocalAddr`, and the 3 deadline methods. |
 | `Listener` | `Accept`, `Close`, `Addr` | Equal |
 | `Addr` | `Network` and `String` | Equal |
-| `TCPAddr`, `IP`, `Dialer`, `Resolver` | Present | Missing. A type assertion of an `Addr` gives a compile error, and not a wrong value. |
+| `Error` | `Timeout` and `Temporary` | `Timeout` only. `Temporary` is deprecated in Go. |
+| `Dialer` | 12 fields | `Timeout`, `Dial`, and `DialContext`. The dial runs on a goroutine, and the select takes the first of the dial and the context. |
+| `TCPAddr`, `UDPAddr`, `UnixAddr`, `IP`, `Resolver` | Present | Missing. A type assertion of an `Addr` gives a compile error, and not a wrong value. |
 | An empty host of `Dial` | The local system | `127.0.0.1` |
 | An empty host of `Listen` | Each interface | `0.0.0.0` |
 | `SplitHostPort` | Accepts an IPv6 host in brackets | Only a host with no bracket. |
 | `JoinHostPort` | Adds brackets for an IPv6 host | It joins the 2 parts with a colon. |
-| UDP, a Unix socket, and TLS | Present | Missing |
-| A deadline, and `SetDeadline` | Present | Missing |
+| TLS | `crypto/tls` | Missing. `SecureSocket` of Dart holds the whole handshake, and the surface holds no `crypto` package. |
+| A deadline that a read already waits on | Ends that read | Reaches the next read only. The runtime applies the limit at the start of an operation. |
+| A write that a deadline ended | Writes nothing | The bytes stay in the buffer of the socket. |
+| A connected UDP socket | The system drops a datagram of another source | The runtime drops it. Dart gives no connect of a datagram socket. |
 | The text of a failure | `dial tcp 127.0.0.1:0: connect: ...` | `dial tcp <address>: ` and the message of the Dart `SocketException`. |
+| The text of a deadline | `read tcp <local>-><remote>: i/o timeout` | `read tcp: i/o timeout` |
 
 ## The clock and the timer
 
