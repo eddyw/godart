@@ -734,6 +734,7 @@ void $init() {
   _current = null;
   _tempSeq = 0;
   _stopping = false;
+  MatchString = null;
   _helpers = (GoMap<GoString, bool>(() => false));
   _benchFlags = _options$(GoString.empty, false, GoString.empty, 1000000000, 0);
 }

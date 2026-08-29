@@ -10,6 +10,34 @@ bool DeepEqual(Iface? x, Iface? y) {
   return $deepEqual(x, y);
 }
 
+final GoString Invalid = GoString.fromString('invalid');
+final GoString Bool$f = GoString.fromString('bool');
+final GoString Int$f = GoString.fromString('int');
+final GoString Int8 = GoString.fromString('int8');
+final GoString Int16 = GoString.fromString('int16');
+final GoString Int32 = GoString.fromString('int32');
+final GoString Int64 = GoString.fromString('int64');
+final GoString Uint$f = GoString.fromString('uint');
+final GoString Uint8 = GoString.fromString('uint8');
+final GoString Uint16 = GoString.fromString('uint16');
+final GoString Uint32 = GoString.fromString('uint32');
+final GoString Uint64 = GoString.fromString('uint64');
+final GoString Uintptr = GoString.fromString('uintptr');
+final GoString Float32 = GoString.fromString('float32');
+final GoString Float64 = GoString.fromString('float64');
+final GoString Complex64 = GoString.fromString('complex64');
+final GoString Complex128 = GoString.fromString('complex128');
+final GoString Array = GoString.fromString('array');
+final GoString Chan$ = GoString.fromString('chan');
+final GoString Func = GoString.fromString('func');
+final GoString Interface$f = GoString.fromString('interface');
+final GoString Map$ = GoString.fromString('map');
+final GoString Pointer = GoString.fromString('ptr');
+final GoString Slice$ = GoString.fromString('slice');
+final GoString String$$f = GoString.fromString('string');
+final GoString Struct = GoString.fromString('struct');
+final GoString UnsafePointer = GoString.fromString('unsafe.Pointer');
+final GoString Ptr = GoString.fromString('ptr');
 GoString Kind$String$(GoString k) {
   return k;
 }
@@ -38,6 +66,38 @@ final class Type$ {
     return text;
   }
 
+  GoString Name() {
+    Type$ t = this.$copy();
+    GoString text = t.String$();
+    for (int i = (text.length - 1); (i >= 0); i = (i - 1)) {
+      if ((text[i] == 46)) {
+        return $substring(text, (i + 1), text.length);
+      }
+      if ((((text[i] == 93) || (text[i] == 42)) || (text[i] == 32))) {
+        return GoString.fromString('');
+      }
+    }
+    GoString $tag159_9 = t.Kind();
+    $sw1:
+    {
+      int $sw1$i = 1;
+      if ($tag159_9 == GoString.fromString('array') ||
+          $tag159_9 == GoString.fromString('chan') ||
+          $tag159_9 == GoString.fromString('func') ||
+          $tag159_9 == GoString.fromString('interface') ||
+          $tag159_9 == GoString.fromString('map') ||
+          $tag159_9 == GoString.fromString('ptr') ||
+          $tag159_9 == GoString.fromString('slice')) {
+        $sw1$i = 0;
+      }
+      if ($sw1$i <= 0) {
+        return GoString.fromString('');
+        break $sw1;
+      }
+    }
+    return text;
+  }
+
   GoString Kind() {
     Type$ t = this.$copy();
     var (_, kind, _$1) = $descInfo(t._desc);
@@ -63,54 +123,459 @@ final class Type$ {
     }
     return Type$(elem);
   }
+
+  int Len() {
+    Type$ t = this.$copy();
+    if ((!(t.Kind() == GoString.fromString('array')))) {
+      $panic(
+        Iface(
+          $typeString,
+          $concat(GoString.fromString('reflect: Len of '), t.String$()),
+        ),
+      );
+    }
+    return $descLength(t._desc);
+  }
+
+  int NumField() {
+    Type$ t = this.$copy();
+    if ((!(t.Kind() == GoString.fromString('struct')))) {
+      $panic(
+        Iface(
+          $typeString,
+          $concat(GoString.fromString('reflect: NumField of '), t.String$()),
+        ),
+      );
+    }
+    return $fieldCount(t._desc);
+  }
+
+  StructField$ Field(int i) {
+    Type$ t = this.$copy();
+    if ((!(t.Kind() == GoString.fromString('struct')))) {
+      $panic(
+        Iface(
+          $typeString,
+          $concat(GoString.fromString('reflect: Field of '), t.String$()),
+        ),
+      );
+    }
+    var (name, tag, _, desc) = $fieldInfo(t._desc, i);
+    return StructField$(name, tag, Type$(desc), false);
+  }
+
+  int Size() {
+    Type$ t = this.$copy();
+    GoString $tag219_9 = t.Kind();
+    $sw2:
+    {
+      int $sw2$i = 7;
+      if ($tag219_9 == GoString.fromString('bool') ||
+          $tag219_9 == GoString.fromString('int8') ||
+          $tag219_9 == GoString.fromString('uint8')) {
+        $sw2$i = 0;
+      } else if ($tag219_9 == GoString.fromString('int16') ||
+          $tag219_9 == GoString.fromString('uint16')) {
+        $sw2$i = 1;
+      } else if ($tag219_9 == GoString.fromString('int32') ||
+          $tag219_9 == GoString.fromString('uint32') ||
+          $tag219_9 == GoString.fromString('float32')) {
+        $sw2$i = 2;
+      } else if ($tag219_9 == GoString.fromString('int') ||
+          $tag219_9 == GoString.fromString('int64') ||
+          $tag219_9 == GoString.fromString('uint') ||
+          $tag219_9 == GoString.fromString('uint64') ||
+          $tag219_9 == GoString.fromString('uintptr') ||
+          $tag219_9 == GoString.fromString('float64') ||
+          $tag219_9 == GoString.fromString('complex64') ||
+          $tag219_9 == GoString.fromString('ptr') ||
+          $tag219_9 == GoString.fromString('unsafe.Pointer') ||
+          $tag219_9 == GoString.fromString('map') ||
+          $tag219_9 == GoString.fromString('chan') ||
+          $tag219_9 == GoString.fromString('func')) {
+        $sw2$i = 3;
+      } else if ($tag219_9 == GoString.fromString('complex128') ||
+          $tag219_9 == GoString.fromString('interface') ||
+          $tag219_9 == GoString.fromString('string')) {
+        $sw2$i = 4;
+      } else if ($tag219_9 == GoString.fromString('slice')) {
+        $sw2$i = 5;
+      } else if ($tag219_9 == GoString.fromString('array')) {
+        $sw2$i = 6;
+      }
+      if ($sw2$i <= 0) {
+        return 1;
+        break $sw2;
+      }
+      if ($sw2$i <= 1) {
+        return 2;
+        break $sw2;
+      }
+      if ($sw2$i <= 2) {
+        return 4;
+        break $sw2;
+      }
+      if ($sw2$i <= 3) {
+        return 8;
+        break $sw2;
+      }
+      if ($sw2$i <= 4) {
+        return 16;
+        break $sw2;
+      }
+      if ($sw2$i <= 5) {
+        return 24;
+        break $sw2;
+      }
+      if ($sw2$i <= 6) {
+        return (t.Len() * t.Elem().Size());
+        break $sw2;
+      }
+    }
+    $panic(
+      Iface(
+        $typeString,
+        $concat(GoString.fromString('reflect: Size of '), t.String$()),
+      ),
+    );
+    $unreachable();
+  }
+}
+
+GoString StructTag$Get(GoString tag, GoString key) {
+  var (v, _) = StructTag$Lookup(tag, key);
+  return v;
+}
+
+(GoString, bool) StructTag$Lookup(GoString tag, GoString key) {
+  for (; (!(tag == GoString.fromString('')));) {
+    int i = 0;
+    for (; ((i < tag.length) && (tag[i] == 32));) {
+      i = (i + 1);
+    }
+    tag = $substring(tag, i, tag.length);
+    if ((tag == GoString.fromString(''))) {
+      break;
+    }
+    i = 0;
+    for (
+      ;
+      (((((i < tag.length) && (tag[i] > 32)) && (!(tag[i] == 58))) &&
+              (!(tag[i] == 34))) &&
+          (!(tag[i] == 127)));
+    ) {
+      i = (i + 1);
+    }
+    if (((((i == 0) || ((i + 1) >= tag.length)) || (!(tag[i] == 58))) ||
+        (!(tag[(i + 1)] == 34)))) {
+      break;
+    }
+    GoString name = $substring(tag, 0, i);
+    tag = $substring(tag, (i + 1), tag.length);
+    i = 1;
+    for (; ((i < tag.length) && (!(tag[i] == 34)));) {
+      if ((tag[i] == 92)) {
+        i = (i + 1);
+      }
+      i = (i + 1);
+    }
+    if ((i >= tag.length)) {
+      break;
+    }
+    GoString value = $substring(tag, 1, i);
+    tag = $substring(tag, (i + 1), tag.length);
+    if ((key == name)) {
+      return (value, true);
+    }
+  }
+  return (GoString.fromString(''), false);
+}
+
+final class StructField$ {
+  GoString Name;
+  GoString Tag;
+  Type$ Type;
+  bool Anonymous;
+
+  StructField$(this.Name, this.Tag, this.Type, this.Anonymous);
+  StructField$.$zero()
+    : Name = GoString.empty,
+      Tag = GoString.empty,
+      Type = Type$.$zero(),
+      Anonymous = false;
+
+  StructField$ $copy() => StructField$(Name, Tag, Type.$copy(), Anonymous);
+
+  void $assign(StructField$ $o) {
+    Name = $o.Name;
+    Tag = $o.Tag;
+    Type.$assign($o.Type);
+    Anonymous = $o.Anonymous;
+  }
+
+  @override
+  bool operator ==(Object $o) =>
+      $o is StructField$ &&
+      Name == $o.Name &&
+      Tag == $o.Tag &&
+      Type == $o.Type &&
+      Anonymous == $o.Anonymous;
+
+  @override
+  int get hashCode => Object.hashAll(<Object?>[
+    Name.hashCode,
+    Tag.hashCode,
+    Type.hashCode,
+    Anonymous.hashCode,
+  ]);
 }
 
 Type$ TypeOf(Iface? v) {
   return Type$($descOf(v));
 }
 
+const int _locNone = 0;
+const int _locPointer = 1;
+const int _locField = 2;
+const int _locIndex = 3;
+
 final class Value$ {
   Iface? _value;
-  Iface? _holder;
+  Iface? _owner;
+  int _index;
+  int _loc;
 
-  Value$(this._value, this._holder);
-  Value$.$zero() : _value = null, _holder = null;
+  Value$(this._value, this._owner, this._index, this._loc);
+  Value$.$zero() : _value = null, _owner = null, _index = 0, _loc = 0;
 
-  Value$ $copy() => Value$(_value, _holder);
+  Value$ $copy() => Value$(_value, _owner, _index, _loc);
 
   void $assign(Value$ $o) {
     _value = $o._value;
-    _holder = $o._holder;
+    _owner = $o._owner;
+    _index = $o._index;
+    _loc = $o._loc;
   }
 
   @override
   bool operator ==(Object $o) =>
-      $o is Value$ && _value == $o._value && _holder == $o._holder;
+      $o is Value$ &&
+      _value == $o._value &&
+      _owner == $o._owner &&
+      _index == $o._index &&
+      _loc == $o._loc;
 
   @override
-  int get hashCode =>
-      Object.hashAll(<Object?>[_value.hashCode, _holder.hashCode]);
+  int get hashCode => Object.hashAll(<Object?>[
+    _value.hashCode,
+    _owner.hashCode,
+    _index.hashCode,
+    _loc.hashCode,
+  ]);
+
+  bool IsValid() {
+    Value$ v = this.$copy();
+    return (!(v._value == null));
+  }
 
   Iface? Interface() {
     Value$ v = this.$copy();
     return v._value;
   }
 
+  Type$ Type() {
+    Value$ v = this.$copy();
+    return TypeOf(v._value);
+  }
+
+  GoString Kind() {
+    Value$ v = this.$copy();
+    if ((v._value == null)) {
+      return GoString.fromString('invalid');
+    }
+    return v.Type().Kind();
+  }
+
   Value$ Elem() {
     Value$ v = this.$copy();
-    return Value$($pointerElem(v._value), v._value);
+    return Value$($pointerElem(v._value), v._value, 0, 1);
+  }
+
+  int Len() {
+    Value$ v = this.$copy();
+    return $valueLen(v._value);
+  }
+
+  Value$ Index(int i) {
+    Value$ v = this.$copy();
+    Value$ out = Value$($valueIndex(v._value, i), null, 0, 0);
+    if ((!(v.Kind() == GoString.fromString('string')))) {
+      Iface? $a318_35 = v._value;
+      int $a318_44 = i;
+      int $a318_47 = 3;
+      out._owner = $a318_35;
+      out._index = $a318_44;
+      out._loc = $a318_47;
+    }
+    return out.$copy();
+  }
+
+  int NumField() {
+    Value$ v = this.$copy();
+    return v.Type().NumField();
+  }
+
+  Value$ Field(int i) {
+    Value$ v = this.$copy();
+    return Value$($fieldRead(v._value, i), v._value, i, 2);
+  }
+
+  bool CanSet() {
+    Value$ v = this.$copy();
+    return (!(v._loc == 0));
   }
 
   void Set(Value$ x) {
     Value$ v = this.$copy();
-    $pointerSet(v._holder, x._value);
+    int $tag339_9 = v._loc;
+    $sw3:
+    {
+      int $sw3$i = 4;
+      if ($tag339_9 == 1) {
+        $sw3$i = 0;
+      } else if ($tag339_9 == 2) {
+        $sw3$i = 1;
+      } else if ($tag339_9 == 3) {
+        $sw3$i = 2;
+      } else {
+        $sw3$i = 3;
+      }
+      if ($sw3$i <= 0) {
+        $pointerSet(v._owner, x._value);
+        break $sw3;
+      }
+      if ($sw3$i <= 1) {
+        $fieldWrite(v._owner, v._index, x._value);
+        break $sw3;
+      }
+      if ($sw3$i <= 2) {
+        $valueSetIndex(v._owner, v._index, x._value);
+        break $sw3;
+      }
+      if ($sw3$i <= 3) {
+        $panic(
+          Iface(
+            $typeString,
+            GoString.fromString(
+              'reflect: Set of a value that holds no address',
+            ),
+          ),
+        );
+        break $sw3;
+      }
+    }
+  }
+
+  int Int() {
+    Value$ v = this.$copy();
+    return $asInt(v._value);
+  }
+
+  int Uint() {
+    Value$ v = this.$copy();
+    return $asInt(v._value);
+  }
+
+  double Float() {
+    Value$ v = this.$copy();
+    return $asFloat(v._value);
+  }
+
+  bool Bool() {
+    Value$ v = this.$copy();
+    return $asBool(v._value);
+  }
+
+  GoString String$() {
+    Value$ v = this.$copy();
+    if ((v.Kind() == GoString.fromString('string'))) {
+      return $asString(v._value);
+    }
+    if ((v._value == null)) {
+      return GoString.fromString('<invalid Value>');
+    }
+    return $concat(
+      $concat(GoString.fromString('<'), v.Type().String$()),
+      GoString.fromString(' Value>'),
+    );
+  }
+
+  void SetInt(int x) {
+    Value$ v = this.$copy();
+    v.Set(Value$($withInt(v._descOf(), x), null, 0, 0));
+  }
+
+  void SetUint(int x) {
+    Value$ v = this.$copy();
+    v.Set(Value$($withInt(v._descOf(), x), null, 0, 0));
+  }
+
+  void SetFloat(double x) {
+    Value$ v = this.$copy();
+    v.Set(Value$($withFloat(v._descOf(), x), null, 0, 0));
+  }
+
+  void SetBool(bool x) {
+    Value$ v = this.$copy();
+    v.Set(Value$($withBool(v._descOf(), x), null, 0, 0));
+  }
+
+  void SetString(GoString x) {
+    Value$ v = this.$copy();
+    v.Set(Value$($withString(v._descOf(), x), null, 0, 0));
+  }
+
+  int _descOf() {
+    Value$ v = this.$copy();
+    return $descOf(v._value);
   }
 }
 
 Value$ ValueOf(Iface? v) {
-  return Value$(v, null);
+  return Value$(v, null, 0, 0);
+}
+
+Value$ Indirect(Value$ v) {
+  if ((!(v.Kind() == GoString.fromString('ptr')))) {
+    return v.$copy();
+  }
+  return v.Elem();
 }
 
 Value$ Zero(Type$ t) {
-  return Value$($descZero(t._desc), null);
+  return Value$($descZero(t._desc), null, 0, 0);
+}
+
+Value$ New(Type$ t) {
+  return Value$($newValue(t._desc), null, 0, 0);
+}
+
+Value$ MakeSlice(Type$ t, int length, int capacity) {
+  if ((!(t.Kind() == GoString.fromString('slice')))) {
+    $panic(
+      Iface(
+        $typeString,
+        $concat(GoString.fromString('reflect: MakeSlice of '), t.String$()),
+      ),
+    );
+  }
+  if (((length < 0) || (capacity < length))) {
+    $panic(
+      Iface(
+        $typeString,
+        GoString.fromString('reflect: MakeSlice with a wrong length'),
+      ),
+    );
+  }
+  return Value$($makeValue(t._desc, length), null, 0, 0);
 }

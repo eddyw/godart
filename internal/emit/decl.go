@@ -467,8 +467,12 @@ func (e *emitter) body(f *ir.Func) {
 // writes the result variables and leaves a labeled block. The function reads
 // the variables after the finally block.
 func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
-	for _, r := range results {
-		if r.Named {
+	// A function that names 1 result declares each result. The return path
+	// writes each one and reads them together, thus a blank result also needs
+	// its variable.
+	named := hasNamedResults(results)
+	if named {
+		for _, r := range results {
 			e.declareOne(r, e.zero(r.Type))
 		}
 	}
@@ -478,10 +482,6 @@ func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
 		return
 	}
 	e.line("final DeferStack $defer = DeferStack();")
-	named := false
-	for _, r := range results {
-		named = named || r.Named
-	}
 	e.line("try {")
 	if named {
 		e.line("$body: {")

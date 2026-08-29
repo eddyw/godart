@@ -477,6 +477,14 @@ type (
 	}
 
 	// Method selects a method on a receiver. It appears as the Fun of a Call.
+	// MethodExpr is a method expression, for example `(*T).M`. The value is a
+	// function whose first parameter is the receiver.
+	MethodExpr struct {
+		Obj  *types.Func
+		Recv types.Type
+		Type types.Type
+	}
+
 	Method struct {
 		Recv Expr
 		Obj  *types.Func
@@ -603,6 +611,7 @@ func (e *MapRead) GoType() types.Type     { return e.Type }
 func (e *Slice) GoType() types.Type       { return e.Type }
 func (e *Call) GoType() types.Type        { return e.Type }
 func (e *Method) GoType() types.Type      { return e.Type }
+func (e *MethodExpr) GoType() types.Type  { return e.Type }
 func (e *Builtin) GoType() types.Type     { return e.Type }
 func (e *Binary) GoType() types.Type      { return e.Type }
 func (e *Unary) GoType() types.Type       { return e.Type }
@@ -628,6 +637,7 @@ func (*MapRead) isExpr()     {}
 func (*Slice) isExpr()       {}
 func (*Call) isExpr()        {}
 func (*Method) isExpr()      {}
+func (*MethodExpr) isExpr()  {}
 func (*Builtin) isExpr()     {}
 func (*Binary) isExpr()      {}
 func (*Unary) isExpr()       {}

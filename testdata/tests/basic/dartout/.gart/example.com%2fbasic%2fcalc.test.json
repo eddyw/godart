@@ -1,7 +1,7 @@
 {
   "path": "example.com/basic/calc.test",
   "name": "main",
-  "sourceHash": "42fdb054ad9fa4f5da89550d0a87d99cc34e9678dd5b833ecaf6cfd60a98431a",
+  "sourceHash": "8c8f5a104646d713479a63761989ab62315754bb2c45aa7d8c0bdf4cd6282279",
   "exportHash": "c07441cd8bf98075a150b0110ae9a652c52949a364d012ed1883ad6c4835632f",
   "export": "aQMGAAAEbWFpbgEAAQAA",
   "blocking": [

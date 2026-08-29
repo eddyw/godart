@@ -120,6 +120,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
 | `encoding/base64` | Native | The real source needs no patch. |
+| `regexp` | Native | The real source needs no patch. |
+| `regexp/syntax` | Native, with 1 patch | The patch replaces `parse.go`, which holds a `recover` call. A pattern that reaches a limit of a resource stops the program, and Go gives an error. |
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
@@ -612,7 +614,7 @@ for each test binary. The output holds the format of `go test`.
 | The position of a deferred log line after `Fatal` | The position of the runtime of Go, for example `panic.go:694` | No position. |
 | `t.Parallel` | Runs the tests in parallel | Does nothing. All Go code runs in 1 isolate. |
 | `t.FailNow`, `t.SkipNow` | `runtime.Goexit` | A throw. Each deferred function still runs, and the subset has no `recover`. |
-| `-run` | A regular expression | Plain text. gart keeps a test whose name holds the text. |
+| `-run` | A regular expression | Equal. The pattern holds 1 expression for each element of the name. |
 | A duplicate subtest name | The second name takes `#01` | The 2 names stay equal |
 | `TestMain` | Runs in place of the entry point | Equal. `testing.M` holds `Run`. |
 | A benchmark | `go test` with no -bench flag runs none | Equal. `gart test -bench <text>` runs them. |
@@ -794,15 +796,15 @@ Gaps of the standard library surface:
 | Item | State |
 |---|---|
 | `sync.RWMutex` | A read lock is equal to a write lock. The single isolate gives no parallel read. |
-| `strconv.Unquote` | Missing |
+| `strconv.Unquote`, `strconv.UnquoteChar` | Present. The source comes from Go. |
 | `strings.Title` | Missing. Go deprecated it. |
 | `sort.Sort` with an interface | Missing. Use `sort.Slice`. |
-| `regexp` | Missing. Thus `-run` reads plain text. |
 | `crypto/tls` | Missing. Read the section of the network access. |
 
 The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
 `%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.
-The flags `-`, `0`, and `+` work.
+The flags `-`, `0`, `+`, and `#` work. The flag `#` writes the prefix of the
+base in front of a whole number, and it reaches no other verb.
 
 A Dart double holds a `float32` with the precision of 64 bits. `%v` and `%g`
 write the shortest decimal text that reads back as the same 32-bit value, thus

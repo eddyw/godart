@@ -1,0 +1,13 @@
+{
+  "path": "testing/internal/testdeps",
+  "name": "testdeps",
+  "sourceHash": "ed6c5e940d4fb99f015acb954233bba8840fc70440f553931bd561ac6123c730",
+  "exportHash": "3b865c4c280f1316e2de3b85686e6a8f1056ee353ed4e0bb032d12b13aeb8b4f",
+  "export": "aQMKAAAIdGVzdGRlcHMBAAEAAA==",
+  "blocking": null,
+  "files": [
+    "lib/std/testing/internal/testdeps.dart",
+    "lib/std/testing/internal/testdeps.map.dart",
+    "lib/std/testing/internal/testdeps/deps.part.dart"
+  ]
+}

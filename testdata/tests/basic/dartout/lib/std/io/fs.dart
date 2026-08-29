@@ -36,11 +36,14 @@ final TypeDesc $descP$FileMode = TypeDesc(
   '*io/fs.FileMode',
   'ptr',
   <String, Function>{
-    'IsDir()bool': (Object? $r) => FileMode$IsDir(($r as Box<int>?)!.v),
-    'IsRegular()bool': (Object? $r) => FileMode$IsRegular(($r as Box<int>?)!.v),
-    'Perm()io/fs.FileMode': (Object? $r) => FileMode$Perm(($r as Box<int>?)!.v),
-    'String()string': (Object? $r) => FileMode$String$(($r as Box<int>?)!.v),
-    'Type()io/fs.FileMode': (Object? $r) => FileMode$Type(($r as Box<int>?)!.v),
+    'IsDir()bool': (Object? $r) => FileMode$IsDir(($r as $Ptr<int>?)!.v),
+    'IsRegular()bool': (Object? $r) =>
+        FileMode$IsRegular(($r as $Ptr<int>?)!.v),
+    'Perm()io/fs.FileMode': (Object? $r) =>
+        FileMode$Perm(($r as $Ptr<int>?)!.v),
+    'String()string': (Object? $r) => FileMode$String$(($r as $Ptr<int>?)!.v),
+    'Type()io/fs.FileMode': (Object? $r) =>
+        FileMode$Type(($r as $Ptr<int>?)!.v),
   },
   text: '*fs.FileMode',
   elem: () => $desc$FileMode,

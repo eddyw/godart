@@ -32,10 +32,84 @@ final TypeDesc $descP$Kind = TypeDesc(
   '*reflect.Kind',
   'ptr',
   <String, Function>{
-    'String()string': (Object? $r) => Kind$String$(($r as Box<GoString>?)!.v),
+    'String()string': (Object? $r) => Kind$String$(($r as $Ptr<GoString>?)!.v),
   },
   text: '*reflect.Kind',
   elem: () => $desc$Kind,
+  zero: () => null,
+);
+final TypeDesc $desc$StructField = TypeDesc(
+  'reflect.StructField',
+  'struct',
+  <String, Function>{},
+  text: 'reflect.StructField',
+  fields: <FieldDesc>[
+    FieldDesc(
+      'Name',
+      '',
+      true,
+      () => $typeString,
+      ($r) => ($r as StructField$).Name,
+      ($r, $v) => ($r as StructField$).Name = $v as GoString,
+    ),
+    FieldDesc(
+      'Tag',
+      '',
+      true,
+      () => $desc$StructTag,
+      ($r) => ($r as StructField$).Tag,
+      ($r, $v) => ($r as StructField$).Tag = $v as GoString,
+    ),
+    FieldDesc(
+      'Type',
+      '',
+      true,
+      () => $desc$Type,
+      ($r) => ($r as StructField$).Type,
+      ($r, $v) => ($r as StructField$).Type = $v as Type$,
+    ),
+    FieldDesc(
+      'Anonymous',
+      '',
+      true,
+      () => $typeBool,
+      ($r) => ($r as StructField$).Anonymous,
+      ($r, $v) => ($r as StructField$).Anonymous = $v as bool,
+    ),
+  ],
+  zero: () => StructField$.$zero(),
+);
+final TypeDesc $descP$StructField = TypeDesc(
+  '*reflect.StructField',
+  'ptr',
+  <String, Function>{},
+  text: '*reflect.StructField',
+  elem: () => $desc$StructField,
+  zero: () => null,
+);
+final TypeDesc $desc$StructTag = TypeDesc(
+  'reflect.StructTag',
+  'string',
+  <String, Function>{
+    'Get(string)string': (Object? $r, GoString $a0) =>
+        StructTag$Get(($r as GoString), $a0),
+    'Lookup(string)string,bool': (Object? $r, GoString $a0) =>
+        StructTag$Lookup(($r as GoString), $a0),
+  },
+  text: 'reflect.StructTag',
+  zero: () => GoString.empty,
+);
+final TypeDesc $descP$StructTag = TypeDesc(
+  '*reflect.StructTag',
+  'ptr',
+  <String, Function>{
+    'Get(string)string': (Object? $r, GoString $a0) =>
+        StructTag$Get(($r as $Ptr<GoString>?)!.v, $a0),
+    'Lookup(string)string,bool': (Object? $r, GoString $a0) =>
+        StructTag$Lookup(($r as $Ptr<GoString>?)!.v, $a0),
+  },
+  text: '*reflect.StructTag',
+  elem: () => $desc$StructTag,
   zero: () => null,
 );
 final TypeDesc $desc$Type = TypeDesc(
@@ -44,7 +118,13 @@ final TypeDesc $desc$Type = TypeDesc(
   <String, Function>{
     'Comparable()bool': (Object? $r) => ($r as Type$).Comparable$(),
     'Elem()reflect.Type': (Object? $r) => ($r as Type$).Elem(),
+    'Field(int)reflect.StructField': (Object? $r, int $a0) =>
+        ($r as Type$).Field($a0),
     'Kind()reflect.Kind': (Object? $r) => ($r as Type$).Kind(),
+    'Len()int': (Object? $r) => ($r as Type$).Len(),
+    'Name()string': (Object? $r) => ($r as Type$).Name(),
+    'NumField()int': (Object? $r) => ($r as Type$).NumField(),
+    'Size()uintptr': (Object? $r) => ($r as Type$).Size(),
     'String()string': (Object? $r) => ($r as Type$).String$(),
   },
   text: 'reflect.Type',
@@ -66,7 +146,13 @@ final TypeDesc $descP$Type = TypeDesc(
   <String, Function>{
     'Comparable()bool': (Object? $r) => ($r as Type$).Comparable$(),
     'Elem()reflect.Type': (Object? $r) => ($r as Type$).Elem(),
+    'Field(int)reflect.StructField': (Object? $r, int $a0) =>
+        ($r as Type$).Field($a0),
     'Kind()reflect.Kind': (Object? $r) => ($r as Type$).Kind(),
+    'Len()int': (Object? $r) => ($r as Type$).Len(),
+    'Name()string': (Object? $r) => ($r as Type$).Name(),
+    'NumField()int': (Object? $r) => ($r as Type$).NumField(),
+    'Size()uintptr': (Object? $r) => ($r as Type$).Size(),
     'String()string': (Object? $r) => ($r as Type$).String$(),
   },
   text: '*reflect.Type',
@@ -77,9 +163,32 @@ final TypeDesc $desc$Value = TypeDesc(
   'reflect.Value',
   'struct',
   <String, Function>{
+    'Bool()bool': (Object? $r) => ($r as Value$).Bool(),
+    'CanSet()bool': (Object? $r) => ($r as Value$).CanSet(),
     'Elem()reflect.Value': (Object? $r) => ($r as Value$).Elem(),
+    'Field(int)reflect.Value': (Object? $r, int $a0) =>
+        ($r as Value$).Field($a0),
+    'Float()float64': (Object? $r) => ($r as Value$).Float(),
+    'Index(int)reflect.Value': (Object? $r, int $a0) =>
+        ($r as Value$).Index($a0),
+    'Int()int64': (Object? $r) => ($r as Value$).Int(),
     'Interface()interface{}': (Object? $r) => ($r as Value$).Interface(),
+    'IsValid()bool': (Object? $r) => ($r as Value$).IsValid(),
+    'Kind()reflect.Kind': (Object? $r) => ($r as Value$).Kind(),
+    'Len()int': (Object? $r) => ($r as Value$).Len(),
+    'NumField()int': (Object? $r) => ($r as Value$).NumField(),
     'Set(reflect.Value)': (Object? $r, Value$ $a0) => ($r as Value$).Set($a0),
+    'SetBool(bool)': (Object? $r, bool $a0) => ($r as Value$).SetBool($a0),
+    'SetFloat(float64)': (Object? $r, double $a0) =>
+        ($r as Value$).SetFloat($a0),
+    'SetInt(int64)': (Object? $r, int $a0) => ($r as Value$).SetInt($a0),
+    'SetString(string)': (Object? $r, GoString $a0) =>
+        ($r as Value$).SetString($a0),
+    'SetUint(uint64)': (Object? $r, int $a0) => ($r as Value$).SetUint($a0),
+    'String()string': (Object? $r) => ($r as Value$).String$(),
+    'Type()reflect.Type': (Object? $r) => ($r as Value$).Type(),
+    'Uint()uint64': (Object? $r) => ($r as Value$).Uint(),
+    'descOf()int': (Object? $r) => ($r as Value$)._descOf(),
   },
   text: 'reflect.Value',
   fields: <FieldDesc>[
@@ -98,7 +207,7 @@ final TypeDesc $desc$Value = TypeDesc(
       ($r, $v) => ($r as Value$)._value = $v as Iface?,
     ),
     FieldDesc(
-      'holder',
+      'owner',
       '',
       false,
       () => TypeDesc(
@@ -108,8 +217,24 @@ final TypeDesc $desc$Value = TypeDesc(
         text: 'interface{}',
         zero: () => null,
       ),
-      ($r) => ($r as Value$)._holder,
-      ($r, $v) => ($r as Value$)._holder = $v as Iface?,
+      ($r) => ($r as Value$)._owner,
+      ($r, $v) => ($r as Value$)._owner = $v as Iface?,
+    ),
+    FieldDesc(
+      'index',
+      '',
+      false,
+      () => $typeInt,
+      ($r) => ($r as Value$)._index,
+      ($r, $v) => ($r as Value$)._index = $v as int,
+    ),
+    FieldDesc(
+      'loc',
+      '',
+      false,
+      () => $typeInt,
+      ($r) => ($r as Value$)._loc,
+      ($r, $v) => ($r as Value$)._loc = $v as int,
     ),
   ],
   zero: () => Value$.$zero(),
@@ -118,9 +243,32 @@ final TypeDesc $descP$Value = TypeDesc(
   '*reflect.Value',
   'ptr',
   <String, Function>{
+    'Bool()bool': (Object? $r) => ($r as Value$).Bool(),
+    'CanSet()bool': (Object? $r) => ($r as Value$).CanSet(),
     'Elem()reflect.Value': (Object? $r) => ($r as Value$).Elem(),
+    'Field(int)reflect.Value': (Object? $r, int $a0) =>
+        ($r as Value$).Field($a0),
+    'Float()float64': (Object? $r) => ($r as Value$).Float(),
+    'Index(int)reflect.Value': (Object? $r, int $a0) =>
+        ($r as Value$).Index($a0),
+    'Int()int64': (Object? $r) => ($r as Value$).Int(),
     'Interface()interface{}': (Object? $r) => ($r as Value$).Interface(),
+    'IsValid()bool': (Object? $r) => ($r as Value$).IsValid(),
+    'Kind()reflect.Kind': (Object? $r) => ($r as Value$).Kind(),
+    'Len()int': (Object? $r) => ($r as Value$).Len(),
+    'NumField()int': (Object? $r) => ($r as Value$).NumField(),
     'Set(reflect.Value)': (Object? $r, Value$ $a0) => ($r as Value$).Set($a0),
+    'SetBool(bool)': (Object? $r, bool $a0) => ($r as Value$).SetBool($a0),
+    'SetFloat(float64)': (Object? $r, double $a0) =>
+        ($r as Value$).SetFloat($a0),
+    'SetInt(int64)': (Object? $r, int $a0) => ($r as Value$).SetInt($a0),
+    'SetString(string)': (Object? $r, GoString $a0) =>
+        ($r as Value$).SetString($a0),
+    'SetUint(uint64)': (Object? $r, int $a0) => ($r as Value$).SetUint($a0),
+    'String()string': (Object? $r) => ($r as Value$).String$(),
+    'Type()reflect.Type': (Object? $r) => ($r as Value$).Type(),
+    'Uint()uint64': (Object? $r) => ($r as Value$).Uint(),
+    'descOf()int': (Object? $r) => ($r as Value$)._descOf(),
   },
   text: '*reflect.Value',
   elem: () => $desc$Value,

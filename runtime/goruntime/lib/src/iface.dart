@@ -257,3 +257,9 @@ Object? $call(Iface? x, String name, List<Object?> args) {
   final Function m = $method(x, name);
   return Function.apply(m, <Object?>[x!.value, ...args]);
 }
+
+/// $noMethod stands in place of an unexported method of a type of another
+/// package. A Dart library holds each name that starts with an underscore, thus
+/// another library reaches no such method.
+Never $noMethod(String name) =>
+    $panic(GoError('the method $name belongs to another package'));

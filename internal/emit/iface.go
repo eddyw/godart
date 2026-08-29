@@ -275,6 +275,12 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool
 	}
 	call := fmt.Sprintf("%s.%s(%s)", recv, methodName(fn), strings.Join(args, ", "))
 	switch {
+	case fn.Pkg() != nil && fn.Pkg() != e.pkg && !fn.Exported():
+		// A Dart library holds each name that starts with an underscore, thus
+		// another library reaches no unexported method of a type of this
+		// package. Such a method reaches the table of a type that embeds the
+		// type, and only the package of the method can call it.
+		call = fmt.Sprintf("$noMethod(%q)", fn.Pkg().Path()+"."+fn.Name())
 	case isInterfaceType(current):
 		// An embedded interface field holds an interface pair. The call reads
 		// the method table of that pair.

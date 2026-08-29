@@ -4,5 +4,5 @@ part of 'calc_test.dart';
 
 const $srcmapData = <String>[
   'bin/calc_test/gart_testmain.part.dart',
-  'd|51ae5168b9691b836f2a76e1bd4cc045aba996a73a10f98c62ed9e047a0ab3f3-d|main.main\n',
+  'd|51ae5168b9691b836f2a76e1bd4cc045aba996a73a10f98c62ed9e047a0ab3f3-d|main.main\np+f',
 ];

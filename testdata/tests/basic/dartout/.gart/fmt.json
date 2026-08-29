@@ -1,10 +1,14 @@
 {
   "path": "fmt",
   "name": "fmt",
-  "sourceHash": "ad82751b775af3d1ba1230c3c3fa0403d761af3f763cdfb9ada69a1f5d8acb45",
-  "exportHash": "b16f3a96504361591045c5802ab17b5d60207640bffe85de7498cf7fdf0e7566",
+  "sourceHash": "209a09147ccee271ffd6461a808b520770bfb270afc1790c34ab87017ad74249",
+  "exportHash": "b67a31682cc7699aa2aaff617cbd5cdd0a49feef3f6484140d77209244d43ca4",
   "export": "aQOsAZYCHC91c3IvbG9jYWwvZ28vc3JjL2ZtdC9kb2MuZ28GZm9ybWF0AWEAAXcGV3JpdGVyCEdvU3RyaW5nBlN0cmluZwVXcml0ZQFwA2ZtdAZFcnJvcmYGRnByaW50B0ZwcmludGYIRnByaW50bG4KR29TdHJpbmdlcgVQcmludAZQcmludGYHUHJpbnRsbgZTcHJpbnQHU3ByaW50ZghTcHJpbnRsbghTdHJpbmdlcgIfRhriBAACHB0QPCQgASgmEwEAKSYCH0YawgIAAhwnMygkNgIsJgEUJhMBAh9GGu4CAAMgJzMoHRA8JEwCLCYBFCYTAQIfRhraAgACJCczKCRlAiwmARQmEwEIJgABCq4CADAAASwmEFQaqgIAewIfRhqaAQABGCSPAQIsJgEUJhMBAh9GGtIBAAIcHRA8JKMBAiwmARQmEwECH0YatgEAASAkugECLCYBFCYTAQIfRho2AAEcJM4BASgmEAECH0Ya/gIAAiAdEDwk3gEBKCYQAQIfRhpqAAEkJPIBASgmEAEIJgABCpoCADkAASQmEFQalgIAggICEQgmAAEKhgIAQAEYRpcCAiwmARQmEwBUGoICAJkCASZIAA1MAlMYWi5iR2tpdnF8hQGDAZwBiwGwAZIBwAGaAdQBowHwASmPAg==",
-  "blocking": null,
+  "blocking": [
+    "Fprint",
+    "Fprintf",
+    "Fprintln"
+  ],
   "files": [
     "lib/std/fmt.dart",
     "lib/std/fmt.map.dart",

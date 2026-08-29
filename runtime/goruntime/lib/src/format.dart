@@ -163,6 +163,29 @@ int _precision(String verb) {
   return out;
 }
 
+/// _base writes the prefix of the base in front of a whole number. Go writes it
+/// for the flag # only.
+String _base(String text, String verb, String letter) {
+  if (!verb.contains('#')) return text;
+  String prefix;
+  switch (letter) {
+    case 'x':
+      prefix = '0x';
+    case 'X':
+      prefix = '0X';
+    case 'o':
+      prefix = '0';
+    case 'O':
+      prefix = '0o';
+    case 'b':
+      prefix = '0b';
+    default:
+      return text;
+  }
+  if (text.startsWith('-')) return '-$prefix${text.substring(1)}';
+  return '$prefix$text';
+}
+
 /// _sign writes the flag + in front of a value that is not negative. Go writes
 /// that flag for a numeric verb only, and not for the verb v.
 String _sign(String text, bool plus, String letter) {
@@ -208,7 +231,11 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'uint':
     case 'uint64':
     case 'uintptr':
-      return _sign(_int(v as int, letter, true), plus, letter);
+      return _sign(
+        _base(_int(v as int, letter, true), verb, letter),
+        plus,
+        letter,
+      );
     case 'int':
     case 'int8':
     case 'int16':
@@ -217,7 +244,11 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'uint8':
     case 'uint16':
     case 'uint32':
-      return _sign(_int(v as int, letter, false), plus, letter);
+      return _sign(
+        _base(_int(v as int, letter, false), verb, letter),
+        plus,
+        letter,
+      );
     case 'slice':
       return _slice(v, type, verb, plus);
     case 'array':

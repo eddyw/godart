@@ -43,17 +43,17 @@ final TypeDesc $descP$Duration = TypeDesc(
   'ptr',
   <String, Function>{
     'Microseconds()int64': (Object? $r) =>
-        Duration$Microseconds(($r as Box<int>?)!.v),
+        Duration$Microseconds(($r as $Ptr<int>?)!.v),
     'Milliseconds()int64': (Object? $r) =>
-        Duration$Milliseconds(($r as Box<int>?)!.v),
+        Duration$Milliseconds(($r as $Ptr<int>?)!.v),
     'Nanoseconds()int64': (Object? $r) =>
-        Duration$Nanoseconds(($r as Box<int>?)!.v),
+        Duration$Nanoseconds(($r as $Ptr<int>?)!.v),
     'Round(time.Duration)time.Duration': (Object? $r, int $a0) =>
-        Duration$Round(($r as Box<int>?)!.v, $a0),
-    'Seconds()float64': (Object? $r) => Duration$Seconds(($r as Box<int>?)!.v),
-    'String()string': (Object? $r) => Duration$String$(($r as Box<int>?)!.v),
+        Duration$Round(($r as $Ptr<int>?)!.v, $a0),
+    'Seconds()float64': (Object? $r) => Duration$Seconds(($r as $Ptr<int>?)!.v),
+    'String()string': (Object? $r) => Duration$String$(($r as $Ptr<int>?)!.v),
     'Truncate(time.Duration)time.Duration': (Object? $r, int $a0) =>
-        Duration$Truncate(($r as Box<int>?)!.v, $a0),
+        Duration$Truncate(($r as $Ptr<int>?)!.v, $a0),
   },
   text: '*time.Duration',
   elem: () => $desc$Duration,
@@ -121,7 +121,7 @@ final TypeDesc $descP$Month = TypeDesc(
   '*time.Month',
   'ptr',
   <String, Function>{
-    'String()string': (Object? $r) => Month$String$(($r as Box<int>?)!.v),
+    'String()string': (Object? $r) => Month$String$(($r as $Ptr<int>?)!.v),
   },
   text: '*time.Month',
   elem: () => $desc$Month,
@@ -451,7 +451,7 @@ final TypeDesc $descP$Weekday = TypeDesc(
   '*time.Weekday',
   'ptr',
   <String, Function>{
-    'String()string': (Object? $r) => Weekday$String$(($r as Box<int>?)!.v),
+    'String()string': (Object? $r) => Weekday$String$(($r as $Ptr<int>?)!.v),
   },
   text: '*time.Weekday',
   elem: () => $desc$Weekday,

@@ -40,6 +40,8 @@ func (e *emitter) expr(x ir.Expr) string {
 		return e.sliceExpr(x)
 	case *ir.Call:
 		return e.call(x)
+	case *ir.MethodExpr:
+		return e.methodExpr(x)
 	case *ir.Method:
 		return e.methodValue(x)
 	case *ir.Builtin:

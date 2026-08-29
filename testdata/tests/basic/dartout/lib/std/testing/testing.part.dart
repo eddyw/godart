@@ -598,6 +598,7 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
   int $n291_2 = 0;
   int $i291_2 = 0;
   InternalTest$ tc = InternalTest$.$zero();
+  bool $t1 = false;
   Box<T$?> t = Box(null);
   Box<void Function(T$?)?> f = Box(null);
   Slice<GoString> $range298_21 = Slice<GoString>.nil();
@@ -606,7 +607,8 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
   int $n306_3 = 0;
   int $i306_3 = 0;
   InternalBenchmark$ bc = InternalBenchmark$.$zero();
-  bool $t1 = false;
+  bool $t2 = false;
+  bool $t3 = false;
   int $s = 0;
   bool $c = false;
   Frame? $r;
@@ -621,6 +623,7 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
     $n291_2 = $f.$n291_2;
     $i291_2 = $f.$i291_2;
     tc = $f.tc;
+    $t1 = $f.$t1;
     t = $f.t;
     f = $f.f;
     $range298_21 = $f.$range298_21;
@@ -629,7 +632,8 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
     $n306_3 = $f.$n306_3;
     $i306_3 = $f.$i306_3;
     bc = $f.bc;
-    $t1 = $f.$t1;
+    $t2 = $f.$t2;
+    $t3 = $f.$t3;
   }
   $m:
   while (true) {
@@ -652,31 +656,40 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
         continue $m;
       case 2:
         tc = $range291_21[$i291_2].$copy();
-        if ((!_matches(tc.Name, flags._run))) {
-          $s = 5;
-          continue $m;
-        } else {
-          $s = 6;
-          continue $m;
-        }
-        $unreachable();
+        $t1 = _matches(tc.Name, flags._run);
+        $s = 5;
+        continue $m;
       case 3:
         $i291_2 = ($i291_2 + 1);
         $s = 1;
         continue $m;
       case 4:
         if (flags._benchmarks) {
-          $s = 8;
+          $s = 9;
           continue $m;
         } else {
-          $s = 9;
+          $s = 10;
           continue $m;
         }
         $unreachable();
       case 5:
+        if ($c) {
+          $c = false;
+          $t1 = $r!.resume() as bool;
+        }
+        if ($blocked != null) break $m;
+        if ((!$t1)) {
+          $s = 6;
+          continue $m;
+        } else {
+          $s = 7;
+          continue $m;
+        }
+        $unreachable();
+      case 6:
         $s = 3;
         continue $m;
-      case 6:
+      case 7:
         t = Box(
           T$(
             tc.Name,
@@ -728,10 +741,10 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
           }
 
           _runOne(t.v, $lit297_13);
-          $s = 7;
+          $s = 8;
           continue $m;
         }
-      case 7:
+      case 8:
         if ($c) {
           $c = false;
           $r!.resume();
@@ -748,13 +761,13 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
         }
         $s = 3;
         continue $m;
-      case 8:
+      case 9:
         $range306_22 = m!._benchmarks;
         $n306_3 = $range306_22.len;
         $i306_3 = 0;
-        $s = 10;
+        $s = 11;
         continue $m;
-      case 9:
+      case 10:
         if (failed) {
           _emit(GoString.fromString('FAIL'));
           m!._code = 1;
@@ -763,47 +776,56 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
         _emit(GoString.fromString('PASS'));
         m!._code = 0;
         return 0;
-      case 10:
-        if ((!($i306_3 < $n306_3))) {
-          $s = 13;
-          continue $m;
-        }
-        $s = 11;
-        continue $m;
       case 11:
-        bc = $range306_22[$i306_3].$copy();
-        if ((!_matches(bc.Name, flags._bench))) {
+        if ((!($i306_3 < $n306_3))) {
           $s = 14;
           continue $m;
+        }
+        $s = 12;
+        continue $m;
+      case 12:
+        bc = $range306_22[$i306_3].$copy();
+        $t2 = _matches(bc.Name, flags._bench);
+        $s = 15;
+        continue $m;
+      case 13:
+        $i306_3 = ($i306_3 + 1);
+        $s = 11;
+        continue $m;
+      case 14:
+        $s = 10;
+        continue $m;
+      case 15:
+        if ($c) {
+          $c = false;
+          $t2 = $r!.resume() as bool;
+        }
+        if ($blocked != null) break $m;
+        if ((!$t2)) {
+          $s = 16;
+          continue $m;
         } else {
-          $s = 15;
+          $s = 17;
           continue $m;
         }
         $unreachable();
-      case 12:
-        $i306_3 = ($i306_3 + 1);
-        $s = 10;
-        continue $m;
-      case 13:
-        $s = 9;
-        continue $m;
-      case 14:
-        $s = 12;
-        continue $m;
-      case 15:
-        $t1 = _runBenchmark(bc.Name, bc.F, flags.$copy());
-        $s = 16;
-        continue $m;
       case 16:
+        $s = 13;
+        continue $m;
+      case 17:
+        $t3 = _runBenchmark(bc.Name, bc.F, flags.$copy());
+        $s = 18;
+        continue $m;
+      case 18:
         if ($c) {
           $c = false;
-          $t1 = $r!.resume() as bool;
+          $t3 = $r!.resume() as bool;
         }
         if ($blocked != null) break $m;
-        if ((!$t1)) {
+        if ((!$t3)) {
           failed = true;
         }
-        $s = 12;
+        $s = 13;
         continue $m;
     }
   }
@@ -818,6 +840,7 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
     ..$n291_2 = $n291_2
     ..$i291_2 = $i291_2
     ..tc = tc
+    ..$t1 = $t1
     ..t = t
     ..f = f
     ..$range298_21 = $range298_21
@@ -826,7 +849,8 @@ int M$Run(M$? m, [_testing_go_287_1$F? $f]) {
     ..$n306_3 = $n306_3
     ..$i306_3 = $i306_3
     ..bc = bc
-    ..$t1 = $t1;
+    ..$t2 = $t2
+    ..$t3 = $t3;
   return 0;
 }
 
@@ -853,6 +877,7 @@ final class _testing_go_287_1$F implements Frame {
   late int $n291_2;
   late int $i291_2;
   late InternalTest$ tc;
+  late bool $t1;
   late Box<T$?> t;
   late Box<void Function(T$?)?> f;
   late Slice<GoString> $range298_21;
@@ -861,7 +886,8 @@ final class _testing_go_287_1$F implements Frame {
   late int $n306_3;
   late int $i306_3;
   late InternalBenchmark$ bc;
-  late bool $t1;
+  late bool $t2;
+  late bool $t3;
   @override
   Object? resume() => M$Run(m, this);
 }
@@ -1078,19 +1104,139 @@ _options$ _readFlags() {
   return out.$copy();
 }
 
-bool _matches(GoString name, GoString pattern) {
-  return ((pattern == GoString.fromString('')) ||
-      $strings.Contains(name, pattern));
+late (bool, Iface?) Function(GoString, GoString)? MatchString;
+bool _matches(GoString name, GoString pattern, [_testing_go_412_1$F? $f]) {
+  Slice<GoString> elems = Slice<GoString>.nil();
+  Slice<GoString> $range417_23 = Slice<GoString>.nil();
+  int $n417_2 = 0;
+  int $i417_2 = 0;
+  int i = 0;
+  GoString part$ = GoString.empty;
+  (bool, Iface?) $t1 = (false, null);
+  bool ok = false;
+  Iface? err = null;
+  int $s = 0;
+  bool $c = false;
+  Frame? $r;
+  if ($f != null) {
+    $s = $f.$s;
+    $c = $f.$c;
+    $r = $f.$r;
+    name = $f.name;
+    pattern = $f.pattern;
+    elems = $f.elems;
+    $range417_23 = $f.$range417_23;
+    $n417_2 = $f.$n417_2;
+    $i417_2 = $f.$i417_2;
+    i = $f.i;
+    part$ = $f.part$;
+    $t1 = $f.$t1;
+    ok = $f.ok;
+    err = $f.err;
+  }
+  $m:
+  while (true) {
+    switch ($s) {
+      case 0:
+        if (((pattern == GoString.fromString('')) || (MatchString == null))) {
+          return true;
+        }
+        elems = $strings.Split(name, GoString.fromString('/'));
+        $range417_23 = $strings.Split(pattern, GoString.fromString('/'));
+        $n417_2 = $range417_23.len;
+        $i417_2 = 0;
+        $s = 1;
+        continue $m;
+      case 1:
+        if ((!($i417_2 < $n417_2))) {
+          $s = 4;
+          continue $m;
+        }
+        $s = 2;
+        continue $m;
+      case 2:
+        i = $i417_2;
+        part$ = $range417_23[$i417_2];
+        if ((i >= elems.len)) {
+          $s = 5;
+          continue $m;
+        } else {
+          $s = 6;
+          continue $m;
+        }
+        $unreachable();
+      case 3:
+        $i417_2 = ($i417_2 + 1);
+        $s = 1;
+        continue $m;
+      case 4:
+        return true;
+      case 5:
+        $s = 4;
+        continue $m;
+      case 6:
+        $t1 = MatchString!(part$, elems[i]);
+        $s = 7;
+        continue $m;
+      case 7:
+        if ($c) {
+          $c = false;
+          $t1 = $r!.resume() as (bool, Iface?);
+        }
+        if ($blocked != null) break $m;
+        (ok, err) = $t1;
+        if (((!(err == null)) || (!ok))) {
+          return false;
+        }
+        $s = 3;
+        continue $m;
+    }
+  }
+  $blocked = _testing_go_412_1$F()
+    ..$s = $s
+    ..$c = true
+    ..$r = $blocked
+    ..name = name
+    ..pattern = pattern
+    ..elems = elems
+    ..$range417_23 = $range417_23
+    ..$n417_2 = $n417_2
+    ..$i417_2 = $i417_2
+    ..i = i
+    ..part$ = part$
+    ..$t1 = $t1
+    ..ok = ok
+    ..err = err;
+  return false;
 }
 
-void _runOne(T$? t, void Function()? call, [_testing_go_413_1$F? $f]) {
+final class _testing_go_412_1$F implements Frame {
+  int $s = 0;
+  bool $c = false;
+  Frame? $r;
+  late GoString name;
+  late GoString pattern;
+  late Slice<GoString> elems;
+  late Slice<GoString> $range417_23;
+  late int $n417_2;
+  late int $i417_2;
+  late int i;
+  late GoString part$;
+  late (bool, Iface?) $t1;
+  late bool ok;
+  late Iface? err;
+  @override
+  Object? resume() => _matches(name, pattern, this);
+}
+
+void _runOne(T$? t, void Function()? call, [_testing_go_431_1$F? $f]) {
   int start = 0;
   T$? parent = null;
   int i = 0;
   GoString head = GoString.empty;
   Slice<GoString> out = Slice<GoString>.nil();
-  Slice<GoString> $range440_23 = Slice<GoString>.nil();
-  int $n440_2 = 0;
+  Slice<GoString> $range458_23 = Slice<GoString>.nil();
+  int $n458_2 = 0;
   int $s = 0;
   bool $c = false;
   Frame? $r;
@@ -1105,8 +1251,8 @@ void _runOne(T$? t, void Function()? call, [_testing_go_413_1$F? $f]) {
     i = $f.i;
     head = $f.head;
     out = $f.out;
-    $range440_23 = $f.$range440_23;
-    $n440_2 = $f.$n440_2;
+    $range458_23 = $f.$range458_23;
+    $n458_2 = $f.$n458_2;
   }
   $m:
   while (true) {
@@ -1191,10 +1337,10 @@ void _runOne(T$? t, void Function()? call, [_testing_go_413_1$F? $f]) {
           return;
         }
         out = Slice.of(<GoString>[head]);
-        $range440_23 = t!._logs;
-        $n440_2 = $range440_23.len;
-        for (int $i440_2 = 0; ($i440_2 < $n440_2); $i440_2 = ($i440_2 + 1)) {
-          GoString text = $range440_23[$i440_2];
+        $range458_23 = t!._logs;
+        $n458_2 = $range458_23.len;
+        for (int $i458_2 = 0; ($i458_2 < $n458_2); $i458_2 = ($i458_2 + 1)) {
+          GoString text = $range458_23[$i458_2];
           out = $appendSlice(
             out,
             _indentLines((t!._level + 1), text),
@@ -1217,7 +1363,7 @@ void _runOne(T$? t, void Function()? call, [_testing_go_413_1$F? $f]) {
         continue $m;
     }
   }
-  $blocked = _testing_go_413_1$F()
+  $blocked = _testing_go_431_1$F()
     ..$s = $s
     ..$c = true
     ..$r = $blocked
@@ -1228,12 +1374,12 @@ void _runOne(T$? t, void Function()? call, [_testing_go_413_1$F? $f]) {
     ..i = i
     ..head = head
     ..out = out
-    ..$range440_23 = $range440_23
-    ..$n440_2 = $n440_2;
+    ..$range458_23 = $range458_23
+    ..$n458_2 = $n458_2;
   return;
 }
 
-final class _testing_go_413_1$F implements Frame {
+final class _testing_go_431_1$F implements Frame {
   int $s = 0;
   bool $c = false;
   Frame? $r;
@@ -1244,8 +1390,8 @@ final class _testing_go_413_1$F implements Frame {
   late int i;
   late GoString head;
   late Slice<GoString> out;
-  late Slice<GoString> $range440_23;
-  late int $n440_2;
+  late Slice<GoString> $range458_23;
+  late int $n458_2;
   @override
   Object? resume() {
     _runOne(t, call, this);
@@ -1285,9 +1431,9 @@ Slice<GoString> _indentLines(int level, GoString text) {
     parts.len,
     (n) => List<GoString>.generate(n, (_) => GoString.empty),
   );
-  int $n465_2 = parts.len;
-  for (int $i465_2 = 0; ($i465_2 < $n465_2); $i465_2 = ($i465_2 + 1)) {
-    GoString part$ = parts[$i465_2];
+  int $n483_2 = parts.len;
+  for (int $i483_2 = 0; ($i483_2 < $n483_2); $i483_2 = ($i483_2 + 1)) {
+    GoString part$ = parts[$i483_2];
     out = $append(out, <GoString>[
       $concat(_indent(level), part$),
     ], (n) => List<GoString>.generate(n, (_) => GoString.empty));
@@ -1616,7 +1762,7 @@ bool B$Run(
   B$? b,
   GoString name,
   void Function(B$?)? f, [
-  _testing_go_637_1$F? $f,
+  _testing_go_655_1$F? $f,
 ]) {
   bool $t1 = false;
   int $s = 0;
@@ -1655,7 +1801,7 @@ bool B$Run(
         return $t1;
     }
   }
-  $blocked = _testing_go_637_1$F()
+  $blocked = _testing_go_655_1$F()
     ..$s = $s
     ..$c = true
     ..$r = $blocked
@@ -1666,7 +1812,7 @@ bool B$Run(
   return false;
 }
 
-final class _testing_go_637_1$F implements Frame {
+final class _testing_go_655_1$F implements Frame {
   int $s = 0;
   bool $c = false;
   Frame? $r;
@@ -1682,14 +1828,14 @@ bool _runBenchmark(
   GoString name,
   void Function(B$?)? f,
   _options$ flags, [
-  _testing_go_648_1$F? $f,
+  _testing_go_666_1$F? $f,
 ]) {
   int n = 0;
   B$? $t1 = null;
   B$? last = null;
   B$? $t2 = null;
-  Slice<GoString> $range671_20 = Slice<GoString>.nil();
-  int $n671_2 = 0;
+  Slice<GoString> $range689_20 = Slice<GoString>.nil();
+  int $n689_2 = 0;
   int $s = 0;
   bool $c = false;
   Frame? $r;
@@ -1704,8 +1850,8 @@ bool _runBenchmark(
     $t1 = $f.$t1;
     last = $f.last;
     $t2 = $f.$t2;
-    $range671_20 = $f.$range671_20;
-    $n671_2 = $f.$n671_2;
+    $range689_20 = $f.$range689_20;
+    $n689_2 = $f.$n689_2;
   }
   $m:
   while (true) {
@@ -1751,10 +1897,10 @@ bool _runBenchmark(
         $s = 2;
         continue $m;
       case 5:
-        $range671_20 = last!._common!._report;
-        $n671_2 = $range671_20.len;
-        for (int $i671_2 = 0; ($i671_2 < $n671_2); $i671_2 = ($i671_2 + 1)) {
-          GoString l = $range671_20[$i671_2];
+        $range689_20 = last!._common!._report;
+        $n689_2 = $range689_20.len;
+        for (int $i689_2 = 0; ($i689_2 < $n689_2); $i689_2 = ($i689_2 + 1)) {
+          GoString l = $range689_20[$i689_2];
           _emit(l);
         }
         if (last!._common!._failed) {
@@ -1809,7 +1955,7 @@ bool _runBenchmark(
         continue $m;
     }
   }
-  $blocked = _testing_go_648_1$F()
+  $blocked = _testing_go_666_1$F()
     ..$s = $s
     ..$c = true
     ..$r = $blocked
@@ -1820,12 +1966,12 @@ bool _runBenchmark(
     ..$t1 = $t1
     ..last = last
     ..$t2 = $t2
-    ..$range671_20 = $range671_20
-    ..$n671_2 = $n671_2;
+    ..$range689_20 = $range689_20
+    ..$n689_2 = $n689_2;
   return false;
 }
 
-final class _testing_go_648_1$F implements Frame {
+final class _testing_go_666_1$F implements Frame {
   int $s = 0;
   bool $c = false;
   Frame? $r;
@@ -1836,8 +1982,8 @@ final class _testing_go_648_1$F implements Frame {
   late B$? $t1;
   late B$? last;
   late B$? $t2;
-  late Slice<GoString> $range671_20;
-  late int $n671_2;
+  late Slice<GoString> $range689_20;
+  late int $n689_2;
   @override
   Object? resume() => _runBenchmark(name, f, flags, this);
 }
@@ -1896,7 +2042,7 @@ final class BenchmarkResult$ {
   }
 }
 
-BenchmarkResult$ Benchmark(void Function(B$?)? f, [_testing_go_717_1$F? $f]) {
+BenchmarkResult$ Benchmark(void Function(B$?)? f, [_testing_go_735_1$F? $f]) {
   int n = 0;
   B$? $t1 = null;
   B$? last = null;
@@ -1984,7 +2130,7 @@ BenchmarkResult$ Benchmark(void Function(B$?)? f, [_testing_go_717_1$F? $f]) {
         continue $m;
     }
   }
-  $blocked = _testing_go_717_1$F()
+  $blocked = _testing_go_735_1$F()
     ..$s = $s
     ..$c = true
     ..$r = $blocked
@@ -1996,7 +2142,7 @@ BenchmarkResult$ Benchmark(void Function(B$?)? f, [_testing_go_717_1$F? $f]) {
   return BenchmarkResult$.$zero();
 }
 
-final class _testing_go_717_1$F implements Frame {
+final class _testing_go_735_1$F implements Frame {
   int $s = 0;
   bool $c = false;
   Frame? $r;
@@ -2013,7 +2159,7 @@ B$? _runIterations(
   GoString name,
   void Function(B$?)? f,
   int n, [
-  _testing_go_737_1$F? $f,
+  _testing_go_755_1$F? $f,
 ]) {
   T$? t = null;
   Box<B$?> b = Box(null);
@@ -2055,7 +2201,7 @@ B$? _runIterations(
         B$StartTimer(b.v);
         {
           final Box<B$?> $cb = b;
-          void $lit743_13([_testing_go_743_13$F? $f]) {
+          void $lit761_13([_testing_go_761_13$F? $f]) {
             int $s = 0;
             bool $c = false;
             Frame? $r;
@@ -2080,15 +2226,15 @@ B$? _runIterations(
                   return;
               }
             }
-            $blocked = _testing_go_743_13$F()
+            $blocked = _testing_go_761_13$F()
               ..$s = $s
               ..$c = true
               ..$r = $blocked
-              ..$fn = $lit743_13;
+              ..$fn = $lit761_13;
             return;
           }
 
-          $catch($lit743_13);
+          $catch($lit761_13);
           $s = 1;
           continue $m;
         }
@@ -2140,10 +2286,10 @@ B$? _runIterations(
             GoString.fromString('s)'),
           );
           Slice<GoString> out = Slice.of(<GoString>[head]);
-          Slice<GoString> $range753_24 = t!._logs;
-          int $n753_3 = $range753_24.len;
-          for (int $i753_3 = 0; ($i753_3 < $n753_3); $i753_3 = ($i753_3 + 1)) {
-            GoString text = $range753_24[$i753_3];
+          Slice<GoString> $range771_24 = t!._logs;
+          int $n771_3 = $range771_24.len;
+          for (int $i771_3 = 0; ($i771_3 < $n771_3); $i771_3 = ($i771_3 + 1)) {
+            GoString text = $range771_24[$i771_3];
             out = $appendSlice(
               out,
               _indentLines((t!._level + 1), text),
@@ -2167,7 +2313,7 @@ B$? _runIterations(
         continue $m;
     }
   }
-  $blocked = _testing_go_737_1$F()
+  $blocked = _testing_go_755_1$F()
     ..$s = $s
     ..$c = true
     ..$r = $blocked
@@ -2181,11 +2327,11 @@ B$? _runIterations(
   return null;
 }
 
-final class _testing_go_743_13$F implements Frame {
+final class _testing_go_761_13$F implements Frame {
   int $s = 0;
   bool $c = false;
   Frame? $r;
-  late void Function([_testing_go_743_13$F?]) $fn;
+  late void Function([_testing_go_761_13$F?]) $fn;
   @override
   Object? resume() {
     $fn(this);
@@ -2193,7 +2339,7 @@ final class _testing_go_743_13$F implements Frame {
   }
 }
 
-final class _testing_go_737_1$F implements Frame {
+final class _testing_go_755_1$F implements Frame {
   int $s = 0;
   bool $c = false;
   Frame? $r;
@@ -2291,10 +2437,10 @@ GoString _benchLine(GoString name, B$? b) {
       ),
     );
   }
-  Slice<GoString> $range814_20 = b!._metrics;
-  int $n814_2 = $range814_20.len;
-  for (int $i814_2 = 0; ($i814_2 < $n814_2); $i814_2 = ($i814_2 + 1)) {
-    GoString m = $range814_20[$i814_2];
+  Slice<GoString> $range832_20 = b!._metrics;
+  int $n832_2 = $range832_20.len;
+  for (int $i832_2 = 0; ($i832_2 < $n832_2); $i832_2 = ($i832_2 + 1)) {
+    GoString m = $range832_20[$i832_2];
     line = $concat(line, $concat(GoString.fromString('\t'), m));
   }
   return line;

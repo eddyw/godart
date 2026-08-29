@@ -113,14 +113,26 @@ func (b *builder) litName(pos token.Pos) string {
 	return fmt.Sprintf("$lit%d_%d", p.Line, p.Column)
 }
 
-// addResults gives the frame each result that the Go source names. A deferred
-// call can write such a result, thus it lives as long as the frame.
+// addResults gives the frame each result of a function that names one. A
+// deferred call can write such a result, thus it lives as long as the frame.
+//
+// A blank result of such a function also lives there, because the return path
+// writes each result and reads them together.
 func addResults(m *ir.Machine, results []*ir.Var) {
+	if !namedResults(results) {
+		return
+	}
+	m.Locals = append(m.Locals, results...)
+}
+
+// namedResults reports whether the Go source names 1 result or more.
+func namedResults(results []*ir.Var) bool {
 	for _, r := range results {
 		if r.Named {
-			m.Locals = append(m.Locals, r)
+			return true
 		}
 	}
+	return false
 }
 
 // declareLocal gives a local variable a name that is unique in the function.

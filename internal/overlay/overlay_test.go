@@ -26,25 +26,12 @@ func TestPackages(t *testing.T) {
 	}
 }
 
-// TestStubs proves that a stub package stays out of the curated surface. The
-// load replaces such a package, and the verifier still rejects an import of it.
-func TestStubs(t *testing.T) {
+// TestSurface proves that the curated surface holds each package that the
+// build needs, and that testdeps gives the harness the match function.
+func TestSurface(t *testing.T) {
 	paths := overlay.Paths()
-	stubs := map[string]bool{}
-	for _, p := range overlay.Packages() {
-		if p.Stub {
-			stubs[p.Path] = true
-		}
-	}
-	for _, want := range []string{"testing/internal/testdeps"} {
-		if !stubs[want] {
-			t.Errorf("the overlay holds no stub of %s", want)
-		}
-		if slices.Contains(paths, want) {
-			t.Errorf("the surface holds the stub %s", want)
-		}
-	}
-	for _, want := range []string{"os", "testing", "reflect", "flag"} {
+	for _, want := range []string{"os", "testing", "reflect", "flag",
+		"testing/internal/testdeps"} {
 		if !slices.Contains(paths, want) {
 			t.Errorf("the surface holds %v, want the package %s", paths, want)
 		}

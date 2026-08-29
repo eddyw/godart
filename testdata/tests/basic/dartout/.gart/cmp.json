@@ -1,0 +1,13 @@
+{
+  "path": "cmp",
+  "name": "cmp",
+  "sourceHash": "9dc1031a42f8a8757d090b3a52ec915491ea8394b7ca881092dd20aa891a424e",
+  "exportHash": "3451e29f0590d26feb6472371a05d8e918a1cd986ebe4d34a20c8c30102e680e",
+  "export": "aQNZggEcL3Vzci9sb2NhbC9nby9zcmMvY21wL2NtcC5nbwlDb21wYXJlLlQAAXgBeQZMZXNzLlQET3IuVAR2YWxzB09yZGVyZWQDY21wB0NvbXBhcmUETGVzcwJPcgkdJ0caogEAASACTCggDCogARQnAQAJLCdHGnIAATYCQCg2DCo2ARQnAAAJMycCS0calgIAAUsBRDhOASwnSwELDgEBAQIBAwEEAQUBBgEHAQgBCQEKAQsBDAENARAIJwEAYABUGkoAfgA9J1A6ogEAAIkBUC5yAACJAVAmlgIAAB4BJ0UAB0kDHWxRGSx0VjAzez1k",
+  "blocking": null,
+  "files": [
+    "lib/std/cmp.dart",
+    "lib/std/cmp.map.dart",
+    "lib/std/cmp/cmp.part.dart"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "path": "sort",
+  "name": "sort",
+  "sourceHash": "8fe3e6b45dadd701abce71d057dc8818033ecae37a355aabf6fcccc7663c9bb8",
+  "exportHash": "3f364da37d1a910a8b9a4b4a8d109eb04f6245acb17dabe6e43de3f607d4efab",
+  "export": "aQOwAZYCHi91c3IvbG9jYWwvZ28vc3JjL3NvcnQvc29ydC5nbwFuA2NtcAABeANMZW4ETGVzcwFpAWoEU3dhcAFmAXYEbGVzcwRkYXRhCUludGVyZmFjZQRzb3J0BEZpbmQIRmxvYXQ2NHMESW50cw1JbnRzQXJlU29ydGVkBlNlYXJjaApTZWFyY2hJbnRzBVNsaWNlC1NsaWNlU3RhYmxlBFNvcnQGU3RhYmxlB1N0cmluZ3MGJQFurgQAJQEBFCUBAEYargQAAhQfARwhIAJQJQEUJQAAAg1GGp4DAAEkJkIAAAglAAMK0gEAKAABGCUBFQQsAhQxAQwzAQEcJQAAOQQ1AhQxAQwzAQAAVBrOAQBPAgFGGvYCAAEUJn4AAAIBRhqyAwABOCaLAQEkJQAABiUBbtoDACUBARQlAABGGtoDAAIcHwEcOpwBAUglAQACAUYakgQAAiwmvAEkPAEBHCUBAAYlAnYqADEBDDMBARwlAABGGioAAhgmHxw+0AEAAAYlAo4BQgAxAQwzAQEcJQAARhpCAAIwJh8cPu4BAAAASCVGGuoBAAEUQ40CAABGGv4BAAEcQ40CAAACEEYaigMAASAmqAIAAAElUgAMVw5cJEhYZWBqbXiKAX+eAYoBwAGQAd8BnAHwAaEB/AGoAYoC",
+  "blocking": null,
+  "files": [
+    "lib/std/sort.dart",
+    "lib/std/sort.map.dart",
+    "lib/std/sort/search.part.dart",
+    "lib/std/sort/slice.part.dart",
+    "lib/std/sort/sort.part.dart",
+    "lib/std/sort/zsortfunc.part.dart",
+    "lib/std/sort/zsortinterface.part.dart"
+  ]
+}

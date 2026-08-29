@@ -7,7 +7,7 @@
 part of '../calc_test.dart';
 
 void _main([
-  _51ae5168b9691b836f2a76e1bd4cc045aba996a73a10f98c62ed9e047a0ab3f3_d_12_1$F?
+  _51ae5168b9691b836f2a76e1bd4cc045aba996a73a10f98c62ed9e047a0ab3f3_d_14_1$F?
   $f,
 ]) {
   int $s = 0;
@@ -76,14 +76,14 @@ void _main([
     }
   }
   $blocked =
-      _51ae5168b9691b836f2a76e1bd4cc045aba996a73a10f98c62ed9e047a0ab3f3_d_12_1$F()
+      _51ae5168b9691b836f2a76e1bd4cc045aba996a73a10f98c62ed9e047a0ab3f3_d_14_1$F()
         ..$s = $s
         ..$c = true
         ..$r = $blocked;
   return;
 }
 
-final class _51ae5168b9691b836f2a76e1bd4cc045aba996a73a10f98c62ed9e047a0ab3f3_d_12_1$F
+final class _51ae5168b9691b836f2a76e1bd4cc045aba996a73a10f98c62ed9e047a0ab3f3_d_14_1$F
     implements Frame {
   int $s = 0;
   bool $c = false;

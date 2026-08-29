@@ -9,26 +9,28 @@ build of a program that imports the package.
 
 ## The import surface
 
-54 packages of the standard library reach the surface. Stage 2 rejects an import
+56 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
 |---|---|
-| `bufio`, `bytes`, `cmp` | `regexp` |
-| `container/heap`, `container/list`, `container/ring` | `net/http` |
-| `context`, `errors`, `flag`, `fmt`, `log` | `os/exec`, `os/signal` |
-| `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `encoding/xml`, `encoding/gob` |
-| `encoding/csv`, `encoding/hex`, `encoding/json` | `text/template`, `html/template` |
-| `crypto/md5`, `crypto/sha256` | `crypto/tls`, `crypto/rand`, `compress/...` |
-| `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `archive/...`, `text/tabwriter` |
-| `io`, `io/fs`, `iter`, `maps`, `slices`, `sort` | `embed`, `database/sql` |
-| `math`, `math/bits`, `math/rand`, `math/rand/v2` | `math/cmplx`, `go/...` |
-| `net`, `net/netip`, `net/url` | `unsafe`, cgo |
+| `bufio`, `bytes`, `cmp` | `net/http` |
+| `container/heap`, `container/list`, `container/ring` | `os/exec`, `os/signal` |
+| `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
+| `regexp`, `regexp/syntax` | `text/template`, `html/template` |
+| `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/tls`, `crypto/rand` |
+| `encoding/csv`, `encoding/hex`, `encoding/json` | `compress/...`, `archive/...` |
+| `crypto/md5`, `crypto/sha256` | `text/tabwriter`, `embed` |
+| `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `database/sql`, `math/cmplx` |
+| `io`, `io/fs`, `iter`, `maps`, `slices`, `sort` | `go/...` |
+| `math`, `math/bits`, `math/rand`, `math/rand/v2` | `unsafe`, cgo |
+| `net`, `net/netip`, `net/url` | |
 | `os`, `path`, `path/filepath` | |
 | `reflect`, `runtime`, `strconv`, `strings` | |
 | `sync`, `sync/atomic`, `testing`, `time` | |
 | `unicode`, `unicode/utf8`, `unique` | |
-| `internal/godebug`, `syscall/dart` | |
+| `internal/godebug`, `internal/byteorder` | |
+| `testing/internal/testdeps`, `syscall/dart` | |
 
 ## The gates of the language
 

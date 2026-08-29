@@ -336,7 +336,7 @@ bool Uint64$CompareAndSwap(Uint64$? x, int old, int new$) {
 
 final class Pointer$<T> {
   final Dict<T> $dT;
-  Box<T>? _v;
+  $Ptr<T>? _v;
 
   Pointer$(this.$dT, this._v);
   Pointer$.$zero(this.$dT) : _v = null;
@@ -353,24 +353,24 @@ final class Pointer$<T> {
   @override
   int get hashCode => Object.hashAll(<Object?>[identityHashCode(_v)]);
 
-  Box<T>? Load() {
+  $Ptr<T>? Load() {
     Pointer$<T>? x = this;
     return x!._v;
   }
 
-  void Store(Box<T>? val) {
+  void Store($Ptr<T>? val) {
     Pointer$<T>? x = this;
     x!._v = val;
   }
 
-  Box<T>? Swap(Box<T>? new$) {
+  $Ptr<T>? Swap($Ptr<T>? new$) {
     Pointer$<T>? x = this;
-    Box<T>? old = x!._v;
+    $Ptr<T>? old = x!._v;
     x!._v = new$;
     return old;
   }
 
-  bool CompareAndSwap(Box<T>? old, Box<T>? new$) {
+  bool CompareAndSwap($Ptr<T>? old, $Ptr<T>? new$) {
     Pointer$<T>? x = this;
     if ((!(x!._v == old))) {
       return false;
@@ -380,71 +380,71 @@ final class Pointer$<T> {
   }
 }
 
-int AddInt32(Box<int>? addr, int delta) {
+int AddInt32($Ptr<int>? addr, int delta) {
   addr!.v = $i32((addr!.v + delta));
   return addr!.v;
 }
 
-int AddInt64(Box<int>? addr, int delta) {
+int AddInt64($Ptr<int>? addr, int delta) {
   addr!.v = (addr!.v + delta);
   return addr!.v;
 }
 
-int AddUint32(Box<int>? addr, int delta) {
+int AddUint32($Ptr<int>? addr, int delta) {
   addr!.v = $u32((addr!.v + delta));
   return addr!.v;
 }
 
-int AddUint64(Box<int>? addr, int delta) {
+int AddUint64($Ptr<int>? addr, int delta) {
   addr!.v = (addr!.v + delta);
   return addr!.v;
 }
 
-int LoadInt32(Box<int>? addr) {
+int LoadInt32($Ptr<int>? addr) {
   return addr!.v;
 }
 
-int LoadInt64(Box<int>? addr) {
+int LoadInt64($Ptr<int>? addr) {
   return addr!.v;
 }
 
-int LoadUint32(Box<int>? addr) {
+int LoadUint32($Ptr<int>? addr) {
   return addr!.v;
 }
 
-int LoadUint64(Box<int>? addr) {
+int LoadUint64($Ptr<int>? addr) {
   return addr!.v;
 }
 
-void StoreInt32(Box<int>? addr, int val) {
+void StoreInt32($Ptr<int>? addr, int val) {
   addr!.v = val;
 }
 
-void StoreInt64(Box<int>? addr, int val) {
+void StoreInt64($Ptr<int>? addr, int val) {
   addr!.v = val;
 }
 
-void StoreUint32(Box<int>? addr, int val) {
+void StoreUint32($Ptr<int>? addr, int val) {
   addr!.v = val;
 }
 
-void StoreUint64(Box<int>? addr, int val) {
+void StoreUint64($Ptr<int>? addr, int val) {
   addr!.v = val;
 }
 
-int SwapInt32(Box<int>? addr, int new$) {
+int SwapInt32($Ptr<int>? addr, int new$) {
   int old = addr!.v;
   addr!.v = new$;
   return old;
 }
 
-int SwapInt64(Box<int>? addr, int new$) {
+int SwapInt64($Ptr<int>? addr, int new$) {
   int old = addr!.v;
   addr!.v = new$;
   return old;
 }
 
-bool CompareAndSwapInt32(Box<int>? addr, int old, int new$) {
+bool CompareAndSwapInt32($Ptr<int>? addr, int old, int new$) {
   if ((!(addr!.v == old))) {
     return false;
   }
@@ -452,7 +452,7 @@ bool CompareAndSwapInt32(Box<int>? addr, int old, int new$) {
   return true;
 }
 
-bool CompareAndSwapInt64(Box<int>? addr, int old, int new$) {
+bool CompareAndSwapInt64($Ptr<int>? addr, int old, int new$) {
   if ((!(addr!.v == old))) {
     return false;
   }

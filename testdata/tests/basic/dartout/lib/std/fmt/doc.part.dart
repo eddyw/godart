@@ -54,28 +54,177 @@ GoString Sprintln(Slice<Iface?> a) {
   return (text.length, null);
 }
 
-(int, Iface?) Fprint(Iface? w, Slice<Iface?> a) {
-  return ($method(w, 'Write([]byte)int,error')
-      as (int, Iface?) Function(Object?, Slice<int>))(
-    w!.value,
-    $stringToBytes(Sprint(a)),
-  );
+(int, Iface?) Fprint(Iface? w, Slice<Iface?> a, [_doc_go_80_1$F? $f]) {
+  (int, Iface?) $t1 = (0, null);
+  int $s = 0;
+  bool $c = false;
+  Frame? $r;
+  if ($f != null) {
+    $s = $f.$s;
+    $c = $f.$c;
+    $r = $f.$r;
+    w = $f.w;
+    a = $f.a;
+    $t1 = $f.$t1;
+  }
+  $m:
+  while (true) {
+    switch ($s) {
+      case 0:
+        $t1 =
+            ($method(w, 'Write([]byte)int,error')
+                as (int, Iface?) Function(Object?, Slice<int>))(
+              w!.value,
+              $stringToBytes(Sprint(a)),
+            );
+        $s = 1;
+        continue $m;
+      case 1:
+        if ($c) {
+          $c = false;
+          $t1 = $r!.resume() as (int, Iface?);
+        }
+        if ($blocked != null) break $m;
+        return $t1;
+    }
+  }
+  $blocked = _doc_go_80_1$F()
+    ..$s = $s
+    ..$c = true
+    ..$r = $blocked
+    ..w = w
+    ..a = a
+    ..$t1 = $t1;
+  return (0, null);
 }
 
-(int, Iface?) Fprintln(Iface? w, Slice<Iface?> a) {
-  return ($method(w, 'Write([]byte)int,error')
-      as (int, Iface?) Function(Object?, Slice<int>))(
-    w!.value,
-    $stringToBytes(Sprintln(a)),
-  );
+final class _doc_go_80_1$F implements Frame {
+  int $s = 0;
+  bool $c = false;
+  Frame? $r;
+  late Iface? w;
+  late Slice<Iface?> a;
+  late (int, Iface?) $t1;
+  @override
+  Object? resume() => Fprint(w, a, this);
 }
 
-(int, Iface?) Fprintf(Iface? w, GoString format, Slice<Iface?> a) {
-  return ($method(w, 'Write([]byte)int,error')
-      as (int, Iface?) Function(Object?, Slice<int>))(
-    w!.value,
-    $stringToBytes(Sprintf(format, a)),
-  );
+(int, Iface?) Fprintln(Iface? w, Slice<Iface?> a, [_doc_go_86_1$F? $f]) {
+  (int, Iface?) $t1 = (0, null);
+  int $s = 0;
+  bool $c = false;
+  Frame? $r;
+  if ($f != null) {
+    $s = $f.$s;
+    $c = $f.$c;
+    $r = $f.$r;
+    w = $f.w;
+    a = $f.a;
+    $t1 = $f.$t1;
+  }
+  $m:
+  while (true) {
+    switch ($s) {
+      case 0:
+        $t1 =
+            ($method(w, 'Write([]byte)int,error')
+                as (int, Iface?) Function(Object?, Slice<int>))(
+              w!.value,
+              $stringToBytes(Sprintln(a)),
+            );
+        $s = 1;
+        continue $m;
+      case 1:
+        if ($c) {
+          $c = false;
+          $t1 = $r!.resume() as (int, Iface?);
+        }
+        if ($blocked != null) break $m;
+        return $t1;
+    }
+  }
+  $blocked = _doc_go_86_1$F()
+    ..$s = $s
+    ..$c = true
+    ..$r = $blocked
+    ..w = w
+    ..a = a
+    ..$t1 = $t1;
+  return (0, null);
+}
+
+final class _doc_go_86_1$F implements Frame {
+  int $s = 0;
+  bool $c = false;
+  Frame? $r;
+  late Iface? w;
+  late Slice<Iface?> a;
+  late (int, Iface?) $t1;
+  @override
+  Object? resume() => Fprintln(w, a, this);
+}
+
+(int, Iface?) Fprintf(
+  Iface? w,
+  GoString format,
+  Slice<Iface?> a, [
+  _doc_go_91_1$F? $f,
+]) {
+  (int, Iface?) $t1 = (0, null);
+  int $s = 0;
+  bool $c = false;
+  Frame? $r;
+  if ($f != null) {
+    $s = $f.$s;
+    $c = $f.$c;
+    $r = $f.$r;
+    w = $f.w;
+    format = $f.format;
+    a = $f.a;
+    $t1 = $f.$t1;
+  }
+  $m:
+  while (true) {
+    switch ($s) {
+      case 0:
+        $t1 =
+            ($method(w, 'Write([]byte)int,error')
+                as (int, Iface?) Function(Object?, Slice<int>))(
+              w!.value,
+              $stringToBytes(Sprintf(format, a)),
+            );
+        $s = 1;
+        continue $m;
+      case 1:
+        if ($c) {
+          $c = false;
+          $t1 = $r!.resume() as (int, Iface?);
+        }
+        if ($blocked != null) break $m;
+        return $t1;
+    }
+  }
+  $blocked = _doc_go_91_1$F()
+    ..$s = $s
+    ..$c = true
+    ..$r = $blocked
+    ..w = w
+    ..format = format
+    ..a = a
+    ..$t1 = $t1;
+  return (0, null);
+}
+
+final class _doc_go_91_1$F implements Frame {
+  int $s = 0;
+  bool $c = false;
+  Frame? $r;
+  late Iface? w;
+  late GoString format;
+  late Slice<Iface?> a;
+  late (int, Iface?) $t1;
+  @override
+  Object? resume() => Fprintf(w, format, a, this);
 }
 
 GoString Sprintf(GoString format, Slice<Iface?> a) {

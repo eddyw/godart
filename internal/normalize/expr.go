@@ -336,7 +336,11 @@ func (b *builder) selector(e *ast.SelectorExpr) ir.Expr {
 		fn, _ := sel.Obj().(*types.Func)
 		return &ir.Method{Recv: b.embeddedPath(x, sel), Obj: fn, Type: sel.Type()}
 	}
-	b.fail(e.Pos(), "a method expression is not supported yet")
+	if sel.Kind() == types.MethodExpr {
+		fn, _ := sel.Obj().(*types.Func)
+		return &ir.MethodExpr{Obj: fn, Recv: sel.Recv(), Type: sel.Type()}
+	}
+	b.fail(e.Pos(), "the selector %s has no Dart form", e.Sel.Name)
 	return nil
 }
 

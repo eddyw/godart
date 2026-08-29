@@ -10,6 +10,7 @@ import 'package:basic/gart_test/calc/calc_test.dart' as $calc_test;
 import 'package:basic/std/os.dart' as $os;
 import 'package:basic/std/reflect.dart' as $reflect;
 import 'package:basic/std/testing.dart' as $testing;
+import 'package:basic/std/testing/internal/testdeps.dart' as $testdeps;
 
 part 'calc_test/gart_testmain.part.dart';
 part 'calc_test.map.dart';
@@ -25,6 +26,7 @@ void $init() {
   $os.$init();
   $reflect.$init();
   $testing.$init();
+  $testdeps.$init();
 }
 
 void main(List<String> $arguments) {

@@ -38,6 +38,8 @@ var native = []string{
 	"hash/crc32",
 	"hash/fnv",
 	"net/netip",
+	"regexp",
+	"regexp/syntax",
 	"net/url",
 }
 

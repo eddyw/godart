@@ -398,14 +398,32 @@ func readFlags() options {
 	return out
 }
 
+// MatchString matches 1 element of a test name against 1 part of the pattern of
+// -test.run. The entry point of a test binary gives it, because this package
+// imports no regexp: regexp/syntax imports this package in its own test, and
+// the 2 imports would give a cycle.
+var MatchString func(pattern, name string) (bool, error)
+
 // matches reports whether a test name passes the filter of -test.run.
 //
-// go test reads the pattern as a regular expression. The subset holds no
-// regexp package, thus gart reads the pattern as plain text. A subtest of a
-// test that matches also runs, because the name of the subtest holds the name
-// of the test.
+// The pattern holds 1 regular expression for each element of the name, and the
+// elements stand between the slashes. A name that holds fewer elements than the
+// pattern passes, because a subtest of it can still match.
 func matches(name, pattern string) bool {
-	return pattern == "" || strings.Contains(name, pattern)
+	if pattern == "" || MatchString == nil {
+		return true
+	}
+	elems := strings.Split(name, "/")
+	for i, part := range strings.Split(pattern, "/") {
+		if i >= len(elems) {
+			break
+		}
+		ok, err := MatchString(part, elems[i])
+		if err != nil || !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // runOne runs 1 test body. It puts the result line of the test in front of the

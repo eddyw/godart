@@ -230,11 +230,11 @@ final TypeDesc $descP$SpecialCase = TypeDesc(
   'ptr',
   <String, Function>{
     'ToLower(rune)rune': (Object? $r, int $a0) =>
-        SpecialCase$ToLower(($r as Box<Slice<CaseRange$>>?)!.v, $a0),
+        SpecialCase$ToLower(($r as $Ptr<Slice<CaseRange$>>?)!.v, $a0),
     'ToTitle(rune)rune': (Object? $r, int $a0) =>
-        SpecialCase$ToTitle(($r as Box<Slice<CaseRange$>>?)!.v, $a0),
+        SpecialCase$ToTitle(($r as $Ptr<Slice<CaseRange$>>?)!.v, $a0),
     'ToUpper(rune)rune': (Object? $r, int $a0) =>
-        SpecialCase$ToUpper(($r as Box<Slice<CaseRange$>>?)!.v, $a0),
+        SpecialCase$ToUpper(($r as $Ptr<Slice<CaseRange$>>?)!.v, $a0),
   },
   text: '*unicode.SpecialCase',
   elem: () => $desc$SpecialCase,
@@ -246,6 +246,7 @@ final TypeDesc $desc$_d = TypeDesc(
   <String, Function>{},
   text: 'unicode.d',
   elem: () => $typeInt32,
+  length: 3,
   zero: () => $makeArray<int>(3, () => 0),
 );
 final TypeDesc $descP$_d = TypeDesc(

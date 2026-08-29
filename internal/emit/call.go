@@ -341,11 +341,21 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 	// method with a nil pointer receiver, and Dart calls no member of null.
 	if obj != nil && (!isStructType(obj.Type()) ||
 		(pointerMethod(m.Obj) && !genericType(obj))) {
-		all := append([]string{e.expr(m.Recv)}, args...)
+		all := append([]string{e.topLevelRecv(m)}, args...)
 		return e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) + targs +
 			"(" + strings.Join(all, ", ") + ")"
 	}
 	return fmt.Sprintf("%s.%s%s(%s)", e.deref(m.Recv), methodName(m.Obj), targs, list)
+}
+
+// topLevelRecv writes the receiver of a call to a method whose body stands in a
+// top level function. Go reads the value behind a pointer for a method with a
+// value receiver.
+func (e *emitter) topLevelRecv(m *ir.Method) string {
+	if !pointerMethod(m.Obj) && isPointerType(m.Recv.GoType()) {
+		return e.deref(m.Recv)
+	}
+	return e.expr(m.Recv)
 }
 
 // methodValue reads a method without a call. Go binds a copy of the receiver at
@@ -361,6 +371,37 @@ func (e *emitter) methodValue(m *ir.Method) string {
 		return fmt.Sprintf("%s.$copy().%s", e.deref(m.Recv), methodName(m.Obj))
 	}
 	return fmt.Sprintf("%s.%s", e.deref(m.Recv), methodName(m.Obj))
+}
+
+// methodExpr writes a method expression, for example `(*T).M`. The value is a
+// closure whose first parameter is the receiver.
+func (e *emitter) methodExpr(x *ir.MethodExpr) string {
+	sig, ok := x.Type.(*types.Signature)
+	if !ok || sig.Params().Len() == 0 {
+		e.fail("the method expression %s has no signature", x.Obj.Name())
+		return "null"
+	}
+	params := make([]string, sig.Params().Len())
+	names := make([]string, sig.Params().Len())
+	for i := range params {
+		names[i] = fmt.Sprintf("$a%d", i)
+		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + names[i]
+	}
+	obj := receiverTypeName(x.Recv)
+	if obj != nil && (!isStructType(obj.Type()) ||
+		(pointerMethod(x.Obj) && !genericType(obj))) {
+		call := e.qualify(obj, methodFuncName(obj.Name(), x.Obj.Name())) +
+			"(" + strings.Join(names, ", ") + ")"
+		return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
+	}
+	recv := names[0]
+	if isPointerType(x.Recv) {
+		recv += "!"
+	} else {
+		recv += ".$copy()"
+	}
+	call := fmt.Sprintf("%s.%s(%s)", recv, methodName(x.Obj), strings.Join(names[1:], ", "))
+	return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
 }
 
 // methodFuncValue reads a method of a named type that is not a struct. Such a
