@@ -368,6 +368,9 @@ func (e *emitter) writeInit(imports []Import) {
 		if g.Var.Name == "_" {
 			continue
 		}
+		// A function literal of the initializer that can block becomes a local
+		// function of the init routine.
+		e.list(g.Pending)
 		value := e.zero(g.Var.Type)
 		if g.Init != nil {
 			value = e.expr(g.Init)

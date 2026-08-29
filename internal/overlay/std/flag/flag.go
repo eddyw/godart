@@ -10,6 +10,7 @@ package flag
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strconv"
@@ -67,7 +68,7 @@ type FlagSet struct {
 	order         []string
 	args          []string
 	errorHandling ErrorHandling
-	output        *os.File
+	output        io.Writer
 }
 
 // CommandLine holds the flags of the program.
@@ -95,12 +96,11 @@ func (f *FlagSet) Name() string { return f.name }
 // ErrorHandling gives the action of a parse error.
 func (f *FlagSet) ErrorHandling() ErrorHandling { return f.errorHandling }
 
-// SetOutput sets the file that the report reaches. Go takes an io.Writer, and
-// the overlay takes a file, because an import of io would make a cycle.
-func (f *FlagSet) SetOutput(out *os.File) { f.output = out }
+// SetOutput sets the writer that the report reaches.
+func (f *FlagSet) SetOutput(out io.Writer) { f.output = out }
 
-// Output gives the file of the report.
-func (f *FlagSet) Output() *os.File {
+// Output gives the writer of the report.
+func (f *FlagSet) Output() io.Writer {
 	if f.output == nil {
 		return os.Stderr
 	}

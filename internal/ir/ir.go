@@ -104,6 +104,10 @@ type Machine struct {
 type Global struct {
 	Var  *Var
 	Init Expr
+	// Pending holds the declaration of each function literal of Init that can
+	// block. Such a literal becomes a local function, and the init routine
+	// writes it in front of the assignment.
+	Pending []Stmt
 }
 
 // ConstDecl is a package level constant.

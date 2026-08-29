@@ -160,6 +160,12 @@ func cancel() {
 	if open != nil {
 		open.Close()
 	}
+
+	timed, err := net.DialTimeout("tcp", ln.Addr().String(), 5*time.Second)
+	fmt.Println("timeout dial:", err == nil, timed != nil)
+	if timed != nil {
+		timed.Close()
+	}
 }
 
 func main() {

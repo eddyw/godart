@@ -394,6 +394,12 @@ func (d *Dialer) Dial(network, address string) (Conn, error) {
 	return d.DialContext(context.Background(), network, address)
 }
 
+// DialTimeout opens a connection and ends the wait after the duration.
+func DialTimeout(network, address string, timeout time.Duration) (Conn, error) {
+	d := Dialer{Timeout: timeout}
+	return d.Dial(network, address)
+}
+
 // DialContext opens a connection and ends the wait when the context ends.
 //
 // The dial runs on a goroutine, thus the select takes the first of the 2. A

@@ -79,12 +79,12 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | `New`, `Is`, `As`, `AsType`, `Unwrap`, and `Join`. |
-| `flag` | Overlay | The real source reads `reflect` and `runtime.Caller`. |
+| `flag` | Overlay | The real source reads `reflect` and `runtime.Caller`. `SetOutput` takes an `io.Writer`. |
 | `reflect` | Overlay | `DeepEqual`, `TypeOf`, `ValueOf`, `Zero`, `Type.String`, `Type.Kind`, `Type.Comparable`, `Type.Elem`, `Value.Elem`, `Value.Set`, and `Value.Interface`. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
 | `maps` | Overlay | |
-| `encoding/json` | Overlay | `Marshal` only. Read the section below. |
+| `encoding/json` | Overlay | `Marshal`, `MarshalIndent`, and `Unmarshal`. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native |
 | `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. Read below. |
@@ -304,6 +304,7 @@ The `net` package holds this surface:
 | `Addr` | `Network` and `String` | Equal |
 | `Error` | `Timeout` and `Temporary` | `Timeout` only. `Temporary` is deprecated in Go. |
 | `Dialer` | 12 fields | `Timeout`, `Dial`, and `DialContext`. The dial runs on a goroutine, and the select takes the first of the dial and the context. |
+| `DialTimeout` | Present | Equal. It reads a `Dialer` with the timeout. |
 | `TCPAddr`, `UDPAddr`, `UnixAddr`, `IP`, `Resolver` | Present | Missing. A type assertion of an `Addr` gives a compile error, and not a wrong value. |
 | An empty host of `Dial` | The local system | `127.0.0.1` |
 | An empty host of `Listen` | Each interface | `0.0.0.0` |

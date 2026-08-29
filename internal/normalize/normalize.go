@@ -239,7 +239,10 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 	case len(spec.Values) == len(vars):
 		for i, v := range vars {
 			b.startInit(spec.Values[i])
-			out = append(out, &ir.Global{Var: v, Init: b.copyPoint(b.exprAs(spec.Values[i], v.Type))})
+			init := b.copyPoint(b.exprAs(spec.Values[i], v.Type))
+			pending := b.pending
+			b.pending = nil
+			out = append(out, &ir.Global{Var: v, Init: init, Pending: pending})
 		}
 	default:
 		b.fail(spec.Pos(), "a package variable with multiple results is not supported yet")
