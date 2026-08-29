@@ -52,10 +52,16 @@ The package `fmt` reads it.
 | `reflect.Type` | A struct with a handle of a descriptor of the runtime, and not an interface. Thus `Type` compares with `==` and holds no nil value. |
 | `reflect.TypeOf(nil)` | Gives a Type with an empty text and an empty kind. Go gives nil. |
 | `reflect.ValueOf`, `Value.Interface`, `Value.Elem`, `Value.Set`, `reflect.Zero`, `Type.Elem` | Present |
+| `Value.Kind`, `Type`, `Len`, `Index`, `NumField`, `Field`, `CanSet`, `IsValid` | Present |
+| `Value.Int`, `Uint`, `Float`, `Bool`, `String`, and each `Set` form of them | Present |
+| `reflect.New`, `reflect.MakeSlice`, `reflect.Indirect` | Present |
+| `Type.NumField`, `Type.Field`, `Type.Len`, `Type.Name`, `StructTag.Get` | Present |
+| `reflect.Kind` | The text of the kind, and not an unsigned number. The 2 forms hold the same set of values. |
 | `Value.Elem` of a value that is not a pointer | Panics. Go gives the value inside an interface. |
-| Each other method of `reflect.Value` | Missing |
+| `Type.Size` | Present for each basic kind, a pointer, a string, a slice, an interface, and an array. A struct panics, because Go holds a padding and the target has no memory layout. |
+| `Type.Align`, `Type.FieldAlign`, `Value.UnsafeAddr` | Missing. The target has no memory layout. |
+| `Value.Complex` and `Value.SetComplex` | Missing. The subset holds no complex number. |
 | A method value through reflect | Missing |
-| The size and the alignment of a type | Missing. The target has no memory layout. |
 
 ## The runtime
 
@@ -114,6 +120,9 @@ reads the real Go source, because that source already stays inside the subset.
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
 | `encoding/base64` | Native | The real source needs no patch. |
+| `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
+| `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
+| `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | `New`, `Is`, `As`, `AsType`, `Unwrap`, and `Join`. |

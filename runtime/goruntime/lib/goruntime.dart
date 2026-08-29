@@ -21,6 +21,7 @@ export 'src/map.dart';
 export 'src/net.dart';
 export 'src/panic.dart';
 export 'src/print.dart';
+export 'src/reflect.dart';
 export 'src/sched.dart';
 export 'src/select.dart';
 export 'src/slice.dart';

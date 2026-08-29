@@ -80,6 +80,42 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$descOf(%s)", args[0]), true
 	case "DescInfo":
 		return fmt.Sprintf("$descInfo(%s)", args[0]), true
+	case "DescLength":
+		return fmt.Sprintf("$descLength(%s)", args[0]), true
+	case "FieldCount":
+		return fmt.Sprintf("$fieldCount(%s)", args[0]), true
+	case "FieldInfo":
+		return fmt.Sprintf("$fieldInfo(%s, %s)", args[0], args[1]), true
+	case "FieldRead":
+		return fmt.Sprintf("$fieldRead(%s, %s)", args[0], args[1]), true
+	case "FieldWrite":
+		return fmt.Sprintf("$fieldWrite(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "ValueLen":
+		return fmt.Sprintf("$valueLen(%s)", args[0]), true
+	case "ValueIndex":
+		return fmt.Sprintf("$valueIndex(%s, %s)", args[0], args[1]), true
+	case "ValueSetIndex":
+		return fmt.Sprintf("$valueSetIndex(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "AsInt":
+		return fmt.Sprintf("$asInt(%s)", args[0]), true
+	case "AsFloat":
+		return fmt.Sprintf("$asFloat(%s)", args[0]), true
+	case "AsBool":
+		return fmt.Sprintf("$asBool(%s)", args[0]), true
+	case "AsString":
+		return fmt.Sprintf("$asString(%s)", args[0]), true
+	case "WithInt":
+		return fmt.Sprintf("$withInt(%s, %s)", args[0], args[1]), true
+	case "WithFloat":
+		return fmt.Sprintf("$withFloat(%s, %s)", args[0], args[1]), true
+	case "WithBool":
+		return fmt.Sprintf("$withBool(%s, %s)", args[0], args[1]), true
+	case "WithString":
+		return fmt.Sprintf("$withString(%s, %s)", args[0], args[1]), true
+	case "NewValue":
+		return fmt.Sprintf("$newValue(%s)", args[0]), true
+	case "MakeValue":
+		return fmt.Sprintf("$makeValue(%s, %s)", args[0], args[1]), true
 	case "DescElem":
 		return fmt.Sprintf("$descElem(%s)", args[0]), true
 	case "DescZero":

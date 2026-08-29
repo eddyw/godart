@@ -55,6 +55,9 @@ final class TypeDesc {
   /// The key type of a map.
   final TypeDesc Function()? key;
 
+  /// The count of the elements of an array type. Each other kind holds 0.
+  final int length;
+
   /// zero builds the zero value of the type. A decoder writes a fresh value of
   /// a field of a struct through it.
   final Object? Function()? zero;
@@ -75,6 +78,7 @@ final class TypeDesc {
     this.fields = const <FieldDesc>[],
     this.elem,
     this.key,
+    this.length = 0,
     this.zero,
     this.make,
     this.comparable = true,

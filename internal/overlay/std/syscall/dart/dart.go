@@ -59,6 +59,97 @@ func DescInfo(handle int) (string, string, bool) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// DescLength gives the count of the elements of an array type.
+func DescLength(handle int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FieldCount gives the count of the fields of a struct type.
+func FieldCount(handle int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FieldInfo gives the name, the tag, the exported flag, and the type handle of
+// 1 field of a struct type.
+func FieldInfo(handle, index int) (string, string, bool, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FieldRead gives the value of 1 field of a struct value.
+func FieldRead(value any, index int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FieldWrite writes 1 field of a struct value.
+func FieldWrite(value any, index int, x any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueLen gives the length of a slice, an array, a string, or a map.
+func ValueLen(value any) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueIndex gives 1 element of a slice, an array, or a string.
+func ValueIndex(value any, index int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueSetIndex writes 1 element of a slice or an array.
+func ValueSetIndex(value any, index int, x any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// AsInt gives the whole number inside a value of an integer kind.
+func AsInt(value any) int64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// AsFloat gives the float inside a value of a float kind.
+func AsFloat(value any) float64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// AsBool gives the flag inside a value of the kind bool.
+func AsBool(value any) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// AsString gives the text inside a value of the kind string.
+func AsString(value any) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// WithInt gives a value of the type, with the whole number inside it.
+func WithInt(handle int, x int64) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// WithFloat gives a value of the type, with the float inside it.
+func WithFloat(handle int, x float64) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// WithBool gives a value of the type, with the flag inside it.
+func WithBool(handle int, x bool) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// WithString gives a value of the type, with the text inside it.
+func WithString(handle int, x string) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// NewValue gives a pointer to a fresh zero value of the type.
+func NewValue(handle int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MakeValue gives a slice of the type, with the length and the capacity.
+func MakeValue(handle, length int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // DescElem gives a handle of the element type of a type. A type that holds no
 // element type gives 0.
 func DescElem(handle int) int {

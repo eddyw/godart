@@ -9,7 +9,7 @@ build of a program that imports the package.
 
 ## The import surface
 
-53 packages of the standard library reach the surface. Stage 2 rejects an import
+54 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
@@ -17,10 +17,10 @@ of each other package with a source position.
 | `bufio`, `bytes`, `cmp` | `regexp` |
 | `container/heap`, `container/list`, `container/ring` | `net/http` |
 | `context`, `errors`, `flag`, `fmt`, `log` | `os/exec`, `os/signal` |
-| `encoding/ascii85`, `encoding/base64`, `encoding/csv` | `encoding/binary`, `encoding/xml`, `encoding/gob` |
-| `encoding/hex`, `encoding/json` | `crypto/tls`, `crypto/rand`, `compress/...` |
-| `crypto/md5`, `crypto/sha256` | `archive/...` |
-| `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `text/template`, `html/template`, `text/tabwriter` |
+| `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `encoding/xml`, `encoding/gob` |
+| `encoding/csv`, `encoding/hex`, `encoding/json` | `text/template`, `html/template` |
+| `crypto/md5`, `crypto/sha256` | `crypto/tls`, `crypto/rand`, `compress/...` |
+| `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `archive/...`, `text/tabwriter` |
 | `io`, `io/fs`, `iter`, `maps`, `slices`, `sort` | `embed`, `database/sql` |
 | `math`, `math/bits`, `math/rand`, `math/rand/v2` | `math/cmplx`, `go/...` |
 | `net`, `net/netip`, `net/url` | `unsafe`, cgo |
