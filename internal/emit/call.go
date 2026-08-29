@@ -69,6 +69,10 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 	case "DialTLS":
 		return fmt.Sprintf("$dialTLS(%s, %s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3], args[4]), true
+	case "AddCleanup":
+		return fmt.Sprintf("$addCleanup(%s!.value as Object, %s)", args[0], args[1]), true
+	case "StopCleanup":
+		return fmt.Sprintf("$stopCleanup(%s)", args[0]), true
 	case "Kind":
 		return fmt.Sprintf("$goKind(%s)", args[0]), true
 	case "Stack":

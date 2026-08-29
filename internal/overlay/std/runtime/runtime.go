@@ -153,3 +153,24 @@ func (f *Func) FileLine(pc uintptr) (string, int) {
 }
 
 func (f *Func) Entry() uintptr { return f.pc }
+
+// A Cleanup names a cleanup that AddCleanup attached.
+type Cleanup struct{ handle int }
+
+// Stop drops the cleanup. A cleanup that already ran gives no operation.
+func (c Cleanup) Stop() { dart.StopCleanup(c.handle) }
+
+// AddCleanup attaches a function that runs after the collector frees the value
+// that the pointer names.
+//
+// Dart gives no way to force a collection, thus the time of the run follows the
+// collector of Dart. GC forces no run. Read docs/parity.md.
+func AddCleanup[T, S any](ptr *T, cleanup func(S), arg S) Cleanup {
+	if ptr == nil {
+		panic("runtime: AddCleanup: ptr is nil")
+	}
+	return Cleanup{handle: dart.AddCleanup(ptr, func() { cleanup(arg) })}
+}
+
+// GC gives no operation. Dart holds no call that forces a collection.
+func GC() {}

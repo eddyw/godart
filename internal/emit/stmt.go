@@ -2,9 +2,12 @@ package emit
 
 import (
 	"fmt"
+	"go/token"
+	"go/types"
 	"strings"
 
 	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 func (e *emitter) stmt(s ir.Stmt) {
@@ -238,6 +241,17 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 	if idx, ok := lhs.(*ir.Index); ok && isMapType(idx.X.GoType()) {
 		e.line("%s.set(%s, %s);", e.expr(idx.X), e.expr(idx.Index), value)
 		return
+	}
+	// The Dart form of a pointer to a type parameter holds no field, thus the
+	// write reads the description of the type argument.
+	if u, ok := lhs.(*ir.Unary); ok && u.Op == token.MUL {
+		if p, ok := typeset.Core(u.X.GoType()).(*types.Pointer); ok {
+			if tp, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
+				e.line("$setDeref<%s>(%s, %s, %s);", e.dartType(tp), e.expr(u.X),
+					value, e.dictOf(tp))
+				return
+			}
+		}
 	}
 	if isStructType(t) {
 		e.line("%s.$assign(%s);", e.expr(lhs), value)

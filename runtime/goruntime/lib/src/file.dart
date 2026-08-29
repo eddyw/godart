@@ -75,7 +75,7 @@ int _slot(RandomAccessFile f) {
 FileMode _mode(int mode) {
   switch (mode) {
     case $openWrite:
-      return FileMode.writeOnly;
+      return FileMode.write;
     case $openAppend:
       return FileMode.writeOnlyAppend;
     case $openReadWrite:

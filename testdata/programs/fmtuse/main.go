@@ -51,4 +51,12 @@ func main() {
 	var nilErr error
 	fmt.Println(nilErr == nil)
 	fmt.Printf("%v\n", nilErr)
+
+	// Go reads a list of bytes as text for the verbs s, q, x, and X.
+	b := []byte{1, 2, 255, 0x0a, 'h', 'i'}
+	fmt.Printf("%x|%X|%v|%q\n", b, b, b, b)
+	fmt.Printf("%s|%s\n", []byte("text"), []byte{})
+	fmt.Printf("%x|%X|%q\n", "abc", "abc", "a\xffb")
+	fmt.Printf("%x %x %x\n", []int{10, 255}, [2]byte{1, 200}, []byte(nil))
+	fmt.Printf("%#x %#X %#o %#b %#x\n", 255, 255, 8, 5, -255)
 }

@@ -5,9 +5,11 @@ import 'sched.dart';
 sealed class SelectCase {
   bool get ready;
 
-  void watch(void Function() notify);
+  /// Puts a waiter of the statement into the channel of the case.
+  void arm(SelectState sel, int index, Goroutine g);
 
-  void unwatch(void Function() notify);
+  /// Drops the waiter of the statement.
+  void disarm(SelectState sel);
 }
 
 /// A case that receives 1 value.
@@ -23,12 +25,16 @@ final class RecvCase<T> extends SelectCase {
   bool get ready => chan.readyToReceive;
 
   @override
-  void watch(void Function() notify) => chan.watch(notify);
+  void arm(SelectState sel, int index, Goroutine g) =>
+      chan.armRecv(sel, index, g);
 
   @override
-  void unwatch(void Function() notify) => chan.unwatch(notify);
+  void disarm(SelectState sel) => chan.disarm(sel);
 
   void take() => result = chan.receiveNow();
+
+  /// Writes the value that a channel gave to the waiter of the statement.
+  void give(SelectState sel) => result = (sel.value as T, sel.ok);
 }
 
 /// A case that sends 1 value.
@@ -42,10 +48,11 @@ final class SendCase<T> extends SelectCase {
   bool get ready => chan.readyToSend;
 
   @override
-  void watch(void Function() notify) => chan.watch(notify);
+  void arm(SelectState sel, int index, Goroutine g) =>
+      chan.armSend(sel, index, g, value);
 
   @override
-  void unwatch(void Function() notify) => chan.unwatch(notify);
+  void disarm(SelectState sel) => chan.disarm(sel);
 
   void take() => chan.sendNow(value);
 }
@@ -84,28 +91,37 @@ void _take(SelectCase c) {
 
 /// The frame of a goroutine that waits for 1 case of a select statement.
 ///
-/// A wake runs the select statement again. A second goroutine can take the
-/// value first, thus the state of each case needs a new read.
+/// The statement puts 1 waiter into each channel of its cases. A channel that
+/// reaches such a waiter writes the number of the case, thus 2 select
+/// statements meet each other. A wake with no such number runs the statement
+/// again, because a second goroutine can take the value first.
 final class _SelectWait implements Frame {
   final List<SelectCase> cases;
   final Goroutine g;
+  final SelectState state = SelectState();
 
   _SelectWait(this.cases, this.g);
 
   void arm() {
-    for (final c in cases) {
-      c.watch(_onReady);
+    for (var i = 0; i < cases.length; i++) {
+      cases[i].arm(state, i, g);
+      // A wake of another goroutine can take a case at this point, thus each
+      // later case stays out.
+      if (state.done) break;
     }
     $block(this);
   }
 
-  void _onReady() {
-    for (final c in cases) {
-      c.unwatch(_onReady);
-    }
-    $ready(g);
-  }
-
   @override
-  Object? resume() => $select(cases, false);
+  Object? resume() {
+    for (final c in cases) {
+      c.disarm(state);
+    }
+    if (!state.done) return $select(cases, false);
+    final SelectCase taken = cases[state.taken];
+    if (taken is RecvCase) {
+      taken.give(state);
+    }
+    return state.taken;
+  }
 }

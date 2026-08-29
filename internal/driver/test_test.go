@@ -192,6 +192,13 @@ func TestTestsOfGoroot(t *testing.T) {
 		{"hash/crc32", "", []string{"--- PASS: TestGolden ", "--- PASS: TestSimple "}},
 		{"hash/fnv", "", []string{"--- PASS: TestGolden32 ", "--- PASS: TestGolden64 "}},
 		{"hash/adler32", "", []string{"--- PASS: TestGolden ", "--- PASS: TestGoldenMarshal "}},
+		// TestMultiReaderFreesExhaustedReaders needs a forced collection, and
+		// Dart holds no such call. Read docs/parity.md.
+		{"io", "TestCopy|TestRead|TestTee|TestSection|TestNop|TestOffset|" +
+			"TestWrite|TestMultiW|TestMultiReader$|TestMultiReaderA|" +
+			"TestMultiReaderC|TestMultiReaderF[il]|TestMultiReaderS|" +
+			"TestInterleaved|TestPipe", []string{
+			"--- PASS: TestCopy ", "--- PASS: TestPipe1 "}},
 		// TestParseInvalidRegexps reads a limit of a resource, and the patch of
 		// parse.go holds no recover for it. Read docs/parity.md.
 		{"regexp/syntax", "Test[^P]|TestParse[SFLMN]", []string{

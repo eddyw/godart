@@ -405,7 +405,15 @@ String _hexBytes(GoString v, bool upper) {
 
 String _quote(GoString v) {
   final StringBuffer out = StringBuffer('"');
-  for (final r in v.toDartString().runes) {
+  int at = 0;
+  while (at < v.length) {
+    final (int r, int size) = $decodeRune(v, at);
+    at += size;
+    // Go writes the escape of a byte that holds no rune of UTF-8.
+    if (r == 0xFFFD && size == 1) {
+      out.write('\\x${v[at - 1].toRadixString(16).padLeft(2, '0')}');
+      continue;
+    }
     switch (r) {
       case 0x22:
         out.write(r'\"');
@@ -432,22 +440,37 @@ String _quote(GoString v) {
 String _slice(Object? v, TypeDesc type, String verb, bool plus) {
   if (v is! Slice<Object?>) return '$v';
   final TypeDesc? elem = type.elem?.call();
-  final List<String> parts = <String>[];
+  final List<Object?> items = <Object?>[];
   for (var i = 0; i < v.len; i++) {
-    final Object? item = v.array[v.off + i];
+    items.add(v.array[v.off + i]);
+  }
+  return _list(items, elem, verb);
+}
+
+String _array(List<Object?> v, TypeDesc type, String verb, bool plus) {
+  return _list(v, type.elem?.call(), verb);
+}
+
+/// _list writes each element of a slice or of an array. Go reads a list of
+/// bytes as text for the verbs s, q, x, and X.
+String _list(List<Object?> items, TypeDesc? elem, String verb) {
+  final String letter = verb.substring(verb.length - 1);
+  if (elem != null && elem.kind == 'uint8' && _textVerb(letter)) {
+    final List<int> bytes = <int>[];
+    for (final Object? item in items) {
+      bytes.add((item as int) & 0xff);
+    }
+    return _string(GoString.fromBytes(bytes), letter);
+  }
+  final List<String> parts = <String>[];
+  for (final item in items) {
     parts.add(elem == null ? '$item' : _value(item, elem, verb));
   }
   return '[${parts.join(' ')}]';
 }
 
-String _array(List<Object?> v, TypeDesc type, String verb, bool plus) {
-  final TypeDesc? elem = type.elem?.call();
-  final List<String> parts = <String>[];
-  for (final item in v) {
-    parts.add(elem == null ? '$item' : _value(item, elem, verb));
-  }
-  return '[${parts.join(' ')}]';
-}
+bool _textVerb(String letter) =>
+    letter == 's' || letter == 'q' || letter == 'x' || letter == 'X';
 
 String _map(Object? v, TypeDesc type, String verb, bool plus) {
   if (v is! GoMap<Object?, Object?>) return '$v';

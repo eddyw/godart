@@ -39,6 +39,13 @@ func (e *emitter) dartType(t types.Type) string {
 		}
 		return name.Local(t.Obj().Name())
 	case *types.Pointer:
+		// The Dart form of a pointer to a type parameter follows the type
+		// argument: a pointer to a struct is the object itself, and each other
+		// pointer holds a cell. Thus such a pointer takes 1 form that holds
+		// both, and $deref reads it.
+		if _, ok := types.Unalias(t.Elem()).(*types.TypeParam); ok {
+			return "Object?"
+		}
 		if needsBox(t.Elem()) {
 			return "$Ptr<" + e.dartType(t.Elem()) + ">?"
 		}

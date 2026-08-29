@@ -22,7 +22,6 @@ final class Chan<T> {
   late final ListQueue<T> _buffer = ListQueue<T>();
   late final ListQueue<_RecvWait<T>> _receivers = ListQueue<_RecvWait<T>>();
   late final ListQueue<_SendWait<T>> _senders = ListQueue<_SendWait<T>>();
-  late final List<void Function()> _watchers = <void Function()>[];
   bool _closed = false;
 
   /// True for the zero value of a channel type. A send and a receive on such a
@@ -39,11 +38,16 @@ final class Chan<T> {
 
   /// True when a receive gives a value at this moment.
   bool get readyToReceive =>
-      !isNil && (_buffer.isNotEmpty || _senders.isNotEmpty || _closed);
+      !isNil && (_buffer.isNotEmpty || _hasSender || _closed);
 
   /// True when a send gives up no control at this moment.
   bool get readyToSend =>
-      !isNil && (_closed || _receivers.isNotEmpty || _buffer.length < capacity);
+      !isNil && (_closed || _hasReceiver || _buffer.length < capacity);
+
+  bool get _hasSender => _senders.any((_SendWait<T> w) => w.sel?.done != true);
+
+  bool get _hasReceiver =>
+      _receivers.any((_RecvWait<T> w) => w.sel?.done != true);
 
   /// Reads 1 value. The caller reads [$blocked] after the call.
   (T, bool) receive() {
@@ -62,21 +66,63 @@ final class Chan<T> {
   (T, bool) receiveNow() {
     if (_buffer.isNotEmpty) {
       final T value = _buffer.removeFirst();
-      if (_senders.isNotEmpty) {
-        final _SendWait<T> waiting = _senders.removeFirst();
+      final _SendWait<T>? waiting = _takeSender();
+      if (waiting != null) {
         _buffer.add(waiting.value);
         $ready(waiting.g);
       }
-      _notify();
       return (value, true);
     }
-    if (_senders.isNotEmpty) {
-      final _SendWait<T> waiting = _senders.removeFirst();
+    final _SendWait<T>? waiting = _takeSender();
+    if (waiting != null) {
       $ready(waiting.g);
-      _notify();
       return (waiting.value, true);
     }
     return (_zero(), false);
+  }
+
+  /// Takes the first sender that waits. A waiter of a select statement that
+  /// already took a case holds no value, thus the queue drops it.
+  _SendWait<T>? _takeSender() {
+    while (_senders.isNotEmpty) {
+      final _SendWait<T> waiting = _senders.removeFirst();
+      final SelectState? sel = waiting.sel;
+      if (sel == null) return waiting;
+      if (sel.done) continue;
+      sel.taken = waiting.index;
+      return waiting;
+    }
+    return null;
+  }
+
+  /// Takes the first receiver that waits.
+  _RecvWait<T>? _takeReceiver() {
+    while (_receivers.isNotEmpty) {
+      final _RecvWait<T> waiting = _receivers.removeFirst();
+      final SelectState? sel = waiting.sel;
+      if (sel == null) return waiting;
+      if (sel.done) continue;
+      sel.taken = waiting.index;
+      return waiting;
+    }
+    return null;
+  }
+
+  /// Puts the waiter of 1 case of a select statement into the queue. A second
+  /// goroutine then meets the statement, also from a select statement of its
+  /// own.
+  void armSend(SelectState sel, int index, Goroutine g, T value) {
+    _senders.add(_SendWait<T>(g, value, sel, index));
+  }
+
+  void armRecv(SelectState sel, int index, Goroutine g) {
+    _receivers.add(_RecvWait<T>(g, _zero, sel, index));
+  }
+
+  /// Drops each waiter of a select statement that ended.
+  void disarm(SelectState sel) {
+    _senders.removeWhere((_SendWait<T> w) => identical(w.sel, sel));
+    _receivers.removeWhere((_RecvWait<T> w) => identical(w.sel, sel));
   }
 
   /// Writes 1 value. The caller reads [$blocked] after the call.
@@ -97,39 +143,53 @@ final class Chan<T> {
   /// Sends with no wait. The caller reads readyToSend first.
   void sendNow(T value) {
     if (_closed) $panic(const GoError('send on closed channel'));
-    if (_receivers.isNotEmpty) {
-      final _RecvWait<T> waiting = _receivers.removeFirst();
+    final _RecvWait<T>? waiting = _takeReceiver();
+    if (waiting != null) {
       waiting.value = (value, true);
+      final SelectState? sel = waiting.sel;
+      if (sel != null) {
+        sel.value = value;
+        sel.ok = true;
+      }
       $ready(waiting.g);
-      _notify();
       return;
     }
     _buffer.add(value);
-    _notify();
   }
 
   void close() {
     if (isNil) $panic(const GoError('close of nil channel'));
     if (_closed) $panic(const GoError('close of closed channel'));
     _closed = true;
-    while (_receivers.isNotEmpty) {
-      final _RecvWait<T> waiting = _receivers.removeFirst();
+    while (true) {
+      final _RecvWait<T>? waiting = _takeReceiver();
+      if (waiting == null) break;
       waiting.value = (_zero(), false);
+      final SelectState? sel = waiting.sel;
+      if (sel != null) {
+        sel.value = _zero();
+        sel.ok = false;
+      }
       $ready(waiting.g);
     }
-    _notify();
   }
+}
 
-  void watch(void Function() notify) => _watchers.add(notify);
+/// The state of 1 select statement that waits.
+///
+/// A select statement puts 1 waiter into each channel of its cases. The first
+/// channel that reaches the waiter writes the number of the case here, and each
+/// other waiter of that state then holds no value.
+final class SelectState {
+  /// The number of the case that a channel took, and -1 while the statement
+  /// waits.
+  int taken = -1;
 
-  void unwatch(void Function() notify) => _watchers.remove(notify);
+  /// The value of a receive case that a channel took.
+  Object? value;
+  bool ok = false;
 
-  void _notify() {
-    if (_watchers.isEmpty) return;
-    for (final notify in List<void Function()>.of(_watchers)) {
-      notify();
-    }
-  }
+  bool get done => taken >= 0;
 }
 
 /// The frame of a goroutine that waits for a value of a channel.
@@ -138,7 +198,11 @@ final class _RecvWait<T> implements Frame {
   final T Function() _zero;
   (T, bool)? value;
 
-  _RecvWait(this.g, this._zero);
+  /// The select statement of the waiter, and null for a plain receive.
+  final SelectState? sel;
+  final int index;
+
+  _RecvWait(this.g, this._zero, [this.sel, this.index = 0]);
 
   @override
   Object? resume() => value ?? (_zero(), false);
@@ -149,7 +213,11 @@ final class _SendWait<T> implements Frame {
   final Goroutine g;
   final T value;
 
-  _SendWait(this.g, this.value);
+  /// The select statement of the waiter, and null for a plain send.
+  final SelectState? sel;
+  final int index;
+
+  _SendWait(this.g, this.value, [this.sel, this.index = 0]);
 
   @override
   Object? resume() => null;

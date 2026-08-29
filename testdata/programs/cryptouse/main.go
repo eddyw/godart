@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/md5"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -26,8 +27,11 @@ func main() {
 		fmt.Println(hex.EncodeToString(sum[:]))
 		fmt.Println(hex.EncodeToString(s256[:]))
 		fmt.Println(hex.EncodeToString(s224[:]))
+		s1 := sha1.Sum([]byte(v))
+		fmt.Println(hex.EncodeToString(s1[:]))
 	}
 
+	writeParts(sha1.New())
 	writeParts(md5.New())
 	writeParts(sha256.New())
 	writeParts(sha256.New224())
@@ -40,6 +44,7 @@ func main() {
 	h.Write(long)
 	fmt.Println("long", hex.EncodeToString(h.Sum(nil)))
 
+	marshal(sha1.New())
 	marshal(md5.New())
 	marshal(sha256.New())
 }

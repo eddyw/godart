@@ -1,3 +1,5 @@
+import 'dict.dart';
+import 'iface.dart';
 import 'panic.dart';
 import 'slice.dart';
 
@@ -65,4 +67,28 @@ T _listGet<T>(List<T> owner, int i) => owner[i];
 
 void _listSet<T>(List<T> owner, int i, T value) {
   owner[i] = value;
+}
+
+/// The value behind a pointer of a generic function.
+///
+/// The Dart form of a pointer to a type parameter follows the type argument: a
+/// pointer to a struct is the object itself, and each other pointer holds a
+/// cell. Thus the read holds both forms.
+T $deref<T>(Object? p) {
+  if (p == null) $panicNil();
+  if (p is $Ptr<T>) return p.v;
+  return p as T;
+}
+
+/// Writes a value behind such a pointer. A pointer to a struct is the object
+/// itself, thus the write copies each field.
+void $setDeref<T>(Object? p, T value, Dict<T> d) {
+  if (p == null) $panicNil();
+  if (p is $Ptr<T>) {
+    p.v = value;
+    return;
+  }
+  for (final FieldDesc f in d.desc.fields) {
+    f.set(p, f.get(value));
+  }
 }

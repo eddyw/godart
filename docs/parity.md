@@ -82,7 +82,8 @@ The package `fmt` reads it.
 | A stack trace of a panic | The full path of each file, and an offset in each frame | The base name of each file, and no offset. The source map of the output gives the position. |
 | A frame of a goroutine that waits | Present | Missing. A function that gives up control leaves the Dart stack. |
 | `runtime.Caller`, `runtime.Callers`, `runtime.CallersFrames`, `runtime.FuncForPC` | The program counters of the stack | Equal, with the base name of each file. A program counter is an index of a table of the runtime, and not an address. |
-| `runtime.AddCleanup`, `runtime.GC` | Present | Missing. A Dart `Finalizer` runs at a time that follows no rule of Go, thus a test of it gives no repeatable result. |
+| `runtime.AddCleanup` | Present | Present, with a Dart `Finalizer`. The time of the run follows the collector of Dart. |
+| `runtime.GC` | Runs a collection and waits for it | No operation. Dart holds no call that forces a collection, thus a cleanup runs at the time of the collector. |
 
 ## The subset of the language
 
@@ -124,6 +125,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `regexp/syntax` | Native, with 1 patch | The patch replaces `parse.go`, which holds a `recover` call. A pattern that reaches a limit of a resource stops the program, and Go gives an error. |
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
+| `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
 | `crypto/tls` | Overlay | A client over the secure socket of Dart. `Dial`, `DialWithDialer`, `Config`, `Conn`, and `ConnectionState`. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
@@ -801,6 +803,10 @@ Gaps of the standard library surface:
 | `strings.Title` | Missing. Go deprecated it. |
 | `sort.Sort` with an interface | Missing. Use `sort.Slice`. |
 | `crypto/tls` | A client only. Read the section of the network access. |
+
+A list of bytes reads as text for the verbs `s`, `q`, `x`, and `X`, exactly as
+in Go. `%s` of a byte that holds no rune of UTF-8 writes the replacement
+character, and Go writes the byte.
 
 The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
 `%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.

@@ -50,9 +50,23 @@ func (e *emitter) captureRenames(vars []*ir.Var) map[string]string {
 		}
 		name := "$c" + v.Name
 		out[v.Name] = name
-		e.captures = append(e.captures, capture{name: name, from: v.Name, typ: e.fieldType(v)})
+		// 2 literals of 1 statement read 1 copy, thus the list holds each name
+		// 1 time.
+		if !hasCapture(e.captures, name) {
+			e.captures = append(e.captures,
+				capture{name: name, from: v.Name, typ: e.fieldType(v)})
+		}
 	}
 	return out
+}
+
+func hasCapture(list []capture, name string) bool {
+	for _, c := range list {
+		if c.name == name {
+			return true
+		}
+	}
+	return false
 }
 
 // withRenames gives the map that a literal of the machine reads.

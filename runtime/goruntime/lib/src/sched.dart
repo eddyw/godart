@@ -140,6 +140,37 @@ void $boot(void Function() body) {
   $schedule();
 }
 
+/// The cleanups of the program, by token. A cleanup that Stop dropped holds
+/// null.
+final List<Object?> _cleanupTokens = <Object?>[];
+
+final Finalizer<void Function()> _cleanups = Finalizer<void Function()>((
+  void Function() body,
+) {
+  $go(body);
+  $schedule();
+});
+
+/// Attaches a cleanup to a value and gives its handle.
+///
+/// Dart gives no way to force a collection, thus the time of the run follows the
+/// collector of Dart. Read docs/parity.md.
+int $addCleanup(Object target, void Function() run) {
+  final Object token = Object();
+  _cleanups.attach(target, run, detach: token);
+  _cleanupTokens.add(token);
+  return _cleanupTokens.length;
+}
+
+/// Drops a cleanup that no collection ran.
+void $stopCleanup(int handle) {
+  if (handle <= 0 || handle > _cleanupTokens.length) return;
+  final Object? token = _cleanupTokens[handle - 1];
+  if (token == null) return;
+  _cleanups.detach(token);
+  _cleanupTokens[handle - 1] = null;
+}
+
 /// Marks the start of a wait on the Dart event loop.
 void $holdEvent() => _pending++;
 

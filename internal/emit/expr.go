@@ -110,6 +110,9 @@ func (e *emitter) deref(x ir.Expr) string {
 	if !ok {
 		return text
 	}
+	if tp, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
+		return fmt.Sprintf("$deref<%s>(%s)", e.dartType(tp), text)
+	}
 	if needsBox(p.Elem()) {
 		return text + "!.v"
 	}

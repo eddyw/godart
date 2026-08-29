@@ -41,6 +41,17 @@ func DialTLS(host string, port int, insecure bool, name string, protos []string)
 	panic("syscall/dart needs the gart compiler")
 }
 
+// AddCleanup attaches a function that runs after the collector of Dart frees
+// the value, and it gives the handle of the cleanup.
+func AddCleanup(target any, run func()) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// StopCleanup drops a cleanup that no collection ran.
+func StopCleanup(handle int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Kind gives the kind of a value, in the words of the package reflect.
 func Kind(value any) string {
 	panic("syscall/dart needs the gart compiler")
@@ -339,7 +350,8 @@ func Args() []string {
 const (
 	// OpenRead opens a file for a read.
 	OpenRead = 0
-	// OpenWrite opens a file for a write, and it replaces the content.
+	// OpenWrite opens a file for a read and a write, and it replaces the
+	// content. os.Create reads it, and Go gives such a file each mode.
 	OpenWrite = 1
 	// OpenAppend opens a file for a write at the end.
 	OpenAppend = 2
