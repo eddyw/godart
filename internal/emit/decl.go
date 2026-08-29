@@ -35,7 +35,7 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 	}
 	e.line("final class %s {", head)
 	for i, tp := range params {
-		e.line("final Dict<%s> %s;", name.Local(tp.Obj().Name()), dicts[i])
+		e.line("final Dict<%s> %s;", e.dartType(tp), dicts[i])
 	}
 	for i, f := range fields {
 		e.line("%s %s;", e.dartType(st.Field(i).Type()), f)
@@ -118,8 +118,7 @@ func (e *emitter) typeArgsOfParams(params []*types.TypeParam) string {
 func (e *emitter) dictParams(params []*types.TypeParam) []string {
 	out := make([]string, len(params))
 	for i, tp := range params {
-		n := name.Local(tp.Obj().Name())
-		out[i] = fmt.Sprintf("Dict<%s> $d%s", n, n)
+		out[i] = fmt.Sprintf("Dict<%s> $d%s", e.dartType(tp), name.Local(tp.Obj().Name()))
 	}
 	return out
 }

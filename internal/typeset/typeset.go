@@ -80,3 +80,80 @@ func Core(t types.Type) types.Type {
 	}
 	return first
 }
+
+// Set describes the type set of a type parameter. The compiler reads it to
+// choose the Dart type of the parameter and the Dart form of each operation.
+type Set struct {
+	// Numeric reports that each term is an integer type or a float type. Such
+	// a set holds 1 Dart bound, thus a Dart operator applies to it.
+	Numeric bool
+
+	// Integer reports that each term is an integer type. Each such term gives
+	// the Dart type int.
+	Integer bool
+
+	// Float reports that each term is a float type.
+	Float bool
+
+	// Narrow reports that a term holds fewer bits than a Dart int or a Dart
+	// double. An operation on such a term needs a mask of its width.
+	Narrow bool
+
+	// Wide reports that a term is an unsigned integer type of 64 bits. Go
+	// reads the bit pattern of such a type as unsigned, and Dart reads the
+	// same pattern as a negative number.
+	Wide bool
+
+	// Plain reports that a term is an integer type that Dart holds with the
+	// sign of Go. The signed operators of Dart give the Go result for it.
+	Plain bool
+}
+
+// MixedSign reports that the type set holds an unsigned integer type of 64 bits
+// and another integer type. A division, a remainder, and a right shift each
+// read the sign, thus those 3 operations hold 2 Dart forms.
+func (s Set) MixedSign() bool { return s.Integer && s.Wide && s.Plain }
+
+// Unsigned64 reports that each term is an unsigned integer type of 64 bits.
+func (s Set) Unsigned64() bool { return s.Integer && s.Wide && !s.Plain }
+
+// Describe reads the type set of a type parameter. It reports false for a type
+// that is not a type parameter, and for a constraint with no closed type set.
+func Describe(t types.Type) (Set, bool) {
+	tp, ok := types.Unalias(t).(*types.TypeParam)
+	if !ok {
+		return Set{}, false
+	}
+	terms, ok := Terms(tp.Constraint())
+	if !ok || len(terms) == 0 {
+		return Set{}, false
+	}
+	out := Set{Numeric: true, Integer: true, Float: true}
+	for _, term := range terms {
+		b, ok := types.Unalias(term).Underlying().(*types.Basic)
+		if !ok {
+			return Set{}, true
+		}
+		switch {
+		case b.Info()&types.IsInteger != 0:
+			out.Float = false
+		case b.Info()&types.IsFloat != 0:
+			out.Integer = false
+		default:
+			return Set{}, true
+		}
+		switch b.Kind() {
+		case types.Int8, types.Int16, types.Int32,
+			types.Uint8, types.Uint16, types.Uint32, types.Float32:
+			out.Narrow = true
+		}
+		switch b.Kind() {
+		case types.Uint, types.Uint64, types.Uintptr:
+			out.Wide = true
+		case types.Float32, types.Float64:
+		default:
+			out.Plain = true
+		}
+	}
+	return out, true
+}

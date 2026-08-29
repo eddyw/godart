@@ -32,6 +32,11 @@ func (e *emitter) dartType(t types.Type) string {
 		if core := typeset.Core(t); core != nil && !isBasicType(core) {
 			return e.dartType(core)
 		}
+		// A type set of integer types gives 1 Dart type. The dictionary holds
+		// the mask of the width and the order of the sign.
+		if set, ok := typeset.Describe(t); ok && set.Integer {
+			return "int"
+		}
 		return name.Local(t.Obj().Name())
 	case *types.Pointer:
 		if needsBox(t.Elem()) {
@@ -208,7 +213,11 @@ func (e *emitter) typeParamBound(tp *types.TypeParam) string {
 // Dart type. Such a type parameter reads each operation from its dictionary,
 // because no Dart operator fits each type argument.
 func (e *emitter) mixedForm(tp *types.TypeParam) bool {
-	return typeset.Core(tp) == nil
+	if typeset.Core(tp) != nil {
+		return false
+	}
+	set, ok := typeset.Describe(tp)
+	return !ok || !set.Integer
 }
 
 // typeArgList writes the type arguments of an instance of a generic type.
@@ -252,9 +261,9 @@ func (e *emitter) dictOf(t types.Type) string {
 		}
 	}
 	dart := e.dartType(t)
-	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s)",
+	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s, %s)",
 		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t),
-		e.orderText(t), e.descriptorOf(t))
+		e.orderText(t), e.maskText(t), e.descriptorOf(t))
 }
 
 // equalText writes the Go equality of 2 values of a type.
@@ -362,6 +371,9 @@ func (e *emitter) qualify(obj types.Object, dartName string) string {
 // isUnsigned64 reports whether the type needs the unsigned helpers. A narrower
 // unsigned type keeps a value that fits in a Dart int with no sign change.
 func isUnsigned64(t types.Type) bool {
+	if set, ok := typeset.Describe(t); ok && set.Unsigned64() {
+		return true
+	}
 	b := basicOf(t)
 	if b == nil {
 		return false
@@ -374,11 +386,17 @@ func isUnsigned64(t types.Type) bool {
 }
 
 func isUnsigned(t types.Type) bool {
+	if set, ok := typeset.Describe(t); ok && set.Unsigned64() {
+		return true
+	}
 	b := basicOf(t)
 	return b != nil && b.Info()&types.IsUnsigned != 0
 }
 
 func isInteger(t types.Type) bool {
+	if set, ok := typeset.Describe(t); ok && set.Integer {
+		return true
+	}
 	b := basicOf(t)
 	return b != nil && b.Info()&types.IsInteger != 0
 }
@@ -475,6 +493,15 @@ func isSliceType(t types.Type) bool {
 func isPointerType(t types.Type) bool {
 	_, ok := typeset.Core(t).(*types.Pointer)
 	return ok
+}
+
+// maskText gives the mask function of a dictionary. A type that needs no mask
+// takes the identity.
+func (e *emitter) maskText(t types.Type) string {
+	if m := mask(t); m != "" {
+		return m
+	}
+	return "$identity<" + e.dartType(t) + ">"
 }
 
 // mask gives the runtime function that keeps a value inside a narrow type.

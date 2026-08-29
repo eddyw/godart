@@ -300,3 +300,69 @@ func f() int {
 }
 `)
 }
+
+// TestTypeParamForm proves that an operation on a type parameter with more than
+// 1 Dart form reaches a rejection, and that a type set of integer types stays
+// inside the subset.
+func TestTypeParamForm(t *testing.T) {
+	const head = `package a
+
+type mixType interface{ ~int | ~string }
+
+type floatType interface{ ~float32 | ~float64 }
+
+type intType interface {
+	~int | ~int8 | ~uint8 | ~uint64
+}
+
+type plainType interface{ ~int8 | ~int16 }
+
+type wideType interface{ ~int | ~float64 }
+
+`
+	rejectFile(t, "the operator + on 2 Dart types", "more than 1 Dart type",
+		head+"func f[T mixType](a, b T) T { return a + b }\n")
+	rejectFile(t, "the operator + on 2 float widths", "a mask of its width",
+		head+"func f[T floatType](a, b T) T { return a + b }\n")
+	rejectFile(t, "the operator += on 2 float widths", "a mask of its width",
+		head+"func f[T floatType](a, b T) T { a += b; return a }\n")
+	rejectFile(t, "the operator ++ on 2 float widths", "a mask of its width",
+		head+"func f[T floatType](a T) T { a++; return a }\n")
+	rejectFile(t, "the unary - on 2 float widths", "a mask of its width",
+		head+"func f[T floatType](a T) T { return -a }\n")
+	rejectFile(t, "a conversion to 2 float widths", "more than 1 Dart type",
+		head+"func f[T floatType](a int) T { return T(a) }\n")
+
+	rejectFile(t, "a division of mixed sign", "an unsigned type of 64 bits",
+		head+"func f[T intType](a, b T) T { return a / b }\n")
+	rejectFile(t, "a remainder of mixed sign", "an unsigned type of 64 bits",
+		head+"func f[T intType](a, b T) T { return a % b }\n")
+	rejectFile(t, "a right shift of mixed sign", "an unsigned type of 64 bits",
+		head+"func f[T intType](a T) T { return a >> 2 }\n")
+	rejectFile(t, "a shift assignment of mixed sign", "an unsigned type of 64 bits",
+		head+"func f[T intType](a T) T { a >>= 2; return a }\n")
+	rejectFile(t, "a conversion of mixed sign to a float", "an unsigned type of 64 bits",
+		head+"func f[T intType](a T) float64 { return float64(a) }\n")
+	rejectFile(t, "the builtin println of mixed sign", "an unsigned type of 64 bits",
+		head+"func f[T intType](a T) { println(a) }\n")
+
+	acceptFile(t, "the operator + on integer types",
+		head+"func f[T intType](a, b T) T { return a + b }\n")
+	acceptFile(t, "a shift left on integer types",
+		head+"func f[T intType](a T) T { return a << 2 }\n")
+	acceptFile(t, "a conversion between integer types",
+		head+"func f[T intType](a T) T { return T(uint64(a) + 1) }\n")
+	acceptFile(t, "a comparison of integer types",
+		head+"func f[T intType](a, b T) bool { return a < b }\n")
+	acceptFile(t, "a division of 1 sign form",
+		head+"func f[T plainType](a, b T) T { return a / b }\n")
+	acceptFile(t, "a comparison of 2 Dart types",
+		head+"func f[T mixType](a, b T) bool { return a < b }\n")
+	acceptFile(t, "the operator + on an int and a float64",
+		head+"func f[T wideType](a, b T) T { return a + b }\n")
+	acceptFile(t, "a conversion of 2 Dart types to an interface",
+		head+"func f[T mixType](a T) any { return any(a) }\n")
+
+	rejectFile(t, "a division of an int and a float64", "the Dart operator / always gives a double",
+		head+"func f[T wideType](a, b T) T { return a / b }\n")
+}

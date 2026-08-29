@@ -400,9 +400,33 @@ dictionary of the type parameter.
 | An order comparison | Present. It reads `Dict.order`. |
 | An index, a slice expression, a range loop | Rejected by stage 2 |
 | `len` and `cap` | Rejected by stage 2 |
+| An arithmetic operator and a conversion | Rejected by stage 2 |
 
 A constraint whose terms give 1 Dart type keeps each operator. `int | int64`
 gives `int` 2 times, thus `+` and `<` work directly.
+
+## A type parameter of integer types
+
+A constraint that lists only integer types gives 1 Dart type, because each
+integer type of Go maps to the Dart type `int`. Such a parameter holds no core
+type, and it still keeps each arithmetic operator.
+
+The width differs per type argument, thus the dictionary holds a mask. `Dict.mask`
+keeps the value inside the width, and the compiler writes it after each
+arithmetic operation and after each conversion to the parameter. The mask of a
+type that fills the width of a Dart int is the identity.
+
+| Type set | godart |
+|---|---|
+| Each term reads the signed operators (`~int8`, `~uint16`, `~int64`) | Each operator |
+| Each term is unsigned and 64 bits (`~uint`, `~uint64`, `~uintptr`) | Each operator, with the unsigned helpers |
+| The 2 forms together (`~int \| ~uint64`) | `/`, `%`, `>>`, a conversion to a float, and the builtin `print` are rejected by stage 2 |
+
+Go reads the bit pattern of an unsigned type of 64 bits as unsigned, and Dart
+reads the same pattern as a negative number. Thus a division, a remainder, and a
+right shift take 2 Dart expressions, and no type argument selects one at compile
+time. `math/rand/v2` holds such a type set in `N` and in `Rand.N`, and neither
+one reads those 3 operators.
 
 A conversion of a value of a type parameter to an interface reads `Dict.desc`.
 Thus a type switch over `any(v)` gives the real type argument:
@@ -547,7 +571,7 @@ The cause that blocks each package of the survey of 2026-08-30:
 |---|---|
 | `errors` | 1 call of `recover` in `wrap_test.go`, and the package `io/fs`. |
 | `io` | `runtime.Callers`, `runtime.CallersFrames`, `runtime.AddCleanup`, and `runtime.GC` in `multi_test.go`. |
-| `math/rand/v2` | `rand.N`, and 9 names of `reflect` that the surface does not hold. |
+| `math/rand/v2` | 9 names of `reflect` that the surface does not hold. |
 | `bytes` | 22 rejections in 5 groups. `recover` and the address of a byte hold 11 of them. |
 | `regexp` | 5 rejections in `regexp/syntax/parse.go`: 1 call of `recover` and 4 addresses of a `[]rune` field. |
 
@@ -675,7 +699,6 @@ Gaps of the standard library surface:
 | `strconv.Unquote` | Missing |
 | `strings.Title` | Missing. Go deprecated it. |
 | `sort.Sort` with an interface | Missing. Use `sort.Slice`. |
-| `math/rand/v2` `N` and `Rand.N` | Missing. The body converts between a type parameter of a mixed type set and uint64, and the compiler holds no such conversion. |
 | `regexp` | Missing. Thus `-run` reads plain text. |
 | `crypto/tls` | Missing. Read the section of the network access. |
 

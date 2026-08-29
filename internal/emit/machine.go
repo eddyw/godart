@@ -141,8 +141,7 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 		w("late %s $fn;", fnType)
 	}
 	for _, tp := range tps {
-		n := name.Local(tp.Obj().Name())
-		w("late Dict<%s> $d%s;", n, n)
+		w("late Dict<%s> $d%s;", e.dartType(tp), name.Local(tp.Obj().Name()))
 	}
 	for _, v := range m.Locals {
 		w("late %s %s;", e.fieldType(v), v.Name)

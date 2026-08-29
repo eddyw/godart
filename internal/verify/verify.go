@@ -85,6 +85,11 @@ func isComplex(t types.Type) bool {
 	return ok && b.Info()&types.IsComplex != 0
 }
 
+func isFloat(t types.Type) bool {
+	b, ok := types.Unalias(t).Underlying().(*types.Basic)
+	return ok && b.Info()&types.IsFloat != 0
+}
+
 func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	path, err := strconv.Unquote(spec.Path.Value)
 	if err != nil {
@@ -176,7 +181,7 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 	case "recover":
 		v.reject(call.Pos(), "a panic stops the program",
 			"the compiler rejects a call to recover")
-	case "len", "cap":
+	case "len", "cap", "print", "println":
 		v.checkTypeParamBuiltin(call, b.Name())
 	}
 }

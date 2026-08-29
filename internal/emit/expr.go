@@ -442,6 +442,9 @@ func (e *emitter) narrow(t types.Type, text string) string {
 		return m + "(" + text + ")"
 	}
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		if set, ok := typeset.Describe(tp); ok && set.Integer {
+			return e.dictOf(tp) + ".mask(" + text + ")"
+		}
 		return "(" + text + " as " + name.Local(tp.Obj().Name()) + ")"
 	}
 	return text

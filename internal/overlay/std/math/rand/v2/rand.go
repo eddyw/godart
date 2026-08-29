@@ -219,10 +219,15 @@ func (r *Rand) UintN(n uint) uint {
 	return uint(r.uint64n(uint64(n)))
 }
 
-// The method N of Go stays out of the surface. Its body converts between the
-// type parameter and uint64, and the compiler holds no such conversion for a
-// type parameter whose type set holds more than 1 Dart form. docs/parity.md
-// holds that gap.
+// N returns a pseudo-random number in the half-open interval [0,n).
+// The type parameter Int can be any integer type.
+// It panics if n <= 0.
+func (r *Rand) N[Int intType](n Int) Int {
+	if n <= 0 {
+		panic("invalid argument to N")
+	}
+	return Int(r.uint64n(uint64(n)))
+}
 
 // Float64 returns, as a float64, a pseudo-random number in the half-open interval [0.0,1.0).
 func (r *Rand) Float64() float64 {
@@ -341,8 +346,17 @@ func IntN(n int) int { return globalRand.IntN(n) }
 // It panics if n == 0.
 func UintN(n uint) uint { return globalRand.UintN(n) }
 
-// The function N of Go stays out of the surface. Read the note of the method N
-// above.
+// N returns a pseudo-random number in the half-open interval [0,n) from the default Source.
+// The type parameter Int can be any integer type.
+// It panics if n <= 0.
+func N[Int intType](n Int) Int {
+	return globalRand.N(n)
+}
+
+type intType interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
+}
 
 // Float64 returns, as a float64, a pseudo-random number in the half-open interval [0.0,1.0)
 // from the default Source.

@@ -22,6 +22,9 @@ func pcg() {
 	list := []int{0, 1, 2, 3, 4, 5, 6, 7}
 	r.Shuffle(len(list), func(i, j int) { list[i], list[j] = list[j], list[i] })
 	fmt.Println("pcg shuffle:", list)
+
+	// N takes a type parameter over each integer type.
+	fmt.Println("pcg n:", r.N(int8(100)), r.N(uint16(1000)), r.N(uint64(1<<40)))
 }
 
 func chacha() {
@@ -80,6 +83,7 @@ func zipf() {
 func global() {
 	// The top-level functions read a source that the clock seeds, thus the
 	// program prints only the range of a value.
+	fmt.Println("global n range:", rand.N(int32(50)) < 50, rand.N(uint(7)) < 7)
 	n := rand.IntN(10)
 	fmt.Println("global range:", n >= 0 && n < 10)
 	f := rand.Float64()

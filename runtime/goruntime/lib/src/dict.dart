@@ -21,6 +21,11 @@ final class Dict<T> {
   /// The function stops the program for a type that Go holds unordered.
   final int Function(T, T) order;
 
+  /// mask keeps a value inside the width of the type argument. A generic
+  /// function reads it after each arithmetic operation, because the width
+  /// differs per type argument. A type that needs no mask holds the identity.
+  final T Function(T) mask;
+
   /// desc describes the type argument. A conversion of a value of the type
   /// parameter to an interface reads it.
   final TypeDesc desc;
@@ -31,9 +36,13 @@ final class Dict<T> {
     this.hash,
     this.alloc,
     this.order,
+    this.mask,
     this.desc,
   );
 }
+
+/// $identity gives the value again. A type that needs no mask reads it.
+T $identity<T>(T v) => v;
 
 /// $unordered stops the program. Go rejects an order operation on the type,
 /// thus no path reaches this function.
@@ -67,20 +76,27 @@ List<GoString> _allocString(int n) => List<GoString>.filled(n, GoString.empty);
 /// A dictionary of an integer type. Each one holds the same operations, and
 /// the description and the order tell them apart. An unsigned 64-bit type
 /// reads the bit pattern as unsigned, thus its order differs.
-Dict<int> _signed(TypeDesc desc) =>
-    Dict<int>(_zeroInt, _equalInt, _hashInt, _allocInt, _orderInt, desc);
+Dict<int> _signed(TypeDesc desc, int Function(int) mask) =>
+    Dict<int>(_zeroInt, _equalInt, _hashInt, _allocInt, _orderInt, mask, desc);
 
-Dict<int> _unsigned(TypeDesc desc) =>
-    Dict<int>(_zeroInt, _equalInt, _hashInt, _allocInt, _orderUint, desc);
+Dict<int> _unsigned(TypeDesc desc) => Dict<int>(
+  _zeroInt,
+  _equalInt,
+  _hashInt,
+  _allocInt,
+  _orderUint,
+  $identity<int>,
+  desc,
+);
 
-final Dict<int> $dictInt = _signed($typeInt);
-final Dict<int> $dictInt8 = _signed($typeInt8);
-final Dict<int> $dictInt16 = _signed($typeInt16);
-final Dict<int> $dictInt32 = _signed($typeInt32);
-final Dict<int> $dictInt64 = _signed($typeInt64);
-final Dict<int> $dictUint8 = _signed($typeUint8);
-final Dict<int> $dictUint16 = _signed($typeUint16);
-final Dict<int> $dictUint32 = _signed($typeUint32);
+final Dict<int> $dictInt = _signed($typeInt, $identity<int>);
+final Dict<int> $dictInt8 = _signed($typeInt8, $i8);
+final Dict<int> $dictInt16 = _signed($typeInt16, $i16);
+final Dict<int> $dictInt32 = _signed($typeInt32, $i32);
+final Dict<int> $dictInt64 = _signed($typeInt64, $identity<int>);
+final Dict<int> $dictUint8 = _signed($typeUint8, $u8);
+final Dict<int> $dictUint16 = _signed($typeUint16, $u16);
+final Dict<int> $dictUint32 = _signed($typeUint32, $u32);
 final Dict<int> $dictUint = _unsigned($typeUint);
 final Dict<int> $dictUint64 = _unsigned($typeUint64);
 final Dict<int> $dictUintptr = _unsigned($typeUintptr);
@@ -91,6 +107,7 @@ const Dict<double> $dictFloat64 = Dict<double>(
   _hashDouble,
   _allocDouble,
   _orderDouble,
+  $identity<double>,
   $typeFloat64,
 );
 
@@ -100,6 +117,7 @@ const Dict<double> $dictFloat32 = Dict<double>(
   _hashDouble,
   _allocDouble,
   _orderDouble,
+  $f32,
   $typeFloat32,
 );
 
@@ -109,6 +127,7 @@ const Dict<bool> $dictBool = Dict<bool>(
   _hashBool,
   _allocBool,
   $unordered<bool>,
+  $identity<bool>,
   $typeBool,
 );
 
@@ -118,5 +137,6 @@ const Dict<GoString> $dictString = Dict<GoString>(
   _hashString,
   _allocString,
   $compare,
+  $identity<GoString>,
   $typeString,
 );
