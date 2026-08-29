@@ -86,7 +86,9 @@ reads the real Go source, because that source already stays inside the subset.
 | `maps` | Overlay | |
 | `encoding/json` | Overlay | `Marshal` only. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
-| `io` | Native | |
+| `io` | Native |
+| `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. Read below. |
+| `path/filepath` | Overlay | The separator is always `/`. `Walk` and `WalkDir` stay out. Read below. | |
 | `net` | Overlay | TCP, UDP, and a Unix socket. No TLS. Read the section below. |
 | `os` | Overlay | The file access, the temporary names, and the process state. Read the section below. |
 | `path` | Native | |
@@ -242,6 +244,26 @@ the verb `%v` and for the verb `%s`.
 interface `fmt.Writer` and not `io.Writer`, because an import of `io` would make
 a cycle. A caller never names the type, thus a Go source compiles the same way
 with the go command and with gart.
+
+## The log package and the filepath package
+
+`log` holds each function and each method of Go. The flags `Llongfile` and
+`Lshortfile` name the source position of the caller, and that position needs
+`runtime.Caller`. A call of `New` or of `SetFlags` with one of the 2 stops the
+program.
+
+`path/filepath` holds the path operations. The separator is always `/`. Go
+selects the separator with a build tag of the operating system, and the emitted
+Dart names the system only at run time.
+
+| Item | Go | godart |
+|---|---|---|
+| `Clean`, `Join`, `Split`, `Dir`, `Base`, `Ext` | Present | Equal |
+| `IsAbs`, `IsLocal`, `ToSlash`, `FromSlash`, `SplitList`, `VolumeName` | Present | Equal |
+| `Match`, `Abs`, `Rel`, `Glob`, `ErrBadPattern` | Present | Equal |
+| `Separator`, `ListSeparator` | The separator of the system | Always `/` and `:` |
+| `Walk`, `WalkDir`, `SkipDir`, `SkipAll` | Present | Missing. Each one reads `io/fs`, and that package stays outside the surface. |
+| `EvalSymlinks`, `Localize`, `HasPrefix` | Present | Missing |
 
 ## The network access
 
