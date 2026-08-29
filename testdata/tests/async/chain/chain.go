@@ -32,3 +32,20 @@ func AsyncChain(n int) int {
 	}
 	return n + AsyncChain(n-1)
 }
+
+// BlockChain calls itself n times and reads an empty channel in its last frame.
+// Each frame writes its locals into a frame object and gives up control, thus
+// the measurement holds the cost of the unwind and of the rewind.
+func BlockChain(n int, done chan int) int {
+	if n == 0 {
+		return <-done
+	}
+	return n + BlockChain(n-1, done)
+}
+
+// Feed writes a value into the channel until the reader stops.
+func Feed(done chan int) {
+	for {
+		done <- 0
+	}
+}

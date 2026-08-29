@@ -23,3 +23,13 @@ func BenchmarkAsyncChain(b *testing.B) {
 	}
 	Sink = total
 }
+
+func BenchmarkBlockChain(b *testing.B) {
+	done := make(chan int)
+	go Feed(done)
+	total := 0
+	for i := 0; i < b.N; i++ {
+		total += BlockChain(Depth, done)
+	}
+	Sink = total
+}

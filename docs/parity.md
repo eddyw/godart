@@ -545,17 +545,34 @@ loop with a switch on a state variable.
 The model holds no `Future` and no `await`. A call that gives up no control
 costs 1 state assignment and 2 tests.
 
-`testdata/tests/async` measures a call chain of 20 frames. The chain reads a
-buffered channel 1 time in its last frame, thus no frame really waits and stage
-3 still marks each frame.
+`testdata/tests/async` measures a call chain of 20 frames. The first 2 chains
+read a buffered channel 1 time in the last frame, thus no frame really waits and
+stage 3 still marks each frame. The third chain reads an empty channel that a
+second goroutine fills, thus each frame writes a frame object and gives up
+control.
 
 | Chain of 20 frames | Go | godart |
 |---|---|---|
 | Synchronous | 8.5 ns/op | 26 ns/op |
 | Asynchronous | 51.5 ns/op | 189 ns/op |
+| An unwind and a rewind of each frame | 138 ns/op | 540 ns/op |
 
-The `async` form of Dart cost 3900 ns/op for the same chain, because each
+The `async` form of Dart cost 3900 ns/op for the second chain, because each
 `await` schedules a microtask. The unwind model is a factor of 21 faster.
+
+A frame holds each local of its function, and not only the locals that live at
+the block point. A hand edit of the frame class of `BlockChain` measured the
+gain of a liveness analysis on 2026-08-29:
+
+| Form of the frame of a chain of 20 frames | Cost |
+|---|---|
+| Each local, the form of the compiler | 538 to 558 ns/op |
+| The live locals of the state, with a branch on the state | 562 ns/op |
+| No local at all, the upper bound of the gain | 532 ns/op |
+
+The upper bound stands inside the noise of the baseline, and the branch that
+selects the live set costs more than the 2 field writes that it saves. Thus the
+liveness analysis stays out.
 
 The block analysis of stage 3 keeps a synchronous path for a function that
 cannot block, thus only a chain that can block pays the cost.
