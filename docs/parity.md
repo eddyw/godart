@@ -42,6 +42,8 @@ The package `fmt` reads it.
 | `runtime.NumGoroutine` | The count of goroutines | Always 1. The runtime library holds no such count. |
 | `runtime.GOOS` | A constant of the build | A variable. Dart names the system at the start of the program. |
 | `runtime.GOARCH` | A constant of the build | Always `dart64`. A Dart int holds 64 bits on each target. |
+| `runtime.Callers`, `runtime.CallersFrames` | The program counters of the stack | Missing. A Dart stack trace names the emitted Dart, and a Go position needs a source map of the output. |
+| `runtime.AddCleanup`, `runtime.GC` | Present | Missing. A Dart `Finalizer` runs at a time that follows no rule of Go, thus a test of it gives no repeatable result. |
 
 ## The subset of the language
 
@@ -214,7 +216,9 @@ point, thus the block analysis of stage 3 stays simple.
 | `Setenv`, `Unsetenv` | Writes the environment of the process | Writes a map of the overlay. The Dart VM gives no write to the environment of the process, and the subset starts no other process. |
 | `Getwd`, `Chdir`, `TempDir` | Present | Equal |
 | `CreateTemp`, `MkdirTemp` | A random name | Equal, with a counter and the clock in place of the random part. |
-| `File.ReadAt` | Present | Equal. The call reads the position first and writes it again. |
+| `File.ReadAt`, `File.WriteAt` | Present | Equal. Each call reads the position first and writes it again. |
+| `OpenFile` | Each flag of the system | 4 modes: a read, a write with `O_TRUNC`, a write at the end with `O_APPEND`, and a read and a write. Dart holds no mode that reads and writes and stands at the start, thus such an open moves the position back. |
+| `O_CREATE` | Fails when the file is missing and the flag stays out | Each mode of a write makes the file. Dart holds no open that fails for a missing file. |
 | `Args`, `Exit` | Present | Equal. `Args[0]` is the text `gart`. |
 | `IsNotExist`, `ErrNotExist`, `PathError` | Present | Equal |
 | `FileMode` | Holds the permission bits | The type exists. No operation reads it. |
@@ -536,6 +540,16 @@ A test file of GOROOT holds code outside the subset in many packages. `recover`,
 `unsafe`, and the address of a byte each appear, and each one stays outside the
 subset. Thus a package reaches a full run only when each of its test files stays
 inside the subset.
+
+The cause that blocks each package of the survey of 2026-08-30:
+
+| Package | Cause |
+|---|---|
+| `errors` | 1 call of `recover` in `wrap_test.go`, and the package `io/fs`. |
+| `io` | `runtime.Callers`, `runtime.CallersFrames`, `runtime.AddCleanup`, and `runtime.GC` in `multi_test.go`. |
+| `math/rand/v2` | `rand.N`, and 9 names of `reflect` that the surface does not hold. |
+| `bytes` | 22 rejections in 5 groups. `recover` and the address of a byte hold 11 of them. |
+| `regexp` | 5 rejections in `regexp/syntax/parse.go`: 1 call of `recover` and 4 addresses of a `[]rune` field. |
 
 ### The block model
 

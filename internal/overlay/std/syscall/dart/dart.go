@@ -230,6 +230,9 @@ const (
 	OpenWrite = 1
 	// OpenAppend opens a file for a write at the end.
 	OpenAppend = 2
+	// OpenReadWrite opens a file for a read and a write, and it keeps the
+	// content. The position stands at the start.
+	OpenReadWrite = 3
 )
 
 // The whence of FileSeek.

@@ -213,6 +213,33 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 	return read, err
 }
 
+// WriteAt writes at the offset. It does not move the write position of the
+// file, thus the call reads the position first and writes it again.
+func (f *File) WriteAt(p []byte, off int64) (int, error) {
+	if f.std != stdNone {
+		return 0, &PathError{Op: "write", Path: f.name, Err: errors.New("bad file descriptor")}
+	}
+	if off < 0 {
+		return 0, &PathError{Op: "writeat", Path: f.name, Err: errors.New("negative offset")}
+	}
+	pos, cause := dart.FileSeek(f.handle, 0, dart.SeekCurrent)
+	if cause != "" {
+		return 0, pathError("writeat", f.name, cause)
+	}
+	if _, cause := dart.FileSeek(f.handle, off, dart.SeekStart); cause != "" {
+		return 0, pathError("writeat", f.name, cause)
+	}
+	written, cause := dart.FileWrite(f.handle, p)
+	var err error
+	if cause != "" {
+		err = pathError("writeat", f.name, cause)
+	}
+	if _, cause := dart.FileSeek(f.handle, pos, dart.SeekStart); cause != "" && err == nil {
+		err = pathError("writeat", f.name, cause)
+	}
+	return written, err
+}
+
 // endOfFile is the error of the end of a file. The package io holds the same
 // value under the name EOF.
 var endOfFile = errors.New("EOF")
@@ -263,15 +290,18 @@ func Create(name string) (*File, error) {
 // OpenFile opens a file with a flag set. The permission argument reaches no
 // operation of the Dart side.
 //
-// The flag set selects 1 of the 3 modes of the Dart side: a read, a write that
-// replaces the content, or a write at the end.
+// The flag set selects 1 of the 4 modes of the Dart side: a read, a write that
+// replaces the content, a write at the end, or a read and a write that keeps
+// the content. Only O_TRUNC replaces the content, exactly as in Go.
 func OpenFile(name string, flag int, perm FileMode) (*File, error) {
 	mode := dart.OpenRead
 	switch {
 	case flag&O_APPEND != 0:
 		mode = dart.OpenAppend
-	case flag&(O_WRONLY|O_RDWR) != 0:
+	case flag&O_TRUNC != 0:
 		mode = dart.OpenWrite
+	case flag&(O_WRONLY|O_RDWR) != 0:
+		mode = dart.OpenReadWrite
 	}
 	return openMode(name, mode, "open")
 }

@@ -25,6 +25,7 @@ final List<RandomAccessFile?> _open = <RandomAccessFile?>[];
 const int $openRead = 0;
 const int $openWrite = 1;
 const int $openAppend = 2;
+const int $openReadWrite = 3;
 
 /// The whence of a seek call.
 const int $seekStart = 0;
@@ -60,13 +61,27 @@ int _slot(RandomAccessFile f) {
 (int, GoString) $fileOpen(GoString path, int mode) {
   final String name = path.toDartString();
   try {
-    final FileMode m = mode == $openWrite
-        ? FileMode.writeOnly
-        : (mode == $openAppend ? FileMode.writeOnlyAppend : FileMode.read);
-    return (_slot(File(name).openSync(mode: m)), _empty);
+    final RandomAccessFile f = File(name).openSync(mode: _mode(mode));
+    // Dart holds no mode that reads and writes and keeps the position at the
+    // start. FileMode.append keeps the content and stands at the end, thus the
+    // open moves the position back.
+    if (mode == $openReadWrite) f.setPositionSync(0);
+    return (_slot(f), _empty);
   } catch (e) {
     return (-1, _cause(e));
   }
+}
+
+FileMode _mode(int mode) {
+  switch (mode) {
+    case $openWrite:
+      return FileMode.writeOnly;
+    case $openAppend:
+      return FileMode.writeOnlyAppend;
+    case $openReadWrite:
+      return FileMode.append;
+  }
+  return FileMode.read;
 }
 
 /// Reads bytes into the slice and gives the count. A count of 0 with no cause

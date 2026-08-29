@@ -74,6 +74,16 @@ func main() {
 	n, _ = f2.Read(rest)
 	fmt.Println("the position stays:", n, string(rest[:n]))
 	f2.Close()
+
+	f3, _ := os.OpenFile(f.Name(), os.O_RDWR, 0o644)
+	n, err = f3.WriteAt([]byte("WORLD"), 6)
+	fmt.Println("writeat:", n, err == nil)
+	if _, err := f3.WriteString("!"); err != nil {
+		fmt.Println("write after writeat:", err)
+	}
+	f3.Close()
+	data, _ := os.ReadFile(f.Name())
+	fmt.Println("after writeat:", string(data))
 	os.RemoveAll(dir)
 
 	r := strings.NewReader("abcdef")
