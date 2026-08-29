@@ -1,0 +1,15 @@
+{
+  "path": "internal/reflectlite",
+  "name": "reflectlite",
+  "sourceHash": "f89b6281a013a4c0aebcf8a1eb7f733b498e1fdc979dca48c8b2d717b0d1b707",
+  "exportHash": "6a4b817c0a553d5ac32585d8a2288479177b3d6147e7be5ceb82734379150e25",
+  "export": "aQNxPjEvdXNyL2xvY2FsL2dvL3NyYy9pbnRlcm5hbC9yZWZsZWN0bGl0ZS9zd2FwcGVyLmdvAAR0ZXh0CmNvbXBhcmFibGUGU3RyaW5nAXQEVHlwZQpDb21wYXJhYmxlAXYLcmVmbGVjdGxpdGUGVHlwZU9mBzICCi4AMxAAMgIEOAAAMgBMMlQaKgAgAiY0QwAfSjAAAUQyECEMUQAfSjAAAVQyAEYaQgABHFwfARwyMAABMl4AAkwTajE=",
+  "blocking": null,
+  "files": [
+    "lib/std/internal/reflectlite.dart",
+    "lib/std/internal/reflectlite.map.dart",
+    "lib/std/internal/reflectlite/swapper.part.dart",
+    "lib/std/internal/reflectlite/type.part.dart",
+    "lib/std/internal/reflectlite/value.part.dart"
+  ]
+}

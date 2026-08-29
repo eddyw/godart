@@ -5,7 +5,9 @@ package emit
 import (
 	"errors"
 	"fmt"
+	"go/token"
 	"go/types"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -25,6 +27,11 @@ type Result struct {
 	Library string
 	Files   map[string]string
 
+	// MapFile names the part file that holds the source map of the package.
+	// Stage 6 writes it, because the line numbers of the map come from the
+	// output of dart format.
+	MapFile string
+
 	// Shared holds the file of each unnamed struct type that the package uses.
 	// Each key is a path that is relative to the output root, and each content
 	// is a pure function of the shape. Thus 2 packages that use 1 shape write
@@ -40,6 +47,10 @@ type Config struct {
 	Imports []Import
 	// DartPackage names the pub package of the output.
 	DartPackage string
+	// Fset resolves the position of a statement. The emitter writes a marker
+	// comment for each new source line, and stage 6 turns the markers into the
+	// source map of the output.
+	Fset *token.FileSet
 	// URIs gives the Dart URI of each Go package of the build. A shared file
 	// belongs to no package, thus it reads the URI of a field type here.
 	URIs map[string]string
@@ -70,6 +81,7 @@ func Package(p *ir.Package, tpkg *types.Package, cfg Config) (*Result, error) {
 		parts = append(parts, part)
 	}
 	sort.Strings(parts)
+	out.MapFile = cfg.Base + ".map.dart"
 	out.Files[out.Library] = e.libraryFile(p, parts, cfg.Imports)
 	out.Shared = e.sharedFiles()
 	if len(e.errs) > 0 {
@@ -140,6 +152,62 @@ type emitter struct {
 	// writes. The frame class of a literal of that function names them, because
 	// the class stands at package level.
 	typeParams []*types.TypeParam
+	// goLine holds the source line of the last marker. A statement of the same
+	// line needs no second marker.
+	goLine int
+}
+
+// The 2 markers of the source map. Each one stands on a line of its own, thus
+// dart format keeps it in front of the code that it names. Stage 6 reads the
+// markers of the formatted output and removes them.
+const (
+	fileMark = "//#f"
+	lineMark = "//#g"
+)
+
+// markFunc opens the source map entry of a function.
+func (e *emitter) markFunc(f *ir.Func) {
+	if e.cfg.Fset == nil || !f.Pos.IsValid() {
+		return
+	}
+	p := e.cfg.Fset.Position(f.Pos)
+	e.line("%s%s|%s", fileMark, filepath.Base(p.Filename), e.goFuncName(f))
+	e.goLine = 0
+}
+
+// mark opens the source map entry of a source line.
+func (e *emitter) mark(pos token.Pos) {
+	if e.cfg.Fset == nil || !pos.IsValid() {
+		return
+	}
+	line := e.cfg.Fset.Position(pos).Line
+	if line == e.goLine {
+		return
+	}
+	e.goLine = line
+	e.line("%s%d", lineMark, line)
+}
+
+// goFuncName writes the name of a function in the form of the Go runtime.
+func (e *emitter) goFuncName(f *ir.Func) string {
+	path := ""
+	if e.pkg != nil {
+		path = e.pkg.Path()
+		if e.pkg.Name() == "main" {
+			path = "main"
+		}
+	}
+	if f.Recv == nil {
+		return path + "." + f.Name
+	}
+	recv := "?"
+	if obj := receiverTypeName(f.Recv.Type); obj != nil {
+		recv = obj.Name()
+		if isPointerType(f.Recv.Type) {
+			recv = "(*" + recv + ")"
+		}
+	}
+	return path + "." + recv + "." + f.Name
 }
 
 // flushFrames writes the class of each frame that a declaration made.
@@ -324,6 +392,7 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	copy(sorted, imports)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Path < sorted[j].Path })
 	e.buf.Reset()
+	e.goLine = 0
 	e.writeAnonClasses()
 	e.writeNilChans()
 	e.writeDescriptors()
@@ -349,6 +418,7 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	for _, part := range parts {
 		e.line("part '%s';", part)
 	}
+	e.line("part '%s.map.dart';", e.base)
 	e.line("")
 	e.buf.WriteString(body)
 	return e.buf.String()
@@ -365,6 +435,7 @@ func (e *emitter) writeInit(imports []Import) {
 	e.line("void $init() {")
 	e.line("if ($initDone) return;")
 	e.line("$initDone = true;")
+	e.line("$srcmap($srcmapData);")
 	for _, im := range imports {
 		e.line("%s.$init();", e.prefixes[im.Path])
 	}
@@ -402,8 +473,8 @@ func (e *emitter) writeMain() {
 	if e.mainFunc != nil {
 		e.line("try {")
 		e.line("$boot(() { _main(); });")
-		e.line("} on GoPanic catch ($p) {")
-		e.line("$fatal($p);")
+		e.line("} on GoPanic catch ($p, $s) {")
+		e.line("$fatal($p, $s);")
 		e.line("}")
 	}
 	e.line("}")
@@ -411,6 +482,7 @@ func (e *emitter) writeMain() {
 
 func (e *emitter) partFile(base string, f *ir.File) string {
 	e.buf.Reset()
+	e.goLine = 0
 	e.buf.WriteString(header)
 	e.line("")
 	e.line("part of '../%s.dart';", base)

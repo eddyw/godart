@@ -1,0 +1,10 @@
+name: basic
+description: The Dart output of the Go module example.com/basic.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  goruntime:
+    path: /path/to/godart/runtime/goruntime

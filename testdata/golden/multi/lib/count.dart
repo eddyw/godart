@@ -7,10 +7,12 @@
 import 'package:goruntime/goruntime.dart';
 
 part 'count/count.part.dart';
+part 'count.map.dart';
 
 bool $initDone = false;
 
 void $init() {
   if ($initDone) return;
   $initDone = true;
+  $srcmap($srcmapData);
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'panic.dart';
+import 'srcmap.dart';
 import 'string.dart';
 
 /// Writes text to standard output. The package fmt uses it.
@@ -48,9 +49,13 @@ String $fstring(double v) {
 
 /// Reports a panic that no function stops, and ends the program. Go writes the
 /// value to stderr and exits with the status 2.
-Never $fatal(GoPanic panic) {
+Never $fatal(GoPanic panic, StackTrace trace) {
   stderr.writeln('panic: ${panic.value}');
   stderr.writeln();
   stderr.writeln('goroutine 1 [running]:');
+  for (final GoPos pos in $goStack(trace)) {
+    stderr.writeln('${pos.function}()');
+    stderr.writeln('\t${pos.file}:${pos.line}');
+  }
   exit(2);
 }

@@ -439,6 +439,7 @@ func (e *emitter) resultText(results []*ir.Var) string {
 // body writes the statements of a function. A named result becomes a local
 // variable that holds the zero value until a return statement writes it.
 func (e *emitter) body(f *ir.Func) {
+	e.markFunc(f)
 	prev := e.typeParams
 	e.typeParams = f.TypeParams
 	defer func() { e.typeParams = prev }()

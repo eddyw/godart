@@ -156,21 +156,58 @@ type Var struct {
 // A Stmt is a statement.
 type Stmt interface{ isStmt() }
 
+// Node carries the position of the Go source of a statement. Stage 4 writes it,
+// and stage 5 builds the source map of the output from it.
+type Node struct{ Pos token.Pos }
+
+func (n *Node) setPos(p token.Pos) {
+	if n.Pos == token.NoPos {
+		n.Pos = p
+	}
+}
+
+func (n *Node) position() token.Pos { return n.Pos }
+
+// SetPos gives a statement the position of its Go source. A statement that
+// already holds one keeps it, thus an inner statement keeps its own position.
+func SetPos(s Stmt, p token.Pos) {
+	if n, ok := s.(interface{ setPos(token.Pos) }); ok {
+		n.setPos(p)
+	}
+}
+
+// PosOf gives the position of the Go source of a statement. A statement that
+// stage 4 built alone carries none, and it gives token.NoPos.
+func PosOf(s Stmt) token.Pos {
+	if n, ok := s.(interface{ position() token.Pos }); ok {
+		return n.position()
+	}
+	return token.NoPos
+}
+
 type (
 	// Block is a statement list with its own scope.
-	Block struct{ List []Stmt }
+	Block struct {
+		Node
+		List []Stmt
+	}
 
 	// ExprStmt evaluates an expression and drops the result.
-	ExprStmt struct{ X Expr }
+	ExprStmt struct {
+		Node
+		X Expr
+	}
 
 	// Declare introduces variables. Init is nil for the zero value.
 	Declare struct {
+		Node
 		Vars []*Var
 		Init Expr
 	}
 
 	// Assign writes 1 value to 1 location.
 	Assign struct {
+		Node
 		Lhs, Rhs Expr
 
 		// Define marks the declaration of a variable that a machine lifted in
@@ -181,6 +218,7 @@ type (
 
 	// AssignMulti reads a record and writes the parts to the locations.
 	AssignMulti struct {
+		Node
 		Lhs []Expr
 		Rhs Expr
 
@@ -190,12 +228,14 @@ type (
 	}
 
 	If struct {
+		Node
 		Cond Expr
 		Then *Block
 		Else Stmt
 	}
 
 	For struct {
+		Node
 		Init  Stmt
 		Cond  Expr
 		Post  Stmt
@@ -203,15 +243,28 @@ type (
 		Label string
 	}
 
-	Return struct{ Values []Expr }
+	Return struct {
+		Node
+		Values []Expr
+	}
 
-	Break struct{ Label string }
+	Break struct {
+		Node
+		Label string
+	}
 
-	Continue struct{ Label string }
+	Continue struct {
+		Node
+		Label string
+	}
 
-	Goto struct{ Label string }
+	Goto struct {
+		Node
+		Label string
+	}
 
 	Labeled struct {
+		Node
 		Label string
 		Stmt  Stmt
 
@@ -223,19 +276,30 @@ type (
 	// Switch holds a tag switch. Normalize rewrites a switch with no tag into
 	// a switch on true.
 	Switch struct {
+		Node
 		Tag   Expr
 		Cases []*Case
 		Label string
 	}
 
-	Send struct{ Chan, Value Expr }
+	Send struct {
+		Node
+		Chan, Value Expr
+	}
 
-	Go struct{ Call Expr }
+	Go struct {
+		Node
+		Call Expr
+	}
 
-	Defer struct{ Call Expr }
+	Defer struct {
+		Node
+		Call Expr
+	}
 
 	// Select runs 1 case of a select statement.
 	Select struct {
+		Node
 		Cases []*SelectClause
 		Label string
 	}

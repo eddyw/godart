@@ -9,12 +9,14 @@ import 'package:multi/count.dart' as $count;
 import 'package:multi/greet.dart' as $greet;
 
 part 'main/main.part.dart';
+part 'main.map.dart';
 
 bool $initDone = false;
 
 void $init() {
   if ($initDone) return;
   $initDone = true;
+  $srcmap($srcmapData);
   $count.$init();
   $greet.$init();
 }
@@ -27,7 +29,7 @@ void main(List<String> $arguments) {
     $boot(() {
       _main();
     });
-  } on GoPanic catch ($p) {
-    $fatal($p);
+  } on GoPanic catch ($p, $s) {
+    $fatal($p, $s);
   }
 }

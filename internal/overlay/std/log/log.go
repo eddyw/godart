@@ -3,15 +3,17 @@
 // Package log writes a line to a writer, with a prefix and a stamp of the
 // clock.
 //
-// The flags Llongfile and Lshortfile stay outside the subset. Each one names
-// the source position of the caller, and that position needs runtime.Caller.
-// A call that sets one of the 2 stops the program.
+// The flag Llongfile stays outside the subset. It names the full path of the
+// source file, and the source map of the output holds the base name only. A
+// call that sets it stops the program.
 package log
 
 import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
+	"strconv"
 	"time"
 )
 
@@ -46,16 +48,30 @@ func Default() *Logger { return std }
 
 var std = New(os.Stderr, "", LstdFlags)
 
-// rejectFileFlag stops the program for a flag that names a source position.
+// rejectFileFlag stops the program for a flag that names a full path.
 func rejectFileFlag(flag int) {
-	if flag&(Llongfile|Lshortfile) != 0 {
-		panic("log: the flags Llongfile and Lshortfile need runtime.Caller, " +
-			"and that function stays outside the subset")
+	if flag&Llongfile != 0 {
+		panic("log: the flag Llongfile needs the full path of a source file, " +
+			"and the source map of the output holds the base name only")
 	}
 }
 
-// header writes the prefix and the stamp of the clock.
-func (l *Logger) header(t time.Time) string {
+// position names the source file and the line of the caller. The count of
+// calldepth reaches runtime.Caller, thus it holds the 2 frames of this package
+// that stand between the writer of the line and the caller.
+func (l *Logger) position(calldepth int) string {
+	if l.flag&Lshortfile == 0 {
+		return ""
+	}
+	_, file, line, ok := runtime.Caller(calldepth)
+	if !ok {
+		file, line = "???", 0
+	}
+	return file + ":" + strconv.Itoa(line) + ": "
+}
+
+// header writes the prefix, the stamp of the clock, and the source position.
+func (l *Logger) header(t time.Time, calldepth int) string {
 	out := ""
 	if l.flag&Lmsgprefix == 0 {
 		out = l.prefix
@@ -75,19 +91,20 @@ func (l *Logger) header(t time.Time) string {
 			}
 		}
 	}
+	out += l.position(calldepth)
 	if l.flag&Lmsgprefix != 0 {
 		out += l.prefix
 	}
 	return out
 }
 
-// Output writes 1 line. The depth of the call reaches no operation, because
-// the subset holds no source position of a caller.
+// Output writes 1 line. The count of calldepth names the frame that Lshortfile
+// reports, and the value 2 names the caller of a top level function.
 func (l *Logger) Output(calldepth int, s string) error {
 	if l.out == nil {
 		return nil
 	}
-	line := l.header(time.Now()) + s
+	line := l.header(time.Now(), calldepth+2) + s
 	if len(line) == 0 || line[len(line)-1] != '\n' {
 		line += "\n"
 	}

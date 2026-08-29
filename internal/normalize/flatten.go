@@ -90,9 +90,12 @@ func (f *flat) deferReturn(s *ir.Return) {
 }
 
 type flat struct {
-	b      *builder
-	m      *ir.Machine
-	cur    int
+	b   *builder
+	m   *ir.Machine
+	cur int
+	// pos holds the position of the statement that the pass reads. Each
+	// statement that the pass builds takes it, thus the source map of the
+	// output holds a state of a machine.
 	pos    token.Pos
 	seq    int
 	loops  []flatLoop
@@ -127,6 +130,7 @@ func (f *flat) state() int {
 }
 
 func (f *flat) emit(s ir.Stmt) {
+	ir.SetPos(s, f.pos)
 	blk := f.m.States[f.cur]
 	blk.List = append(blk.List, s)
 }
@@ -206,6 +210,9 @@ func (f *flat) block(list []ir.Stmt) {
 }
 
 func (f *flat) stmt(s ir.Stmt) {
+	if p := ir.PosOf(s); p.IsValid() {
+		f.pos = p
+	}
 	if !f.split(s) {
 		f.plain(s)
 		return

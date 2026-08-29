@@ -90,6 +90,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 	stats := &Stats{}
 	exports := map[string]string{}
 	files := map[string]string{}
+	var maps []srcPackage
 	for _, p := range pkgs {
 		bin := result.Binary(p.ID)
 		sources, err := readSources(p, result.Sources, bin)
@@ -123,6 +124,10 @@ func BuildWithStats(opt Options) (*Stats, error) {
 			files[path] = text
 			written = append(written, path)
 		}
+		mapAt := filepath.Join(dir, out.MapFile)
+		maps = append(maps, srcPackage{base: baseName(p, module), mapAt: mapAt,
+			files: append([]string{}, written...)})
+		written = append(written, mapAt)
 		sort.Strings(written)
 		export, err := exportData(p)
 		if err != nil {
@@ -156,6 +161,9 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		if err := format(opt.Out); err != nil {
 			return nil, err
 		}
+	}
+	if err := writeSourceMaps(opt.Out, dartPkg, maps); err != nil {
+		return nil, err
 	}
 	stats.Binaries = testBinaries(result, module)
 	stats.NoTests = withoutTests(result, module)
@@ -320,6 +328,7 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 		Base:        baseName(p, module),
 		Imports:     imports,
 		DartPackage: dartPkg,
+		Fset:        p.Fset,
 		URIs:        libraryURIs(p, module, dartPkg),
 	})
 }

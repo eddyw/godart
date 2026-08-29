@@ -1,0 +1,13 @@
+{
+  "path": "example.com/basic/calc",
+  "name": "calc",
+  "sourceHash": "8f635a9b9359389092401f005a10c479ef0bdd53b687f5665204f33824d854ae",
+  "exportHash": "8d149d1121907ae4977aaf065e0095483a827608d81efc5a829a294c5a2bbc58",
+  "export": "aQNrL0QvVXNlcnMvZWRkeXcvRGV2ZWxvcGVyL21pbmUvZ29kYXJ0L3Rlc3RkYXRhL3Rlc3RzL2Jhc2ljL2NhbGMvY2FsYy5nbwFhAWIAAXYFcGFydHMDc2VwBGNhbGMDQWRkBkRvdWJsZQRKb2luRhoWAAIQRQEMRwEBHEkBAEYaIgABHEoBARxJAQACEEYaLgACFEw9QFIQATBJEAABSVYAA1sAXxBmHw==",
+  "blocking": null,
+  "files": [
+    "lib/calc.dart",
+    "lib/calc.map.dart",
+    "lib/calc/calc.part.dart"
+  ]
+}

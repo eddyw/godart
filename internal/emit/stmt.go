@@ -56,6 +56,7 @@ func (e *emitter) openCaptures(mark int) {
 }
 
 func (e *emitter) stmtOne(s ir.Stmt) {
+	e.mark(ir.PosOf(s))
 	switch s := s.(type) {
 	case *ir.Block:
 		e.line("{")

@@ -7,6 +7,7 @@
 import 'package:goruntime/goruntime.dart';
 
 part 'greet/greet.part.dart';
+part 'greet.map.dart';
 
 final TypeDesc $desc$Greeter = TypeDesc(
   'example.com/multi/greet.Greeter',
@@ -66,4 +67,5 @@ bool $initDone = false;
 void $init() {
   if ($initDone) return;
   $initDone = true;
+  $srcmap($srcmapData);
 }

@@ -29,12 +29,17 @@ func (b *builder) block(s *ast.BlockStmt) *ir.Block {
 // it.
 func (b *builder) stmt(s ast.Stmt) []ir.Stmt {
 	out := b.stmtOf(s)
-	if len(b.pending) == 0 {
-		return out
+	if len(b.pending) > 0 {
+		pending := b.pending
+		b.pending = nil
+		out = append(pending, out...)
 	}
-	pending := b.pending
-	b.pending = nil
-	return append(pending, out...)
+	if s != nil {
+		for _, x := range out {
+			ir.SetPos(x, s.Pos())
+		}
+	}
+	return out
 }
 
 func (b *builder) stmtOf(s ast.Stmt) []ir.Stmt {

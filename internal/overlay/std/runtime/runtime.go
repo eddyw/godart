@@ -7,7 +7,11 @@
 // holds no control of a goroutine and no control of the garbage collector.
 package runtime
 
-import "syscall/dart"
+import (
+	"strconv"
+	"strings"
+	"syscall/dart"
+)
 
 // GOMAXPROCS gives the count of goroutines that run at the same time, and it
 // takes no new value.
@@ -32,3 +36,120 @@ var GOOS = dart.OS()
 // AOT, and the compiler rejects the web target. Thus 1 value serves each
 // machine.
 const GOARCH = "dart64"
+
+// frames holds the position of each program counter, and index holds the
+// counter of each position. A Dart stack trace holds no address, thus a program
+// counter is an index of the table. The table holds 1 entry for each call site
+// that a program reads.
+var (
+	frames []string
+	index  = map[string]uintptr{}
+)
+
+func record(text string) uintptr {
+	if pc, ok := index[text]; ok {
+		return pc
+	}
+	frames = append(frames, text)
+	pc := uintptr(len(frames))
+	index[text] = pc
+	return pc
+}
+
+func at(pc uintptr) (string, string, int) {
+	if pc == 0 || int(pc) > len(frames) {
+		return "", "", 0
+	}
+	name, rest, _ := strings.Cut(frames[pc-1], "|")
+	file, text, _ := strings.Cut(rest, "|")
+	line, _ := strconv.Atoi(text)
+	return name, file, line
+}
+
+// Caller gives the position of the call, and the count of skip names the frame.
+// The value 0 names the caller of Caller.
+//
+// The file holds the base name only, because the source map of the output holds
+// no directory.
+func Caller(skip int) (pc uintptr, file string, line int, ok bool) {
+	stack := dart.Stack(skip + 1)
+	if len(stack) == 0 {
+		return 0, "", 0, false
+	}
+	pc = record(stack[0])
+	_, file, line = at(pc)
+	return pc, file, line, true
+}
+
+// Callers writes the program counter of each frame into pc, and it gives the
+// count. The count of skip names the first frame, and the value 0 names Callers
+// itself.
+func Callers(skip int, pc []uintptr) int {
+	stack := dart.Stack(skip)
+	n := 0
+	for _, frame := range stack {
+		if n == len(pc) {
+			break
+		}
+		pc[n] = record(frame)
+		n++
+	}
+	return n
+}
+
+// Frame holds the position of 1 call.
+type Frame struct {
+	PC       uintptr
+	Func     *Func
+	Function string
+	File     string
+	Line     int
+	Entry    uintptr
+}
+
+// Frames reads the position of each program counter of a list.
+type Frames struct {
+	list []uintptr
+}
+
+func CallersFrames(callers []uintptr) *Frames {
+	return &Frames{list: callers}
+}
+
+// Next gives the next frame, and the flag reports whether a frame follows it.
+func (f *Frames) Next() (Frame, bool) {
+	if len(f.list) == 0 {
+		return Frame{}, false
+	}
+	pc := f.list[0]
+	f.list = f.list[1:]
+	name, file, line := at(pc)
+	return Frame{PC: pc, Func: FuncForPC(pc), Function: name, File: file,
+		Line: line, Entry: pc}, len(f.list) > 0
+}
+
+// Func names a function of the program.
+type Func struct {
+	pc uintptr
+}
+
+// FuncForPC gives the function of a program counter, and it gives nil for a
+// counter that no call gave.
+func FuncForPC(pc uintptr) *Func {
+	if pc == 0 || int(pc) > len(frames) {
+		return nil
+	}
+	return &Func{pc: pc}
+}
+
+func (f *Func) Name() string {
+	name, _, _ := at(f.pc)
+	return name
+}
+
+func (f *Func) FileLine(pc uintptr) (string, int) {
+	_, file, line := at(pc)
+	return file, line
+}
+
+func (f *Func) Entry() uintptr { return f.pc }

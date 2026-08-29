@@ -1,0 +1,17 @@
+{
+  "path": "fmt",
+  "name": "fmt",
+  "sourceHash": "ad82751b775af3d1ba1230c3c3fa0403d761af3f763cdfb9ada69a1f5d8acb45",
+  "exportHash": "b16f3a96504361591045c5802ab17b5d60207640bffe85de7498cf7fdf0e7566",
+  "export": "aQOsAZYCHC91c3IvbG9jYWwvZ28vc3JjL2ZtdC9kb2MuZ28GZm9ybWF0AWEAAXcGV3JpdGVyCEdvU3RyaW5nBlN0cmluZwVXcml0ZQFwA2ZtdAZFcnJvcmYGRnByaW50B0ZwcmludGYIRnByaW50bG4KR29TdHJpbmdlcgVQcmludAZQcmludGYHUHJpbnRsbgZTcHJpbnQHU3ByaW50ZghTcHJpbnRsbghTdHJpbmdlcgIfRhriBAACHB0QPCQgASgmEwEAKSYCH0YawgIAAhwnMygkNgIsJgEUJhMBAh9GGu4CAAMgJzMoHRA8JEwCLCYBFCYTAQIfRhraAgACJCczKCRlAiwmARQmEwEIJgABCq4CADAAASwmEFQaqgIAewIfRhqaAQABGCSPAQIsJgEUJhMBAh9GGtIBAAIcHRA8JKMBAiwmARQmEwECH0YatgEAASAkugECLCYBFCYTAQIfRho2AAEcJM4BASgmEAECH0Ya/gIAAiAdEDwk3gEBKCYQAQIfRhpqAAEkJPIBASgmEAEIJgABCpoCADkAASQmEFQalgIAggICEQgmAAEKhgIAQAEYRpcCAiwmARQmEwBUGoICAJkCASZIAA1MAlMYWi5iR2tpdnF8hQGDAZwBiwGwAZIBwAGaAdQBowHwASmPAg==",
+  "blocking": null,
+  "files": [
+    "lib/std/fmt.dart",
+    "lib/std/fmt.map.dart",
+    "lib/std/fmt/doc.part.dart",
+    "lib/std/fmt/errors.part.dart",
+    "lib/std/fmt/format.part.dart",
+    "lib/std/fmt/print.part.dart",
+    "lib/std/fmt/scan.part.dart"
+  ]
+}

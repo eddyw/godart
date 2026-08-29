@@ -1,0 +1,23 @@
+{
+  "path": "reflect",
+  "name": "reflect",
+  "sourceHash": "a0d717b749497c157e41758ba83bc725d57ba9644b436382a5a476af62f81a82",
+  "exportHash": "dfcaa61bd67d13ae76a0a0146946ed48a885b8de121e174662bcd700d41a581c",
+  "export": "aQOZAdwBIC91c3IvbG9jYWwvZ28vc3JjL3JlZmxlY3QvYWJpLmdvAXgBeQAGU3RyaW5nAWsES2luZARkZXNjAXQEVHlwZQpDb21wYXJhYmxlBEVsZW0BdgV2YWx1ZQZob2xkZXIJSW50ZXJmYWNlBVZhbHVlA1NldAdyZWZsZWN0CURlZXBFcXVhbAZUeXBlT2YHVmFsdWVPZgRaZXJvRhpaAAIoIR8MIx8BHCUAAAAvJVQabgAQASYMJgAfLTAAAUQlEAclAQqOAQA0AQAlADslVBqKAQBFBCYsJgAfOVAAAUQlECEYLwAfOVAAATwlMBkYQAAfOVAAAVQlADEcSwAfOVAAATwlUEYangEAARxQHwEcJVAAByUCCq4CAFIfACUCBFgfACUAaSVUGqoCAJgBAyowXwAjUKkBAAFUJR8tEEsAI1CpAQABQCWpARkYbwAjUKkBATQhqQEAAEYawgIAASBQHwEcJakBAEYazgIAARQ5UAEgJakBAAElcwAHewAvEzszhQFqaYwBjAG+AZQBzQE=",
+  "blocking": null,
+  "files": [
+    "lib/std/reflect.dart",
+    "lib/std/reflect.map.dart",
+    "lib/std/reflect/abi.part.dart",
+    "lib/std/reflect/badlinkname.part.dart",
+    "lib/std/reflect/deepequal.part.dart",
+    "lib/std/reflect/float32reg_generic.part.dart",
+    "lib/std/reflect/iter.part.dart",
+    "lib/std/reflect/makefunc.part.dart",
+    "lib/std/reflect/map.part.dart",
+    "lib/std/reflect/swapper.part.dart",
+    "lib/std/reflect/type.part.dart",
+    "lib/std/reflect/value.part.dart",
+    "lib/std/reflect/visiblefields.part.dart"
+  ]
+}

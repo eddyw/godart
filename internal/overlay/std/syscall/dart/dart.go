@@ -19,6 +19,16 @@ func Format(verb string, value any) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// Stack gives 1 item for each frame of the Go stack, in the form
+// "function|file|line". The count of skip drops the first frames, and frame 0
+// is the function that calls Stack.
+//
+// A function that gives up control leaves the Dart stack, thus the stack of a
+// goroutine that waits holds the frames of the current state only.
+func Stack(skip int) []string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Kind gives the kind of a value, in the words of the package reflect.
 func Kind(value any) string {
 	panic("syscall/dart needs the gart compiler")

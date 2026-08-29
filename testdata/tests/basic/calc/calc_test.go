@@ -39,3 +39,15 @@ func TestCleanup(t *testing.T) {
 	t.Cleanup(func() { t.Log("the cleanup ran") })
 	t.Log("the body ran")
 }
+
+func wantAdd(t *testing.T, a, b, want int) {
+	t.Helper()
+	if got := Add(a, b); got != want {
+		t.Errorf("Add(%d, %d) = %d, and %d is the result", a, b, got, want)
+	}
+	t.Log("the helper ran")
+}
+
+func TestHelperPosition(t *testing.T) {
+	wantAdd(t, 1, 2, 3)
+}

@@ -98,9 +98,9 @@ func (t *T) Failed() bool { return t.failed }
 
 func (t *T) Skipped() bool { return t.skipped }
 
-// Helper marks a helper function. Go leaves the position of a helper out of a
-// log line. A log line of gart holds no position, thus the method does nothing.
-func (t *T) Helper() {}
+// Helper marks a helper function. A log line of a helper holds the position of
+// the caller of the helper.
+func (t *T) Helper() { markHelper() }
 
 // Parallel does nothing. All Go code runs in 1 isolate, thus gart runs each
 // test in the order of the list.
@@ -156,13 +156,20 @@ func (t *T) Fail() { t.failed = true }
 
 func (t *T) FailNow() {
 	t.failed = true
+	stopping = true
 	dart.Stop()
 }
 
 func (t *T) SkipNow() {
 	t.skipped = true
+	stopping = true
 	dart.Stop()
 }
+
+// stopping marks the unwind of a test that FailNow or SkipNow stopped. A
+// deferred log line of that unwind holds no position, because Go holds the
+// position of its own runtime there.
+var stopping bool
 
 func (t *T) Log(args ...any) { t.write(fmt.Sprintln(args...)) }
 
@@ -211,17 +218,44 @@ func (t *T) Run(name string, f func(*T)) bool {
 	return !sub.failed
 }
 
-// LogPos holds the source position of the call that writes a log line. The
-// compiler writes it in front of each such call, because the harness reads no
-// stack trace. Go reads the position from the stack.
-var LogPos string
+// helpers holds the name of each function that called Helper.
+var helpers = map[string]bool{}
+
+// markHelper marks the caller of Helper. The walk drops the frames of this
+// package, thus no count of frames stands in the code.
+func markHelper() {
+	for _, frame := range dart.Stack(0) {
+		name, _, ok := strings.Cut(frame, "|")
+		if !ok || strings.HasPrefix(name, "testing.") {
+			continue
+		}
+		helpers[name] = true
+		return
+	}
+}
+
+// logPos gives the source position of the call that writes a log line. The walk
+// drops the frames of this package and the frame of each helper.
+func logPos() string {
+	if stopping {
+		return ""
+	}
+	for _, frame := range dart.Stack(0) {
+		name, rest, ok := strings.Cut(frame, "|")
+		if !ok || strings.HasPrefix(name, "testing.") || helpers[name] {
+			continue
+		}
+		file, line, _ := strings.Cut(rest, "|")
+		return file + ":" + line
+	}
+	return ""
+}
 
 // write holds 1 log message. Verbose mode writes it at once, and the plain
 // mode writes it only when the test fails.
 func (t *T) write(text string) {
-	if LogPos != "" {
-		text = LogPos + ": " + text
-		LogPos = ""
+	if pos := logPos(); pos != "" {
+		text = pos + ": " + text
 	}
 	if !verbose {
 		t.logs = append(t.logs, text)
@@ -384,6 +418,7 @@ func runOne(t *T, call func()) {
 	parent := current
 	current = t
 	dart.Catch(call)
+	stopping = false
 	if t.cancel != nil {
 		t.cancel()
 	}
@@ -482,8 +517,7 @@ func (b *B) Name() string  { return b.common.Name() }
 func (b *B) Failed() bool  { return b.common.Failed() }
 func (b *B) Skipped() bool { return b.common.Skipped() }
 
-// Helper does nothing. A log line of gart holds no source position.
-func (b *B) Helper() {}
+func (b *B) Helper() { markHelper() }
 
 func (b *B) Cleanup(f func())                  { b.common.Cleanup(f) }
 func (b *B) Fail()                             { b.common.Fail() }

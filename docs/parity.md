@@ -73,7 +73,9 @@ The package `fmt` reads it.
 | `runtime.NumGoroutine` | The count of goroutines | Always 1. The runtime library holds no such count. |
 | `runtime.GOOS` | A constant of the build | A variable. Dart names the system at the start of the program. |
 | `runtime.GOARCH` | A constant of the build | Always `dart64`. A Dart int holds 64 bits on each target. |
-| `runtime.Callers`, `runtime.CallersFrames` | The program counters of the stack | Missing. A Dart stack trace names the emitted Dart, and a Go position needs a source map of the output. |
+| A stack trace of a panic | The full path of each file, and an offset in each frame | The base name of each file, and no offset. The source map of the output gives the position. |
+| A frame of a goroutine that waits | Present | Missing. A function that gives up control leaves the Dart stack. |
+| `runtime.Caller`, `runtime.Callers`, `runtime.CallersFrames`, `runtime.FuncForPC` | The program counters of the stack | Equal, with the base name of each file. A program counter is an index of a table of the runtime, and not an address. |
 | `runtime.AddCleanup`, `runtime.GC` | Present | Missing. A Dart `Finalizer` runs at a time that follows no rule of Go, thus a test of it gives no repeatable result. |
 
 ## The subset of the language
@@ -292,10 +294,10 @@ with the go command and with gart.
 
 ## The log package and the filepath package
 
-`log` holds each function and each method of Go. The flags `Llongfile` and
-`Lshortfile` name the source position of the caller, and that position needs
-`runtime.Caller`. A call of `New` or of `SetFlags` with one of the 2 stops the
-program.
+`log` holds each function and each method of Go. `Lshortfile` names the base
+name of the file and the line, exactly as Go does. `Llongfile` names the full
+path, and the source map of the output holds the base name only. A call of `New`
+or of `SetFlags` with `Llongfile` stops the program.
 
 `path/filepath` holds the path operations. The separator is always `/`. Go
 selects the separator with a build tag of the operating system, and the emitted
@@ -593,8 +595,8 @@ for each test binary. The output holds the format of `go test`.
 
 | Item | Go | godart |
 |---|---|---|
-| The source position of a log line | `file.go:12: text` | Equal. Stage 4 writes the position in front of the call. |
-| The position of a log line of a helper that calls `t.Helper` | The position of the caller | The position of the call inside the helper. |
+| The source position of a log line | `file.go:12: text` | Equal. The harness reads the stack through the source map. |
+| The position of a log line of a helper that calls `t.Helper` | The position of the caller | Equal. |
 | The position of a deferred log line after `Fatal` | The position of the runtime of Go, for example `panic.go:694` | No position. |
 | `t.Parallel` | Runs the tests in parallel | Does nothing. All Go code runs in 1 isolate. |
 | `t.FailNow`, `t.SkipNow` | `runtime.Goexit` | A throw. Each deferred function still runs, and the subset has no `recover`. |

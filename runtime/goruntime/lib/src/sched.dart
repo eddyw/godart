@@ -103,10 +103,10 @@ void $schedule() {
         g.start = null;
         if (body != null) body();
       }
-    } on GoPanic catch (p) {
+    } on GoPanic catch (p, trace) {
       _running = false;
       $current = null;
-      $goPanic(p);
+      $goPanic(p, trace);
       return;
     }
     if ($blocked != null) {
@@ -252,6 +252,6 @@ void _deadlock() {
 
 /// The report of a panic that leaves a goroutine. The build driver sets it,
 /// because the report needs the entry point of the program.
-void Function(GoPanic) $goPanic = (GoPanic p) {
+void Function(GoPanic, StackTrace) $goPanic = (GoPanic p, StackTrace trace) {
   throw p;
 };

@@ -30,7 +30,8 @@ func TestLoadTestsFindsTheBinary(t *testing.T) {
 	if bin.Under != "example.com/basic/calc" {
 		t.Errorf("got the package %q under test, want %q", bin.Under, "example.com/basic/calc")
 	}
-	want := []string{"TestAdd", "TestDouble", "TestSkipped", "TestCleanup", "TestJoin"}
+	want := []string{"TestAdd", "TestDouble", "TestSkipped", "TestCleanup",
+		"TestHelperPosition", "TestJoin"}
 	if strings.Join(bin.Tests, ",") != strings.Join(want, ",") {
 		t.Errorf("got the tests %v, want %v", bin.Tests, want)
 	}
