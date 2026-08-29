@@ -353,10 +353,16 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 }
 
 // topLevelRecv writes the receiver of a call to a method whose body stands in a
-// top level function. Go reads the value behind a pointer for a method with a
-// value receiver.
+// top level function.
+//
+// Go reads the value behind a pointer for a method with a value receiver, and it
+// takes the address of a value for a method with a pointer receiver.
 func (e *emitter) topLevelRecv(m *ir.Method) string {
-	if !pointerMethod(m.Obj) && isPointerType(m.Recv.GoType()) {
+	t := m.Recv.GoType()
+	if pointerMethod(m.Obj) && !isPointerType(t) && needsBox(t) {
+		return e.addressExpr(m.Recv)
+	}
+	if !pointerMethod(m.Obj) && isPointerType(t) {
 		return e.deref(m.Recv)
 	}
 	return e.expr(m.Recv)
@@ -701,7 +707,9 @@ func (e *emitter) conv(x *ir.Conv) string {
 		return text
 	}
 	if isInterfaceType(to) {
-		if isInterfaceType(from) {
+		// The untyped nil gives a nil interface. A typed nil keeps its
+		// description, exactly as in Go.
+		if isInterfaceType(from) || isUntypedNil(from) {
 			return text
 		}
 		return e.box(x.X, from)

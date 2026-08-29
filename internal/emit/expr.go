@@ -479,6 +479,15 @@ func (e *emitter) unary(x *ir.Unary) string {
 	return "null"
 }
 
+// addressExpr writes the address of a value that needs a cell. A boxed variable
+// gives its box, and each other form gives a cell of its own.
+func (e *emitter) addressExpr(x ir.Expr) string {
+	if id, ok := x.(*ir.Ident); ok && id.Boxed {
+		return e.identName(id)
+	}
+	return e.addressOf(x, x.GoType())
+}
+
 // addressOf writes a pointer to a field of a struct, or to an element of a
 // slice or an array. Such a location holds a Dart value, thus the pointer holds
 // the object and the index of the location.
@@ -493,6 +502,10 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => $r.%s, ($r, $i, $v) => $r.%s = $v)",
 			e.dartType(owner), e.dartType(elem), e.deref(x.X), fieldIndex(owner, x.Name),
 			field, field)
+	case *ir.Composite:
+		// A composite literal holds no name, thus its address takes a box of
+		// its own. Each read of that pointer reaches the same value.
+		return fmt.Sprintf("Box<%s>(%s)", e.dartType(elem), e.expr(x))
 	case *ir.Index:
 		container := x.X.GoType()
 		if isPointerType(container) {

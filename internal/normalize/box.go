@@ -23,24 +23,56 @@ func (b *builder) addressed(body ast.Node) map[*types.Var]bool {
 // takes. The global flag selects a package variable, and it drops a local.
 func (b *builder) markAddressed(node ast.Node, out map[*types.Var]bool, global bool) {
 	ast.Inspect(node, func(n ast.Node) bool {
-		u, ok := n.(*ast.UnaryExpr)
-		if !ok || u.Op != token.AND {
-			return true
+		switch n := n.(type) {
+		case *ast.UnaryExpr:
+			if n.Op == token.AND {
+				b.markVar(n.X, out, global)
+			}
+		case *ast.SelectorExpr:
+			// Go takes the address of an addressable value for a call to a
+			// method with a pointer receiver, thus such a value needs a box.
+			sel := b.info.Selections[n]
+			if sel == nil || sel.Kind() != types.MethodVal {
+				return true
+			}
+			fn, ok := sel.Obj().(*types.Func)
+			if !ok || !pointerReceiver(fn) {
+				return true
+			}
+			if _, ok := types.Unalias(b.typeOf(n.X)).(*types.Pointer); ok {
+				return true
+			}
+			b.markVar(n.X, out, global)
 		}
-		id, ok := unparenExpr(u.X).(*ast.Ident)
-		if !ok {
-			return true
-		}
-		v, ok := b.info.Uses[id].(*types.Var)
-		if !ok {
-			v, ok = b.info.Defs[id].(*types.Var)
-		}
-		if !ok || !needsBox(v.Type()) || isGlobalVar(v) != global {
-			return true
-		}
-		out[v] = true
 		return true
 	})
+}
+
+// markVar records the variable that the expression names.
+func (b *builder) markVar(e ast.Expr, out map[*types.Var]bool, global bool) {
+	id, ok := unparenExpr(e).(*ast.Ident)
+	if !ok {
+		return
+	}
+	v, ok := b.info.Uses[id].(*types.Var)
+	if !ok {
+		v, ok = b.info.Defs[id].(*types.Var)
+	}
+	if !ok || !needsBox(v.Type()) || isGlobalVar(v) != global {
+		return
+	}
+	out[v] = true
+}
+
+// pointerReceiver reports whether the declaration of the method holds a pointer
+// receiver.
+func pointerReceiver(fn *types.Func) bool {
+	sig, ok := fn.Type().(*types.Signature)
+	if !ok || sig.Recv() == nil {
+		return false
+	}
+	_, ok = types.Unalias(sig.Recv().Type()).(*types.Pointer)
+	return ok
 }
 
 // isGlobalVar reports whether the variable stands at package level.

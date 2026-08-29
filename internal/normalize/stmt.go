@@ -135,12 +135,9 @@ func (b *builder) declStmt(s *ast.DeclStmt) []ir.Stmt {
 	for _, spec := range d.Specs {
 		switch spec := spec.(type) {
 		case *ast.TypeSpec:
-			// A local struct type takes the Dart class of its shape, exactly as
-			// an unnamed struct type does, thus the declaration needs no output.
-			if !b.localStructType(spec) {
-				b.fail(spec.Pos(), "a type declaration inside a function is "+
-					"outside the subset, and only a struct type is")
-			}
+			// A local type needs no output. A struct type takes the Dart class
+			// of its shape, exactly as an unnamed struct type does, and each
+			// other type takes the Dart form of its underlying type.
 		case *ast.ValueSpec:
 			out = append(out, b.localValueSpec(spec, d.Tok)...)
 		}

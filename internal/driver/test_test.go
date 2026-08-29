@@ -176,12 +176,26 @@ func TestAllocs(t *testing.T) {
 // test file that falls outside the subset, and the assertion then fails.
 func TestTestsOfGoroot(t *testing.T) {
 	cases := []struct {
-		pkg   string
+		pkg string
+		// run holds the filter of -run. An empty filter runs each test.
+		run   string
 		wants []string
 	}{
-		{"path", []string{"--- PASS: TestClean ", "--- SKIP: TestCleanMallocs "}},
-		{"container/list", []string{"--- PASS: TestList ", "--- PASS: TestZeroList "}},
-		{"unicode", []string{"--- PASS: TestLetterOptimizations ", "--- PASS: TestSpecialCaseNoMapping "}},
+		{"path", "", []string{"--- PASS: TestClean ", "--- SKIP: TestCleanMallocs "}},
+		{"container/list", "", []string{"--- PASS: TestList ", "--- PASS: TestZeroList "}},
+		{"container/heap", "", []string{"--- PASS: TestInit0 ", "--- PASS: TestRemove2 "}},
+		{"container/ring", "", []string{"--- PASS: TestNew ", "--- PASS: TestLink1 "}},
+		{"unicode", "", []string{"--- PASS: TestLetterOptimizations ", "--- PASS: TestSpecialCaseNoMapping "}},
+		{"encoding/hex", "", []string{"--- PASS: TestEncode ", "--- PASS: TestEncoderDecoder "}},
+		{"encoding/ascii85", "", []string{"--- PASS: TestEncode ", "--- PASS: TestEncoderBuffering "}},
+		{"encoding/csv", "", []string{"--- PASS: TestRead ", "--- PASS: TestWrite "}},
+		{"hash/crc32", "", []string{"--- PASS: TestGolden ", "--- PASS: TestSimple "}},
+		{"hash/fnv", "", []string{"--- PASS: TestGolden32 ", "--- PASS: TestGolden64 "}},
+		{"hash/adler32", "", []string{"--- PASS: TestGolden ", "--- PASS: TestGoldenMarshal "}},
+		// TestParseInvalidRegexps reads a limit of a resource, and the patch of
+		// parse.go holds no recover for it. Read docs/parity.md.
+		{"regexp/syntax", "Test[^P]|TestParse[SFLMN]", []string{
+			"--- PASS: TestParseSimple ", "--- PASS: TestSimplify "}},
 	}
 	for _, c := range cases {
 		t.Run(c.pkg, func(t *testing.T) {
@@ -197,7 +211,7 @@ func TestTestsOfGoroot(t *testing.T) {
 				Out:      t.TempDir(),
 				Runtime:  runtimeDir(t),
 				Format:   true,
-			}, driver.TestOptions{Verbose: true}, out)
+			}, driver.TestOptions{Verbose: true, Run: c.run}, out)
 			if err != nil {
 				t.Fatalf("the test build failed:\n%v", err)
 			}

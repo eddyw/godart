@@ -25,10 +25,21 @@ func isInterfaceType(t types.Type) bool {
 // writeDescriptors writes the run time description of each named type of the
 // package. An interface value holds such a description and the value.
 func (e *emitter) writeDescriptors() {
-	scope := e.pkg.Scope()
+	e.scopeDescriptors(e.pkg.Scope())
+}
+
+// scopeDescriptors writes the description of each named type of a scope and of
+// each scope inside it. A type of a function scope also reaches an interface,
+// thus it also needs a description.
+func (e *emitter) scopeDescriptors(scope *types.Scope) {
 	for _, n := range scope.Names() {
 		obj, ok := scope.Lookup(n).(*types.TypeName)
 		if !ok || obj.IsAlias() {
+			continue
+		}
+		// A dot import puts each exported name of another package into the
+		// scope of the file. The package of that name writes its description.
+		if obj.Pkg() != e.pkg {
 			continue
 		}
 		named, ok := types.Unalias(obj.Type()).(*types.Named)
@@ -43,6 +54,25 @@ func (e *emitter) writeDescriptors() {
 		e.descriptor(named, false)
 		e.descriptor(named, true)
 	}
+	for i := 0; i < scope.NumChildren(); i++ {
+		e.scopeDescriptors(scope.Child(i))
+	}
+}
+
+// descName gives the name of the variable that holds the description of a named
+// type. A type of a function scope holds its position in the name, because 2
+// functions can declare 1 name.
+func (e *emitter) descName(obj *types.TypeName, pointer bool) string {
+	out := "$desc$"
+	if pointer {
+		out = "$descP$"
+	}
+	out += name.Package(obj.Name())
+	if obj.Parent() == nil || obj.Parent() == obj.Pkg().Scope() || e.cfg.Fset == nil {
+		return out
+	}
+	p := e.cfg.Fset.Position(obj.Pos())
+	return fmt.Sprintf("%s$%d_%d", out, p.Line, p.Column)
 }
 
 // isInstance reports whether the named type is an instance of a generic type.
@@ -68,12 +98,15 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 
 // methodTable writes the adapter of each method of the type, in the order of
 // the name.
-func (e *emitter) methodTable(named *types.Named, t types.Type) []string {
+// methodTable writes the adapter of each method of the method set of a type.
+// The element type is the named type or the unnamed struct type behind t, and t
+// holds the pointer form when the table belongs to a pointer.
+func (e *emitter) methodTable(elem types.Type, t types.Type) []string {
 	_, pointer := types.Unalias(t).(*types.Pointer)
 	set := types.NewMethodSet(t)
 	entries := make([]string, 0, set.Len())
 	for i := 0; i < set.Len(); i++ {
-		if entry := e.adapter(named, set.At(i), pointer); entry != "" {
+		if entry := e.adapter(elem, set.At(i), pointer); entry != "" {
 			entries = append(entries, entry)
 		}
 	}
@@ -83,10 +116,10 @@ func (e *emitter) methodTable(named *types.Named, t types.Type) []string {
 
 func (e *emitter) descriptor(named *types.Named, pointer bool) {
 	t := types.Type(named)
-	variable := "$desc$" + name.Package(named.Obj().Name())
+	variable := e.descName(named.Obj(), false)
 	if pointer {
 		t = types.NewPointer(named)
-		variable = "$descP$" + name.Package(named.Obj().Name())
+		variable = e.descName(named.Obj(), true)
 	}
 	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s);",
 		variable, types.TypeString(t, nil), kindOf(t),
@@ -224,7 +257,7 @@ func dartString(text string) string {
 // pointer marks the table of a pointer to the type. Such a value holds a box
 // when the base type is not a struct and not an array, thus a method with a
 // value receiver reads the field of the box.
-func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool) string {
+func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) string {
 	fn, ok := sel.Obj().(*types.Func)
 	if !ok {
 		return ""
@@ -244,24 +277,24 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool
 		args[i] = fmt.Sprintf("$a%d", i)
 		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + args[i]
 	}
-	recv := fmt.Sprintf("($r as %s)", e.dartType(named))
-	if pointer && needsBox(named) {
-		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(named)))
+	recv := fmt.Sprintf("($r as %s)", e.dartType(elem))
+	if pointer && needsBox(elem) {
+		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(elem)))
 		if _, ok := types.Unalias(sig.Recv().Type()).(*types.Pointer); !ok {
 			recv += "!.v"
 		}
 	}
 	// The Dart form of a pointer to a struct accepts null, thus the cast must
 	// accept it too. Go runs a method with a nil pointer receiver.
-	if pointer && !needsBox(named) && len(sel.Index()) == 1 && topLevelMethod(named, fn) {
-		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(named)))
+	if pointer && !needsBox(elem) && len(sel.Index()) == 1 && topLevelMethod(elem, fn) {
+		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(elem)))
 	}
 	index := sel.Index()
-	current := types.Type(named)
+	current := elem
 	for _, i := range index[:len(index)-1] {
 		st := structOf(current)
 		if st == nil {
-			e.fail("the method path of %s leaves a struct type", named)
+			e.fail("the method path of %s leaves a struct type", elem)
 			return ""
 		}
 		field := st.Field(i)
@@ -353,7 +386,7 @@ func (e *emitter) descriptorOf(t types.Type) string {
 			// description.
 			if !isInterfaceType(named) && named.Obj().Pkg() != nil &&
 				(named.TypeParams() == nil || named.TypeParams().Len() == 0) {
-				return e.qualify(named.Obj(), "$descP$"+name.Package(named.Obj().Name()))
+				return e.qualify(named.Obj(), e.descName(named.Obj(), true))
 			}
 		}
 	}
@@ -365,7 +398,7 @@ func (e *emitter) descriptorOf(t types.Type) string {
 				return e.instanceDesc(named, false)
 			}
 			if named.TypeParams() == nil || named.TypeParams().Len() == 0 {
-				return e.qualify(named.Obj(), "$desc$"+name.Package(named.Obj().Name()))
+				return e.qualify(named.Obj(), e.descName(named.Obj(), false))
 			}
 		}
 	}
@@ -374,8 +407,18 @@ func (e *emitter) descriptorOf(t types.Type) string {
 			return text
 		}
 	}
-	return fmt.Sprintf("TypeDesc('%s', '%s', const <String, Function>{}, text: '%s'%s, zero: () => %s)",
-		typeName(t), kindOf(t), types.TypeString(types.Unalias(t), shortQualifier),
+	// An unnamed struct type holds the promoted method of each embedded field,
+	// thus its description also needs a method table. Each other type of this
+	// path holds no method: an interface value carries the table of the type
+	// inside it, and a slice, a map, and a channel hold none.
+	table := "const <String, Function>{}"
+	if _, ok := types.Unalias(t).Underlying().(*types.Struct); ok {
+		if entries := e.methodTable(types.Unalias(t), t); len(entries) > 0 {
+			table = "<String, Function>{" + strings.Join(entries, ", ") + "}"
+		}
+	}
+	return fmt.Sprintf("TypeDesc('%s', '%s', %s, text: '%s'%s, zero: () => %s)",
+		typeName(t), kindOf(t), table, types.TypeString(types.Unalias(t), shortQualifier),
 		e.descParts(t), e.zero(t))
 }
 

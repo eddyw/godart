@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"strings"
 
 	"example.com/anonstructs/shapes"
 )
@@ -79,4 +82,23 @@ func main() {
 	}
 	println(shapes.Empty() == struct{}{})
 	fmt.Println(r)
+
+	// An unnamed struct type holds the promoted method of an embedded
+	// interface, thus its description also holds a method table.
+	reader := struct{ io.Reader }{strings.NewReader("hello")}
+	var sink bytes.Buffer
+	n, err := io.CopyBuffer(&sink, reader, make([]byte, 3))
+	fmt.Println(n, err, sink.String())
+
+	var asReader io.Reader = struct{ io.Reader }{strings.NewReader("again")}
+	text, err := io.ReadAll(asReader)
+	fmt.Println(string(text), err)
+
+	counted := struct {
+		io.Reader
+		N int
+	}{Reader: strings.NewReader("xy"), N: 2}
+	one := make([]byte, 1)
+	got, err := counted.Read(one)
+	fmt.Println(got, string(one[:got]), err, counted.N)
 }

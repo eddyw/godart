@@ -120,8 +120,9 @@ func f() { _ = &total }
 		`func g() []int { return nil }
 
 func f() { _ = &g()[0] }`)
-	reject(t, "a composite literal", "the address of []int",
-		`func f() { _ = &[]int{1} }`)
+	accept(t, "a composite literal", `func f() { _ = &[]int{1} }`)
+	reject(t, "a value behind a pointer", "the address of int",
+		`func f(p *int) { _ = &*p }`)
 }
 
 func TestNew(t *testing.T) {
@@ -139,9 +140,9 @@ func TestComplex(t *testing.T) {
 }
 
 func TestReportsEachRejection(t *testing.T) {
-	err := run(t, head+`func f() {
-	_ = &[]int{1}
-	_ = &[]string{"a"}
+	err := run(t, head+`func f(p *int, q *string) {
+	_ = &*p
+	_ = &*q
 }`)
 	if err == nil {
 		t.Fatal("got no rejection, want 2")

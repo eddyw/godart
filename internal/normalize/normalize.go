@@ -138,20 +138,6 @@ func namedResults(results []*ir.Var) bool {
 // declareLocal gives a local variable a name that is unique in the function.
 // Go allows an inner name to shadow an outer name, but Dart does not, thus the
 // stage renames the inner variable.
-// localStructType reports whether a local type declaration names a struct type.
-func (b *builder) localStructType(spec *ast.TypeSpec) bool {
-	obj, ok := b.info.Defs[spec.Name].(*types.TypeName)
-	if !ok || obj.IsAlias() {
-		return false
-	}
-	named, ok := types.Unalias(obj.Type()).(*types.Named)
-	if !ok {
-		return false
-	}
-	_, isStruct := named.Underlying().(*types.Struct)
-	return isStruct
-}
-
 func (b *builder) declareLocal(obj *types.Var, pref string) *ir.Var {
 	base := name.Local(pref)
 	n := base

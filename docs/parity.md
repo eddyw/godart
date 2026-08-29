@@ -206,7 +206,7 @@ value, and a pointer to a field or to an element holds a `$Ref`.
 | The identity of 2 pointers | Present |
 | `&v` of a struct field | Present. The pointer holds the object and the index of the field. |
 | `&v` of an element of a slice or an array | Present. The pointer holds the backing list and the index. |
-| `&v` of a composite literal of a type that is not a struct | Rejected by stage 2 |
+| `&v` of a composite literal of a type that is not a struct | Present. The pointer holds a box of its own. |
 | `&v` in a declaration of multiple values | Rejected by stage 5 |
 
 The compiler writes a box only for a variable whose address the code takes, thus

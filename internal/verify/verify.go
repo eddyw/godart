@@ -141,10 +141,10 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 // names no location.
 //
 // A struct and an array give a Dart object, thus a pointer to one is the object
-// itself. Each other value needs a cell. A variable holds a box, and a field of
-// a struct and an element of a slice or an array hold a Ref of the object and
-// the index. Each other form, for example a composite literal, holds no
-// location, thus the compiler rejects its address.
+// itself. Each other value needs a cell. A variable and a composite literal each
+// hold a box, and a field of a struct and an element of a slice or an array hold
+// a $Ref of the object and the index. Each other form holds no location, thus
+// the compiler rejects its address.
 func (v *verifier) checkAddress(e *ast.UnaryExpr) {
 	t := v.typeOf(e.X)
 	if t == nil || isStruct(t) || isArray(t) {
@@ -174,11 +174,14 @@ func isGlobal(obj *types.Var) bool {
 	return obj.Pkg() != nil && obj.Parent() == obj.Pkg().Scope()
 }
 
-// isLocation reports whether the expression names a field of a struct, or an
-// element of a slice or an array. A pointer to such a location holds the object
-// and the index.
+// isLocation reports whether the expression names a field of a struct, an
+// element of a slice or an array, or a composite literal. A pointer to a field
+// and to an element holds the object and the index, and a pointer to a literal
+// holds a box of its own.
 func (v *verifier) isLocation(e ast.Expr) bool {
 	switch e := unparen(e).(type) {
+	case *ast.CompositeLit:
+		return true
 	case *ast.SelectorExpr:
 		obj, ok := v.info.Uses[e.Sel].(*types.Var)
 		return ok && obj.IsField()

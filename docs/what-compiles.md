@@ -9,7 +9,7 @@ build of a program that imports the package.
 
 ## The import surface
 
-57 packages of the standard library reach the surface. Stage 2 rejects an import
+59 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
@@ -29,7 +29,8 @@ of each other package with a source position.
 | `reflect`, `runtime`, `strconv`, `strings` | |
 | `sync`, `sync/atomic`, `testing`, `time` | |
 | `unicode`, `unicode/utf8`, `unique` | |
-| `internal/godebug`, `internal/byteorder` | |
+| `encoding`, `internal/godebug`, `internal/byteorder` | |
+| `internal/testhash` | |
 | `testing/internal/testdeps`, `syscall/dart` | |
 
 ## The gates of the language
@@ -42,6 +43,7 @@ of each other package with a source position.
 | The address of a composite literal of a type that is not a struct | Rejected. A variable first, and the address of the variable. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |
+| A generic function as a value | Rejected. Such a value would need the dictionary of each type argument. |
 
 Each other construct of the language stays inside the subset: a closure, a
 method, an interface, an embedded struct, a type switch, a channel, a `select`,
