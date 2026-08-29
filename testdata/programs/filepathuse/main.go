@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -70,8 +72,94 @@ func onDisk() {
 	fmt.Println(filepath.IsAbs(rel), err)
 }
 
+func tree() {
+	root, err := os.MkdirTemp("", "walk")
+	if err != nil {
+		fmt.Println("temp:", err)
+		return
+	}
+	defer os.RemoveAll(root)
+	for _, d := range []string{"a", "a/b", "c"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			fmt.Println("mkdir:", err)
+			return
+		}
+	}
+	for _, f := range []string{"top.txt", "a/one.go", "a/b/two.go", "c/three.txt"} {
+		if err := os.WriteFile(filepath.Join(root, f), []byte("x"), 0o644); err != nil {
+			fmt.Println("write:", err)
+			return
+		}
+	}
+
+	var seen []string
+	err = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(root, p)
+		seen = append(seen, fmt.Sprintf("%s:%v:%v", rel, d.IsDir(), d.Type().IsDir()))
+		return nil
+	})
+	sort.Strings(seen)
+	fmt.Println(err, len(seen))
+	for _, s := range seen {
+		fmt.Println(" ", s)
+	}
+
+	var skipped []string
+	err = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && filepath.Base(p) == "a" {
+			return filepath.SkipDir
+		}
+		rel, _ := filepath.Rel(root, p)
+		skipped = append(skipped, rel)
+		return nil
+	})
+	sort.Strings(skipped)
+	fmt.Println("skip dir:", err, skipped)
+
+	count := 0
+	err = filepath.Walk(root, func(p string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			count++
+		}
+		if count == 2 {
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	fmt.Println("skip all:", err, count)
+
+	entries, err := os.ReadDir(root)
+	fmt.Println("read dir:", err, len(entries))
+	names := []string{}
+	for _, e := range entries {
+		info, err := e.Info()
+		if err != nil {
+			fmt.Println("info:", err)
+			return
+		}
+		names = append(names, fmt.Sprintf("%s:%v:%v", e.Name(), e.IsDir(), info.Size()))
+	}
+	sort.Strings(names)
+	fmt.Println(names)
+
+	info, err := os.Stat(filepath.Join(root, "top.txt"))
+	fmt.Println(err, info.Name(), info.Size(), info.IsDir(), info.Mode().IsRegular())
+	dinfo, err := os.Stat(filepath.Join(root, "a"))
+	fmt.Println(err, dinfo.IsDir(), dinfo.Mode().IsDir(), dinfo.Mode().Perm() != 0)
+}
+
 func main() {
 	pure()
 	relative()
 	onDisk()
+	tree()
 }

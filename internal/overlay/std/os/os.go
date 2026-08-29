@@ -13,7 +13,9 @@ package os
 
 import (
 	"errors"
+	"io/fs"
 	"syscall/dart"
+	"time"
 )
 
 // Args holds the name of the program and each argument of the command line.
@@ -28,17 +30,26 @@ func args() []string {
 // The Dart side gives no control of the permission. Each function below takes
 // the argument and drops it, thus a Go source compiles the same way with the go
 // command and with gart.
-type FileMode uint32
+type FileMode = fs.FileMode
 
-// The permission bits that a Go program writes most.
+// The bits of a FileMode. Each one comes from the package io/fs.
 const (
-	ModePerm FileMode = 0o777
-	ModeDir  FileMode = 1 << 31
+	ModeDir        = fs.ModeDir
+	ModeAppend     = fs.ModeAppend
+	ModeExclusive  = fs.ModeExclusive
+	ModeTemporary  = fs.ModeTemporary
+	ModeSymlink    = fs.ModeSymlink
+	ModeDevice     = fs.ModeDevice
+	ModeNamedPipe  = fs.ModeNamedPipe
+	ModeSocket     = fs.ModeSocket
+	ModeSetuid     = fs.ModeSetuid
+	ModeSetgid     = fs.ModeSetgid
+	ModeCharDevice = fs.ModeCharDevice
+	ModeSticky     = fs.ModeSticky
+	ModeIrregular  = fs.ModeIrregular
+	ModeType       = fs.ModeType
+	ModePerm       = fs.ModePerm
 )
-
-func (m FileMode) IsDir() bool { return m&ModeDir != 0 }
-
-func (m FileMode) Perm() FileMode { return m & 0o777 }
 
 // The flag set of OpenFile.
 const (
@@ -53,21 +64,13 @@ const (
 
 // ErrNotExist is the error of a path that does not exist. Go compares an error
 // with it through errors.Is.
-var ErrNotExist = errors.New("file does not exist")
+var ErrNotExist = fs.ErrNotExist
 
 // ErrClosed is the error of an operation on a closed file.
-var ErrClosed = errors.New("file already closed")
+var ErrClosed = fs.ErrClosed
 
 // PathError names the operation, the path, and the cause of a failure.
-type PathError struct {
-	Op   string
-	Path string
-	Err  error
-}
-
-func (e *PathError) Error() string { return e.Op + " " + e.Path + ": " + e.Err.Error() }
-
-func (e *PathError) Unwrap() error { return e.Err }
+type PathError = fs.PathError
 
 // pathError builds the error of an operation on a path. It gives nil when the
 // cause is empty.
@@ -327,33 +330,116 @@ func WriteFile(name string, data []byte, perm FileMode) error {
 }
 
 // FileInfo holds the metadata of a path.
-type FileInfo struct {
+type FileInfo = fs.FileInfo
+
+// DirEntry holds 1 member of a directory.
+type DirEntry = fs.DirEntry
+
+// fileStat holds the metadata that the Dart runtime gives.
+//
+// The permission bits reach no operation. Dart names no such bit, thus each
+// file reads 0644 and each directory reads 0755.
+type fileStat struct {
 	name  string
 	size  int64
 	dir   bool
 	nanos int64
 }
 
-func (i FileInfo) Name() string { return i.name }
+func (i *fileStat) Name() string { return i.name }
 
-func (i FileInfo) Size() int64 { return i.size }
+func (i *fileStat) Size() int64 { return i.size }
 
-func (i FileInfo) IsDir() bool { return i.dir }
+func (i *fileStat) IsDir() bool { return i.dir }
+
+func (i *fileStat) Sys() any { return nil }
+
+func (i *fileStat) Mode() FileMode {
+	if i.dir {
+		return ModeDir | 0o755
+	}
+	return 0o644
+}
+
+func (i *fileStat) ModTime() time.Time { return time.Unix(0, i.nanos) }
 
 // ModNanos gives the time of the last change, in nanoseconds since the start of
-// the Unix epoch.
-//
-// Go gives a time.Time from a method named ModTime. This package holds no
-// import of time, because time would then import os.
-func (i FileInfo) ModNanos() int64 { return i.nanos }
+// the Unix epoch. Go holds no such method, and ModTime gives the same instant.
+func (i *fileStat) ModNanos() int64 { return i.nanos }
 
 // Stat reads the metadata of a path.
 func Stat(name string) (FileInfo, error) {
 	size, dir, nanos, cause := dart.Stat(name)
 	if cause != "" {
-		return FileInfo{}, pathError("stat", name, cause)
+		return nil, pathError("stat", name, cause)
 	}
-	return FileInfo{name: base(name), size: size, dir: dir, nanos: nanos}, nil
+	return &fileStat{name: base(name), size: size, dir: dir, nanos: nanos}, nil
+}
+
+// Lstat reads the metadata of a path. Dart follows a symbolic link, thus the
+// result is the result of Stat.
+func Lstat(name string) (FileInfo, error) { return Stat(name) }
+
+// dirEntry holds 1 member of a directory. It reads the metadata only when a
+// caller asks for it.
+type dirEntry struct {
+	dir  string
+	name string
+	stat *fileStat
+}
+
+func (d *dirEntry) Name() string { return d.name }
+
+func (d *dirEntry) IsDir() bool {
+	info, err := d.Info()
+	return err == nil && info.IsDir()
+}
+
+func (d *dirEntry) Type() FileMode {
+	info, err := d.Info()
+	if err != nil {
+		return 0
+	}
+	return info.Mode().Type()
+}
+
+func (d *dirEntry) Info() (FileInfo, error) {
+	if d.stat != nil {
+		return d.stat, nil
+	}
+	path := d.dir
+	if path != "" && path[len(path)-1] != '/' {
+		path += "/"
+	}
+	info, err := Stat(path + d.name)
+	if err != nil {
+		return nil, err
+	}
+	d.stat = info.(*fileStat)
+	return d.stat, nil
+}
+
+// ReadDir gives each member of the directory, ordered by name.
+func ReadDir(name string) ([]DirEntry, error) {
+	names, err := ReadNames(name)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]DirEntry, len(names))
+	for i, n := range names {
+		out[i] = &dirEntry{dir: name, name: n}
+	}
+	return out, nil
+}
+
+// ReadDir gives each member of the directory of the file. A count that is not
+// positive gives each member.
+func (f *File) ReadDir(n int) ([]DirEntry, error) {
+	out, err := ReadDir(f.name)
+	if err != nil || n <= 0 || n >= len(out) {
+		return out, err
+	}
+	return out[:n], nil
 }
 
 // base gives the last part of a path.

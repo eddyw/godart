@@ -421,20 +421,51 @@ func methodKey(name string, sig *types.Signature) string {
 		if sig.Variadic() && i == sig.Params().Len()-1 {
 			b.WriteString("...")
 			if s, ok := types.Unalias(sig.Params().At(i).Type()).(*types.Slice); ok {
-				b.WriteString(types.TypeString(s.Elem(), nil))
+				b.WriteString(keyType(s.Elem()))
 				continue
 			}
 		}
-		b.WriteString(types.TypeString(sig.Params().At(i).Type(), nil))
+		b.WriteString(keyType(sig.Params().At(i).Type()))
 	}
 	b.WriteByte(')')
 	for i := 0; i < sig.Results().Len(); i++ {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(types.TypeString(sig.Results().At(i).Type(), nil))
+		b.WriteString(keyType(sig.Results().At(i).Type()))
 	}
 	return b.String()
+}
+
+// keyType names a type inside a method key.
+//
+// An alias gives the name of the type behind it. 2 packages can hold 2 alias
+// names of 1 type, and Go holds the 2 methods equal, thus the 2 keys must stay
+// equal.
+func keyType(t types.Type) string {
+	return types.TypeString(unaliasDeep(t), nil)
+}
+
+// unaliasDeep replaces each alias of a type, and of the element of a container
+// of it, with the type behind it.
+//
+// An alias inside a struct, inside a signature, or inside a type argument
+// stays. docs/parity.md holds that gap.
+func unaliasDeep(t types.Type) types.Type {
+	switch u := types.Unalias(t).(type) {
+	case *types.Pointer:
+		return types.NewPointer(unaliasDeep(u.Elem()))
+	case *types.Slice:
+		return types.NewSlice(unaliasDeep(u.Elem()))
+	case *types.Array:
+		return types.NewArray(unaliasDeep(u.Elem()), u.Len())
+	case *types.Map:
+		return types.NewMap(unaliasDeep(u.Key()), unaliasDeep(u.Elem()))
+	case *types.Chan:
+		return types.NewChan(u.Dir(), unaliasDeep(u.Elem()))
+	default:
+		return u
+	}
 }
 
 func methodNameList(names []string) string {

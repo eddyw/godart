@@ -3,6 +3,16 @@
 This file lists each place where the Dart output differs from Go. A gap here is
 a known difference. A difference that this file does not list is a bug.
 
+## The name of a method
+
+The method table of a type descriptor holds 1 key for each method. The key names
+the method, each parameter type, and each result type. An alias gives the name
+of the type behind it, because 2 packages can hold 2 alias names of 1 type.
+
+The walk replaces an alias at the top level, and inside a pointer, a slice, an
+array, a map, and a channel. An alias inside a struct, inside a signature, or
+inside a type argument stays, thus 2 such methods reach 2 keys.
+
 ## The reflect subset
 
 The compiler writes a type descriptor for each named type. The descriptor gives
@@ -87,6 +97,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `encoding/json` | Overlay | `Marshal`, `MarshalIndent`, and `Unmarshal`. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native |
+| `io/fs` | Overlay | `FileMode`, `FileInfo`, `DirEntry`, `PathError`, `WalkDirFunc`, `SkipDir`, `SkipAll`, and `ValidPath`. No `FS` interface. |
 | `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. Read below. |
 | `path/filepath` | Overlay | The separator is always `/`. `Walk` and `WalkDir` stay out. Read below. | |
 | `net` | Overlay | TCP, UDP, and a Unix socket. No TLS. Read the section below. |
@@ -220,8 +231,12 @@ point, thus the block analysis of stage 3 stays simple.
 | `File.Seek`, `Close`, `Sync` | Present | Equal |
 | `Stat`, `Remove`, `RemoveAll`, `Rename` | Present | Equal |
 | `Mkdir`, `MkdirAll` | Present | Equal. The permission argument reaches no operation. |
-| `FileInfo.ModTime` | Gives a `time.Time` | `ModNanos` gives an integer. `os` holds no import of `time`. |
-| `ReadDir` | Gives a slice of `DirEntry` | `ReadNames` gives the names. |
+| `FileInfo`, `DirEntry`, `FileMode`, `PathError` | Alias of the type of `io/fs` | Equal |
+| `FileInfo.ModTime` | Gives a `time.Time` | Equal. `ModNanos` also gives the count of nanoseconds. |
+| `FileInfo.Mode` | The permission bits of the system | A directory gives `0755`, and each other file gives `0644`. Dart names no permission bit. |
+| `FileInfo.Sys` | The value of the system | Always nil |
+| `ReadDir`, `File.ReadDir` | Gives a slice of `DirEntry` | Equal. `ReadNames` also gives the names. |
+| `Lstat` | Reads no symbolic link | Reads the link. Dart follows it. |
 | `Stdin`, `Stdout`, `Stderr` | Present | Equal. A read of `Stdin` stops at a newline. |
 | `Getenv`, `LookupEnv`, `Environ` | Present | Equal |
 | `Setenv`, `Unsetenv` | Writes the environment of the process | Writes a map of the overlay. The Dart VM gives no write to the environment of the process, and the subset starts no other process. |
@@ -232,7 +247,7 @@ point, thus the block analysis of stage 3 stays simple.
 | `O_CREATE` | Fails when the file is missing and the flag stays out | Each mode of a write makes the file. Dart holds no open that fails for a missing file. |
 | `Args`, `Exit` | Present | Equal. `Args[0]` is the text `gart`. |
 | `IsNotExist`, `ErrNotExist`, `PathError` | Present | Equal |
-| `FileMode` | Holds the permission bits | The type exists. No operation reads it. |
+| `FileMode` | Holds the permission bits | The type reads each bit. The argument of `Mkdir`, of `WriteFile`, and of `OpenFile` reaches no operation. |
 | `Chmod`, `Chown`, `Symlink`, `Link` | Present | Missing. Dart gives no such call. |
 | `os.Pipe`, `os.StartProcess` | Present | Missing |
 
@@ -262,7 +277,7 @@ Dart names the system only at run time.
 | `IsAbs`, `IsLocal`, `ToSlash`, `FromSlash`, `SplitList`, `VolumeName` | Present | Equal |
 | `Match`, `Abs`, `Rel`, `Glob`, `ErrBadPattern` | Present | Equal |
 | `Separator`, `ListSeparator` | The separator of the system | Always `/` and `:` |
-| `Walk`, `WalkDir`, `SkipDir`, `SkipAll` | Present | Missing. Each one reads `io/fs`, and that package stays outside the surface. |
+| `Walk`, `WalkDir`, `SkipDir`, `SkipAll` | Present | Equal |
 | `EvalSymlinks`, `Localize`, `HasPrefix` | Present | Missing |
 
 ## The network access

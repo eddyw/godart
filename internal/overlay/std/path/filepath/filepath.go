@@ -5,13 +5,11 @@
 // The separator is always `/`. Go selects the separator with a build tag of the
 // operating system, and the emitted Dart names the system only at run time.
 // docs/parity.md holds that gap.
-//
-// The walk of a directory tree stays out. `Walk` and `WalkDir` each read the
-// package io/fs, and that package stays outside the surface.
 package filepath
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path"
 	"strings"
@@ -159,6 +157,105 @@ func Rel(basePath, targPath string) (string, error) {
 		return Clean(out), nil
 	}
 	return targ[t0:], nil
+}
+
+// SkipDir tells a walk to leave the directory that holds the current entry.
+var SkipDir = fs.SkipDir
+
+// SkipAll tells a walk to stop with no error.
+var SkipAll = fs.SkipAll
+
+// WalkFunc runs for each file and each directory of a walk of Walk.
+type WalkFunc func(path string, info fs.FileInfo, err error) error
+
+// WalkDir walks the tree that starts at root, and it runs fn for each file and
+// each directory. It reads no symbolic link.
+func WalkDir(root string, fn fs.WalkDirFunc) error {
+	info, err := os.Lstat(root)
+	if err != nil {
+		err = fn(root, nil, err)
+	} else {
+		err = walkDir(root, fs.FileInfoToDirEntry(info), fn)
+	}
+	if err == SkipDir || err == SkipAll {
+		return nil
+	}
+	return err
+}
+
+func walkDir(name string, d fs.DirEntry, fn fs.WalkDirFunc) error {
+	if err := fn(name, d, nil); err != nil || !d.IsDir() {
+		if err == SkipDir && d.IsDir() {
+			// The walk leaves the directory, thus the caller of this call
+			// continues.
+			return nil
+		}
+		return err
+	}
+	entries, err := os.ReadDir(name)
+	if err != nil {
+		// The read of the directory failed after the first call of fn, thus
+		// the second call names the cause.
+		return fn(name, d, err)
+	}
+	for _, e := range entries {
+		if err := walkDir(Join(name, e.Name()), e, fn); err != nil {
+			if err == SkipDir {
+				break
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+// Walk walks the tree that starts at root, and it runs fn for each file and
+// each directory. It reads the metadata of each entry, thus WalkDir is faster.
+func Walk(root string, fn WalkFunc) error {
+	info, err := os.Lstat(root)
+	if err != nil {
+		err = fn(root, nil, err)
+	} else {
+		err = walk(root, info, fn)
+	}
+	if err == SkipDir || err == SkipAll {
+		return nil
+	}
+	return err
+}
+
+func walk(name string, info fs.FileInfo, fn WalkFunc) error {
+	if !info.IsDir() {
+		return fn(name, info, nil)
+	}
+	err := fn(name, info, nil)
+	if err != nil {
+		if err == SkipDir {
+			return nil
+		}
+		return err
+	}
+	entries, err := os.ReadDir(name)
+	if err != nil {
+		return fn(name, info, err)
+	}
+	for _, e := range entries {
+		child := Join(name, e.Name())
+		childInfo, err := e.Info()
+		if err != nil {
+			if err := fn(child, nil, err); err != nil && err != SkipDir {
+				return err
+			}
+			continue
+		}
+		if err := walk(child, childInfo, fn); err != nil {
+			if err == SkipDir {
+				break
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // Glob gives each path that fits the pattern. It reports no error for a path
