@@ -30,17 +30,39 @@ func (e *Error) Error() string {
 // Package rejects each construct of the files that falls outside the subset.
 // The result joins the errors in source order.
 func Package(fset *token.FileSet, files []*ast.File, info *types.Info) error {
-	v := &verifier{fset: fset, info: info}
+	v := &verifier{fset: fset, info: info, bodyless: bodyless(files, info)}
 	for _, f := range files {
 		ast.Inspect(f, v.visit)
 	}
 	return errors.Join(v.errs...)
 }
 
+// bodyless collects each function of the package that holds no body. An
+// assembly file holds the code of such a function, or a go:linkname directive
+// only exports the name.
+func bodyless(files []*ast.File, info *types.Info) map[types.Object]bool {
+	out := map[types.Object]bool{}
+	for _, f := range files {
+		for _, d := range f.Decls {
+			fn, ok := d.(*ast.FuncDecl)
+			if !ok || fn.Body != nil {
+				continue
+			}
+			if obj := info.Defs[fn.Name]; obj != nil {
+				out[obj] = true
+			}
+		}
+	}
+	return out
+}
+
 type verifier struct {
 	fset *token.FileSet
 	info *types.Info
 	errs []error
+	// bodyless holds each function of the package that holds no body. A call of
+	// one reaches a rejection, and the declaration alone stays in the subset.
+	bodyless map[types.Object]bool
 }
 
 func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any) {
@@ -54,6 +76,7 @@ func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any
 func (v *verifier) visit(n ast.Node) bool {
 	v.checkExported(n)
 	v.checkTypeParamOp(n)
+	v.checkBodyless(n)
 	switch n := n.(type) {
 	case *ast.ImportSpec:
 		v.checkImport(n)
@@ -163,6 +186,22 @@ func (v *verifier) isVariable(e ast.Expr) bool {
 	}
 	_, ok = v.info.Defs[id].(*types.Var)
 	return ok
+}
+
+// checkBodyless rejects a read of a function of the package that holds no body.
+// Such a function reaches no Dart code, thus a call of it would panic.
+func (v *verifier) checkBodyless(n ast.Node) {
+	id, ok := n.(*ast.Ident)
+	if !ok {
+		return
+	}
+	obj := v.info.Uses[id]
+	if obj == nil || !v.bodyless[obj] {
+		return
+	}
+	v.reject(id.Pos(), "an assembly file or a go:linkname directive holds the code",
+		"the function %s holds no body, thus the compiler writes no Dart code for it",
+		id.Name)
 }
 
 func (v *verifier) checkCall(call *ast.CallExpr) {

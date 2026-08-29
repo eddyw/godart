@@ -30,25 +30,30 @@ final class Greeter$ {
   @override
   int get hashCode => Object.hashAll(<Object?>[Name.hashCode, _style.hashCode]);
 
-  void SetStyle(int s) {
-    Greeter$? g = this;
-    g!._style = s;
-  }
+  void SetStyle(int s) => Greeter$SetStyle(this, s);
 
-  GoString Text() {
-    Greeter$? g = this;
-    if ((g!._style == 1)) {
-      return $concat(GoString.fromString('HELLO, '), g!.Name);
-    }
-    return $concat(GoString.fromString('hello, '), g!.Name);
-  }
+  GoString Text() => Greeter$Text(this);
 }
 
 Greeter$? New(GoString name) {
   return Greeter$(name, 0);
 }
 
+void Greeter$SetStyle(Greeter$? g, int s) {
+  g!._style = s;
+}
+
+GoString Greeter$Text(Greeter$? g) {
+  if ((g!._style == 1)) {
+    return $concat(GoString.fromString('HELLO, '), g!.Name);
+  }
+  return $concat(GoString.fromString('hello, '), g!.Name);
+}
+
 GoString Twice(GoString name) {
   Greeter$? g = New(name);
-  return $concat($concat(g!.Text(), GoString.fromString(' ')), g!.Text());
+  return $concat(
+    $concat(Greeter$Text(g), GoString.fromString(' ')),
+    Greeter$Text(g),
+  );
 }

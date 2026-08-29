@@ -276,13 +276,23 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	if sig == nil {
 		return nil
 	}
-	if d.Body == nil {
-		b.fail(d.Pos(), "a function with no body is not supported")
-		return nil
-	}
-	f := &ir.Func{Name: obj.Name(), Obj: obj, Pos: d.Pos(), Async: b.blocks.Blocks(obj)}
+	f := &ir.Func{Name: obj.Name(), Obj: obj, Pos: d.Pos()}
 	b.names = map[types.Object]string{}
 	b.used = map[string]bool{}
+	if d.Body == nil {
+		// An assembly file holds the code of such a function, or a go:linkname
+		// directive only exports the name. The Dart form panics, thus a call
+		// of it gives a clear message and a declaration alone costs nothing.
+		f.NoBody = true
+		f.TypeParams = typeParams(sig.TypeParams())
+		if d.Recv != nil && len(d.Recv.List) > 0 {
+			f.Recv = b.recvVar(d.Recv.List[0], sig)
+		}
+		f.Params = b.varsOf(sig.Params())
+		f.Results = b.results(sig)
+		return f
+	}
+	f.Async = b.blocks.Blocks(obj)
 	b.gotoLabels = gotoTargets(d.Body)
 	b.boxes = b.addressed(d.Body)
 	for v := range b.globalBoxes {

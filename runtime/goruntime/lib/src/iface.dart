@@ -21,6 +21,15 @@ final class FieldDesc {
   );
 }
 
+/// $noRead stands in place of the getter of a field that the emitted Dart
+/// cannot name. A Dart library holds each name that starts with an underscore,
+/// thus another library cannot read an unexported field of a type of that
+/// library.
+Object? $noRead(Object? r) => null;
+
+/// $noWrite stands in place of the setter of such a field.
+void $noWrite(Object? r, Object? v) {}
+
 /// The run time description of a Go type.
 ///
 /// The name holds the full Go name of the type, for example

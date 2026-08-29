@@ -298,9 +298,13 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 	}
 	obj := receiverTypeName(m.Recv.GoType())
 	list := strings.Join(args, ", ")
-	if obj != nil && !isStructType(obj.Type()) {
+	// A method of a named type that is not a struct, and a method with a
+	// pointer receiver, each hold the body in a top level function. Go runs a
+	// method with a nil pointer receiver, and Dart calls no member of null.
+	if obj != nil && (!isStructType(obj.Type()) ||
+		(pointerMethod(m.Obj) && !genericType(obj))) {
 		all := append([]string{e.expr(m.Recv)}, args...)
-		return e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) +
+		return e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) + targs +
 			"(" + strings.Join(all, ", ") + ")"
 	}
 	return fmt.Sprintf("%s.%s%s(%s)", e.deref(m.Recv), methodName(m.Obj), targs, list)
@@ -310,7 +314,8 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 // that moment when the method takes a value receiver.
 func (e *emitter) methodValue(m *ir.Method) string {
 	obj := receiverTypeName(m.Recv.GoType())
-	if obj != nil && !isStructType(obj.Type()) {
+	if obj != nil && (!isStructType(obj.Type()) ||
+		(pointerMethod(m.Obj) && !genericType(obj))) {
 		return e.methodFuncValue(m, obj)
 	}
 	sig, _ := m.Obj.Type().(*types.Signature)
@@ -376,7 +381,11 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 		if isMapType(x.Args[0].GoType()) {
 			return e.expr(x.Args[0]) + ".clear()"
 		}
-		e.fail("clear does not apply to a slice yet")
+		if slice, ok := typeset.Core(x.Args[0].GoType()).(*types.Slice); ok {
+			return fmt.Sprintf("$clearSlice(%s, () => %s)",
+				e.expr(x.Args[0]), e.zero(slice.Elem()))
+		}
+		e.fail("clear does not apply to the type %s", x.Args[0].GoType())
 		return "null"
 	case "mapkeys":
 		return e.expr(x.Args[0]) + ".keys()"
@@ -567,6 +576,12 @@ func (e *emitter) conv(x *ir.Conv) string {
 		return fmt.Sprintf("$bytesToString(%s)", text)
 	case isString(to) && isInteger(from):
 		return fmt.Sprintf("$runeToString(%s)", text)
+	case isArrayType(to) && isSliceType(from):
+		// Go 1.20 converts a slice to an array. It panics when the slice holds
+		// fewer elements than the array.
+		a, _ := typeset.Core(to).(*types.Array)
+		return fmt.Sprintf("$sliceToArray<%s>(%s, %d)",
+			e.dartType(a.Elem()), text, a.Len())
 	case isSliceType(to) && isString(from):
 		if isRuneSlice(to) {
 			return fmt.Sprintf("$stringToRunes(%s)", text)

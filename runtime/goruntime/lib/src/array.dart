@@ -1,9 +1,22 @@
 import 'panic.dart';
+import 'slice.dart';
 
 /// A Go array is a fixed length list with value semantics. The compiler emits
 /// a plain Dart list, and it inserts a copy at each copy point.
 List<T> $makeArray<T>(int n, T Function() zero) =>
     List<T>.generate(n, (_) => zero(), growable: false);
+
+/// Builds an array of the first n elements of a slice. Go panics when the
+/// slice holds fewer than n elements.
+List<T> $sliceToArray<T>(Slice<T> s, int n) {
+  if (s.len < n) {
+    $panic(
+      'runtime error: cannot convert slice with length ${s.len} '
+      'to array or pointer to array with length $n',
+    );
+  }
+  return List<T>.generate(n, (i) => s[i], growable: false);
+}
 
 /// Copies an array. The element copy function is not null for a struct
 /// element and for an array element.

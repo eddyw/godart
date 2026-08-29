@@ -212,7 +212,15 @@ func (e *emitter) writeEqual(class string, st *types.Struct, fields []string) {
 }
 
 // method writes a method of a struct class.
+//
+// A method with a pointer receiver holds its body in a top level function, thus
+// the class holds a call of that function. Go runs such a method with a nil
+// receiver, and Dart calls no member of null.
 func (e *emitter) method(f *ir.Func) {
+	if !e.inClass[f] {
+		e.methodForward(f)
+		return
+	}
 	params := append(e.dictParams(f.TypeParams), e.paramList(f.Params)...)
 	if p := e.frameParam(f.Machine, f.TypeParams); p != "" {
 		params = append(params, p)
@@ -225,6 +233,29 @@ func (e *emitter) method(f *ir.Func) {
 	e.frameOf(f, fmt.Sprintf("%s.%s%s(%s)", frameRecv(f.Recv), name.Package(f.Name),
 		typeArgNames(f.TypeParams),
 		strings.Join(e.frameArgs(f.TypeParams, f.Params), ", ")))
+}
+
+// methodForward writes the member of the class that calls the top level
+// function of a method with a pointer receiver.
+func (e *emitter) methodForward(f *ir.Func) {
+	obj := receiverTypeName(f.Recv.Type)
+	if obj == nil {
+		e.fail("the method %s has no named receiver type", f.Name)
+		return
+	}
+	dicts := e.dictParams(f.TypeParams)
+	params := append(append([]string{}, dicts...), e.paramList(f.Params)...)
+	args := []string{"this"}
+	for _, tp := range f.TypeParams {
+		args = append(args, "$d"+name.Local(tp.Obj().Name()))
+	}
+	for _, p := range f.Params {
+		args = append(args, p.Name)
+	}
+	e.line("%s %s%s(%s) => %s%s(%s);", e.results(f), name.Package(f.Name),
+		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "),
+		methodFuncName(obj.Name(), f.Name), typeArgNames(f.TypeParams),
+		strings.Join(args, ", "))
 }
 
 // frameRecv reads the receiver of a frame. A pointer receiver holds a Dart
@@ -299,17 +330,20 @@ func (e *emitter) methodFunc(f *ir.Func) {
 		e.fail("the method %s has no named receiver type", f.Name)
 		return
 	}
-	params := append([]string{e.dartType(f.Recv.Type) + " " + paramName(f.Recv)}, e.paramList(f.Params)...)
-	if p := e.frameParam(f.Machine, nil); p != "" {
+	params := []string{e.dartType(f.Recv.Type) + " " + paramName(f.Recv)}
+	params = append(params, e.dictParams(f.TypeParams)...)
+	params = append(params, e.paramList(f.Params)...)
+	if p := e.frameParam(f.Machine, f.TypeParams); p != "" {
 		params = append(params, p)
 	}
-	e.line("%s %s(%s) {", e.results(f), methodFuncName(obj.Name(), f.Name),
-		strings.Join(params, ", "))
+	e.line("%s %s%s(%s) {", e.results(f), methodFuncName(obj.Name(), f.Name),
+		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "))
 	e.body(f)
 	e.line("}")
 	e.line("")
-	e.frameOf(f, fmt.Sprintf("%s(%s)", methodFuncName(obj.Name(), f.Name),
-		strings.Join(e.frameArgs(nil, append([]*ir.Var{f.Recv}, f.Params...)), ", ")))
+	args := append([]string{varRead(f.Recv)}, e.frameArgs(f.TypeParams, f.Params)...)
+	e.frameOf(f, fmt.Sprintf("%s%s(%s)", methodFuncName(obj.Name(), f.Name),
+		typeArgNames(f.TypeParams), strings.Join(args, ", ")))
 }
 
 // methodFuncName builds the name of a method that becomes a top level
@@ -408,6 +442,11 @@ func (e *emitter) body(f *ir.Func) {
 	prev := e.typeParams
 	e.typeParams = f.TypeParams
 	defer func() { e.typeParams = prev }()
+	if f.NoBody {
+		e.line("$panic(GoString.fromString(%q));",
+			"the function "+f.Name+" holds no body in the subset")
+		return
+	}
 	if f.Machine != nil {
 		if f.Recv != nil && !e.inClass[f] {
 			e.boxRecv(f.Recv)

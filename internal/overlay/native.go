@@ -37,6 +37,8 @@ var native = []string{
 	"hash/adler32",
 	"hash/crc32",
 	"hash/fnv",
+	"net/netip",
+	"net/url",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

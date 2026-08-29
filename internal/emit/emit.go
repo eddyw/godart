@@ -247,7 +247,11 @@ func (e *emitter) groupMethods(p *ir.Package) {
 					obj := receiverTypeName(d.Recv.Type)
 					if obj != nil && isStructType(obj.Type()) {
 						e.methods[obj] = append(e.methods[obj], d)
-						e.inClass[d] = true
+						// A method with a pointer receiver becomes a top level
+						// function. Go runs such a method with a nil receiver,
+						// and Dart calls no member of null. A method of a
+						// generic type stays a member of its class.
+						e.inClass[d] = !isPointerType(d.Recv.Type) || genericType(obj)
 					}
 				case d.Name == "init":
 					e.initNames[d] = fmt.Sprintf("_init$%d", len(e.inits))

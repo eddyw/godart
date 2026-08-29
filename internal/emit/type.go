@@ -368,6 +368,22 @@ func (e *emitter) qualify(obj types.Object, dartName string) string {
 	return prefix + "." + dartName
 }
 
+// genericType reports whether the named type holds type parameters. A method of
+// such a type stays a member of its class, because a top level function would
+// need the type parameters and the dictionaries of the receiver type.
+func genericType(obj *types.TypeName) bool {
+	named, ok := types.Unalias(obj.Type()).(*types.Named)
+	return ok && named.TypeParams() != nil && named.TypeParams().Len() > 0
+}
+
+// pointerMethod reports whether the declaration of the method holds a pointer
+// receiver. Such a method of a struct type holds its body in a top level
+// function, because Go runs it with a nil receiver.
+func pointerMethod(obj *types.Func) bool {
+	sig, ok := obj.Type().(*types.Signature)
+	return ok && sig.Recv() != nil && isPointerType(sig.Recv().Type())
+}
+
 // isUnsigned64 reports whether the type needs the unsigned helpers. A narrower
 // unsigned type keeps a value that fits in a Dart int with no sign change.
 func isUnsigned64(t types.Type) bool {

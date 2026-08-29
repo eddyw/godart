@@ -136,3 +136,11 @@ Slice<T> $appendSlice<T>(
   }
   return $append(s, add, alloc);
 }
+
+/// Writes the zero value into each element of a slice. The Go builtin clear
+/// does that for a slice.
+void $clearSlice<T>(Slice<T> s, T Function() zero) {
+  for (var i = 0; i < s.len; i++) {
+    s[i] = zero();
+  }
+}

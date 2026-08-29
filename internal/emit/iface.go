@@ -137,14 +137,26 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 	parts := make([]string, st.NumFields())
 	for i := range parts {
 		field := st.Field(i)
-		dart := name.Package(field.Name())
-		parts[i] = fmt.Sprintf(
-			"FieldDesc('%s', %s, %t, () => %s, ($r) => ($r as %s).%s, ($r, $v) => ($r as %s).%s = $v as %s)",
+		parts[i] = fmt.Sprintf("FieldDesc('%s', %s, %t, () => %s, %s)",
 			field.Name(), dartString(st.Tag(i)), field.Exported(),
-			e.descriptorOf(field.Type()), class, dart, class, dart,
-			e.dartType(field.Type()))
+			e.descriptorOf(field.Type()), e.fieldAccess(field, class))
 	}
 	return ", fields: <FieldDesc>[" + strings.Join(parts, ", ") + "]"
+}
+
+// fieldAccess writes the getter and the setter of 1 field.
+//
+// An unexported field of a type of another package reaches no accessor. A Dart
+// library holds each name that starts with an underscore, thus another library
+// cannot name it. The description of an instance of a generic type stands at
+// the point of the use, and that point can lie outside the package of the type.
+func (e *emitter) fieldAccess(field *types.Var, class string) string {
+	if !field.Exported() && field.Pkg() != nil && field.Pkg() != e.pkg {
+		return "$noRead, $noWrite"
+	}
+	dart := name.Package(field.Name())
+	return fmt.Sprintf("($r) => ($r as %s).%s, ($r, $v) => ($r as %s).%s = $v as %s",
+		class, dart, class, dart, e.dartType(field.Type()))
 }
 
 // shortQualifier writes the package name of a type, and not the import path.
@@ -239,6 +251,11 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool
 			recv += "!.v"
 		}
 	}
+	// The Dart form of a pointer to a struct accepts null, thus the cast must
+	// accept it too. Go runs a method with a nil pointer receiver.
+	if pointer && !needsBox(named) && len(sel.Index()) == 1 && topLevelMethod(named, fn) {
+		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(named)))
+	}
 	index := sel.Index()
 	current := types.Type(named)
 	for _, i := range index[:len(index)-1] {
@@ -266,7 +283,7 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool
 		if cast := e.resultCast(sig); cast != "" {
 			call = "(" + call + " as " + cast + ")"
 		}
-	case structOf(current) == nil:
+	case structOf(current) == nil || topLevelMethod(current, fn):
 		owner := receiverTypeName(current)
 		if owner == nil {
 			e.fail("the method %s has no named receiver type", fn.Name())
@@ -281,6 +298,14 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool
 		head += ", " + strings.Join(params, ", ")
 	}
 	return fmt.Sprintf("'%s': (%s) => %s", methodKey(fn.Name(), sig), head, call)
+}
+
+// topLevelMethod reports whether the body of the method stands in a top level
+// function. A method with a pointer receiver on a struct type that holds no
+// type parameter takes that form.
+func topLevelMethod(recv types.Type, fn *types.Func) bool {
+	obj := receiverTypeName(recv)
+	return obj != nil && pointerMethod(fn) && !genericType(obj)
 }
 
 // resultCast gives the Dart type of the result of a method. The dispatch of an

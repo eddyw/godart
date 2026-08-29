@@ -71,6 +71,26 @@ func AppendInt(dst []byte, i int64, base int) []byte {
 	return append(dst, FormatInt(i, base)...)
 }
 
+// AppendUint adds the text of i in the base to dst.
+func AppendUint(dst []byte, i uint64, base int) []byte {
+	return append(dst, FormatUint(i, base)...)
+}
+
+// AppendBool adds "true" or "false" to dst.
+func AppendBool(dst []byte, b bool) []byte {
+	return append(dst, FormatBool(b)...)
+}
+
+// AppendFloat adds the text of f to dst.
+func AppendFloat(dst []byte, f float64, verb byte, precision, bitSize int) []byte {
+	return append(dst, FormatFloat(f, verb, precision, bitSize)...)
+}
+
+// AppendQuote adds the quoted form of s to dst.
+func AppendQuote(dst []byte, s string) []byte {
+	return append(dst, Quote(s)...)
+}
+
 // FormatBool gives "true" or "false".
 func FormatBool(b bool) string {
 	if b {

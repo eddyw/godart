@@ -54,6 +54,11 @@ type Func struct {
 	// TypeParams holds the type parameters of a generic function or of a
 	// generic method. The type parameters of the receiver type stay out.
 	TypeParams []*types.TypeParam
+
+	// NoBody marks a declaration with no body. An assembly file holds the code
+	// of such a function, or a go:linkname directive only exports the name.
+	// The Dart form panics.
+	NoBody bool
 }
 
 // Machine holds the flat state machine of a function that can block.

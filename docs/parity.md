@@ -3,6 +3,21 @@
 This file lists each place where the Dart output differs from Go. A gap here is
 a known difference. A difference that this file does not list is a bug.
 
+## The receiver of a method
+
+The Dart form of a pointer to a struct is the object reference, and that type
+accepts null. Go runs a method with a nil pointer receiver, and Dart calls no
+member of null.
+
+Thus a method with a pointer receiver on a struct type holds its body in a top
+level function, and the class holds a member that calls that function. The
+method table of the type also calls the top level function, thus a nil pointer
+inside an interface reaches the method.
+
+A method of a generic type stays a member of its class. A top level function
+would need the type parameters and the dictionaries of the receiver type. A nil
+receiver of such a method panics.
+
 ## The name of a method
 
 The method table of a type descriptor holds 1 key for each method. The key names
@@ -12,6 +27,12 @@ of the type behind it, because 2 packages can hold 2 alias names of 1 type.
 The walk replaces an alias at the top level, and inside a pointer, a slice, an
 array, a map, and a channel. An alias inside a struct, inside a signature, or
 inside a type argument stays, thus 2 such methods reach 2 keys.
+
+An unexported field of a type of another package reaches no accessor of its
+descriptor. A Dart library holds each name that starts with an underscore. The
+description of an instance of a generic type stands at the point of the use, and
+that point can lie outside the package of the type. `%+v` of such a value writes
+`<nil>` for the field.
 
 ## The reflect subset
 
@@ -63,6 +84,11 @@ The package `fmt` reads it.
 | `new` of a type that is not a struct | Present |
 | A goto label inside a nested block | Present |
 | A conversion between 2 struct types | Rejected |
+| A conversion of a slice to an array, as in `[4]byte(s)` | Present. It panics for a slice that is too short. |
+| The builtin `clear` of a slice | Present |
+| A method with a nil pointer receiver | Present. Such a method holds its body in a top level function. |
+| A method with a pointer receiver on a generic type | The method stays a member of its class, thus a nil receiver panics. |
+| A function declaration with no body | Present. Stage 2 rejects a read of it, and the Dart form panics. |
 | `import _ "unsafe"` | Present. A blank import performs no operation. |
 | A method value of a named type that is not a struct | Present. It writes a closure. |
 | A range loop over a function | Present. Read the section below. |
@@ -118,6 +144,10 @@ reads the real Go source, because that source already stays inside the subset.
 | `hash/adler32` | Native | The real source needs no patch. |
 | `hash/crc32` | Native, with 5 patches | Each patch replaces the file of 1 architecture, thus the table of the portable path runs. |
 | `hash/fnv` | Native | The real source needs no patch. |
+| `net/netip` | Native, with 1 patch | The patch replaces `uint128.go`, which gives the address of a field. |
+| `net/url` | Native | The real source needs no patch. |
+| `unique` | Overlay | `Handle` and `Make`. The map keeps each value, because the subset holds no cleanup. |
+| `internal/godebug` | Overlay | Each setting holds its default, thus `Value` gives an empty text. |
 | `fmt` | Overlay | |
 | `slices` | Overlay | The sort is a stable merge sort. |
 | `sort` | Overlay | `Sort`, `Stable`, `Slice`, `SliceStable`, `Search`, `Find`, and the typed forms. |
