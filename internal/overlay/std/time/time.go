@@ -69,20 +69,26 @@ func Sleep(d Duration) {
 	dart.Sleep(int64(d))
 }
 
-// A Time is a point in time.
+// A Time is a point in time. It holds a count of nanoseconds since the start of
+// the Unix epoch and the location of its wall clock.
+//
+// Go holds a count of seconds since the year 1, thus the zero value of Go is
+// that year. The zero value here is the start of the Unix epoch.
+// docs/parity.md holds that gap.
 type Time struct {
 	nanos int64
+	loc   *Location
 }
 
 // Now gives the time of the clock.
 func Now() Time {
-	return Time{nanos: dart.NowNanos()}
+	return Time{nanos: dart.NowNanos(), loc: Local}
 }
 
 // Unix gives the time of a count of seconds and a count of nanoseconds since
 // the start of the Unix epoch.
 func Unix(sec, nsec int64) Time {
-	return Time{nanos: sec*1000000000 + nsec}
+	return Time{nanos: sec*1000000000 + nsec, loc: Local}
 }
 
 // UnixNano gives the count of nanoseconds since the start of the Unix epoch.
@@ -95,7 +101,7 @@ func (t Time) Unix() int64 { return t.nanos / 1000000000 }
 func (t Time) Sub(u Time) Duration { return Duration(t.nanos - u.nanos) }
 
 // Add gives the time after the duration.
-func (t Time) Add(d Duration) Time { return Time{nanos: t.nanos + int64(d)} }
+func (t Time) Add(d Duration) Time { return Time{nanos: t.nanos + int64(d), loc: t.loc} }
 
 // Before reports whether t comes before u.
 func (t Time) Before(u Time) bool { return t.nanos < u.nanos }
@@ -108,41 +114,166 @@ func (t Time) IsZero() bool { return t.nanos == 0 }
 
 // String gives the text of the time, in the format of Go.
 //
-// The layout is `2006-01-02 15:04:05.999999999 -0700 MST`. Go writes the local
-// zone, thus the offset and the name of the zone come from Dart. Go also writes
-// the reading of the monotonic clock, and a Time of the overlay holds no such
-// reading. `docs/parity.md` holds that gap.
+// Go also writes the reading of the monotonic clock, and a Time of the overlay
+// holds no such reading. docs/parity.md holds that gap.
 func (t Time) String() string {
-	offset, zone := dart.ZoneOffset(t.nanos)
-	local := t.nanos + int64(offset)*1000000000
-	days := floorDiv(local, 86400000000000)
-	rest := local - days*86400000000000
-	year, month, day := civilFromDays(days)
-	out := itoa(year) + "-" + pad(int64(month), 2) + "-" + pad(int64(day), 2) +
-		" " + pad(rest/3600000000000, 2) +
-		":" + pad(rest/60000000000%60, 2) +
-		":" + pad(rest/1000000000%60, 2)
-	if nanos := rest % 1000000000; nanos != 0 {
-		out += "." + trimZeros(pad(nanos, 9))
-	}
-	return out + " " + zoneText(offset) + " " + zone
+	return t.Format("2006-01-02 15:04:05.999999999 -0700 MST")
 }
 
-// zoneText writes the offset of a zone in the format of Go. A zone west of UTC
-// takes a minus sign.
-func zoneText(offset int) string {
-	sign := "+"
-	if offset < 0 {
-		sign = "-"
-		offset = -offset
+// Location gives the location of the wall clock of t. A Time with no location
+// reads UTC.
+func (t Time) Location() *Location {
+	if t.loc == nil {
+		return UTC
 	}
-	return sign + pad(int64(offset/3600), 2) + pad(int64(offset/60%60), 2)
+	return t.loc
+}
+
+// In gives the time with the wall clock of the location. The instant stays
+// equal.
+func (t Time) In(loc *Location) Time {
+	if loc == nil {
+		panic("time: missing Location in call to Time.In")
+	}
+	return Time{nanos: t.nanos, loc: loc}
+}
+
+// locWall gives the name of the zone, the offset in seconds east of UTC, and
+// the reading of the wall clock of the location in nanoseconds.
+func (t Time) locWall() (string, int, int64) {
+	offset, name := t.Location().lookup(t.nanos)
+	return name, offset, t.nanos + int64(offset)*1000000000
+}
+
+// nanosecond gives the count of nanoseconds inside the second of t. A zone
+// offset holds a whole count of seconds, thus the location changes nothing.
+func (t Time) nanosecond() int {
+	return int(floorMod(t.nanos, 1000000000))
+}
+
+// Date gives the Time of a date and a clock in a location. A value outside its
+// range moves into the next unit, exactly as in Go.
+func Date(year int, month Month, day, hour, min, sec, nsec int, loc *Location) Time {
+	if loc == nil {
+		panic("time: missing Location in call to Date")
+	}
+	sec, nsec = norm(sec, nsec, 1000000000)
+	min, sec = norm(min, sec, 60)
+	hour, min = norm(hour, min, 60)
+	day, hour = norm(day, hour, 24)
+	m := int(month) - 1
+	year, m = norm(year, m, 12)
+	month = Month(m) + 1
+
+	wall := daysFromCivil(int64(year), int(month), day)*86400000000000 +
+		int64(hour)*3600000000000 + int64(min)*60000000000 +
+		int64(sec)*1000000000 + int64(nsec)
+	return Time{nanos: wall - int64(loc.offsetOf(wall))*1000000000, loc: loc}
+}
+
+// norm moves a value that stands outside its base into the next unit.
+func norm(hi, lo, base int) (int, int) {
+	if lo < 0 {
+		n := (-lo-1)/base + 1
+		hi -= n
+		lo += n * base
+	}
+	if lo >= base {
+		n := lo / base
+		hi += n
+		lo -= n * base
+	}
+	return hi, lo
+}
+
+// A Month names a month of the year.
+type Month int
+
+const (
+	January Month = 1 + iota
+	February
+	March
+	April
+	May
+	June
+	July
+	August
+	September
+	October
+	November
+	December
+)
+
+var longMonthNames = []string{
+	"January", "February", "March", "April", "May", "June",
+	"July", "August", "September", "October", "November", "December",
+}
+
+// String gives the name of the month in English.
+func (m Month) String() string {
+	if January <= m && m <= December {
+		return longMonthNames[int(m)-1]
+	}
+	return "%!Month(" + itoa(int64(m)) + ")"
+}
+
+// A Weekday names a day of the week.
+type Weekday int
+
+const (
+	Sunday Weekday = iota
+	Monday
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+)
+
+var longDayNames = []string{
+	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+}
+
+// String gives the name of the day in English.
+func (d Weekday) String() string {
+	if Sunday <= d && d <= Saturday {
+		return longDayNames[int(d)]
+	}
+	return "%!Weekday(" + itoa(int64(d)) + ")"
+}
+
+// daysOf gives the count of days since the start of the Unix epoch of a reading
+// of a wall clock.
+func daysOf(wall int64) int64 { return floorDiv(wall, 86400000000000) }
+
+// dateOf gives the year, the month, and the day of a reading of a wall clock.
+func dateOf(wall int64) (int, Month, int) { return civilFromDays(daysOf(wall)) }
+
+// clockOf gives the hour, the minute, and the second of a reading of a wall
+// clock.
+func clockOf(wall int64) (int, int, int) {
+	rest := wall - daysOf(wall)*86400000000000
+	return int(rest / 3600000000000), int(rest / 60000000000 % 60), int(rest / 1000000000 % 60)
+}
+
+// weekdayOf gives the day of the week of a reading of a wall clock. January 1
+// of 1970 was a Thursday.
+func weekdayOf(wall int64) Weekday {
+	return Weekday(floorMod(daysOf(wall)+4, 7))
+}
+
+// yearDayOf gives the day of the year of a reading of a wall clock. January 1
+// gives 1.
+func yearDayOf(wall int64) int {
+	days := daysOf(wall)
+	year, _, _ := civilFromDays(days)
+	return int(days-daysFromCivil(int64(year), 1, 1)) + 1
 }
 
 // civilFromDays gives the year, the month, and the day of a count of days since
-// the start of the Unix epoch. The algorithm holds for each proleptic Gregorian
-// date.
-func civilFromDays(days int64) (int64, int, int) {
+// the start of the Unix epoch. The algorithm of Howard Hinnant holds for each
+// proleptic Gregorian date.
+func civilFromDays(days int64) (int, Month, int) {
 	days += 719468
 	era := floorDiv(days, 146097)
 	dayOfEra := days - era*146097
@@ -158,7 +289,23 @@ func civilFromDays(days int64) (int64, int, int) {
 	if month <= 2 {
 		year++
 	}
-	return year, int(month), int(day)
+	return int(year), Month(month), int(day)
+}
+
+// daysFromCivil gives the count of days since the start of the Unix epoch of a
+// year, a month, and a day. It is the other direction of civilFromDays, and a
+// day outside the month stays correct, because the formula adds it.
+func daysFromCivil(year int64, month, day int) int64 {
+	shifted := int64(month - 3)
+	if month <= 2 {
+		year--
+		shifted = int64(month + 9)
+	}
+	era := floorDiv(year, 400)
+	yearOfEra := year - era*400
+	dayOfYear := (153*shifted+2)/5 + int64(day) - 1
+	dayOfEra := yearOfEra*365 + yearOfEra/4 - yearOfEra/100 + dayOfYear
+	return era*146097 + dayOfEra - 719468
 }
 
 // floorDiv divides and rounds toward minus infinity. The division of Go rounds
@@ -171,14 +318,8 @@ func floorDiv(a, b int64) int64 {
 	return q
 }
 
-// pad writes a value with a minimum count of digits.
-func pad(v int64, width int) string {
-	out := itoa(v)
-	for len(out) < width {
-		out = "0" + out
-	}
-	return out
-}
+// floorMod gives the remainder of a division that rounds toward minus infinity.
+func floorMod(a, b int64) int64 { return a - floorDiv(a, b)*b }
 
 // trimZeros removes each trailing zero of the digits after the point.
 func trimZeros(digits string) string {
