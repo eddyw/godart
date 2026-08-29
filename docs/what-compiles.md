@@ -9,7 +9,7 @@ build of a program that imports the package.
 
 ## The import surface
 
-51 packages of the standard library reach the surface. Stage 2 rejects an import
+53 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
@@ -18,7 +18,8 @@ of each other package with a source position.
 | `container/heap`, `container/list`, `container/ring` | `net/http` |
 | `context`, `errors`, `flag`, `fmt`, `log` | `os/exec`, `os/signal` |
 | `encoding/ascii85`, `encoding/base64`, `encoding/csv` | `encoding/binary`, `encoding/xml`, `encoding/gob` |
-| `encoding/hex`, `encoding/json` | `crypto/...`, `compress/...`, `archive/...` |
+| `encoding/hex`, `encoding/json` | `crypto/tls`, `crypto/rand`, `compress/...` |
+| `crypto/md5`, `crypto/sha256` | `archive/...` |
 | `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `text/template`, `html/template`, `text/tabwriter` |
 | `io`, `io/fs`, `iter`, `maps`, `slices`, `sort` | `embed`, `database/sql` |
 | `math`, `math/bits`, `math/rand`, `math/rand/v2` | `math/cmplx`, `go/...` |
