@@ -238,12 +238,30 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 		}
 	case len(spec.Values) == len(vars):
 		for i, v := range vars {
+			b.startInit(spec.Values[i])
 			out = append(out, &ir.Global{Var: v, Init: b.copyPoint(b.exprAs(spec.Values[i], v.Type))})
 		}
 	default:
 		b.fail(spec.Pos(), "a package variable with multiple results is not supported yet")
 	}
 	return out
+}
+
+// startInit gives the builder a fresh set of local names for the initializer of
+// a package variable. A function literal inside such an initializer declares
+// locals, and each declaration reads those maps.
+func (b *builder) startInit(e ast.Expr) {
+	b.names = map[types.Object]string{}
+	b.used = map[string]bool{}
+	b.gotoLabels = nil
+	b.boxes = b.addressed(e)
+	for v := range b.globalBoxes {
+		b.boxes[v] = true
+	}
+	b.retFlag = ""
+	b.retVars = nil
+	b.branchFlags = nil
+	b.fn = nil
 }
 
 func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {

@@ -96,12 +96,21 @@ reads the real Go source, because that source already stays inside the subset.
 | `math/rand` | Native, with 1 patch | The patch replaces `rand.go`. `rng.go` holds the algorithm, thus a seeded sequence stays equal. |
 | `math/rand/v2` | Native, with 1 patch | The patch replaces `rand.go`. `pcg.go` and `chacha8.go` hold the 2 algorithms. |
 | `internal/chacha8rand` | Native, with 2 patches | The 2 patches replace the assembly of `block` and the 2 views of 1 memory block. |
+| `container/heap` | Native | The real source needs no patch. |
+| `container/ring` | Native | The real source needs no patch. |
+| `encoding/ascii85` | Native | The real source needs no patch. |
+| `encoding/csv` | Native | The real source needs no patch. |
+| `encoding/hex` | Native | The real source needs no patch. |
+| `hash` | Native | The 4 interfaces that each hash package holds. |
+| `hash/adler32` | Native | The real source needs no patch. |
+| `hash/crc32` | Native, with 5 patches | Each patch replaces the file of 1 architecture, thus the table of the portable path runs. |
+| `hash/fnv` | Native | The real source needs no patch. |
 | `fmt` | Overlay | |
 | `slices` | Overlay | The sort is a stable merge sort. |
 | `sort` | Overlay | `Sort`, `Stable`, `Slice`, `SliceStable`, `Search`, `Find`, and the typed forms. |
 | `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. `ParseInt` and `ParseUint` each read a base of 0. |
 | `strings` | Overlay | |
-| `sync` | Overlay | |
+| `sync` | Overlay | `Mutex`, `RWMutex`, `WaitGroup`, `Once`, `OnceFunc`, `OnceValue`, `OnceValues`, and `Pool`. |
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |
 | `testing` | Overlay | |
 | `sync/atomic` | Overlay | `Value` and `Int32` only. Read the section below. |

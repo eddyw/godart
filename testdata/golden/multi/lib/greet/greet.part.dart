@@ -31,12 +31,12 @@ final class Greeter$ {
   int get hashCode => Object.hashAll(<Object?>[Name.hashCode, _style.hashCode]);
 
   void SetStyle(int s) {
-    final Greeter$? g = this;
+    Greeter$? g = this;
     g!._style = s;
   }
 
   GoString Text() {
-    final Greeter$? g = this;
+    Greeter$? g = this;
     if ((g!._style == 1)) {
       return $concat(GoString.fromString('HELLO, '), g!.Name);
     }

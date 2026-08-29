@@ -107,6 +107,35 @@ func (o *Once) Do(f func()) {
 	f()
 }
 
+// OnceFunc gives a function that runs f 1 time. Each later call performs no
+// operation.
+func OnceFunc(f func()) func() {
+	var once Once
+	return func() { once.Do(f) }
+}
+
+// OnceValue gives a function that runs f 1 time and holds its result. Each
+// later call gives the held result again.
+func OnceValue[T any](f func() T) func() T {
+	var once Once
+	var out T
+	return func() T {
+		once.Do(func() { out = f() })
+		return out
+	}
+}
+
+// OnceValues gives a function that runs f 1 time and holds its 2 results.
+func OnceValues[T1, T2 any](f func() (T1, T2)) func() (T1, T2) {
+	var once Once
+	var a T1
+	var b T2
+	return func() (T1, T2) {
+		once.Do(func() { a, b = f() })
+		return a, b
+	}
+}
+
 // Pool holds a set of values that a caller reuses.
 //
 // All Go code runs in 1 Dart isolate, thus the pool needs no lock. Go may drop

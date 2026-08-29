@@ -51,6 +51,16 @@ func IndexByte(s string, c byte) int {
 	return -1
 }
 
+// LastIndexByte gives the position of the last c in s, or -1.
+func LastIndexByte(s string, c byte) int {
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == c {
+			return i
+		}
+	}
+	return -1
+}
+
 // Contains reports whether substr is inside s.
 // Compare gives a negative value, 0, or a positive value. It orders by byte.
 //

@@ -13,7 +13,7 @@ import (
 // The Dart form of a pointer to a struct is the object of the struct, and
 // another pointer needs a box. A variable of this set holds a box, thus each
 // read of it reads the field of the box.
-func (b *builder) addressed(body *ast.BlockStmt) map[*types.Var]bool {
+func (b *builder) addressed(body ast.Node) map[*types.Var]bool {
 	out := map[*types.Var]bool{}
 	b.markAddressed(body, out, false)
 	return out

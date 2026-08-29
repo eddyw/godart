@@ -263,17 +263,13 @@ func (e *emitter) receiver(f *ir.Func) {
 	if f.Recv == nil {
 		return
 	}
-	// A machine writes the receiver into its frame, thus the name takes a new
-	// value on each resume.
-	keyword := "final "
-	if f.Machine != nil {
-		keyword = ""
-	}
+	// The name takes no `final` keyword. A method of Go can write its own
+	// receiver, and `container/ring` holds such a method.
 	if isPointerType(f.Recv.Type) {
-		e.line("%s%s %s = this;", keyword, e.dartType(f.Recv.Type), f.Recv.Name)
+		e.line("%s %s = this;", e.dartType(f.Recv.Type), f.Recv.Name)
 		return
 	}
-	e.line("%s%s %s = this.$copy();", keyword, e.dartType(f.Recv.Type), f.Recv.Name)
+	e.line("%s %s = this.$copy();", e.dartType(f.Recv.Type), f.Recv.Name)
 }
 
 func (e *emitter) funcDecl(f *ir.Func) {
@@ -409,6 +405,9 @@ func (e *emitter) resultText(results []*ir.Var) string {
 // body writes the statements of a function. A named result becomes a local
 // variable that holds the zero value until a return statement writes it.
 func (e *emitter) body(f *ir.Func) {
+	prev := e.typeParams
+	e.typeParams = f.TypeParams
+	defer func() { e.typeParams = prev }()
 	if f.Machine != nil {
 		if f.Recv != nil && !e.inClass[f] {
 			e.boxRecv(f.Recv)

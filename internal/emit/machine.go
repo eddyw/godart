@@ -140,8 +140,13 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	if fnType != "" {
 		w("late %s $fn;", fnType)
 	}
-	for _, tp := range tps {
-		w("late Dict<%s> $d%s;", e.dartType(tp), name.Local(tp.Obj().Name()))
+	// A local function reads the dictionary of the enclosing function through
+	// its closure, thus its frame holds no dictionary. The field $fn marks
+	// such a frame.
+	if fnType == "" {
+		for _, tp := range tps {
+			w("late Dict<%s> $d%s;", e.dartType(tp), name.Local(tp.Obj().Name()))
+		}
 	}
 	for _, v := range m.Locals {
 		w("late %s %s;", e.fieldType(v), v.Name)
@@ -292,9 +297,12 @@ func (e *emitter) machineSave(f *ir.Func, fn string) {
 	if fn != "" {
 		e.line("..$fn = %s", fn)
 	}
-	for _, tp := range tps {
-		n := name.Local(tp.Obj().Name())
-		e.line("..$d%s = $d%s", n, n)
+	// The frame of a local function holds no dictionary. Read writeFrameClass.
+	if fn == "" {
+		for _, tp := range tps {
+			n := name.Local(tp.Obj().Name())
+			e.line("..$d%s = $d%s", n, n)
+		}
 	}
 	for _, v := range m.Locals {
 		e.line("..%s = %s", v.Name, v.Name)
@@ -404,17 +412,22 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 	prevNames := e.renames
 	e.renames = e.withRenames(e.captureRenames(lit.Captured))
 	defer func() { e.renames = prevNames }()
+	// The frame class stands at package level, thus it takes the type
+	// parameters of the enclosing function. A local of the literal can hold a
+	// value of such a parameter.
+	tps := e.typeParams
 	params := e.paramList(lit.Params)
-	if p := e.frameParam(m, nil); p != "" {
+	if p := e.frameParam(m, tps); p != "" {
 		params = append(params, p)
 	}
 	result := e.resultText(lit.Results)
 	e.line("%s %s(%s) {", result, s.Name, strings.Join(params, ", "))
 	inner := &ir.Func{
-		Params:  lit.Params,
-		Results: lit.Results,
-		Body:    lit.Body,
-		Machine: m,
+		Params:     lit.Params,
+		Results:    lit.Results,
+		Body:       lit.Body,
+		Machine:    m,
+		TypeParams: tps,
 	}
 	e.machineBody(inner, s.Name)
 	e.line("}")
@@ -422,13 +435,14 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 	for i, p := range lit.Params {
 		types[i] = e.dartType(p.Type)
 	}
+	frame := e.frameType(m, tps)
 	fnType := fmt.Sprintf("%s Function(%s, [%s?])", result,
-		strings.Join(types, ", "), m.Class)
+		strings.Join(types, ", "), frame)
 	if len(types) == 0 {
-		fnType = fmt.Sprintf("%s Function([%s?])", result, m.Class)
+		fnType = fmt.Sprintf("%s Function([%s?])", result, frame)
 	}
 	invoke := fmt.Sprintf("$fn(%s)", strings.Join(e.frameArgs(nil, lit.Params), ", "))
-	e.writeFrameClass(m, nil, fnType, invoke, len(lit.Results) > 0)
+	e.writeFrameClass(m, tps, fnType, invoke, len(lit.Results) > 0)
 }
 
 // selectBind writes the value and the flag of a receive case of a select

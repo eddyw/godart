@@ -136,6 +136,10 @@ type emitter struct {
 	// frames holds the class of each frame that the file still needs. Dart
 	// holds no class inside a function, thus each one waits for package level.
 	frames []string
+	// typeParams holds the type parameters of the function that the emitter
+	// writes. The frame class of a literal of that function names them, because
+	// the class stands at package level.
+	typeParams []*types.TypeParam
 }
 
 // flushFrames writes the class of each frame that a declaration made.

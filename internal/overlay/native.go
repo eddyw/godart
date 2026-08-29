@@ -28,6 +28,15 @@ var native = []string{
 	"math/rand/v2",
 	"internal/chacha8rand",
 	"unicode",
+	"container/heap",
+	"container/ring",
+	"encoding/ascii85",
+	"encoding/csv",
+	"encoding/hex",
+	"hash",
+	"hash/adler32",
+	"hash/crc32",
+	"hash/fnv",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from
