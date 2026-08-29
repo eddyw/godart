@@ -208,6 +208,7 @@ point, thus the block analysis of stage 3 stays simple.
 | `ReadDir` | Gives a slice of `DirEntry` | `ReadNames` gives the names. |
 | `Stdin`, `Stdout`, `Stderr` | Present | Equal. A read of `Stdin` stops at a newline. |
 | `Getenv`, `LookupEnv`, `Environ` | Present | Equal |
+| `Setenv`, `Unsetenv` | Writes the environment of the process | Writes a map of the overlay. The Dart VM gives no write to the environment of the process, and the subset starts no other process. |
 | `Getwd`, `Chdir`, `TempDir` | Present | Equal |
 | `CreateTemp`, `MkdirTemp` | A random name | Equal, with a counter and the clock in place of the random part. |
 | `File.ReadAt` | Present | Equal. The call reads the position first and writes it again. |
@@ -483,7 +484,9 @@ for each test binary. The output holds the format of `go test`.
 | A fuzz target | Runs the seed corpus | Reported as a skipped test |
 | An example with an output comment | Runs and compares the output | Reported as a skipped test |
 | `t.TempDir` | A new directory for the test | Equal. The cleanup of the test removes it. |
-| `t.Setenv`, `t.Context` | Present | Missing |
+| `t.Setenv` | Writes the environment for the test | Equal. It writes the map of the `os` overlay, and the cleanup writes the value of the start again. |
+| `t.Context` | A context that a cancel closes in front of the cleanups | Equal |
+| `testing.TB` | Holds `Setenv` and `Context` | Holds neither. `B` and `F` give no such method. |
 | `testing.Benchmark` | Gives a BenchmarkResult | Equal. The field T holds a count of nanoseconds, and not a `time.Duration`. |
 | `-bench`, `-benchtime`, `-benchcount` | Present | Present. `-benchtime 100x` becomes `-benchcount 100`. |
 | `-benchmem` | Present | Missing. Read the row of `b.ReportAllocs`. |

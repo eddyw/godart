@@ -9,7 +9,9 @@
 package testing
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"syscall/dart"
@@ -83,6 +85,8 @@ type T struct {
 	skipped  bool
 	logs     []string
 	cleanups []func()
+	ctx      context.Context
+	cancel   context.CancelFunc
 	// report holds the result line of each subtest, and of the subtests of a
 	// subtest. Go writes them after the line of the parent.
 	report []string
@@ -103,6 +107,34 @@ func (t *T) Helper() {}
 func (t *T) Parallel() {}
 
 func (t *T) Cleanup(f func()) { t.cleanups = append(t.cleanups, f) }
+
+// Context gives a context that the harness cancels in front of the cleanups of
+// the test.
+func (t *T) Context() context.Context {
+	if t.ctx == nil {
+		t.ctx, t.cancel = context.WithCancel(context.Background())
+	}
+	return t.ctx
+}
+
+// Setenv writes 1 variable of the environment for the test. The cleanup writes
+// the value of the start again.
+//
+// The Dart VM gives no write to the environment of the process. The os overlay
+// holds a map of its own, thus the write reaches each reader of the program.
+func (t *T) Setenv(name, value string) {
+	prev, held := os.LookupEnv(name)
+	if cause := os.Setenv(name, value); cause != nil {
+		t.Fatal("Setenv: " + cause.Error())
+	}
+	t.Cleanup(func() {
+		if held {
+			os.Setenv(name, prev)
+			return
+		}
+		os.Unsetenv(name)
+	})
+}
 
 // tempSeq numbers each temporary directory of the binary.
 var tempSeq int
@@ -352,6 +384,9 @@ func runOne(t *T, call func()) {
 	parent := current
 	current = t
 	dart.Catch(call)
+	if t.cancel != nil {
+		t.cancel()
+	}
 	for i := len(t.cleanups) - 1; i >= 0; i-- {
 		dart.Catch(t.cleanups[i])
 	}
