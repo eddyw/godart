@@ -138,6 +138,16 @@ func (t Time) In(loc *Location) Time {
 	return Time{nanos: t.nanos, loc: loc}
 }
 
+// UTC gives t with the location UTC.
+func (t Time) UTC() Time { return t.In(UTC) }
+
+// Local gives t with the location of the system.
+func (t Time) Local() Time { return t.In(Local) }
+
+// Equal reports whether t and u name the same instant. The location of each
+// one changes nothing.
+func (t Time) Equal(u Time) bool { return t.nanos == u.nanos }
+
 // locWall gives the name of the zone, the offset in seconds east of UTC, and
 // the reading of the wall clock of the location in nanoseconds.
 func (t Time) locWall() (string, int, int64) {
@@ -230,6 +240,12 @@ const (
 	Saturday
 )
 
+// shortMonthNames holds the name of each month of 3 letters. Parse reads it.
+var shortMonthNames = []string{
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+}
+
 var longDayNames = []string{
 	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
 }
@@ -240,6 +256,58 @@ func (d Weekday) String() string {
 		return longDayNames[int(d)]
 	}
 	return "%!Weekday(" + itoa(int64(d)) + ")"
+}
+
+// Year gives the year of t in its location.
+func (t Time) Year() int { year, _, _ := t.Date(); return year }
+
+// Month gives the month of the year of t in its location.
+func (t Time) Month() Month { _, month, _ := t.Date(); return month }
+
+// Day gives the day of the month of t in its location.
+func (t Time) Day() int { _, _, day := t.Date(); return day }
+
+// Date gives the year, the month, and the day of the month of t in its
+// location.
+func (t Time) Date() (int, Month, int) {
+	_, _, wall := t.locWall()
+	return dateOf(wall)
+}
+
+// Hour gives the hour of the day of t in its location. The range is 0 to 23.
+func (t Time) Hour() int { hour, _, _ := t.Clock(); return hour }
+
+// Minute gives the minute of the hour of t in its location.
+func (t Time) Minute() int { _, min, _ := t.Clock(); return min }
+
+// Second gives the second of the minute of t in its location.
+func (t Time) Second() int { _, _, sec := t.Clock(); return sec }
+
+// Clock gives the hour, the minute, and the second of t in its location.
+func (t Time) Clock() (int, int, int) {
+	_, _, wall := t.locWall()
+	return clockOf(wall)
+}
+
+// Nanosecond gives the count of nanoseconds inside the second of t.
+func (t Time) Nanosecond() int { return t.nanosecond() }
+
+// Weekday gives the day of the week of t in its location.
+func (t Time) Weekday() Weekday {
+	_, _, wall := t.locWall()
+	return weekdayOf(wall)
+}
+
+// YearDay gives the day of the year of t in its location. January 1 gives 1.
+func (t Time) YearDay() int {
+	_, _, wall := t.locWall()
+	return yearDayOf(wall)
+}
+
+// shortDayNames holds the name of each day of the week of 3 letters. Parse
+// reads it.
+var shortDayNames = []string{
+	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
 }
 
 // daysOf gives the count of days since the start of the Unix epoch of a reading

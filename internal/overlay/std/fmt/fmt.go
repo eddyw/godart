@@ -222,21 +222,33 @@ func isDigit(c byte) bool {
 	return c >= '0' && c <= '9'
 }
 
-// pad gives the text the width of the verb. The flag `-` puts the space after
-// the text.
+// pad gives the text the width of the verb. The flag `-` puts the fill after
+// the text, and the flag `0` writes a zero in place of each space.
 func pad(text string, width int, verb string) string {
 	n := width - runeCount(text)
 	if n <= 0 {
 		return text
 	}
-	space := ""
-	for range n {
-		space += " "
-	}
 	if contains(verb, '-') {
-		return text + space
+		return text + fill(n, ' ')
 	}
-	return space + text
+	if contains(verb, '0') {
+		// The sign stands in front of the zeros.
+		sign := ""
+		if len(text) > 0 && (text[0] == '-' || text[0] == '+') {
+			sign, text = text[:1], text[1:]
+		}
+		return sign + fill(n, '0') + text
+	}
+	return fill(n, ' ') + text
+}
+
+func fill(n int, c byte) string {
+	out := ""
+	for range n {
+		out += string(rune(c))
+	}
+	return out
 }
 
 func runeCount(text string) int {

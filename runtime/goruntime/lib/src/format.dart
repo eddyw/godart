@@ -268,6 +268,28 @@ int _precision(String verb) {
   return out;
 }
 
+/// _sign writes the flag + in front of a value that is not negative. Go writes
+/// that flag for a numeric verb only, and not for the verb v.
+String _sign(String text, bool plus, String letter) {
+  if (!plus || text.startsWith('-')) return text;
+  switch (letter) {
+    case 'd':
+    case 'x':
+    case 'X':
+    case 'o':
+    case 'O':
+    case 'b':
+    case 'e':
+    case 'E':
+    case 'f':
+    case 'F':
+    case 'g':
+    case 'G':
+      return '+$text';
+  }
+  return text;
+}
+
 String _value(Object? v, TypeDesc type, String verb) {
   final bool plus = verb.contains('+');
   final String letter = verb.substring(verb.length - 1);
@@ -283,16 +305,15 @@ String _value(Object? v, TypeDesc type, String verb) {
       return _string(v as GoString, letter);
     case 'float32':
     case 'float64':
-      return _float(
-        v as double,
+      return _sign(
+        _float(v as double, letter, _precision(verb), type.kind == 'float32'),
+        plus,
         letter,
-        _precision(verb),
-        type.kind == 'float32',
       );
     case 'uint':
     case 'uint64':
     case 'uintptr':
-      return _int(v as int, letter, true);
+      return _sign(_int(v as int, letter, true), plus, letter);
     case 'int':
     case 'int8':
     case 'int16':
@@ -301,7 +322,7 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'uint8':
     case 'uint16':
     case 'uint32':
-      return _int(v as int, letter, false);
+      return _sign(_int(v as int, letter, false), plus, letter);
     case 'slice':
       return _slice(v, type, verb, plus);
     case 'array':

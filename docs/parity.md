@@ -307,10 +307,18 @@ from Dart at each instant.
 | `Time.Format` | Present | Equal. The scanner holds each chunk of a layout, and the 19 layout constants are present. |
 | `Date`, `Month`, `Weekday`, and the name of each | Present | Equal |
 | `Time.In`, `Time.Location` | Present | Present |
-| `UTC`, `Local` | 2 of the locations of the zone database | The only 2 locations. `FixedZone` and `LoadLocation` stay out. |
-| `Time.Year`, `Month`, `Day`, `Hour`, `Weekday` | Present | Missing. `Format` reads the calendar, and no exported method does. |
-| `Time.Parse`, `ParseDuration`, `Truncate`, `Round`, `Equal` | Present | Missing |
+| `UTC`, `Local` | 2 of the locations of the zone database | The only 2 named locations. `LoadLocation` stays out. |
+| `FixedZone` | Present | Present. `Parse` builds one for an offset that `Local` does not hold. |
+| `Time.Year`, `Month`, `Day`, `Date`, `Hour`, `Minute`, `Second`, `Clock`, `Nanosecond`, `Weekday`, `YearDay` | Present | Equal |
+| `Time.UTC`, `Time.Local`, `Time.Equal` | Present | Equal |
+| `Time.Parse`, `ParseInLocation`, `ParseError` | Present | Equal. Read below. |
+| `ParseDuration`, `Truncate`, `Round` | Present | Missing |
 | The zero value of `Time` | January 1 of the year 1 | The start of the Unix epoch. A Time holds 1 count of nanoseconds, thus the range is the year 1678 to the year 2262. |
+
+`Parse` reads each chunk of the layout that `Format` writes, and it gives a
+`*ParseError` with the text of Go. A layout that names no year gives the year 0,
+and that year stands outside the range of the overlay. Such a value wraps. Give
+the layout a year, or read the clock of the result only.
 
 A Go `Time` of `time.Now` also holds a reading of the monotonic clock, and
 `String` writes it as ` m=+1.234567890`. A `Time` of the overlay holds no such
@@ -694,8 +702,6 @@ Gaps of the standard library surface:
 | Item | State |
 |---|---|
 | `sync.RWMutex` | A read lock is equal to a write lock. The single isolate gives no parallel read. |
-| `time.Time.Parse` | Missing. `Format` and `Date` are present. |
-| `time.Time.Year`, `Month`, `Day`, `Hour`, `Weekday` | Missing. `Format` reads the calendar. |
 | `strconv.Unquote` | Missing |
 | `strings.Title` | Missing. Go deprecated it. |
 | `sort.Sort` with an interface | Missing. Use `sort.Slice`. |
@@ -704,7 +710,7 @@ Gaps of the standard library surface:
 
 The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
 `%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.
-The flag `-` works.
+The flags `-`, `0`, and `+` work.
 
 A Dart double holds a `float32` with the precision of 64 bits. `%v` and `%g`
 write the shortest decimal text that reads back as the same 32-bit value, thus
