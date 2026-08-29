@@ -245,8 +245,9 @@ func (e *emitter) methodForward(f *ir.Func) {
 	}
 	dicts := e.dictParams(f.TypeParams)
 	params := append(append([]string{}, dicts...), e.paramList(f.Params)...)
+	recv := recvTypeParams(obj)
 	args := []string{"this"}
-	for _, tp := range f.TypeParams {
+	for _, tp := range append(append([]*types.TypeParam{}, recv...), f.TypeParams...) {
 		args = append(args, "$d"+name.Local(tp.Obj().Name()))
 	}
 	for _, p := range f.Params {
@@ -254,7 +255,8 @@ func (e *emitter) methodForward(f *ir.Func) {
 	}
 	e.line("%s %s%s(%s) => %s%s(%s);", e.results(f), name.Package(f.Name),
 		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "),
-		methodFuncName(obj.Name(), f.Name), typeArgNames(f.TypeParams),
+		methodFuncName(obj.Name(), f.Name),
+		typeArgNames(append(append([]*types.TypeParam{}, recv...), f.TypeParams...)),
 		strings.Join(args, ", "))
 }
 
@@ -270,10 +272,17 @@ func frameRecv(v *ir.Var) string {
 
 // frameOf writes the frame class of a function that can block.
 func (e *emitter) frameOf(f *ir.Func, invoke string) {
+	e.frameOfWith(f, f.TypeParams, invoke)
+}
+
+// frameOfWith writes the frame class with an explicit list of type parameters.
+// The class of a method that stands in a top level function also names the type
+// parameters of the receiver type.
+func (e *emitter) frameOfWith(f *ir.Func, tps []*types.TypeParam, invoke string) {
 	if f.Machine == nil || !f.Machine.Blocking {
 		return
 	}
-	e.writeFrameClass(f.Machine, f.TypeParams, "", invoke, len(f.Results) > 0)
+	e.writeFrameClass(f.Machine, tps, "", invoke, len(f.Results) > 0)
 }
 
 // typeArgNames writes the type arguments of a call to a generic function.
@@ -330,20 +339,27 @@ func (e *emitter) methodFunc(f *ir.Func) {
 		e.fail("the method %s has no named receiver type", f.Name)
 		return
 	}
+	// The function names the type parameters of the receiver type first. The
+	// body reads the dictionary of each one, and the class of the receiver
+	// holds no such name at top level.
+	all := append(recvTypeParams(obj), f.TypeParams...)
 	params := []string{e.dartType(f.Recv.Type) + " " + paramName(f.Recv)}
-	params = append(params, e.dictParams(f.TypeParams)...)
+	params = append(params, e.dictParams(all)...)
 	params = append(params, e.paramList(f.Params)...)
-	if p := e.frameParam(f.Machine, f.TypeParams); p != "" {
+	if p := e.frameParam(f.Machine, all); p != "" {
 		params = append(params, p)
 	}
+	prev := e.typeParams
+	e.typeParams = all
 	e.line("%s %s%s(%s) {", e.results(f), methodFuncName(obj.Name(), f.Name),
-		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "))
+		e.typeParamDecl(all), strings.Join(params, ", "))
 	e.body(f)
 	e.line("}")
 	e.line("")
-	args := append([]string{varRead(f.Recv)}, e.frameArgs(f.TypeParams, f.Params)...)
-	e.frameOf(f, fmt.Sprintf("%s%s(%s)", methodFuncName(obj.Name(), f.Name),
-		typeArgNames(f.TypeParams), strings.Join(args, ", ")))
+	e.typeParams = prev
+	args := append([]string{varRead(f.Recv)}, e.frameArgs(all, f.Params)...)
+	e.frameOfWith(f, all, fmt.Sprintf("%s%s(%s)", methodFuncName(obj.Name(), f.Name),
+		typeArgNames(all), strings.Join(args, ", ")))
 }
 
 // methodFuncName builds the name of a method that becomes a top level

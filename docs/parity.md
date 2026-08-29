@@ -14,9 +14,9 @@ level function, and the class holds a member that calls that function. The
 method table of the type also calls the top level function, thus a nil pointer
 inside an interface reaches the method.
 
-A method of a generic type stays a member of its class. A top level function
-would need the type parameters and the dictionaries of the receiver type. A nil
-receiver of such a method panics.
+A method of a generic type takes the same form. The top level function names the
+type parameters of the receiver type first, and it takes the dictionary of each
+one. Thus a nil receiver of such a method also runs.
 
 ## The name of a method
 

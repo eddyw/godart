@@ -54,6 +54,45 @@ type box[T any] struct{ v T }
 func (b *box[T]) set(v T) { b.v = v }
 func (b *box[T]) get() T  { return b.v }
 
+// A method of a generic type with a nil receiver. Go runs it, and it reads the
+// zero value of the type parameter.
+func (b *box[T]) or(alt T) T {
+	if b == nil {
+		return alt
+	}
+	return b.v
+}
+
+func (b *box[T]) zero() T {
+	var out T
+	if b == nil {
+		return out
+	}
+	return b.v
+}
+
+type pair[K comparable, V any] struct {
+	k K
+	v V
+}
+
+func (p *pair[K, V]) key() K {
+	if p == nil {
+		var none K
+		return none
+	}
+	return p.k
+}
+
+func (p *pair[K, V]) mapOf() map[K]V {
+	out := map[K]V{}
+	if p == nil {
+		return out
+	}
+	out[p.k] = p.v
+	return out
+}
+
 func main() {
 	var u *user
 	fmt.Println(u.Name())
@@ -83,8 +122,23 @@ func main() {
 	f := u.Name
 	fmt.Println(f())
 
-	// A method of a generic type stays a member of its class.
+	// A method of a generic type. Its body stands in a top level function, and
+	// the function takes the dictionary of each type parameter.
 	b := &box[string]{}
 	b.set("g")
 	fmt.Println(b.get())
+
+	var none *box[string]
+	fmt.Println(none.or("alt"), none.zero() == "")
+	var nums *box[int]
+	fmt.Println(nums.or(7), nums.zero())
+
+	var np *pair[string, int]
+	fmt.Println(np.key() == "", len(np.mapOf()))
+	p := &pair[string, int]{k: "a", v: 1}
+	fmt.Println(p.key(), p.mapOf())
+
+	// A method value of a nil receiver of a generic type.
+	g := none.or
+	fmt.Println(g("from a value"))
 }

@@ -42,7 +42,6 @@ of each other package with a source position.
 | The address of a composite literal of a type that is not a struct | Rejected. A variable first, and the address of the variable. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |
-| A nil pointer receiver of a method of a generic type | Panics. Each other nil pointer receiver runs. |
 
 Each other construct of the language stays inside the subset: a closure, a
 method, an interface, an embedded struct, a type switch, a channel, a `select`,

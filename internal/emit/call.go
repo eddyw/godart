@@ -342,10 +342,11 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 	// A method of a named type that is not a struct, and a method with a
 	// pointer receiver, each hold the body in a top level function. Go runs a
 	// method with a nil pointer receiver, and Dart calls no member of null.
-	if obj != nil && (!isStructType(obj.Type()) ||
-		(pointerMethod(m.Obj) && !genericType(obj))) {
-		all := append([]string{e.topLevelRecv(m)}, args...)
-		return e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) + targs +
+	if obj != nil && (!isStructType(obj.Type()) || pointerMethod(m.Obj)) {
+		dicts, typeArgs := e.recvTypeArgs(m.Recv.GoType())
+		all := append(append([]string{e.topLevelRecv(m)}, dicts...), args...)
+		return e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) +
+			joinTypeArgs(typeArgs, targs) +
 			"(" + strings.Join(all, ", ") + ")"
 	}
 	return fmt.Sprintf("%s.%s%s(%s)", e.deref(m.Recv), methodName(m.Obj), targs, list)
@@ -365,8 +366,7 @@ func (e *emitter) topLevelRecv(m *ir.Method) string {
 // that moment when the method takes a value receiver.
 func (e *emitter) methodValue(m *ir.Method) string {
 	obj := receiverTypeName(m.Recv.GoType())
-	if obj != nil && (!isStructType(obj.Type()) ||
-		(pointerMethod(m.Obj) && !genericType(obj))) {
+	if obj != nil && (!isStructType(obj.Type()) || pointerMethod(m.Obj)) {
 		return e.methodFuncValue(m, obj)
 	}
 	sig, _ := m.Obj.Type().(*types.Signature)
@@ -391,10 +391,11 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + names[i]
 	}
 	obj := receiverTypeName(x.Recv)
-	if obj != nil && (!isStructType(obj.Type()) ||
-		(pointerMethod(x.Obj) && !genericType(obj))) {
+	if obj != nil && (!isStructType(obj.Type()) || pointerMethod(x.Obj)) {
+		dicts, typeArgs := e.recvTypeArgs(x.Recv)
+		all := append(append([]string{names[0]}, dicts...), names[1:]...)
 		call := e.qualify(obj, methodFuncName(obj.Name(), x.Obj.Name())) +
-			"(" + strings.Join(names, ", ") + ")"
+			joinTypeArgs(typeArgs, "") + "(" + strings.Join(all, ", ") + ")"
 		return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
 	}
 	recv := names[0]
@@ -413,6 +414,20 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 //
 // Go binds the receiver at the point of the value. The outer closure runs 1
 // time, thus a later write to the source of the receiver does not reach it.
+// joinTypeArgs writes the type arguments of a call to a top level function of a
+// method. The list holds the arguments of the receiver type first, and the text
+// holds the arguments of the method itself.
+func joinTypeArgs(recv []string, method string) string {
+	if len(recv) == 0 {
+		return method
+	}
+	out := strings.Join(recv, ", ")
+	if method != "" {
+		out += ", " + strings.TrimSuffix(strings.TrimPrefix(method, "<"), ">")
+	}
+	return "<" + out + ">"
+}
+
 func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
 	sig, _ := m.Obj.Type().(*types.Signature)
 	if sig == nil {
@@ -427,8 +442,10 @@ func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
 		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + name
 		args[i+1] = name
 	}
+	dicts, typeArgs := e.recvTypeArgs(m.Recv.GoType())
+	args = append(append([]string{args[0]}, dicts...), args[1:]...)
 	call := e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) +
-		"(" + strings.Join(args, ", ") + ")"
+		joinTypeArgs(typeArgs, "") + "(" + strings.Join(args, ", ") + ")"
 	return fmt.Sprintf("((%s $recv) => (%s) => %s)(%s)",
 		e.dartType(m.Recv.GoType()), strings.Join(params, ", "), call, e.expr(m.Recv))
 }

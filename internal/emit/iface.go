@@ -295,9 +295,10 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool
 			e.fail("the method %s has no named receiver type", fn.Name())
 			return ""
 		}
-		all := append([]string{recv}, args...)
+		dicts, typeArgs := e.recvTypeArgs(current)
+		all := append(append([]string{recv}, dicts...), args...)
 		call = e.qualify(owner, methodFuncName(owner.Name(), fn.Name())) +
-			"(" + strings.Join(all, ", ") + ")"
+			joinTypeArgs(typeArgs, "") + "(" + strings.Join(all, ", ") + ")"
 	}
 	head := "Object? $r"
 	if len(params) > 0 {
@@ -307,11 +308,10 @@ func (e *emitter) adapter(named *types.Named, sel *types.Selection, pointer bool
 }
 
 // topLevelMethod reports whether the body of the method stands in a top level
-// function. A method with a pointer receiver on a struct type that holds no
-// type parameter takes that form.
+// function. A method with a pointer receiver on a struct type takes that form.
 func topLevelMethod(recv types.Type, fn *types.Func) bool {
 	obj := receiverTypeName(recv)
-	return obj != nil && pointerMethod(fn) && !genericType(obj)
+	return obj != nil && pointerMethod(fn)
 }
 
 // resultCast gives the Dart type of the result of a method. The dispatch of an

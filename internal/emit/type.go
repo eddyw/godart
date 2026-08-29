@@ -368,12 +368,47 @@ func (e *emitter) qualify(obj types.Object, dartName string) string {
 	return prefix + "." + dartName
 }
 
-// genericType reports whether the named type holds type parameters. A method of
-// such a type stays a member of its class, because a top level function would
-// need the type parameters and the dictionaries of the receiver type.
-func genericType(obj *types.TypeName) bool {
+// recvTypeParams gives the type parameters of a named receiver type. The top
+// level function of a method of such a type names them, because the body reads
+// the dictionary of each one.
+func recvTypeParams(obj *types.TypeName) []*types.TypeParam {
 	named, ok := types.Unalias(obj.Type()).(*types.Named)
-	return ok && named.TypeParams() != nil && named.TypeParams().Len() > 0
+	if !ok {
+		return nil
+	}
+	return typeParamsOf(named.TypeParams())
+}
+
+// namedOf gives the named type of a receiver. It reads through a pointer.
+func namedOf(t types.Type) *types.Named {
+	u := types.Unalias(t)
+	if p, ok := u.(*types.Pointer); ok {
+		u = types.Unalias(p.Elem())
+	}
+	named, _ := u.(*types.Named)
+	return named
+}
+
+// recvTypeArgs gives the dictionary and the Dart type of each type argument of
+// the receiver type of a call to a method. A call inside the body of the type
+// itself reads the type parameters, because such a receiver holds no argument.
+func (e *emitter) recvTypeArgs(t types.Type) (dicts, args []string) {
+	named := namedOf(t)
+	if named == nil {
+		return nil, nil
+	}
+	if list := named.TypeArgs(); list != nil && list.Len() > 0 {
+		for i := 0; i < list.Len(); i++ {
+			dicts = append(dicts, e.dictOf(list.At(i)))
+			args = append(args, e.dartType(list.At(i)))
+		}
+		return dicts, args
+	}
+	for _, tp := range typeParamsOf(named.TypeParams()) {
+		dicts = append(dicts, e.dictOf(tp))
+		args = append(args, e.dartType(tp))
+	}
+	return dicts, args
 }
 
 // pointerMethod reports whether the declaration of the method holds a pointer
