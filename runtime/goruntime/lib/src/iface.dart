@@ -99,33 +99,103 @@ final class Iface {
   String toString() => '$value';
 }
 
-const TypeDesc $typeBool = TypeDesc('bool', 'bool', <String, Function>{});
-const TypeDesc $typeInt = TypeDesc('int', 'int', <String, Function>{});
-const TypeDesc $typeInt8 = TypeDesc('int8', 'int8', <String, Function>{});
-const TypeDesc $typeInt16 = TypeDesc('int16', 'int16', <String, Function>{});
-const TypeDesc $typeInt32 = TypeDesc('int32', 'int32', <String, Function>{});
-const TypeDesc $typeInt64 = TypeDesc('int64', 'int64', <String, Function>{});
-const TypeDesc $typeUint = TypeDesc('uint', 'uint', <String, Function>{});
-const TypeDesc $typeUint8 = TypeDesc('uint8', 'uint8', <String, Function>{});
-const TypeDesc $typeUint16 = TypeDesc('uint16', 'uint16', <String, Function>{});
-const TypeDesc $typeUint32 = TypeDesc('uint32', 'uint32', <String, Function>{});
-const TypeDesc $typeUint64 = TypeDesc('uint64', 'uint64', <String, Function>{});
+/// The zero value of a predeclared type. A tear-off of a top level function is
+/// a constant expression of Dart, thus each descriptor below stays const.
+Object? $zeroInt() => 0;
+Object? $zeroFloat() => 0.0;
+Object? $zeroBool() => false;
+Object? $zeroString() => GoString.empty;
+
+const TypeDesc $typeBool = TypeDesc(
+  'bool',
+  'bool',
+  <String, Function>{},
+  zero: $zeroBool,
+);
+const TypeDesc $typeInt = TypeDesc(
+  'int',
+  'int',
+  <String, Function>{},
+  zero: $zeroInt,
+);
+const TypeDesc $typeInt8 = TypeDesc(
+  'int8',
+  'int8',
+  <String, Function>{},
+  zero: $zeroInt,
+);
+const TypeDesc $typeInt16 = TypeDesc(
+  'int16',
+  'int16',
+  <String, Function>{},
+  zero: $zeroInt,
+);
+const TypeDesc $typeInt32 = TypeDesc(
+  'int32',
+  'int32',
+  <String, Function>{},
+  zero: $zeroInt,
+);
+const TypeDesc $typeInt64 = TypeDesc(
+  'int64',
+  'int64',
+  <String, Function>{},
+  zero: $zeroInt,
+);
+const TypeDesc $typeUint = TypeDesc(
+  'uint',
+  'uint',
+  <String, Function>{},
+  zero: $zeroInt,
+);
+const TypeDesc $typeUint8 = TypeDesc(
+  'uint8',
+  'uint8',
+  <String, Function>{},
+  zero: $zeroInt,
+);
+const TypeDesc $typeUint16 = TypeDesc(
+  'uint16',
+  'uint16',
+  <String, Function>{},
+  zero: $zeroInt,
+);
+const TypeDesc $typeUint32 = TypeDesc(
+  'uint32',
+  'uint32',
+  <String, Function>{},
+  zero: $zeroInt,
+);
+const TypeDesc $typeUint64 = TypeDesc(
+  'uint64',
+  'uint64',
+  <String, Function>{},
+  zero: $zeroInt,
+);
 const TypeDesc $typeUintptr = TypeDesc(
   'uintptr',
   'uintptr',
   <String, Function>{},
+  zero: $zeroInt,
 );
 const TypeDesc $typeFloat32 = TypeDesc(
   'float32',
   'float32',
   <String, Function>{},
+  zero: $zeroFloat,
 );
 const TypeDesc $typeFloat64 = TypeDesc(
   'float64',
   'float64',
   <String, Function>{},
+  zero: $zeroFloat,
 );
-const TypeDesc $typeString = TypeDesc('string', 'string', <String, Function>{});
+const TypeDesc $typeString = TypeDesc(
+  'string',
+  'string',
+  <String, Function>{},
+  zero: $zeroString,
+);
 
 /// True when the type holds each method of an interface.
 bool $implements(Iface? x, List<String> methods) {

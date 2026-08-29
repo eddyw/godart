@@ -143,6 +143,111 @@ GoString $zeroText(Iface? value) {
   return value.desc.info;
 }
 
+/// The type descriptors that the package reflect reads. A handle is an index of
+/// the list plus 1, thus the handle 0 names no type.
+///
+/// A Go value carries no descriptor of a type that no value holds, for example
+/// the element type of a pointer. The table gives the package reflect a name
+/// for such a type.
+final List<TypeDesc> _descTable = <TypeDesc>[];
+final Map<String, int> _descHandles = <String, int>{};
+
+int _descHandle(TypeDesc desc) {
+  final int? found = _descHandles[desc.name];
+  if (found != null) return found;
+  _descTable.add(desc);
+  _descHandles[desc.name] = _descTable.length;
+  return _descTable.length;
+}
+
+TypeDesc? _descAt(int handle) {
+  if (handle <= 0 || handle > _descTable.length) return null;
+  return _descTable[handle - 1];
+}
+
+/// A handle of the type of an interface value. A nil value gives 0.
+int $descOf(Iface? value) => value == null ? 0 : _descHandle(value.desc);
+
+/// The text, the kind, and the comparable flag of a type handle.
+(GoString, GoString, bool) $descInfo(int handle) {
+  final TypeDesc? desc = _descAt(handle);
+  if (desc == null) return (GoString.empty, GoString.empty, false);
+  return (
+    GoString.fromString(desc.display),
+    GoString.fromString(desc.kind),
+    desc.comparable,
+  );
+}
+
+/// A handle of the element type of a type. A type that holds no element type
+/// gives 0.
+int $descElem(int handle) {
+  final TypeDesc? desc = _descAt(handle);
+  final TypeDesc Function()? elem = desc?.elem;
+  if (elem == null) return 0;
+  return _descHandle(elem());
+}
+
+/// The zero value of a type, inside an interface value. The zero value of an
+/// interface type is a nil interface, thus it holds no descriptor.
+Iface? $descZero(int handle) {
+  final TypeDesc? desc = _descAt(handle);
+  if (desc == null || desc.kind == 'interface') return null;
+  final Object? Function()? zero = desc.zero;
+  if (zero == null) {
+    $panic(GoError('reflect: no zero value of ${desc.display}'));
+  }
+  return Iface(desc, zero());
+}
+
+/// The value behind a pointer, inside an interface value.
+///
+/// A pointer to a value that is not a struct holds a box, and a pointer to a
+/// struct is the object itself.
+Iface? $pointerElem(Iface? pointer) {
+  final TypeDesc elem = _pointerElemDesc(pointer);
+  final Object? target = pointer!.value;
+  if (target is Box<Object?>) {
+    if (elem.kind == 'interface') return target.v as Iface?;
+    return Iface(elem, target.v);
+  }
+  return Iface(elem, target);
+}
+
+/// Writes a value behind a pointer.
+///
+/// A pointer to a struct is the object itself, thus the write copies each
+/// field. A field of a struct type keeps the reference of the source, and
+/// docs/parity.md holds that gap.
+void $pointerSet(Iface? pointer, Iface? value) {
+  final TypeDesc elem = _pointerElemDesc(pointer);
+  final Object? target = pointer!.value;
+  final Object? stored = elem.kind == 'interface' ? value : value?.value;
+  if (target is Box<Object?>) {
+    target.v = stored;
+    return;
+  }
+  if (elem.kind == 'struct') {
+    for (final FieldDesc field in elem.fields) {
+      field.set(target, field.get(stored));
+    }
+    return;
+  }
+  $panic(GoError('reflect: Set on a pointer to ${elem.display}'));
+}
+
+TypeDesc _pointerElemDesc(Iface? pointer) {
+  if (pointer == null) {
+    $panic(const GoError('reflect: the value holds no address'));
+  }
+  final TypeDesc desc = pointer.desc;
+  final TypeDesc Function()? elem = desc.elem;
+  if (desc.kind != 'ptr' || elem == null) {
+    $panic(GoError('reflect: ${desc.display} is not a pointer'));
+  }
+  return elem();
+}
+
 String _format(Iface? x, String verb) {
   if (verb.endsWith('T')) return x == null ? '<nil>' : x.desc.display;
   if (x == null) return verb.endsWith('v') ? '<nil>' : '%!$verb(<nil>)';

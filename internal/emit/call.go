@@ -74,6 +74,18 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$deepEqual(%s, %s)", args[0], args[1]), true
 	case "AssignError":
 		return fmt.Sprintf("$assignError(%s, %s)", args[0], args[1]), true
+	case "DescOf":
+		return fmt.Sprintf("$descOf(%s)", args[0]), true
+	case "DescInfo":
+		return fmt.Sprintf("$descInfo(%s)", args[0]), true
+	case "DescElem":
+		return fmt.Sprintf("$descElem(%s)", args[0]), true
+	case "DescZero":
+		return fmt.Sprintf("$descZero(%s)", args[0]), true
+	case "PointerElem":
+		return fmt.Sprintf("$pointerElem(%s)", args[0]), true
+	case "PointerSet":
+		return fmt.Sprintf("$pointerSet(%s, %s)", args[0], args[1]), true
 	case "ZeroText":
 		return fmt.Sprintf("$zeroText(%s)", args[0]), true
 	case "OS":

@@ -18,6 +18,11 @@ The package `fmt` reads it.
 | `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
 | A descriptor of an instance of a generic type | Present. The description stands at the point of the use, and the name holds each type argument. |
 | `reflect.DeepEqual` | Present. The walk reads the type descriptor. |
+| `reflect.Type` | A struct with a handle of a descriptor of the runtime, and not an interface. Thus `Type` compares with `==` and holds no nil value. |
+| `reflect.TypeOf(nil)` | Gives a Type with an empty text and an empty kind. Go gives nil. |
+| `reflect.ValueOf`, `Value.Interface`, `Value.Elem`, `Value.Set`, `reflect.Zero`, `Type.Elem` | Present |
+| `Value.Elem` of a value that is not a pointer | Panics. Go gives the value inside an interface. |
+| Each other method of `reflect.Value` | Missing |
 | A method value through reflect | Missing |
 | The size and the alignment of a type | Missing. The target has no memory layout. |
 
@@ -73,7 +78,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | `New`, `Is`, `As`, `AsType`, `Unwrap`, and `Join`. |
 | `flag` | Overlay | The real source reads `reflect` and `runtime.Caller`. |
-| `reflect` | Overlay | `DeepEqual`, `TypeOf`, `Type.String`, `Type.Kind`, and `Type.Comparable`. |
+| `reflect` | Overlay | `DeepEqual`, `TypeOf`, `ValueOf`, `Zero`, `Type.String`, `Type.Kind`, `Type.Comparable`, `Type.Elem`, `Value.Elem`, `Value.Set`, and `Value.Interface`. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
 | `maps` | Overlay | |
@@ -95,7 +100,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |
 | `testing` | Overlay | |
 | `sync/atomic` | Overlay | `Value` and `Int32` only. Read the section below. |
-| `time` | Overlay | Read the section below. |
+| `time` | Overlay | The clock, the timer, the ticker, and the calendar. Read the section below. |
 | `unicode` | Native | |
 | `unicode/utf8` | Overlay | The real source needs an index of a mixed type parameter. |
 
@@ -264,10 +269,11 @@ The `net` package holds this surface:
 
 ## The clock and the timer
 
-`time` reads the clock of `dart:io` and the scheduler of the runtime. Each value
-of `Time` holds only a count of nanoseconds after the start of the Unix epoch.
-`Time.String` reads the offset and the name of the local zone from Dart, and the
-overlay holds no other part of a calendar.
+`time` reads the clock of `dart:io` and the scheduler of the runtime. A value of
+`Time` holds a count of nanoseconds after the start of the Unix epoch and a
+location. The overlay holds no zone database of its own, thus it gives 2
+locations: `UTC` and `Local`. `Local` reads the offset and the name of the zone
+from Dart at each instant.
 
 | Item | Go | godart |
 |---|---|---|
@@ -280,13 +286,24 @@ overlay holds no other part of a calendar.
 | `NewTimer`, `Timer.C`, `Timer.Reset`, `After` | Present | Equal. The channel holds 1 value, thus a write of the timer never blocks. |
 | `NewTicker`, `Ticker.C`, `Ticker.Stop`, `Ticker.Reset`, `Tick` | Present | Equal. Each pass starts the timer of the next pass. |
 | `Time.String` | `2006-01-02 15:04:05.999999999 -0700 MST` | Equal, with no reading of the monotonic clock. Read below. |
-| `Time.Format`, `Parse` | Present | Missing |
-| `Time.Year`, `Month`, `Day`, `Hour` | Present | Missing. The overlay holds no calendar. |
-| `Location`, `UTC`, `Local` | Present | Missing |
+| `Time.Format` | Present | Equal. The scanner holds each chunk of a layout, and the 19 layout constants are present. |
+| `Date`, `Month`, `Weekday`, and the name of each | Present | Equal |
+| `Time.In`, `Time.Location` | Present | Present |
+| `UTC`, `Local` | 2 of the locations of the zone database | The only 2 locations. `FixedZone` and `LoadLocation` stay out. |
+| `Time.Year`, `Month`, `Day`, `Hour`, `Weekday` | Present | Missing. `Format` reads the calendar, and no exported method does. |
+| `Time.Parse`, `ParseDuration`, `Truncate`, `Round`, `Equal` | Present | Missing |
+| The zero value of `Time` | January 1 of the year 1 | The start of the Unix epoch. A Time holds 1 count of nanoseconds, thus the range is the year 1678 to the year 2262. |
 
 A Go `Time` of `time.Now` also holds a reading of the monotonic clock, and
 `String` writes it as ` m=+1.234567890`. A `Time` of the overlay holds no such
 reading, thus the text ends with the name of the zone.
+
+`time.Date` with the location `Local` reads the offset of the system 2 times.
+The Dart runtime names the offset of an instant, and the argument of `Date` is a
+reading of a wall clock. The first lookup reads that wall clock as if it were
+UTC, and the second one reads the instant that the first offset gives. A wall
+clock reading inside 1 offset of a transition of the zone can take the offset of
+the other side.
 
 Go reads the zone of an instant from its own copy of the zone database, and Dart
 reads the zone from the platform. The 2 agree for each date after 1901. A date

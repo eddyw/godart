@@ -317,7 +317,13 @@ func (e *emitter) descriptorOf(t types.Type) string {
 			if isInstance(named) {
 				return e.instanceDesc(named, true)
 			}
-			return e.qualify(named.Obj(), "$descP$"+name.Package(named.Obj().Name()))
+			// The package holds no variable for an interface type and for a
+			// predeclared type, thus a pointer to one takes its own
+			// description.
+			if !isInterfaceType(named) && named.Obj().Pkg() != nil &&
+				(named.TypeParams() == nil || named.TypeParams().Len() == 0) {
+				return e.qualify(named.Obj(), "$descP$"+name.Package(named.Obj().Name()))
+			}
 		}
 	}
 	if named, ok := u.(*types.Named); ok {

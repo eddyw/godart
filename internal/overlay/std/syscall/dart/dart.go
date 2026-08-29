@@ -36,6 +36,40 @@ func DeepEqual(x, y any) bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// DescOf gives a handle of the type of a value. A nil value gives 0.
+//
+// The package reflect names a type that no value holds, for example the element
+// type of a pointer. The runtime holds a table of the descriptors for it.
+func DescOf(value any) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescInfo gives the text, the kind, and the comparable flag of a type handle.
+func DescInfo(handle int) (string, string, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescElem gives a handle of the element type of a type. A type that holds no
+// element type gives 0.
+func DescElem(handle int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescZero gives the zero value of a type, inside an interface value.
+func DescZero(handle int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// PointerElem gives the value behind a pointer, inside an interface value.
+func PointerElem(pointer any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// PointerSet writes a value behind a pointer.
+func PointerSet(pointer, value any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // AssignError writes a value into the target of errors.As. It reports false
 // when the type of the value does not hold the element type of the target.
 //
