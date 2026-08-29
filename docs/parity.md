@@ -344,7 +344,8 @@ from Dart at each instant.
 | `Time.Year`, `Month`, `Day`, `Date`, `Hour`, `Minute`, `Second`, `Clock`, `Nanosecond`, `Weekday`, `YearDay` | Present | Equal |
 | `Time.UTC`, `Time.Local`, `Time.Equal` | Present | Equal |
 | `Time.Parse`, `ParseInLocation`, `ParseError` | Present | Equal. Read below. |
-| `ParseDuration`, `Truncate`, `Round` | Present | Missing |
+| `ParseDuration`, `Duration.Truncate`, `Duration.Round` | Present | Equal |
+| `Time.Truncate`, `Time.Round` | Round against January 1 of the year 1 | Equal. The count of nanoseconds of that day does not fit an int64, thus the general case builds a value of 128 bits. |
 | The zero value of `Time` | January 1 of the year 1 | The start of the Unix epoch. A Time holds 1 count of nanoseconds, thus the range is the year 1678 to the year 2262. |
 
 `Parse` reads each chunk of the layout that `Format` writes, and it gives a

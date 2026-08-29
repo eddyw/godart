@@ -103,6 +103,40 @@ func localZone() {
 	fmt.Println(named.Format(time.RFC3339), named.Location(), err)
 }
 
+func durations() {
+	texts := []string{
+		"0", "1ns", "300ms", "-1.5h", "2h45m", "1.5s", "100us", "10\u00b5s",
+		"1h1m1s1ms1us1ns", "+3m", "0.5m", ".5s", "5", "1x", "", "-", "1.5.2s",
+		"9223372036854775807ns", "9223372036854775808ns",
+	}
+	for _, text := range texts {
+		d, err := time.ParseDuration(text)
+		fmt.Printf("%-24q %v %v\n", text, d, err)
+	}
+
+	base := 1234567890 * time.Nanosecond
+	for _, m := range []time.Duration{
+		0, -1, time.Nanosecond, time.Microsecond, time.Millisecond,
+		time.Second, 7 * time.Second,
+	} {
+		fmt.Println(base.Truncate(m), base.Round(m), (-base).Round(m))
+	}
+}
+
+func rounding() {
+	t := time.Date(2026, time.August, 30, 14, 25, 7, 123456789, time.UTC)
+	units := []time.Duration{
+		time.Nanosecond, time.Microsecond, time.Millisecond, time.Second,
+		time.Minute, time.Hour, 24 * time.Hour, 7 * time.Hour,
+		90 * time.Second, 3 * time.Millisecond,
+	}
+	for _, d := range units {
+		fmt.Println(d, t.Truncate(d).Format(time.RFC3339Nano),
+			t.Round(d).Format(time.RFC3339Nano))
+	}
+	fmt.Println(t.Truncate(0).Equal(t), t.Round(-1).Equal(t))
+}
+
 func main() {
 	accessors()
 	parseGood()
@@ -110,4 +144,6 @@ func main() {
 	roundTrip()
 	inLocation()
 	localZone()
+	durations()
+	rounding()
 }
