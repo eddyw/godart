@@ -33,13 +33,13 @@ func need(b byte) int {
 	switch {
 	case b < 0x80:
 		return 1
-	case b < 0xC0:
+	case b < 0xC2:
 		return 0
 	case b < 0xE0:
 		return 2
 	case b < 0xF0:
 		return 3
-	case b < 0xF8:
+	case b < 0xF5:
 		return 4
 	}
 	return 0

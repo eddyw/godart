@@ -174,22 +174,29 @@ GoString $runesToString(Slice<int> runes) {
 }
 
 /// Reads 1 UTF-8 rune at a byte index. An invalid sequence gives U+FFFD with
-/// a size of 1, exactly as a Go range loop does.
+/// a size of 1, exactly as a Go range loop does. An overlong sequence, a
+/// surrogate, and a value above U+10FFFF are each invalid.
 (int, int) $decodeRune(GoString s, int i) {
   final b = s.bytes;
   final int b0 = b[i];
   if (b0 < 0x80) return (b0, 1);
   int size;
   int rune;
-  if (b0 >= 0xF0) {
+  int least;
+  if (b0 >= 0xF8) {
+    return (0xFFFD, 1);
+  } else if (b0 >= 0xF0) {
     size = 4;
     rune = b0 & 0x07;
+    least = 0x10000;
   } else if (b0 >= 0xE0) {
     size = 3;
     rune = b0 & 0x0F;
+    least = 0x800;
   } else if (b0 >= 0xC0) {
     size = 2;
     rune = b0 & 0x1F;
+    least = 0x80;
   } else {
     return (0xFFFD, 1);
   }
@@ -198,7 +205,7 @@ GoString $runesToString(Slice<int> runes) {
     if (b[i + k] & 0xC0 != 0x80) return (0xFFFD, 1);
     rune = (rune << 6) | (b[i + k] & 0x3F);
   }
-  if (rune > 0x10FFFF || (rune >= 0xD800 && rune <= 0xDFFF)) {
+  if (rune < least || rune > 0x10FFFF || (rune >= 0xD800 && rune <= 0xDFFF)) {
     return (0xFFFD, 1);
   }
   return (rune, size);

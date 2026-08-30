@@ -459,6 +459,12 @@ The plan left these points open. The work took the decisions below.
 130. `net.Error` holds `Temporary`, exactly as Go declares it. Go marks the
      method as deprecated and keeps it in the interface, thus a program that
      calls it must compile.
+131. The rune decoder of the runtime library rejects each sequence that Go
+     rejects. An overlong form, a surrogate, a value above U+10FFFF, and a start
+     byte above 0xF7 each give U+FFFD with a size of 1. Before this rule, a
+     range loop over `"\xE0\x9F\xBF"` gave U+07FF, and `TestDecodeInvalidSequence`
+     of the Go repository found it. `need` of the `unicode/utf8` overlay held
+     the same gap for 0xC0, 0xC1, and 0xF5 to 0xF7.
 
 ## Answered questions of 2026-08-31
 

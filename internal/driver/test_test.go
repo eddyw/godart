@@ -228,6 +228,8 @@ func TestTestsOfGoroot(t *testing.T) {
 			"--- PASS: TestCopy ", "--- PASS: TestMultiReaderFreesExhaustedReaders "}},
 		{"internal/chacha8rand", "", []string{
 			"--- PASS: TestOutput ", "--- PASS: TestMarshal "}},
+		{"unicode/utf8", "", []string{
+			"--- PASS: TestFullRune ", "--- PASS: TestDecodeInvalidSequence "}},
 		// The tests of zlib read testdata through a relative path, thus the
 		// binary must run in the directory of the package.
 		{"compress/zlib", "", []string{

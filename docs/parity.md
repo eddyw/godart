@@ -192,7 +192,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `sync/atomic` | Overlay | `Value` and `Int32` only. Read the section below. |
 | `time` | Overlay | The clock, the timer, the ticker, and the calendar. Read the section below. |
 | `unicode` | Native | |
-| `unicode/utf8` | Overlay | The real source needs an index of a mixed type parameter. |
+| `unicode/utf8` | Overlay | The real source needs an index of a mixed type parameter. Each test of the Go repository passes. |
 
 Each other standard library package stays outside the surface. Stage 2 rejects
 an import of it with a source position.

@@ -304,7 +304,7 @@ and a call through `reflect`.
 
 The user asked on 2026-08-29 whether the compiler can run the tests of the Go
 repository, exactly as GopherJS does. The answer is yes for a package whose test
-files stay inside the subset. 16 packages now run their real tests, and `make
+files stay inside the subset. 17 packages now run their real tests, and `make
 ci` proves each one through `TestTestsOfGoroot`.
 
 ```bash
@@ -324,6 +324,7 @@ make std-test STD=regexp/syntax   # 11 of 12 pass. Read the note below.
 make std-test STD=io              # each test passes
 make std-test STD=internal/chacha8rand  # each test passes
 make std-test STD=compress/zlib   # each test passes
+make std-test STD=unicode/utf8    # each test passes
 ```
 
 `TestParseInvalidRegexps` of `regexp/syntax` reads a limit of a resource, and
@@ -400,6 +401,7 @@ A fourth survey on 2026-08-31, over each native package that no run covers:
 | Package | Cause that blocks the run |
 |---|---|
 | `internal/chacha8rand` | Runs. Each test passes. It needed no work. |
+| `unicode/utf8` | Runs. Each test passes. It needed the strict rune decoder of decision 131. |
 | `compress/zlib` | Runs. Each test passes. It needed `internal/testenv`, the working directory of the package, and the fix of decision 126. |
 | `compress/flate` | `strings.FieldsSeq` in `example_test.go`. Read the note below. |
 | `compress/gzip` | `testenv.MustHaveSource`, `filepath.EvalSymlinks`, and `runtime.GOROOT`. |
@@ -423,6 +425,43 @@ bytes of Dart source for `testdata/programs/args`, which is 4 percent. No other
 package changed its form. The work waits for the value flow of stage 3, because
 `iter.Pull` in a program marks each `iter.Seq` closure as a function that can
 block.
+
+A fifth survey on 2026-08-31, over each overlay package. Such a package holds a
+subset of the real API, thus a test file of the Go repository names a function
+that the overlay does not hold. `unicode/utf8` is the only one that runs.
+
+| Package | Cause that blocks the run |
+|---|---|
+| `unicode/utf8` | Runs. Each test passes. |
+| `slices` | `internal/asan`, `internal/msan`, `internal/race`, `unsafe`, and 3 calls of `recover`. |
+| `sort` | `SearchStrings`, `SearchFloat64s`, `SliceIsSorted`, `Float64sAreSorted`, `Reverse`, and `IntSlice`. |
+| `strconv` | `IsGraphic`, `IsPrint`, `QuoteRune`, `QuoteRuneToASCII`, and `QuoteRuneToGraphic`. |
+| `strings` | `Builder.Cap`. |
+| `errors` | 1 call of `recover`. |
+| `iter` | `runtime.Gosched` and `runtime.Goexit`. |
+| `sync` | `sync.NewCond`. |
+| `sync/atomic` | `CompareAndSwapUint32` and each other named function of the package. |
+| `time` | `absDays`, an unexported name of the real source. |
+| `unique` | `canonMap`, an unexported name of the real source. |
+| `fmt` | `Fscanf` and each other scan function. |
+| `flag` | `FlagSet.Duration`. |
+| `os` | `Clearenv`. |
+| `io/fs` | `Glob` and `ReadFile`. |
+| `path/filepath` | `lstat`, an unexported name of the real source. |
+| `reflect`, `internal/reflectlite` | A large part of the real API. |
+| `runtime` | `SetFinalizer` and each other name of the real runtime. |
+| `testing` | `B.Context`. |
+| `testing/quick` | `complex64`. |
+| `log` | `testenv.MustHaveExec`. |
+| `internal/godebug` | `testenv.MustHaveGoRun`. |
+| `crypto/md5`, `crypto/sha256` | `crypto/internal/cryptotest`. |
+| `crypto/sha1` | `crypto/internal/boring`. |
+| `crypto/tls` | `SignatureScheme`. |
+| `encoding/binary` | `reflect.Value.Slice`. |
+| `encoding/json` | `NewEncoder`. |
+| `net` | `ParseIP`. |
+| `net/http` | `Request.TLS`. |
+| `net/http/httptest` | `Server.EnableHTTP2`. |
 
 The work that remains, in the order of the value:
 

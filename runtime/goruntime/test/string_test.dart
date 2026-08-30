@@ -88,6 +88,20 @@ void _moreTests() {
       expect($decodeRune(GoString.fromBytes(<int>[0xFF]), 0), (0xFFFD, 1));
     });
 
+    test('decode rejects a sequence that Go rejects', () {
+      // An overlong form of U+07FF, an overlong form of U+0000, a surrogate,
+      // a value above U+10FFFF, and a start byte above 0xF7.
+      for (final bytes in <List<int>>[
+        <int>[0xE0, 0x9F, 0xBF],
+        <int>[0xC0, 0x80],
+        <int>[0xED, 0xA0, 0x80],
+        <int>[0xF4, 0x90, 0x80, 0x80],
+        <int>[0xF8, 0x80, 0x80, 0x80],
+      ]) {
+        expect($decodeRune(GoString.fromBytes(bytes), 0), (0xFFFD, 1));
+      }
+    });
+
     test('a byte round trip keeps the bytes', () {
       final s = GoString.fromString('godart');
       expect($bytesToString($stringToBytes(s)), s);
