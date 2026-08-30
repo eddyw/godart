@@ -9,7 +9,7 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 66 packages. `docs/what-compiles.md` holds the whole list and
+The surface holds 78 packages. `docs/what-compiles.md` holds the whole list and
 the gate of each package that stays out. A package reaches the surface 3 ways.
 
 An **overlay** replaces the real source. `internal/overlay/std/<path>/` holds
