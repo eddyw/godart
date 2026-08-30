@@ -305,6 +305,43 @@ func TrimSuffix(s, suffix string) string {
 	return s
 }
 
+// IndexFunc gives the position of the first rune that satisfies f, or -1.
+func IndexFunc(s string, f func(rune) bool) int {
+	for i, c := range s {
+		if f(c) {
+			return i
+		}
+	}
+	return -1
+}
+
+// TrimLeftFunc removes each leading rune that satisfies f.
+func TrimLeftFunc(s string, f func(rune) bool) string {
+	for i, c := range s {
+		if !f(c) {
+			return s[i:]
+		}
+	}
+	return ""
+}
+
+// TrimRightFunc removes each trailing rune that satisfies f.
+func TrimRightFunc(s string, f func(rune) bool) string {
+	end := len(s)
+	for end > 0 {
+		start := end - 1
+		for start > 0 && s[start]&0xC0 == 0x80 {
+			start--
+		}
+		c, _ := decodeFirst(s[start:end])
+		if !f(c) {
+			break
+		}
+		end = start
+	}
+	return s[:end]
+}
+
 // TrimSpace removes the space at the start and at the end of s.
 func TrimSpace(s string) string {
 	start := 0

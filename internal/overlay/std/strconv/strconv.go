@@ -465,6 +465,12 @@ func Unquote(s string) (string, error) {
 	return out, err
 }
 
+// QuotedPrefix gives the quoted text at the start of s, with its quotes.
+func QuotedPrefix(s string) (string, error) {
+	out, _, err := unquote(s, false)
+	return out, err
+}
+
 // unquote parses a quoted string at the start of the input,
 // returning the parsed prefix, the remaining suffix, and any parse errors.
 // If unescape is true, the parsed prefix is unescaped,

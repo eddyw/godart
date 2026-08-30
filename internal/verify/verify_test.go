@@ -176,6 +176,20 @@ var Value T
 
 func Ref() *T { return &Value }
 `)
+	acceptFile(t, "an exported variable of a main package", `package main
+
+var Key int
+
+func main() { ref(&Key) }
+
+func ref(p *int) { *p = 1 }
+`)
+	acceptFile(t, "an exported variable of a test package", `package a_test
+
+var Sink int
+
+func Ref() *int { return &Sink }
+`)
 }
 
 // TestAnonStructCrossesAPackage proves that stage 2 rejects an unnamed struct

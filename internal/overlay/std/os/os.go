@@ -133,6 +133,12 @@ var (
 	Stderr = &File{std: stdErr, name: "/dev/stderr"}
 )
 
+// Pipe gives a connected pair of files. The Dart platform holds no pipe, thus
+// the call gives an error.
+func Pipe() (*File, *File, error) {
+	return nil, nil, &PathError{Op: "pipe", Err: errors.New("not supported")}
+}
+
 func (f *File) Name() string { return f.name }
 
 // Write writes the bytes and gives the count.

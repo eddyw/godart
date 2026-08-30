@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"go/types"
 	"strconv"
+	"strings"
 
 	"github.com/eddyw/godart/internal/overlay"
 )
@@ -162,11 +163,18 @@ func (v *verifier) checkAddress(e *ast.UnaryExpr) {
 	// thus each package that reads the variable must know the box. An exported
 	// variable reaches another package, and the archive holds no such field.
 	if id, ok := unparen(e.X).(*ast.Ident); ok && id.IsExported() {
-		if obj, ok := v.info.Uses[id].(*types.Var); ok && isGlobal(obj) {
+		if obj, ok := v.info.Uses[id].(*types.Var); ok && isGlobal(obj) && importable(obj.Pkg()) {
 			v.reject(e.Pos(), "the box of a package variable does not cross a package boundary",
 				"the compiler rejects the address of the exported package variable %s", id.Name)
 		}
 	}
+}
+
+// importable reports whether an import of another package can name the
+// package. No import names a main package or an external test package, thus a
+// box of an exported variable of one stays inside the package.
+func importable(pkg *types.Package) bool {
+	return pkg != nil && pkg.Name() != "main" && !strings.HasSuffix(pkg.Name(), "_test")
 }
 
 // isGlobal reports whether the variable stands at package level.

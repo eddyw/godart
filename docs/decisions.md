@@ -465,6 +465,27 @@ The plan left these points open. The work took the decisions below.
      range loop over `"\xE0\x9F\xBF"` gave U+07FF, and `TestDecodeInvalidSequence`
      of the Go repository found it. `need` of the `unicode/utf8` overlay held
      the same gap for 0xC0, 0xC1, and 0xF5 to 0xF7.
+132. A type descriptor holds the function type of each exported method, under
+     the key of the method. `reflect.Value.Method` gives a func value from it,
+     and `Value.Call` of that value reads the parameter types and the result
+     types. The table costs 10337 bytes on `testdata/programs/args`, which is
+     3.1 percent. A bound method travels as a `BoundMethod` pair, because a
+     Dart closure holds a fixed arity, and `$callValue` unwraps the pair.
+     `testdata/programs/reflectmethod` proves the API.
+133. The order of the methods of `reflect` follows the name, exactly as in Go.
+     The key of a method table holds the name and then a parenthesis, and the
+     parenthesis stands below each letter and each digit, thus a sort of the
+     keys gives the order of the names.
+134. The address of an exported package variable stays allowed inside a main
+     package and inside an external test package. No import can name such a
+     package, thus the box of the variable never crosses a package boundary.
+     `rand_test` of the Go repository takes `&Sink`, and the old rule rejected
+     it.
+135. `os.Pipe` gives an error. The Dart side holds no pipe of `dart:io` that a
+     `*File` of the overlay can wrap. `TestUpdateExample` of `math/rand/v2`
+     compiles with it and skips at run time.
+136. `reflect.Value.MapKeys` gives the keys in the order of the insertion, and
+     Go gives a random order. `docs/parity.md` holds the gap.
 
 ## Answered questions of 2026-08-31
 
