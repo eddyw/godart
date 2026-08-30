@@ -63,7 +63,8 @@ The package `fmt` reads it.
 | `Type.NumField`, `Type.Field`, `Type.Len`, `Type.Name`, `StructTag.Get` | Present |
 | `reflect.Kind` | The text of the kind, and not an unsigned number. The 2 forms hold the same set of values. |
 | `Value.Elem` of a value that is not a pointer | Panics. Go gives the value inside an interface. |
-| `Type.Size` | Present for each basic kind, a pointer, a string, a slice, an interface, and an array. A struct panics, because Go holds a padding and the target has no memory layout. |
+| `Type.Size`, `Type.Align`, `Type.FieldAlign`, `StructField.Offset` | Present. The result follows the rules of a 64-bit machine, exactly as the compiler of Go computes them. |
+| `Type.String` of an unnamed struct type | `struct{a int}`. Go writes `struct { a int }`. The text comes from `go/types`, and the 2 packages hold 2 forms of the space. |
 | `Type.Align`, `Type.FieldAlign`, `Value.UnsafeAddr` | Missing. The target has no memory layout. |
 | `Value.Complex` and `Value.SetComplex` | Missing. The subset holds no complex number. |
 | A method value through reflect | Missing |

@@ -128,6 +128,9 @@ type StructField struct {
 	Name string
 	Tag  StructTag
 	Type Type
+	// Offset holds the count of bytes from the start of the struct. Read
+	// Type.Size.
+	Offset uintptr
 	// Anonymous marks an embedded field.
 	Anonymous bool
 }
@@ -148,19 +151,39 @@ func (t Type) String() string {
 // other type.
 func (t Type) Name() string {
 	text := t.String()
-	for i := len(text) - 1; i >= 0; i-- {
-		if text[i] == '.' {
-			return text[i+1:]
-		}
-		if text[i] == ']' || text[i] == '*' || text[i] == ' ' {
-			return ""
-		}
-	}
-	switch t.Kind() {
-	case Array, Chan, Func, Interface, Map, Pointer, Slice:
+	if composite(text) {
 		return ""
 	}
+	// The name of an instance of a generic type holds the type arguments, and
+	// each one can name its own package. The package of the type itself stands
+	// before the first bracket.
+	head := text
+	for i := 0; i < len(text); i++ {
+		if text[i] == '[' {
+			head = text[:i]
+			break
+		}
+	}
+	for i := len(head) - 1; i >= 0; i-- {
+		if head[i] == '.' {
+			return text[i+1:]
+		}
+	}
 	return text
+}
+
+// composite reports whether the text names a type that Go does not define with
+// a name.
+func composite(text string) bool {
+	for _, prefix := range []string{
+		"[", "*", "map[", "chan ", "<-chan ", "func(",
+		"struct{", "struct {", "interface{", "interface {",
+	} {
+		if len(text) >= len(prefix) && text[:len(prefix)] == prefix {
+			return true
+		}
+	}
+	return false
 }
 
 // Kind gives the class of the type.
@@ -208,7 +231,28 @@ func (t Type) Field(i int) StructField {
 		panic("reflect: Field of " + t.String())
 	}
 	name, tag, _, desc := dart.FieldInfo(t.desc, i)
-	return StructField{Name: name, Tag: StructTag(tag), Type: Type{desc: desc}}
+	return StructField{
+		Name:   name,
+		Tag:    StructTag(tag),
+		Type:   Type{desc: desc},
+		Offset: t.offsetOf(i),
+	}
+}
+
+// offsetOf gives the count of bytes from the start of the struct to the field.
+// Read Type.Size.
+func (t Type) offsetOf(index int) uintptr {
+	offset := uintptr(0)
+	for i := 0; i <= index; i++ {
+		_, _, _, desc := dart.FieldInfo(t.desc, i)
+		field := Type{desc: desc}
+		offset = roundUp(offset, uintptr(field.Align()))
+		if i == index {
+			return offset
+		}
+		offset += field.Size()
+	}
+	return offset
 }
 
 // Key gives the key type of a map type. Each other type panics, exactly as in
@@ -260,8 +304,8 @@ func (t Type) IsVariadic() bool { return false }
 
 // Size gives the count of bytes that a value of the type holds in Go.
 //
-// A struct of Go holds a padding that follows the alignment of the machine. The
-// Dart output holds no memory layout, thus the size of a struct panics.
+// The Dart output holds no memory layout. The result follows the rules of a
+// 64-bit machine, exactly as the compiler of Go computes them.
 func (t Type) Size() uintptr {
 	switch t.Kind() {
 	case Bool, Int8, Uint8:
@@ -279,8 +323,67 @@ func (t Type) Size() uintptr {
 		return 24
 	case Array:
 		return uintptr(t.Len()) * t.Elem().Size()
+	case Struct:
+		size, _ := t.layout()
+		return size
 	}
 	panic("reflect: Size of " + t.String())
+}
+
+// Align gives the count of bytes of the alignment of a value of the type.
+func (t Type) Align() int {
+	switch t.Kind() {
+	case Bool, Int8, Uint8:
+		return 1
+	case Int16, Uint16:
+		return 2
+	case Int32, Uint32, Float32, Complex64:
+		return 4
+	case Int, Int64, Uint, Uint64, Uintptr, Float64, Complex128,
+		Pointer, UnsafePointer, Map, Chan, Func, Interface, String, Slice:
+		return 8
+	case Array:
+		return t.Elem().Align()
+	case Struct:
+		_, align := t.layout()
+		return align
+	}
+	panic("reflect: Align of " + t.String())
+}
+
+// FieldAlign gives the alignment of the type inside a struct.
+func (t Type) FieldAlign() int { return t.Align() }
+
+// layout gives the size and the alignment of a struct type.
+//
+// Go puts each field at an offset that its alignment allows, and it rounds the
+// size up to the alignment of the struct. A struct whose last field holds 0
+// bytes takes 1 more byte, thus a pointer to the end stays inside the value.
+func (t Type) layout() (uintptr, int) {
+	count := dart.FieldCount(t.desc)
+	offset := uintptr(0)
+	align := 1
+	last := uintptr(0)
+	for i := 0; i < count; i++ {
+		_, _, _, desc := dart.FieldInfo(t.desc, i)
+		field := Type{desc: desc}
+		a := field.Align()
+		if a > align {
+			align = a
+		}
+		offset = roundUp(offset, uintptr(a))
+		last = field.Size()
+		offset += last
+	}
+	if count > 0 && last == 0 && offset > 0 {
+		offset++
+	}
+	return roundUp(offset, uintptr(align)), align
+}
+
+// roundUp gives the first multiple of the alignment that is not below n.
+func roundUp(n, align uintptr) uintptr {
+	return (n + align - 1) / align * align
 }
 
 // The 4 forms of the location that a Value names. A Value of the form locNone
