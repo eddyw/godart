@@ -561,6 +561,39 @@ The plan left these points open. The work took the decisions below.
      with the output of go run. 54 files match, a file outside the subset
      skips, and `goTestSkips` names the 18 files whose run differs, with the
      cause of each one. A fix removes its entry.
+151. A case of a switch with no tag compares with true. A case of an
+     interface type needs that comparison in the output, and a plain bool is
+     its own condition. Before this rule, `case i:` with an interface i wrote
+     the interface into the condition, and the Dart build stopped.
+152. The length and the capacity of a pointer to an array come from the type,
+     and the read follows no pointer. `len(f())` with a function that gives a
+     nil `*[40]int` gives 40, and a closure keeps the side effect.
+153. The name of a descriptor writes each basic type by its kind, thus byte
+     gives uint8 and rune gives int32. A type test compares the name, and
+     `x.(uint8)` must accept a value that a byte expression boxed.
+154. `new(expr)` of an array type copies the array with `$copyArray`. A Dart
+     list holds no `$copy` method.
+155. `writeNilChans` runs again after the init routine, and a second call
+     writes only the new keys. The initializer of a package variable
+     registers its nil channels after the first call, and the output held an
+     undefined name.
+156. A parallel assignment reads the operands of each location before the
+     first write. The key of an index and the pointer of a deref each land in
+     a variable, the range clause `for i, x[i] = range y` writes the element
+     of the old key, and a receive case of a select takes a fresh box for its
+     variable on each pass.
+157. A map with a key of an array type takes its own equality and its own
+     hash, because a Dart list compares by identity. `mapNew` writes them at
+     each creation site, and an array inside the key compares the same way.
+158. A pointer to a struct compares by identity. The == operator of the class
+     reads the fields, thus 2 allocations with equal fields compared equal.
+     Each other pointer keeps the == of its cell, because a field pointer is
+     a fresh `$Ref` at each address operation.
+159. A method expression walks to its method, exactly as the adapter of a
+     method table does. An interface receiver dispatches through `$call`, a
+     promoted method reads its embedded fields, a value method through a
+     pointer parameter reads the value behind it, and a value receiver takes
+     a copy at the call.
 
 ## Answered questions of 2026-08-31
 

@@ -485,17 +485,17 @@ with 4 patches that remove a deferred recover. Read decision 148.
 
 `TestRunFilesOfGoTest` of `internal/driver/gotest_test.go` runs each file of
 `$GOROOT/test` whose header is `// run`. The directory holds 145 such files at
-the top level. 54 compile and give the output of go run. A file outside the
-subset skips, and `goTestSkips` names the 18 files whose run differs, with the
-cause of each one. The list of 2026-08-31, by the kind of the cause:
+the top level. The first run of 2026-08-31 matched 54 files and named 18
+differences. The same session fixed 13 of them, with decisions 151 to 159,
+and 70 files match now. A file outside the subset skips, and `goTestSkips`
+names each run that still differs:
 
-| Kind | Files |
+| File | Cause |
 |---|---|
-| A parity limit of the target | `stack`, `stackobj2` (the Dart VM holds a fixed stack), `peano` (a deref of `type Number *Number`), `reflectmethod4` (a bound method of reflect is no plain Dart function). |
-| The order of an assignment | `reorder`, `range`, `escape` (an index location or an aliased pointer reads late). |
-| A composite literal | `complit`, `compos`, `bigmap` (the identity or the copy of a literal). |
-| A method form | `method3`, `method7`, `ddd`, `genmeth1` (a method expression on a slice type, of an interface, of a promoted method, and a generic method value). |
-| The emit of a type | `alias1` (byte against uint8), `const4` (a nil channel variable), `switch` (an interface lands in a bool), `newexpr` (new of an array type). |
+| `stack`, `stackobj2` | The Dart VM holds a fixed stack, and the deep recursion overflows. A parity limit. |
+| `peano` | A deref of `type Number *Number` has no Dart form. Decision 149 stops the crash, and the deref stays open. |
+| `reflectmethod4` | A bound method of reflect is no plain Dart function, thus an assertion back to a func type fails. A parity limit. |
+| `genmeth1` | A value of a generic method of Go 1.27 carries the dictionary form. The call of such a method works, and the value stays open. |
 
 The subdirectories of `$GOROOT/test` stay open: fixedbugs holds about 2000
 more files, and typeparam holds about 400.

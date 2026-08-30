@@ -99,6 +99,9 @@ itself stopped the compiler.
 | `4c57aad` | A parallel assignment stages a copy of a struct value. |
 | `0d2d133` | The real tests of `compress/flate` and of `compress/gzip`. |
 | `1d1e352` | The run files of the test directory of the Go repository: 54 match, and 18 skips name their causes. |
+| `7b4cfad` | A parallel assignment reads each location before the first write, in the range clause and in a select case too. |
+| `8e03c79` | 7 emit fixes: the interface case of a tagless switch, len and cap of an array pointer, new of an array, the name of byte, the late nil channel, the identity of a struct pointer, the map key of an array type, and the walk of a method expression. |
+| `35126f4` | The skip list of the run files fell from 18 to 5 entries, and 70 files match. |
 
 ### 2026-08-31, the second session
 
