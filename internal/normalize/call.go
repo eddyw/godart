@@ -3,6 +3,7 @@ package normalize
 import (
 	"go/ast"
 	"go/constant"
+	"go/token"
 	"go/types"
 	"strconv"
 
@@ -231,7 +232,10 @@ func (b *builder) builtin(e *ast.CallExpr, fn string) ir.Expr {
 }
 
 func (b *builder) composite(e *ast.CompositeLit) ir.Expr {
-	t := b.typeOf(e)
+	return b.compositeOf(e, b.typeOf(e))
+}
+
+func (b *builder) compositeOf(e *ast.CompositeLit, t types.Type) ir.Expr {
 	switch u := typeset.Core(t).(type) {
 	case *types.Struct:
 		return b.structLit(e, t, u)
@@ -251,6 +255,15 @@ func (b *builder) composite(e *ast.CompositeLit) ir.Expr {
 			out.Elems = append(out.Elems, b.copyPoint(b.exprAs(kv.Value, u.Elem())))
 		}
 		return out
+	case *types.Pointer:
+		// An element of a literal of a container of pointers omits the
+		// address operator. The literal builds the element, and the address
+		// wraps it, exactly as the written form does.
+		inner := b.compositeOf(e, u.Elem())
+		if inner == nil {
+			return nil
+		}
+		return &ir.Unary{Op: token.AND, X: inner, Type: t}
 	}
 	b.fail(e.Pos(), "a literal of type %s is outside the subset", t)
 	return nil

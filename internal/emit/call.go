@@ -27,13 +27,47 @@ func (e *emitter) callText(x *ir.Call) string {
 	args = append(dicts, args...)
 	switch fun := x.Fun.(type) {
 	case *ir.Method:
-		return e.methodCall(fun, args, targs)
+		return e.eraseCast(fun.Obj, x, e.methodCall(fun, args, targs))
 	case *ir.Ident:
-		if _, ok := fun.Obj.(*types.Func); ok {
-			return e.identExpr(fun) + targs + "(" + strings.Join(args, ", ") + ")"
+		if fn, ok := fun.Obj.(*types.Func); ok {
+			return e.eraseCast(fn, x,
+				e.identExpr(fun)+targs+"("+strings.Join(args, ", ")+")")
 		}
 	}
 	return e.expr(x.Fun) + "!(" + strings.Join(args, ", ") + ")"
+}
+
+// eraseCast adds a cast when the declaration of a generic function erases the
+// Dart type of its result. A pointer to a type parameter takes the Dart type
+// Object?, because the form of a pointer follows the type argument. The call
+// site holds that argument, thus the cast gives the real type.
+func (e *emitter) eraseCast(obj types.Object, x *ir.Call, text string) string {
+	fn, ok := obj.(*types.Func)
+	if !ok {
+		return text
+	}
+	origin, ok := fn.Origin().Type().(*types.Signature)
+	if !ok || origin.Results().Len() != 1 {
+		return text
+	}
+	if e.dartType(origin.Results().At(0).Type()) != "Object?" {
+		return text
+	}
+	result := x.GoType()
+	if tuple, ok := result.(*types.Tuple); ok {
+		if tuple.Len() != 1 {
+			return text
+		}
+		result = tuple.At(0).Type()
+	}
+	if result == nil {
+		return text
+	}
+	dart := e.dartType(result)
+	if dart == "Object?" {
+		return text
+	}
+	return "(" + text + " as " + dart + ")"
 }
 
 // spreadCall writes a call whose arguments come from the results of another

@@ -46,6 +46,16 @@ var native = []string{
 	"compress/flate",
 	"compress/gzip",
 	"compress/zlib",
+	"testing/iotest",
+	"text/tabwriter",
+	"go/token",
+	"go/scanner",
+	"go/ast",
+	"go/build/constraint",
+	"go/parser",
+	"go/doc/comment",
+	"go/printer",
+	"go/format",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

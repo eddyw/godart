@@ -242,6 +242,44 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 			b.pending = nil
 			out = append(out, &ir.Global{Var: v, Init: init, Pending: pending})
 		}
+	case len(spec.Values) == 1:
+		// The call runs 1 time. A hidden variable holds the record of the
+		// results, and each name reads 1 field of it. The hidden variable
+		// takes the place of the first name in the order of the init.
+		b.startInit(spec.Values[0])
+		call := b.expr(spec.Values[0])
+		pending := b.pending
+		b.pending = nil
+		if call == nil {
+			break
+		}
+		tuple, ok := call.GoType().(*types.Tuple)
+		if !ok || tuple.Len() != len(vars) {
+			b.fail(spec.Pos(), "a package variable with multiple results needs a call")
+			break
+		}
+		p := b.fset.Position(spec.Pos())
+		hidden := &ir.Var{
+			Name: fmt.Sprintf("InitVars$%d_%d", p.Line, p.Column),
+			Type: tuple,
+		}
+		// The rank of the first named variable places the hidden variable,
+		// and the stable sort of the init order keeps it in front.
+		for _, v := range vars {
+			if v.Name != "_" {
+				hidden.Obj = v.Obj
+				break
+			}
+		}
+		out = append(out, &ir.Global{Var: hidden, Init: call, Pending: pending})
+		for i, v := range vars {
+			field := &ir.RecordField{
+				X:     &ir.Ident{Name: hidden.Name, Type: tuple},
+				Index: i,
+				Type:  v.Type,
+			}
+			out = append(out, &ir.Global{Var: v, Init: b.copyPoint(field)})
+		}
 	default:
 		b.fail(spec.Pos(), "a package variable with multiple results is not supported yet")
 	}

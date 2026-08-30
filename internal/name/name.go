@@ -6,6 +6,7 @@ package name
 
 import (
 	"go/token"
+	"strconv"
 	"unicode"
 	"unicode/utf8"
 )
@@ -51,7 +52,32 @@ func Local(goName string) string {
 	if keywords[goName] || reserved[goName] {
 		return goName + "$"
 	}
-	return goName
+	return ascii(goName)
+}
+
+// ascii writes each rune of a Go name that Dart rejects as a hex escape. A
+// Dart identifier holds only ASCII letters, ASCII digits, `_`, and `$`.
+func ascii(goName string) string {
+	plain := true
+	for _, r := range goName {
+		if r >= 128 {
+			plain = false
+			break
+		}
+	}
+	if plain {
+		return goName
+	}
+	out := make([]byte, 0, len(goName)+8)
+	for _, r := range goName {
+		if r < 128 {
+			out = append(out, byte(r))
+			continue
+		}
+		out = append(out, '$', 'u')
+		out = strconv.AppendInt(out, int64(r), 16)
+	}
+	return string(out)
 }
 
 // Exported reports whether Go exports the name.
@@ -78,10 +104,10 @@ func Type(goName string) string {
 // type, or a struct field.
 func Package(goName string) string {
 	if !token.IsExported(goName) {
-		return "_" + goName
+		return "_" + ascii(goName)
 	}
 	if keywords[goName] || reserved[goName] {
 		return goName + "$"
 	}
-	return goName
+	return ascii(goName)
 }
