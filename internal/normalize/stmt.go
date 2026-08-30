@@ -222,23 +222,36 @@ func (b *builder) assign(s *ast.AssignStmt) []ir.Stmt {
 	if len(s.Lhs) == 1 {
 		return b.assignOne(s.Lhs[0], s.Rhs[0])
 	}
-	// Go evaluates each value on the right before it writes a location, thus
-	// the stage hoists the values into temporary variables. The stage copies
-	// a struct value, because a write to a location writes into its object,
-	// and the temporary must keep the value before the write.
+	// Go evaluates the operands of each location and each value on the right
+	// before the first write. The stage hoists both into temporary variables,
+	// and it copies a struct value, because a write to a location writes into
+	// its object.
 	var out []ir.Stmt
+	sets := make([]func(ir.Expr) ir.Stmt, len(s.Lhs))
+	for i, lhs := range s.Lhs {
+		if isBlank(lhs) {
+			continue
+		}
+		pre, set := b.lvalueStaged(lhs)
+		out = append(out, pre...)
+		sets[i] = set
+	}
 	tmps := make([]ir.Expr, len(s.Rhs))
 	for i, rhs := range s.Rhs {
 		t := b.typeOf(s.Lhs[i])
+		if isBlank(s.Lhs[i]) {
+			t = b.typeOf(rhs)
+		}
 		v := b.tempVar(rhs.Pos(), "a", t)
 		out = append(out, &ir.Declare{Vars: []*ir.Var{v},
 			Init: b.copyPoint(b.exprAs(rhs, t))})
 		tmps[i] = &ir.Ident{Name: v.Name, Type: t}
 	}
-	for i, lhs := range s.Lhs {
-		pre, _, set := b.lvalue(lhs)
-		out = append(out, pre...)
-		out = append(out, set(b.copyPoint(tmps[i])))
+	for i := range s.Lhs {
+		if sets[i] == nil {
+			continue
+		}
+		out = append(out, sets[i](b.copyPoint(tmps[i])))
 	}
 	return out
 }
@@ -269,6 +282,18 @@ func (b *builder) assignMulti(s *ast.AssignStmt) []ir.Stmt {
 		}
 	}
 	var out []ir.Stmt
+	// The operands of each location stand in front of the call, in the order
+	// of Go. A location that a name on the left also writes keeps its place
+	// this way.
+	sets := make([]func(ir.Expr) ir.Stmt, len(s.Lhs))
+	for i, lhs := range s.Lhs {
+		if isBlank(lhs) || (news != nil && news[i] != nil) {
+			continue
+		}
+		pre, set := b.lvalueStaged(lhs)
+		out = append(out, pre...)
+		sets[i] = set
+	}
 	// Each temporary holds the type of the call, and not the type of the
 	// location. A location of an interface type then takes a conversion.
 	tuple, _ := rhs.GoType().(*types.Tuple)
@@ -291,9 +316,7 @@ func (b *builder) assignMulti(s *ast.AssignStmt) []ir.Stmt {
 			out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: b.convert(read, news[i].Type())})
 			continue
 		}
-		pre, _, set := b.lvalue(lhs)
-		out = append(out, pre...)
-		out = append(out, set(b.convert(read, b.typeOf(lhs))))
+		out = append(out, sets[i](b.convert(read, b.typeOf(lhs))))
 	}
 	return out
 }

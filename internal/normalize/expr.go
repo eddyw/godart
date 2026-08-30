@@ -81,6 +81,47 @@ func (b *builder) lvalue(e ast.Expr) (pre []ir.Stmt, get ir.Expr, set func(ir.Ex
 	return nil, x, func(v ir.Expr) ir.Stmt { return &ir.Assign{Lhs: x, Rhs: v} }
 }
 
+// lvalueStaged prepares a location of a parallel assignment. Go evaluates the
+// operands of each location before the first write, thus the key of an index
+// and the pointer of a deref each land in a variable, and a write to a name
+// on the left does not move a location on the right of it. The base of a
+// field keeps its name, because a variable is stable storage.
+func (b *builder) lvalueStaged(e ast.Expr) (pre []ir.Stmt, set func(ir.Expr) ir.Stmt) {
+	switch e := e.(type) {
+	case *ast.ParenExpr:
+		return b.lvalueStaged(e.X)
+	case *ast.IndexExpr:
+		x := b.expr(e)
+		switch x := x.(type) {
+		case *ir.Index:
+			pre1, base := b.hoist(x.X, e.X.Pos(), "b")
+			pre2, key := b.forceHoist(x.Index, e.Index.Pos(), "k")
+			read := &ir.Index{X: base, Index: key, Type: x.Type}
+			return append(pre1, pre2...), func(v ir.Expr) ir.Stmt {
+				return &ir.Assign{Lhs: read, Rhs: v}
+			}
+		case *ir.MapRead:
+			pre1, base := b.hoist(x.X, e.X.Pos(), "b")
+			pre2, key := b.forceHoist(x.Key, e.Index.Pos(), "k")
+			read := &ir.MapRead{X: base, Key: key, Type: x.Type}
+			return append(pre1, pre2...), func(v ir.Expr) ir.Stmt {
+				return &ir.Assign{Lhs: read, Rhs: v}
+			}
+		}
+	case *ast.StarExpr:
+		x := b.expr(e)
+		if un, ok := x.(*ir.Unary); ok {
+			pre, p := b.forceHoist(un.X, e.X.Pos(), "p")
+			read := &ir.Unary{Op: un.Op, X: p, Type: un.Type}
+			return pre, func(v ir.Expr) ir.Stmt {
+				return &ir.Assign{Lhs: read, Rhs: v}
+			}
+		}
+	}
+	pre, _, set = b.lvalue(e)
+	return pre, set
+}
+
 // forceHoist puts an expression into a temporary variable in each case. A
 // defer statement reads its operands at that moment, thus a later write to a
 // variable does not change the deferred call.

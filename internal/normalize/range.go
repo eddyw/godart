@@ -74,6 +74,23 @@ func (b *builder) bind(s *ast.RangeStmt, target ast.Expr, value ir.Expr) []ir.St
 	return append(pre, set(b.copyPoint(b.convert(value, b.typeOf(target)))))
 }
 
+// bindBoth writes the key and the value of 1 pass of a range loop. Go
+// evaluates the operands of the 2 locations first, thus the location of the
+// value reads the key before the write of the key. `for i, x[i] = range y`
+// writes the element that the old key names.
+func (b *builder) bindBoth(s *ast.RangeStmt, kv, vv ir.Expr) []ir.Stmt {
+	if s.Value == nil || isBlank(s.Value) || s.Tok == token.DEFINE {
+		out := b.bind(s, s.Key, kv)
+		if s.Value != nil && vv != nil {
+			out = append(out, b.bind(s, s.Value, vv)...)
+		}
+		return out
+	}
+	pre, set := b.lvalueStaged(s.Value)
+	out := append(pre, b.bind(s, s.Key, kv)...)
+	return append(out, set(b.copyPoint(b.convert(vv, b.typeOf(s.Value)))))
+}
+
 func (b *builder) rangeList(s *ast.RangeStmt, label string) []ir.Stmt {
 	pre, container := b.hoist(b.expr(s.X), s.X.Pos(), "range")
 	iv, i := b.intVar(s.Pos(), "i")
@@ -82,8 +99,7 @@ func (b *builder) rangeList(s *ast.RangeStmt, label string) []ir.Stmt {
 		&ir.Declare{Vars: []*ir.Var{lv}, Init: &ir.Builtin{Name: "len", Args: []ir.Expr{container}, Type: types.Typ[types.Int]}})
 	elem := elemType(container.GoType())
 	body := &ir.Block{}
-	body.List = append(body.List, b.bind(s, s.Key, i)...)
-	body.List = append(body.List, b.bind(s, s.Value, b.copyPoint(&ir.Index{X: container, Index: i, Type: elem}))...)
+	body.List = append(body.List, b.bindBoth(s, i, b.copyPoint(&ir.Index{X: container, Index: i, Type: elem}))...)
 	body.List = append(body.List, b.block(s.Body).List...)
 	loop := &ir.For{
 		Init:  &ir.Declare{Vars: []*ir.Var{iv}, Init: intConst(0)},
@@ -128,8 +144,7 @@ func (b *builder) rangeString(s *ast.RangeStmt, label string) []ir.Stmt {
 		Lhs: []ir.Expr{runeRead, size},
 		Rhs: &ir.Builtin{Name: "decoderune", Args: []ir.Expr{str, i}, Type: types.Typ[types.Int]},
 	})
-	body.List = append(body.List, b.bind(s, s.Key, i)...)
-	body.List = append(body.List, b.bind(s, s.Value, runeRead)...)
+	body.List = append(body.List, b.bindBoth(s, i, runeRead)...)
 	body.List = append(body.List, b.block(s.Body).List...)
 	loop := &ir.For{
 		Cond: &ir.Binary{Op: token.LSS, X: i,
@@ -160,8 +175,7 @@ func (b *builder) rangeMap(s *ast.RangeStmt, label string) []ir.Stmt {
 			X: &ir.Builtin{Name: "maphas", Args: []ir.Expr{container, key}, Type: types.Typ[types.Bool]}},
 		Then: &ir.Block{List: []ir.Stmt{&ir.Continue{}}},
 	})
-	body.List = append(body.List, b.bind(s, s.Key, key)...)
-	body.List = append(body.List, b.bind(s, s.Value,
+	body.List = append(body.List, b.bindBoth(s, key,
 		b.copyPoint(&ir.Index{X: container, Index: key, Type: m.Elem()}))...)
 	body.List = append(body.List, b.block(s.Body).List...)
 	loop := &ir.For{

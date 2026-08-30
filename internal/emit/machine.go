@@ -471,6 +471,12 @@ func (e *emitter) selectBind(s *ir.SelectBind) {
 		if i >= len(fields) || v.Name == "_" {
 			continue
 		}
+		if v.Boxed {
+			// The case declares its variable, thus each pass takes a fresh
+			// box, and a pointer of an earlier pass keeps its value.
+			e.line("%s = Box(%s);", v.Name, fields[i])
+			continue
+		}
 		e.line("%s = %s;", varRead(v), fields[i])
 	}
 	for i, lhs := range s.Clause.Lhs {
