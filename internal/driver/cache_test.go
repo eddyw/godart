@@ -71,6 +71,68 @@ func TestCache(t *testing.T) {
 	}
 }
 
+// TestCacheBlockDigest proves that a package compiles again when the block
+// analysis of the module changes.
+//
+// That analysis reads the whole module. A new function of a package that this
+// package does not import can give a function value of a shared signature the
+// async form, and each call through such a value then changes.
+func TestCacheBlockDigest(t *testing.T) {
+	source := t.TempDir()
+	runtime, err := filepath.Abs("../../runtime/goruntime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(source, "lib"), 0o777); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(source, "go.mod"), "module example.com/blockcache\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(source, "lib", "lib.go"),
+		"package lib\n\nfunc Apply(f func(int) bool, v int) bool { return f(v) }\n")
+	writeFile(t, filepath.Join(source, "main.go"),
+		"package main\n\nimport \"example.com/blockcache/lib\"\n\n"+
+			"func main() { println(lib.Apply(func(i int) bool { return i > 0 }, 1)) }\n")
+
+	out := t.TempDir()
+	build := func() *driver.Stats {
+		t.Helper()
+		stats, err := driver.BuildWithStats(driver.Options{
+			Dir:      source,
+			Patterns: []string{"./..."},
+			Out:      out,
+			Runtime:  runtime,
+			Format:   false,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return stats
+	}
+
+	build()
+	second := build()
+	if len(second.Compiled) != 0 {
+		t.Fatalf("the second build compiled %v, want the cache", second.Compiled)
+	}
+
+	// The new function reaches a value of the signature that Apply calls, thus
+	// Apply takes the async form.
+	writeFile(t, filepath.Join(source, "main.go"),
+		"package main\n\nimport \"example.com/blockcache/lib\"\n\n"+
+			"var ch = make(chan int, 1)\n\n"+
+			"func wait(i int) bool { <-ch; return i > 0 }\n\n"+
+			"func main() {\n"+
+			"\tprintln(lib.Apply(func(i int) bool { return i > 0 }, 1))\n"+
+			"\tch <- 1\n"+
+			"\tvar g func(int) bool = wait\n"+
+			"\tprintln(g(2))\n"+
+			"}\n")
+	third := build()
+	if !slices.Contains(third.Compiled, "example.com/blockcache/lib") {
+		t.Errorf("the third build compiled %v, want the package lib", third.Compiled)
+	}
+}
+
 func copyModule(t *testing.T, source string) string {
 	t.Helper()
 	out := t.TempDir()

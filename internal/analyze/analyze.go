@@ -7,6 +7,9 @@
 package analyze
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"go/ast"
 	"go/types"
 	"strconv"
@@ -36,6 +39,39 @@ func (r *Result) CallAsync(call *ast.CallExpr) bool { return r.callAsync[call] }
 // SignatureAsync reports whether a function value of this signature can block.
 func (r *Result) SignatureAsync(sig *types.Signature) bool {
 	return r.sigAsync[signatureKey(sig)]
+}
+
+// Digest gives a stable text of each decision that the emitter of 1 package
+// reads.
+//
+// The cache key of a package holds this text. The analysis reads the whole
+// module, thus a new function of a package that this package does not import
+// can change the form of a call through a function value.
+func (r *Result) Digest(p *packages.Package) string {
+	h := sha256.New()
+	for _, f := range p.Syntax {
+		ast.Inspect(f, func(n ast.Node) bool {
+			switch n := n.(type) {
+			case *ast.FuncDecl:
+				fmt.Fprintf(h, "d%t\x00", r.blocking[any(p.TypesInfo.Defs[n.Name])])
+			case *ast.FuncLit:
+				fmt.Fprintf(h, "l%t\x00", r.blocking[any(n)])
+			case *ast.CallExpr:
+				fmt.Fprintf(h, "c%t\x00", r.callAsync[n])
+			case *ast.RangeStmt:
+				tv, ok := p.TypesInfo.Types[n.X]
+				if !ok {
+					return true
+				}
+				sig, ok := types.Unalias(tv.Type).Underlying().(*types.Signature)
+				if ok {
+					fmt.Fprintf(h, "r%t\x00", r.SignatureAsync(sig))
+				}
+			}
+			return true
+		})
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // summary holds what 1 function does. The fixed point reads it.

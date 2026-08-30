@@ -97,7 +97,8 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		if err != nil {
 			return nil, err
 		}
-		sourceHash := meta.SourceHash(sources, dependencyHashes(p, module, exports), dartPkg)
+		sourceHash := meta.SourceHash(sources, dependencyHashes(p, module, exports),
+			dartPkg, blocks.Digest(p))
 		if !opt.NoCache {
 			if old, ok := store.Read(p.ID); ok && old.SourceHash == sourceHash &&
 				outputExists(opt.Out, old.Files) {

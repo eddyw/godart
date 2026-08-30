@@ -107,11 +107,13 @@ func (s *Store) Write(a *Archive) error {
 }
 
 // SourceHash covers each input of the compile function: the source files, the
-// export hash of each dependency, the identity of the compiler, and the flags.
-func SourceHash(files map[string][]byte, deps []string, flags string) string {
+// export hash of each dependency, the identity of the compiler, the flags, and
+// the digest of the block analysis.
+func SourceHash(files map[string][]byte, deps []string, flags, blocks string) string {
 	h := sha256.New()
 	fmt.Fprintf(h, "version\x00%s\x00%s\x00", Version, build())
 	fmt.Fprintf(h, "flags\x00%s\x00", flags)
+	fmt.Fprintf(h, "blocks\x00%s\x00", blocks)
 	names := make([]string, 0, len(files))
 	for name := range files {
 		names = append(names, name)
