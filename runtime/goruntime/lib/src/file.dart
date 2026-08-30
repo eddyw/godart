@@ -319,7 +319,7 @@ GoString $tempDir() => GoString.fromString(Directory.systemTemp.path);
 GoString $pathSeparator() => GoString.fromString(Platform.pathSeparator);
 
 /// Writes text to standard error.
-void $stderr(GoString text) => stderr.write(text.toDartString());
+void $stderr(GoString text) => stderr.add(text.bytes);
 
 /// Reads bytes from standard input. A count of 0 means the end of the input.
 ///

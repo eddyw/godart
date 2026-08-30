@@ -881,8 +881,10 @@ Gaps of the standard library surface:
 | `crypto/tls` | A client only. Read the section of the network access. |
 
 A list of bytes reads as text for the verbs `s`, `q`, `x`, and `X`, exactly as
-in Go. `%s` of a byte that holds no rune of UTF-8 writes the replacement
-character, and Go writes the byte.
+in Go. A byte that holds no rune of UTF-8 keeps its value through each write.
+`GoString.toDartString` gives such a byte 1 code unit of the range U+DC80 to
+U+DCFF, and `GoString.fromString` gives the byte again. A Dart String holds
+runes only, thus the format path needs that escape.
 
 The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
 `%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.

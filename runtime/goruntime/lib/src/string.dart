@@ -20,8 +20,9 @@ final class GoString {
   /// The zero value of a Go string.
   static final GoString empty = GoString.fromBytes(const <int>[]);
 
-  /// Encodes a Dart string as UTF-8.
-  factory GoString.fromString(String s) => GoString.fromBytes(utf8.encode(s));
+  /// Encodes a Dart string as UTF-8. A code unit of the escape range gives the
+  /// 1 byte that it stands for. Read toDartString.
+  factory GoString.fromString(String s) => GoString.fromBytes(_encode(s));
 
   /// Copies the bytes into unmodifiable storage.
   factory GoString.fromBytes(List<int> bytes) =>
@@ -40,8 +41,18 @@ final class GoString {
     return bytes[i];
   }
 
-  /// Decodes the bytes as UTF-8. An invalid byte becomes U+FFFD, as in Go.
-  String toDartString() => utf8.decode(bytes, allowMalformed: true);
+  /// Decodes the bytes as UTF-8.
+  ///
+  /// A byte that holds no rune of UTF-8 becomes 1 code unit of the range U+DC80
+  /// to U+DCFF, thus GoString.fromString gives the same bytes again. Go writes
+  /// such a byte with no change, and a Dart String holds runes only.
+  String toDartString() {
+    try {
+      return utf8.decode(bytes);
+    } on FormatException {
+      return _escape(this);
+    }
+  }
 
   @override
   bool operator ==(Object other) {
@@ -191,4 +202,55 @@ GoString $runesToString(Slice<int> runes) {
     return (0xFFFD, 1);
   }
   return (rune, size);
+}
+
+/// The first code unit of the escape range. A byte that holds no rune of UTF-8
+/// takes the code unit of this base and the value of the byte.
+const int _escapeBase = 0xDC00;
+
+/// Decodes bytes that hold no valid UTF-8. Each byte of an invalid sequence
+/// takes 1 code unit of the escape range.
+String _escape(GoString s) {
+  final StringBuffer out = StringBuffer();
+  var i = 0;
+  while (i < s.bytes.length) {
+    final (int rune, int size) = $decodeRune(s, i);
+    if (rune == 0xFFFD && size == 1) {
+      out.writeCharCode(_escapeBase | s.bytes[i]);
+    } else {
+      out.writeCharCode(rune);
+    }
+    i += size;
+  }
+  return out.toString();
+}
+
+/// Encodes a Dart string as UTF-8. A code unit of the escape range gives the 1
+/// byte that it stands for.
+List<int> _encode(String s) {
+  var escaped = false;
+  for (var i = 0; i < s.length; i++) {
+    final int unit = s.codeUnitAt(i);
+    if (unit >= 0xDC80 && unit <= 0xDCFF) {
+      escaped = true;
+      break;
+    }
+  }
+  if (!escaped) return utf8.encode(s);
+  final List<int> out = <int>[];
+  final StringBuffer part = StringBuffer();
+  for (var i = 0; i < s.length; i++) {
+    final int unit = s.codeUnitAt(i);
+    if (unit >= 0xDC80 && unit <= 0xDCFF) {
+      if (part.isNotEmpty) {
+        out.addAll(utf8.encode(part.toString()));
+        part.clear();
+      }
+      out.add(unit & 0xFF);
+      continue;
+    }
+    part.writeCharCode(unit);
+  }
+  if (part.isNotEmpty) out.addAll(utf8.encode(part.toString()));
+  return out;
 }

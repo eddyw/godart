@@ -77,6 +77,7 @@ and `make ci` runs each one.
 | A generic set with an iterator | `cmp`, `maps`, `slices`, a generic method |
 | A merge of 2 sequences, step by step | `iter.Pull`, `iter.Pull2`, a goroutine |
 | The size and the offset of each field of a struct | `reflect.Type.Size`, `Align`, `StructField.Offset` |
+| A write of a byte that holds no rune of UTF-8 | `fmt`, `os.Stdout.Write` |
 | A linked list with a nil safe method | A method with a nil pointer receiver |
 | An HTTP server and a client in 1 program | `net/http`, a handler, a cookie, a chunked answer |
 | A client that holds a connection open | `net/http` keep alive, a listener of its own |

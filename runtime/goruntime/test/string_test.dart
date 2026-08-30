@@ -38,8 +38,15 @@ void main() {
       expect(a.hashCode, b.hashCode);
     });
 
-    test('replaces an invalid byte with U+FFFD', () {
-      expect(GoString.fromBytes(<int>[0xFF]).toDartString(), '�');
+    test('keeps a byte that holds no rune through a round trip', () {
+      final GoString bad = GoString.fromBytes(<int>[0x68, 0xFF, 0x69]);
+      expect(GoString.fromString(bad.toDartString()).bytes, bad.bytes);
+      expect(bad.toDartString().length, 3);
+    });
+
+    test('keeps each byte of a sequence that holds no rune', () {
+      final GoString bad = GoString.fromBytes(<int>[0xED, 0xA0, 0x80, 0x41]);
+      expect(GoString.fromString(bad.toDartString()).bytes, bad.bytes);
     });
 
     test('has an empty zero value', () {

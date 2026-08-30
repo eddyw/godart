@@ -5,7 +5,10 @@ import 'srcmap.dart';
 import 'string.dart';
 
 /// Writes text to standard output. The package fmt uses it.
-void $stdout(GoString text) => stdout.write(text.toDartString());
+///
+/// The bytes reach the sink with no step through a Dart String, thus a byte
+/// that holds no rune of UTF-8 keeps its value.
+void $stdout(GoString text) => stdout.add(text.bytes);
 
 /// The Go builtin `print`. It writes to stderr with no separator.
 void $print(List<String> parts) => stderr.write(parts.join());
