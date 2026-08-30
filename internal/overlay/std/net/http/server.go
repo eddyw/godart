@@ -127,13 +127,25 @@ func (s *Server) handle(conn net.Conn) {
 		}
 		handler.ServeHTTP(w, req)
 		w.finish()
-		if req.Body != nil {
-			io.Copy(io.Discard, req.Body)
-		}
-		if req.Close || w.closeAfter {
+		if req.Close || w.closeAfter || !drain(req) {
 			return
 		}
 	}
+}
+
+// maxPostHandlerReadBytes is the count of bytes of a body that a handler left
+// behind that the server reads. A body that holds more ends the connection.
+const maxPostHandlerReadBytes = 256 << 10
+
+// drain reads the rest of a body that the handler left. The connection then
+// stands at the start of the next request. It gives false for a body that holds
+// more than maxPostHandlerReadBytes bytes.
+func drain(req *Request) bool {
+	if req.Body == nil {
+		return true
+	}
+	n, err := io.Copy(io.Discard, io.LimitReader(req.Body, maxPostHandlerReadBytes+1))
+	return err == nil && n <= maxPostHandlerReadBytes
 }
 
 // A response writes the answer of 1 request. It holds the body in memory, thus

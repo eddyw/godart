@@ -75,6 +75,7 @@ and `make ci` runs each one.
 | A generic set with an iterator | `cmp`, `maps`, `slices`, a generic method |
 | A linked list with a nil safe method | A method with a nil pointer receiver |
 | An HTTP server and a client in 1 program | `net/http`, a handler, a cookie, a chunked answer |
+| A client that holds a connection open | `net/http` keep alive, a listener of its own |
 | A matcher of a pattern with a named group | `regexp`, a replace, a split |
 | A checksum of a text with 4 algorithms | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `encoding/hex` |
 | A read and a write of a binary record | `encoding/binary`, a struct, an array, a varint |

@@ -215,7 +215,7 @@ func readRequest(r *bufio.Reader) (*Request, error) {
 	if u.Host == "" {
 		req.URL.Host = req.Host
 	}
-	body, length, err := readBody(r, header, method != MethodHead)
+	body, length, _, err := readBody(r, header, method != MethodHead, false)
 	if err != nil {
 		return nil, err
 	}

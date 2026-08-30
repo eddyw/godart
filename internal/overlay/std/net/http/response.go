@@ -26,6 +26,11 @@ type Response struct {
 	Close bool
 	// Request holds the request that the response answers.
 	Request *Request
+
+	// bodyEnds marks a body whose end the header names. A body without such an
+	// end reaches the end of the connection, thus the connection holds no
+	// second answer.
+	bodyEnds bool
 }
 
 // readResponse reads 1 response from a connection.
@@ -62,12 +67,13 @@ func readResponse(r *bufio.Reader, req *Request) (*Response, error) {
 	if status == StatusNoContent || status == StatusNotModified || status < 200 {
 		withBody = false
 	}
-	body, length, err := readBody(r, header, withBody)
+	body, length, ends, err := readBody(r, header, withBody, true)
 	if err != nil {
 		return nil, err
 	}
 	res.Body = body
 	res.ContentLength = length
+	res.bodyEnds = ends
 	return res, nil
 }
 
@@ -100,22 +106,27 @@ func readHeader(r *bufio.Reader) (Header, error) {
 }
 
 // readBody gives the reader of a body. The header names the length or the
-// chunked form, and a body with neither ends with the connection.
-func readBody(r *bufio.Reader, header Header, withBody bool) (io.ReadCloser, int64, error) {
+// chunked form. A message with neither holds no body, and toEnd marks a message
+// whose body reaches the end of the connection. The third result marks a body
+// whose end the header names.
+func readBody(r *bufio.Reader, header Header, withBody, toEnd bool) (io.ReadCloser, int64, bool, error) {
 	if !withBody {
-		return io.NopCloser(strings.NewReader("")), 0, nil
+		return io.NopCloser(strings.NewReader("")), 0, true, nil
 	}
 	if strings.EqualFold(header.Get("Transfer-Encoding"), "chunked") {
-		return io.NopCloser(&chunkedReader{r: r}), -1, nil
+		return io.NopCloser(&chunkedReader{r: r}), -1, true, nil
 	}
 	if text := header.Get("Content-Length"); text != "" {
 		n, err := strconv.ParseInt(text, 10, 64)
 		if err != nil || n < 0 {
-			return nil, 0, errors.New("bad Content-Length " + strconv.Quote(text))
+			return nil, 0, false, errors.New("bad Content-Length " + strconv.Quote(text))
 		}
-		return io.NopCloser(io.LimitReader(r, n)), n, nil
+		return io.NopCloser(io.LimitReader(r, n)), n, true, nil
 	}
-	return io.NopCloser(r), -1, nil
+	if !toEnd {
+		return io.NopCloser(strings.NewReader("")), 0, true, nil
+	}
+	return io.NopCloser(r), -1, false, nil
 }
 
 // A chunkedReader reads a body of the chunked form.

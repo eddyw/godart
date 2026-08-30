@@ -417,17 +417,20 @@ with about 1500 lines.
 | `Error`, `NotFound`, `Redirect`, `StatusText` | Present | Equal |
 | `Cookie`, `SetCookie`, `Request.Cookies`, `Response.Cookies` | Present | Equal |
 | A chunked body | Present | Equal, for a read and for a write. |
-| Keep alive | Present | Missing. The client opens 1 connection for each request. |
+| Keep alive | Present | Present. The client holds a pool of 2 connections for each host. |
+| A Close of a body that stands before its end | The connection stays open when the read loop reaches the end first | The connection ends. |
 | HTTP/2 | Present | Missing |
 | `Accept-Encoding: gzip` | The client adds it and reads the answer | Missing. The surface holds no `compress/gzip`. |
 | The type of a body that the handler does not name | `DetectContentType` reads the first 512 bytes | `text/plain; charset=utf-8` for each body |
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
 | `Request.RemoteAddr` | The address of the peer | Empty. The `Conn` of the `net` overlay names no peer. |
-| `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig` only |
+| `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `MaxIdleConnsPerHost`, and `CloseIdleConnections` |
 | `httptest`, `CookieJar`, `FileServer`, `multipart` | Present | Missing |
 
 `testdata/programs/httpuse` runs a server and a client in 1 program, and the
 output of `go run` and of the Dart build stays equal.
+`testdata/programs/httpkeep` counts the connections of a listener, and it proves
+that 5 requests in a row share 1 connection.
 
 ## The clock and the timer
 

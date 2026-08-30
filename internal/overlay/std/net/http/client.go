@@ -25,6 +25,18 @@ type Client struct {
 // DefaultClient is the client of the top level functions.
 var DefaultClient = &Client{}
 
+// CloseIdleConnections ends each connection of the transport that stands open
+// with no request.
+func (c *Client) CloseIdleConnections() {
+	transport := c.Transport
+	if transport == nil {
+		transport = DefaultTransport
+	}
+	if t, ok := transport.(interface{ CloseIdleConnections() }); ok {
+		t.CloseIdleConnections()
+	}
+}
+
 // Get sends a GET request.
 func Get(url string) (*Response, error) { return DefaultClient.Get(url) }
 
