@@ -223,13 +223,16 @@ func (b *builder) assign(s *ast.AssignStmt) []ir.Stmt {
 		return b.assignOne(s.Lhs[0], s.Rhs[0])
 	}
 	// Go evaluates each value on the right before it writes a location, thus
-	// the stage hoists the values into temporary variables.
+	// the stage hoists the values into temporary variables. The stage copies
+	// a struct value, because a write to a location writes into its object,
+	// and the temporary must keep the value before the write.
 	var out []ir.Stmt
 	tmps := make([]ir.Expr, len(s.Rhs))
 	for i, rhs := range s.Rhs {
 		t := b.typeOf(s.Lhs[i])
 		v := b.tempVar(rhs.Pos(), "a", t)
-		out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: b.exprAs(rhs, t)})
+		out = append(out, &ir.Declare{Vars: []*ir.Var{v},
+			Init: b.copyPoint(b.exprAs(rhs, t))})
 		tmps[i] = &ir.Ident{Name: v.Name, Type: t}
 	}
 	for i, lhs := range s.Lhs {
