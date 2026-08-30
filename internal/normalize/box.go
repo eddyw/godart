@@ -6,6 +6,7 @@ import (
 	"go/types"
 
 	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // addressed collects each variable whose address the code takes.
@@ -109,12 +110,28 @@ func (b *builder) boxed(obj types.Object) bool {
 func (b *builder) captured(body ast.Node, assigned map[*types.Var]bool) map[*types.Var]bool {
 	out := map[*types.Var]bool{}
 	ast.Inspect(body, func(n ast.Node) bool {
-		lit, ok := n.(*ast.FuncLit)
-		if !ok {
-			return true
+		switch n := n.(type) {
+		case *ast.FuncLit:
+			b.captureUses([]ast.Node{n}, out, assigned)
+		case *ast.RangeStmt:
+			// The body of a range loop over a function becomes a closure,
+			// exactly as a function literal does.
+			if b.funcRange(n) {
+				b.captureUses(rangeScope(n), out, assigned)
+			}
 		}
-		inner := map[*types.Var]bool{}
-		ast.Inspect(lit, func(m ast.Node) bool {
+		return true
+	})
+	return out
+}
+
+// captureUses collects each outer variable that the scope writes through a
+// closure. The scope is 1 function literal, or the parts of a range loop over
+// a function.
+func (b *builder) captureUses(scope []ast.Node, out, assigned map[*types.Var]bool) {
+	inner := map[*types.Var]bool{}
+	for _, node := range scope {
+		ast.Inspect(node, func(m ast.Node) bool {
 			if id, ok := m.(*ast.Ident); ok {
 				if v, ok := b.info.Defs[id].(*types.Var); ok {
 					inner[v] = true
@@ -122,7 +139,9 @@ func (b *builder) captured(body ast.Node, assigned map[*types.Var]bool) map[*typ
 			}
 			return true
 		})
-		ast.Inspect(lit, func(m ast.Node) bool {
+	}
+	for _, node := range scope {
+		ast.Inspect(node, func(m ast.Node) bool {
 			id, ok := m.(*ast.Ident)
 			if !ok {
 				return true
@@ -137,9 +156,34 @@ func (b *builder) captured(body ast.Node, assigned map[*types.Var]bool) map[*typ
 			out[v] = true
 			return true
 		})
-		return true
-	})
-	return out
+	}
+}
+
+// rangeScope gives the parts of a range loop that its closure holds. The
+// expression of the sequence stays outside, because the enclosing function
+// reads it.
+func rangeScope(n *ast.RangeStmt) []ast.Node {
+	scope := make([]ast.Node, 0, 3)
+	if n.Key != nil {
+		scope = append(scope, n.Key)
+	}
+	if n.Value != nil {
+		scope = append(scope, n.Value)
+	}
+	return append(scope, n.Body)
+}
+
+// funcRange reports whether the range statement runs over a function.
+func (b *builder) funcRange(n *ast.RangeStmt) bool {
+	if n.X == nil {
+		return false
+	}
+	tv, ok := b.info.Types[n.X]
+	if !ok {
+		return false
+	}
+	_, ok = typeset.Core(tv.Type).(*types.Signature)
+	return ok
 }
 
 // litCaptures gives each boxed variable of an outer scope that the literal
@@ -185,15 +229,66 @@ func (b *builder) machineBoxes(body *ast.BlockStmt, blocking bool) {
 		}
 	}
 	ast.Inspect(body, func(n ast.Node) bool {
-		lit, ok := n.(*ast.FuncLit)
-		if !ok || !b.blocks.Blocks(lit) {
+		var machineBody ast.Node
+		switch n := n.(type) {
+		case *ast.FuncLit:
+			if b.blocks.Blocks(n) {
+				machineBody = n.Body
+			}
+		case *ast.RangeStmt:
+			// The body of a range loop over a function that blocks is a state
+			// machine of its own.
+			if b.blocks.Blocks(n) {
+				machineBody = n.Body
+			}
+		}
+		if machineBody == nil {
 			return true
 		}
-		for v := range b.captured(lit.Body, assigned) {
+		for v := range b.captured(machineBody, assigned) {
 			b.boxes[v] = true
 		}
 		return true
 	})
+}
+
+// rangeCaptures gives each boxed variable of an outer scope that the body of a
+// range loop over a function reads. The state machine of the body reads a copy
+// of each one, exactly as litCaptures gives it for a function literal.
+func (b *builder) rangeCaptures(s *ast.RangeStmt) []*ir.Var {
+	scope := rangeScope(s)
+	inner := map[*types.Var]bool{}
+	for _, node := range scope {
+		ast.Inspect(node, func(n ast.Node) bool {
+			if id, ok := n.(*ast.Ident); ok {
+				if v, ok := b.info.Defs[id].(*types.Var); ok {
+					inner[v] = true
+				}
+			}
+			return true
+		})
+	}
+	seen := map[*types.Var]bool{}
+	var out []*ir.Var
+	for _, node := range scope {
+		ast.Inspect(node, func(n ast.Node) bool {
+			id, ok := n.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			v, ok := b.info.Uses[id].(*types.Var)
+			if !ok || inner[v] || seen[v] || !b.boxes[v] {
+				return true
+			}
+			if v.Parent() != nil && v.Pkg() != nil && v.Parent() == v.Pkg().Scope() {
+				return true
+			}
+			seen[v] = true
+			out = append(out, &ir.Var{Name: b.names[v], Obj: v, Type: v.Type(), Boxed: true})
+			return true
+		})
+	}
+	return out
 }
 
 // assignedVars collects each variable that the code writes or binds after its

@@ -486,6 +486,29 @@ The plan left these points open. The work took the decisions below.
      compiles with it and skips at run time.
 136. `reflect.Value.MapKeys` gives the keys in the order of the insertion, and
      Go gives a random order. `docs/parity.md` holds the gap.
+137. Stage 3 holds a value flow in place of the signature groups.
+     `internal/analyze/flow.go` follows each function value through each
+     assignment, each argument, each result, and each struct field, thus a
+     call through a value reaches only the functions that flow to it. A value
+     that leaves this net falls into the escape group of its signature, and a
+     call outside the net reads that group, thus an untracked construct keeps
+     the old behavior. Before this rule, `iter.Pull` in a program marked each
+     `iter.Seq` closure of the program. The output of
+     `testdata/programs/iteruse` fell 19 percent with this rule, and the
+     output of `slicesuse` fell 2.3 percent. 2 measurements of 2026-08-31
+     first closed the 2 cheap paths: a reachability pass and an owner key each
+     closed nothing.
+138. The body of a range loop over a function is a function of stage 3, and it
+     becomes a local state machine of stage 5 when it blocks. The box rules of
+     stage 4 treat the body as a function literal. Before this rule, a block
+     operation inside such a body was lost: the plain closure ignored the park
+     of a channel, ran on with a junk value, and `testdata/programs/rangeblock`
+     gave 6 in place of 66.
+139. The name of the descriptor of a function type holds no parameter name.
+     A type assertion compares the name, the text of a declared signature
+     holds the parameter names, and the text of an assertion target holds
+     none. Before this rule, `x.(func(int) int)` failed on a value whose
+     declaration named the parameter.
 
 ## Answered questions of 2026-08-31
 

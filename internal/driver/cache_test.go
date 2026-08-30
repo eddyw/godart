@@ -115,8 +115,8 @@ func TestCacheBlockDigest(t *testing.T) {
 		t.Fatalf("the second build compiled %v, want the cache", second.Compiled)
 	}
 
-	// The new function reaches a value of the signature that Apply calls, thus
-	// Apply takes the async form.
+	// The new function flows into the parameter that Apply calls, thus Apply
+	// takes the async form, and the digest of the package lib changes.
 	writeFile(t, filepath.Join(source, "main.go"),
 		"package main\n\nimport \"example.com/blockcache/lib\"\n\n"+
 			"var ch = make(chan int, 1)\n\n"+
@@ -124,8 +124,7 @@ func TestCacheBlockDigest(t *testing.T) {
 			"func main() {\n"+
 			"\tprintln(lib.Apply(func(i int) bool { return i > 0 }, 1))\n"+
 			"\tch <- 1\n"+
-			"\tvar g func(int) bool = wait\n"+
-			"\tprintln(g(2))\n"+
+			"\tprintln(lib.Apply(wait, 2))\n"+
 			"}\n")
 	third := build()
 	if !slices.Contains(third.Compiled, "example.com/blockcache/lib") {

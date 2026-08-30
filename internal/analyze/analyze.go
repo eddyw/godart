@@ -2,8 +2,11 @@
 // block, and it marks each call that must wait for a result.
 //
 // All Go code runs in 1 Dart isolate, and goroutines are cooperative. A
-// function that can block compiles to a Dart async function, and a call to such
-// a function compiles to an await expression.
+// function that can block compiles to a state machine, and a call to such a
+// function compiles to a wait for the result.
+//
+// A call through a function value reaches only the functions that flow to that
+// value. The file flow.go holds the value flow.
 package analyze
 
 import (
@@ -11,35 +14,39 @@ import (
 	"encoding/hex"
 	"fmt"
 	"go/ast"
+	"go/token"
 	"go/types"
 	"strconv"
 	"strings"
 
+	"github.com/eddyw/godart/internal/typeset"
 	"golang.org/x/tools/go/packages"
 )
 
 // Result holds the block state of each function and of each call.
 type Result struct {
-	// blocking marks a function that can block. A key is a *types.Func or a
-	// *ast.FuncLit.
+	// blocking marks a function that can block. A key is a *types.Func, a
+	// *ast.FuncLit, or the *ast.RangeStmt of a range loop over a function,
+	// whose body is a function of its own.
 	blocking map[any]bool
 	// callAsync marks a call that waits for a result.
 	callAsync map[*ast.CallExpr]bool
-	// sigAsync marks the signature of a function value that can block. Each
-	// function value of the signature then takes the async form.
+	// rangeAsync marks a range loop over a function whose call of the
+	// sequence waits for a result.
+	rangeAsync map[*ast.RangeStmt]bool
+	// sigAsync marks the escape group of a signature. A call through a value
+	// that the flow does not track waits when its group holds a function that
+	// blocks.
 	sigAsync map[string]bool
-	// methodAsync marks a method name with a signature that can block.
-	methodAsync map[string]bool
 }
 
 func (r *Result) Blocks(key any) bool { return r.blocking[key] }
 
 func (r *Result) CallAsync(call *ast.CallExpr) bool { return r.callAsync[call] }
 
-// SignatureAsync reports whether a function value of this signature can block.
-func (r *Result) SignatureAsync(sig *types.Signature) bool {
-	return r.sigAsync[signatureKey(sig)]
-}
+// RangeAsync reports whether the call of the sequence of a range loop over a
+// function waits for a result.
+func (r *Result) RangeAsync(s *ast.RangeStmt) bool { return r.rangeAsync[s] }
 
 // Digest gives a stable text of each decision that the emitter of 1 package
 // reads.
@@ -59,14 +66,7 @@ func (r *Result) Digest(p *packages.Package) string {
 			case *ast.CallExpr:
 				fmt.Fprintf(h, "c%t\x00", r.callAsync[n])
 			case *ast.RangeStmt:
-				tv, ok := p.TypesInfo.Types[n.X]
-				if !ok {
-					return true
-				}
-				sig, ok := types.Unalias(tv.Type).Underlying().(*types.Signature)
-				if ok {
-					fmt.Fprintf(h, "r%t\x00", r.SignatureAsync(sig))
-				}
+				fmt.Fprintf(h, "r%t%t\x00", r.blocking[any(n)], r.rangeAsync[n])
 			}
 			return true
 		})
@@ -76,41 +76,42 @@ func (r *Result) Digest(p *packages.Package) string {
 
 // summary holds what 1 function does. The fixed point reads it.
 type summary struct {
-	key     any
-	direct  bool
-	callees []any
-	sigs    []string
-	methods []string
-	calls   []*ast.CallExpr
-	// callKeys names the target of each call, in the order of calls.
-	callKeys [][]any
-	callSigs []string
+	key    any
+	direct bool
+	sites  []*callSite
+	// intrinsics holds each call of an interop function that gives up
+	// control. Such a call always waits.
+	intrinsics []*ast.CallExpr
 }
 
 // Module computes the block state over each package of a module.
 func Module(pkgs []*packages.Package) *Result {
 	a := &analyzer{
 		result: &Result{
-			blocking:    map[any]bool{},
-			callAsync:   map[*ast.CallExpr]bool{},
-			sigAsync:    map[string]bool{},
-			methodAsync: map[string]bool{},
+			blocking:   map[any]bool{},
+			callAsync:  map[*ast.CallExpr]bool{},
+			rangeAsync: map[*ast.RangeStmt]bool{},
+			sigAsync:   map[string]bool{},
 		},
 		summaries:  map[any]*summary{},
-		bySig:      map[string][]any{},
 		byMethod:   map[string][]any{},
-		methodKeys: map[any]string{},
-		sigKeys:    map[any]string{},
-		callFuns:   map[ast.Expr]bool{},
 		parent:     map[string]string{},
+		pts:        map[cell]map[any]bool{},
+		edges:      map[cell]map[cell]bool{},
+		inWork:     map[cell]bool{},
+		watchers:   map[cell][]*callSite{},
+		litSigs:    map[*ast.FuncLit]*types.Signature{},
+		rangeShape: map[*ast.RangeStmt][]cell{},
 	}
 	for _, p := range pkgs {
 		a.pkg = p
 		for _, f := range p.Syntax {
-			ast.Inspect(f, a.collect)
+			a.file(f)
 		}
 	}
 	a.components()
+	a.solve()
+	a.resolveSites()
 	a.fixedPoint()
 	a.markCalls()
 	return a.result
@@ -122,21 +123,9 @@ type analyzer struct {
 	summaries map[any]*summary
 	order     []any
 
-	// bySig groups each function value by its signature, and byMethod groups
-	// each method by its name and its signature. A call through a value or
+	// byMethod groups each method by its name and its signature. A call
 	// through an interface can reach each member of the group.
-	bySig      map[string][]any
-	byMethod   map[string][]any
-	methodKeys map[any]string
-	sigKeys    map[any]string
-	// callFuns holds the callee expression of each call, thus a name that
-	// stands alone reads as a function value.
-	callFuns map[ast.Expr]bool
-
-	// methodValues joins the signature of a value of an interface method with
-	// the group of that method. A call through such a value reaches each method
-	// of the group.
-	methodValues []methodValue
+	byMethod map[string][]any
 
 	// parent joins the key of a generic signature with the key of each
 	// instance of it. The analysis reads a generic function 1 time, thus the 2
@@ -144,59 +133,530 @@ type analyzer struct {
 	parent map[string]string
 	// byGroup gives each key of 1 group, by the root of the group.
 	byGroup map[string][]string
+
+	// The value flow. Read flow.go.
+	pts      map[cell]map[any]bool
+	edges    map[cell]map[cell]bool
+	work     []cell
+	inWork   map[cell]bool
+	sites    []*callSite
+	watchers map[cell][]*callSite
+
+	litSigs    map[*ast.FuncLit]*types.Signature
+	rangeShape map[*ast.RangeStmt][]cell
 }
 
-type methodValue struct {
-	sig    string
-	method string
-}
-
-func (a *analyzer) collect(n ast.Node) bool {
-	switch n := n.(type) {
-	case *ast.FuncDecl:
-		obj, _ := a.pkg.TypesInfo.Defs[n.Name].(*types.Func)
-		if obj == nil || n.Body == nil {
-			return true
-		}
-		a.walkBody(obj, n.Body)
-		if sig, ok := obj.Type().(*types.Signature); ok && sig.Recv() != nil {
-			key := methodKey(obj.Name(), sig)
-			a.byMethod[key] = append(a.byMethod[key], any(obj))
-			a.methodKeys[any(obj)] = key
-		}
-		return true
-	case *ast.FuncLit:
-		a.walkBody(n, n.Body)
-		if sig, ok := a.pkg.TypesInfo.Types[n].Type.(*types.Signature); ok {
-			a.addValue(any(n), sig)
-		}
-		return true
-	case *ast.CallExpr:
-		fun := unparen(n.Fun)
-		a.callFuns[fun] = true
-		switch x := fun.(type) {
-		case *ast.IndexExpr:
-			a.callFuns[unparen(x.X)] = true
-		case *ast.IndexListExpr:
-			a.callFuns[unparen(x.X)] = true
-		}
-		return true
-	case *ast.SelectorExpr:
-		a.methodValue(n)
-		return true
-	case *ast.Ident:
-		a.linkUse(n)
-		if a.callFuns[n] {
-			return true
-		}
-		if obj, ok := a.pkg.TypesInfo.Uses[n].(*types.Func); ok {
-			if sig := a.valueSignature(n, obj); sig != nil {
-				a.addValue(any(obj), sig)
+// file reads 1 file. Each function gets a summary, and each package variable
+// joins the flow.
+func (a *analyzer) file(f *ast.File) {
+	for _, d := range f.Decls {
+		switch d := d.(type) {
+		case *ast.FuncDecl:
+			obj, _ := a.pkg.TypesInfo.Defs[d.Name].(*types.Func)
+			if obj == nil {
+				continue
 			}
+			if sig, ok := obj.Type().(*types.Signature); ok && sig.Recv() != nil {
+				key := methodKey(obj.Name(), sig)
+				a.byMethod[key] = append(a.byMethod[key], any(obj))
+			}
+			if d.Body != nil {
+				a.walkFunc(any(obj), d.Body)
+			}
+		case *ast.GenDecl:
+			for _, spec := range d.Specs {
+				if vs, ok := spec.(*ast.ValueSpec); ok {
+					a.valueSpec(vs)
+					for _, v := range vs.Values {
+						a.walkTopExpr(v)
+					}
+				}
+			}
+		}
+	}
+	// The links of the generic instances. An escaped value of a generic
+	// signature and a read at an instance of it share 1 group.
+	ast.Inspect(f, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok {
+			a.linkUse(id)
+		}
+		return true
+	})
+}
+
+// walkTopExpr reads an expression of a package variable. A function literal
+// inside it needs a summary of its own.
+func (a *analyzer) walkTopExpr(e ast.Expr) {
+	ast.Inspect(e, func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.FuncLit:
+			a.registerLit(n)
+			return false
+		case *ast.CompositeLit:
+			a.compositeLit(n)
+		}
+		return true
+	})
+}
+
+func (a *analyzer) registerLit(lit *ast.FuncLit) {
+	sig, _ := a.pkg.TypesInfo.Types[lit].Type.(*types.Signature)
+	a.litSigs[lit] = sig
+	a.walkFunc(any(lit), lit.Body)
+}
+
+// walkFunc reads 1 function body and builds its summary. A nested function
+// literal and the body of a range loop over a function each get a summary of
+// their own.
+func (a *analyzer) walkFunc(key any, body ast.Node) {
+	s := &summary{key: key}
+	a.summaries[key] = s
+	a.order = append(a.order, key)
+	a.namedResults(key)
+	var visit func(n ast.Node) bool
+	visit = func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.FuncLit:
+			a.registerLit(n)
+			return false
+		case *ast.SendStmt:
+			s.direct = true
+			a.escape(n.Value)
+		case *ast.SelectStmt:
+			s.direct = true
+		case *ast.UnaryExpr:
+			if n.Op == token.ARROW {
+				s.direct = true
+			}
+			if n.Op == token.AND {
+				a.escapeAddress(n.X)
+			}
+		case *ast.RangeStmt:
+			return a.rangeStmt(s, n, visit)
+		case *ast.AssignStmt:
+			a.assignStmt(n)
+		case *ast.ValueSpec:
+			a.valueSpec(n)
+		case *ast.ReturnStmt:
+			a.returnStmt(key, n)
+		case *ast.CompositeLit:
+			a.compositeLit(n)
+		case *ast.CallExpr:
+			a.callExpr(s, n)
 		}
 		return true
 	}
-	return true
+	ast.Inspect(body, func(n ast.Node) bool {
+		if n == body {
+			return true
+		}
+		return visit(n)
+	})
+}
+
+// namedResults joins the cell of each named result with the result of the
+// function, because a bare return and a deferred write each reach it.
+func (a *analyzer) namedResults(key any) {
+	sig := a.sigOf(key)
+	if sig == nil {
+		return
+	}
+	for i := 0; i < sig.Results().Len(); i++ {
+		res := sig.Results().At(i)
+		if res.Name() != "" && funcSig(res.Type()) != nil {
+			a.addEdge(funcCell(res), retCell{key, i})
+		}
+	}
+}
+
+func (a *analyzer) sigOf(key any) *types.Signature {
+	switch key := key.(type) {
+	case *types.Func:
+		sig, _ := key.Type().(*types.Signature)
+		return sig
+	case *ast.FuncLit:
+		return a.litSigs[key]
+	}
+	return nil
+}
+
+// rangeStmt reads 1 range statement inside the visit of a body.
+//
+// A loop over a function holds an implicit call of the sequence, with the
+// loop body as the yield function. The body becomes a Dart closure, thus a
+// block operation inside it needs the body as a function of its own. Before
+// this rule, such an operation was lost, and the closure ignored the park of
+// a channel.
+func (a *analyzer) rangeStmt(s *summary, n *ast.RangeStmt, visit func(ast.Node) bool) bool {
+	if n.X == nil {
+		return true
+	}
+	t := a.typeOf(n.X)
+	if _, ok := typeset.Core(t).(*types.Chan); ok {
+		s.direct = true
+		return true
+	}
+	sig, _ := typeset.Core(t).(*types.Signature)
+	if sig == nil || sig.Params().Len() != 1 {
+		a.rangeVars(n)
+		return true
+	}
+	yield := funcSig(typeset.Core(sig.Params().At(0).Type()))
+	if yield == nil {
+		return true
+	}
+	// The expression of the sequence and the loop variables stay in the
+	// enclosing function.
+	ast.Inspect(n.X, visit)
+	if n.Key != nil {
+		ast.Inspect(n.Key, visit)
+	}
+	if n.Value != nil {
+		ast.Inspect(n.Value, visit)
+	}
+	shape := make([]cell, yield.Params().Len())
+	if len(shape) > 0 && n.Key != nil {
+		if c, blank := a.lhsCell(n.Key); !blank {
+			shape[0] = c
+		}
+	}
+	if len(shape) > 1 && n.Value != nil {
+		if c, blank := a.lhsCell(n.Value); !blank {
+			shape[1] = c
+		}
+	}
+	a.rangeShape[n] = shape
+	site := &callSite{
+		summary: s,
+		rng:     n,
+		callee:  a.flowExpr(n.X),
+		args:    map[int]source{0: {keys: []any{n}}},
+		argEsc:  map[int]string{0: signatureKey(yield)},
+		done:    map[any]bool{},
+	}
+	a.sites = append(a.sites, site)
+	s.sites = append(s.sites, site)
+	a.walkFunc(any(n), n.Body)
+	return false
+}
+
+// rangeVars reads the loop variables of a range over a container. A function
+// value inside a container stands outside the net, thus the variable draws
+// from the escape group.
+func (a *analyzer) rangeVars(n *ast.RangeStmt) {
+	for _, e := range []ast.Expr{n.Key, n.Value} {
+		if e == nil {
+			continue
+		}
+		sig := funcSig(a.typeOf(e))
+		if sig == nil {
+			continue
+		}
+		if c, blank := a.lhsCell(e); c != nil && !blank {
+			a.addEdge(sigCell{signatureKey(sig)}, c)
+		}
+	}
+}
+
+// escapeAddress joins a variable with its escape group when the code takes
+// its address. A pointer aliases the cell, and the flow does not follow a
+// pointer.
+func (a *analyzer) escapeAddress(e ast.Expr) {
+	sig := funcSig(a.typeOf(e))
+	if sig == nil {
+		return
+	}
+	c, blank := a.lhsCell(e)
+	if c == nil || blank {
+		return
+	}
+	group := sigCell{signatureKey(sig)}
+	a.addEdge(c, group)
+	a.addEdge(group, c)
+}
+
+// assignStmt wires each pair of an assignment.
+func (a *analyzer) assignStmt(n *ast.AssignStmt) {
+	if len(n.Lhs) > 1 && len(n.Rhs) == 1 {
+		call, ok := unparen(n.Rhs[0]).(*ast.CallExpr)
+		if !ok {
+			return
+		}
+		tuple, ok := a.typeOf(call).(*types.Tuple)
+		if !ok {
+			return
+		}
+		for i, lhs := range n.Lhs {
+			if i >= tuple.Len() {
+				break
+			}
+			a.assign(lhs, source{cells: []cell{outCell{call, i}}}, tuple.At(i).Type())
+		}
+		return
+	}
+	for i, lhs := range n.Lhs {
+		if i >= len(n.Rhs) {
+			break
+		}
+		a.assign(lhs, a.flowExpr(n.Rhs[i]), a.typeOf(n.Rhs[i]))
+	}
+}
+
+// valueSpec wires each pair of a var declaration.
+func (a *analyzer) valueSpec(n *ast.ValueSpec) {
+	if len(n.Names) > 1 && len(n.Values) == 1 {
+		call, ok := unparen(n.Values[0]).(*ast.CallExpr)
+		if !ok {
+			return
+		}
+		tuple, ok := a.typeOf(call).(*types.Tuple)
+		if !ok {
+			return
+		}
+		for i, name := range n.Names {
+			if i >= tuple.Len() {
+				break
+			}
+			a.assign(name, source{cells: []cell{outCell{call, i}}}, tuple.At(i).Type())
+		}
+		return
+	}
+	for i, name := range n.Names {
+		if i >= len(n.Values) {
+			break
+		}
+		a.assign(name, a.flowExpr(n.Values[i]), a.typeOf(n.Values[i]))
+	}
+}
+
+// returnStmt wires each result of a return statement.
+func (a *analyzer) returnStmt(key any, n *ast.ReturnStmt) {
+	sig := a.sigOf(key)
+	if sig == nil {
+		return
+	}
+	if len(n.Results) == 1 && sig.Results().Len() > 1 {
+		call, ok := unparen(n.Results[0]).(*ast.CallExpr)
+		if !ok {
+			return
+		}
+		for i := 0; i < sig.Results().Len(); i++ {
+			if funcSig(sig.Results().At(i).Type()) != nil {
+				a.addEdge(outCell{call, i}, retCell{key, i})
+			}
+		}
+		return
+	}
+	for i, e := range n.Results {
+		if i >= sig.Results().Len() {
+			break
+		}
+		if funcSig(sig.Results().At(i).Type()) == nil {
+			if funcSig(a.typeOf(e)) != nil {
+				a.escape(e)
+			}
+			continue
+		}
+		a.flowTo(retCell{key, i}, a.flowExpr(e))
+	}
+}
+
+// compositeLit wires the elements of a composite literal. A struct field is a
+// cell, and an element of a slice, of an array, or of a map escapes.
+func (a *analyzer) compositeLit(n *ast.CompositeLit) {
+	t := a.typeOf(n)
+	if p, ok := types.Unalias(t).Underlying().(*types.Pointer); ok {
+		t = p.Elem()
+	}
+	st, _ := types.Unalias(t).Underlying().(*types.Struct)
+	for i, elt := range n.Elts {
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			if st != nil {
+				if id, ok := kv.Key.(*ast.Ident); ok {
+					if v, ok := a.pkg.TypesInfo.Uses[id].(*types.Var); ok {
+						a.fieldFlow(v, kv.Value)
+						continue
+					}
+				}
+			}
+			if funcSig(a.typeOf(kv.Value)) != nil {
+				a.escape(kv.Value)
+			}
+			continue
+		}
+		if st != nil && i < st.NumFields() {
+			a.fieldFlow(st.Field(i), elt)
+			continue
+		}
+		if funcSig(a.typeOf(elt)) != nil {
+			a.escape(elt)
+		}
+	}
+}
+
+func (a *analyzer) fieldFlow(field *types.Var, e ast.Expr) {
+	if funcSig(a.typeOf(e)) == nil {
+		return
+	}
+	if funcSig(field.Type()) == nil {
+		a.escape(e)
+		return
+	}
+	a.flowTo(funcCell(field), a.flowExpr(e))
+}
+
+// callExpr reads 1 call. A conversion keeps the value, a builtin drops each
+// function argument into its escape group, and each other call becomes a call
+// site of the flow.
+func (a *analyzer) callExpr(s *summary, call *ast.CallExpr) {
+	fun := unparen(call.Fun)
+	if tv, ok := a.pkg.TypesInfo.Types[fun]; ok && tv.IsType() {
+		return
+	}
+	callee, handled := a.calleeSource(s, call, fun)
+	if handled {
+		return
+	}
+	site := &callSite{
+		summary: s,
+		call:    call,
+		callee:  callee,
+		args:    map[int]source{},
+		argEsc:  map[int]string{},
+		done:    map[any]bool{},
+	}
+	for i, arg := range call.Args {
+		sig := funcSig(a.typeOf(arg))
+		if sig == nil {
+			continue
+		}
+		site.args[i] = a.flowExpr(arg)
+		site.argEsc[i] = signatureKey(sig)
+	}
+	a.sites = append(a.sites, site)
+	s.sites = append(s.sites, site)
+}
+
+// calleeSource gives the source of the callee of a call. The flag reports
+// that the call needs no site: a builtin, or an interop function.
+func (a *analyzer) calleeSource(s *summary, call *ast.CallExpr, fun ast.Expr) (source, bool) {
+	switch fun := fun.(type) {
+	case *ast.Ident:
+		switch obj := a.pkg.TypesInfo.Uses[fun].(type) {
+		case *types.Func:
+			return a.funcCallee(s, call, obj)
+		case *types.Builtin:
+			a.escapeArgs(call)
+			return source{}, true
+		case *types.Var:
+			return source{cells: []cell{funcCell(obj)}}, false
+		}
+	case *ast.SelectorExpr:
+		sel, ok := a.pkg.TypesInfo.Selections[fun]
+		if !ok {
+			switch obj := a.pkg.TypesInfo.Uses[fun.Sel].(type) {
+			case *types.Func:
+				return a.funcCallee(s, call, obj)
+			case *types.Var:
+				return source{cells: []cell{funcCell(obj)}}, false
+			}
+			break
+		}
+		switch sel.Kind() {
+		case types.MethodVal, types.MethodExpr:
+			fn, ok := sel.Obj().(*types.Func)
+			if !ok {
+				break
+			}
+			if isInterface(sel.Recv()) || abstractMethod(fn) {
+				msig, ok := fn.Type().(*types.Signature)
+				if !ok {
+					break
+				}
+				return source{cells: []cell{methodCell{methodKey(fn.Name(), msig)}}}, false
+			}
+			a.recvFlow(fn, fun.X)
+			if sel.Kind() == types.MethodExpr {
+				return source{keys: []any{methodExprKey{fn.Origin()}}}, false
+			}
+			return source{keys: []any{fn.Origin()}}, false
+		case types.FieldVal:
+			if v, ok := sel.Obj().(*types.Var); ok {
+				return source{cells: []cell{funcCell(v)}}, false
+			}
+		}
+	case *ast.IndexExpr:
+		if src := a.instanceSource(fun.X); !src.empty() {
+			if fn, ok := src.keys[0].(*types.Func); ok {
+				return a.funcCallee(s, call, fn)
+			}
+		}
+	case *ast.IndexListExpr:
+		if src := a.instanceSource(fun.X); !src.empty() {
+			if fn, ok := src.keys[0].(*types.Func); ok {
+				return a.funcCallee(s, call, fn)
+			}
+		}
+	case *ast.FuncLit:
+		return source{keys: []any{fun}}, false
+	case *ast.CallExpr:
+		return source{cells: []cell{outCell{fun, 0}}}, false
+	}
+	return a.flowExpr(fun), false
+}
+
+// funcCallee gives the source of a call of a named function. An interop
+// function that gives up control marks the caller, and each other interop
+// function drops its function arguments into the escape group, because the
+// runtime library calls them outside the net.
+func (a *analyzer) funcCallee(s *summary, call *ast.CallExpr, fn *types.Func) (source, bool) {
+	if blockingIntrinsic(fn) {
+		s.direct = true
+		s.intrinsics = append(s.intrinsics, call)
+		return source{}, true
+	}
+	if fn.Pkg() != nil && fn.Pkg().Path() == "syscall/dart" {
+		a.escapeArgs(call)
+	}
+	return source{keys: []any{fn.Origin()}}, false
+}
+
+// recvFlow joins the receiver of a method call with the receiver cell, when
+// the receiver is a function value. A method on a named function type calls
+// through its receiver.
+func (a *analyzer) recvFlow(fn *types.Func, recv ast.Expr) {
+	sig, ok := fn.Type().(*types.Signature)
+	if !ok || sig.Recv() == nil {
+		return
+	}
+	if funcSig(sig.Recv().Type()) == nil {
+		return
+	}
+	origin, ok := fn.Origin().Type().(*types.Signature)
+	if !ok || origin.Recv() == nil {
+		return
+	}
+	a.flowTo(funcCell(origin.Recv()), a.flowExpr(recv))
+}
+
+// escapeArgs drops each function argument of a call into its escape group.
+func (a *analyzer) escapeArgs(call *ast.CallExpr) {
+	for _, arg := range call.Args {
+		if funcSig(a.typeOf(arg)) != nil {
+			a.escape(arg)
+		}
+	}
+}
+
+// abstractMethod reports whether the method belongs to an interface type. A
+// promoted method of an embedded interface field reaches a call with a
+// concrete receiver, and the dispatch still runs through the interface.
+func abstractMethod(fn *types.Func) bool {
+	sig, ok := fn.Type().(*types.Signature)
+	if !ok || sig.Recv() == nil {
+		return false
+	}
+	return isInterface(sig.Recv().Type())
 }
 
 // linkUse joins the key of a generic signature with the key of the instance
@@ -206,9 +666,6 @@ func (a *analyzer) linkUse(n *ast.Ident) {
 	if !ok || inst.Type == nil {
 		return
 	}
-	// A type name gives no link. The key of a generic function joins the key of
-	// an instance only where the code names that instance, thus a program that
-	// calls no instance of a function keeps each key apart.
 	if obj, ok := a.pkg.TypesInfo.Uses[n].(*types.Func); ok {
 		a.linkInstance(obj.Origin().Type(), inst.Type)
 	}
@@ -330,109 +787,24 @@ func (a *analyzer) spreadKey(key string) bool {
 	return changed
 }
 
-// valueSignature gives the signature under which a function reaches a value.
-// An instance of a generic function reaches the value with its type arguments
-// already bound, thus the key holds the instantiated signature.
-func (a *analyzer) valueSignature(n *ast.Ident, obj *types.Func) *types.Signature {
-	if inst, ok := a.pkg.TypesInfo.Instances[n]; ok {
-		if sig, ok := inst.Type.(*types.Signature); ok {
-			return sig
+// resolveSites reads the answer of the flow into each call site. The flow is
+// at its fixed point, thus the set of each site is final.
+func (a *analyzer) resolveSites() {
+	for _, site := range a.sites {
+		site.targets = nil
+		for _, t := range a.targets(site.callee) {
+			site.targets = append(site.targets, blockTarget(t))
 		}
+		site.fallbacks = sigFallbacks(site.callee)
 	}
-	sig, ok := obj.Type().(*types.Signature)
-	if !ok || sig.Recv() != nil {
-		return nil
-	}
-	return sig
 }
 
-// methodValue records a method that reaches a function value. A method value
-// binds the receiver, and a method expression takes the receiver as its first
-// parameter. Thus the key comes from the type of the selector, and not from the
-// type of the method.
-func (a *analyzer) methodValue(n *ast.SelectorExpr) {
-	if a.callFuns[n] {
-		return
+// blockTarget gives the key that holds the block state of a target.
+func blockTarget(t any) any {
+	if m, ok := t.(methodExprKey); ok {
+		return any(m.fn)
 	}
-	sel, ok := a.pkg.TypesInfo.Selections[n]
-	if !ok || (sel.Kind() != types.MethodVal && sel.Kind() != types.MethodExpr) {
-		return
-	}
-	fn, ok := sel.Obj().(*types.Func)
-	if !ok {
-		return
-	}
-	sig, ok := types.Unalias(sel.Type()).(*types.Signature)
-	if !ok {
-		return
-	}
-	if isInterface(sel.Recv()) {
-		msig, ok := fn.Type().(*types.Signature)
-		if !ok {
-			return
-		}
-		a.methodValues = append(a.methodValues, methodValue{
-			sig:    signatureKey(sig),
-			method: methodKey(fn.Name(), msig),
-		})
-		return
-	}
-	a.addValue(any(fn), sig)
-}
-
-// addValue records a function that the code uses as a value. A call through
-// such a value can reach each function of the same signature.
-func (a *analyzer) addValue(key any, sig *types.Signature) {
-	name := signatureKey(sig)
-	for _, member := range a.bySig[name] {
-		if member == key {
-			return
-		}
-	}
-	a.bySig[name] = append(a.bySig[name], key)
-	a.sigKeys[key] = name
-}
-
-// walkBody reads 1 function body. It stops at a nested function literal,
-// because that literal gets its own summary.
-func (a *analyzer) walkBody(key any, body ast.Node) {
-	s := &summary{key: key}
-	a.summaries[key] = s
-	a.order = append(a.order, key)
-	var walk func(n ast.Node) bool
-	walk = func(n ast.Node) bool {
-		switch n := n.(type) {
-		case *ast.FuncLit:
-			if n.Body != body {
-				return false
-			}
-		case *ast.SendStmt:
-			s.direct = true
-		case *ast.SelectStmt:
-			s.direct = true
-		case *ast.UnaryExpr:
-			if n.Op.String() == "<-" {
-				s.direct = true
-			}
-		case *ast.RangeStmt:
-			if _, ok := types.Unalias(a.typeOf(n.X)).Underlying().(*types.Chan); ok {
-				s.direct = true
-			}
-		case *ast.CallExpr:
-			a.callTargets(s, n)
-		}
-		return true
-	}
-	ast.Inspect(body, func(n ast.Node) bool {
-		if n == body {
-			return true
-		}
-		if lit, ok := n.(*ast.FuncLit); ok {
-			_ = lit
-			return false
-		}
-		return walk(n)
-	})
+	return t
 }
 
 func (a *analyzer) typeOf(e ast.Expr) types.Type {
@@ -440,88 +812,6 @@ func (a *analyzer) typeOf(e ast.Expr) types.Type {
 		return tv.Type
 	}
 	return types.Typ[types.Invalid]
-}
-
-// callTargets names the functions that a call can reach.
-func (a *analyzer) callTargets(s *summary, call *ast.CallExpr) {
-	fun := unparen(call.Fun)
-	if tv, ok := a.pkg.TypesInfo.Types[fun]; ok && tv.IsType() {
-		return
-	}
-	var keys []any
-	var sigKey string
-	switch fun := fun.(type) {
-	case *ast.Ident:
-		obj := a.pkg.TypesInfo.Uses[fun]
-		switch obj := obj.(type) {
-		case *types.Func:
-			if blockingIntrinsic(obj) {
-				a.markIntrinsic(s, call)
-				return
-			}
-			keys = append(keys, any(obj))
-		case *types.Builtin:
-			return
-		case *types.Var:
-			sig, _ := types.Unalias(obj.Type()).Underlying().(*types.Signature)
-			sigKey = signatureKey(sig)
-		}
-	case *ast.SelectorExpr:
-		sel, ok := a.pkg.TypesInfo.Selections[fun]
-		if !ok {
-			if obj, ok := a.pkg.TypesInfo.Uses[fun.Sel].(*types.Func); ok {
-				if blockingIntrinsic(obj) {
-					a.markIntrinsic(s, call)
-					return
-				}
-				keys = append(keys, any(obj))
-			}
-			break
-		}
-		switch sel.Kind() {
-		case types.MethodVal, types.MethodExpr:
-			if isInterface(sel.Recv()) {
-				fn, _ := sel.Obj().(*types.Func)
-				if sig, ok := fn.Type().(*types.Signature); ok {
-					key := methodKey(fn.Name(), sig)
-					s.methods = append(s.methods, key)
-					s.calls = append(s.calls, call)
-					s.callKeys = append(s.callKeys, nil)
-					s.callSigs = append(s.callSigs, key)
-					return
-				}
-			}
-			if fn, ok := sel.Obj().(*types.Func); ok {
-				keys = append(keys, any(fn))
-			}
-		case types.FieldVal:
-			sig, _ := types.Unalias(sel.Type()).Underlying().(*types.Signature)
-			sigKey = signatureKey(sig)
-		}
-	default:
-		sig, _ := types.Unalias(a.typeOf(fun)).Underlying().(*types.Signature)
-		sigKey = signatureKey(sig)
-	}
-	s.callees = append(s.callees, keys...)
-	if sigKey != "" {
-		s.sigs = append(s.sigs, sigKey)
-	}
-	s.calls = append(s.calls, call)
-	s.callKeys = append(s.callKeys, keys)
-	s.callSigs = append(s.callSigs, sigKey)
-}
-
-// intrinsicKey marks a call to an interop function that gives up control.
-const intrinsicKey = "$intrinsic"
-
-// markIntrinsic records a call that the compiler replaces with a call to the
-// runtime library. Such a call waits for a result, thus the caller can block.
-func (a *analyzer) markIntrinsic(s *summary, call *ast.CallExpr) {
-	s.direct = true
-	s.calls = append(s.calls, call)
-	s.callKeys = append(s.callKeys, nil)
-	s.callSigs = append(s.callSigs, intrinsicKey)
-	a.result.sigAsync[intrinsicKey] = true
 }
 
 // blockingIntrinsic reports whether an interop function gives up control. The
@@ -575,36 +865,42 @@ func (a *analyzer) fixedPoint() {
 }
 
 func (a *analyzer) blocksNow(s *summary) bool {
-	for _, c := range s.callees {
-		if a.result.blocking[c] {
-			return true
-		}
-	}
-	for _, sig := range s.sigs {
-		if a.result.sigAsync[sig] {
-			return true
-		}
-	}
-	for _, m := range s.methods {
-		if a.result.methodAsync[m] {
+	for _, site := range s.sites {
+		if a.siteAsync(site) {
 			return true
 		}
 	}
 	return false
 }
 
-// spread gives the same state to each member of a group. A call through a
-// function value or through an interface reaches each member, thus each member
-// takes the async form.
+// siteAsync reports whether a call site must wait. A target that blocks or an
+// escape group that holds a function that blocks each give true.
+func (a *analyzer) siteAsync(site *callSite) bool {
+	for _, t := range site.targets {
+		if a.result.blocking[t] {
+			return true
+		}
+	}
+	for _, key := range site.fallbacks {
+		if a.result.sigAsync[key] {
+			return true
+		}
+	}
+	return false
+}
+
+// spread marks the escape group of each escaped function that blocks, and it
+// gives the same state to each key of a linked group.
 func (a *analyzer) spread() bool {
 	changed := false
-	for key, group := range a.bySig {
-		if a.result.sigAsync[key] {
+	for c, set := range a.pts {
+		group, ok := c.(sigCell)
+		if !ok || a.result.sigAsync[group.key] {
 			continue
 		}
-		for _, member := range group {
-			if a.result.blocking[member] {
-				a.result.sigAsync[key] = true
+		for member := range set {
+			if a.result.blocking[blockTarget(member)] {
+				a.result.sigAsync[group.key] = true
 				changed = true
 				break
 			}
@@ -621,44 +917,25 @@ func (a *analyzer) spread() bool {
 			changed = true
 		}
 	}
-	for key, group := range a.byMethod {
-		if a.result.methodAsync[key] {
-			continue
-		}
-		for _, member := range group {
-			if a.result.blocking[member] {
-				a.result.methodAsync[key] = true
-				changed = true
-				break
-			}
-		}
-	}
-	for _, mv := range a.methodValues {
-		if a.result.methodAsync[mv.method] && !a.result.sigAsync[mv.sig] {
-			a.result.sigAsync[mv.sig] = true
-			changed = true
-		}
-	}
 	return changed
 }
 
 // markCalls marks each call that must wait for a result.
 func (a *analyzer) markCalls() {
-	keys := make([]any, 0, len(a.summaries))
-	keys = append(keys, a.order...)
-	for _, key := range keys {
+	for _, key := range a.order {
 		s := a.summaries[key]
-		for i, call := range s.calls {
-			async := false
-			for _, target := range s.callKeys[i] {
-				async = async || a.result.blocking[target]
+		for _, call := range s.intrinsics {
+			a.result.callAsync[call] = true
+		}
+		for _, site := range s.sites {
+			if !a.siteAsync(site) {
+				continue
 			}
-			if sig := s.callSigs[i]; sig != "" {
-				async = async || a.result.sigAsync[sig] || a.result.methodAsync[sig]
+			if site.rng != nil {
+				a.result.rangeAsync[site.rng] = true
+				continue
 			}
-			if async {
-				a.result.callAsync[call] = true
-			}
+			a.result.callAsync[site.call] = true
 		}
 	}
 }

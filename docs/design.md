@@ -67,6 +67,13 @@ list, because it is the authority.
 - A summary lists the direct block operations and the callees of the function.
 - Resolve the final block state with a fixed point over the summaries of all
   packages.
+- A call through a function value reaches only the functions that flow to that
+  value. `internal/analyze/flow.go` holds the value flow: each assignment, each
+  argument, each result, and each struct field. A value that leaves this net
+  falls into the escape group of its signature, and a call outside the net
+  reads that group. Read decision 137.
+- The body of a range loop over a function is a function of the analysis, with
+  a summary of its own. Read decision 138.
 - Find all instantiations of a generic function and of a generic type.
 - Keep all declarations. The Dart toolchain removes each unused declaration in a
   release build.

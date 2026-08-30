@@ -162,13 +162,26 @@ func (b *builder) rangeFunc(s *ast.RangeStmt, label string, sig *types.Signature
 		Results: []*ir.Var{{Name: "$ok", Type: yield.Results().At(0).Type()}},
 		Body:    body,
 		Type:    yield,
-		Async:   b.blocks.SignatureAsync(yield),
+		Async:   b.blocks.Blocks(s),
+	}
+	// A body that can block becomes a local state machine, exactly as a
+	// function literal does. Before this rule, the body stayed a plain
+	// closure, and a park of a channel inside it was lost.
+	var arg ir.Expr = fn
+	if fn.Async {
+		fn.Machine = b.flatten(fn.Body, fn.Params, nil, true, false, false,
+			fn.Results, b.frameClass(s.Pos()), s.Pos())
+		addResults(fn.Machine, fn.Results)
+		fn.Captured = b.rangeCaptures(s)
+		local := b.litName(s.Pos())
+		b.pending = append(b.pending, &ir.LocalFunc{Name: local, Lit: fn})
+		arg = &ir.Ident{Name: local, Type: yield}
 	}
 	call := &ir.Call{
 		Fun:   b.expr(s.X),
-		Args:  []ir.Expr{fn},
+		Args:  []ir.Expr{arg},
 		Type:  sig.Results(),
-		Async: b.blocks.SignatureAsync(sig),
+		Async: b.blocks.RangeAsync(s),
 	}
 	out := []ir.Stmt{&ir.ExprStmt{X: call}}
 	if check := b.returnCheck(); check != nil {
