@@ -53,6 +53,12 @@ Slice<T> $makeSlice<T>(int len, int cap, List<T> Function(int) alloc) {
   return Slice(alloc(cap), 0, len, cap);
 }
 
+/// The Go builtin `make` of a slice type with no capacity. The length comes
+/// from 1 read of its expression, because the expression can hold a side
+/// effect.
+Slice<T> $makeSliceN<T>(int len, List<T> Function(int) alloc) =>
+    $makeSlice(len, len, alloc);
+
 /// The Go builtin `append`. The result shares the backing array when the
 /// capacity is enough, exactly as in Go.
 Slice<T> $append<T>(Slice<T> s, List<T> add, List<T> Function(int) alloc) {

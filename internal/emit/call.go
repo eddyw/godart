@@ -676,12 +676,14 @@ func (e *emitter) makeCall(x *ir.Builtin) string {
 		if len(x.Args) > 0 {
 			length = e.expr(x.Args[0])
 		}
-		capacity := length
-		if len(x.Args) > 1 {
-			capacity = e.expr(x.Args[1])
+		// A make with no capacity reads its length expression 1 time, because
+		// the expression can hold a side effect.
+		if len(x.Args) < 2 {
+			return fmt.Sprintf("$makeSliceN<%s>(%s, %s)",
+				e.dartType(u.Elem()), length, e.alloc(u.Elem()))
 		}
 		return fmt.Sprintf("$makeSlice<%s>(%s, %s, %s)",
-			e.dartType(u.Elem()), length, capacity, e.alloc(u.Elem()))
+			e.dartType(u.Elem()), length, e.expr(x.Args[1]), e.alloc(u.Elem()))
 	case *types.Map:
 		return fmt.Sprintf("GoMap<%s, %s>(() => %s)",
 			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
