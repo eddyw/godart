@@ -2,6 +2,7 @@ package emit
 
 import (
 	"fmt"
+	"go/token"
 	"go/types"
 	"sort"
 	"strconv"
@@ -759,7 +760,39 @@ func isPure(x ir.Expr) bool {
 // An alias carries the name of its own declaration, thus the name comes from
 // the type behind it.
 func typeName(t types.Type) string {
-	return types.TypeString(types.Unalias(t), nil)
+	return types.TypeString(stripNames(types.Unalias(t)), nil)
+}
+
+// stripNames gives the type with no parameter name inside a function type.
+//
+// A type assertion compares the name of a descriptor, and 2 texts of 1
+// function type must stay equal. The text of a declared signature holds the
+// parameter names, and the text of an assertion target holds none.
+func stripNames(t types.Type) types.Type {
+	switch u := types.Unalias(t).(type) {
+	case *types.Signature:
+		params := make([]*types.Var, u.Params().Len())
+		for i := range params {
+			params[i] = types.NewVar(token.NoPos, nil, "", stripNames(u.Params().At(i).Type()))
+		}
+		results := make([]*types.Var, u.Results().Len())
+		for i := range results {
+			results[i] = types.NewVar(token.NoPos, nil, "", stripNames(u.Results().At(i).Type()))
+		}
+		return types.NewSignatureType(nil, nil, nil,
+			types.NewTuple(params...), types.NewTuple(results...), u.Variadic())
+	case *types.Pointer:
+		return types.NewPointer(stripNames(u.Elem()))
+	case *types.Slice:
+		return types.NewSlice(stripNames(u.Elem()))
+	case *types.Array:
+		return types.NewArray(stripNames(u.Elem()), u.Len())
+	case *types.Map:
+		return types.NewMap(stripNames(u.Key()), stripNames(u.Elem()))
+	case *types.Chan:
+		return types.NewChan(u.Dir(), stripNames(u.Elem()))
+	}
+	return t
 }
 
 // isStructUnder reports whether the underlying type is a struct.

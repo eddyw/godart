@@ -45,7 +45,7 @@ final TypeDesc $descP$Greeter = TypeDesc(
   text: '*greet.Greeter',
   methodTypes: <String, TypeDesc Function()>{
     'SetStyle(example.com/multi/greet.Style)': () => TypeDesc(
-      'func(s example.com/multi/greet.Style)',
+      'func(example.com/multi/greet.Style)',
       'func',
       const <String, Function>{},
       text: 'func(greet.Style)',
