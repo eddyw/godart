@@ -394,6 +394,9 @@ func (e *emitter) topLevelRecv(m *ir.Method) string {
 // methodValue reads a method without a call. Go binds a copy of the receiver at
 // that moment when the method takes a value receiver.
 func (e *emitter) methodValue(m *ir.Method) string {
+	if isInterfaceType(m.Recv.GoType()) {
+		return e.interfaceMethodValue(m)
+	}
 	obj := receiverTypeName(m.Recv.GoType())
 	if obj != nil && (!isStructType(obj.Type()) || pointerMethod(m.Obj)) {
 		return e.methodFuncValue(m, obj)
@@ -498,6 +501,34 @@ func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
 		joinTypeArgs(typeArgs, "") + "(" + strings.Join(args, ", ") + ")"
 	return fmt.Sprintf("((%s $recv) => (%s) => %s)(%s)",
 		e.dartType(m.Recv.GoType()), strings.Join(params, ", "), call, e.expr(m.Recv))
+}
+
+// interfaceMethodValue reads a method of an interface value without a call. The
+// closure holds the value, and each call reads the method table of the
+// descriptor.
+func (e *emitter) interfaceMethodValue(m *ir.Method) string {
+	sig, _ := m.Obj.Type().(*types.Signature)
+	if sig == nil {
+		e.fail("the method %s has no signature", m.Obj.Name())
+		return "null"
+	}
+	params := make([]string, sig.Params().Len())
+	types := make([]string, sig.Params().Len()+1)
+	args := make([]string, sig.Params().Len()+1)
+	types[0] = "Object?"
+	args[0] = "$recv!.value"
+	for i := range params {
+		name := fmt.Sprintf("$a%d", i)
+		text := e.dartType(sig.Params().At(i).Type())
+		params[i] = text + " " + name
+		types[i+1] = text
+		args[i+1] = name
+	}
+	call := fmt.Sprintf("($method($recv, '%s') as %s Function(%s))(%s)",
+		methodKey(m.Obj.Name(), sig), e.resultType(sig),
+		strings.Join(types, ", "), strings.Join(args, ", "))
+	return fmt.Sprintf("((Iface? $recv) => (%s) => %s)(%s)",
+		strings.Join(params, ", "), call, e.expr(m.Recv))
 }
 
 func (e *emitter) builtin(x *ir.Builtin) string {

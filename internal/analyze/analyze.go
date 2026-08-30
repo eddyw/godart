@@ -133,12 +133,22 @@ type analyzer struct {
 	// stands alone reads as a function value.
 	callFuns map[ast.Expr]bool
 
+	// methodValues joins the signature of a value of an interface method with
+	// the group of that method. A call through such a value reaches each method
+	// of the group.
+	methodValues []methodValue
+
 	// parent joins the key of a generic signature with the key of each
 	// instance of it. The analysis reads a generic function 1 time, thus the 2
 	// texts of 1 signature differ. Read linkInstance.
 	parent map[string]string
 	// byGroup gives each key of 1 group, by the root of the group.
 	byGroup map[string][]string
+}
+
+type methodValue struct {
+	sig    string
+	method string
 }
 
 func (a *analyzer) collect(n ast.Node) bool {
@@ -170,6 +180,9 @@ func (a *analyzer) collect(n ast.Node) bool {
 		case *ast.IndexListExpr:
 			a.callFuns[unparen(x.X)] = true
 		}
+		return true
+	case *ast.SelectorExpr:
+		a.methodValue(n)
 		return true
 	case *ast.Ident:
 		a.linkUse(n)
@@ -333,6 +346,40 @@ func (a *analyzer) valueSignature(n *ast.Ident, obj *types.Func) *types.Signatur
 	return sig
 }
 
+// methodValue records a method that reaches a function value. A method value
+// binds the receiver, and a method expression takes the receiver as its first
+// parameter. Thus the key comes from the type of the selector, and not from the
+// type of the method.
+func (a *analyzer) methodValue(n *ast.SelectorExpr) {
+	if a.callFuns[n] {
+		return
+	}
+	sel, ok := a.pkg.TypesInfo.Selections[n]
+	if !ok || (sel.Kind() != types.MethodVal && sel.Kind() != types.MethodExpr) {
+		return
+	}
+	fn, ok := sel.Obj().(*types.Func)
+	if !ok {
+		return
+	}
+	sig, ok := types.Unalias(sel.Type()).(*types.Signature)
+	if !ok {
+		return
+	}
+	if isInterface(sel.Recv()) {
+		msig, ok := fn.Type().(*types.Signature)
+		if !ok {
+			return
+		}
+		a.methodValues = append(a.methodValues, methodValue{
+			sig:    signatureKey(sig),
+			method: methodKey(fn.Name(), msig),
+		})
+		return
+	}
+	a.addValue(any(fn), sig)
+}
+
 // addValue records a function that the code uses as a value. A call through
 // such a value can reach each function of the same signature.
 func (a *analyzer) addValue(key any, sig *types.Signature) {
@@ -432,7 +479,7 @@ func (a *analyzer) callTargets(s *summary, call *ast.CallExpr) {
 			break
 		}
 		switch sel.Kind() {
-		case types.MethodVal:
+		case types.MethodVal, types.MethodExpr:
 			if isInterface(sel.Recv()) {
 				fn, _ := sel.Obj().(*types.Func)
 				if sig, ok := fn.Type().(*types.Signature); ok {
@@ -584,6 +631,12 @@ func (a *analyzer) spread() bool {
 				changed = true
 				break
 			}
+		}
+	}
+	for _, mv := range a.methodValues {
+		if a.result.methodAsync[mv.method] && !a.result.sigAsync[mv.sig] {
+			a.result.sigAsync[mv.sig] = true
+			changed = true
 		}
 	}
 	return changed
