@@ -41,7 +41,7 @@ of each other package with a source position.
 | `recover` | Rejected. A panic stops the program. |
 | `unsafe` and cgo | Rejected |
 | A complex number | Rejected |
-| The address of a composite literal of a type that is not a struct | Rejected. A variable first, and the address of the variable. |
+| The address of a value behind a pointer, for example `&*p` | Rejected. Read `p`. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |
 | A generic function as a value | Rejected. Such a value would need the dictionary of each type argument. |
@@ -49,13 +49,15 @@ of each other package with a source position.
 Each other construct of the language stays inside the subset: a closure, a
 method, an interface, an embedded struct, a type switch, a channel, a `select`,
 a `defer` that can block, `goto`, generics, a range loop over a function, the
-loop variable of Go 1.22, a conversion of a slice to an array, and a method with
-a nil pointer receiver.
+loop variable of Go 1.22, a conversion of a slice to an array, a method with a
+nil pointer receiver, a method expression, and a type declaration inside a
+function.
 
 ## The shapes that build
 
 Each program below is a real build of 2026-08-30. The Dart output gives the
-output of `go run` for each one.
+output of `go run` for each one. The last 5 rows stand in `testdata/programs`,
+and `make ci` runs each one.
 
 | Shape | Reads |
 |---|---|
@@ -73,6 +75,11 @@ output of `go run` for each one.
 | A worker pool with a context | `context`, `sync`, a channel, a `select` |
 | A generic set with an iterator | `cmp`, `maps`, `slices`, a generic method |
 | A linked list with a nil safe method | A method with a nil pointer receiver |
+| An HTTP server and a client in 1 program | `net/http`, a handler, a cookie, a chunked answer |
+| A matcher of a pattern with a named group | `regexp`, a replace, a split |
+| A checksum of a text with 4 algorithms | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `encoding/hex` |
+| A read and a write of a binary record | `encoding/binary`, a struct, an array, a varint |
+| A property test of a pure function | `testing/quick`, `reflect.Value.Call` |
 
 Thus these categories build:
 
@@ -81,28 +88,32 @@ Thus these categories build:
 - An interpreter, a parser, a tokenizer, and a virtual machine.
 - An algorithm collection: a graph, a tree, a sort, a search, dynamic
   programming, and a number theory problem.
-- A solution of Advent of Code, of Project Euler, or of Exercism, when the
-  solution reads no regular expression.
+- A solution of Advent of Code, of Project Euler, or of Exercism.
 - A TCP server and a TCP client with a text protocol of its own.
 - A simulation with a goroutine, a channel, and a `select`.
-- A reader and a writer of JSON, CSV, hex, and base64.
+- A reader and a writer of JSON, CSV, hex, base64, and a binary record.
+- An HTTP server of HTTP/1.1, and a client of it. A client of an https address
+  also runs, because Dart holds the handshake.
 - A test suite of such a program. `gart test` gives the output of `go test`.
 
 ## The gate of each program that does not build
 
 | Gate | What it stops |
 |---|---|
-| `net/http` | Each web server, each REST client, and each program that reads a page. |
-| `regexp` | Each program that matches a pattern. A `strings` search is the alternative. |
-| `crypto/...` | Each program that hashes a password, signs a value, or reads TLS. |
 | `os/exec` | Each program that starts another process. |
 | `recover` | Each program that turns a panic into an error. A parser of the standard library often does. |
 | `text/template`, `html/template` | Each program that writes a page or a file from a template. |
-| `encoding/xml`, `encoding/binary` | Each program that reads a binary format or an XML file. |
+| `encoding/xml`, `encoding/gob` | Each program that reads an XML file or a gob stream. |
+| `compress/...`, `archive/...` | Each program that reads a zip file, a tar file, or a gzip stream. |
+| HTTP/2 and keep alive | Each client that needs a pool of connections or the newer protocol. |
+| `net/http/httptest` | Each test of a handler that reads a recorder. |
+| `database/sql` | Each program that reads a database. |
+| A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
 
 Thus no large program of the Go world builds today. `kubectl`, `hugo`,
-`docker`, `terraform`, and `gopls` each read `net/http`, `os/exec`, `regexp`, or
-`recover`. The gate is the library surface, and not the language.
+`docker`, `terraform`, and `gopls` each read `os/exec`, `recover`, a template
+package, or a compression package. The gate is the library surface, and not the
+language.
 
 ## The near misses
 
@@ -112,6 +123,6 @@ the exact gap.
 | Package | The gap |
 |---|---|
 | `text/tabwriter` | 1 call of `recover`, and the address of a field of a slice. |
-| `encoding/binary` | `reflect.Value.Kind` and the kind constants of `reflect`. |
-| `crypto/md5`, `crypto/sha256` | Each one reads a package of `crypto/internal`. A pure Go overlay of the algorithm would work. |
-| `net/http` | The largest gap. It reads TLS, `crypto`, `regexp` for a cookie, and a server of its own. |
+| `compress/flate`, `compress/gzip` | A survey of the real source. `net/http` would then hold `Accept-Encoding: gzip`. |
+| `net/http/httptest` | A listener of a test and a recorder of an answer, over the `net/http` overlay. |
+| `crypto/hmac`, `crypto/sha512` | Each one follows the pattern of the `crypto/sha256` overlay. |

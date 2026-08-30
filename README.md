@@ -59,20 +59,26 @@ The compiler holds all 6 stages. The subset covers:
 | Generics | Generic function, generic type, generic method of Go 1.27 |
 | Isolates | `dart.Worker` runs a pure function in a second isolate |
 | Structs | A named struct and an unnamed struct, with value semantics |
-| Library | `bufio`, `bytes`, `cmp`, `container/list`, `encoding/json`, `errors`, `fmt`, `io`, `iter`, `maps`, `math`, `math/bits`, `net`, `os`, `path`, `runtime`, `slices`, `sort`, `strconv`, `strings`, `sync`, `sync/atomic`, `testing`, `time`, `unicode`, `unicode/utf8` |
+| Library | 62 packages. `docs/what-compiles.md` holds the whole list. |
 | Tests | `gart test` runs a `TestXxx` function and a subtest |
 | Iterators | A range loop over a function with `break`, `continue`, and `return` |
 | Files | `os` and `io` read and write a file through `dart:io` |
 | Network | `net.Dial` and `net.Listen` reach TCP through `dart:io` |
-| Pointers | A pointer to any type. A value that is not a struct holds a box. |
+| HTTP | `net/http` gives an HTTP/1.1 client and an HTTP/1.1 server |
+| TLS | `crypto/tls` gives a client over the secure socket of Dart |
+| Pointers | A pointer to any value, also to a field and to an element |
+| Stack | A source map gives `runtime.Caller` and the Go trace of a panic |
 | JSON | `json.Marshal` walks the type descriptor of a value |
 | Benchmarks | `gart test -bench <text>` runs a `BenchmarkXxx` function |
 
-The standard library surface holds `errors`, `fmt`, `sort`, `strconv`,
-`strings`, `sync`, `testing`, `time`, and the interop package `syscall/dart`. An overlay replaces the Go source of such a package. The build
-tag `dart` selects the overlay files, thus the go command skips them.
+The standard library surface holds 62 packages, for example `fmt`, `net/http`,
+`regexp`, `reflect`, `encoding/json`, and the interop package `syscall/dart`. An
+overlay replaces the Go source of a package that needs one, and the build tag
+`dart` selects the overlay files. Each other package of the surface reads the
+real Go source.
 
-`docs/parity.md` lists each difference between Go and the Dart output.
+`docs/what-compiles.md` names the shape of a Go program that the compiler
+accepts. `docs/parity.md` lists each difference between Go and the Dart output.
 
 ## The 6 stages
 

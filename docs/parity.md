@@ -45,6 +45,7 @@ The package `fmt` reads it.
 | Type identity, kind, and name | Present |
 | Struct field name, tag, and value | Present |
 | Method table by name and signature | Present. 2 methods of 1 name and 2 signatures stay apart. |
+| An unexported method of a type of another package | The method table holds a placeholder that panics. A Dart library reaches no name that starts with an underscore. |
 | Element type and key type of a container | Present |
 | `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
 | A descriptor of an instance of a generic type | Present. The description stands at the point of the use, and the name holds each type argument. |
@@ -108,7 +109,8 @@ The package `fmt` reads it.
 | A deferred call that can block | Present. The chain of the deferred calls holds states of its own. |
 | A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
 | A type declaration inside a function, of a struct type | Present. It takes the class of its shape. |
-| A type declaration inside a function, of another type | Rejected |
+| A type declaration inside a function, of another type | Present. It takes the Dart form of its underlying type. |
+| A method expression, for example `(*T).M` | Present. The value is a closure whose first parameter is the receiver. |
 | An unnamed struct type with an unexported field, in an exported declaration | Rejected. Read the section below. |
 
 
@@ -127,6 +129,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `encoding/base64` | Native | The real source needs no patch. |
 | `regexp` | Native | The real source needs no patch. |
 | `regexp/syntax` | Native, with 1 patch | The patch replaces `parse.go`, which holds a `recover` call. A pattern that reaches a limit of a resource stops the program, and Go gives an error. |
+| `encoding` | Native | The package holds interfaces only. |
+| `internal/testhash` | Native | The tests of the hash packages of the Go repository read it. |
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
@@ -215,6 +219,7 @@ value, and a pointer to a field or to an element holds a `$Ref`.
 | `&v` of a struct field | Present. The pointer holds the object and the index of the field. |
 | `&v` of an element of a slice or an array | Present. The pointer holds the backing list and the index. |
 | `&v` of a composite literal of a type that is not a struct | Present. The pointer holds a box of its own. |
+| `&*p` | Rejected by stage 2. Read `p`. |
 | `&v` in a declaration of multiple values | Rejected by stage 5 |
 
 The compiler writes a box only for a variable whose address the code takes, thus
@@ -225,6 +230,10 @@ for it.
 
 A pointer to a struct and to an array holds no box. The Dart object of a struct
 and the Dart List of an array already hold a reference.
+
+A pointer to a type parameter holds 1 form for both: the Dart type is `Object?`,
+`$deref` reads the value, and `$setDeref` writes it. The form of such a pointer
+follows the type argument, because a pointer to a struct is the object itself.
 
 ## A call that fills each argument
 
@@ -298,7 +307,7 @@ point, thus the block analysis of stage 3 stays simple.
 | `Getwd`, `Chdir`, `TempDir` | Present | Equal |
 | `CreateTemp`, `MkdirTemp` | A random name | Equal, with a counter and the clock in place of the random part. |
 | `File.ReadAt`, `File.WriteAt` | Present | Equal. Each call reads the position first and writes it again. |
-| `OpenFile` | Each flag of the system | 4 modes: a read, a write with `O_TRUNC`, a write at the end with `O_APPEND`, and a read and a write. Dart holds no mode that reads and writes and stands at the start, thus such an open moves the position back. |
+| `OpenFile` | Each flag of the system | 4 modes: a read, a write with `O_TRUNC`, a write at the end with `O_APPEND`, and a read and a write with no truncation. Each write mode also reads, exactly as `os.Create` of Go does. Dart holds no mode that reads and writes and stands at the start, thus the last one moves the position back. |
 | `O_CREATE` | Fails when the file is missing and the flag stays out | Each mode of a write makes the file. Dart holds no open that fails for a missing file. |
 | `Args`, `Exit` | Present | Equal. `Args[0]` is the text `gart`. |
 | `IsNotExist`, `ErrNotExist`, `PathError` | Present | Equal |
