@@ -192,6 +192,7 @@ func TestTestsOfGoroot(t *testing.T) {
 		{"hash/crc32", "", []string{"--- PASS: TestGolden ", "--- PASS: TestSimple "}},
 		{"hash/fnv", "", []string{"--- PASS: TestGolden32 ", "--- PASS: TestGolden64 "}},
 		{"hash/adler32", "", []string{"--- PASS: TestGolden ", "--- PASS: TestGoldenMarshal "}},
+		{"maps", "", []string{"--- PASS: TestEqualFunc ", "--- PASS: TestCloneLarge "}},
 		// TestMultiReaderFreesExhaustedReaders needs a forced collection, and
 		// Dart holds no such call. Read docs/parity.md.
 		{"io", "TestCopy|TestRead|TestTee|TestSection|TestNop|TestOffset|" +

@@ -254,10 +254,42 @@ func (b *builder) ident(e *ast.Ident) ir.Expr {
 	if _, ok := obj.(*types.Nil); ok {
 		return &ir.Zero{Type: b.typeOf(e)}
 	}
+	name := obj.Name()
 	if n, ok := b.names[obj]; ok {
-		return &ir.Ident{Name: n, Obj: obj, Type: obj.Type(), Boxed: b.boxed(obj)}
+		name = n
 	}
-	return &ir.Ident{Name: obj.Name(), Obj: obj, Type: obj.Type(), Boxed: b.boxed(obj)}
+	id := &ir.Ident{Name: name, Obj: obj, Type: obj.Type(), Boxed: b.boxed(obj)}
+	if targs, sig := b.funcInstArgs(e, obj); targs != nil {
+		return &ir.FuncInst{Fun: id, TypeArgs: targs, Type: sig}
+	}
+	return id
+}
+
+// funcInstArgs gives the type arguments and the instantiated signature of an
+// instance of a generic function. It gives nil for any other name. A call
+// unwraps the node again, thus only a value of such an instance keeps it.
+func (b *builder) funcInstArgs(e *ast.Ident, obj types.Object) ([]types.Type, *types.Signature) {
+	fn, ok := obj.(*types.Func)
+	if !ok {
+		return nil, nil
+	}
+	decl, ok := fn.Origin().Type().(*types.Signature)
+	if !ok || decl.Recv() != nil || decl.TypeParams().Len() == 0 {
+		return nil, nil
+	}
+	inst, ok := b.info.Instances[e]
+	if !ok || inst.TypeArgs == nil || inst.TypeArgs.Len() != decl.TypeParams().Len() {
+		return nil, nil
+	}
+	sig, ok := inst.Type.(*types.Signature)
+	if !ok {
+		return nil, nil
+	}
+	out := make([]types.Type, inst.TypeArgs.Len())
+	for i := range out {
+		out[i] = inst.TypeArgs.At(i)
+	}
+	return out, sig
 }
 
 func (b *builder) binary(e *ast.BinaryExpr) ir.Expr {

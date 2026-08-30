@@ -44,14 +44,13 @@ of each other package with a source position.
 | The address of a value behind a pointer, for example `&*p` | Rejected. Read `p`. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |
-| A generic function as a value | Rejected. Such a value would need the dictionary of each type argument. |
 
 Each other construct of the language stays inside the subset: a closure, a
 method, an interface, an embedded struct, a type switch, a channel, a `select`,
 a `defer` that can block, `goto`, generics, a range loop over a function, the
 loop variable of Go 1.22, a conversion of a slice to an array, a method with a
-nil pointer receiver, a method expression, and a type declaration inside a
-function.
+nil pointer receiver, a method expression, a generic function as a value, and a
+type declaration inside a function.
 
 ## The shapes that build
 

@@ -31,6 +31,9 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 	if fun == nil {
 		return nil
 	}
+	if inst, ok := fun.(*ir.FuncInst); ok {
+		fun = inst.Fun
+	}
 	sig := signatureOf(b.typeOf(e.Fun))
 	out := &ir.Call{
 		Fun:      fun,

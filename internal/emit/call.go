@@ -405,6 +405,27 @@ func (e *emitter) methodValue(m *ir.Method) string {
 
 // methodExpr writes a method expression, for example `(*T).M`. The value is a
 // closure whose first parameter is the receiver.
+// funcInst writes an instance of a generic function that reaches a value. Dart
+// binds no argument of a function, thus the value is a closure that gives the
+// dictionary of each type argument.
+func (e *emitter) funcInst(x *ir.FuncInst) string {
+	sig, ok := x.Type.(*types.Signature)
+	if !ok {
+		e.fail("the instance of %s has no signature", x.Fun.Name)
+		return "null"
+	}
+	targs, dicts := e.typeArguments(x.TypeArgs)
+	params := make([]string, sig.Params().Len())
+	names := make([]string, sig.Params().Len())
+	for i := range params {
+		names[i] = fmt.Sprintf("$a%d", i)
+		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + names[i]
+	}
+	all := append(append([]string{}, dicts...), names...)
+	call := e.identExpr(x.Fun) + targs + "(" + strings.Join(all, ", ") + ")"
+	return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
+}
+
 func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	sig, ok := x.Type.(*types.Signature)
 	if !ok || sig.Params().Len() == 0 {

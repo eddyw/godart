@@ -485,6 +485,14 @@ type (
 		Type types.Type
 	}
 
+	// FuncInst names an instance of a generic function that reaches a value,
+	// for example `equal[int]`. Type holds the instantiated signature.
+	FuncInst struct {
+		Fun      *Ident
+		TypeArgs []types.Type
+		Type     types.Type
+	}
+
 	Method struct {
 		Recv Expr
 		Obj  *types.Func
@@ -612,6 +620,7 @@ func (e *Slice) GoType() types.Type       { return e.Type }
 func (e *Call) GoType() types.Type        { return e.Type }
 func (e *Method) GoType() types.Type      { return e.Type }
 func (e *MethodExpr) GoType() types.Type  { return e.Type }
+func (e *FuncInst) GoType() types.Type    { return e.Type }
 func (e *Builtin) GoType() types.Type     { return e.Type }
 func (e *Binary) GoType() types.Type      { return e.Type }
 func (e *Unary) GoType() types.Type       { return e.Type }
@@ -638,6 +647,7 @@ func (*Slice) isExpr()       {}
 func (*Call) isExpr()        {}
 func (*Method) isExpr()      {}
 func (*MethodExpr) isExpr()  {}
+func (*FuncInst) isExpr()    {}
 func (*Builtin) isExpr()     {}
 func (*Binary) isExpr()      {}
 func (*Unary) isExpr()       {}

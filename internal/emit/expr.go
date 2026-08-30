@@ -42,6 +42,8 @@ func (e *emitter) expr(x ir.Expr) string {
 		return e.call(x)
 	case *ir.MethodExpr:
 		return e.methodExpr(x)
+	case *ir.FuncInst:
+		return e.funcInst(x)
 	case *ir.Method:
 		return e.methodValue(x)
 	case *ir.Builtin:

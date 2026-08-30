@@ -115,20 +115,43 @@ func (a *analyzer) collect(n ast.Node) bool {
 		}
 		return true
 	case *ast.CallExpr:
-		a.callFuns[unparen(n.Fun)] = true
+		fun := unparen(n.Fun)
+		a.callFuns[fun] = true
+		switch x := fun.(type) {
+		case *ast.IndexExpr:
+			a.callFuns[unparen(x.X)] = true
+		case *ast.IndexListExpr:
+			a.callFuns[unparen(x.X)] = true
+		}
 		return true
 	case *ast.Ident:
 		if a.callFuns[n] {
 			return true
 		}
 		if obj, ok := a.pkg.TypesInfo.Uses[n].(*types.Func); ok {
-			if sig, ok := obj.Type().(*types.Signature); ok && sig.Recv() == nil {
+			if sig := a.valueSignature(n, obj); sig != nil {
 				a.addValue(any(obj), sig)
 			}
 		}
 		return true
 	}
 	return true
+}
+
+// valueSignature gives the signature under which a function reaches a value.
+// An instance of a generic function reaches the value with its type arguments
+// already bound, thus the key holds the instantiated signature.
+func (a *analyzer) valueSignature(n *ast.Ident, obj *types.Func) *types.Signature {
+	if inst, ok := a.pkg.TypesInfo.Instances[n]; ok {
+		if sig, ok := inst.Type.(*types.Signature); ok {
+			return sig
+		}
+	}
+	sig, ok := obj.Type().(*types.Signature)
+	if !ok || sig.Recv() != nil {
+		return nil
+	}
+	return sig
 }
 
 // addValue records a function that the code uses as a value. A call through

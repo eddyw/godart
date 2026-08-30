@@ -111,6 +111,7 @@ The package `fmt` reads it.
 | A type declaration inside a function, of a struct type | Present. It takes the class of its shape. |
 | A type declaration inside a function, of another type | Present. It takes the Dart form of its underlying type. |
 | A method expression, for example `(*T).M` | Present. The value is a closure whose first parameter is the receiver. |
+| A generic function as a value, for example `equal[int]` | Present. The value is a closure that gives the dictionary of each type argument. |
 | An unnamed struct type with an unexported field, in an exported declaration | Rejected. Read the section below. |
 
 
