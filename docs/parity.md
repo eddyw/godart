@@ -50,6 +50,7 @@ The package `fmt` reads it.
 | `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
 | A descriptor of an instance of a generic type | Present. The description stands at the point of the use, and the name holds each type argument. |
 | `reflect.DeepEqual` | Present. The walk reads the type descriptor. |
+| `Type.String` | Present. The text follows `reflect`, and not `go/types`. An unnamed struct type and an unnamed interface type each hold 1 space after the keyword. |
 | `reflect.Type` | A struct with a handle of a descriptor of the runtime, and not an interface. Thus `Type` compares with `==` and holds no nil value. |
 | `reflect.TypeOf(nil)` | Gives a Type with an empty text and an empty kind. Go gives nil. |
 | `reflect.ValueOf`, `Value.Interface`, `Value.Elem`, `Value.Set`, `reflect.Zero`, `Type.Elem` | Present |
@@ -64,7 +65,6 @@ The package `fmt` reads it.
 | `reflect.Kind` | The text of the kind, and not an unsigned number. The 2 forms hold the same set of values. |
 | `Value.Elem` of a value that is not a pointer | Panics. Go gives the value inside an interface. |
 | `Type.Size`, `Type.Align`, `Type.FieldAlign`, `StructField.Offset` | Present. The result follows the rules of a 64-bit machine, exactly as the compiler of Go computes them. |
-| `Type.String` of an unnamed struct type | `struct{a int}`. Go writes `struct { a int }`. The text comes from `go/types`, and the 2 packages hold 2 forms of the space. |
 | `Type.Align`, `Type.FieldAlign`, `Value.UnsafeAddr` | Missing. The target has no memory layout. |
 | `Value.Complex` and `Value.SetComplex` | Missing. The subset holds no complex number. |
 | A method value through reflect | Missing |

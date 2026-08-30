@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/types"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/eddyw/godart/internal/ir"
@@ -92,8 +93,8 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 		t = types.NewPointer(named)
 	}
 	return fmt.Sprintf("TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s)",
-		typeName(t), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
-		types.TypeString(types.Unalias(t), shortQualifier), e.descParts(t), e.zero(t))
+		dartText(typeName(t)), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
+		dartText(reflectText(types.Unalias(t))), e.descParts(t), e.zero(t))
 }
 
 // methodTable writes the adapter of each method of the type, in the order of
@@ -122,8 +123,8 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 		variable = e.descName(named.Obj(), true)
 	}
 	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s);",
-		variable, types.TypeString(t, nil), kindOf(t),
-		strings.Join(e.methodTable(named, t), ", "), types.TypeString(t, shortQualifier),
+		variable, dartText(types.TypeString(t, nil)), kindOf(t),
+		strings.Join(e.methodTable(named, t), ", "), dartText(reflectText(t)),
 		e.descParts(t), e.zero(t))
 }
 
@@ -207,6 +208,102 @@ func (e *emitter) fieldAccess(field *types.Var, class string) string {
 	dart := name.Package(field.Name())
 	return fmt.Sprintf("($r) => ($r as %s).%s, ($r, $v) => ($r as %s).%s = $v as %s",
 		class, dart, class, dart, e.dartType(field.Type()))
+}
+
+// dartText escapes a text for a Dart string literal that single quotes hold.
+// The tag of a struct field reaches the text of a type, and such a tag holds a
+// quotation mark and a backslash.
+func dartText(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch r {
+		case '\\', '\'', '$':
+			b.WriteByte('\\')
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+// reflectText writes the text of a type in the form that reflect.Type.String
+// gives.
+//
+// `go/types` writes an unnamed struct type and an unnamed interface type with
+// no space after the keyword, and `reflect` writes 1 space. Each other form is
+// equal, thus the function falls back to `types.TypeString`.
+func reflectText(t types.Type) string {
+	switch t := types.Unalias(t).(type) {
+	case *types.Struct:
+		if t.NumFields() == 0 {
+			return "struct {}"
+		}
+		parts := make([]string, t.NumFields())
+		for i := range parts {
+			field := t.Field(i)
+			text := reflectText(field.Type())
+			if !field.Embedded() {
+				text = field.Name() + " " + text
+			}
+			if tag := t.Tag(i); tag != "" {
+				text += " " + strconv.Quote(tag)
+			}
+			parts[i] = text
+		}
+		return "struct { " + strings.Join(parts, "; ") + " }"
+	case *types.Interface:
+		if t.NumMethods() == 0 {
+			return "interface {}"
+		}
+		parts := make([]string, t.NumMethods())
+		for i := range parts {
+			m := t.Method(i)
+			parts[i] = m.Name() + strings.TrimPrefix(reflectText(m.Type()), "func")
+		}
+		return "interface { " + strings.Join(parts, "; ") + " }"
+	case *types.Pointer:
+		return "*" + reflectText(t.Elem())
+	case *types.Slice:
+		return "[]" + reflectText(t.Elem())
+	case *types.Array:
+		return "[" + strconv.FormatInt(t.Len(), 10) + "]" + reflectText(t.Elem())
+	case *types.Map:
+		return "map[" + reflectText(t.Key()) + "]" + reflectText(t.Elem())
+	case *types.Chan:
+		switch t.Dir() {
+		case types.SendOnly:
+			return "chan<- " + reflectText(t.Elem())
+		case types.RecvOnly:
+			return "<-chan " + reflectText(t.Elem())
+		}
+		return "chan " + reflectText(t.Elem())
+	case *types.Signature:
+		return signatureText(t)
+	}
+	return types.TypeString(t, shortQualifier)
+}
+
+// signatureText writes a function type in the form of reflect.
+func signatureText(sig *types.Signature) string {
+	params := make([]string, sig.Params().Len())
+	for i := range params {
+		params[i] = reflectText(sig.Params().At(i).Type())
+	}
+	if sig.Variadic() && len(params) > 0 {
+		last := params[len(params)-1]
+		params[len(params)-1] = "..." + strings.TrimPrefix(last, "[]")
+	}
+	out := "func(" + strings.Join(params, ", ") + ")"
+	results := make([]string, sig.Results().Len())
+	for i := range results {
+		results[i] = reflectText(sig.Results().At(i).Type())
+	}
+	switch len(results) {
+	case 0:
+		return out
+	case 1:
+		return out + " " + results[0]
+	}
+	return out + " (" + strings.Join(results, ", ") + ")"
 }
 
 // shortQualifier writes the package name of a type, and not the import path.
@@ -444,7 +541,7 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		}
 	}
 	return fmt.Sprintf("TypeDesc('%s', '%s', %s, text: '%s'%s, zero: () => %s)",
-		typeName(t), kindOf(t), table, types.TypeString(types.Unalias(t), shortQualifier),
+		dartText(typeName(t)), kindOf(t), table, dartText(reflectText(types.Unalias(t))),
 		e.descParts(t), e.zero(t))
 }
 
