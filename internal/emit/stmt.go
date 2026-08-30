@@ -415,6 +415,13 @@ func (e *emitter) switchStmt(s *ir.Switch) {
 		parts := make([]string, len(c.Values))
 		for k, v := range c.Values {
 			if s.Tag == nil {
+				// A switch with no tag compares each case with true. A case
+				// of an interface type needs that comparison, and a plain
+				// bool is its own condition.
+				if isInterfaceType(v.GoType()) {
+					parts[k] = e.expr(v) + " == Iface($typeBool, true)"
+					continue
+				}
 				parts[k] = e.expr(v)
 				continue
 			}

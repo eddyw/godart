@@ -138,6 +138,8 @@ type emitter struct {
 	// nilPrefix stands in front of the name of each nil channel. A shared file
 	// holds its own channels, thus 2 files of 1 library give no collision.
 	nilPrefix string
+	// nilChansDone keeps each nil channel that writeNilChans wrote.
+	nilChansDone map[string]bool
 	// typeCycle keeps each named type that reaches itself, and typeAcyclic
 	// keeps each one that does not. Read cyclic. typeDepth caps a cycle
 	// through a function type.
@@ -408,6 +410,7 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	e.line("")
 	e.writeInit(sorted)
 	e.flushFrames()
+	e.writeNilChans()
 	if p.Name == "main" {
 		e.writeMain()
 	}

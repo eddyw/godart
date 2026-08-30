@@ -130,8 +130,13 @@ func (e *emitter) nilChan(elem types.Type) string {
 
 // writeNilChans writes the nil channel of each element type that the package
 // uses. The order comes from the name, thus equal input gives an equal file.
+// A second call writes only the new keys, because the init routine of the
+// package variables registers its channels after the first call.
 func (e *emitter) writeNilChans() {
-	written := map[string]bool{}
+	if e.nilChansDone == nil {
+		e.nilChansDone = map[string]bool{}
+	}
+	written := e.nilChansDone
 	for {
 		names := make([]string, 0, len(e.nilChans))
 		for key := range e.nilChans {

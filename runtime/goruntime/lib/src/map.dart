@@ -10,16 +10,22 @@ import 'slice.dart';
 /// the order of the writes. Go gives no order, thus a Go program must not
 /// depend on it.
 final class GoMap<K, V> {
-  final LinkedHashMap<K, V> _entries = LinkedHashMap<K, V>();
+  final LinkedHashMap<K, V> _entries;
   final V Function() _zero;
 
   /// True for the zero value of a map type. A read gives the zero value, and a
   /// write panics.
   final bool isNil;
 
-  GoMap(this._zero) : isNil = false;
+  /// A key of an array type compares by value in Go, and a Dart list compares
+  /// by identity, thus such a map takes its own equality and its own hash.
+  GoMap(this._zero, {bool Function(K, K)? equals, int Function(K)? hashCode})
+    : _entries = equals == null
+          ? LinkedHashMap<K, V>()
+          : LinkedHashMap<K, V>(equals: equals, hashCode: hashCode),
+      isNil = false;
 
-  GoMap.nil(this._zero) : isNil = true;
+  GoMap.nil(this._zero) : _entries = LinkedHashMap<K, V>(), isNil = true;
 
   int get length => _entries.length;
 

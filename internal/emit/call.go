@@ -489,22 +489,76 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 		names[i] = fmt.Sprintf("$a%d", i)
 		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + names[i]
 	}
-	obj := receiverTypeName(x.Recv)
-	if obj != nil && (!isStructType(obj.Type()) || pointerMethod(x.Obj)) {
-		dicts, typeArgs := e.recvTypeArgs(x.Recv)
-		all := append(append([]string{names[0]}, dicts...), names[1:]...)
-		call := e.qualify(obj, methodFuncName(obj.Name(), x.Obj.Name())) +
-			joinTypeArgs(typeArgs, "") + "(" + strings.Join(all, ", ") + ")"
+	msig, _ := x.Obj.Type().(*types.Signature)
+	closure := func(call string) string {
 		return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
 	}
+	// The method of an interface type dispatches through the method table of
+	// the receiver argument.
+	if isInterfaceType(x.Recv) {
+		call := fmt.Sprintf("$call(%s, %q, <Object?>[%s])",
+			names[0], methodKey(x.Obj.Name(), msig), strings.Join(names[1:], ", "))
+		if cast := e.resultCast(msig); cast != "" {
+			call = "(" + call + " as " + cast + ")"
+		}
+		return closure(call)
+	}
+	// A promoted method reads its embedded fields first, exactly as the
+	// adapter of a method table does.
 	recv := names[0]
-	if isPointerType(x.Recv) {
+	current := x.Recv
+	if pkg := x.Obj.Pkg(); pkg != nil {
+		_, index, _ := types.LookupFieldOrMethod(x.Recv, true, pkg, x.Obj.Name())
+		if len(index) > 1 {
+			for _, fi := range index[:len(index)-1] {
+				st := structOf(current)
+				if st == nil {
+					break
+				}
+				if isPointerType(current) {
+					recv += "!"
+				}
+				field := st.Field(fi)
+				recv += "." + name.Package(field.Name())
+				current = field.Type()
+			}
+		}
+	}
+	if isInterfaceType(current) {
+		call := fmt.Sprintf("$call(%s, %q, <Object?>[%s])",
+			recv, methodKey(x.Obj.Name(), msig), strings.Join(names[1:], ", "))
+		if cast := e.resultCast(msig); cast != "" {
+			call = "(" + call + " as " + cast + ")"
+		}
+		return closure(call)
+	}
+	obj := receiverTypeName(current)
+	if obj != nil && (!isStructType(obj.Type()) || pointerMethod(x.Obj)) {
+		// The body stands in a top level function. A value method through a
+		// pointer receiver argument reads the value behind the pointer.
+		arg0 := recv
+		if !pointerMethod(x.Obj) && isPointerType(current) {
+			if p, ok := typeset.Core(current).(*types.Pointer); ok && needsBox(p.Elem()) {
+				arg0 += "!.v"
+			} else {
+				arg0 += "!"
+			}
+		}
+		dicts, typeArgs := e.recvTypeArgs(current)
+		all := append(append([]string{arg0}, dicts...), names[1:]...)
+		call := e.qualify(obj, methodFuncName(obj.Name(), x.Obj.Name())) +
+			joinTypeArgs(typeArgs, "") + "(" + strings.Join(all, ", ") + ")"
+		return closure(call)
+	}
+	// A class method. A value receiver takes a copy at the call, exactly as
+	// Go copies it.
+	if isPointerType(current) {
 		recv += "!"
-	} else {
+	}
+	if msig != nil && msig.Recv() != nil && !isPointerType(msig.Recv().Type()) {
 		recv += ".$copy()"
 	}
-	call := fmt.Sprintf("%s.%s(%s)", recv, methodName(x.Obj), strings.Join(names[1:], ", "))
-	return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
+	return closure(fmt.Sprintf("%s.%s(%s)", recv, methodName(x.Obj), strings.Join(names[1:], ", ")))
 }
 
 // methodFuncValue reads a method of a named type that is not a struct. Such a
@@ -638,6 +692,14 @@ func (e *emitter) length(x ir.Expr) string {
 	case isChanType(t):
 		return e.expr(x) + ".length"
 	case isPointerType(t):
+		// The length of a pointer to an array comes from the type, and the
+		// read follows no pointer, thus a nil pointer also gives the length.
+		// The closure keeps the side effect of the operand.
+		if p, ok := typeset.Core(t).(*types.Pointer); ok {
+			if arr, ok := types.Unalias(p.Elem()).Underlying().(*types.Array); ok {
+				return fmt.Sprintf("((Object? $p) => %d)(%s)", arr.Len(), e.expr(x))
+			}
+		}
 		return e.deref(x) + ".length"
 	}
 	e.fail("len does not apply to the type %s", t)
@@ -654,10 +716,55 @@ func (e *emitter) capacity(x ir.Expr) string {
 	case isChanType(t):
 		return e.expr(x) + ".capacity"
 	case isPointerType(t):
+		// Read the note of length: the value comes from the type.
+		if p, ok := typeset.Core(t).(*types.Pointer); ok {
+			if arr, ok := types.Unalias(p.Elem()).Underlying().(*types.Array); ok {
+				return fmt.Sprintf("((Object? $p) => %d)(%s)", arr.Len(), e.expr(x))
+			}
+		}
 		return e.deref(x) + ".length"
 	}
 	e.fail("cap does not apply to the type %s", t)
 	return "0"
+}
+
+// mapNew writes the constructor of a map. A key of an array type compares by
+// value in Go, and a Dart list compares by identity, thus such a map takes
+// its own equality and its own hash.
+func (e *emitter) mapNew(m *types.Map) string {
+	base := fmt.Sprintf("GoMap<%s, %s>(() => %s",
+		e.dartType(m.Key()), e.dartType(m.Elem()), e.zero(m.Elem()))
+	if _, ok := typeset.Core(m.Key()).(*types.Array); !ok {
+		return base + ")"
+	}
+	return fmt.Sprintf("%s, equals: ($ka, $kb) => %s, hashCode: ($k) => %s)",
+		base, e.arrayKeyEqual(m.Key(), "$ka", "$kb", 0),
+		e.arrayKeyHash(m.Key(), "$k", 0))
+}
+
+// arrayKeyEqual writes the value equality of a map key of an array type. An
+// array inside the array compares the same way.
+func (e *emitter) arrayKeyEqual(t types.Type, a, b string, depth int) string {
+	arr, ok := typeset.Core(t).(*types.Array)
+	if !ok {
+		return e.equalText(a, b, t)
+	}
+	x := fmt.Sprintf("$x%d", depth)
+	y := fmt.Sprintf("$y%d", depth)
+	return fmt.Sprintf("$equalArray(%s, %s, (%s, %s) => %s)",
+		a, b, x, y, e.arrayKeyEqual(arr.Elem(), x, y, depth+1))
+}
+
+// arrayKeyHash writes the hash of a map key of an array type. The hash reads
+// each element, thus 2 equal keys give 1 hash.
+func (e *emitter) arrayKeyHash(t types.Type, v string, depth int) string {
+	arr, ok := typeset.Core(t).(*types.Array)
+	if !ok {
+		return e.hashText(v, t)
+	}
+	x := fmt.Sprintf("$e%d", depth)
+	return fmt.Sprintf("Object.hashAll(%s.map((%s) => %s))",
+		v, x, e.arrayKeyHash(arr.Elem(), x, depth+1))
 }
 
 // isUntypedNil reports whether the type is the type of the literal nil.
@@ -719,8 +826,7 @@ func (e *emitter) makeCall(x *ir.Builtin) string {
 		return fmt.Sprintf("$makeSlice<%s>(%s, %s, %s)",
 			e.dartType(u.Elem()), length, e.expr(x.Args[1]), e.alloc(u.Elem()))
 	case *types.Map:
-		return fmt.Sprintf("GoMap<%s, %s>(() => %s)",
-			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
+		return e.mapNew(u)
 	case *types.Chan:
 		capacity := "0"
 		if len(x.Args) > 0 {
@@ -746,7 +852,7 @@ func (e *emitter) newCall(x *ir.Builtin) string {
 		return fmt.Sprintf("Box<%s>(%s)", e.dartType(p.Elem()), e.zero(p.Elem()))
 	}
 	if len(x.Args) == 1 {
-		return e.expr(x.Args[0]) + ".$copy()"
+		return e.copyOf(e.expr(x.Args[0]), p.Elem())
 	}
 	return e.zero(p.Elem())
 }

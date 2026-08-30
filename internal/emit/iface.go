@@ -185,9 +185,8 @@ func (e *emitter) descShape(t types.Type) string {
 	case *types.Chan:
 		return ", elem: () => " + e.descriptorOf(u.Elem())
 	case *types.Map:
-		return fmt.Sprintf(", key: () => %s, elem: () => %s, make: ($n) => GoMap<%s, %s>(() => %s)",
-			e.descriptorOf(u.Key()), e.descriptorOf(u.Elem()),
-			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
+		return fmt.Sprintf(", key: () => %s, elem: () => %s, make: ($n) => %s",
+			e.descriptorOf(u.Key()), e.descriptorOf(u.Elem()), e.mapNew(u))
 	case *types.Signature:
 		return e.signatureShape(u)
 	}
@@ -770,6 +769,10 @@ func typeName(t types.Type) string {
 // parameter names, and the text of an assertion target holds none.
 func stripNames(t types.Type) types.Type {
 	switch u := types.Unalias(t).(type) {
+	case *types.Basic:
+		// byte and uint8 name 1 type, and so do rune and int32. The test of
+		// a type compares the name, thus the name comes from the kind.
+		return types.Typ[u.Kind()]
 	case *types.Signature:
 		params := make([]*types.Var, u.Params().Len())
 		for i := range params {

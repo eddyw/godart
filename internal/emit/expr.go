@@ -355,6 +355,13 @@ func (e *emitter) equal(a, b ir.Expr) string {
 	if text, ok := e.nilTest(b, a); ok {
 		return text
 	}
+	// A pointer to a struct is the Dart object of the struct, and the class
+	// compares the fields, thus 2 allocations with equal fields would compare
+	// equal. The comparison reads the identity. Each other pointer holds a
+	// cell, and the cell compares its location.
+	if p, ok := typeset.Core(a.GoType()).(*types.Pointer); ok && !needsBox(p.Elem()) {
+		return fmt.Sprintf("identical(%s, %s)", e.expr(a), e.expr(b))
+	}
 	return fmt.Sprintf("%s == %s", e.expr(a), e.expr(b))
 }
 
@@ -567,8 +574,7 @@ func (e *emitter) composite(x *ir.Composite) string {
 		return e.sliceLiteral(u.Elem(), parts)
 	case *types.Map:
 		var text strings.Builder
-		fmt.Fprintf(&text, "(GoMap<%s, %s>(() => %s)",
-			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
+		fmt.Fprintf(&text, "(%s", e.mapNew(u))
 		for i, key := range x.Keys {
 			fmt.Fprintf(&text, "..set(%s, %s)", e.expr(key), parts[i])
 		}
