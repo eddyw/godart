@@ -237,11 +237,15 @@ func (e *emitter) index(x *ir.Index) string {
 	if isMapType(container) {
 		return fmt.Sprintf("%s.get(%s)", e.expr(x.X), e.expr(x.Index))
 	}
+	// The type argument stands in the text. Dart reads the context of the
+	// expression for it, and an operand of `-` gives `num`.
 	if isPointerType(container) {
-		return fmt.Sprintf("$arrayIndex(%s, %s)", e.deref(x.X), e.expr(x.Index))
+		return fmt.Sprintf("$arrayIndex<%s>(%s, %s)",
+			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index))
 	}
 	if isArrayType(container) {
-		return fmt.Sprintf("$arrayIndex(%s, %s)", e.expr(x.X), e.expr(x.Index))
+		return fmt.Sprintf("$arrayIndex<%s>(%s, %s)",
+			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index))
 	}
 	return fmt.Sprintf("%s[%s]", e.expr(x.X), e.expr(x.Index))
 }
@@ -251,10 +255,12 @@ func (e *emitter) index(x *ir.Index) string {
 func (e *emitter) indexTarget(x *ir.Index) string {
 	container := x.X.GoType()
 	if isPointerType(container) {
-		return fmt.Sprintf("$arraySet(%s, %s", e.deref(x.X), e.expr(x.Index))
+		return fmt.Sprintf("$arraySet<%s>(%s, %s",
+			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index))
 	}
 	if isArrayType(container) {
-		return fmt.Sprintf("$arraySet(%s, %s", e.expr(x.X), e.expr(x.Index))
+		return fmt.Sprintf("$arraySet<%s>(%s, %s",
+			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index))
 	}
 	return ""
 }

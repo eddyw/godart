@@ -26,6 +26,9 @@ type Response struct {
 	Close bool
 	// Request holds the request that the response answers.
 	Request *Request
+	// Uncompressed marks a body that the transport read back from the gzip
+	// form.
+	Uncompressed bool
 
 	// bodyEnds marks a body whose end the header names. A body without such an
 	// end reaches the end of the connection, thus the connection holds no

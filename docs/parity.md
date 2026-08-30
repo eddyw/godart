@@ -131,6 +131,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `regexp` | Native | The real source needs no patch. |
 | `regexp/syntax` | Native, with 1 patch | The patch replaces `parse.go`, which holds a `recover` call. A pattern that reaches a limit of a resource stops the program, and Go gives an error. |
 | `encoding` | Native | The package holds interfaces only. |
+| `compress/flate` | Native | The real source needs no patch. The output holds the same bytes as Go. |
+| `compress/gzip` | Native | The real source needs no patch. |
 | `internal/testhash` | Native | The tests of the hash packages of the Go repository read it. |
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
@@ -420,7 +422,7 @@ with about 1500 lines.
 | Keep alive | Present | Present. The client holds a pool of 2 connections for each host. |
 | A Close of a body that stands before its end | The connection stays open when the read loop reaches the end first | The connection ends. |
 | HTTP/2 | Present | Missing |
-| `Accept-Encoding: gzip` | The client adds it and reads the answer | Missing. The surface holds no `compress/gzip`. |
+| `Accept-Encoding: gzip` | The client adds it and reads the answer | Equal. `DisableCompression` stops it, and `Response.Uncompressed` marks the answer. |
 | The type of a body that the handler does not name | `DetectContentType` reads the first 512 bytes | `text/plain; charset=utf-8` for each body |
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
 | `Request.RemoteAddr` | The address of the peer | Empty. The `Conn` of the `net` overlay names no peer. |

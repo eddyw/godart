@@ -729,6 +729,16 @@ func (e *emitter) conv(x *ir.Conv) string {
 		a, _ := typeset.Core(to).(*types.Array)
 		return fmt.Sprintf("$sliceToArray<%s>(%s, %d)",
 			e.dartType(a.Elem()), text, a.Len())
+	case isPointerType(to) && isSliceType(from):
+		// Go 1.17 converts a slice to a pointer to an array. The array shares
+		// the elements of the slice, thus a write through the pointer reaches
+		// the slice.
+		p, _ := typeset.Core(to).(*types.Pointer)
+		a, _ := typeset.Core(p.Elem()).(*types.Array)
+		if a != nil {
+			return fmt.Sprintf("$sliceToArrayPtr<%s>(%s, %d)",
+				e.dartType(a.Elem()), text, a.Len())
+		}
 	case isSliceType(to) && isString(from):
 		if isRuneSlice(to) {
 			return fmt.Sprintf("$stringToRunes(%s)", text)

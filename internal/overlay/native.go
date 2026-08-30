@@ -43,6 +43,8 @@ var native = []string{
 	"regexp",
 	"regexp/syntax",
 	"net/url",
+	"compress/flate",
+	"compress/gzip",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

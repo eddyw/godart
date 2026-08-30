@@ -4,12 +4,14 @@ package http
 
 import (
 	"bufio"
+	"compress/gzip"
 	"crypto/tls"
 	"errors"
 	"io"
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -30,6 +32,9 @@ type Transport struct {
 	TLSClientConfig *tls.Config
 	// DisableKeepAlives ends each connection after 1 answer.
 	DisableKeepAlives bool
+	// DisableCompression stops the field Accept-Encoding that the transport
+	// adds.
+	DisableCompression bool
 	// MaxIdleConnsPerHost limits the connections that stand open for 1 host. A
 	// value of 0 reads the default of 2.
 	MaxIdleConnsPerHost int
@@ -82,12 +87,16 @@ func (t *Transport) exchange(conn net.Conn, req *Request, key string) (*Response
 	} else if !req.deadline.IsZero() {
 		conn.SetDeadline(req.deadline)
 	}
-	if err := req.write(conn); err != nil {
+	wire, gzipped := t.gzipRequest(req)
+	if err := wire.write(conn); err != nil {
 		return nil, err
 	}
 	res, err := readResponse(bufio.NewReader(conn), req)
 	if err != nil {
 		return nil, err
+	}
+	if gzipped {
+		unzip(res)
 	}
 	res.Body = &connBody{
 		body:     res.Body,
@@ -98,6 +107,63 @@ func (t *Transport) exchange(conn net.Conn, req *Request, key string) (*Response
 	}
 	return res, nil
 }
+
+// gzipRequest gives the request that reaches the wire, and it asks for the gzip
+// form of the body. Go adds the field to a copy, thus the request of the caller
+// keeps its header.
+func (t *Transport) gzipRequest(req *Request) (*Request, bool) {
+	if t.DisableCompression || req.Method == MethodHead {
+		return req, false
+	}
+	if req.Header.Get("Accept-Encoding") != "" || req.Header.Get("Range") != "" {
+		return req, false
+	}
+	out := *req
+	out.Header = req.Header.Clone()
+	if out.Header == nil {
+		out.Header = Header{}
+	}
+	out.Header.Set("Accept-Encoding", "gzip")
+	return &out, true
+}
+
+// unzip replaces the body of an answer of the gzip form. The length of the
+// header names the bytes of the wire, thus it leaves the answer.
+func unzip(res *Response) {
+	if !strings.EqualFold(res.Header.Get("Content-Encoding"), "gzip") {
+		return
+	}
+	res.Body = &gzipBody{source: res.Body}
+	res.Header.Del("Content-Encoding")
+	res.Header.Del("Content-Length")
+	res.ContentLength = -1
+	res.Uncompressed = true
+}
+
+// A gzipBody reads the gzip form of a body. The reader of the stream opens at
+// the first read, because the header of the stream stands in the body.
+type gzipBody struct {
+	source io.ReadCloser
+	reader *gzip.Reader
+	err    error
+}
+
+func (g *gzipBody) Read(p []byte) (int, error) {
+	if g.err != nil {
+		return 0, g.err
+	}
+	if g.reader == nil {
+		r, err := gzip.NewReader(g.source)
+		if err != nil {
+			g.err = err
+			return 0, err
+		}
+		g.reader = r
+	}
+	return g.reader.Read(p)
+}
+
+func (g *gzipBody) Close() error { return g.source.Close() }
 
 // connectKey names the pool of a request.
 func (t *Transport) connectKey(req *Request) (string, error) {

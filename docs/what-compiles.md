@@ -9,7 +9,7 @@ build of a program that imports the package.
 
 ## The import surface
 
-62 packages of the standard library reach the surface. Stage 2 rejects an import
+64 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
@@ -19,7 +19,8 @@ of each other package with a source position.
 | `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
 | `regexp`, `regexp/syntax` | `text/template`, `html/template` |
 | `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/rand`, `crypto/x509` |
-| `encoding/csv`, `encoding/hex`, `encoding/json` | `compress/...`, `archive/...` |
+| `encoding/csv`, `encoding/hex`, `encoding/json` | `archive/...`, `compress/zlib` |
+| `compress/flate`, `compress/gzip` | `compress/bzip2`, `compress/lzw` |
 | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/tls` | `text/tabwriter`, `embed` |
 | `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `database/sql`, `math/cmplx` |
 | `io`, `io/fs`, `iter`, `maps`, `slices`, `sort` | `go/...` |
@@ -76,6 +77,8 @@ and `make ci` runs each one.
 | A linked list with a nil safe method | A method with a nil pointer receiver |
 | An HTTP server and a client in 1 program | `net/http`, a handler, a cookie, a chunked answer |
 | A client that holds a connection open | `net/http` keep alive, a listener of its own |
+| A round trip of a gzip stream | `compress/gzip`, `compress/flate`, a dictionary, each level |
+| A client that reads the gzip form of an answer | `net/http` with `Accept-Encoding: gzip` |
 | A matcher of a pattern with a named group | `regexp`, a replace, a split |
 | A checksum of a text with 4 algorithms | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `encoding/hex` |
 | A read and a write of a binary record | `encoding/binary`, a struct, an array, a varint |
@@ -104,8 +107,8 @@ Thus these categories build:
 | `recover` | Each program that turns a panic into an error. A parser of the standard library often does. |
 | `text/template`, `html/template` | Each program that writes a page or a file from a template. |
 | `encoding/xml`, `encoding/gob` | Each program that reads an XML file or a gob stream. |
-| `compress/...`, `archive/...` | Each program that reads a zip file, a tar file, or a gzip stream. |
-| HTTP/2 and keep alive | Each client that needs a pool of connections or the newer protocol. |
+| `archive/...`, `compress/bzip2`, `compress/lzw`, `compress/zlib` | Each program that reads a zip file or a tar file. |
+| HTTP/2 | Each client that needs the newer protocol. |
 | `net/http/httptest` | Each test of a handler that reads a recorder. |
 | `database/sql` | Each program that reads a database. |
 | A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
@@ -123,6 +126,5 @@ the exact gap.
 | Package | The gap |
 |---|---|
 | `text/tabwriter` | 1 call of `recover`, and the address of a field of a slice. |
-| `compress/flate`, `compress/gzip` | A survey of the real source. `net/http` would then hold `Accept-Encoding: gzip`. |
 | `net/http/httptest` | A listener of a test and a recorder of an answer, over the `net/http` overlay. |
 | `crypto/hmac`, `crypto/sha512` | Each one follows the pattern of the `crypto/sha256` overlay. |

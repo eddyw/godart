@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'panic.dart';
 import 'slice.dart';
 
@@ -16,6 +18,48 @@ List<T> $sliceToArray<T>(Slice<T> s, int n) {
     );
   }
   return List<T>.generate(n, (i) => s[i], growable: false);
+}
+
+/// Builds a pointer to an array of the first n elements of a slice. The array
+/// shares the elements of the slice, thus a write through the pointer reaches
+/// the slice. Go panics when the slice holds fewer than n elements.
+List<T> $sliceToArrayPtr<T>(Slice<T> s, int n) {
+  if (s.len < n) {
+    $panic(
+      'runtime error: cannot convert slice with length ${s.len} '
+      'to array or pointer to array with length $n',
+    );
+  }
+  if (s.off == 0 && s.array.length == n) return s.array;
+  return $ArrayView<T>(s.array, s.off, n);
+}
+
+/// A window of n elements of a backing list, from an offset. It holds the
+/// array of a pointer that a conversion of a slice gives.
+final class $ArrayView<T> extends ListBase<T> {
+  final List<T> array;
+  final int off;
+  final int count;
+
+  $ArrayView(this.array, this.off, this.count);
+
+  @override
+  int get length => count;
+
+  @override
+  set length(int value) => $panic('the length of an array is fixed');
+
+  @override
+  T operator [](int i) {
+    if (i < 0 || i >= count) $panicIndex(i, count);
+    return array[off + i];
+  }
+
+  @override
+  void operator []=(int i, T value) {
+    if (i < 0 || i >= count) $panicIndex(i, count);
+    array[off + i] = value;
+  }
 }
 
 /// Copies an array. The element copy function is not null for a struct

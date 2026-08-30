@@ -60,7 +60,15 @@ func Exported(goName string) bool {
 
 // Type maps the name of a named type. The Dart class takes a `$` suffix,
 // because an embedded struct field carries the name of its own type.
+//
+// The name of an unexported type takes no `_` prefix. An exported variable can
+// hold a type that Go does not export, and a second package then names that
+// type. A Dart library reaches no name of another library that starts with an
+// underscore.
 func Type(goName string) string {
+	if !token.IsExported(goName) {
+		return goName + "$"
+	}
 	return Package(goName) + "$"
 }
 
