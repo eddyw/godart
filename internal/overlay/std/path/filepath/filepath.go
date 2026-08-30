@@ -349,3 +349,9 @@ func sortNames(names []string) {
 		}
 	}
 }
+
+// EvalSymlinks gives the path after each symbolic link. The Dart output walks
+// no link, thus the result is the cleaned path. docs/parity.md holds the gap.
+func EvalSymlinks(path string) (string, error) {
+	return Clean(path), nil
+}

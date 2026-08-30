@@ -240,6 +240,13 @@ func TestTestsOfGoroot(t *testing.T) {
 			"--- PASS: TestParseSimple ", "--- PASS: TestSimplify "}},
 		{"math/rand/v2", "", []string{
 			"--- PASS: TestRegress ", "--- PASS: TestChaCha8Read "}},
+		{"compress/gzip", "", []string{
+			"--- PASS: TestRoundTrip ", "--- PASS: TestConcat "}},
+		// The whole run of the flate tests takes 8 minutes, thus the row
+		// keeps a fast set. TestDeflateInflateString proves the size limit
+		// of the encoder at each level.
+		{"compress/flate", "TestDeflate$|TestDeflateInflate$|TestDeflateInflateString$|TestReaderDict$|TestWriterDict$|TestBulkHash4$",
+			[]string{"--- PASS: TestDeflateInflateString ", "--- PASS: TestWriterDict "}},
 	}
 	for _, c := range cases {
 		t.Run(c.pkg, func(t *testing.T) {

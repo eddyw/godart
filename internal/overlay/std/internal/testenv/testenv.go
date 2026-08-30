@@ -17,3 +17,8 @@ func Builder() string { return "" }
 // SkipIfOptimizationOff skips a test that needs the optimizations of the
 // compiler. The Dart toolchain holds no mode with no optimization.
 func SkipIfOptimizationOff(t testing.TB) {}
+
+// MustHaveSource skips the test. The Dart output holds no source tree of Go.
+func MustHaveSource(t testing.TB) {
+	t.Skip("testenv: the Dart output holds no source tree of Go")
+}

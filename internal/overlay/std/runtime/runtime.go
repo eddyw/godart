@@ -27,6 +27,10 @@ func NumCPU() int { return 1 }
 // count, thus the value is always 1.
 func NumGoroutine() int { return 1 }
 
+// GOROOT gives the root of the Go tree. The Dart output holds no such tree,
+// thus the text is empty. Go marks the function as deprecated.
+func GOROOT() string { return "" }
+
 // GOOS names the operating system that runs the program. The value comes from
 // Dart at the start of the program, because the output of 1 build runs on each
 // system that the Dart VM holds.
