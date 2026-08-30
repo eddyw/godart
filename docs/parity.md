@@ -742,19 +742,25 @@ command needs no flag for it:
 cd $(go env GOROOT)/src/path && gart test -o /tmp/x -runtime <path> .
 ```
 
+14 packages of GOROOT run each of their tests, and `TestTestsOfGoroot` proves
+each one: `path`, `container/list`, `container/heap`, `container/ring`,
+`unicode`, `encoding/hex`, `encoding/ascii85`, `encoding/csv`, `hash/crc32`,
+`hash/fnv`, `hash/adler32`, `maps`, `io`, and `regexp/syntax`.
+
 A test file of GOROOT holds code outside the subset in many packages. `recover`,
 `unsafe`, and the address of a byte each appear, and each one stays outside the
 subset. Thus a package reaches a full run only when each of its test files stays
 inside the subset.
 
-The cause that blocks each package of the survey of 2026-08-30:
+The cause that blocks each package of the survey of 2026-08-31:
 
 | Package | Cause |
 |---|---|
-| `errors` | 1 call of `recover` in `wrap_test.go`, and the package `io/fs`. |
+| `errors` | 1 call of `recover` in `wrap_test.go`. |
 | `io` | Runs. Each test passes. |
-| `math/rand/v2` | 9 names of `reflect` that the surface does not hold. |
-| `bytes` | 22 rejections in 5 groups. `recover` and the address of a byte hold 11 of them. |
+| `maps` | Runs. Each test passes. |
+| `math/rand/v2` | `Type.NumMethod`, `Type.Method`, `Value.Method`, and `os.Pipe`. |
+| `bytes` | `internal/testenv`, `internal/asan`, and 7 calls of `recover`. |
 | `regexp` | 5 rejections in `regexp/syntax/parse.go`: 1 call of `recover` and 4 addresses of a `[]rune` field. |
 
 ### The block model
