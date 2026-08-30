@@ -95,12 +95,10 @@ The plan left these points open. The work took the decisions below.
     arguments of the process.
 28. `-run` reads plain text and not a regular expression. The subset holds no
     `regexp` package. A plain pattern gives the same result as the regexp of `go
-    test`, and an anchor or a character class does not. Superseded for a test
-    name. The surface holds `regexp`, and the entry point gives the harness
-    `testing.MatchString`. The harness splits the pattern and the name at each
-    slash, and it matches 1 expression against 1 element.
-    `internal/driver/run.go` still filters the skip line of an unsupported
-    function with `strings.Contains`.
+    test`, and an anchor or a character class does not. Superseded. The surface
+    holds `regexp`, and the entry point gives the harness
+    `testing.MatchString`. `-run` and `-bench` each read a regular expression
+    with the rule of `testing/match.go` of Go. Read decision 124.
 29. `testing.B` and `testing.F` exist with a body that panics. A test file
     declares a benchmark and a fuzz target, and that body must type check. No
     path reaches such a method, thus the panic never runs. The benchmark work
@@ -421,6 +419,21 @@ The plan left these points open. The work took the decisions below.
      package. The analysis reads the whole module. Thus a new function of a
      package that this package does not import can change the form of a call
      through a function value. `TestCacheBlockDigest` proves the rule.
+124. 1 file holds the rule of `-run` and of `-bench`, and the compiler and the
+     harness both read it. `internal/overlay/std/testing/match.go` carries no
+     build tag. Thus the go command builds it as a package of the module, and
+     the overlay gives the same file to a test binary. `internal/driver` passes
+     `regexp.MatchString` to it, and the entry point of a binary passes the
+     function of the surface. The rule comes from `splitRegexp` of
+     `testing/match.go` of Go: the split reads each `|` outside a bracket group
+     and outside a parenthesis group, and then each `/` outside such a group.
+     `Run` of `T` and `Run` of `B` each apply the filter to the full name of the
+     subtest, exactly as Go does.
+125. `Run` of `M` writes `testing: warning: no tests to run` when the filter
+     keeps no test and the arguments hold no `-test.bench`. The driver reads
+     that line and writes ` [no tests to run]` after the line of the package.
+     The go command reads the same line of a test binary and writes the same
+     mark.
 
 ## Answered questions of 2026-08-31
 
@@ -432,6 +445,8 @@ The plan left these points open. The work took the decisions below.
   turn of the event loop. Read decision 122.
 - Does a reachability pass cut the cost of `iter.Pull`? No. Such a pass reads
   the same groups of the signature. Read the workstream doc.
+- Can the compiler and a test binary share 1 source file? Yes. A file of the
+  overlay with no build tag reaches both. Read decision 124.
 - Does the real source of `compress/flate` stay inside the subset? Yes. The
   package needs no patch, and the Dart output writes the same bytes as Go.
 

@@ -695,7 +695,8 @@ for each test binary. The output holds the format of `go test`.
 | The position of a deferred log line after `Fatal` | The position of the runtime of Go, for example `panic.go:694` | No position. |
 | `t.Parallel` | Runs the tests in parallel | Does nothing. All Go code runs in 1 isolate. |
 | `t.FailNow`, `t.SkipNow` | `runtime.Goexit` | A throw. Each deferred function still runs, and the subset has no `recover`. |
-| `-run` | A regular expression | Equal. The pattern holds 1 expression for each element of the name. |
+| `-run` | A regular expression | Equal. A `\|` separates 2 alternatives, and a `/` separates the expression of each element of the name. |
+| A filter that keeps no test | `testing: warning: no tests to run`, and ` [no tests to run]` after the package | Equal. The driver writes the mark, and the harness writes the warning. |
 | A duplicate subtest name | The second name takes `#01` | The 2 names stay equal |
 | `TestMain` | Runs in place of the entry point | Equal. `testing.M` holds `Run`. |
 | A benchmark | `go test` with no -bench flag runs none | Equal. `gart test -bench <text>` runs them. |

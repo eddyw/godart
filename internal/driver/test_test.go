@@ -53,18 +53,49 @@ func TestTests(t *testing.T) {
 	}
 }
 
-// TestTestsFilter proves that the -run flag keeps only the tests that match.
+// TestTestsFilter proves that the -run flag of gart keeps the same tests as the
+// -run flag of go test. The module table holds a test with 3 subtests, thus a
+// pattern with a slash, with a bar, or with a group reaches each rule of the
+// matcher.
 func TestTestsFilter(t *testing.T) {
-	dir, err := filepath.Abs("../../testdata/tests/basic")
+	dir, err := filepath.Abs("../../testdata/tests/table")
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := gartTest(t, dir, driver.TestOptions{Verbose: true, Run: "TestAdd"})
-	if !strings.Contains(got, "--- PASS: TestAdd") {
-		t.Errorf("the output holds no result of TestAdd:\n%s", got)
+	out := t.TempDir()
+	for _, pattern := range []string{
+		"TestClamp",
+		"TestClamp/inside",
+		"TestClamp/inside|TestSum",
+		"TestClamp/(inside|above)",
+		"TestClamp/[/a]",
+		"^TestSum$",
+		"TestNothing",
+	} {
+		t.Run(pattern, func(t *testing.T) {
+			want := goTest(t, dir, true, "-run", pattern)
+			got := gartTestIn(t, dir, out, driver.TestOptions{Verbose: true, Run: pattern})
+			if got != want {
+				t.Errorf("the output differs\ngo test:\n%s\ngart test:\n%s", want, got)
+			}
+		})
 	}
-	if strings.Contains(got, "TestDouble") {
-		t.Errorf("the filter kept TestDouble:\n%s", got)
+}
+
+// TestTestsFiltersTheSkipLine proves that the -run flag also reads a regular
+// expression for the skip line of an unsupported function. The driver writes
+// that line, and not the harness.
+func TestTestsFiltersTheSkipLine(t *testing.T) {
+	dir, err := filepath.Abs("../../testdata/tests/unsupported")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := gartTest(t, dir, driver.TestOptions{Run: "^FuzzLength$"})
+	if !strings.Contains(got, "--- SKIP: FuzzLength") {
+		t.Errorf("the output holds no skip line of FuzzLength:\n%s", got)
+	}
+	if strings.Contains(got, "ExampleLength") {
+		t.Errorf("the filter kept ExampleLength:\n%s", got)
 	}
 }
 
@@ -275,12 +306,13 @@ func runtimeDir(t *testing.T) string {
 	return dir
 }
 
-func goTest(t *testing.T, dir string, verbose bool) string {
+func goTest(t *testing.T, dir string, verbose bool, extra ...string) string {
 	t.Helper()
 	args := []string{"test", "-count=1"}
 	if verbose {
 		args = append(args, "-v")
 	}
+	args = append(args, extra...)
 	cmd := exec.Command("go", append(args, "./...")...)
 	cmd.Dir = dir
 	text, _ := cmd.CombinedOutput()
@@ -289,17 +321,25 @@ func goTest(t *testing.T, dir string, verbose bool) string {
 
 func gartTest(t *testing.T, dir string, options driver.TestOptions) string {
 	t.Helper()
-	out := &bytes.Buffer{}
+	return gartTestIn(t, dir, t.TempDir(), options)
+}
+
+// gartTestIn runs the tests of a module and writes the Dart package into out. A
+// second call with the same directory reads the cache, thus a run of many
+// filters compiles 1 time.
+func gartTestIn(t *testing.T, dir, out string, options driver.TestOptions) string {
+	t.Helper()
+	text := &bytes.Buffer{}
 	if _, err := driver.Test(driver.Options{
 		Dir:      dir,
 		Patterns: []string{"./..."},
-		Out:      t.TempDir(),
+		Out:      out,
 		Runtime:  runtimeDir(t),
 		Format:   true,
-	}, options, out); err != nil {
+	}, options, text); err != nil {
 		t.Fatalf("the test build failed:\n%v", err)
 	}
-	return normalize(out.String())
+	return normalize(text.String())
 }
 
 var (

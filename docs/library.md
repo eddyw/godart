@@ -175,8 +175,9 @@ other line of the patch comes from the real file.
 The 4 addresses of a `[]rune` field, as in `cleanClass(&re.Rune)`, needed no
 patch. The work of 2026-08-30 gave the subset a pointer to a field of a struct.
 
-`gart test -run` reads a regular expression through the harness. Read decision
-28 for the 1 filter that still reads plain text.
+`gart test -run` and `gart test -bench` each read a regular expression through
+the harness. The driver reads the same file for the skip line of an unsupported
+function. Read decision 124.
 
 ## The context package
 

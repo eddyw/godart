@@ -6,12 +6,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/eddyw/godart/internal/load"
+	harness "github.com/eddyw/godart/internal/overlay/std/testing"
 )
 
 // mainEntry is the Dart entry point of package main.
@@ -21,10 +23,10 @@ const mainEntry = "bin/main.dart"
 type TestOptions struct {
 	// Verbose writes 1 line for each test.
 	Verbose bool
-	// Run keeps only a test whose name holds this text.
+	// Run keeps only a test whose name matches this regular expression.
 	Run string
 	// Benchmarks runs the benchmarks. Bench then keeps only a benchmark whose
-	// name holds its text.
+	// name matches its regular expression.
 	Benchmarks bool
 	Bench      string
 	// BenchTime is the length that 1 benchmark targets. It is 1 second when the
@@ -93,7 +95,7 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 			fmt.Fprintf(out, "FAIL\t%s\t%ss\n", bin.Package, elapsed)
 			continue
 		}
-		fmt.Fprintf(out, "ok  \t%s\t%ss\n", bin.Package, elapsed)
+		fmt.Fprintf(out, "ok  \t%s\t%ss%s\n", bin.Package, elapsed, noRun(text))
 	}
 	if failed {
 		fmt.Fprintln(out, "FAIL")
@@ -159,10 +161,19 @@ func compileExe(out, entry string) (string, error) {
 	return exe, nil
 }
 
+// noRun marks a package whose filter kept no test. go test reads the warning of
+// the binary and writes the mark, thus the driver does the same.
+func noRun(text string) string {
+	if strings.Contains(text, harness.NoTestsToRun+"\n") {
+		return " [no tests to run]"
+	}
+	return ""
+}
+
 // matches reads the filter of the -run flag and of the -bench flag. The harness
-// holds the same rule, because the subset has no regexp package.
+// of a test binary reads the same file.
 func matches(name, pattern string) bool {
-	return pattern == "" || strings.Contains(name, pattern)
+	return harness.MatchName(name, pattern, regexp.MatchString)
 }
 
 func seconds(d time.Duration) string {

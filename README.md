@@ -24,8 +24,8 @@ gart test -o dartout -runtime path/to/runtime/goruntime ./...
 `gart build` writes the Dart package and stops. `gart run` compiles it and runs
 package main with the Dart VM. `gart test` compiles the `_test.go` files and
 runs each test binary with the Dart VM. The output of `gart test` holds the
-format of `go test`. `gart test -bench <text>` runs the benchmarks on an ahead
-of time build.
+format of `go test`. `gart test -bench <expression>` runs the benchmarks on an
+ahead of time build.
 
 To run 1 of the example programs of this repository:
 
@@ -69,7 +69,7 @@ The compiler holds all 6 stages. The subset covers:
 | Compression | `compress/gzip`, `compress/flate`, and `compress/zlib` write the bytes of Go |
 | Stack | A source map gives `runtime.Caller` and the Go trace of a panic |
 | JSON | `json.Marshal` walks the type descriptor of a value |
-| Benchmarks | `gart test -bench <text>` runs a `BenchmarkXxx` function |
+| Benchmarks | `gart test -bench <expression>` runs a `BenchmarkXxx` function |
 
 The standard library surface holds 66 packages, for example `fmt`, `net/http`,
 `regexp`, `reflect`, `encoding/json`, and the interop package `syscall/dart`. An

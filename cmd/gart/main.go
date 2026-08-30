@@ -41,9 +41,8 @@ The run command passes each argument after -- to the program.
 The test command takes these flags:
 
 	-v               write 1 line for each test
-	-run text        run only a test whose name holds the text
-	-bench text      run each benchmark whose name holds the text. The value .
-	                 or an empty value runs each one.
+	-run expr        run only a test whose name matches the expression
+	-bench expr      run each benchmark whose name matches the expression
 	-benchtime d     the length that 1 benchmark targets, for example 2s
 	-benchcount n    the fixed count of iterations of 1 benchmark
 
@@ -153,8 +152,8 @@ func runRun(args []string) error {
 func runTest(args []string) error {
 	flags := newBuildFlags("test")
 	verbose := flags.set.Bool("v", false, "write 1 line for each test")
-	pattern := flags.set.String("run", "", "run only a test whose name holds this text")
-	bench := flags.set.String("bench", "", "run each benchmark whose name holds this text")
+	pattern := flags.set.String("run", "", "run only a test whose name matches this expression")
+	bench := flags.set.String("bench", "", "run each benchmark whose name matches this expression")
 	benchTime := flags.set.Duration("benchtime", time.Second,
 		"the length that 1 benchmark targets")
 	benchCount := flags.set.Int("benchcount", 0,
@@ -167,7 +166,7 @@ func runTest(args []string) error {
 		Verbose:    *verbose,
 		Run:        *pattern,
 		Benchmarks: given(flags.set, "bench"),
-		Bench:      benchText(*bench),
+		Bench:      *bench,
 		BenchTime:  *benchTime,
 		BenchCount: *benchCount,
 	}
@@ -191,16 +190,6 @@ func given(set *flag.FlagSet, name string) bool {
 		}
 	})
 	return found
-}
-
-// benchText reads the value of -bench. go test takes a regular expression, and
-// the value . matches each name. gart reads plain text, thus . becomes an empty
-// filter.
-func benchText(value string) string {
-	if value == "." {
-		return ""
-	}
-	return value
 }
 
 // split cuts the arguments at the first -- element. The first part belongs to

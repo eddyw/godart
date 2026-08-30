@@ -210,6 +210,9 @@ func (t *T) Skipf(format string, args ...any) {
 // Run runs a subtest and reports whether the subtest passed.
 func (t *T) Run(name string, f func(*T)) bool {
 	sub := &T{name: t.name + "/" + subName(name), level: t.level + 1}
+	if !matches(sub.name, runFilter) {
+		return true
+	}
 	runOne(sub, func() { f(sub) })
 	t.report = append(t.report, sub.report...)
 	if sub.failed {
@@ -288,10 +291,12 @@ func (m *M) Run() int {
 	m.ran = true
 	flags := readFlags()
 	failed := false
+	ran := false
 	for _, tc := range m.tests {
 		if !matches(tc.Name, flags.run) {
 			continue
 		}
+		ran = true
 		t := &T{name: tc.Name}
 		f := tc.F
 		runOne(t, func() { f(t) })
@@ -311,6 +316,9 @@ func (m *M) Run() int {
 				failed = true
 			}
 		}
+	}
+	if !ran && !flags.benchmarks {
+		emit(NoTestsToRun)
 	}
 	if failed {
 		emit("FAIL")
@@ -358,6 +366,9 @@ func MainWith(tests []InternalTest, benchmarks []InternalBenchmark, f func(*M)) 
 	Finish(m, m.code)
 }
 
+// runFilter holds the pattern of -test.run. Run of T reads it for a subtest.
+var runFilter string
+
 // options holds the flags of a run.
 type options struct {
 	run string
@@ -382,6 +393,7 @@ func readFlags() options {
 			verbose = true
 		case strings.HasPrefix(arg, "-test.run="):
 			out.run = strings.TrimPrefix(arg, "-test.run=")
+			runFilter = out.run
 		case strings.HasPrefix(arg, "-test.bench="):
 			out.benchmarks = true
 			out.bench = strings.TrimPrefix(arg, "-test.bench=")
@@ -404,26 +416,10 @@ func readFlags() options {
 // the 2 imports would give a cycle.
 var MatchString func(pattern, name string) (bool, error)
 
-// matches reports whether a test name passes the filter of -test.run.
-//
-// The pattern holds 1 regular expression for each element of the name, and the
-// elements stand between the slashes. A name that holds fewer elements than the
-// pattern passes, because a subtest of it can still match.
+// matches reports whether a test name passes a filter. match.go holds the rule,
+// and the driver of the compiler reads the same file.
 func matches(name, pattern string) bool {
-	if pattern == "" || MatchString == nil {
-		return true
-	}
-	elems := strings.Split(name, "/")
-	for i, part := range strings.Split(pattern, "/") {
-		if i >= len(elems) {
-			break
-		}
-		ok, err := MatchString(part, elems[i])
-		if err != nil || !ok {
-			return false
-		}
-	}
-	return true
+	return MatchName(name, pattern, MatchString)
 }
 
 // runOne runs 1 test body. It puts the result line of the test in front of the
@@ -654,7 +650,11 @@ var benchFlags = options{nanoseconds: defaultBenchNanos}
 // Run runs a subbenchmark and reports whether it passed.
 func (b *B) Run(name string, f func(*B)) bool {
 	b.sub = true
-	return runBenchmark(b.common.name+"/"+subName(name), f, benchFlags)
+	full := b.common.name + "/" + subName(name)
+	if !matches(full, benchFlags.bench) {
+		return true
+	}
+	return runBenchmark(full, f, benchFlags)
 }
 
 // runBenchmark measures 1 benchmark and writes its line. It reports whether the
