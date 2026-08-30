@@ -6,6 +6,7 @@ package strings
 import "errors"
 
 import (
+	"iter"
 	"syscall/dart"
 	"unicode"
 )
@@ -239,6 +240,60 @@ func Split(s, sep string) []string {
 		start = i
 	}
 	return append(out, s[start:])
+}
+
+// SplitSeq cuts s at each sep, and it gives each part as a sequence. An empty
+// sep gives each rune as its own part.
+func SplitSeq(s, sep string) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		if len(sep) == 0 {
+			for _, r := range s {
+				if !yield(string(r)) {
+					return
+				}
+			}
+			return
+		}
+		start := 0
+		i := 0
+		for i+len(sep) <= len(s) {
+			if s[i:i+len(sep)] != sep {
+				i++
+				continue
+			}
+			if !yield(s[start:i]) {
+				return
+			}
+			i += len(sep)
+			start = i
+		}
+		yield(s[start:])
+	}
+}
+
+// FieldsSeq cuts s at each run of space, and it gives each field as a
+// sequence.
+func FieldsSeq(s string) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		start := -1
+		for i := 0; i < len(s); i++ {
+			if isSpace(s[i]) {
+				if start >= 0 {
+					if !yield(s[start:i]) {
+						return
+					}
+					start = -1
+				}
+				continue
+			}
+			if start < 0 {
+				start = i
+			}
+		}
+		if start >= 0 {
+			yield(s[start:])
+		}
+	}
 }
 
 // SplitN cuts s at each sep, and it gives at most n parts.
