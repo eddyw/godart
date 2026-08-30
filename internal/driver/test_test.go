@@ -238,6 +238,8 @@ func TestTestsOfGoroot(t *testing.T) {
 		// parse.go holds no recover for it. Read docs/parity.md.
 		{"regexp/syntax", "Test[^P]|TestParse[SFLMN]", []string{
 			"--- PASS: TestParseSimple ", "--- PASS: TestSimplify "}},
+		{"math/rand/v2", "", []string{
+			"--- PASS: TestRegress ", "--- PASS: TestChaCha8Read "}},
 	}
 	for _, c := range cases {
 		t.Run(c.pkg, func(t *testing.T) {
