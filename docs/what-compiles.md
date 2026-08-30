@@ -4,8 +4,8 @@ This file names the shape of a Go program that the compiler accepts. It also
 names the gate that stops each program that it rejects. `docs/parity.md` holds
 each difference between Go and the Dart output.
 
-Each row comes from a measurement of 2026-08-31. A `Present` row is a real
-build of a program that imports the package.
+Each row comes from a measurement of 2026-08-31. A `Present` row is a real build
+of a program that imports the package.
 
 ## The import surface
 
@@ -47,12 +47,14 @@ of each other package with a source position.
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |
 
-Each other construct of the language stays inside the subset: a closure, a
-method, an interface, an embedded struct, a type switch, a channel, a `select`,
-a `defer` that can block, `goto`, generics, a range loop over a function, the
-loop variable of Go 1.22, a conversion of a slice to an array, a method with a
-nil pointer receiver, a method expression, a generic function as a value, and a
-type declaration inside a function.
+Each other construct of the language stays inside the subset:
+
+- A closure, a method, an interface, an embedded struct, and a type switch.
+- A channel, a `select`, and a `defer` that can block.
+- `goto`, and a type declaration inside a function.
+- Generics, a generic function as a value, and a method expression.
+- A range loop over a function, and the loop variable of Go 1.22.
+- A conversion of a slice to an array, and a method with a nil pointer receiver.
 
 ## The shapes that build
 
@@ -93,8 +95,8 @@ and `make ci` runs each one.
 
 Thus these categories build:
 
-- A command line tool that reads a file, walks a directory, writes a report,
-  and takes a flag.
+- A command line tool that reads a file, walks a directory, writes a report, and
+  takes a flag.
 - An interpreter, a parser, a tokenizer, and a virtual machine.
 - An algorithm collection: a graph, a tree, a sort, a search, dynamic
   programming, and a number theory problem.
@@ -119,10 +121,9 @@ Thus these categories build:
 | `database/sql` | Each program that reads a database. |
 | A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
 
-Thus no large program of the Go world builds today. `kubectl`, `hugo`,
-`docker`, `terraform`, and `gopls` each read `os/exec`, `recover`, a template
-package, or a compression package. The gate is the library surface, and not the
-language.
+Thus no large program of the Go world builds today. `kubectl`, `hugo`, `docker`,
+`terraform`, and `gopls` each read `os/exec`, `recover`, a template package, or
+a compression package. The gate is the library surface, and not the language.
 
 ## The near misses
 

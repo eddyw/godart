@@ -79,6 +79,7 @@ real Go source.
 
 `docs/what-compiles.md` names the shape of a Go program that the compiler
 accepts. `docs/parity.md` lists each difference between Go and the Dart output.
+The section "Documents" below names each other file.
 
 ## The 6 stages
 
@@ -96,6 +97,19 @@ curated surface.
 
 `internal/driver` runs the stages over a module and writes the Dart package.
 `runtime/goruntime` holds the Dart runtime library.
+
+## Documents
+
+| File | Content |
+|---|---|
+| `docs/what-compiles.md` | The shape of a Go program that the compiler accepts |
+| `docs/parity.md` | Each difference between Go and the Dart output |
+| `docs/design.md` | The architecture, each stage, and each compiler feature |
+| `docs/block-model.md` | The unwind model of a function that can block |
+| `docs/decisions.md` | Each decision, by number, and each answered question |
+| `docs/library.md` | The standard library surface and each overlay |
+| `docs/history.md` | Each milestone, each defect, and each verified fact |
+| `docs/flutter-options.md` | 6 options that reach Flutter from Go. No decision. |
 
 ## Tests
 

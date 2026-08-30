@@ -10,9 +10,9 @@ accepts null. Go runs a method with a nil pointer receiver, and Dart calls no
 member of null.
 
 Thus a method with a pointer receiver on a struct type holds its body in a top
-level function, and the class holds a member that calls that function. The
-method table of the type also calls the top level function, thus a nil pointer
-inside an interface reaches the method.
+level function. The class holds a member that calls that function. The method
+table of the type also calls the top level function, thus a nil pointer inside
+an interface reaches the method.
 
 A method of a generic type takes the same form. The top level function names the
 type parameters of the receiver type first, and it takes the dictionary of each
@@ -30,8 +30,8 @@ inside a type argument stays, thus 2 such methods reach 2 keys.
 
 An unexported field of a type of another package reaches no accessor of its
 descriptor. A Dart library holds each name that starts with an underscore. The
-description of an instance of a generic type stands at the point of the use, and
-that point can lie outside the package of the type. `%+v` of such a value writes
+description of an instance of a generic type stands at the point of the use.
+That point can lie outside the package of the type. `%+v` of such a value writes
 `<nil>` for the field.
 
 ## The reflect subset
@@ -65,9 +65,9 @@ The package `fmt` reads it.
 | `reflect.Kind` | The text of the kind, and not an unsigned number. The 2 forms hold the same set of values. |
 | `Value.Elem` of a value that is not a pointer | Panics. Go gives the value inside an interface. |
 | `Type.Size`, `Type.Align`, `Type.FieldAlign`, `StructField.Offset` | Present. The result follows the rules of a 64-bit machine, exactly as the compiler of Go computes them. |
-| `Type.Align`, `Type.FieldAlign`, `Value.UnsafeAddr` | Missing. The target has no memory layout. |
-| `Value.Complex` and `Value.SetComplex` | Missing. The subset holds no complex number. |
-| A method value through reflect | Missing |
+| `Type.Align`, `Type.FieldAlign`, `Value.UnsafeAddr` | Not present. The target has no memory layout. |
+| `Value.Complex` and `Value.SetComplex` | Not present. The subset holds no complex number. |
+| A method value through reflect | Not present |
 
 ## The runtime
 
@@ -86,7 +86,7 @@ The package `fmt` reads it.
 | `runtime.GOOS` | A constant of the build | A variable. Dart names the system at the start of the program. |
 | `runtime.GOARCH` | A constant of the build | Always `dart64`. A Dart int holds 64 bits on each target. |
 | A stack trace of a panic | The full path of each file, and an offset in each frame | The base name of each file, and no offset. The source map of the output gives the position. |
-| A frame of a goroutine that waits | Present | Missing. A function that gives up control leaves the Dart stack. |
+| A frame of a goroutine that waits | Present | Not present. A function that gives up control leaves the Dart stack. |
 | `runtime.Caller`, `runtime.Callers`, `runtime.CallersFrames`, `runtime.FuncForPC` | The program counters of the stack | Equal, with the base name of each file. A program counter is an index of a table of the runtime, and not an address. |
 | `runtime.AddCleanup` | Present | Present, with a Dart `Finalizer`. The time of the run follows the collector of Dart. |
 | `runtime.GC` | Runs a collection and waits for it | Allocates a block of garbage and gives up control. Dart holds no call that forces a collection, thus a cleanup can stay for a later call. |
@@ -205,8 +205,8 @@ source of the package.
 
 ## A pointer to a value that is not a struct
 
-`*int`, `*string`, `*[]byte`, and each other pointer now stays in the subset. The
-Dart form is a `$Ptr<T>`. A pointer to a variable holds a `Box<T>` with the
+`*int`, `*string`, `*[]byte`, and each other pointer now stays in the subset.
+The Dart form is a `$Ptr<T>`. A pointer to a variable holds a `Box<T>` with the
 value, and a pointer to a field or to an element holds a `$Ref`.
 
 | Item | godart |
@@ -230,9 +230,9 @@ value, and a pointer to a field or to an element holds a `$Ref`.
 
 The compiler writes a box only for a variable whose address the code takes, thus
 a program that takes no address holds no box. A field and an element live inside
-another object, thus the pointer holds a `$Ref` of that object and the index.
-Go compares 2 pointers with `==`, and `$Ref` compares the object and the index
-for it.
+another object, thus the pointer holds a `$Ref` of that object and the index. Go
+compares 2 pointers with `==`, and `$Ref` compares the object and the index for
+it.
 
 A pointer to a struct and to an array holds no box. The Dart object of a struct
 and the Dart List of an array already hold a reference.
@@ -268,8 +268,8 @@ walks it.
 | The order of a map member | Sorted by the key | Equal |
 | A byte slice | Gives base64 text | Gives a list of numbers |
 | `Unmarshal` | Present | Present. Read the table below. |
-| `Decoder` and `Encoder` | Present | Missing |
-| `Marshaler` and `Unmarshaler` | Present | Missing |
+| `Decoder` and `Encoder` | Present | Not present |
+| `Marshaler` and `Unmarshaler` | Present | Not present |
 
 `Unmarshal` reads the same descriptor. It writes each field through
 `FieldDesc.set`, and it builds a nested value through `TypeDesc.zero` and
@@ -283,7 +283,7 @@ walks it.
 | A value of the type `any` | Gives bool, float64, string, []any, map[string]any | Equal |
 | A type that does not fit the JSON value | Gives an error | Gives an error with another text |
 | A broken text | Gives a `SyntaxError` | Gives an error with another text |
-| `UnmarshalTypeError` and its fields | Present | Missing. Each cause is a `SyntaxError`. |
+| `UnmarshalTypeError` and its fields | Present | Not present. Each cause is a `SyntaxError`. |
 | A number with a fraction into an integer field | Gives an error | Gives an error |
 
 ## The file access
@@ -314,15 +314,15 @@ point, thus the block analysis of stage 3 stays simple.
 | `CreateTemp`, `MkdirTemp` | A random name | Equal, with a counter and the clock in place of the random part. |
 | `File.ReadAt`, `File.WriteAt` | Present | Equal. Each call reads the position first and writes it again. |
 | `OpenFile` | Each flag of the system | 4 modes: a read, a write with `O_TRUNC`, a write at the end with `O_APPEND`, and a read and a write with no truncation. Each write mode also reads, exactly as `os.Create` of Go does. Dart holds no mode that reads and writes and stands at the start, thus the last one moves the position back. |
-| `O_CREATE` | Fails when the file is missing and the flag stays out | Each mode of a write makes the file. Dart holds no open that fails for a missing file. |
+| `O_CREATE` | Fails when the file does not exist and the flag stays out | Each mode of a write makes the file. Dart holds no open that fails when the file does not exist. |
 | `Args`, `Exit` | Present | Equal. `Args[0]` is the text `gart`. |
 | `IsNotExist`, `ErrNotExist`, `PathError` | Present | Equal |
 | `FileMode` | Holds the permission bits | The type reads each bit. The argument of `Mkdir`, of `WriteFile`, and of `OpenFile` reaches no operation. |
-| `Chmod`, `Chown`, `Symlink`, `Link` | Present | Missing. Dart gives no such call. |
-| `os.Pipe`, `os.StartProcess` | Present | Missing |
+| `Chmod`, `Chown`, `Symlink`, `Link` | Present | Not present. Dart gives no such call. |
+| `os.Pipe`, `os.StartProcess` | Present | Not present |
 
 `fmt` holds `Stringer` and `GoStringer`. The formatter reads the method table of
-the type descriptor, thus a value with a `String` method writes that text for
+the type descriptor. Thus a value with a `String` method writes that text for
 the verb `%v` and for the verb `%s`.
 
 `fmt` grows `Fprint`, `Fprintln`, and `Fprintf`. The parameter holds the
@@ -348,7 +348,7 @@ Dart names the system only at run time.
 | `Match`, `Abs`, `Rel`, `Glob`, `ErrBadPattern` | Present | Equal |
 | `Separator`, `ListSeparator` | The separator of the system | Always `/` and `:` |
 | `Walk`, `WalkDir`, `SkipDir`, `SkipAll` | Present | Equal |
-| `EvalSymlinks`, `Localize`, `HasPrefix` | Present | Missing |
+| `EvalSymlinks`, `Localize`, `HasPrefix` | Present | Not present |
 
 ## The network access
 
@@ -390,12 +390,12 @@ The `net` package holds this surface:
 | `Error` | `Timeout` and `Temporary` | `Timeout` only. `Temporary` is deprecated in Go. |
 | `Dialer` | 12 fields | `Timeout`, `Dial`, and `DialContext`. The dial runs on a goroutine, and the select takes the first of the dial and the context. |
 | `DialTimeout` | Present | Equal. It reads a `Dialer` with the timeout. |
-| `TCPAddr`, `UDPAddr`, `UnixAddr`, `IP`, `Resolver` | Present | Missing. A type assertion of an `Addr` gives a compile error, and not a wrong value. |
+| `TCPAddr`, `UDPAddr`, `UnixAddr`, `IP`, `Resolver` | Present | Not present. A type assertion of an `Addr` gives a compile error, and not a wrong value. |
 | An empty host of `Dial` | The local system | `127.0.0.1` |
 | An empty host of `Listen` | Each interface | `0.0.0.0` |
 | `SplitHostPort` | Accepts an IPv6 host in brackets | Only a host with no bracket. |
 | `JoinHostPort` | Adds brackets for an IPv6 host | It joins the 2 parts with a colon. |
-| TLS | `crypto/tls` | Missing. `SecureSocket` of Dart holds the whole handshake, and the surface holds no `crypto` package. |
+| TLS | `crypto/tls` | Not present. `SecureSocket` of Dart holds the whole handshake, and the surface holds no `crypto` package. |
 | A deadline that a read already waits on | Ends that read | Reaches the next read only. The runtime applies the limit at the start of an operation. |
 | A write that a deadline ended | Writes nothing | The bytes stay in the buffer of the socket. |
 | A connected UDP socket | The system drops a datagram of another source | The runtime drops it. Dart gives no connect of a datagram socket. |
@@ -424,14 +424,14 @@ with about 1500 lines.
 | A chunked body | Present | Equal, for a read and for a write. |
 | Keep alive | Present | Present. The client holds a pool of 2 connections for each host. |
 | A Close of a body that stands before its end | The connection stays open when the read loop reaches the end first | The connection ends. |
-| HTTP/2 | Present | Missing |
+| HTTP/2 | Present | Not present |
 | `Accept-Encoding: gzip` | The client adds it and reads the answer | Equal. `DisableCompression` stops it, and `Response.Uncompressed` marks the answer. |
 | The type of a body that the handler does not name | `DetectContentType` reads the first 512 bytes | `text/plain; charset=utf-8` for each body |
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
 | `Request.RemoteAddr` | The address of the peer | Empty. The `Conn` of the `net` overlay names no peer. |
 | `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `MaxIdleConnsPerHost`, and `CloseIdleConnections` |
 | `httptest` | Present | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `Server.Client`, and `Server.Close`. `NewTLSServer`, `CloseClientConnections`, and the wait of `Close` for each request that stands open stay out. |
-| `CookieJar`, `FileServer`, `multipart` | Present | Missing |
+| `CookieJar`, `FileServer`, `multipart` | Present | Not present |
 
 `testdata/programs/httpuse` runs a server and a client in 1 program, and the
 output of `go run` and of the Dart build stays equal.
@@ -456,7 +456,7 @@ from Dart at each instant.
 | `Timer.Stop` | Reports false after the run | Equal |
 | `NewTimer`, `Timer.C`, `Timer.Reset`, `After` | Present | Equal. The channel holds 1 value, thus a write of the timer never blocks. |
 | `NewTicker`, `Ticker.C`, `Ticker.Stop`, `Ticker.Reset`, `Tick` | Present | Equal. Each pass starts the timer of the next pass. |
-| `Time.String` | `2006-01-02 15:04:05.999999999 -0700 MST` | Equal, with no reading of the monotonic clock. Read below. |
+| `Time.String` | `2006-01-02 15:04:05.999999999 -0700 MST` | Equal, with no value of the monotonic clock. Read below. |
 | `Time.Format` | Present | Equal. The scanner holds each chunk of a layout, and the 19 layout constants are present. |
 | `Date`, `Month`, `Weekday`, and the name of each | Present | Equal |
 | `Time.In`, `Time.Location` | Present | Present |
@@ -474,16 +474,16 @@ from Dart at each instant.
 and that year stands outside the range of the overlay. Such a value wraps. Give
 the layout a year, or read the clock of the result only.
 
-A Go `Time` of `time.Now` also holds a reading of the monotonic clock, and
+A Go `Time` of `time.Now` also holds a value of the monotonic clock, and
 `String` writes it as ` m=+1.234567890`. A `Time` of the overlay holds no such
-reading, thus the text ends with the name of the zone.
+value, thus the text ends with the name of the zone.
 
 `time.Date` with the location `Local` reads the offset of the system 2 times.
 The Dart runtime names the offset of an instant, and the argument of `Date` is a
-reading of a wall clock. The first lookup reads that wall clock as if it were
-UTC, and the second one reads the instant that the first offset gives. A wall
-clock reading inside 1 offset of a transition of the zone can take the offset of
-the other side.
+wall clock value. The first lookup reads that wall clock as if it were UTC, and
+the second one reads the instant that the first offset gives. A wall clock value
+inside 1 offset of a transition of the zone can take the offset of the other
+side.
 
 Go reads the zone of an instant from its own copy of the zone database, and Dart
 reads the zone from the platform. The 2 agree for each date after 1901. A date
@@ -525,9 +525,9 @@ output of a program that imports `iter` grows. `slices` and `maps` each import
 
 ## A range loop over a function
 
-`for k, v := range seq` accepts a function of the form
-`func(yield func(K, V) bool)`. The compiler writes the body as a Dart closure
-and it passes the closure to the function:
+`for k, v := range seq` accepts a function of the form `func(yield func(K, V)
+bool)`. The compiler writes the body as a Dart closure and it passes the closure
+to the function:
 
 ```go
 seq(func(k K, v V) bool { BODY; return true })
@@ -545,13 +545,14 @@ seq(func(k K, v V) bool { BODY; return true })
 | A labelled `break` or `continue` that leaves the body | Present. A flag carries the branch out. |
 | `goto` out of the body | Rejected by stage 4 |
 
-A `return` inside the body writes each value into a temporary variable, it sets a
-flag, and it gives false to the sequence. The code after the call of the sequence
-reads the flag. A nested sequence carries the flag out 1 level for each call.
+A `return` inside the body writes each value into a temporary variable, it sets
+a flag, and it gives false to the sequence. The code after the call of the
+sequence reads the flag. A nested sequence carries the flag out 1 level for each
+call.
 
 A labelled `break` or `continue` that leaves the body writes the flag of its
-target and gives false to the sequence. The code after the call reads the flag:
-it gives false again while another such body holds it, and it runs the real
+target and gives false to the sequence. The code after the call reads the flag.
+It gives false again while another such body holds it, and it runs the real
 branch at the level of the target. The flag takes 0 again at that point, because
 the target construct runs its next pass.
 
@@ -561,9 +562,9 @@ Go gives a type parameter a core type when each term of its type set shares 1
 underlying type. `S ~[]E` holds the core type `[]E`, thus each operation of a
 slice applies to a value of the type S.
 
-The compiler reads the core type for each operation: an index, a slice
-expression, a range loop, `len`, `cap`, `make`, `append`, `copy`, `delete`, a
-nil comparison, and a field read.
+The compiler reads the core type for each operation. The operations are an
+index, a slice expression, a range loop, `len`, `cap`, `make`, `append`, `copy`,
+`delete`, a nil comparison, and a field read.
 
 The Dart type of such a parameter is the Dart type of the core type, and not a
 Dart type parameter. `S ~[]E` gives `Slice<E>`. A parameter whose core type is a
@@ -593,10 +594,10 @@ A constraint that lists only integer types gives 1 Dart type, because each
 integer type of Go maps to the Dart type `int`. Such a parameter holds no core
 type, and it still keeps each arithmetic operator.
 
-The width differs per type argument, thus the dictionary holds a mask. `Dict.mask`
-keeps the value inside the width, and the compiler writes it after each
-arithmetic operation and after each conversion to the parameter. The mask of a
-type that fills the width of a Dart int is the identity.
+The width differs per type argument, thus the dictionary holds a mask.
+`Dict.mask` keeps the value inside the width, and the compiler writes it after
+each arithmetic operation and after each conversion to the parameter. The mask
+of a type that fills the width of a Dart int is the identity.
 
 | Type set | godart |
 |---|---|
@@ -626,7 +627,7 @@ func kind[T string | []byte](s T) int {
 ```
 
 A value of an instance of a generic named type reaches an interface. The package
-holds a variable for the description of each other named type, and an instance
+holds a variable for the description of each other named type. An instance
 reaches the output only through its use, thus the description stands at that
 point. The name of the description holds each type argument, and a type
 assertion compares that name.
@@ -653,7 +654,7 @@ A variable with no initializer takes its zero value first.
 
 `struct{ ... }` with no `type` declaration reaches the output as a Dart class.
 The name comes from a hash of the text of the type and of the library of each
-field type, thus 2 equal Go types give 1 class. The class holds the fields,
+field type. Thus 2 equal Go types give 1 class. The class holds the fields,
 `$copy`, `$assign`, and the equality operations when Go holds the type
 comparable.
 
@@ -671,8 +672,8 @@ and 2 packages share 1 class.
 | An exported declaration, each field exported | Present | Equal |
 | An exported declaration, 1 field unexported | Present | Rejected. Read the cause below. |
 
-Go gives an unexported field the identity of the package that declares it, and
-Dart holds a name with a leading underscore private to 1 library. Thus the class
+Go gives an unexported field the identity of the package that declares it. Dart
+holds a name that starts with an underscore private to 1 library. Thus the class
 of such a shape stays inside 1 package, and 2 packages give 2 classes that Dart
 holds apart. Stage 2 rejects such a shape in an exported declaration. A
 declaration of a named type solves it, and so does an exported name for each
@@ -712,12 +713,12 @@ for each test binary. The output holds the format of `go test`.
 | `testing.TB` | Holds `Setenv` and `Context` | Holds neither. `B` and `F` give no such method. |
 | `testing.Benchmark` | Gives a BenchmarkResult | Equal. The field T holds a count of nanoseconds, and not a `time.Duration`. |
 | `-bench`, `-benchtime`, `-benchcount` | Present | Present. `-benchtime 100x` becomes `-benchcount 100`. |
-| `-benchmem` | Present | Missing. Read the row of `b.ReportAllocs`. |
-| `-short`, `-count`, `-timeout`, `-cover` | Present | Missing |
+| `-benchmem` | Present | Not present. Read the row of `b.ReportAllocs`. |
+| `-short`, `-count`, `-timeout`, `-cover` | Present | Not present |
 | A panic inside a test | Reports the test and ends the binary | Equal. A panic passes through the harness. |
 
 `testing.B` holds the state of a benchmark. The search of the count of
-iterations follows `go test`: the first run takes 1 iteration, and each next
+iterations follows `go test`. The first run takes 1 iteration, and each next
 count comes from the time of the last run. The result line holds the format of
 `go test`, thus `benchstat` reads the output. The suffix of the name is the
 count of isolates, thus it is always 1.
@@ -743,9 +744,9 @@ cd $(go env GOROOT)/src/path && gart test -o /tmp/x -runtime <path> .
 ```
 
 14 packages of GOROOT run each of their tests, and `TestTestsOfGoroot` proves
-each one: `path`, `container/list`, `container/heap`, `container/ring`,
-`unicode`, `encoding/hex`, `encoding/ascii85`, `encoding/csv`, `hash/crc32`,
-`hash/fnv`, `hash/adler32`, `maps`, `io`, and `regexp/syntax`.
+each one. The 14 are `path`, `container/list`, `container/heap`,
+`container/ring`, `unicode`, `encoding/hex`, `encoding/ascii85`, `encoding/csv`,
+`hash/crc32`, `hash/fnv`, `hash/adler32`, `maps`, `io`, and `regexp/syntax`.
 
 A test file of GOROOT holds code outside the subset in many packages. `recover`,
 `unsafe`, and the address of a byte each appear, and each one stays outside the
@@ -775,9 +776,9 @@ The model holds no `Future` and no `await`. A call that gives up no control
 costs 1 state assignment and 2 tests.
 
 `testdata/tests/async` measures a call chain of 20 frames. The first 2 chains
-read a buffered channel 1 time in the last frame, thus no frame really waits and
-stage 3 still marks each frame. The third chain reads an empty channel that a
-second goroutine fills, thus each frame writes a frame object and gives up
+read a buffered channel 1 time in the last frame. Thus no frame really waits,
+and stage 3 still marks each frame. The third chain reads an empty channel that
+a second goroutine fills, thus each frame writes a frame object and gives up
 control.
 
 | Chain of 20 frames | Go | godart |
@@ -799,21 +800,21 @@ gain of a liveness analysis on 2026-08-29:
 | The live locals of the state, with a branch on the state | 562 ns/op |
 | No local at all, the upper bound of the gain | 532 ns/op |
 
-The upper bound stands inside the noise of the baseline, and the branch that
-selects the live set costs more than the 2 field writes that it saves. Thus the
-liveness analysis stays out.
+The upper bound stands inside the noise of the baseline. The branch that selects
+the live set costs more than the 2 field writes that it saves. Thus the liveness
+analysis stays out.
 
 The block analysis of stage 3 keeps a synchronous path for a function that
-cannot block, thus only a chain that can block pays the cost.
+cannot block. Thus only a chain that can block pays the cost.
 
 These rules follow from the model:
 
 - A machine whose deferred calls can block holds the chain of those calls in 3
   states of its own. A return statement writes each result into the frame and
-  jumps to the chain, and the chain runs 1 call for each pass. Such a call
-  gives up control exactly as each other call does. The try block of the panic
-  stands inside the loop of the machine, thus a panic also reaches the chain,
-  and the frame keeps the panic until the last call ends.
+  jumps to the chain, and the chain runs 1 call for each pass. Such a call gives
+  up control exactly as each other call does. The try block of the panic stands
+  inside the loop of the machine. Thus a panic also reaches the chain, and the
+  frame keeps the panic until the last call ends.
 - A local that a closure reads and that the code writes takes a box. A resume
   reads each local from the frame into a new call, thus the closure and the
   frame must share 1 value. A struct and an array need no box, because an
@@ -883,8 +884,8 @@ Gaps of the standard library surface:
 |---|---|
 | `sync.RWMutex` | A read lock is equal to a write lock. The single isolate gives no parallel read. |
 | `strconv.Unquote`, `strconv.UnquoteChar` | Present. The source comes from Go. |
-| `strings.Title` | Missing. Go deprecated it. |
-| `sort.Sort` with an interface | Missing. Use `sort.Slice`. |
+| `strings.Title` | Not present. Go deprecated it. |
+| `sort.Sort` with an interface | Not present. Use `sort.Slice`. |
 | `crypto/tls` | A client only. Read the section of the network access. |
 
 A list of bytes reads as text for the verbs `s`, `q`, `x`, and `X`, exactly as
