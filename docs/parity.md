@@ -89,7 +89,7 @@ The package `fmt` reads it.
 | A frame of a goroutine that waits | Present | Missing. A function that gives up control leaves the Dart stack. |
 | `runtime.Caller`, `runtime.Callers`, `runtime.CallersFrames`, `runtime.FuncForPC` | The program counters of the stack | Equal, with the base name of each file. A program counter is an index of a table of the runtime, and not an address. |
 | `runtime.AddCleanup` | Present | Present, with a Dart `Finalizer`. The time of the run follows the collector of Dart. |
-| `runtime.GC` | Runs a collection and waits for it | No operation. Dart holds no call that forces a collection, thus a cleanup runs at the time of the collector. |
+| `runtime.GC` | Runs a collection and waits for it | Allocates a block of garbage and gives up control. Dart holds no call that forces a collection, thus a cleanup can stay for a later call. |
 
 ## The subset of the language
 
@@ -751,7 +751,7 @@ The cause that blocks each package of the survey of 2026-08-30:
 | Package | Cause |
 |---|---|
 | `errors` | 1 call of `recover` in `wrap_test.go`, and the package `io/fs`. |
-| `io` | `runtime.Callers`, `runtime.CallersFrames`, `runtime.AddCleanup`, and `runtime.GC` in `multi_test.go`. |
+| `io` | Runs. Each test passes. |
 | `math/rand/v2` | 9 names of `reflect` that the surface does not hold. |
 | `bytes` | 22 rejections in 5 groups. `recover` and the address of a byte hold 11 of them. |
 | `regexp` | 5 rejections in `regexp/syntax/parse.go`: 1 call of `recover` and 4 addresses of a `[]rune` field. |

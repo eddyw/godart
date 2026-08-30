@@ -269,6 +269,31 @@ void $sleep(int nanoseconds) {
   $block(waiting);
 }
 
+/// Provokes a collection and gives up control, thus each cleanup of a value
+/// that no code reaches runs.
+///
+/// Dart holds no call that forces a collection. The function allocates a block
+/// of garbage, and the collector of the Dart VM runs for it. A cleanup runs on
+/// a later turn of the event loop, thus the goroutine waits for 1 timer. The
+/// collector follows no rule of Go, thus a cleanup can stay for a later call.
+void $gc() {
+  for (var round = 0; round < 2; round++) {
+    final List<Object> garbage = <Object>[];
+    for (var i = 0; i < 20000; i++) {
+      garbage.add(List<int>.filled(64, i));
+    }
+    garbage.clear();
+  }
+  final Goroutine g = $current!;
+  final EventWait waiting = EventWait();
+  $holdEvent();
+  Timer(Duration.zero, () {
+    $freeEvent();
+    $wake(g);
+  });
+  $block(waiting);
+}
+
 /// The count of nanoseconds since the start of the Unix epoch.
 int $nowNanos() => DateTime.now().microsecondsSinceEpoch * 1000;
 

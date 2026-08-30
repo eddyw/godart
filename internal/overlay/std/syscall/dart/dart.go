@@ -41,6 +41,12 @@ func DialTLS(host string, port int, insecure bool, name string, protos []string)
 	panic("syscall/dart needs the gart compiler")
 }
 
+// GC provokes a collection and gives up control. Each cleanup of a value that
+// no code reaches then runs.
+func GC() {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // AddCleanup attaches a function that runs after the collector of Dart frees
 // the value, and it gives the handle of the cleanup.
 func AddCleanup(target any, run func()) int {

@@ -172,5 +172,10 @@ func AddCleanup[T, S any](ptr *T, cleanup func(S), arg S) Cleanup {
 	return Cleanup{handle: dart.AddCleanup(ptr, func() { cleanup(arg) })}
 }
 
-// GC gives no operation. Dart holds no call that forces a collection.
-func GC() {}
+// GC provokes a collection and gives up control, thus each cleanup of a value
+// that no code reaches runs.
+//
+// Dart holds no call that forces a collection. The runtime library allocates a
+// block of garbage for it. The collector follows no rule of Go, thus a cleanup
+// can stay for a later call. Read docs/parity.md.
+func GC() { dart.GC() }
