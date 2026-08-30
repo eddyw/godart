@@ -84,6 +84,8 @@ same rule.
 | `b1051dd` | The record of the filter work. |
 | `6fc8577` | A call through a method value gives up control. Stage 5 writes a method value of an interface value. |
 | `2bed5ca` | The real tests of `internal/chacha8rand` and of `compress/zlib`. |
+| `22d1f7d` | The record of the library work. |
+| `1cec023` | The strict rune decoder, and the real tests of `unicode/utf8`. |
 
 The defects of that session:
 
@@ -97,6 +99,8 @@ The defects of that session:
 | A call through `d.step` of `compress/flate` never gave up control | Stage 3 dropped each method that reaches a function value |
 | A method value of an interface value gave no Dart code that compiles | Stage 5 wrote the name of a method function of the interface type |
 | A test that reads `testdata/x` found no file | The binary ran in the output directory, and not in the directory of the package |
+| A range loop over `"\xE0\x9F\xBF"` gave U+07FF | The rune decoder of the runtime held no smallest value for each size |
+| `FullRune("\xc0")` gave false | `need` of the `unicode/utf8` overlay gave the size 2 for a start byte that Go rejects |
 
 ### 2026-08-31, the first session
 
@@ -589,4 +593,12 @@ Each fact carries the date of its check.
   1 call of `recover`.
 - `math/rand` cannot run its tests. `default_test.go` reads `testenv.Command`,
   and such a call starts a process of the go command.
+- A survey of each overlay package found 1 more package that runs its real
+  tests: `unicode/utf8`. Each other overlay holds a subset of the real API, thus
+  a test file names a function that the overlay does not hold.
+  `docs/library.md` holds the whole survey.
+- `slices` needs `internal/asan`, `internal/msan`, `internal/race`, `unsafe`,
+  and 3 calls of `recover`. `testenv.OptimizationOff` alone opens no path.
+- The type checker reports the errors of 1 file group at a time. A first run can
+  hide a later cause, thus a survey needs a second run after each fix.
 
