@@ -75,6 +75,7 @@ and `make ci` runs each one.
 | A reader of a URL and of a query | `net/url`, `net/netip` |
 | A worker pool with a context | `context`, `sync`, a channel, a `select` |
 | A generic set with an iterator | `cmp`, `maps`, `slices`, a generic method |
+| A merge of 2 sequences, step by step | `iter.Pull`, `iter.Pull2`, a goroutine |
 | A linked list with a nil safe method | A method with a nil pointer receiver |
 | An HTTP server and a client in 1 program | `net/http`, a handler, a cookie, a chunked answer |
 | A client that holds a connection open | `net/http` keep alive, a listener of its own |

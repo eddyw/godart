@@ -9,6 +9,8 @@ package analyze
 import (
 	"go/ast"
 	"go/types"
+	"strconv"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -64,6 +66,7 @@ func Module(pkgs []*packages.Package) *Result {
 		methodKeys: map[any]string{},
 		sigKeys:    map[any]string{},
 		callFuns:   map[ast.Expr]bool{},
+		parent:     map[string]string{},
 	}
 	for _, p := range pkgs {
 		a.pkg = p
@@ -71,6 +74,7 @@ func Module(pkgs []*packages.Package) *Result {
 			ast.Inspect(f, a.collect)
 		}
 	}
+	a.components()
 	a.fixedPoint()
 	a.markCalls()
 	return a.result
@@ -92,6 +96,13 @@ type analyzer struct {
 	// callFuns holds the callee expression of each call, thus a name that
 	// stands alone reads as a function value.
 	callFuns map[ast.Expr]bool
+
+	// parent joins the key of a generic signature with the key of each
+	// instance of it. The analysis reads a generic function 1 time, thus the 2
+	// texts of 1 signature differ. Read linkInstance.
+	parent map[string]string
+	// byGroup gives each key of 1 group, by the root of the group.
+	byGroup map[string][]string
 }
 
 func (a *analyzer) collect(n ast.Node) bool {
@@ -103,7 +114,7 @@ func (a *analyzer) collect(n ast.Node) bool {
 		}
 		a.walkBody(obj, n.Body)
 		if sig, ok := obj.Type().(*types.Signature); ok && sig.Recv() != nil {
-			key := obj.Name() + "|" + signatureKey(sig)
+			key := methodKey(obj.Name(), sig)
 			a.byMethod[key] = append(a.byMethod[key], any(obj))
 			a.methodKeys[any(obj)] = key
 		}
@@ -125,6 +136,7 @@ func (a *analyzer) collect(n ast.Node) bool {
 		}
 		return true
 	case *ast.Ident:
+		a.linkUse(n)
 		if a.callFuns[n] {
 			return true
 		}
@@ -136,6 +148,137 @@ func (a *analyzer) collect(n ast.Node) bool {
 		return true
 	}
 	return true
+}
+
+// linkUse joins the key of a generic signature with the key of the instance
+// that stands at this name.
+func (a *analyzer) linkUse(n *ast.Ident) {
+	inst, ok := a.pkg.TypesInfo.Instances[n]
+	if !ok || inst.Type == nil {
+		return
+	}
+	// A type name gives no link. The key of a generic function joins the key of
+	// an instance only where the code names that instance, thus a program that
+	// calls no instance of a function keeps each key apart.
+	if obj, ok := a.pkg.TypesInfo.Uses[n].(*types.Func); ok {
+		a.linkInstance(obj.Origin().Type(), inst.Type)
+	}
+}
+
+// linkInstance walks a generic type and 1 instance of it at the same time, and
+// it joins the key of each function type that the 2 hold.
+func (a *analyzer) linkInstance(generic, concrete types.Type) {
+	seen := map[[2]types.Type]bool{}
+	var walk func(g, c types.Type)
+	walk = func(g, c types.Type) {
+		if g == nil || c == nil {
+			return
+		}
+		pair := [2]types.Type{g, c}
+		if seen[pair] {
+			return
+		}
+		seen[pair] = true
+		gu, cu := types.Unalias(g), types.Unalias(c)
+		if gn, ok := gu.(*types.Named); ok {
+			if cn, ok := cu.(*types.Named); ok {
+				walk(gn.Underlying(), cn.Underlying())
+				return
+			}
+		}
+		switch gt := gu.(type) {
+		case *types.Signature:
+			ct, ok := cu.(*types.Signature)
+			if !ok || gt.Params().Len() != ct.Params().Len() ||
+				gt.Results().Len() != ct.Results().Len() {
+				return
+			}
+			a.link(signatureKey(gt), signatureKey(ct))
+			for i := 0; i < gt.Params().Len(); i++ {
+				walk(gt.Params().At(i).Type(), ct.Params().At(i).Type())
+			}
+			for i := 0; i < gt.Results().Len(); i++ {
+				walk(gt.Results().At(i).Type(), ct.Results().At(i).Type())
+			}
+		case *types.Pointer:
+			if ct, ok := cu.(*types.Pointer); ok {
+				walk(gt.Elem(), ct.Elem())
+			}
+		case *types.Slice:
+			if ct, ok := cu.(*types.Slice); ok {
+				walk(gt.Elem(), ct.Elem())
+			}
+		case *types.Array:
+			if ct, ok := cu.(*types.Array); ok {
+				walk(gt.Elem(), ct.Elem())
+			}
+		case *types.Chan:
+			if ct, ok := cu.(*types.Chan); ok {
+				walk(gt.Elem(), ct.Elem())
+			}
+		case *types.Map:
+			if ct, ok := cu.(*types.Map); ok {
+				walk(gt.Key(), ct.Key())
+				walk(gt.Elem(), ct.Elem())
+			}
+		case *types.Struct:
+			ct, ok := cu.(*types.Struct)
+			if !ok || gt.NumFields() != ct.NumFields() {
+				return
+			}
+			for i := 0; i < gt.NumFields(); i++ {
+				walk(gt.Field(i).Type(), ct.Field(i).Type())
+			}
+		}
+	}
+	walk(generic, concrete)
+}
+
+// link joins the 2 keys in 1 group.
+func (a *analyzer) link(x, y string) {
+	if x == "" || y == "" || x == y {
+		return
+	}
+	rx, ry := a.find(x), a.find(y)
+	if rx != ry {
+		a.parent[ry] = rx
+	}
+}
+
+func (a *analyzer) find(k string) string {
+	p, ok := a.parent[k]
+	if !ok {
+		a.parent[k] = k
+		return k
+	}
+	if p == k {
+		return k
+	}
+	root := a.find(p)
+	a.parent[k] = root
+	return root
+}
+
+// components groups each key that names the same signature. A key of a generic
+// signature and a key of an instance of it stand in 1 group.
+func (a *analyzer) components() {
+	a.byGroup = map[string][]string{}
+	for key := range a.parent {
+		root := a.find(key)
+		a.byGroup[root] = append(a.byGroup[root], key)
+	}
+}
+
+// spreadKey marks each key of the group of the key.
+func (a *analyzer) spreadKey(key string) bool {
+	changed := false
+	for _, other := range a.byGroup[a.find(key)] {
+		if !a.result.sigAsync[other] {
+			a.result.sigAsync[other] = true
+			changed = true
+		}
+	}
+	return changed
 }
 
 // valueSignature gives the signature under which a function reaches a value.
@@ -238,9 +381,7 @@ func (a *analyzer) callTargets(s *summary, call *ast.CallExpr) {
 			return
 		case *types.Var:
 			sig, _ := types.Unalias(obj.Type()).Underlying().(*types.Signature)
-			if sig != nil {
-				sigKey = signatureKey(sig)
-			}
+			sigKey = signatureKey(sig)
 		}
 	case *ast.SelectorExpr:
 		sel, ok := a.pkg.TypesInfo.Selections[fun]
@@ -259,10 +400,11 @@ func (a *analyzer) callTargets(s *summary, call *ast.CallExpr) {
 			if isInterface(sel.Recv()) {
 				fn, _ := sel.Obj().(*types.Func)
 				if sig, ok := fn.Type().(*types.Signature); ok {
-					s.methods = append(s.methods, fn.Name()+"|"+signatureKey(sig))
+					key := methodKey(fn.Name(), sig)
+					s.methods = append(s.methods, key)
 					s.calls = append(s.calls, call)
 					s.callKeys = append(s.callKeys, nil)
-					s.callSigs = append(s.callSigs, fn.Name()+"|"+signatureKey(sig))
+					s.callSigs = append(s.callSigs, key)
 					return
 				}
 			}
@@ -271,15 +413,11 @@ func (a *analyzer) callTargets(s *summary, call *ast.CallExpr) {
 			}
 		case types.FieldVal:
 			sig, _ := types.Unalias(sel.Type()).Underlying().(*types.Signature)
-			if sig != nil {
-				sigKey = signatureKey(sig)
-			}
+			sigKey = signatureKey(sig)
 		}
 	default:
 		sig, _ := types.Unalias(a.typeOf(fun)).Underlying().(*types.Signature)
-		if sig != nil {
-			sigKey = signatureKey(sig)
-		}
+		sigKey = signatureKey(sig)
 	}
 	s.callees = append(s.callees, keys...)
 	if sigKey != "" {
@@ -389,6 +527,17 @@ func (a *analyzer) spread() bool {
 			}
 		}
 	}
+	async := make([]string, 0, len(a.result.sigAsync))
+	for key, on := range a.result.sigAsync {
+		if on {
+			async = append(async, key)
+		}
+	}
+	for _, key := range async {
+		if a.spreadKey(key) {
+			changed = true
+		}
+	}
 	for key, group := range a.byMethod {
 		if a.result.methodAsync[key] {
 			continue
@@ -425,30 +574,86 @@ func (a *analyzer) markCalls() {
 	}
 }
 
+// keySep joins the parts of a signature key, and keyResults marks the start of
+// the results. The 2 bytes stand outside the text of a Go type.
+const (
+	keySep     = "\x00"
+	keyResults = "\x01"
+	// wildcard stands for a type that holds a type parameter. The analysis
+	// reads a generic function 1 time, and the call site holds the type
+	// argument, thus the 2 texts of 1 signature differ.
+	wildcard = "\x02"
+)
+
+// methodKey names a method of an interface by its name and its signature.
+func methodKey(name string, sig *types.Signature) string {
+	return name + keySep + signatureKey(sig)
+}
+
+// typeKey names 1 type of a signature. A type parameter takes the wildcard, and
+// each other part of the type keeps its text. Thus 2 signatures that differ
+// only in a type argument keep 2 keys.
+func typeKey(t types.Type) string {
+	switch t := types.Unalias(t).(type) {
+	case *types.TypeParam:
+		return wildcard
+	case *types.Pointer:
+		return "*" + typeKey(t.Elem())
+	case *types.Slice:
+		return "[]" + typeKey(t.Elem())
+	case *types.Array:
+		return "[" + strconv.FormatInt(t.Len(), 10) + "]" + typeKey(t.Elem())
+	case *types.Chan:
+		return "chan" + strconv.Itoa(int(t.Dir())) + " " + typeKey(t.Elem())
+	case *types.Map:
+		return "map[" + typeKey(t.Key()) + "]" + typeKey(t.Elem())
+	case *types.Signature:
+		parts := make([]string, 0, t.Params().Len()+t.Results().Len()+1)
+		for i := 0; i < t.Params().Len(); i++ {
+			parts = append(parts, typeKey(t.Params().At(i).Type()))
+		}
+		parts = append(parts, keyResults)
+		for i := 0; i < t.Results().Len(); i++ {
+			parts = append(parts, typeKey(t.Results().At(i).Type()))
+		}
+		return "func(" + strings.Join(parts, ",") + ")"
+	case *types.Struct:
+		parts := make([]string, t.NumFields())
+		for i := range parts {
+			parts[i] = t.Field(i).Name() + " " + typeKey(t.Field(i).Type())
+		}
+		return "struct{" + strings.Join(parts, ";") + "}"
+	case *types.Named:
+		if t.TypeArgs().Len() == 0 {
+			return types.TypeString(t, nil)
+		}
+		args := make([]string, t.TypeArgs().Len())
+		for i := range args {
+			args[i] = typeKey(t.TypeArgs().At(i))
+		}
+		return types.TypeString(t.Origin(), nil) + "[" + strings.Join(args, ",") + "]"
+	}
+	return types.TypeString(t, nil)
+}
+
 // signatureKey builds a stable text of a signature. The receiver stays out,
 // because a method group needs 1 key for each implementation.
 func signatureKey(sig *types.Signature) string {
 	if sig == nil {
 		return ""
 	}
-	out := "("
+	parts := make([]string, 0, sig.Params().Len()+sig.Results().Len()+2)
 	for i := 0; i < sig.Params().Len(); i++ {
-		if i > 0 {
-			out += ","
-		}
-		out += types.TypeString(sig.Params().At(i).Type(), nil)
+		parts = append(parts, typeKey(sig.Params().At(i).Type()))
 	}
-	out += ")("
+	parts = append(parts, keyResults)
 	for i := 0; i < sig.Results().Len(); i++ {
-		if i > 0 {
-			out += ","
-		}
-		out += types.TypeString(sig.Results().At(i).Type(), nil)
+		parts = append(parts, typeKey(sig.Results().At(i).Type()))
 	}
 	if sig.Variadic() {
-		out += ",..."
+		parts = append(parts, "...")
 	}
-	return out + ")"
+	return strings.Join(parts, keySep)
 }
 
 func unparen(e ast.Expr) ast.Expr {

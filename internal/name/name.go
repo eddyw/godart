@@ -34,6 +34,8 @@ var reserved = map[string]bool{
 	"Slice": true, "GoString": true, "GoMap": true, "Chan": true,
 	"Iface": true, "TypeDesc": true, "FieldDesc": true, "Dict": true,
 	"DeferStack": true, "GoPanic": true, "GoError": true,
+	// The frame class of a function that can block holds this member.
+	"resume":     true,
 	"SelectCase": true, "RecvCase": true, "SendCase": true,
 	// The typed data lists.
 	"Int8List": true, "Int16List": true, "Int32List": true, "Int64List": true,

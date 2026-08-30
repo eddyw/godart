@@ -148,7 +148,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `flag` | Overlay | The real source reads `reflect` and `runtime.Caller`. `SetOutput` takes an `io.Writer`. |
 | `reflect` | Overlay | `DeepEqual`, `TypeOf`, `ValueOf`, `Zero`, `Type.String`, `Type.Kind`, `Type.Comparable`, `Type.Elem`, `Value.Elem`, `Value.Set`, and `Value.Interface`. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
-| `iter` | Overlay | `Seq` and `Seq2` only. `Pull` and `Pull2` need a coroutine of the Go runtime. |
+| `iter` | Overlay | `Seq`, `Seq2`, `Pull`, and `Pull2`. Read the section below. |
 | `maps` | Overlay | |
 | `encoding/json` | Overlay | `Marshal`, `MarshalIndent`, and `Unmarshal`. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
@@ -500,6 +500,26 @@ plain write.
 | A `Store` of a second concrete type | Panics | It writes the value. |
 | `Pointer[T]` | Present | Equal |
 | The function form, for example `AddInt64` | Present | Equal for `Add`, `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
+
+## The Pull functions of iter
+
+Go runs `Pull` on a coroutine of its runtime. The subset holds no coroutine,
+thus the sequence runs on a goroutine of its own. 2 channels with no buffer hand
+the control back and forth, and the 2 goroutines never run at the same time.
+
+| Item | Go | godart |
+|---|---|---|
+| `Pull`, `Pull2` | Present | Equal |
+| A `stop` before the end of the sequence | The sequence ends | Equal |
+| A `next` after `stop` | The zero value and false | Equal |
+| `yield` after a `stop` | Gives false | Equal |
+| A panic of the sequence | `next` panics with the same value | The panic stops the program. The subset holds no `recover`. |
+| `runtime.Goexit` inside the sequence | `next` panics | Out of the subset |
+
+The `yield` of `Pull` gives up control, thus each function that a sequence calls
+can block. Stage 3 marks each `iter.Seq` closure of a program as such, and the
+output of a program that imports `iter` grows. `slices` and `maps` each import
+`iter`.
 
 ## A range loop over a function
 
