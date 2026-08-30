@@ -73,7 +73,26 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
-### 2026-08-31
+### 2026-08-31, the second session
+
+The session closed item 1 of the open list, and it found 2 more defects of the
+same rule.
+
+| Commit | Work |
+|---|---|
+| `96d2b8e` | 1 matcher for `-run` and for `-bench`, with the rule of `testing/match.go` of Go. |
+
+The defects of that session:
+
+| Defect | Cause |
+|---|---|
+| `Run` of `T` ran a subtest that the filter excludes | The method never read the filter |
+| `-run 'A/x\|B'` never ran `B` | The split cut the pattern at each slash before it read a vertical bar |
+| `-run '^Fuzz$'` printed no skip line | `internal/driver/run.go` matched the name with `strings.Contains` |
+| `Run` of `B` ran a subbenchmark that `-bench` excludes | The method never read the filter |
+| A filter that keeps no test wrote no warning | The harness counted no run, and the driver wrote no mark |
+
+### 2026-08-31, the first session
 
 The session closed each of the 8 items of the open list. It closed 2 of the 3
 items that the work found, and it found 6 defects.
@@ -510,7 +529,7 @@ Each fact carries the date of its check.
 - `os` can import `time`. The comment of the overlay named a cycle that does not
   exist.
 
-### 2026-08-31
+### 2026-08-31, the first session
 
 - `make ci` passes on `main` at commit `7a7eb93`. The end to end test compiles
   89 Go programs and runs the tests of 8 modules.
@@ -537,4 +556,18 @@ Each fact carries the date of its check.
 - The output of `testdata/programs/iteruse` grows 47 percent with `iter.Pull`,
   and the output of `testdata/programs/slicesuse` grows 4 percent. A program
   that imports neither `iter` nor `slices` keeps its size.
+
+### 2026-08-31, the second session
+
+- A file of `internal/overlay/std` with no build tag reaches the go command and
+  a test binary. The go command builds the directory as a package of the module,
+  because the build tag `dart` excludes each other file of it. `//go:embed std`
+  reads the same file, thus the overlay gives it to the compiler.
+- A `_test.go` file inside `internal/overlay/std` would join the overlay, thus a
+  test of such a file lives outside that tree.
+- `go test` writes ` [no tests to run]` after the line of a package when the
+  output of the binary holds `testing: warning: no tests to run`. The go command
+  reads the line and writes the mark.
+- `-bench .` needs no special case. The expression `.` matches each name that
+  holds 1 character or more.
 
