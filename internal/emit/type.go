@@ -11,6 +11,13 @@ import (
 
 // dartType gives the Dart type that holds a value of the Go type.
 func (e *emitter) dartType(t types.Type) string {
+	// The guard caps a cycle through a function type. Each use of such a type
+	// starts at its name, thus each use gives 1 text.
+	if e.typeDepth > 64 {
+		return "Object?"
+	}
+	e.typeDepth++
+	defer func() { e.typeDepth-- }()
 	t = types.Unalias(t)
 	switch t := t.(type) {
 	case *types.Basic:
@@ -21,6 +28,12 @@ func (e *emitter) dartType(t types.Type) string {
 				return e.anonClass(st)
 			}
 			return e.className(t.Obj()) + e.typeArgList(t.TypeArgs())
+		}
+		// A type that names itself through a pointer, a slice, or a map has
+		// no finite Dart form. Each use of such a type takes Object?, thus
+		// the 2 sides of an assignment keep 1 form.
+		if e.cyclic(t.Obj()) {
+			return "Object?"
 		}
 		return e.dartType(t.Underlying())
 	case *types.TypeParam:
@@ -540,6 +553,64 @@ func basicOf(t types.Type) *types.Basic {
 // pointer to one is the object itself. Each other type needs a box.
 func needsBox(t types.Type) bool {
 	return !isStructType(t) && !isArrayType(t)
+}
+
+// cyclic reports whether the named type reaches itself through its underlying
+// type. `type Number *Number` is such a type, and it has no finite Dart form.
+// A struct breaks a cycle, because its class name stands in for its shape.
+func (e *emitter) cyclic(obj *types.TypeName) bool {
+	if e.typeCycle == nil {
+		e.typeCycle = map[*types.TypeName]bool{}
+		e.typeAcyclic = map[*types.TypeName]bool{}
+	}
+	if e.typeCycle[obj] {
+		return true
+	}
+	if e.typeAcyclic[obj] {
+		return false
+	}
+	seen := map[*types.TypeName]bool{}
+	var walk func(t types.Type) bool
+	walk = func(t types.Type) bool {
+		switch u := types.Unalias(t).(type) {
+		case *types.Named:
+			if u.Obj() == obj {
+				return true
+			}
+			if seen[u.Obj()] {
+				return false
+			}
+			seen[u.Obj()] = true
+			if _, ok := u.Underlying().(*types.Struct); ok {
+				return false
+			}
+			return walk(u.Underlying())
+		case *types.Pointer:
+			return walk(u.Elem())
+		case *types.Slice:
+			return walk(u.Elem())
+		case *types.Array:
+			return walk(u.Elem())
+		case *types.Chan:
+			return walk(u.Elem())
+		case *types.Map:
+			return walk(u.Key()) || walk(u.Elem())
+			// A cycle through a function type stays out. Such a type keeps
+			// its structural form, and the depth guard of dartType caps it at
+			// 1 consistent text, because each use starts at the named type.
+		}
+		return false
+	}
+	out := false
+	if _, ok := obj.Type().Underlying().(*types.Struct); !ok {
+		out = walk(obj.Type().Underlying())
+	}
+	if out {
+		e.typeCycle[obj] = true
+	} else {
+		e.typeAcyclic[obj] = true
+	}
+	return out
 }
 
 // isLocalType reports whether a function declares the type.
