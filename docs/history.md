@@ -81,6 +81,9 @@ same rule.
 | Commit | Work |
 |---|---|
 | `96d2b8e` | 1 matcher for `-run` and for `-bench`, with the rule of `testing/match.go` of Go. |
+| `b1051dd` | The record of the filter work. |
+| `6fc8577` | A call through a method value gives up control. Stage 5 writes a method value of an interface value. |
+| `2bed5ca` | The real tests of `internal/chacha8rand` and of `compress/zlib`. |
 
 The defects of that session:
 
@@ -91,6 +94,9 @@ The defects of that session:
 | `-run '^Fuzz$'` printed no skip line | `internal/driver/run.go` matched the name with `strings.Contains` |
 | `Run` of `B` ran a subbenchmark that `-bench` excludes | The method never read the filter |
 | A filter that keeps no test wrote no warning | The harness counted no run, and the driver wrote no mark |
+| A call through `d.step` of `compress/flate` never gave up control | Stage 3 dropped each method that reaches a function value |
+| A method value of an interface value gave no Dart code that compiles | Stage 5 wrote the name of a method function of the interface type |
+| A test that reads `testdata/x` found no file | The binary ran in the output directory, and not in the directory of the package |
 
 ### 2026-08-31, the first session
 
@@ -570,4 +576,17 @@ Each fact carries the date of its check.
   reads the line and writes the mark.
 - `-bench .` needs no special case. The expression `.` matches each name that
   holds 1 character or more.
+- `internal/chacha8rand` runs each of its real tests, and it needed no work.
+- `compress/zlib` runs each of its real tests. It needed `internal/testenv`, the
+  working directory of the package, and the fix of decision 126.
+- The tests of `bytes`, of `compress/flate`, and of `compress/zlib` read 2
+  functions of `internal/testenv`: `Builder` and `SkipIfOptimizationOff`.
+- `strings.FieldsSeq` is the only gap of the tests of `compress/flate`. The
+  overlay of `strings` must import `iter` for it. The output of
+  `testdata/programs/args` then grows by 17479 bytes, which is 4 percent, and no
+  other package changes its form.
+- `net/url` cannot run its tests. It needs `encoding/gob`, `internal/diff`, and
+  1 call of `recover`.
+- `math/rand` cannot run its tests. `default_test.go` reads `testenv.Command`,
+  and such a call starts a process of the go command.
 
