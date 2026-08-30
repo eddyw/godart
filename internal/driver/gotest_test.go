@@ -14,24 +14,11 @@ import (
 // compiles and whose run differs from Go. Each entry names the cause. A fix
 // removes its entry, and the file then joins the comparison.
 var goTestSkips = map[string]string{
-	"alias1":         "a type assertion tells byte and uint8 apart",
-	"bigmap":         "a map value of a large struct type loses writes",
-	"complit":        "a composite literal in a linked list compares wrong",
-	"compos":         "2 literals of &T{} share 1 allocation",
-	"const4":         "the nil channel variable of a package misses its file",
-	"ddd":            "a method expression of a promoted method names the outer type",
 	"peano":          "a deref of a type that names itself has no Dart form",
-	"escape":         "a select case writes through an aliased pointer",
 	"genmeth1":       "a generic method value takes the dictionary form",
-	"method3":        "a method expression on a slice type passes a pointer",
-	"method7":        "a method expression of an interface has no function",
-	"newexpr":        "new of an array type copies a missing method",
-	"range":          "a parallel assignment in a range clause reads late",
 	"reflectmethod4": "a bound method of reflect is no plain Dart function",
-	"reorder":        "a parallel assignment reads an index location late",
 	"stack":          "the Dart VM holds a fixed stack, and the recursion overflows",
 	"stackobj2":      "the Dart VM holds a fixed stack, and the recursion overflows",
-	"switch":         "a switch with no tag writes an interface into a bool",
 }
 
 // TestRunFilesOfGoTest compiles each file of the test directory of the Go
