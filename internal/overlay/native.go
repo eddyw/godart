@@ -45,6 +45,7 @@ var native = []string{
 	"net/url",
 	"compress/flate",
 	"compress/gzip",
+	"compress/zlib",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

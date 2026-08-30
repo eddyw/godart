@@ -50,28 +50,28 @@ The compiler holds all 6 stages. The subset covers:
 |---|---|
 | Values | Each integer width, `float32`, `float64`, `bool`, `string` |
 | Containers | Slice, array, map, struct with value semantics |
-| Pointers | A pointer to a struct only |
+| Pointers | A pointer to any value, also to a field and to an element |
 | Types | Method, interface, type assertion, type switch, embedded struct |
 | Control | `if`, `for`, `switch`, `fallthrough`, label, `goto` |
 | Functions | Closure, variadic, multiple results, named result, `defer` |
 | Errors | `panic`. The subset has no `recover`. |
 | Concurrency | Goroutine, channel, `select` |
-| Generics | Generic function, generic type, generic method of Go 1.27 |
+| Generics | Generic function, generic type, generic method of Go 1.27, a generic function as a value |
 | Isolates | `dart.Worker` runs a pure function in a second isolate |
 | Structs | A named struct and an unnamed struct, with value semantics |
-| Library | 65 packages. `docs/what-compiles.md` holds the whole list. |
+| Library | 66 packages. `docs/what-compiles.md` holds the whole list. |
 | Tests | `gart test` runs a `TestXxx` function and a subtest |
-| Iterators | A range loop over a function with `break`, `continue`, and `return` |
+| Iterators | A range loop over a function, and `iter.Pull` over a goroutine |
 | Files | `os` and `io` read and write a file through `dart:io` |
 | Network | `net.Dial` and `net.Listen` reach TCP through `dart:io` |
-| HTTP | `net/http` gives an HTTP/1.1 client and an HTTP/1.1 server |
+| HTTP | `net/http` gives an HTTP/1.1 client with a pool, and a server. `net/http/httptest` tests a handler. |
 | TLS | `crypto/tls` gives a client over the secure socket of Dart |
-| Pointers | A pointer to any value, also to a field and to an element |
+| Compression | `compress/gzip`, `compress/flate`, and `compress/zlib` write the bytes of Go |
 | Stack | A source map gives `runtime.Caller` and the Go trace of a panic |
 | JSON | `json.Marshal` walks the type descriptor of a value |
 | Benchmarks | `gart test -bench <text>` runs a `BenchmarkXxx` function |
 
-The standard library surface holds 65 packages, for example `fmt`, `net/http`,
+The standard library surface holds 66 packages, for example `fmt`, `net/http`,
 `regexp`, `reflect`, `encoding/json`, and the interop package `syscall/dart`. An
 overlay replaces the Go source of a package that needs one, and the build tag
 `dart` selects the overlay files. Each other package of the surface reads the

@@ -134,6 +134,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `encoding` | Native | The package holds interfaces only. |
 | `compress/flate` | Native | The real source needs no patch. The output holds the same bytes as Go. |
 | `compress/gzip` | Native | The real source needs no patch. |
+| `compress/zlib` | Native | The real source needs no patch. |
 | `internal/testhash` | Native | The tests of the hash packages of the Go repository read it. |
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |

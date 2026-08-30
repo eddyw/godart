@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"compress/gzip"
+	"compress/zlib"
 	"fmt"
 	"io"
 	"strings"
@@ -74,6 +75,19 @@ func main() {
 	// A stream that holds no valid header gives an error.
 	_, err = gzip.NewReader(strings.NewReader("not a stream"))
 	fmt.Println("bad", err)
+
+	// A zlib stream holds the same deflate bytes with a header of its own.
+	var zbuf bytes.Buffer
+	zw := zlib.NewWriter(&zbuf)
+	io.WriteString(zw, text)
+	zw.Close()
+	zr, err := zlib.NewReader(bytes.NewReader(zbuf.Bytes()))
+	if err != nil {
+		fmt.Println("zlib:", err)
+		return
+	}
+	zout, err := io.ReadAll(zr)
+	fmt.Println("zlib", zbuf.Len(), string(zout) == text, err)
 
 	// The empty text passes through.
 	var empty bytes.Buffer
