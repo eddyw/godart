@@ -302,6 +302,20 @@ func (t Type) Out(i int) Type {
 // always false.
 func (t Type) IsVariadic() bool { return false }
 
+// A Method describes 1 exported method of a type.
+type Method struct {
+	Name  string
+	Index int
+}
+
+// NumMethod gives the count of the exported methods of the type.
+func (t Type) NumMethod() int { return dart.DescNumMethod(t.desc) }
+
+// Method gives 1 exported method of the type, in the order of the name.
+func (t Type) Method(i int) Method {
+	return Method{Name: dart.DescMethodName(t.desc, i), Index: i}
+}
+
 // Size gives the count of bytes that a value of the type holds in Go.
 //
 // The Dart output holds no memory layout. The result follows the rules of a
@@ -554,6 +568,14 @@ func (v Value) String() string {
 	return "<" + v.Type().String() + " Value>"
 }
 
+// NumMethod gives the count of the exported methods of the type of v.
+func (v Value) NumMethod() int { return v.Type().NumMethod() }
+
+// Method gives a func value that binds 1 exported method of the type to v.
+func (v Value) Method(i int) Value {
+	return Value{value: dart.MethodValue(v.read(), i)}
+}
+
 // Call runs the function that v holds and gives each result.
 //
 // A function that gives up control is outside this call. The Dart form of such
@@ -575,6 +597,32 @@ func (v Value) Call(in []Value) []Value {
 // SetMapIndex writes 1 entry of a map. A key with no value drops the entry.
 func (v Value) SetMapIndex(key, value Value) {
 	dart.MapSet(v.read(), key.read(), value.read(), !value.IsValid())
+}
+
+// IsNil reports whether the value of a kind that can hold nil holds nil. Each
+// other kind panics.
+func (v Value) IsNil() bool {
+	switch v.Kind() {
+	case Chan, Func, Interface, Map, Pointer, Slice:
+		return dart.ValueIsNil(v.read())
+	}
+	panic("reflect: IsNil of " + v.Kind().String())
+}
+
+// MapKeys gives the keys of a map value. The order follows the insertion.
+func (v Value) MapKeys() []Value {
+	raw := dart.MapKeys(v.read())
+	out := make([]Value, len(raw))
+	for i, k := range raw {
+		out[i] = Value{value: k}
+	}
+	return out
+}
+
+// MapIndex gives the value of 1 key of a map value. A key that the map does
+// not hold gives the zero Value.
+func (v Value) MapIndex(key Value) Value {
+	return Value{value: dart.MapIndex(v.read(), key.read())}
 }
 
 // SetZero writes the zero value of the type into the location that v names.

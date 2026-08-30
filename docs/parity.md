@@ -67,7 +67,9 @@ The package `fmt` reads it.
 | `Type.Size`, `Type.Align`, `Type.FieldAlign`, `StructField.Offset` | Present. The result follows the rules of a 64-bit machine, exactly as the compiler of Go computes them. |
 | `Type.Align`, `Type.FieldAlign`, `Value.UnsafeAddr` | Not present. The target has no memory layout. |
 | `Value.Complex` and `Value.SetComplex` | Not present. The subset holds no complex number. |
-| A method value through reflect | Not present |
+| `Type.NumMethod`, `Type.Method`, `Value.NumMethod`, `Value.Method` | Present. The order follows the name, exactly as in Go. `Method` gives the name and the index only. |
+| `Value.IsNil`, `Value.MapIndex` | Present |
+| `Value.MapKeys` | Present. The order follows the insertion, and Go gives a random order. |
 
 ## The runtime
 

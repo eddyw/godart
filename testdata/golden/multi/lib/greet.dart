@@ -43,6 +43,28 @@ final TypeDesc $descP$Greeter = TypeDesc(
     'Text()string': (Object? $r) => Greeter$Text(($r as Greeter$?)),
   },
   text: '*greet.Greeter',
+  methodTypes: <String, TypeDesc Function()>{
+    'SetStyle(example.com/multi/greet.Style)': () => TypeDesc(
+      'func(s example.com/multi/greet.Style)',
+      'func',
+      const <String, Function>{},
+      text: 'func(greet.Style)',
+      params: <TypeDesc Function()>[() => $desc$Style],
+      results: <TypeDesc Function()>[],
+      comparable: false,
+      zero: () => null,
+    ),
+    'Text()string': () => TypeDesc(
+      'func() string',
+      'func',
+      const <String, Function>{},
+      text: 'func() string',
+      params: <TypeDesc Function()>[],
+      results: <TypeDesc Function()>[() => $typeString],
+      comparable: false,
+      zero: () => null,
+    ),
+  },
   elem: () => $desc$Greeter,
   zero: () => null,
 );

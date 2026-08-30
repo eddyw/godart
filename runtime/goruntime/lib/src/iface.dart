@@ -48,6 +48,10 @@ final class TypeDesc {
   /// `string`, `slice`, `map`, `ptr`, and the other kinds.
   final String kind;
   final Map<String, Function> methods;
+
+  /// The function type of each exported method, under the key of the method.
+  /// The package reflect reads it, and each other path reads only [methods].
+  final Map<String, TypeDesc Function()> methodTypes;
   final List<FieldDesc> fields;
 
   /// The element type of a slice, an array, a pointer, a channel, or a map.
@@ -80,6 +84,7 @@ final class TypeDesc {
     this.kind,
     this.methods, {
     this.text = '',
+    this.methodTypes = const <String, TypeDesc Function()>{},
     this.fields = const <FieldDesc>[],
     this.elem,
     this.key,

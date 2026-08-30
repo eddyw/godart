@@ -94,7 +94,7 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 	}
 	return fmt.Sprintf("TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s)",
 		dartText(typeName(t)), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
-		dartText(reflectText(types.Unalias(t))), e.descParts(t), e.zero(t))
+		dartText(reflectText(types.Unalias(t))), e.methodTypeTable(t)+e.descParts(t), e.zero(t))
 }
 
 // methodTable writes the adapter of each method of the type, in the order of
@@ -125,7 +125,34 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s);",
 		variable, dartText(types.TypeString(t, nil)), kindOf(t),
 		strings.Join(e.methodTable(named, t), ", "), dartText(reflectText(t)),
-		e.descParts(t), e.zero(t))
+		e.methodTypeTable(t)+e.descParts(t), e.zero(t))
+}
+
+// methodTypeTable writes the function type of each exported method of the
+// method set of a type. The package reflect reads it: Value.Method gives a
+// func value, and Value.Call of it needs the parameter types and the result
+// types.
+func (e *emitter) methodTypeTable(t types.Type) string {
+	set := types.NewMethodSet(t)
+	entries := make([]string, 0, set.Len())
+	for i := 0; i < set.Len(); i++ {
+		fn, ok := set.At(i).Obj().(*types.Func)
+		if !ok || !fn.Exported() {
+			continue
+		}
+		sig, ok := fn.Type().(*types.Signature)
+		if !ok || (sig.TypeParams() != nil && sig.TypeParams().Len() > 0) {
+			continue
+		}
+		entries = append(entries, fmt.Sprintf("'%s': () => %s",
+			methodKey(fn.Name(), sig), e.descriptorOf(sig)))
+	}
+	if len(entries) == 0 {
+		return ""
+	}
+	sort.Strings(entries)
+	return ", methodTypes: <String, TypeDesc Function()>{" +
+		strings.Join(entries, ", ") + "}"
 }
 
 // descParts writes the fields of a struct type, and the element type and the
@@ -526,10 +553,12 @@ func (e *emitter) descriptorOf(t types.Type) string {
 	// the key of each method that it needs, because a type assertion to a type
 	// parameter reads that set. A slice, a map, and a channel hold no method.
 	table := "const <String, Function>{}"
+	methodTypes := ""
 	switch {
 	case isStructUnder(t):
 		if entries := e.methodTable(types.Unalias(t), t); len(entries) > 0 {
 			table = "<String, Function>{" + strings.Join(entries, ", ") + "}"
+			methodTypes = e.methodTypeTable(t)
 		}
 	case isInterfaceType(t):
 		if keys := interfaceMethods(t); len(keys) > 0 {
@@ -542,7 +571,7 @@ func (e *emitter) descriptorOf(t types.Type) string {
 	}
 	return fmt.Sprintf("TypeDesc('%s', '%s', %s, text: '%s'%s, zero: () => %s)",
 		dartText(typeName(t)), kindOf(t), table, dartText(reflectText(types.Unalias(t))),
-		e.descParts(t), e.zero(t))
+		methodTypes+e.descParts(t), e.zero(t))
 }
 
 // basicDesc names the description of a predeclared type. The runtime library

@@ -380,7 +380,10 @@ Slice<Iface?> $callValue(Iface? fn, Slice<Iface?> args) {
     final Iface? a = args[i];
     raw.add(desc.params[i]().kind == 'interface' ? a : a?.value);
   }
-  final Object? out = Function.apply(fn.value as Function, raw);
+  final Object? f = fn.value;
+  final Object? out = f is BoundMethod
+      ? Function.apply(f.fn, <Object?>[f.receiver, ...raw])
+      : Function.apply(f as Function, raw);
   final int n = desc.results.length;
   final List<Iface?> results = <Iface?>[];
   if (n == 1) {
@@ -421,6 +424,120 @@ Object? _field(Object? record, int index, int count) {
       return r.$8;
   }
   $panic(GoError('reflect: a call of $count results is outside the subset'));
+}
+
+/// A method value: the adapter of the method and the receiver.
+///
+/// The adapter of a method table takes the receiver as its first argument.
+/// $callValue unwraps this pair, because a closure of Dart holds a fixed
+/// arity, and the arity of the method lives only in its type descriptor.
+final class BoundMethod {
+  final Function fn;
+  final Object? receiver;
+
+  const BoundMethod(this.fn, this.receiver);
+}
+
+/// The keys of the exported methods of a type, in the order of the name.
+///
+/// A key holds the name and the signature, and a parenthesis follows the name.
+/// The parenthesis stands below each letter and each digit, thus the order of
+/// the keys equals the order of the names.
+List<String> _exportedMethodKeys(TypeDesc desc) {
+  final List<String> keys = <String>[];
+  for (final String key in desc.methods.keys) {
+    final int cut = key.indexOf('(');
+    final String name = cut < 0 ? key : key.substring(0, cut);
+    if (name.isEmpty) continue;
+    final String first = name[0];
+    if (first.toUpperCase() == first && first.toLowerCase() != first) {
+      keys.add(key);
+    }
+  }
+  keys.sort();
+  return keys;
+}
+
+/// The count of the exported methods of a type.
+int $descNumMethod(int handle) => _exportedMethodKeys(_typeAt(handle)).length;
+
+/// The name of 1 exported method of a type.
+GoString $descMethodName(int handle, int index) {
+  final TypeDesc desc = _typeAt(handle);
+  final List<String> keys = _exportedMethodKeys(desc);
+  if (index < 0 || index >= keys.length) {
+    $panic(GoError('reflect: ${desc.display} holds no method $index'));
+  }
+  final String key = keys[index];
+  final int cut = key.indexOf('(');
+  return GoString.fromString(cut < 0 ? key : key.substring(0, cut));
+}
+
+/// A func value that binds 1 exported method of the type to the value.
+Iface? $methodValue(Iface? value, int index) {
+  if (value == null) $panicNil();
+  final TypeDesc desc = value.desc;
+  final List<String> keys = _exportedMethodKeys(desc);
+  if (index < 0 || index >= keys.length) {
+    $panic(GoError('reflect: ${desc.display} holds no method $index'));
+  }
+  final String key = keys[index];
+  final Function? fn = desc.methods[key];
+  final TypeDesc Function()? type = desc.methodTypes[key];
+  if (fn == null || type == null) {
+    $panic(GoError('reflect: no type of the method $key of ${desc.display}'));
+  }
+  return Iface(type(), BoundMethod(fn, value.value));
+}
+
+/// True when the value of a kind that can hold nil holds nil. A pointer, a
+/// func, an interface, and a channel each hold null. A slice and a map each
+/// carry a nil flag, because Go reads the length of a nil one.
+bool $valueIsNil(Iface? value) {
+  if (value == null) return true;
+  final Object? v = value.value;
+  if (v == null) return true;
+  if (v is Slice<Object?>) return v.isNil;
+  if (v is GoMap<Object?, Object?>) return v.isNil;
+  return false;
+}
+
+/// The keys of a map value, in the order of the insertion.
+Slice<Iface?> $mapKeys(Iface? value) {
+  if (value == null) $panicNil();
+  final Object? m = value.value;
+  if (m is! GoMap<Object?, Object?>) {
+    $panic(GoError('reflect: MapKeys of ${value.desc.display}'));
+  }
+  final TypeDesc? keyType = value.desc.key?.call();
+  final List<Iface?> out = <Iface?>[];
+  final Slice<Object?> keys = m.keys();
+  for (int i = 0; i < keys.len; i++) {
+    final Object? k = keys[i];
+    out.add(
+      keyType == null || keyType.kind == 'interface'
+          ? k as Iface?
+          : Iface(keyType, k),
+    );
+  }
+  return Slice.of(out);
+}
+
+/// The value of 1 key of a map value. A key that the map does not hold gives
+/// null, and the package reflect reads that as the zero Value.
+Iface? $mapIndex(Iface? target, Iface? key) {
+  if (target == null) $panicNil();
+  final Object? m = target.value;
+  if (m is! GoMap<Object?, Object?>) {
+    $panic(GoError('reflect: MapIndex of ${target.desc.display}'));
+  }
+  final TypeDesc? keyType = target.desc.key?.call();
+  final Object? k = keyType?.kind == 'interface' ? key : key?.value;
+  if (!m.has(k)) return null;
+  final TypeDesc? elem = target.desc.elem?.call();
+  final Object? out = m.get(k);
+  if (elem == null || elem.kind == 'interface') return out as Iface?;
+  return Iface(elem, out);
 }
 
 /// A map of the type.

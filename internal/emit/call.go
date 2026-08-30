@@ -101,6 +101,18 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$descKey(%s)", args[0]), true
 	case "CallValue":
 		return fmt.Sprintf("$callValue(%s, %s)", args[0], args[1]), true
+	case "DescNumMethod":
+		return fmt.Sprintf("$descNumMethod(%s)", args[0]), true
+	case "DescMethodName":
+		return fmt.Sprintf("$descMethodName(%s, %s)", args[0], args[1]), true
+	case "MethodValue":
+		return fmt.Sprintf("$methodValue(%s, %s)", args[0], args[1]), true
+	case "ValueIsNil":
+		return fmt.Sprintf("$valueIsNil(%s)", args[0]), true
+	case "MapKeys":
+		return fmt.Sprintf("$mapKeys(%s)", args[0]), true
+	case "MapIndex":
+		return fmt.Sprintf("$mapIndex(%s, %s)", args[0], args[1]), true
 	case "MakeMap":
 		return fmt.Sprintf("$makeMap(%s)", args[0]), true
 	case "MapSet":

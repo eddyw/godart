@@ -118,6 +118,37 @@ func CallValue(fn any, args []any) []any {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// DescNumMethod gives the count of the exported methods of a type.
+func DescNumMethod(handle int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescMethodName gives the name of 1 exported method of a type. The order is
+// the order of the name.
+func DescMethodName(handle, index int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MethodValue gives a func value that binds 1 exported method to the value.
+func MethodValue(value any, index int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueIsNil reports whether the value of a kind that can hold nil holds nil.
+func ValueIsNil(value any) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MapKeys gives the keys of a map value. The order follows the insertion.
+func MapKeys(target any) []any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MapIndex gives the value of 1 key of a map value, or nil.
+func MapIndex(target, key any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // MakeMap gives a map of the type.
 func MakeMap(handle int) any {
 	panic("syscall/dart needs the gart compiler")
