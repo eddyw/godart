@@ -5,6 +5,7 @@ import (
 	"go/types"
 
 	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // This file holds the expression side of the state machine. A call that blocks
@@ -92,6 +93,30 @@ func (f *flat) operands(list []ir.Expr) []ir.Expr {
 	return out
 }
 
+// hoistRecv writes the receiver of a method call into a variable of the
+// frame, because an argument of the call blocks and the receiver must keep
+// its place in the order of the evaluation.
+//
+// A method with a pointer receiver reads a location, and a copy of the value
+// has no address. The variable then holds the address, and the call reads the
+// location through it.
+func (f *flat) hoistRecv(m *ir.Method, recv ir.Expr) ir.Expr {
+	t := recv.GoType()
+	sig, ok := m.Obj.Type().(*types.Signature)
+	pointer := ok && sig.Recv() != nil &&
+		isPointerUnder(sig.Recv().Type()) && !isPointerUnder(t)
+	if pointer && needsBox(t) {
+		return f.temp(&ir.Unary{Op: token.AND, X: recv, Type: types.NewPointer(t)})
+	}
+	return f.temp(recv)
+}
+
+// isPointerUnder reports whether the core type is a pointer.
+func isPointerUnder(t types.Type) bool {
+	_, ok := typeset.Core(t).(*types.Pointer)
+	return ok
+}
+
 // call writes a call that blocks into a variable of the frame.
 func (f *flat) call(x *ir.Call) ir.Expr {
 	out := f.callArgs(x)
@@ -122,7 +147,7 @@ func (f *flat) callArgs(x ir.Expr) ir.Expr {
 	if m, ok := call.Fun.(*ir.Method); ok {
 		recv := f.value(m.Recv)
 		if argsBlock {
-			recv = f.temp(recv)
+			recv = f.hoistRecv(m, recv)
 		}
 		out.Fun = &ir.Method{Recv: recv, Obj: m.Obj, Type: m.Type}
 	} else if blocksExpr(call.Fun) {

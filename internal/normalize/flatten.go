@@ -603,9 +603,28 @@ func (f *flat) lvalue(x ir.Expr) ir.Expr {
 	case *ir.Index:
 		return &ir.Index{X: f.temp(f.value(x.X)), Index: f.temp(f.value(x.Index)), Type: x.Type}
 	case *ir.Field:
-		return &ir.Field{X: f.temp(f.value(x.X)), Name: x.Name, Type: x.Type}
+		return &ir.Field{X: f.lvalueBase(x.X), Name: x.Name, Type: x.Type}
 	case *ir.Unary:
 		return &ir.Unary{Op: x.Op, X: f.temp(f.value(x.X)), Type: x.Type}
 	}
 	return x
+}
+
+// lvalueBase keeps the location of the base of a field write. A name is a
+// stable location. A variable of the frame holds a copy of a struct value,
+// thus a hoist of such a base would take the write onto the copy. A slice, an
+// array, and a pointer each share their target through a copy, thus a hoist
+// of them stays safe.
+func (f *flat) lvalueBase(x ir.Expr) ir.Expr {
+	switch x := x.(type) {
+	case *ir.Ident:
+		return x
+	case *ir.Field:
+		return &ir.Field{X: f.lvalueBase(x.X), Name: x.Name, Type: x.Type}
+	case *ir.Index:
+		return &ir.Index{X: f.temp(f.value(x.X)), Index: f.temp(f.value(x.Index)), Type: x.Type}
+	case *ir.Unary:
+		return &ir.Unary{Op: x.Op, X: f.temp(f.value(x.X)), Type: x.Type}
+	}
+	return f.temp(f.value(x))
 }
