@@ -139,6 +139,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
 | `net/http` | Overlay | An HTTP/1.1 client and an HTTP/1.1 server. Read the section of the HTTP access. |
+| `net/http/httptest` | Overlay | `NewRecorder`, `NewRequest`, `NewServer`, and `NewUnstartedServer`. The TLS forms stay out. |
 | `testing/quick` | Overlay | The source of Go, with no complex case. |
 | `crypto/tls` | Overlay | A client over the secure socket of Dart. `Dial`, `DialWithDialer`, `Config`, `Conn`, and `ConnectionState`. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
@@ -427,7 +428,8 @@ with about 1500 lines.
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
 | `Request.RemoteAddr` | The address of the peer | Empty. The `Conn` of the `net` overlay names no peer. |
 | `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `MaxIdleConnsPerHost`, and `CloseIdleConnections` |
-| `httptest`, `CookieJar`, `FileServer`, `multipart` | Present | Missing |
+| `httptest` | Present | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `Server.Client`, and `Server.Close`. `NewTLSServer`, `CloseClientConnections`, and the wait of `Close` for each request that stands open stay out. |
+| `CookieJar`, `FileServer`, `multipart` | Present | Missing |
 
 `testdata/programs/httpuse` runs a server and a client in 1 program, and the
 output of `go run` and of the Dart build stays equal.

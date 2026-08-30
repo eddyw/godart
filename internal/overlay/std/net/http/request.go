@@ -176,6 +176,9 @@ func validMethod(m string) bool {
 	return true
 }
 
+// ReadRequest reads 1 request from the reader.
+func ReadRequest(b *bufio.Reader) (*Request, error) { return readRequest(b) }
+
 // readRequest reads 1 request from a connection. A server calls it.
 func readRequest(r *bufio.Reader) (*Request, error) {
 	line, err := readLine(r)

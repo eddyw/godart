@@ -59,7 +59,7 @@ The compiler holds all 6 stages. The subset covers:
 | Generics | Generic function, generic type, generic method of Go 1.27 |
 | Isolates | `dart.Worker` runs a pure function in a second isolate |
 | Structs | A named struct and an unnamed struct, with value semantics |
-| Library | 64 packages. `docs/what-compiles.md` holds the whole list. |
+| Library | 65 packages. `docs/what-compiles.md` holds the whole list. |
 | Tests | `gart test` runs a `TestXxx` function and a subtest |
 | Iterators | A range loop over a function with `break`, `continue`, and `return` |
 | Files | `os` and `io` read and write a file through `dart:io` |
@@ -71,7 +71,7 @@ The compiler holds all 6 stages. The subset covers:
 | JSON | `json.Marshal` walks the type descriptor of a value |
 | Benchmarks | `gart test -bench <text>` runs a `BenchmarkXxx` function |
 
-The standard library surface holds 64 packages, for example `fmt`, `net/http`,
+The standard library surface holds 65 packages, for example `fmt`, `net/http`,
 `regexp`, `reflect`, `encoding/json`, and the interop package `syscall/dart`. An
 overlay replaces the Go source of a package that needs one, and the build tag
 `dart` selects the overlay files. Each other package of the surface reads the
