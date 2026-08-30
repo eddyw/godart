@@ -92,6 +92,11 @@ The package `fmt` reads it.
 | `runtime.Caller`, `runtime.Callers`, `runtime.CallersFrames`, `runtime.FuncForPC` | The program counters of the stack | Equal, with the base name of each file. A program counter is an index of a table of the runtime, and not an address. |
 | `runtime.AddCleanup` | Present | Present, with a Dart `Finalizer`. The time of the run follows the collector of Dart. |
 | `runtime.GC` | Runs a collection and waits for it | Allocates a block of garbage and gives up control. Dart holds no call that forces a collection, thus a cleanup can stay for a later call. |
+| The stack of a goroutine | Grows without a fixed limit | The Dart VM holds a fixed stack, thus a deep recursion overflows. `stack.go` of the Go repository is such a program. |
+| `runtime.GOROOT` | The root of the Go tree | An empty text. The Dart output holds no such tree. |
+| `debug.SetMaxStack` | Writes the limit of the runtime | Keeps the value only. |
+| `filepath.EvalSymlinks` | Walks each symbolic link | Gives the cleaned path, and walks no link. |
+| A deferred recover of go/ast, go/parser, go/build/constraint, and text/tabwriter | Turns a panic into an error result | The 4 patches drop the recover, thus such a panic stops the program. Read decision 148. |
 
 ## The subset of the language
 

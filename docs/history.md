@@ -73,6 +73,33 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-08-31, the third session
+
+The session closed the last 2 items of the open list: the value flow of stage
+3, and the real tests of `math/rand/v2`, of `compress/gzip`, and of
+`compress/flate`. It also opened the test directory of the Go repository, and
+that run found 18 differences. The road found 6 soundness defects of the
+compiler, and each one holds a decision and a program: the body of a range
+loop over a function lost its block operation, a make read its length 2
+times, a hoisted receiver and a hoisted field write lost their location, a
+parallel assignment staged no copy of a struct value, and a type that names
+itself stopped the compiler.
+
+| Commit | Work |
+|---|---|
+| `2870142` | The reflect method API: `NumMethod`, `Method`, `IsNil`, `MapKeys`, `MapIndex`, and the method type table of a descriptor. |
+| `f159c30` | The overlay gaps of the math/rand/v2 road: 3 strings functions, `strconv.QuotedPrefix`, `os.Pipe`, and the box rule of a test package. |
+| `2deadc8` | The descriptor name of a function type holds no parameter name. |
+| `d47e213` | The value flow of stage 3, and the state machine of a range loop body. |
+| `1cd202d` | A make with no capacity reads its length 1 time. |
+| `f7f9a60` | The hoist keeps the location of a receiver and of a field write. |
+| `321a044` | `strings.SplitSeq` and `strings.FieldsSeq`, with the `iter` import. |
+| `d3ae3f0` | The go/format subtree from the real Go source, with 4 recover patches and 4 subset rules. |
+| `d7c8c5f` | The real tests of `math/rand/v2`. |
+| `4c57aad` | A parallel assignment stages a copy of a struct value. |
+| `0d2d133` | The real tests of `compress/flate` and of `compress/gzip`. |
+| `1d1e352` | The run files of the test directory of the Go repository: 54 match, and 18 skips name their causes. |
+
 ### 2026-08-31, the second session
 
 The session closed item 1 of the open list, and it found 2 more defects of the

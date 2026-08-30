@@ -472,3 +472,31 @@ The work that remains, in the order of the value:
 3. A test file that reads `recover` never runs. Such a file needs a fork of the
    test source, and that ends the value of a parity measurement.
 
+## The tests of the third session of 2026-08-31
+
+The third session closed item 1 and item 2 of the list above. The real tests
+of `math/rand/v2`, of `compress/gzip`, and of `compress/flate` run, thus
+`TestTestsOfGoroot` covers 20 packages. The road to them found 5 defects of
+the compiler, and each one holds a decision: 140 to 142 and the earlier 137
+and 138. The surface gained the go/format subtree from the real Go source,
+with 4 patches that remove a deferred recover. Read decision 148.
+
+## The test directory of the Go repository
+
+`TestRunFilesOfGoTest` of `internal/driver/gotest_test.go` runs each file of
+`$GOROOT/test` whose header is `// run`. The directory holds 145 such files at
+the top level. 54 compile and give the output of go run. A file outside the
+subset skips, and `goTestSkips` names the 18 files whose run differs, with the
+cause of each one. The list of 2026-08-31, by the kind of the cause:
+
+| Kind | Files |
+|---|---|
+| A parity limit of the target | `stack`, `stackobj2` (the Dart VM holds a fixed stack), `peano` (a deref of `type Number *Number`), `reflectmethod4` (a bound method of reflect is no plain Dart function). |
+| The order of an assignment | `reorder`, `range`, `escape` (an index location or an aliased pointer reads late). |
+| A composite literal | `complit`, `compos`, `bigmap` (the identity or the copy of a literal). |
+| A method form | `method3`, `method7`, `ddd`, `genmeth1` (a method expression on a slice type, of an interface, of a promoted method, and a generic method value). |
+| The emit of a type | `alias1` (byte against uint8), `const4` (a nil channel variable), `switch` (an interface lands in a bool), `newexpr` (new of an array type). |
+
+The subdirectories of `$GOROOT/test` stay open: fixedbugs holds about 2000
+more files, and typeparam holds about 400.
+

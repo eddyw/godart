@@ -509,6 +509,58 @@ The plan left these points open. The work took the decisions below.
      holds the parameter names, and the text of an assertion target holds
      none. Before this rule, `x.(func(int) int)` failed on a value whose
      declaration named the parameter.
+140. A make with no capacity reads its length expression 1 time, through
+     `$makeSliceN`. Before this rule, the emitted text held the expression 2
+     times, and `make([]byte, IntN(100))` drew 2 random numbers.
+     `testdata/programs/makeonce` proves the rule, and `TestChaCha8Read` of
+     `math/rand/v2` found it.
+141. The hoist of a call whose argument blocks keeps the location of the
+     receiver and of a field write. The address of the receiver of a pointer
+     method lands in the frame, and the write of a field walks to its
+     location, because a struct variable of the frame holds a copy.
+     `testdata/programs/hoistrecv` and `fieldwrite` prove the 2 rules. The
+     parser of the Go repository writes the fields of a named result under a
+     blocking call, and each parameter list came back empty.
+142. A parallel assignment stages a copy of a struct value. A write to a
+     location goes into its object, thus a staged reference lost the value
+     before the read. `testdata/programs/swapfields` proves the rule. The
+     level 6 encoder of `compress/flate` swaps its hash chain this way, and
+     the loss gave a ratio above the limit of `TestDeflateInflateString`.
+143. An element of a composite literal of a container of pointers omits the
+     address operator, and the compiler builds the element and wraps it,
+     exactly as the written form does. `go/printer` holds `[]*ast.Comment{{...}}`.
+144. A package variable pair from 1 call holds a hidden record variable, and
+     each name reads 1 field of it. The hidden variable takes the rank of the
+     first name in the init order. `rand_test.go` declares
+     `var rn, kn, wn, fn = GetNormalDistributionParameters()`.
+145. A Go identifier outside ASCII takes a hex escape in its Dart name, for
+     example `χ2` becomes `$u3c72`. Dart holds only ASCII letters, ASCII
+     digits, `_`, and `$` in a name.
+146. A call of a generic function whose declared result erases to Object?
+     takes a cast to the Dart type of the instance. A pointer to a type
+     parameter erases, because the form of a pointer follows the type
+     argument. `go/token` reads `atomic.Pointer[File].Load` this way.
+147. The strings overlay holds `SplitSeq` and `FieldsSeq`, thus it imports
+     `iter`. With the value flow of decision 137, the import adds only the
+     text of the iter package: 12860 bytes on `testdata/programs/args`, which
+     is 3.7 percent, and no other package changes its form. Before the value
+     flow, the same import also marked closures across the program.
+148. The surface holds the go/format subtree from the real Go source:
+     go/token, go/scanner, go/ast, go/build/constraint, go/parser,
+     go/doc/comment, go/printer, go/format, with testing/iotest and
+     text/tabwriter. 4 patches remove a deferred recover: go/ast/print.go,
+     go/parser/interface.go, go/build/constraint/expr.go, and
+     text/tabwriter/tabwriter.go. A source with a panic in those paths stops
+     the program. `testdata/programs/gofmtuse` proves the subtree.
+149. A named type that reaches itself through a pointer, a slice, or a map
+     takes the Dart type Object?, and the emitter caps a cycle through a
+     function type at a depth of 64. Before this rule, `type Number *Number`
+     of peano.go stopped the compiler with a stack overflow.
+150. `TestRunFilesOfGoTest` runs each file of the test directory of the Go
+     repository whose header is `// run`, and it compares the Dart output
+     with the output of go run. 54 files match, a file outside the subset
+     skips, and `goTestSkips` names the 18 files whose run differs, with the
+     cause of each one. A fix removes its entry.
 
 ## Answered questions of 2026-08-31
 
