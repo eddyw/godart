@@ -9,7 +9,7 @@ of a program that imports the package.
 
 ## The import surface
 
-66 packages of the standard library reach the surface. Stage 2 rejects an import
+67 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
@@ -19,8 +19,8 @@ of each other package with a source position.
 | `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
 | `regexp`, `regexp/syntax` | `text/template`, `html/template` |
 | `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/rand`, `crypto/x509` |
-| `encoding/csv`, `encoding/hex`, `encoding/json` | `archive/...`, `compress/zlib` |
-| `compress/flate`, `compress/gzip`, `compress/zlib` | `compress/bzip2`, `compress/lzw` |
+| `encoding/csv`, `encoding/hex`, `encoding/json` | `archive/...`, `compress/lzw` |
+| `compress/flate`, `compress/gzip`, `compress/zlib` | `compress/bzip2`, `runtime/debug` |
 | `net/http/httptest` | `net/smtp`, `net/mail` |
 | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/tls` | `text/tabwriter`, `embed` |
 | `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `database/sql`, `math/cmplx` |
@@ -33,7 +33,7 @@ of each other package with a source position.
 | `time`, `unique` | |
 | `unicode`, `unicode/utf8` | |
 | `encoding`, `internal/godebug`, `internal/byteorder` | |
-| `internal/testhash` | |
+| `internal/testhash`, `internal/testenv` | |
 | `testing/internal/testdeps`, `syscall/dart` | |
 
 ## The gates of the language

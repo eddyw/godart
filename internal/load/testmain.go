@@ -7,6 +7,7 @@ import (
 	"go/doc"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"sort"
 	"strings"
 	"unicode"
@@ -25,6 +26,10 @@ type Binary struct {
 	ID string
 	// Under is the import path of the package under test.
 	Under string
+	// Dir is the directory of the package under test. A test binary runs in
+	// that directory, exactly as go test does, thus a relative path of a test
+	// file reads the same file.
+	Dir string
 	// File is the path that the go command gives to its own entry point. The
 	// overlay replaces the content of that path.
 	File string
@@ -58,7 +63,12 @@ func testBinaries(found []*packages.Package) ([]*Binary, error) {
 				p.PkgPath, len(p.CompiledGoFiles))
 		}
 		under := strings.TrimSuffix(p.PkgPath, ".test")
-		bin := &Binary{ID: id, Under: under, File: p.CompiledGoFiles[0]}
+		bin := &Binary{
+			ID:    id,
+			Under: under,
+			Dir:   packageDir(byID[under+" ["+p.PkgPath+"]"], byID[under]),
+			File:  p.CompiledGoFiles[0],
+		}
 		inside, err := functionsOf(byID[under+" ["+p.PkgPath+"]"])
 		if err != nil {
 			return nil, err
@@ -74,6 +84,19 @@ func testBinaries(found []*packages.Package) ([]*Binary, error) {
 		out = append(out, bin)
 	}
 	return out, nil
+}
+
+// packageDir gives the directory of the first package that holds a Go file.
+func packageDir(pkgs ...*packages.Package) string {
+	for _, p := range pkgs {
+		if p == nil {
+			continue
+		}
+		for _, name := range p.GoFiles {
+			return filepath.Dir(name)
+		}
+	}
+	return ""
 }
 
 // functions holds the functions of 1 test variant that the entry point reads.

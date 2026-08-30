@@ -56,6 +56,9 @@ type TestBinary struct {
 	Package string
 	// Entry is the path of the Dart file, relative to the output directory.
 	Entry string
+	// Dir is the directory of the package under test. The binary runs in that
+	// directory.
+	Dir string
 	// Tests is the count of test functions of the binary.
 	Tests int
 	// Skips lists each function of a test file that gart does not run.
@@ -189,6 +192,7 @@ func testBinaries(result *load.Result, module string) []TestBinary {
 		out = append(out, TestBinary{
 			Package:    b.Under,
 			Entry:      filepath.Join("bin", testDir(b.Under, module)+"_test.dart"),
+			Dir:        b.Dir,
 			Tests:      len(b.Tests),
 			Skips:      b.Skips,
 			Benchmarks: len(b.Benchmarks),

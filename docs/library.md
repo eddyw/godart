@@ -304,7 +304,7 @@ and a call through `reflect`.
 
 The user asked on 2026-08-29 whether the compiler can run the tests of the Go
 repository, exactly as GopherJS does. The answer is yes for a package whose test
-files stay inside the subset. 14 packages now run their real tests, and `make
+files stay inside the subset. 16 packages now run their real tests, and `make
 ci` proves each one through `TestTestsOfGoroot`.
 
 ```bash
@@ -322,6 +322,8 @@ make std-test STD=hash/adler32    # each test passes
 make std-test STD=maps            # each test passes
 make std-test STD=regexp/syntax   # 11 of 12 pass. Read the note below.
 make std-test STD=io              # each test passes
+make std-test STD=internal/chacha8rand  # each test passes
+make std-test STD=compress/zlib   # each test passes
 ```
 
 `TestParseInvalidRegexps` of `regexp/syntax` reads a limit of a resource, and
@@ -389,11 +391,45 @@ A third survey on 2026-08-31, after the work of that day:
 | `math/rand/v2` | `Type.NumMethod`, `Type.Method`, `Value.Method`, and `os.Pipe` in `regress_test.go`. The Kind constants reached the surface. |
 | `bytes` | `internal/testenv`, `internal/asan`, and 7 calls of `recover`. |
 
+The overlay of `internal/testenv` gives 2 functions. `Builder` gives an empty
+name, and `SkipIfOptimizationOff` does nothing. The real package starts a
+process of the go command, and gart holds no such access. Read decision 129.
+
+A fourth survey on 2026-08-31, over each native package that no run covers:
+
+| Package | Cause that blocks the run |
+|---|---|
+| `internal/chacha8rand` | Runs. Each test passes. It needed no work. |
+| `compress/zlib` | Runs. Each test passes. It needed `internal/testenv`, the working directory of the package, and the fix of decision 126. |
+| `compress/flate` | `strings.FieldsSeq` in `example_test.go`. Read the note below. |
+| `compress/gzip` | `testenv.MustHaveSource`, `filepath.EvalSymlinks`, and `runtime.GOROOT`. |
+| `math/rand` | `testenv.Command`, `testenv.Executable`, `testenv.CleanCmdEnv`, `Value.NumMethod`, `Type.Method`, and `Value.Method`. |
+| `math/rand/v2` | `os.Pipe`, `Type.NumMethod`, `Type.Method`, and `Value.Method`. |
+| `bytes` | 7 calls of `recover`, `internal/asan`, and `unsafe`. |
+| `bufio` | `net.UnixAddr`. |
+| `context` | `sync.Cond`. |
+| `net/netip` | `net.ParseIP`. |
+| `net/url` | `encoding/gob`, `internal/diff`, and 1 call of `recover`. |
+| `regexp` | `compress/bzip2`. |
+| `hash` | `crypto/sha512`. |
+| `encoding/base64` | `runtime/debug`. |
+| `math/bits` | `runtime.Error` after a `recover`. |
+| `cmp`, `math` | `unsafe`. |
+
+`strings.FieldsSeq` is the only gap of `compress/flate`. The overlay of
+`strings` must import `iter` for it, and each program that imports `strings`
+then carries the `iter` package. A measurement of 2026-08-31 gave 17479 more
+bytes of Dart source for `testdata/programs/args`, which is 4 percent. No other
+package changed its form. The work waits for the value flow of stage 3, because
+`iter.Pull` in a program marks each `iter.Seq` closure as a function that can
+block.
+
 The work that remains, in the order of the value:
 
 1. `Type.NumMethod`, `Type.Method`, `Value.Method`, and `os.Pipe`, for the tests
-   of `math/rand/v2`.
-2. `internal/testenv`.
+   of `math/rand` and of `math/rand/v2`.
+2. `filepath.EvalSymlinks`, `runtime.GOROOT`, and `testenv.MustHaveSource`, for
+   the tests of `compress/gzip`.
 3. A test file that reads `recover` never runs. Such a file needs a fork of the
    test source, and that ends the value of a parity measurement.
 

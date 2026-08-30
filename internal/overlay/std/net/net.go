@@ -54,9 +54,12 @@ type Addr interface {
 
 // Error is the error of a network operation. A deadline that passed gives an
 // error that reports true.
+//
+// Go marks Temporary as deprecated, and it keeps the method in the interface.
 type Error interface {
 	error
 	Timeout() bool
+	Temporary() bool
 }
 
 // tcpAddr holds a host and a port. Go exports TCPAddr with an IP and a zone,
@@ -99,6 +102,8 @@ type timeoutError struct {
 func (e *timeoutError) Error() string { return e.op + ": i/o timeout" }
 
 func (e *timeoutError) Timeout() bool { return true }
+
+func (e *timeoutError) Temporary() bool { return true }
 
 // netError builds the error of a failed operation.
 func netError(op, cause string) error {

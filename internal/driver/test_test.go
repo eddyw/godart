@@ -226,6 +226,12 @@ func TestTestsOfGoroot(t *testing.T) {
 		{"maps", "", []string{"--- PASS: TestEqualFunc ", "--- PASS: TestCloneLarge "}},
 		{"io", "", []string{
 			"--- PASS: TestCopy ", "--- PASS: TestMultiReaderFreesExhaustedReaders "}},
+		{"internal/chacha8rand", "", []string{
+			"--- PASS: TestOutput ", "--- PASS: TestMarshal "}},
+		// The tests of zlib read testdata through a relative path, thus the
+		// binary must run in the directory of the package.
+		{"compress/zlib", "", []string{
+			"--- PASS: TestWriterBig ", "--- PASS: TestWriterDict "}},
 		// TestParseInvalidRegexps reads a limit of a resource, and the patch of
 		// parse.go holds no recover for it. Read docs/parity.md.
 		{"regexp/syntax", "Test[^P]|TestParse[SFLMN]", []string{

@@ -113,16 +113,28 @@ func writeBenchHeader(out io.Writer, pkgPath string) {
 }
 
 // runBinary runs 1 test binary and gives its output and its exit code.
+//
+// The binary runs in the directory of the package under test, exactly as the
+// binary of go test does. Thus a test file reads a relative path such as
+// testdata/x.txt. The entry point takes an absolute path for that reason.
 func runBinary(out string, bin TestBinary, testOpt TestOptions) (string, int, error) {
 	args := binaryArgs(testOpt)
+	dir := bin.Dir
+	if dir == "" {
+		dir = out
+	}
 	if !testOpt.Benchmarks {
-		return dartOutput(out, append([]string{"run", bin.Entry}, args...))
+		entry, err := filepath.Abs(filepath.Join(out, bin.Entry))
+		if err != nil {
+			return "", 1, err
+		}
+		return dartOutput(dir, append([]string{"run", entry}, args...))
 	}
 	exe, err := compileExe(out, bin.Entry)
 	if err != nil {
 		return "", 1, err
 	}
-	return command(out, exe, args)
+	return command(dir, exe, args)
 }
 
 // binaryArgs writes the flags that the harness of the binary reads.

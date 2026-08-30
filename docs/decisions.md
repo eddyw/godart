@@ -434,6 +434,31 @@ The plan left these points open. The work took the decisions below.
      that line and writes ` [no tests to run]` after the line of the package.
      The go command reads the same line of a test binary and writes the same
      mark.
+126. Stage 3 holds a method that reaches a function value in the group of the
+     signature of that value. A method value binds the receiver, and a method
+     expression takes the receiver as its first parameter, thus the key comes
+     from the type of the selector and not from the type of the method. Before
+     this rule, `valueSignature` dropped each method, thus a call through
+     `d.step` of `compress/flate` never gave up control and the bit state of the
+     writer took a stale value. `testdata/programs/methodvalue` proves the rule.
+127. A method value of an interface value reaches the method table of the
+     descriptor. The closure holds the value, and each call of it reads the
+     table with `$method`. Before this rule, stage 5 wrote the name of a method
+     function of the interface type, and the Dart build stopped with "Method not
+     found".
+128. A test binary runs in the directory of the package under test, exactly as
+     the binary of `go test` does. Thus a test file reads a relative path such
+     as `testdata/x.txt`. The driver gives the entry point an absolute path for
+     that reason, because the Dart VM reads the package configuration next to
+     that path.
+129. The surface holds `internal/testenv` with 2 functions. `Builder` gives an
+     empty name, and `SkipIfOptimizationOff` does nothing. The real package
+     starts a process of the go command, and gart holds no such access. The
+     tests of `bytes`, of `compress/flate`, and of `compress/zlib` each read
+     only those 2 functions.
+130. `net.Error` holds `Temporary`, exactly as Go declares it. Go marks the
+     method as deprecated and keeps it in the interface, thus a program that
+     calls it must compile.
 
 ## Answered questions of 2026-08-31
 
@@ -447,6 +472,9 @@ The plan left these points open. The work took the decisions below.
   the same groups of the signature. Read the workstream doc.
 - Can the compiler and a test binary share 1 source file? Yes. A file of the
   overlay with no build tag reaches both. Read decision 124.
+- Does a call through a function value always give up control? No. A method
+  that reaches such a value stood in no group of stage 3 before 2026-08-31.
+  Read decision 126.
 - Does the real source of `compress/flate` stay inside the subset? Yes. The
   package needs no patch, and the Dart output writes the same bytes as Go.
 

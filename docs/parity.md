@@ -106,6 +106,7 @@ The package `fmt` reads it.
 | A function declaration with no body | Present. Stage 2 rejects a read of it, and the Dart form panics. |
 | `import _ "unsafe"` | Present. A blank import performs no operation. |
 | A method value of a named type that is not a struct | Present. It writes a closure. |
+| A method value of an interface value, for example `r.Read` | Present. The closure holds the value, and each call reads the method table. |
 | A range loop over a function | Present. Read the section below. |
 | A deferred call that can block | Present. The chain of the deferred calls holds states of its own. |
 | A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
@@ -387,7 +388,7 @@ The `net` package holds this surface:
 | `PacketConn` | 7 methods | `ReadFrom`, `WriteTo`, `Close`, `LocalAddr`, and the 3 deadline methods. |
 | `Listener` | `Accept`, `Close`, `Addr` | Equal |
 | `Addr` | `Network` and `String` | Equal |
-| `Error` | `Timeout` and `Temporary` | `Timeout` only. `Temporary` is deprecated in Go. |
+| `Error` | `Timeout` and `Temporary` | Equal. A deadline that passed reports true for each one. |
 | `Dialer` | 12 fields | `Timeout`, `Dial`, and `DialContext`. The dial runs on a goroutine, and the select takes the first of the dial and the context. |
 | `DialTimeout` | Present | Equal. It reads a `Dialer` with the timeout. |
 | `TCPAddr`, `UDPAddr`, `UnixAddr`, `IP`, `Resolver` | Present | Not present. A type assertion of an `Addr` gives a compile error, and not a wrong value. |
@@ -708,6 +709,7 @@ for each test binary. The output holds the format of `go test`.
 | A benchmark build | The normal test binary | An ahead of time build. The warm up cost of the Dart VM hides the result. |
 | A fuzz target | Runs the seed corpus | Reported as a skipped test |
 | An example with an output comment | Runs and compares the output | Reported as a skipped test |
+| The working directory of a test | The directory of the package | Equal. The driver runs the binary there, thus a relative path reads the same file. |
 | `t.TempDir` | A new directory for the test | Equal. The cleanup of the test removes it. |
 | `t.Setenv` | Writes the environment for the test | Equal. It writes the map of the `os` overlay, and the cleanup writes the value of the start again. |
 | `t.Context` | A context that a cancel closes in front of the cleanups | Equal |
