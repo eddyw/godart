@@ -150,9 +150,9 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
 | `net/http` | Overlay | An HTTP/1.1 client and an HTTP/1.1 server. Read the section of the HTTP access. |
-| `net/http/httptest` | Overlay | `NewRecorder`, `NewRequest`, `NewServer`, and `NewUnstartedServer`. The TLS forms stay out. |
+| `net/http/httptest` | Overlay | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `NewTLSServer`, and `StartTLS`. |
 | `testing/quick` | Overlay | The source of Go, with no complex case. |
-| `crypto/tls` | Overlay | A client over the secure socket of Dart. `Dial`, `DialWithDialer`, `Config`, `Conn`, and `ConnectionState`. |
+| `crypto/tls` | Overlay | A client and a server over the secure socket of Dart. `Dial`, `DialWithDialer`, `Listen`, `X509KeyPair`, `Config`, `Certificate`, `Conn`, and `ConnectionState`. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | `New`, `Is`, `As`, `AsType`, `Unwrap`, and `Join`. |
@@ -422,7 +422,7 @@ The `net` package holds this surface:
 | An empty host of `Listen` | Each interface | `0.0.0.0` |
 | `SplitHostPort` | Accepts an IPv6 host in brackets | Only a host with no bracket. |
 | `JoinHostPort` | Adds brackets for an IPv6 host | It joins the 2 parts with a colon. |
-| TLS | `crypto/tls` | Not present. `SecureSocket` of Dart holds the whole handshake, and the surface holds no `crypto` package. |
+| TLS | `crypto/tls` | Present through the overlay of `crypto/tls`. `SecureSocket` and `SecureServerSocket` of Dart hold the whole handshake. |
 | A deadline that a read already waits on | Ends that read | Reaches the next read only. The runtime applies the limit at the start of an operation. |
 | A write that a deadline ended | Writes nothing | The bytes stay in the buffer of the socket. |
 | A connected UDP socket | The system drops a datagram of another source | The runtime drops it. Dart gives no connect of a datagram socket. |
@@ -457,7 +457,7 @@ with about 1500 lines.
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
 | `Request.RemoteAddr` | The address of the peer | Empty. The `Conn` of the `net` overlay names no peer. |
 | `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `MaxIdleConnsPerHost`, and `CloseIdleConnections` |
-| `httptest` | Present | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `Server.Client`, and `Server.Close`. `NewTLSServer`, `CloseClientConnections`, and the wait of `Close` for each request that stands open stay out. |
+| `httptest` | Present | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `NewTLSServer`, `StartTLS`, `Server.Client`, and `Server.Close`. `CloseClientConnections` and the wait of `Close` for each request that stands open stay out. `StartTLS` binds a fresh port, because the secure socket of Dart wraps no open listener, and the client of a TLS server drops the certificate check, because the surface holds no root pool. |
 | `CookieJar`, `FileServer`, `multipart` | Present | Not present |
 
 `testdata/programs/httpuse` runs a server and a client in 1 program, and the
@@ -919,7 +919,7 @@ Gaps of the standard library surface:
 | `strconv.Unquote`, `strconv.UnquoteChar` | Present. The source comes from Go. |
 | `strings.Title` | Not present. Go deprecated it. |
 | `sort.Sort` with an interface | Not present. Use `sort.Slice`. |
-| `crypto/tls` | A client only. Read the section of the network access. |
+| `crypto/tls` | A client and a server. Read the section of the network access. |
 
 A list of bytes reads as text for the verbs `s`, `q`, `x`, and `X`, exactly as
 in Go. A byte that holds no rune of UTF-8 keeps its value through each write.

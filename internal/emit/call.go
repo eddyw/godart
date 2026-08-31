@@ -321,6 +321,11 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$connClose(%s)", args[0]), true
 	case "ListenTCP":
 		return fmt.Sprintf("$listenTCP(%s, %s)", args[0], args[1]), true
+	case "ListenTLS":
+		return fmt.Sprintf("$listenTLS(%s, %s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3], args[4]), true
+	case "AcceptTLS":
+		return fmt.Sprintf("$acceptTLS(%s)", args[0]), true
 	case "Accept":
 		return fmt.Sprintf("$accept(%s)", args[0]), true
 	case "ListenClose":

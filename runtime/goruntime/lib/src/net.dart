@@ -44,15 +44,18 @@ final List<_Conn?> _open = <_Conn?>[];
 /// iterator closes the server socket, and a pending accept then gives no
 /// connection.
 final class _Listener {
-  final ServerSocket server;
   final StreamIterator<Socket> incoming;
+
+  /// close ends the server socket. A plain listener and a TLS listener hold
+  /// 2 server classes with no shared base, thus the class keeps a function.
+  final Future<void> Function() close;
 
   /// The path of a Unix socket. A close removes the file, exactly as Go does.
   /// The value is empty for a TCP listener.
   final String unixPath;
 
-  _Listener(this.server, [this.unixPath = ''])
-    : incoming = StreamIterator<Socket>(server);
+  _Listener(Stream<Socket> stream, this.close, [this.unixPath = ''])
+    : incoming = StreamIterator<Socket>(stream);
 }
 
 /// The open listeners of the program, by handle. The handles of a listener, of
@@ -154,7 +157,7 @@ void _closeAll() {
     if (l == null) continue;
     _listeners[i] = null;
     unawaited(l.incoming.cancel());
-    unawaited(l.server.close());
+    unawaited(l.close());
   }
   for (int i = 0; i < _packets.length; i++) {
     final _Packet? s = _packets[i];
@@ -422,13 +425,64 @@ GoString $connDeadline(int handle, int read, int write) {
 /// The call gives up control, thus the result of the call itself is dead.
 (int, int, GoString) $listenTCP(GoString host, int port) {
   $await(
-    ServerSocket.bind(
-      host.toDartString(),
-      port,
-    ).then((ServerSocket s) => (_listenSlot(_Listener(s)), s.port, _empty)),
+    ServerSocket.bind(host.toDartString(), port).then(
+      (ServerSocket s) =>
+          (_listenSlot(_Listener(s, () => s.close())), s.port, _empty),
+    ),
     (Object cause) => (-1, 0, _cause(cause)),
   );
   return (-1, 0, _empty);
+}
+
+/// Opens a TLS listener on a host and a port, and gives its handle and the
+/// port that the system took. The certificate chain and the key each hold the
+/// PEM form, and the list of alpn holds each protocol that the server offers.
+///
+/// The call gives up control, thus the result of the call itself is dead.
+(int, int, GoString) $listenTLS(
+  GoString host,
+  int port,
+  Slice<int> cert,
+  Slice<int> key,
+  Slice<GoString> alpn,
+) {
+  final SecurityContext context = SecurityContext();
+  try {
+    context.useCertificateChainBytes(_bytes(cert));
+    context.usePrivateKeyBytes(_bytes(key));
+    final List<String> protocols = <String>[
+      for (int i = 0; i < alpn.len; i++)
+        alpn.array[alpn.off + i].toDartString(),
+    ];
+    if (protocols.isNotEmpty) context.setAlpnProtocols(protocols, true);
+  } catch (e) {
+    return (-1, 0, _cause(e));
+  }
+  $await(
+    SecureServerSocket.bind(host.toDartString(), port, context).then(
+      (SecureServerSocket s) =>
+          (_listenSlot(_Listener(s, () => s.close())), s.port, _empty),
+    ),
+    (Object cause) => (-1, 0, _cause(cause)),
+  );
+  return (-1, 0, _empty);
+}
+
+/// Waits for 1 connection of a TLS listener, and gives its handle and the
+/// protocol that ALPN took.
+(int, GoString, GoString) $acceptTLS(int handle) {
+  final _Listener? l = _listenerAt(handle);
+  if (l == null) return (-1, _empty, _closed());
+  $await(
+    l.incoming.moveNext().then((bool more) {
+      if (!more) return (-1, _empty, _closed());
+      final Socket s = l.incoming.current;
+      final String proto = s is SecureSocket ? s.selectedProtocol ?? '' : '';
+      return (_slot(_Conn(s)), GoString.fromString(proto), _empty);
+    }),
+    (Object cause) => (-1, _empty, _cause(cause)),
+  );
+  return (-1, _empty, _empty);
 }
 
 /// Opens a listener on a Unix socket and gives its handle.
@@ -438,7 +492,10 @@ GoString $connDeadline(int handle, int read, int write) {
     ServerSocket.bind(
       InternetAddress(name, type: InternetAddressType.unix),
       0,
-    ).then((ServerSocket s) => (_listenSlot(_Listener(s, name)), _empty)),
+    ).then(
+      (ServerSocket s) =>
+          (_listenSlot(_Listener(s, () => s.close(), name)), _empty),
+    ),
     (Object cause) => (-1, _cause(cause)),
   );
   return (-1, _empty);
@@ -470,7 +527,7 @@ GoString $listenClose(int handle) {
   // accepted nothing holds no subscription, thus the cancel closes no server
   // socket and the isolate stays alive.
   unawaited(l.incoming.cancel());
-  unawaited(l.server.close());
+  unawaited(l.close());
   if (l.unixPath.isNotEmpty) {
     try {
       File(l.unixPath).deleteSync();

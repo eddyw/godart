@@ -615,6 +615,25 @@ func ListenTCP(host string, port int) (int, int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ListenTLS opens a TLS listener on a host and a port. The certificate chain
+// and the key each hold the PEM form, and alpn holds each protocol that the
+// server offers. The 3 results are the handle, the port that the system took,
+// and the cause of a failure.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ListenTLS(host string, port int, cert, key []byte, alpn []string) (int, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// AcceptTLS waits for 1 connection of a TLS listener. The 3 results are the
+// handle of the connection, the protocol that ALPN took, and the cause of a
+// failure.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func AcceptTLS(handle int) (int, string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Accept waits for 1 connection of a listener and gives its handle.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.

@@ -1,14 +1,16 @@
 //go:build dart
 
-// Package tls gives a TLS client over the secure socket of Dart.
+// Package tls gives a TLS client and a TLS server over the secure socket of
+// Dart.
 //
-// Dart holds the whole handshake. It honors InsecureSkipVerify, ServerName, and
-// NextProtos, and it honors no version and no cipher suite. A value of
-// MinVersion, MaxVersion, or CipherSuites would reach no operation, thus a dial
-// with such a value stops the program.
+// Dart holds the whole handshake. It honors InsecureSkipVerify, ServerName,
+// NextProtos, and the first certificate of a server config, and it honors no
+// version and no cipher suite. A value of MinVersion, MaxVersion, or
+// CipherSuites would reach no operation, thus a dial or a listen with such a
+// value stops the program.
 //
-// The package holds a client only. A server needs a certificate chain, and the
-// surface holds no crypto/x509.
+// The surface holds no crypto/x509, thus a Certificate keeps the 2 PEM blocks
+// that X509KeyPair took, and Dart parses them.
 package tls
 
 import (
@@ -36,13 +38,34 @@ type Config struct {
 	// ServerName names the host of the check and of the extension of the name
 	// of the server. An empty name reads the host of the address.
 	ServerName string
-	// NextProtos holds each protocol of ALPN that the client offers.
+	// NextProtos holds each protocol of ALPN that the client offers, or that
+	// the server accepts.
 	NextProtos []string
+	// Certificates holds the certificate chain of a server. Listen reads the
+	// first one, and a client dial with one stops the program, because the
+	// secure socket of Dart takes no client certificate on a dial.
+	Certificates []Certificate
 	// MinVersion, MaxVersion, and CipherSuites each reach no operation. A dial
 	// with a value stops the program.
 	MinVersion   uint16
 	MaxVersion   uint16
 	CipherSuites []uint16
+}
+
+// A Certificate holds a chain and a private key, each in the PEM form. Go
+// parses the blocks into a DER chain, and the overlay keeps the blocks,
+// because Dart reads PEM.
+type Certificate struct {
+	pemChain []byte
+	pemKey   []byte
+}
+
+// X509KeyPair builds a Certificate of a PEM chain and a PEM key.
+func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
+	if len(certPEMBlock) == 0 || len(keyPEMBlock) == 0 {
+		return Certificate{}, errors.New("tls: failed to find any PEM data in certificate input")
+	}
+	return Certificate{pemChain: certPEMBlock, pemKey: keyPEMBlock}, nil
 }
 
 // Clone gives a copy of the config. A nil config gives nil.
@@ -136,12 +159,79 @@ func deadlineNanos(t time.Time) int64 {
 	return t.UnixNano()
 }
 
+// Listen opens a TLS listener. The network must be tcp, and the config must
+// hold a certificate.
+func Listen(network, laddr string, config *Config) (net.Listener, error) {
+	if network != "tcp" {
+		return nil, errors.New("tls: the network " + network + " is outside the subset")
+	}
+	reject(config)
+	if config == nil || len(config.Certificates) == 0 {
+		return nil, errors.New("tls: neither Certificates, GetCertificate, nor GetConfigForClient set in Config")
+	}
+	host, port, err := hostPort(laddr)
+	if err != nil {
+		return nil, err
+	}
+	cert := config.Certificates[0]
+	handle, taken, cause := dart.ListenTLS(host, port, cert.pemChain, cert.pemKey,
+		config.NextProtos)
+	if cause != "" {
+		return nil, errors.New("tls: listen " + laddr + ": " + cause)
+	}
+	return &listener{handle: handle, addr: listenAddr{host: host, port: taken}}, nil
+}
+
+// listener waits for a TLS connection of a client.
+type listener struct {
+	handle int
+	addr   listenAddr
+}
+
+// Accept waits for 1 connection and runs the handshake.
+func (l *listener) Accept() (net.Conn, error) {
+	handle, proto, cause := dart.AcceptTLS(l.handle)
+	if cause != "" {
+		return nil, errors.New("tls: accept: " + cause)
+	}
+	return &Conn{handle: handle,
+		state: ConnectionState{NegotiatedProtocol: proto}}, nil
+}
+
+// Close ends the listener. Each connection of it stays open, exactly as in
+// Go.
+func (l *listener) Close() error {
+	if cause := dart.ListenClose(l.handle); cause != "" {
+		return errors.New("tls: close: " + cause)
+	}
+	return nil
+}
+
+// Addr gives the address of the listener.
+func (l *listener) Addr() net.Addr { return l.addr }
+
+// listenAddr holds the host and the port of a TLS listener. The package net
+// keeps its own address type unexported, thus this package holds one too.
+type listenAddr struct {
+	host string
+	port int
+}
+
+func (a listenAddr) Network() string { return "tcp" }
+
+func (a listenAddr) String() string {
+	return a.host + ":" + strconv.Itoa(a.port)
+}
+
 // Dial opens a TLS connection. The network must be tcp.
 func Dial(network, addr string, config *Config) (*Conn, error) {
 	if network != "tcp" {
 		return nil, errors.New("tls: the network " + network + " is outside the subset")
 	}
 	reject(config)
+	if config != nil && len(config.Certificates) != 0 {
+		panic("crypto/tls: the secure socket of Dart takes no client certificate on a dial")
+	}
 	host, port, err := hostPort(addr)
 	if err != nil {
 		return nil, err

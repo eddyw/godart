@@ -112,10 +112,20 @@ table of the connections. Thus each read, each write, each deadline, and the
 close of a TCP connection also work on a TLS handle.
 
 Dart holds the whole handshake, thus the overlay honors `InsecureSkipVerify`,
-`ServerName`, and `NextProtos` only. `MinVersion`, `MaxVersion`, and
-`CipherSuites` each stay a field of the `Config`, and a dial with a value stops
-the program. A server needs a certificate chain, and the surface holds no
-`crypto/x509`, thus the package holds no server.
+`ServerName`, `NextProtos`, and the first `Certificate` of a listen only.
+`MinVersion`, `MaxVersion`, and `CipherSuites` each stay a field of the
+`Config`, and a dial or a listen with a value stops the program.
+
+The server landed on 2026-09-01. `tls.Listen` rides `SecureServerSocket` of
+Dart through the interop calls `ListenTLS` and `AcceptTLS`, and the accepted
+connection joins the table of the plain connections. The surface holds no
+`crypto/x509`, thus a `Certificate` keeps the 2 PEM blocks that `X509KeyPair`
+took, and Dart parses them. `AcceptTLS` gives the protocol that ALPN took.
+`httptest.NewTLSServer` and `StartTLS` ride `tls.Listen` with a self signed
+certificate of the loopback address, and `testdata/programs/tlserve` proves
+the parity against `go run`. The other HTTP/2 dependencies stay parked:
+`LocalAddr` and `RemoteAddr` of `net`, HPACK, and the framing. Read decision
+210.
 
 `runtime/goruntime/test/tls_test.dart` proves a handshake, ALPN, a write, and a
 read against a local server. The certificate comes from

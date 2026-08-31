@@ -900,6 +900,19 @@ The plan left these points open. The work took the decisions below.
      target already covers the browser with the 64-bit model, thus the JS
      target serves only a build that must ship plain JS.
 
+210. The TLS server rides `SecureServerSocket` of Dart. `ListenTLS` binds
+     with a security context of 2 PEM blocks and the ALPN list, `AcceptTLS`
+     gives the connection and the protocol that ALPN took, and the accepted
+     connection joins the table of the plain connections, thus each read,
+     each write, and each deadline works on it. A `Certificate` keeps the 2
+     PEM blocks of `X509KeyPair`, because the surface holds no `crypto/x509`
+     and Dart parses PEM. `tls.NewListener` stays out: the secure socket of
+     Dart wraps no open listener, thus `httptest.StartTLS` closes the plain
+     listener and binds a fresh port of the loopback address. The client of
+     `httptest` drops the certificate check, because the surface holds no
+     root pool. The listener of the runtime now holds a close function, thus
+     1 listener class serves the 2 server socket classes of Dart.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a
