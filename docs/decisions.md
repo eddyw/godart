@@ -892,6 +892,14 @@ The plan left these points open. The work took the decisions below.
      the dart:io form, because the analyzer reads that branch. `TestWasm`
      of the driver is the smoke test.
 
+209. The JS integer design stands in `docs/js-integers.md`, and the work
+     waits. The model: the emitted code names `GoInt` in place of the Dart
+     int, a conditional import selects the form, the native form is an
+     extension type over int that erases on the VM, with AOT, and on wasm,
+     and only the JS library holds the pair form of GopherJS. The wasm
+     target already covers the browser with the 64-bit model, thus the JS
+     target serves only a build that must ship plain JS.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a
