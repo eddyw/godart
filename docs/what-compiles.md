@@ -117,7 +117,7 @@ Thus these categories build:
 
 | Gate | What it stops |
 |---|---|
-| `os/exec` | Each program that starts another process. |
+| `os/exec` | Each program that starts another process. Decision 204 holds the survey of the overlay. |
 | `text/template`, `html/template` | Each program that writes a page or a file from a template. |
 | `encoding/xml`, `encoding/gob` | Each program that reads an XML file or a gob stream. |
 | `archive/...`, `compress/bzip2`, `compress/lzw` | Each program that reads a zip file or a tar file. |

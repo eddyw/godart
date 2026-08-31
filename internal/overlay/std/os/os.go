@@ -349,6 +349,7 @@ type fileStat struct {
 	name  string
 	size  int64
 	dir   bool
+	link  bool
 	nanos int64
 }
 
@@ -363,6 +364,9 @@ func (i *fileStat) Sys() any { return nil }
 func (i *fileStat) Mode() FileMode {
 	if i.dir {
 		return ModeDir | 0o755
+	}
+	if i.link {
+		return ModeSymlink | 0o755
 	}
 	return 0o644
 }
@@ -382,9 +386,40 @@ func Stat(name string) (FileInfo, error) {
 	return &fileStat{name: base(name), size: size, dir: dir, nanos: nanos}, nil
 }
 
-// Lstat reads the metadata of a path. Dart follows a symbolic link, thus the
-// result is the result of Stat.
-func Lstat(name string) (FileInfo, error) { return Stat(name) }
+// Lstat reads the metadata of a path, and it follows no symbolic link. The
+// size of a link is the length of its target, and the time of a link is 0,
+// because dart:io gives no metadata of a link itself.
+func Lstat(name string) (FileInfo, error) {
+	size, dir, link, nanos, cause := dart.Lstat(name)
+	if cause != "" {
+		return nil, pathError("lstat", name, cause)
+	}
+	return &fileStat{name: base(name), size: size, dir: dir, link: link, nanos: nanos}, nil
+}
+
+// LinkError names the operation, the 2 paths, and the cause of a failure of a
+// link operation.
+type LinkError struct {
+	Op  string
+	Old string
+	New string
+	Err error
+}
+
+func (e *LinkError) Error() string {
+	return e.Op + " " + e.Old + " " + e.New + ": " + e.Err.Error()
+}
+
+func (e *LinkError) Unwrap() error { return e.Err }
+
+// Symlink makes a symbolic link at newname, and the link points at oldname.
+func Symlink(oldname, newname string) error {
+	cause := dart.Symlink(oldname, newname)
+	if cause == "" {
+		return nil
+	}
+	return &LinkError{Op: "symlink", Old: oldname, New: newname, Err: causeError(cause)}
+}
 
 // dirEntry holds 1 member of a directory. It reads the metadata only when a
 // caller asks for it.
@@ -417,7 +452,8 @@ func (d *dirEntry) Info() (FileInfo, error) {
 	if path != "" && path[len(path)-1] != '/' {
 		path += "/"
 	}
-	info, err := Stat(path + d.name)
+	// Go reads the metadata of the entry itself, and it follows no link there.
+	info, err := Lstat(path + d.name)
 	if err != nil {
 		return nil, err
 	}

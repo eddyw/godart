@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"syscall/dart"
 )
 
 const (
@@ -350,8 +351,56 @@ func sortNames(names []string) {
 	}
 }
 
-// EvalSymlinks gives the path after each symbolic link. The Dart output walks
-// no link, thus the result is the cleaned path. docs/parity.md holds the gap.
+// EvalSymlinks gives the path after each symbolic link. The path must exist.
+//
+// Go walks each element itself, and the result of a relative path stays
+// relative. The Dart side gives the resolved path from the root, thus a
+// relative argument takes Rel against the resolved working directory.
 func EvalSymlinks(path string) (string, error) {
-	return Clean(path), nil
+	resolved, cause := dart.ResolveSymlinks(path)
+	if cause != "" {
+		return "", &fs.PathError{Op: "lstat", Path: path, Err: fs.ErrNotExist}
+	}
+	if IsAbs(path) {
+		return resolved, nil
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return resolved, nil
+	}
+	wdResolved, cause := dart.ResolveSymlinks(wd)
+	if cause != "" {
+		return resolved, nil
+	}
+	rel, err := Rel(wdResolved, resolved)
+	if err != nil {
+		return resolved, nil
+	}
+	return rel, nil
+}
+
+// errInvalidPath names an argument that Localize rejects.
+var errInvalidPath = errors.New("invalid path")
+
+// Localize gives the path of the system for a path with `/` between 2
+// elements. The argument must hold the form that fs.ValidPath accepts.
+func Localize(path string) (string, error) {
+	if !fs.ValidPath(path) {
+		return "", errInvalidPath
+	}
+	for i := 0; i < len(path); i++ {
+		if path[i] == 0 {
+			return "", errInvalidPath
+		}
+	}
+	return path, nil
+}
+
+// HasPrefix reports whether the path starts with the prefix. Go holds the
+// function for old code only, and it respects no element boundary.
+//
+// Deprecated: HasPrefix does not respect path boundaries and
+// does not ignore case when required.
+func HasPrefix(p, prefix string) bool {
+	return strings.HasPrefix(p, prefix)
 }

@@ -95,7 +95,7 @@ The package `fmt` reads it.
 | The stack of a goroutine | Grows without a fixed limit | The Dart VM holds a fixed stack, thus a deep recursion overflows. `stack.go` of the Go repository is such a program. |
 | `runtime.GOROOT` | The root of the Go tree | An empty text. The Dart output holds no such tree. |
 | `debug.SetMaxStack` | Writes the limit of the runtime | Keeps the value only. |
-| `filepath.EvalSymlinks` | Walks each symbolic link | Gives the cleaned path, and walks no link. |
+| `filepath.EvalSymlinks` | Walks each element itself | Asks the system for the resolved path. A relative argument takes `Rel` against the resolved working directory, thus the result stays relative in each usual case. The error of a missing path holds a different text. |
 | A panic of a run time error that recover reads | The value implements `error`, and `Error()` gives the text | Equal. The value carries the description `runtime.errorString`, whose method table holds `Error`. |
 
 ## The subset of the language
@@ -165,7 +165,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `io` | Native |
 | `io/fs` | Overlay | `FileMode`, `FileInfo`, `DirEntry`, `PathError`, `WalkDirFunc`, `SkipDir`, `SkipAll`, and `ValidPath`. No `FS` interface. |
 | `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. Read below. |
-| `path/filepath` | Overlay | The separator is always `/`. `Walk` and `WalkDir` stay out. Read below. | |
+| `path/filepath` | Overlay | The separator is always `/`. Read below. | |
 | `net` | Overlay | TCP, UDP, and a Unix socket. No TLS. Read the section below. |
 | `os` | Overlay | The file access, the temporary names, and the process state. Read the section below. |
 | `path` | Native | |
@@ -314,7 +314,7 @@ point, thus the block analysis of stage 3 stays simple.
 | `FileInfo.Mode` | The permission bits of the system | A directory gives `0755`, and each other file gives `0644`. Dart names no permission bit. |
 | `FileInfo.Sys` | The value of the system | Always nil |
 | `ReadDir`, `File.ReadDir` | Gives a slice of `DirEntry` | Equal. `ReadNames` also gives the names. |
-| `Lstat` | Reads no symbolic link | Reads the link. Dart follows it. |
+| `Lstat` | Follows no symbolic link | Equal. The size of a link is the length of its target, and the time of a link is 0, because `dart:io` gives no metadata of a link itself. |
 | `Stdin`, `Stdout`, `Stderr` | Present | Equal. A read of `Stdin` stops at a newline. |
 | `Getenv`, `LookupEnv`, `Environ` | Present | Equal |
 | `Setenv`, `Unsetenv` | Writes the environment of the process | Writes a map of the overlay. The Dart VM gives no write to the environment of the process, and the subset starts no other process. |
@@ -326,7 +326,8 @@ point, thus the block analysis of stage 3 stays simple.
 | `Args`, `Exit` | Present | Equal. `Args[0]` is the text `gart`. |
 | `IsNotExist`, `ErrNotExist`, `PathError` | Present | Equal |
 | `FileMode` | Holds the permission bits | The type reads each bit. The argument of `Mkdir`, of `WriteFile`, and of `OpenFile` reaches no operation. |
-| `Chmod`, `Chown`, `Symlink`, `Link` | Present | Not present. Dart gives no such call. |
+| `Symlink` | Present | Equal. The error of a failure holds a different text. |
+| `Chmod`, `Chown`, `Link` | Present | Not present. Dart gives no such call. |
 | `os.Pipe`, `os.StartProcess` | Present | Not present |
 
 `fmt` holds `Stringer` and `GoStringer`. The formatter reads the method table of
@@ -356,7 +357,8 @@ Dart names the system only at run time.
 | `Match`, `Abs`, `Rel`, `Glob`, `ErrBadPattern` | Present | Equal |
 | `Separator`, `ListSeparator` | The separator of the system | Always `/` and `:` |
 | `Walk`, `WalkDir`, `SkipDir`, `SkipAll` | Present | Equal |
-| `EvalSymlinks`, `Localize`, `HasPrefix` | Present | Not present |
+| `Localize`, `HasPrefix` | Present | Equal |
+| `EvalSymlinks` | Present | Present. The table of the runtime above holds the 2 gaps. |
 
 ## The network access
 

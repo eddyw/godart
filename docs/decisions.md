@@ -820,6 +820,28 @@ The plan left these points open. The work took the decisions below.
      pointer to an array stays constant, and Go evaluates the operand for no
      result.
 
+203. The symbolic link operations ride 3 synchronous interop calls: `Lstat`,
+     `Symlink`, and `ResolveSymlinks`. `dart:io` gives no metadata of a link
+     itself, thus the size of a link is the length of its target, and the
+     time of a link is 0. `filepath.EvalSymlinks` asks the system for the
+     resolved path, and a relative argument takes `Rel` against the resolved
+     working directory. `DirEntry.Info` of `os.ReadDir` reads `Lstat`, as Go
+     does. The program `symlinkuse` proves the parity against `go run`.
+
+204. The survey of `os/exec` over `Process` of `dart:io`, taken on
+     2026-09-01. The package is possible as an overlay in the pattern of
+     `net`: `Process.start` gives the process, and 6 interop calls carry it.
+     `ProcStart` gives the handle, `ProcWrite` feeds standard input,
+     `ProcRead` and `ProcReadErr` drain the 2 outputs, `ProcWait` blocks for
+     the exit code, and `ProcKill` sends a signal. The 4 stream calls and
+     the wait ride the scheduler, exactly as `ConnRead` does. `Process.start`
+     takes a directory and an environment per process, thus `Cmd.Dir` and
+     `Cmd.Env` work with no write to the process environment. The gaps: no
+     `SysProcAttr`, no process group, `LookPath` cannot read the execute
+     bit because Dart names no permission bit, and `ProcessState` holds the
+     exit code only. The package stays out until a program of the net needs
+     it, and this survey holds the map.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

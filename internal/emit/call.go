@@ -279,6 +279,12 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$writeFile(%s, %s)", args[0], args[1]), true
 	case "Stat":
 		return fmt.Sprintf("$stat(%s)", args[0]), true
+	case "Lstat":
+		return fmt.Sprintf("$lstat(%s)", args[0]), true
+	case "Symlink":
+		return fmt.Sprintf("$symlink(%s, %s)", args[0], args[1]), true
+	case "ResolveSymlinks":
+		return fmt.Sprintf("$resolveSymlinks(%s)", args[0]), true
 	case "Remove":
 		return fmt.Sprintf("$remove(%s)", args[0]), true
 	case "RemoveAll":

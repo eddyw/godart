@@ -493,6 +493,25 @@ func Stat(path string) (int64, bool, int64, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// Lstat reads the metadata of a path, and it follows no symbolic link. The 4
+// values are the size in bytes, the directory flag, the link flag, and the time
+// of the last change in nanoseconds. The size of a link is the length of its
+// target, and the time of a link is 0.
+func Lstat(path string) (int64, bool, bool, int64, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Symlink makes a symbolic link at the path, and the link points at the target.
+func Symlink(target, link string) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ResolveSymlinks gives the path after each symbolic link, from the root. The
+// path must exist.
+func ResolveSymlinks(path string) (string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func Remove(path string) string {
 	panic("syscall/dart needs the gart compiler")
 }

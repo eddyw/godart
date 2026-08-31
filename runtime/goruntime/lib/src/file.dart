@@ -205,6 +205,66 @@ GoString $writeFile(GoString path, Slice<int> data) {
   }
 }
 
+/// Reads the metadata of a path, and it follows no symbolic link. The 4 values
+/// are the size in bytes, the directory flag, the link flag, and the time of
+/// the last change in nanoseconds.
+///
+/// The metadata of a link itself is out of reach in dart:io, thus the size of a
+/// link is the length of its target, and the time of a link is 0.
+(int, bool, bool, int, GoString) $lstat(GoString path) {
+  final String name = path.toDartString();
+  try {
+    final FileSystemEntityType t = FileSystemEntity.typeSync(
+      name,
+      followLinks: false,
+    );
+    if (t == FileSystemEntityType.notFound) {
+      return (
+        0,
+        false,
+        false,
+        0,
+        GoString.fromString('$name: no such file or directory'),
+      );
+    }
+    if (t == FileSystemEntityType.link) {
+      final String target = Link(name).targetSync();
+      return (target.length, false, true, 0, _empty);
+    }
+    final FileStat s = FileStat.statSync(name);
+    final bool dir = s.type == FileSystemEntityType.directory;
+    return (
+      s.size,
+      dir,
+      false,
+      s.modified.microsecondsSinceEpoch * 1000,
+      _empty,
+    );
+  } catch (e) {
+    return (0, false, false, 0, _cause(e));
+  }
+}
+
+/// Makes a symbolic link at the path, and the link points at the target.
+GoString $symlink(GoString target, GoString link) {
+  try {
+    Link(link.toDartString()).createSync(target.toDartString());
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+/// Gives the path after each symbolic link, from the root. The path must exist.
+(GoString, GoString) $resolveSymlinks(GoString path) {
+  try {
+    final String out = File(path.toDartString()).resolveSymbolicLinksSync();
+    return (GoString.fromString(out), _empty);
+  } catch (e) {
+    return (_empty, _cause(e));
+  }
+}
+
 GoString $remove(GoString path) {
   final String name = path.toDartString();
   try {
