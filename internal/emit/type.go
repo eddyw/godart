@@ -113,6 +113,9 @@ func basicType(t *types.Basic) string {
 	case types.UnsafePointer:
 		return "Object?"
 	}
+	if t.Info()&types.IsComplex != 0 {
+		return "GoComplex"
+	}
 	if t.Info()&types.IsInteger != 0 {
 		return "int"
 	}
@@ -184,6 +187,8 @@ func (e *emitter) zero(t types.Type) string {
 			return "GoString.empty"
 		case u.Info()&types.IsFloat != 0:
 			return "0.0"
+		case u.Info()&types.IsComplex != 0:
+			return "GoComplex.zero"
 		case u.Info()&types.IsInteger != 0:
 			return "0"
 		}
@@ -592,6 +597,11 @@ func isInteger(t types.Type) bool {
 	return b != nil && b.Info()&types.IsInteger != 0
 }
 
+func isComplexType(t types.Type) bool {
+	b := basicOf(t)
+	return b != nil && b.Info()&types.IsComplex != 0
+}
+
 func isFloat(t types.Type) bool {
 	b := basicOf(t)
 	return b != nil && b.Info()&types.IsFloat != 0
@@ -777,6 +787,8 @@ func mask(t types.Type) string {
 		return "$u32"
 	case types.Float32:
 		return "$f32"
+	case types.Complex64:
+		return "$c64"
 	}
 	return ""
 }
@@ -821,6 +833,10 @@ func basicDict(b *types.Basic) string {
 		return "$dictFloat32"
 	case types.Float64, types.UntypedFloat:
 		return "$dictFloat64"
+	case types.Complex64:
+		return "$dictComplex64"
+	case types.Complex128, types.UntypedComplex:
+		return "$dictComplex128"
 	}
 	return ""
 }

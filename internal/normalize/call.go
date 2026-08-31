@@ -235,6 +235,9 @@ func (b *builder) builtin(e *ast.CallExpr, fn string) ir.Expr {
 	case "append":
 		out := &ir.Builtin{Name: fn, Type: t, Spread: e.Ellipsis.IsValid()}
 		slice, _ := typeset.Core(t).(*types.Slice)
+		if b.spreadBuiltin(out, e) {
+			return out
+		}
 		out.Args = append(out.Args, b.expr(e.Args[0]))
 		for _, a := range e.Args[1:] {
 			if out.Spread {

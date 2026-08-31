@@ -176,6 +176,8 @@ func (e *emitter) constant(v constant.Value, t types.Type) string {
 	case isFloat(t):
 		f, _ := constant.Float64Val(constant.ToFloat(v))
 		return floatConst(f)
+	case isComplexType(t):
+		return complexConst(v, t)
 	case isInteger(t):
 		return intConst(v, t)
 	}
@@ -184,6 +186,19 @@ func (e *emitter) constant(v constant.Value, t types.Type) string {
 	}
 	e.fail("the constant %s has no Dart form", v)
 	return "null"
+}
+
+// complexConst writes a complex constant. A constant of complex64 rounds each
+// part to 32 bits, exactly as the go compiler does.
+func complexConst(v constant.Value, t types.Type) string {
+	c := constant.ToComplex(v)
+	re, _ := constant.Float64Val(constant.Real(c))
+	im, _ := constant.Float64Val(constant.Imag(c))
+	if b := basicOf(t); b != nil && b.Kind() == types.Complex64 {
+		re = float64(float32(re))
+		im = float64(float32(im))
+	}
+	return fmt.Sprintf("GoComplex(%s, %s)", floatConst(re), floatConst(im))
 }
 
 func intConst(v constant.Value, t types.Type) string {
@@ -477,12 +492,12 @@ func (e *emitter) binary(x *ir.Binary) string {
 		}
 		return e.narrow(t, fmt.Sprintf("$mod(%s, %s)", left, right))
 	case token.SHL:
-		return e.narrow(t, fmt.Sprintf("$shl(%s, %s)", left, right))
+		return e.narrow(t, fmt.Sprintf("$shl(%s, %s)", left, e.shiftCount(x.Y)))
 	case token.SHR:
 		if isUnsigned(t) {
-			return e.narrow(t, fmt.Sprintf("$ushr(%s, %s)", left, right))
+			return e.narrow(t, fmt.Sprintf("$ushr(%s, %s)", left, e.shiftCount(x.Y)))
 		}
-		return e.narrow(t, fmt.Sprintf("$shr(%s, %s)", left, right))
+		return e.narrow(t, fmt.Sprintf("$shr(%s, %s)", left, e.shiftCount(x.Y)))
 	case token.AND_NOT:
 		return e.narrow(t, fmt.Sprintf("(%s & ~%s)", left, right))
 	case token.ADD:
@@ -491,6 +506,26 @@ func (e *emitter) binary(x *ir.Binary) string {
 		}
 	}
 	return e.narrow(t, fmt.Sprintf("(%s %s %s)", left, x.Op.String(), right))
+}
+
+// shiftCount writes the right operand of a shift. An untyped constant count
+// can hold the float kind or the complex kind, and the operation needs the
+// int form of its value. A constant count of 64 or more takes the text 64: a
+// Dart int holds 64 bits, thus the 2 counts give 1 result, and the unsigned
+// form of a large count would read as a negative int.
+func (e *emitter) shiftCount(y ir.Expr) string {
+	c, ok := y.(*ir.Const)
+	if !ok {
+		return e.expr(y)
+	}
+	i := constant.ToInt(c.Value)
+	if constant.Compare(i, token.GEQ, constant.MakeInt64(64)) {
+		return "64"
+	}
+	if isFloat(c.Type) || isComplexType(c.Type) {
+		return intConst(c.Value, types.Typ[types.Int])
+	}
+	return e.expr(y)
 }
 
 // compare writes an ordered comparison. A string compares by byte, and a 64 bit

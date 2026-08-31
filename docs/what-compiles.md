@@ -44,7 +44,7 @@ of each other package with a source position.
 | Gate | Effect |
 |---|---|
 | `unsafe` and cgo | Rejected |
-| A complex number | Rejected |
+| A complex number | Present. The runtime class GoComplex holds it. |
 | The address of a value behind a pointer, for example `&*p` | Rejected. Read `p`. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 

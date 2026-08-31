@@ -11,6 +11,7 @@ export 'src/args.dart';
 export 'src/array.dart';
 export 'src/box.dart';
 export 'src/chan.dart';
+export 'src/complex.dart';
 export 'src/dict.dart';
 export 'src/file.dart';
 export 'src/format.dart';

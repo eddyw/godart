@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'complex.dart';
 import 'iface.dart';
 import 'int.dart';
 import 'string.dart';
@@ -83,6 +84,12 @@ bool _equalBool(bool a, bool b) => a == b;
 int _hashBool(bool v) => v.hashCode;
 List<bool> _allocBool(int n) => List<bool>.filled(n, false);
 
+GoComplex _zeroComplex() => GoComplex.zero;
+bool _equalComplex(GoComplex a, GoComplex b) => a == b;
+int _hashComplex(GoComplex v) => v.hashCode;
+List<GoComplex> _allocComplex(int n) =>
+    List<GoComplex>.filled(n, GoComplex.zero);
+
 GoString _zeroString() => GoString.empty;
 bool _equalString(GoString a, GoString b) => a == b;
 int _hashString(GoString v) => v.hashCode;
@@ -144,6 +151,26 @@ const Dict<bool> $dictBool = Dict<bool>(
   $unordered<bool>,
   $identity<bool>,
   $typeBool,
+);
+
+const Dict<GoComplex> $dictComplex64 = Dict<GoComplex>(
+  _zeroComplex,
+  _equalComplex,
+  _hashComplex,
+  _allocComplex,
+  $unordered<GoComplex>,
+  $c64,
+  $typeComplex64,
+);
+
+const Dict<GoComplex> $dictComplex128 = Dict<GoComplex>(
+  _zeroComplex,
+  _equalComplex,
+  _hashComplex,
+  _allocComplex,
+  $unordered<GoComplex>,
+  $identity<GoComplex>,
+  $typeComplex128,
 );
 
 const Dict<GoString> $dictString = Dict<GoString>(

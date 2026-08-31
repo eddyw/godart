@@ -43,7 +43,6 @@ clear error and a source position. The verifier rejects:
 - An import of the `unsafe` package, and all cgo code. A blank import of
   `unsafe` stays in the subset, because such an import performs no operation.
 - A call to `recover`.
-- A complex number, and the builtins `complex`, `real`, and `imag`.
 - The address of a field, of an element, and of the result of a call. Only a
   variable holds a box. Read the "Pointers" section.
 - An index, a slice expression, a range loop, `len`, and `cap` on a type
@@ -140,8 +139,11 @@ list, because it is the authority.
 
 - `float64` maps to the Dart `double`.
 - For `float32`: round the value to 32-bit precision after each operation.
-- `complex64` and `complex128` map to a runtime class. This class stays open,
-  thus stage 2 rejects a complex number for now.
+- `complex64` and `complex128` map to the runtime class `GoComplex`. The class
+  holds 2 doubles and the Dart operators, and the division is the algorithm of
+  Smith with the corrections of C99, as in the Go runtime. For `complex64`:
+  round the 2 parts with `$c64` after each operation, exactly as `float32`
+  rounds with `$f32`. Read decision 207.
 
 ### Strings
 
@@ -324,8 +326,6 @@ The `goruntime` package holds:
 - `$releases`, the list of releases that the scheduler runs when package main
   returns. Go ends the process at that point, and an open socket of Dart keeps
   the isolate alive. The network library adds 1 release.
-
-The complex number class stays open. Stage 2 rejects a complex number.
 
 All state in the runtime library is per isolate.
 

@@ -496,12 +496,13 @@ with 4 patches that remove a deferred recover. Read decision 148.
 under a cap of 2 minutes. A file outside the subset skips with the rejection
 of stage 2.
 
-The state of 2026-09-01, after the fifth session: 669 files match, and no
-run differs. 229 files stand outside the subset, most through `unsafe`, and
-the parts of `runtime` and `reflect` that the surface omits. `chanlinear`
-measures time, and it can fail 1 time under a heavy parallel load.
-`goTestSkips` names the 33 runs that the net holds back, each with its
-cause. The groups:
+The state of 2026-09-01, after the sixth session: 682 files match, and no
+run differs. The complex numbers and the source map work of that day
+unlocked 13 files. 217 files stand outside the subset, most through
+`unsafe`, and the parts of `runtime` and `reflect` that the surface omits.
+`chanlinear` measures time, and it can fail 1 time under a heavy parallel
+load. `goTestSkips` names the 32 runs that the net holds back, each with
+its cause. The groups:
 
 | Group | Files | Cause |
 |---|---|---|

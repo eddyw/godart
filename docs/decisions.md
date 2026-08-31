@@ -868,6 +868,18 @@ The plan left these points open. The work took the decisions below.
      the TraceFrame members of each frame class, and each wait frame of the
      runtime names its reason.
 
+207. A complex number maps to the runtime class GoComplex, with 2 doubles
+     and the Dart operators, thus the emitter writes a plain operation. The
+     division holds the algorithm of Smith with the corrections of C99, as
+     complex128div of the Go runtime does. `complex64` rounds the 2 parts
+     with `$c64` after each operation, and a constant of it rounds at the
+     emit. The builtins map to `.re`, `.im`, and the constructor. The class
+     overrides the equality and the hash, thus a complex value works as a
+     map key. `fmt` writes the `(1+2i)` form for the verbs `v`, `f`, `e`,
+     and `g`, and the other verbs of Go for a complex value stay out. The
+     program `complexuse` proves the parity, the division edges included.
+     This decision closes the plan of decision 16.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

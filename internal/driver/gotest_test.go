@@ -38,6 +38,7 @@ var goTestSkips = map[string]string{
 	"fixedbugs/bug352":     "2 values with no size take 2 cells, and gc gives them 1 address",
 	"fixedbugs/issue75764": "the Dart VM holds a fixed stack, and the recursion overflows",
 	"fixedbugs/issue13169": "the run holds 100000 channel rounds with a deep stack, and it needs more than the cap",
+	"maplinear":            "the range loop snapshots the keys, thus a loop that starts n times over a map that shrinks takes square time",
 	"fixedbugs/issue34395": "a global array of 100 MB fills element by element, and the run needs more than the cap",
 	"fixedbugs/issue78081": "the run holds 1600000 rounds of a byte append, and it needs more than the cap",
 

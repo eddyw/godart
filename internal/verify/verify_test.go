@@ -133,9 +133,9 @@ func TestNew(t *testing.T) {
 }
 
 func TestComplex(t *testing.T) {
-	reject(t, "variable", "rejects the type complex128", `func f() { var c complex128; _ = c }`)
-	reject(t, "builtin", "rejects the builtin complex", `func f() { _ = complex(1.0, 2.0) }`)
-	reject(t, "real", "rejects the builtin real", `func f(c complex64) { _ = real(c) }`)
+	accept(t, "variable", `func f() { var c complex128; _ = c }`)
+	accept(t, "builtin", `func f() { _ = complex(1.0, 2.0) }`)
+	accept(t, "real", `func f(c complex64) { _ = real(c) }`)
 	accept(t, "float", `func f() { var x float64; _ = x }`)
 }
 

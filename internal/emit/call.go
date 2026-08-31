@@ -855,10 +855,22 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 		return "null"
 	case "mapkeys":
 		return e.expr(x.Args[0]) + ".keys()"
+	case "mapvals":
+		return e.expr(x.Args[0]) + ".values()"
+	case "mapclears":
+		return e.expr(x.Args[0]) + ".clearCount"
 	case "close":
 		return e.chanExpr(x.Args[0]) + ".close()"
 	case "maphas":
 		return fmt.Sprintf("%s.has(%s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
+	case "real":
+		return fmt.Sprintf("%s.re", e.expr(x.Args[0]))
+	case "imag":
+		return fmt.Sprintf("%s.im", e.expr(x.Args[0]))
+	case "complex":
+		// The 2 parts of a complex64 value hold 32 bits already, thus the
+		// construction needs no second rounding.
+		return fmt.Sprintf("GoComplex(%s, %s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
 	}
 	e.fail("the builtin %s has no Dart form yet", x.Name)
 	return "null"
@@ -921,6 +933,21 @@ func (e *emitter) capacity(x ir.Expr) string {
 func (e *emitter) mapNew(m *types.Map) string {
 	base := fmt.Sprintf("GoMap<%s, %s>(() => %s",
 		e.dartType(m.Key()), e.dartType(m.Elem()), e.zero(m.Elem()))
+	// A pointer compares by identity in Go. A pointer to a struct is the Dart
+	// object of the struct, and the class compares the fields, thus such a
+	// key needs the identity of Dart.
+	if p, ok := typeset.Core(m.Key()).(*types.Pointer); ok && isStructType(p.Elem()) {
+		return base + ", equals: identical, hashCode: identityHashCode)"
+	}
+	// A NaN key never compares equal, thus each write of one adds an entry,
+	// and a read of one finds nothing. The map of Dart takes 2 identical
+	// doubles as 1 key, thus a float key and a complex key need the plain
+	// equality. Each NaN takes a fresh hash, and GoMap.nanHash tells the
+	// cause.
+	if isFloat(m.Key()) || isComplexType(m.Key()) {
+		return base + ", equals: ($ka, $kb) => $ka == $kb, " +
+			"hashCode: ($k) => $k == $k ? $k.hashCode : GoMap.nanHash())"
+	}
 	if _, ok := typeset.Core(m.Key()).(*types.Array); !ok {
 		return base + ")"
 	}
@@ -1143,6 +1170,8 @@ func (e *emitter) conv(x *ir.Conv) string {
 	case isInteger(to) && isFloat(from):
 		return e.narrow(to, fmt.Sprintf("%s.toInt()", text))
 	case isFloat(to) && isFloat(from):
+		return e.narrow(to, text)
+	case isComplexType(to) && isComplexType(from):
 		return e.narrow(to, text)
 	case isInteger(to) && isInteger(from):
 		return e.narrow(to, text)

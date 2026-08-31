@@ -640,6 +640,10 @@ func basicDesc(b *types.Basic) string {
 		return "$typeFloat32"
 	case types.Float64, types.UntypedFloat:
 		return "$typeFloat64"
+	case types.Complex64:
+		return "$typeComplex64"
+	case types.Complex128, types.UntypedComplex:
+		return "$typeComplex128"
 	}
 	return ""
 }

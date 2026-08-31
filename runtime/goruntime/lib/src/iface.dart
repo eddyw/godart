@@ -1,3 +1,4 @@
+import 'complex.dart';
 import 'dict.dart';
 import 'panic.dart';
 import 'string.dart';
@@ -167,6 +168,7 @@ Object? $zeroInt() => 0;
 Object? $zeroFloat() => 0.0;
 Object? $zeroBool() => false;
 Object? $zeroString() => GoString.empty;
+Object? $zeroComplex() => GoComplex.zero;
 
 const TypeDesc $typeBool = TypeDesc(
   'bool',
@@ -251,6 +253,18 @@ const TypeDesc $typeFloat64 = TypeDesc(
   'float64',
   <String, Function>{},
   zero: $zeroFloat,
+);
+const TypeDesc $typeComplex64 = TypeDesc(
+  'complex64',
+  'complex64',
+  <String, Function>{},
+  zero: $zeroComplex,
+);
+const TypeDesc $typeComplex128 = TypeDesc(
+  'complex128',
+  'complex128',
+  <String, Function>{},
+  zero: $zeroComplex,
 );
 const TypeDesc $typeString = TypeDesc(
   'string',

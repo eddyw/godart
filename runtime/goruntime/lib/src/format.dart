@@ -1,4 +1,5 @@
 import 'box.dart';
+import 'complex.dart';
 import 'iface.dart';
 import 'int.dart';
 import 'map.dart';
@@ -236,6 +237,9 @@ String _value(Object? v, TypeDesc type, String verb) {
         plus,
         letter,
       );
+    case 'complex64':
+    case 'complex128':
+      return _complex(v as GoComplex, type.kind, letter, verb);
     case 'uint':
     case 'uint64':
     case 'uintptr':
@@ -376,6 +380,24 @@ String _float(double v, String letter, int precision, bool single) {
       return '%!d(float64=${$fstring(v)})';
   }
   return '%!$letter(float64=${$fstring(v)})';
+}
+
+/// The text of a complex number, in the form (1+2i) of Go. The imaginary part
+/// always carries a sign.
+String _complex(GoComplex c, String kind, String letter, String verb) {
+  switch (letter) {
+    case 'v':
+    case 'g':
+    case 'f':
+    case 'e':
+      final bool single = kind == 'complex64';
+      final int precision = _precision(verb);
+      final String re = _float(c.re, letter, precision, single);
+      String im = _float(c.im, letter, precision, single);
+      if (!im.startsWith('-') && !im.startsWith('+')) im = '+$im';
+      return '($re${im}i)';
+  }
+  return '%!$letter($kind=${_complex(c, kind, 'v', 'v')})';
 }
 
 String _exponent(double v, int digits) {

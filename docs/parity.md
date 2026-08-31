@@ -117,7 +117,7 @@ The package `fmt` reads it.
 | A method value of an interface value, for example `r.Read` | Present. The closure holds the value, and each call reads the method table. |
 | A range loop over a function | Present. Read the section below. |
 | A deferred call that can block | Present. The chain of the deferred calls holds states of its own. |
-| A complex number and the builtins `complex`, `real`, and `imag` | Rejected |
+| A complex number and the builtins `complex`, `real`, and `imag` | Present. Each operation of `complex64` rounds the 2 parts to 32 bits. The division is the division of the Go runtime. `fmt` writes the `(1+2i)` form for the verbs `v`, `f`, `e`, and `g`. |
 | A type declaration inside a function, of a struct type | Present. It takes the class of its shape. |
 | A type declaration inside a function, of another type | Present. It takes the Dart form of its underlying type. |
 | A method expression, for example `(*T).M` | Present. The value is a closure whose first parameter is the receiver. |

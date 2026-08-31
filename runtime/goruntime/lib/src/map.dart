@@ -56,7 +56,30 @@ final class GoMap<K, V> {
 
   bool has(K key) => _entries.containsKey(key);
 
-  void clear() => _entries.clear();
+  void clear() {
+    _entries.clear();
+    clearCount++;
+  }
+
+  /// The count of the clear calls. A NaN key never reads back, and only a
+  /// clear removes its entry, thus a range loop compares this count to see
+  /// whether such an entry still stands.
+  int clearCount = 0;
+
+  /// The values at the start of a range loop, in the order of [keys]. A NaN
+  /// key never reads back, thus the loop takes its value from this snapshot.
+  Slice<V> values() => Slice.of(_entries.values.toList());
+
+  /// A fresh hash for a NaN key. Each NaN entry stands alone, thus 1 shared
+  /// hash would put each one into 1 bucket, and the map would grow in square
+  /// time. The Go runtime also spreads NaN with random bits. A NaN key never
+  /// reads back, thus the lookup needs no stable hash.
+  static int nanHash() {
+    _nanSeed = _nanSeed * 6364136223846793005 + 1442695040888963407;
+    return _nanSeed >>> 33;
+  }
+
+  static int _nanSeed = 0x9e3779b97f4a7c15;
 
   /// The keys at the start of a range loop. Go does not give a key that the
   /// body removes, thus the loop reads the map again for each key.

@@ -87,26 +87,8 @@ func (v *verifier) visit(n ast.Node) bool {
 		}
 	case *ast.CallExpr:
 		v.checkCall(n)
-	case *ast.Ident:
-		v.checkComplex(n)
 	}
 	return true
-}
-
-// checkComplex rejects a complex number. The runtime library holds no complex
-// class yet, thus the emitter would write a value with no type.
-func (v *verifier) checkComplex(e *ast.Ident) {
-	t := v.typeOf(e)
-	if t == nil || !isComplex(t) {
-		return
-	}
-	v.reject(e.Pos(), "the runtime library holds no complex class",
-		"the compiler rejects the type %s", types.TypeString(t, nil))
-}
-
-func isComplex(t types.Type) bool {
-	b, ok := types.Unalias(t).Underlying().(*types.Basic)
-	return ok && b.Info()&types.IsComplex != 0
 }
 
 func isFloat(t types.Type) bool {
@@ -250,9 +232,6 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 		return
 	}
 	switch b.Name() {
-	case "complex", "real", "imag":
-		v.reject(call.Pos(), "the runtime library holds no complex class",
-			"the compiler rejects the builtin %s", b.Name())
 	case "len", "cap", "print", "println":
 		v.checkTypeParamBuiltin(call, b.Name())
 	}
