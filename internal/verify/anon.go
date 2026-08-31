@@ -184,4 +184,3 @@ func (v *verifier) checkParamStruct(n *ast.StructType) {
 		}
 	}
 }
-

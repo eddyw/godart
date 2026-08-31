@@ -490,7 +490,7 @@ under a cap of 2 minutes. A file outside the subset skips with the rejection
 of stage 2.
 
 The state of 2026-08-31, after the fourth session: 592 files match, and no
-run differs. 71 of the top level, 109 of typeparam, and 412 of fixedbugs.
+run differs. 70 of the top level, 109 of typeparam, and 413 of fixedbugs.
 317 files stand outside the subset, most through `recover`, `unsafe`, and
 the parts of `runtime` and `reflect` that the surface omits. `chanlinear`
 measures time, and it can fail 1 time under a heavy parallel load.
