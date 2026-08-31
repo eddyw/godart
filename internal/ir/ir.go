@@ -513,6 +513,11 @@ type (
 		Args   []Expr
 		Type   types.Type
 		Spread bool
+
+		// Results holds a call whose results feed each argument, exactly as
+		// the field of the same name on Call does.
+		Results    Expr
+		ResultsVar string
 	}
 
 	Binary struct {

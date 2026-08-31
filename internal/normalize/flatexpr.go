@@ -49,7 +49,12 @@ func (f *flat) value(x ir.Expr) ir.Expr {
 	case *ir.Composite:
 		return &ir.Composite{Keys: x.Keys, Elems: f.operands(x.Elems), Type: x.Type}
 	case *ir.Builtin:
-		return &ir.Builtin{Name: x.Name, Args: f.operands(x.Args), Type: x.Type, Spread: x.Spread}
+		out := &ir.Builtin{Name: x.Name, Args: f.operands(x.Args),
+			Type: x.Type, Spread: x.Spread, ResultsVar: x.ResultsVar}
+		if x.Results != nil {
+			out.Results = f.value(x.Results)
+		}
+		return out
 	case *ir.Record:
 		return &ir.Record{Elems: f.operands(x.Elems), Type: x.Type}
 	case *ir.RecordField:
@@ -440,7 +445,7 @@ func blocksExpr(x ir.Expr) bool {
 	case *ir.Composite:
 		return blocksAny(x.Elems) || blocksAny(x.Keys)
 	case *ir.Builtin:
-		return blocksAny(x.Args)
+		return blocksExpr(x.Results) || blocksAny(x.Args)
 	case *ir.Record:
 		return blocksAny(x.Elems)
 	case *ir.RecordField:

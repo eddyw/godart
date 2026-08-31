@@ -99,7 +99,7 @@ func (e *emitter) stmtOne(s ir.Stmt) {
 	case *ir.Defer:
 		e.line("$defer.push(() => %s);", e.expr(s.Call))
 	case *ir.Send:
-		e.line("%s.send(%s);", e.expr(s.Chan), e.expr(s.Value))
+		e.line("%s.send(%s);", e.chanExpr(s.Chan), e.expr(s.Value))
 	case *ir.Go:
 		e.goStmt(s)
 	case *ir.Jump:
@@ -279,12 +279,20 @@ func (e *emitter) goStmt(s *ir.Go) {
 func (e *emitter) ifStmt(s *ir.If) {
 	e.line("if (%s) {", e.expr(s.Cond))
 	e.list(s.Then.List)
-	if s.Else == nil {
-		e.line("}")
-		return
+	for s.Else != nil {
+		next, ok := s.Else.(*ir.If)
+		if !ok {
+			e.line("} else {")
+			e.stmt(s.Else)
+			break
+		}
+		// A chain of else-if branches stays flat, because the Dart front end
+		// caps the nesting of a statement.
+		e.mark(next.Pos)
+		e.line("} else if (%s) {", e.expr(next.Cond))
+		e.list(next.Then.List)
+		s = next
 	}
-	e.line("} else {")
-	e.stmt(s.Else)
 	e.line("}")
 }
 

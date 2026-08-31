@@ -4,6 +4,8 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // checkExported rejects an unnamed struct type with an unexported field in an
@@ -156,4 +158,54 @@ func exportedFieldAnon(st *types.Struct, seen map[types.Type]bool) bool {
 		}
 	}
 	return false
+}
+
+// checkParamStruct rejects a struct type that reads a type parameter without
+// the name of a package level generic type. The class of such a shape stands
+// at package level, and that class cannot name the parameter.
+func (v *verifier) checkParamStruct(n *ast.StructType) {
+	if n == v.genericStruct || v.typeTargets[n] {
+		return
+	}
+	tv, ok := v.info.Types[n]
+	if !ok {
+		return
+	}
+	st, ok := tv.Type.(*types.Struct)
+	if !ok {
+		return
+	}
+	for i := 0; i < st.NumFields(); i++ {
+		if typeset.HoldsParam(st.Field(i).Type()) {
+			v.reject(n.Pos(), "the class of a struct shape stands at package level",
+				"the field %s reads a type parameter, and only a package level generic type holds one",
+				st.Field(i).Name())
+			return
+		}
+	}
+}
+
+// checkFieldClash rejects a generic struct type with a field whose name
+// equals the name of a type parameter. The Dart class holds the 2 names in 1
+// scope.
+func (v *verifier) checkFieldClash(n *ast.TypeSpec) {
+	st, ok := n.Type.(*ast.StructType)
+	if !ok {
+		return
+	}
+	params := map[string]bool{}
+	for _, f := range n.TypeParams.List {
+		for _, id := range f.Names {
+			params[id.Name] = true
+		}
+	}
+	for _, f := range st.Fields.List {
+		for _, id := range f.Names {
+			if params[id.Name] {
+				v.reject(id.Pos(), "the Dart class holds the field and the type parameter in 1 scope",
+					"the field %s of the type %s shares the name of a type parameter",
+					id.Name, n.Name.Name)
+			}
+		}
+	}
 }

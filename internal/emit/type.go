@@ -5,6 +5,7 @@ import (
 	"go/types"
 	"strings"
 
+	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
 	"github.com/eddyw/godart/internal/typeset"
 )
@@ -50,7 +51,7 @@ func (e *emitter) dartType(t types.Type) string {
 		if set, ok := typeset.Describe(t); ok && set.Integer {
 			return "int"
 		}
-		return name.Local(t.Obj().Name())
+		return typeParamName(t)
 	case *types.Pointer:
 		// The Dart form of a pointer to a type parameter follows the type
 		// argument: a pointer to a struct is the object itself, and each other
@@ -82,6 +83,16 @@ func (e *emitter) dartType(t types.Type) string {
 	}
 	e.fail("the type %s is outside the subset", t)
 	return "Object?"
+}
+
+// typeParamName gives the Dart name of a type parameter. A blank parameter
+// takes its position, because Dart holds no wildcard type parameter, and a
+// method can name the parameter of its receiver type with a blank.
+func typeParamName(tp *types.TypeParam) string {
+	if tp.Obj().Name() == "_" {
+		return fmt.Sprintf("$T%d", tp.Index())
+	}
+	return name.Local(tp.Obj().Name())
 }
 
 func basicType(t *types.Basic) string {
@@ -176,17 +187,56 @@ func (e *emitter) zero(t types.Type) string {
 		return e.makeArray(u)
 	case *types.Map:
 		return fmt.Sprintf("GoMap<%s, %s>.nil(() => %s)",
-			e.dartType(u.Key()), e.dartType(u.Elem()), e.zero(u.Elem()))
+			e.dartType(u.Key()), e.dartType(u.Elem()), e.cycleZero(u.Elem()))
 	case *types.Chan:
 		if !holdsTypeParam(u.Elem()) {
 			return e.nilChan(u.Elem())
 		}
-		return fmt.Sprintf("Chan<%s>.nil(() => %s)", e.dartType(u.Elem()), e.zero(u.Elem()))
+		return fmt.Sprintf("Chan<%s>.nil(() => %s)", e.dartType(u.Elem()), e.cycleZero(u.Elem()))
 	case *types.Pointer, *types.Signature, *types.Interface:
 		return "null"
 	}
 	e.fail("the type %s has no zero value in the subset", t)
 	return "null"
+}
+
+// cycleZero gives the zero of an element type inside a zero closure. The Dart
+// type of a type that names itself erases to Object?, thus null is its zero,
+// and the text of the true zero has no end.
+func (e *emitter) cycleZero(t types.Type) string {
+	if n, ok := types.Unalias(t).(*types.Named); ok && e.cyclic(n.Obj()) {
+		return "null"
+	}
+	return e.zero(t)
+}
+
+// coreDispatch reports whether a method call on a type parameter with this
+// core type goes through the method table. A struct core gives a Dart class
+// with the method as a member, and each other core erases the method.
+func coreDispatch(core types.Type) bool {
+	if core == nil {
+		return true
+	}
+	switch core.(type) {
+	case *types.Struct, *types.Pointer:
+		return false
+	}
+	return true
+}
+
+// chanExpr writes a channel expression for a member call. The Dart type of a
+// type that names itself erases to Object?, thus the call needs the real
+// channel type back.
+func (e *emitter) chanExpr(x ir.Expr) string {
+	text := e.expr(x)
+	if e.dartType(x.GoType()) != "Object?" {
+		return text
+	}
+	ch, ok := typeset.Core(x.GoType()).(*types.Chan)
+	if !ok {
+		return text
+	}
+	return fmt.Sprintf("(%s as Chan<%s>)", text, e.dartType(ch.Elem()))
 }
 
 func (e *emitter) makeArray(a *types.Array) string {
@@ -269,7 +319,7 @@ func (e *emitter) dictArgs(args *types.TypeList) []string {
 func (e *emitter) dictOf(t types.Type) string {
 	u := types.Unalias(t)
 	if tp, ok := u.(*types.TypeParam); ok {
-		return "$d" + name.Local(tp.Obj().Name())
+		return "$d" + typeParamName(tp)
 	}
 	if b, ok := u.Underlying().(*types.Basic); ok {
 		// A named type takes the dictionary of its underlying type only when
@@ -696,47 +746,7 @@ func mask(t types.Type) string {
 // holdsTypeParam reports whether a type reads a type parameter. A value of such
 // a type takes no variable at package level.
 func holdsTypeParam(t types.Type) bool {
-	found := false
-	var walk func(types.Type)
-	seen := map[types.Type]bool{}
-	walk = func(t types.Type) {
-		if t == nil || found || seen[t] {
-			return
-		}
-		seen[t] = true
-		switch t := types.Unalias(t).(type) {
-		case *types.TypeParam:
-			found = true
-		case *types.Slice:
-			walk(t.Elem())
-		case *types.Array:
-			walk(t.Elem())
-		case *types.Pointer:
-			walk(t.Elem())
-		case *types.Chan:
-			walk(t.Elem())
-		case *types.Map:
-			walk(t.Key())
-			walk(t.Elem())
-		case *types.Named:
-			for i := 0; i < t.TypeArgs().Len(); i++ {
-				walk(t.TypeArgs().At(i))
-			}
-		case *types.Struct:
-			for i := 0; i < t.NumFields(); i++ {
-				walk(t.Field(i).Type())
-			}
-		case *types.Signature:
-			for i := 0; i < t.Params().Len(); i++ {
-				walk(t.Params().At(i).Type())
-			}
-			for i := 0; i < t.Results().Len(); i++ {
-				walk(t.Results().At(i).Type())
-			}
-		}
-	}
-	walk(t)
-	return found
+	return typeset.HoldsParam(t)
 }
 
 // basicDict names the dictionary of a predeclared type. The runtime library

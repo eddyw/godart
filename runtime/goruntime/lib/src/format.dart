@@ -361,13 +361,38 @@ String _float(double v, String letter, int precision, bool single) {
     case 'f':
       if (v.isNaN) return 'NaN';
       if (v.isInfinite) return v > 0 ? '+Inf' : '-Inf';
-      return v.toStringAsFixed(precision < 0 ? 6 : precision);
+      if (precision < 0) {
+        // Go writes the shortest fixed text with no exponent.
+        return _expandExponent(single ? $f32string(v) : $fstring(v));
+      }
+      return v.toStringAsFixed(precision);
     case 'e':
       return _exponent(v, precision < 0 ? 6 : precision);
     case 'd':
       return '%!d(float64=${$fstring(v)})';
   }
   return '%!$letter(float64=${$fstring(v)})';
+}
+
+/// The fixed form of a shortest text that holds an exponent.
+String _expandExponent(String text) {
+  final int e = text.indexOf('e');
+  if (e < 0) return text;
+  String mant = text.substring(0, e);
+  final int exp = int.parse(text.substring(e + 1));
+  String sign = '';
+  if (mant.startsWith('-')) {
+    sign = '-';
+    mant = mant.substring(1);
+  }
+  final int dot = mant.indexOf('.');
+  final String digits = dot < 0
+      ? mant
+      : mant.substring(0, dot) + mant.substring(dot + 1);
+  final int point = (dot < 0 ? mant.length : dot) + exp;
+  if (point <= 0) return '${sign}0.${'0' * -point}$digits';
+  if (point >= digits.length) return sign + digits.padRight(point, '0');
+  return '$sign${digits.substring(0, point)}.${digits.substring(point)}';
 }
 
 String _exponent(double v, int digits) {

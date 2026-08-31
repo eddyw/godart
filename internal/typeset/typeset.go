@@ -47,11 +47,16 @@ func walk(iface *types.Interface, out *[]types.Type, depth int) bool {
 				}
 				*out = append(*out, term.Type())
 			}
-		case *types.Interface:
-			if !walk(t, out, depth+1) {
-				return false
-			}
 		default:
+			// An embedded interface intersects the type set, and a method
+			// adds no term. A named interface walks the same as a literal
+			// one.
+			if inner, ok := types.Unalias(t).Underlying().(*types.Interface); ok {
+				if !walk(inner, out, depth+1) {
+					return false
+				}
+				continue
+			}
 			*out = append(*out, t)
 		}
 	}
@@ -156,4 +161,50 @@ func Describe(t types.Type) (Set, bool) {
 		}
 	}
 	return out, true
+}
+
+// HoldsParam reports whether a type reads a type parameter anywhere in its
+// structure.
+func HoldsParam(t types.Type) bool {
+	found := false
+	var walk func(types.Type)
+	seen := map[types.Type]bool{}
+	walk = func(t types.Type) {
+		if t == nil || found || seen[t] {
+			return
+		}
+		seen[t] = true
+		switch t := types.Unalias(t).(type) {
+		case *types.TypeParam:
+			found = true
+		case *types.Slice:
+			walk(t.Elem())
+		case *types.Array:
+			walk(t.Elem())
+		case *types.Pointer:
+			walk(t.Elem())
+		case *types.Chan:
+			walk(t.Elem())
+		case *types.Map:
+			walk(t.Key())
+			walk(t.Elem())
+		case *types.Named:
+			for i := 0; i < t.TypeArgs().Len(); i++ {
+				walk(t.TypeArgs().At(i))
+			}
+		case *types.Struct:
+			for i := 0; i < t.NumFields(); i++ {
+				walk(t.Field(i).Type())
+			}
+		case *types.Signature:
+			for i := 0; i < t.Params().Len(); i++ {
+				walk(t.Params().At(i).Type())
+			}
+			for i := 0; i < t.Results().Len(); i++ {
+				walk(t.Results().At(i).Type())
+			}
+		}
+	}
+	walk(t)
+	return found
 }

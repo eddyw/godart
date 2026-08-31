@@ -27,11 +27,11 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 	head := class + e.typeParamDecl(params)
 	fields := make([]string, st.NumFields())
 	for i := range fields {
-		fields[i] = name.Package(st.Field(i).Name())
+		fields[i] = structFieldName(st.Field(i), i)
 	}
 	dicts := make([]string, len(params))
 	for i, tp := range params {
-		dicts[i] = "$d" + name.Local(tp.Obj().Name())
+		dicts[i] = "$d" + typeParamName(tp)
 	}
 	e.line("final class %s {", head)
 	for i, tp := range params {
@@ -94,7 +94,7 @@ func (e *emitter) typeParamDecl(params []*types.TypeParam) string {
 	}
 	parts := make([]string, len(params))
 	for i, tp := range params {
-		parts[i] = name.Local(tp.Obj().Name())
+		parts[i] = typeParamName(tp)
 		if bound := e.typeParamBound(tp); bound != "" {
 			parts[i] += " extends " + bound
 		}
@@ -109,7 +109,7 @@ func (e *emitter) typeArgsOfParams(params []*types.TypeParam) string {
 	}
 	parts := make([]string, len(params))
 	for i, tp := range params {
-		parts[i] = name.Local(tp.Obj().Name())
+		parts[i] = typeParamName(tp)
 	}
 	return "<" + strings.Join(parts, ", ") + ">"
 }
@@ -118,7 +118,7 @@ func (e *emitter) typeArgsOfParams(params []*types.TypeParam) string {
 func (e *emitter) dictParams(params []*types.TypeParam) []string {
 	out := make([]string, len(params))
 	for i, tp := range params {
-		out[i] = fmt.Sprintf("Dict<%s> $d%s", e.dartType(tp), name.Local(tp.Obj().Name()))
+		out[i] = fmt.Sprintf("Dict<%s> $d%s", e.dartType(tp), typeParamName(tp))
 	}
 	return out
 }
@@ -221,18 +221,30 @@ func (e *emitter) method(f *ir.Func) {
 		e.methodForward(f)
 		return
 	}
-	params := append(e.dictParams(f.TypeParams), e.paramList(f.Params)...)
-	if p := e.frameParam(f.Machine, f.TypeParams); p != "" {
+	// The frame of the body takes the type parameters of the class and of
+	// the method, exactly as the frame of a top level method does. The
+	// signature keeps the own list, because the class head names the rest.
+	own := f.TypeParams
+	all := own
+	if f.Obj != nil {
+		if sig, ok := f.Obj.Type().(*types.Signature); ok && sig.RecvTypeParams() != nil {
+			all = append(typeParamsOf(sig.RecvTypeParams()), own...)
+		}
+	}
+	params := append(e.dictParams(own), e.paramList(f.Params)...)
+	if p := e.frameParam(f.Machine, all); p != "" {
 		params = append(params, p)
 	}
 	e.line("%s %s%s(%s) {", e.results(f), name.Package(f.Name),
-		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "))
+		e.typeParamDecl(own), strings.Join(params, ", "))
 	e.receiver(f)
+	f.TypeParams = all
 	e.body(f)
+	f.TypeParams = own
 	e.line("}")
-	e.frameOf(f, fmt.Sprintf("%s.%s%s(%s)", frameRecv(f.Recv), name.Package(f.Name),
-		typeArgNames(f.TypeParams),
-		strings.Join(e.frameArgs(f.TypeParams, f.Params), ", ")))
+	e.frameOfWith(f, all, fmt.Sprintf("%s.%s%s(%s)", frameRecv(f.Recv), name.Package(f.Name),
+		typeArgNames(own),
+		strings.Join(e.frameArgs(own, f.Params), ", ")))
 }
 
 // methodForward writes the member of the class that calls the top level
@@ -248,7 +260,7 @@ func (e *emitter) methodForward(f *ir.Func) {
 	recv := recvTypeParams(obj)
 	args := []string{"this"}
 	for _, tp := range append(append([]*types.TypeParam{}, recv...), f.TypeParams...) {
-		args = append(args, "$d"+name.Local(tp.Obj().Name()))
+		args = append(args, "$d"+typeParamName(tp))
 	}
 	for _, p := range f.Params {
 		args = append(args, p.Name)
@@ -292,7 +304,7 @@ func typeArgNames(params []*types.TypeParam) string {
 	}
 	parts := make([]string, len(params))
 	for i, tp := range params {
-		parts[i] = name.Local(tp.Obj().Name())
+		parts[i] = typeParamName(tp)
 	}
 	return "<" + strings.Join(parts, ", ") + ">"
 }
@@ -342,7 +354,15 @@ func (e *emitter) methodFunc(f *ir.Func) {
 	// The function names the type parameters of the receiver type first. The
 	// body reads the dictionary of each one, and the class of the receiver
 	// holds no such name at top level.
-	all := append(recvTypeParams(obj), f.TypeParams...)
+	recv := recvTypeParams(obj)
+	if f.Obj != nil {
+		if sig, ok := f.Obj.Type().(*types.Signature); ok && sig.RecvTypeParams() != nil {
+			// The body names the parameter objects of the method itself, and
+			// a method can give the receiver parameter a blank name.
+			recv = typeParamsOf(sig.RecvTypeParams())
+		}
+	}
+	all := append(recv, f.TypeParams...)
 	params := []string{e.dartType(f.Recv.Type) + " " + paramName(f.Recv)}
 	params = append(params, e.dictParams(all)...)
 	params = append(params, e.paramList(f.Params)...)
@@ -365,6 +385,16 @@ func (e *emitter) methodFunc(f *ir.Func) {
 	args := append([]string{varRead(f.Recv)}, e.frameArgs(all, f.Params)...)
 	e.frameOfWith(f, all, fmt.Sprintf("%s%s(%s)", methodFuncName(obj.Name(), f.Name),
 		typeArgNames(all), strings.Join(args, ", ")))
+}
+
+// structFieldName gives the Dart name of a struct field. Each blank field
+// takes a name of its own, because Dart forbids 2 parameters of 1 name, and
+// Go never reads a blank field.
+func structFieldName(f *types.Var, i int) string {
+	if f.Name() == "_" {
+		return fmt.Sprintf("$b%d", i)
+	}
+	return name.Package(f.Name())
 }
 
 // methodFuncName builds the name of a method that becomes a top level

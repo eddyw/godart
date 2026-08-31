@@ -128,6 +128,62 @@ func (e *emitter) nilChan(elem types.Type) string {
 	return key
 }
 
+// instDescVar names the variable that holds the description of an instance
+// of a generic type. The description of an instance can reach itself through
+// a method signature or a field, thus the text stands in 1 variable, and each
+// use names it.
+func (e *emitter) instDescVar(named *types.Named, pointer bool) string {
+	t := types.Type(named)
+	if pointer {
+		t = types.NewPointer(named)
+	}
+	// A description that reads a type parameter reads the dictionary of the
+	// enclosing function, thus it cannot stand at package level.
+	if holdsTypeParam(t) {
+		return e.instanceDesc(named, pointer)
+	}
+	sum := sha256.Sum256([]byte(typeName(t)))
+	key := e.nilPrefix + "$desc" + hex.EncodeToString(sum[:4])
+	if _, ok := e.instDescs[key]; !ok {
+		e.instDescs[key] = t
+	}
+	return key
+}
+
+// writeInstDescs writes the variable of each instance description that the
+// package reads. A description can name another one, thus the loop reads the
+// map again, exactly as writeNilChans does.
+func (e *emitter) writeInstDescs() {
+	if e.instDescsDone == nil {
+		e.instDescsDone = map[string]bool{}
+	}
+	written := e.instDescsDone
+	for {
+		names := make([]string, 0, len(e.instDescs))
+		for key := range e.instDescs {
+			if !written[key] {
+				names = append(names, key)
+			}
+		}
+		if len(names) == 0 {
+			return
+		}
+		sort.Strings(names)
+		for _, key := range names {
+			written[key] = true
+			t := e.instDescs[key]
+			named, _ := types.Unalias(t).(*types.Named)
+			pointer := false
+			if p, ok := types.Unalias(t).(*types.Pointer); ok {
+				named, _ = types.Unalias(p.Elem()).(*types.Named)
+				pointer = true
+			}
+			e.line("final TypeDesc %s = %s;", key, e.instanceDesc(named, pointer))
+		}
+		e.line("")
+	}
+}
+
 // writeNilChans writes the nil channel of each element type that the package
 // uses. The order comes from the name, thus equal input gives an equal file.
 // A second call writes only the new keys, because the init routine of the
@@ -196,7 +252,10 @@ func (e *emitter) anonURIs() []string {
 // inside the package. Such a class can name another one, thus the loop reads
 // the map again.
 func (e *emitter) writeAnonClasses() {
-	written := map[string]bool{}
+	if e.anonDone == nil {
+		e.anonDone = map[string]bool{}
+	}
+	written := e.anonDone
 	for {
 		names := make([]string, 0, len(e.localAnon))
 		for key := range e.localAnon {
@@ -260,6 +319,7 @@ func (e *emitter) anonFile(class string, st *types.Struct) (string, map[string]*
 		localAnon: map[string]*types.Struct{},
 		shadowed:  map[string]map[string]bool{},
 		nilChans:  map[string]types.Type{},
+		instDescs: map[string]types.Type{},
 		cfg:       e.cfg,
 		nilPrefix: class,
 	}
@@ -267,6 +327,7 @@ func (e *emitter) anonFile(class string, st *types.Struct) (string, map[string]*
 	inner.line("/// %s", anonText(st))
 	inner.structClass(class, nil, st, types.Comparable(st), nil)
 	inner.writeNilChans()
+	inner.writeInstDescs()
 	inner.flushFrames()
 	body := inner.buf.String()
 

@@ -101,7 +101,10 @@ func Strings(x []string) {
 
 // Float64s orders a slice of float64.
 func Float64s(x []float64) {
-	Slice(x, func(i, j int) bool { return x[i] < x[j] })
+	// Go orders a NaN in front of each other value.
+	Slice(x, func(i, j int) bool {
+		return x[i] < x[j] || (x[i] != x[i] && x[j] == x[j])
+	})
 }
 
 // IntsAreSorted reports whether x is in order.

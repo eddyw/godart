@@ -78,8 +78,31 @@ func (e *emitter) eraseCast(obj types.Object, x *ir.Call, text string) string {
 func (e *emitter) spreadCall(x *ir.Call) string {
 	inner := x.Results
 	x.Results = nil
+	defer func() { x.Results = inner }()
+	// Go reads the function operand first, and the inner call second. An
+	// operand with an effect takes a parameter of its own, thus the order
+	// stays the order of Go.
+	switch fun := x.Fun.(type) {
+	case *ir.Ident, *ir.Const:
+	case *ir.Method:
+		switch fun.Recv.(type) {
+		case *ir.Ident, *ir.Const, *ir.Zero:
+		default:
+			out := *x
+			out.Fun = &ir.Method{Recv: &ir.Ident{Name: "$fn", Type: fun.Recv.GoType()},
+				Obj: fun.Obj, Type: fun.Type, TypeArgs: fun.TypeArgs}
+			return fmt.Sprintf("((%s $fn, %s %s) => %s)(%s, %s)",
+				e.dartType(fun.Recv.GoType()), e.dartType(inner.GoType()), x.ResultsVar,
+				e.callText(&out), e.expr(fun.Recv), e.expr(inner))
+		}
+	default:
+		out := *x
+		out.Fun = &ir.Ident{Name: "$fn", Type: fun.GoType()}
+		return fmt.Sprintf("((%s $fn, %s %s) => %s)(%s, %s)",
+			e.dartType(fun.GoType()), e.dartType(inner.GoType()), x.ResultsVar,
+			e.callText(&out), e.expr(fun), e.expr(inner))
+	}
 	body := e.callText(x)
-	x.Results = inner
 	return fmt.Sprintf("((%s %s) => %s)(%s)",
 		e.dartType(inner.GoType()), x.ResultsVar, body, e.expr(inner))
 }
@@ -406,6 +429,18 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 	if isInterfaceType(m.Recv.GoType()) {
 		return e.interfaceCall(m, args)
 	}
+	// A method call on a type parameter with no core type dispatches through
+	// the method table of its dictionary, exactly as an interface call does.
+	// A parameter whose core type is an interface already holds an Iface.
+	if recv, ok := e.typeParamRecv(m); ok {
+		sig, _ := m.Obj.Type().(*types.Signature)
+		call := fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
+			recv, e.methodKeyText(m.Obj.Name(), sig), strings.Join(args, ", "))
+		if result := e.resultType(sig); result != "void" {
+			return fmt.Sprintf("(%s as %s)", call, result)
+		}
+		return call
+	}
 	obj := receiverTypeName(m.Recv.GoType())
 	list := strings.Join(args, ", ")
 	// A method of a named type that is not a struct, and a method with a
@@ -443,11 +478,14 @@ func (e *emitter) methodValue(m *ir.Method) string {
 	if isInterfaceType(m.Recv.GoType()) {
 		return e.interfaceMethodValue(m)
 	}
+	if recv, ok := e.typeParamRecv(m); ok {
+		return e.interfaceMethodValueOf(m, recv)
+	}
 	obj := receiverTypeName(m.Recv.GoType())
 	if obj != nil && (!isStructType(obj.Type()) || pointerMethod(m.Obj)) {
 		return e.methodFuncValue(m, obj)
 	}
-	if len(m.TypeArgs) > 0 {
+	if len(m.TypeArgs) > 0 || e.methodValueCast(m) != "" {
 		return e.genericMethodValue(m)
 	}
 	sig, _ := m.Obj.Type().(*types.Signature)
@@ -484,8 +522,34 @@ func (e *emitter) genericMethodValue(m *ir.Method) string {
 	}
 	all := append(append([]string{}, dicts...), names...)
 	call := "$recv." + methodName(m.Obj) + targs + "(" + strings.Join(all, ", ") + ")"
+	if cast := e.methodValueCast(m); cast != "" {
+		call = "(" + call + " as " + cast + ")"
+	}
 	return fmt.Sprintf("((%s $recv) => (%s) => %s)(%s)",
 		e.dartType(rt), strings.Join(params, ", "), call, recv)
+}
+
+// methodValueCast gives the cast of a method value whose declaration erases
+// the Dart type of its result. A pointer to a type parameter takes Object?,
+// and the value site holds the type argument, exactly as eraseCast does for
+// a call.
+func (e *emitter) methodValueCast(m *ir.Method) string {
+	origin, ok := m.Obj.Origin().Type().(*types.Signature)
+	if !ok || origin.Results().Len() != 1 {
+		return ""
+	}
+	if e.dartType(origin.Results().At(0).Type()) != "Object?" {
+		return ""
+	}
+	inst, ok := m.Type.(*types.Signature)
+	if !ok || inst.Results().Len() != 1 {
+		return ""
+	}
+	text := e.dartType(inst.Results().At(0).Type())
+	if text == "Object?" {
+		return ""
+	}
+	return text
 }
 
 // methodExpr writes a method expression, for example `(*T).M`. The value is a
@@ -527,6 +591,25 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	mtargs, mdicts := e.typeArguments(x.TypeArgs)
 	closure := func(call string) string {
 		return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
+	}
+	// The method of a type parameter with no single Dart class dispatches
+	// through the method table, exactly as an interface receiver does. A
+	// parameter with no core type boxes the value with its dictionary.
+	if tp, ok := types.Unalias(x.Recv).(*types.TypeParam); ok {
+		core := typeset.Core(tp)
+		_, coreIface := core.(*types.Interface)
+		if coreDispatch(core) || coreIface {
+			recv := names[0]
+			if !coreIface {
+				recv = fmt.Sprintf("$boxDesc(%s.desc, %s)", e.dictOf(tp), recv)
+			}
+			call := fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
+				recv, e.methodKeyText(x.Obj.Name(), msig), strings.Join(names[1:], ", "))
+			if cast := e.resultCast(msig); cast != "" {
+				call = "(" + call + " as " + cast + ")"
+			}
+			return closure(call)
+		}
 	}
 	// The method of an interface type dispatches through the method table of
 	// the receiver argument.
@@ -649,6 +732,29 @@ func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
 // closure holds the value, and each call reads the method table of the
 // descriptor.
 func (e *emitter) interfaceMethodValue(m *ir.Method) string {
+	return e.interfaceMethodValueOf(m, e.expr(m.Recv))
+}
+
+// typeParamRecv gives the Iface form of a receiver whose type is a type
+// parameter with no single Dart class. A parameter with no core type boxes
+// the value with the descriptor of its dictionary, and a parameter whose
+// core type is an interface already holds an Iface.
+func (e *emitter) typeParamRecv(m *ir.Method) (string, bool) {
+	tp, ok := types.Unalias(m.Recv.GoType()).(*types.TypeParam)
+	if !ok {
+		return "", false
+	}
+	core := typeset.Core(tp)
+	if _, ok := core.(*types.Interface); ok {
+		return e.expr(m.Recv), true
+	}
+	if coreDispatch(core) {
+		return fmt.Sprintf("$boxDesc(%s.desc, %s)", e.dictOf(tp), e.expr(m.Recv)), true
+	}
+	return "", false
+}
+
+func (e *emitter) interfaceMethodValueOf(m *ir.Method, recv string) string {
 	sig, _ := m.Obj.Type().(*types.Signature)
 	if sig == nil {
 		e.fail("the method %s has no signature", m.Obj.Name())
@@ -666,14 +772,22 @@ func (e *emitter) interfaceMethodValue(m *ir.Method) string {
 		types[i+1] = text
 		args[i+1] = name
 	}
-	call := fmt.Sprintf("($method($recv, '%s') as %s Function(%s))(%s)",
-		methodKey(m.Obj.Name(), sig), e.resultType(sig),
+	call := fmt.Sprintf("($method($recv, %s) as %s Function(%s))(%s)",
+		e.methodKeyText(m.Obj.Name(), sig), e.resultType(sig),
 		strings.Join(types, ", "), strings.Join(args, ", "))
 	return fmt.Sprintf("((Iface? $recv) => (%s) => %s)(%s)",
-		strings.Join(params, ", "), call, e.expr(m.Recv))
+		strings.Join(params, ", "), call, recv)
 }
 
 func (e *emitter) builtin(x *ir.Builtin) string {
+	if x.Results != nil {
+		inner := x.Results
+		x.Results = nil
+		body := e.builtin(x)
+		x.Results = inner
+		return fmt.Sprintf("((%s %s) => %s)(%s)",
+			e.dartType(inner.GoType()), x.ResultsVar, body, e.expr(inner))
+	}
 	switch x.Name {
 	case "len":
 		return e.length(x.Args[0])
@@ -712,7 +826,7 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 	case "mapkeys":
 		return e.expr(x.Args[0]) + ".keys()"
 	case "close":
-		return e.expr(x.Args[0]) + ".close()"
+		return e.chanExpr(x.Args[0]) + ".close()"
 	case "maphas":
 		return fmt.Sprintf("%s.has(%s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
 	}

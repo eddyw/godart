@@ -62,9 +62,9 @@ func (e *emitter) expr(x ir.Expr) string {
 		return e.copyExpr(x)
 	case *ir.Recv:
 		if x.Comma {
-			return fmt.Sprintf("%s.receive()", e.expr(x.Chan))
+			return fmt.Sprintf("%s.receive()", e.chanExpr(x.Chan))
 		}
-		return fmt.Sprintf("%s.receive().$1", e.expr(x.Chan))
+		return fmt.Sprintf("%s.receive().$1", e.chanExpr(x.Chan))
 	case *ir.RecordField:
 		return fmt.Sprintf("%s.$%d", e.expr(x.X), x.Index+1)
 	case *ir.SelectList:
@@ -332,8 +332,9 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		methods: e.methods, inClass: e.inClass, initNames: e.initNames,
 		breakables: e.breakables, labelSeq: e.labelSeq,
 		anon: e.anon, localAnon: e.localAnon, shadowed: e.shadowed,
-		nilChans: e.nilChans, cfg: e.cfg, nilPrefix: e.nilPrefix,
-		renames: e.withRenames(e.captureRenames(x.Captured))}
+		nilChans: e.nilChans, instDescs: e.instDescs, cfg: e.cfg, nilPrefix: e.nilPrefix,
+		typeParams: e.typeParams,
+		renames:    e.withRenames(e.captureRenames(x.Captured))}
 	inner.boxParams(x.Params)
 	inner.emitBody(x.Results, x.Defers, x.Body)
 	e.errs = append(e.errs, inner.errs...)
@@ -361,6 +362,14 @@ func (e *emitter) equal(a, b ir.Expr) string {
 	// cell, and the cell compares its location.
 	if p, ok := typeset.Core(a.GoType()).(*types.Pointer); ok && !needsBox(p.Elem()) {
 		return fmt.Sprintf("identical(%s, %s)", e.expr(a), e.expr(b))
+	}
+	// Go compares a value with an interface value through the interface form,
+	// thus the other side boxes at the comparison.
+	if ai, bi := isInterfaceType(a.GoType()), isInterfaceType(b.GoType()); ai != bi {
+		if ai {
+			return fmt.Sprintf("%s == %s", e.expr(a), e.box(b, b.GoType()))
+		}
+		return fmt.Sprintf("%s == %s", e.box(a, a.GoType()), e.expr(b))
 	}
 	return fmt.Sprintf("%s == %s", e.expr(a), e.expr(b))
 }
@@ -465,7 +474,7 @@ func (e *emitter) narrow(t types.Type, text string) string {
 		if set, ok := typeset.Describe(tp); ok && set.Integer {
 			return e.dictOf(tp) + ".mask(" + text + ")"
 		}
-		return "(" + text + " as " + name.Local(tp.Obj().Name()) + ")"
+		return "(" + text + " as " + typeParamName(tp) + ")"
 	}
 	return text
 }
@@ -561,7 +570,17 @@ func (e *emitter) composite(x *ir.Composite) string {
 	}
 	switch u := u.(type) {
 	case *types.Struct:
-		if named, ok := types.Unalias(x.Type).(*types.Named); ok {
+		// Go evaluates the value of a blank field and then discards it, thus
+		// the field keeps its zero value.
+		for i := range parts {
+			if i < u.NumFields() && u.Field(i).Name() == "_" {
+				parts[i] = fmt.Sprintf("((Object? $v) => %s)(%s)",
+					e.zero(u.Field(i).Type()), parts[i])
+			}
+		}
+		if named, ok := types.Unalias(x.Type).(*types.Named); ok && !isLocalType(named.Obj()) {
+			// The class of a local type is the class of its shape, and such
+			// a class holds no dictionary.
 			parts = append(e.dictArgs(named.TypeArgs()), parts...)
 		}
 		return e.dartType(x.Type) + "(" + strings.Join(parts, ", ") + ")"

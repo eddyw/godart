@@ -70,7 +70,7 @@ func Package(p *ir.Package, tpkg *types.Package, cfg Config) (*Result, error) {
 		initNames: map[*ir.Func]string{},
 		anon:      map[string]*types.Struct{}, localAnon: map[string]*types.Struct{},
 		shadowed: map[string]map[string]bool{},
-		nilChans: map[string]types.Type{}, cfg: cfg}
+		nilChans: map[string]types.Type{}, instDescs: map[string]types.Type{}, cfg: cfg}
 	e.setPrefixes(cfg.Imports)
 	e.groupMethods(p)
 	out := &Result{Library: cfg.Base + ".dart", Files: map[string]string{}}
@@ -140,6 +140,15 @@ type emitter struct {
 	nilPrefix string
 	// nilChansDone keeps each nil channel that writeNilChans wrote.
 	nilChansDone map[string]bool
+	// instDescs keys the variable of each instance description, and
+	// instDescsDone keeps each one that writeInstDescs wrote. The text of 2
+	// descriptions can reach each other, thus each one stands in a variable.
+	instDescs     map[string]types.Type
+	instDescsDone map[string]bool
+	// descBusy keeps each instance description that the emitter writes now.
+	descBusy map[string]bool
+	// anonDone keeps each local shape class that writeAnonClasses wrote.
+	anonDone map[string]bool
 	// typeCycle keeps each named type that reaches itself, and typeAcyclic
 	// keeps each one that does not. Read cyclic. typeDepth caps a cycle
 	// through a function type.
@@ -406,11 +415,14 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	e.goLine = 0
 	e.writeAnonClasses()
 	e.writeNilChans()
+	e.writeInstDescs()
 	e.writeDescriptors()
 	e.line("")
 	e.writeInit(sorted)
 	e.flushFrames()
 	e.writeNilChans()
+	e.writeInstDescs()
+	e.writeAnonClasses()
 	if p.Name == "main" {
 		e.writeMain()
 	}
@@ -456,8 +468,16 @@ func (e *emitter) writeInit(imports []Import) {
 	for _, im := range imports {
 		e.line("%s.$init();", e.prefixes[im.Path])
 	}
+	blanks := 0
 	for _, g := range e.globals {
 		if g.Var.Name == "_" {
+			// Go runs the initializer of a blank variable for its effect, in
+			// the order of the init. Only the value falls away.
+			if g.Init != nil {
+				e.list(g.Pending)
+				e.line("final $blank%d = %s;", blanks, e.expr(g.Init))
+				blanks++
+			}
 			continue
 		}
 		// A function literal of the initializer that can block becomes a local

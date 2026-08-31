@@ -611,6 +611,120 @@ The plan left these points open. The work took the decisions below.
      dictionary. The method `wait` of `testdata/programs/genmethval` proves a
      block operation inside a generic method through a method value.
 
+162. A builtin whose only argument is a call with 2 results spreads them,
+     exactly as a function call does. `ir.Builtin` carries `Results` and
+     `ResultsVar`, and the emitter writes the same record closure.
+     `copy(f(a))` and `delete(h(m))` of `fixedbugs/issue15992` prove it.
+
+163. The zero text of a map or of a channel whose element names the same type
+     ends with null. The Dart type of such a type erases to Object?, thus
+     null is the zero of the element. Read `cycleZero`. `typeparam/issue47901`
+     crashed the compiler before.
+
+164. A member call on a channel whose Dart type erased to Object? takes a
+     cast back to the channel type. Read `chanExpr`. The cast covers receive,
+     send, and close.
+
+165. A blank struct field takes the name `$b<index>`, because Dart forbids 2
+     parameters of 1 name. A positional literal evaluates the value of a
+     blank field and discards it, thus the field keeps its zero value.
+     `fixedbugs/issue21048` and `fixedbugs/issue31546` prove the 2 rules.
+
+166. The initializer of a blank package variable runs inside `$init`, in the
+     order of the type checker. Only the value falls away. The old output
+     dropped the whole initializer, and `fixedbugs/issue51913` and
+     `fixedbugs/issue22326` caught the loss.
+
+167. A package variable pair also comes from a comma form: a type assertion,
+     a map read, or a channel receive. The pair reads `multiValue`, and each
+     name converts the record field to its own type. `fixedbugs/issue53619`
+     proves the assertion form.
+
+168. A spread call reads its function operand first, and the inner call
+     second, exactly as Go orders them. An operand with an effect becomes the
+     first parameter of the record closure. `fixedbugs/issue50672` proves the
+     order for a call, a method, and an index operand.
+
+169. A parallel assignment stages the base of a slice or of a map location as
+     a value, thus a write of the variable in the same statement misses it.
+     An array location writes through the variable, and the name stays.
+     `fixedbugs/issue23188` proves the slice rule.
+
+170. A chain of else-if branches emits flat, because the Dart front end caps
+     the nesting of a statement near 250. `fixedbugs/issue2615` holds a chain
+     of 256 branches.
+
+171. A method call on a type parameter with no core type dispatches through
+     the method table of its dictionary: the receiver boxes into an Iface
+     with the descriptor of the dictionary, and `$call` finds the method.
+     `fixedbugs/issue54348` proves the promoted case.
+
+172. The description of a ground instance of a generic type stands in a
+     package variable, exactly as a nil channel does, because 2 descriptions
+     can reach each other. A description with a free type parameter stays
+     inline, and its second visit gives a shallow form, thus the text ends.
+     `typeparam/list2` and `typeparam/sets` crashed the emitter before.
+
+173. A blank type parameter takes the positional name `$T<index>`, and a top
+     level method takes the receiver type parameters of the method itself,
+     not of the type declaration. A method can name the parameter of its
+     receiver type with a blank, and the 2 object sets must give 1 text.
+
+174. An embedded named interface of a constraint adds its methods to the type
+     set, and it adds no term. The walk of the terms resolves the underlying
+     interface of each embedded name. `typeparam/stringer` caught the loss.
+
+175. A method call on a type parameter dispatches through the method table of
+     its dictionary, unless the core type is a struct or a pointer. A
+     parameter with no core type boxes the receiver with `$boxDesc`, an
+     interface core passes the interface value through, and each other core
+     boxes too, because the Dart form of the core holds no Go method. The
+     same rule covers a method value and a method expression.
+
+176. A struct type that reads a type parameter needs the name of a package
+     level generic type, and stage 2 rejects each other form. The class of a
+     shape stands at package level, and it cannot name the parameter. The
+     target of a type test stays allowed when the switch binds no variable,
+     because such a target needs the name only.
+
+177. The name of a type that reads a type parameter interpolates the name of
+     the dictionary at run time. `substParams` puts a marker into the type,
+     and `interpolate` splits the printed text at each marker. The method
+     keys and the reflect text follow the same rule, and each method table
+     keys on the signature of the instance, not of the origin.
+
+178. A type argument can name an interface type, and a value of such a
+     parameter is an interface inside an interface. `$boxDesc` flattens the
+     box, and `$call` unwraps at the `$ifaceMethod` placeholder.
+
+179. A comparison of an interface value with a value of another type boxes
+     the other side, exactly as Go compares through the interface form.
+
+180. The frame of a class method that blocks takes the type parameters of the
+     class and of the method, and the frame parameter of the signature takes
+     the same joined form. The emitter clone of a function literal keeps
+     `typeParams`, thus a nested frame names them too.
+
+181. A blank type declaration drops from the emit with its methods. No code
+     names a blank type, and 2 blank types give 1 Dart name.
+
+182. Stage 2 rejects a generic struct type with a field whose name equals the
+     name of a type parameter. The Dart class holds the 2 names in 1 scope.
+
+183. `strconv.FormatFloat` with the verb f and the precision -1 gives the
+     shortest fixed text with no exponent. `_expandExponent` unrolls the
+     shortest form of the runtime.
+
+184. `sort.Float64s` orders a NaN in front of each other value, exactly as
+     Go does.
+
+185. The writer of the local shape classes resumes, exactly as the nil
+     channel writer does. A descriptor variable can name a shape after the
+     first pass.
+
+186. A method value whose declaration erases the Dart type of its result
+     becomes a closure with a cast, exactly as `eraseCast` treats a call.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

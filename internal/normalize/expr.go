@@ -94,14 +94,21 @@ func (b *builder) lvalueStaged(e ast.Expr) (pre []ir.Stmt, set func(ir.Expr) ir.
 		x := b.expr(e)
 		switch x := x.(type) {
 		case *ir.Index:
-			pre1, base := b.hoist(x.X, e.X.Pos(), "b")
+			// A parallel assignment stages the slice value itself, thus a
+			// write of the variable in the same statement misses it. An
+			// array writes through the variable, and the name stays.
+			hoistBase := b.hoist
+			if _, ok := typeset.Core(x.X.GoType()).(*types.Slice); ok {
+				hoistBase = b.forceHoist
+			}
+			pre1, base := hoistBase(x.X, e.X.Pos(), "b")
 			pre2, key := b.forceHoist(x.Index, e.Index.Pos(), "k")
 			read := &ir.Index{X: base, Index: key, Type: x.Type}
 			return append(pre1, pre2...), func(v ir.Expr) ir.Stmt {
 				return &ir.Assign{Lhs: read, Rhs: v}
 			}
 		case *ir.MapRead:
-			pre1, base := b.hoist(x.X, e.X.Pos(), "b")
+			pre1, base := b.forceHoist(x.X, e.X.Pos(), "b")
 			pre2, key := b.forceHoist(x.Key, e.Index.Pos(), "k")
 			read := &ir.MapRead{X: base, Key: key, Type: x.Type}
 			return append(pre1, pre2...), func(v ir.Expr) ir.Stmt {

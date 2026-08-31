@@ -44,6 +44,26 @@ func Package(fset *token.FileSet, files []*ast.File, info *types.Info, pkg *type
 	return out, nil
 }
 
+// receiverName gives the type name of a receiver field.
+func receiverName(e ast.Expr) string {
+	for {
+		switch x := e.(type) {
+		case *ast.StarExpr:
+			e = x.X
+		case *ast.ParenExpr:
+			e = x.X
+		case *ast.IndexExpr:
+			e = x.X
+		case *ast.IndexListExpr:
+			e = x.X
+		case *ast.Ident:
+			return x.Name
+		default:
+			return ""
+		}
+	}
+}
+
 type builder struct {
 	fset  *token.FileSet
 	info  *types.Info
@@ -198,7 +218,8 @@ func (b *builder) genDecl(d *ast.GenDecl) []ir.Decl {
 		case *ast.ImportSpec:
 		case *ast.TypeSpec:
 			obj, _ := b.info.Defs[spec.Name].(*types.TypeName)
-			if obj != nil {
+			// No code names a blank type, and 2 blank types give 1 Dart name.
+			if obj != nil && obj.Name() != "_" {
 				out = append(out, &ir.TypeDecl{Name: obj.Name(), Obj: obj})
 			}
 		case *ast.ValueSpec:
@@ -247,7 +268,7 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 		// results, and each name reads 1 field of it. The hidden variable
 		// takes the place of the first name in the order of the init.
 		b.startInit(spec.Values[0])
-		call := b.expr(spec.Values[0])
+		call := b.multiValue(spec.Values[0])
 		pending := b.pending
 		b.pending = nil
 		if call == nil {
@@ -276,9 +297,9 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 			field := &ir.RecordField{
 				X:     &ir.Ident{Name: hidden.Name, Type: tuple},
 				Index: i,
-				Type:  v.Type,
+				Type:  tuple.At(i).Type(),
 			}
-			out = append(out, &ir.Global{Var: v, Init: b.copyPoint(field)})
+			out = append(out, &ir.Global{Var: v, Init: b.copyPoint(b.convert(field, v.Type))})
 		}
 	default:
 		b.fail(spec.Pos(), "a package variable with multiple results is not supported yet")
@@ -311,6 +332,13 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	sig, _ := obj.Type().(*types.Signature)
 	if sig == nil {
 		return nil
+	}
+	if d.Recv != nil && len(d.Recv.List) > 0 {
+		if named := receiverName(d.Recv.List[0].Type); named == "_" {
+			// The receiver type is a blank type, and no code calls such a
+			// method.
+			return nil
+		}
 	}
 	f := &ir.Func{Name: obj.Name(), Obj: obj, Pos: d.Pos()}
 	b.names = map[types.Object]string{}

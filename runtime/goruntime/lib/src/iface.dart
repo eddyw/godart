@@ -266,6 +266,14 @@ Function $method(Iface? x, String name) {
 /// Calls a method of an interface value when the receiver is not a simple
 /// name. The call reads the receiver 1 time, thus a side effect runs 1 time.
 Object? $call(Iface? x, String name, List<Object?> args) {
+  // A type argument can name an interface type. A value of such a type
+  // parameter is an interface value inside another one, and the dispatch
+  // reads the inner value.
+  if (x != null &&
+      x.value is Iface &&
+      identical($method(x, name), $ifaceMethod)) {
+    return $call(x.value as Iface, name, args);
+  }
   final Function m = $method(x, name);
   return Function.apply(m, <Object?>[x!.value, ...args]);
 }
@@ -275,6 +283,14 @@ Object? $call(Iface? x, String name, List<Object?> args) {
 /// another library reaches no such method.
 Never $noMethod(String name) =>
     $panic(GoError('the method $name belongs to another package'));
+
+/// $boxDesc puts a value into an interface value with the given description.
+/// A type argument can name an interface type, and a value of such a type
+/// parameter already holds an interface value. That value passes through.
+Iface $boxDesc(TypeDesc d, Object? v) {
+  if (v is Iface && d.kind == 'interface') return v;
+  return Iface(d, v);
+}
 
 /// $ifaceMethod stands in the method table of the description of an interface
 /// type. Such a table holds the key of each method that the interface needs,

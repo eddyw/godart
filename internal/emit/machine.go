@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/eddyw/godart/internal/ir"
-	"github.com/eddyw/godart/internal/name"
 )
 
 // A function that can block writes each local into a frame and gives up control
@@ -91,7 +90,7 @@ func (e *emitter) frameType(m *ir.Machine, tps []*types.TypeParam) string {
 	}
 	parts := make([]string, len(tps))
 	for i, tp := range tps {
-		parts[i] = name.Local(tp.Obj().Name())
+		parts[i] = typeParamName(tp)
 	}
 	return m.Class + "<" + strings.Join(parts, ", ") + ">"
 }
@@ -159,7 +158,7 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	// such a frame.
 	if fnType == "" {
 		for _, tp := range tps {
-			w("late Dict<%s> $d%s;", e.dartType(tp), name.Local(tp.Obj().Name()))
+			w("late Dict<%s> $d%s;", e.dartType(tp), typeParamName(tp))
 		}
 	}
 	for _, v := range m.Locals {
@@ -183,7 +182,7 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 func (e *emitter) frameArgs(tps []*types.TypeParam, params []*ir.Var) []string {
 	out := make([]string, 0, len(tps)+len(params)+1)
 	for _, tp := range tps {
-		n := name.Local(tp.Obj().Name())
+		n := typeParamName(tp)
 		out = append(out, "$d"+n)
 	}
 	for _, p := range params {
@@ -314,7 +313,7 @@ func (e *emitter) machineSave(f *ir.Func, fn string) {
 	// The frame of a local function holds no dictionary. Read writeFrameClass.
 	if fn == "" {
 		for _, tp := range tps {
-			n := name.Local(tp.Obj().Name())
+			n := typeParamName(tp)
 			e.line("..$d%s = $d%s", n, n)
 		}
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // isInterfaceType reports whether a value of the type holds an interface pair.
@@ -93,9 +94,22 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 	if pointer {
 		t = types.NewPointer(named)
 	}
-	return fmt.Sprintf("TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s)",
-		dartText(typeName(t)), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
-		dartText(reflectText(types.Unalias(t))), e.methodTypeTable(t)+e.descParts(t), e.zero(t))
+	// The description of an instance with a free type parameter can reach
+	// itself through a field or a method, and no variable can hold it. The
+	// second visit gives a shallow description, thus the text ends.
+	key := typeName(t)
+	if e.descBusy == nil {
+		e.descBusy = map[string]bool{}
+	}
+	if e.descBusy[key] {
+		return fmt.Sprintf("TypeDesc('%s', '%s', const <String, Function>{}, text: '%s', zero: () => %s)",
+			dartText(key), kindOf(t), dartText(reflectText(types.Unalias(t))), e.zero(t))
+	}
+	e.descBusy[key] = true
+	defer delete(e.descBusy, key)
+	return fmt.Sprintf("TypeDesc(%s, '%s', <String, Function>{%s}, text: %s%s, zero: () => %s)",
+		e.typeNameText(t), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
+		e.reflectTextExpr(t), e.methodTypeTable(t)+e.descParts(t), e.zero(t))
 }
 
 // methodTable writes the adapter of each method of the type, in the order of
@@ -141,12 +155,16 @@ func (e *emitter) methodTypeTable(t types.Type) string {
 		if !ok || !fn.Exported() {
 			continue
 		}
-		sig, ok := fn.Type().(*types.Signature)
-		if !ok || (sig.TypeParams() != nil && sig.TypeParams().Len() > 0) {
+		if o, ok := fn.Type().(*types.Signature); ok &&
+			o.TypeParams() != nil && o.TypeParams().Len() > 0 {
 			continue
 		}
-		entries = append(entries, fmt.Sprintf("'%s': () => %s",
-			methodKey(fn.Name(), sig), e.descriptorOf(sig)))
+		sig, ok := set.At(i).Type().(*types.Signature)
+		if !ok {
+			continue
+		}
+		entries = append(entries, fmt.Sprintf("%s: () => %s",
+			e.methodKeyText(fn.Name(), sig), e.descriptorOf(sig)))
 	}
 	if len(entries) == 0 {
 		return ""
@@ -217,7 +235,7 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 		field := st.Field(i)
 		parts[i] = fmt.Sprintf("FieldDesc('%s', %s, %t, () => %s, %s)",
 			field.Name(), dartString(st.Tag(i)), field.Exported(),
-			e.descriptorOf(field.Type()), e.fieldAccess(field, class))
+			e.descriptorOf(field.Type()), e.fieldAccess(field, i, class))
 	}
 	return ", fields: <FieldDesc>[" + strings.Join(parts, ", ") + "]"
 }
@@ -228,11 +246,11 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 // library holds each name that starts with an underscore, thus another library
 // cannot name it. The description of an instance of a generic type stands at
 // the point of the use, and that point can lie outside the package of the type.
-func (e *emitter) fieldAccess(field *types.Var, class string) string {
+func (e *emitter) fieldAccess(field *types.Var, i int, class string) string {
 	if !field.Exported() && field.Pkg() != nil && field.Pkg() != e.pkg {
 		return "$noRead, $noWrite"
 	}
-	dart := name.Package(field.Name())
+	dart := structFieldName(field, i)
 	return fmt.Sprintf("($r) => ($r as %s).%s, ($r, $v) => ($r as %s).%s = $v as %s",
 		class, dart, class, dart, e.dartType(field.Type()))
 }
@@ -412,11 +430,17 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 		// method never reaches a method table.
 		return ""
 	}
-	params := make([]string, sig.Params().Len())
-	args := make([]string, sig.Params().Len())
+	// The selection carries the signature of the instance, and the key of an
+	// instance holds the type arguments, not the parameters of the origin.
+	selSig, _ := sel.Type().(*types.Signature)
+	if selSig == nil {
+		selSig = sig
+	}
+	params := make([]string, selSig.Params().Len())
+	args := make([]string, selSig.Params().Len())
 	for i := range params {
 		args[i] = fmt.Sprintf("$a%d", i)
-		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + args[i]
+		params[i] = e.dartType(selSig.Params().At(i).Type()) + " " + args[i]
 	}
 	recv := fmt.Sprintf("($r as %s)", e.dartType(elem))
 	if pointer && needsBox(elem) {
@@ -458,9 +482,9 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 	case isInterfaceType(current):
 		// An embedded interface field holds an interface pair. The call reads
 		// the method table of that pair.
-		call = fmt.Sprintf("$call(%s, %q, <Object?>[%s])",
-			recv, methodKey(fn.Name(), sig), strings.Join(args, ", "))
-		if cast := e.resultCast(sig); cast != "" {
+		call = fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
+			recv, e.methodKeyText(fn.Name(), selSig), strings.Join(args, ", "))
+		if cast := e.resultCast(selSig); cast != "" {
 			call = "(" + call + " as " + cast + ")"
 		}
 	case structOf(current) == nil || topLevelMethod(current, fn):
@@ -478,7 +502,7 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 	if len(params) > 0 {
 		head += ", " + strings.Join(params, ", ")
 	}
-	return fmt.Sprintf("'%s': (%s) => %s", methodKey(fn.Name(), sig), head, call)
+	return fmt.Sprintf("%s: (%s) => %s", e.methodKeyText(fn.Name(), selSig), head, call)
 }
 
 // topLevelMethod reports whether the body of the method stands in a top level
@@ -520,7 +544,7 @@ func (e *emitter) descriptorOf(t types.Type) string {
 	if p, ok := u.(*types.Pointer); ok {
 		if named, ok := types.Unalias(p.Elem()).(*types.Named); ok {
 			if isInstance(named) {
-				return e.instanceDesc(named, true)
+				return e.instDescVar(named, true)
 			}
 			// The package holds no variable for an interface type and for a
 			// predeclared type, thus a pointer to one takes its own
@@ -536,7 +560,7 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		// type belongs to no package.
 		if !isInterfaceType(named) && named.Obj().Pkg() != nil {
 			if isInstance(named) {
-				return e.instanceDesc(named, false)
+				return e.instDescVar(named, false)
 			}
 			if named.TypeParams() == nil || named.TypeParams().Len() == 0 {
 				return e.qualify(named.Obj(), e.descName(named.Obj(), false))
@@ -569,8 +593,8 @@ func (e *emitter) descriptorOf(t types.Type) string {
 			table = "<String, Function>{" + strings.Join(parts, ", ") + "}"
 		}
 	}
-	return fmt.Sprintf("TypeDesc('%s', '%s', %s, text: '%s'%s, zero: () => %s)",
-		dartText(typeName(t)), kindOf(t), table, dartText(reflectText(types.Unalias(t))),
+	return fmt.Sprintf("TypeDesc(%s, '%s', %s, text: %s%s, zero: () => %s)",
+		e.typeNameText(t), kindOf(t), table, e.reflectTextExpr(t),
 		methodTypes+e.descParts(t), e.zero(t))
 }
 
@@ -712,6 +736,11 @@ func (e *emitter) box(x ir.Expr, from types.Type) string {
 	case isArrayType(from):
 		text = e.copyArray(text, from)
 	}
+	// The argument of a type parameter can be an interface type, and a value
+	// of such a parameter already holds an interface value.
+	if _, ok := types.Unalias(from).(*types.TypeParam); ok {
+		return fmt.Sprintf("$boxDesc(%s, %s)", e.descriptorOf(from), text)
+	}
 	return fmt.Sprintf("Iface(%s, %s)", e.descriptorOf(from), text)
 }
 
@@ -731,12 +760,12 @@ func (e *emitter) interfaceCall(m *ir.Method, args []string) string {
 			params = append(params, e.dartType(sig.Params().At(i).Type()))
 		}
 		all := append([]string{recv + "!.value"}, args...)
-		return fmt.Sprintf("($method(%s, '%s') as %s Function(%s))(%s)",
-			recv, methodKey(m.Obj.Name(), sig), result,
+		return fmt.Sprintf("($method(%s, %s) as %s Function(%s))(%s)",
+			recv, e.methodKeyText(m.Obj.Name(), sig), result,
 			strings.Join(params, ", "), strings.Join(all, ", "))
 	}
-	call := fmt.Sprintf("$call(%s, '%s', <Object?>[%s])",
-		e.expr(m.Recv), methodKey(m.Obj.Name(), sig), strings.Join(args, ", "))
+	call := fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
+		e.expr(m.Recv), e.methodKeyText(m.Obj.Name(), sig), strings.Join(args, ", "))
 	if result == "void" {
 		return call
 	}
@@ -807,7 +836,7 @@ func isStructUnder(t types.Type) bool {
 // typeTest writes the test of a type assertion and of a type switch.
 func (e *emitter) typeTest(x ir.Expr, target types.Type) string {
 	if isInterfaceType(target) {
-		return fmt.Sprintf("$implements(%s, %s)", e.expr(x), methodNameList(interfaceMethods(target)))
+		return fmt.Sprintf("$implements(%s, %s)", e.expr(x), e.methodKeyListText(target))
 	}
 	// A type parameter holds no kind of its own. An interface type argument
 	// needs the test of the method set, thus the test reads the description.
@@ -818,21 +847,147 @@ func (e *emitter) typeTest(x ir.Expr, target types.Type) string {
 }
 
 // typeNameText writes the name that a type test compares. A type parameter
-// holds no name of its own, thus the name comes from its dictionary.
+// holds no name of its own, thus the name comes from its dictionary. A type
+// that reads a parameter interpolates that name at run time.
 func (e *emitter) typeNameText(t types.Type) string {
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
 		return e.dictOf(tp) + ".desc.name"
 	}
-	return "'" + typeName(t) + "'"
+	if !typeset.HoldsParam(t) {
+		return "'" + dartText(typeName(t)) + "'"
+	}
+	var reads []string
+	sub := e.substParams(t, &reads)
+	return interpolate(types.TypeString(stripNames(sub), nil), reads)
+}
+
+// interpolate writes the Dart string whose marker parts read a name at run
+// time.
+func interpolate(text string, reads []string) string {
+	parts := strings.Split(text, "\x01")
+	var b strings.Builder
+	b.WriteString("'")
+	for i, part := range parts {
+		if i%2 == 0 {
+			b.WriteString(dartText(part))
+			continue
+		}
+		var n int
+		fmt.Sscanf(part, "%d", &n)
+		b.WriteString("${" + reads[n] + "}")
+	}
+	b.WriteString("'")
+	return b.String()
+}
+
+// methodKeyText writes the Dart expression of the key of 1 method. A key that
+// reads a type parameter interpolates its name at run time.
+func (e *emitter) methodKeyText(name string, sig *types.Signature) string {
+	if sig == nil || !typeset.HoldsParam(sig) {
+		return "'" + dartText(methodKey(name, sig)) + "'"
+	}
+	var reads []string
+	sub, ok := e.substParams(sig, &reads).(*types.Signature)
+	if !ok {
+		return "'" + dartText(methodKey(name, sig)) + "'"
+	}
+	return interpolate(methodKey(name, sub), reads)
+}
+
+// methodKeyListText writes the Dart list of the key of each method of an
+// interface type.
+func (e *emitter) methodKeyListText(t types.Type) string {
+	iface, ok := types.Unalias(t).Underlying().(*types.Interface)
+	if !ok {
+		return "<String>[]"
+	}
+	parts := make([]string, iface.NumMethods())
+	for i := range parts {
+		m := iface.Method(i)
+		sig, _ := m.Type().(*types.Signature)
+		parts[i] = e.methodKeyText(m.Name(), sig)
+	}
+	sort.Strings(parts)
+	return "<String>[" + strings.Join(parts, ", ") + "]"
+}
+
+// reflectTextExpr writes the Dart expression of the reflect text of a type.
+// A type parameter reads the text of its dictionary at run time.
+func (e *emitter) reflectTextExpr(t types.Type) string {
+	if !typeset.HoldsParam(t) {
+		return "'" + dartText(reflectText(types.Unalias(t))) + "'"
+	}
+	var reads []string
+	sub := e.substParams(t, &reads)
+	for i := range reads {
+		reads[i] = strings.Replace(reads[i], ".desc.name", ".desc.display", 1)
+	}
+	return interpolate(reflectText(types.Unalias(sub)), reads)
+}
+
+// substParams replaces each type parameter with a marker type, thus the name
+// text splits at each parameter. The list holds the run time read of each
+// marker, in order.
+func (e *emitter) substParams(t types.Type, reads *[]string) types.Type {
+	switch u := types.Unalias(t).(type) {
+	case *types.TypeParam:
+		marker := fmt.Sprintf("\x01%d\x01", len(*reads))
+		*reads = append(*reads, e.dictOf(u)+".desc.name")
+		obj := types.NewTypeName(token.NoPos, nil, marker, nil)
+		return types.NewNamed(obj, types.Typ[types.Int], nil)
+	case *types.Pointer:
+		return types.NewPointer(e.substParams(u.Elem(), reads))
+	case *types.Slice:
+		return types.NewSlice(e.substParams(u.Elem(), reads))
+	case *types.Array:
+		return types.NewArray(e.substParams(u.Elem(), reads), u.Len())
+	case *types.Map:
+		return types.NewMap(e.substParams(u.Key(), reads), e.substParams(u.Elem(), reads))
+	case *types.Chan:
+		return types.NewChan(u.Dir(), e.substParams(u.Elem(), reads))
+	case *types.Signature:
+		params := make([]*types.Var, u.Params().Len())
+		for i := range params {
+			params[i] = types.NewVar(token.NoPos, nil, "", e.substParams(u.Params().At(i).Type(), reads))
+		}
+		results := make([]*types.Var, u.Results().Len())
+		for i := range results {
+			results[i] = types.NewVar(token.NoPos, nil, "", e.substParams(u.Results().At(i).Type(), reads))
+		}
+		return types.NewSignatureType(nil, nil, nil,
+			types.NewTuple(params...), types.NewTuple(results...), u.Variadic())
+	case *types.Struct:
+		fields := make([]*types.Var, u.NumFields())
+		tags := make([]string, u.NumFields())
+		for i := range fields {
+			f := u.Field(i)
+			fields[i] = types.NewField(token.NoPos, f.Pkg(), f.Name(),
+				e.substParams(f.Type(), reads), f.Embedded())
+			tags[i] = u.Tag(i)
+		}
+		return types.NewStruct(fields, tags)
+	case *types.Named:
+		if u.TypeArgs().Len() > 0 {
+			args := make([]types.Type, u.TypeArgs().Len())
+			for i := range args {
+				args[i] = e.substParams(u.TypeArgs().At(i), reads)
+			}
+			if inst, err := types.Instantiate(nil, u.Origin(), args, false); err == nil {
+				return inst
+			}
+		}
+		return u
+	}
+	return t
 }
 
 func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 	tp, isParam := types.Unalias(x.Assert).(*types.TypeParam)
 	if !x.Comma {
 		if isInterfaceType(x.Assert) {
-			return fmt.Sprintf("$assertIface(%s, %s, '%s')",
-				e.expr(x.X), methodNameList(interfaceMethods(x.Assert)),
-				typeName(x.Assert))
+			return fmt.Sprintf("$assertIface(%s, %s, %s)",
+				e.expr(x.X), e.methodKeyListText(x.Assert),
+				e.typeNameText(x.Assert))
 		}
 		if isParam {
 			return fmt.Sprintf("$assertDict(%s, %s)", e.expr(x.X), e.dictOf(tp))
@@ -842,7 +997,7 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 	}
 	if isInterfaceType(x.Assert) {
 		return fmt.Sprintf("(() { final $x = %s; if ($implements($x, %s)) return ($x, true); return (null, false); })()",
-			e.expr(x.X), methodNameList(interfaceMethods(x.Assert)))
+			e.expr(x.X), e.methodKeyListText(x.Assert))
 	}
 	if isParam {
 		return fmt.Sprintf("(() { final $x = %s; if ($isDictType($x, %s.desc)) return ($dictValue<%s>($x, %s), true); return (%s.zero(), false); })()",

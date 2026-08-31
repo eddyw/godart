@@ -169,6 +169,34 @@ func (b *builder) spreadResults(out *ir.Call, e *ast.CallExpr, sig *types.Signat
 	return true
 }
 
+// spreadBuiltin fills the arguments of a builtin whose only argument is a call
+// with multiple results, for example copy(f()). The form follows spreadResults.
+func (b *builder) spreadBuiltin(out *ir.Builtin, e *ast.CallExpr) bool {
+	if len(e.Args) != 1 || e.Ellipsis.IsValid() {
+		return false
+	}
+	inner, ok := unparenExpr(e.Args[0]).(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	tuple, ok := b.typeOf(inner).(*types.Tuple)
+	if !ok || tuple.Len() < 2 {
+		return false
+	}
+	recv := b.temp(e.Pos(), "sr")
+	args := make([]ir.Expr, tuple.Len())
+	for i := range args {
+		args[i] = &ir.Ident{
+			Name: recv + ".$" + strconv.Itoa(i+1),
+			Type: tuple.At(i).Type(),
+		}
+	}
+	out.Args = args
+	out.Results = b.expr(inner)
+	out.ResultsVar = recv
+	return true
+}
+
 // paramType gives the type of the parameter that takes argument i. The last
 // parameter of a variadic function takes the element type, except when the call
 // spreads a slice.
@@ -222,6 +250,9 @@ func (b *builder) builtin(e *ast.CallExpr, fn string) ir.Expr {
 	case "len", "cap", "copy", "delete", "clear", "print", "println",
 		"min", "max", "close", "complex", "real", "imag":
 		out := &ir.Builtin{Name: fn, Type: t}
+		if b.spreadBuiltin(out, e) {
+			return out
+		}
 		for _, a := range e.Args {
 			out.Args = append(out.Args, b.expr(a))
 		}
