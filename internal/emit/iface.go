@@ -97,7 +97,7 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 	// The description of an instance with a free type parameter can reach
 	// itself through a field or a method, and no variable can hold it. The
 	// second visit gives a shallow description, thus the text ends.
-	key := typeName(t)
+	key := e.typeName(t)
 	if e.descBusy == nil {
 		e.descBusy = map[string]bool{}
 	}
@@ -138,7 +138,7 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 		variable = e.descName(named.Obj(), true)
 	}
 	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s);",
-		variable, dartText(types.TypeString(t, nil)), kindOf(t),
+		variable, dartText(e.typeName(t)), kindOf(t),
 		strings.Join(e.methodTable(named, t), ", "), dartText(reflectText(t)),
 		e.methodTypeTable(t)+e.descParts(t), e.zero(t))
 }
@@ -787,8 +787,17 @@ func isPure(x ir.Expr) bool {
 // typeName gives the name that a descriptor holds and that a type test reads.
 // An alias carries the name of its own declaration, thus the name comes from
 // the type behind it.
-func typeName(t types.Type) string {
-	return types.TypeString(stripNames(types.Unalias(t)), nil)
+func (e *emitter) typeName(t types.Type) string {
+	text := types.TypeString(stripNames(types.Unalias(t)), nil)
+	// 2 local types of 2 functions can share 1 printed name, and the
+	// identity of a type reads the name. The position keeps them apart, and
+	// the display text stays short.
+	if named, ok := types.Unalias(t).(*types.Named); ok &&
+		isLocalType(named.Obj()) && e.cfg.Fset != nil {
+		p := e.cfg.Fset.Position(named.Obj().Pos())
+		text += fmt.Sprintf("·%d_%d", p.Line, p.Column)
+	}
+	return text
 }
 
 // stripNames gives the type with no parameter name inside a function type.
@@ -854,7 +863,7 @@ func (e *emitter) typeNameText(t types.Type) string {
 		return e.dictOf(tp) + ".desc.name"
 	}
 	if !typeset.HoldsParam(t) {
-		return "'" + dartText(typeName(t)) + "'"
+		return "'" + dartText(e.typeName(t)) + "'"
 	}
 	var reads []string
 	sub := e.substParams(t, &reads)

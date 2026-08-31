@@ -542,9 +542,13 @@ type (
 	// Composite builds a struct, an array, a slice, or a map value. Keys is nil
 	// for a positional literal.
 	Composite struct {
-		Keys  []Expr
-		Elems []Expr
-		Type  types.Type
+		// Results holds the record of the values in the order of the source,
+		// and each element reads 1 field of it. ResultsVar names the record.
+		Results    Expr
+		ResultsVar string
+		Keys       []Expr
+		Elems      []Expr
+		Type       types.Type
 	}
 
 	// FuncLit is a closure.

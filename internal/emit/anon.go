@@ -142,7 +142,7 @@ func (e *emitter) instDescVar(named *types.Named, pointer bool) string {
 	if holdsTypeParam(t) {
 		return e.instanceDesc(named, pointer)
 	}
-	sum := sha256.Sum256([]byte(typeName(t)))
+	sum := sha256.Sum256([]byte(e.typeName(t)))
 	key := e.nilPrefix + "$desc" + hex.EncodeToString(sum[:4])
 	if _, ok := e.instDescs[key]; !ok {
 		e.instDescs[key] = t

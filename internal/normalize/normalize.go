@@ -292,6 +292,11 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 				break
 			}
 		}
+		if hidden.Obj == nil && len(vars) > 0 {
+			// Each name is blank, and the rank of the first one still
+			// places the call.
+			hidden.Obj = vars[0].Obj
+		}
 		out = append(out, &ir.Global{Var: hidden, Init: call, Pending: pending})
 		for i, v := range vars {
 			field := &ir.RecordField{

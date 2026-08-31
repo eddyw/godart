@@ -8,11 +8,12 @@ part of '../count.dart';
 
 int Runes(GoString text) {
   int n = 0;
+  GoString $range6_12 = text;
   int $i6_2 = 0;
   int $size6_2 = 0;
   int $rune6_2 = 0;
-  for (; ($i6_2 < text.length); $i6_2 = ($i6_2 + $size6_2)) {
-    ($rune6_2, $size6_2) = $decodeRune(text, $i6_2);
+  for (; ($i6_2 < $range6_12.length); $i6_2 = ($i6_2 + $size6_2)) {
+    ($rune6_2, $size6_2) = $decodeRune($range6_12, $i6_2);
     n = (n + 1);
   }
   return n;

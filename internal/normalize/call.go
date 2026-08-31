@@ -271,9 +271,9 @@ func (b *builder) compositeOf(e *ast.CompositeLit, t types.Type) ir.Expr {
 	case *types.Struct:
 		return b.structLit(e, t, u)
 	case *types.Slice:
-		return &ir.Composite{Elems: b.listLit(e, u.Elem()), Type: t}
+		return b.listLit(e, u.Elem(), t)
 	case *types.Array:
-		return &ir.Composite{Elems: b.listLit(e, u.Elem()), Type: t}
+		return b.listLit(e, u.Elem(), t)
 	case *types.Map:
 		out := &ir.Composite{Type: t}
 		for _, el := range e.Elts {
@@ -302,10 +302,14 @@ func (b *builder) compositeOf(e *ast.CompositeLit, t types.Type) ir.Expr {
 
 // listLit fills the elements of an array literal or of a slice literal. A key
 // gives the index of the element, and a gap holds the zero value.
-func (b *builder) listLit(e *ast.CompositeLit, elem types.Type) []ir.Expr {
-	var out []ir.Expr
+func (b *builder) listLit(e *ast.CompositeLit, elem types.Type, t types.Type) ir.Expr {
+	values := make([]ir.Expr, len(e.Elts))
+	slots := make([]int, len(e.Elts))
+	pure := true
+	ordered := true
 	next := 0
-	for _, el := range e.Elts {
+	size := 0
+	for k, el := range e.Elts {
 		if kv, ok := el.(*ast.KeyValueExpr); ok {
 			tv, ok := b.info.Types[kv.Key]
 			if !ok || tv.Value == nil {
@@ -316,16 +320,45 @@ func (b *builder) listLit(e *ast.CompositeLit, elem types.Type) []ir.Expr {
 			next = i
 			el = kv.Value
 		}
-		for len(out) < next {
-			out = append(out, &ir.Zero{Type: elem})
+		values[k] = b.copyPoint(b.exprAs(el, elem))
+		slots[k] = next
+		pure = pure && pureExpr(values[k])
+		if next < size {
+			ordered = false
 		}
-		value := b.copyPoint(b.exprAs(el, elem))
-		if len(out) == next {
-			out = append(out, value)
-		} else {
-			out[next] = value
+		if next+1 > size {
+			size = next + 1
 		}
 		next++
+	}
+	out := &ir.Composite{Type: t}
+	// Go evaluates the values in the order of the source, and the slots take
+	// them by the index. The record holds the source order.
+	if !pure && !ordered {
+		vars := make([]*types.Var, len(values))
+		for i, v := range values {
+			vars[i] = anonVar(v.GoType())
+		}
+		tuple := types.NewTuple(vars...)
+		recv := b.temp(e.Pos(), "cl")
+		out.Results = &ir.Record{Elems: append([]ir.Expr{}, values...), Type: tuple}
+		out.ResultsVar = recv
+		for i := range values {
+			values[i] = &ir.RecordField{
+				X:     &ir.Ident{Name: recv, Type: tuple},
+				Index: i,
+				Type:  tuple.At(i).Type(),
+			}
+		}
+	}
+	out.Elems = make([]ir.Expr, size)
+	for i := range out.Elems {
+		out.Elems[i] = &ir.Zero{Type: elem}
+	}
+	for k := range values {
+		if values[k] != nil {
+			out.Elems[slots[k]] = values[k]
+		}
 	}
 	return out
 }
@@ -369,30 +402,77 @@ func (b *builder) keyedStructLit(e *ast.CompositeLit, t types.Type, st *types.St
 		}
 		entries = append(entries, entry{path: path, value: kv.Value})
 	}
-	var build func(st *types.Struct, structType types.Type, entries []entry) ir.Expr
-	build = func(st *types.Struct, structType types.Type, entries []entry) ir.Expr {
+	// Go evaluates the values in the order of the source, and the fields take
+	// them by the keys. The record holds the source order.
+	values := make([]ir.Expr, len(entries))
+	paths := make([][]int, len(entries))
+	pure := true
+	for i, en := range entries {
+		paths[i] = en.path
+		values[i] = b.copyPoint(b.exprAs(en.value, leafFieldType(st, en.path)))
+		pure = pure && pureExpr(values[i])
+	}
+	if !pure && len(entries) > 1 {
+		vars := make([]*types.Var, len(values))
+		for i, v := range values {
+			vars[i] = anonVar(v.GoType())
+		}
+		tuple := types.NewTuple(vars...)
+		recv := b.temp(e.Pos(), "cl")
+		rec := &ir.Record{Elems: values, Type: tuple}
+		values = make([]ir.Expr, len(entries))
+		for i := range values {
+			values[i] = &ir.RecordField{
+				X:     &ir.Ident{Name: recv, Type: tuple},
+				Index: i,
+				Type:  tuple.At(i).Type(),
+			}
+		}
+		out := b.buildKeyed(st, t, paths, values, e.Pos())
+		if c, ok := out.(*ir.Composite); ok {
+			c.Results = rec
+			c.ResultsVar = recv
+		}
+		return out
+	}
+	return b.buildKeyed(st, t, paths, values, e.Pos())
+}
+
+// buildKeyed places each staged value at its field path.
+func (b *builder) buildKeyed(st *types.Struct, t types.Type,
+	paths [][]int, values []ir.Expr, pos token.Pos) ir.Expr {
+	type slot struct {
+		path []int
+		ir   ir.Expr
+	}
+	slots := make([]slot, len(paths))
+	for i := range paths {
+		slots[i] = slot{path: paths[i], ir: values[i]}
+	}
+	var build func(st *types.Struct, structType types.Type, slots []slot) ir.Expr
+	build = func(st *types.Struct, structType types.Type, slots []slot) ir.Expr {
 		out := &ir.Composite{Type: structType}
 		for i := 0; i < st.NumFields(); i++ {
 			field := st.Field(i)
-			var nested []entry
-			var direct ast.Expr
-			for _, en := range entries {
+			var nested []slot
+			var direct ir.Expr
+			for _, en := range slots {
 				if en.path[0] != i {
 					continue
 				}
 				if len(en.path) == 1 {
-					direct = en.value
+					direct = en.ir
 					continue
 				}
-				nested = append(nested, entry{path: en.path[1:], value: en.value})
+				nested = append(nested, slot{path: en.path[1:], ir: en.ir})
 			}
 			switch {
 			case direct != nil:
-				out.Elems = append(out.Elems, b.copyPoint(b.exprAs(direct, field.Type())))
+				out.Elems = append(out.Elems, direct)
 			case len(nested) > 0:
 				inner := structOf(field.Type())
 				if inner == nil {
-					b.fail(e.Pos(), "the key path leaves a struct type")
+					b.fail(pos, "the key path leaves a struct type")
 					out.Elems = append(out.Elems, &ir.Zero{Type: field.Type()})
 					continue
 				}
@@ -403,7 +483,30 @@ func (b *builder) keyedStructLit(e *ast.CompositeLit, t types.Type, st *types.St
 		}
 		return out
 	}
-	return build(st, t, entries)
+	return build(st, t, slots)
+}
+
+// leafFieldType walks a field path to its type.
+func leafFieldType(st *types.Struct, path []int) types.Type {
+	t := st.Field(path[0]).Type()
+	for _, i := range path[1:] {
+		inner := structOf(t)
+		if inner == nil {
+			return t
+		}
+		t = inner.Field(i).Type()
+	}
+	return t
+}
+
+// pureExpr reports whether a second read of an expression gives the same
+// value with no effect.
+func pureExpr(e ir.Expr) bool {
+	switch e.(type) {
+	case *ir.Const, *ir.Zero, *ir.Ident:
+		return true
+	}
+	return false
 }
 
 // fieldPathOf resolves the key of a struct literal to a field index path. The

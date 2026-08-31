@@ -46,6 +46,25 @@ func (b *builder) rangeStmt(s *ast.RangeStmt, label string) []ir.Stmt {
 	return nil
 }
 
+// lenIsConst reports whether the length of the range expression is constant.
+// A call and a channel receive each make it variable, and Go then evaluates
+// the expression 1 time.
+func lenIsConst(e ast.Expr) bool {
+	ok := true
+	ast.Inspect(e, func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.CallExpr:
+			ok = false
+		case *ast.UnaryExpr:
+			if n.Op == token.ARROW {
+				ok = false
+			}
+		}
+		return ok
+	})
+	return ok
+}
+
 func intConst(n int64) *ir.Const {
 	return &ir.Const{Value: constant.MakeInt64(n), Type: types.Typ[types.Int]}
 }
@@ -92,7 +111,29 @@ func (b *builder) bindBoth(s *ast.RangeStmt, kv, vv ir.Expr) []ir.Stmt {
 }
 
 func (b *builder) rangeList(s *ast.RangeStmt, label string) []ir.Stmt {
-	pre, container := b.hoist(b.expr(s.X), s.X.Pos(), "range")
+	// Go reads the range expression 0 times when at most 1 iteration
+	// variable stands and the length is constant. A nil pointer to an array
+	// ranges by the length of the type.
+	if (s.Value == nil || isBlank(s.Value)) && lenIsConst(s.X) {
+		u := typeset.Core(b.typeOf(s.X))
+		if ptr, ok := u.(*types.Pointer); ok {
+			u = typeset.Core(ptr.Elem())
+		}
+		if a, ok := u.(*types.Array); ok {
+			iv, i := b.intVar(s.Pos(), "i")
+			body := &ir.Block{}
+			body.List = append(body.List, b.bindBoth(s, i, nil)...)
+			body.List = append(body.List, b.block(s.Body).List...)
+			return []ir.Stmt{&ir.For{
+				Init:  &ir.Declare{Vars: []*ir.Var{iv}, Init: intConst(0)},
+				Cond:  &ir.Binary{Op: token.LSS, X: i, Y: intConst(a.Len()), Type: types.Typ[types.Bool]},
+				Post:  &ir.Assign{Lhs: i, Rhs: &ir.Binary{Op: token.ADD, X: i, Y: intConst(1), Type: types.Typ[types.Int]}},
+				Body:  body,
+				Label: label,
+			}}
+		}
+	}
+	pre, container := b.forceHoist(b.expr(s.X), s.X.Pos(), "range")
 	iv, i := b.intVar(s.Pos(), "i")
 	lv, length := b.intVar(s.Pos(), "n")
 	pre = append(pre,
@@ -130,7 +171,7 @@ func (b *builder) rangeInt(s *ast.RangeStmt, label string) []ir.Stmt {
 // rangeString walks the runes of a string. The size of the last rune moves the
 // index, thus a continue statement also moves it.
 func (b *builder) rangeString(s *ast.RangeStmt, label string) []ir.Stmt {
-	pre, str := b.hoist(b.expr(s.X), s.X.Pos(), "range")
+	pre, str := b.forceHoist(b.expr(s.X), s.X.Pos(), "range")
 	iv, i := b.intVar(s.Pos(), "i")
 	sv, size := b.intVar(s.Pos(), "size")
 	rv := b.tempVar(s.Pos(), "rune", types.Typ[types.Rune])
@@ -161,7 +202,7 @@ func (b *builder) rangeString(s *ast.RangeStmt, label string) []ir.Stmt {
 // removes, thus the loop reads the map again for each key.
 func (b *builder) rangeMap(s *ast.RangeStmt, label string) []ir.Stmt {
 	m := mapType(b.typeOf(s.X))
-	pre, container := b.hoist(b.expr(s.X), s.X.Pos(), "range")
+	pre, container := b.forceHoist(b.expr(s.X), s.X.Pos(), "range")
 	keyList := types.NewSlice(m.Key())
 	kv := b.tempVar(s.Pos(), "keys", keyList)
 	keys := &ir.Ident{Name: kv.Name, Type: keyList}
@@ -192,7 +233,7 @@ func (b *builder) rangeMap(s *ast.RangeStmt, label string) []ir.Stmt {
 
 // rangeChan reads a channel until the channel closes.
 func (b *builder) rangeChan(s *ast.RangeStmt, label string, elem types.Type) []ir.Stmt {
-	pre, container := b.hoist(b.expr(s.X), s.X.Pos(), "range")
+	pre, container := b.forceHoist(b.expr(s.X), s.X.Pos(), "range")
 	value := b.tempVar(s.Pos(), "v", elem)
 	okVar := b.tempVar(s.Pos(), "ok", types.Typ[types.Bool])
 	ok := &ir.Ident{Name: okVar.Name, Type: types.Typ[types.Bool]}

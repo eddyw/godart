@@ -31,10 +31,20 @@ var goTestSkips = map[string]string{
 	"fixedbugs/issue29312": "a slice type that nests 60 levels breaks the Dart form",
 	"fixedbugs/issue19182": "a busy loop without a block operation never yields, and the other goroutine never runs",
 	"typeparam/nested":     "the reflect identity of a local type of a generic function drops the outer type argument",
-	"typeparam/issue54456": "2 local types of 2 functions share 1 reflect name, and the identity reads the name",
 	"typeparam/issue48137": "a function type that nests 30 levels erases at 2 depths, and the 2 Dart forms differ",
 
+	"fixedbugs/bug260":     "the test reads the machine address of a value, and Dart gives none",
+	"fixedbugs/bug352":     "2 values with no size take 2 cells, and gc gives them 1 address",
+	"fixedbugs/issue75764": "the Dart VM holds a fixed stack, and the recursion overflows",
+	"fixedbugs/issue14646": "a line directive does not reach the source map, and runtime.Caller gives the true position",
+	"fixedbugs/issue18149": "a line directive does not reach the source map, and runtime.Caller gives the true position",
+	"fixedbugs/issue5856":  "a line directive does not reach the source map, and runtime.Caller gives the true position",
+	"fixedbugs/issue13169": "the run holds 100000 channel rounds with a deep stack, and it needs more than the cap",
+	"fixedbugs/issue34395": "a global array of 100 MB fills element by element, and the run needs more than the cap",
+	"fixedbugs/issue78081": "the run holds 1600000 rounds of a byte append, and it needs more than the cap",
+
 	"typeparam/issue376214": "an append that spreads a union of a string and a byte slice stays open",
+	"fixedbugs/issue70156":  "reflect.Value.Elem of a pointer to an interface stays open",
 }
 
 // runWithin runs a program with a time limit. A file of the test directory

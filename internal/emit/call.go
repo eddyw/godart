@@ -724,8 +724,18 @@ func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
 	args = append(append(append([]string{args[0]}, dicts...), mdicts...), args[1:]...)
 	call := e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) +
 		joinTypeArgs(typeArgs, mtargs) + "(" + strings.Join(args, ", ") + ")"
+	// The receiver takes the form of the top level function: a pointer method
+	// takes the address of a value, and a value method reads behind a pointer.
+	rt := m.Recv.GoType()
+	if pointerMethod(m.Obj) && !isPointerType(rt) && needsBox(rt) {
+		rt = types.NewPointer(rt)
+	} else if !pointerMethod(m.Obj) && isPointerType(rt) {
+		if p, ok := typeset.Core(rt).(*types.Pointer); ok {
+			rt = p.Elem()
+		}
+	}
 	return fmt.Sprintf("((%s $recv) => (%s) => %s)(%s)",
-		e.dartType(m.Recv.GoType()), strings.Join(params, ", "), call, e.expr(m.Recv))
+		e.dartType(rt), strings.Join(params, ", "), call, e.topLevelRecv(m))
 }
 
 // interfaceMethodValue reads a method of an interface value without a call. The
@@ -949,7 +959,21 @@ func (e *emitter) appendCall(x *ir.Builtin) string {
 		parts = append(parts, e.expr(a))
 	}
 	return fmt.Sprintf("$append(%s, <%s>[%s], %s)",
-		e.expr(x.Args[0]), e.dartType(slice.Elem()), strings.Join(parts, ", "), e.alloc(slice.Elem()))
+		e.sliceText(x.Args[0]), e.dartType(slice.Elem()), strings.Join(parts, ", "), e.alloc(slice.Elem()))
+}
+
+// sliceText writes a slice expression. The Dart type of a type that names
+// itself erases to Object?, and the operation needs the slice type back.
+func (e *emitter) sliceText(x ir.Expr) string {
+	text := e.expr(x)
+	if e.dartType(x.GoType()) != "Object?" {
+		return text
+	}
+	slice, ok := typeset.Core(x.GoType()).(*types.Slice)
+	if !ok {
+		return text
+	}
+	return fmt.Sprintf("(%s as Slice<%s>)", text, e.dartType(slice.Elem()))
 }
 
 func (e *emitter) copyCall(x *ir.Builtin) string {
@@ -1014,16 +1038,15 @@ func (e *emitter) newCall(x *ir.Builtin) string {
 }
 
 func (e *emitter) minMax(x *ir.Builtin) string {
-	op := "<"
+	fn := "$minOf"
 	if x.Name == "max" {
-		op = ">"
+		fn = "$maxOf"
 	}
 	out := e.expr(x.Args[0])
 	for _, a := range x.Args[1:] {
-		next := e.expr(a)
-		out = fmt.Sprintf("((%s %s %s) ? %s : %s)", out, op, next, out, next)
+		out = fmt.Sprintf("%s(%s, %s)", fn, out, e.expr(a))
 	}
-	return out
+	return fmt.Sprintf("(%s as %s)", out, e.dartType(x.Type))
 }
 
 // textList writes each value of a print builtin as Dart text.

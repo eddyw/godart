@@ -47,7 +47,12 @@ func (f *flat) value(x ir.Expr) ir.Expr {
 		parts := f.operands([]ir.Expr{x.X, x.Low, x.High, x.Max})
 		return &ir.Slice{X: parts[0], Low: parts[1], High: parts[2], Max: parts[3], Type: x.Type}
 	case *ir.Composite:
-		return &ir.Composite{Keys: x.Keys, Elems: f.operands(x.Elems), Type: x.Type}
+		out := &ir.Composite{Keys: x.Keys, Elems: f.operands(x.Elems),
+			Type: x.Type, ResultsVar: x.ResultsVar}
+		if x.Results != nil {
+			out.Results = f.value(x.Results)
+		}
+		return out
 	case *ir.Builtin:
 		out := &ir.Builtin{Name: x.Name, Args: f.operands(x.Args),
 			Type: x.Type, Spread: x.Spread, ResultsVar: x.ResultsVar}
@@ -443,7 +448,7 @@ func blocksExpr(x ir.Expr) bool {
 	case *ir.Slice:
 		return blocksExpr(x.X) || blocksExpr(x.Low) || blocksExpr(x.High) || blocksExpr(x.Max)
 	case *ir.Composite:
-		return blocksAny(x.Elems) || blocksAny(x.Keys)
+		return blocksExpr(x.Results) || blocksAny(x.Elems) || blocksAny(x.Keys)
 	case *ir.Builtin:
 		return blocksExpr(x.Results) || blocksAny(x.Args)
 	case *ir.Record:

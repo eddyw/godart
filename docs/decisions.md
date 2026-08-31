@@ -725,6 +725,50 @@ The plan left these points open. The work took the decisions below.
 186. A method value whose declaration erases the Dart type of its result
      becomes a closure with a cast, exactly as `eraseCast` treats a call.
 
+187. The builtins min and max evaluate each operand 1 time, through the
+     runtime pair $minOf and $maxOf. A string compares by bytes, and a NaN
+     passes through, exactly as Go orders them.
+
+188. A write to the blank name keeps the evaluation and drops the value, in
+     an assignment, in a declaration pair, and in a tuple assignment. Dart
+     holds no setter of the wildcard.
+
+189. A package variable pair whose names are all blank takes the rank of its
+     first name, thus the call runs in the order of the type checker.
+
+190. A keyed struct or array literal evaluates its values in the order of the
+     source. The record form of `ir.Composite` holds the source order, and
+     each slot reads 1 field of it. `fixedbugs/bug433` and
+     `fixedbugs/issue17640` prove the order.
+
+191. A compound assignment reads the operands of its location 1 time: the
+     map base, the map key, and the pointer of a deref each take a variable.
+     `fixedbugs/bug196` counts the calls.
+
+192. The receiver of a method value whose body stands in a top level function
+     takes the form of that function: a pointer method takes the address of a
+     value, and a value method reads behind a pointer. `fixedbugs/issue7863`
+     proves the address form.
+
+193. A slice value whose Dart type erased to Object? casts back at an append
+     and at a nil test, exactly as a channel does at a member call.
+
+194. A range expression evaluates 1 time into a variable of its own, thus a
+     write of the same variable inside the body misses the loop. An array or
+     a pointer to an array with at most 1 iteration variable and a constant
+     length evaluates 0 times, exactly as the specification orders.
+     `fixedbugs/issue79909` and `fixedbugs/issue73476` prove the 2 rules.
+
+195. The name of a local type carries the position of its declaration, thus 2
+     local types of 2 functions keep 2 identities. The display text stays
+     short, and the reflect handle table keys on the name.
+     `fixedbugs/gcc65755` and `typeparam/issue54456` prove the split.
+
+196. `strconv.FormatFloat` with the verb f and the precision -1 unrolls the
+     shortest text in the overlay, and the bridge verb f keeps 6 digits for
+     fmt. The first form of decision 183 broke `%+f`, and this form holds
+     both.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

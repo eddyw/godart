@@ -383,7 +383,13 @@ func (e *emitter) nilTest(x, other ir.Expr) (string, bool) {
 	switch typeset.Core(x.GoType()).(type) {
 	case *types.Slice, *types.Map, *types.Chan:
 		// A slice, a map, and a channel each hold the zero value as an object.
-		return e.expr(x) + ".isNil", true
+		// The Dart type of a type that names itself erases to Object?, and
+		// the test needs the container type back.
+		text := e.expr(x)
+		if e.dartType(x.GoType()) == "Object?" {
+			return "(" + text + " as dynamic).isNil as bool", true
+		}
+		return text + ".isNil", true
 	case *types.Pointer, *types.Signature, *types.Interface:
 		return e.expr(x) + " == null", true
 	}
@@ -563,6 +569,14 @@ func fieldIndex(t types.Type, field string) int {
 }
 
 func (e *emitter) composite(x *ir.Composite) string {
+	if x.Results != nil {
+		inner := x.Results
+		x.Results = nil
+		body := e.composite(x)
+		x.Results = inner
+		return fmt.Sprintf("((%s %s) => %s)(%s)",
+			e.dartType(inner.GoType()), x.ResultsVar, body, e.expr(inner))
+	}
 	u := types.Unalias(x.Type).Underlying()
 	parts := make([]string, len(x.Elems))
 	for i, el := range x.Elems {

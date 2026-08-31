@@ -136,6 +136,12 @@ func (e *emitter) statementExpr(x ir.Expr) string {
 // declareOne writes 1 variable with its value. A boxed variable holds a box, and
 // the value goes inside the box.
 func (e *emitter) declareOne(v *ir.Var, value string) {
+	if v.Name == "_" {
+		// Dart holds no setter of the wildcard, and the value read stands.
+		e.line("final $blank%d = %s;", e.labelSeq, value)
+		e.labelSeq++
+		return
+	}
 	e.line("%s;", e.declareText(v, value))
 }
 
@@ -197,6 +203,9 @@ func (e *emitter) assignMulti(s *ir.AssignMulti) {
 	e.line("final %s = %s;", tmp, e.expr(s.Rhs))
 	for i, l := range s.Lhs {
 		id, ok := l.(*ir.Ident)
+		if ok && id.Name == "_" {
+			continue
+		}
 		if ok && id.Boxed && s.Define {
 			e.line("%s = Box(%s.$%d);", id.Name, tmp, i+1)
 			continue
@@ -230,6 +239,13 @@ func (e *emitter) defineAssign(s *ir.Assign) {
 // assign writes 1 value into 1 location. A struct and an array keep their
 // identity, thus the write copies the fields and does not replace the object.
 func (e *emitter) assign(lhs, rhs ir.Expr) {
+	// A write to the blank name keeps the evaluation only. Dart holds no
+	// setter of the wildcard.
+	if id, ok := lhs.(*ir.Ident); ok && id.Name == "_" {
+		e.line("final $blank%d = %s;", e.labelSeq, e.expr(rhs))
+		e.labelSeq++
+		return
+	}
 	t := lhs.GoType()
 	value := e.expr(rhs)
 	// The case list of a select statement has no Go type, thus it takes the

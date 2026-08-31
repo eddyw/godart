@@ -63,6 +63,14 @@ func (b *builder) lvalue(e ast.Expr) (pre []ir.Stmt, get ir.Expr, set func(ir.Ex
 		return pre, read, func(v ir.Expr) ir.Stmt { return &ir.Assign{Lhs: read, Rhs: v} }
 	case *ast.IndexExpr:
 		x := b.expr(e)
+		if mr, ok := x.(*ir.MapRead); ok {
+			pre1, base := b.hoist(mr.X, e.X.Pos(), "b")
+			pre2, key := b.hoist(mr.Key, e.Index.Pos(), "k")
+			read := &ir.MapRead{X: base, Key: key, Type: mr.Type}
+			return append(pre1, pre2...), read, func(v ir.Expr) ir.Stmt {
+				return &ir.Assign{Lhs: read, Rhs: v}
+			}
+		}
 		idx, ok := x.(*ir.Index)
 		if !ok {
 			return nil, x, func(v ir.Expr) ir.Stmt { return &ir.Assign{Lhs: x, Rhs: v} }
@@ -75,7 +83,13 @@ func (b *builder) lvalue(e ast.Expr) (pre []ir.Stmt, get ir.Expr, set func(ir.Ex
 		}
 	case *ast.StarExpr:
 		x := b.expr(e)
-		return nil, x, func(v ir.Expr) ir.Stmt { return &ir.Assign{Lhs: x, Rhs: v} }
+		un, ok := x.(*ir.Unary)
+		if !ok || un.Op != token.MUL {
+			return nil, x, func(v ir.Expr) ir.Stmt { return &ir.Assign{Lhs: x, Rhs: v} }
+		}
+		pre, ptr := b.hoist(un.X, e.X.Pos(), "p")
+		read := &ir.Unary{Op: un.Op, X: ptr, Type: un.Type}
+		return pre, read, func(v ir.Expr) ir.Stmt { return &ir.Assign{Lhs: read, Rhs: v} }
 	}
 	x := b.expr(e)
 	return nil, x, func(v ir.Expr) ir.Stmt { return &ir.Assign{Lhs: x, Rhs: v} }

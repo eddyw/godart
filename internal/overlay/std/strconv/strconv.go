@@ -102,11 +102,73 @@ func FormatBool(b bool) string {
 // FormatFloat gives the text of f. The verb is one of 'f', 'e', and 'g', and a
 // negative precision gives the shortest text.
 func FormatFloat(f float64, verb byte, precision, bitSize int) string {
+	// The verb f with the precision -1 gives the shortest fixed text with no
+	// exponent. The bridge verb f writes 6 digits, exactly as fmt does.
+	if precision < 0 && verb == 'f' {
+		if bitSize == 32 {
+			return expandExponent(dart.Format("v", float32(f)))
+		}
+		return expandExponent(dart.Format("v", f))
+	}
 	form := string(rune(verb))
 	if precision >= 0 {
 		form = "." + Itoa(precision) + form
 	}
 	return dart.Format(form, f)
+}
+
+// expandExponent unrolls the exponent form of a shortest text into the fixed
+// form.
+func expandExponent(text string) string {
+	e := -1
+	for i := 0; i < len(text); i++ {
+		if text[i] == 'e' {
+			e = i
+			break
+		}
+	}
+	if e < 0 {
+		return text
+	}
+	mant := text[:e]
+	exp, err := Atoi(text[e+1:])
+	if err != nil {
+		return text
+	}
+	sign := ""
+	if len(mant) > 0 && mant[0] == '-' {
+		sign = "-"
+		mant = mant[1:]
+	}
+	dot := -1
+	for i := 0; i < len(mant); i++ {
+		if mant[i] == '.' {
+			dot = i
+			break
+		}
+	}
+	digits := mant
+	point := len(mant)
+	if dot >= 0 {
+		digits = mant[:dot] + mant[dot+1:]
+		point = dot
+	}
+	point += exp
+	if point <= 0 {
+		out := sign + "0."
+		for i := 0; i < -point; i++ {
+			out += "0"
+		}
+		return out + digits
+	}
+	if point >= len(digits) {
+		out := sign + digits
+		for i := len(digits); i < point; i++ {
+			out += "0"
+		}
+		return out
+	}
+	return sign + digits[:point] + "." + digits[point:]
 }
 
 // Atoi reads a decimal int from text.

@@ -261,3 +261,20 @@ List<int> _encode(String s) {
   if (part.isNotEmpty) out.addAll(utf8.encode(part.toString()));
   return out;
 }
+
+/// The smaller of 2 values, in the order of Go. A NaN passes through, and a
+/// string compares by bytes.
+Object? $minOf(Object? a, Object? b) {
+  if (a is GoString) return $compare(a, b as GoString) <= 0 ? a : b;
+  if (a is double && a.isNaN) return a;
+  if (b is double && b.isNaN) return b;
+  return (a as num) <= (b as num) ? a : b;
+}
+
+/// The larger of 2 values, in the order of Go.
+Object? $maxOf(Object? a, Object? b) {
+  if (a is GoString) return $compare(a, b as GoString) >= 0 ? a : b;
+  if (a is double && a.isNaN) return a;
+  if (b is double && b.isNaN) return b;
+  return (a as num) >= (b as num) ? a : b;
+}
