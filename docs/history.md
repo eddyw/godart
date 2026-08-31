@@ -73,6 +73,23 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-08-31, the fourth session
+
+The session closed the 2 items of the open list: the value of a generic
+method, and the subdirectories of the go test directory. The harness now runs
+931 files, and 589 match `go run` with 0 differences. The road fixed the
+generic method value, the dispatch of a method call on a type parameter, the
+run time name of an open type, the source order of a keyed literal, the
+staged range container, and about 30 more defects. Decisions 160 to 196 hold
+each one.
+
+| Commit | Work |
+|---|---|
+| `b67a9ba` | The dictionaries of a generic method value bind in a closure, and the frame of a top level method takes the joined type parameters. |
+| `f289a55` | The typeparam wave: the dictionary dispatch, the interpolated names, the instance keys, 2 verify rules, and 104 files of typeparam. |
+| `c168d10` | The fixedbugs wave: the source order of keyed literals, the compound bases, the blank writes, the range container, and the local type identity. |
+| `1257b49` | The go test net of the subdirectories in `docs/library.md` and `docs/parity.md`. |
+
 ### 2026-08-31, the third session
 
 The session closed the last 2 items of the open list: the value flow of stage
