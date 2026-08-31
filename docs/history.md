@@ -73,6 +73,19 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-01, the fifth session
+
+The session built the 2 items of the open list: the local struct type that
+reads a type parameter, and `recover`. The road also fixed the nil dereference,
+the call through a nil function value, the comparison of an uncomparable type,
+the delete of an interface key, and the text of the makeslice errors. The go
+test net now holds 669 matches of 931 files with 0 differences, and 33 named
+limits. Decisions 200 to 202 hold each design.
+
+| Commit | Work |
+|---|---|
+| `31f77b1` | The shape class with its twins, the 2 pass emit, the recover chain with its tokens, the nil checks, and the 6 patches gone. |
+
 ### 2026-08-31, the fourth session
 
 The session closed the 2 items of the open list: the value of a generic
