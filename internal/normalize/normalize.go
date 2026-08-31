@@ -346,6 +346,9 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 		}
 	}
 	f := &ir.Func{Name: obj.Name(), Obj: obj, Pos: d.Pos()}
+	if d.Body != nil {
+		f.End = d.Body.Rbrace
+	}
 	b.names = map[types.Object]string{}
 	b.used = map[string]bool{}
 	if d.Body == nil {

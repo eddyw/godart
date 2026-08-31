@@ -53,7 +53,7 @@ final class Chan<T> {
   /// Reads 1 value. The caller reads [$blocked] after the call.
   (T, bool) receive() {
     if (isNil) {
-      $park();
+      $park('chan receive (nil chan)');
       return (_zero(), false);
     }
     if (readyToReceive) return receiveNow();
@@ -129,7 +129,7 @@ final class Chan<T> {
   /// Writes 1 value. The caller reads [$blocked] after the call.
   void send(T value) {
     if (isNil) {
-      $park();
+      $park('chan send (nil chan)');
       return;
     }
     if (readyToSend) {
@@ -200,7 +200,7 @@ final class SelectState {
 }
 
 /// The frame of a goroutine that waits for a value of a channel.
-final class _RecvWait<T> implements Frame {
+final class _RecvWait<T> implements WaitFrame {
   final Goroutine g;
   final T Function() _zero;
   (T, bool)? value;
@@ -212,11 +212,14 @@ final class _RecvWait<T> implements Frame {
   _RecvWait(this.g, this._zero, [this.sel, this.index = 0]);
 
   @override
+  String get $reason => sel == null ? 'chan receive' : 'select';
+
+  @override
   Object? resume() => value ?? (_zero(), false);
 }
 
 /// The frame of a goroutine that waits to write a value into a channel.
-final class _SendWait<T> implements Frame {
+final class _SendWait<T> implements WaitFrame {
   final Goroutine g;
   final T value;
 
@@ -225,6 +228,9 @@ final class _SendWait<T> implements Frame {
   final int index;
 
   _SendWait(this.g, this.value, [this.sel, this.index = 0]);
+
+  @override
+  String get $reason => sel == null ? 'chan send' : 'select';
 
   @override
   Object? resume() => null;

@@ -44,6 +44,11 @@ type Func struct {
 	Defers  bool
 	Pos     token.Pos
 
+	// End holds the closing brace of the body. Go gives a deferred call that
+	// runs while the function falls off its end or panics the position of
+	// that brace, and the source map must give the same line.
+	End token.Pos
+
 	// DeferBlocks marks a function whose defer stack can hold a call that
 	// blocks. The return path and the panic path then run inside the machine.
 	DeferBlocks bool
@@ -556,9 +561,11 @@ type (
 		Params  []*Var
 		Results []*Var
 		Body    *Block
-		Async   bool
-		Defers  bool
-		Type    types.Type
+		// End holds the closing brace of the body. Read the End field of Func.
+		End    token.Pos
+		Async  bool
+		Defers bool
+		Type   types.Type
 
 		// Machine holds the flat state machine of a literal that can block.
 		Machine *Machine

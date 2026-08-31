@@ -168,7 +168,10 @@ func (f *flat) close() {
 			f.emit(&ir.Jump{State: f.m.DeferState})
 			continue
 		}
-		f.emit(&ir.Return{})
+		// The return of a fall off the end keeps no position. The emitter
+		// then marks the closing brace, exactly as Go names such an exit.
+		blk := f.m.States[f.cur]
+		blk.List = append(blk.List, &ir.Return{})
 	}
 }
 

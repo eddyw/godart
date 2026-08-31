@@ -2,6 +2,7 @@ package emit
 
 import (
 	"fmt"
+	"go/token"
 	"go/types"
 	"strings"
 
@@ -305,7 +306,12 @@ func (e *emitter) frameOfWith(f *ir.Func, tps []*types.TypeParam, invoke string)
 	if f.Machine == nil || !f.Machine.Blocking {
 		return
 	}
-	e.writeFrameClass(f.Machine, tps, "", invoke, len(f.Results) > 0)
+	goFile := ""
+	if e.cfg.Fset != nil && f.Pos.IsValid() {
+		goFile = e.goFile(f.Pos)
+	}
+	e.writeFrameClass(f.Machine, tps, "", invoke, len(f.Results) > 0,
+		e.goFuncName(f), goFile)
 }
 
 // typeArgNames writes the type arguments of a call to a generic function.
@@ -544,16 +550,17 @@ func (e *emitter) body(f *ir.Func) {
 	}
 	e.boxParams(f.Params)
 	e.boxRecv(f.Recv)
-	e.emitBody(f.Results, f.Defers, f.Body)
+	e.emitBody(f.Results, f.Defers, f.Body, f.End)
 }
 
 // emitBody writes the statements of a function or of a closure. A function
-// with a defer statement runs the deferred calls through a finally block.
+// with a defer statement runs the deferred calls at each return, after the
+// body, and on the panic path.
 //
 // Go lets a deferred call change a named result, thus the return statement
 // writes the result variables and leaves a labeled block. The function reads
-// the variables after the finally block.
-func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
+// the variables after the block.
+func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block, end token.Pos) {
 	// A function that names 1 result declares each result. The return path
 	// writes each one and reads them together, thus a blank result also needs
 	// its variable.
@@ -569,7 +576,13 @@ func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
 		return
 	}
 	e.line("final DeferStack $defer = DeferStack();")
-	e.line("bool $caught = false;")
+	// A return statement runs the deferred calls itself, thus the frame of a
+	// deferred call names the line of that return, exactly as in Go. The run
+	// after the body covers a fall off the end, and the mark of the closing
+	// brace gives its line. A second run finds an empty stack and does
+	// nothing.
+	prevPlain := e.deferPlain
+	e.deferPlain = true
 	e.line("try {")
 	if named {
 		e.line("$body: {")
@@ -581,14 +594,15 @@ func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
 	} else {
 		e.list(body.List)
 	}
+	e.mark(end)
+	e.line("$defer.run();")
 	e.line("} catch ($e) {")
-	e.line("$caught = true;")
 	e.line("$chainSave($e);")
+	e.mark(end)
 	e.line("if (!$defer.runRecovered()) { $chainRestore(); rethrow; }")
 	e.line("$chainRestore();")
-	e.line("} finally {")
-	e.line("if (!$caught) $defer.run();")
 	e.line("}")
+	e.deferPlain = prevPlain
 	if named {
 		e.line("return %s;", e.resultRead(results))
 		return

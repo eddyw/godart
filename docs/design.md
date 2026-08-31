@@ -404,13 +404,29 @@ The output holds a source map, and 4 readers use it.
   that follows it, `t.Helper` of the testing harness, and `Lshortfile` of the
   log package.
 
-The map holds the base name of a Go file, thus 2 machines give equal output.
-`Llongfile` of the log package needs the full path, and it stays a rejection.
+The map holds the module form of a Go file: the package path and the base
+name, as a build with `-trimpath` gives. Each file of a package lives in the
+directory of the package, thus the form needs no path of the machine, and 2
+checkouts of 1 tree give equal output for goal G5. The text of a line
+directive passes verbatim, and go/token resolves a relative directive against
+the directory of the source, exactly as the go compiler does. A line marker
+names its file only when a directive changed it, and the map entry then
+carries the file behind a `|`. The marker `//#g0` unmaps the line that
+follows: the wrapper of a deferred call holds no Go frame, and the reader
+drops such a line from a stack.
 
 Stage 4 gives each statement the position of its Go source. The flat state
 machine gives each statement that it builds the position of the source
-statement. A function that gives up control leaves the Dart stack. Thus the
-stack of a goroutine that waits holds the frames of the current state only.
+statement. The return of a fall off the end keeps no position, and the
+emitter marks the closing brace at each run of the defer chain outside a
+return, exactly as Go names such an exit.
+
+A function that gives up control leaves the Dart stack, and its frame chain
+holds the state. Each frame class implements TraceFrame: the Go name, the
+file, the line of the state that resumes, and the frame below. The deadlock
+report of the scheduler walks the chain of each live goroutine and writes the
+Go frames. A wait frame of the runtime names the reason of the goroutine
+header, such as `chan receive`.
 
 `testdata/programs/callers` proves `runtime.Caller`, `runtime.Callers`,
 `runtime.CallersFrames`, and `runtime.FuncForPC` against Go.

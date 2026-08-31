@@ -170,6 +170,10 @@ type emitter struct {
 	// empty only in a function that holds a defer statement and a named result.
 	returnLabel string
 	returnVars  []*ir.Var
+	// deferPlain marks the body of a function that holds a defer statement
+	// and no state machine. A return statement then runs the deferred calls
+	// itself, thus the frame of a deferred call names the line of the return.
+	deferPlain bool
 	// localAnon holds each unnamed struct type whose class stays inside the
 	// library of the package. Read anonShared.
 	localAnon map[string]*types.Struct
@@ -245,6 +249,17 @@ type emitter struct {
 	// goLine holds the source line of the last marker. A statement of the same
 	// line needs no second marker.
 	goLine int
+	// goMarkFile holds the file of the last marker, in the form of the map.
+	goMarkFile string
+	// funcFile holds the map form of the file of the current function. A line
+	// marker names its file only when a line directive changed it.
+	funcFile string
+	// curGoName holds the Go name of the current function. The frame class of
+	// a local function reads it.
+	curGoName string
+	// litSeq numbers the literals of the current function, in the order of
+	// the output. Go numbers them in the order of the source.
+	litSeq int
 	// extra holds each import that the emitter added. Read addImport.
 	extra []Import
 }
@@ -262,9 +277,41 @@ func (e *emitter) markFunc(f *ir.Func) {
 	if e.cfg.Fset == nil || !f.Pos.IsValid() {
 		return
 	}
-	p := e.cfg.Fset.Position(f.Pos)
-	e.line("%s%s|%s", fileMark, filepath.Base(p.Filename), e.goFuncName(f))
+	e.curGoName = e.goFuncName(f)
+	e.funcFile = e.goFile(f.Pos)
+	e.litSeq = 0
+	e.line("%s%s|%s", fileMark, e.funcFile, e.curGoName)
 	e.goLine = 0
+	e.goMarkFile = e.funcFile
+}
+
+// goFile gives the map form of the file of a position. A file of the package
+// takes the package path and the base name, thus 2 checkouts of 1 tree give
+// equal output. The text of a line directive passes verbatim, exactly as the
+// Go runtime reports it.
+func (e *emitter) goFile(pos token.Pos) string {
+	adjusted := e.cfg.Fset.Position(pos)
+	raw := e.cfg.Fset.PositionFor(pos, false)
+	if adjusted.Filename != raw.Filename {
+		return adjusted.Filename
+	}
+	base := filepath.Base(adjusted.Filename)
+	if e.pkg != nil {
+		return e.pkg.Path() + "/" + base
+	}
+	return base
+}
+
+// markDrop unmaps the output line that follows. The wrapper of a deferred
+// call is such a line: Go holds no frame of it, thus the reader of the map
+// must drop it from a stack.
+func (e *emitter) markDrop() {
+	if e.cfg.Fset == nil {
+		return
+	}
+	e.line("%s0", lineMark)
+	e.goLine = 0
+	e.goMarkFile = ""
 }
 
 // mark opens the source map entry of a source line.
@@ -273,11 +320,17 @@ func (e *emitter) mark(pos token.Pos) {
 		return
 	}
 	line := e.cfg.Fset.Position(pos).Line
-	if line == e.goLine {
+	file := e.goFile(pos)
+	if line == e.goLine && file == e.goMarkFile {
 		return
 	}
 	e.goLine = line
-	e.line("%s%d", lineMark, line)
+	e.goMarkFile = file
+	if file == e.funcFile {
+		e.line("%s%d", lineMark, line)
+		return
+	}
+	e.line("%s%d|%s", lineMark, line, file)
 }
 
 // goFuncName writes the name of a function in the form of the Go runtime.

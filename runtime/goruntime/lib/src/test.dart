@@ -42,10 +42,17 @@ bool $catch(void Function()? f) {
 ///
 /// The frame holds the stop signal of the inner chain, exactly as the first
 /// call does.
-final class _CatchWait implements Frame {
+final class _CatchWait implements WaitFrame {
   Frame inner;
 
   _CatchWait(this.inner);
+
+  @override
+  String get $reason {
+    final Frame f = inner;
+    if (f is WaitFrame) return f.$reason;
+    return 'waiting';
+  }
 
   @override
   Object? resume() {

@@ -73,7 +73,7 @@ int $select(List<SelectCase> cases, bool hasDefault) {
   }
   if (hasDefault) return -1;
   if (cases.isEmpty) {
-    $park();
+    $park('select (no cases)');
     return -1;
   }
   _SelectWait(cases, $current!).arm();
@@ -95,12 +95,15 @@ void _take(SelectCase c) {
 /// reaches such a waiter writes the number of the case, thus 2 select
 /// statements meet each other. A wake with no such number runs the statement
 /// again, because a second goroutine can take the value first.
-final class _SelectWait implements Frame {
+final class _SelectWait implements WaitFrame {
   final List<SelectCase> cases;
   final Goroutine g;
   final SelectState state = SelectState();
 
   _SelectWait(this.cases, this.g);
+
+  @override
+  String get $reason => 'select';
 
   void arm() {
     for (var i = 0; i < cases.length; i++) {

@@ -249,6 +249,11 @@ func logPos() string {
 			continue
 		}
 		file, line, _ := strings.Cut(rest, "|")
+		// go test names the base name of the file, and the map holds the
+		// package path in front of it.
+		if i := strings.LastIndexByte(file, '/'); i >= 0 {
+			file = file[i+1:]
+		}
 		return file + ":" + line
 	}
 	return ""

@@ -4,5 +4,5 @@ part of 'greet.dart';
 
 const $srcmapData = <String>[
   'package:multi/greet/greet.part.dart',
-  '13|greet.go|example.com/multi/greet.New;4|greet.go|example.com/multi/greet.(*Greeter).SetStyle;4|greet.go|example.com/multi/greet.(*Greeter).Text;d|greet.go|example.com/multi/greet.Twice\n13+i,4+4,4+4,1+1,5+2,7+4,1+1',
+  '13|example.com/multi/greet/greet.go|example.com/multi/greet.New;4|example.com/multi/greet/greet.go|example.com/multi/greet.(*Greeter).SetStyle;4|example.com/multi/greet/greet.go|example.com/multi/greet.(*Greeter).Text;d|example.com/multi/greet/greet.go|example.com/multi/greet.Twice\n13+i,4+4,4+4,1+1,5+2,7+4,1+1',
 ];

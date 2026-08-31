@@ -97,9 +97,12 @@ final class DeferStack {
     $savedRec = $recovered;
     $recovered = false;
     Object? thrown;
-    for (var i = _calls.length - 1; i >= 0; i--) {
+    // The loop consumes each call, thus a second run of the chain finds an
+    // empty stack and does nothing. The return path and the exit path of 1
+    // function can both reach the chain.
+    while (_calls.isNotEmpty) {
       try {
-        _calls[i]();
+        _calls.removeLast()();
       } catch (e) {
         if (e is GoPanic) {
           $chainPanic = e;

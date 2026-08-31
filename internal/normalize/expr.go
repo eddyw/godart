@@ -539,7 +539,7 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	if sig == nil {
 		return nil
 	}
-	out := &ir.FuncLit{Type: sig, Async: b.blocks.Blocks(e)}
+	out := &ir.FuncLit{Type: sig, Async: b.blocks.Blocks(e), End: e.Body.Rbrace}
 	prev := b.fn
 	prevPending := b.pending
 	b.pending = nil

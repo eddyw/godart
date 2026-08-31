@@ -2,7 +2,9 @@ package emit
 
 import (
 	"fmt"
+	"go/token"
 	"go/types"
+	"strconv"
 	"strings"
 
 	"github.com/eddyw/godart/internal/ir"
@@ -21,6 +23,9 @@ type machineCtx struct {
 	fn string
 	// locals holds the name of each local of the frame.
 	locals map[string]bool
+	// end holds the closing brace of the body. The run of the defer chain on
+	// the panic path and at a fall off the end marks that line.
+	end token.Pos
 }
 
 // capture holds the copy of 1 box that a state declares.
@@ -130,7 +135,7 @@ func (e *emitter) localZero(v *ir.Var) string {
 // level, because Dart holds no class inside a function and no class inside
 // another class.
 func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
-	fnType, invoke string, hasResult bool) {
+	fnType, invoke string, hasResult bool, goName, goFile string) {
 	// A frame of a local function resumes under the token of the function,
 	// because the call gave up control inside the chain of a defer
 	// statement, and a recover after the yield still reads the chain panic.
@@ -144,10 +149,19 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 		}
 		b.WriteByte('\n')
 	}
-	w("final class %s%s implements Frame {", m.Class, e.typeParamDecl(tps))
+	w("final class %s%s implements TraceFrame {", m.Class, e.typeParamDecl(tps))
 	w("int $s = 0;")
 	w("bool $c = false;")
 	w("Frame? $r;")
+	w("static const List<int> $lines = <int>[%s];", e.stateLines(m))
+	w("@override")
+	w("String get $name => %s;", dartString(goName))
+	w("@override")
+	w("String get $goFile => %s;", dartString(goFile))
+	w("@override")
+	w("int get $goLine => $s >= 0 && $s < $lines.length ? $lines[$s] : 0;")
+	w("@override")
+	w("Frame? get $next => $r;")
 	if m.Defer {
 		w("late DeferStack $defer;")
 	}
@@ -180,6 +194,26 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	e.frames = append(e.frames, b.String())
 }
 
+// stateLines writes the source line of each state of a machine. The line of a
+// state is the line of its first statement that holds a position. The trace of
+// a goroutine that waits reads the line of the state that resumes.
+func (e *emitter) stateLines(m *ir.Machine) string {
+	if e.cfg.Fset == nil {
+		return ""
+	}
+	parts := make([]string, len(m.States))
+	for i, s := range m.States {
+		parts[i] = "0"
+		for _, st := range s.List {
+			if p := ir.PosOf(st); p.IsValid() {
+				parts[i] = strconv.Itoa(e.cfg.Fset.Position(p).Line)
+				break
+			}
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
 // frameArgs lists the arguments that a resume gives the function again.
 func (e *emitter) frameArgs(tps []*types.TypeParam, params []*ir.Var) []string {
 	out := make([]string, 0, len(tps)+len(params)+1)
@@ -205,7 +239,8 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	for _, v := range m.Locals {
 		locals[v.Name] = true
 	}
-	e.machine = &machineCtx{m: m, results: f.Results, fn: fn, locals: locals}
+	e.machine = &machineCtx{m: m, results: f.Results, fn: fn, locals: locals,
+		end: f.End}
 	e.boxParams(f.Params)
 	skip := map[*ir.Var]bool{f.Recv: true}
 	for _, p := range f.Params {
@@ -271,6 +306,7 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	if m.Defer && !m.DeferBlocks {
 		e.line("} catch ($e) {")
 		e.line("$chainSave($e);")
+		e.mark(f.End)
 		e.line("if (!$defer.runRecovered()) { $chainRestore(); rethrow; }")
 		e.line("$chainRestore();")
 		if hasNamedResults(f.Results) {
@@ -286,6 +322,12 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 // deferNext writes the state that runs the next deferred call.
 func (e *emitter) deferNext(s *ir.DeferNext) {
 	e.line("if ($defer.isEmpty) { $s = %d; continue $m; }", s.Done)
+	// Each exit of the function shares this state, thus the frame of a
+	// deferred call names the closing brace. Go names the line of a return
+	// statement when the exit is a return, and the shared state cannot.
+	if e.machine != nil {
+		e.mark(e.machine.end)
+	}
 	e.line("$defer.runNext();")
 	e.line("$s = %d;", s.Body)
 	e.line("continue $m;")
@@ -361,6 +403,11 @@ func (e *emitter) machineReturn(s *ir.Return) {
 	// A machine whose deferred calls can block runs the chain in its own
 	// states, thus the return statement of the chain runs no call.
 	if ctx.m.Defer && !ctx.m.DeferBlocks {
+		// A return that stage 4 built for a fall off the end holds no
+		// position, and Go names the closing brace there.
+		if !s.Pos.IsValid() {
+			e.mark(ctx.end)
+		}
 		e.line("$defer.run();")
 	}
 	if named {
@@ -452,6 +499,7 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 		Body:       lit.Body,
 		Machine:    m,
 		TypeParams: tps,
+		End:        lit.End,
 	}
 	e.machineBody(inner, s.Name)
 	e.line("}")
@@ -466,7 +514,9 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 		fnType = fmt.Sprintf("%s Function([%s?])", result, frame)
 	}
 	invoke := fmt.Sprintf("$fn(%s)", strings.Join(e.frameArgs(nil, lit.Params), ", "))
-	e.writeFrameClass(m, tps, fnType, invoke, len(lit.Results) > 0)
+	e.litSeq++
+	e.writeFrameClass(m, tps, fnType, invoke, len(lit.Results) > 0,
+		fmt.Sprintf("%s.func%d", e.curGoName, e.litSeq), e.funcFile)
 }
 
 // selectBind writes the value and the flag of a receive case of a select

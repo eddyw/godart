@@ -66,12 +66,17 @@ final class _MappedFile {
   final List<int> lineAt;
   final List<int> goLine;
 
+  /// The file of 1 line entry, from a line directive. An empty text means the
+  /// file of the function.
+  final List<String> lineFile;
+
   _MappedFile(
     this.funcAt,
     this.funcFile,
     this.funcName,
     this.lineAt,
     this.goLine,
+    this.lineFile,
   );
 
   factory _MappedFile.parse(String text) {
@@ -94,10 +99,17 @@ final class _MappedFile {
     }
     final lineAt = <int>[];
     final goLine = <int>[];
+    final lineFile = <String>[];
     var dart = 0;
     var go = 0;
     if (body.isNotEmpty) {
-      for (final item in body.split(',')) {
+      for (var item in body.split(',')) {
+        final bar = item.indexOf('|');
+        var file = '';
+        if (bar >= 0) {
+          file = item.substring(bar + 1);
+          item = item.substring(0, bar);
+        }
         var sign = item.indexOf('+');
         var step = 1;
         if (sign < 0) {
@@ -108,17 +120,22 @@ final class _MappedFile {
         go += step * int.parse(item.substring(sign + 1), radix: 36);
         lineAt.add(dart);
         goLine.add(go);
+        lineFile.add(file);
       }
     }
-    return _MappedFile(funcAt, funcFile, funcName, lineAt, goLine);
+    return _MappedFile(funcAt, funcFile, funcName, lineAt, goLine, lineFile);
   }
 
   GoPos? at(int line) {
     final i = _floor(lineAt, line);
     if (i < 0) return null;
+    // The line 0 unmaps the region. The wrapper of a deferred call holds no
+    // Go frame, and the compiler writes such an entry for it.
+    if (goLine[i] == 0) return null;
     final f = _floor(funcAt, line);
     final name = f < 0 ? '' : funcName[f];
-    final file = f < 0 ? '' : funcFile[f];
+    var file = lineFile[i];
+    if (file.isEmpty) file = f < 0 ? '' : funcFile[f];
     return GoPos(name, file, goLine[i]);
   }
 }

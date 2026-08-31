@@ -508,7 +508,7 @@ cause. The groups:
 | The fixed Dart stack | `stack`, `stackobj2`, `fixedbugs/issue75764` | The deep recursion overflows. A parity limit. |
 | The self type | `peano`, `fixedbugs/issue4316` | A deref of `type Number *Number` has no Dart form. Decision 149 stops the crash. |
 | The reflect gaps | `reflectmethod4` | A bound method of reflect is no plain Dart function. |
-| The line directives | `fixedbugs/issue22662`, `issue14646`, `issue18149`, `issue5856` | A line directive does not reach the source map. |
+| The line directives | `fixedbugs/issue22662`, `issue5856` | A directive with no file gives `??` in Go, and the panic path of Go holds a gopanic frame. `issue14646` and `issue18149` joined the comparison on 2026-09-01. |
 | The machine addresses | `fixedbugs/bug260`, `bug352`, `issue29735`, `issue4667` | Dart gives no machine address, no program counter, and no allocation count. |
 | The deep types | `fixedbugs/issue72063`, `issue29312`, `typeparam/issue48137` | A type that nests 30 levels or more erases at 2 depths. |
 | The local generic identity | `typeparam/nested` | The reflect identity of a local type of a generic function drops the outer type argument. |

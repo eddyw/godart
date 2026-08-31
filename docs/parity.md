@@ -77,7 +77,7 @@ The package `fmt` reads it.
 |---|---|---|
 | Map order | Random for each run | The order of the writes |
 | `select` with 2 ready cases | Random | The first case in source order |
-| Deadlock | The runtime reports it and exits | Equal, with no stack trace |
+| Deadlock | The runtime reports it, writes the stack of each goroutine, and exits | Equal. The report walks the frame chain of each live goroutine. Go also writes the arguments, an offset, and a created-by line, and the chain holds none of them. The goroutine numbers can differ. |
 | A pointer value in `%v` | An address | `&` and the value, or `<func>` and `<chan>` |
 | `%p` | An address | Not supported |
 | A goroutine on a second thread | Yes | No. All Go code runs in 1 isolate. |
@@ -87,9 +87,10 @@ The package `fmt` reads it.
 | `runtime.NumGoroutine` | The count of goroutines | Always 1. The runtime library holds no such count. |
 | `runtime.GOOS` | A constant of the build | A variable. Dart names the system at the start of the program. |
 | `runtime.GOARCH` | A constant of the build | Always `dart64`. A Dart int holds 64 bits on each target. |
-| A stack trace of a panic | The full path of each file, and an offset in each frame | The base name of each file, and no offset. The source map of the output gives the position. |
-| A frame of a goroutine that waits | Present | Not present. A function that gives up control leaves the Dart stack. |
-| `runtime.Caller`, `runtime.Callers`, `runtime.CallersFrames`, `runtime.FuncForPC` | The program counters of the stack | Equal, with the base name of each file. A program counter is an index of a table of the runtime, and not an address. |
+| A stack trace of a panic | The path of the build machine in each frame, and an offset | The module form: the package path and the base name, as a build with `-trimpath` gives. No offset. The text of a line directive passes verbatim, and a relative directive resolves against the directory of the source, exactly as in Go. |
+| A frame of a goroutine that waits | Present | Present in the deadlock report, from the frame chain of the scheduler. A panic trace still holds the frames of the running goroutine only. |
+| `runtime.Caller`, `runtime.Callers`, `runtime.CallersFrames`, `runtime.FuncForPC` | The program counters of the stack | Equal, with the module form of each file. A program counter is an index of a table of the runtime, and not an address. |
+| The frame of a deferred call | The line of the return, or the closing brace at a fall or a panic | Equal, except 2 forms: a return inside a defer chain that can block gives the brace, and the panic path of Go holds a frame of gopanic that the chain does not hold. |
 | `runtime.AddCleanup` | Present | Present, with a Dart `Finalizer`. The time of the run follows the collector of Dart. |
 | `runtime.GC` | Runs a collection and waits for it | Allocates a block of garbage and gives up control. Dart holds no call that forces a collection, thus a cleanup can stay for a later call. |
 | The stack of a goroutine | Grows without a fixed limit | The Dart VM holds a fixed stack, thus a deep recursion overflows. `stack.go` of the Go repository is such a program. |
@@ -342,9 +343,10 @@ with the go command and with gart.
 ## The log package and the filepath package
 
 `log` holds each function and each method of Go. `Lshortfile` names the base
-name of the file and the line, exactly as Go does. `Llongfile` names the full
-path, and the source map of the output holds the base name only. A call of `New`
-or of `SetFlags` with `Llongfile` stops the program.
+name of the file and the line, exactly as Go does. `Llongfile` names the file
+the way the source map holds it: the package path and the base name. Go names
+the file the way the build machine holds it, thus the text before the base
+name differs.
 
 `path/filepath` holds the path operations. The separator is always `/`. Go
 selects the separator with a build tag of the operating system, and the emitted
@@ -921,8 +923,10 @@ the text holds the digits that Go writes.
 
 ## The findings of the go test directory, 2026-08-31
 
-- A line directive does not reach the source map. `runtime.Caller` gives the
-  true position of the source file.
+- A line directive reaches the source map, and `runtime.Caller` gives the
+  position of the directive. The work of 2026-09-01 closed this finding. 2
+  edge forms stay out: a directive with no file, and the gopanic frame of the
+  panic path.
 - Dart gives no machine address, no program counter, and no allocation count.
   A test of `%p` arithmetic, of `runtime.FuncForPC`, or of
   `testing.AllocsPerRun` has no Dart form.

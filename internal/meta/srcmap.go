@@ -21,8 +21,9 @@ func Strip(text string) (string, string) {
 	lines := strings.Split(text, "\n")
 	out := make([]string, 0, len(lines))
 	var funcs, entries []string
-	var pendingFile, pendingFunc string
+	var pendingFile, pendingFunc, pendingLineFile string
 	pendingLine := 0
+	pendingSet := false
 	lastFunc, lastDart, lastGo := 0, 0, 0
 	for _, line := range lines {
 		trimmed := strings.TrimLeft(line, " \t")
@@ -33,9 +34,16 @@ func Strip(text string) (string, string) {
 			pendingFile, pendingFunc = file, fn
 			continue
 		case strings.HasPrefix(trimmed, lineMark):
-			n, err := strconv.Atoi(trimmed[len(lineMark):])
+			rest := trimmed[len(lineMark):]
+			// A marker names its file only when a line directive changed it.
+			// The line 0 unmaps the output line: the reader of the map drops
+			// such a frame from a stack.
+			numText, file, _ := strings.Cut(rest, "|")
+			n, err := strconv.Atoi(numText)
 			if err == nil {
 				pendingLine = n
+				pendingLineFile = file
+				pendingSet = true
 			}
 			continue
 		}
@@ -46,10 +54,15 @@ func Strip(text string) (string, string) {
 			lastFunc = at
 			pendingFile, pendingFunc = "", ""
 		}
-		if pendingLine != 0 {
-			entries = append(entries, base36(at-lastDart)+delta(pendingLine-lastGo))
+		if pendingSet {
+			entry := base36(at-lastDart) + delta(pendingLine-lastGo)
+			if pendingLineFile != "" {
+				entry += "|" + pendingLineFile
+			}
+			entries = append(entries, entry)
 			lastDart, lastGo = at, pendingLine
-			pendingLine = 0
+			pendingSet = false
+			pendingLineFile = ""
 		}
 	}
 	return strings.Join(out, "\n"), strings.Join(funcs, ";") + "\n" + strings.Join(entries, ",")

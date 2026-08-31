@@ -387,7 +387,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		renames: e.withRenames(e.captureRenames(x.Captured))}
 	inner.curFuncId = e.funcId(x)
 	inner.boxParams(x.Params)
-	inner.emitBody(x.Results, x.Defers, x.Body)
+	inner.emitBody(x.Results, x.Defers, x.Body, x.End)
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
 	e.frames = append(e.frames, inner.frames...)

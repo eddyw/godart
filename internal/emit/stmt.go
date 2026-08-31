@@ -110,10 +110,12 @@ func (e *emitter) stmtOne(s ir.Stmt) {
 			// recover the panic value only in the function that the defer
 			// pushed, and each function that it calls reads nil.
 			if id := e.deferredId(m.Fun); id != 0 {
+				e.markDrop()
 				e.line("$defer.push(() => $dcall(%d, () => %s));", id, e.expr(s.Call))
 				return
 			}
 		}
+		e.markDrop()
 		e.line("$defer.push(() => %s);", e.expr(s.Call))
 	case *ir.Send:
 		e.line("%s.send(%s);", e.chanExpr(s.Chan), e.expr(s.Value))
@@ -565,6 +567,25 @@ func (e *emitter) returnStmt(s *ir.Return) {
 		e.namedReturn(s)
 		return
 	}
+	if e.deferPlain {
+		// Go evaluates the values of the return first, and the deferred calls
+		// run after that.
+		switch len(s.Values) {
+		case 0:
+			e.line("$defer.run();")
+			e.line("return;")
+		case 1:
+			e.line("{ final $ret = %s; $defer.run(); return $ret; }", e.expr(s.Values[0]))
+		default:
+			parts := make([]string, len(s.Values))
+			for i, v := range s.Values {
+				parts[i] = e.expr(v)
+			}
+			e.line("{ final $ret = (%s); $defer.run(); return $ret; }",
+				strings.Join(parts, ", "))
+		}
+		return
+	}
 	switch len(s.Values) {
 	case 0:
 		e.line("return;")
@@ -602,6 +623,9 @@ func (e *emitter) namedReturn(s *ir.Return) {
 			r := e.returnVars[i]
 			e.assign(&ir.Ident{Name: r.Name, Type: r.Type, Boxed: r.Boxed}, v)
 		}
+	}
+	if e.deferPlain {
+		e.line("$defer.run();")
 	}
 	e.line("break %s;", e.returnLabel)
 }

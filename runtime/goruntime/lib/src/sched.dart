@@ -19,6 +19,28 @@ abstract class Frame {
   Object? resume();
 }
 
+/// The frame of a compiled function. The compiler writes the 4 members, and
+/// the deadlock report walks the chain through them.
+abstract interface class TraceFrame implements Frame {
+  /// The Go name of the function.
+  String get $name;
+
+  /// The file of the function, in the form of the source map.
+  String get $goFile;
+
+  /// The source line of the state that resumes.
+  int get $goLine;
+
+  /// The frame under this one.
+  Frame? get $next;
+}
+
+/// A frame of the runtime that holds a goroutine while it waits. The reason
+/// takes the words of the goroutine header of Go, such as `chan receive`.
+abstract interface class WaitFrame implements Frame {
+  String get $reason;
+}
+
 /// Not null when the current goroutine must give up control.
 ///
 /// The runtime writes the frame of the operation that blocks. Each caller on
@@ -39,8 +61,16 @@ final class Goroutine {
   /// goroutine returns.
   final bool isMain;
 
-  Goroutine({this.isMain = false});
+  /// The number of the goroutine. Go numbers each goroutine from 1.
+  final int id;
+
+  Goroutine({this.isMain = false}) : id = ++_lastId;
 }
+
+int _lastId = 0;
+
+/// Each goroutine that did not return. The deadlock report walks it.
+final Set<Goroutine> _liveSet = <Goroutine>{};
 
 /// The goroutine that runs now.
 Goroutine? $current;
@@ -63,15 +93,21 @@ void $ready(Goroutine g) => _runq.add(g);
 void $block(Frame f) => $blocked = f;
 
 /// The frame of a goroutine that no operation wakes again.
-final class Park implements Frame {
-  const Park();
+final class Park implements WaitFrame {
+  final String reason;
+
+  const Park([this.reason = 'waiting']);
+
+  @override
+  String get $reason => reason;
 
   @override
   Object? resume() => null;
 }
 
-/// Gives up control until the end of the program.
-void $park() => $block(const Park());
+/// Gives up control until the end of the program. The reason reaches the
+/// goroutine header of the deadlock report.
+void $park([String reason = 'waiting']) => $block(Park(reason));
 
 /// Puts a goroutine on the run queue and runs the scheduler.
 ///
@@ -114,6 +150,7 @@ void $schedule() {
       $blocked = null;
     } else {
       _live--;
+      _liveSet.remove(g);
       if (g.isMain) _mainDone = true;
     }
   }
@@ -130,13 +167,17 @@ void $schedule() {
 /// waits for the scheduler.
 void $go(void Function() body) {
   _live++;
-  $ready(Goroutine()..start = body);
+  final Goroutine g = Goroutine()..start = body;
+  _liveSet.add(g);
+  $ready(g);
 }
 
 /// Runs package main as the first goroutine.
 void $boot(void Function() body) {
   _live++;
-  $ready(Goroutine(isMain: true)..start = body);
+  final Goroutine g = Goroutine(isMain: true)..start = body;
+  _liveSet.add(g);
+  $ready(g);
   $schedule();
 }
 
@@ -181,8 +222,11 @@ void $freeEvent() => _pending--;
 ///
 /// The value of the operation reaches the caller through the resume, thus the
 /// dead result of the operation itself needs no value.
-final class EventWait implements Frame {
+final class EventWait implements WaitFrame {
   Object? value;
+
+  @override
+  String get $reason => 'IO wait';
 
   @override
   Object? resume() => value;
@@ -275,9 +319,32 @@ void _exitMain() {
   if (_pending > 0) exit(0);
 }
 
-/// Reports that no goroutine can run again.
+/// Reports that no goroutine can run again. The report walks the frame chain
+/// of each live goroutine, thus the trace holds the Go frames of the wait. Go
+/// also writes the arguments and an offset in each frame, and the chain holds
+/// no such value.
 void _deadlock() {
   stderr.writeln('fatal error: all goroutines are asleep - deadlock!');
+  for (final Goroutine g in _liveSet) {
+    var reason = 'waiting';
+    final List<TraceFrame> stack = <TraceFrame>[];
+    Frame? f = g.frame;
+    while (f != null) {
+      if (f is TraceFrame) {
+        stack.add(f);
+        f = f.$next;
+        continue;
+      }
+      if (f is WaitFrame) reason = f.$reason;
+      break;
+    }
+    stderr.writeln();
+    stderr.writeln('goroutine ${g.id} [$reason]:');
+    for (final TraceFrame t in stack.reversed) {
+      stderr.writeln('${t.$name}()');
+      stderr.writeln('\t${t.$goFile}:${t.$goLine}');
+    }
+  }
   exit(2);
 }
 

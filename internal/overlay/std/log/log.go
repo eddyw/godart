@@ -3,9 +3,9 @@
 // Package log writes a line to a writer, with a prefix and a stamp of the
 // clock.
 //
-// The flag Llongfile stays outside the subset. It names the full path of the
-// source file, and the source map of the output holds the base name only. A
-// call that sets it stops the program.
+// The flag Llongfile names the file the way the source map holds it: the
+// package path and the base name. Go names the file the way the build machine
+// holds it. docs/parity.md holds that gap.
 package log
 
 import (
@@ -39,7 +39,6 @@ type Logger struct {
 
 // New builds a Logger that writes to out.
 func New(out io.Writer, prefix string, flag int) *Logger {
-	rejectFileFlag(flag)
 	return &Logger{out: out, prefix: prefix, flag: flag}
 }
 
@@ -48,24 +47,25 @@ func Default() *Logger { return std }
 
 var std = New(os.Stderr, "", LstdFlags)
 
-// rejectFileFlag stops the program for a flag that names a full path.
-func rejectFileFlag(flag int) {
-	if flag&Llongfile != 0 {
-		panic("log: the flag Llongfile needs the full path of a source file, " +
-			"and the source map of the output holds the base name only")
-	}
-}
-
 // position names the source file and the line of the caller. The count of
 // calldepth reaches runtime.Caller, thus it holds the 2 frames of this package
-// that stand between the writer of the line and the caller.
+// that stand between the writer of the line and the caller. Lshortfile wins
+// over Llongfile, exactly as in Go.
 func (l *Logger) position(calldepth int) string {
-	if l.flag&Lshortfile == 0 {
+	if l.flag&(Lshortfile|Llongfile) == 0 {
 		return ""
 	}
 	_, file, line, ok := runtime.Caller(calldepth)
 	if !ok {
 		file, line = "???", 0
+	}
+	if l.flag&Lshortfile != 0 {
+		for i := len(file) - 1; i > 0; i-- {
+			if file[i] == '/' {
+				file = file[i+1:]
+				break
+			}
+		}
 	}
 	return file + ":" + strconv.Itoa(line) + ": "
 }
@@ -156,7 +156,6 @@ func (l *Logger) SetPrefix(prefix string) { l.prefix = prefix }
 func (l *Logger) Flags() int              { return l.flag }
 
 func (l *Logger) SetFlags(flag int) {
-	rejectFileFlag(flag)
 	l.flag = flag
 }
 

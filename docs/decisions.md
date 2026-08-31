@@ -854,6 +854,20 @@ The plan left these points open. The work took the decisions below.
      value. A loaded location takes the exact transition rule of `Date` of Go,
      and `Local` keeps the 2-lookup guess of decision 79.
 
+206. The source map holds the module form of a file: the package path and
+     the base name, as a build with `-trimpath` gives. The form keeps goal
+     G5, because it needs no path of the machine. Go without `-trimpath`
+     writes the path of the build machine, thus `Llongfile` and a printed
+     trace differ before the base name. A line directive passes verbatim,
+     with the resolution of go/token. The wrapper of a deferred call takes
+     the map entry 0, and the reader drops such a frame. The run of the
+     defer chain marks the line that Go names: the return statement at a
+     return, and the closing brace at a fall or on the panic path. The run
+     consumes the calls of the chain, thus a second run does nothing. The
+     deadlock report walks the frame chain of each live goroutine through
+     the TraceFrame members of each frame class, and each wait frame of the
+     runtime names its reason.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a
