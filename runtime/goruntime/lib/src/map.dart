@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'iface.dart';
 import 'panic.dart';
 import 'slice.dart';
 
@@ -43,7 +44,11 @@ final class GoMap<K, V> {
   }
 
   void set(K key, V value) {
-    if (isNil) $panic(const GoError('assignment to entry in nil map'));
+    if (isNil) {
+      $panic(
+        Iface($typeGoError, const GoError('assignment to entry in nil map')),
+      );
+    }
     _entries[key] = value;
   }
 

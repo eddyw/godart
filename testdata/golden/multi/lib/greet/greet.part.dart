@@ -44,10 +44,16 @@ void Greeter$SetStyle(Greeter$? g, int s) {
 }
 
 GoString Greeter$Text(Greeter$? g) {
-  if ((g!._style == 1)) {
-    return $concat(GoString.fromString('HELLO, '), g!.Name);
+  if (((g == null ? $panicNil() : g!)._style == 1)) {
+    return $concat(
+      GoString.fromString('HELLO, '),
+      (g == null ? $panicNil() : g!).Name,
+    );
   }
-  return $concat(GoString.fromString('hello, '), g!.Name);
+  return $concat(
+    GoString.fromString('hello, '),
+    (g == null ? $panicNil() : g!).Name,
+  );
 }
 
 GoString Twice(GoString name) {

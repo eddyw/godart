@@ -782,6 +782,43 @@ The plan left these points open. The work took the decisions below.
      the Dart suffix $f, at the class, at each read, at each write, and in
      the descriptor. Decision 182 falls, and stage 2 accepts the form.
      `typeparam/combine` runs now.
+200. A struct shape that reads a type parameter takes 1 Dart class. The class
+     takes 1 Dart type parameter and 1 dictionary for each Go parameter of
+     the shape, and it stands in the library of the package, in the way of a
+     named generic type. A ground shape whose open twin exists resolves to
+     the class of the twin through a structural match that fills each
+     parameter, and 2 uses of 1 parameter must agree. The emit stage runs 2
+     passes, thus the pass that finds the shapes cannot change the output.
+     A type parameter whose constraint names a struct shape as its core
+     erases to Object? and reads each operation from its dictionary, and its
+     method calls go through the method table. A struct term of a constraint
+     gives the parameter no Dart bound. The dictionary holds a copy and an
+     assign for a struct and an array argument, thus a copy point of a type
+     parameter keeps value semantics. `equal`, `typeswitch2`,
+     `issue50690b`, `issue50690c`, and `issue54535` run now.
+201. `recover` reads the chain of the deferred calls of its function. The
+     runtime holds the pending panic, the chain panic, and the recovered
+     flag, and the chain of each function saves and restores that state, so
+     a chain inside a deferred call gives the state of the outer chain back.
+     Each run of a deferred call sets the pending panic around the call, and
+     a recover outside such a call gives nil. A panic inside a deferred call
+     replaces the chain panic, and the calls that remain run for the new
+     panic. A runtime error reaches recover as an interface value of the
+     description `runtime.errorString`, whose Error method gives the text of
+     Go. Stage 2 accepts `recover`, and the 6 patches that stripped
+     `recover` from go/parser, go/ast, go/build/constraint, regexp/syntax,
+     bytes, and text/tabwriter are gone. A machine holds the chain across a
+     blocked deferred call through its states, and the end of the chain
+     reads the run time state.
+202. A read that follows a pointer, and a call that goes through a function
+     value, panic with the nil dereference error of Go when the operand is
+     nil, and Dart gives a null check error. An operand with an effect takes
+     a parameter of its own, so the wrapper runs the effect 1 time. The
+     equality of 2 interface values compares the fields of a struct in the
+     order of the type, and a comparison that reaches a slice, a map, or a
+     function panics with the uncomparable error of Go. The `len` of a
+     pointer to an array stays constant, and Go evaluates the operand for no
+     result.
 
 ## Answered questions of 2026-08-31
 

@@ -66,11 +66,14 @@ func runProgram(t *testing.T, dir string, name string, args ...string) string {
 func cutTrace(text string) string {
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
-		if strings.HasPrefix(line, "goroutine ") {
-			return strings.Join(lines[:i], "\n")
+		// Go reports the signal of a crash, and the trace follows. The Dart
+		// VM prints the Dart trace of its own. The blank line in front of
+		// each trace takes the trim.
+		if strings.HasPrefix(line, "goroutine ") || strings.HasPrefix(line, "[signal ") {
+			return strings.TrimRight(strings.Join(lines[:i], "\n"), "\n")
 		}
 	}
-	return text
+	return strings.TrimRight(text, "\n")
 }
 
 // TestAOT proves that the output also compiles ahead of time. The Dart VM and

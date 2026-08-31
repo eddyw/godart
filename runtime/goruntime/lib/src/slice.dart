@@ -47,8 +47,11 @@ final class Slice<T> {
 /// The Go expression `make([]T, len, cap)`. The allocator returns a list of
 /// the given length that holds a fresh zero value in each slot.
 Slice<T> $makeSlice<T>(int len, int cap, List<T> Function(int) alloc) {
-  if (len < 0 || cap < len) {
-    $panic(const GoError('makeslice: len out of range'));
+  if (len < 0) {
+    $panic(Iface($typeGoError, const GoError('makeslice: len out of range')));
+  }
+  if (cap < len) {
+    $panic(Iface($typeGoError, const GoError('makeslice: cap out of range')));
   }
   return Slice(alloc(cap), 0, len, cap);
 }
@@ -89,7 +92,9 @@ Slice<T> $append<T>(Slice<T> s, List<T> add, List<T> Function(int) alloc) {
 void $swap(Object? value, int i, int j) {
   final Object? unwrapped = value is Iface ? value.value : value;
   if (unwrapped is! Slice<Object?>) {
-    $panic(const GoError('sort: the value is not a slice'));
+    $panic(
+      Iface($typeGoError, const GoError('sort: the value is not a slice')),
+    );
   }
   final Slice<Object?> slice = unwrapped;
   if (i < 0 || i >= slice.len) $panicIndex(i, slice.len);
@@ -103,7 +108,9 @@ void $swap(Object? value, int i, int j) {
 int $sliceLen(Object? value) {
   final Object? unwrapped = value is Iface ? value.value : value;
   if (unwrapped is! Slice<Object?>) {
-    $panic(const GoError('sort: the value is not a slice'));
+    $panic(
+      Iface($typeGoError, const GoError('sort: the value is not a slice')),
+    );
   }
   return unwrapped.len;
 }

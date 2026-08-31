@@ -4,8 +4,6 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-
-	"github.com/eddyw/godart/internal/typeset"
 )
 
 // checkExported rejects an unnamed struct type with an unexported field in an
@@ -158,29 +156,4 @@ func exportedFieldAnon(st *types.Struct, seen map[types.Type]bool) bool {
 		}
 	}
 	return false
-}
-
-// checkParamStruct rejects a struct type that reads a type parameter without
-// the name of a package level generic type. The class of such a shape stands
-// at package level, and that class cannot name the parameter.
-func (v *verifier) checkParamStruct(n *ast.StructType) {
-	if n == v.genericStruct || v.typeTargets[n] {
-		return
-	}
-	tv, ok := v.info.Types[n]
-	if !ok {
-		return
-	}
-	st, ok := tv.Type.(*types.Struct)
-	if !ok {
-		return
-	}
-	for i := 0; i < st.NumFields(); i++ {
-		if typeset.HoldsParam(st.Field(i).Type()) {
-			v.reject(n.Pos(), "the class of a struct shape stands at package level",
-				"the field %s reads a type parameter, and only a package level generic type holds one",
-				st.Field(i).Name())
-			return
-		}
-	}
 }

@@ -248,13 +248,20 @@ func (b *builder) builtin(e *ast.CallExpr, fn string) ir.Expr {
 		return &ir.Builtin{Name: fn, Type: t,
 			Args: []ir.Expr{b.convert(b.expr(e.Args[0]), anyType())}}
 	case "len", "cap", "copy", "delete", "clear", "print", "println",
-		"min", "max", "close", "complex", "real", "imag":
+		"min", "max", "close", "complex", "real", "imag", "recover":
 		out := &ir.Builtin{Name: fn, Type: t}
 		if b.spreadBuiltin(out, e) {
 			return out
 		}
 		for _, a := range e.Args {
 			out.Args = append(out.Args, b.expr(a))
+		}
+		// A key of a map with interface keys takes the type of the key, and
+		// each other type of key needs the conversion to it.
+		if fn == "delete" {
+			if m, ok := typeset.Core(b.typeOf(e.Args[0])).(*types.Map); ok {
+				out.Args[1] = b.convert(out.Args[1], m.Key())
+			}
 		}
 		return out
 	}

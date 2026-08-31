@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'iface.dart';
 import 'panic.dart';
 import 'sched.dart';
 import 'slice.dart';
@@ -142,7 +143,9 @@ final class Chan<T> {
 
   /// Sends with no wait. The caller reads readyToSend first.
   void sendNow(T value) {
-    if (_closed) $panic(const GoError('send on closed channel'));
+    if (_closed) {
+      $panic(Iface($typeGoError, const GoError('send on closed channel')));
+    }
     final _RecvWait<T>? waiting = _takeReceiver();
     if (waiting != null) {
       waiting.value = (value, true);
@@ -158,8 +161,12 @@ final class Chan<T> {
   }
 
   void close() {
-    if (isNil) $panic(const GoError('close of nil channel'));
-    if (_closed) $panic(const GoError('close of closed channel'));
+    if (isNil) {
+      $panic(Iface($typeGoError, const GoError('close of nil channel')));
+    }
+    if (_closed) {
+      $panic(Iface($typeGoError, const GoError('close of closed channel')));
+    }
     _closed = true;
     while (true) {
       final _RecvWait<T>? waiting = _takeReceiver();

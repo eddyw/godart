@@ -131,6 +131,10 @@ func (e *emitter) localZero(v *ir.Var) string {
 // another class.
 func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	fnType, invoke string, hasResult bool) {
+	// A frame of a local function resumes under the token of the function,
+	// because the call gave up control inside the chain of a defer
+	// statement, and a recover after the yield still reads the chain panic.
+	tok := e.curFuncId
 	var b strings.Builder
 	w := func(format string, args ...any) {
 		if len(args) == 0 {
@@ -147,9 +151,7 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	if m.Defer {
 		w("late DeferStack $defer;")
 	}
-	if m.DeferBlocks {
-		w("Object? $p;")
-	}
+
 	if fnType != "" {
 		w("late %s $fn;", fnType)
 	}
@@ -166,10 +168,10 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	}
 	w("@override")
 	if hasResult {
-		w("Object? resume() => %s;", invoke)
+		w("Object? resume() => $dcall<Object?>(%d, () => %s);", tok, invoke)
 	} else {
 		w("Object? resume() {")
-		w("%s;", invoke)
+		w("$dcall<Object?>(%d, () => %s);", tok, invoke)
 		w("return null;")
 		w("}")
 	}
@@ -223,9 +225,7 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	if m.Defer {
 		e.line("DeferStack $defer = DeferStack();")
 	}
-	if m.DeferBlocks {
-		e.line("Object? $p;")
-	}
+
 	if m.Blocking {
 		e.line("if ($f != null) {")
 		e.line("$s = $f.$s;")
@@ -234,9 +234,7 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 		if m.Defer {
 			e.line("$defer = $f.$defer;")
 		}
-		if m.DeferBlocks {
-			e.line("$p = $f.$p;")
-		}
+
 		for _, v := range m.Locals {
 			e.line("%s = $f.%s;", v.Name, v.Name)
 		}
@@ -260,8 +258,8 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	e.line("}")
 	if m.DeferBlocks {
 		e.line("} catch ($e) {")
-		e.line("if ($defer.isEmpty || $p != null) rethrow;")
-		e.line("$p = $e;")
+		e.line("if ($defer.isEmpty) rethrow;")
+		e.line("$chainSave($e);")
 		e.line("$s = %d;", m.DeferState)
 		e.line("continue $m;")
 		e.line("}")
@@ -272,8 +270,14 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	}
 	if m.Defer && !m.DeferBlocks {
 		e.line("} catch ($e) {")
-		e.line("$defer.run();")
-		e.line("rethrow;")
+		e.line("$chainSave($e);")
+		e.line("if (!$defer.runRecovered()) { $chainRestore(); rethrow; }")
+		e.line("$chainRestore();")
+		if hasNamedResults(f.Results) {
+			e.line("return %s;", e.resultRead(f.Results))
+		} else {
+			e.line("return %s;", e.zeroResult(f.Results))
+		}
 		e.line("}")
 	}
 	e.machine = prev
@@ -287,10 +291,13 @@ func (e *emitter) deferNext(s *ir.DeferNext) {
 	e.line("continue $m;")
 }
 
-// deferEnd writes the end of the defer chain. A panic that the machine caught
-// reaches the caller here.
+// deferEnd writes the end of the defer chain. A panic that the chain holds
+// reaches the caller here, unless a deferred call recovered it.
 func (e *emitter) deferEnd() {
-	e.line("if ($p != null) { final Object $pv = $p!; $p = null; throw $pv; }")
+	e.line("if ($chainPanic != null) {")
+	e.line("if (!$recovered) { final GoPanic $pv = $chainPanic!; $chainRestore(); throw $pv; }")
+	e.line("$chainRestore();")
+	e.line("}")
 }
 
 // machineSave writes the frame of a call that gave up control.
@@ -304,9 +311,7 @@ func (e *emitter) machineSave(f *ir.Func, fn string) {
 	if m.Defer {
 		e.line("..$defer = $defer")
 	}
-	if m.DeferBlocks {
-		e.line("..$p = $p")
-	}
+
 	if fn != "" {
 		e.line("..$fn = %s", fn)
 	}
@@ -425,6 +430,12 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 	prevNames := e.renames
 	e.renames = e.withRenames(e.captureRenames(lit.Captured))
 	defer func() { e.renames = prevNames }()
+	// The chain of the deferred calls runs the local function of a defer
+	// statement under its token, and recover reads it.
+	saved := e.curFuncId
+	e.curFuncId = e.funcId(s.Name)
+	defer func() { e.curFuncId = saved }()
+	e.varLitId[s.Name] = e.curFuncId
 	// The frame class stands at package level, thus it takes the type
 	// parameters of the enclosing function. A local of the literal can hold a
 	// value of such a parameter.

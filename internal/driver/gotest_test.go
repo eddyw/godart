@@ -42,6 +42,18 @@ var goTestSkips = map[string]string{
 	"fixedbugs/issue13169": "the run holds 100000 channel rounds with a deep stack, and it needs more than the cap",
 	"fixedbugs/issue34395": "a global array of 100 MB fills element by element, and the run needs more than the cap",
 	"fixedbugs/issue78081": "the run holds 1600000 rounds of a byte append, and it needs more than the cap",
+
+	"convert4":                    "the address of an element of an array that a slice conversion shares differs from the address of the slice element",
+	"devirtualization_nil_panics": "the test reads the line of the panic site in the recovered stack, and the source map gives none",
+	"fixedbugs/issue29190":        "the test allocates a list of 4 billion elements, and the Dart VM runs out of memory",
+	"fixedbugs/issue26094":        "the text of a conversion panic names a local type with its position, and Go names it with the package",
+	"fixedbugs/issue7550":         "the append of 2 slices of the maximum length must overflow the capacity, and the Dart build runs out of memory",
+	"fixedbugs/issue4562":         "Go prints the panic of the caller in front of a panic that a recover turned into a second panic, and the Dart print holds the second panic only",
+	"fixedbugs/issue19040":        "the panic of a method wrapper of a nil pointer gives no error value with the text of Go",
+	"fixedbugs/issue48898":        "a defer of a call of panic inside 2 chains of deferred calls orders the panics differently",
+	"fixedbugs/issue23734":        "a read of a map with an interface key whose type has no identity must panic, and the Dart read compares in silence",
+	"fixedbugs/issue34123":        "a deref of a nil pointer inside a map read keeps no check, and Go panics",
+	"fixedbugs/issue29504":        "the test reads the frames of the recovered stack, and the source map gives none of them",
 }
 
 // runWithin runs a program with a time limit. A file of the test directory

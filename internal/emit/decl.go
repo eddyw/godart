@@ -141,13 +141,16 @@ func typeParamsOf(list *types.TypeParamList) []*types.TypeParam {
 }
 
 // copyOf gives the expression that copies 1 field. A struct and an array hold a
-// value, thus each one needs a fresh copy.
+// value, thus each one needs a fresh copy. A type parameter reads its copy
+// from the dictionary, because the Dart type of the argument is unknown.
 func (e *emitter) copyOf(read string, t types.Type) string {
 	switch {
 	case isStructType(t):
 		return read + ".$copy()"
 	case isArrayType(t):
 		return e.copyArray(read, t)
+	case typeset.HoldsParam(t) && typeset.Core(t) == nil:
+		return fmt.Sprintf("%s.copyOf(%s)", e.dictOf(t), read)
 	}
 	return read
 }
@@ -169,6 +172,8 @@ func (e *emitter) writeAssign(class string, st *types.Struct, fields []string) {
 	for i, f := range fields {
 		t := st.Field(i).Type()
 		switch {
+		case typeset.HoldsParam(t) && typeset.Core(t) == nil:
+			e.line("%s = %s.assignOf(%s, $o.%s);", f, e.dictOf(t), f, f)
 		case isStructType(t):
 			e.line("%s.$assign($o.%s);", f, f)
 		case isArrayType(t):
@@ -527,6 +532,9 @@ func (e *emitter) body(f *ir.Func) {
 			"the function "+f.Name+" holds no body in the subset")
 		return
 	}
+	saved := e.curFuncId
+	e.curFuncId = e.funcId(f)
+	defer func() { e.curFuncId = saved }()
 	if f.Machine != nil {
 		if f.Recv != nil && !e.inClass[f] {
 			e.boxRecv(f.Recv)
@@ -561,6 +569,7 @@ func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
 		return
 	}
 	e.line("final DeferStack $defer = DeferStack();")
+	e.line("bool $caught = false;")
 	e.line("try {")
 	if named {
 		e.line("$body: {")
@@ -572,11 +581,22 @@ func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block) {
 	} else {
 		e.list(body.List)
 	}
+	e.line("} catch ($e) {")
+	e.line("$caught = true;")
+	e.line("$chainSave($e);")
+	e.line("if (!$defer.runRecovered()) { $chainRestore(); rethrow; }")
+	e.line("$chainRestore();")
 	e.line("} finally {")
-	e.line("$defer.run();")
+	e.line("if (!$caught) $defer.run();")
 	e.line("}")
 	if named {
 		e.line("return %s;", e.resultRead(results))
+		return
+	}
+	// A panic that a deferred call recovered leaves the body at the catch,
+	// and Go gives such a return the zero value.
+	if len(results) > 0 {
+		e.line("return %s;", e.zeroResult(results))
 		return
 	}
 	e.closeBody(results, body)

@@ -446,6 +446,11 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 		params[i] = e.dartType(selSig.Params().At(i).Type()) + " " + args[i]
 	}
 	recv := fmt.Sprintf("($r as %s)", e.dartType(elem))
+	if pointer && !needsBox(elem) {
+		// Go panics when a value method runs with a nil pointer receiver,
+		// and the Dart cast of null gives a cast error.
+		recv = fmt.Sprintf("($r == null ? $panicNil() : ($r as %s))", e.dartType(elem))
+	}
 	if pointer && needsBox(elem) {
 		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(elem)))
 		if _, ok := types.Unalias(sig.Recv().Type()).(*types.Pointer); !ok {

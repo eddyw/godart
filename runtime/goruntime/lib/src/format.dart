@@ -100,14 +100,22 @@ bool $assignError(Iface? value, Iface? target) {
   if (value == null || target == null) return false;
   final TypeDesc desc = target.desc;
   if (desc.kind != 'ptr' || desc.elem == null) {
-    $panic(const GoError('errors: target must be a non-nil pointer'));
+    $panic(
+      Iface(
+        $typeGoError,
+        const GoError('errors: target must be a non-nil pointer'),
+      ),
+    );
   }
   final TypeDesc elem = desc.elem!();
   if (elem.kind == 'interface') {
     $panic(
-      const GoError(
-        'errors.As with a pointer to an interface type is '
-        'outside the subset',
+      Iface(
+        $typeGoError,
+        const GoError(
+          'errors.As with a pointer to an interface type is '
+          'outside the subset',
+        ),
       ),
     );
   }

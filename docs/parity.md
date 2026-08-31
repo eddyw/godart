@@ -81,7 +81,7 @@ The package `fmt` reads it.
 | A pointer value in `%v` | An address | `&` and the value, or `<func>` and `<chan>` |
 | `%p` | An address | Not supported |
 | A goroutine on a second thread | Yes | No. All Go code runs in 1 isolate. |
-| `recover` | Present | Outside the subset |
+| `recover` | Present | Present. A deferred call of the panicking function reads the value, and each other call gives nil. A panic inside a deferred call replaces the chain panic. |
 | `unsafe` and cgo | Present | Outside the subset |
 | `runtime.GOMAXPROCS`, `runtime.NumCPU` | The count of processors | Always 1. All Go code runs in 1 isolate. |
 | `runtime.NumGoroutine` | The count of goroutines | Always 1. The runtime library holds no such count. |
@@ -96,7 +96,7 @@ The package `fmt` reads it.
 | `runtime.GOROOT` | The root of the Go tree | An empty text. The Dart output holds no such tree. |
 | `debug.SetMaxStack` | Writes the limit of the runtime | Keeps the value only. |
 | `filepath.EvalSymlinks` | Walks each symbolic link | Gives the cleaned path, and walks no link. |
-| A deferred recover of go/ast, go/parser, go/build/constraint, and text/tabwriter | Turns a panic into an error result | The 4 patches drop the recover, thus such a panic stops the program. Read decision 148. |
+| A panic of a run time error that recover reads | The value implements `error`, and `Error()` gives the text | Equal. The value carries the description `runtime.errorString`, whose method table holds `Error`. |
 
 ## The subset of the language
 
@@ -133,12 +133,12 @@ reads the real Go source, because that source already stays inside the subset.
 | Package | Form | Note |
 |---|---|---|
 | `bufio` | Native | The real source needs no patch. |
-| `bytes` | Native, with 1 patch | The patch replaces `buffer.go`, which holds a `recover` call. |
+| `bytes` | Native | The real source needs no patch. |
 | `cmp` | Native | The order of a mixed constraint reads the dictionary. |
 | `container/list` | Native | |
 | `encoding/base64` | Native | The real source needs no patch. |
 | `regexp` | Native | The real source needs no patch. |
-| `regexp/syntax` | Native, with 1 patch | The patch replaces `parse.go`, which holds a `recover` call. A pattern that reaches a limit of a resource stops the program, and Go gives an error. |
+| `regexp/syntax` | Native | The real source needs no patch. |
 | `encoding` | Native | The package holds interfaces only. |
 | `compress/flate` | Native | The real source needs no patch. The output holds the same bytes as Go. |
 | `compress/gzip` | Native | The real source needs no patch. |
@@ -523,7 +523,7 @@ the control back and forth, and the 2 goroutines never run at the same time.
 | A `stop` before the end of the sequence | The sequence ends | Equal |
 | A `next` after `stop` | The zero value and false | Equal |
 | `yield` after a `stop` | Gives false | Equal |
-| A panic of the sequence | `next` panics with the same value | The panic stops the program. The subset holds no `recover`. |
+| A panic of the sequence | `next` panics with the same value | Equal. A deferred call of the caller can recover it. |
 | `runtime.Goexit` inside the sequence | `next` panics | Out of the subset |
 
 The `yield` of `Pull` gives up control, thus each function that a sequence calls

@@ -64,7 +64,9 @@ Iface? $descZero(int handle) {
   if (desc == null || desc.kind == 'interface') return null;
   final Object? Function()? zero = desc.zero;
   if (zero == null) {
-    $panic(GoError('reflect: no zero value of ${desc.display}'));
+    $panic(
+      Iface($typeGoError, GoError('reflect: no zero value of ${desc.display}')),
+    );
   }
   return Iface(desc, zero());
 }
@@ -102,17 +104,26 @@ void $pointerSet(Iface? pointer, Iface? value) {
     }
     return;
   }
-  $panic(GoError('reflect: Set on a pointer to ${elem.display}'));
+  $panic(
+    Iface(
+      $typeGoError,
+      GoError('reflect: Set on a pointer to ${elem.display}'),
+    ),
+  );
 }
 
 TypeDesc _pointerElemDesc(Iface? pointer) {
   if (pointer == null) {
-    $panic(const GoError('reflect: the value holds no address'));
+    $panic(
+      Iface($typeGoError, const GoError('reflect: the value holds no address')),
+    );
   }
   final TypeDesc desc = pointer.desc;
   final TypeDesc Function()? elem = desc.elem;
   if (desc.kind != 'ptr' || elem == null) {
-    $panic(GoError('reflect: ${desc.display} is not a pointer'));
+    $panic(
+      Iface($typeGoError, GoError('reflect: ${desc.display} is not a pointer')),
+    );
   }
   return elem();
 }
@@ -135,7 +146,12 @@ int $fieldCount(int handle) {
 (GoString, GoString, bool, int) $fieldInfo(int handle, int index) {
   final TypeDesc? desc = _descAt(handle);
   if (desc == null || index < 0 || index >= desc.fields.length) {
-    $panic(const GoError('reflect: the type holds no such field'));
+    $panic(
+      Iface(
+        $typeGoError,
+        const GoError('reflect: the type holds no such field'),
+      ),
+    );
   }
   final FieldDesc field = desc.fields[index];
   return (
@@ -166,7 +182,12 @@ FieldDesc _fieldOf(Iface? value, int index) {
   if (value == null) $panicNil();
   final TypeDesc desc = value.desc;
   if (desc.kind != 'struct' || index < 0 || index >= desc.fields.length) {
-    $panic(GoError('reflect: ${desc.display} holds no field $index'));
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: ${desc.display} holds no field $index'),
+      ),
+    );
   }
   return desc.fields[index];
 }
@@ -179,7 +200,7 @@ int $valueLen(Iface? value) {
   if (v is List<Object?>) return v.length;
   if (v is GoString) return v.length;
   if (v is GoMap<Object?, Object?>) return v.length;
-  $panic(GoError('reflect: Len of ${value.desc.display}'));
+  $panic(Iface($typeGoError, GoError('reflect: Len of ${value.desc.display}')));
 }
 
 /// 1 element of a slice, an array, or a string.
@@ -192,7 +213,7 @@ Iface? $valueIndex(Iface? value, int index) {
   }
   final TypeDesc? elem = desc.elem?.call();
   if (elem == null) {
-    $panic(GoError('reflect: Index of ${desc.display}'));
+    $panic(Iface($typeGoError, GoError('reflect: Index of ${desc.display}')));
   }
   final Object? out = _elemAt(v, index, desc);
   if (elem.kind == 'interface') return out as Iface?;
@@ -205,7 +226,7 @@ void $valueSetIndex(Iface? value, int index, Iface? x) {
   final TypeDesc desc = value.desc;
   final TypeDesc? elem = desc.elem?.call();
   if (elem == null) {
-    $panic(GoError('reflect: Index of ${desc.display}'));
+    $panic(Iface($typeGoError, GoError('reflect: Index of ${desc.display}')));
   }
   final Object? stored = elem.kind == 'interface' ? x : x?.value;
   final Object? v = value.value;
@@ -219,7 +240,12 @@ void $valueSetIndex(Iface? value, int index, Iface? x) {
     v[index] = stored;
     return;
   }
-  $panic(GoError('reflect: Set of an element of ${desc.display}'));
+  $panic(
+    Iface(
+      $typeGoError,
+      GoError('reflect: Set of an element of ${desc.display}'),
+    ),
+  );
 }
 
 Object? _elemAt(Object? v, int index, TypeDesc desc) {
@@ -231,7 +257,7 @@ Object? _elemAt(Object? v, int index, TypeDesc desc) {
     if (index < 0 || index >= v.length) $panicIndex(index, v.length);
     return v[index];
   }
-  $panic(GoError('reflect: Index of ${desc.display}'));
+  $panic(Iface($typeGoError, GoError('reflect: Index of ${desc.display}')));
 }
 
 final TypeDesc _byteDesc = TypeDesc(
@@ -247,7 +273,12 @@ int $asInt(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
   if (v is int) return v;
-  $panic(GoError('reflect: the value of ${value.desc.display} is no integer'));
+  $panic(
+    Iface(
+      $typeGoError,
+      GoError('reflect: the value of ${value.desc.display} is no integer'),
+    ),
+  );
 }
 
 /// The float inside a value of a float kind.
@@ -256,7 +287,12 @@ double $asFloat(Iface? value) {
   final Object? v = value.value;
   if (v is double) return v;
   if (v is int) return v.toDouble();
-  $panic(GoError('reflect: the value of ${value.desc.display} is no float'));
+  $panic(
+    Iface(
+      $typeGoError,
+      GoError('reflect: the value of ${value.desc.display} is no float'),
+    ),
+  );
 }
 
 /// The flag inside a value of the kind bool.
@@ -264,7 +300,12 @@ bool $asBool(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
   if (v is bool) return v;
-  $panic(GoError('reflect: the value of ${value.desc.display} is no bool'));
+  $panic(
+    Iface(
+      $typeGoError,
+      GoError('reflect: the value of ${value.desc.display} is no bool'),
+    ),
+  );
 }
 
 /// The text inside a value of the kind string.
@@ -272,7 +313,12 @@ GoString $asString(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
   if (v is GoString) return v;
-  $panic(GoError('reflect: the value of ${value.desc.display} is no string'));
+  $panic(
+    Iface(
+      $typeGoError,
+      GoError('reflect: the value of ${value.desc.display} is no string'),
+    ),
+  );
 }
 
 /// A value of the type, with the whole number inside it.
@@ -290,7 +336,9 @@ Iface? $withString(int handle, GoString x) => Iface(_typeAt(handle), x);
 TypeDesc _typeAt(int handle) {
   final TypeDesc? desc = _descAt(handle);
   if (desc == null) {
-    $panic(const GoError('reflect: the handle names no type'));
+    $panic(
+      Iface($typeGoError, const GoError('reflect: the handle names no type')),
+    );
   }
   return desc;
 }
@@ -300,7 +348,7 @@ Iface? $newValue(int handle) {
   final TypeDesc desc = _typeAt(handle);
   final Object? Function()? zero = desc.zero;
   if (zero == null) {
-    $panic(GoError('reflect: New of ${desc.display}'));
+    $panic(Iface($typeGoError, GoError('reflect: New of ${desc.display}')));
   }
   final Object? target = desc.kind == 'struct' ? zero() : Box<Object?>(zero());
   return Iface(_pointerTo(desc), target);
@@ -311,7 +359,7 @@ Iface? $makeValue(int handle, int length) {
   final TypeDesc desc = _typeAt(handle);
   final Object? Function(int)? make = desc.make;
   if (make == null) {
-    $panic(GoError('reflect: Make of ${desc.display}'));
+    $panic(Iface($typeGoError, GoError('reflect: Make of ${desc.display}')));
   }
   return Iface(desc, make(length));
 }
@@ -343,7 +391,12 @@ int $descNumOut(int handle) => _typeAt(handle).results.length;
 int $descIn(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
   if (index < 0 || index >= desc.params.length) {
-    $panic(const GoError('reflect: the type holds no such parameter'));
+    $panic(
+      Iface(
+        $typeGoError,
+        const GoError('reflect: the type holds no such parameter'),
+      ),
+    );
   }
   return _descHandle(desc.params[index]());
 }
@@ -352,7 +405,12 @@ int $descIn(int handle, int index) {
 int $descOut(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
   if (index < 0 || index >= desc.results.length) {
-    $panic(const GoError('reflect: the type holds no such result'));
+    $panic(
+      Iface(
+        $typeGoError,
+        const GoError('reflect: the type holds no such result'),
+      ),
+    );
   }
   return _descHandle(desc.results[index]());
 }
@@ -365,13 +423,16 @@ Slice<Iface?> $callValue(Iface? fn, Slice<Iface?> args) {
   if (fn == null) $panicNil();
   final TypeDesc desc = fn.desc;
   if (desc.kind != 'func') {
-    $panic(GoError('reflect: Call of ${desc.display}'));
+    $panic(Iface($typeGoError, GoError('reflect: Call of ${desc.display}')));
   }
   if (args.len != desc.params.length) {
     $panic(
-      GoError(
-        'reflect: Call with ${args.len} input arguments, '
-        'and the function takes ${desc.params.length}',
+      Iface(
+        $typeGoError,
+        GoError(
+          'reflect: Call with ${args.len} input arguments, '
+          'and the function takes ${desc.params.length}',
+        ),
       ),
     );
   }
@@ -423,7 +484,12 @@ Object? _field(Object? record, int index, int count) {
     case 7:
       return r.$8;
   }
-  $panic(GoError('reflect: a call of $count results is outside the subset'));
+  $panic(
+    Iface(
+      $typeGoError,
+      GoError('reflect: a call of $count results is outside the subset'),
+    ),
+  );
 }
 
 /// A method value: the adapter of the method and the receiver.
@@ -466,7 +532,12 @@ GoString $descMethodName(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
   final List<String> keys = _exportedMethodKeys(desc);
   if (index < 0 || index >= keys.length) {
-    $panic(GoError('reflect: ${desc.display} holds no method $index'));
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: ${desc.display} holds no method $index'),
+      ),
+    );
   }
   final String key = keys[index];
   final int cut = key.indexOf('(');
@@ -479,13 +550,23 @@ Iface? $methodValue(Iface? value, int index) {
   final TypeDesc desc = value.desc;
   final List<String> keys = _exportedMethodKeys(desc);
   if (index < 0 || index >= keys.length) {
-    $panic(GoError('reflect: ${desc.display} holds no method $index'));
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: ${desc.display} holds no method $index'),
+      ),
+    );
   }
   final String key = keys[index];
   final Function? fn = desc.methods[key];
   final TypeDesc Function()? type = desc.methodTypes[key];
   if (fn == null || type == null) {
-    $panic(GoError('reflect: no type of the method $key of ${desc.display}'));
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: no type of the method $key of ${desc.display}'),
+      ),
+    );
   }
   return Iface(type(), BoundMethod(fn, value.value));
 }
@@ -507,7 +588,9 @@ Slice<Iface?> $mapKeys(Iface? value) {
   if (value == null) $panicNil();
   final Object? m = value.value;
   if (m is! GoMap<Object?, Object?>) {
-    $panic(GoError('reflect: MapKeys of ${value.desc.display}'));
+    $panic(
+      Iface($typeGoError, GoError('reflect: MapKeys of ${value.desc.display}')),
+    );
   }
   final TypeDesc? keyType = value.desc.key?.call();
   final List<Iface?> out = <Iface?>[];
@@ -529,7 +612,12 @@ Iface? $mapIndex(Iface? target, Iface? key) {
   if (target == null) $panicNil();
   final Object? m = target.value;
   if (m is! GoMap<Object?, Object?>) {
-    $panic(GoError('reflect: MapIndex of ${target.desc.display}'));
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: MapIndex of ${target.desc.display}'),
+      ),
+    );
   }
   final TypeDesc? keyType = target.desc.key?.call();
   final Object? k = keyType?.kind == 'interface' ? key : key?.value;
@@ -545,7 +633,7 @@ Iface? $makeMap(int handle) {
   final TypeDesc desc = _typeAt(handle);
   final Object? Function(int)? make = desc.make;
   if (make == null) {
-    $panic(GoError('reflect: MakeMap of ${desc.display}'));
+    $panic(Iface($typeGoError, GoError('reflect: MakeMap of ${desc.display}')));
   }
   return Iface(desc, make(0));
 }
@@ -563,7 +651,12 @@ void $mapSet(Iface? target, Iface? key, Iface? value, bool drop) {
   if (target == null) $panicNil();
   final Object? m = target.value;
   if (m is! GoMap<Object?, Object?>) {
-    $panic(GoError('reflect: SetMapIndex of ${target.desc.display}'));
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: SetMapIndex of ${target.desc.display}'),
+      ),
+    );
   }
   final TypeDesc? keyType = target.desc.key?.call();
   final TypeDesc? elem = target.desc.elem?.call();

@@ -66,13 +66,66 @@ type Config struct {
 const partSuffix = ".part.dart"
 
 func Package(p *ir.Package, tpkg *types.Package, cfg Config) (*Result, error) {
+	e := newEmitter(p, tpkg, cfg)
+	// A shape can name its twin in a function that the emitter writes after
+	// the twin. The first pass discovers every shape, channel, and
+	// description in any order, and the second pass writes the output with
+	// the full maps.
+	e.generate(p, cfg)
+	e.resetDiscovery()
+	out := e.generate(p, cfg)
+	if len(e.errs) > 0 {
+		return nil, errors.Join(e.errs...)
+	}
+	return out, nil
+}
+
+func newEmitter(p *ir.Package, tpkg *types.Package, cfg Config) *emitter {
 	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: cfg.Base,
 		initNames: map[*ir.Func]string{},
 		anon:      map[string]*types.Struct{}, localAnon: map[string]*types.Struct{},
 		shadowed: map[string]map[string]bool{},
-		nilChans: map[string]types.Type{}, instDescs: map[string]types.Type{}, cfg: cfg}
+		nilChans: map[string]types.Type{}, instDescs: map[string]types.Type{}, cfg: cfg,
+		anonParams:  map[string][]*types.TypeParam{},
+		groundTwins: map[string]*anonTwin{},
+		funcIds:     map[any]int{},
+		funcByObj:   map[types.Object]*ir.Func{},
+		varLitId:    map[string]int{}}
 	e.setPrefixes(cfg.Imports)
 	e.groupMethods(p)
+	return e
+}
+
+// funcId gives the token of a function, and it mints one on the first use.
+func (e *emitter) funcId(key any) int {
+	if id, ok := e.funcIds[key]; ok {
+		return id
+	}
+	e.funcSeq++
+	e.funcIds[key] = e.funcSeq
+	return e.funcSeq
+}
+
+func (e *emitter) resetDiscovery() {
+	e.prefixes = map[string]string{}
+	e.setPrefixes(e.cfg.Imports)
+	e.anon = map[string]*types.Struct{}
+	e.localAnon = map[string]*types.Struct{}
+	e.anonParams = map[string][]*types.TypeParam{}
+	e.groundTwins = map[string]*anonTwin{}
+	e.nilChans = map[string]types.Type{}
+	e.nilChansDone = nil
+	e.instDescs = map[string]types.Type{}
+	e.instDescsDone = nil
+	e.descBusy = nil
+	e.anonDone = nil
+	e.extra = nil
+	e.errs = nil
+	e.labelSeq = 0
+	e.goLine = 0
+}
+
+func (e *emitter) generate(p *ir.Package, cfg Config) *Result {
 	out := &Result{Library: cfg.Base + ".dart", Files: map[string]string{}}
 	var parts []string
 	for _, f := range p.Files {
@@ -84,10 +137,7 @@ func Package(p *ir.Package, tpkg *types.Package, cfg Config) (*Result, error) {
 	out.MapFile = cfg.Base + ".map.dart"
 	out.Files[out.Library] = e.libraryFile(p, parts, cfg.Imports)
 	out.Shared = e.sharedFiles()
-	if len(e.errs) > 0 {
-		return nil, errors.Join(e.errs...)
-	}
-	return out, nil
+	return out
 }
 
 type emitter struct {
@@ -149,6 +199,12 @@ type emitter struct {
 	descBusy map[string]bool
 	// anonDone keeps each local shape class that writeAnonClasses wrote.
 	anonDone map[string]bool
+	// anonParams holds the type parameters of each shape class that reads a
+	// parameter, by the name of the class.
+	anonParams map[string][]*types.TypeParam
+	// groundTwins holds the open twin of each ground shape that has one, by the
+	// name of the class of the ground shape. A nil entry names no twin.
+	groundTwins map[string]*anonTwin
 	// typeCycle keeps each named type that reaches itself, and typeAcyclic
 	// keeps each one that does not. Read cyclic. typeDepth caps a cycle
 	// through a function type.
@@ -169,6 +225,23 @@ type emitter struct {
 	// writes. The frame class of a literal of that function names them, because
 	// the class stands at package level.
 	typeParams []*types.TypeParam
+	// funcIds holds a token for each function and each literal of the
+	// package. The chain of the deferred calls gives the token of 1 function
+	// to the runtime, and recover reads it, so a recover in a function that
+	// the chain does not run gives nil.
+	funcIds map[any]int
+	funcSeq int
+	// funcByObj gives the tree of each named function of the package.
+	funcByObj map[types.Object]*ir.Func
+	// curFuncId holds the token of the function that the emitter writes now.
+	curFuncId int
+	// varLitId holds the token of the literal that a hoisted variable holds,
+	// by the name of the variable.
+	varLitId map[string]int
+	// storeDepth counts the writes whose left side the emitter writes now.
+	// A left side holds a location, and the nil check of a read is no
+	// location, so a deref keeps the bare form in a store.
+	storeDepth int
 	// goLine holds the source line of the last marker. A statement of the same
 	// line needs no second marker.
 	goLine int
@@ -325,6 +398,9 @@ func (e *emitter) groupMethods(p *ir.Package) {
 	e.inClass = map[*ir.Func]bool{}
 	for _, f := range p.Files {
 		for _, d := range f.Decls {
+			if fn, ok := d.(*ir.Func); ok && fn.Obj != nil {
+				e.funcByObj[fn.Obj] = fn
+			}
 			switch d := d.(type) {
 			case *ir.Global:
 				e.globals = append(e.globals, d)

@@ -90,7 +90,7 @@ import _ "unsafe"
 }
 
 func TestRecover(t *testing.T) {
-	reject(t, "call", "rejects a call to recover", `func f() { _ = recover() }`)
+	accept(t, "call", `func f() { _ = recover() }`)
 	accept(t, "shadowed name", `func f() { recover := 1; _ = recover }`)
 	accept(t, "panic", `func f() { panic("stop") }`)
 }

@@ -26,7 +26,7 @@ func (e *emitter) dartType(t types.Type) string {
 	case *types.Named:
 		if st, ok := t.Underlying().(*types.Struct); ok {
 			if isLocalType(t.Obj()) {
-				return e.anonClass(st)
+				return e.anonType(st)
 			}
 			return e.className(t.Obj()) + e.typeArgList(t.TypeArgs())
 		}
@@ -44,6 +44,13 @@ func (e *emitter) dartType(t types.Type) string {
 		// A basic core type keeps the parameter. `~int` and `~string` give 2
 		// Dart types, and the bound of the parameter holds what they share.
 		if core := typeset.Core(t); core != nil && !isBasicType(core) {
+			// The core struct of a constraint is a shape of the compiler, and
+			// the class of a type argument of the shape is not the class of
+			// the shape. Each operation on such a parameter reads its
+			// dictionary, thus the value takes no Dart type.
+			if st, ok := core.(*types.Struct); ok && typeset.HoldsParam(st) {
+				return "Object?"
+			}
 			return e.dartType(core)
 		}
 		// A type set of integer types gives 1 Dart type. The dictionary holds
@@ -79,7 +86,7 @@ func (e *emitter) dartType(t types.Type) string {
 	case *types.Interface:
 		return "Iface?"
 	case *types.Struct:
-		return e.anonClass(t)
+		return e.anonType(t)
 	}
 	e.fail("the type %s is outside the subset", t)
 	return "Object?"
@@ -151,7 +158,7 @@ func (e *emitter) zero(t types.Type) string {
 	if named, ok := u.(*types.Named); ok {
 		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
 			if isLocalType(named.Obj()) {
-				return e.anonClass(st) + ".$zero()"
+				return e.anonZero(st)
 			}
 			return e.className(named.Obj()) + e.typeArgList(named.TypeArgs()) +
 				".$zero(" + strings.Join(e.dictArgs(named.TypeArgs()), ", ") + ")"
@@ -159,7 +166,7 @@ func (e *emitter) zero(t types.Type) string {
 		u = named.Underlying()
 	}
 	if st, ok := u.(*types.Struct); ok {
-		return e.anonClass(st) + ".$zero()"
+		return e.anonZero(st)
 	}
 	switch u := u.Underlying().(type) {
 	case *types.Tuple:
@@ -200,6 +207,13 @@ func (e *emitter) zero(t types.Type) string {
 	return "null"
 }
 
+// anonZero gives the zero value of an unnamed struct shape. A shape that
+// reads a type parameter takes 1 dictionary for each parameter.
+func (e *emitter) anonZero(st *types.Struct) string {
+	return fmt.Sprintf("%s.$zero(%s)", e.anonType(st),
+		strings.Join(e.anonDicts(st), ", "))
+}
+
 // cycleZero gives the zero of an element type inside a zero closure. The Dart
 // type of a type that names itself erases to Object?, thus null is its zero,
 // and the text of the true zero has no end.
@@ -212,13 +226,18 @@ func (e *emitter) cycleZero(t types.Type) string {
 
 // coreDispatch reports whether a method call on a type parameter with this
 // core type goes through the method table. A struct core gives a Dart class
-// with the method as a member, and each other core erases the method.
+// with the method as a member, and each other core erases the method. A struct
+// core that reads a type parameter takes no single class, thus it reads the
+// table.
 func coreDispatch(core types.Type) bool {
 	if core == nil {
 		return true
 	}
-	switch core.(type) {
+	switch core := types.Unalias(core).(type) {
 	case *types.Struct, *types.Pointer:
+		if st, ok := core.(*types.Struct); ok {
+			return typeset.HoldsParam(st)
+		}
 		return false
 	}
 	return true
@@ -257,6 +276,11 @@ func (e *emitter) typeParamBound(tp *types.TypeParam) string {
 	dart := ""
 	numeric := true
 	for _, t := range terms {
+		// A struct term names a shape of the compiler, and no Dart bound
+		// holds the class of each type argument of the shape.
+		if _, ok := types.Unalias(t).(*types.Struct); ok {
+			return ""
+		}
 		text := e.dartType(t)
 		if text != "int" && text != "double" {
 			numeric = false
@@ -331,9 +355,23 @@ func (e *emitter) dictOf(t types.Type) string {
 		}
 	}
 	dart := e.dartType(t)
-	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s, %s)",
+	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s, %s%s)",
 		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t),
-		e.orderText(t), e.maskText(t), e.descriptorOf(t))
+		e.orderText(t), e.maskText(t), e.descriptorOf(t), e.dictCopy(t))
+}
+
+// dictCopy gives the copy and the assign of a dictionary. A struct and an
+// array hold value semantics, thus a copy point reads them from the
+// dictionary of a type parameter.
+func (e *emitter) dictCopy(t types.Type) string {
+	switch {
+	case isStructType(t):
+		return ", copy: (v) => v.$copy(), assign: (d, s) { d.$assign(s); return s; }"
+	case isArrayType(t):
+		return fmt.Sprintf(", copy: (v) => %s, assign: (d, s) { %s; return s; }",
+			e.copyOf("v", t), e.assignElem("d", "s", t))
+	}
+	return ""
 }
 
 // equalText writes the Go equality of 2 values of a type.

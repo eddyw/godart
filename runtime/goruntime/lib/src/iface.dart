@@ -115,13 +115,50 @@ final class Iface {
 
   @override
   bool operator ==(Object other) =>
-      other is Iface && desc.name == other.desc.name && value == other.value;
+      other is Iface &&
+      desc.name == other.desc.name &&
+      $goEqual(value, other.value, desc);
 
   @override
   int get hashCode => Object.hash(desc.name, value);
 
   @override
   String toString() => '$value';
+}
+
+/// The Go equality of 2 values of 1 type. A comparison of a value whose type
+/// holds no identity panics, and the fields of a struct compare in order, so
+/// the panic names the type of the first field that holds no identity.
+bool $goEqual(Object? a, Object? b, TypeDesc d) {
+  switch (d.kind) {
+    case 'slice' || 'map' || 'func':
+      $panic(
+        Iface(
+          $typeGoError,
+          GoError('runtime error: comparing uncomparable type ${d.display}'),
+        ),
+      );
+    case 'array':
+      final List<Object?> ea = a! as List<Object?>;
+      final List<Object?> eb = b! as List<Object?>;
+      final TypeDesc? elem = d.elem?.call();
+      for (var i = 0; i < ea.length; i++) {
+        if (!$goEqual(ea[i], eb[i], elem!)) return false;
+      }
+      return true;
+    case 'struct':
+      for (final FieldDesc f in d.fields) {
+        if (!$goEqual(f.get(a), f.get(b), f.type.call())) return false;
+      }
+      return true;
+    case 'interface':
+      final ia = a as Iface?;
+      final ib = b as Iface?;
+      if (ia == null || ib == null) return ia == null && ib == null;
+      if (ia.desc.name != ib.desc.name) return false;
+      return $goEqual(ia.value, ib.value, ia.desc);
+  }
+  return a == b;
 }
 
 /// The zero value of a predeclared type. A tear-off of a top level function is
@@ -236,11 +273,19 @@ bool $isType(Iface? x, String name) => x != null && x.desc.name == name;
 /// The value of a type assertion that gives 1 value. A wrong type panics.
 Object? $assertType(Iface? x, String name) {
   if (x == null) {
-    $panic(GoError('interface conversion: interface is nil, not $name'));
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('interface conversion: interface is nil, not $name'),
+      ),
+    );
   }
   if (x.desc.name != name) {
     $panic(
-      GoError('interface conversion: interface is ${x.desc.name}, not $name'),
+      Iface(
+        $typeGoError,
+        GoError('interface conversion: interface is ${x.desc.name}, not $name'),
+      ),
     );
   }
   return x.value;
@@ -250,7 +295,12 @@ Object? $assertType(Iface? x, String name) {
 Iface $assertIface(Iface? x, List<String> methods, String name) {
   if (!$implements(x, methods)) {
     final String got = x == null ? 'nil' : x.desc.name;
-    $panic(GoError('interface conversion: $got does not implement $name'));
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('interface conversion: $got does not implement $name'),
+      ),
+    );
   }
   return x!;
 }
@@ -275,14 +325,20 @@ Object? $call(Iface? x, String name, List<Object?> args) {
     return $call(x.value as Iface, name, args);
   }
   final Function m = $method(x, name);
+  if (identical(m, $ifaceMethod)) {
+    // The description belongs to an interface type, and the value is nil.
+    // Go panics with a nil dereference.
+    $panicNil();
+  }
   return Function.apply(m, <Object?>[x!.value, ...args]);
 }
 
 /// $noMethod stands in place of an unexported method of a type of another
 /// package. A Dart library holds each name that starts with an underscore, thus
 /// another library reaches no such method.
-Never $noMethod(String name) =>
-    $panic(GoError('the method $name belongs to another package'));
+Never $noMethod(String name) => $panic(
+  Iface($typeGoError, GoError('the method $name belongs to another package')),
+);
 
 /// $boxDesc puts a value into an interface value with the given description.
 /// A type argument can name an interface type, and a value of such a type
@@ -295,8 +351,9 @@ Iface $boxDesc(TypeDesc d, Object? v) {
 /// $ifaceMethod stands in the method table of the description of an interface
 /// type. Such a table holds the key of each method that the interface needs,
 /// and no call reaches the value.
-Never $ifaceMethod() =>
-    $panic(const GoError('the method belongs to an interface type'));
+Never $ifaceMethod() => $panic(
+  Iface($typeGoError, const GoError('the method belongs to an interface type')),
+);
 
 /// Reports whether the value holds the type of a dictionary. An interface type
 /// argument reads the method set, and each other type argument reads the name.
@@ -317,9 +374,12 @@ T $dictValue<T>(Iface? x, Dict<T> d) {
 T $assertDict<T>(Iface? x, Dict<T> d) {
   if (!$isDictType(x, d.desc)) {
     $panic(
-      GoError(
-        'interface conversion: interface {} is '
-        '${x == null ? 'nil' : x.desc.display}, not ${d.desc.display}',
+      Iface(
+        $typeGoError,
+        GoError(
+          'interface conversion: interface {} is '
+          '${x == null ? 'nil' : x.desc.display}, not ${d.desc.display}',
+        ),
       ),
     );
   }

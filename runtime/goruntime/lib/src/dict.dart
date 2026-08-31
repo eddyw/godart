@@ -30,6 +30,15 @@ final class Dict<T> {
   /// parameter to an interface reads it.
   final TypeDesc desc;
 
+  /// copy gives a fresh value. A struct and an array hold value semantics,
+  /// thus a copy point needs a deep copy. Null stands for the identity.
+  final T Function(T)? copy;
+
+  /// assign writes a value into a location and gives the value to store. A
+  /// struct writes its fields in place, thus a pointer to the location stays
+  /// correct. Null stores the source value.
+  final T Function(T, T)? assign;
+
   const Dict(
     this.zero,
     this.equal,
@@ -37,8 +46,14 @@ final class Dict<T> {
     this.alloc,
     this.order,
     this.mask,
-    this.desc,
-  );
+    this.desc, {
+    this.copy,
+    this.assign,
+  });
+
+  T copyOf(T v) => copy == null ? v : copy!(v);
+
+  T assignOf(T dst, T src) => assign == null ? src : assign!(dst, src);
 }
 
 /// $identity gives the value again. A type that needs no mask reads it.

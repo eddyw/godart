@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'iface.dart';
 import 'panic.dart';
 
 // A Dart int on the VM holds 64 bits and wraps on overflow, thus int, int64,
@@ -49,21 +50,27 @@ bool $ule(int a, int b) => !$ult(b, a);
 
 /// A left shift. Go gives 0 when the count reaches the width of the type.
 int $shl(int v, int count) {
-  if (count < 0) $panic(const GoError('negative shift amount'));
+  if (count < 0) {
+    $panic(Iface($typeGoError, const GoError('negative shift amount')));
+  }
   if (count >= 64) return 0;
   return v << count;
 }
 
 /// An arithmetic right shift. Go keeps the sign bit.
 int $shr(int v, int count) {
-  if (count < 0) $panic(const GoError('negative shift amount'));
+  if (count < 0) {
+    $panic(Iface($typeGoError, const GoError('negative shift amount')));
+  }
   if (count >= 64) return v < 0 ? -1 : 0;
   return v >> count;
 }
 
 /// A logical right shift, for an unsigned type.
 int $ushr(int v, int count) {
-  if (count < 0) $panic(const GoError('negative shift amount'));
+  if (count < 0) {
+    $panic(Iface($typeGoError, const GoError('negative shift amount')));
+  }
   if (count >= 64) return 0;
   return v >>> count;
 }

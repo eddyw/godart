@@ -26,7 +26,7 @@ func (e *emitter) expr(x ir.Expr) string {
 	case *ir.Zero:
 		return e.zero(x.Type)
 	case *ir.Field:
-		return e.deref(x.X) + "." + fieldDartName(x.X.GoType(), x.Name)
+		return e.derefRead(x.X) + "." + fieldDartName(x.X.GoType(), x.Name)
 	case *ir.Index:
 		return e.index(x)
 	case *ir.TypeAssert:
@@ -118,6 +118,55 @@ func (e *emitter) deref(x ir.Expr) string {
 		return text + "!.v"
 	}
 	return text + "!"
+}
+
+// derefRead reads through a pointer for a value. Go panics with the nil
+// dereference error when the pointer is nil, and Dart gives a null check
+// error. An operand with an effect takes a parameter of its own, so the read
+// runs the effect 1 time. A store keeps the bare form of deref, because the
+// wrapper is no location.
+func (e *emitter) derefRead(x ir.Expr) string {
+	if e.storeDepth > 0 {
+		return e.deref(x)
+	}
+	text := e.expr(x)
+	p, ok := typeset.Core(x.GoType()).(*types.Pointer)
+	if !ok {
+		return text
+	}
+	if tp, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
+		return fmt.Sprintf("$deref<%s>(%s)", e.dartType(tp), text)
+	}
+	if needsBox(p.Elem()) {
+		if exprIsSimple(x) {
+			return "(" + text + " == null ? $panicNil() : " + text + "!.v)"
+		}
+		return fmt.Sprintf("((%s $p) => ($p == null ? $panicNil() : $p!.v))(%s)",
+			e.dartType(p), text)
+	}
+	if exprIsSimple(x) {
+		return "(" + text + " == null ? $panicNil() : " + text + "!)"
+	}
+	return fmt.Sprintf("((%s $p) => ($p == null ? $panicNil() : $p!))(%s)",
+		e.dartType(p), text)
+}
+
+// exprIsSimple reports whether the expression holds no call, so its text can
+// stand 2 times in a wrapper.
+func exprIsSimple(x ir.Expr) bool {
+	switch x := x.(type) {
+	case *ir.Ident:
+		return true
+	case *ir.Const:
+		return true
+	case *ir.Zero:
+		return true
+	case *ir.Blank:
+		return true
+	case *ir.FuncLit:
+		return x != nil
+	}
+	return false
 }
 
 func (e *emitter) constant(v constant.Value, t types.Type) string {
@@ -240,7 +289,7 @@ func (e *emitter) index(x *ir.Index) string {
 	// expression for it, and an operand of `-` gives `num`.
 	if isPointerType(container) {
 		return fmt.Sprintf("$arrayIndex<%s>(%s, %s)",
-			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index))
+			e.dartType(x.Type), e.derefRead(x.X), e.expr(x.Index))
 	}
 	if isArrayType(container) {
 		return fmt.Sprintf("$arrayIndex<%s>(%s, %s)",
@@ -288,7 +337,7 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 	if isArrayType(source) || isPointerType(source) {
 		text := e.expr(x.X)
 		if isPointerType(source) {
-			text = e.deref(x.X)
+			text = e.derefRead(x.X)
 		}
 		high := fmt.Sprintf("%s.length", text)
 		if x.High != nil {
@@ -317,7 +366,7 @@ func (e *emitter) copyExpr(x *ir.Copy) string {
 	if isArrayType(x.Type) {
 		return e.copyArray(e.expr(x.X), x.Type)
 	}
-	return e.deref(x.X) + ".$copy()"
+	return e.derefRead(x.X) + ".$copy()"
 }
 
 func (e *emitter) funcLit(x *ir.FuncLit) string {
@@ -333,7 +382,10 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		anon: e.anon, localAnon: e.localAnon, shadowed: e.shadowed,
 		nilChans: e.nilChans, instDescs: e.instDescs, cfg: e.cfg, nilPrefix: e.nilPrefix,
 		typeParams: e.typeParams,
-		renames:    e.withRenames(e.captureRenames(x.Captured))}
+		anonParams: e.anonParams, groundTwins: e.groundTwins,
+		funcIds: e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
+		renames: e.withRenames(e.captureRenames(x.Captured))}
+	inner.curFuncId = e.funcId(x)
 	inner.boxParams(x.Params)
 	inner.emitBody(x.Results, x.Defers, x.Body)
 	e.errs = append(e.errs, inner.errs...)
@@ -497,7 +549,7 @@ func (e *emitter) unary(x *ir.Unary) string {
 		}
 		return e.expr(x.X)
 	case token.MUL:
-		return e.deref(x.X)
+		return e.derefRead(x.X)
 	case token.SUB:
 		return e.narrow(x.Type, "(-"+e.expr(x.X)+")")
 	case token.NOT:
@@ -532,7 +584,7 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 		}
 		field := fieldDartName(x.X.GoType(), x.Name)
 		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => $r.%s, ($r, $i, $v) => $r.%s = $v)",
-			e.dartType(owner), e.dartType(elem), e.deref(x.X), fieldIndex(owner, x.Name),
+			e.dartType(owner), e.dartType(elem), e.derefRead(x.X), fieldIndex(owner, x.Name),
 			field, field)
 	case *ir.Composite:
 		// A composite literal holds no name, thus its address takes a box of
@@ -541,7 +593,7 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 	case *ir.Index:
 		container := x.X.GoType()
 		if isPointerType(container) {
-			return fmt.Sprintf("$indexPtr(%s, %s)", e.deref(x.X), e.expr(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, %s)", e.derefRead(x.X), e.expr(x.Index))
 		}
 		if isArrayType(container) {
 			return fmt.Sprintf("$indexPtr(%s, %s)", e.expr(x.X), e.expr(x.Index))
@@ -595,6 +647,10 @@ func (e *emitter) composite(x *ir.Composite) string {
 			// The class of a local type is the class of its shape, and such
 			// a class holds no dictionary.
 			parts = append(e.dictArgs(named.TypeArgs()), parts...)
+		} else if st, ok := structOfAnon(x.Type); ok {
+			// The class of a shape that reads a type parameter, and the class
+			// of its ground twin, each take 1 dictionary per parameter.
+			parts = append(e.anonDicts(st), parts...)
 		}
 		return e.dartType(x.Type) + "(" + strings.Join(parts, ", ") + ")"
 	case *types.Array:

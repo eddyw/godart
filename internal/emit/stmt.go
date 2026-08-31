@@ -97,6 +97,23 @@ func (e *emitter) stmtOne(s ir.Stmt) {
 		e.line("%s:", s.Label)
 		e.stmt(s.Stmt)
 	case *ir.Defer:
+		// Go resolves the method of an interface receiver at the statement,
+		// and a nil receiver panics there. A function value keeps its check
+		// for the run of the deferred call.
+		if m, ok := s.Call.(*ir.Call); ok {
+			if fun, ok := m.Fun.(*ir.Method); ok && isInterfaceType(fun.Recv.GoType()) {
+				recv := e.expr(fun.Recv)
+				e.line("%s == null ? $panicNil() : null;", recv)
+			}
+			// The chain runs the body of the deferred function under the
+			// token of the function, and recover reads the token. Go gives a
+			// recover the panic value only in the function that the defer
+			// pushed, and each function that it calls reads nil.
+			if id := e.deferredId(m.Fun); id != 0 {
+				e.line("$defer.push(() => $dcall(%d, () => %s));", id, e.expr(s.Call))
+				return
+			}
+		}
 		e.line("$defer.push(() => %s);", e.expr(s.Call))
 	case *ir.Send:
 		e.line("%s.send(%s);", e.chanExpr(s.Chan), e.expr(s.Value))
@@ -159,6 +176,12 @@ func (e *emitter) declare(s *ir.Declare) {
 		if s.Init == nil {
 			e.declareOne(v, e.zero(v.Type))
 			return
+		}
+		if lit, ok := s.Init.(*ir.FuncLit); ok {
+			// The machine hoists the literal of a deferred call into a
+			// variable, and the defer statement reads the token of the
+			// literal through this name.
+			e.varLitId[v.Name] = e.funcId(lit)
 		}
 		e.declareOne(v, e.expr(s.Init))
 		return
@@ -233,6 +256,15 @@ func (e *emitter) defineAssign(s *ir.Assign) {
 		e.line("%s = Box(%s);", id.Name, value)
 		return
 	}
+	if idn, ok := s.Rhs.(*ir.Ident); ok {
+		if tok, ok := e.varLitId[idn.Name]; ok {
+			if li, ok := s.Lhs.(*ir.Ident); ok {
+				e.varLitId[li.Name] = tok
+			}
+		}
+	}
+	e.storeDepth++
+	defer func() { e.storeDepth-- }()
 	e.line("%s = %s;", e.expr(s.Lhs), value)
 }
 
@@ -248,6 +280,18 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 	}
 	t := lhs.GoType()
 	value := e.expr(rhs)
+	// A copy of a variable that holds the literal of a deferred call keeps
+	// the token of the literal, because the defer statement reads it through
+	// the copy.
+	if idn, ok := rhs.(*ir.Ident); ok {
+		if tok, ok := e.varLitId[idn.Name]; ok {
+			if li, ok := lhs.(*ir.Ident); ok {
+				e.varLitId[li.Name] = tok
+			}
+		}
+	}
+	e.storeDepth++
+	defer func() { e.storeDepth-- }()
 	// The case list of a select statement has no Go type, thus it takes the
 	// plain form of an assignment.
 	if t == nil {
@@ -288,6 +332,28 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 
 // goStmt starts a goroutine. Go waits for the scheduler, thus the body does not
 // run at the point of the statement.
+// deferredId gives the token of the function that a defer statement pushes,
+// and 0 when the compiler holds no tree of it.
+func (e *emitter) deferredId(fun ir.Expr) int {
+	switch fun := fun.(type) {
+	case *ir.Ident:
+		if f, ok := e.funcByObj[fun.Obj]; ok {
+			return e.funcId(f)
+		}
+		// A machine hoists the literal of a deferred call into a variable.
+		if id, ok := e.varLitId[fun.Name]; ok {
+			return id
+		}
+	case *ir.Method:
+		if f, ok := e.funcByObj[fun.Obj]; ok {
+			return e.funcId(f)
+		}
+	case *ir.FuncLit:
+		return e.funcId(fun)
+	}
+	return 0
+}
+
 func (e *emitter) goStmt(s *ir.Go) {
 	e.line("$go(() { %s; });", e.expr(s.Call))
 }

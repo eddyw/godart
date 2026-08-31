@@ -34,7 +34,19 @@ func (e *emitter) callText(x *ir.Call) string {
 				e.identExpr(fun)+targs+"("+strings.Join(args, ", ")+")")
 		}
 	}
-	return e.expr(x.Fun) + "!(" + strings.Join(args, ", ") + ")"
+	// Go panics with a run time error when a call goes through a nil
+	// function value, and Dart gives a null check error. An operand with an
+	// effect takes a parameter of its own, thus the operand runs 1 time.
+	recv := e.expr(x.Fun)
+	joined := strings.Join(args, ", ")
+	if exprIsSimple(x.Fun) {
+		return "(" + recv + " == null ? $panicNil() : " + recv + "!(" + joined + "))"
+	}
+	// The parameter takes Object?, because the type text of a chain of calls
+	// grows with each level, and the analyzer rejects the deep text.
+	return fmt.Sprintf(
+		"((Object? $fn) => ($fn == null ? $panicNil() : ($fn! as dynamic)(%s)))(%s)",
+		joined, recv)
 }
 
 // eraseCast adds a cast when the declaration of a generic function erases the
@@ -813,6 +825,8 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 		return e.newCall(x)
 	case "panic":
 		return fmt.Sprintf("$panic(%s)", e.expr(x.Args[0]))
+	case "recover":
+		return fmt.Sprintf("$recover(%d)", e.curFuncId)
 	case "print":
 		return fmt.Sprintf("$print(<String>[%s])", strings.Join(e.textList(x.Args), ", "))
 	case "println":
@@ -858,9 +872,10 @@ func (e *emitter) length(x ir.Expr) string {
 	case isChanType(t):
 		return e.expr(x) + ".length"
 	case isPointerType(t):
-		// The length of a pointer to an array comes from the type, and the
-		// read follows no pointer, thus a nil pointer also gives the length.
-		// The closure keeps the side effect of the operand.
+		// The length of a pointer to an array comes from the type, and Go
+		// evaluates the operand for a constant length in no case, thus a nil
+		// pointer also gives the length. The closure keeps the side effect of
+		// the operand.
 		if p, ok := typeset.Core(t).(*types.Pointer); ok {
 			if arr, ok := types.Unalias(p.Elem()).Underlying().(*types.Array); ok {
 				return fmt.Sprintf("((Object? $p) => %d)(%s)", arr.Len(), e.expr(x))

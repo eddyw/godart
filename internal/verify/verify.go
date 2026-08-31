@@ -64,12 +64,6 @@ type verifier struct {
 	// bodyless holds each function of the package that holds no body. A call of
 	// one reaches a rejection, and the declaration alone stays in the subset.
 	bodyless map[types.Object]bool
-	// genericStruct holds the struct body of the generic type declaration
-	// that the walk visits now. Only that struct can read a type parameter.
-	genericStruct ast.Expr
-	// typeTargets holds each node inside the target of a type test. Such a
-	// target needs a name only, and no class of its shape.
-	typeTargets map[ast.Node]bool
 }
 
 func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any) {
@@ -80,46 +74,11 @@ func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any
 	})
 }
 
-// markTypeTarget records each node inside the target of a type test.
-func (v *verifier) markTypeTarget(target ast.Expr) {
-	if v.typeTargets == nil {
-		v.typeTargets = map[ast.Node]bool{}
-	}
-	ast.Inspect(target, func(n ast.Node) bool {
-		if n != nil {
-			v.typeTargets[n] = true
-		}
-		return true
-	})
-}
-
 func (v *verifier) visit(n ast.Node) bool {
 	v.checkExported(n)
 	v.checkTypeParamOp(n)
 	v.checkBodyless(n)
 	switch n := n.(type) {
-	case *ast.TypeSpec:
-		if n.TypeParams != nil && n.TypeParams.NumFields() > 0 {
-			v.genericStruct = n.Type
-		}
-	case *ast.TypeSwitchStmt:
-		// A switch with a binding declares a variable of the case type, and
-		// such a variable needs the class of the shape. Only the switch with
-		// no binding tests the name alone.
-		if _, bind := n.Assign.(*ast.AssignStmt); bind {
-			break
-		}
-		for _, c := range n.Body.List {
-			clause, ok := c.(*ast.CaseClause)
-			if !ok {
-				continue
-			}
-			for _, target := range clause.List {
-				v.markTypeTarget(target)
-			}
-		}
-	case *ast.StructType:
-		v.checkParamStruct(n)
 	case *ast.ImportSpec:
 		v.checkImport(n)
 	case *ast.UnaryExpr:
@@ -294,9 +253,6 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 	case "complex", "real", "imag":
 		v.reject(call.Pos(), "the runtime library holds no complex class",
 			"the compiler rejects the builtin %s", b.Name())
-	case "recover":
-		v.reject(call.Pos(), "a panic stops the program",
-			"the compiler rejects a call to recover")
 	case "len", "cap", "print", "println":
 		v.checkTypeParamBuiltin(call, b.Name())
 	}

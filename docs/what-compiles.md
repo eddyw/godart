@@ -43,11 +43,13 @@ of each other package with a source position.
 
 | Gate | Effect |
 |---|---|
-| `recover` | Rejected. A panic stops the program. |
 | `unsafe` and cgo | Rejected |
 | A complex number | Rejected |
 | The address of a value behind a pointer, for example `&*p` | Rejected. Read `p`. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
+
+Stage 2 accepts a local struct type that reads a type parameter, and the
+`recover` builtin. Read decisions 200 and 201 of `docs/decisions.md`.
 | A conversion between 2 struct types | Rejected |
 
 Each other construct of the language stays inside the subset:
@@ -116,7 +118,6 @@ Thus these categories build:
 | Gate | What it stops |
 |---|---|
 | `os/exec` | Each program that starts another process. |
-| `recover` | Each program that turns a panic into an error. A parser of the standard library often does. |
 | `text/template`, `html/template` | Each program that writes a page or a file from a template. |
 | `encoding/xml`, `encoding/gob` | Each program that reads an XML file or a gob stream. |
 | `archive/...`, `compress/bzip2`, `compress/lzw` | Each program that reads a zip file or a tar file. |
@@ -125,8 +126,8 @@ Thus these categories build:
 | A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
 
 Thus no large program of the Go world builds today. `kubectl`, `hugo`, `docker`,
-`terraform`, and `gopls` each read `os/exec`, `recover`, a template package, or
-a compression package. The gate is the library surface, and not the language.
+`terraform`, and `gopls` each read `os/exec`, a template package, or a
+compression package. The gate is the library surface, and not the language.
 
 ## The near misses
 
@@ -135,5 +136,5 @@ the exact gap.
 
 | Package | The gap |
 |---|---|
-| `text/tabwriter` | 1 call of `recover`, and the address of a field of a slice. |
+| `text/tabwriter` | The address of a field of a slice. |
 | `crypto/hmac`, `crypto/sha512` | Each one follows the pattern of the `crypto/sha256` overlay. |

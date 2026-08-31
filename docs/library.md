@@ -165,12 +165,10 @@ the library file writes its import.
 
 ## The regexp package
 
-`regexp` and `regexp/syntax` are native, and 1 patch replaces
-`regexp/syntax/parse.go`. The real file holds 1 deferred call of `recover` at
-line 893. That call turns a panic of `ErrLarge` and a panic of `ErrNestingDepth`
-into an error, and each one names a limit of a resource. The subset holds no
-`recover`, thus a pattern that reaches such a limit stops the program. Each
-other line of the patch comes from the real file.
+`regexp` and `regexp/syntax` are native, and no patch remains. The patch of
+`regexp/syntax/parse.go` is gone, because the subset holds `recover` now, and
+the real file turns a panic of `ErrLarge` and a panic of `ErrNestingDepth` into
+an error through its own deferred call. Read decision 201.
 
 The 4 addresses of a `[]rune` field, as in `cleanClass(&re.Rune)`, needed no
 patch. The work of 2026-08-30 gave the subset a pointer to a field of a struct.
@@ -328,8 +326,8 @@ make std-test STD=unicode/utf8    # each test passes
 ```
 
 `TestParseInvalidRegexps` of `regexp/syntax` reads a limit of a resource, and
-the patch of `parse.go` holds no `recover` for it. `TestTestsOfGoroot` runs each
-other test of that package.
+the recovered panic of the real `parse.go` serves it. `TestTestsOfGoroot` runs
+each test of that package.
 
 The work gave:
 
@@ -489,12 +487,11 @@ with 4 patches that remove a deferred recover. Read decision 148.
 under a cap of 2 minutes. A file outside the subset skips with the rejection
 of stage 2.
 
-The state of 2026-08-31, after the fourth session: 592 files match, and no
-run differs. 70 of the top level, 109 of typeparam, and 413 of fixedbugs.
-317 files stand outside the subset, most through `recover`, `unsafe`, and
+The state of 2026-09-01, after the fifth session: 669 files match, and no
+run differs. 229 files stand outside the subset, most through `unsafe`, and
 the parts of `runtime` and `reflect` that the surface omits. `chanlinear`
 measures time, and it can fail 1 time under a heavy parallel load.
-`goTestSkips` names the 22 runs that the net holds back, each with its
+`goTestSkips` names the 33 runs that the net holds back, each with its
 cause. The groups:
 
 | Group | Files | Cause |
@@ -507,6 +504,8 @@ cause. The groups:
 | The deep types | `fixedbugs/issue72063`, `issue29312`, `typeparam/issue48137` | A type that nests 30 levels or more erases at 2 depths. |
 | The local generic identity | `typeparam/nested` | The reflect identity of a local type of a generic function drops the outer type argument. |
 | The run caps | `fixedbugs/issue13169`, `issue34395`, `issue78081`, `issue19182` | The run needs more than the cap, or a busy loop never yields. |
+| The recover corners | `convert4`, `issue26094`, `issue4562`, `issue19040`, `issue48898`, `issue23734`, `issue29504`, `issue34123`, `devirtualization_nil_panics` | The text of a panic, the address of a view element, the frames of a recovered stack, and the identity of a map key each differ in a corner. |
+| The memory of Dart | `fixedbugs/issue29190`, `issue7550` | The run allocates past the memory of the Dart VM. |
 
-The road of the fourth session stands in decisions 160 to 199.
+The road of the fifth session stands in decisions 200 to 202.
 

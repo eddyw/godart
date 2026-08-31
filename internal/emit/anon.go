@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // anonClass gives the name of the Dart class of an unnamed struct type, and it
@@ -22,6 +23,9 @@ import (
 // package. Package main is such a package, and no other package names a type
 // of it.
 func (e *emitter) anonClass(st *types.Struct) string {
+	if typeset.HoldsParam(st) {
+		return e.openClass(st)
+	}
 	key := e.anonName(st)
 	target := e.anon
 	if !e.anonShared(st) {
@@ -33,13 +37,266 @@ func (e *emitter) anonClass(st *types.Struct) string {
 	return key
 }
 
+// anonType gives the Dart type of an unnamed struct value: the class name and,
+// for a shape with a parameter, the type arguments. A ground shape whose open
+// twin exists reads the class of the twin, because 1 Go shape must give 1 Dart
+// class, or a type test and an equality through an interface give a wrong
+// result.
+func (e *emitter) anonType(st *types.Struct) string {
+	if typeset.HoldsParam(st) {
+		return e.openClass(st) + e.typeParamArgs(e.anonParams[e.anonName(st)])
+	}
+	if twin := e.anonTwin(st); twin != nil {
+		return twin.class + "<" + strings.Join(twin.args, ", ") + ">"
+	}
+	return e.anonClass(st)
+}
+
+// typeParamArgs writes the type arguments of a class that takes 1 Dart type
+// parameter for each Go parameter of the shape.
+func (e *emitter) typeParamArgs(params []*types.TypeParam) string {
+	if len(params) == 0 {
+		return ""
+	}
+	args := make([]string, len(params))
+	for i, tp := range params {
+		args[i] = e.dartType(tp)
+	}
+	return "<" + strings.Join(args, ", ") + ">"
+}
+
+// structOfAnon gives the underlying struct of an unnamed struct type and of a
+// local named type whose underlying type is a struct. Both take the class of
+// a shape.
+func structOfAnon(t types.Type) (*types.Struct, bool) {
+	switch t := types.Unalias(t).(type) {
+	case *types.Struct:
+		return t, true
+	case *types.Named:
+		if isLocalType(t.Obj()) {
+			if st, ok := t.Underlying().(*types.Struct); ok {
+				return st, true
+			}
+		}
+	}
+	return nil, false
+}
+
+// anonDicts gives the dictionary argument of each parameter of the shape.
+func (e *emitter) anonDicts(st *types.Struct) []string {
+	if params, ok := e.anonParams[e.anonName(st)]; ok && typeset.HoldsParam(st) {
+		out := make([]string, len(params))
+		for i, tp := range params {
+			out[i] = e.dictOf(tp)
+		}
+		return out
+	}
+	if twin := e.anonTwin(st); twin != nil {
+		return twin.dicts
+	}
+	return nil
+}
+
+// openClass names the class of a shape that reads a type parameter, and it
+// records the shape with its parameters. The class takes 1 Dart type parameter
+// for each Go parameter of the shape, thus the ground shape and the open shape
+// share the class.
+func (e *emitter) openClass(st *types.Struct) string {
+	key := e.anonName(st)
+	if _, ok := e.anonParams[key]; !ok {
+		e.anonParams[key] = shapeParams(st)
+		e.localAnon[key] = st
+	}
+	return key
+}
+
+// shapeParams lists each type parameter of the shape, in the order of its
+// first use in a field type.
+func shapeParams(st *types.Struct) []*types.TypeParam {
+	var out []*types.TypeParam
+	seen := map[*types.TypeParam]bool{}
+	var walk func(t types.Type)
+	walk = func(t types.Type) {
+		switch t := types.Unalias(t).(type) {
+		case *types.TypeParam:
+			if !seen[t] {
+				seen[t] = true
+				out = append(out, t)
+			}
+		case *types.Pointer:
+			walk(t.Elem())
+		case *types.Slice:
+			walk(t.Elem())
+		case *types.Array:
+			walk(t.Elem())
+		case *types.Chan:
+			walk(t.Elem())
+		case *types.Map:
+			walk(t.Key())
+			walk(t.Elem())
+		case *types.Signature:
+			walkTuple(t.Params(), walk)
+			walkTuple(t.Results(), walk)
+		case *types.Struct:
+			for i := 0; i < t.NumFields(); i++ {
+				walk(t.Field(i).Type())
+			}
+		case *types.Named:
+			for i := 0; i < t.TypeArgs().Len(); i++ {
+				walk(t.TypeArgs().At(i))
+			}
+		}
+	}
+	walk(st)
+	return out
+}
+
+func walkTuple(t *types.Tuple, walk func(types.Type)) {
+	for i := 0; i < t.Len(); i++ {
+		walk(t.At(i).Type())
+	}
+}
+
+// anonTwin gives the class and the arguments of the open twin of a ground
+// shape. A nil result names no twin.
+func (e *emitter) anonTwin(st *types.Struct) *anonTwin {
+	key := e.anonName(st)
+	if t, ok := e.groundTwins[key]; ok {
+		if t == nil {
+			return nil
+		}
+		return t
+	}
+	t := e.matchTwin(st)
+	e.groundTwins[key] = t
+	return t
+}
+
+// matchTwin compares the ground shape with each open shape of the package.
+func (e *emitter) matchTwin(st *types.Struct) *anonTwin {
+	keys := make([]string, 0, len(e.anonParams))
+	for key := range e.anonParams {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		open, ok := e.localAnon[key]
+		if !ok {
+			continue
+		}
+		subs := map[*types.TypeParam]types.Type{}
+		if !matchShape(open, st, subs) {
+			continue
+		}
+		e.openClass(open)
+		params := e.anonParams[key]
+		t := &anonTwin{class: key}
+		for _, tp := range params {
+			g := subs[tp]
+			t.args = append(t.args, e.dartType(g))
+			t.dicts = append(t.dicts, e.dictOf(g))
+		}
+		return t
+	}
+	return nil
+}
+
+// matchShape reports whether the ground type fills the open type. It records
+// the type of each parameter in subs, and 2 uses of 1 parameter must agree.
+func matchShape(open, ground types.Type, subs map[*types.TypeParam]types.Type) bool {
+	open, ground = types.Unalias(open), types.Unalias(ground)
+	if tp, ok := open.(*types.TypeParam); ok {
+		if prev, ok := subs[tp]; ok {
+			return types.Identical(prev, ground)
+		}
+		subs[tp] = ground
+		return true
+	}
+	if !typeset.HoldsParam(open) {
+		return types.Identical(open, ground)
+	}
+	switch open := open.(type) {
+	case *types.Struct:
+		u := types.Unalias(ground)
+		if named, ok := u.(*types.Named); ok {
+			u = named.Underlying()
+		}
+		g, ok := u.(*types.Struct)
+		if !ok || g.NumFields() != open.NumFields() {
+			return false
+		}
+		for i := 0; i < g.NumFields(); i++ {
+			if g.Field(i).Name() != open.Field(i).Name() ||
+				g.Tag(i) != open.Tag(i) ||
+				g.Field(i).Embedded() != open.Field(i).Embedded() {
+				return false
+			}
+			if !matchShape(open.Field(i).Type(), g.Field(i).Type(), subs) {
+				return false
+			}
+		}
+		return true
+	case *types.Pointer:
+		g, ok := ground.(*types.Pointer)
+		return ok && matchShape(open.Elem(), g.Elem(), subs)
+	case *types.Slice:
+		g, ok := ground.(*types.Slice)
+		return ok && matchShape(open.Elem(), g.Elem(), subs)
+	case *types.Array:
+		g, ok := ground.(*types.Array)
+		return ok && open.Len() == g.Len() && matchShape(open.Elem(), g.Elem(), subs)
+	case *types.Chan:
+		g, ok := ground.(*types.Chan)
+		return ok && open.Dir() == g.Dir() && matchShape(open.Elem(), g.Elem(), subs)
+	case *types.Map:
+		g, ok := ground.(*types.Map)
+		return ok && matchShape(open.Key(), g.Key(), subs) &&
+			matchShape(open.Elem(), g.Elem(), subs)
+	case *types.Signature:
+		g, ok := ground.(*types.Signature)
+		return ok && open.Variadic() == g.Variadic() &&
+			matchTuple(open.Params(), g.Params(), subs) &&
+			matchTuple(open.Results(), g.Results(), subs)
+	case *types.Named:
+		g, ok := ground.(*types.Named)
+		if !ok || open.Obj() != g.Obj() || open.TypeArgs().Len() != g.TypeArgs().Len() {
+			return false
+		}
+		for i := 0; i < open.TypeArgs().Len(); i++ {
+			if !matchShape(open.TypeArgs().At(i), g.TypeArgs().At(i), subs) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func matchTuple(open, ground *types.Tuple, subs map[*types.TypeParam]types.Type) bool {
+	if open.Len() != ground.Len() {
+		return false
+	}
+	for i := 0; i < open.Len(); i++ {
+		if !matchShape(open.At(i).Type(), ground.At(i).Type(), subs) {
+			return false
+		}
+	}
+	return true
+}
+
 // anonName gives the Dart class name of an unnamed struct type.
 //
 // The name comes from the text of the type and from the library of each field
 // type. A test variant of a package holds a library of its own, thus a shape
-// that names a type of such a variant takes a class of its own.
+// that names a type of such a variant takes a class of its own. A shape that
+// reads a type parameter writes 1 marker for each parameter, thus the name
+// does not depend on the name of the parameter.
 func (e *emitter) anonName(st *types.Struct) string {
 	text := anonText(st)
+	if typeset.HoldsParam(st) {
+		var reads []string
+		text = anonText(e.substParams(st, &reads))
+	}
 	for _, im := range e.anonImports(st) {
 		text += "\n" + im.URI
 	}
@@ -63,6 +320,22 @@ func (e *emitter) anonShared(st *types.Struct) bool {
 	}
 	for path := range paths {
 		if e.cfg.URIs[path] == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// anonComparable reports whether the class of the shape holds the equality. A
+// field that reads a type parameter compares through its dictionary, and Go
+// compares such a shape when each ground argument is comparable.
+func anonComparable(st *types.Struct) bool {
+	for i := 0; i < st.NumFields(); i++ {
+		t := st.Field(i).Type()
+		if _, ok := types.Unalias(t).(*types.TypeParam); ok {
+			continue
+		}
+		if !types.Comparable(t) {
 			return false
 		}
 	}
@@ -216,6 +489,14 @@ func (e *emitter) writeNilChans() {
 	}
 }
 
+// anonTwin holds the Dart class and the arguments of the open twin of a ground
+// shape.
+type anonTwin struct {
+	class string
+	args  []string
+	dicts []string
+}
+
 // anonDir holds the file of each unnamed struct type. The path stands outside
 // the directory of a package, because 2 packages share 1 file.
 const anonDir = "lib/gart_anon/"
@@ -271,7 +552,7 @@ func (e *emitter) writeAnonClasses() {
 			written[key] = true
 			st := e.localAnon[key]
 			e.line("/// %s", anonText(st))
-			e.structClass(key, nil, st, types.Comparable(st), nil)
+			e.structClass(key, e.anonParams[key], st, anonComparable(st), nil)
 		}
 	}
 }
@@ -313,19 +594,22 @@ func (e *emitter) sharedFiles() map[string]string {
 // thus each package that holds the shape writes equal bytes.
 func (e *emitter) anonFile(class string, st *types.Struct) (string, map[string]*types.Struct) {
 	inner := &emitter{
-		prefixes:  map[string]string{},
-		initNames: map[*ir.Func]string{},
-		anon:      map[string]*types.Struct{},
-		localAnon: map[string]*types.Struct{},
-		shadowed:  map[string]map[string]bool{},
-		nilChans:  map[string]types.Type{},
-		instDescs: map[string]types.Type{},
-		cfg:       e.cfg,
-		nilPrefix: class,
+		prefixes:    map[string]string{},
+		initNames:   map[*ir.Func]string{},
+		anon:        map[string]*types.Struct{},
+		localAnon:   map[string]*types.Struct{},
+		shadowed:    map[string]map[string]bool{},
+		nilChans:    map[string]types.Type{},
+		instDescs:   map[string]types.Type{},
+		cfg:         e.cfg,
+		nilPrefix:   class,
+		anonParams:  map[string][]*types.TypeParam{},
+		groundTwins: map[string]*anonTwin{},
+		funcIds:     e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
 	}
 	inner.setPrefixes(e.anonImports(st))
 	inner.line("/// %s", anonText(st))
-	inner.structClass(class, nil, st, types.Comparable(st), nil)
+	inner.structClass(class, nil, st, anonComparable(st), nil)
 	inner.writeNilChans()
 	inner.writeInstDescs()
 	inner.flushFrames()
