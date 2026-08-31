@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'panic.dart';
+import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'sched.dart';
 
 /// The signal of `testing.T.FailNow`.
@@ -71,4 +70,4 @@ final class _CatchWait implements WaitFrame {
 }
 
 /// Ends the program with a status code.
-void $exit(int code) => exit(code);
+void $exit(int code) => $platformExit(code);

@@ -880,6 +880,18 @@ The plan left these points open. The work took the decisions below.
      program `complexuse` proves the parity, the division edges included.
      This decision closes the plan of decision 16.
 
+208. The minimal web target. The process access of the scheduler, of the
+     print helpers, and of `$exit` goes through 1 platform shim, and a
+     conditional import selects the dart:io form or the web form. The
+     barrel of the runtime exports `file.dart` and `net.dart` through a
+     conditional export, and the web form of each holds only `$goos`, which
+     gives `js`. Thus a pure program compiles with `dart compile wasm` and
+     runs under node, and a program that reaches a file or a socket fails
+     in the Dart compile with the name of the missing function, per the
+     web decision of 2026-09-01. The default branch of each condition is
+     the dart:io form, because the analyzer reads that branch. `TestWasm`
+     of the driver is the smoke test.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

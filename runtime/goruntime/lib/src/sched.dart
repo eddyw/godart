@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io';
 
 import 'panic.dart';
+import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 
 /// The saved state of 1 call that gave up control.
 ///
@@ -316,7 +316,7 @@ void _exitMain() {
   for (final void Function() release in $releases) {
     release();
   }
-  if (_pending > 0) exit(0);
+  if (_pending > 0) $platformExit(0);
 }
 
 /// Reports that no goroutine can run again. The report walks the frame chain
@@ -324,7 +324,7 @@ void _exitMain() {
 /// also writes the arguments and an offset in each frame, and the chain holds
 /// no such value.
 void _deadlock() {
-  stderr.writeln('fatal error: all goroutines are asleep - deadlock!');
+  $platformStderrText('fatal error: all goroutines are asleep - deadlock!\n');
   for (final Goroutine g in _liveSet) {
     var reason = 'waiting';
     final List<TraceFrame> stack = <TraceFrame>[];
@@ -338,14 +338,12 @@ void _deadlock() {
       if (f is WaitFrame) reason = f.$reason;
       break;
     }
-    stderr.writeln();
-    stderr.writeln('goroutine ${g.id} [$reason]:');
+    $platformStderrText('\ngoroutine ${g.id} [$reason]:\n');
     for (final TraceFrame t in stack.reversed) {
-      stderr.writeln('${t.$name}()');
-      stderr.writeln('\t${t.$goFile}:${t.$goLine}');
+      $platformStderrText('${t.$name}()\n\t${t.$goFile}:${t.$goLine}\n');
     }
   }
-  exit(2);
+  $platformExit(2);
 }
 
 /// The report of a panic that leaves a goroutine. The build driver sets it,

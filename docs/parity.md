@@ -362,6 +362,21 @@ Dart names the system only at run time.
 | `Localize`, `HasPrefix` | Present | Equal |
 | `EvalSymlinks` | Present | Present. The table of the runtime above holds the 2 gaps. |
 
+## The web target
+
+The compiler adds no web layer of its own. A web build calls the Dart
+compiler, per the web decision of 2026-09-01. `dart compile wasm bin/main.dart`
+compiles a pure program, and the output runs under node through the loader
+that the Dart compiler writes. `TestWasm` of the driver proves it.
+
+| Item | Go | godart |
+|---|---|---|
+| A pure program on wasm | Compiles with GOOS=js GOARCH=wasm | Compiles with `dart compile wasm`. The 64-bit integer model holds. |
+| A program that reaches a file or a socket | Compiles, and the call fails at run time | Fails in the Dart compile, with the name of the missing function |
+| `runtime.GOOS` on the web | `js` | Equal |
+| `print` and `fmt` on the web | Standard output and standard error | The console of the host, 1 line for each call, thus a write without a newline waits in a buffer |
+| `os.Exit` on the web | Ends the process | Throws an error of the host, thus a status outside 0 ends node with a failure |
+
 ## The network access
 
 `net` reaches TCP, UDP, and a Unix socket through `syscall/dart`. The Dart side

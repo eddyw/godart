@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'panic.dart';
+import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'srcmap.dart';
 import 'string.dart';
 
@@ -8,14 +7,15 @@ import 'string.dart';
 ///
 /// The bytes reach the sink with no step through a Dart String, thus a byte
 /// that holds no rune of UTF-8 keeps its value.
-void $stdout(GoString text) => stdout.add(text.bytes);
+void $stdout(GoString text) => $platformStdout(text.bytes);
 
 /// The Go builtin `print`. It writes to stderr with no separator.
-void $print(List<String> parts) => stderr.write(parts.join());
+void $print(List<String> parts) => $platformStderrText(parts.join());
 
 /// The Go builtin `println`. It writes to stderr, and it puts 1 space between
 /// 2 values.
-void $println(List<String> parts) => stderr.writeln(parts.join(' '));
+void $println(List<String> parts) =>
+    $platformStderrText('${parts.join(' ')}\n');
 
 /// The text of a float, in the format that the Go builtin print uses.
 ///
@@ -53,12 +53,9 @@ String $fstring(double v) {
 /// Reports a panic that no function stops, and ends the program. Go writes the
 /// value to stderr and exits with the status 2.
 Never $fatal(GoPanic panic, StackTrace trace) {
-  stderr.writeln('panic: ${panic.value}');
-  stderr.writeln();
-  stderr.writeln('goroutine 1 [running]:');
+  $platformStderrText('panic: ${panic.value}\n\ngoroutine 1 [running]:\n');
   for (final GoPos pos in $goStack(trace)) {
-    stderr.writeln('${pos.function}()');
-    stderr.writeln('\t${pos.file}:${pos.line}');
+    $platformStderrText('${pos.function}()\n\t${pos.file}:${pos.line}\n');
   }
-  exit(2);
+  $platformExit(2);
 }
