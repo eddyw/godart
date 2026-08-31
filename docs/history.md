@@ -73,6 +73,27 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-01, the sixth session
+
+The session worked the 7 tasks of the open list end to end, in the order that
+the user set: package coverage, parity, wasm, the JS design, and TLS last.
+The symbolic link operations, the zone database of `time`, the module form of
+the source map with the line directives, the complex numbers, the minimal web
+target, the JS integer design doc, and the TLS server each landed. The
+complex unlock also closed 4 defects of other features. The go test net now
+holds 682 matches of 931 files with 0 differences, and 32 named limits.
+Decisions 203 to 210 hold each design.
+
+| Commit | Work |
+|---|---|
+| `7fb47c4` | `os.Symlink`, a true `os.Lstat`, `filepath.EvalSymlinks`, `Localize`, and `HasPrefix`, over 3 interop calls. The `os/exec` survey. |
+| `18778b1` | The zone database: `LoadLocation`, the TZif parser and the zip reader of Go, and the embedded database of `time/tzdata`. |
+| `5478b43` | The source map holds the module form and each line directive. `Llongfile`, the exit marks of the defer chain, and the deadlock report with the frame chain. |
+| `3441575` | The complex numbers over the class GoComplex, with the division of the Go runtime, and 4 defects of the unlock closed. |
+| `8bde58c` | The minimal web target: the platform shim, the conditional exports, and the wasm smoke test under node. |
+| `63d4987` | The design of the JS integer, in `docs/js-integers.md`. |
+| `5a1683a` | The TLS server: `tls.Listen` over `SecureServerSocket` with ALPN, and `httptest.NewTLSServer`. |
+
 ### 2026-09-01, the fifth session
 
 The session built the 2 items of the open list: the local struct type that
