@@ -105,6 +105,52 @@ func TestAOT(t *testing.T) {
 	}
 }
 
+// TestZoneinfoZip proves the zip reader of the time overlay. The variable
+// ZONEINFO points at the zone zip file of the Go tree, thus the 2 runs read
+// the same zip, and the output must stay equal.
+func TestZoneinfoZip(t *testing.T) {
+	source, err := filepath.Abs("../../testdata/programs/tzuse")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtimeDir, err := filepath.Abs("../../runtime/goruntime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	zip := filepath.Join(strings.TrimSpace(run(t, source, "go", "env", "GOROOT")),
+		"lib", "time", "zoneinfo.zip")
+	if _, err := os.Stat(zip); err != nil {
+		t.Skipf("the Go tree holds no zoneinfo.zip: %v", err)
+	}
+	env := append(os.Environ(), "ZONEINFO="+zip)
+	want := runProgramEnv(t, source, env, "go", "run", ".")
+	out := t.TempDir()
+	if err := driver.Build(driver.Options{
+		Dir:      source,
+		Patterns: []string{"./..."},
+		Out:      out,
+		Runtime:  runtimeDir,
+		Format:   true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	run(t, out, "dart", "pub", "get")
+	got := runProgramEnv(t, out, env, "dart", "run", "bin/main.dart")
+	if got != want {
+		t.Errorf("the output differs under ZONEINFO\nGo:\n%s\nDart:\n%s", want, got)
+	}
+}
+
+// runProgramEnv runs a compiled program with an environment.
+func runProgramEnv(t *testing.T, dir string, env []string, name string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	cmd.Env = env
+	text, _ := cmd.CombinedOutput()
+	return cutTrace(string(text))
+}
+
 func run(t *testing.T, dir string, name string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command(name, args...)

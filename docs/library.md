@@ -9,7 +9,7 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 78 packages. `docs/what-compiles.md` holds the whole list and
+The surface holds 79 packages. `docs/what-compiles.md` holds the whole list and
 the gate of each package that stays out. A package reaches the surface 3 ways.
 
 An **overlay** replaces the real source. `internal/overlay/std/<path>/` holds
@@ -219,9 +219,18 @@ date. M18 gave the other direction and the layout scanner of Go.
 `testdata/programs/timecal` proves 7 dates against 25 layouts, and each output
 of `go run` and of the Dart build stays equal.
 
-`Time.Parse` and the accessors `Year`, `Month`, `Day`, `Hour`, `Minute`,
-`Second`, `Weekday`, and `YearDay` stay out. `Format` reads the calendar through
-4 unexported functions.
+`Time.Parse`, `ParseInLocation`, and the accessors `Year`, `Month`, `Day`,
+`Hour`, `Minute`, `Second`, `Weekday`, and `YearDay` are present.
+`docs/parity.md` holds the whole table.
+
+The zone database landed on 2026-09-01. `LoadLocation` reads the variable
+ZONEINFO, then each zone directory of the system, and then the database that
+`time/tzdata` embeds. `zoneinfo_read.go` of the overlay holds the TZif parser
+and the zip reader of Go, over `dart.ReadFile`. `zoneinfo.go` holds the lookup
+and the tzset chain of Go. The overlay of `time/tzdata` holds the generated
+`zzipdata.go` of the Go tree and calls `time.RegisterEmbeddedTZData`, because
+the subset holds no linkname directive. The programs `tzuse` and `tzdatause`
+and the test `TestZoneinfoZip` prove the parity. Read decision 205.
 
 ## The read and the write of reflect
 

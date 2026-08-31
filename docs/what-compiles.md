@@ -9,7 +9,7 @@ of a program that imports the package.
 
 ## The import surface
 
-78 packages of the standard library reach the surface. Stage 2 rejects an import
+79 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |

@@ -842,6 +842,18 @@ The plan left these points open. The work took the decisions below.
      exit code only. The package stays out until a program of the net needs
      it, and this survey holds the map.
 
+205. The zone database rides the file access, and the parser is the parser of
+     Go. `LoadLocation` reads the variable ZONEINFO, then each zone directory
+     of the system, and then the embedded database of `time/tzdata`. The zip
+     file of the Go tree stays out, because the Dart output holds no Go tree.
+     The overlay of `time/tzdata` holds the generated `zzipdata.go` of the Go
+     tree, and the emitter writes the zip as a byte list of about 450 KB. Go
+     wires `time/tzdata` to `time` with a linkname directive, and the subset
+     holds no such directive, thus the overlay exports
+     `time.RegisterEmbeddedTZData`, with a found flag in place of the error
+     value. A loaded location takes the exact transition rule of `Date` of Go,
+     and `Local` keeps the 2-lookup guess of decision 79.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

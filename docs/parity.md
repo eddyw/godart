@@ -452,9 +452,9 @@ that 5 requests in a row share 1 connection.
 
 `time` reads the clock of `dart:io` and the scheduler of the runtime. A value of
 `Time` holds a count of nanoseconds after the start of the Unix epoch and a
-location. The overlay holds no zone database of its own, thus it gives 2
-locations: `UTC` and `Local`. `Local` reads the offset and the name of the zone
-from Dart at each instant.
+location. `UTC` and `Local` are the 2 built locations, and `Local` reads the
+offset and the name of the zone from Dart at each instant. `LoadLocation`
+builds each other location from the zone database.
 
 | Item | Go | godart |
 |---|---|---|
@@ -470,8 +470,12 @@ from Dart at each instant.
 | `Time.Format` | Present | Equal. The scanner holds each chunk of a layout, and the 19 layout constants are present. |
 | `Date`, `Month`, `Weekday`, and the name of each | Present | Equal |
 | `Time.In`, `Time.Location` | Present | Present |
-| `UTC`, `Local` | 2 of the locations of the zone database | The only 2 named locations. `LoadLocation` stays out. |
-| `FixedZone` | Present | Present. `Parse` builds one for an offset that `Local` does not hold. |
+| `UTC`, `Local` | 2 of the locations of the zone database | Equal |
+| `LoadLocation` | The variable ZONEINFO, the zone directories of the system, the embedded database of `time/tzdata`, and the zip file of the Go tree | Equal, except the zip file of the Go tree. The Dart output holds no Go tree. `os.Setenv("ZONEINFO", ...)` reaches only the map of the os overlay, thus the variable must come from the start of the process. |
+| `LoadLocationFromTZData` | Present | Equal. The parser is the parser of Go. |
+| `time/tzdata` | The embedded IANA database | Equal. The import grows the emitted program by the zip, about 450 KB. |
+| A date after the last transition of a zone file | The extend rule of the file | Equal. The tzset chain of Go reads the rule. |
+| `FixedZone` | Present | Present. `Parse` builds one for an offset that the location does not hold. |
 | `Time.Year`, `Month`, `Day`, `Date`, `Hour`, `Minute`, `Second`, `Clock`, `Nanosecond`, `Weekday`, `YearDay` | Present | Equal |
 | `Time.UTC`, `Time.Local`, `Time.Equal` | Present | Equal |
 | `Time.Parse`, `ParseInLocation`, `ParseError` | Present | Equal. Read below. |
