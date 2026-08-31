@@ -637,7 +637,7 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 					recv += "!"
 				}
 				field := st.Field(fi)
-				recv += "." + name.Package(field.Name())
+				recv += "." + fieldDartName(current, field.Name())
 				current = field.Type()
 			}
 		}
@@ -950,6 +950,10 @@ func (e *emitter) appendCall(x *ir.Builtin) string {
 		if isString(x.Args[1].GoType()) {
 			// Go allows append of a string to a byte slice.
 			source = fmt.Sprintf("$stringToBytes(%s)", source)
+		} else if tp, ok := types.Unalias(x.Args[1].GoType()).(*types.TypeParam); ok &&
+			typeset.Core(tp) == nil {
+			// A union of a string and a byte slice branches at run time.
+			source = fmt.Sprintf("$spreadBytes(%s)", source)
 		}
 		return fmt.Sprintf("$appendSlice(%s, %s, %s)",
 			e.expr(x.Args[0]), source, e.alloc(slice.Elem()))

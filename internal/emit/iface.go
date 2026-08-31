@@ -235,7 +235,7 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 		field := st.Field(i)
 		parts[i] = fmt.Sprintf("FieldDesc('%s', %s, %t, () => %s, %s)",
 			field.Name(), dartString(st.Tag(i)), field.Exported(),
-			e.descriptorOf(field.Type()), e.fieldAccess(field, i, class))
+			e.descriptorOf(field.Type()), e.fieldAccess(t, field, i, class))
 	}
 	return ", fields: <FieldDesc>[" + strings.Join(parts, ", ") + "]"
 }
@@ -246,11 +246,14 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 // library holds each name that starts with an underscore, thus another library
 // cannot name it. The description of an instance of a generic type stands at
 // the point of the use, and that point can lie outside the package of the type.
-func (e *emitter) fieldAccess(field *types.Var, i int, class string) string {
+func (e *emitter) fieldAccess(owner types.Type, field *types.Var, i int, class string) string {
 	if !field.Exported() && field.Pkg() != nil && field.Pkg() != e.pkg {
 		return "$noRead, $noWrite"
 	}
 	dart := structFieldName(field, i)
+	if field.Name() != "_" {
+		dart = fieldDartName(owner, field.Name())
+	}
 	return fmt.Sprintf("($r) => ($r as %s).%s, ($r, $v) => ($r as %s).%s = $v as %s",
 		class, dart, class, dart, e.dartType(field.Type()))
 }
@@ -463,7 +466,7 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 			return ""
 		}
 		field := st.Field(i)
-		recv += "." + name.Package(field.Name())
+		recv += "." + fieldDartName(current, field.Name())
 		current = field.Type()
 		if isPointerType(current) && structOf(current) != nil {
 			// A pointer to a struct is the Dart object reference, and that

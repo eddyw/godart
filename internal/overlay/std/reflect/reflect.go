@@ -416,6 +416,9 @@ type Value struct {
 	owner any
 	index int
 	loc   int
+	// typ holds the static type when the value itself is nil, for example
+	// the element of a pointer to an interface.
+	typ Type
 }
 
 // ValueOf gives the value inside an interface.
@@ -484,11 +487,19 @@ func (v Value) IsValid() bool { return v.read() != nil }
 func (v Value) Interface() any { return v.read() }
 
 // Type gives the type of the value.
-func (v Value) Type() Type { return TypeOf(v.read()) }
+func (v Value) Type() Type {
+	if v.read() == nil && v.typ.desc != 0 {
+		return v.typ
+	}
+	return TypeOf(v.read())
+}
 
 // Kind gives the class of the type of the value.
 func (v Value) Kind() Kind {
 	if v.read() == nil {
+		if v.typ.desc != 0 {
+			return v.typ.Kind()
+		}
 		return Invalid
 	}
 	return v.Type().Kind()
@@ -498,7 +509,11 @@ func (v Value) Kind() Kind {
 // writes through it.
 func (v Value) Elem() Value {
 	p := v.read()
-	return Value{value: dart.PointerElem(p), owner: p, loc: locPointer}
+	out := Value{value: dart.PointerElem(p), owner: p, loc: locPointer}
+	if v.Kind() == Pointer {
+		out.typ = v.Type().Elem()
+	}
+	return out
 }
 
 // Len gives the length of a slice, an array, a string, or a map.
@@ -604,6 +619,9 @@ func (v Value) SetMapIndex(key, value Value) {
 func (v Value) IsNil() bool {
 	switch v.Kind() {
 	case Chan, Func, Interface, Map, Pointer, Slice:
+		if v.read() == nil {
+			return true
+		}
 		return dart.ValueIsNil(v.read())
 	}
 	panic("reflect: IsNil of " + v.Kind().String())

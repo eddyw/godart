@@ -42,9 +42,6 @@ var goTestSkips = map[string]string{
 	"fixedbugs/issue13169": "the run holds 100000 channel rounds with a deep stack, and it needs more than the cap",
 	"fixedbugs/issue34395": "a global array of 100 MB fills element by element, and the run needs more than the cap",
 	"fixedbugs/issue78081": "the run holds 1600000 rounds of a byte append, and it needs more than the cap",
-
-	"typeparam/issue376214": "an append that spreads a union of a string and a byte slice stays open",
-	"fixedbugs/issue70156":  "reflect.Value.Elem of a pointer to an interface stays open",
 }
 
 // runWithin runs a program with a time limit. A file of the test directory

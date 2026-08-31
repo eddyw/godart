@@ -7,6 +7,7 @@ import (
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // class writes the Dart class of a named Go struct type. The class holds the
@@ -28,6 +29,11 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 	fields := make([]string, st.NumFields())
 	for i := range fields {
 		fields[i] = structFieldName(st.Field(i), i)
+		for _, tp := range params {
+			if tp.Obj().Name() == st.Field(i).Name() {
+				fields[i] += "$f"
+			}
+		}
 	}
 	dicts := make([]string, len(params))
 	for i, tp := range params {
@@ -395,6 +401,28 @@ func structFieldName(f *types.Var, i int) string {
 		return fmt.Sprintf("$b%d", i)
 	}
 	return name.Package(f.Name())
+}
+
+// fieldDartName gives the Dart name of a field through its owner type. A
+// field whose name equals a type parameter of its own generic type takes a
+// suffix, because the Dart class holds the 2 names in 1 scope.
+func fieldDartName(owner types.Type, field string) string {
+	out := name.Package(field)
+	u := types.Unalias(owner)
+	if p, ok := typeset.Core(u).(*types.Pointer); ok {
+		u = types.Unalias(p.Elem())
+	}
+	named, ok := u.(*types.Named)
+	if !ok {
+		return out
+	}
+	tps := named.Origin().TypeParams()
+	for i := 0; i < tps.Len(); i++ {
+		if tps.At(i).Obj().Name() == field {
+			return out + "$f"
+		}
+	}
+	return out
 }
 
 // methodFuncName builds the name of a method that becomes a top level

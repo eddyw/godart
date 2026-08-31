@@ -769,6 +769,20 @@ The plan left these points open. The work took the decisions below.
      fmt. The first form of decision 183 broke `%+f`, and this form holds
      both.
 
+197. A reflect Value carries the static type of a nil value. Elem of a
+     pointer stores the element type of the pointer, thus Kind and IsNil of a
+     nil interface element answer, exactly as Go does.
+     `fixedbugs/issue70156` proves it.
+
+198. An append that spreads a value of a union of a string and a byte slice
+     branches at run time through `$spreadBytes`.
+     `typeparam/issue376214` proves both arms.
+
+199. A field whose name equals a type parameter of its own generic type takes
+     the Dart suffix $f, at the class, at each read, at each write, and in
+     the descriptor. Decision 182 falls, and stage 2 accepts the form.
+     `typeparam/combine` runs now.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

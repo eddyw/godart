@@ -185,27 +185,3 @@ func (v *verifier) checkParamStruct(n *ast.StructType) {
 	}
 }
 
-// checkFieldClash rejects a generic struct type with a field whose name
-// equals the name of a type parameter. The Dart class holds the 2 names in 1
-// scope.
-func (v *verifier) checkFieldClash(n *ast.TypeSpec) {
-	st, ok := n.Type.(*ast.StructType)
-	if !ok {
-		return
-	}
-	params := map[string]bool{}
-	for _, f := range n.TypeParams.List {
-		for _, id := range f.Names {
-			params[id.Name] = true
-		}
-	}
-	for _, f := range st.Fields.List {
-		for _, id := range f.Names {
-			if params[id.Name] {
-				v.reject(id.Pos(), "the Dart class holds the field and the type parameter in 1 scope",
-					"the field %s of the type %s shares the name of a type parameter",
-					id.Name, n.Name.Name)
-			}
-		}
-	}
-}

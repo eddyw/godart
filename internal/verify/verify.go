@@ -101,7 +101,6 @@ func (v *verifier) visit(n ast.Node) bool {
 	case *ast.TypeSpec:
 		if n.TypeParams != nil && n.TypeParams.NumFields() > 0 {
 			v.genericStruct = n.Type
-			v.checkFieldClash(n)
 		}
 	case *ast.TypeSwitchStmt:
 		// A switch with a binding declares a variable of the case type, and

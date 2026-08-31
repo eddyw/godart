@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/eddyw/godart/internal/ir"
-	"github.com/eddyw/godart/internal/name"
 	"github.com/eddyw/godart/internal/typeset"
 )
 
@@ -27,7 +26,7 @@ func (e *emitter) expr(x ir.Expr) string {
 	case *ir.Zero:
 		return e.zero(x.Type)
 	case *ir.Field:
-		return e.deref(x.X) + "." + name.Package(x.Name)
+		return e.deref(x.X) + "." + fieldDartName(x.X.GoType(), x.Name)
 	case *ir.Index:
 		return e.index(x)
 	case *ir.TypeAssert:
@@ -531,7 +530,7 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 		if p, ok := typeset.Core(owner).(*types.Pointer); ok {
 			owner = p.Elem()
 		}
-		field := name.Package(x.Name)
+		field := fieldDartName(x.X.GoType(), x.Name)
 		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => $r.%s, ($r, $i, $v) => $r.%s = $v)",
 			e.dartType(owner), e.dartType(elem), e.deref(x.X), fieldIndex(owner, x.Name),
 			field, field)

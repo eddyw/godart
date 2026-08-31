@@ -489,23 +489,24 @@ with 4 patches that remove a deferred recover. Read decision 148.
 under a cap of 2 minutes. A file outside the subset skips with the rejection
 of stage 2.
 
-The state of 2026-08-31, after the fourth session: 589 files match, and no
-run differs. 70 of the top level, 107 of typeparam, and 412 of fixedbugs.
-318 files stand outside the subset, most through `recover`, `unsafe`, and
-the parts of `runtime` and `reflect` that the surface omits. `goTestSkips`
-names the 24 runs that the net holds back, each with its cause. The groups:
+The state of 2026-08-31, after the fourth session: 592 files match, and no
+run differs. 71 of the top level, 109 of typeparam, and 412 of fixedbugs.
+317 files stand outside the subset, most through `recover`, `unsafe`, and
+the parts of `runtime` and `reflect` that the surface omits. `chanlinear`
+measures time, and it can fail 1 time under a heavy parallel load.
+`goTestSkips` names the 22 runs that the net holds back, each with its
+cause. The groups:
 
 | Group | Files | Cause |
 |---|---|---|
 | The fixed Dart stack | `stack`, `stackobj2`, `fixedbugs/issue75764` | The deep recursion overflows. A parity limit. |
 | The self type | `peano`, `fixedbugs/issue4316` | A deref of `type Number *Number` has no Dart form. Decision 149 stops the crash. |
-| The reflect gaps | `reflectmethod4`, `fixedbugs/issue70156` | A bound method as a plain function, and `Value.Elem` of a pointer to an interface. |
+| The reflect gaps | `reflectmethod4` | A bound method of reflect is no plain Dart function. |
 | The line directives | `fixedbugs/issue22662`, `issue14646`, `issue18149`, `issue5856` | A line directive does not reach the source map. |
 | The machine addresses | `fixedbugs/bug260`, `bug352`, `issue29735`, `issue4667` | Dart gives no machine address, no program counter, and no allocation count. |
 | The deep types | `fixedbugs/issue72063`, `issue29312`, `typeparam/issue48137` | A type that nests 30 levels or more erases at 2 depths. |
 | The local generic identity | `typeparam/nested` | The reflect identity of a local type of a generic function drops the outer type argument. |
 | The run caps | `fixedbugs/issue13169`, `issue34395`, `issue78081`, `issue19182` | The run needs more than the cap, or a busy loop never yields. |
-| The open defects | `typeparam/issue376214` | An append that spreads a union of a string and a byte slice. |
 
-The road of the fourth session stands in decisions 160 to 196.
+The road of the fourth session stands in decisions 160 to 199.
 

@@ -278,3 +278,9 @@ Object? $maxOf(Object? a, Object? b) {
   if (b is double && b.isNaN) return b;
   return (a as num) >= (b as num) ? a : b;
 }
+
+/// The spread of a value of a union of a string and a byte slice.
+Slice<int> $spreadBytes(Object? v) {
+  if (v is GoString) return $stringToBytes(v);
+  return v as Slice<int>;
+}
