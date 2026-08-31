@@ -484,19 +484,28 @@ with 4 patches that remove a deferred recover. Read decision 148.
 ## The test directory of the Go repository
 
 `TestRunFilesOfGoTest` of `internal/driver/gotest_test.go` runs each file of
-`$GOROOT/test` whose header is `// run`. The directory holds 145 such files at
-the top level. The first run of 2026-08-31 matched 54 files and named 18
-differences. The same session fixed 13 of them, with decisions 151 to 159. The fourth
-session fixed the generic method value with decisions 160 and 161, and 71
-files match now. A file outside the subset skips, and `goTestSkips` names
-each run that still differs:
+`$GOROOT/test` whose header is `// run`: the 145 files of the top level, the
+141 of typeparam, and the 645 of fixedbugs. Each run compares with `go run`
+under a cap of 2 minutes. A file outside the subset skips with the rejection
+of stage 2.
 
-| File | Cause |
-|---|---|
-| `stack`, `stackobj2` | The Dart VM holds a fixed stack, and the deep recursion overflows. A parity limit. |
-| `peano` | A deref of `type Number *Number` has no Dart form. Decision 149 stops the crash, and the deref stays open. |
-| `reflectmethod4` | A bound method of reflect is no plain Dart function, thus an assertion back to a func type fails. A parity limit. |
+The state of 2026-08-31, after the fourth session: 589 files match, and no
+run differs. 70 of the top level, 107 of typeparam, and 412 of fixedbugs.
+318 files stand outside the subset, most through `recover`, `unsafe`, and
+the parts of `runtime` and `reflect` that the surface omits. `goTestSkips`
+names the 24 runs that the net holds back, each with its cause. The groups:
 
-The subdirectories of `$GOROOT/test` stay open: fixedbugs holds about 2000
-more files, and typeparam holds about 400.
+| Group | Files | Cause |
+|---|---|---|
+| The fixed Dart stack | `stack`, `stackobj2`, `fixedbugs/issue75764` | The deep recursion overflows. A parity limit. |
+| The self type | `peano`, `fixedbugs/issue4316` | A deref of `type Number *Number` has no Dart form. Decision 149 stops the crash. |
+| The reflect gaps | `reflectmethod4`, `fixedbugs/issue70156` | A bound method as a plain function, and `Value.Elem` of a pointer to an interface. |
+| The line directives | `fixedbugs/issue22662`, `issue14646`, `issue18149`, `issue5856` | A line directive does not reach the source map. |
+| The machine addresses | `fixedbugs/bug260`, `bug352`, `issue29735`, `issue4667` | Dart gives no machine address, no program counter, and no allocation count. |
+| The deep types | `fixedbugs/issue72063`, `issue29312`, `typeparam/issue48137` | A type that nests 30 levels or more erases at 2 depths. |
+| The local generic identity | `typeparam/nested` | The reflect identity of a local type of a generic function drops the outer type argument. |
+| The run caps | `fixedbugs/issue13169`, `issue34395`, `issue78081`, `issue19182` | The run needs more than the cap, or a busy loop never yields. |
+| The open defects | `typeparam/issue376214` | An append that spreads a union of a string and a byte slice. |
+
+The road of the fourth session stands in decisions 160 to 196.
 

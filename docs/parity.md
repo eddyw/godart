@@ -912,3 +912,20 @@ base in front of a whole number, and it reaches no other verb.
 A Dart double holds a `float32` with the precision of 64 bits. `%v` and `%g`
 write the shortest decimal text that reads back as the same 32-bit value, thus
 the text holds the digits that Go writes.
+
+## The findings of the go test directory, 2026-08-31
+
+- A line directive does not reach the source map. `runtime.Caller` gives the
+  true position of the source file.
+- Dart gives no machine address, no program counter, and no allocation count.
+  A test of `%p` arithmetic, of `runtime.FuncForPC`, or of
+  `testing.AllocsPerRun` has no Dart form.
+- 2 values with no size take 2 cells. gc can give them 1 address.
+- A type that nests 30 levels or more erases at 2 depths, and the 2 Dart
+  forms differ.
+- The reflect identity of a local type inside a generic function drops the
+  outer type argument. 2 instantiations of `F[A].T[B]` with 2 arguments for A
+  compare equal when B stays equal.
+- A goroutine with a busy loop and no block operation never yields. The other
+  goroutines never run, exactly as GopherJS behaves.
+- `reflect.Value.Elem` of a pointer to an interface stays open.
