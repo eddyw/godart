@@ -486,16 +486,16 @@ with 4 patches that remove a deferred recover. Read decision 148.
 `TestRunFilesOfGoTest` of `internal/driver/gotest_test.go` runs each file of
 `$GOROOT/test` whose header is `// run`. The directory holds 145 such files at
 the top level. The first run of 2026-08-31 matched 54 files and named 18
-differences. The same session fixed 13 of them, with decisions 151 to 159,
-and 70 files match now. A file outside the subset skips, and `goTestSkips`
-names each run that still differs:
+differences. The same session fixed 13 of them, with decisions 151 to 159. The fourth
+session fixed the generic method value with decisions 160 and 161, and 71
+files match now. A file outside the subset skips, and `goTestSkips` names
+each run that still differs:
 
 | File | Cause |
 |---|---|
 | `stack`, `stackobj2` | The Dart VM holds a fixed stack, and the deep recursion overflows. A parity limit. |
 | `peano` | A deref of `type Number *Number` has no Dart form. Decision 149 stops the crash, and the deref stays open. |
 | `reflectmethod4` | A bound method of reflect is no plain Dart function, thus an assertion back to a func type fails. A parity limit. |
-| `genmeth1` | A value of a generic method of Go 1.27 carries the dictionary form. The call of such a method works, and the value stays open. |
 
 The subdirectories of `$GOROOT/test` stay open: fixedbugs holds about 2000
 more files, and typeparam holds about 400.

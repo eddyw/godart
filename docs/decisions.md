@@ -595,6 +595,22 @@ The plan left these points open. The work took the decisions below.
      pointer parameter reads the value behind it, and a value receiver takes
      a copy at the call.
 
+160. The value and the expression of a generic method bind the dictionary of
+     each type argument in a closure. A Dart tear-off binds no argument, thus
+     the tear-off form stays only for a method without type arguments.
+     `ir.Method` and `ir.MethodExpr` carry the type arguments, normalize
+     fills them from the instance record of the type checker, and the type
+     becomes the instantiated signature. `genmeth1` of the go test directory
+     and `testdata/programs/genmethval` prove the 6 forms.
+
+161. The frame of a top level method takes the type parameters of the
+     receiver type and of the method, in that order. The frame class already
+     named the joined list, and the save site named the method list only,
+     thus a resume read an empty dictionary. The body emit of
+     `topLevelMethod` now carries the joined list, and the frame saves each
+     dictionary. The method `wait` of `testdata/programs/genmethval` proves a
+     block operation inside a generic method through a method value.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

@@ -269,7 +269,7 @@ func (b *builder) expr(e ast.Expr) ir.Expr {
 	case *ast.IndexExpr:
 		return b.index(e)
 	case *ast.IndexListExpr:
-		return b.expr(e.X)
+		return b.methodInst(e, b.expr(e.X))
 	case *ast.SliceExpr:
 		return b.slice(e)
 	case *ast.CompositeLit:
@@ -460,12 +460,31 @@ func structOf(t types.Type) *types.Struct {
 	return st
 }
 
+// methodInst fills the type arguments of an instance of a generic method, and
+// the type becomes the instantiated signature. Any other instance passes
+// through, because a call reads its own type arguments.
+func (b *builder) methodInst(e ast.Expr, x ir.Expr) ir.Expr {
+	targs := b.typeArgs(e)
+	if len(targs) == 0 {
+		return x
+	}
+	switch m := x.(type) {
+	case *ir.Method:
+		m.TypeArgs = targs
+		m.Type = b.typeOf(e)
+	case *ir.MethodExpr:
+		m.TypeArgs = targs
+		m.Type = b.typeOf(e)
+	}
+	return x
+}
+
 func (b *builder) index(e *ast.IndexExpr) ir.Expr {
 	if tv, ok := b.info.Types[e.Index]; ok && tv.IsType() {
-		// The expression names an instance of a generic function or of a
-		// generic type. The instance reads as the name itself, and the type
-		// arguments reach the call through the info of the type checker.
-		return b.expr(e.X)
+		// The expression names an instance of a generic function, of a
+		// generic type, or of a generic method. A method instance keeps its
+		// type arguments, and a call reads them from the type checker.
+		return b.methodInst(e, b.expr(e.X))
 	}
 	x := b.expr(e.X)
 	if x == nil {

@@ -59,7 +59,7 @@ func (f *flat) value(x ir.Expr) ir.Expr {
 	case *ir.TypeTest:
 		return &ir.TypeTest{X: f.value(x.X), Assert: x.Assert, Type: x.Type}
 	case *ir.Method:
-		return &ir.Method{Recv: f.value(x.Recv), Obj: x.Obj, Type: x.Type}
+		return &ir.Method{Recv: f.value(x.Recv), Obj: x.Obj, Type: x.Type, TypeArgs: x.TypeArgs}
 	}
 	return x
 }
@@ -149,7 +149,7 @@ func (f *flat) callArgs(x ir.Expr) ir.Expr {
 		if argsBlock {
 			recv = f.hoistRecv(m, recv)
 		}
-		out.Fun = &ir.Method{Recv: recv, Obj: m.Obj, Type: m.Type}
+		out.Fun = &ir.Method{Recv: recv, Obj: m.Obj, Type: m.Type, TypeArgs: m.TypeArgs}
 	} else if blocksExpr(call.Fun) {
 		out.Fun = f.value(call.Fun)
 	}

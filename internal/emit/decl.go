@@ -353,7 +353,12 @@ func (e *emitter) methodFunc(f *ir.Func) {
 	e.typeParams = all
 	e.line("%s %s%s(%s) {", e.results(f), methodFuncName(obj.Name(), f.Name),
 		e.typeParamDecl(all), strings.Join(params, ", "))
+	// The frame of the body must take the same type parameters as its class,
+	// and the class names the parameters of the receiver type first.
+	own := f.TypeParams
+	f.TypeParams = all
 	e.body(f)
+	f.TypeParams = own
 	e.line("}")
 	e.line("")
 	e.typeParams = prev

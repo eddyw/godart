@@ -15,7 +15,6 @@ import (
 // removes its entry, and the file then joins the comparison.
 var goTestSkips = map[string]string{
 	"peano":          "a deref of a type that names itself has no Dart form",
-	"genmeth1":       "a generic method value takes the dictionary form",
 	"reflectmethod4": "a bound method of reflect is no plain Dart function",
 	"stack":          "the Dart VM holds a fixed stack, and the recursion overflows",
 	"stackobj2":      "the Dart VM holds a fixed stack, and the recursion overflows",

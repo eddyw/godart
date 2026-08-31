@@ -483,6 +483,10 @@ type (
 		Obj  *types.Func
 		Recv types.Type
 		Type types.Type
+
+		// TypeArgs holds the type arguments of an instance of a generic
+		// method.
+		TypeArgs []types.Type
 	}
 
 	// FuncInst names an instance of a generic function that reaches a value,
@@ -497,6 +501,10 @@ type (
 		Recv Expr
 		Obj  *types.Func
 		Type types.Type
+
+		// TypeArgs holds the type arguments of an instance of a generic
+		// method.
+		TypeArgs []types.Type
 	}
 
 	// Builtin calls a Go builtin, for example len or append.

@@ -349,7 +349,7 @@ func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 		case *ir.Method:
 			hoisted, recv := b.forceHoist(b.receiverValue(fun), s.Pos(), "dr")
 			pre = append(pre, hoisted...)
-			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type}
+			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type, TypeArgs: fun.TypeArgs}
 		default:
 			if !directFunc(fun) {
 				hoisted, value := b.forceHoist(fun, s.Pos(), "df")
@@ -380,7 +380,7 @@ func (b *builder) goStmt(s *ast.GoStmt) []ir.Stmt {
 		case *ir.Method:
 			hoisted, recv := b.forceHoist(b.receiverValue(fun), s.Pos(), "gr")
 			pre = append(pre, hoisted...)
-			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type}
+			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type, TypeArgs: fun.TypeArgs}
 		default:
 			if !directFunc(fun) {
 				hoisted, value := b.forceHoist(fun, s.Pos(), "gf")

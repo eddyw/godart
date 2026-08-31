@@ -447,11 +447,45 @@ func (e *emitter) methodValue(m *ir.Method) string {
 	if obj != nil && (!isStructType(obj.Type()) || pointerMethod(m.Obj)) {
 		return e.methodFuncValue(m, obj)
 	}
+	if len(m.TypeArgs) > 0 {
+		return e.genericMethodValue(m)
+	}
 	sig, _ := m.Obj.Type().(*types.Signature)
 	if sig != nil && sig.Recv() != nil && !isPointerType(sig.Recv().Type()) {
 		return fmt.Sprintf("%s.$copy().%s", e.deref(m.Recv), methodName(m.Obj))
 	}
 	return fmt.Sprintf("%s.%s", e.deref(m.Recv), methodName(m.Obj))
+}
+
+// genericMethodValue reads an instance of a generic method without a call. A
+// Dart tear-off binds no type argument, thus the value is a closure. The
+// closure holds the receiver and the dictionary of each type argument.
+func (e *emitter) genericMethodValue(m *ir.Method) string {
+	sig, _ := m.Type.(*types.Signature)
+	if sig == nil {
+		e.fail("the method value %s has no signature", m.Obj.Name())
+		return "null"
+	}
+	targs, dicts := e.typeArguments(m.TypeArgs)
+	params := make([]string, sig.Params().Len())
+	names := make([]string, sig.Params().Len())
+	for i := range params {
+		names[i] = fmt.Sprintf("$a%d", i)
+		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + names[i]
+	}
+	recv := e.deref(m.Recv)
+	msig, _ := m.Obj.Type().(*types.Signature)
+	if msig != nil && msig.Recv() != nil && !isPointerType(msig.Recv().Type()) {
+		recv += ".$copy()"
+	}
+	rt := m.Recv.GoType()
+	if p, ok := typeset.Core(rt).(*types.Pointer); ok {
+		rt = p.Elem()
+	}
+	all := append(append([]string{}, dicts...), names...)
+	call := "$recv." + methodName(m.Obj) + targs + "(" + strings.Join(all, ", ") + ")"
+	return fmt.Sprintf("((%s $recv) => (%s) => %s)(%s)",
+		e.dartType(rt), strings.Join(params, ", "), call, recv)
 }
 
 // methodExpr writes a method expression, for example `(*T).M`. The value is a
@@ -490,6 +524,7 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + names[i]
 	}
 	msig, _ := x.Obj.Type().(*types.Signature)
+	mtargs, mdicts := e.typeArguments(x.TypeArgs)
 	closure := func(call string) string {
 		return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
 	}
@@ -545,9 +580,9 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 			}
 		}
 		dicts, typeArgs := e.recvTypeArgs(current)
-		all := append(append([]string{arg0}, dicts...), names[1:]...)
+		all := append(append(append([]string{arg0}, dicts...), mdicts...), names[1:]...)
 		call := e.qualify(obj, methodFuncName(obj.Name(), x.Obj.Name())) +
-			joinTypeArgs(typeArgs, "") + "(" + strings.Join(all, ", ") + ")"
+			joinTypeArgs(typeArgs, mtargs) + "(" + strings.Join(all, ", ") + ")"
 		return closure(call)
 	}
 	// A class method. A value receiver takes a copy at the call, exactly as
@@ -558,7 +593,8 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	if msig != nil && msig.Recv() != nil && !isPointerType(msig.Recv().Type()) {
 		recv += ".$copy()"
 	}
-	return closure(fmt.Sprintf("%s.%s(%s)", recv, methodName(x.Obj), strings.Join(names[1:], ", ")))
+	return closure(fmt.Sprintf("%s.%s%s(%s)", recv, methodName(x.Obj), mtargs,
+		strings.Join(append(append([]string{}, mdicts...), names[1:]...), ", ")))
 }
 
 // methodFuncValue reads a method of a named type that is not a struct. Such a
@@ -583,6 +619,11 @@ func joinTypeArgs(recv []string, method string) string {
 
 func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
 	sig, _ := m.Obj.Type().(*types.Signature)
+	if len(m.TypeArgs) > 0 {
+		if inst, ok := m.Type.(*types.Signature); ok {
+			sig = inst
+		}
+	}
 	if sig == nil {
 		e.fail("the method %s has no signature", m.Obj.Name())
 		return "null"
@@ -595,10 +636,11 @@ func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
 		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + name
 		args[i+1] = name
 	}
+	mtargs, mdicts := e.typeArguments(m.TypeArgs)
 	dicts, typeArgs := e.recvTypeArgs(m.Recv.GoType())
-	args = append(append([]string{args[0]}, dicts...), args[1:]...)
+	args = append(append(append([]string{args[0]}, dicts...), mdicts...), args[1:]...)
 	call := e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) +
-		joinTypeArgs(typeArgs, "") + "(" + strings.Join(args, ", ") + ")"
+		joinTypeArgs(typeArgs, mtargs) + "(" + strings.Join(args, ", ") + ")"
 	return fmt.Sprintf("((%s $recv) => (%s) => %s)(%s)",
 		e.dartType(m.Recv.GoType()), strings.Join(params, ", "), call, e.expr(m.Recv))
 }
