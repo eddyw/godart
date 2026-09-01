@@ -60,12 +60,12 @@ func MarshalIndent(v any, prefix, indent string) ([]byte, error) {
 //
 // A type that holds the method UnmarshalJSON reads its own form.
 func Unmarshal(data []byte, v any) error {
-	return unmarshal(data, v, false)
+	return unmarshal(data, v, false, false)
 }
 
 // unmarshal reads 1 value. The flag strict reports a member that matches no
 // field of the target struct.
-func unmarshal(data []byte, v any, strict bool) error {
+func unmarshal(data []byte, v any, strict, useNumber bool) error {
 	n, err := scanValue(data, true)
 	if err != nil {
 		if err == errEnd {
@@ -84,7 +84,7 @@ func unmarshal(data []byte, v any, strict bool) error {
 			}
 		}
 	}
-	if cause := dart.UnmarshalJSON(v, string(data), strict); cause != "" {
+	if cause := dart.UnmarshalJSON(v, string(data), strict, useNumber); cause != "" {
 		return unmarshalCause(cause)
 	}
 	return nil

@@ -372,7 +372,7 @@ func MarshalJSON(v any) (string, string) {
 // reports a member of the input that matches no field of the target struct.
 //
 // The result holds the cause of a failure, and it is empty after a success.
-func UnmarshalJSON(v any, data string, strict bool) string {
+func UnmarshalJSON(v any, data string, strict, useNumber bool) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
@@ -810,6 +810,33 @@ func ProcWait(pid int) (int, string) {
 // ProcKill sends a signal to a process. The signal is the number of the
 // system, for example 9 for SIGKILL and 15 for SIGTERM.
 func ProcKill(pid int, signal int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// KillPid sends a signal to any process by its id. ProcKill reaches a child
+// of this program only.
+func KillPid(pid int, number int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SignalWatch starts a watch of 1 operating system signal and gives its
+// handle. The number is the number of the system, for example 2 for SIGINT.
+// A signal that the platform cannot catch gives a cause.
+func SignalWatch(number int) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SignalWait waits for the next event of a watch and gives the number of the
+// signal. A number of 0 with no cause means that SignalStop closed the watch.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func SignalWait(id int) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SignalStop stops a watch. The goroutine that waits on it wakes with a
+// number of 0.
+func SignalStop(id int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 

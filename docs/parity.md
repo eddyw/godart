@@ -29,7 +29,7 @@ The state of 2026-09-01. Each row names the section that holds the detail.
 | The network access | TCP, UDP, and a Unix socket. `net.IP` and `ParseIP` are present, and each other address type stays out. `Request.RemoteAddr` is empty. |
 | HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, and a multipart form are present. No file server. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
-| JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, and the error types. No `Token`, no `UseNumber`, and no `TextMarshaler`. |
+| JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. No `TextMarshaler`. The text of a syntax error of `Token` differs. |
 | `gart test` | The format of `go test`. `t.Parallel` does nothing, and `-cover`, `-short`, and `-count` stay out. |
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
 | A stack trace | The module form of each file, with no offset. |
@@ -236,7 +236,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `sync` | Overlay | `Mutex`, `RWMutex`, `Map`, `Cond`, `Locker`, `WaitGroup`, `Once`, `OnceFunc`, `OnceValue`, `OnceValues`, and `Pool`. |
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |
 | `testing` | Overlay | |
-| `sync/atomic` | Overlay | `Value`, the 5 typed values, `Pointer`, and the function forms. `Uintptr` and the pointer functions stay out. Read the section below. |
+| `sync/atomic` | Overlay | `Value`, the 6 typed values, `Pointer`, and the function forms, with `And` and `Or`. The `unsafe.Pointer` functions stay out. Read the section below. |
 | `time` | Overlay | The clock, the timer, the ticker, and the calendar. Read the section below. |
 | `unicode` | Native | |
 | `unicode/utf8` | Overlay | The real source needs an index of a mixed type parameter. Each test of the Go repository passes. |
@@ -316,7 +316,7 @@ walks it.
 | The order of a map member | Sorted by the key | Equal |
 | A byte slice | Gives base64 text | Equal |
 | `Unmarshal` | Present | Present. Read the table below. |
-| `Decoder` and `Encoder` | Present | Equal, except `Token` and `UseNumber`. Read the table below. |
+| `Decoder` and `Encoder` | Present | Equal. Read the table below for the text of a syntax error of `Token`. |
 | `Marshaler` | Present | Equal. Read the section below. |
 | `TextMarshaler` | The walk reads it when the type holds no `MarshalJSON` | Not present |
 | A `time.Time` field | Gives `"2023-11-14T22:13:20Z"` | Equal |
@@ -366,8 +366,8 @@ offset of Go. `Decoder`, `Valid`, `Compact`, and `Indent` each read it, and
 |---|---|---|
 | `NewDecoder`, `Decode`, `More`, `Buffered`, `InputOffset` | Present | Equal |
 | `Decoder.DisallowUnknownFields` | Present | Equal |
-| `Decoder.Token` | Present | Not present |
-| `Decoder.UseNumber` | A number of an `any` gives a `Number` | Not present. The Dart walk builds the value, and it cannot build the method table of `Number`. |
+| `Decoder.Token` | Present | Present. A valid input gives the same tokens. The text and the offset of a syntax error differ, because Go 1.27 routes `encoding/json` through the v2 implementation and that implementation blames a different character. `GOEXPERIMENT=none` gives the text of the overlay. |
+| `Decoder.UseNumber` | A number of an `any` gives a `Number` | Present. The parse of the runtime keeps the text of each literal, thus the `Number` holds the text of the input. |
 | `NewEncoder`, `Encode`, `SetIndent` | Present | Equal |
 | `Encoder.SetEscapeHTML` | Turns the escape of `<`, `>`, and `&` on and off | Present, and it changes nothing. The encoder never escapes the 3 characters. |
 | `Valid`, `Compact`, `Indent` | Present | Equal |
@@ -695,10 +695,25 @@ plain write.
 | Item | Go | godart |
 |---|---|---|
 | `Value.Load`, `Store`, `Swap`, `CompareAndSwap` | Present | Equal, with no check of the type. |
-| `Int32`, `Int64`, `Uint32`, `Uint64`, `Bool` | Present | Equal. Each one holds `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
+| `Int32`, `Int64`, `Uint32`, `Uint64`, `Uintptr`, `Bool` | Present | Equal. Each one holds `Load`, `Store`, `Swap`, and `CompareAndSwap`, and each integer type holds `Add`, `And`, and `Or`. |
 | A `Store` of a second concrete type | Panics | It writes the value. |
 | `Pointer[T]` | Present | Equal |
-| The function form, for example `AddInt64` | Present | Equal for `Add`, `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
+| The function form, for example `AddInt64` | Present | Equal for `Add`, `And`, `Or`, `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
+| `LoadPointer`, `StorePointer`, `SwapPointer`, `CompareAndSwapPointer` | Present | Not present. Each one takes an `unsafe.Pointer`, which stands outside the subset. `Pointer[T]` holds the same use. |
+
+## The signal access
+
+`os/signal` reads `ProcessSignal.watch` of dart:io. Each watch runs on the
+event loop, thus a signal reaches the program between 2 goroutine steps, as it
+does in Go.
+
+| Item | Go | godart |
+|---|---|---|
+| `Notify`, `Stop`, `Reset`, `Ignore`, `Ignored`, `NotifyContext` | Present | Equal |
+| The signals that a program can catch | Each signal of the platform | `SIGHUP`, `SIGINT`, `SIGQUIT`, `SIGABRT`, `SIGALRM`, and `SIGTERM`. dart:io watches no other signal, thus `Notify` of another signal keeps the channel and no event reaches it. |
+| The package `syscall` | The whole system call interface | The `Signal` type and the 12 signal numbers that macOS and Linux agree on. A signal whose number differs between the 2, for example `SIGUSR1`, stays out. |
+| `(*os.Process).Signal` | Present | Equal. It reads `Process.killPid` of dart:io, thus it reaches any process and not only a child. |
+| `Reset` after `Ignore` | `Ignored` still reports true, because the disposition of the system stays | Equal |
 
 ## The Pull functions of iter
 

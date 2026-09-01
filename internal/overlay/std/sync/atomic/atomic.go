@@ -73,6 +73,18 @@ func (x *Int32) Swap(new int32) int32 {
 	return old
 }
 
+func (x *Int32) And(mask int32) int32 {
+	old := x.v
+	x.v &= mask
+	return old
+}
+
+func (x *Int32) Or(mask int32) int32 {
+	old := x.v
+	x.v |= mask
+	return old
+}
+
 func (x *Int32) CompareAndSwap(old, new int32) bool {
 	if x.v != old {
 		return false
@@ -98,6 +110,18 @@ func (x *Int64) Add(delta int64) int64 {
 func (x *Int64) Swap(new int64) int64 {
 	old := x.v
 	x.v = new
+	return old
+}
+
+func (x *Int64) And(mask int64) int64 {
+	old := x.v
+	x.v &= mask
+	return old
+}
+
+func (x *Int64) Or(mask int64) int64 {
+	old := x.v
+	x.v |= mask
 	return old
 }
 
@@ -129,6 +153,18 @@ func (x *Uint32) Swap(new uint32) uint32 {
 	return old
 }
 
+func (x *Uint32) And(mask uint32) uint32 {
+	old := x.v
+	x.v &= mask
+	return old
+}
+
+func (x *Uint32) Or(mask uint32) uint32 {
+	old := x.v
+	x.v |= mask
+	return old
+}
+
 func (x *Uint32) CompareAndSwap(old, new uint32) bool {
 	if x.v != old {
 		return false
@@ -157,6 +193,18 @@ func (x *Uint64) Swap(new uint64) uint64 {
 	return old
 }
 
+func (x *Uint64) And(mask uint64) uint64 {
+	old := x.v
+	x.v &= mask
+	return old
+}
+
+func (x *Uint64) Or(mask uint64) uint64 {
+	old := x.v
+	x.v |= mask
+	return old
+}
+
 func (x *Uint64) CompareAndSwap(old, new uint64) bool {
 	if x.v != old {
 		return false
@@ -166,6 +214,46 @@ func (x *Uint64) CompareAndSwap(old, new uint64) bool {
 }
 
 // Pointer holds a pointer to a value of the type parameter.
+// Uintptr holds a uintptr.
+type Uintptr struct {
+	v uintptr
+}
+
+func (x *Uintptr) Load() uintptr { return x.v }
+
+func (x *Uintptr) Store(val uintptr) { x.v = val }
+
+func (x *Uintptr) Add(delta uintptr) uintptr {
+	x.v += delta
+	return x.v
+}
+
+func (x *Uintptr) And(mask uintptr) uintptr {
+	old := x.v
+	x.v &= mask
+	return old
+}
+
+func (x *Uintptr) Or(mask uintptr) uintptr {
+	old := x.v
+	x.v |= mask
+	return old
+}
+
+func (x *Uintptr) Swap(new uintptr) uintptr {
+	old := x.v
+	x.v = new
+	return old
+}
+
+func (x *Uintptr) CompareAndSwap(old, new uintptr) bool {
+	if x.v != old {
+		return false
+	}
+	x.v = new
+	return true
+}
+
 type Pointer[T any] struct {
 	v *T
 }
@@ -253,4 +341,115 @@ func CompareAndSwapInt64(addr *int64, old, new int64) bool {
 	}
 	*addr = new
 	return true
+}
+
+func AddUintptr(addr *uintptr, delta uintptr) uintptr {
+	*addr += delta
+	return *addr
+}
+
+func LoadUintptr(addr *uintptr) uintptr { return *addr }
+
+func StoreUintptr(addr *uintptr, val uintptr) { *addr = val }
+
+func SwapUint32(addr *uint32, new uint32) uint32 {
+	old := *addr
+	*addr = new
+	return old
+}
+
+func SwapUint64(addr *uint64, new uint64) uint64 {
+	old := *addr
+	*addr = new
+	return old
+}
+
+func SwapUintptr(addr *uintptr, new uintptr) uintptr {
+	old := *addr
+	*addr = new
+	return old
+}
+
+func CompareAndSwapUint32(addr *uint32, old, new uint32) bool {
+	if *addr != old {
+		return false
+	}
+	*addr = new
+	return true
+}
+
+func CompareAndSwapUint64(addr *uint64, old, new uint64) bool {
+	if *addr != old {
+		return false
+	}
+	*addr = new
+	return true
+}
+
+func CompareAndSwapUintptr(addr *uintptr, old, new uintptr) bool {
+	if *addr != old {
+		return false
+	}
+	*addr = new
+	return true
+}
+
+func AndInt32(addr *int32, mask int32) int32 {
+	old := *addr
+	*addr &= mask
+	return old
+}
+
+func OrInt32(addr *int32, mask int32) int32 {
+	old := *addr
+	*addr |= mask
+	return old
+}
+
+func AndInt64(addr *int64, mask int64) int64 {
+	old := *addr
+	*addr &= mask
+	return old
+}
+
+func OrInt64(addr *int64, mask int64) int64 {
+	old := *addr
+	*addr |= mask
+	return old
+}
+
+func AndUint32(addr *uint32, mask uint32) uint32 {
+	old := *addr
+	*addr &= mask
+	return old
+}
+
+func OrUint32(addr *uint32, mask uint32) uint32 {
+	old := *addr
+	*addr |= mask
+	return old
+}
+
+func AndUint64(addr *uint64, mask uint64) uint64 {
+	old := *addr
+	*addr &= mask
+	return old
+}
+
+func OrUint64(addr *uint64, mask uint64) uint64 {
+	old := *addr
+	*addr |= mask
+	return old
+}
+
+func AndUintptr(addr *uintptr, mask uintptr) uintptr {
+	old := *addr
+	*addr &= mask
+	return old
+}
+
+func OrUintptr(addr *uintptr, mask uintptr) uintptr {
+	old := *addr
+	*addr |= mask
+	return old
 }

@@ -197,3 +197,126 @@ GoString $procKill(int pid, int signal) {
   }
   return _empty;
 }
+
+/// Sends a signal to any process by its id. $procKill reaches a child only,
+/// and a program that signals itself needs this call.
+GoString $killPid(int pid, int number) {
+  final ProcessSignal? sig =
+      _signalOf(number) ?? (number == 9 ? ProcessSignal.sigkill : null);
+  if (sig == null) {
+    return GoString.fromString('signal $number cannot be sent');
+  }
+  if (!Process.killPid(pid, sig)) {
+    return GoString.fromString('os: process already finished');
+  }
+  return _empty;
+}
+
+/// One watch of an operating system signal.
+///
+/// The subscription starts at once, because `ProcessSignal.watch` of dart:io
+/// installs the handler of the platform only when a listener joins. A watch
+/// that waits for the first read of Go lets the default action of the platform
+/// end the program.
+final class _Watch {
+  final int number;
+  late final StreamSubscription<ProcessSignal> sub;
+
+  /// The events that no read took yet. Go reads them 1 at a time.
+  final List<int> queue = <int>[];
+  Completer<int>? waiter;
+  bool closed = false;
+
+  _Watch(Stream<ProcessSignal> stream, this.number) {
+    sub = stream.listen((ProcessSignal _) {
+      final Completer<int>? w = waiter;
+      if (w != null) {
+        waiter = null;
+        w.complete(number);
+        return;
+      }
+      queue.add(number);
+    });
+  }
+
+  void close() {
+    if (closed) return;
+    closed = true;
+    unawaited(sub.cancel());
+    final Completer<int>? w = waiter;
+    if (w != null) {
+      waiter = null;
+      w.complete(0);
+    }
+  }
+}
+
+final Map<int, _Watch> _watches = <int, _Watch>{};
+int _nextWatch = 1;
+bool _watchRelease = false;
+
+/// _signalOf maps a signal number to the value of dart:io.
+///
+/// The overlay of the package syscall holds only the numbers that macOS and
+/// Linux agree on, thus the table needs no platform test.
+ProcessSignal? _signalOf(int number) => switch (number) {
+  1 => ProcessSignal.sighup,
+  2 => ProcessSignal.sigint,
+  3 => ProcessSignal.sigquit,
+  6 => ProcessSignal.sigabrt,
+  14 => ProcessSignal.sigalrm,
+  15 => ProcessSignal.sigterm,
+  _ => null,
+};
+
+void _closeWatches() {
+  for (final _Watch w in _watches.values) {
+    w.close();
+  }
+  _watches.clear();
+}
+
+/// Starts a watch of 1 signal and gives its handle.
+(int, GoString) $signalWatch(int number) {
+  final ProcessSignal? sig = _signalOf(number);
+  if (sig == null) {
+    return (0, GoString.fromString('signal $number cannot be caught'));
+  }
+  if (!_watchRelease) {
+    // A live subscription keeps the isolate alive, thus the end of package
+    // main must cancel each 1.
+    _watchRelease = true;
+    $releases.add(_closeWatches);
+  }
+  final int id = _nextWatch++;
+  try {
+    _watches[id] = _Watch(sig.watch(), number);
+  } catch (e) {
+    return (0, _cause(e));
+  }
+  return (id, _empty);
+}
+
+/// Waits for the next event of a watch and gives the signal number. A number
+/// of 0 with no cause means that $signalStop closed the watch.
+///
+/// The call blocks the goroutine.
+(int, GoString) $signalWait(int id) {
+  final _Watch? watch = _watches[id];
+  if (watch == null) return (0, _empty);
+  if (watch.queue.isNotEmpty) return (watch.queue.removeAt(0), _empty);
+  if (watch.closed) return (0, _empty);
+  final Completer<int> next = Completer<int>();
+  watch.waiter = next;
+  $await(
+    next.future.then((int n) => (n, _empty)),
+    (Object cause) => (0, _cause(cause)),
+  );
+  return (0, _empty);
+}
+
+/// Stops a watch. The goroutine that waits on it wakes with a number of 0.
+GoString $signalStop(int id) {
+  _watches.remove(id)?.close();
+  return _empty;
+}

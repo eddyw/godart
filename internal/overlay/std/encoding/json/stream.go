@@ -15,7 +15,12 @@ type Decoder struct {
 	off    int
 	done   bool
 	strict bool
+	number bool
 	read   int64
+	// state and stack hold the position of Token inside the value. Read
+	// token.go.
+	state int
+	stack []int
 }
 
 // NewDecoder gives a Decoder that reads from r.
@@ -27,7 +32,13 @@ func (d *Decoder) DisallowUnknownFields() { d.strict = true }
 
 // Decode reads the next JSON value of the stream into the value that v points
 // to. It gives io.EOF after the last value.
+//
+// A call of Token before Decode leaves the reader inside an array or inside an
+// object, and Decode then reads the next element of that value.
 func (d *Decoder) Decode(v any) error {
+	if err := d.prepare(); err != nil {
+		return err
+	}
 	n, err := d.next()
 	if err != nil {
 		return err
@@ -35,7 +46,11 @@ func (d *Decoder) Decode(v any) error {
 	data := d.buf[d.off : d.off+n]
 	d.off += n
 	d.read += int64(n)
-	return unmarshal(data, v, d.strict)
+	if err := unmarshal(data, v, d.strict, d.number); err != nil {
+		return err
+	}
+	d.valueEnd()
+	return nil
 }
 
 // More reports whether the stream holds another element of the current array or
@@ -54,7 +69,9 @@ func (d *Decoder) Buffered() io.Reader {
 // InputOffset gives the count of bytes of the stream that Decode used.
 func (d *Decoder) InputOffset() int64 { return d.read }
 
-// UseNumber is not present. Read docs/parity.md.
+// UseNumber makes Decode read a number into a Number, and not into a float64,
+// when the target is an empty interface.
+func (d *Decoder) UseNumber() { d.number = true }
 
 // next gives the length of the next value of the buffer, and it reads more
 // bytes until the buffer holds that value.

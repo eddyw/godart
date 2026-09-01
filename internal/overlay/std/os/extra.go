@@ -5,6 +5,7 @@ package os
 import (
 	"errors"
 	"io/fs"
+	"syscall"
 	"syscall/dart"
 )
 
@@ -265,3 +266,16 @@ func SameFile(fi1, fi2 FileInfo) bool {
 	return fi1.Size() == fi2.Size() && fi1.Mode() == fi2.Mode() &&
 		fi1.ModTime().Equal(fi2.ModTime())
 }
+
+// Signal names an operating system signal. The concrete type is
+// syscall.Signal, as it is in Go.
+type Signal interface {
+	String() string
+	Signal()
+}
+
+// The 2 signals that each platform holds.
+var (
+	Interrupt Signal = syscall.SIGINT
+	Kill      Signal = syscall.SIGKILL
+)

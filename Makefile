@@ -16,7 +16,8 @@ FLUTTER ?= flutter
 
 .PHONY: help get build test vet fmt fmt-check dart-get dart-analyze dart-test \
 	dart-fmt dart-fmt-check ci install clean run compare programs suites \
-	gart-test compare-tests bench std-test flutter-go flutter-test flutter-nodes
+	gart-test compare-tests bench std-test flutter-go flutter-test flutter-nodes \
+	surface
 
 help:
 	@echo "godart targets:"
@@ -31,6 +32,7 @@ help:
 	@echo "  make flutter-go       Run the Go tests of the Flutter modules."
 	@echo "  make flutter-test     Build the example and run the Flutter tests."
 	@echo "  make flutter-nodes    Write the Go node set again from the Flutter API."
+	@echo "  make surface          Measure the standard library surface."
 	@echo "  make ci               Run the full check that CI runs."
 	@echo "  make programs         List the Go programs of testdata."
 	@echo "  make run PROG=x       Compile testdata/programs/x and run the Dart output."
@@ -91,6 +93,11 @@ flutter-test: build
 	cd flutter/example/counter && $(FLUTTER) analyze
 	cd flutter/nodegen && dart pub get && dart analyze
 	cd flutter/example/counter && $(FLUTTER) test
+
+# surface measures how much of each package of the standard library the
+# compiler holds. Read docs/support.md.
+surface:
+	go run ./internal/surface $(ARGS)
 
 # flutter-nodes writes the Go node set again from the public API of Flutter.
 # Take it after an upgrade of the Flutter SDK. Read flutter/nodegen/README.md.

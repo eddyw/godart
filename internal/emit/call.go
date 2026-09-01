@@ -336,8 +336,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "MarshalJSON":
 		return fmt.Sprintf("$jsonMarshal(%s)", args[0]), true
 	case "UnmarshalJSON":
-		return fmt.Sprintf("$jsonUnmarshal(%s, %s, %s)",
-			args[0], args[1], args[2]), true
+		return fmt.Sprintf("$jsonUnmarshal(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
 	case "Float64Bits":
 		return fmt.Sprintf("$f64ToBits(%s)", args[0]), true
 	case "Float64FromBits":
@@ -411,6 +411,14 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$procWrite(%s, %s)", args[0], args[1]), true
 	case "ProcCloseStdin":
 		return fmt.Sprintf("$procCloseStdin(%s)", args[0]), true
+	case "KillPid":
+		return fmt.Sprintf("$killPid(%s, %s)", args[0], args[1]), true
+	case "SignalWatch":
+		return fmt.Sprintf("$signalWatch(%s)", args[0]), true
+	case "SignalWait":
+		return fmt.Sprintf("$signalWait(%s)", args[0]), true
+	case "SignalStop":
+		return fmt.Sprintf("$signalStop(%s)", args[0]), true
 	case "ProcRead":
 		return fmt.Sprintf("$procRead(%s, %s)", args[0], args[1]), true
 	case "ProcReadErr":

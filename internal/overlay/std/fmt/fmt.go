@@ -19,7 +19,7 @@ func Sprint(a ...any) string {
 		if i > 0 && dart.Kind(a[i-1]) != "string" && dart.Kind(v) != "string" {
 			out += " "
 		}
-		out += dart.Format("v", v)
+		out += plain(v)
 	}
 	return out
 }
@@ -32,7 +32,7 @@ func Sprintln(a ...any) string {
 		if i > 0 {
 			out += " "
 		}
-		out += dart.Format("v", v)
+		out += plain(v)
 	}
 	return out + "\n"
 }
@@ -118,20 +118,26 @@ func Sprintf(format string, a ...any) string {
 			continue
 		}
 		verb := ""
+		var sp spec
 		for i < len(format) && isFlag(format[i]) {
 			verb += string(rune(format[i]))
+			sp.flags += string(rune(format[i]))
 			i++
 		}
 		width := 0
 		for i < len(format) && isDigit(format[i]) {
 			width = width*10 + int(format[i]-'0')
+			sp.hasWidth = true
 			i++
 		}
+		sp.width = width
 		if i < len(format) && format[i] == '.' {
 			verb += "."
+			sp.hasPrec = true
 			i++
 			for i < len(format) && isDigit(format[i]) {
 				verb += string(rune(format[i]))
+				sp.prec = sp.prec*10 + int(format[i]-'0')
 				i++
 			}
 		}
@@ -145,6 +151,14 @@ func Sprintf(format string, a ...any) string {
 		start = i
 		if arg >= len(a) {
 			out += "%!" + string(rune(letter)) + "(MISSING)"
+			continue
+		}
+		if f, ok := a[arg].(Formatter); ok {
+			// The method owns the width, the precision, and each flag.
+			st := &state{spec: sp}
+			f.Format(st, rune(letter))
+			out += string(st.buf)
+			arg++
 			continue
 		}
 		text := dart.Format(verb+string(rune(letter)), a[arg])

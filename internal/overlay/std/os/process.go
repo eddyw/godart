@@ -5,6 +5,7 @@ package os
 import (
 	"errors"
 	"strconv"
+	"syscall"
 	"syscall/dart"
 )
 
@@ -22,6 +23,19 @@ func FindProcess(pid int) (*Process, error) {
 // Kill ends the process with SIGKILL.
 func (p *Process) Kill() error {
 	if cause := dart.ProcKill(p.Pid, 9); cause != "" {
+		return errors.New(cause)
+	}
+	return nil
+}
+
+// Signal sends a signal to the process. A signal that the platform cannot
+// send gives an error.
+func (p *Process) Signal(sig Signal) error {
+	number, ok := sig.(syscall.Signal)
+	if !ok {
+		return errors.New("os: unsupported signal type")
+	}
+	if cause := dart.KillPid(p.Pid, int(number)); cause != "" {
 		return errors.New(cause)
 	}
 	return nil
