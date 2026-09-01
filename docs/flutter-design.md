@@ -940,7 +940,7 @@ signal graph, the 3 state shapes, and 28 node types. The Dart package
 **The proof.** 6 widget tests pass under Flutter 3.47.0: the whole tree, the
 counter, the focus of a text field across a Go rebuild, a lazy list of 100,000
 rows that a goroutine fills, a Go error on the screen, and 1 signal that
-rebuilds 1 boundary. 32 Go tests pass under `go test` and under `go test
+rebuilds 1 boundary. 35 Go tests pass under `go test` and under `go test
 -race`, with no Flutter and no Dart.
 
 **The compiler work.** The plan said none. 3 small items came up.

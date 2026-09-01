@@ -209,7 +209,7 @@ tag.
 | A Go error reaches the screen | The error of the command drives the body. |
 | One signal rebuilds one boundary | The count changes, and the greeting keeps its element. |
 
-The Go side runs alone too. 26 tests of `gart.dev/ui` and 6 tests of the
+The Go side runs alone too. 30 tests of `gart.dev/ui` and 5 tests of the
 application pass under `go test`, and under `go test -race`.
 
 ## The compiler work that milestone 1 needed
