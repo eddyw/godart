@@ -53,6 +53,8 @@ var goTestSkips = map[string]string{
 	"fixedbugs/issue23734":        "a read of a map with an interface key whose type has no identity must panic, and the Dart read compares in silence",
 	"fixedbugs/issue34123":        "a deref of a nil pointer inside a map read keeps no check, and Go panics",
 	"fixedbugs/issue29504":        "the test reads the frames of the recovered stack, and the source map gives none of them",
+	"fixedbugs/issue22083":        "the test reads the line of the panic site in the stack of a recover, and the frame chain of the runtime holds the current state only",
+	"fixedbugs/issue33724":        "the test reads the name of the function of the panic site in the stack of a recover, and the frame chain of the runtime holds the current state only",
 }
 
 // runWithin runs a program with a time limit. A file of the test directory

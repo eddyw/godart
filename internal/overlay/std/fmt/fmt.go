@@ -6,7 +6,10 @@
 // applies the width.
 package fmt
 
-import "syscall/dart"
+import (
+	"io"
+	"syscall/dart"
+)
 
 // Sprint returns the text of the operands. It puts 1 space between 2 operands
 // when neither one is a string.
@@ -55,16 +58,6 @@ func Printf(format string, a ...any) (int, error) {
 	return len(text), nil
 }
 
-// Sprintf returns the formatted text.
-// Writer is the target of Fprint, Fprintf, and Fprintln.
-//
-// The standard library names the type io.Writer. This package declares its own
-// interface with the same method, because an import of io would make a cycle:
-// io holds an error, and errors reaches fmt.
-type Writer interface {
-	Write(p []byte) (int, error)
-}
-
 // Stringer holds the method that gives the text of a value.
 type Stringer interface {
 	String() string
@@ -75,23 +68,37 @@ type GoStringer interface {
 	GoString() string
 }
 
+// Append writes each value after b. It adds a space between 2 values when
+// neither is a string.
+func Append(b []byte, a ...any) []byte { return append(b, Sprint(a...)...) }
+
+// Appendln writes each value after b with a space between 2 values, and a
+// newline at the end.
+func Appendln(b []byte, a ...any) []byte { return append(b, Sprintln(a...)...) }
+
+// Appendf writes the format with each value after b.
+func Appendf(b []byte, format string, a ...any) []byte {
+	return append(b, Sprintf(format, a...)...)
+}
+
 // Fprint writes each value to w. It adds a space between 2 values when neither
 // is a string.
-func Fprint(w Writer, a ...any) (int, error) {
+func Fprint(w io.Writer, a ...any) (int, error) {
 	return w.Write([]byte(Sprint(a...)))
 }
 
 // Fprintln writes each value to w with a space between 2 values, and a newline
 // at the end.
-func Fprintln(w Writer, a ...any) (int, error) {
+func Fprintln(w io.Writer, a ...any) (int, error) {
 	return w.Write([]byte(Sprintln(a...)))
 }
 
 // Fprintf writes the format with each value to w.
-func Fprintf(w Writer, format string, a ...any) (int, error) {
+func Fprintf(w io.Writer, format string, a ...any) (int, error) {
 	return w.Write([]byte(Sprintf(format, a...)))
 }
 
+// Sprintf returns the formatted text.
 func Sprintf(format string, a ...any) string {
 	out := ""
 	arg := 0

@@ -564,6 +564,23 @@ func Environ() []string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// Getpid gives the process id of the program.
+func Getpid() int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Hostname gives the name of the host. The second result holds the cause of a
+// failure, and it is empty after a success.
+func Hostname() (string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Executable gives the path of the program that runs. The second result holds
+// the cause of a failure.
+func Executable() (string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func Getwd() (string, string) {
 	panic("syscall/dart needs the gart compiler")
 }

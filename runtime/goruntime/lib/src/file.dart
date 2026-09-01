@@ -365,6 +365,28 @@ Slice<GoString> $environ() {
   }
 }
 
+/// Gives the process id of the program.
+int $getpid() => pid;
+
+/// Gives the name of the host.
+(GoString, GoString) $hostname() {
+  try {
+    return (GoString.fromString(Platform.localHostname), _empty);
+  } catch (e) {
+    return (_empty, _cause(e));
+  }
+}
+
+/// Gives the path of the program that runs. The Dart VM runs the emitted Dart,
+/// thus the path names the VM.
+(GoString, GoString) $executable() {
+  try {
+    return (GoString.fromString(Platform.resolvedExecutable), _empty);
+  } catch (e) {
+    return (_empty, _cause(e));
+  }
+}
+
 GoString $chdir(GoString path) {
   try {
     Directory.current = Directory(path.toDartString());

@@ -8,13 +8,16 @@
 package flag
 
 import (
+	"encoding"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"syscall/dart"
+	"time"
 )
 
 // ErrHelp is the error of the flag -h or -help with no declaration of its own.
@@ -677,4 +680,149 @@ var Usage = func() { CommandLine.defaultUsage() }
 func Parse() {
 	CommandLine.Usage = Usage
 	CommandLine.Parse(os.Args[1:])
+}
+
+// durationValue holds a flag of the type time.Duration.
+type durationValue time.Duration
+
+func (d *durationValue) Set(text string) error {
+	out, err := time.ParseDuration(text)
+	*d = durationValue(out)
+	return err
+}
+
+func (d *durationValue) Get() any { return time.Duration(*d) }
+
+func (d *durationValue) String() string { return time.Duration(*d).String() }
+
+// DurationVar declares a flag of the type time.Duration, and it writes the
+// value into p.
+func (f *FlagSet) DurationVar(p *time.Duration, name string, value time.Duration, usage string) {
+	*p = value
+	f.Var((*durationValue)(p), name, usage)
+}
+
+// Duration declares a flag of the type time.Duration.
+func (f *FlagSet) Duration(name string, value time.Duration, usage string) *time.Duration {
+	p := new(time.Duration)
+	f.DurationVar(p, name, value, usage)
+	return p
+}
+
+// DurationVar declares a flag of the type time.Duration of the command line.
+func DurationVar(p *time.Duration, name string, value time.Duration, usage string) {
+	CommandLine.DurationVar(p, name, value, usage)
+}
+
+// Duration declares a flag of the type time.Duration of the command line.
+func Duration(name string, value time.Duration, usage string) *time.Duration {
+	return CommandLine.Duration(name, value, usage)
+}
+
+// funcValue holds a flag that calls a function of the caller.
+type funcValue func(string) error
+
+func (f funcValue) Set(text string) error { return f(text) }
+
+func (f funcValue) String() string { return "" }
+
+// Func declares a flag that calls fn with the value of each read.
+func (f *FlagSet) Func(name, usage string, fn func(string) error) {
+	f.Var(funcValue(fn), name, usage)
+}
+
+// Func declares such a flag of the command line.
+func Func(name, usage string, fn func(string) error) {
+	CommandLine.Func(name, usage, fn)
+}
+
+// boolFuncValue holds a flag with no value that calls a function.
+type boolFuncValue func(string) error
+
+func (f boolFuncValue) Set(text string) error { return f(text) }
+
+func (f boolFuncValue) String() string { return "" }
+
+func (f boolFuncValue) IsBoolFlag() bool { return true }
+
+// BoolFunc declares a flag with no value that calls fn at each read.
+func (f *FlagSet) BoolFunc(name, usage string, fn func(string) error) {
+	f.Var(boolFuncValue(fn), name, usage)
+}
+
+// BoolFunc declares such a flag of the command line.
+func BoolFunc(name, usage string, fn func(string) error) {
+	CommandLine.BoolFunc(name, usage, fn)
+}
+
+// textValue holds a flag of a type that reads and writes its own text.
+type textValue struct{ p encoding.TextUnmarshaler }
+
+func (v textValue) Set(text string) error {
+	return v.p.UnmarshalText([]byte(text))
+}
+
+func (v textValue) Get() any { return v.p }
+
+func (v textValue) String() string {
+	if m, ok := v.p.(encoding.TextMarshaler); ok {
+		if text, err := m.MarshalText(); err == nil {
+			return string(text)
+		}
+	}
+	return ""
+}
+
+// TextVar declares a flag of a type that holds MarshalText and UnmarshalText.
+// The value of the flag reaches p, and value gives the text of the default.
+func (f *FlagSet) TextVar(p encoding.TextUnmarshaler, name string, value encoding.TextMarshaler, usage string) {
+	text, err := value.MarshalText()
+	if err != nil {
+		panic("flag: the default value of " + name + " holds no text: " + err.Error())
+	}
+	if err := p.UnmarshalText(text); err != nil {
+		panic("flag: the default value of " + name + " does not fit: " + err.Error())
+	}
+	f.Var(textValue{p}, name, usage)
+}
+
+// TextVar declares such a flag of the command line.
+func TextVar(p encoding.TextUnmarshaler, name string, value encoding.TextMarshaler, usage string) {
+	CommandLine.TextVar(p, name, value, usage)
+}
+
+// Init writes the name of the set and the action of a parse error.
+func (f *FlagSet) Init(name string, errorHandling ErrorHandling) {
+	f.name = name
+	f.errorHandling = errorHandling
+}
+
+// UnquoteUsage gives the name of the value of a flag and its usage. A pair of
+// back quotation marks in the usage names the value, and the marks drop out of
+// the text.
+func UnquoteUsage(flag *Flag) (string, string) {
+	usage := flag.Usage
+	start := strings.IndexByte(usage, '`')
+	if start >= 0 {
+		if end := strings.IndexByte(usage[start+1:], '`'); end >= 0 {
+			end += start + 1
+			return usage[start+1 : end],
+				usage[:start] + usage[start+1:end] + usage[end+1:]
+		}
+	}
+	switch flag.Value.(type) {
+	case boolFlag:
+		return "", usage
+	case *durationValue:
+		return "duration", usage
+	case *float64Value:
+		return "float", usage
+	case *intValue, *int64Value:
+		return "int", usage
+	case *stringValue:
+		return "string", usage
+	case *uintValue, *uint64Value:
+		return "uint", usage
+	}
+	return "value", usage
 }

@@ -18,6 +18,10 @@ func New(text string) error {
 	return &errorString{text: text}
 }
 
+// ErrUnsupported reports an operation that the environment does not hold. A
+// caller reads it with Is.
+var ErrUnsupported = New("unsupported operation")
+
 type wrapped interface {
 	Unwrap() error
 }
