@@ -9,8 +9,10 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 80 packages. `docs/what-compiles.md` holds the whole list and
-the gate of each package that stays out. A package reaches the surface 3 ways.
+The surface holds 83 import paths: 74 standard packages, `syscall/dart`, and 8
+internal packages. `docs/what-compiles.md` holds the whole list and the gate of
+each package that stays out. `docs/support.md` holds the count of the exported
+names that each one holds. A package reaches the surface 3 ways.
 
 An **overlay** replaces the real source. `internal/overlay/std/<path>/` holds
 the files, and each one carries the build tag `dart`. The go command skips such

@@ -2,15 +2,21 @@
 
 This file names the shape of a Go program that the compiler accepts. It also
 names the gate that stops each program that it rejects. `docs/parity.md` holds
-each difference between Go and the Dart output.
+each difference between Go and the Dart output. `docs/support.md` holds the
+count of the exported names that each package of the surface holds.
 
 Each row comes from a measurement of 2026-08-31. A `Present` row is a real build
 of a program that imports the package.
 
 ## The import surface
 
-80 packages of the standard library reach the surface. Stage 2 rejects an import
-of each other package with a source position.
+The surface holds 83 import paths: 74 standard packages, the interop package
+`syscall/dart`, and 8 internal packages that the 74 need. Stage 2 rejects an
+import of each other package with a source position.
+
+52 of the 74 hold each exported name of Go, and 21 hold a part of them.
+`docs/support.md` holds the level of each one and the largest gap of each
+partial package.
 
 | Present | Absent |
 |---|---|
@@ -47,10 +53,10 @@ of each other package with a source position.
 | A complex number | Present. The runtime class GoComplex holds it. |
 | The address of a value behind a pointer, for example `&*p` | Rejected. Read `p`. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
+| A conversion between 2 struct types | Rejected |
 
 Stage 2 accepts a local struct type that reads a type parameter, and the
 `recover` builtin. Read decisions 200 and 201 of `docs/decisions.md`.
-| A conversion between 2 struct types | Rejected |
 
 Each other construct of the language stays inside the subset:
 
@@ -129,10 +135,12 @@ or `os/signal`. The gate is the library surface, and not the language.
 
 ## The near misses
 
-Each package below needs a small piece of work. The survey of 2026-08-31 gives
-the exact gap.
+Each package below needs a small piece of work. `docs/support.md` holds the
+whole list of the packages that stay out, with the cause and the cost of each
+one.
 
 | Package | The gap |
 |---|---|
-| `text/tabwriter` | The address of a field of a slice. |
 | `crypto/hmac`, `crypto/sha512` | Each one follows the pattern of the `crypto/sha256` overlay. |
+| `os/signal` | `ProcessSignal.watch` of `dart:io` gives the event. |
+| `math/cmplx` | The language holds the complex type already. The package needs a survey. |

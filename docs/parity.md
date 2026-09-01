@@ -3,6 +3,39 @@
 This file lists each place where the Dart output differs from Go. A gap here is
 a known difference. A difference that this file does not list is a bug.
 
+`docs/support.md` holds the count of the names that each package of the surface
+holds. This file holds the behavior.
+
+## At a glance
+
+The state of 2026-09-01. Each row names the section that holds the detail.
+
+| Area | The difference |
+|---|---|
+| A goroutine, a channel, and a `select` | Present. A function that blocks unwinds each frame to the scheduler, and the output holds no `Future` and no `await`. |
+| A parallel run | Out. All Go code runs in 1 isolate. `GOMAXPROCS` and `NumCPU` give 1, and a goroutine with no block operation never gives up control. |
+| The order of a map | The order of the writes. Go gives a random order. |
+| A `select` with 2 ready cases | The first case in source order. Go takes a random one. |
+| `sync.RWMutex` | A read lock is equal to a write lock. |
+| A pointer | Present, also to a value that is not a struct. `&*p` and a conversion between 2 struct types stay out. |
+| `unsafe` and cgo | Outside the subset. |
+| `reflect` | A subset over a type descriptor. `Type` is a struct with a handle, and not an interface. |
+| An address | None. `%p` stays out, and a program counter is an index of a table of the runtime. |
+| An integer | 64 bits on each target. The JS target holds the pair form of GopherJS, and `reflect` and `json` read 53 bits there. |
+| A `Time` | 1 count of nanoseconds, thus the range is the year 1678 to the year 2262, and it holds no monotonic value. |
+| The zone of a date before 1901 | The modern offset of the zone. Dart names the zone, and Go reads its own database. |
+| The file access | Synchronous, through `dart:io`. No permission bit, and no handle of a directory. |
+| The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. |
+| The network access | TCP, UDP, and a Unix socket. No address type, and `Request.RemoteAddr` is empty. |
+| HTTP | 1.1 and 2, for the client and the server. No cookie jar, no file server, and no multipart form. |
+| TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
+| JSON | A byte slice gives a list of numbers, and Go gives base64 text. No `Encoder`, no `Decoder`, and no `Marshaler`. |
+| `gart test` | The format of `go test`. `t.Parallel` does nothing, and `-cover`, `-short`, and `-count` stay out. |
+| A benchmark | Present, with the format of `go test`. No count of allocations. |
+| A stack trace | The module form of each file, with no offset. |
+| The garbage collector | `runtime.GC` gives up control only, and a cleanup follows the collector of Dart. |
+| The web target | `dart compile js` and `dart compile wasm` each build a pure program. A program that reaches a file or a socket fails in the compile. |
+
 ## The receiver of a method
 
 The Dart form of a pointer to a struct is the object reference, and that type
@@ -157,7 +190,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | `New`, `Is`, `As`, `AsType`, `Unwrap`, and `Join`. |
 | `flag` | Overlay | The real source reads `reflect` and `runtime.Caller`. `SetOutput` takes an `io.Writer`. |
-| `reflect` | Overlay | `DeepEqual`, `TypeOf`, `ValueOf`, `Zero`, `Type.String`, `Type.Kind`, `Type.Comparable`, `Type.Elem`, `Value.Elem`, `Value.Set`, and `Value.Interface`. |
+| `reflect` | Overlay | 82 of the 188 names of Go. The section "The reflect subset" above holds each one. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq`, `Seq2`, `Pull`, and `Pull2`. Read the section below. |
 | `maps` | Overlay | |
@@ -170,7 +203,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `net` | Overlay | TCP, UDP, and a Unix socket. No TLS. Read the section below. |
 | `os` | Overlay | The file access, the temporary names, and the process state. Read the section below. |
 | `path` | Native | |
-| `runtime` | Overlay | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOOS`, and `GOARCH`. |
+| `runtime` | Overlay | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOROOT`, `GOOS`, `GOARCH`, `Caller`, `Callers`, `CallersFrames`, `FuncForPC`, `AddCleanup`, and `GC`. |
+| `runtime/debug` | Overlay | `SetMaxStack` only. |
 | `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `math/rand` | Native, with 1 patch | The patch replaces `rand.go`. `rng.go` holds the algorithm, thus a seeded sequence stays equal. |
@@ -191,13 +225,13 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/godebug` | Overlay | Each setting holds its default, thus `Value` gives an empty text. |
 | `fmt` | Overlay | |
 | `slices` | Overlay | The sort is a stable merge sort. |
-| `sort` | Overlay | `Sort`, `Stable`, `Slice`, `SliceStable`, `Search`, `Find`, and the typed forms. |
+| `sort` | Overlay | `Sort`, `Stable`, `Slice`, `SliceStable`, `Search`, `SearchInts`, `Find`, `Ints`, `Strings`, `Float64s`, and `IntsAreSorted`. `Reverse` and the 3 typed slice types stay out. |
 | `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. `ParseInt` and `ParseUint` each read a base of 0. |
 | `strings` | Overlay | |
 | `sync` | Overlay | `Mutex`, `RWMutex`, `WaitGroup`, `Once`, `OnceFunc`, `OnceValue`, `OnceValues`, and `Pool`. |
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |
 | `testing` | Overlay | |
-| `sync/atomic` | Overlay | `Value` and `Int32` only. Read the section below. |
+| `sync/atomic` | Overlay | `Value`, the 5 typed values, `Pointer`, and the function forms. `Uintptr` and the pointer functions stay out. Read the section below. |
 | `time` | Overlay | The clock, the timer, the ticker, and the calendar. Read the section below. |
 | `unicode` | Native | |
 | `unicode/utf8` | Overlay | The real source needs an index of a mixed type parameter. Each test of the Go repository passes. |
@@ -896,24 +930,6 @@ The runtime reports a deadlock when no goroutine can run and no timer waits:
 the status code 2. Go writes a stack trace of each goroutine, and the runtime
 writes only the line.
 
-## The standard library
-
-The verifier rejects each package outside the curated surface.
-
-| Package | Content |
-|---|---|
-| `errors` | `New`, `Is`, `Unwrap` |
-| `fmt` | `Print`, `Printf`, `Println`, `Sprint`, `Sprintf`, `Sprintln`, `Errorf` |
-| `sort` | `Slice`, `SliceStable`, `Ints`, `Strings`, `Float64s`, `Search`, `SearchInts` |
-| `runtime` | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOOS`, `GOARCH`. The scheduler lives in the Dart runtime library. |
-| `strconv` | `Itoa`, `Atoi`, `AppendInt`, `FormatInt`, `ParseInt`, `FormatFloat`, `ParseFloat`, `FormatBool`, `ParseBool`, `Quote` |
-| `strings` | The common operations and `Builder` |
-| `sync` | `Mutex`, `RWMutex`, `WaitGroup`, `Once` |
-| `testing` | `T`, `TB`, `B`, `F`, `Verbose`, `Short`, `AllocsPerRun`. Read the section "The test command". |
-| `context` | Each function of the package. The real Go source compiles. |
-| `time` | `Duration`, `Sleep`, `Now`, `Since`, and the operations of `Time` |
-| `syscall/dart` | The interop. The compiler replaces each call. |
-
 ## The isolate worker
 
 `dart.Worker` runs a pure function in a second isolate. The 2 isolates share no
@@ -942,14 +958,15 @@ func runWorker(f func([]byte) []byte, input []byte) []byte {
 
 `testdata/programs/worker` holds this pattern.
 
-Gaps of the standard library surface:
+Gaps of the standard library surface. `docs/support.md` holds the count of
+each package and the whole list:
 
 | Item | State |
 |---|---|
 | `sync.RWMutex` | A read lock is equal to a write lock. The single isolate gives no parallel read. |
 | `strconv.Unquote`, `strconv.UnquoteChar` | Present. The source comes from Go. |
 | `strings.Title` | Not present. Go deprecated it. |
-| `sort.Sort` with an interface | Not present. Use `sort.Slice`. |
+| `sort.Sort` with an interface | Present. `sort.Reverse` and the 3 typed slice types stay out. |
 | `crypto/tls` | A client and a server. Read the section of the network access. |
 
 A list of bytes reads as text for the verbs `s`, `q`, `x`, and `X`, exactly as
