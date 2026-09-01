@@ -86,9 +86,18 @@ differences, and 6 stale rows of it now read the measured state: `sort`
 holds `Sort` with an interface, `sync/atomic` holds the 5 typed values, and
 `runtime` holds 12 names.
 
+The session then answered what a Flutter client needs first.
+`docs/flutter-first.md` holds the 2 ordered lists, and each claim names a
+file and a line. The pass found that the unwind model of 2026-08-29 removed
+the hardest Flutter blocker, and that `docs/flutter-options.md` of
+2026-08-28 still described the async model. That file now carries the
+correction in 3 places. A verified run of 1 struct showed that a
+`time.Time` field marshals as `{}` with no error.
+
 | Commit | Work |
 |---|---|
 | `bcbd099` | The measurement of the surface: `docs/support.md`, the at-a-glance table and the 6 corrections of `docs/parity.md`, and the exact counts of the 2 other files. |
+| `4525496` | The first Flutter work: `docs/flutter-first.md`, the 3 corrections of `docs/flutter-options.md`, and the 2 JSON rows of `docs/parity.md`. |
 
 ### 2026-09-01, the seventh session
 
