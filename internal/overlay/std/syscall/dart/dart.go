@@ -619,6 +619,12 @@ func DialTCP(host string, port int) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ConnAddrs gives the local address, the local port, the peer address, and
+// the peer port of a connection.
+func ConnAddrs(handle int) (string, int, string, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ConnRead reads bytes of a connection into the slice and gives the count. A
 // count of 0 with no cause means the end of the stream.
 //

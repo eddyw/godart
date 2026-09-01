@@ -447,6 +447,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$h2End(%s)", args[0]), true
 	case "H2Close":
 		return fmt.Sprintf("$h2Close(%s)", args[0]), true
+	case "ConnAddrs":
+		return fmt.Sprintf("$connAddrs(%s)", args[0]), true
 	case "ConnRead":
 		return fmt.Sprintf("$connRead(%s, %s)", args[0], args[1]), true
 	case "ConnWrite":

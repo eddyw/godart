@@ -26,7 +26,7 @@ The state of 2026-09-01. Each row names the section that holds the detail.
 | The zone of a date before 1901 | The modern offset of the zone. Dart names the zone, and Go reads its own database. |
 | The file access | Synchronous, through `dart:io`. No permission bit, and no handle of a directory. |
 | The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. `Getuid` and its family give -1. |
-| The network access | TCP, UDP, and a Unix socket. `net.IP` and `ParseIP` are present, and each other address type stays out. `Request.RemoteAddr` is empty. |
+| The network access | TCP, UDP, and a Unix socket. `IP`, `IPMask`, `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, `IPAddr`, and `UnixAddr` are present. The name resolver stays out, thus `ResolveTCPAddr` needs an IP address. |
 | HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, and a multipart form are present. No file server. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
 | JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. No `TextMarshaler`. The text of a syntax error of `Token` differs. |
@@ -556,14 +556,16 @@ The `net` package holds this surface:
 | `Dial` | Each network | `tcp`, `udp`, and `unix`. Each other name gives an error. |
 | `Listen` | Each network | `tcp` and `unix`. A port of 0 gives a free port. |
 | `ListenPacket` | Each network | `udp` only. |
-| `Conn` | 8 methods | `Read`, `Write`, `Close`, and the 3 deadline methods. `LocalAddr` and `RemoteAddr` stay out. |
+| `Conn` | 8 methods | Equal. `LocalAddr` and `RemoteAddr` read the socket of the runtime, and each 1 gives a `*TCPAddr` or a `*UnixAddr`. |
 | `PacketConn` | 7 methods | `ReadFrom`, `WriteTo`, `Close`, `LocalAddr`, and the 3 deadline methods. |
 | `Listener` | `Accept`, `Close`, `Addr` | Equal |
 | `Addr` | `Network` and `String` | Equal |
 | `Error` | `Timeout` and `Temporary` | Equal. A deadline that passed reports true for each one. |
 | `Dialer` | 12 fields | `Timeout`, `Dial`, and `DialContext`. The dial runs on a goroutine, and the select takes the first of the dial and the context. |
 | `DialTimeout` | Present | Equal. It reads a `Dialer` with the timeout. |
-| `TCPAddr`, `UDPAddr`, `UnixAddr`, `IP`, `Resolver` | Present | Not present. A type assertion of an `Addr` gives a compile error, and not a wrong value. |
+| `TCPAddr`, `UDPAddr`, `IPAddr`, `UnixAddr`, `IP`, `IPMask`, `IPNet` | Present | Equal. `ParseCIDR`, `CIDRMask`, `IPv4Mask`, `IP.Mask`, and `IP.DefaultMask` are present. |
+| `ResolveTCPAddr`, `ResolveUDPAddr`, `ResolveUnixAddr` | Present, with a name lookup | Present. A host that is not an IP address gives a parse error, because the surface holds no resolver. |
+| `Resolver`, `LookupHost`, `LookupIP`, `Interfaces` | Present | Not present. `dart:io` holds `InternetAddress.lookup`, and no work names it yet. |
 | An empty host of `Dial` | The local system | `127.0.0.1` |
 | An empty host of `Listen` | Each interface | `0.0.0.0` |
 | `SplitHostPort` | Accepts an IPv6 host in brackets | Only a host with no bracket. |
@@ -605,7 +607,7 @@ Go.
 | `Accept-Encoding: gzip` | The client adds it and reads the answer | Equal. `DisableCompression` stops it, and `Response.Uncompressed` marks the answer. |
 | The type of a body that the handler does not name | `DetectContentType` reads the first 512 bytes | `text/plain; charset=utf-8` for each body |
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
-| `Request.RemoteAddr` | The address of the peer | Empty. The `Conn` of the `net` overlay names no peer. |
+| `Request.RemoteAddr` | The address of the peer | Equal. The server reads `Conn.RemoteAddr` of the accepted connection. |
 | `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `DisableCompression`, `MaxIdleConnsPerHost`, `ForceAttemptHTTP2`, `Proxy`, and `CloseIdleConnections`. Each timeout field stays out. |
 | `httptest` | Present | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `NewTLSServer`, `StartTLS`, `Server.Client`, and `Server.Close`. `CloseClientConnections` and the wait of `Close` for each request that stands open stay out. `StartTLS` binds a fresh port, because the secure socket of Dart wraps no open listener, and the client of a TLS server drops the certificate check, because the surface holds no root pool. |
 | `CookieJar` and `net/http/cookiejar` | Present | Equal. `Client.Jar` reads a jar before each request, and it writes each cookie of the answer. |

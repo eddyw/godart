@@ -30,7 +30,8 @@ type Request struct {
 	ContentLength int64
 	// Host holds the host of the request. An empty host reads the URL.
 	Host string
-	// RemoteAddr stays empty. The Conn of the net overlay names no peer.
+	// RemoteAddr holds the address of the peer, in the form host:port. A
+	// server writes it, and a client leaves it empty.
 	RemoteAddr string
 	// RequestURI holds the text of the request line that a server read.
 	RequestURI string

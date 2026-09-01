@@ -130,12 +130,17 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 	defer conn.Close()
+	peer := ""
+	if addr := conn.RemoteAddr(); addr != nil {
+		peer = addr.String()
+	}
 	reader := bufio.NewReader(conn)
 	for {
 		req, err := readRequest(reader)
 		if err != nil {
 			return
 		}
+		req.RemoteAddr = peer
 		w := &response{conn: conn, header: Header{}, req: req}
 		handler := s.Handler
 		if handler == nil {

@@ -23,6 +23,8 @@ type Conn interface {
 	Read(b []byte) (int, error)
 	Write(b []byte) (int, error)
 	Close() error
+	LocalAddr() Addr
+	RemoteAddr() Addr
 	SetDeadline(t time.Time) error
 	SetReadDeadline(t time.Time) error
 	SetWriteDeadline(t time.Time) error
@@ -62,37 +64,6 @@ type Error interface {
 	Temporary() bool
 }
 
-// tcpAddr holds a host and a port. Go exports TCPAddr with an IP and a zone,
-// and that type stays outside the subset. Thus a type assertion of an Addr
-// gives a compile error, and not a wrong value.
-type tcpAddr struct {
-	host string
-	port int
-}
-
-func (a tcpAddr) Network() string { return "tcp" }
-
-func (a tcpAddr) String() string { return a.host + ":" + strconv.Itoa(a.port) }
-
-// udpAddr holds the host and the port of a datagram socket.
-type udpAddr struct {
-	host string
-	port int
-}
-
-func (a udpAddr) Network() string { return "udp" }
-
-func (a udpAddr) String() string { return a.host + ":" + strconv.Itoa(a.port) }
-
-// unixAddr holds the path of a Unix socket.
-type unixAddr struct {
-	path string
-}
-
-func (a unixAddr) Network() string { return "unix" }
-
-func (a unixAddr) String() string { return a.path }
-
 // timeoutError reports a deadline that passed. Go gives an error that holds a
 // Timeout method, and a caller reads that method.
 type timeoutError struct {
@@ -128,6 +99,28 @@ type conn struct {
 	network string
 	read    int64
 	write   int64
+}
+
+// LocalAddr gives the address of this side of the connection.
+func (c *conn) LocalAddr() Addr { return c.addrOf(true) }
+
+// RemoteAddr gives the address of the peer.
+func (c *conn) RemoteAddr() Addr { return c.addrOf(false) }
+
+// addrOf reads the 2 addresses of the socket. A closed connection gives an
+// address with no IP and a port of 0.
+func (c *conn) addrOf(local bool) Addr {
+	lHost, lPort, rHost, rPort, cause := dart.ConnAddrs(c.handle)
+	if cause != "" {
+		lHost, lPort, rHost, rPort = "", 0, "", 0
+	}
+	if c.network == "unix" {
+		return &UnixAddr{Name: lHost, Net: "unix"}
+	}
+	if local {
+		return tcpAddrOf(lHost, lPort)
+	}
+	return tcpAddrOf(rHost, rPort)
 }
 
 func (c *conn) Read(b []byte) (int, error) {
@@ -182,7 +175,7 @@ func (c *conn) apply() error {
 // packet holds a datagram socket.
 type packet struct {
 	handle int
-	local  udpAddr
+	local  *UDPAddr
 	read   int64
 	write  int64
 }
@@ -192,7 +185,7 @@ func (p *packet) ReadFrom(b []byte) (int, Addr, error) {
 	if cause != "" {
 		return n, nil, netError("read udp", cause)
 	}
-	return n, udpAddr{host: host, port: port}, nil
+	return n, udpAddrOf(host, port), nil
 }
 
 func (p *packet) WriteTo(b []byte, addr Addr) (int, error) {
@@ -247,6 +240,12 @@ type udpConn struct {
 	host string
 	port int
 }
+
+// LocalAddr gives the address of the socket.
+func (c *udpConn) LocalAddr() Addr { return c.packet.LocalAddr() }
+
+// RemoteAddr gives the address that Dial named.
+func (c *udpConn) RemoteAddr() Addr { return udpAddrOf(c.host, c.port) }
 
 func (c *udpConn) Read(b []byte) (int, error) {
 	n, _, err := c.ReadFrom(b)
@@ -319,7 +318,7 @@ func Dial(network, address string) (Conn, error) {
 			return nil, errors.New("dial udp " + address + ": " + cause)
 		}
 		return &udpConn{
-			packet: &packet{handle: handle, local: udpAddr{port: local}},
+			packet: &packet{handle: handle, local: &UDPAddr{Port: local}},
 			host:   host,
 			port:   port,
 		}, nil
@@ -345,7 +344,7 @@ func Listen(network, address string) (Listener, error) {
 		}
 		return &listener{
 			handle:  handle,
-			addr:    tcpAddr{host: host, port: taken},
+			addr:    tcpAddrOf(host, taken),
 			network: "tcp",
 		}, nil
 	case "unix":
@@ -355,7 +354,7 @@ func Listen(network, address string) (Listener, error) {
 		}
 		return &listener{
 			handle:  handle,
-			addr:    unixAddr{path: address},
+			addr:    &UnixAddr{Name: address, Net: "unix"},
 			network: "unix",
 		}, nil
 	}
@@ -380,7 +379,7 @@ func ListenPacket(network, address string) (PacketConn, error) {
 	if cause != "" {
 		return nil, errors.New("listen udp " + address + ": " + cause)
 	}
-	return &packet{handle: handle, local: udpAddr{host: host, port: taken}}, nil
+	return &packet{handle: handle, local: udpAddrOf(host, taken)}, nil
 }
 
 // A Dialer opens a connection with a timeout or with a context.
@@ -445,6 +444,10 @@ func SplitHostPort(address string) (string, string, error) {
 
 // JoinHostPort writes an address from a host and a port.
 func JoinHostPort(host, port string) string {
+	// A host that holds a colon is an IPv6 address, and it takes brackets.
+	if strings.IndexByte(host, ':') >= 0 {
+		return "[" + host + "]:" + port
+	}
 	return host + ":" + port
 }
 

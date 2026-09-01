@@ -518,6 +518,28 @@ String _statusLine(Uint8List b) {
 }
 
 /// Closes a connection in both directions.
+/// Gives the local address, the local port, the peer address, and the peer
+/// port of a connection. A handle that no connection holds gives a cause.
+(GoString, int, GoString, int, GoString) $connAddrs(int handle) {
+  final _Conn? c = _at(handle);
+  if (c == null) {
+    return (
+      GoString.empty,
+      0,
+      GoString.empty,
+      0,
+      GoString.fromString('use of closed network connection'),
+    );
+  }
+  return (
+    GoString.fromString(c.socket.address.address),
+    c.socket.port,
+    GoString.fromString(c.socket.remoteAddress.address),
+    c.socket.remotePort,
+    GoString.empty,
+  );
+}
+
 GoString $connClose(int handle) {
   final _Conn? c = _at(handle);
   if (c == null) return _closed();

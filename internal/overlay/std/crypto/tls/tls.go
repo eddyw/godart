@@ -93,6 +93,24 @@ type Conn struct {
 	write  int64
 }
 
+// LocalAddr gives the address of this side of the connection.
+func (c *Conn) LocalAddr() net.Addr { return connAddr(c.handle, true) }
+
+// RemoteAddr gives the address of the peer.
+func (c *Conn) RemoteAddr() net.Addr { return connAddr(c.handle, false) }
+
+// connAddr reads the 2 addresses of the socket of a TLS connection.
+func connAddr(handle int, local bool) net.Addr {
+	lHost, lPort, rHost, rPort, cause := dart.ConnAddrs(handle)
+	if cause != "" {
+		lHost, lPort, rHost, rPort = "", 0, "", 0
+	}
+	if local {
+		return &net.TCPAddr{IP: net.ParseIP(lHost), Port: lPort}
+	}
+	return &net.TCPAddr{IP: net.ParseIP(rHost), Port: rPort}
+}
+
 func (c *Conn) Read(b []byte) (int, error) {
 	n, cause := dart.ConnRead(c.handle, b)
 	if cause != "" {
