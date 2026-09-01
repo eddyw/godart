@@ -12,6 +12,8 @@ library;
 
 export 'src/app.dart' show GoApp;
 export 'src/bridge.dart' show GoBridge, rootID;
-export 'src/host.dart' show GoTextField, GoWatch, goIcons, goRender;
+export 'src/convert.dart';
+export 'src/host.dart'
+    show GoTextField, GoWatch, GoWidgets, goIcons, goRender, goSetWidgets;
 export 'src/node.dart' show GoNode;
 export 'src/runtime.dart' show GoRuntime;

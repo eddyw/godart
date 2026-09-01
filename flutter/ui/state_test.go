@@ -245,11 +245,11 @@ func (f *feed) Build() ui.Node {
 	return ui.Scaffold{
 		AppBar: ui.AppBar{
 			Title:   ui.Text{Data: "Feed"},
-			Actions: ui.Kids(ui.IconButton{Icon: "refresh", OnPressed: f.load.Run}),
+			Actions: ui.Kids(ui.IconButton{Icon: ui.Icon{Icon: "refresh"}, OnPressed: f.load.Run}),
 		},
 		Body: ui.Watch{Build: func() ui.Node {
 			if f.load.Busy() {
-				return ui.Center{Child: ui.Progress{}}
+				return ui.Center{Child: ui.CircularProgressIndicator{}}
 			}
 			if err := f.load.Err(); err != nil {
 				return ui.Center{Child: ui.Text{Data: "error: " + err.Error()}}

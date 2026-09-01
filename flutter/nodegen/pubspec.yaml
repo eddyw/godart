@@ -1,0 +1,10 @@
+name: nodegen
+description: Reads the Flutter public API and writes the Go node set and the Dart host.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  analyzer: ^8.0.0
+  path: ^1.9.0

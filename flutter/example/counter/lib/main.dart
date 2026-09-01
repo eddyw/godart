@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:goflutter/goflutter.dart';
 
 import 'bridge.dart';
+import 'widgets_gen.dart';
 
 void main() {
+  goSetWidgets(goGenWidget);
   runApp(const CounterApp());
 }
 

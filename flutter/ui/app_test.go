@@ -22,7 +22,10 @@ func (c *counter) Build() ui.Node {
 		Body: ui.Center{Child: ui.Watch{Build: func() ui.Node {
 			return ui.Text{Data: fmt.Sprintf("count %d", c.n.Get())}
 		}}},
-		Fab: ui.IconButton{Icon: "add", OnPressed: c.Add},
+		FloatingActionButton: ui.IconButton{
+			Icon:      ui.Icon{Icon: "add"},
+			OnPressed: c.Add,
+		},
 	}
 }
 
@@ -141,7 +144,7 @@ func TestThemeRebuildsOnlyTheReaderOfTheTheme(t *testing.T) {
 	idThemed := ui.NewWatch()
 	ui.RunWatch(idPlain, func() ui.Node { return ui.Text{Data: fmt.Sprint(a.Get())} })
 	ui.RunWatch(idThemed, func() ui.Node {
-		return ui.Text{Data: "x", Size: ui.Theme().TextSize}
+		return ui.Text{Data: "x", Style: &ui.TextStyle{Size: ui.P(ui.Theme().TextSize)}}
 	})
 	ui.TakeDirty()
 
@@ -159,7 +162,7 @@ func TestMediaIsASignal(t *testing.T) {
 	ui.Reset()
 	id := ui.NewWatch()
 	ui.RunWatch(id, func() ui.Node {
-		return ui.SizedBox{Width: ui.Media().Width}
+		return ui.SizedBox{Width: ui.P(ui.Media().Width)}
 	})
 	ui.TakeDirty()
 	ui.SetMedia(ui.MediaData{Width: 390, Height: 844})
@@ -183,8 +186,8 @@ func newListApp(n int) *listApp {
 
 func (a *listApp) Build() ui.Node {
 	return ui.ListViewBuilder{
-		Count: len(a.rows),
-		Item: func(i int) ui.Node {
+		ItemCount: ui.P(len(a.rows)),
+		ItemBuilder: func(i int) ui.Node {
 			return ui.Keyed{Key: fmt.Sprint(i), Child: ui.Watch{Build: func() ui.Node {
 				return ui.Text{Data: a.rows[i].Get()}
 			}}}

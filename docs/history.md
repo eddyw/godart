@@ -860,3 +860,40 @@ Milestone 2 of `docs/flutter-design.md`, the synchronous guarantee.
   6 widget tests of the counter pass with no change of the host.
 - A `go.mod` of a test that requires a module with `go 1.27.0` must name the
   same patch version. `go 1.27` alone gives "updates to go.mod needed".
+
+### 2026-09-02, milestone 3
+
+The generated node set. `flutter/nodegen` reads the public API of Flutter and
+writes 411 Go node types with 3576 fields.
+
+- `package:analyzer` 8.4.1 reads `widgets.dart`, `material.dart`, and
+  `cupertino.dart` in about 5 seconds, thus the cost of the read is no gate.
+  The 3 libraries hold 940, 1324, and 1022 exported classes, and 323, 515, and
+  382 of them are widgets.
+- The library of a declaration is not the library that a host can import. The
+  analyzer gives `package:flutter/src/material/app.dart`, and an import of that
+  path breaks the lint `implementation_imports`. The tool now reads the export
+  namespace of 12 public libraries, and it drops each name that no 1 of them
+  exports.
+- `dart:ui` cannot join the import list of the host. It exports `TextStyle` and
+  `Image`, and painting and widgets each export a different declaration of the
+  same name.
+- An enum with a private constant leaves the switch of the host without a case,
+  thus the whole enum stays out. `ContentSensitivity` holds `_unknown`.
+- A default value of a parameter reaches the host verbatim. A default that
+  names a static member of its own class, such as `defaultThickness`, does not
+  resolve there, thus the tool reads each bare word of the default against the
+  visible set.
+- The Dart tree shaker drops a type descriptor that no code reads. The Go node
+  set compiles to 60,518 lines of Dart, and it costs nothing that the
+  application does not build.
+- A shared host costs 7.2 megabytes. A case names a Flutter widget, thus 411
+  cases keep the whole framework. The ahead of time snapshot went from
+  13,989,280 bytes with the hand written set of 28 nodes to 20,844,352 bytes
+  with a shared host, and back to 13,628,480 bytes with the 18 cases that the
+  counter uses. Thus the host is per application. Decision 224.
+- A Go node struct cannot live outside the package `ui`. `Node` holds the
+  unexported method `isNode`, thus only the declaring package implements it.
+- `Scaffold.appBar` takes a `PreferredSizeWidget` and not a `Widget`. A
+  parameter that takes any subtype of `Widget` now maps to `Node`, and the host
+  casts the result. 2 more node types reached the set for that reason.

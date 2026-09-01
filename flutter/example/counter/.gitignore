@@ -2,3 +2,4 @@ gen/
 .dart_tool/
 build/
 .flutter-plugins*
+lib/widgets_gen.dart

@@ -6,13 +6,21 @@ import 'package:goruntime/goruntime.dart';
 /// the field table that the descriptor carries. Thus 1 host serves each node
 /// set, and the generated set of milestone 3 needs no change here.
 final class GoNode {
-  final Iface value;
+  final Object? value;
+  final TypeDesc desc;
   final Map<String, FieldDesc> _fields;
 
-  GoNode(this.value) : _fields = _index(value.desc);
+  GoNode(Iface node)
+      : value = node.value,
+        desc = node.desc,
+        _fields = _index(node.desc);
+
+  /// GoNode.struct reads a struct that stands inside a node, for example the
+  /// Insets of a padding field.
+  GoNode.struct(this.value, this.desc) : _fields = _index(desc);
 
   /// kind gives the full Go name of the type, for example `gart.dev/ui.Text`.
-  String get kind => value.desc.name;
+  String get kind => desc.name;
 
   static final Map<String, Map<String, FieldDesc>> _cache =
       <String, Map<String, FieldDesc>>{};
@@ -31,7 +39,67 @@ final class GoNode {
   Object? raw(String name) {
     final FieldDesc? f = _fields[name];
     if (f == null) return null;
-    return f.get(value.value);
+    return f.get(value);
+  }
+
+  /// point reads a pointer field. A nil pointer means "the default of
+  /// Flutter", thus the host leaves the Dart parameter out.
+  T? point<T>(String name) {
+    final Object? v = raw(name);
+    return v is $Ptr<T> ? v.v : null;
+  }
+
+  /// nested reads a struct field, or a pointer to a struct. It gives null when
+  /// the pointer is nil.
+  GoNode? nested(String name) {
+    final FieldDesc? f = _fields[name];
+    if (f == null) return null;
+    final Object? v = f.get(value);
+    if (v == null) return null;
+    final TypeDesc t = f.type();
+    if (t.kind == 'ptr') {
+      final TypeDesc Function()? elem = t.elem;
+      if (elem == null) return null;
+      return GoNode.struct(v, elem());
+    }
+    return GoNode.struct(v, t);
+  }
+
+  /// textOpt gives an optional string field.
+  String? textOpt(String name) => point<GoString>(name)?.toDartString();
+
+  /// sizeOpt gives an optional float64 field.
+  double? sizeOpt(String name) => point<double>(name);
+
+  /// countOpt gives an optional integer field.
+  int? countOpt(String name) => point<int>(name);
+
+  /// flagOpt gives an optional bool field.
+  bool? flagOpt(String name) => point<bool>(name);
+
+  /// texts gives a slice of string.
+  List<String> texts(String name) {
+    final Object? v = raw(name);
+    if (v is! Slice<GoString>) return const <String>[];
+    return <String>[for (int i = 0; i < v.len; i++) v[i].toDartString()];
+  }
+
+  /// onSize gives a `func(float64)` field.
+  void Function(double)? onSize(String name) {
+    final Object? v = raw(name);
+    return v is void Function(double) ? v : null;
+  }
+
+  /// onCount gives a `func(int)` field.
+  void Function(int)? onCount(String name) {
+    final Object? v = raw(name);
+    return v is void Function(int) ? v : null;
+  }
+
+  /// build0 gives a `func() Node` field.
+  Iface? Function()? build0(String name) {
+    final Object? v = raw(name);
+    return v is Iface? Function() ? v : null;
   }
 
   /// text gives a string field.

@@ -76,12 +76,12 @@ func TestTheListLoads(t *testing.T) {
 	if !ok {
 		t.Fatalf("the body is %T, want a ListViewBuilder", a.listBody())
 	}
-	if list.Count != 100000 {
-		t.Fatalf("the list holds %d rows, want 100000", list.Count)
+	if list.ItemCount == nil || *list.ItemCount != 100000 {
+		t.Fatalf("the list holds %v rows, want 100000", list.ItemCount)
 	}
-	row, ok := list.Item(9).(ui.Keyed)
+	row, ok := list.ItemBuilder(9).(ui.Keyed)
 	if !ok {
-		t.Fatalf("row 9 is %T, want a Keyed", list.Item(9))
+		t.Fatalf("row 9 is %T, want a Keyed", list.ItemBuilder(9))
 	}
 	if row.Key != "9" {
 		t.Fatalf("row 9 holds the key %q, want %q", row.Key, "9")

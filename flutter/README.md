@@ -1,8 +1,8 @@
 # Flutter
 
-This directory holds milestone 1 of `docs/flutter-design.md`: a Go tree of plain
-structs, and a Dart host that builds real Flutter widgets from it.
-`docs/flutter-state.md` holds the state model.
+This directory holds milestone 1 to milestone 3 of `docs/flutter-design.md`: a
+Go tree of plain structs, and a Dart host that builds real Flutter widgets from
+it. `docs/flutter-state.md` holds the state model.
 
 `make ci` does not run this directory, because it needs the Flutter SDK. The
 Go module `flutter/ui` still passes `gofmt` and `go vet` through the root
@@ -10,8 +10,9 @@ targets.
 
 | Path | Content |
 |---|---|
-| `ui/` | The Go module `gart.dev/ui`. The signal graph, the state shapes, and 28 node types. |
+| `ui/` | The Go module `gart.dev/ui`. The signal graph, the state shapes, and 411 node types. |
 | `goflutter/` | The Dart package that hosts a Go tree in Flutter. |
+| `nodegen/` | The generator. It reads the Flutter API and writes the node set and the host. Read its README. |
 | `example/counter/` | The proof application. Go holds the whole screen. |
 
 ## Run the example
@@ -24,8 +25,11 @@ flutter test                        # 6 widget tests
 flutter run                         # on a device or a simulator
 ```
 
-`build.sh` writes the Dart output of `./go` into `gen`, which the pubspec of the
-application names as a path dependency. `gen` stays out of git.
+`build.sh` does 2 things. It writes the Dart output of `./go` into `gen`, which
+the pubspec of the application names as a path dependency. It then runs
+`nodegen host`, which writes `lib/widgets_gen.dart` with 1 case for each node
+type that the Go source names. `gen` and `lib/widgets_gen.dart` each stay out of
+git.
 
 ## Test the Go side alone
 
@@ -45,12 +49,19 @@ cd flutter/example/counter/go && go test ./...
    output then takes a suffix.
 3. A Dart class that implements `GoBridge`. Copy
    `example/counter/lib/bridge.dart` and change the 2 import lines.
-4. `GoApp(bridge: YourBridge())` inside a `MaterialApp`.
+4. A `build.sh` that runs `gart build` and then `nodegen host`. Copy
+   `example/counter/build.sh`.
+5. `goSetWidgets(goGenWidget)` before `runApp`, and in the `setUp` of each
+   widget test.
+6. `GoApp(bridge: YourBridge())` inside a `MaterialApp`.
 
-A widget outside the node set of `ui` costs 1 Go struct and 1 case of
-`goflutter/lib/src/host.dart`. Nothing in the host is specific to Material, thus
-a Cupertino widget and a widget of a `pub.dev` package each take the same 2
-steps.
+The node set holds 411 types of `widgets`, `material`, and `cupertino`. A
+Cupertino screen needs no extra step. A widget of a `pub.dev` package costs 1 Go
+struct in a package of your own and 1 case that you write, and `goSetWidgets`
+takes a function that reads your case first and the generated 1 after it.
+
+A field of a node that a call leaves unset is a pointer, and nil means "the
+default of Flutter". Write `ui.P(14.0)` to set one.
 
 ## The rule of a builder
 

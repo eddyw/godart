@@ -1045,6 +1045,40 @@ The plan left these points open. The work took the decisions below.
      and never a silent pass. `gart.dev/ui` declares `Builder` and
      `ItemBuilder`, and `internal/analyze/sync.go` holds the pass.
 
+222. A field of a generated node that a call may leave unset is a pointer, and
+     a nil pointer means "the default of Flutter". The type descriptor already
+     carries `ptr:` and `newPtr:`, thus the host reads null with no new
+     mechanism, and `GoNode.point` of `flutter/goflutter/lib/src/node.dart`
+     holds the whole read. The 2 alternatives were a wrapper `Opt[T]`, which
+     costs a nested struct read for each field, and the zero value, which
+     cannot state "not set" for a bool or for a color. `ui.P` writes a pointer,
+     because Go takes no address of a literal.
+
+223. A named constructor of Flutter takes a Go struct of its own.
+     `ListView.builder` gives `ui.ListViewBuilder`. The host already switches
+     on the name of the type descriptor, thus the shape needs no new mechanism.
+
+224. The Dart host of the generated node set is per application, and not
+     shared. A shared host holds a case for each of the 411 node types, thus it
+     names each Flutter widget and the tree shaker of Dart keeps the whole
+     framework. The measurement of 2026-09-02, on an ahead of time build for
+     macOS: the hand written set of 28 nodes gave a snapshot of 13,989,280
+     bytes, the generated set with a shared host gave 20,844,352 bytes, and the
+     generated set with a host of the 18 cases that the counter uses gave
+     13,628,480 bytes. Thus the Go node set costs nothing that the application
+     does not use, and the whole cost of 7.2 megabytes comes from the switch.
+     `goSetWidgets` of `flutter/goflutter/lib/src/host.dart` installs the host
+     of the application, and `usedNodes` of `flutter/nodegen/bin/nodegen.dart`
+     reads each `ui.<Name>` of the Go source to build the list. That list is a
+     superset, and a name that the scan misses gives a clear error at run time.
+
+225. The generated set replaces the hand written node set of milestone 1. 4
+     types stay hand written in `flutter/ui/node.go`, because no Flutter widget
+     carries them: `Keyed`, which holds a key that a Go value cannot hold,
+     `Watch`, which is a rebuild boundary, `TextInput`, which owns its value
+     because the Flutter `TextField` takes a controller, and the 2 marker types
+     `Builder` and `ItemBuilder`.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

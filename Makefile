@@ -16,7 +16,7 @@ FLUTTER ?= flutter
 
 .PHONY: help get build test vet fmt fmt-check dart-get dart-analyze dart-test \
 	dart-fmt dart-fmt-check ci install clean run compare programs suites \
-	gart-test compare-tests bench std-test flutter-go flutter-test
+	gart-test compare-tests bench std-test flutter-go flutter-test flutter-nodes
 
 help:
 	@echo "godart targets:"
@@ -30,6 +30,7 @@ help:
 	@echo "  make dart-test        Run the Dart tests of the runtime library."
 	@echo "  make flutter-go       Run the Go tests of the Flutter modules."
 	@echo "  make flutter-test     Build the example and run the Flutter tests."
+	@echo "  make flutter-nodes    Write the Go node set again from the Flutter API."
 	@echo "  make ci               Run the full check that CI runs."
 	@echo "  make programs         List the Go programs of testdata."
 	@echo "  make run PROG=x       Compile testdata/programs/x and run the Dart output."
@@ -88,7 +89,14 @@ flutter-test: build
 	cd flutter/example/counter && ./build.sh
 	cd flutter/goflutter && $(FLUTTER) analyze
 	cd flutter/example/counter && $(FLUTTER) analyze
+	cd flutter/nodegen && dart pub get && dart analyze
 	cd flutter/example/counter && $(FLUTTER) test
+
+# flutter-nodes writes the Go node set again from the public API of Flutter.
+# Take it after an upgrade of the Flutter SDK. Read flutter/nodegen/README.md.
+flutter-nodes:
+	cd flutter/nodegen && dart pub get && dart run bin/nodegen.dart go \
+		../goflutter ../ui/widgets_gen.go
 
 ci: fmt-check vet test flutter-go dart-analyze dart-test
 

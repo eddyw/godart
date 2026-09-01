@@ -70,23 +70,27 @@ func (a *App) Build() ui.Node {
 		AppBar: ui.AppBar{
 			Title: ui.Text{Data: "Go drives Flutter"},
 			Actions: ui.Kids(
-				ui.IconButton{Icon: "refresh", Tooltip: "load the list", OnPressed: a.load.Run},
+				ui.IconButton{
+					Icon:      ui.Icon{Icon: "refresh"},
+					Tooltip:   ui.P("load the list"),
+					OnPressed: a.load.Run,
+				},
 			),
 		},
 		Body: ui.Column{Children: ui.Kids(
-			ui.Padding{All: 16, Child: ui.Watch{Build: a.greetingRow}},
+			ui.Padding{Padding: ui.AllSides(16), Child: ui.Watch{Build: a.greetingRow}},
 			ui.Padding{
-				Left: 16, Right: 16,
-				Child: ui.TextField{
+				Padding: ui.Sides(16, 0),
+				Child: ui.TextInput{
 					Label:     "your name",
 					Hint:      "type here",
 					Value:     a.name.Peek(),
 					OnChanged: a.SetName,
 				},
 			},
-			ui.Padding{All: 16, Child: ui.Watch{Build: a.counterRow}},
+			ui.Padding{Padding: ui.AllSides(16), Child: ui.Watch{Build: a.counterRow}},
 			ui.Padding{
-				Left: 16, Right: 16,
+				Padding: ui.Sides(16, 0),
 				Child: ui.Row{Children: ui.Kids(
 					ui.Text{Data: "make the load fail"},
 					ui.Spacer{},
@@ -96,20 +100,33 @@ func (a *App) Build() ui.Node {
 			ui.Divider{},
 			ui.Expanded{Child: ui.Watch{Build: a.listBody}},
 		)},
-		Fab: ui.IconButton{Icon: "add", Tooltip: "count 1 up", OnPressed: a.Add},
+		FloatingActionButton: ui.IconButton{
+			Icon:      ui.Icon{Icon: "add"},
+			Tooltip:   ui.P("count 1 up"),
+			OnPressed: a.Add,
+		},
 	}
 }
 
 func (a *App) greetingRow() ui.Node {
-	return ui.Text{Data: a.Greeting(), Size: 22, Bold: true}
+	return ui.Text{
+		Data:  a.Greeting(),
+		Style: &ui.TextStyle{Size: ui.P(22.0), Weight: "bold"},
+	}
 }
 
 func (a *App) counterRow() ui.Node {
-	return ui.Row{Main: "center", Children: ui.Kids(
-		ui.Text{Data: fmt.Sprintf("count %d", a.count.Get()), Size: 18},
-		ui.SizedBox{Width: 16},
-		ui.TextButton{Child: ui.Text{Data: "reset"}, OnPressed: a.Reset},
-	)}
+	return ui.Row{
+		MainAxisAlignment: ui.P("center"),
+		Children: ui.Kids(
+			ui.Text{
+				Data:  fmt.Sprintf("count %d", a.count.Get()),
+				Style: &ui.TextStyle{Size: ui.P(18.0)},
+			},
+			ui.SizedBox{Width: ui.P(16.0)},
+			ui.TextButton{Child: ui.Text{Data: "reset"}, OnPressed: a.Reset},
+		),
+	}
 }
 
 func (a *App) failSwitch() ui.Node {
@@ -118,7 +135,7 @@ func (a *App) failSwitch() ui.Node {
 
 func (a *App) listBody() ui.Node {
 	if a.load.Busy() {
-		return ui.Center{Child: ui.Progress{}}
+		return ui.Center{Child: ui.CircularProgressIndicator{}}
 	}
 	if err := a.load.Err(); err != nil {
 		return ui.Center{Child: ui.Text{Data: "error: " + err.Error()}}
@@ -128,11 +145,13 @@ func (a *App) listBody() ui.Node {
 		return ui.Center{Child: ui.Text{Data: "press refresh to load 100,000 rows"}}
 	}
 	return ui.ListViewBuilder{
-		Count: len(rows),
-		Item: func(i int) ui.Node {
+		ItemCount: ui.P(len(rows)),
+		ItemBuilder: func(i int) ui.Node {
 			return ui.Keyed{Key: fmt.Sprint(i), Child: ui.Card{
-				Padding: 12,
-				Child:   ui.Text{Data: rows[i]},
+				Child: ui.Padding{
+					Padding: ui.AllSides(12),
+					Child:   ui.Text{Data: rows[i]},
+				},
 			}}
 		},
 	}

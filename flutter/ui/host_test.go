@@ -104,7 +104,7 @@ func (h *host) walk(n ui.Node) {
 	case ui.Scaffold:
 		h.walk(v.AppBar)
 		h.walk(v.Body)
-		h.walk(v.Fab)
+		h.walk(v.FloatingActionButton)
 	case ui.AppBar:
 		h.walk(v.Title)
 		h.each(v.Actions)
@@ -117,8 +117,10 @@ func (h *host) walk(n ui.Node) {
 	case ui.ListView:
 		h.each(v.Children)
 	case ui.ListViewBuilder:
-		for i := range v.Count {
-			h.walk(v.Item(i))
+		if v.ItemCount != nil {
+			for i := range *v.ItemCount {
+				h.walk(v.ItemBuilder(i))
+			}
 		}
 	case ui.Center:
 		h.walk(v.Child)
@@ -139,8 +141,8 @@ func (h *host) walk(n ui.Node) {
 	case ui.Text:
 		h.write(v.Data)
 	case ui.Icon:
-		h.write("[" + v.Name + "]")
-	case ui.Progress:
+		h.write("[" + v.Icon + "]")
+	case ui.CircularProgressIndicator:
 		h.write("[busy]")
 	case ui.Divider:
 		h.write("---")
@@ -149,11 +151,12 @@ func (h *host) walk(n ui.Node) {
 	case ui.TextButton:
 		h.button(v.Child, v.OnPressed)
 	case ui.IconButton:
-		h.write("<" + v.Icon + ">")
+		name := iconName(v.Icon)
+		h.write("<" + name + ">")
 		if v.OnPressed != nil {
-			h.taps[v.Icon] = v.OnPressed
+			h.taps[name] = v.OnPressed
 		}
-	case ui.TextField:
+	case ui.TextInput:
 		h.write(fmt.Sprintf("{%s=%q}", v.Label, v.Value))
 		if v.OnChanged != nil {
 			h.changes[v.Label] = v.OnChanged
@@ -176,4 +179,12 @@ func (h *host) button(child ui.Node, tap func()) {
 	if tap != nil {
 		h.taps[label] = tap
 	}
+}
+
+// iconName reads the name of an Icon node, or an empty text.
+func iconName(n ui.Node) string {
+	if v, ok := n.(ui.Icon); ok {
+		return v.Icon
+	}
+	return ""
 }

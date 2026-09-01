@@ -1,4 +1,5 @@
 import 'package:counter_app/bridge.dart';
+import 'package:counter_app/widgets_gen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gocounter/app.dart' as app;
@@ -10,6 +11,7 @@ Widget harness() {
 
 void main() {
   setUp(() {
+    goSetWidgets(goGenWidget);
     app.$init();
     app.Restart();
   });
