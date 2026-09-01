@@ -979,6 +979,59 @@ The plan left these points open. The work took the decisions below.
      table under dart2js, and `TestJS` proves the program `intwrap` under
      node against `go run`. `docs/js-integers.md` holds the whole build.
 
+215. The state of a Flutter application in Go stands in a signal graph. A
+     `Signal[T]` holds 1 value, a read inside a rebuild boundary records a
+     dependency, and a write marks that boundary alone. The reason is wall 3
+     of `docs/flutter-design.md`: the host builds a fresh Dart widget at each
+     pass, thus Flutter never takes its identity short cut, and a dirty flag
+     then rebuilds the whole mapped subtree. `Computed`, `Effect`, `Batch`,
+     and `Untracked` complete the graph, and the package also holds `Store`
+     for the shape of `ChangeNotifier`, `Reducer` for the shape of Redux and
+     of bloc, and `Command` for the shape of the Command pattern of the
+     Flutter guide. The graph needs no compiler change, and it runs on 1
+     goroutine: `Post` and `Pump` carry a result from a worker goroutine, thus
+     `go test -race` gives a clean run. `docs/flutter-state.md` holds the
+     whole model.
+
+216. The Dart host reads a node through its type descriptor, and not through a
+     generated class. `Iface.desc.name` picks the case, and `FieldDesc.get`
+     reads each property. Thus the package `goflutter` imports no output of
+     any Go module, and 1 host serves each node set, the generated set of
+     milestone 3 included. The application writes 1 class that implements
+     `GoBridge`, about 60 lines, which forwards the 10 calls into its own Dart
+     output.
+
+217. A package of a dependency module compiles. `compiled` of
+     `internal/driver/driver.go` accepts a path whose first element holds a
+     dot, which is the rule that `internal/overlay/native.go` already reads
+     for the import check of stage 2, and `libPath` writes such a package
+     under the directory `dep`. Before this decision stage 2 accepted the
+     import and stage 5 failed with "the package X has no import prefix", thus
+     no Go library outside the main module reached Dart.
+
+218. The scheduler holds `$onIdle`, and a host outside Go sets it. The hook
+     runs after the run queue empties, 1 time for each turn, thus a call of
+     `$schedule` inside the hook starts no second call. A Flutter host reads
+     the result of the turn there. `$hosted` turns off the deadlock report,
+     because a goroutine that waits for an event of the host is not a
+     deadlock. The alternative was a poll of 16 milliseconds, and such a poll
+     also stops `pumpAndSettle` of a widget test from ever settling.
+
+219. The box of an interface value writes no copy when the operand is a
+     composite literal. The literal builds a value that no other expression
+     names, thus the box holds the only reference. A widget tree of 200 nodes
+     then allocates 200 objects in place of 400, and the counter application
+     of `flutter/example/counter` went from 39 copies to 2. This is the shape
+     that each further copy of stage 4 must take: a rule that the compiler
+     derives, and not a tag that the user writes and the compiler trusts.
+
+220. A reactive value holds a `noCopy` field with a `Lock` and an `Unlock`
+     method. A copy of such a value splits its subscriber list, because
+     `$copy` of a struct builds a new `dep` that holds the subscriber slice of
+     the moment, and no error names the split. The copylocks check of
+     `go vet` reports each copy, and it follows the value through an enclosing
+     struct. Thus the safety needs no compiler work.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

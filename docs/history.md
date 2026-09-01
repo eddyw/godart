@@ -801,3 +801,37 @@ Each fact carries the date of its check.
   measure that walks the value method set. The count of `time` grew from 145
   to 224 with no change of the real package.
 
+
+### 2026-09-02, the tenth session
+
+- A Go module outside the main module wrote no Dart. Stage 2 accepted the
+  import, because `overlay.Outside` reads a dot in the first path element, and
+  `compiled` of the driver read the main module and the surface only. Stage 5
+  then failed with "the package X has no import prefix". The 2 rules must name
+  the same set.
+- A library package of Go writes `lib/<name>.dart` and no `bin/main.dart`, thus
+  a Flutter application needs no change of the entry point.
+- A top level Go function takes the suffix `$f` when a struct of the same
+  package holds a method of that name. `topName` of `internal/emit/emit.go:375`
+  writes it, and a host that names the function by hand must read the output.
+- The scheduler gave a host no signal after a goroutine woke. A poll of 16
+  milliseconds also stops `pumpAndSettle` of a widget test from ever settling,
+  thus a hook is the only shape that works. `$onIdle` runs after the run queue
+  empties.
+- The box of an interface value copied a composite literal. The literal builds
+  a value that no other expression names, thus the copy is dead. The counter
+  application went from 39 copies to 2, and each program of `testdata` gives
+  the same output as before.
+- A `GoString` can never be const. It holds a `final Uint8List bytes`, and Dart
+  holds no const `Uint8List`. A const widget from a Go tree has no road.
+- A copy of a struct that holds a reactive value splits its subscriber list,
+  because `$copy` builds a new `dep` that holds the slice of the moment. The
+  copylocks check of `go vet` reports each copy through a `noCopy` field, and
+  the report follows the value through an enclosing struct.
+- `flutter analyze` walks a path dependency, thus the generated code of a Go
+  module reaches the report of the user. 10 more lint names in the header of a
+  generated file took 1034 issues to 0.
+- The Flutter SDK holds no `Command` class and no `Signal` class. The
+  architecture guide of the Flutter team writes the Command pattern in
+  application code, and it recommends the third-party `package:provider` for
+  dependency injection.

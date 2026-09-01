@@ -927,23 +927,38 @@ takes A13.
 Each milestone names its compiler work and 1 proof program. The proof program
 of milestone 1 already passes outside the repository.
 
-### Milestone 1: the Go tree and a hand written host
+### Milestone 1: the Go tree and a hand written host — done 2026-09-02
 
-**The compiler work.** None, when the Go application is a library package. A
-`package main` holds no library URI at `internal/driver/driver.go:504`, and
-`writeMain` at `internal/emit/emit.go:634` writes `bin/main.dart`. Item 4 of
-`docs/flutter-first.md` gives `package main` a library entry point, at a small
-cost. Take that item, or take a library package.
+The directory `flutter/` holds it. `docs/flutter-state.md` holds the state
+model, and `flutter/README.md` names each command.
 
-**The deliverables.** A Go module that holds about 20 node types and the `Ctx`
-interface. A Dart package `goflutter` that holds the host widget, the case of
-each node kind, and `GoApp`. A `flutter:` section in the pubspec of the
-application, and not in the pubspec of the generated package.
+**The deliverables.** The Go module `gart.dev/ui` at `flutter/ui` holds the
+signal graph, the 3 state shapes, and 28 node types. The Dart package
+`flutter/goflutter` holds the host widget, `GoWatch`, `GoTextField`, and
+`GoApp`. `flutter/example/counter` holds the application.
 
-**The proof program.** The counter. A Go struct holds the count, a Go closure
-adds 1 to it, and the screen shows the new value. Add the lazy list of 100,000
-rows and the text field. Each 1 proves a property that a Go tree is not
-expected to hold.
+**The proof.** 6 widget tests pass under Flutter 3.47.0: the whole tree, the
+counter, the focus of a text field across a Go rebuild, a lazy list of 100,000
+rows that a goroutine fills, a Go error on the screen, and 1 signal that
+rebuilds 1 boundary. 32 Go tests pass under `go test` and under `go test
+-race`, with no Flutter and no Dart.
+
+**The compiler work.** The plan said none. 3 small items came up.
+
+| Item | Change |
+|---|---|
+| A dependency module wrote no Dart. Stage 2 accepted the import, and stage 5 failed with "the package X has no import prefix". | `compiled` of `internal/driver/driver.go` now accepts a path whose first element holds a dot, and `libPath` writes it under `dep`. Decision 217. |
+| The host had no signal after a goroutine woke, and a poll stops `pumpAndSettle` of a widget test from settling. | `$onIdle` and `$hosted` of `sched.dart`. Decision 218. |
+| `flutter analyze` gave 1034 issues in the generated code. | The header of a generated file now names 18 lints. |
+
+A library package needed no change, thus the claim of the plan holds for the
+entry point. The `Ctx` interface of the plan is gone: `ui.Theme`, `ui.Media`,
+and `ui.Dirty` are package functions, thus a `Build` method takes no parameter
+and a closure captures no context.
+
+1 more change came from the measure and not from a failure: the box of an
+interface value writes no copy for a composite literal, thus a tree of 200
+nodes allocates 200 objects in place of 400. Decision 219.
 
 ### Milestone 2: the synchronous guarantee
 
