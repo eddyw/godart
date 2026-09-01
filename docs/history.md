@@ -897,3 +897,44 @@ writes 411 Go node types with 3576 fields.
 - `Scaffold.appBar` takes a `PreferredSizeWidget` and not a `Widget`. A
   parameter that takes any subtype of `Widget` now maps to `Node`, and the host
   casts the result. 2 more node types reached the set for that reason.
+
+### 2026-09-02, the focus list of docs/support.md
+
+The 9 items of the focus list. `docs/support.md` holds the state of each 1.
+
+- Go 1.27 routes `encoding/json` through the v2 implementation by default.
+  `GOEXPERIMENT=none` gives the v1 behavior. The overlay follows v1, thus the
+  text of a syntax error of `Decoder.Token` differs from the reference.
+- `jsonDecode` of dart:convert loses the text of a number literal. A `uint64`
+  above the largest `int64` came back as a double and clamped. The runtime now
+  holds its own JSON parse.
+- `ProcessSignal.watch` of dart:io installs the handler of the platform only
+  when a listener joins. A watch that waits for the first read of Go lets the
+  default action end the program.
+- A live stream subscription keeps the Dart isolate alive after package main
+  returns. `$releases` of the scheduler cancels each signal watch.
+- `io/fs` compiles from the real Go source. It needed `internal/oserror` in the
+  surface, and the overlay of `io/fs` is gone.
+- `os` cannot read `path/filepath`, because that package reads `os`. The real
+  `os` reads `internal/filepathlite` for the same reason.
+- `net/http/fs.go` of the real Go 1.27 compiles with 1 change: the setting
+  `httpservecontentkeepheaders` of `internal/godebug` holds its default.
+- A function that holds a `defer` and that returns the results of 1 call wrote
+  the whole record into the first result variable. The Dart output then held a
+  type error. `io/fs` found the bug, and `deferReturn` of
+  `internal/normalize/flatten.go` now writes an `AssignMulti`.
+- A type that a reflect constructor builds carries an untyped Dart container.
+  A real descriptor of the same name replaces it as soon as a value of that
+  type reaches the package, thus the shadow of a synthetic descriptor never
+  reaches a typed location.
+- `reflect.Type` must be an interface. A method of an unexported type emits as
+  a private Dart name, thus a pointer to an unexported struct reaches no other
+  package.
+- A function type that names itself has no finite Dart form. The lexer of
+  `text/template/parse` holds `type stateFn func(*lexer) stateFn`, and the
+  depth guard of `dartType` wrote 30 levels of it.
+- A nil interface result of `reflect.Value.Call` lost its static type, thus
+  `ret[1].IsNil()` of `safeCall` of `text/template` panicked. Each of `Call`,
+  `Field`, `Index`, and `MapIndex` now carries the static type of the result.
+- A method value of reflect must be a plain Dart closure. A pair of a function
+  and a receiver holds no form that a Go program can assert to a function type.

@@ -183,3 +183,20 @@ func AddCleanup[T, S any](ptr *T, cleanup func(S), arg S) Cleanup {
 // block of garbage for it. The collector follows no rule of Go, thus a cleanup
 // can stay for a later call. Read docs/parity.md.
 func GC() { dart.GC() }
+
+// An Error is a run time error of Go. A recover of a run time panic gives a
+// value that holds this interface.
+type Error interface {
+	error
+	// RuntimeError marks the type as a run time error.
+	RuntimeError()
+}
+
+// A TypeAssertionError names a type assertion that failed.
+type TypeAssertionError struct {
+	text string
+}
+
+func (e *TypeAssertionError) RuntimeError() {}
+
+func (e *TypeAssertionError) Error() string { return e.text }

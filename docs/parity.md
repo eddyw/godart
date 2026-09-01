@@ -126,6 +126,10 @@ form.
 | `MakeSlice`, `MakeMap`, `New`, `Zero` of such a type | A value of the type | A value that reads and writes through reflect. |
 | A type assertion of such a value to its Go type | The value | A Dart type error, because the container holds `Object?`. |
 | `MakeFunc` | Present | Not present. The Dart form of a Go function type is a closure of that exact signature, and the runtime holds no way to build one. |
+| A method value, from `Method`, `MethodByName`, or `Value.Method` | A function value of the method | A Dart closure of `Object?` parameters. Dart reads a parameter type against the other direction, thus the closure fits each function type of the same arity. The result stays `dynamic`, thus an assertion to a function type with a result fails. Read decision 228. |
+| `Value.Pointer`, `Value.UnsafePointer` | The machine address | The identity of the object. 2 reads of the same object give the same number, and the number names no memory, thus `runtime.FuncForPC` of it gives nil. |
+| `Type.ChanDir` | The direction of the channel type | Always `BothDir`. The type descriptor of the runtime holds no direction. |
+| `Type.AssignableTo`, `ConvertibleTo`, `Implements` | The rule of the specification | The name of the type, the method set of an interface, and the kind of a number each answer. A conversion between 2 named struct types of the same shape gives false. |
 
 2 files of the test directory of Go witness the limit, and
 `internal/driver/gotest_test.go` names each 1: `fixedbugs/issue22605` and

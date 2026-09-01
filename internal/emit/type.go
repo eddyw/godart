@@ -80,6 +80,12 @@ func (e *emitter) dartType(t types.Type) string {
 	case *types.Chan:
 		return "Chan<" + e.dartType(t.Elem()) + ">"
 	case *types.Signature:
+		// A signature that names a cyclic type holds no finite Dart form
+		// either. `func(*lexer) stateFn` is identical to the underlying type
+		// of stateFn, thus the 2 must take 1 form.
+		if e.mentionsCyclic(t, map[*types.TypeName]bool{}) {
+			return "Object?"
+		}
 		return e.funcType(t) + "?"
 	case *types.Tuple:
 		return e.recordType(t)
@@ -712,9 +718,22 @@ func (e *emitter) cyclic(obj *types.TypeName) bool {
 			return walk(u.Elem())
 		case *types.Map:
 			return walk(u.Key()) || walk(u.Elem())
-			// A cycle through a function type stays out. Such a type keeps
-			// its structural form, and the depth guard of dartType caps it at
-			// 1 consistent text, because each use starts at the named type.
+		case *types.Signature:
+			// A function type that names itself, for example
+			// `type stateFn func(*lexer) stateFn`, holds no finite Dart form
+			// either. The depth guard of dartType wrote 30 levels of it, and
+			// the Dart parser rejects that text.
+			for i := 0; i < u.Params().Len(); i++ {
+				if walk(u.Params().At(i).Type()) {
+					return true
+				}
+			}
+			for i := 0; i < u.Results().Len(); i++ {
+				if walk(u.Results().At(i).Type()) {
+					return true
+				}
+			}
+			return false
 		}
 		return false
 	}
@@ -728,6 +747,48 @@ func (e *emitter) cyclic(obj *types.TypeName) bool {
 		e.typeAcyclic[obj] = true
 	}
 	return out
+}
+
+// mentionsCyclic reports whether a type reaches a named type that names
+// itself. Such a named type takes Object?, thus each type that holds it takes
+// Object? as well.
+func (e *emitter) mentionsCyclic(t types.Type, seen map[*types.TypeName]bool) bool {
+	switch u := types.Unalias(t).(type) {
+	case *types.Named:
+		if seen[u.Obj()] {
+			return false
+		}
+		seen[u.Obj()] = true
+		if e.cyclic(u.Obj()) {
+			return true
+		}
+		if _, ok := u.Underlying().(*types.Struct); ok {
+			return false
+		}
+		return e.mentionsCyclic(u.Underlying(), seen)
+	case *types.Pointer:
+		return e.mentionsCyclic(u.Elem(), seen)
+	case *types.Slice:
+		return e.mentionsCyclic(u.Elem(), seen)
+	case *types.Array:
+		return e.mentionsCyclic(u.Elem(), seen)
+	case *types.Chan:
+		return e.mentionsCyclic(u.Elem(), seen)
+	case *types.Map:
+		return e.mentionsCyclic(u.Key(), seen) || e.mentionsCyclic(u.Elem(), seen)
+	case *types.Signature:
+		for i := 0; i < u.Params().Len(); i++ {
+			if e.mentionsCyclic(u.Params().At(i).Type(), seen) {
+				return true
+			}
+		}
+		for i := 0; i < u.Results().Len(); i++ {
+			if e.mentionsCyclic(u.Results().At(i).Type(), seen) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // isLocalType reports whether a function declares the type.

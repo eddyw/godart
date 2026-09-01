@@ -39,6 +39,18 @@ func (e *emitter) callText(x *ir.Call) string {
 	// effect takes a parameter of its own, thus the operand runs 1 time.
 	recv := e.expr(x.Fun)
 	joined := strings.Join(args, ", ")
+	// A function value whose type erases to Object?, for example a type that
+	// names itself, holds no Dart function type. Such a call goes through a
+	// dynamic call.
+	if e.dartType(x.Fun.GoType()) == "Object?" {
+		if exprIsSimple(x.Fun) {
+			return "(" + recv + " == null ? $panicNil() : (" + recv +
+				"! as dynamic)(" + joined + "))"
+		}
+		return fmt.Sprintf(
+			"((Object? $fn) => ($fn == null ? $panicNil() : ($fn! as dynamic)(%s)))(%s)",
+			joined, recv)
+	}
 	if exprIsSimple(x.Fun) {
 		return "(" + recv + " == null ? $panicNil() : " + recv + "!(" + joined + "))"
 	}
@@ -264,6 +276,42 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$mapKeys(%s)", args[0]), true
 	case "MapIndex":
 		return fmt.Sprintf("$mapIndex(%s, %s)", args[0], args[1]), true
+	case "ValueRecv":
+		return fmt.Sprintf("$valueRecv(%s)", args[0]), true
+	case "ValueAddr":
+		return fmt.Sprintf("$valueAddr(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
+	case "MethodByName":
+		return fmt.Sprintf("$methodByName(%s, %s)", args[0], args[1]), true
+	case "ValueEqual":
+		return fmt.Sprintf("$valueEqual(%s, %s)", args[0], args[1]), true
+	case "ValueConvert":
+		return fmt.Sprintf("$valueConvert(%s, %s)", args[0], args[1]), true
+	case "ValueSlice":
+		return fmt.Sprintf("$valueSlice(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
+	case "AsComplex":
+		return fmt.Sprintf("$asComplex(%s)", args[0]), true
+	case "WithComplex":
+		return fmt.Sprintf("$withComplex(%s, %s)", args[0], args[1]), true
+	case "ValuePointer":
+		return fmt.Sprintf("$valuePointer(%s)", args[0]), true
+	case "DescImplements":
+		return fmt.Sprintf("$descImplements(%s, %s)", args[0], args[1]), true
+	case "DescAssignable":
+		return fmt.Sprintf("$descAssignable(%s, %s)", args[0], args[1]), true
+	case "DescConvertible":
+		return fmt.Sprintf("$descConvertible(%s, %s)", args[0], args[1]), true
+	case "FieldEmbedded":
+		return fmt.Sprintf("$fieldEmbedded(%s, %s)", args[0], args[1]), true
+	case "DescPkgPath":
+		return fmt.Sprintf("$descPkgPath(%s)", args[0]), true
+	case "DescVariadic":
+		return fmt.Sprintf("$descVariadic(%s)", args[0]), true
+	case "DescChanDir":
+		return fmt.Sprintf("$descChanDir(%s)", args[0]), true
+	case "DescFieldByName":
+		return fmt.Sprintf("$descFieldByName(%s, %s)", args[0], args[1]), true
 	case "SliceOf":
 		return fmt.Sprintf("$sliceOf(%s)", args[0]), true
 	case "ArrayOf":

@@ -254,8 +254,12 @@ func (e *emitter) signatureShape(sig *types.Signature) string {
 	for i := range results {
 		results[i] = "() => " + e.descriptorOf(sig.Results().At(i).Type())
 	}
-	return fmt.Sprintf(", params: <TypeDesc Function()>[%s], results: <TypeDesc Function()>[%s]",
-		strings.Join(params, ", "), strings.Join(results, ", "))
+	variadic := ""
+	if sig.Variadic() {
+		variadic = ", variadic: true"
+	}
+	return fmt.Sprintf(", params: <TypeDesc Function()>[%s], results: <TypeDesc Function()>[%s]%s",
+		strings.Join(params, ", "), strings.Join(results, ", "), variadic)
 }
 
 // fieldDescs writes the description of each struct field. The reflect subset
@@ -265,9 +269,14 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 	parts := make([]string, st.NumFields())
 	for i := range parts {
 		field := st.Field(i)
-		parts[i] = fmt.Sprintf("FieldDesc('%s', %s, %t, () => %s, %s)",
+		embedded := ""
+		if field.Embedded() {
+			embedded = ", embedded: true"
+		}
+		parts[i] = fmt.Sprintf("FieldDesc('%s', %s, %t, () => %s, %s%s)",
 			field.Name(), dartString(st.Tag(i)), field.Exported(),
-			e.descriptorOf(field.Type()), e.fieldAccess(t, field, i, class))
+			e.descriptorOf(field.Type()), e.fieldAccess(t, field, i, class),
+			embedded)
 	}
 	return ", fields: <FieldDesc>[" + strings.Join(parts, ", ") + "]"
 }

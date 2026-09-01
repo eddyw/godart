@@ -40,11 +40,11 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-82 packages hold each exported name of Go.
+86 packages hold each exported name of Go.
 
 | Form | Packages |
 |---|---|
-| Native, 32 | `bufio`, `cmp`, `compress/flate`, `compress/gzip`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `io`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `unicode` |
+| Native, 38 | `bufio`, `cmp`, `compress/flate`, `compress/gzip`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `io`, `io/fs`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
 | Patch, 13 | `bytes`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
 | Overlay, 23 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strings`, `sync`, `testing/quick`, `time`, `unicode/utf8`, `unique` |
 
@@ -70,9 +70,9 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 | `testing` | 92/145 | 63% | `Init`, `MainStart`, the cover types, `InternalExample`, `InternalFuzzTarget` |
 | `crypto/rand` | 3/5 | 60% | `Int` and `Prime`. The 2 read `math/big`. |
 | `net/http` | 185/392 | 47% | `FileServer` and the `FS` family, `ServeContent`, `Hijacker`, `ResponseController` |
-| `reflect` | 82/188 | 43% | `SliceOf`, `MapOf`, `ChanOf`, `FuncOf`, `ArrayOf`, `Append`, `Copy`, `MakeFunc`, `Select` |
-| `runtime` | 27/114 | 23% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
-| `crypto/tls` | 30/263 | 11% | The cipher suite constants, the curve names, `CipherSuites`, `LoadX509KeyPair` |
+| `reflect` | 126/188 | 67% | `MakeFunc`, `ChanOf`, `FuncOf`, `MakeChan`, `Select`, `Method.Func` |
+| `runtime` | 31/114 | 27% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
+| `crypto/tls` | 32/263 | 12% | The cipher suite constants, the curve names, `CipherSuites`, `LoadX509KeyPair` |
 | `net` | 26/346 | 7% | `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, the `Lookup` family, `Interfaces`, the `Resolver` |
 | `syscall` | 15/2228 | 0% | Each system call, each error number, and each constant of the platform. |
 
@@ -96,7 +96,7 @@ Stage 2 rejects an import of each package below with a source position.
 | `math/cmplx` | No survey yet. The language holds the complex type already. | Small |
 | `crypto/subtle` | No overlay yet. Each function is a loop over 2 byte slices. | Small |
 | `embed` | The compiler holds no `go:embed` directive. | Medium |
-| `text/template`, `html/template` | The real source reads the deep reflect surface. | Medium |
+| `html/template` | It reads `text/template` and the escape pass of HTML. | Medium |
 | `encoding/xml` | The real source reads the deep reflect surface. | Medium |
 | `archive/zip`, `archive/tar`, `compress/bzip2`, `compress/lzw` | No survey yet. Each one is pure Go. | Medium |
 | `math/big` | No survey yet. The real source reads assembly for each word operation. | Large |
@@ -122,8 +122,11 @@ and `docs/flutter-design.md` holds the design of that client.
    `MakeFunc` has no form: the Dart type of a Go function type is a closure of
    that exact signature, and the runtime holds no way to build one. Read
    `docs/parity.md`.
-3. **`text/template`.** It is the largest single gate of a real program. A
-   command line tool, a code generator, and a web server each read it.
+3. **`text/template`.** Done 2026-09-02. `text/template` and
+   `text/template/parse` each read the real Go source, and each one holds every
+   exported name. A field, a method, a range, a map, a variable, a pipe, a
+   custom function, each builtin, and a nested template each give the text that
+   Go gives.
 4. **The address types of `net`.** `IPNet`, `ParseCIDR`, `TCPAddr`, and the 2
    address methods of a connection. `Request.RemoteAddr` of `net/http` is empty
    without them.

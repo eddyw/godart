@@ -14,14 +14,18 @@ final class FieldDesc {
   final Object? Function(Object?) get;
   final void Function(Object?, Object?) set;
 
+  /// True for an embedded field. The package reflect reads it as Anonymous.
+  final bool embedded;
+
   const FieldDesc(
     this.name,
     this.tag,
     this.exported,
     this.type,
     this.get,
-    this.set,
-  );
+    this.set, {
+    this.embedded = false,
+  });
 }
 
 /// $noRead stands in place of the getter of a field that the emitted Dart
@@ -69,6 +73,10 @@ final class TypeDesc {
   final List<TypeDesc Function()> params;
   final List<TypeDesc Function()> results;
 
+  /// True for a function type whose last parameter is variadic. The package
+  /// reflect reads it.
+  final bool variadic;
+
   /// zero builds the zero value of the type. A decoder writes a fresh value of
   /// a field of a struct through it.
   final Object? Function()? zero;
@@ -103,6 +111,7 @@ final class TypeDesc {
     this.length = 0,
     this.params = const <TypeDesc Function()>[],
     this.results = const <TypeDesc Function()>[],
+    this.variadic = false,
     this.zero,
     this.make,
     this.comparable = true,

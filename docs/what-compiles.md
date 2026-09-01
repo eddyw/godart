@@ -6,31 +6,33 @@ each difference between Go and the Dart output. `docs/support.md` holds the
 count of the exported names that each package of the surface holds.
 
 Each row comes from a measurement of 2026-08-31. A `Present` row is a real build
-of a program that imports the package.
+of a program that imports the package. The import surface holds the run of
+`make surface` of 2026-09-02.
 
 ## The import surface
 
-The surface holds 92 import paths: 82 standard packages, the interop package
-`syscall/dart`, and 9 internal packages that the 82 need. Stage 2 rejects an
+The surface holds 113 import paths: 99 standard packages, the interop package
+`syscall/dart`, and 13 internal packages that the 99 need. Stage 2 rejects an
 import of each other package with a source position.
 
-66 of the 82 hold each exported name of Go, and 15 hold a part of them.
+86 of the 99 hold each exported name of Go, and 14 hold a part of them.
 `docs/support.md` holds the level of each one and the largest gap of each
-partial package.
+partial package. `make surface` measures each one again.
 
 | Present | Absent |
 |---|---|
 | `bufio`, `bytes`, `cmp`, `net/http` | `net/http/cgi`, `net/rpc` |
-| `container/heap`, `container/list`, `container/ring`, `os/exec` | `os/signal` |
+| `container/heap`, `container/list`, `container/ring`, `os/exec` | `net/http/cgi` |
 | `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
-| `regexp`, `regexp/syntax` | `text/template`, `html/template` |
+| `regexp`, `regexp/syntax` | `html/template` |
 | `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/x509`, `crypto/subtle` |
 | `encoding/csv`, `encoding/hex`, `encoding/json` | `archive/...`, `compress/lzw` |
 | `compress/flate`, `compress/gzip`, `compress/zlib` | `compress/bzip2` |
 | `go/token`, `go/scanner`, `go/ast`, `go/parser` | `go/types`, `go/importer` |
 | `go/printer`, `go/format`, `go/build/constraint`, `go/doc/comment` | `go/build` |
-| `text/tabwriter`, `testing/iotest`, `runtime/debug` | |
-| `net/http/httptest` | `net/smtp`, `net/mail` |
+| `text/tabwriter`, `text/template`, `text/template/parse` | |
+| `testing/iotest`, `runtime/debug`, `os/signal`, `syscall` | |
+| `net/http/httptest`, `net/http/internal` | `net/smtp`, `net/mail` |
 | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512` | `embed` |
 | `crypto/hmac`, `crypto/rand`, `crypto/tls` | `math/big` |
 | `mime`, `mime/multipart`, `mime/quotedprintable` | |
@@ -59,6 +61,7 @@ partial package.
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |
 | A function that can block, in a value of a type that carries `//gart:sync` | Rejected. Read decision 221. |
+| A function type that names itself, for example `type stateFn func(*lexer) stateFn` | Present. The type erases to `Object?`, and a call of such a value goes through a dynamic call. Read decision 227. |
 
 Stage 2 accepts a local struct type that reads a type parameter, and the
 `recover` builtin. Read decisions 200 and 201 of `docs/decisions.md`.
@@ -134,15 +137,16 @@ Thus these categories build:
 
 | Gate | What it stops |
 |---|---|
-| `text/template`, `html/template` | Each program that writes a page or a file from a template. |
+| `html/template` | Each program that writes an HTML page from a template. `text/template` builds since 2026-09-02. |
 | `encoding/xml`, `encoding/gob` | Each program that reads an XML file or a gob stream. |
 | `archive/...`, `compress/bzip2`, `compress/lzw` | Each program that reads a zip file or a tar file. |
 | `database/sql` | Each program that reads a database. |
 | A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
 
-Thus no large program of the Go world builds today. `kubectl`, `hugo`, `docker`,
-`terraform`, and `gopls` each read a template package, a compression package,
-or `os/signal`. The gate is the library surface, and not the language.
+Thus no large program of the Go world builds today. `kubectl`, `hugo`,
+`docker`, `terraform`, and `gopls` each read `html/template`, a compression
+package, `encoding/xml`, or `database/sql`. The gate is the library surface,
+and not the language.
 
 ## The near misses
 
@@ -152,6 +156,6 @@ one.
 
 | Package | The gap |
 |---|---|
-| `os/signal` | `ProcessSignal.watch` of `dart:io` gives the event. |
+| `html/template` | It reads `text/template`, which builds, and the escape pass of HTML. |
 | `crypto/subtle` | Each function is a loop over 2 byte slices. |
 | `math/cmplx` | The language holds the complex type already. The package needs a survey. |

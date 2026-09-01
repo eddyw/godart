@@ -191,6 +191,9 @@ final TypeDesc $typeGoError = TypeDesc(
   <String, Function>{
     'Error()string': (Object? e) =>
         GoString.fromString('runtime error: ${(e as GoError).message}'),
+    // The interface runtime.Error holds this method, and a recover of a run
+    // time panic asserts that interface.
+    'RuntimeError()': (Object? e) {},
   },
   text: 'errorString',
 );

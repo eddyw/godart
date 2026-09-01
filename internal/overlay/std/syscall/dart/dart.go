@@ -159,6 +159,103 @@ func MapIndex(target, key any) any {
 }
 
 // MakeMap gives a map of the type.
+// ValueRecv reads 1 value of a channel that a Value holds. The flag is false
+// when the channel closed.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ValueRecv(value any) (any, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueAddr gives a pointer to the location that a Value names. The loc names
+// the kind of the location: 1 for a pointer, 2 for a field of a struct, and 3
+// for an element of a slice or of an array.
+func ValueAddr(value, owner any, index, loc int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MethodByName gives a bound method of a value, by name. A name that no method
+// holds gives nil.
+func MethodByName(value any, name string) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueEqual reports whether 2 values hold the same type and the same value.
+func ValueEqual(a, b any) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueConvert gives the value of a type conversion.
+func ValueConvert(value any, handle int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueSlice gives the slice of a value, with the low, the high, and the
+// maximum.
+func ValueSlice(value any, low, high, max int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// AsComplex gives the complex value inside an interface value.
+func AsComplex(value any) complex128 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// WithComplex gives a complex value of the type of a handle.
+func WithComplex(handle int, x complex128) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValuePointer gives a number that names the object of a value.
+func ValuePointer(value any) uintptr {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescImplements reports whether a type holds each method of an interface
+// type.
+func DescImplements(handle, iface int) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescAssignable reports whether a value of the first type fits a location of
+// the second one.
+func DescAssignable(handle, other int) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescConvertible reports whether a conversion of the first type to the second
+// one holds.
+func DescConvertible(handle, other int) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FieldEmbedded reports whether a field of a struct type is embedded.
+func FieldEmbedded(handle, index int) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescPkgPath gives the import path of the package of a type.
+func DescPkgPath(handle int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescVariadic reports whether the last parameter of a function type is
+// variadic.
+func DescVariadic(handle int) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescChanDir gives the direction of a channel type.
+func DescChanDir(handle int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescFieldByName gives the index of a field of a struct type, by name. A name
+// that no field holds gives -1.
+func DescFieldByName(handle int, name string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // SliceOf gives the handle of the slice type of an element type.
 func SliceOf(elem int) int {
 	panic("syscall/dart needs the gart compiler")

@@ -1079,6 +1079,33 @@ The plan left these points open. The work took the decisions below.
      because the Flutter `TextField` takes a controller, and the 2 marker types
      `Builder` and `ItemBuilder`.
 
+226. `reflect.Type` is an interface, and the overlay holds 1 unexported
+     implementation. Go gives an interface, and the overlay gave a struct
+     before 2026-09-02. `text/template` compares a `Type` with nil, and a
+     struct holds no such comparison. A pointer to an unexported struct
+     compares with nil and holds each method, but a method of an unexported
+     type emits as a private Dart name, and a Dart library holds each private
+     name of its own, thus no other package can call it. An interface
+     dispatches through the method table, and each package then reads it.
+
+227. A function type that names itself erases to `Object?`, and each type that
+     holds such a type erases with it. `type stateFn func(*lexer) stateFn` of
+     the lexer of `text/template/parse` has no finite Dart form. The depth
+     guard of `dartType` wrote 30 levels of the expansion, and the Dart parser
+     rejected that text. `cyclic` of `internal/emit/type.go` now walks a
+     signature, and `mentionsCyclic` erases each signature that reaches such a
+     type, because `func(*lexer) stateFn` is identical to the underlying type
+     of `stateFn` and the 2 must take 1 Dart form. A call through such a value
+     goes through a dynamic call.
+
+228. A method value of the package reflect is a plain Dart closure of `Object?`
+     parameters, and no pair of a function and a receiver. A Go program asserts
+     such a value to its function type, and a pair holds no such form. Dart
+     reads a parameter type against the other direction, thus a closure of
+     `Object?` parameters fits each function type of the same arity. The result
+     stays `dynamic`, thus an assertion to a function type with a result fails.
+     `fixedbugs/issue27695` of the test directory of Go witnesses that limit.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

@@ -6,6 +6,9 @@
 library;
 
 import 'box.dart';
+import 'chan.dart';
+import 'complex.dart';
+import 'format.dart';
 import 'goint.dart';
 import 'iface.dart';
 import 'map.dart';
@@ -454,7 +457,11 @@ Slice<Iface?> $callValue(Iface? fn, Slice<Iface?> args) {
   if (desc.kind != 'func') {
     $panic(Iface($typeGoError, GoError('reflect: Call of ${desc.display}')));
   }
-  if (args.len != desc.params.length) {
+  final int fixed = desc.variadic ? desc.params.length - 1 : desc.params.length;
+  final bool wrong = desc.variadic
+      ? args.len < fixed
+      : args.len != desc.params.length;
+  if (wrong) {
     $panic(
       Iface(
         $typeGoError,
@@ -466,14 +473,27 @@ Slice<Iface?> $callValue(Iface? fn, Slice<Iface?> args) {
     );
   }
   final List<Object?> raw = <Object?>[];
-  for (int i = 0; i < args.len; i++) {
+  for (int i = 0; i < fixed; i++) {
     final Iface? a = args[i];
     raw.add(desc.params[i]().kind == 'interface' ? a : a?.value);
   }
-  final Object? f = fn.value;
-  final Object? out = f is BoundMethod
-      ? Function.apply(f.fn, <Object?>[f.receiver, ...raw])
-      : Function.apply(f as Function, raw);
+  if (desc.variadic) {
+    // The Dart form of a variadic parameter is a slice, thus the call packs
+    // each argument after the fixed ones.
+    final TypeDesc rest = desc.params[fixed]();
+    final TypeDesc? elem = rest.elem?.call();
+    final Object? Function(int)? make = rest.make;
+    if (make == null) {
+      $panic(Iface($typeGoError, GoError('reflect: Call of ${desc.display}')));
+    }
+    final Slice<Object?> tail = make(args.len - fixed) as Slice<Object?>;
+    for (int i = fixed; i < args.len; i++) {
+      final Iface? a = args[i];
+      tail[i - fixed] = elem != null && elem.kind == 'interface' ? a : a?.value;
+    }
+    raw.add(tail);
+  }
+  final Object? out = Function.apply(fn.value as Function, raw);
   final int n = desc.results.length;
   final List<Iface?> results = <Iface?>[];
   if (n == 1) {
@@ -519,18 +539,6 @@ Object? _field(Object? record, int index, int count) {
       GoError('reflect: a call of $count results is outside the subset'),
     ),
   );
-}
-
-/// A method value: the adapter of the method and the receiver.
-///
-/// The adapter of a method table takes the receiver as its first argument.
-/// $callValue unwraps this pair, because a closure of Dart holds a fixed
-/// arity, and the arity of the method lives only in its type descriptor.
-final class BoundMethod {
-  final Function fn;
-  final Object? receiver;
-
-  const BoundMethod(this.fn, this.receiver);
 }
 
 /// The keys of the exported methods of a type, in the order of the name.
@@ -597,7 +605,48 @@ Iface? $methodValue(Iface? value, int index) {
       ),
     );
   }
-  return Iface(type(), BoundMethod(fn, value.value));
+  final TypeDesc sig = type();
+  return Iface(sig, _bindMethod(fn, value.value, sig.params.length));
+}
+
+/// _bindMethod gives a plain Dart closure of a method and its receiver.
+///
+/// A BoundMethod holds the pair, and $callValue reads it. A Go program that
+/// asserts the value to its function type needs a closure, and a closure of
+/// Object? parameters fits each such type: Dart reads a parameter type
+/// against the other direction, thus Object? accepts each argument.
+Function _bindMethod(Function fn, Object? recv, int arity) {
+  switch (arity) {
+    case 0:
+      return () => fn(recv);
+    case 1:
+      return (Object? a) => fn(recv, a);
+    case 2:
+      return (Object? a, Object? b) => fn(recv, a, b);
+    case 3:
+      return (Object? a, Object? b, Object? c) => fn(recv, a, b, c);
+    case 4:
+      return (Object? a, Object? b, Object? c, Object? d) =>
+          fn(recv, a, b, c, d);
+    case 5:
+      return (Object? a, Object? b, Object? c, Object? d, Object? e) =>
+          fn(recv, a, b, c, d, e);
+    case 6:
+      return (
+        Object? a,
+        Object? b,
+        Object? c,
+        Object? d,
+        Object? e,
+        Object? f,
+      ) => fn(recv, a, b, c, d, e, f);
+  }
+  $panic(
+    Iface(
+      $typeGoError,
+      GoError('reflect: a method of $arity parameters is outside the subset'),
+    ),
+  );
 }
 
 /// True when the value of a kind that can hold nil holds nil. A pointer, a
@@ -801,9 +850,7 @@ Slice<Object?>? _sliceOfValue(Iface? value) {
 Slice<Object?> _freshSlice(TypeDesc desc, int length) {
   final Object? Function(int)? make = desc.make;
   if (make == null) {
-    $panic(
-      Iface($typeGoError, GoError('reflect: Append of ${desc.display}')),
-    );
+    $panic(Iface($typeGoError, GoError('reflect: Append of ${desc.display}')));
   }
   return make(length) as Slice<Object?>;
 }
@@ -889,4 +936,303 @@ void _writeElem(Object? v, int i, Object? x) {
     return;
   }
   (v as List<Object?>)[i] = x;
+}
+
+// The type relations that the package reflect reads.
+
+/// Reports whether a type holds each method of an interface type.
+bool $descImplements(int handle, int iface) {
+  final TypeDesc a = _typeAt(handle);
+  final TypeDesc b = _typeAt(iface);
+  if (b.kind != 'interface') return false;
+  for (final String key in b.methods.keys) {
+    if (!a.methods.containsKey(key)) return false;
+  }
+  return true;
+}
+
+/// Reports whether a value of the first type fits a location of the second.
+bool $descAssignable(int handle, int other) {
+  if (handle == other) return true;
+  final TypeDesc a = _typeAt(handle);
+  final TypeDesc b = _typeAt(other);
+  if (a.name == b.name) return true;
+  if (b.kind == 'interface') return $descImplements(handle, other);
+  return false;
+}
+
+const Set<String> _numberKinds = <String>{
+  'int',
+  'int8',
+  'int16',
+  'int32',
+  'int64',
+  'uint',
+  'uint8',
+  'uint16',
+  'uint32',
+  'uint64',
+  'uintptr',
+  'float32',
+  'float64',
+};
+
+/// Reports whether a conversion of the first type to the second one holds.
+bool $descConvertible(int handle, int other) {
+  if ($descAssignable(handle, other)) return true;
+  final TypeDesc a = _typeAt(handle);
+  final TypeDesc b = _typeAt(other);
+  if (_numberKinds.contains(a.kind) && _numberKinds.contains(b.kind)) {
+    return true;
+  }
+  if (a.kind == 'string' && b.kind == 'slice') {
+    final String elem = b.elem?.call().kind ?? '';
+    return elem == 'uint8' || elem == 'int32';
+  }
+  if (b.kind == 'string') {
+    if (_numberKinds.contains(a.kind)) return true;
+    if (a.kind == 'slice') {
+      final String elem = a.elem?.call().kind ?? '';
+      return elem == 'uint8' || elem == 'int32';
+    }
+  }
+  if (a.kind == b.kind && a.kind == 'struct') {
+    return a.name == b.name;
+  }
+  return false;
+}
+
+/// The direction of a channel type: 3 for both, 2 for receive, 1 for send.
+int $descChanDir(int handle) {
+  final TypeDesc desc = _typeAt(handle);
+  if (desc.kind != 'chan') return 0;
+  // The descriptor of the runtime holds no direction, thus each channel type
+  // reads as a channel of both directions. Read docs/parity.md.
+  return 3;
+}
+
+/// The index of a field of a struct type, by name. A name that no field holds
+/// gives -1.
+int $descFieldByName(int handle, GoString name) {
+  final TypeDesc desc = _typeAt(handle);
+  final String want = name.toDartString();
+  for (int i = 0; i < desc.fields.length; i++) {
+    if (desc.fields[i].name == want) return i;
+  }
+  return -1;
+}
+
+// The value operations that text/template reads.
+
+/// A pointer to the location that a Value names.
+///
+/// The loc names the kind of the location: 1 for a pointer, 2 for a field of a
+/// struct, and 3 for an element of a slice or of an array.
+Iface? $valueAddr(Iface? value, Iface? owner, int index, int loc) {
+  if (loc == 1) return owner;
+  if (owner == null) $panicNil();
+  final TypeDesc ownerDesc = owner.desc;
+  if (loc == 2) {
+    if (index < 0 || index >= ownerDesc.fields.length) {
+      $panic(Iface($typeGoError, GoError('reflect: Addr of a field')));
+    }
+    final FieldDesc f = ownerDesc.fields[index];
+    final TypeDesc field = f.type();
+    // The Dart form of a pointer to a struct is the struct itself.
+    if (field.kind == 'struct') {
+      return Iface(_pointerTo(field), f.get(owner.value));
+    }
+    return Iface(
+      _pointerTo(field),
+      $Ref<Object?, Object?>(
+        owner.value,
+        0,
+        (Object? o, int _) => f.get(o),
+        (Object? o, int _, Object? v) => f.set(o, v),
+      ),
+    );
+  }
+  final TypeDesc? elem = ownerDesc.elem?.call();
+  if (elem == null) {
+    $panic(Iface($typeGoError, GoError('reflect: Addr of an element')));
+  }
+  final Object? v = owner.value;
+  if (elem.kind == 'struct') {
+    return Iface(_pointerTo(elem), _readElem(v, index));
+  }
+  return Iface(
+    _pointerTo(elem),
+    $Ref<Object?, Object?>(
+      v,
+      index,
+      (Object? o, int i) => _readElem(o, i),
+      (Object? o, int i, Object? x) => _writeElem(o, i, x),
+    ),
+  );
+}
+
+/// A bound method of a value, by name. A name that no method holds gives null.
+Iface? $methodByName(Iface? value, GoString name) {
+  if (value == null) return null;
+  final String want = name.toDartString();
+  for (final String key in value.desc.methods.keys) {
+    final int cut = key.indexOf('(');
+    if ((cut < 0 ? key : key.substring(0, cut)) != want) continue;
+    final TypeDesc Function()? type = value.desc.methodTypes[key];
+    if (type == null) return null;
+    final TypeDesc sig = type();
+    return Iface(
+      sig,
+      _bindMethod(value.desc.methods[key]!, value.value, sig.params.length),
+    );
+  }
+  return null;
+}
+
+/// Reports whether 2 values hold the same type and the same value.
+bool $valueEqual(Iface? a, Iface? b) {
+  if (a == null || b == null) return a == null && b == null;
+  if (a.desc.name != b.desc.name) return false;
+  return $deepEqual(a, b);
+}
+
+/// The value of a type conversion.
+Iface? $valueConvert(Iface? value, int handle) {
+  final TypeDesc to = _typeAt(handle);
+  if (value == null) return Iface(to, to.zero?.call());
+  final TypeDesc from = value.desc;
+  if (from.name == to.name) return Iface(to, value.value);
+  if (!$descConvertible(_descHandle(from), handle)) {
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: cannot convert ${from.display} to ${to.display}'),
+      ),
+    );
+  }
+  return Iface(to, _converted(from, to, value.value));
+}
+
+Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
+  if (to.kind == 'string') {
+    if (_numberKinds.contains(from.kind)) {
+      return GoString.fromString(String.fromCharCode(($ix(v as GoInt))));
+    }
+    if (v is Slice<Object?>) {
+      final List<int> bytes = <int>[
+        for (int i = 0; i < v.len; i++) $ix(v[i] as GoInt),
+      ];
+      final String elem = from.elem?.call().kind ?? '';
+      if (elem == 'int32') {
+        return GoString.fromString(String.fromCharCodes(bytes));
+      }
+      return GoString.fromBytes(bytes);
+    }
+    return v;
+  }
+  if (from.kind == 'string' && to.kind == 'slice') {
+    final GoString s = v as GoString;
+    final String elem = to.elem?.call().kind ?? '';
+    final List<Object?> out = <Object?>[];
+    if (elem == 'int32') {
+      for (final int r in s.toDartString().runes) {
+        out.add($gi(r));
+      }
+    } else {
+      for (int i = 0; i < s.length; i++) {
+        out.add($gi(s[i]));
+      }
+    }
+    return Slice<Object?>.of(out);
+  }
+  if (_numberKinds.contains(to.kind)) {
+    final double x = v is GoInt ? $ix(v).toDouble() : (v as double);
+    if (to.kind == 'float32' || to.kind == 'float64') return x;
+    return $gi(x.toInt());
+  }
+  return v;
+}
+
+/// The slice of a value, with the low, the high, and the maximum.
+Iface? $valueSlice(Iface? value, int low, int high, int max) {
+  if (value == null) $panicNil();
+  final Object? v = value.value;
+  if (v is GoString) {
+    return Iface(value.desc, $substring(v, low, high));
+  }
+  if (v is Slice<Object?>) {
+    return Iface(value.desc, v.range(low, high, max));
+  }
+  $panic(
+    Iface($typeGoError, GoError('reflect: Slice of ${value.desc.display}')),
+  );
+}
+
+/// The complex value inside an interface value.
+GoComplex $asComplex(Iface? value) {
+  final Object? v = value?.value;
+  if (v is GoComplex) return v;
+  if (v is double) return GoComplex(v, 0);
+  if (v is GoInt) return GoComplex($ix(v).toDouble(), 0);
+  return GoComplex.zero;
+}
+
+/// A complex value of the type of a handle.
+Iface? $withComplex(int handle, GoComplex x) => Iface(_typeAt(handle), x);
+
+/// A number that names the object of a value. Dart gives no machine address,
+/// thus the number is the identity hash of the object. Read docs/parity.md.
+int $valuePointer(Iface? value) {
+  final Object? v = value?.value;
+  if (v == null) return 0;
+  return identityHashCode(v);
+}
+
+/// A receive on a channel that a Value holds. The call blocks the goroutine,
+/// exactly as a receive of Go does.
+(Iface?, bool) $valueRecv(Iface? value) {
+  if (value == null) $panicNil();
+  final Object? v = value.value;
+  if (v is! Chan<Object?>) {
+    $panic(
+      Iface($typeGoError, GoError('reflect: Recv of ${value.desc.display}')),
+    );
+  }
+  final TypeDesc? elem = value.desc.elem?.call();
+  final (Object?, bool) got = v.receive();
+  if (elem == null || elem.kind == 'interface') {
+    return (got.$1 as Iface?, got.$2);
+  }
+  return (Iface(elem, got.$1), got.$2);
+}
+
+/// Reports whether the last parameter of a function type is variadic.
+bool $descVariadic(int handle) => _typeAt(handle).variadic;
+
+/// The import path of the package of a type. A type that no package holds, for
+/// example a slice type, gives an empty text.
+GoString $descPkgPath(int handle) {
+  final TypeDesc? desc = _descAt(handle);
+  if (desc == null) return GoString.empty;
+  final int cut = desc.name.lastIndexOf('.');
+  if (cut <= 0) return GoString.empty;
+  // The emitter names a type of package main with the path of the module, and
+  // Go names it main. The short text holds the name of the package.
+  if (desc.display.startsWith('main.')) {
+    return GoString.fromString('main');
+  }
+  final String head = desc.name.substring(0, cut);
+  // A composite type holds no package. Its name starts with a bracket, a star,
+  // or the word map, chan, func, or interface.
+  if (head.contains('[') || head.contains('*') || head.contains(' ')) {
+    return GoString.empty;
+  }
+  return GoString.fromString(head);
+}
+
+/// Reports whether a field of a struct type is embedded.
+bool $fieldEmbedded(int handle, int index) {
+  final TypeDesc? desc = _descAt(handle);
+  if (desc == null || index < 0 || index >= desc.fields.length) return false;
+  return desc.fields[index].embedded;
 }

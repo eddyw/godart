@@ -12,7 +12,10 @@
 // `docs/parity.md` lists each gap.
 package reflect
 
-import "syscall/dart"
+import (
+	"iter"
+	"syscall/dart"
+)
 
 // DeepEqual reports whether 2 values are deeply equal.
 //
@@ -67,10 +70,73 @@ const Ptr = Pointer
 // String gives the name of the kind.
 func (k Kind) String() string { return string(k) }
 
-// A Type describes a Go type. Go gives an interface, and the overlay gives a
-// struct that holds a handle of the type descriptor of the runtime.
-type Type struct {
+// A Type describes a Go type. It compares with nil, exactly as it does in Go.
+//
+// The overlay holds 1 implementation, and that implementation is unexported.
+// A Dart library holds each private name of its own, thus a method of an
+// unexported type reaches no other package as a plain call. An interface
+// dispatches through the method table, and each package then reads it.
+type Type interface {
+	String() string
+	Name() string
+	Kind() Kind
+	Comparable() bool
+	Elem() Type
+	Key() Type
+	Len() int
+	NumField() int
+	Field(i int) StructField
+	FieldByName(name string) (StructField, bool)
+	NumIn() int
+	In(i int) Type
+	NumOut() int
+	Out(i int) Type
+	IsVariadic() bool
+	NumMethod() int
+	Method(i int) Method
+	Size() uintptr
+	Align() int
+	FieldAlign() int
+	AssignableTo(u Type) bool
+	ConvertibleTo(u Type) bool
+	Implements(u Type) bool
+	ChanDir() ChanDir
+	CanSeq() bool
+	CanSeq2() bool
+	handle() int
+	layout() (uintptr, int)
+	offsetOf(index int) uintptr
+}
+
+// An rtype holds the handle of 1 type descriptor of the runtime.
+type rtype struct {
 	desc int
+}
+
+// types interns 1 rtype for each handle, thus 2 reads of the same type give 2
+// equal values, as they do in Go.
+var types = map[int]*rtype{}
+
+// typeOf gives the Type of a handle. The handle 0 names no type, and it gives
+// nil, exactly as a nil interface does in Go.
+func typeOf(handle int) Type {
+	if handle == 0 {
+		return nil
+	}
+	if t := types[handle]; t != nil {
+		return t
+	}
+	t := &rtype{desc: handle}
+	types[handle] = t
+	return t
+}
+
+// handle gives the handle of a type. A nil Type gives 0.
+func (t *rtype) handle() int {
+	if t == nil {
+		return 0
+	}
+	return t.desc
 }
 
 // A StructTag is the tag of a struct field.
@@ -126,8 +192,14 @@ func (tag StructTag) Lookup(key string) (string, bool) {
 // A StructField describes 1 field of a struct type.
 type StructField struct {
 	Name string
-	Tag  StructTag
-	Type Type
+	// PkgPath holds the import path of an unexported field, and it is empty
+	// for an exported field.
+	PkgPath string
+	Tag     StructTag
+	Type    Type
+	// Index holds the path of the field inside the struct. The overlay reads
+	// no embedded field of a parent, thus the path holds 1 element.
+	Index []int
 	// Offset holds the count of bytes from the start of the struct. Read
 	// Type.Size.
 	Offset uintptr
@@ -137,19 +209,19 @@ type StructField struct {
 
 // TypeOf gives the type of the value inside an interface.
 func TypeOf(v any) Type {
-	return Type{desc: dart.DescOf(v)}
+	return typeOf(dart.DescOf(v))
 }
 
 // String gives the text of the type. It holds the name of the package, and not
 // the import path.
-func (t Type) String() string {
-	text, _, _ := dart.DescInfo(t.desc)
+func (t *rtype) String() string {
+	text, _, _ := dart.DescInfo(t.handle())
 	return text
 }
 
 // Name gives the name of a named type, and it gives an empty string for each
 // other type.
-func (t Type) Name() string {
+func (t *rtype) Name() string {
 	text := t.String()
 	if composite(text) {
 		return ""
@@ -187,65 +259,72 @@ func composite(text string) bool {
 }
 
 // Kind gives the class of the type.
-func (t Type) Kind() Kind {
-	_, kind, _ := dart.DescInfo(t.desc)
+func (t *rtype) Kind() Kind {
+	_, kind, _ := dart.DescInfo(t.handle())
 	return Kind(kind)
 }
 
 // Comparable reports whether Go compares 2 values of the type with ==.
-func (t Type) Comparable() bool {
-	_, _, comparable := dart.DescInfo(t.desc)
+func (t *rtype) Comparable() bool {
+	_, _, comparable := dart.DescInfo(t.handle())
 	return comparable
 }
 
 // Elem gives the element type of a pointer, a slice, an array, a channel, or a
 // map. Each other type panics, exactly as in Go.
-func (t Type) Elem() Type {
-	elem := dart.DescElem(t.desc)
+func (t *rtype) Elem() Type {
+	elem := dart.DescElem(t.handle())
 	if elem == 0 {
 		panic("reflect: Elem of " + t.String())
 	}
-	return Type{desc: elem}
+	return typeOf(elem)
 }
 
 // Len gives the count of the elements of an array type. Each other type panics,
 // exactly as in Go.
-func (t Type) Len() int {
+func (t *rtype) Len() int {
 	if t.Kind() != Array {
 		panic("reflect: Len of " + t.String())
 	}
-	return dart.DescLength(t.desc)
+	return dart.DescLength(t.handle())
 }
 
 // NumField gives the count of the fields of a struct type.
-func (t Type) NumField() int {
+func (t *rtype) NumField() int {
 	if t.Kind() != Struct {
 		panic("reflect: NumField of " + t.String())
 	}
-	return dart.FieldCount(t.desc)
+	return dart.FieldCount(t.handle())
 }
 
 // Field gives 1 field of a struct type.
-func (t Type) Field(i int) StructField {
+func (t *rtype) Field(i int) StructField {
 	if t.Kind() != Struct {
 		panic("reflect: Field of " + t.String())
 	}
-	name, tag, _, desc := dart.FieldInfo(t.desc, i)
+	name, tag, exported, desc := dart.FieldInfo(t.handle(), i)
+	pkg := ""
+	if !exported {
+		pkg = dart.DescPkgPath(t.handle())
+	}
 	return StructField{
-		Name:   name,
-		Tag:    StructTag(tag),
-		Type:   Type{desc: desc},
-		Offset: t.offsetOf(i),
+		Name:      name,
+		PkgPath:   pkg,
+		Tag:       StructTag(tag),
+		Type:      typeOf(desc),
+		Index:     []int{i},
+		Offset:    t.offsetOf(i),
+		Anonymous: dart.FieldEmbedded(t.handle(), i),
 	}
 }
 
 // offsetOf gives the count of bytes from the start of the struct to the field.
 // Read Type.Size.
-func (t Type) offsetOf(index int) uintptr {
+func (t *rtype) offsetOf(index int) uintptr {
 	offset := uintptr(0)
 	for i := 0; i <= index; i++ {
-		_, _, _, desc := dart.FieldInfo(t.desc, i)
-		field := Type{desc: desc}
+		_, _, _, desc := dart.FieldInfo(t.handle(), i)
+		field := typeOf(desc)
 		offset = roundUp(offset, uintptr(field.Align()))
 		if i == index {
 			return offset
@@ -257,50 +336,50 @@ func (t Type) offsetOf(index int) uintptr {
 
 // Key gives the key type of a map type. Each other type panics, exactly as in
 // Go.
-func (t Type) Key() Type {
-	key := dart.DescKey(t.desc)
+func (t *rtype) Key() Type {
+	key := dart.DescKey(t.handle())
 	if key == 0 {
 		panic("reflect: Key of " + t.String())
 	}
-	return Type{desc: key}
+	return typeOf(key)
 }
 
 // NumIn gives the count of the parameters of a function type.
-func (t Type) NumIn() int {
+func (t *rtype) NumIn() int {
 	if t.Kind() != Func {
 		panic("reflect: NumIn of " + t.String())
 	}
-	return dart.DescNumIn(t.desc)
+	return dart.DescNumIn(t.handle())
 }
 
 // In gives the type of 1 parameter of a function type.
-func (t Type) In(i int) Type {
+func (t *rtype) In(i int) Type {
 	if t.Kind() != Func {
 		panic("reflect: In of " + t.String())
 	}
-	return Type{desc: dart.DescIn(t.desc, i)}
+	return typeOf(dart.DescIn(t.handle(), i))
 }
 
 // NumOut gives the count of the results of a function type.
-func (t Type) NumOut() int {
+func (t *rtype) NumOut() int {
 	if t.Kind() != Func {
 		panic("reflect: NumOut of " + t.String())
 	}
-	return dart.DescNumOut(t.desc)
+	return dart.DescNumOut(t.handle())
 }
 
 // Out gives the type of 1 result of a function type.
-func (t Type) Out(i int) Type {
+func (t *rtype) Out(i int) Type {
 	if t.Kind() != Func {
 		panic("reflect: Out of " + t.String())
 	}
-	return Type{desc: dart.DescOut(t.desc, i)}
+	return typeOf(dart.DescOut(t.handle(), i))
 }
 
 // IsVariadic reports whether the last parameter of a function type holds a
 // list. The description of the output holds no such flag, thus the result is
 // always false.
-func (t Type) IsVariadic() bool { return false }
+func (t *rtype) IsVariadic() bool { return dart.DescVariadic(t.handle()) }
 
 // A Method describes 1 exported method of a type.
 type Method struct {
@@ -309,18 +388,18 @@ type Method struct {
 }
 
 // NumMethod gives the count of the exported methods of the type.
-func (t Type) NumMethod() int { return dart.DescNumMethod(t.desc) }
+func (t *rtype) NumMethod() int { return dart.DescNumMethod(t.handle()) }
 
 // Method gives 1 exported method of the type, in the order of the name.
-func (t Type) Method(i int) Method {
-	return Method{Name: dart.DescMethodName(t.desc, i), Index: i}
+func (t *rtype) Method(i int) Method {
+	return Method{Name: dart.DescMethodName(t.handle(), i), Index: i}
 }
 
 // Size gives the count of bytes that a value of the type holds in Go.
 //
 // The Dart output holds no memory layout. The result follows the rules of a
 // 64-bit machine, exactly as the compiler of Go computes them.
-func (t Type) Size() uintptr {
+func (t *rtype) Size() uintptr {
 	switch t.Kind() {
 	case Bool, Int8, Uint8:
 		return 1
@@ -345,7 +424,7 @@ func (t Type) Size() uintptr {
 }
 
 // Align gives the count of bytes of the alignment of a value of the type.
-func (t Type) Align() int {
+func (t *rtype) Align() int {
 	switch t.Kind() {
 	case Bool, Int8, Uint8:
 		return 1
@@ -366,21 +445,21 @@ func (t Type) Align() int {
 }
 
 // FieldAlign gives the alignment of the type inside a struct.
-func (t Type) FieldAlign() int { return t.Align() }
+func (t *rtype) FieldAlign() int { return t.Align() }
 
 // layout gives the size and the alignment of a struct type.
 //
 // Go puts each field at an offset that its alignment allows, and it rounds the
 // size up to the alignment of the struct. A struct whose last field holds 0
 // bytes takes 1 more byte, thus a pointer to the end stays inside the value.
-func (t Type) layout() (uintptr, int) {
-	count := dart.FieldCount(t.desc)
+func (t *rtype) layout() (uintptr, int) {
+	count := dart.FieldCount(t.handle())
 	offset := uintptr(0)
 	align := 1
 	last := uintptr(0)
 	for i := 0; i < count; i++ {
-		_, _, _, desc := dart.FieldInfo(t.desc, i)
-		field := Type{desc: desc}
+		_, _, _, desc := dart.FieldInfo(t.handle(), i)
+		field := typeOf(desc)
 		a := field.Align()
 		if a > align {
 			align = a
@@ -434,10 +513,10 @@ func Indirect(v Value) Value {
 }
 
 // Zero gives the zero value of a type.
-func Zero(t Type) Value { return Value{value: dart.DescZero(t.desc)} }
+func Zero(t Type) Value { return Value{value: dart.DescZero(t.handle())} }
 
 // New gives a Value that holds a pointer to a fresh zero value of the type.
-func New(t Type) Value { return Value{value: dart.NewValue(t.desc)} }
+func New(t Type) Value { return Value{value: dart.NewValue(t.handle())} }
 
 // MakeSlice gives a slice of the type, with the length and the capacity. The
 // overlay gives each slice a capacity that is equal to its length.
@@ -448,7 +527,7 @@ func MakeSlice(t Type, length, capacity int) Value {
 	if length < 0 || capacity < length {
 		panic("reflect: MakeSlice with a wrong length")
 	}
-	return Value{value: dart.MakeValue(t.desc, length, capacity)}
+	return Value{value: dart.MakeValue(t.handle(), length, capacity)}
 }
 
 // MakeMap gives an empty map of the type.
@@ -456,7 +535,7 @@ func MakeMap(t Type) Value {
 	if t.Kind() != Map {
 		panic("reflect: MakeMap of " + t.String())
 	}
-	return Value{value: dart.MakeMap(t.desc)}
+	return Value{value: dart.MakeMap(t.handle())}
 }
 
 // TypeAssert reads the value inside v as the type T. The flag is false when the
@@ -488,7 +567,7 @@ func (v Value) Interface() any { return v.read() }
 
 // Type gives the type of the value.
 func (v Value) Type() Type {
-	if v.read() == nil && v.typ.desc != 0 {
+	if v.read() == nil && v.typ != nil {
 		return v.typ
 	}
 	return TypeOf(v.read())
@@ -497,7 +576,7 @@ func (v Value) Type() Type {
 // Kind gives the class of the type of the value.
 func (v Value) Kind() Kind {
 	if v.read() == nil {
-		if v.typ.desc != 0 {
+		if v.typ != nil {
 			return v.typ.Kind()
 		}
 		return Invalid
@@ -526,6 +605,7 @@ func (v Value) Index(i int) Value {
 	out := Value{value: dart.ValueIndex(owner, i)}
 	if v.Kind() != String {
 		out.owner, out.index, out.loc = owner, i, locIndex
+		out.typ = v.Type().Elem()
 	}
 	return out
 }
@@ -538,7 +618,7 @@ func (v Value) NumField() int { return v.Type().NumField() }
 func (v Value) Field(i int) Value {
 	owner := v.read()
 	return Value{value: dart.FieldRead(owner, i), owner: owner,
-		index: i, loc: locField}
+		index: i, loc: locField, typ: v.Type().Field(i).Type}
 }
 
 // CanSet reports whether Set writes through v.
@@ -602,9 +682,12 @@ func (v Value) Call(in []Value) []Value {
 		args[i] = a.read()
 	}
 	raw := dart.CallValue(v.read(), args)
+	// The static type of each result travels with the value. A nil interface
+	// result holds no descriptor, and Kind then reads the static type.
+	t := v.Type()
 	out := make([]Value, len(raw))
 	for i, r := range raw {
-		out[i] = Value{value: r}
+		out[i] = Value{value: r, typ: t.Out(i)}
 	}
 	return out
 }
@@ -640,7 +723,7 @@ func (v Value) MapKeys() []Value {
 // MapIndex gives the value of 1 key of a map value. A key that the map does
 // not hold gives the zero Value.
 func (v Value) MapIndex(key Value) Value {
-	return Value{value: dart.MapIndex(v.read(), key.read())}
+	return Value{value: dart.MapIndex(v.read(), key.read()), typ: v.Type().Elem()}
 }
 
 // SetZero writes the zero value of the type into the location that v names.
@@ -673,14 +756,14 @@ func (v Value) descOf() int { return dart.DescOf(v.read()) }
 // text. Read docs/parity.md.
 
 // SliceOf gives the slice type of an element type.
-func SliceOf(t Type) Type { return Type{desc: dart.SliceOf(t.desc)} }
+func SliceOf(t Type) Type { return typeOf(dart.SliceOf(t.handle())) }
 
 // ArrayOf gives the array type of a length and an element type.
 func ArrayOf(length int, t Type) Type {
 	if length < 0 {
 		panic("reflect: ArrayOf with a negative length")
 	}
-	return Type{desc: dart.ArrayOf(length, t.desc)}
+	return typeOf(dart.ArrayOf(length, t.handle()))
 }
 
 // MapOf gives the map type of a key type and an element type.
@@ -688,11 +771,11 @@ func MapOf(key, elem Type) Type {
 	if !key.Comparable() {
 		panic("reflect: invalid key type " + key.String())
 	}
-	return Type{desc: dart.MapOf(key.desc, elem.desc)}
+	return typeOf(dart.MapOf(key.handle(), elem.handle()))
 }
 
 // PointerTo gives the pointer type of an element type.
-func PointerTo(t Type) Type { return Type{desc: dart.PointerTo(t.desc)} }
+func PointerTo(t Type) Type { return typeOf(dart.PointerTo(t.handle())) }
 
 // PtrTo gives the pointer type of an element type. Go marks it as older than
 // PointerTo.
@@ -701,7 +784,7 @@ func PtrTo(t Type) Type { return PointerTo(t) }
 // TypeFor gives the type of T.
 func TypeFor[T any]() Type {
 	var zero T
-	if t := TypeOf(zero); t.desc != 0 {
+	if t := TypeOf(zero); t.handle() != 0 {
 		return t
 	}
 	// The zero value of an interface type holds no descriptor, thus the type
@@ -742,3 +825,359 @@ func Copy(dst, src Value) int {
 	}
 	return dart.CopyValue(dst.read(), src.read())
 }
+
+// A ChanDir names the direction of a channel type.
+type ChanDir int
+
+// The 3 directions of a channel type.
+const (
+	RecvDir ChanDir = 1 << iota
+	SendDir
+	BothDir = RecvDir | SendDir
+)
+
+func (d ChanDir) String() string {
+	switch d {
+	case SendDir:
+		return "chan<-"
+	case RecvDir:
+		return "<-chan"
+	case BothDir:
+		return "chan"
+	}
+	return "ChanDir" + itoa(int(d))
+}
+
+// itoa writes a small integer. The overlay reads no strconv, because strconv
+// reads no reflect and the surface keeps the 2 apart.
+func itoa(v int) string {
+	if v == 0 {
+		return "0"
+	}
+	neg := v < 0
+	if neg {
+		v = -v
+	}
+	out := ""
+	for v > 0 {
+		out = string(rune('0'+v%10)) + out
+		v /= 10
+	}
+	if neg {
+		return "-" + out
+	}
+	return out
+}
+
+// ChanDir gives the direction of a channel type.
+//
+// The descriptor of the runtime holds no direction, thus each channel type
+// reads as a channel of both directions. Read docs/parity.md.
+func (t *rtype) ChanDir() ChanDir {
+	if t.Kind() != Chan {
+		panic("reflect: ChanDir of " + t.String())
+	}
+	return ChanDir(dart.DescChanDir(t.handle()))
+}
+
+// AssignableTo reports whether a value of the type fits a location of u.
+func (t *rtype) AssignableTo(u Type) bool {
+	if u == nil {
+		panic("reflect: nil type passed to Type.AssignableTo")
+	}
+	return dart.DescAssignable(t.handle(), u.handle())
+}
+
+// ConvertibleTo reports whether a conversion of the type to u holds.
+func (t *rtype) ConvertibleTo(u Type) bool {
+	if u == nil {
+		panic("reflect: nil type passed to Type.ConvertibleTo")
+	}
+	return dart.DescConvertible(t.handle(), u.handle())
+}
+
+// Implements reports whether the type holds each method of the interface u.
+func (t *rtype) Implements(u Type) bool {
+	if u == nil {
+		panic("reflect: nil type passed to Type.Implements")
+	}
+	if u.Kind() != Interface {
+		panic("reflect: non-interface type passed to Type.Implements")
+	}
+	return dart.DescImplements(t.handle(), u.handle())
+}
+
+// FieldByName gives the field of the name, and whether the struct holds it.
+func (t *rtype) FieldByName(name string) (StructField, bool) {
+	if t.Kind() != Struct {
+		panic("reflect: FieldByName of " + t.String())
+	}
+	i := dart.DescFieldByName(t.handle(), name)
+	if i < 0 {
+		return StructField{}, false
+	}
+	return t.Field(i), true
+}
+
+// CanSeq reports whether a range loop over a value of the type gives 1 value.
+func (t *rtype) CanSeq() bool {
+	switch t.Kind() {
+	case Int, Int8, Int16, Int32, Int64,
+		Uint, Uint8, Uint16, Uint32, Uint64, Uintptr,
+		Array, Slice, Chan, String, Map:
+		return true
+	case Func:
+		return t.NumIn() == 1 && t.NumOut() == 0
+	}
+	return false
+}
+
+// CanSeq2 reports whether a range loop over a value of the type gives 2 values.
+func (t *rtype) CanSeq2() bool {
+	switch t.Kind() {
+	case Array, Slice, String, Map:
+		return true
+	case Func:
+		return t.NumIn() == 1 && t.NumOut() == 0
+	}
+	return false
+}
+
+// The value operations that a template engine reads.
+
+// CanAddr reports whether Addr gives a pointer to the value.
+func (v Value) CanAddr() bool { return v.loc != locNone }
+
+// Addr gives a pointer to the value. The value must hold a location.
+func (v Value) Addr() Value {
+	if v.loc == locNone {
+		panic("reflect: Addr of a value that holds no address")
+	}
+	return Value{value: dart.ValueAddr(v.read(), v.owner, v.index, v.loc)}
+}
+
+// MethodByName gives the method of the name, bound to the value. A name that
+// no method holds gives the zero Value.
+func (v Value) MethodByName(name string) Value {
+	out := dart.MethodByName(v.read(), name)
+	if out == nil {
+		return Value{}
+	}
+	return Value{value: out}
+}
+
+// Equal reports whether the 2 values hold the same type and the same value.
+func (v Value) Equal(u Value) bool { return dart.ValueEqual(v.read(), u.read()) }
+
+// Convert gives the value converted to the type t.
+func (v Value) Convert(t Type) Value {
+	if t == nil {
+		panic("reflect: nil type passed to Value.Convert")
+	}
+	return Value{value: dart.ValueConvert(v.read(), t.handle())}
+}
+
+// CanConvert reports whether a conversion of the value to t holds.
+func (v Value) CanConvert(t Type) bool {
+	if t == nil {
+		return false
+	}
+	return v.Type().ConvertibleTo(t)
+}
+
+// Slice gives the slice v[i:j].
+func (v Value) Slice(i, j int) Value {
+	max := v.Cap()
+	if v.Kind() == String {
+		max = v.Len()
+	}
+	return Value{value: dart.ValueSlice(v.read(), i, j, max)}
+}
+
+// Slice3 gives the slice v[i:j:k].
+func (v Value) Slice3(i, j, k int) Value {
+	return Value{value: dart.ValueSlice(v.read(), i, j, k)}
+}
+
+// Complex gives the complex value.
+func (v Value) Complex() complex128 { return dart.AsComplex(v.read()) }
+
+// SetComplex writes a complex value through the location.
+func (v Value) SetComplex(x complex128) {
+	v.Set(Value{value: dart.WithComplex(v.descOf(), x)})
+}
+
+// Pointer gives a number that names the object of the value.
+//
+// Dart gives no machine address, thus the number is the identity of the object
+// and not an address. 2 reads of the same object give the same number, and the
+// number names no memory. Read docs/parity.md.
+func (v Value) Pointer() uintptr { return dart.ValuePointer(v.read()) }
+
+// UnsafePointer gives the same number as Pointer.
+func (v Value) UnsafePointer() uintptr { return v.Pointer() }
+
+// IsZero reports whether the value is the zero value of its type.
+func (v Value) IsZero() bool {
+	t := v.Type()
+	if t == nil {
+		return true
+	}
+	return dart.ValueEqual(v.read(), dart.DescZero(t.handle()))
+}
+
+// CanInterface reports whether Interface gives the value. Each value of the
+// overlay reads, thus the answer is always true.
+func (v Value) CanInterface() bool { return v.IsValid() }
+
+// FieldByName gives the field of the name. A name that no field holds gives
+// the zero Value.
+func (v Value) FieldByName(name string) Value {
+	f, ok := v.Type().FieldByName(name)
+	if !ok {
+		return Value{}
+	}
+	return v.Field(f.Index[0])
+}
+
+// FieldByIndex gives the field that each index of the path names.
+func (v Value) FieldByIndex(index []int) Value {
+	out := v
+	for i, x := range index {
+		if i > 0 && out.Kind() == Pointer {
+			out = out.Elem()
+		}
+		out = out.Field(x)
+	}
+	return out
+}
+
+// FieldByIndexErr does the same, and it gives an error for a nil pointer of
+// the path in place of a panic.
+func (v Value) FieldByIndexErr(index []int) (Value, error) {
+	out := v
+	for i, x := range index {
+		if i > 0 && out.Kind() == Pointer {
+			if out.IsNil() {
+				return Value{}, errNilField
+			}
+			out = out.Elem()
+		}
+		out = out.Field(x)
+	}
+	return out, nil
+}
+
+// errNilField names a nil pointer inside the path of FieldByIndexErr.
+var errNilField = errorText("reflect: indirection through a nil pointer to an embedded struct")
+
+// errorText is an error that holds 1 text. The overlay reads no errors
+// package, because that package reads no reflect and the surface keeps the 2
+// apart.
+type errorText string
+
+func (e errorText) Error() string { return string(e) }
+
+// A MapIter walks the pairs of a map.
+type MapIter struct {
+	keys []Value
+	m    Value
+	at   int
+}
+
+// MapRange gives an iterator of the pairs of a map.
+func (v Value) MapRange() *MapIter {
+	return &MapIter{keys: v.MapKeys(), m: v, at: -1}
+}
+
+// Next steps to the next pair, and it reports whether a pair stands there.
+func (it *MapIter) Next() bool {
+	it.at++
+	return it.at < len(it.keys)
+}
+
+// Key gives the key of the pair.
+func (it *MapIter) Key() Value { return it.keys[it.at] }
+
+// Value gives the value of the pair.
+func (it *MapIter) Value() Value { return it.m.MapIndex(it.keys[it.at]) }
+
+// Reset points the iterator at another map.
+func (it *MapIter) Reset(m Value) {
+	it.keys = m.MapKeys()
+	it.m = m
+	it.at = -1
+}
+
+// IsExported reports whether the field is exported.
+func (f StructField) IsExported() bool { return f.PkgPath == "" }
+
+// Recv reads 1 value of a channel. The flag is false when the channel closed.
+func (v Value) Recv() (Value, bool) {
+	out, ok := dart.ValueRecv(v.read())
+	return Value{value: out}, ok
+}
+
+// Seq gives a sequence of 1 value for each element.
+func (v Value) Seq() iter.Seq[Value] {
+	return func(yield func(Value) bool) {
+		switch v.Kind() {
+		case Int, Int8, Int16, Int32, Int64,
+			Uint, Uint8, Uint16, Uint32, Uint64, Uintptr:
+			for i := int64(0); i < v.Int(); i++ {
+				if !yield(Value{value: dart.WithInt(v.descOf(), i)}) {
+					return
+				}
+			}
+		case Slice, Array, String:
+			for i := range v.Len() {
+				if !yield(v.Index(i)) {
+					return
+				}
+			}
+		case Map:
+			for _, k := range v.MapKeys() {
+				if !yield(k) {
+					return
+				}
+			}
+		case Chan:
+			for {
+				got, ok := v.Recv()
+				if !ok {
+					return
+				}
+				if !yield(got) {
+					return
+				}
+			}
+		default:
+			panic("reflect: Seq of " + v.Type().String())
+		}
+	}
+}
+
+// Seq2 gives a sequence of 2 values for each element.
+func (v Value) Seq2() iter.Seq2[Value, Value] {
+	return func(yield func(Value, Value) bool) {
+		switch v.Kind() {
+		case Slice, Array, String:
+			for i := range v.Len() {
+				if !yield(Value{value: dart.WithInt(intDesc(), int64(i))}, v.Index(i)) {
+					return
+				}
+			}
+		case Map:
+			for _, k := range v.MapKeys() {
+				if !yield(k, v.MapIndex(k)) {
+					return
+				}
+			}
+		default:
+			panic("reflect: Seq2 of " + v.Type().String())
+		}
+	}
+}
+
+// intDesc gives the handle of the type int.
+func intDesc() int { return TypeOf(0).handle() }
