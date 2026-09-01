@@ -1,3 +1,5 @@
+import 'goint.dart';
+
 import 'iface.dart';
 import 'panic.dart';
 
@@ -156,4 +158,17 @@ void $clearSlice<T>(Slice<T> s, T Function() zero) {
   for (var i = 0; i < s.len; i++) {
     s[i] = zero();
   }
+}
+
+/// The Go byte slice of a plain int slice of the runtime. The native form
+/// shares the storage, because the element type erases there, and the JS
+/// form copies each element into a pair.
+Slice<GoInt> $gils(Slice<int> v) {
+  if ($isJS) {
+    final List<GoInt> out = <GoInt>[
+      for (var i = 0; i < v.len; i++) $gi(v.array[v.off + i]),
+    ];
+    return Slice.of(out);
+  }
+  return Slice<GoInt>(v.array as List<GoInt>, v.off, v.len, v.cap);
 }

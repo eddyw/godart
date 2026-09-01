@@ -6,6 +6,7 @@
 library;
 
 import 'box.dart';
+import 'goint.dart';
 import 'iface.dart';
 import 'map.dart';
 import 'panic.dart';
@@ -272,7 +273,7 @@ final TypeDesc _byteDesc = TypeDesc(
 int $asInt(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
-  if (v is int) return v;
+  if (v is GoInt) return $ix(v);
   $panic(
     Iface(
       $typeGoError,
@@ -286,7 +287,7 @@ double $asFloat(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
   if (v is double) return v;
-  if (v is int) return v.toDouble();
+  if (v is GoInt) return v.toDouble();
   $panic(
     Iface(
       $typeGoError,

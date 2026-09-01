@@ -74,8 +74,8 @@ void _moreTests() {
 
     test('a substring shares the storage', () {
       final s = GoString.fromString('godart');
-      expect($substring(s, 2, 6).toDartString(), 'dart');
-      expect(() => $substring(s, 0, 7), throwsA(isA<GoPanic>()));
+      expect($substring(s, $gi(2), $gi(6)).toDartString(), 'dart');
+      expect(() => $substring(s, $gi(0), $gi(7)), throwsA(isA<GoPanic>()));
     });
 
     test('a rune round trip keeps the text', () {
@@ -84,8 +84,8 @@ void _moreTests() {
     });
 
     test('decode reads 1 rune with its size', () {
-      expect($decodeRune(GoString.fromString('é'), 0), (0xE9, 2));
-      expect($decodeRune(GoString.fromBytes(<int>[0xFF]), 0), (0xFFFD, 1));
+      expect($decodeRuneRaw(GoString.fromString('é'), 0), (0xE9, 2));
+      expect($decodeRuneRaw(GoString.fromBytes(<int>[0xFF]), 0), (0xFFFD, 1));
     });
 
     test('decode rejects a sequence that Go rejects', () {
@@ -98,7 +98,7 @@ void _moreTests() {
         <int>[0xF4, 0x90, 0x80, 0x80],
         <int>[0xF8, 0x80, 0x80, 0x80],
       ]) {
-        expect($decodeRune(GoString.fromBytes(bytes), 0), (0xFFFD, 1));
+        expect($decodeRuneRaw(GoString.fromBytes(bytes), 0), (0xFFFD, 1));
       }
     });
 

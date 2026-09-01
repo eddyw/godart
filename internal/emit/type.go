@@ -56,7 +56,7 @@ func (e *emitter) dartType(t types.Type) string {
 		// A type set of integer types gives 1 Dart type. The dictionary holds
 		// the mask of the width and the order of the sign.
 		if set, ok := typeset.Describe(t); ok && set.Integer {
-			return "int"
+			return "GoInt"
 		}
 		return typeParamName(t)
 	case *types.Pointer:
@@ -119,7 +119,7 @@ func basicType(t *types.Basic) string {
 		return "GoComplex"
 	}
 	if t.Info()&types.IsInteger != 0 {
-		return "int"
+		return "GoInt"
 	}
 	return "Object?"
 }
@@ -195,7 +195,7 @@ func (e *emitter) zero(t types.Type) string {
 		case u.Info()&types.IsComplex != 0:
 			return "GoComplex.zero"
 		case u.Info()&types.IsInteger != 0:
-			return "0"
+			return "GoInt.zero"
 		}
 		return "null"
 	case *types.Slice:
@@ -292,7 +292,7 @@ func (e *emitter) typeParamBound(tp *types.TypeParam) string {
 			return ""
 		}
 		text := e.dartType(t)
-		if text != "int" && text != "double" {
+		if text != "GoInt" && text != "double" {
 			numeric = false
 		}
 		if dart == "" {
@@ -430,6 +430,9 @@ func (e *emitter) alloc(elem types.Type) string {
 	if tp, ok := types.Unalias(elem).(*types.TypeParam); ok {
 		return e.dictOf(tp) + ".alloc"
 	}
+	if fn := goList(elem); fn != "" {
+		return fn
+	}
 	if list := typedList(elem); list != "" {
 		return fmt.Sprintf("(n) => %s(n)", list)
 	}
@@ -437,7 +440,34 @@ func (e *emitter) alloc(elem types.Type) string {
 		e.dartType(elem), e.zero(elem))
 }
 
-// typedList gives the typed data list of a numeric element type. Such a list
+// goList gives the allocator of a Go integer element type. The native form
+// keeps the dense list of the width, and the JS form gives a plain list of
+// pairs, thus the caller cannot name the Dart class of the list.
+func goList(t types.Type) string {
+	b, ok := types.Unalias(t).Underlying().(*types.Basic)
+	if !ok || b.Info()&types.IsInteger == 0 {
+		return ""
+	}
+	switch b.Kind() {
+	case types.Int8:
+		return "$goList8"
+	case types.Int16:
+		return "$goList16"
+	case types.Int32:
+		return "$goList32"
+	case types.Uint8:
+		return "$goListU8"
+	case types.Uint16:
+		return "$goListU16"
+	case types.Uint32:
+		return "$goListU32"
+	case types.Uint, types.Uint64, types.Uintptr:
+		return "$goListU64"
+	}
+	return "$goList64"
+}
+
+// typedList gives the typed data list of a float element type. Such a list
 // holds the values without a box, thus it saves memory and time.
 func typedList(t types.Type) string {
 	b, ok := types.Unalias(t).Underlying().(*types.Basic)
@@ -445,22 +475,6 @@ func typedList(t types.Type) string {
 		return ""
 	}
 	switch b.Kind() {
-	case types.Int8:
-		return "Int8List"
-	case types.Int16:
-		return "Int16List"
-	case types.Int32:
-		return "Int32List"
-	case types.Int, types.Int64:
-		return "Int64List"
-	case types.Uint8:
-		return "Uint8List"
-	case types.Uint16:
-		return "Uint16List"
-	case types.Uint32:
-		return "Uint32List"
-	case types.Uint, types.Uint64, types.Uintptr:
-		return "Uint64List"
 	case types.Float32:
 		return "Float32List"
 	case types.Float64:

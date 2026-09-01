@@ -108,6 +108,10 @@ final class GoInt {
 
   double toDouble() => _b32 * $h + $l.toDouble();
 
+  /// The text in a radix. The signed value takes a minus sign, exactly as
+  /// int.toRadixString gives it.
+  String toRadixString(int radix) => _sbig(this).toRadixString(radix);
+
   @override
   String toString() {
     if ($h >= -2097152 && $h < 2097152) return $v.toString();
@@ -279,3 +283,34 @@ double $f32FromBits(GoInt b) {
   _bits.setUint32(0, b.$l);
   return _bits.getFloat32(0);
 }
+
+/// The plain Dart int of a Go integer, for an index, a length, or another
+/// value that a Dart API takes. A value outside 53 bits loses its low bits.
+int $ix(GoInt v) => v.$v;
+
+/// The Go integer of a double, with the truncation of Go. A double outside
+/// 53 bits is a multiple of a power of 2, thus the 2 halves stay exact.
+GoInt $fromF64(double v) {
+  final double t = v.truncateToDouble();
+  final double low = t % 4294967296;
+  return GoInt._(_s32(((t - low) / 4294967296).toInt()), low.toInt());
+}
+
+/// True inside the build of the JS target. The conditional import selects
+/// this file per target, thus the value is a constant of the file.
+const bool $isJS = true;
+
+/// The text of the 64-bit pattern of a Go integer in a radix, read as an
+/// unsigned value.
+String $uradix(GoInt v, int radix) => _ubig(v).toRadixString(radix);
+
+// The allocators of a Go integer slice. The pair form fits no dense list,
+// thus each width gives a plain list.
+List<GoInt> $goList8(int n) => List<GoInt>.filled(n, GoInt.zero);
+List<GoInt> $goList16(int n) => List<GoInt>.filled(n, GoInt.zero);
+List<GoInt> $goList32(int n) => List<GoInt>.filled(n, GoInt.zero);
+List<GoInt> $goList64(int n) => List<GoInt>.filled(n, GoInt.zero);
+List<GoInt> $goListU8(int n) => List<GoInt>.filled(n, GoInt.zero);
+List<GoInt> $goListU16(int n) => List<GoInt>.filled(n, GoInt.zero);
+List<GoInt> $goListU32(int n) => List<GoInt>.filled(n, GoInt.zero);
+List<GoInt> $goListU64(int n) => List<GoInt>.filled(n, GoInt.zero);

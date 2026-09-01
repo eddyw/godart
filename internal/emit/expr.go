@@ -69,7 +69,7 @@ func (e *emitter) expr(x ir.Expr) string {
 	case *ir.SelectList:
 		return e.selectList(x)
 	case *ir.SelectRun:
-		return fmt.Sprintf("$select(%s, %t)", e.expr(x.List), x.HasDefault)
+		return fmt.Sprintf("$gi($select(%s, %t))", e.expr(x.List), x.HasDefault)
 	case *ir.Record:
 		parts := make([]string, len(x.Elems))
 		for i, el := range x.Elems {
@@ -201,21 +201,23 @@ func complexConst(v constant.Value, t types.Type) string {
 	return fmt.Sprintf("GoComplex(%s, %s)", floatConst(re), floatConst(im))
 }
 
+// intConst writes a Go integer constant. A JS number holds 53 bits of an
+// integer, thus a value outside that range takes the form of 2 32-bit
+// halves, and each other value takes the plain form.
 func intConst(v constant.Value, t types.Type) string {
 	i := constant.ToInt(v)
-	if n, ok := constant.Int64Val(i); ok {
-		if n < 0 {
-			return "(" + strconv.FormatInt(n, 10) + ")"
-		}
-		return strconv.FormatInt(n, 10)
-	}
-	if n, ok := constant.Uint64Val(i); ok {
+	n, ok := constant.Int64Val(i)
+	if !ok {
 		// A value above the range of int64 keeps its 64 bit pattern. Dart
 		// reads the pattern as a negative number, and the unsigned helpers
 		// give the Go result.
-		return strconv.FormatInt(int64(n), 10)
+		u, _ := constant.Uint64Val(i)
+		n = int64(u)
 	}
-	return "0"
+	if n > -(1<<53) && n < 1<<53 {
+		return "$gi(" + strconv.FormatInt(n, 10) + ")"
+	}
+	return fmt.Sprintf("$gi2(%d, %d)", int32(n>>32), int64(uint32(n)))
 }
 
 func floatConst(f float64) string {
@@ -300,17 +302,20 @@ func (e *emitter) index(x *ir.Index) string {
 	if isMapType(container) {
 		return fmt.Sprintf("%s.get(%s)", e.expr(x.X), e.expr(x.Index))
 	}
+	if isString(container) {
+		return fmt.Sprintf("%s.$at(%s)", e.expr(x.X), e.expr(x.Index))
+	}
 	// The type argument stands in the text. Dart reads the context of the
 	// expression for it, and an operand of `-` gives `num`.
 	if isPointerType(container) {
-		return fmt.Sprintf("$arrayIndex<%s>(%s, %s)",
+		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s))",
 			e.dartType(x.Type), e.derefRead(x.X), e.expr(x.Index))
 	}
 	if isArrayType(container) {
-		return fmt.Sprintf("$arrayIndex<%s>(%s, %s)",
+		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s))",
 			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index))
 	}
-	return fmt.Sprintf("%s[%s]", e.expr(x.X), e.expr(x.Index))
+	return fmt.Sprintf("%s[$ix(%s)]", e.expr(x.X), e.expr(x.Index))
 }
 
 // indexTarget gives the start of a write into an array. The result is empty
@@ -318,11 +323,11 @@ func (e *emitter) index(x *ir.Index) string {
 func (e *emitter) indexTarget(x *ir.Index) string {
 	container := x.X.GoType()
 	if isPointerType(container) {
-		return fmt.Sprintf("$arraySet<%s>(%s, %s",
+		return fmt.Sprintf("$arraySet<%s>(%s, $ix(%s)",
 			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index))
 	}
 	if isArrayType(container) {
-		return fmt.Sprintf("$arraySet<%s>(%s, %s",
+		return fmt.Sprintf("$arraySet<%s>(%s, $ix(%s)",
 			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index))
 	}
 	return ""
@@ -339,13 +344,13 @@ func (e *emitter) assignArray(dst string, t types.Type, value string) string {
 func (e *emitter) sliceExpr(x *ir.Slice) string {
 	low := "0"
 	if x.Low != nil {
-		low = e.expr(x.Low)
+		low = "$ix(" + e.expr(x.Low) + ")"
 	}
 	source := x.X.GoType()
 	if isString(source) {
 		high := fmt.Sprintf("%s.length", e.expr(x.X))
 		if x.High != nil {
-			high = e.expr(x.High)
+			high = "$ix(" + e.expr(x.High) + ")"
 		}
 		return fmt.Sprintf("$substring(%s, %s, %s)", e.expr(x.X), low, high)
 	}
@@ -356,11 +361,11 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		}
 		high := fmt.Sprintf("%s.length", text)
 		if x.High != nil {
-			high = e.expr(x.High)
+			high = "$ix(" + e.expr(x.High) + ")"
 		}
 		max := fmt.Sprintf("%s.length", text)
 		if x.Max != nil {
-			max = e.expr(x.Max)
+			max = "$ix(" + e.expr(x.Max) + ")"
 		}
 		return fmt.Sprintf("Slice(%s, 0, %s, %s).range(%s, %s, %s)",
 			text, max, max, low, high, max)
@@ -368,11 +373,11 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 	x0 := e.expr(x.X)
 	high := fmt.Sprintf("%s.len", x0)
 	if x.High != nil {
-		high = e.expr(x.High)
+		high = "$ix(" + e.expr(x.High) + ")"
 	}
 	max := fmt.Sprintf("%s.cap", x0)
 	if x.Max != nil {
-		max = e.expr(x.Max)
+		max = "$ix(" + e.expr(x.Max) + ")"
 	}
 	return fmt.Sprintf("%s.range(%s, %s, %s)", x0, low, high, max)
 }
@@ -520,7 +525,7 @@ func (e *emitter) shiftCount(y ir.Expr) string {
 	}
 	i := constant.ToInt(c.Value)
 	if constant.Compare(i, token.GEQ, constant.MakeInt64(64)) {
-		return "64"
+		return "$gi(64)"
 	}
 	if isFloat(c.Type) || isComplexType(c.Type) {
 		return intConst(c.Value, types.Typ[types.Int])

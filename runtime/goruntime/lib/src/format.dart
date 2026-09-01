@@ -1,7 +1,7 @@
 import 'box.dart';
 import 'complex.dart';
+import 'goint.dart';
 import 'iface.dart';
-import 'int.dart';
 import 'map.dart';
 import 'panic.dart';
 import 'print.dart';
@@ -244,7 +244,7 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'uint64':
     case 'uintptr':
       return _sign(
-        _base(_int(v as int, letter, true), verb, letter),
+        _base(_int(v as GoInt, letter, true), verb, letter),
         plus,
         letter,
       );
@@ -257,7 +257,7 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'uint16':
     case 'uint32':
       return _sign(
-        _base(_int(v as int, letter, false), verb, letter),
+        _base(_int(v as GoInt, letter, false), verb, letter),
         plus,
         letter,
       );
@@ -322,7 +322,7 @@ String _string(GoString v, String letter) {
   return '%!$letter(string=${v.toDartString()})';
 }
 
-String _int(int v, String letter, bool unsigned) {
+String _int(GoInt v, String letter, bool unsigned) {
   switch (letter) {
     case 'v':
     case 'd':
@@ -332,13 +332,9 @@ String _int(int v, String letter, bool unsigned) {
     case 'X':
       return _hexInt(v, unsigned, true);
     case 'b':
-      return v < 0 && !unsigned
-          ? '-${(-v).toRadixString(2)}'
-          : v.toRadixString(2);
+      return _radix(v, 2, unsigned);
     case 'o':
-      return v < 0 && !unsigned
-          ? '-${(-v).toRadixString(8)}'
-          : v.toRadixString(8);
+      return _radix(v, 8, unsigned);
     case 'c':
       return $runeToString(v).toDartString();
     case 'q':
@@ -349,6 +345,14 @@ String _int(int v, String letter, bool unsigned) {
       return _float(v.toDouble(), letter, -1, false);
   }
   return '%!$letter(int=$v)';
+}
+
+/// The text of an integer in a radix. An unsigned value reads its 64-bit
+/// pattern, and a negative signed value takes a minus sign.
+String _radix(GoInt v, int radix, bool unsigned) {
+  if (unsigned) return $uradix(v, radix);
+  if (v < GoInt.zero) return '-${$uradix(-v, radix)}';
+  return $uradix(v, radix);
 }
 
 /// The text of a 32-bit float, in the format of Go.
@@ -412,15 +416,8 @@ String _exponent(double v, int digits) {
   return '$sign${text.substring(0, e)}e$exponentSign$pad';
 }
 
-String _hexInt(int v, bool unsigned, bool upper) {
-  String text;
-  if (v < 0 && !unsigned) {
-    text = '-${(-v).toRadixString(16)}';
-  } else if (v < 0) {
-    text = (v.toUnsigned(64)).toRadixString(16);
-  } else {
-    text = v.toRadixString(16);
-  }
+String _hexInt(GoInt v, bool unsigned, bool upper) {
+  final String text = _radix(v, 16, unsigned);
   return upper ? text.toUpperCase() : text;
 }
 
@@ -437,7 +434,7 @@ String _quote(GoString v) {
   final StringBuffer out = StringBuffer('"');
   int at = 0;
   while (at < v.length) {
-    final (int r, int size) = $decodeRune(v, at);
+    final (int r, int size) = $decodeRuneRaw(v, at);
     at += size;
     // Go writes the escape of a byte that holds no rune of UTF-8.
     if (r == 0xFFFD && size == 1) {
@@ -488,7 +485,7 @@ String _list(List<Object?> items, TypeDesc? elem, String verb) {
   if (elem != null && elem.kind == 'uint8' && _textVerb(letter)) {
     final List<int> bytes = <int>[];
     for (final Object? item in items) {
-      bytes.add((item as int) & 0xff);
+      bytes.add($ix(item as GoInt) & 0xff);
     }
     return _string(GoString.fromBytes(bytes), letter);
   }

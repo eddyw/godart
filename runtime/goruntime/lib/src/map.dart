@@ -117,13 +117,14 @@ final class GoMap<K, V> {
   /// A fresh hash for a NaN key. Each NaN entry stands alone, thus 1 shared
   /// hash would put each one into 1 bucket, and the map would grow in square
   /// time. The Go runtime also spreads NaN with random bits. A NaN key never
-  /// reads back, thus the lookup needs no stable hash.
+  /// reads back, thus the lookup needs no stable hash. Each step stays under
+  /// 53 bits, thus the JS target computes the same walk.
   static int nanHash() {
-    _nanSeed = _nanSeed * 6364136223846793005 + 1442695040888963407;
-    return _nanSeed >>> 33;
+    _nanSeed = (_nanSeed * 69069 + 12345) & 0xFFFFFF;
+    return _nanSeed;
   }
 
-  static int _nanSeed = 0x9e3779b97f4a7c15;
+  static int _nanSeed = 0x5F491;
 
   /// The keys, in the order of the writes. The format code, the json code,
   /// and the reflect code read this list. A range loop takes [GoMapIter].

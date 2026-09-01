@@ -689,7 +689,9 @@ func (e *emitter) decl(d ir.Decl) {
 func (e *emitter) constDecl(d *ir.ConstDecl) {
 	value := e.constant(d.Value, d.Type)
 	keyword := "const"
-	if isString(d.Type) {
+	// A string builds its bytes, and a Go integer builds its form at the
+	// first read, thus the 2 kinds take a lazy final.
+	if isString(d.Type) || isInteger(d.Type) || isComplexType(d.Type) {
 		keyword = "final"
 	}
 	e.line("%s %s %s = %s;", keyword, e.dartType(d.Type), e.topName(e.pkg, d.Name), value)

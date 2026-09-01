@@ -387,9 +387,17 @@ compiler, per the web decision of 2026-09-01. `dart compile wasm bin/main.dart`
 compiles a pure program, and the output runs under node through the loader
 that the Dart compiler writes. `TestWasm` of the driver proves it.
 
+`dart compile js` also compiles a pure program since 2026-09-01. The Go
+integer of the emitted code is the type GoInt, and the JS build selects the
+pair form of GopherJS, thus the 64-bit model holds there too. `TestJS` of the
+driver proves it under node, and `docs/js-integers.md` holds the build and
+the gaps of the JS target: a mixed numeric type set, the 53-bit reads of
+reflect and json, and the rounded nanosecond clock.
+
 | Item | Go | godart |
 |---|---|---|
 | A pure program on wasm | Compiles with GOOS=js GOARCH=wasm | Compiles with `dart compile wasm`. The 64-bit integer model holds. |
+| A pure program on dart2js | Compiles with GOOS=js | Compiles with `dart compile js`. The pair form of GoInt keeps the 64-bit model. |
 | A program that reaches a file or a socket | Compiles, and the call fails at run time | Fails in the Dart compile, with the name of the missing function |
 | `runtime.GOOS` on the web | `js` | Equal |
 | `print` and `fmt` on the web | Standard output and standard error | The console of the host, 1 line for each call, thus a write without a newline waits in a buffer |

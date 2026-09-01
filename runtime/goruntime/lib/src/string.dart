@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'goint.dart';
 import 'panic.dart';
 import 'slice.dart';
 
@@ -40,6 +41,9 @@ final class GoString {
     if (i < 0 || i >= bytes.length) $panicIndex(i, bytes.length);
     return bytes[i];
   }
+
+  /// The byte at a Go index, as a Go integer. The emitted code reads it.
+  GoInt $at(GoInt i) => $gi(this[$ix(i)]);
 
   /// Decodes the bytes as UTF-8.
   ///
@@ -110,20 +114,30 @@ GoString $substring(GoString s, int low, int high) {
   );
 }
 
-/// The Go conversion `[]byte(s)`. Go copies the bytes.
-Slice<int> $stringToBytes(GoString s) => Slice.of(Uint8List.fromList(s.bytes));
+/// The Go conversion `[]byte(s)`. Go copies the bytes. The native form keeps
+/// the dense byte list, because the list type erases there.
+Slice<GoInt> $stringToBytes(GoString s) {
+  if ($isJS) {
+    return Slice.of(<GoInt>[for (final b in s.bytes) $gi(b)]);
+  }
+  return Slice.of(Uint8List.fromList(s.bytes) as List<GoInt>);
+}
 
 /// The Go conversion `string(b)` for a byte slice.
-GoString $bytesToString(Slice<int> b) {
+GoString $bytesToString(Slice<GoInt> b) {
   final out = Uint8List(b.len);
   for (var i = 0; i < b.len; i++) {
-    out[i] = b.array[b.off + i];
+    out[i] = $ix(b.array[b.off + i]);
   }
   return GoString.take(out);
 }
 
 /// The Go conversion `string(r)` for 1 rune.
-GoString $runeToString(int rune) {
+GoString $runeToString(GoInt goRune) {
+  return _runeToString($ix(goRune));
+}
+
+GoString _runeToString(int rune) {
   if (rune < 0 || rune > 0x10FFFF || (rune >= 0xD800 && rune <= 0xDFFF)) {
     rune = 0xFFFD;
   }
@@ -153,22 +167,25 @@ GoString $runeToString(int rune) {
 }
 
 /// The Go conversion `[]rune(s)`.
-Slice<int> $stringToRunes(GoString s) {
+Slice<GoInt> $stringToRunes(GoString s) {
   final out = <int>[];
   var i = 0;
   while (i < s.length) {
-    final (int rune, int size) = $decodeRune(s, i);
+    final (int rune, int size) = $decodeRuneRaw(s, i);
     out.add(rune);
     i += size;
   }
-  return Slice.of(Int32List.fromList(out));
+  if ($isJS) {
+    return Slice.of(<GoInt>[for (final r in out) $gi(r)]);
+  }
+  return Slice.of(Int32List.fromList(out) as List<GoInt>);
 }
 
 /// The Go conversion `string(r)` for a rune slice.
-GoString $runesToString(Slice<int> runes) {
+GoString $runesToString(Slice<GoInt> runes) {
   var out = GoString.empty;
   for (var i = 0; i < runes.len; i++) {
-    out = $concat(out, $runeToString(runes.array[runes.off + i]));
+    out = $concat(out, _runeToString($ix(runes.array[runes.off + i])));
   }
   return out;
 }
@@ -176,7 +193,12 @@ GoString $runesToString(Slice<int> runes) {
 /// Reads 1 UTF-8 rune at a byte index. An invalid sequence gives U+FFFD with
 /// a size of 1, exactly as a Go range loop does. An overlong sequence, a
 /// surrogate, and a value above U+10FFFF are each invalid.
-(int, int) $decodeRune(GoString s, int i) {
+(GoInt, GoInt) $decodeRune(GoString s, GoInt i) {
+  final (int rune, int size) = $decodeRuneRaw(s, $ix(i));
+  return ($gi(rune), $gi(size));
+}
+
+(int, int) $decodeRuneRaw(GoString s, int i) {
   final b = s.bytes;
   final int b0 = b[i];
   if (b0 < 0x80) return (b0, 1);
@@ -221,7 +243,7 @@ String _escape(GoString s) {
   final StringBuffer out = StringBuffer();
   var i = 0;
   while (i < s.bytes.length) {
-    final (int rune, int size) = $decodeRune(s, i);
+    final (int rune, int size) = $decodeRuneRaw(s, i);
     if (rune == 0xFFFD && size == 1) {
       out.writeCharCode(_escapeBase | s.bytes[i]);
     } else {
@@ -266,6 +288,7 @@ List<int> _encode(String s) {
 /// string compares by bytes.
 Object? $minOf(Object? a, Object? b) {
   if (a is GoString) return $compare(a, b as GoString) <= 0 ? a : b;
+  if (a is GoInt) return a <= (b as GoInt) ? a : b;
   if (a is double && a.isNaN) return a;
   if (b is double && b.isNaN) return b;
   return (a as num) <= (b as num) ? a : b;
@@ -274,13 +297,14 @@ Object? $minOf(Object? a, Object? b) {
 /// The larger of 2 values, in the order of Go.
 Object? $maxOf(Object? a, Object? b) {
   if (a is GoString) return $compare(a, b as GoString) >= 0 ? a : b;
+  if (a is GoInt) return a >= (b as GoInt) ? a : b;
   if (a is double && a.isNaN) return a;
   if (b is double && b.isNaN) return b;
   return (a as num) >= (b as num) ? a : b;
 }
 
 /// The spread of a value of a union of a string and a byte slice.
-Slice<int> $spreadBytes(Object? v) {
+Slice<GoInt> $spreadBytes(Object? v) {
   if (v is GoString) return $stringToBytes(v);
-  return v as Slice<int>;
+  return v as Slice<GoInt>;
 }

@@ -130,7 +130,86 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 	if !ok || fn.Pkg() == nil || !overlay.Intrinsic(fn.Pkg().Path()) {
 		return "", false
 	}
-	switch fn.Name() {
+	// The boundary of the interop: each Go integer argument becomes a plain
+	// Dart int, and each integer result comes back as a Go integer. Thus the
+	// runtime library keeps the plain int inside. The raw set opts out: the
+	// float bit functions carry a 64-bit pattern that a JS number cannot
+	// hold, and the worker carries a function value of byte slices.
+	sig, _ := fn.Type().(*types.Signature)
+	raw := intrinsicRaw[fn.Name()]
+	if !raw && sig != nil {
+		for i := range args {
+			if i < sig.Params().Len() && isInteger(sig.Params().At(i).Type()) {
+				args[i] = "$ix(" + args[i] + ")"
+			}
+		}
+	}
+	text, ok := e.intrinsicText(fn.Name(), args)
+	if !ok {
+		return "", false
+	}
+	if !raw && sig != nil {
+		text = e.goIntResult(text, sig.Results())
+	}
+	return text, true
+}
+
+// intrinsicRaw lists each interop function whose boundary the mapped text
+// handles itself.
+var intrinsicRaw = map[string]bool{
+	"Float64Bits":     true,
+	"Float64FromBits": true,
+	"Float32Bits":     true,
+	"Float32FromBits": true,
+	"Worker":          true,
+}
+
+// goIntResult wraps the integer results of an interop call. A single integer
+// takes $gi, a byte slice takes $gils, and a tuple with such a member reads
+// each member through a small closure.
+func (e *emitter) goIntResult(text string, rs *types.Tuple) string {
+	member := func(t types.Type, text string) (string, bool) {
+		if isInteger(t) {
+			return "$gi(" + text + ")", true
+		}
+		if slice, ok := types.Unalias(t).Underlying().(*types.Slice); ok && isInteger(slice.Elem()) {
+			return "$gils(" + text + ")", true
+		}
+		return text, false
+	}
+	switch rs.Len() {
+	case 0:
+		return text
+	case 1:
+		out, _ := member(rs.At(0).Type(), text)
+		return out
+	}
+	needs := false
+	parts := make([]string, rs.Len())
+	raw := make([]string, rs.Len())
+	for i := 0; i < rs.Len(); i++ {
+		t := rs.At(i).Type()
+		out, changed := member(t, fmt.Sprintf("$r.$%d", i+1))
+		parts[i] = out
+		if changed {
+			needs = true
+		}
+		raw[i] = e.dartType(t)
+		if isInteger(t) {
+			raw[i] = "int"
+		} else if slice, ok := types.Unalias(t).Underlying().(*types.Slice); ok && isInteger(slice.Elem()) {
+			raw[i] = "Slice<int>"
+		}
+	}
+	if !needs {
+		return text
+	}
+	return fmt.Sprintf("(((%s) $r) => (%s))(%s)",
+		strings.Join(raw, ", "), strings.Join(parts, ", "), text)
+}
+
+func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
+	switch name {
 	case "Print":
 		return fmt.Sprintf("$stdout(%s)", args[0]), true
 	case "Format":
@@ -403,7 +482,7 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 	case "SliceSwap":
 		return fmt.Sprintf("$swap(%s, %s, %s)", args[0], args[1], args[2]), true
 	}
-	e.fail("the interop function %s has no runtime form", fn.Name())
+	e.fail("the interop function %s has no runtime form", name)
 	return "null", true
 }
 
@@ -864,7 +943,7 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 	case "append":
 		return e.appendCall(x)
 	case "copy":
-		return e.copyCall(x)
+		return "$gi(" + e.copyCall(x) + ")"
 	case "make":
 		return e.makeCall(x)
 	case "new":
@@ -920,15 +999,15 @@ func (e *emitter) length(x ir.Expr) string {
 	t := x.GoType()
 	switch {
 	case isString(t):
-		return e.expr(x) + ".length"
+		return "$gi(" + e.expr(x) + ".length)"
 	case isSliceType(t):
-		return e.expr(x) + ".len"
+		return "$gi(" + e.expr(x) + ".len)"
 	case isArrayType(t):
-		return e.expr(x) + ".length"
+		return "$gi(" + e.expr(x) + ".length)"
 	case isMapType(t):
-		return e.expr(x) + ".length"
+		return "$gi(" + e.expr(x) + ".length)"
 	case isChanType(t):
-		return e.expr(x) + ".length"
+		return "$gi(" + e.expr(x) + ".length)"
 	case isPointerType(t):
 		// The length of a pointer to an array comes from the type, and Go
 		// evaluates the operand for a constant length in no case, thus a nil
@@ -936,10 +1015,10 @@ func (e *emitter) length(x ir.Expr) string {
 		// the operand.
 		if p, ok := typeset.Core(t).(*types.Pointer); ok {
 			if arr, ok := types.Unalias(p.Elem()).Underlying().(*types.Array); ok {
-				return fmt.Sprintf("((Object? $p) => %d)(%s)", arr.Len(), e.expr(x))
+				return fmt.Sprintf("((Object? $p) => $gi(%d))(%s)", arr.Len(), e.expr(x))
 			}
 		}
-		return e.deref(x) + ".length"
+		return "$gi(" + e.deref(x) + ".length)"
 	}
 	e.fail("len does not apply to the type %s", t)
 	return "0"
@@ -949,19 +1028,19 @@ func (e *emitter) capacity(x ir.Expr) string {
 	t := x.GoType()
 	switch {
 	case isSliceType(t):
-		return e.expr(x) + ".cap"
+		return "$gi(" + e.expr(x) + ".cap)"
 	case isArrayType(t):
-		return e.expr(x) + ".length"
+		return "$gi(" + e.expr(x) + ".length)"
 	case isChanType(t):
-		return e.expr(x) + ".capacity"
+		return "$gi(" + e.expr(x) + ".capacity)"
 	case isPointerType(t):
 		// Read the note of length: the value comes from the type.
 		if p, ok := typeset.Core(t).(*types.Pointer); ok {
 			if arr, ok := types.Unalias(p.Elem()).Underlying().(*types.Array); ok {
-				return fmt.Sprintf("((Object? $p) => %d)(%s)", arr.Len(), e.expr(x))
+				return fmt.Sprintf("((Object? $p) => $gi(%d))(%s)", arr.Len(), e.expr(x))
 			}
 		}
-		return e.deref(x) + ".length"
+		return "$gi(" + e.deref(x) + ".length)"
 	}
 	e.fail("cap does not apply to the type %s", t)
 	return "0"
@@ -1087,7 +1166,7 @@ func (e *emitter) makeCall(x *ir.Builtin) string {
 	case *types.Slice:
 		length := "0"
 		if len(x.Args) > 0 {
-			length = e.expr(x.Args[0])
+			length = "$ix(" + e.expr(x.Args[0]) + ")"
 		}
 		// A make with no capacity reads its length expression 1 time, because
 		// the expression can hold a side effect.
@@ -1095,14 +1174,14 @@ func (e *emitter) makeCall(x *ir.Builtin) string {
 			return fmt.Sprintf("$makeSliceN<%s>(%s, %s)",
 				e.dartType(u.Elem()), length, e.alloc(u.Elem()))
 		}
-		return fmt.Sprintf("$makeSlice<%s>(%s, %s, %s)",
+		return fmt.Sprintf("$makeSlice<%s>(%s, $ix(%s), %s)",
 			e.dartType(u.Elem()), length, e.expr(x.Args[1]), e.alloc(u.Elem()))
 	case *types.Map:
 		return e.mapNew(u)
 	case *types.Chan:
 		capacity := "0"
 		if len(x.Args) > 0 {
-			capacity = e.expr(x.Args[0])
+			capacity = "$ix(" + e.expr(x.Args[0]) + ")"
 		}
 		return fmt.Sprintf("Chan<%s>(%s, () => %s)",
 			e.dartType(u.Elem()), capacity, e.zero(u.Elem()))
@@ -1208,7 +1287,7 @@ func (e *emitter) conv(x *ir.Conv) string {
 		}
 		return e.narrow(to, fmt.Sprintf("%s.toDouble()", text))
 	case isInteger(to) && isFloat(from):
-		return e.narrow(to, fmt.Sprintf("%s.toInt()", text))
+		return e.narrow(to, fmt.Sprintf("$fromF64(%s)", text))
 	case isFloat(to) && isFloat(from):
 		return e.narrow(to, text)
 	case isComplexType(to) && isComplexType(from):

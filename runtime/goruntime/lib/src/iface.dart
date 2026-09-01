@@ -1,5 +1,6 @@
 import 'complex.dart';
 import 'dict.dart';
+import 'goint.dart';
 import 'panic.dart';
 import 'string.dart';
 
@@ -164,7 +165,7 @@ bool $goEqual(Object? a, Object? b, TypeDesc d) {
 
 /// The zero value of a predeclared type. A tear-off of a top level function is
 /// a constant expression of Dart, thus each descriptor below stays const.
-Object? $zeroInt() => 0;
+Object? $zeroInt() => GoInt.zero;
 Object? $zeroFloat() => 0.0;
 Object? $zeroBool() => false;
 Object? $zeroString() => GoString.empty;

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'box.dart';
+import 'goint.dart';
 import 'iface.dart';
 import 'map.dart';
 import 'slice.dart';
@@ -68,7 +69,7 @@ Object? _value(TypeDesc desc, Object? value) {
     case 'interface':
       return _tree(value as Iface?);
   }
-  if (value is int) return value;
+  if (value is GoInt) return $ix(value);
   throw _JsonCause('json: unsupported type: ${desc.display}');
 }
 
@@ -143,7 +144,7 @@ Map<String, Object?> _map(TypeDesc desc, GoMap<Object?, Object?> m) {
 
 String _keyText(TypeDesc key, Object? k) {
   if (key.kind == 'string') return (k as GoString).toDartString();
-  if (k is int) return k.toString();
+  if (k is GoInt) return k.toString();
   throw _JsonCause('json: unsupported map key type: ${key.display}');
 }
 
@@ -208,7 +209,7 @@ bool _empty(TypeDesc desc, Object? v) {
     case 'map':
       return (v as GoMap<Object?, Object?>).length == 0;
   }
-  return v is int && v == 0;
+  return v is GoInt && v == GoInt.zero;
 }
 
 /// Reads the JSON form into a Go value.

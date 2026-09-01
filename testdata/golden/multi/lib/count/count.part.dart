@@ -6,15 +6,15 @@
 
 part of '../count.dart';
 
-int Runes(GoString text) {
-  int n = 0;
+GoInt Runes(GoString text) {
+  GoInt n = $gi(0);
   GoString $range6_12 = text;
-  int $i6_2 = 0;
-  int $size6_2 = 0;
-  int $rune6_2 = 0;
-  for (; ($i6_2 < $range6_12.length); $i6_2 = ($i6_2 + $size6_2)) {
+  GoInt $i6_2 = $gi(0);
+  GoInt $size6_2 = $gi(0);
+  GoInt $rune6_2 = $gi(0);
+  for (; ($i6_2 < $gi($range6_12.length)); $i6_2 = ($i6_2 + $size6_2)) {
     ($rune6_2, $size6_2) = $decodeRune($range6_12, $i6_2);
-    n = (n + 1);
+    n = (n + $gi(1));
   }
   return n;
 }

@@ -15,6 +15,7 @@ export 'src/complex.dart';
 export 'src/dict.dart';
 export 'src/file.dart' if (dart.library.js_interop) 'src/file_web.dart';
 export 'src/format.dart';
+export 'src/goint.dart';
 export 'src/http2.dart' if (dart.library.js_interop) 'src/http2_web.dart';
 export 'src/iface.dart';
 export 'src/int.dart';

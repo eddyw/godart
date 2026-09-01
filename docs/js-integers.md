@@ -1,121 +1,109 @@
-# The design of the JS integer
+# The Go integer of the JS target
 
-The status: a design, with no code. The user set the order on 2026-09-01: the
-JS target comes after the package coverage, the parity work, and the wasm
-target. This doc holds the design, thus the work can start in a later session
-with no new survey.
+The status: built, on 2026-09-01. The design of decision 209 stands, and
+decision 214 holds the build. `TestJS` of `internal/driver` proves 1 program
+of 64-bit work under node, byte-equal with `go run`.
 
 ## The problem
 
 A Go int holds 64 bits. A Dart int holds 64 bits on the VM, with AOT, and on
-the wasm target. The check of 2026-09-01 proved the wasm case: a wrap test
-with `1 << 62` doubled, `(-1) >>> 40`, and an FNV multiply gave the values of
-the VM under node (read `docs/history.md`).
+the wasm target. dart2js maps an int to a JS number, which is a 64-bit float
+with 53 bits of an integer. An overflow does not wrap, a shift by 32 or more
+drops bits, and a multiply of 2 large values rounds. Each difference is a
+silent change of meaning, and the project rejects such a change.
 
-The JS target differs. dart2js maps an int to a JS number, which is a 64-bit
-float. Such a number holds 53 bits of an integer. An overflow does not wrap,
-a shift by 32 or more drops bits, and a multiply of 2 large values rounds.
-Each of these differences is a silent change of meaning, and the project
-rejects such a change. Thus no program of the compiler targets dart2js today,
-and this design names the path.
+## The model
 
-## The reference model: GopherJS
-
-GopherJS compiles Go to JS, and it holds a proven 64-bit model. A 64-bit
-value is a pair of 32-bit halves, `{ high, low }`. Each operation reads the
-halves, computes with 32-bit steps, and writes a pair. A multiply splits each
-half again into 16-bit parts, because a JS multiply of 2 values over 2^26
-rounds. A division goes through a float when the operands fit 53 bits, and
-through a loop of shifts when they do not.
-
-The model costs about 5 to 20 times a plain JS operation. GopherJS pays that
-cost only for `int64`, `uint64`, and `uintptr`. It maps `int`, `int32`, and
-the smaller widths to a plain JS number with a mask, because 32 bits fit a JS
-number exactly. godart cannot split the widths this way: the subset gives
-`int` 64 bits, and the emitted code holds 1 Dart int type for each width.
-
-## The design: 1 integer type behind a conditional import
-
-The emitted code names a type `GoInt` in place of the Dart `int`. The runtime
-library holds 2 forms of it, and a conditional import selects 1:
+The emitted code names the type `GoInt` in place of the Dart `int`. The
+runtime holds 2 forms of 1 surface, and a conditional export selects 1:
 
 ```dart
-// goruntime.dart
-export 'src/goint_native.dart' if (dart.library.js) 'src/goint_js.dart';
+// goint.dart
+export 'goint_native.dart' if (dart.library.js) 'goint_js.dart';
 ```
+
+`dart.library.js` separates dart2js from the wasm target: dart2js holds the
+old dart:js library, and dart2wasm does not.
 
 ### The native form
 
 `goint_native.dart` holds an extension type over the Dart int:
 
 ```dart
-extension type const GoInt(int $v) implements int {}
+extension type const GoInt(int $v) implements int { ... }
 ```
 
-An extension type erases at the compile: the VM, AOT, and the wasm target see
-a plain int, thus the 3 targets pay nothing. The clause `implements int`
-gives the type each int operator, thus the emitted arithmetic stays a plain
-Dart operation, and the output of the 3 targets keeps its speed and its
-meaning. Goal G5 also holds: the output text is equal for each target,
-because the target selects the library and not the code.
+The extension type erases at the compile, thus the VM, AOT, and the wasm
+target see a plain int, and the emitted arithmetic costs nothing. The form
+redeclares `+ - * & | ^ ~` and the unary minus, thus the result type stays
+GoInt. Goal G5 holds: the output text is equal for each target, because the
+target selects the library and not the code.
 
 ### The JS form
 
-`goint_js.dart` holds the pair form, in the model of GopherJS:
+`goint_js.dart` holds the pair of GopherJS: a signed high half and an
+unsigned low half, each of 32 bits. Each step stays under 53 bits, thus each
+step is exact in a JS number. The multiply splits each half into 16-bit
+parts. The division, the remainder, and the decimal text ride BigInt,
+because they are rare next to the other operations, and the BigInt of Dart
+is exact on dart2js. A bitwise operation of dart2js gives an unsigned 32-bit
+result, thus each half normalizes after the operation.
 
-```dart
-final class GoInt {
-  final int $high; // 32 bits, as a JS number
-  final int $low;  // 32 bits, as a JS number
-  const GoInt.pair(this.$high, this.$low);
-  GoInt operator +(GoInt o) { ... }
-  ...
-}
-```
+## The surface
 
-The class holds the operators `+ - * ~/ % & | ^ << >> >>> ~ unary-`, the
-comparisons, `toDouble`, `toString`, and the constructors of the runtime
-helpers. The multiply and the division take the 16-bit split of GopherJS.
+The 2 forms hold 1 surface, and the emitted code uses only it:
 
-### What the emitter changes
+- `$gi(int)` builds a Go integer of a value inside 53 bits, and `$gi2(high,
+  low)` builds one of 2 halves. The emitter writes `$gi` for a small literal
+  and `$gi2` for a large one.
+- `$ix(GoInt)` gives the plain Dart int back, for an index, a length, or a
+  handle. `$fromF64(double)` truncates, as a Go conversion does.
+- The helpers of the old int.dart moved in: the masks `$i8` to `$u32`, the
+  division forms, the shifts, the unsigned order, the unsigned text, and the
+  float bit reads. Each takes and gives GoInt.
+- `$goList8` to `$goListU64` allocate the backing list of an integer slice.
+  The native form keeps the dense typed-data list, because the list type
+  erases there, and the JS form gives a plain list of pairs.
+- `$gils(Slice<int>)` lifts a byte slice of the runtime into a Go slice.
 
-- `basicType` writes `GoInt` for each integer kind, in place of `int`.
-- An int literal takes a constructor form that both libraries hold, for
-  example `$gi(5)`. The native form gives the value back, and the JS form
-  builds a pair from 2 halves at the compile of the program.
-- The helpers of int.dart (`$shl`, `$div`, `$u8`, and the others) move onto
-  the type or take a GoInt parameter, thus each target holds 1 set of names.
-- A Dart index, a list length, and an interop parameter need the plain int.
-  The boundary takes `.toJs()` and `$gi(...)` forms, exactly where the code
-  crosses into a Dart API.
+## The boundary
 
-The boundary work is the largest part. The emitter writes an int in many
-places: an index, a slice length, a state number, a hash, a handle of the
-interop. The state number and the handle stay a plain Dart int, because they
-never reach Go code. Only a value of a Go integer type takes GoInt.
+The interop boundary is 1 uniform rule of stage 5, in `intrinsic` of
+`internal/emit/call.go`: each Go integer argument of an interop call takes
+`$ix`, and each integer result comes back through `$gi`, `$gils`, or a small
+typed closure over the result record. Thus the runtime library keeps the
+plain int inside, and no wrapper of `net.dart` or `file.dart` changed for
+the cutover. The float bit functions and the worker opt out with
+`intrinsicRaw`, because their values cannot ride a plain int on JS.
 
-## The costs
+A Go constant of an integer type emits as a lazy `final`, because `$gi` is
+no Dart constant.
 
-| Target | The cost of the design |
+## The costs and the gaps
+
+| Target | The cost |
 |---|---|
 | VM, AOT, wasm | None. The extension type erases, and the output text stays equal. |
-| JS | Each 64-bit operation runs 5 to 20 JS operations, as in GopherJS. |
-| The compiler | The boundary work in stage 5, and a survey of each intrinsic. |
+| JS | Each 64-bit operation runs several JS operations, and a division rides BigInt. |
 
-## Open questions
+The gaps of the JS target:
 
-- Does `implements int` on an extension type expose an operation whose JS
-  form cannot hold the contract, thus the native form and the JS form drift?
-  The work needs a conformance test that runs 1 operation table against both
-  libraries.
-- Does the JS target pay for `int8` to `int32`? GopherJS holds a plain
-  number for them. A second extension type for the small widths would keep
-  that speed, and it would grow the boundary work.
-- How does `$f64ToBits` work on JS, where no 64-bit int exists? GopherJS
-  reads a DataView. The JS library takes the same path.
+- A generic function over a mixed numeric type set takes the Dart bound
+  `num`, and the JS form of GoInt is no num, thus such a program fails in
+  the dart2js compile. The other targets keep it.
+- `reflect` and `json` read the plain int out of a Go integer, thus a value
+  outside 53 bits loses its low bits on JS in those 2 paths.
+- The nanosecond clock of JS rounds, because the count since the epoch does
+  not fit 53 bits.
+- A dart:io program fails in the dart2js compile, exactly as in the wasm
+  compile, per decision 208.
 
-## The decision
+## The proof
 
-The design stands, and the work waits. The wasm target already covers the
-browser with the 64-bit model, thus the JS target serves only a build that
-must ship plain JS. Decision 209 holds this state.
+- `runtime/goruntime/test/goint_test.dart` runs an operation table of the
+  JS form against the native form on the VM: 30 values crossed, the shifts,
+  the masks, the texts, the float bits, and the division edges.
+- A node probe ran the same table compiled with dart2js, and the output was
+  byte-equal with the VM run.
+- `TestJS` compiles `testdata/programs/intwrap` with `dart compile js` and
+  runs it under node. The output is byte-equal with `go run`.

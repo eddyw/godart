@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'goint.dart';
 import 'iface.dart';
 import 'panic.dart';
 import 'sched.dart';
@@ -241,32 +242,35 @@ final class _SendWait<T> implements WaitFrame {
 /// The 2 isolates share no memory, thus the function must not read a package
 /// variable and must not write one. The input and the result cross the
 /// boundary as bytes, because bytes cross at a low cost.
-Slice<int> $worker(Slice<int> Function(Slice<int>)? body, Slice<int> input) {
+Slice<GoInt> $worker(
+  Slice<GoInt> Function(Slice<GoInt>)? body,
+  Slice<GoInt> input,
+) {
   if (body == null) $panicNil();
-  final Slice<int> Function(Slice<int>) run = body;
+  final Slice<GoInt> Function(Slice<GoInt>) run = body;
   final Uint8List bytes = Uint8List(input.len);
   for (var i = 0; i < input.len; i++) {
-    bytes[i] = input.array[input.off + i];
+    bytes[i] = $ix(input.array[input.off + i]);
   }
   final Goroutine g = $current!;
   final EventWait waiting = EventWait();
   $holdEvent();
   unawaited(
     Isolate.run(() {
-      final Slice<int> result = run(Slice.of(bytes));
+      final Slice<GoInt> result = run($gils(Slice.of(bytes)));
       final Uint8List copy = Uint8List(result.len);
       for (var i = 0; i < result.len; i++) {
-        copy[i] = result.array[result.off + i];
+        copy[i] = $ix(result.array[result.off + i]);
       }
       return copy;
     }).then((Uint8List out) {
-      waiting.value = Slice.of(out);
+      waiting.value = $gils(Slice.of(out));
       $freeEvent();
       $wake(g);
     }),
   );
   $block(waiting);
-  return Slice.of(Uint8List(0));
+  return Slice.of(<GoInt>[]);
 }
 
 /// Gives up control for a time.

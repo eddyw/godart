@@ -9,9 +9,9 @@ part of '../main.dart';
 void _main() {
   $greet.Greeter$? g = $greet.New(GoString.fromString('world'));
   $println(<String>[$greet.Greeter$Text(g).toDartString()]);
-  $greet.Greeter$SetStyle(g, 1);
+  $greet.Greeter$SetStyle(g, $gi(1));
   $println(<String>[$greet.Greeter$Text(g).toDartString()]);
   $println(<String>[$greet.Twice(GoString.fromString('go')).toDartString()]);
   $println(<String>[$count.Runes(GoString.fromString('héllo')).toString()]);
-  $println(<String>[0.toString(), 1.toString()]);
+  $println(<String>[$gi(0).toString(), $gi(1).toString()]);
 }

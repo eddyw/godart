@@ -959,6 +959,26 @@ The plan left these points open. The work took the decisions below.
      `EnableHTTP2`. A push of the server, a trailer, and `Request.TLS`
      stay out. The program `h2serve` proves the parity.
 
+214. The Go integer of the emitted code is the type GoInt, and a
+     conditional export selects 1 of 2 forms: an extension type over int
+     that erases on the VM, with AOT, and on wasm, and the pair of
+     GopherJS on dart2js, where `dart.library.js` tells the 2 web targets
+     apart. A literal takes `$gi`, a literal outside 53 bits takes the 2
+     halves of `$gi2`, an index or a length crosses with `$ix`, and a Go
+     integer constant emits as a lazy final. The interop boundary is 1
+     uniform rule of stage 5: each integer argument takes `$ix`, and each
+     integer result comes back through `$gi`, `$gils`, or a typed closure
+     over the result record, thus the wrappers of the runtime keep the
+     plain int inside. The division of the JS form rides BigInt, because
+     it is rare next to the other operations, and a dart2js bitwise result
+     comes back unsigned, thus each half normalizes. The allocators
+     `$goList8` to `$goListU64` keep the dense list on the native targets.
+     A mixed numeric type set keeps the Dart bound num, thus such a
+     generic program fails only in the dart2js compile. `goint_test.dart`
+     proves the pair against the native form, a node probe proved the
+     table under dart2js, and `TestJS` proves the program `intwrap` under
+     node against `go run`. `docs/js-integers.md` holds the whole build.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

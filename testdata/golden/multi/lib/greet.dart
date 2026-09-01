@@ -29,7 +29,7 @@ final TypeDesc $desc$Greeter = TypeDesc(
       false,
       () => $desc$Style,
       ($r) => ($r as Greeter$)._style,
-      ($r, $v) => ($r as Greeter$)._style = $v as int,
+      ($r, $v) => ($r as Greeter$)._style = $v as GoInt,
     ),
   ],
   zero: () => Greeter$.$zero(),
@@ -38,7 +38,7 @@ final TypeDesc $descP$Greeter = TypeDesc(
   '*example.com/multi/greet.Greeter',
   'ptr',
   <String, Function>{
-    'SetStyle(example.com/multi/greet.Style)': (Object? $r, int $a0) =>
+    'SetStyle(example.com/multi/greet.Style)': (Object? $r, GoInt $a0) =>
         Greeter$SetStyle(($r as Greeter$?), $a0),
     'Text()string': (Object? $r) => Greeter$Text(($r as Greeter$?)),
   },
@@ -73,7 +73,7 @@ final TypeDesc $desc$Style = TypeDesc(
   'int',
   <String, Function>{},
   text: 'greet.Style',
-  zero: () => 0,
+  zero: () => GoInt.zero,
 );
 final TypeDesc $descP$Style = TypeDesc(
   '*example.com/multi/greet.Style',

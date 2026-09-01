@@ -6,15 +6,15 @@
 
 part of '../greet.dart';
 
-const int Plain = 0;
-const int Loud = 1;
+final GoInt Plain = $gi(0);
+final GoInt Loud = $gi(1);
 
 final class Greeter$ {
   GoString Name;
-  int _style;
+  GoInt _style;
 
   Greeter$(this.Name, this._style);
-  Greeter$.$zero() : Name = GoString.empty, _style = 0;
+  Greeter$.$zero() : Name = GoString.empty, _style = GoInt.zero;
 
   Greeter$ $copy() => Greeter$(Name, _style);
 
@@ -30,21 +30,21 @@ final class Greeter$ {
   @override
   int get hashCode => Object.hashAll(<Object?>[Name.hashCode, _style.hashCode]);
 
-  void SetStyle(int s) => Greeter$SetStyle(this, s);
+  void SetStyle(GoInt s) => Greeter$SetStyle(this, s);
 
   GoString Text() => Greeter$Text(this);
 }
 
 Greeter$? New(GoString name) {
-  return Greeter$(name, 0);
+  return Greeter$(name, GoInt.zero);
 }
 
-void Greeter$SetStyle(Greeter$? g, int s) {
+void Greeter$SetStyle(Greeter$? g, GoInt s) {
   g!._style = s;
 }
 
 GoString Greeter$Text(Greeter$? g) {
-  if (((g == null ? $panicNil() : g!)._style == 1)) {
+  if (((g == null ? $panicNil() : g!)._style == $gi(1))) {
     return $concat(
       GoString.fromString('HELLO, '),
       (g == null ? $panicNil() : g!).Name,

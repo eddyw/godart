@@ -132,3 +132,35 @@ double $f32FromBits(GoInt b) {
   _bits.setUint32(0, b.$v & 0xFFFFFFFF);
   return _bits.getFloat32(0);
 }
+
+/// The plain Dart int of a Go integer, for an index, a length, or another
+/// value that a Dart API takes. The module form spares the caller a
+/// parenthesis around a compound expression.
+int $ix(GoInt v) => v.$v;
+
+/// The Go integer of a double, with the truncation of Go.
+GoInt $fromF64(double v) => GoInt(v.truncate());
+
+/// True inside the build of the JS target. The conditional import selects
+/// this file per target, thus the value is a constant of the file.
+const bool $isJS = false;
+
+/// The text of the 64-bit pattern of a Go integer in a radix, read as an
+/// unsigned value.
+String $uradix(GoInt v, int radix) {
+  if (v.$v >= 0) return v.$v.toRadixString(radix);
+  return BigInt.from(v.$v).toUnsigned(64).toRadixString(radix);
+}
+
+// The allocators of a Go integer slice. The native form keeps the dense list
+// of the width, because the list type erases to List<int> here. A write into
+// a dense list wraps at the width, and each store of a narrow Go type is
+// masked already.
+List<GoInt> $goList8(int n) => Int8List(n) as List<GoInt>;
+List<GoInt> $goList16(int n) => Int16List(n) as List<GoInt>;
+List<GoInt> $goList32(int n) => Int32List(n) as List<GoInt>;
+List<GoInt> $goList64(int n) => Int64List(n) as List<GoInt>;
+List<GoInt> $goListU8(int n) => Uint8List(n) as List<GoInt>;
+List<GoInt> $goListU16(int n) => Uint16List(n) as List<GoInt>;
+List<GoInt> $goListU32(int n) => Uint32List(n) as List<GoInt>;
+List<GoInt> $goListU64(int n) => Uint64List(n) as List<GoInt>;

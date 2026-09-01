@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'complex.dart';
+import 'goint.dart';
 import 'iface.dart';
 import 'int.dart';
 import 'string.dart';
@@ -66,12 +67,12 @@ int $unordered<T>(T a, T b) {
   throw StateError('the type holds no order');
 }
 
-int _zeroInt() => 0;
-bool _equalInt(int a, int b) => a == b;
-int _hashInt(int v) => v.hashCode;
-List<int> _allocInt(int n) => Int64List(n);
-int _orderInt(int a, int b) => a < b ? -1 : (a == b ? 0 : 1);
-int _orderUint(int a, int b) => $ult(a, b) ? -1 : (a == b ? 0 : 1);
+GoInt _zeroInt() => GoInt.zero;
+bool _equalInt(GoInt a, GoInt b) => a == b;
+int _hashInt(GoInt v) => v.hashCode;
+List<GoInt> _allocInt(int n) => List<GoInt>.filled(n, GoInt.zero);
+int _orderInt(GoInt a, GoInt b) => a < b ? -1 : (a == b ? 0 : 1);
+int _orderUint(GoInt a, GoInt b) => $ult(a, b) ? -1 : (a == b ? 0 : 1);
 
 double _zeroDouble() => 0.0;
 bool _equalDouble(double a, double b) => a == b;
@@ -98,30 +99,37 @@ List<GoString> _allocString(int n) => List<GoString>.filled(n, GoString.empty);
 /// A dictionary of an integer type. Each one holds the same operations, and
 /// the description and the order tell them apart. An unsigned 64-bit type
 /// reads the bit pattern as unsigned, thus its order differs.
-Dict<int> _signed(TypeDesc desc, int Function(int) mask) =>
-    Dict<int>(_zeroInt, _equalInt, _hashInt, _allocInt, _orderInt, mask, desc);
+Dict<GoInt> _signed(TypeDesc desc, GoInt Function(GoInt) mask) => Dict<GoInt>(
+  _zeroInt,
+  _equalInt,
+  _hashInt,
+  _allocInt,
+  _orderInt,
+  mask,
+  desc,
+);
 
-Dict<int> _unsigned(TypeDesc desc) => Dict<int>(
+Dict<GoInt> _unsigned(TypeDesc desc) => Dict<GoInt>(
   _zeroInt,
   _equalInt,
   _hashInt,
   _allocInt,
   _orderUint,
-  $identity<int>,
+  $identity<GoInt>,
   desc,
 );
 
-final Dict<int> $dictInt = _signed($typeInt, $identity<int>);
-final Dict<int> $dictInt8 = _signed($typeInt8, $i8);
-final Dict<int> $dictInt16 = _signed($typeInt16, $i16);
-final Dict<int> $dictInt32 = _signed($typeInt32, $i32);
-final Dict<int> $dictInt64 = _signed($typeInt64, $identity<int>);
-final Dict<int> $dictUint8 = _signed($typeUint8, $u8);
-final Dict<int> $dictUint16 = _signed($typeUint16, $u16);
-final Dict<int> $dictUint32 = _signed($typeUint32, $u32);
-final Dict<int> $dictUint = _unsigned($typeUint);
-final Dict<int> $dictUint64 = _unsigned($typeUint64);
-final Dict<int> $dictUintptr = _unsigned($typeUintptr);
+final Dict<GoInt> $dictInt = _signed($typeInt, $identity<GoInt>);
+final Dict<GoInt> $dictInt8 = _signed($typeInt8, $i8);
+final Dict<GoInt> $dictInt16 = _signed($typeInt16, $i16);
+final Dict<GoInt> $dictInt32 = _signed($typeInt32, $i32);
+final Dict<GoInt> $dictInt64 = _signed($typeInt64, $identity<GoInt>);
+final Dict<GoInt> $dictUint8 = _signed($typeUint8, $u8);
+final Dict<GoInt> $dictUint16 = _signed($typeUint16, $u16);
+final Dict<GoInt> $dictUint32 = _signed($typeUint32, $u32);
+final Dict<GoInt> $dictUint = _unsigned($typeUint);
+final Dict<GoInt> $dictUint64 = _unsigned($typeUint64);
+final Dict<GoInt> $dictUintptr = _unsigned($typeUintptr);
 
 const Dict<double> $dictFloat64 = Dict<double>(
   _zeroDouble,
