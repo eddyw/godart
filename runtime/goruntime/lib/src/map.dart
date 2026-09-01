@@ -4,6 +4,18 @@ import 'iface.dart';
 import 'panic.dart';
 import 'slice.dart';
 
+/// An entry of a Go map. The entries form a list in the order of the writes,
+/// and a range loop walks that list. A removed entry keeps its [next] link,
+/// thus an iterator that stands on it still reaches the rest of the list.
+final class _Entry<K, V> {
+  final K key;
+  V value;
+  bool dead = false;
+  _Entry<K, V>? prev;
+  _Entry<K, V>? next;
+  _Entry(this.key, this.value);
+}
+
 /// A Go map.
 ///
 /// The map keeps the zero value of the element type, because a read of a key
@@ -11,8 +23,10 @@ import 'slice.dart';
 /// the order of the writes. Go gives no order, thus a Go program must not
 /// depend on it.
 final class GoMap<K, V> {
-  final LinkedHashMap<K, V> _entries;
+  final HashMap<K, _Entry<K, V>> _entries;
   final V Function() _zero;
+  _Entry<K, V>? _head;
+  _Entry<K, V>? _tail;
 
   /// True for the zero value of a map type. A read gives the zero value, and a
   /// write panics.
@@ -22,25 +36,25 @@ final class GoMap<K, V> {
   /// by identity, thus such a map takes its own equality and its own hash.
   GoMap(this._zero, {bool Function(K, K)? equals, int Function(K)? hashCode})
     : _entries = equals == null
-          ? LinkedHashMap<K, V>()
-          : LinkedHashMap<K, V>(equals: equals, hashCode: hashCode),
+          ? HashMap<K, _Entry<K, V>>()
+          : HashMap<K, _Entry<K, V>>(equals: equals, hashCode: hashCode),
       isNil = false;
 
-  GoMap.nil(this._zero) : _entries = LinkedHashMap<K, V>(), isNil = true;
+  GoMap.nil(this._zero) : _entries = HashMap<K, _Entry<K, V>>(), isNil = true;
 
   int get length => _entries.length;
 
   V get(K key) {
-    final V? value = _entries[key];
-    if (value == null && !_entries.containsKey(key)) return _zero();
-    return value as V;
+    final _Entry<K, V>? e = _entries[key];
+    if (e == null) return _zero();
+    return e.value;
   }
 
   /// The Go form `v, ok := m[k]`.
   (V, bool) get2(K key) {
-    final V? value = _entries[key];
-    if (value == null && !_entries.containsKey(key)) return (_zero(), false);
-    return (value as V, true);
+    final _Entry<K, V>? e = _entries[key];
+    if (e == null) return (_zero(), false);
+    return (e.value, true);
   }
 
   void set(K key, V value) {
@@ -49,26 +63,56 @@ final class GoMap<K, V> {
         Iface($typeGoError, const GoError('assignment to entry in nil map')),
       );
     }
-    _entries[key] = value;
+    final _Entry<K, V>? e = _entries[key];
+    if (e != null) {
+      e.value = value;
+      return;
+    }
+    final entry = _Entry(key, value);
+    entry.prev = _tail;
+    if (_tail == null) {
+      _head = entry;
+    } else {
+      _tail!.next = entry;
+    }
+    _tail = entry;
+    _entries[key] = entry;
   }
 
-  void remove(K key) => _entries.remove(key);
+  void remove(K key) {
+    final _Entry<K, V>? e = _entries.remove(key);
+    if (e == null) return;
+    _unlink(e);
+  }
+
+  void _unlink(_Entry<K, V> e) {
+    e.dead = true;
+    if (e.prev == null) {
+      _head = e.next;
+    } else {
+      e.prev!.next = e.next;
+    }
+    if (e.next == null) {
+      _tail = e.prev;
+    } else {
+      e.next!.prev = e.prev;
+    }
+    e.prev = null;
+  }
 
   bool has(K key) => _entries.containsKey(key);
 
   void clear() {
+    var e = _head;
+    while (e != null) {
+      e.dead = true;
+      e.prev = null;
+      e = e.next;
+    }
+    _head = null;
+    _tail = null;
     _entries.clear();
-    clearCount++;
   }
-
-  /// The count of the clear calls. A NaN key never reads back, and only a
-  /// clear removes its entry, thus a range loop compares this count to see
-  /// whether such an entry still stands.
-  int clearCount = 0;
-
-  /// The values at the start of a range loop, in the order of [keys]. A NaN
-  /// key never reads back, thus the loop takes its value from this snapshot.
-  Slice<V> values() => Slice.of(_entries.values.toList());
 
   /// A fresh hash for a NaN key. Each NaN entry stands alone, thus 1 shared
   /// hash would put each one into 1 bucket, and the map would grow in square
@@ -81,7 +125,47 @@ final class GoMap<K, V> {
 
   static int _nanSeed = 0x9e3779b97f4a7c15;
 
-  /// The keys at the start of a range loop. Go does not give a key that the
-  /// body removes, thus the loop reads the map again for each key.
-  Slice<K> keys() => Slice.of(_entries.keys.toList());
+  /// The keys, in the order of the writes. The format code, the json code,
+  /// and the reflect code read this list. A range loop takes [GoMapIter].
+  Slice<K> keys() {
+    final list = <K>[];
+    var e = _head;
+    while (e != null) {
+      list.add(e.key);
+      e = e.next;
+    }
+    return Slice.of(list);
+  }
+}
+
+/// The iterator of a range loop over a map. Go does not give a key that the
+/// body removes, and the iterator jumps over each dead entry. A key that the
+/// body adds joins the tail, and Go allows the loop to give it. The value
+/// reads the entry at the visit, thus a NaN key needs no snapshot.
+final class GoMapIter<K, V> {
+  _Entry<K, V>? _at;
+  _Entry<K, V>? _cur;
+
+  GoMapIter(GoMap<K, V> m) : _at = m._head;
+
+  /// The first value of a frame local. The machine writes the true iterator
+  /// before the loop starts.
+  GoMapIter.empty() : _at = null;
+
+  bool next() {
+    var e = _at;
+    while (e != null && e.dead) {
+      e = e.next;
+    }
+    if (e == null) {
+      _at = null;
+      return false;
+    }
+    _cur = e;
+    _at = e.next;
+    return true;
+  }
+
+  K get key => _cur!.key;
+  V get value => _cur!.value;
 }

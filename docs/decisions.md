@@ -913,6 +913,20 @@ The plan left these points open. The work took the decisions below.
      root pool. The listener of the runtime now holds a close function, thus
      1 listener class serves the 2 server socket classes of Dart.
 
+211. A range loop over a map rides a lazy iterator of the runtime, and the
+     key snapshot is gone. `GoMap` keeps its entries in a
+     list in the order of the writes, next to a `HashMap` from the key to
+     the entry. A remove marks the entry dead and unlinks it, and the dead
+     entry keeps its next link, thus an iterator that stands on it still
+     reaches the rest of the list. The iterator starts in constant time,
+     thus n loops over a map that shrinks stay linear, and `maplinear`
+     joins the net. The value reads the entry at the visit, thus the NaN
+     snapshot and the clear count of decision 207 are gone too: a clear
+     marks each entry dead, and a NaN entry behaves as each other entry.
+     The iterator types as `ir.MapIterType`, a type of the compiler that
+     go/types does not hold, in the pattern of the Dart field of a select
+     variable.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

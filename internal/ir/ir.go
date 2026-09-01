@@ -686,3 +686,11 @@ func (*Record) isExpr()      {}
 func (*RecordField) isExpr() {}
 func (*SelectList) isExpr()  {}
 func (*SelectRun) isExpr()   {}
+
+// MapIterType types the iterator of a range loop over a map. Stage 4 builds
+// the iterator with the builtin mapiter, and go/types holds no form of it.
+// The type satisfies types.Type, thus a Var of the stage can carry it.
+type MapIterType struct{ Map *types.Map }
+
+func (t *MapIterType) Underlying() types.Type { return t }
+func (t *MapIterType) String() string         { return "map iterator" }

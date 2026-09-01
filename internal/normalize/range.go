@@ -198,89 +198,29 @@ func (b *builder) rangeString(s *ast.RangeStmt, label string) []ir.Stmt {
 	return append(pre, loop)
 }
 
-// rangeMap walks the keys of a map. Go does not give a key that the body
-// removes, thus the loop reads the map again for each key.
-//
-// A float key and a complex key can hold NaN. Such a key never reads back,
-// and the body can never remove its entry, thus the loop reads the value of
-// such a key from a snapshot.
+// rangeMap walks the entries of a map with the iterator of the runtime. The
+// iterator jumps over an entry that the body removes, and it starts in
+// constant time, thus n loops over a map that shrinks stay linear. The value
+// reads the entry at the visit, thus a NaN key needs no snapshot.
 func (b *builder) rangeMap(s *ast.RangeStmt, label string) []ir.Stmt {
 	m := mapType(b.typeOf(s.X))
 	pre, container := b.forceHoist(b.expr(s.X), s.X.Pos(), "range")
-	keyList := types.NewSlice(m.Key())
-	kv := b.tempVar(s.Pos(), "keys", keyList)
-	keys := &ir.Ident{Name: kv.Name, Type: keyList}
-	pre = append(pre, &ir.Declare{Vars: []*ir.Var{kv},
-		Init: &ir.Builtin{Name: "mapkeys", Args: []ir.Expr{container}, Type: keyList}})
-	nanKey := isNaNKey(m.Key())
-	valList := types.NewSlice(m.Elem())
-	var vals, clears *ir.Ident
-	if nanKey {
-		vv := b.tempVar(s.Pos(), "vals", valList)
-		vals = &ir.Ident{Name: vv.Name, Type: valList}
-		pre = append(pre, &ir.Declare{Vars: []*ir.Var{vv},
-			Init: &ir.Builtin{Name: "mapvals", Args: []ir.Expr{container}, Type: valList}})
-		cv := b.tempVar(s.Pos(), "clears", types.Typ[types.Int])
-		clears = &ir.Ident{Name: cv.Name, Type: types.Typ[types.Int]}
-		pre = append(pre, &ir.Declare{Vars: []*ir.Var{cv},
-			Init: &ir.Builtin{Name: "mapclears", Args: []ir.Expr{container},
-				Type: types.Typ[types.Int]}})
-	}
-	iv, i := b.intVar(s.Pos(), "i")
-	key := &ir.Index{X: keys, Index: i, Type: m.Key()}
-	hasNot := &ir.Unary{Op: token.NOT, Type: types.Typ[types.Bool],
-		X: &ir.Builtin{Name: "maphas", Args: []ir.Expr{container, key}, Type: types.Typ[types.Bool]}}
+	itType := &ir.MapIterType{Map: m}
+	itv := b.tempVar(s.Pos(), "it", itType)
+	it := &ir.Ident{Name: itv.Name, Type: itType}
+	pre = append(pre, &ir.Declare{Vars: []*ir.Var{itv},
+		Init: &ir.Builtin{Name: "mapiter", Args: []ir.Expr{container}, Type: itType}})
+	key := &ir.Builtin{Name: "iterkey", Args: []ir.Expr{it}, Type: m.Key()}
+	value := b.copyPoint(&ir.Builtin{Name: "iterval", Args: []ir.Expr{it}, Type: m.Elem()})
 	body := &ir.Block{}
-	value := b.copyPoint(&ir.Index{X: container, Index: key, Type: m.Elem()})
-	if nanKey {
-		vv := b.tempVar(s.Pos(), "v", m.Elem())
-		vi := &ir.Ident{Name: vv.Name, Type: m.Elem()}
-		// Only a clear removes an entry with a NaN key, thus the clear count
-		// of the map tells whether the entry still stands.
-		cleared := &ir.Binary{Op: token.NEQ, Type: types.Typ[types.Bool],
-			X: &ir.Builtin{Name: "mapclears", Args: []ir.Expr{container},
-				Type: types.Typ[types.Int]},
-			Y: clears}
-		body.List = append(body.List,
-			&ir.Declare{Vars: []*ir.Var{vv}},
-			&ir.If{
-				Cond: &ir.Binary{Op: token.NEQ, X: key, Y: key, Type: types.Typ[types.Bool]},
-				Then: &ir.Block{List: []ir.Stmt{
-					&ir.If{Cond: cleared, Then: &ir.Block{List: []ir.Stmt{&ir.Continue{}}}},
-					&ir.Assign{Lhs: vi,
-						Rhs: b.copyPoint(&ir.Index{X: vals, Index: i, Type: m.Elem()})},
-				}},
-				Else: &ir.Block{List: []ir.Stmt{
-					&ir.If{Cond: hasNot, Then: &ir.Block{List: []ir.Stmt{&ir.Continue{}}}},
-					&ir.Assign{Lhs: vi, Rhs: value},
-				}},
-			})
-		value = vi
-	} else {
-		body.List = append(body.List, &ir.If{
-			Cond: hasNot,
-			Then: &ir.Block{List: []ir.Stmt{&ir.Continue{}}},
-		})
-	}
 	body.List = append(body.List, b.bindBoth(s, key, value)...)
 	body.List = append(body.List, b.block(s.Body).List...)
 	loop := &ir.For{
-		Init: &ir.Declare{Vars: []*ir.Var{iv}, Init: intConst(0)},
-		Cond: &ir.Binary{Op: token.LSS, X: i,
-			Y:    &ir.Builtin{Name: "len", Args: []ir.Expr{keys}, Type: types.Typ[types.Int]},
-			Type: types.Typ[types.Bool]},
-		Post:  &ir.Assign{Lhs: i, Rhs: &ir.Binary{Op: token.ADD, X: i, Y: intConst(1), Type: types.Typ[types.Int]}},
+		Cond:  &ir.Builtin{Name: "iternext", Args: []ir.Expr{it}, Type: types.Typ[types.Bool]},
 		Body:  body,
 		Label: label,
 	}
 	return append(pre, loop)
-}
-
-// isNaNKey reports whether a map key of the type can hold NaN. Such a key is
-// never equal to itself.
-func isNaNKey(t types.Type) bool {
-	b, ok := types.Unalias(t).Underlying().(*types.Basic)
-	return ok && b.Info()&(types.IsFloat|types.IsComplex) != 0
 }
 
 // rangeChan reads a channel until the channel closes.

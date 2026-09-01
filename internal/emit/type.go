@@ -87,6 +87,8 @@ func (e *emitter) dartType(t types.Type) string {
 		return "Iface?"
 	case *types.Struct:
 		return e.anonType(t)
+	case *ir.MapIterType:
+		return "GoMapIter<" + e.dartType(t.Map.Key()) + ", " + e.dartType(t.Map.Elem()) + ">"
 	}
 	e.fail("the type %s is outside the subset", t)
 	return "Object?"
@@ -170,6 +172,9 @@ func (e *emitter) zero(t types.Type) string {
 	}
 	if st, ok := u.(*types.Struct); ok {
 		return e.anonZero(st)
+	}
+	if _, ok := u.(*ir.MapIterType); ok {
+		return "GoMapIter.empty()"
 	}
 	switch u := u.Underlying().(type) {
 	case *types.Tuple:

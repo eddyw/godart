@@ -858,16 +858,16 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 		}
 		e.fail("clear does not apply to the type %s", x.Args[0].GoType())
 		return "null"
-	case "mapkeys":
-		return e.expr(x.Args[0]) + ".keys()"
-	case "mapvals":
-		return e.expr(x.Args[0]) + ".values()"
-	case "mapclears":
-		return e.expr(x.Args[0]) + ".clearCount"
+	case "mapiter":
+		return fmt.Sprintf("GoMapIter(%s)", e.expr(x.Args[0]))
+	case "iternext":
+		return e.expr(x.Args[0]) + ".next()"
+	case "iterkey":
+		return e.expr(x.Args[0]) + ".key"
+	case "iterval":
+		return e.expr(x.Args[0]) + ".value"
 	case "close":
 		return e.chanExpr(x.Args[0]) + ".close()"
-	case "maphas":
-		return fmt.Sprintf("%s.has(%s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
 	case "real":
 		return fmt.Sprintf("%s.re", e.expr(x.Args[0]))
 	case "imag":
