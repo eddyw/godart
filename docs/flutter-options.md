@@ -3,6 +3,11 @@
 This file lists each option that reaches Flutter from Go through gart. It takes
 no decision and it gives no recommendation. The user decides later.
 
+`docs/flutter-design.md` replaces this file. That file re-reads each option
+against the state of 2026-09-01, it adds 7 more, and it takes the decision. Its
+section "The corrections" names 3 claims of this file that are false and 1
+conclusion that does not hold. Read that file first.
+
 The file stands from 2026-08-28. The block model changed on 2026-08-29, and 2
 rows below carry the correction. `docs/flutter-first.md` holds the order of the
 work, and it names the state of 2026-09-01.
