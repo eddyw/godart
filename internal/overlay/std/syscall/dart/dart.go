@@ -522,6 +522,12 @@ func Symlink(target, link string) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ReadLink gives the target of 1 symbolic link. A path that holds no link
+// gives a cause.
+func ReadLink(path string) (string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ResolveSymlinks gives the path after each symbolic link, from the root. The
 // path must exist.
 func ResolveSymlinks(path string) (string, string) {

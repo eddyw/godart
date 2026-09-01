@@ -484,6 +484,38 @@ func (f *File) ReadDir(n int) ([]DirEntry, error) {
 	return out[:n], nil
 }
 
+// Readdir reads the directory and gives the metadata of each entry. A count of
+// 0 or less gives each entry. Go marks the method as older than ReadDir, and
+// http.File reads it.
+func (f *File) Readdir(n int) ([]FileInfo, error) {
+	entries, err := f.ReadDir(n)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]FileInfo, 0, len(entries))
+	for _, e := range entries {
+		info, err := e.Info()
+		if err != nil {
+			return out, err
+		}
+		out = append(out, info)
+	}
+	return out, nil
+}
+
+// Readdirnames reads the directory and gives the name of each entry.
+func (f *File) Readdirnames(n int) ([]string, error) {
+	entries, err := f.ReadDir(n)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, e.Name())
+	}
+	return out, nil
+}
+
 // base gives the last part of a path.
 func base(path string) string {
 	sep := dart.PathSeparator()

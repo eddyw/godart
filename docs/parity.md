@@ -703,6 +703,26 @@ plain write.
 | The function form, for example `AddInt64` | Present | Equal for `Add`, `And`, `Or`, `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
 | `LoadPointer`, `StorePointer`, `SwapPointer`, `CompareAndSwapPointer` | Present | Not present. Each one takes an `unsafe.Pointer`, which stands outside the subset. `Pointer[T]` holds the same use. |
 
+## The root of a directory
+
+`os.Root` holds a directory, and each operation of it stays inside that
+directory.
+
+Go opens the directory 1 time and reaches each name under it with `openat`,
+thus no path can leave the tree. `dart:io` holds no such call. The overlay
+resolves each symbolic link of the path with `resolveSymbolicLinks` and it
+compares the result with the root.
+
+| Item | Go | godart |
+|---|---|---|
+| A path that holds `..` | Rejected | Rejected |
+| A symbolic link that points outside the root | Rejected | Rejected |
+| A rename of a directory of the path between the check and the operation | Rejected, because the handle of the directory holds the tree | **Not rejected.** The check is not atomic, thus such a race can reach a name outside the root. |
+| `Chmod`, `Chown`, `Chtimes`, `Lchown`, `Link` | Present | Not present. `dart:io` holds no such call, and `os` holds no such function either. |
+
+Do not read `Root` as a security boundary against a writer that can rename a
+directory of the path while the program runs.
+
 ## The signal access
 
 `os/signal` reads `ProcessSignal.watch` of dart:io. Each watch runs on the

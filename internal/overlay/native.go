@@ -19,6 +19,8 @@ var native = []string{
 	"container/list",
 	"encoding/base64",
 	"internal/byteorder",
+	"internal/oserror",
+	"io/fs",
 	"context",
 	"io",
 	"path",
@@ -62,6 +64,7 @@ var native = []string{
 	"mime/multipart",
 	"net/http/cookiejar",
 	"net/http/internal/ascii",
+	"net/http/internal",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

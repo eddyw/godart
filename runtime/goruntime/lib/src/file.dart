@@ -255,6 +255,21 @@ GoString $symlink(GoString target, GoString link) {
   }
 }
 
+/// Gives the target of 1 symbolic link. A path that holds no link gives a
+/// cause.
+(GoString, GoString) $readLink(GoString path) {
+  final String name = path.toDartString();
+  try {
+    if (FileSystemEntity.typeSync(name, followLinks: false) !=
+        FileSystemEntityType.link) {
+      return (_empty, GoString.fromString('invalid argument'));
+    }
+    return (GoString.fromString(Link(name).targetSync()), _empty);
+  } catch (e) {
+    return (_empty, _cause(e));
+  }
+}
+
 /// Gives the path after each symbolic link, from the root. The path must exist.
 (GoString, GoString) $resolveSymlinks(GoString path) {
   try {

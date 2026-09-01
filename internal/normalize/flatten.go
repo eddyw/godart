@@ -79,7 +79,20 @@ func (f *flat) writeDeferChain() {
 
 // deferReturn writes each result into its variable and jumps to the chain of
 // the deferred calls.
+//
+// A return of 1 call that gives each result writes the record of the call into
+// the whole set of variables. A plain assignment would put the record into the
+// first variable, and the Dart output would then hold a type error.
 func (f *flat) deferReturn(s *ir.Return) {
+	if len(s.Values) == 1 && len(f.m.ResultVars) > 1 {
+		lhs := make([]ir.Expr, len(f.m.ResultVars))
+		for i, v := range f.m.ResultVars {
+			lhs[i] = identOf(v)
+		}
+		f.emit(&ir.AssignMulti{Lhs: lhs, Rhs: s.Values[0]})
+		f.emit(&ir.Jump{State: f.m.DeferState})
+		return
+	}
 	for i, v := range s.Values {
 		if i >= len(f.m.ResultVars) {
 			break

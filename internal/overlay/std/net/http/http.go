@@ -32,35 +32,37 @@ const (
 	StatusContinue           = 100
 	StatusSwitchingProtocols = 101
 
-	StatusOK                    = 200
-	StatusCreated               = 201
-	StatusAccepted              = 202
-	StatusNoContent             = 204
-	StatusResetContent          = 205
-	StatusPartialContent        = 206
-	StatusMultipleChoices       = 300
-	StatusMovedPermanently      = 301
-	StatusFound                 = 302
-	StatusSeeOther              = 303
-	StatusNotModified           = 304
-	StatusTemporaryRedirect     = 307
-	StatusPermanentRedirect     = 308
-	StatusBadRequest            = 400
-	StatusUnauthorized          = 401
-	StatusPaymentRequired       = 402
-	StatusForbidden             = 403
-	StatusNotFound              = 404
-	StatusMethodNotAllowed      = 405
-	StatusNotAcceptable         = 406
-	StatusRequestTimeout        = 408
-	StatusConflict              = 409
-	StatusGone                  = 410
-	StatusLengthRequired        = 411
-	StatusRequestEntityTooLarge = 413
-	StatusRequestURITooLong     = 414
-	StatusUnsupportedMediaType  = 415
-	StatusTeapot                = 418
-	StatusTooManyRequests       = 429
+	StatusOK                           = 200
+	StatusCreated                      = 201
+	StatusAccepted                     = 202
+	StatusNoContent                    = 204
+	StatusResetContent                 = 205
+	StatusPartialContent               = 206
+	StatusMultipleChoices              = 300
+	StatusMovedPermanently             = 301
+	StatusFound                        = 302
+	StatusSeeOther                     = 303
+	StatusNotModified                  = 304
+	StatusPreconditionFailed           = 412
+	StatusRequestedRangeNotSatisfiable = 416
+	StatusTemporaryRedirect            = 307
+	StatusPermanentRedirect            = 308
+	StatusBadRequest                   = 400
+	StatusUnauthorized                 = 401
+	StatusPaymentRequired              = 402
+	StatusForbidden                    = 403
+	StatusNotFound                     = 404
+	StatusMethodNotAllowed             = 405
+	StatusNotAcceptable                = 406
+	StatusRequestTimeout               = 408
+	StatusConflict                     = 409
+	StatusGone                         = 410
+	StatusLengthRequired               = 411
+	StatusRequestEntityTooLarge        = 413
+	StatusRequestURITooLong            = 414
+	StatusUnsupportedMediaType         = 415
+	StatusTeapot                       = 418
+	StatusTooManyRequests              = 429
 
 	StatusInternalServerError     = 500
 	StatusNotImplemented          = 501
@@ -74,35 +76,37 @@ var statusText = map[int]string{
 	StatusContinue:           "Continue",
 	StatusSwitchingProtocols: "Switching Protocols",
 
-	StatusOK:                    "OK",
-	StatusCreated:               "Created",
-	StatusAccepted:              "Accepted",
-	StatusNoContent:             "No Content",
-	StatusResetContent:          "Reset Content",
-	StatusPartialContent:        "Partial Content",
-	StatusMultipleChoices:       "Multiple Choices",
-	StatusMovedPermanently:      "Moved Permanently",
-	StatusFound:                 "Found",
-	StatusSeeOther:              "See Other",
-	StatusNotModified:           "Not Modified",
-	StatusTemporaryRedirect:     "Temporary Redirect",
-	StatusPermanentRedirect:     "Permanent Redirect",
-	StatusBadRequest:            "Bad Request",
-	StatusUnauthorized:          "Unauthorized",
-	StatusPaymentRequired:       "Payment Required",
-	StatusForbidden:             "Forbidden",
-	StatusNotFound:              "Not Found",
-	StatusMethodNotAllowed:      "Method Not Allowed",
-	StatusNotAcceptable:         "Not Acceptable",
-	StatusRequestTimeout:        "Request Timeout",
-	StatusConflict:              "Conflict",
-	StatusGone:                  "Gone",
-	StatusLengthRequired:        "Length Required",
-	StatusRequestEntityTooLarge: "Request Entity Too Large",
-	StatusRequestURITooLong:     "Request URI Too Long",
-	StatusUnsupportedMediaType:  "Unsupported Media Type",
-	StatusTeapot:                "I'm a teapot",
-	StatusTooManyRequests:       "Too Many Requests",
+	StatusOK:                           "OK",
+	StatusCreated:                      "Created",
+	StatusAccepted:                     "Accepted",
+	StatusNoContent:                    "No Content",
+	StatusResetContent:                 "Reset Content",
+	StatusPartialContent:               "Partial Content",
+	StatusMultipleChoices:              "Multiple Choices",
+	StatusMovedPermanently:             "Moved Permanently",
+	StatusFound:                        "Found",
+	StatusSeeOther:                     "See Other",
+	StatusNotModified:                  "Not Modified",
+	StatusPreconditionFailed:           "Precondition Failed",
+	StatusRequestedRangeNotSatisfiable: "Requested Range Not Satisfiable",
+	StatusTemporaryRedirect:            "Temporary Redirect",
+	StatusPermanentRedirect:            "Permanent Redirect",
+	StatusBadRequest:                   "Bad Request",
+	StatusUnauthorized:                 "Unauthorized",
+	StatusPaymentRequired:              "Payment Required",
+	StatusForbidden:                    "Forbidden",
+	StatusNotFound:                     "Not Found",
+	StatusMethodNotAllowed:             "Method Not Allowed",
+	StatusNotAcceptable:                "Not Acceptable",
+	StatusRequestTimeout:               "Request Timeout",
+	StatusConflict:                     "Conflict",
+	StatusGone:                         "Gone",
+	StatusLengthRequired:               "Length Required",
+	StatusRequestEntityTooLarge:        "Request Entity Too Large",
+	StatusRequestURITooLong:            "Request URI Too Long",
+	StatusUnsupportedMediaType:         "Unsupported Media Type",
+	StatusTeapot:                       "I'm a teapot",
+	StatusTooManyRequests:              "Too Many Requests",
 
 	StatusInternalServerError:     "Internal Server Error",
 	StatusNotImplemented:          "Not Implemented",
