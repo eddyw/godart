@@ -29,7 +29,7 @@ The state of 2026-09-01. Each row names the section that holds the detail.
 | The network access | TCP, UDP, and a Unix socket. No address type, and `Request.RemoteAddr` is empty. |
 | HTTP | 1.1 and 2, for the client and the server. No cookie jar, no file server, and no multipart form. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
-| JSON | `Marshaler`, `Unmarshaler`, base64 text for a byte slice, and `time.Time` are present. No `Encoder`, no `Decoder`, and no `TextMarshaler`. |
+| JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, and the error types. No `Token`, no `UseNumber`, and no `TextMarshaler`. |
 | `gart test` | The format of `go test`. `t.Parallel` does nothing, and `-cover`, `-short`, and `-count` stay out. |
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
 | A stack trace | The module form of each file, with no offset. |
@@ -194,7 +194,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq`, `Seq2`, `Pull`, and `Pull2`. Read the section below. |
 | `maps` | Overlay | |
-| `encoding/json` | Overlay | `Marshal`, `MarshalIndent`, `Unmarshal`, `Marshaler`, and `Unmarshaler`. Read the section below. |
+| `encoding/json` | Overlay | Each name of the client surface. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native |
 | `io/fs` | Overlay | `FileMode`, `FileInfo`, `DirEntry`, `PathError`, `WalkDirFunc`, `SkipDir`, `SkipAll`, and `ValidPath`. No `FS` interface. |
@@ -302,7 +302,7 @@ walks it.
 | Item | Go | godart |
 |---|---|---|
 | `Marshal` | Present | Equal |
-| `MarshalIndent` | Present | Equal, with an empty prefix. |
+| `MarshalIndent` | Present | Equal |
 | A json tag, `-`, and `omitempty` | Present | Equal |
 | A nil slice and a nil map | Give `null` | Equal |
 | A whole float | Gives `0`, not `0.0` | Equal |
@@ -311,7 +311,7 @@ walks it.
 | The order of a map member | Sorted by the key | Equal |
 | A byte slice | Gives base64 text | Equal |
 | `Unmarshal` | Present | Present. Read the table below. |
-| `Decoder` and `Encoder` | Present | Not present |
+| `Decoder` and `Encoder` | Present | Equal, except `Token` and `UseNumber`. Read the table below. |
 | `Marshaler` | Present | Equal. Read the section below. |
 | `TextMarshaler` | The walk reads it when the type holds no `MarshalJSON` | Not present |
 | A `time.Time` field | Gives `"2023-11-14T22:13:20Z"` | Equal |
@@ -343,12 +343,46 @@ that the value type does not hold.
 | A name that matches only in case | Matches | Equal |
 | A member with no field | Stays out | Equal |
 | A value of the type `any` | Gives bool, float64, string, []any, map[string]any | Equal |
-| A type that does not fit the JSON value | Gives an error | Gives an error with another text |
-| A broken text | Gives a `SyntaxError` | Gives an error with another text |
-| `UnmarshalTypeError` and its fields | Present | Not present. Each cause is a `SyntaxError`. |
+| A type that does not fit the JSON value | Gives an `UnmarshalTypeError` | Equal, with the text of Go |
+| A broken text | Gives a `SyntaxError` | Equal, with the text and the offset of Go |
+| `UnmarshalTypeError` | Present | Present, with `Value`, `Struct`, and `Field`. Read the section below. |
 | An RFC 3339 text into a `time.Time` | The `UnmarshalJSON` method reads it | Equal |
 | A base64 text into a byte slice | Present | Equal |
 | A number with a fraction into an integer field | Gives an error | Gives an error |
+
+### The stream forms and the error types
+
+A scanner in the Go half of the package walks 1 JSON value of a buffer. It
+reports the end of the value and it reports a syntax error with the text and the
+offset of Go. `Decoder`, `Valid`, `Compact`, and `Indent` each read it, and
+`Unmarshal` reads it in front of the Dart walk.
+
+| Item | Go | godart |
+|---|---|---|
+| `NewDecoder`, `Decode`, `More`, `Buffered`, `InputOffset` | Present | Equal |
+| `Decoder.DisallowUnknownFields` | Present | Equal |
+| `Decoder.Token` | Present | Not present |
+| `Decoder.UseNumber` | A number of an `any` gives a `Number` | Not present. The Dart walk builds the value, and it cannot build the method table of `Number`. |
+| `NewEncoder`, `Encode`, `SetIndent` | Present | Equal |
+| `Encoder.SetEscapeHTML` | Turns the escape of `<`, `>`, and `&` on and off | Present, and it changes nothing. The encoder never escapes the 3 characters. |
+| `Valid`, `Compact`, `Indent` | Present | Equal |
+| `RawMessage` | Present | Equal. The bytes hold the compact form of the input. |
+| `Number` and its 3 methods | Present | Equal. A field of that type holds each digit of the input. |
+| `SyntaxError` | `Offset` and the text | Equal |
+| `UnmarshalTypeError` | `Value`, `Type`, `Offset`, `Struct`, `Field` | `Value`, `Struct`, and `Field`. Read below. |
+| `InvalidUnmarshalError`, `UnsupportedTypeError`, `UnsupportedValueError`, `MarshalerError` | Present | Present, with the text of Go. Read below. |
+
+Each error type of Go holds a field `Type` of the type `reflect.Type`. A
+`reflect.Type` of the overlay is a struct with a handle of a type descriptor,
+and the field of that struct is unexported. Thus `encoding/json` cannot build
+one, and each such field stays out. The text of the type stands in an unexported
+field, thus each `Error` method writes the text of Go. `UnmarshalTypeError` also
+holds no `Offset`, and `MarshalerError.Err` holds a new error with the text of
+the original one.
+
+The Dart walk gives a cause to the Go half through 1 string. A cause that starts
+with a null byte holds a code and the parts of a typed error, and the Go half
+builds the error of that code.
 
 ## The file access
 

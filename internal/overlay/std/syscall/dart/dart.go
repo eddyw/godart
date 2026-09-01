@@ -351,17 +351,19 @@ func Float32FromBits(b uint32) float32 {
 // descriptor of the value, thus the name of each member comes from the json tag
 // of the field.
 //
-// An empty indent gives a compact form. The second result holds the cause of a
-// failure, and it is empty after a success.
-func MarshalJSON(v any, indent string) (string, string) {
+// The second result holds the cause of a failure, and it is empty after a
+// success. A cause that starts with a null byte holds the code and the parts of
+// a typed error of the package encoding/json.
+func MarshalJSON(v any) (string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
 // UnmarshalJSON reads the JSON form into a value. The target holds a pointer,
-// and the walk reads the type descriptor of the element.
+// and the walk reads the type descriptor of the element. The flag strict
+// reports a member of the input that matches no field of the target struct.
 //
 // The result holds the cause of a failure, and it is empty after a success.
-func UnmarshalJSON(v any, data string) string {
+func UnmarshalJSON(v any, data string, strict bool) string {
 	panic("syscall/dart needs the gart compiler")
 }
 

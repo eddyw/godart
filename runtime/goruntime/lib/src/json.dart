@@ -13,20 +13,21 @@ const String _marshalKey = 'MarshalJSON()[]byte,error';
 /// The key of the method of the interface json.Unmarshaler.
 const String _unmarshalKey = 'UnmarshalJSON([]byte)error';
 
+/// The full name of the type encoding/json.Number. A field of that type holds
+/// the text of a JSON number, thus the walk holds it apart from a string.
+const String _numberType = 'encoding/json.Number';
+
 /// Writes the JSON form of a Go value.
 ///
 /// The walk reads the type descriptor of the value. A struct gives an object,
 /// and the name of each member comes from the json tag of the field.
 ///
 /// The second result holds the cause of a failure, and it is empty after a
-/// success.
-(GoString, GoString) $jsonMarshal(Iface? v, GoString indent) {
+/// success. A cause that starts with a null byte holds the code and the parts
+/// of a typed error of the package encoding/json.
+(GoString, GoString) $jsonMarshal(Iface? v) {
   try {
-    final Object? tree = _tree(v);
-    final String text = indent.length == 0
-        ? jsonEncode(tree)
-        : JsonEncoder.withIndent(indent.toDartString()).convert(tree);
-    return (GoString.fromString(text), GoString.empty);
+    return (GoString.fromString(jsonEncode(_tree(v))), GoString.empty);
   } on _JsonCause catch (e) {
     return (GoString.empty, GoString.fromString(e.text));
   }
@@ -38,6 +39,10 @@ class _JsonCause implements Exception {
 
   _JsonCause(this.text);
 }
+
+/// _coded builds the cause of a typed error of the package encoding/json.
+_JsonCause _coded(String code, List<String> parts) =>
+    _JsonCause('\u0000$code\u0000${parts.join('\u0000')}');
 
 /// _tree maps a Go value to the tree that jsonEncode accepts.
 Object? _tree(Iface? v) {
@@ -52,6 +57,7 @@ Object? _value(TypeDesc desc, Object? value) {
     case 'bool':
       return value as bool;
     case 'string':
+      if (desc.name == _numberType) return _numberOf(value as GoString);
       return (value as GoString).toDartString();
     case 'float32':
     case 'float64':
@@ -75,7 +81,20 @@ Object? _value(TypeDesc desc, Object? value) {
       return _tree(value as Iface?);
   }
   if (value is GoInt) return $ix(value);
-  throw _JsonCause('json: unsupported type: ${desc.display}');
+  throw _coded('unsupportedType', <String>[desc.display]);
+}
+
+/// _numberOf writes a value of the type encoding/json.Number. Go writes the
+/// text of the number, and not a JSON string.
+Object _numberOf(GoString text) {
+  if (text.length == 0) return 0;
+  final Object? out = num.tryParse(text.toDartString());
+  if (out == null) {
+    throw _coded('unsupportedValue', <String>[
+      'invalid number literal ${text.toDartString()}',
+    ]);
+  }
+  return out;
 }
 
 /// _callMarshal writes a value through the method MarshalJSON of its type.
@@ -88,17 +107,12 @@ Object? _callMarshal(TypeDesc desc, Function marshal, Object? value) {
       Function.apply(marshal, <Object?>[value]) as (Slice<GoInt>, Iface?);
   final Iface? cause = out.$2;
   if (cause != null) {
-    throw _JsonCause(
-      'json: error calling MarshalJSON for type ${desc.display}: '
-      '${_errorText(cause)}',
-    );
+    throw _coded('marshaler', <String>[desc.display, _errorText(cause)]);
   }
   try {
     return jsonDecode($bytesToString(out.$1).toDartString());
   } on FormatException catch (e) {
-    throw _JsonCause(
-      'json: error calling MarshalJSON for type ${desc.display}: ${e.message}',
-    );
+    throw _coded('marshaler', <String>[desc.display, e.message]);
   }
 }
 
@@ -147,7 +161,7 @@ Map<String, Object?> _object(TypeDesc desc, Object? value) {
 /// reads back as the same value, thus a whole value holds no fraction.
 Object _number(double v) {
   if (v.isNaN || v.isInfinite) {
-    throw _JsonCause('json: unsupported value: $v');
+    throw _coded('unsupportedValue', <String>['$v']);
   }
   if (v == v.roundToDouble() && v.abs() < 1e21) return v.toInt();
   return v;
@@ -199,7 +213,7 @@ Map<String, Object?> _map(TypeDesc desc, GoMap<Object?, Object?> m) {
 String _keyText(TypeDesc key, Object? k) {
   if (key.kind == 'string') return (k as GoString).toDartString();
   if (k is GoInt) return k.toString();
-  throw _JsonCause('json: unsupported map key type: ${key.display}');
+  throw _coded('unsupportedType', <String>['map key ${key.display}']);
 }
 
 /// _Tag holds the parts of a json tag of a field.
@@ -271,26 +285,38 @@ bool _empty(TypeDesc desc, Object? v) {
 /// The target holds a pointer, and the walk reads the type descriptor of the
 /// element. The result holds the cause of a failure, and it is empty after a
 /// success.
-GoString $jsonUnmarshal(Iface? target, GoString data) {
+GoString $jsonUnmarshal(Iface? target, GoString data, bool strict) {
+  _strict = strict;
+  _structName = '';
+  _fieldName = '';
   try {
     if (target == null) {
-      throw _JsonCause('json: Unmarshal(nil)');
+      throw _coded('invalid', <String>['nil']);
     }
     if (target.desc.kind != 'ptr') {
-      throw _JsonCause('json: Unmarshal(non-pointer ${target.desc.display})');
+      throw _coded('invalid', <String>['non-pointer ${target.desc.display}']);
     }
     final TypeDesc? elem = target.desc.elem?.call();
     if (elem == null || target.value == null) {
-      throw _JsonCause('json: Unmarshal(nil ${target.desc.display})');
+      throw _coded('invalid', <String>['nil ${target.desc.display}']);
     }
     _store(elem, target.value, jsonDecode(data.toDartString()));
     return GoString.empty;
   } on _JsonCause catch (e) {
     return GoString.fromString(e.text);
   } on FormatException catch (e) {
+    // The Go side scans the text before this call. A form that only the Dart
+    // parser rejects reaches this line.
     return GoString.fromString('json: ${e.message}');
   }
 }
+
+/// The state of 1 walk of the decoder. Go names the struct and the field of a
+/// value that does not fit, and it reports a member that matches no field.
+/// The walk is synchronous, thus 1 set of variables holds that state.
+bool _strict = false;
+String _structName = '';
+String _fieldName = '';
 
 /// _store writes a value through a pointer.
 ///
@@ -349,6 +375,10 @@ Object? _decode(TypeDesc desc, Object? tree) {
       if (tree is! bool) throw _wrong(tree, desc);
       return tree;
     case 'string':
+      if (desc.name == _numberType) {
+        if (tree is! num) throw _wrong(tree, desc);
+        return GoString.fromString(tree.toString());
+      }
       if (tree is! String) throw _wrong(tree, desc);
       return GoString.fromString(tree);
     case 'float32':
@@ -448,11 +478,35 @@ Object? _key(TypeDesc desc, String text) {
 void _fillStruct(TypeDesc desc, Object? target, Object? tree) {
   if (tree == null) return;
   if (tree is! Map) throw _wrong(tree, desc);
+  final String outerStruct = _structName;
+  final String outerField = _fieldName;
   for (final MapEntry<Object?, Object?> entry in tree.entries) {
-    final FieldDesc? field = _field(desc, entry.key as String);
-    if (field == null) continue;
+    final String name = entry.key as String;
+    final FieldDesc? field = _field(desc, name);
+    if (field == null) {
+      if (_strict) throw _coded('unknown', <String>[_path(outerField, name)]);
+      continue;
+    }
+    _structName = _bareName(desc.display);
+    _fieldName = _path(outerField, _readTag(field.tag, field.name).name);
     field.set(target, _decode(field.type(), entry.value));
   }
+  _structName = outerStruct;
+  _fieldName = outerField;
+}
+
+/// _path names a field under the field that holds it.
+String _path(String outer, String name) =>
+    outer.isEmpty ? name : '$outer.$name';
+
+/// _bareName drops the package of a type name. Go names the struct of an
+/// UnmarshalTypeError without its package.
+String _bareName(String display) {
+  final int bracket = display.indexOf('[');
+  final String head = bracket < 0 ? display : display.substring(0, bracket);
+  final int dot = head.lastIndexOf('.');
+  final String name = dot < 0 ? head : head.substring(dot + 1);
+  return bracket < 0 ? name : name + display.substring(bracket);
 }
 
 /// _field finds the field of a name. Go takes an equal name first, and a name
@@ -540,9 +594,12 @@ final TypeDesc _anyMapDesc = TypeDesc(
   elem: () => _anyDesc,
 );
 
-_JsonCause _wrong(Object? tree, TypeDesc desc) => _JsonCause(
-  'json: cannot unmarshal ${_treeKind(tree)} into Go value of type ${desc.display}',
-);
+_JsonCause _wrong(Object? tree, TypeDesc desc) => _coded('type', <String>[
+  _treeKind(tree),
+  desc.display,
+  _structName,
+  _fieldName,
+]);
 
 String _treeKind(Object? tree) {
   if (tree == null) return 'null';

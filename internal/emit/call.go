@@ -329,9 +329,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "MonoNanos":
 		return "$monoNanos()", true
 	case "MarshalJSON":
-		return fmt.Sprintf("$jsonMarshal(%s, %s)", args[0], args[1]), true
+		return fmt.Sprintf("$jsonMarshal(%s)", args[0]), true
 	case "UnmarshalJSON":
-		return fmt.Sprintf("$jsonUnmarshal(%s, %s)", args[0], args[1]), true
+		return fmt.Sprintf("$jsonUnmarshal(%s, %s, %s)",
+			args[0], args[1], args[2]), true
 	case "Float64Bits":
 		return fmt.Sprintf("$f64ToBits(%s)", args[0]), true
 	case "Float64FromBits":
