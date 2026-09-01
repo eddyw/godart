@@ -52,10 +52,66 @@ type RWMutex struct {
 	mu Mutex
 }
 
-func (rw *RWMutex) Lock()    { rw.mu.Lock() }
-func (rw *RWMutex) Unlock()  { rw.mu.Unlock() }
-func (rw *RWMutex) RLock()   { rw.mu.Lock() }
-func (rw *RWMutex) RUnlock() { rw.mu.Unlock() }
+func (rw *RWMutex) Lock()          { rw.mu.Lock() }
+func (rw *RWMutex) Unlock()        { rw.mu.Unlock() }
+func (rw *RWMutex) RLock()         { rw.mu.Lock() }
+func (rw *RWMutex) RUnlock()       { rw.mu.Unlock() }
+func (rw *RWMutex) TryLock() bool  { return rw.mu.TryLock() }
+func (rw *RWMutex) TryRLock() bool { return rw.mu.TryLock() }
+
+// RLocker gives a Locker that takes the read lock.
+func (rw *RWMutex) RLocker() Locker { return rlocker{rw} }
+
+type rlocker struct{ rw *RWMutex }
+
+func (r rlocker) Lock()   { r.rw.RLock() }
+func (r rlocker) Unlock() { r.rw.RUnlock() }
+
+// A Locker holds a lock and gives it back.
+type Locker interface {
+	Lock()
+	Unlock()
+}
+
+// A Cond holds a queue of goroutines that wait for a change of a condition.
+// Each goroutine of the queue holds the lock L while it tests the condition.
+type Cond struct {
+	// L holds the lock of the condition.
+	L Locker
+
+	waiters []chan bool
+}
+
+// NewCond gives a Cond with the lock l.
+func NewCond(l Locker) *Cond { return &Cond{L: l} }
+
+// Wait gives up the lock and waits for a Signal or a Broadcast. It takes the
+// lock again before it gives control back.
+func (c *Cond) Wait() {
+	w := make(chan bool)
+	c.waiters = append(c.waiters, w)
+	c.L.Unlock()
+	<-w
+	c.L.Lock()
+}
+
+// Signal wakes 1 goroutine of the queue.
+func (c *Cond) Signal() {
+	if len(c.waiters) == 0 {
+		return
+	}
+	w := c.waiters[0]
+	c.waiters = c.waiters[1:]
+	close(w)
+}
+
+// Broadcast wakes each goroutine of the queue.
+func (c *Cond) Broadcast() {
+	for _, w := range c.waiters {
+		close(w)
+	}
+	c.waiters = nil
+}
 
 // A WaitGroup waits for a group of goroutines.
 type WaitGroup struct {
@@ -81,6 +137,16 @@ func (wg *WaitGroup) Add(delta int) {
 // Done takes 1 away from the count.
 func (wg *WaitGroup) Done() {
 	wg.Add(-1)
+}
+
+// Go adds 1 to the count and runs f on a new goroutine. The count drops by 1
+// after f gives control back.
+func (wg *WaitGroup) Go(f func()) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		f()
+	}()
 }
 
 // Wait waits until the count reaches 0.

@@ -32,6 +32,9 @@ type Cookie struct {
 	Secure   bool
 	HttpOnly bool
 	SameSite SameSite
+	// Quoted reports whether the value of the field stood between 2 quotation
+	// marks. A write puts the marks back.
+	Quoted bool
 	// Raw holds the text of the field that a read gave.
 	Raw string
 }
@@ -48,7 +51,7 @@ func (c *Cookie) String() string {
 	var b strings.Builder
 	b.WriteString(c.Name)
 	b.WriteByte('=')
-	b.WriteString(sanitizeCookieValue(c.Value))
+	b.WriteString(sanitizeCookieValue(c.Value, c.Quoted))
 	if len(c.Path) > 0 {
 		b.WriteString("; Path=" + c.Path)
 	}
@@ -94,7 +97,7 @@ func SetCookie(w ResponseWriter, cookie *Cookie) {
 
 // AddCookie adds a cookie to the field Cookie of the request.
 func (r *Request) AddCookie(c *Cookie) {
-	pair := c.Name + "=" + sanitizeCookieValue(c.Value)
+	pair := c.Name + "=" + sanitizeCookieValue(c.Value, c.Quoted)
 	if old := r.Header.Get("Cookie"); old != "" {
 		r.Header.Set("Cookie", old+"; "+pair)
 		return
@@ -142,7 +145,8 @@ func readCookies(lines []string, filter string) []*Cookie {
 			if filter != "" && filter != name {
 				continue
 			}
-			out = append(out, &Cookie{Name: name, Value: unquoteCookie(value)})
+			text, quoted := unquoteCookie(value)
+			out = append(out, &Cookie{Name: name, Value: text, Quoted: quoted})
 		}
 	}
 	return out
@@ -160,10 +164,12 @@ func readSetCookies(lines []string) []*Cookie {
 		if !ok || !validCookieName(strings.TrimSpace(name)) {
 			continue
 		}
+		text, quoted := unquoteCookie(value)
 		c := &Cookie{
-			Name:  strings.TrimSpace(name),
-			Value: unquoteCookie(value),
-			Raw:   line,
+			Name:   strings.TrimSpace(name),
+			Value:  text,
+			Quoted: quoted,
+			Raw:    line,
 		}
 		for _, part := range parts[1:] {
 			part = strings.TrimSpace(part)
@@ -223,8 +229,9 @@ func validCookieName(name string) bool {
 }
 
 // sanitizeCookieValue drops each byte that a cookie value cannot hold, and it
-// puts the value in quotes when it holds a space or a comma.
-func sanitizeCookieValue(v string) string {
+// puts the value in quotes when it holds a space or a comma, or when the value
+// of the read held them.
+func sanitizeCookieValue(v string, quoted bool) string {
 	var b strings.Builder
 	for i := 0; i < len(v); i++ {
 		c := v[i]
@@ -234,16 +241,21 @@ func sanitizeCookieValue(v string) string {
 		b.WriteByte(c)
 	}
 	out := b.String()
-	if strings.ContainsAny(out, " ,") {
+	if out == "" {
+		return out
+	}
+	if quoted || strings.ContainsAny(out, " ,") {
 		return `"` + out + `"`
 	}
 	return out
 }
 
-func unquoteCookie(v string) string {
+// unquoteCookie drops the 2 quotation marks of a value. The flag reports a
+// value that held them.
+func unquoteCookie(v string) (string, bool) {
 	v = strings.TrimSpace(v)
 	if len(v) > 1 && v[0] == '"' && v[len(v)-1] == '"' {
-		return v[1 : len(v)-1]
+		return v[1 : len(v)-1], true
 	}
-	return v
+	return v, false
 }

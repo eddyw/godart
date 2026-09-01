@@ -367,6 +367,11 @@ func UnmarshalJSON(v any, data string, strict bool) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// RandomBytes gives n bytes of the secure source of the platform.
+func RandomBytes(n int) []byte {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // MonoNanos gives the count of nanoseconds since the start of the program.
 //
 // The value comes from a monotonic clock. A change of the system time does not

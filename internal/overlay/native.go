@@ -56,6 +56,12 @@ var native = []string{
 	"go/doc/comment",
 	"go/printer",
 	"go/format",
+	"net/textproto",
+	"mime",
+	"mime/quotedprintable",
+	"mime/multipart",
+	"net/http/cookiejar",
+	"net/http/internal/ascii",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

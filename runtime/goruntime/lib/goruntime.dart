@@ -25,6 +25,7 @@ export 'src/net.dart' if (dart.library.js_interop) 'src/net_web.dart';
 export 'src/panic.dart';
 export 'src/print.dart';
 export 'src/process.dart' if (dart.library.js_interop) 'src/process_web.dart';
+export 'src/random.dart';
 export 'src/reflect.dart';
 export 'src/sched.dart';
 export 'src/select.dart';

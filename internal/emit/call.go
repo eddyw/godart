@@ -328,6 +328,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$zoneOffset(%s)", args[0]), true
 	case "MonoNanos":
 		return "$monoNanos()", true
+	case "RandomBytes":
+		return fmt.Sprintf("$randomBytes(%s)", args[0]), true
 	case "MarshalJSON":
 		return fmt.Sprintf("$jsonMarshal(%s)", args[0]), true
 	case "UnmarshalJSON":

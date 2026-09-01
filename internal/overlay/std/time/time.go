@@ -109,6 +109,18 @@ func (t Time) Before(u Time) bool { return t.nanos < u.nanos }
 // After reports whether t comes after u.
 func (t Time) After(u Time) bool { return t.nanos > u.nanos }
 
+// Compare gives -1 when t comes before u, 0 when the 2 name the same instant,
+// and 1 when t comes after u.
+func (t Time) Compare(u Time) int {
+	if t.nanos < u.nanos {
+		return -1
+	}
+	if t.nanos > u.nanos {
+		return 1
+	}
+	return 0
+}
+
 // IsZero reports whether t holds the zero time.
 func (t Time) IsZero() bool { return t.nanos == 0 }
 
