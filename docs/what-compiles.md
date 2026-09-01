@@ -109,8 +109,8 @@ Thus these categories build:
 - A TCP server and a TCP client with a text protocol of its own.
 - A simulation with a goroutine, a channel, and a `select`.
 - A reader and a writer of JSON, CSV, hex, base64, and a binary record.
-- An HTTP server of HTTP/1.1, and a client of it. A client of an https address
-  also runs, because Dart holds the handshake.
+- An HTTP server of HTTP/1.1 or HTTP/2, and a client of it. A client of an
+  https address also runs, because Dart holds the handshake.
 - A test suite of such a program. `gart test` gives the output of `go test`.
 
 ## The gate of each program that does not build
@@ -120,7 +120,6 @@ Thus these categories build:
 | `text/template`, `html/template` | Each program that writes a page or a file from a template. |
 | `encoding/xml`, `encoding/gob` | Each program that reads an XML file or a gob stream. |
 | `archive/...`, `compress/bzip2`, `compress/lzw` | Each program that reads a zip file or a tar file. |
-| HTTP/2 | Each client that needs the newer protocol. |
 | `database/sql` | Each program that reads a database. |
 | A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
 

@@ -4,12 +4,17 @@ package http
 
 import (
 	"bufio"
+	"crypto/tls"
+	"errors"
 	"io"
+	"log"
 	"net"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall/dart"
 )
 
 // A Handler answers 1 request.
@@ -46,6 +51,10 @@ type Server struct {
 	Addr string
 	// Handler answers each request. A nil handler reads DefaultServeMux.
 	Handler Handler
+	// ErrorLog receives the log of an accept or a handshake failure in Go.
+	// The overlay server writes no such log, thus the field keeps the value
+	// only.
+	ErrorLog *log.Logger
 
 	mu       sync.Mutex
 	listener net.Listener
@@ -113,6 +122,13 @@ func (s *Server) Close() error {
 
 // handle answers each request of 1 connection.
 func (s *Server) handle(conn net.Conn) {
+	// A TLS connection whose ALPN took h2 leaves the table of the
+	// connections, and the HTTP/2 session of the runtime drives its socket.
+	if tc, ok := conn.(h2Conn); ok &&
+		tc.ConnectionState().NegotiatedProtocol == "h2" {
+		s.serveH2(tc.Handle())
+		return
+	}
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
 	for {
@@ -409,4 +425,159 @@ func StripPrefix(prefix string, h Handler) Handler {
 		out.URL = &u
 		h.ServeHTTP(w, &out)
 	})
+}
+
+// h2Conn names an accepted connection that can carry HTTP/2. The TLS
+// listener gives one.
+type h2Conn interface {
+	ConnectionState() tls.ConnectionState
+	Handle() int
+}
+
+// serveH2 answers each stream of 1 HTTP/2 connection. Each stream runs on a
+// goroutine of its own, exactly as each request of HTTP/2 does in Go.
+func (s *Server) serveH2(conn int) {
+	session, cause := dart.H2Server(conn)
+	if cause != "" {
+		return
+	}
+	defer dart.H2Close(session)
+	for {
+		stream, method, path, authority, flat, cause := dart.H2Next(session)
+		if cause != "" {
+			return
+		}
+		go s.serveH2Stream(stream, method, path, authority, flat)
+	}
+}
+
+func (s *Server) serveH2Stream(stream int, method, path, authority string, flat []string) {
+	u, err := url.ParseRequestURI(path)
+	if err != nil {
+		u = &url.URL{Path: path}
+	}
+	header := Header{}
+	for i := 0; i+1 < len(flat); i += 2 {
+		header.Add(flat[i], flat[i+1])
+	}
+	length := int64(-1)
+	if v := header.Get("Content-Length"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			length = n
+		}
+	}
+	req := &Request{
+		Method:        method,
+		URL:           u,
+		Proto:         "HTTP/2.0",
+		ProtoMajor:    2,
+		Header:        header,
+		Body:          &h2Body{stream: stream},
+		ContentLength: length,
+		Host:          authority,
+		RequestURI:    path,
+	}
+	w := &h2Response{stream: stream, header: Header{}, req: req}
+	handler := s.Handler
+	if handler == nil {
+		handler = DefaultServeMux
+	}
+	handler.ServeHTTP(w, req)
+	w.finish()
+}
+
+// An h2Response writes the answer of 1 stream. It holds the body until the
+// end of the handler, exactly as the answer of HTTP/1.1 does, and a Flush
+// writes the head and the bytes that stand open.
+type h2Response struct {
+	stream    int
+	header    Header
+	req       *Request
+	body      []byte
+	status    int
+	wroteHead bool
+	headSent  bool
+	ended     bool
+}
+
+func (w *h2Response) Header() Header { return w.header }
+
+func (w *h2Response) WriteHeader(code int) {
+	if w.wroteHead {
+		return
+	}
+	w.wroteHead = true
+	w.status = code
+}
+
+func (w *h2Response) Write(p []byte) (int, error) {
+	if !w.wroteHead {
+		w.WriteHeader(StatusOK)
+	}
+	if w.headSent {
+		if len(p) == 0 {
+			return 0, nil
+		}
+		n, cause := dart.H2Write(w.stream, p)
+		if cause != "" {
+			return n, errors.New(cause)
+		}
+		return len(p), nil
+	}
+	w.body = append(w.body, p...)
+	return len(p), nil
+}
+
+// Flush writes the head and the body that stands open.
+func (w *h2Response) Flush() {
+	if !w.wroteHead {
+		w.WriteHeader(StatusOK)
+	}
+	if !w.headSent {
+		w.sendHead(false)
+		body := w.body
+		w.body = nil
+		if len(body) > 0 {
+			dart.H2Write(w.stream, body)
+		}
+	}
+}
+
+func (w *h2Response) sendHead(endStream bool) {
+	w.headSent = true
+	if w.header.Get("Content-Type") == "" && len(w.body) > 0 {
+		w.header.Set("Content-Type", "text/plain; charset=utf-8")
+	}
+	var flat []string
+	for name, values := range w.header {
+		for _, v := range values {
+			flat = append(flat, name, v)
+		}
+	}
+	dart.H2WriteHead(w.stream, w.status, flat, endStream)
+	w.ended = endStream
+}
+
+// finish writes the answer that stands open, and it ends the stream.
+func (w *h2Response) finish() {
+	if !w.wroteHead {
+		w.WriteHeader(StatusOK)
+	}
+	if !w.headSent {
+		w.header.Set("Content-Length", itoa(len(w.body)))
+		if w.req != nil && w.req.Method == MethodHead {
+			w.sendHead(true)
+			dart.H2End(w.stream)
+			return
+		}
+		w.sendHead(len(w.body) == 0)
+	}
+	if w.ended {
+		dart.H2End(w.stream)
+		return
+	}
+	if len(w.body) > 0 {
+		dart.H2Write(w.stream, w.body)
+	}
+	dart.H2End(w.stream)
 }

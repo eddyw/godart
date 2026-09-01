@@ -328,6 +328,26 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$procWait(%s)", args[0]), true
 	case "ProcKill":
 		return fmt.Sprintf("$procKill(%s, %s)", args[0], args[1]), true
+	case "H2Client":
+		return fmt.Sprintf("$h2Client(%s)", args[0]), true
+	case "H2Fetch":
+		return fmt.Sprintf("$h2Fetch(%s, %s, %s, %s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3], args[4], args[5], args[6]), true
+	case "H2Read":
+		return fmt.Sprintf("$h2Read(%s, %s)", args[0], args[1]), true
+	case "H2Server":
+		return fmt.Sprintf("$h2Server(%s)", args[0]), true
+	case "H2Next":
+		return fmt.Sprintf("$h2Next(%s)", args[0]), true
+	case "H2WriteHead":
+		return fmt.Sprintf("$h2WriteHead(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
+	case "H2Write":
+		return fmt.Sprintf("$h2Write(%s, %s)", args[0], args[1]), true
+	case "H2End":
+		return fmt.Sprintf("$h2End(%s)", args[0]), true
+	case "H2Close":
+		return fmt.Sprintf("$h2Close(%s)", args[0]), true
 	case "ConnRead":
 		return fmt.Sprintf("$connRead(%s, %s)", args[0], args[1]), true
 	case "ConnWrite":

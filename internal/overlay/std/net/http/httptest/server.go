@@ -24,6 +24,10 @@ type Server struct {
 	// Config holds the server that answers each request.
 	Config *http.Server
 
+	// EnableHTTP2 asks StartTLS for h2 in the list of ALPN, and the client
+	// of the server then also offers h2. Set it before StartTLS.
+	EnableHTTP2 bool
+
 	client *http.Client
 }
 
@@ -75,9 +79,13 @@ func (s *Server) StartTLS() {
 		panic("httptest: " + err.Error())
 	}
 	s.Listener.Close()
+	protos := []string{"http/1.1"}
+	if s.EnableHTTP2 {
+		protos = []string{"h2", "http/1.1"}
+	}
 	l, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		NextProtos:   []string{"http/1.1"},
+		NextProtos:   protos,
 	})
 	if err != nil {
 		panic("httptest: failed to listen on a port: " + err.Error())
@@ -88,7 +96,8 @@ func (s *Server) StartTLS() {
 	// thus the client of the server drops the check. Go gives its client the
 	// certificate as a root.
 	s.client = &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+		ForceAttemptHTTP2: s.EnableHTTP2,
 	}}
 	go s.Config.Serve(s.Listener)
 }

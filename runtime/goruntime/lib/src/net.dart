@@ -184,6 +184,17 @@ _Conn? _at(int handle) {
   return _open[handle];
 }
 
+/// Takes the socket of a connection out of the table. The HTTP/2 transport
+/// wraps the socket, and the handle then answers no read and no write. The
+/// take works only while no read ran, because the first read subscribes the
+/// iterator of the connection to the stream.
+Socket? $takeSocket(int handle) {
+  final _Conn? c = _at(handle);
+  if (c == null) return null;
+  _open[handle] = null;
+  return c.socket;
+}
+
 int _listenSlot(_Listener l) {
   _register();
   for (int i = 0; i < _listeners.length; i++) {

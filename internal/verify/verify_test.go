@@ -78,9 +78,9 @@ var _ = unsafe.Sizeof(0)
 `)
 	rejectFile(t, "curated surface", "outside the supported surface", `package a
 
-import "os/exec"
+import "os/signal"
 
-var _ = exec.ErrNotFound
+var _ = signal.Ignore
 `)
 	acceptFile(t, "a blank import of unsafe", `package a
 

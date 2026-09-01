@@ -66,7 +66,7 @@ The package `fmt` reads it.
 | `Value.Elem` of a value that is not a pointer | Panics. Go gives the value inside an interface. |
 | `Type.Size`, `Type.Align`, `Type.FieldAlign`, `StructField.Offset` | Present. The result follows the rules of a 64-bit machine, exactly as the compiler of Go computes them. |
 | `Type.Align`, `Type.FieldAlign`, `Value.UnsafeAddr` | Not present. The target has no memory layout. |
-| `Value.Complex` and `Value.SetComplex` | Not present. The subset holds no complex number. |
+| `Value.Complex` and `Value.SetComplex` | Not present. The reflect subset holds no complex kind. |
 | `Type.NumMethod`, `Type.Method`, `Value.NumMethod`, `Value.Method` | Present. The order follows the name, exactly as in Go. `Method` gives the name and the index only. |
 | `Value.IsNil`, `Value.MapIndex` | Present |
 | `Value.MapKeys` | Present. The order follows the insertion, and Go gives a random order. |
@@ -452,7 +452,11 @@ The `net` package holds this surface:
 The real `net/http` of Go holds 53000 lines. It reads a vendored HTTP/2 stack, a
 cookie jar, a file transport, `mime`, `net/textproto`, and `compress/gzip`. The
 overlay holds an HTTP/1.1 client and an HTTP/1.1 server over the `net` package,
-with about 1500 lines.
+with about 1500 lines. HTTP/2 rides the Dart package `http2` behind ALPN, and
+decision 213 holds the shape: the transport offers h2 on an https dial as Go
+does, 1 session carries each request of a host, and the server answers each
+stream on a goroutine of its own. `httptest.Server` takes `EnableHTTP2`, as in
+Go.
 
 | Item | Go | godart |
 |---|---|---|
@@ -469,19 +473,20 @@ with about 1500 lines.
 | A chunked body | Present | Equal, for a read and for a write. |
 | Keep alive | Present | Present. The client holds a pool of 2 connections for each host. |
 | A Close of a body that stands before its end | The connection stays open when the read loop reaches the end first | The connection ends. |
-| HTTP/2 | Present | Not present |
+| HTTP/2 | The vendored stack of Go | Present over the Dart package http2, for the client and the server, behind ALPN. The request body reaches the wire as 1 piece, a push of the server and a trailer stay out, and `Request.TLS` stays nil. |
 | `Accept-Encoding: gzip` | The client adds it and reads the answer | Equal. `DisableCompression` stops it, and `Response.Uncompressed` marks the answer. |
 | The type of a body that the handler does not name | `DetectContentType` reads the first 512 bytes | `text/plain; charset=utf-8` for each body |
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
 | `Request.RemoteAddr` | The address of the peer | Empty. The `Conn` of the `net` overlay names no peer. |
-| `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `MaxIdleConnsPerHost`, and `CloseIdleConnections` |
+| `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `MaxIdleConnsPerHost`, `ForceAttemptHTTP2`, and `CloseIdleConnections` |
 | `httptest` | Present | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `NewTLSServer`, `StartTLS`, `Server.Client`, and `Server.Close`. `CloseClientConnections` and the wait of `Close` for each request that stands open stay out. `StartTLS` binds a fresh port, because the secure socket of Dart wraps no open listener, and the client of a TLS server drops the certificate check, because the surface holds no root pool. |
 | `CookieJar`, `FileServer`, `multipart` | Present | Not present |
 
 `testdata/programs/httpuse` runs a server and a client in 1 program, and the
 output of `go run` and of the Dart build stays equal.
 `testdata/programs/httpkeep` counts the connections of a listener, and it proves
-that 5 requests in a row share 1 connection.
+that 5 requests in a row share 1 connection. `testdata/programs/h2serve` runs
+an HTTP/2 server and its client, and the 2 sides print `HTTP/2.0`.
 
 ## The clock and the timer
 

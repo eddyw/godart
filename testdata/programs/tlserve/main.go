@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,6 +16,9 @@ func main() {
 			fmt.Fprintf(w, "secure %s %s", r.Method, r.URL.Path)
 		}))
 	defer s.Close()
+	// The raw dial below can end while the server still shakes hands, and
+	// the server of Go then logs a handshake error at a time of its own.
+	s.Config.ErrorLog = log.New(io.Discard, "", 0)
 	fmt.Println(strings.HasPrefix(s.URL, "https://"))
 
 	res, err := s.Client().Get(s.URL + "/door")

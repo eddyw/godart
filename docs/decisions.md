@@ -942,6 +942,23 @@ The plan left these points open. The work took the decisions below.
      stay out. The program `execuse` proves the parity, the kill and the
      exit code included.
 
+213. HTTP/2 rides the Dart package `http2 ^2.3.1`, behind ALPN, and not a
+     Go stack: HPACK and the framing stand in that package, and the overlay
+     of `net/http` stays small. `$takeSocket` lifts the socket of a TLS
+     connection out of the table of `net.dart`, and the take works only
+     while no read ran, because the first read subscribes the iterator.
+     9 interop calls carry the 2 sides, and `H2Fetch`, `H2Read`, and
+     `H2Next` block. The client offers h2 on an https dial with the rules
+     of Go: a config with `NextProtos` wins, no config offers h2, and
+     `ForceAttemptHTTP2` offers h2 next to a config. 1 session carries
+     each request of a host, and a session that broke leaves the pool with
+     the retry rule of a reused connection. The request body reaches the
+     wire as 1 piece, because the fetch takes the bytes. The server
+     answers each stream on a goroutine of its own, and the answer buffers
+     as the answer of HTTP/1.1 does. `httptest.Server` takes
+     `EnableHTTP2`. A push of the server, a trailer, and `Request.TLS`
+     stay out. The program `h2serve` proves the parity.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

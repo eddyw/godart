@@ -148,6 +148,11 @@ func (c *Conn) Handshake() error { return nil }
 // ConnectionState gives the result of the handshake.
 func (c *Conn) ConnectionState() ConnectionState { return c.state }
 
+// Handle gives the handle of the connection inside the runtime. The HTTP/2
+// transport of net/http wraps the socket behind it. The real tls.Conn of Go
+// holds no such method.
+func (c *Conn) Handle() int { return c.handle }
+
 // errEOF names the end of the stream. The package io imports no tls, thus the
 // value compares equal to io.EOF through the text of the error.
 var errEOF = errors.New("EOF")

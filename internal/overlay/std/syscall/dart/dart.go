@@ -779,3 +779,65 @@ func ProcWait(pid int) (int, string) {
 func ProcKill(pid int, signal int) string {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// H2Client wraps an open TLS connection whose ALPN took h2, and gives the
+// handle of the session. The socket leaves the table of the connections,
+// thus the old handle answers no read and no write. The wrap works only
+// while no read ran on the connection.
+func H2Client(conn int) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// H2Fetch runs 1 request on a session of a client. The results are the
+// handle of the stream of the body, the status, the flat response headers,
+// and the cause of a failure. The flat list holds each name in front of its
+// value.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func H2Fetch(session int, method, path, authority string, headers []string, body []byte, hasBody bool) (int, int, []string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// H2Read reads bytes of the body of a stream. A count of 0 with no cause
+// means the end of the stream.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func H2Read(stream int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// H2Server wraps an accepted TLS connection whose ALPN took h2, and gives
+// the handle of the session of the server.
+func H2Server(conn int) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// H2Next waits for the next stream of a client. The results are the handle
+// of the stream, the method, the path, the authority, the flat headers, and
+// the cause. The end of the connection gives the cause EOF.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func H2Next(session int) (int, string, string, string, []string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// H2WriteHead writes the status and the fields of an answer. endStream
+// marks an answer with no body.
+func H2WriteHead(stream int, status int, headers []string, endStream bool) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// H2Write writes bytes of a body onto a stream.
+func H2Write(stream int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// H2End ends the send side of a stream, and drops the stream.
+func H2End(stream int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// H2Close ends a session and its connection.
+func H2Close(session int) string {
+	panic("syscall/dart needs the gart compiler")
+}

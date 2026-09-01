@@ -123,9 +123,8 @@ connection joins the table of the plain connections. The surface holds no
 took, and Dart parses them. `AcceptTLS` gives the protocol that ALPN took.
 `httptest.NewTLSServer` and `StartTLS` ride `tls.Listen` with a self signed
 certificate of the loopback address, and `testdata/programs/tlserve` proves
-the parity against `go run`. The other HTTP/2 dependencies stay parked:
-`LocalAddr` and `RemoteAddr` of `net`, HPACK, and the framing. Read decision
-210.
+the parity against `go run`. Read decision 210. HTTP/2 landed over the Dart
+package `http2` on 2026-09-01, and the section of the HTTP access holds it.
 
 `runtime/goruntime/test/tls_test.dart` proves a handshake, ALPN, a write, and a
 read against a local server. The certificate comes from
@@ -134,8 +133,6 @@ read against a local server. The certificate comes from
 `testdata/programs/netpkg` reads the real `net` API with no build tag. The go
 command takes the real package, and `gart` takes the overlay. Both builds write
 the same 9 lines.
-
-The work that remains: TLS. Read the note above.
 
 ## The process access
 
@@ -147,6 +144,14 @@ holds the exit code and the signal only. Decision 212 holds the shape, and
 `docs/parity.md` holds the gaps. The program `execuse` proves the parity.
 
 ## The HTTP access
+
+HTTP/2 rides the Dart package `http2`, behind ALPN. The runtime file
+`http2.dart` wraps the socket of a TLS connection whose handshake took h2:
+`$takeSocket` lifts the socket out of the table of `net.dart`, and 9 interop
+calls carry the 2 sides. 1 session carries each request of a host on the
+client, and the server answers each stream on a goroutine of its own.
+`goruntime` thus holds 1 pub dependency, `http2 ^2.3.1`. Decision 213 holds
+the shape, and the program `h2serve` proves the parity.
 
 The real `net/http` holds 53000 lines and reads a vendored HTTP/2 stack, a
 cookie jar, `mime`, `net/textproto`, and `compress/gzip`. The overlay holds an
