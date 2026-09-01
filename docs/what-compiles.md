@@ -10,11 +10,11 @@ of a program that imports the package.
 
 ## The import surface
 
-The surface holds 83 import paths: 74 standard packages, the interop package
-`syscall/dart`, and 8 internal packages that the 74 need. Stage 2 rejects an
+The surface holds 92 import paths: 82 standard packages, the interop package
+`syscall/dart`, and 9 internal packages that the 82 need. Stage 2 rejects an
 import of each other package with a source position.
 
-52 of the 74 hold each exported name of Go, and 21 hold a part of them.
+66 of the 82 hold each exported name of Go, and 15 hold a part of them.
 `docs/support.md` holds the level of each one and the largest gap of each
 partial package.
 
@@ -24,14 +24,17 @@ partial package.
 | `container/heap`, `container/list`, `container/ring`, `os/exec` | `os/signal` |
 | `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
 | `regexp`, `regexp/syntax` | `text/template`, `html/template` |
-| `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/rand`, `crypto/x509` |
+| `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/x509`, `crypto/subtle` |
 | `encoding/csv`, `encoding/hex`, `encoding/json` | `archive/...`, `compress/lzw` |
 | `compress/flate`, `compress/gzip`, `compress/zlib` | `compress/bzip2` |
 | `go/token`, `go/scanner`, `go/ast`, `go/parser` | `go/types`, `go/importer` |
 | `go/printer`, `go/format`, `go/build/constraint`, `go/doc/comment` | `go/build` |
 | `text/tabwriter`, `testing/iotest`, `runtime/debug` | |
 | `net/http/httptest` | `net/smtp`, `net/mail` |
-| `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/tls` | `embed` |
+| `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512` | `embed` |
+| `crypto/hmac`, `crypto/rand`, `crypto/tls` | `math/big` |
+| `mime`, `mime/multipart`, `mime/quotedprintable` | |
+| `net/textproto`, `net/http/cookiejar` | |
 | `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `database/sql`, `math/cmplx` |
 | `io`, `io/fs`, `iter`, `maps`, `slices`, `sort` | |
 | `math`, `math/bits`, `math/rand`, `math/rand/v2` | `unsafe`, cgo |
@@ -43,6 +46,7 @@ partial package.
 | `unicode`, `unicode/utf8` | |
 | `encoding`, `internal/godebug`, `internal/byteorder` | |
 | `internal/testhash`, `internal/testenv` | |
+| `internal/chacha8rand`, `net/http/internal/ascii` | |
 | `testing/internal/testdeps`, `syscall/dart` | |
 
 ## The gates of the language
@@ -141,6 +145,6 @@ one.
 
 | Package | The gap |
 |---|---|
-| `crypto/hmac`, `crypto/sha512` | Each one follows the pattern of the `crypto/sha256` overlay. |
 | `os/signal` | `ProcessSignal.watch` of `dart:io` gives the event. |
+| `crypto/subtle` | Each function is a loop over 2 byte slices. |
 | `math/cmplx` | The language holds the complex type already. The package needs a survey. |

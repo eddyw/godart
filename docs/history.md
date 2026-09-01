@@ -99,6 +99,48 @@ correction in 3 places. A verified run of 1 struct showed that a
 | `bcbd099` | The measurement of the surface: `docs/support.md`, the at-a-glance table and the 6 corrections of `docs/parity.md`, and the exact counts of the 2 other files. |
 | `4525496` | The first Flutter work: `docs/flutter-first.md`, the 3 corrections of `docs/flutter-options.md`, and the 2 JSON rows of `docs/parity.md`. |
 
+### 2026-09-01, the ninth session
+
+The session ran the 6 tasks of the priority list of the user, and it took the
+Flutter decision.
+
+`encoding/json` grew from 7 names to 52. The Dart walk of the package read the
+type descriptor only, thus a type with a JSON form of its own gave a silent
+wrong result. The walk now reads the method table of that descriptor, and it
+calls `MarshalJSON` and `UnmarshalJSON`. A method with a pointer receiver stays
+out of the value method set, thus the description of a value type now names the
+description of its pointer type, and that pointer description builds a pointer
+to a fresh value. The compiler writes the 2 links only when the pointer type
+holds a method that the value type does not hold. A byte slice gives base64
+text, `time.Time` holds the 8 marshal methods of Go, and a scanner in the Go
+half gives `Decoder`, `Encoder`, `Valid`, `Compact`, `Indent`, and each syntax
+error with the text and the offset of Go.
+
+The surface grew by 9 packages. `mime`, `mime/quotedprintable`,
+`mime/multipart`, `net/textproto`, `net/http/cookiejar`, and
+`net/http/internal/ascii` read the real Go source, and a patch of
+`mime/multipart` replaces the `go:linkname` stub of `readMIMEHeader`.
+`crypto/sha512`, `crypto/hmac`, and `crypto/rand` hold new overlays.
+
+`net/http` took the cookie jar, the form API, and the proxy. An https request
+through a proxy needed a new name that Go does not hold: Go writes the CONNECT
+request itself and then wraps the connection with `tls.Client`, and the secure
+socket of Dart takes over only a socket that no read touched. Thus the runtime
+holds the whole exchange, and `crypto/tls.DialProxy` names it.
+
+6 packages now hold each name of Go: `sort`, `strings`, `time`, `flag`,
+`errors`, and `runtime/debug`. `fmt` took the whole scan family, and it dropped
+the invented name `Writer`, because `io` is importable after all.
+
+| Commit | Work |
+|---|---|
+| `b00076b` | `json`: the 2 marshal interfaces, base64 bytes, and the 8 marshal methods of `time.Time`. |
+| `d7d263e` | `docs/flutter-design.md`: 13 approaches, a matrix of 20 features, and 1 decision. |
+| `8c8884b` | `json`: the scanner, `Decoder`, `Encoder`, `RawMessage`, `Number`, and the 6 error types. |
+| `a2e1de2` | The 9 new packages of the surface, and the 9 names that they needed. |
+| `cdedf0a` | `http`: the cookie jar, the form API, and the proxy with its CONNECT tunnel. |
+| `d128d1b` | The small gaps of `sort`, `strings`, `time`, `flag`, `os`, and the scan family of `fmt`. |
+
 ### 2026-09-01, the seventh session
 
 The session worked the 4 candidates of the sixth session end to end: the
@@ -732,4 +774,30 @@ Each fact carries the date of its check.
   and 3 calls of `recover`. `testenv.OptimizationOff` alone opens no path.
 - The type checker reports the errors of 1 file group at a time. A first run can
   hide a later cause, thus a survey needs a second run after each fix.
+
+### 2026-09-01, the ninth session
+
+- `blockingIntrinsic` of `internal/analyze/analyze.go` holds the name of each
+  interop function that gives up control. A new intrinsic that calls `$await`
+  and that no entry names gives a silent wrong result: the caller reads the zero
+  value, and no report reaches the program. `DialTLSProxy` showed the failure.
+- `SecureSocket.secure` of Dart takes over the subscription of a socket that a
+  listen already holds. It rejects a subscription that stands paused, thus the
+  handler must stay live between the read of the answer and the call.
+- A `StreamIterator` subscribes at its first `moveNext`, thus a `_Conn` that no
+  read touched holds no subscription. A `_Conn` that a read touched holds one
+  that no code can name, thus `tls.Client` over such a connection has no form.
+- The loader rejects a package overlay that holds more files than the real
+  package. `flag` holds 1 real file, thus each new name of it joins `flag.go`.
+- `fmt` can import `io`. The comment of the overlay claimed a cycle, and no
+  cycle exists. `strings` still cannot, thus its `Reader` holds its own EOF.
+- An import of `os` in `fmt` breaks the web target. `os` reads `time`, `time`
+  reads the zone file, and `file_web.dart` holds no `$readFile`. The Dart
+  compile of the web target then fails for each program that reads `fmt`.
+- A parameter of a runtime function that takes a byte slice must name
+  `Slice<GoInt>` in a web file. `GoInt` is an extension type over `int` on the
+  native target, thus `Slice<int>` works there and fails on the JS target.
+- A measure that walks the method set of a pointer counts more names than a
+  measure that walks the value method set. The count of `time` grew from 145
+  to 224 with no change of the real package.
 

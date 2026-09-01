@@ -90,6 +90,70 @@ func unmarshal(data []byte, v any, strict bool) error {
 	return nil
 }
 
+// A Marshaler writes its own JSON form. Marshal calls the method for a value
+// whose type holds it.
+type Marshaler interface {
+	MarshalJSON() ([]byte, error)
+}
+
+// An Unmarshaler reads its own JSON form. Unmarshal calls the method for a
+// value whose type holds it.
+type Unmarshaler interface {
+	UnmarshalJSON([]byte) error
+}
+
+// HTMLEscape writes the JSON text of src into dst with `<`, `>`, `&`, U+2028,
+// and U+2029 in their escaped form. A page that holds the text inside a script
+// element then reads 1 value.
+func HTMLEscape(dst *bytes.Buffer, src []byte) {
+	for i := 0; i < len(src); {
+		c := src[i]
+		switch {
+		case c == '<' || c == '>' || c == '&':
+			dst.WriteString(`\u00`)
+			dst.WriteByte(hexDigit(c >> 4))
+			dst.WriteByte(hexDigit(c & 0xF))
+			i++
+		case c == 0xE2 && i+2 < len(src) && src[i+1] == 0x80 &&
+			src[i+2]&^1 == 0xA8:
+			dst.WriteString(`\u202`)
+			dst.WriteByte(hexDigit(src[i+2] & 1))
+			i += 3
+		default:
+			dst.WriteByte(c)
+			i++
+		}
+	}
+}
+
+func hexDigit(v byte) byte {
+	const digits = "0123456789abcdef"
+	return digits[v]
+}
+
+// An InvalidUTF8Error names a string that holds no valid UTF-8. Go marks the
+// type as deprecated, and no path of this package gives it.
+type InvalidUTF8Error struct {
+	S string
+}
+
+func (e *InvalidUTF8Error) Error() string {
+	return "json: invalid UTF-8 in string: " + strconv.Quote(e.S)
+}
+
+// An UnmarshalFieldError names a member of the input that matches no field of
+// the target. Go marks the type as deprecated, and no path of this package
+// gives it.
+type UnmarshalFieldError struct {
+	Key   string
+	Field string
+}
+
+func (e *UnmarshalFieldError) Error() string {
+	return "json: cannot unmarshal object key " + strconv.Quote(e.Key) +
+		" into unexported field " + e.Field
+}
+
 // A Number holds the text of a JSON number. A field of this type keeps each
 // digit of the input.
 type Number string

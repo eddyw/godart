@@ -167,4 +167,12 @@ func rawAndNumber() {
 	var empty json.RawMessage
 	b, err = json.Marshal(empty)
 	fmt.Println(string(b), err == nil)
+
+	var out bytes.Buffer
+	json.HTMLEscape(&out, []byte(`{"a":"x<y>z&w"}`))
+	fmt.Println(out.String())
+
+	var _ json.Marshaler = json.RawMessage(nil)
+	var _ json.Unmarshaler = (*json.RawMessage)(nil)
+	fmt.Println("interfaces ok")
 }

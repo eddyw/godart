@@ -9,7 +9,7 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 83 import paths: 74 standard packages, `syscall/dart`, and 8
+The surface holds 92 import paths: 82 standard packages, `syscall/dart`, and 9
 internal packages. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
 names that each one holds. A package reaches the surface 3 ways.

@@ -25,7 +25,7 @@ The state of 2026-09-01. Each row names the section that holds the detail.
 | A `Time` | 1 count of nanoseconds, thus the range is the year 1678 to the year 2262, and it holds no monotonic value. |
 | The zone of a date before 1901 | The modern offset of the zone. Dart names the zone, and Go reads its own database. |
 | The file access | Synchronous, through `dart:io`. No permission bit, and no handle of a directory. |
-| The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. |
+| The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. `Getuid` and its family give -1. |
 | The network access | TCP, UDP, and a Unix socket. `net.IP` and `ParseIP` are present, and each other address type stays out. `Request.RemoteAddr` is empty. |
 | HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, and a multipart form are present. No file server. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
@@ -193,8 +193,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/tls` | Overlay | A client and a server over the secure socket of Dart. `Dial`, `DialWithDialer`, `Listen`, `X509KeyPair`, `Config`, `Certificate`, `Conn`, and `ConnectionState`. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
-| `errors` | Overlay | `New`, `Is`, `As`, `AsType`, `Unwrap`, and `Join`. |
-| `flag` | Overlay | The real source reads `reflect` and `runtime.Caller`. `SetOutput` takes an `io.Writer`. |
+| `errors` | Overlay | Each name of Go. `As` takes no pointer to an interface type. |
+| `flag` | Overlay | Each name of Go. The real source reads `reflect` and `runtime.Caller`. |
 | `reflect` | Overlay | 82 of the 188 names of Go. The section "The reflect subset" above holds each one. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq`, `Seq2`, `Pull`, and `Pull2`. Read the section below. |
@@ -206,10 +206,10 @@ reads the real Go source, because that source already stays inside the subset.
 | `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. Read below. |
 | `path/filepath` | Overlay | The separator is always `/`. Read below. | |
 | `net` | Overlay | TCP, UDP, a Unix socket, `IP`, and `ParseIP`. No TLS. Read the section below. |
-| `os` | Overlay | The file access, the temporary names, and the process state. Read the section below. |
+| `os` | Overlay | The file access, the environment, the identity of the process, and the process state. `Root`, `DirFS`, `Chmod`, and the signals stay out. Read the section below. |
 | `path` | Native | |
 | `runtime` | Overlay | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOROOT`, `GOOS`, `GOARCH`, `Caller`, `Callers`, `CallersFrames`, `FuncForPC`, `AddCleanup`, and `GC`. |
-| `runtime/debug` | Overlay | `SetMaxStack` only. |
+| `runtime/debug` | Overlay | Each name of Go. `ReadBuildInfo` gives no record, and `ReadGCStats` writes the zero value. |
 | `math` | Native, with 7 patches | 6 patches replace an assembly file, and 1 replaces `unsafe.go`. |
 | `math/bits` | Native, with 1 patch | The patch replaces `bits_errors.go`, which needs `go:linkname`. |
 | `math/rand` | Native, with 1 patch | The patch replaces `rand.go`. `rng.go` holds the algorithm, thus a seeded sequence stays equal. |
@@ -228,11 +228,11 @@ reads the real Go source, because that source already stays inside the subset.
 | `net/url` | Native | The real source needs no patch. |
 | `unique` | Overlay | `Handle` and `Make`. The map keeps each value, because the subset holds no cleanup. |
 | `internal/godebug` | Overlay | Each setting holds its default, thus `Value` gives an empty text. |
-| `fmt` | Overlay | |
+| `fmt` | Overlay | Each name of Go, except `Formatter`, `State`, and `FormatString`. |
 | `slices` | Overlay | The sort is a stable merge sort. |
-| `sort` | Overlay | `Sort`, `Stable`, `Slice`, `SliceStable`, `Search`, `SearchInts`, `Find`, `Ints`, `Strings`, `Float64s`, and `IntsAreSorted`. `Reverse` and the 3 typed slice types stay out. |
+| `sort` | Overlay | Each name of Go. The order of `Slice` and of `Sort` is a quick sort, and it is not stable. |
 | `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. `ParseInt` and `ParseUint` each read a base of 0. |
-| `strings` | Overlay | |
+| `strings` | Overlay | Each name of Go. `NewReplacer` skips a pair whose old text is empty. |
 | `sync` | Overlay | `Mutex`, `RWMutex`, `Map`, `Cond`, `Locker`, `WaitGroup`, `Once`, `OnceFunc`, `OnceValue`, `OnceValues`, and `Pool`. |
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |
 | `testing` | Overlay | |
@@ -388,6 +388,32 @@ the original one.
 The Dart walk gives a cause to the Go half through 1 string. A cause that starts
 with a null byte holds a code and the parts of a typed error, and the Go half
 builds the error of that code.
+
+### The scan family of fmt
+
+`Sscan`, `Fscan`, `Scan`, and each other member read the runes of an input. A
+scanner of the overlay holds the state, and each error text matches Go.
+
+| Item | Go | godart |
+|---|---|---|
+| `Sscan`, `Sscanln`, `Sscanf` | Present | Equal |
+| `Fscan`, `Fscanln`, `Fscanf` | Present | Equal |
+| `Scan`, `Scanln`, `Scanf` | Read `os.Stdin` | Equal. The reader calls the runtime, and not `os`. Read below. |
+| `ScanState` and `Scanner` | Present | Equal |
+| The verbs `%v %d %b %o %x %X %s %q %c %t %e %f %g` | Present | Equal |
+| A width, for example `%3d` | Present | Equal |
+| `%p` and a complex number | Present | Not present |
+| The error of a broken input | Present | Equal, with the text of Go |
+
+The scan family reads standard input through `syscall/dart`. An import of `os`
+would put the whole file access and the clock of `time` into each program that
+reads `fmt`, and the web target holds neither. A web build reads 0 bytes of
+standard input, thus each scan of that input gives `io.EOF`.
+
+`fmt` also holds no `Formatter`, no `State`, and no `FormatString`. A write of
+the overlay calls the Dart side with 1 verb and 1 value, and a type that writes
+its own form needs a call back into Go. `Marshaler` of `encoding/json` holds the
+path that closes the gap.
 
 ## The file access
 
