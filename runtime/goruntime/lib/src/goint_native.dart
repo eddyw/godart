@@ -1,0 +1,134 @@
+import 'dart:typed_data';
+
+import 'panic.dart';
+
+// The native form of the Go integer. The extension type erases at the
+// compile, thus the VM, AOT, and the wasm target see a plain int, and the
+// emitted arithmetic costs nothing. goint_js.dart holds the form of the JS
+// target, and the 2 files hold 1 surface. Read docs/js-integers.md.
+
+extension type const GoInt(int $v) implements int {
+  static const GoInt zero = GoInt(0);
+
+  GoInt operator +(int o) => GoInt($v + o);
+  GoInt operator -(int o) => GoInt($v - o);
+  GoInt operator *(int o) => GoInt($v * o);
+  GoInt operator &(int o) => GoInt($v & o);
+  GoInt operator |(int o) => GoInt($v | o);
+  GoInt operator ^(int o) => GoInt($v ^ o);
+  GoInt operator ~() => GoInt(~$v);
+  GoInt operator -() => GoInt(-$v);
+}
+
+/// The Go integer of a Dart int. A literal and each boundary value take
+/// this form.
+GoInt $gi(int v) => GoInt(v);
+
+/// The Go integer of 2 32-bit halves. A literal outside 53 bits takes this
+/// form, because a JS number holds 53 bits of an integer.
+GoInt $gi2(int high, int low) => GoInt((high << 32) | low);
+
+GoInt $i8(GoInt v) => GoInt((v.$v & 0xFF) - ((v.$v & 0x80) << 1));
+
+GoInt $i16(GoInt v) => GoInt((v.$v & 0xFFFF) - ((v.$v & 0x8000) << 1));
+
+GoInt $i32(GoInt v) => GoInt((v.$v & 0xFFFFFFFF) - ((v.$v & 0x80000000) << 1));
+
+GoInt $u8(GoInt v) => GoInt(v.$v & 0xFF);
+
+GoInt $u16(GoInt v) => GoInt(v.$v & 0xFFFF);
+
+GoInt $u32(GoInt v) => GoInt(v.$v & 0xFFFFFFFF);
+
+/// Truncated division, as in Go. Dart rounds toward zero with `~/`.
+GoInt $div(GoInt a, GoInt b) {
+  if (b.$v == 0) $panicDivide();
+  return GoInt(a.$v ~/ b.$v);
+}
+
+/// The remainder keeps the sign of the dividend, as in Go. The Dart operator
+/// `%` gives a value with the sign of the divisor, thus it does not fit.
+GoInt $mod(GoInt a, GoInt b) {
+  if (b.$v == 0) $panicDivide();
+  return GoInt(a.$v.remainder(b.$v));
+}
+
+/// Unsigned division of 2 64-bit patterns.
+GoInt $udiv(GoInt a, GoInt b) {
+  if (b.$v == 0) $panicDivide();
+  if (b.$v < 0) return $ult(a, b) ? GoInt.zero : const GoInt(1);
+  if (a.$v >= 0) return GoInt(a.$v ~/ b.$v);
+  final int q = ((a.$v >>> 1) ~/ b.$v) << 1;
+  return GoInt($ult(GoInt(a.$v - q * b.$v), b) ? q : q + 1);
+}
+
+GoInt $umod(GoInt a, GoInt b) => GoInt(a.$v - $udiv(a, b).$v * b.$v);
+
+/// Unsigned comparison of 2 64-bit patterns.
+bool $ult(GoInt a, GoInt b) =>
+    (a.$v ^ 0x8000000000000000) < (b.$v ^ 0x8000000000000000);
+
+bool $ule(GoInt a, GoInt b) => !$ult(b, a);
+
+/// A left shift. Go gives 0 when the count reaches the width of the type.
+GoInt $shl(GoInt v, GoInt count) {
+  if (count.$v < 0) $panicShift();
+  if (count.$v >= 64) return GoInt.zero;
+  return GoInt(v.$v << count.$v);
+}
+
+/// An arithmetic right shift. Go keeps the sign bit.
+GoInt $shr(GoInt v, GoInt count) {
+  if (count.$v < 0) $panicShift();
+  if (count.$v >= 64) return GoInt(v.$v < 0 ? -1 : 0);
+  return GoInt(v.$v >> count.$v);
+}
+
+/// A logical right shift, for an unsigned type.
+GoInt $ushr(GoInt v, GoInt count) {
+  if (count.$v < 0) $panicShift();
+  if (count.$v >= 64) return GoInt.zero;
+  return GoInt(v.$v >>> count.$v);
+}
+
+/// The decimal text of a 64-bit pattern that holds an unsigned value.
+String $ustring(GoInt v) {
+  if (v.$v >= 0) return v.$v.toString();
+  final GoInt q = $udiv(v, const GoInt(10));
+  return '${q.$v}${v.$v - q.$v * 10}';
+}
+
+/// The value of an unsigned 64-bit pattern as a double.
+double $utodouble(GoInt v) {
+  if (v.$v >= 0) return v.$v.toDouble();
+  return (v.$v >>> 1).toDouble() * 2.0 + (v.$v & 1).toDouble();
+}
+
+/// _bits reads the same 8 bytes as a double and as an integer. The 2 views
+/// share 1 buffer, thus a write through 1 view reads back through the other.
+final ByteData _bits = ByteData(8);
+
+/// The IEEE 754 bit pattern of a 64-bit value.
+GoInt $f64ToBits(double v) {
+  _bits.setFloat64(0, v);
+  return GoInt(_bits.getInt64(0));
+}
+
+/// The 64-bit value of an IEEE 754 bit pattern.
+double $f64FromBits(GoInt b) {
+  _bits.setInt64(0, b.$v);
+  return _bits.getFloat64(0);
+}
+
+/// The IEEE 754 bit pattern of a 32-bit value. The result holds 32 bits, thus
+/// it stays positive.
+GoInt $f32ToBits(double v) {
+  _bits.setFloat32(0, v);
+  return GoInt(_bits.getUint32(0));
+}
+
+/// The 32-bit value of an IEEE 754 bit pattern.
+double $f32FromBits(GoInt b) {
+  _bits.setUint32(0, b.$v & 0xFFFFFFFF);
+  return _bits.getFloat32(0);
+}

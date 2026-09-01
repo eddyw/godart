@@ -1,0 +1,281 @@
+import 'dart:typed_data';
+
+import 'panic.dart';
+
+// The JS form of the Go integer, in the pair model of GopherJS. A JS number
+// holds 53 bits of an integer, thus a 64-bit value is a pair of 32-bit
+// halves. The high half holds a signed value, and the low half holds an
+// unsigned value. Each step below stays under 53 bits, thus each step is
+// exact. The division, the remainder, and the decimal text ride BigInt,
+// because they are rare next to the other operations. goint_native.dart
+// holds the form of the other targets, and the 2 files hold 1 surface.
+// Read docs/js-integers.md.
+
+const int _b32 = 4294967296;
+const int _b16 = 65536;
+
+/// The signed 32-bit value of the low 32 bits of x.
+int _s32(int x) => ((x + 2147483648) % _b32) - 2147483648;
+
+/// The unsigned 32-bit value of the low 32 bits of x.
+int _u32(int x) => x % _b32;
+
+final class GoInt {
+  /// The high half, as a signed 32-bit value.
+  final int $h;
+
+  /// The low half, as an unsigned 32-bit value.
+  final int $l;
+
+  const GoInt._(this.$h, this.$l);
+
+  static const GoInt zero = GoInt._(0, 0);
+
+  /// The value as a plain Dart int. A value outside 53 bits loses its low
+  /// bits, thus the getter serves a boundary value only: an index, a
+  /// length, or a handle.
+  int get $v => _b32 * $h + $l;
+
+  GoInt operator +(GoInt o) {
+    int low = $l + o.$l;
+    int carry = 0;
+    if (low >= _b32) {
+      low -= _b32;
+      carry = 1;
+    }
+    return GoInt._(_s32($h + o.$h + carry), low);
+  }
+
+  GoInt operator -(GoInt o) {
+    int low = $l - o.$l;
+    int borrow = 0;
+    if (low < 0) {
+      low += _b32;
+      borrow = 1;
+    }
+    return GoInt._(_s32($h - o.$h - borrow), low);
+  }
+
+  GoInt operator -() => zero - this;
+
+  /// The multiply splits each half into 16-bit parts, because a JS multiply
+  /// of 2 values over 2^26 rounds. Each lane stays under 53 bits.
+  GoInt operator *(GoInt o) {
+    final int a0 = $l % _b16;
+    final int a1 = $l ~/ _b16;
+    final int ua = _u32($h);
+    final int a2 = ua % _b16;
+    final int a3 = ua ~/ _b16;
+    final int b0 = o.$l % _b16;
+    final int b1 = o.$l ~/ _b16;
+    final int ub = _u32(o.$h);
+    final int b2 = ub % _b16;
+    final int b3 = ub ~/ _b16;
+    final int c0 = a0 * b0;
+    final int c1 = c0 ~/ _b16 + a1 * b0 + a0 * b1;
+    final int c2 = c1 ~/ _b16 + a2 * b0 + a1 * b1 + a0 * b2;
+    final int c3 = c2 ~/ _b16 + a3 * b0 + a2 * b1 + a1 * b2 + a0 * b3;
+    final int low = (c1 % _b16) * _b16 + (c0 % _b16);
+    final int high = _s32((c3 % _b16) * _b16 + (c2 % _b16));
+    return GoInt._(high, low);
+  }
+
+  GoInt operator &(GoInt o) => GoInt._(_s32($h & o.$h), _u32($l & o.$l));
+
+  GoInt operator |(GoInt o) => GoInt._(_s32($h | o.$h), _u32($l | o.$l));
+
+  GoInt operator ^(GoInt o) => GoInt._(_s32($h ^ o.$h), _u32($l ^ o.$l));
+
+  GoInt operator ~() => GoInt._(_s32(~$h), _u32(~$l));
+
+  bool operator <(GoInt o) {
+    if ($h != o.$h) return $h < o.$h;
+    return $l < o.$l;
+  }
+
+  bool operator <=(GoInt o) => !(o < this);
+
+  bool operator >(GoInt o) => o < this;
+
+  bool operator >=(GoInt o) => !(this < o);
+
+  @override
+  bool operator ==(Object other) =>
+      other is GoInt && $h == other.$h && $l == other.$l;
+
+  @override
+  int get hashCode => ($h ^ $l) & 0x3FFFFFFF;
+
+  double toDouble() => _b32 * $h + $l.toDouble();
+
+  @override
+  String toString() {
+    if ($h >= -2097152 && $h < 2097152) return $v.toString();
+    return _sbig(this).toString();
+  }
+}
+
+BigInt _sbig(GoInt a) =>
+    BigInt.from(a.$h) * BigInt.from(_b32) + BigInt.from(a.$l);
+
+BigInt _ubig(GoInt a) => _sbig(a).toUnsigned(64);
+
+GoInt _ofBig(BigInt v) {
+  final BigInt t = v.toUnsigned(64);
+  final int high = (t >> 32).toInt();
+  final int low = (t & BigInt.from(0xFFFFFFFF)).toInt();
+  return GoInt._(_s32(high), low);
+}
+
+/// The Go integer of a Dart int. The value must hold 53 bits or less,
+/// because a JS number holds no more of an integer.
+GoInt $gi(int v) {
+  final int low = v % _b32;
+  return GoInt._(_s32((v - low) ~/ _b32), low);
+}
+
+/// The Go integer of 2 32-bit halves. A literal outside 53 bits takes this
+/// form.
+GoInt $gi2(int high, int low) => GoInt._(_s32(high), _u32(low));
+
+GoInt $i8(GoInt v) {
+  final int b = v.$l & 0xFF;
+  return $gi(b - ((b & 0x80) << 1));
+}
+
+GoInt $i16(GoInt v) {
+  final int b = v.$l & 0xFFFF;
+  return $gi(b - ((b & 0x8000) << 1));
+}
+
+GoInt $i32(GoInt v) {
+  final int s = _s32(v.$l);
+  return GoInt._(s < 0 ? -1 : 0, v.$l);
+}
+
+GoInt $u8(GoInt v) => GoInt._(0, v.$l & 0xFF);
+
+GoInt $u16(GoInt v) => GoInt._(0, v.$l & 0xFFFF);
+
+GoInt $u32(GoInt v) => GoInt._(0, v.$l);
+
+/// Truncated division, as in Go.
+GoInt $div(GoInt a, GoInt b) {
+  if (b.$h == 0 && b.$l == 0) $panicDivide();
+  return _ofBig(_sbig(a) ~/ _sbig(b));
+}
+
+/// The remainder keeps the sign of the dividend, as in Go.
+GoInt $mod(GoInt a, GoInt b) {
+  if (b.$h == 0 && b.$l == 0) $panicDivide();
+  return _ofBig(_sbig(a).remainder(_sbig(b)));
+}
+
+/// Unsigned division of 2 64-bit patterns.
+GoInt $udiv(GoInt a, GoInt b) {
+  if (b.$h == 0 && b.$l == 0) $panicDivide();
+  return _ofBig(_ubig(a) ~/ _ubig(b));
+}
+
+GoInt $umod(GoInt a, GoInt b) {
+  if (b.$h == 0 && b.$l == 0) $panicDivide();
+  return _ofBig(_ubig(a).remainder(_ubig(b)));
+}
+
+/// Unsigned comparison of 2 64-bit patterns.
+bool $ult(GoInt a, GoInt b) {
+  final int ua = _u32(a.$h);
+  final int ub = _u32(b.$h);
+  if (ua != ub) return ua < ub;
+  return a.$l < b.$l;
+}
+
+bool $ule(GoInt a, GoInt b) => !$ult(b, a);
+
+/// A left shift. Go gives 0 when the count reaches the width of the type.
+GoInt $shl(GoInt v, GoInt count) {
+  final int s = count.$v;
+  if (s < 0) $panicShift();
+  if (s >= 64) return GoInt.zero;
+  if (s == 0) return v;
+  if (s < 32) {
+    final int keep = _b32 ~/ (1 << s);
+    final int crossing = v.$l ~/ keep;
+    final int low = (v.$l % keep) * (1 << s);
+    final int high = _s32((_u32(v.$h) % keep) * (1 << s) + crossing);
+    return GoInt._(high, low);
+  }
+  if (s == 32) return GoInt._(_s32(v.$l), 0);
+  final int keep = _b32 ~/ (1 << (s - 32));
+  return GoInt._(_s32((v.$l % keep) * (1 << (s - 32))), 0);
+}
+
+/// An arithmetic right shift. Go keeps the sign bit.
+GoInt $shr(GoInt v, GoInt count) {
+  final int s = count.$v;
+  if (s < 0) $panicShift();
+  if (s >= 64) return v.$h < 0 ? const GoInt._(-1, 0xFFFFFFFF) : GoInt.zero;
+  if (s == 0) return v;
+  if (s < 32) {
+    final int step = 1 << s;
+    final int low = _u32(v.$l ~/ step + (_u32(v.$h) % step) * (_b32 ~/ step));
+    final int high = _s32(v.$h >> s);
+    return GoInt._(high, low);
+  }
+  if (s == 32) return GoInt._(v.$h < 0 ? -1 : 0, _u32(v.$h));
+  return GoInt._(v.$h < 0 ? -1 : 0, _u32(v.$h >> (s - 32)));
+}
+
+/// A logical right shift, for an unsigned type.
+GoInt $ushr(GoInt v, GoInt count) {
+  final int s = count.$v;
+  if (s < 0) $panicShift();
+  if (s >= 64) return GoInt.zero;
+  if (s == 0) return v;
+  final int uh = _u32(v.$h);
+  if (s < 32) {
+    final int step = 1 << s;
+    final int low = v.$l ~/ step + (uh % step) * (_b32 ~/ step);
+    return GoInt._(_s32(uh ~/ step), low);
+  }
+  if (s == 32) return GoInt._(0, uh);
+  return GoInt._(0, uh ~/ (1 << (s - 32)));
+}
+
+/// The decimal text of a 64-bit pattern that holds an unsigned value.
+String $ustring(GoInt v) {
+  if (v.$h >= 0) return v.toString();
+  return _ubig(v).toString();
+}
+
+/// The value of an unsigned 64-bit pattern as a double.
+double $utodouble(GoInt v) => _u32(v.$h) * 4294967296.0 + v.$l.toDouble();
+
+/// _bits reads the same 8 bytes as a double and as 2 32-bit halves. The JS
+/// target holds no 64-bit read, thus the pattern reads as the 2 halves.
+final ByteData _bits = ByteData(8);
+
+/// The IEEE 754 bit pattern of a 64-bit value.
+GoInt $f64ToBits(double v) {
+  _bits.setFloat64(0, v);
+  return GoInt._(_s32(_bits.getUint32(0)), _bits.getUint32(4));
+}
+
+/// The 64-bit value of an IEEE 754 bit pattern.
+double $f64FromBits(GoInt b) {
+  _bits.setUint32(0, _u32(b.$h));
+  _bits.setUint32(4, b.$l);
+  return _bits.getFloat64(0);
+}
+
+/// The IEEE 754 bit pattern of a 32-bit value.
+GoInt $f32ToBits(double v) {
+  _bits.setFloat32(0, v);
+  return GoInt._(0, _bits.getUint32(0));
+}
+
+/// The 32-bit value of an IEEE 754 bit pattern.
+double $f32FromBits(GoInt b) {
+  _bits.setUint32(0, b.$l);
+  return _bits.getFloat32(0);
+}

@@ -40,6 +40,9 @@ Never $panicSlice(int low, int high, int capacity) => throw GoPanic(
 Never $panicDivide() =>
     throw GoPanic(Iface($typeGoError, const GoError('integer divide by zero')));
 
+Never $panicShift() =>
+    throw GoPanic(Iface($typeGoError, const GoError('negative shift amount')));
+
 Never $panicNil() => throw GoPanic(
   Iface(
     $typeGoError,
