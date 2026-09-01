@@ -116,8 +116,12 @@ and `docs/flutter-design.md` holds the design of that client.
 
 1. **The `FS` family.** `io/fs.FS`, `os.DirFS`, and `http.FileServer` together
    give a static file server, and they open the road to `embed`.
-2. **The reflect gaps.** `SliceOf`, `MapOf`, `PointerTo`, `MakeFunc`, `Append`,
-   and `Copy`. `text/template` needs each one.
+2. **The reflect gaps.** Done 2026-09-02, except `MakeFunc`. `SliceOf`,
+   `ArrayOf`, `MapOf`, `PointerTo`, `PtrTo`, `TypeFor`, `Append`,
+   `AppendSlice`, `Copy`, and `Value.Cap`. `MakeSlice` now honors its capacity.
+   `MakeFunc` has no form: the Dart type of a Go function type is a closure of
+   that exact signature, and the runtime holds no way to build one. Read
+   `docs/parity.md`.
 3. **`text/template`.** It is the largest single gate of a real program. A
    command line tool, a code generator, and a web server each read it.
 4. **The address types of `net`.** `IPNet`, `ParseCIDR`, `TCPAddr`, and the 2

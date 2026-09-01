@@ -159,6 +159,46 @@ func MapIndex(target, key any) any {
 }
 
 // MakeMap gives a map of the type.
+// SliceOf gives the handle of the slice type of an element type.
+func SliceOf(elem int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ArrayOf gives the handle of the array type of a length and an element type.
+func ArrayOf(length, elem int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MapOf gives the handle of the map type of a key type and an element type.
+func MapOf(key, elem int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// PointerTo gives the handle of the pointer type of an element type.
+func PointerTo(elem int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueCap gives the capacity of a slice, of an array, or of a channel.
+func ValueCap(value any) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// AppendValue appends each value to a slice and gives the new slice.
+func AppendValue(slice any, items []any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// AppendSliceValue appends each element of the second slice to the first one.
+func AppendSliceValue(slice, add any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// CopyValue copies each element of the source into the destination.
+func CopyValue(dst, src any) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func MakeMap(handle int) any {
 	panic("syscall/dart needs the gart compiler")
 }
@@ -255,7 +295,7 @@ func NewValue(handle int) any {
 }
 
 // MakeValue gives a slice of the type, with the length and the capacity.
-func MakeValue(handle, length int) any {
+func MakeValue(handle, length, capacity int) any {
 	panic("syscall/dart needs the gart compiler")
 }
 

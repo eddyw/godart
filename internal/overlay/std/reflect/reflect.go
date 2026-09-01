@@ -448,7 +448,7 @@ func MakeSlice(t Type, length, capacity int) Value {
 	if length < 0 || capacity < length {
 		panic("reflect: MakeSlice with a wrong length")
 	}
-	return Value{value: dart.MakeValue(t.desc, length)}
+	return Value{value: dart.MakeValue(t.desc, length, capacity)}
 }
 
 // MakeMap gives an empty map of the type.
@@ -662,3 +662,83 @@ func (v Value) SetBool(x bool) { v.Set(Value{value: dart.WithBool(v.descOf(), x)
 func (v Value) SetString(x string) { v.Set(Value{value: dart.WithString(v.descOf(), x)}) }
 
 func (v Value) descOf() int { return dart.DescOf(v.read()) }
+
+// The type constructors.
+//
+// A constructor gives a Type that no value of the program carries. The name of
+// the type goes through the table of the runtime first, thus a type that the
+// program already holds keeps its own descriptor and MakeSlice, MakeMap, New,
+// and Zero of it each work. A type that the program never holds gives a Type
+// for the inspection alone, and each of those 4 calls then panics with a clear
+// text. Read docs/parity.md.
+
+// SliceOf gives the slice type of an element type.
+func SliceOf(t Type) Type { return Type{desc: dart.SliceOf(t.desc)} }
+
+// ArrayOf gives the array type of a length and an element type.
+func ArrayOf(length int, t Type) Type {
+	if length < 0 {
+		panic("reflect: ArrayOf with a negative length")
+	}
+	return Type{desc: dart.ArrayOf(length, t.desc)}
+}
+
+// MapOf gives the map type of a key type and an element type.
+func MapOf(key, elem Type) Type {
+	if !key.Comparable() {
+		panic("reflect: invalid key type " + key.String())
+	}
+	return Type{desc: dart.MapOf(key.desc, elem.desc)}
+}
+
+// PointerTo gives the pointer type of an element type.
+func PointerTo(t Type) Type { return Type{desc: dart.PointerTo(t.desc)} }
+
+// PtrTo gives the pointer type of an element type. Go marks it as older than
+// PointerTo.
+func PtrTo(t Type) Type { return PointerTo(t) }
+
+// TypeFor gives the type of T.
+func TypeFor[T any]() Type {
+	var zero T
+	if t := TypeOf(zero); t.desc != 0 {
+		return t
+	}
+	// The zero value of an interface type holds no descriptor, thus the type
+	// comes from a pointer to it.
+	return TypeOf(&zero).Elem()
+}
+
+// Cap gives the capacity of a slice, of an array, or of a channel.
+func (v Value) Cap() int { return dart.ValueCap(v.read()) }
+
+// Append gives a slice that holds each element of s and each value of x.
+func Append(s Value, x ...Value) Value {
+	if s.Kind() != Slice {
+		panic("reflect: Append of " + s.Type().String())
+	}
+	items := make([]any, len(x))
+	for i, v := range x {
+		items[i] = v.read()
+	}
+	return Value{value: dart.AppendValue(s.read(), items)}
+}
+
+// AppendSlice gives a slice that holds each element of s and each element of t.
+func AppendSlice(s, t Value) Value {
+	if s.Kind() != Slice {
+		panic("reflect: AppendSlice of " + s.Type().String())
+	}
+	return Value{value: dart.AppendSliceValue(s.read(), t.read())}
+}
+
+// Copy writes each element of src into dst, and it gives the count that it
+// wrote. src may hold a string when dst holds a byte slice.
+func Copy(dst, src Value) int {
+	switch dst.Kind() {
+	case Slice, Array:
+	default:
+		panic("reflect: Copy of " + dst.Type().String())
+	}
+	return dart.CopyValue(dst.read(), src.read())
+}

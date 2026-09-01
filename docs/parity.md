@@ -104,6 +104,34 @@ The package `fmt` reads it.
 | `Value.IsNil`, `Value.MapIndex` | Present |
 | `Value.MapKeys` | Present. The order follows the insertion, and Go gives a random order. |
 
+## A type that reflect builds
+
+`SliceOf`, `ArrayOf`, `MapOf`, and `PointerTo` each give a `Type` that no value
+of the program carries.
+
+The name of the type goes through the table of the runtime first. A type that
+the program already holds keeps its own descriptor, thus `MakeSlice`,
+`MakeMap`, `New`, and `Zero` of it each give a value with the Dart type of the
+emitted code, and a type assertion of that value works.
+
+A type that the program never holds gives a descriptor that the runtime builds.
+Such a descriptor carries an untyped container: a `List<Object?>` for a slice
+and for an array, and a `GoMap<Object?, Object?>` for a map. The Dart type of a
+Go type lives only in the emitted code, thus the runtime cannot build the typed
+form.
+
+| Item | Go | godart |
+|---|---|---|
+| `SliceOf`, `ArrayOf`, `MapOf`, `PointerTo` | Present | Equal for `Kind`, `Elem`, `Key`, `Len`, `String`, and `Comparable`. |
+| `MakeSlice`, `MakeMap`, `New`, `Zero` of such a type | A value of the type | A value that reads and writes through reflect. |
+| A type assertion of such a value to its Go type | The value | A Dart type error, because the container holds `Object?`. |
+| `MakeFunc` | Present | Not present. The Dart form of a Go function type is a closure of that exact signature, and the runtime holds no way to build one. |
+
+2 files of the test directory of Go witness the limit, and
+`internal/driver/gotest_test.go` names each 1: `fixedbugs/issue22605` and
+`fixedbugs/issue37716`. Each one builds a type that the program never names,
+and it then asserts the value to the Go type.
+
 ## The runtime
 
 | Item | Go | godart |

@@ -24,6 +24,8 @@ var goTestSkips = map[string]string{
 	"stackobj2":      "the Dart VM holds a fixed stack, and the recursion overflows",
 
 	"fixedbugs/issue4316":  "a deref of a type that names itself has no Dart form",
+	"fixedbugs/issue22605": "reflect.ArrayOf builds a type that the program never names, thus the value holds an untyped Dart list and the assertion to [8]string fails",
+	"fixedbugs/issue37716": "reflect.MapOf builds a type that the program never names, thus the value holds an untyped Dart map and the write into a map[K]bool fails",
 	"fixedbugs/issue4667":  "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one",
 	"fixedbugs/issue29735": "runtime.FuncForPC walks the program counters, and the Dart VM gives none",
 	"fixedbugs/issue22662": "a line directive with no file gives ?? in Go, and go/token keeps the file of the source",

@@ -22,11 +22,35 @@ import 'string.dart';
 final List<TypeDesc> _descTable = <TypeDesc>[];
 final Map<String, int> _descHandles = <String, int>{};
 
+/// The handles that a type constructor built. Such a descriptor holds an
+/// untyped zero and an untyped make, thus a descriptor of the emitted code
+/// replaces it when a value of the same type reaches the package. Read
+/// $sliceOf.
+final Set<int> _synthetic = <int>{};
+
 int _descHandle(TypeDesc desc) {
+  final int? found = _descHandles[desc.name];
+  if (found != null) {
+    if (_synthetic.contains(found)) {
+      _descTable[found - 1] = desc;
+      _synthetic.remove(found);
+    }
+    return found;
+  }
+  _descTable.add(desc);
+  _descHandles[desc.name] = _descTable.length;
+  return _descTable.length;
+}
+
+/// _syntheticHandle registers a descriptor that a type constructor built. A
+/// name that the table already holds keeps its own descriptor.
+int _syntheticHandle(TypeDesc Function() build) {
+  final TypeDesc desc = build();
   final int? found = _descHandles[desc.name];
   if (found != null) return found;
   _descTable.add(desc);
   _descHandles[desc.name] = _descTable.length;
+  _synthetic.add(_descTable.length);
   return _descTable.length;
 }
 
@@ -356,13 +380,17 @@ Iface? $newValue(int handle) {
 }
 
 /// A slice of the type, with the length and the capacity.
-Iface? $makeValue(int handle, int length) {
+Iface? $makeValue(int handle, int length, int capacity) {
   final TypeDesc desc = _typeAt(handle);
   final Object? Function(int)? make = desc.make;
   if (make == null) {
     $panic(Iface($typeGoError, GoError('reflect: Make of ${desc.display}')));
   }
-  return Iface(desc, make(length));
+  final Object? out = make(capacity);
+  if (out is Slice<Object?> && capacity != length) {
+    return Iface(desc, out.range(0, length, capacity));
+  }
+  return Iface(desc, out);
 }
 
 final Map<String, TypeDesc> _pointers = <String, TypeDesc>{};
@@ -667,4 +695,198 @@ void $mapSet(Iface? target, Iface? key, Iface? value, bool drop) {
     return;
   }
   m.set(k, elem?.kind == 'interface' ? value : value?.value);
+}
+
+// The type constructors and the slice operations of the package reflect.
+//
+// A constructor gives a descriptor that no value of the program carries. Each
+// name goes through the handle table first, thus a type that the program
+// already holds keeps its own descriptor, with its zero and its make. A type
+// that the program never holds gives a descriptor for the inspection alone,
+// and MakeSlice, MakeMap, New, and Zero of it each panic with a clear text.
+// Read docs/parity.md.
+
+/// A handle of the slice type of an element type.
+int $sliceOf(int elem) {
+  final TypeDesc e = _typeAt(elem);
+  return _syntheticHandle(
+    () => TypeDesc(
+      '[]${e.name}',
+      'slice',
+      const <String, Function>{},
+      text: '[]${e.display}',
+      elem: () => e,
+      comparable: false,
+      zero: () => Slice<Object?>.nil(),
+      make: (int n) => Slice<Object?>.of(_zeros(e, n)),
+    ),
+  );
+}
+
+/// A handle of the array type of a length and an element type.
+int $arrayOf(int length, int elem) {
+  final TypeDesc e = _typeAt(elem);
+  final String name = '[$length]${e.name}';
+  return _syntheticHandle(
+    () => TypeDesc(
+      name,
+      'array',
+      const <String, Function>{},
+      text: '[$length]${e.display}',
+      elem: () => e,
+      length: length,
+      comparable: e.comparable,
+      zero: () => _zeros(e, length),
+    ),
+  );
+}
+
+/// A handle of the map type of a key type and an element type.
+int $mapOf(int key, int elem) {
+  final TypeDesc k = _typeAt(key);
+  final TypeDesc e = _typeAt(elem);
+  final String name = 'map[${k.name}]${e.name}';
+  return _syntheticHandle(
+    () => TypeDesc(
+      name,
+      'map',
+      const <String, Function>{},
+      text: 'map[${k.display}]${e.display}',
+      key: () => k,
+      elem: () => e,
+      comparable: false,
+      zero: () => GoMap<Object?, Object?>.nil(() => _zeroOf(e)),
+      make: (int _) => GoMap<Object?, Object?>(() => _zeroOf(e)),
+    ),
+  );
+}
+
+/// A handle of the pointer type of an element type.
+int $pointerTo(int elem) {
+  final TypeDesc e = _typeAt(elem);
+  return _syntheticHandle(() => _pointerTo(e));
+}
+
+/// _zeroOf gives the zero value of a type, or null for a type that holds no
+/// zero builder.
+Object? _zeroOf(TypeDesc desc) {
+  if (desc.kind == 'interface') return null;
+  return desc.zero?.call();
+}
+
+/// _zeros gives a list of the length that holds the zero value of the type.
+///
+/// The list holds Object?, and not the Dart type of the element, because the
+/// Dart type of a Go type lives only in the emitted code. Read docs/parity.md.
+List<Object?> _zeros(TypeDesc elem, int n) =>
+    List<Object?>.filled(n, _zeroOf(elem), growable: true);
+
+/// The capacity of a slice, of an array, or of a channel.
+int $valueCap(Iface? value) {
+  if (value == null) return 0;
+  final Object? v = value.value;
+  if (v is Slice<Object?>) return v.cap;
+  if (v is List<Object?>) return v.length;
+  return $valueLen(value);
+}
+
+/// _sliceParts gives the header of a slice value, or null.
+Slice<Object?>? _sliceOfValue(Iface? value) {
+  final Object? v = value?.value;
+  return v is Slice<Object?> ? v : null;
+}
+
+/// _freshSlice builds a slice of the type with the length, through the make of
+/// the descriptor. A type that the program never holds gives a panic.
+Slice<Object?> _freshSlice(TypeDesc desc, int length) {
+  final Object? Function(int)? make = desc.make;
+  if (make == null) {
+    $panic(
+      Iface($typeGoError, GoError('reflect: Append of ${desc.display}')),
+    );
+  }
+  return make(length) as Slice<Object?>;
+}
+
+/// Appends each value to a slice and gives the new slice.
+Iface? $appendValue(Iface? slice, Slice<Iface?> items) {
+  if (slice == null) $panicNil();
+  final TypeDesc desc = slice.desc;
+  final TypeDesc? elem = desc.elem?.call();
+  if (elem == null) {
+    $panic(Iface($typeGoError, GoError('reflect: Append of ${desc.display}')));
+  }
+  final Slice<Object?>? held = _sliceOfValue(slice);
+  final int n = held == null ? 0 : held.len;
+  final Slice<Object?> out = _freshSlice(desc, n + items.len);
+  for (int i = 0; i < n; i++) {
+    out[i] = held![i];
+  }
+  for (int i = 0; i < items.len; i++) {
+    final Iface? x = items[i];
+    out[n + i] = elem.kind == 'interface' ? x : x?.value;
+  }
+  return Iface(desc, out);
+}
+
+/// Appends each element of the second slice to the first one.
+Iface? $appendSliceValue(Iface? slice, Iface? add) {
+  if (slice == null) $panicNil();
+  final TypeDesc desc = slice.desc;
+  if (desc.elem == null) {
+    $panic(
+      Iface($typeGoError, GoError('reflect: AppendSlice of ${desc.display}')),
+    );
+  }
+  final Slice<Object?>? held = _sliceOfValue(slice);
+  final Slice<Object?>? more = _sliceOfValue(add);
+  final int n = held == null ? 0 : held.len;
+  final int m = more == null ? 0 : more.len;
+  final Slice<Object?> out = _freshSlice(desc, n + m);
+  for (int i = 0; i < n; i++) {
+    out[i] = held![i];
+  }
+  for (int i = 0; i < m; i++) {
+    out[n + i] = more![i];
+  }
+  return Iface(desc, out);
+}
+
+/// Copies each element of the source into the destination, and gives the count
+/// that it wrote. The source may be a string, and the destination is then a
+/// byte slice.
+int $copyValue(Iface? dst, Iface? src) {
+  if (dst == null) $panicNil();
+  final Object? to = dst.value;
+  if (to is! Slice<Object?> && to is! List<Object?>) return 0;
+  final Object? from = src?.value;
+  final int room = to is Slice<Object?> ? to.len : (to as List<Object?>).length;
+  if (from is GoString) {
+    final int n = room < from.length ? room : from.length;
+    for (int i = 0; i < n; i++) {
+      _writeElem(to, i, $gi(from[i]));
+    }
+    return n;
+  }
+  final int have = from is Slice<Object?>
+      ? from.len
+      : (from is List<Object?> ? from.length : 0);
+  final int n = room < have ? room : have;
+  for (int i = 0; i < n; i++) {
+    _writeElem(to, i, _readElem(from, i));
+  }
+  return n;
+}
+
+Object? _readElem(Object? v, int i) {
+  if (v is Slice<Object?>) return v[i];
+  return (v as List<Object?>)[i];
+}
+
+void _writeElem(Object? v, int i, Object? x) {
+  if (v is Slice<Object?>) {
+    v[i] = x;
+    return;
+  }
+  (v as List<Object?>)[i] = x;
 }
