@@ -88,6 +88,9 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		}
 	}
 	blocks := analyze.Module(pkgs)
+	if err := blocks.SyncErrors(); err != nil {
+		return nil, err
+	}
 	dartPkg := dartPackageName(module)
 	store := meta.Open(filepath.Join(opt.Out, ".gart"))
 	stats := &Stats{}

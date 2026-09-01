@@ -38,6 +38,8 @@ type Result struct {
 	// that the flow does not track waits when its group holds a function that
 	// blocks.
 	sigAsync map[string]bool
+	// syncErrs holds each rejection of the synchronous check. Read sync.go.
+	syncErrs []*SyncError
 }
 
 func (r *Result) Blocks(key any) bool { return r.blocking[key] }
@@ -78,10 +80,24 @@ func (r *Result) Digest(p *packages.Package) string {
 type summary struct {
 	key    any
 	direct bool
-	sites  []*callSite
+	// directPos and directWhat name the first operation of the body that
+	// blocks. The synchronous check of sync.go reports the pair, thus the
+	// error names a position inside the function and not only its declaration.
+	directPos  token.Pos
+	directWhat string
+	sites      []*callSite
 	// intrinsics holds each call of an interop function that gives up
 	// control. Such a call always waits.
 	intrinsics []*ast.CallExpr
+}
+
+// blocksAt marks the summary and keeps the first operation that blocks.
+func (s *summary) blocksAt(pos token.Pos, what string) {
+	s.direct = true
+	if !s.directPos.IsValid() {
+		s.directPos = pos
+		s.directWhat = what
+	}
 }
 
 // Module computes the block state over each package of a module.
@@ -105,6 +121,9 @@ func Module(pkgs []*packages.Package) *Result {
 	}
 	for _, p := range pkgs {
 		a.pkg = p
+		if a.fset == nil {
+			a.fset = p.Fset
+		}
 		for _, f := range p.Syntax {
 			a.file(f)
 		}
@@ -114,14 +133,20 @@ func Module(pkgs []*packages.Package) *Result {
 	a.resolveSites()
 	a.fixedPoint()
 	a.markCalls()
+	a.checkSync()
 	return a.result
 }
 
 type analyzer struct {
 	pkg       *packages.Package
+	fset      *token.FileSet
 	result    *Result
 	summaries map[any]*summary
 	order     []any
+
+	// syncTypes holds each named function type that carries //gart:sync. Read
+	// sync.go.
+	syncTypes map[*types.TypeName]bool
 
 	// byMethod groups each method by its name and its signature. A call
 	// through an interface can reach each member of the group.
@@ -165,11 +190,14 @@ func (a *analyzer) file(f *ast.File) {
 			}
 		case *ast.GenDecl:
 			for _, spec := range d.Specs {
-				if vs, ok := spec.(*ast.ValueSpec); ok {
-					a.valueSpec(vs)
-					for _, v := range vs.Values {
+				switch spec := spec.(type) {
+				case *ast.ValueSpec:
+					a.valueSpec(spec)
+					for _, v := range spec.Values {
 						a.walkTopExpr(v)
 					}
+				case *ast.TypeSpec:
+					a.typeSpec(d, spec)
 				}
 			}
 		}
@@ -220,13 +248,13 @@ func (a *analyzer) walkFunc(key any, body ast.Node) {
 			a.registerLit(n)
 			return false
 		case *ast.SendStmt:
-			s.direct = true
+			s.blocksAt(n.Pos(), "a channel send")
 			a.escape(n.Value)
 		case *ast.SelectStmt:
-			s.direct = true
+			s.blocksAt(n.Pos(), "a select statement")
 		case *ast.UnaryExpr:
 			if n.Op == token.ARROW {
-				s.direct = true
+				s.blocksAt(n.Pos(), "a channel receive")
 			}
 			if n.Op == token.AND {
 				a.escapeAddress(n.X)
@@ -293,7 +321,7 @@ func (a *analyzer) rangeStmt(s *summary, n *ast.RangeStmt, visit func(ast.Node) 
 	}
 	t := a.typeOf(n.X)
 	if _, ok := typeset.Core(t).(*types.Chan); ok {
-		s.direct = true
+		s.blocksAt(n.Pos(), "a range loop over a channel")
 		return true
 	}
 	sig, _ := typeset.Core(t).(*types.Signature)
@@ -611,7 +639,7 @@ func (a *analyzer) calleeSource(s *summary, call *ast.CallExpr, fun ast.Expr) (s
 // runtime library calls them outside the net.
 func (a *analyzer) funcCallee(s *summary, call *ast.CallExpr, fn *types.Func) (source, bool) {
 	if blockingIntrinsic(fn) {
-		s.direct = true
+		s.blocksAt(call.Pos(), "a call of "+fn.Pkg().Path()+"."+fn.Name())
 		s.intrinsics = append(s.intrinsics, call)
 		return source{}, true
 	}

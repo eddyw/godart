@@ -37,7 +37,7 @@ func NewWatch() int {
 
 // RunWatch builds 1 boundary under a tracked scope. Each signal that build
 // reads marks this boundary alone on its next change.
-func RunWatch(id int, build func() Node) Node {
+func RunWatch(id int, build Builder) Node {
 	s := scopeByID(id)
 	if s == nil || !s.alive {
 		return build()

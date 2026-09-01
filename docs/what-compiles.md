@@ -58,9 +58,16 @@ partial package.
 | The address of a value behind a pointer, for example `&*p` | Rejected. Read `p`. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |
+| A function that can block, in a value of a type that carries `//gart:sync` | Rejected. Read decision 221. |
 
 Stage 2 accepts a local struct type that reads a type parameter, and the
 `recover` builtin. Read decisions 200 and 201 of `docs/decisions.md`.
+
+The last gate is the only 1 that a library declares. A named function type whose
+declaration carries `//gart:sync` states that a host outside Go calls the value
+and reads the result at once. A function that can block returns the zero value
+there, thus the compiler rejects it. `gart.dev/ui` declares 2 such types, and no
+package of the standard surface declares any.
 
 Each other construct of the language stays inside the subset:
 

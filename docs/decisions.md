@@ -1032,6 +1032,19 @@ The plan left these points open. The work took the decisions below.
      `go vet` reports each copy, and it follows the value through an enclosing
      struct. Thus the safety needs no compiler work.
 
+221. A synchronous export position is a named function type whose declaration
+     carries `//gart:sync`. A pass after stage 3 rejects each function that can
+     block and that reaches a value of such a type, and the report names the
+     function, the position that holds it, and the operation that blocks. A
+     named type is the only candidate that stands as a struct field type and as
+     a function parameter, thus 1 marker covers the whole boundary. A struct tag
+     reaches no parameter, and a directive on a declaration reaches no closure
+     literal. The flow of `internal/analyze/flow.go` answers the question with
+     no new analysis, and a value that the flow cannot name falls into the
+     escape group of its signature, thus an unresolved value gives a rejection
+     and never a silent pass. `gart.dev/ui` declares `Builder` and
+     `ItemBuilder`, and `internal/analyze/sync.go` holds the pass.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

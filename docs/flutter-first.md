@@ -66,7 +66,7 @@ type.
 **Status of 2026-09-02.** Milestone 1 holds no Dart handle in a Go value. The
 host owns each Flutter object, and the Go tree carries data alone.
 
-### 3. A callback export, in 2 flavors &mdash; this is milestone 2
+### 3. A callback export, in 2 flavors &mdash; done 2026-09-02
 
 Flutter calls Go, and the 2 directions of that call need 2 rules.
 
@@ -87,11 +87,12 @@ each exported function. The rule is a small pass, and not a new analysis.
 Evidence: `internal/emit/machine.go:349`, `:469`, `internal/driver/driver.go:274`.
 Cost: small. This item makes a build method safe.
 
-**Status of 2026-09-02.** The first flavor works, and the host of
-`flutter/goflutter` runs each event through `$go`. The second flavor stays
-open, and it is milestone 2 of `docs/flutter-design.md`. The evidence stands in
-the output of the example: `Command$Run` carries a frame parameter, thus a
-direct Dart call of it gives the zero value with no report.
+**Status of 2026-09-02.** Both flavors work. The first one needed no change,
+and the host of `flutter/goflutter` runs each event through `$go`. The second
+one is milestone 2, and it is done: a named function type that carries
+`//gart:sync` names the position, and a pass after stage 3 rejects a function
+that can block there. Read decision 221 and the milestone 2 section of
+`docs/flutter-design.md`.
 
 ### 4. A library entry point &mdash; not needed
 

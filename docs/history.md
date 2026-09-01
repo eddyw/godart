@@ -835,3 +835,28 @@ Each fact carries the date of its check.
   architecture guide of the Flutter team writes the Command pattern in
   application code, and it recommends the third-party `package:provider` for
   dependency injection.
+
+### 2026-09-02, the eleventh session
+
+Milestone 2 of `docs/flutter-design.md`, the synchronous guarantee.
+
+- A named function type that carries `//gart:sync` names a synchronous export
+  position. The 2 other candidates each miss a position that the node set
+  holds: a struct tag reaches no function parameter, and a directive on a
+  declaration reaches no closure literal.
+- The pass needs no analysis of its own. The points-to sets of
+  `internal/analyze/flow.go` already hold each function that reaches a struct
+  field, a parameter, and a variable, thus the pass is a walk of `a.pts`.
+- A value that the flow cannot name falls into the escape group of its
+  signature, and the group flows into the cell of the position. Thus an
+  unresolved value gives a rejection, and the safe direction needs no extra
+  rule.
+- A report that names the declaration of a function is not enough. The user
+  needs the operation that blocks, thus `summary` now keeps the position of the
+  first block operation of each body, and `blockCause` follows the call chain
+  to it.
+- The named type does not change the Dart type of a field. `Watch.Build` stays
+  `Iface? Function()?`, and only the type descriptor names `$desc$Builder`. The
+  6 widget tests of the counter pass with no change of the host.
+- A `go.mod` of a test that requires a module with `go 1.27.0` must name the
+  same patch version. `go 1.27` alone gives "updates to go.mod needed".

@@ -190,7 +190,7 @@ type ListView struct {
 // screen shows.
 type ListViewBuilder struct {
 	Count   int
-	Item    func(int) Node
+	Item    ItemBuilder
 	Padding float64
 }
 
@@ -210,8 +210,21 @@ type Keyed struct {
 // Watch marks a rebuild boundary. The host runs Build under a tracked scope,
 // and a change of a signal that Build read rebuilds this subtree alone.
 type Watch struct {
-	Build func() Node
+	Build Builder
 }
+
+// Builder builds 1 node subtree. The Dart host calls a value of this type and
+// reads the result at once. A function that can block returns the zero value
+// there, and no report reaches the program, thus the compiler rejects such a
+// function. Read the section "Milestone 2" of docs/flutter-design.md.
+//
+//gart:sync
+type Builder func() Node
+
+// ItemBuilder builds 1 row of a lazy list. The rule of Builder applies.
+//
+//gart:sync
+type ItemBuilder func(int) Node
 
 func (Column) isNode()          {}
 func (Row) isNode()             {}

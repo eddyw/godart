@@ -960,26 +960,58 @@ and a closure captures no context.
 interface value writes no copy for a composite literal, thus a tree of 200
 nodes allocates 200 objects in place of 400. Decision 219.
 
-### Milestone 2: the synchronous guarantee
+### Milestone 2: the synchronous guarantee — done 2026-09-02
 
-**The compiler work.** A pass after stage 3 that rejects a Go function in a
-synchronous export position when it can block. `blockingExports` at
-`internal/driver/driver.go:274` already writes the list into the archive, thus
-the pass is a filter and not a new analysis. The error must name the source
-position of the call that blocks.
+`internal/analyze/sync.go` holds the pass, and decision 221 holds the choice.
 
-The pass needs a definition of such a position. 3 candidates:
+**The shape.** A synchronous position is a named function type whose
+declaration carries `//gart:sync`. The user took this candidate over a struct
+tag and over a directive on each declaration, because a named type is the only
+1 that stands as a struct field type and as a function parameter. A struct tag
+reaches no parameter, and a directive on a declaration reaches no closure
+literal.
 
-| Candidate | Cost | Note |
-|---|---|---|
-| An interface of the node package, for example `ui.Builder` | Small | Stage 3 already reads each method set. |
-| A directive `//gart:sync` | Small | `go/packages` parses each comment at `packages.go:774`. |
-| A struct tag | Small | `FieldDesc` already carries the raw tag at `internal/emit/iface.go:236`. |
+```go
+// Builder builds 1 node subtree.
+//
+//gart:sync
+type Builder func() Node
 
-**The proof program.** A Go `Build` method that reads a channel. The build must
-fail with a source position. A second program proves the other side. A callback
-with no result still accepts a Go function that blocks, because the host wraps
-it as `() { $go(f); $schedule(); }`.
+type Watch struct {
+	Build Builder
+}
+```
+
+**The pass.** It runs after the fixed point of stage 3, because the block state
+of a function is final only then. It reads the points-to sets of
+`internal/analyze/flow.go`, thus it adds no analysis. For each cell of a
+variable, a field, or a parameter whose type carries the marker, it reports
+each function of the set that can block. A value that the flow cannot name
+falls into the escape group of its signature, and the group flows into the cell,
+thus an unresolved value gives a rejection and never a silent pass.
+
+The report names 3 places: the function value, the position that holds it, and
+the operation that blocks. `summary.blocksAt` of `internal/analyze/analyze.go`
+keeps the first operation of each body, and `blockCause` follows the call chain
+to it.
+
+```
+main.go:13:24: this function can block, and ui.Builder is a synchronous
+position (Build at node.go:213:2 holds the value, and a channel receive at
+main.go:14:3 blocks)
+```
+
+**The proof.** 9 tests of `internal/driver/sync_test.go` pass. They cover a
+struct field, a function parameter, a local variable, a method value, a cause
+1 call away, a declaration inside a `type` group, a directive on a type that is
+not a function type, and a marker that stands in a dependency module. 1 test
+proves the other side: a callback with no result still accepts a function that
+blocks, because the host wraps it as `() { $go(f); $schedule(); }`.
+
+`gart.dev/ui` now declares `Builder` and `ItemBuilder`, and `Watch.Build`,
+`ListViewBuilder.Item`, and `RunWatch` each take 1. The Dart type of the field
+does not change: it stays `Iface? Function()?`, and only the type descriptor of
+the field names the new type. The 6 widget tests of the counter still pass.
 
 ### Milestone 3: the generated node set and the generated host
 

@@ -51,3 +51,37 @@ A widget outside the node set of `ui` costs 1 Go struct and 1 case of
 `goflutter/lib/src/host.dart`. Nothing in the host is specific to Material, thus
 a Cupertino widget and a widget of a `pub.dev` package each take the same 2
 steps.
+
+## The rule of a builder
+
+`ui.Builder` and `ui.ItemBuilder` are synchronous positions. Flutter calls such
+a function and reads the result at once, thus the function must not block. A
+build that reads a channel, that runs a `select`, or that calls a function which
+does either, fails the build with a source position.
+
+Move the work into a goroutine, and let the build read a signal:
+
+```go
+func (m *Model) Load() {
+	go func() {
+		rows := fetch()          // this may block
+		ui.Post(func() {         // 1 goroutine writes each signal
+			m.rows.Set(rows)
+		})
+	}()
+}
+
+func (m *Model) Build() ui.Node {  // this never blocks
+	return ui.Text{Data: m.rows.Get()[0]}
+}
+```
+
+A callback with no result, such as `OnPressed`, takes a function that blocks.
+The host wraps it as a goroutine, thus no Dart caller waits for it.
+
+A new synchronous position needs a named function type with the directive:
+
+```go
+//gart:sync
+type RowBuilder func(int) Node
+```
