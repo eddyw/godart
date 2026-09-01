@@ -7,6 +7,12 @@ import 'map.dart';
 import 'slice.dart';
 import 'string.dart';
 
+/// The key of the method of the interface json.Marshaler in a method table.
+const String _marshalKey = 'MarshalJSON()[]byte,error';
+
+/// The key of the method of the interface json.Unmarshaler.
+const String _unmarshalKey = 'UnmarshalJSON([]byte)error';
+
 /// Writes the JSON form of a Go value.
 ///
 /// The walk reads the type descriptor of the value. A struct gives an object,
@@ -34,15 +40,14 @@ class _JsonCause implements Exception {
 }
 
 /// _tree maps a Go value to the tree that jsonEncode accepts.
-///
-/// Go writes a byte slice as base64 text. This encoder writes a list of numbers
-/// instead, thus a byte slice does not match Go.
 Object? _tree(Iface? v) {
   if (v == null) return null;
   return _value(v.desc, v.value);
 }
 
 Object? _value(TypeDesc desc, Object? value) {
+  final Function? marshal = desc.methods[_marshalKey];
+  if (marshal != null) return _callMarshal(desc, marshal, value);
   switch (desc.kind) {
     case 'bool':
       return value as bool;
@@ -61,7 +66,7 @@ Object? _value(TypeDesc desc, Object? value) {
     case 'struct':
       return _object(desc, value);
     case 'slice':
-      return _list(desc, value as Slice<Object?>?);
+      return _slice(desc, value as Slice<Object?>?);
     case 'array':
       return _array(desc, value as List<Object?>);
     case 'map':
@@ -71,6 +76,57 @@ Object? _value(TypeDesc desc, Object? value) {
   }
   if (value is GoInt) return $ix(value);
   throw _JsonCause('json: unsupported type: ${desc.display}');
+}
+
+/// _callMarshal writes a value through the method MarshalJSON of its type.
+///
+/// Go writes the bytes of the method into the output. This encoder reads the
+/// bytes back into a tree, thus the output holds the compact form of them.
+Object? _callMarshal(TypeDesc desc, Function marshal, Object? value) {
+  if (desc.kind == 'ptr' && value == null) return null;
+  final (Slice<GoInt>, Iface?) out =
+      Function.apply(marshal, <Object?>[value]) as (Slice<GoInt>, Iface?);
+  final Iface? cause = out.$2;
+  if (cause != null) {
+    throw _JsonCause(
+      'json: error calling MarshalJSON for type ${desc.display}: '
+      '${_errorText(cause)}',
+    );
+  }
+  try {
+    return jsonDecode($bytesToString(out.$1).toDartString());
+  } on FormatException catch (e) {
+    throw _JsonCause(
+      'json: error calling MarshalJSON for type ${desc.display}: ${e.message}',
+    );
+  }
+}
+
+String _errorText(Iface cause) =>
+    ($call(cause, 'Error()string', <Object?>[]) as GoString).toDartString();
+
+/// _slice writes a slice. Go writes base64 text for a byte slice, and it holds
+/// the type of the element apart when that type writes a form of its own.
+Object? _slice(TypeDesc desc, Slice<Object?>? s) {
+  final TypeDesc? elem = desc.elem?.call();
+  if (elem == null) throw _JsonCause('json: a slice holds no element type');
+  if (elem.kind == 'uint8' && !_marshaler(elem)) return _base64(s);
+  return _list(elem, s);
+}
+
+/// _marshaler reports whether a pointer to the type holds MarshalJSON. Go reads
+/// the method set of the pointer, because it holds each method of the type.
+bool _marshaler(TypeDesc desc) =>
+    desc.methods.containsKey(_marshalKey) ||
+    (desc.ptr?.call().methods.containsKey(_marshalKey) ?? false);
+
+String? _base64(Slice<Object?>? s) {
+  if (s == null || s.isNil) return null;
+  final List<int> out = List<int>.filled(s.len, 0);
+  for (int i = 0; i < s.len; i++) {
+    out[i] = $ix(s.array[s.off + i] as GoInt);
+  }
+  return base64.encode(out);
 }
 
 Map<String, Object?> _object(TypeDesc desc, Object? value) {
@@ -97,10 +153,8 @@ Object _number(double v) {
   return v;
 }
 
-/// _list writes a slice. Go writes null for a nil slice.
-List<Object?>? _list(TypeDesc desc, Slice<Object?>? s) {
-  final TypeDesc? elem = desc.elem?.call();
-  if (elem == null) throw _JsonCause('json: a slice holds no element type');
+/// _list writes the elements of a slice. Go writes null for a nil slice.
+List<Object?>? _list(TypeDesc elem, Slice<Object?>? s) {
   if (s == null || s.isNil) return null;
   final List<Object?> out = <Object?>[];
   for (int i = 0; i < s.len; i++) {
@@ -244,6 +298,11 @@ GoString $jsonUnmarshal(Iface? target, GoString data) {
 /// Dart form of a pointer to an array is the list. Each other pointer holds a
 /// box.
 void _store(TypeDesc elem, Object? pointer, Object? tree) {
+  final Function? unmarshal = _unmarshaler(elem);
+  if (unmarshal != null) {
+    _callUnmarshal(unmarshal, pointer, tree);
+    return;
+  }
   switch (elem.kind) {
     case 'struct':
       _fillStruct(elem, pointer, tree);
@@ -255,7 +314,34 @@ void _store(TypeDesc elem, Object? pointer, Object? tree) {
   (pointer as $Ptr<dynamic>).v = _decode(elem, tree);
 }
 
+/// _unmarshaler gives the method UnmarshalJSON of the pointer to a type.
+///
+/// A method with a value receiver cannot write the value, thus this walk reads
+/// only the method set of the pointer. docs/parity.md holds that gap.
+Function? _unmarshaler(TypeDesc desc) {
+  if (desc.kind == 'ptr') return null;
+  return desc.ptr?.call().methods[_unmarshalKey];
+}
+
+/// _callUnmarshal reads a tree through the method UnmarshalJSON of a type.
+///
+/// Go gives the method the bytes of the input. This decoder reads the whole
+/// input first, thus the method reads the compact form of them.
+void _callUnmarshal(Function unmarshal, Object? pointer, Object? tree) {
+  final Iface? cause = Function.apply(unmarshal, <Object?>[
+    pointer,
+    $stringToBytes(GoString.fromString(jsonEncode(tree))),
+  ]) as Iface?;
+  if (cause != null) throw _JsonCause(_errorText(cause));
+}
+
 Object? _decode(TypeDesc desc, Object? tree) {
+  final Function? unmarshal = _unmarshaler(desc);
+  if (unmarshal != null) {
+    final Object? pointer = desc.ptr!.call().newPtr!();
+    _callUnmarshal(unmarshal, pointer, tree);
+    return pointer is $Ptr<Object?> ? pointer.v : pointer;
+  }
   switch (desc.kind) {
     case 'interface':
       return _any(tree);
@@ -302,15 +388,34 @@ Object? _decodePointer(TypeDesc desc, Object? tree) {
 
 Object? _decodeSlice(TypeDesc desc, Object? tree) {
   if (tree == null) return _fresh(desc);
-  if (tree is! List) throw _wrong(tree, desc);
   final TypeDesc? elem = desc.elem?.call();
   final Object? Function(int)? make = desc.make;
   if (elem == null || make == null) {
     throw _JsonCause('json: a slice holds no element type');
   }
+  if (tree is String) {
+    if (elem.kind != 'uint8') throw _wrong(tree, desc);
+    return _decodeBase64(make, tree);
+  }
+  if (tree is! List) throw _wrong(tree, desc);
   final Slice<Object?> out = make(tree.length) as Slice<Object?>;
   for (int i = 0; i < tree.length; i++) {
     out.array[out.off + i] = _decode(elem, tree[i]);
+  }
+  return out;
+}
+
+/// _decodeBase64 reads the base64 text of a byte slice.
+Object? _decodeBase64(Object? Function(int) make, String text) {
+  final List<int> bytes;
+  try {
+    bytes = base64.decode(text);
+  } on FormatException {
+    throw _JsonCause('json: illegal base64 data');
+  }
+  final Slice<Object?> out = make(bytes.length) as Slice<Object?>;
+  for (int i = 0; i < bytes.length; i++) {
+    out.array[out.off + i] = $gi(bytes[i]);
   }
   return out;
 }

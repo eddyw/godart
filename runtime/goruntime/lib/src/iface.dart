@@ -81,6 +81,16 @@ final class TypeDesc {
   /// function each give false, and so does a struct that holds one.
   final bool comparable;
 
+  /// The description of the pointer to the type, when that pointer holds a
+  /// method that the type does not hold. A method with a pointer receiver
+  /// stays out of the value method set, and json reads such a method, because
+  /// Unmarshal writes through a pointer.
+  final TypeDesc Function()? ptr;
+
+  /// Builds a pointer to the zero value of the element type. The description of
+  /// a pointer type holds it under the same condition as [ptr].
+  final Object? Function()? newPtr;
+
   const TypeDesc(
     this.name,
     this.kind,
@@ -96,6 +106,8 @@ final class TypeDesc {
     this.zero,
     this.make,
     this.comparable = true,
+    this.ptr,
+    this.newPtr,
   });
 
   /// The name for a message. Go writes the package name, and not the path.

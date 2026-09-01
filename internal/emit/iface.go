@@ -109,7 +109,9 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 	defer delete(e.descBusy, key)
 	return fmt.Sprintf("TypeDesc(%s, '%s', <String, Function>{%s}, text: %s%s, zero: () => %s)",
 		e.typeNameText(t), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
-		e.reflectTextExpr(t), e.methodTypeTable(t)+e.descParts(t), e.zero(t))
+		e.reflectTextExpr(t),
+		e.methodTypeTable(t)+e.descParts(t)+e.pointerPart(named, pointer),
+		e.zero(t))
 }
 
 // methodTable writes the adapter of each method of the type, in the order of
@@ -140,7 +142,37 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s);",
 		variable, dartText(e.typeName(t)), kindOf(t),
 		strings.Join(e.methodTable(named, t), ", "), dartText(reflectText(t)),
-		e.methodTypeTable(t)+e.descParts(t), e.zero(t))
+		e.methodTypeTable(t)+e.descParts(t)+e.pointerPart(named, pointer),
+		e.zero(t))
+}
+
+// pointerPart links the 2 descriptions of a named type whose pointer type holds
+// a method that the value type does not hold.
+//
+// A method with a pointer receiver stays out of the value method set.
+// encoding/json reads such a method, because Unmarshal writes through a
+// pointer. The value description names the pointer description, and the pointer
+// description builds a pointer to a fresh value.
+func (e *emitter) pointerPart(named *types.Named, pointer bool) string {
+	if types.NewMethodSet(types.NewPointer(named)).Len() <=
+		types.NewMethodSet(named).Len() {
+		return ""
+	}
+	if !pointer {
+		return ", ptr: () => " + e.descriptorOf(types.NewPointer(named))
+	}
+	return ", newPtr: () => " + e.freshPointer(named)
+}
+
+// freshPointer writes a pointer to the zero value of a type. The Dart form of a
+// pointer to a struct and of a pointer to an array is the value itself, and
+// each other pointer holds a box.
+func (e *emitter) freshPointer(t types.Type) string {
+	switch types.Unalias(t).Underlying().(type) {
+	case *types.Struct, *types.Array:
+		return e.zero(t)
+	}
+	return fmt.Sprintf("Box<%s>(%s)", e.dartType(t), e.zero(t))
 }
 
 // methodTypeTable writes the function type of each exported method of the

@@ -29,7 +29,7 @@ The state of 2026-09-01. Each row names the section that holds the detail.
 | The network access | TCP, UDP, and a Unix socket. No address type, and `Request.RemoteAddr` is empty. |
 | HTTP | 1.1 and 2, for the client and the server. No cookie jar, no file server, and no multipart form. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
-| JSON | A byte slice gives a list of numbers, and Go gives base64 text. No `Encoder`, no `Decoder`, and no `Marshaler`. |
+| JSON | `Marshaler`, `Unmarshaler`, base64 text for a byte slice, and `time.Time` are present. No `Encoder`, no `Decoder`, and no `TextMarshaler`. |
 | `gart test` | The format of `go test`. `t.Parallel` does nothing, and `-cover`, `-short`, and `-count` stay out. |
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
 | A stack trace | The module form of each file, with no offset. |
@@ -194,7 +194,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq`, `Seq2`, `Pull`, and `Pull2`. Read the section below. |
 | `maps` | Overlay | |
-| `encoding/json` | Overlay | `Marshal`, `MarshalIndent`, and `Unmarshal`. Read the section below. |
+| `encoding/json` | Overlay | `Marshal`, `MarshalIndent`, `Unmarshal`, `Marshaler`, and `Unmarshaler`. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native |
 | `io/fs` | Overlay | `FileMode`, `FileInfo`, `DirEntry`, `PathError`, `WalkDirFunc`, `SkipDir`, `SkipAll`, and `ValidPath`. No `FS` interface. |
@@ -309,11 +309,29 @@ walks it.
 | A nested struct and a pointer | Present | Equal |
 | A map key of the type string or int | Present | Equal |
 | The order of a map member | Sorted by the key | Equal |
-| A byte slice | Gives base64 text | Gives a list of numbers |
+| A byte slice | Gives base64 text | Equal |
 | `Unmarshal` | Present | Present. Read the table below. |
 | `Decoder` and `Encoder` | Present | Not present |
-| `Marshaler` and `Unmarshaler` | Present | Not present |
-| A `time.Time` field | The `MarshalJSON` method writes `"2023-11-14T22:13:20Z"` | Gives `{}`, and the call reports no error. The walk reads the descriptor, and each field of `time.Time` is unexported. |
+| `Marshaler` | Present | Equal. Read the section below. |
+| `TextMarshaler` | The walk reads it when the type holds no `MarshalJSON` | Not present |
+| A `time.Time` field | Gives `"2023-11-14T22:13:20Z"` | Equal |
+| `<`, `>`, and `&` in a string | Give `\u003c`, `\u003e`, and `\u0026` | Give the character itself. A reader gives 1 value from the 2 forms. |
+
+`Marshaler` and `Unmarshaler` reach the walk through the method table of the
+type descriptor. A method with a pointer receiver stays out of the value method
+set, thus the description of a value type names the description of its pointer
+type. The compiler writes that link only when the pointer type holds a method
+that the value type does not hold.
+
+| Item of the 2 interfaces | Go | godart |
+|---|---|---|
+| A value receiver and a pointer receiver on `MarshalJSON` | Present | Equal |
+| A pointer receiver on `UnmarshalJSON` | Present | Equal |
+| A value receiver on `UnmarshalJSON` | The walk calls it with a copy, and the write is lost | The walk does not call it |
+| The bytes of `MarshalJSON` | Go writes them into the output | The walk reads them into a tree and writes that tree again, thus the output holds the compact form |
+| The bytes of `UnmarshalJSON` | Go gives the bytes of the input | The walk reads the whole input first, thus the method reads the compact form |
+| A broken form from `MarshalJSON` | Gives an error | Gives an error with another text |
+| A byte slice whose element type holds `MarshalJSON` | Gives a list | Equal |
 
 `Unmarshal` reads the same descriptor. It writes each field through
 `FieldDesc.set`, and it builds a nested value through `TypeDesc.zero` and
@@ -328,7 +346,8 @@ walks it.
 | A type that does not fit the JSON value | Gives an error | Gives an error with another text |
 | A broken text | Gives a `SyntaxError` | Gives an error with another text |
 | `UnmarshalTypeError` and its fields | Present | Not present. Each cause is a `SyntaxError`. |
-| An RFC 3339 text into a `time.Time` | The `UnmarshalJSON` method reads it | The error `json: cannot unmarshal string into Go value of type time.Time` |
+| An RFC 3339 text into a `time.Time` | The `UnmarshalJSON` method reads it | Equal |
+| A base64 text into a byte slice | Present | Equal |
 | A number with a fraction into an integer field | Gives an error | Gives an error |
 
 ## The file access
@@ -563,6 +582,9 @@ builds each other location from the zone database.
 | `Time.Year`, `Month`, `Day`, `Date`, `Hour`, `Minute`, `Second`, `Clock`, `Nanosecond`, `Weekday`, `YearDay` | Present | Equal |
 | `Time.UTC`, `Time.Local`, `Time.Equal` | Present | Equal |
 | `Time.Parse`, `ParseInLocation`, `ParseError` | Present | Equal. Read below. |
+| `Time.MarshalJSON`, `MarshalText`, `AppendText`, and the 2 read methods | RFC 3339 with the nanosecond | Equal |
+| `Time.MarshalBinary`, `AppendBinary`, `UnmarshalBinary` | The versioned form of Go | Equal. The bytes of the 2 runtimes match. |
+| `Time.MarshalJSON` outside the year range 0 to 9999 | Gives an error | The range of a Time cannot reach it, thus the method reports no error. |
 | `ParseDuration`, `Duration.Truncate`, `Duration.Round` | Present | Equal |
 | `Time.Truncate`, `Time.Round` | Round against January 1 of the year 1 | Equal. The count of nanoseconds of that day does not fit an int64, thus the general case builds a value of 128 bits. |
 | The zero value of `Time` | January 1 of the year 1 | The start of the Unix epoch. A Time holds 1 count of nanoseconds, thus the range is the year 1678 to the year 2262. |

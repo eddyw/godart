@@ -32,6 +32,7 @@ final TypeDesc $desc$Greeter = TypeDesc(
       ($r, $v) => ($r as Greeter$)._style = $v as GoInt,
     ),
   ],
+  ptr: () => $descP$Greeter,
   zero: () => Greeter$.$zero(),
 );
 final TypeDesc $descP$Greeter = TypeDesc(
@@ -66,6 +67,7 @@ final TypeDesc $descP$Greeter = TypeDesc(
     ),
   },
   elem: () => $desc$Greeter,
+  newPtr: () => Greeter$.$zero(),
   zero: () => null,
 );
 final TypeDesc $desc$Style = TypeDesc(
