@@ -12,9 +12,11 @@ SUITE_OUT := $(CURDIR)/build/suite/$(SUITE)
 STD ?= path
 STD_OUT := $(CURDIR)/build/std/$(STD)
 
+FLUTTER ?= flutter
+
 .PHONY: help get build test vet fmt fmt-check dart-get dart-analyze dart-test \
 	dart-fmt dart-fmt-check ci install clean run compare programs suites \
-	gart-test compare-tests bench std-test
+	gart-test compare-tests bench std-test flutter-go flutter-test
 
 help:
 	@echo "godart targets:"
@@ -26,6 +28,8 @@ help:
 	@echo "  make fmt-check        Fail if the format differs."
 	@echo "  make dart-analyze     Run the Dart analyzer on the runtime library."
 	@echo "  make dart-test        Run the Dart tests of the runtime library."
+	@echo "  make flutter-go       Run the Go tests of the Flutter modules."
+	@echo "  make flutter-test     Build the example and run the Flutter tests."
 	@echo "  make ci               Run the full check that CI runs."
 	@echo "  make programs         List the Go programs of testdata."
 	@echo "  make run PROG=x       Compile testdata/programs/x and run the Dart output."
@@ -72,7 +76,21 @@ dart-analyze:
 dart-test:
 	cd $(RUNTIME) && dart test
 
-ci: fmt-check vet test dart-analyze dart-test
+# flutter-go runs the Go side of the Flutter work. Each one is a module of its
+# own, thus the go targets of the root do not reach it. It needs no Flutter SDK.
+flutter-go:
+	cd flutter/ui && go vet ./... && go test ./...
+	cd flutter/example/counter/go && go vet ./... && go test ./...
+
+# flutter-test builds the example and runs the widget tests. It needs the
+# Flutter SDK, thus ci does not run it.
+flutter-test: build
+	cd flutter/example/counter && ./build.sh
+	cd flutter/goflutter && $(FLUTTER) analyze
+	cd flutter/example/counter && $(FLUTTER) analyze
+	cd flutter/example/counter && $(FLUTTER) test
+
+ci: fmt-check vet test flutter-go dart-analyze dart-test
 
 programs:
 	@ls testdata/programs

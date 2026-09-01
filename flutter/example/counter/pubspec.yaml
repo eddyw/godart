@@ -1,0 +1,25 @@
+name: counter_app
+description: The Flutter application of the milestone 1 proof. The whole screen comes from Go.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  goflutter:
+    path: ../../goflutter
+  gocounter:
+    path: gen
+  goruntime:
+    path: ../../../runtime/goruntime
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
