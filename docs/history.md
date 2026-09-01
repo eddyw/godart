@@ -73,6 +73,23 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-01, the eighth session
+
+The session measured the surface and wrote `docs/support.md`. A throwaway
+program loaded each package of the surface 2 times, from the real Go 1.27
+source and through the overlay, and it compared the exported names. 52 of
+the 74 standard packages hold each name of Go, 21 hold a part, and
+`time/tzdata` holds none. The new file names the largest gap of each partial
+package, the cause and the cost of each package that stays out, and a focus
+list of 9 items. `docs/parity.md` took an at-a-glance table of the
+differences, and 6 stale rows of it now read the measured state: `sort`
+holds `Sort` with an interface, `sync/atomic` holds the 5 typed values, and
+`runtime` holds 12 names.
+
+| Commit | Work |
+|---|---|
+| `bcbd099` | The measurement of the surface: `docs/support.md`, the at-a-glance table and the 6 corrections of `docs/parity.md`, and the exact counts of the 2 other files. |
+
 ### 2026-09-01, the seventh session
 
 The session worked the 4 candidates of the sixth session end to end: the
