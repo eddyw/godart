@@ -9,6 +9,11 @@ call of an HTTP API.
 
 Each claim below names a file and a line. The state is of 2026-09-01.
 
+**The state of 2026-09-02.** Milestone 1 of `docs/flutter-design.md` is
+complete, and the directory `flutter/` holds it. That work answers most of this
+file. Read the status line of each item below, and read
+`docs/flutter-state.md` for the state model that the application uses.
+
 ## What already works
 
 Do not plan this work again. The list corrects 2 rows of
@@ -23,11 +28,11 @@ Do not plan this work again. The list corrects 2 rows of
 | The output holds no `async` and no `await`. The unwind model replaced that form on 2026-08-29, 1 day after the Flutter research. A function that can block keeps its Dart return type, and the extra cost is about 1.6 nanoseconds for each frame. A build path of Go code thus pays no async cost. | `docs/block-model.md` |
 | An https request verifies the certificate against the trust store of the platform. Only `InsecureSkipVerify` drops the check. | `runtime/goruntime/lib/src/net.dart:347` |
 | A gzip answer decompresses already. `compress/gzip`, `compress/flate`, and `compress/zlib` read the real Go source, and the client sets `Accept-Encoding` itself. | `docs/support.md`, `docs/parity.md` |
-| A third-party Go module compiles when it stays in the subset. The verifier rejects a standard package outside the surface, and it accepts each path that holds a dot. | `internal/overlay/native.go:82` |
+| A third-party Go module compiles when it stays in the subset. **This row was false until 2026-09-02.** Stage 2 accepted the import, and stage 5 then failed with "the package X has no import prefix", because `compiled` of the driver read the main module and the surface only. Decision 217 fixed it. | `internal/overlay/native.go:82`, `internal/driver/driver.go` |
 
 ## The compiler work, in order
 
-### 1. An external Dart declaration
+### 1. An external Dart declaration &mdash; not needed for A13
 
 `intrinsic` of stage 5 is a flat switch on the name of each interop function,
 thus each Dart call needs an edit of the compiler. A Flutter binding names
@@ -39,9 +44,12 @@ Dart name, and emit a direct call of it. A widget then costs 1 Go declaration,
 and no compiler change.
 
 Evidence: `internal/emit/call.go:46`, `docs/what-compiles.md`. Cost: medium.
-Without this item each other item stays theory.
 
-### 2. An opaque Dart handle in Go
+**Status of 2026-09-02.** A13 needs no such declaration. The Dart host holds
+each widget call, and Go names no Dart symbol. Take this item only for an
+approach that makes a Go type a Dart widget class.
+
+### 2. An opaque Dart handle in Go &mdash; not needed for A13
 
 A widget, a controller, and a `BuildContext` must live in a Go value. 5
 interop tables already hold that pattern with an `int` handle: the socket, the
@@ -55,7 +63,10 @@ today, and stage 2 rejects `unsafe`.
 Evidence: `internal/emit/type.go:64`. Cost: small with an int, medium with a
 type.
 
-### 3. A callback export, in 2 flavors
+**Status of 2026-09-02.** Milestone 1 holds no Dart handle in a Go value. The
+host owns each Flutter object, and the Go tree carries data alone.
+
+### 3. A callback export, in 2 flavors &mdash; this is milestone 2
 
 Flutter calls Go, and the 2 directions of that call need 2 rules.
 
@@ -76,7 +87,13 @@ each exported function. The rule is a small pass, and not a new analysis.
 Evidence: `internal/emit/machine.go:349`, `:469`, `internal/driver/driver.go:274`.
 Cost: small. This item makes a build method safe.
 
-### 4. A library entry point
+**Status of 2026-09-02.** The first flavor works, and the host of
+`flutter/goflutter` runs each event through `$go`. The second flavor stays
+open, and it is milestone 2 of `docs/flutter-design.md`. The evidence stands in
+the output of the example: `Command$Run` carries a frame parameter, thus a
+direct Dart call of it gives the zero value with no report.
+
+### 4. A library entry point &mdash; not needed
 
 `writeMain` emits `bin/main.dart`, and the program ends when the first goroutine
 returns. A Flutter app needs the opposite: a `lib/` library, an init that starts
@@ -86,7 +103,12 @@ dependency.
 Evidence: `internal/emit/emit.go:633`, `runtime/goruntime/lib/src/sched.dart:176`.
 Cost: small.
 
-### 5. The value boundary
+**Status of 2026-09-02.** A Go application that is a library package needs no
+change. `gart build` writes `lib/<name>.dart` and no `bin/main.dart`, and the
+Flutter application calls `$init` of that library. Take this item only for a
+`package main`.
+
+### 5. The value boundary &mdash; enough for milestone 1
 
 The interop rule converts an integer, a `GoString`, a byte slice, and a record.
 A widget property also needs a double, a bool, a list, a map, and a Go struct as
@@ -94,6 +116,11 @@ a Dart value, in both directions. A text property crosses the boundary at each
 build, thus the cost of `GoString` matters at 60 frames each second.
 
 Evidence: `internal/emit/call.go`, `docs/js-integers.md`. Cost: medium.
+
+**Status of 2026-09-02.** The boundary carries each type that the node set
+needs: a `GoString`, a double, a bool, a `GoInt`, a slice of interface values,
+and a closure of 4 shapes. A `GoInt` erases to a Dart int on the Flutter
+target. The cost of a text property at 60 frames each second is unmeasured.
 
 ## The compiler work that a first app does not need
 
@@ -115,7 +142,7 @@ where a Go type **is** a Dart widget class, which is option 4 of
 The target is a client, and not a server. `docs/support.md` holds the count of
 each package.
 
-### 1. `encoding/json`, with `time`
+### 1. `encoding/json`, with `time` &mdash; done 2026-09-01
 
 This is the largest gap of a client, and it fails silently today. A verified
 run of 2026-09-01 with 1 struct of 3 fields:
@@ -134,7 +161,7 @@ Needed, in order: the 2 interfaces, the base64 rule of a byte slice, the 6
 marshal methods of `time.Time`, `RawMessage`, `Decoder`, `Encoder`, and
 `Number`.
 
-### 2. The client gaps of `net/http`
+### 2. The client gaps of `net/http` &mdash; done 2026-09-01
 
 The request path works: `Get`, `Post`, `Client.Do`, a header, a redirect, a
 timeout, a cookie of 1 request, and the gzip answer. 3 gaps hit a real client:
@@ -143,7 +170,7 @@ timeout, a cookie of 1 request, and the gzip answer. 3 gaps hit a real client:
 - No `mime/multipart`, thus no file upload.
 - No `Transport.Proxy`, thus no system proxy.
 
-### 3. The small crypto packages
+### 3. The small crypto packages &mdash; done 2026-09-01
 
 `crypto/rand` gives a token and an idempotency key. `crypto/hmac` and
 `crypto/sha512` sign a request and read a JWT. Each one follows a pattern that
@@ -164,8 +191,9 @@ A mobile app reads its storage through a Flutter plugin, and not through `os`.
 
 Each one is small, and together they cover the whole mechanism.
 
-1. **A counter.** A Go state, a Dart button that calls a Go closure, and a
-   rebuild. It proves items 2, 3, and 4 of the compiler list.
+1. **A counter.** Done 2026-09-02. `flutter/example/counter` holds it, and 6
+   widget tests pass under Flutter 3.47.0. It needed no item of the compiler
+   list.
 2. **A list from an API.** An https GET, a JSON decode into a Go struct, and a
    list of widgets. It proves item 1 of the package list.
 3. **A form.** A text field, a validation in Go, and a POST. It proves the
