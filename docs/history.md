@@ -73,6 +73,27 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-01, the seventh session
+
+The session worked the 4 candidates of the sixth session end to end: the
+lazy map iterator, `os/exec`, HTTP/2, and the build of the JS integer. The
+range loop over a map now starts in constant time, and `maplinear` joined
+the net. `os/exec` rides `Process.start` over 7 interop calls. HTTP/2 rides
+the Dart package `http2` behind ALPN, for the client and the server, and
+`httptest.Server` takes `EnableHTTP2`. The Go integer of the emitted code is
+the type GoInt, the JS form holds the pair of GopherJS, and a program of
+64-bit work runs under node byte-equal with `go run`. The go test net now
+holds 683 matches of 931 files with 0 differences, and 32 named limits.
+Decisions 211 to 214 hold each design.
+
+| Commit | Work |
+|---|---|
+| `3319bfe` | The lazy map iterator: the entry list of GoMap, the dead links, `GoMapIter`, and `ir.MapIterType`. |
+| `0d274bd` | `os/exec` over `Process.start`: the 7 interop calls, `os.Process`, the pipes, and the program `execuse`. |
+| `cc36c97` | HTTP/2 over the Dart package `http2`: `$takeSocket`, the 9 interop calls, the transport rules of Go, and the program `h2serve`. |
+| `1b8f814` | The 2 forms of the Go integer and their conformance test, behind `dart.library.js`. |
+| `52c8772` | The cutover of the emitted code to GoInt: the literals, the boundaries, the uniform interop rule, and `TestJS` under node. |
+
 ### 2026-09-01, the sixth session
 
 The session worked the 7 tasks of the open list end to end, in the order that
