@@ -16,7 +16,7 @@ The state of 2026-09-01. Each row names the section that holds the detail.
 | A parallel run | Out. All Go code runs in 1 isolate. `GOMAXPROCS` and `NumCPU` give 1, and a goroutine with no block operation never gives up control. |
 | The order of a map | The order of the writes. Go gives a random order. |
 | A `select` with 2 ready cases | The first case in source order. Go takes a random one. |
-| `sync.RWMutex` | A read lock is equal to a write lock. |
+| `sync.RWMutex` | A read lock is equal to a write lock. `sync.Map` is a plain map, and it needs no lock. |
 | A pointer | Present, also to a value that is not a struct. `&*p` and a conversion between 2 struct types stay out. |
 | `unsafe` and cgo | Outside the subset. |
 | `reflect` | A subset over a type descriptor. `Type` is a struct with a handle, and not an interface. |
@@ -26,8 +26,8 @@ The state of 2026-09-01. Each row names the section that holds the detail.
 | The zone of a date before 1901 | The modern offset of the zone. Dart names the zone, and Go reads its own database. |
 | The file access | Synchronous, through `dart:io`. No permission bit, and no handle of a directory. |
 | The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. |
-| The network access | TCP, UDP, and a Unix socket. No address type, and `Request.RemoteAddr` is empty. |
-| HTTP | 1.1 and 2, for the client and the server. No cookie jar, no file server, and no multipart form. |
+| The network access | TCP, UDP, and a Unix socket. `net.IP` and `ParseIP` are present, and each other address type stays out. `Request.RemoteAddr` is empty. |
+| HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, and a multipart form are present. No file server. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
 | JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, and the error types. No `Token`, no `UseNumber`, and no `TextMarshaler`. |
 | `gart test` | The format of `go test`. `t.Parallel` does nothing, and `-cover`, `-short`, and `-count` stay out. |
@@ -182,6 +182,11 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
+| `crypto/sha512` | Overlay | The algorithm of `crypto/internal/fips140/sha512`, with the public names of `crypto/sha512`. |
+| `crypto/hmac` | Overlay | `New` and `Equal`, from FIPS 198-1. |
+| `crypto/rand` | Overlay | `Read`, `Reader`, and `Text`, over `Random.secure` of Dart. `Int` and `Prime` read `math/big`, thus the 2 stay out. |
+| `mime`, `mime/quotedprintable`, `mime/multipart` | Native | A patch of `mime/multipart` replaces the `go:linkname` stub of `readMIMEHeader`. |
+| `net/textproto`, `net/http/cookiejar` | Native | |
 | `net/http` | Overlay | An HTTP/1.1 client and an HTTP/1.1 server. Read the section of the HTTP access. |
 | `net/http/httptest` | Overlay | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `NewTLSServer`, and `StartTLS`. |
 | `testing/quick` | Overlay | The source of Go, with no complex case. |
@@ -200,7 +205,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `io/fs` | Overlay | `FileMode`, `FileInfo`, `DirEntry`, `PathError`, `WalkDirFunc`, `SkipDir`, `SkipAll`, and `ValidPath`. No `FS` interface. |
 | `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. Read below. |
 | `path/filepath` | Overlay | The separator is always `/`. Read below. | |
-| `net` | Overlay | TCP, UDP, and a Unix socket. No TLS. Read the section below. |
+| `net` | Overlay | TCP, UDP, a Unix socket, `IP`, and `ParseIP`. No TLS. Read the section below. |
 | `os` | Overlay | The file access, the temporary names, and the process state. Read the section below. |
 | `path` | Native | |
 | `runtime` | Overlay | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOROOT`, `GOOS`, `GOARCH`, `Caller`, `Callers`, `CallersFrames`, `FuncForPC`, `AddCleanup`, and `GC`. |
@@ -228,7 +233,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `sort` | Overlay | `Sort`, `Stable`, `Slice`, `SliceStable`, `Search`, `SearchInts`, `Find`, `Ints`, `Strings`, `Float64s`, and `IntsAreSorted`. `Reverse` and the 3 typed slice types stay out. |
 | `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. `ParseInt` and `ParseUint` each read a base of 0. |
 | `strings` | Overlay | |
-| `sync` | Overlay | `Mutex`, `RWMutex`, `WaitGroup`, `Once`, `OnceFunc`, `OnceValue`, `OnceValues`, and `Pool`. |
+| `sync` | Overlay | `Mutex`, `RWMutex`, `Map`, `Cond`, `Locker`, `WaitGroup`, `Once`, `OnceFunc`, `OnceValue`, `OnceValues`, and `Pool`. |
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |
 | `testing` | Overlay | |
 | `sync/atomic` | Overlay | `Value`, the 5 typed values, `Pointer`, and the function forms. `Uintptr` and the pointer functions stay out. Read the section below. |
@@ -575,15 +580,27 @@ Go.
 | The type of a body that the handler does not name | `DetectContentType` reads the first 512 bytes | `text/plain; charset=utf-8` for each body |
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
 | `Request.RemoteAddr` | The address of the peer | Empty. The `Conn` of the `net` overlay names no peer. |
-| `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `MaxIdleConnsPerHost`, `ForceAttemptHTTP2`, and `CloseIdleConnections` |
+| `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `DisableCompression`, `MaxIdleConnsPerHost`, `ForceAttemptHTTP2`, `Proxy`, and `CloseIdleConnections`. Each timeout field stays out. |
 | `httptest` | Present | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `NewTLSServer`, `StartTLS`, `Server.Client`, and `Server.Close`. `CloseClientConnections` and the wait of `Close` for each request that stands open stay out. `StartTLS` binds a fresh port, because the secure socket of Dart wraps no open listener, and the client of a TLS server drops the certificate check, because the surface holds no root pool. |
-| `CookieJar`, `FileServer`, `multipart` | Present | Not present |
+| `CookieJar` and `net/http/cookiejar` | Present | Equal. `Client.Jar` reads a jar before each request, and it writes each cookie of the answer. |
+| `Transport.Proxy`, `ProxyURL`, `ProxyFromEnvironment` | Present | Equal. An http request holds the whole URL in the request line, and an https request rides a CONNECT tunnel. `socks5` stays out. |
+| `Request.ParseForm`, `FormValue`, `PostFormValue` | Present | Equal |
+| `Request.ParseMultipartForm`, `FormFile`, `MultipartReader` | Present | Equal, with `mime/multipart` |
+| `FileServer` and the `FS` family | Present | Not present |
 
 `testdata/programs/httpuse` runs a server and a client in 1 program, and the
 output of `go run` and of the Dart build stays equal.
 `testdata/programs/httpkeep` counts the connections of a listener, and it proves
 that 5 requests in a row share 1 connection. `testdata/programs/h2serve` runs
 an HTTP/2 server and its client, and the 2 sides print `HTTP/2.0`.
+`testdata/programs/httpclient` runs a cookie jar, a multipart form, and a proxy
+that carries a plain request and a CONNECT tunnel.
+
+An https request through a proxy takes 1 name that Go does not hold. Go writes
+the CONNECT request itself and then wraps the connection with `tls.Client`. The
+secure socket of Dart takes over a socket that no read touched, thus the runtime
+holds the whole exchange, and `crypto/tls.DialProxy` names it. `tls.Client` and
+`tls.Server` stay out for the same cause.
 
 ## The clock and the timer
 

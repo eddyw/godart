@@ -217,6 +217,9 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "DialTLS":
 		return fmt.Sprintf("$dialTLS(%s, %s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3], args[4]), true
+	case "DialTLSProxy":
+		return fmt.Sprintf("$dialTLSProxy(%s, %s, %s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3], args[4], args[5]), true
 	case "GC":
 		return "$gc()", true
 	case "AddCleanup":

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"mime/multipart"
 	"net/url"
 	"strconv"
 	"strings"
@@ -35,6 +36,14 @@ type Request struct {
 	RequestURI string
 	// Close asks for the end of the connection after the answer.
 	Close bool
+	// Form holds the values of the query of the URL and of the body of a form.
+	// ParseForm fills it.
+	Form url.Values
+	// PostForm holds the values of the body of a form alone.
+	PostForm url.Values
+	// MultipartForm holds the parts of a body of the type multipart/form-data.
+	// ParseMultipartForm fills it.
+	MultipartForm *multipart.Form
 
 	ctx context.Context
 	// deadline holds the end that the Timeout of a client gives.
@@ -124,7 +133,10 @@ func (r *Request) UserAgent() string { return r.Header.Get("User-Agent") }
 func (r *Request) Referer() string { return r.Header.Get("Referer") }
 
 // write writes the request in the form of the wire.
-func (r *Request) write(w io.Writer) error {
+//
+// A request that rides an HTTP proxy holds the whole URL in the request line,
+// and each other request holds the path.
+func (r *Request) write(w io.Writer, absolute bool) error {
 	host := r.Host
 	if host == "" && r.URL != nil {
 		host = r.URL.Host
@@ -132,6 +144,9 @@ func (r *Request) write(w io.Writer) error {
 	path := "/"
 	if r.URL != nil {
 		path = r.URL.RequestURI()
+		if absolute {
+			path = r.URL.Scheme + "://" + r.URL.Host + path
+		}
 	}
 	head := r.Method + " " + path + " HTTP/1.1\r\n" + "Host: " + host + "\r\n"
 	if _, err := io.WriteString(w, head); err != nil {

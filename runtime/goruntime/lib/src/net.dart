@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -357,6 +358,112 @@ Future<int> _fill(_Conn c) {
     (Object cause) => (-1, GoString.empty, _cause(cause)),
   );
   return (-1, GoString.empty, _empty);
+}
+
+/// Opens a TLS connection through an HTTP proxy and gives its handle.
+///
+/// head holds the whole CONNECT request, thus the Go side names the target and
+/// the authorization. The proxy answers with a status line and a header block,
+/// and the handshake then runs on the same socket.
+(int, GoString, GoString) $dialTLSProxy(
+  GoString host,
+  int port,
+  GoString head,
+  bool insecure,
+  GoString sni,
+  Slice<GoString> protos,
+) {
+  final List<String> alpn = <String>[];
+  for (int i = 0; i < protos.len; i++) {
+    alpn.add(protos[i].toDartString());
+  }
+  $await(
+    _tunnel(
+      host.toDartString(),
+      port,
+      head.toDartString(),
+      sni.toDartString(),
+      insecure,
+      alpn,
+    ),
+    (Object cause) => (-1, GoString.empty, _cause(cause)),
+  );
+  return (-1, GoString.empty, _empty);
+}
+
+Future<(int, GoString, GoString)> _tunnel(
+  String host,
+  int port,
+  String head,
+  String name,
+  bool insecure,
+  List<String> alpn,
+) async {
+  final Socket raw = await Socket.connect(host, port);
+  raw.add(utf8.encode(head));
+  await raw.flush();
+  final BytesBuilder held = BytesBuilder();
+  final Completer<void> ready = Completer<void>();
+  // RawSecureSocket.secure takes over the subscription of the socket, and it
+  // rejects a subscription that stands paused. Thus the handler stays live, and
+  // the length test below reports a proxy that wrote too much.
+  raw.listen(
+    (Uint8List chunk) {
+      held.add(chunk);
+      if (!ready.isCompleted && _headEnd(held.toBytes()) >= 0) ready.complete();
+    },
+    onDone: () {
+      if (!ready.isCompleted) ready.complete();
+    },
+    onError: (Object cause) {
+      if (!ready.isCompleted) ready.completeError(cause);
+    },
+  );
+  await ready.future;
+  final Uint8List answer = held.toBytes();
+  final int end = _headEnd(answer);
+  if (end < 0) {
+    throw const SocketException('the proxy wrote no answer to CONNECT');
+  }
+  if (end != answer.length) {
+    throw const SocketException(
+      'the proxy wrote bytes after the answer to CONNECT',
+    );
+  }
+  final String line = _statusLine(answer);
+  if (!line.contains(' 200 ') && !line.endsWith(' 200')) {
+    throw SocketException('the proxy answered CONNECT with $line');
+  }
+  final SecureSocket s = await SecureSocket.secure(
+    raw,
+    host: name,
+    supportedProtocols: alpn.isEmpty ? null : alpn,
+    onBadCertificate: insecure ? (X509Certificate c) => true : null,
+  );
+  return (
+    _slot(_Conn(s)),
+    GoString.fromString(s.selectedProtocol ?? ''),
+    _empty,
+  );
+}
+
+/// _headEnd gives the index after the blank line of a header block, and it
+/// gives -1 for a block that no blank line ends.
+int _headEnd(Uint8List b) {
+  for (int i = 0; i + 3 < b.length; i++) {
+    if (b[i] == 13 && b[i + 1] == 10 && b[i + 2] == 13 && b[i + 3] == 10) {
+      return i + 4;
+    }
+  }
+  return -1;
+}
+
+String _statusLine(Uint8List b) {
+  int end = 0;
+  while (end < b.length && b[end] != 13) {
+    end++;
+  }
+  return ascii.decode(b.sublist(0, end), allowInvalid: true);
 }
 
 /// Opens a connection to a Unix socket and gives its handle.

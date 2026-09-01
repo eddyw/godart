@@ -6,10 +6,12 @@ import (
 	"bufio"
 	"compress/gzip"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"io"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -43,6 +45,9 @@ type Transport struct {
 	// own. A transport with no TLSClientConfig offers h2 on each https dial,
 	// exactly as in Go.
 	ForceAttemptHTTP2 bool
+	// Proxy gives the proxy of a request. A nil function and a nil result each
+	// give a direct dial. Read ProxyFromEnvironment and ProxyURL.
+	Proxy func(*Request) (*url.URL, error)
 
 	mu   sync.Mutex
 	idle map[string][]net.Conn
@@ -64,10 +69,11 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 	if req.URL == nil {
 		return nil, errors.New("http: nil Request.URL")
 	}
-	key, err := t.connectKey(req)
+	r, err := t.route(req)
 	if err != nil {
 		return nil, err
 	}
+	key := r.key
 	for {
 		// An open HTTP/2 session of the host carries the request. A session
 		// that broke leaves the pool, and a request with no body rides a
@@ -83,7 +89,7 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 			}
 			return nil, err
 		}
-		conn, reused, err := t.getConn(key, req)
+		conn, reused, err := t.getConn(r, req)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +108,7 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 			}
 			return res, nil
 		}
-		res, err := t.exchange(conn, req, key)
+		res, err := t.exchange(conn, req, r)
 		if err == nil {
 			return res, nil
 		}
@@ -118,14 +124,14 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 }
 
 // exchange writes 1 request and reads 1 answer on the connection.
-func (t *Transport) exchange(conn net.Conn, req *Request, key string) (*Response, error) {
+func (t *Transport) exchange(conn net.Conn, req *Request, r route) (*Response, error) {
 	if deadline, ok := req.Context().Deadline(); ok {
 		conn.SetDeadline(deadline)
 	} else if !req.deadline.IsZero() {
 		conn.SetDeadline(req.deadline)
 	}
 	wire, gzipped := t.gzipRequest(req)
-	if err := wire.write(conn); err != nil {
+	if err := wire.write(conn, r.absolute(req)); err != nil {
 		return nil, err
 	}
 	res, err := readResponse(bufio.NewReader(conn), req)
@@ -139,7 +145,7 @@ func (t *Transport) exchange(conn net.Conn, req *Request, key string) (*Response
 		body:     res.Body,
 		conn:     conn,
 		pool:     t,
-		key:      key,
+		key:      r.key,
 		reusable: !t.DisableKeepAlives && !res.Close && !req.Close && res.bodyEnds,
 	}
 	return res, nil
@@ -203,24 +209,127 @@ func (g *gzipBody) Read(p []byte) (int, error) {
 func (g *gzipBody) Close() error { return g.source.Close() }
 
 // connectKey names the pool of a request.
-func (t *Transport) connectKey(req *Request) (string, error) {
+// A route names the connection that 1 request needs.
+type route struct {
+	// key names the pool entry. 2 requests share a connection only when the 2
+	// keys are equal.
+	key string
+	// proxy holds the proxy of the request, or nil.
+	proxy *url.URL
+}
+
+// absolute reports whether the request line holds the whole URL. An http
+// request through a proxy holds it, and each other request holds the path.
+func (r route) absolute(req *Request) bool {
+	return r.proxy != nil && req.URL.Scheme == "http"
+}
+
+func (t *Transport) route(req *Request) (route, error) {
 	switch req.URL.Scheme {
 	case "http", "https":
 	default:
-		return "", errors.New("http: the scheme " + strconv.Quote(req.URL.Scheme) +
+		return route{}, errors.New("http: the scheme " + strconv.Quote(req.URL.Scheme) +
 			" is outside the subset")
 	}
+	var proxy *url.URL
+	if t.Proxy != nil {
+		out, err := t.Proxy(req)
+		if err != nil {
+			return route{}, err
+		}
+		proxy = out
+	}
 	host, port := hostPort(req.URL)
-	return req.URL.Scheme + "|" + host + ":" + port, nil
+	key := req.URL.Scheme + "|" + host + ":" + port
+	if proxy != nil {
+		key += "|proxy " + proxy.String()
+	}
+	return route{key: key, proxy: proxy}, nil
+}
+
+// ProxyURL gives a Proxy function that always names 1 proxy.
+func ProxyURL(fixedURL *url.URL) func(*Request) (*url.URL, error) {
+	return func(*Request) (*url.URL, error) { return fixedURL, nil }
+}
+
+// ProxyFromEnvironment gives the proxy of a request from the environment. It
+// reads HTTP_PROXY, HTTPS_PROXY, and NO_PROXY, and the lower case name of each
+// one.
+//
+// A request of the scheme https reads HTTPS_PROXY, and each other request reads
+// HTTP_PROXY. A host of NO_PROXY gives no proxy, and so does an empty value.
+func ProxyFromEnvironment(req *Request) (*url.URL, error) {
+	name := "HTTP_PROXY"
+	if req.URL.Scheme == "https" {
+		name = "HTTPS_PROXY"
+	}
+	value := envAny(name)
+	if value == "" {
+		return nil, nil
+	}
+	host, _ := hostPort(req.URL)
+	if noProxy(envAny("NO_PROXY"), host) {
+		return nil, nil
+	}
+	out, err := url.Parse(value)
+	if err != nil || out.Host == "" {
+		out, err = url.Parse("http://" + value)
+		if err != nil {
+			return nil, err
+		}
+	}
+	switch out.Scheme {
+	case "http", "https", "socks5":
+	default:
+		return nil, errors.New("http: the proxy scheme " + strconv.Quote(out.Scheme) +
+			" is outside the subset")
+	}
+	return out, nil
+}
+
+// envAny reads the upper case name of a variable, and then the lower case name.
+func envAny(name string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+	return os.Getenv(strings.ToLower(name))
+}
+
+// noProxy reports a host that the value of NO_PROXY names. A value of `*` names
+// each host, and a name that starts with a point matches each host under it.
+func noProxy(list, host string) bool {
+	if list == "" {
+		return false
+	}
+	if list == "*" {
+		return true
+	}
+	host = strings.ToLower(host)
+	for _, part := range strings.Split(list, ",") {
+		part = strings.ToLower(strings.TrimSpace(part))
+		if part == "" {
+			continue
+		}
+		if part[0] == '.' {
+			if strings.HasSuffix(host, part) {
+				return true
+			}
+			continue
+		}
+		if host == part || strings.HasSuffix(host, "."+part) {
+			return true
+		}
+	}
+	return false
 }
 
 // getConn gives a connection of the pool, or a new one. The second result marks
 // a connection that already stood open.
-func (t *Transport) getConn(key string, req *Request) (net.Conn, bool, error) {
-	if conn := t.takeIdle(key); conn != nil {
+func (t *Transport) getConn(r route, req *Request) (net.Conn, bool, error) {
+	if conn := t.takeIdle(r.key); conn != nil {
 		return conn, true, nil
 	}
-	conn, err := t.dial(req)
+	conn, err := t.dial(r, req)
 	if err != nil {
 		return nil, false, err
 	}
@@ -279,10 +388,14 @@ func (t *Transport) CloseIdleConnections() {
 	}
 }
 
-func (t *Transport) dial(req *Request) (net.Conn, error) {
+func (t *Transport) dial(r route, req *Request) (net.Conn, error) {
 	host, port := hostPort(req.URL)
 	switch req.URL.Scheme {
 	case "http":
+		if r.proxy != nil {
+			proxyHost, proxyPort := hostPort(r.proxy)
+			return net.Dial("tcp", proxyHost+":"+proxyPort)
+		}
 		return net.Dial("tcp", host+":"+port)
 	case "https":
 		config := t.TLSClientConfig
@@ -293,6 +406,11 @@ func (t *Transport) dial(req *Request) (net.Conn, error) {
 			}
 			config.NextProtos = protos
 		}
+		if r.proxy != nil {
+			proxyHost, proxyPort := hostPort(r.proxy)
+			return tls.DialProxy(proxyHost+":"+proxyPort, host+":"+port,
+				connectHead(host+":"+port, r.proxy), config)
+		}
 		c, err := tls.Dial("tcp", host+":"+port, config)
 		if err != nil {
 			return nil, err
@@ -301,6 +419,18 @@ func (t *Transport) dial(req *Request) (net.Conn, error) {
 	}
 	return nil, errors.New("http: the scheme " + strconv.Quote(req.URL.Scheme) +
 		" is outside the subset")
+}
+
+// connectHead writes the CONNECT request that opens a tunnel through a proxy.
+func connectHead(target string, proxy *url.URL) string {
+	head := "CONNECT " + target + " HTTP/1.1\r\nHost: " + target + "\r\n"
+	if proxy.User != nil {
+		name := proxy.User.Username()
+		secret, _ := proxy.User.Password()
+		head += "Proxy-Authorization: Basic " +
+			base64.StdEncoding.EncodeToString([]byte(name+":"+secret)) + "\r\n"
+	}
+	return head + "User-Agent: " + defaultUserAgent + "\r\n\r\n"
 }
 
 // hostPort splits the host of a URL. A URL with no port takes the port of its

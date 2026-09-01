@@ -41,6 +41,15 @@ func DialTLS(host string, port int, insecure bool, name string, protos []string)
 	panic("syscall/dart needs the gart compiler")
 }
 
+// DialTLSProxy opens a TLS connection through an HTTP proxy and gives its
+// handle. head holds the whole CONNECT request, thus the caller names the
+// target and the authorization.
+//
+// The other 4 arguments and the 3 results match DialTLS.
+func DialTLSProxy(host string, port int, head string, insecure bool, name string, protos []string) (int, string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // GC provokes a collection and gives up control. Each cleanup of a value that
 // no code reaches then runs.
 func GC() {

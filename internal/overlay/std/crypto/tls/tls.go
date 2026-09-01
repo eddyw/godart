@@ -262,6 +262,43 @@ func Dial(network, addr string, config *Config) (*Conn, error) {
 	}, nil
 }
 
+// DialProxy opens a TLS connection through an HTTP proxy. proxyAddr names the
+// proxy, addr names the target, and head holds the whole CONNECT request.
+//
+// Go holds no such function. Go writes the CONNECT request itself and then
+// wraps the connection with tls.Client. The secure socket of Dart takes over a
+// socket that no read touched, thus the runtime holds the whole exchange.
+// docs/parity.md holds that gap.
+func DialProxy(proxyAddr, addr, head string, config *Config) (*Conn, error) {
+	reject(config)
+	host, port, err := hostPort(proxyAddr)
+	if err != nil {
+		return nil, err
+	}
+	name := ""
+	insecure := false
+	var protos []string
+	if config != nil {
+		name = config.ServerName
+		insecure = config.InsecureSkipVerify
+		protos = config.NextProtos
+	}
+	if name == "" {
+		name, _, err = hostPort(addr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	handle, chosen, cause := dart.DialTLSProxy(host, port, head, insecure, name, protos)
+	if cause != "" {
+		return nil, errors.New("tls: dial " + addr + " through " + proxyAddr + ": " + cause)
+	}
+	return &Conn{
+		handle: handle,
+		state:  ConnectionState{NegotiatedProtocol: chosen, ServerName: name},
+	}, nil
+}
+
 // DialWithDialer opens a TLS connection with the timeout of the dialer. Each
 // other field of the dialer reaches no operation.
 func DialWithDialer(dialer *net.Dialer, network, addr string, config *Config) (*Conn, error) {

@@ -18,8 +18,20 @@ type Client struct {
 	// CheckRedirect decides each redirect. A nil function follows up to 10
 	// redirects, exactly as in Go.
 	CheckRedirect func(req *Request, via []*Request) error
+	// Jar holds the cookies of the client between requests. A nil jar sends
+	// only the cookies that the caller put in the header of the request.
+	Jar CookieJar
 	// Timeout ends a request that takes too long. A value of 0 holds no limit.
 	Timeout time.Duration
+}
+
+// A CookieJar holds the cookies of a client between requests. The package
+// net/http/cookiejar holds an implementation.
+type CookieJar interface {
+	// SetCookies takes the cookies that an answer of the URL gave.
+	SetCookies(u *url.URL, cookies []*Cookie)
+	// Cookies gives each cookie that a request to the URL must send.
+	Cookies(u *url.URL) []*Cookie
 }
 
 // DefaultClient is the client of the top level functions.
@@ -104,9 +116,19 @@ func (c *Client) Do(req *Request) (*Response, error) {
 	}
 	var via []*Request
 	for {
+		if c.Jar != nil {
+			for _, cookie := range c.Jar.Cookies(req.URL) {
+				req.AddCookie(cookie)
+			}
+		}
 		res, err := transport.RoundTrip(req)
 		if err != nil {
 			return nil, &url.Error{Op: methodOp(req.Method), URL: req.URL.String(), Err: err}
+		}
+		if c.Jar != nil {
+			if cookies := res.Cookies(); len(cookies) > 0 {
+				c.Jar.SetCookies(req.URL, cookies)
+			}
 		}
 		next, err := c.redirect(req, res, via)
 		if err != nil {
