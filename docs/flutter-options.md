@@ -3,6 +3,10 @@
 This file lists each option that reaches Flutter from Go through gart. It takes
 no decision and it gives no recommendation. The user decides later.
 
+The file stands from 2026-08-28. The block model changed on 2026-08-29, and 2
+rows below carry the correction. `docs/flutter-first.md` holds the order of the
+work, and it names the state of 2026-09-01.
+
 Each number comes from a measurement of the Flutter SDK at
 `/path/to/flutter` or from the gart source. The section "Facts"
 holds the file path and the line number of each claim.
@@ -158,25 +162,33 @@ reach.
 | A Go interface value as a Dart `Widget` | Out of reach. An interface value is the pair `Iface`, with a `TypeDesc` and an `Object?`. | `runtime/goruntime/lib/src/iface.dart:66`, `internal/emit/type.go:47` |
 | A field-wise `==` and `hashCode` on a widget | Present, and Flutter forbids it. The 2 members of `Widget` carry `@nonVirtual`. | `internal/emit/decl.go:191`, `widgets/framework.dart:365` |
 | Value semantics of a struct | Present, and it works against the Flutter model. A value receiver opens with `$copy`, and a box into an interface copies again. | `internal/emit/decl.go:227`, `internal/emit/iface.go:310` |
-| A guarantee that a function stays synchronous | Out of reach. Stage 3 spreads the async state per signature, and no rule rejects a block in a synchronous position. | `internal/analyze/analyze.go:357`, `:409`, `internal/verify/verify.go:46` |
+| A guarantee that a function stays synchronous | A new pass after stage 3 gives it. `blockingExports` already reads the block set of each exported function, thus the rule needs no new analysis. The row before the block model change read "out of reach". | `internal/driver/driver.go:274`, `internal/analyze/analyze.go:357` |
 | A call of an arbitrary Dart constructor or method | Out of reach. `intrinsic` is a flat switch on the name of an interop function. | `internal/emit/call.go:46` |
 | A generic Dart class that a Dart caller constructs | Out of reach. A generic gart class takes a `Dict` parameter, and it gets no type descriptor. | `internal/emit/decl.go:32`, `internal/emit/iface.go:41` |
 
 The repository holds no mention of Flutter and no mention of a widget. Each
 option starts from 0.
 
-The async model is the hardest item of the table. Stage 3 marks a function that
-can block, and stage 5 emits `Future<T> f() async`. The spread runs per
-signature and not per call site, thus 1 `Build` method that blocks makes every
-`Build` call async at every interface dispatch. An async frame of Dart costs
-about 200 nanoseconds, and a chain of 20 frames costs 3,900 nanoseconds against
-28.9 nanoseconds for the synchronous chain. A 60 frames per second build tree
-does not pay that cost.
+The async model was the hardest item of the table on 2026-08-28. Stage 5 emitted
+`Future<T> f() async` then, and a chain of 20 frames cost 3,900 nanoseconds
+against 28.9 for the synchronous chain. A 60 frames per second build tree does
+not pay that cost.
 
-An async closure is safe at the event handler boundary. Dart accepts an async
-function for a `void Function()` parameter, thus `onPressed` and `onChanged`
-carry Go code that blocks. This fact corrects the note in the workstream doc
-that states the opposite.
+The unwind model of 2026-08-29 removed that cost. The output holds no `Future`
+and no `await`. A function that can block keeps its Dart return type, and the
+extra cost is about 1.6 nanoseconds for each frame. A build path of Go code thus
+runs at the speed of the synchronous chain.
+
+1 danger replaces the cost. A function that really blocks writes its frame to
+`$blocked` and returns the zero value, and only a Go caller tests that field.
+A Dart caller of such a function reads the zero value and sees no report. Thus a
+`build` method needs the rule of the row above. `docs/block-model.md` holds the
+model, and `docs/flutter-first.md` holds the rule.
+
+The event handler boundary stays safe. A handler gives no result, thus the
+adapter starts a goroutine and runs the scheduler: `() { $go(f); $schedule(); }`.
+`onPressed` and `onChanged` then carry Go code that blocks. The finalizer of
+`sched.dart:188` already holds that pattern.
 
 ## The options
 

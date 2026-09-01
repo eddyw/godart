@@ -99,7 +99,9 @@ Stage 2 rejects an import of each package below with a source position.
 
 ## The focus list
 
-The order follows the value of the work against its cost.
+The order follows the value of the work against its cost. It reads a general Go
+program. `docs/flutter-first.md` holds a different order for a Flutter client,
+where `encoding/json` and the callback boundary come first.
 
 1. **The small gaps of 7 packages.** `sort.Reverse` and the 3 typed slices,
    `strings.NewReplacer` and `SplitAfter`, `sync.Map` and `sync.Cond`,

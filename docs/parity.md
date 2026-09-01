@@ -313,6 +313,7 @@ walks it.
 | `Unmarshal` | Present | Present. Read the table below. |
 | `Decoder` and `Encoder` | Present | Not present |
 | `Marshaler` and `Unmarshaler` | Present | Not present |
+| A `time.Time` field | The `MarshalJSON` method writes `"2023-11-14T22:13:20Z"` | Gives `{}`, and the call reports no error. The walk reads the descriptor, and each field of `time.Time` is unexported. |
 
 `Unmarshal` reads the same descriptor. It writes each field through
 `FieldDesc.set`, and it builds a nested value through `TypeDesc.zero` and
@@ -327,6 +328,7 @@ walks it.
 | A type that does not fit the JSON value | Gives an error | Gives an error with another text |
 | A broken text | Gives a `SyntaxError` | Gives an error with another text |
 | `UnmarshalTypeError` and its fields | Present | Not present. Each cause is a `SyntaxError`. |
+| An RFC 3339 text into a `time.Time` | The `UnmarshalJSON` method reads it | The error `json: cannot unmarshal string into Go value of type time.Time` |
 | A number with a fraction into an integer field | Gives an error | Gives an error |
 
 ## The file access
