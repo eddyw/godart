@@ -9,13 +9,13 @@ of a program that imports the package.
 
 ## The import surface
 
-79 packages of the standard library reach the surface. Stage 2 rejects an import
+80 packages of the standard library reach the surface. Stage 2 rejects an import
 of each other package with a source position.
 
 | Present | Absent |
 |---|---|
 | `bufio`, `bytes`, `cmp`, `net/http` | `net/http/cgi`, `net/rpc` |
-| `container/heap`, `container/list`, `container/ring` | `os/exec`, `os/signal` |
+| `container/heap`, `container/list`, `container/ring`, `os/exec` | `os/signal` |
 | `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
 | `regexp`, `regexp/syntax` | `text/template`, `html/template` |
 | `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/rand`, `crypto/x509` |
@@ -117,7 +117,6 @@ Thus these categories build:
 
 | Gate | What it stops |
 |---|---|
-| `os/exec` | Each program that starts another process. Decision 204 holds the survey of the overlay. |
 | `text/template`, `html/template` | Each program that writes a page or a file from a template. |
 | `encoding/xml`, `encoding/gob` | Each program that reads an XML file or a gob stream. |
 | `archive/...`, `compress/bzip2`, `compress/lzw` | Each program that reads a zip file or a tar file. |
@@ -126,8 +125,8 @@ Thus these categories build:
 | A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
 
 Thus no large program of the Go world builds today. `kubectl`, `hugo`, `docker`,
-`terraform`, and `gopls` each read `os/exec`, a template package, or a
-compression package. The gate is the library surface, and not the language.
+`terraform`, and `gopls` each read a template package, a compression package,
+or `os/signal`. The gate is the library surface, and not the language.
 
 ## The near misses
 

@@ -723,3 +723,59 @@ func StartTimer(nanoseconds int64, f func()) int {
 func StopTimer(handle int) bool {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// ProcStart starts a process. argv holds the program and each argument, dir
+// holds the working directory, and env holds each variable in the form
+// name=value. An empty dir keeps the directory of the program. useEnv tells
+// whether env replaces the environment, because a nil list and an empty list
+// differ in Go. The results are the process id and the cause of a failure.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ProcStart(argv []string, dir string, env []string, useEnv bool) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ProcWrite writes the bytes of the slice to the standard input of a process.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ProcWrite(pid int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ProcCloseStdin closes the standard input of a process. A child that reads
+// until the end of the input then sees that end.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ProcCloseStdin(pid int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ProcRead reads bytes of the standard output of a process. A count of 0 with
+// no cause means the end of the stream.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ProcRead(pid int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ProcReadErr reads bytes of the standard error of a process. A count of 0
+// with no cause means the end of the stream.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ProcReadErr(pid int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ProcWait waits for the end of a process and gives the exit code. A process
+// that a signal ended gives the negative number of the signal.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ProcWait(pid int) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ProcKill sends a signal to a process. The signal is the number of the
+// system, for example 9 for SIGKILL and 15 for SIGTERM.
+func ProcKill(pid int, signal int) string {
+	panic("syscall/dart needs the gart compiler")
+}

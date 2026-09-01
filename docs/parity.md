@@ -340,6 +340,24 @@ interface `fmt.Writer` and not `io.Writer`, because an import of `io` would make
 a cycle. A caller never names the type, thus a Go source compiles the same way
 with the go command and with gart.
 
+## The process access
+
+`os/exec` starts a child over `Process` of `dart:io`, and the runtime holds
+the child in a table by its process id. Decision 212 holds the shape.
+
+| Item | Go | godart |
+|---|---|---|
+| `Command`, `Run`, `Start`, `Wait`, `Output`, `CombinedOutput` | Present | Equal |
+| `StdinPipe`, `StdoutPipe`, `StderrPipe` | The pipe works before `Start` | A write or a read before `Start` gives an error. The pipe of the system opens at the start. |
+| `Cmd.Dir`, `Cmd.Env` | Present | Equal |
+| `Args[0]` differs from `Path` | The child sees `Args[0]` | The child sees `Path`. Dart takes the program and the arguments apart. |
+| `LookPath` | Reads the execute bit | Finds a plain file. Dart names no permission bit. |
+| `ExitError`, `os.ProcessState` | Present | The state holds the exit code and the signal only. |
+| `os.Process.Kill`, `Wait`, `Release` | Present | Equal. `Signal` stays out. |
+| `CommandContext` | Present | Out. The context needs a kill on a timer, and no program of the net asks for it. |
+| `SysProcAttr`, a process group | Present | Out |
+| The error of `Start` for a bad program | `fs.PathError` inside `exec.Error` | The text of the Dart exception |
+
 ## The log package and the filepath package
 
 `log` holds each function and each method of Go. `Lshortfile` names the base

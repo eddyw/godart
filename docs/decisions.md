@@ -927,6 +927,21 @@ The plan left these points open. The work took the decisions below.
      go/types does not hold, in the pattern of the Dart field of a select
      variable.
 
+212. `os/exec` is an overlay over `Process.start` of `dart:io`, on the map
+     of decision 204. The runtime holds the child in a table by its process
+     id, thus the id is the handle of each call, and `os.Process` holds the
+     id alone. 7 interop calls carry the work: `ProcStart`, `ProcWrite`,
+     `ProcCloseStdin`, `ProcRead`, `ProcReadErr`, `ProcWait`, and
+     `ProcKill`. The close of the standard input is the seventh call,
+     because a child that reads until the end of the input needs that end,
+     and the survey held 6. A command with no `Stdin` closes the input at
+     the start, and a `Stdin` reader feeds it on a goroutine. Each output
+     drains on a goroutine even without a writer, because a full pipe would
+     stop the child. A pipe of `StdinPipe` or `StdoutPipe` works only after
+     `Start`, and `CommandContext`, `SysProcAttr`, and a separate `Args[0]`
+     stay out. The program `execuse` proves the parity, the kill and the
+     exit code included.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

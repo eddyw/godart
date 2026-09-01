@@ -31,6 +31,7 @@ var goTestSkips = map[string]string{
 	"fixedbugs/issue72063": "a function type that nests 30 levels erases at 2 depths, and the 2 Dart forms differ",
 	"fixedbugs/issue29312": "a slice type that nests 60 levels breaks the Dart form",
 	"fixedbugs/issue19182": "a busy loop without a block operation never yields, and the other goroutine never runs",
+	"linkx_run":            "the file runs go run on a neighbor file that the run directory does not hold, and the go run wrapper of the comparison adds an exit line that dart run does not add",
 	"typeparam/nested":     "the reflect identity of a local type of a generic function drops the outer type argument",
 	"typeparam/issue48137": "a function type that nests 30 levels erases at 2 depths, and the 2 Dart forms differ",
 

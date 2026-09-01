@@ -313,6 +313,21 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 		return fmt.Sprintf("$stdinRead(%s)", args[0]), true
 	case "DialTCP":
 		return fmt.Sprintf("$dialTCP(%s, %s)", args[0], args[1]), true
+	case "ProcStart":
+		return fmt.Sprintf("$procStart(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
+	case "ProcWrite":
+		return fmt.Sprintf("$procWrite(%s, %s)", args[0], args[1]), true
+	case "ProcCloseStdin":
+		return fmt.Sprintf("$procCloseStdin(%s)", args[0]), true
+	case "ProcRead":
+		return fmt.Sprintf("$procRead(%s, %s)", args[0], args[1]), true
+	case "ProcReadErr":
+		return fmt.Sprintf("$procReadErr(%s, %s)", args[0], args[1]), true
+	case "ProcWait":
+		return fmt.Sprintf("$procWait(%s)", args[0]), true
+	case "ProcKill":
+		return fmt.Sprintf("$procKill(%s, %s)", args[0], args[1]), true
 	case "ConnRead":
 		return fmt.Sprintf("$connRead(%s, %s)", args[0], args[1]), true
 	case "ConnWrite":

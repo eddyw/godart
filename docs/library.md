@@ -9,7 +9,7 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 79 packages. `docs/what-compiles.md` holds the whole list and
+The surface holds 80 packages. `docs/what-compiles.md` holds the whole list and
 the gate of each package that stays out. A package reaches the surface 3 ways.
 
 An **overlay** replaces the real source. `internal/overlay/std/<path>/` holds
@@ -136,6 +136,15 @@ command takes the real package, and `gart` takes the overlay. Both builds write
 the same 9 lines.
 
 The work that remains: TLS. Read the note above.
+
+## The process access
+
+`os/exec` is an overlay over `Process.start` of `dart:io`. The runtime holds
+the child in a table by its process id, and 7 interop calls carry the start,
+the 3 pipes, the close of the standard input, the wait, and the kill.
+`os.Process` and `os.ProcessState` live in the `os` overlay, and the state
+holds the exit code and the signal only. Decision 212 holds the shape, and
+`docs/parity.md` holds the gaps. The program `execuse` proves the parity.
 
 ## The HTTP access
 
