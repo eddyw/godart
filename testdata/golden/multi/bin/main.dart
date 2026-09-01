@@ -3,6 +3,11 @@
 // ignore_for_file: non_constant_identifier_names, camel_case_types
 // ignore_for_file: constant_identifier_names, unnecessary_non_null_assertion
 // ignore_for_file: unused_import, prefer_final_locals, curly_braces_in_flow_control_structures
+// ignore_for_file: dead_code, unnecessary_null_comparison, avoid_init_to_null
+// ignore_for_file: unnecessary_this, avoid_renaming_method_parameters
+// ignore_for_file: library_private_types_in_public_api, prefer_final_fields
+// ignore_for_file: no_leading_underscores_for_local_identifiers, unused_label
+// ignore_for_file: prefer_conditional_assignment
 
 import 'package:goruntime/goruntime.dart';
 import 'package:multi/count.dart' as $count;

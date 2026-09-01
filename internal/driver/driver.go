@@ -356,7 +356,7 @@ func libraryURIs(p *packages.Package, module, dartPkg string) map[string]string 
 
 // compiled reports whether the build writes Dart code for a package. The
 // module belongs to the build, and so does each package of the curated
-// standard library surface.
+// standard library surface and each package of a dependency module.
 func compiled(pkgPath, module string) bool {
 	if overlay.Intrinsic(pkgPath) {
 		return false
@@ -367,7 +367,20 @@ func compiled(pkgPath, module string) bool {
 	if module == stdModule && testVariant(pkgPath) {
 		return true
 	}
-	return slices.Contains(overlay.Surface(), pkgPath)
+	if slices.Contains(overlay.Surface(), pkgPath) {
+		return true
+	}
+	return external(pkgPath)
+}
+
+// external reports whether a path names a package of a dependency module. The
+// first element of a module path holds a dot, and no path of the standard
+// library holds one. The verifier reads the same rule at
+// internal/overlay/native.go, thus stage 2 accepts the import that this
+// function accepts.
+func external(pkgPath string) bool {
+	first, _, _ := strings.Cut(pkgPath, "/")
+	return strings.Contains(first, ".")
 }
 
 // stdModule is the module of a build of a GOROOT package. No import path of
@@ -427,13 +440,17 @@ func moduleOf(roots []*packages.Package) string {
 }
 
 // libPath mirrors the Go import path in the Dart directory structure. A
-// standard library package goes under the directory std, and a test variant
-// goes under the directory of its test binary.
+// standard library package goes under the directory std, a package of a
+// dependency module goes under the directory dep, and a test variant goes under
+// the directory of its test binary.
 func libPath(p *packages.Package, module string) string {
 	if under := underTest(p.ID); under != "" {
 		return "gart_test/" + testDir(under, module) + "/" + modulePath(p, module)
 	}
 	if !strings.HasPrefix(p.PkgPath, module) {
+		if external(p.PkgPath) {
+			return "dep/" + p.PkgPath
+		}
 		return "std/" + p.PkgPath
 	}
 	return modulePath(p, module)

@@ -118,6 +118,22 @@ void $wake(Goroutine g) {
   $schedule();
 }
 
+/// Runs after the run queue empties.
+///
+/// A host outside Go sets it. A Flutter host reads the result of the turn
+/// there: it applies the work that a goroutine posted, and it rebuilds each
+/// part of the screen that the turn changed. The hook runs 1 time for each
+/// turn, thus a call of $schedule inside the hook starts no second call.
+void Function()? $onIdle;
+
+bool _inIdle = false;
+
+/// Tells the scheduler that a host outside Go starts a goroutine.
+///
+/// A goroutine that waits for an event of the host is not a deadlock, thus the
+/// report stays off while this flag holds true.
+bool $hosted = false;
+
 /// Runs each goroutine of the run queue until the queue is empty.
 ///
 /// The function returns when no goroutine can run. The Dart event loop then
@@ -160,7 +176,16 @@ void $schedule() {
     _exitMain();
     return;
   }
-  if (_runq.isEmpty && _pending == 0 && _live > 0) _deadlock();
+  final void Function()? idle = $onIdle;
+  if (idle != null && !_inIdle) {
+    _inIdle = true;
+    try {
+      idle();
+    } finally {
+      _inIdle = false;
+    }
+  }
+  if (!$hosted && _runq.isEmpty && _pending == 0 && _live > 0) _deadlock();
 }
 
 /// Starts a goroutine. Go runs the body after the statement, thus the body

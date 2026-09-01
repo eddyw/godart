@@ -772,12 +772,18 @@ func methodNameList(names []string) string {
 
 // box puts a concrete value into an interface value. Go copies a struct at
 // this point, because the interface holds a value and not a location.
+//
+// A composite literal needs no copy. The literal builds a value that no other
+// expression names yet, thus the box holds the only reference. A tree of such
+// literals, for example a widget tree, then costs 1 object for each node in
+// place of 2.
 func (e *emitter) box(x ir.Expr, from types.Type) string {
 	text := e.expr(x)
+	_, fresh := x.(*ir.Composite)
 	switch {
-	case isStructType(from):
+	case isStructType(from) && !fresh:
 		text = e.deref(x) + ".$copy()"
-	case isArrayType(from):
+	case isArrayType(from) && !fresh:
 		text = e.copyArray(text, from)
 	}
 	// The argument of a type parameter can be an interface type, and a value
