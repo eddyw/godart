@@ -161,11 +161,12 @@ of 200 nodes with a text of 20 characters costs 61.4 microseconds, which is
 boundary, costs 0.58 microseconds. A screen needs about 20,000 text properties
 before the `GoString` conversions take 10% of a frame.
 
-2 things cost more than the text. `GoString.fromString` runs 3 to 6 times the
-cost of `toDartString`, and `GoString.take(utf8.encode(s))` gives the same
-value 27% to 32% cheaper. The read of the optional fields costs 37.4
-microseconds of a 200 node frame against 8.04 for the text. Read decision 248,
-and `flutter/bench/report.md` for each number.
+2 things cost more than the text. `GoString.fromString` ran 3 to 6 times the
+cost of `toDartString`, and the adopted buffer of `GoString.take` closed 27% to
+32% of that on 2026-09-03. The read of the optional fields cost 37.4
+microseconds of a 200 node frame against 8.04 for the text, and the read by
+position of the same day brought it to 20.3 against 6.85. Read decision 248,
+and `flutter/bench/README.md` for each number.
 
 ## The compiler work that a first app does not need
 

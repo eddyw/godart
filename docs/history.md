@@ -1179,8 +1179,9 @@ call site in its key.
 
 **The text property, measured.** A whole tree rebuild of 200 nodes with a text
 of 20 characters costs 61.4 microseconds, 0.37% of the frame. The normal case
-costs 0.58 microseconds. The read of the optional fields costs 4 times the
-text, and `GoString.fromString` runs 3 to 6 times the cost of `toDartString`.
+costs 0.58 microseconds. The read of the optional fields cost 4 times the text
+at that hour, and `GoString.fromString` ran 3 to 6 times the cost of
+`toDartString`. The work of the same day brought the first to 3 times.
 `flutter/bench` holds the harness.
 
 **The reconciler of A10 loses.** It costs 1.82 times the plain walk in the case

@@ -1330,6 +1330,12 @@ The plan left these points open. The work took the decisions below.
      `ui.Text` holds 12 optional fields and each read is a lookup of a
      descriptor map at about 15 nanoseconds.
 
+     **2026-09-03, later the same day: the 2 numbers moved.** `fromString`
+     adopts the buffer of the encoder now, and the host reads a field by its
+     position in place of the map. The optional fields cost 20.3 microseconds
+     against 6.85 for the text, and 1 optional read costs 8.5 nanoseconds. The
+     whole frame falls from 56.9 to 40.0.
+
      A screen needs about 20,000 text properties before the conversions take
      10% of a frame, and Flutter lays out no such screen. `flutter/bench` holds
      the harness, and `flutter/bench/report.md` holds each number.
