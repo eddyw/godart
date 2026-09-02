@@ -129,11 +129,12 @@ Dart holds the whole handshake, thus the overlay honors `InsecureSkipVerify`,
 
 The server landed on 2026-09-01. `tls.Listen` rides `SecureServerSocket` of
 Dart through the interop calls `ListenTLS` and `AcceptTLS`, and the accepted
-connection joins the table of the plain connections. The surface holds no
-`crypto/x509`, thus a `Certificate` keeps the 2 PEM blocks that `X509KeyPair`
-took, and Dart parses them. `AcceptTLS` gives the protocol that ALPN took.
-`httptest.NewTLSServer` and `StartTLS` ride `tls.Listen` with a self signed
-certificate of the loopback address, and `testdata/programs/tlserve` proves
+connection joins the table of the plain connections. A `Certificate` keeps the
+2 PEM blocks that `X509KeyPair` took, because Dart parses them, and since
+2026-09-03 it also holds the DER chain and the parsed leaf. `AcceptTLS` gives
+the protocol that ALPN took.
+`httptest.NewTLSServer` and `StartTLS` ride `tls.Listen` with the test pair of
+`net/http/internal/testcert`, and `testdata/programs/tlserve` proves
 the parity against `go run`. Read decision 210. HTTP/2 landed over the Dart
 package `http2` on 2026-09-01, and the section of the HTTP access holds it.
 
@@ -332,10 +333,10 @@ and the tzset chain of Go. The overlay of `time/tzdata` holds the generated
 the subset holds no linkname directive. The programs `tzuse` and `tzdatause`
 and the test `TestZoneinfoZip` prove the parity. Read decision 205.
 
-## The 2 patched packages of 2026-09-03
+## The patched packages of 2026-09-03
 
-`archive/tar` and `math/big` each read the real Go source, and a patch replaces
-the files that reach outside the surface.
+`archive/tar`, `math/big`, and `encoding/asn1` each read the real Go source,
+and a patch replaces the files that reach outside the surface.
 
 **`archive/tar`** takes 3 patch files, and each 1 is empty. `stat_unix.go`
 reads `syscall.Stat_t` and `os/user`, and `stat_actime1.go` and
@@ -344,17 +345,36 @@ reads `syscall.Stat_t` and `os/user`, and `stat_actime1.go` and
 header thus carries no owner name and no group name, exactly as Go behaves on
 a platform with no such file.
 
-**`math/big`** takes 2 patch files. `arith_decl.go` declares 6 functions with
+**`math/big`** takes 5 patch files. `arith_decl.go` declares 6 functions with
 no body, because an assembly file of each architecture holds the code. Go ships
 the pure Go form of the same 6 behind the tag `math_big_pure_go`, and `arith.go`
 holds each `_g` function that the form calls. The patch writes those 6 calls.
 `arith_amd64.go` reads `internal/cpu` for the ADX instruction, and its patch
 gives the flag the value false.
 
+The last 3 files landed later on 2026-09-03, and each 1 serves the block model
+and not the compile. `intconv.go` and `ftoa.go` wrote the message of an unknown
+verb with `fmt.Fprintf` and `fmt.Fprint`. The 2 take an `io.Writer`, thus the
+flow of stage 3 gave the call the group of each `Write` method of the program,
+and that group holds a `Write` that blocks. The 2 files now write through the
+`fmt.State` that the caller gives. `natconv.go` guarded the divisor cache of
+base 10 with a `sync.Mutex`, and `Mutex.Lock` of the overlay waits on a
+channel. The critical section holds `nat` arithmetic alone, thus no goroutine
+of the 1 isolate reaches the cache while another builds it. Read decision 250
+and the section "The method group of an interface call" of `docs/parity.md`.
+
+**`encoding/asn1`** takes 2 patch files. `asn1.go` drops `internal/saferio`,
+which holds `unsafe.Sizeof`, and a local function holds the body of
+`SliceCapWithSize`. The same file also reads the type of a field in place of a
+type assertion of its address, because `Value.Addr().Interface()` of the
+reflect subset gives a plain reference and no typed pointer. `marshal.go`
+writes a composite literal in place of a conversion between 2 struct types.
+
 The result needs no new interop and no Dart arithmetic. A Dart form of the same
 word operations would be a second implementation to keep correct, and the Go
 form is correct already. `testdata/programs/biguse` proves an `Int`, a `Float`
-of 200 bits, and a `Rat`.
+of 200 bits, and a `Rat`, and `testdata/programs/bigfmt` reads each line that
+the 3 later patches touch.
 
 ## The value surface of crypto/tls
 
