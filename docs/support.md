@@ -71,9 +71,9 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 | `reflect` | 130/188 | 69% | `MakeFunc`, `ChanOf`, `FuncOf`, `MakeChan`, `Select`, `Method.Func` |
 | `encoding/json` | 59/92 | 64% | The option set of the v2 implementation, and the field `Type` of each error |
 | `testing` | 132/145 | 91% | `Init`, `MainStart`, `RunTests` and its 2 companions, `InternalExample`, `InternalFuzzTarget` |
-| `net/http` | 223/392 | 56% | `Hijacker`, `ResponseController`, `Protocols`, `HTTP2Config`, `TimeoutHandler` |
+| `net/http` | 240/392 | 61% | `HTTP2Config`, `TimeoutHandler`, `FileServer` and the `FS` family, `Server.Protocols` |
 | `runtime` | 31/114 | 27% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
-| `net` | 127/346 | 36% | `Interface`, `IPConn`, `TCPConn`, `ListenConfig`, the option fields of `Dialer` |
+| `net` | 142/346 | 41% | `Interface`, `IPConn`, `Resolver`, the socket option methods of `TCPConn`, the option fields of `Dialer` |
 | `crypto/tls` | 115/263 | 43% | Each name that reads `crypto/x509`, the QUIC connection, and each `Config` field that would change the handshake |
 | `syscall` | 15/2228 | 0% | Each system call, each error number, and each constant of the platform. |
 
