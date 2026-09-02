@@ -46,7 +46,7 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 	if _, err := os.Stat(filepath.Join(opt.Out, mainEntry)); err != nil {
 		return 1, fmt.Errorf("the module holds no package main")
 	}
-	if err := pubGet(opt.Out); err != nil {
+	if err := pubGet(opt.Out, opt.Runtime); err != nil {
 		return 1, err
 	}
 	return dartRun(opt.Out, append([]string{mainEntry}, args...), out)
@@ -64,7 +64,7 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	if err := pubGet(opt.Out); err != nil {
+	if err := pubGet(opt.Out, opt.Runtime); err != nil {
 		return 1, err
 	}
 	for _, path := range stats.NoTests {
@@ -195,10 +195,16 @@ func seconds(d time.Duration) string {
 // pubGet resolves the dependencies of the output package. The Dart VM needs
 // the package configuration, and the configuration holds the path of the
 // runtime library.
-func pubGet(out string) error {
+func pubGet(out, runtime string) error {
 	config := filepath.Join(out, ".dart_tool", "package_config.json")
-	spec := filepath.Join(out, "pubspec.yaml")
-	if fresh(config, spec) {
+	specs := []string{filepath.Join(out, "pubspec.yaml")}
+	if runtime != "" {
+		// The output package depends on the runtime by path, thus a new
+		// dependency of the runtime must reach the configuration of the
+		// output. The package file of the output does not change with it.
+		specs = append(specs, filepath.Join(runtime, "pubspec.yaml"))
+	}
+	if fresh(config, specs) {
 		return nil
 	}
 	cmd := exec.Command("dart", "pub", "get")
@@ -209,17 +215,22 @@ func pubGet(out string) error {
 	return nil
 }
 
-// fresh reports whether the configuration is not older than the package file.
-func fresh(config, spec string) bool {
+// fresh reports whether the configuration is not older than each package file.
+func fresh(config string, specs []string) bool {
 	a, err := os.Stat(config)
 	if err != nil {
 		return false
 	}
-	b, err := os.Stat(spec)
-	if err != nil {
-		return false
+	for _, spec := range specs {
+		b, err := os.Stat(spec)
+		if err != nil {
+			return false
+		}
+		if a.ModTime().Before(b.ModTime()) {
+			return false
+		}
 	}
-	return !a.ModTime().Before(b.ModTime())
+	return true
 }
 
 // dartRun runs the Dart VM and gives the exit code of the program.
