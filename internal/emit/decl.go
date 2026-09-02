@@ -16,7 +16,36 @@ import (
 // methods.
 func (e *emitter) class(obj *types.TypeName, named *types.Named, st *types.Struct) {
 	e.structClass(name.Type(obj.Name()), typeParamsOf(named.TypeParams()), st,
-		types.Comparable(named), e.methods[obj])
+		structComparable(named, st), e.methods[obj])
+}
+
+// structComparable reports whether the class of a named struct type needs the
+// == operator and the hashCode getter.
+//
+// types.Comparable gives false for a generic struct that holds a field of a
+// type parameter whose constraint is any, because such a parameter is not
+// strictly comparable. Go still accepts == on an instance whose type arguments
+// are comparable, and it rejects each other instance at the use site. The
+// dictionary of the parameter gives equal and hash, thus the class of such a
+// struct holds the 2 members. Without them Dart compares 2 instances by
+// identity, and a map with such a key finds nothing.
+func structComparable(named *types.Named, st *types.Struct) bool {
+	if types.Comparable(named) {
+		return true
+	}
+	if named.TypeParams().Len() == 0 {
+		return false
+	}
+	for i := range st.NumFields() {
+		t := st.Field(i).Type()
+		if _, ok := types.Unalias(t).(*types.TypeParam); ok {
+			continue
+		}
+		if !types.Comparable(t) {
+			return false
+		}
+	}
+	return true
 }
 
 // structClass writes the Dart class of a Go struct type.
