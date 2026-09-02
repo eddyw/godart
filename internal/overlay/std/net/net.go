@@ -271,6 +271,9 @@ func (l *listener) Accept() (Conn, error) {
 	if cause != "" {
 		return nil, netError("accept "+l.network, cause)
 	}
+	if l.network == "tcp" {
+		return newTCPConn(handle), nil
+	}
 	return &conn{handle: handle, network: l.network}, nil
 }
 
@@ -298,7 +301,7 @@ func Dial(network, address string) (Conn, error) {
 		if cause != "" {
 			return nil, errors.New("dial tcp " + address + ": " + cause)
 		}
-		return &conn{handle: handle, network: "tcp"}, nil
+		return newTCPConn(handle), nil
 	case "unix":
 		handle, cause := dart.DialUnix(address)
 		if cause != "" {

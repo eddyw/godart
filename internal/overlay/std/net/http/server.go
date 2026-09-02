@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"syscall/dart"
+	"time"
 )
 
 // A Handler answers 1 request.
@@ -44,6 +45,21 @@ type ResponseWriter interface {
 type Flusher interface {
 	Flush()
 }
+
+// A Hijacker gives the connection of a request to the handler. The handler
+// then owns the connection, and the server writes no answer and no close of
+// its own.
+//
+// The ResponseWriter of the HTTP/1.1 server holds the interface. The answer of
+// an HTTP/2 stream carries no connection of its own, thus it holds none.
+type Hijacker interface {
+	// Hijack gives the connection and a buffered reader and writer of it. The
+	// reader can already hold bytes that the client sent.
+	Hijack() (net.Conn, *bufio.ReadWriter, error)
+}
+
+// ErrHijacked reports a write on an answer whose connection the handler took.
+var ErrHijacked = errors.New("http: connection has been hijacked")
 
 // A Server holds the settings of a listener.
 type Server struct {
@@ -129,7 +145,14 @@ func (s *Server) handle(conn net.Conn) {
 		s.serveH2(tc.Handle())
 		return
 	}
-	defer conn.Close()
+	// A handler that hijacks the connection owns it, thus the server closes
+	// it no more.
+	taken := false
+	defer func() {
+		if !taken {
+			conn.Close()
+		}
+	}()
 	peer := ""
 	if addr := conn.RemoteAddr(); addr != nil {
 		peer = addr.String()
@@ -141,12 +164,16 @@ func (s *Server) handle(conn net.Conn) {
 			return
 		}
 		req.RemoteAddr = peer
-		w := &response{conn: conn, header: Header{}, req: req}
+		w := &response{conn: conn, reader: reader, header: Header{}, req: req}
 		handler := s.Handler
 		if handler == nil {
 			handler = DefaultServeMux
 		}
 		handler.ServeHTTP(w, req)
+		if w.hijacked {
+			taken = true
+			return
+		}
 		w.finish()
 		if req.Close || w.closeAfter || !drain(req) {
 			return
@@ -172,7 +199,10 @@ func drain(req *Request) bool {
 // A response writes the answer of 1 request. It holds the body in memory, thus
 // the answer names its length.
 type response struct {
-	conn       net.Conn
+	conn net.Conn
+	// reader holds the buffer of the connection. A Hijack gives it to the
+	// handler, because it can already hold bytes of the next request.
+	reader     *bufio.Reader
 	header     Header
 	req        *Request
 	body       []byte
@@ -180,6 +210,8 @@ type response struct {
 	wroteHead  bool
 	closeAfter bool
 	flushed    bool
+	// hijacked marks a connection that the handler took.
+	hijacked bool
 }
 
 func (w *response) Header() Header { return w.header }
@@ -193,6 +225,9 @@ func (w *response) WriteHeader(code int) {
 }
 
 func (w *response) Write(p []byte) (int, error) {
+	if w.hijacked {
+		return 0, ErrHijacked
+	}
 	if !w.wroteHead {
 		w.WriteHeader(StatusOK)
 	}
@@ -206,6 +241,9 @@ func (w *response) Write(p []byte) (int, error) {
 // Flush writes the head and the body that stands open, and it moves the answer
 // to the chunked form.
 func (w *response) Flush() {
+	if w.hijacked {
+		return
+	}
 	if !w.wroteHead {
 		w.WriteHeader(StatusOK)
 	}
@@ -259,6 +297,9 @@ func (w *response) writeHead() {
 
 // finish writes the answer that stands open.
 func (w *response) finish() {
+	if w.hijacked {
+		return
+	}
 	if !w.wroteHead {
 		w.WriteHeader(StatusOK)
 	}
@@ -275,6 +316,39 @@ func (w *response) finish() {
 		w.conn.Write(w.body)
 	}
 }
+
+// Hijack gives the connection of the request to the handler. A second call
+// gives ErrHijacked.
+func (w *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if w.hijacked {
+		return nil, nil, ErrHijacked
+	}
+	if w.flushed {
+		return nil, nil, errors.New("http: the answer already reached the wire")
+	}
+	w.hijacked = true
+	reader := w.reader
+	if reader == nil {
+		reader = bufio.NewReader(w.conn)
+	}
+	return w.conn, bufio.NewReadWriter(reader, bufio.NewWriter(w.conn)), nil
+}
+
+// SetReadDeadline writes the read deadline of the connection.
+func (w *response) SetReadDeadline(deadline time.Time) error {
+	return w.conn.SetReadDeadline(deadline)
+}
+
+// SetWriteDeadline writes the write deadline of the connection.
+func (w *response) SetWriteDeadline(deadline time.Time) error {
+	return w.conn.SetWriteDeadline(deadline)
+}
+
+// EnableFullDuplex lets the handler read the body of the request while it
+// writes the answer. The overlay server reads the rest of a body after the
+// handler ends, thus each handler already holds the 2 directions, and the call
+// changes nothing.
+func (w *response) EnableFullDuplex() error { return nil }
 
 // Error writes a status code and a text.
 func Error(w ResponseWriter, text string, code int) {
