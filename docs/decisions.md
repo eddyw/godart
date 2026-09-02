@@ -1367,6 +1367,9 @@ The plan left these points open. The work took the decisions below.
      it skips for each unchanged node exceeds 202 nanoseconds. That number
      needs a Flutter harness, and `flutter/bench` holds none.
 
+     **2026-09-03, later the same day: the condition holds, and the reading of
+     the A5 comparison above is wrong.** Read decision 253.
+
 250. `crypto/rand.Int` and `crypto/rand.Prime` stay out, and `math/big` stays
      in. The 2 names read `math/big`, thus each program that reads
      `crypto/tls` would carry that package. `math/big` holds a `fmt.Formatter`,
@@ -1461,6 +1464,44 @@ The plan left these points open. The work took the decisions below.
      dart2js schedules a microtask through `self`, which a browser and a
      worker each hold and node does not. `runNodeJS` of
      `internal/driver/e2e_test.go` writes that 1 line in front of the build.
+
+253. A10 beats A5 and it stays out, because the signal graph beats A10 by 76
+     times. Decision 249 held A10 out for 2 reasons, and only the second one
+     survives the measurement.
+
+     The Flutter work that 1 unchanged node skips is **645 nanoseconds**.
+     Decision 249 named 202 nanoseconds as the number that A10 must beat, and
+     it could not read the real work because `flutter/bench` builds no Flutter
+     widget. `flutter/bench/flutter` builds one now. The condition of decision
+     249 thus holds, by a factor of 3.2.
+
+     The first reason of decision 249 falls. With the Flutter work in the sum,
+     a frame of 200 nodes where nothing changed costs 178.3 microseconds under
+     A5 and 93.0 under A10. **A5 costs 1.92 times A10**, and decision 249 read
+     the opposite ratio because it counted the Go build and the Dart walk
+     alone. The ratio holds at 20 nodes and at 500.
+
+     The second reason stands and it decides the item. A `ui.Watch` rebuilds 1
+     boundary of 1 text in 1.23 microseconds, thus the signal graph answers the
+     same question **76 times cheaper** than the floor of A10. The 2 answer
+     which part of the screen must rebuild. The signal graph answers it in Go
+     before the tree exists, and A10 answers it in Dart after Go rebuilt the
+     whole tree.
+
+     The 6 counts of "What an honest A10 must also carry" still stand, and each
+     1 makes A10 worse. A seventh joins them: a host of A10 must hold the Dart
+     widget of each node between 2 frames and find it again. The harness holds
+     a plain list, and a real host needs a map of the node.
+
+     The measurement needs a profile build. A widget test runs in debug mode,
+     where the Dart VM interprets the code and each assert of the framework
+     runs, and the debug number is 10.5 times the profile number.
+     `flutter/bench/flutter/run.sh` drives a macOS profile build through
+     `flutter drive`, and it reads `BuildOwner.buildScope` and not the pump of
+     the tester, because a pump of a real binding waits 8.33 milliseconds for
+     the next frame of the screen.
+
+     `flutter/bench/README.md` holds the tables and the whole method.
 
 ## Answered questions of 2026-08-31
 

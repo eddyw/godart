@@ -44,6 +44,18 @@ median over each batch and writes `report.md`.
 
 `gen/`, `bench.exe`, `out.csv`, and `report.md` stay out of git.
 
+`flutter/bench/flutter` holds a second harness. It measures the Flutter work
+that 1 unchanged node skips, and it needs a profile build of a real
+application:
+
+```sh
+RUNS=3 FLUTTER=/path/to/flutter flutter/bench/flutter/run.sh
+```
+
+The script writes the macOS runner with `flutter create`, thus git holds no
+such directory. The run opens a window of the application. The last section of
+this file holds the numbers.
+
 **The machine must stand near idle.** A parallel build moves each number by a
 factor of 3 or more. `run.sh` prints the load average before each process run
 and after the last one, thus a reader can throw a run away.
@@ -504,3 +516,88 @@ that price: 7.2 megabytes of the snapshot.
 The guard of the name costs 1.7 nanoseconds of the 8.5. A build that dropped it
 would read 6.8, and a Go struct of another field order would then give a wrong
 widget with no report. The measurement kept the guard.
+
+## The Flutter work that 1 unchanged node skips, 2026-09-03
+
+The section "The reconciler of A10" left 1 condition open: A10 earns its cost
+only when the Flutter work that it skips for each unchanged node exceeds 202
+nanoseconds. That harness built no Flutter widget, thus it could not read the
+number. `flutter/bench/flutter` reads it now.
+
+**The answer is 645 nanoseconds, thus the condition holds. A10 does beat A5
+once the Flutter work stands in the sum. A10 still loses to the signal graph.**
+
+### The harness
+
+`flutter/bench/flutter/run.sh` measures it. `lib/skip.dart` holds a root that
+builds a fresh `Column` at each frame. The children of the fresh case are new
+`Text` objects, and the children of the reuse case are the objects of the frame
+before. `Element.updateChild` of `widgets/framework.dart` ends at its first
+test when the new widget is the object that the element already holds, thus the
+difference of the 2 cases is the Flutter work of 1 unchanged node.
+
+The loop drives `BuildOwner.buildScope` and not the pump of the tester. A
+profile run holds a real binding, thus a pump waits for the next frame of the
+screen and that wait of 8.33 milliseconds hides the work. The build scope holds
+each part that an unchanged node skips: the widget of the child, the update of
+its element, and the write of its render object. The render object reads the
+same text in both cases, thus no layout follows either one.
+
+**The run must be a profile build.** A widget test runs in debug mode: the Dart
+VM interprets the code, and each assert of the framework runs. The debug number
+is 6744 nanoseconds for each node, which is 10.5 times the profile number.
+`flutter test` of this package thus proves that the harness runs, and it names
+no number that a reader may use.
+
+### The measurement
+
+6 profile runs on the machine of the project, 2000 build scopes for each cell
+after a warm up of 200.
+
+| Nodes | Fresh, microseconds | Reuse, microseconds | Skipped, nanoseconds for each node |
+|---|---|---|---|
+| 50 | 32.8 | 1.1 | 634 |
+| 200 | 132.0 | 3.8 | 645 |
+| 500 | 347.9 | 8.7 | 679 |
+
+The 3 rows agree, and the fresh column grows with the node count at a constant
+rate. The reuse column gives the cost of the identity test alone: **16.8
+nanoseconds for each node**.
+
+### A10 against A5, with the Flutter work
+
+The table of "The reconciler of A10" holds the Go build and the Dart walk. The
+2 columns below add the Flutter work: A5 gives a fresh widget for each node,
+and A10 gives the object of the frame before for each unchanged node.
+
+At 200 nodes and 20 characters, for a frame where nothing changed:
+
+| Part | A5 | A10 |
+|---|---|---|
+| The Go build and the Dart walk or diff | 49.3 | 89.6 |
+| The Flutter work | 129.0 | 3.4 |
+| **The frame** | **178.3** | **93.0** |
+
+**A5 costs 1.92 times A10.** The same ratio holds at 20 nodes (1.85) and at 500
+nodes (1.93). A10 loses 1 case alone: a frame where each node changed costs
+189.1 against 178.3, because A10 pays the diff and gains nothing.
+
+### The reading
+
+The number reverses the A5 comparison of decision 249 and it leaves the
+decision itself. 3 points hold.
+
+1. **The condition of decision 249 is met.** 645 nanoseconds stands above the
+   202 that A10 must beat, by a factor of 3.2.
+2. **A10 beats A5 by about 1.9 times** for a frame where nothing changed.
+   Decision 249 read the opposite, because it counted no Flutter work.
+3. **A10 still loses to the signal graph by about 76 times.** A `ui.Watch`
+   rebuilds 1 boundary of 1 text in 0.588 microseconds of Go work plus 0.645 of
+   Flutter work, thus 1.23 in total. A10 reaches 93.0 at 200 nodes, and it
+   reaches that floor only after Go built the whole tree again.
+
+The 6 counts of "What an honest A10 must also carry" still stand, and each 1
+makes the A10 column worse. The measurement adds a seventh: a host of A10 must
+hold the Dart widget of each node between 2 frames and find it again for each
+node. This harness holds the widget in a plain list, and a real host needs a
+map of the node. That lookup stands in no column above.

@@ -99,6 +99,7 @@ flutter-test: build
 	cd flutter/example/counter && $(FLUTTER) analyze
 	cd flutter/example/apilist && $(FLUTTER) analyze
 	cd flutter/example/form && $(FLUTTER) analyze
+	cd flutter/bench/flutter && $(FLUTTER) pub get && $(FLUTTER) analyze
 	cd flutter/nodegen && dart pub get && dart analyze
 	cd flutter/example/counter && $(FLUTTER) test
 	cd flutter/example/apilist && $(FLUTTER) test
