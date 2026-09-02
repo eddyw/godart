@@ -8,8 +8,11 @@ the subset gives the same result in Go and in Dart. A compromise is always a
 rejection, never a silent change of meaning.
 
 The output is a set of Dart packages. The output compiles with the Dart
-toolchain, on the VM and with AOT. The web target is out of scope, because a
-Dart `int` on the web has no 64 bits.
+toolchain: the VM, AOT, Flutter on macOS, iOS, and Android, and the web with
+`dart compile js` and `dart compile wasm`. A Dart `int` on dart2js holds 53
+bits, thus the emitted code names the type `GoInt` and the JS build takes a
+pair of 32-bit halves. A file operation and a socket operation each report the
+error that Go reports under `GOOS=js`.
 
 ## Start
 
