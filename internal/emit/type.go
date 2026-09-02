@@ -24,6 +24,11 @@ func (e *emitter) dartType(t types.Type) string {
 	case *types.Basic:
 		return basicType(t)
 	case *types.Named:
+		// A Dart object holds no Go form, thus the type erases to the top type
+		// of Dart. Only a //gart:dart declaration gives such a value.
+		if isDartObject(t.Obj()) {
+			return "Object?"
+		}
 		if st, ok := t.Underlying().(*types.Struct); ok {
 			if isLocalType(t.Obj()) {
 				return e.anonType(st)

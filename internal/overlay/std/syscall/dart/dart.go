@@ -630,6 +630,12 @@ func FileSync(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// FileTruncate cuts the file of the handle to the size. A size above the
+// length of the file grows it with zero bytes.
+func FileTruncate(handle int, size int64) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ReadFile reads a whole file.
 func ReadFile(path string) ([]byte, string) {
 	panic("syscall/dart needs the gart compiler")
@@ -656,6 +662,37 @@ func Lstat(path string) (int64, bool, bool, int64, string) {
 
 // Symlink makes a symbolic link at the path, and the link points at the target.
 func Symlink(target, link string) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Link makes a hard link at the path new, and it points at the same content as
+// the path old. dart:io holds no such call, thus the Dart side runs the command
+// ln of the platform.
+func Link(oldname, newname string) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Chmod writes the permission bits of a path. The mode holds the 12 bits of a
+// POSIX mode. dart:io holds no such call, thus the Dart side runs the command
+// chmod of the platform.
+func Chmod(path string, mode int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Chown writes the owner and the group of a path. A number below 0 leaves that
+// 1 of the 2 alone, and follow false takes a symbolic link itself. dart:io
+// holds no such call, thus the Dart side runs the command chown of the
+// platform.
+func Chown(path string, uid, gid int, follow bool) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Chtimes writes the time of the last read and the time of the last change, in
+// nanoseconds since the start of the Unix epoch. A flag that is false leaves
+// that 1 of the 2 alone.
+//
+// dart:io holds the millisecond, thus the call drops the finer part.
+func Chtimes(path string, atime int64, setAtime bool, mtime int64, setMtime bool) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
@@ -932,6 +969,13 @@ func ProcCloseStdin(pid int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ProcCloseIO closes the 2 output pipes of a process. A read that waits on such
+// a pipe ends at once, thus a caller that gave up on the child does not stay
+// blocked behind an orphan that holds the pipe.
+func ProcCloseIO(pid int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ProcRead reads bytes of the standard output of a process. A count of 0 with
 // no cause means the end of the stream.
 //
@@ -1050,3 +1094,14 @@ func H2End(stream int) string {
 func H2Close(session int) string {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// An Object holds 1 object of the Dart host.
+//
+// The Dart form of this type is Object?, thus a value crosses the boundary of
+// a //gart:dart declaration with no conversion. A Go program reads no field of
+// such a value and calls no method of it. Only a Dart declaration gives 1, and
+// only a Dart declaration reads 1.
+//
+// This file carries //go:build dart, thus a module that names this type also
+// needs a twin file and an alias of its own. Read docs/flutter-first.md.
+type Object struct{ _ [0]func() }

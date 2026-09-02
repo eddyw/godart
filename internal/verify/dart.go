@@ -88,6 +88,9 @@ func (v *verifier) checkDartDecls(f *ast.File) {
 // Go int is an extension type over the Dart int, and a GoString holds 2
 // methods that give the Dart String and read it back.
 func dartBoundary(t types.Type) bool {
+	if named, ok := types.Unalias(t).(*types.Named); ok {
+		return isDartObject(named.Obj())
+	}
 	basic, ok := types.Unalias(t).(*types.Basic)
 	if !ok {
 		return false
@@ -97,4 +100,16 @@ func dartBoundary(t types.Type) bool {
 		return true
 	}
 	return false
+}
+
+// dartObjectPath and dartObjectName name the Go type that holds 1 Dart object.
+// Such a value crosses the boundary with no conversion.
+const (
+	dartObjectPath = "syscall/dart"
+	dartObjectName = "Object"
+)
+
+func isDartObject(obj *types.TypeName) bool {
+	return obj != nil && obj.Name() == dartObjectName &&
+		obj.Pkg() != nil && obj.Pkg().Path() == dartObjectPath
 }

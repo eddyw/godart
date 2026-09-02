@@ -90,3 +90,15 @@ func isDartInt(t types.Type) bool {
 	b, ok := types.Unalias(t).(*types.Basic)
 	return ok && b.Kind() == types.Int
 }
+
+// dartObjectPath and dartObjectName name the Go type that holds 1 Dart object.
+const (
+	dartObjectPath = "syscall/dart"
+	dartObjectName = "Object"
+)
+
+// isDartObject reports whether a named type is the opaque Dart object.
+func isDartObject(obj *types.TypeName) bool {
+	return obj != nil && obj.Name() == dartObjectName &&
+		obj.Pkg() != nil && obj.Pkg().Path() == dartObjectPath
+}
