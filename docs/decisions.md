@@ -1338,7 +1338,9 @@ The plan left these points open. The work took the decisions below.
 
      A screen needs about 20,000 text properties before the conversions take
      10% of a frame, and Flutter lays out no such screen. `flutter/bench` holds
-     the harness, and `flutter/bench/report.md` holds each number.
+     the harness, and `flutter/bench/README.md` holds each number.
+     `report.md` of that directory carries the last run, and git ignores it,
+     thus `run.sh` writes it again.
 
 249. The Dart reconciler of A10 stays out, and the plain walk of A5 with the
      signal graph stands. A10 is 1.82 times the cost of A5 in the case that it
