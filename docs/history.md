@@ -1311,4 +1311,100 @@ Decision 251 records the change, and `TestWebIO` reads the exact text under
 gives no typed pointer. A pointer to a type parameter loses its method table. A
 `reflect.New` of a type that is not a struct gives an untyped box. And
 `reflect.Type.String` holds the alias of the source, thus it gives `[]byte`
-where Go gives `[]uint8`.
+where Go gives `[]uint8`. The fourteenth session closed each 1.
+
+### 2026-09-03, the fourteenth session
+
+The session took the 3 tasks of the "what is next" list. A fourth task came out
+of the work, and each 1 is done. 1 subagent held the reflect work while the
+main session held the web work and the Flutter work.
+
+**The web target reaches a real server.** A browser holds no socket, thus
+decision 251 left each dial with the cause `operation not supported` and no web
+program reached a network. `net/http` now takes the fetch API of the host when
+`runtime.GOOS` gives `js`, which is the answer that Go takes under `GOOS=js`. 1
+build of the Go code serves each target here, thus the branch stands at run
+time and not behind a build tag.
+
+3 shims carry the path. `FetchStart` sends the request and waits for the head
+of the answer. `FetchRead` takes 1 chunk of the `ReadableStream` of the body,
+thus the program holds no whole body in memory. `FetchClose` cancels the
+reader. The host owns 3 answers that a socket owns in Go: it follows a
+redirect, it decodes the gzip form, and it picks the protocol. Go gives the
+same 3 answers under `GOOS=js`. Decision 252.
+
+`TestWebFetch` runs 1 program against a real server 3 times: with the go
+command, with the dart2js build, and with the dart2wasm build. The 3 outputs
+are equal. The program reads a status, a header, a body, a request header, a
+request body, a body of 100000 bytes through a buffer of 512 bytes, a 404, and
+a deadline.
+
+**2 defects that the web work found.**
+
+- A blocking shim must put the Go form of an integer into the frame of the
+  wait. The compiler wraps the direct result of a shim, and the frame answer
+  skips that wrapper. The 2 forms are equal on each target except dart2js,
+  where `GoInt` is a class of its own, and no web shim blocked before this
+  change. The rule now stands next to `$await` of `sched.dart`.
+- A timeout of a future of an extension type reads the type of the object
+  itself. The widening stood at the call, thus dart2wasm rejected the
+  `onTimeout` of the deadline helper at run time. The source future now takes a
+  `then` that widens it.
+
+`webio` also took the fetch path, thus its node run needed the browser global
+`self`, which dart2js reads to schedule a microtask and node does not hold.
+`runNodeJS` of `internal/driver/e2e_test.go` writes that 1 line in front of
+each dart2js build.
+
+**The 4 reflect gaps of the thirteenth session.** Each 1 gave a wrong answer at
+run time, and none was a missing name.
+
+`Value.Addr().Interface()` built a cell of `Object?`, thus the cast of the
+emitted code threw. `reflect.New` wrote a `Box` of `Object?`, thus a write of
+the result into a typed pointer slot threw and a gob decode into `**int`
+panicked. The runtime now reads the kind of the value and it builds the cell of
+the Dart type that the kind names.
+
+15 kinds answer from the kind alone. A slice, a map, a channel, a function, and
+a pointer each read the Dart type of the element, and that name lives only in
+the emitted code. `withType` of `TypeDesc` closes the 5: stage 5 writes a
+generic function that names the Dart type, and the runtime calls it with a
+builder of a cell. Decision 254.
+
+`encoding/asn1` reads its own type switch over `v.Addr().Interface()` again,
+thus the patch of that package now holds 1 change alone: it drops
+`internal/saferio`, which reads `unsafe.Sizeof`.
+`testdata/programs/asn1parse` reads each of the 7 cases of that switch.
+
+A pointer to a type parameter took 2 fixes. `descriptorOf` wrote the
+description inline with an empty method map, and `$ptrDesc` now reads the
+description of the type argument through the dictionary. The interface value of
+the address carried the cell, thus a method of the pointer reached a `Box`
+receiver.
+
+`Type.String` held the alias of the source. `basicText` names the element type,
+thus `[]byte` reads `[]uint8` and `rune` reads `int32`. `kindOf` reads it too,
+because a named type over an alias gave a kind that the overlay maps to no
+`reflect.Kind`.
+
+**The Flutter measure, and a correction of decision 249.** That decision left 1
+condition open: A10 earns its cost only when the Flutter work of an unchanged
+node exceeds 202 nanoseconds. The Dart harness builds no Flutter widget, thus
+it could not read the number.
+
+`flutter/bench/flutter` reads it: **645 nanoseconds**, thus the condition holds
+by a factor of 3.2. The first reason of decision 249 falls. With the Flutter
+work in the sum, a frame of 200 nodes where nothing changed costs 178.3
+microseconds under A5 and 93.0 under A10, thus **A5 costs 1.92 times A10**.
+Decision 249 read the opposite ratio, because it counted the Go build and the
+Dart walk alone.
+
+The second reason stands and it decides the item. A `ui.Watch` rebuilds 1
+boundary in 1.23 microseconds, thus the signal graph beats the floor of A10 by
+76 times. A10 stays out. Decision 253.
+
+The measurement needs a profile build. A widget test runs in debug mode, where
+the Dart VM interprets the code and each assert of the framework runs, and the
+debug number is 10.5 times the profile number. The loop drives
+`BuildOwner.buildScope`, because a pump of a real binding waits 8.33
+milliseconds for the next frame of the screen.

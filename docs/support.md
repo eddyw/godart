@@ -209,3 +209,12 @@ and each 1 closed the same day.**
 The description of a slice, a map, a channel, a function, and a pointer carries
 a factory of the Dart type since 2026-09-03. The kind alone names the Dart type
 of each other type, thus only these 5 carry it. Read decision 254.
+
+**The list of 2026-09-03 is closed. 3 items stay open, and no work names a
+date for them.**
+
+| # | Item | Cost | What it blocks |
+|---|---|---|---|
+| 1 | `reflect.MakeFunc`, and a method value with a result | Large | Each 1 needs a Dart closure of an exact signature. A change of the emitted form of a Go function type would open the road. Read decision 228. |
+| 2 | A type that the program never names gives an untyped container | Large | `SliceOf`, `MapOf`, and `ArrayOf` build a description in the runtime, thus no emitted code names the Dart type. A type assertion of such a value throws. |
+| 3 | A sound source of the used node types of a Flutter host | Medium | `usedNodes` reads each `ui.<Name>` with a regular expression. A name that the scan misses gives a clear error at run time, thus the cost of the gap is low. |

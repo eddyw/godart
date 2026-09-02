@@ -237,7 +237,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | Each name of Go. `As` takes no pointer to an interface type. |
 | `flag` | Overlay | Each name of Go. The real source reads `reflect` and `runtime.Caller`. |
-| `reflect` | Overlay | 82 of the 188 names of Go. The section "The reflect subset" above holds each one. |
+| `reflect` | Overlay | 130 of the 188 names of Go. The section "The reflect subset" above holds each one. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq`, `Seq2`, `Pull`, and `Pull2`. Read the section below. |
 | `maps` | Overlay | |
