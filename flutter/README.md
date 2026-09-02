@@ -11,7 +11,7 @@ targets.
 
 | Path | Content |
 |---|---|
-| `ui/` | The Go module `gart.dev/ui`. The signal graph, the state shapes, and 414 node types. |
+| `ui/` | The Go module `gart.dev/ui`. The signal graph, the state shapes, the value types, the identity keys, and 427 node types. |
 | `goflutter/` | The Dart package that hosts a Go tree in Flutter. |
 | `nodegen/` | The generator. It reads the Flutter API and writes the node set and the host. Read its README. |
 | `example/counter/` | Proof program 1. Go holds the whole screen. |
@@ -24,7 +24,7 @@ targets.
 make build                          # from the root of the repository
 cd flutter/example/counter
 ./build.sh                          # go vet, go test, and gart build into gen
-flutter test                        # 6 widget tests
+flutter test                        # 11 widget tests
 ```
 
 Run `./build.sh` again after each change of the Go source.
@@ -56,7 +56,7 @@ writes neither 1, thus `apilist` and `form` would reach no server.
 issue list of `golang/go` over https, it decodes the answer into a Go struct,
 and it gives a `ListView` of cards.
 
-`example/form` holds 6 widget tests. 3 text fields, a validation in Go on each
+`example/form` holds 7 widget tests. 3 text fields, a validation in Go on each
 keystroke, and a POST of the fields as JSON.
 
 Each widget test of the 2 points the application at a local server of

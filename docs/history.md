@@ -1094,7 +1094,7 @@ The overlay holds a resolver of the DNS. `net` went from 73 names of 346 to
 The session took the whole list of 17 open tasks of `docs/support.md` and
 `docs/flutter-first.md`.
 
-**The library surface, 89 standard packages to 97, and 75 full to 85.**
+**The library surface, 89 standard packages to 97, and 75 full to 84.**
 
 - 5 packages needed no change at all: `compress/lzw`, `compress/bzip2`,
   `archive/zip`, `html`, and `html/template`. Each 1 entered the native list
