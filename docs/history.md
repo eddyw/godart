@@ -1152,7 +1152,8 @@ The session took the whole list of 17 open tasks of `docs/support.md` and
   added wrote its line after the reassemble.
 - The 3 examples each build for macOS, for iOS, and for Android. A web build
   fails: `GoInt` has no constructor under the JS number model, and `$getenv`
-  and `$readFile` have no web form.
+  and `$readFile` have no web form. The fourteenth session closed each cause,
+  and `flutter build web` writes `build/web` for the 3.
 
 **The Flutter path.** The node set went from 414 types to 427, and from 3851
 fields to 4111. 257 constructors stay out against 270 before.
@@ -1408,3 +1409,15 @@ the Dart VM interprets the code and each assert of the framework runs, and the
 debug number is 10.5 times the profile number. The loop drives
 `BuildOwner.buildScope`, because a pump of a real binding waits 8.33
 milliseconds for the next frame of the screen.
+
+**A Flutter application builds for the web.** The 3 examples reached macOS,
+iOS, and Android on 2026-09-03, and a web build failed on `GoInt` and on 2
+functions of the io shim. Decision 251 closed the io shim, and this session
+closed the last 8 errors: each bridge wrote `GoInt(x)` and read an element of a
+`Slice<GoInt>` as an `int`. `GoInt` erases on the Dart VM and on wasm, thus
+only dart2js rejected the code. `$gi` and `$ix` hold on each target.
+
+`flutter build web` now writes `build/web` for the counter, for `apilist`, and
+for the form. `apilist` reaches its API through the fetch client. The web
+runner of an example comes from `flutter/example/platform.sh <app> web`,
+because git holds no such directory.

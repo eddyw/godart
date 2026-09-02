@@ -783,7 +783,10 @@ the 2 web compilers, and it reads the exact text of each cause.
 
 A web program also reaches a real server since 2026-09-03. `net/http` takes
 the fetch API of the host when `runtime.GOOS` gives `js`, and the body of an
-answer rides the `ReadableStream` of that API. Read decision 252.
+answer rides the `ReadableStream` of that API. Read decision 252. A Flutter
+application also builds for the web since the same day. `flutter build web`
+writes `build/web` for each of the 3 examples, and `apilist` reaches its API
+through that client.
 `TestWebFetch` of the driver runs the program of `testdata/web/webfetch`
 against a real server with the go command and with the 2 web compilers, and
 the 3 outputs are equal. A socket and a server stay out of reach, because a
