@@ -45,6 +45,10 @@ var reserved = map[string]bool{
 	// The core library and the async library.
 	"Object": true, "List": true, "Map": true, "String": true, "Never": true,
 	"Comparable": true, "Future": true, "FutureOr": true,
+	// The scalar types of Dart. A Go name of this shape is always unexported,
+	// thus only a local name and an embedded field reach these 4. Go accepts
+	// each 1 as an identifier, and Dart reads the type at the same place.
+	"int": true, "double": true, "bool": true, "num": true,
 }
 
 // Local maps a local variable, a parameter, or a result.

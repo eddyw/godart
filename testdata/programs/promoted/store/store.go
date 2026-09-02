@@ -35,6 +35,22 @@ type Holder struct {
 	*entry
 }
 
+// Counter embeds the builtin int. The Dart name of that field must not hide
+// the Dart type of the same name.
+type Counter struct {
+	int
+	bool
+}
+
+func NewCounter(n int, on bool) Counter { return Counter{n, on} }
+
+// Bumped reads the 2 embedded builtin fields, which only this package can
+// name.
+func Bumped(c Counter) (int, bool, bool) {
+	c.int++
+	return c.int, c.bool, c == Counter{c.int, c.bool}
+}
+
 func NewItem(key string, tag int) *Item {
 	return &Item{entry{Key: key}, class{Tag: tag}}
 }

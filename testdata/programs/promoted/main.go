@@ -25,4 +25,7 @@ func main() {
 	f := i.Name
 	g := (*store.Item).Bump
 	fmt.Println(f(), g(i))
+
+	n2, on, same := store.Bumped(store.NewCounter(41, true))
+	fmt.Println("embedded builtin:", n2, on, same)
 }
