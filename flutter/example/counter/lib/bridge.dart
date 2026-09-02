@@ -15,23 +15,23 @@ final class CounterBridge implements GoBridge {
   Iface? build() => app.Tree();
 
   @override
-  int newWatch() => ui.NewWatch();
+  int newWatch() => $ix(ui.NewWatch());
 
   @override
   Iface? runWatch(int id, Object? build) =>
-      ui.RunWatch(GoInt(id), build as Iface? Function()?);
+      ui.RunWatch($gi(id), build as Iface? Function()?);
 
   @override
-  void disposeWatch(int id) => ui.DisposeWatch(GoInt(id));
+  void disposeWatch(int id) => ui.DisposeWatch($gi(id));
 
   @override
   List<int> takeDirty() {
     final Slice<GoInt> ids = ui.TakeDirty();
-    return <int>[for (int i = 0; i < ids.len; i++) ids[i]];
+    return <int>[for (int i = 0; i < ids.len; i++) $ix(ids[i])];
   }
 
   @override
-  int pump() => ui.Pump();
+  int pump() => $ix(ui.Pump());
 
   @override
   void setTheme({
@@ -44,9 +44,9 @@ final class CounterBridge implements GoBridge {
     ui.SetTheme(
       ui.ThemeData$(
         dark,
-        GoInt(primary),
-        GoInt(surface),
-        GoInt(onSurface),
+        $gi(primary),
+        $gi(surface),
+        $gi(onSurface),
         textSize,
       ),
     );
