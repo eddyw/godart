@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/overlay"
 )
 
@@ -37,6 +38,9 @@ func (e *Error) Error() string {
 func Package(fset *token.FileSet, files []*ast.File, info *types.Info, embeds map[string]bool) error {
 	v := &verifier{fset: fset, info: info, bodyless: bodyless(files, info), embeds: embeds}
 	for _, f := range files {
+		v.checkDartDecls(f)
+	}
+	for _, f := range files {
 		ast.Inspect(f, v.visit)
 	}
 	return errors.Join(v.errs...)
@@ -51,6 +55,11 @@ func bodyless(files []*ast.File, info *types.Info) map[types.Object]bool {
 		for _, d := range f.Decls {
 			fn, ok := d.(*ast.FuncDecl)
 			if !ok || fn.Body != nil {
+				continue
+			}
+			// A //gart:dart directive names the Dart symbol of the
+			// declaration, thus stage 5 writes a call and the read stands.
+			if ir.DartMarker(fn.Doc) != nil {
 				continue
 			}
 			if obj := info.Defs[fn.Name]; obj != nil {

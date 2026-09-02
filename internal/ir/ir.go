@@ -64,6 +64,12 @@ type Func struct {
 	// of such a function, or a go:linkname directive only exports the name.
 	// The Dart form panics.
 	NoBody bool
+
+	// DartLib and DartName name the Dart library and the Dart symbol that a
+	// declaration with no body stands for. A //gart:dart directive writes the
+	// 2, and the emitter then calls that symbol.
+	DartLib  string
+	DartName string
 }
 
 // Machine holds the flat state machine of a function that can block.

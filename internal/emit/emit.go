@@ -108,6 +108,7 @@ func (e *emitter) funcId(key any) int {
 
 func (e *emitter) resetDiscovery() {
 	e.prefixes = map[string]string{}
+	e.dartLibs = map[string]string{}
 	e.setPrefixes(e.cfg.Imports)
 	e.anon = map[string]*types.Struct{}
 	e.localAnon = map[string]*types.Struct{}
@@ -143,9 +144,15 @@ func (e *emitter) generate(p *ir.Package, cfg Config) *Result {
 type emitter struct {
 	pkg      *types.Package
 	prefixes map[string]string
-	base     string
-	buf      strings.Builder
-	errs     []error
+
+	// dartLibs gives the import prefix of each Dart library that an external
+	// declaration names, and dartOrder holds the order of the first read. The
+	// order of the read is stable, thus the header stays stable.
+	dartLibs  map[string]string
+	dartOrder []string
+	base      string
+	buf       strings.Builder
+	errs      []error
 
 	// methods groups each method by the name of its receiver type.
 	methods map[*types.TypeName][]*ir.Func
@@ -586,6 +593,9 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	e.line("import 'package:goruntime/goruntime.dart';")
 	for _, im := range all {
 		e.line("import '%s' as %s;", im.URI, e.prefixes[im.Path])
+	}
+	for _, uri := range e.dartOrder {
+		e.line("import '%s' as %s;", uri, e.dartLibs[uri])
 	}
 	for _, uri := range e.anonURIs() {
 		e.line("import '%s';", uri)

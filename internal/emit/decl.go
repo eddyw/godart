@@ -536,6 +536,10 @@ func (e *emitter) body(f *ir.Func) {
 	e.typeParams = f.TypeParams
 	defer func() { e.typeParams = prev }()
 	if f.NoBody {
+		if f.DartLib != "" {
+			e.dartCall(f)
+			return
+		}
 		e.line("$panic(GoString.fromString(%q));",
 			"the function "+f.Name+" holds no body in the subset")
 		return

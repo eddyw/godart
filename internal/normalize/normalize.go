@@ -355,7 +355,13 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 		// An assembly file holds the code of such a function, or a go:linkname
 		// directive only exports the name. The Dart form panics, thus a call
 		// of it gives a clear message and a declaration alone costs nothing.
+		//
+		// A //gart:dart directive names a Dart symbol, and the Dart form then
+		// calls that symbol.
 		f.NoBody = true
+		if ref := ir.DartMarker(d.Doc); ref != nil {
+			f.DartLib, f.DartName = ref.Lib, ref.Name
+		}
 		f.TypeParams = typeParams(sig.TypeParams())
 		if d.Recv != nil && len(d.Recv.List) > 0 {
 			f.Recv = b.recvVar(d.Recv.List[0], sig)

@@ -4,7 +4,6 @@
 //
 // The bytes come from Random.secure of Dart. That source reads the generator of
 // the operating system, and the web build reads window.crypto.
-//
 package rand
 
 import (
