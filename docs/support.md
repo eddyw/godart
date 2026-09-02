@@ -22,7 +22,7 @@ The ratio counts names, and not use. `net` holds 346 names, because the
 resolver, the typed connections, and the interface list hold most of them. Read
 the gap column, and not the percent alone.
 
-The surface holds 101 import paths: 88 standard packages, the interop package
+The surface holds 102 import paths: 89 standard packages, the interop package
 `syscall/dart`, and 12 internal packages that the 86 need. The measure skips
 the interop package and each internal package, because no package of Go stands
 behind them.
@@ -43,13 +43,13 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-74 of the 88 standard packages hold each exported name of Go.
+75 of the 89 standard packages hold each exported name of Go.
 
 | Form | Packages |
 |---|---|
 | Native, 36 | `bufio`, `cmp`, `compress/flate`, `compress/gzip`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `io`, `io/fs`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
 | Patch, 13 | `bytes`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
-| Overlay, 25 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
+| Overlay, 26 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `embed`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.
@@ -95,7 +95,6 @@ Stage 2 rejects an import of each package below with a source position.
 
 | Package | The cause | The cost |
 |---|---|---|
-| `embed` | The compiler holds no `go:embed` directive. | Medium |
 | `html/template` | It reads `text/template` and the escape pass of HTML. | Medium |
 | `encoding/xml` | The real source reads the deep reflect surface. | Medium |
 | `archive/zip`, `archive/tar`, `compress/bzip2`, `compress/lzw` | No survey yet. Each one is pure Go. | Medium |
@@ -161,8 +160,9 @@ The order again follows the value of the work against its cost.
    and `math/bits` alone. `crypto/subtle` takes an overlay of 8 names, because
    `boolToUint8` of `crypto/internal/constanttime` panics and waits for an
    instruction of the machine.
-3. **`embed`.** The `FS` family stands, thus the road is open. The compiler
-   needs the directive `go:embed`. Cost: medium.
+3. **`embed`.** Done 2026-09-02. The loader reads each `//go:embed` directive,
+   it resolves the patterns, and it writes the files into the declaration of
+   the variable. `docs/parity.md` holds the 2 differences.
 4. **The `Lookup` family of `net`.** `dart:io` holds `InternetAddress.lookup`
    alone, thus `LookupMX`, `LookupNS`, and `LookupSRV` need a resolver of the
    runtime. Cost: large.

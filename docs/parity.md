@@ -210,6 +210,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `compress/gzip` | Native | The real source needs no patch. |
 | `compress/zlib` | Native | The real source needs no patch. |
 | `internal/testhash` | Native | The tests of the hash packages of the Go repository read it. |
+| `embed` | Overlay | The source of Go, with a constructor and with `strings` in place of 2 internal packages. Read the note below. |
 | `math/cmplx` | Native | The real source needs no patch. It imports `math` and `math/bits` alone. |
 | `crypto/subtle` | Overlay | The 8 names of Go, each in its portable form. Read the note below. |
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
@@ -284,6 +285,35 @@ build tag of the architecture selects the file set of a package.
 
 The next candidate needs a survey of the rejections of stage 2 over the real
 source of the package.
+
+## The go:embed directive
+
+A `//go:embed` directive works, and the variable takes the type `string`,
+`[]byte`, or `embed.FS`. The value stands at the declaration, thus a package
+level variable that reads it sees the files.
+
+The compiler of Go writes the file list of an `embed.FS` into the data of the
+program, and this compiler holds no directive of the linker. Thus stage 1 reads
+each directive, it resolves the patterns against the directory of the package,
+and it writes the files into the source of the declaration. The go command
+rejects a directive on a variable that holds a value, thus the same rewrite
+turns `//go:embed` into a plain comment.
+
+2 differences stand.
+
+`embed.New` is a name of the overlay, and the real package of Go holds none.
+Stage 2 rejects a read of it in a file that holds no directive, thus a program
+that compiles here also compiles under the go command.
+
+A nested module stays inside the set. The go command drops each file of a
+directory that holds a `go.mod` of its own, and the resolution of stage 1 reads
+the directory tree alone. A pattern that reaches such a directory thus gives
+more files here than under the go command.
+
+The other rules follow the go command: a pattern that names no file gives a
+rejection, a pattern with `..` or an absolute path gives a rejection, a name
+that starts with a dot or with a low line needs the prefix `all:`, and a
+variable of the type `string` or `[]byte` takes 1 file.
 
 ## The constant time operations
 

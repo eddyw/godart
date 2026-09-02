@@ -114,11 +114,11 @@ func loadReal(paths []string) (map[string]*types.Scope, error) {
 }
 
 func loadOverlay(paths []string) (map[string]*types.Scope, error) {
-	pkgs, err := load.Load(".", paths...)
+	found, err := load.Load(".", paths...)
 	if err != nil {
 		return nil, fmt.Errorf("the overlay load failed: %w", err)
 	}
-	return scopes(pkgs), nil
+	return scopes(found.Packages), nil
 }
 
 func scopes(pkgs []*packages.Package) map[string]*types.Scope {

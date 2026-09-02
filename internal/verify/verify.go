@@ -30,8 +30,12 @@ func (e *Error) Error() string {
 
 // Package rejects each construct of the files that falls outside the subset.
 // The result joins the errors in source order.
-func Package(fset *token.FileSet, files []*ast.File, info *types.Info) error {
-	v := &verifier{fset: fset, info: info, bodyless: bodyless(files, info)}
+//
+// embeds holds the path of each file that the loader rewrote for a
+// `//go:embed` directive. The constructor of the package embed stands in such
+// a file alone.
+func Package(fset *token.FileSet, files []*ast.File, info *types.Info, embeds map[string]bool) error {
+	v := &verifier{fset: fset, info: info, bodyless: bodyless(files, info), embeds: embeds}
 	for _, f := range files {
 		ast.Inspect(f, v.visit)
 	}
@@ -64,6 +68,9 @@ type verifier struct {
 	// bodyless holds each function of the package that holds no body. A call of
 	// one reaches a rejection, and the declaration alone stays in the subset.
 	bodyless map[types.Object]bool
+	// embeds holds the path of each file that the loader rewrote for a
+	// `//go:embed` directive.
+	embeds map[string]bool
 }
 
 func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any) {
@@ -87,8 +94,32 @@ func (v *verifier) visit(n ast.Node) bool {
 		}
 	case *ast.CallExpr:
 		v.checkCall(n)
+	case *ast.SelectorExpr:
+		v.checkEmbedNew(n)
 	}
 	return true
+}
+
+// checkEmbedNew rejects a read of the constructor of the package embed.
+//
+// The real package embed of Go holds no such name. The compiler of Go writes
+// the file list of an FS into the data of the program, and this compiler holds
+// no directive of the linker, thus the overlay takes a constructor and the
+// loader writes 1 call of it for each `//go:embed` variable. A file of the
+// user that names it would compile here and fail under the go command.
+func (v *verifier) checkEmbedNew(sel *ast.SelectorExpr) {
+	if sel.Sel.Name != "New" {
+		return
+	}
+	obj, ok := v.info.Uses[sel.Sel].(*types.Func)
+	if !ok || obj.Pkg() == nil || obj.Pkg().Path() != "embed" {
+		return
+	}
+	if v.embeds[v.fset.Position(sel.Pos()).Filename] {
+		return
+	}
+	v.reject(sel.Pos(), "the package embed of Go holds no such name",
+		"a value of embed.FS comes from a //go:embed directive")
 }
 
 func isFloat(t types.Type) bool {

@@ -1139,6 +1139,18 @@ The plan left these points open. The work took the decisions below.
      `WidgetStatesController` each hold an identity, and the host owns such an
      object, as it owns the controller of `ui.TextInput`.
 
+232. A `//go:embed` directive takes its value at the declaration, and stage 1
+     writes it. The compiler of Go holds a directive of the linker for the file
+     list of an `embed.FS`, and this compiler holds none. An `init` of the
+     generated code was the other candidate, and it breaks the initialization
+     order: `var count = len(greeting)` reads the value before an `init` runs.
+     Thus stage 1 rewrites the source of the declaration itself, and the go
+     command sees `// go:embed` with a space, which is no directive. The
+     overlay of `embed` takes the constructor `New`, because a package cannot
+     reach an unexported field of another package, and stage 2 rejects a read
+     of that name in a file that holds no directive.
+     `testdata/programs/embeduse` and 4 tests of `internal/driver` cover it.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

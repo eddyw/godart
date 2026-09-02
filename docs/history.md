@@ -1035,3 +1035,27 @@ standard packages to 88, and from 72 full to 74.
 - `dit_test.go` of Go reads `internal/cpu` and `internal/runtime/sys`, thus
   `make std-test STD=crypto/subtle` gives a rejection of stage 2.
   `testdata/programs/subtleuse` covers the 8 names instead.
+
+### 2026-09-02, the go:embed directive
+
+`embed` joins the surface. The loader reads each directive, it resolves the
+patterns, and it writes the files into the declaration of the variable. The
+surface went to 89 standard packages, and 75 of them hold each exported name.
+
+- The value must stand at the declaration, and not in an `init`. A package
+  level variable that reads an embedded string runs before each `init`, thus
+  `var count = len(greeting)` would give 0. Decision 232.
+- The go command rejects a directive on a variable that holds a value. The
+  rewrite turns `//go:embed` into `// go:embed`, and a comment with a space is
+  no directive.
+- The rewrite runs on the first of the 2 loads, and the second load reads its
+  output through the same overlay map that carries the standard library.
+- The overlay of `embed` is the source of Go with 3 changes: `strings` in place
+  of `internal/bytealg` and `internal/stringslite`, no `hash` field, and the
+  constructor `New`. Stage 2 rejects a read of `New` in a file of the user.
+- A directory entry of an `embed.FS` carries a trailing slash, and the list
+  sorts by the directory and then by the element, and not by the whole name.
+  `New` builds each directory entry and sorts the list, thus the generated
+  source holds the leaf files alone.
+- The resolution reads the directory tree, and it holds no rule for a nested
+  module. `docs/parity.md` names the difference.

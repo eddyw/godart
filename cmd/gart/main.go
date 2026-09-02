@@ -210,11 +210,11 @@ func runLoad(patterns []string) error {
 	if err != nil {
 		return err
 	}
-	pkgs, err := load.Load(dir, patterns...)
+	found, err := load.Load(dir, patterns...)
 	if err != nil {
 		return err
 	}
-	for _, p := range pkgs {
+	for _, p := range found.Packages {
 		fmt.Printf("%s\t%d files\n", p.PkgPath, len(p.CompiledGoFiles))
 	}
 	return nil

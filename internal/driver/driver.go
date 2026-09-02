@@ -83,7 +83,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 	module := moduleOf(roots)
 	pkgs := order(roots, module)
 	for _, p := range pkgs {
-		if err := verify.Package(p.Fset, p.Syntax, p.TypesInfo); err != nil {
+		if err := verify.Package(p.Fset, p.Syntax, p.TypesInfo, result.Embeds); err != nil {
 			return nil, err
 		}
 	}
@@ -181,11 +181,7 @@ func loadModule(opt Options) (*load.Result, error) {
 	if opt.Tests {
 		return load.LoadTests(opt.Dir, opt.Patterns...)
 	}
-	pkgs, err := load.Load(opt.Dir, opt.Patterns...)
-	if err != nil {
-		return nil, err
-	}
-	return &load.Result{Packages: pkgs}, nil
+	return load.Load(opt.Dir, opt.Patterns...)
 }
 
 // testBinaries names the Dart entry point of each test binary of the build.

@@ -42,14 +42,14 @@ func loadHello(t *testing.T) (pkgPath string, scope *types.Scope) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkgs, err := load.Load(dir, "./...")
+	found, err := load.Load(dir, "./...")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(pkgs) != 1 {
-		t.Fatalf("got %d packages, want 1", len(pkgs))
+	if len(found.Packages) != 1 {
+		t.Fatalf("got %d packages, want 1", len(found.Packages))
 	}
-	p := pkgs[0]
+	p := found.Packages[0]
 	if p.Types == nil || p.TypesInfo == nil {
 		t.Fatal("the package holds no type information")
 	}

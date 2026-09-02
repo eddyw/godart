@@ -29,7 +29,7 @@ func run(t *testing.T, src string) error {
 	if _, err := conf.Check("example.com/a", fset, []*ast.File{file}, info); err != nil {
 		t.Fatalf("the source does not type check: %v", err)
 	}
-	return verify.Package(fset, []*ast.File{file}, info)
+	return verify.Package(fset, []*ast.File{file}, info, nil)
 }
 
 const head = "package a\n\ntype point struct{ x, y int }\n\n"

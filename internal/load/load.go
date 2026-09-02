@@ -46,6 +46,10 @@ type Result struct {
 	// Binaries lists 1 test binary for each package that holds a test. It is
 	// empty when the load asked for no test.
 	Binaries []*Binary
+	// Embeds holds the path of each file of the module that carried a
+	// `//go:embed` directive. The loader rewrote each 1, thus stage 2 allows
+	// the constructor of the package embed there.
+	Embeds map[string]bool
 }
 
 // Binary reads the test binary of 1 package.
@@ -62,12 +66,8 @@ func (r *Result) Binary(id string) *Binary {
 //
 // The load runs 2 times. The first load finds the files of each standard
 // library package, and the second load replaces those files with the overlay.
-func Load(dir string, patterns ...string) ([]*packages.Package, error) {
-	out, err := load(dir, false, patterns)
-	if err != nil {
-		return nil, err
-	}
-	return out.Packages, nil
+func Load(dir string, patterns ...string) (*Result, error) {
+	return load(dir, false, patterns)
 }
 
 // LoadTests reads the packages and also each test variant of them. It replaces
@@ -91,6 +91,10 @@ func load(dir string, tests bool, patterns []string) (*Result, error) {
 		return nil, err
 	}
 	files, err := overlayFiles(found, surface)
+	if err != nil {
+		return nil, err
+	}
+	embeds, err := embedRewrites(found, files)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +126,7 @@ func load(dir string, tests bool, patterns []string) (*Result, error) {
 		return nil, err
 	}
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
-	return &Result{Packages: pkgs, Sources: files, Binaries: binaries}, nil
+	return &Result{Packages: pkgs, Sources: files, Binaries: binaries, Embeds: embeds}, nil
 }
 
 // overlayFiles maps each file of a standard library package to the file of the
