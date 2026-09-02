@@ -1154,7 +1154,31 @@ The session took the whole list of 17 open tasks of `docs/support.md` and
   fails: `GoInt` has no constructor under the JS number model, and `$getenv`
   and `$readFile` have no web form.
 
-**The Flutter path.** The node set went from 414 types to 423, and from 3851
-fields to 3977. `ButtonStyle`, `ImageSource`, `Decoration`, `Size`, `Shadow`,
-and `Gradient` entered as value types, thus 261 constructors stay out against
-270 before.
+**The Flutter path.** The node set went from 414 types to 427, and from 3851
+fields to 4111. 257 constructors stay out against 270 before.
+
+- 6 value types entered: `ButtonStyle`, `ImageSource`, `Decoration`, `Size`,
+  `Shadow`, and `Gradient`.
+- 3 identity keys entered: `FocusKey`, `ScrollKey`, and `StatesKey`. The host
+  owns the object, and the Go program names it. The lifetime follows the
+  element tree, and a post frame sweep disposes an object with no user.
+- 24 widget tests pass, 6 more than before.
+
+**The regression that the Flutter work found.** `crypto/rand.Int` and
+`crypto/rand.Prime` read `math/big`, thus each program that reads `crypto/tls`
+carried that package. `math/big` holds a `fmt.Formatter`, and the flow of stage
+3 resolves an interface method call to each method of that name and that
+signature. `fmt.State.Write` thus reached `(*io.PipeWriter).Write`, which runs
+a `select`. A build method that only formats an error then took a rejection,
+and 2 of the 3 examples stopped building for a few hours.
+
+The 2 names came out, `math/big` stayed, and
+`TestSyncAcceptsAnErrorFormatWithHTTP` holds the shape. `docs/parity.md` names
+the real fix: the group of an interface method needs the interface type of the
+call site in its key.
+
+**The text property, measured.** A whole tree rebuild of 200 nodes with a text
+of 20 characters costs 61.4 microseconds, 0.37% of the frame. The normal case
+costs 0.58 microseconds. The read of the optional fields costs 4 times the
+text, and `GoString.fromString` runs 3 to 6 times the cost of `toDartString`.
+`flutter/bench` holds the harness.

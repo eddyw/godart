@@ -11,8 +11,8 @@ Each claim below names a file and a line. The state is of 2026-09-01.
 
 **The state of 2026-09-02.** Milestone 1, milestone 2, and milestone 3 of
 `docs/flutter-design.md` are complete, and the directory `flutter/` holds them.
-The node set holds 414 types of `widgets`, `material`, and `cupertino`, with
-3851 fields. That work answers each item of this file. Read the status line of each 1, and read
+The node set holds 427 types of `widgets`, `material`, and `cupertino`, with
+4111 fields. That work answers each item of this file. Read the status line of each 1, and read
 `docs/flutter-state.md` for the state model that the application uses.
 
 ## What already works
@@ -46,9 +46,15 @@ and no compiler change.
 
 Evidence: `internal/emit/call.go:46`, `docs/what-compiles.md`. Cost: medium.
 
-**Status of 2026-09-02.** A13 needs no such declaration. The Dart host holds
-each widget call, and Go names no Dart symbol. Take this item only for an
-approach that makes a Go type a Dart widget class.
+**Status of 2026-09-03. Done.** The directive `//gart:dart` names a Dart
+library and a Dart symbol, and stage 5 writes a direct call of it. The value
+boundary carries `bool`, `int`, `float64`, `string`, and `dart.Object`, and
+stage 2 rejects each other type. Read decision 239 and the section "An external
+Dart declaration" of `docs/design.md`.
+
+A13 still needs no such declaration, because the Dart host holds each widget
+call. The item earns its cost for an approach that makes a Go type a Dart
+widget class, and for item 2.
 
 **The tool chain, measured 2026-09-02.** `go build` rejects a bodyless
 declaration with `missing function body`. `go vet` accepts it, and `gopls`
@@ -73,24 +79,22 @@ type.
 **Status of 2026-09-02.** Milestone 1 holds no Dart handle in a Go value. The
 host owns each Flutter object, and the Go tree carries data alone.
 
-**The item stays open, and the measure of 2026-09-02 lowered its value.** A
-count of the blocking parameter of each of the 273 dropped constructors gave
-176 distinct Dart types, and the largest holds 11. `FocusNode` blocks 3, and
-`Decoration` blocks 2. Thus `dart.Object` unlocks a handful of constructors,
-and not the group that the earlier note named.
+**Status of 2026-09-03. Done.** `syscall/dart` holds the type, and the emitter
+gives it the Dart form `Object?`. The 2 conditions of the note below each hold:
 
-2 conditions must hold before the item earns its cost:
+1. **A producer.** Item 1 is done, thus a `//gart:dart` declaration gives such
+   a value. A Go program still makes none of its own.
+2. **A twin declaration.** It holds as written. `testdata/programs/dartobj`
+   carries a file for each build tag and an alias of its own, and `make
+   compare` runs the Go form and the Dart form and diffs the 2.
 
-1. **A producer.** A Go program cannot make a `FocusNode` or a
-   `ScrollController`. Only the host can. Thus `dart.Object` needs item 1, the
-   external Dart declaration, or a host call that gives such a value.
-2. **A twin declaration.** `syscall/dart` carries `//go:build dart`, thus a Go
-   module that names `dart.Object` no longer builds with the go command. A
-   module of the Flutter path must hold a pair of files, and an alias of its
-   own, to keep the rule that `go test` runs the whole screen with no Flutter.
+Read decision 240.
 
-The 9 value types of decision 231 took the part of the surface that needs
-neither condition.
+**The measure of 2026-09-02 lowered the value of this item, and the value types
+took its place.** A count of the blocking parameter of each of the 273 dropped
+constructors gave 176 distinct Dart types, and the largest held 11. The 15
+value types of decision 231 and decision 246, and the 3 identity keys of
+decision 247, took 16 of the 273 without any Dart handle in a Go value.
 
 ### 3. A callback export, in 2 flavors &mdash; done 2026-09-02
 
@@ -147,7 +151,19 @@ Evidence: `internal/emit/call.go`, `docs/js-integers.md`. Cost: medium.
 **Status of 2026-09-02.** The boundary carries each type that the node set
 needs: a `GoString`, a double, a bool, a `GoInt`, a slice of interface values,
 and a closure of 4 shapes. A `GoInt` erases to a Dart int on the Flutter
-target. The cost of a text property at 60 frames each second is unmeasured.
+target.
+
+**The cost, measured 2026-09-03. The concern is false.** A whole tree rebuild
+of 200 nodes with a text of 20 characters costs 61.4 microseconds, which is
+0.37% of the 16,700 microsecond frame. The normal case, 1 signal and 1
+boundary, costs 0.58 microseconds. A screen needs about 20,000 text properties
+before the `GoString` conversions take 10% of a frame.
+
+2 things cost more than the text. `GoString.fromString` runs 3 to 6 times the
+cost of `toDartString`, and `GoString.take(utf8.encode(s))` gives the same
+value 27% to 32% cheaper. The read of the optional fields costs 37.4
+microseconds of a 200 node frame against 8.04 for the text. Read decision 248,
+and `flutter/bench/report.md` for each number.
 
 ## The compiler work that a first app does not need
 

@@ -1028,7 +1028,7 @@ acceptable and the first open question is answered. The output:
 
 | Output | Scope |
 |---|---|
-| `flutter/ui/widgets_gen.go`, 414 node types and 3851 fields | The whole project |
+| `flutter/ui/widgets_gen.go`, 427 node types and 4111 fields | The whole project |
 | `<app>/lib/widgets_gen.dart` | 1 application |
 
 **The 3 questions of the plan.**
@@ -1068,16 +1068,30 @@ constructors reached no node type. A measure of the blocking parameter of each
 1 of the 273 gave a long tail: 176 distinct types, and the largest holds 11.
 Thus no single Dart type unlocks a large group.
 
-The 9 value types of the same day widened the mapping. The set now holds 414
-node types with 3851 fields, thus 275 more parameters reach Go, and 270
-constructors stay out. Read the mapping table of `flutter/nodegen/README.md`
-and decision 231.
+The 9 value types of the same day widened the mapping to 414 node types with
+3851 fields, thus 270 constructors stayed out.
 
-3 Dart types of the top of the list stay out, and each 1 holds an identity that
-a Go value cannot carry: `FocusNode` in 74 parameters, `ScrollController` in
-31, and `WidgetStatesController` in 27. The host owns such an object today, and
-`ui.TextInput` is the pattern: the host keeps the controller and the focus of a
-text field across a rebuild that Go drives.
+**The state of 2026-09-03.** The set holds 427 node types with 4111 fields, and
+257 constructors stay out.
+
+| The work | Node types | Fields | Dropped |
+|---|---|---|---|
+| The reading of 2026-09-02 | 411 | 3576 | 273 |
+| The 9 value types, decision 231 | 414 | 3851 | 270 |
+| 6 more value types, decision 246 | 423 | 3977 | 261 |
+| The 3 identity objects, decision 247 | 427 | 4111 | 257 |
+
+`ButtonStyle`, `ImageSource`, `Decoration`, `Size`, `Shadow`, and `Gradient`
+took the value part. `FocusKey`, `ScrollKey`, and `StatesKey` took the identity
+part: the host owns the object, and the Go program names it by a key.
+`ui.TextInput` was the pattern for the 3.
+
+The 4 constructors that the identity work recovered are the ones that hold such
+a parameter and require it: `Focus.withExternalFocusNode`, `KeyboardListener`,
+`PrimaryScrollController`, and `RawKeyboardListener`. The other 124 parameters
+became fields of a node that already mapped.
+
+Read the mapping table of `flutter/nodegen/README.md`.
 
 ## The measurements
 

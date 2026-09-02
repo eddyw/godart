@@ -1275,6 +1275,60 @@ The plan left these points open. The work took the decisions below.
      `testdata/programs/strconvquote` proves it: 159,613 printable runes and
      159,629 graphic runes, equal for Go and for the Dart form.
 
+246. 6 more Dart types take a Go value type: `ButtonStyle`, `ImageProvider`,
+     `Decoration`, `Size`, `ShapeBorder` of a shadow, and `Gradient`. The set
+     went from 414 node types to 423, and 261 constructors stay out against
+     270. `ButtonStyle` carries a per state value for a color alone, because
+     `StateColor` stands already and a per state padding belongs in a theme.
+     `ImageProvider` takes a kind and a source, and not 1 field for each kind:
+     3 of the kinds hold 1 text, and 2 fields set at once would name no image.
+     `FileImage` stays out, because it reads a `File` of `dart:io` and
+     `goflutter` must build for the web too.
+
+247. A `FocusNode`, a `ScrollController`, and a `WidgetStatesController` each
+     take a Go key, and the host owns the object. A Go tree is data and it
+     rebuilds on each change, thus a Go value cannot be the object itself: a
+     new tree would give a new controller and the widget would lose its focus,
+     its offset, or its pressed state. `ui.TextInput` already held that pattern
+     for a text field.
+
+     The lifetime follows the element tree, and not a build pass. `GoKeep`
+     retains the object on `initState`, rebinds on `didUpdateWidget`, and
+     releases on `dispose`. A post frame sweep disposes each entry with no
+     user. A sweep of the keys that the last build read is wrong, because a row
+     of a lazy list builds long after the list and the sweep would drop a live
+     object.
+
+     1 key that reaches 2 widgets gives a report through `FlutterError`, and
+     the object stays. A dispose would break the 2 live widgets. The check runs
+     after the frame, because Flutter mounts the new element before it unmounts
+     the old and the count is 2 during a move.
+
+     The read back direction is carried, and the write direction is not. A Go
+     program reads whether a field holds the focus and what the offset is,
+     through an optional callback of the key. It requests no focus and no
+     scroll: a plain field would re-apply on each rebuild and fight the user,
+     and a one shot command channel has no form in a tree of data.
+
+248. A text property costs nothing at 60 frames each second, and the claim of
+     `docs/flutter-first.md` is false. A whole tree rebuild of 200 nodes with a
+     text of 20 characters costs 61.4 microseconds, which is 0.37% of the
+     16,700 microsecond frame. The `GoString` conversions are 17.8 of those
+     microseconds. The normal case, 1 signal and 1 boundary, costs 0.58
+     microseconds.
+
+     The measurement found 2 things that matter more than the text. The encode
+     dominates the decode by a factor of 3 to 6, and
+     `GoString.take(utf8.encode(s))` gives the same value 27% to 32% cheaper
+     than `GoString.fromString`. The read of the optional fields costs more
+     than the text: 37.4 microseconds against 8.04 for 200 nodes, because a
+     `ui.Text` holds 12 optional fields and each read is a lookup of a
+     descriptor map at about 15 nanoseconds.
+
+     A screen needs about 20,000 text properties before the conversions take
+     10% of a frame, and Flutter lays out no such screen. `flutter/bench` holds
+     the harness, and `flutter/bench/report.md` holds each number.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a
