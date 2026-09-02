@@ -177,7 +177,8 @@ mark that needs a note carries 1, and "The notes of the matrix" holds the text.
    the Flutter base with Go, and a Go named type costs a type descriptor pair.
    A measurement of 5 named types gave 6,353 bytes of descriptor against 7,676
    bytes of code. A13 carries 1 descriptor pair for each generated node type,
-   and the effect of the Dart tree shaker on those descriptors is unverified.
+   and the Dart tree shaker drops each descriptor that no code reads. The
+   milestone 3 section holds the measurement of 2026-09-02.
 9. **Hot reload.** Each approach that emits Dart from Go needs a `gart watch`
    pass first, and then the Flutter reload takes the new Dart. This chain is
    unverified. A9 needs no reload at all, because the widget tree is data.
@@ -839,8 +840,8 @@ already holds.
 **The runtime cost.** The same as A5: 8.66 microseconds for a Go tree of 200
 nodes, and 2.89 microseconds for the Dart walk. The generated node set adds a
 type descriptor pair for each node type, at about 1,271 bytes of Dart source
-for each 1. The effect of the Dart tree shaker on an unused descriptor is
-unverified.
+for each 1. The Dart tree shaker drops an unused descriptor. The milestone 3
+section holds the measurement of 2026-09-02.
 
 Pros:
 
@@ -1101,8 +1102,8 @@ repository, and the session deleted it.
 
 The last 2 rows carry the risk of a large node set. Each named Go type costs
 about 1,271 bytes of descriptor source. A generated set of 300 node types then
-costs about 380 kilobytes of Dart source. The effect of the Dart tree shaker on
-a descriptor that no code reads is unverified.
+costs about 380 kilobytes of Dart source. The Dart tree shaker drops a
+descriptor that no code reads. The milestone 3 section holds the measurement.
 
 ## The corrections
 
@@ -1183,10 +1184,7 @@ Each claim below stands in this file with no measurement behind it.
 
 - Hot reload of a Flutter application after a `gart watch` pass. The chain is
   mechanically clear, and no probe ran it.
-- The effect of the Dart tree shaker on a type descriptor that no code reads.
 - The gain of the Dart reconciler of A10 over the plain walk of A5.
-- The ability of `package:analyzer` to read the whole Flutter public API at an
-  acceptable cost.
 - The cost of a per-frame update of A9 at 60 hertz. The package publishes no
   benchmark.
 - The exact behavior of `gopls` for a bodyless Go declaration. `go build` and
