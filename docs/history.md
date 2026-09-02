@@ -1208,3 +1208,102 @@ the go command and with the Dart output, and it diffs the 2.
 | `blankfunc` | 2 functions of the blank name in 1 package. |
 | `geneq` | `==` and a map key of a generic struct. |
 | `fmthex` | 21 verbs of `fmt` against 7 values, over each flag. |
+
+### 2026-09-03, the thirteenth session
+
+The session took the 9 open tasks of the "what is next" list, and each 1 is
+done. 6 subagents ran in parallel on disjoint directories, and 5 more defects
+came out of that work.
+
+**The method group of an interface call, the 1 blocker.** The recorded fix was
+correct and it was not sufficient. The chain took 3 causes, and only the first
+stood in the plan.
+
+1. The key of a group held the name and the signature alone. It now holds the
+   interface of the call site, thus a concrete method joins only a group whose
+   interface its receiver implements. Each test that cannot answer gives true,
+   thus the group never drops a target that a call can reach.
+2. A type assertion narrows the interface further. A value of `x.(I)`
+   implements `I` and the interface of `x`. `writeMultiple` of `math/big`
+   shows the shape: it asserts `io.ByteWriter` on a `fmt.State`, and the wide
+   group held each `Write` of the program. A type switch clause takes the same
+   rule. A pass before the main walk keeps the pair for each local name that no
+   other statement writes.
+3. 3 files of `math/big` needed a patch. `intconv.go` and `ftoa.go` wrote the
+   message of an unknown verb with `fmt.Fprintf`, which takes an `io.Writer`,
+   thus the group widened at the parameter. `natconv.go` guarded the divisor
+   cache with a `sync.Mutex`, and `Mutex.Lock` of the overlay waits on a
+   channel. The critical section holds `nat` arithmetic alone, thus 1 isolate
+   never finds that cache held.
+
+`crypto/rand.Int` and `crypto/rand.Prime` return, decision 250 records the
+return, and the 3 Flutter examples each pass the check with `math/big` linked.
+
+**The surface, 97 standard packages to 103, and 84 full to 91.**
+
+- `crypto/x509` gives 106 of 261 names. It parses a DER or a PEM certificate
+  and it holds a `CertPool`. Chain verification stays out, because `dart:io`
+  owns the trust decision and a `Verify` that always gives nil is a security
+  fault. 4 packages entered as native for it: `unicode/utf16`, `encoding/pem`,
+  `encoding/asn1`, and `crypto/x509/pkix`.
+- `encoding/gob` gives each exported name. 4 things blocked it, and `reflect`
+  answers each 1. `Kind` is a `uint` now, with the 27 numbers of Go, because
+  `encode.go` holds an array literal that indexes by a kind. `Type.PkgPath`
+  enters. `PointerTo` reads the pointer descriptor that the emitter writes, in
+  place of a synthetic 1 with an empty method table.
+- `testing` goes from 92 of 145 to 132. `TB` holds the 7 names of the real
+  `TB`, and the benchmark path now cancels its context in front of the
+  cleanups.
+- `net` goes from 127 of 346 to 142, and `net/http` from 223 of 392 to 240.
+  `TCPConn`, `ListenConfig`, `Protocols`, `ResponseController`, and `Hijacker`
+  enter. Each name that stays out needs a socket option, a file descriptor, or
+  a raw socket, and `dart:io` exposes none of the 3.
+- `crypto/rand` and `net/http/httptest` each reached 100 percent.
+  `Server.Certificate` reads, and the overlay carries the pair of
+  `net/http/internal/testcert`, thus the fields match the fields of Go.
+
+**The web target works.** The decision of 2026-09-01 let a program that reaches
+a file or a socket fail in the Dart compile. That rule made the target
+unreachable: the Go package `os` names each function of the io shim, thus a
+program that only reads `os.Getenv` failed with 36 missing names, and
+`net/http` added 30 more. The 4 web files now declare each name of their native
+form, and each unsupported operation reports the cause of Go under `GOOS=js`.
+Decision 251 records the change, and `TestWebIO` reads the exact text under
+`dart compile js` and under `dart compile wasm`.
+
+**2 measured wins.**
+
+- `GoString.fromString` adopts the buffer of the encoder. `_encode` gave a
+  `Uint8List` under the static type `List<int>`, thus `fromBytes` copied every
+  byte a second time. The measurement gave 27% to 32%.
+- The generated host reads a field by its position, and not by a map. `GoNode`
+  held 1 `Map<String, FieldDesc>` for each node kind, and the map took 7.1
+  nanoseconds of the 15.9 that 1 optional read cost. The optional fields of a
+  200 node frame fall from 38.2 microseconds to 20.3, and the whole frame from
+  56.9 to 40.0.
+
+**5 defects that the parallel work found.**
+
+- A promoted member of an unexported embedded type reached no other package.
+  The emitter gave it a private Dart name, thus `$net._conn$Close` failed in
+  the library of the caller. The privacy of a method now follows the method
+  name alone, and an embedded field takes a public name.
+- The address of an index wrote the index with no `$ix` conversion. `GoInt`
+  implements `int` on each other target, thus the fault showed itself on
+  dart2js alone.
+- `gart test` reused a stale Dart package configuration. The freshness check
+  read the package file of the output alone, and the output depends on the
+  runtime by path, thus a new dependency of the runtime never reached the
+  configuration.
+- `docs/flutter-options.md` held 233 line references, and a check of the 20
+  that a pass mapped on 2026-09-01 found 18 of them wrong 2 days later. The
+  file is retired, and each claim that still stands moved into
+  `docs/flutter-design.md`. 6 more claims of it are false today.
+- The test of the curated surface named `encoding/gob` as its example of a
+  package outside the surface. It names `database/sql` now.
+
+**4 gaps that the work named and did not close.** `reflect.Addr().Interface()`
+gives no typed pointer. A pointer to a type parameter loses its method table. A
+`reflect.New` of a type that is not a struct gives an untyped box. And
+`reflect.Type.String` holds the alias of the source, thus it gives `[]byte`
+where Go gives `[]uint8`.
