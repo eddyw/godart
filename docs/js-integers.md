@@ -95,8 +95,11 @@ The gaps of the JS target:
   outside 53 bits loses its low bits on JS in those 2 paths.
 - The nanosecond clock of JS rounds, because the count since the epoch does
   not fit 53 bits.
-- A dart:io program fails in the dart2js compile, exactly as in the wasm
-  compile, per decision 208.
+- A `dart:io` program compiles since 2026-09-03, and each file and socket
+  operation reports the cause of Go under `GOOS=js`. Read decision 251.
+- The address of an index needed the `$ix` conversion, and the emitter wrote
+  none. `GoInt` implements `int` on each other target, thus the fault showed
+  itself on dart2js alone. `internal/emit/expr.go` writes the conversion now.
 
 ## The proof
 
@@ -107,3 +110,6 @@ The gaps of the JS target:
   byte-equal with the VM run.
 - `TestJS` compiles `testdata/programs/intwrap` with `dart compile js` and
   runs it under node. The output is byte-equal with `go run`.
+- `TestWebIO` compiles `testdata/web/webio` with `dart compile js` and with
+  `dart compile wasm`. That program reads `os` and `net/http`, thus the whole
+  io surface passes the JS compile.
