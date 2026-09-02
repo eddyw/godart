@@ -55,9 +55,16 @@ func tlsRun() {
 
 	ts := httptest.NewUnstartedServer(handler)
 	fmt.Println("tls before start:", ts.TLS == nil)
+	fmt.Println("certificate before start:", ts.Certificate() == nil)
 	ts.StartTLS()
 	defer ts.Close()
 	fmt.Println("tls after start:", len(ts.TLS.Certificates), ts.TLS.NextProtos)
+	if cert := ts.Certificate(); cert != nil {
+		fmt.Println("certificate:", cert.Subject.CommonName, cert.DNSNames,
+			cert.IsCA, cert.NotAfter.After(cert.NotBefore))
+	} else {
+		fmt.Println("certificate: none")
+	}
 
 	res, err := ts.Client().Get(ts.URL + "/door")
 	if err != nil {

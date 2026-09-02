@@ -4,6 +4,7 @@ package httptest
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"net"
 	"net/http"
 	"strings"
@@ -14,9 +15,8 @@ import (
 // A Server holds a listener on a port of the machine and answers each request
 // with a handler.
 //
-// The real Server of Go waits for each request that stands open, and it gives
-// the certificate of its TLS form as a value of x509. The surface holds no
-// package crypto/x509, thus the overlay holds no method Certificate.
+// The real Server of Go waits for each request that stands open. The overlay
+// does not.
 type Server struct {
 	// URL holds the base address of the server, for example
 	// `http://127.0.0.1:52341`. The first call of Client, Start, or StartTLS
@@ -187,6 +187,15 @@ func (s *Server) initTLS() {
 	}
 }
 
+// Certificate gives the certificate of a TLS server. A server that StartTLS
+// did not start gives nil.
+func (s *Server) Certificate() *x509.Certificate {
+	if s.TLS == nil || len(s.TLS.Certificates) == 0 {
+		return nil
+	}
+	return s.TLS.Certificates[0].Leaf
+}
+
 // transport gives the transport of the client of a TLS server.
 //
 // The certificate is self signed, and the surface holds no root pool, thus the
@@ -252,62 +261,70 @@ func (t *fakeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func (t *fakeTransport) CloseIdleConnections() { t.inner.CloseIdleConnections() }
 
-// testCert holds a self signed certificate of the loopback address and of
-// localhost, valid to the year 2126. The pair serves tests only.
+// testCert holds the certificate of net/http/internal/testcert, which the
+// httptest of Go also uses. It names 127.0.0.1, ::1, example.com, and
+// *.example.com, and it is valid to the year 2084. A program that reads
+// Server.Certificate thus finds the values of Go. The pair serves tests only.
 const testCert = `-----BEGIN CERTIFICATE-----
-MIIC/zCCAeegAwIBAgIJAK9noFnHmJSfMA0GCSqGSIb3DQEBCwUAMCUxDzANBgNV
-BAoMBmdvZGFydDESMBAGA1UEAwwJbG9jYWxob3N0MCAXDTI2MDgzMTIyMDExNloY
-DzIxMjYwODA3MjIwMTE2WjAlMQ8wDQYDVQQKDAZnb2RhcnQxEjAQBgNVBAMMCWxv
-Y2FsaG9zdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAM6gZHPdERlf
-6HZ4pCMFHGcLZ6RgAMKgbt6yciWue2qvRBqOaUJLQA0OFp4DCR5nQX0WjwutL2Y9
-vytkOibGZpUwhWJB/m/OlErH8pk1TRyqc/QcXkAEqiRoc2iYQ3KQbig/m7ZTMEKb
-TZgzvBddVcCA3mLI3HpLA8x8Ipsnxtb5kT6uct0PlwPu8T5jTlyVvMupQjtbuiMC
-b26BX7Vlq/nRsfzfp07+Z9rrwc2pCdVdyvl7CqA8aiE5ElX/QpaWqKEG8IM0W41W
-ODwBymimb+0KkQOOv+1+N8dsIYQZenKFJakIsHUEXUraCdojvLvKg56+B1hCBKyn
-LPzB7/3PrusCAwEAAaMwMC4wLAYDVR0RBCUwI4IJbG9jYWxob3N0hwR/AAABhxAA
-AAAAAAAAAAAAAAAAAAABMA0GCSqGSIb3DQEBCwUAA4IBAQATCypJ9ejqEvqUFIAc
-fFUcW4ryKAmrHtNpectlRu9pf3EW/fbU9Z2fKzjA8oALL8qu0XX2uwGZ6RWYtt85
-nSjOq1cDODcefcvpxTe+qB9y4Pg0xEnAtkjDBufa6TvBHTLvE463tx1+S5SFVGcS
-tBILsYVDSdsD1G+9gp5Wuf/TnZN0odhGolhH4q5ufhO6kEtGo+6VNBM4+CFf8497
-48VnoleUYEhW/N+/vRcuSKlEidNFjTO1s43Dw57apQDSdpaovljuYC/AMzcnjgrQ
-6sUwRDUAUHgngWQREik06DARuX4/dgoBFqKlHFk/PH4K/ioQMWi3mBsTyA0PSNAM
-BvWv
+MIIDSDCCAjCgAwIBAgIQEP/md970HysdBTpuzDOf0DANBgkqhkiG9w0BAQsFADAS
+MRAwDgYDVQQKEwdBY21lIENvMCAXDTcwMDEwMTAwMDAwMFoYDzIwODQwMTI5MTYw
+MDAwWjASMRAwDgYDVQQKEwdBY21lIENvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+MIIBCgKCAQEAxcl69ROJdxjN+MJZnbFrYxyQooADCsJ6VDkuMyNQIix/Hk15Nk/u
+FyBX1Me++aEpGmY3RIY4fUvELqT/srvAHsTXwVVSttMcY8pcAFmXSqo3x4MuUTG/
+jCX3Vftj0r3EM5M8ImY1rzA/jqTTLJg00rD+DmuDABcqQvoXw/RV8w1yTRi5BPoH
+DFD/AWTt/YgMvk1l2Yq/xI8VbMUIpjBoGXxWsSevQ5i2s1mk9/yZzu0Ysp1tTlzD
+qOPa4ysFjBitdXiwfxjxtv5nXqOCP5rheKO0sWLk0fetMp1OV5JSJMAJw6c2ZMkl
+U2WMqAEpRjdE/vHfIuNg+yGaRRqI07NZRQIDAQABo4GXMIGUMA4GA1UdDwEB/wQE
+AwICpDATBgNVHSUEDDAKBggrBgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MB0GA1Ud
+DgQWBBQR5QIzmacmw78ZI1C4MXw7Q0wJ1jA9BgNVHREENjA0ggtleGFtcGxlLmNv
+bYINKi5leGFtcGxlLmNvbYcEfwAAAYcQAAAAAAAAAAAAAAAAAAAAATANBgkqhkiG
+9w0BAQsFAAOCAQEACrRNgiioUDzxQftd0fwOa6iRRcPampZRDtuaF68yNHoNWbOu
+LUwc05eOWxRq3iABGSk2xg+FXM3DDeW4HhAhCFptq7jbVZ+4Jj6HeJG9mYRatAxR
+Y/dEpa0D0EHhDxxVg6UzKOXB355n0IetGE/aWvyTV9SiDs6QsaC57Q9qq1/mitx5
+2GFBoapol9L5FxCc77bztzK8CpLujkBi25Vk6GAFbl27opLfpyxkM+rX/T6MXCPO
+6/YBacNZ7ff1/57Etg4i5mNA6ubCpuc4Gi9oYqCNNohftr2lkJr7REdDR6OW0lsL
+rF7r4gUnKeC7mYIH1zypY7laskopiLFAfe96Kg==
 -----END CERTIFICATE-----`
 
 // testKey gives the private key of testCert. The text holds the word TESTING,
 // thus a scanner of secrets does not read a live key, exactly as the test
 // certificate of Go does.
+//
+// Go labels the block RSA PRIVATE KEY, and the bytes hold the PKCS number 8
+// form. X509KeyPair of Go reads each form and ignores the label, and the
+// secure socket of Dart reads the label. The block below thus carries the
+// label of the form that it holds.
 func testKey() string {
 	return strings.ReplaceAll(testKeyMarked, "TESTING KEY", "PRIVATE KEY")
 }
 
 const testKeyMarked = `-----BEGIN TESTING KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDOoGRz3REZX+h2
-eKQjBRxnC2ekYADCoG7esnIlrntqr0QajmlCS0ANDhaeAwkeZ0F9Fo8LrS9mPb8r
-ZDomxmaVMIViQf5vzpRKx/KZNU0cqnP0HF5ABKokaHNomENykG4oP5u2UzBCm02Y
-M7wXXVXAgN5iyNx6SwPMfCKbJ8bW+ZE+rnLdD5cD7vE+Y05clbzLqUI7W7ojAm9u
-gV+1Zav50bH836dO/mfa68HNqQnVXcr5ewqgPGohORJV/0KWlqihBvCDNFuNVjg8
-Acpopm/tCpEDjr/tfjfHbCGEGXpyhSWpCLB1BF1K2gnaI7y7yoOevgdYQgSspyz8
-we/9z67rAgMBAAECggEAUso7VZ1HI6alCwsNoSaEGdmc/mSlCVak9cAEMor10mpF
-XGqhTDnAgTqa31cSCUeQGuG2ERSkQFAPUACJuE2YfsCBQTx2CTB5hHkXAEI2En1N
-lorjTL1RuuLLEyanJ7ktGh1ac7RjStzVO13HSIlSOZ6o/GXEyY9TB1TZvNc0OZ/u
-9OiJYlyr6j1ToUePBnzpX+x9mNp5x3nlqQrKZQnR9sOi1DMNgR4SrCHsI/X2SWcR
-00asTxZrDZF+0YwpybUcqteJBeJ0GSXtF4CSwFLNLeGDcIBhn78N7L6dWPitYjnF
-AmV+KuU4cMWKjRuApWc5nmDRG5AZmuZOH7WIsF4b0QKBgQDzPUYgPS48LxI2jgNC
-6N17EK9y1VQbxGblD5w0kxBJM0F2SYv2T0B/bKg2vAboyJRJJDLkjLZ4gxBPYmzW
-ZLKhKh1nsDqJsUvJsJIuODtbuvui3392o3CswANlobVcz1/VLxHjU6oJznno0yAS
-AeeIDmc/L5ln8+8QvxuqTq1agwKBgQDZd2eyKoVUuD8WrMuh1Js3OPbF60xkVYFQ
-c8Xyo93uTFV4T9bRoJrmtACugf1vqaLNHyA9fuvZYb+zvhbDN0/rCWi4xAuhpQlT
-7PV4wJxk9az/fnbb3WSsZuBOE0DFpLa/i6xVJ6MecP+hQAuxWL0eAFTqQdueFiAm
-3fxLOPfNeQKBgD4clG6hENBfeLgjlWOdkQje3t5k6SBaC6hMTygBsbPvebTZ3Pqd
-jCu9tEqdwunoZi0zKCfCYsntNdn/mSk5938+ANo8XwZQFrk+9GUHCOlImv8hMSw7
-WgdS1Ms7+tLjRWZrqZayA4aTif/RAax3fgb5HpY88mBgItjU5ByeEJg/AoGAOn85
-IJ75gKGTLulKWXzUR9WF5BV4ViD+CQMrgyp7P2e/Mf7f/UGjiV1wNYD4CHpsNZsi
-1Af5L19w7su6WcbeM44zYkgyDMhVKwM5wMKnDy1a3NtK47e5JfsCaV4adU/qbLoI
-oFtqMH0a9mhA/PKu5IwYS29twSeYfHwIKr/nQJkCgYEAyMxUkCT2C/qDfqeCLv4/
-irn4zBlfRSM6My2WEK+eTAM0Z6LvkwwgvPLxLuzZJGfBc9CXzEYl3/8SswXxFYyV
-GCgH6kOX2blj7DqiYOqmYsU47ll2Wn19QGp01CZ4++uJhGQ5ONHMdrBv9aBDKU8Q
-BChx2JXwiXwYE525nl9qsTw=
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDFyXr1E4l3GM34
+wlmdsWtjHJCigAMKwnpUOS4zI1AiLH8eTXk2T+4XIFfUx775oSkaZjdEhjh9S8Qu
+pP+yu8AexNfBVVK20xxjylwAWZdKqjfHgy5RMb+MJfdV+2PSvcQzkzwiZjWvMD+O
+pNMsmDTSsP4Oa4MAFypC+hfD9FXzDXJNGLkE+gcMUP8BZO39iAy+TWXZir/EjxVs
+xQimMGgZfFaxJ69DmLazWaT3/JnO7RiynW1OXMOo49rjKwWMGK11eLB/GPG2/mde
+o4I/muF4o7SxYuTR960ynU5XklIkwAnDpzZkySVTZYyoASlGN0T+8d8i42D7IZpF
+GojTs1lFAgMBAAECggEAIYthUi1lFBDd5gG4Rzlu+BlBIn5JhcqkCqLEBiJIFfOr
+/4yuMRrvS3bNzqWt6xJ9MSAC4ZlN/VobRLnxL/QNymoiGYUKCT3Ww8nvPpPzR9OE
+sE68TUL9tJw/zZJcRMKwgvrGqSLimfq53MxxkE+kLdOc0v9C8YH8Re26mB5ZcWYa
+7YFyZQpKsQYnsmu/05cMbpOQrQWhtmIqRoyn8mG/par2s3NzjtpSE9NINyz26uFc
+k/3ovFJQIHkUmTS7KHD3BgY5vuCqP98HramYnOysJ0WoYgvSDNCWw3037s5CCwJT
+gCKuM+Ow6liFrj83RrdKBpm5QUGjfNpYP31o+QNP4QKBgQDSrUQ2XdgtAnibAV7u
+7kbxOxro0EhIKso0Y/6LbDQgcXgxLqltkmeqZgG8nC3Z793lhlSasz2snhzzooV5
+5fTy1y8ikXqjhG0nNkInFyOhsI0auE28CFoDowaQd+5cmCatpN4Grqo5PNRXxm1w
+HktfPEgoP11NNCFHvvN5fEKbbQKBgQDwVlOaV20IvW3IPq7cXZyiyabouFF9eTRo
+VJka1Uv+JtyvL2P0NKkjYHOdN8gRblWqxQtJoTNk020rVA4UP1heiXALy50gvj/p
+hMcybPTLYSPOhAGx838KIcvGR5oskP1aUCmFbFQzGELxhJ9diVVjxUtbG2DuwPKd
+tD9TLxT2OQKBgQCcdlHSjp+dzdgERmBa0ludjGfPv9/uuNizUBAbO6D690psPFtY
+JQMYaemgSd1DngEOFVWADt4e9M5Lose+YCoqr+UxpxmNlyv5kzJOFcFAs/4XeglB
+PHKdgNW/NVKxMc6H54l9LPr+x05sYdGlEtqnP/3W5jhEvhJ5Vjc8YiyVgQKBgQCl
+zwjyrGo+42GACy7cPYE5FeIfIDqoVByB9guC5bD98JXEDu/opQQjsgFRcBCJZhOY
+M0UsURiB8ROaFu13rpQq9KrmmF0ZH+g8FSzQbzcbsTLg4VXCDXmR5esOKowFPypr
+Sm667BfTAGP++D5ya7MLmCv6+RKQ5XD8uEQQAaV2kQKBgAD8qeJuWIXZT0VKkQrn
+nIhgtzGERF/6sZdQGW2LxTbUDWG74AfFkkEbeBfwEkCZXY/xmnYqYABhvlSex8jU
+supU6Eea21esIxIub2zv/Np0ojUb6rlqTPS4Ox1E27D787EJ3VOXpriSD10vyNnZ
+jel6uj2FOP9g54s+GzlSVg/T
 -----END TESTING KEY-----`
 
 // Close ends each listener and each connection of the client that stands open
