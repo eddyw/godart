@@ -78,9 +78,9 @@ var _ = unsafe.Sizeof(0)
 `)
 	rejectFile(t, "curated surface", "outside the supported surface", `package a
 
-import "encoding/gob"
+import "database/sql"
 
-var _ = gob.Register
+var _ = sql.Open
 `)
 	acceptFile(t, "a blank import of unsafe", `package a
 
