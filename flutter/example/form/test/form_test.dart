@@ -156,6 +156,34 @@ void main() {
     expect(find.byType(TextField), findsNWidgets(3));
   });
 
+  testWidgets('a Go ButtonStyle reaches the Flutter button', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(harness());
+
+    final FilledButton button = tester.widget<FilledButton>(
+      find.byType(FilledButton),
+    );
+    final ButtonStyle style = button.style!;
+    const Set<WidgetState> idle = <WidgetState>{};
+    const Set<WidgetState> off = <WidgetState>{WidgetState.disabled};
+
+    // ui.ButtonStyle, ui.StateColor, ui.Size, and ui.Shape each reach the
+    // ButtonStyle of Flutter.
+    expect(style.backgroundColor!.resolve(idle), const Color(0xff1a73e8));
+    expect(style.backgroundColor!.resolve(off), const Color(0xffbdbdbd));
+    expect(style.foregroundColor!.resolve(idle), const Color(0xffffffff));
+    expect(
+      style.padding!.resolve(idle),
+      const EdgeInsets.fromLTRB(24, 14, 24, 14),
+    );
+    expect(style.minimumSize!.resolve(idle), const Size(0, 48));
+    expect(style.textStyle!.resolve(idle)!.fontWeight, FontWeight.w600);
+    final RoundedRectangleBorder shape =
+        style.shape!.resolve(idle)! as RoundedRectangleBorder;
+    expect(shape.borderRadius, BorderRadius.circular(8));
+  });
+
   testWidgets('a text field keeps its focus and its text across a rebuild', (
     WidgetTester tester,
   ) async {

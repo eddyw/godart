@@ -339,3 +339,139 @@ WidgetStateProperty<Color?>? goStateColor(GoNode? n) {
     return base;
   });
 }
+
+/// goSize reads the Size struct of the Go side.
+Size? goSize(GoNode? n) =>
+    n == null ? null : Size(n.size('Width'), n.size('Height'));
+
+/// goImage reads the ImageSource struct of the Go side.
+///
+/// No kind names a file of the disk. FileImage reads dart:io, and the host
+/// also builds for the web, thus a Go program gives the bytes of the file.
+ImageProvider<Object>? goImage(GoNode? n) {
+  if (n == null) return null;
+  final double scale = n.sizeOpt('Scale') ?? 1;
+  final String src = n.text('Src');
+  switch (n.text('Kind')) {
+    case 'network':
+      if (src.isEmpty) return null;
+      return NetworkImage(src, scale: scale);
+    case 'asset':
+      if (src.isEmpty) return null;
+      final String pkg = n.text('Package');
+      return AssetImage(src, package: pkg.isEmpty ? null : pkg);
+    case 'memory':
+      final List<int> bytes = n.counts('Bytes');
+      if (bytes.isEmpty) return null;
+      return MemoryImage(Uint8List.fromList(bytes), scale: scale);
+  }
+  return null;
+}
+
+final Map<String, BoxFit> _fits = BoxFit.values.asNameMap();
+
+/// goShadows reads the Shadow structs of a decoration.
+List<BoxShadow>? goShadows(List<GoNode> list) {
+  if (list.isEmpty) return null;
+  return <BoxShadow>[
+    for (final GoNode n in list)
+      BoxShadow(
+        color: goColorOpt(n.argb('Color')) ?? const BoxShadow().color,
+        offset: goOffset(n.nested('Offset')) ?? Offset.zero,
+        blurRadius: n.size('BlurRadius'),
+        spreadRadius: n.size('SpreadRadius'),
+      ),
+  ];
+}
+
+/// goGradient reads the Gradient struct of the Go side.
+///
+/// Flutter demands 2 colors at least, and a shorter list gives no gradient.
+/// The count of the stops must match the count of the colors, thus a list of
+/// another length spreads the colors evenly.
+Gradient? goGradient(GoNode? n) {
+  if (n == null) return null;
+  final List<Color> colors = <Color>[
+    for (final int v in n.counts('Colors')) Color(v),
+  ];
+  if (colors.length < 2) return null;
+  final List<double> stops = n.sizes('Stops');
+  final List<double>? at = stops.length == colors.length ? stops : null;
+  if (n.text('Kind') == 'radial') {
+    final double radius = n.size('Radius');
+    return RadialGradient(
+      colors: colors,
+      stops: at,
+      center: goAlignment(n.text('Center')) ?? Alignment.center,
+      radius: radius == 0 ? 0.5 : radius,
+    );
+  }
+  return LinearGradient(
+    colors: colors,
+    stops: at,
+    begin: goAlignment(n.text('Begin')) ?? Alignment.centerLeft,
+    end: goAlignment(n.text('End')) ?? Alignment.centerRight,
+  );
+}
+
+/// goDecoration reads the Decoration struct of the Go side.
+///
+/// A circle carries no border radius, because Flutter rejects the pair.
+BoxDecoration? goDecoration(GoNode? n) {
+  if (n == null) return null;
+  final BorderSide? side = goBorderSide(n.nested('Border'));
+  final ImageProvider<Object>? image = goImage(n.nested('Image'));
+  final bool circle = n.text('Shape') == 'circle';
+  return BoxDecoration(
+    color: goColorOpt(n.countOpt('Color')),
+    image: image == null
+        ? null
+        : DecorationImage(image: image, fit: _fits[n.text('Fit')]),
+    border: side == null ? null : Border.fromBorderSide(side),
+    borderRadius: circle ? null : goRadius(n.nested('Radius')),
+    boxShadow: goShadows(n.structs('Shadows')),
+    gradient: goGradient(n.nested('Gradient')),
+    shape: circle ? BoxShape.circle : BoxShape.rectangle,
+  );
+}
+
+const Map<String, MaterialTapTargetSize> _tapTargets =
+    <String, MaterialTapTargetSize>{
+  'padded': MaterialTapTargetSize.padded,
+  'shrinkWrap': MaterialTapTargetSize.shrinkWrap,
+};
+
+/// _all gives 1 value for each state of a Material widget.
+WidgetStateProperty<T>? _all<T>(T? v) =>
+    v == null ? null : WidgetStatePropertyAll<T>(v);
+
+/// goButtonStyle reads the ButtonStyle struct of the Go side.
+///
+/// A color carries 1 value for each state, and each other field carries 1
+/// value for the whole button.
+ButtonStyle? goButtonStyle(GoNode? n) {
+  if (n == null) return null;
+  return ButtonStyle(
+    backgroundColor: goStateColor(n.nested('BackgroundColor')),
+    foregroundColor: goStateColor(n.nested('ForegroundColor')),
+    overlayColor: goStateColor(n.nested('OverlayColor')),
+    shadowColor: goStateColor(n.nested('ShadowColor')),
+    surfaceTintColor: goStateColor(n.nested('SurfaceTintColor')),
+    iconColor: goStateColor(n.nested('IconColor')),
+    textStyle: _all<TextStyle>(goTextStyle(n.nested('TextStyle'))),
+    elevation: _all<double>(n.sizeOpt('Elevation')),
+    iconSize: _all<double>(n.sizeOpt('IconSize')),
+    padding: _all<EdgeInsetsGeometry>(goInsets(n.nested('Padding'))),
+    minimumSize: _all<Size>(goSize(n.nested('MinimumSize'))),
+    maximumSize: _all<Size>(goSize(n.nested('MaximumSize'))),
+    fixedSize: _all<Size>(goSize(n.nested('FixedSize'))),
+    side: _all<BorderSide>(goBorderSide(n.nested('Side'))),
+    shape: _all<OutlinedBorder>(goShape(n.nested('Shape'))),
+    alignment: goAlignment(n.text('Alignment')),
+    visualDensity: goDensity(n.nested('VisualDensity')),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor'))),
+    tapTargetSize: _tapTargets[n.text('TapTargetSize')],
+    animationDuration: goMillis(n.countOpt('AnimationMillis')),
+    enableFeedback: n.flagOpt('EnableFeedback'),
+  );
+}

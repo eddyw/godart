@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:goruntime/goruntime.dart';
 
 import 'bridge.dart';
+import 'identity.dart';
 
 /// GoRuntime drives 1 Go library from Flutter.
 ///
@@ -10,6 +11,10 @@ import 'bridge.dart';
 final class GoRuntime {
   final GoBridge bridge;
   final Map<int, VoidCallback> _boundaries = <int, VoidCallback>{};
+
+  /// identities holds each Flutter object that a Go key names, for example the
+  /// FocusNode of a ui.FocusKey.
+  final GoIdentities identities = GoIdentities();
 
   /// onRoot rebuilds the whole tree. GoApp writes it.
   VoidCallback? onRoot;
@@ -27,9 +32,11 @@ final class GoRuntime {
     $onIdle = tick;
   }
 
-  /// stop takes the tick off the idle hook.
+  /// stop takes the tick off the idle hook, and it releases each Flutter
+  /// object that a key names. No sweep follows the last frame of the tree.
   void stop() {
     if ($onIdle == tick) $onIdle = null;
+    identities.dropAll();
   }
 
   /// bind registers the rebuild of 1 boundary.

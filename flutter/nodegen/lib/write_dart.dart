@@ -141,6 +141,20 @@ String readExpr(Param p) {
       return 'goIconStyle(n.nested($f))';
     case 'stateColor':
       return 'goStateColor(n.nested($f))';
+    case 'boxSize':
+      return 'goSize(n.nested($f))';
+    case 'buttonStyle':
+      return 'goButtonStyle(n.nested($f))';
+    case 'image':
+      return 'goImage(n.nested($f))';
+    case 'decoration':
+      return 'goDecoration(n.nested($f))';
+    case 'focusKey':
+      return 'goFocusNode(n.nested($f), rt)';
+    case 'scrollKey':
+      return 'goScrollController(n.nested($f), rt)';
+    case 'statesKey':
+      return 'goStatesController(n.nested($f), rt)';
     case 'node':
       return 'goChildOpt(n.child($f), rt)';
     case 'nodes':

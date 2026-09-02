@@ -5,6 +5,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"gart.dev/ui"
@@ -18,12 +19,21 @@ type App struct {
 	rows  ui.Signal[[]string]
 	fail  ui.Signal[bool]
 	load  *ui.Command
+
+	// The 4 signals below hold the note section. note decides whether the
+	// field stands in the tree, and the other 3 hold the state that the host
+	// reports through a key of flutter/ui/identity.go.
+	note  ui.Signal[bool]
+	focus ui.Signal[bool]
+	marks ui.Signal[string]
+	at    ui.Signal[float64]
 }
 
 // New gives an application with an empty state.
 func New() *App {
 	a := &App{}
 	a.load = ui.NewCommand(a.fetch)
+	a.note.Set(true)
 	return a
 }
 
@@ -54,6 +64,33 @@ func (a *App) SetName(s string) { a.name.Set(s) }
 // SetFail decides whether the next load fails. The switch of the screen writes
 // it, and a test writes it too.
 func (a *App) SetFail(v bool) { a.fail.Set(v) }
+
+// ToggleNote takes the note field out of the tree, or it puts the field back.
+// The host disposes the FocusNode of the key "note" when the field leaves.
+func (a *App) ToggleNote() { a.note.Update(func(v bool) bool { return !v }) }
+
+// SetNoteFocus records whether the note field holds the focus. The host calls
+// it through the field OnFocus of the key.
+func (a *App) SetNoteFocus(v bool) { a.focus.Set(v) }
+
+// SetMarks records the states of the toggle button, for example "pressed".
+func (a *App) SetMarks(on []string) { a.marks.Set(strings.Join(on, " ")) }
+
+// SetOffset records the scroll offset of the list.
+func (a *App) SetOffset(v float64) { a.at.Set(v) }
+
+// Report gives the state that the host reported back for the note section.
+func (a *App) Report() string {
+	focus := "idle"
+	if a.focus.Get() {
+		focus = "focused"
+	}
+	marks := a.marks.Get()
+	if marks == "" {
+		marks = "none"
+	}
+	return "note " + focus + ", button " + marks
+}
 
 // Greeting gives the line that the name drives.
 func (a *App) Greeting() string {
@@ -89,6 +126,7 @@ func (a *App) Build() ui.Node {
 				},
 			},
 			ui.Padding{Padding: ui.AllSides(16), Child: ui.Watch{Build: a.counterRow}},
+			ui.Padding{Padding: ui.Sides(16, 0), Child: ui.Watch{Build: a.noteSection}},
 			ui.Padding{
 				Padding: ui.Sides(16, 0),
 				Child: ui.Row{Children: ui.Kids(
@@ -98,7 +136,7 @@ func (a *App) Build() ui.Node {
 				)},
 			},
 			ui.Divider{},
-			ui.Expanded{Child: ui.Watch{Build: a.listBody}},
+			ui.Expanded{Child: ui.Watch{Build: a.listPanel}},
 		)},
 		FloatingActionButton: ui.IconButton{
 			Icon:      ui.Icon{Icon: "add"},
@@ -108,10 +146,45 @@ func (a *App) Build() ui.Node {
 	}
 }
 
+// pixelPNG holds 1 transparent pixel in the PNG format. It stands for the
+// bytes of an image that a Go program holds, for example the body of an HTTP
+// answer or the content of a file.
+var pixelPNG = []byte{
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+	0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+	0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+	0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+	0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+}
+
 func (a *App) greetingRow() ui.Node {
-	return ui.Text{
-		Data:  a.Greeting(),
-		Style: &ui.TextStyle{Size: ui.P(22.0), Weight: "bold"},
+	return ui.Container{
+		Padding: ui.P(ui.Sides(16, 12)),
+		Decoration: &ui.Decoration{
+			Radius: ui.P(ui.AllCorners(12)),
+			Border: &ui.BorderSide{
+				Color: ui.P(ui.RGB(0x90, 0xa4, 0xae)),
+				Width: ui.P(1.0),
+			},
+			Gradient: &ui.Gradient{
+				Kind:   "linear",
+				Colors: []ui.Color{ui.RGB(0xe3, 0xf2, 0xfd), ui.RGB(0xbb, 0xde, 0xfb)},
+				Begin:  "centerLeft",
+				End:    "centerRight",
+			},
+			Shadows: []ui.Shadow{{
+				Color:      ui.ARGB(0x33, 0, 0, 0),
+				Offset:     ui.Offset{Dy: 2},
+				BlurRadius: 4,
+			}},
+			Image: ui.P(ui.MemoryImage(pixelPNG)),
+			Fit:   "cover",
+		},
+		Child: ui.Text{
+			Data:  a.Greeting(),
+			Style: &ui.TextStyle{Size: ui.P(22.0), Weight: "bold"},
+		},
 	}
 }
 
@@ -127,6 +200,62 @@ func (a *App) counterRow() ui.Node {
 			ui.TextButton{Child: ui.Text{Data: "reset"}, OnPressed: a.Reset},
 		),
 	}
+}
+
+// noteSection holds a field whose FocusNode the host owns, and a button whose
+// WidgetStatesController the host owns. The line under them holds the state
+// that the host reported back, thus a change of the focus or of the press
+// rebuilds this boundary alone.
+func (a *App) noteSection() ui.Node {
+	kids := ui.Kids(
+		ui.ElevatedButton{
+			OnPressed:        a.ToggleNote,
+			StatesController: &ui.StatesKey{Name: "toggle", OnStates: a.SetMarks},
+			Child:            ui.Text{Data: a.noteLabel()},
+		},
+		ui.SizedBox{Width: ui.P(12.0)},
+	)
+	if a.note.Get() {
+		kids = append(kids, ui.Expanded{Child: ui.TextField{
+			FocusNode: &ui.FocusKey{Name: "note", OnFocus: a.SetNoteFocus},
+		}})
+	} else {
+		kids = append(kids, ui.Expanded{
+			Child: ui.Text{Data: "the note field left the tree"},
+		})
+	}
+	return ui.Column{
+		CrossAxisAlignment: ui.P("start"),
+		Children: ui.Kids(
+			ui.Row{Children: kids},
+			ui.Text{
+				Data:  a.Report(),
+				Style: &ui.TextStyle{Size: ui.P(12.0)},
+			},
+		),
+	}
+}
+
+func (a *App) noteLabel() string {
+	if a.note.Peek() {
+		return "hide the note"
+	}
+	return "show the note"
+}
+
+// listPanel gives the list and the offset that the host reported. The offset
+// stands in the boundary of the list, thus each scroll rebuilds the list from
+// Go and the controller must keep its identity.
+func (a *App) listPanel() ui.Node {
+	body := a.listBody()
+	list, ok := body.(ui.ListViewBuilder)
+	if !ok {
+		return body
+	}
+	return ui.Column{Children: ui.Kids(
+		ui.Text{Data: fmt.Sprintf("offset %.0f", a.at.Get())},
+		ui.Expanded{Child: list},
+	)}
 }
 
 func (a *App) failSwitch() ui.Node {
@@ -145,7 +274,8 @@ func (a *App) listBody() ui.Node {
 		return ui.Center{Child: ui.Text{Data: "press refresh to load 100,000 rows"}}
 	}
 	return ui.ListViewBuilder{
-		ItemCount: ui.P(len(rows)),
+		Controller: &ui.ScrollKey{Name: "rows", OnScroll: a.SetOffset},
+		ItemCount:  ui.P(len(rows)),
 		ItemBuilder: func(i int) ui.Node {
 			return ui.Keyed{Key: fmt.Sprint(i), Child: ui.Card{
 				Child: ui.Padding{

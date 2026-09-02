@@ -25,7 +25,7 @@ the tool reads the Flutter SDK of that package. The read takes about 5 seconds.
 
 ## Why the host is per application
 
-A shared host would hold a case for each of the 414 node types, thus it would
+A shared host would hold a case for each of the 423 node types, thus it would
 name each Flutter widget. The tree shaker of Dart then keeps the whole
 framework. The measurement of 2026-09-02 read a set of 411 nodes, on an ahead
 of time build for macOS:
@@ -78,14 +78,20 @@ parameter that its constructor demands maps to a Go type.
 | `VisualDensity` | `ui.Density` | |
 | `IconThemeData` | `ui.IconStyle` | The name differs, because a widget holds the name `IconTheme`. |
 | `WidgetStateProperty<Color?>` | `ui.StateColor` | 1 color for each state. |
+| `Size` | `ui.Size` | A width and a height. |
+| `ButtonStyle` | `ui.ButtonStyle` | A color for each state, and 1 value of each other field. |
+| `ImageProvider` | `ui.ImageSource` | A kind and a source: `network`, `asset`, or `memory`. |
+| `Decoration`, `BoxDecoration` | `ui.Decoration` | The host gives a `BoxDecoration`. |
 
 A parameter that the constructor does not demand takes a pointer field, and a
 nil pointer means "the default of Flutter". A parameter of any other type does
 not reach the node set. A `FocusNode`, a `ScrollController`, and a
 `WidgetStatesController` each stand outside, because such a value holds an
-identity that a Go value cannot carry. A `ButtonStyle`, a `Decoration`, and an
-`ImageProvider` each stand outside for now, and each 1 is a value that a Go
-struct can hold.
+identity that a Go value cannot carry.
+
+A `FileImage` stands outside `ui.ImageSource`, because it reads a `File` of
+`dart:io`, and the host also builds for the web. A Go program reads the file
+and gives the bytes under the kind `memory`.
 
 A named constructor takes a Go struct of its own. `ListView.builder` gives
 `ui.ListViewBuilder`, and the host switches on the name of the type descriptor.

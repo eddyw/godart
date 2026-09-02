@@ -15,5 +15,12 @@ export 'src/bridge.dart' show GoBridge, rootID;
 export 'src/convert.dart';
 export 'src/host.dart'
     show GoTextField, GoWatch, GoWidgets, goIcons, goRender, goSetWidgets;
+export 'src/identity.dart'
+    show
+        GoIdentities,
+        GoKeep,
+        goFocusNode,
+        goScrollController,
+        goStatesController;
 export 'src/node.dart' show GoNode;
 export 'src/runtime.dart' show GoRuntime;

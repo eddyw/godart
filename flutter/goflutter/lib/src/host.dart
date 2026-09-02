@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:goruntime/goruntime.dart';
 
+import 'identity.dart';
 import 'node.dart';
 import 'runtime.dart';
 
@@ -74,10 +75,24 @@ Widget goRender(Iface? node, GoRuntime rt) {
         runtime: rt,
       );
   }
-  final Widget? built = _widgets?.call(n, rt);
-  if (built != null) return built;
-  throw StateError('the host holds no case for the node ${n.kind}. '
-      'Run nodegen again, or call goSetWidgets.');
+  // The build of a generated node may read a key, for example a ui.FocusKey.
+  // The host then wraps the widget, and the element of the wrapper holds the
+  // Flutter object until the widget leaves the tree.
+  final GoIdentities table = rt.identities;
+  final Widget? built;
+  final Set<String> keys;
+  table.open();
+  try {
+    built = _widgets?.call(n, rt);
+  } finally {
+    keys = table.close();
+  }
+  if (built == null) {
+    throw StateError('the host holds no case for the node ${n.kind}. '
+        'Run nodegen again, or call goSetWidgets.');
+  }
+  if (keys.isEmpty) return built;
+  return GoKeep(ids: keys, table: table, child: built);
 }
 
 

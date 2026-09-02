@@ -307,6 +307,16 @@ const _scalars = <String, GoType>{
   'VisualDensity': GoType('Density', 'density'),
   'IconThemeData': GoType('IconStyle', 'iconStyle'),
   'WidgetStateProperty<Color>': GoType('StateColor', 'stateColor'),
+  'Size': GoType('Size', 'boxSize'),
+  'ButtonStyle': GoType('ButtonStyle', 'buttonStyle'),
+  'ImageProvider<Object>': GoType('ImageSource', 'image'),
+  'Decoration': GoType('Decoration', 'decoration'),
+  'BoxDecoration': GoType('Decoration', 'decoration'),
+  // The 3 objects below hold an identity that no Go value carries. The Go
+  // side names 1, and the host owns the object. Read flutter/ui/identity.go.
+  'FocusNode': GoType('FocusKey', 'focusKey'),
+  'ScrollController': GoType('ScrollKey', 'scrollKey'),
+  'WidgetStatesController': GoType('StatesKey', 'statesKey'),
 };
 
 /// The argument kinds that a callback of 1 argument carries. cb1Expr of

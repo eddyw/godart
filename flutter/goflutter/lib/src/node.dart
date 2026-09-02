@@ -77,6 +77,43 @@ final class GoNode {
   /// flagOpt gives an optional bool field.
   bool? flagOpt(String name) => point<bool>(name);
 
+  /// structs reads a slice of structs, for example the shadows of a
+  /// decoration.
+  List<GoNode> structs(String name) {
+    final FieldDesc? f = _fields[name];
+    if (f == null) return const <GoNode>[];
+    final Object? v = f.get(value);
+    if (v is! Slice<Object?>) return const <GoNode>[];
+    final TypeDesc Function()? elem = f.type().elem;
+    if (elem == null) return const <GoNode>[];
+    final TypeDesc t = elem();
+    return <GoNode>[for (int i = 0; i < v.len; i++) GoNode.struct(v[i], t)];
+  }
+
+  /// counts gives a slice of integers. A slice of byte reads it too.
+  List<int> counts(String name) {
+    final Object? v = raw(name);
+    if (v is! Slice<Object?>) return const <int>[];
+    final List<int> out = <int>[];
+    for (int i = 0; i < v.len; i++) {
+      final Object? e = v[i];
+      if (e is int) out.add(e);
+    }
+    return out;
+  }
+
+  /// sizes gives a slice of float64.
+  List<double> sizes(String name) {
+    final Object? v = raw(name);
+    if (v is! Slice<Object?>) return const <double>[];
+    final List<double> out = <double>[];
+    for (int i = 0; i < v.len; i++) {
+      final Object? e = v[i];
+      if (e is double) out.add(e);
+    }
+    return out;
+  }
+
   /// texts gives a slice of string.
   List<String> texts(String name) {
     final Object? v = raw(name);
@@ -152,6 +189,12 @@ final class GoNode {
   void Function(GoString)? onText(String name) {
     final Object? v = raw(name);
     return v is void Function(GoString) ? v : null;
+  }
+
+  /// onTexts gives a `func([]string)` field.
+  void Function(Slice<GoString>)? onTexts(String name) {
+    final Object? v = raw(name);
+    return v is void Function(Slice<GoString>) ? v : null;
   }
 
   /// onFlag gives a `func(bool)` field.

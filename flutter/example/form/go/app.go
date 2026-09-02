@@ -154,7 +154,18 @@ func (a *App) button() ui.Node {
 	}
 	return ui.FilledButton{
 		OnPressed: a.Submit,
-		Child:     ui.Text{Data: "send"},
+		Style: &ui.ButtonStyle{
+			BackgroundColor: &ui.StateColor{
+				Default:  ui.P(ui.RGB(0x1a, 0x73, 0xe8)),
+				Disabled: ui.P(ui.RGB(0xbd, 0xbd, 0xbd)),
+			},
+			ForegroundColor: &ui.StateColor{Default: ui.P(ui.RGB(0xff, 0xff, 0xff))},
+			Padding:         ui.P(ui.Sides(24, 14)),
+			MinimumSize:     &ui.Size{Height: 48},
+			Shape:           &ui.Shape{Kind: "rounded", Radius: ui.AllCorners(8)},
+			TextStyle:       &ui.TextStyle{Size: ui.P(16.0), Weight: "semibold"},
+		},
+		Child: ui.Text{Data: "send"},
 	}
 }
 

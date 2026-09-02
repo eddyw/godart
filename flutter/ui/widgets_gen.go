@@ -65,6 +65,7 @@ type ActionChip struct {
 	Side                  *BorderSide
 	Shape                 *Shape
 	ClipBehavior          *string
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	Color                 *StateColor
 	BackgroundColor       *Color
@@ -96,6 +97,7 @@ type ActionChipElevated struct {
 	Side                  *BorderSide
 	Shape                 *Shape
 	ClipBehavior          *string
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	Color                 *StateColor
 	BackgroundColor       *Color
@@ -185,6 +187,8 @@ type AlertDialogAdaptive struct {
 	Shape                        *Shape
 	Alignment                    *string
 	Constraints                  *Constraints
+	ScrollController             *ScrollKey
+	ActionScrollController       *ScrollKey
 }
 
 // Align maps Align of package:flutter/widgets.dart.
@@ -225,19 +229,21 @@ type AnimatedAlign struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type AnimatedContainer struct {
-	Alignment          *string
-	Padding            *Insets
-	Color              *Color
-	Width              *float64
-	Height             *float64
-	Constraints        *Constraints
-	Margin             *Insets
-	TransformAlignment *string
-	Child              Node
-	ClipBehavior       *string
-	Curve              *string
-	Duration           int
-	OnEnd              func()
+	Alignment            *string
+	Padding              *Insets
+	Color                *Color
+	Decoration           *Decoration
+	ForegroundDecoration *Decoration
+	Width                *float64
+	Height               *float64
+	Constraints          *Constraints
+	Margin               *Insets
+	TransformAlignment   *string
+	Child                Node
+	ClipBehavior         *string
+	Curve                *string
+	Duration             int
+	OnEnd                func()
 }
 
 // AnimatedCrossFade maps AnimatedCrossFade of package:flutter/widgets.dart.
@@ -508,6 +514,7 @@ type AutomaticKeepAlive struct {
 // BackButton maps BackButton of package:flutter/material.dart.
 type BackButton struct {
 	Color     *Color
+	Style     *ButtonStyle
 	OnPressed func()
 }
 
@@ -628,6 +635,7 @@ type BottomSheet struct {
 	EnableDrag      *bool
 	ShowDragHandle  *bool
 	DragHandleColor *Color
+	DragHandleSize  *Size
 	BackgroundColor *Color
 	ShadowColor     *Color
 	Elevation       *float64
@@ -823,6 +831,7 @@ type Checkbox struct {
 	SplashRadius          *float64
 	MaterialTapTargetSize *string
 	VisualDensity         *Density
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	Shape                 *Shape
 	Side                  *BorderSide
@@ -847,6 +856,7 @@ type CheckboxAdaptive struct {
 	SplashRadius          *float64
 	MaterialTapTargetSize *string
 	VisualDensity         *Density
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	Shape                 *Shape
 	Side                  *BorderSide
@@ -873,6 +883,8 @@ type CheckboxListTile struct {
 	SplashRadius                *float64
 	MaterialTapTargetSize       *string
 	VisualDensity               *Density
+	FocusNode                   *FocusKey
+	StatesController            *StatesKey
 	Autofocus                   *bool
 	Shape                       *Shape
 	Side                        *BorderSide
@@ -921,6 +933,8 @@ type CheckboxListTileAdaptive struct {
 	SplashRadius                *float64
 	MaterialTapTargetSize       *string
 	VisualDensity               *Density
+	FocusNode                   *FocusKey
+	StatesController            *StatesKey
 	Autofocus                   *bool
 	Shape                       *Shape
 	Side                        *BorderSide
@@ -954,16 +968,19 @@ type CheckboxListTileAdaptive struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CheckboxMenuButton struct {
-	Value           bool
-	Tristate        *bool
-	IsError         *bool
-	OnChanged       func(bool)
-	OnHover         func(bool)
-	OnFocusChange   func(bool)
-	ClipBehavior    *string
-	TrailingIcon    Node
-	CloseOnActivate *bool
-	Child           Node
+	Value            bool
+	Tristate         *bool
+	IsError          *bool
+	OnChanged        func(bool)
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	FocusNode        *FocusKey
+	Style            *ButtonStyle
+	StatesController *StatesKey
+	ClipBehavior     *string
+	TrailingIcon     Node
+	CloseOnActivate  *bool
+	Child            Node
 }
 
 // CheckedModeBanner maps CheckedModeBanner of package:flutter/widgets.dart.
@@ -999,6 +1016,7 @@ type Chip struct {
 	Side                       *BorderSide
 	Shape                      *Shape
 	ClipBehavior               *string
+	FocusNode                  *FocusKey
 	Autofocus                  *bool
 	Color                      *StateColor
 	BackgroundColor            *Color
@@ -1033,6 +1051,7 @@ type ChoiceChip struct {
 	Side                  *BorderSide
 	Shape                 *Shape
 	ClipBehavior          *string
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	Color                 *StateColor
 	BackgroundColor       *Color
@@ -1070,6 +1089,7 @@ type ChoiceChipElevated struct {
 	Side                  *BorderSide
 	Shape                 *Shape
 	ClipBehavior          *string
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	Color                 *StateColor
 	BackgroundColor       *Color
@@ -1092,6 +1112,8 @@ type ChoiceChipElevated struct {
 type CircleAvatar struct {
 	Child           Node
 	BackgroundColor *Color
+	BackgroundImage *ImageSource
+	ForegroundImage *ImageSource
 	ForegroundColor *Color
 	Radius          *float64
 	MinRadius       *float64
@@ -1179,6 +1201,7 @@ type ClipRect struct {
 type CloseButton struct {
 	Color     *Color
 	OnPressed func()
+	Style     *ButtonStyle
 }
 
 // ColoredBox maps ColoredBox of package:flutter/widgets.dart.
@@ -1222,25 +1245,29 @@ type ConstrainedBox struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Container struct {
-	Alignment          *string
-	Padding            *Insets
-	Color              *Color
-	IsAntiAlias        *bool
-	Width              *float64
-	Height             *float64
-	Constraints        *Constraints
-	Margin             *Insets
-	TransformAlignment *string
-	Child              Node
-	ClipBehavior       *string
+	Alignment            *string
+	Padding              *Insets
+	Color                *Color
+	IsAntiAlias          *bool
+	Decoration           *Decoration
+	ForegroundDecoration *Decoration
+	Width                *float64
+	Height               *float64
+	Constraints          *Constraints
+	Margin               *Insets
+	TransformAlignment   *string
+	Child                Node
+	ClipBehavior         *string
 }
 
 // CupertinoActionSheet maps CupertinoActionSheet of package:flutter/cupertino.dart.
 type CupertinoActionSheet struct {
-	Title        Node
-	Message      Node
-	Actions      []Node
-	CancelButton Node
+	Title                   Node
+	Message                 Node
+	Actions                 []Node
+	MessageScrollController *ScrollKey
+	ActionScrollController  *ScrollKey
+	CancelButton            Node
 }
 
 // CupertinoActionSheetAction maps CupertinoActionSheetAction of package:flutter/cupertino.dart.
@@ -1249,6 +1276,7 @@ type CupertinoActionSheetAction struct {
 	IsDefaultAction     *bool
 	IsDestructiveAction *bool
 	MouseCursor         *string
+	FocusNode           *FocusKey
 	FocusColor          *Color
 	Child               Node
 }
@@ -1267,10 +1295,12 @@ type CupertinoActivityIndicatorPartiallyRevealed struct {
 
 // CupertinoAlertDialog maps CupertinoAlertDialog of package:flutter/cupertino.dart.
 type CupertinoAlertDialog struct {
-	Title               Node
-	Content             Node
-	Actions             []Node
-	InsetAnimationCurve *string
+	Title                  Node
+	Content                Node
+	Actions                []Node
+	ScrollController       *ScrollKey
+	ActionScrollController *ScrollKey
+	InsetAnimationCurve    *string
 }
 
 // CupertinoApp maps CupertinoApp of package:flutter/cupertino.dart.
@@ -1314,10 +1344,12 @@ type CupertinoButton struct {
 	ForegroundColor *Color
 	DisabledColor   *Color
 	MinSize         *float64
+	MinimumSize     *Size
 	PressedOpacity  *float64
 	BorderRadius    *Radius
 	Alignment       *string
 	FocusColor      *Color
+	FocusNode       *FocusKey
 	OnFocusChange   func(bool)
 	Autofocus       *bool
 	MouseCursor     *string
@@ -1336,10 +1368,12 @@ type CupertinoButtonFilled struct {
 	DisabledColor   *Color
 	ForegroundColor *Color
 	MinSize         *float64
+	MinimumSize     *Size
 	PressedOpacity  *float64
 	BorderRadius    *Radius
 	Alignment       *string
 	FocusColor      *Color
+	FocusNode       *FocusKey
 	OnFocusChange   func(bool)
 	Autofocus       *bool
 	MouseCursor     *string
@@ -1358,10 +1392,12 @@ type CupertinoButtonTinted struct {
 	ForegroundColor *Color
 	DisabledColor   *Color
 	MinSize         *float64
+	MinimumSize     *Size
 	PressedOpacity  *float64
 	BorderRadius    *Radius
 	Alignment       *string
 	FocusColor      *Color
+	FocusNode       *FocusKey
 	OnFocusChange   func(bool)
 	Autofocus       *bool
 	MouseCursor     *string
@@ -1380,9 +1416,11 @@ type CupertinoCheckbox struct {
 	FillColor     *StateColor
 	CheckColor    *Color
 	FocusColor    *Color
+	FocusNode     *FocusKey
 	Autofocus     *bool
 	Side          *BorderSide
 	Shape         *Shape
+	TapTargetSize *Size
 	SemanticLabel *string
 }
 
@@ -1474,6 +1512,7 @@ type CupertinoFormSection struct {
 	Footer          Node
 	Margin          *Insets
 	BackgroundColor *Color
+	Decoration      *Decoration
 	ClipBehavior    *string
 }
 
@@ -1485,6 +1524,7 @@ type CupertinoFormSectionInsetGrouped struct {
 	Header          Node
 	Footer          Node
 	BackgroundColor *Color
+	Decoration      *Decoration
 	ClipBehavior    *string
 }
 
@@ -1503,6 +1543,7 @@ type CupertinoListSection struct {
 	Header                  Node
 	Footer                  Node
 	BackgroundColor         *Color
+	Decoration              *Decoration
 	ClipBehavior            *string
 	AdditionalDividerMargin *float64
 	TopMargin               *float64
@@ -1519,6 +1560,7 @@ type CupertinoListSectionInsetGrouped struct {
 	Footer                  Node
 	Margin                  *Insets
 	BackgroundColor         *Color
+	Decoration              *Decoration
 	ClipBehavior            *string
 	AdditionalDividerMargin *float64
 	TopMargin               *float64
@@ -1574,6 +1616,7 @@ type CupertinoMenuAnchor struct {
 	OverlayPadding           *Insets
 	MenuChildren             []Node
 	Child                    Node
+	ChildFocusNode           *FocusKey
 }
 
 // CupertinoMenuItem maps CupertinoMenuItem of package:flutter/cupertino.dart.
@@ -1591,6 +1634,7 @@ type CupertinoMenuItem struct {
 	Padding                   *Insets
 	Constraints               *Constraints
 	Autofocus                 *bool
+	FocusNode                 *FocusKey
 	OnFocusChange             func(bool)
 	OnHover                   func(bool)
 	OnPressed                 func()
@@ -1707,6 +1751,7 @@ type CupertinoPopupSurface struct {
 // ScrollbarOrientation takes "left", "right", "top", or "bottom".
 type CupertinoScrollbar struct {
 	Child                Node
+	Controller           *ScrollKey
 	ThumbVisibility      *bool
 	ScrollbarOrientation *string
 }
@@ -1724,6 +1769,7 @@ type CupertinoSearchTextField struct {
 	Style                         *TextStyle
 	Placeholder                   *string
 	PlaceholderStyle              *TextStyle
+	Decoration                    *Decoration
 	BackgroundColor               *Color
 	BorderRadius                  *Radius
 	Padding                       *Insets
@@ -1736,6 +1782,7 @@ type CupertinoSearchTextField struct {
 	SuffixMode                    *string
 	OnSuffixTap                   func()
 	RestorationId                 *string
+	FocusNode                     *FocusKey
 	SmartQuotesType               *string
 	SmartDashesType               *string
 	EnableIMEPersonalizedLearning *bool
@@ -1827,7 +1874,10 @@ type CupertinoSwitch struct {
 	FocusColor         *Color
 	OnLabelColor       *Color
 	OffLabelColor      *Color
+	ActiveThumbImage   *ImageSource
+	InactiveThumbImage *ImageSource
 	TrackOutlineColor  *StateColor
+	FocusNode          *FocusKey
 	OnFocusChange      func(bool)
 	Autofocus          *bool
 	DragStartBehavior  *string
@@ -1879,6 +1929,8 @@ type CupertinoTabView struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoTextField struct {
+	FocusNode                     *FocusKey
+	Decoration                    *Decoration
 	Padding                       *Insets
 	Placeholder                   *string
 	PlaceholderStyle              *TextStyle
@@ -1922,6 +1974,7 @@ type CupertinoTextField struct {
 	EnableInteractiveSelection    *bool
 	SelectAllOnFocus              *bool
 	OnTap                         func()
+	ScrollController              *ScrollKey
 	ScrollPhysics                 *string
 	ClipBehavior                  *string
 	RestorationId                 *string
@@ -1961,6 +2014,8 @@ type CupertinoTextField struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoTextFieldBorderless struct {
+	FocusNode                     *FocusKey
+	Decoration                    *Decoration
 	Padding                       *Insets
 	Placeholder                   *string
 	PlaceholderStyle              *TextStyle
@@ -2004,6 +2059,7 @@ type CupertinoTextFieldBorderless struct {
 	EnableInteractiveSelection    *bool
 	SelectAllOnFocus              *bool
 	OnTap                         func()
+	ScrollController              *ScrollKey
 	ScrollPhysics                 *string
 	ClipBehavior                  *string
 	RestorationId                 *string
@@ -2034,6 +2090,8 @@ type CupertinoTextFormFieldRow struct {
 	Prefix                     Node
 	Padding                    *Insets
 	InitialValue               *string
+	FocusNode                  *FocusKey
+	Decoration                 *Decoration
 	TextCapitalization         *string
 	TextInputAction            *string
 	Style                      *TextStyle
@@ -2115,6 +2173,7 @@ type CupertinoUserInterfaceLevel struct {
 
 // CustomPaint maps CustomPaint of package:flutter/widgets.dart.
 type CustomPaint struct {
+	Size       *Size
 	IsComplex  *bool
 	WillChange *bool
 	Child      Node
@@ -2136,6 +2195,7 @@ type CustomPaint struct {
 type CustomScrollView struct {
 	ScrollDirection         *string
 	Reverse                 *bool
+	Controller              *ScrollKey
 	Primary                 *bool
 	Physics                 *string
 	ShrinkWrap              *bool
@@ -2149,6 +2209,24 @@ type CustomScrollView struct {
 	RestorationId           *string
 	ClipBehavior            *string
 	HitTestBehavior         *string
+}
+
+// DecoratedBox maps DecoratedBox of package:flutter/widgets.dart.
+//
+// Position takes "background", or "foreground".
+type DecoratedBox struct {
+	Decoration Decoration
+	Position   *string
+	Child      Node
+}
+
+// DecoratedSliver maps DecoratedSliver of package:flutter/widgets.dart.
+//
+// Position takes "background", or "foreground".
+type DecoratedSliver struct {
+	Decoration Decoration
+	Position   *string
+	Sliver     Node
 }
 
 // DefaultSelectionStyle maps DefaultSelectionStyle of package:flutter/widgets.dart.
@@ -2331,6 +2409,7 @@ type Drawer struct {
 // DrawerButton maps DrawerButton of package:flutter/material.dart.
 type DrawerButton struct {
 	Color     *Color
+	Style     *ButtonStyle
 	OnPressed func()
 }
 
@@ -2353,10 +2432,11 @@ type DrawerController struct {
 
 // DrawerHeader maps DrawerHeader of package:flutter/material.dart.
 type DrawerHeader struct {
-	Margin  *Insets
-	Padding *Insets
-	Curve   *string
-	Child   Node
+	Decoration *Decoration
+	Margin     *Insets
+	Padding    *Insets
+	Curve      *string
+	Child      Node
 }
 
 // DropdownButtonHideUnderline maps DropdownButtonHideUnderline of package:flutter/material.dart.
@@ -2376,13 +2456,16 @@ type DropdownMenuItem struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ElevatedButton struct {
-	OnPressed     func()
-	OnLongPress   func()
-	OnHover       func(bool)
-	OnFocusChange func(bool)
-	Autofocus     *bool
-	ClipBehavior  *string
-	Child         Node
+	OnPressed        func()
+	OnLongPress      func()
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	ClipBehavior     *string
+	StatesController *StatesKey
+	Child            Node
 }
 
 // ElevatedButtonIcon maps ElevatedButton.icon of package:flutter/material.dart.
@@ -2391,15 +2474,18 @@ type ElevatedButton struct {
 //
 // IconAlignment takes "start", or "end".
 type ElevatedButtonIcon struct {
-	OnPressed     func()
-	OnLongPress   func()
-	OnHover       func(bool)
-	OnFocusChange func(bool)
-	Autofocus     *bool
-	ClipBehavior  *string
-	Icon          Node
-	Label         Node
-	IconAlignment *string
+	OnPressed        func()
+	OnLongPress      func()
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	ClipBehavior     *string
+	StatesController *StatesKey
+	Icon             Node
+	Label            Node
+	IconAlignment    *string
 }
 
 // EnableWidgetInspectorScope maps EnableWidgetInspectorScope of package:flutter/widgets.dart.
@@ -2410,6 +2496,7 @@ type EnableWidgetInspectorScope struct {
 // EndDrawerButton maps EndDrawerButton of package:flutter/material.dart.
 type EndDrawerButton struct {
 	Color     *Color
+	Style     *ButtonStyle
 	OnPressed func()
 }
 
@@ -2511,6 +2598,44 @@ type ExpansionTile struct {
 	EnableFeedback              *bool
 	Enabled                     *bool
 	InternalAddSemanticForOnTap *bool
+	StatesController            *StatesKey
+}
+
+// FadeInImage maps FadeInImage of package:flutter/widgets.dart.
+//
+// ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
+//
+// PlaceholderColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
+//
+// Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// PlaceholderFit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// FilterQuality takes "none", "low", "medium", or "high".
+//
+// PlaceholderFilterQuality takes "none", "low", "medium", or "high".
+//
+// Repeat takes "repeat", "repeatX", "repeatY", or "noRepeat".
+type FadeInImage struct {
+	Placeholder               ImageSource
+	Image                     ImageSource
+	ExcludeFromSemantics      *bool
+	ImageSemanticLabel        *string
+	FadeOutCurve              *string
+	FadeInCurve               *string
+	Color                     *Color
+	ColorBlendMode            *string
+	PlaceholderColor          *Color
+	PlaceholderColorBlendMode *string
+	Width                     *float64
+	Height                    *float64
+	Fit                       *string
+	PlaceholderFit            *string
+	FilterQuality             *string
+	PlaceholderFilterQuality  *string
+	Alignment                 *string
+	Repeat                    *string
+	MatchTextDirection        *bool
 }
 
 // FadeInImageAssetNetwork maps FadeInImage.assetNetwork of package:flutter/widgets.dart.
@@ -2560,13 +2685,16 @@ type FadeInImageAssetNetwork struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type FilledButton struct {
-	OnPressed     func()
-	OnLongPress   func()
-	OnHover       func(bool)
-	OnFocusChange func(bool)
-	Autofocus     *bool
-	ClipBehavior  *string
-	Child         Node
+	OnPressed        func()
+	OnLongPress      func()
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	ClipBehavior     *string
+	StatesController *StatesKey
+	Child            Node
 }
 
 // FilledButtonIcon maps FilledButton.icon of package:flutter/material.dart.
@@ -2575,28 +2703,34 @@ type FilledButton struct {
 //
 // IconAlignment takes "start", or "end".
 type FilledButtonIcon struct {
-	OnPressed     func()
-	OnLongPress   func()
-	OnHover       func(bool)
-	OnFocusChange func(bool)
-	Autofocus     *bool
-	ClipBehavior  *string
-	Icon          Node
-	Label         Node
-	IconAlignment *string
+	OnPressed        func()
+	OnLongPress      func()
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	ClipBehavior     *string
+	StatesController *StatesKey
+	Icon             Node
+	Label            Node
+	IconAlignment    *string
 }
 
 // FilledButtonTonal maps FilledButton.tonal of package:flutter/material.dart.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type FilledButtonTonal struct {
-	OnPressed     func()
-	OnLongPress   func()
-	OnHover       func(bool)
-	OnFocusChange func(bool)
-	Autofocus     *bool
-	ClipBehavior  *string
-	Child         Node
+	OnPressed        func()
+	OnLongPress      func()
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	ClipBehavior     *string
+	StatesController *StatesKey
+	Child            Node
 }
 
 // FilledButtonTonalIcon maps FilledButton.tonalIcon of package:flutter/material.dart.
@@ -2605,15 +2739,18 @@ type FilledButtonTonal struct {
 //
 // IconAlignment takes "start", or "end".
 type FilledButtonTonalIcon struct {
-	OnPressed     func()
-	OnLongPress   func()
-	OnHover       func(bool)
-	OnFocusChange func(bool)
-	Autofocus     *bool
-	ClipBehavior  *string
-	Icon          Node
-	Label         Node
-	IconAlignment *string
+	OnPressed        func()
+	OnLongPress      func()
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	ClipBehavior     *string
+	StatesController *StatesKey
+	Icon             Node
+	Label            Node
+	IconAlignment    *string
 }
 
 // FilterChip maps FilterChip of package:flutter/material.dart.
@@ -2639,6 +2776,7 @@ type FilterChip struct {
 	Side                       *BorderSide
 	Shape                      *Shape
 	ClipBehavior               *string
+	FocusNode                  *FocusKey
 	Autofocus                  *bool
 	Color                      *StateColor
 	BackgroundColor            *Color
@@ -2681,6 +2819,7 @@ type FilterChipElevated struct {
 	Side                       *BorderSide
 	Shape                      *Shape
 	ClipBehavior               *string
+	FocusNode                  *FocusKey
 	Autofocus                  *bool
 	Color                      *StateColor
 	BackgroundColor            *Color
@@ -2797,6 +2936,7 @@ type FloatingActionButton struct {
 	Mini                  *bool
 	Shape                 *Shape
 	ClipBehavior          *string
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	MaterialTapTargetSize *string
 	IsExtended            *bool
@@ -2826,6 +2966,7 @@ type FloatingActionButtonExtended struct {
 	IsExtended               *bool
 	MaterialTapTargetSize    *string
 	ClipBehavior             *string
+	FocusNode                *FocusKey
 	Autofocus                *bool
 	ExtendedIconLabelSpacing *float64
 	ExtendedPadding          *Insets
@@ -2857,6 +2998,7 @@ type FloatingActionButtonLarge struct {
 	MouseCursor           *string
 	Shape                 *Shape
 	ClipBehavior          *string
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	MaterialTapTargetSize *string
 	EnableFeedback        *bool
@@ -2884,6 +3026,7 @@ type FloatingActionButtonSmall struct {
 	MouseCursor           *string
 	Shape                 *Shape
 	ClipBehavior          *string
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	MaterialTapTargetSize *string
 	EnableFeedback        *bool
@@ -2902,6 +3045,8 @@ type FlutterLogo struct {
 // Focus maps Focus of package:flutter/widgets.dart.
 type Focus struct {
 	Child                     Node
+	FocusNode                 *FocusKey
+	ParentNode                *FocusKey
 	Autofocus                 *bool
 	OnFocusChange             func(bool)
 	CanRequestFocus           *bool
@@ -2914,6 +3059,7 @@ type Focus struct {
 
 // FocusScope maps FocusScope of package:flutter/widgets.dart.
 type FocusScope struct {
+	ParentNode                *FocusKey
 	Child                     Node
 	Autofocus                 *bool
 	OnFocusChange             func(bool)
@@ -2929,12 +3075,22 @@ type FocusScope struct {
 type FocusTraversalGroup struct {
 	DescendantsAreFocusable   *bool
 	DescendantsAreTraversable *bool
+	ParentNode                *FocusKey
 	Child                     Node
+}
+
+// FocusWithExternalFocusNode maps Focus.withExternalFocusNode of package:flutter/widgets.dart.
+type FocusWithExternalFocusNode struct {
+	Child         Node
+	FocusNode     FocusKey
+	ParentNode    *FocusKey
+	OnFocusChange func(bool)
 }
 
 // FocusableActionDetector maps FocusableActionDetector of package:flutter/widgets.dart.
 type FocusableActionDetector struct {
 	Enabled                   *bool
+	FocusNode                 *FocusKey
 	Autofocus                 *bool
 	DescendantsAreFocusable   *bool
 	DescendantsAreTraversable *bool
@@ -3055,6 +3211,7 @@ type GridTileBar struct {
 type GridViewCount struct {
 	ScrollDirection         *string
 	Reverse                 *bool
+	Controller              *ScrollKey
 	Primary                 *bool
 	Physics                 *string
 	ShrinkWrap              *bool
@@ -3091,6 +3248,7 @@ type GridViewCount struct {
 type GridViewExtent struct {
 	ScrollDirection         *string
 	Reverse                 *bool
+	Controller              *ScrollKey
 	Primary                 *bool
 	Physics                 *string
 	ShrinkWrap              *bool
@@ -3163,106 +3321,118 @@ type Icon struct {
 
 // IconButton maps IconButton of package:flutter/material.dart.
 type IconButton struct {
-	IconSize       *float64
-	VisualDensity  *Density
-	Padding        *Insets
-	Alignment      *string
-	SplashRadius   *float64
-	Color          *Color
-	FocusColor     *Color
-	HoverColor     *Color
-	HighlightColor *Color
-	SplashColor    *Color
-	DisabledColor  *Color
-	OnPressed      func()
-	OnHover        func(bool)
-	OnLongPress    func()
-	MouseCursor    *string
-	Autofocus      *bool
-	Tooltip        *string
-	EnableFeedback *bool
-	Constraints    *Constraints
-	IsSelected     *bool
-	SelectedIcon   Node
-	Icon           Node
+	IconSize         *float64
+	VisualDensity    *Density
+	Padding          *Insets
+	Alignment        *string
+	SplashRadius     *float64
+	Color            *Color
+	FocusColor       *Color
+	HoverColor       *Color
+	HighlightColor   *Color
+	SplashColor      *Color
+	DisabledColor    *Color
+	OnPressed        func()
+	OnHover          func(bool)
+	OnLongPress      func()
+	MouseCursor      *string
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	Tooltip          *string
+	EnableFeedback   *bool
+	Constraints      *Constraints
+	Style            *ButtonStyle
+	IsSelected       *bool
+	SelectedIcon     Node
+	StatesController *StatesKey
+	Icon             Node
 }
 
 // IconButtonFilled maps IconButton.filled of package:flutter/material.dart.
 type IconButtonFilled struct {
-	IconSize       *float64
-	VisualDensity  *Density
-	Padding        *Insets
-	Alignment      *string
-	SplashRadius   *float64
-	Color          *Color
-	FocusColor     *Color
-	HoverColor     *Color
-	HighlightColor *Color
-	SplashColor    *Color
-	DisabledColor  *Color
-	OnPressed      func()
-	OnHover        func(bool)
-	OnLongPress    func()
-	MouseCursor    *string
-	Autofocus      *bool
-	Tooltip        *string
-	EnableFeedback *bool
-	Constraints    *Constraints
-	IsSelected     *bool
-	SelectedIcon   Node
-	Icon           Node
+	IconSize         *float64
+	VisualDensity    *Density
+	Padding          *Insets
+	Alignment        *string
+	SplashRadius     *float64
+	Color            *Color
+	FocusColor       *Color
+	HoverColor       *Color
+	HighlightColor   *Color
+	SplashColor      *Color
+	DisabledColor    *Color
+	OnPressed        func()
+	OnHover          func(bool)
+	OnLongPress      func()
+	MouseCursor      *string
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	Tooltip          *string
+	EnableFeedback   *bool
+	Constraints      *Constraints
+	Style            *ButtonStyle
+	IsSelected       *bool
+	SelectedIcon     Node
+	StatesController *StatesKey
+	Icon             Node
 }
 
 // IconButtonFilledTonal maps IconButton.filledTonal of package:flutter/material.dart.
 type IconButtonFilledTonal struct {
-	IconSize       *float64
-	VisualDensity  *Density
-	Padding        *Insets
-	Alignment      *string
-	SplashRadius   *float64
-	Color          *Color
-	FocusColor     *Color
-	HoverColor     *Color
-	HighlightColor *Color
-	SplashColor    *Color
-	DisabledColor  *Color
-	OnPressed      func()
-	OnHover        func(bool)
-	OnLongPress    func()
-	MouseCursor    *string
-	Autofocus      *bool
-	Tooltip        *string
-	EnableFeedback *bool
-	Constraints    *Constraints
-	IsSelected     *bool
-	SelectedIcon   Node
-	Icon           Node
+	IconSize         *float64
+	VisualDensity    *Density
+	Padding          *Insets
+	Alignment        *string
+	SplashRadius     *float64
+	Color            *Color
+	FocusColor       *Color
+	HoverColor       *Color
+	HighlightColor   *Color
+	SplashColor      *Color
+	DisabledColor    *Color
+	OnPressed        func()
+	OnHover          func(bool)
+	OnLongPress      func()
+	MouseCursor      *string
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	Tooltip          *string
+	EnableFeedback   *bool
+	Constraints      *Constraints
+	Style            *ButtonStyle
+	IsSelected       *bool
+	SelectedIcon     Node
+	StatesController *StatesKey
+	Icon             Node
 }
 
 // IconButtonOutlined maps IconButton.outlined of package:flutter/material.dart.
 type IconButtonOutlined struct {
-	IconSize       *float64
-	VisualDensity  *Density
-	Padding        *Insets
-	Alignment      *string
-	SplashRadius   *float64
-	Color          *Color
-	FocusColor     *Color
-	HoverColor     *Color
-	HighlightColor *Color
-	SplashColor    *Color
-	DisabledColor  *Color
-	OnPressed      func()
-	OnHover        func(bool)
-	OnLongPress    func()
-	MouseCursor    *string
-	Autofocus      *bool
-	Tooltip        *string
-	EnableFeedback *bool
-	Constraints    *Constraints
-	IsSelected     *bool
-	SelectedIcon   Node
-	Icon           Node
+	IconSize         *float64
+	VisualDensity    *Density
+	Padding          *Insets
+	Alignment        *string
+	SplashRadius     *float64
+	Color            *Color
+	FocusColor       *Color
+	HoverColor       *Color
+	HighlightColor   *Color
+	SplashColor      *Color
+	DisabledColor    *Color
+	OnPressed        func()
+	OnHover          func(bool)
+	OnLongPress      func()
+	MouseCursor      *string
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	Tooltip          *string
+	EnableFeedback   *bool
+	Constraints      *Constraints
+	Style            *ButtonStyle
+	IsSelected       *bool
+	SelectedIcon     Node
+	StatesController *StatesKey
+	Icon             Node
 }
 
 // IconTheme maps IconTheme of package:flutter/widgets.dart.
@@ -3281,6 +3451,32 @@ type IgnorePointer struct {
 	Ignoring          *bool
 	IgnoringSemantics *bool
 	Child             Node
+}
+
+// Image maps Image of package:flutter/widgets.dart.
+//
+// ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
+//
+// Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// Repeat takes "repeat", "repeatX", "repeatY", or "noRepeat".
+//
+// FilterQuality takes "none", "low", "medium", or "high".
+type Image struct {
+	Image                ImageSource
+	SemanticLabel        *string
+	ExcludeFromSemantics *bool
+	Width                *float64
+	Height               *float64
+	Color                *Color
+	ColorBlendMode       *string
+	Fit                  *string
+	Alignment            *string
+	Repeat               *string
+	MatchTextDirection   *bool
+	GaplessPlayback      *bool
+	IsAntiAlias          *bool
+	FilterQuality        *string
 }
 
 // ImageAsset maps Image.asset of package:flutter/widgets.dart.
@@ -3311,6 +3507,15 @@ type ImageAsset struct {
 	FilterQuality        *string
 	CacheWidth           *int
 	CacheHeight          *int
+}
+
+// ImageIcon maps ImageIcon of package:flutter/widgets.dart.
+type ImageIcon struct {
+	Image             ImageSource
+	Size              *float64
+	Color             *Color
+	SemanticLabel     *string
+	UseOriginalColors *bool
 }
 
 // ImageNetwork maps Image.network of package:flutter/widgets.dart.
@@ -3375,11 +3580,29 @@ type InheritedCupertinoTheme struct {
 
 // Ink maps Ink of package:flutter/material.dart.
 type Ink struct {
-	Padding *Insets
-	Color   *Color
-	Width   *float64
-	Height  *float64
-	Child   Node
+	Padding    *Insets
+	Color      *Color
+	Decoration *Decoration
+	Width      *float64
+	Height     *float64
+	Child      Node
+}
+
+// InkImage maps Ink.image of package:flutter/material.dart.
+//
+// Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// Repeat takes "repeat", "repeatX", "repeatY", or "noRepeat".
+type InkImage struct {
+	Padding            *Insets
+	Image              ImageSource
+	Fit                *string
+	Alignment          *string
+	Repeat             *string
+	MatchTextDirection *bool
+	Width              *float64
+	Height             *float64
+	Child              Node
 }
 
 // InkResponse maps InkResponse of package:flutter/material.dart.
@@ -3409,9 +3632,11 @@ type InkResponse struct {
 	SplashColor          *Color
 	EnableFeedback       *bool
 	ExcludeFromSemantics *bool
+	FocusNode            *FocusKey
 	CanRequestFocus      *bool
 	OnFocusChange        func(bool)
 	Autofocus            *bool
+	StatesController     *StatesKey
 	HoverDuration        *int
 }
 
@@ -3438,9 +3663,11 @@ type InkWell struct {
 	CustomBorder         *Shape
 	EnableFeedback       *bool
 	ExcludeFromSemantics *bool
+	FocusNode            *FocusKey
 	CanRequestFocus      *bool
 	OnFocusChange        func(bool)
 	Autofocus            *bool
+	StatesController     *StatesKey
 	HoverDuration        *int
 }
 
@@ -3469,6 +3696,7 @@ type InputChip struct {
 	Side                       *BorderSide
 	Shape                      *Shape
 	ClipBehavior               *string
+	FocusNode                  *FocusKey
 	Autofocus                  *bool
 	Color                      *StateColor
 	BackgroundColor            *Color
@@ -3563,6 +3791,14 @@ type KeepAlive struct {
 	Child     Node
 }
 
+// KeyboardListener maps KeyboardListener of package:flutter/widgets.dart.
+type KeyboardListener struct {
+	FocusNode        FocusKey
+	Autofocus        *bool
+	IncludeSemantics *bool
+	Child            Node
+}
+
 // KeyedSubtree maps KeyedSubtree of package:flutter/widgets.dart.
 type KeyedSubtree struct {
 	Child Node
@@ -3642,6 +3878,7 @@ type ListTile struct {
 	FocusColor                  *Color
 	HoverColor                  *Color
 	SplashColor                 *Color
+	FocusNode                   *FocusKey
 	Autofocus                   *bool
 	TileColor                   *Color
 	SelectedTileColor           *Color
@@ -3652,6 +3889,7 @@ type ListTile struct {
 	MinTileHeight               *float64
 	TitleAlignment              *string
 	InternalAddSemanticForOnTap *bool
+	StatesController            *StatesKey
 }
 
 // ListTileTheme maps ListTileTheme of package:flutter/material.dart.
@@ -3691,6 +3929,7 @@ type ListTileTheme struct {
 type ListView struct {
 	ScrollDirection         *string
 	Reverse                 *bool
+	Controller              *ScrollKey
 	Primary                 *bool
 	Physics                 *string
 	ShrinkWrap              *bool
@@ -3724,6 +3963,7 @@ type ListView struct {
 type ListViewBuilder struct {
 	ScrollDirection         *string
 	Reverse                 *bool
+	Controller              *ScrollKey
 	Primary                 *bool
 	Physics                 *string
 	ShrinkWrap              *bool
@@ -3758,6 +3998,7 @@ type ListViewBuilder struct {
 type ListViewSeparated struct {
 	ScrollDirection         *string
 	Reverse                 *bool
+	Controller              *ScrollKey
 	Primary                 *bool
 	Physics                 *string
 	ShrinkWrap              *bool
@@ -3786,6 +4027,7 @@ type ListViewSeparated struct {
 //
 // ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
 type ListWheelScrollView struct {
+	Controller                    *ScrollKey
 	Physics                       *string
 	DiameterRatio                 *float64
 	Perspective                   *float64
@@ -3847,6 +4089,7 @@ type Magnifier struct {
 	AdditionalFocalPointOffset *Offset
 	FilmColor                  *Color
 	ClipBehavior               *string
+	Size                       *Size
 }
 
 // Material maps Material of package:flutter/material.dart.
@@ -3972,6 +4215,7 @@ type MaterialButton struct {
 	VisualDensity         *Density
 	Shape                 *Shape
 	ClipBehavior          *string
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	MaterialTapTargetSize *string
 	AnimationDuration     *int
@@ -3997,6 +4241,7 @@ type MenuAcceleratorLabel struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type MenuAnchor struct {
+	ChildFocusNode           *FocusKey
 	AlignmentOffset          *Offset
 	ReservedPadding          *Insets
 	ClipBehavior             *string
@@ -4030,8 +4275,11 @@ type MenuItemButton struct {
 	OnHover             func(bool)
 	RequestFocusOnHover *bool
 	OnFocusChange       func(bool)
+	FocusNode           *FocusKey
 	Autofocus           *bool
 	SemanticsLabel      *string
+	Style               *ButtonStyle
+	StatesController    *StatesKey
 	ClipBehavior        *string
 	LeadingIcon         Node
 	TrailingIcon        Node
@@ -4191,13 +4439,16 @@ type Opacity struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type OutlinedButton struct {
-	OnPressed     func()
-	OnLongPress   func()
-	OnHover       func(bool)
-	OnFocusChange func(bool)
-	Autofocus     *bool
-	ClipBehavior  *string
-	Child         Node
+	OnPressed        func()
+	OnLongPress      func()
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	ClipBehavior     *string
+	StatesController *StatesKey
+	Child            Node
 }
 
 // OutlinedButtonIcon maps OutlinedButton.icon of package:flutter/material.dart.
@@ -4206,15 +4457,18 @@ type OutlinedButton struct {
 //
 // IconAlignment takes "start", or "end".
 type OutlinedButtonIcon struct {
-	OnPressed     func()
-	OnLongPress   func()
-	OnHover       func(bool)
-	OnFocusChange func(bool)
-	Autofocus     *bool
-	ClipBehavior  *string
-	Icon          Node
-	Label         Node
-	IconAlignment *string
+	OnPressed        func()
+	OnLongPress      func()
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	ClipBehavior     *string
+	StatesController *StatesKey
+	Icon             Node
+	Label            Node
+	IconAlignment    *string
 }
 
 // OverflowBar maps OverflowBar of package:flutter/widgets.dart.
@@ -4412,6 +4666,21 @@ type PositionedFill struct {
 	Child  Node
 }
 
+// PreferredSize maps PreferredSize of package:flutter/widgets.dart.
+type PreferredSize struct {
+	PreferredSize Size
+	Child         Node
+}
+
+// PrimaryScrollController maps PrimaryScrollController of package:flutter/widgets.dart.
+//
+// ScrollDirection takes "horizontal", or "vertical".
+type PrimaryScrollController struct {
+	Controller      ScrollKey
+	ScrollDirection *string
+	Child           Node
+}
+
 // PrimaryScrollControllerNone maps PrimaryScrollController.none of package:flutter/widgets.dart.
 type PrimaryScrollControllerNone struct {
 	Child Node
@@ -4445,6 +4714,7 @@ type RawChip struct {
 	Side                       *BorderSide
 	Shape                      *Shape
 	ClipBehavior               *string
+	FocusNode                  *FocusKey
 	Autofocus                  *bool
 	Color                      *StateColor
 	BackgroundColor            *Color
@@ -4496,6 +4766,25 @@ type RawImage struct {
 	IsAntiAlias        *bool
 }
 
+// RawKeyboardListener maps RawKeyboardListener of package:flutter/widgets.dart.
+type RawKeyboardListener struct {
+	FocusNode        FocusKey
+	Autofocus        *bool
+	IncludeSemantics *bool
+	Child            Node
+}
+
+// RawMagnifier maps RawMagnifier of package:flutter/widgets.dart.
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+type RawMagnifier struct {
+	Child              Node
+	ClipBehavior       *string
+	FocalPointOffset   *Offset
+	MagnificationScale *float64
+	Size               Size
+}
+
 // RawMaterialButton maps RawMaterialButton of package:flutter/material.dart.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
@@ -4522,6 +4811,7 @@ type RawMaterialButton struct {
 	Shape                 *Shape
 	AnimationDuration     *int
 	ClipBehavior          *string
+	FocusNode             *FocusKey
 	Autofocus             *bool
 	MaterialTapTargetSize *string
 	Child                 Node
@@ -4533,6 +4823,7 @@ type RawMaterialButton struct {
 // ScrollbarOrientation takes "left", "right", "top", or "bottom".
 type RawScrollbar struct {
 	Child                Node
+	Controller           *ScrollKey
 	ThumbVisibility      *bool
 	Shape                *Shape
 	Thickness            *float64
@@ -4598,6 +4889,7 @@ type ReorderableList struct {
 	Padding                    *Insets
 	ScrollDirection            *string
 	Reverse                    *bool
+	Controller                 *ScrollKey
 	Primary                    *bool
 	Physics                    *string
 	ShrinkWrap                 *bool
@@ -4631,6 +4923,7 @@ type ReorderableListView struct {
 	Footer                     Node
 	ScrollDirection            *string
 	Reverse                    *bool
+	ScrollController           *ScrollKey
 	Primary                    *bool
 	Physics                    *string
 	ShrinkWrap                 *bool
@@ -4666,6 +4959,7 @@ type ReorderableListViewBuilder struct {
 	Footer                     Node
 	ScrollDirection            *string
 	Reverse                    *bool
+	ScrollController           *ScrollKey
 	Primary                    *bool
 	Physics                    *string
 	ShrinkWrap                 *bool
@@ -4757,6 +5051,7 @@ type Scaffold struct {
 	Body                           Node
 	FloatingActionButton           Node
 	PersistentFooterButtons        []Node
+	PersistentFooterDecoration     *Decoration
 	Drawer                         Node
 	OnDrawerChanged                func(bool)
 	EndDrawer                      Node
@@ -4792,6 +5087,7 @@ type ScrollNotificationObserver struct {
 // ScrollbarOrientation takes "left", "right", "top", or "bottom".
 type Scrollbar struct {
 	Child                Node
+	Controller           *ScrollKey
 	ThumbVisibility      *bool
 	TrackVisibility      *bool
 	Thickness            *float64
@@ -4809,6 +5105,7 @@ type Scrollbar struct {
 //
 // SmartQuotesType takes "disabled", or "enabled".
 type SearchBar struct {
+	FocusNode          *FocusKey
 	HintText           *string
 	Leading            Node
 	OnTap              func()
@@ -4840,6 +5137,7 @@ type SearchBar struct {
 // TextWidthBasis takes "parent", or "longestLine".
 type SelectableText struct {
 	Data                       string
+	FocusNode                  *FocusKey
 	Style                      *TextStyle
 	TextAlign                  *string
 	TextDirection              *string
@@ -4862,7 +5160,8 @@ type SelectableText struct {
 
 // SelectionArea maps SelectionArea of package:flutter/material.dart.
 type SelectionArea struct {
-	Child Node
+	FocusNode *FocusKey
+	Child     Node
 }
 
 // SelectionContainerDisabled maps SelectionContainer.disabled of package:flutter/widgets.dart.
@@ -5011,6 +5310,7 @@ type SingleChildScrollView struct {
 	Padding                 *Insets
 	Primary                 *bool
 	Physics                 *string
+	Controller              *ScrollKey
 	Child                   Node
 	DragStartBehavior       *string
 	ClipBehavior            *string
@@ -5039,6 +5339,7 @@ type SizedBoxExpand struct {
 // SizedBoxFromSize maps SizedBox.fromSize of package:flutter/widgets.dart.
 type SizedBoxFromSize struct {
 	Child Node
+	Size  *Size
 }
 
 // SizedBoxShrink maps SizedBox.shrink of package:flutter/widgets.dart.
@@ -5050,6 +5351,13 @@ type SizedBoxShrink struct {
 type SizedBoxSquare struct {
 	Child     Node
 	Dimension *float64
+}
+
+// SizedOverflowBox maps SizedOverflowBox of package:flutter/widgets.dart.
+type SizedOverflowBox struct {
+	Size      Size
+	Alignment *string
+	Child     Node
 }
 
 // Slider maps Slider of package:flutter/material.dart.
@@ -5073,6 +5381,7 @@ type Slider struct {
 	ThumbColor           *Color
 	OverlayColor         *StateColor
 	MouseCursor          *string
+	FocusNode            *FocusKey
 	Autofocus            *bool
 	AllowedInteraction   *string
 	Padding              *Insets
@@ -5101,6 +5410,7 @@ type SliderAdaptive struct {
 	SecondaryActiveColor *Color
 	ThumbColor           *Color
 	OverlayColor         *StateColor
+	FocusNode            *FocusKey
 	Autofocus            *bool
 	AllowedInteraction   *string
 	ShowValueIndicator   *string
@@ -5613,8 +5923,11 @@ type SubmenuButton struct {
 	OnFocusChange            func(bool)
 	OnOpen                   func()
 	OnClose                  func()
+	Style                    *ButtonStyle
 	AlignmentOffset          *Offset
 	ClipBehavior             *string
+	FocusNode                *FocusKey
+	StatesController         *StatesKey
 	LeadingIcon              Node
 	TrailingIcon             Node
 	UseRootOverlay           *bool
@@ -5637,6 +5950,8 @@ type Switch struct {
 	ActiveTrackColor      *Color
 	InactiveThumbColor    *Color
 	InactiveTrackColor    *Color
+	ActiveThumbImage      *ImageSource
+	InactiveThumbImage    *ImageSource
 	ThumbColor            *StateColor
 	TrackColor            *StateColor
 	TrackOutlineColor     *StateColor
@@ -5647,6 +5962,7 @@ type Switch struct {
 	HoverColor            *Color
 	OverlayColor          *StateColor
 	SplashRadius          *float64
+	FocusNode             *FocusKey
 	OnFocusChange         func(bool)
 	Autofocus             *bool
 	Padding               *Insets
@@ -5665,6 +5981,8 @@ type SwitchAdaptive struct {
 	ActiveTrackColor      *Color
 	InactiveThumbColor    *Color
 	InactiveTrackColor    *Color
+	ActiveThumbImage      *ImageSource
+	InactiveThumbImage    *ImageSource
 	MaterialTapTargetSize *string
 	ThumbColor            *StateColor
 	TrackColor            *StateColor
@@ -5675,6 +5993,7 @@ type SwitchAdaptive struct {
 	HoverColor            *Color
 	OverlayColor          *StateColor
 	SplashRadius          *float64
+	FocusNode             *FocusKey
 	OnFocusChange         func(bool)
 	Autofocus             *bool
 	Padding               *Insets
@@ -5696,6 +6015,8 @@ type SwitchListTile struct {
 	ActiveTrackColor            *Color
 	InactiveThumbColor          *Color
 	InactiveTrackColor          *Color
+	ActiveThumbImage            *ImageSource
+	InactiveThumbImage          *ImageSource
 	ThumbColor                  *StateColor
 	TrackColor                  *StateColor
 	TrackOutlineColor           *StateColor
@@ -5704,6 +6025,8 @@ type SwitchListTile struct {
 	MouseCursor                 *string
 	OverlayColor                *StateColor
 	SplashRadius                *float64
+	FocusNode                   *FocusKey
+	StatesController            *StatesKey
 	OnFocusChange               func(bool)
 	Autofocus                   *bool
 	TileColor                   *Color
@@ -5742,6 +6065,8 @@ type SwitchListTileAdaptive struct {
 	ActiveTrackColor            *Color
 	InactiveThumbColor          *Color
 	InactiveTrackColor          *Color
+	ActiveThumbImage            *ImageSource
+	InactiveThumbImage          *ImageSource
 	ThumbColor                  *StateColor
 	TrackColor                  *StateColor
 	TrackOutlineColor           *StateColor
@@ -5750,6 +6075,8 @@ type SwitchListTileAdaptive struct {
 	MouseCursor                 *string
 	OverlayColor                *StateColor
 	SplashRadius                *float64
+	FocusNode                   *FocusKey
+	StatesController            *StatesKey
 	OnFocusChange               func(bool)
 	Autofocus                   *bool
 	ApplyCupertinoTheme         *bool
@@ -5800,6 +6127,7 @@ type TabBar struct {
 	AutomaticIndicatorColorAdjustment *bool
 	IndicatorWeight                   *float64
 	IndicatorPadding                  *Insets
+	Indicator                         *Decoration
 	IndicatorSize                     *string
 	DividerColor                      *Color
 	DividerHeight                     *float64
@@ -5836,6 +6164,7 @@ type TabBarSecondary struct {
 	AutomaticIndicatorColorAdjustment *bool
 	IndicatorWeight                   *float64
 	IndicatorPadding                  *Insets
+	Indicator                         *Decoration
 	IndicatorSize                     *string
 	DividerColor                      *Color
 	DividerHeight                     *float64
@@ -5863,6 +6192,7 @@ type TabBarSecondary struct {
 //
 // IndicatorAnimation takes "linear", or "elastic".
 type TabBarTheme struct {
+	Indicator            *Decoration
 	IndicatorColor       *Color
 	IndicatorSize        *string
 	DividerColor         *Color
@@ -5994,8 +6324,11 @@ type TextButton struct {
 	OnLongPress      func()
 	OnHover          func(bool)
 	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
 	Autofocus        *bool
 	ClipBehavior     *string
+	StatesController *StatesKey
 	IsSemanticButton *bool
 	Child            Node
 }
@@ -6006,15 +6339,18 @@ type TextButton struct {
 //
 // IconAlignment takes "start", or "end".
 type TextButtonIcon struct {
-	OnPressed     func()
-	OnLongPress   func()
-	OnHover       func(bool)
-	OnFocusChange func(bool)
-	Autofocus     *bool
-	ClipBehavior  *string
-	Icon          Node
-	Label         Node
-	IconAlignment *string
+	OnPressed        func()
+	OnLongPress      func()
+	OnHover          func(bool)
+	OnFocusChange    func(bool)
+	Style            *ButtonStyle
+	FocusNode        *FocusKey
+	Autofocus        *bool
+	ClipBehavior     *string
+	StatesController *StatesKey
+	Icon             Node
+	Label            Node
+	IconAlignment    *string
 }
 
 // TextField maps TextField of package:flutter/material.dart.
@@ -6039,6 +6375,7 @@ type TextButtonIcon struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type TextField struct {
+	FocusNode                     *FocusKey
 	TextInputAction               *string
 	TextCapitalization            *string
 	Style                         *TextStyle
@@ -6047,6 +6384,7 @@ type TextField struct {
 	ReadOnly                      *bool
 	ShowCursor                    *bool
 	Autofocus                     *bool
+	StatesController              *StatesKey
 	ObscuringCharacter            *string
 	ObscureText                   *bool
 	Autocorrect                   *bool
@@ -6076,6 +6414,7 @@ type TextField struct {
 	OnTap                         func()
 	OnTapAlwaysCalled             *bool
 	MouseCursor                   *string
+	ScrollController              *ScrollKey
 	ScrollPhysics                 *string
 	ClipBehavior                  *string
 	RestorationId                 *string
@@ -6119,6 +6458,7 @@ type TextFieldTapRegion struct {
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type TextFormField struct {
 	InitialValue                  *string
+	FocusNode                     *FocusKey
 	ForceErrorText                *string
 	TextCapitalization            *string
 	TextInputAction               *string
@@ -6157,11 +6497,13 @@ type TextFormField struct {
 	SelectAllOnFocus              *bool
 	ScrollPhysics                 *string
 	AutovalidateMode              *string
+	ScrollController              *ScrollKey
 	RestorationId                 *string
 	EnableIMEPersonalizedLearning *bool
 	MouseCursor                   *string
 	CursorOpacityAnimates         *bool
 	DragStartBehavior             *string
+	StatesController              *StatesKey
 	ClipBehavior                  *string
 	ScribbleEnabled               *bool
 	StylusHandwritingEnabled      *bool
@@ -6235,6 +6577,7 @@ type Tooltip struct {
 	VerticalOffset       *float64
 	PreferBelow          *bool
 	ExcludeFromSemantics *bool
+	Decoration           *Decoration
 	TextStyle            *TextStyle
 	TextAlign            *string
 	WaitDuration         *int
@@ -6340,13 +6683,16 @@ type UnmanagedRestorationScope struct {
 
 // UserAccountsDrawerHeader maps UserAccountsDrawerHeader of package:flutter/material.dart.
 type UserAccountsDrawerHeader struct {
-	Margin                *Insets
-	CurrentAccountPicture Node
-	OtherAccountsPictures []Node
-	AccountName           Node
-	AccountEmail          Node
-	OnDetailsPressed      func()
-	ArrowColor            *Color
+	Decoration                *Decoration
+	Margin                    *Insets
+	CurrentAccountPicture     Node
+	OtherAccountsPictures     []Node
+	CurrentAccountPictureSize *Size
+	OtherAccountsPicturesSize *Size
+	AccountName               Node
+	AccountEmail              Node
+	OnDetailsPressed          func()
+	ArrowColor                *Color
 }
 
 // VerticalDivider maps VerticalDivider of package:flutter/material.dart.
@@ -6581,6 +6927,8 @@ func (CupertinoTimerPicker) isNode()                           {}
 func (CupertinoUserInterfaceLevel) isNode()                    {}
 func (CustomPaint) isNode()                                    {}
 func (CustomScrollView) isNode()                               {}
+func (DecoratedBox) isNode()                                   {}
+func (DecoratedSliver) isNode()                                {}
 func (DefaultSelectionStyle) isNode()                          {}
 func (DefaultTabController) isNode()                           {}
 func (DefaultTextEditingShortcuts) isNode()                    {}
@@ -6616,6 +6964,7 @@ func (Expanded) isNode()                                       {}
 func (ExpansionPanelList) isNode()                             {}
 func (ExpansionPanelListRadio) isNode()                        {}
 func (ExpansionTile) isNode()                                  {}
+func (FadeInImage) isNode()                                    {}
 func (FadeInImageAssetNetwork) isNode()                        {}
 func (FilledButton) isNode()                                   {}
 func (FilledButtonIcon) isNode()                               {}
@@ -6636,6 +6985,7 @@ func (FlutterLogo) isNode()                                    {}
 func (Focus) isNode()                                          {}
 func (FocusScope) isNode()                                     {}
 func (FocusTraversalGroup) isNode()                            {}
+func (FocusWithExternalFocusNode) isNode()                     {}
 func (FocusableActionDetector) isNode()                        {}
 func (Form) isNode()                                           {}
 func (FractionalTranslation) isNode()                          {}
@@ -6659,12 +7009,15 @@ func (IconButtonOutlined) isNode()                             {}
 func (IconTheme) isNode()                                      {}
 func (IgnoreBaseline) isNode()                                 {}
 func (IgnorePointer) isNode()                                  {}
+func (Image) isNode()                                          {}
 func (ImageAsset) isNode()                                     {}
+func (ImageIcon) isNode()                                      {}
 func (ImageNetwork) isNode()                                   {}
 func (IndexedSemantics) isNode()                               {}
 func (IndexedStack) isNode()                                   {}
 func (InheritedCupertinoTheme) isNode()                        {}
 func (Ink) isNode()                                            {}
+func (InkImage) isNode()                                       {}
 func (InkResponse) isNode()                                    {}
 func (InkWell) isNode()                                        {}
 func (InputChip) isNode()                                      {}
@@ -6673,6 +7026,7 @@ func (InteractiveViewer) isNode()                              {}
 func (IntrinsicHeight) isNode()                                {}
 func (IntrinsicWidth) isNode()                                 {}
 func (KeepAlive) isNode()                                      {}
+func (KeyboardListener) isNode()                               {}
 func (KeyedSubtree) isNode()                                   {}
 func (KeyedSubtreeWrap) isNode()                               {}
 func (LicensePage) isNode()                                    {}
@@ -6734,10 +7088,14 @@ func (PopupMenuItem) isNode()                                  {}
 func (Positioned) isNode()                                     {}
 func (PositionedDirectional) isNode()                          {}
 func (PositionedFill) isNode()                                 {}
+func (PreferredSize) isNode()                                  {}
+func (PrimaryScrollController) isNode()                        {}
 func (PrimaryScrollControllerNone) isNode()                    {}
 func (RawChip) isNode()                                        {}
 func (RawGestureDetector) isNode()                             {}
 func (RawImage) isNode()                                       {}
+func (RawKeyboardListener) isNode()                            {}
+func (RawMagnifier) isNode()                                   {}
 func (RawMaterialButton) isNode()                              {}
 func (RawScrollbar) isNode()                                   {}
 func (RefreshProgressIndicator) isNode()                       {}
@@ -6775,6 +7133,7 @@ func (SizedBoxExpand) isNode()                                 {}
 func (SizedBoxFromSize) isNode()                               {}
 func (SizedBoxShrink) isNode()                                 {}
 func (SizedBoxSquare) isNode()                                 {}
+func (SizedOverflowBox) isNode()                               {}
 func (Slider) isNode()                                         {}
 func (SliderAdaptive) isNode()                                 {}
 func (SliverAnimatedOpacity) isNode()                          {}
