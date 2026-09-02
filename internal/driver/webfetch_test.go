@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eddyw/godart/internal/driver"
 )
@@ -104,6 +105,9 @@ func webFetchRoutes(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i < 100; i++ {
 			w.Write(block)
 		}
+	case "/slow":
+		time.Sleep(2 * time.Second)
+		io.WriteString(w, "late")
 	default:
 		http.NotFound(w, r)
 	}

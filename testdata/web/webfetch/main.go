@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // target names the server of the test. The driver test writes the real
@@ -20,6 +21,7 @@ func main() {
 	post()
 	big()
 	missing()
+	slow()
 }
 
 func get() {
@@ -88,6 +90,20 @@ func big() {
 		}
 	}
 	fmt.Println("big:", total, sum)
+}
+
+// slow proves that the deadline of a client ends a request. The 2 paths name
+// a different cause, thus the program prints no text of the error.
+func slow() {
+	client := &http.Client{Timeout: 200 * time.Millisecond}
+	res, err := client.Get(target + "/slow")
+	if err != nil {
+		fmt.Println("slow: an error")
+		return
+	}
+	defer res.Body.Close()
+	io.Copy(io.Discard, res.Body)
+	fmt.Println("slow:", res.StatusCode)
 }
 
 func missing() {

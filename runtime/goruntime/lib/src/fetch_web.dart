@@ -117,16 +117,19 @@ GoString _timeout() => GoString.fromString('i/o timeout');
 /// blocked request.
 GoString _cause(Object cause) => GoString.fromString(cause.toString());
 
-/// _limit ends a wait at a deadline. A deadline of 0 holds no limit, and a
-/// deadline that passed already gives the expired value at once.
-Future<T> _limit<T>(Future<T> f, int deadline, T expired) {
+/// _limit ends a wait at a deadline and gives null at that end. A deadline of
+/// 0 holds no limit, and a deadline that passed already gives null at once.
+///
+/// The source future takes a then that widens its type. A timeout of a future
+/// of an extension type reads the type of the object itself, thus a plain
+/// widening at the call gives a type error on dart2wasm.
+Future<T?> _limit<T>(Future<T> f, int deadline) {
   if (deadline == 0) return f;
   final int left = deadline - $nowNanos();
-  if (left <= 0) return Future<T>.value(expired);
-  return f.timeout(
-    Duration(microseconds: left ~/ 1000),
-    onTimeout: () => expired,
-  );
+  if (left <= 0) return Future<T?>.value(null);
+  return f
+      .then<T?>((T value) => value)
+      .timeout(Duration(microseconds: left ~/ 1000), onTimeout: () => null);
 }
 
 /// True when the host holds the fetch API. A host without it reports the same
@@ -221,10 +224,9 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
     signal: stop?.signal,
   );
   $await(
-    _limit<_Response?>(
+    _limit<_Response>(
       _fetch(url.toDartString(), init).toDart,
       deadline,
-      null,
     ).then((_Response? r) async {
       if (r == null) {
         stop?.abort();
@@ -249,9 +251,7 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
   final _Reader? reader = b.reader;
   if (b.ended || reader == null) return (0, _empty);
   $await(
-    _limit<_Chunk?>(reader.read().toDart, b.deadline, null).then((
-      _Chunk? chunk,
-    ) {
+    _limit<_Chunk>(reader.read().toDart, b.deadline).then((_Chunk? chunk) {
       if (chunk == null) {
         b.stop?.abort();
         return ($gi(0), _timeout());
