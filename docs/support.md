@@ -43,13 +43,13 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-85 of the 97 standard packages hold each exported name of Go.
+84 of the 97 standard packages hold each exported name of Go.
 
 | Form | Packages |
 |---|---|
 | Native, 42 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/xml`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `html`, `html/template`, `io`, `io/fs`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
 | Patch, 15 | `archive/tar`, `bytes`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
-| Overlay, 28 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `embed`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
+| Overlay, 27 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `embed`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.
@@ -59,11 +59,12 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 
 ## Partial support
 
-12 packages hold a part of the names of Go. The run of 2026-09-03:
+13 packages hold a part of the names of Go. The run of 2026-09-03:
 
 | Package | Names | Held | The largest gap |
 |---|---|---|---|
 | `sync/atomic` | 90/94 | 95% | The 4 `unsafe.Pointer` functions. `Pointer[T]` holds the same use. |
+| `crypto/rand` | 3/5 | 60% | `Int` and `Prime`. The 2 read `math/big`, and `docs/parity.md` holds the cause. |
 | `net/http/httptest` | 30/31 | 96% | `Server.Certificate`. It gives an x509 certificate. |
 | `os` | 193/207 | 93% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr` |
 | `os/exec` | 43/49 | 87% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, `ExitError.Sys` and its 3 companions |
@@ -175,7 +176,9 @@ The order again follows the value of the work against its cost.
    `syscall.Stat_t` and `os/user`.
 9. **`math/big`.** Done 2026-09-03. A 2 file patch gives the 6 functions of
    `arith_decl.go` the pure Go body that `arith.go` already holds.
-   `crypto/rand.Int` and `crypto/rand.Prime` came with it.
+   `crypto/rand.Int` and `crypto/rand.Prime` stay out, because the 2 would give
+   `math/big` to each program that reads `crypto/tls`. Read the section "The
+   method group of an interface call" of `docs/parity.md`.
 10. **`encoding/xml`.** Done 2026-09-03. It needed 6 reflect names:
     `Type.Bits`, `Type.FieldByIndex`, `Value.Bytes`, `Value.SetBytes`,
     `Value.Grow`, and `Value.SetLen`.

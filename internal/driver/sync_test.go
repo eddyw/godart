@@ -273,3 +273,48 @@ func main() {
 		t.Errorf("the report names a type that carries no directive:\n%v", err)
 	}
 }
+
+// TestSyncAcceptsAnErrorFormatWithHTTP holds the shape that broke the 3 Flutter
+// examples on 2026-09-03. The flow resolves an interface method call to each
+// method of that name and that signature, thus a program that holds 1
+// fmt.Formatter lets fmt.State.Write reach io.PipeWriter.Write, which selects.
+// A build method that only formats an error then reached a rejection.
+//
+// crypto/rand held Int and Prime for a few hours of that day, and the 2 read
+// math/big. Each program that reads crypto/tls thus carried a Formatter, and
+// each Flutter example that reads net/http stopped building. Read the section
+// "The method group of an interface call" of docs/parity.md.
+func TestSyncAcceptsAnErrorFormatWithHTTP(t *testing.T) {
+	err := buildSync(t, `package main
+
+import (
+	"errors"
+	"fmt"
+	"net/http"
+)
+
+//gart:sync
+type Builder func() string
+
+type Node struct {
+	Build Builder
+}
+
+var failure = errors.New("the call failed")
+
+func text() string {
+	if err := failure; err != nil {
+		return "error: " + err.Error()
+	}
+	return fmt.Sprintf("%v", http.StatusOK)
+}
+
+func main() {
+	n := Node{Build: text}
+	println(n.Build())
+}
+`)
+	if err != nil {
+		t.Fatalf("the build rejected a function that only formats an error:\n%v", err)
+	}
+}

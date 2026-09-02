@@ -319,8 +319,39 @@ reaches no array here.
 
 ### crypto/rand
 
-`Int` and `Prime` read the secure source and they ignore the reader that the
-caller names. Go 1.26 and later do the same, thus the 2 agree.
+`Int` and `Prime` stay out, and the cause is the section below and not
+`math/big`. The 2 read `math/big`, thus each program that reads `crypto/tls`
+would carry that package. `crypto/rand` thus holds 3 of the 5 names of Go.
+
+A program that wants a big random number imports `math/big` itself and writes
+the 12 lines of `Int`. That program pays the cost below only when it also holds
+a `//gart:sync` position.
+
+## The method group of an interface call
+
+The flow of stage 3 resolves an interface method call to each method of that
+name and that signature in the program. It reads no interface type at the call
+site, thus a method of a type that the interface rejects still joins the group.
+
+1 chain shows the cost. `fmt.Formatter` names `Format(fmt.State, rune)`, and a
+body of it calls `s.Write`. The group of `Write([]byte) (int, error)` holds
+`(*io.PipeWriter).Write`, which runs a `select` and thus blocks. `io.PipeWriter`
+implements no `fmt.State`, and the group takes it anyway.
+
+The effect reaches the `//gart:sync` check alone. A program with 1
+`fmt.Formatter` in it makes each call of `err.Error()` reach that `select`, thus
+a build method that only formats an error takes a rejection. Each of the 3
+Flutter examples that read `net/http` hit this on 2026-09-03, for the few hours
+that `crypto/rand` carried `Int`.
+
+`TestSyncAcceptsAnErrorFormatWithHTTP` of `internal/driver/sync_test.go` holds
+the shape, thus the fault cannot return without a report.
+
+**The fix.** The group needs the interface type of the call site as part of its
+key, and a concrete method joins only a group whose interface its receiver
+implements. The check stays sound, because a dynamic dispatch through an
+interface reaches no type outside that interface. The work is a change of
+`methodCell` and of the wiring in `internal/analyze/flow.go`, and it is open.
 
 ### crypto/tls
 
