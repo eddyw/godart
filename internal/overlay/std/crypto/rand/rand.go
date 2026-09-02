@@ -5,12 +5,12 @@
 // The bytes come from Random.secure of Dart. That source reads the generator of
 // the operating system, and the web build reads window.crypto.
 //
-// Go also holds Int and Prime. The 2 read the package math/big, and that
-// package stands outside the surface. docs/parity.md holds that gap.
 package rand
 
 import (
+	"errors"
 	"io"
+	"math/big"
 	"syscall/dart"
 )
 
@@ -42,4 +42,89 @@ func Text() string {
 		src[i] = base32alphabet[src[i]%32]
 	}
 	return string(src)
+}
+
+// Prime gives a number of the named bit count that is prime with a high
+// probability.
+//
+// Go 1.26 and later read the secure source and ignore r, thus this function
+// ignores r too.
+func Prime(r io.Reader, bits int) (*big.Int, error) {
+	if bits < 2 {
+		return nil, errors.New("crypto/rand: prime size must be at least 2-bit")
+	}
+
+	b := uint(bits % 8)
+	if b == 0 {
+		b = 8
+	}
+
+	bytes := make([]byte, (bits+7)/8)
+	p := new(big.Int)
+
+	for {
+		if _, err := io.ReadFull(Reader, bytes); err != nil {
+			return nil, err
+		}
+
+		// The clear of the first byte holds the candidate at the named size,
+		// and the set of the top 2 bits holds it above half of that size. The
+		// product of 2 such values thus never falls 1 bit short.
+		bytes[0] &= uint8(int(1<<b) - 1)
+		if b >= 2 {
+			bytes[0] |= 3 << (b - 2)
+		} else {
+			bytes[0] |= 1
+			if len(bytes) > 1 {
+				bytes[1] |= 0x80
+			}
+		}
+		// An even number of this size is never prime.
+		bytes[len(bytes)-1] |= 1
+
+		p.SetBytes(bytes)
+		if p.ProbablyPrime(20) {
+			return p, nil
+		}
+	}
+}
+
+// Int gives a uniform random value in the range 0 to max, and it holds max
+// outside that range. It panics when max is 0 or less.
+//
+// Go 1.26 and later read the secure source and ignore rand, thus this function
+// ignores rand too.
+func Int(rand io.Reader, max *big.Int) (n *big.Int, err error) {
+	if max.Sign() <= 0 {
+		panic("crypto/rand: argument to Int is <= 0")
+	}
+	n = new(big.Int)
+	n.Sub(max, n.SetUint64(1))
+	bitLen := n.BitLen()
+	if bitLen == 0 {
+		return
+	}
+	k := (bitLen + 7) / 8
+	b := uint(bitLen % 8)
+	if b == 0 {
+		b = 8
+	}
+
+	bytes := make([]byte, k)
+
+	for {
+		_, err = io.ReadFull(Reader, bytes)
+		if err != nil {
+			return nil, err
+		}
+
+		// The clear of the first byte raises the probability that the
+		// candidate falls below max, thus the loop repeats less often.
+		bytes[0] &= uint8(int(1<<b) - 1)
+
+		n.SetBytes(bytes)
+		if n.Cmp(max) < 0 {
+			return
+		}
+	}
 }

@@ -87,6 +87,8 @@ type Type interface {
 	NumField() int
 	Field(i int) StructField
 	FieldByName(name string) (StructField, bool)
+	FieldByIndex(index []int) StructField
+	Bits() int
 	NumIn() int
 	In(i int) Type
 	NumOut() int
@@ -1181,3 +1183,113 @@ func (v Value) Seq2() iter.Seq2[Value, Value] {
 
 // intDesc gives the handle of the type int.
 func intDesc() int { return TypeOf(0).handle() }
+
+// Bits gives the count of bits of a sized arithmetic type. Each other type
+// panics, exactly as in Go.
+//
+// An int, a uint, and a uintptr each hold 64 bits, because a Dart int holds 64
+// bits on the VM and with AOT.
+func (t *rtype) Bits() int {
+	switch t.Kind() {
+	case Int8, Uint8:
+		return 8
+	case Int16, Uint16:
+		return 16
+	case Int32, Uint32, Float32:
+		return 32
+	case Int, Int64, Uint, Uint64, Uintptr, Float64, Complex64:
+		return 64
+	case Complex128:
+		return 128
+	}
+	panic("reflect: Bits of non-arithmetic Type " + t.String())
+}
+
+// FieldByIndex gives the nested field that each index of the list names. An
+// index that names a pointer to a struct reads the type behind the pointer.
+func (t *rtype) FieldByIndex(index []int) StructField {
+	if len(index) == 0 {
+		panic("reflect: FieldByIndex of an empty index")
+	}
+	var f StructField
+	typ := Type(t)
+	for i, x := range index {
+		if i > 0 {
+			if typ.Kind() == Pointer && typ.Elem().Kind() == Struct {
+				typ = typ.Elem()
+			}
+		}
+		f = typ.Field(x)
+		typ = f.Type
+	}
+	f.Index = index
+	return f
+}
+
+// Bytes gives the byte slice that v holds.
+//
+// The result reads the same object that v holds, thus a write through it
+// reaches v. A value of an array of bytes needs an address, exactly as in Go.
+func (v Value) Bytes() []byte {
+	switch v.Kind() {
+	case Slice:
+		if v.Type().Elem().Kind() != Uint8 {
+			panic("reflect.Value.Bytes of " + v.Type().String())
+		}
+		return v.Interface().([]byte)
+	case Array:
+		if v.Type().Elem().Kind() != Uint8 {
+			panic("reflect.Value.Bytes of " + v.Type().String())
+		}
+		out := make([]byte, v.Len())
+		for i := range out {
+			out[i] = byte(v.Index(i).Uint())
+		}
+		return out
+	}
+	panic("reflect.Value.Bytes of " + v.Type().String())
+}
+
+// SetBytes writes a byte slice into the location that v names.
+func (v Value) SetBytes(x []byte) {
+	if v.Kind() != Slice || v.Type().Elem().Kind() != Uint8 {
+		panic("reflect.Value.SetBytes of " + v.Type().String())
+	}
+	v.Set(ValueOf(x))
+}
+
+// SetLen writes the length of the slice that v names. The capacity holds, and
+// the elements between the 2 lengths keep their values.
+func (v Value) SetLen(n int) {
+	if v.Kind() != Slice {
+		panic("reflect: SetLen of " + v.Type().String())
+	}
+	if n < 0 || n > v.Cap() {
+		panic("reflect: SetLen: slice length out of range")
+	}
+	v.Set(v.Slice3(0, n, v.Cap()))
+}
+
+// Grow raises the capacity of the slice that v names, thus n more elements fit
+// with no further allocation. The length holds.
+func (v Value) Grow(n int) {
+	if v.Kind() != Slice {
+		panic("reflect: Grow of " + v.Type().String())
+	}
+	if n < 0 {
+		panic("reflect.Value.Grow: negative len")
+	}
+	length := v.Len()
+	if length+n <= v.Cap() {
+		return
+	}
+	// Go raises the capacity by more than the request, thus a loop of single
+	// steps stays linear.
+	capacity := v.Cap()*2 + n
+	if capacity < length+n {
+		capacity = length + n
+	}
+	grown := MakeSlice(v.Type(), length, capacity)
+	Copy(grown, v)
+	v.Set(grown)
+}

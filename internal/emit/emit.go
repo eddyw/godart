@@ -158,7 +158,8 @@ type emitter struct {
 	inits []*ir.Func
 	// mainFunc holds the entry function of package main.
 	mainFunc *ir.Func
-	// initNames gives each init function a name that is unique in the package.
+	// initNames gives a name to each function that holds no usable name of its
+	// own: an init function, and a function that carries the blank name.
 	initNames map[*ir.Func]string
 	// breakables holds the label of each construct that a break statement can
 	// leave. An empty label marks a loop, and a loop needs no label.
@@ -473,6 +474,12 @@ func (e *emitter) groupMethods(p *ir.Package) {
 				case d.Name == "init":
 					e.initNames[d] = fmt.Sprintf("_init$%d", len(e.inits))
 					e.inits = append(e.inits, d)
+				case d.Name == "_":
+					// A package may hold many functions of the blank name, and
+					// stringer writes 1 for each type that it generates. Go
+					// calls none of them, thus each 1 takes a name of its own
+					// to keep the names of the Dart output distinct.
+					e.initNames[d] = fmt.Sprintf("_blank$%d", len(e.initNames))
 				case d.Name == "main" && p.Name == "main":
 					e.mainFunc = d
 				}
