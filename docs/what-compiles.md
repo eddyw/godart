@@ -11,11 +11,11 @@ of a program that imports the package. The import surface holds the run of
 
 ## The import surface
 
-The surface holds 113 import paths: 99 standard packages, the interop package
-`syscall/dart`, and 13 internal packages that the 99 need. Stage 2 rejects an
+The surface holds 99 import paths: 86 standard packages, the interop package
+`syscall/dart`, and 12 internal packages that the 86 need. Stage 2 rejects an
 import of each other package with a source position.
 
-86 of the 99 hold each exported name of Go, and 14 hold a part of them.
+72 of the 86 hold each exported name of Go, and 14 hold a part of them.
 `docs/support.md` holds the level of each one and the largest gap of each
 partial package. `make surface` measures each one again.
 

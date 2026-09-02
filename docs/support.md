@@ -22,10 +22,13 @@ The ratio counts names, and not use. `net` holds 346 names, because the address
 types and the resolver hold most of them, and a program that dials and listens
 reads 26. Read the gap column, and not the percent alone.
 
-The surface holds 95 import paths: 84 standard packages, the interop package
-`syscall/dart`, and 10 internal packages that the 84 need. The measure skips
+The surface holds 99 import paths: 86 standard packages, the interop package
+`syscall/dart`, and 12 internal packages that the 86 need. The measure skips
 the interop package and each internal package, because no package of Go stands
 behind them.
+
+A native package that also holds a patch stands 2 times in the list of the
+surface, thus the measure removes each repeat first.
 
 ## The 3 forms
 
@@ -40,13 +43,13 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-86 packages hold each exported name of Go.
+72 of the 86 standard packages hold each exported name of Go.
 
 | Form | Packages |
 |---|---|
-| Native, 38 | `bufio`, `cmp`, `compress/flate`, `compress/gzip`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `io`, `io/fs`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
+| Native, 35 | `bufio`, `cmp`, `compress/flate`, `compress/gzip`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `io`, `io/fs`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
 | Patch, 13 | `bytes`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
-| Overlay, 23 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strings`, `sync`, `testing/quick`, `time`, `unicode/utf8`, `unique` |
+| Overlay, 24 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.

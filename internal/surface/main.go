@@ -71,8 +71,8 @@ func main() {
 		}
 		fmt.Println()
 	}
-	fmt.Printf("\n%d packages hold each exported name, and %d hold a part.\n",
-		whole, partial)
+	fmt.Printf("\n%d packages of %d hold each exported name, and %d hold a part.\n",
+		whole, len(paths), partial)
 }
 
 func first(list []string, n int) []string {
@@ -86,12 +86,16 @@ func first(list []string, n int) []string {
 // from the real Go source. The interop package and each internal package have
 // no counterpart to compare.
 func surfacePaths() []string {
+	// A native package that also holds a patch stands 2 times in the surface,
+	// because Surface joins the overlay list and the native list.
+	seen := map[string]bool{}
 	var out []string
 	for _, p := range overlay.Surface() {
-		if overlay.Intrinsic(p) || strings.HasPrefix(p, "internal/") ||
-			strings.Contains(p, "/internal/") {
+		if seen[p] || overlay.Intrinsic(p) || strings.HasPrefix(p, "internal/") ||
+			strings.Contains(p, "/internal") {
 			continue
 		}
+		seen[p] = true
 		out = append(out, p)
 	}
 	sort.Strings(out)
