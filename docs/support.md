@@ -192,6 +192,9 @@ The order again follows the value of the work against its cost.
     exported name, and `reflect.Kind` became an integer for it.
 14. **`net` and `net/http`.** Done 2026-09-03. `TCPConn`, `DialTCP`,
     `ListenConfig`, `Protocols`, `ResponseController`, and `Hijacker`.
+15. **An HTTP client over `fetch` for the web target.** Done 2026-09-03.
+    `net/http` reaches a real server on the web, and `runtime.GOOS` picks the
+    path at run time. Read decision 252.
 
 **The list of 2026-09-02 is closed. The 4 items below opened on 2026-09-03,
 and each 1 is a gap of the reflect subset or of stage 5.**

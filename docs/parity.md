@@ -34,7 +34,7 @@ The state of 2026-09-03. Each row names the section that holds the detail.
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
 | A stack trace | The module form of each file, with no offset. |
 | The garbage collector | `runtime.GC` gives up control only, and a cleanup follows the collector of Dart. |
-| The web target | `dart compile js` and `dart compile wasm` each build any program. A file or a socket operation gives the error that Go gives under `GOOS=js`. |
+| The web target | `dart compile js` and `dart compile wasm` each build any program. `net/http` reaches a server through the fetch API. A file or a socket operation gives the error that Go gives under `GOOS=js`. |
 
 ## The receiver of a method
 
@@ -778,6 +778,14 @@ unsupported operation gives the cause of Go under `GOOS=js`. Read decision
 251. `TestWebIO` of the driver runs the program of `testdata/web/webio` under
 the 2 web compilers, and it reads the exact text of each cause.
 
+A web program also reaches a real server since 2026-09-03. `net/http` takes
+the fetch API of the host when `runtime.GOOS` gives `js`, and the body of an
+answer rides the `ReadableStream` of that API. Read decision 252.
+`TestWebFetch` of the driver runs the program of `testdata/web/webfetch`
+against a real server with the go command and with the 2 web compilers, and
+the 3 outputs are equal. A socket and a server stay out of reach, because a
+browser holds neither.
+
 | Item | Go | godart |
 |---|---|---|
 | A pure program on wasm | Compiles with GOOS=js GOARCH=wasm | Compiles with `dart compile wasm`. The 64-bit integer model holds. |
@@ -792,7 +800,13 @@ the 2 web compilers, and it reads the exact text of each cause.
 | `runtime.GOOS` on the web | `js` | Equal |
 | `print` and `fmt` on the web | Standard output and standard error | The console of the host, 1 line for each call, thus a write without a newline waits in a buffer |
 | `os.Exit` on the web | Ends the process | Throws an error of the host, thus a status outside 0 ends node with a failure |
-| An HTTP request from a browser | `fetch` through the js syscall layer | Not present. A web build reports `operation not supported`, and a client over `fetch` stays open. |
+| An HTTP request from a browser | `fetch`, through the js syscall layer | Equal. `net/http` takes the fetch API when `runtime.GOOS` gives `js`. |
+| `CheckRedirect` of a `Client` on the web | Never runs, because the host follows the redirect | Equal |
+| `Response.Proto` on the web | Empty, because the host picks the protocol | Equal |
+| A gzip answer on the web | The host decodes it, and `Uncompressed` marks it | Equal |
+| Each field of `Transport` on the web | Without effect, because the host owns the connection | Equal. The deadline of the request is the exception. |
+| A TCP or a UDP socket in a browser | Not present | Equal |
+| An HTTP server in a browser | Not present | Equal |
 
 ## The network access
 

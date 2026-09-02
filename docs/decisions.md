@@ -1418,6 +1418,50 @@ The plan left these points open. The work took the decisions below.
      `testdata/web/webio` under `dart compile js` and under
      `dart compile wasm`, and it reads the exact text of each cause.
 
+252. `net/http` reaches the network through the fetch API on the web target,
+     and `runtime.GOOS` names the target at run time.
+
+     A browser holds no socket, thus decision 251 left each dial with the
+     cause `operation not supported` and the web target reached no server.
+     Go answers the same question with a build tag, and 1 build of the Go code
+     here serves each target, thus the branch stands at run time. The value of
+     `GOOS` is `js` on the web, exactly as in Go.
+
+     3 shims carry the path. `FetchStart` sends the request and waits for the
+     head of the answer. `FetchRead` takes 1 chunk of the `ReadableStream` of
+     the body, thus the program holds no whole body in memory. `FetchClose`
+     cancels the reader. `fetch_web.dart` holds the real form, and
+     `fetch.dart` gives the cause of decision 251 on the Dart VM, because the
+     compiler emits the call of each shim for both targets.
+
+     The host owns 3 answers that the socket path owns in Go. The host follows
+     a redirect, thus `CheckRedirect` of a `Client` never runs. The host
+     decodes the gzip form, thus the transport only drops the field
+     `Content-Encoding` and marks `Uncompressed`. The host also picks the
+     protocol, thus `Proto` is empty and `ProtoMajor` is 0. Go gives the same
+     3 answers under `GOOS=js`.
+
+     Each field of `Transport` stays without effect on this path, because the
+     host owns the connection. The deadline of the request is the exception,
+     and an `AbortController` ends the fetch at that deadline.
+
+     A blocking shim must put the Go form of an integer into the frame of the
+     wait. The compiler wraps the direct result of a shim, and the frame
+     answer skips that wrapper. The 2 forms are equal on each target except
+     dart2js, where `GoInt` is a class of its own. No web shim blocked before
+     this change. The note stands next to `$await` of `sched.dart`.
+
+     `TestWebFetch` of `internal/driver/webfetch_test.go` runs the program of
+     `testdata/web/webfetch` against a real server 3 times: with the go
+     command, with the dart2js build, and with the dart2wasm build. The 3
+     outputs are equal. The program reads a status, a header, a body, a
+     request header, a request body, a body of 100000 bytes through a buffer
+     of 512 bytes, a 404, and a deadline.
+
+     dart2js schedules a microtask through `self`, which a browser and a
+     worker each hold and node does not. `runNodeJS` of
+     `internal/driver/e2e_test.go` writes that 1 line in front of the build.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a
