@@ -703,12 +703,48 @@ Pros:
 Cons:
 
 - The host holds a second tree, thus the memory cost doubles.
-- A Go struct has value semantics, and a box into an interface copies it at
-  `internal/emit/iface.go:236`. Thus the diff cannot compare 2 nodes by
-  identity, and it must compare each field.
-- The measurement of A5 gives 2.89 microseconds for 200 nodes, thus the diff
-  saves little at that size. The gain needs a measurement, and it is
-  unverified.
+- A build allocates a fresh node object for each node, thus `identical(old,
+  new)` is false between 2 frames even when each field matches. No identity
+  test can stop the walk, and the diff must compare each field.
+
+  The earlier text named a copy of a box at `internal/emit/iface.go:236` as the
+  cause. 2 parts of that are wrong. `box` stands at `internal/emit/iface.go:791`,
+  and `:236` writes the descriptor of a map. The rule is also the opposite: a
+  composite literal takes no copy, and the comment of that function names a
+  widget tree as exactly the case that it holds at 1 object for each node.
+- **Measured 2026-09-03. A10 loses in each case, and it has no case left.**
+  `flutter/bench` holds the reconciler and the harness. Each number is a median
+  of 120 batches at 200 nodes with a text of 20 characters.
+
+  | Case | Microseconds | Against A5 |
+  |---|---|---|
+  | A5, the whole frame | 49.3 | 1.00 |
+  | A10, nothing changed | 89.6 | 1.82 |
+  | A10, 1 leaf changed | 89.6 | 1.82 |
+  | A10, each leaf changed | 60.1 | 1.22 |
+  | 1 boundary of the signal graph | 0.588 | 0.012 |
+
+  The order of those rows is the answer. A10 costs the most when nothing
+  changed, which is the case that it exists for, and the least when everything
+  changed, because the first field that differs ends the compare. A5 reads 13
+  fields of 1 tree for each node, and A10 reads 13 fields of 2 trees before it
+  decides anything.
+
+  The signal graph settles it. A `ui.Watch` rebuilds 1 boundary in 0.588
+  microseconds at any tree size, and the floor of A10 is 88.2. A10 answers the
+  same question 150 times more expensively, and it answers it in Dart after Go
+  rebuilt the whole tree. The signal graph answers it in Go before the tree
+  exists.
+
+  A10 would need the Flutter work that it skips for each unchanged node to
+  exceed 202 nanoseconds, which is its own cost for each node. That number
+  needs a Flutter harness, and it stays open.
+
+  The generated `==` cannot serve as the compare. It reads each pointer field
+  with `identical`, which is correct for Go, and a build allocates a fresh
+  pointer for each optional field that it sets. `ui.P("center")` thus reports a
+  change that nobody can see, and a fresh closure makes each button report one.
+  `flutter/bench/dart/bin/check.dart` proves it over 100 leaves.
 
 ### A11: An immediate mode user interface
 
@@ -1196,7 +1232,6 @@ holds the current position of each cited item.
 
 Each claim below stands in this file with no measurement behind it.
 
-- The gain of the Dart reconciler of A10 over the plain walk of A5.
 - The cost of a per-frame update of A9 at 60 hertz. The package publishes no
   benchmark.
 

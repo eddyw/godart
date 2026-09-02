@@ -1329,6 +1329,31 @@ The plan left these points open. The work took the decisions below.
      10% of a frame, and Flutter lays out no such screen. `flutter/bench` holds
      the harness, and `flutter/bench/report.md` holds each number.
 
+249. The Dart reconciler of A10 stays out, and the plain walk of A5 with the
+     signal graph stands. A10 is 1.82 times the cost of A5 in the case that it
+     exists for, and 150 times the cost of the signal graph.
+
+     A build allocates a fresh node object for each node, thus no identity test
+     can stop the walk and the diff must read each field. A5 reads 13 fields of
+     1 tree for each node, and A10 reads 13 fields of 2 trees before it decides
+     anything. The cost order proves it: A10 costs the most when nothing
+     changed, and the least when everything changed, because the first field
+     that differs ends the compare.
+
+     A `ui.Watch` rebuilds 1 boundary in 0.588 microseconds at any tree size,
+     and the floor of A10 is 88.2 microseconds at 200 nodes. The signal graph
+     answers the same question in Go before the tree exists, and A10 answers it
+     in Dart after Go rebuilt the whole tree.
+
+     The generated `==` is no shortcut. It reads each pointer field with
+     `identical`, which is correct for Go, and a build allocates a fresh
+     pointer for each optional field. Each such field thus reports a change
+     that nobody can see, and a fresh closure makes each button report one.
+
+     1 condition stays open: A10 earns its cost only when the Flutter work that
+     it skips for each unchanged node exceeds 202 nanoseconds. That number
+     needs a Flutter harness, and `flutter/bench` holds none.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a
