@@ -50,6 +50,12 @@ Evidence: `internal/emit/call.go:46`, `docs/what-compiles.md`. Cost: medium.
 each widget call, and Go names no Dart symbol. Take this item only for an
 approach that makes a Go type a Dart widget class.
 
+**The tool chain, measured 2026-09-02.** `go build` rejects a bodyless
+declaration with `missing function body`. `go vet` accepts it, and `gopls`
+reports nothing. A control file with a type error gives a gopls diagnostic,
+thus the probe stands. The editor thus costs this item nothing, and a module
+that carries such a declaration needs a twin file behind a build tag.
+
 ### 2. An opaque Dart handle in Go &mdash; not needed for A13
 
 A widget, a controller, and a `BuildContext` must live in a Go value. 5

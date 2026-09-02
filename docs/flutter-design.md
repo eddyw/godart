@@ -1187,5 +1187,17 @@ Each claim below stands in this file with no measurement behind it.
 - The gain of the Dart reconciler of A10 over the plain walk of A5.
 - The cost of a per-frame update of A9 at 60 hertz. The package publishes no
   benchmark.
-- The exact behavior of `gopls` for a bodyless Go declaration. `go build` and
-  `go vet` each reject it, and the editor reads the same tool chain.
+
+**A bodyless Go declaration, measured 2026-09-02.** The earlier text said that
+`go build` and `go vet` each reject such a declaration, and that the editor
+reads the same tool chain. 2 of the 3 parts are false.
+
+| Tool | Result |
+|---|---|
+| `go build ./...` | Rejects. `missing function body`, exit 1. |
+| `go vet ./...` | Accepts. No diagnostic, exit 0. |
+| `gopls check` | Accepts. No diagnostic. A control file with a type error gives the diagnostic, thus the probe stands. |
+
+The editor thus stays quiet for item 1 of `docs/flutter-first.md`, and only
+`go build` names the declaration. A module that carries 1 still needs a twin
+file behind a build tag, for the same cause that `dart.Object` needs 1.

@@ -6,6 +6,7 @@ package strconv
 import (
 	"errors"
 	"syscall/dart"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -27,14 +28,10 @@ type NumError struct {
 }
 
 func (e *NumError) Error() string {
-	return "strconv." + e.Func + ": parsing " + quote(e.Num) + ": " + e.Err.Error()
+	return "strconv." + e.Func + ": parsing " + Quote(e.Num) + ": " + e.Err.Error()
 }
 
 func (e *NumError) Unwrap() error { return e.Err }
-
-func quote(s string) string {
-	return dart.Format("q", s)
-}
 
 // Itoa gives the decimal text of i.
 func Itoa(i int) string {
@@ -84,11 +81,6 @@ func AppendBool(dst []byte, b bool) []byte {
 // AppendFloat adds the text of f to dst.
 func AppendFloat(dst []byte, f float64, verb byte, precision, bitSize int) []byte {
 	return append(dst, FormatFloat(f, verb, precision, bitSize)...)
-}
-
-// AppendQuote adds the quoted form of s to dst.
-func AppendQuote(dst []byte, s string) []byte {
-	return append(dst, Quote(s)...)
 }
 
 // FormatBool gives "true" or "false".
@@ -278,9 +270,432 @@ func ParseFloat(text string, bitSize int) (float64, error) {
 	return v, nil
 }
 
-// Quote gives the Go text of s inside double quotes.
-func Quote(s string) string {
-	return dart.Format("q", s)
+// ParseComplex reads a complex value from text. The bit size is 64 for a
+// complex64 or 128 for a complex128, and the 2 parts take the size of half.
+//
+// The text holds the form N, Ni, or N±Ni, and a pair of parentheses may wrap
+// it. A space anywhere makes the text invalid.
+func ParseComplex(text string, bitSize int) (complex128, error) {
+	c, err := parseComplex(text, bitSize)
+	if err != nil {
+		return c, &NumError{Func: "ParseComplex", Num: text, Err: err}
+	}
+	return c, nil
+}
+
+func parseComplex(text string, bitSize int) (complex128, error) {
+	size := 64
+	if bitSize == 64 {
+		size = 32
+	}
+	s := text
+	if len(s) >= 2 && s[0] == '(' && s[len(s)-1] == ')' {
+		s = s[1 : len(s)-1]
+	}
+
+	// A part outside the range gives an infinity and a pending error. The other
+	// part still reads, thus a bad pair reports the first cause only.
+	var pending error
+	re, n, err := parseFloatPrefix(s, size)
+	if err != nil {
+		if err != ErrRange {
+			return 0, err
+		}
+		pending = err
+	}
+	s = s[n:]
+	if len(s) == 0 {
+		return complex(re, 0), pending
+	}
+
+	switch s[0] {
+	case '+':
+		// A single plus belongs to the imaginary part, thus "1+NaNi" reads. A
+		// double plus stays, because it keeps the error of the syntax.
+		if len(s) > 1 && s[1] != '+' {
+			s = s[1:]
+		}
+	case '-':
+	case 'i':
+		if len(s) == 1 {
+			return complex(0, re), pending
+		}
+		return 0, ErrSyntax
+	default:
+		return 0, ErrSyntax
+	}
+
+	im, n, err := parseFloatPrefix(s, size)
+	if err != nil {
+		if err != ErrRange {
+			return 0, err
+		}
+		pending = err
+	}
+	s = s[n:]
+	if s != "i" {
+		return 0, ErrSyntax
+	}
+	return complex(re, im), pending
+}
+
+// FormatComplex gives the text of c in the form (a+bi). The verb and the
+// precision hold the meaning of FormatFloat, and the bit size is 64 for a
+// complex64 or 128 for a complex128.
+func FormatComplex(c complex128, verb byte, precision, bitSize int) string {
+	if bitSize != 64 && bitSize != 128 {
+		panic("invalid bitSize")
+	}
+	size := bitSize >> 1
+	im := FormatFloat(imag(c), verb, precision, size)
+	if im[0] != '+' && im[0] != '-' {
+		im = "+" + im
+	}
+	return "(" + FormatFloat(real(c), verb, precision, size) + im + "i)"
+}
+
+// parseFloatPrefix reads the float at the start of s, and it gives the count of
+// bytes that it takes. ParseComplex needs the count, because the imaginary part
+// follows the real part with no separator.
+func parseFloatPrefix(s string, bitSize int) (float64, int, error) {
+	if f, n, ok := specialFloat(s); ok {
+		return f, n, nil
+	}
+	mantissa, exp, neg, trunc, isHex, n, ok := readFloat(s)
+	if !ok {
+		return 0, n, ErrSyntax
+	}
+	if isHex {
+		f, err := hexFloat(mantissa, exp, neg, trunc, bitSize)
+		return f, n, err
+	}
+	f, err := decimalFloat(s[:n], bitSize)
+	return f, n, err
+}
+
+// specialFloat reads inf, infinity, or NaN at the start of s, in any case of
+// the letters. Go accepts a sign before an infinity only.
+func specialFloat(s string) (float64, int, bool) {
+	if len(s) == 0 {
+		return 0, 0, false
+	}
+	sign := 1
+	signLen := 0
+	first := s[0]
+	if first == '+' || first == '-' {
+		if first == '-' {
+			sign = -1
+		}
+		signLen = 1
+		s = s[1:]
+		first = 'i'
+	}
+	switch first {
+	case 'i', 'I':
+		n := prefixLenLower(s, "infinity")
+		// Anything longer than inf reads, and a text short of infinity takes
+		// the 3 letters of inf only.
+		if 3 < n && n < 8 {
+			n = 3
+		}
+		if n == 3 || n == 8 {
+			if sign < 0 {
+				return dart.Float64FromBits(0xFFF0000000000000), signLen + n, true
+			}
+			return dart.Float64FromBits(0x7FF0000000000000), signLen + n, true
+		}
+	case 'n', 'N':
+		if prefixLenLower(s, "nan") == 3 {
+			return dart.Float64FromBits(0x7FF8000000000001), 3, true
+		}
+	}
+	return 0, 0, false
+}
+
+// prefixLenLower gives the length of the common prefix of s and a lower case
+// text, and it ignores the case of s.
+func prefixLenLower(s, prefix string) int {
+	n := len(prefix)
+	if len(s) < n {
+		n = len(s)
+	}
+	for i := 0; i < n; i++ {
+		if lower(s[i]) != prefix[i] {
+			return i
+		}
+	}
+	return n
+}
+
+func lower(c byte) byte {
+	return c | ('x' - 'X')
+}
+
+// readFloat scans a decimal or a hexadecimal float at the start of s. It gives
+// the mantissa, the decimal or the binary exponent, the sign, a flag for a
+// digit that the mantissa drops, a flag for the hexadecimal form, the count of
+// bytes that it reads, and a flag for a valid number.
+func readFloat(s string) (mantissa uint64, exp int, neg, trunc, isHex bool, i int, ok bool) {
+	underscores := false
+	if i >= len(s) {
+		return
+	}
+	if s[i] == '+' {
+		i++
+	} else if s[i] == '-' {
+		i++
+		neg = true
+	}
+
+	base := uint64(10)
+	maxMantDigits := 19
+	expChar := byte('e')
+	if i+2 < len(s) && s[i] == '0' && lower(s[i+1]) == 'x' {
+		base = 16
+		maxMantDigits = 16
+		i += 2
+		expChar = 'p'
+		isHex = true
+	}
+	sawdot := false
+	sawdigits := false
+	nd := 0
+	ndMant := 0
+	dp := 0
+	for i < len(s) {
+		c := s[i]
+		if c == '_' {
+			underscores = true
+			i++
+			continue
+		}
+		// A second point ends the number, thus "1.2.3" reads "1.2" only.
+		if c == '.' && !sawdot {
+			sawdot = true
+			dp = nd
+			i++
+			continue
+		}
+		if c >= '0' && c <= '9' {
+			sawdigits = true
+			if c == '0' && nd == 0 {
+				dp--
+				i++
+				continue
+			}
+			nd++
+			if ndMant < maxMantDigits {
+				mantissa *= base
+				mantissa += uint64(c - '0')
+				ndMant++
+			} else if c != '0' {
+				trunc = true
+			}
+			i++
+			continue
+		}
+		if base == 16 && lower(c) >= 'a' && lower(c) <= 'f' {
+			sawdigits = true
+			nd++
+			if ndMant < maxMantDigits {
+				mantissa *= 16
+				mantissa += uint64(lower(c) - 'a' + 10)
+				ndMant++
+			} else {
+				trunc = true
+			}
+			i++
+			continue
+		}
+		break
+	}
+	if !sawdigits {
+		return
+	}
+	if !sawdot {
+		dp = nd
+	}
+	if base == 16 {
+		dp *= 4
+		ndMant *= 4
+	}
+
+	if i < len(s) && lower(s[i]) == expChar {
+		i++
+		if i >= len(s) {
+			return
+		}
+		esign := 1
+		if s[i] == '+' {
+			i++
+		} else if s[i] == '-' {
+			i++
+			esign = -1
+		}
+		if i >= len(s) || s[i] < '0' || s[i] > '9' {
+			return
+		}
+		e := 0
+		for i < len(s) && (s[i] >= '0' && s[i] <= '9' || s[i] == '_') {
+			if s[i] == '_' {
+				underscores = true
+				i++
+				continue
+			}
+			// A huge exponent needs no exact value, because the result is an
+			// infinity or a zero either way.
+			if e < 10000 {
+				e = e*10 + int(s[i]) - '0'
+			}
+			i++
+		}
+		dp += e * esign
+	} else if base == 16 {
+		return
+	}
+
+	if mantissa != 0 {
+		exp = dp - ndMant
+	}
+	if underscores && !underscoreOK(s[:i]) {
+		return
+	}
+	ok = true
+	return
+}
+
+// underscoreOK reports a text where each underscore stands between 2 digits, or
+// between a base prefix and a digit.
+func underscoreOK(s string) bool {
+	// saw holds the class of the last byte: ^ for the start, 0 for a digit or a
+	// base prefix, _ for an underscore, and ! for any other byte.
+	saw := '^'
+	i := 0
+	if len(s) >= 1 && (s[0] == '-' || s[0] == '+') {
+		s = s[1:]
+	}
+	hex := false
+	if len(s) >= 2 && s[0] == '0' &&
+		(lower(s[1]) == 'b' || lower(s[1]) == 'o' || lower(s[1]) == 'x') {
+		i = 2
+		saw = '0'
+		hex = lower(s[1]) == 'x'
+	}
+	for ; i < len(s); i++ {
+		if s[i] >= '0' && s[i] <= '9' || hex && lower(s[i]) >= 'a' && lower(s[i]) <= 'f' {
+			saw = '0'
+			continue
+		}
+		if s[i] == '_' {
+			if saw != '0' {
+				return false
+			}
+			saw = '_'
+			continue
+		}
+		if saw == '_' {
+			return false
+		}
+		saw = '!'
+	}
+	return saw != '_'
+}
+
+// decimalFloat gives the value of a decimal float that readFloat accepts. The
+// bridge of Dart reads no underscore, thus each one goes first.
+func decimalFloat(text string, bitSize int) (float64, error) {
+	clean := text
+	if index(text, '_') >= 0 {
+		buf := make([]byte, 0, len(text))
+		for i := 0; i < len(text); i++ {
+			if text[i] != '_' {
+				buf = append(buf, text[i])
+			}
+		}
+		clean = string(buf)
+	}
+	v, ok := dart.ParseFloat(clean)
+	if !ok {
+		return 0, ErrSyntax
+	}
+	// specialFloat holds the text of an infinity, thus an infinity here comes
+	// from a value above the range of the type.
+	if bitSize == 32 {
+		f := float32(v)
+		if dart.Float32Bits(f)&0x7FFFFFFF == 0x7F800000 {
+			return float64(f), ErrRange
+		}
+		return float64(f), nil
+	}
+	if dart.Float64Bits(v)&0x7FFFFFFFFFFFFFFF == 0x7FF0000000000000 {
+		return v, ErrRange
+	}
+	return v, nil
+}
+
+// hexFloat gives the value of a hexadecimal float from its mantissa and its
+// binary exponent. The steps hold the rounding of Go, thus the last bit agrees.
+func hexFloat(mantissa uint64, exp int, neg, trunc bool, bitSize int) (float64, error) {
+	mantBits := uint(52)
+	expBits := uint(11)
+	bias := -1023
+	if bitSize == 32 {
+		mantBits = 23
+		expBits = 8
+		bias = -127
+	}
+	maxExp := 1<<expBits + bias - 2
+	minExp := bias + 1
+	exp += int(mantBits)
+
+	// The target holds a leading bit, mantBits other bits, and 2 bits for the
+	// rounding. The low bit of the 2 records every bit that the shift drops.
+	for mantissa != 0 && mantissa>>(mantBits+2) == 0 {
+		mantissa <<= 1
+		exp--
+	}
+	if trunc {
+		mantissa |= 1
+	}
+	for mantissa>>(1+mantBits+2) != 0 {
+		mantissa = mantissa>>1 | mantissa&1
+		exp++
+	}
+	for mantissa > 1 && exp < minExp-2 {
+		mantissa = mantissa>>1 | mantissa&1
+		exp++
+	}
+
+	round := mantissa & 3
+	mantissa >>= 2
+	round |= mantissa & 1
+	exp += 2
+	if round == 3 {
+		mantissa++
+		if mantissa == 1<<(1+mantBits) {
+			mantissa >>= 1
+			exp++
+		}
+	}
+	if mantissa>>mantBits == 0 {
+		exp = bias
+	}
+	var err error
+	if exp > maxExp {
+		mantissa = 1 << mantBits
+		exp = maxExp + 1
+		err = ErrRange
+	}
+
+	bits := mantissa & (1<<mantBits - 1)
+	bits |= uint64((exp-bias)&(1<<expBits-1)) << mantBits
+	if neg {
+		bits |= 1 << mantBits << expBits
+	}
+	if bitSize == 32 {
+		return float64(dart.Float32FromBits(uint32(bits))), err
+	}
+	return dart.Float64FromBits(bits), err
 }
 
 // FormatUint gives the text of i in the base.
@@ -317,63 +732,175 @@ func CanBackquote(s string) bool {
 	return true
 }
 
+// lowerhex holds the digits of the base 16 that an escape form takes.
+const lowerhex = "0123456789abcdef"
+
+// Quote gives the Go text of s inside double quotes. A rune outside the set of
+// IsPrint takes an escape form.
+func Quote(s string) string {
+	return quoteWith(s, '"', false, false)
+}
+
+// AppendQuote adds the form of Quote to dst.
+func AppendQuote(dst []byte, s string) []byte {
+	return appendQuotedWith(dst, s, '"', false, false)
+}
+
 // QuoteToASCII gives the Go text of s inside double quotes. Each rune outside
 // the printable range of ASCII takes an escape form.
-//
-// An invalid byte of UTF-8 reaches the escape of the replacement rune. Go
-// writes the byte itself in the \x form.
 func QuoteToASCII(s string) string {
-	out := "\""
-	for _, r := range s {
-		switch r {
-		case '"':
-			out += "\\\""
-		case '\\':
-			out += "\\\\"
-		case '\a':
-			out += "\\a"
-		case '\b':
-			out += "\\b"
-		case '\f':
-			out += "\\f"
-		case '\n':
-			out += "\\n"
-		case '\r':
-			out += "\\r"
-		case '\t':
-			out += "\\t"
-		case '\v':
-			out += "\\v"
-		default:
-			if r >= ' ' && r < 0x7F {
-				out += string(r)
-				continue
-			}
-			out += escape(r)
-		}
-	}
-	return out + "\""
+	return quoteWith(s, '"', true, false)
 }
 
-// escape writes 1 rune in the \x form, the \u form, or the \U form of Go. Go
-// takes the \x form for a control character of ASCII only.
-func escape(r rune) string {
+// AppendQuoteToASCII adds the form of QuoteToASCII to dst.
+func AppendQuoteToASCII(dst []byte, s string) []byte {
+	return appendQuotedWith(dst, s, '"', true, false)
+}
+
+// QuoteToGraphic gives the Go text of s inside double quotes. A graphic rune
+// of Unicode stays, and each other rune takes an escape form.
+func QuoteToGraphic(s string) string {
+	return quoteWith(s, '"', false, true)
+}
+
+// AppendQuoteToGraphic adds the form of QuoteToGraphic to dst.
+func AppendQuoteToGraphic(dst []byte, s string) []byte {
+	return appendQuotedWith(dst, s, '"', false, true)
+}
+
+// QuoteRune gives the Go text of r inside single quotes. An invalid code point
+// takes the value of the replacement rune.
+func QuoteRune(r rune) string {
+	return quoteRuneWith(r, '\'', false, false)
+}
+
+// AppendQuoteRune adds the form of QuoteRune to dst.
+func AppendQuoteRune(dst []byte, r rune) []byte {
+	return appendQuotedRuneWith(dst, r, '\'', false, false)
+}
+
+// QuoteRuneToASCII gives the Go text of r inside single quotes. A rune outside
+// the printable range of ASCII takes an escape form.
+func QuoteRuneToASCII(r rune) string {
+	return quoteRuneWith(r, '\'', true, false)
+}
+
+// AppendQuoteRuneToASCII adds the form of QuoteRuneToASCII to dst.
+func AppendQuoteRuneToASCII(dst []byte, r rune) []byte {
+	return appendQuotedRuneWith(dst, r, '\'', true, false)
+}
+
+// QuoteRuneToGraphic gives the Go text of r inside single quotes. A rune
+// outside the graphic set of Unicode takes an escape form.
+func QuoteRuneToGraphic(r rune) string {
+	return quoteRuneWith(r, '\'', false, true)
+}
+
+// AppendQuoteRuneToGraphic adds the form of QuoteRuneToGraphic to dst.
+func AppendQuoteRuneToGraphic(dst []byte, r rune) []byte {
+	return appendQuotedRuneWith(dst, r, '\'', false, true)
+}
+
+// IsPrint reports a rune that Go defines as printable: a letter, a number, a
+// mark of punctuation, a symbol, and the space of ASCII. The package unicode
+// holds the tables, thus this package needs no copy of them.
+func IsPrint(r rune) bool {
+	return unicode.IsPrint(r)
+}
+
+// IsGraphic reports a rune that Unicode defines as graphic. Such a rune belongs
+// to the category L, M, N, P, S, or Zs.
+func IsGraphic(r rune) bool {
+	return unicode.IsGraphic(r)
+}
+
+// inGraphicList reports a graphic rune that is not printable. Each such rune is
+// a space of Unicode outside ASCII.
+func inGraphicList(r rune) bool {
+	return unicode.IsGraphic(r) && !unicode.IsPrint(r)
+}
+
+func quoteWith(s string, quote byte, asciiOnly, graphicOnly bool) string {
+	return string(appendQuotedWith(make([]byte, 0, 3*len(s)/2), s, quote, asciiOnly, graphicOnly))
+}
+
+func quoteRuneWith(r rune, quote byte, asciiOnly, graphicOnly bool) string {
+	return string(appendQuotedRuneWith(nil, r, quote, asciiOnly, graphicOnly))
+}
+
+// appendQuotedWith adds the quoted form of s to buf. A byte that belongs to no
+// valid rune of UTF-8 keeps its own value in the \x form, thus Unquote gives
+// the bytes of s again.
+func appendQuotedWith(buf []byte, s string, quote byte, asciiOnly, graphicOnly bool) []byte {
+	buf = append(buf, quote)
+	for len(s) > 0 {
+		r, width := utf8.DecodeRuneInString(s)
+		if width == 1 && r == utf8.RuneError {
+			buf = append(buf, '\\', 'x', lowerhex[s[0]>>4], lowerhex[s[0]&0xF])
+		} else {
+			buf = appendEscapedRune(buf, r, quote, asciiOnly, graphicOnly)
+		}
+		s = s[width:]
+	}
+	return append(buf, quote)
+}
+
+func appendQuotedRuneWith(buf []byte, r rune, quote byte, asciiOnly, graphicOnly bool) []byte {
+	buf = append(buf, quote)
+	if !utf8.ValidRune(r) {
+		r = utf8.RuneError
+	}
+	buf = appendEscapedRune(buf, r, quote, asciiOnly, graphicOnly)
+	return append(buf, quote)
+}
+
+func appendEscapedRune(buf []byte, r rune, quote byte, asciiOnly, graphicOnly bool) []byte {
+	if r == rune(quote) || r == '\\' {
+		return append(buf, '\\', byte(r))
+	}
+	if asciiOnly {
+		if r < utf8.RuneSelf && IsPrint(r) {
+			return append(buf, byte(r))
+		}
+	} else if IsPrint(r) || graphicOnly && inGraphicList(r) {
+		return utf8.AppendRune(buf, r)
+	}
+	switch r {
+	case '\a':
+		return append(buf, "\\a"...)
+	case '\b':
+		return append(buf, "\\b"...)
+	case '\f':
+		return append(buf, "\\f"...)
+	case '\n':
+		return append(buf, "\\n"...)
+	case '\r':
+		return append(buf, "\\r"...)
+	case '\t':
+		return append(buf, "\\t"...)
+	case '\v':
+		return append(buf, "\\v"...)
+	}
+	// The order holds the order of Go. A negative rune reaches the \x form
+	// first, thus it keeps the low byte of its value.
 	if r < ' ' || r == 0x7F {
-		return "\\x" + hex(uint64(r), 2)
+		return append(buf, '\\', 'x', lowerhex[byte(r)>>4], lowerhex[byte(r)&0xF])
+	}
+	if !utf8.ValidRune(r) {
+		r = 0xFFFD
 	}
 	if r < 0x10000 {
-		return "\\u" + hex(uint64(r), 4)
+		buf = append(buf, '\\', 'u')
+		for shift := 12; shift >= 0; shift -= 4 {
+			buf = append(buf, lowerhex[int(r>>uint(shift))&0xF])
+		}
+		return buf
 	}
-	return "\\U" + hex(uint64(r), 8)
-}
-
-// hex writes a value in the base 16, with a minimum count of digits.
-func hex(v uint64, width int) string {
-	out := FormatUint(v, 16)
-	for len(out) < width {
-		out = "0" + out
+	buf = append(buf, '\\', 'U')
+	for shift := 28; shift >= 0; shift -= 4 {
+		buf = append(buf, lowerhex[int(r>>uint(shift))&0xF])
 	}
-	return out
+	return buf
 }
 
 func digitValue(c byte) int {
