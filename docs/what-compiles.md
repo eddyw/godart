@@ -85,6 +85,26 @@ Each other construct of the language stays inside the subset:
 - A range loop over a function, and the loop variable of Go 1.22.
 - A conversion of a slice to an array, and a method with a nil pointer receiver.
 
+## The targets
+
+The compiler writes Dart, thus the target is each target of Dart. The table
+holds the state of 2026-09-03.
+
+| Target | State |
+|---|---|
+| The Dart VM, `dart run` | Present. `make run PROG=x` takes this path. |
+| Ahead of time, `dart compile exe` | Present. Each measurement of `docs/flutter-design.md` reads a binary of this form. |
+| macOS, through Flutter | Present. The 3 examples of `flutter/` each build and run. |
+| iOS, through Flutter | Present. `flutter build ios --debug --no-codesign` builds the 3. No plugin stands in the way, thus CocoaPods is not needed. |
+| Android, through Flutter | Present. `flutter build apk --debug` builds the 3. It needs `ANDROID_HOME`, and it does not need the cmdline-tools that `flutter doctor` asks for. |
+| The web | Blocked. `GoInt` holds no constructor under the JS number model, and `$getenv` and `$readFile` of the io shim hold no web form. Read `docs/js-integers.md`. |
+
+`flutter/example/platform.sh` writes the platform runner of an example. git
+holds no such directory, because `flutter test` needs none and each file comes
+from `flutter create`. The script also gives a macOS runner the entitlement
+`com.apple.security.network.client`, and an Android runner
+`android.permission.INTERNET` in the main manifest.
+
 ## The shapes that build
 
 Each program below is a real build of 2026-08-31. The Dart output gives the

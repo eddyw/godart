@@ -1354,6 +1354,25 @@ The plan left these points open. The work took the decisions below.
      it skips for each unchanged node exceeds 202 nanoseconds. That number
      needs a Flutter harness, and `flutter/bench` holds none.
 
+250. `crypto/rand.Int` and `crypto/rand.Prime` stay out, and `math/big` stays
+     in. The 2 names read `math/big`, thus each program that reads
+     `crypto/tls` would carry that package. `math/big` holds a `fmt.Formatter`,
+     and the flow of stage 3 then reaches `(*io.PipeWriter).Write` through the
+     group of `Write([]byte) (int, error)`. A `//gart:sync` position thus
+     rejects a build method that only formats an error, and each of the 3
+     Flutter examples that reads `net/http` stopped building.
+
+     The other choice was to hold `math/big` out of the surface as well. That
+     costs more: a program that wants a big integer imports the package
+     itself, and it pays the cost only when it also holds a `//gart:sync`
+     position. `crypto/rand` gives no such choice, because `crypto/tls` reads
+     it.
+
+     `TestSyncAcceptsAnErrorFormatWithHTTP` of `internal/driver/sync_test.go`
+     holds the shape, thus the fault cannot return without a report. The real
+     fix is a key of the method group that carries the interface type of the
+     call site, and `docs/parity.md` holds it.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a
