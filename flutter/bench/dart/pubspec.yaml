@@ -1,0 +1,13 @@
+name: bench_harness
+description: The Dart harness of the text property measurement of flutter/bench.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  gobench:
+    path: ../gen
+  goruntime:
+    path: ../../../runtime/goruntime
