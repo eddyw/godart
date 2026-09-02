@@ -3,16 +3,17 @@
 This file answers how a Go program that gart compiles drives a Flutter user
 interface. It weighs 13 approaches, and it takes 1 decision.
 
-`docs/flutter-options.md` holds the option survey of 2026-08-28. This file
-re-reads each option against the state of 2026-09-01, and it adds 7 more.
-`docs/flutter-first.md` holds the order of the compiler work. Read this file
-before a choice of the Flutter mechanism.
+This file holds the whole survey. `docs/flutter-options.md` held the option
+survey of 2026-08-28, and 2026-09-03 retired that file. Each claim of it that
+still stands is below. `docs/flutter-first.md` holds the order of the compiler
+work. Read this file before a choice of the Flutter mechanism.
 
-Each claim about the compiler names a file and a line. Each measurement ran on
-2026-09-01, on the machine of the project: Flutter 3.47.0, Dart SDK 3.13.0,
-macOS on arm64. The section "The measurements" holds each number, and the
-section "The corrections" names each claim of `docs/flutter-options.md` that
-this pass found to be false.
+Each claim about the compiler names a file and a symbol, because a line number
+rots. Each measurement ran on 2026-09-01, on the machine of the project:
+Flutter 3.47.0, Dart SDK 3.13.0, macOS on arm64. The pass of 2026-09-03 ran the
+Flutter and the Dart checks again, under Flutter 3.47.2 and Dart 3.13.2. The
+section "The measurements" holds each number, and the section "The corrections"
+holds each claim that a pass found to be false.
 
 ## The question
 
@@ -31,9 +32,9 @@ escapes them.
 
 Stage 5 writes 1 class head, `final class X {`, at `internal/emit/decl.go`.
 1 Go package maps to 1 Dart library. A `final` class of 1 library accepts no
-subclass in another library, and a probe of `docs/flutter-options.md` proved
-that rule. Thus a Go type is not a Flutter `Widget` today, and no Dart code
-extends a gart class.
+subclass in another library, and the section "The probes of the language"
+proves that rule. Thus a Go type is not a Flutter `Widget` today, and no Dart
+code extends a gart class.
 
 The consequence reaches each value that crosses the boundary. A Go struct is
 `X$`, and a Go interface value is `Iface?` at `internal/emit/type.go`. A Go
@@ -94,6 +95,81 @@ The probe corrects 1 statement of `docs/flutter-first.md`. `checkBodyless` at
 function of the **same** package only, because `bodyless` reads the files of 1
 package. A cross-package call already reaches a correct Dart call site. Thus
 item 1 of `docs/flutter-first.md` is smaller than the file states.
+
+## What Flutter asks of a language
+
+The 3 constraints above come from gart. This section holds the facts of the
+Flutter side. The pass of 2026-09-03 measured each 1 again against Flutter
+3.47.2 at `/path/to/flutter`.
+
+### The size of each layer
+
+The count holds each line that is not blank and not a comment.
+
+| Layer | Files | Code lines |
+|---|---|---|
+| `foundation` | 42 | 5,433 |
+| `painting` | 48 | 13,272 |
+| `physics` | 7 | 400 |
+| `animation` | 8 | 2,232 |
+| `gestures` | 27 | 8,028 |
+| `scheduler` | 5 | 1,064 |
+| `semantics` | 5 | 4,198 |
+| `services` | 53 | 14,775 |
+| `rendering` | 48 | 31,943 |
+| `widgets` | 186 | 81,804 |
+| `material` | 198 | 134,343 |
+| `cupertino` | 52 | 30,512 |
+
+A widget layer needs 3 of them: `painting`, `rendering`, and `widgets`. Their
+sum is 127,019 code lines, and that number is the port cost of A6. The base
+under `material` adds `foundation`, `physics`, `animation`, `gestures`,
+`scheduler`, `semantics`, and `services`, for 163,149 code lines.
+
+34 percent of the apparent size of `material` is a data table and not logic.
+`icons.dart` of `material` holds 11,658 code lines of icon codepoint
+constants, and `material/animated_icons/data/` holds 34,066 code lines of path
+data in 14 files. Hand written `material` is thus 88,619 code lines.
+`icons.dart` of `cupertino` holds 6,372 code lines of the same form, thus hand
+written `cupertino` is 24,140 code lines.
+
+A port must generate each table from the upstream source. Go declares no const
+class instance, thus a Go icon table needs a code generator of its own. That
+cost stands on top of the port cost of A6.
+
+### The barrier of Material is not native code
+
+Material and Cupertino are pure Dart on top of `widgets`. A search for
+`SystemChannels.`, `MethodChannel(`, and `dart:ffi` over the 250 files of the 2
+layers gives no hit. The whole platform contact is 5 wrapper classes of
+`package:flutter/services.dart`: `HapticFeedback`, `SystemChrome`,
+`SystemNavigator`, `SystemSound`, and `HardwareKeyboard`.
+
+Material reaches the engine at 3 points only: `FragmentProgram.fromAsset` of
+`material/ink_sparkle.dart`, the `Platform` read of `material/about.dart`, and
+`PictureRecorder` of `material/color_scheme.dart`.
+
+Thus no native barrier blocks a Go Material. A different barrier blocks it.
+Material declares 33 private `RenderObject` subclasses, and Cupertino declares
+15. Only A4 and A6 reach such a class from Go, and note 11 of the matrix holds
+that row.
+
+### The contract of each base class is small
+
+A Go type that stands as a Flutter widget satisfies a small contract.
+`StatelessWidget` declares 1 abstract member, `build`. `StatefulWidget`
+declares 1, `createState`. `State` declares `build`, plus `initState`,
+`didUpdateWidget`, `didChangeDependencies`, and `dispose`.
+`RenderObjectWidget` declares `createRenderObject`. `RenderObject` declares
+`performResize` and `performLayout`, and `RenderBox` supplies each 1 except
+`performLayout`.
+
+2 rules of `Widget` conflict with the emitter. `Widget` carries `@immutable`,
+and each field of a gart class is mutable. Its `operator ==` and its
+`hashCode` each carry `@nonVirtual`, and each delegates to object identity.
+A2 and A4 must thus suppress `writeEqual` of `internal/emit/decl.go`. The
+section "The probes of the language" measures the 3 warnings that such a class
+gives.
 
 ## The feature matrix
 
@@ -1167,78 +1243,117 @@ about 1,271 bytes of descriptor source. A generated set of 300 node types then
 costs about 380 kilobytes of Dart source. The Dart tree shaker drops a
 descriptor that no code reads. The milestone 3 section holds the measurement.
 
+## The probes of the language
+
+Each probe below ran again on 2026-09-03, under Dart 3.13.2 and Flutter 3.47.2.
+Each 1 stood outside the repository, and the session deleted it.
+
+| The probe | The result |
+|---|---|
+| A `final class` of library A, that library B extends | `dart analyze` rejects it with `invalid_use_of_type_outside_library`. The same extension inside 1 library passes. This is the proof of constraint 1. |
+| A const constructor of a class that holds a mutable field | `dart analyze` rejects it with `const_constructor_with_non_final_field`. A const widget thus needs a final field, and A2 pays that cost. |
+| 2 `const W(1)` values, against 2 `W(1)` values | `identical` gives true for the const pair and false for the other pair. Only a canonical const widget reaches the short cut of `Element.updateChild`. |
+| A gart-shaped class that extends `StatelessWidget`, with a mutable field and a field-wise `==` | `flutter analyze` gives 3 warnings and 0 errors: `must_be_immutable` 1 time, and `invalid_override_of_non_virtual_member` 2 times. The class compiles and it mounts. |
+| An async closure for a `void Function()` parameter | Dart accepts it, and it runs. The event handler boundary of constraint 3 thus holds. |
+| `augment class` in a part file | Dart 3.13.2 gives a parse error, with and without `--enable-experiment=augmentations`. An augmentation reaches no approach. |
+
+Dart macros are cancelled and will not ship. `https://dart.dev/language/macros`
+states it. Thus Dart holds no compile time mechanism that writes a widget
+class, and each approach that needs generated Dart needs a tool of its own.
+
+## The prior art
+
+The survey of 2026-08-28 read 15 projects, and the pass of 2026-09-03 checked
+each state again.
+
+| Project | Shape | State on 2026-09-03 | What it settles |
+|---|---|---|---|
+| flutter_rust_bridge | An FFI bridge. Rust writes plain functions and structs, and Dart writes each widget. | Active, 5,394 stars | Its own `frb(ui_state)` still leaves the tree in Dart. A synchronous mode exists only because `build` cannot await. |
+| flutter-go-bridge | The Go form of the same bridge | Stalled, 103 stars, last push 2024-05-30 | It carries functions only. |
+| go-flutter | An engine embedder. Go writes a plugin, and Dart writes each widget. | Dead, 5,931 stars. The last functional commit is 2022-07-24, and each later commit bumps a dependency. | An embedder answers a deployment question, and not the widget question. |
+| Flet | A protocol binding for Python, with a hand written Dart adapter for each control. | Active, 16,636 stars | It gives the price of the A1 host: 40,259 lines of hand written Dart. |
+| rfw | The first-party data-driven widget tree of Flutter | Active | Read A9. Its README states its own ceiling. |
+| RemoteFlutterSharp | A C# domain language over `rfw` | Archived, 12 stars | The only C# attempt, and it stopped at a proof of concept. |
+| ClojureDart | Compile to Dart with real subclasses: `:extends`, `^super`, `^:mixin`, and a `widget` macro that replaces `StatelessWidget`, `StatefulWidget`, `State`, `Builder`, and `StatefulBuilder`. | Active, 1,637 stars | The only prior art in which a second language authors a Flutter widget. A2 and A4 are thus possible, and not only plausible. |
+| Dotlin | Kotlin to Dart. A marker on the supertype writes `implements` or `with`. | Archived 2024-03-06, 221 stars | It answers the relation question of A4: the marker carries the choice. It ships no Flutter story. |
+| ts2dart | TypeScript to Dart, built for AngularDart | Archived, 185 stars, last push 2016 | The 1 industrial compile-to-Dart effort before gart. |
+| jaspr | A reimplementation of the Flutter framework shape for the web | Active, 2,455 stars | The reconciler is 4,086 code lines in 17 files, and the tag library is 12,072 generated lines. It sizes A3 and A10. |
+| gio | An immediate mode Go user interface. A config struct, 1 `Layout` method, and closure children. | Active, 2,242 stars | It proves A11 in Go. It needs no key, no element reuse, and no equality. |
+| go-app | A declarative Go user interface. An embedded base, a `Render` method, and builder chains. | Active, 8,959 stars | The closest Go shape to a Flutter API. |
+| Fyne | A retained mode Go user interface, with positional constructors and setters | Active, 28,668 stars | The most adopted Go user interface, and the opposite model of A13. |
+| Vugu | A template file plus a generated Go `Build` method | Experimental, 5,002 stars | A second file format and a second tool chain step. A13 needs neither. |
+| Compose Multiplatform | A vendor reimplementation of Material 3 in Kotlin, with a compiler plugin | Active, 19,336 stars | It is the true price of A6: a funded platform team over years. |
+
+The table answers 1 question of the survey. No project reaches a Flutter widget
+from Go, and the 2 that tried are dead or stalled. gart thus copies no path,
+and ClojureDart is the nearest example.
+
 ## The corrections
 
-This pass re-read each claim of `docs/flutter-options.md` against the code. The
-Flutter facts of that file all hold. A re-run of each Flutter measurement
-against Flutter 3.47.0 verified 14 of 14 claims about `widgets/framework.dart`,
-`rendering/object.dart`, `scheduler/ticker.dart`, and
-`animation/animation_controller.dart`.
+The pass of 2026-09-01 and the pass of 2026-09-03 each re-read the option
+survey of 2026-08-28 against the code. The Flutter facts of that file all hold.
+A re-run against Flutter 3.47.0 verified 14 of 14 claims about
+`widgets/framework.dart`, `rendering/object.dart`, `scheduler/ticker.dart`, and
+`animation/animation_controller.dart`. A second re-run against Flutter 3.47.2
+verified each size and each count of the section "What Flutter asks of a
+language".
 
-3 claims about the compiler are false.
+3 claims about the compiler were false on 2026-09-01.
 
-| Claim of `docs/flutter-options.md` | The state of 2026-09-01 |
+| The claim of 2026-08-28 | The state of 2026-09-01 |
 |---|---|
-| `asyncWord` writes ` async` at `internal/emit/decl.go:303` | False. No function of that name exists. The emitter writes no `async`. |
-| `resultText` wraps the result in `Future<...>` at `internal/emit/decl.go:316` | False. `resultText` stands at `internal/emit/decl.go:512`, and it wraps nothing. |
-| A signature that blocks gives `FutureOr<R> Function(...)` at `internal/emit/type.go:81` | False. `funcType` at `internal/emit/type.go:128` writes `R Function(...)` for each signature. `FutureOr` reaches no line of `type.go` or `decl.go`. |
+| `asyncWord` writes ` async` | False. No function of that name exists. The emitter writes no `async`. |
+| `resultText` wraps the result in `Future<...>` | False. `resultText` of `internal/emit/decl.go` wraps nothing. |
+| A signature that blocks gives `FutureOr<R> Function(...)` | False. `funcType` of `internal/emit/type.go` writes `R Function(...)` for each signature. `FutureOr` reaches no line of `type.go` or `decl.go`. |
 
 The 3 rows date from the async model of 2026-08-28. The unwind model of
-2026-08-29 removed each 1. `docs/flutter-first.md` names the change, and
-`docs/flutter-options.md` still holds the 3 rows.
+2026-08-29 removed each 1, and `docs/flutter-first.md` names the change.
+
+6 more claims are false on 2026-09-03. The compiler grew, thus each row below
+states a limit that the compiler no longer holds.
+
+| The claim of 2026-08-28 | The state of 2026-09-03 |
+|---|---|
+| A Dart handle type in Go needs an emitter change, and only `unsafe.Pointer` gives `Object?` | False. `Object` of `syscall/dart` is that type, and `dartBoundary` of `internal/verify/dart.go` accepts it. Read decision 239 and decision 240. |
+| A call of an arbitrary Dart constructor or method is out of reach, because `intrinsic` is a flat switch | False. A `//gart:dart` declaration names any Dart symbol, and `dartCall` of `internal/emit/dart.go` writes the call. The boundary carries `bool`, `int`, `float64`, `string`, and `dart.Object`. |
+| An import of a Dart library that is not `goruntime` needs an emitter change | False. `dartPrefix` and `dartOrder` of `internal/emit/dart.go` and of `internal/emit/emit.go` write 1 prefixed import for each Dart library. |
+| A guarantee that a function stays synchronous needs a new pass after stage 3 | False. `internal/analyze/sync.go` holds that pass, and milestone 2 above records it. |
+| A box into an interface copies the struct again | False. `box` of `internal/emit/iface.go` writes no copy for a composite literal. A widget tree thus costs 1 object for each node. Decision 219. |
+| The repository holds no mention of Flutter and no mention of a widget, thus each option starts from 0 | False. `flutter/` holds `gart.dev/ui` with 427 node types, the Dart package `goflutter`, the tool `nodegen`, and 3 example applications. |
 
 2 more claims are incomplete.
 
 | Claim | The correction |
 |---|---|
 | "A Dart caller reads the zero value and sees no report" of `docs/flutter-first.md` | True for a block point that reads no goroutine, for example a nil channel. A real channel reads `$current!` at `runtime/goruntime/lib/src/chan.dart:61`, thus the Dart caller gets a null check error of Dart that names no Go position. |
-| "A Go function declaration with no body already parses, and stage 2 rejects a read of it" of `docs/flutter-first.md` | The rejection of `internal/verify/verify.go:211` covers a read inside the same package only. A cross-package call compiles today, and stage 5 already writes the correct Dart call site. |
+| "A Go function declaration with no body already parses, and stage 2 rejects a read of it" of `docs/flutter-first.md` | The rejection of `checkBodyless` of `internal/verify/verify.go` covers a read inside the same package only. A cross-package call compiles today, and stage 5 already writes the correct Dart call site. |
 
-1 conclusion of `docs/flutter-options.md` does not hold.
+1 conclusion of the option survey does not hold.
 
-Option 5 of that file names its risk as the ceiling of `rfw`. That transfer is
-wrong. The ceiling of `rfw` comes from the data model of `rfw`: no
-arithmetic, no key, no text input, no const, and an O(N²) list index. A Go tree
-with a Dart host holds none of those limits, because the host builds real
-Flutter widgets in Dart code. A probe proved the key, the text input, the
-focus, the lazy list, and the error boundary.
+The survey named the ceiling of `rfw` as the risk of the approach that this
+file calls A5. That transfer is wrong. The ceiling of `rfw` comes from the data
+model of `rfw`: no arithmetic, no key, no text input, no const, and an O(N²)
+list index. A Go tree with a Dart host holds none of those limits, because the
+host builds real Flutter widgets in Dart code. A probe proved the key, the text
+input, the focus, the lazy list, and the error boundary.
 
-Each line number that `docs/flutter-options.md` gives for `internal/emit` and
-for `internal/verify` is now stale, because the files grew. The table below
-holds the current position of each cited item.
+**Why this file names no line number of the compiler.** The option survey gave
+a line number for each claim about `internal/emit` and `internal/verify`. The
+pass of 2026-09-01 mapped 20 of them to their new position. 2 days later 18 of
+those 20 positions were wrong again, because the files grew. A line number thus
+rots faster than a pass corrects it, and a symbol name does not. The archive
+notice of `docs/flutter-options.md` holds no line number for that reason.
 
-| Item | The line of 2026-08-28 | The line of 2026-09-01 |
-|---|---|---|
-| The class head, `final class X {` | `decl.go:36` | `decl.go:43` |
-| A mutable struct field | `decl.go:41` | `decl.go:48` |
-| The positional constructor | `decl.go:49` | `decl.go:56` |
-| `$assign` | `decl.go:162` | `decl.go:171` |
-| `writeEqual` | `decl.go:191` | `decl.go:202` |
-| The 2 `@override` lines | `decl.go:199`, `:206` | `decl.go:210`, `:217` |
-| The method head | `decl.go:218` | `decl.go:250` |
-| The receiver and its `$copy` | `decl.go:227` | `decl.go:331` |
-| `paramList` | `decl.go:295` | `decl.go:466` |
-| A pointer to a struct | `type.go:33` | `type.go:70` |
-| A function value | `type.go:43` | `type.go:128` |
-| An interface value, `Iface?` | `type.go:47` | `type.go:85` |
-| A Go string, `GoString` | `type.go:60` | `type.go:111` |
-| `unsafe.Pointer` to `Object?` | `type.go:64` | `type.go:115` |
-| The composite literal | `expr.go:438` | `expr.go:662` |
-| `intrinsic` | `call.go:46` | `call.go:124`, and `intrinsicText` at `:211` |
-| A `FieldDesc` with the raw tag | `iface.go:101` | `iface.go:236` |
-| The rejection of `unsafe` | `verify.go:123` | `verify.go:105` |
-| The build tag `dart` | `load.go:18` | `load.go:20` |
-| A string constant as `final` | `emit.go:326` | `emit.go:695`, in `constDecl` |
+1 more note stands. "Only `unsafe.Pointer` gives `Object?`" was incomplete even
+on 2026-08-28. `dartType` of `internal/emit/type.go` gives `Object?` at 6 more
+points:
 
-2 more rows of that file need a note.
-
-- "Only `unsafe.Pointer` gives `Object?`" is incomplete. `dartType` gives
-  `Object?` at 4 more points: a cyclic named type at `internal/emit/type.go:36`,
-  a pointer to a type parameter at `:65`, a core struct that holds a parameter
-  at `:52`, and the depth cap at `:17`.
-- Each Dart sketch of that file writes `int Count` for a Go `int` field. The
-  emitter writes `GoInt Count` since 2026-09-01. `GoInt` is an extension type
-  over the Dart `int`, thus the 2 forms are equal on the Flutter target.
+- a `dart.Object` of `syscall/dart`,
+- a named type that names itself through a pointer, a slice, or a map,
+- a signature that names such a type,
+- a core struct of a constraint that holds a type parameter,
+- a pointer to a type parameter,
+- the depth cap of 64.
 
 ## The unverified claims
 
