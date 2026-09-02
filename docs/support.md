@@ -183,4 +183,22 @@ The order again follows the value of the work against its cost.
     constant, each enumeration with its `String` method, and the 3 cipher suite
     functions. A `Config` field that would change the handshake stays out.
 
-**The list is closed since 2026-09-03.**
+12. **`testing`.** Done 2026-09-03. 92 names to 132. `Chdir`, `Output`,
+    `ArtifactDir`, `Attr`, `Deadline`, and the cover surface. `TB` holds the 7
+    names of the real `TB`.
+13. **`crypto/x509` and `encoding/gob`.** Done 2026-09-03. `crypto/x509` parses
+    a certificate and holds a `CertPool`, and chain verification stays out
+    because `dart:io` owns the trust decision. `encoding/gob` holds each
+    exported name, and `reflect.Kind` became an integer for it.
+14. **`net` and `net/http`.** Done 2026-09-03. `TCPConn`, `DialTCP`,
+    `ListenConfig`, `Protocols`, `ResponseController`, and `Hijacker`.
+
+**The list of 2026-09-02 is closed. The 4 items below opened on 2026-09-03,
+and each 1 is a gap of the reflect subset or of stage 5.**
+
+| # | Item | Cost | What it blocks |
+|---|---|---|---|
+| 1 | `Value.Addr().Interface()` gives a plain reference and no typed pointer | Medium | A type assertion of it throws. The real `encoding/asn1` needs it, and the patch of that package reads the type of the field instead. |
+| 2 | `reflect.New` of a type that is not a struct gives an untyped box | Medium | A write of it into a typed pointer slot throws, thus a gob decode into `**int` panics. It needs a factory for each pointer type in stage 5. |
+| 3 | A pointer to a type parameter loses its method table | Medium | Stage 5 builds the descriptor inline with an empty map, thus `Type.Implements` on it answers false. A generic helper then hides a `GobDecoder`. |
+| 4 | `Type.String` holds the alias of the source | Small | It gives `[]byte` where Go gives `[]uint8`. `kindOf` and `reflectText` of `internal/emit/iface.go` hold the fix. |
