@@ -9,9 +9,10 @@ call of an HTTP API.
 
 Each claim below names a file and a line. The state is of 2026-09-01.
 
-**The state of 2026-09-02.** Milestone 1 of `docs/flutter-design.md` is
-complete, and the directory `flutter/` holds it. That work answers most of this
-file. Read the status line of each item below, and read
+**The state of 2026-09-02.** Milestone 1, milestone 2, and milestone 3 of
+`docs/flutter-design.md` are complete, and the directory `flutter/` holds them.
+The node set holds 411 types of `widgets`, `material`, and `cupertino`. That
+work answers each item of this file. Read the status line of each 1, and read
 `docs/flutter-state.md` for the state model that the application uses.
 
 ## What already works
@@ -177,16 +178,20 @@ timeout, a cookie of 1 request, and the gzip answer. 3 gaps hit a real client:
 `crypto/sha512` sign a request and read a JWT. Each one follows a pattern that
 the surface already holds, and each cost is small.
 
-### 4. The general focus list
+### 4. The general focus list &mdash; done 2026-09-02
 
-`fmt` scan, `sort.Reverse`, `strings.NewReplacer`, `sync.Map`, `time.AddDate`,
-and the other small names of the focus list of `docs/support.md`. A client app
-reads them as any other program does.
+The 9 items of the focus list of `docs/support.md` are done, except
+`reflect.MakeFunc`. The surface grew from 92 import paths to 113, and from 66
+full packages to 86.
 
 ### Out of scope for a client
 
 The HTTP server, `os/exec`, `os/signal`, `text/template`, and `database/sql`.
 A mobile app reads its storage through a Flutter plugin, and not through `os`.
+
+**Status of 2026-09-02.** `os/signal` and `text/template` each build now. The
+work of the focus list of `docs/support.md` took them, and a client still reads
+neither one.
 
 ## The 3 programs that prove the path
 

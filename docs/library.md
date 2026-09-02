@@ -9,8 +9,8 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 92 import paths: 82 standard packages, `syscall/dart`, and 9
-internal packages. `docs/what-compiles.md` holds the whole list and the gate of
+The surface holds 113 import paths: 99 standard packages, `syscall/dart`, and
+13 internal packages. The run of `make surface` of 2026-09-02 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
 names that each one holds. A package reaches the surface 3 ways.
 
@@ -31,12 +31,21 @@ build tag of the architecture selects the file set of a package.
 `internal/overlay/std/` holds the source of each overlay. The 2 files are the
 authority, because each build reads them.
 
-3 packages need a note:
+`make surface` measures how much of each package the surface holds.
+`internal/surface` holds the tool.
+
+5 packages need a note:
 
 - `math` takes 7 patches. The go command selects an assembly file for each
   architecture, thus 6 patches replace such a file and 1 replaces `unsafe.go`.
 - `syscall/dart` is the interop package. The compiler replaces each call of it,
   and the standard library holds no such package.
+- `syscall` holds the `Signal` type and the 12 signal numbers that macOS and
+  Linux agree on. `os` and `os/signal` need them, and the surface holds no
+  system call interface. Read `docs/parity.md`.
+- `os` cannot read `path/filepath`, because that package reads `os`. The
+  overlay holds its own `localize`, exactly as the real `os` reads
+  `internal/filepathlite`.
 - A stub overlay is an empty package that the fixed import list of a test binary
   drags in. `overlay.Paths()` leaves a stub out, thus stage 2 still rejects an
   import of it. Read decision 19.

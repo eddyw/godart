@@ -74,6 +74,10 @@ list, because it is the authority.
 - The body of a range loop over a function is a function of the analysis, with
   a summary of its own. Read decision 138.
 - Find all instantiations of a generic function and of a generic type.
+- Reject each function that can block in a synchronous export position.
+  `internal/analyze/sync.go` holds the check. A named function type whose
+  declaration carries `//gart:sync` names such a position, and the check reads
+  the points-to sets of the value flow. Read decision 221.
 - Keep all declarations. The Dart toolchain removes each unused declaration in a
   release build.
 
