@@ -37,5 +37,16 @@ if [ "$platform" = "macos" ]; then
   done
 fi
 
+# flutter create gives INTERNET to the debug manifest and to the profile
+# manifest alone. A release build of apilist or of form then reaches no server.
+if [ "$platform" = "android" ]; then
+  m=android/app/src/main/AndroidManifest.xml
+  if ! grep -q "android.permission.INTERNET" "$m"; then
+    /usr/bin/sed -i '' \
+      's|^    <application|    <uses-permission android:name="android.permission.INTERNET"/>\n    <application|' \
+      "$m"
+  fi
+fi
+
 echo "$example holds a $platform runner."
 echo "Run it: cd $app && flutter run -d $platform"

@@ -40,9 +40,17 @@ cd counter
 flutter run -d macos
 ```
 
-The script also gives a macOS runner the entitlement
-`com.apple.security.network.client`. The sandbox of macOS blocks each outgoing
-connection without it, thus `apilist` and `form` reach no server.
+The script also patches the 2 permissions that a network demo needs. A macOS
+runner gets the entitlement `com.apple.security.network.client`, and an Android
+runner gets `android.permission.INTERNET` in the main manifest. `flutter create`
+writes neither 1, thus `apilist` and `form` would reach no server.
+
+| Platform | State of 2026-09-02 |
+|---|---|
+| macOS | The 3 examples build and run. |
+| iOS | The 3 examples build with `flutter build ios --debug --no-codesign`. No plugin stands in the way, thus CocoaPods is not needed. |
+| Android | The 3 examples build with `flutter build apk --debug`. The build needs `ANDROID_HOME`, and it does not need the cmdline-tools that `flutter doctor` asks for. |
+| Web | Blocked. `GoInt` has no constructor under the JS number model, and `$getenv` and `$readFile` of the runtime have no web form. Read `docs/js-integers.md`. |
 
 `example/apilist` runs the same way, and it holds 6 widget tests. It reads the
 issue list of `golang/go` over https, it decodes the answer into a Go struct,
