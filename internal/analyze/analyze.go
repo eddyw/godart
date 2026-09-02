@@ -109,15 +109,24 @@ func Module(pkgs []*packages.Package) *Result {
 			rangeAsync: map[*ast.RangeStmt]bool{},
 			sigAsync:   map[string]bool{},
 		},
-		summaries:  map[any]*summary{},
-		byMethod:   map[string][]any{},
-		parent:     map[string]string{},
-		pts:        map[cell]map[any]bool{},
-		edges:      map[cell]map[cell]bool{},
-		inWork:     map[cell]bool{},
-		watchers:   map[cell][]*callSite{},
-		litSigs:    map[*ast.FuncLit]*types.Signature{},
-		rangeShape: map[*ast.RangeStmt][]cell{},
+		summaries:    map[any]*summary{},
+		byMethod:     map[string][]any{},
+		methodCells:  map[methodCell]*types.Interface{},
+		assertNarrow: map[*types.Var]*types.Interface{},
+		assertDrop:   map[*types.Var]bool{},
+		parent:       map[string]string{},
+		pts:          map[cell]map[any]bool{},
+		edges:        map[cell]map[cell]bool{},
+		inWork:       map[cell]bool{},
+		watchers:     map[cell][]*callSite{},
+		litSigs:      map[*ast.FuncLit]*types.Signature{},
+		rangeShape:   map[*ast.RangeStmt][]cell{},
+	}
+	for _, p := range pkgs {
+		a.pkg = p
+		for _, f := range p.Syntax {
+			a.collectAsserts(f)
+		}
 	}
 	for _, p := range pkgs {
 		a.pkg = p
@@ -149,8 +158,16 @@ type analyzer struct {
 	syncTypes map[*types.TypeName]bool
 
 	// byMethod groups each method by its name and its signature. A call
-	// through an interface can reach each member of the group.
+	// through an interface reads the group of its own key. Read iface.go.
 	byMethod map[string][]any
+	// methodCells holds each group that a call site reads, with the interface
+	// of that site. A nil interface means that the group holds each member.
+	methodCells map[methodCell]*types.Interface
+	// assertNarrow holds the interface of each local value that a type
+	// assertion produced, and assertDrop marks a name that another statement
+	// can write. A pass before the main walk fills the 2. Read iface.go.
+	assertNarrow map[*types.Var]*types.Interface
+	assertDrop   map[*types.Var]bool
 
 	// parent joins the key of a generic signature with the key of each
 	// instance of it. The analysis reads a generic function 1 time, thus the 2
@@ -597,11 +614,10 @@ func (a *analyzer) calleeSource(s *summary, call *ast.CallExpr, fun ast.Expr) (s
 				break
 			}
 			if isInterface(sel.Recv()) || abstractMethod(fn) {
-				msig, ok := fn.Type().(*types.Signature)
-				if !ok {
-					break
+				if src, ok := a.methodSource(fun.X, sel.Recv(), fn); ok {
+					return src, false
 				}
-				return source{cells: []cell{methodCell{methodKey(fn.Name(), msig)}}}, false
+				break
 			}
 			a.recvFlow(fn, fun.X)
 			if sel.Kind() == types.MethodExpr {

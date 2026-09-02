@@ -1,0 +1,3 @@
+module example.com/bigfmt
+
+go 1.27.0

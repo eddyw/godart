@@ -318,3 +318,40 @@ func main() {
 		t.Fatalf("the build rejected a function that only formats an error:\n%v", err)
 	}
 }
+
+func TestSyncAcceptsABigFormatWithHTTP(t *testing.T) {
+	err := buildSync(t, `package main
+
+import (
+	"errors"
+	"fmt"
+	"math/big"
+	"net/http"
+)
+
+//gart:sync
+type Builder func() string
+
+type Node struct {
+	Build Builder
+}
+
+var failure = errors.New("the call failed")
+
+func text() string {
+	n := new(big.Int).Exp(big.NewInt(2), big.NewInt(64), nil)
+	if err := failure; err != nil {
+		return "error: " + err.Error()
+	}
+	return fmt.Sprintf("%v %v", n, http.StatusOK)
+}
+
+func main() {
+	n := Node{Build: text}
+	println(n.Build())
+}
+`)
+	if err != nil {
+		t.Fatalf("the build rejected a function that only formats a big.Int and an error:\n%v", err)
+	}
+}

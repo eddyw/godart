@@ -39,9 +39,15 @@ type outCell struct {
 // sigCell names the escape group of a signature.
 type sigCell struct{ key string }
 
-// methodCell names the group of an interface method. Each method of the name
-// and the signature is a member, because a dynamic dispatch can reach it.
-type methodCell struct{ key string }
+// methodCell names the group of an interface method. A method of the name and
+// the signature is a member when its receiver implements iface, because a
+// dispatch through that interface can then reach it. An empty iface means that
+// the analysis named no interface, and each method of the group is a member.
+// Read iface.go.
+type methodCell struct {
+	key   string
+	iface string
+}
 
 // methodExprKey marks a target that a method expression built. A call of such
 // a value takes the receiver as its first argument, thus the wire shifts each
@@ -243,11 +249,10 @@ func (a *analyzer) flowExpr(e ast.Expr) source {
 				break
 			}
 			if isInterface(sel.Recv()) {
-				msig, ok := fn.Type().(*types.Signature)
-				if !ok {
-					break
+				if src, ok := a.methodSource(e.X, sel.Recv(), fn); ok {
+					return src
 				}
-				return source{cells: []cell{methodCell{methodKey(fn.Name(), msig)}}}
+				break
 			}
 			if sel.Kind() == types.MethodExpr {
 				if sig, ok := fn.Type().(*types.Signature); ok &&
@@ -305,9 +310,11 @@ func (a *analyzer) instanceSource(x ast.Expr) source {
 // solve runs the flow to a fixed point. The wire of a call site adds new
 // edges, thus the 2 parts repeat together until no set grows.
 func (a *analyzer) solve() {
-	for key, group := range a.byMethod {
-		for _, member := range group {
-			a.addTarget(methodCell{key}, member)
+	for c, it := range a.methodCells {
+		for _, member := range a.byMethod[c.key] {
+			if it == nil || reachesIface(member, it) {
+				a.addTarget(c, member)
+			}
 		}
 	}
 	for _, site := range a.sites {
