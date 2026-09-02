@@ -23,7 +23,10 @@ final class GoString {
 
   /// Encodes a Dart string as UTF-8. A code unit of the escape range gives the
   /// 1 byte that it stands for. Read toDartString.
-  factory GoString.fromString(String s) => GoString.fromBytes(_encode(s));
+  ///
+  /// _encode gives a fresh buffer that no other code holds, thus this factory
+  /// adopts the buffer and makes no second copy.
+  factory GoString.fromString(String s) => GoString.take(_encode(s));
 
   /// Copies the bytes into unmodifiable storage.
   factory GoString.fromBytes(List<int> bytes) =>
@@ -256,7 +259,11 @@ String _escape(GoString s) {
 
 /// Encodes a Dart string as UTF-8. A code unit of the escape range gives the 1
 /// byte that it stands for.
-List<int> _encode(String s) {
+///
+/// The result is always a fresh buffer that this function alone holds, thus a
+/// caller adopts it with GoString.take and makes no copy. utf8.encode builds
+/// the buffer with a sublist, and Uint8List.fromList builds a new list.
+Uint8List _encode(String s) {
   var escaped = false;
   for (var i = 0; i < s.length; i++) {
     final int unit = s.codeUnitAt(i);
@@ -281,7 +288,7 @@ List<int> _encode(String s) {
     part.writeCharCode(unit);
   }
   if (part.isNotEmpty) out.addAll(utf8.encode(part.toString()));
-  return out;
+  return Uint8List.fromList(out);
 }
 
 /// The smaller of 2 values, in the order of Go. A NaN passes through, and a

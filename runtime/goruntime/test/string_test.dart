@@ -53,6 +53,30 @@ void main() {
       expect(GoString.empty.length, 0);
       expect(GoString.empty, GoString.fromString(''));
     });
+
+    test('gives the exact byte count with no spare tail', () {
+      // utf8.encode fills a buffer of 3 bytes for each code unit, thus the
+      // adopted buffer must hold the bytes of the text alone.
+      expect(GoString.fromString('').bytes.length, 0);
+      expect(GoString.fromString('go').bytes.length, 2);
+      expect(GoString.fromString('\u00e9').bytes.length, 2);
+      expect(GoString.fromString('\u65e5\u672c').bytes.length, 6);
+    });
+
+    test('rejects a write to an adopted buffer', () {
+      final GoString plain = GoString.fromString('godart');
+      expect(() => plain.bytes[0] = 0, throwsUnsupportedError);
+      expect(
+        () => $substring(plain, $gi(2), $gi(6)).bytes[0] = 0,
+        throwsUnsupportedError,
+      );
+      // The escape path builds the buffer with a different route.
+      final GoString escaped = GoString.fromString(
+        GoString.fromBytes(<int>[0x68, 0xFF]).toDartString(),
+      );
+      expect(escaped.bytes, <int>[0x68, 0xFF]);
+      expect(() => escaped.bytes[0] = 0, throwsUnsupportedError);
+    });
   });
   _moreTests();
 }
