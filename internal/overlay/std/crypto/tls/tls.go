@@ -29,6 +29,10 @@ const (
 	VersionTLS11 = 0x0302
 	VersionTLS12 = 0x0303
 	VersionTLS13 = 0x0304
+
+	// Deprecated: SSLv3 carries a break of the cryptography, and no package
+	// of the surface takes it.
+	VersionSSL30 = 0x0300
 )
 
 // A Config holds the settings of a TLS connection.
@@ -50,6 +54,11 @@ type Config struct {
 	MinVersion   uint16
 	MaxVersion   uint16
 	CipherSuites []uint16
+	// PreferServerCipherSuites reaches no operation here, and Go itself
+	// ignores it too, thus the field carries no lie.
+	//
+	// Deprecated: PreferServerCipherSuites is ignored.
+	PreferServerCipherSuites bool
 }
 
 // A Certificate holds a chain and a private key, each in the PEM form. Go
