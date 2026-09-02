@@ -667,7 +667,8 @@ point, thus the block analysis of stage 3 stays simple.
 | `OpenFile` | Each flag of the system | 4 modes: a read, a write with `O_TRUNC`, a write at the end with `O_APPEND`, and a read and a write with no truncation. Each write mode also reads, exactly as `os.Create` of Go does. Dart holds no mode that reads and writes and stands at the start, thus the last one moves the position back. |
 | `O_CREATE` | Fails when the file does not exist and the flag stays out | Each mode of a write makes the file. Dart holds no open that fails when the file does not exist. |
 | `Args`, `Exit` | Present | Equal. `Args[0]` is the text `gart`. |
-| `IsNotExist`, `ErrNotExist`, `PathError` | Present | Equal |
+| `IsNotExist`, `ErrNotExist`, `PathError` | Present | Equal. `errors.Is` finds each sentinel. |
+| The text of a `PathError` | The message of the system call, for example `no such file or directory` | The text of the sentinel, for example `file does not exist`. `causeError` maps the message of Dart to the sentinel of Go, thus the test of the error works and the text differs. |
 | `FileMode` | Holds the permission bits | The type reads each bit. The argument of `Mkdir`, of `WriteFile`, and of `OpenFile` reaches no operation. |
 | `Symlink` | Present | Equal. The error of a failure holds a different text. |
 | `Chmod`, `Chown`, `Link` | Present | Not present. Dart gives no such call. |
