@@ -221,7 +221,7 @@ since 2026-09-02, and `make flutter-test` runs each 1.
    widget tests pass under Flutter 3.47.0. It needed no item of the compiler
    list.
 2. **A list from an API.** Done 2026-09-02. `flutter/example/apilist` holds
-   it, and 5 widget tests pass under Flutter 3.47.0. It reads the issue list of
+   it, and 6 widget tests pass under Flutter 3.47.0. It reads the issue list of
    `golang/go`, it decodes each `created_at` into a `time.Time`, and it gives a
    `ListView` of cards. It needed no item of the compiler list, and it found
    the bug of decision 229.

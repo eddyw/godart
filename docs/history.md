@@ -943,7 +943,7 @@ The 9 items of the focus list. `docs/support.md` holds the state of each 1.
 
 `flutter/example/apilist`. The application reads the issue list of `golang/go`
 over https, it decodes the answer into a Go struct, and it gives a `ListView`
-of cards. 5 widget tests pass under Flutter 3.47.0, and 6 Go tests run the same
+of cards. 6 widget tests pass under Flutter 3.47.0, and 6 Go tests run the same
 screen with no Flutter.
 
 - A generic function that gives a pointer needs a read at the call site, and
@@ -998,7 +998,7 @@ widget parameters reach Go. Decision 231.
 
 `flutter/example/form`. 3 text fields, a validation in Go on each keystroke,
 and a POST of the fields as JSON. 6 widget tests pass under Flutter 3.47.0, and
-7 Go tests run the same screen with no Flutter. The 3 programs of
+6 Go tests run the same screen with no Flutter. The 3 programs of
 `docs/flutter-first.md` are done.
 
 - The program needed no item of the compiler list. `ui.TextInput` of milestone
