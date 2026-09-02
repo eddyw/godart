@@ -1088,3 +1088,73 @@ The overlay holds a resolver of the DNS. `net` went from 73 names of 346 to
 - `net.AddrError` reached the overlay with the family. The error of an unknown
   network reads `address sctp: unknown network`, and `UnknownNetworkError`
   gives another text.
+
+### 2026-09-03, the twelfth session
+
+The session took the whole list of 17 open tasks of `docs/support.md` and
+`docs/flutter-first.md`.
+
+**The library surface, 89 standard packages to 97, and 75 full to 85.**
+
+- 5 packages needed no change at all: `compress/lzw`, `compress/bzip2`,
+  `archive/zip`, `html`, and `html/template`. Each 1 entered the native list
+  and the real Go source compiled. The earlier note "no survey yet" was the
+  only thing that held them out.
+- `archive/tar` needed a patch of 3 files. `stat_unix.go` reads
+  `syscall.Stat_t` and `os/user`, and `sysStat` of `common.go` tests for nil
+  already, thus a nil value is the behavior of Go on a platform with no such
+  file.
+- `math/big` needed a patch of 2 files. `arith_decl.go` declares 6 functions
+  with no body, and Go itself ships the pure Go form behind the tag
+  `math_big_pure_go`. The patch writes those 6 calls.
+- `encoding/xml` needed 6 reflect names, and each 1 builds on a primitive that
+  the overlay already holds. `reflect` went from 126 names to 130.
+- `crypto/rand` reached 5 of 5, because `Int` and `Prime` read `math/big`.
+
+**4 defects that the work found.**
+
+- A package may hold many functions of the blank name, and `stringer` writes 1
+  for each type that it generates. Each 1 took the Dart name `__`, thus the
+  output of `html/template` held 6 declarations of that name. That defect
+  blocked the package, and it blocked no other package only because no other
+  package of the surface holds 2 such functions.
+- A generic struct held no `==` and no `hashCode`. `types.Comparable` gives
+  false for a struct with a field of a type parameter whose constraint is
+  `any`, and the emitter read that answer. Dart then compared 2 instances by
+  identity, and a map with such a key found nothing. The GOROOT test
+  `typeparam/issue48318` failed on it, and that test reached the compiler for
+  the first time on this day, because it reads `encoding/xml`.
+- The flag 0 of `fmt` wrote its zeros in front of the base prefix, thus
+  `%#04x` of 5 gave `00x5`. The value work of `crypto/tls` found it. A sweep of
+  each flag against the go command found 3 more: `%#o` of 0 doubled the zero,
+  the verb `O` reached no case, and the flag space reached no code at all.
+- `os.OpenFile` dropped `O_EXCL`. `CopyFS` needs that flag, thus the gap showed
+  itself as a wrong result and not as a compile error.
+
+**The compiler.**
+
+- `//gart:dart` names a Dart library and a Dart symbol for a Go function
+  declaration with no body. Item 1 of `docs/flutter-first.md` asked for it, and
+  the value boundary carries 5 types.
+- `dart.Object` came with it. Item 2 of that file named 2 conditions, and the
+  directive answers the first 1. The second 1 holds: a module that names the
+  type needs a twin file behind the tag `!dart`.
+
+**3 measurements that closed an unverified claim.**
+
+- `go build` rejects a bodyless declaration and `go vet` accepts it. `gopls`
+  reports nothing, and a control file with a type error gives a diagnostic,
+  thus the probe stands. The editor thus costs the external declaration
+  nothing.
+- The hot reload chain works. `gart watch` read a change of 1 Go line and wrote
+  the Dart again, 1 package compiled and 13 stayed cached, and the Flutter hot
+  reload took the new Dart in 601 milliseconds. A `fmt.Println` that the change
+  added wrote its line after the reassemble.
+- The 3 examples each build for macOS, for iOS, and for Android. A web build
+  fails: `GoInt` has no constructor under the JS number model, and `$getenv`
+  and `$readFile` have no web form.
+
+**The Flutter path.** The node set went from 414 types to 423, and from 3851
+fields to 3977. `ButtonStyle`, `ImageSource`, `Decoration`, `Size`, `Shadow`,
+and `Gradient` entered as value types, thus 261 constructors stay out against
+270 before.
