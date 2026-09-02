@@ -801,6 +801,13 @@ The `net` package holds this surface:
 | `TCPAddr`, `UDPAddr`, `IPAddr`, `UnixAddr`, `IP`, `IPMask`, `IPNet` | Present | Equal. `ParseCIDR`, `CIDRMask`, `IPv4Mask`, `IP.Mask`, and `IP.DefaultMask` are present. |
 | `ResolveTCPAddr`, `ResolveUDPAddr`, `ResolveUnixAddr` | Present, with a name lookup | Present. A host that is not an IP address gives a parse error, because the surface holds no resolver. |
 | `Resolver`, `LookupHost`, `LookupIP`, `Interfaces` | Present | Not present. `dart:io` holds `InternetAddress.lookup`, and no work names it yet. |
+| `TCPConn` | 20 methods | 10 methods: the 8 of `Conn`, plus `ReadFrom` and `WriteTo`. `Dial`, `Dialer.DialContext`, and `Listener.Accept` each give 1 for the network `tcp`. |
+| `TCPConn.CloseRead`, `CloseWrite` | A half close | Not present. `dart.ConnClose` maps to `Socket.destroy`, which ends the 2 directions. |
+| `TCPConn.SetNoDelay`, `SetLinger`, `SetKeepAlive`, `SetKeepAlivePeriod`, `SetKeepAliveConfig`, `SetReadBuffer`, `SetWriteBuffer` | Each writes a socket option | Not present. `syscall/dart` holds no option intrinsic. |
+| `TCPConn.SyscallConn`, `TCPConn.File`, `TCPConn.MultipathTCP` | Present | Not present. `dart:io` owns the socket and gives no file descriptor. |
+| `DialTCP` | A local address and a remote address | Present. A local address that is not nil gives an error, because Dart binds no local address of a dial. |
+| `ListenConfig` | 5 fields, with `Listen` and `ListenPacket` | `Listen` and `ListenPacket`. The bind runs on a goroutine, and the select takes the first of the bind and the context. `Control`, `KeepAlive`, `KeepAliveConfig`, and the 2 MPTCP names stay out, because each 1 needs a socket option or a `syscall.RawConn`. |
+| `IPConn`, `DialIP`, `ListenIP` | A raw IP socket | Not present. `dart:io` opens no `SOCK_RAW` socket, and `ReadMsgIP` needs a control message that Dart never exposes. |
 | An empty host of `Dial` | The local system | `127.0.0.1` |
 | An empty host of `Listen` | Each interface | `0.0.0.0` |
 | `SplitHostPort` | Accepts an IPv6 host in brackets | Only a host with no bracket. |
@@ -850,6 +857,11 @@ Go.
 | `Request.ParseForm`, `FormValue`, `PostFormValue` | Present | Equal |
 | `Request.ParseMultipartForm`, `FormFile`, `MultipartReader` | Present | Equal, with `mime/multipart` |
 | `FileServer` and the `FS` family | Present | Not present |
+| `Protocols`, with the 6 accessors and `String` | Present | Equal |
+| `Server.Protocols`, `Transport.Protocols` | Present | Not present. The overlay server reads the ALPN of the TLS listener, and no path carries HTTP/2 over a plain socket, thus `UnencryptedHTTP2` names nothing. |
+| `ResponseController`, `NewResponseController` | 5 methods | Equal. `Flush`, `Hijack`, `SetReadDeadline`, `SetWriteDeadline`, and `EnableFullDuplex` each reach the connection of the HTTP/1.1 server. |
+| `Hijacker`, `ErrHijacked` | Present | Present for the HTTP/1.1 server. The answer of an HTTP/2 stream carries no connection of its own, thus it holds neither. |
+| `ResponseController.EnableFullDuplex` | Lets a handler read the body while it writes | Present, and it changes nothing. The overlay server reads the rest of a body after the handler ends, thus each handler already holds the 2 directions. |
 
 `testdata/programs/httpuse` runs a server and a client in 1 program, and the
 output of `go run` and of the Dart build stays equal.
