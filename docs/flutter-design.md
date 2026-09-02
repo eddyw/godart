@@ -1182,11 +1182,22 @@ holds the current position of each cited item.
 
 Each claim below stands in this file with no measurement behind it.
 
-- Hot reload of a Flutter application after a `gart watch` pass. The chain is
-  mechanically clear, and no probe ran it.
 - The gain of the Dart reconciler of A10 over the plain walk of A5.
 - The cost of a per-frame update of A9 at 60 hertz. The package publishes no
   benchmark.
+
+**Hot reload, measured 2026-09-02.** The chain works. A probe ran the counter
+with `flutter run -d macos`, held `gart watch` on the Go module, and changed 1
+line of the Go source.
+
+| Step | Result |
+|---|---|
+| `gart watch` | It read the change and wrote the Dart again. 1 package compiled, and 13 stayed cached. |
+| The Flutter hot reload | It took the new Dart. 3 of 828 libraries, 601 milliseconds and 1,804 milliseconds over 2 runs. |
+| The new Go code | It runs. A `fmt.Println` that the change added wrote its line after the reassemble. |
+
+The probe sent SIGUSR1 to the process that `--pid-file` names, thus it needed
+no keystroke.
 
 **A bodyless Go declaration, measured 2026-09-02.** The earlier text said that
 `go build` and `go vet` each reject such a declaration, and that the editor
