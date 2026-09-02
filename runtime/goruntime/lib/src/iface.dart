@@ -99,6 +99,16 @@ final class TypeDesc {
   /// a pointer type holds it under the same condition as [ptr].
   final Object? Function()? newPtr;
 
+  /// Calls the function with the Dart type of a value of the type.
+  ///
+  /// The Dart type of a slice, a map, a channel, a function, and a pointer
+  /// holds the name of its element type, and that name lives only in the
+  /// emitted code. The package reflect builds a typed cell through this
+  /// field, thus Value.Addr and reflect.New each give a pointer that a type
+  /// assertion reads. The kind alone names the Dart type of each other type,
+  /// thus only these 5 carry the field.
+  final R Function<R>(R Function<T>())? withType;
+
   const TypeDesc(
     this.name,
     this.kind,
@@ -117,6 +127,7 @@ final class TypeDesc {
     this.comparable = true,
     this.ptr,
     this.newPtr,
+    this.withType,
   });
 
   /// The name for a message. Go writes the package name, and not the path.

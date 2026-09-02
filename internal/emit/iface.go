@@ -209,13 +209,30 @@ func (e *emitter) methodTypeTable(t types.Type) string {
 // descParts writes the fields of a struct type, and the element type and the
 // key type of a container type.
 func (e *emitter) descParts(t types.Type) string {
-	out := e.descShape(t)
+	out := e.descShape(t) + withTypePart(e, t)
 	// The package internal/reflectlite reads the flag. Go compares 2 values of
 	// each type except a slice, a map, a function, and a type that holds one.
 	if !types.Comparable(t) {
 		out += ", comparable: false"
 	}
 	return out
+}
+
+// withTypePart writes the factory that names the Dart type of a value of the
+// type. The package reflect builds a typed cell through it, thus Value.Addr
+// and reflect.New each give a pointer that a type assertion reads.
+//
+// The Dart type of a slice, a map, a channel, a function, and a pointer holds
+// the name of its element type, and that name lives only in the emitted code.
+// The kind alone names the Dart type of each other type, thus only these 5
+// carry the factory.
+func withTypePart(e *emitter, t types.Type) string {
+	switch types.Unalias(t).Underlying().(type) {
+	case *types.Slice, *types.Map, *types.Chan, *types.Signature, *types.Pointer:
+		return fmt.Sprintf(
+			", withType: <$R>($R Function<$T>() $f) => $f<%s>()", e.dartType(t))
+	}
+	return ""
 }
 
 // descShape writes the element type, the key type, and the fields.

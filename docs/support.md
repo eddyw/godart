@@ -197,11 +197,15 @@ The order again follows the value of the work against its cost.
     path at run time. Read decision 252.
 
 **The list of 2026-09-02 is closed. The 4 items below opened on 2026-09-03,
-and each 1 is a gap of the reflect subset or of stage 5.**
+and each 1 closed the same day.**
 
-| # | Item | Cost | What it blocks |
-|---|---|---|---|
-| 1 | `Value.Addr().Interface()` gives a plain reference and no typed pointer | Medium | A type assertion of it throws. The real `encoding/asn1` needs it, and the patch of that package reads the type of the field instead. |
-| 2 | `reflect.New` of a type that is not a struct gives an untyped box | Medium | A write of it into a typed pointer slot throws, thus a gob decode into `**int` panics. It needs a factory for each pointer type in stage 5. |
-| 3 | A pointer to a type parameter loses its method table | Medium | Stage 5 builds the descriptor inline with an empty map, thus `Type.Implements` on it answers false. A generic helper then hides a `GobDecoder`. |
-| 4 | `Type.String` holds the alias of the source | Small | It gives `[]byte` where Go gives `[]uint8`. `kindOf` and `reflectText` of `internal/emit/iface.go` hold the fix. |
+| # | Item | State |
+|---|---|---|
+| 1 | `Value.Addr().Interface()` gave a plain reference and no typed pointer | **Done.** The cell carries the Dart type of the value. The real `encoding/asn1` reads its own type switch again. |
+| 2 | `reflect.New` of a type that is not a struct gave an untyped box | **Done.** A gob decode into `**int` reads. |
+| 3 | A pointer to a type parameter lost its method table | **Done.** The description reads the type argument through the dictionary. |
+| 4 | `Type.String` held the alias of the source | **Done.** `[]byte` gives `[]uint8`, and `rune` gives `int32`. |
+
+The description of a slice, a map, a channel, a function, and a pointer carries
+a factory of the Dart type since 2026-09-03. The kind alone names the Dart type
+of each other type, thus only these 5 carry it. Read decision 254.

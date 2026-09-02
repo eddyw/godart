@@ -104,8 +104,8 @@ The package `fmt` reads it.
 | `Type.NumMethod`, `Type.Method`, `Value.NumMethod`, `Value.Method` | Present. The order follows the name, exactly as in Go. `Method` gives the name and the index only. |
 | `Value.IsNil`, `Value.MapIndex` | Present |
 | `Value.MapKeys` | Present. The order follows the insertion, and Go gives a random order. |
-| `Value.Addr().Interface()` | A typed pointer since 2026-09-03, thus a type assertion of it reads. A field or an element of the kind `slice`, `map`, `chan`, `func`, or `ptr` stays untyped, because the Dart type of such a value names its element type and that name lives only in the emitted code. |
-| `reflect.New` of a type that is not a struct | A typed cell since 2026-09-03, thus a write of it into a typed pointer slot reads. The same 5 kinds stay untyped. |
+| `Value.Addr().Interface()` | A typed pointer since 2026-09-03, thus a type assertion of it reads. The description of a slice, a map, a channel, a function, and a pointer carries the Dart type of a value, because the kind alone does not name it. |
+| `reflect.New` of a type that is not a struct | A typed cell since 2026-09-03, thus a write of it into a typed pointer slot reads. |
 | A pointer to a type parameter, inside a generic function | The method table stands since 2026-09-03. The description of the pointer reads the type argument through the dictionary, thus `Type.Implements` of it answers as Go does. |
 
 ## A type that reflect builds
@@ -219,7 +219,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/subtle` | Overlay | The 8 names of Go, each in its portable form. Read the note below. |
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
 | `encoding/gob` | Overlay | The source of Go. The wire bytes are the real ones, and the type ids of the bootstrap keep the numbers 1 to 23. The speed helpers, `internal/saferio`, `sync.Pool`, and `atomic.Pointer` each stay out, and the general path writes the same bytes. A decode into a pointer to a pointer whose element is not a struct panics. |
-| `encoding/asn1` | Patch | The source of Go. `asn1.go` drops `internal/saferio`, which holds `unsafe.Sizeof`, and it reads the type of a field in place of a type assertion of its address. `marshal.go` writes a composite literal in place of a conversion between 2 struct types. |
+| `encoding/asn1` | Patch | The source of Go. `asn1.go` drops `internal/saferio`, which holds `unsafe.Sizeof`. `marshal.go` writes a composite literal in place of a conversion between 2 struct types. |
 | `encoding/pem`, `crypto/x509/pkix`, `unicode/utf16` | Native | Each name of Go. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |

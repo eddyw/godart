@@ -156,9 +156,7 @@ int _take(_Body b, Slice<GoInt> p) {
   for (int i = 0; i < n; i++) {
     p[i] = $gi(b.rest[i]);
   }
-  b.rest = n == b.rest.length
-      ? Uint8List(0)
-      : Uint8List.sublistView(b.rest, n);
+  b.rest = n == b.rest.length ? Uint8List(0) : Uint8List.sublistView(b.rest, n);
   return n;
 }
 
@@ -224,10 +222,9 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
     signal: stop?.signal,
   );
   $await(
-    _limit<_Response>(
-      _fetch(url.toDartString(), init).toDart,
-      deadline,
-    ).then((_Response? r) async {
+    _limit<_Response>(_fetch(url.toDartString(), init).toDart, deadline).then((
+      _Response? r,
+    ) async {
       if (r == null) {
         stop?.abort();
         return ($gi(-1), $gi(0), Slice<GoString>.nil(), _empty, _timeout());

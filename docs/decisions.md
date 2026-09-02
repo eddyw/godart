@@ -1503,6 +1503,41 @@ The plan left these points open. The work took the decisions below.
 
      `flutter/bench/README.md` holds the tables and the whole method.
 
+254. The description of a slice, a map, a channel, a function, and a pointer
+     carries a factory of the Dart type of a value. Each other kind names its
+     Dart type from the kind alone, thus only these 5 carry the field.
+
+     `reflect.New` and `Value.Addr()` must give a pointer that a type
+     assertion reads. The runtime builds the cell, and it holds no name of a
+     Dart type: `Slice<GoInt>` and `GoMap<GoString, GoInt>` each live only in
+     the emitted code. A cell of `Object?` fits no typed location, thus a type
+     assertion of it threw.
+
+     `_byKind` of `runtime/goruntime/lib/src/reflect.dart` answers 15 kinds
+     from the kind alone. A bool gives `bool`, a string gives `GoString`, each
+     integer kind gives `GoInt`, and a struct and an array each give the value
+     itself. The 5 kinds above read the type of the element, thus the kind
+     leaves them open.
+
+     `withType` of `TypeDesc` closes them. Stage 5 writes
+     `<$R>($R Function<$T>() $f) => $f<Slice<GoInt>>()` on the description of
+     such a type, and the runtime calls the field with a builder of a cell.
+     Dart holds a generic function type, thus 1 field carries each Dart type.
+
+     The other choice was a factory for each shape of a cell: 1 for a box and 1
+     for a reference. That needs 2 fields and it repeats the Dart type 2 times
+     in the output. The generic form writes the type 1 time.
+
+     The cost is 1 line of the output for each description of the 5 kinds. The
+     golden program `multi` grew by 4 lines.
+
+     `encoding/asn1` reads its own type switch over `v.Addr().Interface()`
+     again, thus the patch of that package now holds 1 change alone: it drops
+     `internal/saferio`, which reads `unsafe.Sizeof`.
+     `testdata/programs/asn1parse` reads each of the 7 cases of that switch,
+     and `testdata/programs/reflectnew` and `testdata/programs/reflectaddr`
+     each read the 5 kinds.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

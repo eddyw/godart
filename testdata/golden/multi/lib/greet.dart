@@ -57,6 +57,7 @@ final TypeDesc $descP$Greeter = TypeDesc(
       text: 'func(greet.Style)',
       params: <TypeDesc Function()>[() => $desc$Style],
       results: <TypeDesc Function()>[],
+      withType: <$R>($R Function<$T>() $f) => $f<void Function(GoInt)?>(),
       comparable: false,
       zero: () => null,
     ),
@@ -67,11 +68,13 @@ final TypeDesc $descP$Greeter = TypeDesc(
       text: 'func() string',
       params: <TypeDesc Function()>[],
       results: <TypeDesc Function()>[() => $typeString],
+      withType: <$R>($R Function<$T>() $f) => $f<GoString Function()?>(),
       comparable: false,
       zero: () => null,
     ),
   },
   elem: () => $desc$Greeter,
+  withType: <$R>($R Function<$T>() $f) => $f<Greeter$?>(),
   newPtr: () => Greeter$.$zero(),
   zero: () => null,
 );
@@ -88,6 +91,7 @@ final TypeDesc $descP$Style = TypeDesc(
   <String, Function>{},
   text: '*greet.Style',
   elem: () => $desc$Style,
+  withType: <$R>($R Function<$T>() $f) => $f<$Ptr<GoInt>?>(),
   zero: () => null,
 );
 

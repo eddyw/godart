@@ -384,7 +384,7 @@ Iface? $newValue(int handle) {
   if (_isObjectPointer(desc)) return Iface($ptrDesc(desc), zero());
   return Iface(
     $ptrDesc(desc),
-    _byKind<$Ptr<Object?>>(desc.kind, <T>() => Box<T>(zero() as T)),
+    _withType<$Ptr<Object?>>(desc, <T>() => Box<T>(zero() as T)),
   );
 }
 
@@ -392,13 +392,22 @@ Iface? $newValue(int handle) {
 bool _isObjectPointer(TypeDesc desc) =>
     desc.kind == 'struct' || desc.kind == 'array';
 
+/// Calls the function with the Dart type of a value of the type.
+///
+/// A slice, a map, a channel, a function, and a pointer each read the Dart
+/// type of the element, and stage 5 writes the factory for those 5. The kind
+/// alone names the Dart type of each other type.
+R _withType<R>(TypeDesc desc, R Function<T>() f) {
+  final X Function<X>(X Function<Y>())? make = desc.withType;
+  if (make != null) return make<R>(f);
+  return _byKind<R>(desc.kind, f);
+}
+
 /// Calls the function with the Dart type that the kind names.
 ///
 /// The Dart type of a value lives in the emitted code, thus a cell of Object?
 /// fits no typed location. Each kind below holds 1 Dart type, and the runtime
-/// builds the typed cell for it. A slice, a map, a channel, a function, and a
-/// pointer each read the Dart type of the element. A cell of one of the 5
-/// keeps Object?, thus a type assertion of it throws.
+/// builds the typed cell for it.
 R _byKind<R>(String kind, R Function<T>() f) {
   switch (kind) {
     case 'bool':
@@ -435,8 +444,8 @@ $Ptr<Object?> _typedCell(
   int index,
   Object? Function(Object?, int) get,
   void Function(Object?, int, Object?) set,
-) => _byKind<$Ptr<Object?>>(
-  desc.kind,
+) => _withType<$Ptr<Object?>>(
+  desc,
   <T>() => $Ref<Object?, T>(
     owner,
     index,

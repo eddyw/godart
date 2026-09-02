@@ -47,6 +47,27 @@ func main() {
 	*pe = fmt.Errorf("boom")
 	fmt.Println(*pe)
 
+	// A slice, a map, a channel, a function, and a pointer each name the Dart
+	// type of the element. The description of the type carries that name since
+	// 2026-09-03, thus these 5 read too.
+	pls := reflect.New(reflect.TypeOf([]int(nil))).Interface().(*[]int)
+	*pls = append(*pls, 7)
+	fmt.Println(*pls)
+	pm := reflect.New(reflect.TypeOf(map[string]int(nil))).Interface().(*map[string]int)
+	*pm = map[string]int{"a": 1}
+	fmt.Println(*pm)
+	pch := reflect.New(reflect.TypeOf(make(chan int))).Interface().(*chan int)
+	*pch = make(chan int, 1)
+	*pch <- 4
+	fmt.Println(<-*pch)
+	pfn := reflect.New(reflect.TypeOf((func(int) int)(nil))).Interface().(*func(int) int)
+	*pfn = func(x int) int { return x + 1 }
+	fmt.Println((*pfn)(1))
+	pptr := reflect.New(reflect.TypeOf((*int)(nil))).Interface().(**int)
+	inner := 11
+	*pptr = &inner
+	fmt.Println(**pptr)
+
 	// A write of such a pointer into a typed pointer slot reads.
 	var slot *int
 	reflect.ValueOf(&slot).Elem().Set(reflect.New(reflect.TypeOf(0)))

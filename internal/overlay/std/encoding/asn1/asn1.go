@@ -6,17 +6,11 @@
 
 // This file patches the file of the same name of the package encoding/asn1.
 //
-// 2 parts of the real file stay outside the subset.
-//
-//  1. It reads internal/saferio for the cap of the slice of a SEQUENCE OF.
-//     That package holds unsafe.Sizeof, thus it stays outside the surface. The
-//     function sliceCapWithSize at the end of this file holds the body of
-//     saferio.SliceCapWithSize.
-//  2. parseField reads the address of the field with
-//     v.Addr().Interface().(type). The reflect subset gives a plain reference
-//     for that call, and a type assertion of it to a typed pointer fails at
-//     run time. The switch reads the type of the field instead, and it writes
-//     through Value.Set.
+// 1 part of the real file stays outside the subset. It reads
+// internal/saferio for the cap of the slice of a SEQUENCE OF. That package
+// holds unsafe.Sizeof, thus it stays outside the surface. The function
+// sliceCapWithSize at the end of this file holds the body of
+// saferio.SliceCapWithSize.
 //
 // Each other line comes from the real file.
 
@@ -922,58 +916,37 @@ func parseField(v reflect.Value, bytes []byte, initOffset int, params fieldParam
 	offset += t.length
 
 	// We deal with the structures defined in this package first.
-	//
-	// The real file writes `switch v := v.Addr().Interface().(type)` here. The
-	// reflect subset gives a plain reference for Addr().Interface(), and a
-	// type assertion of it to a typed pointer fails at run time. The switch
-	// below reads the type of the field and it writes through Value.Set, thus
-	// it needs no pointer. The 7 cases hold the same order and the same
-	// bodies as the real file.
-	switch fieldType {
-	case rawValueType:
-		v.Set(reflect.ValueOf(RawValue{t.class, t.tag, t.isCompound, innerBytes, bytes[initOffset:offset]}))
+	switch v := v.Addr().Interface().(type) {
+	case *RawValue:
+		*v = RawValue{t.class, t.tag, t.isCompound, innerBytes, bytes[initOffset:offset]}
 		return
-	case objectIdentifierType:
-		parsedOID, err1 := parseObjectIdentifier(innerBytes)
-		if err1 == nil {
-			v.Set(reflect.ValueOf(parsedOID))
-		}
-		err = err1
+	case *ObjectIdentifier:
+		*v, err = parseObjectIdentifier(innerBytes)
 		return
-	case bitStringType:
-		parsedBits, err1 := parseBitString(innerBytes)
-		if err1 == nil {
-			v.Set(reflect.ValueOf(parsedBits))
-		}
-		err = err1
+	case *BitString:
+		*v, err = parseBitString(innerBytes)
 		return
-	case timeType:
-		var parsedTime time.Time
-		var err1 error
+	case *time.Time:
 		if universalTag == TagUTCTime {
-			parsedTime, err1 = parseUTCTime(innerBytes)
-		} else {
-			parsedTime, err1 = parseGeneralizedTime(innerBytes)
+			*v, err = parseUTCTime(innerBytes)
+			return
 		}
-		if err1 == nil {
-			v.Set(reflect.ValueOf(parsedTime))
-		}
-		err = err1
+		*v, err = parseGeneralizedTime(innerBytes)
 		return
-	case enumeratedType:
+	case *Enumerated:
 		parsedInt, err1 := parseInt32(innerBytes)
 		if err1 == nil {
-			v.SetInt(int64(parsedInt))
+			*v = Enumerated(parsedInt)
 		}
 		err = err1
 		return
-	case flagType:
-		v.SetBool(true)
+	case *Flag:
+		*v = true
 		return
-	case bigIntType:
+	case **big.Int:
 		parsedInt, err1 := parseBigInt(innerBytes)
 		if err1 == nil {
-			v.Set(reflect.ValueOf(parsedInt))
+			*v = parsedInt
 		}
 		err = err1
 		return
