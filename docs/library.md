@@ -247,12 +247,22 @@ directory:
 - `client.go` holds `Client`, `Do`, and each redirect.
 - `server.go` holds `Server`, `ServeMux`, `ResponseWriter`, and `Flusher`.
 - `cookie.go` holds `Cookie`, `SetCookie`, and each read of a cookie.
+- `fetch.go` holds the client of the web target. A browser holds no socket,
+  thus `RoundTrip` takes the fetch API of the host when `runtime.GOOS` gives
+  `js`. Read decision 252.
 - `httptest/` holds `ResponseRecorder`, `NewRequest`, and the `Server` of a
   test. `net/http` exports `ReadRequest` for it.
 
 `docs/parity.md` holds a table of each gap. The largest one is HTTP/2. The
 client reads gzip, and `net/http/httptest` holds a recorder and a server of a
 test.
+
+`testdata/web/webfetch` runs the client of the web target against a real
+server. `TestWebFetch` of `internal/driver` builds it 3 times: with the go
+command, with `dart compile js`, and with `dart compile wasm`. The 3 outputs
+are equal. The body of an answer rides the `ReadableStream` of the fetch API,
+thus a program reads 100000 bytes through a buffer of 512 bytes and holds no
+whole body.
 
 `testdata/programs/httpuse` runs a server and a client in 1 program. It proves a
 GET, a POST, a form, a HEAD, and a redirect. It also proves a subtree pattern,
