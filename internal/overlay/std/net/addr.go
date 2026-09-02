@@ -333,6 +333,31 @@ func ResolveUnixAddr(network, address string) (*UnixAddr, error) {
 	return nil, UnknownNetworkError(network)
 }
 
+// An AddrError reports a failure that names an address.
+type AddrError struct {
+	Err  string
+	Addr string
+}
+
+func (e *AddrError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	s := e.Err
+	if e.Addr != "" {
+		s = "address " + e.Addr + ": " + s
+	}
+	return s
+}
+
+// Timeout reports whether the failure came from a deadline. An address error
+// holds none.
+func (e *AddrError) Timeout() bool { return false }
+
+// Temporary reports whether a second try may work. An address error gives
+// false.
+func (e *AddrError) Temporary() bool { return false }
+
 // An UnknownNetworkError names a network that no operation holds.
 type UnknownNetworkError string
 

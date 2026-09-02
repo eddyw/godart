@@ -1059,3 +1059,32 @@ surface went to 89 standard packages, and 75 of them hold each exported name.
   source holds the leaf files alone.
 - The resolution reads the directory tree, and it holds no rule for a nested
   module. `docs/parity.md` names the difference.
+
+### 2026-09-02, the Lookup family of net
+
+The overlay holds a resolver of the DNS. `net` went from 73 names of 346 to
+127, and each name of the Lookup family stands.
+
+- The resolver needs no new interop. `dnsmsg.go` writes and reads the message,
+  and the socket of `net` already carries UDP and TCP. The earlier note said
+  that `dart:io` holds `InternetAddress.lookup` alone and that the family needs
+  a resolver of the runtime. A resolver in Go is the better place: it holds the
+  same 8 record types on each target, and a test reads it with no network.
+- `/etc/hosts`, `/etc/resolv.conf`, and `/etc/services` each read through
+  `dart.ReadFile`, thus the overlay imports no `os` and holds no cycle.
+- `Resolver.Dial` is the test seam. `testdata/programs/dnslookup` runs a DNS
+  server of its own on the loopback interface, and the program gives the same
+  output under `go run` and under Dart.
+- A method forwarder of a class passed the name of a parameter that the
+  emitter had renamed. A boxed parameter takes the suffix `$p`, and
+  `methodForward` of `internal/emit/decl.go` wrote the plain name in the
+  argument list. `DialContext` is the first method that holds a boxed
+  parameter: its body becomes a state machine, and a closure reads the
+  parameter that the body writes. `testdata/programs/boxptr` holds the case.
+- `LookupPort` needs the `parsePort` of Go. A resolver of the system gives a
+  valid port for a number above 65536, thus Go reads the whole text before it
+  rejects one, and the error of an unknown port is a `DNSError` and not an
+  `AddrError`.
+- `net.AddrError` reached the overlay with the family. The error of an unknown
+  network reads `address sctp: unknown network`, and `UnknownNetworkError`
+  gives another text.

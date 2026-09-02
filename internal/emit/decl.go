@@ -274,8 +274,10 @@ func (e *emitter) methodForward(f *ir.Func) {
 	for _, tp := range append(append([]*types.TypeParam{}, recv...), f.TypeParams...) {
 		args = append(args, "$d"+typeParamName(tp))
 	}
+	// A boxed parameter takes a second name, thus the argument reads the same
+	// name that the parameter list of this member declares.
 	for _, p := range f.Params {
-		args = append(args, p.Name)
+		args = append(args, paramName(p))
 	}
 	e.line("%s %s%s(%s) => %s%s(%s);", e.results(f), name.Package(f.Name),
 		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "),

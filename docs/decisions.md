@@ -1151,6 +1151,18 @@ The plan left these points open. The work took the decisions below.
      of that name in a file that holds no directive.
      `testdata/programs/embeduse` and 4 tests of `internal/driver` cover it.
 
+233. The Lookup family of `net` takes a resolver of the overlay, and not a
+     call of `InternetAddress.lookup` of `dart:io`. That call gives an A record
+     and an AAAA record alone, thus `LookupMX`, `LookupNS`, `LookupSRV`,
+     `LookupTXT`, and `LookupCNAME` would each stay out. The socket of the
+     overlay already carries UDP and TCP, thus the resolver needs no new
+     interop function. `dnsmsg.go` holds the message format for the 8 record
+     types of the family, and `lookup.go` holds the `Resolver`. The resolver
+     reads /etc/hosts, /etc/resolv.conf, and /etc/services through
+     `dart.ReadFile`, thus the overlay imports no `os`. `Resolver.Dial` is the
+     seam of a test, and `testdata/programs/dnslookup` runs a server of its own
+     on the loopback interface. `docs/parity.md` holds the 5 differences.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

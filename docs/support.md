@@ -18,9 +18,9 @@ compares the 2 sets.
 `make surface ARGS=-gaps` names each missing name, and
 `make surface ARGS="-pkg os"` measures 1 package.
 
-The ratio counts names, and not use. `net` holds 346 names, because the
-resolver, the typed connections, and the interface list hold most of them. Read
-the gap column, and not the percent alone.
+The ratio counts names, and not use. `net` holds 346 names, because the typed
+connections and the interface list hold most of them. Read the gap column, and
+not the percent alone.
 
 The surface holds 102 import paths: 89 standard packages, the interop package
 `syscall/dart`, and 12 internal packages that the 86 need. The measure skips
@@ -74,7 +74,7 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 | `crypto/rand` | 3/5 | 60% | `Int` and `Prime`. The 2 read `math/big`. |
 | `net/http` | 223/392 | 56% | `Hijacker`, `ResponseController`, `Protocols`, `HTTP2Config`, `TimeoutHandler` |
 | `runtime` | 31/114 | 27% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
-| `net` | 73/346 | 21% | The `Lookup` family, the `Resolver`, `Interface`, `IPConn`, `ListenConfig` |
+| `net` | 127/346 | 36% | `Interface`, `IPConn`, `TCPConn`, `ListenConfig`, the option fields of `Dialer` |
 | `crypto/tls` | 32/263 | 12% | The cipher suite constants, the curve names, `CipherSuites`, `LoadX509KeyPair` |
 | `syscall` | 15/2228 | 0% | Each system call, each error number, and each constant of the platform. |
 
@@ -163,6 +163,7 @@ The order again follows the value of the work against its cost.
 3. **`embed`.** Done 2026-09-02. The loader reads each `//go:embed` directive,
    it resolves the patterns, and it writes the files into the declaration of
    the variable. `docs/parity.md` holds the 2 differences.
-4. **The `Lookup` family of `net`.** `dart:io` holds `InternetAddress.lookup`
-   alone, thus `LookupMX`, `LookupNS`, and `LookupSRV` need a resolver of the
-   runtime. Cost: large.
+4. **The `Lookup` family of `net`.** Done 2026-09-02. The overlay holds a
+   resolver of its own, and it needs no `InternetAddress.lookup` of `dart:io`.
+   It reads /etc/hosts, /etc/resolv.conf, and /etc/services, and it speaks the
+   DNS over UDP with a fallback to TCP. `net` went from 73 names to 127.

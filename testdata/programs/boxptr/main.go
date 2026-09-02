@@ -129,4 +129,22 @@ func main() {
 	ptp := &pt
 	ptp.x = 9
 	fmt.Println(pt.x)
+
+	// A method of a pointer receiver whose parameter needs a box.
+	cnt := &counter{}
+	fmt.Println(cnt.bump(3), cnt.n)
+}
+
+type counter struct{ n int }
+
+// bump gives up control on a channel, thus its body becomes a state machine.
+// The body writes step, and a closure reads it, thus the parameter needs a box
+// in the frame. The class of the pointer receiver forwards to the top level
+// function, and the 2 names of the parameter must agree.
+func (c *counter) bump(step int) int {
+	done := make(chan int, 1)
+	step = step * 2
+	go func() { done <- step }()
+	c.n = <-done
+	return step
 }

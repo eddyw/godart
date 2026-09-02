@@ -385,6 +385,9 @@ func ListenPacket(network, address string) (PacketConn, error) {
 // A Dialer opens a connection with a timeout or with a context.
 type Dialer struct {
 	Timeout time.Duration
+	// Resolver reads the host name of the address. A nil field gives the name
+	// to the runtime, which reads the resolver of the platform.
+	Resolver *Resolver
 }
 
 // dialResult holds the 2 results of a dial that runs on a goroutine.
@@ -414,6 +417,13 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 		defer cancel()
 		ctx = inner
 	}
+	if d.Resolver != nil {
+		resolved, err := d.resolve(ctx, network, address)
+		if err != nil {
+			return nil, err
+		}
+		address = resolved
+	}
 	done := make(chan dialResult, 1)
 	go func() {
 		c, cause := Dial(network, address)
@@ -430,6 +440,29 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 		}()
 		return nil, ctx.Err()
 	}
+}
+
+// resolve gives the address again with the host name replaced by the first
+// address that the resolver of the dialer gives.
+func (d *Dialer) resolve(ctx context.Context, network, address string) (string, error) {
+	if network == "unix" {
+		return address, nil
+	}
+	host, port, err := SplitHostPort(address)
+	if err != nil {
+		return "", err
+	}
+	if host == "" || ParseIP(host) != nil {
+		return address, nil
+	}
+	ips, err := d.Resolver.LookupIP(ctx, "ip", host)
+	if err != nil {
+		return "", err
+	}
+	if len(ips) == 0 {
+		return "", &DNSError{Err: errNoSuchHost, Name: host, IsNotFound: true}
+	}
+	return JoinHostPort(ips[0].String(), port), nil
 }
 
 // SplitHostPort reads the host and the port of an address. Go accepts an IPv6

@@ -240,7 +240,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `io/fs` | Overlay | `FileMode`, `FileInfo`, `DirEntry`, `PathError`, `WalkDirFunc`, `SkipDir`, `SkipAll`, and `ValidPath`. No `FS` interface. |
 | `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. Read below. |
 | `path/filepath` | Overlay | The separator is always `/`. Read below. | |
-| `net` | Overlay | TCP, UDP, a Unix socket, `IP`, and `ParseIP`. No TLS. Read the section below. |
+| `net` | Overlay | TCP, UDP, a Unix socket, `IP`, `ParseIP`, and the `Lookup` family. No TLS. Read the 2 sections below. |
 | `os` | Overlay | The file access, the environment, the identity of the process, and the process state. `Root`, `DirFS`, `Chmod`, and the signals stay out. Read the section below. |
 | `path` | Native | |
 | `runtime` | Overlay | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOROOT`, `GOOS`, `GOARCH`, `Caller`, `Callers`, `CallersFrames`, `FuncForPC`, `AddCleanup`, and `GC`. |
@@ -314,6 +314,34 @@ The other rules follow the go command: a pattern that names no file gives a
 rejection, a pattern with `..` or an absolute path gives a rejection, a name
 that starts with a dot or with a low line needs the prefix `all:`, and a
 variable of the type `string` or `[]byte` takes 1 file.
+
+## The Lookup family of net
+
+The overlay holds a resolver of its own. `dnsmsg.go` writes and reads the
+message, and `lookup.go` holds the `Resolver` and each `Lookup` function. The
+real source of Go reads the resolver of the platform through cgo, or its own
+resolver over the vendored package `golang.org/x/net/dns/dnsmessage`, and each
+one stands outside the surface.
+
+The resolver reads /etc/hosts first, and then each server of /etc/resolv.conf
+over UDP. A truncated answer takes a second exchange over TCP. `LookupPort`
+reads /etc/services, and `parsePort` of Go holds the rule for a number.
+
+5 differences stand.
+
+- `Resolver.PreferGo` and `Resolver.StrictErrors` each read no field. This
+  resolver is always the resolver of Go, and each error of a server reaches the
+  caller.
+- The order of the addresses of `LookupIP` follows the answer, and Go sorts by
+  RFC 6724. A caller that needs 1 order sorts the result.
+- `LookupMX` and `LookupSRV` each sort by the preference and by the priority
+  alone. Go also shuffles the records of equal weight, and this resolver keeps
+  the order of the answer, thus 2 runs give 1 order.
+- The configuration of /etc/resolv.conf and the table of /etc/services each
+  read 1 time for each process. Go reads the configuration again after 5
+  seconds.
+- A record type outside the 8 of `dnsmsg.go` reaches no `Lookup` function. The
+  8 are A, AAAA, CNAME, NS, PTR, MX, TXT, and SRV.
 
 ## The constant time operations
 
