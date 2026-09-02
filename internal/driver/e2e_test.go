@@ -239,3 +239,58 @@ func run(t *testing.T, dir string, name string, args ...string) string {
 	}
 	return string(text)
 }
+
+// TestWebIO proves that the whole io surface compiles for the web. The Go
+// package os names each function of the io shim, thus a program that only
+// reads an environment value once failed in the Dart compile. Each web form
+// now gives an honest cause, and the program runs. Read decision 251.
+func TestWebIO(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skipf("the machine holds no node: %v", err)
+	}
+	source, err := filepath.Abs("../../testdata/web/webio")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtimeDir, err := filepath.Abs("../../runtime/goruntime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const want = `goos: true
+pid: 0
+open: open /etc/hosts: function not implemented
+mkdir: mkdir /x: function not implemented
+get: an error`
+	out := t.TempDir()
+	if err := driver.Build(driver.Options{
+		Dir:      source,
+		Patterns: []string{"./..."},
+		Out:      out,
+		Runtime:  runtimeDir,
+		Format:   true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	run(t, out, "dart", "pub", "get")
+
+	run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
+	if got := runProgram(t, out, "node", "main.js"); got != want {
+		t.Errorf("the output of the JS build differs\nwant:\n%s\ngot:\n%s", want, got)
+	}
+
+	run(t, out, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
+	runner := `import { compile } from './main.mjs';
+import { readFile } from 'node:fs/promises';
+
+const bytes = await readFile(new URL('./main.wasm', import.meta.url));
+const app = await compile(bytes);
+const instance = await app.instantiate({});
+instance.invokeMain();
+`
+	if err := os.WriteFile(filepath.Join(out, "run.mjs"), []byte(runner), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := runProgram(t, out, "node", "run.mjs"); got != want {
+		t.Errorf("the output of the wasm build differs\nwant:\n%s\ngot:\n%s", want, got)
+	}
+}

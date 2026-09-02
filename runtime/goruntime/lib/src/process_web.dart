@@ -1,5 +1,47 @@
-/// The web form of process.dart. A web target holds no process access, thus
-/// this file holds no name. A program that starts a process names a function
-/// that this file does not hold, and the Dart compile of the web target fails
-/// there, per the web decision of 2026-09-01.
+/// The web form of process.dart.
+///
+/// A web target starts no process. This file still declares each name of
+/// process.dart, because the Go packages os and os/exec name each 1. A
+/// program that only reads an environment value would otherwise fail in the
+/// Dart compile.
+///
+/// Each operation gives the cause "function not implemented", and the Go side
+/// wraps that text in an error. Read decision 251.
 library;
+
+import 'goint.dart';
+import 'slice.dart';
+import 'string.dart';
+
+/// The cause of each operation that the web target does not hold. Go gives
+/// the same text for the errno ENOSYS.
+final GoString _noSys = GoString.fromString('function not implemented');
+
+(int, GoString) $procStart(
+  Slice<GoString> argv,
+  GoString dir,
+  Slice<GoString> env,
+  bool useEnv,
+) => (0, _noSys);
+
+(int, GoString) $procWrite(int pid, Slice<GoInt> p) => (0, _noSys);
+
+GoString $procCloseStdin(int pid) => _noSys;
+
+GoString $procCloseIO(int pid) => _noSys;
+
+(int, GoString) $procRead(int pid, Slice<GoInt> p) => (0, _noSys);
+
+(int, GoString) $procReadErr(int pid, Slice<GoInt> p) => (0, _noSys);
+
+(int, GoString) $procWait(int pid) => (0, _noSys);
+
+GoString $procKill(int pid, int signal) => _noSys;
+
+GoString $killPid(int pid, int number) => _noSys;
+
+(int, GoString) $signalWatch(int number) => (0, _noSys);
+
+(int, GoString) $signalWait(int id) => (0, _noSys);
+
+GoString $signalStop(int id) => _noSys;

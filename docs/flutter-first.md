@@ -2,8 +2,8 @@
 
 The user asks which language features and which packages come first, and the
 user assumes that the contact with Flutter is solved. This file answers that
-question in 2 ordered lists. `docs/flutter-options.md` holds the 6 shapes of a
-binding and the measurement of the Flutter SDK. This file holds the order of
+question in 2 ordered lists. `docs/flutter-design.md` holds each shape of a
+binding and each measurement of the Flutter SDK. This file holds the order of
 the work, and it takes the target of a client app: a widget, a state, and a
 call of an HTTP API.
 
@@ -18,8 +18,8 @@ The node set holds 427 types of `widgets`, `material`, and `cupertino`, with
 
 ## What already works
 
-Do not plan this work again. The list corrects 2 rows of
-`docs/flutter-options.md`, which stands from 2026-08-28.
+Do not plan this work again. The list corrects 2 rows of the option survey of
+2026-08-28. `docs/flutter-design.md` holds each correction.
 
 | Item | Evidence |
 |---|---|
@@ -171,8 +171,8 @@ and `flutter/bench/report.md` for each number.
 
 A binding where Go calls Dart, and where a hand written Dart adapter holds the
 widget classes, needs none of the items below. Each one belongs to the shape
-where a Go type **is** a Dart widget class, which is option 4 of
-`docs/flutter-options.md`.
+where a Go type **is** a Dart widget class, which is A4 of
+`docs/flutter-design.md`.
 
 | Item | Why a first app lives without it |
 |---|---|

@@ -34,7 +34,7 @@ The state of 2026-09-03. Each row names the section that holds the detail.
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
 | A stack trace | The module form of each file, with no offset. |
 | The garbage collector | `runtime.GC` gives up control only, and a cleanup follows the collector of Dart. |
-| The web target | `dart compile js` and `dart compile wasm` each build a pure program. A program that reaches a file or a socket fails in the compile. |
+| The web target | `dart compile js` and `dart compile wasm` each build any program. A file or a socket operation gives the error that Go gives under `GOOS=js`. |
 
 ## The receiver of a method
 
@@ -736,14 +736,27 @@ driver proves it under node, and `docs/js-integers.md` holds the build and
 the gaps of the JS target: a mixed numeric type set, the 53-bit reads of
 reflect and json, and the rounded nanosecond clock.
 
+Since 2026-09-03 a program that reaches a file or a socket also compiles. The
+4 web files of the runtime declare each name of their native form, and each
+unsupported operation gives the cause of Go under `GOOS=js`. Read decision
+251. `TestWebIO` of the driver runs the program of `testdata/web/webio` under
+the 2 web compilers, and it reads the exact text of each cause.
+
 | Item | Go | godart |
 |---|---|---|
 | A pure program on wasm | Compiles with GOOS=js GOARCH=wasm | Compiles with `dart compile wasm`. The 64-bit integer model holds. |
 | A pure program on dart2js | Compiles with GOOS=js | Compiles with `dart compile js`. The pair form of GoInt keeps the 64-bit model. |
-| A program that reaches a file or a socket | Compiles, and the call fails at run time | Fails in the Dart compile, with the name of the missing function |
+| A program that reaches a file or a socket | Compiles, and the call fails at run time | Equal. The compile passes, and the call gives an error. |
+| `os.Open`, and each other file operation | `open x: function not implemented` in a browser | Equal |
+| `net.Dial`, `http.Get`, and each other socket operation | An error of the host | `operation not supported`, inside a `net.OpError` |
+| `os.Getenv` and `os.Environ` on the web | Empty | Equal |
+| `os.Getwd` on the web | `/` | Equal |
+| `os.Getpid` on the web | 0 | Equal |
+| `os.TempDir` on the web | `/tmp` | Equal |
 | `runtime.GOOS` on the web | `js` | Equal |
 | `print` and `fmt` on the web | Standard output and standard error | The console of the host, 1 line for each call, thus a write without a newline waits in a buffer |
 | `os.Exit` on the web | Ends the process | Throws an error of the host, thus a status outside 0 ends node with a failure |
+| An HTTP request from a browser | `fetch` through the js syscall layer | Not present. A web build reports `operation not supported`, and a client over `fetch` stays open. |
 
 ## The network access
 

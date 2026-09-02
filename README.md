@@ -110,7 +110,7 @@ curated surface.
 | `docs/decisions.md` | Each decision, by number, and each answered question |
 | `docs/library.md` | The standard library surface and each overlay |
 | `docs/history.md` | Each milestone, each defect, and each verified fact |
-| `docs/flutter-options.md` | 6 options that reach Flutter from Go. No decision. |
+| `docs/flutter-design.md` | Each approach that reaches Flutter from Go, the decision, and the state |
 
 ## Tests
 

@@ -1373,6 +1373,38 @@ The plan left these points open. The work took the decisions below.
      fix is a key of the method group that carries the interface type of the
      call site, and `docs/parity.md` holds it.
 
+     **2026-09-03, later the same day: the 2 names return.** The fix of
+     decision 251 landed. The key of a method group now carries the interface
+     of the call site, a type assertion narrows that interface further, and 3
+     patched files of `math/big` close the last 2 paths.
+     `testdata/programs/randbig` proves the 2 names against the go command.
+
+251. The web target declares each name of the io shim, and each unsupported
+     operation gives an honest cause at run time. The decision of 2026-09-01
+     said the opposite: a program that reaches a file or a socket fails in the
+     Dart compile, with the name of the missing function.
+
+     That rule made the whole web target unreachable. The Go package `os`
+     names each function of the io shim, thus a program that only reads
+     `os.Getenv` failed in the Dart compile with 36 missing names. `net/http`
+     added 30 more. No real program compiled for the web.
+
+     `file_web.dart`, `process_web.dart`, `net_web.dart`, and `http2_web.dart`
+     now declare each name of their native form. A file operation gives the
+     cause `function not implemented`, and a socket operation gives
+     `operation not supported`. The Go side wraps each text in a `PathError`
+     or an `OpError`, thus a program reads the same error that Go gives under
+     `GOOS=js`. `os.Getenv`, `os.Args`, `os.Exit`, `os.Getwd`, `os.Getpid`,
+     and `os.TempDir` each give the answer of Go on that target.
+
+     The other choice was to keep the compile-time failure. It reports the
+     fault earlier, and it costs the whole target. Go itself takes the run
+     time answer on `js/wasm`, thus this choice also matches Go.
+
+     `TestWebIO` of `internal/driver/e2e_test.go` runs the program of
+     `testdata/web/webio` under `dart compile js` and under
+     `dart compile wasm`, and it reads the exact text of each cause.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

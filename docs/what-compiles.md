@@ -97,7 +97,7 @@ holds the state of 2026-09-03.
 | macOS, through Flutter | Present. The 3 examples of `flutter/` each build and run. |
 | iOS, through Flutter | Present. `flutter build ios --debug --no-codesign` builds the 3. No plugin stands in the way, thus CocoaPods is not needed. |
 | Android, through Flutter | Present. `flutter build apk --debug` builds the 3. It needs `ANDROID_HOME`, and it does not need the cmdline-tools that `flutter doctor` asks for. |
-| The web | Blocked. `GoInt` holds no constructor under the JS number model, and `$getenv` and `$readFile` of the io shim hold no web form. Read `docs/js-integers.md`. |
+| The web, `dart compile js` and `dart compile wasm` | Present. Each program compiles, and a file or a socket operation gives the error that Go gives under `GOOS=js`. A Flutter web build reads the same path. Read decision 251 and `docs/js-integers.md`. |
 
 `flutter/example/platform.sh` writes the platform runner of an example. git
 holds no such directory, because `flutter test` needs none and each file comes

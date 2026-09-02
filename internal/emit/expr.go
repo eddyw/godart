@@ -633,12 +633,12 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 	case *ir.Index:
 		container := x.X.GoType()
 		if isPointerType(container) {
-			return fmt.Sprintf("$indexPtr(%s, %s)", e.derefRead(x.X), e.expr(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, $ix(%s))", e.derefRead(x.X), e.expr(x.Index))
 		}
 		if isArrayType(container) {
-			return fmt.Sprintf("$indexPtr(%s, %s)", e.expr(x.X), e.expr(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, $ix(%s))", e.expr(x.X), e.expr(x.Index))
 		}
-		return fmt.Sprintf("$elemPtr(%s, %s)", e.expr(x.X), e.expr(x.Index))
+		return fmt.Sprintf("$elemPtr(%s, $ix(%s))", e.expr(x.X), e.expr(x.Index))
 	}
 	e.fail("the address of %T has no Dart form", x)
 	return "null"
