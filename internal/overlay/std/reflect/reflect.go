@@ -28,47 +28,143 @@ func DeepEqual(x, y any) bool {
 
 // A Kind names the class of a type, for example `int` or `struct`.
 //
-// Go gives an unsigned number, and the overlay gives the text of the kind. The
-// type descriptor of the runtime holds that text, and the 2 forms hold the same
-// set of values.
-type Kind string
+// The type is an unsigned number, exactly as in Go, and each constant holds
+// the same number as the constant of Go. Thus a table that an index of a Kind
+// reads holds the same layout, and `encoding/gob` compiles.
+type Kind uint
 
 // The kinds of Go.
 const (
-	Invalid       Kind = "invalid"
-	Bool          Kind = "bool"
-	Int           Kind = "int"
-	Int8          Kind = "int8"
-	Int16         Kind = "int16"
-	Int32         Kind = "int32"
-	Int64         Kind = "int64"
-	Uint          Kind = "uint"
-	Uint8         Kind = "uint8"
-	Uint16        Kind = "uint16"
-	Uint32        Kind = "uint32"
-	Uint64        Kind = "uint64"
-	Uintptr       Kind = "uintptr"
-	Float32       Kind = "float32"
-	Float64       Kind = "float64"
-	Complex64     Kind = "complex64"
-	Complex128    Kind = "complex128"
-	Array         Kind = "array"
-	Chan          Kind = "chan"
-	Func          Kind = "func"
-	Interface     Kind = "interface"
-	Map           Kind = "map"
-	Pointer       Kind = "ptr"
-	Slice         Kind = "slice"
-	String        Kind = "string"
-	Struct        Kind = "struct"
-	UnsafePointer Kind = "unsafe.Pointer"
+	Invalid Kind = iota
+	Bool
+	Int
+	Int8
+	Int16
+	Int32
+	Int64
+	Uint
+	Uint8
+	Uint16
+	Uint32
+	Uint64
+	Uintptr
+	Float32
+	Float64
+	Complex64
+	Complex128
+	Array
+	Chan
+	Func
+	Interface
+	Map
+	Pointer
+	Slice
+	String
+	Struct
+	UnsafePointer
 )
 
 // Ptr is the old name of Pointer.
 const Ptr = Pointer
 
+// kindNames holds the text of each kind, in the order of the constants.
+var kindNames = []string{
+	"invalid",
+	"bool",
+	"int",
+	"int8",
+	"int16",
+	"int32",
+	"int64",
+	"uint",
+	"uint8",
+	"uint16",
+	"uint32",
+	"uint64",
+	"uintptr",
+	"float32",
+	"float64",
+	"complex64",
+	"complex128",
+	"array",
+	"chan",
+	"func",
+	"interface",
+	"map",
+	"ptr",
+	"slice",
+	"string",
+	"struct",
+	"unsafe.Pointer",
+}
+
 // String gives the name of the kind.
-func (k Kind) String() string { return string(k) }
+func (k Kind) String() string {
+	if int(k) < len(kindNames) {
+		return kindNames[k]
+	}
+	return "kind" + itoa(int(k))
+}
+
+// kindByName gives the Kind of the text that the type descriptor of the
+// runtime holds. A text that names no kind gives Invalid.
+func kindByName(text string) Kind {
+	switch text {
+	case "bool":
+		return Bool
+	case "int":
+		return Int
+	case "int8":
+		return Int8
+	case "int16":
+		return Int16
+	case "int32":
+		return Int32
+	case "int64":
+		return Int64
+	case "uint":
+		return Uint
+	case "uint8":
+		return Uint8
+	case "uint16":
+		return Uint16
+	case "uint32":
+		return Uint32
+	case "uint64":
+		return Uint64
+	case "uintptr":
+		return Uintptr
+	case "float32":
+		return Float32
+	case "float64":
+		return Float64
+	case "complex64":
+		return Complex64
+	case "complex128":
+		return Complex128
+	case "array":
+		return Array
+	case "chan":
+		return Chan
+	case "func":
+		return Func
+	case "interface":
+		return Interface
+	case "map":
+		return Map
+	case "ptr":
+		return Pointer
+	case "slice":
+		return Slice
+	case "string":
+		return String
+	case "struct":
+		return Struct
+	case "unsafe.Pointer":
+		return UnsafePointer
+	}
+	return Invalid
+}
 
 // A Type describes a Go type. It compares with nil, exactly as it does in Go.
 //
@@ -79,6 +175,7 @@ func (k Kind) String() string { return string(k) }
 type Type interface {
 	String() string
 	Name() string
+	PkgPath() string
 	Kind() Kind
 	Comparable() bool
 	Elem() Type
@@ -263,7 +360,17 @@ func composite(text string) bool {
 // Kind gives the class of the type.
 func (t *rtype) Kind() Kind {
 	_, kind, _ := dart.DescInfo(t.handle())
-	return Kind(kind)
+	return kindByName(kind)
+}
+
+// PkgPath gives the import path of the package of a named type, and it gives
+// an empty text for each other type. A type of the package main gives `main`,
+// exactly as in Go.
+func (t *rtype) PkgPath() string {
+	if t.Name() == "" {
+		return ""
+	}
+	return dart.DescPkgPath(t.handle())
 }
 
 // Comparable reports whether Go compares 2 values of the type with ==.

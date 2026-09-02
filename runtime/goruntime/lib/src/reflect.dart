@@ -399,6 +399,11 @@ Iface? $makeValue(int handle, int length, int capacity) {
 final Map<String, TypeDesc> _pointers = <String, TypeDesc>{};
 
 TypeDesc _pointerTo(TypeDesc elem) {
+  // The emitter writes the description of the pointer when that pointer holds
+  // a method that the value type does not hold. That description carries the
+  // method table, thus Implements of it answers as Go does.
+  final TypeDesc? held = elem.ptr?.call();
+  if (held != null) return held;
   final TypeDesc? found = _pointers[elem.name];
   if (found != null) return found;
   final TypeDesc out = TypeDesc(
