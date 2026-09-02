@@ -183,9 +183,17 @@ String _base(String text, String verb, String letter) {
     case 'X':
       prefix = '0X';
     case 'o':
+      // Go writes the zero of an octal only when the digits hold none, thus
+      // the value 0 gives the text 0 and never 00.
+      if (text.startsWith('0') || text.startsWith('-0')) return text;
       prefix = '0';
     case 'O':
-      prefix = '0o';
+      // _int already wrote 0o, because Go writes that prefix with no flag.
+      // The flag # adds the leading zero of an octal on top of it.
+      final bool neg = text.startsWith('-');
+      final String digits = text.substring(neg ? 3 : 2);
+      if (digits.startsWith('0')) return text;
+      return '${neg ? '-' : ''}0o0$digits';
     case 'b':
       prefix = '0b';
     default:
@@ -195,10 +203,14 @@ String _base(String text, String verb, String letter) {
   return '$prefix$text';
 }
 
-/// _sign writes the flag + in front of a value that is not negative. Go writes
-/// that flag for a numeric verb only, and not for the verb v.
-String _sign(String text, bool plus, String letter) {
-  if (!plus || text.startsWith('-')) return text;
+/// _sign writes the flag + or the flag space in front of a value that is not
+/// negative. Go writes each 1 for a numeric verb only, and not for the verb v.
+/// The flag + wins when the verb holds both.
+String _sign(String text, String verb, String letter) {
+  if (text.startsWith('-')) return text;
+  final bool plus = verb.contains('+');
+  final bool space = verb.contains(' ');
+  if (!plus && !space) return text;
   switch (letter) {
     case 'd':
     case 'x':
@@ -212,7 +224,7 @@ String _sign(String text, bool plus, String letter) {
     case 'F':
     case 'g':
     case 'G':
-      return '+$text';
+      return plus ? '+$text' : ' $text';
   }
   return text;
 }
@@ -234,7 +246,7 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'float64':
       return _sign(
         _float(v as double, letter, _precision(verb), type.kind == 'float32'),
-        plus,
+        verb,
         letter,
       );
     case 'complex64':
@@ -245,7 +257,7 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'uintptr':
       return _sign(
         _base(_int(v as GoInt, letter, true), verb, letter),
-        plus,
+        verb,
         letter,
       );
     case 'int':
@@ -258,7 +270,7 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'uint32':
       return _sign(
         _base(_int(v as GoInt, letter, false), verb, letter),
-        plus,
+        verb,
         letter,
       );
     case 'slice':
@@ -335,6 +347,10 @@ String _int(GoInt v, String letter, bool unsigned) {
       return _radix(v, 2, unsigned);
     case 'o':
       return _radix(v, 8, unsigned);
+    case 'O':
+      // Go writes the prefix of this verb with no flag, thus _base adds none.
+      final text = _radix(v, 8, unsigned);
+      return text.startsWith('-') ? '-0o${text.substring(1)}' : '0o$text';
     case 'c':
       return $runeToString(v).toDartString();
     case 'q':

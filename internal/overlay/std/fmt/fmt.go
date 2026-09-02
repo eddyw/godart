@@ -163,7 +163,7 @@ func Sprintf(format string, a ...any) string {
 		}
 		text := dart.Format(verb+string(rune(letter)), a[arg])
 		arg++
-		out += pad(text, width, verb)
+		out += pad(text, width, verb, letter)
 	}
 	out += format[start:]
 	return out
@@ -245,7 +245,10 @@ func isDigit(c byte) bool {
 
 // pad gives the text the width of the verb. The flag `-` puts the fill after
 // the text, and the flag `0` writes a zero in place of each space.
-func pad(text string, width int, verb string) string {
+func pad(text string, width int, verb string, letter byte) string {
+	if contains(verb, '0') && !contains(verb, '-') {
+		return zeroPad(text, width, verb, letter)
+	}
 	n := width - runeCount(text)
 	if n <= 0 {
 		return text
@@ -253,15 +256,54 @@ func pad(text string, width int, verb string) string {
 	if contains(verb, '-') {
 		return text + fill(n, ' ')
 	}
-	if contains(verb, '0') {
-		// The sign stands in front of the zeros.
-		sign := ""
-		if len(text) > 0 && (text[0] == '-' || text[0] == '+') {
-			sign, text = text[:1], text[1:]
-		}
-		return sign + fill(n, '0') + text
-	}
 	return fill(n, ' ') + text
+}
+
+// zeroPad writes the zeros of the flag 0.
+//
+// Go puts the zeros after the sign and after the base prefix of the flag #,
+// and it counts the sign against the width and the prefix not. The prefix of
+// an octal is 1 zero, and Go writes that zero only when the digits hold none,
+// thus the padding gives it.
+func zeroPad(text string, width int, verb string, letter byte) string {
+	sign := ""
+	if len(text) > 0 && (text[0] == '-' || text[0] == '+' || text[0] == ' ') {
+		sign, text = text[:1], text[1:]
+	}
+	alt := contains(verb, '#')
+	prefix := ""
+	octal := alt && letter == 'o'
+	switch {
+	case octal:
+		// dart.Format already wrote the leading zero of the octal. The width
+		// covers the digits alone, thus the zero comes off first.
+		if len(text) > 1 && text[0] == '0' {
+			text = text[1:]
+		}
+	case alt || letter == 'O':
+		// The verb O writes its prefix with no flag, thus the width covers the
+		// digits alone for that verb too.
+		prefix, text = cutBase(text)
+	}
+	if n := width - runeCount(sign) - runeCount(text); n > 0 {
+		text = fill(n, '0') + text
+	}
+	if octal && (len(text) == 0 || text[0] != '0') {
+		text = "0" + text
+	}
+	return sign + prefix + text
+}
+
+// cutBase splits the 2 character base prefix that the flag # writes from the
+// digits behind it.
+func cutBase(text string) (string, string) {
+	if len(text) >= 2 && text[0] == '0' {
+		switch text[1] {
+		case 'x', 'X', 'b', 'B', 'o', 'O':
+			return text[:2], text[2:]
+		}
+	}
+	return "", text
 }
 
 func fill(n int, c byte) string {

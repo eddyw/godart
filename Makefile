@@ -54,8 +54,10 @@ dart-get:
 build:
 	go build -o build/gart ./cmd/gart
 
+# The driver tests compile each program of testdata with the Dart VM, thus the
+# suite runs for about 30 minutes. The default of the go command is 10.
 test:
-	go test ./...
+	go test -timeout 90m ./...
 
 vet:
 	go vet ./...
