@@ -367,8 +367,22 @@ func reflectText(t types.Type) string {
 		return "chan " + reflectText(t.Elem())
 	case *types.Signature:
 		return signatureText(t)
+	case *types.Basic:
+		return basicText(t)
 	}
 	return types.TypeString(t, shortQualifier)
+}
+
+// basicText names a predeclared type in the form that reflect gives.
+//
+// byte and uint8 name 1 type, and so do rune and int32. Go prints the name of
+// the element type, thus uint8 and not byte. stripNames holds the same rule
+// for the identity of a type.
+func basicText(b *types.Basic) string {
+	if b.Kind() == types.UnsafePointer {
+		return b.String()
+	}
+	return types.Typ[b.Kind()].Name()
 }
 
 // signatureText writes a function type in the form of reflect.
@@ -412,7 +426,7 @@ func kindOf(t types.Type) string {
 		case types.UnsafePointer:
 			return "unsafe.Pointer"
 		}
-		return u.String()
+		return basicText(u)
 	case *types.Slice:
 		return "slice"
 	case *types.Array:
@@ -591,6 +605,13 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		return e.dictOf(tp) + ".desc"
 	}
 	if p, ok := u.(*types.Pointer); ok {
+		// A generic function holds no variable for the description of a
+		// pointer to its type parameter. The runtime reads the description of
+		// the type argument, thus the method table of the pointer stays, and
+		// Implements of it answers as Go does.
+		if tp, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
+			return "$ptrDesc(" + e.dictOf(tp) + ".desc)"
+		}
 		if named, ok := types.Unalias(p.Elem()).(*types.Named); ok {
 			if isInstance(named) {
 				return e.instDescVar(named, true)
@@ -799,6 +820,15 @@ func (e *emitter) box(x ir.Expr, from types.Type) string {
 	// of such a parameter already holds an interface value.
 	if _, ok := types.Unalias(from).(*types.TypeParam); ok {
 		return fmt.Sprintf("$boxDesc(%s, %s)", e.descriptorOf(from), text)
+	}
+	// A generic function writes a cell for the address of a value. The Dart
+	// form of a pointer to a struct and of a pointer to an array is the value
+	// itself. The interface value thus reads the cell out.
+	if p, ok := types.Unalias(from).(*types.Pointer); ok {
+		if tp, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
+			return fmt.Sprintf("Iface(%s, $ptrValue(%s.desc, %s))",
+				e.descriptorOf(from), e.dictOf(tp), text)
+		}
 	}
 	return fmt.Sprintf("Iface(%s, %s)", e.descriptorOf(from), text)
 }

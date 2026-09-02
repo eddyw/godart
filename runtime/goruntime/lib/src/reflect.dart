@@ -378,9 +378,72 @@ Iface? $newValue(int handle) {
   if (zero == null) {
     $panic(Iface($typeGoError, GoError('reflect: New of ${desc.display}')));
   }
-  final Object? target = desc.kind == 'struct' ? zero() : Box<Object?>(zero());
-  return Iface(_pointerTo(desc), target);
+  // The Dart form of a pointer to a struct and of a pointer to an array is
+  // the value itself. Each other pointer holds a cell of the Dart type of the
+  // value, thus a type assertion of the result reads.
+  if (_isObjectPointer(desc)) return Iface($ptrDesc(desc), zero());
+  return Iface(
+    $ptrDesc(desc),
+    _byKind<$Ptr<Object?>>(desc.kind, <T>() => Box<T>(zero() as T)),
+  );
 }
+
+/// True when the Dart form of a pointer to the type is the value itself.
+bool _isObjectPointer(TypeDesc desc) =>
+    desc.kind == 'struct' || desc.kind == 'array';
+
+/// Calls the function with the Dart type that the kind names.
+///
+/// The Dart type of a value lives in the emitted code, thus a cell of Object?
+/// fits no typed location. Each kind below holds 1 Dart type, and the runtime
+/// builds the typed cell for it. A slice, a map, a channel, a function, and a
+/// pointer each read the Dart type of the element. A cell of one of the 5
+/// keeps Object?, thus a type assertion of it throws.
+R _byKind<R>(String kind, R Function<T>() f) {
+  switch (kind) {
+    case 'bool':
+      return f<bool>();
+    case 'string':
+      return f<GoString>();
+    case 'float32' || 'float64':
+      return f<double>();
+    case 'complex64' || 'complex128':
+      return f<GoComplex>();
+    case 'interface':
+      return f<Iface?>();
+    case 'int' ||
+        'int8' ||
+        'int16' ||
+        'int32' ||
+        'int64' ||
+        'uint' ||
+        'uint8' ||
+        'uint16' ||
+        'uint32' ||
+        'uint64' ||
+        'uintptr':
+      return f<GoInt>();
+  }
+  return f<Object?>();
+}
+
+/// A pointer to a location that a getter and a setter name, with the Dart type
+/// that the kind of the value names.
+$Ptr<Object?> _typedCell(
+  TypeDesc desc,
+  Object? owner,
+  int index,
+  Object? Function(Object?, int) get,
+  void Function(Object?, int, Object?) set,
+) => _byKind<$Ptr<Object?>>(
+  desc.kind,
+  <T>() => $Ref<Object?, T>(
+    owner,
+    index,
+    (Object? o, int i) => get(o, i) as T,
+    (Object? o, int i, T v) => set(o, i, v),
+  ),
+);
 
 /// A slice of the type, with the length and the capacity.
 Iface? $makeValue(int handle, int length, int capacity) {
@@ -398,7 +461,12 @@ Iface? $makeValue(int handle, int length, int capacity) {
 
 final Map<String, TypeDesc> _pointers = <String, TypeDesc>{};
 
-TypeDesc _pointerTo(TypeDesc elem) {
+/// The description of a pointer to the type.
+///
+/// A generic function holds no variable for the description of a pointer to
+/// its type parameter. The emitted code calls this function with the
+/// description of the type argument.
+TypeDesc $ptrDesc(TypeDesc elem) {
   // The emitter writes the description of the pointer when that pointer holds
   // a method that the value type does not hold. That description carries the
   // method table, thus Implements of it answers as Go does.
@@ -416,6 +484,18 @@ TypeDesc _pointerTo(TypeDesc elem) {
   );
   _pointers[elem.name] = out;
   return out;
+}
+
+/// The value of a pointer to a type parameter, in the form of the type
+/// argument.
+///
+/// A generic function holds no type argument, thus the address of a value
+/// there writes a cell. The Dart form of a pointer to a struct and of a
+/// pointer to an array is the value itself. An interface value of such a
+/// pointer thus reads the cell out.
+Object? $ptrValue(TypeDesc elem, Object? pointer) {
+  if (!_isObjectPointer(elem)) return pointer;
+  return pointer is $Ptr<Object?> ? pointer.v : pointer;
 }
 
 /// The count of the parameters of a function type.
@@ -818,7 +898,7 @@ int $mapOf(int key, int elem) {
 /// A handle of the pointer type of an element type.
 int $pointerTo(int elem) {
   final TypeDesc e = _typeAt(elem);
-  return _syntheticHandle(() => _pointerTo(e));
+  return _syntheticHandle(() => $ptrDesc(e));
 }
 
 /// _zeroOf gives the zero value of a type, or null for a type that holds no
@@ -1043,15 +1123,19 @@ Iface? $valueAddr(Iface? value, Iface? owner, int index, int loc) {
     }
     final FieldDesc f = ownerDesc.fields[index];
     final TypeDesc field = f.type();
-    // The Dart form of a pointer to a struct is the struct itself.
-    if (field.kind == 'struct') {
-      return Iface(_pointerTo(field), f.get(owner.value));
+    // The Dart form of a pointer to a struct and of a pointer to an array is
+    // the value itself.
+    if (_isObjectPointer(field)) {
+      return Iface($ptrDesc(field), f.get(owner.value));
     }
+    // The index of the field keeps 2 addresses of 2 fields apart, because a
+    // cell compares the owner and the index.
     return Iface(
-      _pointerTo(field),
-      $Ref<Object?, Object?>(
+      $ptrDesc(field),
+      _typedCell(
+        field,
         owner.value,
-        0,
+        index,
         (Object? o, int _) => f.get(o),
         (Object? o, int _, Object? v) => f.set(o, v),
       ),
@@ -1062,17 +1146,12 @@ Iface? $valueAddr(Iface? value, Iface? owner, int index, int loc) {
     $panic(Iface($typeGoError, GoError('reflect: Addr of an element')));
   }
   final Object? v = owner.value;
-  if (elem.kind == 'struct') {
-    return Iface(_pointerTo(elem), _readElem(v, index));
+  if (_isObjectPointer(elem)) {
+    return Iface($ptrDesc(elem), _readElem(v, index));
   }
   return Iface(
-    _pointerTo(elem),
-    $Ref<Object?, Object?>(
-      v,
-      index,
-      (Object? o, int i) => _readElem(o, i),
-      (Object? o, int i, Object? x) => _writeElem(o, i, x),
-    ),
+    $ptrDesc(elem),
+    _typedCell(elem, v, index, _readElem, _writeElem),
   );
 }
 

@@ -83,7 +83,7 @@ The package `fmt` reads it.
 | `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
 | A descriptor of an instance of a generic type | Present. The description stands at the point of the use, and the name holds each type argument. |
 | `reflect.DeepEqual` | Present. The walk reads the type descriptor. |
-| `Type.String` | Present. The text follows `reflect`, and not `go/types`. An unnamed struct type and an unnamed interface type each hold 1 space after the keyword. |
+| `Type.String` | Present. The text follows `reflect`, and not `go/types`. An unnamed struct type and an unnamed interface type each hold 1 space after the keyword. An alias gives the name of the element type since 2026-09-03, thus `[]byte` reads `[]uint8` and `rune` reads `int32`. |
 | `reflect.Type` | A struct with a handle of a descriptor of the runtime, and not an interface. Thus `Type` compares with `==` and holds no nil value. |
 | `reflect.TypeOf(nil)` | Gives a Type with an empty text and an empty kind. Go gives nil. |
 | `reflect.ValueOf`, `Value.Interface`, `Value.Elem`, `Value.Set`, `reflect.Zero`, `Type.Elem` | Present |
@@ -104,6 +104,9 @@ The package `fmt` reads it.
 | `Type.NumMethod`, `Type.Method`, `Value.NumMethod`, `Value.Method` | Present. The order follows the name, exactly as in Go. `Method` gives the name and the index only. |
 | `Value.IsNil`, `Value.MapIndex` | Present |
 | `Value.MapKeys` | Present. The order follows the insertion, and Go gives a random order. |
+| `Value.Addr().Interface()` | A typed pointer since 2026-09-03, thus a type assertion of it reads. A field or an element of the kind `slice`, `map`, `chan`, `func`, or `ptr` stays untyped, because the Dart type of such a value names its element type and that name lives only in the emitted code. |
+| `reflect.New` of a type that is not a struct | A typed cell since 2026-09-03, thus a write of it into a typed pointer slot reads. The same 5 kinds stay untyped. |
+| A pointer to a type parameter, inside a generic function | The method table stands since 2026-09-03. The description of the pointer reads the type argument through the dictionary, thus `Type.Implements` of it answers as Go does. |
 
 ## A type that reflect builds
 
