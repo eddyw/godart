@@ -95,11 +95,12 @@ The package `fmt` reads it.
 | `Value.Int`, `Uint`, `Float`, `Bool`, `String`, and each `Set` form of them | Present |
 | `reflect.New`, `reflect.MakeSlice`, `reflect.Indirect` | Present |
 | `Type.NumField`, `Type.Field`, `Type.Len`, `Type.Name`, `StructTag.Get` | Present |
-| `reflect.Kind` | The text of the kind, and not an unsigned number. The 2 forms hold the same set of values. |
+| `reflect.Kind` | Equal since 2026-09-03. The type is a `uint` with the 27 constants of Go under `iota`, and each number matches Go. `String` gives the text of Go, and an array that indexes by a kind thus compiles. |
+| `Type.PkgPath` | Present since 2026-09-03. A named type gives the import path of its package, and each other type gives an empty text. |
 | `Value.Elem` of a value that is not a pointer | Panics. Go gives the value inside an interface. |
 | `Type.Size`, `Type.Align`, `Type.FieldAlign`, `StructField.Offset` | Present. The result follows the rules of a 64-bit machine, exactly as the compiler of Go computes them. |
 | `Type.Align`, `Type.FieldAlign`, `Value.UnsafeAddr` | Not present. The target has no memory layout. |
-| `Value.Complex` and `Value.SetComplex` | Not present. The reflect subset holds no complex kind. |
+| `Value.Complex` and `Value.SetComplex` | Not present. `Complex64` and `Complex128` stand in the kind set, and no `Value` method reads such a value. |
 | `Type.NumMethod`, `Type.Method`, `Value.NumMethod`, `Value.Method` | Present. The order follows the name, exactly as in Go. `Method` gives the name and the index only. |
 | `Value.IsNil`, `Value.MapIndex` | Present |
 | `Value.MapKeys` | Present. The order follows the insertion, and Go gives a random order. |
@@ -214,6 +215,9 @@ reads the real Go source, because that source already stays inside the subset.
 | `math/cmplx` | Native | The real source needs no patch. It imports `math` and `math/bits` alone. |
 | `crypto/subtle` | Overlay | The 8 names of Go, each in its portable form. Read the note below. |
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
+| `encoding/gob` | Overlay | The source of Go. The wire bytes are the real ones, and the type ids of the bootstrap keep the numbers 1 to 23. The speed helpers, `internal/saferio`, `sync.Pool`, and `atomic.Pointer` each stay out, and the general path writes the same bytes. A decode into a pointer to a pointer whose element is not a struct panics. |
+| `encoding/asn1` | Patch | The source of Go. `asn1.go` drops `internal/saferio`, which holds `unsafe.Sizeof`, and it reads the type of a field in place of a type assertion of its address. `marshal.go` writes a composite literal in place of a conversion between 2 struct types. |
+| `encoding/pem`, `crypto/x509/pkix`, `unicode/utf16` | Native | Each name of Go. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
