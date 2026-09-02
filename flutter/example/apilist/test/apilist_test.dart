@@ -137,6 +137,30 @@ void main() {
     expect(seen.length, 2);
   });
 
+  testWidgets('a Go value type reaches the Flutter widget', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(harness());
+    await tester.tap(find.byTooltip('read the API'));
+    await tester.pump();
+    await settle(tester);
+
+    // ui.Shape, ui.BorderSide, and ui.Radius reach the Card of Flutter.
+    final Card card = tester.widget<Card>(find.byType(Card).first);
+    final RoundedRectangleBorder shape = card.shape! as RoundedRectangleBorder;
+    expect(shape.borderRadius, BorderRadius.circular(12));
+    expect(shape.side.width, 1);
+
+    // A string field reaches a named Flutter value.
+    final ListView list = tester.widget<ListView>(find.byType(ListView));
+    expect(list.physics, isA<BouncingScrollPhysics>());
+
+    final IconButton button = tester.widget<IconButton>(
+      find.byType(IconButton),
+    );
+    expect(button.mouseCursor, SystemMouseCursors.click);
+  });
+
   testWidgets('the load rebuilds the body boundary alone', (
     WidgetTester tester,
   ) async {

@@ -88,9 +88,10 @@ func (a *App) Build() ui.Node {
 			Title: ui.Text{Data: "golang/go issues"},
 			Actions: ui.Kids(
 				ui.IconButton{
-					Icon:      ui.Icon{Icon: "refresh"},
-					Tooltip:   ui.P("read the API"),
-					OnPressed: a.Load,
+					Icon:        ui.Icon{Icon: "refresh"},
+					Tooltip:     ui.P("read the API"),
+					MouseCursor: ui.P("click"),
+					OnPressed:   a.Load,
 				},
 			),
 		},
@@ -116,6 +117,7 @@ func (a *App) body() ui.Node {
 		return ui.Center{Child: ui.Text{Data: "press refresh to read the API"}}
 	}
 	return ui.ListViewBuilder{
+		Physics:     ui.P("bouncing"),
 		ItemCount:   ui.P(len(list)),
 		ItemBuilder: func(i int) ui.Node { return row(list[i]) },
 	}
@@ -124,6 +126,11 @@ func (a *App) body() ui.Node {
 func row(it Issue) ui.Node {
 	return ui.Keyed{Key: fmt.Sprint(it.Number), Child: ui.Card{
 		Margin: ui.P(ui.Sides(12, 6)),
+		Shape: &ui.Shape{
+			Kind:   "rounded",
+			Radius: ui.AllCorners(12),
+			Side:   &ui.BorderSide{Width: ui.P(1.0)},
+		},
 		Child: ui.Padding{
 			Padding: ui.AllSides(12),
 			Child: ui.Column{

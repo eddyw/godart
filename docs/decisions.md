@@ -1123,6 +1123,22 @@ The plan left these points open. The work took the decisions below.
      now writes the cast only for a target of another Dart type. The package
      `unique` holds the 1 site that reaches this shape today.
 
+231. A Dart value type of a widget parameter takes a Go struct, and not an
+     opaque handle. The reading of 2026-09-02 dropped 273 widget constructors,
+     and a count of the blocking parameter of each 1 gave 176 distinct Dart
+     types with a largest of 11. Thus no opaque handle unlocks a group. The
+     parameters that a mapping does reach stand on the 411 nodes that already
+     map: `FocusNode` in 74, `WidgetStateProperty<Color?>` in 54, `MouseCursor`
+     in 49, `ShapeBorder` in 40, `ScrollController` in 31, and `ScrollPhysics`
+     in 30. Of these, 6 of 9 hold a value and no identity, thus a Go struct or
+     a name carries them. `ui.BorderSide`, `ui.Radius`, `ui.Shape`,
+     `ui.Density`, `ui.IconStyle`, and `ui.StateColor` joined `ui.Insets`,
+     `ui.TextStyle`, and `ui.Constraints`, and `MouseCursor`, `ScrollPhysics`,
+     and `Locale` each take a name. The set went to 414 nodes and 3851 fields,
+     thus 275 more parameters reach Go. `FocusNode`, `ScrollController`, and
+     `WidgetStatesController` each hold an identity, and the host owns such an
+     object, as it owns the controller of `ui.TextInput`.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

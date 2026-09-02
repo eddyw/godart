@@ -1027,7 +1027,7 @@ acceptable and the first open question is answered. The output:
 
 | Output | Scope |
 |---|---|
-| `flutter/ui/widgets_gen.go`, 411 node types and 3576 fields | The whole project |
+| `flutter/ui/widgets_gen.go`, 414 node types and 3851 fields | The whole project |
 | `<app>/lib/widgets_gen.dart` | 1 application |
 
 **The 3 questions of the plan.**
@@ -1059,10 +1059,24 @@ Go tests of `flutter/ui` and `flutter/example/counter/go` pass with no Flutter.
 `flutter analyze` gives no issue for `goflutter`, for `nodegen`, and for the
 application.
 
-**What the mapping drops.** A parameter that holds a controller, a focus node,
-a shape, a decoration, a scroll physics, or any other Dart object stays out,
-because a Go value holds no Dart object. 275 widget constructors reach no node
-type for that reason. `dart run bin/report.dart ../goflutter` names each 1.
+**What the mapping drops.** A parameter of a Dart type that no Go type carries
+stays out. `dart run bin/report.dart ../goflutter` names each 1.
+
+The reading of 2026-09-02 held 411 node types with 3576 fields, and 273 widget
+constructors reached no node type. A measure of the blocking parameter of each
+1 of the 273 gave a long tail: 176 distinct types, and the largest holds 11.
+Thus no single Dart type unlocks a large group.
+
+The 9 value types of the same day widened the mapping. The set now holds 414
+node types with 3851 fields, thus 275 more parameters reach Go, and 270
+constructors stay out. Read the mapping table of `flutter/nodegen/README.md`
+and decision 231.
+
+3 Dart types of the top of the list stay out, and each 1 holds an identity that
+a Go value cannot carry: `FocusNode` in 74 parameters, `ScrollController` in
+31, and `WidgetStatesController` in 27. The host owns such an object today, and
+`ui.TextInput` is the pattern: the host keeps the controller and the focus of a
+text field across a rebuild that Go drives.
 
 ## The measurements
 

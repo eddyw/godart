@@ -68,11 +68,23 @@ parameter that its constructor demands maps to a Go type.
 | `void Function(T)` for a mapped scalar or enum | `func(T)` | |
 | `Widget Function(BuildContext)` | `ui.Builder` | A synchronous position. Read decision 221. |
 | `Widget Function(BuildContext, int)` | `ui.ItemBuilder` | A synchronous position. |
+| `MouseCursor` | `string` | A name of the table of `convert.dart`. |
+| `ScrollPhysics` | `string` | A name: `bouncing`, `clamping`, `never`, `always`, `page`, `range`, `fixedExtent`. |
+| `Locale` | `string` | A language tag, for example `en` or `en_US`. |
+| `BorderSide` | `ui.BorderSide` | |
+| `BorderRadius`, `BorderRadiusGeometry` | `ui.Radius` | The 4 corners. |
+| `ShapeBorder`, `OutlinedBorder` | `ui.Shape` | The host gives an `OutlinedBorder`. |
+| `VisualDensity` | `ui.Density` | |
+| `IconThemeData` | `ui.IconStyle` | The name differs, because a widget holds the name `IconTheme`. |
+| `WidgetStateProperty<Color?>` | `ui.StateColor` | 1 color for each state. |
 
 A parameter that the constructor does not demand takes a pointer field, and a
 nil pointer means "the default of Flutter". A parameter of any other type does
-not reach the node set. A controller, a focus node, a shape, a decoration, and a
-scroll physics each stand outside, because a Go value holds no Dart object.
+not reach the node set. A `FocusNode`, a `ScrollController`, and a
+`WidgetStatesController` each stand outside, because such a value holds an
+identity that a Go value cannot carry. A `ButtonStyle`, a `Decoration`, and an
+`ImageProvider` each stand outside for now, and each 1 is a value that a Go
+struct can hold.
 
 A named constructor takes a Go struct of its own. `ListView.builder` gives
 `ui.ListViewBuilder`, and the host switches on the name of the type descriptor.

@@ -966,3 +966,30 @@ screen with no Flutter.
   named Go struct.
 - A widget test needs no network. `HttpServer.bind` of `dart:io` gives a local
   server, and `SetBaseURL` of the Go package points the application at it.
+
+### 2026-09-02, the value types of the node set
+
+9 Dart value types joined the mapping of `flutter/nodegen`. The node set went
+from 411 types with 3576 fields to 414 types with 3851 fields, thus 275 more
+widget parameters reach Go. Decision 231.
+
+- The earlier note named a controller, a focus node, a shape, a decoration, and
+  a scroll physics as the cause of 275 dropped constructors. The measure of the
+  blocking parameter of each of the 273 dropped constructors gave 176 distinct
+  Dart types, and the largest holds 11. `FocusNode` blocks 3, and `Decoration`
+  blocks 2. Thus no opaque handle unlocks a group.
+- The value stands in the optional parameters of the 411 nodes that already
+  map. 6 of the 9 largest unmapped types hold a value and no identity, thus a
+  Go struct or a name carries each 1.
+- `FocusNode` in 74 parameters, `ScrollController` in 31, and
+  `WidgetStatesController` in 27 each hold an identity. A Go program cannot
+  make one, thus an opaque handle needs a producer first.
+- `syscall/dart` carries `//go:build dart`. A Go module that names a type of
+  that package no longer builds with the go command, thus `gart.dev/ui` would
+  need a pair of files and an alias of its own to keep `go test` working.
+- A value type of the node set must not take the name of a widget.
+  `IconThemeData` maps to `ui.IconStyle`, because the set already holds a
+  widget `IconTheme`.
+- A callback of 1 argument reaches `cb1Expr`, which throws for an argument that
+  it cannot write. `mapFunction` now names the 6 kinds that it writes, thus a
+  new value type adds no crash of the generator.

@@ -193,3 +193,149 @@ T? goCast<T>(Iface? node, GoRuntime rt, String field) {
   throw StateError('the field $field holds a ${w.runtimeType}, and the '
       'parameter needs a $T');
 }
+
+const Map<String, MouseCursor> _cursors = <String, MouseCursor>{
+  'none': SystemMouseCursors.none,
+  'basic': SystemMouseCursors.basic,
+  'click': SystemMouseCursors.click,
+  'forbidden': SystemMouseCursors.forbidden,
+  'wait': SystemMouseCursors.wait,
+  'progress': SystemMouseCursors.progress,
+  'contextMenu': SystemMouseCursors.contextMenu,
+  'help': SystemMouseCursors.help,
+  'text': SystemMouseCursors.text,
+  'verticalText': SystemMouseCursors.verticalText,
+  'cell': SystemMouseCursors.cell,
+  'precise': SystemMouseCursors.precise,
+  'move': SystemMouseCursors.move,
+  'grab': SystemMouseCursors.grab,
+  'grabbing': SystemMouseCursors.grabbing,
+  'noDrop': SystemMouseCursors.noDrop,
+  'alias': SystemMouseCursors.alias,
+  'copy': SystemMouseCursors.copy,
+  'allScroll': SystemMouseCursors.allScroll,
+  'resizeLeftRight': SystemMouseCursors.resizeLeftRight,
+  'resizeUpDown': SystemMouseCursors.resizeUpDown,
+  'zoomIn': SystemMouseCursors.zoomIn,
+  'zoomOut': SystemMouseCursors.zoomOut,
+  'defer': MouseCursor.defer,
+  'uncontrolled': MouseCursor.uncontrolled,
+};
+
+/// goCursor reads the name of a mouse cursor.
+MouseCursor? goCursor(String? s) => s == null ? null : _cursors[s];
+
+/// goPhysics reads the name of a scroll physics.
+///
+/// Each one takes the physics of the platform as its parent, thus a list keeps
+/// the feel of the platform under the named rule.
+ScrollPhysics? goPhysics(String? s) {
+  switch (s) {
+    case 'bouncing':
+      return const BouncingScrollPhysics();
+    case 'clamping':
+      return const ClampingScrollPhysics();
+    case 'never':
+      return const NeverScrollableScrollPhysics();
+    case 'always':
+      return const AlwaysScrollableScrollPhysics();
+    case 'page':
+      return const PageScrollPhysics();
+    case 'range':
+      return const RangeMaintainingScrollPhysics();
+    case 'fixedExtent':
+      return const FixedExtentScrollPhysics();
+  }
+  return null;
+}
+
+/// goLocale reads a language tag, for example `en` or `en_US`.
+Locale? goLocale(String? s) {
+  if (s == null || s.isEmpty) return null;
+  final List<String> parts = s.split(RegExp(r'[_-]'));
+  if (parts.length == 1) return Locale(parts[0]);
+  return Locale(parts[0], parts[1]);
+}
+
+/// goBorderSide reads the BorderSide struct of the Go side.
+BorderSide? goBorderSide(GoNode? n) {
+  if (n == null) return null;
+  return BorderSide(
+    color: goColorOpt(n.countOpt('Color')) ?? const BorderSide().color,
+    width: n.sizeOpt('Width') ?? 1,
+    style: n.text('Style') == 'none' ? BorderStyle.none : BorderStyle.solid,
+  );
+}
+
+/// goRadius reads the Radius struct of the Go side.
+BorderRadius? goRadius(GoNode? n) {
+  if (n == null) return null;
+  return BorderRadius.only(
+    topLeft: Radius.circular(n.size('TopLeft')),
+    topRight: Radius.circular(n.size('TopRight')),
+    bottomLeft: Radius.circular(n.size('BottomLeft')),
+    bottomRight: Radius.circular(n.size('BottomRight')),
+  );
+}
+
+/// goShape reads the Shape struct of the Go side.
+///
+/// The result is an OutlinedBorder, thus a parameter of that type and a
+/// parameter of ShapeBorder each take it.
+OutlinedBorder? goShape(GoNode? n) {
+  if (n == null) return null;
+  final BorderSide side = goBorderSide(n.nested('Side')) ?? BorderSide.none;
+  final BorderRadius radius = goRadius(n.nested('Radius')) ?? BorderRadius.zero;
+  switch (n.text('Kind')) {
+    case 'rounded':
+      return RoundedRectangleBorder(borderRadius: radius, side: side);
+    case 'stadium':
+      return StadiumBorder(side: side);
+    case 'circle':
+      return CircleBorder(side: side);
+    case 'beveled':
+      return BeveledRectangleBorder(borderRadius: radius, side: side);
+  }
+  return RoundedRectangleBorder(side: side);
+}
+
+/// goDensity reads the Density struct of the Go side.
+VisualDensity? goDensity(GoNode? n) => n == null
+    ? null
+    : VisualDensity(
+        horizontal: n.size('Horizontal'),
+        vertical: n.size('Vertical'),
+      );
+
+/// goIconStyle reads the IconStyle struct of the Go side.
+IconThemeData? goIconStyle(GoNode? n) => n == null
+    ? null
+    : IconThemeData(
+        color: goColorOpt(n.countOpt('Color')),
+        size: n.sizeOpt('Size'),
+        opacity: n.sizeOpt('Opacity'),
+        fill: n.sizeOpt('Fill'),
+        weight: n.sizeOpt('Weight'),
+      );
+
+/// goStateColor reads the StateColor struct of the Go side.
+///
+/// A state with no color of its own takes the color of Default. A nil Default
+/// gives null for that state, thus Flutter reads its own default.
+WidgetStateProperty<Color?>? goStateColor(GoNode? n) {
+  if (n == null) return null;
+  final Color? base = goColorOpt(n.countOpt('Default'));
+  final Color? hovered = goColorOpt(n.countOpt('Hovered'));
+  final Color? focused = goColorOpt(n.countOpt('Focused'));
+  final Color? pressed = goColorOpt(n.countOpt('Pressed'));
+  final Color? selected = goColorOpt(n.countOpt('Selected'));
+  final Color? disabled = goColorOpt(n.countOpt('Disabled'));
+  return WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+    if (states.contains(WidgetState.disabled)) return disabled ?? base;
+    if (states.contains(WidgetState.pressed)) return pressed ?? base;
+    if (states.contains(WidgetState.hovered)) return hovered ?? base;
+    if (states.contains(WidgetState.focused)) return focused ?? base;
+    if (states.contains(WidgetState.selected)) return selected ?? base;
+    return base;
+  });
+}

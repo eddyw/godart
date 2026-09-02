@@ -123,6 +123,24 @@ String readExpr(Param p) {
       return 'goTextStyle(n.nested($f))';
     case 'constraints':
       return 'goConstraints(n.nested($f))';
+    case 'cursor':
+      return 'goCursor(${p.optional ? "n.textOpt($f)" : "n.text($f)"})';
+    case 'physics':
+      return 'goPhysics(${p.optional ? "n.textOpt($f)" : "n.text($f)"})';
+    case 'locale':
+      return 'goLocale(${p.optional ? "n.textOpt($f)" : "n.text($f)"})';
+    case 'borderSide':
+      return 'goBorderSide(n.nested($f))';
+    case 'radius':
+      return 'goRadius(n.nested($f))';
+    case 'shape':
+      return 'goShape(n.nested($f))';
+    case 'density':
+      return 'goDensity(n.nested($f))';
+    case 'iconStyle':
+      return 'goIconStyle(n.nested($f))';
+    case 'stateColor':
+      return 'goStateColor(n.nested($f))';
     case 'node':
       return 'goChildOpt(n.child($f), rt)';
     case 'nodes':

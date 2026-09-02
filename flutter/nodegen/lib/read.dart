@@ -296,6 +296,28 @@ const _scalars = <String, GoType>{
   'EdgeInsetsGeometry': GoType('Insets', 'insets'),
   'TextStyle': GoType('TextStyle', 'textStyle'),
   'BoxConstraints': GoType('Constraints', 'constraints'),
+  'MouseCursor': GoType('string', 'cursor'),
+  'ScrollPhysics': GoType('string', 'physics'),
+  'Locale': GoType('string', 'locale'),
+  'BorderSide': GoType('BorderSide', 'borderSide'),
+  'BorderRadius': GoType('Radius', 'radius'),
+  'BorderRadiusGeometry': GoType('Radius', 'radius'),
+  'ShapeBorder': GoType('Shape', 'shape'),
+  'OutlinedBorder': GoType('Shape', 'shape'),
+  'VisualDensity': GoType('Density', 'density'),
+  'IconThemeData': GoType('IconStyle', 'iconStyle'),
+  'WidgetStateProperty<Color>': GoType('StateColor', 'stateColor'),
+};
+
+/// The argument kinds that a callback of 1 argument carries. cb1Expr of
+/// write_dart.dart holds the read of each 1, and an enum joins them.
+const _cb1Args = <String>{
+  'str',
+  'f64',
+  'i64',
+  'boolean',
+  'color',
+  'millis',
 };
 
 /// mapType gives the Go type of a Dart type, or null when no form fits.
@@ -360,8 +382,8 @@ GoType? mapFunction(Reading out, FunctionType t) {
     if (params.isEmpty) return const GoType('func()', 'cb0', pointer: false);
     if (params.length == 1) {
       final arg = mapType(out, params.first.type);
-      if (arg == null || arg.kind.startsWith('cb') ||
-          arg.kind.startsWith('build')) {
+      if (arg == null) return null;
+      if (!_cb1Args.contains(arg.kind) && !arg.kind.startsWith('enum:')) {
         return null;
       }
       return GoType('func(${arg.goType})', 'cb1:${arg.kind}', pointer: false);

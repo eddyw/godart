@@ -67,6 +67,25 @@ type.
 **Status of 2026-09-02.** Milestone 1 holds no Dart handle in a Go value. The
 host owns each Flutter object, and the Go tree carries data alone.
 
+**The item stays open, and the measure of 2026-09-02 lowered its value.** A
+count of the blocking parameter of each of the 273 dropped constructors gave
+176 distinct Dart types, and the largest holds 11. `FocusNode` blocks 3, and
+`Decoration` blocks 2. Thus `dart.Object` unlocks a handful of constructors,
+and not the group that the earlier note named.
+
+2 conditions must hold before the item earns its cost:
+
+1. **A producer.** A Go program cannot make a `FocusNode` or a
+   `ScrollController`. Only the host can. Thus `dart.Object` needs item 1, the
+   external Dart declaration, or a host call that gives such a value.
+2. **A twin declaration.** `syscall/dart` carries `//go:build dart`, thus a Go
+   module that names `dart.Object` no longer builds with the go command. A
+   module of the Flutter path must hold a pair of files, and an alias of its
+   own, to keep the rule that `go test` runs the whole screen with no Flutter.
+
+The 9 value types of decision 231 took the part of the surface that needs
+neither condition.
+
 ### 3. A callback export, in 2 flavors &mdash; done 2026-09-02
 
 Flutter calls Go, and the 2 directions of that call need 2 rules.

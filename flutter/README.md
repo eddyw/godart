@@ -11,7 +11,7 @@ targets.
 
 | Path | Content |
 |---|---|
-| `ui/` | The Go module `gart.dev/ui`. The signal graph, the state shapes, and 411 node types. |
+| `ui/` | The Go module `gart.dev/ui`. The signal graph, the state shapes, and 414 node types. |
 | `goflutter/` | The Dart package that hosts a Go tree in Flutter. |
 | `nodegen/` | The generator. It reads the Flutter API and writes the node set and the host. Read its README. |
 | `example/counter/` | Proof program 1. Go holds the whole screen. |
@@ -75,7 +75,7 @@ cd flutter/example/apilist/go && go test ./...
    widget test.
 6. `GoApp(bridge: YourBridge())` inside a `MaterialApp`.
 
-The node set holds 411 types of `widgets`, `material`, and `cupertino`. A
+The node set holds 414 types of `widgets`, `material`, and `cupertino`. A
 Cupertino screen needs no extra step. A widget of a `pub.dev` package costs 1 Go
 struct in a package of your own and 1 case that you write, and `goSetWidgets`
 takes a function that reads your case first and the generated 1 after it.

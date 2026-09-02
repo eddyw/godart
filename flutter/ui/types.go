@@ -66,3 +66,66 @@ type TextStyle struct {
 	Decoration    string
 	Family        string
 }
+
+// BorderSide holds 1 edge of a border. A nil field takes the default of
+// Flutter: a black line of 1 logical pixel.
+//
+// Style takes "solid" or "none".
+type BorderSide struct {
+	Color *Color
+	Width *float64
+	Style string
+}
+
+// Radius holds the 4 corners of a rounded rectangle, in logical pixels.
+type Radius struct {
+	TopLeft     float64
+	TopRight    float64
+	BottomLeft  float64
+	BottomRight float64
+}
+
+// AllCorners gives the same radius on each corner.
+func AllCorners(v float64) Radius {
+	return Radius{TopLeft: v, TopRight: v, BottomLeft: v, BottomRight: v}
+}
+
+// Shape holds the outline of a widget.
+//
+// Kind takes "rounded", "stadium", "circle", "beveled", or "rectangle". An
+// empty Kind gives a rectangle. Radius reads for "rounded" and for "beveled"
+// alone.
+type Shape struct {
+	Kind   string
+	Radius Radius
+	Side   *BorderSide
+}
+
+// Density holds the visual density of a Material widget. Each value stands
+// between -4 and 4, and 0 gives the density of the theme.
+type Density struct {
+	Horizontal float64
+	Vertical   float64
+}
+
+// IconStyle holds the part of the Flutter IconThemeData that a node field
+// reads. The name differs from the Flutter name, because the node set holds a
+// widget IconTheme.
+type IconStyle struct {
+	Color   *Color
+	Size    *float64
+	Opacity *float64
+	Fill    *float64
+	Weight  *float64
+}
+
+// StateColor gives 1 color for each state of a Material widget. A nil field
+// takes the color of Default, and a nil Default takes the default of Flutter.
+type StateColor struct {
+	Default  *Color
+	Hovered  *Color
+	Focused  *Color
+	Pressed  *Color
+	Selected *Color
+	Disabled *Color
+}
