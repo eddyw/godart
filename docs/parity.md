@@ -1193,7 +1193,13 @@ for each test binary. The output holds the format of `go test`.
 | `t.TempDir` | A new directory for the test | Equal. The cleanup of the test removes it. |
 | `t.Setenv` | Writes the environment for the test | Equal. It writes the map of the `os` overlay, and the cleanup writes the value of the start again. |
 | `t.Context` | A context that a cancel closes in front of the cleanups | Equal |
-| `testing.TB` | Holds `Setenv` and `Context` | Holds neither. `B` and `F` give no such method. |
+| `testing.TB` | Holds `Setenv` and `Context` | Equal since 2026-09-03. `TB` holds the 7 names of the real `TB`, and `T`, `B`, and `F` each give them. |
+| `t.Attr` | Writes a key and a value to the test log | Present. A key with a space, or a value with a newline, reports an error and writes no line, as Go does. |
+| `t.Output` | Gives a writer of the test log | Present. Each line takes the prefix of the test, as Go writes it. |
+| `t.ArtifactDir`, `t.Deadline` | Read a flag of `testing.Init` | Present in the shape. `Init` registers no flag in gart, thus a call outside `go test` reads a nil pointer. |
+| `b.Chdir`, `b.Context`, `b.Setenv`, `b.TempDir`, `b.Elapsed`, `b.SetParallelism` | Present | Equal. The benchmark path now cancels its context in front of the cleanups, as the test path does. |
+| `BenchmarkResult.MemAllocs`, `MemBytes`, `Extra`, `MemString` | Present | Present. Each memory number reads 0 on a measured run, because the Dart VM counts no allocation. `Extra` reads a value that the benchmark wrote. |
+| `testing.Init`, `MainStart`, `RunTests`, `RunBenchmarks`, `RunExamples` | Present | Not present. `Init` registers 20 flags and gart reads no flag, `MainStart` names the unexported type `testDeps`, and `RunExamples` compares standard output that the runtime does not capture. |
 | `testing.Benchmark` | Gives a BenchmarkResult | Equal. The field T holds a count of nanoseconds, and not a `time.Duration`. |
 | `-bench`, `-benchtime`, `-benchcount` | Present | Present. `-benchtime 100x` becomes `-benchcount 100`. |
 | `-benchmem` | Present | Not present. Read the row of `b.ReportAllocs`. |
