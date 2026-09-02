@@ -11,35 +11,37 @@ of a program that imports the package. The import surface holds the run of
 
 ## The import surface
 
-The surface holds 102 import paths: 89 standard packages, the interop package
-`syscall/dart`, and 12 internal packages that the 89 need. Stage 2 rejects an
+The surface holds 110 import paths: 97 standard packages, the interop package
+`syscall/dart`, and 12 internal packages that the 97 need. Stage 2 rejects an
 import of each other package with a source position.
 
-75 of the 89 hold each exported name of Go, and 14 hold a part of them.
+85 of the 97 hold each exported name of Go, and 12 hold a part of them.
 `docs/support.md` holds the level of each one and the largest gap of each
 partial package. `make surface` measures each one again.
 
 | Present | Absent |
 |---|---|
-| `bufio`, `bytes`, `cmp`, `net/http` | `net/http/cgi`, `net/rpc` |
-| `container/heap`, `container/list`, `container/ring`, `os/exec` | `net/http/cgi` |
-| `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
-| `regexp`, `regexp/syntax` | `html/template` |
-| `encoding/ascii85`, `encoding/base64`, `encoding/binary`, `embed` | `crypto/x509` |
-| `encoding/csv`, `encoding/hex`, `encoding/json` | `archive/...`, `compress/lzw` |
-| `compress/flate`, `compress/gzip`, `compress/zlib` | `compress/bzip2` |
-| `go/token`, `go/scanner`, `go/ast`, `go/parser` | `go/types`, `go/importer` |
-| `go/printer`, `go/format`, `go/build/constraint`, `go/doc/comment` | `go/build` |
+| `bufio`, `bytes`, `cmp`, `net/http` | `encoding/gob` |
+| `container/heap`, `container/list`, `container/ring`, `os/exec` | `crypto/x509` |
+| `context`, `errors`, `flag`, `fmt`, `log` | `database/sql` |
+| `regexp`, `regexp/syntax`, `encoding/xml` | `go/types`, `go/importer` |
+| `encoding/ascii85`, `encoding/base64`, `encoding/binary`, `embed` | `go/build` |
+| `encoding/csv`, `encoding/hex`, `encoding/json` | `net/http/cgi`, `net/rpc` |
+| `compress/flate`, `compress/gzip`, `compress/zlib` | `net/smtp`, `net/mail` |
+| `compress/lzw`, `compress/bzip2`, `archive/zip`, `archive/tar` | `unsafe`, cgo |
+| `html`, `html/template` | |
+| `go/token`, `go/scanner`, `go/ast`, `go/parser` | |
+| `go/printer`, `go/format`, `go/build/constraint`, `go/doc/comment` | |
 | `text/tabwriter`, `text/template`, `text/template/parse` | |
 | `testing/iotest`, `runtime/debug`, `os/signal`, `syscall` | |
-| `net/http/httptest`, `net/http/internal` | `net/smtp`, `net/mail` |
+| `net/http/httptest`, `net/http/internal` | |
 | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle` | |
-| `crypto/hmac`, `crypto/rand`, `crypto/tls` | `math/big` |
+| `crypto/hmac`, `crypto/rand`, `crypto/tls` | |
 | `mime`, `mime/multipart`, `mime/quotedprintable` | |
 | `net/textproto`, `net/http/cookiejar` | |
-| `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `database/sql` |
+| `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | |
 | `io`, `io/fs`, `iter`, `maps`, `slices`, `sort` | |
-| `math`, `math/bits`, `math/cmplx`, `math/rand`, `math/rand/v2` | `unsafe`, cgo |
+| `math`, `math/big`, `math/bits`, `math/cmplx`, `math/rand`, `math/rand/v2` | |
 | `net`, `net/netip`, `net/url` | |
 | `os`, `path`, `path/filepath` | |
 | `reflect`, `runtime`, `strconv`, `strings` | |
@@ -62,6 +64,7 @@ partial package. `make surface` measures each one again.
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |
 | A function that can block, in a value of a type that carries `//gart:sync` | Rejected. Read decision 221. |
+| A function declaration with no body | Rejected, and a `//gart:dart` directive accepts it. Read decision 239. |
 | A function type that names itself, for example `type stateFn func(*lexer) stateFn` | Present. The type erases to `Object?`, and a call of such a value goes through a dynamic call. Read decision 227. |
 
 Stage 2 accepts a local struct type that reads a type parameter, and the
@@ -138,16 +141,17 @@ Thus these categories build:
 
 | Gate | What it stops |
 |---|---|
-| `html/template` | Each program that writes an HTML page from a template. `text/template` builds since 2026-09-02. |
-| `encoding/xml`, `encoding/gob` | Each program that reads an XML file or a gob stream. |
-| `archive/...`, `compress/bzip2`, `compress/lzw` | Each program that reads a zip file or a tar file. |
+| `encoding/gob` | Each program that reads a gob stream. |
+| `crypto/x509` | Each program that reads a certificate, and each TLS server that names its own 1. |
 | `database/sql` | Each program that reads a database. |
+| `go/types`, `go/build` | Each program that type checks Go source. |
 | A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
 
-Thus no large program of the Go world builds today. `kubectl`, `hugo`,
-`docker`, `terraform`, and `gopls` each read `html/template`, a compression
-package, `encoding/xml`, or `database/sql`. The gate is the library surface,
-and not the language.
+The list shortened on 2026-09-03. `html/template`, `encoding/xml`,
+`archive/zip`, `archive/tar`, `compress/lzw`, `compress/bzip2`, and `math/big`
+each build now. `hugo` still reads `database/sql` and a large module set, and
+`gopls` reads `go/types`. The gate is the library surface, and not the
+language.
 
 ## The near misses
 
@@ -157,6 +161,9 @@ one.
 
 | Package | The gap |
 |---|---|
-| `html/template` | It reads `text/template`, which builds, and the escape pass of HTML. |
-| `crypto/subtle` | Each function is a loop over 2 byte slices. |
-| `math/cmplx` | The language holds the complex type already. The package needs a survey. |
+| `encoding/gob` | It needs the 6 reflect names that `encoding/xml` took, and 1 more thing: it indexes a table by `reflect.Kind`, and the overlay models a `Kind` as a text. |
+| `crypto/x509` | The whole ASN.1 stack and a root pool. It gates `Server.Certificate` of `httptest` and each name of `crypto/tls` that carries a certificate. |
+
+`crypto/subtle` and `math/cmplx` stood here until 2026-09-02, and
+`html/template`, `encoding/xml`, `archive/zip`, `archive/tar`, `compress/lzw`,
+`compress/bzip2`, and `math/big` until 2026-09-03. Each 1 builds now.

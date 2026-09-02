@@ -8,7 +8,7 @@ holds. This file holds the behavior.
 
 ## At a glance
 
-The state of 2026-09-01. Each row names the section that holds the detail.
+The state of 2026-09-03. Each row names the section that holds the detail.
 
 | Area | The difference |
 |---|---|
@@ -24,9 +24,9 @@ The state of 2026-09-01. Each row names the section that holds the detail.
 | An integer | 64 bits on each target. The JS target holds the pair form of GopherJS, and `reflect` and `json` read 53 bits there. |
 | A `Time` | 1 count of nanoseconds, thus the range is the year 1678 to the year 2262, and it holds no monotonic value. |
 | The zone of a date before 1901 | The modern offset of the zone. Dart names the zone, and Go reads its own database. |
-| The file access | Synchronous, through `dart:io`. No permission bit, and no handle of a directory. |
+| The file access | Synchronous, through `dart:io`. No handle of a directory, and no file descriptor. `Chmod`, `Chown`, and `Chtimes` reach a path, and `Stat` still reports a fixed mode. |
 | The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. `Getuid` and its family give -1. |
-| The network access | TCP, UDP, and a Unix socket. `IP`, `IPMask`, `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, `IPAddr`, and `UnixAddr` are present. The name resolver stays out, thus `ResolveTCPAddr` needs an IP address. |
+| The network access | TCP, UDP, and a Unix socket. `IP`, `IPMask`, `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, `IPAddr`, and `UnixAddr` are present. The overlay holds a resolver of the DNS since 2026-09-02, thus the whole `Lookup` family reads. |
 | HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, and a multipart form are present. No file server. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
 | JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. No `TextMarshaler`. The text of a syntax error of `Token` differs. |
@@ -285,6 +285,82 @@ build tag of the architecture selects the file set of a package.
 
 The next candidate needs a survey of the rejections of stage 2 over the real
 source of the package.
+
+## The packages of 2026-09-03
+
+7 packages entered the surface on this day, and each 1 below names a behavior
+that differs from Go.
+
+### archive/tar
+
+`FileInfoHeader` writes no owner name and no group name. The real
+`stat_unix.go` reads `syscall.Stat_t` and `os/user`, and the surface holds
+neither 1, thus the patch leaves `sysStat` nil. Each other field of the header
+reads as Go writes it.
+
+### math/big
+
+The package reads the real Go source, and a 2 file patch replaces the 6
+functions that assembly holds. Each 1 takes the pure Go body of `arith.go`,
+which is the same body that the tag `math_big_pure_go` gives. The results are
+equal, and the speed of a large multiplication is lower than the speed of Go on
+the same machine.
+
+`arith_amd64.go` reads `internal/cpu` to find the ADX instruction. The patch
+gives the flag the value false, and no caller reads it on the pure Go path.
+
+### encoding/xml
+
+The package reads the real Go source. It needed 6 reflect names, and
+`docs/support.md` names them. `Value.Bytes` of an array of bytes gives a copy,
+because the runtime holds no address of an element. Go gives the array itself
+when the value holds an address. A write through the result of that case thus
+reaches no array here.
+
+### crypto/rand
+
+`Int` and `Prime` read the secure source and they ignore the reader that the
+caller names. Go 1.26 and later do the same, thus the 2 agree.
+
+### crypto/tls
+
+The overlay holds each value type, and `dart:io` owns the handshake. A `Config`
+field that would change that handshake stays out, because such a field would
+report support and change nothing. `Config.PreferServerCipherSuites` is the 1
+field that stands, and Go documents it as ignored.
+
+`Server.TLS` of `net/http/httptest` reads now, and `Server.Certificate` gives
+an x509 certificate and stays out.
+
+### net/http/httptest
+
+`Close` does not wait for a request that stands open. A panic of a handler ends
+the program, because the server of the overlay recovers no panic and holds no
+`ErrAbortHandler`. With `EnableHTTP2`, `TLS.NextProtos` reads
+`[h2 http/1.1]` where Go reads `[h2]`.
+
+### os and os/exec
+
+| Name | The difference |
+|---|---|
+| `Stat` after a `Chmod` | The mode of the result does not change. `dart:io` reports no permission bit. |
+| `Chtimes` | The precision is 1 millisecond. `dart:io` names a `DateTime`. |
+| `File.Chmod`, `File.Chown`, `File.Truncate` | Each 1 reaches the file by its path. Go reaches it by its descriptor, thus a rename between the 2 calls changes the target here. |
+| `OpenFile` with `O_EXCL` | A check and an open, and not 1 operation of the system. 2 processes can pass the check together. |
+| `File.SetDeadline` and its 2 companions | Each 1 gives `ErrNoDeadline`. A read of a file is 1 synchronous call that nothing interrupts. Go gives the same error for a file whose poller cannot hold a deadline. |
+| `Chmod`, `Chown`, `Link` | Each 1 runs a command of the platform, because `dart:io` names no permission bit, no owner, and no hard link. |
+
+### The fmt verbs
+
+| Verb | The difference |
+|---|---|
+| `%#v` | It gives the plain form of `%v`. The Go syntax form needs a printer of its own. |
+| `%#q` | It gives the plain form of `%q`. Go writes a backquote when the text holds none. |
+| `%g` with a precision | The precision reaches no digit. `strconv.FormatFloat` passes the verb to the runtime, and `_float` of the runtime reads the precision for `f` and for `e` alone. |
+
+`strconv.ParseFloat` stays loose. It reads `double.tryParse` of Dart, thus it
+accepts text with a space around it, it accepts a bare `0x10`, and it reports
+no `ErrRange`. `ParseComplex` holds a scanner of its own and it matches Go.
 
 ## The go:embed directive
 

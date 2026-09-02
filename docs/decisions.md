@@ -1163,6 +1163,118 @@ The plan left these points open. The work took the decisions below.
      seam of a test, and `testdata/programs/dnslookup` runs a server of its own
      on the loopback interface. `docs/parity.md` holds the 5 differences.
 
+234. A function that carries the blank name takes a Dart name of its own. A Go
+     package may hold many such functions, and `stringer` writes 1 for each
+     type that it generates. Each 1 took the Dart name `__`, thus the output of
+     `html/template` held 6 declarations of that name. Go calls none of them,
+     thus the name alone matters and the body stays. `initNames` of the
+     emitter already gave a name to each `init` function, and a blank function
+     now joins that map with the form `_blank$<n>`.
+
+235. `archive/tar` takes a patch of 3 files, and `sysStat` stays nil. The real
+     `stat_unix.go` reads `syscall.Stat_t` and `os/user`, and
+     `stat_actime1.go` and `stat_actime2.go` each read `syscall.Stat_t`. The
+     surface holds no such type. `FileInfoHeader` tests `sysStat` for nil
+     already, thus a nil value is the behavior that Go itself takes on a
+     platform with no such file. The header then carries no owner name and no
+     group name, and each other field reads as Go writes it.
+
+236. `math/big` takes the pure Go arithmetic, and not an interop function. The
+     real `arith_decl.go` declares 6 functions with no body, because an
+     assembly file of each architecture holds the code. Go itself ships the
+     pure Go form behind the tag `math_big_pure_go`, and `arith.go` holds each
+     `_g` function that the form calls. The patch writes those 6 calls, thus
+     the package needs no new interop and no assembly. A Dart form of the same
+     word operations would be a second implementation to keep correct, and the
+     Go form is already correct.
+
+237. `encoding/xml` takes the real Go source, and the 6 reflect names that it
+     needs enter the overlay. `Type.Bits`, `Type.FieldByIndex`, `Value.Bytes`,
+     `Value.SetBytes`, `Value.Grow`, and `Value.SetLen` each build on the
+     primitives that the overlay already holds, thus none needs a new interop
+     function. `Value.Bytes` of an array of bytes gives a copy, because the
+     runtime holds no address of an element. `encoding/gob` needs the same 6
+     and 1 more thing: it indexes a table by `reflect.Kind`, and the overlay
+     models a `Kind` as a text. That package thus stays out.
+
+238. `crypto/tls` holds the value surface alone. `dart:io` owns the handshake,
+     thus a `Config` field that would change it can only report support and
+     change nothing. Such a field is a silent lie, and the project rejects one.
+     A field that Go itself documents as ignored is a different case, and
+     `Config.PreferServerCipherSuites` is the 1 field that passed that test.
+     The constants, the enumerations with their `String` methods, and the 3
+     cipher suite functions are pure data, thus each 1 enters. The package went
+     from 32 names to 115.
+
+239. An external Dart declaration takes the directive `//gart:dart`, and the
+     value boundary of it carries 5 types. `intrinsic` of stage 5 is a flat
+     switch on the name of each interop function, thus each Dart call cost an
+     edit of the compiler. A Go function declaration with no body already
+     parses, and the directive names the Dart library and the Dart symbol.
+     Stage 2 accepted no read of a bodyless function, and it now accepts a read
+     of a marked 1.
+
+     The boundary carries `bool`, `int`, `float64`, `string`, and
+     `dart.Object`. A `bool` and a `float64` hold the Dart form already, and a
+     Go `int` is an extension type over the Dart `int`. A `string` needs
+     `toDartString` in 1 direction and `GoString.fromString` in the other. Each
+     other type needs a conversion table, and a wrong conversion gives a wrong
+     value with no report, thus stage 2 rejects it. A method, a type parameter,
+     a variadic parameter, and more than 1 result each reach a rejection too.
+
+     `dart:core` takes no prefix and no import. A prefixed import of it hides
+     the plain names, thus `double` and `String` would leave the file.
+
+240. `dart.Object` enters `syscall/dart`, and the emitter gives it the Dart
+     form `Object?`. Decision of 2026-09-02 held this type, and it named 2
+     conditions. Decision 239 answers the first 1: a `//gart:dart` declaration
+     is the producer, and a Go program still makes no such value. The second 1
+     holds as written. `syscall/dart` carries `//go:build dart`, thus a module
+     that names the type needs a twin file and an alias of its own.
+     `testdata/programs/dartobj` holds that pair.
+
+241. The flag 0 of `fmt` counts the sign against the width and the base prefix
+     not. The pad of the overlay wrote its zeros in front of the whole text,
+     thus `%#04x` of 5 gave `00x5` and Go gives `0x0005`. 3 more faults stood
+     with it: `%#o` of 0 doubled the zero, the verb `O` reached no case at all,
+     and the flag space reached no code. `testdata/programs/fmthex` runs 21
+     verbs against 7 values, thus a change of this area now shows itself.
+
+242. A generic struct holds the `==` operator and the `hashCode` getter, and
+     `types.Comparable` is the wrong test for it. That function gives false for
+     a struct that holds a field of a type parameter whose constraint is `any`,
+     because such a parameter is not strictly comparable. Go still accepts `==`
+     on an instance whose type arguments are comparable, and it rejects each
+     other instance at the use site. The class thus held neither member, and
+     Dart compared 2 instances by identity. A map with such a key found
+     nothing. The dictionary of the parameter already gives `equal` and `hash`,
+     thus the code that a `comparable` constraint takes works here too.
+
+243. `os` reaches a permission bit, an owner, and a hard link through a command
+     of the platform. `dart:io` names none of the 3. `Chmod`, `Chown`, and
+     `Link` each run `Process.runSync`, and `Chtimes` reads the real
+     `setLastAccessedSync` and `setLastModifiedSync`. A name that needs a file
+     descriptor stays out, because the runtime names a file by an object alone.
+     `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, and `ProcAttr`
+     thus stay out, and so does each name that needs a wait status or a
+     resource usage.
+
+244. `net/http/httptest` tracks each accepted connection itself, and the
+     overlay of `net/http` stays unchanged. That server holds no `ConnState`
+     hook, thus `CloseClientConnections` would need a change of it. A wrapper
+     of the listener and of the connection costs less and it reaches no other
+     caller. The wrapper keys a connection by an `int`, because the runtime
+     hashes a map key by its structure and a `*tls.Conn` changes its byte
+     counters while it stands in the map.
+
+245. `strconv.IsPrint` and `strconv.IsGraphic` read `unicode`, and the
+     generated tables of Go stay out. Go documents the 2 as equal to
+     `unicode.IsPrint` and `unicode.IsGraphic`, and it carries its own tables
+     for speed alone. `unicode` reads the real Go source in the surface, thus
+     the answer is the same. A sweep of the whole rune range in
+     `testdata/programs/strconvquote` proves it: 159,613 printable runes and
+     159,629 graphic runes, equal for Go and for the Dart form.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

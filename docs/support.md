@@ -7,7 +7,7 @@ This file names how much of each standard library package the surface holds.
 ## The measure
 
 Run `make surface`. `internal/surface` holds the tool, and the numbers below
-come from the run of 2026-09-02.
+come from the run of 2026-09-03.
 
 The measure counts the exported names of a package: each name of the package
 scope, each exported method of the pointer to an exported named type, and each
@@ -22,8 +22,8 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 102 import paths: 89 standard packages, the interop package
-`syscall/dart`, and 12 internal packages that the 86 need. The measure skips
+The surface holds 110 import paths: 97 standard packages, the interop package
+`syscall/dart`, and 12 internal packages that the 97 need. The measure skips
 the interop package and each internal package, because no package of Go stands
 behind them.
 
@@ -43,13 +43,13 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-75 of the 89 standard packages hold each exported name of Go.
+85 of the 97 standard packages hold each exported name of Go.
 
 | Form | Packages |
 |---|---|
-| Native, 36 | `bufio`, `cmp`, `compress/flate`, `compress/gzip`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `io`, `io/fs`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
-| Patch, 13 | `bytes`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
-| Overlay, 26 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `embed`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
+| Native, 42 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/xml`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `html`, `html/template`, `io`, `io/fs`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
+| Patch, 15 | `archive/tar`, `bytes`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
+| Overlay, 28 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `embed`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.
@@ -59,23 +59,21 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 
 ## Partial support
 
-14 packages hold a part of the names of Go. The run of 2026-09-02:
+12 packages hold a part of the names of Go. The run of 2026-09-03:
 
 | Package | Names | Held | The largest gap |
 |---|---|---|---|
 | `sync/atomic` | 90/94 | 95% | The 4 `unsafe.Pointer` functions. `Pointer[T]` holds the same use. |
-| `net/http/httptest` | 27/31 | 87% | `Server.TLS`, `Server.Certificate`, `CloseClientConnections`, `NewTestServer` |
-| `os` | 172/207 | 83% | `StartProcess`, `ProcAttr`, `NewFile`, `Chmod`, `Chown`, `Chtimes`, `Link` |
-| `os/exec` | 37/49 | 75% | `CommandContext`, `Cmd.Cancel`, `Cmd.Environ`, `Cmd.WaitDelay` |
-| `strconv` | 30/43 | 69% | `QuoteRune` and its 3 forms, `IsPrint`, `IsGraphic`, `ParseComplex` |
-| `reflect` | 126/188 | 67% | `MakeFunc`, `ChanOf`, `FuncOf`, `MakeChan`, `Select`, `Method.Func` |
+| `net/http/httptest` | 30/31 | 96% | `Server.Certificate`. It gives an x509 certificate. |
+| `os` | 193/207 | 93% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr` |
+| `os/exec` | 43/49 | 87% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, `ExitError.Sys` and its 3 companions |
+| `reflect` | 130/188 | 69% | `MakeFunc`, `ChanOf`, `FuncOf`, `MakeChan`, `Select`, `Method.Func` |
 | `encoding/json` | 59/92 | 64% | The option set of the v2 implementation, and the field `Type` of each error |
 | `testing` | 92/145 | 63% | `Init`, `MainStart`, the cover types, `InternalExample`, `InternalFuzzTarget` |
-| `crypto/rand` | 3/5 | 60% | `Int` and `Prime`. The 2 read `math/big`. |
 | `net/http` | 223/392 | 56% | `Hijacker`, `ResponseController`, `Protocols`, `HTTP2Config`, `TimeoutHandler` |
 | `runtime` | 31/114 | 27% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
 | `net` | 127/346 | 36% | `Interface`, `IPConn`, `TCPConn`, `ListenConfig`, the option fields of `Dialer` |
-| `crypto/tls` | 32/263 | 12% | The cipher suite constants, the curve names, `CipherSuites`, `LoadX509KeyPair` |
+| `crypto/tls` | 115/263 | 43% | Each name that reads `crypto/x509`, the QUIC connection, and each `Config` field that would change the handshake |
 | `syscall` | 15/2228 | 0% | Each system call, each error number, and each constant of the platform. |
 
 `syscall` is a special case. The package of Go holds the whole system call
@@ -95,11 +93,7 @@ Stage 2 rejects an import of each package below with a source position.
 
 | Package | The cause | The cost |
 |---|---|---|
-| `html/template` | It reads `text/template` and the escape pass of HTML. | Medium |
-| `encoding/xml` | The real source reads the deep reflect surface. | Medium |
-| `archive/zip`, `archive/tar`, `compress/bzip2`, `compress/lzw` | No survey yet. Each one is pure Go. | Medium |
-| `math/big` | No survey yet. The real source reads assembly for each word operation. | Large |
-| `encoding/gob` | The real source reads `unsafe` and the deep reflect surface. | Large |
+| `encoding/gob` | The real source reads `unsafe`, and it indexes a table by `reflect.Kind`. The overlay models a `Kind` as a text. | Large |
 | `crypto/x509` | The whole ASN.1 stack and a root pool. | Large |
 | `database/sql` | A driver, and a pool over a second thread. | Large |
 | `go/types`, `go/importer`, `go/build` | Each one is large, and `go/build` reads the tool chain. | Large |
@@ -167,3 +161,26 @@ The order again follows the value of the work against its cost.
    resolver of its own, and it needs no `InternetAddress.lookup` of `dart:io`.
    It reads /etc/hosts, /etc/resolv.conf, and /etc/services, and it speaks the
    DNS over UDP with a fallback to TCP. `net` went from 73 names to 127.
+5. **`strconv` to full.** Done 2026-09-03. `IsPrint` and `IsGraphic` read
+   `unicode`, the quote family takes the machinery of Go, and `ParseComplex`
+   and `FormatComplex` come from `atoc.go` and `ctoa.go`.
+6. **The reachable names of `os` and `os/exec`.** Done 2026-09-03. `os` went
+   from 172 names to 193, and `os/exec` from 37 to 43. `Chmod`, `Chown`,
+   `Chtimes`, and `Link` each took a new interop function.
+7. **`net/http/httptest`.** Done 2026-09-03. 27 names to 30. The overlay tracks
+   each accepted connection itself, thus `CloseClientConnections` works.
+8. **`html/template`, `archive/zip`, `archive/tar`, `compress/lzw`, and
+   `compress/bzip2`.** Done 2026-09-03. Each 1 reads the real Go source.
+   `archive/tar` takes a 3 file patch, because `stat_unix.go` reads
+   `syscall.Stat_t` and `os/user`.
+9. **`math/big`.** Done 2026-09-03. A 2 file patch gives the 6 functions of
+   `arith_decl.go` the pure Go body that `arith.go` already holds.
+   `crypto/rand.Int` and `crypto/rand.Prime` came with it.
+10. **`encoding/xml`.** Done 2026-09-03. It needed 6 reflect names:
+    `Type.Bits`, `Type.FieldByIndex`, `Value.Bytes`, `Value.SetBytes`,
+    `Value.Grow`, and `Value.SetLen`.
+11. **The value types of `crypto/tls`.** Done 2026-09-03. 32 names to 115. Each
+    constant, each enumeration with its `String` method, and the 3 cipher suite
+    functions. A `Config` field that would change the handshake stays out.
+
+**The list is closed since 2026-09-03.**
