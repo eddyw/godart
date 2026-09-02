@@ -18,9 +18,9 @@ compares the 2 sets.
 `make surface ARGS=-gaps` names each missing name, and
 `make surface ARGS="-pkg os"` measures 1 package.
 
-The ratio counts names, and not use. `net` holds 346 names, because the address
-types and the resolver hold most of them, and a program that dials and listens
-reads 26. Read the gap column, and not the percent alone.
+The ratio counts names, and not use. `net` holds 346 names, because the
+resolver, the typed connections, and the interface list hold most of them. Read
+the gap column, and not the percent alone.
 
 The surface holds 99 import paths: 86 standard packages, the interop package
 `syscall/dart`, and 12 internal packages that the 86 need. The measure skips
@@ -59,24 +59,23 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 
 ## Partial support
 
-15 packages hold a part of the names of Go. The run of 2026-09-02:
+14 packages hold a part of the names of Go. The run of 2026-09-02:
 
 | Package | Names | Held | The largest gap |
 |---|---|---|---|
 | `sync/atomic` | 90/94 | 95% | The 4 `unsafe.Pointer` functions. `Pointer[T]` holds the same use. |
 | `net/http/httptest` | 27/31 | 87% | `Server.TLS`, `Server.Certificate`, `CloseClientConnections`, `NewTestServer` |
+| `os` | 172/207 | 83% | `StartProcess`, `ProcAttr`, `NewFile`, `Chmod`, `Chown`, `Chtimes`, `Link` |
 | `os/exec` | 37/49 | 75% | `CommandContext`, `Cmd.Cancel`, `Cmd.Environ`, `Cmd.WaitDelay` |
-| `os` | 146/207 | 70% | `Root`, `DirFS`, `CopyFS`, `Chmod`, `Chown`, `Chtimes` |
 | `strconv` | 30/43 | 69% | `QuoteRune` and its 3 forms, `IsPrint`, `IsGraphic`, `ParseComplex` |
-| `io/fs` | 39/59 | 66% | The `FS` interface family: `FS`, `File`, `Glob`, `ReadDir`, `Sub` |
+| `reflect` | 126/188 | 67% | `MakeFunc`, `ChanOf`, `FuncOf`, `MakeChan`, `Select`, `Method.Func` |
 | `encoding/json` | 59/92 | 64% | The option set of the v2 implementation, and the field `Type` of each error |
 | `testing` | 92/145 | 63% | `Init`, `MainStart`, the cover types, `InternalExample`, `InternalFuzzTarget` |
 | `crypto/rand` | 3/5 | 60% | `Int` and `Prime`. The 2 read `math/big`. |
-| `net/http` | 185/392 | 47% | `FileServer` and the `FS` family, `ServeContent`, `Hijacker`, `ResponseController` |
-| `reflect` | 126/188 | 67% | `MakeFunc`, `ChanOf`, `FuncOf`, `MakeChan`, `Select`, `Method.Func` |
+| `net/http` | 200/392 | 51% | `Hijacker`, `ResponseController`, `Protocols`, `HTTP2Config`, 23 status constants |
 | `runtime` | 31/114 | 27% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
+| `net` | 73/346 | 21% | The `Lookup` family, the `Resolver`, `Interface`, `IPConn`, `ListenConfig` |
 | `crypto/tls` | 32/263 | 12% | The cipher suite constants, the curve names, `CipherSuites`, `LoadX509KeyPair` |
-| `net` | 26/346 | 7% | `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, the `Lookup` family, `Interfaces`, the `Resolver` |
 | `syscall` | 15/2228 | 0% | Each system call, each error number, and each constant of the platform. |
 
 `syscall` is a special case. The package of Go holds the whole system call
@@ -117,8 +116,9 @@ The order follows the value of the work against its cost. It reads a general Go
 program. `docs/flutter-first.md` holds a different order for a Flutter client,
 and `docs/flutter-design.md` holds the design of that client.
 
-1. **The `FS` family.** `io/fs.FS`, `os.DirFS`, and `http.FileServer` together
-   give a static file server, and they open the road to `embed`.
+1. **The `FS` family.** Done 2026-09-02. `io/fs` reads the real Go source and
+   holds each exported name. `os.DirFS`, `os.Root`, and `http.FileServer` give
+   a static file server, and they open the road to `embed`.
 2. **The reflect gaps.** Done 2026-09-02, except `MakeFunc`. `SliceOf`,
    `ArrayOf`, `MapOf`, `PointerTo`, `PtrTo`, `TypeFor`, `Append`,
    `AppendSlice`, `Copy`, and `Value.Cap`. `MakeSlice` now honors its capacity.
@@ -130,9 +130,9 @@ and `docs/flutter-design.md` holds the design of that client.
    exported name. A field, a method, a range, a map, a variable, a pipe, a
    custom function, each builtin, and a nested template each give the text that
    Go gives.
-4. **The address types of `net`.** `IPNet`, `ParseCIDR`, `TCPAddr`, and the 2
-   address methods of a connection. `Request.RemoteAddr` of `net/http` is empty
-   without them.
+4. **The address types of `net`.** Done 2026-09-02. `IPNet`, `ParseCIDR`,
+   `TCPAddr`, `UDPAddr`, and the 2 address methods of a connection.
+   `Request.RemoteAddr` of `net/http` reads now.
 5. **`os/signal`.** Done 2026-09-02. A graceful shutdown reads it, and
    `(*os.Process).Signal` sends a signal to any process.
 6. **The `Token` family of `encoding/json`.** Done 2026-09-02. `Decoder.Token`,
@@ -145,4 +145,22 @@ and `docs/flutter-design.md` holds the design of that client.
 8. **The `And` and `Or` forms of `sync/atomic`,** and the pointer functions.
    Done 2026-09-02, except the 4 `unsafe.Pointer` functions, which stand
    outside the subset.
-9. **`os.Root` and `os.DirFS`.** The 2 come with the `FS` family of item 1.
+9. **`os.Root` and `os.DirFS`.** Done 2026-09-02. The 2 came with the `FS`
+   family of item 1. `os` went from 146 names to 172.
+
+**The list is closed since 2026-09-02,** except `reflect.MakeFunc`.
+`docs/parity.md` holds the rule for that name.
+
+## The next list
+
+The order again follows the value of the work against its cost.
+
+1. **The 23 status constants of `net/http`.** Each 1 is an integer constant.
+   Cost: small.
+2. **`math/cmplx` and `crypto/subtle`.** Each function of `crypto/subtle` is a
+   loop over 2 byte slices. Cost: small.
+3. **`embed`.** The `FS` family stands, thus the road is open. The compiler
+   needs the directive `go:embed`. Cost: medium.
+4. **The `Lookup` family of `net`.** `dart:io` holds `InternetAddress.lookup`
+   alone, thus `LookupMX`, `LookupNS`, and `LookupSRV` need a resolver of the
+   runtime. Cost: large.

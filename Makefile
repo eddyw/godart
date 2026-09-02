@@ -30,7 +30,7 @@ help:
 	@echo "  make dart-analyze     Run the Dart analyzer on the runtime library."
 	@echo "  make dart-test        Run the Dart tests of the runtime library."
 	@echo "  make flutter-go       Run the Go tests of the Flutter modules."
-	@echo "  make flutter-test     Build the example and run the Flutter tests."
+	@echo "  make flutter-test     Build each example and run the Flutter tests."
 	@echo "  make flutter-nodes    Write the Go node set again from the Flutter API."
 	@echo "  make surface          Measure the standard library surface."
 	@echo "  make ci               Run the full check that CI runs."
@@ -84,15 +84,19 @@ dart-test:
 flutter-go:
 	cd flutter/ui && go vet ./... && go test ./...
 	cd flutter/example/counter/go && go vet ./... && go test ./...
+	cd flutter/example/apilist/go && go vet ./... && go test ./...
 
 # flutter-test builds the example and runs the widget tests. It needs the
 # Flutter SDK, thus ci does not run it.
 flutter-test: build
 	cd flutter/example/counter && ./build.sh
+	cd flutter/example/apilist && ./build.sh
 	cd flutter/goflutter && $(FLUTTER) analyze
 	cd flutter/example/counter && $(FLUTTER) analyze
+	cd flutter/example/apilist && $(FLUTTER) analyze
 	cd flutter/nodegen && dart pub get && dart analyze
 	cd flutter/example/counter && $(FLUTTER) test
+	cd flutter/example/apilist && $(FLUTTER) test
 
 # surface measures how much of each package of the standard library the
 # compiler holds. Read docs/support.md.

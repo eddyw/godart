@@ -80,6 +80,18 @@ T $deref<T>(Object? p) {
   return p as T;
 }
 
+/// The concrete form of a pointer that a generic function gave.
+///
+/// A generic function writes a cell for the address of a value, because it
+/// holds no type argument. A pointer to a struct or to an array is the object
+/// itself at the call site, thus the call site reads the cell out. A nil
+/// pointer stays nil.
+T? $ptrTo<T>(Object? p) {
+  if (p == null) return null;
+  if (p is $Ptr<T>) return p.v;
+  return p as T;
+}
+
 /// Writes a value behind such a pointer. A pointer to a struct is the object
 /// itself, thus the write copies each field.
 void $setDeref<T>(Object? p, T value, Dict<T> d) {

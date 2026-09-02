@@ -1106,6 +1106,23 @@ The plan left these points open. The work took the decisions below.
      stays `dynamic`, thus an assertion to a function type with a result fails.
      `fixedbugs/issue27695` of the test directory of Go witnesses that limit.
 
+229. A generic function that gives a pointer needs a read at the call site,
+     and not a cast. The Dart form of a pointer follows the type argument: a
+     pointer to a struct or to an array is the object itself, and each other
+     pointer holds a cell. A generic body holds no type argument, thus `&v`
+     there always writes a `Box`. `eraseCast` of `internal/emit/call.go` wrote
+     `as Insets$?` on the result of `ui.P(ui.Sides(12, 6))`, and Dart reported
+     that a `Box<Insets$>` is no `Insets$`. The call site now writes
+     `$ptrTo<Insets$>(...)`, which reads the cell out and keeps a nil pointer
+     nil. Proof program 2 of the Flutter path found the bug.
+
+230. A type assertion to a pointer to a type parameter writes no cast.
+     `$assertType` gives `Object?`, and the Dart form of such a pointer is
+     `Object?` as well, thus the cast was a no-op that `flutter analyze`
+     reported as `unnecessary_cast`. `typeAssert` of `internal/emit/iface.go`
+     now writes the cast only for a target of another Dart type. The package
+     `unique` holds the 1 site that reaches this shape today.
+
 ## Answered questions of 2026-08-31
 
 - Does Dart hold a coroutine for `iter.Pull`? No. The sequence runs on a

@@ -1,0 +1,25 @@
+name: apilist_app
+description: The Flutter application of the proof program 2. Go reads an HTTP API and gives the whole screen.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  goflutter:
+    path: ../../goflutter
+  goapilist:
+    path: gen
+  goruntime:
+    path: ../../../runtime/goruntime
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

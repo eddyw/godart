@@ -2,7 +2,8 @@
 
 This directory holds milestone 1 to milestone 3 of `docs/flutter-design.md`: a
 Go tree of plain structs, and a Dart host that builds real Flutter widgets from
-it. `docs/flutter-state.md` holds the state model.
+it. `docs/flutter-state.md` holds the state model, and
+`docs/flutter-first.md` holds the 3 programs that prove the path.
 
 `make ci` does not run this directory, because it needs the Flutter SDK. The
 Go module `flutter/ui` still passes `gofmt` and `go vet` through the root
@@ -13,9 +14,10 @@ targets.
 | `ui/` | The Go module `gart.dev/ui`. The signal graph, the state shapes, and 411 node types. |
 | `goflutter/` | The Dart package that hosts a Go tree in Flutter. |
 | `nodegen/` | The generator. It reads the Flutter API and writes the node set and the host. Read its README. |
-| `example/counter/` | The proof application. Go holds the whole screen. |
+| `example/counter/` | Proof program 1. Go holds the whole screen. |
+| `example/apilist/` | Proof program 2. Go reads an HTTP API and gives a list. |
 
-## Run the example
+## Run an example
 
 ```sh
 make build                          # from the root of the repository
@@ -23,6 +25,23 @@ cd flutter/example/counter
 ./build.sh                          # go vet, go test, and gart build into gen
 flutter test                        # 6 widget tests
 flutter run                         # on a device or a simulator
+```
+
+`example/apilist` runs the same way, and it holds 5 widget tests. It reads the
+issue list of `golang/go` over https, it decodes the answer into a Go struct,
+and it gives a `ListView` of cards. Each widget test points the application at
+a local server of `dart:io`, thus no test reaches the network.
+
+A widget test holds a fake clock. A real socket completes in the real zone,
+thus a test of a network read gives time to each zone in turn:
+
+```dart
+for (int i = 0; i < 200 && !app.Loaded(); i++) {
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 10)),
+  );
+  await tester.pump();
+}
 ```
 
 `build.sh` does 2 things. It writes the Dart output of `./go` into `gen`, which
@@ -38,6 +57,7 @@ The state layer needs no Flutter and no Dart.
 ```sh
 cd flutter/ui && go test ./...
 cd flutter/example/counter/go && go test ./...
+cd flutter/example/apilist/go && go test ./...
 ```
 
 ## Write an application

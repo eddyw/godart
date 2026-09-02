@@ -91,6 +91,12 @@ func (e *emitter) eraseCast(obj types.Object, x *ir.Call, text string) string {
 	if dart == "Object?" {
 		return text
 	}
+	// A generic function writes a cell for the address of a value, because it
+	// holds no type argument. The Dart form of a pointer to a struct or to an
+	// array is the object itself, thus the call site reads the cell out.
+	if ptr, ok := types.Unalias(result).(*types.Pointer); ok && !needsBox(ptr.Elem()) {
+		return fmt.Sprintf("$ptrTo<%s>(%s)", e.dartType(ptr.Elem()), text)
+	}
 	return "(" + text + " as " + dart + ")"
 }
 

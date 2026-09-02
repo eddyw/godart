@@ -938,3 +938,31 @@ The 9 items of the focus list. `docs/support.md` holds the state of each 1.
   `Field`, `Index`, and `MapIndex` now carries the static type of the result.
 - A method value of reflect must be a plain Dart closure. A pair of a function
   and a receiver holds no form that a Go program can assert to a function type.
+
+### 2026-09-02, proof program 2 of the Flutter path
+
+`flutter/example/apilist`. The application reads the issue list of `golang/go`
+over https, it decodes the answer into a Go struct, and it gives a `ListView`
+of cards. 5 widget tests pass under Flutter 3.47.0, and 6 Go tests run the same
+screen with no Flutter.
+
+- A generic function that gives a pointer needs a read at the call site, and
+  not a cast. `ui.P(ui.Sides(12, 6))` wrote `as Insets$?` on a `Box<Insets$>`,
+  and the row of the list threw a type error. The body of a generic function
+  holds no type argument, thus `&v` there always writes a cell. Decision 229.
+- A type assertion to a pointer to a type parameter wrote a cast to `Object?`,
+  which `flutter analyze` reported. The package `unique` reaches that shape,
+  and `net/http` reads `unique`, thus the counter never met it. Decision 230.
+- A widget test holds a fake clock, and a socket of `dart:io` completes in the
+  real zone. A poll that gives time to each zone in turn drives a real network
+  read: `tester.runAsync` for the socket, and `tester.pump` for the Go
+  scheduler. A single `runAsync` that waits for the answer never completes,
+  because the continuation of the goroutine waits in the fake queue.
+- The idle hook `$onIdle` of the scheduler needs no change for a real socket.
+  The hook runs each time that the run queue of Go empties, thus the answer of
+  the server reaches the screen with no poll of the host.
+- `encoding/json` reads a `time.Time` field from an RFC 3339 text of the
+  answer, and the screen holds the date. The nested object `user` reaches a
+  named Go struct.
+- A widget test needs no network. `HttpServer.bind` of `dart:io` gives a local
+  server, and `SetBaseURL` of the Go package points the application at it.

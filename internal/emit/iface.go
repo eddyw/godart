@@ -1060,8 +1060,14 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 		if isParam {
 			return fmt.Sprintf("$assertDict(%s, %s)", e.expr(x.X), e.dictOf(tp))
 		}
-		return fmt.Sprintf("($assertType(%s, %s) as %s)",
-			e.expr(x.X), e.typeNameText(x.Assert), e.dartType(x.Assert))
+		// $assertType gives Object?, thus a target of that Dart type needs no
+		// cast. A pointer to a type parameter is such a target.
+		if dart := e.dartType(x.Assert); dart != "Object?" {
+			return fmt.Sprintf("($assertType(%s, %s) as %s)",
+				e.expr(x.X), e.typeNameText(x.Assert), dart)
+		}
+		return fmt.Sprintf("$assertType(%s, %s)",
+			e.expr(x.X), e.typeNameText(x.Assert))
 	}
 	if isInterfaceType(x.Assert) {
 		return fmt.Sprintf("(() { final $x = %s; if ($implements($x, %s)) return ($x, true); return (null, false); })()",

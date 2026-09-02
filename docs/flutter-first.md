@@ -200,7 +200,10 @@ Each one is small, and together they cover the whole mechanism.
 1. **A counter.** Done 2026-09-02. `flutter/example/counter` holds it, and 6
    widget tests pass under Flutter 3.47.0. It needed no item of the compiler
    list.
-2. **A list from an API.** An https GET, a JSON decode into a Go struct, and a
-   list of widgets. It proves item 1 of the package list.
+2. **A list from an API.** Done 2026-09-02. `flutter/example/apilist` holds
+   it, and 5 widget tests pass under Flutter 3.47.0. It reads the issue list of
+   `golang/go`, it decodes each `created_at` into a `time.Time`, and it gives a
+   `ListView` of cards. It needed no item of the compiler list, and it found
+   the bug of decision 229.
 3. **A form.** A text field, a validation in Go, and a POST. It proves the
    boundary of item 5 and the callback with a result.
