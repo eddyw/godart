@@ -33,8 +33,9 @@ String writeDart(Reading r, {Set<String>? only}) {
     if (only != null && !only.contains(w.goName)) continue;
     b.writeln("    case 'gart.dev/ui.${w.goName}':");
     b.writeln('      return ${w.dartCall}(');
-    for (final p in w.params) {
-      final arg = argExpr(w, p);
+    for (var i = 0; i < w.params.length; i++) {
+      final p = w.params[i];
+      final arg = argExpr(w, p, i);
       b.writeln('        ${p.named ? "${p.dartName}: " : ""}$arg,');
     }
     b.writeln('      );');
@@ -48,9 +49,12 @@ String writeDart(Reading r, {Set<String>? only}) {
   return b.toString();
 }
 
-/// argExpr gives the Dart expression of 1 constructor argument.
-String argExpr(WidgetSpec w, Param p) {
-  final read = readExpr(p);
+/// argExpr gives the Dart expression of 1 constructor argument. The position
+/// of the field stands next to its name, and GoNode reads the position first.
+/// The Go struct of flutter/ui/widgets_gen.go holds the fields in this order,
+/// because writeGo writes the same list.
+String argExpr(WidgetSpec w, Param p, int at) {
+  final read = readExpr(p, at);
   if (!exprNullable(p)) return read;
   if (p.nullable) return read;
   if (p.required) {
@@ -78,8 +82,8 @@ bool exprNullable(Param p) {
 }
 
 /// readExpr gives the Dart expression that reads 1 field of the node.
-String readExpr(Param p) {
-  final f = "'${p.goName}'";
+String readExpr(Param p, int at) {
+  final f = "'${p.goName}', $at";
   final kind = p.type.kind;
   if (kind.startsWith('enum:')) {
     final name = kind.substring(5);

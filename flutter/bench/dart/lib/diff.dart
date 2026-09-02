@@ -37,33 +37,52 @@ bool diffFields(Iface? a, Iface? b) {
     case 'gart.dev/ui.Text':
       // The compare reads the bytes of a GoString, thus the diff pays no
       // decode and allocates no Dart string. This is the best case for A10.
-      final bool same = x.goText('Data') == y.goText('Data') &&
-          x.nested('Style') == y.nested('Style') &&
-          x.goTextOpt('TextAlign') == y.goTextOpt('TextAlign') &&
-          x.goTextOpt('TextDirection') == y.goTextOpt('TextDirection') &&
-          x.goTextOpt('Locale') == y.goTextOpt('Locale') &&
-          x.flagOpt('SoftWrap') == y.flagOpt('SoftWrap') &&
-          x.goTextOpt('Overflow') == y.goTextOpt('Overflow') &&
-          x.sizeOpt('TextScaleFactor') == y.sizeOpt('TextScaleFactor') &&
-          x.countOpt('MaxLines') == y.countOpt('MaxLines') &&
-          x.goTextOpt('SemanticsLabel') == y.goTextOpt('SemanticsLabel') &&
-          x.goTextOpt('SemanticsIdentifier') == y.goTextOpt('SemanticsIdentifier') &&
-          x.goTextOpt('TextWidthBasis') == y.goTextOpt('TextWidthBasis') &&
-          x.countOpt('SelectionColor') == y.countOpt('SelectionColor');
+      final bool same = x.goText('Data', textData) ==
+              y.goText('Data', textData) &&
+          x.nested('Style', textStyle) == y.nested('Style', textStyle) &&
+          x.goTextOpt('TextAlign', textAlign) ==
+              y.goTextOpt('TextAlign', textAlign) &&
+          x.goTextOpt('TextDirection', textDirection) ==
+              y.goTextOpt('TextDirection', textDirection) &&
+          x.goTextOpt('Locale', textLocale) ==
+              y.goTextOpt('Locale', textLocale) &&
+          x.flagOpt('SoftWrap', textSoftWrap) ==
+              y.flagOpt('SoftWrap', textSoftWrap) &&
+          x.goTextOpt('Overflow', textOverflow) ==
+              y.goTextOpt('Overflow', textOverflow) &&
+          x.sizeOpt('TextScaleFactor', textScaleFactor) ==
+              y.sizeOpt('TextScaleFactor', textScaleFactor) &&
+          x.countOpt('MaxLines', textMaxLines) ==
+              y.countOpt('MaxLines', textMaxLines) &&
+          x.goTextOpt('SemanticsLabel', textSemanticsLabel) ==
+              y.goTextOpt('SemanticsLabel', textSemanticsLabel) &&
+          x.goTextOpt('SemanticsIdentifier', textSemanticsIdentifier) ==
+              y.goTextOpt('SemanticsIdentifier', textSemanticsIdentifier) &&
+          x.goTextOpt('TextWidthBasis', textWidthBasis) ==
+              y.goTextOpt('TextWidthBasis', textWidthBasis) &&
+          x.countOpt('SelectionColor', textSelectionColor) ==
+              y.countOpt('SelectionColor', textSelectionColor);
       if (same) return false;
       changed.add(b);
       return true;
     case 'gart.dev/ui.Column':
     case 'gart.dev/ui.Row':
-      bool moved = x.goTextOpt('MainAxisAlignment') != y.goTextOpt('MainAxisAlignment') ||
-          x.goTextOpt('MainAxisSize') != y.goTextOpt('MainAxisSize') ||
-          x.goTextOpt('CrossAxisAlignment') != y.goTextOpt('CrossAxisAlignment') ||
-          x.goTextOpt('TextDirection') != y.goTextOpt('TextDirection') ||
-          x.goTextOpt('VerticalDirection') != y.goTextOpt('VerticalDirection') ||
-          x.goTextOpt('TextBaseline') != y.goTextOpt('TextBaseline') ||
-          x.sizeOpt('Spacing') != y.sizeOpt('Spacing');
-      final List<Iface?> old = x.children('Children');
-      final List<Iface?> fresh = y.children('Children');
+      bool moved = x.goTextOpt('MainAxisAlignment', flexMainAxisAlignment) !=
+              y.goTextOpt('MainAxisAlignment', flexMainAxisAlignment) ||
+          x.goTextOpt('MainAxisSize', flexMainAxisSize) !=
+              y.goTextOpt('MainAxisSize', flexMainAxisSize) ||
+          x.goTextOpt('CrossAxisAlignment', flexCrossAxisAlignment) !=
+              y.goTextOpt('CrossAxisAlignment', flexCrossAxisAlignment) ||
+          x.goTextOpt('TextDirection', flexTextDirection) !=
+              y.goTextOpt('TextDirection', flexTextDirection) ||
+          x.goTextOpt('VerticalDirection', flexVerticalDirection) !=
+              y.goTextOpt('VerticalDirection', flexVerticalDirection) ||
+          x.goTextOpt('TextBaseline', flexTextBaseline) !=
+              y.goTextOpt('TextBaseline', flexTextBaseline) ||
+          x.sizeOpt('Spacing', flexSpacing) !=
+              y.sizeOpt('Spacing', flexSpacing);
+      final List<Iface?> old = x.children('Children', flexChildren);
+      final List<Iface?> fresh = y.children('Children', flexChildren);
       // A child list of another length rebuilds the whole subtree. A real
       // reconciler reads a key here, and it moves the state of a child that
       // kept its key. This harness holds no key.
@@ -104,8 +123,8 @@ bool diffEqual(Iface? a, Iface? b) {
   }
   final GoNodeView x = GoNodeView(a);
   final GoNodeView y = GoNodeView(b);
-  final List<Iface?> old = x.children('Children');
-  final List<Iface?> fresh = y.children('Children');
+  final List<Iface?> old = x.children('Children', flexChildren);
+  final List<Iface?> fresh = y.children('Children', flexChildren);
   if (old.length != fresh.length) {
     changed.add(b);
     return true;

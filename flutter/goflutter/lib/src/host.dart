@@ -56,22 +56,22 @@ Widget goRender(Iface? node, GoRuntime rt) {
   final GoNode n = GoNode(node);
   switch (n.kind) {
     case 'gart.dev/ui.Watch':
-      return GoWatch(runtime: rt, build: n.raw('Build'));
+      return GoWatch(runtime: rt, build: n.raw('Build', 0));
 
     case 'gart.dev/ui.Keyed':
       return KeyedSubtree(
-        key: ValueKey<String>(n.text('Key')),
-        child: goRender(n.child('Child'), rt),
+        key: ValueKey<String>(n.text('Key', 0)),
+        child: goRender(n.child('Child', 1), rt),
       );
 
     case 'gart.dev/ui.TextInput':
       return GoTextField(
-        value: n.text('Value'),
-        hint: n.text('Hint'),
-        label: n.text('Label'),
-        obscure: n.flag('Obscure'),
-        onChanged: n.onText('OnChanged'),
-        onSubmit: n.onText('OnSubmit'),
+        value: n.text('Value', 0),
+        hint: n.text('Hint', 1),
+        label: n.text('Label', 2),
+        obscure: n.flag('Obscure', 3),
+        onChanged: n.onText('OnChanged', 4),
+        onSubmit: n.onText('OnSubmit', 5),
         runtime: rt,
       );
   }

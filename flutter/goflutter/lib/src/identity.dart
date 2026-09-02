@@ -76,9 +76,9 @@ final class GoIdentities {
   /// focus gives the FocusNode of 1 ui.FocusKey.
   FocusNode? focus(GoNode? key, GoRuntime rt) {
     if (key == null) return null;
-    final _Held h = _focus(key.text('Name'));
+    final _Held h = _focus(key.text('Name', 0));
     final FocusNode node = h.object as FocusNode;
-    final void Function(bool)? f = key.onFlag('OnFocus');
+    final void Function(bool)? f = key.onFlag('OnFocus', 1);
     h.report = f == null ? null : () => rt.run(() => f(node.hasFocus));
     return node;
   }
@@ -86,9 +86,9 @@ final class GoIdentities {
   /// scroll gives the ScrollController of 1 ui.ScrollKey.
   ScrollController? scroll(GoNode? key, GoRuntime rt) {
     if (key == null) return null;
-    final _Held h = _scroll(key.text('Name'), key.size('Initial'));
+    final _Held h = _scroll(key.text('Name', 0), key.size('Initial', 1));
     final ScrollController c = h.object as ScrollController;
-    final void Function(double)? f = key.onSize('OnScroll');
+    final void Function(double)? f = key.onSize('OnScroll', 2);
     h.report = f == null
         ? null
         : () {
@@ -102,9 +102,9 @@ final class GoIdentities {
   /// states gives the WidgetStatesController of 1 ui.StatesKey.
   WidgetStatesController? states(GoNode? key, GoRuntime rt) {
     if (key == null) return null;
-    final _Held h = _states(key.text('Name'));
+    final _Held h = _states(key.text('Name', 0));
     final WidgetStatesController c = h.object as WidgetStatesController;
-    final void Function(Slice<GoString>)? f = key.onTexts('OnStates');
+    final void Function(Slice<GoString>)? f = key.onTexts('OnStates', 1);
     h.report = f == null
         ? null
         : () {

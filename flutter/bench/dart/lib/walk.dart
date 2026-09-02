@@ -9,90 +9,136 @@ import 'package:goruntime/goruntime.dart';
 /// `dart compile exe`, and `package:flutter` needs the Flutter engine. The
 /// widget construction is also the same work that a Dart application does, thus
 /// it hides the price of the boundary.
+///
+/// Each read names the position of the field and the name of it, exactly as
+/// GoNode reads them. The position is the fast path, and the name guards it.
 
 /// sink holds the result of each walk. A write to a top level variable keeps
 /// the Dart compiler away from a drop of the work.
 int sink = 0;
 
-final Map<String, Map<String, FieldDesc>> _cache = <String, Map<String, FieldDesc>>{};
+/// The position of each field of a ui.Text, in the order of the Go struct.
+const int textData = 0;
+const int textStyle = 1;
+const int textAlign = 2;
+const int textDirection = 3;
+const int textLocale = 4;
+const int textSoftWrap = 5;
+const int textOverflow = 6;
+const int textScaleFactor = 7;
+const int textMaxLines = 8;
+const int textSemanticsLabel = 9;
+const int textSemanticsIdentifier = 10;
+const int textWidthBasis = 11;
+const int textSelectionColor = 12;
 
-Map<String, FieldDesc> _index(TypeDesc desc) {
-  final Map<String, FieldDesc>? held = _cache[desc.name];
-  if (held != null) return held;
-  final Map<String, FieldDesc> out = <String, FieldDesc>{};
-  for (final FieldDesc f in desc.fields) {
-    out[f.name] = f;
-  }
-  _cache[desc.name] = out;
-  return out;
-}
+/// The position of each field of a ui.Column and of a ui.Row.
+const int flexMainAxisAlignment = 0;
+const int flexMainAxisSize = 1;
+const int flexCrossAxisAlignment = 2;
+const int flexTextDirection = 3;
+const int flexVerticalDirection = 4;
+const int flexTextBaseline = 5;
+const int flexSpacing = 6;
+const int flexChildren = 7;
 
 /// GoNodeView reads 1 node of the Go tree through its type descriptor. The
 /// method set holds only the readers that this measurement needs.
 final class GoNodeView {
   final Object? value;
   final TypeDesc desc;
-  final Map<String, FieldDesc> _fields;
+  final List<FieldDesc> _fields;
 
   GoNodeView(Iface node)
       : value = node.value,
         desc = node.desc,
-        _fields = _index(node.desc);
+        _fields = node.desc.fields;
 
   String get kind => desc.name;
 
-  Object? raw(String name) {
-    final FieldDesc? f = _fields[name];
-    if (f == null) return null;
-    return f.get(value);
+  /// noAt stands for "the caller names no position", as in GoNode.
+  static const int noAt = 0x7fffffff;
+
+  FieldDesc? _find(String name) {
+    final List<FieldDesc> f = _fields;
+    for (int i = 0; i < f.length; i++) {
+      if (identical(f[i].name, name)) return f[i];
+    }
+    for (int i = 0; i < f.length; i++) {
+      if (f[i].name == name) return f[i];
+    }
+    return null;
   }
 
-  T? point<T>(String name) {
-    final Object? v = raw(name);
+  Object? raw(String name, [int at = noAt]) {
+    final List<FieldDesc> f = _fields;
+    if (at < f.length) {
+      final FieldDesc d = f[at];
+      if (identical(d.name, name)) return d.get(value);
+    }
+    return _find(name)?.get(value);
+  }
+
+  T? point<T>(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
     return v is $Ptr<T> ? v.v : null;
   }
 
-  String text(String name) {
-    final Object? v = raw(name);
+  String text(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
     return v is GoString ? v.toDartString() : '';
   }
 
   /// bytes gives the byte count of a string field, and it runs no decode. The
   /// difference against text is the price of GoString.toDartString.
-  int bytes(String name) {
-    final Object? v = raw(name);
+  int bytes(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
     return v is GoString ? v.length : 0;
   }
 
-  String? textOpt(String name) => point<GoString>(name)?.toDartString();
+  String? textOpt(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is $Ptr<GoString> ? v.v.toDartString() : null;
+  }
 
   /// goText gives a string field with no decode. The diff reads it, because a
   /// compare of 2 GoString values reads the bytes and allocates nothing.
-  GoString? goText(String name) {
-    final Object? v = raw(name);
+  GoString? goText(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
     return v is GoString ? v : null;
   }
 
   /// goTextOpt gives an optional string field with no decode.
-  GoString? goTextOpt(String name) => point<GoString>(name);
-
-  /// bytesOpt reads the same pointer as textOpt, and it runs no decode.
-  int bytesOpt(String name) => point<GoString>(name)?.length ?? 0;
-
-  double? sizeOpt(String name) => point<double>(name);
-
-  int? countOpt(String name) => point<int>(name);
-
-  bool? flagOpt(String name) => point<bool>(name);
-
-  Object? nested(String name) {
-    final FieldDesc? f = _fields[name];
-    if (f == null) return null;
-    return f.get(value);
+  GoString? goTextOpt(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is $Ptr<GoString> ? v.v : null;
   }
 
-  List<Iface?> children(String name) {
-    final Object? v = raw(name);
+  /// bytesOpt reads the same pointer as textOpt, and it runs no decode.
+  int bytesOpt(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is $Ptr<GoString> ? v.v.length : 0;
+  }
+
+  double? sizeOpt(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is $Ptr<double> ? v.v : null;
+  }
+
+  int? countOpt(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is $Ptr<int> ? v.v : null;
+  }
+
+  bool? flagOpt(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is $Ptr<bool> ? v.v : null;
+  }
+
+  Object? nested(String name, [int at = noAt]) => raw(name, at);
+
+  List<Iface?> children(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
     if (v is! Slice<Iface?>) return const <Iface?>[];
     return <Iface?>[for (int i = 0; i < v.len; i++) v[i]];
   }
@@ -105,30 +151,34 @@ void walkText(Iface? node) {
   final GoNodeView n = GoNodeView(node);
   switch (n.kind) {
     case 'gart.dev/ui.Text':
-      sink += n.text('Data').length;
-      if (n.nested('Style') != null) sink++;
-      if (n.textOpt('TextAlign') != null) sink++;
-      if (n.textOpt('TextDirection') != null) sink++;
-      if (n.textOpt('Locale') != null) sink++;
-      if (n.flagOpt('SoftWrap') != null) sink++;
-      if (n.textOpt('Overflow') != null) sink++;
-      if (n.sizeOpt('TextScaleFactor') != null) sink++;
-      if (n.countOpt('MaxLines') != null) sink++;
-      if (n.textOpt('SemanticsLabel') != null) sink++;
-      if (n.textOpt('SemanticsIdentifier') != null) sink++;
-      if (n.textOpt('TextWidthBasis') != null) sink++;
-      if (n.countOpt('SelectionColor') != null) sink++;
+      sink += n.text('Data', textData).length;
+      if (n.nested('Style', textStyle) != null) sink++;
+      if (n.textOpt('TextAlign', textAlign) != null) sink++;
+      if (n.textOpt('TextDirection', textDirection) != null) sink++;
+      if (n.textOpt('Locale', textLocale) != null) sink++;
+      if (n.flagOpt('SoftWrap', textSoftWrap) != null) sink++;
+      if (n.textOpt('Overflow', textOverflow) != null) sink++;
+      if (n.sizeOpt('TextScaleFactor', textScaleFactor) != null) sink++;
+      if (n.countOpt('MaxLines', textMaxLines) != null) sink++;
+      if (n.textOpt('SemanticsLabel', textSemanticsLabel) != null) sink++;
+      if (n.textOpt('SemanticsIdentifier', textSemanticsIdentifier) != null) {
+        sink++;
+      }
+      if (n.textOpt('TextWidthBasis', textWidthBasis) != null) sink++;
+      if (n.countOpt('SelectionColor', textSelectionColor) != null) sink++;
       return;
     case 'gart.dev/ui.Column':
     case 'gart.dev/ui.Row':
-      if (n.textOpt('MainAxisAlignment') != null) sink++;
-      if (n.textOpt('MainAxisSize') != null) sink++;
-      if (n.textOpt('CrossAxisAlignment') != null) sink++;
-      if (n.textOpt('TextDirection') != null) sink++;
-      if (n.textOpt('VerticalDirection') != null) sink++;
-      if (n.textOpt('TextBaseline') != null) sink++;
-      if (n.sizeOpt('Spacing') != null) sink++;
-      for (final Iface? kid in n.children('Children')) {
+      if (n.textOpt('MainAxisAlignment', flexMainAxisAlignment) != null) sink++;
+      if (n.textOpt('MainAxisSize', flexMainAxisSize) != null) sink++;
+      if (n.textOpt('CrossAxisAlignment', flexCrossAxisAlignment) != null) {
+        sink++;
+      }
+      if (n.textOpt('TextDirection', flexTextDirection) != null) sink++;
+      if (n.textOpt('VerticalDirection', flexVerticalDirection) != null) sink++;
+      if (n.textOpt('TextBaseline', flexTextBaseline) != null) sink++;
+      if (n.sizeOpt('Spacing', flexSpacing) != null) sink++;
+      for (final Iface? kid in n.children('Children', flexChildren)) {
         walkText(kid);
       }
       return;
@@ -144,30 +194,30 @@ void walkRaw(Iface? node) {
   final GoNodeView n = GoNodeView(node);
   switch (n.kind) {
     case 'gart.dev/ui.Text':
-      sink += n.bytes('Data');
-      if (n.nested('Style') != null) sink++;
-      sink += n.bytesOpt('TextAlign');
-      sink += n.bytesOpt('TextDirection');
-      sink += n.bytesOpt('Locale');
-      if (n.flagOpt('SoftWrap') != null) sink++;
-      sink += n.bytesOpt('Overflow');
-      if (n.sizeOpt('TextScaleFactor') != null) sink++;
-      if (n.countOpt('MaxLines') != null) sink++;
-      sink += n.bytesOpt('SemanticsLabel');
-      sink += n.bytesOpt('SemanticsIdentifier');
-      sink += n.bytesOpt('TextWidthBasis');
-      if (n.countOpt('SelectionColor') != null) sink++;
+      sink += n.bytes('Data', textData);
+      if (n.nested('Style', textStyle) != null) sink++;
+      sink += n.bytesOpt('TextAlign', textAlign);
+      sink += n.bytesOpt('TextDirection', textDirection);
+      sink += n.bytesOpt('Locale', textLocale);
+      if (n.flagOpt('SoftWrap', textSoftWrap) != null) sink++;
+      sink += n.bytesOpt('Overflow', textOverflow);
+      if (n.sizeOpt('TextScaleFactor', textScaleFactor) != null) sink++;
+      if (n.countOpt('MaxLines', textMaxLines) != null) sink++;
+      sink += n.bytesOpt('SemanticsLabel', textSemanticsLabel);
+      sink += n.bytesOpt('SemanticsIdentifier', textSemanticsIdentifier);
+      sink += n.bytesOpt('TextWidthBasis', textWidthBasis);
+      if (n.countOpt('SelectionColor', textSelectionColor) != null) sink++;
       return;
     case 'gart.dev/ui.Column':
     case 'gart.dev/ui.Row':
-      sink += n.bytesOpt('MainAxisAlignment');
-      sink += n.bytesOpt('MainAxisSize');
-      sink += n.bytesOpt('CrossAxisAlignment');
-      sink += n.bytesOpt('TextDirection');
-      sink += n.bytesOpt('VerticalDirection');
-      sink += n.bytesOpt('TextBaseline');
-      if (n.sizeOpt('Spacing') != null) sink++;
-      for (final Iface? kid in n.children('Children')) {
+      sink += n.bytesOpt('MainAxisAlignment', flexMainAxisAlignment);
+      sink += n.bytesOpt('MainAxisSize', flexMainAxisSize);
+      sink += n.bytesOpt('CrossAxisAlignment', flexCrossAxisAlignment);
+      sink += n.bytesOpt('TextDirection', flexTextDirection);
+      sink += n.bytesOpt('VerticalDirection', flexVerticalDirection);
+      sink += n.bytesOpt('TextBaseline', flexTextBaseline);
+      if (n.sizeOpt('Spacing', flexSpacing) != null) sink++;
+      for (final Iface? kid in n.children('Children', flexChildren)) {
         walkRaw(kid);
       }
       return;
@@ -177,10 +227,11 @@ void walkRaw(Iface? node) {
 
 /// buildOf gives the Build field of a Watch node. The host reads the same
 /// field at the mount of a boundary.
-Object? buildOf(Iface node) => GoNodeView(node).raw('Build');
+Object? buildOf(Iface node) => GoNodeView(node).raw('Build', 0);
 
 /// kidsOf gives the children of a Column node.
-List<Iface?> kidsOf(Iface node) => GoNodeView(node).children('Children');
+List<Iface?> kidsOf(Iface node) =>
+    GoNodeView(node).children('Children', flexChildren);
 
 /// walkData reads the text property alone, and it reads no optional field. The
 /// difference against walkText is the price of the 12 optional fields that the
@@ -190,11 +241,11 @@ void walkData(Iface? node) {
   final GoNodeView n = GoNodeView(node);
   switch (n.kind) {
     case 'gart.dev/ui.Text':
-      sink += n.text('Data').length;
+      sink += n.text('Data', textData).length;
       return;
     case 'gart.dev/ui.Column':
     case 'gart.dev/ui.Row':
-      for (final Iface? kid in n.children('Children')) {
+      for (final Iface? kid in n.children('Children', flexChildren)) {
         walkData(kid);
       }
       return;

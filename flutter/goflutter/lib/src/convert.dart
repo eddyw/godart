@@ -86,22 +86,23 @@ Widget Function(BuildContext, int)? goItem(
 EdgeInsets? goInsets(GoNode? n) => n == null
     ? null
     : EdgeInsets.fromLTRB(
-        n.size('Left'), n.size('Top'), n.size('Right'), n.size('Bottom'));
+        n.size('Left', 0), n.size('Top', 1), n.size('Right', 2),
+        n.size('Bottom', 3));
 
 /// goOffset reads the Offset struct of the Go side.
 Offset? goOffset(GoNode? n) =>
-    n == null ? null : Offset(n.size('Dx'), n.size('Dy'));
+    n == null ? null : Offset(n.size('Dx', 0), n.size('Dy', 1));
 
 /// goConstraints reads the Constraints struct of the Go side. A maximum of 0
 /// means no limit.
 BoxConstraints? goConstraints(GoNode? n) {
   if (n == null) return null;
-  final double maxW = n.size('MaxWidth');
-  final double maxH = n.size('MaxHeight');
+  final double maxW = n.size('MaxWidth', 1);
+  final double maxH = n.size('MaxHeight', 3);
   return BoxConstraints(
-    minWidth: n.size('MinWidth'),
+    minWidth: n.size('MinWidth', 0),
     maxWidth: maxW == 0 ? double.infinity : maxW,
-    minHeight: n.size('MinHeight'),
+    minHeight: n.size('MinHeight', 2),
     maxHeight: maxH == 0 ? double.infinity : maxH,
   );
 }
@@ -125,16 +126,16 @@ const Map<String, TextDecoration> _decorations = <String, TextDecoration>{
 /// goTextStyle reads the TextStyle struct of the Go side.
 TextStyle? goTextStyle(GoNode? n) {
   if (n == null) return null;
-  final String family = n.text('Family');
+  final String family = n.text('Family', 8);
   return TextStyle(
-    color: goColorOpt(n.countOpt('Color')),
-    fontSize: n.sizeOpt('Size'),
-    fontWeight: _weights[n.text('Weight')],
-    fontStyle: n.flag('Italic') ? FontStyle.italic : null,
-    letterSpacing: n.sizeOpt('LetterSpacing'),
-    wordSpacing: n.sizeOpt('WordSpacing'),
-    height: n.sizeOpt('Height'),
-    decoration: _decorations[n.text('Decoration')],
+    color: goColorOpt(n.countOpt('Color', 0)),
+    fontSize: n.sizeOpt('Size', 1),
+    fontWeight: _weights[n.text('Weight', 2)],
+    fontStyle: n.flag('Italic', 3) ? FontStyle.italic : null,
+    letterSpacing: n.sizeOpt('LetterSpacing', 4),
+    wordSpacing: n.sizeOpt('WordSpacing', 5),
+    height: n.sizeOpt('Height', 6),
+    decoration: _decorations[n.text('Decoration', 7)],
     fontFamily: family.isEmpty ? null : family,
   );
 }
@@ -261,9 +262,9 @@ Locale? goLocale(String? s) {
 BorderSide? goBorderSide(GoNode? n) {
   if (n == null) return null;
   return BorderSide(
-    color: goColorOpt(n.countOpt('Color')) ?? const BorderSide().color,
-    width: n.sizeOpt('Width') ?? 1,
-    style: n.text('Style') == 'none' ? BorderStyle.none : BorderStyle.solid,
+    color: goColorOpt(n.countOpt('Color', 0)) ?? const BorderSide().color,
+    width: n.sizeOpt('Width', 1) ?? 1,
+    style: n.text('Style', 2) == 'none' ? BorderStyle.none : BorderStyle.solid,
   );
 }
 
@@ -271,10 +272,10 @@ BorderSide? goBorderSide(GoNode? n) {
 BorderRadius? goRadius(GoNode? n) {
   if (n == null) return null;
   return BorderRadius.only(
-    topLeft: Radius.circular(n.size('TopLeft')),
-    topRight: Radius.circular(n.size('TopRight')),
-    bottomLeft: Radius.circular(n.size('BottomLeft')),
-    bottomRight: Radius.circular(n.size('BottomRight')),
+    topLeft: Radius.circular(n.size('TopLeft', 0)),
+    topRight: Radius.circular(n.size('TopRight', 1)),
+    bottomLeft: Radius.circular(n.size('BottomLeft', 2)),
+    bottomRight: Radius.circular(n.size('BottomRight', 3)),
   );
 }
 
@@ -284,9 +285,10 @@ BorderRadius? goRadius(GoNode? n) {
 /// parameter of ShapeBorder each take it.
 OutlinedBorder? goShape(GoNode? n) {
   if (n == null) return null;
-  final BorderSide side = goBorderSide(n.nested('Side')) ?? BorderSide.none;
-  final BorderRadius radius = goRadius(n.nested('Radius')) ?? BorderRadius.zero;
-  switch (n.text('Kind')) {
+  final BorderSide side = goBorderSide(n.nested('Side', 2)) ?? BorderSide.none;
+  final BorderRadius radius =
+      goRadius(n.nested('Radius', 1)) ?? BorderRadius.zero;
+  switch (n.text('Kind', 0)) {
     case 'rounded':
       return RoundedRectangleBorder(borderRadius: radius, side: side);
     case 'stadium':
@@ -303,19 +305,19 @@ OutlinedBorder? goShape(GoNode? n) {
 VisualDensity? goDensity(GoNode? n) => n == null
     ? null
     : VisualDensity(
-        horizontal: n.size('Horizontal'),
-        vertical: n.size('Vertical'),
+        horizontal: n.size('Horizontal', 0),
+        vertical: n.size('Vertical', 1),
       );
 
 /// goIconStyle reads the IconStyle struct of the Go side.
 IconThemeData? goIconStyle(GoNode? n) => n == null
     ? null
     : IconThemeData(
-        color: goColorOpt(n.countOpt('Color')),
-        size: n.sizeOpt('Size'),
-        opacity: n.sizeOpt('Opacity'),
-        fill: n.sizeOpt('Fill'),
-        weight: n.sizeOpt('Weight'),
+        color: goColorOpt(n.countOpt('Color', 0)),
+        size: n.sizeOpt('Size', 1),
+        opacity: n.sizeOpt('Opacity', 2),
+        fill: n.sizeOpt('Fill', 3),
+        weight: n.sizeOpt('Weight', 4),
       );
 
 /// goStateColor reads the StateColor struct of the Go side.
@@ -324,12 +326,12 @@ IconThemeData? goIconStyle(GoNode? n) => n == null
 /// gives null for that state, thus Flutter reads its own default.
 WidgetStateProperty<Color?>? goStateColor(GoNode? n) {
   if (n == null) return null;
-  final Color? base = goColorOpt(n.countOpt('Default'));
-  final Color? hovered = goColorOpt(n.countOpt('Hovered'));
-  final Color? focused = goColorOpt(n.countOpt('Focused'));
-  final Color? pressed = goColorOpt(n.countOpt('Pressed'));
-  final Color? selected = goColorOpt(n.countOpt('Selected'));
-  final Color? disabled = goColorOpt(n.countOpt('Disabled'));
+  final Color? base = goColorOpt(n.countOpt('Default', 0));
+  final Color? hovered = goColorOpt(n.countOpt('Hovered', 1));
+  final Color? focused = goColorOpt(n.countOpt('Focused', 2));
+  final Color? pressed = goColorOpt(n.countOpt('Pressed', 3));
+  final Color? selected = goColorOpt(n.countOpt('Selected', 4));
+  final Color? disabled = goColorOpt(n.countOpt('Disabled', 5));
   return WidgetStateProperty.resolveWith((Set<WidgetState> states) {
     if (states.contains(WidgetState.disabled)) return disabled ?? base;
     if (states.contains(WidgetState.pressed)) return pressed ?? base;
@@ -342,7 +344,7 @@ WidgetStateProperty<Color?>? goStateColor(GoNode? n) {
 
 /// goSize reads the Size struct of the Go side.
 Size? goSize(GoNode? n) =>
-    n == null ? null : Size(n.size('Width'), n.size('Height'));
+    n == null ? null : Size(n.size('Width', 0), n.size('Height', 1));
 
 /// goImage reads the ImageSource struct of the Go side.
 ///
@@ -350,18 +352,18 @@ Size? goSize(GoNode? n) =>
 /// also builds for the web, thus a Go program gives the bytes of the file.
 ImageProvider<Object>? goImage(GoNode? n) {
   if (n == null) return null;
-  final double scale = n.sizeOpt('Scale') ?? 1;
-  final String src = n.text('Src');
-  switch (n.text('Kind')) {
+  final double scale = n.sizeOpt('Scale', 3) ?? 1;
+  final String src = n.text('Src', 1);
+  switch (n.text('Kind', 0)) {
     case 'network':
       if (src.isEmpty) return null;
       return NetworkImage(src, scale: scale);
     case 'asset':
       if (src.isEmpty) return null;
-      final String pkg = n.text('Package');
+      final String pkg = n.text('Package', 4);
       return AssetImage(src, package: pkg.isEmpty ? null : pkg);
     case 'memory':
-      final List<int> bytes = n.counts('Bytes');
+      final List<int> bytes = n.counts('Bytes', 2);
       if (bytes.isEmpty) return null;
       return MemoryImage(Uint8List.fromList(bytes), scale: scale);
   }
@@ -376,10 +378,10 @@ List<BoxShadow>? goShadows(List<GoNode> list) {
   return <BoxShadow>[
     for (final GoNode n in list)
       BoxShadow(
-        color: goColorOpt(n.argb('Color')) ?? const BoxShadow().color,
-        offset: goOffset(n.nested('Offset')) ?? Offset.zero,
-        blurRadius: n.size('BlurRadius'),
-        spreadRadius: n.size('SpreadRadius'),
+        color: goColorOpt(n.argb('Color', 0)) ?? const BoxShadow().color,
+        offset: goOffset(n.nested('Offset', 1)) ?? Offset.zero,
+        blurRadius: n.size('BlurRadius', 2),
+        spreadRadius: n.size('SpreadRadius', 3),
       ),
   ];
 }
@@ -392,25 +394,25 @@ List<BoxShadow>? goShadows(List<GoNode> list) {
 Gradient? goGradient(GoNode? n) {
   if (n == null) return null;
   final List<Color> colors = <Color>[
-    for (final int v in n.counts('Colors')) Color(v),
+    for (final int v in n.counts('Colors', 1)) Color(v),
   ];
   if (colors.length < 2) return null;
-  final List<double> stops = n.sizes('Stops');
+  final List<double> stops = n.sizes('Stops', 2);
   final List<double>? at = stops.length == colors.length ? stops : null;
-  if (n.text('Kind') == 'radial') {
-    final double radius = n.size('Radius');
+  if (n.text('Kind', 0) == 'radial') {
+    final double radius = n.size('Radius', 6);
     return RadialGradient(
       colors: colors,
       stops: at,
-      center: goAlignment(n.text('Center')) ?? Alignment.center,
+      center: goAlignment(n.text('Center', 5)) ?? Alignment.center,
       radius: radius == 0 ? 0.5 : radius,
     );
   }
   return LinearGradient(
     colors: colors,
     stops: at,
-    begin: goAlignment(n.text('Begin')) ?? Alignment.centerLeft,
-    end: goAlignment(n.text('End')) ?? Alignment.centerRight,
+    begin: goAlignment(n.text('Begin', 3)) ?? Alignment.centerLeft,
+    end: goAlignment(n.text('End', 4)) ?? Alignment.centerRight,
   );
 }
 
@@ -419,18 +421,18 @@ Gradient? goGradient(GoNode? n) {
 /// A circle carries no border radius, because Flutter rejects the pair.
 BoxDecoration? goDecoration(GoNode? n) {
   if (n == null) return null;
-  final BorderSide? side = goBorderSide(n.nested('Border'));
-  final ImageProvider<Object>? image = goImage(n.nested('Image'));
-  final bool circle = n.text('Shape') == 'circle';
+  final BorderSide? side = goBorderSide(n.nested('Border', 3));
+  final ImageProvider<Object>? image = goImage(n.nested('Image', 1));
+  final bool circle = n.text('Shape', 7) == 'circle';
   return BoxDecoration(
-    color: goColorOpt(n.countOpt('Color')),
+    color: goColorOpt(n.countOpt('Color', 0)),
     image: image == null
         ? null
-        : DecorationImage(image: image, fit: _fits[n.text('Fit')]),
+        : DecorationImage(image: image, fit: _fits[n.text('Fit', 2)]),
     border: side == null ? null : Border.fromBorderSide(side),
-    borderRadius: circle ? null : goRadius(n.nested('Radius')),
-    boxShadow: goShadows(n.structs('Shadows')),
-    gradient: goGradient(n.nested('Gradient')),
+    borderRadius: circle ? null : goRadius(n.nested('Radius', 4)),
+    boxShadow: goShadows(n.structs('Shadows', 5)),
+    gradient: goGradient(n.nested('Gradient', 6)),
     shape: circle ? BoxShape.circle : BoxShape.rectangle,
   );
 }
@@ -452,26 +454,26 @@ WidgetStateProperty<T>? _all<T>(T? v) =>
 ButtonStyle? goButtonStyle(GoNode? n) {
   if (n == null) return null;
   return ButtonStyle(
-    backgroundColor: goStateColor(n.nested('BackgroundColor')),
-    foregroundColor: goStateColor(n.nested('ForegroundColor')),
-    overlayColor: goStateColor(n.nested('OverlayColor')),
-    shadowColor: goStateColor(n.nested('ShadowColor')),
-    surfaceTintColor: goStateColor(n.nested('SurfaceTintColor')),
-    iconColor: goStateColor(n.nested('IconColor')),
-    textStyle: _all<TextStyle>(goTextStyle(n.nested('TextStyle'))),
-    elevation: _all<double>(n.sizeOpt('Elevation')),
-    iconSize: _all<double>(n.sizeOpt('IconSize')),
-    padding: _all<EdgeInsetsGeometry>(goInsets(n.nested('Padding'))),
-    minimumSize: _all<Size>(goSize(n.nested('MinimumSize'))),
-    maximumSize: _all<Size>(goSize(n.nested('MaximumSize'))),
-    fixedSize: _all<Size>(goSize(n.nested('FixedSize'))),
-    side: _all<BorderSide>(goBorderSide(n.nested('Side'))),
-    shape: _all<OutlinedBorder>(goShape(n.nested('Shape'))),
-    alignment: goAlignment(n.text('Alignment')),
-    visualDensity: goDensity(n.nested('VisualDensity')),
-    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor'))),
-    tapTargetSize: _tapTargets[n.text('TapTargetSize')],
-    animationDuration: goMillis(n.countOpt('AnimationMillis')),
-    enableFeedback: n.flagOpt('EnableFeedback'),
+    backgroundColor: goStateColor(n.nested('BackgroundColor', 0)),
+    foregroundColor: goStateColor(n.nested('ForegroundColor', 1)),
+    overlayColor: goStateColor(n.nested('OverlayColor', 2)),
+    shadowColor: goStateColor(n.nested('ShadowColor', 3)),
+    surfaceTintColor: goStateColor(n.nested('SurfaceTintColor', 4)),
+    iconColor: goStateColor(n.nested('IconColor', 5)),
+    textStyle: _all<TextStyle>(goTextStyle(n.nested('TextStyle', 6))),
+    elevation: _all<double>(n.sizeOpt('Elevation', 7)),
+    iconSize: _all<double>(n.sizeOpt('IconSize', 8)),
+    padding: _all<EdgeInsetsGeometry>(goInsets(n.nested('Padding', 9))),
+    minimumSize: _all<Size>(goSize(n.nested('MinimumSize', 10))),
+    maximumSize: _all<Size>(goSize(n.nested('MaximumSize', 11))),
+    fixedSize: _all<Size>(goSize(n.nested('FixedSize', 12))),
+    side: _all<BorderSide>(goBorderSide(n.nested('Side', 13))),
+    shape: _all<OutlinedBorder>(goShape(n.nested('Shape', 14))),
+    alignment: goAlignment(n.text('Alignment', 15)),
+    visualDensity: goDensity(n.nested('VisualDensity', 16)),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 17))),
+    tapTargetSize: _tapTargets[n.text('TapTargetSize', 18)],
+    animationDuration: goMillis(n.countOpt('AnimationMillis', 19)),
+    enableFeedback: n.flagOpt('EnableFeedback', 20),
   );
 }

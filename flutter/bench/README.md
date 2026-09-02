@@ -115,6 +115,11 @@ byte count or the rune count drives the cost.
 
 ## The result of 2026-09-03
 
+**The host of this section reads each field through a map of the name.** The
+last section of this file, "The cheaper field read", holds the host of today
+and the numbers of it. The `GoString` numbers of this section still hold,
+because the change touched no conversion.
+
 The machine of the project: Apple M4 Max, 16 cores, macOS 27.0, Dart SDK 3.13.2
 on macos_arm64. The compiler is `build/gart` of 2026-09-02 17:21.
 
@@ -199,7 +204,7 @@ The text conversions take 22 to 55 percent of the frame, and the read of the
 optional fields takes 43 to 72 percent. A `ui.Text` holds 12 optional fields,
 and the host reads each 1 through a map of the descriptor. Each such read costs
 about 15 nanoseconds, thus a `Text` node costs about 190 nanoseconds before any
-text work.
+text work. The last section of this file takes that map out.
 
 ### The reading
 
@@ -219,7 +224,8 @@ in 1 frame, thus the layout reaches the budget long before the boundary does.
    text that a Go literal writes pays 60 nanoseconds at each build for 20
    characters, and the read of it pays 16.
 2. The read of the optional fields costs more than the text. A cheaper field
-   read would gain more than a cheaper `GoString`.
+   read would gain more than a cheaper `GoString`. The last section of this
+   file holds that cheaper read, and it measures the gain.
 
 ### The cross check
 
@@ -394,3 +400,107 @@ would make the real number worse.
 6. **No decode.** The diff compares the bytes of 2 `GoString` values, and it
    allocates no Dart string. A real host must decode the text of a node that
    changed anyway.
+
+## The cheaper field read, 2026-09-03
+
+The section "Where the time goes" named the read of the optional fields as the
+largest single cost of a frame: 37.4 microseconds of the 58.3 that a tree of
+200 nodes took. This section holds the change that answers that number.
+
+### What the host did
+
+`GoNode` of `flutter/goflutter/lib/src/node.dart` held 1 `Map<String,
+FieldDesc>` for each node kind. A read of 1 field hashed the name of the field,
+it probed that map, and it then called the getter closure of the descriptor.
+The construction of 1 `GoNode` paid 1 more map lookup, on the name of the type.
+
+A probe over a tree of 200 nodes split the 15.9 nanoseconds of 1 optional field
+read. The tree holds 2,395 such reads, and each 1 of them reads a nil pointer.
+
+| The part of 1 read | The cost |
+|---|---|
+| The lookup of the name in the map | 7.1 ns |
+| The call of the getter closure of the descriptor | 5.5 ns |
+| The test `v is $Ptr<T>` against a type parameter | 0.6 ns |
+| The null test, the bounds test, and the call frames | 2.7 ns |
+
+Half of the cost stood in the map, and no part of that half read a value.
+
+### The change
+
+1. `GoNode` holds `desc.fields`, which is a `List<FieldDesc>` that the
+   descriptor carries already. It builds no map and it reads no cache, thus the
+   construction of 1 node costs nothing.
+2. Each reader takes the position of the field beside the name of it:
+   `n.textOpt('TextAlign', 2)`. The read takes the descriptor at that position,
+   and it compares the name of it with `identical`. Dart holds 1 object for
+   each string literal of a program, thus the compare of 2 pointers answers.
+3. A position that misses falls back to a scan of the name over the list. A Go
+   struct of another field order thus still reads right, and a caller that
+   names no position reads right too.
+4. `textOpt`, `sizeOpt`, `countOpt`, and `flagOpt` each name the element type
+   of the pointer. A test against `$Ptr<GoString>` costs less than a test
+   against `$Ptr<T>` of a type parameter.
+5. `nodegen` writes the position. `writeGo` and `writeDart` of
+   `flutter/nodegen/lib` read 1 list of parameters for each widget, thus the
+   position of a parameter is the position of the Go struct field.
+6. `convert.dart`, `host.dart`, and `identity.dart` name the position of each
+   field of `flutter/ui/types.go`, `node.go`, and `identity.go` too.
+
+`dart/lib/walk.dart` mirrors the new `GoNode`, thus the measurement below reads
+the tree the way the host of today reads it.
+
+### The measurement of the change
+
+The same machine. 3 process runs of each build gave 90 batches for each cell,
+and the 2 builds ran in turn, thus a load of the machine hits both. Each number
+is the smallest batch, in microseconds.
+
+| Nodes | Text | Optional fields, before | after | Dart walk, before | after | Frame, before | after |
+|---|---|---|---|---|---|---|---|
+| 20 | 5 | 3.88 | 2.28 | 4.81 | 2.95 | 5.45 | 3.68 |
+| 20 | 20 | 3.87 | 2.23 | 4.87 | 2.98 | 6.15 | 4.20 |
+| 20 | 80 | 3.91 | 2.21 | 5.24 | 3.30 | 8.76 | 6.76 |
+| 50 | 5 | 9.70 | 5.38 | 11.8 | 6.97 | 13.0 | 8.49 |
+| 50 | 20 | 9.51 | 5.26 | 11.8 | 7.04 | 14.7 | 9.98 |
+| 50 | 80 | 9.70 | 5.43 | 12.9 | 8.03 | 21.4 | 16.6 |
+| 200 | 5 | 38.2 | 21.0 | 45.5 | 27.0 | 50.7 | 33.9 |
+| 200 | 20 | 38.2 | 20.3 | 46.1 | 27.2 | 56.9 | 40.0 |
+| 200 | 80 | 38.0 | 20.8 | 49.7 | 31.1 | 86.0 | 70.1 |
+| 200 | 20 runes, 37 bytes | 37.6 | 20.4 | 55.2 | 37.1 | 69.3 | 52.1 |
+| 500 | 5 | 94.7 | 54.2 | 112.2 | 69.0 | 125.0 | 82.9 |
+| 500 | 20 | 93.5 | 53.5 | 114.6 | 70.8 | 144.5 | 98.6 |
+| 500 | 80 | 93.1 | 51.8 | 123.5 | 78.0 | 211.1 | 166.7 |
+
+The read of the optional fields costs 43 to 47 percent less. 1 such read falls
+from 15.9 nanoseconds to 8.5. The whole Dart walk costs 37 to 41 percent less,
+and the whole frame of 200 nodes with 20 characters falls from 56.9
+microseconds to 40.0.
+
+The Go side did not move, as it must not. `go.held` of 200 nodes reads 1.97
+microseconds before and 1.99 after, and `go.literal` reads 12.2 and 12.5.
+
+4 more cases of the sweep gain from the same change, at 200 nodes and 20
+characters:
+
+| Case | Before | After |
+|---|---|---|
+| `dart.walk.raw` | 39.8 | 25.9 |
+| `frame.a5` | 46.6 | 30.1 |
+| `diff.same`, the floor of A10 | 86.8 | 53.1 |
+| `watch.three`, 1 boundary of 3 texts | 1.31 | 1.01 |
+
+### What stands after the change
+
+The floor of the read is the getter closure of the descriptor, at 5.5
+nanoseconds of the 8.5 that 1 optional field now takes. That closure lives in
+the Dart that `gart` writes, and a call of it is an indirect call that the
+branch predictor of the processor misses. A read of the Dart field itself costs
+under 1 nanosecond, thus a host that named the generated class would beat the
+descriptor by another factor of 5. Such a host reads a generated class for each
+node type, and the reading of `flutter/nodegen/README.md` gives the size of
+that price: 7.2 megabytes of the snapshot.
+
+The guard of the name costs 1.7 nanoseconds of the 8.5. A build that dropped it
+would read 6.8, and a Go struct of another field order would then give a wrong
+widget with no report. The measurement kept the guard.
