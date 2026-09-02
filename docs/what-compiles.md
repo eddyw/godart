@@ -7,28 +7,29 @@ count of the exported names that each package of the surface holds.
 
 Each row comes from a measurement of 2026-08-31. A `Present` row is a real build
 of a program that imports the package. The import surface holds the run of
-`make surface` of 2026-09-02.
+`make surface` of 2026-09-03.
 
 ## The import surface
 
-The surface holds 110 import paths: 97 standard packages, the interop package
-`syscall/dart`, and 12 internal packages that the 97 need. Stage 2 rejects an
+The surface holds 116 import paths: 103 standard packages, the interop package
+`syscall/dart`, and 12 internal packages that the 103 need. Stage 2 rejects an
 import of each other package with a source position.
 
-84 of the 97 hold each exported name of Go, and 13 hold a part of them.
+91 of the 103 hold each exported name of Go, and 12 hold a part of them.
 `docs/support.md` holds the level of each one and the largest gap of each
 partial package. `make surface` measures each one again.
 
 | Present | Absent |
 |---|---|
-| `bufio`, `bytes`, `cmp`, `net/http` | `encoding/gob` |
-| `container/heap`, `container/list`, `container/ring`, `os/exec` | `crypto/x509` |
-| `context`, `errors`, `flag`, `fmt`, `log` | `database/sql` |
-| `regexp`, `regexp/syntax`, `encoding/xml` | `go/types`, `go/importer` |
-| `encoding/ascii85`, `encoding/base64`, `encoding/binary`, `embed` | `go/build` |
-| `encoding/csv`, `encoding/hex`, `encoding/json` | `net/http/cgi`, `net/rpc` |
-| `compress/flate`, `compress/gzip`, `compress/zlib` | `net/smtp`, `net/mail` |
-| `compress/lzw`, `compress/bzip2`, `archive/zip`, `archive/tar` | `unsafe`, cgo |
+| `bufio`, `bytes`, `cmp`, `net/http` | `database/sql` |
+| `container/heap`, `container/list`, `container/ring`, `os/exec` | `go/types`, `go/importer` |
+| `context`, `errors`, `flag`, `fmt`, `log` | `go/build` |
+| `regexp`, `regexp/syntax`, `encoding/xml` | `net/http/cgi`, `net/rpc` |
+| `encoding/ascii85`, `encoding/base64`, `encoding/binary`, `embed` | `net/smtp`, `net/mail` |
+| `encoding/csv`, `encoding/hex`, `encoding/json`, `encoding/gob` | `unsafe`, cgo |
+| `encoding/asn1`, `encoding/pem`, `unicode/utf16` | |
+| `compress/flate`, `compress/gzip`, `compress/zlib` | |
+| `compress/lzw`, `compress/bzip2`, `archive/zip`, `archive/tar` | |
 | `html`, `html/template` | |
 | `go/token`, `go/scanner`, `go/ast`, `go/parser` | |
 | `go/printer`, `go/format`, `go/build/constraint`, `go/doc/comment` | |
@@ -37,6 +38,7 @@ partial package. `make surface` measures each one again.
 | `net/http/httptest`, `net/http/internal` | |
 | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle` | |
 | `crypto/hmac`, `crypto/rand`, `crypto/tls` | |
+| `crypto/x509`, `crypto/x509/pkix` | |
 | `mime`, `mime/multipart`, `mime/quotedprintable` | |
 | `net/textproto`, `net/http/cookiejar` | |
 | `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | |

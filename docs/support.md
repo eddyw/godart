@@ -22,8 +22,8 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 110 import paths: 97 standard packages, the interop package
-`syscall/dart`, and 12 internal packages that the 97 need. The measure skips
+The surface holds 116 import paths: 103 standard packages, the interop package
+`syscall/dart`, and 12 internal packages that the 103 need. The measure skips
 the interop package and each internal package, because no package of Go stands
 behind them.
 
@@ -43,13 +43,13 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-84 of the 97 standard packages hold each exported name of Go.
+91 of the 103 standard packages hold each exported name of Go.
 
 | Form | Packages |
 |---|---|
-| Native, 42 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/xml`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `html`, `html/template`, `io`, `io/fs`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
-| Patch, 15 | `archive/tar`, `bytes`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
-| Overlay, 27 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `embed`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
+| Native, 45 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `crypto/x509/pkix`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/pem`, `encoding/xml`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `html`, `html/template`, `io`, `io/fs`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode`, `unicode/utf16` |
+| Patch, 16 | `archive/tar`, `bytes`, `encoding/asn1`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
+| Overlay, 30 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `embed`, `encoding/binary`, `encoding/gob`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `net/http/httptest`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.
@@ -59,13 +59,11 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 
 ## Partial support
 
-13 packages hold a part of the names of Go. The run of 2026-09-03:
+12 packages hold a part of the names of Go. The run of 2026-09-03:
 
 | Package | Names | Held | The largest gap |
 |---|---|---|---|
 | `sync/atomic` | 90/94 | 95% | The 4 `unsafe.Pointer` functions. `Pointer[T]` holds the same use. |
-| `crypto/rand` | 3/5 | 60% | `Int` and `Prime`. The 2 read `math/big`, and `docs/parity.md` holds the cause. |
-| `net/http/httptest` | 30/31 | 96% | `Server.Certificate`. It gives an x509 certificate. |
 | `os` | 193/207 | 93% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr` |
 | `os/exec` | 43/49 | 87% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, `ExitError.Sys` and its 3 companions |
 | `reflect` | 130/188 | 69% | `MakeFunc`, `ChanOf`, `FuncOf`, `MakeChan`, `Select`, `Method.Func` |
@@ -74,7 +72,8 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 | `net/http` | 240/392 | 61% | `HTTP2Config`, `TimeoutHandler`, `FileServer` and the `FS` family, `Server.Protocols` |
 | `runtime` | 31/114 | 27% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
 | `net` | 142/346 | 41% | `Interface`, `IPConn`, `Resolver`, the socket option methods of `TCPConn`, the option fields of `Dialer` |
-| `crypto/tls` | 115/263 | 43% | Each name that reads `crypto/x509`, the QUIC connection, and each `Config` field that would change the handshake |
+| `crypto/tls` | 117/263 | 44% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake |
+| `crypto/x509` | 106/261 | 40% | `Verify` and each verify error, `CheckSignature`, `PublicKey`, and each name that signs |
 | `syscall` | 15/2228 | 0% | Each system call, each error number, and each constant of the platform. |
 
 `syscall` is a special case. The package of Go holds the whole system call
@@ -94,11 +93,9 @@ Stage 2 rejects an import of each package below with a source position.
 
 | Package | The cause | The cost |
 |---|---|---|
-| `encoding/gob` | The real source reads `unsafe`, and it indexes a table by `reflect.Kind`. The overlay models a `Kind` as a text. | Large |
-| `crypto/x509` | The whole ASN.1 stack and a root pool. | Large |
 | `database/sql` | A driver, and a pool over a second thread. | Large |
 | `go/types`, `go/importer`, `go/build` | Each one is large, and `go/build` reads the tool chain. | Large |
-| `net/rpc`, `net/smtp`, `net/mail` | Each one reads `encoding/gob` or `net/textproto`. | Large |
+| `net/rpc`, `net/smtp`, `net/mail` | Each one needs a server model that the surface holds not. `net/rpc` reads `encoding/gob`, which the surface now holds. | Large |
 | `net/http/cgi` | No process model of a server. | Large |
 | `unsafe`, cgo | Outside the subset by design. | Rejected |
 
