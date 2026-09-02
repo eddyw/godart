@@ -22,7 +22,7 @@ The ratio counts names, and not use. `net` holds 346 names, because the
 resolver, the typed connections, and the interface list hold most of them. Read
 the gap column, and not the percent alone.
 
-The surface holds 99 import paths: 86 standard packages, the interop package
+The surface holds 101 import paths: 88 standard packages, the interop package
 `syscall/dart`, and 12 internal packages that the 86 need. The measure skips
 the interop package and each internal package, because no package of Go stands
 behind them.
@@ -43,13 +43,13 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-72 of the 86 standard packages hold each exported name of Go.
+74 of the 88 standard packages hold each exported name of Go.
 
 | Form | Packages |
 |---|---|
-| Native, 35 | `bufio`, `cmp`, `compress/flate`, `compress/gzip`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `io`, `io/fs`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
+| Native, 36 | `bufio`, `cmp`, `compress/flate`, `compress/gzip`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `io`, `io/fs`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode` |
 | Patch, 13 | `bytes`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
-| Overlay, 24 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
+| Overlay, 25 | `crypto/hmac`, `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `encoding/binary`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.
@@ -72,7 +72,7 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 | `encoding/json` | 59/92 | 64% | The option set of the v2 implementation, and the field `Type` of each error |
 | `testing` | 92/145 | 63% | `Init`, `MainStart`, the cover types, `InternalExample`, `InternalFuzzTarget` |
 | `crypto/rand` | 3/5 | 60% | `Int` and `Prime`. The 2 read `math/big`. |
-| `net/http` | 200/392 | 51% | `Hijacker`, `ResponseController`, `Protocols`, `HTTP2Config`, 23 status constants |
+| `net/http` | 223/392 | 56% | `Hijacker`, `ResponseController`, `Protocols`, `HTTP2Config`, `TimeoutHandler` |
 | `runtime` | 31/114 | 27% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
 | `net` | 73/346 | 21% | The `Lookup` family, the `Resolver`, `Interface`, `IPConn`, `ListenConfig` |
 | `crypto/tls` | 32/263 | 12% | The cipher suite constants, the curve names, `CipherSuites`, `LoadX509KeyPair` |
@@ -95,8 +95,6 @@ Stage 2 rejects an import of each package below with a source position.
 
 | Package | The cause | The cost |
 |---|---|---|
-| `math/cmplx` | No survey yet. The language holds the complex type already. | Small |
-| `crypto/subtle` | No overlay yet. Each function is a loop over 2 byte slices. | Small |
 | `embed` | The compiler holds no `go:embed` directive. | Medium |
 | `html/template` | It reads `text/template` and the escape pass of HTML. | Medium |
 | `encoding/xml` | The real source reads the deep reflect surface. | Medium |
@@ -155,10 +153,14 @@ and `docs/flutter-design.md` holds the design of that client.
 
 The order again follows the value of the work against its cost.
 
-1. **The 23 status constants of `net/http`.** Each 1 is an integer constant.
-   Cost: small.
-2. **`math/cmplx` and `crypto/subtle`.** Each function of `crypto/subtle` is a
-   loop over 2 byte slices. Cost: small.
+1. **The 23 status constants of `net/http`.** Done 2026-09-02. The overlay
+   holds `status.go` of the real Go 1.27 source, thus the 62 codes and
+   `StatusText` each match. `net/http` went from 200 names to 223.
+2. **`math/cmplx` and `crypto/subtle`.** Done 2026-09-02. `math/cmplx` reads
+   the real Go source and needed no compiler change, because it imports `math`
+   and `math/bits` alone. `crypto/subtle` takes an overlay of 8 names, because
+   `boolToUint8` of `crypto/internal/constanttime` panics and waits for an
+   instruction of the machine.
 3. **`embed`.** The `FS` family stands, thus the road is open. The compiler
    needs the directive `go:embed`. Cost: medium.
 4. **The `Lookup` family of `net`.** `dart:io` holds `InternetAddress.lookup`

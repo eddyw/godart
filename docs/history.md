@@ -1013,3 +1013,25 @@ and a POST of the fields as JSON. 6 widget tests pass under Flutter 3.47.0, and
 - A validation that runs on each keystroke needs no signal of its own. The body
   reads the field signal, thus 1 keystroke marks 1 boundary, and `Validate`
   runs 1 time for the whole screen.
+
+### 2026-09-02, the status codes, math/cmplx, and crypto/subtle
+
+3 items of the next list of `docs/support.md`. The surface went from 86
+standard packages to 88, and from 72 full to 74.
+
+- `net/http` holds `status.go` of the real Go 1.27 source now, thus the 62
+  codes and `StatusText` each match. The overlay held 39 codes and a map, and
+  Go 1.27 holds a switch. `net/http` went from 200 names to 223.
+- `math/cmplx` reads the real Go source and needed no compiler change. It
+  imports `math` and `math/bits` alone, and each one already stands in the
+  surface. 1 line of `internal/overlay/native.go` holds the whole change.
+- `crypto/subtle` needs an overlay. `boolToUint8` of
+  `crypto/internal/constanttime` panics, and the compiler of Go replaces it
+  with an instruction of the machine. The overlay holds the portable form of
+  each of the 6 arithmetic names.
+- `XORBytes` of Go panics for a destination that overlaps in part. The check
+  reads the package `unsafe`, and the documentation of Go says "may panic",
+  thus the overlay holds no check. `docs/parity.md` names it.
+- `dit_test.go` of Go reads `internal/cpu` and `internal/runtime/sys`, thus
+  `make std-test STD=crypto/subtle` gives a rejection of stage 2.
+  `testdata/programs/subtleuse` covers the 8 names instead.

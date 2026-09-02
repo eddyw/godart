@@ -26,6 +26,7 @@ var native = []string{
 	"path",
 	"math",
 	"math/bits",
+	"math/cmplx",
 	"math/rand",
 	"math/rand/v2",
 	"internal/chacha8rand",

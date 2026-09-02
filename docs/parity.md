@@ -210,6 +210,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `compress/gzip` | Native | The real source needs no patch. |
 | `compress/zlib` | Native | The real source needs no patch. |
 | `internal/testhash` | Native | The tests of the hash packages of the Go repository read it. |
+| `math/cmplx` | Native | The real source needs no patch. It imports `math` and `math/bits` alone. |
+| `crypto/subtle` | Overlay | The 8 names of Go, each in its portable form. Read the note below. |
 | `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
@@ -282,6 +284,28 @@ build tag of the architecture selects the file set of a package.
 
 The next candidate needs a survey of the rejections of stage 2 over the real
 source of the package.
+
+## The constant time operations
+
+`crypto/subtle` holds each exported name of Go, and 2 differences stand.
+
+`XORBytes` of Go panics for a destination that overlaps `x` or `y` in part.
+The check of Go reads the package `unsafe`, and the documentation of Go says
+"may panic", thus the overlay holds no such check. A call with such an overlap
+writes the bytes in order, and it gives no report.
+
+`WithDataIndependentTiming` runs the function and adds nothing. The mode of the
+processor that holds the timing of each instruction steady needs an
+instruction of the machine, and the Dart target reaches none. Go behaves the
+same way on a platform that holds no such mode. `dit_test.go` of Go reads
+`internal/cpu` and `internal/runtime/sys`, thus `make std-test STD=crypto/subtle`
+gives a rejection of stage 2. `testdata/programs/subtleuse` covers the 8 names
+instead.
+
+The other 6 functions each give the result of Go. The real source of Go 1.27
+calls `boolToUint8` of `crypto/internal/constanttime`, and that function
+panics, because the compiler of Go replaces it with an instruction of the
+machine. The overlay holds the portable form of each 1.
 
 ## A pointer to a value that is not a struct
 
