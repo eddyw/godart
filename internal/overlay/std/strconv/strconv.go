@@ -106,6 +106,11 @@ func FormatFloat(f float64, verb byte, precision, bitSize int) string {
 	if precision >= 0 {
 		form = "." + Itoa(precision) + form
 	}
+	// A float32 value reaches the bridge as a float32, thus the shortest text
+	// of the verb g holds the digits of 32 bits and no more.
+	if bitSize == 32 {
+		return dart.Format(form, float32(f))
+	}
 	return dart.Format(form, f)
 }
 
@@ -271,7 +276,7 @@ func ParseFloat(text string, bitSize int) (float64, error) {
 }
 
 // ParseComplex reads a complex value from text. The bit size is 64 for a
-// complex64 or 128 for a complex128, and the 2 parts take the size of half.
+// complex64 or 128 for a complex128, and each part takes half of it.
 //
 // The text holds the form N, Ni, or N±Ni, and a pair of parentheses may wrap
 // it. A space anywhere makes the text invalid.
@@ -340,7 +345,7 @@ func parseComplex(text string, bitSize int) (complex128, error) {
 }
 
 // FormatComplex gives the text of c in the form (a+bi). The verb and the
-// precision hold the meaning of FormatFloat, and the bit size is 64 for a
+// precision hold the meaning of FormatFloat. The bit size is 64 for a
 // complex64 or 128 for a complex128.
 func FormatComplex(c complex128, verb byte, precision, bitSize int) string {
 	if bitSize != 64 && bitSize != 128 {
@@ -431,10 +436,12 @@ func lower(c byte) byte {
 	return c | ('x' - 'X')
 }
 
-// readFloat scans a decimal or a hexadecimal float at the start of s. It gives
-// the mantissa, the decimal or the binary exponent, the sign, a flag for a
-// digit that the mantissa drops, a flag for the hexadecimal form, the count of
-// bytes that it reads, and a flag for a valid number.
+// readFloat scans a decimal or a hexadecimal float at the start of s.
+//
+// It gives the mantissa, the exponent, and the sign. The flag trunc marks a
+// digit that the mantissa drops, and the flag isHex marks the hexadecimal
+// form. The count i holds the bytes that the scan takes, and ok reports a
+// valid number.
 func readFloat(s string) (mantissa uint64, exp int, neg, trunc, isHex bool, i int, ok bool) {
 	underscores := false
 	if i >= len(s) {
@@ -567,8 +574,8 @@ func readFloat(s string) (mantissa uint64, exp int, neg, trunc, isHex bool, i in
 // underscoreOK reports a text where each underscore stands between 2 digits, or
 // between a base prefix and a digit.
 func underscoreOK(s string) bool {
-	// saw holds the class of the last byte: ^ for the start, 0 for a digit or a
-	// base prefix, _ for an underscore, and ! for any other byte.
+	// saw holds the class of the last byte. ^ marks the start, 0 a digit or a
+	// base prefix, _ an underscore, and ! any other byte.
 	saw := '^'
 	i := 0
 	if len(s) >= 1 && (s[0] == '-' || s[0] == '+') {
@@ -634,7 +641,7 @@ func decimalFloat(text string, bitSize int) (float64, error) {
 }
 
 // hexFloat gives the value of a hexadecimal float from its mantissa and its
-// binary exponent. The steps hold the rounding of Go, thus the last bit agrees.
+// binary exponent. The steps hold the way Go rounds, thus the last bit agrees.
 func hexFloat(mantissa uint64, exp int, neg, trunc bool, bitSize int) (float64, error) {
 	mantBits := uint(52)
 	expBits := uint(11)
@@ -648,8 +655,8 @@ func hexFloat(mantissa uint64, exp int, neg, trunc bool, bitSize int) (float64, 
 	minExp := bias + 1
 	exp += int(mantBits)
 
-	// The target holds a leading bit, mantBits other bits, and 2 bits for the
-	// rounding. The low bit of the 2 records every bit that the shift drops.
+	// The target holds a leading bit, mantBits other bits, and 2 spare bits that
+	// round the value. The low spare bit records every bit that a shift drops.
 	for mantissa != 0 && mantissa>>(mantBits+2) == 0 {
 		mantissa <<= 1
 		exp--
@@ -828,9 +835,9 @@ func quoteRuneWith(r rune, quote byte, asciiOnly, graphicOnly bool) string {
 	return string(appendQuotedRuneWith(nil, r, quote, asciiOnly, graphicOnly))
 }
 
-// appendQuotedWith adds the quoted form of s to buf. A byte that belongs to no
-// valid rune of UTF-8 keeps its own value in the \x form, thus Unquote gives
-// the bytes of s again.
+// appendQuotedWith adds the quoted form of s to buf. A byte outside any valid
+// rune of UTF-8 keeps its own value in the \x form, thus Unquote gives the
+// bytes of s again.
 func appendQuotedWith(buf []byte, s string, quote byte, asciiOnly, graphicOnly bool) []byte {
 	buf = append(buf, quote)
 	for len(s) > 0 {

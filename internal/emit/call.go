@@ -428,6 +428,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileClose(%s)", args[0]), true
 	case "FileSync":
 		return fmt.Sprintf("$fileSync(%s)", args[0]), true
+	case "FileTruncate":
+		return fmt.Sprintf("$fileTruncate(%s, %s)", args[0], args[1]), true
 	case "ReadFile":
 		return fmt.Sprintf("$readFile(%s)", args[0]), true
 	case "WriteFile":
@@ -438,6 +440,16 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$lstat(%s)", args[0]), true
 	case "Symlink":
 		return fmt.Sprintf("$symlink(%s, %s)", args[0], args[1]), true
+	case "Link":
+		return fmt.Sprintf("$link(%s, %s)", args[0], args[1]), true
+	case "Chmod":
+		return fmt.Sprintf("$chmod(%s, %s)", args[0], args[1]), true
+	case "Chown":
+		return fmt.Sprintf("$chown(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
+	case "Chtimes":
+		return fmt.Sprintf("$chtimes(%s, %s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3], args[4]), true
 	case "ReadLink":
 		return fmt.Sprintf("$readLink(%s)", args[0]), true
 	case "ResolveSymlinks":
@@ -483,6 +495,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$procWrite(%s, %s)", args[0], args[1]), true
 	case "ProcCloseStdin":
 		return fmt.Sprintf("$procCloseStdin(%s)", args[0]), true
+	case "ProcCloseIO":
+		return fmt.Sprintf("$procCloseIO(%s)", args[0]), true
 	case "KillPid":
 		return fmt.Sprintf("$killPid(%s, %s)", args[0], args[1]), true
 	case "SignalWatch":

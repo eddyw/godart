@@ -665,9 +665,9 @@ func Symlink(target, link string) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// Link makes a hard link at the path new, and it points at the same content as
-// the path old. dart:io holds no such call, thus the Dart side runs the command
-// ln of the platform.
+// Link makes a hard link at newname, and it names the content of oldname.
+// dart:io holds no such call, thus the Dart side runs the command ln of the
+// platform.
 func Link(oldname, newname string) string {
 	panic("syscall/dart needs the gart compiler")
 }
@@ -970,8 +970,10 @@ func ProcCloseStdin(pid int) string {
 }
 
 // ProcCloseIO closes the 2 output pipes of a process. A read that waits on such
-// a pipe ends at once, thus a caller that gave up on the child does not stay
-// blocked behind an orphan that holds the pipe.
+// a pipe ends at once.
+//
+// A caller that gave up on the child then stays behind no orphan that holds the
+// pipe.
 func ProcCloseIO(pid int) string {
 	panic("syscall/dart needs the gart compiler")
 }

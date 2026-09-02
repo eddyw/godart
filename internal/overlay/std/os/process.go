@@ -23,9 +23,18 @@ func FindProcess(pid int) (*Process, error) {
 // Kill ends the process with SIGKILL.
 func (p *Process) Kill() error {
 	if cause := dart.ProcKill(p.Pid, 9); cause != "" {
-		return errors.New(cause)
+		return processError(cause)
 	}
 	return nil
+}
+
+// processError maps the text of the Dart side to an error value. A process that
+// already ended gives ErrProcessDone, thus errors.Is finds it.
+func processError(cause string) error {
+	if cause == ErrProcessDone.Error() {
+		return ErrProcessDone
+	}
+	return errors.New(cause)
 }
 
 // Signal sends a signal to the process. A signal that the platform cannot
@@ -36,7 +45,7 @@ func (p *Process) Signal(sig Signal) error {
 		return errors.New("os: unsupported signal type")
 	}
 	if cause := dart.KillPid(p.Pid, int(number)); cause != "" {
-		return errors.New(cause)
+		return processError(cause)
 	}
 	return nil
 }

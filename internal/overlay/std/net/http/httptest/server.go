@@ -7,19 +7,23 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
+	"testing"
 )
 
 // A Server holds a listener on a port of the machine and answers each request
 // with a handler.
 //
-// The real Server of Go waits for each request that stands open, and it holds a
-// TLS form. Close of the overlay ends the listener and each connection of the
-// client that stands open with no request.
+// The real Server of Go waits for each request that stands open, and it gives
+// the certificate of its TLS form as a value of x509. The surface holds no
+// package crypto/x509, thus the overlay holds no method Certificate.
 type Server struct {
 	// URL holds the base address of the server, for example
-	// `http://127.0.0.1:52341`.
+	// `http://127.0.0.1:52341`. The first call of Client, Start, or StartTLS
+	// writes it.
 	URL string
-	// Listener holds the listener of the server.
+	// Listener holds the listener of the server. A server of NewTestServer
+	// that neither Start nor StartTLS ran holds none.
 	Listener net.Listener
 	// Config holds the server that answers each request.
 	Config *http.Server
@@ -28,7 +32,28 @@ type Server struct {
 	// of the server then also offers h2. Set it before StartTLS.
 	EnableHTTP2 bool
 
+	// TLS holds the settings of the TLS form. A start writes a fresh config,
+	// and it keeps each field of a config that the caller set before.
+	TLS *tls.Config
+
+	t      testing.TB
 	client *http.Client
+
+	// once guards the start of a server of a test that Client reaches before
+	// Start.
+	once sync.Once
+
+	mu      sync.Mutex
+	started bool
+	// conns holds each connection that a listener accepted, because
+	// CloseClientConnections ends them. The server of the overlay reports no
+	// state of a connection. A number names each entry, because a map of the
+	// runtime reads the fields of a key, and a connection changes them.
+	conns map[int]net.Conn
+	seq   int
+	// plain and secure hold the 2 listeners of a server of NewTestServer.
+	plain  net.Listener
+	secure net.Listener
 }
 
 // NewServer builds a server and starts it.
@@ -54,14 +79,69 @@ func NewUnstartedServer(handler http.Handler) *Server {
 	}
 }
 
-// Start answers each request of the listener.
-func (s *Server) Start() {
-	if s.URL != "" {
+// NewTestServer builds a server for a test, and the test closes it at its end.
+// A nil handler answers the status 500.
+//
+// Go answers on a network in memory, and the client of the server then reaches
+// it for each host. The surface holds no pipe of memory, thus the overlay
+// binds 2 listeners of the loopback address, 1 plain and 1 of TLS, and the
+// client of the server sends each request to them. URL then reads
+// `http://example.com` and Listener stays nil, exactly as in Go.
+//
+// Go also sends a request of the host example.com to a server of a test that
+// Start bound. The overlay reaches such a server through URL only.
+//
+// Go reports a panic of the handler to the test. The server of the overlay
+// recovers no panic, thus a panic of the handler ends the program.
+func NewTestServer(t testing.TB, handler http.Handler) *Server {
+	s := &Server{
+		t:      t,
+		Config: &http.Server{Handler: testHandler{h: handler}},
+	}
+	t.Cleanup(s.Close)
+	return s
+}
+
+// A testHandler answers the status 500 for a server of NewTestServer that
+// holds no handler of its own.
+type testHandler struct {
+	h http.Handler
+}
+
+func (t testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if t.h == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	t.h.ServeHTTP(w, r)
+}
+
+// startCommon marks the start and binds the listener of a server of a test.
+func (s *Server) startCommon(loopback bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.started {
 		panic("httptest: server already started")
 	}
+	s.started = true
+	if s.t == nil || !loopback {
+		return
+	}
+	// Client must bind no listener of its own after a start of the loopback
+	// form.
+	s.once.Do(func() {})
+	if s.Listener != nil {
+		panic("httptest: Server.Listener is unexpectedly set")
+	}
+	s.Listener = newLocalListener()
+}
+
+// Start answers each request of the listener.
+func (s *Server) Start() {
+	s.startCommon(true)
 	s.URL = "http://" + s.Listener.Addr().String()
 	s.client = &http.Client{}
-	go s.Config.Serve(s.Listener)
+	go s.Config.Serve(s.track(s.Listener))
 }
 
 // StartTLS answers each request of the listener over TLS, with the test
@@ -71,36 +151,106 @@ func (s *Server) Start() {
 // Dart binds a socket of its own, thus the plain listener closes, and the TLS
 // listener takes a fresh port of the loopback address.
 func (s *Server) StartTLS() {
-	if s.URL != "" {
-		panic("httptest: server already started")
-	}
-	cert, err := tls.X509KeyPair([]byte(testCert), []byte(testKey()))
-	if err != nil {
-		panic("httptest: " + err.Error())
-	}
+	s.startCommon(true)
+	s.initTLS()
 	s.Listener.Close()
-	protos := []string{"http/1.1"}
-	if s.EnableHTTP2 {
-		protos = []string{"h2", "http/1.1"}
-	}
-	l, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		NextProtos:   protos,
-	})
+	l, err := tls.Listen("tcp", "127.0.0.1:0", s.TLS)
 	if err != nil {
 		panic("httptest: failed to listen on a port: " + err.Error())
 	}
 	s.Listener = l
 	s.URL = "https://" + l.Addr().String()
-	// The certificate is self signed, and the surface holds no root pool,
-	// thus the client of the server drops the check. Go gives its client the
-	// certificate as a root.
-	s.client = &http.Client{Transport: &http.Transport{
+	s.client = &http.Client{Transport: s.transport()}
+	go s.Config.Serve(s.track(l))
+}
+
+// initTLS writes the config of the TLS form. A config that the caller set
+// keeps each field that it holds.
+func (s *Server) initTLS() {
+	cert, err := tls.X509KeyPair([]byte(testCert), []byte(testKey()))
+	if err != nil {
+		panic("httptest: " + err.Error())
+	}
+	s.TLS = s.TLS.Clone()
+	if s.TLS == nil {
+		s.TLS = &tls.Config{}
+	}
+	if s.TLS.NextProtos == nil {
+		protos := []string{"http/1.1"}
+		if s.EnableHTTP2 {
+			protos = []string{"h2", "http/1.1"}
+		}
+		s.TLS.NextProtos = protos
+	}
+	if len(s.TLS.Certificates) == 0 {
+		s.TLS.Certificates = []tls.Certificate{cert}
+	}
+}
+
+// transport gives the transport of the client of a TLS server.
+//
+// The certificate is self signed, and the surface holds no root pool, thus the
+// client of the server drops the check. Go gives its client the certificate as
+// a root.
+func (s *Server) transport() *http.Transport {
+	return &http.Transport{
 		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		ForceAttemptHTTP2: s.EnableHTTP2,
-	}}
-	go s.Config.Serve(s.Listener)
+	}
 }
+
+// startFake binds the 2 listeners that stand for the network in memory of Go.
+func (s *Server) startFake() {
+	s.startCommon(false)
+	s.initTLS()
+	plain := newLocalListener()
+	secure, err := tls.Listen("tcp", "127.0.0.1:0", s.TLS)
+	if err != nil {
+		panic("httptest: failed to listen on a port: " + err.Error())
+	}
+	s.mu.Lock()
+	s.plain, s.secure = plain, secure
+	s.mu.Unlock()
+	s.URL = "http://example.com"
+	s.client = &http.Client{Transport: &fakeTransport{
+		plain:  plain.Addr().String(),
+		secure: secure.Addr().String(),
+		inner:  s.transport(),
+	}}
+	go s.Config.Serve(s.track(plain))
+	go s.Config.Serve(s.track(secure))
+}
+
+// A fakeTransport sends each request to a listener of a server of
+// NewTestServer, whatever host the URL names. The field Host of the request
+// keeps the host of the caller, thus the handler reads the name that Go gives
+// it over the network in memory.
+type fakeTransport struct {
+	plain  string
+	secure string
+	inner  *http.Transport
+}
+
+func (t *fakeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	out := *req
+	target := *req.URL
+	if out.Host == "" {
+		out.Host = target.Host
+	}
+	if target.Scheme == "https" {
+		target.Host = t.secure
+	} else {
+		target.Host = t.plain
+	}
+	out.URL = &target
+	res, err := t.inner.RoundTrip(&out)
+	if res != nil {
+		res.Request = req
+	}
+	return res, err
+}
+
+func (t *fakeTransport) CloseIdleConnections() { t.inner.CloseIdleConnections() }
 
 // testCert holds a self signed certificate of the loopback address and of
 // localhost, valid to the year 2126. The pair serves tests only.
@@ -160,17 +310,46 @@ GCgH6kOX2blj7DqiYOqmYsU47ll2Wn19QGp01CZ4++uJhGQ5ONHMdrBv9aBDKU8Q
 BChx2JXwiXwYE525nl9qsTw=
 -----END TESTING KEY-----`
 
-// Close ends the listener and each connection of the client that stands open
+// Close ends each listener and each connection of the client that stands open
 // with no request.
 func (s *Server) Close() {
+	s.mu.Lock()
+	plain, secure := s.plain, s.secure
+	s.mu.Unlock()
+	// The server of the overlay keeps 1 listener only, thus the 2 listeners
+	// of a server of NewTestServer end here.
+	if plain != nil {
+		plain.Close()
+	}
+	if secure != nil {
+		secure.Close()
+	}
 	s.Config.Close()
 	if s.client != nil {
 		s.client.CloseIdleConnections()
 	}
 }
 
-// Client gives a client that reaches the server.
+// CloseClientConnections ends each connection that a client of the server
+// holds.
+func (s *Server) CloseClientConnections() {
+	s.mu.Lock()
+	open := make([]net.Conn, 0, len(s.conns))
+	for _, c := range s.conns {
+		open = append(open, c)
+	}
+	s.mu.Unlock()
+	for _, c := range open {
+		c.Close()
+	}
+}
+
+// Client gives a client that reaches the server. A server of a test binds its
+// listeners here, because such a server starts at the first use.
 func (s *Server) Client() *http.Client {
+	if s.t != nil {
+		s.once.Do(s.startFake)
+	}
 	if s.client == nil {
 		s.client = &http.Client{}
 	}
@@ -185,3 +364,89 @@ func newLocalListener() net.Listener {
 	}
 	return l
 }
+
+// track counts each connection of the listener, and it gives the listener that
+// the server reads.
+func (s *Server) track(l net.Listener) net.Listener {
+	return &trackListener{Listener: l, server: s}
+}
+
+func (s *Server) claim() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.seq++
+	return s.seq
+}
+
+func (s *Server) remember(id int, c net.Conn) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.conns == nil {
+		s.conns = map[int]net.Conn{}
+	}
+	s.conns[id] = c
+}
+
+func (s *Server) forget(id int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.conns, id)
+}
+
+// A trackListener holds each connection that it accepted in the server, and
+// CloseClientConnections then reaches them.
+type trackListener struct {
+	net.Listener
+	server *Server
+}
+
+func (l *trackListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	id := l.server.claim()
+	var out net.Conn
+	if secure, ok := c.(*tls.Conn); ok {
+		out = &trackTLSConn{
+			trackConn: trackConn{Conn: c, server: l.server, id: id},
+			secure:    secure,
+		}
+	} else {
+		out = &trackConn{Conn: c, server: l.server, id: id}
+	}
+	l.server.remember(id, out)
+	return out, nil
+}
+
+// A trackConn drops itself from the server at its end. The Close runs 1 time
+// only, because the handler of the server and CloseClientConnections each
+// reach it.
+type trackConn struct {
+	net.Conn
+	server *Server
+	id     int
+	once   sync.Once
+}
+
+func (c *trackConn) Close() error {
+	var err error
+	c.once.Do(func() {
+		c.server.forget(c.id)
+		err = c.Conn.Close()
+	})
+	return err
+}
+
+// A trackTLSConn also holds the 2 methods that the server reads for a
+// connection of HTTP/2. A wrapper without them would hide the h2 form.
+type trackTLSConn struct {
+	trackConn
+	secure *tls.Conn
+}
+
+func (c *trackTLSConn) ConnectionState() tls.ConnectionState {
+	return c.secure.ConnectionState()
+}
+
+func (c *trackTLSConn) Handle() int { return c.secure.Handle() }

@@ -141,6 +141,19 @@ GoString $fileClose(int handle) {
   }
 }
 
+/// Cuts the file of the handle to the size, or it grows the file with zero
+/// bytes. A file that no write mode opened gives a cause.
+GoString $fileTruncate(int handle, int size) {
+  final RandomAccessFile? f = _at(handle);
+  if (f == null) return GoString.fromString('file already closed');
+  try {
+    f.truncateSync(size);
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
 GoString $fileSync(int handle) {
   final RandomAccessFile? f = _at(handle);
   if (f == null) return GoString.fromString('file already closed');
@@ -249,6 +262,98 @@ GoString $writeFile(GoString path, Slice<int> data) {
 GoString $symlink(GoString target, GoString link) {
   try {
     Link(link.toDartString()).createSync(target.toDartString());
+    return _empty;
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+/// Runs 1 command of the platform and gives the cause of a failure.
+///
+/// dart:io holds no call for a hard link, for a permission bit, and for an
+/// owner. The command of the platform is the only road to the 3, and it writes
+/// the message of the system on standard error.
+GoString _run(String program, List<String> args, String path) {
+  try {
+    final ProcessResult r = Process.runSync(program, args);
+    if (r.exitCode == 0) return _empty;
+    final String text = '${r.stderr}'.trim();
+    if (text.isEmpty) {
+      return GoString.fromString(
+        '$path: $program gave the status ${r.exitCode}',
+      );
+    }
+    return GoString.fromString(text);
+  } catch (e) {
+    return _cause(e);
+  }
+}
+
+/// Makes a hard link at the path link, and it names the content of target.
+GoString $link(GoString target, GoString link) {
+  final String to = link.toDartString();
+  return _run('ln', <String>['--', target.toDartString(), to], to);
+}
+
+/// Writes the permission bits of a path. The mode holds the 12 bits of a POSIX
+/// mode, thus the text of the command carries 4 octal digits.
+GoString $chmod(GoString path, int mode) {
+  final String name = path.toDartString();
+  final String bits = (mode & 0xFFF).toRadixString(8).padLeft(4, '0');
+  return _run('chmod', <String>['--', bits, name], name);
+}
+
+/// Writes the owner and the group of a path. A number below 0 leaves that 1 of
+/// the 2 alone, and follow false takes a symbolic link itself.
+GoString $chown(GoString path, int uid, int gid, bool follow) {
+  final String name = path.toDartString();
+  if (uid < 0 && gid < 0) {
+    // The call changes nothing, and the caller still needs the report of a path
+    // that does not exist.
+    final FileSystemEntityType t = FileSystemEntity.typeSync(
+      name,
+      followLinks: follow,
+    );
+    if (t == FileSystemEntityType.notFound) {
+      return GoString.fromString('$name: no such file or directory');
+    }
+    return _empty;
+  }
+  final String owner = uid < 0 ? ':$gid' : (gid < 0 ? '$uid' : '$uid:$gid');
+  final List<String> args = follow
+      ? <String>['--', owner, name]
+      : <String>['-h', '--', owner, name];
+  return _run('chown', args, name);
+}
+
+/// Writes the time of the last read and the time of the last change, in
+/// nanoseconds since the start of the Unix epoch.
+///
+/// dart:io holds the millisecond, thus the call drops the finer part.
+GoString $chtimes(
+  GoString path,
+  int atime,
+  bool setAtime,
+  int mtime,
+  bool setMtime,
+) {
+  final String name = path.toDartString();
+  if (!setAtime && !setMtime) {
+    // The call writes no time, and the caller still needs the report of a path
+    // that does not exist.
+    if (FileSystemEntity.typeSync(name) == FileSystemEntityType.notFound) {
+      return GoString.fromString('$name: no such file or directory');
+    }
+    return _empty;
+  }
+  try {
+    final File f = File(name);
+    if (setAtime) {
+      f.setLastAccessedSync(DateTime.fromMicrosecondsSinceEpoch(atime ~/ 1000));
+    }
+    if (setMtime) {
+      f.setLastModifiedSync(DateTime.fromMicrosecondsSinceEpoch(mtime ~/ 1000));
+    }
     return _empty;
   } catch (e) {
     return _cause(e);

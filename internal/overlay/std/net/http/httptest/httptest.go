@@ -2,8 +2,9 @@
 
 // Package httptest holds a recorder of an answer and a server of a test.
 //
-// The real package of Go holds a TLS server, a set of connection states, and a
-// wait for each request that stands open. The overlay holds the names below.
+// The real package of Go gives the certificate of a TLS server as a value of
+// x509, and Close of it waits for each request that stands open. The surface
+// holds no package crypto/x509, thus the overlay holds the names below.
 package httptest
 
 import (

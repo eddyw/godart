@@ -13,6 +13,7 @@ package os
 
 import (
 	"errors"
+	"io"
 	"io/fs"
 	"syscall/dart"
 	"time"
@@ -27,9 +28,11 @@ func args() []string {
 
 // FileMode holds the permission bits of a path.
 //
-// The Dart side gives no control of the permission. Each function below takes
-// the argument and drops it, thus a Go source compiles the same way with the go
-// command and with gart.
+// A call that makes a file takes the argument and drops it. A Go source thus
+// compiles the same way with the go command and with gart.
+//
+// Chmod of attr.go writes the mode through the command of the platform, and Stat
+// still reports a fixed mode.
 type FileMode = fs.FileMode
 
 // The bits of a FileMode. Each one comes from the package io/fs.
@@ -91,6 +94,12 @@ func causeError(cause string) error {
 	}
 	if contains(cause, "file already closed") {
 		return ErrClosed
+	}
+	if contains(cause, "Permission denied") ||
+		contains(cause, "permission denied") ||
+		contains(cause, "Operation not permitted") ||
+		contains(cause, "operation not permitted") {
+		return ErrPermission
 	}
 	return errors.New(cause)
 }
@@ -249,6 +258,59 @@ func (f *File) WriteAt(p []byte, off int64) (int, error) {
 	return written, err
 }
 
+// ReadFrom writes each byte of the reader to the file and gives the count.
+//
+// Go reaches the copy call of the kernel here. The loop below is the fallback
+// that Go also takes when that call does not fit.
+func (f *File) ReadFrom(r io.Reader) (int64, error) {
+	buf := make([]byte, 32*1024)
+	var total int64
+	for {
+		n, rerr := r.Read(buf)
+		if n > 0 {
+			written, werr := f.Write(buf[:n])
+			total += int64(written)
+			if werr != nil {
+				return total, werr
+			}
+			if written != n {
+				return total, io.ErrShortWrite
+			}
+		}
+		if rerr != nil {
+			if rerr == io.EOF {
+				return total, nil
+			}
+			return total, rerr
+		}
+	}
+}
+
+// WriteTo writes each byte of the file to the writer and gives the count.
+func (f *File) WriteTo(w io.Writer) (int64, error) {
+	buf := make([]byte, 32*1024)
+	var total int64
+	for {
+		n, rerr := f.Read(buf)
+		if n > 0 {
+			written, werr := w.Write(buf[:n])
+			total += int64(written)
+			if werr != nil {
+				return total, werr
+			}
+			if written != n {
+				return total, io.ErrShortWrite
+			}
+		}
+		if rerr != nil {
+			if rerr == io.EOF {
+				return total, nil
+			}
+			return total, rerr
+		}
+	}
+}
+
 // endOfFile is the error of the end of a file. The package io holds the same
 // value under the name EOF.
 var endOfFile = errors.New("EOF")
@@ -296,13 +358,32 @@ func Create(name string) (*File, error) {
 	return openMode(name, dart.OpenWrite, "open")
 }
 
+// existsError names a path that already exists. Go writes the text of the
+// system, and ErrExist writes another text.
+type existsError struct{}
+
+func (existsError) Error() string { return "file exists" }
+
+func (existsError) Is(target error) bool { return target == ErrExist }
+
+var errExist error = existsError{}
+
 // OpenFile opens a file with a flag set. The permission argument reaches no
 // operation of the Dart side.
 //
 // The flag set selects 1 of the 4 modes of the Dart side: a read, a write that
 // replaces the content, a write at the end, or a read and a write that keeps
 // the content. Only O_TRUNC replaces the content, exactly as in Go.
+//
+// O_EXCL takes a read of the path before the open. The 2 steps are not 1
+// operation of the system. A file that another program makes between them thus
+// still passes.
 func OpenFile(name string, flag int, perm FileMode) (*File, error) {
+	if flag&O_CREATE != 0 && flag&O_EXCL != 0 {
+		if _, err := Lstat(name); err == nil {
+			return nil, &PathError{Op: "open", Path: name, Err: errExist}
+		}
+	}
 	mode := dart.OpenRead
 	switch {
 	case flag&O_APPEND != 0:

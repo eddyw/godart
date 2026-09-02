@@ -6,7 +6,7 @@
 // calls carry the start, the 3 pipes, the wait, and the kill. Decision 204
 // holds the survey, and decision 212 holds the shape.
 //
-// The gaps against Go: no SysProcAttr, no process group, no CommandContext,
+// The gaps against Go: no SysProcAttr, no ExtraFiles, no process group,
 // argv[0] cannot differ from the program, a pipe of StdinPipe or StdoutPipe
 // works only after Start, and LookPath cannot read the execute bit because
 // Dart names no permission bit.
@@ -14,6 +14,7 @@ package exec
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"io/fs"
@@ -22,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall/dart"
+	"time"
 )
 
 // Error joins the name that LookPath looked for and the cause.
@@ -38,6 +40,24 @@ func (e *Error) Unwrap() error { return e.Err }
 
 // ErrNotFound is the cause when the search of the path finds no file.
 var ErrNotFound = errors.New("executable file not found in $PATH")
+
+// ErrDot is the cause when the search of the path finds a file through a
+// relative member of PATH. The caller reads it with errors.Is.
+var ErrDot = errors.New("cannot run executable found relative to current directory")
+
+// ErrWaitDelay is the cause when a child ends well and WaitDelay runs out
+// before each pipe of it closes.
+var ErrWaitDelay = errors.New("exec: WaitDelay expired before I/O complete")
+
+// wrappedError names the step of the command that failed.
+type wrappedError struct {
+	prefix string
+	err    error
+}
+
+func (w wrappedError) Error() string { return w.prefix + ": " + w.err.Error() }
+
+func (w wrappedError) Unwrap() error { return w.err }
 
 // ExitError reports a process that ended with a state other than success.
 type ExitError struct {
@@ -76,6 +96,36 @@ type Cmd struct {
 	// back.
 	Err error
 
+	// Cancel runs when the context of the command is done. CommandContext
+	// writes the Kill method of the process there, and the caller may write
+	// another action, for example a signal or a close of a pipe.
+	//
+	// A command that ends well after a call of Cancel gives the error of the
+	// context to Wait. A Cancel that gave an error which wraps os.ErrProcessDone
+	// is the 1 exception.
+	//
+	// A Cancel that stands on a command of Command, and not of
+	// CommandContext, gives an error at Start.
+	Cancel func() error
+
+	// WaitDelay bounds 2 delays. The first is a child that does not end after
+	// the context is done, and the second is a child that leaves a pipe open.
+	//
+	// The timer starts when the context is done, or when Wait sees the end of
+	// the child, whichever comes first. At the end of the delay Wait ends the
+	// child and closes each pipe of it. A child that ended well and left a pipe
+	// open then gives ErrWaitDelay.
+	WaitDelay time.Duration
+
+	// ctx holds the context that CommandContext took.
+	ctx context.Context
+
+	// ctxResult carries the 1 result of watchCtx to Wait.
+	ctxResult <-chan ctxResult
+
+	// ioDone closes when the copy of each of the 3 pipes ended.
+	ioDone chan struct{}
+
 	inPipe  bool
 	outPipe bool
 	errPipe bool
@@ -93,12 +143,27 @@ func Command(name string, arg ...string) *Cmd {
 	}
 	if filepath.Base(name) == name {
 		path, err := LookPath(name)
-		if err != nil {
-			cmd.Err = err
-		} else {
+		// A search that gives ErrDot still names the file, and Start reports
+		// the error.
+		if path != "" {
 			cmd.Path = path
 		}
+		if err != nil {
+			cmd.Err = err
+		}
 	}
+	return cmd
+}
+
+// CommandContext builds a command that the context stops. It writes the Kill
+// method of the process into Cancel, and it leaves WaitDelay at 0.
+func CommandContext(ctx context.Context, name string, arg ...string) *Cmd {
+	if ctx == nil {
+		panic("nil Context")
+	}
+	cmd := Command(name, arg...)
+	cmd.ctx = ctx
+	cmd.Cancel = func() error { return cmd.Process.Kill() }
 	return cmd
 }
 
@@ -119,6 +184,16 @@ func (c *Cmd) Start() error {
 	}
 	if c.Err != nil {
 		return c.Err
+	}
+	if c.Cancel != nil && c.ctx == nil {
+		return errors.New("exec: command with a non-nil Cancel was not created with CommandContext")
+	}
+	if c.ctx != nil {
+		select {
+		case <-c.ctx.Done():
+			return c.ctx.Err()
+		default:
+		}
 	}
 	argv := c.Args
 	if len(argv) == 0 {
@@ -155,7 +230,109 @@ func (c *Cmd) Start() error {
 			drain(pid, true, c.Stderr)
 		}()
 	}
+	c.ioDone = make(chan struct{})
+	go func() {
+		defer close(c.ioDone)
+		if c.inDone != nil {
+			<-c.inDone
+		}
+		if c.outDone != nil {
+			<-c.outDone
+		}
+		if c.errDone != nil {
+			<-c.errDone
+		}
+	}()
+	if (c.Cancel != nil || c.WaitDelay != 0) && c.ctx != nil && c.ctx.Done() != nil {
+		result := make(chan ctxResult)
+		c.ctxResult = result
+		go c.watchCtx(result)
+	}
 	return nil
+}
+
+// ctxResult carries the outcome of watchCtx. The timer stands there when
+// WaitDelay started to run before the child ended.
+type ctxResult struct {
+	err   error
+	timer *time.Timer
+}
+
+// watchCtx waits until the context is done or until Wait takes the result.
+//
+// A context that is done runs Cancel. A WaitDelay that then runs out ends the
+// child and closes each pipe of it.
+func (c *Cmd) watchCtx(result chan<- ctxResult) {
+	select {
+	case result <- ctxResult{}:
+		return
+	case <-c.ctx.Done():
+	}
+	var err error
+	if c.Cancel != nil {
+		if cancelErr := c.Cancel(); cancelErr == nil {
+			err = c.ctx.Err()
+		} else if !errors.Is(cancelErr, os.ErrProcessDone) {
+			err = wrappedError{prefix: "exec: canceling Cmd", err: cancelErr}
+		}
+	}
+	if c.WaitDelay == 0 {
+		result <- ctxResult{err: err}
+		return
+	}
+	timer := time.NewTimer(c.WaitDelay)
+	select {
+	case result <- ctxResult{err: err, timer: timer}:
+		return
+	case <-timer.C:
+	}
+	if killErr := c.Process.Kill(); killErr != nil &&
+		!errors.Is(killErr, os.ErrProcessDone) {
+		err = wrappedError{prefix: "exec: killing Cmd", err: killErr}
+	}
+	select {
+	case <-c.ioDone:
+	default:
+		dart.ProcCloseIO(c.Process.Pid)
+		<-c.ioDone
+		if err == nil {
+			err = ErrWaitDelay
+		}
+	}
+	result <- ctxResult{err: err}
+}
+
+// awaitCopies waits for the copy of each pipe. A WaitDelay that runs out closes
+// the pipes of the child. An orphan that holds a pipe thus stops no caller.
+func (c *Cmd) awaitCopies(timer *time.Timer) error {
+	if c.ioDone == nil {
+		return nil
+	}
+	defer func() {
+		if timer != nil {
+			timer.Stop()
+		}
+	}()
+	if timer == nil {
+		if c.WaitDelay == 0 {
+			<-c.ioDone
+			return nil
+		}
+		select {
+		case <-c.ioDone:
+			return nil
+		default:
+		}
+		timer = time.NewTimer(c.WaitDelay)
+	}
+	select {
+	case <-c.ioDone:
+		return nil
+	case <-timer.C:
+		dart.ProcCloseIO(c.Process.Pid)
+		<-c.ioDone
+		return ErrWaitDelay
+	}
 }
 
 // feed copies the reader into the standard input of the child, and it closes
@@ -210,23 +387,22 @@ func (c *Cmd) Wait() error {
 		return errors.New("exec: Wait was already called")
 	}
 	state, err := c.Process.Wait()
-	if err != nil {
-		return err
-	}
-	if c.outDone != nil {
-		<-c.outDone
-	}
-	if c.errDone != nil {
-		<-c.errDone
-	}
-	if c.inDone != nil {
-		<-c.inDone
+	if err == nil && !state.Success() {
+		err = &ExitError{ProcessState: state}
 	}
 	c.ProcessState = state
-	if !state.Success() {
-		return &ExitError{ProcessState: state}
+	var timer *time.Timer
+	if c.ctxResult != nil {
+		watch := <-c.ctxResult
+		timer = watch.timer
+		if err == nil && watch.err != nil {
+			err = watch.err
+		}
 	}
-	return nil
+	if copyErr := c.awaitCopies(timer); err == nil {
+		err = copyErr
+	}
+	return err
 }
 
 func (c *Cmd) Run() error {
@@ -362,9 +538,80 @@ func (r *procReader) Read(p []byte) (int, error) {
 
 func (r *procReader) Close() error { return nil }
 
+// Environ gives the environment of the command as it stands now. A nil Env
+// reads the environment of this program, and a Dir that is not empty adds PWD.
+// A name that stands 2 times keeps the last value.
+func (c *Cmd) Environ() []string {
+	env, _ := c.environ()
+	return env
+}
+
+func (c *Cmd) environ() ([]string, error) {
+	var err error
+	env := c.Env
+	if env == nil {
+		env = os.Environ()
+		if c.Dir != "" {
+			// PWD names the working directory on a POSIX platform, and the
+			// child runs in another directory than this program.
+			if pwd, absErr := filepath.Abs(c.Dir); absErr == nil {
+				env = append(env, "PWD="+pwd)
+			} else {
+				err = absErr
+			}
+		}
+	}
+	out, dedupErr := dedupEnv(env)
+	if err == nil {
+		err = dedupErr
+	}
+	return out, err
+}
+
+// dedupEnv drops each name that stands 2 times, and it keeps the last value of
+// such a name. An entry that holds a zero byte goes, and it gives an error.
+func dedupEnv(env []string) ([]string, error) {
+	var err error
+	out := make([]string, 0, len(env))
+	saw := make(map[string]bool, len(env))
+	// The walk runs backwards, thus the last value of a name is the first one
+	// that the walk meets.
+	for n := len(env); n > 0; n-- {
+		item := env[n-1]
+		if strings.IndexByte(item, 0) != -1 {
+			err = errors.New("exec: environment variable contains NUL")
+			continue
+		}
+		i := strings.Index(item, "=")
+		if i == 0 {
+			i = strings.Index(item[1:], "=") + 1
+		}
+		if i < 0 {
+			if item != "" {
+				out = append(out, item)
+			}
+			continue
+		}
+		name := item[:i]
+		if saw[name] {
+			continue
+		}
+		saw[name] = true
+		out = append(out, item)
+	}
+	for i := 0; i < len(out)/2; i++ {
+		j := len(out) - i - 1
+		out[i], out[j] = out[j], out[i]
+	}
+	return out, err
+}
+
 // LookPath searches the directories of the variable PATH for the file. A name
 // with a separator skips the search. Dart names no permission bit, thus a
 // plain file passes without the check of the execute bit.
+//
+// A member of PATH that is relative gives the path and an error that errors.Is
+// reads as ErrDot, exactly as Go does.
 func LookPath(file string) (string, error) {
 	if strings.Contains(file, "/") {
 		if err := findExecutable(file); err != nil {
@@ -378,6 +625,9 @@ func LookPath(file string) (string, error) {
 		}
 		path := filepath.Join(dir, file)
 		if err := findExecutable(path); err == nil {
+			if !filepath.IsAbs(path) {
+				return path, &Error{Name: file, Err: ErrDot}
+			}
 			return path, nil
 		}
 	}

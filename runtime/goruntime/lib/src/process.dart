@@ -159,6 +159,26 @@ GoString $procCloseStdin(int pid) {
   return (0, _empty);
 }
 
+/// Closes the 2 output pipes of a process.
+///
+/// A child that ends can leave an orphan that still holds the pipes, and a read
+/// of such a pipe never ends. This call cancels the 2 subscriptions, thus a
+/// read that waits gives the end of the stream at once.
+GoString $procCloseIO(int pid) {
+  final _Proc? proc = _procs[pid];
+  if (proc == null) return _unknown(pid);
+  _closePipe(proc.out);
+  _closePipe(proc.err);
+  return _empty;
+}
+
+void _closePipe(_Pipe pipe) {
+  if (pipe.ended) return;
+  pipe.ended = true;
+  pipe.rest = Uint8List(0);
+  unawaited(pipe.chunks.cancel());
+}
+
 (int, GoString) $procRead(int pid, Slice<int> p) {
   final _Proc? proc = _procs[pid];
   if (proc == null) return (0, _unknown(pid));

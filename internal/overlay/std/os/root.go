@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/fs"
 	"syscall/dart"
+	"time"
 )
 
 // Root holds a directory, and each operation of it stays inside that
@@ -218,6 +219,77 @@ func (r *Root) Symlink(oldname, newname string) error {
 		return err
 	}
 	return rename(Symlink(oldname, full), newname)
+}
+
+// Chmod writes the mode of a name of the root.
+func (r *Root) Chmod(name string, mode FileMode) error {
+	full, err := r.resolve("chmodat", name)
+	if err != nil {
+		return err
+	}
+	return rootError("chmodat", name, Chmod(full, mode))
+}
+
+// Chown writes the owner and the group of a name of the root.
+func (r *Root) Chown(name string, uid, gid int) error {
+	full, err := r.resolve("chownat", name)
+	if err != nil {
+		return err
+	}
+	return rootError("chownat", name, Chown(full, uid, gid))
+}
+
+// Lchown writes the owner and the group of a name of the root, and it takes a
+// symbolic link itself.
+func (r *Root) Lchown(name string, uid, gid int) error {
+	full, err := r.resolveNoFollow("lchownat", name)
+	if err != nil {
+		return err
+	}
+	return rootError("lchownat", name, Lchown(full, uid, gid))
+}
+
+// Chtimes writes the time of the last read and the time of the last change of
+// a name of the root.
+func (r *Root) Chtimes(name string, atime time.Time, mtime time.Time) error {
+	full, err := r.resolve("chtimesat", name)
+	if err != nil {
+		return err
+	}
+	return rootError("chtimesat", name, Chtimes(full, atime, mtime))
+}
+
+// Link makes newname of the root as a hard link of oldname of the root.
+//
+// A symbolic link at oldname gives an error. The platform of the surface holds
+// no link of a link.
+func (r *Root) Link(oldname, newname string) error {
+	from, err := r.resolveNoFollow("linkat", oldname)
+	if err != nil {
+		return err
+	}
+	if info, cause := Lstat(from); cause == nil && info.Mode()&ModeSymlink != 0 {
+		return &PathError{Op: "linkat", Path: oldname,
+			Err: errors.New("cannot create a hard link to a symlink")}
+	}
+	to, err := r.resolveNoFollow("linkat", newname)
+	if err != nil {
+		return err
+	}
+	if cause := Link(from, to); cause != nil {
+		return &LinkError{Op: "linkat", Old: oldname, New: newname,
+			Err: underlyingError(cause)}
+	}
+	return nil
+}
+
+// rootError writes the name of the caller and the operation of the root into
+// the error of an operation.
+func rootError(op, name string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &PathError{Op: op, Path: name, Err: underlyingError(err)}
 }
 
 // Readlink gives the target of a symbolic link of the root.
