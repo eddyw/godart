@@ -262,6 +262,12 @@ final class EventWait implements WaitFrame {
 /// The value of the future reaches the caller through the frame. A failure
 /// reaches onError, which writes the Go form of the result. Each operation of
 /// dart:io that gives a future reads this function.
+///
+/// The value must hold the Go form of each integer, thus a count and a handle
+/// each ride a GoInt. The direct result of the shim keeps the plain int of the
+/// runtime, because the compiler wraps that result and the frame answer skips
+/// the wrapper. The 2 forms are equal on each target except dart2js, where
+/// GoInt is a class of its own.
 void $await(Future<Object?> future, Object? Function(Object cause) onError) {
   final Goroutine g = $current!;
   final EventWait waiting = EventWait();

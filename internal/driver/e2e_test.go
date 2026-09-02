@@ -240,6 +240,21 @@ func run(t *testing.T, dir string, name string, args ...string) string {
 	return string(text)
 }
 
+// runNodeJS runs a dart2js build under node and gives its output.
+//
+// dart2js schedules a microtask through self, which a browser and a worker
+// each hold and node does not. The shim below stands in for it.
+func runNodeJS(t *testing.T, dir string) string {
+	t.Helper()
+	const shim = `globalThis.self = globalThis;
+require('./main.js');
+`
+	if err := os.WriteFile(filepath.Join(dir, "run.js"), []byte(shim), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return runProgram(t, dir, "node", "run.js")
+}
+
 // TestWebIO proves that the whole io surface compiles for the web. The Go
 // package os names each function of the io shim, thus a program that only
 // reads an environment value once failed in the Dart compile. Each web form
@@ -274,7 +289,7 @@ get: an error`
 	run(t, out, "dart", "pub", "get")
 
 	run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
-	if got := runProgram(t, out, "node", "main.js"); got != want {
+	if got := runNodeJS(t, out); got != want {
 		t.Errorf("the output of the JS build differs\nwant:\n%s\ngot:\n%s", want, got)
 	}
 

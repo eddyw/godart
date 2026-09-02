@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -68,6 +69,11 @@ const defaultMaxIdlePerHost = 2
 func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 	if req.URL == nil {
 		return nil, errors.New("http: nil Request.URL")
+	}
+	// A web target holds no socket. The value of GOOS names the target at run
+	// time, because 1 build of the Go code serves each target. Read fetch.go.
+	if runtime.GOOS == "js" {
+		return t.fetchRoundTrip(req)
 	}
 	r, err := t.route(req)
 	if err != nil {

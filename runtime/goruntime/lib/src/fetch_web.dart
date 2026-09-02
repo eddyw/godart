@@ -1,0 +1,280 @@
+/// The fetch client of the web target.
+///
+/// A browser holds no socket, thus net/http reaches the network through the
+/// fetch API of the host. The Go side picks this path when runtime.GOOS gives
+/// "js". Read decision 251 and fetch.dart.
+///
+/// The body of an answer rides a ReadableStream, thus a read takes 1 chunk at
+/// a time and the program holds no whole body in memory. A host that gives no
+/// such stream falls back to the whole array, exactly as Go does under
+/// GOOS=js.
+library;
+
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+import 'dart:typed_data';
+
+import 'chan.dart';
+import 'goint.dart';
+import 'sched.dart';
+import 'slice.dart';
+import 'string.dart';
+
+@JS('fetch')
+external JSPromise<_Response> _fetch(String url, _Init init);
+
+extension type _Init._(JSObject _) implements JSObject {
+  external factory _Init({
+    String method,
+    String credentials,
+    _Headers headers,
+    JSAny? body,
+    JSAny? signal,
+  });
+}
+
+@JS('Headers')
+extension type _Headers._(JSObject _) implements JSObject {
+  external factory _Headers();
+  external void append(String name, String value);
+  external void forEach(JSFunction each);
+}
+
+extension type _Response._(JSObject _) implements JSObject {
+  external int get status;
+  external bool get redirected;
+  external String get url;
+  external _Headers get headers;
+  external _Stream? get body;
+  external JSPromise<JSArrayBuffer> arrayBuffer();
+}
+
+extension type _Stream._(JSObject _) implements JSObject {
+  external _Reader getReader();
+}
+
+extension type _Reader._(JSObject _) implements JSObject {
+  external JSPromise<_Chunk> read();
+  external JSPromise<JSAny?> cancel();
+}
+
+extension type _Chunk._(JSObject _) implements JSObject {
+  external bool get done;
+  external JSUint8Array? get value;
+}
+
+extension type _Abort._(JSObject _) implements JSObject {
+  external JSAny get signal;
+  external void abort();
+}
+
+/// The body of 1 answer.
+///
+/// reader holds the stream of the host. A host that gives no stream leaves it
+/// null, and rest then holds the whole body.
+final class _Body {
+  final _Reader? reader;
+
+  /// The bytes that a read did not take. A Go read takes no more bytes than
+  /// its slice holds.
+  Uint8List rest;
+
+  bool ended = false;
+
+  /// The deadline of the request, in nanoseconds after the start of the Unix
+  /// epoch. A value of 0 holds no limit.
+  final int deadline;
+
+  /// The controller of the request. An abort ends the body at a deadline.
+  final _Abort? stop;
+
+  _Body(this.reader, this.rest, this.deadline, this.stop);
+}
+
+final List<_Body?> _bodies = <_Body?>[];
+
+int _slot(_Body b) {
+  for (int i = 0; i < _bodies.length; i++) {
+    if (_bodies[i] == null) {
+      _bodies[i] = b;
+      return i;
+    }
+  }
+  _bodies.add(b);
+  return _bodies.length - 1;
+}
+
+final GoString _empty = GoString.empty;
+
+final GoString _noFetch = GoString.fromString('operation not supported');
+
+GoString _closed() => GoString.fromString('use of closed response body');
+
+GoString _timeout() => GoString.fromString('i/o timeout');
+
+/// _cause gives the text of a failure of the host. The message of a fetch
+/// failure names no reason on purpose, because a browser hides the reason of a
+/// blocked request.
+GoString _cause(Object cause) => GoString.fromString(cause.toString());
+
+/// _limit ends a wait at a deadline. A deadline of 0 holds no limit, and a
+/// deadline that passed already gives the expired value at once.
+Future<T> _limit<T>(Future<T> f, int deadline, T expired) {
+  if (deadline == 0) return f;
+  final int left = deadline - $nowNanos();
+  if (left <= 0) return Future<T>.value(expired);
+  return f.timeout(
+    Duration(microseconds: left ~/ 1000),
+    onTimeout: () => expired,
+  );
+}
+
+/// True when the host holds the fetch API. A host without it reports the same
+/// cause as the Dart VM.
+final bool _has = globalContext.has('fetch');
+
+_Abort? _controller() {
+  final JSAny? make = globalContext['AbortController'];
+  if (make == null) return null;
+  return (make as JSFunction).callAsConstructor<_Abort>();
+}
+
+Uint8List _bytes(Slice<GoInt> p) {
+  final Uint8List out = Uint8List(p.len);
+  for (int i = 0; i < p.len; i++) {
+    out[i] = $ix(p.array[p.off + i]) & 0xFF;
+  }
+  return out;
+}
+
+/// _take moves the held bytes of a body into the slice and gives the count.
+int _take(_Body b, Slice<GoInt> p) {
+  final int n = b.rest.length < p.len ? b.rest.length : p.len;
+  for (int i = 0; i < n; i++) {
+    p[i] = $gi(b.rest[i]);
+  }
+  b.rest = n == b.rest.length
+      ? Uint8List(0)
+      : Uint8List.sublistView(b.rest, n);
+  return n;
+}
+
+/// _head reads the status, the header, and the first state of the body.
+///
+/// The result rides the frame of the wait, thus each integer carries the Go
+/// form. A plain int reaches the caller of $fetchStart, and that result is
+/// dead. Read the note on $await.
+Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
+  _Response r,
+  int deadline,
+  _Abort? stop,
+) async {
+  final List<GoString> fields = <GoString>[];
+  r.headers.forEach(
+    ((JSString value, JSString name, JSAny parent) {
+      fields.add(GoString.fromString(name.toDart));
+      fields.add(GoString.fromString(value.toDart));
+    }).toJS,
+  );
+  final _Stream? stream = r.body;
+  final _Body b = stream == null
+      ? _Body(
+          null,
+          (await r.arrayBuffer().toDart).toDart.asUint8List(),
+          deadline,
+          stop,
+        )
+      : _Body(stream.getReader(), Uint8List(0), deadline, stop);
+  return (
+    $gi(_slot(b)),
+    $gi(r.status),
+    Slice<GoString>.of(fields),
+    r.redirected ? GoString.fromString(r.url) : _empty,
+    _empty,
+  );
+}
+
+/// Sends a request and waits for the head of the answer.
+///
+/// The call gives up control, thus the result of the call itself is dead. The
+/// frame of the wait gives the value to the caller.
+(int, int, Slice<GoString>, GoString, GoString) $fetchStart(
+  GoString method,
+  GoString url,
+  Slice<GoString> header,
+  Slice<GoInt> body,
+  int deadline,
+) {
+  if (!_has) {
+    return (-1, 0, Slice<GoString>.nil(), _empty, _noFetch);
+  }
+  final _Headers fields = _Headers();
+  for (int i = 0; i + 1 < header.len; i += 2) {
+    fields.append(header[i].toDartString(), header[i + 1].toDartString());
+  }
+  final _Abort? stop = _controller();
+  final _Init init = _Init(
+    method: method.toDartString(),
+    credentials: 'same-origin',
+    headers: fields,
+    body: body.len == 0 ? null : _bytes(body).toJS,
+    signal: stop?.signal,
+  );
+  $await(
+    _limit<_Response?>(
+      _fetch(url.toDartString(), init).toDart,
+      deadline,
+      null,
+    ).then((_Response? r) async {
+      if (r == null) {
+        stop?.abort();
+        return ($gi(-1), $gi(0), Slice<GoString>.nil(), _empty, _timeout());
+      }
+      return await _head(r, deadline, stop);
+    }),
+    (Object cause) =>
+        ($gi(-1), $gi(0), Slice<GoString>.nil(), _empty, _cause(cause)),
+  );
+  return (-1, 0, Slice<GoString>.nil(), _empty, _empty);
+}
+
+/// Reads bytes of the body of an answer into the slice and gives the count. A
+/// count of 0 with no cause means the end of the body.
+(int, GoString) $fetchRead(int handle, Slice<GoInt> p) {
+  if (handle < 0 || handle >= _bodies.length) return (0, _closed());
+  final _Body? b = _bodies[handle];
+  if (b == null) return (0, _closed());
+  if (p.len == 0) return (0, _empty);
+  if (b.rest.isNotEmpty) return (_take(b, p), _empty);
+  final _Reader? reader = b.reader;
+  if (b.ended || reader == null) return (0, _empty);
+  $await(
+    _limit<_Chunk?>(reader.read().toDart, b.deadline, null).then((
+      _Chunk? chunk,
+    ) {
+      if (chunk == null) {
+        b.stop?.abort();
+        return ($gi(0), _timeout());
+      }
+      final JSUint8Array? value = chunk.value;
+      if (chunk.done || value == null) {
+        b.ended = true;
+        return ($gi(0), _empty);
+      }
+      b.rest = value.toDart;
+      return ($gi(_take(b, p)), _empty);
+    }),
+    (Object cause) => ($gi(0), _cause(cause)),
+  );
+  return (0, _empty);
+}
+
+/// Ends the read of the body of an answer and frees its handle.
+GoString $fetchClose(int handle) {
+  if (handle < 0 || handle >= _bodies.length) return _closed();
+  final _Body? b = _bodies[handle];
+  if (b == null) return _closed();
+  _bodies[handle] = null;
+  b.reader?.cancel();
+  return _empty;
+}

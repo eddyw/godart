@@ -533,6 +533,13 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$h2End(%s)", args[0]), true
 	case "H2Close":
 		return fmt.Sprintf("$h2Close(%s)", args[0]), true
+	case "FetchStart":
+		return fmt.Sprintf("$fetchStart(%s, %s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3], args[4]), true
+	case "FetchRead":
+		return fmt.Sprintf("$fetchRead(%s, %s)", args[0], args[1]), true
+	case "FetchClose":
+		return fmt.Sprintf("$fetchClose(%s)", args[0]), true
 	case "ConnAddrs":
 		return fmt.Sprintf("$connAddrs(%s)", args[0]), true
 	case "ConnRead":

@@ -931,6 +931,37 @@ func PacketDeadline(handle int, read, write int64) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// FetchStart sends a request through the fetch API of the host, and it waits
+// for the head of the answer. Each pair of items of header holds the name of a
+// field and its value, and the third result holds the same shape.
+//
+// The results are the handle of the body, the status, the header, the address
+// of the answer, and the cause of a failure. The address is empty unless a
+// redirect moved the answer.
+//
+// deadline ends the wait, in nanoseconds after the start of the Unix epoch. A
+// value of 0 holds no limit, and the same limit covers each read of the body.
+//
+// A target that holds no fetch API gives the cause "operation not supported".
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func FetchStart(method, url string, header []string, body []byte, deadline int64) (int, int, []string, string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FetchRead reads bytes of the body of an answer into the slice and gives the
+// count. A count of 0 with no cause means the end of the body.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func FetchRead(handle int, p []byte) (int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FetchClose ends the read of the body of an answer and frees its handle.
+func FetchClose(handle int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // StartTimer starts a timer that runs f after a count of nanoseconds, and
 // gives the handle of the timer. Go runs f on a new goroutine, thus f can
 // block.
