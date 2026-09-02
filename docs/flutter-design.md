@@ -70,10 +70,9 @@ until it is empty, and it returns. A timer or a future calls `$wake`. Flutter
 owns the loop already, and it needs no change.
 
 A Flutter event handler that starts Go work costs 2 lines:
-`() { $go(f); $schedule(); }`. `$go` stands at `sched.dart:168`, and the
-finalizer of `sched.dart:188` already holds that pattern. A Go call that waits
-for a Dart future reads `$await` at `sched.dart:240`, and that call needs an
-intrinsic of stage 5.
+`() { $go(f); $schedule(); }`. `$go` and the finalizer `_cleanups` of
+`sched.dart` already hold that pattern. A Go call that waits for a Dart future
+reads `$await` of the same file, and that call needs an intrinsic of stage 5.
 
 ### What a probe of 2026-09-01 proved
 
@@ -294,7 +293,7 @@ Cons:
 - The widget struct loses `$assign` and the value semantics of decision 2.
 - A Go string constant blocks the const constructor.
 - `Widget.operator ==` carries `@nonVirtual` at `widgets/framework.dart:365`,
-  thus `writeEqual` at `decl.go:202` must not run for such a class.
+  thus `writeEqual` of `decl.go` must not run for such a class.
 
 ### A3: A generator that reads the Go AST and writes Dart widget classes
 
