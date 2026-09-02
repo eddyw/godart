@@ -11,11 +11,11 @@ of a program that imports the package. The import surface holds the run of
 
 ## The import surface
 
-The surface holds 99 import paths: 86 standard packages, the interop package
-`syscall/dart`, and 12 internal packages that the 86 need. Stage 2 rejects an
+The surface holds 102 import paths: 89 standard packages, the interop package
+`syscall/dart`, and 12 internal packages that the 89 need. Stage 2 rejects an
 import of each other package with a source position.
 
-72 of the 86 hold each exported name of Go, and 14 hold a part of them.
+75 of the 89 hold each exported name of Go, and 14 hold a part of them.
 `docs/support.md` holds the level of each one and the largest gap of each
 partial package. `make surface` measures each one again.
 
@@ -25,7 +25,7 @@ partial package. `make surface` measures each one again.
 | `container/heap`, `container/list`, `container/ring`, `os/exec` | `net/http/cgi` |
 | `context`, `errors`, `flag`, `fmt`, `log` | `encoding/xml`, `encoding/gob` |
 | `regexp`, `regexp/syntax` | `html/template` |
-| `encoding/ascii85`, `encoding/base64`, `encoding/binary` | `crypto/x509`, `crypto/subtle` |
+| `encoding/ascii85`, `encoding/base64`, `encoding/binary`, `embed` | `crypto/x509` |
 | `encoding/csv`, `encoding/hex`, `encoding/json` | `archive/...`, `compress/lzw` |
 | `compress/flate`, `compress/gzip`, `compress/zlib` | `compress/bzip2` |
 | `go/token`, `go/scanner`, `go/ast`, `go/parser` | `go/types`, `go/importer` |
@@ -33,13 +33,13 @@ partial package. `make surface` measures each one again.
 | `text/tabwriter`, `text/template`, `text/template/parse` | |
 | `testing/iotest`, `runtime/debug`, `os/signal`, `syscall` | |
 | `net/http/httptest`, `net/http/internal` | `net/smtp`, `net/mail` |
-| `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512` | `embed` |
+| `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle` | |
 | `crypto/hmac`, `crypto/rand`, `crypto/tls` | `math/big` |
 | `mime`, `mime/multipart`, `mime/quotedprintable` | |
 | `net/textproto`, `net/http/cookiejar` | |
-| `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `database/sql`, `math/cmplx` |
+| `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | `database/sql` |
 | `io`, `io/fs`, `iter`, `maps`, `slices`, `sort` | |
-| `math`, `math/bits`, `math/rand`, `math/rand/v2` | `unsafe`, cgo |
+| `math`, `math/bits`, `math/cmplx`, `math/rand`, `math/rand/v2` | `unsafe`, cgo |
 | `net`, `net/netip`, `net/url` | |
 | `os`, `path`, `path/filepath` | |
 | `reflect`, `runtime`, `strconv`, `strings` | |
@@ -57,6 +57,7 @@ partial package. `make surface` measures each one again.
 |---|---|
 | `unsafe` and cgo | Rejected |
 | A complex number | Present. The runtime class GoComplex holds it. |
+| A `//go:embed` directive | Present. Stage 1 writes the files into the declaration of the variable. |
 | The address of a value behind a pointer, for example `&*p` | Rejected. Read `p`. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
 | A conversion between 2 struct types | Rejected |

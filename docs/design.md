@@ -34,6 +34,10 @@ The compiler has 6 stages. Each stage has 1 function. Do not mix the stages.
   and the second load replaces them through `packages.Config.Overlay`.
 - The overlay also adds `syscall/dart`, which the standard library does not
   hold. The go command accepts a new directory inside GOROOT.
+- The first load also reads each `//go:embed` directive of the module. It
+  resolves the patterns, and it writes the files into the declaration of the
+  variable. The same overlay map carries the result to the second load. Read
+  the section "The embed package" of `docs/library.md`.
 
 ### Stage 2: Verify
 
@@ -42,7 +46,6 @@ clear error and a source position. The verifier rejects:
 
 - An import of the `unsafe` package, and all cgo code. A blank import of
   `unsafe` stays in the subset, because such an import performs no operation.
-- A call to `recover`.
 - The address of a field, of an element, and of the result of a call. Only a
   variable holds a box. Read the "Pointers" section.
 - An index, a slice expression, a range loop, `len`, and `cap` on a type
@@ -53,6 +56,8 @@ clear error and a source position. The verifier rejects:
 - A type declaration inside a function, except a struct type.
 - An import of a library package outside the supported surface. Read the
   "Standard library" section for the rule.
+- A read of `embed.New` in a file that holds no `//go:embed` directive. The
+  real package `embed` of Go holds no such name.
 
 `internal/verify` holds a test for each rule. Read that package for the exact
 list, because it is the authority.

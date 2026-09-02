@@ -9,8 +9,8 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 99 import paths: 86 standard packages, `syscall/dart`, and 12
-internal packages. The run of `make surface` of 2026-09-02 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
+The surface holds 102 import paths: 89 standard packages, `syscall/dart`, and
+12 internal packages. The run of `make surface` of 2026-09-02 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
 names that each one holds. A package reaches the surface 3 ways.
 
@@ -144,6 +144,71 @@ read against a local server. The certificate comes from
 `testdata/programs/netpkg` reads the real `net` API with no build tag. The go
 command takes the real package, and `gart` takes the overlay. Both builds write
 the same 9 lines.
+
+## The resolver of the DNS
+
+The Lookup family of `net` reads a resolver of the overlay, and no call of the
+platform. `InternetAddress.lookup` of `dart:io` gives an A record and an AAAA
+record alone, thus `LookupMX`, `LookupNS`, `LookupSRV`, `LookupTXT`, and
+`LookupCNAME` would each stay out. The socket of the overlay already carries
+UDP and TCP, thus the resolver needs no interop function of its own. Decision
+233.
+
+| File | Content |
+|---|---|
+| `internal/overlay/std/net/dnsmsg.go` | The message format. 8 record types: A, AAAA, CNAME, NS, PTR, MX, TXT, and SRV. |
+| `internal/overlay/std/net/lookup.go` | The `Resolver`, each `Lookup` function, `DNSError`, `MX`, `NS`, and `SRV`. |
+
+The resolver reads `/etc/hosts` first. It then asks each server of
+`/etc/resolv.conf` over UDP, and a truncated answer takes a second exchange
+over TCP. `LookupPort` reads `/etc/services`, and `parsePort` of Go holds the
+rule for a number. Each of the 3 files reads through `dart.ReadFile`, thus the
+overlay imports no `os` and holds no cycle.
+
+`Resolver.Dial` is the seam of a test.
+`testdata/programs/dnslookup` runs a DNS server of its own on the loopback
+interface, thus the program reads no network. It covers each function of the
+family, the fallback to TCP, and the 4 error shapes.
+`docs/parity.md` holds the 5 differences against Go.
+
+## The embed package
+
+A `//go:embed` directive takes its value at the declaration, and stage 1 writes
+it. The compiler of Go holds a directive of the linker for the file list of an
+`embed.FS`, and this compiler holds none. Decision 232.
+
+`internal/load/embed.go` reads each directive of the module on the first of the
+2 loads. It resolves the patterns against the directory of the package, and it
+writes the files into the source of the declaration. The second load reads the
+output through the same overlay map that carries the standard library.
+
+An `init` of the generated code was the other candidate, and it breaks the
+initialization order. A package level variable that reads an embedded string
+runs before each `init`, thus `var count = len(greeting)` would give 0.
+
+The go command rejects a directive on a variable that holds a value, thus the
+same rewrite turns `//go:embed` into `// go:embed`. A comment with a space is
+no directive.
+
+`internal/overlay/std/embed/embed.go` is the source of Go with 3 changes:
+`strings` in place of `internal/bytealg` and `internal/stringslite`, no `hash`
+field, and the constructor `New`. A package cannot reach an unexported field of
+another package, thus the generated source names `New`. The real package of Go
+holds no such name, thus stage 2 rejects a read of it in a file that holds no
+directive, and `verify.Package` takes the set of those files.
+
+`New` builds 1 entry for each directory of a name, and it sorts the list by the
+directory and then by the element. Thus the generated source holds the leaf
+files alone.
+
+## The constant time package
+
+`crypto/subtle` needs an overlay. `boolToUint8` of
+`crypto/internal/constanttime` panics, and the compiler of Go replaces it with
+an instruction of the machine. `dit.go` of Go reads `unsafe` and
+`internal/runtime/sys`. The overlay holds the same 8 names, and each arithmetic
+body takes its portable form. `docs/parity.md` holds the 2 differences, and
+`testdata/programs/subtleuse` covers each name.
 
 ## The process access
 

@@ -11,8 +11,8 @@ Each claim below names a file and a line. The state is of 2026-09-01.
 
 **The state of 2026-09-02.** Milestone 1, milestone 2, and milestone 3 of
 `docs/flutter-design.md` are complete, and the directory `flutter/` holds them.
-The node set holds 411 types of `widgets`, `material`, and `cupertino`. That
-work answers each item of this file. Read the status line of each 1, and read
+The node set holds 414 types of `widgets`, `material`, and `cupertino`, with
+3851 fields. That work answers each item of this file. Read the status line of each 1, and read
 `docs/flutter-state.md` for the state model that the application uses.
 
 ## What already works

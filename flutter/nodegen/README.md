@@ -25,9 +25,10 @@ the tool reads the Flutter SDK of that package. The read takes about 5 seconds.
 
 ## Why the host is per application
 
-A shared host would hold a case for each of the 411 node types, thus it would
+A shared host would hold a case for each of the 414 node types, thus it would
 name each Flutter widget. The tree shaker of Dart then keeps the whole
-framework. The measurement of 2026-09-02, on an ahead of time build for macOS:
+framework. The measurement of 2026-09-02 read a set of 411 nodes, on an ahead
+of time build for macOS:
 
 | The host | The snapshot |
 |---|---|
