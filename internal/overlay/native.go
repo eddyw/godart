@@ -77,6 +77,10 @@ var native = []string{
 	"net/http/cookiejar",
 	"net/http/internal/ascii",
 	"net/http/internal",
+	"unicode/utf16",
+	"encoding/pem",
+	"encoding/asn1",
+	"crypto/x509/pkix",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

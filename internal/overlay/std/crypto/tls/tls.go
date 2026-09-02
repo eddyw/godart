@@ -9,11 +9,14 @@
 // CipherSuites would reach no operation, thus a dial or a listen with such a
 // value stops the program.
 //
-// The surface holds no crypto/x509, thus a Certificate keeps the 2 PEM blocks
-// that X509KeyPair took, and Dart parses them.
+// A Certificate keeps the 2 PEM blocks that X509KeyPair took, because Dart
+// reads PEM. It also holds the DER chain and the parsed leaf, thus a program
+// can read the fields of the certificate that it presents.
 package tls
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"net"
 	"strconv"
@@ -61,20 +64,67 @@ type Config struct {
 	PreferServerCipherSuites bool
 }
 
-// A Certificate holds a chain and a private key, each in the PEM form. Go
-// parses the blocks into a DER chain, and the overlay keeps the blocks,
-// because Dart reads PEM.
+// A Certificate holds a chain and a private key.
+//
+// Certificate holds the DER of each certificate of the chain, with the leaf
+// first, exactly as in Go. Leaf holds the parse of that leaf.
+//
+// The private key stays unexported, because the surface holds no crypto.Signer
+// and no crypto/rsa. A program builds a Certificate with X509KeyPair alone,
+// and the overlay keeps the 2 PEM blocks of that call, because Dart reads PEM.
 type Certificate struct {
+	// Certificate holds the DER of the leaf first, and then the DER of each
+	// certificate of the chain above it.
+	Certificate [][]byte
+	// Leaf holds the parse of Certificate[0]. Go 1.23 and later also fill it
+	// in X509KeyPair.
+	Leaf *x509.Certificate
+
 	pemChain []byte
 	pemKey   []byte
 }
 
 // X509KeyPair builds a Certificate of a PEM chain and a PEM key.
+//
+// The overlay parses no private key, thus it checks no match between the key
+// and the leaf. Dart reads the 2 blocks at the dial or at the listen, and it
+// reports a mismatch there.
 func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
-	if len(certPEMBlock) == 0 || len(keyPEMBlock) == 0 {
-		return Certificate{}, errors.New("tls: failed to find any PEM data in certificate input")
+	cert := Certificate{pemChain: certPEMBlock, pemKey: keyPEMBlock}
+	var skipped []string
+	rest := certPEMBlock
+	for {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type == "CERTIFICATE" {
+			cert.Certificate = append(cert.Certificate, block.Bytes)
+			continue
+		}
+		skipped = append(skipped, block.Type)
 	}
-	return Certificate{pemChain: certPEMBlock, pemKey: keyPEMBlock}, nil
+	if len(cert.Certificate) == 0 {
+		if len(skipped) == 0 {
+			return Certificate{}, errors.New("tls: failed to find any PEM data in certificate input")
+		}
+		return Certificate{}, errors.New("tls: failed to find \"CERTIFICATE\" PEM block in certificate input after skipping PEM blocks of the following types: " +
+			strings.Join(skipped, " "))
+	}
+	keyBlock, _ := pem.Decode(keyPEMBlock)
+	if keyBlock == nil {
+		return Certificate{}, errors.New("tls: failed to find any PEM data in key input")
+	}
+	if strings.HasSuffix(keyBlock.Type, "CERTIFICATE") {
+		return Certificate{}, errors.New("tls: found a certificate rather than a key in the PEM for the private key")
+	}
+	leaf, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return Certificate{}, err
+	}
+	cert.Leaf = leaf
+	return cert, nil
 }
 
 // Clone gives a copy of the config. A nil config gives nil.
@@ -206,6 +256,9 @@ func Listen(network, laddr string, config *Config) (net.Listener, error) {
 		return nil, err
 	}
 	cert := config.Certificates[0]
+	if len(cert.pemChain) == 0 || len(cert.pemKey) == 0 {
+		return nil, errors.New("tls: the certificate holds no PEM block, thus X509KeyPair must build it")
+	}
 	handle, taken, cause := dart.ListenTLS(host, port, cert.pemChain, cert.pemKey,
 		config.NextProtos)
 	if cause != "" {
