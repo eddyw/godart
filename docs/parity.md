@@ -360,8 +360,35 @@ field that would change that handshake stays out, because such a field would
 report support and change nothing. `Config.PreferServerCipherSuites` is the 1
 field that stands, and Go documents it as ignored.
 
-`Server.TLS` of `net/http/httptest` reads now, and `Server.Certificate` gives
-an x509 certificate and stays out.
+`Certificate` holds the DER chain and the parsed leaf since 2026-09-03, and
+`X509KeyPair` fills the 2 as Go 1.23 does. `ConnectionState.PeerCertificates`
+and `Config.RootCAs` each stay out, because the runtime holds no call that
+reads the peer certificate of a secure socket.
+
+### crypto/x509
+
+The overlay parses a certificate and reads its fields. It builds no chain and
+it checks no signature, because `dart:io` owns the trust decision. A `Verify`
+that always gives nil is a security fault, thus the name is absent and a
+program that calls it takes a compile error.
+
+| Item | Go | godart |
+|---|---|---|
+| `ParseCertificate`, `ParseCertificates` | Present | Equal for each field that the overlay reads. |
+| The fields of a `Certificate` | 40 fields | The 35 of RFC 5280 that the parse reads. The name constraint fields, `PolicyIdentifiers`, `Policies`, and `OID` stay out, and the extensions still stand in `Extensions`. |
+| `Certificate.PublicKey` | An `any` of 1 of 3 key types | Not present. `crypto/rsa`, `crypto/ecdsa`, and `crypto/ed25519` stand outside the surface, thus the field could hold nil alone. `PublicKeyAlgorithm` names the algorithm, and `RawSubjectPublicKeyInfo` holds the DER. |
+| `Certificate.Verify`, `VerifyOptions`, `SystemCertPool`, and each verify error | Present | Not present. The trust store belongs to `dart:io`. |
+| `Certificate.CheckSignature` and its 2 companions | Present | Not present. A check needs `crypto/rsa` and `crypto/ecdsa`. |
+| `Certificate.VerifyHostname` | Reads the names and the name constraints | Present. It matches the subject alternative names alone. |
+| `CreateCertificate` and each other name that signs | Present | Not present. Each 1 needs a private key. |
+| `CertPool` | 8 methods | `NewCertPool`, `AddCert`, `AppendCertsFromPEM`, `Subjects`, `Equal`, and `Clone`. |
+| The text of a parse error | The text of `cryptobyte` | The text of `encoding/asn1`. The overlay reads the DER with that package. |
+| A critical extension of a policy | Go reads `nameConstraints`, `certificatePolicies`, `policyMappings`, `policyConstraints`, and `inhibitAnyPolicy` | Each 1 lands in `UnhandledCriticalExtensions`. |
+| A URI of a subject alternative name | `url.Parse`, a label check, and a reverse label walk of Go | `url.Parse` and the label check. 1 rare malformed URI passes here. |
+
+`testdata/programs/x509use` reads a certificate that the program holds as a PEM
+constant, and it prints each field. A second check parsed the 128 certificates
+of `/etc/ssl/cert.pem` under the 2 commands, and each output was equal.
 
 ### net/http/httptest
 
@@ -369,6 +396,10 @@ an x509 certificate and stays out.
 the program, because the server of the overlay recovers no panic and holds no
 `ErrAbortHandler`. With `EnableHTTP2`, `TLS.NextProtos` reads
 `[h2 http/1.1]` where Go reads `[h2]`.
+
+`Server.Certificate` reads since 2026-09-03. The overlay carries the pair of
+`net/http/internal/testcert`, thus the fields of the certificate match the
+fields that Go gives.
 
 ### os and os/exec
 
