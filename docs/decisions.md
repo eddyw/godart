@@ -892,6 +892,11 @@ The plan left these points open. The work took the decisions below.
      the dart:io form, because the analyzer reads that branch. `TestWasm`
      of the driver is the smoke test.
 
+     **2026-09-03: decision 251 replaces the second half.** Each web form
+     now holds each name of its native form, and an unsupported operation
+     reports the cause of Go under `GOOS=js`. The compile of a program
+     that reaches a file or a socket passes.
+
 209. The JS integer design stands in `docs/js-integers.md`, and the work
      waits. The model: the emitted code names `GoInt` in place of the Dart
      int, a conditional import selects the form, the native form is an
