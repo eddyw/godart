@@ -81,6 +81,13 @@ list, because it is the authority.
   argument, each result, and each struct field. A value that leaves this net
   falls into the escape group of its signature, and a call outside the net
   reads that group. Read decision 137.
+- A call through an interface reaches the group of that method. The key of a
+  group holds the name, the signature, and the interface of the call site, thus
+  a concrete method joins only a group whose interface its receiver implements.
+  A type assertion narrows that interface further: a value of `x.(I)`
+  implements `I` and the interface of `x`. `internal/analyze/iface.go` holds
+  the 2 rules, and each test that cannot answer gives true, thus the group
+  never drops a target that a call can reach. Read decision 250.
 - The body of a range loop over a function is a function of the analysis, with
   a summary of its own. Read decision 138.
 - Find all instantiations of a generic function and of a generic type.
