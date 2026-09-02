@@ -214,7 +214,8 @@ neither one.
 
 ## The 3 programs that prove the path
 
-Each one is small, and together they cover the whole mechanism.
+Each one is small, and together they cover the whole mechanism. The 3 are done
+since 2026-09-02, and `make flutter-test` runs each 1.
 
 1. **A counter.** Done 2026-09-02. `flutter/example/counter` holds it, and 6
    widget tests pass under Flutter 3.47.0. It needed no item of the compiler
@@ -224,5 +225,8 @@ Each one is small, and together they cover the whole mechanism.
    `golang/go`, it decodes each `created_at` into a `time.Time`, and it gives a
    `ListView` of cards. It needed no item of the compiler list, and it found
    the bug of decision 229.
-3. **A form.** A text field, a validation in Go, and a POST. It proves the
-   boundary of item 5 and the callback with a result.
+3. **A form.** Done 2026-09-02. `flutter/example/form` holds it, and 6 widget
+   tests pass under Flutter 3.47.0. 3 text fields, a validation in Go on each
+   keystroke, and a POST of the fields as JSON. It needed no item of the
+   compiler list. `net/mail` stands outside the subset, thus the address rule
+   of the form reads the text itself.

@@ -85,18 +85,22 @@ flutter-go:
 	cd flutter/ui && go vet ./... && go test ./...
 	cd flutter/example/counter/go && go vet ./... && go test ./...
 	cd flutter/example/apilist/go && go vet ./... && go test ./...
+	cd flutter/example/form/go && go vet ./... && go test ./...
 
 # flutter-test builds the example and runs the widget tests. It needs the
 # Flutter SDK, thus ci does not run it.
 flutter-test: build
 	cd flutter/example/counter && ./build.sh
 	cd flutter/example/apilist && ./build.sh
+	cd flutter/example/form && ./build.sh
 	cd flutter/goflutter && $(FLUTTER) analyze
 	cd flutter/example/counter && $(FLUTTER) analyze
 	cd flutter/example/apilist && $(FLUTTER) analyze
+	cd flutter/example/form && $(FLUTTER) analyze
 	cd flutter/nodegen && dart pub get && dart analyze
 	cd flutter/example/counter && $(FLUTTER) test
 	cd flutter/example/apilist && $(FLUTTER) test
+	cd flutter/example/form && $(FLUTTER) test
 
 # surface measures how much of each package of the standard library the
 # compiler holds. Read docs/support.md.

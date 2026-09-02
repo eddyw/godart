@@ -993,3 +993,23 @@ widget parameters reach Go. Decision 231.
 - A callback of 1 argument reaches `cb1Expr`, which throws for an argument that
   it cannot write. `mapFunction` now names the 6 kinds that it writes, thus a
   new value type adds no crash of the generator.
+
+### 2026-09-02, proof program 3 of the Flutter path
+
+`flutter/example/form`. 3 text fields, a validation in Go on each keystroke,
+and a POST of the fields as JSON. 6 widget tests pass under Flutter 3.47.0, and
+7 Go tests run the same screen with no Flutter. The 3 programs of
+`docs/flutter-first.md` are done.
+
+- The program needed no item of the compiler list. `ui.TextInput` of milestone
+  1 already keeps the Flutter controller and the focus across a rebuild that Go
+  drives, thus a form needs no opaque Dart handle.
+- `net/mail` stands outside the subset, thus the address rule reads the text
+  itself: 1 at sign, a local part that is not empty, and a domain of 2 labels
+  or more.
+- `Command.Done` reports a finish of any outcome. A screen that shows the
+  answer must read `Done() && Err() == nil`, and a poll of a widget test reads
+  `Done()` alone.
+- A validation that runs on each keystroke needs no signal of its own. The body
+  reads the field signal, thus 1 keystroke marks 1 boundary, and `Validate`
+  runs 1 time for the whole screen.

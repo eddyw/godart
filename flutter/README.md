@@ -16,6 +16,7 @@ targets.
 | `nodegen/` | The generator. It reads the Flutter API and writes the node set and the host. Read its README. |
 | `example/counter/` | Proof program 1. Go holds the whole screen. |
 | `example/apilist/` | Proof program 2. Go reads an HTTP API and gives a list. |
+| `example/form/` | Proof program 3. Go validates a form and sends it. |
 
 ## Run an example
 
@@ -27,10 +28,15 @@ flutter test                        # 6 widget tests
 flutter run                         # on a device or a simulator
 ```
 
-`example/apilist` runs the same way, and it holds 5 widget tests. It reads the
+`example/apilist` runs the same way, and it holds 6 widget tests. It reads the
 issue list of `golang/go` over https, it decodes the answer into a Go struct,
-and it gives a `ListView` of cards. Each widget test points the application at
-a local server of `dart:io`, thus no test reaches the network.
+and it gives a `ListView` of cards.
+
+`example/form` holds 6 widget tests. 3 text fields, a validation in Go on each
+keystroke, and a POST of the fields as JSON.
+
+Each widget test of the 2 points the application at a local server of
+`dart:io`, thus no test reaches the network.
 
 A widget test holds a fake clock. A real socket completes in the real zone,
 thus a test of a network read gives time to each zone in turn:
@@ -58,6 +64,7 @@ The state layer needs no Flutter and no Dart.
 cd flutter/ui && go test ./...
 cd flutter/example/counter/go && go test ./...
 cd flutter/example/apilist/go && go test ./...
+cd flutter/example/form/go && go test ./...
 ```
 
 ## Write an application
