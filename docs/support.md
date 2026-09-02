@@ -70,7 +70,7 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 | `os/exec` | 43/49 | 87% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, `ExitError.Sys` and its 3 companions |
 | `reflect` | 130/188 | 69% | `MakeFunc`, `ChanOf`, `FuncOf`, `MakeChan`, `Select`, `Method.Func` |
 | `encoding/json` | 59/92 | 64% | The option set of the v2 implementation, and the field `Type` of each error |
-| `testing` | 92/145 | 63% | `Init`, `MainStart`, the cover types, `InternalExample`, `InternalFuzzTarget` |
+| `testing` | 132/145 | 91% | `Init`, `MainStart`, `RunTests` and its 2 companions, `InternalExample`, `InternalFuzzTarget` |
 | `net/http` | 223/392 | 56% | `Hijacker`, `ResponseController`, `Protocols`, `HTTP2Config`, `TimeoutHandler` |
 | `runtime` | 31/114 | 27% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
 | `net` | 127/346 | 36% | `Interface`, `IPConn`, `TCPConn`, `ListenConfig`, the option fields of `Dialer` |

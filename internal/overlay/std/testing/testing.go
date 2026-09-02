@@ -11,10 +11,14 @@ package testing
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall/dart"
+	"time"
+	"unicode"
 )
 
 // InternalTest names 1 test function. The compiler writes the list.
@@ -31,7 +35,11 @@ type InternalBenchmark struct {
 
 // TB holds the methods that T, B, and F share.
 type TB interface {
+	ArtifactDir() string
+	Attr(key, value string)
+	Chdir(dir string)
 	Cleanup(f func())
+	Context() context.Context
 	Error(args ...any)
 	Errorf(format string, args ...any)
 	Fail()
@@ -43,11 +51,20 @@ type TB interface {
 	Log(args ...any)
 	Logf(format string, args ...any)
 	Name() string
+	Output() io.Writer
+	Setenv(key, value string)
 	Skip(args ...any)
 	SkipNow()
 	Skipf(format string, args ...any)
 	Skipped() bool
+	TempDir() string
 }
+
+var (
+	_ TB = (*T)(nil)
+	_ TB = (*B)(nil)
+	_ TB = (*F)(nil)
+)
 
 // verbose holds the state of the -v flag of gart test. The compiler writes the
 // value into the call of Main.
@@ -87,6 +104,12 @@ type T struct {
 	cleanups []func()
 	ctx      context.Context
 	cancel   context.CancelFunc
+	// artifactDir holds the directory of ArtifactDir. Each call of 1 test
+	// gives the same directory, thus the name stands here.
+	artifactDir string
+	// out holds the writer of Output. It keeps the part of a line that no
+	// newline closed yet.
+	out *outputWriter
 	// report holds the result line of each subtest, and of the subtests of a
 	// subtest. Go writes them after the line of the parent.
 	report []string
@@ -139,17 +162,134 @@ func (t *T) Setenv(name, value string) {
 // tempSeq numbers each temporary directory of the binary.
 var tempSeq int
 
-// TempDir gives a new directory for the test. The cleanup of the test removes
-// it and each file inside it.
-func (t *T) TempDir() string {
+// newTempDir builds a new directory under the temporary directory of the
+// system, and it holds a cleanup that removes the directory.
+func (t *T) newTempDir(who string) string {
 	tempSeq++
 	dir := dart.TempDir() + dart.PathSeparator() +
 		"gart" + strconv.Itoa(tempSeq) + "_" + strconv.FormatInt(dart.NowNanos(), 10)
 	if cause := dart.Mkdir(dir, true); cause != "" {
-		t.Fatal("TempDir: " + cause)
+		t.Fatal(who + ": " + cause)
 	}
 	t.Cleanup(func() { dart.RemoveAll(dir) })
 	return dir
+}
+
+// TempDir gives a new directory for the test. The cleanup of the test removes
+// it and each file inside it.
+func (t *T) TempDir() string { return t.newTempDir("TempDir") }
+
+// ArtifactDir gives the directory that holds each file that the test writes.
+// Each call of 1 test gives the same directory.
+//
+// Go reads the flag -test.artifacts for the place of the directory, and gart
+// holds no such flag. Thus the directory is a temporary one, and the cleanup of
+// the test removes it. Go does the same when the flag stands away.
+func (t *T) ArtifactDir() string {
+	if t.artifactDir == "" {
+		t.artifactDir = t.newTempDir("ArtifactDir")
+	}
+	return t.artifactDir
+}
+
+// Chdir moves the process into a directory for the test, and the cleanup of the
+// test moves it back. The call also writes PWD, exactly as Go does on a system
+// of the POSIX form.
+//
+// Go holds the old directory as an open descriptor, and gart holds the path,
+// because the Dart VM gives no descriptor of a directory.
+func (t *T) Chdir(dir string) {
+	old, cause := os.Getwd()
+	if cause != nil {
+		t.Fatal(cause)
+	}
+	if cause := os.Chdir(dir); cause != nil {
+		t.Fatal(cause)
+	}
+	full := dir
+	if !filepath.IsAbs(full) {
+		now, cause := os.Getwd()
+		if cause != nil {
+			t.Fatal(cause)
+		}
+		full = now
+	}
+	t.Setenv("PWD", full)
+	t.Cleanup(func() {
+		if cause := os.Chdir(old); cause != nil {
+			panic("testing.Chdir: " + cause.Error())
+		}
+	})
+}
+
+// Deadline gives the time at which the binary passes the timeout of the run.
+//
+// gart holds no flag for a timeout, thus the flag of the result is always
+// false. Go reports the same for a run with the timeout 0.
+func (t *T) Deadline() (deadline time.Time, ok bool) { return time.Time{}, false }
+
+// Attr writes 1 attribute of the test. A verbose run holds the line, and a
+// plain run drops it, exactly as go test does.
+//
+// The key holds no space, and the value holds no newline. A call that breaks
+// the rule reports an error against the test.
+func (t *T) Attr(key, value string) {
+	if strings.ContainsFunc(key, unicode.IsSpace) {
+		t.Errorf("disallowed whitespace in attribute key %q", key)
+		return
+	}
+	if strings.ContainsAny(value, "\r\n") {
+		t.Errorf("disallowed newline in attribute value %q", value)
+		return
+	}
+	if !verbose {
+		return
+	}
+	emit("=== ATTR  " + t.name + " " + key + " " + value)
+}
+
+// Output gives a writer that holds each line in the log of the test. The writer
+// adds no source position and no newline.
+//
+// The writer holds a part of a line until a newline closes it. A call of Log,
+// or the end of the test, writes such a part with a newline behind it.
+func (t *T) Output() io.Writer {
+	if t.out == nil {
+		t.out = &outputWriter{t: t}
+	}
+	return t.out
+}
+
+// outputWriter holds the bytes of Output until a newline closes a line.
+type outputWriter struct {
+	t *T
+	// partial holds the bytes behind the last newline.
+	partial string
+}
+
+func (o *outputWriter) Write(p []byte) (int, error) {
+	o.partial += string(p)
+	for {
+		i := strings.IndexByte(o.partial, '\n')
+		if i < 0 {
+			break
+		}
+		line := o.partial[:i]
+		o.partial = o.partial[i+1:]
+		o.t.writeRaw(line + "\n")
+	}
+	return len(p), nil
+}
+
+// flush writes the part of a line that no newline closed. A writer that holds
+// nothing writes nothing.
+func (o *outputWriter) flush() {
+	if o == nil || o.partial == "" {
+		return
+	}
+	text := o.partial
+	o.partial = ""
+	o.t.writeRaw(text + "\n")
 }
 
 func (t *T) Fail() { t.failed = true }
@@ -259,12 +399,19 @@ func logPos() string {
 	return ""
 }
 
-// write holds 1 log message. Verbose mode writes it at once, and the plain
-// mode writes it only when the test fails.
+// write holds 1 log message with the position of the caller in front of it. A
+// part of a line that Output holds goes out first, exactly as Go does.
 func (t *T) write(text string) {
+	t.out.flush()
 	if pos := logPos(); pos != "" {
 		text = pos + ": " + text
 	}
+	t.writeRaw(text)
+}
+
+// writeRaw holds 1 log message as it stands. Verbose mode writes it at once,
+// and the plain mode writes it only when the test fails.
+func (t *T) writeRaw(text string) {
 	if !verbose {
 		t.logs = append(t.logs, text)
 		return
@@ -287,6 +434,7 @@ type M struct {
 // NewM builds the state of a test binary. The compiler writes the call into the
 // entry point.
 func NewM(tests []InternalTest, benchmarks []InternalBenchmark) *M {
+	testBinary = true
 	return &M{tests: tests, benchmarks: benchmarks}
 }
 
@@ -438,6 +586,7 @@ func runOne(t *T, call func()) {
 	current = t
 	dart.Catch(call)
 	stopping = false
+	t.out.flush()
 	if t.cancel != nil {
 		t.cancel()
 	}
@@ -527,6 +676,11 @@ type B struct {
 	bytes int64
 	// metrics holds each value that ReportMetric gave, with its unit.
 	metrics []string
+	// extra holds the same values by unit. BenchmarkResult reads them.
+	extra map[string]float64
+	// parallelism holds the count that SetParallelism gave. gart runs no
+	// parallel benchmark, thus no run reads it.
+	parallelism int
 	// loopN counts the iterations that Loop gave. A value above 0 marks a body
 	// that reads Loop, and Loop runs the search itself.
 	loopN int
@@ -551,8 +705,36 @@ func (b *B) Fatalf(format string, args ...any) { b.common.Fatalf(format, args...
 func (b *B) Skip(args ...any)                  { b.common.Skip(args...) }
 func (b *B) Skipf(format string, args ...any)  { b.common.Skipf(format, args...) }
 func (b *B) SetBytes(n int64)                  { b.bytes = n }
+
+func (b *B) ArtifactDir() string      { return b.common.ArtifactDir() }
+func (b *B) Attr(key, value string)   { b.common.Attr(key, value) }
+func (b *B) Chdir(dir string)         { b.common.Chdir(dir) }
+func (b *B) Context() context.Context { return b.common.Context() }
+func (b *B) Output() io.Writer        { return b.common.Output() }
+func (b *B) Setenv(key, value string) { b.common.Setenv(key, value) }
+func (b *B) TempDir() string          { return b.common.TempDir() }
+
+// Elapsed gives the measured time of the run up to this point. A timer that
+// runs now holds the time of the current stretch as well.
+func (b *B) Elapsed() time.Duration { return time.Duration(b.measured()) }
+
+// SetParallelism holds the count of workers that RunParallel would use.
+//
+// gart runs no parallel benchmark, because all Go code runs in 1 isolate. Thus
+// the count reaches no run. Go states the same for a benchmark that calls no
+// RunParallel: the call has no effect.
+func (b *B) SetParallelism(p int) {
+	if p >= 1 {
+		b.parallelism = p
+	}
+}
+
 func (b *B) ReportMetric(value float64, unit string) {
 	b.metrics = append(b.metrics, strconv.FormatFloat(value, 'f', 4, 64)+" "+unit)
+	if b.extra == nil {
+		b.extra = map[string]float64{}
+	}
+	b.extra[unit] = value
 }
 
 // ReportAllocs does nothing. The Dart VM gives no count of allocations for 1
@@ -709,26 +891,61 @@ type BenchmarkResult struct {
 	// N is the count of iterations.
 	N int
 	// T is the measured time of the run, in nanoseconds. Go holds a
-	// time.Duration, and the overlay of testing reads no other package of the
-	// surface.
+	// time.Duration, and docs/parity.md names the difference.
 	T int64
 	// Bytes is the count of bytes that 1 iteration reads or writes.
 	Bytes int64
+	// MemAllocs is the count of allocations of the run. The Dart VM gives no
+	// count of allocations, thus a run of the harness holds 0.
+	MemAllocs uint64
+	// MemBytes is the count of allocated bytes of the run. The Dart VM gives
+	// no count of allocations, thus a run of the harness holds 0.
+	MemBytes uint64
+	// Extra holds each value that ReportMetric gave, by unit. A value here
+	// replaces the built-in value of the same unit.
+	Extra map[string]float64
 }
 
 // NsPerOp gives the time of 1 iteration, in nanoseconds.
 func (r BenchmarkResult) NsPerOp() int64 {
+	if v, held := r.Extra["ns/op"]; held {
+		return int64(v)
+	}
 	if r.N <= 0 {
 		return 0
 	}
 	return r.T / int64(r.N)
 }
 
-// AllocsPerOp gives 0. The Dart VM gives no count of allocations.
-func (r BenchmarkResult) AllocsPerOp() int64 { return 0 }
+// AllocsPerOp gives the count of allocations of 1 iteration. The Dart VM gives
+// no count of allocations, thus a run of the harness gives 0.
+func (r BenchmarkResult) AllocsPerOp() int64 {
+	if v, held := r.Extra["allocs/op"]; held {
+		return int64(v)
+	}
+	if r.N <= 0 {
+		return 0
+	}
+	return int64(r.MemAllocs) / int64(r.N)
+}
 
-// AllocedBytesPerOp gives 0. The Dart VM gives no count of allocations.
-func (r BenchmarkResult) AllocedBytesPerOp() int64 { return 0 }
+// AllocedBytesPerOp gives the count of allocated bytes of 1 iteration. The Dart
+// VM gives no count of allocations, thus a run of the harness gives 0.
+func (r BenchmarkResult) AllocedBytesPerOp() int64 {
+	if v, held := r.Extra["B/op"]; held {
+		return int64(v)
+	}
+	if r.N <= 0 {
+		return 0
+	}
+	return int64(r.MemBytes) / int64(r.N)
+}
+
+// MemString gives the memory numbers in the format of go test.
+func (r BenchmarkResult) MemString() string {
+	return fmt.Sprintf("%8d B/op\t%8d allocs/op",
+		r.AllocedBytesPerOp(), r.AllocsPerOp())
+}
 
 // String gives the line of the result, in the format of go test.
 func (r BenchmarkResult) String() string {
@@ -753,18 +970,23 @@ func Benchmark(f func(*B)) BenchmarkResult {
 	if last.common.failed {
 		return BenchmarkResult{}
 	}
-	return BenchmarkResult{N: last.N, T: last.elapsed, Bytes: last.bytes}
+	return BenchmarkResult{N: last.N, T: last.elapsed, Bytes: last.bytes,
+		Extra: last.extra}
 }
 
 // runIterations runs the body 1 time with a fixed count of iterations.
 func runIterations(name string, f func(*B), n int) *B {
 	t := &T{name: name}
-	b := &B{N: n, common: t}
+	b := &B{N: n, common: t, extra: map[string]float64{}}
 	parent := current
 	current = t
 	b.StartTimer()
 	dart.Catch(func() { f(b) })
 	b.StopTimer()
+	t.out.flush()
+	if t.cancel != nil {
+		t.cancel()
+	}
 	for i := len(t.cleanups) - 1; i >= 0; i-- {
 		dart.Catch(t.cleanups[i])
 	}
@@ -877,3 +1099,61 @@ func (f *F) Skip(args ...any)                  { panic(noFuzz) }
 func (f *F) Skipf(format string, args ...any)  { panic(noFuzz) }
 func (f *F) Add(args ...any)                   { panic(noFuzz) }
 func (f *F) Fuzz(body any)                     { panic(noFuzz) }
+func (f *F) ArtifactDir() string               { panic(noFuzz) }
+func (f *F) Attr(key, value string)            { panic(noFuzz) }
+func (f *F) Chdir(dir string)                  { panic(noFuzz) }
+func (f *F) Context() context.Context          { panic(noFuzz) }
+func (f *F) Output() io.Writer                 { panic(noFuzz) }
+func (f *F) Setenv(key, value string)          { panic(noFuzz) }
+func (f *F) TempDir() string                   { panic(noFuzz) }
+
+// CoverBlock holds the coverage of 1 basic block. The numbers count from 1,
+// exactly as an editor counts them, and a column counts bytes.
+type CoverBlock struct {
+	// Line0 is the line of the start of the block.
+	Line0 uint32
+	// Col0 is the column of the start of the block.
+	Col0 uint16
+	// Line1 is the line of the end of the block.
+	Line1 uint32
+	// Col1 is the column of the end of the block.
+	Col1 uint16
+	// Stmts is the count of statements of the block.
+	Stmts uint16
+}
+
+// Cover holds the coverage data of a run.
+type Cover struct {
+	Mode            string
+	Counters        map[string][]uint32
+	Blocks          map[string][]CoverBlock
+	CoveredPackages string
+}
+
+// RegisterCover holds the counters of the coverage of the tests. The function
+// of Go does nothing as well, because the report of Go reads the counters of
+// the runtime.
+func RegisterCover(c Cover) {}
+
+// CoverMode gives the mode of the coverage: "set", "count", or "atomic".
+//
+// gart writes no counter into a package, thus the result is always empty. Go
+// gives the same result for a run with no coverage.
+func CoverMode() string { return "" }
+
+// Coverage gives the part of the statements that the run reached, from 0 to 1.
+//
+// gart writes no counter into a package, thus the result is always 0. Go gives
+// the same result for a run with no coverage.
+func Coverage() float64 { return 0 }
+
+// testBinary marks a run of a test binary. NewM writes it, and the compiler
+// writes the call of NewM into the entry point of each test binary.
+var testBinary bool
+
+// Testing reports whether the code runs inside a test.
+//
+// Go writes the answer at the link of the binary, and gart writes it when the
+// entry point builds the state of the run. Thus a package initializer of a
+// test binary reads false here, and it reads true in Go.
+func Testing() bool { return testBinary }
