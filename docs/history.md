@@ -1282,12 +1282,17 @@ Decision 251 records the change, and `TestWebIO` reads the exact text under
   200 node frame fall from 38.2 microseconds to 20.3, and the whole frame from
   56.9 to 40.0.
 
-**5 defects that the parallel work found.**
+**6 defects that the parallel work found.**
 
 - A promoted member of an unexported embedded type reached no other package.
   The emitter gave it a private Dart name, thus `$net._conn$Close` failed in
   the library of the caller. The privacy of a method now follows the method
   name alone, and an embedded field takes a public name.
+- The fix of that defect made a second 1. A Go struct that embeds the builtin
+  `int` wrote a Dart field of the name `int`, and that name hides the Dart type
+  inside its own class. `compos.go` of the Go test directory holds the shape,
+  and the suite caught it. `int`, `double`, `bool`, and `num` joined the
+  reserved set of the name pass.
 - The address of an index wrote the index with no `$ix` conversion. `GoInt`
   implements `int` on each other target, thus the fault showed itself on
   dart2js alone.
