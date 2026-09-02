@@ -241,7 +241,7 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'bool':
       return _bool(v as bool, letter);
     case 'string':
-      return _string(v as GoString, letter);
+      return _string(v as GoString, verb, letter);
     case 'float32':
     case 'float64':
       return _sign(
@@ -319,7 +319,7 @@ String _bool(bool v, String letter) {
   return '%!$letter(bool=$v)';
 }
 
-String _string(GoString v, String letter) {
+String _string(GoString v, String verb, String letter) {
   switch (letter) {
     case 'v':
     case 's':
@@ -327,9 +327,9 @@ String _string(GoString v, String letter) {
     case 'q':
       return _quote(v);
     case 'x':
-      return _hexBytes(v, false);
+      return _base(_hexBytes(v, false), verb, letter);
     case 'X':
-      return _hexBytes(v, true);
+      return _base(_hexBytes(v, true), verb, letter);
   }
   return '%!$letter(string=${v.toDartString()})';
 }
@@ -503,7 +503,7 @@ String _list(List<Object?> items, TypeDesc? elem, String verb) {
     for (final Object? item in items) {
       bytes.add($ix(item as GoInt) & 0xff);
     }
-    return _string(GoString.fromBytes(bytes), letter);
+    return _string(GoString.fromBytes(bytes), verb, letter);
   }
   final List<String> parts = <String>[];
   for (final item in items) {

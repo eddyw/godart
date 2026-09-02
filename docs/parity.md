@@ -357,6 +357,7 @@ the program, because the server of the overlay recovers no panic and holds no
 | `%#v` | It gives the plain form of `%v`. The Go syntax form needs a printer of its own. |
 | `%#q` | It gives the plain form of `%q`. Go writes a backquote when the text holds none. |
 | `%g` with a precision | The precision reaches no digit. `strconv.FormatFloat` passes the verb to the runtime, and `_float` of the runtime reads the precision for `f` and for `e` alone. |
+| A verb that the type rejects, with a width | The width reaches no text. Go writes `%!s(int=       5)` for `% 8s` of 5, and the runtime writes `%!s(int=5)`. A program that reaches this row already holds a bug. |
 
 `strconv.ParseFloat` stays loose. It reads `double.tryParse` of Dart, thus it
 accepts text with a space around it, it accepts a bare `0x10`, and it reports
