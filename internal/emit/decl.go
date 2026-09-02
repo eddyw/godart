@@ -442,7 +442,26 @@ func structFieldName(f *types.Var, i int) string {
 	if f.Name() == "_" {
 		return fmt.Sprintf("$b%d", i)
 	}
-	return name.Package(f.Name())
+	return fieldBaseName(f)
+}
+
+// fieldBaseName gives the Dart name of 1 struct field. An embedded field takes
+// a public name even when Go does not export it. Go promotes each member of an
+// embedded type across a package boundary, thus a reader of another Dart
+// library names the field, and a private Dart name gives a compile error
+// there.
+func fieldBaseName(f *types.Var) string {
+	if !f.Embedded() {
+		return name.Package(f.Name())
+	}
+	out := name.Public(f.Name())
+	if out == name.Type(f.Name()) {
+		// The Dart class of an unexported Go type already carries the name
+		// with 1 dollar sign. A field of that name would hide the class
+		// inside the body of its own class.
+		out += "$"
+	}
+	return out
 }
 
 // fieldDartName gives the Dart name of a field through its owner type. A
@@ -453,6 +472,14 @@ func fieldDartName(owner types.Type, field string) string {
 	u := types.Unalias(owner)
 	if p, ok := typeset.Core(u).(*types.Pointer); ok {
 		u = types.Unalias(p.Elem())
+	}
+	if st, ok := typeset.Core(u).Underlying().(*types.Struct); ok {
+		for i := range st.NumFields() {
+			if st.Field(i).Name() == field {
+				out = fieldBaseName(st.Field(i))
+				break
+			}
+		}
 	}
 	named, ok := u.(*types.Named)
 	if !ok {
@@ -468,12 +495,16 @@ func fieldDartName(owner types.Type, field string) string {
 }
 
 // methodFuncName builds the name of a method that becomes a top level
-// function. The name stays private when Go does not export the type or the
-// method.
+// function. The name stays private when Go does not export the method.
+//
+// The name of the type does not decide the privacy. An exported type can
+// embed an unexported type, and the method of the embedded type then reaches
+// another package. A private Dart name of another library gives a compile
+// error at that call.
 func methodFuncName(typeName, methodName string) string {
 	n := strings.TrimPrefix(name.Package(typeName), "_") + "$" +
 		strings.TrimPrefix(name.Package(methodName), "_")
-	if !isExported(typeName) || !isExported(methodName) {
+	if !isExported(methodName) {
 		return "_" + n
 	}
 	return n

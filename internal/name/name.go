@@ -106,6 +106,13 @@ func Package(goName string) string {
 	if !token.IsExported(goName) {
 		return "_" + ascii(goName)
 	}
+	return Public(goName)
+}
+
+// Public maps a name that another Dart library must reach, whether or not Go
+// exports it. An embedded field of an unexported type takes this form, because
+// Go promotes each member of that type across a package boundary.
+func Public(goName string) string {
 	if keywords[goName] || reserved[goName] {
 		return goName + "$"
 	}
