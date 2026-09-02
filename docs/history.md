@@ -1182,3 +1182,28 @@ of 20 characters costs 61.4 microseconds, 0.37% of the frame. The normal case
 costs 0.58 microseconds. The read of the optional fields costs 4 times the
 text, and `GoString.fromString` runs 3 to 6 times the cost of `toDartString`.
 `flutter/bench` holds the harness.
+
+**The reconciler of A10 loses.** It costs 1.82 times the plain walk in the case
+that it exists for, and 150 times the signal graph. Decision 249.
+
+**The 16 programs that prove the day.** `make compare PROG=x` runs each 1 with
+the go command and with the Dart output, and it diffs the 2.
+
+| Program | What it proves |
+|---|---|
+| `zipuse` | `archive/zip` writes and reads an archive of 2 files. |
+| `taruse` | `archive/tar` writes and reads a header of the PAX format. |
+| `lzwuse` | `compress/lzw` round trips both bit orders. |
+| `bzip2use` | `compress/bzip2` reads a stream that the `bzip2` command wrote. |
+| `htmltpl` | `html/template` escapes each context, and it blocks a `javascript:` URL. |
+| `xmluse` | `encoding/xml` marshals and unmarshals an attribute, a comment, a byte slice, and a nested struct. |
+| `biguse` | `math/big` holds an `Int`, a `Float` of 200 bits, and a `Rat`. |
+| `strconvquote` | The 13 new names of `strconv`, and a sweep of the whole rune range. |
+| `osextra` | Each new name of `os` and `os/exec`, against a temporary directory. |
+| `httptestextra` | `CloseClientConnections`, `Server.TLS`, and `NewTestServer`. |
+| `tlsvalues` | Each constant of `crypto/tls`, each `String` result, and each fallback branch. |
+| `dartdecl` | A `//gart:dart` declaration of 6 Dart symbols, with a twin file for the go command. |
+| `dartobj` | A `dart.Object` that carries a Dart value through Go, over a JSON round trip. |
+| `blankfunc` | 2 functions of the blank name in 1 package. |
+| `geneq` | `==` and a map key of a generic struct. |
+| `fmthex` | 21 verbs of `fmt` against 7 values, over each flag. |
