@@ -355,3 +355,47 @@ func main() {
 		t.Fatalf("the build rejected a function that only formats a big.Int and an error:\n%v", err)
 	}
 }
+
+// The narrow group of a type assertion must keep each target that the
+// assertion can give. A type that implements the asserted interface and the
+// interface of the value stays in the group, thus a block inside it still
+// reaches the check.
+func TestSyncRejectsABlockingTargetOfATypeAssertion(t *testing.T) {
+	err := buildSync(t, `package main
+
+import "io"
+
+//gart:sync
+type Builder func() string
+
+type Node struct {
+	Build Builder
+}
+
+type slow struct{ ch chan int }
+
+func (s *slow) Write(p []byte) (int, error) { return len(p), nil }
+
+func (s *slow) WriteString(text string) (int, error) {
+	<-s.ch
+	return len(text), nil
+}
+
+func emit(w io.Writer) string {
+	if sw, ok := w.(io.StringWriter); ok {
+		sw.WriteString("x")
+	}
+	return "done"
+}
+
+func text() string { return emit(&slow{ch: make(chan int)}) }
+
+func main() {
+	n := Node{Build: text}
+	println(n.Build())
+}
+`)
+	if err == nil {
+		t.Fatal("the build accepted a function that reaches a Write that blocks")
+	}
+}
