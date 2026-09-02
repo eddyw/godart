@@ -1157,6 +1157,12 @@ repository, and the session deleted it.
 | The type descriptor bytes against the code bytes, for 5 named types | 6,353 against 7,676 |
 | The Dart source of `goruntime` | 6,978 lines in 288 kilobytes |
 
+**The 2026-09-01 date of that table holds.** The Dart source of `goruntime`
+grew with the surface: it reads 8,457 lines in 340 kilobytes on 2026-09-03,
+against the 6,978 lines in 288 kilobytes of the row above. Each other row of
+the table names a speed, and no measurement of 2026-09-03 moved 1 of them by
+more than 2%.
+
 The last 2 rows carry the risk of a large node set. Each named Go type costs
 about 1,271 bytes of descriptor source. A generated set of 300 node types then
 costs about 380 kilobytes of Dart source. The Dart tree shaker drops a
