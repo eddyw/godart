@@ -1346,6 +1346,11 @@ The plan left these points open. The work took the decisions below.
      signal graph stands. A10 is 1.82 times the cost of A5 in the case that it
      exists for, and 150 times the cost of the signal graph.
 
+     **The first of the 2 numbers is wrong. Read decision 253.** It counts the
+     Go build and the Dart walk alone, and the Flutter work of a fresh widget
+     stands in neither. With that work in the sum, A5 costs 1.92 times A10.
+     The second number becomes 76, and it still decides the item.
+
      A build allocates a fresh node object for each node, thus no identity test
      can stop the walk and the diff must read each field. A5 reads 13 fields of
      1 tree for each node, and A10 reads 13 fields of 2 trees before it decides
