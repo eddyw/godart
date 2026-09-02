@@ -9,7 +9,10 @@ section "The corrections" names 3 claims of this file that are false and 1
 conclusion that does not hold. Read that file first.
 
 The file stands from 2026-08-28. The block model changed on 2026-08-29, and 2
-rows below carry the correction. `docs/flutter-first.md` holds the order of the
+rows below carry the correction. **Each line number of this file is stale.** A
+line number rots on the next commit, and the table "The corrections" of
+`docs/flutter-design.md` holds the position of each cited item on 2026-09-01.
+Read the file name and the symbol, and not the number. `docs/flutter-first.md` holds the order of the
 work, and it names the state of 2026-09-01.
 
 Each number comes from a measurement of the Flutter SDK at

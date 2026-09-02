@@ -7,7 +7,8 @@ binding and the measurement of the Flutter SDK. This file holds the order of
 the work, and it takes the target of a client app: a widget, a state, and a
 call of an HTTP API.
 
-Each claim below names a file and a line. The state is of 2026-09-01.
+Each claim below names a file and a symbol. A line number rots on the next
+commit, thus this file names none. The state is of 2026-09-01.
 
 **The state of 2026-09-02.** Milestone 1, milestone 2, and milestone 3 of
 `docs/flutter-design.md` are complete, and the directory `flutter/` holds them.
@@ -22,14 +23,14 @@ Do not plan this work again. The list corrects 2 rows of
 
 | Item | Evidence |
 |---|---|
-| The scheduler is a guest of the Dart event loop. `$schedule` runs the queue until it is empty and returns, and a timer or a future starts it again. Flutter owns the loop already. | `runtime/goruntime/lib/src/sched.dart:125` |
-| A Go function value is a plain Dart closure. Its Dart type is `R Function(P...)` over the Dart form of each Go type. | `internal/emit/type.go:128` |
-| A Dart event that starts Go work needs 2 lines. The finalizer of the runtime already runs `$go(body)` and `$schedule()`. | `runtime/goruntime/lib/src/sched.dart:188` |
-| A Go call of an async Dart API blocks the goroutine and holds no `Future`. `$await` writes a frame, and the event loop wakes it. | `runtime/goruntime/lib/src/sched.dart:240` |
+| The scheduler is a guest of the Dart event loop. `$schedule` runs the queue until it is empty and returns, and a timer or a future starts it again. Flutter owns the loop already. | `$schedule` of `sched.dart` |
+| A Go function value is a plain Dart closure. Its Dart type is `R Function(P...)` over the Dart form of each Go type. | `funcType` of `internal/emit/type.go` |
+| A Dart event that starts Go work needs 2 lines. The finalizer of the runtime already runs `$go(body)` and `$schedule()`. | `_cleanups` of `sched.dart` |
+| A Go call of an async Dart API blocks the goroutine and holds no `Future`. `$await` writes a frame, and the event loop wakes it. | `$await` of `sched.dart` |
 | The output holds no `async` and no `await`. The unwind model replaced that form on 2026-08-29, 1 day after the Flutter research. A function that can block keeps its Dart return type, and the extra cost is about 1.6 nanoseconds for each frame. A build path of Go code thus pays no async cost. | `docs/block-model.md` |
-| An https request verifies the certificate against the trust store of the platform. Only `InsecureSkipVerify` drops the check. | `runtime/goruntime/lib/src/net.dart:347` |
+| An https request verifies the certificate against the trust store of the platform. Only `InsecureSkipVerify` drops the check. | `SecureSocket.secure` and its `onBadCertificate` of `net.dart` |
 | A gzip answer decompresses already. `compress/gzip`, `compress/flate`, and `compress/zlib` read the real Go source, and the client sets `Accept-Encoding` itself. | `docs/support.md`, `docs/parity.md` |
-| A third-party Go module compiles when it stays in the subset. **This row was false until 2026-09-02.** Stage 2 accepted the import, and stage 5 then failed with "the package X has no import prefix", because `compiled` of the driver read the main module and the surface only. Decision 217 fixed it. | `internal/overlay/native.go:82`, `internal/driver/driver.go` |
+| A third-party Go module compiles when it stays in the subset. **This row was false until 2026-09-02.** Stage 2 accepted the import, and stage 5 then failed with "the package X has no import prefix", because `compiled` of the driver read the main module and the surface only. Decision 217 fixed it. | `NativePaths` of `internal/overlay/native.go`, `compiled` of the driver |
 
 ## The compiler work, in order
 
@@ -44,7 +45,8 @@ read of it. Give such a declaration a marker that names a Dart library and a
 Dart name, and emit a direct call of it. A widget then costs 1 Go declaration,
 and no compiler change.
 
-Evidence: `internal/emit/call.go:46`, `docs/what-compiles.md`. Cost: medium.
+Evidence: `intrinsic` and `intrinsicText` of `internal/emit/call.go`, and
+`docs/what-compiles.md`. Cost: medium.
 
 **Status of 2026-09-03. Done.** The directive `//gart:dart` names a Dart
 library and a Dart symbol, and stage 5 writes a direct call of it. The value
@@ -73,8 +75,8 @@ A named type `dart.Object` that emits as `Object?` removes the table, the
 lookup, and the risk of a stale handle. Only `unsafe.Pointer` maps to `Object?`
 today, and stage 2 rejects `unsafe`.
 
-Evidence: `internal/emit/type.go:64`. Cost: small with an int, medium with a
-type.
+Evidence: `dartType` of `internal/emit/type.go`. Cost: small with an int,
+medium with a type.
 
 **Status of 2026-09-02.** Milestone 1 holds no Dart handle in a Go value. The
 host owns each Flutter object, and the Go tree carries data alone.
@@ -114,8 +116,8 @@ The compiler must reject a blocking function in that position, and the
 information already exists: `blockingExports` reads the block set of stage 3 for
 each exported function. The rule is a small pass, and not a new analysis.
 
-Evidence: `internal/emit/machine.go:349`, `:469`, `internal/driver/driver.go:274`.
-Cost: small. This item makes a build method safe.
+Evidence: `blockingExports` of `internal/driver/driver.go`, and the machine of
+`internal/emit/machine.go`. Cost: small. This item makes a build method safe.
 
 **Status of 2026-09-02.** Both flavors work. The first one needed no change,
 and the host of `flutter/goflutter` runs each event through `$go`. The second
@@ -131,7 +133,7 @@ returns. A Flutter app needs the opposite: a `lib/` library, an init that starts
 the runtime and keeps the isolate alive, and a pubspec that holds the Flutter
 dependency.
 
-Evidence: `internal/emit/emit.go:633`, `runtime/goruntime/lib/src/sched.dart:176`.
+Evidence: `writeMain` of `internal/emit/emit.go`, and `$init` of `sched.dart`.
 Cost: small.
 
 **Status of 2026-09-02.** A Go application that is a library package needs no

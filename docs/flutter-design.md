@@ -29,42 +29,43 @@ escapes them.
 
 ### Constraint 1: a Go type is a final Dart class of its own library
 
-Stage 5 writes 1 class head, `final class X {`, at `internal/emit/decl.go:43`.
+Stage 5 writes 1 class head, `final class X {`, at `internal/emit/decl.go`.
 1 Go package maps to 1 Dart library. A `final` class of 1 library accepts no
 subclass in another library, and a probe of `docs/flutter-options.md` proved
 that rule. Thus a Go type is not a Flutter `Widget` today, and no Dart code
 extends a gart class.
 
 The consequence reaches each value that crosses the boundary. A Go struct is
-`X$`, and a Go interface value is `Iface?` at `internal/emit/type.go:85`. A Go
-string is `GoString` at `:111`, and a Go slice is `Slice<T>`. 3 Go types map to
+`X$`, and a Go interface value is `Iface?` at `internal/emit/type.go`. A Go
+string is `GoString`, and a Go slice is `Slice<T>`. 3 Go types map to
 a plain Dart type: `bool`, `float64` to `double`, and each integer type to
-`GoInt` at `:118`. `GoInt` is an extension type over the Dart `int` at
-`runtime/goruntime/lib/src/goint_native.dart:10`, thus it erases on the Flutter
+`GoInt`. `GoInt` is an extension type over the Dart `int` at
+`runtime/goruntime/lib/src/goint_native.dart`, thus it erases on the Flutter
 target and costs nothing.
 
 ### Constraint 2: a function that can block gives a wrong answer to Dart
 
 The emitted Dart holds no `Future` and no `await`. A function that can block
 writes its locals to a frame, sets `$blocked`, and returns the zero value:
-`internal/emit/machine.go:349`. Only a Go caller tests that field, at `:469`.
+`machineSave` of `internal/emit/machine.go`. Only a Go caller tests that field,
+and `resume` of the same file reads it.
 
 A probe proved the 2 failures. A Go `Build` method that reads a nil channel
 gives `null` to a Dart caller, and `$blocked` holds the frame. A Go `Build`
 method that reads a real channel gives the Dart caller a null check error from
-`runtime/goruntime/lib/src/chan.dart:61`, which names no Go position.
+`runtime/goruntime/lib/src/chan.dart`, which names no Go position.
 
 A Flutter `build` method must be synchronous, and `StatefulElement.build` calls
 `state.build(this)` synchronously at `widgets/framework.dart:5944`. Thus a Go
 function in a build position must never block, and the compiler must prove it.
 The information already exists: `blockingExports` of
-`internal/driver/driver.go:274` writes the list into the archive. A probe of a
+`internal/driver/driver.go` writes the list into the archive. A probe of a
 Go type with 2 methods that block gave the archive entry
 `["Blocker.Build", "Blocker.Silent"]`.
 
 ### Constraint 3: the Go scheduler is a guest of the Dart event loop
 
-`$schedule` at `runtime/goruntime/lib/src/sched.dart:125` runs the run queue
+`$schedule` at `runtime/goruntime/lib/src/sched.dart` runs the run queue
 until it is empty, and it returns. A timer or a future calls `$wake`. Flutter
 owns the loop already, and it needs no change.
 
@@ -90,8 +91,8 @@ widget test. It stood outside the repository, and the session deleted it.
 | A bodyless Go function of package A, that package B calls, compiles. Stage 5 writes `$flutter.Text(GoString.fromString('hello'))`, and the body panics. `go build` rejects the same package with "missing function body". | Passes | None |
 
 The probe corrects 1 statement of `docs/flutter-first.md`. `checkBodyless` at
-`internal/verify/verify.go:211` rejects a read of a bodyless function of the
-**same** package only, because `bodyless` at `:44` reads the files of 1
+`checkBodyless` of `internal/verify/verify.go` rejects a read of a bodyless
+function of the **same** package only, because `bodyless` reads the files of 1
 package. A cross-package call already reaches a correct Dart call site. Thus
 item 1 of `docs/flutter-first.md` is smaller than the file states.
 
@@ -191,7 +192,7 @@ mark that needs a note carries 1, and "The notes of the matrix" holds the text.
     screen.
 12. **The error boundary.** A Go panic throws `GoPanic`, a Dart exception.
     `ComponentElement.performRebuild` at `widgets/framework.dart:5823` catches
-    it and calls `ErrorWidget.builder` at `:5838`. A probe proved the path. A6
+    it and calls `ErrorWidget.builder` of the same file. A probe proved the path. A6
     holds no `ComponentElement`, thus it needs an error boundary of its own.
 
 ## The approaches
@@ -216,13 +217,17 @@ func (c *Counter) node() dart.Object {
 **The state model.** The state is a plain Go struct. Go rebuilds the handle
 tree at each pass, and the host holds no Go value.
 
-**The compiler work.** `intrinsic` at `internal/emit/call.go:124` is a flat
-switch on the name of an interop function, and `intrinsicText` at `:211` holds
-132 cases. `internal/overlay/std/syscall/dart/dart.go` holds 132 Go stubs. A
-handle needs a named Go type whose Dart type is `Object?`, and only
-`unsafe.Pointer` gives that type at `internal/emit/type.go:115`. Stage 2
-rejects `unsafe` at `internal/verify/verify.go:105`. A callback with a result
-needs the rule of constraint 2.
+**The compiler work.** `intrinsic` of `internal/emit/call.go` is a flat switch
+on the name of an interop function, and `intrinsicText` holds 1 case for each
+Go stub of `internal/overlay/std/syscall/dart/dart.go`. The 2 counts were 132
+on 2026-08-28, and each 1 reads 174 on 2026-09-03.
+
+A handle needs a named Go type whose Dart type is `Object?`. That was the whole
+cost of this row, and 2026-09-03 paid it: `//gart:dart` gives an external Dart
+declaration, and `dart.Object` of `syscall/dart` gives the type. Read decision
+239 and decision 240. `unsafe.Pointer` was the only such type before that day,
+and stage 2 still rejects `unsafe`. A callback with a result needs the rule of
+constraint 2.
 
 **The runtime cost.** Each property crosses as a string key. A text property
 pays 47.1 nanoseconds for `GoString.fromString`.
@@ -266,10 +271,10 @@ constructor, thus the state moves to a second Go type. The Go source then holds
 2 types for 1 screen, exactly as Dart does.
 
 **The compiler work.** The largest of the 13. Stage 5 needs a second class
-shape. `decl.go:43` writes the head, `:48` a final field, and `:56` a const
-named constructor with `required` and a default. `:202` drops the equality
-operations, and `:250` writes `@override` and the Dart member name.
-`paramList` at `:466` and the composite literal of `internal/emit/expr.go:662`
+shape. `structClass` of `decl.go` writes the head, a final field, and a const
+named constructor with `required` and a default. `writeEqual` of the same file
+drops the equality operations, and `method` writes `@override` and the Dart
+member name. `paramList` and the composite literal of `internal/emit/expr.go`
 each need a named argument. Stage 2 needs 3 rules, and stage 3 needs the root
 rule of constraint 2.
 
@@ -314,7 +319,7 @@ func (c *Counter) Build(ctx dart.Context) dart.Node {
 it calls `setState` after each Go event.
 
 **The compiler work.** None in the 6 stages. The driver at
-`internal/driver/driver.go:504` must write the extra file into the output
+`internal/driver/driver.go` must write the extra file into the output
 package. `go/packages` parses each comment at `packages.go:774`, thus a
 directive needs no loader change.
 
@@ -370,9 +375,10 @@ func (g *Gauge) PerformLayout() { g.SetSize(g.Constraints().Biggest()) }
 **The state model.** The Go type is the Dart `State` or the Dart
 `RenderObject`, thus the state model is the Flutter model.
 
-**The compiler work.** `decl.go:43` writes the superclass, and `:250` writes
+**The compiler work.** `structClass` of `decl.go` writes the superclass, and
+`method` writes
 `@override` and the Dart member name. `internal/name/name.go` needs a map from
-a Go method name to a Dart member name. `internal/emit/emit.go:570` needs an
+a Go method name to a Dart member name. `internal/emit/emit.go` needs an
 import of a Dart package URI. A super call has no Go form, thus `dart.Super`
 becomes a new intrinsic. The marker must select 1 of 3 Dart relations:
 `extends`, `implements`, or `with`.
@@ -397,7 +403,7 @@ Cons:
 **The mechanism.** Go declares an immutable tree of plain Go structs. 1 Dart
 host reads the tree and builds real Flutter widgets from it. The Go tree
 crosses as an `Iface` pair, and the host reads `Iface.desc.name` at
-`runtime/goruntime/lib/src/iface.dart:124`.
+`runtime/goruntime/lib/src/iface.dart`.
 
 ```go
 type Counter struct{ n int }
@@ -424,8 +430,8 @@ case 'example.com/app/ui.Button':
 holds this exact shape, and it works.
 
 **The compiler work.** None, when the Go application is a library package. A
-`package main` holds no library URI at `internal/driver/driver.go:504`, and
-`writeMain` at `internal/emit/emit.go:634` writes `bin/main.dart`. Thus
+`package main` holds no library URI at `internal/driver/driver.go`, and
+`writeMain` at `internal/emit/emit.go` writes `bin/main.dart`. Thus
 `package main` needs item 4 of `docs/flutter-first.md`, at a small cost.
 
 **The runtime cost.** Measured. A Go tree of 200 nodes with no text work costs
@@ -588,8 +594,8 @@ cross-package read of a bodyless function:
 sequence over opaque handles.
 
 **The compiler work.** Item 1 and item 2 of `docs/flutter-first.md`. A marker
-that stage 5 reads, an import of a Dart URI at `internal/emit/emit.go:570`, a
-handle type at `internal/emit/type.go:115`, and the value boundary of item 5.
+that stage 5 reads, an import of a Dart URI at `internal/emit/emit.go`, a
+handle type at `internal/emit/type.go`, and the value boundary of item 5.
 
 **The runtime cost.** 1 Dart call for each Go call, with the conversion of each
 argument.
@@ -707,9 +713,10 @@ Cons:
   new)` is false between 2 frames even when each field matches. No identity
   test can stop the walk, and the diff must compare each field.
 
-  The earlier text named a copy of a box at `internal/emit/iface.go:236` as the
-  cause. 2 parts of that are wrong. `box` stands at `internal/emit/iface.go:791`,
-  and `:236` writes the descriptor of a map. The rule is also the opposite: a
+  The earlier text named a copy of a box at `internal/emit/iface.go` as the
+  cause. 2 parts of that are wrong. `box` stands at `internal/emit/iface.go`,
+  and line 236 of that file wrote the descriptor of a map. The rule is also
+  the opposite: a
   composite literal takes no copy, and the comment of that function names a
   widget tree as exactly the case that it holds at 1 object for each node.
 - **Measured 2026-09-03. A10 loses in each case, and it has no case left.**
@@ -905,7 +912,7 @@ The 3 best are A13, A2, and A8. The table judges each 1 against 5 Go idioms.
 | A struct with methods | Full. The state is a plain Go struct, and `Build` is a method with a pointer receiver. | Broken. A const constructor needs a final field, thus a method must not write a field. The state moves to a second Go type. | Full for the state. The widget is a call, and not a struct. |
 | A channel | Partial. A goroutine sends an update, and the receiver marks the tree dirty. `Build` must not read a channel. | Partial. The same rule holds. | Partial. The same rule holds. |
 | `context.Context` | Full. A background call takes a context, and `defer cancel()` works since 2026-08-29. | Full | Full |
-| An interface | Full. `ui.Node` is a Go interface, and a type switch over a node is plain Go. | Broken. A Go interface value is `Iface?` at `internal/emit/type.go:85`, and a Dart `List<Widget>` needs a `Widget`. | Partial. A handle is opaque, thus a Go interface over handles gives no type test. |
+| An interface | Full. `ui.Node` is a Go interface, and a type switch over a node is plain Go. | Broken. A Go interface value is `Iface?` at `internal/emit/type.go`, and a Dart `List<Widget>` needs a `Widget`. | Partial. A handle is opaque, thus a Go interface over handles gives no type test. |
 | A goroutine that owns state | Broken. `Build` runs on the Dart stack and must not block, thus it cannot ask a goroutine for a value. | Broken. The same rule holds. | Broken. The same rule holds. |
 
 The 1 idiom that each 1 breaks:

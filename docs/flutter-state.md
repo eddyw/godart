@@ -137,8 +137,8 @@ this form.
 **A struct tag would give `c.n++`, and it needs stage 5.** Dart holds a real
 setter and Go holds none, thus stage 5 can write a getter and a setter pair for
 a marked field. The cost is 1 split: under `go test` the value matches and the
-notification does not. `FieldDesc` already carries the raw tag at
-`internal/emit/iface.go:236`, thus the mechanism exists.
+notification does not. `fieldDescs` of `internal/emit/iface.go` already writes
+the raw tag into each `FieldDesc`, thus the mechanism exists.
 
 The limit of a setter is the limit of a signal. `c.items[0] = y`, `c.m["k"] = v`,
 and `*c.ptr = v` each write through the field, and no setter of any language
@@ -177,8 +177,8 @@ const widget stands at the end of that road. Only the approach that generates a
 Dart widget class at build time reaches a const subtree.
 
 **For the compiler: the marker is not needed, because the compiler already
-sees it.** The box of an interface value copied the struct at
-`internal/emit/iface.go:774`. A composite literal builds a value that no other
+sees it.** The box of an interface value copied the struct in `box` of
+`internal/emit/iface.go`. A composite literal builds a value that no other
 expression names, thus the copy is dead. The rule needs no annotation, and a
 measure of the counter application gives:
 
