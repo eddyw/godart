@@ -25,8 +25,24 @@ make build                          # from the root of the repository
 cd flutter/example/counter
 ./build.sh                          # go vet, go test, and gart build into gen
 flutter test                        # 6 widget tests
-flutter run                         # on a device or a simulator
 ```
+
+Run `./build.sh` again after each change of the Go source.
+
+`flutter test` needs no platform runner. `flutter run` needs one, and git holds
+no such directory, because `flutter create` writes each file of it.
+`example/platform.sh` writes the runner and cleans the template files:
+
+```sh
+cd flutter/example
+./platform.sh counter macos         # or ios, android, linux, windows, web
+cd counter
+flutter run -d macos
+```
+
+The script also gives a macOS runner the entitlement
+`com.apple.security.network.client`. The sandbox of macOS blocks each outgoing
+connection without it, thus `apilist` and `form` reach no server.
 
 `example/apilist` runs the same way, and it holds 6 widget tests. It reads the
 issue list of `golang/go` over https, it decodes the answer into a Go struct,
