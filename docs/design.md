@@ -58,6 +58,11 @@ clear error and a source position. The verifier rejects:
   "Standard library" section for the rule.
 - A read of `embed.New` in a file that holds no `//go:embed` directive. The
   real package `embed` of Go holds no such name.
+- A read of a function declaration that holds no body. A `//gart:dart`
+  directive on such a declaration lifts the rejection. Read "An external Dart
+  declaration".
+- A `//gart:dart` declaration that names a method, a type parameter, a variadic
+  parameter, more than 1 result, or a type outside the value boundary.
 
 `internal/verify` holds a test for each rule. Read that package for the exact
 list, because it is the authority.
@@ -118,6 +123,52 @@ list, because it is the authority.
 - If only a function body of a dependency changed, the export hash of the
   dependency stays equal. Then the dependents keep their cache. This mechanism
   is the early cutoff.
+
+## An external Dart declaration
+
+`intrinsic` of stage 5 is a flat switch on the name of each interop function of
+`syscall/dart`, thus each new Dart call costs an edit of the compiler. A
+binding of a large Dart API does not fit in such a switch.
+
+A Go function declaration with no body already parses. The directive
+`//gart:dart` on such a declaration names a Dart library and a Dart symbol, and
+stage 5 writes a direct call of it.
+
+```go
+//gart:dart dart:math max
+func dartMax(a, b float64) float64
+```
+
+The output holds `import 'dart:math' as $d0;` and the body
+`return $d0.max(a, b);`. `dart:core` takes no prefix and no import, because a
+prefixed import of it hides the plain names and `double` and `String` would
+leave the file.
+
+**The value boundary.** The call holds no type descriptor, thus each parameter
+type and the result type must hold 1 Dart form.
+
+| Go | To Dart | From Dart |
+|---|---|---|
+| `bool` | The value | The value |
+| `float64` | The value | The value |
+| `int` | The value. `GoInt` implements the Dart `int`. | `$gi(...)` |
+| `string` | `.toDartString()` | `GoString.fromString(...)` |
+| `dart.Object` | The value. The Dart form of the type is `Object?`. | The value |
+
+Stage 2 rejects each other type. A wider set needs a conversion table, and a
+wrong conversion gives a wrong value with no report.
+
+**The twin file.** The go command rejects a function with no body, thus a
+module that holds such a declaration needs a second file behind the tag
+`!dart`. `testdata/programs/dartdecl` and `testdata/programs/dartobj` each hold
+that pair, and `make compare` runs the Go form and the Dart form and diffs the
+2.
+
+`dart.Object` of `syscall/dart` carries 1 Dart object through Go. A Go program
+reads no field of such a value and calls no method of it, and only a Dart
+declaration gives 1. `syscall/dart` carries `//go:build dart`, thus a module
+that names the type needs an alias of its own in the twin file. Read decision
+239 and decision 240.
 
 ## The map of a package
 
