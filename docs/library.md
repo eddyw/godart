@@ -332,6 +332,100 @@ and the tzset chain of Go. The overlay of `time/tzdata` holds the generated
 the subset holds no linkname directive. The programs `tzuse` and `tzdatause`
 and the test `TestZoneinfoZip` prove the parity. Read decision 205.
 
+## The 2 patched packages of 2026-09-03
+
+`archive/tar` and `math/big` each read the real Go source, and a patch replaces
+the files that reach outside the surface.
+
+**`archive/tar`** takes 3 patch files, and each 1 is empty. `stat_unix.go`
+reads `syscall.Stat_t` and `os/user`, and `stat_actime1.go` and
+`stat_actime2.go` each read `syscall.Stat_t`. The variable `sysStat` of
+`common.go` then stays nil, and `FileInfoHeader` already tests it for nil. A
+header thus carries no owner name and no group name, exactly as Go behaves on
+a platform with no such file.
+
+**`math/big`** takes 2 patch files. `arith_decl.go` declares 6 functions with
+no body, because an assembly file of each architecture holds the code. Go ships
+the pure Go form of the same 6 behind the tag `math_big_pure_go`, and `arith.go`
+holds each `_g` function that the form calls. The patch writes those 6 calls.
+`arith_amd64.go` reads `internal/cpu` for the ADX instruction, and its patch
+gives the flag the value false.
+
+The result needs no new interop and no Dart arithmetic. A Dart form of the same
+word operations would be a second implementation to keep correct, and the Go
+form is correct already. `testdata/programs/biguse` proves an `Int`, a `Float`
+of 200 bits, and a `Rat`.
+
+## The value surface of crypto/tls
+
+`dart:io` owns the TLS handshake, thus the overlay is a thin cover over a host
+connection. The package holds 115 of the 263 names of Go, and the split follows
+1 rule: a name that carries a value enters, and a name that would change the
+handshake stays out.
+
+`values.go` holds each cipher suite constant, `VersionSSL30`, `VersionName`,
+and the 5 enumerations `CurveID`, `SignatureScheme`, `ClientAuthType`,
+`RenegotiationSupport`, and `QUICEncryptionLevel` with the `String` method of
+each 1. It also holds the struct `CipherSuite` and the 3 functions
+`CipherSuites`, `InsecureCipherSuites`, and `CipherSuiteName`.
+
+Each `String` method is a switch, and not a generated table. Each range arm of
+`common_string.go` of Go covers defined constants alone, thus a switch gives
+the same text for each input, the fallback included. The package holds no
+`fmt`, thus a local `hex4` writes the `%04X` of a fallback.
+
+A `Config` field that would change the handshake stays out, because such a
+field can only report support and change nothing.
+`Config.PreferServerCipherSuites` is the 1 field that enters: Go documents it
+as ignored since Go 1.18, thus an inert field reproduces Go exactly.
+
+`testdata/programs/tlsvalues` prints each value, each `String` result, the 2
+cipher suite lists in full, and each fallback branch.
+
+## The permission and the owner of a file
+
+`dart:io` names no permission bit, no owner, and no hard link. `os` reaches the
+3 through a command of the platform, and `attr.go` of the overlay holds them.
+
+| Name | The form |
+|---|---|
+| `Chmod` | `Process.runSync('chmod', ...)` |
+| `Chown` and `Lchown` | `Process.runSync('chown', ...)` |
+| `Link` | `Process.runSync('ln', ...)`. The `Link` of `dart:io` is a symbolic link. |
+| `Chtimes` | `setLastAccessedSync` and `setLastModifiedSync` of `dart:io`. The precision is 1 millisecond. |
+| `Truncate` | `truncateSync` of a `RandomAccessFile`. |
+
+`Stat` still reports a fixed mode, because `dart:io` gives no permission bit
+back. `docs/parity.md` holds that row and the 5 that stand with it.
+
+A name that needs a file descriptor stays out. The runtime names a file by a
+`RandomAccessFile` object alone, thus `File.Fd`, `File.SyscallConn`, `NewFile`,
+`ProcAttr.Files`, and `Cmd.ExtraFiles` reach no form. A name that needs a wait
+status or a resource usage stays out for the same kind of cause:
+`process.dart` reads `Process.exitCode` and nothing else.
+
+## The connection tracking of httptest
+
+`Server.CloseClientConnections` needs the server to hold each accepted
+connection. The overlay of `net/http` carries no `ConnState` hook, and a change
+of it would reach each caller of the server.
+
+`httptest` wraps the listener and each connection itself. A `sync.Once` in the
+wrapper makes the close idempotent, thus a close from a handler and a close
+from `CloseClientConnections` cannot close 1 Dart socket handle 2 times.
+
+The wrapper keys a connection by an `int`, and not by the connection. The
+runtime hashes a map key by its structure, and a `*tls.Conn` changes its byte
+counters while it stands in the map. A key of the connection thus reached no
+end in `Iface.hashCode`.
+
+`NewTestServer` binds 2 loopback listeners inside `Client()` and gives the
+client a transport that rewrites the host of the URL alone. Go runs an
+in-memory network there, and the surface holds no `net.Pipe` and no dial hook.
+The contract that a caller reads holds: `URL` is `http://example.com`,
+`Listener` stays nil, and a request of any host reaches the handler with the
+host of the caller.
+
 ## The read and the write of reflect
 
 The `reflect` overlay held a description of a type only. M18 gave it a read and
