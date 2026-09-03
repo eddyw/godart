@@ -43,6 +43,7 @@ func (b *builder) stmt(s ast.Stmt) []ir.Stmt {
 		out = append(own, out...)
 	}
 	if s != nil {
+		out = b.order(out, s.Pos())
 		for _, x := range out {
 			ir.SetPos(x, s.Pos())
 		}
@@ -223,19 +224,7 @@ func (b *builder) assign(s *ast.AssignStmt) []ir.Stmt {
 		return b.assignMulti(s)
 	}
 	if s.Tok == token.DEFINE {
-		var out []ir.Stmt
-		for i, lhs := range s.Lhs {
-			id, _ := lhs.(*ast.Ident)
-			obj, _ := b.info.Defs[id].(*types.Var)
-			if obj == nil {
-				out = append(out, b.assignOne(lhs, s.Rhs[i])...)
-				continue
-			}
-			init := b.copyPoint(b.exprAs(s.Rhs[i], obj.Type()))
-			v := b.declareLocal(obj, obj.Name())
-			out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: init})
-		}
-		return out
+		return b.define(s)
 	}
 	if len(s.Lhs) == 1 {
 		return b.assignOne(s.Lhs[0], s.Rhs[0])
@@ -244,7 +233,20 @@ func (b *builder) assign(s *ast.AssignStmt) []ir.Stmt {
 	// before the first write. The stage hoists both into temporary variables,
 	// and it copies a struct value, because a write to a location writes into
 	// its object.
-	var out []ir.Stmt
+	//
+	// Each call of the right side stands in front of that work, because gc
+	// runs each call first and reads each other operand after it.
+	kinds := make([]types.Type, len(s.Rhs))
+	values := make([]ir.Expr, len(s.Rhs))
+	for i, rhs := range s.Rhs {
+		t := b.typeOf(s.Lhs[i])
+		if isBlank(s.Lhs[i]) {
+			t = b.typeOf(rhs)
+		}
+		kinds[i] = t
+		values[i] = b.copyPoint(b.exprAs(rhs, t))
+	}
+	out := b.orderValues(values, s.Pos())
 	sets := make([]func(ir.Expr) ir.Stmt, len(s.Lhs))
 	for i, lhs := range s.Lhs {
 		if isBlank(lhs) {
@@ -256,20 +258,55 @@ func (b *builder) assign(s *ast.AssignStmt) []ir.Stmt {
 	}
 	tmps := make([]ir.Expr, len(s.Rhs))
 	for i, rhs := range s.Rhs {
-		t := b.typeOf(s.Lhs[i])
-		if isBlank(s.Lhs[i]) {
-			t = b.typeOf(rhs)
-		}
-		v := b.tempVar(rhs.Pos(), "a", t)
-		out = append(out, &ir.Declare{Vars: []*ir.Var{v},
-			Init: b.copyPoint(b.exprAs(rhs, t))})
-		tmps[i] = &ir.Ident{Name: v.Name, Type: t}
+		v := b.tempVar(rhs.Pos(), "a", kinds[i])
+		out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: values[i]})
+		tmps[i] = &ir.Ident{Name: v.Name, Type: kinds[i]}
 	}
 	for i := range s.Lhs {
 		if sets[i] == nil {
 			continue
 		}
 		out = append(out, sets[i](b.copyPoint(tmps[i])))
+	}
+	return out
+}
+
+// define writes a short variable declaration. Go reads each value on the right
+// before it binds the names, thus each call of the list runs in front of each
+// other operand.
+//
+// The left side may hold a name that already exists. Go declares only the new
+// names, and each other name takes an assignment. The 2 forms mix in 1
+// statement, and each 1 reads its value from the same list.
+func (b *builder) define(s *ast.AssignStmt) []ir.Stmt {
+	objs := make([]*types.Var, len(s.Lhs))
+	for i, lhs := range s.Lhs {
+		id, _ := lhs.(*ast.Ident)
+		objs[i], _ = b.info.Defs[id].(*types.Var)
+	}
+	values := make([]ir.Expr, len(s.Rhs))
+	for i, lhs := range s.Lhs {
+		switch {
+		case objs[i] != nil:
+			values[i] = b.copyPoint(b.exprAs(s.Rhs[i], objs[i].Type()))
+		case isBlank(lhs):
+			values[i] = b.expr(s.Rhs[i])
+		default:
+			values[i] = b.copyPoint(b.exprAs(s.Rhs[i], b.typeOf(lhs)))
+		}
+	}
+	out := b.orderValues(values, s.Pos())
+	for i, lhs := range s.Lhs {
+		switch {
+		case objs[i] != nil:
+			v := b.declareLocal(objs[i], objs[i].Name())
+			out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: values[i]})
+		case isBlank(lhs):
+			out = append(out, &ir.ExprStmt{X: values[i]})
+		default:
+			_, _, set := b.lvalue(lhs)
+			out = append(out, set(values[i]))
+		}
 	}
 	return out
 }
@@ -363,6 +400,7 @@ func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 	var pre []ir.Stmt
 	switch c := call.(type) {
 	case *ir.Call:
+		pre = append(pre, b.orderCall(c, s.Pos())...)
 		switch fun := c.Fun.(type) {
 		case *ir.Method:
 			hoisted, recv := b.forceHoist(b.receiverValue(fun), s.Pos(), "dr")
@@ -377,6 +415,7 @@ func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 		}
 		pre = append(pre, b.hoistArgs(c.Args, s.Pos())...)
 	case *ir.Builtin:
+		pre = append(pre, b.orderValues(c.Args, s.Pos())...)
 		pre = append(pre, b.hoistArgs(c.Args, s.Pos())...)
 	default:
 		if call != nil {
@@ -394,6 +433,7 @@ func (b *builder) goStmt(s *ast.GoStmt) []ir.Stmt {
 	var pre []ir.Stmt
 	switch c := call.(type) {
 	case *ir.Call:
+		pre = append(pre, b.orderCall(c, s.Pos())...)
 		switch fun := c.Fun.(type) {
 		case *ir.Method:
 			hoisted, recv := b.forceHoist(b.receiverValue(fun), s.Pos(), "gr")
@@ -408,6 +448,7 @@ func (b *builder) goStmt(s *ast.GoStmt) []ir.Stmt {
 		}
 		pre = append(pre, b.hoistArgs(c.Args, s.Pos())...)
 	case *ir.Builtin:
+		pre = append(pre, b.orderValues(c.Args, s.Pos())...)
 		pre = append(pre, b.hoistArgs(c.Args, s.Pos())...)
 	default:
 		if call != nil {
@@ -579,7 +620,12 @@ func (b *builder) ifStmt(s *ast.IfStmt) []ir.Stmt {
 // variable holds a reference, and the copy of Dart then shares 1 box, thus the
 // third clause takes a new box in front of it.
 func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
+	// The first clause and the third clause each stand inside the header of
+	// the Dart loop, thus no temporary variable of the order pass can stand in
+	// front of them. Read `docs/parity.md`.
+	b.noOrder++
 	out := b.stmt(s.Init)
+	b.noOrder--
 	loop := &ir.For{Label: label}
 	if len(out) == 1 {
 		if d, ok := out[0].(*ir.Declare); ok {
@@ -606,7 +652,9 @@ func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
 		}
 	}
 	if s.Post != nil {
+		b.noOrder++
 		post = append(post, b.stmt(s.Post)...)
+		b.noOrder--
 	}
 	if len(post) == 1 {
 		loop.Post = post[0]

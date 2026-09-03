@@ -15,6 +15,7 @@ The state of 2026-09-03. Each row names the section that holds the detail.
 | A goroutine, a channel, and a `select` | Present. A function that blocks unwinds each frame to the scheduler, and the output holds no `Future` and no `await`. |
 | A parallel run | Out. All Go code runs in 1 isolate. `GOMAXPROCS` and `NumCPU` give 1, and a goroutine with no block operation never gives up control. |
 | The order of a map | The order of the writes. Go gives a random order. |
+| The order of the evaluation of an expression | Equal to gc for each statement. A for clause, the value of a case, and the initializer of a package variable each still read a plain operand in front of a call. |
 | A `select` with 2 ready cases | The first case in source order. Go takes a random one. |
 | `sync.RWMutex` | A read lock is equal to a write lock. `sync.Map` is a plain map, and it needs no lock. |
 | A pointer | Present, also to a value that is not a struct. `&*p` and a conversion between 2 struct types stay out. |
@@ -1268,6 +1269,70 @@ rule.
 
 The left side of `:=` accepts only a name, thus a field and an index never
 appear there.
+
+## The order of the evaluation
+
+The Go specification orders each function call, each method call, each receive
+operation, and each binary logical operation of an expression. That order is
+lexical, from left to right. The specification leaves the order of each other
+operand open, thus 2 correct compilers can differ.
+
+gc closes the gap 1 way. Its order pass writes each such operation into a
+temporary variable in front of the statement. Each other operand then reads its
+value after the operations ran, and real Go source depends on that.
+`crypto/x509.ParseOID` holds `return o, o.unmarshalOIDText(oid)`. The method
+writes the value that the first result reads.
+
+`internal/normalize/order.go` holds the same rule. The pass walks the operands
+of 1 statement in the order of the evaluation, and it marks each read that no
+operation consumed. A call behind such a read must run first, thus the pass
+writes each operation of the statement into a temporary variable, in lexical
+order. A statement that holds no such read keeps its form. Thus a list of 1
+operand, and a list whose operands in front of each call are all constants,
+each take no variable. Read decision 324.
+
+The pass writes a variable for the same set of operations that gc writes 1 for:
+a call, a method call, a channel read, a slice expression, a logical `&&` or
+`||`, and the builtins `append`, `cap`, `complex`, `copy`, `imag`, `len`,
+`make`, `max`, `min`, `new`, `real`, and `recover`.
+`cmd/compile/internal/walk/order.go` holds that list.
+
+The cost is about 3 percent more lines of Dart. `testdata/programs/rpcuse` gave
+201552 lines before the pass and 208091 lines after it, with 5926 new local
+variables.
+
+`testdata/programs/evalorder` proves the rule for a result list, a call, a short
+variable declaration, a parallel assignment, a binary operation, a composite
+literal, an index, a builtin, a method receiver, a send statement, a defer
+statement, and a function that gives up control.
+
+### The positions that still differ
+
+5 positions still differ. Each row holds a witness, and `set(n)` writes the
+variable `x` and gives 0.
+
+| Position | The witness | Go | godart |
+|---|---|---|---|
+| The condition of a for loop | `for x+set(3) < 3 { n++ }` | The condition reads the new `x`, thus the body runs 0 times | The condition reads the old `x`, thus the body runs 1 time |
+| The first clause and the third clause of a for loop | `for i := 0; i < 2; i, _ = x, set(5)` | The third clause reads the new `x`, thus the loop runs 1 time | The third clause reads the old `x`, thus the loop runs 2 times |
+| The value of a case | `switch 3 { case x + set(3): }` | The case matches | The case does not match |
+| The initializer of a package variable | `var sum = gx + gset(2)` | `sum` is 2 | `sum` is 1 |
+| A conversion of a string, of a byte slice, or of a rune slice | `fmt.Println(x, string([]byte(s)), grow())`, where `grow` writes `s` | The conversion reads the old `s` | The conversion reads the new `s` |
+
+The condition and the third clause of a for loop each run more than 1 time,
+and the value of a case runs only until a case matches. A temporary variable
+in front of the statement would change the count of the runs. The first clause
+stands in the header of the Dart loop, because Go 1.22 gives each pass of the
+loop its own copy of the variable. gc holds each of the 4 in the init list of
+the node, and Dart holds no such list.
+
+The initializer of a package variable reaches a Dart routine, thus a variable
+can stand there. Stage 4 builds such an initializer outside the statement path,
+and the pass does not reach it.
+
+gc writes the result of a conversion of a string into a temporary variable,
+thus the conversion reads its operand early. Stage 4 reads such a conversion as
+a plain operand, thus it reads the operand late.
 
 ## The order of a package variable
 

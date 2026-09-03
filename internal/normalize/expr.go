@@ -534,6 +534,10 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	prev := b.fn
 	prevPending := b.pending
 	b.pending = nil
+	// The body of a literal is a function of its own, thus the order pass runs
+	// over it also inside the header of a loop.
+	prevNoOrder := b.noOrder
+	b.noOrder = 0
 	inner := &ir.Func{Params: b.varsOf(sig.Params()), Results: b.results(sig)}
 	b.fn = inner
 	out.Params = inner.Params
@@ -543,6 +547,7 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	out.Captured = b.litCaptures(e)
 	b.fn = prev
 	b.pending = prevPending
+	b.noOrder = prevNoOrder
 	if !out.Async {
 		return out
 	}

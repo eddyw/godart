@@ -2878,6 +2878,69 @@ The plan left these points open. The work took the decisions below.
      argument gives no defect of its own, and 1 rule for each call site is
      easier to hold.
 
+324. gart reads each operand of an expression from left to right, and gc does
+     not. The Go specification orders 4 operations of an expression from left
+     to right. The 4 are a function call, a method call, a receive operation,
+     and a binary logical operation. The specification leaves the order of
+     each other operand open, thus 2 correct compilers can differ.
+
+     gc closes that gap 1 way. Its order pass writes each such operation into a
+     temporary variable in front of the statement, thus each other operand
+     reads its value after the operations ran. `return x, f()` becomes
+     `t := f(); return x, t`. Real Go source depends on it: the port of
+     `crypto/x509.ParseOID` gave an empty OID, because the source holds
+     `return o, o.unmarshalOIDText(oid)` and the method writes the value that
+     the first result reads.
+
+     `internal/normalize/order.go` holds the same rule now. The pass walks the
+     operands of 1 statement in the order of the evaluation, and it marks each
+     read that no operation consumed. A call behind such a read must run
+     first, thus the pass writes each operation of that statement into a
+     temporary variable, in lexical order. Only that 1 shape differs. A call
+     in front of a read already matches, because both forms run the call
+     first, thus a statement with no read in front of a call keeps each node
+     of its tree.
+
+     The pass runs on the result list of a return, on an expression statement,
+     on a declaration, on an assignment, on the condition of an if, and on a
+     send. A parallel assignment, a short variable declaration, a defer
+     statement, and a go statement each hold a list of their own, and each 1
+     reads that list first. `b.stmt` of stage 4 splices the declarations in
+     front of the statement that needs them.
+
+     The set of the operations follows gc and not the specification, because
+     the specification names only 4 and gc writes a variable for more.
+     `cmd/compile/internal/walk/order.go` holds the list: a call, a method
+     call, a channel read, a slice expression, a logical `&&` or `||`, and the
+     builtins `append`, `cap`, `complex`, `copy`, `imag`, `len`, `make`,
+     `max`, `min`, `new`, `real`, and `recover`. A measurement proved each
+     open question. `two(len(nums), grow())` gives 1 in Go, because gc writes
+     `len` into a variable in front of the call. `_, _ = false || g(1), g(2)`
+     of `fixedbugs/issue30566b` runs `g(1)` first, because gc writes the
+     logical operator into a variable too. A first form of the pass read `len`
+     as a plain operand and failed both.
+
+     The path that blocks takes the same rule. `operands` of `flatexpr.go`
+     gave each operand in front of the last blocking one a variable, thus that
+     operand read its value early and gc reads it late. Such an operand keeps
+     its place now, and only an operand that holds a call which stays in place
+     takes a variable. The machine already runs a call that blocks in a state
+     of its own, thus that call needs no second variable. 1 rule serves both
+     paths: an ordered operation keeps its place in the sequence, and a plain
+     read happens at the end.
+
+     `testdata/programs/evalorder` is the witness. The cost is about 3 percent
+     more lines of Dart. `testdata/programs/rpcuse` gave 201552 lines before
+     the pass and 208091 lines after it, with 5926 new local variables.
+
+     5 positions still differ. The 3 clauses of a for loop and the value of a
+     case each hold no place for a Dart statement in front of them. The
+     initializer of a package variable stands outside the statement path of
+     stage 4, thus the pass does not reach it. A conversion of a string, of a
+     byte slice, or of a rune slice differs too, because gc writes such a
+     conversion into a variable and stage 4 reads it as a plain operand.
+     `docs/parity.md` holds a witness for each 1.
+
 325. `reflect.FuncOf` builds a function type at run time, and
      `reflect.Method.Func` stays out with a measured cause. The 2 names were
      the last of the reflect gap that needed a change of the Dart runtime

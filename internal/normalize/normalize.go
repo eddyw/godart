@@ -108,6 +108,15 @@ type builder struct {
 	// Such a literal becomes a local function, because the frame of the literal
 	// must name it.
 	pending []ir.Stmt
+
+	// noOrder stops the order pass of `order.go`. The condition and the post
+	// statement of a for loop each run more than 1 time, thus no call of them
+	// leaves the loop.
+	noOrder int
+
+	// orderN counts the temporary variables of the order pass. The name of
+	// such a variable holds the count, thus 1 statement can hold more than 1.
+	orderN int
 }
 
 // frameClass builds the name of the Dart frame class of 1 function. The name

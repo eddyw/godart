@@ -10,8 +10,12 @@ import (
 
 // This file holds the expression side of the state machine. A call that blocks
 // must stand alone as a statement, because the machine takes a new state after
-// it. Go evaluates each operand in order, thus an operand that stands in front
-// of such a call takes a variable of its own.
+// it. An operand that stands in front of such a call and holds a call of its
+// own takes a variable, thus the 2 calls keep their order.
+//
+// A plain read keeps its place. gc reads such an operand after each call of
+// the statement, and `order.go` holds the rule for the path that blocks no
+// more.
 
 // value rewrites an expression so that it holds no operation that blocks.
 func (f *flat) value(x ir.Expr) ir.Expr {
@@ -75,8 +79,12 @@ func (f *flat) value(x ir.Expr) ir.Expr {
 }
 
 // operands rewrites each expression of a list up to the last one that blocks.
-// Each one in front of that operand takes a variable, thus the order of the
-// evaluation stays the order of Go.
+//
+// An operand in front of that one takes a variable only when it holds a call
+// that stays in place. The machine runs the call that blocks in a state of its
+// own, thus such a call would else run second. Each other operand keeps its
+// place and reads its value after the state, exactly as gc does. Read
+// decision 324.
 func (f *flat) operands(list []ir.Expr) []ir.Expr {
 	last := -1
 	for i, x := range list {
@@ -92,15 +100,74 @@ func (f *flat) operands(list []ir.Expr) []ir.Expr {
 		switch {
 		case x == nil:
 			out[i] = nil
-		case i < last:
+		case i < last && holdsSyncCall(x):
 			out[i] = f.temp(f.value(x))
-		case i == last:
+		case i <= last:
 			out[i] = f.value(x)
 		default:
 			out[i] = x
 		}
 	}
 	return out
+}
+
+// holdsSyncCall reports whether the expression holds a call that stays in
+// place. A call that blocks takes a state of its own, thus the machine
+// already runs it in front of the statement. The walk stops at a function
+// literal, because such a literal is its own function.
+func holdsSyncCall(x ir.Expr) bool {
+	switch x := x.(type) {
+	case nil:
+		return false
+	case *ir.Call:
+		if !x.Async {
+			return true
+		}
+		return holdsSyncCall(x.Fun) || holdsSyncCall(x.Results) || holdsSyncCallAny(x.Args)
+	case *ir.Builtin:
+		return holdsSyncCall(x.Results) || holdsSyncCallAny(x.Args)
+	case *ir.Method:
+		return holdsSyncCall(x.Recv)
+	case *ir.Recv:
+		return holdsSyncCall(x.Chan)
+	case *ir.Binary:
+		return holdsSyncCall(x.X) || holdsSyncCall(x.Y)
+	case *ir.Unary:
+		return holdsSyncCall(x.X)
+	case *ir.Conv:
+		return holdsSyncCall(x.X)
+	case *ir.Copy:
+		return holdsSyncCall(x.X)
+	case *ir.Field:
+		return holdsSyncCall(x.X)
+	case *ir.Index:
+		return holdsSyncCall(x.X) || holdsSyncCall(x.Index)
+	case *ir.MapRead:
+		return holdsSyncCall(x.X) || holdsSyncCall(x.Key)
+	case *ir.Slice:
+		return holdsSyncCall(x.X) || holdsSyncCall(x.Low) ||
+			holdsSyncCall(x.High) || holdsSyncCall(x.Max)
+	case *ir.Composite:
+		return holdsSyncCall(x.Results) || holdsSyncCallAny(x.Elems)
+	case *ir.Record:
+		return holdsSyncCallAny(x.Elems)
+	case *ir.RecordField:
+		return holdsSyncCall(x.X)
+	case *ir.TypeAssert:
+		return holdsSyncCall(x.X)
+	case *ir.TypeTest:
+		return holdsSyncCall(x.X)
+	}
+	return false
+}
+
+func holdsSyncCallAny(list []ir.Expr) bool {
+	for _, x := range list {
+		if holdsSyncCall(x) {
+			return true
+		}
+	}
+	return false
 }
 
 // hoistRecv writes the receiver of a method call into a variable of the

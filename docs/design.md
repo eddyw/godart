@@ -108,6 +108,10 @@ list, because it is the authority.
 - Insert a struct copy operation at each copy point. Read the "Structs" section
   below for the copy points.
 - Hoist an expression that has multiple values into local variables.
+- Give each statement the order of the evaluation of gc. A call that stands
+  behind an operand which reads a value takes a temporary variable in front of
+  the statement. `internal/normalize/order.go` holds the rule, and
+  `docs/parity.md` holds each position that still differs. Read decision 324.
 - Expand a struct literal key that is a nested field selector. Go 1.27 allows
   such a key.
 
