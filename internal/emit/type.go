@@ -75,7 +75,13 @@ func (e *emitter) dartType(t types.Type) string {
 		if needsBox(t.Elem()) {
 			return "$Ptr<" + e.dartType(t.Elem()) + ">?"
 		}
-		return e.dartType(t.Elem()) + "?"
+		// The cap of the depth gives Object?, which already accepts null. A
+		// second question mark is no Dart type.
+		elem := e.dartType(t.Elem())
+		if strings.HasSuffix(elem, "?") {
+			return elem
+		}
+		return elem + "?"
 	case *types.Slice:
 		return "Slice<" + e.dartType(t.Elem()) + ">"
 	case *types.Array:

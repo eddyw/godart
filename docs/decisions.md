@@ -2913,3 +2913,29 @@ The plan left these points open. The work took the decisions below.
      The measure follows the rule of item 9 of the next list, which keeps
      `crypto/rand.Int` out to keep `math/big` out of a TLS program. `reflect`
      holds 181 of 188 names now.
+
+326. A pointer to a type that the depth cap erased wrote 2 question marks. The
+     cap of `dartType` gives `Object?` below a depth of 65, and the pointer
+     case added a question mark to that text. `Object??` is no Dart type, and
+     the front end rejects the whole file.
+
+     `fixedbugs/issue29312` holds a slice type that nests 253 levels, and it
+     found the defect. The pointer case reads the text of the element now, and
+     it adds no second question mark.
+
+     The witness stays in the skip table with a new cause. The composite
+     literal of the file nests 253 levels, and the Dart front end reports
+     `The file has too many nested expressions or statements`. No change of
+     the compiler answers that limit, because the literal holds the depth.
+
+     3 more entries of the table took a new cause, because the old text named
+     the wrong thing. `fixedbugs/issue72063` and `typeparam/issue48137` hold
+     the Y combinator, which gives a local generic type that names itself. The
+     Dart form of the result of that type erases to `dynamic`, and the call
+     site needs `(int) => int`. `typeparam/nested` holds a local type of a
+     generic function whose type argument names an interface type. The value
+     reaches `$ifaceMethod`, which is the sentinel of an interface
+     description, and the dispatch calls that sentinel with a receiver.
+
+     The 3 are open. Each 1 needs work on the generic form of the emitter, and
+     each cause now names the real fault.
