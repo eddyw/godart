@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:goruntime/goruntime.dart';
 
@@ -831,3 +832,842 @@ List<DataRow> goRows(List<GoNode> list, GoRuntime rt) => <DataRow>[
       color: goStateColor(n.nested('Color', 3)),
     ),
 ];
+
+// The converters below build the theme of 1 widget family. Each 1 reads the
+// value type of flutter/ui/themes.go, and it gives the Flutter theme of the
+// same meaning.
+
+/// goEnumValue gives the value of an enum by its name. The Go side holds the
+/// name of the Dart value, and an empty text gives null.
+T? goEnumValue<T extends Enum>(List<T> values, String s) {
+  for (final T v in values) {
+    if (v.name == s) return v;
+  }
+  return null;
+}
+
+/// goCircular gives a circular radius. An elliptical radius stays out.
+Radius? goCircular(double? v) => v == null ? null : Radius.circular(v);
+
+/// goActionIconStyle reads the ActionIconStyle struct of the Go side.
+ActionIconThemeData? goActionIconStyle(GoNode? n, GoRuntime rt) {
+  if (n == null) return null;
+  return ActionIconThemeData(
+    backButtonIconBuilder: goBuild(n.build0('BackButtonIconBuilder', 0), rt),
+    closeButtonIconBuilder: goBuild(n.build0('CloseButtonIconBuilder', 1), rt),
+    drawerButtonIconBuilder:
+        goBuild(n.build0('DrawerButtonIconBuilder', 2), rt),
+    endDrawerButtonIconBuilder:
+        goBuild(n.build0('EndDrawerButtonIconBuilder', 3), rt),
+  );
+}
+
+/// goBadgeStyle reads the BadgeStyle struct of the Go side.
+BadgeThemeData? goBadgeStyle(GoNode? n) {
+  if (n == null) return null;
+  return BadgeThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    textColor: goColorOpt(n.countOpt('TextColor', 1)),
+    smallSize: n.sizeOpt('SmallSize', 2),
+    largeSize: n.sizeOpt('LargeSize', 3),
+    textStyle: goTextStyle(n.nested('TextStyle', 4)),
+    padding: goInsets(n.nested('Padding', 5)),
+    alignment: goAlignment(n.text('Alignment', 6)),
+    offset: goOffset(n.nested('Offset', 7)),
+  );
+}
+
+/// goBottomNavigationBarStyle reads the BottomNavigationBarStyle struct of the
+/// Go side.
+BottomNavigationBarThemeData? goBottomNavigationBarStyle(GoNode? n) {
+  if (n == null) return null;
+  return BottomNavigationBarThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    elevation: n.sizeOpt('Elevation', 1),
+    selectedIconTheme: goIconStyle(n.nested('SelectedIconTheme', 2)),
+    unselectedIconTheme: goIconStyle(n.nested('UnselectedIconTheme', 3)),
+    selectedItemColor: goColorOpt(n.countOpt('SelectedItemColor', 4)),
+    unselectedItemColor: goColorOpt(n.countOpt('UnselectedItemColor', 5)),
+    selectedLabelStyle: goTextStyle(n.nested('SelectedLabelStyle', 6)),
+    unselectedLabelStyle: goTextStyle(n.nested('UnselectedLabelStyle', 7)),
+    showSelectedLabels: n.flagOpt('ShowSelectedLabels', 8),
+    showUnselectedLabels: n.flagOpt('ShowUnselectedLabels', 9),
+    type: goEnumValue<BottomNavigationBarType>(
+      BottomNavigationBarType.values,
+      n.text('Type', 10),
+    ),
+    enableFeedback: n.flagOpt('EnableFeedback', 11),
+    landscapeLayout: goEnumValue<BottomNavigationBarLandscapeLayout>(
+      BottomNavigationBarLandscapeLayout.values,
+      n.text('LandscapeLayout', 12),
+    ),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 13))),
+  );
+}
+
+/// goButtonBarStyle reads the ButtonBarStyle struct of the Go side.
+///
+/// Flutter holds ButtonBar as deprecated, thus the 2 lines below stand under
+/// an ignore.
+// ignore: deprecated_member_use
+ButtonBarThemeData? goButtonBarStyle(GoNode? n) {
+  if (n == null) return null;
+  // ignore: deprecated_member_use
+  return ButtonBarThemeData(
+    alignment: goEnumValue<MainAxisAlignment>(
+      MainAxisAlignment.values,
+      n.text('Alignment', 0),
+    ),
+    mainAxisSize: goEnumValue<MainAxisSize>(
+      MainAxisSize.values,
+      n.text('MainAxisSize', 1),
+    ),
+    buttonTextTheme: goEnumValue<ButtonTextTheme>(
+      ButtonTextTheme.values,
+      n.text('ButtonTextTheme', 2),
+    ),
+    buttonMinWidth: n.sizeOpt('ButtonMinWidth', 3),
+    buttonHeight: n.sizeOpt('ButtonHeight', 4),
+    buttonPadding: goInsets(n.nested('ButtonPadding', 5)),
+    buttonAlignedDropdown: n.flagOpt('ButtonAlignedDropdown', 6),
+    layoutBehavior: goEnumValue<ButtonBarLayoutBehavior>(
+      ButtonBarLayoutBehavior.values,
+      n.text('LayoutBehavior', 7),
+    ),
+    overflowDirection: goEnumValue<VerticalDirection>(
+      VerticalDirection.values,
+      n.text('OverflowDirection', 8),
+    ),
+  );
+}
+
+/// goButtonThemeStyle reads the ButtonThemeStyle struct of the Go side.
+ButtonThemeData? goButtonThemeStyle(GoNode? n) {
+  if (n == null) return null;
+  return const ButtonThemeData().copyWith(
+    textTheme: goEnumValue<ButtonTextTheme>(
+      ButtonTextTheme.values,
+      n.text('TextTheme', 0),
+    ),
+    minWidth: n.sizeOpt('MinWidth', 1),
+    height: n.sizeOpt('Height', 2),
+    padding: goInsets(n.nested('Padding', 3)),
+    shape: goShape(n.nested('Shape', 4)),
+    layoutBehavior: goEnumValue<ButtonBarLayoutBehavior>(
+      ButtonBarLayoutBehavior.values,
+      n.text('LayoutBehavior', 5),
+    ),
+    alignedDropdown: n.flagOpt('AlignedDropdown', 6),
+    buttonColor: goColorOpt(n.countOpt('ButtonColor', 7)),
+    disabledColor: goColorOpt(n.countOpt('DisabledColor', 8)),
+    focusColor: goColorOpt(n.countOpt('FocusColor', 9)),
+    hoverColor: goColorOpt(n.countOpt('HoverColor', 10)),
+    highlightColor: goColorOpt(n.countOpt('HighlightColor', 11)),
+    splashColor: goColorOpt(n.countOpt('SplashColor', 12)),
+    materialTapTargetSize: goEnumValue<MaterialTapTargetSize>(
+      MaterialTapTargetSize.values,
+      n.text('MaterialTapTargetSize', 13),
+    ),
+  );
+}
+
+/// goCarouselViewStyle reads the CarouselViewStyle struct of the Go side.
+CarouselViewThemeData? goCarouselViewStyle(GoNode? n) {
+  if (n == null) return null;
+  return CarouselViewThemeData(
+    elevation: n.sizeOpt('Elevation', 0),
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 1)),
+    overlayColor: goStateColor(n.nested('OverlayColor', 2)),
+    shape: goShape(n.nested('Shape', 3)),
+    padding: goInsets(n.nested('Padding', 4)),
+    itemClipBehavior: goEnumValue<Clip>(
+      Clip.values,
+      n.text('ItemClipBehavior', 5),
+    ),
+  );
+}
+
+/// goCheckboxStyle reads the CheckboxStyle struct of the Go side.
+CheckboxThemeData? goCheckboxStyle(GoNode? n) {
+  if (n == null) return null;
+  return CheckboxThemeData(
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 0))),
+    fillColor: goStateColor(n.nested('FillColor', 1)),
+    checkColor: goStateColor(n.nested('CheckColor', 2)),
+    overlayColor: goStateColor(n.nested('OverlayColor', 3)),
+    splashRadius: n.sizeOpt('SplashRadius', 4),
+    materialTapTargetSize: goEnumValue<MaterialTapTargetSize>(
+      MaterialTapTargetSize.values,
+      n.text('MaterialTapTargetSize', 5),
+    ),
+    visualDensity: goDensity(n.nested('VisualDensity', 6)),
+    shape: goShape(n.nested('Shape', 7)),
+    side: goBorderSide(n.nested('Side', 8)),
+  );
+}
+
+/// goChipStyle reads the ChipStyle struct of the Go side.
+ChipThemeData? goChipStyle(GoNode? n) {
+  if (n == null) return null;
+  return ChipThemeData(
+    color: goStateColor(n.nested('Color', 0)),
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 1)),
+    deleteIconColor: goColorOpt(n.countOpt('DeleteIconColor', 2)),
+    disabledColor: goColorOpt(n.countOpt('DisabledColor', 3)),
+    selectedColor: goColorOpt(n.countOpt('SelectedColor', 4)),
+    secondarySelectedColor: goColorOpt(n.countOpt('SecondarySelectedColor', 5)),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 6)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 7)),
+    selectedShadowColor: goColorOpt(n.countOpt('SelectedShadowColor', 8)),
+    showCheckmark: n.flagOpt('ShowCheckmark', 9),
+    checkmarkColor: goColorOpt(n.countOpt('CheckmarkColor', 10)),
+    labelPadding: goInsets(n.nested('LabelPadding', 11)),
+    padding: goInsets(n.nested('Padding', 12)),
+    side: goBorderSide(n.nested('Side', 13)),
+    shape: goShape(n.nested('Shape', 14)),
+    labelStyle: goTextStyle(n.nested('LabelStyle', 15)),
+    secondaryLabelStyle: goTextStyle(n.nested('SecondaryLabelStyle', 16)),
+    brightness: goEnumValue<Brightness>(
+      Brightness.values,
+      n.text('Brightness', 17),
+    ),
+    elevation: n.sizeOpt('Elevation', 18),
+    pressElevation: n.sizeOpt('PressElevation', 19),
+    iconTheme: goIconStyle(n.nested('IconTheme', 20)),
+    avatarBoxConstraints: goConstraints(n.nested('AvatarBoxConstraints', 21)),
+    deleteIconBoxConstraints:
+        goConstraints(n.nested('DeleteIconBoxConstraints', 22)),
+  );
+}
+
+/// goCupertinoStyle reads the CupertinoStyle struct of the Go side.
+CupertinoThemeData? goCupertinoStyle(GoNode? n) {
+  if (n == null) return null;
+  return CupertinoThemeData(
+    brightness: goEnumValue<Brightness>(
+      Brightness.values,
+      n.text('Brightness', 0),
+    ),
+    primaryColor: goColorOpt(n.countOpt('PrimaryColor', 1)),
+    primaryContrastingColor:
+        goColorOpt(n.countOpt('PrimaryContrastingColor', 2)),
+    barBackgroundColor: goColorOpt(n.countOpt('BarBackgroundColor', 3)),
+    scaffoldBackgroundColor:
+        goColorOpt(n.countOpt('ScaffoldBackgroundColor', 4)),
+    selectionHandleColor: goColorOpt(n.countOpt('SelectionHandleColor', 5)),
+    applyThemeToAll: n.flagOpt('ApplyThemeToAll', 6),
+  );
+}
+
+/// goDataTableStyle reads the DataTableStyle struct of the Go side.
+DataTableThemeData? goDataTableStyle(GoNode? n) {
+  if (n == null) return null;
+  return DataTableThemeData(
+    decoration: goDecoration(n.nested('Decoration', 0)),
+    dataRowColor: goStateColor(n.nested('DataRowColor', 1)),
+    dataRowMinHeight: n.sizeOpt('DataRowMinHeight', 2),
+    dataRowMaxHeight: n.sizeOpt('DataRowMaxHeight', 3),
+    dataTextStyle: goTextStyle(n.nested('DataTextStyle', 4)),
+    headingRowColor: goStateColor(n.nested('HeadingRowColor', 5)),
+    headingRowHeight: n.sizeOpt('HeadingRowHeight', 6),
+    headingTextStyle: goTextStyle(n.nested('HeadingTextStyle', 7)),
+    horizontalMargin: n.sizeOpt('HorizontalMargin', 8),
+    columnSpacing: n.sizeOpt('ColumnSpacing', 9),
+    dividerThickness: n.sizeOpt('DividerThickness', 10),
+    checkboxHorizontalMargin: n.sizeOpt('CheckboxHorizontalMargin', 11),
+    headingCellCursor:
+        _all<MouseCursor>(goCursor(n.text('HeadingCellCursor', 12))),
+    dataRowCursor: _all<MouseCursor>(goCursor(n.text('DataRowCursor', 13))),
+    headingRowAlignment: goEnumValue<MainAxisAlignment>(
+      MainAxisAlignment.values,
+      n.text('HeadingRowAlignment', 14),
+    ),
+  );
+}
+
+/// goDatePickerStyle reads the DatePickerStyle struct of the Go side.
+DatePickerThemeData? goDatePickerStyle(GoNode? n) {
+  if (n == null) return null;
+  return DatePickerThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    elevation: n.sizeOpt('Elevation', 1),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 2)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 3)),
+    shape: goShape(n.nested('Shape', 4)),
+    headerBackgroundColor: goColorOpt(n.countOpt('HeaderBackgroundColor', 5)),
+    headerForegroundColor: goColorOpt(n.countOpt('HeaderForegroundColor', 6)),
+    headerHeadlineStyle: goTextStyle(n.nested('HeaderHeadlineStyle', 7)),
+    headerHelpStyle: goTextStyle(n.nested('HeaderHelpStyle', 8)),
+    weekdayStyle: goTextStyle(n.nested('WeekdayStyle', 9)),
+    dayStyle: goTextStyle(n.nested('DayStyle', 10)),
+    dayForegroundColor: goStateColor(n.nested('DayForegroundColor', 11)),
+    dayBackgroundColor: goStateColor(n.nested('DayBackgroundColor', 12)),
+    dayOverlayColor: goStateColor(n.nested('DayOverlayColor', 13)),
+    dayShape: _all<OutlinedBorder>(goShape(n.nested('DayShape', 14))),
+    todayForegroundColor: goStateColor(n.nested('TodayForegroundColor', 15)),
+    todayBackgroundColor: goStateColor(n.nested('TodayBackgroundColor', 16)),
+    todayBorder: goBorderSide(n.nested('TodayBorder', 17)),
+    yearStyle: goTextStyle(n.nested('YearStyle', 18)),
+    yearForegroundColor: goStateColor(n.nested('YearForegroundColor', 19)),
+    yearBackgroundColor: goStateColor(n.nested('YearBackgroundColor', 20)),
+    yearOverlayColor: goStateColor(n.nested('YearOverlayColor', 21)),
+    yearShape: _all<OutlinedBorder>(goShape(n.nested('YearShape', 22))),
+    rangePickerBackgroundColor:
+        goColorOpt(n.countOpt('RangePickerBackgroundColor', 23)),
+    rangePickerElevation: n.sizeOpt('RangePickerElevation', 24),
+    rangePickerShadowColor:
+        goColorOpt(n.countOpt('RangePickerShadowColor', 25)),
+    rangePickerSurfaceTintColor:
+        goColorOpt(n.countOpt('RangePickerSurfaceTintColor', 26)),
+    rangePickerShape: goShape(n.nested('RangePickerShape', 27)),
+    rangePickerHeaderBackgroundColor:
+        goColorOpt(n.countOpt('RangePickerHeaderBackgroundColor', 28)),
+    rangePickerHeaderForegroundColor:
+        goColorOpt(n.countOpt('RangePickerHeaderForegroundColor', 29)),
+    rangePickerHeaderHeadlineStyle:
+        goTextStyle(n.nested('RangePickerHeaderHeadlineStyle', 30)),
+    rangePickerHeaderHelpStyle:
+        goTextStyle(n.nested('RangePickerHeaderHelpStyle', 31)),
+    rangeSelectionBackgroundColor:
+        goColorOpt(n.countOpt('RangeSelectionBackgroundColor', 32)),
+    rangeSelectionOverlayColor:
+        goStateColor(n.nested('RangeSelectionOverlayColor', 33)),
+    dividerColor: goColorOpt(n.countOpt('DividerColor', 34)),
+    cancelButtonStyle: goButtonStyle(n.nested('CancelButtonStyle', 35)),
+    confirmButtonStyle: goButtonStyle(n.nested('ConfirmButtonStyle', 36)),
+    locale: goLocale(n.text('Locale', 37)),
+    toggleButtonTextStyle: goTextStyle(n.nested('ToggleButtonTextStyle', 38)),
+    subHeaderForegroundColor:
+        goColorOpt(n.countOpt('SubHeaderForegroundColor', 39)),
+  );
+}
+
+/// goDividerStyle reads the DividerStyle struct of the Go side.
+DividerThemeData? goDividerStyle(GoNode? n) {
+  if (n == null) return null;
+  return DividerThemeData(
+    color: goColorOpt(n.countOpt('Color', 0)),
+    space: n.sizeOpt('Space', 1),
+    thickness: n.sizeOpt('Thickness', 2),
+    indent: n.sizeOpt('Indent', 3),
+    endIndent: n.sizeOpt('EndIndent', 4),
+    radius: goRadius(n.nested('Radius', 5)),
+  );
+}
+
+/// goDrawerStyle reads the DrawerStyle struct of the Go side.
+DrawerThemeData? goDrawerStyle(GoNode? n) {
+  if (n == null) return null;
+  return DrawerThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    scrimColor: goColorOpt(n.countOpt('ScrimColor', 1)),
+    elevation: n.sizeOpt('Elevation', 2),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 3)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 4)),
+    shape: goShape(n.nested('Shape', 5)),
+    endShape: goShape(n.nested('EndShape', 6)),
+    width: n.sizeOpt('Width', 7),
+    clipBehavior: goEnumValue<Clip>(Clip.values, n.text('ClipBehavior', 8)),
+  );
+}
+
+/// goDropdownMenuStyle reads the DropdownMenuStyle struct of the Go side.
+DropdownMenuThemeData? goDropdownMenuStyle(GoNode? n) {
+  if (n == null) return null;
+  return DropdownMenuThemeData(
+    textStyle: goTextStyle(n.nested('TextStyle', 0)),
+    menuStyle: goMenuStyle(n.nested('MenuStyle', 1)),
+    disabledColor: goColorOpt(n.countOpt('DisabledColor', 2)),
+  );
+}
+
+/// goExpansionTileStyle reads the ExpansionTileStyle struct of the Go side.
+ExpansionTileThemeData? goExpansionTileStyle(GoNode? n) {
+  if (n == null) return null;
+  return ExpansionTileThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    collapsedBackgroundColor:
+        goColorOpt(n.countOpt('CollapsedBackgroundColor', 1)),
+    tilePadding: goInsets(n.nested('TilePadding', 2)),
+    expandedAlignment: goAlignment(n.text('ExpandedAlignment', 3)),
+    childrenPadding: goInsets(n.nested('ChildrenPadding', 4)),
+    iconColor: goColorOpt(n.countOpt('IconColor', 5)),
+    collapsedIconColor: goColorOpt(n.countOpt('CollapsedIconColor', 6)),
+    textColor: goColorOpt(n.countOpt('TextColor', 7)),
+    collapsedTextColor: goColorOpt(n.countOpt('CollapsedTextColor', 8)),
+    shape: goShape(n.nested('Shape', 9)),
+    collapsedShape: goShape(n.nested('CollapsedShape', 10)),
+    clipBehavior: goEnumValue<Clip>(Clip.values, n.text('ClipBehavior', 11)),
+  );
+}
+
+/// goFloatingActionButtonStyle reads the FloatingActionButtonStyle struct of
+/// the Go side.
+FloatingActionButtonThemeData? goFloatingActionButtonStyle(GoNode? n) {
+  if (n == null) return null;
+  return FloatingActionButtonThemeData(
+    foregroundColor: goColorOpt(n.countOpt('ForegroundColor', 0)),
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 1)),
+    focusColor: goColorOpt(n.countOpt('FocusColor', 2)),
+    hoverColor: goColorOpt(n.countOpt('HoverColor', 3)),
+    splashColor: goColorOpt(n.countOpt('SplashColor', 4)),
+    elevation: n.sizeOpt('Elevation', 5),
+    focusElevation: n.sizeOpt('FocusElevation', 6),
+    hoverElevation: n.sizeOpt('HoverElevation', 7),
+    disabledElevation: n.sizeOpt('DisabledElevation', 8),
+    highlightElevation: n.sizeOpt('HighlightElevation', 9),
+    shape: goShape(n.nested('Shape', 10)),
+    enableFeedback: n.flagOpt('EnableFeedback', 11),
+    iconSize: n.sizeOpt('IconSize', 12),
+    sizeConstraints: goConstraints(n.nested('SizeConstraints', 13)),
+    smallSizeConstraints: goConstraints(n.nested('SmallSizeConstraints', 14)),
+    largeSizeConstraints: goConstraints(n.nested('LargeSizeConstraints', 15)),
+    extendedSizeConstraints:
+        goConstraints(n.nested('ExtendedSizeConstraints', 16)),
+    extendedIconLabelSpacing: n.sizeOpt('ExtendedIconLabelSpacing', 17),
+    extendedPadding: goInsets(n.nested('ExtendedPadding', 18)),
+    extendedTextStyle: goTextStyle(n.nested('ExtendedTextStyle', 19)),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 20))),
+  );
+}
+
+/// goMenuStyle reads the MenuStyle struct of the Go side.
+MenuStyle? goMenuStyle(GoNode? n) {
+  if (n == null) return null;
+  return MenuStyle(
+    backgroundColor: goStateColor(n.nested('BackgroundColor', 0)),
+    shadowColor: goStateColor(n.nested('ShadowColor', 1)),
+    surfaceTintColor: goStateColor(n.nested('SurfaceTintColor', 2)),
+    elevation: _all<double>(n.sizeOpt('Elevation', 3)),
+    padding: _all<EdgeInsetsGeometry>(goInsets(n.nested('Padding', 4))),
+    minimumSize: _all<Size>(goSize(n.nested('MinimumSize', 5))),
+    fixedSize: _all<Size>(goSize(n.nested('FixedSize', 6))),
+    maximumSize: _all<Size>(goSize(n.nested('MaximumSize', 7))),
+    side: _all<BorderSide>(goBorderSide(n.nested('Side', 8))),
+    shape: _all<OutlinedBorder>(goShape(n.nested('Shape', 9))),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 10))),
+    visualDensity: goDensity(n.nested('VisualDensity', 11)),
+    alignment: goAlignment(n.text('Alignment', 12)),
+  );
+}
+
+/// goNavigationBarStyle reads the NavigationBarStyle struct of the Go side.
+NavigationBarThemeData? goNavigationBarStyle(GoNode? n) {
+  if (n == null) return null;
+  return NavigationBarThemeData(
+    height: n.sizeOpt('Height', 0),
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 1)),
+    elevation: n.sizeOpt('Elevation', 2),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 3)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 4)),
+    indicatorColor: goColorOpt(n.countOpt('IndicatorColor', 5)),
+    indicatorShape: goShape(n.nested('IndicatorShape', 6)),
+    labelTextStyle: _all<TextStyle>(goTextStyle(n.nested('LabelTextStyle', 7))),
+    iconTheme: _all<IconThemeData>(goIconStyle(n.nested('IconTheme', 8))),
+    labelBehavior: goEnumValue<NavigationDestinationLabelBehavior>(
+      NavigationDestinationLabelBehavior.values,
+      n.text('LabelBehavior', 9),
+    ),
+    overlayColor: goStateColor(n.nested('OverlayColor', 10)),
+    labelPadding: goInsets(n.nested('LabelPadding', 11)),
+  );
+}
+
+/// goNavigationDrawerStyle reads the NavigationDrawerStyle struct of the Go
+/// side.
+NavigationDrawerThemeData? goNavigationDrawerStyle(GoNode? n) {
+  if (n == null) return null;
+  return NavigationDrawerThemeData(
+    tileHeight: n.sizeOpt('TileHeight', 0),
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 1)),
+    elevation: n.sizeOpt('Elevation', 2),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 3)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 4)),
+    indicatorColor: goColorOpt(n.countOpt('IndicatorColor', 5)),
+    indicatorShape: goShape(n.nested('IndicatorShape', 6)),
+    indicatorSize: goSize(n.nested('IndicatorSize', 7)),
+    labelTextStyle: _all<TextStyle>(goTextStyle(n.nested('LabelTextStyle', 8))),
+    iconTheme: _all<IconThemeData>(goIconStyle(n.nested('IconTheme', 9))),
+  );
+}
+
+/// goNavigationRailStyle reads the NavigationRailStyle struct of the Go side.
+NavigationRailThemeData? goNavigationRailStyle(GoNode? n) {
+  if (n == null) return null;
+  return NavigationRailThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    elevation: n.sizeOpt('Elevation', 1),
+    unselectedLabelTextStyle:
+        goTextStyle(n.nested('UnselectedLabelTextStyle', 2)),
+    selectedLabelTextStyle: goTextStyle(n.nested('SelectedLabelTextStyle', 3)),
+    unselectedIconTheme: goIconStyle(n.nested('UnselectedIconTheme', 4)),
+    selectedIconTheme: goIconStyle(n.nested('SelectedIconTheme', 5)),
+    groupAlignment: n.sizeOpt('GroupAlignment', 6),
+    labelType: goEnumValue<NavigationRailLabelType>(
+      NavigationRailLabelType.values,
+      n.text('LabelType', 7),
+    ),
+    useIndicator: n.flagOpt('UseIndicator', 8),
+    indicatorColor: goColorOpt(n.countOpt('IndicatorColor', 9)),
+    indicatorShape: goShape(n.nested('IndicatorShape', 10)),
+    minWidth: n.sizeOpt('MinWidth', 11),
+    minExtendedWidth: n.sizeOpt('MinExtendedWidth', 12),
+  );
+}
+
+/// goPopupMenuStyle reads the PopupMenuStyle struct of the Go side.
+PopupMenuThemeData? goPopupMenuStyle(GoNode? n) {
+  if (n == null) return null;
+  return PopupMenuThemeData(
+    color: goColorOpt(n.countOpt('Color', 0)),
+    shape: goShape(n.nested('Shape', 1)),
+    menuPadding: goInsets(n.nested('MenuPadding', 2)),
+    elevation: n.sizeOpt('Elevation', 3),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 4)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 5)),
+    textStyle: goTextStyle(n.nested('TextStyle', 6)),
+    labelTextStyle: _all<TextStyle>(goTextStyle(n.nested('LabelTextStyle', 7))),
+    enableFeedback: n.flagOpt('EnableFeedback', 8),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 9))),
+    position: goEnumValue<PopupMenuPosition>(
+      PopupMenuPosition.values,
+      n.text('Position', 10),
+    ),
+    iconColor: goColorOpt(n.countOpt('IconColor', 11)),
+    iconSize: n.sizeOpt('IconSize', 12),
+  );
+}
+
+/// goProgressIndicatorStyle reads the ProgressIndicatorStyle struct of the Go
+/// side.
+ProgressIndicatorThemeData? goProgressIndicatorStyle(GoNode? n) {
+  if (n == null) return null;
+  return ProgressIndicatorThemeData(
+    color: goColorOpt(n.countOpt('Color', 0)),
+    linearTrackColor: goColorOpt(n.countOpt('LinearTrackColor', 1)),
+    linearMinHeight: n.sizeOpt('LinearMinHeight', 2),
+    circularTrackColor: goColorOpt(n.countOpt('CircularTrackColor', 3)),
+    refreshBackgroundColor: goColorOpt(n.countOpt('RefreshBackgroundColor', 4)),
+    borderRadius: goRadius(n.nested('BorderRadius', 5)),
+    stopIndicatorColor: goColorOpt(n.countOpt('StopIndicatorColor', 6)),
+    stopIndicatorRadius: n.sizeOpt('StopIndicatorRadius', 7),
+    strokeWidth: n.sizeOpt('StrokeWidth', 8),
+    strokeAlign: n.sizeOpt('StrokeAlign', 9),
+    strokeCap: goEnumValue<StrokeCap>(
+      StrokeCap.values,
+      n.text('StrokeCap', 10),
+    ),
+    constraints: goConstraints(n.nested('Constraints', 11)),
+    trackGap: n.sizeOpt('TrackGap', 12),
+    circularTrackPadding: goInsets(n.nested('CircularTrackPadding', 13)),
+  );
+}
+
+/// goRadioStyle reads the RadioStyle struct of the Go side.
+RadioThemeData? goRadioStyle(GoNode? n) {
+  if (n == null) return null;
+  return RadioThemeData(
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 0))),
+    fillColor: goStateColor(n.nested('FillColor', 1)),
+    overlayColor: goStateColor(n.nested('OverlayColor', 2)),
+    splashRadius: n.sizeOpt('SplashRadius', 3),
+    materialTapTargetSize: goEnumValue<MaterialTapTargetSize>(
+      MaterialTapTargetSize.values,
+      n.text('MaterialTapTargetSize', 4),
+    ),
+    visualDensity: goDensity(n.nested('VisualDensity', 5)),
+    backgroundColor: goStateColor(n.nested('BackgroundColor', 6)),
+    side: goBorderSide(n.nested('Side', 7)),
+    innerRadius: _all<double>(n.sizeOpt('InnerRadius', 8)),
+  );
+}
+
+/// goScrollbarStyle reads the ScrollbarStyle struct of the Go side.
+ScrollbarThemeData? goScrollbarStyle(GoNode? n) {
+  if (n == null) return null;
+  return ScrollbarThemeData(
+    thumbVisibility: _all<bool>(n.flagOpt('ThumbVisibility', 0)),
+    thickness: _all<double>(n.sizeOpt('Thickness', 1)),
+    trackVisibility: _all<bool>(n.flagOpt('TrackVisibility', 2)),
+    radius: goCircular(n.sizeOpt('Radius', 3)),
+    thumbColor: goStateColor(n.nested('ThumbColor', 4)),
+    trackColor: goStateColor(n.nested('TrackColor', 5)),
+    trackBorderColor: goStateColor(n.nested('TrackBorderColor', 6)),
+    crossAxisMargin: n.sizeOpt('CrossAxisMargin', 7),
+    mainAxisMargin: n.sizeOpt('MainAxisMargin', 8),
+    minThumbLength: n.sizeOpt('MinThumbLength', 9),
+    interactive: n.flagOpt('Interactive', 10),
+  );
+}
+
+/// goSearchBarStyle reads the SearchBarStyle struct of the Go side.
+SearchBarThemeData? goSearchBarStyle(GoNode? n) {
+  if (n == null) return null;
+  return SearchBarThemeData(
+    elevation: _all<double>(n.sizeOpt('Elevation', 0)),
+    backgroundColor: goStateColor(n.nested('BackgroundColor', 1)),
+    shadowColor: goStateColor(n.nested('ShadowColor', 2)),
+    surfaceTintColor: goStateColor(n.nested('SurfaceTintColor', 3)),
+    overlayColor: goStateColor(n.nested('OverlayColor', 4)),
+    side: _all<BorderSide>(goBorderSide(n.nested('Side', 5))),
+    shape: _all<OutlinedBorder>(goShape(n.nested('Shape', 6))),
+    padding: _all<EdgeInsetsGeometry>(goInsets(n.nested('Padding', 7))),
+    textStyle: _all<TextStyle>(goTextStyle(n.nested('TextStyle', 8))),
+    hintStyle: _all<TextStyle>(goTextStyle(n.nested('HintStyle', 9))),
+    constraints: goConstraints(n.nested('Constraints', 10)),
+    textCapitalization: goEnumValue<TextCapitalization>(
+      TextCapitalization.values,
+      n.text('TextCapitalization', 11),
+    ),
+  );
+}
+
+/// goSearchViewStyle reads the SearchViewStyle struct of the Go side.
+SearchViewThemeData? goSearchViewStyle(GoNode? n) {
+  if (n == null) return null;
+  return SearchViewThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    elevation: n.sizeOpt('Elevation', 1),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 2)),
+    constraints: goConstraints(n.nested('Constraints', 3)),
+    padding: goInsets(n.nested('Padding', 4)),
+    barPadding: goInsets(n.nested('BarPadding', 5)),
+    shrinkWrap: n.flagOpt('ShrinkWrap', 6),
+    side: goBorderSide(n.nested('Side', 7)),
+    shape: goShape(n.nested('Shape', 8)),
+    headerHeight: n.sizeOpt('HeaderHeight', 9),
+    headerTextStyle: goTextStyle(n.nested('HeaderTextStyle', 10)),
+    headerHintStyle: goTextStyle(n.nested('HeaderHintStyle', 11)),
+    dividerColor: goColorOpt(n.countOpt('DividerColor', 12)),
+  );
+}
+
+/// goSegmentedButtonStyle reads the SegmentedButtonStyle struct of the Go side.
+SegmentedButtonThemeData? goSegmentedButtonStyle(GoNode? n, GoRuntime rt) {
+  if (n == null) return null;
+  return SegmentedButtonThemeData(
+    style: goButtonStyle(n.nested('Style', 0)),
+    selectedIcon: goChildOpt(n.child('SelectedIcon', 1), rt),
+  );
+}
+
+/// goSliderStyle reads the SliderStyle struct of the Go side.
+SliderThemeData? goSliderStyle(GoNode? n) {
+  if (n == null) return null;
+  return SliderThemeData(
+    trackHeight: n.sizeOpt('TrackHeight', 0),
+    activeTrackColor: goColorOpt(n.countOpt('ActiveTrackColor', 1)),
+    inactiveTrackColor: goColorOpt(n.countOpt('InactiveTrackColor', 2)),
+    secondaryActiveTrackColor:
+        goColorOpt(n.countOpt('SecondaryActiveTrackColor', 3)),
+    disabledActiveTrackColor:
+        goColorOpt(n.countOpt('DisabledActiveTrackColor', 4)),
+    disabledInactiveTrackColor:
+        goColorOpt(n.countOpt('DisabledInactiveTrackColor', 5)),
+    disabledSecondaryActiveTrackColor:
+        goColorOpt(n.countOpt('DisabledSecondaryActiveTrackColor', 6)),
+    activeTickMarkColor: goColorOpt(n.countOpt('ActiveTickMarkColor', 7)),
+    inactiveTickMarkColor: goColorOpt(n.countOpt('InactiveTickMarkColor', 8)),
+    disabledActiveTickMarkColor:
+        goColorOpt(n.countOpt('DisabledActiveTickMarkColor', 9)),
+    disabledInactiveTickMarkColor:
+        goColorOpt(n.countOpt('DisabledInactiveTickMarkColor', 10)),
+    thumbColor: goColorOpt(n.countOpt('ThumbColor', 11)),
+    overlappingShapeStrokeColor:
+        goColorOpt(n.countOpt('OverlappingShapeStrokeColor', 12)),
+    disabledThumbColor: goColorOpt(n.countOpt('DisabledThumbColor', 13)),
+    overlayColor: goColorOpt(n.countOpt('OverlayColor', 14)),
+    valueIndicatorColor: goColorOpt(n.countOpt('ValueIndicatorColor', 15)),
+    valueIndicatorStrokeColor:
+        goColorOpt(n.countOpt('ValueIndicatorStrokeColor', 16)),
+    showValueIndicator: goEnumValue<ShowValueIndicator>(
+      ShowValueIndicator.values,
+      n.text('ShowValueIndicator', 17),
+    ),
+    valueIndicatorTextStyle:
+        goTextStyle(n.nested('ValueIndicatorTextStyle', 18)),
+    minThumbSeparation: n.sizeOpt('MinThumbSeparation', 19),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 20))),
+    allowedInteraction: goEnumValue<SliderInteraction>(
+      SliderInteraction.values,
+      n.text('AllowedInteraction', 21),
+    ),
+    padding: goInsets(n.nested('Padding', 22)),
+    thumbSize: _all<Size>(goSize(n.nested('ThumbSize', 23))),
+    trackGap: n.sizeOpt('TrackGap', 24),
+  );
+}
+
+/// goSnackBarStyle reads the SnackBarStyle struct of the Go side.
+SnackBarThemeData? goSnackBarStyle(GoNode? n) {
+  if (n == null) return null;
+  return SnackBarThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    actionTextColor: goColorOpt(n.countOpt('ActionTextColor', 1)),
+    disabledActionTextColor:
+        goColorOpt(n.countOpt('DisabledActionTextColor', 2)),
+    contentTextStyle: goTextStyle(n.nested('ContentTextStyle', 3)),
+    elevation: n.sizeOpt('Elevation', 4),
+    shape: goShape(n.nested('Shape', 5)),
+    behavior: goEnumValue<SnackBarBehavior>(
+      SnackBarBehavior.values,
+      n.text('Behavior', 6),
+    ),
+    width: n.sizeOpt('Width', 7),
+    insetPadding: goInsets(n.nested('InsetPadding', 8)),
+    showCloseIcon: n.flagOpt('ShowCloseIcon', 9),
+    closeIconColor: goColorOpt(n.countOpt('CloseIconColor', 10)),
+    actionOverflowThreshold: n.sizeOpt('ActionOverflowThreshold', 11),
+    actionBackgroundColor: goColorOpt(n.countOpt('ActionBackgroundColor', 12)),
+    disabledActionBackgroundColor:
+        goColorOpt(n.countOpt('DisabledActionBackgroundColor', 13)),
+    dismissDirection: goEnumValue<DismissDirection>(
+      DismissDirection.values,
+      n.text('DismissDirection', 14),
+    ),
+  );
+}
+
+/// goSwitchStyle reads the SwitchStyle struct of the Go side.
+SwitchThemeData? goSwitchStyle(GoNode? n) {
+  if (n == null) return null;
+  return SwitchThemeData(
+    thumbColor: goStateColor(n.nested('ThumbColor', 0)),
+    trackColor: goStateColor(n.nested('TrackColor', 1)),
+    trackOutlineColor: goStateColor(n.nested('TrackOutlineColor', 2)),
+    trackOutlineWidth: _all<double>(n.sizeOpt('TrackOutlineWidth', 3)),
+    materialTapTargetSize: goEnumValue<MaterialTapTargetSize>(
+      MaterialTapTargetSize.values,
+      n.text('MaterialTapTargetSize', 4),
+    ),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 5))),
+    overlayColor: goStateColor(n.nested('OverlayColor', 6)),
+    splashRadius: n.sizeOpt('SplashRadius', 7),
+    padding: goInsets(n.nested('Padding', 8)),
+  );
+}
+
+/// goTextSelectionStyle reads the TextSelectionStyle struct of the Go side.
+TextSelectionThemeData? goTextSelectionStyle(GoNode? n) {
+  if (n == null) return null;
+  return TextSelectionThemeData(
+    cursorColor: goColorOpt(n.countOpt('CursorColor', 0)),
+    selectionColor: goColorOpt(n.countOpt('SelectionColor', 1)),
+    selectionHandleColor: goColorOpt(n.countOpt('SelectionHandleColor', 2)),
+  );
+}
+
+/// goTimePickerStyle reads the TimePickerStyle struct of the Go side.
+TimePickerThemeData? goTimePickerStyle(GoNode? n) {
+  if (n == null) return null;
+  return TimePickerThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    cancelButtonStyle: goButtonStyle(n.nested('CancelButtonStyle', 1)),
+    confirmButtonStyle: goButtonStyle(n.nested('ConfirmButtonStyle', 2)),
+    dayPeriodBorderSide: goBorderSide(n.nested('DayPeriodBorderSide', 3)),
+    dayPeriodColor: goColorOpt(n.countOpt('DayPeriodColor', 4)),
+    dayPeriodShape: goShape(n.nested('DayPeriodShape', 5)),
+    dayPeriodTextColor: goColorOpt(n.countOpt('DayPeriodTextColor', 6)),
+    dayPeriodTextStyle: goTextStyle(n.nested('DayPeriodTextStyle', 7)),
+    dialBackgroundColor: goColorOpt(n.countOpt('DialBackgroundColor', 8)),
+    dialHandColor: goColorOpt(n.countOpt('DialHandColor', 9)),
+    dialTextColor: goColorOpt(n.countOpt('DialTextColor', 10)),
+    dialTextStyle: goTextStyle(n.nested('DialTextStyle', 11)),
+    elevation: n.sizeOpt('Elevation', 12),
+    entryModeIconColor: goColorOpt(n.countOpt('EntryModeIconColor', 13)),
+    helpTextStyle: goTextStyle(n.nested('HelpTextStyle', 14)),
+    hourMinuteColor: goColorOpt(n.countOpt('HourMinuteColor', 15)),
+    hourMinuteShape: goShape(n.nested('HourMinuteShape', 16)),
+    hourMinuteTextColor: goColorOpt(n.countOpt('HourMinuteTextColor', 17)),
+    hourMinuteTextStyle: goTextStyle(n.nested('HourMinuteTextStyle', 18)),
+    padding: goInsets(n.nested('Padding', 19)),
+    shape: goShape(n.nested('Shape', 20)),
+    timeSelectorSeparatorColor:
+        goStateColor(n.nested('TimeSelectorSeparatorColor', 21)),
+    timeSelectorSeparatorTextStyle: _all<TextStyle>(
+      goTextStyle(n.nested('TimeSelectorSeparatorTextStyle', 22)),
+    ),
+  );
+}
+
+/// goToggleButtonsStyle reads the ToggleButtonsStyle struct of the Go side.
+ToggleButtonsThemeData? goToggleButtonsStyle(GoNode? n) {
+  if (n == null) return null;
+  return ToggleButtonsThemeData(
+    textStyle: goTextStyle(n.nested('TextStyle', 0)),
+    constraints: goConstraints(n.nested('Constraints', 1)),
+    color: goColorOpt(n.countOpt('Color', 2)),
+    selectedColor: goColorOpt(n.countOpt('SelectedColor', 3)),
+    disabledColor: goColorOpt(n.countOpt('DisabledColor', 4)),
+    fillColor: goColorOpt(n.countOpt('FillColor', 5)),
+    focusColor: goColorOpt(n.countOpt('FocusColor', 6)),
+    highlightColor: goColorOpt(n.countOpt('HighlightColor', 7)),
+    hoverColor: goColorOpt(n.countOpt('HoverColor', 8)),
+    splashColor: goColorOpt(n.countOpt('SplashColor', 9)),
+    borderColor: goColorOpt(n.countOpt('BorderColor', 10)),
+    selectedBorderColor: goColorOpt(n.countOpt('SelectedBorderColor', 11)),
+    disabledBorderColor: goColorOpt(n.countOpt('DisabledBorderColor', 12)),
+    borderRadius: goRadius(n.nested('BorderRadius', 13)),
+    borderWidth: n.sizeOpt('BorderWidth', 14),
+  );
+}
+
+/// goTooltipStyle reads the TooltipStyle struct of the Go side.
+TooltipThemeData? goTooltipStyle(GoNode? n) {
+  if (n == null) return null;
+  return TooltipThemeData(
+    constraints: goConstraints(n.nested('Constraints', 0)),
+    padding: goInsets(n.nested('Padding', 1)),
+    margin: goInsets(n.nested('Margin', 2)),
+    verticalOffset: n.sizeOpt('VerticalOffset', 3),
+    preferBelow: n.flagOpt('PreferBelow', 4),
+    excludeFromSemantics: n.flagOpt('ExcludeFromSemantics', 5),
+    decoration: goDecoration(n.nested('Decoration', 6)),
+    textStyle: goTextStyle(n.nested('TextStyle', 7)),
+    textAlign: goEnumValue<TextAlign>(TextAlign.values, n.text('TextAlign', 8)),
+    waitDuration: goMillis(n.countOpt('WaitDuration', 9)),
+    showDuration: goMillis(n.countOpt('ShowDuration', 10)),
+    exitDuration: goMillis(n.countOpt('ExitDuration', 11)),
+    triggerMode: goEnumValue<TooltipTriggerMode>(
+      TooltipTriggerMode.values,
+      n.text('TriggerMode', 12),
+    ),
+    enableFeedback: n.flagOpt('EnableFeedback', 13),
+  );
+}
+
+
+// A theme of 1 button family holds 1 ButtonStyle alone, thus each converter
+// below reads the ButtonStyle struct of the Go side.
+
+/// goElevatedButtonTheme gives the ElevatedButtonThemeData of 1 ButtonStyle.
+ElevatedButtonThemeData? goElevatedButtonTheme(GoNode? n) =>
+    n == null ? null : ElevatedButtonThemeData(style: goButtonStyle(n));
+
+/// goFilledButtonTheme gives the FilledButtonThemeData of 1 ButtonStyle.
+FilledButtonThemeData? goFilledButtonTheme(GoNode? n) =>
+    n == null ? null : FilledButtonThemeData(style: goButtonStyle(n));
+
+/// goIconButtonTheme gives the IconButtonThemeData of 1 ButtonStyle.
+IconButtonThemeData? goIconButtonTheme(GoNode? n) =>
+    n == null ? null : IconButtonThemeData(style: goButtonStyle(n));
+
+/// goMenuButtonTheme gives the MenuButtonThemeData of 1 ButtonStyle.
+MenuButtonThemeData? goMenuButtonTheme(GoNode? n) =>
+    n == null ? null : MenuButtonThemeData(style: goButtonStyle(n));
+
+/// goOutlinedButtonTheme gives the OutlinedButtonThemeData of 1 ButtonStyle.
+OutlinedButtonThemeData? goOutlinedButtonTheme(GoNode? n) =>
+    n == null ? null : OutlinedButtonThemeData(style: goButtonStyle(n));
+
+/// goTextButtonTheme gives the TextButtonThemeData of 1 ButtonStyle.
+TextButtonThemeData? goTextButtonTheme(GoNode? n) =>
+    n == null ? null : TextButtonThemeData(style: goButtonStyle(n));
+
+/// goMenuTheme gives the MenuThemeData of 1 MenuStyle.
+MenuThemeData? goMenuTheme(GoNode? n) =>
+    n == null ? null : MenuThemeData(style: goMenuStyle(n));
+
+/// goMenuBarTheme gives the MenuBarThemeData of 1 MenuStyle.
+MenuBarThemeData? goMenuBarTheme(GoNode? n) =>
+    n == null ? null : MenuBarThemeData(style: goMenuStyle(n));

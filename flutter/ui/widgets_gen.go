@@ -113,6 +113,12 @@ type ActionChipElevated struct {
 	MouseCursor           *string
 }
 
+// ActionIconTheme maps ActionIconTheme of package:flutter/material.dart.
+type ActionIconTheme struct {
+	Data  ActionIconStyle
+	Child Node
+}
+
 // AlertDialog maps AlertDialog of package:flutter/material.dart.
 //
 // ActionsAlignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
@@ -601,6 +607,12 @@ type BadgeCount struct {
 	Child           Node
 }
 
+// BadgeTheme maps BadgeTheme of package:flutter/material.dart.
+type BadgeTheme struct {
+	Data  BadgeStyle
+	Child Node
+}
+
 // Banner maps Banner of package:flutter/widgets.dart.
 //
 // TextDirection takes "rtl", or "ltr".
@@ -687,6 +699,12 @@ type BottomNavigationBar struct {
 	UseLegacyColorScheme *bool
 }
 
+// BottomNavigationBarTheme maps BottomNavigationBarTheme of package:flutter/material.dart.
+type BottomNavigationBarTheme struct {
+	Data  BottomNavigationBarStyle
+	Child Node
+}
+
 // BottomSheet maps BottomSheet of package:flutter/material.dart.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
@@ -730,6 +748,12 @@ type ButtonBar struct {
 	Children              []Node
 }
 
+// ButtonBarTheme maps ButtonBarTheme of package:flutter/material.dart.
+type ButtonBarTheme struct {
+	Data  ButtonBarStyle
+	Child Node
+}
+
 // ButtonTheme maps ButtonTheme of package:flutter/material.dart.
 //
 // TextTheme takes "normal", "accent", or "primary".
@@ -753,6 +777,12 @@ type ButtonTheme struct {
 	SplashColor           *Color
 	MaterialTapTargetSize *string
 	Child                 Node
+}
+
+// ButtonThemeFromButtonThemeData maps ButtonTheme.fromButtonThemeData of package:flutter/material.dart.
+type ButtonThemeFromButtonThemeData struct {
+	Data  ButtonThemeStyle
+	Child Node
 }
 
 // CalendarDatePicker maps CalendarDatePicker of package:flutter/material.dart.
@@ -877,6 +907,12 @@ type CarouselViewBuilder struct {
 	ItemCount        *int
 	OnIndexChanged   func(int)
 	Infinite         *bool
+}
+
+// CarouselViewTheme maps CarouselViewTheme of package:flutter/material.dart.
+type CarouselViewTheme struct {
+	Data  CarouselViewStyle
+	Child Node
 }
 
 // CarouselViewWeighted maps CarouselView.weighted of package:flutter/material.dart.
@@ -1106,6 +1142,12 @@ type CheckboxMenuButton struct {
 	Child            Node
 }
 
+// CheckboxTheme maps CheckboxTheme of package:flutter/material.dart.
+type CheckboxTheme struct {
+	Data  CheckboxStyle
+	Child Node
+}
+
 // CheckedModeBanner maps CheckedModeBanner of package:flutter/widgets.dart.
 type CheckedModeBanner struct {
 	Child Node
@@ -1153,6 +1195,12 @@ type Chip struct {
 	AvatarBoxConstraints       *Constraints
 	DeleteIconBoxConstraints   *Constraints
 	MouseCursor                *string
+}
+
+// ChipTheme maps ChipTheme of package:flutter/material.dart.
+type ChipTheme struct {
+	Data  ChipStyle
+	Child Node
 }
 
 // ChoiceChip maps ChoiceChip of package:flutter/material.dart.
@@ -1450,6 +1498,7 @@ type CupertinoAlertDialog struct {
 // CupertinoApp maps CupertinoApp of package:flutter/cupertino.dart.
 type CupertinoApp struct {
 	Home                          Node
+	Theme                         *CupertinoStyle
 	InitialRoute                  *string
 	Title                         *string
 	Color                         *Color
@@ -1465,6 +1514,7 @@ type CupertinoApp struct {
 
 // CupertinoAppRouter maps CupertinoApp.router of package:flutter/cupertino.dart.
 type CupertinoAppRouter struct {
+	Theme                         *CupertinoStyle
 	Title                         *string
 	Color                         *Color
 	Locale                        *string
@@ -2381,6 +2431,12 @@ type CupertinoTextSelectionToolbarButtonText struct {
 	Text      string
 }
 
+// CupertinoTheme maps CupertinoTheme of package:flutter/cupertino.dart.
+type CupertinoTheme struct {
+	Data  CupertinoStyle
+	Child Node
+}
+
 // CupertinoTimerPicker maps CupertinoTimerPicker of package:flutter/cupertino.dart.
 //
 // Mode takes "hm", "ms", or "hms".
@@ -2471,6 +2527,12 @@ type DataTable struct {
 	ClipBehavior             *string
 }
 
+// DataTableTheme maps DataTableTheme of package:flutter/material.dart.
+type DataTableTheme struct {
+	Data  DataTableStyle
+	Child Node
+}
+
 // DatePickerDialog maps DatePickerDialog of package:flutter/material.dart.
 //
 // InitialEntryMode takes "calendar", "input", "calendarOnly", or "inputOnly".
@@ -2494,6 +2556,12 @@ type DatePickerDialog struct {
 	OnDatePickerModeChange        func(string)
 	SwitchToInputEntryModeIcon    Node
 	SwitchToCalendarEntryModeIcon Node
+}
+
+// DatePickerTheme maps DatePickerTheme of package:flutter/material.dart.
+type DatePickerTheme struct {
+	Data  DatePickerStyle
+	Child Node
 }
 
 // DateRangePickerDialog maps DateRangePickerDialog of package:flutter/material.dart.
@@ -2680,6 +2748,12 @@ type Divider struct {
 	Radius    *Radius
 }
 
+// DividerTheme maps DividerTheme of package:flutter/material.dart.
+type DividerTheme struct {
+	Data  DividerStyle
+	Child Node
+}
+
 // DragBoundary maps DragBoundary of package:flutter/widgets.dart.
 type DragBoundary struct {
 	Child Node
@@ -2765,6 +2839,12 @@ type DrawerHeader struct {
 	Child      Node
 }
 
+// DrawerTheme maps DrawerTheme of package:flutter/material.dart.
+type DrawerTheme struct {
+	Data  DrawerStyle
+	Child Node
+}
+
 // DropdownButtonHideUnderline maps DropdownButtonHideUnderline of package:flutter/material.dart.
 type DropdownButtonHideUnderline struct {
 	Child Node
@@ -2776,6 +2856,12 @@ type DropdownMenuItem struct {
 	Enabled   *bool
 	Alignment *string
 	Child     Node
+}
+
+// DropdownMenuTheme maps DropdownMenuTheme of package:flutter/material.dart.
+type DropdownMenuTheme struct {
+	Data  DropdownMenuStyle
+	Child Node
 }
 
 // EditableText maps EditableText of package:flutter/widgets.dart.
@@ -2888,6 +2974,12 @@ type ElevatedButtonIcon struct {
 	Icon             Node
 	Label            Node
 	IconAlignment    *string
+}
+
+// ElevatedButtonTheme maps ElevatedButtonTheme of package:flutter/material.dart.
+type ElevatedButtonTheme struct {
+	Data  ButtonStyle
+	Child Node
 }
 
 // EnableWidgetInspectorScope maps EnableWidgetInspectorScope of package:flutter/widgets.dart.
@@ -3011,6 +3103,12 @@ type ExpansionTile struct {
 	Enabled                     *bool
 	InternalAddSemanticForOnTap *bool
 	StatesController            *StatesKey
+}
+
+// ExpansionTileTheme maps ExpansionTileTheme of package:flutter/material.dart.
+type ExpansionTileTheme struct {
+	Data  ExpansionTileStyle
+	Child Node
 }
 
 // FadeInImage maps FadeInImage of package:flutter/widgets.dart.
@@ -3177,6 +3275,12 @@ type FilledButtonIcon struct {
 	Icon             Node
 	Label            Node
 	IconAlignment    *string
+}
+
+// FilledButtonTheme maps FilledButtonTheme of package:flutter/material.dart.
+type FilledButtonTheme struct {
+	Data  ButtonStyle
+	Child Node
 }
 
 // FilledButtonTonal maps FilledButton.tonal of package:flutter/material.dart.
@@ -3496,6 +3600,12 @@ type FloatingActionButtonSmall struct {
 	Autofocus             *bool
 	MaterialTapTargetSize *string
 	EnableFeedback        *bool
+}
+
+// FloatingActionButtonTheme maps FloatingActionButtonTheme of package:flutter/material.dart.
+type FloatingActionButtonTheme struct {
+	Data  FloatingActionButtonStyle
+	Child Node
 }
 
 // FlutterLogo maps FlutterLogo of package:flutter/widgets.dart.
@@ -4016,6 +4126,12 @@ type IconButtonOutlined struct {
 	SelectedIcon     Node
 	StatesController *StatesKey
 	Icon             Node
+}
+
+// IconButtonTheme maps IconButtonTheme of package:flutter/material.dart.
+type IconButtonTheme struct {
+	Data  ButtonStyle
+	Child Node
 }
 
 // IconTheme maps IconTheme of package:flutter/widgets.dart.
@@ -4931,6 +5047,7 @@ type MenuAcceleratorLabel struct {
 type MenuAnchor struct {
 	Controller               *MenuKey
 	ChildFocusNode           *FocusKey
+	Style                    *MenuStyle
 	AlignmentOffset          *Offset
 	ReservedPadding          *Insets
 	LayerLink                *LinkKey
@@ -4951,9 +5068,22 @@ type MenuAnchor struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type MenuBar struct {
+	Style        *MenuStyle
 	ClipBehavior *string
 	Controller   *MenuKey
 	Children     []Node
+}
+
+// MenuBarTheme maps MenuBarTheme of package:flutter/material.dart.
+type MenuBarTheme struct {
+	Data  MenuStyle
+	Child Node
+}
+
+// MenuButtonTheme maps MenuButtonTheme of package:flutter/material.dart.
+type MenuButtonTheme struct {
+	Data  ButtonStyle
+	Child Node
 }
 
 // MenuItemButton maps MenuItemButton of package:flutter/material.dart.
@@ -4977,6 +5107,12 @@ type MenuItemButton struct {
 	CloseOnActivate     *bool
 	OverflowAxis        *string
 	Child               Node
+}
+
+// MenuTheme maps MenuTheme of package:flutter/material.dart.
+type MenuTheme struct {
+	Data  MenuStyle
+	Child Node
 }
 
 // MergeSemantics maps MergeSemantics of package:flutter/widgets.dart.
@@ -5043,6 +5179,12 @@ type NavigationBar struct {
 	MaintainBottomViewPadding *bool
 }
 
+// NavigationBarTheme maps NavigationBarTheme of package:flutter/material.dart.
+type NavigationBarTheme struct {
+	Data  NavigationBarStyle
+	Child Node
+}
+
 // NavigationDestination maps NavigationDestination of package:flutter/material.dart.
 type NavigationDestination struct {
 	Icon         Node
@@ -5074,6 +5216,12 @@ type NavigationDrawerDestination struct {
 	SelectedIcon    Node
 	Label           Node
 	Enabled         *bool
+}
+
+// NavigationDrawerTheme maps NavigationDrawerTheme of package:flutter/material.dart.
+type NavigationDrawerTheme struct {
+	Data  NavigationDrawerStyle
+	Child Node
 }
 
 // NavigationIndicator maps NavigationIndicator of package:flutter/material.dart.
@@ -5113,6 +5261,12 @@ type NavigationRail struct {
 	TrailingAtBottom         *bool
 	Scrollable               *bool
 	MainAxisAlignment        *string
+}
+
+// NavigationRailTheme maps NavigationRailTheme of package:flutter/material.dart.
+type NavigationRailTheme struct {
+	Data  NavigationRailStyle
+	Child Node
 }
 
 // NavigationToolbar maps NavigationToolbar of package:flutter/widgets.dart.
@@ -5227,6 +5381,12 @@ type OutlinedButtonIcon struct {
 	Icon             Node
 	Label            Node
 	IconAlignment    *string
+}
+
+// OutlinedButtonTheme maps OutlinedButtonTheme of package:flutter/material.dart.
+type OutlinedButtonTheme struct {
+	Data  ButtonStyle
+	Child Node
 }
 
 // OverflowBar maps OverflowBar of package:flutter/widgets.dart.
@@ -5441,6 +5601,12 @@ type PopupMenuItem struct {
 	Child       Node
 }
 
+// PopupMenuTheme maps PopupMenuTheme of package:flutter/material.dart.
+type PopupMenuTheme struct {
+	Data  PopupMenuStyle
+	Child Node
+}
+
 // Positioned maps Positioned of package:flutter/widgets.dart.
 type Positioned struct {
 	Left   *float64
@@ -5507,6 +5673,18 @@ type PrimaryScrollControllerNone struct {
 	Child Node
 }
 
+// ProgressIndicatorTheme maps ProgressIndicatorTheme of package:flutter/material.dart.
+type ProgressIndicatorTheme struct {
+	Data  ProgressIndicatorStyle
+	Child Node
+}
+
+// RadioTheme maps RadioTheme of package:flutter/material.dart.
+type RadioTheme struct {
+	Data  RadioStyle
+	Child Node
+}
+
 // RangeSlider maps RangeSlider of package:flutter/material.dart.
 type RangeSlider struct {
 	Values        Range
@@ -5529,6 +5707,7 @@ type RangeSlider struct {
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 type RawChip struct {
+	DefaultProperties          *ChipStyle
 	Avatar                     Node
 	Label                      Node
 	LabelStyle                 *TextStyle
@@ -6029,6 +6208,12 @@ type Scrollbar struct {
 	ScrollbarOrientation *string
 }
 
+// ScrollbarTheme maps ScrollbarTheme of package:flutter/material.dart.
+type ScrollbarTheme struct {
+	Data  ScrollbarStyle
+	Child Node
+}
+
 // SearchBar maps SearchBar of package:flutter/material.dart.
 //
 // TextCapitalization takes "words", "sentences", "characters", or "none".
@@ -6059,6 +6244,24 @@ type SearchBar struct {
 	ReadOnly           *bool
 	SmartDashesType    *string
 	SmartQuotesType    *string
+}
+
+// SearchBarTheme maps SearchBarTheme of package:flutter/material.dart.
+type SearchBarTheme struct {
+	Data  SearchBarStyle
+	Child Node
+}
+
+// SearchViewTheme maps SearchViewTheme of package:flutter/material.dart.
+type SearchViewTheme struct {
+	Data  SearchViewStyle
+	Child Node
+}
+
+// SegmentedButtonTheme maps SegmentedButtonTheme of package:flutter/material.dart.
+type SegmentedButtonTheme struct {
+	Data  SegmentedButtonStyle
+	Child Node
 }
 
 // SelectableText maps SelectableText of package:flutter/material.dart.
@@ -6396,6 +6599,12 @@ type SliderAdaptive struct {
 	AllowedInteraction   *string
 	ShowValueIndicator   *string
 	Year2023             *bool
+}
+
+// SliderTheme maps SliderTheme of package:flutter/material.dart.
+type SliderTheme struct {
+	Data  SliderStyle
+	Child Node
 }
 
 // SliverAnimatedOpacity maps SliverAnimatedOpacity of package:flutter/widgets.dart.
@@ -6933,6 +7142,12 @@ type SnackBarAction struct {
 	OnPressed               func()
 }
 
+// SnackBarTheme maps SnackBarTheme of package:flutter/material.dart.
+type SnackBarTheme struct {
+	Data  SnackBarStyle
+	Child Node
+}
+
 // Spacer maps Spacer of package:flutter/widgets.dart.
 type Spacer struct {
 	Flex *int
@@ -7015,6 +7230,7 @@ type SubmenuButton struct {
 	OnClose                  func()
 	Controller               *MenuKey
 	Style                    *ButtonStyle
+	MenuStyle                *MenuStyle
 	AlignmentOffset          *Offset
 	ClipBehavior             *string
 	FocusNode                *FocusKey
@@ -7190,6 +7406,12 @@ type SwitchListTileAdaptive struct {
 	MinTileHeight               *float64
 	HoverColor                  *Color
 	InternalAddSemanticForOnTap *bool
+}
+
+// SwitchTheme maps SwitchTheme of package:flutter/material.dart.
+type SwitchTheme struct {
+	Data  SwitchStyle
+	Child Node
 }
 
 // Tab maps Tab of package:flutter/material.dart.
@@ -7445,6 +7667,12 @@ type TextButtonIcon struct {
 	IconAlignment    *string
 }
 
+// TextButtonTheme maps TextButtonTheme of package:flutter/material.dart.
+type TextButtonTheme struct {
+	Data  ButtonStyle
+	Child Node
+}
+
 // TextField maps TextField of package:flutter/material.dart.
 //
 // TextInputAction takes "none", "unspecified", "done", "go", "search", "send", "next", "previous", "continueAction", "join", "route", "emergencyCall", or "newline".
@@ -7647,6 +7875,12 @@ type TextSelectionGestureDetector struct {
 	Child                 Node
 }
 
+// TextSelectionTheme maps TextSelectionTheme of package:flutter/material.dart.
+type TextSelectionTheme struct {
+	Data  TextSelectionStyle
+	Child Node
+}
+
 // TextSelectionToolbar maps TextSelectionToolbar of package:flutter/material.dart.
 type TextSelectionToolbar struct {
 	AnchorAbove Offset
@@ -7700,6 +7934,12 @@ type TimePickerDialog struct {
 	EmptyInitialInput          *bool
 }
 
+// TimePickerTheme maps TimePickerTheme of package:flutter/material.dart.
+type TimePickerTheme struct {
+	Data  TimePickerStyle
+	Child Node
+}
+
 // Title maps Title of package:flutter/widgets.dart.
 type Title struct {
 	Title *string
@@ -7740,6 +7980,12 @@ type ToggleButtons struct {
 	VerticalDirection   *string
 }
 
+// ToggleButtonsTheme maps ToggleButtonsTheme of package:flutter/material.dart.
+type ToggleButtonsTheme struct {
+	Data  ToggleButtonsStyle
+	Child Node
+}
+
 // Tooltip maps Tooltip of package:flutter/material.dart.
 //
 // TextAlign takes "left", "right", "center", "justify", "start", or "end".
@@ -7768,6 +8014,12 @@ type Tooltip struct {
 	MouseCursor          *string
 	IgnorePointer        *bool
 	Child                Node
+}
+
+// TooltipTheme maps TooltipTheme of package:flutter/material.dart.
+type TooltipTheme struct {
+	Data  TooltipStyle
+	Child Node
 }
 
 // TooltipVisibility maps TooltipVisibility of package:flutter/material.dart.
@@ -8008,6 +8260,7 @@ func (AboutListTile) isNode()                                        {}
 func (AbsorbPointer) isNode()                                        {}
 func (ActionChip) isNode()                                           {}
 func (ActionChipElevated) isNode()                                   {}
+func (ActionIconTheme) isNode()                                      {}
 func (AlertDialog) isNode()                                          {}
 func (AlertDialogAdaptive) isNode()                                  {}
 func (Align) isNode()                                                {}
@@ -8043,15 +8296,19 @@ func (BackdropFilterGrouped) isNode()                                {}
 func (BackdropGroup) isNode()                                        {}
 func (Badge) isNode()                                                {}
 func (BadgeCount) isNode()                                           {}
+func (BadgeTheme) isNode()                                           {}
 func (Banner) isNode()                                               {}
 func (Baseline) isNode()                                             {}
 func (BlockSemantics) isNode()                                       {}
 func (BottomAppBar) isNode()                                         {}
 func (BottomAppBarTheme) isNode()                                    {}
 func (BottomNavigationBar) isNode()                                  {}
+func (BottomNavigationBarTheme) isNode()                             {}
 func (BottomSheet) isNode()                                          {}
 func (ButtonBar) isNode()                                            {}
+func (ButtonBarTheme) isNode()                                       {}
 func (ButtonTheme) isNode()                                          {}
+func (ButtonThemeFromButtonThemeData) isNode()                       {}
 func (CalendarDatePicker) isNode()                                   {}
 func (Card) isNode()                                                 {}
 func (CardFilled) isNode()                                           {}
@@ -8059,6 +8316,7 @@ func (CardOutlined) isNode()                                         {}
 func (CardTheme) isNode()                                            {}
 func (CarouselView) isNode()                                         {}
 func (CarouselViewBuilder) isNode()                                  {}
+func (CarouselViewTheme) isNode()                                    {}
 func (CarouselViewWeighted) isNode()                                 {}
 func (CarouselViewWeightedBuilder) isNode()                          {}
 func (Center) isNode()                                               {}
@@ -8067,9 +8325,11 @@ func (CheckboxAdaptive) isNode()                                     {}
 func (CheckboxListTile) isNode()                                     {}
 func (CheckboxListTileAdaptive) isNode()                             {}
 func (CheckboxMenuButton) isNode()                                   {}
+func (CheckboxTheme) isNode()                                        {}
 func (CheckedModeBanner) isNode()                                    {}
 func (CheckedPopupMenuItem) isNode()                                 {}
 func (Chip) isNode()                                                 {}
+func (ChipTheme) isNode()                                            {}
 func (ChoiceChip) isNode()                                           {}
 func (ChoiceChipElevated) isNode()                                   {}
 func (CircleAvatar) isNode()                                         {}
@@ -8153,12 +8413,15 @@ func (CupertinoTextSelectionToolbar) isNode()                        {}
 func (CupertinoTextSelectionToolbarButton) isNode()                  {}
 func (CupertinoTextSelectionToolbarButtonButtonItem) isNode()        {}
 func (CupertinoTextSelectionToolbarButtonText) isNode()              {}
+func (CupertinoTheme) isNode()                                       {}
 func (CupertinoTimerPicker) isNode()                                 {}
 func (CupertinoUserInterfaceLevel) isNode()                          {}
 func (CustomPaint) isNode()                                          {}
 func (CustomScrollView) isNode()                                     {}
 func (DataTable) isNode()                                            {}
+func (DataTableTheme) isNode()                                       {}
 func (DatePickerDialog) isNode()                                     {}
+func (DatePickerTheme) isNode()                                      {}
 func (DateRangePickerDialog) isNode()                                {}
 func (DecoratedBox) isNode()                                         {}
 func (DecoratedSliver) isNode()                                      {}
@@ -8178,6 +8441,7 @@ func (Directionality) isNode()                                       {}
 func (DisableWidgetInspectorScope) isNode()                          {}
 func (DisplayFeatureSubScreen) isNode()                              {}
 func (Divider) isNode()                                              {}
+func (DividerTheme) isNode()                                         {}
 func (DragBoundary) isNode()                                         {}
 func (Draggable) isNode()                                            {}
 func (DraggableScrollableActuator) isNode()                          {}
@@ -8186,11 +8450,14 @@ func (DrawerButton) isNode()                                         {}
 func (DrawerButtonIcon) isNode()                                     {}
 func (DrawerController) isNode()                                     {}
 func (DrawerHeader) isNode()                                         {}
+func (DrawerTheme) isNode()                                          {}
 func (DropdownButtonHideUnderline) isNode()                          {}
 func (DropdownMenuItem) isNode()                                     {}
+func (DropdownMenuTheme) isNode()                                    {}
 func (EditableText) isNode()                                         {}
 func (ElevatedButton) isNode()                                       {}
 func (ElevatedButtonIcon) isNode()                                   {}
+func (ElevatedButtonTheme) isNode()                                  {}
 func (EnableWidgetInspectorScope) isNode()                           {}
 func (EndDrawerButton) isNode()                                      {}
 func (EndDrawerButtonIcon) isNode()                                  {}
@@ -8204,12 +8471,14 @@ func (Expanded) isNode()                                             {}
 func (ExpansionPanelList) isNode()                                   {}
 func (ExpansionPanelListRadio) isNode()                              {}
 func (ExpansionTile) isNode()                                        {}
+func (ExpansionTileTheme) isNode()                                   {}
 func (FadeInImage) isNode()                                          {}
 func (FadeInImageAssetNetwork) isNode()                              {}
 func (FadeInImageMemoryNetwork) isNode()                             {}
 func (FadeTransition) isNode()                                       {}
 func (FilledButton) isNode()                                         {}
 func (FilledButtonIcon) isNode()                                     {}
+func (FilledButtonTheme) isNode()                                    {}
 func (FilledButtonTonal) isNode()                                    {}
 func (FilledButtonTonalIcon) isNode()                                {}
 func (FilterChip) isNode()                                           {}
@@ -8223,6 +8492,7 @@ func (FloatingActionButton) isNode()                                 {}
 func (FloatingActionButtonExtended) isNode()                         {}
 func (FloatingActionButtonLarge) isNode()                            {}
 func (FloatingActionButtonSmall) isNode()                            {}
+func (FloatingActionButtonTheme) isNode()                            {}
 func (FlutterLogo) isNode()                                          {}
 func (Focus) isNode()                                                {}
 func (FocusScope) isNode()                                           {}
@@ -8253,6 +8523,7 @@ func (IconButton) isNode()                                           {}
 func (IconButtonFilled) isNode()                                     {}
 func (IconButtonFilledTonal) isNode()                                {}
 func (IconButtonOutlined) isNode()                                   {}
+func (IconButtonTheme) isNode()                                      {}
 func (IconTheme) isNode()                                            {}
 func (IgnoreBaseline) isNode()                                       {}
 func (IgnorePointer) isNode()                                        {}
@@ -8305,18 +8576,24 @@ func (MenuAcceleratorCallbackBinding) isNode()                       {}
 func (MenuAcceleratorLabel) isNode()                                 {}
 func (MenuAnchor) isNode()                                           {}
 func (MenuBar) isNode()                                              {}
+func (MenuBarTheme) isNode()                                         {}
+func (MenuButtonTheme) isNode()                                      {}
 func (MenuItemButton) isNode()                                       {}
+func (MenuTheme) isNode()                                            {}
 func (MergeSemantics) isNode()                                       {}
 func (MergeableMaterial) isNode()                                    {}
 func (MetaData) isNode()                                             {}
 func (ModalBarrier) isNode()                                         {}
 func (MouseRegion) isNode()                                          {}
 func (NavigationBar) isNode()                                        {}
+func (NavigationBarTheme) isNode()                                   {}
 func (NavigationDestination) isNode()                                {}
 func (NavigationDrawer) isNode()                                     {}
 func (NavigationDrawerDestination) isNode()                          {}
+func (NavigationDrawerTheme) isNode()                                {}
 func (NavigationIndicator) isNode()                                  {}
 func (NavigationRail) isNode()                                       {}
+func (NavigationRailTheme) isNode()                                  {}
 func (NavigationToolbar) isNode()                                    {}
 func (Navigator) isNode()                                            {}
 func (NavigatorPopHandler) isNode()                                  {}
@@ -8327,6 +8604,7 @@ func (Opacity) isNode()                                              {}
 func (OrientationBuilder) isNode()                                   {}
 func (OutlinedButton) isNode()                                       {}
 func (OutlinedButtonIcon) isNode()                                   {}
+func (OutlinedButtonTheme) isNode()                                  {}
 func (OverflowBar) isNode()                                          {}
 func (OverflowBox) isNode()                                          {}
 func (Overlay) isNode()                                              {}
@@ -8346,6 +8624,7 @@ func (PlatformSelectableRegionContextMenu) isNode()                  {}
 func (PopScope) isNode()                                             {}
 func (PopupMenuDivider) isNode()                                     {}
 func (PopupMenuItem) isNode()                                        {}
+func (PopupMenuTheme) isNode()                                       {}
 func (Positioned) isNode()                                           {}
 func (PositionedDirectional) isNode()                                {}
 func (PositionedFill) isNode()                                       {}
@@ -8354,6 +8633,8 @@ func (PositionedFromRelativeRect) isNode()                           {}
 func (PreferredSize) isNode()                                        {}
 func (PrimaryScrollController) isNode()                              {}
 func (PrimaryScrollControllerNone) isNode()                          {}
+func (ProgressIndicatorTheme) isNode()                               {}
+func (RadioTheme) isNode()                                           {}
 func (RangeSlider) isNode()                                          {}
 func (RawChip) isNode()                                              {}
 func (RawGestureDetector) isNode()                                   {}
@@ -8387,7 +8668,11 @@ func (ScaffoldMessenger) isNode()                                    {}
 func (ScaleTransition) isNode()                                      {}
 func (ScrollNotificationObserver) isNode()                           {}
 func (Scrollbar) isNode()                                            {}
+func (ScrollbarTheme) isNode()                                       {}
 func (SearchBar) isNode()                                            {}
+func (SearchBarTheme) isNode()                                       {}
+func (SearchViewTheme) isNode()                                      {}
+func (SegmentedButtonTheme) isNode()                                 {}
 func (SelectableText) isNode()                                       {}
 func (SelectableTextRich) isNode()                                   {}
 func (SelectionArea) isNode()                                        {}
@@ -8409,6 +8694,7 @@ func (SizedBoxSquare) isNode()                                       {}
 func (SizedOverflowBox) isNode()                                     {}
 func (Slider) isNode()                                               {}
 func (SliderAdaptive) isNode()                                       {}
+func (SliderTheme) isNode()                                          {}
 func (SliverAnimatedOpacity) isNode()                                {}
 func (SliverAppBar) isNode()                                         {}
 func (SliverAppBarLarge) isNode()                                    {}
@@ -8452,6 +8738,7 @@ func (SliverVisibility) isNode()                                     {}
 func (SliverVisibilityMaintain) isNode()                             {}
 func (SnackBar) isNode()                                             {}
 func (SnackBarAction) isNode()                                       {}
+func (SnackBarTheme) isNode()                                        {}
 func (Spacer) isNode()                                               {}
 func (SpellCheckSuggestionsToolbar) isNode()                         {}
 func (Stack) isNode()                                                {}
@@ -8463,6 +8750,7 @@ func (Switch) isNode()                                               {}
 func (SwitchAdaptive) isNode()                                       {}
 func (SwitchListTile) isNode()                                       {}
 func (SwitchListTileAdaptive) isNode()                               {}
+func (SwitchTheme) isNode()                                          {}
 func (Tab) isNode()                                                  {}
 func (TabBar) isNode()                                               {}
 func (TabBarSecondary) isNode()                                      {}
@@ -8478,19 +8766,24 @@ func (TapRegionSurface) isNode()                                     {}
 func (Text) isNode()                                                 {}
 func (TextButton) isNode()                                           {}
 func (TextButtonIcon) isNode()                                       {}
+func (TextButtonTheme) isNode()                                      {}
 func (TextField) isNode()                                            {}
 func (TextFieldTapRegion) isNode()                                   {}
 func (TextFormField) isNode()                                        {}
 func (TextRich) isNode()                                             {}
 func (TextSelectionGestureDetector) isNode()                         {}
+func (TextSelectionTheme) isNode()                                   {}
 func (TextSelectionToolbar) isNode()                                 {}
 func (TextSelectionToolbarTextButton) isNode()                       {}
 func (Texture) isNode()                                              {}
 func (TickerMode) isNode()                                           {}
 func (TimePickerDialog) isNode()                                     {}
+func (TimePickerTheme) isNode()                                      {}
 func (Title) isNode()                                                {}
 func (ToggleButtons) isNode()                                        {}
+func (ToggleButtonsTheme) isNode()                                   {}
 func (Tooltip) isNode()                                              {}
+func (TooltipTheme) isNode()                                         {}
 func (TooltipVisibility) isNode()                                    {}
 func (Transform) isNode()                                            {}
 func (TransformFlip) isNode()                                        {}

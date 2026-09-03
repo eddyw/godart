@@ -2092,6 +2092,56 @@ The plan left these points open. The work took the decisions below.
      network poller outside the run queue, thus it needs no such rule.
      `fixedbugs/issue11256` of the test directory of Go hung before this change,
      and it takes 1.4 seconds now.
+311. The theme of 1 widget family crosses to Go, and 34 value types carry the
+     41 themes. `flutter/ui/themes.go` holds 1 struct for each 1, for example
+     `ui.SliderStyle` for `SliderThemeData`. The set went from 509 node types
+     with 4806 fields to 550 with 4894 fields. The dropped constructors went
+     from 174 to 133. The theme of 1 widget family was the
+     largest group that stayed out, and no constructor of that group stays out
+     now.
+
+     The name of a struct strips "ThemeData" and adds "Style". `ButtonThemeData`
+     gives `ui.ButtonThemeStyle`, because `ui.ButtonStyle` already holds the
+     Flutter `ButtonStyle`. 6 themes hold 1 `ButtonStyle` alone, thus
+     `ElevatedButtonThemeData`, `FilledButtonThemeData`, `IconButtonThemeData`,
+     `MenuButtonThemeData`, `OutlinedButtonThemeData`, and
+     `TextButtonThemeData` each read `ui.ButtonStyle` and take no type of their
+     own. `MenuThemeData` and `MenuBarThemeData` each hold 1 `MenuStyle` alone,
+     thus the 2 read the new `ui.MenuStyle`.
+
+     A field that Flutter carries for each state holds 1 value in Go, as
+     `ui.ButtonStyle` does. A `WidgetStateProperty<double?>` thus reads a
+     `*float64`, and the host gives that value to each state. A text field
+     names a value of an enum of Flutter, and an empty text gives the default.
+
+     These fields of a theme stay out, and each cause stands next to it:
+
+     - The 9 shape fields of `SliderThemeData`, for example `thumbShape`, and
+       `thumbSelector`. A Dart subclass must implement a shape, and a Go type
+       cannot.
+     - `inputDecorationTheme` of `DatePickerThemeData`, of
+       `DropdownMenuThemeData`, and of `TimePickerThemeData`. The parameter
+       takes an `Object`, thus a Go text would compile and give the wrong
+       object.
+     - `colorScheme` of `ButtonThemeData` and `textTheme` of
+       `CupertinoThemeData`. Each 1 is a theme of its own, and this work adds
+       no value type for it.
+     - `expansionAnimationStyle` of `ExpansionTileThemeData`. No Go value holds
+       an `AnimationStyle`.
+     - `controller` of `ProgressIndicatorThemeData`. An `AnimationController`
+       is a live object of the host.
+     - `submenuIcon` of `MenuThemeData` and `thumbIcon` of `SwitchThemeData`.
+       Each 1 holds 1 widget for each state.
+     - An elliptical `radius` of `ScrollbarThemeData`. The Go field takes a
+       circular value alone.
+     - `dataRowHeight` of `DataTableThemeData`, `height` of `TooltipThemeData`,
+       and `year2023` of the slider and of the progress indicator. Flutter
+       holds each 1 as deprecated.
+
+     Flutter also holds `ButtonBarThemeData` as deprecated, thus `convert.dart`
+     names that type under an ignore. The whole node set compiles. The host
+     mode with `-all` writes a case for each of the 550 types, and
+     `flutter analyze` of `goflutter` reports no issue.
 
 ## Answered questions of 2026-08-31
 

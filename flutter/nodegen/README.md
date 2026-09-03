@@ -57,7 +57,7 @@ node type carries such a name.
 
 ## Why the host is per application
 
-A shared host would hold a case for each of the 509 node types, thus it would
+A shared host would hold a case for each of the 550 node types, thus it would
 name each Flutter widget. The tree shaker of Dart then keeps the whole
 framework. The measurement of 2026-09-02 read a set of 411 nodes, on an ahead
 of time build for macOS:
@@ -120,6 +120,48 @@ then takes the default of Flutter.
 | `VisualDensity` | `ui.Density` | |
 | `IconThemeData` | `ui.IconStyle` | The name differs, because a widget holds the name `IconTheme`. |
 | `ThemeData` | `ui.ThemeStyle` | A subset of the fields. The name differs, because `app.go` holds `ui.ThemeData`. |
+| `ActionIconThemeData` | `ui.ActionIconStyle` | 1 builder for each button of an app bar. |
+| `BadgeThemeData` | `ui.BadgeStyle` | A subset of the fields. |
+| `BottomNavigationBarThemeData` | `ui.BottomNavigationBarStyle` | The same. |
+| `ButtonBarThemeData` | `ui.ButtonBarStyle` | The same. Flutter holds ButtonBar as deprecated. |
+| `ButtonThemeData` | `ui.ButtonThemeStyle` | The same. The name differs, because `ui.ButtonStyle` holds the Flutter `ButtonStyle`. |
+| `CarouselViewThemeData` | `ui.CarouselViewStyle` | The same. |
+| `CheckboxThemeData` | `ui.CheckboxStyle` | The same. |
+| `ChipThemeData` | `ui.ChipStyle` | The same. |
+| `CupertinoThemeData` | `ui.CupertinoStyle` | The same. The text theme stays out. |
+| `DataTableThemeData` | `ui.DataTableStyle` | The same. |
+| `DatePickerThemeData` | `ui.DatePickerStyle` | The same. |
+| `DividerThemeData` | `ui.DividerStyle` | The same. |
+| `DrawerThemeData` | `ui.DrawerStyle` | The same. |
+| `DropdownMenuThemeData` | `ui.DropdownMenuStyle` | The same. It carries 1 `ui.MenuStyle`. |
+| `ElevatedButtonThemeData` | `ui.ButtonStyle` | The theme holds 1 `ButtonStyle` alone. |
+| `ExpansionTileThemeData` | `ui.ExpansionTileStyle` | A subset of the fields. |
+| `FilledButtonThemeData` | `ui.ButtonStyle` | The theme holds 1 `ButtonStyle` alone. |
+| `FloatingActionButtonThemeData` | `ui.FloatingActionButtonStyle` | A subset of the fields. |
+| `IconButtonThemeData` | `ui.ButtonStyle` | The theme holds 1 `ButtonStyle` alone. |
+| `MenuBarThemeData` | `ui.MenuStyle` | The theme holds 1 `MenuStyle` alone. |
+| `MenuButtonThemeData` | `ui.ButtonStyle` | The theme holds 1 `ButtonStyle` alone. |
+| `MenuStyle` | `ui.MenuStyle` | 1 value for each field, and 1 color for each state. |
+| `MenuThemeData` | `ui.MenuStyle` | The theme holds 1 `MenuStyle` alone. |
+| `NavigationBarThemeData` | `ui.NavigationBarStyle` | A subset of the fields. |
+| `NavigationDrawerThemeData` | `ui.NavigationDrawerStyle` | The same. |
+| `NavigationRailThemeData` | `ui.NavigationRailStyle` | The same. |
+| `OutlinedButtonThemeData` | `ui.ButtonStyle` | The theme holds 1 `ButtonStyle` alone. |
+| `PopupMenuThemeData` | `ui.PopupMenuStyle` | A subset of the fields. |
+| `ProgressIndicatorThemeData` | `ui.ProgressIndicatorStyle` | The same. |
+| `RadioThemeData` | `ui.RadioStyle` | The same. |
+| `ScrollbarThemeData` | `ui.ScrollbarStyle` | The same. Radius takes a circular value. |
+| `SearchBarThemeData` | `ui.SearchBarStyle` | The same. |
+| `SearchViewThemeData` | `ui.SearchViewStyle` | The same. |
+| `SegmentedButtonThemeData` | `ui.SegmentedButtonStyle` | 1 `ButtonStyle` and 1 icon. |
+| `SliderThemeData` | `ui.SliderStyle` | A subset of the fields. The shape of each part stays out. |
+| `SnackBarThemeData` | `ui.SnackBarStyle` | A subset of the fields. |
+| `SwitchThemeData` | `ui.SwitchStyle` | The same. |
+| `TextButtonThemeData` | `ui.ButtonStyle` | The theme holds 1 `ButtonStyle` alone. |
+| `TextSelectionThemeData` | `ui.TextSelectionStyle` | 3 colors. |
+| `TimePickerThemeData` | `ui.TimePickerStyle` | A subset of the fields. |
+| `ToggleButtonsThemeData` | `ui.ToggleButtonsStyle` | The same. |
+| `TooltipThemeData` | `ui.TooltipStyle` | The same. |
 | `WidgetStateProperty<Color?>` | `ui.StateColor` | 1 color for each state. |
 | `WidgetStateProperty<Color>` | `ui.StateColor` | The same. A state with no color gives a transparent color, because the parameter takes no null. |
 | `Size` | `ui.Size` | A width and a height. |
@@ -151,6 +193,11 @@ A parameter that the constructor does not demand takes a pointer field, and a
 nil pointer means "the default of Flutter". A parameter of any other type does
 not reach the node set.
 
+The name of the value type of a theme strips "ThemeData" and adds "Style". A
+field that Flutter carries for each state holds 1 value in the Go struct, as
+`ui.ButtonStyle` does. The host gives that value to each state. Read
+`flutter/ui/themes.go`.
+
 The key types hold an identity, and not a value. A Go tree is data and it
 rebuilds on each change, thus a Go value cannot be the object itself: a new
 tree would give a new controller and the widget would lose its focus, its
@@ -175,11 +222,10 @@ dart run bin/nodegen.dart report ../goflutter -all
 It names each widget that the reader dropped, the cause of each drop, and each
 Dart type that no Go type carries.
 
-The largest groups that stay out on 2026-09-03, with 174 dropped constructors:
+The largest groups that stay out on 2026-09-03, with 133 dropped constructors:
 
 | The group | Count | The cause |
 |---|---|---|
-| A theme of 1 widget family, for example `SliderThemeData` | 41 | Each 1 holds the whole configuration of a family. 41 value types close the group. |
 | A generic widget, for example `Radio<T>` | 17 | A node holds no type argument, thus the host cannot name the instantiation. |
 | A delegate that a Dart subclass must implement | 12 | A Go type cannot implement a Dart interface. |
 | A live object of the host, for example `EditableTextState` or `ViewportOffset` | 12 | The object lives inside 1 build of Flutter, and a Go value cannot hold it. |

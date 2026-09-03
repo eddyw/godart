@@ -332,6 +332,58 @@ const _scalars = <String, GoType>{
   'SliverGridDelegate': GoType('GridSpec', 'gridSpec'),
   'RangeValues': GoType('Range', 'range'),
   'ThemeData': GoType('ThemeStyle', 'themeStyle'),
+  // The theme of 1 widget family, and the value type of it. Read
+  // flutter/ui/themes.go.
+  'ActionIconThemeData': GoType('ActionIconStyle', 'actionIconStyle'),
+  'BadgeThemeData': GoType('BadgeStyle', 'badgeStyle'),
+  'BottomNavigationBarThemeData':
+      GoType('BottomNavigationBarStyle', 'bottomNavigationBarStyle'),
+  'ButtonBarThemeData': GoType('ButtonBarStyle', 'buttonBarStyle'),
+  'ButtonThemeData': GoType('ButtonThemeStyle', 'buttonThemeStyle'),
+  'CarouselViewThemeData': GoType('CarouselViewStyle', 'carouselViewStyle'),
+  'CheckboxThemeData': GoType('CheckboxStyle', 'checkboxStyle'),
+  'ChipThemeData': GoType('ChipStyle', 'chipStyle'),
+  'CupertinoThemeData': GoType('CupertinoStyle', 'cupertinoStyle'),
+  'DataTableThemeData': GoType('DataTableStyle', 'dataTableStyle'),
+  'DatePickerThemeData': GoType('DatePickerStyle', 'datePickerStyle'),
+  'DividerThemeData': GoType('DividerStyle', 'dividerStyle'),
+  'DrawerThemeData': GoType('DrawerStyle', 'drawerStyle'),
+  'DropdownMenuThemeData': GoType('DropdownMenuStyle', 'dropdownMenuStyle'),
+  'ExpansionTileThemeData': GoType('ExpansionTileStyle', 'expansionTileStyle'),
+  'FloatingActionButtonThemeData':
+      GoType('FloatingActionButtonStyle', 'floatingActionButtonStyle'),
+  'MenuStyle': GoType('MenuStyle', 'menuStyle'),
+  'NavigationBarThemeData': GoType('NavigationBarStyle', 'navigationBarStyle'),
+  'NavigationDrawerThemeData':
+      GoType('NavigationDrawerStyle', 'navigationDrawerStyle'),
+  'NavigationRailThemeData':
+      GoType('NavigationRailStyle', 'navigationRailStyle'),
+  'PopupMenuThemeData': GoType('PopupMenuStyle', 'popupMenuStyle'),
+  'ProgressIndicatorThemeData':
+      GoType('ProgressIndicatorStyle', 'progressIndicatorStyle'),
+  'RadioThemeData': GoType('RadioStyle', 'radioStyle'),
+  'ScrollbarThemeData': GoType('ScrollbarStyle', 'scrollbarStyle'),
+  'SearchBarThemeData': GoType('SearchBarStyle', 'searchBarStyle'),
+  'SearchViewThemeData': GoType('SearchViewStyle', 'searchViewStyle'),
+  'SegmentedButtonThemeData':
+      GoType('SegmentedButtonStyle', 'segmentedButtonStyle'),
+  'SliderThemeData': GoType('SliderStyle', 'sliderStyle'),
+  'SnackBarThemeData': GoType('SnackBarStyle', 'snackBarStyle'),
+  'SwitchThemeData': GoType('SwitchStyle', 'switchStyle'),
+  'TextSelectionThemeData': GoType('TextSelectionStyle', 'textSelectionStyle'),
+  'TimePickerThemeData': GoType('TimePickerStyle', 'timePickerStyle'),
+  'ToggleButtonsThemeData': GoType('ToggleButtonsStyle', 'toggleButtonsStyle'),
+  'TooltipThemeData': GoType('TooltipStyle', 'tooltipStyle'),
+  // A theme of 1 button family holds 1 ButtonStyle alone, and 2 themes of a
+  // menu each hold 1 MenuStyle alone.
+  'ElevatedButtonThemeData': GoType('ButtonStyle', 'elevatedButtonTheme'),
+  'FilledButtonThemeData': GoType('ButtonStyle', 'filledButtonTheme'),
+  'IconButtonThemeData': GoType('ButtonStyle', 'iconButtonTheme'),
+  'MenuButtonThemeData': GoType('ButtonStyle', 'menuButtonTheme'),
+  'OutlinedButtonThemeData': GoType('ButtonStyle', 'outlinedButtonTheme'),
+  'TextButtonThemeData': GoType('ButtonStyle', 'textButtonTheme'),
+  'MenuThemeData': GoType('MenuStyle', 'menuTheme'),
+  'MenuBarThemeData': GoType('MenuStyle', 'menuBarTheme'),
   'BottomNavigationBarItem': GoType('BarItem', 'barItem'),
   'NavigationRailDestination': GoType('RailItem', 'railItem'),
   'Step': GoType('Step', 'step'),

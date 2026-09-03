@@ -1149,7 +1149,7 @@ acceptable and the first open question is answered. The output:
 
 | Output | Scope |
 |---|---|
-| `flutter/ui/widgets_gen.go`, 509 node types and 4806 fields | The whole project |
+| `flutter/ui/widgets_gen.go`, 550 node types and 4894 fields | The whole project |
 | `<app>/lib/widgets_gen.dart` | 1 application |
 
 **The 3 questions of the plan.**
@@ -1193,8 +1193,8 @@ Thus no single Dart type unlocks a large group.
 The 9 value types of the same day widened the mapping to 414 node types with
 3851 fields, thus 270 constructors stayed out.
 
-**The state of 2026-09-03.** The set holds 509 node types with 4806 fields, and
-174 constructors stay out.
+**The state of 2026-09-03.** The set holds 550 node types with 4894 fields, and
+133 constructors stay out.
 
 | The work | Node types | Fields | Dropped |
 |---|---|---|---|
@@ -1203,6 +1203,7 @@ The 9 value types of the same day widened the mapping to 414 node types with
 | 6 more value types, decision 246 | 423 | 3977 | 261 |
 | The 3 identity objects, decision 247 | 427 | 4111 | 257 |
 | The long tail of 2026-09-03, decisions 269 to 274 | 509 | 4806 | 174 |
+| The 34 theme value types, decision 311 | 550 | 4894 | 133 |
 
 The set of 509 types costs an application 26,752 bytes less than the set of
 427, because the tree shaker drops each type that the application does not
@@ -1328,7 +1329,7 @@ states a limit that the compiler no longer holds.
 | An import of a Dart library that is not `goruntime` needs an emitter change | False. `dartPrefix` and `dartOrder` of `internal/emit/dart.go` and of `internal/emit/emit.go` write 1 prefixed import for each Dart library. |
 | A guarantee that a function stays synchronous needs a new pass after stage 3 | False. `internal/analyze/sync.go` holds that pass, and milestone 2 above records it. |
 | A box into an interface copies the struct again | False. `box` of `internal/emit/iface.go` writes no copy for a composite literal. A widget tree thus costs 1 object for each node. Decision 219. |
-| The repository holds no mention of Flutter and no mention of a widget, thus each option starts from 0 | False. `flutter/` holds `gart.dev/ui` with 509 node types, the Dart package `goflutter`, the tool `nodegen`, the tool `nodescan`, and 3 example applications. |
+| The repository holds no mention of Flutter and no mention of a widget, thus each option starts from 0 | False. `flutter/` holds `gart.dev/ui` with 550 node types, the Dart package `goflutter`, the tool `nodegen`, the tool `nodescan`, and 3 example applications. |
 
 2 more claims are incomplete.
 
