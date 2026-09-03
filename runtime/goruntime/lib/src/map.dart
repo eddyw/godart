@@ -66,7 +66,7 @@ final class GoMap<K, V> {
         ),
       );
     }
-    final _Entry<K, V>? e = _entries[key];
+    final _Entry<K, V>? e = _readForWrite(key);
     if (e != null) {
       e.value = value;
       return;
@@ -80,6 +80,19 @@ final class GoMap<K, V> {
     }
     _tail = entry;
     _entries[key] = entry;
+  }
+
+  /// The entry of a key that a write reads. Go writes a text of its own for
+  /// the hash of a key that holds no identity in a write, thus the flag of
+  /// the hash stands over the read.
+  _Entry<K, V>? _readForWrite(K key) {
+    if (key is! Iface) return _entries[key];
+    $hashInWrite = true;
+    try {
+      return _entries[key];
+    } finally {
+      $hashInWrite = false;
+    }
   }
 
   void remove(K key) {

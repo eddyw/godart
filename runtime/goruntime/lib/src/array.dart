@@ -11,25 +11,18 @@ List<T> $makeArray<T>(int n, T Function() zero) =>
 /// Builds an array of the first n elements of a slice. Go panics when the
 /// slice holds fewer than n elements.
 List<T> $sliceToArray<T>(Slice<T> s, int n) {
-  if (s.len < n) {
-    $panic(
-      'runtime error: cannot convert slice with length ${s.len} '
-      'to array or pointer to array with length $n',
-    );
-  }
+  if (s.len < n) $panicConvert(s.len, n);
   return List<T>.generate(n, (i) => s[i], growable: false);
 }
 
 /// Builds a pointer to an array of the first n elements of a slice. The array
 /// shares the elements of the slice, thus a write through the pointer reaches
 /// the slice. Go panics when the slice holds fewer than n elements.
-List<T> $sliceToArrayPtr<T>(Slice<T> s, int n) {
-  if (s.len < n) {
-    $panic(
-      'runtime error: cannot convert slice with length ${s.len} '
-      'to array or pointer to array with length $n',
-    );
-  }
+List<T>? $sliceToArrayPtr<T>(Slice<T> s, int n) {
+  if (s.len < n) $panicConvert(s.len, n);
+  // A nil slice gives a nil pointer, and an empty slice that is not nil gives
+  // a pointer that is not nil. Only a length of 0 reaches both.
+  if (s.isNil) return null;
   if (s.off == 0 && s.array.length == n) return s.array;
   return $ArrayView<T>(s.array, s.off, n);
 }
@@ -90,12 +83,12 @@ bool $equalArray<T>(List<T> a, List<T> b, [bool Function(T, T)? equal]) {
 
 /// The element at index i of an array. uns names an index of an unsigned
 /// type, which reads as a negative Dart int above 2^63.
-T $arrayIndex<T>(List<T> a, int i, {bool uns = false}) {
+T $arrayIndex<T>(List<T> a, int i, [bool uns = false]) {
   if (i < 0 || i >= a.length) $panicIndex(i, a.length, uns);
   return a[i];
 }
 
-void $arraySet<T>(List<T> a, int i, T v, {bool uns = false}) {
+void $arraySet<T>(List<T> a, int i, T v, [bool uns = false]) {
   if (i < 0 || i >= a.length) $panicIndex(i, a.length, uns);
   a[i] = v;
 }

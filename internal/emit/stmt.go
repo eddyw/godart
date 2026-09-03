@@ -265,8 +265,6 @@ func (e *emitter) defineAssign(s *ir.Assign) {
 			}
 		}
 	}
-	e.storeDepth++
-	defer func() { e.storeDepth-- }()
 	e.line("%s = %s;", e.expr(s.Lhs), value)
 }
 
@@ -292,8 +290,6 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 			}
 		}
 	}
-	e.storeDepth++
-	defer func() { e.storeDepth-- }()
 	// The case list of a select statement has no Go type, thus it takes the
 	// plain form of an assignment.
 	if t == nil {

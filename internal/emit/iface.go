@@ -581,15 +581,20 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 		params[i] = e.dartType(selSig.Params().At(i).Type()) + " " + args[i]
 	}
 	recv := fmt.Sprintf("($r as %s)", e.dartType(elem))
+	_, wantPtr := types.Unalias(sig.Recv().Type()).(*types.Pointer)
 	if pointer && !needsBox(elem) {
-		// Go panics when a value method runs with a nil pointer receiver,
-		// and the Dart cast of null gives a cast error.
-		recv = fmt.Sprintf("($r == null ? $panicNil() : ($r as %s))", e.dartType(elem))
+		// Go stops when a value method runs with a nil pointer receiver, and
+		// the Dart cast of null gives a cast error.
+		recv = fmt.Sprintf("($r == null ? %s : ($r as %s))",
+			e.wrapPanic(elem, fn), e.dartType(elem))
 	}
 	if pointer && needsBox(elem) {
-		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(elem)))
-		if _, ok := types.Unalias(sig.Recv().Type()).(*types.Pointer); !ok {
-			recv += "!.v"
+		ptr := e.dartType(types.NewPointer(elem))
+		if wantPtr {
+			recv = fmt.Sprintf("($r as %s)", ptr)
+		} else {
+			recv = fmt.Sprintf("($r == null ? %s : ($r as %s)!.v)",
+				e.wrapPanic(elem, fn), ptr)
 		}
 	}
 	// The Dart form of a pointer to a struct accepts null, thus the cast must
@@ -599,19 +604,26 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 	}
 	index := sel.Index()
 	current := elem
-	for _, i := range index[:len(index)-1] {
+	// The last field of the path holds the receiver, and each field before it
+	// only carries the walk. A pointer to a struct in the middle of the walk
+	// needs the object behind it.
+	path := index[:len(index)-1]
+	for n, i := range path {
 		st := structOf(current)
 		if st == nil {
 			e.fail("the method path of %s leaves a struct type", elem)
 			return ""
 		}
 		field := st.Field(i)
+		parent, holder := recv, current
 		recv += "." + fieldDartName(current, field.Name())
 		current = field.Type()
+		if n == len(path)-1 {
+			recv = e.fitReceiver(recv, parent, holder, field.Name(), current, sig)
+			break
+		}
 		if isPointerType(current) && structOf(current) != nil {
-			// A pointer to a struct is the Dart object reference, and that
-			// type accepts null.
-			recv += "!"
+			recv = nilRead(recv, false)
 		}
 	}
 	call := fmt.Sprintf("%s.%s(%s)", recv, methodName(fn), strings.Join(args, ", "))
@@ -646,6 +658,57 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 		head += ", " + strings.Join(params, ", ")
 	}
 	return fmt.Sprintf("%s: (%s) => %s", e.methodKeyText(fn.Name(), selSig), head, call)
+}
+
+// wrapPanic writes the panic of a method wrapper that a nil pointer receiver
+// reached. Go names the value method with its package, and the pointer type
+// with the name of the type alone.
+func (e *emitter) wrapPanic(elem types.Type, fn *types.Func) string {
+	name := reflectText(elem)
+	short := name
+	if i := strings.LastIndex(name, "."); i >= 0 {
+		short = name[i+1:]
+	}
+	return fmt.Sprintf("$panicWrap(%s, %s, %s)",
+		dartString(name), dartString(fn.Name()), dartString(short))
+}
+
+// nilRead gives the value behind a pointer of a method path. Go panics with
+// the nil dereference error, and the bare null check of Dart gives an error of
+// Dart. The text holds a field path of the receiver, thus it runs no effect.
+func nilRead(text string, box bool) string {
+	if box {
+		return "(" + text + " == null ? $panicNil() : " + text + "!.v)"
+	}
+	return "(" + text + " == null ? $panicNil() : " + text + "!)"
+}
+
+// fitReceiver adjusts the last field of a method path to the receiver of the
+// method. An embedded field and the receiver can differ in form: Go reads
+// through a pointer field for a value receiver, and it takes the address of a
+// value field for a pointer receiver.
+//
+// A pointer to a struct is the Dart object itself, thus a pointer receiver on
+// a field of such a struct needs no address.
+func (e *emitter) fitReceiver(recv, parent string, holder types.Type,
+	fieldName string, field types.Type, sig *types.Signature) string {
+	_, wantPtr := types.Unalias(sig.Recv().Type()).(*types.Pointer)
+	p, isPtr := typeset.Core(field).(*types.Pointer)
+	if isPtr && !wantPtr {
+		return nilRead(recv, needsBox(p.Elem()))
+	}
+	if !isPtr && wantPtr && needsBox(field) {
+		owner := holder
+		if hp, ok := typeset.Core(owner).(*types.Pointer); ok {
+			owner = hp.Elem()
+		}
+		name := fieldDartName(holder, fieldName)
+		return fmt.Sprintf(
+			"$Ref<%s, %s>(%s, %d, ($r, $i) => $r.%s, ($r, $i, $v) => $r.%s = $v)",
+			e.dartType(owner), e.dartType(field), parent,
+			fieldIndex(owner, fieldName), name, name)
+	}
+	return recv
 }
 
 // topLevelMethod reports whether the body of the method stands in a top level
@@ -723,14 +786,20 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		}
 	}
 	// An unnamed struct type holds the promoted method of each embedded field,
-	// thus its description also needs a method table. An interface type holds
-	// the key of each method that it needs, because a type assertion to a type
-	// parameter reads that set. A slice, a map, and a channel hold no method.
+	// thus its description also needs a method table. A pointer to such a
+	// struct holds the same set, and each pointer method of it. An interface
+	// type holds the key of each method that it needs, because a type
+	// assertion to a type parameter reads that set. A slice, a map, and a
+	// channel hold no method.
 	table := "const <String, Function>{}"
 	methodTypes := ""
+	owner := u
+	if p, ok := owner.(*types.Pointer); ok {
+		owner = types.Unalias(p.Elem())
+	}
 	switch {
-	case isStructUnder(t):
-		if entries := e.methodTable(types.Unalias(t), t); len(entries) > 0 {
+	case isStructUnder(owner):
+		if entries := e.methodTable(owner, t); len(entries) > 0 {
 			table = "<String, Function>{" + strings.Join(entries, ", ") + "}"
 			methodTypes = e.methodTypeTable(t)
 		}

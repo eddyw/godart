@@ -258,10 +258,6 @@ type emitter struct {
 	// varLitId holds the token of the literal that a hoisted variable holds,
 	// by the name of the variable.
 	varLitId map[string]int
-	// storeDepth counts the writes whose left side the emitter writes now.
-	// A left side holds a location, and the nil check of a read is no
-	// location, so a deref keeps the bare form in a store.
-	storeDepth int
 	// goLine holds the source line of the last marker. A statement of the same
 	// line needs no second marker.
 	goLine int
@@ -309,6 +305,12 @@ func (e *emitter) goFile(pos token.Pos) string {
 	adjusted := e.cfg.Fset.Position(pos)
 	raw := e.cfg.Fset.PositionFor(pos, false)
 	if adjusted.Filename != raw.Filename {
+		// A line directive with no file gives an empty name, and Go writes ??
+		// for it. A directive that holds a column keeps the file of the last
+		// 1, and go/token holds that rule already.
+		if adjusted.Filename == "" {
+			return "??"
+		}
 		return adjusted.Filename
 	}
 	base := filepath.Base(adjusted.Filename)

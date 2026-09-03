@@ -5,10 +5,45 @@ import 'string.dart';
 final class GoPanic implements Exception {
   final Object? value;
 
+  /// The panic that stood when this one started. A deferred call that panics
+  /// again holds such a link, and Go writes the whole chain.
+  GoPanic? link;
+
+  /// True when a deferred call recovered this panic. Go writes the mark
+  /// [recovered] behind such a panic.
+  bool recovered = false;
+
   GoPanic(this.value);
 
   @override
   String toString() => 'panic: $value';
+}
+
+/// The text of the chain of active panics. Go writes the oldest panic first,
+/// it marks each panic that a deferred call recovered, and it puts each panic
+/// behind the first one 1 tab in. Read printpanics of runtime/panic.go.
+String $panicChain(GoPanic p) {
+  final List<GoPanic> chain = <GoPanic>[];
+  for (GoPanic? at = p; at != null; at = at.link) {
+    chain.add(at);
+  }
+  final StringBuffer b = StringBuffer();
+  for (final GoPanic at in chain.reversed) {
+    if (!identical(at, chain.last)) b.write('\t');
+    b.write('panic: ${at.value}');
+    if (at.recovered) b.write(' [recovered]');
+    b.write('\n');
+  }
+  return b.toString();
+}
+
+/// Links a panic that starts inside the chain of deferred calls of another
+/// panic. Go keeps each panic of the chain, and it writes them together.
+void _linkPanic(GoPanic e) {
+  final GoPanic? prev = $chainPanic;
+  if (prev == null || identical(prev, e) || e.link != null) return;
+  prev.recovered = $recovered;
+  e.link = prev;
 }
 
 /// A run time error of the Go runtime, for example an index out of range.
@@ -123,6 +158,46 @@ Never $panicBound(SliceBound code, int x, int y, [bool uns = false]) {
   throw GoPanic(Iface($typeGoError, GoError(text)));
 }
 
+/// Raises the panic of a hash of a key whose type holds no identity.
+///
+/// Go writes 2 texts. A read and a delete take the plain form with a colon,
+/// and a write takes the prefix "runtime error: " with no colon. Read
+/// nilinterhash of runtime/alg.go and typehash of runtime/alg.go.
+Never $panicHash(String type, bool write) => throw GoPanic(
+  Iface(
+    $typeGoError,
+    write
+        ? GoError('hash of unhashable type $type')
+        : GoError('hash of unhashable type: $type', plain: true),
+  ),
+);
+
+/// Raises the panic of a conversion of a slice to an array or to a pointer to
+/// an array. Go gives a runtime.Error, thus the value carries the prefix.
+Never $panicConvert(int len, int n) => throw GoPanic(
+  Iface(
+    $typeGoError,
+    GoError(
+      'cannot convert slice with length $len '
+      'to array or pointer to array with length $n',
+    ),
+  ),
+);
+
+/// Raises the panic of a method wrapper that a nil pointer receiver reached.
+/// A value method needs the value behind the pointer, thus Go stops. name
+/// holds the type with its package, and short holds the type alone. Read
+/// panicwrap of runtime/error.go.
+Never $panicWrap(String name, String method, String short) => throw GoPanic(
+  Iface(
+    $typeGoError,
+    GoError(
+      'value method $name.$method called using nil *$short pointer',
+      plain: true,
+    ),
+  ),
+);
+
 Never $panicDivide() =>
     throw GoPanic(Iface($typeGoError, const GoError('integer divide by zero')));
 
@@ -181,6 +256,7 @@ final class DeferStack {
       if (e is GoPanic) {
         // A panic inside a deferred call replaces the chain panic, and the
         // calls that remain run for the new panic.
+        _linkPanic(e);
         $chainPanic = e;
         $recovered = false;
       } else {
@@ -194,8 +270,11 @@ final class DeferStack {
   /// call that remains runs for the new panic. A panic that no call recovered
   /// leaves the function again.
   bool runRecovered() {
-    $savedChain = $chainPanic;
-    $savedRec = $recovered;
+    // The state of the chain that holds this one stays in a local. A deferred
+    // call can open a chain of its own, thus 1 pair of variables of the
+    // library would lose the state of the outer chain.
+    final GoPanic? outer = $chainPanic;
+    final bool outerRec = $recovered;
     $recovered = false;
     Object? thrown;
     // The loop consumes each call, thus a second run of the chain finds an
@@ -206,25 +285,31 @@ final class DeferStack {
         _calls.removeLast()();
       } catch (e) {
         if (e is GoPanic) {
+          _linkPanic(e);
           $chainPanic = e;
           $recovered = false;
           thrown = e;
         } else {
-          $chainRestore();
+          $chainPanic = outer;
+          $recovered = outerRec;
           rethrow;
         }
       }
     }
     final rec = $recovered;
-    $chainRestore();
+    $chainPanic = outer;
+    $recovered = outerRec;
     if (!rec && thrown != null) throw thrown;
     return rec;
   }
 
   /// Runs each call for the chain panic of the function, which [start] gives.
   bool runChain(GoPanic? start) {
+    final GoPanic? outer = $chainPanic;
     $chainPanic = start;
-    return runRecovered();
+    final bool rec = runRecovered();
+    $chainPanic = outer;
+    return rec;
   }
 }
 

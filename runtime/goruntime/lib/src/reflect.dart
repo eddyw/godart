@@ -775,10 +775,9 @@ void $valueClear(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
   if (v is GoMap<Object?, Object?>) {
-    final Slice<Object?> keys = v.keys();
-    for (int i = 0; i < keys.len; i++) {
-      v.remove(keys[i]);
-    }
+    // A read of each key would drop no NaN key, because a NaN never compares
+    // equal to itself. clear walks the entries themselves.
+    v.clear();
     return;
   }
   if (v is Slice<Object?>) {
@@ -1021,6 +1020,56 @@ Slice<Iface?> $mapKeys(Iface? value) {
   }
   return Slice.of(out);
 }
+
+/// The map that a value holds. The name of the caller stands in the panic.
+GoMap<Object?, Object?> _mapOf(Iface? value, String name) {
+  if (value == null) $panicNil();
+  final Object? m = value.value;
+  if (m is! GoMap<Object?, Object?>) {
+    $panic(
+      Iface($typeGoError, GoError('reflect: $name of ${value.desc.display}')),
+    );
+  }
+  return m;
+}
+
+/// The value of 1 pair of a map, with the description of the element type.
+Iface? _mapPart(Object? v, TypeDesc? desc) {
+  if (desc == null || desc.kind == 'interface') return v as Iface?;
+  return Iface(desc, v);
+}
+
+/// The description of the handle that MapRange gives. The handle crosses to
+/// the overlay as a value of the Go type any, thus it needs a description.
+final TypeDesc $typeMapIter = TypeDesc(
+  'reflect.mapIter',
+  'ptr',
+  const <String, Function>{},
+  text: '*reflect.mapIter',
+  zero: () => null,
+);
+
+/// The iterator of the pairs of a map value. The iterator reads the map
+/// itself, thus a clear inside the loop ends the loop, and Go holds the same
+/// rule. A snapshot of the keys would walk each entry that the clear dropped,
+/// and a NaN key gives no second read.
+Iface $mapIterOf(Iface? value) =>
+    Iface($typeMapIter, GoMapIter<Object?, Object?>(_mapOf(value, 'MapRange')));
+
+GoMapIter<Object?, Object?> _iterOf(Iface? it) =>
+    it!.value! as GoMapIter<Object?, Object?>;
+
+/// Steps the iterator, and reports whether a pair stands there.
+bool $mapIterNext(Iface? it) => _iterOf(it).next();
+
+/// The key of the pair that the iterator holds.
+Iface? $mapIterKey(Iface? value, Iface? it) =>
+    _mapPart(_iterOf(it).key, value!.desc.key?.call());
+
+/// The value of the pair that the iterator holds. The read reaches the entry,
+/// thus a write of the loop body gives the new value.
+Iface? $mapIterValue(Iface? value, Iface? it) =>
+    _mapPart(_iterOf(it).value, value!.desc.elem?.call());
 
 /// The value of 1 key of a map value. A key that the map does not hold gives
 /// null, and the package reflect reads that as the zero Value.

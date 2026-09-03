@@ -26,7 +26,7 @@ func (e *emitter) expr(x ir.Expr) string {
 	case *ir.Zero:
 		return e.zero(x.Type)
 	case *ir.Field:
-		return e.derefRead(x.X) + "." + fieldDartName(x.X.GoType(), x.Name)
+		return e.deref(x.X) + "." + fieldDartName(x.X.GoType(), x.Name)
 	case *ir.Index:
 		return e.index(x)
 	case *ir.TypeAssert:
@@ -103,8 +103,13 @@ func (e *emitter) identName(x *ir.Ident) string {
 	return x.Name
 }
 
-// deref reads through a pointer. A pointer to a struct is the Dart object
-// reference, and the type is nullable, thus the read needs a null check.
+// deref reads through a pointer. Go panics with the nil dereference error
+// when the pointer is nil, and the bare null check of Dart gives an error of
+// Dart. An operand with an effect takes a parameter of its own, thus the read
+// runs the effect 1 time.
+//
+// The guard holds a location. Dart takes a field write on the result of an
+// expression, thus a write through the pointer reads the same guard.
 func (e *emitter) deref(x ir.Expr) string {
 	text := e.expr(x)
 	p, ok := typeset.Core(x.GoType()).(*types.Pointer)
@@ -114,41 +119,17 @@ func (e *emitter) deref(x ir.Expr) string {
 	if tp, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
 		return fmt.Sprintf("$deref<%s>(%s)", e.dartType(tp), text)
 	}
-	if needsBox(p.Elem()) {
-		return text + "!.v"
-	}
-	return text + "!"
-}
-
-// derefRead reads through a pointer for a value. Go panics with the nil
-// dereference error when the pointer is nil, and Dart gives a null check
-// error. An operand with an effect takes a parameter of its own, so the read
-// runs the effect 1 time. A store keeps the bare form of deref, because the
-// wrapper is no location.
-func (e *emitter) derefRead(x ir.Expr) string {
-	if e.storeDepth > 0 {
-		return e.deref(x)
-	}
-	text := e.expr(x)
-	p, ok := typeset.Core(x.GoType()).(*types.Pointer)
-	if !ok {
-		return text
-	}
-	if tp, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
-		return fmt.Sprintf("$deref<%s>(%s)", e.dartType(tp), text)
-	}
-	if needsBox(p.Elem()) {
-		if exprIsSimple(x) {
-			return "(" + text + " == null ? $panicNil() : " + text + "!.v)"
-		}
-		return fmt.Sprintf("((%s $p) => ($p == null ? $panicNil() : $p!.v))(%s)",
+	var guard string
+	if exprIsSimple(x) {
+		guard = "(" + text + " == null ? $panicNil() : " + text + "!)"
+	} else {
+		guard = fmt.Sprintf("((%s $p) => ($p == null ? $panicNil() : $p!))(%s)",
 			e.dartType(p), text)
 	}
-	if exprIsSimple(x) {
-		return "(" + text + " == null ? $panicNil() : " + text + "!)"
+	if needsBox(p.Elem()) {
+		return guard + ".v"
 	}
-	return fmt.Sprintf("((%s $p) => ($p == null ? $panicNil() : $p!))(%s)",
-		e.dartType(p), text)
+	return guard
 }
 
 // exprIsSimple reports whether the expression holds no call, so its text can
@@ -297,14 +278,37 @@ func validUTF8(s string) bool {
 
 // index reads 1 element. A Go array keeps a plain Dart list, thus the read
 // needs the bounds check of the runtime.
-// unsFlag gives the argument that names a bound of an unsigned type. Go writes
-// the unsigned value of such a bound in a panic report, and a value above 2^63
-// reads as a negative Dart int. name is the parameter of the runtime helper.
-func unsFlag(name string, x ir.Expr) string {
-	if x == nil || !isUnsigned64(x.GoType()) {
-		return ""
+// unsBound reports whether a bound holds an unsigned type of 64 bits. Go
+// writes the unsigned value of such a bound in a panic report, and a value
+// above 2^63 reads as a negative Dart int. A narrower unsigned type needs no
+// flag, because such a value fits in a Dart int with no sign change.
+func unsBound(x ir.Expr) bool {
+	return x != nil && isUnsigned64(x.GoType())
+}
+
+// unsArg gives the last argument of an index helper. The helper holds the
+// flag in an optional parameter of position. dart2wasm holds a defect on a
+// named argument of such a call, thus each flag takes a position.
+func unsArg(x ir.Expr) string {
+	if unsBound(x) {
+		return ", true"
 	}
-	return ", " + name + ": true"
+	return ""
+}
+
+// rangeTail gives the optional arguments of Slice.range. three names a slice
+// expression of 3 bounds, and byLen names a report that writes "with length".
+// The flag of each bound follows them, and each 1 stands only when a bound
+// holds an unsigned type.
+func rangeTail(three, byLen bool, low, high, max ir.Expr) string {
+	l, h, m := unsBound(low), unsBound(high), unsBound(max)
+	if !l && !h && !m {
+		if !three && !byLen {
+			return ""
+		}
+		return fmt.Sprintf(", %v, %v", three, byLen)
+	}
+	return fmt.Sprintf(", %v, %v, %v, %v, %v", three, byLen, l, h, m)
 }
 
 func (e *emitter) index(x *ir.Index) string {
@@ -312,15 +316,18 @@ func (e *emitter) index(x *ir.Index) string {
 	if isMapType(container) {
 		return fmt.Sprintf("%s.get(%s)", e.expr(x.X), e.expr(x.Index))
 	}
-	uns := unsFlag("uns", x.Index)
+	uns := unsArg(x.Index)
 	if isString(container) {
-		return fmt.Sprintf("%s.$at(%s%s)", e.expr(x.X), e.expr(x.Index), uns)
+		if unsBound(x.Index) {
+			return fmt.Sprintf("$atUns(%s, %s)", e.expr(x.X), e.expr(x.Index))
+		}
+		return fmt.Sprintf("%s.$at(%s)", e.expr(x.X), e.expr(x.Index))
 	}
 	// The type argument stands in the text. Dart reads the context of the
 	// expression for it, and an operand of `-` gives `num`.
 	if isPointerType(container) {
 		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s)%s)",
-			e.dartType(x.Type), e.derefRead(x.X), e.expr(x.Index), uns)
+			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index), uns)
 	}
 	if isArrayType(container) {
 		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s)%s)",
@@ -336,7 +343,7 @@ func (e *emitter) index(x *ir.Index) string {
 // empty when the write uses the index operator of Dart.
 func (e *emitter) indexTarget(x *ir.Index) (head, tail string) {
 	container := x.X.GoType()
-	uns := unsFlag("uns", x.Index)
+	uns := unsArg(x.Index)
 	if isPointerType(container) {
 		return fmt.Sprintf("$arraySet<%s>(%s, $ix(%s)",
 			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index)), uns
@@ -364,21 +371,23 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 	if x.Low != nil {
 		low = "$ix(" + e.expr(x.Low) + ")"
 	}
-	bounds := unsFlag("lowUns", x.Low) + unsFlag("highUns", x.High) +
-		unsFlag("maxUns", x.Max)
 	source := x.X.GoType()
 	if isString(source) {
 		high := fmt.Sprintf("%s.length", e.expr(x.X))
 		if x.High != nil {
 			high = "$ix(" + e.expr(x.High) + ")"
 		}
+		tail := ""
+		if unsBound(x.Low) || unsBound(x.High) {
+			tail = fmt.Sprintf(", %v, %v", unsBound(x.Low), unsBound(x.High))
+		}
 		return fmt.Sprintf("$substring(%s, %s, %s%s)",
-			e.expr(x.X), low, high, bounds)
+			e.expr(x.X), low, high, tail)
 	}
 	if isArrayType(source) || isPointerType(source) {
 		text := e.expr(x.X)
 		if isPointerType(source) {
-			text = e.derefRead(x.X)
+			text = e.deref(x.X)
 		}
 		high := fmt.Sprintf("%s.length", text)
 		if x.High != nil {
@@ -391,9 +400,9 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		}
 		// An array and a pointer to an array each report "with length" in a
 		// bound panic, and a slice reports "with capacity".
-		return fmt.Sprintf(
-			"Slice(%s, 0, %s, %s).range(%s, %s, %s, three: %v, byLen: true%s)",
-			text, size, size, low, high, max, x.Max != nil, bounds)
+		return fmt.Sprintf("Slice(%s, 0, %s, %s).range(%s, %s, %s%s)",
+			text, size, size, low, high, max,
+			rangeTail(x.Max != nil, true, x.Low, x.High, x.Max))
 	}
 	x0 := e.expr(x.X)
 	high := fmt.Sprintf("%s.len", x0)
@@ -404,18 +413,15 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 	if x.Max != nil {
 		max = "$ix(" + e.expr(x.Max) + ")"
 	}
-	if x.Max != nil {
-		return fmt.Sprintf("%s.range(%s, %s, %s, three: true%s)",
-			x0, low, high, max, bounds)
-	}
-	return fmt.Sprintf("%s.range(%s, %s, %s%s)", x0, low, high, max, bounds)
+	return fmt.Sprintf("%s.range(%s, %s, %s%s)", x0, low, high, max,
+		rangeTail(x.Max != nil, false, x.Low, x.High, x.Max))
 }
 
 func (e *emitter) copyExpr(x *ir.Copy) string {
 	if isArrayType(x.Type) {
 		return e.copyArray(e.expr(x.X), x.Type)
 	}
-	return e.derefRead(x.X) + ".$copy()"
+	return e.deref(x.X) + ".$copy()"
 }
 
 func (e *emitter) funcLit(x *ir.FuncLit) string {
@@ -622,7 +628,7 @@ func (e *emitter) unary(x *ir.Unary) string {
 		}
 		return e.expr(x.X)
 	case token.MUL:
-		return e.derefRead(x.X)
+		return e.deref(x.X)
 	case token.SUB:
 		return e.narrow(x.Type, "(-"+e.expr(x.X)+")")
 	case token.NOT:
@@ -657,7 +663,7 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 		}
 		field := fieldDartName(x.X.GoType(), x.Name)
 		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => $r.%s, ($r, $i, $v) => $r.%s = $v)",
-			e.dartType(owner), e.dartType(elem), e.derefRead(x.X), fieldIndex(owner, x.Name),
+			e.dartType(owner), e.dartType(elem), e.deref(x.X), fieldIndex(owner, x.Name),
 			field, field)
 	case *ir.Composite:
 		// A composite literal holds no name, thus its address takes a box of
@@ -666,7 +672,7 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 	case *ir.Index:
 		container := x.X.GoType()
 		if isPointerType(container) {
-			return fmt.Sprintf("$indexPtr(%s, $ix(%s))", e.derefRead(x.X), e.expr(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, $ix(%s))", e.deref(x.X), e.expr(x.Index))
 		}
 		if isArrayType(container) {
 			return fmt.Sprintf("$indexPtr(%s, $ix(%s))", e.expr(x.X), e.expr(x.Index))

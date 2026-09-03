@@ -201,6 +201,27 @@ func MapIndex(target, key any) any {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// MapIterOf gives an iterator over the pairs of a map value. The iterator
+// reads the map itself, thus a clear inside the loop ends the loop.
+func MapIterOf(target any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MapIterNext steps the iterator, and it reports whether a pair stands there.
+func MapIterNext(it any) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MapIterKey gives the key of the pair that the iterator holds.
+func MapIterKey(target, it any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MapIterValue gives the value of the pair that the iterator holds.
+func MapIterValue(target, it any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // MakeMap gives a map of the type.
 // ValueRecv reads 1 value of a channel that a Value holds. The flag is false
 // when the channel closed.

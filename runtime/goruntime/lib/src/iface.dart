@@ -227,29 +227,39 @@ bool $goEqual(Object? a, Object? b, TypeDesc d, [TypeDesc? root]) {
   return a == b;
 }
 
+/// True while a map write reads the entry of its key. Go writes a text of its
+/// own for the hash of a key that holds no identity in a write. All Go code
+/// runs in 1 isolate, and no goroutine switch happens inside a hash, thus 1
+/// flag carries the form.
+bool $hashInWrite = false;
+
 /// The hash of a Go value of 1 type. It holds the rule of [$goEqual]: 2 values
 /// that Go reports as equal give an equal number.
 ///
-/// A slice, a map, and a function reach no comparison in Go, thus each one
-/// gives a constant. The map of the runtime hashes the key first, and the
-/// comparison then reports the cause of Go.
-int $goHash(Object? v, TypeDesc d) {
+/// A slice, a map, and a function holds no identity, thus a key of such a type
+/// panics. Go hashes the key of a map before it compares, thus the hash names
+/// the cause and the comparison never runs.
+///
+/// root carries the type of the key through the walk of the fields. Go names
+/// that type, and not the field that holds no identity.
+int $goHash(Object? v, TypeDesc d, [TypeDesc? root]) {
+  final TypeDesc top = root ?? d;
   switch (d.kind) {
     case 'slice' || 'map' || 'func':
-      return 0;
+      $panicHash(top.display, $hashInWrite);
     case 'array':
       final List<Object?> e = v! as List<Object?>;
       final TypeDesc? elem = d.elem?.call();
       if (elem == null) return e.length;
       final List<int> parts = <int>[];
       for (final Object? x in e) {
-        parts.add($goHash(x, elem));
+        parts.add($goHash(x, elem, top));
       }
       return Object.hashAll(parts);
     case 'struct':
       final List<int> parts = <int>[];
       for (final FieldDesc f in d.fields) {
-        parts.add($goHash(f.get(v), f.type.call()));
+        parts.add($goHash(f.get(v), f.type.call(), top));
       }
       return Object.hashAll(parts);
     case 'interface':
@@ -434,14 +444,19 @@ Object? $assertType(
     $panic(
       Iface(
         $typeGoError,
-        GoError(
-          'interface conversion: $static is ${x.desc.display}, not $target',
-          plain: true,
-        ),
+        GoError(_assertText(static, x.desc.display, target), plain: true),
       ),
     );
   }
   return x.value;
+}
+
+/// The text of a failed type assertion. Go adds a mark when the 2 types carry
+/// 1 name and hold a different identity. A local type of 2 functions takes
+/// that shape. Read assertE2I of runtime/iface.go.
+String _assertText(String static, String got, String want) {
+  final String tail = got == want ? ' (types from different scopes)' : '';
+  return 'interface conversion: $static is $got, not $want$tail';
 }
 
 /// The value of an assertion to an interface type.
@@ -544,8 +559,10 @@ T $assertDict<T>(Iface? x, Dict<T> d) {
       Iface(
         $typeGoError,
         GoError(
-          'interface conversion: interface {} is '
-          '${x == null ? 'nil' : x.desc.display}, not ${d.desc.display}',
+          x == null
+              ? 'interface conversion: interface {} is nil, '
+                    'not ${d.desc.display}'
+              : _assertText('interface {}', x.desc.display, d.desc.display),
           plain: true,
         ),
       ),

@@ -33,12 +33,12 @@ final class Slice<T> {
 
   /// The element at index i. uns names an index of an unsigned type, which
   /// reads as a negative Dart int above 2^63.
-  T $at(int i, {bool uns = false}) {
+  T $at(int i, [bool uns = false]) {
     if (i < 0 || i >= len) $panicIndex(i, len, uns);
     return array[off + i];
   }
 
-  void $set(int i, T value, {bool uns = false}) {
+  void $set(int i, T value, [bool uns = false]) {
     if (i < 0 || i >= len) $panicIndex(i, len, uns);
     array[off + i] = value;
   }
@@ -52,13 +52,13 @@ final class Slice<T> {
   Slice<T> range(
     int low,
     int high,
-    int max, {
+    int max, [
     bool three = false,
     bool byLen = false,
     bool lowUns = false,
     bool highUns = false,
     bool maxUns = false,
-  }) {
+  ]) {
     if (three) {
       if (max < 0 || max > cap) {
         $panicBound(

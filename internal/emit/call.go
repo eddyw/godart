@@ -294,6 +294,14 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$mapKeys(%s)", args[0]), true
 	case "MapIndex":
 		return fmt.Sprintf("$mapIndex(%s, %s)", args[0], args[1]), true
+	case "MapIterOf":
+		return fmt.Sprintf("$mapIterOf(%s)", args[0]), true
+	case "MapIterNext":
+		return fmt.Sprintf("$mapIterNext(%s)", args[0]), true
+	case "MapIterKey":
+		return fmt.Sprintf("$mapIterKey(%s, %s)", args[0], args[1]), true
+	case "MapIterValue":
+		return fmt.Sprintf("$mapIterValue(%s, %s)", args[0], args[1]), true
 	case "ValueRecv":
 		return fmt.Sprintf("$valueRecv(%s)", args[0]), true
 	case "ValueAddr":

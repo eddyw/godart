@@ -46,7 +46,7 @@ Greeter$? New(GoString name) {
 }
 
 void Greeter$SetStyle(Greeter$? g, GoInt s) {
-  g!._style = s;
+  (g == null ? $panicNil() : g!)._style = s;
 }
 
 GoString Greeter$Text(Greeter$? g) {

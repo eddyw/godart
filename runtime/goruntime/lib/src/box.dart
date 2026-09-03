@@ -1,3 +1,4 @@
+import 'array.dart';
 import 'dict.dart';
 import 'iface.dart';
 import 'panic.dart';
@@ -51,16 +52,33 @@ final class $Ref<O, T> implements $Ptr<T> {
   int get hashCode => Object.hash(identityHashCode(owner), index);
 }
 
+/// A pointer to the cell at index i of a list.
+///
+/// A conversion of a slice to a pointer to an array gives an $ArrayView over
+/// the storage of the slice. Go gives 1 address for the element of the slice
+/// and for the element of the array, thus the pointer names the cell of the
+/// storage and not the cell of the view. A view over a view holds the same
+/// rule, thus the walk goes to the list that holds the storage.
+$Ref<List<T>, T> _cellPtr<T>(List<T> a, int i) {
+  List<T> list = a;
+  int at = i;
+  while (list is $ArrayView<T>) {
+    at += list.off;
+    list = list.array;
+  }
+  return $Ref<List<T>, T>(list, at, _listGet<T>, _listSet<T>);
+}
+
 /// A pointer to 1 element of a slice.
 $Ref<List<T>, T> $elemPtr<T>(Slice<T> s, int i) {
   if (i < 0 || i >= s.len) $panicIndex(i, s.len);
-  return $Ref<List<T>, T>(s.array, s.off + i, _listGet<T>, _listSet<T>);
+  return _cellPtr<T>(s.array, s.off + i);
 }
 
 /// A pointer to 1 element of an array.
 $Ref<List<T>, T> $indexPtr<T>(List<T> a, int i) {
   if (i < 0 || i >= a.length) $panicIndex(i, a.length);
-  return $Ref<List<T>, T>(a, i, _listGet<T>, _listSet<T>);
+  return _cellPtr<T>(a, i);
 }
 
 T _listGet<T>(List<T> owner, int i) => owner[i];

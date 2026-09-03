@@ -2565,3 +2565,315 @@ The plan left these points open. The work took the decisions below.
      which holds 41 entries now. The output of each 1 matches the `.out` file
      of Go, byte for byte. `testdata/programs/uindex` holds 15 cases of its
      own, and it matches `go run` for each 1.
+
+319. The name gap of 5 overlay packages closed by 19 names. `runtime` went from
+     43 to 52 of 114, and `reflect` from 173 to 180 of 188. `os` went from 193
+     to 195 of 207, and `os/exec` from 43 to 44 of 49. `sync/atomic` stays at
+     90 of 94.
+
+     The cause. Each row of `docs/support.md` named a gap with 1 phrase, and no
+     row named the limit of each single name. A phrase such as "the Dart VM
+     reports none of the numbers" hides the names that the VM does report. A
+     later session cannot tell a real limit from a name that nobody wrote.
+
+     The change of `runtime`. `GoroutineProfile` and `StackRecord` read the
+     scheduler. `dart.Parked` already gives the frames of each goroutine that
+     waits, and `dart.Stack` gives the frames of the goroutine that calls.
+     `runtime.Stack` of the overlay reads the same 2 sources, thus the profile
+     needs no new interop call. A program counter is an index of the table of
+     the overlay, exactly as `runtime.Caller` writes it.
+
+     `Pinner` keeps a reference of each pinned object. A pin of Go stops 2
+     things: a move of the object, and a free of it. The subset holds no
+     address, thus no program reads the position of an object, and a strong
+     reference of Dart answers the second half. `Pin` reads `dart.Kind` and
+     panics with the text of Go for a value that is not a pointer.
+
+     `CPUProfile` panics with the text of Go, because Go removed the operation
+     and its own body holds 1 panic. `SetDefaultGOMAXPROCS` needs no operation,
+     because all Go code runs in 1 isolate and `GOMAXPROCS` already gives 1.
+
+     The change of `reflect`. `SliceHeader` and `StringHeader` hold plain
+     numbers. Go marks each 1 as older than `unsafe.Slice` and `unsafe.String`,
+     and stage 2 rejects the import that a conversion to a header needs. Thus
+     each field carries the value that the program wrote, exactly as Go carries
+     it, and no header of gart names the memory of a value.
+
+     The change of `os` and of `os/exec`. `Process.WithHandle` gives
+     `ErrNoHandle`, exactly as Go does on a platform with no handle of the
+     system. `ProcessState.Sys` and `ExitError.Sys` give a `syscall.WaitStatus`.
+     `dart:io` reports the exit code and the number of the signal that ended the
+     child, and the word of a Unix wait state carries the 2:
+     `WaitStatus(code) << 8` for an exit, and `WaitStatus(signal)` for a signal.
+     `internal/overlay/std/syscall/wait.go` holds the type, thus `syscall` went
+     from 15 names to 24. `CoreDump` and `Stopped` are always false and
+     `StopSignal` always gives -1, because `dart:io` reports no such state.
+
+     The rule of the work: a stub that gives a zero value is worse than a
+     missing name. A missing name gives an error of the compiler at the
+     earliest point, and a stub gives a wrong number with no report. 91 names
+     stay out under that rule, and `docs/support.md` holds the cause of each 1
+     in the section "Why a name of 5 packages stays out".
+
+     4 causes carry most of them. The Dart VM reports no number of its own heap
+     inside the process. `MemStats` and `ReadMemStats` thus hold 34 names of
+     the 62 of `runtime`. The VM counts no allocation, no block, and no
+     contention, and it writes no event of the tracer of Go. Each profile and
+     the trace thus hold 25 more. `SetFinalizer` needs the object inside the finalizer, and a
+     Dart `Finalizer` must hold no reference of the object that it watches: such
+     a capture would stop each collection and the finalizer would never run.
+     `dart:io` gives a child 3 streams and no other descriptor, thus `File.Fd`,
+     `NewFile`, `StartProcess`, `ProcAttr`, and `Cmd.ExtraFiles` each stay out.
+
+     2 names of `reflect` need a change of the Dart runtime library, and that
+     library stood outside this work. `FuncOf` needs `$funcOf` next to
+     `$sliceOf` and its 3 companions, with an intrinsic of stage 5 and 1 name of
+     `syscall/dart`. `Method.Func` needs a bind factory on the type that
+     `_withReceiver` builds, because `MakeFunc` panics for a type with no
+     factory.
+
+     `Breakpoint` failed a measure. `debugger` of `dart:developer` is the Dart
+     form, and a probe under `dart run` waited for ever with no report, because
+     the VM service holds no client. Go ends the program with SIGTRAP. A wait
+     with no report is the silent answer that the rule forbids, thus the name
+     stays out.
+
+     `Value.UnsafeAddr` failed a measure too. `Value.Addr` builds a new cell at
+     each call for a field of a scalar type, thus `field.UnsafeAddr()` gave 2
+     numbers for 2 reads of 1 field. `testdata/programs/n1reflect` proved it
+     before the name left again.
+
+     The measure. `testdata/programs/n1runtime`, `n1proc`, and `n1reflect` each
+     match `go run` line for line under `TestPrograms`. `go run
+     ./internal/surface` gives the 4 new numbers.
+
+320. The name gap of the 5 network packages closed by 147 names. `net` went
+     from 218 to 259 of 346, `net/http` from 341 to 361 of 392, `crypto/tls`
+     from 118 to 126 of 263, and `crypto/x509` from 115 to 193 of 261.
+     `encoding/json` stays at 67 of 92, and a measure holds the cause.
+
+     The cause. Each row of `docs/support.md` named the gap of a package with 1
+     phrase, and the phrase hid the names that Dart does carry. "Dart owns the
+     handshake" is true of `Config.CipherSuites` and false of `Dialer`, of
+     `LoadX509KeyPair`, and of `http.ListenAndServeTLS`. A later session cannot
+     tell a real limit from a name that nobody wrote.
+
+     The change of `net`. The 6 address tests, the 10 well-known addresses,
+     `InvalidAddrError`, and the 2 error methods of `ParseError` each read the
+     bytes of a value alone. `IsUnspecified` also took the rule of Go: an
+     address of a length that no form holds now gives false, and the old body
+     gave true for 5 zero bytes.
+
+     `Listen` gives a `*TCPListener` for the network tcp and a `*UnixListener`
+     for the network unix, exactly as in Go, thus `ListenTCP`, `ListenUnix`,
+     `AcceptTCP`, and `AcceptUnix` each stand. `Dialer.DialTCP`, `DialUDP`, and
+     `DialUnix` each take the context of Go 1.27, and each 1 gives an error for
+     a local address, because Dart binds none.
+
+     `UnixConn.ReadFrom` and `ReadFromUnix` give a nil address. Dart opens a
+     stream socket of the Unix domain alone, and the system reports an empty
+     name for the source of such a socket. Go gives nil there too.
+     `UnixConn.WriteTo` failed a measure and left again: Go gives
+     `ErrWriteToConnected` for a socket that a dial connected, and a socket
+     that an accept gave holds no such mark. macOS then writes the bytes and
+     Linux gives EOPNOTSUPP, thus no answer of the overlay can match both.
+
+     The change of `net/http`. `CrossOriginProtection` is a line for line port
+     of the real `csrf.go`. It reads `Sec-Fetch-Site`, `Origin`, and `Host`,
+     and it needs no socket, thus each error text matches Go byte for byte.
+
+     `ListenAndServeTLS` and `Server.ListenAndServeTLS` open the secure
+     listener with `tls.Listen`, and `Server.TLSConfig` names its certificate.
+     `ServeTLS` and `Server.ServeTLS` each wrap a listener that stands open,
+     and the secure socket of Dart takes over no socket that another call
+     opened, thus the 2 stay out.
+
+     `Server.Protocols` and `Transport.Protocols` name the list of ALPN. A set
+     that holds `UnencryptedHTTP2` gives an error, because no path of the
+     runtime carries HTTP/2 over a plain socket. `Server.TLSNextProto` and
+     `Transport.TLSNextProto` add the protocol of each handler to that list,
+     and a connection of such a protocol reaches the handler.
+
+     `TrailerPrefix` needed a real trailer. `WriteHeader` now keeps a copy of
+     the fields when the head declares a `Trailer`, because the handler writes
+     the value of a declared field after that point. The write of the head
+     drops each key with the prefix, and the end of the chunked body writes
+     each 1 without it. An answer of HTTP/1.0 writes no trailer, exactly as in
+     Go.
+
+     `Pusher` and `CloseNotifier` each hold a type and no implementation. Go
+     documents each 1 as an optional interface of a `ResponseWriter`, thus an
+     assertion that gives false is the answer of Go on a writer that holds
+     neither. `HTTP2Config` and `ClientConn` each stay out, because the HTTP/2
+     session lives in the Dart runtime library and reports no knob and no count
+     of free streams.
+
+     The change of `crypto/tls`. `Dialer` runs the dial on a goroutine, and the
+     select takes the first of the dial, the context, and the cancel channel of
+     the `net.Dialer`. `DialWithDialer` reads the same body, thus a timeout of
+     the dialer is no longer a rejection. A `Resolver` of the dialer reads the
+     host name, and the handshake keeps the name of the user.
+     `LoadX509KeyPair` reads the 2 PEM files. `HandshakeContext` gives nil,
+     because each `Conn` of the package already holds a complete handshake, and
+     Go gives nil at that point too.
+
+     `ConnectionState.PeerCertificates` needs 1 new intrinsic. Dart holds the
+     certificate of the peer inside `SecureSocket.peerCertificate`, and no name
+     of `syscall/dart` gives its DER to Go. That 1 intrinsic would open 6
+     names, and the Dart runtime library stood outside this work.
+
+     The change of `crypto/x509`. The 13 names of `OID` are a port of the real
+     `oid.go`, which reads `encoding/asn1`, `math/big`, and `math/bits` alone.
+     `ParseOID` took 1 change: Go writes `return o, o.unmarshalOIDText(oid)`,
+     and the specification leaves the order of the read of `o` and of the call
+     open. The emitter reads `o` first, thus the result was always empty, and
+     the 2 statements now hold the order.
+
+     The 4 policy extensions of RFC 5280 now parse, thus `Policies`,
+     `PolicyIdentifiers`, `PolicyMappings`, and the 6 policy constraint fields
+     each read, and none of the 4 lands in `UnhandledCriticalExtensions`.
+     `ParseCertificateRequest`, `ParseRevocationList`, `ParseCRL`, and
+     `ParseDERCRL` each read `encoding/asn1`, exactly as `ParseCertificate`
+     already does.
+
+     `Verify` stays out. A chain check needs an RSA check and an ECDSA check of
+     a signature. `crypto/rsa`, `crypto/ecdsa`, and `crypto/ed25519` each stand
+     outside the surface, and no intrinsic verifies a signature. A `Verify`
+     that builds a chain and checks no signature takes a forged certificate,
+     which is the worst answer that this project can give. `SystemCertPool`
+     stands and it always gives a `SystemRootsError`, because Go models exactly
+     that failure and Dart exports no root.
+
+     The measure of `encoding/json`. 2 of the 25 missing names are reachable:
+     `InvalidUnmarshalError.Type` holds `reflect.TypeOf` of the argument of
+     `Unmarshal`, and `UnmarshalFieldError.Type` sits on a type that no path of
+     Go and no path of the overlay ever gives. The 2 need 1 import of
+     `reflect` in `encoding/json`.
+
+     A build of `testdata/programs/jsonuse` with that import and without it
+     gave the cost. The Dart source of the output went from 2456 KB to 2804
+     KB, and the binary of `dart compile exe` from 8423360 bytes to 8636768
+     bytes. That is 14 percent of the source and 2.5 percent of the binary, for
+     each program that reads `encoding/json`.
+
+     Item 9 of "The next list" of `docs/support.md` already holds that trade:
+     `crypto/rand.Int` and `crypto/rand.Prime` stay out, because the 2 would
+     give `math/big` to each program that reads `crypto/tls`. `encoding/json`
+     reaches more programs than `crypto/tls`, and the 2 names carry less: 1 of
+     them no path ever gives, and the other names a bug of the program that the
+     text of the error already reports. Thus the 2 stay out under the same
+     rule, and `docs/support.md` holds the table of the measure.
+
+     Each other name of `encoding/json` stays out with no choice. The walk of
+     the type descriptor runs in the Dart runtime library and reports a text,
+     and `reflect` builds no `Type` from a name. The option set of the v2
+     implementation needs `encoding/json/v2`, which stands outside the
+     surface, thus no function of the surface reads an `Options` value.
+
+     The rule of the work. A stub that gives a zero value is worse than a
+     missing name, and a name that gives a wrong answer in silence is worse
+     than both. 348 names stay out under that rule, and `docs/support.md` holds
+     the cause of each 1 in the section "Why a name of the 5 network packages
+     stays out".
+
+     The measure. `testdata/programs/n2net`, `n2httptls`, and `n2x509` each
+     match `go run` line for line. `go run ./internal/surface` gives the 4 new
+     numbers.
+
+321. The 5 silent wrong answers of the skip table each close, and 3 of the 5
+     held more than 1 defect. The whole group came out of the test directory of
+     Go, and each 1 gave a wrong answer with no report.
+
+     **The hash of a key that holds no identity.** `$goHash` gave 0 for a
+     slice, a map, and a function. A map with an interface key thus read the
+     zero value in silence, and Go panics. `$goHash` now panics, and it names
+     the type of the key and not the field that holds no identity. Go writes 2
+     texts, and the runtime writes both. A read and a delete take the plain
+     form `hash of unhashable type: []int`, and a write takes the prefix
+     `runtime error: ` with no colon. `$hashInWrite` carries the form, and
+     `_readForWrite` of `GoMap` sets it only for a key of an interface type.
+
+     **A store through a nil pointer.** `deref` of the emitter wrote the bare
+     null check of Dart for a store, and Dart gave an error of Dart. The
+     comment held that a guard is no location, and that reading is wrong: Dart
+     takes a field write on the result of an expression. `deref` now guards
+     each read and each store, thus `derefRead` and `storeDepth` leave the
+     emitter. `fixedbugs/issue34123` reports the line of the fault correctly.
+
+     **3 defects of a conversion of a slice to an array.** A pointer to an
+     element of the array took the identity of the `$ArrayView`, and Go gives
+     1 address for the element of the slice and for the element of the array.
+     `_cellPtr` walks to the list that holds the storage. A nil slice gave a
+     pointer that is not nil. `$panicConvert` gives the run time error of Go,
+     and the panic carried a bare Dart string.
+
+     **3 defects of the method table.** A value receiver on a pointer field
+     needs a read of the cell, and a pointer receiver on a value field needs
+     the address of that field. `fitReceiver` writes both, and it runs only on
+     the last field of the path, because that field holds the receiver. A
+     pointer to an unnamed struct type carried an empty method table, and Go
+     gives it the whole method set of the struct.
+
+     **A range loop over a map through reflect.** `MapIter` held a snapshot of
+     the keys, thus a clear inside the loop did not end the loop. The iterator
+     reads the map itself now, through `$mapIterOf` and 3 companions of
+     `syscall/dart`. A liveness test on the snapshot answers no, because a NaN
+     key never compares equal to itself. `$valueClear` held the same defect: it
+     removed each key by a read, thus each NaN entry stayed in the map. It
+     calls `GoMap.clear`, which walks the entries themselves.
+
+     `fixedbugs/issue59411`, `fixedbugs/issue23734`, `fixedbugs/issue34123`,
+     `convert4`, and `method` leave the skip table.
+
+322. 6 entries of the panic text group close, and 1 of them held a silent wrong
+     answer of `recover`.
+
+     **The chain state of the deferred calls.** `runRecovered` kept the state
+     of the outer chain in 2 variables of the library. A deferred call that
+     opens a chain of its own overwrote them, and the flag of a recover was
+     lost. A function that Go returns from normally thus let the panic escape.
+     The state stays in a local now. `fixedbugs/issue48898` gives `1234`, and
+     it gave `1`.
+
+     **The chain of active panics.** `GoPanic` holds a link and a mark now.
+     Go writes the oldest panic first, it marks each panic that a deferred call
+     recovered with `[recovered]`, and it puts each panic behind the first 1
+     tab in. `$panicChain` holds that rule, and `$fatal` writes it.
+     `fixedbugs/issue4562` and `fixedbugs/issue27201` match Go.
+
+     **The text of a failed assertion.** Go adds ` (types from different
+     scopes)` when the 2 types carry 1 name and hold a different identity.
+     `_assertText` holds that rule.
+
+     **The panic of a method wrapper.** A value method that runs with a nil
+     pointer receiver gives `value method main.T.F called using nil *T
+     pointer` in the plain form. `$panicWrap` writes it, and `wrapPanic` of the
+     emitter names the type and the method.
+
+     **A line directive with no file.** `go/token` gives an empty name for
+     `//line :1`, and Go writes `??`. `goFile` writes that name now. A
+     directive that holds a column keeps the file of the last 1, and `go/token`
+     already holds that rule.
+
+     The skip table holds 30 entries, and it held 43 at the start of the
+     sixteenth session.
+
+323. A call that fills an optional parameter of a method of `GoString` crashes
+     dart2wasm. The type flow analysis of the Dart VM reports `type 'Call' is
+     not a subtype of type 'Parameter' in type cast` at `Summary.apply`, and
+     the whole wasm build stops.
+
+     The defect came out of decision 318, which gave `GoString.$at` a flag.
+     A bisect against the last green tree proved each half: the same runtime
+     with no call that fills the parameter builds, and the same call against a
+     method of a top level function builds.
+
+     `$atUns` is a top level function now, and `GoString.$at` holds its 1
+     parameter again. `Slice.$at`, `Slice.$set`, `Slice.range`, `$arrayIndex`,
+     `$arraySet`, and `$substring` each keep an optional parameter of position,
+     and `testdata/programs/uindex` builds to wasm with each 1 filled. Only a
+     method of `GoString` reaches the defect.
+
+     Each flag of the emitter takes a position, and not a name. A named
+     argument gives no defect of its own, and 1 rule for each call site is
+     easier to hold.
