@@ -1,4 +1,5 @@
 import 'box.dart';
+import 'chan.dart';
 import 'complex.dart';
 import 'goint.dart';
 import 'iface.dart';
@@ -229,14 +230,19 @@ String _sign(String text, String verb, String letter) {
   return text;
 }
 
-String _value(Object? v, TypeDesc type, String verb) {
+String _value(Object? v, TypeDesc type, String verb, [int depth = 0]) {
   final bool plus = verb.contains('+');
   final String letter = verb.substring(verb.length - 1);
   if (letter == 'T') return type.display;
-  if (letter == 'v' || letter == 's' || letter == 'q') {
+  final bool sharp = _goSyntax(verb);
+  if (sharp) {
+    final String? text = _goStringMethod(v, type);
+    if (text != null) return text;
+  } else if (letter == 'v' || letter == 's' || letter == 'q') {
     final String? text = _viaMethod(v, type, letter);
     if (text != null) return text;
   }
+  if (sharp && _unsigned(type.kind)) return '0x${$uradix(v as GoInt, 16)}';
   switch (type.kind) {
     case 'bool':
       return _bool(v as bool, letter);
@@ -278,28 +284,41 @@ String _value(Object? v, TypeDesc type, String verb) {
         letter,
       );
     case 'slice':
-      return _slice(v, type, verb, plus);
+      return _slice(v, type, verb, depth);
     case 'array':
-      return _array(v as List<Object?>, type, verb, plus);
+      return _array(v as List<Object?>, type, verb, depth);
     case 'map':
-      return _map(v, type, verb, plus);
+      return _map(v, type, verb, depth);
     case 'struct':
-      return _struct(v, type, verb, plus);
+      return _struct(v, type, verb, plus, depth);
     case 'ptr':
-      if (v == null) return '<nil>';
       final TypeDesc? inner = type.elem?.call();
-      if (inner != null && inner.kind == 'struct') {
-        return '&${_struct(v, inner, verb, plus)}';
+      if (v == null) return sharp ? '(${type.display})(nil)' : '<nil>';
+      if (sharp) {
+        // The Dart form of a pointer to a struct is the object of the struct,
+        // and each other pointer holds a cell.
+        final Object? target = v is $Ptr<Object?> ? v.v : v;
+        if (inner == null) return '&$target';
+        return '&${_value(target, inner, verb, depth + 1)}';
       }
-      return '&${inner == null ? v : _value(v, inner, verb)}';
+      if (inner != null && inner.kind == 'struct') {
+        return '&${_struct(v, inner, verb, plus, depth)}';
+      }
+      return '&${inner == null ? v : _value(v, inner, verb, depth + 1)}';
     case 'interface':
-      if (v == null) return '<nil>';
-      if (v is Iface) return _value(v.value, v.desc, verb);
+      if (v == null) return sharp ? '${type.display}(nil)' : '<nil>';
+      if (v is Iface) return _value(v.value, v.desc, verb, depth + 1);
       return '$v';
     case 'chan':
-      return v == null ? '<nil>' : '<chan>';
+      // The Dart form of a nil channel is a Chan that holds the nil flag, and
+      // not a null reference.
+      if (v == null || (v is Chan<Object?> && v.isNil)) {
+        return sharp ? '(${type.display})(nil)' : '<nil>';
+      }
+      return '<chan>';
     case 'func':
-      return v == null ? '<nil>' : '<func>';
+      if (v == null) return sharp ? '(${type.display})(nil)' : '<nil>';
+      return '<func>';
   }
   return '$v';
 }
@@ -318,6 +337,56 @@ String? _viaMethod(Object? v, TypeDesc type, String letter) {
   return null;
 }
 
+/// True for the verb %#v, which asks for the Go syntax form of a value.
+bool _goSyntax(String verb) => verb.endsWith('v') && verb.contains('#');
+
+/// True for a kind that Go writes as hexadecimal in the Go syntax form.
+bool _unsigned(String kind) {
+  switch (kind) {
+    case 'uint':
+    case 'uint8':
+    case 'uint16':
+    case 'uint32':
+    case 'uint64':
+    case 'uintptr':
+      return true;
+  }
+  return false;
+}
+
+/// The text of the method GoString. The verb %#v of Go reads that method, and
+/// it reads neither String nor Error.
+String? _goStringMethod(Object? v, TypeDesc type) {
+  final Function? m = type.methods['GoString()string'];
+  if (m == null) return null;
+  final Object? text = Function.apply(m, <Object?>[v]);
+  if (text is! GoString) return null;
+  return text.toDartString();
+}
+
+/// The type name that stands in front of a composite literal.
+///
+/// reflect names a slice of bytes `[]uint8`, and the package fmt holds a case
+/// of its own for the type `[]byte` of an argument. That case writes `[]byte`,
+/// thus the name differs at the top only.
+String _goName(TypeDesc type, int depth) =>
+    depth == 0 && type.display == '[]uint8' ? '[]byte' : type.display;
+
+/// The Go syntax form of a list of elements, with the name of the type.
+String _goList(
+  List<Object?> items,
+  TypeDesc? elem,
+  String name,
+  String verb,
+  int depth,
+) {
+  final List<String> parts = <String>[
+    for (final item in items)
+      elem == null ? '$item' : _value(item, elem, verb, depth + 1),
+  ];
+  return '$name{${parts.join(', ')}}';
+}
+
 String _bool(bool v, String letter) {
   if (letter == 'v' || letter == 't') return v ? 'true' : 'false';
   return '%!$letter(bool=$v)';
@@ -326,6 +395,8 @@ String _bool(bool v, String letter) {
 String _string(GoString v, String verb, String letter) {
   switch (letter) {
     case 'v':
+      if (_goSyntax(verb)) return _quote(v);
+      return v.toDartString();
     case 's':
       return v.toDartString();
     case 'q':
@@ -588,14 +659,22 @@ String _quote(GoString v) {
         out.write(r'\"');
       case 0x5C:
         out.write(r'\\');
+      case 0x07:
+        out.write(r'\a');
+      case 0x08:
+        out.write(r'\b');
+      case 0x0C:
+        out.write(r'\f');
       case 0x0A:
         out.write(r'\n');
-      case 0x09:
-        out.write(r'\t');
       case 0x0D:
         out.write(r'\r');
+      case 0x09:
+        out.write(r'\t');
+      case 0x0B:
+        out.write(r'\v');
       default:
-        if (r < 0x20) {
+        if (r < 0x20 || r == 0x7F) {
           out.write('\\x${r.toRadixString(16).padLeft(2, '0')}');
           break;
         }
@@ -606,23 +685,30 @@ String _quote(GoString v) {
   return out.toString();
 }
 
-String _slice(Object? v, TypeDesc type, String verb, bool plus) {
+String _slice(Object? v, TypeDesc type, String verb, int depth) {
   if (v is! Slice<Object?>) return '$v';
   final TypeDesc? elem = type.elem?.call();
   final List<Object?> items = <Object?>[];
   for (var i = 0; i < v.len; i++) {
     items.add(v.array[v.off + i]);
   }
-  return _list(items, elem, verb);
+  if (_goSyntax(verb)) {
+    final String name = _goName(type, depth);
+    if (v.isNil) return '$name(nil)';
+    return _goList(items, elem, name, verb, depth);
+  }
+  return _list(items, elem, verb, depth);
 }
 
-String _array(List<Object?> v, TypeDesc type, String verb, bool plus) {
-  return _list(v, type.elem?.call(), verb);
+String _array(List<Object?> v, TypeDesc type, String verb, int depth) {
+  final TypeDesc? elem = type.elem?.call();
+  if (_goSyntax(verb)) return _goList(v, elem, type.display, verb, depth);
+  return _list(v, elem, verb, depth);
 }
 
 /// _list writes each element of a slice or of an array. Go reads a list of
 /// bytes as text for the verbs s, q, x, and X.
-String _list(List<Object?> items, TypeDesc? elem, String verb) {
+String _list(List<Object?> items, TypeDesc? elem, String verb, int depth) {
   final String letter = verb.substring(verb.length - 1);
   if (elem != null && elem.kind == 'uint8' && _textVerb(letter)) {
     final List<int> bytes = <int>[];
@@ -633,7 +719,7 @@ String _list(List<Object?> items, TypeDesc? elem, String verb) {
   }
   final List<String> parts = <String>[];
   for (final item in items) {
-    parts.add(elem == null ? '$item' : _value(item, elem, verb));
+    parts.add(elem == null ? '$item' : _value(item, elem, verb, depth + 1));
   }
   return '[${parts.join(' ')}]';
 }
@@ -641,8 +727,10 @@ String _list(List<Object?> items, TypeDesc? elem, String verb) {
 bool _textVerb(String letter) =>
     letter == 's' || letter == 'q' || letter == 'x' || letter == 'X';
 
-String _map(Object? v, TypeDesc type, String verb, bool plus) {
+String _map(Object? v, TypeDesc type, String verb, int depth) {
   if (v is! GoMap<Object?, Object?>) return '$v';
+  final bool sharp = _goSyntax(verb);
+  if (sharp && v.isNil) return '${type.display}(nil)';
   final TypeDesc? keyType = type.key?.call();
   final TypeDesc? elem = type.elem?.call();
   final List<(Object?, String, String)> rows = <(Object?, String, String)>[];
@@ -652,10 +740,12 @@ String _map(Object? v, TypeDesc type, String verb, bool plus) {
   while (it.next()) {
     final Object? k = it.key;
     final Object? value = it.value;
-    final String keyText = keyType == null ? '$k' : _value(k, keyType, verb);
+    final String keyText = keyType == null
+        ? '$k'
+        : _value(k, keyType, verb, depth + 1);
     final String valueText = elem == null
         ? '$value'
-        : _value(value, elem, verb);
+        : _value(value, elem, verb, depth + 1);
     rows.add((k, keyText, valueText));
   }
   // Go orders the entries by the key, and not by the text of the key. A key of
@@ -664,6 +754,7 @@ String _map(Object? v, TypeDesc type, String verb, bool plus) {
   final List<String> parts = <String>[
     for (final row in rows) '${row.$2}:${row.$3}',
   ];
+  if (sharp) return '${type.display}{${parts.join(', ')}}';
   return 'map[${parts.join(' ')}]';
 }
 
@@ -712,12 +803,14 @@ int _compareKeys(
   return aText.compareTo(bText);
 }
 
-String _struct(Object? v, TypeDesc type, String verb, bool plus) {
+String _struct(Object? v, TypeDesc type, String verb, bool plus, int depth) {
+  final bool sharp = _goSyntax(verb);
   final List<String> parts = <String>[];
   for (final field in type.fields) {
     final Object? value = field.get(v);
-    final String text = _value(value, field.type(), verb);
-    parts.add(plus ? '${field.name}:$text' : text);
+    final String text = _value(value, field.type(), verb, depth + 1);
+    parts.add(plus || sharp ? '${field.name}:$text' : text);
   }
+  if (sharp) return '${type.display}{${parts.join(', ')}}';
   return '{${parts.join(' ')}}';
 }
