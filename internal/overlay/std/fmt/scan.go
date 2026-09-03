@@ -416,10 +416,10 @@ func (s *ss) scanFloat(verb rune, bits int) float64 {
 		panic(scanFail{badVerb(verb, "float")})
 	}
 	s.SkipSpace()
-	text := string(s.token(false, floatByte))
-	if text == "" {
+	if s.peek() == eof {
 		panic(scanFail{errEOF})
 	}
+	text := s.floatToken()
 	out, err := strconv.ParseFloat(text, bits)
 	if err != nil {
 		panic(scanFail{errNumber})
@@ -427,9 +427,49 @@ func (s *ss) scanFloat(verb rune, bits int) float64 {
 	return out
 }
 
-// floatByte accepts each rune that a float of Go holds.
-func floatByte(r rune) bool {
-	return strings.ContainsRune("+-.0123456789eEpPxXaAbBcCdDfFnNiIty_", r)
+// accept reads the next rune when the set holds it, and it writes that rune
+// into b. It reads nothing and gives false otherwise.
+func (s *ss) accept(b *strings.Builder, set string) bool {
+	r := s.peek()
+	if r == eof || !strings.ContainsRune(set, r) {
+		return false
+	}
+	s.ReadRune()
+	b.WriteRune(r)
+	return true
+}
+
+// floatToken reads the text of 1 float literal. The token ends at the first
+// rune that no float literal holds, thus a format such as "%fC" leaves the C
+// for the literal text of the format. A set of accepted runes cannot give that
+// rule, because a hexadecimal float holds each letter from a to f.
+func (s *ss) floatToken() string {
+	var b strings.Builder
+	if s.accept(&b, "nN") && s.accept(&b, "aA") && s.accept(&b, "nN") {
+		return b.String()
+	}
+	s.accept(&b, "+-")
+	if s.accept(&b, "iI") && s.accept(&b, "nN") && s.accept(&b, "fF") {
+		return b.String()
+	}
+	digits := "0123456789_"
+	exp := "eE"
+	if s.accept(&b, "0") && s.accept(&b, "xX") {
+		digits = "0123456789aAbBcCdDeEfF_"
+		exp = "pP"
+	}
+	for s.accept(&b, digits) {
+	}
+	if s.accept(&b, ".") {
+		for s.accept(&b, digits) {
+		}
+	}
+	if s.accept(&b, exp) {
+		s.accept(&b, "+-")
+		for s.accept(&b, "0123456789_") {
+		}
+	}
+	return b.String()
 }
 
 // convertString reads a text of the verb.

@@ -8,6 +8,7 @@
 // ignore_for_file: library_private_types_in_public_api, prefer_final_fields
 // ignore_for_file: no_leading_underscores_for_local_identifiers, unused_label
 // ignore_for_file: prefer_conditional_assignment
+// ignore_for_file: prefer_function_declarations_over_variables
 
 import 'package:goruntime/goruntime.dart';
 
@@ -37,6 +38,7 @@ final TypeDesc $desc$Greeter = TypeDesc(
       ($r, $v) => ($r as Greeter$)._style = $v as GoInt,
     ),
   ],
+  withType: <$R>($R Function<$T>() $f) => $f<Greeter$>(),
   ptr: () => $descP$Greeter,
   zero: () => Greeter$.$zero(),
 );
@@ -57,6 +59,8 @@ final TypeDesc $descP$Greeter = TypeDesc(
       text: 'func(greet.Style)',
       params: <TypeDesc Function()>[() => $desc$Style],
       results: <TypeDesc Function()>[],
+      bind: (List<Object?> Function(List<Object?>) $f) =>
+          (GoInt $a0) => $f(<Object?>[$a0]),
       withType: <$R>($R Function<$T>() $f) => $f<void Function(GoInt)?>(),
       comparable: false,
       zero: () => null,
@@ -68,6 +72,8 @@ final TypeDesc $descP$Greeter = TypeDesc(
       text: 'func() string',
       params: <TypeDesc Function()>[],
       results: <TypeDesc Function()>[() => $typeString],
+      bind: (List<Object?> Function(List<Object?>) $f) =>
+          () => $f(<Object?>[])[0] as GoString,
       withType: <$R>($R Function<$T>() $f) => $f<GoString Function()?>(),
       comparable: false,
       zero: () => null,

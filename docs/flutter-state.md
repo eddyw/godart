@@ -134,11 +134,13 @@ The answer holds 2 parts.
 `c.n.Get()` run the same way under `go test` and under gart. Milestone 1 uses
 this form.
 
-**A struct tag would give `c.n++`, and it needs stage 5.** Dart holds a real
-setter and Go holds none, thus stage 5 can write a getter and a setter pair for
-a marked field. The cost is 1 split: under `go test` the value matches and the
-notification does not. `fieldDescs` of `internal/emit/iface.go` already writes
-the raw tag into each `FieldDesc`, thus the mechanism exists.
+**A struct tag would give `c.n++`, and the work rejected it on 2026-09-03.**
+Dart holds a real setter and Go holds none, thus stage 5 could write a getter
+and a setter pair for a marked field. The cost is 1 split: under `go test` the
+value matches and the notification does not. G1 asks for the same result in the
+2 runtimes, thus the split is a rejection. `fieldDescs` of
+`internal/emit/iface.go` already writes the raw tag into each `FieldDesc`, thus
+the mechanism exists and no code reads it. Read decision 278.
 
 The limit of a setter is the limit of a signal. `c.items[0] = y`, `c.m["k"] = v`,
 and `*c.ptr = v` each write through the field, and no setter of any language
@@ -151,9 +153,12 @@ failure exact: `Signal$.$copy()` calls `_d.$copy()`, which builds a new `dep$`
 that holds the subscriber slice of the moment. The 2 lists then drift apart, and
 no error names it.
 
-`go vet` gives the whole answer with no compiler work. `Signal`, `Computed`,
+`go vet` gives most of the answer with no compiler work. `Signal`, `Computed`,
 `Store`, `Reducer`, `Command`, and `Command1` each hold a `noCopy` field with a
-`Lock` and an `Unlock` method. The copylocks check then reports each copy:
+`Lock` and an `Unlock` method. The copylocks check then reports each copy that
+the source writes. It reports no copy that `append` makes when a slice grows,
+thus `dep.check` closes that hole at run time. Read decision 257. The report of
+`go vet`:
 
 ```
 main.go:19:9: assignment copies lock value to bad: gart.dev/ui.Signal[int] contains gart.dev/ui.noCopy
@@ -224,11 +229,12 @@ The design document said "none". 3 items came up, and each 1 is small.
 
 ## What stays open
 
-- The struct tag of a field, and the split that it costs under `go test`.
-- A `Signal` inside a slice or a map. The element is not addressable in Go,
-  thus a program must hold a pointer.
-- The other 5 copy points of stage 4. Only the box of an interface value took
-  the derived rule.
-- A `Computed` that a program drops must call `Drop`. No test names a leak yet.
-- The equality test of `Set`. A `comparable` constraint would give one, and it
-  would split the type in 2.
+Nothing. The work of 2026-09-03 closed each of the 5 items below.
+
+| Item | The answer |
+|---|---|
+| The struct tag of a field | **Out.** Under `go test` the value matches and the notification does not, and that split is a silent difference of meaning. Read decision 278. |
+| A `Signal` inside a slice or a map | **Closed with a run time test.** `go vet` reports no copy that `append` makes when a slice grows, thus `dep.check` panics on a reactive value that moved. A map of such values is already a compile error of Go. Read decision 257. |
+| The other 5 copy points of stage 4 | **Closed.** `ir.Fresh` holds 1 rule that stage 4 and the box each read. The work found 2 defects of the old rule, and 2 more of `append`. Read decision 255 and decision 256. |
+| A `Computed` that a program drops | **Closed with an owner.** A boundary owns each scope that its build creates, thus a rebuild and a dispose each release it. Read decision 258. |
+| The equality test of `Set` | **Closed with an optional test.** `NewSignalEq(v, ui.Eq[int])` skips the mark of an equal write, and the type does not split. Read decision 259. |

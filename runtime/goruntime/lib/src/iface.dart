@@ -69,6 +69,11 @@ final class TypeDesc {
   /// The count of the elements of an array type. Each other kind holds 0.
   final int length;
 
+  /// The direction of a channel type: 3 for both, 2 for send, and 1 for
+  /// receive. Each other kind holds 0, and so does a channel description that
+  /// an older build wrote.
+  final int dir;
+
   /// The parameter types and the result types of a function type.
   final List<TypeDesc Function()> params;
   final List<TypeDesc Function()> results;
@@ -109,6 +114,18 @@ final class TypeDesc {
   /// thus only these 5 carry the field.
   final R Function<R>(R Function<T>())? withType;
 
+  /// Builds a closure that carries the Dart type of each parameter and of the
+  /// result of a function type.
+  ///
+  /// The body reads a list of the raw arguments and gives a list of the raw
+  /// results. reflect.Value.Method, reflect.Value.MethodByName, and
+  /// reflect.MakeFunc each build a func value through the field, thus a type
+  /// assertion of such a value to its Go function type reads. A plain closure
+  /// of Object? parameters gives a dynamic result, and Dart rejects that value
+  /// at a location of a function type with a result. Only a function type
+  /// carries the field.
+  final Function Function(List<Object?> Function(List<Object?>))? bind;
+
   const TypeDesc(
     this.name,
     this.kind,
@@ -119,6 +136,7 @@ final class TypeDesc {
     this.elem,
     this.key,
     this.length = 0,
+    this.dir = 0,
     this.params = const <TypeDesc Function()>[],
     this.results = const <TypeDesc Function()>[],
     this.variadic = false,
@@ -128,6 +146,7 @@ final class TypeDesc {
     this.ptr,
     this.newPtr,
     this.withType,
+    this.bind,
   });
 
   /// The name for a message. Go writes the package name, and not the path.
@@ -154,22 +173,25 @@ final class Iface {
       $goEqual(value, other.value, desc);
 
   @override
-  int get hashCode => Object.hash(desc.name, value);
+  int get hashCode => Object.hash(desc.name, $goHash(value, desc));
 
   @override
   String toString() => '$value';
 }
 
 /// The Go equality of 2 values of 1 type. A comparison of a value whose type
-/// holds no identity panics, and the fields of a struct compare in order, so
-/// the panic names the type of the first field that holds no identity.
-bool $goEqual(Object? a, Object? b, TypeDesc d) {
+/// holds no identity panics, and the panic names the type of the comparison.
+///
+/// root carries that type through the walk of the fields. Go names the type
+/// that the code compares, and not the field that holds no identity.
+bool $goEqual(Object? a, Object? b, TypeDesc d, [TypeDesc? root]) {
+  final TypeDesc top = root ?? d;
   switch (d.kind) {
     case 'slice' || 'map' || 'func':
       $panic(
         Iface(
           $typeGoError,
-          GoError('runtime error: comparing uncomparable type ${d.display}'),
+          GoError('comparing uncomparable type ${top.display}'),
         ),
       );
     case 'array':
@@ -177,12 +199,12 @@ bool $goEqual(Object? a, Object? b, TypeDesc d) {
       final List<Object?> eb = b! as List<Object?>;
       final TypeDesc? elem = d.elem?.call();
       for (var i = 0; i < ea.length; i++) {
-        if (!$goEqual(ea[i], eb[i], elem!)) return false;
+        if (!$goEqual(ea[i], eb[i], elem!, top)) return false;
       }
       return true;
     case 'struct':
       for (final FieldDesc f in d.fields) {
-        if (!$goEqual(f.get(a), f.get(b), f.type.call())) return false;
+        if (!$goEqual(f.get(a), f.get(b), f.type.call(), top)) return false;
       }
       return true;
     case 'interface':
@@ -190,9 +212,57 @@ bool $goEqual(Object? a, Object? b, TypeDesc d) {
       final ib = b as Iface?;
       if (ia == null || ib == null) return ia == null && ib == null;
       if (ia.desc.name != ib.desc.name) return false;
+      // The dynamic type of the interface value takes over, exactly as Go
+      // reports it.
       return $goEqual(ia.value, ib.value, ia.desc);
   }
   return a == b;
+}
+
+/// True for a pointer type whose element is a struct.
+bool _pointsToStruct(TypeDesc d) {
+  final TypeDesc? elem = d.elem?.call();
+  return elem != null && elem.kind == 'struct';
+}
+
+/// The hash of a Go value of 1 type. It holds the rule of [$goEqual]: 2 values
+/// that Go reports as equal give an equal number.
+///
+/// A slice, a map, and a function reach no comparison in Go, thus each one
+/// gives a constant. The map of the runtime hashes the key first, and the
+/// comparison then reports the cause of Go.
+int $goHash(Object? v, TypeDesc d) {
+  switch (d.kind) {
+    case 'slice' || 'map' || 'func':
+      return 0;
+    case 'array':
+      final List<Object?> e = v! as List<Object?>;
+      final TypeDesc? elem = d.elem?.call();
+      if (elem == null) return e.length;
+      final List<int> parts = <int>[];
+      for (final Object? x in e) {
+        parts.add($goHash(x, elem));
+      }
+      return Object.hashAll(parts);
+    case 'struct':
+      final List<int> parts = <int>[];
+      for (final FieldDesc f in d.fields) {
+        parts.add($goHash(f.get(v), f.type.call()));
+      }
+      return Object.hashAll(parts);
+    case 'interface':
+      // The hash reads the parts of the pair, and not the getter hashCode of
+      // Iface. That getter calls this function again, and the type flow
+      // analysis of dart2wasm stops on such a cycle through a getter. The 2
+      // forms give the same number.
+      final Iface? iv = v as Iface?;
+      if (iv == null) return 0;
+      return Object.hash(iv.desc.name, $goHash(iv.value, iv.desc));
+    case 'ptr':
+      if (_pointsToStruct(d)) return identityHashCode(v);
+      return v.hashCode;
+  }
+  return v.hashCode;
 }
 
 /// The zero value of a predeclared type. A tear-off of a top level function is
@@ -306,6 +376,23 @@ const TypeDesc $typeString = TypeDesc(
   zero: $zeroString,
 );
 
+/// The name of the first method of the list that the type does not hold, or an
+/// empty text. Go names that method in the report of a failed assertion.
+String $missingMethod(Iface? x, List<String> methods) {
+  if (x == null) return '';
+  for (final m in methods) {
+    if (!x.desc.methods.containsKey(m)) return _methodName(m);
+  }
+  return '';
+}
+
+/// The Go name of a method key. A key holds the name, the parameters, and the
+/// results, for example `String()string`.
+String _methodName(String key) {
+  final int i = key.indexOf('(');
+  return i < 0 ? key : key.substring(0, i);
+}
+
 /// True when the type holds each method of an interface.
 bool $implements(Iface? x, List<String> methods) {
   if (x == null) return false;
@@ -318,12 +405,26 @@ bool $implements(Iface? x, List<String> methods) {
 bool $isType(Iface? x, String name) => x != null && x.desc.name == name;
 
 /// The value of a type assertion that gives 1 value. A wrong type panics.
-Object? $assertType(Iface? x, String name) {
+///
+/// static names the interface type of the operand, and the report of Go writes
+/// it in front of the value: "interface {} is int, not string".
+Object? $assertType(
+  Iface? x,
+  String name, [
+  String static = 'interface',
+  String want = '',
+]) {
+  // name holds the identity of the type, and the report needs the text that
+  // reflect.Type.String gives. The 2 differ for a type of package main.
+  final String target = want.isEmpty ? name : want;
   if (x == null) {
     $panic(
       Iface(
         $typeGoError,
-        GoError('interface conversion: interface is nil, not $name'),
+        GoError(
+          'interface conversion: $static is nil, not $target',
+          plain: true,
+        ),
       ),
     );
   }
@@ -331,7 +432,10 @@ Object? $assertType(Iface? x, String name) {
     $panic(
       Iface(
         $typeGoError,
-        GoError('interface conversion: interface is ${x.desc.name}, not $name'),
+        GoError(
+          'interface conversion: $static is ${x.desc.display}, not $target',
+          plain: true,
+        ),
       ),
     );
   }
@@ -341,11 +445,25 @@ Object? $assertType(Iface? x, String name) {
 /// The value of an assertion to an interface type.
 Iface $assertIface(Iface? x, List<String> methods, String name) {
   if (!$implements(x, methods)) {
-    final String got = x == null ? 'nil' : x.desc.name;
+    if (x == null) {
+      $panic(
+        Iface(
+          $typeGoError,
+          GoError(
+            'interface conversion: interface is nil, not $name',
+            plain: true,
+          ),
+        ),
+      );
+    }
     $panic(
       Iface(
         $typeGoError,
-        GoError('interface conversion: $got does not implement $name'),
+        GoError(
+          'interface conversion: ${x.desc.name} is not $name: '
+          'missing method ${$missingMethod(x, methods)}',
+          plain: true,
+        ),
       ),
     );
   }
@@ -426,6 +544,7 @@ T $assertDict<T>(Iface? x, Dict<T> d) {
         GoError(
           'interface conversion: interface {} is '
           '${x == null ? 'nil' : x.desc.display}, not ${d.desc.display}',
+          plain: true,
         ),
       ),
     );

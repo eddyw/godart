@@ -3,11 +3,37 @@ import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'srcmap.dart';
 import 'string.dart';
 
+/// The bytes that a capture of standard output holds. Null when no capture
+/// runs.
+List<int>? _captured;
+
+/// Starts a capture of standard output, or ends it and gives the text.
+///
+/// The harness of an example reads it: Go holds the output of the example and
+/// compares it with the text of the comment.
+GoString $captureOut(bool on) {
+  if (on) {
+    _captured = <int>[];
+    return GoString.empty;
+  }
+  final List<int>? held = _captured;
+  _captured = null;
+  if (held == null) return GoString.empty;
+  return GoString.fromBytes(held);
+}
+
 /// Writes text to standard output. The package fmt uses it.
 ///
 /// The bytes reach the sink with no step through a Dart String, thus a byte
 /// that holds no rune of UTF-8 keeps its value.
-void $stdout(GoString text) => $platformStdout(text.bytes);
+void $stdout(GoString text) {
+  final List<int>? held = _captured;
+  if (held != null) {
+    held.addAll(text.bytes);
+    return;
+  }
+  $platformStdout(text.bytes);
+}
 
 /// The Go builtin `print`. It writes to stderr with no separator.
 void $print(List<String> parts) => $platformStderrText(parts.join());

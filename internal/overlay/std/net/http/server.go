@@ -4,16 +4,22 @@ package http
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"log"
+	"maps"
 	"net"
 	"net/url"
-	"sort"
+	"path"
+	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall/dart"
 	"time"
 )
@@ -61,20 +67,111 @@ type Hijacker interface {
 // ErrHijacked reports a write on an answer whose connection the handler took.
 var ErrHijacked = errors.New("http: connection has been hijacked")
 
+// A ConnState names the state of a connection of a server. The hook
+// Server.ConnState reads each change.
+type ConnState int
+
+const (
+	// StateNew marks a connection that a client opened. Such a connection
+	// moves to StateActive or to StateClosed.
+	StateNew ConnState = iota
+	// StateActive marks a connection that holds the bytes of a request. The
+	// hook runs before the server reads the request.
+	StateActive
+	// StateIdle marks a connection that answered a request and that waits for
+	// the next request of the same client.
+	StateIdle
+	// StateHijacked marks a connection that a handler took. It is a final
+	// state, and no StateClosed follows it.
+	StateHijacked
+	// StateClosed marks a connection that ended. It is a final state.
+	StateClosed
+)
+
+var stateName = map[ConnState]string{
+	StateNew:      "new",
+	StateActive:   "active",
+	StateIdle:     "idle",
+	StateHijacked: "hijacked",
+	StateClosed:   "closed",
+}
+
+// String gives the name of the state.
+func (c ConnState) String() string { return stateName[c] }
+
+// A contextKey names a value that the server puts in the context of a request.
+type contextKey struct {
+	name string
+}
+
+func (k *contextKey) String() string { return "net/http context value " + k.name }
+
+// ServerContextKey names the *Server of the context of a request.
+var ServerContextKey = &contextKey{"http-server"}
+
+// LocalAddrContextKey names the local address of the connection of a request.
+// The value holds the type net.Addr.
+var LocalAddrContextKey = &contextKey{"local-addr"}
+
+// DefaultMaxHeaderBytes is the limit of the head of a request. A Server with no
+// MaxHeaderBytes takes this value.
+const DefaultMaxHeaderBytes = 1 << 20 // 1 MB
+
+// DefaultMaxHeaderValueCount is the count of the values of the head of a
+// request that a server reads. A Server with no MaxHeaderValueCount takes this
+// value.
+const DefaultMaxHeaderValueCount = 500
+
 // A Server holds the settings of a listener.
 type Server struct {
 	// Addr names the host and the port of the listener.
 	Addr string
 	// Handler answers each request. A nil handler reads DefaultServeMux.
 	Handler Handler
-	// ErrorLog receives the log of an accept or a handshake failure in Go.
-	// The overlay server writes no such log, thus the field keeps the value
-	// only.
+	// DisableGeneralOptionsHandler stops the built in answer of the request
+	// line "OPTIONS *". The handler of the server then answers such a request.
+	DisableGeneralOptionsHandler bool
+	// ReadTimeout is the whole time of the read of a request, from the accept
+	// to the end of the body. A value of 0 holds no limit.
+	ReadTimeout time.Duration
+	// ReadHeaderTimeout is the time of the read of the head of a request. A
+	// value of 0 reads ReadTimeout.
+	ReadHeaderTimeout time.Duration
+	// WriteTimeout is the time of the write of an answer, from the end of the
+	// head of the request. A value of 0 holds no limit.
+	WriteTimeout time.Duration
+	// IdleTimeout is the time that a connection waits for the next request. A
+	// value of 0 reads ReadTimeout.
+	IdleTimeout time.Duration
+	// MaxHeaderBytes limits the bytes of the request line and of the head of a
+	// request. A value of 0 reads DefaultMaxHeaderBytes. The body stays
+	// outside the count.
+	MaxHeaderBytes int
+	// MaxHeaderValueCount limits the count of the values of the head of a
+	// request. A value of 0 reads DefaultMaxHeaderValueCount. 2 values that a
+	// comma divides in 1 line count 1 time, and 2 lines of 1 name count 2
+	// times.
+	MaxHeaderValueCount int
+	// ConnState runs at each change of the state of a connection.
+	ConnState func(net.Conn, ConnState)
+	// ErrorLog receives the log of an accept failure and of a panic of a
+	// handler. A nil field writes to the logger of the package log.
 	ErrorLog *log.Logger
+	// BaseContext gives the context of each connection of 1 listener. A nil
+	// function reads context.Background.
+	BaseContext func(net.Listener) context.Context
+	// ConnContext changes the context of 1 connection. The result must hold no
+	// nil value.
+	ConnContext func(ctx context.Context, c net.Conn) context.Context
 
-	mu       sync.Mutex
-	listener net.Listener
-	closed   bool
+	// down marks a server that Close or Shutdown ended.
+	down atomic.Bool
+
+	mu          sync.Mutex
+	listeners   map[*net.Listener]struct{}
+	conns       map[*serverConn]struct{}
+	onShutdown  []func()
+	noKeepAlive bool
 }
 
 // ListenAndServe listens on the address and answers each request.
@@ -83,8 +180,18 @@ func ListenAndServe(addr string, handler Handler) error {
 	return server.ListenAndServe()
 }
 
+// Serve answers each connection of the listener with the handler. A nil handler
+// reads DefaultServeMux.
+func Serve(l net.Listener, handler Handler) error {
+	server := &Server{Handler: handler}
+	return server.Serve(l)
+}
+
 // ListenAndServe listens on the address of the server.
 func (s *Server) ListenAndServe() error {
+	if s.shuttingDown() {
+		return ErrServerClosed
+	}
 	addr := s.Addr
 	if addr == "" {
 		addr = ":80"
@@ -97,87 +204,400 @@ func (s *Server) ListenAndServe() error {
 }
 
 // Serve answers each connection of the listener. It gives ErrServerClosed after
-// Close.
+// Close or after Shutdown.
 func (s *Server) Serve(l net.Listener) error {
-	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-		l.Close()
+	origin := l
+	var tracked net.Listener = &onceCloseListener{Listener: l}
+	defer tracked.Close()
+	if !s.trackListener(&tracked, true) {
 		return ErrServerClosed
 	}
-	s.listener = l
-	s.mu.Unlock()
+	defer s.trackListener(&tracked, false)
+
+	base := context.Background()
+	if s.BaseContext != nil {
+		base = s.BaseContext(origin)
+		if base == nil {
+			panic("BaseContext returned a nil context")
+		}
+	}
+	base = context.WithValue(base, ServerContextKey, s)
 	for {
-		conn, err := l.Accept()
+		conn, err := tracked.Accept()
 		if err != nil {
-			s.mu.Lock()
-			done := s.closed
-			s.mu.Unlock()
-			if done {
+			if s.shuttingDown() {
 				return ErrServerClosed
 			}
 			return err
 		}
-		go s.handle(conn)
+		ctx := base
+		if hook := s.ConnContext; hook != nil {
+			ctx = hook(ctx, conn)
+			if ctx == nil {
+				panic("ConnContext returned a nil context")
+			}
+		}
+		c := &serverConn{server: s, conn: conn}
+		s.trackConn(c, true)
+		s.setState(c, StateNew)
+		go c.serve(ctx)
 	}
 }
 
-// Close ends the listener. Each connection that stands open keeps its answer.
+// Close ends each listener and each connection of the server. A handler that
+// runs loses its connection. Read Shutdown for the end that waits.
 func (s *Server) Close() error {
+	s.down.Store(true)
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.closed {
-		return nil
+	err := s.closeListenersLocked()
+	for c := range s.conns {
+		c.conn.Close()
+		delete(s.conns, c)
 	}
-	s.closed = true
-	if s.listener == nil {
-		return nil
-	}
-	return s.listener.Close()
+	s.mu.Unlock()
+	return err
 }
 
-// handle answers each request of 1 connection.
-func (s *Server) handle(conn net.Conn) {
-	// A TLS connection whose ALPN took h2 leaves the table of the
-	// connections, and the HTTP/2 session of the runtime drives its socket.
-	if tc, ok := conn.(h2Conn); ok &&
-		tc.ConnectionState().NegotiatedProtocol == "h2" {
-		s.serveH2(tc.Handle())
+// shutdownPollInterval is the wait between 2 tests of Shutdown.
+const shutdownPollInterval = 10 * time.Millisecond
+
+// Shutdown ends each listener, and it then waits for each connection to reach
+// the idle state. It gives the error of the context when the context ends
+// first, and Serve then gives ErrServerClosed.
+func (s *Server) Shutdown(ctx context.Context) error {
+	s.down.Store(true)
+	s.mu.Lock()
+	err := s.closeListenersLocked()
+	for _, f := range s.onShutdown {
+		go f()
+	}
+	s.mu.Unlock()
+	ticker := time.NewTicker(shutdownPollInterval)
+	defer ticker.Stop()
+	for {
+		if s.closeIdleConns() {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
+
+// RegisterOnShutdown adds a function that Shutdown calls on a goroutine of its
+// own. A server of a web socket registers the end of each such connection here.
+func (s *Server) RegisterOnShutdown(f func()) {
+	s.mu.Lock()
+	s.onShutdown = append(s.onShutdown, f)
+	s.mu.Unlock()
+}
+
+// SetKeepAlivesEnabled holds or drops the connection after an answer. A false
+// value also ends each connection that stands idle.
+func (s *Server) SetKeepAlivesEnabled(v bool) {
+	s.mu.Lock()
+	s.noKeepAlive = !v
+	s.mu.Unlock()
+	if v {
 		return
 	}
-	// A handler that hijacks the connection owns it, thus the server closes
-	// it no more.
+	s.closeIdleConns()
+}
+
+// closeIdleConns ends each connection that stands idle, and it reports whether
+// the server holds no connection any more.
+func (s *Server) closeIdleConns() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	quiet := true
+	now := time.Now().Unix()
+	for c := range s.conns {
+		state, stamp := c.getState()
+		// A connection that stood new for more than 5 seconds sent no request,
+		// thus it counts as idle. Go holds the same rule.
+		if state == StateNew && stamp < now-5 {
+			state = StateIdle
+		}
+		if state != StateIdle {
+			quiet = false
+			continue
+		}
+		c.conn.Close()
+		delete(s.conns, c)
+	}
+	return quiet
+}
+
+func (s *Server) closeListenersLocked() error {
+	var err error
+	for l := range s.listeners {
+		if cause := (*l).Close(); cause != nil && err == nil {
+			err = cause
+		}
+	}
+	return err
+}
+
+// trackListener adds a listener to the server, or it drops one. It gives false
+// for an add on a server that already ended.
+func (s *Server) trackListener(l *net.Listener, add bool) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.listeners == nil {
+		s.listeners = map[*net.Listener]struct{}{}
+	}
+	if !add {
+		delete(s.listeners, l)
+		return true
+	}
+	if s.shuttingDown() {
+		return false
+	}
+	s.listeners[l] = struct{}{}
+	return true
+}
+
+func (s *Server) trackConn(c *serverConn, add bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.conns == nil {
+		s.conns = map[*serverConn]struct{}{}
+	}
+	if add {
+		s.conns[c] = struct{}{}
+		return
+	}
+	delete(s.conns, c)
+}
+
+// setState writes the state of a connection and it calls the hook. A connection
+// that a handler took, and a connection that ended, each leave the table of the
+// server, thus Shutdown waits for neither one.
+func (s *Server) setState(c *serverConn, state ConnState) {
+	c.mu.Lock()
+	c.state = state
+	c.stamp = time.Now().Unix()
+	c.mu.Unlock()
+	if state == StateHijacked || state == StateClosed {
+		s.trackConn(c, false)
+	}
+	if hook := s.ConnState; hook != nil {
+		hook(c.conn, state)
+	}
+}
+
+func (s *Server) shuttingDown() bool { return s.down.Load() }
+
+func (s *Server) doKeepAlives() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return !s.noKeepAlive && !s.shuttingDown()
+}
+
+func (s *Server) idleTimeout() time.Duration {
+	if s.IdleTimeout != 0 {
+		return s.IdleTimeout
+	}
+	return s.ReadTimeout
+}
+
+func (s *Server) readHeaderTimeout() time.Duration {
+	if s.ReadHeaderTimeout != 0 {
+		return s.ReadHeaderTimeout
+	}
+	return s.ReadTimeout
+}
+
+func (s *Server) maxHeaderBytes() int {
+	if s.MaxHeaderBytes > 0 {
+		return s.MaxHeaderBytes
+	}
+	return DefaultMaxHeaderBytes
+}
+
+// readLimit gives the bytes that the request line and the head of a request may
+// hold together. Go adds 4096 bytes to MaxHeaderBytes for the buffer, thus the
+// overlay adds the same count.
+func (s *Server) readLimit() int { return s.maxHeaderBytes() + 4096 }
+
+func (s *Server) maxHeaderValueCount() int {
+	if s.MaxHeaderValueCount > 0 {
+		return s.MaxHeaderValueCount
+	}
+	return DefaultMaxHeaderValueCount
+}
+
+// logf writes a line to ErrorLog, or to the logger of the package log.
+func (s *Server) logf(format string, args ...any) {
+	if s != nil && s.ErrorLog != nil {
+		s.ErrorLog.Printf(format, args...)
+		return
+	}
+	log.Printf(format, args...)
+}
+
+// An onceCloseListener ends its listener 1 time only. Serve and Close each
+// reach the same listener.
+type onceCloseListener struct {
+	net.Listener
+	once sync.Once
+	err  error
+}
+
+func (l *onceCloseListener) Close() error {
+	l.once.Do(func() { l.err = l.Listener.Close() })
+	return l.err
+}
+
+// A serverConn holds 1 connection of a server. The server tracks it, thus
+// Close and Shutdown each reach it.
+type serverConn struct {
+	server *Server
+	conn   net.Conn
+
+	mu sync.Mutex
+	// state holds the state of the connection, and stamp holds the second of
+	// its last change.
+	state ConnState
+	stamp int64
+}
+
+func (c *serverConn) getState() (ConnState, int64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.state, c.stamp
+}
+
+// serve answers each request of 1 connection.
+func (c *serverConn) serve(ctx context.Context) {
+	s := c.server
+	// A handler that hijacks the connection owns it, thus the server closes it
+	// no more.
 	taken := false
 	defer func() {
-		if !taken {
-			conn.Close()
-		}
-	}()
-	peer := ""
-	if addr := conn.RemoteAddr(); addr != nil {
-		peer = addr.String()
-	}
-	reader := bufio.NewReader(conn)
-	for {
-		req, err := readRequest(reader)
-		if err != nil {
+		if taken {
 			return
 		}
-		req.RemoteAddr = peer
-		w := &response{conn: conn, reader: reader, header: Header{}, req: req}
-		handler := s.Handler
-		if handler == nil {
-			handler = DefaultServeMux
+		c.conn.Close()
+		s.setState(c, StateClosed)
+	}()
+	// A TLS connection whose ALPN took h2 leaves the loop of HTTP/1.1, and the
+	// HTTP/2 session of the runtime drives its socket.
+	if tc, ok := c.conn.(h2Conn); ok &&
+		tc.ConnectionState().NegotiatedProtocol == "h2" {
+		s.setState(c, StateActive)
+		s.serveH2(ctx, tc.Handle())
+		return
+	}
+	ctx = context.WithValue(ctx, LocalAddrContextKey, c.conn.LocalAddr())
+	peer := ""
+	if addr := c.conn.RemoteAddr(); addr != nil {
+		peer = addr.String()
+	}
+	reader := bufio.NewReader(c.conn)
+	first := true
+	for {
+		if !first {
+			s.setState(c, StateIdle)
+			if d := s.idleTimeout(); d > 0 {
+				if c.conn.SetReadDeadline(time.Now().Add(d)) != nil {
+					return
+				}
+			}
 		}
-		handler.ServeHTTP(w, req)
+		// The state moves to active at the first byte of the request, thus the
+		// peek holds the wait for the client.
+		if _, err := reader.Peek(1); err != nil {
+			return
+		}
+		s.setState(c, StateActive)
+		first = false
+		start := time.Now()
+		if d := s.readHeaderTimeout(); d > 0 {
+			c.conn.SetReadDeadline(start.Add(d))
+		} else {
+			c.conn.SetReadDeadline(time.Time{})
+		}
+		if d := s.WriteTimeout; d > 0 {
+			c.conn.SetWriteDeadline(start.Add(d))
+		} else {
+			c.conn.SetWriteDeadline(time.Time{})
+		}
+		req, err := readRequestLimit(reader, s.readLimit(), s.maxHeaderValueCount())
+		if err != nil {
+			if errors.Is(err, errHeaderTooLarge) {
+				io.WriteString(c.conn, "HTTP/1.1 431 Request Header Fields Too Large\r\n"+
+					"Content-Length: 0\r\nConnection: close\r\n\r\n")
+			}
+			return
+		}
+		if d := s.ReadTimeout; d > 0 {
+			c.conn.SetReadDeadline(start.Add(d))
+		}
+		req.RemoteAddr = peer
+		// A request that declares a trailer gives the status 501. The overlay
+		// reads no trailer, thus a silent drop would lose a field.
+		if req.Header.Get("Trailer") != "" {
+			io.WriteString(c.conn, "HTTP/1.1 501 Not Implemented\r\n"+
+				"Content-Length: 0\r\nConnection: close\r\n\r\n")
+			return
+		}
+		if tc, ok := c.conn.(h2Conn); ok {
+			state := tc.ConnectionState()
+			req.TLS = &state
+		}
+		reqCtx, cancel := context.WithCancel(ctx)
+		req.ctx = reqCtx
+		w := &response{conn: c.conn, reader: reader, header: Header{}, req: req}
+		if !s.doKeepAlives() || req.Close {
+			w.closeAfter = true
+		}
+		serverHandler{s}.ServeHTTP(w, req)
 		if w.hijacked {
+			cancel()
 			taken = true
+			s.setState(c, StateHijacked)
 			return
 		}
 		w.finish()
-		if req.Close || w.closeAfter || !drain(req) {
+		cancel()
+		if w.closeAfter || !drain(req) {
 			return
 		}
+	}
+}
+
+// A serverHandler picks the handler of a request. A nil Handler of the server
+// reads DefaultServeMux, and the request line "OPTIONS *" reads a handler of
+// the package.
+type serverHandler struct {
+	srv *Server
+}
+
+func (sh serverHandler) ServeHTTP(w ResponseWriter, req *Request) {
+	handler := sh.srv.Handler
+	if handler == nil {
+		handler = DefaultServeMux
+	}
+	if !sh.srv.DisableGeneralOptionsHandler && req.RequestURI == "*" &&
+		req.Method == MethodOptions {
+		handler = globalOptionsHandler{}
+	}
+	handler.ServeHTTP(w, req)
+}
+
+// A globalOptionsHandler answers the request line "OPTIONS *".
+type globalOptionsHandler struct{}
+
+func (globalOptionsHandler) ServeHTTP(w ResponseWriter, r *Request) {
+	w.Header().Set("Content-Length", "0")
+	if r.ContentLength != 0 {
+		// A body of such a request holds no meaning. The read of 4 kilobytes
+		// keeps the connection, and a longer body ends it.
+		mb := MaxBytesReader(w, r.Body, 4<<10)
+		io.Copy(io.Discard, mb)
 	}
 }
 
@@ -210,11 +630,17 @@ type response struct {
 	wroteHead  bool
 	closeAfter bool
 	flushed    bool
+	// chunked marks an answer of the chunked form. Only HTTP/1.1 holds it.
+	chunked bool
 	// hijacked marks a connection that the handler took.
 	hijacked bool
 }
 
 func (w *response) Header() Header { return w.header }
+
+// requestTooLarge ends the connection after the answer. A MaxBytesReader of the
+// body of the request calls it.
+func (w *response) requestTooLarge() { w.closeAfter = true }
 
 func (w *response) WriteHeader(code int) {
 	if w.wroteHead {
@@ -248,7 +674,15 @@ func (w *response) Flush() {
 		w.WriteHeader(StatusOK)
 	}
 	if !w.flushed {
-		w.header.Set("Transfer-Encoding", "chunked")
+		// The chunked form belongs to HTTP/1.1. An answer of HTTP/1.0 that
+		// flushes writes the bytes raw, and the end of the connection then
+		// names the end of the body.
+		w.chunked = w.req == nil || w.req.ProtoAtLeast(1, 1)
+		if w.chunked {
+			w.header.Set("Transfer-Encoding", "chunked")
+		} else {
+			w.closeAfter = true
+		}
 		w.header.Del("Content-Length")
 		w.writeHead()
 		w.flushed = true
@@ -264,6 +698,9 @@ func (w *response) Flush() {
 func (w *response) writeChunk(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
+	}
+	if !w.chunked {
+		return w.conn.Write(p)
 	}
 	head := strconv.FormatInt(int64(len(p)), 16) + "\r\n"
 	if _, err := io.WriteString(w.conn, head); err != nil {
@@ -288,8 +725,10 @@ func (w *response) writeHead() {
 	if w.header.Get("Content-Type") == "" && len(w.body) > 0 {
 		w.header.Set("Content-Type", "text/plain; charset=utf-8")
 	}
-	if w.req != nil && w.req.Close {
+	if w.closeAfter {
 		w.header.Set("Connection", "close")
+	} else if w.req != nil && !w.req.ProtoAtLeast(1, 1) {
+		w.header.Set("Connection", "keep-alive")
 	}
 	w.header.Write(w.conn)
 	io.WriteString(w.conn, "\r\n")
@@ -304,7 +743,9 @@ func (w *response) finish() {
 		w.WriteHeader(StatusOK)
 	}
 	if w.flushed {
-		io.WriteString(w.conn, "0\r\n\r\n")
+		if w.chunked {
+			io.WriteString(w.conn, "0\r\n\r\n")
+		}
 		return
 	}
 	w.header.Set("Content-Length", itoa(len(w.body)))
@@ -398,93 +839,448 @@ func htmlEscape(s string) string {
 	return b.String()
 }
 
-// A ServeMux holds a pattern for each handler. A pattern that ends with a slash
-// names a subtree.
+// A redirectHandler answers each request with a redirect.
+type redirectHandler struct {
+	url  string
+	code int
+}
+
+func (rh *redirectHandler) ServeHTTP(w ResponseWriter, r *Request) {
+	Redirect(w, r, rh.url, rh.code)
+}
+
+// RedirectHandler gives a handler that answers each request with a redirect to
+// the URL and with the status code. The code must name a redirect, for example
+// StatusMovedPermanently or StatusFound.
+func RedirectHandler(url string, code int) Handler {
+	return &redirectHandler{url, code}
+}
+
+// AllowQuerySemicolons gives a handler that reads each semicolon of the raw
+// query as an ampersand, and that then calls the handler.
+//
+// Go stopped the semicolon as a separator of a query in 1.17. This wrapper
+// keeps the old form for a client that still writes it.
+func AllowQuerySemicolons(h Handler) Handler {
+	return HandlerFunc(func(w ResponseWriter, r *Request) {
+		if !strings.Contains(r.URL.RawQuery, ";") {
+			h.ServeHTTP(w, r)
+			return
+		}
+		r2 := new(Request)
+		*r2 = *r
+		r2.URL = new(url.URL)
+		*r2.URL = *r.URL
+		r2.URL.RawQuery = strings.ReplaceAll(r.URL.RawQuery, ";", "&")
+		h.ServeHTTP(w, r2)
+	})
+}
+
+// ErrHandlerTimeout is the error of a write on the ResponseWriter of a
+// TimeoutHandler after the time ran out.
+var ErrHandlerTimeout = errors.New("http: Handler timeout")
+
+// TimeoutHandler gives a handler that runs the handler under a time limit.
+//
+// The new handler calls the handler each time, and it gives the answer of that
+// handler when the handler ends inside the limit. A handler that takes longer
+// gives the status 503, the text of the message, and the type text/html. Each
+// later write of the handler gives ErrHandlerTimeout.
+//
+// The new handler holds no Flusher and no Hijacker, exactly as in Go.
+func TimeoutHandler(h Handler, dt time.Duration, msg string) Handler {
+	return &timeoutHandler{handler: h, body: msg, dt: dt}
+}
+
+type timeoutHandler struct {
+	handler Handler
+	body    string
+	dt      time.Duration
+}
+
+func (h *timeoutHandler) errorBody() string {
+	if h.body != "" {
+		return h.body
+	}
+	return "<html><head><title>Timeout</title></head><body><h1>Timeout</h1></body></html>"
+}
+
+func (h *timeoutHandler) ServeHTTP(w ResponseWriter, r *Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), h.dt)
+	defer cancel()
+	r = r.WithContext(ctx)
+	done := make(chan struct{})
+	panics := make(chan any, 1)
+	tw := &timeoutWriter{w: w, h: Header{}, req: r}
+	go func() {
+		defer func() {
+			if p := recover(); p != nil {
+				panics <- p
+			}
+		}()
+		h.handler.ServeHTTP(tw, r)
+		close(done)
+	}()
+	select {
+	case p := <-panics:
+		panic(p)
+	case <-done:
+		tw.mu.Lock()
+		defer tw.mu.Unlock()
+		dst := w.Header()
+		for k, v := range tw.h {
+			dst[k] = v
+		}
+		if !tw.wroteHeader {
+			tw.code = StatusOK
+		}
+		w.WriteHeader(tw.code)
+		w.Write(tw.body)
+	case <-ctx.Done():
+		tw.mu.Lock()
+		defer tw.mu.Unlock()
+		w.WriteHeader(StatusServiceUnavailable)
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			io.WriteString(w, h.errorBody())
+			tw.err = ErrHandlerTimeout
+			return
+		}
+		tw.err = ctx.Err()
+	}
+}
+
+// A timeoutWriter holds the answer of a handler that runs under a time limit.
+// The bytes reach the real answer only when the handler ends inside the limit.
+type timeoutWriter struct {
+	w   ResponseWriter
+	h   Header
+	req *Request
+
+	mu          sync.Mutex
+	body        []byte
+	code        int
+	wroteHeader bool
+	// err holds the error of each write after the time ran out.
+	err error
+}
+
+func (tw *timeoutWriter) Header() Header { return tw.h }
+
+func (tw *timeoutWriter) Write(p []byte) (int, error) {
+	tw.mu.Lock()
+	defer tw.mu.Unlock()
+	if tw.err != nil {
+		return 0, tw.err
+	}
+	if !tw.wroteHeader {
+		tw.writeHeaderLocked(StatusOK)
+	}
+	tw.body = append(tw.body, p...)
+	return len(p), nil
+}
+
+func (tw *timeoutWriter) WriteHeader(code int) {
+	tw.mu.Lock()
+	defer tw.mu.Unlock()
+	tw.writeHeaderLocked(code)
+}
+
+func (tw *timeoutWriter) writeHeaderLocked(code int) {
+	if code < 100 || code > 999 {
+		panic("invalid WriteHeader code " + itoa(code))
+	}
+	if tw.err != nil || tw.wroteHeader {
+		return
+	}
+	tw.wroteHeader = true
+	tw.code = code
+}
+
+// ServeMux is an HTTP request multiplexer. It matches the URL of each incoming
+// request against a list of registered patterns, and it calls the handler of
+// the pattern that fits the URL best.
+//
+// A pattern holds an optional method, an optional host, and a path.
+//
+//	[METHOD ][HOST]/[PATH]
+//
+// A pattern with a method matches that method alone, and the method GET also
+// matches HEAD. A pattern with no method matches each method.
+//
+// A path holds segments that a slash divides. A segment that stands between
+// braces is a wildcard: "{name}" matches 1 segment, and "{name...}" at the end
+// matches each segment that follows. The segment "{$}" at the end matches the
+// end of the path alone. Request.PathValue gives the text of a wildcard.
+//
+// A path that ends with a slash matches each path under it. A request of the
+// path of such a pattern with no slash takes a redirect to the path with the
+// slash.
+//
+// The pattern that is more specific wins. 2 patterns where neither is more
+// specific than the other conflict, and the registration of the second one
+// stops the program.
+//
+// This type comes from the real source of Go 1.27. The mode of Go 1.21, which
+// GODEBUG=httpmuxgo121=1 names, stays out.
 type ServeMux struct {
-	mu       sync.Mutex
-	patterns map[string]Handler
+	mu    sync.RWMutex
+	tree  routingNode
+	index routingIndex
 }
 
 // NewServeMux builds a ServeMux.
-func NewServeMux() *ServeMux { return &ServeMux{patterns: map[string]Handler{}} }
+func NewServeMux() *ServeMux { return &ServeMux{} }
 
 // DefaultServeMux is the ServeMux of Handle and HandleFunc.
-var DefaultServeMux = NewServeMux()
+var DefaultServeMux = &defaultServeMux
 
-// Handle registers a handler for the pattern.
-func Handle(pattern string, handler Handler) { DefaultServeMux.Handle(pattern, handler) }
+var defaultServeMux ServeMux
 
-// HandleFunc registers a function for the pattern.
-func HandleFunc(pattern string, handler func(ResponseWriter, *Request)) {
-	DefaultServeMux.HandleFunc(pattern, handler)
+// cleanPath gives the canonical form of a path. It drops each element "." and
+// each element "..".
+func cleanPath(p string) string {
+	if p == "" {
+		return "/"
+	}
+	if p[0] != '/' {
+		p = "/" + p
+	}
+	np := path.Clean(p)
+	// path.Clean drops the trailing slash of each path but the root, thus the
+	// slash comes back here.
+	if p[len(p)-1] == '/' && np != "/" {
+		if len(p) == len(np)+1 && strings.HasPrefix(p, np) {
+			np = p
+		} else {
+			np += "/"
+		}
+	}
+	return np
 }
 
-// Handle registers a handler for the pattern.
-func (m *ServeMux) Handle(pattern string, handler Handler) {
-	if pattern == "" {
-		panic("http: invalid pattern")
+// stripHostPort gives the host with no trailing port.
+func stripHostPort(h string) string {
+	if !strings.Contains(h, ":") {
+		return h
+	}
+	host, _, err := net.SplitHostPort(h)
+	if err != nil {
+		return h
+	}
+	return host
+}
+
+// Handler gives the handler of a request and the pattern that matched it. It
+// reads r.Method, r.Host, and r.URL.Path, and it always gives a handler.
+//
+// A path that is not canonical gives a handler of a redirect and the path that
+// matches after the redirect. Handler changes no field of the request, thus
+// Request.PathValue gives an empty string after this call.
+func (mux *ServeMux) Handler(r *Request) (Handler, string) {
+	h, p, _, _ := mux.findHandler(r)
+	return h, p
+}
+
+// findHandler gives the handler of a request, the text of the pattern, the
+// pattern, and the value of each wildcard.
+func (mux *ServeMux) findHandler(r *Request) (h Handler, patStr string, _ *pattern, matches []string) {
+	var n *routingNode
+	host := r.URL.Host
+	escapedPath := r.URL.EscapedPath()
+	target := escapedPath
+	// A request of the method CONNECT keeps its path.
+	if r.Method == MethodConnect {
+		_, _, u := mux.matchOrRedirect(host, r.Method, target, r.URL)
+		if u != nil {
+			return RedirectHandler(u.String(), StatusTemporaryRedirect), u.Path, nil, nil
+		}
+		// The match runs a second time with r.Host. A nil URL skips the
+		// redirect of the trailing slash.
+		n, matches, _ = mux.matchOrRedirect(r.Host, r.Method, target, nil)
+	} else {
+		host = stripHostPort(r.Host)
+		target = cleanPath(target)
+
+		var u *url.URL
+		n, matches, u = mux.matchOrRedirect(host, r.Method, target, r.URL)
+		if u != nil {
+			return RedirectHandler(u.String(), StatusTemporaryRedirect), n.pattern.String(), nil, nil
+		}
+		if target != escapedPath {
+			// The path took a clean, thus the answer names the new path.
+			patStr := ""
+			if n != nil {
+				patStr = n.pattern.String()
+			}
+			u := urlFromEscaped(target, r.URL.RawQuery)
+			return RedirectHandler(u.String(), StatusTemporaryRedirect), patStr, nil, nil
+		}
+	}
+	if n == nil {
+		// No pattern of the method matched. A pattern that matches the path
+		// with another method gives the status 405 and the field Allow.
+		allowed := mux.matchingMethods(host, target)
+		if len(allowed) > 0 {
+			return HandlerFunc(func(w ResponseWriter, r *Request) {
+				w.Header().Set("Allow", strings.Join(allowed, ", "))
+				Error(w, StatusText(StatusMethodNotAllowed), StatusMethodNotAllowed)
+			}), "", nil, nil
+		}
+		return NotFoundHandler(), "", nil, nil
+	}
+	return n.handler, n.pattern.String(), n.pattern, matches
+}
+
+// matchOrRedirect reads the node of the tree that matches the host, the method,
+// and the path.
+//
+// A URL that holds a value also gives the redirect of the trailing slash: a
+// path that matches no pattern takes a second match with a slash at its end,
+// and the third result then names the target of the redirect.
+func (mux *ServeMux) matchOrRedirect(host, method, target string, u *url.URL) (_ *routingNode, matches []string, redirectTo *url.URL) {
+	mux.mu.RLock()
+	defer mux.mu.RUnlock()
+
+	n, matches := mux.tree.match(host, method, target)
+	if !exactMatch(n, target) && u != nil && !strings.HasSuffix(target, "/") && target != "" {
+		target += "/"
+		n2, _ := mux.tree.match(host, method, target)
+		if exactMatch(n2, target) {
+			return n2, nil, urlFromEscaped(target, u.RawQuery)
+		}
+	}
+	return n, matches, nil
+}
+
+// urlFromEscaped builds a URL of an escaped path and of a raw query. The 2
+// fields Path and RawPath stay equal, thus URL.String writes no second escape.
+func urlFromEscaped(escaped, rawQuery string) *url.URL {
+	unescaped, err := url.PathUnescape(escaped)
+	if err != nil {
+		unescaped = escaped
+	}
+	return &url.URL{
+		Path:     unescaped,
+		RawPath:  escaped,
+		RawQuery: rawQuery,
+	}
+}
+
+// exactMatch reports whether the pattern of the node matches the whole path. A
+// nil node gives false.
+//
+// A match where a multi wildcard takes a text that is not empty is not exact.
+// Each other match is exact.
+func exactMatch(n *routingNode, target string) bool {
+	if n == nil {
+		return false
+	}
+	if !n.pattern.lastSegment().multi {
+		return true
+	}
+	if len(target) > 0 && target[len(target)-1] != '/' {
+		return false
+	}
+	return len(n.pattern.segments) == strings.Count(target, "/")
+}
+
+// matchingMethods gives each method that matches the host and the path, in
+// order.
+func (mux *ServeMux) matchingMethods(host, target string) []string {
+	mux.mu.RLock()
+	defer mux.mu.RUnlock()
+	ms := map[string]bool{}
+	mux.tree.matchingMethods(host, target, ms)
+	// matchOrRedirect adds a trailing slash when no pattern matches.
+	if !strings.HasSuffix(target, "/") {
+		mux.tree.matchingMethods(host, target+"/", ms)
+	}
+	return slices.Sorted(maps.Keys(ms))
+}
+
+// ServeHTTP gives the request to the handler of the pattern that matches its
+// URL best.
+func (mux *ServeMux) ServeHTTP(w ResponseWriter, r *Request) {
+	if r.RequestURI == "*" {
+		if r.ProtoAtLeast(1, 1) {
+			w.Header().Set("Connection", "close")
+		}
+		w.WriteHeader(StatusBadRequest)
+		return
+	}
+	var h Handler
+	h, r.Pattern, r.pat, r.matches = mux.findHandler(r)
+	h.ServeHTTP(w, r)
+}
+
+// Handle registers the handler for the pattern. A pattern that conflicts with a
+// registered pattern, and a pattern that holds a syntax error, each stop the
+// program.
+func (mux *ServeMux) Handle(pattern string, handler Handler) {
+	mux.register(pattern, handler)
+}
+
+// HandleFunc registers the function for the pattern. A pattern that conflicts
+// with a registered pattern, and a pattern that holds a syntax error, each stop
+// the program.
+func (mux *ServeMux) HandleFunc(pattern string, handler func(ResponseWriter, *Request)) {
+	mux.register(pattern, HandlerFunc(handler))
+}
+
+// Handle registers the handler for the pattern in DefaultServeMux.
+func Handle(pattern string, handler Handler) { DefaultServeMux.register(pattern, handler) }
+
+// HandleFunc registers the function for the pattern in DefaultServeMux.
+func HandleFunc(pattern string, handler func(ResponseWriter, *Request)) {
+	DefaultServeMux.register(pattern, HandlerFunc(handler))
+}
+
+func (mux *ServeMux) register(pattern string, handler Handler) {
+	if err := mux.registerErr(pattern, handler); err != nil {
+		panic(err)
+	}
+}
+
+func (mux *ServeMux) registerErr(patstr string, handler Handler) error {
+	if patstr == "" {
+		return errors.New("http: invalid pattern")
 	}
 	if handler == nil {
-		panic("http: nil handler")
+		return errors.New("http: nil handler")
 	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.patterns == nil {
-		m.patterns = map[string]Handler{}
+	if f, ok := handler.(HandlerFunc); ok && f == nil {
+		return errors.New("http: nil handler")
 	}
-	if _, ok := m.patterns[pattern]; ok {
-		panic("http: multiple registrations for " + pattern)
-	}
-	m.patterns[pattern] = handler
-}
 
-// HandleFunc registers a function for the pattern.
-func (m *ServeMux) HandleFunc(pattern string, handler func(ResponseWriter, *Request)) {
-	m.Handle(pattern, HandlerFunc(handler))
-}
+	pat, err := parsePattern(patstr)
+	if err != nil {
+		return fmt.Errorf("parsing %q: %w", patstr, err)
+	}
 
-// Handler gives the handler of a request and the pattern that it matched.
-func (m *ServeMux) Handler(r *Request) (Handler, string) {
-	path := "/"
-	if r.URL != nil {
-		path = r.URL.Path
+	// The position of the caller gives a better message of a conflict. The
+	// count of 3 skips register and the function that called it.
+	_, file, line, ok := runtime.Caller(3)
+	if !ok {
+		pat.loc = "unknown location"
+	} else {
+		pat.loc = fmt.Sprintf("%s:%d", file, line)
 	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	// The longest pattern wins, exactly as in Go.
-	keys := make([]string, 0, len(m.patterns))
-	for k := range m.patterns {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	best := ""
-	for _, k := range keys {
-		if !matchPattern(k, path) {
-			continue
+
+	mux.mu.Lock()
+	defer mux.mu.Unlock()
+	if err := mux.index.possiblyConflictingPatterns(pat, func(pat2 *pattern) error {
+		if pat.conflictsWith(pat2) {
+			d := describeConflict(pat, pat2)
+			return fmt.Errorf("pattern %q (registered at %s) conflicts with pattern %q (registered at %s):\n%s",
+				pat, pat.loc, pat2, pat2.loc, d)
 		}
-		if len(k) > len(best) {
-			best = k
-		}
+		return nil
+	}); err != nil {
+		return err
 	}
-	if best == "" {
-		return NotFoundHandler(), ""
-	}
-	return m.patterns[best], best
-}
-
-// ServeHTTP gives the request to the handler of its path.
-func (m *ServeMux) ServeHTTP(w ResponseWriter, r *Request) {
-	handler, _ := m.Handler(r)
-	handler.ServeHTTP(w, r)
-}
-
-// matchPattern reports whether the path matches the pattern. A pattern that
-// ends with a slash names a subtree.
-func matchPattern(pattern, path string) bool {
-	if !strings.HasSuffix(pattern, "/") {
-		return pattern == path
-	}
-	return strings.HasPrefix(path, pattern)
+	mux.tree.addPattern(pat, handler)
+	mux.index.addPattern(pat)
+	return nil
 }
 
 // StripPrefix gives a handler that drops the prefix of the path.
@@ -515,22 +1311,22 @@ type h2Conn interface {
 
 // serveH2 answers each stream of 1 HTTP/2 connection. Each stream runs on a
 // goroutine of its own, exactly as each request of HTTP/2 does in Go.
-func (s *Server) serveH2(conn int) {
+func (s *Server) serveH2(ctx context.Context, conn int) {
 	session, cause := dart.H2Server(conn)
 	if cause != "" {
 		return
 	}
 	defer dart.H2Close(session)
 	for {
-		stream, method, path, authority, flat, cause := dart.H2Next(session)
+		stream, method, target, authority, flat, cause := dart.H2Next(session)
 		if cause != "" {
 			return
 		}
-		go s.serveH2Stream(stream, method, path, authority, flat)
+		go s.serveH2Stream(ctx, stream, method, target, authority, flat)
 	}
 }
 
-func (s *Server) serveH2Stream(stream int, method, path, authority string, flat []string) {
+func (s *Server) serveH2Stream(ctx context.Context, stream int, method, path, authority string, flat []string) {
 	u, err := url.ParseRequestURI(path)
 	if err != nil {
 		u = &url.URL{Path: path}
@@ -555,13 +1351,10 @@ func (s *Server) serveH2Stream(stream int, method, path, authority string, flat 
 		ContentLength: length,
 		Host:          authority,
 		RequestURI:    path,
+		ctx:           ctx,
 	}
 	w := &h2Response{stream: stream, header: Header{}, req: req}
-	handler := s.Handler
-	if handler == nil {
-		handler = DefaultServeMux
-	}
-	handler.ServeHTTP(w, req)
+	serverHandler{s}.ServeHTTP(w, req)
 	w.finish()
 }
 

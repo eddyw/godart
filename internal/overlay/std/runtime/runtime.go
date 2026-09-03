@@ -23,9 +23,9 @@ func GOMAXPROCS(n int) int { return 1 }
 // always 1, exactly as GOMAXPROCS.
 func NumCPU() int { return 1 }
 
-// NumGoroutine gives the count of goroutines. The runtime library holds no such
-// count, thus the value is always 1.
-func NumGoroutine() int { return 1 }
+// NumGoroutine gives the count of goroutines that did not return. The
+// scheduler holds each one, and the count holds the goroutine that calls.
+func NumGoroutine() int { return len(dart.Parked()) + 1 }
 
 // GOROOT gives the root of the Go tree. The Dart output holds no such tree,
 // thus the text is empty. Go marks the function as deprecated.
@@ -40,6 +40,75 @@ var GOOS = dart.OS()
 // AOT, and the compiler rejects the web target. Thus 1 value serves each
 // machine.
 const GOARCH = "dart64"
+
+// Compiler names the tool chain that built the program. Go gives "gc" for its
+// own tool chain, thus gart gives its own name.
+const Compiler = "gart"
+
+// Version gives the version of the tool chain that built the program.
+//
+// Go gives a text such as "go1.27.0". gart is no Go tool chain, thus the text
+// names gart and its own number. internal/driver holds the same number, and
+// TestVersionMatchesTheDriver compares the 2.
+func Version() string { return "gart0.1.0-dev" }
+
+// Gosched gives up control and lets each other goroutine run.
+//
+// The goroutine stands behind each goroutine of the run queue, and the
+// scheduler runs it again after them.
+func Gosched() { dart.Gosched() }
+
+// Goexit ends the goroutine that calls it. Each deferred call of the goroutine
+// runs first, and no other goroutine stops.
+//
+// Go keeps the program alive when the goroutine of main ends this way. The
+// program then reports a crash after the last other goroutine ends.
+func Goexit() { dart.Goexit() }
+
+// KeepAlive keeps a value reachable up to the point of the call.
+//
+// The value reaches a function call here, thus the collector of Dart cannot
+// free it before that call.
+func KeepAlive(x any) {
+	keepAlive = x
+	keepAlive = nil
+}
+
+// keepAlive holds the last value of KeepAlive. A write of a package variable
+// is a use that the Dart compiler cannot drop.
+var keepAlive any
+
+// LockOSThread binds the goroutine to the thread that runs it.
+//
+// All Go code of gart runs in 1 isolate, and that isolate runs on 1 thread.
+// The goroutine already holds that thread, thus the call needs no operation.
+func LockOSThread() {}
+
+// UnlockOSThread drops the bind of LockOSThread. The bind needs no operation
+// here, thus the drop needs none either.
+func UnlockOSThread() {}
+
+// NumCgoCall gives the count of calls of cgo that the program made. The subset
+// holds no cgo, thus the count is always 0.
+func NumCgoCall() int64 { return 0 }
+
+// A PanicNilError is the value of a recover of `panic(nil)`. Go 1.21 and each
+// later version give this value, thus recover reports the panic.
+type PanicNilError struct {
+	// The field keeps the type incomparable, exactly as Go does. A program
+	// then cannot compare 2 values of the type by mistake.
+	_ [0]*PanicNilError
+}
+
+func (*PanicNilError) Error() string {
+	return "runtime error: panic called with nil argument"
+}
+
+func (*PanicNilError) RuntimeError() {}
+
+// init installs the builder of the value of `panic(nil)`. The runtime library
+// holds no class of an emitted Go type, thus it reads this builder.
+func init() { dart.SetPanicNil(func() any { return &PanicNilError{} }) }
 
 // frames holds the position of each program counter, and index holds the
 // counter of each position. A Dart stack trace holds no address, thus a program
@@ -157,6 +226,54 @@ func (f *Func) FileLine(pc uintptr) (string, int) {
 }
 
 func (f *Func) Entry() uintptr { return f.pc }
+
+// Stack writes the stack trace of the goroutine that calls it into buf, and it
+// gives the count of bytes that the write took. A trace that does not fit
+// gives the part that fits.
+//
+// The flag all asks for the trace of each other goroutine after the trace of
+// this one. A function that gives up control leaves the Dart stack, thus the
+// trace of a goroutine that waits holds the frames of its saved state.
+func Stack(buf []byte, all bool) int {
+	text := make([]byte, 0, 512)
+	text = append(text, "goroutine "...)
+	text = strconv.AppendInt(text, int64(dart.GoID()), 10)
+	text = append(text, " [running]:\n"...)
+	// Frame 0 is this function, thus the skip starts at 1.
+	for _, frame := range dart.Stack(1) {
+		text = appendFrame(text, frame)
+	}
+	if all {
+		for _, block := range dart.Parked() {
+			head, rest, _ := strings.Cut(block, "\n")
+			id, reason, _ := strings.Cut(head, "|")
+			text = append(text, "\ngoroutine "...)
+			text = append(text, id...)
+			text = append(text, " ["...)
+			text = append(text, reason...)
+			text = append(text, "]:\n"...)
+			for rest != "" {
+				var frame string
+				frame, rest, _ = strings.Cut(rest, "\n")
+				text = appendFrame(text, frame)
+			}
+		}
+	}
+	return copy(buf, text)
+}
+
+// appendFrame writes 1 frame of the runtime in the form of Go. The item holds
+// "function|file|line".
+func appendFrame(out []byte, frame string) []byte {
+	name, rest, _ := strings.Cut(frame, "|")
+	file, line, _ := strings.Cut(rest, "|")
+	out = append(out, name...)
+	out = append(out, "()\n\t"...)
+	out = append(out, file...)
+	out = append(out, ':')
+	out = append(out, line...)
+	return append(out, '\n')
+}
 
 // A Cleanup names a cleanup that AddCleanup attached.
 type Cleanup struct{ handle int }

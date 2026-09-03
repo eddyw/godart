@@ -37,10 +37,34 @@ final class Slice<T> {
     array[off + i] = value;
   }
 
-  /// The Go expression `s[low:high:max]`.
-  Slice<T> range(int low, int high, int max) {
-    if (low < 0 || high < low || max < high || max > cap) {
-      $panicSlice(low, high, cap);
+  /// The Go expression `s[low:high]`, and `s[low:high:max]` when three is
+  /// true. byLen names the limit "length" in a report, which an array and a
+  /// pointer to an array need.
+  ///
+  /// The order of the tests is the order of Go, thus a bound that breaks 2
+  /// limits names the same 1 that Go names.
+  Slice<T> range(
+    int low,
+    int high,
+    int max, [
+    bool three = false,
+    bool byLen = false,
+  ]) {
+    if (three) {
+      if (max < 0 || max > cap) {
+        $panicBound(
+          byLen ? SliceBound.threeALen : SliceBound.threeACap,
+          max,
+          cap,
+        );
+      }
+      if (high < 0 || high > max) $panicBound(SliceBound.threeB, high, max);
+      if (low < 0 || low > high) $panicBound(SliceBound.threeC, low, high);
+    } else {
+      if (high < 0 || high > cap) {
+        $panicBound(byLen ? SliceBound.aLen : SliceBound.aCap, high, cap);
+      }
+      if (low < 0 || low > high) $panicBound(SliceBound.b, low, high);
     }
     return Slice(array, off + low, high - low, max - low);
   }
@@ -66,7 +90,17 @@ Slice<T> $makeSliceN<T>(int len, List<T> Function(int) alloc) =>
 
 /// The Go builtin `append`. The result shares the backing array when the
 /// capacity is enough, exactly as in Go.
-Slice<T> $append<T>(Slice<T> s, List<T> add, List<T> Function(int) alloc) {
+///
+/// The assign function writes 1 element. A struct element needs a field copy on
+/// the path that grows, because Go copies each element into the new array. A
+/// reference write would give the 2 slices 1 object, and a pointer into the old
+/// array would then follow a write to the new 1.
+Slice<T> $append<T>(
+  Slice<T> s,
+  List<T> add,
+  List<T> Function(int) alloc, [
+  void Function(T, T)? assign,
+]) {
   if (add.isEmpty) return s;
   final int need = s.len + add.length;
   if (need <= s.cap) {
@@ -80,8 +114,14 @@ Slice<T> $append<T>(Slice<T> s, List<T> add, List<T> Function(int) alloc) {
     cap += cap < 256 ? cap : cap ~/ 4;
   }
   final List<T> array = alloc(cap);
-  for (var i = 0; i < s.len; i++) {
-    array[i] = s.array[s.off + i];
+  if (assign != null) {
+    for (var i = 0; i < s.len; i++) {
+      assign(array[i], s.array[s.off + i]);
+    }
+  } else {
+    for (var i = 0; i < s.len; i++) {
+      array[i] = s.array[s.off + i];
+    }
   }
   for (var i = 0; i < add.length; i++) {
     array[s.len + i] = add[i];
@@ -143,13 +183,25 @@ int $copySlice<T>(Slice<T> dst, Slice<T> src, [void Function(T, T)? assign]) {
 Slice<T> $appendSlice<T>(
   Slice<T> s,
   Slice<T> other,
-  List<T> Function(int) alloc,
-) {
+  List<T> Function(int) alloc, [
+  void Function(T, T)? assign,
+]) {
   final add = <T>[];
+  if (assign != null && other.len > 0) {
+    // Go copies each element of the source. A plain append copies its argument
+    // at the call site, and a spread has no such point, thus the copy stands
+    // here.
+    final List<T> fresh = alloc(other.len);
+    for (var i = 0; i < other.len; i++) {
+      assign(fresh[i], other.array[other.off + i]);
+      add.add(fresh[i]);
+    }
+    return $append(s, add, alloc, assign);
+  }
   for (var i = 0; i < other.len; i++) {
     add.add(other.array[other.off + i]);
   }
-  return $append(s, add, alloc);
+  return $append(s, add, alloc, assign);
 }
 
 /// Writes the zero value into each element of a slice. The Go builtin clear

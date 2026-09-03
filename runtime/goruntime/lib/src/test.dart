@@ -2,19 +2,10 @@ import 'panic.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'sched.dart';
 
-/// The signal of `testing.T.FailNow`.
-///
-/// Go stops such a call chain with `runtime.Goexit`, and each deferred
-/// function of the chain still runs. A throw gives an equal result here,
-/// because the subset has no `recover`.
-final class GoStop implements Exception {
-  const GoStop();
-
-  @override
-  String toString() => 'the goroutine stopped';
-}
-
 /// Stops the call chain. Each deferred function of the chain still runs.
+///
+/// `panic.dart` holds the class of the signal, because the scheduler catches
+/// the same signal for `runtime.Goexit`.
 void $stop() => throw const GoStop();
 
 /// Calls f and holds a stop signal.

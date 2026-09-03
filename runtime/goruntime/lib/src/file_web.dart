@@ -53,6 +53,10 @@ GoString $link(GoString target, GoString link) => _noSys;
 
 GoString $chmod(GoString path, int mode) => _noSys;
 
+/// The file mode creation mask of the process. A browser holds no such mask,
+/// and it writes no file, thus the value 0 leaves each mode of a call whole.
+int $umask() => 0;
+
 GoString $chown(GoString path, int uid, int gid, bool follow) => _noSys;
 
 GoString $chtimes(

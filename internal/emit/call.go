@@ -248,6 +248,18 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$goKind(%s)", args[0]), true
 	case "Stack":
 		return fmt.Sprintf("$stack(%s)", args[0]), true
+	case "GoID":
+		return "$goid()", true
+	case "CaptureOut":
+		return fmt.Sprintf("$captureOut(%s)", args[0]), true
+	case "Parked":
+		return "$parked()", true
+	case "Gosched":
+		return "$gosched()", true
+	case "Goexit":
+		return "$goexit()", true
+	case "SetPanicNil":
+		return fmt.Sprintf("$setPanicNil(%s)", args[0]), true
 	case "TypeInfo":
 		return fmt.Sprintf("$typeInfo(%s)", args[0]), true
 	case "DeepEqual":
@@ -326,6 +338,29 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$mapOf(%s, %s)", args[0], args[1]), true
 	case "PointerTo":
 		return fmt.Sprintf("$pointerTo(%s)", args[0]), true
+	case "ChanOf":
+		return fmt.Sprintf("$chanOf(%s, %s)", args[0], args[1]), true
+	case "MakeChan":
+		return fmt.Sprintf("$makeChan(%s, %s)", args[0], args[1]), true
+	case "ValueSend":
+		return fmt.Sprintf("$valueSend(%s, %s)", args[0], args[1]), true
+	case "ValueClose":
+		return fmt.Sprintf("$valueClose(%s)", args[0]), true
+	case "ValueTryRecv":
+		return fmt.Sprintf("$valueTryRecv(%s)", args[0]), true
+	case "ValueTrySend":
+		return fmt.Sprintf("$valueTrySend(%s, %s)", args[0], args[1]), true
+	case "SelectValue":
+		return fmt.Sprintf("$selectValue(%s, %s, %s)",
+			args[0], args[1], args[2]), true
+	case "ValueClear":
+		return fmt.Sprintf("$valueClear(%s)", args[0]), true
+	case "DescMethodType":
+		return fmt.Sprintf("$descMethodType(%s, %s)", args[0], args[1]), true
+	case "MakeFunc":
+		return fmt.Sprintf("$makeFunc(%s, %s)", args[0], args[1]), true
+	case "CallSliceValue":
+		return fmt.Sprintf("$callSliceValue(%s, %s)", args[0], args[1]), true
 	case "ValueCap":
 		return fmt.Sprintf("$valueCap(%s)", args[0]), true
 	case "AppendValue":
@@ -442,6 +477,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$symlink(%s, %s)", args[0], args[1]), true
 	case "Link":
 		return fmt.Sprintf("$link(%s, %s)", args[0], args[1]), true
+	case "Umask":
+		return "$umask()", true
 	case "Chmod":
 		return fmt.Sprintf("$chmod(%s, %s)", args[0], args[1]), true
 	case "Chown":
@@ -578,6 +615,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$packetClose(%s)", args[0]), true
 	case "PacketDeadline":
 		return fmt.Sprintf("$packetDeadline(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "Interfaces":
+		return "$interfaces()", true
 	case "StartTimer":
 		return fmt.Sprintf("$startTimer(%s, %s)", args[0], args[1]), true
 	case "StopTimer":
@@ -1237,15 +1276,28 @@ func (e *emitter) appendCall(x *ir.Builtin) string {
 			// A union of a string and a byte slice branches at run time.
 			source = fmt.Sprintf("$spreadBytes(%s)", source)
 		}
-		return fmt.Sprintf("$appendSlice(%s, %s, %s)",
-			e.expr(x.Args[0]), source, e.alloc(slice.Elem()))
+		return fmt.Sprintf("$appendSlice(%s, %s, %s%s)",
+			e.expr(x.Args[0]), source, e.alloc(slice.Elem()),
+			e.elemAssign(slice.Elem()))
 	}
 	parts := make([]string, 0, len(x.Args)-1)
 	for _, a := range x.Args[1:] {
 		parts = append(parts, e.expr(a))
 	}
-	return fmt.Sprintf("$append(%s, <%s>[%s], %s)",
-		e.sliceText(x.Args[0]), e.dartType(slice.Elem()), strings.Join(parts, ", "), e.alloc(slice.Elem()))
+	return fmt.Sprintf("$append(%s, <%s>[%s], %s%s)",
+		e.sliceText(x.Args[0]), e.dartType(slice.Elem()), strings.Join(parts, ", "),
+		e.alloc(slice.Elem()), e.elemAssign(slice.Elem()))
+}
+
+// elemAssign writes the assign argument of $append and of $appendSlice. A
+// struct element and an array element each need a field copy on the path that
+// grows. Each other element type gives an empty text, thus the call takes the
+// reference write.
+func (e *emitter) elemAssign(elem types.Type) string {
+	if !needsElementCopy(elem) {
+		return ""
+	}
+	return fmt.Sprintf(", (a, b) => %s", e.assignElem("a", "b", elem))
 }
 
 // sliceText writes a slice expression. The Dart type of a type that names

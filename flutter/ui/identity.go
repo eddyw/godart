@@ -60,3 +60,96 @@ type StatesKey struct {
 	// "pressed". The order follows the enum WidgetState of Flutter.
 	OnStates func([]string)
 }
+
+// TextKey names 1 Flutter TextEditingController.
+//
+//	ui.TextField{Controller: &ui.TextKey{Name: "email"}}
+//
+// The host owns the text after the first read, thus a later change of Initial
+// reaches no controller. A Go program that owns the text reads ui.TextInput.
+type TextKey struct {
+	Name string
+
+	// Initial gives the text of the first read alone.
+	Initial string
+
+	// OnChanged reports the text after each change.
+	OnChanged func(string)
+}
+
+// AnimationKey names 1 Flutter AnimationController.
+//
+//	ui.FadeTransition{Opacity: &ui.AnimationKey{Name: "card", Target: 1}}
+//
+// The Go side names where the animation runs to, and the host runs it. The
+// value of the animation stands between 0 and 1. A transition widget reads the
+// value on each frame, thus the animation costs no rebuild of the Go tree.
+type AnimationKey struct {
+	Name string
+
+	// Millis gives the length of 1 whole run, from 0 to 1. A value of 0 gives
+	// 300 milliseconds.
+	Millis int
+
+	// Target names the value that the animation runs to. The host holds that
+	// value after the end of the run, and a new Target starts a new run.
+	Target float64
+
+	// Curve names the shape of the run, for example "easeInOut".
+	Curve string
+
+	// Repeat runs the animation again and again, and it reads no Target.
+	// Reverse then runs it back to the start each second time.
+	Repeat  bool
+	Reverse bool
+
+	// OnEnd reports the end of a run that reaches Target. A run that a new
+	// Target stops gives no report.
+	OnEnd func()
+}
+
+// LinkKey names 1 Flutter LayerLink. A target widget and a follower widget
+// that name 1 key hold the same link, thus the follower stands at the target.
+//
+//	ui.CompositedTransformTarget{Link: &ui.LinkKey{Name: "menu"}}
+type LinkKey struct {
+	Name string
+}
+
+// OverlapKey names 1 Flutter SliverOverlapAbsorberHandle. An absorber and an
+// injector that name 1 key hold the same handle.
+type OverlapKey struct {
+	Name string
+}
+
+// OverlayKey names 1 Flutter OverlayPortalController.
+//
+//	ui.OverlayPortal{Controller: &ui.OverlayKey{Name: "tip", Show: open}}
+//
+// The Go side names whether the overlay child stands on the screen, and the
+// host shows it or hides it after the frame.
+type OverlayKey struct {
+	Name string
+	Show bool
+}
+
+// MenuKey names 1 Flutter MenuController.
+//
+// The Go side names whether the menu stands open, and the host opens it or
+// closes it after the frame.
+type MenuKey struct {
+	Name string
+	Open bool
+}
+
+// ScopeKey names 1 Flutter FocusScopeNode. A scope holds the focus of the
+// widgets under it, and it gives the focus back when it stands again.
+type ScopeKey struct {
+	Name string
+}
+
+// StorageKey names 1 Flutter PageStorageBucket. Such a bucket keeps the scroll
+// offset of each list under it, by the key of the list.
+type StorageKey struct {
+	Name string
+}

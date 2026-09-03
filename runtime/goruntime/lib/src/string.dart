@@ -108,8 +108,11 @@ int $compare(GoString a, GoString b) {
 /// The Go expression `s[low:high]`. The result shares the storage, because a
 /// Go string never changes.
 GoString $substring(GoString s, int low, int high) {
-  if (low < 0 || high < low || high > s.length) {
-    $panicSlice(low, high, s.length);
+  if (high < 0 || high > s.length) {
+    $panicBound(SliceBound.aLen, high, s.length);
+  }
+  if (low < 0 || low > high) {
+    $panicBound(SliceBound.b, low, high);
   }
   if (low == 0 && high == s.length) return s;
   return GoString.take(

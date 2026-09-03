@@ -5,7 +5,6 @@ package debug
 import (
 	"os"
 	"runtime"
-	"syscall/dart"
 	"time"
 )
 
@@ -15,40 +14,14 @@ import (
 // goroutine that waits holds the frames of the current state only.
 // docs/parity.md holds that gap.
 func Stack() []byte {
-	out := []byte("goroutine 1 [running]:\n")
-	// Frame 0 is this function, thus the skip starts at 1.
-	for _, frame := range dart.Stack(1) {
-		name, file, line := splitFrame(frame)
-		out = append(out, name...)
-		out = append(out, "()\n\t"...)
-		out = append(out, file...)
-		out = append(out, ':')
-		out = append(out, line...)
-		out = append(out, '\n')
-	}
-	return out
-}
-
-// splitFrame reads 1 item of the stack of the runtime. The item holds
-// "function|file|line".
-func splitFrame(frame string) (string, string, string) {
-	first := -1
-	second := -1
-	for i := 0; i < len(frame); i++ {
-		if frame[i] != '|' {
-			continue
+	buf := make([]byte, 1024)
+	for {
+		n := runtime.Stack(buf, false)
+		if n < len(buf) {
+			return buf[:n]
 		}
-		if first < 0 {
-			first = i
-			continue
-		}
-		second = i
-		break
+		buf = make([]byte, 2*len(buf))
 	}
-	if first < 0 || second < 0 {
-		return frame, "", "0"
-	}
-	return frame[:first], frame[first+1 : second], frame[second+1:]
 }
 
 // PrintStack writes the stack trace of the goroutine that calls it to standard

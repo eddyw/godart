@@ -109,13 +109,15 @@ func (f *flat) operands(list []ir.Expr) []ir.Expr {
 //
 // A method with a pointer receiver reads a location, and a copy of the value
 // has no address. The variable then holds the address, and the call reads the
-// location through it.
+// location through it. A struct and an array need the address too: a variable
+// of such a type takes a copy at each assignment, thus a temporary of the
+// value type would hide each write of the method.
 func (f *flat) hoistRecv(m *ir.Method, recv ir.Expr) ir.Expr {
 	t := recv.GoType()
 	sig, ok := m.Obj.Type().(*types.Signature)
 	pointer := ok && sig.Recv() != nil &&
 		isPointerUnder(sig.Recv().Type()) && !isPointerUnder(t)
-	if pointer && needsBox(t) {
+	if pointer {
 		return f.temp(&ir.Unary{Op: token.AND, X: recv, Type: types.NewPointer(t)})
 	}
 	return f.temp(recv)
@@ -137,7 +139,7 @@ func (f *flat) call(x *ir.Call) ir.Expr {
 	v := f.local(call.Type)
 	f.emit(&ir.Assign{Lhs: identOf(v), Rhs: call})
 	f.pause(v)
-	return identOf(v)
+	return f.readLocal(v)
 }
 
 // callArgs rewrites the callee and each argument of a call. The call itself
@@ -306,6 +308,9 @@ func (f *flat) split(s ir.Stmt) bool {
 	if blocksStmt(s) || holdsGoto(s) {
 		return true
 	}
+	if f.m.DeferBlocks && holdsReturn(s) {
+		return true
+	}
 	return len(f.loops) > 0 && escapes(s)
 }
 
@@ -318,7 +323,55 @@ func (f *flat) splitBlock(b *ir.Block) bool {
 		if blocksStmt(s) || holdsGoto(s) {
 			return true
 		}
+		if f.m.DeferBlocks && holdsReturn(s) {
+			return true
+		}
 		if len(f.loops) > 0 && escapes(s) {
+			return true
+		}
+	}
+	return false
+}
+
+// holdsReturn reports whether a statement holds a return statement.
+//
+// A machine whose deferred calls can block runs the chain in states of its
+// own. A return must jump to that chain. A return inside a plain statement
+// writes a Dart return, and each deferred call then runs no more. The walk
+// stops at a function literal, because such a literal is its own function.
+func holdsReturn(s ir.Stmt) bool {
+	switch s := s.(type) {
+	case nil:
+		return false
+	case *ir.Return:
+		return true
+	case *ir.Labeled:
+		return holdsReturn(s.Stmt)
+	case *ir.Block:
+		return holdsReturnList(s.List)
+	case *ir.If:
+		return holdsReturnList(s.Then.List) || holdsReturn(s.Else)
+	case *ir.For:
+		return holdsReturnList(s.Body.List)
+	case *ir.Switch:
+		for _, c := range s.Cases {
+			if holdsReturnList(c.Body.List) {
+				return true
+			}
+		}
+	case *ir.Select:
+		for _, c := range s.Cases {
+			if holdsReturnList(c.Body.List) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func holdsReturnList(list []ir.Stmt) bool {
+	for _, s := range list {
+		if holdsReturn(s) {
 			return true
 		}
 	}

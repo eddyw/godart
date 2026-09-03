@@ -363,12 +363,15 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		if x.High != nil {
 			high = "$ix(" + e.expr(x.High) + ")"
 		}
-		max := fmt.Sprintf("%s.length", text)
+		size := fmt.Sprintf("%s.length", text)
+		max := size
 		if x.Max != nil {
 			max = "$ix(" + e.expr(x.Max) + ")"
 		}
-		return fmt.Sprintf("Slice(%s, 0, %s, %s).range(%s, %s, %s)",
-			text, max, max, low, high, max)
+		// An array and a pointer to an array each report "with length" in a
+		// bound panic, and a slice reports "with capacity".
+		return fmt.Sprintf("Slice(%s, 0, %s, %s).range(%s, %s, %s, %v, true)",
+			text, size, size, low, high, max, x.Max != nil)
 	}
 	x0 := e.expr(x.X)
 	high := fmt.Sprintf("%s.len", x0)
@@ -378,6 +381,9 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 	max := fmt.Sprintf("%s.cap", x0)
 	if x.Max != nil {
 		max = "$ix(" + e.expr(x.Max) + ")"
+	}
+	if x.Max != nil {
+		return fmt.Sprintf("%s.range(%s, %s, %s, true)", x0, low, high, max)
 	}
 	return fmt.Sprintf("%s.range(%s, %s, %s)", x0, low, high, max)
 }
@@ -411,6 +417,10 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
 	e.frames = append(e.frames, inner.frames...)
+	// The 2 emitters share the map of the prefixes and hold a list of the
+	// added imports of their own. An import that the body of the literal
+	// added must reach the library file, thus the outer list takes it.
+	e.extra = append(e.extra, inner.extra...)
 	b.WriteString(inner.buf.String())
 	b.WriteString("}")
 	return b.String()

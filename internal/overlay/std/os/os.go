@@ -384,6 +384,15 @@ func OpenFile(name string, flag int, perm FileMode) (*File, error) {
 			return nil, &PathError{Op: "open", Path: name, Err: errExist}
 		}
 	}
+	// A create gives the file the bits of perm without the bits of the mask.
+	// dart:io writes no mode, thus the chmod stands after the open, and it
+	// runs only for a path that the call itself makes.
+	fresh := false
+	if flag&O_CREATE != 0 {
+		if _, err := Lstat(name); err != nil {
+			fresh = true
+		}
+	}
 	mode := dart.OpenRead
 	switch {
 	case flag&O_APPEND != 0:
@@ -393,7 +402,23 @@ func OpenFile(name string, flag int, perm FileMode) (*File, error) {
 	case flag&(O_WRONLY|O_RDWR) != 0:
 		mode = dart.OpenReadWrite
 	}
-	return openMode(name, mode, "open")
+	f, err := openMode(name, mode, "open")
+	if err != nil || !fresh {
+		return f, err
+	}
+	applyPerm(name, perm)
+	return f, nil
+}
+
+// applyPerm writes the permission bits of a fresh file. It drops each bit of
+// the mask of the process, exactly as a create of Go does. A default mode
+// needs no command, thus the common path runs no process.
+func applyPerm(name string, perm FileMode) {
+	bits := syscallMode(perm) &^ dart.Umask()
+	if bits == 0o644 {
+		return
+	}
+	dart.Chmod(name, bits)
 }
 
 func openMode(name string, mode int, op string) (*File, error) {
@@ -410,10 +435,21 @@ func ReadFile(name string) ([]byte, error) {
 	return data, pathError("open", name, cause)
 }
 
-// WriteFile writes a whole file. It replaces the content of an existing file.
-// The permission argument reaches no operation of the Dart side.
+// WriteFile writes a whole file. It replaces the content of an existing file,
+// and it gives a fresh file the permission bits of perm without the bits of
+// the mask of the process.
 func WriteFile(name string, data []byte, perm FileMode) error {
-	return pathError("open", name, dart.WriteFile(name, data))
+	fresh := false
+	if _, err := Lstat(name); err != nil {
+		fresh = true
+	}
+	if cause := dart.WriteFile(name, data); cause != "" {
+		return pathError("open", name, cause)
+	}
+	if fresh {
+		applyPerm(name, perm)
+	}
+	return nil
 }
 
 // FileInfo holds the metadata of a path.

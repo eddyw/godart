@@ -222,15 +222,24 @@ func (e *emitter) descParts(t types.Type) string {
 // type. The package reflect builds a typed cell through it, thus Value.Addr
 // and reflect.New each give a pointer that a type assertion reads.
 //
-// The Dart type of a slice, a map, a channel, a function, and a pointer holds
-// the name of its element type, and that name lives only in the emitted code.
-// The kind alone names the Dart type of each other type, thus only these 5
-// carry the factory.
+// A slice, a map, a channel, a function, and a pointer each name the Dart type
+// of the element, and an array names it too. A struct names the class that the
+// emitter writes. None of these 7 names lives outside the emitted code, thus
+// each 1 carries the factory. The kind alone names the Dart type of each other
+// type: a bool gives bool, a string gives GoString, and each integer kind gives
+// GoInt.
 func withTypePart(e *emitter, t types.Type) string {
 	switch types.Unalias(t).Underlying().(type) {
-	case *types.Slice, *types.Map, *types.Chan, *types.Signature, *types.Pointer:
+	case *types.Slice, *types.Map, *types.Chan, *types.Signature,
+		*types.Pointer, *types.Array, *types.Struct:
+		dart := e.dartType(t)
+		// A cyclic type and a type of a Dart object each erase to the top type
+		// of Dart, and the kind already gives that answer.
+		if dart == "Object?" {
+			return ""
+		}
 		return fmt.Sprintf(
-			", withType: <$R>($R Function<$T>() $f) => $f<%s>()", e.dartType(t))
+			", withType: <$R>($R Function<$T>() $f) => $f<%s>()", dart)
 	}
 	return ""
 }
@@ -250,7 +259,8 @@ func (e *emitter) descShape(t types.Type) string {
 	case *types.Array:
 		return fmt.Sprintf(", elem: () => %s, length: %d", e.descriptorOf(u.Elem()), u.Len())
 	case *types.Chan:
-		return ", elem: () => " + e.descriptorOf(u.Elem())
+		return fmt.Sprintf(", elem: () => %s, dir: %d",
+			e.descriptorOf(u.Elem()), chanDir(u))
 	case *types.Map:
 		return fmt.Sprintf(", key: () => %s, elem: () => %s, make: ($n) => %s",
 			e.descriptorOf(u.Key()), e.descriptorOf(u.Elem()), e.mapNew(u))
@@ -258,6 +268,18 @@ func (e *emitter) descShape(t types.Type) string {
 		return e.signatureShape(u)
 	}
 	return ""
+}
+
+// chanDir names the direction of a channel type in the numbers of the package
+// reflect: 1 for a receive, 2 for a send, and 3 for both.
+func chanDir(c *types.Chan) int {
+	switch c.Dir() {
+	case types.RecvOnly:
+		return 1
+	case types.SendOnly:
+		return 2
+	}
+	return 3
 }
 
 // signatureShape writes the parameter types and the result types of a function
@@ -275,8 +297,49 @@ func (e *emitter) signatureShape(sig *types.Signature) string {
 	if sig.Variadic() {
 		variadic = ", variadic: true"
 	}
-	return fmt.Sprintf(", params: <TypeDesc Function()>[%s], results: <TypeDesc Function()>[%s]%s",
-		strings.Join(params, ", "), strings.Join(results, ", "), variadic)
+	return fmt.Sprintf(", params: <TypeDesc Function()>[%s], results: <TypeDesc Function()>[%s]%s%s",
+		strings.Join(params, ", "), strings.Join(results, ", "), variadic,
+		e.bindPart(sig))
+}
+
+// bindPart writes the factory that builds a closure of the Dart type of a
+// function type.
+//
+// The body of the factory reads a list of the raw arguments and gives a list of
+// the raw results. Only the emitted code names the Dart type of a parameter and
+// of a result, thus the package reflect cannot write such a closure of its own.
+// A closure of Object? parameters gives a dynamic result, and Dart rejects that
+// value at a location of a function type with a result. Read decision 228.
+//
+// reflect.Value.Method, reflect.Value.MethodByName, and reflect.MakeFunc each
+// read the factory.
+func (e *emitter) bindPart(sig *types.Signature) string {
+	params := make([]string, sig.Params().Len())
+	args := make([]string, sig.Params().Len())
+	for i := range params {
+		args[i] = fmt.Sprintf("$a%d", i)
+		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + args[i]
+	}
+	head := fmt.Sprintf(", bind: (List<Object?> Function(List<Object?>) $f) => (%s) =>",
+		strings.Join(params, ", "))
+	call := fmt.Sprintf("$f(<Object?>[%s])", strings.Join(args, ", "))
+	rs := sig.Results()
+	switch rs.Len() {
+	case 0:
+		// A Dart location of a void result accepts each other result type,
+		// thus the closure gives the list of the body.
+		return head + " " + call
+	case 1:
+		return fmt.Sprintf("%s %s[0] as %s", head, call, e.dartType(rs.At(0).Type()))
+	}
+	// A function of more than 1 result gives a Dart record, and no runtime
+	// call builds a record of a list.
+	parts := make([]string, rs.Len())
+	for i := range parts {
+		parts[i] = fmt.Sprintf("$o[%d] as %s", i, e.dartType(rs.At(i).Type()))
+	}
+	return fmt.Sprintf(", bind: (List<Object?> Function(List<Object?>) $f) => (%s) { final List<Object?> $o = %s; return (%s); }",
+		strings.Join(params, ", "), call, strings.Join(parts, ", "))
 }
 
 // fieldDescs writes the description of each struct field. The reflect subset
@@ -820,13 +883,13 @@ func methodNameList(names []string) string {
 // box puts a concrete value into an interface value. Go copies a struct at
 // this point, because the interface holds a value and not a location.
 //
-// A composite literal needs no copy. The literal builds a value that no other
-// expression names yet, thus the box holds the only reference. A tree of such
-// literals, for example a widget tree, then costs 1 object for each node in
-// place of 2.
+// A fresh expression needs no copy. Such an expression builds a value that no
+// other expression names yet, thus the box holds the only reference. A tree of
+// composite literals, for example a widget tree, then costs 1 object for each
+// node in place of 2. ir.Fresh holds the rule, and stage 4 reads the same 1.
 func (e *emitter) box(x ir.Expr, from types.Type) string {
 	text := e.expr(x)
-	_, fresh := x.(*ir.Composite)
+	fresh := ir.Fresh(x)
 	switch {
 	case isStructType(from) && !fresh:
 		text = e.deref(x) + ".$copy()"
@@ -1109,12 +1172,17 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 		}
 		// $assertType gives Object?, thus a target of that Dart type needs no
 		// cast. A pointer to a type parameter is such a target.
+		//
+		// The report of a failed assertion names the static type of the
+		// operand, exactly as Go does: "interface {} is int, not string".
+		static := dartString(reflectText(x.X.GoType()))
+		want := dartString(reflectText(x.Assert))
 		if dart := e.dartType(x.Assert); dart != "Object?" {
-			return fmt.Sprintf("($assertType(%s, %s) as %s)",
-				e.expr(x.X), e.typeNameText(x.Assert), dart)
+			return fmt.Sprintf("($assertType(%s, %s, %s, %s) as %s)",
+				e.expr(x.X), e.typeNameText(x.Assert), static, want, dart)
 		}
-		return fmt.Sprintf("$assertType(%s, %s)",
-			e.expr(x.X), e.typeNameText(x.Assert))
+		return fmt.Sprintf("$assertType(%s, %s, %s, %s)",
+			e.expr(x.X), e.typeNameText(x.Assert), static, want)
 	}
 	if isInterfaceType(x.Assert) {
 		return fmt.Sprintf("(() { final $x = %s; if ($implements($x, %s)) return ($x, true); return (null, false); })()",

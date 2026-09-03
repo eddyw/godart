@@ -26,6 +26,7 @@ func main() {
 	formats()
 	lines()
 	failures()
+	floats()
 	custom()
 }
 
@@ -152,6 +153,34 @@ func failures() {
 	var ptr *int
 	n, err = fmt.Sscan("1", &ptr)
 	fmt.Println(n, err != nil)
+}
+
+// floats reads a float that a literal of the format follows. The token of a
+// float must end at the first rune that no float literal holds.
+func floats() {
+	var v float64
+	n, err := fmt.Sscanf("21.5C", "%fC", &v)
+	fmt.Println(n, err, v)
+
+	var hex float64
+	n, err = fmt.Sscanf("0x1p4 rest", "%g rest", &hex)
+	fmt.Println(n, err, hex)
+
+	var e float64
+	n, err = fmt.Sscanf("1.5e-3ms", "%fms", &e)
+	fmt.Println(n, err, e)
+
+	var nan, inf float64
+	n, err = fmt.Sscanf("NaN Inf", "%f %f", &nan, &inf)
+	fmt.Println(n, err, nan != nan, inf)
+
+	var bad float64
+	n, err = fmt.Sscanf("abc", "%f", &bad)
+	fmt.Println(n, err != nil)
+
+	var sign float64
+	n, err = fmt.Sscanf("-2.5x", "%fx", &sign)
+	fmt.Println(n, err, sign)
 }
 
 func custom() {

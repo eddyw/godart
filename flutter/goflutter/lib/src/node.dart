@@ -258,4 +258,58 @@ final class GoNode {
     final Object? v = raw(name, at);
     return v is Iface? Function(int) ? v : null;
   }
+
+  /// flags gives a slice of bool.
+  List<bool> flags(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    if (v is! Slice<Object?>) return const <bool>[];
+    return <bool>[for (int i = 0; i < v.len; i++) v[i] == true];
+  }
+
+  /// onPair gives a `func(float64, float64)` field.
+  void Function(double, double)? onPair(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is void Function(double, double) ? v : null;
+  }
+
+  /// onSort gives a `func(int, bool)` field.
+  void Function(int, bool)? onSort(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is void Function(int, bool) ? v : null;
+  }
+
+  /// task gives a `func(func())` field. The Go side calls the argument when
+  /// the work ends, thus the host can hold a Future. Read the Task type of
+  /// flutter/ui/node.go.
+  void Function(void Function())? task(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is void Function(void Function()) ? v : null;
+  }
+
+  /// ask gives a `func(func(bool))` field.
+  void Function(void Function(bool))? ask(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is void Function(void Function(bool)) ? v : null;
+  }
+
+  /// buildText gives a `func(string) Node` field.
+  Iface? Function(GoString)? buildText(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is Iface? Function(GoString) ? v : null;
+  }
+
+  /// buildBox gives a `func(float64, float64, float64, float64) Node` field.
+  Iface? Function(double, double, double, double)? buildBox(
+    String name, [
+    int at = noAt,
+  ]) {
+    final Object? v = raw(name, at);
+    return v is Iface? Function(double, double, double, double) ? v : null;
+  }
+
+  /// buildSlivers gives a `func(bool) []Node` field.
+  Slice<Iface?> Function(bool)? buildSlivers(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is Slice<Iface?> Function(bool) ? v : null;
+  }
 }

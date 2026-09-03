@@ -477,3 +477,357 @@ ButtonStyle? goButtonStyle(GoNode? n) {
     enableFeedback: n.flagOpt('EnableFeedback', 20),
   );
 }
+
+/// goDate reads a date. The Go side holds the milliseconds of the Unix epoch,
+/// and a value of 0 means no date.
+DateTime? goDate(int? ms) =>
+    ms == null || ms == 0 ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+
+/// goOnDate wraps a callback that takes 1 date.
+void Function(DateTime)? goOnDate(void Function(int)? f, GoRuntime rt) =>
+    f == null
+    ? null
+    : (DateTime v) => rt.run(() => f(v.millisecondsSinceEpoch));
+
+/// goClock reads a time of the day. The Go side holds the minutes after
+/// midnight.
+TimeOfDay? goClock(int? m) =>
+    m == null ? null : TimeOfDay(hour: (m ~/ 60) % 24, minute: m % 60);
+
+/// goOnClock wraps a callback that takes 1 time of the day.
+void Function(TimeOfDay)? goOnClock(void Function(int)? f, GoRuntime rt) =>
+    f == null ? null : (TimeOfDay v) => rt.run(() => f(v.hour * 60 + v.minute));
+
+/// goBytes reads a byte slice. An empty slice gives null, thus a required
+/// parameter reports the name of the field that holds no bytes.
+Uint8List? goBytes(List<int> bytes) =>
+    bytes.isEmpty ? null : Uint8List.fromList(bytes);
+
+/// goRect reads the Rect struct of the Go side.
+Rect? goRect(GoNode? n) => n == null
+    ? null
+    : Rect.fromLTRB(
+        n.size('Left', 0),
+        n.size('Top', 1),
+        n.size('Right', 2),
+        n.size('Bottom', 3),
+      );
+
+/// goRelRect reads the Rect struct of the Go side as a RelativeRect. Each edge
+/// gives the distance from that edge of the parent.
+RelativeRect? goRelRect(GoNode? n) => n == null
+    ? null
+    : RelativeRect.fromLTRB(
+        n.size('Left', 0),
+        n.size('Top', 1),
+        n.size('Right', 2),
+        n.size('Bottom', 3),
+      );
+
+/// goRange reads the Range struct of the Go side.
+RangeValues? goRange(GoNode? n) =>
+    n == null ? null : RangeValues(n.size('Start', 0), n.size('End', 1));
+
+/// goOnRange wraps a callback that takes a range. The Go function takes the 2
+/// ends, because the host cannot build a Go struct.
+void Function(RangeValues)? goOnRange(
+  void Function(double, double)? f,
+  GoRuntime rt,
+) => f == null ? null : (RangeValues v) => rt.run(() => f(v.start, v.end));
+
+/// goSpan reads the Span struct of the Go side.
+///
+/// The result is a TextSpan, thus a parameter of that type and a parameter of
+/// InlineSpan each take it.
+TextSpan? goSpan(GoNode? n) {
+  if (n == null) return null;
+  final List<GoNode> kids = n.structs('Children', 2);
+  return TextSpan(
+    text: n.text('Text', 0),
+    style: goTextStyle(n.nested('Style', 1)),
+    children: kids.isEmpty
+        ? null
+        : <InlineSpan>[for (final GoNode k in kids) goSpan(k)!],
+  );
+}
+
+/// goSliverChildren reads the SliverChildren struct of the Go side.
+SliverChildDelegate? goSliverChildren(GoNode? n, GoRuntime rt) {
+  if (n == null) return null;
+  final Iface? Function(int)? make = n.item('Builder', 1);
+  if (make != null) {
+    final int count = n.count('Count', 2);
+    return SliverChildBuilderDelegate(
+      (BuildContext _, int i) => goRender(make(i), rt),
+      childCount: count == 0 ? null : count,
+    );
+  }
+  return SliverChildListDelegate(goChildren(n.children('Children', 0), rt));
+}
+
+/// goGridSpec reads the GridSpec struct of the Go side.
+SliverGridDelegate? goGridSpec(GoNode? n) {
+  if (n == null) return null;
+  final double ratio = n.size('AspectRatio', 5);
+  final double main = n.size('MainSpacing', 3);
+  final double cross = n.size('CrossSpacing', 4);
+  final double? extent = n.sizeOpt('MainExtent', 6);
+  if (n.text('Kind', 0) == 'extent') {
+    final double max = n.size('MaxExtent', 2);
+    return SliverGridDelegateWithMaxCrossAxisExtent(
+      maxCrossAxisExtent: max <= 0 ? 100 : max,
+      mainAxisSpacing: main,
+      crossAxisSpacing: cross,
+      childAspectRatio: ratio == 0 ? 1 : ratio,
+      mainAxisExtent: extent,
+    );
+  }
+  final int count = n.count('Count', 1);
+  return SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: count < 1 ? 1 : count,
+    mainAxisSpacing: main,
+    crossAxisSpacing: cross,
+    childAspectRatio: ratio == 0 ? 1 : ratio,
+    mainAxisExtent: extent,
+  );
+}
+
+/// goBarItem reads the BarItem struct of the Go side.
+BottomNavigationBarItem? goBarItem(GoNode? n, GoRuntime rt) {
+  if (n == null) return null;
+  final Widget icon = goChildOpt(n.child('Icon', 0), rt) ?? const SizedBox();
+  final String tip = n.text('Tooltip', 3);
+  return BottomNavigationBarItem(
+    icon: icon,
+    label: n.text('Label', 1),
+    activeIcon: goChildOpt(n.child('ActiveIcon', 2), rt) ?? icon,
+    tooltip: tip.isEmpty ? null : tip,
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 4)),
+  );
+}
+
+/// goBarItems reads a slice of the BarItem struct.
+List<BottomNavigationBarItem> goBarItems(List<GoNode> list, GoRuntime rt) =>
+    <BottomNavigationBarItem>[
+      for (final GoNode n in list) goBarItem(n, rt)!,
+    ];
+
+/// goRailItem reads the RailItem struct of the Go side.
+NavigationRailDestination? goRailItem(GoNode? n, GoRuntime rt) {
+  if (n == null) return null;
+  return NavigationRailDestination(
+    icon: goChildOpt(n.child('Icon', 0), rt) ?? const SizedBox(),
+    label: goChildOpt(n.child('Label', 1), rt) ?? const SizedBox(),
+    selectedIcon: goChildOpt(n.child('SelectedIcon', 2), rt),
+    padding: goInsets(n.nested('Padding', 3)),
+    disabled: n.flag('Disabled', 4),
+  );
+}
+
+/// goRailItems reads a slice of the RailItem struct.
+List<NavigationRailDestination> goRailItems(
+  List<GoNode> list,
+  GoRuntime rt,
+) => <NavigationRailDestination>[
+  for (final GoNode n in list) goRailItem(n, rt)!,
+];
+
+const Map<String, StepState> _stepStates = <String, StepState>{
+  'indexed': StepState.indexed,
+  'editing': StepState.editing,
+  'complete': StepState.complete,
+  'disabled': StepState.disabled,
+  'error': StepState.error,
+};
+
+/// goStep reads the Step struct of the Go side.
+Step? goStep(GoNode? n, GoRuntime rt) {
+  if (n == null) return null;
+  return Step(
+    title: goChildOpt(n.child('Title', 0), rt) ?? const SizedBox(),
+    content: goChildOpt(n.child('Content', 1), rt) ?? const SizedBox(),
+    subtitle: goChildOpt(n.child('Subtitle', 2), rt),
+    state: _stepStates[n.text('State', 3)] ?? StepState.indexed,
+    isActive: n.flag('Active', 4),
+  );
+}
+
+/// goSteps reads a slice of the Step struct.
+List<Step> goSteps(List<GoNode> list, GoRuntime rt) => <Step>[
+  for (final GoNode n in list) goStep(n, rt)!,
+];
+
+/// goThemeStyle reads the ThemeStyle struct of the Go side.
+ThemeData? goThemeStyle(GoNode? n) {
+  if (n == null) return null;
+  final String family = n.text('FontFamily', 4);
+  return ThemeData(
+    brightness: n.text('Brightness', 0) == 'dark'
+        ? Brightness.dark
+        : (n.text('Brightness', 0) == 'light' ? Brightness.light : null),
+    colorSchemeSeed: goColorOpt(n.countOpt('Seed', 1)),
+    primaryColor: goColorOpt(n.countOpt('PrimaryColor', 2)),
+    scaffoldBackgroundColor: goColorOpt(n.countOpt('ScaffoldBackground', 3)),
+    fontFamily: family.isEmpty ? null : family,
+    visualDensity: goDensity(n.nested('Density', 5)),
+    iconTheme: goIconStyle(n.nested('IconStyle', 6)),
+  );
+}
+
+/// goTask wraps a Go function that the host waits for.
+///
+/// The Go side runs as a goroutine, thus it may block, and it reports the end
+/// itself. Read the Task type of flutter/ui/node.go.
+Future<void> Function()? goTask(
+  void Function(void Function())? f,
+  GoRuntime rt,
+) {
+  if (f == null) return null;
+  return () {
+    final Completer<void> done = Completer<void>();
+    rt.run(
+      () => f(() {
+        if (!done.isCompleted) done.complete();
+      }),
+    );
+    return done.future;
+  };
+}
+
+/// goAsk wraps a Go function that the host waits for, and that gives an
+/// answer.
+Future<bool> Function()? goAsk(
+  void Function(void Function(bool))? f,
+  GoRuntime rt,
+) {
+  if (f == null) return null;
+  return () {
+    final Completer<bool> done = Completer<bool>();
+    rt.run(
+      () => f((bool v) {
+        if (!done.isCompleted) done.complete(v);
+      }),
+    );
+    return done.future;
+  };
+}
+
+/// goTurnBuilder wraps a builder that takes the orientation of the parent.
+Widget Function(BuildContext, Orientation)? goTurnBuilder(
+  Iface? Function(GoString)? f,
+  GoRuntime rt,
+) => f == null
+    ? null
+    : (BuildContext _, Orientation o) =>
+          goRender(f(GoString.fromString(o.name)), rt);
+
+/// goBoxBuilder wraps a builder that takes the limits of the box. A maximum
+/// with no limit gives 0 to the Go side, as in ui.Constraints.
+Widget Function(BuildContext, BoxConstraints)? goBoxBuilder(
+  Iface? Function(double, double, double, double)? f,
+  GoRuntime rt,
+) => f == null
+    ? null
+    : (BuildContext _, BoxConstraints c) => goRender(
+        f(
+          c.minWidth,
+          c.maxWidth.isFinite ? c.maxWidth : 0,
+          c.minHeight,
+          c.maxHeight.isFinite ? c.maxHeight : 0,
+        ),
+        rt,
+      );
+
+/// goSliverBuilder wraps a builder that gives the slivers of a header.
+List<Widget> Function(BuildContext, bool)? goSliverBuilder(
+  Slice<Iface?> Function(bool)? f,
+  GoRuntime rt,
+) => f == null
+    ? null
+    : (BuildContext _, bool scrolled) {
+        final Slice<Iface?> out = f(scrolled);
+        return <Widget>[
+          for (int i = 0; i < out.len; i++) goRender(out[i], rt),
+        ];
+      };
+
+/// goStateColorOn reads the StateColor struct for a parameter that demands 1
+/// color for each state.
+///
+/// A state with no color of its own and no Default gives a transparent color,
+/// because such a parameter takes no null.
+WidgetStateProperty<Color>? goStateColorOn(GoNode? n) {
+  final WidgetStateProperty<Color?>? p = goStateColor(n);
+  if (p == null) return null;
+  return WidgetStateProperty.resolveWith<Color>(
+    (Set<WidgetState> states) => p.resolve(states) ?? const Color(0x00000000),
+  );
+}
+
+const Map<String, ContextMenuButtonType> _buttonTypes =
+    <String, ContextMenuButtonType>{
+      'cut': ContextMenuButtonType.cut,
+      'copy': ContextMenuButtonType.copy,
+      'paste': ContextMenuButtonType.paste,
+      'selectAll': ContextMenuButtonType.selectAll,
+      'delete': ContextMenuButtonType.delete,
+      'lookUp': ContextMenuButtonType.lookUp,
+      'searchWeb': ContextMenuButtonType.searchWeb,
+      'share': ContextMenuButtonType.share,
+      'liveTextInput': ContextMenuButtonType.liveTextInput,
+      'custom': ContextMenuButtonType.custom,
+    };
+
+/// goMenuItem reads the MenuButtonItem struct of the Go side.
+ContextMenuButtonItem? goMenuItem(GoNode? n, GoRuntime rt) {
+  if (n == null) return null;
+  final String label = n.text('Label', 0);
+  return ContextMenuButtonItem(
+    label: label.isEmpty ? null : label,
+    type: _buttonTypes[n.text('Kind', 1)] ?? ContextMenuButtonType.custom,
+    onPressed: goAction(n.action('OnPressed', 2), rt),
+  );
+}
+
+/// goMenuItems reads a slice of the MenuButtonItem struct.
+List<ContextMenuButtonItem> goMenuItems(List<GoNode> list, GoRuntime rt) =>
+    <ContextMenuButtonItem>[for (final GoNode n in list) goMenuItem(n, rt)!];
+
+/// goMatrix reads a matrix of 16 numbers, in the order of the columns.
+Matrix4? goMatrix(List<double> v) => v.length == 16 ? Matrix4.fromList(v) : null;
+
+/// goColumns reads a slice of the DataColumn struct of the Go side.
+List<DataColumn> goColumns(List<GoNode> list, GoRuntime rt) => <DataColumn>[
+  for (final GoNode n in list)
+    DataColumn(
+      label: goChildOpt(n.child('Label', 0), rt) ?? const SizedBox(),
+      tooltip: n.text('Tooltip', 1).isEmpty ? null : n.text('Tooltip', 1),
+      numeric: n.flag('Numeric', 2),
+      onSort: goOnSort(n.onSort('OnSort', 3), rt),
+    ),
+];
+
+/// goOnSort wraps the callback of the header of a column.
+void Function(int, bool)? goOnSort(
+  void Function(int, bool)? f,
+  GoRuntime rt,
+) => f == null ? null : (int i, bool up) => rt.run(() => f(i, up));
+
+/// goRows reads a slice of the DataRow struct of the Go side.
+List<DataRow> goRows(List<GoNode> list, GoRuntime rt) => <DataRow>[
+  for (final GoNode n in list)
+    DataRow(
+      cells: <DataCell>[
+        for (final GoNode c in n.structs('Cells', 0))
+          DataCell(
+            goChildOpt(c.child('Child', 0), rt) ?? const SizedBox(),
+            placeholder: c.flag('Placeholder', 1),
+            showEditIcon: c.flag('ShowEditIcon', 2),
+            onTap: goAction(c.action('OnTap', 3), rt),
+          ),
+      ],
+      selected: n.flag('Selected', 1),
+      onSelectChanged: goOnBool(n.onFlag('OnSelect', 2), rt),
+      color: goStateColor(n.nested('Color', 3)),
+    ),
+];

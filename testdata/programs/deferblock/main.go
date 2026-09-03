@@ -46,6 +46,29 @@ func loop(ch chan int) string {
 	return out
 }
 
+// nested proves that a return inside a plain statement also runs the chain of
+// the deferred calls. Such a statement holds no operation that blocks. Stage 4
+// left it outside the state machine before. The return then wrote a plain Dart
+// return that ran no deferred call.
+func nested(ch chan int, pick int) (out string) {
+	defer func() {
+		out += fmt.Sprint(" and ", take(ch))
+	}()
+	if pick == 1 {
+		return "the first"
+	}
+	switch pick {
+	case 2:
+		return "the second"
+	}
+	for i := 0; i < 2; i++ {
+		if pick == 3 {
+			return "the third"
+		}
+	}
+	return "the last"
+}
+
 // stopped proves that a deferred call that blocks runs on the way out of a
 // panic.
 func stopped(ch chan int) {
@@ -74,6 +97,11 @@ func main() {
 
 	go feed(ch, 3)
 	fmt.Println("loop:", loop(ch))
+
+	for pick := 1; pick <= 4; pick++ {
+		go feed(ch, 1)
+		fmt.Println("nested:", nested(ch, pick))
+	}
 
 	go feed(ch, 1)
 	stopped(ch)

@@ -295,6 +295,33 @@ GoString $link(GoString target, GoString link) {
   return _run('ln', <String>['--', target.toDartString(), to], to);
 }
 
+/// _umask holds the file mode creation mask of the process, or -1 before the
+/// first read.
+int _umaskValue = -1;
+
+/// The file mode creation mask of the process.
+///
+/// A create of Go gives the file the permission bits of the call without the
+/// bits of this mask. dart:io writes no mode at a create, thus the caller
+/// applies the mask itself and then runs chmod. The shell holds the only read
+/// of the mask that a process outside libc can take, thus the value comes from
+/// 1 run of it and it stays.
+int $umask() {
+  if (_umaskValue >= 0) return _umaskValue;
+  _umaskValue = 0;
+  try {
+    final ProcessResult r = Process.runSync('sh', <String>['-c', 'umask']);
+    if (r.exitCode == 0) {
+      final int? v = int.tryParse('${r.stdout}'.trim(), radix: 8);
+      if (v != null) _umaskValue = v & 0xFFF;
+    }
+  } catch (_) {
+    // A host with no shell keeps the mask 0, thus a create writes the bits of
+    // the call itself.
+  }
+  return _umaskValue;
+}
+
 /// Writes the permission bits of a path. The mode holds the 12 bits of a POSIX
 /// mode, thus the text of the command carries 4 octal digits.
 GoString $chmod(GoString path, int mode) {

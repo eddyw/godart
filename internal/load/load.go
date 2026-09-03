@@ -67,16 +67,23 @@ func (r *Result) Binary(id string) *Binary {
 // The load runs 2 times. The first load finds the files of each standard
 // library package, and the second load replaces those files with the overlay.
 func Load(dir string, patterns ...string) (*Result, error) {
-	return load(dir, false, patterns)
+	return load(dir, false, false, patterns)
 }
 
 // LoadTests reads the packages and also each test variant of them. It replaces
 // the test entry point of the go command with the entry point of the compiler.
 func LoadTests(dir string, patterns ...string) (*Result, error) {
-	return load(dir, true, patterns)
+	return load(dir, true, false, patterns)
 }
 
-func load(dir string, tests bool, patterns []string) (*Result, error) {
+// LoadTestsCover reads the packages as LoadTests does, and it also writes a
+// counter into each statement of each package under test. The entry point of
+// the test binary then reports the coverage. Read testmain.go.
+func LoadTestsCover(dir string, patterns ...string) (*Result, error) {
+	return load(dir, true, true, patterns)
+}
+
+func load(dir string, tests, cover bool, patterns []string) (*Result, error) {
 	found, err := packages.Load(&packages.Config{
 		Mode:       findMode,
 		Dir:        dir,
@@ -100,12 +107,15 @@ func load(dir string, tests bool, patterns []string) (*Result, error) {
 	}
 	var binaries []*Binary
 	if tests {
-		binaries, err = testBinaries(found)
+		binaries, err = testBinaries(found, cover, files)
 		if err != nil {
 			return nil, err
 		}
 		for _, b := range binaries {
 			files[b.File] = b.Source
+			for name, content := range b.Cover {
+				files[name] = content
+			}
 		}
 	}
 	cfg := &packages.Config{

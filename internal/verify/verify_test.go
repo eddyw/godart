@@ -78,9 +78,9 @@ var _ = unsafe.Sizeof(0)
 `)
 	rejectFile(t, "curated surface", "outside the supported surface", `package a
 
-import "database/sql"
+import "plugin"
 
-var _ = sql.Open
+var _ = plugin.Open
 `)
 	acceptFile(t, "a blank import of unsafe", `package a
 

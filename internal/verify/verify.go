@@ -263,6 +263,7 @@ func (v *verifier) checkBodyless(n ast.Node) {
 }
 
 func (v *verifier) checkCall(call *ast.CallExpr) {
+	v.checkStructConv(call)
 	id, _ := unparen(call.Fun).(*ast.Ident)
 	if id == nil {
 		return
@@ -275,6 +276,35 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 	case "len", "cap", "print", "println":
 		v.checkTypeParamBuiltin(call, b.Name())
 	}
+}
+
+// checkStructConv rejects a conversion between 2 struct types that are not
+// identical.
+//
+// The Dart class of a struct holds an unexported field as a private member,
+// and a private member reaches no other Dart library. Thus no expression can
+// build the target from the source. Stage 5 rejected such a conversion, and it
+// gave no source position.
+func (v *verifier) checkStructConv(call *ast.CallExpr) {
+	if len(call.Args) != 1 || call.Ellipsis.IsValid() {
+		return
+	}
+	tv, ok := v.info.Types[unparen(call.Fun)]
+	if !ok || !tv.IsType() {
+		return
+	}
+	to := tv.Type
+	from := v.typeOf(call.Args[0])
+	if to == nil || from == nil || !isStruct(to) || !isStruct(from) {
+		return
+	}
+	if types.Identical(to, from) {
+		return
+	}
+	v.reject(call.Pos(),
+		"the Dart class of a struct holds an unexported field as a private member",
+		"a conversion between the 2 struct types %s and %s is outside the subset",
+		from, to)
 }
 
 func (v *verifier) typeOf(e ast.Expr) types.Type {

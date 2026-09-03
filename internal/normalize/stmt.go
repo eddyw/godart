@@ -27,18 +27,36 @@ func (b *builder) block(s *ast.BlockStmt) *ir.Block {
 // stmt builds 1 statement. A function literal that can block becomes a local
 // function, and its declaration stands in front of the statement that holds
 // it.
+//
+// The list of the pending declarations belongs to 1 statement alone. A nested
+// statement of the same statement, for example the body of an if, must not
+// take it, because the declaration then stands after the use. Thus the build
+// of a nested statement starts with an empty list and gives the list of the
+// outer statement back.
 func (b *builder) stmt(s ast.Stmt) []ir.Stmt {
+	outer := b.pending
+	b.pending = nil
 	out := b.stmtOf(s)
-	if len(b.pending) > 0 {
-		pending := b.pending
-		b.pending = nil
-		out = append(pending, out...)
+	own := b.pending
+	b.pending = outer
+	if len(own) > 0 {
+		out = append(own, out...)
 	}
 	if s != nil {
 		for _, x := range out {
 			ir.SetPos(x, s.Pos())
 		}
 	}
+	return out
+}
+
+// takePending gives the declaration of each function literal that the last
+// expression built, and it empties the list. A statement that holds a nested
+// block calls it after the build of its expression, thus each declaration
+// stands in front of the statement and not inside the block.
+func (b *builder) takePending() []ir.Stmt {
+	out := b.pending
+	b.pending = nil
 	return out
 }
 
@@ -537,7 +555,9 @@ func isBlank(e ast.Expr) bool {
 
 func (b *builder) ifStmt(s *ast.IfStmt) []ir.Stmt {
 	out := b.stmt(s.Init)
-	node := &ir.If{Cond: b.expr(s.Cond), Then: b.block(s.Body)}
+	cond := b.expr(s.Cond)
+	out = append(out, b.takePending()...)
+	node := &ir.If{Cond: cond, Then: b.block(s.Body)}
 	if s.Else != nil {
 		inner := b.stmt(s.Else)
 		switch len(inner) {

@@ -37,6 +37,9 @@ type Options struct {
 	// Tests compiles the test variants of each package, and 1 entry point for
 	// each test binary.
 	Tests bool
+	// Cover writes a counter into each statement of each package under test.
+	// It needs Tests.
+	Cover bool
 }
 
 // Stats reports what the build did. A cached package needs no second compile.
@@ -178,6 +181,9 @@ func BuildWithStats(opt Options) (*Stats, error) {
 }
 
 func loadModule(opt Options) (*load.Result, error) {
+	if opt.Tests && opt.Cover {
+		return load.LoadTestsCover(opt.Dir, opt.Patterns...)
+	}
 	if opt.Tests {
 		return load.LoadTests(opt.Dir, opt.Patterns...)
 	}

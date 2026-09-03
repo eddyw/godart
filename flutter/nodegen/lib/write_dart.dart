@@ -69,6 +69,7 @@ bool exprNullable(Param p) {
   if (p.optional) return true;
   switch (p.type.kind) {
     case 'str':
+    case 'tag':
     case 'f64':
     case 'i64':
     case 'boolean':
@@ -76,6 +77,15 @@ bool exprNullable(Param p) {
     case 'millis':
     case 'nodes':
     case 'strs':
+    case 'counts':
+    case 'sizes':
+    case 'flags':
+    case 'barItems':
+    case 'railItems':
+    case 'steps':
+    case 'menuItems':
+    case 'columns':
+    case 'rows':
       return false;
   }
   return true;
@@ -98,6 +108,7 @@ String readExpr(Param p, int at) {
   }
   switch (kind) {
     case 'str':
+    case 'tag':
       return p.optional ? 'n.textOpt($f)' : 'n.text($f)';
     case 'f64':
       return p.optional ? 'n.sizeOpt($f)' : 'n.size($f)';
@@ -145,6 +156,8 @@ String readExpr(Param p, int at) {
       return 'goIconStyle(n.nested($f))';
     case 'stateColor':
       return 'goStateColor(n.nested($f))';
+    case 'stateColorOn':
+      return 'goStateColorOn(n.nested($f))';
     case 'boxSize':
       return 'goSize(n.nested($f))';
     case 'buttonStyle':
@@ -159,6 +172,82 @@ String readExpr(Param p, int at) {
       return 'goScrollController(n.nested($f), rt)';
     case 'statesKey':
       return 'goStatesController(n.nested($f), rt)';
+    case 'date':
+      return p.optional ? 'goDate(n.countOpt($f))' : 'goDate(n.count($f))';
+    case 'clock':
+      return p.optional ? 'goClock(n.countOpt($f))' : 'goClock(n.count($f))';
+    case 'rect':
+      return 'goRect(n.nested($f))';
+    case 'relRect':
+      return 'goRelRect(n.nested($f))';
+    case 'span':
+      return 'goSpan(n.nested($f))';
+    case 'range':
+      return 'goRange(n.nested($f))';
+    case 'gridSpec':
+      return 'goGridSpec(n.nested($f))';
+    case 'themeStyle':
+      return 'goThemeStyle(n.nested($f))';
+    case 'sliverChildren':
+      return 'goSliverChildren(n.nested($f), rt)';
+    case 'barItem':
+      return 'goBarItem(n.nested($f), rt)';
+    case 'railItem':
+      return 'goRailItem(n.nested($f), rt)';
+    case 'step':
+      return 'goStep(n.nested($f), rt)';
+    case 'menuItem':
+      return 'goMenuItem(n.nested($f), rt)';
+    case 'menuItems':
+      return 'goMenuItems(n.structs($f), rt)';
+    case 'columns':
+      return 'goColumns(n.structs($f), rt)';
+    case 'rows':
+      return 'goRows(n.structs($f), rt)';
+    case 'matrix':
+      return 'goMatrix(n.sizes($f))';
+    case 'scopeKey':
+      return 'goFocusScope(n.nested($f), rt)';
+    case 'storageKey':
+      return 'goStorageBucket(n.nested($f), rt)';
+    case 'barItems':
+      return 'goBarItems(n.structs($f), rt)';
+    case 'railItems':
+      return 'goRailItems(n.structs($f), rt)';
+    case 'steps':
+      return 'goSteps(n.structs($f), rt)';
+    case 'bytes':
+      return 'goBytes(n.counts($f))';
+    case 'counts':
+      return 'n.counts($f)';
+    case 'sizes':
+      return 'n.sizes($f)';
+    case 'flags':
+      return 'n.flags($f)';
+    case 'animation':
+      return 'goAnimation(n.nested($f), rt)';
+    case 'linkKey':
+      return 'goLayerLink(n.nested($f), rt)';
+    case 'overlapKey':
+      return 'goOverlapHandle(n.nested($f), rt)';
+    case 'overlayKey':
+      return 'goOverlayController(n.nested($f), rt)';
+    case 'menuKey':
+      return 'goMenuController(n.nested($f), rt)';
+    case 'textKey':
+      return 'goTextController(n.nested($f), rt)';
+    case 'task':
+      return 'goTask(n.task($f), rt)';
+    case 'ask':
+      return 'goAsk(n.ask($f), rt)';
+    case 'buildTurn':
+      return 'goTurnBuilder(n.buildText($f), rt)';
+    case 'buildBox':
+      return 'goBoxBuilder(n.buildBox($f), rt)';
+    case 'buildSlivers':
+      return 'goSliverBuilder(n.buildSlivers($f), rt)';
+    case 'cbRange':
+      return 'goOnRange(n.onPair($f), rt)';
     case 'node':
       return 'goChildOpt(n.child($f), rt)';
     case 'nodes':
@@ -194,6 +283,10 @@ String cb1Expr(String arg, String f) {
       return 'goOnColor(n.onCount($f), rt)';
     case 'millis':
       return 'goOnDuration(n.onCount($f), rt)';
+    case 'date':
+      return 'goOnDate(n.onCount($f), rt)';
+    case 'clock':
+      return 'goOnClock(n.onCount($f), rt)';
   }
   throw StateError('the callback argument $arg holds no read');
 }

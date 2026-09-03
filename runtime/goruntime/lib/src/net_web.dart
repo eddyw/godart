@@ -87,3 +87,15 @@ GoString $listenClose(int handle) => _noNet;
 GoString $packetClose(int handle) => _noNet;
 
 GoString $packetDeadline(int handle, int read, int write) => _noNet;
+
+/// Gives the network interfaces of the host.
+///
+/// A browser holds no such API. Go under GOOS=js also gives an empty table
+/// and no cause. Thus this stub gives 2 empty lists and no cause. The Go side
+/// then reports "no such network interface" for a name and for an index,
+/// exactly as Go does.
+(Slice<GoString>, Slice<GoString>, GoString) $interfaces() => (
+  Slice<GoString>.of(<GoString>[]),
+  Slice<GoString>.of(<GoString>[]),
+  _empty,
+);

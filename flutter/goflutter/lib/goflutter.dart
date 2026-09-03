@@ -19,8 +19,16 @@ export 'src/identity.dart'
     show
         GoIdentities,
         GoKeep,
+        goAnimation,
         goFocusNode,
+        goFocusScope,
+        goLayerLink,
+        goMenuController,
+        goOverlapHandle,
+        goOverlayController,
         goScrollController,
-        goStatesController;
+        goStatesController,
+        goStorageBucket,
+        goTextController;
 export 'src/node.dart' show GoNode;
 export 'src/runtime.dart' show GoRuntime;

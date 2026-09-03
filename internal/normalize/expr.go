@@ -13,7 +13,7 @@ import (
 // copyPoint inserts a struct copy. Go gives a struct and an array value
 // semantics, thus each copy point needs a fresh value.
 func (b *builder) copyPoint(e ir.Expr) ir.Expr {
-	if e == nil || !needsCopy(e.GoType()) || isFresh(e) {
+	if e == nil || !needsCopy(e.GoType()) || ir.Fresh(e) {
 		return e
 	}
 	return &ir.Copy{X: e, Type: e.GoType()}
@@ -25,15 +25,6 @@ func needsCopy(t types.Type) bool {
 	}
 	switch typeset.Core(t).(type) {
 	case *types.Struct, *types.Array:
-		return true
-	}
-	return false
-}
-
-// isFresh reports whether the expression already builds a new value.
-func isFresh(e ir.Expr) bool {
-	switch e.(type) {
-	case *ir.Composite, *ir.Call, *ir.Copy, *ir.Zero, *ir.Builtin, *ir.Conv:
 		return true
 	}
 	return false

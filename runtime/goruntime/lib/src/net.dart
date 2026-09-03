@@ -816,3 +816,50 @@ GoString $packetDeadline(int handle, int read, int write) {
   s.writeDeadline = write;
   return _empty;
 }
+
+/// Gives the network interfaces of the host.
+///
+/// The first result holds 1 item for each interface, in the form
+/// `<index>|<name>`. The second result holds 1 item for each address, in the
+/// form `<index>|<address>/<prefix>`. The third result holds the cause of a
+/// failure.
+///
+/// The list holds the loopback interface and each link local address, because
+/// Interfaces of Go holds them too.
+///
+/// The call gives up control, thus the result of the call itself is dead.
+(Slice<GoString>, Slice<GoString>, GoString) $interfaces() {
+  $await(
+    NetworkInterface.list(
+      includeLoopback: true,
+      includeLinkLocal: true,
+    ).then(_interfaceLists),
+    (Object cause) => (
+      Slice<GoString>.of(<GoString>[]),
+      Slice<GoString>.of(<GoString>[]),
+      _cause(cause),
+    ),
+  );
+  return (
+    Slice<GoString>.of(<GoString>[]),
+    Slice<GoString>.of(<GoString>[]),
+    _empty,
+  );
+}
+
+/// _interfaceLists writes the 2 flat lists of the interfaces.
+(Slice<GoString>, Slice<GoString>, GoString) _interfaceLists(
+  List<NetworkInterface> found,
+) {
+  final List<GoString> names = <GoString>[];
+  final List<GoString> addrs = <GoString>[];
+  for (final NetworkInterface n in found) {
+    names.add(GoString.fromString('${n.index}|${n.name}'));
+    for (final InterfaceAddress a in n.addresses) {
+      addrs.add(
+        GoString.fromString('${n.index}|${a.address}/${a.prefixLength}'),
+      );
+    }
+  }
+  return (Slice<GoString>.of(names), Slice<GoString>.of(addrs), _empty);
+}

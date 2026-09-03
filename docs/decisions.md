@@ -1073,9 +1073,10 @@ The plan left these points open. The work took the decisions below.
      13,628,480 bytes. Thus the Go node set costs nothing that the application
      does not use, and the whole cost of 7.2 megabytes comes from the switch.
      `goSetWidgets` of `flutter/goflutter/lib/src/host.dart` installs the host
-     of the application, and `usedNodes` of `flutter/nodegen/bin/nodegen.dart`
-     reads each `ui.<Name>` of the Go source to build the list. That list is a
-     superset, and a name that the scan misses gives a clear error at run time.
+     of the application, and `flutter/nodescan` reads the Go module with full
+     type information to build the list. The list was a superset until
+     2026-09-03: `usedNodes` of `nodegen` read each `ui.<Name>` with a regular
+     expression. Read decision 268.
 
 225. The generated set replaces the hand written node set of milestone 1. 4
      types stay hand written in `flutter/ui/node.go`, because no Flutter widget
@@ -1542,6 +1543,555 @@ The plan left these points open. The work took the decisions below.
      `testdata/programs/asn1parse` reads each of the 7 cases of that switch,
      and `testdata/programs/reflectnew` and `testdata/programs/reflectaddr`
      each read the 5 kinds.
+255. Stage 4 and stage 5 read 1 freshness rule, and `ir.Fresh` holds it. An
+     expression is fresh when it builds a value that no other expression names,
+     thus a value semantics copy of it gives nothing. `copyPoint` of stage 4
+     read such a rule already, and the box of an interface value read a
+     narrower 1 that named a composite literal alone. The 2 now agree.
+
+     The rule dropped `*ir.Builtin`, because `iterkey` and `iterval` each read
+     the object that the map holds. A `for k, v := range m` over a map of
+     struct values thus gave the loop variable an alias of the entry, and a
+     write to that variable reached the map. Go printed `1` and Dart printed
+     `99`. The key took no copy point at all, and it took the same fault.
+
+     The gain of the wider rule at the box: 24 copies over 154 programs of
+     `testdata/programs`, and `tzuse` fell from 103 copies to 89. The 2 defects
+     add 2 copies back, and each 1 is correct.
+     `testdata/programs/valuecopy` holds each case, and it also reads the other
+     17 places where Go copies a struct or an array.
+256. `append` copies each element when the slice grows, and the runtime takes
+     an assign function for that copy. `$append` wrote the reference of each
+     element into the new array, thus the old slice and the new 1 shared each
+     element object. A write through the new slice then reached the old 1, and
+     a pointer into the old array followed a write that Go never shows. Go
+     printed `1 99` and Dart printed `99 99`.
+
+     The path that grows takes the copy, and the path with spare capacity takes
+     none, exactly as Go does. The elements that the call adds need no copy of
+     their own, because stage 4 copies each argument at the call site. The
+     spread form holds no such point, thus `$appendSlice` copies each element
+     of the source itself.
+
+     `elemAssign` of `internal/emit/call.go` writes the argument, and it gives
+     an empty text for each element type that needs no copy. `$copySlice` held
+     the same shape already, thus the 2 builtins now agree.
+257. A reactive value reports a move at run time. `dep` holds the address of
+     itself at its first use, and `check` panics when the 2 differ.
+
+     `go vet` reports each copy that the source writes, through the `noCopy`
+     field of decision 220. It reports no copy that `append` makes when a slice
+     grows. A `[]Signal[int]` that grows thus split its subscriber list with no
+     report: a probe ran the effect 1 time where 2 is correct. A
+     `map[K]Signal[T]` needs no such guard, because Go rejects a pointer method
+     on a map element at compile time.
+
+     The test costs 1 pointer field and 1 comparison for each track and each
+     notify. A pointer comparison holds its meaning in the Dart output, thus
+     the panic reaches a program of either runtime.
+258. A scope owns each scope that its body builds, and it drops each 1. A
+     `Computed` or an `Effect` that a build creates thus dies with its
+     boundary, and the program calls no `Drop` of its own. A value that stands
+     outside each scope keeps the manual rule.
+
+     `newScope` records the current scope as the owner, `enter` drops each
+     child before it runs the body again, and `drop` drops each child first.
+     `drop` also returns at once for a scope that is not alive, thus a second
+     `Drop` frees no identifier 2 times. 2 scopes with 1 identifier would lose
+     each mark of the first.
+259. A signal takes an optional equality test, and the type does not split.
+     `NewSignalEq(v, eq)` installs the test, and `Set` marks no scope when the
+     test reports true. `ui.Eq[T]` gives the test of a comparable type, thus 1
+     `Signal[T any]` still serves each T. A `comparable` constraint on the type
+     itself would give 2 types, and a slice value or a map value would reach
+     neither.
+260. `encoding/json` reads `MarshalText` and `UnmarshalText`. The walk read
+     `MarshalJSON` alone, thus a `net.IP` wrote base64 in place of
+     `"192.168.0.1"`, and an unmarshal of the text form gave
+     `illegal base64 data`.
+
+     `MarshalJSON` still takes precedence. A `MarshalText` writes its bytes as
+     a JSON string, an `UnmarshalText` reads a JSON string alone and rejects
+     each other JSON value, and a null leaves the target as it stands. A map
+     key reads the same 2 methods, thus `map[net.IP]int` holds a real key. A
+     byte slice whose element type holds either method writes a list, and not
+     base64. `testdata/programs/jsontext` holds each case.
+261. `strconv.ParseFloat` reads the whole grammar of Go, and the float token of
+     `fmt` ends at the first rune that no float literal holds.
+
+     `ParseFloat` called the bridge of Dart directly, and it skipped
+     `parseFloatPrefix`, which the package already held for `ParseComplex`.
+     Thus it rejected `Inf`, `inf`, `+Inf`, `-Inf`, `nan`, `1_000.5`, and each
+     hexadecimal float such as `0x1p4`. Only `NaN` passed, because
+     `double.parse` of Dart accepts that 1 text.
+
+     `floatByte` of the `fmt` overlay accepted each rune of the set
+     `+-.0123456789eEpPxXaAbBcCdDfFnNiIty_`, thus
+     `fmt.Sscanf("21.5C", "%fC", &v)` read `21.5C` as 1 token and failed. A set
+     of accepted runes cannot hold the rule, because a hexadecimal float holds
+     each letter from a to f. `floatToken` reads the literal with the state
+     machine of Go, thus the `C` stays for the literal text of the format.
+     `testdata/programs/parsefloat` and the `floats` section of
+     `testdata/programs/scanuse` hold each case.
+262. `net.Interface` holds `Index` and `Name` alone. `NetworkInterface.list` of
+     `dart:io` reports the name, the index, and each address with its prefix
+     length. It reports no MTU, no hardware address, no flag, and no multicast
+     group, thus `MTU`, `HardwareAddr`, `Flags`, and `MulticastAddrs` stay out.
+     A field that always reads 0 lies about the host, and `ListenConfig` of the
+     overlay already holds that rule. The type `Flags` and its 6 constants
+     still enter, because a program reads them as plain values.
+
+     `InterfaceAddress` carries `prefixLength`, thus `Interface.Addrs` and
+     `InterfaceAddrs` each give a real `*net.IPNet` with a real mask.
+263. 1 interop function carries the whole interface table. `dart.Interfaces`
+     gives 2 flat lists of text and a cause. An item of the first list holds
+     `<index>|<name>`, and an item of the second holds
+     `<index>|<address>/<prefix>`. The first bar of an item ends the index,
+     thus a name that holds a bar stays safe. The form needs no `[]int` result,
+     thus the native file and the web file both write `Slice<GoString>`. The
+     name joins `blockingIntrinsic` of `internal/analyze/analyze.go`.
+
+     The web target reports what Go reports under `GOOS=js`:
+     `interface_stub.go` of Go gives an empty table and no error, thus the web
+     stub gives 2 empty lists and no cause.
+264. `DialIP`, `ListenIP`, and `IPConn` stay out. `dart:io` opens a stream
+     socket and a datagram socket over TCP, UDP, and the Unix domain. It opens
+     no raw socket. `DialUnix` takes the network `unix` alone, because Dart
+     opens no datagram socket of the Unix domain, and `unixgram` and
+     `unixpacket` each give an error that names the cause.
+265. `Dialer` holds `Deadline` and `Cancel`, and it rejects 8 more option
+     fields. `LocalAddr`, `Control`, `ControlContext`, `KeepAlive`,
+     `KeepAliveConfig`, `FallbackDelay`, `DualStack`, and the 2 multipath names
+     each need a file descriptor, a socket option, or a second dial. Dart gives
+     none of the 3.
+266. A dial that times out gives `os.ErrDeadlineExceeded`, and not
+     `ctx.Err()`. The overlay gave the error of the context, thus
+     `errors.Is(err, context.DeadlineExceeded)` reported true where Go reports
+     false. Go maps that error, and `net.Error.Timeout` still reports true.
+     `net.ErrClosed` also reaches a program now, because `netError` wraps a
+     closed socket in an error that unwraps to it.
+267. The 9 name constraint fields of `crypto/x509.Certificate` enter the
+     surface. The parser fills each 1 from the bytes of the certificate, thus
+     the work holds no crypto. Go 1.27 holds 9 such fields, and the backlog row
+     named 10. `Verify`, each chain error, and `CheckSignature` each stay out:
+     `dart:io` owns the trust decision, and the surface holds no `crypto/rsa`
+     and no `crypto/ecdsa`.
+268. A sound list of the used node types comes from a Go tool of the host, and
+     not from a Go type checker inside the compiled surface. `flutter/nodescan`
+     loads the application module with `golang.org/x/tools/go/packages`, and it
+     reports each named type of `gart.dev/ui` that the code uses. The run takes
+     0.44 to 0.83 seconds. Task I2 thus gates nothing here, and the earlier
+     reading of the open question was wrong.
+
+     The regular expression of `usedNodes` is gone. The 3 examples give an
+     identical host under the 2 sources, because each extra name of the scan
+     named a function of `gart.dev/ui` and no node type. The gain is soundness:
+     the scan read a name of a comment and of a string, and it missed each name
+     that an import alias or a dot import carries.
+269. A constructor with no mapped parameter reaches the node set. Such a
+     constructor demands nothing, thus each parameter takes the default of
+     Flutter and the node holds the whole meaning of the widget. The Go struct
+     holds no field, and the host writes a call with no argument.
+     `ui.CupertinoListTileChevron` and `ui.BackButtonIcon` are 2 of the 10.
+270. A date takes the milliseconds of the Unix epoch, and a time of the day
+     takes the minutes after midnight. A value of 0 means no date. A Go program
+     writes `t.UnixMilli()`, thus the 2 sides name the same instant. A required
+     parameter with the value 0 gives a loud report, and never the year 1970.
+     A Dart `Object` parameter takes a text, because the 3 such parameters name
+     a tag, a key, or a message, and a Dart String is an Object.
+271. `ui.AnimationKey` names 1 Flutter `AnimationController`. The Go side names
+     the target, the length, the curve, and the repeat, and the host runs the
+     animation. The host gives each command after the frame, because an
+     animation that starts during a build marks a widget dirty in that build.
+     `GoApp` holds the ticker, thus each animation stops when the host leaves
+     the screen. A transition widget reads the value on each frame, thus an
+     animation costs no rebuild of the Go tree.
+
+     6 more identity keys join `FocusKey`, `ScrollKey`, and `StatesKey`:
+     `LinkKey`, `OverlapKey`, `OverlayKey`, `MenuKey`, `TextKey`, `ScopeKey`,
+     and `StorageKey`. A key that carries a bool lets the Go side name the
+     state, and the host opens or closes the object after the frame.
+272. `ui.Task` and `ui.Ask` carry a Dart Future through a `done` callback. A
+     `Future<void> Function()` parameter, such as the refresh of a pull to
+     refresh, needs the end of the Go work. The Dart host sees no end of a
+     goroutine: `$go` gives no handle, and a Dart wrapper cannot survive a
+     block of the Go body. Thus the Go function calls `done` itself. A function
+     that never calls it leaves the indicator turning, which is a loud fault
+     and never a wrong value. A handle of a goroutine in `sched.dart` would
+     replace the callback, and that item stays open.
+273. A builder that must receive a Dart object takes the fields of that object.
+     The host imports no output of a Go module, thus it can build no Go struct.
+     `OrientBuilder` takes the orientation as a text, `BoxBuilder` takes the 4
+     limits of the box as numbers, and `SliverBuilder` gives a list of nodes.
+     The same rule maps `void Function(RangeValues)` to `func(float64, float64)`.
+274. The reader of `nodegen` reads the exact Dart type of a parameter first,
+     and the text with no question mark second. The strip of each question mark
+     made `WidgetStateProperty<Color?>` equal to `WidgetStateProperty<Color>`,
+     and the 2 need a different converter. `Stepper` reached the set, and the
+     host did not compile.
+275. The node set of 509 types costs an application less than the set of 427.
+     A release build of the counter for macOS gives 15,137,248 bytes against
+     15,164,000. The tree shaker drops each type that the application does not
+     name, thus the growth of the shared set is free. A shared host of each of
+     the 509 cases gives 23,864,160 bytes, thus the host per application saves
+     8.7 megabytes. Decision 224 holds.
+276. A Go type cannot implement a Dart interface, and it does not need to. A
+     delegate that a Dart subclass must implement blocks 12 constructors, such
+     as `FlowDelegate` and `MultiChildLayoutDelegate`. Each other case takes 1
+     of the 2 forms that the work already holds: a value type that describes
+     the Dart object, or an identity key that names it. `ScrollController`
+     became `ScrollKey`, and `TickerProvider` became `AnimationKey`, thus
+     neither name of the backlog row stays open.
+277. A const constructor has no form, and the mechanism that would replace it
+     already lost its measurement. The host builds each Flutter widget from the
+     data of a Go node at run time, thus no argument of that call is a
+     constant. A `GoString` also holds a `final Uint8List`, and Dart holds no
+     const `Uint8List`.
+
+     The gain of a canonical const widget is the gain of an identity test that
+     skips a subtree. A host that holds the widget of each node between 2
+     frames gives the same test, and that is the seventh count against A10 of
+     decision 253. A5 with the signal graph beats A10 by 76 times, thus the
+     item stays out.
+278. A struct tag that makes a Go field a Dart setter stays out. Dart holds a
+     real setter and Go holds none, thus stage 5 could write a getter and a
+     setter pair for a marked field and `c.n++` would notify. The cost is 1
+     split: under `go test` the value matches and the notification does not.
+     That is a silent difference of meaning between the 2 runtimes, and G1
+     rejects it. The wrapper type of milestone 1 gives `c.n.Set(1)`, and it
+     runs the same way under `go test` and under gart.
+279. A frame class stands 1 time in a file. `placeLocalFuncs` of stage 4 writes
+     1 declaration of a literal into each state that reads the name, because a
+     case clause of a Dart switch holds a scope of its own. The class of that
+     literal stands at package level, thus a second write gave Dart 2
+     declarations of 1 name and `net` did not compile. `frameSeen` of the
+     emitter holds the name of each class that the pass wrote, and
+     `resetDiscovery` clears it, because the emitter runs 2 passes and only the
+     second 1 writes the output.
+280. `runtime.Gosched` and `runtime.Goexit` are real, and the scheduler holds
+     the 2. `$gosched` of `runtime/goruntime/lib/src/gort.dart` puts the
+     goroutine on the run queue and then blocks it with a frame, thus each
+     other goroutine takes a turn first. The name joins `blockingIntrinsic` of
+     `internal/analyze/analyze.go`, because it gives up control.
+
+     `Goexit` reuses the signal `GoStop` that `testing.T.FailNow` already
+     threw. The class moved to `panic.dart`, thus `$schedule` catches it: the
+     goroutine ends, and each deferred call of its chain runs first. Go keeps
+     the program alive when the goroutine of main ends this way, thus a flag
+     replaces the end of the program and the deadlock report writes the words
+     of Go, "no goroutines (main called runtime.Goexit)".
+281. `panic(nil)` gives the value of Go. The overlay of `runtime` declares
+     `PanicNilError` with its 2 methods, and its initializer installs a builder
+     through the interop `SetPanicNil`. `$panic` reads that builder for a nil
+     value, thus `recover` gives a value that is not nil and `Error` gives
+     "runtime error: panic called with nil argument". A program that does not
+     import `runtime` cannot name the type, thus a description of the runtime
+     library stands in for it. Before this change `recover` gave nil, and the
+     program could not see the panic.
+282. `runtime.NumGoroutine` gives the real count. The scheduler holds each live
+     goroutine, and the interop `Parked` reads that set. The old body always
+     gave 1. `runtime.Stack` reads the same set for the flag `all`, and
+     `runtime/debug.Stack` now calls `runtime.Stack`, thus 1 body writes the
+     text. `Stack` writes no offset and no argument, because the source map
+     holds no such number.
+283. `runtime.Version` holds 1 number in 1 place, and that place is
+     `internal/driver.Version`. `cmd/gart` prints it, the overlay gives
+     `gart0.1.0-dev`, and a test compares the 2. `Compiler` is the constant
+     `gart`, because gart is no Go tool chain.
+284. The 8 missing names of `encoding/json` are the methods of
+     `jsontext.Value`, and not the helpers that the backlog row named.
+     `Compact`, `Indent`, `HTMLEscape`, and `Valid` already stood in the
+     overlay. Go 1.27 makes `RawMessage` an alias of `jsontext.Value`, thus the
+     8 are `Canonicalize`, `Clone`, `Compact`, `Format`, `Indent`, `IsValid`,
+     `Kind`, and `String`. 1 recursive formatter serves the 4 write methods and
+     `IsValid`. It validates RFC 7493, it sorts the members of an object by the
+     code units of UTF-16 for RFC 8785, and it writes a canonical number.
+
+     The 4 write methods take no option. Go declares each 1 with
+     `opts ...jsontext.Options`, and the surface holds no `jsontext`. A
+     parameter that no caller can fill would be a lie, thus the overlay leaves
+     it out and a program that passes an option fails to compile.
+285. `t.Parallel` runs each test on a goroutine of its own. A group of the level
+     starts 1 goroutine for each test and waits for a pause or for the end.
+     `Parallel` reports the pause over a channel and then waits, thus the runner
+     goes on to the next test. After the pass of the tests that are not
+     parallel, the group wakes each test that waits and reads the end of each 1
+     over 1 shared channel. The order of that channel is the order of the ends,
+     exactly as `go test` writes it, and the scheduler of 1 isolate makes that
+     order stable. 60 runs of `go test -v` and 8 runs of `gart test -v` gave 1
+     equal output.
+
+     The test that runs now hangs on the number of its goroutine.
+     `AllocsPerRun` read a global that held the current test, and a parallel run
+     breaks that shape. The map takes `dart.GoID` as its key, and the flag of an
+     unwind after `FailNow` moved from a global to a field of the test.
+286. `-cover` reads `go tool cover` of the Go tool chain. The loader rewrites
+     each file of the package under test with `-mode=set` and an exported
+     counter variable, and the generated entry point maps the 3 arrays of each
+     variable to `testing.Cover`. `CoverMode` and `Coverage` then read the
+     counters, and the harness writes the line "coverage: 63.6% of statements".
+     The build cache tells the 2 forms of the source apart.
+
+     `-cover` rejects a package that the overlay replaces. The rewrite reads the
+     file of the disk, and the overlay holds another source for such a file.
+     `gart test -cover` inside such a package reports the cause and writes no
+     false number.
+287. `gart test` runs each example. `testing.RunExamples` and the capture of
+     standard output already worked, and `internal/load/testmain.go` still wrote
+     each example as a skipped test. The generated entry point now names the
+     list, with the text of the output comment and the unordered flag of each 1,
+     exactly as `go test` builds it. Go runs an example that carries an output
+     comment, and it compiles each other 1 without a run.
+
+     `testing.Main` and `testing.MainWith` each take the list, and `M.Run` runs
+     the examples after the tests and in front of the benchmarks, which is the
+     order of Go. `testdata/tests/unsupported` now differs from `go test` in the
+     fuzz target alone.
+288. `database/sql` and `database/sql/driver` enter the surface, and each 1 is
+     full: 155 names and 59 names. `uuid` enters with them at 13 names, because
+     Go 1.27 makes it a standard package and `database/sql/driver` reads it.
+
+     The backlog row said that the package needs a driver and a pool over a
+     second thread. That reading does not hold. `database/sql` is pure Go, each
+     package that it reads already stood in the surface, and the pool runs a
+     goroutine and a mutex that 1 isolate serves. A second thread is a property
+     of a driver. The work needed 1 patch line and no thread.
+
+     The pool behaves as Go does, and 3 measurements prove it. A goroutine that
+     waits for a connection parks on the request channel and wakes through
+     `putConn`. `connectionOpener` wakes after `driver.ErrBadConn` and it opens
+     a real connection. 8 goroutines that share 2 connections each complete. A
+     context that a cancel stopped gives `context.Canceled` with no wait, and a
+     deadline of 20 milliseconds gives `context.DeadlineExceeded`.
+289. `driver.ScanContext` takes an alias of `internal.ScanContext`. Go 1.27
+     declares the 2 as separate named types and converts between them at 2
+     places. The Dart class of `internal.ScanContext` holds its unexported field
+     as a private member, and no other Dart library reads such a member, thus no
+     expression can carry the value across. The alias changes 1 line of 1 file,
+     and it keeps the kind, the field set, the comparability, and the `%v` form.
+     `%T` and `reflect.Type.String` then give `internal.ScanContext`, and no
+     program can hold the 2 types apart in any other way.
+290. A return inside a plain statement ran no deferred call. This was a silent
+     wrong answer for each function with a deferred call that can block.
+
+     A machine whose deferred calls can block runs the chain in states of its
+     own. Stage 4 gave a statement its own states only when the statement
+     blocks, when it holds a `goto`, or when a branch leaves it inside a loop. A
+     `return` inside an `if`, a `switch`, or a `for` that holds no such
+     operation stayed a plain statement, and stage 5 wrote a plain Dart return
+     that left the defer stack untouched.
+
+     `database/sql.execDC` holds exactly that shape, thus the connection never
+     went back to the pool and the count of open connections grew with each
+     call. `holdsReturn` of `internal/normalize/flatexpr.go` now splits such a
+     statement, and `testdata/programs/deferblock` holds the witness.
+291. A conversion to an identical type gives a copy. `T(x)` where `T` names the
+     type of `x` gave a hard error for a struct, and it gave no copy for an
+     array, thus `b := [2]point(a)` shared the Dart list with `a`. Stage 4 now
+     writes `ir.Copy` for such a conversion of a struct or an array, and
+     `ir.Fresh` already names `ir.Copy`, thus a copy point after it writes no
+     second copy. An alias of a struct type makes such a conversion, and so does
+     the name of the type itself.
+292. Stage 2 rejects a conversion between 2 struct types that are not identical,
+     and stage 5 no longer holds that rejection. The report of stage 5 carried
+     no source position, thus a reader had to search the Go source for the site.
+     The docs already claimed that stage 2 holds the rule, and the code now
+     matches the docs. An alias gives an identical type, thus it still passes.
+293. A slice bound report names the bound that failed, with the 7 messages of
+     Go. The runtime wrote 1 message for each failure, thus `s[1:9]` of a slice
+     of capacity 3 read `[1:9] with capacity 3` where Go reads `[:9] with
+     capacity 3`.
+
+     `Slice.range` now takes 2 more flags: the source wrote a third bound, and
+     the limit is a length. An array and a pointer to an array each report "with
+     length", and a slice reports "with capacity". The order of the tests is the
+     order of Go, thus a bound that breaks 2 limits names the same 1 that Go
+     names. A bound below 0 takes the second table of Go, which writes no limit:
+     `s[-1:]` reads `[-1:]`. `testdata/programs/panictext` holds the 12 shapes.
+294. The text of each run time panic matches Go. The work found 8 differences,
+     and each 1 is closed.
+
+     Go holds 2 error types with a different rule. `errorString` writes the
+     prefix "runtime error: ", and `plainError` writes the message alone. A
+     write to a nil map, a close of a nil channel, a close of a closed channel,
+     and a send on a closed channel each take the plain form, and the runtime
+     wrote the prefix for all 4. `GoError` now carries that flag.
+
+     `comparing uncomparable type` carried the prefix 2 times, and it named the
+     field that holds no identity. Go names the type of the comparison, thus
+     `$goEqual` carries the root descriptor through the walk of the fields.
+
+     A failed assertion of an interface now names the first missing method, as
+     Go does: `int is not fmt.Stringer: missing method String`. A failed
+     assertion of a concrete type names the static interface type of the
+     operand and the display text of the target: `interface {} is int, not
+     string`. The runtime call carried neither, thus the emitter passes the 2.
+     The identity name of a type and its display text differ for a type of
+     package main, thus the message reads the display text.
+295. `fmt.Errorf` gives the 3 error types of Go. A format with no `%w` gives
+     `errors.New(text)`, thus `*errors.errorString`. A format with 1 `%w` gives
+     `*fmt.wrapError`, and a format with more gives `*fmt.wrapErrors` whose
+     `Unwrap` gives a list. The overlay gave its own `*fmt.formatError` in each
+     case, thus `%T`, a type switch, and `errors.Join` each read a type that Go
+     never builds. `fmt` imports `errors` for it, and no cycle exists.
+296. `ServeMux` holds the routing tree of Go 1.22. The overlay held a map of
+     exact strings and a prefix test, 90 lines. `pattern.go`, `routing_tree.go`,
+     `routing_index.go`, and `mapping.go` of the real Go source enter with no
+     change of the body, 908 lines. `Request.PathValue`, `SetPathValue`, and
+     `Pattern` work, and so do the method, the `{id}` wildcard, the `{$}`
+     anchor, the trailing slash redirect, and the status 405 with the field
+     `Allow`. The mode of Go 1.21 that `GODEBUG=httpmuxgo121=1` names stays out,
+     because the overlay of `internal/godebug` always gives the default.
+297. The server tracks each connection and each listener, thus `Shutdown` is
+     real. A `serverConn` holds the socket, the state, and the second of the
+     last change. `Close` ends both tables, and `Shutdown` waits for each
+     connection to reach the idle state. The state moves to active at the first
+     byte of a request, because a `Peek` of 1 byte holds the wait, thus the
+     order of the states is the order of Go. A hijacked connection leaves the
+     table at once, thus it never blocks a `Shutdown`.
+
+     A limit of the head adds 4096 bytes, exactly as Go does. A head above
+     `MaxHeaderBytes` plus 4096, or above `MaxHeaderValueCount` lines, gives the
+     status 431 and ends the connection. A probe of the real Go server gave the
+     same boundary.
+298. A `persistConn` replaces the bare socket of the transport pool. Each
+     connection carries its host key, its buffered reader, its buffered writer,
+     and a `sync.Once` of its close. The close of that 1 object gives the place
+     of the host back, thus `MaxConnsPerHost` counts right at each exit. The
+     reader lives on the connection, thus a connection that goes back to the
+     pool keeps each byte that the reader held.
+
+     The transport writes the request line, `Host`, `User-Agent`, the length of
+     the body, and then each other field in order, which is the order of
+     `Request.Write` of Go. A body of unknown length takes the chunked form:
+     `NewRequest` leaves `ContentLength` at 0 as Go does, and `outgoingLength`
+     reads a body next to a 0 as a length that no field can name. Before that
+     change such a request carried no length and no chunk, thus no server could
+     find the end of the body.
+299. `Transport.TLSHandshakeTimeout` and `OnProxyConnectResponse` stay out.
+     `tls.Dial` of the overlay opens the socket and runs the handshake in 1 call
+     of the Dart runtime, thus no clock can measure the handshake alone, and a
+     timeout over the 2 together holds another meaning. `tls.DialProxy` writes
+     the CONNECT request inside the runtime and gives no answer back.
+
+     `Transport.Dial` and `DialContext` reach no request of the scheme https,
+     because the secure socket of Dart takes no socket that stands open. The
+     transport gives a clear error and names `DialTLSContext`.
+300. Stage 4 lost each write of a method with a pointer receiver. `hoistRecv` of
+     `internal/normalize/flatexpr.go` wrote a copy of the receiver into the
+     frame when an argument of the call blocked, because `needsBox` held a
+     struct out of the address form. `b.WriteString(f())` where `f` blocks then
+     wrote nothing at all. `sanitizeCookieValue` of the real `cookie.go` hit it,
+     thus each cookie carried an empty value. The fix always hoists the address
+     for a pointer receiver. This was a silent wrong answer, and it reaches far
+     past `net/http`.
+301. An inner emitter gives its added imports back. `funcLit` of
+     `internal/emit/expr.go` builds an emitter that shares the map of the
+     prefixes and holds a list of the added imports of its own, and it never
+     read that list back. A closure that reads `r.URL.Query()` in a program that
+     imports no `net/url` then wrote a name with no import.
+302. `fmt` reads the star width, the star precision, and the explicit argument
+     index. The overlay read neither, thus `%*d` wrote `%!*(int=5)d` and
+     `%[2]d` wrote `%![(int=11)2]d`. Each 1 was a silent wrong output.
+
+     The parse now follows `doPrintf` of Go: the flags, an optional `[n]`, the
+     width as `*` or as digits, the point with an optional `[n]` and the
+     precision as `*` or as digits, and a last `[n]` when none stood earlier. A
+     width below 0 gives the flag minus and the positive width, a precision
+     below 0 gives `%!(BADPREC)`, a value of a wrong type gives
+     `%!(BADWIDTH)`, and an index that names no argument gives
+     `%!<verb>(BADINDEX)`.
+
+     A precision on a string verb also cuts the value, and it cuts by runes and
+     before the format, thus `%.3q` of "abcdef" gives `"abc"`.
+     `testdata/programs/fmtindex` holds the 30 shapes.
+303. `net/mail`, `net/smtp`, `net/rpc`, and `net/rpc/jsonrpc` enter the surface,
+     and each 1 is full: 20, 25, 47, and 5 names. The backlog row said that each
+     1 needs a server model, and that reading does not hold. `net/mail` needs no
+     server, and the other 2 need 1 only in a test, where `net.Listen` gives it.
+
+     `net/smtp.StartTLS` reports a cause and sends no command, because the
+     overlay of `crypto/tls` holds no `Client` that raises an open connection.
+     `SendMail` gives that error to its caller, thus no password reaches a
+     server in the clear. A silent fall back to plain text would change the
+     meaning of the function.
+
+     `net/rpc` takes a patch of 1 line: `mtype.method.Func.Call` becomes
+     `s.rcvr.Method(mtype.method.Index).Call`, because `reflect.Method.Func`
+     stays out. The 2 forms hold the same call, because `suitableMethods` reads
+     the method set of the type of the same receiver. `net.OpError` and
+     `net.Pipe` entered with them.
+304. `net/http/cgi` enters the surface at 14 of 14 names. It needed 3 fields of
+     `Request` and 5 vendored packages.
+
+     `Request.TransferEncoding` holds the 1 element "chunked" or nothing, and
+     the server fills it from the length of the body. `Request.TLS` holds the
+     `tls.ConnectionState` of the connection, which carries 3 fields. Read
+     `docs/parity.md` for the members that stay zero. `Request.Trailer` stays
+     nil, and a request that declares a `Trailer` field gives the status 501,
+     thus no trailer is lost with no report.
+
+     The 5 vendored packages are `vendor/golang.org/x/net/http/httpguts`,
+     `vendor/golang.org/x/net/idna`, and the 3 `x/text` packages that idna
+     reads. Each 1 compiles from the real Go source with no patch.
+305. A field of a class shadows a package variable of the same name. The
+     shadow set of the emitter held each method name of the package, and it
+     holds each field name now. `ccc[p.ccc]` of
+     `vendor/golang.org/x/text/unicode/norm` reads the package variable `ccc`
+     and the field `ccc`, and Dart read the field 2 times. The name of the
+     package variable takes the suffix `$f`, which the method rule already
+     used.
+306. A relative `Cmd.Path` resolves against `Cmd.Dir`. Go gives the child its
+     directory before the exec, thus the kernel resolves the program there.
+     `Process.start` of Dart resolves against the directory of the parent, thus
+     the overlay joins the 2 itself. `net/http/cgi` splits its path exactly this
+     way, and each child failed with "no such file or directory" before the fix.
+307. A create writes the permission bits of the call. `os.OpenFile` and
+     `os.WriteFile` each dropped the mode, thus
+     `os.WriteFile(name, data, 0o755)` gave a file that no exec could run.
+
+     `dart:io` writes no mode at a create, thus the chmod stands after the open
+     and it runs only for a path that the call itself makes. The bits drop the
+     mask of the process, exactly as a create of Go does, and the new interop
+     `Umask` reads that mask from 1 run of the shell. A mode of 0644 after the
+     mask needs no command, thus the common path runs no process.
+308. `fmt` writes the entries of a map in the order of the key. The printer
+     sorted the text of each pair, thus a key of 1000 stood in front of a key of
+     3. The order now follows `internal/fmtsort` of Go: a bool, each integer
+     kind, each float kind, and a string each take their own order, and a kind
+     with no natural order keeps the order of its text. A float that is not a
+     number stands first.
+
+     The walk reads each entry itself. A second read by the key would lose a key
+     that no lookup finds, and a float that is not a number is such a key.
+309. The verb `U`, the verb `q` of a rune, and the verb `q` of a string each
+     read the tables of `strconv` in the Go overlay. The Dart side holds no
+     table of the graphic categories of Unicode, thus `%#U` could not tell a
+     printable rune from an unassigned code point, and `%q` wrote no escape at
+     all. `strconv.IsPrint`, `QuoteRune`, `QuoteRuneToASCII`, `Quote`, and
+     `QuoteToASCII` each give the answer of Go.
+
+     A rune inside a slice, a map, or a struct still reaches the Dart printer,
+     which holds the escape table of the ASCII range and writes each other rune
+     itself. Go writes the same text for each printable rune.
+
+     A precision on a whole number gives the smallest count of digits, thus
+     `%.2d` of 5 reads `05` and `%.0d` of 0 reads an empty text. The sign and
+     the base prefix of the flag `#` each stand in front of the zeros. Go turns
+     the flag `0` off for the verb `U`, thus a width there gives spaces.
+310. `runtime.Gosched` gives the Dart event loop a turn when no other goroutine
+     can run. The call put the goroutine on the run queue and blocked, thus the
+     queue never emptied and `$schedule` never returned. A timer of a `Sleep`
+     and a read of a socket then never reached the program, and a program that
+     spins on `Gosched` while it waits for such an event hung for ever.
+
+     The rule fires only when the run queue holds no other goroutine and a wait
+     on the event loop stands. A spin between 2 goroutines thus stays cheap, and
+     a spin with no pending event still holds the limit of a cooperative
+     scheduler that `fixedbugs/issue19182` records. Go runs its timers and its
+     network poller outside the run queue, thus it needs no such rule.
+     `fixedbugs/issue11256` of the test directory of Go hung before this change,
+     and it takes 1.4 seconds now.
 
 ## Answered questions of 2026-08-31
 

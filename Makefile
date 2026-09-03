@@ -4,13 +4,15 @@ RUNTIME := runtime/goruntime
 GO_FILES := $(shell find . -name '*.go' -not -path './build/*')
 
 PROG ?= hello
-DEMO := $(CURDIR)/build/demo/$(PROG)
+# DEMO holds the output of run and of compare. The identifier of the process
+# ends the path, thus 2 runs at the same time write no mixed tree.
+DEMO := $(CURDIR)/build/demo/$(PROG)-$(shell echo $$$$)
 
 SUITE ?= basic
-SUITE_OUT := $(CURDIR)/build/suite/$(SUITE)
+SUITE_OUT := $(CURDIR)/build/suite/$(SUITE)-$(shell echo $$$$)
 
 STD ?= path
-STD_OUT := $(CURDIR)/build/std/$(STD)
+STD_OUT := $(CURDIR)/build/std/$(subst /,-,$(STD))-$(shell echo $$$$)
 
 FLUTTER ?= flutter
 
@@ -101,6 +103,7 @@ flutter-test: build
 	cd flutter/example/form && $(FLUTTER) analyze
 	cd flutter/bench/flutter && $(FLUTTER) pub get && $(FLUTTER) analyze
 	cd flutter/nodegen && dart pub get && dart analyze
+	cd flutter/goflutter && $(FLUTTER) test
 	cd flutter/example/counter && $(FLUTTER) test
 	cd flutter/example/apilist && $(FLUTTER) test
 	cd flutter/example/form && $(FLUTTER) test
@@ -124,6 +127,7 @@ programs:
 
 # run compiles 1 program of testdata and runs the Dart output.
 run: build
+	@rm -rf $(DEMO)
 	@cd testdata/programs/$(PROG) && \
 		$(CURDIR)/build/gart build -o $(DEMO) -runtime $(CURDIR)/$(RUNTIME) ./...
 	@cd $(DEMO) && dart pub get > /dev/null && dart run bin/main.dart
@@ -131,12 +135,13 @@ run: build
 # compare runs the program with the Go toolchain and with Dart, and it reports
 # each difference.
 compare: build
-	@cd testdata/programs/$(PROG) && go run . > $(CURDIR)/build/go.txt 2>&1 || true
+	@rm -rf $(DEMO)
+	@cd testdata/programs/$(PROG) && go run . > $(DEMO).go.txt 2>&1 || true
 	@cd testdata/programs/$(PROG) && \
 		$(CURDIR)/build/gart build -o $(DEMO) -runtime $(CURDIR)/$(RUNTIME) ./...
 	@cd $(DEMO) && dart pub get > /dev/null && \
-		dart run bin/main.dart > $(CURDIR)/build/dart.txt 2>&1 || true
-	@diff $(CURDIR)/build/go.txt $(CURDIR)/build/dart.txt && echo "$(PROG): the 2 outputs are equal"
+		dart run bin/main.dart > $(DEMO).dart.txt 2>&1 || true
+	@diff $(DEMO).go.txt $(DEMO).dart.txt && echo "$(PROG): the 2 outputs are equal"
 
 suites:
 	@ls testdata/tests
@@ -159,13 +164,14 @@ NORMALIZE = sed -E \
 # compare-tests runs the tests with the go toolchain and with gart, and it
 # reports each difference.
 compare-tests: build
-	@cd testdata/tests/$(SUITE) && go test -count=1 -v ./... > $(CURDIR)/build/go.txt 2>&1 || true
+	@mkdir -p $(dir $(SUITE_OUT))
+	@cd testdata/tests/$(SUITE) && go test -count=1 -v ./... > $(SUITE_OUT).go.txt 2>&1 || true
 	@cd testdata/tests/$(SUITE) && \
 		$(CURDIR)/build/gart test -o $(SUITE_OUT) -runtime $(CURDIR)/$(RUNTIME) -v ./... \
-		> $(CURDIR)/build/dart.txt 2>&1 || true
-	@$(NORMALIZE) $(CURDIR)/build/go.txt > $(CURDIR)/build/go.norm.txt
-	@$(NORMALIZE) $(CURDIR)/build/dart.txt > $(CURDIR)/build/dart.norm.txt
-	@diff $(CURDIR)/build/go.norm.txt $(CURDIR)/build/dart.norm.txt && \
+		> $(SUITE_OUT).dart.txt 2>&1 || true
+	@$(NORMALIZE) $(SUITE_OUT).go.txt > $(SUITE_OUT).go.norm.txt
+	@$(NORMALIZE) $(SUITE_OUT).dart.txt > $(SUITE_OUT).dart.norm.txt
+	@diff $(SUITE_OUT).go.norm.txt $(SUITE_OUT).dart.norm.txt && \
 		echo "$(SUITE): the 2 outputs are equal"
 
 # std-test runs the real test files of 1 package of GOROOT with gart. Such a

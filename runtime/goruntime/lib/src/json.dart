@@ -5,6 +5,7 @@ import 'goint.dart';
 import 'iface.dart';
 import 'jsonparse.dart';
 import 'map.dart';
+import 'reflect.dart';
 import 'slice.dart';
 import 'string.dart';
 
@@ -13,6 +14,13 @@ const String _marshalKey = 'MarshalJSON()[]byte,error';
 
 /// The key of the method of the interface json.Unmarshaler.
 const String _unmarshalKey = 'UnmarshalJSON([]byte)error';
+
+/// The key of the method of the interface encoding.TextMarshaler. Go writes the
+/// text of such a value as a JSON string, and MarshalJSON takes precedence.
+const String _textMarshalKey = 'MarshalText()[]byte,error';
+
+/// The key of the method of the interface encoding.TextUnmarshaler.
+const String _textUnmarshalKey = 'UnmarshalText([]byte)error';
 
 /// The full name of the type encoding/json.Number. A field of that type holds
 /// the text of a JSON number, thus the walk holds it apart from a string.
@@ -54,6 +62,8 @@ Object? _tree(Iface? v) {
 Object? _value(TypeDesc desc, Object? value) {
   final Function? marshal = desc.methods[_marshalKey];
   if (marshal != null) return _callMarshal(desc, marshal, value);
+  final Function? text = desc.methods[_textMarshalKey];
+  if (text != null) return _callTextMarshal(desc, text, value);
   switch (desc.kind) {
     case 'bool':
       return value as bool;
@@ -69,7 +79,10 @@ Object? _value(TypeDesc desc, Object? value) {
       if (elem == null) {
         throw _JsonCause('json: a pointer holds no element type');
       }
-      return _value(elem, value);
+      // The Dart form of a pointer to a struct and of a pointer to an array is
+      // the value itself. Each other pointer holds a cell, thus the walk reads
+      // the cell out first.
+      return _value(elem, value is $Ptr<Object?> ? value.v : value);
     case 'struct':
       return _object(desc, value);
     case 'slice':
@@ -115,6 +128,19 @@ Object? _callMarshal(TypeDesc desc, Function marshal, Object? value) {
   } on FormatException catch (e) {
     throw _coded('marshaler', <String>[desc.display, e.message]);
   }
+}
+
+/// _callTextMarshal writes a value through the method MarshalText of its type.
+/// Go writes the text as a JSON string.
+Object? _callTextMarshal(TypeDesc desc, Function marshal, Object? value) {
+  if (desc.kind == 'ptr' && value == null) return null;
+  final (Slice<GoInt>, Iface?) out =
+      Function.apply(marshal, <Object?>[value]) as (Slice<GoInt>, Iface?);
+  final Iface? cause = out.$2;
+  if (cause != null) {
+    throw _coded('marshaler', <String>[desc.display, _errorText(cause)]);
+  }
+  return $bytesToString(out.$1).toDartString();
 }
 
 /// _text writes a tree in the compact JSON form.
@@ -174,8 +200,11 @@ Object? _slice(TypeDesc desc, Slice<Object?>? s) {
 /// _marshaler reports whether a pointer to the type holds MarshalJSON. Go reads
 /// the method set of the pointer, because it holds each method of the type.
 bool _marshaler(TypeDesc desc) =>
-    desc.methods.containsKey(_marshalKey) ||
-    (desc.ptr?.call().methods.containsKey(_marshalKey) ?? false);
+    _hasMethod(desc, _marshalKey) || _hasMethod(desc, _textMarshalKey);
+
+bool _hasMethod(TypeDesc desc, String key) =>
+    desc.methods.containsKey(key) ||
+    (desc.ptr?.call().methods.containsKey(key) ?? false);
 
 String? _base64(Slice<Object?>? s) {
   if (s == null || s.isNil) return null;
@@ -254,6 +283,11 @@ Map<String, Object?> _map(TypeDesc desc, GoMap<Object?, Object?> m) {
 }
 
 String _keyText(TypeDesc key, Object? k) {
+  final Function? text = key.methods[_textMarshalKey];
+  if (text != null) {
+    final Object? out = _callTextMarshal(key, text, k);
+    if (out is String) return out;
+  }
   if (key.kind == 'string') return (k as GoString).toDartString();
   if (k is GoInt) return k.toString();
   throw _coded('unsupportedType', <String>['map key ${key.display}']);
@@ -379,6 +413,11 @@ void _store(TypeDesc elem, Object? pointer, Object? tree) {
     _callUnmarshal(unmarshal, pointer, tree);
     return;
   }
+  final Function? text = _textUnmarshaler(elem);
+  if (text != null) {
+    _callTextUnmarshal(elem, text, pointer, tree);
+    return;
+  }
   switch (elem.kind) {
     case 'struct':
       _fillStruct(elem, pointer, tree);
@@ -387,7 +426,8 @@ void _store(TypeDesc elem, Object? pointer, Object? tree) {
       _fillArray(elem, pointer as List<Object?>, tree);
       return;
   }
-  (pointer as $Ptr<dynamic>).v = _decode(elem, tree);
+  final $Ptr<dynamic> cell = pointer as $Ptr<dynamic>;
+  cell.v = _into(elem, cell.v, tree);
 }
 
 /// _unmarshaler gives the method UnmarshalJSON of the pointer to a type.
@@ -397,6 +437,31 @@ void _store(TypeDesc elem, Object? pointer, Object? tree) {
 Function? _unmarshaler(TypeDesc desc) {
   if (desc.kind == 'ptr') return null;
   return desc.ptr?.call().methods[_unmarshalKey];
+}
+
+/// _textUnmarshaler gives the method UnmarshalText of the pointer to a type.
+Function? _textUnmarshaler(TypeDesc desc) {
+  if (desc.kind == 'ptr') return null;
+  return desc.ptr?.call().methods[_textUnmarshalKey];
+}
+
+/// _callTextUnmarshal reads a JSON string through the method UnmarshalText.
+///
+/// Go gives the method the text of the string, and it rejects each other JSON
+/// value. A null leaves the target as it stands.
+void _callTextUnmarshal(
+  TypeDesc desc,
+  Function unmarshal,
+  Object? pointer,
+  Object? tree,
+) {
+  if (tree == null) return;
+  if (tree is! String) throw _wrong(tree, desc);
+  final Iface? cause = Function.apply(unmarshal, <Object?>[
+    pointer,
+    $stringToBytes(GoString.fromString(tree)),
+  ]) as Iface?;
+  if (cause != null) throw _JsonCause(_errorText(cause));
 }
 
 /// _callUnmarshal reads a tree through the method UnmarshalJSON of a type.
@@ -411,11 +476,36 @@ void _callUnmarshal(Function unmarshal, Object? pointer, Object? tree) {
   if (cause != null) throw _JsonCause(_errorText(cause));
 }
 
+/// _into reads a tree into a value that already stands.
+///
+/// Go descends into a non-nil pointer that a non-nil interface holds, and it
+/// writes the value that the pointer names. net/rpc/jsonrpc reads its
+/// parameter that way. A null keeps the rule of Go too: the interface takes
+/// the value nil, and the pointer stays untouched.
+Object? _into(TypeDesc desc, Object? current, Object? tree) {
+  if (desc.kind != 'interface' || tree == null || current is! Iface) {
+    return _decode(desc, tree);
+  }
+  if (current.desc.kind != 'ptr' || current.value == null) {
+    return _decode(desc, tree);
+  }
+  final TypeDesc? elem = current.desc.elem?.call();
+  if (elem == null) return _decode(desc, tree);
+  _store(elem, current.value, tree);
+  return current;
+}
+
 Object? _decode(TypeDesc desc, Object? tree) {
   final Function? unmarshal = _unmarshaler(desc);
   if (unmarshal != null) {
     final Object? pointer = desc.ptr!.call().newPtr!();
     _callUnmarshal(unmarshal, pointer, tree);
+    return pointer is $Ptr<Object?> ? pointer.v : pointer;
+  }
+  final Function? text = _textUnmarshaler(desc);
+  if (text != null) {
+    final Object? pointer = desc.ptr!.call().newPtr!();
+    _callTextUnmarshal(desc, text, pointer, tree);
     return pointer is $Ptr<Object?> ? pointer.v : pointer;
   }
   switch (desc.kind) {
@@ -463,7 +553,9 @@ Object? _decodePointer(TypeDesc desc, Object? tree) {
     _store(elem, out, tree);
     return out;
   }
-  return Box<Object?>(_decode(elem, tree));
+  // The cell must hold the Dart type of the element, because the setter of a
+  // field of a pointer type casts to that exact type. Read $typedBox.
+  return $typedBox(elem, _decode(elem, tree));
 }
 
 Object? _decodeSlice(TypeDesc desc, Object? tree) {
@@ -517,6 +609,12 @@ Object? _decodeMap(TypeDesc desc, Object? tree) {
 }
 
 Object? _key(TypeDesc desc, String text) {
+  final Function? unmarshal = _textUnmarshaler(desc);
+  if (unmarshal != null) {
+    final Object? pointer = desc.ptr!.call().newPtr!();
+    _callTextUnmarshal(desc, unmarshal, pointer, text);
+    return pointer is $Ptr<Object?> ? pointer.v : pointer;
+  }
   if (desc.kind == 'string') return GoString.fromString(text);
   final int? n = int.tryParse(text);
   if (n == null) {
@@ -539,7 +637,11 @@ void _fillStruct(TypeDesc desc, Object? target, Object? tree) {
     }
     _structName = _bareName(desc.display);
     _fieldName = _path(outerField, _readTag(field.tag, field.name).name);
-    field.set(target, _decode(field.type(), entry.value));
+    final TypeDesc ft = field.type();
+    // The read of the field costs a call, thus only an interface field takes
+    // it. _into descends into a pointer that such a field already holds.
+    final Object? current = ft.kind == 'interface' ? field.get(target) : null;
+    field.set(target, _into(ft, current, entry.value));
   }
   _structName = outerStruct;
   _fieldName = outerField;
@@ -581,7 +683,9 @@ void _fillArray(TypeDesc desc, List<Object?> target, Object? tree) {
   final TypeDesc? elem = desc.elem?.call();
   if (elem == null) throw _JsonCause('json: an array holds no element type');
   for (int i = 0; i < target.length; i++) {
-    target[i] = i < tree.length ? _decode(elem, tree[i]) : elem.zero?.call();
+    target[i] = i < tree.length
+        ? _into(elem, target[i], tree[i])
+        : elem.zero?.call();
   }
 }
 

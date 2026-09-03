@@ -246,3 +246,161 @@ type ButtonStyle struct {
 	AnimationMillis  *int
 	EnableFeedback   *bool
 }
+
+// Rect holds the 4 edges of a rectangle, in logical pixels.
+//
+// A field of the type RelativeRect reads the same struct. Each edge of such a
+// field gives the distance from that edge of the parent, and not a coordinate.
+type Rect struct {
+	Left   float64
+	Top    float64
+	Right  float64
+	Bottom float64
+}
+
+// Range holds the 2 ends of a range of numbers, for example the values of a
+// RangeSlider.
+type Range struct {
+	Start float64
+	End   float64
+}
+
+// Span holds 1 piece of rich text, and it gives a Flutter TextSpan.
+//
+// A span with children holds the text of each child after its own text, and a
+// child that names no style takes the style of the parent.
+type Span struct {
+	Text     string
+	Style    *TextStyle
+	Children []Span
+}
+
+// SliverChildren gives the children of a sliver.
+//
+// A Builder makes 1 child at a time, and Flutter then builds a row of a long
+// list only when that row reaches the screen. A nil Builder reads Children.
+type SliverChildren struct {
+	// Children holds the whole list. A nil Builder reads it.
+	Children []Node
+
+	// Builder makes 1 child of the list.
+	Builder ItemBuilder
+
+	// Count gives the length of the list of the Builder. A Count of 0 gives a
+	// list with no end.
+	Count int
+}
+
+// GridSpec gives the layout of the children of a grid.
+//
+// Kind takes "count" or "extent". "count" reads Count, and it puts that many
+// children on each cross axis line. "extent" reads MaxExtent, and it puts as
+// many children as the width allows. An empty Kind gives "count".
+type GridSpec struct {
+	Kind string
+
+	// Count gives the number of children of 1 cross axis line. A value below 1
+	// gives 1.
+	Count int
+
+	// MaxExtent gives the largest size of 1 child on the cross axis.
+	MaxExtent float64
+
+	// MainSpacing and CrossSpacing give the space between 2 children.
+	MainSpacing  float64
+	CrossSpacing float64
+
+	// AspectRatio gives the width of a child over its height. A value of 0
+	// gives 1.
+	AspectRatio float64
+
+	// MainExtent gives the size of a child on the main axis. A nil value reads
+	// AspectRatio.
+	MainExtent *float64
+}
+
+// BarItem holds 1 item of a bottom navigation bar.
+type BarItem struct {
+	Icon            Node
+	Label           string
+	ActiveIcon      Node
+	Tooltip         string
+	BackgroundColor *Color
+}
+
+// RailItem holds 1 destination of a navigation rail.
+type RailItem struct {
+	Icon         Node
+	Label        Node
+	SelectedIcon Node
+	Padding      *Insets
+	Disabled     bool
+}
+
+// Step holds 1 step of a stepper.
+//
+// State takes "indexed", "editing", "complete", "disabled", or "error". An
+// empty State gives "indexed".
+type Step struct {
+	Title    Node
+	Content  Node
+	Subtitle Node
+	State    string
+	Active   bool
+}
+
+// ThemeStyle holds the part of the Flutter ThemeData that a node field reads.
+// The name differs from the Flutter name, because app.go holds the type
+// ThemeData of the theme that a Go build reads.
+//
+// Brightness takes "light" or "dark". Seed gives 1 color, and Flutter builds
+// the whole color scheme from it. A nil field takes the default of Flutter.
+type ThemeStyle struct {
+	Brightness         string
+	Seed               *Color
+	PrimaryColor       *Color
+	ScaffoldBackground *Color
+	FontFamily         string
+	Density            *Density
+	IconStyle          *IconStyle
+}
+
+// MenuButtonItem holds 1 button of a text selection toolbar.
+//
+// Kind names the meaning of the button, and Flutter writes the label of the
+// platform for it. Kind takes "cut", "copy", "paste", "selectAll", "delete",
+// "lookUp", "searchWeb", "share", "liveTextInput", or "custom". An empty Kind
+// gives "custom", and such a button reads Label.
+type MenuButtonItem struct {
+	Label     string
+	Kind      string
+	OnPressed func()
+}
+
+// DataColumn holds 1 column of a data table.
+type DataColumn struct {
+	Label   Node
+	Tooltip string
+	Numeric bool
+
+	// OnSort reports a tap of the header. It takes the number of the column
+	// and the direction, and true means "from the smallest".
+	OnSort func(int, bool)
+}
+
+// DataCell holds 1 cell of a row of a data table.
+type DataCell struct {
+	Child        Node
+	Placeholder  bool
+	ShowEditIcon bool
+	OnTap        func()
+}
+
+// DataRow holds 1 row of a data table. The count of the cells must match the
+// count of the columns.
+type DataRow struct {
+	Cells    []DataCell
+	Selected bool
+	OnSelect func(bool)
+	Color    *StateColor
+}

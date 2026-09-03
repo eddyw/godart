@@ -238,6 +238,7 @@ type AnimatedContainer struct {
 	Height               *float64
 	Constraints          *Constraints
 	Margin               *Insets
+	Transform            []float64
 	TransformAlignment   *string
 	Child                Node
 	ClipBehavior         *string
@@ -364,6 +365,15 @@ type AnimatedPositionedDirectional struct {
 	OnEnd    func()
 }
 
+// AnimatedPositionedFromRect maps AnimatedPositioned.fromRect of package:flutter/widgets.dart.
+type AnimatedPositionedFromRect struct {
+	Child    Node
+	Rect     Rect
+	Curve    *string
+	Duration int
+	OnEnd    func()
+}
+
 // AnimatedRotation maps AnimatedRotation of package:flutter/widgets.dart.
 //
 // FilterQuality takes "none", "low", "medium", or "high".
@@ -419,6 +429,15 @@ type AnimatedSwitcher struct {
 	ReverseDuration *int
 	SwitchInCurve   *string
 	SwitchOutCurve  *string
+}
+
+// AnimatedTheme maps AnimatedTheme of package:flutter/material.dart.
+type AnimatedTheme struct {
+	Data     ThemeStyle
+	Curve    *string
+	Duration *int
+	OnEnd    func()
+	Child    Node
 }
 
 // AppBar maps AppBar of package:flutter/material.dart.
@@ -516,6 +535,16 @@ type BackButton struct {
 	Color     *Color
 	Style     *ButtonStyle
 	OnPressed func()
+}
+
+// BackButtonIcon maps BackButtonIcon of package:flutter/material.dart.
+type BackButtonIcon struct {
+}
+
+// BackButtonListener maps BackButtonListener of package:flutter/widgets.dart.
+type BackButtonListener struct {
+	Child               Node
+	OnBackButtonPressed Ask
 }
 
 // BackdropFilter maps BackdropFilter of package:flutter/widgets.dart.
@@ -628,6 +657,36 @@ type BottomAppBarTheme struct {
 	Child            Node
 }
 
+// BottomNavigationBar maps BottomNavigationBar of package:flutter/material.dart.
+//
+// Type takes "fixed", or "shifting".
+//
+// LandscapeLayout takes "spread", "centered", or "linear".
+type BottomNavigationBar struct {
+	Items                []BarItem
+	OnTap                func(int)
+	CurrentIndex         *int
+	Elevation            *float64
+	Type                 *string
+	FixedColor           *Color
+	BackgroundColor      *Color
+	IconSize             *float64
+	SelectedItemColor    *Color
+	UnselectedItemColor  *Color
+	SelectedIconTheme    *IconStyle
+	UnselectedIconTheme  *IconStyle
+	SelectedFontSize     *float64
+	UnselectedFontSize   *float64
+	SelectedLabelStyle   *TextStyle
+	UnselectedLabelStyle *TextStyle
+	ShowSelectedLabels   *bool
+	ShowUnselectedLabels *bool
+	MouseCursor          *string
+	EnableFeedback       *bool
+	LandscapeLayout      *string
+	UseLegacyColorScheme *bool
+}
+
 // BottomSheet maps BottomSheet of package:flutter/material.dart.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
@@ -694,6 +753,19 @@ type ButtonTheme struct {
 	SplashColor           *Color
 	MaterialTapTargetSize *string
 	Child                 Node
+}
+
+// CalendarDatePicker maps CalendarDatePicker of package:flutter/material.dart.
+//
+// InitialCalendarMode takes "day", or "year".
+type CalendarDatePicker struct {
+	InitialDate             int
+	FirstDate               int
+	LastDate                int
+	CurrentDate             *int
+	OnDateChanged           func(int)
+	OnDisplayedMonthChanged func(int)
+	InitialCalendarMode     *string
 }
 
 // Card maps Card of package:flutter/material.dart.
@@ -801,6 +873,57 @@ type CarouselViewBuilder struct {
 	OnTap            func(int)
 	EnableSplash     *bool
 	ItemExtent       float64
+	ItemBuilder      ItemBuilder
+	ItemCount        *int
+	OnIndexChanged   func(int)
+	Infinite         *bool
+}
+
+// CarouselViewWeighted maps CarouselView.weighted of package:flutter/material.dart.
+//
+// ItemClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+//
+// ScrollDirection takes "horizontal", or "vertical".
+type CarouselViewWeighted struct {
+	Padding          *Insets
+	BackgroundColor  *Color
+	Elevation        *float64
+	Shape            *Shape
+	ItemClipBehavior *string
+	OverlayColor     *StateColor
+	ItemSnapping     *bool
+	ShrinkExtent     *float64
+	ScrollDirection  *string
+	Reverse          *bool
+	ConsumeMaxWeight *bool
+	OnTap            func(int)
+	EnableSplash     *bool
+	Infinite         *bool
+	FlexWeights      []int
+	Children         []Node
+	OnIndexChanged   func(int)
+}
+
+// CarouselViewWeightedBuilder maps CarouselView.weightedBuilder of package:flutter/material.dart.
+//
+// ItemClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+//
+// ScrollDirection takes "horizontal", or "vertical".
+type CarouselViewWeightedBuilder struct {
+	Padding          *Insets
+	BackgroundColor  *Color
+	Elevation        *float64
+	Shape            *Shape
+	ItemClipBehavior *string
+	OverlayColor     *StateColor
+	ItemSnapping     *bool
+	ShrinkExtent     *float64
+	ScrollDirection  *string
+	Reverse          *bool
+	ConsumeMaxWeight *bool
+	OnTap            func(int)
+	EnableSplash     *bool
+	FlexWeights      []int
 	ItemBuilder      ItemBuilder
 	ItemCount        *int
 	OnIndexChanged   func(int)
@@ -1204,6 +1327,10 @@ type CloseButton struct {
 	Style     *ButtonStyle
 }
 
+// CloseButtonIcon maps CloseButtonIcon of package:flutter/material.dart.
+type CloseButtonIcon struct {
+}
+
 // ColoredBox maps ColoredBox of package:flutter/widgets.dart.
 type ColoredBox struct {
 	Color       Color
@@ -1235,6 +1362,22 @@ type Column struct {
 	Children           []Node
 }
 
+// CompositedTransformFollower maps CompositedTransformFollower of package:flutter/widgets.dart.
+type CompositedTransformFollower struct {
+	Link             LinkKey
+	ShowWhenUnlinked *bool
+	Offset           *Offset
+	TargetAnchor     *string
+	FollowerAnchor   *string
+	Child            Node
+}
+
+// CompositedTransformTarget maps CompositedTransformTarget of package:flutter/widgets.dart.
+type CompositedTransformTarget struct {
+	Link  LinkKey
+	Child Node
+}
+
 // ConstrainedBox maps ConstrainedBox of package:flutter/widgets.dart.
 type ConstrainedBox struct {
 	Constraints Constraints
@@ -1255,6 +1398,7 @@ type Container struct {
 	Height               *float64
 	Constraints          *Constraints
 	Margin               *Insets
+	Transform            []float64
 	TransformAlignment   *string
 	Child                Node
 	ClipBehavior         *string
@@ -1440,6 +1584,30 @@ type CupertinoContextMenuAction struct {
 	TrailingIcon        *string
 }
 
+// CupertinoDatePicker maps CupertinoDatePicker of package:flutter/cupertino.dart.
+//
+// Mode takes "time", "date", "dateAndTime", or "monthYear".
+//
+// DateOrder takes "dmy", "mdy", "ymd", or "ydm".
+//
+// ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
+type CupertinoDatePicker struct {
+	Mode                    *string
+	OnDateTimeChanged       func(int)
+	InitialDateTime         *int
+	MinimumDate             *int
+	MaximumDate             *int
+	MinimumYear             *int
+	MaximumYear             *int
+	MinuteInterval          *int
+	Use24hFormat            *bool
+	DateOrder               *string
+	BackgroundColor         *Color
+	ShowDayOfWeek           *bool
+	ShowTimeSeparator       *bool
+	ChangeReportingBehavior *string
+}
+
 // CupertinoDesktopTextSelectionToolbar maps CupertinoDesktopTextSelectionToolbar of package:flutter/cupertino.dart.
 type CupertinoDesktopTextSelectionToolbar struct {
 	Anchor   Offset
@@ -1450,6 +1618,11 @@ type CupertinoDesktopTextSelectionToolbar struct {
 type CupertinoDesktopTextSelectionToolbarButton struct {
 	OnPressed func()
 	Child     Node
+}
+
+// CupertinoDesktopTextSelectionToolbarButtonButtonItem maps CupertinoDesktopTextSelectionToolbarButton.buttonItem of package:flutter/cupertino.dart.
+type CupertinoDesktopTextSelectionToolbarButtonButtonItem struct {
+	ButtonItem MenuButtonItem
 }
 
 // CupertinoDesktopTextSelectionToolbarButtonText maps CupertinoDesktopTextSelectionToolbarButton.text of package:flutter/cupertino.dart.
@@ -1528,6 +1701,14 @@ type CupertinoFormSectionInsetGrouped struct {
 	ClipBehavior    *string
 }
 
+// CupertinoFullscreenDialogTransition maps CupertinoFullscreenDialogTransition of package:flutter/cupertino.dart.
+type CupertinoFullscreenDialogTransition struct {
+	PrimaryRouteAnimation   AnimationKey
+	SecondaryRouteAnimation AnimationKey
+	Child                   Node
+	LinearTransition        bool
+}
+
 // CupertinoLinearActivityIndicator maps CupertinoLinearActivityIndicator of package:flutter/cupertino.dart.
 type CupertinoLinearActivityIndicator struct {
 	Progress float64
@@ -1580,6 +1761,10 @@ type CupertinoListTile struct {
 	Padding                  *Insets
 }
 
+// CupertinoListTileChevron maps CupertinoListTileChevron of package:flutter/cupertino.dart.
+type CupertinoListTileChevron struct {
+}
+
 // CupertinoListTileNotched maps CupertinoListTile.notched of package:flutter/cupertino.dart.
 type CupertinoListTileNotched struct {
 	Title                    Node
@@ -1599,11 +1784,13 @@ type CupertinoMagnifier struct {
 	BorderRadius               *Radius
 	AdditionalFocalPointOffset *Offset
 	ClipBehavior               *string
+	InOutAnimation             *AnimationKey
 	MagnificationScale         *float64
 }
 
 // CupertinoMenuAnchor maps CupertinoMenuAnchor of package:flutter/cupertino.dart.
 type CupertinoMenuAnchor struct {
+	Controller               *MenuKey
 	OnOpen                   func()
 	OnClose                  func()
 	OnAnimationStatusChanged func(string)
@@ -1617,6 +1804,10 @@ type CupertinoMenuAnchor struct {
 	MenuChildren             []Node
 	Child                    Node
 	ChildFocusNode           *FocusKey
+}
+
+// CupertinoMenuDivider maps CupertinoMenuDivider of package:flutter/cupertino.dart.
+type CupertinoMenuDivider struct {
 }
 
 // CupertinoMenuItem maps CupertinoMenuItem of package:flutter/cupertino.dart.
@@ -1701,6 +1892,14 @@ type CupertinoPageScaffoldBackgroundColor struct {
 	Color Color
 }
 
+// CupertinoPageTransition maps CupertinoPageTransition of package:flutter/cupertino.dart.
+type CupertinoPageTransition struct {
+	PrimaryRouteAnimation   AnimationKey
+	SecondaryRouteAnimation AnimationKey
+	Child                   Node
+	LinearTransition        bool
+}
+
 // CupertinoPicker maps CupertinoPicker of package:flutter/cupertino.dart.
 //
 // ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
@@ -1764,6 +1963,7 @@ type CupertinoScrollbar struct {
 //
 // SmartDashesType takes "disabled", or "enabled".
 type CupertinoSearchTextField struct {
+	Controller                    *TextKey
 	OnChanged                     func(string)
 	OnSubmitted                   func(string)
 	Style                         *TextStyle
@@ -1794,6 +1994,14 @@ type CupertinoSearchTextField struct {
 	CursorHeight                  *float64
 	CursorOpacityAnimates         *bool
 	CursorColor                   *Color
+}
+
+// CupertinoSheetTransition maps CupertinoSheetTransition of package:flutter/cupertino.dart.
+type CupertinoSheetTransition struct {
+	PrimaryRouteAnimation   AnimationKey
+	SecondaryRouteAnimation AnimationKey
+	Child                   Node
+	LinearTransition        bool
 }
 
 // CupertinoSlider maps CupertinoSlider of package:flutter/cupertino.dart.
@@ -1858,6 +2066,11 @@ type CupertinoSliverNavigationBarSearch struct {
 	OnSearchableBottomTap         func(bool)
 }
 
+// CupertinoSliverRefreshControl maps CupertinoSliverRefreshControl of package:flutter/cupertino.dart.
+type CupertinoSliverRefreshControl struct {
+	OnRefresh Task
+}
+
 // CupertinoSwitch maps CupertinoSwitch of package:flutter/cupertino.dart.
 //
 // DragStartBehavior takes "down", or "start".
@@ -1881,6 +2094,16 @@ type CupertinoSwitch struct {
 	OnFocusChange      func(bool)
 	Autofocus          *bool
 	DragStartBehavior  *string
+}
+
+// CupertinoTabBar maps CupertinoTabBar of package:flutter/cupertino.dart.
+type CupertinoTabBar struct {
+	Items           []BarItem
+	OnTap           func(int)
+	CurrentIndex    *int
+	BackgroundColor *Color
+	ActiveColor     *Color
+	IconSize        *float64
 }
 
 // CupertinoTabScaffold maps CupertinoTabScaffold of package:flutter/cupertino.dart.
@@ -1929,6 +2152,8 @@ type CupertinoTabView struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoTextField struct {
+	GroupId                       *string
+	Controller                    *TextKey
 	FocusNode                     *FocusKey
 	Decoration                    *Decoration
 	Padding                       *Insets
@@ -2014,6 +2239,8 @@ type CupertinoTextField struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoTextFieldBorderless struct {
+	GroupId                       *string
+	Controller                    *TextKey
 	FocusNode                     *FocusKey
 	Decoration                    *Decoration
 	Padding                       *Insets
@@ -2089,6 +2316,7 @@ type CupertinoTextFieldBorderless struct {
 type CupertinoTextFormFieldRow struct {
 	Prefix                     Node
 	Padding                    *Insets
+	Controller                 *TextKey
 	InitialValue               *string
 	FocusNode                  *FocusKey
 	Decoration                 *Decoration
@@ -2140,6 +2368,11 @@ type CupertinoTextSelectionToolbar struct {
 type CupertinoTextSelectionToolbarButton struct {
 	OnPressed func()
 	Child     Node
+}
+
+// CupertinoTextSelectionToolbarButtonButtonItem maps CupertinoTextSelectionToolbarButton.buttonItem of package:flutter/cupertino.dart.
+type CupertinoTextSelectionToolbarButtonButtonItem struct {
+	ButtonItem MenuButtonItem
 }
 
 // CupertinoTextSelectionToolbarButtonText maps CupertinoTextSelectionToolbarButton.text of package:flutter/cupertino.dart.
@@ -2211,6 +2444,82 @@ type CustomScrollView struct {
 	HitTestBehavior         *string
 }
 
+// DataTable maps DataTable of package:flutter/material.dart.
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+type DataTable struct {
+	Columns                  []DataColumn
+	SortColumnIndex          *int
+	SortAscending            *bool
+	OnSelectAll              func(bool)
+	Decoration               *Decoration
+	DataRowColor             *StateColor
+	DataRowHeight            *float64
+	DataRowMinHeight         *float64
+	DataRowMaxHeight         *float64
+	DataTextStyle            *TextStyle
+	HeadingRowColor          *StateColor
+	HeadingRowHeight         *float64
+	HeadingTextStyle         *TextStyle
+	HorizontalMargin         *float64
+	ColumnSpacing            *float64
+	ShowCheckboxColumn       *bool
+	ShowBottomBorder         *bool
+	DividerThickness         *float64
+	Rows                     []DataRow
+	CheckboxHorizontalMargin *float64
+	ClipBehavior             *string
+}
+
+// DatePickerDialog maps DatePickerDialog of package:flutter/material.dart.
+//
+// InitialEntryMode takes "calendar", "input", "calendarOnly", or "inputOnly".
+//
+// InitialCalendarMode takes "day", or "year".
+type DatePickerDialog struct {
+	InitialDate                   *int
+	FirstDate                     int
+	LastDate                      int
+	CurrentDate                   *int
+	InitialEntryMode              *string
+	CancelText                    *string
+	ConfirmText                   *string
+	HelpText                      *string
+	InitialCalendarMode           *string
+	ErrorFormatText               *string
+	ErrorInvalidText              *string
+	FieldHintText                 *string
+	FieldLabelText                *string
+	RestorationId                 *string
+	OnDatePickerModeChange        func(string)
+	SwitchToInputEntryModeIcon    Node
+	SwitchToCalendarEntryModeIcon Node
+}
+
+// DateRangePickerDialog maps DateRangePickerDialog of package:flutter/material.dart.
+//
+// InitialEntryMode takes "calendar", "input", "calendarOnly", or "inputOnly".
+type DateRangePickerDialog struct {
+	FirstDate                     int
+	LastDate                      int
+	CurrentDate                   *int
+	InitialEntryMode              *string
+	HelpText                      *string
+	CancelText                    *string
+	ConfirmText                   *string
+	SaveText                      *string
+	ErrorInvalidRangeText         *string
+	ErrorFormatText               *string
+	ErrorInvalidText              *string
+	FieldStartHintText            *string
+	FieldEndHintText              *string
+	FieldStartLabelText           *string
+	FieldEndLabelText             *string
+	RestorationId                 *string
+	SwitchToInputEntryModeIcon    Node
+	SwitchToCalendarEntryModeIcon Node
+}
+
 // DecoratedBox maps DecoratedBox of package:flutter/widgets.dart.
 //
 // Position takes "background", or "foreground".
@@ -2235,6 +2544,10 @@ type DefaultSelectionStyle struct {
 	SelectionColor *Color
 	MouseCursor    *string
 	Child          Node
+}
+
+// DefaultSelectionStyleFallback maps DefaultSelectionStyle.fallback of package:flutter/widgets.dart.
+type DefaultSelectionStyleFallback struct {
 }
 
 // DefaultTabController maps DefaultTabController of package:flutter/material.dart.
@@ -2267,6 +2580,10 @@ type DefaultTextStyle struct {
 	Child          Node
 }
 
+// DefaultTextStyleFallback maps DefaultTextStyle.fallback of package:flutter/widgets.dart.
+type DefaultTextStyleFallback struct {
+}
+
 // DesktopTextSelectionToolbar maps DesktopTextSelectionToolbar of package:flutter/material.dart.
 type DesktopTextSelectionToolbar struct {
 	Anchor   Offset
@@ -2277,6 +2594,11 @@ type DesktopTextSelectionToolbar struct {
 type DesktopTextSelectionToolbarButton struct {
 	OnPressed func()
 	Child     Node
+}
+
+// DeviceOrientationBuilder maps DeviceOrientationBuilder of package:flutter/widgets.dart.
+type DeviceOrientationBuilder struct {
+	Builder OrientBuilder
 }
 
 // Dialog maps Dialog of package:flutter/material.dart.
@@ -2413,6 +2735,10 @@ type DrawerButton struct {
 	OnPressed func()
 }
 
+// DrawerButtonIcon maps DrawerButtonIcon of package:flutter/material.dart.
+type DrawerButtonIcon struct {
+}
+
 // DrawerController maps DrawerController of package:flutter/material.dart.
 //
 // Alignment takes "start", or "end".
@@ -2450,6 +2776,82 @@ type DropdownMenuItem struct {
 	Enabled   *bool
 	Alignment *string
 	Child     Node
+}
+
+// EditableText maps EditableText of package:flutter/widgets.dart.
+//
+// SmartDashesType takes "disabled", or "enabled".
+//
+// SmartQuotesType takes "disabled", or "enabled".
+//
+// TextAlign takes "left", "right", "center", "justify", "start", or "end".
+//
+// TextDirection takes "rtl", or "ltr".
+//
+// TextWidthBasis takes "parent", or "longestLine".
+//
+// TextInputAction takes "none", "unspecified", "done", "go", "search", "send", "next", "previous", "continueAction", "join", "route", "emergencyCall", or "newline".
+//
+// TextCapitalization takes "words", "sentences", "characters", or "none".
+//
+// KeyboardAppearance takes "dark", or "light".
+//
+// DragStartBehavior takes "down", or "start".
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+type EditableText struct {
+	Controller                    TextKey
+	FocusNode                     FocusKey
+	ReadOnly                      *bool
+	ObscuringCharacter            *string
+	ObscureText                   *bool
+	Autocorrect                   *bool
+	SmartDashesType               *string
+	SmartQuotesType               *string
+	EnableSuggestions             *bool
+	Style                         TextStyle
+	CursorColor                   Color
+	BackgroundCursorColor         Color
+	TextAlign                     *string
+	TextDirection                 *string
+	Locale                        *string
+	TextScaleFactor               *float64
+	MaxLines                      *int
+	MinLines                      *int
+	Expands                       *bool
+	ForceLine                     *bool
+	TextWidthBasis                *string
+	Autofocus                     *bool
+	ShowCursor                    *bool
+	ShowSelectionHandles          *bool
+	SelectionColor                *Color
+	TextInputAction               *string
+	TextCapitalization            *string
+	OnChanged                     func(string)
+	OnEditingComplete             func()
+	OnSubmitted                   func(string)
+	OnSelectionHandleTapped       func()
+	GroupId                       *string
+	MouseCursor                   *string
+	RendererIgnoresPointer        *bool
+	CursorWidth                   *float64
+	CursorHeight                  *float64
+	CursorOpacityAnimates         *bool
+	CursorOffset                  *Offset
+	PaintCursorAboveText          *bool
+	ScrollPadding                 *Insets
+	KeyboardAppearance            *string
+	DragStartBehavior             *string
+	EnableInteractiveSelection    *bool
+	SelectAllOnFocus              *bool
+	ScrollController              *ScrollKey
+	ScrollPhysics                 *string
+	AutocorrectionTextRectColor   *Color
+	ClipBehavior                  *string
+	RestorationId                 *string
+	ScribbleEnabled               *bool
+	EnableIMEPersonalizedLearning *bool
+	EnableInlinePrediction        *bool
 }
 
 // ElevatedButton maps ElevatedButton of package:flutter/material.dart.
@@ -2498,6 +2900,15 @@ type EndDrawerButton struct {
 	Color     *Color
 	Style     *ButtonStyle
 	OnPressed func()
+}
+
+// EndDrawerButtonIcon maps EndDrawerButtonIcon of package:flutter/material.dart.
+type EndDrawerButtonIcon struct {
+}
+
+// ErrorWidget maps ErrorWidget of package:flutter/widgets.dart.
+type ErrorWidget struct {
+	Exception string
 }
 
 // ErrorWidgetWithDetails maps ErrorWidget.withDetails of package:flutter/widgets.dart.
@@ -2553,11 +2964,12 @@ type ExpansionPanelList struct {
 
 // ExpansionPanelListRadio maps ExpansionPanelList.radio of package:flutter/material.dart.
 type ExpansionPanelListRadio struct {
-	AnimationDuration *int
-	DividerColor      *Color
-	Elevation         *float64
-	ExpandIconColor   *Color
-	MaterialGapSize   *float64
+	AnimationDuration     *int
+	InitialOpenPanelValue *string
+	DividerColor          *Color
+	Elevation             *float64
+	ExpandIconColor       *Color
+	MaterialGapSize       *float64
 }
 
 // ExpansionTile maps ExpansionTile of package:flutter/material.dart.
@@ -2679,6 +3091,56 @@ type FadeInImageAssetNetwork struct {
 	PlaceholderCacheHeight    *int
 	ImageCacheWidth           *int
 	ImageCacheHeight          *int
+}
+
+// FadeInImageMemoryNetwork maps FadeInImage.memoryNetwork of package:flutter/widgets.dart.
+//
+// Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
+//
+// PlaceholderColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
+//
+// PlaceholderFit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// FilterQuality takes "none", "low", "medium", or "high".
+//
+// PlaceholderFilterQuality takes "none", "low", "medium", or "high".
+//
+// Repeat takes "repeat", "repeatX", "repeatY", or "noRepeat".
+type FadeInImageMemoryNetwork struct {
+	Placeholder               []byte
+	Image                     string
+	PlaceholderScale          *float64
+	ImageScale                *float64
+	ExcludeFromSemantics      *bool
+	ImageSemanticLabel        *string
+	FadeOutCurve              *string
+	FadeInCurve               *string
+	Width                     *float64
+	Height                    *float64
+	Fit                       *string
+	Color                     *Color
+	ColorBlendMode            *string
+	PlaceholderColor          *Color
+	PlaceholderColorBlendMode *string
+	PlaceholderFit            *string
+	FilterQuality             *string
+	PlaceholderFilterQuality  *string
+	Alignment                 *string
+	Repeat                    *string
+	MatchTextDirection        *bool
+	PlaceholderCacheWidth     *int
+	PlaceholderCacheHeight    *int
+	ImageCacheWidth           *int
+	ImageCacheHeight          *int
+}
+
+// FadeTransition maps FadeTransition of package:flutter/widgets.dart.
+type FadeTransition struct {
+	Opacity                AnimationKey
+	AlwaysIncludeSemantics *bool
+	Child                  Node
 }
 
 // FilledButton maps FilledButton of package:flutter/material.dart.
@@ -2926,6 +3388,7 @@ type FloatingActionButton struct {
 	FocusColor            *Color
 	HoverColor            *Color
 	SplashColor           *Color
+	HeroTag               *string
 	Elevation             *float64
 	FocusElevation        *float64
 	HoverElevation        *float64
@@ -2954,6 +3417,7 @@ type FloatingActionButtonExtended struct {
 	BackgroundColor          *Color
 	FocusColor               *Color
 	HoverColor               *Color
+	HeroTag                  *string
 	Elevation                *float64
 	FocusElevation           *float64
 	HoverElevation           *float64
@@ -2989,6 +3453,7 @@ type FloatingActionButtonLarge struct {
 	FocusColor            *Color
 	HoverColor            *Color
 	SplashColor           *Color
+	HeroTag               *string
 	Elevation             *float64
 	FocusElevation        *float64
 	HoverElevation        *float64
@@ -3017,6 +3482,7 @@ type FloatingActionButtonSmall struct {
 	FocusColor            *Color
 	HoverColor            *Color
 	SplashColor           *Color
+	HeroTag               *string
 	Elevation             *float64
 	FocusElevation        *float64
 	HoverElevation        *float64
@@ -3059,6 +3525,7 @@ type Focus struct {
 
 // FocusScope maps FocusScope of package:flutter/widgets.dart.
 type FocusScope struct {
+	Node                      *ScopeKey
 	ParentNode                *FocusKey
 	Child                     Node
 	Autofocus                 *bool
@@ -3069,6 +3536,14 @@ type FocusScope struct {
 	IncludeSemantics          *bool
 	DescendantsAreFocusable   *bool
 	DescendantsAreTraversable *bool
+}
+
+// FocusScopeWithExternalFocusNode maps FocusScope.withExternalFocusNode of package:flutter/widgets.dart.
+type FocusScopeWithExternalFocusNode struct {
+	Child          Node
+	FocusScopeNode ScopeKey
+	ParentNode     *FocusKey
+	OnFocusChange  func(bool)
 }
 
 // FocusTraversalGroup maps FocusTraversalGroup of package:flutter/widgets.dart.
@@ -3109,6 +3584,7 @@ type Form struct {
 	Child            Node
 	CanPop           *bool
 	OnPopInvoked     func(bool)
+	OnWillPop        Ask
 	OnChanged        func()
 	AutovalidateMode *string
 }
@@ -3197,6 +3673,73 @@ type GridTileBar struct {
 	Trailing        Node
 }
 
+// GridView maps GridView of package:flutter/widgets.dart.
+//
+// ScrollDirection takes "horizontal", or "vertical".
+//
+// DragStartBehavior takes "down", or "start".
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+//
+// KeyboardDismissBehavior takes "manual", or "onDrag".
+//
+// HitTestBehavior takes "deferToChild", "opaque", or "translucent".
+type GridView struct {
+	ScrollDirection         *string
+	Reverse                 *bool
+	Controller              *ScrollKey
+	Primary                 *bool
+	Physics                 *string
+	ShrinkWrap              *bool
+	Padding                 *Insets
+	GridDelegate            GridSpec
+	AddAutomaticKeepAlives  *bool
+	AddRepaintBoundaries    *bool
+	AddSemanticIndexes      *bool
+	CacheExtent             *float64
+	Children                []Node
+	SemanticChildCount      *int
+	DragStartBehavior       *string
+	ClipBehavior            *string
+	KeyboardDismissBehavior *string
+	RestorationId           *string
+	HitTestBehavior         *string
+}
+
+// GridViewBuilder maps GridView.builder of package:flutter/widgets.dart.
+//
+// ScrollDirection takes "horizontal", or "vertical".
+//
+// DragStartBehavior takes "down", or "start".
+//
+// KeyboardDismissBehavior takes "manual", or "onDrag".
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+//
+// HitTestBehavior takes "deferToChild", "opaque", or "translucent".
+type GridViewBuilder struct {
+	ScrollDirection         *string
+	Reverse                 *bool
+	Controller              *ScrollKey
+	Primary                 *bool
+	Physics                 *string
+	ShrinkWrap              *bool
+	Padding                 *Insets
+	GridDelegate            GridSpec
+	ItemBuilder             ItemBuilder
+	ItemCount               *int
+	AddAutomaticKeepAlives  *bool
+	AddRepaintBoundaries    *bool
+	AddSemanticIndexes      *bool
+	CacheExtent             *float64
+	SemanticChildCount      *int
+	DragStartBehavior       *string
+	KeyboardDismissBehavior *string
+	RestorationId           *string
+	ClipBehavior            *string
+	HitTestBehavior         *string
+}
+
 // GridViewCount maps GridView.count of package:flutter/widgets.dart.
 //
 // ScrollDirection takes "horizontal", or "vertical".
@@ -3226,6 +3769,36 @@ type GridViewCount struct {
 	AddSemanticIndexes      *bool
 	CacheExtent             *float64
 	Children                []Node
+	SemanticChildCount      *int
+	DragStartBehavior       *string
+	KeyboardDismissBehavior *string
+	RestorationId           *string
+	ClipBehavior            *string
+	HitTestBehavior         *string
+}
+
+// GridViewCustom maps GridView.custom of package:flutter/widgets.dart.
+//
+// ScrollDirection takes "horizontal", or "vertical".
+//
+// DragStartBehavior takes "down", or "start".
+//
+// KeyboardDismissBehavior takes "manual", or "onDrag".
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+//
+// HitTestBehavior takes "deferToChild", "opaque", or "translucent".
+type GridViewCustom struct {
+	ScrollDirection         *string
+	Reverse                 *bool
+	Controller              *ScrollKey
+	Primary                 *bool
+	Physics                 *string
+	ShrinkWrap              *bool
+	Padding                 *Insets
+	GridDelegate            GridSpec
+	ChildrenDelegate        SliverChildren
+	CacheExtent             *float64
 	SemanticChildCount      *int
 	DragStartBehavior       *string
 	KeyboardDismissBehavior *string
@@ -3271,6 +3844,15 @@ type GridViewExtent struct {
 	HitTestBehavior         *string
 }
 
+// Hero maps Hero of package:flutter/widgets.dart.
+type Hero struct {
+	Tag                      string
+	TransitionOnUserGestures *bool
+	Curve                    *string
+	ReverseCurve             *string
+	Child                    Node
+}
+
 // HeroControllerScopeNone maps HeroControllerScope.none of package:flutter/widgets.dart.
 type HeroControllerScopeNone struct {
 	Child Node
@@ -3288,6 +3870,7 @@ type HeroMode struct {
 type HtmlElementView struct {
 	ViewType              string
 	OnPlatformViewCreated func(int)
+	CreationParams        *string
 	HitTestBehavior       *string
 }
 
@@ -3469,10 +4052,12 @@ type Image struct {
 	Width                *float64
 	Height               *float64
 	Color                *Color
+	Opacity              *AnimationKey
 	ColorBlendMode       *string
 	Fit                  *string
 	Alignment            *string
 	Repeat               *string
+	CenterSlice          *Rect
 	MatchTextDirection   *bool
 	GaplessPlayback      *bool
 	IsAntiAlias          *bool
@@ -3496,10 +4081,12 @@ type ImageAsset struct {
 	Width                *float64
 	Height               *float64
 	Color                *Color
+	Opacity              *AnimationKey
 	ColorBlendMode       *string
 	Fit                  *string
 	Alignment            *string
 	Repeat               *string
+	CenterSlice          *Rect
 	MatchTextDirection   *bool
 	GaplessPlayback      *bool
 	IsAntiAlias          *bool
@@ -3516,6 +4103,37 @@ type ImageIcon struct {
 	Color             *Color
 	SemanticLabel     *string
 	UseOriginalColors *bool
+}
+
+// ImageMemory maps Image.memory of package:flutter/widgets.dart.
+//
+// ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
+//
+// Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// Repeat takes "repeat", "repeatX", "repeatY", or "noRepeat".
+//
+// FilterQuality takes "none", "low", "medium", or "high".
+type ImageMemory struct {
+	Bytes                []byte
+	Scale                *float64
+	SemanticLabel        *string
+	ExcludeFromSemantics *bool
+	Width                *float64
+	Height               *float64
+	Color                *Color
+	Opacity              *AnimationKey
+	ColorBlendMode       *string
+	Fit                  *string
+	Alignment            *string
+	Repeat               *string
+	CenterSlice          *Rect
+	MatchTextDirection   *bool
+	GaplessPlayback      *bool
+	IsAntiAlias          *bool
+	FilterQuality        *string
+	CacheWidth           *int
+	CacheHeight          *int
 }
 
 // ImageNetwork maps Image.network of package:flutter/widgets.dart.
@@ -3537,10 +4155,12 @@ type ImageNetwork struct {
 	Width                  *float64
 	Height                 *float64
 	Color                  *Color
+	Opacity                *AnimationKey
 	ColorBlendMode         *string
 	Fit                    *string
 	Alignment              *string
 	Repeat                 *string
+	CenterSlice            *Rect
 	MatchTextDirection     *bool
 	GaplessPlayback        *bool
 	FilterQuality          *string
@@ -3598,6 +4218,7 @@ type InkImage struct {
 	Image              ImageSource
 	Fit                *string
 	Alignment          *string
+	CenterSlice        *Rect
 	Repeat             *string
 	MatchTextDirection *bool
 	Width              *float64
@@ -3716,6 +4337,22 @@ type InputChip struct {
 	MouseCursor                *string
 }
 
+// InputDatePickerFormField maps InputDatePickerFormField of package:flutter/material.dart.
+type InputDatePickerFormField struct {
+	InitialDate      *int
+	FirstDate        int
+	LastDate         int
+	OnDateSubmitted  func(int)
+	OnDateSaved      func(int)
+	ErrorFormatText  *string
+	ErrorInvalidText *string
+	FieldHintText    *string
+	FieldLabelText   *string
+	Autofocus        *bool
+	AcceptEmptyDate  *bool
+	FocusNode        *FocusKey
+}
+
 // InputDecorationTheme maps InputDecorationTheme of package:flutter/material.dart.
 //
 // FloatingLabelBehavior takes "never", "auto", or "always".
@@ -3808,6 +4445,17 @@ type KeyedSubtree struct {
 type KeyedSubtreeWrap struct {
 	Child      Node
 	ChildIndex int
+}
+
+// LayoutBuilder maps LayoutBuilder of package:flutter/widgets.dart.
+type LayoutBuilder struct {
+	Builder BoxBuilder
+}
+
+// LayoutId maps LayoutId of package:flutter/widgets.dart.
+type LayoutId struct {
+	Id    string
+	Child Node
 }
 
 // LicensePage maps LicensePage of package:flutter/material.dart.
@@ -3984,6 +4632,37 @@ type ListViewBuilder struct {
 	HitTestBehavior         *string
 }
 
+// ListViewCustom maps ListView.custom of package:flutter/widgets.dart.
+//
+// ScrollDirection takes "horizontal", or "vertical".
+//
+// DragStartBehavior takes "down", or "start".
+//
+// KeyboardDismissBehavior takes "manual", or "onDrag".
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+//
+// HitTestBehavior takes "deferToChild", "opaque", or "translucent".
+type ListViewCustom struct {
+	ScrollDirection         *string
+	Reverse                 *bool
+	Controller              *ScrollKey
+	Primary                 *bool
+	Physics                 *string
+	ShrinkWrap              *bool
+	Padding                 *Insets
+	ItemExtent              *float64
+	PrototypeItem           Node
+	ChildrenDelegate        SliverChildren
+	CacheExtent             *float64
+	SemanticChildCount      *int
+	DragStartBehavior       *string
+	KeyboardDismissBehavior *string
+	RestorationId           *string
+	ClipBehavior            *string
+	HitTestBehavior         *string
+}
+
 // ListViewSeparated maps ListView.separated of package:flutter/widgets.dart.
 //
 // ScrollDirection takes "horizontal", or "vertical".
@@ -4121,6 +4800,10 @@ type MaterialApp struct {
 	InitialRoute                  *string
 	Title                         *string
 	Color                         *Color
+	Theme                         *ThemeStyle
+	DarkTheme                     *ThemeStyle
+	HighContrastTheme             *ThemeStyle
+	HighContrastDarkTheme         *ThemeStyle
 	ThemeMode                     *string
 	ThemeAnimationDuration        *int
 	ThemeAnimationCurve           *string
@@ -4141,6 +4824,10 @@ type MaterialApp struct {
 type MaterialAppRouter struct {
 	Title                         *string
 	Color                         *Color
+	Theme                         *ThemeStyle
+	DarkTheme                     *ThemeStyle
+	HighContrastTheme             *ThemeStyle
+	HighContrastDarkTheme         *ThemeStyle
 	ThemeMode                     *string
 	ThemeAnimationDuration        *int
 	ThemeAnimationCurve           *string
@@ -4173,6 +4860,7 @@ type MaterialBanner struct {
 	LeadingPadding     *Insets
 	ForceActionsBelow  *bool
 	OverflowAlignment  *string
+	Animation          *AnimationKey
 	OnVisible          func()
 	MinActionBarHeight *float64
 }
@@ -4241,9 +4929,11 @@ type MenuAcceleratorLabel struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type MenuAnchor struct {
+	Controller               *MenuKey
 	ChildFocusNode           *FocusKey
 	AlignmentOffset          *Offset
 	ReservedPadding          *Insets
+	LayerLink                *LinkKey
 	ClipBehavior             *string
 	AnchorTapClosesMenu      *bool
 	ConsumeOutsideTap        *bool
@@ -4262,6 +4952,7 @@ type MenuAnchor struct {
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type MenuBar struct {
 	ClipBehavior *string
+	Controller   *MenuKey
 	Children     []Node
 }
 
@@ -4385,6 +5076,45 @@ type NavigationDrawerDestination struct {
 	Enabled         *bool
 }
 
+// NavigationIndicator maps NavigationIndicator of package:flutter/material.dart.
+type NavigationIndicator struct {
+	Animation    AnimationKey
+	Color        *Color
+	BorderRadius *Radius
+	Shape        *Shape
+}
+
+// NavigationRail maps NavigationRail of package:flutter/material.dart.
+//
+// LabelType takes "none", "selected", or "all".
+//
+// MainAxisAlignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
+type NavigationRail struct {
+	BackgroundColor          *Color
+	Extended                 *bool
+	Leading                  Node
+	Trailing                 Node
+	Destinations             []RailItem
+	SelectedIndex            int
+	OnDestinationSelected    func(int)
+	Elevation                *float64
+	GroupAlignment           *float64
+	LabelType                *string
+	UnselectedLabelTextStyle *TextStyle
+	SelectedLabelTextStyle   *TextStyle
+	UnselectedIconTheme      *IconStyle
+	SelectedIconTheme        *IconStyle
+	MinWidth                 *float64
+	MinExtendedWidth         *float64
+	UseIndicator             *bool
+	IndicatorColor           *Color
+	IndicatorShape           *Shape
+	LeadingAtTop             *bool
+	TrailingAtBottom         *bool
+	Scrollable               *bool
+	MainAxisAlignment        *string
+}
+
 // NavigationToolbar maps NavigationToolbar of package:flutter/widgets.dart.
 type NavigationToolbar struct {
 	Leading      Node
@@ -4417,6 +5147,29 @@ type NavigatorPopHandler struct {
 	Child   Node
 }
 
+// NestedScrollView maps NestedScrollView of package:flutter/widgets.dart.
+//
+// ScrollDirection takes "horizontal", or "vertical".
+//
+// DragStartBehavior takes "down", or "start".
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+//
+// HitTestBehavior takes "deferToChild", "opaque", or "translucent".
+type NestedScrollView struct {
+	Controller          *ScrollKey
+	ScrollDirection     *string
+	Reverse             *bool
+	Physics             *string
+	HeaderSliverBuilder SliverBuilder
+	Body                Node
+	DragStartBehavior   *string
+	FloatHeaderSlivers  *bool
+	ClipBehavior        *string
+	HitTestBehavior     *string
+	RestorationId       *string
+}
+
 // NotificationListener maps NotificationListener of package:flutter/widgets.dart.
 type NotificationListener struct {
 	Child Node
@@ -4433,6 +5186,11 @@ type Opacity struct {
 	Opacity                float64
 	AlwaysIncludeSemantics *bool
 	Child                  Node
+}
+
+// OrientationBuilder maps OrientationBuilder of package:flutter/widgets.dart.
+type OrientationBuilder struct {
+	Builder OrientBuilder
 }
 
 // OutlinedButton maps OutlinedButton of package:flutter/material.dart.
@@ -4511,10 +5269,33 @@ type Overlay struct {
 	AlwaysSizeToContent *bool
 }
 
+// OverlayPortal maps OverlayPortal of package:flutter/widgets.dart.
+//
+// OverlayLocation takes "nearestOverlay", or "rootOverlay".
+type OverlayPortal struct {
+	Controller          OverlayKey
+	OverlayChildBuilder Builder
+	OverlayLocation     *string
+	Child               Node
+}
+
+// OverlayPortalTargetsRootOverlay maps OverlayPortal.targetsRootOverlay of package:flutter/widgets.dart.
+type OverlayPortalTargetsRootOverlay struct {
+	Controller          OverlayKey
+	OverlayChildBuilder Builder
+	Child               Node
+}
+
 // Padding maps Padding of package:flutter/widgets.dart.
 type Padding struct {
 	Padding Insets
 	Child   Node
+}
+
+// PageStorage maps PageStorage of package:flutter/widgets.dart.
+type PageStorage struct {
+	Bucket StorageKey
+	Child  Node
 }
 
 // PageView maps PageView of package:flutter/widgets.dart.
@@ -4566,9 +5347,37 @@ type PageViewBuilder struct {
 	PadEnds                *bool
 }
 
+// PageViewCustom maps PageView.custom of package:flutter/widgets.dart.
+//
+// ScrollDirection takes "horizontal", or "vertical".
+//
+// DragStartBehavior takes "down", or "start".
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+//
+// HitTestBehavior takes "deferToChild", "opaque", or "translucent".
+type PageViewCustom struct {
+	ScrollDirection        *string
+	Reverse                *bool
+	Physics                *string
+	PageSnapping           *bool
+	OnPageChanged          func(int)
+	ChildrenDelegate       SliverChildren
+	DragStartBehavior      *string
+	AllowImplicitScrolling *bool
+	RestorationId          *string
+	ClipBehavior           *string
+	HitTestBehavior        *string
+	PadEnds                *bool
+}
+
 // PerformanceOverlay maps PerformanceOverlay of package:flutter/widgets.dart.
 type PerformanceOverlay struct {
 	OptionsMask *int
+}
+
+// PerformanceOverlayAllEnabled maps PerformanceOverlay.allEnabled of package:flutter/widgets.dart.
+type PerformanceOverlayAllEnabled struct {
 }
 
 // PhysicalModel maps PhysicalModel of package:flutter/widgets.dart.
@@ -4666,6 +5475,18 @@ type PositionedFill struct {
 	Child  Node
 }
 
+// PositionedFromRect maps Positioned.fromRect of package:flutter/widgets.dart.
+type PositionedFromRect struct {
+	Rect  Rect
+	Child Node
+}
+
+// PositionedFromRelativeRect maps Positioned.fromRelativeRect of package:flutter/widgets.dart.
+type PositionedFromRelativeRect struct {
+	Rect  Rect
+	Child Node
+}
+
 // PreferredSize maps PreferredSize of package:flutter/widgets.dart.
 type PreferredSize struct {
 	PreferredSize Size
@@ -4684,6 +5505,22 @@ type PrimaryScrollController struct {
 // PrimaryScrollControllerNone maps PrimaryScrollController.none of package:flutter/widgets.dart.
 type PrimaryScrollControllerNone struct {
 	Child Node
+}
+
+// RangeSlider maps RangeSlider of package:flutter/material.dart.
+type RangeSlider struct {
+	Values        Range
+	OnChanged     func(float64, float64)
+	OnChangeStart func(float64, float64)
+	OnChangeEnd   func(float64, float64)
+	Min           *float64
+	Max           *float64
+	Divisions     *int
+	ActiveColor   *Color
+	InactiveColor *Color
+	OverlayColor  *StateColor
+	Padding       *Insets
+	Year2023      *bool
 }
 
 // RawChip maps RawChip of package:flutter/material.dart.
@@ -4756,10 +5593,12 @@ type RawImage struct {
 	Height             *float64
 	Scale              *float64
 	Color              *Color
+	Opacity            *AnimationKey
 	ColorBlendMode     *string
 	Fit                *string
 	Alignment          *string
 	Repeat             *string
+	CenterSlice        *Rect
 	MatchTextDirection *bool
 	InvertColors       *bool
 	FilterQuality      *string
@@ -4818,6 +5657,12 @@ type RawMaterialButton struct {
 	EnableFeedback        *bool
 }
 
+// RawMenuAnchorGroup maps RawMenuAnchorGroup of package:flutter/widgets.dart.
+type RawMenuAnchorGroup struct {
+	Child      Node
+	Controller MenuKey
+}
+
 // RawScrollbar maps RawScrollbar of package:flutter/widgets.dart.
 //
 // ScrollbarOrientation takes "left", "right", "top", or "bottom".
@@ -4837,6 +5682,53 @@ type RawScrollbar struct {
 	MainAxisMargin       *float64
 	CrossAxisMargin      *float64
 	Padding              *Insets
+}
+
+// RefreshIndicator maps RefreshIndicator of package:flutter/material.dart.
+//
+// TriggerMode takes "anywhere", or "onEdge".
+type RefreshIndicator struct {
+	Displacement    *float64
+	EdgeOffset      *float64
+	OnRefresh       Task
+	Color           *Color
+	BackgroundColor *Color
+	SemanticsLabel  *string
+	SemanticsValue  *string
+	StrokeWidth     *float64
+	TriggerMode     *string
+	Elevation       *float64
+	Child           Node
+}
+
+// RefreshIndicatorAdaptive maps RefreshIndicator.adaptive of package:flutter/material.dart.
+//
+// TriggerMode takes "anywhere", or "onEdge".
+type RefreshIndicatorAdaptive struct {
+	Displacement    *float64
+	EdgeOffset      *float64
+	OnRefresh       Task
+	Color           *Color
+	BackgroundColor *Color
+	SemanticsLabel  *string
+	SemanticsValue  *string
+	StrokeWidth     *float64
+	TriggerMode     *string
+	Elevation       *float64
+	Child           Node
+}
+
+// RefreshIndicatorNoSpinner maps RefreshIndicator.noSpinner of package:flutter/material.dart.
+//
+// TriggerMode takes "anywhere", or "onEdge".
+type RefreshIndicatorNoSpinner struct {
+	OnRefresh      Task
+	OnStatusChange func(string)
+	SemanticsLabel *string
+	SemanticsValue *string
+	TriggerMode    *string
+	Elevation      *float64
+	Child          Node
 }
 
 // RefreshProgressIndicator maps RefreshProgressIndicator of package:flutter/material.dart.
@@ -4990,6 +5882,28 @@ type RestorationScope struct {
 	Child         Node
 }
 
+// RichText maps RichText of package:flutter/widgets.dart.
+//
+// TextAlign takes "left", "right", "center", "justify", "start", or "end".
+//
+// TextDirection takes "rtl", or "ltr".
+//
+// Overflow takes "clip", "fade", "ellipsis", or "visible".
+//
+// TextWidthBasis takes "parent", or "longestLine".
+type RichText struct {
+	Text            Span
+	TextAlign       *string
+	TextDirection   *string
+	SoftWrap        *bool
+	Overflow        *string
+	TextScaleFactor *float64
+	MaxLines        *int
+	Locale          *string
+	TextWidthBasis  *string
+	SelectionColor  *Color
+}
+
 // RootRestorationScope maps RootRestorationScope of package:flutter/widgets.dart.
 type RootRestorationScope struct {
 	RestorationId string
@@ -5006,6 +5920,16 @@ type RootWidget struct {
 type RotatedBox struct {
 	QuarterTurns int
 	Child        Node
+}
+
+// RotationTransition maps RotationTransition of package:flutter/widgets.dart.
+//
+// FilterQuality takes "none", "low", "medium", or "high".
+type RotationTransition struct {
+	Turns         AnimationKey
+	Alignment     *string
+	FilterQuality *string
+	Child         Node
 }
 
 // Row maps Row of package:flutter/widgets.dart.
@@ -5077,6 +6001,16 @@ type ScaffoldMessenger struct {
 	Child Node
 }
 
+// ScaleTransition maps ScaleTransition of package:flutter/widgets.dart.
+//
+// FilterQuality takes "none", "low", "medium", or "high".
+type ScaleTransition struct {
+	Scale         AnimationKey
+	Alignment     *string
+	FilterQuality *string
+	Child         Node
+}
+
 // ScrollNotificationObserver maps ScrollNotificationObserver of package:flutter/widgets.dart.
 type ScrollNotificationObserver struct {
 	Child Node
@@ -5105,6 +6039,7 @@ type Scrollbar struct {
 //
 // SmartQuotesType takes "disabled", or "enabled".
 type SearchBar struct {
+	Controller         *TextKey
 	FocusNode          *FocusKey
 	HintText           *string
 	Leading            Node
@@ -5137,6 +6072,38 @@ type SearchBar struct {
 // TextWidthBasis takes "parent", or "longestLine".
 type SelectableText struct {
 	Data                       string
+	FocusNode                  *FocusKey
+	Style                      *TextStyle
+	TextAlign                  *string
+	TextDirection              *string
+	TextScaleFactor            *float64
+	ShowCursor                 *bool
+	Autofocus                  *bool
+	MinLines                   *int
+	MaxLines                   *int
+	CursorWidth                *float64
+	CursorHeight               *float64
+	CursorColor                *Color
+	SelectionColor             *Color
+	DragStartBehavior          *string
+	EnableInteractiveSelection *bool
+	OnTap                      func()
+	ScrollPhysics              *string
+	SemanticsLabel             *string
+	TextWidthBasis             *string
+}
+
+// SelectableTextRich maps SelectableText.rich of package:flutter/material.dart.
+//
+// TextAlign takes "left", "right", "center", "justify", "start", or "end".
+//
+// TextDirection takes "rtl", or "ltr".
+//
+// DragStartBehavior takes "down", or "start".
+//
+// TextWidthBasis takes "parent", or "longestLine".
+type SelectableTextRich struct {
+	TextSpan                   Span
 	FocusNode                  *FocusKey
 	Style                      *TextStyle
 	TextAlign                  *string
@@ -5213,6 +6180,8 @@ type Semantics struct {
 	MaxValueLength                  *int
 	CurrentValueLength              *int
 	Identifier                      *string
+	TraversalParentIdentifier       *string
+	TraversalChildIdentifier        *string
 	Label                           *string
 	Value                           *string
 	IncreasedValue                  *string
@@ -5322,6 +6291,18 @@ type SingleChildScrollView struct {
 // SizeChangedLayoutNotifier maps SizeChangedLayoutNotifier of package:flutter/widgets.dart.
 type SizeChangedLayoutNotifier struct {
 	Child Node
+}
+
+// SizeTransition maps SizeTransition of package:flutter/widgets.dart.
+//
+// Axis takes "horizontal", or "vertical".
+type SizeTransition struct {
+	Axis                     *string
+	SizeFactor               AnimationKey
+	AxisAlignment            *float64
+	Alignment                *string
+	FixedCrossAxisSizeFactor *float64
+	Child                    Node
 }
 
 // SizedBox maps SizedBox of package:flutter/widgets.dart.
@@ -5458,6 +6439,7 @@ type SliverAppBar struct {
 	Snap                      *bool
 	Stretch                   *bool
 	StretchTriggerOffset      *float64
+	OnStretchTrigger          Task
 	Shape                     *Shape
 	ToolbarHeight             *float64
 	LeadingWidth              *float64
@@ -5500,6 +6482,7 @@ type SliverAppBarLarge struct {
 	Snap                      *bool
 	Stretch                   *bool
 	StretchTriggerOffset      *float64
+	OnStretchTrigger          Task
 	Shape                     *Shape
 	LeadingWidth              *float64
 	ToolbarTextStyle          *TextStyle
@@ -5541,6 +6524,7 @@ type SliverAppBarMedium struct {
 	Snap                      *bool
 	Stretch                   *bool
 	StretchTriggerOffset      *float64
+	OnStretchTrigger          Task
 	Shape                     *Shape
 	LeadingWidth              *float64
 	ToolbarTextStyle          *TextStyle
@@ -5573,11 +6557,32 @@ type SliverEnsureSemantics struct {
 	Sliver Node
 }
 
+// SliverFadeTransition maps SliverFadeTransition of package:flutter/widgets.dart.
+type SliverFadeTransition struct {
+	Opacity                AnimationKey
+	AlwaysIncludeSemantics *bool
+	Sliver                 Node
+}
+
 // SliverFillRemaining maps SliverFillRemaining of package:flutter/widgets.dart.
 type SliverFillRemaining struct {
 	Child          Node
 	HasScrollBody  *bool
 	FillOverscroll *bool
+}
+
+// SliverFillViewport maps SliverFillViewport of package:flutter/widgets.dart.
+type SliverFillViewport struct {
+	Delegate               SliverChildren
+	ViewportFraction       *float64
+	PadEnds                *bool
+	AllowImplicitScrolling *bool
+}
+
+// SliverFixedExtentList maps SliverFixedExtentList of package:flutter/widgets.dart.
+type SliverFixedExtentList struct {
+	Delegate   SliverChildren
+	ItemExtent float64
 }
 
 // SliverFixedExtentListBuilder maps SliverFixedExtentList.builder of package:flutter/widgets.dart.
@@ -5608,6 +6613,23 @@ type SliverFloatingHeader struct {
 	Child    Node
 }
 
+// SliverGrid maps SliverGrid of package:flutter/widgets.dart.
+type SliverGrid struct {
+	Delegate     SliverChildren
+	GridDelegate GridSpec
+}
+
+// SliverGridBuilder maps SliverGrid.builder of package:flutter/widgets.dart.
+type SliverGridBuilder struct {
+	GridDelegate           GridSpec
+	ItemBuilder            ItemBuilder
+	ItemCount              *int
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+	SemanticIndexOffset    *int
+}
+
 // SliverGridCount maps SliverGrid.count of package:flutter/widgets.dart.
 type SliverGridCount struct {
 	CrossAxisCount   int
@@ -5626,11 +6648,26 @@ type SliverGridExtent struct {
 	Children           []Node
 }
 
+// SliverGridList maps SliverGrid.list of package:flutter/widgets.dart.
+type SliverGridList struct {
+	GridDelegate           GridSpec
+	Children               []Node
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+	SemanticIndexOffset    *int
+}
+
 // SliverIgnorePointer maps SliverIgnorePointer of package:flutter/widgets.dart.
 type SliverIgnorePointer struct {
 	Ignoring          *bool
 	IgnoringSemantics *bool
 	Sliver            Node
+}
+
+// SliverList maps SliverList of package:flutter/widgets.dart.
+type SliverList struct {
+	Delegate SliverChildren
 }
 
 // SliverListBuilder maps SliverList.builder of package:flutter/widgets.dart.
@@ -5679,10 +6716,28 @@ type SliverOpacity struct {
 	Sliver                 Node
 }
 
+// SliverOverlapAbsorber maps SliverOverlapAbsorber of package:flutter/widgets.dart.
+type SliverOverlapAbsorber struct {
+	Handle OverlapKey
+	Sliver Node
+}
+
+// SliverOverlapInjector maps SliverOverlapInjector of package:flutter/widgets.dart.
+type SliverOverlapInjector struct {
+	Handle OverlapKey
+	Sliver Node
+}
+
 // SliverPadding maps SliverPadding of package:flutter/widgets.dart.
 type SliverPadding struct {
 	Padding Insets
 	Sliver  Node
+}
+
+// SliverPrototypeExtentList maps SliverPrototypeExtentList of package:flutter/widgets.dart.
+type SliverPrototypeExtentList struct {
+	Delegate      SliverChildren
+	PrototypeItem Node
 }
 
 // SliverPrototypeExtentListBuilder maps SliverPrototypeExtentList.builder of package:flutter/widgets.dart.
@@ -5776,6 +6831,8 @@ type SliverSemantics struct {
 	MaxValueLength                  *int
 	CurrentValueLength              *int
 	Identifier                      *string
+	TraversalParentIdentifier       *string
+	TraversalChildIdentifier        *string
 	Label                           *string
 	Value                           *string
 	IncreasedValue                  *string
@@ -5860,6 +6917,7 @@ type SnackBar struct {
 	ShowCloseIcon           *bool
 	CloseIconColor          *Color
 	Persist                 *bool
+	Animation               *AnimationKey
 	OnVisible               func()
 	DismissDirection        *string
 	ClipBehavior            *string
@@ -5880,6 +6938,12 @@ type Spacer struct {
 	Flex *int
 }
 
+// SpellCheckSuggestionsToolbar maps SpellCheckSuggestionsToolbar of package:flutter/material.dart.
+type SpellCheckSuggestionsToolbar struct {
+	Anchor      Offset
+	ButtonItems []MenuButtonItem
+}
+
 // Stack maps Stack of package:flutter/widgets.dart.
 //
 // TextDirection takes "rtl", or "ltr".
@@ -5893,6 +6957,32 @@ type Stack struct {
 	Fit           *string
 	ClipBehavior  *string
 	Children      []Node
+}
+
+// Stepper maps Stepper of package:flutter/material.dart.
+//
+// Type takes "vertical", or "horizontal".
+//
+// ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+type Stepper struct {
+	Steps              []Step
+	Controller         *ScrollKey
+	Physics            *string
+	Type               *string
+	CurrentStep        *int
+	OnStepTapped       func(int)
+	OnStepContinue     func()
+	OnStepCancel       func()
+	Elevation          *float64
+	Margin             *Insets
+	ConnectorColor     *StateColor
+	ConnectorThickness *float64
+	StepIconHeight     *float64
+	StepIconWidth      *float64
+	StepIconMargin     *Insets
+	ClipBehavior       *string
+	HeaderPadding      *Insets
+	ContentPadding     *Insets
 }
 
 // StretchEffect maps StretchEffect of package:flutter/widgets.dart.
@@ -5923,6 +7013,7 @@ type SubmenuButton struct {
 	OnFocusChange            func(bool)
 	OnOpen                   func()
 	OnClose                  func()
+	Controller               *MenuKey
 	Style                    *ButtonStyle
 	AlignmentOffset          *Offset
 	ClipBehavior             *string
@@ -6282,6 +7373,7 @@ type TapRegion struct {
 	Child              Node
 	Enabled            *bool
 	Behavior           *string
+	GroupId            *string
 	ConsumeOutsideTaps *bool
 	DebugLabel         *string
 }
@@ -6375,6 +7467,8 @@ type TextButtonIcon struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type TextField struct {
+	GroupId                       *string
+	Controller                    *TextKey
 	FocusNode                     *FocusKey
 	TextInputAction               *string
 	TextCapitalization            *string
@@ -6431,6 +7525,7 @@ type TextFieldTapRegion struct {
 	Enabled            *bool
 	ConsumeOutsideTaps *bool
 	DebugLabel         *string
+	GroupId            *string
 }
 
 // TextFormField maps TextFormField of package:flutter/material.dart.
@@ -6457,6 +7552,8 @@ type TextFieldTapRegion struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type TextFormField struct {
+	GroupId                       *string
+	Controller                    *TextKey
 	InitialValue                  *string
 	FocusNode                     *FocusKey
 	ForceErrorText                *string
@@ -6510,6 +7607,31 @@ type TextFormField struct {
 	CanRequestFocus               *bool
 }
 
+// TextRich maps Text.rich of package:flutter/widgets.dart.
+//
+// TextAlign takes "left", "right", "center", "justify", "start", or "end".
+//
+// TextDirection takes "rtl", or "ltr".
+//
+// Overflow takes "clip", "fade", "ellipsis", or "visible".
+//
+// TextWidthBasis takes "parent", or "longestLine".
+type TextRich struct {
+	TextSpan            Span
+	Style               *TextStyle
+	TextAlign           *string
+	TextDirection       *string
+	Locale              *string
+	SoftWrap            *bool
+	Overflow            *string
+	TextScaleFactor     *float64
+	MaxLines            *int
+	SemanticsLabel      *string
+	SemanticsIdentifier *string
+	TextWidthBasis      *string
+	SelectionColor      *Color
+}
+
 // TextSelectionGestureDetector maps TextSelectionGestureDetector of package:flutter/widgets.dart.
 //
 // Behavior takes "deferToChild", "opaque", or "translucent".
@@ -6556,11 +7678,66 @@ type TickerMode struct {
 	ForceFrames *bool
 }
 
+// TimePickerDialog maps TimePickerDialog of package:flutter/material.dart.
+//
+// InitialEntryMode takes "dial", "input", "dialOnly", or "inputOnly".
+//
+// Orientation takes "portrait", or "landscape".
+type TimePickerDialog struct {
+	InitialTime                int
+	CancelText                 *string
+	ConfirmText                *string
+	HelpText                   *string
+	ErrorInvalidText           *string
+	HourLabelText              *string
+	MinuteLabelText            *string
+	RestorationId              *string
+	InitialEntryMode           *string
+	Orientation                *string
+	OnEntryModeChanged         func(string)
+	SwitchToInputEntryModeIcon Node
+	SwitchToTimerEntryModeIcon Node
+	EmptyInitialInput          *bool
+}
+
 // Title maps Title of package:flutter/widgets.dart.
 type Title struct {
 	Title *string
 	Color Color
 	Child Node
+}
+
+// ToggleButtons maps ToggleButtons of package:flutter/material.dart.
+//
+// TapTargetSize takes "padded", or "shrinkWrap".
+//
+// Direction takes "horizontal", or "vertical".
+//
+// VerticalDirection takes "up", or "down".
+type ToggleButtons struct {
+	Children            []Node
+	IsSelected          []bool
+	OnPressed           func(int)
+	MouseCursor         *string
+	TapTargetSize       *string
+	TextStyle           *TextStyle
+	Constraints         *Constraints
+	Color               *Color
+	SelectedColor       *Color
+	DisabledColor       *Color
+	FillColor           *Color
+	FocusColor          *Color
+	HighlightColor      *Color
+	HoverColor          *Color
+	SplashColor         *Color
+	RenderBorder        *bool
+	BorderColor         *Color
+	SelectedBorderColor *Color
+	DisabledBorderColor *Color
+	BorderRadius        *Radius
+	BorderWidth         *float64
+	Direction           *string
+	VerticalDirection   *string
 }
 
 // Tooltip maps Tooltip of package:flutter/material.dart.
@@ -6570,6 +7747,7 @@ type Title struct {
 // TriggerMode takes "manual", "longPress", or "tap".
 type Tooltip struct {
 	Message              *string
+	RichMessage          *Span
 	Height               *float64
 	Constraints          *Constraints
 	Padding              *Insets
@@ -6596,6 +7774,18 @@ type Tooltip struct {
 type TooltipVisibility struct {
 	Visible bool
 	Child   Node
+}
+
+// Transform maps Transform of package:flutter/widgets.dart.
+//
+// FilterQuality takes "none", "low", "medium", or "high".
+type Transform struct {
+	Transform         []float64
+	Origin            *Offset
+	Alignment         *string
+	TransformHitTests *bool
+	FilterQuality     *string
+	Child             Node
 }
 
 // TransformFlip maps Transform.flip of package:flutter/widgets.dart.
@@ -6765,6 +7955,12 @@ type WidgetsAppRouter struct {
 	UseInheritedMediaQuery     *bool
 }
 
+// WillPopScope maps WillPopScope of package:flutter/widgets.dart.
+type WillPopScope struct {
+	Child     Node
+	OnWillPop Ask
+}
+
 // Wrap maps Wrap of package:flutter/widgets.dart.
 //
 // Direction takes "horizontal", or "vertical".
@@ -6793,430 +7989,525 @@ type Wrap struct {
 	Children           []Node
 }
 
-func (AboutDialog) isNode()                                    {}
-func (AboutDialogAdaptive) isNode()                            {}
-func (AboutListTile) isNode()                                  {}
-func (AbsorbPointer) isNode()                                  {}
-func (ActionChip) isNode()                                     {}
-func (ActionChipElevated) isNode()                             {}
-func (AlertDialog) isNode()                                    {}
-func (AlertDialogAdaptive) isNode()                            {}
-func (Align) isNode()                                          {}
-func (AndroidView) isNode()                                    {}
-func (AnimatedAlign) isNode()                                  {}
-func (AnimatedContainer) isNode()                              {}
-func (AnimatedCrossFade) isNode()                              {}
-func (AnimatedDefaultTextStyle) isNode()                       {}
-func (AnimatedFractionallySizedBox) isNode()                   {}
-func (AnimatedOpacity) isNode()                                {}
-func (AnimatedPadding) isNode()                                {}
-func (AnimatedPhysicalModel) isNode()                          {}
-func (AnimatedPositioned) isNode()                             {}
-func (AnimatedPositionedDirectional) isNode()                  {}
-func (AnimatedRotation) isNode()                               {}
-func (AnimatedScale) isNode()                                  {}
-func (AnimatedSize) isNode()                                   {}
-func (AnimatedSlide) isNode()                                  {}
-func (AnimatedSwitcher) isNode()                               {}
-func (AppBar) isNode()                                         {}
-func (AppBarTheme) isNode()                                    {}
-func (AppKitView) isNode()                                     {}
-func (AspectRatio) isNode()                                    {}
-func (AutofillGroup) isNode()                                  {}
-func (AutomaticKeepAlive) isNode()                             {}
-func (BackButton) isNode()                                     {}
-func (BackdropFilter) isNode()                                 {}
-func (BackdropFilterGrouped) isNode()                          {}
-func (BackdropGroup) isNode()                                  {}
-func (Badge) isNode()                                          {}
-func (BadgeCount) isNode()                                     {}
-func (Banner) isNode()                                         {}
-func (Baseline) isNode()                                       {}
-func (BlockSemantics) isNode()                                 {}
-func (BottomAppBar) isNode()                                   {}
-func (BottomAppBarTheme) isNode()                              {}
-func (BottomSheet) isNode()                                    {}
-func (ButtonBar) isNode()                                      {}
-func (ButtonTheme) isNode()                                    {}
-func (Card) isNode()                                           {}
-func (CardFilled) isNode()                                     {}
-func (CardOutlined) isNode()                                   {}
-func (CardTheme) isNode()                                      {}
-func (CarouselView) isNode()                                   {}
-func (CarouselViewBuilder) isNode()                            {}
-func (Center) isNode()                                         {}
-func (Checkbox) isNode()                                       {}
-func (CheckboxAdaptive) isNode()                               {}
-func (CheckboxListTile) isNode()                               {}
-func (CheckboxListTileAdaptive) isNode()                       {}
-func (CheckboxMenuButton) isNode()                             {}
-func (CheckedModeBanner) isNode()                              {}
-func (CheckedPopupMenuItem) isNode()                           {}
-func (Chip) isNode()                                           {}
-func (ChoiceChip) isNode()                                     {}
-func (ChoiceChipElevated) isNode()                             {}
-func (CircleAvatar) isNode()                                   {}
-func (CircularProgressIndicator) isNode()                      {}
-func (CircularProgressIndicatorAdaptive) isNode()              {}
-func (ClipOval) isNode()                                       {}
-func (ClipPath) isNode()                                       {}
-func (ClipRRect) isNode()                                      {}
-func (ClipRSuperellipse) isNode()                              {}
-func (ClipRect) isNode()                                       {}
-func (CloseButton) isNode()                                    {}
-func (ColoredBox) isNode()                                     {}
-func (Column) isNode()                                         {}
-func (ConstrainedBox) isNode()                                 {}
-func (Container) isNode()                                      {}
-func (CupertinoActionSheet) isNode()                           {}
-func (CupertinoActionSheetAction) isNode()                     {}
-func (CupertinoActivityIndicator) isNode()                     {}
-func (CupertinoActivityIndicatorPartiallyRevealed) isNode()    {}
-func (CupertinoAlertDialog) isNode()                           {}
-func (CupertinoApp) isNode()                                   {}
-func (CupertinoAppRouter) isNode()                             {}
-func (CupertinoButton) isNode()                                {}
-func (CupertinoButtonFilled) isNode()                          {}
-func (CupertinoButtonTinted) isNode()                          {}
-func (CupertinoCheckbox) isNode()                              {}
-func (CupertinoContextMenu) isNode()                           {}
-func (CupertinoContextMenuAction) isNode()                     {}
-func (CupertinoDesktopTextSelectionToolbar) isNode()           {}
-func (CupertinoDesktopTextSelectionToolbarButton) isNode()     {}
-func (CupertinoDesktopTextSelectionToolbarButtonText) isNode() {}
-func (CupertinoDialogAction) isNode()                          {}
-func (CupertinoExpansionTile) isNode()                         {}
-func (CupertinoFocusHaloWithRRect) isNode()                    {}
-func (CupertinoFocusHaloWithRect) isNode()                     {}
-func (CupertinoFocusHaloWithRoundedSuperellipse) isNode()      {}
-func (CupertinoFormRow) isNode()                               {}
-func (CupertinoFormSection) isNode()                           {}
-func (CupertinoFormSectionInsetGrouped) isNode()               {}
-func (CupertinoLinearActivityIndicator) isNode()               {}
-func (CupertinoListSection) isNode()                           {}
-func (CupertinoListSectionInsetGrouped) isNode()               {}
-func (CupertinoListTile) isNode()                              {}
-func (CupertinoListTileNotched) isNode()                       {}
-func (CupertinoMagnifier) isNode()                             {}
-func (CupertinoMenuAnchor) isNode()                            {}
-func (CupertinoMenuItem) isNode()                              {}
-func (CupertinoNavigationBar) isNode()                         {}
-func (CupertinoNavigationBarBackButton) isNode()               {}
-func (CupertinoNavigationBarLarge) isNode()                    {}
-func (CupertinoPageScaffold) isNode()                          {}
-func (CupertinoPageScaffoldBackgroundColor) isNode()           {}
-func (CupertinoPicker) isNode()                                {}
-func (CupertinoPickerBuilder) isNode()                         {}
-func (CupertinoPickerDefaultSelectionOverlay) isNode()         {}
-func (CupertinoPopupSurface) isNode()                          {}
-func (CupertinoScrollbar) isNode()                             {}
-func (CupertinoSearchTextField) isNode()                       {}
-func (CupertinoSlider) isNode()                                {}
-func (CupertinoSliverNavigationBar) isNode()                   {}
-func (CupertinoSliverNavigationBarSearch) isNode()             {}
-func (CupertinoSwitch) isNode()                                {}
-func (CupertinoTabScaffold) isNode()                           {}
-func (CupertinoTabView) isNode()                               {}
-func (CupertinoTextField) isNode()                             {}
-func (CupertinoTextFieldBorderless) isNode()                   {}
-func (CupertinoTextFormFieldRow) isNode()                      {}
-func (CupertinoTextSelectionToolbar) isNode()                  {}
-func (CupertinoTextSelectionToolbarButton) isNode()            {}
-func (CupertinoTextSelectionToolbarButtonText) isNode()        {}
-func (CupertinoTimerPicker) isNode()                           {}
-func (CupertinoUserInterfaceLevel) isNode()                    {}
-func (CustomPaint) isNode()                                    {}
-func (CustomScrollView) isNode()                               {}
-func (DecoratedBox) isNode()                                   {}
-func (DecoratedSliver) isNode()                                {}
-func (DefaultSelectionStyle) isNode()                          {}
-func (DefaultTabController) isNode()                           {}
-func (DefaultTextEditingShortcuts) isNode()                    {}
-func (DefaultTextStyle) isNode()                               {}
-func (DesktopTextSelectionToolbar) isNode()                    {}
-func (DesktopTextSelectionToolbarButton) isNode()              {}
-func (Dialog) isNode()                                         {}
-func (DialogFullscreen) isNode()                               {}
-func (DialogTheme) isNode()                                    {}
-func (Directionality) isNode()                                 {}
-func (DisableWidgetInspectorScope) isNode()                    {}
-func (DisplayFeatureSubScreen) isNode()                        {}
-func (Divider) isNode()                                        {}
-func (DragBoundary) isNode()                                   {}
-func (Draggable) isNode()                                      {}
-func (DraggableScrollableActuator) isNode()                    {}
-func (Drawer) isNode()                                         {}
-func (DrawerButton) isNode()                                   {}
-func (DrawerController) isNode()                               {}
-func (DrawerHeader) isNode()                                   {}
-func (DropdownButtonHideUnderline) isNode()                    {}
-func (DropdownMenuItem) isNode()                               {}
-func (ElevatedButton) isNode()                                 {}
-func (ElevatedButtonIcon) isNode()                             {}
-func (EnableWidgetInspectorScope) isNode()                     {}
-func (EndDrawerButton) isNode()                                {}
-func (ErrorWidgetWithDetails) isNode()                         {}
-func (ExcludeFocus) isNode()                                   {}
-func (ExcludeFocusTraversal) isNode()                          {}
-func (ExcludeSemantics) isNode()                               {}
-func (ExpandIcon) isNode()                                     {}
-func (Expanded) isNode()                                       {}
-func (ExpansionPanelList) isNode()                             {}
-func (ExpansionPanelListRadio) isNode()                        {}
-func (ExpansionTile) isNode()                                  {}
-func (FadeInImage) isNode()                                    {}
-func (FadeInImageAssetNetwork) isNode()                        {}
-func (FilledButton) isNode()                                   {}
-func (FilledButtonIcon) isNode()                               {}
-func (FilledButtonTonal) isNode()                              {}
-func (FilledButtonTonalIcon) isNode()                          {}
-func (FilterChip) isNode()                                     {}
-func (FilterChipElevated) isNode()                             {}
-func (FittedBox) isNode()                                      {}
-func (Flex) isNode()                                           {}
-func (Flexible) isNode()                                       {}
-func (FlexibleSpaceBar) isNode()                               {}
-func (FlexibleSpaceBarSettings) isNode()                       {}
-func (FloatingActionButton) isNode()                           {}
-func (FloatingActionButtonExtended) isNode()                   {}
-func (FloatingActionButtonLarge) isNode()                      {}
-func (FloatingActionButtonSmall) isNode()                      {}
-func (FlutterLogo) isNode()                                    {}
-func (Focus) isNode()                                          {}
-func (FocusScope) isNode()                                     {}
-func (FocusTraversalGroup) isNode()                            {}
-func (FocusWithExternalFocusNode) isNode()                     {}
-func (FocusableActionDetector) isNode()                        {}
-func (Form) isNode()                                           {}
-func (FractionalTranslation) isNode()                          {}
-func (FractionallySizedBox) isNode()                           {}
-func (GestureDetector) isNode()                                {}
-func (GlowingOverscrollIndicator) isNode()                     {}
-func (GridPaper) isNode()                                      {}
-func (GridTile) isNode()                                       {}
-func (GridTileBar) isNode()                                    {}
-func (GridViewCount) isNode()                                  {}
-func (GridViewExtent) isNode()                                 {}
-func (HeroControllerScopeNone) isNode()                        {}
-func (HeroMode) isNode()                                       {}
-func (HtmlElementView) isNode()                                {}
-func (HtmlElementViewFromTagName) isNode()                     {}
-func (Icon) isNode()                                           {}
-func (IconButton) isNode()                                     {}
-func (IconButtonFilled) isNode()                               {}
-func (IconButtonFilledTonal) isNode()                          {}
-func (IconButtonOutlined) isNode()                             {}
-func (IconTheme) isNode()                                      {}
-func (IgnoreBaseline) isNode()                                 {}
-func (IgnorePointer) isNode()                                  {}
-func (Image) isNode()                                          {}
-func (ImageAsset) isNode()                                     {}
-func (ImageIcon) isNode()                                      {}
-func (ImageNetwork) isNode()                                   {}
-func (IndexedSemantics) isNode()                               {}
-func (IndexedStack) isNode()                                   {}
-func (InheritedCupertinoTheme) isNode()                        {}
-func (Ink) isNode()                                            {}
-func (InkImage) isNode()                                       {}
-func (InkResponse) isNode()                                    {}
-func (InkWell) isNode()                                        {}
-func (InputChip) isNode()                                      {}
-func (InputDecorationTheme) isNode()                           {}
-func (InteractiveViewer) isNode()                              {}
-func (IntrinsicHeight) isNode()                                {}
-func (IntrinsicWidth) isNode()                                 {}
-func (KeepAlive) isNode()                                      {}
-func (KeyboardListener) isNode()                               {}
-func (KeyedSubtree) isNode()                                   {}
-func (KeyedSubtreeWrap) isNode()                               {}
-func (LicensePage) isNode()                                    {}
-func (LimitedBox) isNode()                                     {}
-func (LinearProgressIndicator) isNode()                        {}
-func (ListBody) isNode()                                       {}
-func (ListTile) isNode()                                       {}
-func (ListTileTheme) isNode()                                  {}
-func (ListView) isNode()                                       {}
-func (ListViewBuilder) isNode()                                {}
-func (ListViewSeparated) isNode()                              {}
-func (ListWheelScrollView) isNode()                            {}
-func (Listener) isNode()                                       {}
-func (LongPressDraggable) isNode()                             {}
-func (LookupBoundary) isNode()                                 {}
-func (Magnifier) isNode()                                      {}
-func (Material) isNode()                                       {}
-func (MaterialApp) isNode()                                    {}
-func (MaterialAppRouter) isNode()                              {}
-func (MaterialBanner) isNode()                                 {}
-func (MaterialBannerTheme) isNode()                            {}
-func (MaterialButton) isNode()                                 {}
-func (MenuAcceleratorCallbackBinding) isNode()                 {}
-func (MenuAcceleratorLabel) isNode()                           {}
-func (MenuAnchor) isNode()                                     {}
-func (MenuBar) isNode()                                        {}
-func (MenuItemButton) isNode()                                 {}
-func (MergeSemantics) isNode()                                 {}
-func (MergeableMaterial) isNode()                              {}
-func (MetaData) isNode()                                       {}
-func (ModalBarrier) isNode()                                   {}
-func (MouseRegion) isNode()                                    {}
-func (NavigationBar) isNode()                                  {}
-func (NavigationDestination) isNode()                          {}
-func (NavigationDrawer) isNode()                               {}
-func (NavigationDrawerDestination) isNode()                    {}
-func (NavigationToolbar) isNode()                              {}
-func (Navigator) isNode()                                      {}
-func (NavigatorPopHandler) isNode()                            {}
-func (NotificationListener) isNode()                           {}
-func (Offstage) isNode()                                       {}
-func (Opacity) isNode()                                        {}
-func (OutlinedButton) isNode()                                 {}
-func (OutlinedButtonIcon) isNode()                             {}
-func (OverflowBar) isNode()                                    {}
-func (OverflowBox) isNode()                                    {}
-func (Overlay) isNode()                                        {}
-func (Padding) isNode()                                        {}
-func (PageView) isNode()                                       {}
-func (PageViewBuilder) isNode()                                {}
-func (PerformanceOverlay) isNode()                             {}
-func (PhysicalModel) isNode()                                  {}
-func (PinnedHeaderSliver) isNode()                             {}
-func (Placeholder) isNode()                                    {}
-func (PlatformSelectableRegionContextMenu) isNode()            {}
-func (PopScope) isNode()                                       {}
-func (PopupMenuDivider) isNode()                               {}
-func (PopupMenuItem) isNode()                                  {}
-func (Positioned) isNode()                                     {}
-func (PositionedDirectional) isNode()                          {}
-func (PositionedFill) isNode()                                 {}
-func (PreferredSize) isNode()                                  {}
-func (PrimaryScrollController) isNode()                        {}
-func (PrimaryScrollControllerNone) isNode()                    {}
-func (RawChip) isNode()                                        {}
-func (RawGestureDetector) isNode()                             {}
-func (RawImage) isNode()                                       {}
-func (RawKeyboardListener) isNode()                            {}
-func (RawMagnifier) isNode()                                   {}
-func (RawMaterialButton) isNode()                              {}
-func (RawScrollbar) isNode()                                   {}
-func (RefreshProgressIndicator) isNode()                       {}
-func (ReorderableDelayedDragStartListener) isNode()            {}
-func (ReorderableDragStartListener) isNode()                   {}
-func (ReorderableList) isNode()                                {}
-func (ReorderableListView) isNode()                            {}
-func (ReorderableListViewBuilder) isNode()                     {}
-func (RepaintBoundary) isNode()                                {}
-func (RepaintBoundaryWrap) isNode()                            {}
-func (RestorationScope) isNode()                               {}
-func (RootRestorationScope) isNode()                           {}
-func (RootWidget) isNode()                                     {}
-func (RotatedBox) isNode()                                     {}
-func (Row) isNode()                                            {}
-func (SafeArea) isNode()                                       {}
-func (Scaffold) isNode()                                       {}
-func (ScaffoldMessenger) isNode()                              {}
-func (ScrollNotificationObserver) isNode()                     {}
-func (Scrollbar) isNode()                                      {}
-func (SearchBar) isNode()                                      {}
-func (SelectableText) isNode()                                 {}
-func (SelectionArea) isNode()                                  {}
-func (SelectionContainerDisabled) isNode()                     {}
-func (Semantics) isNode()                                      {}
-func (SemanticsDebugger) isNode()                              {}
-func (SharedAppData) isNode()                                  {}
-func (ShortcutRegistrar) isNode()                              {}
-func (SimpleDialog) isNode()                                   {}
-func (SimpleDialogOption) isNode()                             {}
-func (SingleChildScrollView) isNode()                          {}
-func (SizeChangedLayoutNotifier) isNode()                      {}
-func (SizedBox) isNode()                                       {}
-func (SizedBoxExpand) isNode()                                 {}
-func (SizedBoxFromSize) isNode()                               {}
-func (SizedBoxShrink) isNode()                                 {}
-func (SizedBoxSquare) isNode()                                 {}
-func (SizedOverflowBox) isNode()                               {}
-func (Slider) isNode()                                         {}
-func (SliderAdaptive) isNode()                                 {}
-func (SliverAnimatedOpacity) isNode()                          {}
-func (SliverAppBar) isNode()                                   {}
-func (SliverAppBarLarge) isNode()                              {}
-func (SliverAppBarMedium) isNode()                             {}
-func (SliverConstrainedCrossAxis) isNode()                     {}
-func (SliverCrossAxisExpanded) isNode()                        {}
-func (SliverCrossAxisGroup) isNode()                           {}
-func (SliverEnsureSemantics) isNode()                          {}
-func (SliverFillRemaining) isNode()                            {}
-func (SliverFixedExtentListBuilder) isNode()                   {}
-func (SliverFixedExtentListList) isNode()                      {}
-func (SliverFloatingHeader) isNode()                           {}
-func (SliverGridCount) isNode()                                {}
-func (SliverGridExtent) isNode()                               {}
-func (SliverIgnorePointer) isNode()                            {}
-func (SliverListBuilder) isNode()                              {}
-func (SliverListList) isNode()                                 {}
-func (SliverListSeparated) isNode()                            {}
-func (SliverMainAxisGroup) isNode()                            {}
-func (SliverOffstage) isNode()                                 {}
-func (SliverOpacity) isNode()                                  {}
-func (SliverPadding) isNode()                                  {}
-func (SliverPrototypeExtentListBuilder) isNode()               {}
-func (SliverPrototypeExtentListList) isNode()                  {}
-func (SliverReorderableList) isNode()                          {}
-func (SliverResizingHeader) isNode()                           {}
-func (SliverSafeArea) isNode()                                 {}
-func (SliverSemantics) isNode()                                {}
-func (SliverToBoxAdapter) isNode()                             {}
-func (SliverVisibility) isNode()                               {}
-func (SliverVisibilityMaintain) isNode()                       {}
-func (SnackBar) isNode()                                       {}
-func (SnackBarAction) isNode()                                 {}
-func (Spacer) isNode()                                         {}
-func (Stack) isNode()                                          {}
-func (StretchEffect) isNode()                                  {}
-func (StretchingOverscrollIndicator) isNode()                  {}
-func (SubmenuButton) isNode()                                  {}
-func (Switch) isNode()                                         {}
-func (SwitchAdaptive) isNode()                                 {}
-func (SwitchListTile) isNode()                                 {}
-func (SwitchListTileAdaptive) isNode()                         {}
-func (Tab) isNode()                                            {}
-func (TabBar) isNode()                                         {}
-func (TabBarSecondary) isNode()                                {}
-func (TabBarTheme) isNode()                                    {}
-func (TabBarView) isNode()                                     {}
-func (TabPageSelector) isNode()                                {}
-func (TabPageSelectorIndicator) isNode()                       {}
-func (Table) isNode()                                          {}
-func (TableCell) isNode()                                      {}
-func (TableRowInkWell) isNode()                                {}
-func (TapRegion) isNode()                                      {}
-func (TapRegionSurface) isNode()                               {}
-func (Text) isNode()                                           {}
-func (TextButton) isNode()                                     {}
-func (TextButtonIcon) isNode()                                 {}
-func (TextField) isNode()                                      {}
-func (TextFieldTapRegion) isNode()                             {}
-func (TextFormField) isNode()                                  {}
-func (TextSelectionGestureDetector) isNode()                   {}
-func (TextSelectionToolbar) isNode()                           {}
-func (TextSelectionToolbarTextButton) isNode()                 {}
-func (Texture) isNode()                                        {}
-func (TickerMode) isNode()                                     {}
-func (Title) isNode()                                          {}
-func (Tooltip) isNode()                                        {}
-func (TooltipVisibility) isNode()                              {}
-func (TransformFlip) isNode()                                  {}
-func (TransformRotate) isNode()                                {}
-func (TransformScale) isNode()                                 {}
-func (TransformTranslate) isNode()                             {}
-func (UiKitView) isNode()                                      {}
-func (UnconstrainedBox) isNode()                               {}
-func (UnmanagedRestorationScope) isNode()                      {}
-func (UserAccountsDrawerHeader) isNode()                       {}
-func (VerticalDivider) isNode()                                {}
-func (ViewAnchor) isNode()                                     {}
-func (ViewCollection) isNode()                                 {}
-func (Visibility) isNode()                                     {}
-func (VisibilityMaintain) isNode()                             {}
-func (WidgetsApp) isNode()                                     {}
-func (WidgetsAppRouter) isNode()                               {}
-func (Wrap) isNode()                                           {}
+// YearPicker maps YearPicker of package:flutter/material.dart.
+//
+// DragStartBehavior takes "down", or "start".
+type YearPicker struct {
+	CurrentDate       *int
+	FirstDate         int
+	LastDate          int
+	InitialDate       *int
+	SelectedDate      int
+	OnChanged         func(int)
+	DragStartBehavior *string
+}
+
+func (AboutDialog) isNode()                                          {}
+func (AboutDialogAdaptive) isNode()                                  {}
+func (AboutListTile) isNode()                                        {}
+func (AbsorbPointer) isNode()                                        {}
+func (ActionChip) isNode()                                           {}
+func (ActionChipElevated) isNode()                                   {}
+func (AlertDialog) isNode()                                          {}
+func (AlertDialogAdaptive) isNode()                                  {}
+func (Align) isNode()                                                {}
+func (AndroidView) isNode()                                          {}
+func (AnimatedAlign) isNode()                                        {}
+func (AnimatedContainer) isNode()                                    {}
+func (AnimatedCrossFade) isNode()                                    {}
+func (AnimatedDefaultTextStyle) isNode()                             {}
+func (AnimatedFractionallySizedBox) isNode()                         {}
+func (AnimatedOpacity) isNode()                                      {}
+func (AnimatedPadding) isNode()                                      {}
+func (AnimatedPhysicalModel) isNode()                                {}
+func (AnimatedPositioned) isNode()                                   {}
+func (AnimatedPositionedDirectional) isNode()                        {}
+func (AnimatedPositionedFromRect) isNode()                           {}
+func (AnimatedRotation) isNode()                                     {}
+func (AnimatedScale) isNode()                                        {}
+func (AnimatedSize) isNode()                                         {}
+func (AnimatedSlide) isNode()                                        {}
+func (AnimatedSwitcher) isNode()                                     {}
+func (AnimatedTheme) isNode()                                        {}
+func (AppBar) isNode()                                               {}
+func (AppBarTheme) isNode()                                          {}
+func (AppKitView) isNode()                                           {}
+func (AspectRatio) isNode()                                          {}
+func (AutofillGroup) isNode()                                        {}
+func (AutomaticKeepAlive) isNode()                                   {}
+func (BackButton) isNode()                                           {}
+func (BackButtonIcon) isNode()                                       {}
+func (BackButtonListener) isNode()                                   {}
+func (BackdropFilter) isNode()                                       {}
+func (BackdropFilterGrouped) isNode()                                {}
+func (BackdropGroup) isNode()                                        {}
+func (Badge) isNode()                                                {}
+func (BadgeCount) isNode()                                           {}
+func (Banner) isNode()                                               {}
+func (Baseline) isNode()                                             {}
+func (BlockSemantics) isNode()                                       {}
+func (BottomAppBar) isNode()                                         {}
+func (BottomAppBarTheme) isNode()                                    {}
+func (BottomNavigationBar) isNode()                                  {}
+func (BottomSheet) isNode()                                          {}
+func (ButtonBar) isNode()                                            {}
+func (ButtonTheme) isNode()                                          {}
+func (CalendarDatePicker) isNode()                                   {}
+func (Card) isNode()                                                 {}
+func (CardFilled) isNode()                                           {}
+func (CardOutlined) isNode()                                         {}
+func (CardTheme) isNode()                                            {}
+func (CarouselView) isNode()                                         {}
+func (CarouselViewBuilder) isNode()                                  {}
+func (CarouselViewWeighted) isNode()                                 {}
+func (CarouselViewWeightedBuilder) isNode()                          {}
+func (Center) isNode()                                               {}
+func (Checkbox) isNode()                                             {}
+func (CheckboxAdaptive) isNode()                                     {}
+func (CheckboxListTile) isNode()                                     {}
+func (CheckboxListTileAdaptive) isNode()                             {}
+func (CheckboxMenuButton) isNode()                                   {}
+func (CheckedModeBanner) isNode()                                    {}
+func (CheckedPopupMenuItem) isNode()                                 {}
+func (Chip) isNode()                                                 {}
+func (ChoiceChip) isNode()                                           {}
+func (ChoiceChipElevated) isNode()                                   {}
+func (CircleAvatar) isNode()                                         {}
+func (CircularProgressIndicator) isNode()                            {}
+func (CircularProgressIndicatorAdaptive) isNode()                    {}
+func (ClipOval) isNode()                                             {}
+func (ClipPath) isNode()                                             {}
+func (ClipRRect) isNode()                                            {}
+func (ClipRSuperellipse) isNode()                                    {}
+func (ClipRect) isNode()                                             {}
+func (CloseButton) isNode()                                          {}
+func (CloseButtonIcon) isNode()                                      {}
+func (ColoredBox) isNode()                                           {}
+func (Column) isNode()                                               {}
+func (CompositedTransformFollower) isNode()                          {}
+func (CompositedTransformTarget) isNode()                            {}
+func (ConstrainedBox) isNode()                                       {}
+func (Container) isNode()                                            {}
+func (CupertinoActionSheet) isNode()                                 {}
+func (CupertinoActionSheetAction) isNode()                           {}
+func (CupertinoActivityIndicator) isNode()                           {}
+func (CupertinoActivityIndicatorPartiallyRevealed) isNode()          {}
+func (CupertinoAlertDialog) isNode()                                 {}
+func (CupertinoApp) isNode()                                         {}
+func (CupertinoAppRouter) isNode()                                   {}
+func (CupertinoButton) isNode()                                      {}
+func (CupertinoButtonFilled) isNode()                                {}
+func (CupertinoButtonTinted) isNode()                                {}
+func (CupertinoCheckbox) isNode()                                    {}
+func (CupertinoContextMenu) isNode()                                 {}
+func (CupertinoContextMenuAction) isNode()                           {}
+func (CupertinoDatePicker) isNode()                                  {}
+func (CupertinoDesktopTextSelectionToolbar) isNode()                 {}
+func (CupertinoDesktopTextSelectionToolbarButton) isNode()           {}
+func (CupertinoDesktopTextSelectionToolbarButtonButtonItem) isNode() {}
+func (CupertinoDesktopTextSelectionToolbarButtonText) isNode()       {}
+func (CupertinoDialogAction) isNode()                                {}
+func (CupertinoExpansionTile) isNode()                               {}
+func (CupertinoFocusHaloWithRRect) isNode()                          {}
+func (CupertinoFocusHaloWithRect) isNode()                           {}
+func (CupertinoFocusHaloWithRoundedSuperellipse) isNode()            {}
+func (CupertinoFormRow) isNode()                                     {}
+func (CupertinoFormSection) isNode()                                 {}
+func (CupertinoFormSectionInsetGrouped) isNode()                     {}
+func (CupertinoFullscreenDialogTransition) isNode()                  {}
+func (CupertinoLinearActivityIndicator) isNode()                     {}
+func (CupertinoListSection) isNode()                                 {}
+func (CupertinoListSectionInsetGrouped) isNode()                     {}
+func (CupertinoListTile) isNode()                                    {}
+func (CupertinoListTileChevron) isNode()                             {}
+func (CupertinoListTileNotched) isNode()                             {}
+func (CupertinoMagnifier) isNode()                                   {}
+func (CupertinoMenuAnchor) isNode()                                  {}
+func (CupertinoMenuDivider) isNode()                                 {}
+func (CupertinoMenuItem) isNode()                                    {}
+func (CupertinoNavigationBar) isNode()                               {}
+func (CupertinoNavigationBarBackButton) isNode()                     {}
+func (CupertinoNavigationBarLarge) isNode()                          {}
+func (CupertinoPageScaffold) isNode()                                {}
+func (CupertinoPageScaffoldBackgroundColor) isNode()                 {}
+func (CupertinoPageTransition) isNode()                              {}
+func (CupertinoPicker) isNode()                                      {}
+func (CupertinoPickerBuilder) isNode()                               {}
+func (CupertinoPickerDefaultSelectionOverlay) isNode()               {}
+func (CupertinoPopupSurface) isNode()                                {}
+func (CupertinoScrollbar) isNode()                                   {}
+func (CupertinoSearchTextField) isNode()                             {}
+func (CupertinoSheetTransition) isNode()                             {}
+func (CupertinoSlider) isNode()                                      {}
+func (CupertinoSliverNavigationBar) isNode()                         {}
+func (CupertinoSliverNavigationBarSearch) isNode()                   {}
+func (CupertinoSliverRefreshControl) isNode()                        {}
+func (CupertinoSwitch) isNode()                                      {}
+func (CupertinoTabBar) isNode()                                      {}
+func (CupertinoTabScaffold) isNode()                                 {}
+func (CupertinoTabView) isNode()                                     {}
+func (CupertinoTextField) isNode()                                   {}
+func (CupertinoTextFieldBorderless) isNode()                         {}
+func (CupertinoTextFormFieldRow) isNode()                            {}
+func (CupertinoTextSelectionToolbar) isNode()                        {}
+func (CupertinoTextSelectionToolbarButton) isNode()                  {}
+func (CupertinoTextSelectionToolbarButtonButtonItem) isNode()        {}
+func (CupertinoTextSelectionToolbarButtonText) isNode()              {}
+func (CupertinoTimerPicker) isNode()                                 {}
+func (CupertinoUserInterfaceLevel) isNode()                          {}
+func (CustomPaint) isNode()                                          {}
+func (CustomScrollView) isNode()                                     {}
+func (DataTable) isNode()                                            {}
+func (DatePickerDialog) isNode()                                     {}
+func (DateRangePickerDialog) isNode()                                {}
+func (DecoratedBox) isNode()                                         {}
+func (DecoratedSliver) isNode()                                      {}
+func (DefaultSelectionStyle) isNode()                                {}
+func (DefaultSelectionStyleFallback) isNode()                        {}
+func (DefaultTabController) isNode()                                 {}
+func (DefaultTextEditingShortcuts) isNode()                          {}
+func (DefaultTextStyle) isNode()                                     {}
+func (DefaultTextStyleFallback) isNode()                             {}
+func (DesktopTextSelectionToolbar) isNode()                          {}
+func (DesktopTextSelectionToolbarButton) isNode()                    {}
+func (DeviceOrientationBuilder) isNode()                             {}
+func (Dialog) isNode()                                               {}
+func (DialogFullscreen) isNode()                                     {}
+func (DialogTheme) isNode()                                          {}
+func (Directionality) isNode()                                       {}
+func (DisableWidgetInspectorScope) isNode()                          {}
+func (DisplayFeatureSubScreen) isNode()                              {}
+func (Divider) isNode()                                              {}
+func (DragBoundary) isNode()                                         {}
+func (Draggable) isNode()                                            {}
+func (DraggableScrollableActuator) isNode()                          {}
+func (Drawer) isNode()                                               {}
+func (DrawerButton) isNode()                                         {}
+func (DrawerButtonIcon) isNode()                                     {}
+func (DrawerController) isNode()                                     {}
+func (DrawerHeader) isNode()                                         {}
+func (DropdownButtonHideUnderline) isNode()                          {}
+func (DropdownMenuItem) isNode()                                     {}
+func (EditableText) isNode()                                         {}
+func (ElevatedButton) isNode()                                       {}
+func (ElevatedButtonIcon) isNode()                                   {}
+func (EnableWidgetInspectorScope) isNode()                           {}
+func (EndDrawerButton) isNode()                                      {}
+func (EndDrawerButtonIcon) isNode()                                  {}
+func (ErrorWidget) isNode()                                          {}
+func (ErrorWidgetWithDetails) isNode()                               {}
+func (ExcludeFocus) isNode()                                         {}
+func (ExcludeFocusTraversal) isNode()                                {}
+func (ExcludeSemantics) isNode()                                     {}
+func (ExpandIcon) isNode()                                           {}
+func (Expanded) isNode()                                             {}
+func (ExpansionPanelList) isNode()                                   {}
+func (ExpansionPanelListRadio) isNode()                              {}
+func (ExpansionTile) isNode()                                        {}
+func (FadeInImage) isNode()                                          {}
+func (FadeInImageAssetNetwork) isNode()                              {}
+func (FadeInImageMemoryNetwork) isNode()                             {}
+func (FadeTransition) isNode()                                       {}
+func (FilledButton) isNode()                                         {}
+func (FilledButtonIcon) isNode()                                     {}
+func (FilledButtonTonal) isNode()                                    {}
+func (FilledButtonTonalIcon) isNode()                                {}
+func (FilterChip) isNode()                                           {}
+func (FilterChipElevated) isNode()                                   {}
+func (FittedBox) isNode()                                            {}
+func (Flex) isNode()                                                 {}
+func (Flexible) isNode()                                             {}
+func (FlexibleSpaceBar) isNode()                                     {}
+func (FlexibleSpaceBarSettings) isNode()                             {}
+func (FloatingActionButton) isNode()                                 {}
+func (FloatingActionButtonExtended) isNode()                         {}
+func (FloatingActionButtonLarge) isNode()                            {}
+func (FloatingActionButtonSmall) isNode()                            {}
+func (FlutterLogo) isNode()                                          {}
+func (Focus) isNode()                                                {}
+func (FocusScope) isNode()                                           {}
+func (FocusScopeWithExternalFocusNode) isNode()                      {}
+func (FocusTraversalGroup) isNode()                                  {}
+func (FocusWithExternalFocusNode) isNode()                           {}
+func (FocusableActionDetector) isNode()                              {}
+func (Form) isNode()                                                 {}
+func (FractionalTranslation) isNode()                                {}
+func (FractionallySizedBox) isNode()                                 {}
+func (GestureDetector) isNode()                                      {}
+func (GlowingOverscrollIndicator) isNode()                           {}
+func (GridPaper) isNode()                                            {}
+func (GridTile) isNode()                                             {}
+func (GridTileBar) isNode()                                          {}
+func (GridView) isNode()                                             {}
+func (GridViewBuilder) isNode()                                      {}
+func (GridViewCount) isNode()                                        {}
+func (GridViewCustom) isNode()                                       {}
+func (GridViewExtent) isNode()                                       {}
+func (Hero) isNode()                                                 {}
+func (HeroControllerScopeNone) isNode()                              {}
+func (HeroMode) isNode()                                             {}
+func (HtmlElementView) isNode()                                      {}
+func (HtmlElementViewFromTagName) isNode()                           {}
+func (Icon) isNode()                                                 {}
+func (IconButton) isNode()                                           {}
+func (IconButtonFilled) isNode()                                     {}
+func (IconButtonFilledTonal) isNode()                                {}
+func (IconButtonOutlined) isNode()                                   {}
+func (IconTheme) isNode()                                            {}
+func (IgnoreBaseline) isNode()                                       {}
+func (IgnorePointer) isNode()                                        {}
+func (Image) isNode()                                                {}
+func (ImageAsset) isNode()                                           {}
+func (ImageIcon) isNode()                                            {}
+func (ImageMemory) isNode()                                          {}
+func (ImageNetwork) isNode()                                         {}
+func (IndexedSemantics) isNode()                                     {}
+func (IndexedStack) isNode()                                         {}
+func (InheritedCupertinoTheme) isNode()                              {}
+func (Ink) isNode()                                                  {}
+func (InkImage) isNode()                                             {}
+func (InkResponse) isNode()                                          {}
+func (InkWell) isNode()                                              {}
+func (InputChip) isNode()                                            {}
+func (InputDatePickerFormField) isNode()                             {}
+func (InputDecorationTheme) isNode()                                 {}
+func (InteractiveViewer) isNode()                                    {}
+func (IntrinsicHeight) isNode()                                      {}
+func (IntrinsicWidth) isNode()                                       {}
+func (KeepAlive) isNode()                                            {}
+func (KeyboardListener) isNode()                                     {}
+func (KeyedSubtree) isNode()                                         {}
+func (KeyedSubtreeWrap) isNode()                                     {}
+func (LayoutBuilder) isNode()                                        {}
+func (LayoutId) isNode()                                             {}
+func (LicensePage) isNode()                                          {}
+func (LimitedBox) isNode()                                           {}
+func (LinearProgressIndicator) isNode()                              {}
+func (ListBody) isNode()                                             {}
+func (ListTile) isNode()                                             {}
+func (ListTileTheme) isNode()                                        {}
+func (ListView) isNode()                                             {}
+func (ListViewBuilder) isNode()                                      {}
+func (ListViewCustom) isNode()                                       {}
+func (ListViewSeparated) isNode()                                    {}
+func (ListWheelScrollView) isNode()                                  {}
+func (Listener) isNode()                                             {}
+func (LongPressDraggable) isNode()                                   {}
+func (LookupBoundary) isNode()                                       {}
+func (Magnifier) isNode()                                            {}
+func (Material) isNode()                                             {}
+func (MaterialApp) isNode()                                          {}
+func (MaterialAppRouter) isNode()                                    {}
+func (MaterialBanner) isNode()                                       {}
+func (MaterialBannerTheme) isNode()                                  {}
+func (MaterialButton) isNode()                                       {}
+func (MenuAcceleratorCallbackBinding) isNode()                       {}
+func (MenuAcceleratorLabel) isNode()                                 {}
+func (MenuAnchor) isNode()                                           {}
+func (MenuBar) isNode()                                              {}
+func (MenuItemButton) isNode()                                       {}
+func (MergeSemantics) isNode()                                       {}
+func (MergeableMaterial) isNode()                                    {}
+func (MetaData) isNode()                                             {}
+func (ModalBarrier) isNode()                                         {}
+func (MouseRegion) isNode()                                          {}
+func (NavigationBar) isNode()                                        {}
+func (NavigationDestination) isNode()                                {}
+func (NavigationDrawer) isNode()                                     {}
+func (NavigationDrawerDestination) isNode()                          {}
+func (NavigationIndicator) isNode()                                  {}
+func (NavigationRail) isNode()                                       {}
+func (NavigationToolbar) isNode()                                    {}
+func (Navigator) isNode()                                            {}
+func (NavigatorPopHandler) isNode()                                  {}
+func (NestedScrollView) isNode()                                     {}
+func (NotificationListener) isNode()                                 {}
+func (Offstage) isNode()                                             {}
+func (Opacity) isNode()                                              {}
+func (OrientationBuilder) isNode()                                   {}
+func (OutlinedButton) isNode()                                       {}
+func (OutlinedButtonIcon) isNode()                                   {}
+func (OverflowBar) isNode()                                          {}
+func (OverflowBox) isNode()                                          {}
+func (Overlay) isNode()                                              {}
+func (OverlayPortal) isNode()                                        {}
+func (OverlayPortalTargetsRootOverlay) isNode()                      {}
+func (Padding) isNode()                                              {}
+func (PageStorage) isNode()                                          {}
+func (PageView) isNode()                                             {}
+func (PageViewBuilder) isNode()                                      {}
+func (PageViewCustom) isNode()                                       {}
+func (PerformanceOverlay) isNode()                                   {}
+func (PerformanceOverlayAllEnabled) isNode()                         {}
+func (PhysicalModel) isNode()                                        {}
+func (PinnedHeaderSliver) isNode()                                   {}
+func (Placeholder) isNode()                                          {}
+func (PlatformSelectableRegionContextMenu) isNode()                  {}
+func (PopScope) isNode()                                             {}
+func (PopupMenuDivider) isNode()                                     {}
+func (PopupMenuItem) isNode()                                        {}
+func (Positioned) isNode()                                           {}
+func (PositionedDirectional) isNode()                                {}
+func (PositionedFill) isNode()                                       {}
+func (PositionedFromRect) isNode()                                   {}
+func (PositionedFromRelativeRect) isNode()                           {}
+func (PreferredSize) isNode()                                        {}
+func (PrimaryScrollController) isNode()                              {}
+func (PrimaryScrollControllerNone) isNode()                          {}
+func (RangeSlider) isNode()                                          {}
+func (RawChip) isNode()                                              {}
+func (RawGestureDetector) isNode()                                   {}
+func (RawImage) isNode()                                             {}
+func (RawKeyboardListener) isNode()                                  {}
+func (RawMagnifier) isNode()                                         {}
+func (RawMaterialButton) isNode()                                    {}
+func (RawMenuAnchorGroup) isNode()                                   {}
+func (RawScrollbar) isNode()                                         {}
+func (RefreshIndicator) isNode()                                     {}
+func (RefreshIndicatorAdaptive) isNode()                             {}
+func (RefreshIndicatorNoSpinner) isNode()                            {}
+func (RefreshProgressIndicator) isNode()                             {}
+func (ReorderableDelayedDragStartListener) isNode()                  {}
+func (ReorderableDragStartListener) isNode()                         {}
+func (ReorderableList) isNode()                                      {}
+func (ReorderableListView) isNode()                                  {}
+func (ReorderableListViewBuilder) isNode()                           {}
+func (RepaintBoundary) isNode()                                      {}
+func (RepaintBoundaryWrap) isNode()                                  {}
+func (RestorationScope) isNode()                                     {}
+func (RichText) isNode()                                             {}
+func (RootRestorationScope) isNode()                                 {}
+func (RootWidget) isNode()                                           {}
+func (RotatedBox) isNode()                                           {}
+func (RotationTransition) isNode()                                   {}
+func (Row) isNode()                                                  {}
+func (SafeArea) isNode()                                             {}
+func (Scaffold) isNode()                                             {}
+func (ScaffoldMessenger) isNode()                                    {}
+func (ScaleTransition) isNode()                                      {}
+func (ScrollNotificationObserver) isNode()                           {}
+func (Scrollbar) isNode()                                            {}
+func (SearchBar) isNode()                                            {}
+func (SelectableText) isNode()                                       {}
+func (SelectableTextRich) isNode()                                   {}
+func (SelectionArea) isNode()                                        {}
+func (SelectionContainerDisabled) isNode()                           {}
+func (Semantics) isNode()                                            {}
+func (SemanticsDebugger) isNode()                                    {}
+func (SharedAppData) isNode()                                        {}
+func (ShortcutRegistrar) isNode()                                    {}
+func (SimpleDialog) isNode()                                         {}
+func (SimpleDialogOption) isNode()                                   {}
+func (SingleChildScrollView) isNode()                                {}
+func (SizeChangedLayoutNotifier) isNode()                            {}
+func (SizeTransition) isNode()                                       {}
+func (SizedBox) isNode()                                             {}
+func (SizedBoxExpand) isNode()                                       {}
+func (SizedBoxFromSize) isNode()                                     {}
+func (SizedBoxShrink) isNode()                                       {}
+func (SizedBoxSquare) isNode()                                       {}
+func (SizedOverflowBox) isNode()                                     {}
+func (Slider) isNode()                                               {}
+func (SliderAdaptive) isNode()                                       {}
+func (SliverAnimatedOpacity) isNode()                                {}
+func (SliverAppBar) isNode()                                         {}
+func (SliverAppBarLarge) isNode()                                    {}
+func (SliverAppBarMedium) isNode()                                   {}
+func (SliverConstrainedCrossAxis) isNode()                           {}
+func (SliverCrossAxisExpanded) isNode()                              {}
+func (SliverCrossAxisGroup) isNode()                                 {}
+func (SliverEnsureSemantics) isNode()                                {}
+func (SliverFadeTransition) isNode()                                 {}
+func (SliverFillRemaining) isNode()                                  {}
+func (SliverFillViewport) isNode()                                   {}
+func (SliverFixedExtentList) isNode()                                {}
+func (SliverFixedExtentListBuilder) isNode()                         {}
+func (SliverFixedExtentListList) isNode()                            {}
+func (SliverFloatingHeader) isNode()                                 {}
+func (SliverGrid) isNode()                                           {}
+func (SliverGridBuilder) isNode()                                    {}
+func (SliverGridCount) isNode()                                      {}
+func (SliverGridExtent) isNode()                                     {}
+func (SliverGridList) isNode()                                       {}
+func (SliverIgnorePointer) isNode()                                  {}
+func (SliverList) isNode()                                           {}
+func (SliverListBuilder) isNode()                                    {}
+func (SliverListList) isNode()                                       {}
+func (SliverListSeparated) isNode()                                  {}
+func (SliverMainAxisGroup) isNode()                                  {}
+func (SliverOffstage) isNode()                                       {}
+func (SliverOpacity) isNode()                                        {}
+func (SliverOverlapAbsorber) isNode()                                {}
+func (SliverOverlapInjector) isNode()                                {}
+func (SliverPadding) isNode()                                        {}
+func (SliverPrototypeExtentList) isNode()                            {}
+func (SliverPrototypeExtentListBuilder) isNode()                     {}
+func (SliverPrototypeExtentListList) isNode()                        {}
+func (SliverReorderableList) isNode()                                {}
+func (SliverResizingHeader) isNode()                                 {}
+func (SliverSafeArea) isNode()                                       {}
+func (SliverSemantics) isNode()                                      {}
+func (SliverToBoxAdapter) isNode()                                   {}
+func (SliverVisibility) isNode()                                     {}
+func (SliverVisibilityMaintain) isNode()                             {}
+func (SnackBar) isNode()                                             {}
+func (SnackBarAction) isNode()                                       {}
+func (Spacer) isNode()                                               {}
+func (SpellCheckSuggestionsToolbar) isNode()                         {}
+func (Stack) isNode()                                                {}
+func (Stepper) isNode()                                              {}
+func (StretchEffect) isNode()                                        {}
+func (StretchingOverscrollIndicator) isNode()                        {}
+func (SubmenuButton) isNode()                                        {}
+func (Switch) isNode()                                               {}
+func (SwitchAdaptive) isNode()                                       {}
+func (SwitchListTile) isNode()                                       {}
+func (SwitchListTileAdaptive) isNode()                               {}
+func (Tab) isNode()                                                  {}
+func (TabBar) isNode()                                               {}
+func (TabBarSecondary) isNode()                                      {}
+func (TabBarTheme) isNode()                                          {}
+func (TabBarView) isNode()                                           {}
+func (TabPageSelector) isNode()                                      {}
+func (TabPageSelectorIndicator) isNode()                             {}
+func (Table) isNode()                                                {}
+func (TableCell) isNode()                                            {}
+func (TableRowInkWell) isNode()                                      {}
+func (TapRegion) isNode()                                            {}
+func (TapRegionSurface) isNode()                                     {}
+func (Text) isNode()                                                 {}
+func (TextButton) isNode()                                           {}
+func (TextButtonIcon) isNode()                                       {}
+func (TextField) isNode()                                            {}
+func (TextFieldTapRegion) isNode()                                   {}
+func (TextFormField) isNode()                                        {}
+func (TextRich) isNode()                                             {}
+func (TextSelectionGestureDetector) isNode()                         {}
+func (TextSelectionToolbar) isNode()                                 {}
+func (TextSelectionToolbarTextButton) isNode()                       {}
+func (Texture) isNode()                                              {}
+func (TickerMode) isNode()                                           {}
+func (TimePickerDialog) isNode()                                     {}
+func (Title) isNode()                                                {}
+func (ToggleButtons) isNode()                                        {}
+func (Tooltip) isNode()                                              {}
+func (TooltipVisibility) isNode()                                    {}
+func (Transform) isNode()                                            {}
+func (TransformFlip) isNode()                                        {}
+func (TransformRotate) isNode()                                      {}
+func (TransformScale) isNode()                                       {}
+func (TransformTranslate) isNode()                                   {}
+func (UiKitView) isNode()                                            {}
+func (UnconstrainedBox) isNode()                                     {}
+func (UnmanagedRestorationScope) isNode()                            {}
+func (UserAccountsDrawerHeader) isNode()                             {}
+func (VerticalDivider) isNode()                                      {}
+func (ViewAnchor) isNode()                                           {}
+func (ViewCollection) isNode()                                       {}
+func (Visibility) isNode()                                           {}
+func (VisibilityMaintain) isNode()                                   {}
+func (WidgetsApp) isNode()                                           {}
+func (WidgetsAppRouter) isNode()                                     {}
+func (WillPopScope) isNode()                                         {}
+func (Wrap) isNode()                                                 {}
+func (YearPicker) isNode()                                           {}

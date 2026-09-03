@@ -198,3 +198,20 @@ Verified on 2026-08-29, for the last 3 tasks:
 - The flatten pass of the machine reads the label of a loop from `ir.For.Label`.
   A labelled statement reaches the pass only for a goto target.
 
+
+Verified on 2026-09-03:
+
+- `$schedule` runs the run queue until it is empty, thus a goroutine that puts
+  itself back on the queue starves the Dart event loop. `runtime.Gosched` did
+  exactly that, and a program that spins on it while a `time.Sleep` stands hung
+  for ever. The call now gives the event loop a turn when the run queue holds
+  no other goroutine and a wait on the event loop stands. Read decision 310.
+- `runtime.Goexit` throws the signal `GoStop` that `testing.T.FailNow` already
+  used. The class moved into `panic.dart`, thus `$schedule` catches it: the
+  goroutine ends and each deferred call of its chain runs first. Go keeps the
+  program alive when the goroutine of main ends this way, thus a flag replaces
+  the end of the program. Read decision 280.
+- A `return` inside an `if`, a `switch`, or a `for` needs its own state when
+  the deferred calls of the function can block. Stage 4 gave such a statement
+  no state, thus stage 5 wrote a plain Dart return that left the defer stack
+  untouched and no deferred call ran. Read decision 290.

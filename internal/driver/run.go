@@ -19,6 +19,11 @@ import (
 // mainEntry is the Dart entry point of package main.
 const mainEntry = "bin/main.dart"
 
+// Version is the version of the gart tool chain. cmd/gart prints it, and the
+// overlay of the package runtime gives the same number to a program through
+// runtime.Version. TestVersionMatchesTheOverlay compares the 2.
+const Version = "0.1.0-dev"
+
 // TestOptions holds the flags of the test command.
 type TestOptions struct {
 	// Verbose writes 1 line for each test.
@@ -35,6 +40,16 @@ type TestOptions struct {
 	// BenchCount fixes the count of iterations. It replaces the search when it
 	// is above 0.
 	BenchCount int
+	// Short asks each test for its short form. testing.Short then gives true.
+	Short bool
+	// Count is the count of runs of the whole list of the tests. CountGiven
+	// must hold true for the value to reach the run: go test runs no test for
+	// a count of 0, and 0 is also the zero value of this field.
+	Count      int
+	CountGiven bool
+	// Cover writes a counter into each statement of each package under test,
+	// and the run then reports the part of the statements that it reached.
+	Cover bool
 }
 
 // Run compiles the module and runs package main with the Dart VM. The result
@@ -59,7 +74,11 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 // of time first, because the VM starts a just in time compiler and its warm up
 // cost hides the result.
 func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
+	if testOpt.CountGiven && testOpt.Count < 0 {
+		return 1, fmt.Errorf("the flag -count takes a count of 0 or more")
+	}
 	opt.Tests = true
+	opt.Cover = testOpt.Cover
 	stats, err := BuildWithStats(opt)
 	if err != nil {
 		return 1, err
@@ -95,7 +114,9 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 			fmt.Fprintf(out, "FAIL\t%s\t%ss\n", bin.Package, elapsed)
 			continue
 		}
-		fmt.Fprintf(out, "ok  \t%s\t%ss%s\n", bin.Package, elapsed, noRun(text))
+		// go test writes the coverage in front of the mark of an empty run.
+		fmt.Fprintf(out, "ok  \t%s\t%ss%s%s\n", bin.Package, elapsed,
+			coverSuffix(text), noRun(text))
 	}
 	if failed {
 		fmt.Fprintln(out, "FAIL")
@@ -146,6 +167,14 @@ func binaryArgs(testOpt TestOptions) []string {
 	if testOpt.Run != "" {
 		args = append(args, "-test.run="+testOpt.Run)
 	}
+	if testOpt.Short {
+		args = append(args, "-test.short")
+	}
+	// A count of 0 runs no test, exactly as go test does. The value 1 is the
+	// default of the harness, thus it needs no flag.
+	if testOpt.CountGiven && testOpt.Count != 1 {
+		args = append(args, "-test.count="+strconv.Itoa(testOpt.Count))
+	}
 	if testOpt.Benchmarks {
 		args = append(args, "-test.bench="+testOpt.Bench)
 		if testOpt.BenchCount > 0 {
@@ -178,6 +207,17 @@ func compileExe(out, entry string) (string, error) {
 func noRun(text string) string {
 	if strings.Contains(text, harness.NoTestsToRun+"\n") {
 		return " [no tests to run]"
+	}
+	return ""
+}
+
+// coverSuffix reads the coverage line of a binary and gives the part that go
+// test writes after the time of the package.
+func coverSuffix(text string) string {
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(line, "coverage: ") {
+			return "\t" + line
+		}
 	}
 	return ""
 }

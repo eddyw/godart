@@ -11,9 +11,10 @@ of a program that imports the package. The import surface holds the run of
 
 ## The import surface
 
-The surface holds 116 import paths: 103 standard packages, the interop package
-`syscall/dart`, and 12 internal packages that the 103 need. Stage 2 rejects an
-import of each other package with a source position.
+The surface holds 170 import paths: 140 standard packages, the interop package
+`syscall/dart`, 23 internal packages, and 6 vendored packages of
+`golang.org/x`. Stage 2 rejects an import of each other package with a source
+position.
 
 91 of the 103 hold each exported name of Go, and 12 hold a part of them.
 `docs/support.md` holds the level of each one and the largest gap of each
@@ -21,11 +22,14 @@ partial package. `make surface` measures each one again.
 
 | Present | Absent |
 |---|---|
-| `bufio`, `bytes`, `cmp`, `net/http` | `database/sql` |
-| `container/heap`, `container/list`, `container/ring`, `os/exec` | `go/types`, `go/importer` |
-| `context`, `errors`, `flag`, `fmt`, `log` | `go/build` |
-| `regexp`, `regexp/syntax`, `encoding/xml` | `net/http/cgi`, `net/rpc` |
-| `encoding/ascii85`, `encoding/base64`, `encoding/binary`, `embed` | `net/smtp`, `net/mail` |
+| `bufio`, `bytes`, `cmp`, `net/http` | `go/importer` |
+| `container/heap`, `container/list`, `container/ring`, `os/exec` | |
+| `context`, `errors`, `flag`, `fmt`, `log` | |
+| `regexp`, `regexp/syntax`, `encoding/xml` | |
+| `go/constant`, `go/types`, `go/build`, `go/doc` | |
+| `net/mail`, `net/smtp`, `net/rpc`, `net/http/cgi` | |
+| `encoding/ascii85`, `encoding/base64`, `encoding/binary`, `embed` | |
+| `database/sql`, `database/sql/driver`, `uuid` | |
 | `encoding/csv`, `encoding/hex`, `encoding/json`, `encoding/gob` | `unsafe`, cgo |
 | `encoding/asn1`, `encoding/pem`, `unicode/utf16` | |
 | `compress/flate`, `compress/gzip`, `compress/zlib` | |
@@ -163,17 +167,15 @@ Thus these categories build:
 
 | Gate | What it stops |
 |---|---|
-| `encoding/gob` | Each program that reads a gob stream. |
-| `crypto/x509` | Each program that reads a certificate, and each TLS server that names its own 1. |
-| `database/sql` | Each program that reads a database. |
-| `go/types`, `go/build` | Each program that type checks Go source. |
+| `go/importer` | Each program that reads a compiled export file. A caller writes an importer of its own over `go/types`, thus the gate is narrow. |
 | A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
 
 The list shortened on 2026-09-03. `html/template`, `encoding/xml`,
-`archive/zip`, `archive/tar`, `compress/lzw`, `compress/bzip2`, and `math/big`
-each build now. `hugo` still reads `database/sql` and a large module set, and
-`gopls` reads `go/types`. The gate is the library surface, and not the
-language.
+`archive/zip`, `archive/tar`, `compress/lzw`, `compress/bzip2`, `math/big`,
+`encoding/gob`, `crypto/x509`, `database/sql`, `database/sql/driver`, `uuid`,
+`net/mail`, `net/smtp`, `net/rpc`, `net/http/cgi`, `go/constant`, `go/types`,
+and `go/build` each build now. `hugo` still reads a large module set. The gate
+is the library surface, and not the language.
 
 ## The near misses
 
@@ -181,11 +183,13 @@ Each package below needs a small piece of work. `docs/support.md` holds the
 whole list of the packages that stay out, with the cause and the cost of each
 one.
 
-| Package | The gap |
-|---|---|
-| `encoding/gob` | It needs the 6 reflect names that `encoding/xml` took, and 1 more thing: it indexes a table by `reflect.Kind`, and the overlay models a `Kind` as a text. |
-| `crypto/x509` | The whole ASN.1 stack and a root pool. It gates `Server.Certificate` of `httptest` and each name of `crypto/tls` that carries a certificate. |
+No package stands here. `docs/support.md` holds the whole list of the packages
+that stay out, with the cause and the cost of each one.
 
 `crypto/subtle` and `math/cmplx` stood here until 2026-09-02, and
 `html/template`, `encoding/xml`, `archive/zip`, `archive/tar`, `compress/lzw`,
-`compress/bzip2`, and `math/big` until 2026-09-03. Each 1 builds now.
+`compress/bzip2`, `math/big`, `encoding/gob`, and `crypto/x509` until
+2026-09-03. Each 1 builds now. `encoding/gob` needed 6 reflect names and a
+`reflect.Kind` that is a `uint`, and `crypto/x509` needed the whole ASN.1
+stack. `crypto/x509` holds 115 of 261 names, and chain verification stays out
+because `dart:io` owns the trust decision.

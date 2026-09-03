@@ -13,7 +13,9 @@ import (
 	"github.com/eddyw/godart/internal/load"
 )
 
-const version = "0.1.0-dev"
+// version is the version of the tool chain. internal/driver holds the number,
+// because the overlay of the package runtime gives the same text to a program.
+const version = driver.Version
 
 const usage = `gart compiles Go source code into Dart source code.
 
@@ -42,6 +44,9 @@ The test command takes these flags:
 
 	-v               write 1 line for each test
 	-run expr        run only a test whose name matches the expression
+	-short           ask each test for its short form
+	-count n         run the whole list of the tests n times, and 0 runs none
+	-cover           report the part of the statements that the tests reached
 	-bench expr      run each benchmark whose name matches the expression
 	-benchtime d     the length that 1 benchmark targets, for example 2s
 	-benchcount n    the fixed count of iterations of 1 benchmark
@@ -153,6 +158,10 @@ func runTest(args []string) error {
 	flags := newBuildFlags("test")
 	verbose := flags.set.Bool("v", false, "write 1 line for each test")
 	pattern := flags.set.String("run", "", "run only a test whose name matches this expression")
+	short := flags.set.Bool("short", false, "ask each test for its short form")
+	count := flags.set.Int("count", 1, "run the whole list of the tests this many times")
+	cover := flags.set.Bool("cover", false,
+		"report the part of the statements that the tests reached")
 	bench := flags.set.String("bench", "", "run each benchmark whose name matches this expression")
 	benchTime := flags.set.Duration("benchtime", time.Second,
 		"the length that 1 benchmark targets")
@@ -165,6 +174,10 @@ func runTest(args []string) error {
 	testOptions := driver.TestOptions{
 		Verbose:    *verbose,
 		Run:        *pattern,
+		Short:      *short,
+		Count:      *count,
+		CountGiven: given(flags.set, "count"),
+		Cover:      *cover,
 		Benchmarks: given(flags.set, "bench"),
 		Bench:      *bench,
 		BenchTime:  *benchTime,

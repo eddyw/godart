@@ -72,12 +72,22 @@ int _lastId = 0;
 /// Each goroutine that did not return. The deadlock report walks it.
 final Set<Goroutine> _liveSet = <Goroutine>{};
 
+/// Each goroutine that did not return. `runtime.Stack` of the surface reads it
+/// for the trace of a goroutine that waits.
+Iterable<Goroutine> get $goroutines => _liveSet;
+
 /// The goroutine that runs now.
 Goroutine? $current;
 
 final ListQueue<Goroutine> _runq = ListQueue<Goroutine>();
 bool _running = false;
 bool _mainDone = false;
+
+/// True when the goroutine of main ended through `runtime.Goexit`.
+///
+/// Go keeps the program alive in that case, and it reports a crash when each
+/// other goroutine ends too.
+bool _mainExited = false;
 
 /// The count of wake sources outside the scheduler. A timer of a sleep and a
 /// future of an isolate worker each hold 1. A deadlock needs a count of 0.
@@ -88,6 +98,12 @@ int _live = 0;
 
 /// Puts a goroutine on the run queue.
 void $ready(Goroutine g) => _runq.add(g);
+
+/// True when the run queue holds no goroutine.
+bool get $runqEmpty => _runq.isEmpty;
+
+/// The count of the waits on the Dart event loop.
+int get $eventWaits => _pending;
 
 /// Gives up control. The caller returns a value that no code reads.
 void $block(Frame f) => $blocked = f;
@@ -160,6 +176,15 @@ void $schedule() {
       $current = null;
       $goPanic(p, trace);
       return;
+    } on GoStop {
+      // runtime.Goexit ended the goroutine, and each deferred call of the
+      // chain already ran. Go keeps the program alive when the goroutine of
+      // main ends this way, thus the flag replaces the end of the program.
+      $blocked = null;
+      _live--;
+      _liveSet.remove(g);
+      if (g.isMain) _mainExited = true;
+      continue;
     }
     if ($blocked != null) {
       g.frame = $blocked;
@@ -185,7 +210,12 @@ void $schedule() {
       _inIdle = false;
     }
   }
-  if (!$hosted && _runq.isEmpty && _pending == 0 && _live > 0) _deadlock();
+  if (!$hosted &&
+      _runq.isEmpty &&
+      _pending == 0 &&
+      (_live > 0 || _mainExited)) {
+    _deadlock();
+  }
 }
 
 /// Starts a goroutine. Go runs the body after the statement, thus the body
@@ -355,7 +385,11 @@ void _exitMain() {
 /// also writes the arguments and an offset in each frame, and the chain holds
 /// no such value.
 void _deadlock() {
-  $platformStderrText('fatal error: all goroutines are asleep - deadlock!\n');
+  $platformStderrText(
+    _mainExited
+        ? 'fatal error: no goroutines (main called runtime.Goexit) - deadlock!\n'
+        : 'fatal error: all goroutines are asleep - deadlock!\n',
+  );
   for (final Goroutine g in _liveSet) {
     var reason = 'waiting';
     final List<TraceFrame> stack = <TraceFrame>[];

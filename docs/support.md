@@ -22,8 +22,10 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 116 import paths: 103 standard packages, the interop package
-`syscall/dart`, and 12 internal packages that the 103 need. The measure skips
+The surface holds 170 import paths: 140 standard packages, the interop package
+`syscall/dart`, 23 internal packages, and 6 vendored packages of
+`golang.org/x`. `make surface` measures 123 of the standard packages against
+the real API, and 112 of those hold each exported name. The measure skips
 the interop package and each internal package, because no package of Go stands
 behind them.
 
@@ -59,22 +61,27 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 
 ## Partial support
 
-12 packages hold a part of the names of Go. The run of 2026-09-03:
+11 packages hold a part of the names of Go. The run of 2026-09-03, after the
+fifteenth session:
 
 | Package | Names | Held | The largest gap |
 |---|---|---|---|
 | `sync/atomic` | 90/94 | 95% | The 4 `unsafe.Pointer` functions. `Pointer[T]` holds the same use. |
-| `os` | 193/207 | 93% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr` |
+| `os` | 193/207 | 93% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr`, and the 4 time names of `ProcessState`. `dart:io` hides the descriptor, and it reports no CPU time. |
 | `os/exec` | 43/49 | 87% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, `ExitError.Sys` and its 3 companions |
-| `reflect` | 130/188 | 69% | `MakeFunc`, `ChanOf`, `FuncOf`, `MakeChan`, `Select`, `Method.Func` |
-| `encoding/json` | 59/92 | 64% | The option set of the v2 implementation, and the field `Type` of each error |
-| `testing` | 132/145 | 91% | `Init`, `MainStart`, `RunTests` and its 2 companions, `InternalExample`, `InternalFuzzTarget` |
-| `net/http` | 240/392 | 61% | `HTTP2Config`, `TimeoutHandler`, `FileServer` and the `FS` family, `Server.Protocols` |
-| `runtime` | 31/114 | 27% | `MemStats`, `ReadMemStats`, `Goexit`, `Breakpoint`, `SetFinalizer`, each profile |
-| `net` | 142/346 | 41% | `Interface`, `IPConn`, `Resolver`, the socket option methods of `TCPConn`, the option fields of `Dialer` |
-| `crypto/tls` | 117/263 | 44% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake |
-| `crypto/x509` | 106/261 | 40% | `Verify` and each verify error, `CheckSignature`, `PublicKey`, and each name that signs |
+| `reflect` | 173/188 | 92% | `FuncOf`, `NewAt`, `SliceAt`, `SliceHeader`, `StringHeader`, `Method.Func`. Each 1 needs a type that no emitted code names, or `unsafe`. |
+| `encoding/json` | 67/92 | 72% | The option set of the v2 implementation, and the field `Type` of each error |
+| `testing` | 145/145 | 100% | Full since 2026-09-03. |
+| `net/http` | 341/392 | 87% | `HTTP2Config`, `Pusher`, `ClientConn`, `CrossOriginProtection`, `ListenAndServeTLS`. Dart owns the handshake and the HTTP 2 frame layer. |
+| `runtime` | 43/114 | 37% | `MemStats`, `ReadMemStats`, `Breakpoint`, `SetFinalizer`, `Pinner`, each profile, and the trace. The Dart VM reports none of the numbers. |
+| `net` | 218/346 | 63% | `IPConn`, `Resolver` as a configurable type, each socket option method, `FileConn`, and `FileListener`. Each 1 needs a raw socket or a file descriptor. |
+| `crypto/tls` | 118/263 | 44% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake |
+| `crypto/x509` | 115/261 | 44% | `Verify` and each verify error, `CheckSignature`, `PublicKey`, and each name that signs |
 | `syscall` | 15/2228 | 0% | Each system call, each error number, and each constant of the platform. |
+
+`testing` left this table on 2026-09-03. `reflect` went from 130 names to 173,
+`net/http` from 240 to 335, `net` from 142 to 218, `runtime` from 31 to 43,
+`encoding/json` from 59 to 67, and `crypto/x509` from 106 to 115.
 
 `syscall` is a special case. The package of Go holds the whole system call
 interface of the platform, and the surface holds no such interface. The overlay
@@ -93,10 +100,7 @@ Stage 2 rejects an import of each package below with a source position.
 
 | Package | The cause | The cost |
 |---|---|---|
-| `database/sql` | A driver, and a pool over a second thread. | Large |
-| `go/types`, `go/importer`, `go/build` | Each one is large, and `go/build` reads the tool chain. | Large |
-| `net/rpc`, `net/smtp`, `net/mail` | Each one needs a server model that the surface holds not. `net/rpc` reads `encoding/gob`, which the surface now holds. | Large |
-| `net/http/cgi` | No process model of a server. | Large |
+| `go/importer` | `Default` reads `runtime.Compiler`, which gart reports as `gart`. The gc form reads a compiled export file that gart never writes, the gccgo form needs 5 more packages and the gccgo driver, and the source form fails on the same compiler name. A caller writes an importer of its own over `go/types`. | Rejected |
 | `unsafe`, cgo | Outside the subset by design. | Rejected |
 
 ## The focus list
@@ -108,11 +112,12 @@ and `docs/flutter-design.md` holds the design of that client.
 1. **The `FS` family.** Done 2026-09-02. `io/fs` reads the real Go source and
    holds each exported name. `os.DirFS`, `os.Root`, and `http.FileServer` give
    a static file server, and they open the road to `embed`.
-2. **The reflect gaps.** Done 2026-09-02, except `MakeFunc`. `SliceOf`,
-   `ArrayOf`, `MapOf`, `PointerTo`, `PtrTo`, `TypeFor`, `Append`,
-   `AppendSlice`, `Copy`, and `Value.Cap`. `MakeSlice` now honors its capacity.
-   `MakeFunc` has no form: the Dart type of a Go function type is a closure of
-   that exact signature, and the runtime holds no way to build one. Read
+2. **The reflect gaps.** Done 2026-09-02, and `MakeFunc` followed on
+   2026-09-03. `SliceOf`, `ArrayOf`, `MapOf`, `PointerTo`, `PtrTo`, `TypeFor`,
+   `Append`, `AppendSlice`, `Copy`, and `Value.Cap`. `MakeSlice` honors its
+   capacity. `MakeFunc` reads the bind factory of the signature descriptor,
+   which builds a closure of the exact Dart type. `FuncOf` and `StructOf` stay
+   out, because each 1 builds a type that no emitted code names. Read
    `docs/parity.md`.
 3. **`text/template`.** Done 2026-09-02. `text/template` and
    `text/template/parse` each read the real Go source, and each one holds every
@@ -137,7 +142,8 @@ and `docs/flutter-design.md` holds the design of that client.
 9. **`os.Root` and `os.DirFS`.** Done 2026-09-02. The 2 came with the `FS`
    family of item 1. `os` went from 146 names to 172.
 
-**The list is closed since 2026-09-02,** except `reflect.MakeFunc`.
+**The list is closed since 2026-09-02,** and `reflect.MakeFunc` followed on
+2026-09-03.
 `docs/parity.md` holds the rule for that name.
 
 ## The next list
@@ -210,11 +216,21 @@ The description of a slice, a map, a channel, a function, and a pointer carries
 a factory of the Dart type since 2026-09-03. The kind alone names the Dart type
 of each other type, thus only these 5 carry it. Read decision 254.
 
-**The list of 2026-09-03 is closed. 3 items stay open, and no work names a
-date for them.**
+**The 3 items of that list are closed too, and the fifteenth session of
+2026-09-03 closed a backlog of 43 tasks on top of them.**
+
+| # | Item | State |
+|---|---|---|
+| 1 | `reflect.MakeFunc`, and a method value with a result | **Done.** Each function type descriptor carries a bind factory that builds a closure of the exact Dart type. 1 field serves the method value and `MakeFunc`. Read decision 254 and the report of the fifteenth session. |
+| 2 | A type that the program never names gives an untyped container | **Done.** `_withType` threads through `$sliceOf`, `$arrayOf`, and `$mapOf`, and a struct descriptor and each named descriptor carry a factory. |
+| 3 | A sound source of the used node types of a Flutter host | **Done.** `flutter/nodescan` reads the Go module with full type information. Read decision 268. |
+
+**4 items stay open, and no work names a date for them.** Each 1 came out of
+the work of 2026-09-03.
 
 | # | Item | Cost | What it blocks |
 |---|---|---|---|
-| 1 | `reflect.MakeFunc`, and a method value with a result | Large | Each 1 needs a Dart closure of an exact signature. A change of the emitted form of a Go function type would open the road. Read decision 228. |
-| 2 | A type that the program never names gives an untyped container | Large | `SliceOf`, `MapOf`, and `ArrayOf` build a description in the runtime, thus no emitted code names the Dart type. A type assertion of such a value throws. |
-| 3 | A sound source of the used node types of a Flutter host | Medium | `usedNodes` reads each `ui.<Name>` with a regular expression. A name that the scan misses gives a clear error at run time, thus the cost of the gap is low. |
+| 1 | `gart test` runs no seed corpus of a fuzz target | Medium | `go test` runs each `f.Add` seed and each file of `testdata/fuzz` as a subtest. `testing.F` of the overlay panics. A real `F` holds a `*T`, and the corpus file needs a parser of the versioned text form. |
+| 2 | The verb `%#v` writes no Go syntax form | Medium | `%#v` of a struct gives `{3 4}` where Go gives `main.point{X:3, Y:4}`. The type descriptor holds the name and each field. A pointer to a value that is not a struct needs an address that Dart gives not. |
+| 3 | A pointer inside an interface compares by value | Medium | `$goEqual` reads the structural equality of the emitted class, and Go compares the location. `strings` and `os` each declare an `EOF` of their own, thus only the structural test makes `err == io.EOF` true. The honest fix gives the 2 packages the real `io.EOF` first. |
+| 4 | A slice bound of an unsigned type above 2^63 | Small | The report reads a negative number, and Go writes the unsigned value. The runtime call carries no sign of the bound. |

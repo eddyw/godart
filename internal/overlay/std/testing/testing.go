@@ -10,6 +10,7 @@ package testing
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -31,6 +32,178 @@ type InternalTest struct {
 type InternalBenchmark struct {
 	Name string
 	F    func(*B)
+}
+
+// InternalExample names 1 example function, with the output that the run must
+// give. An empty output marks an example that the harness only compiles.
+type InternalExample struct {
+	Name string
+	F    func()
+	// Output holds the text that the example must write.
+	Output string
+	// Unordered reports whether the lines of the output can stand in any
+	// order. The comparison then sorts the 2 texts.
+	Unordered bool
+}
+
+// InternalFuzzTarget names 1 fuzz target. gart runs no fuzz target, and the
+// name stands here because a generated main of Go holds the list.
+type InternalFuzzTarget struct {
+	Name string
+	Fn   func(f *F)
+}
+
+// testDeps holds the calls that a generated main gives the harness. Go holds
+// an interface of the same name, and it also keeps the name unexported.
+//
+// Go asks for the profile calls and the fuzz calls too. gart writes no profile
+// and it runs no fuzz target, thus the interface holds the match function
+// alone. Read docs/parity.md.
+type testDeps interface {
+	MatchString(pat, str string) (bool, error)
+}
+
+// Init registers the flags of the harness with the package flag.
+//
+// A TestMain function of Go calls it in front of flag.Parse, thus the parse
+// takes each name that starts with -test and reports no unknown flag.
+//
+// readFlags reads the arguments of the program again, thus each value below
+// reaches the run through that path. The 3 flags with a target write the same
+// variable that readFlags writes.
+func Init() {
+	if flagsReady {
+		return
+	}
+	flagsReady = true
+	flag.BoolVar(&verbose, "test.v", verbose, "verbose: print additional output")
+	flag.BoolVar(&short, "test.short", short, "run smaller test suite to save time")
+	flag.StringVar(&runFilter, "test.run", runFilter,
+		"run only tests and examples matching `regexp`")
+	flag.String("test.bench", "", "run only benchmarks matching `regexp`")
+	flag.String("test.benchtime", "1s", "run each benchmark for duration `d`")
+	flag.Int("test.count", 1, "run tests and benchmarks `n` times")
+	flag.Int("test.benchcount", 0, "the fixed count of iterations of 1 benchmark")
+	flag.String("test.coverprofile", "", "write a coverage profile to `file`")
+}
+
+// flagsReady marks a call of Init. Go also holds such a flag, because a second
+// call of flag.BoolVar with 1 name panics.
+var flagsReady bool
+
+// MainStart builds the state of a test binary. A generated main of Go calls
+// it, and the entry point of gart calls NewM.
+//
+// gart runs no fuzz target, thus the list of the targets reaches no run.
+func MainStart(deps testDeps, tests []InternalTest, benchmarks []InternalBenchmark,
+	fuzzTargets []InternalFuzzTarget, examples []InternalExample) *M {
+	if deps != nil && MatchString == nil {
+		MatchString = deps.MatchString
+	}
+	m := NewM(tests, benchmarks)
+	m.examples = examples
+	m.fuzzTargets = fuzzTargets
+	return m
+}
+
+// RunTests runs each test of the list and reports whether each one passed.
+//
+// Go marks the function as deprecated, because a generated main calls
+// MainStart. The name stands here for a program that reads the old form.
+func RunTests(matchString func(pat, str string) (bool, error), tests []InternalTest) bool {
+	if MatchString == nil {
+		MatchString = matchString
+	}
+	ran, ok := runList(tests, readFlags())
+	if !ran {
+		emit(NoTestsToRun)
+	}
+	return ok
+}
+
+// RunBenchmarks runs each benchmark of the list. Go marks the function as
+// deprecated.
+func RunBenchmarks(matchString func(pat, str string) (bool, error), benchmarks []InternalBenchmark) {
+	if MatchString == nil {
+		MatchString = matchString
+	}
+	flags := readFlags()
+	flags.benchmarks = true
+	for _, bc := range benchmarks {
+		if !matches(bc.Name, flags.bench) {
+			continue
+		}
+		runBenchmark(bc.Name, bc.F, flags)
+	}
+}
+
+// RunExamples runs each example of the list and reports whether each one
+// passed. Go marks the function as deprecated.
+//
+// The harness holds the text of standard output while the example runs, and it
+// compares that text with the output of the example.
+func RunExamples(matchString func(pat, str string) (bool, error), examples []InternalExample) bool {
+	if MatchString == nil {
+		MatchString = matchString
+	}
+	ok := true
+	for _, ex := range examples {
+		if !matches(ex.Name, runFilter) {
+			continue
+		}
+		if !runExample(ex) {
+			ok = false
+		}
+	}
+	return ok
+}
+
+// runExample runs 1 example and reports whether its output matches.
+func runExample(ex InternalExample) bool {
+	if verbose {
+		emit("=== RUN   " + ex.Name)
+	}
+	start := dart.MonoNanos()
+	text := captured(ex.F)
+	elapsed := seconds(dart.MonoNanos() - start)
+	got := strings.TrimSpace(text)
+	want := strings.TrimSpace(ex.Output)
+	fail := ""
+	if ex.Unordered {
+		if sortedLines(got) != sortedLines(want) {
+			fail = "got:\n" + text + "\nwant (unordered):\n" + ex.Output + "\n"
+		}
+	} else if got != want {
+		fail = "got:\n" + got + "\nwant:\n" + want + "\n"
+	}
+	if fail != "" {
+		fmt.Print("--- FAIL: " + ex.Name + " (" + elapsed + "s)\n" + fail)
+		return false
+	}
+	if verbose {
+		emit("--- PASS: " + ex.Name + " (" + elapsed + "s)")
+	}
+	return true
+}
+
+// captured runs a function and gives the text that it wrote to standard
+// output. A panic of the function still gives the text back to the terminal.
+func captured(f func()) (text string) {
+	dart.CaptureOut(true)
+	defer func() { text = dart.CaptureOut(false) }()
+	f()
+	return ""
+}
+
+// sortedLines sorts the lines of a text. An unordered example reads it.
+func sortedLines(text string) string {
+	lines := strings.Split(text, "\n")
+	for i := 1; i < len(lines); i++ {
+		for k := i; k > 0 && lines[k] < lines[k-1]; k-- {
+			lines[k], lines[k-1] = lines[k-1], lines[k]
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 // TB holds the methods that T, B, and F share.
@@ -73,13 +246,21 @@ var verbose bool
 // Verbose reports whether the build asked for 1 line for each test.
 func Verbose() bool { return verbose }
 
-// Short reports whether the build asked for the short form of a test. gart has
-// no flag for it, thus the result is always false.
-func Short() bool { return false }
+// short holds the state of the -short flag of gart test. readFlags writes it.
+var short bool
 
-// current holds the test that runs now. AllocsPerRun reads it, because the
-// function takes no TB.
-var current *T
+// Short reports whether the build asked for the short form of a test.
+func Short() bool { return short }
+
+// current holds the test of each goroutine that runs a test. AllocsPerRun
+// reads it, because the function takes no TB.
+//
+// A parallel test runs on a goroutine of its own, thus 1 variable cannot hold
+// the answer. The number of the goroutine is the key.
+var current = map[int]*T{}
+
+// currentTest gives the test that the goroutine of the caller runs.
+func currentTest() *T { return current[dart.GoID()] }
 
 // AllocsPerRun skips the test that runs now.
 //
@@ -87,10 +268,11 @@ var current *T
 // would make an allocation test pass, thus the call reports a skip with the
 // cause.
 func AllocsPerRun(runs int, f func()) float64 {
-	if current == nil {
+	t := currentTest()
+	if t == nil {
 		panic("testing.AllocsPerRun runs outside a test")
 	}
-	current.Skipf("gart counts no allocation, thus AllocsPerRun skips the test")
+	t.Skipf("gart counts no allocation, thus AllocsPerRun skips the test")
 	return 0
 }
 
@@ -113,6 +295,23 @@ type T struct {
 	// report holds the result line of each subtest, and of the subtests of a
 	// subtest. Go writes them after the line of the parent.
 	report []string
+	// start holds the time of the start of the test, in nanoseconds. Parallel
+	// writes it again, thus the pause holds no time.
+	start int64
+	// stopping marks the unwind of a test that FailNow or SkipNow stopped. A
+	// deferred log line of that unwind holds no position, because Go holds the
+	// position of its own runtime there.
+	stopping bool
+	// gate carries the state of the test to the runner of its level: 1 for a
+	// pause of Parallel, and 2 for the end.
+	gate chan int
+	// resume wakes a test that Parallel paused. The runner of the level writes
+	// it after each test of the level started.
+	resume chan int
+	// parallel marks a test that called Parallel.
+	parallel bool
+	// group runs the subtests of this test. Read the type group.
+	group *group
 }
 
 func (t *T) Name() string { return t.name }
@@ -125,9 +324,82 @@ func (t *T) Skipped() bool { return t.skipped }
 // the caller of the helper.
 func (t *T) Helper() { markHelper() }
 
-// Parallel does nothing. All Go code runs in 1 isolate, thus gart runs each
-// test in the order of the list.
-func (t *T) Parallel() {}
+// Parallel marks the test as a test that runs at the same time as each other
+// parallel test of its level.
+//
+// The call stops the test and gives control back to the runner. The runner
+// then starts each test of the level that is not parallel. After that pass, it
+// wakes each parallel test, and the tests run at the same time on the 1
+// isolate of gart. A test that waits for input or for output thus lets another
+// test run.
+func (t *T) Parallel() {
+	if t.parallel {
+		panic("testing: t.Parallel called multiple times")
+	}
+	if t.gate == nil {
+		// A benchmark holds a T that no group started, thus no runner waits.
+		return
+	}
+	t.parallel = true
+	t.resume = make(chan int)
+	if verbose {
+		emit("=== PAUSE " + t.name)
+	}
+	t.gate <- 1
+	<-t.resume
+	current[dart.GoID()] = t
+	if verbose {
+		emit("=== CONT  " + t.name)
+	}
+	// Go drops the time of the pause, thus the line of the result holds the
+	// time of the work alone.
+	t.start = dart.MonoNanos()
+}
+
+// group runs the tests of 1 level. The runner of a test binary holds 1 group
+// for the tests of the binary, and each test holds 1 group for its subtests.
+type group struct {
+	// parked holds each test of the level that Parallel stopped.
+	parked []*T
+	// done takes each parallel test that ended. The order of the reads is the
+	// order of the ends, exactly as go test writes it.
+	done chan *T
+}
+
+// run starts 1 test on a goroutine of its own and waits for the pause or for
+// the end of it.
+func (g *group) run(t *T, call func()) {
+	if g.done == nil {
+		g.done = make(chan *T)
+	}
+	t.gate = make(chan int)
+	go func() {
+		runOne(t, call)
+		if t.parallel {
+			g.done <- t
+			return
+		}
+		t.gate <- 2
+	}()
+	if <-t.gate == 1 {
+		g.parked = append(g.parked, t)
+	}
+}
+
+// wait wakes each test that Parallel stopped, and it gives each one in the
+// order of its end.
+func (g *group) wait() []*T {
+	list := g.parked
+	g.parked = nil
+	for _, t := range list {
+		t.resume <- 1
+	}
+	out := make([]*T, 0, len(list))
+	for range list {
+		out = append(out, <-g.done)
+	}
+	return out
+}
 
 func (t *T) Cleanup(f func()) { t.cleanups = append(t.cleanups, f) }
 
@@ -296,20 +568,15 @@ func (t *T) Fail() { t.failed = true }
 
 func (t *T) FailNow() {
 	t.failed = true
-	stopping = true
+	t.stopping = true
 	dart.Stop()
 }
 
 func (t *T) SkipNow() {
 	t.skipped = true
-	stopping = true
+	t.stopping = true
 	dart.Stop()
 }
-
-// stopping marks the unwind of a test that FailNow or SkipNow stopped. A
-// deferred log line of that unwind holds no position, because Go holds the
-// position of its own runtime there.
-var stopping bool
 
 func (t *T) Log(args ...any) { t.write(fmt.Sprintln(args...)) }
 
@@ -353,7 +620,15 @@ func (t *T) Run(name string, f func(*T)) bool {
 	if !matches(sub.name, runFilter) {
 		return true
 	}
-	runOne(sub, func() { f(sub) })
+	if t.group == nil {
+		t.group = &group{}
+	}
+	t.group.run(sub, func() { f(sub) })
+	if sub.parallel {
+		// Go reports true for a subtest that stands in the parallel pass,
+		// because the body of it did not fail yet.
+		return true
+	}
 	t.report = append(t.report, sub.report...)
 	if sub.failed {
 		t.failed = true
@@ -379,7 +654,7 @@ func markHelper() {
 
 // logPos gives the source position of the call that writes a log line. The walk
 // drops the frames of this package and the frame of each helper.
-func logPos() string {
+func logPos(stopping bool) string {
 	if stopping {
 		return ""
 	}
@@ -403,7 +678,7 @@ func logPos() string {
 // part of a line that Output holds goes out first, exactly as Go does.
 func (t *T) write(text string) {
 	t.out.flush()
-	if pos := logPos(); pos != "" {
+	if pos := logPos(t.stopping); pos != "" {
 		text = pos + ": " + text
 	}
 	t.writeRaw(text)
@@ -423,8 +698,10 @@ func (t *T) writeRaw(text string) {
 
 // M holds the state of a test binary. A TestMain function reads it.
 type M struct {
-	tests      []InternalTest
-	benchmarks []InternalBenchmark
+	tests       []InternalTest
+	benchmarks  []InternalBenchmark
+	examples    []InternalExample
+	fuzzTargets []InternalFuzzTarget
 	// code holds the exit status after Run.
 	code int
 	// ran marks a call of Run.
@@ -443,20 +720,15 @@ func NewM(tests []InternalTest, benchmarks []InternalBenchmark) *M {
 func (m *M) Run() int {
 	m.ran = true
 	flags := readFlags()
-	failed := false
-	ran := false
-	for _, tc := range m.tests {
-		if !matches(tc.Name, flags.run) {
+	ran, ok := runList(m.tests, flags)
+	failed := !ok
+	// Go runs each example after the tests and before the benchmarks.
+	for _, ex := range m.examples {
+		if !matches(ex.Name, flags.run) {
 			continue
 		}
 		ran = true
-		t := &T{name: tc.Name}
-		f := tc.F
-		runOne(t, func() { f(t) })
-		for _, l := range t.report {
-			emit(l)
-		}
-		if t.failed {
+		if !runExample(ex) {
 			failed = true
 		}
 	}
@@ -475,12 +747,69 @@ func (m *M) Run() int {
 	}
 	if failed {
 		emit("FAIL")
+		writeCoverage()
 		m.code = 1
 		return 1
 	}
 	emit("PASS")
+	writeCoverage()
 	m.code = 0
 	return 0
+}
+
+// runList runs each test of a list and reports whether 1 test ran and whether
+// each test passed.
+//
+// The flag -count runs the whole list again, exactly as go test does. A test
+// that Parallel stopped waits for the end of the pass of its round.
+func runList(tests []InternalTest, flags options) (ran, ok bool) {
+	ok = true
+	for round := 0; round < flags.rounds; round++ {
+		g := &group{}
+		for _, tc := range tests {
+			if !matches(tc.Name, flags.run) {
+				continue
+			}
+			ran = true
+			t := &T{name: tc.Name}
+			f := tc.F
+			g.run(t, func() { f(t) })
+			if t.parallel {
+				continue
+			}
+			for _, l := range t.report {
+				emit(l)
+			}
+			if t.failed {
+				ok = false
+			}
+		}
+		// The parallel pass. Each test that Parallel stopped runs now, and the
+		// report of each one follows the order of its end.
+		for _, t := range g.wait() {
+			for _, l := range t.report {
+				emit(l)
+			}
+			if t.failed {
+				ok = false
+			}
+		}
+	}
+	return ran, ok
+}
+
+// writeCoverage writes the line of the coverage of a run that holds counters.
+// A run with no counter writes no line, exactly as go test does.
+func writeCoverage() {
+	if CoverMode() == "" {
+		return
+	}
+	if _, total := coverCounts(); total == 0 {
+		emit("coverage: [no statements]")
+		return
+	}
+	emit("coverage: " + strconv.FormatFloat(Coverage()*100, 'f', 1, 64) +
+		"% of statements")
 }
 
 // Main runs each test and each benchmark of a test binary. The compiler writes
@@ -491,8 +820,10 @@ func (m *M) Run() int {
 // -test.bench=<pattern> for a filter of the benchmarks, and one of
 // -test.benchtime=<nanoseconds> or -test.benchcount=<count> for the length of
 // a benchmark.
-func Main(tests []InternalTest, benchmarks []InternalBenchmark) {
+func Main(tests []InternalTest, benchmarks []InternalBenchmark,
+	examples []InternalExample) {
 	m := NewM(tests, benchmarks)
+	m.examples = examples
 	Finish(m, m.Run())
 }
 
@@ -509,8 +840,10 @@ func Finish(m *M, code int) {
 
 // MainWith runs a TestMain function and then stops the binary. The compiler
 // writes the call into the entry point of a binary with such a function.
-func MainWith(tests []InternalTest, benchmarks []InternalBenchmark, f func(*M)) {
+func MainWith(tests []InternalTest, benchmarks []InternalBenchmark,
+	examples []InternalExample, f func(*M)) {
 	m := NewM(tests, benchmarks)
+	m.examples = examples
 	f(m)
 	if !m.ran {
 		emit("testing: warning: no tests to run")
@@ -533,17 +866,26 @@ type options struct {
 	// count fixes the count of iterations. It replaces the search when it is
 	// above 0.
 	count int
+	// rounds is the count of runs of the whole list of the tests. The flag
+	// -count of gart test gives it, and the value is 1 by default.
+	rounds int
 }
 
 // defaultBenchNanos is the length that 1 benchmark targets. Go uses 1 second.
 const defaultBenchNanos = 1000000000
 
 func readFlags() options {
-	out := options{nanoseconds: defaultBenchNanos}
+	out := options{nanoseconds: defaultBenchNanos, rounds: 1}
 	for _, arg := range dart.Args() {
 		switch {
 		case arg == "-test.v" || arg == "-test.v=true":
 			verbose = true
+		case arg == "-test.short" || arg == "-test.short=true":
+			short = true
+		case strings.HasPrefix(arg, "-test.count="):
+			if v, err := strconv.Atoi(strings.TrimPrefix(arg, "-test.count=")); err == nil {
+				out.rounds = v
+			}
 		case strings.HasPrefix(arg, "-test.run="):
 			out.run = strings.TrimPrefix(arg, "-test.run=")
 			runFilter = out.run
@@ -581,11 +923,23 @@ func runOne(t *T, call func()) {
 	if verbose {
 		emit("=== RUN   " + t.name)
 	}
-	start := dart.MonoNanos()
-	parent := current
-	current = t
+	t.start = dart.MonoNanos()
+	id := dart.GoID()
+	parent := current[id]
+	current[id] = t
 	dart.Catch(call)
-	stopping = false
+	t.stopping = false
+	// The parallel subtests of this test run now. Go runs them after the body
+	// and in front of the cleanups.
+	if t.group != nil {
+		for _, sub := range t.group.wait() {
+			t.report = append(t.report, sub.report...)
+			if sub.failed {
+				t.failed = true
+			}
+		}
+	}
+	current[id] = t
 	t.out.flush()
 	if t.cancel != nil {
 		t.cancel()
@@ -593,9 +947,9 @@ func runOne(t *T, call func()) {
 	for i := len(t.cleanups) - 1; i >= 0; i-- {
 		dart.Catch(t.cleanups[i])
 	}
-	current = parent
+	current[id] = parent
 	head := fmt.Sprintf("%s--- %s: %s (%ss)", indent(t.level), state(t), t.name,
-		seconds(dart.MonoNanos()-start))
+		seconds(dart.MonoNanos()-t.start))
 	if verbose {
 		t.report = append([]string{head}, t.report...)
 		return
@@ -978,8 +1332,9 @@ func Benchmark(f func(*B)) BenchmarkResult {
 func runIterations(name string, f func(*B), n int) *B {
 	t := &T{name: name}
 	b := &B{N: n, common: t, extra: map[string]float64{}}
-	parent := current
-	current = t
+	id := dart.GoID()
+	parent := current[id]
+	current[id] = t
 	b.StartTimer()
 	dart.Catch(func() { f(b) })
 	b.StopTimer()
@@ -990,7 +1345,7 @@ func runIterations(name string, f func(*B), n int) *B {
 	for i := len(t.cleanups) - 1; i >= 0; i-- {
 		dart.Catch(t.cleanups[i])
 	}
-	current = parent
+	current[id] = parent
 	if t.failed || t.skipped {
 		head := indent(t.level) + "--- " + state(t) + ": " + name + " (" +
 			seconds(b.elapsed) + "s)"
@@ -1130,22 +1485,54 @@ type Cover struct {
 	CoveredPackages string
 }
 
-// RegisterCover holds the counters of the coverage of the tests. The function
-// of Go does nothing as well, because the report of Go reads the counters of
-// the runtime.
+// cover holds the counters that SetCover took.
+var cover Cover
+
+// RegisterCover does nothing. The function of Go does nothing as well, because
+// the coverage of Go moved into the runtime. SetCover holds the counters of a
+// run of gart.
 func RegisterCover(c Cover) {}
 
-// CoverMode gives the mode of the coverage: "set", "count", or "atomic".
+// SetCover holds the counters of the coverage of a run. The entry point of a
+// test binary of gart calls it, because the flag -cover of gart test writes a
+// counter into each statement of the package under test.
 //
-// gart writes no counter into a package, thus the result is always empty. Go
-// gives the same result for a run with no coverage.
-func CoverMode() string { return "" }
+// Go holds no such name: its own entry point gives the mode through the
+// interface testDeps of MainStart, and that interface names a profile of the
+// runtime that gart holds not.
+func SetCover(c Cover) { cover = c }
+
+// CoverMode gives the mode of the coverage: "set", "count", or "atomic". A run
+// with no coverage gives an empty text.
+func CoverMode() string { return cover.Mode }
 
 // Coverage gives the part of the statements that the run reached, from 0 to 1.
-//
-// gart writes no counter into a package, thus the result is always 0. Go gives
-// the same result for a run with no coverage.
-func Coverage() float64 { return 0 }
+// A run with no coverage gives 0.
+func Coverage() float64 {
+	covered, total := coverCounts()
+	if total == 0 {
+		return 0
+	}
+	return float64(covered) / float64(total)
+}
+
+// coverCounts gives the count of the statements that the run reached and the
+// count of the statements of each block.
+func coverCounts() (covered, total int) {
+	for name, counts := range cover.Counters {
+		blocks := cover.Blocks[name]
+		for i, count := range counts {
+			if i >= len(blocks) {
+				break
+			}
+			total += int(blocks[i].Stmts)
+			if count > 0 {
+				covered += int(blocks[i].Stmts)
+			}
+		}
+	}
+	return covered, total
+}
 
 // testBinary marks a run of a test binary. NewM writes it, and the compiler
 // writes the call of NewM into the entry point of each test binary.

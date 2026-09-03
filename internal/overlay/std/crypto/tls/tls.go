@@ -142,6 +142,11 @@ type ConnectionState struct {
 	NegotiatedProtocol string
 	// ServerName holds the name that the client sent.
 	ServerName string
+	// HandshakeComplete reports a handshake that ran to its end. Dart gives a
+	// connection only after the handshake, thus each Conn of this package
+	// holds the value true. A zero ConnectionState holds false, exactly as in
+	// Go.
+	HandshakeComplete bool
 }
 
 // A Conn is a TLS connection. It holds each method of net.Conn.
@@ -280,7 +285,8 @@ func (l *listener) Accept() (net.Conn, error) {
 		return nil, errors.New("tls: accept: " + cause)
 	}
 	return &Conn{handle: handle,
-		state: ConnectionState{NegotiatedProtocol: proto}}, nil
+		state: ConnectionState{NegotiatedProtocol: proto,
+			HandshakeComplete: true}}, nil
 }
 
 // Close ends the listener. Each connection of it stays open, exactly as in
@@ -338,7 +344,8 @@ func Dial(network, addr string, config *Config) (*Conn, error) {
 	}
 	return &Conn{
 		handle: handle,
-		state:  ConnectionState{NegotiatedProtocol: chosen, ServerName: name},
+		state: ConnectionState{NegotiatedProtocol: chosen, ServerName: name,
+			HandshakeComplete: true},
 	}, nil
 }
 
@@ -375,7 +382,8 @@ func DialProxy(proxyAddr, addr, head string, config *Config) (*Conn, error) {
 	}
 	return &Conn{
 		handle: handle,
-		state:  ConnectionState{NegotiatedProtocol: chosen, ServerName: name},
+		state: ConnectionState{NegotiatedProtocol: chosen, ServerName: name,
+			HandshakeComplete: true},
 	}, nil
 }
 

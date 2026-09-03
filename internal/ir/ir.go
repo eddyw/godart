@@ -700,3 +700,20 @@ type MapIterType struct{ Map *types.Map }
 
 func (t *MapIterType) Underlying() types.Type { return t }
 func (t *MapIterType) String() string         { return "map iterator" }
+
+// Fresh reports whether the expression builds a new value that no other
+// expression names. A value semantics copy of such a value gives nothing.
+//
+// Stage 4 reads this rule at each copy point, and stage 5 reads it at the box
+// of an interface value. The 2 must agree, because a copy that only 1 of them
+// writes gives either a wasted object or an alias.
+//
+// A builtin is not fresh. iterkey and iterval each read the object that the
+// map holds.
+func Fresh(e Expr) bool {
+	switch e.(type) {
+	case *Composite, *Call, *Copy, *Zero, *Conv:
+		return true
+	}
+	return false
+}

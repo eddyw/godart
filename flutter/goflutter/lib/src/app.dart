@@ -21,13 +21,17 @@ final class GoApp extends StatefulWidget {
   State<GoApp> createState() => _GoAppState();
 }
 
-class _GoAppState extends State<GoApp> {
+class _GoAppState extends State<GoApp> with TickerProviderStateMixin {
   late final GoRuntime _rt;
 
   @override
   void initState() {
     super.initState();
     _rt = GoRuntime(widget.bridge);
+    // A ui.AnimationKey names an AnimationController, and such a controller
+    // needs a ticker. The ticker of this State stops when the host leaves the
+    // screen.
+    _rt.identities.vsync = this;
     _rt.onRoot = () {
       if (mounted) setState(() {});
     };

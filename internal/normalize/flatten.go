@@ -6,6 +6,7 @@ import (
 	"go/types"
 
 	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // A function that can block gives up control with a plain return, thus it keeps
@@ -40,6 +41,7 @@ func (b *builder) flatten(body *ir.Block, params []*ir.Var, recv *ir.Var,
 		f.writeDeferChain()
 	}
 	f.close()
+	placeLocalFuncs(m)
 	return m
 }
 
@@ -269,9 +271,11 @@ func (f *flat) stmt(s ir.Stmt) {
 	case *ir.Send:
 		f.send(s)
 	case *ir.Go:
-		f.emit(&ir.Go{Call: f.callArgs(s.Call)})
+		out := &ir.Go{Node: s.Node, Call: f.callArgs(s.Call)}
+		f.spawn(out, out.Call)
 	case *ir.Defer:
-		f.emit(&ir.Defer{Call: f.callArgs(s.Call)})
+		out := &ir.Defer{Node: s.Node, Call: f.callArgs(s.Call)}
+		f.spawn(out, out.Call)
 	default:
 		f.b.fail(f.pos, "the statement %T has no state machine form", s)
 	}
@@ -280,14 +284,72 @@ func (f *flat) stmt(s ir.Stmt) {
 // plain adds a statement that holds no operation that blocks. A declaration
 // still becomes a variable of the frame, because a later state reads it.
 func (f *flat) plain(s ir.Stmt) {
-	d, ok := s.(*ir.Declare)
-	if !ok {
+	switch s := s.(type) {
+	case *ir.Declare:
+		for _, out := range f.lift(s) {
+			f.emit(out)
+		}
+	case *ir.Go:
+		f.spawn(s, s.Call)
+	case *ir.Defer:
+		f.spawn(s, s.Call)
+	default:
+		f.emit(s)
+	}
+}
+
+// spawn writes a go statement or a defer statement of a machine.
+//
+// Go reads the function value and each argument at the point of the
+// statement, and the Dart closure of the goroutine or of the deferred call
+// reads the variable and not the value. Each local of a machine stands in
+// front of the loop, thus a second pass of the loop would change what a
+// closure of the first pass reads.
+//
+// The statement thus takes a block of its own, and the block declares a copy
+// of each argument that names a local of the machine. A Dart block gives a new
+// binding at each pass, thus the closure of each pass reads its own copy.
+func (f *flat) spawn(s ir.Stmt, target ir.Expr) {
+	local := map[string]bool{}
+	for _, v := range f.m.Locals {
+		local[v.Name] = true
+	}
+	var list []ir.Stmt
+	snap := func(e ir.Expr) ir.Expr {
+		id, ok := e.(*ir.Ident)
+		if !ok || !local[id.Name] {
+			return e
+		}
+		v := f.b.tempVar(f.pos, fmt.Sprintf("gc%d", len(list)), id.GoType())
+		list = append(list, &ir.Declare{Vars: []*ir.Var{v}, Init: id})
+		return identOf(v)
+	}
+	_, spawns := s.(*ir.Go)
+	switch call := target.(type) {
+	case *ir.Call:
+		if m, ok := call.Fun.(*ir.Method); ok {
+			call.Fun = &ir.Method{Recv: snap(m.Recv), Obj: m.Obj, Type: m.Type,
+				TypeArgs: m.TypeArgs}
+		} else if spawns {
+			// The chain of the deferred calls reads the name of the function
+			// value of a defer statement, and it gives that call the token of
+			// recover. A copy of that name would lose the token, thus only a
+			// go statement takes a copy of its function value.
+			call.Fun = snap(call.Fun)
+		}
+		for i, a := range call.Args {
+			call.Args[i] = snap(a)
+		}
+	case *ir.Builtin:
+		for i, a := range call.Args {
+			call.Args[i] = snap(a)
+		}
+	}
+	if len(list) == 0 {
 		f.emit(s)
 		return
 	}
-	for _, out := range f.lift(d) {
-		f.emit(out)
-	}
+	f.emit(&ir.Block{List: append(list, s)})
 }
 
 // lift turns a declaration into a variable of the frame and an assignment. A
@@ -361,6 +423,15 @@ func (f *flat) local(t types.Type) *ir.Var {
 // temp writes an expression into a variable of the frame. Go evaluates each
 // operand in order, thus an operand that stands before a call that blocks needs
 // its own variable.
+// temp writes an expression into a variable of the frame, and it gives the
+// read of that variable.
+//
+// A variable of the frame lives as long as the machine, and 1 loop writes it
+// again at each turn. A struct and an array each hold a Dart object, thus a
+// read of such a variable must take a copy. Without the copy a composite
+// literal of an earlier turn holds the object that the next turn writes.
+// Stage 4 marks no copy point here, because the source expression is a call or
+// another fresh value, and Go needs no copy of such a value.
 func (f *flat) temp(x ir.Expr) ir.Expr {
 	switch x.(type) {
 	case *ir.Const, *ir.Zero, *ir.Blank, nil:
@@ -368,7 +439,23 @@ func (f *flat) temp(x ir.Expr) ir.Expr {
 	}
 	v := f.local(x.GoType())
 	f.emit(&ir.Assign{Lhs: identOf(v), Rhs: x})
-	return identOf(v)
+	return f.readLocal(v)
+}
+
+// readLocal gives the read of a variable of the frame.
+//
+// A struct and an array each hold a Dart object, and a variable of the frame
+// lives as long as the machine. 1 loop writes such a variable again at each
+// turn, thus a read must take a copy. Without the copy a composite literal of
+// an earlier turn holds the object that the next turn writes. Stage 4 marks no
+// copy point on the source expression, because a call and each other fresh
+// value need none in Go.
+func (f *flat) readLocal(v *ir.Var) ir.Expr {
+	out := identOf(v)
+	if needsCopy(v.Type) {
+		return &ir.Copy{X: out, Type: v.Type}
+	}
+	return out
 }
 
 // pause ends the state after a call that blocks. The next state re-enters the
@@ -617,13 +704,38 @@ func (f *flat) send(s *ir.Send) {
 func (f *flat) lvalue(x ir.Expr) ir.Expr {
 	switch x := x.(type) {
 	case *ir.Index:
-		return &ir.Index{X: f.temp(f.value(x.X)), Index: f.temp(f.value(x.Index)), Type: x.Type}
+		return &ir.Index{X: f.indexBase(x.X), Index: f.temp(f.value(x.Index)), Type: x.Type}
 	case *ir.Field:
 		return &ir.Field{X: f.lvalueBase(x.X), Name: x.Name, Type: x.Type}
 	case *ir.Unary:
 		return &ir.Unary{Op: x.Op, X: f.temp(f.value(x.X)), Type: x.Type}
 	}
 	return x
+}
+
+// indexBase keeps the base of an index write.
+//
+// A slice, a map, and a pointer each hold a reference. A variable of the frame
+// thus names the same target, and the hoist holds the order of Go: the value
+// that stands in front of the call reaches the write.
+//
+// A Dart list holds an array by value, thus each assignment of an array takes
+// a copy. A hoist of an array would write into that copy, and the array of the
+// program would keep its old element. An array keeps its location.
+func (f *flat) indexBase(x ir.Expr) ir.Expr {
+	if isArrayType(x.GoType()) {
+		return f.lvalueBase(x)
+	}
+	return f.temp(f.value(x))
+}
+
+// isArrayType reports whether the core type of t is an array.
+func isArrayType(t types.Type) bool {
+	if t == nil {
+		return false
+	}
+	_, ok := typeset.Core(t).(*types.Array)
+	return ok
 }
 
 // lvalueBase keeps the location of the base of a field write. A name is a
@@ -638,7 +750,7 @@ func (f *flat) lvalueBase(x ir.Expr) ir.Expr {
 	case *ir.Field:
 		return &ir.Field{X: f.lvalueBase(x.X), Name: x.Name, Type: x.Type}
 	case *ir.Index:
-		return &ir.Index{X: f.temp(f.value(x.X)), Index: f.temp(f.value(x.Index)), Type: x.Type}
+		return &ir.Index{X: f.indexBase(x.X), Index: f.temp(f.value(x.Index)), Type: x.Type}
 	case *ir.Unary:
 		return &ir.Unary{Op: x.Op, X: f.temp(f.value(x.X)), Type: x.Type}
 	}

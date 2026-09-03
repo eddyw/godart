@@ -61,9 +61,17 @@ func (h Header) Clone() Header {
 
 // Write writes the header in the form of the wire. The keys stand in order,
 // because a Go map holds no order.
-func (h Header) Write(w io.Writer) error {
+func (h Header) Write(w io.Writer) error { return h.WriteSubset(w, nil) }
+
+// WriteSubset writes the header in the form of the wire, and it drops each key
+// that the map exclude holds with the value true. The keys stand in order,
+// because a Go map holds no order.
+func (h Header) WriteSubset(w io.Writer, exclude map[string]bool) error {
 	keys := make([]string, 0, len(h))
 	for k := range h {
+		if exclude[k] {
+			continue
+		}
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)

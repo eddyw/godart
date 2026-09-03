@@ -191,6 +191,18 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	}
 	w("}")
 	w("")
+	// placeLocalFuncs of stage 4 writes 1 declaration of a literal into each
+	// state that reads it, because a case clause of a Dart switch holds a
+	// scope of its own. The class stands at package level, thus the file takes
+	// 1 copy only. The text above still reads each type of the frame, thus the
+	// import of that type reaches the library file.
+	if e.frameSeen == nil {
+		e.frameSeen = map[string]bool{}
+	}
+	if e.frameSeen[m.Class] {
+		return
+	}
+	e.frameSeen[m.Class] = true
 	e.frames = append(e.frames, b.String())
 }
 
@@ -514,7 +526,11 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 		fnType = fmt.Sprintf("%s Function([%s?])", result, frame)
 	}
 	invoke := fmt.Sprintf("$fn(%s)", strings.Join(e.frameArgs(nil, lit.Params), ", "))
-	e.litSeq++
+	// A second declaration of 1 literal takes no number of its own, because
+	// writeFrameClass drops its class. Go numbers each literal 1 time.
+	if !e.frameSeen[m.Class] {
+		e.litSeq++
+	}
 	e.writeFrameClass(m, tps, fnType, invoke, len(lit.Results) > 0,
 		fmt.Sprintf("%s.func%d", e.curGoName, e.litSeq), e.funcFile)
 }

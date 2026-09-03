@@ -7,8 +7,8 @@ import "errors"
 
 import (
 	"iter"
-	"syscall/dart"
 	"unicode"
+	"unicode/utf8"
 )
 
 // Index gives the position of the first substr in s, or -1.
@@ -489,12 +489,58 @@ func FieldsFunc(s string, f func(rune) bool) []string {
 
 // ToUpper gives the text in upper case.
 func ToUpper(s string) string {
-	return dart.Upper(s)
+	isASCII, hasLower := true, false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= utf8.RuneSelf {
+			isASCII = false
+			break
+		}
+		hasLower = hasLower || ('a' <= c && c <= 'z')
+	}
+	if isASCII {
+		if !hasLower {
+			return s
+		}
+		b := make([]byte, len(s))
+		for i := 0; i < len(s); i++ {
+			c := s[i]
+			if 'a' <= c && c <= 'z' {
+				c -= 'a' - 'A'
+			}
+			b[i] = c
+		}
+		return string(b)
+	}
+	return Map(unicode.ToUpper, s)
 }
 
 // ToLower gives the text in lower case.
 func ToLower(s string) string {
-	return dart.Lower(s)
+	isASCII, hasUpper := true, false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= utf8.RuneSelf {
+			isASCII = false
+			break
+		}
+		hasUpper = hasUpper || ('A' <= c && c <= 'Z')
+	}
+	if isASCII {
+		if !hasUpper {
+			return s
+		}
+		b := make([]byte, len(s))
+		for i := 0; i < len(s); i++ {
+			c := s[i]
+			if 'A' <= c && c <= 'Z' {
+				c += 'a' - 'A'
+			}
+			b[i] = c
+		}
+		return string(b)
+	}
+	return Map(unicode.ToLower, s)
 }
 
 // ToLowerSpecial gives the text in lower case, with the rules of the case
@@ -534,9 +580,79 @@ func mapRunes(f func(rune) rune, s string) string {
 	return out
 }
 
-// EqualFold reports whether s and t are equal in lower case.
+// EqualFold reports whether s and t are equal under simple Unicode case
+// folding.
+//
+// A lower case of the 2 texts gives a different answer. Simple folding relates
+// the long s to s, the final sigma to sigma, and the theta symbol to theta, and
+// no case mapping does.
 func EqualFold(s, t string) bool {
-	return dart.Lower(s) == dart.Lower(t)
+	i := 0
+	wide := -1
+	for i < len(s) && i < len(t) {
+		sr := s[i]
+		tr := t[i]
+		if sr|tr >= utf8.RuneSelf {
+			wide = i
+			break
+		}
+		if tr == sr {
+			i++
+			continue
+		}
+		if tr < sr {
+			tr, sr = sr, tr
+		}
+		if 'A' <= sr && sr <= 'Z' && tr == sr+'a'-'A' {
+			i++
+			continue
+		}
+		return false
+	}
+	if wide < 0 {
+		return len(s) == len(t)
+	}
+	return foldTail(s[wide:], t[wide:])
+}
+
+// foldTail reads the rest of the 2 texts rune by rune. EqualFold reads the
+// ASCII part first, because that part needs no decode.
+func foldTail(s, t string) bool {
+	for _, sr := range s {
+		if len(t) == 0 {
+			return false
+		}
+		var tr rune
+		if t[0] < utf8.RuneSelf {
+			tr, t = rune(t[0]), t[1:]
+		} else {
+			r, size := utf8.DecodeRuneInString(t)
+			tr, t = r, t[size:]
+		}
+		if tr == sr {
+			continue
+		}
+		if tr < sr {
+			tr, sr = sr, tr
+		}
+		if tr < utf8.RuneSelf {
+			if 'A' <= sr && sr <= 'Z' && tr == sr+'a'-'A' {
+				continue
+			}
+			return false
+		}
+		// The fold of a rune is a cycle. The walk stops at the start again, or
+		// at a rune that is not below the larger 1.
+		r := unicode.SimpleFold(sr)
+		for r != sr && r < tr {
+			r = unicode.SimpleFold(r)
+		}
+		if r == tr {
+			continue
+		}
+		return false
+	}
+	return len(t) == 0
 }
 
 // Cut cuts s at the first sep.

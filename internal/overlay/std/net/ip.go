@@ -108,6 +108,52 @@ func (ip IP) String() string {
 	return "?" + hexText(ip)
 }
 
+// AppendText writes the text of the address after the bytes of b, and it
+// gives the result. An empty address writes nothing. It reports an error for
+// a length that no address holds.
+//
+// AppendText gives the interface encoding.TextAppender.
+func (ip IP) AppendText(b []byte) ([]byte, error) {
+	if len(ip) == 0 {
+		return b, nil
+	}
+	if len(ip) != IPv4len && len(ip) != IPv6len {
+		return b, &AddrError{Err: "invalid IP address", Addr: hexText(ip)}
+	}
+	return append(b, ip.String()...), nil
+}
+
+// MarshalText gives the text of the address. An empty address gives an empty
+// slice.
+//
+// MarshalText gives the interface encoding.TextMarshaler.
+func (ip IP) MarshalText() ([]byte, error) {
+	// 24 bytes hold each IPv4 address and each short IPv6 address.
+	b, err := ip.AppendText(make([]byte, 0, 24))
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// UnmarshalText reads the text of an address. An empty text gives an empty
+// address.
+//
+// UnmarshalText gives the interface encoding.TextUnmarshaler.
+func (ip *IP) UnmarshalText(text []byte) error {
+	if len(text) == 0 {
+		*ip = nil
+		return nil
+	}
+	s := string(text)
+	x := ParseIP(s)
+	if x == nil {
+		return &ParseError{Type: "IP address", Text: s}
+	}
+	*ip = x
+	return nil
+}
+
 func isZeros(b []byte) bool {
 	for _, c := range b {
 		if c != 0 {

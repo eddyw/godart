@@ -6,9 +6,9 @@
 
 // HTTP file system request handler.
 //
-// This file comes from the real source of Go 1.27, with 1 change: the package
-// internal/godebug stands outside the surface, thus the setting
-// httpservecontentkeepheaders holds its default.
+// This file comes from the real source of Go 1.27, with 1 change: the setting
+// httpservecontentkeepheaders reads a local type and holds its default. The
+// overlay of internal/godebug gives the same answer.
 
 package http
 
@@ -186,7 +186,8 @@ func dirList(w ResponseWriter, r *Request, f File) {
 // GODEBUG=httpservecontentkeepheaders=1 restores the pre-1.23 behavior of not deleting
 // Cache-Control, Content-Encoding, Etag, or Last-Modified headers on ServeContent errors.
 // httpservecontentkeepheaders holds the setting of the same name. The package
-// internal/godebug stands outside the surface, thus the value is the default.
+// The setting holds its default, exactly as the overlay of internal/godebug
+// gives it.
 var httpservecontentkeepheaders = godebugSetting{}
 
 type godebugSetting struct{}

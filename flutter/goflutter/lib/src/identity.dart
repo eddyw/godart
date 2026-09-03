@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:goruntime/goruntime.dart';
 
+import 'convert.dart';
 import 'node.dart';
 import 'runtime.dart';
 
@@ -24,11 +25,17 @@ final class _Held {
 
   final String kind;
   final String name;
-  final Listenable object;
+  final Object object;
 
-  /// drop releases the Flutter object. Each of the 3 kinds owns a dispose of
-  /// its own, and this field saves a switch on the kind.
+  /// drop releases the Flutter object. Each kind owns a dispose of its own,
+  /// and this field saves a switch on the kind. An object that holds no
+  /// dispose takes an empty function.
   final void Function() drop;
+
+  /// state holds the last command that the host gave to the object. An
+  /// animation, an overlay, and a menu each read a command from the Go tree,
+  /// and the host gives it 1 time for each change. Read _drive.
+  String state = '';
 
   /// users counts the GoKeep widgets that hold this object. A count above 1
   /// means that 1 key reached 2 widgets, and the sweep reports it.
@@ -73,6 +80,10 @@ final class GoIdentities {
   WidgetStatesController statesFor(String name) =>
       _states(name).object as WidgetStatesController;
 
+  /// vsync drives each animation that a key names. GoApp writes it, thus a
+  /// ticker stops when the host leaves the screen.
+  TickerProvider? vsync;
+
   /// focus gives the FocusNode of 1 ui.FocusKey.
   FocusNode? focus(GoNode? key, GoRuntime rt) {
     if (key == null) return null;
@@ -115,6 +126,145 @@ final class GoIdentities {
             rt.run(() => f(on));
           };
     return c;
+  }
+
+  /// text gives the TextEditingController of 1 ui.TextKey.
+  TextEditingController? text(GoNode? key, GoRuntime rt) {
+    if (key == null) return null;
+    final _Held h = _text(key.text('Name', 0), key.text('Initial', 1));
+    final TextEditingController c = h.object as TextEditingController;
+    final void Function(GoString)? f = key.onText('OnChanged', 2);
+    h.report = f == null
+        ? null
+        : () {
+            final GoString v = GoString.fromString(c.text);
+            rt.run(() => f(v));
+          };
+    return c;
+  }
+
+  /// animation gives the AnimationController of 1 ui.AnimationKey.
+  Animation<double>? animation(GoNode? key, GoRuntime rt) {
+    if (key == null) return null;
+    final int millis = key.count('Millis', 1);
+    final _Held h = _anim(key.text('Name', 0), millis);
+    final AnimationController c = h.object as AnimationController;
+    final double target = key.size('Target', 2);
+    final String curve = key.text('Curve', 3);
+    final bool repeat = key.flag('Repeat', 4);
+    final bool reverse = key.flag('Reverse', 5);
+    final void Function()? end = key.action('OnEnd', 6);
+    _drive(h, '$millis/$target/$curve/$repeat/$reverse', () {
+      c.duration = Duration(milliseconds: millis == 0 ? 300 : millis);
+      if (repeat) {
+        c.repeat(reverse: reverse);
+        return;
+      }
+      if (c.value == target) return;
+      final TickerFuture run = c.animateTo(
+        target,
+        curve: goCurve(curve) ?? Curves.linear,
+      );
+      if (end != null) run.then((void _) => rt.run(end));
+    });
+    return c;
+  }
+
+  /// link gives the LayerLink of 1 ui.LinkKey.
+  LayerLink? link(GoNode? key) {
+    if (key == null) return null;
+    return _obtain('link', key.text('Name', 0), (String n) {
+          return _Held('link', n, LayerLink(), () {});
+        }).object
+        as LayerLink;
+  }
+
+  /// overlap gives the SliverOverlapAbsorberHandle of 1 ui.OverlapKey.
+  SliverOverlapAbsorberHandle? overlap(GoNode? key) {
+    if (key == null) return null;
+    return _obtain('overlap', key.text('Name', 0), (String n) {
+          final SliverOverlapAbsorberHandle h = SliverOverlapAbsorberHandle();
+          return _Held('overlap', n, h, h.dispose);
+        }).object
+        as SliverOverlapAbsorberHandle;
+  }
+
+  /// overlay gives the OverlayPortalController of 1 ui.OverlayKey.
+  OverlayPortalController? overlay(GoNode? key) {
+    if (key == null) return null;
+    final _Held h = _obtain('overlay', key.text('Name', 0), (String n) {
+      return _Held(
+        'overlay',
+        n,
+        OverlayPortalController(debugLabel: 'gart overlay $n'),
+        () {},
+      );
+    });
+    final OverlayPortalController c = h.object as OverlayPortalController;
+    final bool show = key.flag('Show', 1);
+    _drive(h, show ? 'show' : 'hide', () {
+      if (show == c.isShowing) return;
+      if (show) {
+        c.show();
+      } else {
+        c.hide();
+      }
+    });
+    return c;
+  }
+
+  /// menu gives the MenuController of 1 ui.MenuKey.
+  MenuController? menu(GoNode? key) {
+    if (key == null) return null;
+    final _Held h = _obtain('menu', key.text('Name', 0), (String n) {
+      return _Held('menu', n, MenuController(), () {});
+    });
+    final MenuController c = h.object as MenuController;
+    final bool open = key.flag('Open', 1);
+    _drive(h, open ? 'open' : 'close', () {
+      if (open == c.isOpen) return;
+      if (open) {
+        c.open();
+      } else {
+        c.close();
+      }
+    });
+    return c;
+  }
+
+  /// scope gives the FocusScopeNode of 1 ui.ScopeKey.
+  FocusScopeNode? scope(GoNode? key) {
+    if (key == null) return null;
+    return _obtain('scope', key.text('Name', 0), (String n) {
+          final FocusScopeNode node = FocusScopeNode(
+            debugLabel: 'gart scope $n',
+          );
+          return _Held('scope', n, node, node.dispose);
+        }).object
+        as FocusScopeNode;
+  }
+
+  /// storage gives the PageStorageBucket of 1 ui.StorageKey.
+  PageStorageBucket? storage(GoNode? key) {
+    if (key == null) return null;
+    return _obtain('storage', key.text('Name', 0), (String n) {
+          return _Held('storage', n, PageStorageBucket(), () {});
+        }).object
+        as PageStorageBucket;
+  }
+
+  /// _drive gives 1 command to an object of the table, and it gives it 1 time
+  /// for each change of the Go tree.
+  ///
+  /// The command runs after the frame. An animation that starts during a build
+  /// marks a widget dirty in the middle of that build, and Flutter reports
+  /// such a change as an error.
+  void _drive(_Held h, String want, void Function() run) {
+    if (h.state == want) return;
+    h.state = want;
+    SchedulerBinding.instance.addPostFrameCallback((Duration _) {
+      if (_held[h.id] == h) run();
+    });
   }
 
   /// retain marks each key as held by 1 more widget.
@@ -196,6 +346,28 @@ final class GoIdentities {
     return _Held('states', n, c, c.dispose);
   });
 
+  _Held _text(String name, String initial) =>
+      _obtain('text', name, (String n) {
+        final TextEditingController c = TextEditingController(text: initial);
+        return _Held('text', n, c, c.dispose);
+      });
+
+  _Held _anim(String name, int millis) => _obtain('anim', name, (String n) {
+    final TickerProvider? v = vsync;
+    if (v == null) {
+      throw StateError(
+        'the host holds no ticker provider, thus the key $n names no '
+        'animation. GoApp writes the provider of the application.',
+      );
+    }
+    final AnimationController c = AnimationController(
+      vsync: v,
+      duration: Duration(milliseconds: millis == 0 ? 300 : millis),
+      debugLabel: 'gart animation $n',
+    );
+    return _Held('anim', n, c, c.dispose);
+  });
+
   _Held _obtain(String kind, String name, _Held Function(String) make) {
     final String id = '$kind:$name';
     if (_open.isNotEmpty) _open.last.add(id);
@@ -203,7 +375,8 @@ final class GoIdentities {
     if (found != null) return found;
     final _Held made = make(name);
     _held[id] = made;
-    made.object.addListener(() => _changed(made));
+    final Object object = made.object;
+    if (object is Listenable) object.addListener(() => _changed(made));
     _needSweep();
     return made;
   }
@@ -294,3 +467,35 @@ ScrollController? goScrollController(GoNode? key, GoRuntime rt) =>
 /// goStatesController reads the ui.StatesKey struct of the Go side.
 WidgetStatesController? goStatesController(GoNode? key, GoRuntime rt) =>
     rt.identities.states(key, rt);
+
+/// goTextController reads the ui.TextKey struct of the Go side.
+TextEditingController? goTextController(GoNode? key, GoRuntime rt) =>
+    rt.identities.text(key, rt);
+
+/// goAnimation reads the ui.AnimationKey struct of the Go side.
+Animation<double>? goAnimation(GoNode? key, GoRuntime rt) =>
+    rt.identities.animation(key, rt);
+
+/// goLayerLink reads the ui.LinkKey struct of the Go side.
+LayerLink? goLayerLink(GoNode? key, GoRuntime rt) =>
+    rt.identities.link(key);
+
+/// goOverlapHandle reads the ui.OverlapKey struct of the Go side.
+SliverOverlapAbsorberHandle? goOverlapHandle(GoNode? key, GoRuntime rt) =>
+    rt.identities.overlap(key);
+
+/// goOverlayController reads the ui.OverlayKey struct of the Go side.
+OverlayPortalController? goOverlayController(GoNode? key, GoRuntime rt) =>
+    rt.identities.overlay(key);
+
+/// goMenuController reads the ui.MenuKey struct of the Go side.
+MenuController? goMenuController(GoNode? key, GoRuntime rt) =>
+    rt.identities.menu(key);
+
+/// goFocusScope reads the ui.ScopeKey struct of the Go side.
+FocusScopeNode? goFocusScope(GoNode? key, GoRuntime rt) =>
+    rt.identities.scope(key);
+
+/// goStorageBucket reads the ui.StorageKey struct of the Go side.
+PageStorageBucket? goStorageBucket(GoNode? key, GoRuntime rt) =>
+    rt.identities.storage(key);

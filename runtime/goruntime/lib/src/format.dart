@@ -256,7 +256,7 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'uint64':
     case 'uintptr':
       return _sign(
-        _base(_int(v as GoInt, letter, true), verb, letter),
+        _base(_int(v as GoInt, letter, true, verb.contains('#')), verb, letter),
         verb,
         letter,
       );
@@ -269,7 +269,11 @@ String _value(Object? v, TypeDesc type, String verb) {
     case 'uint16':
     case 'uint32':
       return _sign(
-        _base(_int(v as GoInt, letter, false), verb, letter),
+        _base(
+          _int(v as GoInt, letter, false, verb.contains('#')),
+          verb,
+          letter,
+        ),
         verb,
         letter,
       );
@@ -334,7 +338,7 @@ String _string(GoString v, String verb, String letter) {
   return '%!$letter(string=${v.toDartString()})';
 }
 
-String _int(GoInt v, String letter, bool unsigned) {
+String _int(GoInt v, String letter, bool unsigned, bool sharp) {
   switch (letter) {
     case 'v':
     case 'd':
@@ -354,7 +358,9 @@ String _int(GoInt v, String letter, bool unsigned) {
     case 'c':
       return $runeToString(v).toDartString();
     case 'q':
-      return "'${$runeToString(v).toDartString()}'";
+      return _quoteRune($ix(v));
+    case 'U':
+      return _unicode(v, sharp);
     case 'f':
     case 'e':
     case 'g':
@@ -363,8 +369,49 @@ String _int(GoInt v, String letter, bool unsigned) {
   return '%!$letter(int=$v)';
 }
 
+/// The text of a code point. Go writes `U+0061`, with 4 hexadecimal digits at
+/// least, and the flag # adds the character of a printable rune.
+String _unicode(GoInt v, bool sharp) {
+  final int n = $ix(v);
+  final String hex = n.toRadixString(16).toUpperCase().padLeft(4, '0');
+  if (!sharp || n < 0x20 || n > 0x10FFFF || (n >= 0x7F && n < 0xA0)) {
+    return 'U+$hex';
+  }
+  return "U+$hex '${$runeToString(v).toDartString()}'";
+}
+
 /// The text of an integer in a radix. An unsigned value reads its 64-bit
 /// pattern, and a negative signed value takes a minus sign.
+/// The quoted form of 1 code point, in the escape table of Go.
+///
+/// The table of the graphic categories of Unicode lives in the package
+/// strconv, and the overlay of fmt reads it for a rune of a call. A rune
+/// inside a slice, a map, or a struct reaches this function, thus a rune above
+/// the ASCII range writes itself here.
+String _quoteRune(int r) {
+  const Map<int, String> escapes = <int, String>{
+    0x07: r'\a',
+    0x08: r'\b',
+    0x0C: r'\f',
+    0x0A: r'\n',
+    0x0D: r'\r',
+    0x09: r'\t',
+    0x0B: r'\v',
+    0x27: r"\'",
+    0x5C: r'\\',
+  };
+  final String? e = escapes[r];
+  if (e != null) return "'$e'";
+  if (r < 0x20 || r == 0x7F) {
+    final String hex = r.toRadixString(16).padLeft(2, '0');
+    return "'\\x$hex'";
+  }
+  if (r < 0 || r > 0x10FFFF || (r >= 0xD800 && r <= 0xDFFF)) {
+    return "'\uFFFD'";
+  }
+  return "'${String.fromCharCode(r)}'";
+}
+
 String _radix(GoInt v, int radix, bool unsigned) {
   if (unsigned) return $uradix(v, radix);
   if (v < GoInt.zero) return '-${$uradix(-v, radix)}';
@@ -389,17 +436,96 @@ String _float(double v, String letter, int precision, bool single) {
   switch (letter) {
     case 'v':
     case 'g':
-      return single ? $f32string(v) : $fstring(v);
+      if (precision < 0) return single ? $f32string(v) : $fstring(v);
+      return _gPrecision(v, precision);
+    case 'G':
+      if (precision < 0) return single ? $f32string(v) : $fstring(v);
+      return _gPrecision(v, precision).toUpperCase();
     case 'f':
+    case 'F':
       if (v.isNaN) return 'NaN';
       if (v.isInfinite) return v > 0 ? '+Inf' : '-Inf';
       return v.toStringAsFixed(precision < 0 ? 6 : precision);
     case 'e':
       return _exponent(v, precision < 0 ? 6 : precision);
+    case 'E':
+      return _exponent(v, precision < 0 ? 6 : precision).toUpperCase();
     case 'd':
       return '%!d(float64=${$fstring(v)})';
   }
   return '%!$letter(float64=${$fstring(v)})';
+}
+
+/// The text of a float in the form %g of Go, with a count of the significant
+/// digits.
+///
+/// Go rounds the value to that count, it drops each trailing zero, and it then
+/// takes the form %e when the decimal exponent is under -4 or not under the
+/// count. This form holds the same rule, and it writes the text from the
+/// rounded digits, thus no second rounding of Dart reaches the output.
+String _gPrecision(double v, int prec) {
+  if (v.isNaN) return 'NaN';
+  if (v.isInfinite) return v > 0 ? '+Inf' : '-Inf';
+  if (prec <= 0) prec = 1;
+  final String sign = v.isNegative ? '-' : '';
+  final String text = v.abs().toStringAsExponential(prec - 1);
+  final int at = text.indexOf('e');
+  final int exp10 = int.parse(text.substring(at + 1));
+  String mant = text.substring(0, at).replaceAll('.', '');
+  int nd = mant.length;
+  while (nd > 1 && mant.codeUnitAt(nd - 1) == 0x30) {
+    nd--;
+  }
+  mant = mant.substring(0, nd);
+  final int dp = exp10 + 1;
+  int eprec = prec;
+  if (eprec > nd && nd >= dp) eprec = nd;
+  final int exp = dp - 1;
+  if (exp < -4 || exp >= eprec) {
+    final int digits = (prec > nd ? nd : prec) - 1;
+    return sign + _digitsExp(mant, exp, digits);
+  }
+  int frac = (prec > dp ? nd : prec) - dp;
+  if (frac < 0) frac = 0;
+  return sign + _digitsFixed(mant, dp, frac);
+}
+
+/// The form d.dddde±dd of a digit string with a decimal exponent.
+String _digitsExp(String mant, int exp, int digits) {
+  final StringBuffer out = StringBuffer();
+  out.write(mant[0]);
+  if (digits > 0) {
+    out.write('.');
+    for (var i = 1; i <= digits; i++) {
+      out.write(i < mant.length ? mant[i] : '0');
+    }
+  }
+  final String esign = exp < 0 ? '-' : '+';
+  final int abs = exp < 0 ? -exp : exp;
+  final String number = abs < 10 ? '0$abs' : '$abs';
+  out.write('e$esign$number');
+  return out.toString();
+}
+
+/// The form ddd.ddd of a digit string, a decimal point, and a count of the
+/// digits after the point.
+String _digitsFixed(String mant, int dp, int frac) {
+  final StringBuffer out = StringBuffer();
+  if (dp <= 0) {
+    out.write('0');
+  } else {
+    for (var i = 0; i < dp; i++) {
+      out.write(i < mant.length ? mant[i] : '0');
+    }
+  }
+  if (frac > 0) {
+    out.write('.');
+    for (var i = 0; i < frac; i++) {
+      final int at = dp + i;
+      out.write(at >= 0 && at < mant.length ? mant[at] : '0');
+    }
+  }
+  return out.toString();
 }
 
 /// The text of a complex number, in the form (1+2i) of Go. The imaginary part
@@ -519,19 +645,71 @@ String _map(Object? v, TypeDesc type, String verb, bool plus) {
   if (v is! GoMap<Object?, Object?>) return '$v';
   final TypeDesc? keyType = type.key?.call();
   final TypeDesc? elem = type.elem?.call();
-  final Slice<Object?> keys = v.keys();
-  final List<String> parts = <String>[];
-  for (var i = 0; i < keys.len; i++) {
-    final Object? k = keys.array[keys.off + i];
-    final Object? value = v.get(k);
+  final List<(Object?, String, String)> rows = <(Object?, String, String)>[];
+  // The walk reads each entry itself. A second read by the key would lose a
+  // key that no lookup finds, and a float that is not a number is such a key.
+  final GoMapIter<Object?, Object?> it = GoMapIter<Object?, Object?>(v);
+  while (it.next()) {
+    final Object? k = it.key;
+    final Object? value = it.value;
     final String keyText = keyType == null ? '$k' : _value(k, keyType, verb);
     final String valueText = elem == null
         ? '$value'
         : _value(value, elem, verb);
-    parts.add('$keyText:$valueText');
+    rows.add((k, keyText, valueText));
   }
-  parts.sort();
+  // Go orders the entries by the key, and not by the text of the key. A key of
+  // 1000 thus stands after a key of 3. Read internal/fmtsort of Go.
+  rows.sort((a, b) => _compareKeys(a.$1, b.$1, keyType, a.$2, b.$2));
+  final List<String> parts = <String>[
+    for (final row in rows) '${row.$2}:${row.$3}',
+  ];
   return 'map[${parts.join(' ')}]';
+}
+
+/// The order of 2 map keys of 1 type. A kind that holds no natural order takes
+/// the order of its text, which keeps the output stable.
+int _compareKeys(
+  Object? a,
+  Object? b,
+  TypeDesc? type,
+  String aText,
+  String bText,
+) {
+  switch (type?.kind) {
+    case 'bool':
+      if (a is bool && b is bool) {
+        if (a == b) return 0;
+        return a ? 1 : -1;
+      }
+    case 'int' || 'int8' || 'int16' || 'int32' || 'int64':
+      if (a is GoInt && b is GoInt) {
+        if (a == b) return 0;
+        return a < b ? -1 : 1;
+      }
+    case 'uint' || 'uint8' || 'uint16' || 'uint32' || 'uint64' || 'uintptr':
+      if (a is GoInt && b is GoInt) {
+        if (a == b) return 0;
+        // A value above the largest signed number reads as a negative number,
+        // thus the 2 signs decide first.
+        final bool an = a < $gi(0);
+        final bool bn = b < $gi(0);
+        if (an != bn) return an ? 1 : -1;
+        return a < b ? -1 : 1;
+      }
+    case 'float32' || 'float64':
+      if (a is double && b is double) {
+        // Go puts each value that is not a number first.
+        if (a.isNaN) return b.isNaN ? 0 : -1;
+        if (b.isNaN) return 1;
+        return a.compareTo(b);
+      }
+    case 'string':
+      if (a is GoString && b is GoString) {
+        return $compare(a, b);
+      }
+  }
+  return aText.compareTo(bText);
 }
 
 String _struct(Object? v, TypeDesc type, String verb, bool plus) {

@@ -491,17 +491,36 @@ func (t *rtype) Out(i int) Type {
 func (t *rtype) IsVariadic() bool { return dart.DescVariadic(t.handle()) }
 
 // A Method describes 1 exported method of a type.
+//
+// Go also holds the field Func, and that field stays out. It gives a func value
+// whose first parameter is the receiver, and the method table of the runtime
+// holds no such value. Read docs/parity.md.
 type Method struct {
-	Name  string
+	Name string
+	// PkgPath holds the import path of an unexported method, and it is empty
+	// for an exported method. The overlay reads no unexported method, thus the
+	// field is always empty.
+	PkgPath string
+	// Type holds the function type of the method. The type of a method of a
+	// concrete type carries the receiver in front of each parameter, and the
+	// type of a method of an interface type carries no receiver.
+	Type  Type
 	Index int
 }
+
+// IsExported reports whether the method is exported.
+func (m Method) IsExported() bool { return m.PkgPath == "" }
 
 // NumMethod gives the count of the exported methods of the type.
 func (t *rtype) NumMethod() int { return dart.DescNumMethod(t.handle()) }
 
 // Method gives 1 exported method of the type, in the order of the name.
 func (t *rtype) Method(i int) Method {
-	return Method{Name: dart.DescMethodName(t.handle(), i), Index: i}
+	return Method{
+		Name:  dart.DescMethodName(t.handle(), i),
+		Type:  typeOf(dart.DescMethodType(t.handle(), i)),
+		Index: i,
+	}
 }
 
 // Size gives the count of bytes that a value of the type holds in Go.
@@ -622,7 +641,12 @@ func Indirect(v Value) Value {
 }
 
 // Zero gives the zero value of a type.
-func Zero(t Type) Value { return Value{value: dart.DescZero(t.handle())} }
+// The static type travels with the value, because the zero value of an
+// interface type holds no descriptor of its own. A Value that holds neither a
+// value nor a type is the zero Value, and MakeFunc rejects such a result.
+func Zero(t Type) Value {
+	return Value{value: dart.DescZero(t.handle()), typ: t}
+}
 
 // New gives a Value that holds a pointer to a fresh zero value of the type.
 func New(t Type) Value { return Value{value: dart.NewValue(t.handle())} }
@@ -881,6 +905,68 @@ func MapOf(key, elem Type) Type {
 		panic("reflect: invalid key type " + key.String())
 	}
 	return typeOf(dart.MapOf(key.handle(), elem.handle()))
+}
+
+// MakeMapWithSize gives an empty map of the type. The size is a hint of Go, and
+// the map of Dart needs none.
+func MakeMapWithSize(t Type, n int) Value { return MakeMap(t) }
+
+// ChanOf gives the channel type of a direction and an element type.
+func ChanOf(dir ChanDir, t Type) Type {
+	return typeOf(dart.ChanOf(int(dir), t.handle()))
+}
+
+// MakeChan gives a channel of the type, with the size of the buffer.
+func MakeChan(t Type, buffer int) Value {
+	if t.Kind() != Chan {
+		panic("reflect: MakeChan of " + t.String())
+	}
+	if t.ChanDir() != BothDir {
+		panic("reflect: MakeChan of a channel of 1 direction")
+	}
+	if buffer < 0 {
+		panic("reflect: MakeChan with a negative buffer")
+	}
+	return Value{value: dart.MakeChan(t.handle(), buffer)}
+}
+
+// MakeFunc gives a func value of the function type. Each call of that value
+// runs fn with the arguments, and the results of fn become the results of the
+// call.
+//
+// The description of the function type carries a factory of its Dart type, thus
+// the value fits a location of that type. A function type that the program
+// never names holds no such factory, and MakeFunc of it panics with the cause.
+// FuncOf builds exactly such a type, thus FuncOf stays out. Read
+// docs/parity.md.
+//
+// A function that gives up control is outside this call, exactly as it is
+// outside Value.Call.
+func MakeFunc(typ Type, fn func(args []Value) (results []Value)) Value {
+	if typ == nil {
+		panic("reflect: MakeFunc with a nil type")
+	}
+	if typ.Kind() != Func {
+		panic("reflect: MakeFunc of " + typ.String())
+	}
+	return Value{value: dart.MakeFunc(typ.handle(), func(args []any) []any {
+		in := make([]Value, len(args))
+		for i, a := range args {
+			in[i] = Value{value: a, typ: typ.In(i)}
+		}
+		out := fn(in)
+		res := make([]any, len(out))
+		for i, o := range out {
+			// Go rejects a result that holds the zero Value. Such a Value
+			// carries no value and no type, and reflect.Zero of an interface
+			// type carries the type.
+			if o.value == nil && o.typ == nil && o.loc == locNone {
+				panic("reflect: function created by MakeFunc using closure returned zero Value")
+			}
+			res[i] = o.read()
+		}
+		return res
+	})}
 }
 
 // PointerTo gives the pointer type of an element type.
@@ -1399,4 +1485,507 @@ func (v Value) Grow(n int) {
 	grown := MakeSlice(v.Type(), length, capacity)
 	Copy(grown, v)
 	v.Set(grown)
+}
+
+// The channel operations of a Value. The runtime holds real channels, thus a
+// send and a receive give up control exactly as the operators of Go do.
+
+// Send writes 1 value into the channel that v holds. The call blocks the
+// goroutine until a receiver takes the value or the buffer holds room.
+func (v Value) Send(x Value) {
+	if v.Kind() != Chan {
+		panic(&ValueError{Method: "reflect.Value.Send", Kind: v.Kind()})
+	}
+	if v.Type().ChanDir() == RecvDir {
+		panic("reflect: send on a receive-only channel")
+	}
+	dart.ValueSend(v.read(), x.read())
+}
+
+// Close closes the channel that v holds.
+func (v Value) Close() {
+	if v.Kind() != Chan {
+		panic(&ValueError{Method: "reflect.Value.Close", Kind: v.Kind()})
+	}
+	if v.Type().ChanDir() == RecvDir {
+		panic("reflect: close of receive-only channel")
+	}
+	dart.ValueClose(v.read())
+}
+
+// TryRecv reads 1 value of the channel that v holds and gives up no control.
+//
+// A receive that ends gives the value and a true flag. A receive that cannot
+// end at this moment gives the zero Value and a false flag. A channel that
+// closed gives the zero value of the element type and a false flag.
+func (v Value) TryRecv() (Value, bool) {
+	if v.Kind() != Chan {
+		panic(&ValueError{Method: "reflect.Value.TryRecv", Kind: v.Kind()})
+	}
+	if v.Type().ChanDir() == SendDir {
+		panic("reflect: receive on send-only channel")
+	}
+	out, ok, valid := dart.ValueTryRecv(v.read())
+	if !valid {
+		return Value{}, false
+	}
+	return Value{value: out, typ: v.Type().Elem()}, ok
+}
+
+// TrySend writes 1 value into the channel that v holds and gives up no control.
+// The flag is false when the send cannot end at this moment.
+func (v Value) TrySend(x Value) bool {
+	if v.Kind() != Chan {
+		panic(&ValueError{Method: "reflect.Value.TrySend", Kind: v.Kind()})
+	}
+	if v.Type().ChanDir() == RecvDir {
+		panic("reflect: send on a receive-only channel")
+	}
+	return dart.ValueTrySend(v.read(), x.read())
+}
+
+// A SelectDir names the direction of 1 case of a select statement.
+type SelectDir int
+
+// The 3 directions of a case of a select statement.
+const (
+	_             SelectDir = iota
+	SelectSend              // case Chan <- Send
+	SelectRecv              // case <-Chan:
+	SelectDefault           // default
+)
+
+// A SelectCase describes 1 case of a select statement.
+//
+// The direction names the kind of the case. A case of the kind SelectDefault
+// holds no channel and no value. A case whose Chan holds the zero Value never
+// runs, exactly as in Go.
+type SelectCase struct {
+	Dir  SelectDir
+	Chan Value
+	Send Value
+}
+
+// Select runs a select statement of the cases and gives the number of the case
+// that it took.
+//
+// A case of the kind SelectRecv also gives the value and the flag of the
+// receive. Each other kind gives the zero Value and a false flag. Go takes a
+// ready case at random, and this call takes the first one. A Go program must
+// not depend on the choice.
+func Select(cases []SelectCase) (chosen int, recv Value, recvOK bool) {
+	dirs := make([]int, len(cases))
+	chans := make([]any, len(cases))
+	sends := make([]any, len(cases))
+	seenDefault := false
+	for i, c := range cases {
+		switch c.Dir {
+		case SelectDefault:
+			if seenDefault {
+				panic("reflect.Select: multiple default cases")
+			}
+			seenDefault = true
+			if c.Chan.IsValid() {
+				panic("reflect.Select: default case has Chan value")
+			}
+			if c.Send.IsValid() {
+				panic("reflect.Select: default case has Send value")
+			}
+			dirs[i] = int(SelectDefault)
+		case SelectSend:
+			dirs[i] = int(SelectSend)
+			if !c.Chan.IsValid() {
+				break
+			}
+			if c.Chan.Kind() != Chan {
+				panic("reflect.Select: SendDir case has no channel")
+			}
+			if c.Chan.Type().ChanDir() == RecvDir {
+				panic("reflect.Select: SendDir case of a receive-only channel")
+			}
+			if !c.Send.IsValid() {
+				panic("reflect.Select: SendDir case missing Send value")
+			}
+			chans[i] = c.Chan.read()
+			sends[i] = c.Send.read()
+		case SelectRecv:
+			dirs[i] = int(SelectRecv)
+			if c.Send.IsValid() {
+				panic("reflect.Select: RecvDir case has Send value")
+			}
+			if !c.Chan.IsValid() {
+				break
+			}
+			if c.Chan.Kind() != Chan {
+				panic("reflect.Select: RecvDir case has no channel")
+			}
+			if c.Chan.Type().ChanDir() == SendDir {
+				panic("reflect.Select: RecvDir case of a send-only channel")
+			}
+			chans[i] = c.Chan.read()
+		default:
+			panic("reflect.Select: invalid Dir")
+		}
+	}
+	at, out, ok := dart.SelectValue(dirs, chans, sends)
+	if at < 0 || at >= len(cases) || cases[at].Dir != SelectRecv {
+		return at, Value{}, false
+	}
+	return at, Value{value: out, typ: cases[at].Chan.Type().Elem()}, ok
+}
+
+// The predicates of a Value, and the small names of the package.
+
+// A ValueError names a call of a method of Value on a Value of the wrong kind.
+type ValueError struct {
+	Method string
+	Kind   Kind
+}
+
+// Error gives the text of the error.
+func (e *ValueError) Error() string {
+	if e.Kind == Invalid {
+		return "reflect: call of " + e.Method + " on zero Value"
+	}
+	return "reflect: call of " + e.Method + " on " + e.Kind.String() + " Value"
+}
+
+// CanInt reports whether Int gives the value with no panic.
+func (v Value) CanInt() bool {
+	switch v.Kind() {
+	case Int, Int8, Int16, Int32, Int64:
+		return true
+	}
+	return false
+}
+
+// CanUint reports whether Uint gives the value with no panic.
+func (v Value) CanUint() bool {
+	switch v.Kind() {
+	case Uint, Uint8, Uint16, Uint32, Uint64, Uintptr:
+		return true
+	}
+	return false
+}
+
+// CanFloat reports whether Float gives the value with no panic.
+func (v Value) CanFloat() bool {
+	switch v.Kind() {
+	case Float32, Float64:
+		return true
+	}
+	return false
+}
+
+// CanComplex reports whether Complex gives the value with no panic.
+func (v Value) CanComplex() bool {
+	switch v.Kind() {
+	case Complex64, Complex128:
+		return true
+	}
+	return false
+}
+
+// Comparable reports whether the operator == of Go reads the value with no
+// panic.
+func (v Value) Comparable() bool {
+	switch v.Kind() {
+	case Invalid:
+		return false
+	case Array:
+		switch v.Type().Elem().Kind() {
+		case Interface, Array, Struct:
+			for i := 0; i < v.Type().Len(); i++ {
+				if !v.Index(i).Comparable() {
+					return false
+				}
+			}
+			return true
+		}
+		return v.Type().Comparable()
+	case Interface:
+		return v.IsNil() || v.Elem().Comparable()
+	case Struct:
+		for i := 0; i < v.NumField(); i++ {
+			if !v.Field(i).Comparable() {
+				return false
+			}
+		}
+		return true
+	}
+	return v.Type().Comparable()
+}
+
+// Clear drops each entry of a map, or writes the zero value into each element
+// of a slice.
+func (v Value) Clear() {
+	switch v.Kind() {
+	case Slice, Map:
+		dart.ValueClear(v.read())
+	default:
+		panic(&ValueError{Method: "reflect.Value.Clear", Kind: v.Kind()})
+	}
+}
+
+// maxFloat32 holds the largest float32. The overlay reads no math package,
+// because that package reads no reflect and the surface keeps the 2 apart.
+const maxFloat32 = 3.4028234663852886e+38
+
+// overflowFloat32 reports whether a float64 does not fit a float32.
+func overflowFloat32(x float64) bool {
+	if x < 0 {
+		x = -x
+	}
+	return maxFloat32 < x
+}
+
+// OverflowInt reports whether the number does not fit the type of v.
+func (v Value) OverflowInt(x int64) bool {
+	switch v.Kind() {
+	case Int, Int8, Int16, Int32, Int64:
+		bits := uint(v.Type().Bits())
+		trunc := (x << (64 - bits)) >> (64 - bits)
+		return x != trunc
+	}
+	panic(&ValueError{Method: "reflect.Value.OverflowInt", Kind: v.Kind()})
+}
+
+// OverflowUint reports whether the number does not fit the type of v.
+func (v Value) OverflowUint(x uint64) bool {
+	switch v.Kind() {
+	case Uint, Uint8, Uint16, Uint32, Uint64, Uintptr:
+		bits := uint(v.Type().Bits())
+		trunc := (x << (64 - bits)) >> (64 - bits)
+		return x != trunc
+	}
+	panic(&ValueError{Method: "reflect.Value.OverflowUint", Kind: v.Kind()})
+}
+
+// OverflowFloat reports whether the float does not fit the type of v.
+func (v Value) OverflowFloat(x float64) bool {
+	switch v.Kind() {
+	case Float32:
+		return overflowFloat32(x)
+	case Float64:
+		return false
+	}
+	panic(&ValueError{Method: "reflect.Value.OverflowFloat", Kind: v.Kind()})
+}
+
+// OverflowComplex reports whether the complex number does not fit the type of
+// v.
+func (v Value) OverflowComplex(x complex128) bool {
+	switch v.Kind() {
+	case Complex64:
+		return overflowFloat32(real(x)) || overflowFloat32(imag(x))
+	case Complex128:
+		return false
+	}
+	panic(&ValueError{Method: "reflect.Value.OverflowComplex", Kind: v.Kind()})
+}
+
+// SetCap writes the capacity of the slice that v names. The length holds, and
+// the elements keep their values.
+func (v Value) SetCap(n int) {
+	if v.Kind() != Slice {
+		panic(&ValueError{Method: "reflect.Value.SetCap", Kind: v.Kind()})
+	}
+	if n < v.Len() || n > v.Cap() {
+		panic("reflect: SetCap: slice capacity out of range")
+	}
+	v.Set(v.Slice3(0, v.Len(), n))
+}
+
+// SetIterKey writes the key of the pair that the iterator names into the
+// location that v names.
+func (v Value) SetIterKey(it *MapIter) { v.Set(it.Key()) }
+
+// SetIterValue writes the value of the pair that the iterator names into the
+// location that v names.
+func (v Value) SetIterValue(it *MapIter) { v.Set(it.Value()) }
+
+// CallSlice runs a variadic function and assigns the last argument to the
+// variadic parameter.
+//
+// Go assigns the slice itself, thus the function reads the same backing array
+// as the caller.
+func (v Value) CallSlice(in []Value) []Value {
+	t := v.Type()
+	if t.Kind() != Func {
+		panic(&ValueError{Method: "reflect.Value.CallSlice", Kind: v.Kind()})
+	}
+	if !t.IsVariadic() {
+		panic("reflect: CallSlice of non-variadic function")
+	}
+	if len(in) < t.NumIn() {
+		panic("reflect: CallSlice with too few input arguments")
+	}
+	if len(in) > t.NumIn() {
+		panic("reflect: CallSlice with too many input arguments")
+	}
+	args := make([]any, len(in))
+	for i, a := range in {
+		args[i] = a.read()
+	}
+	raw := dart.CallSliceValue(v.read(), args)
+	out := make([]Value, len(raw))
+	for i, r := range raw {
+		out[i] = Value{value: r, typ: t.Out(i)}
+	}
+	return out
+}
+
+// Fields gives a sequence of the field description and the value of each field
+// of a struct.
+func (v Value) Fields() iter.Seq2[StructField, Value] {
+	t := v.Type()
+	if t.Kind() != Struct {
+		panic("reflect: Fields of non-struct type " + t.String())
+	}
+	return func(yield func(StructField, Value) bool) {
+		for i := 0; i < v.NumField(); i++ {
+			if !yield(t.Field(i), v.Field(i)) {
+				return
+			}
+		}
+	}
+}
+
+// Methods gives a sequence of the method description and the bound method value
+// of each exported method of the type of v.
+func (v Value) Methods() iter.Seq2[Method, Value] {
+	t := v.Type()
+	n := v.NumMethod()
+	return func(yield func(Method, Value) bool) {
+		for i := 0; i < n; i++ {
+			if !yield(t.Method(i), v.Method(i)) {
+				return
+			}
+		}
+	}
+}
+
+// FieldByNameFunc gives the field of the struct whose name the function
+// accepts.
+//
+// A name that stands at 2 fields of 1 depth gives the zero Value, exactly as in
+// Go.
+func (v Value) FieldByNameFunc(match func(string) bool) Value {
+	t := v.Type()
+	if t.Kind() != Struct {
+		panic("reflect: FieldByNameFunc of " + t.String())
+	}
+	fields := VisibleFields(t)
+	best := -1
+	depth := 0
+	count := 0
+	for i, f := range fields {
+		if !match(f.Name) {
+			continue
+		}
+		if best < 0 || len(f.Index) < depth {
+			best, depth, count = i, len(f.Index), 1
+			continue
+		}
+		if len(f.Index) == depth {
+			count++
+		}
+	}
+	if best < 0 || count > 1 {
+		return Value{}
+	}
+	return v.FieldByIndex(fields[best].Index)
+}
+
+// Swapper gives a function that exchanges 2 elements of the slice.
+func Swapper(slice any) func(i, j int) {
+	v := ValueOf(slice)
+	if v.Kind() != Slice {
+		panic(&ValueError{Method: "Swapper", Kind: v.Kind()})
+	}
+	switch v.Len() {
+	case 0:
+		return func(i, j int) { panic("reflect: slice index out of range") }
+	case 1:
+		return func(i, j int) {
+			if i != 0 || j != 0 {
+				panic("reflect: slice index out of range")
+			}
+		}
+	}
+	return func(i, j int) { dart.SliceSwap(slice, i, j) }
+}
+
+// VisibleFields gives each field that a selector of the struct type reaches.
+//
+// The list holds each field of the type itself and each promoted field of an
+// embedded struct. A name that stands at 2 fields of 1 depth reaches no
+// selector, thus the list drops both.
+func VisibleFields(t Type) []StructField {
+	if t == nil {
+		panic("reflect: VisibleFields(nil)")
+	}
+	if t.Kind() != Struct {
+		panic("reflect.VisibleFields of non-struct type")
+	}
+	w := &fieldWalker{byName: map[string]int{}, visiting: map[Type]bool{}}
+	w.walk(t)
+	out := make([]StructField, 0, len(w.fields))
+	for _, f := range w.fields {
+		if f.Name != "" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// A fieldWalker collects the visible fields of a struct type. A field whose
+// name a shallower field already holds keeps no name, thus VisibleFields drops
+// it.
+type fieldWalker struct {
+	byName   map[string]int
+	visiting map[Type]bool
+	fields   []StructField
+	index    []int
+}
+
+func (w *fieldWalker) walk(t Type) {
+	if w.visiting[t] {
+		return
+	}
+	w.visiting[t] = true
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		w.index = append(w.index, i)
+		add := true
+		if old, ok := w.byName[f.Name]; ok {
+			switch {
+			case len(w.index) == len(w.fields[old].Index):
+				w.fields[old].Name = ""
+				add = false
+			case len(w.index) < len(w.fields[old].Index):
+				w.fields[old].Name = ""
+			default:
+				add = false
+			}
+		}
+		if add {
+			path := make([]int, len(w.index))
+			copy(path, w.index)
+			f.Index = path
+			w.byName[f.Name] = len(w.fields)
+			w.fields = append(w.fields, f)
+		}
+		if f.Anonymous {
+			inner := f.Type
+			if inner.Kind() == Pointer {
+				inner = inner.Elem()
+			}
+			if inner.Kind() == Struct {
+				w.walk(inner)
+			}
+		}
+		w.index = w.index[:len(w.index)-1]
+	}
+	delete(w.visiting, t)
 }

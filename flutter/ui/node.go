@@ -58,3 +58,46 @@ type TextInput struct {
 }
 
 func (TextInput) isNode() {}
+
+// OrientBuilder builds 1 subtree from the orientation of the parent. The
+// argument takes "portrait" or "landscape". The rule of Builder applies.
+//
+// The name differs from the Flutter name, because the node set holds the
+// widget OrientationBuilder.
+//
+//gart:sync
+type OrientBuilder func(string) Node
+
+// BoxBuilder builds 1 subtree from the limits of the box of the parent. A
+// maximum of 0 means no limit, as in ui.Constraints. The rule of Builder
+// applies.
+//
+// The name differs from the Flutter name, because the node set holds the
+// widget LayoutBuilder.
+//
+//gart:sync
+type BoxBuilder func(minWidth, maxWidth, minHeight, maxHeight float64) Node
+
+// SliverBuilder builds the slivers that stand over a scroll view. The argument
+// reports whether the inner list holds the primary scroll. The rule of Builder
+// applies.
+//
+//gart:sync
+type SliverBuilder func(innerBoxIsScrolled bool) []Node
+
+// Task is work that the host waits for. A refresh indicator turns while the
+// task runs.
+//
+// The Go function runs as a goroutine of its own, thus it may block. The host
+// sees no end of a goroutine, thus the function must call done itself. A
+// function that never calls done leaves the indicator turning.
+//
+//	ui.RefreshIndicator{OnRefresh: func(done func()) {
+//		load()
+//		done()
+//	}}
+type Task func(done func())
+
+// Ask is work that the host waits for, and that gives an answer. A back button
+// listener reads 1. The rule of Task applies to the answer.
+type Ask func(answer func(bool))

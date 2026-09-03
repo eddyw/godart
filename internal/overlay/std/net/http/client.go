@@ -159,18 +159,36 @@ func (c *Client) redirect(req *Request, res *Response, via []*Request) (*Request
 		return nil, errors.New("failed to parse Location header " + strconv.Quote(location))
 	}
 	method := req.Method
-	if res.StatusCode == StatusSeeOther || res.StatusCode == StatusFound ||
-		res.StatusCode == StatusMovedPermanently {
-		if method != MethodHead {
-			method = MethodGet
-		}
+	// A redirect of the status 301, 302, or 303 takes the method GET and no
+	// body. A redirect of the status 307 or 308 keeps the method and the body,
+	// and the body needs GetBody.
+	keepBody := res.StatusCode == StatusTemporaryRedirect ||
+		res.StatusCode == StatusPermanentRedirect
+	if !keepBody && method != MethodHead {
+		method = MethodGet
 	}
-	next, err := NewRequestWithContext(req.Context(), method, target.String(), nil)
+	var body io.ReadCloser
+	if keepBody && req.Body != nil {
+		if req.GetBody == nil {
+			return nil, errors.New("http: the redirect needs Request.GetBody for the body")
+		}
+		fresh, err := req.GetBody()
+		if err != nil {
+			return nil, err
+		}
+		body = fresh
+	}
+	next, err := NewRequestWithContext(req.Context(), method, target.String(), body)
 	if err != nil {
 		return nil, err
 	}
+	next.Response = res
+	if keepBody {
+		next.GetBody = req.GetBody
+		next.ContentLength = req.ContentLength
+	}
 	for k, v := range req.Header {
-		if k == "Content-Length" || k == "Content-Type" {
+		if !keepBody && (k == "Content-Length" || k == "Content-Type") {
 			continue
 		}
 		next.Header[k] = append([]string(nil), v...)

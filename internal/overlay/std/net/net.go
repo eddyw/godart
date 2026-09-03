@@ -64,6 +64,68 @@ type Error interface {
 	Temporary() bool
 }
 
+// OpError holds the error of a network operation. It names the operation, the
+// network, the 2 addresses, and the cause.
+//
+// The overlay holds no system call error, thus Timeout and Temporary read the
+// cause alone. Go also reads an os.SyscallError inside the cause, and this
+// package builds no such error.
+type OpError struct {
+	// Op names the operation, such as "read", "write", or "dial".
+	Op string
+
+	// Net names the network, such as "tcp" or "udp6".
+	Net string
+
+	// Source holds the local address of an operation over a connection.
+	Source Addr
+
+	// Addr holds the address of the operation. A local operation names the
+	// local endpoint, and a remote operation names the peer.
+	Addr Addr
+
+	// Err holds the cause. Error stops the program for a nil cause, exactly
+	// as in Go.
+	Err error
+}
+
+func (e *OpError) Unwrap() error { return e.Err }
+
+func (e *OpError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	s := e.Op
+	if e.Net != "" {
+		s += " " + e.Net
+	}
+	if e.Source != nil {
+		s += " " + e.Source.String()
+	}
+	if e.Addr != nil {
+		if e.Source != nil {
+			s += "->"
+		} else {
+			s += " "
+		}
+		s += e.Addr.String()
+	}
+	s += ": " + e.Err.Error()
+	return s
+}
+
+// Timeout reports a cause that names a deadline.
+func (e *OpError) Timeout() bool {
+	t, ok := e.Err.(interface{ Timeout() bool })
+	return ok && t.Timeout()
+}
+
+// Temporary reports a cause that a second try may pass.
+func (e *OpError) Temporary() bool {
+	t, ok := e.Err.(interface{ Temporary() bool })
+	return ok && t.Temporary()
+}
+
 // timeoutError reports a deadline that passed. Go gives an error that holds a
 // Timeout method, and a caller reads that method.
 type timeoutError struct {
@@ -76,10 +138,28 @@ func (e *timeoutError) Timeout() bool { return true }
 
 func (e *timeoutError) Temporary() bool { return true }
 
+// closedError reports an operation on a socket that a close already ended.
+// The error wraps ErrClosed, thus errors.Is(err, net.ErrClosed) gives true,
+// exactly as in Go.
+type closedError struct {
+	op string
+}
+
+func (e *closedError) Error() string { return e.op + ": " + errClosed.Error() }
+
+func (e *closedError) Unwrap() error { return errClosed }
+
+func (e *closedError) Timeout() bool { return false }
+
+func (e *closedError) Temporary() bool { return false }
+
 // netError builds the error of a failed operation.
 func netError(op, cause string) error {
 	if cause == "i/o timeout" {
 		return &timeoutError{op: op}
+	}
+	if cause == errClosed.Error() {
+		return &closedError{op: op}
 	}
 	return errors.New(op + ": " + cause)
 }
@@ -115,7 +195,10 @@ func (c *conn) addrOf(local bool) Addr {
 		lHost, lPort, rHost, rPort = "", 0, "", 0
 	}
 	if c.network == "unix" {
-		return &UnixAddr{Name: lHost, Net: "unix"}
+		if local {
+			return &UnixAddr{Name: lHost, Net: "unix"}
+		}
+		return &UnixAddr{Name: rHost, Net: "unix"}
 	}
 	if local {
 		return tcpAddrOf(lHost, lPort)
@@ -189,7 +272,7 @@ func (p *packet) ReadFrom(b []byte) (int, Addr, error) {
 }
 
 func (p *packet) WriteTo(b []byte, addr Addr) (int, error) {
-	host, port, err := hostPort(addr.String())
+	host, port, err := targetOf(addr)
 	if err != nil {
 		return 0, err
 	}
@@ -232,34 +315,6 @@ func (p *packet) apply() error {
 	return nil
 }
 
-// udpConn holds a datagram socket that a dial opened. Such a socket drops a
-// datagram of another source, thus a plain read gives the datagrams of the
-// peer only.
-type udpConn struct {
-	*packet
-	host string
-	port int
-}
-
-// LocalAddr gives the address of the socket.
-func (c *udpConn) LocalAddr() Addr { return c.packet.LocalAddr() }
-
-// RemoteAddr gives the address that Dial named.
-func (c *udpConn) RemoteAddr() Addr { return udpAddrOf(c.host, c.port) }
-
-func (c *udpConn) Read(b []byte) (int, error) {
-	n, _, err := c.ReadFrom(b)
-	return n, err
-}
-
-func (c *udpConn) Write(b []byte) (int, error) {
-	n, cause := dart.PacketWrite(c.handle, b, c.host, c.port)
-	if cause != "" {
-		return n, netError("write udp", cause)
-	}
-	return n, nil
-}
-
 type listener struct {
 	handle  int
 	addr    Addr
@@ -274,7 +329,7 @@ func (l *listener) Accept() (Conn, error) {
 	if l.network == "tcp" {
 		return newTCPConn(handle), nil
 	}
-	return &conn{handle: handle, network: l.network}, nil
+	return newUnixConn(handle), nil
 }
 
 func (l *listener) Close() error {
@@ -307,7 +362,7 @@ func Dial(network, address string) (Conn, error) {
 		if cause != "" {
 			return nil, errors.New("dial unix " + address + ": " + cause)
 		}
-		return &conn{handle: handle, network: "unix"}, nil
+		return newUnixConn(handle), nil
 	case "udp":
 		host, port, err := hostPort(address)
 		if err != nil {
@@ -320,11 +375,11 @@ func Dial(network, address string) (Conn, error) {
 		if cause != "" {
 			return nil, errors.New("dial udp " + address + ": " + cause)
 		}
-		return &udpConn{
-			packet: &packet{handle: handle, local: &UDPAddr{Port: local}},
-			host:   host,
-			port:   port,
-		}, nil
+		return newDialedUDPConn(
+			&packet{handle: handle, local: &UDPAddr{Port: local}},
+			host,
+			port,
+		), nil
 	}
 	return nil, errors.New("dial " + network + ": the subset holds tcp, udp, and unix")
 }
@@ -382,15 +437,73 @@ func ListenPacket(network, address string) (PacketConn, error) {
 	if cause != "" {
 		return nil, errors.New("listen udp " + address + ": " + cause)
 	}
-	return &packet{handle: handle, local: udpAddrOf(host, taken)}, nil
+	return newUDPConn(&packet{handle: handle, local: udpAddrOf(host, taken)}), nil
 }
 
-// A Dialer opens a connection with a timeout or with a context.
+// A Dialer opens a connection with a timeout, with a deadline, or with a
+// context.
+//
+// Go holds 8 more items. `LocalAddr` binds the near side of a dial, and Dart
+// binds none. `Control` and `ControlContext` each take a `syscall.RawConn`,
+// and `dart:io` gives no file descriptor. `KeepAlive` and `KeepAliveConfig`
+// each write a socket option that no intrinsic of `syscall/dart` reaches.
+// `FallbackDelay` and `DualStack` each tune the 2 dials of Happy Eyeballs.
+// 1 dial of Dart resolves the name and opens the socket. `MultipathTCP`
+// and `SetMultipathTCP` name a transport of Linux that Dart never opens. The
+// overlay holds none of the 8, because a field that reads no value lies.
 type Dialer struct {
+	// Timeout ends the wait of a dial after the duration. A value of 0 holds
+	// no limit.
 	Timeout time.Duration
+	// Deadline is the point in time after which a dial fails. Timeout can end
+	// the wait earlier. The zero Time holds no deadline.
+	Deadline time.Time
+	// Cancel ends a dial when the channel closes. A nil channel ends no dial.
+	//
+	// Deprecated: Use DialContext instead.
+	Cancel <-chan struct{}
 	// Resolver reads the host name of the address. A nil field gives the name
 	// to the runtime, which reads the resolver of the platform.
 	Resolver *Resolver
+}
+
+// canceledError reports an operation that a cancel ended. Go keeps the same
+// text and the same Is method, thus errors.Is(err, context.Canceled) gives
+// true.
+type canceledError struct{}
+
+func (canceledError) Error() string { return "operation was canceled" }
+
+func (canceledError) Is(err error) bool { return err == context.Canceled }
+
+// deadlineError reports a deadline that passed. Go gives
+// os.ErrDeadlineExceeded, and the text and the 2 methods below match it. That
+// value holds no Is method, thus errors.Is(err, context.DeadlineExceeded)
+// gives false in Go and here.
+type deadlineError struct{}
+
+func (deadlineError) Error() string { return "i/o timeout" }
+
+func (deadlineError) Timeout() bool { return true }
+
+func (deadlineError) Temporary() bool { return true }
+
+// The 2 errors of a context that ended.
+var (
+	errCanceled error = canceledError{}
+	errTimeout  error = deadlineError{}
+)
+
+// mapErr gives the error of this package for an error of a context, exactly
+// as Go does.
+func mapErr(err error) error {
+	switch err {
+	case context.Canceled:
+		return errCanceled
+	case context.DeadlineExceeded:
+		return errTimeout
+	}
+	return err
 }
 
 // dialResult holds the 2 results of a dial that runs on a goroutine.
@@ -412,11 +525,17 @@ func DialTimeout(network, address string, timeout time.Duration) (Conn, error) {
 
 // DialContext opens a connection and ends the wait when the context ends.
 //
-// The dial runs on a goroutine, thus the select takes the first of the 2. A
-// dial that ends after the context closes its own connection.
+// The dial runs on a goroutine, thus the select takes the first of the 3
+// events: the dial, the end of the context, and the close of the Cancel
+// channel. A dial that ends after the wait closes its own connection.
 func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn, error) {
 	if d.Timeout > 0 {
 		inner, cancel := context.WithTimeout(ctx, d.Timeout)
+		defer cancel()
+		ctx = inner
+	}
+	if !d.Deadline.IsZero() {
+		inner, cancel := context.WithDeadline(ctx, d.Deadline)
 		defer cancel()
 		ctx = inner
 	}
@@ -436,12 +555,18 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 	case r := <-done:
 		return r.conn, r.cause
 	case <-ctx.Done():
-		go func() {
-			if r := <-done; r.conn != nil {
-				r.conn.Close()
-			}
-		}()
-		return nil, ctx.Err()
+		go closeLate(done)
+		return nil, mapErr(ctx.Err())
+	case <-d.Cancel:
+		go closeLate(done)
+		return nil, errCanceled
+	}
+}
+
+// closeLate closes a connection of a dial that ended after the caller left.
+func closeLate(done chan dialResult) {
+	if r := <-done; r.conn != nil {
+		r.conn.Close()
 	}
 }
 
@@ -485,6 +610,22 @@ func JoinHostPort(host, port string) string {
 		return "[" + host + "]:" + port
 	}
 	return host + ":" + port
+}
+
+// targetOf reads the host and the port of the target of a datagram. A UDP
+// address gives the 2 values directly. Thus an IPv6 target needs no split of
+// the text of the address.
+func targetOf(addr Addr) (string, int, error) {
+	if addr == nil {
+		return "", 0, errors.New("write udp: the address is missing")
+	}
+	if u, ok := addr.(*UDPAddr); ok {
+		if len(u.IP) == 0 {
+			return "127.0.0.1", u.Port, nil
+		}
+		return u.IP.String(), u.Port, nil
+	}
+	return hostPort(addr.String())
 }
 
 func hostPort(address string) (string, int, error) {

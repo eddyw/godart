@@ -872,10 +872,13 @@ func blockingIntrinsic(fn *types.Func) bool {
 		"ListenTLS", "AcceptTLS",
 		"DialUnix", "ListenUnix",
 		"DialUDP", "ListenUDP", "PacketRead", "PacketWrite",
+		"Interfaces",
 		"ProcStart", "ProcWrite", "ProcCloseStdin", "ProcRead",
-		"ProcReadErr", "ProcWait", "SignalWait", "ValueRecv",
+		"ProcReadErr", "ProcWait", "SignalWait",
+		"ValueRecv", "ValueSend", "SelectValue",
 		"H2Fetch", "H2Read", "H2Next",
-		"FetchStart", "FetchRead":
+		"FetchStart", "FetchRead",
+		"Gosched":
 		return true
 	}
 	return false

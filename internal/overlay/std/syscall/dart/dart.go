@@ -29,6 +29,49 @@ func Stack(skip int) []string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// CaptureOut starts a hold of the text of standard output, or it ends the hold
+// and gives the text. The harness of an example of the package testing reads
+// it.
+func CaptureOut(on bool) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// GoID gives the number of the goroutine that runs now. The scheduler numbers
+// each goroutine from 1, exactly as Go does.
+func GoID() int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Parked gives the state of each goroutine that gave up control, except the
+// goroutine that runs now.
+//
+// 1 item holds 1 goroutine. The first line holds the number and the reason,
+// with a bar between them. Each line after it holds 1 frame in the form
+// "function|file|line".
+func Parked() []string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Gosched gives up control and puts the goroutine on the run queue again.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func Gosched() {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Goexit ends the goroutine that runs now. Each deferred call of the chain
+// runs first.
+func Goexit() {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SetPanicNil installs the builder of the value that `panic(nil)` gives. The
+// initializer of the package runtime calls it, because only the emitted Go
+// type holds the class of that value.
+func SetPanicNil(build func() any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // DialTLS opens a TLS connection to a host and a port, and gives its handle.
 // The handle joins the table of the connections, thus ConnRead, ConnWrite,
 // ConnDeadline, and ConnClose each work on it.
@@ -273,6 +316,73 @@ func MapOf(key, elem int) int {
 
 // PointerTo gives the handle of the pointer type of an element type.
 func PointerTo(elem int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ChanOf gives the handle of the channel type of a direction and an element
+// type. The direction is 3 for both, 2 for send, and 1 for receive.
+func ChanOf(dir, elem int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MakeChan gives a channel of the type, with the size of the buffer.
+func MakeChan(handle, buffer int) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueSend writes 1 value into a channel that a Value holds. The call gives up
+// control, exactly as a send of Go does.
+func ValueSend(value, x any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueClose closes a channel that a Value holds.
+func ValueClose(value any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueTryRecv reads 1 value of a channel and gives up no control. The 3
+// results are the value, the flag of the receive, and the flag of a valid
+// Value.
+func ValueTryRecv(value any) (any, bool, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueTrySend writes 1 value into a channel and gives up no control. The flag
+// is false when the send cannot end at this moment.
+func ValueTrySend(value, x any) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SelectValue runs a select statement of the package reflect. The direction of
+// each case is 1 for a receive, 2 for a send, and 3 for the default. The 3
+// results are the number of the case, the value of a receive, and the flag of
+// that receive.
+func SelectValue(dirs []int, chans, sends []any) (int, any, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueClear drops each entry of a map, or writes the zero value into each
+// element of a slice.
+func ValueClear(value any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// DescMethodType gives a handle of the function type of 1 exported method of a
+// type. The order follows the name, and the type holds no receiver.
+func DescMethodType(handle, index int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MakeFunc gives a func value of a function type. Each call of it runs fn with
+// the arguments, and the results of fn become the results of the call.
+func MakeFunc(handle int, fn func(args []any) []any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// CallSliceValue calls a variadic function value and takes the last argument as
+// the slice of the variadic parameter.
+func CallSliceValue(fn any, args []any) []any {
 	panic("syscall/dart needs the gart compiler")
 }
 
@@ -672,6 +782,10 @@ func Link(oldname, newname string) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// Umask gives the file mode creation mask of the process. A create of Go drops
+// each bit of the mask from the mode of the call.
+func Umask() int
+
 // Chmod writes the permission bits of a path. The mode holds the 12 bits of a
 // POSIX mode. dart:io holds no such call, thus the Dart side runs the command
 // chmod of the platform.
@@ -928,6 +1042,23 @@ func PacketClose(handle int) string {
 
 // PacketDeadline writes the 2 deadlines of a datagram socket.
 func PacketDeadline(handle int, read, write int64) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Interfaces gives the network interfaces of the host.
+//
+// The first result holds 1 item for each interface, in the form
+// "<index>|<name>". The second result holds 1 item for each address of an
+// interface, in the form "<index>|<address>/<prefix>". The index of an
+// address names the interface that holds it. A name and an address each hold
+// no bar, thus the first bar of an item ends the index. The third result
+// holds the cause of a failure.
+//
+// A web target holds no such API. The web form of the runtime gives 2 empty
+// lists and no cause, exactly as Go does under GOOS=js.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func Interfaces() ([]string, []string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 

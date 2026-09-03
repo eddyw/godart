@@ -12,16 +12,41 @@ import "slices"
 
 // scope is a tracked unit of work. A Watch of the host holds one, a Computed
 // holds one, and an Effect holds one.
+//
+// A scope owns each scope that the code builds inside it. The owner drops each
+// child, thus a Computed or an Effect of a build dies with its boundary and the
+// program calls no Drop of its own.
 type scope struct {
-	id    int
-	run   func()
-	deps  []*dep
-	alive bool
+	id       int
+	run      func()
+	deps     []*dep
+	children []*scope
+	alive    bool
 }
 
 // dep holds the scopes that read 1 value.
+//
+// self holds the address of the dep at its first use. A copy of a reactive
+// value carries the address of the original, thus the 2 subscriber lists would
+// drift apart with no report. check finds that copy and it panics.
 type dep struct {
+	self *dep
 	subs []int
+}
+
+// check rejects a reactive value that moved after its first use.
+//
+// `go vet` reports a plain copy through the noCopy field. It reports no copy
+// that append makes when a slice grows, thus this test closes that hole.
+func (d *dep) check() {
+	if d.self == nil {
+		d.self = d
+		return
+	}
+	if d.self != d {
+		panic("ui: a reactive value moved after its first use. " +
+			"Hold it behind a pointer, for example []*Signal[int].")
+	}
 }
 
 var (
@@ -38,10 +63,13 @@ func newScope(run func()) *scope {
 		s.id = freeIDs[n-1]
 		freeIDs = freeIDs[:n-1]
 		scopes[s.id] = s
-		return s
+	} else {
+		s.id = len(scopes)
+		scopes = append(scopes, s)
 	}
-	s.id = len(scopes)
-	scopes = append(scopes, s)
+	if current != nil {
+		current.children = append(current.children, s)
+	}
 	return s
 }
 
@@ -53,11 +81,25 @@ func scopeByID(id int) *scope {
 }
 
 func (s *scope) drop() {
+	if !s.alive {
+		return
+	}
 	s.alive = false
+	s.dropChildren()
 	s.clear()
 	s.run = nil
 	scopes[s.id] = nil
 	freeIDs = append(freeIDs, s.id)
+}
+
+// dropChildren releases each scope that a run of this scope built. A rebuild
+// runs the body again, thus it builds each child again.
+func (s *scope) dropChildren() {
+	kids := s.children
+	s.children = nil
+	for _, k := range kids {
+		k.drop()
+	}
 }
 
 // clear removes the scope from each value that it read. The next run records
@@ -80,12 +122,14 @@ func (s *scope) clear() {
 func (s *scope) enter(fn func()) {
 	prev := current
 	current = s
+	s.dropChildren()
 	s.clear()
 	fn()
 	current = prev
 }
 
 func (d *dep) track() {
+	d.check()
 	if current == nil {
 		return
 	}
@@ -97,6 +141,7 @@ func (d *dep) track() {
 }
 
 func (d *dep) notify() {
+	d.check()
 	if len(d.subs) == 0 {
 		return
 	}
@@ -152,15 +197,35 @@ func (*noCopy) Unlock() {}
 //
 // A Signal must live behind a pointer. A copy of the struct takes a dep of its
 // own that holds the subscribers of the moment, and the 2 lists then drift
-// apart. `go vet` reports each copy.
+// apart. `go vet` reports each copy that the source writes, and dep.check
+// reports the copy that append makes when a slice grows. A container thus holds
+// []*Signal[T] and not []Signal[T].
 type Signal[T any] struct {
-	_ noCopy
-	d dep
-	v T
+	_  noCopy
+	d  dep
+	v  T
+	eq func(a, b T) bool
 }
 
-// NewSignal gives a signal that holds v.
+// NewSignal gives a signal that holds v. Each Set marks the dependent scopes,
+// also when the new value equals the old one.
 func NewSignal[T any](v T) *Signal[T] { return &Signal[T]{v: v} }
+
+// NewSignalEq gives a signal that holds v and that reads eq before each mark. A
+// Set that gives an equal value then marks no scope.
+//
+// Go holds no equality operation for each type, thus the test comes from the
+// caller. Eq gives the test of a comparable type, and 1 type still serves each
+// T:
+//
+//	count := ui.NewSignalEq(0, ui.Eq[int])
+func NewSignalEq[T any](v T, eq func(a, b T) bool) *Signal[T] {
+	return &Signal[T]{v: v, eq: eq}
+}
+
+// Eq reports whether the 2 values are equal. It fits the eq parameter of
+// NewSignalEq for each comparable type.
+func Eq[T comparable](a, b T) bool { return a == b }
 
 // Get gives the value, and it records a dependency in the current scope.
 func (s *Signal[T]) Get() T {
@@ -171,11 +236,15 @@ func (s *Signal[T]) Get() T {
 // Peek gives the value and records no dependency.
 func (s *Signal[T]) Peek() T { return s.v }
 
-// Set writes the value and marks each dependent scope dirty. It marks the
-// scopes also when the new value equals the old one, because Go holds no
-// equality operation for each type.
+// Set writes the value and marks each dependent scope dirty. It marks no scope
+// when the signal holds an equality test and the test reports true. NewSignal
+// installs no such test, thus a plain signal marks each scope.
 func (s *Signal[T]) Set(v T) {
+	skip := s.eq != nil && s.eq(s.v, v)
 	s.v = v
+	if skip {
+		return
+	}
 	s.d.notify()
 }
 

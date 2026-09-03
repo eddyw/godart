@@ -21,7 +21,16 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		if x == nil {
 			return nil
 		}
-		return &ir.Conv{X: x, From: b.typeOf(e.Args[0]), Type: tv.Type}
+		from := b.typeOf(e.Args[0])
+		// A conversion to the same type gives a copy of the value. Go accepts
+		// such a conversion, and an alias of a struct type makes one. A struct
+		// and an array need a real copy, because Go gives each one value
+		// semantics. Stage 5 holds no form for a conversion between 2 struct
+		// classes, thus the copy must stand here.
+		if needsCopy(tv.Type) && types.Identical(from, tv.Type) {
+			return &ir.Copy{X: x, Type: tv.Type}
+		}
+		return &ir.Conv{X: x, From: from, Type: tv.Type}
 	}
 	if id := calleeIdent(e.Fun); id != nil {
 		if bi, ok := b.info.Uses[id].(*types.Builtin); ok {

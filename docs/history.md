@@ -1306,7 +1306,9 @@ Decision 251 records the change, and `TestWebIO` reads the exact text under
   file is retired, and each claim that still stands moved into
   `docs/flutter-design.md`. 6 more claims of it are false today.
 - The test of the curated surface named `encoding/gob` as its example of a
-  package outside the surface. It names `database/sql` now.
+  package outside the surface. It named `database/sql` until 2026-09-03, and
+  that package entered the surface too. `internal/verify` names `plugin` now,
+  and `internal/driver/reject_test.go` names `os/user`.
 
 **4 gaps that the work named and did not close.** `reflect.Addr().Interface()`
 gives no typed pointer. A pointer to a type parameter loses its method table. A
@@ -1421,3 +1423,74 @@ only dart2js rejected the code. `$gi` and `$ix` hold on each target.
 for the form. `apilist` reaches its API through the fetch client. The web
 runner of an example comes from `flutter/example/platform.sh <app> web`,
 because git holds no such directory.
+
+### 2026-09-03, the fifteenth session
+
+The session took the whole backlog of 43 tasks, and each 1 is closed. 8
+subagents ran on disjoint directories, and the main session held the Flutter
+graph, the value semantics, the panic texts, the format verbs, and the docs.
+The work also found 23 defects that no task named, and it fixed 20 of them.
+
+**The surface went from 91 full packages of 103 to 112 full of 123.** 17 import
+paths entered: `database/sql`, `database/sql/driver`, `uuid`, `net/mail`,
+`net/smtp`, `net/rpc`, `net/rpc/jsonrpc`, `net/http/cgi`, `go/constant`,
+`go/types`, `go/build`, `go/doc`, `go/version`, `hash/maphash`, and 5 vendored
+packages of `x/net` and `x/text`. 13 internal packages joined them.
+
+| Package | Before | After |
+|---|---|---|
+| `reflect` | 130 of 188 | **173 of 188** |
+| `net/http` | 240 of 392 | **341 of 392** |
+| `net` | 142 of 346 | **218 of 346** |
+| `runtime` | 31 of 114 | **43 of 114** |
+| `encoding/json` | 59 of 92 | **67 of 92** |
+| `crypto/x509` | 106 of 261 | **115 of 261** |
+| `testing` | 132 of 145 | **145 of 145, full** |
+| `go/types` | outside | **440 of 440, full** |
+| `database/sql` | outside | **155 of 155, full** |
+
+**The Flutter node set went from 427 types to 509, and the dropped
+constructors from 257 to 174.** The set of 509 costs an application 26,752
+bytes less than the set of 427, because the tree shaker drops each type that
+the application does not name. `flutter/nodescan` replaced the regular
+expression of `usedNodes`, thus the list of the used node types is exact.
+
+**11 defects of the value semantics and of the scheduler.** Each 1 gave a
+silent wrong answer or a hang, and each 1 is fixed:
+
+- A range over a map of struct values shared the value and the key with the
+  map. Go printed 1 and Dart printed 99.
+- `append` shared the element object when the slice grew, and the spread form
+  copied no element.
+- A `return` inside an `if`, a `switch`, or a `for` ran no deferred call when
+  the chain could block. The connection pool of `database/sql` thus leaked
+  every connection.
+- A method with a pointer receiver lost each write when an argument of the call
+  blocked. Each cookie of `net/http` carried an empty value.
+- A write to an element of an array wrote into a copy, thus the parser of Go
+  lost each type argument of a composite literal.
+- A struct result of a call that blocks was shared across the turns of a loop.
+- A map with an interface key lost a pointer key after a write to the target.
+- A package variable that a field of the receiver shadows read the field.
+- A frame class of a local function stood 2 times at package level.
+- A local function declaration reached the wrong Dart scope, and a second 1
+  reached no other state.
+- `runtime.Gosched` never gave the Dart event loop a turn, thus a program that
+  spins on it while it waits for a timer hung for ever.
+
+**9 defects of the library.** `encoding/json` read no `MarshalText` and no
+`UnmarshalText`, and it crashed on a pointer field to a type that is not a
+struct. `strconv.ParseFloat` rejected `Inf`, an underscore, and each
+hexadecimal float, and `ParseInt` reported no value out of range. `fmt` read no
+star width, no explicit argument index, no precision of a whole number, no
+verb `U`, and no escape of a quoted rune, and it sorted the entries of a map by
+their text. `strings.ToUpper` kept an invalid byte, and `EqualFold` compared 2
+lower cases. `os.WriteFile` dropped the permission bits of a create, and a
+relative `Cmd.Path` ignored `Cmd.Dir`. 8 texts of a run time panic differed
+from Go.
+
+**3 defects stay open**, and `docs/support.md` holds each 1: the seed corpus of
+a fuzz target, the verb `%#v`, and the structural comparison of a pointer
+inside an interface.
+
+Read decisions 255 to 310 for the whole account.

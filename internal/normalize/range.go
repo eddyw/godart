@@ -210,7 +210,7 @@ func (b *builder) rangeMap(s *ast.RangeStmt, label string) []ir.Stmt {
 	it := &ir.Ident{Name: itv.Name, Type: itType}
 	pre = append(pre, &ir.Declare{Vars: []*ir.Var{itv},
 		Init: &ir.Builtin{Name: "mapiter", Args: []ir.Expr{container}, Type: itType}})
-	key := &ir.Builtin{Name: "iterkey", Args: []ir.Expr{it}, Type: m.Key()}
+	key := b.copyPoint(&ir.Builtin{Name: "iterkey", Args: []ir.Expr{it}, Type: m.Key()})
 	value := b.copyPoint(&ir.Builtin{Name: "iterval", Args: []ir.Expr{it}, Type: m.Elem()})
 	body := &ir.Block{}
 	body.List = append(body.List, b.bindBoth(s, key, value)...)

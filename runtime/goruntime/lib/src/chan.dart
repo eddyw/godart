@@ -145,7 +145,12 @@ final class Chan<T> {
   /// Sends with no wait. The caller reads readyToSend first.
   void sendNow(T value) {
     if (_closed) {
-      $panic(Iface($typeGoError, const GoError('send on closed channel')));
+      $panic(
+        Iface(
+          $typeGoError,
+          const GoError('send on closed channel', plain: true),
+        ),
+      );
     }
     final _RecvWait<T>? waiting = _takeReceiver();
     if (waiting != null) {
@@ -163,10 +168,17 @@ final class Chan<T> {
 
   void close() {
     if (isNil) {
-      $panic(Iface($typeGoError, const GoError('close of nil channel')));
+      $panic(
+        Iface($typeGoError, const GoError('close of nil channel', plain: true)),
+      );
     }
     if (_closed) {
-      $panic(Iface($typeGoError, const GoError('close of closed channel')));
+      $panic(
+        Iface(
+          $typeGoError,
+          const GoError('close of closed channel', plain: true),
+        ),
+      );
     }
     _closed = true;
     while (true) {

@@ -13,6 +13,8 @@ import 'goint.dart';
 import 'iface.dart';
 import 'map.dart';
 import 'panic.dart';
+import 'sched.dart';
+import 'select.dart';
 import 'slice.dart';
 import 'string.dart';
 
@@ -228,6 +230,8 @@ int $valueLen(Iface? value) {
   if (v is List<Object?>) return v.length;
   if (v is GoString) return v.length;
   if (v is GoMap<Object?, Object?>) return v.length;
+  // The length of a channel is the count of the values that the buffer holds.
+  if (v is Chan<Object?>) return v.length;
   $panic(Iface($typeGoError, GoError('reflect: Len of ${value.desc.display}')));
 }
 
@@ -436,6 +440,16 @@ R _byKind<R>(String kind, R Function<T>() f) {
   return f<Object?>();
 }
 
+/// A pointer to a fresh cell that holds the value, with the Dart type of the
+/// element.
+///
+/// A cell of Object? fits no typed location: the setter of a field of the type
+/// `*float64` casts to `$Ptr<double>?`, and Dart rejects a `Box<Object?>` there.
+/// The description of the element names the Dart type, thus the cell fits. The
+/// decoder of encoding/json reads this function for a pointer field.
+$Ptr<Object?> $typedBox(TypeDesc elem, Object? value) =>
+    _withType<$Ptr<Object?>>(elem, <T>() => Box<T>(value as T));
+
 /// A pointer to a location that a getter and a setter name, with the Dart type
 /// that the kind of the value names.
 $Ptr<Object?> _typedCell(
@@ -545,11 +559,43 @@ int $descOut(int handle, int index) {
 ///
 /// A function that gives up control is outside this call: the Dart form of such
 /// a function gives a sentinel, and the call reads no scheduler.
-Slice<Iface?> $callValue(Iface? fn, Slice<Iface?> args) {
+Slice<Iface?> $callValue(Iface? fn, Slice<Iface?> args) =>
+    _callValue(fn, args, false);
+
+/// Calls a variadic function value and takes the last argument as the slice of
+/// the variadic parameter.
+///
+/// Go assigns that slice itself, thus the function reads the same backing array
+/// as the caller. A pack of the tail would give a copy, and the 2 meanings
+/// differ.
+Slice<Iface?> $callSliceValue(Iface? fn, Slice<Iface?> args) =>
+    _callValue(fn, args, true);
+
+Slice<Iface?> _callValue(Iface? fn, Slice<Iface?> args, bool spread) {
   if (fn == null) $panicNil();
   final TypeDesc desc = fn.desc;
   if (desc.kind != 'func') {
     $panic(Iface($typeGoError, GoError('reflect: Call of ${desc.display}')));
+  }
+  if (spread && !desc.variadic) {
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError(
+          'reflect: CallSlice of ${desc.display}, a type that is not '
+          'variadic',
+        ),
+      ),
+    );
+  }
+  if (spread) {
+    // The last argument already holds the slice of the variadic parameter.
+    final List<Object?> raw = <Object?>[];
+    for (int i = 0; i < args.len; i++) {
+      final Iface? a = args[i];
+      raw.add(desc.params[i]().kind == 'interface' ? a : a?.value);
+    }
+    return _resultSlice(desc, Function.apply(fn.value as Function, raw));
   }
   final int fixed = desc.variadic ? desc.params.length - 1 : desc.params.length;
   final bool wrong = desc.variadic
@@ -587,7 +633,11 @@ Slice<Iface?> $callValue(Iface? fn, Slice<Iface?> args) {
     }
     raw.add(tail);
   }
-  final Object? out = Function.apply(fn.value as Function, raw);
+  return _resultSlice(desc, Function.apply(fn.value as Function, raw));
+}
+
+/// _resultSlice gives the results of a call as a slice of interface values.
+Slice<Iface?> _resultSlice(TypeDesc desc, Object? out) {
   final int n = desc.results.length;
   final List<Iface?> results = <Iface?>[];
   if (n == 1) {
@@ -658,6 +708,91 @@ List<String> _exportedMethodKeys(TypeDesc desc) {
 /// The count of the exported methods of a type.
 int $descNumMethod(int handle) => _exportedMethodKeys(_typeAt(handle)).length;
 
+/// A handle of the function type of 1 exported method of a type. A method that
+/// carries no type gives 0.
+///
+/// Go puts the receiver in front of each parameter of the type of a method of a
+/// concrete type, and it writes no receiver for a method of an interface type.
+int $descMethodType(int handle, int index) {
+  final TypeDesc desc = _typeAt(handle);
+  final List<String> keys = _exportedMethodKeys(desc);
+  if (index < 0 || index >= keys.length) return 0;
+  final TypeDesc Function()? type = desc.methodTypes[keys[index]];
+  if (type == null) return 0;
+  final TypeDesc sig = type();
+  if (desc.kind == 'interface') return _descHandle(sig);
+  return _descHandle(_withReceiver(desc, sig));
+}
+
+/// _withReceiver gives the function type of a method of a concrete type.
+///
+/// The type carries no factory of its Dart type, because no call reads it. Go
+/// holds such a call under Method.Func, and that name stays out.
+TypeDesc _withReceiver(TypeDesc recv, TypeDesc sig) => TypeDesc(
+  _funcText(recv.name, sig, (TypeDesc d) => d.name),
+  'func',
+  const <String, Function>{},
+  text: _funcText(recv.display, sig, (TypeDesc d) => d.display),
+  params: <TypeDesc Function()>[() => recv, ...sig.params],
+  results: sig.results,
+  variadic: sig.variadic,
+  comparable: false,
+  zero: () => null,
+);
+
+/// _funcText writes a function type in the form of Go, with 1 receiver in front
+/// of each parameter.
+String _funcText(String recv, TypeDesc sig, String Function(TypeDesc) name) {
+  final StringBuffer b = StringBuffer('func(')..write(recv);
+  for (int i = 0; i < sig.params.length; i++) {
+    b.write(', ');
+    final TypeDesc p = sig.params[i]();
+    if (sig.variadic && i == sig.params.length - 1) {
+      final TypeDesc? e = p.elem?.call();
+      b.write('...${name(e ?? p)}');
+      continue;
+    }
+    b.write(name(p));
+  }
+  b.write(')');
+  if (sig.results.length == 1) {
+    b.write(' ${name(sig.results[0]())}');
+    return b.toString();
+  }
+  if (sig.results.isEmpty) return b.toString();
+  b.write(' (');
+  for (int i = 0; i < sig.results.length; i++) {
+    if (i > 0) b.write(', ');
+    b.write(name(sig.results[i]()));
+  }
+  b.write(')');
+  return b.toString();
+}
+
+/// Drops each entry of a map, or writes the zero value into each element of a
+/// slice.
+void $valueClear(Iface? value) {
+  if (value == null) $panicNil();
+  final Object? v = value.value;
+  if (v is GoMap<Object?, Object?>) {
+    final Slice<Object?> keys = v.keys();
+    for (int i = 0; i < keys.len; i++) {
+      v.remove(keys[i]);
+    }
+    return;
+  }
+  if (v is Slice<Object?>) {
+    final TypeDesc? elem = value.desc.elem?.call();
+    for (int i = 0; i < v.len; i++) {
+      v[i] = elem == null ? null : _zeroOf(elem);
+    }
+    return;
+  }
+  $panic(
+    Iface($typeGoError, GoError('reflect: Clear of ${value.desc.display}')),
+  );
+}
+
 /// The name of 1 exported method of a type.
 GoString $descMethodName(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
@@ -700,31 +835,63 @@ Iface? $methodValue(Iface? value, int index) {
     );
   }
   final TypeDesc sig = type();
-  return Iface(sig, _bindMethod(fn, value.value, sig.params.length));
+  return Iface(sig, _bindMethod(sig, fn, value.value));
 }
 
-/// _bindMethod gives a plain Dart closure of a method and its receiver.
+/// _bindMethod gives a Dart closure of a method and its receiver.
 ///
-/// A BoundMethod holds the pair, and $callValue reads it. A Go program that
-/// asserts the value to its function type needs a closure, and a closure of
-/// Object? parameters fits each such type: Dart reads a parameter type
-/// against the other direction, thus Object? accepts each argument.
-Function _bindMethod(Function fn, Object? recv, int arity) {
+/// The closure carries the Dart type of each parameter and of the result,
+/// because the description of the signature holds the factory of decision 254.
+/// A Go program that asserts the value to its function type then reads the
+/// result. Read decision 228 for the earlier limit.
+Function _bindMethod(TypeDesc sig, Function fn, Object? recv) => _typedFunc(
+  sig,
+  (List<Object?> args) =>
+      _resultList(sig, Function.apply(fn, <Object?>[recv, ...args])),
+);
+
+/// _typedFunc builds a closure of the Dart type of a function type.
+///
+/// The body reads a list of the raw arguments and gives a list of the raw
+/// results. A signature that carries no factory gives a closure of Object?
+/// parameters, and an assertion of that value to a function type with a result
+/// fails.
+Function _typedFunc(TypeDesc sig, List<Object?> Function(List<Object?>) body) {
+  final Function Function(List<Object?> Function(List<Object?>))? bind =
+      sig.bind;
+  if (bind != null) return bind(body);
+  return _looseFunc(body, sig.params.length);
+}
+
+/// _resultList gives the raw results of a call as a list. A call of more than 1
+/// result gives a Dart record, thus the list reads each member of it.
+List<Object?> _resultList(TypeDesc sig, Object? out) {
+  final int n = sig.results.length;
+  if (n == 0) return const <Object?>[];
+  if (n == 1) return <Object?>[out];
+  return <Object?>[for (int i = 0; i < n; i++) _field(out, i, n)];
+}
+
+/// _looseFunc gives a closure of Object? parameters. Dart reads a parameter
+/// type against the other direction, thus such a closure fits each function
+/// type of the same arity. The result stays dynamic.
+Function _looseFunc(List<Object?> Function(List<Object?>) body, int arity) {
   switch (arity) {
     case 0:
-      return () => fn(recv);
+      return () => _onlyResult(body(const <Object?>[]));
     case 1:
-      return (Object? a) => fn(recv, a);
+      return (Object? a) => _onlyResult(body(<Object?>[a]));
     case 2:
-      return (Object? a, Object? b) => fn(recv, a, b);
+      return (Object? a, Object? b) => _onlyResult(body(<Object?>[a, b]));
     case 3:
-      return (Object? a, Object? b, Object? c) => fn(recv, a, b, c);
+      return (Object? a, Object? b, Object? c) =>
+          _onlyResult(body(<Object?>[a, b, c]));
     case 4:
       return (Object? a, Object? b, Object? c, Object? d) =>
-          fn(recv, a, b, c, d);
+          _onlyResult(body(<Object?>[a, b, c, d]));
     case 5:
       return (Object? a, Object? b, Object? c, Object? d, Object? e) =>
-          fn(recv, a, b, c, d, e);
+          _onlyResult(body(<Object?>[a, b, c, d, e]));
     case 6:
       return (
         Object? a,
@@ -733,13 +900,87 @@ Function _bindMethod(Function fn, Object? recv, int arity) {
         Object? d,
         Object? e,
         Object? f,
-      ) => fn(recv, a, b, c, d, e, f);
+      ) => _onlyResult(body(<Object?>[a, b, c, d, e, f]));
   }
   $panic(
     Iface(
       $typeGoError,
-      GoError('reflect: a method of $arity parameters is outside the subset'),
+      GoError('reflect: a function of $arity parameters is outside the subset'),
     ),
+  );
+}
+
+/// _onlyResult gives the single result of a call, or the whole list.
+Object? _onlyResult(List<Object?> out) => out.length == 1 ? out[0] : out;
+
+/// A func value of a function type. Each call of it runs the body with the
+/// arguments, and the results of the body become the results of the call.
+///
+/// The description of the signature carries the factory of the Dart type, thus
+/// the value fits a location of its Go function type. A function type that the
+/// program never names holds no such factory, and MakeFunc of it panics.
+Iface? $makeFunc(int handle, Object? body) {
+  final TypeDesc desc = _typeAt(handle);
+  if (desc.kind != 'func') {
+    $panic(
+      Iface($typeGoError, GoError('reflect: MakeFunc of ${desc.display}')),
+    );
+  }
+  if (desc.bind == null) {
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError(
+          'reflect: MakeFunc of ${desc.display}, a type that the '
+          'program never names',
+        ),
+      ),
+    );
+  }
+  final Function run = body! as Function;
+  return Iface(
+    desc,
+    _typedFunc(desc, (List<Object?> args) {
+      final List<Iface?> input = <Iface?>[];
+      for (int i = 0; i < args.length && i < desc.params.length; i++) {
+        final TypeDesc p = desc.params[i]();
+        input.add(
+          p.kind == 'interface' ? args[i] as Iface? : Iface(p, args[i]),
+        );
+      }
+      final Slice<Iface?> out = run(Slice<Iface?>.of(input)) as Slice<Iface?>;
+      // A function that gives up control is outside this call, exactly as it
+      // is outside Value.Call. The sentinel of the scheduler names the cause.
+      if ($blocked != null) {
+        $panic(
+          Iface(
+            $typeGoError,
+            GoError(
+              'reflect: MakeFunc of ${desc.display} ran a body that gives up '
+              'control',
+            ),
+          ),
+        );
+      }
+      final int n = desc.results.length;
+      if (out.len != n) {
+        $panic(
+          Iface(
+            $typeGoError,
+            GoError(
+              'reflect: MakeFunc of ${desc.display} gave ${out.len} '
+              'results, and the type holds $n',
+            ),
+          ),
+        );
+      }
+      final List<Object?> raw = <Object?>[];
+      for (int i = 0; i < n; i++) {
+        final Iface? o = out[i];
+        raw.add(desc.results[i]().kind == 'interface' ? o : o?.value);
+      }
+      return raw;
+    }),
   );
 }
 
@@ -752,6 +993,9 @@ bool $valueIsNil(Iface? value) {
   if (v == null) return true;
   if (v is Slice<Object?>) return v.isNil;
   if (v is GoMap<Object?, Object?>) return v.isNil;
+  // The zero value of a channel type is an object of its own, and that object
+  // carries the nil flag.
+  if (v is Chan<Object?>) return v.isNil;
   return false;
 }
 
@@ -860,8 +1104,11 @@ int $sliceOf(int elem) {
       text: '[]${e.display}',
       elem: () => e,
       comparable: false,
-      zero: () => Slice<Object?>.nil(),
-      make: (int n) => Slice<Object?>.of(_zeros(e, n)),
+      zero: () => _withType<Object?>(e, <T>() => Slice<T>.nil()),
+      make: (int n) =>
+          _withType<Object?>(e, <T>() => Slice<T>.of(_zeros<T>(e, n))),
+      withType: <R>(R Function<T>() f) =>
+          _withType<R>(e, <T>() => f<Slice<T>>()),
     ),
   );
 }
@@ -879,7 +1126,9 @@ int $arrayOf(int length, int elem) {
       elem: () => e,
       length: length,
       comparable: e.comparable,
-      zero: () => _zeros(e, length),
+      zero: () => _withType<Object?>(e, <T>() => _zeros<T>(e, length)),
+      withType: <R>(R Function<T>() f) =>
+          _withType<R>(e, <T>() => f<List<T>>()),
     ),
   );
 }
@@ -898,16 +1147,256 @@ int $mapOf(int key, int elem) {
       key: () => k,
       elem: () => e,
       comparable: false,
-      zero: () => GoMap<Object?, Object?>.nil(() => _zeroOf(e)),
-      make: (int _) => GoMap<Object?, Object?>(() => _zeroOf(e)),
+      zero: () => _withType<Object?>(
+        k,
+        <K>() => _withType<Object?>(
+          e,
+          <V>() => GoMap<K, V>.nil(() => _zeroOf(e) as V),
+        ),
+      ),
+      make: (int _) => _withType<Object?>(
+        k,
+        <K>() => _withType<Object?>(
+          e,
+          <V>() => GoMap<K, V>(
+            () => _zeroOf(e) as V,
+            equals: _keyEquals<K>(k),
+            hashCode: _keyHash<K>(k),
+          ),
+        ),
+      ),
+      withType: <R>(R Function<T>() f) =>
+          _withType<R>(k, <K>() => _withType<R>(e, <V>() => f<GoMap<K, V>>())),
     ),
   );
+}
+
+/// _keyEquals gives the equality of a map key, or null for the equality of
+/// Dart.
+///
+/// A key of an array type compares by value in Go, and a Dart list compares by
+/// identity. A key of a pointer to a struct compares by identity in Go, and the
+/// Dart class of a struct compares each field.
+bool Function(K, K)? _keyEquals<K>(TypeDesc k) {
+  if (k.kind == 'array') return (K a, K b) => $goEqual(a, b, k);
+  if (k.kind == 'ptr' && _isObjectPointer(k.elem!())) {
+    return (K a, K b) => identical(a, b);
+  }
+  return null;
+}
+
+/// _keyHash gives the hash of a map key, and it pairs with _keyEquals.
+int Function(K)? _keyHash<K>(TypeDesc k) {
+  if (k.kind == 'array') return (K a) => $goHash(a, k);
+  if (k.kind == 'ptr' && _isObjectPointer(k.elem!())) {
+    return (K a) => identityHashCode(a);
+  }
+  return null;
 }
 
 /// A handle of the pointer type of an element type.
 int $pointerTo(int elem) {
   final TypeDesc e = _typeAt(elem);
   return _syntheticHandle(() => $ptrDesc(e));
+}
+
+/// A handle of the channel type of a direction and an element type. The
+/// direction is 3 for both, 2 for send, and 1 for receive.
+int $chanOf(int dir, int elem) {
+  final TypeDesc e = _typeAt(elem);
+  final String head = dir == 1 ? '<-chan ' : (dir == 2 ? 'chan<- ' : 'chan ');
+  return _syntheticHandle(
+    () => TypeDesc(
+      '$head${e.name}',
+      'chan',
+      const <String, Function>{},
+      text: '$head${e.display}',
+      elem: () => e,
+      dir: dir,
+      zero: () =>
+          _withType<Object?>(e, <T>() => Chan<T>.nil(() => _zeroOf(e) as T)),
+      withType: <R>(R Function<T>() f) =>
+          _withType<R>(e, <T>() => f<Chan<T>>()),
+    ),
+  );
+}
+
+/// A channel of the type, with the size of the buffer.
+Iface? $makeChan(int handle, int buffer) {
+  final TypeDesc desc = _typeAt(handle);
+  final TypeDesc? elem = desc.elem?.call();
+  if (desc.kind != 'chan' || elem == null) {
+    $panic(
+      Iface($typeGoError, GoError('reflect: MakeChan of ${desc.display}')),
+    );
+  }
+  if (desc.dir != 0 && desc.dir != 3) {
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: MakeChan of a channel of 1 direction'),
+      ),
+    );
+  }
+  return Iface(
+    desc,
+    _withType<Object?>(
+      elem,
+      <T>() => Chan<T>(buffer, () => _zeroOf(elem) as T),
+    ),
+  );
+}
+
+/// _chanOf gives the channel of a value, and it panics for each other kind.
+Chan<Object?> _chanOf(Iface? value, String call) {
+  if (value == null) $panicNil();
+  final Object? v = value.value;
+  if (v is! Chan<Object?>) {
+    $panic(
+      Iface($typeGoError, GoError('reflect: $call of ${value.desc.display}')),
+    );
+  }
+  return v;
+}
+
+/// _rawElem gives the raw Dart form of a value that a channel of the type
+/// holds. A channel of an interface type keeps the pair itself.
+Object? _rawElem(TypeDesc chan, Iface? x) {
+  final TypeDesc? elem = chan.elem?.call();
+  return elem == null || elem.kind == 'interface' ? x : x?.value;
+}
+
+/// _wrapElem puts the raw Dart form of an element back into an interface value.
+Iface? _wrapElem(TypeDesc chan, Object? raw) {
+  final TypeDesc? elem = chan.elem?.call();
+  if (elem == null || elem.kind == 'interface') return raw as Iface?;
+  return Iface(elem, raw);
+}
+
+/// A send on a channel that a Value holds. The call blocks the goroutine,
+/// exactly as a send of Go does.
+void $valueSend(Iface? value, Iface? x) {
+  _chanOf(value, 'Send').send(_rawElem(value!.desc, x));
+}
+
+/// Closes a channel that a Value holds.
+void $valueClose(Iface? value) {
+  _chanOf(value, 'Close').close();
+}
+
+/// A receive on a channel that gives up no control.
+///
+/// The 3 results are the value, the flag of the receive, and the flag of a
+/// valid Value. A receive that cannot end at this moment gives the zero Value,
+/// thus the third flag is false.
+(Iface?, bool, bool) $valueTryRecv(Iface? value) {
+  final Chan<Object?> c = _chanOf(value, 'TryRecv');
+  if (!c.readyToReceive) return (null, false, false);
+  final (Object?, bool) got = c.receiveNow();
+  return (_wrapElem(value!.desc, got.$1), got.$2, true);
+}
+
+/// A send that gives up no control. The flag is false when the send cannot end
+/// at this moment.
+bool $valueTrySend(Iface? value, Iface? x) {
+  final Chan<Object?> c = _chanOf(value, 'TrySend');
+  if (!c.readyToSend) return false;
+  c.sendNow(_rawElem(value!.desc, x));
+  return true;
+}
+
+/// Runs a select statement of the package reflect.
+///
+/// The direction of each case takes the numbers of reflect.SelectDir: 1 for a
+/// send, 2 for a receive, and 3 for the default. A case with a nil Chan is
+/// ignored, exactly as in Go. The 3 results are the number of the case, the
+/// value of a receive, and the flag of that receive.
+(int, Iface?, bool) $selectValue(
+  Slice<GoInt> dirs,
+  Slice<Iface?> chans,
+  Slice<Iface?> sends,
+) {
+  final List<SelectCase> cases = <SelectCase>[];
+  final List<int> order = <int>[];
+  final List<TypeDesc?> descs = <TypeDesc?>[];
+  int fallback = -1;
+  for (int i = 0; i < dirs.len; i++) {
+    final int dir = $ix(dirs[i]);
+    if (dir == 3) {
+      if (fallback >= 0) {
+        $panic(
+          Iface(
+            $typeGoError,
+            const GoError('reflect.Select: multiple default cases'),
+          ),
+        );
+      }
+      fallback = i;
+      continue;
+    }
+    final Iface? holder = chans[i];
+    // Go ignores a case whose Chan holds the zero Value.
+    if (holder == null) continue;
+    final Chan<Object?> c = _chanOf(holder, 'Select');
+    order.add(i);
+    descs.add(holder.desc);
+    if (dir == 2) {
+      cases.add(RecvCase<Object?>(c));
+      continue;
+    }
+    cases.add(SendCase<Object?>(c, _rawElem(holder.desc, sends[i])));
+  }
+  final int taken = $select(cases, fallback >= 0);
+  if ($blocked != null) {
+    $block(_SelectResume($blocked!, cases, order, descs));
+    return (0, null, false);
+  }
+  if (taken < 0) return (fallback, null, false);
+  return _selectResult(cases, order, descs, taken);
+}
+
+/// _selectResult reads the value of the case that a select statement took.
+(int, Iface?, bool) _selectResult(
+  List<SelectCase> cases,
+  List<int> order,
+  List<TypeDesc?> descs,
+  int taken,
+) {
+  if (taken < 0 || taken >= cases.length) return (0, null, false);
+  final SelectCase c = cases[taken];
+  if (c is! RecvCase<Object?>) return (order[taken], null, false);
+  final (Object?, bool) got = c.result ?? (null, false);
+  final TypeDesc? desc = descs[taken];
+  final Iface? out = desc == null ? got.$1 as Iface? : _wrapElem(desc, got.$1);
+  return (order[taken], out, got.$2);
+}
+
+/// The frame of a goroutine that waits inside reflect.Select.
+///
+/// The frame of the runtime gives the number of the case, and the package
+/// reflect needs the value of a receive as well. The conversion stands here,
+/// because the caller reads the result of the resume.
+final class _SelectResume implements WaitFrame {
+  final Frame inner;
+  final List<SelectCase> cases;
+  final List<int> order;
+  final List<TypeDesc?> descs;
+
+  _SelectResume(this.inner, this.cases, this.order, this.descs);
+
+  @override
+  String get $reason => 'select';
+
+  @override
+  Object? resume() {
+    final Object? out = inner.resume();
+    final Frame? again = $blocked;
+    if (again != null) {
+      $block(_SelectResume(again, cases, order, descs));
+      return (0, null, false);
+    }
+    return _selectResult(cases, order, descs, out is int ? out : -1);
+  }
 }
 
 /// _zeroOf gives the zero value of a type, or null for a type that holds no
@@ -919,10 +1408,11 @@ Object? _zeroOf(TypeDesc desc) {
 
 /// _zeros gives a list of the length that holds the zero value of the type.
 ///
-/// The list holds Object?, and not the Dart type of the element, because the
-/// Dart type of a Go type lives only in the emitted code. Read docs/parity.md.
-List<Object?> _zeros(TypeDesc elem, int n) =>
-    List<Object?>.filled(n, _zeroOf(elem), growable: true);
+/// The caller names the Dart type of the element through _withType, thus a
+/// type assertion of the value reads. Each slot takes a fresh zero, because Go
+/// gives 1 struct of its own to each element of an array.
+List<T> _zeros<T>(TypeDesc elem, int n) =>
+    List<T>.generate(n, (int _) => _zeroOf(elem) as T, growable: true);
 
 /// The capacity of a slice, of an array, or of a channel.
 int $valueCap(Iface? value) {
@@ -930,6 +1420,8 @@ int $valueCap(Iface? value) {
   final Object? v = value.value;
   if (v is Slice<Object?>) return v.cap;
   if (v is List<Object?>) return v.length;
+  // The capacity of a channel is the size of its buffer.
+  if (v is Chan<Object?>) return v.capacity;
   return $valueLen(value);
 }
 
@@ -1096,13 +1588,13 @@ bool $descConvertible(int handle, int other) {
   return false;
 }
 
-/// The direction of a channel type: 3 for both, 2 for receive, 1 for send.
+/// The direction of a channel type: 3 for both, 2 for send, and 1 for receive.
 int $descChanDir(int handle) {
   final TypeDesc desc = _typeAt(handle);
   if (desc.kind != 'chan') return 0;
-  // The descriptor of the runtime holds no direction, thus each channel type
-  // reads as a channel of both directions. Read docs/parity.md.
-  return 3;
+  // A description that names no direction reads as a channel of both
+  // directions.
+  return desc.dir == 0 ? 3 : desc.dir;
 }
 
 /// The index of a field of a struct type, by name. A name that no field holds
@@ -1174,10 +1666,7 @@ Iface? $methodByName(Iface? value, GoString name) {
     final TypeDesc Function()? type = value.desc.methodTypes[key];
     if (type == null) return null;
     final TypeDesc sig = type();
-    return Iface(
-      sig,
-      _bindMethod(value.desc.methods[key]!, value.value, sig.params.length),
-    );
+    return Iface(sig, _bindMethod(sig, value.desc.methods[key]!, value.value));
   }
   return null;
 }
@@ -1284,19 +1773,38 @@ int $valuePointer(Iface? value) {
 /// A receive on a channel that a Value holds. The call blocks the goroutine,
 /// exactly as a receive of Go does.
 (Iface?, bool) $valueRecv(Iface? value) {
-  if (value == null) $panicNil();
-  final Object? v = value.value;
-  if (v is! Chan<Object?>) {
-    $panic(
-      Iface($typeGoError, GoError('reflect: Recv of ${value.desc.display}')),
-    );
+  final Chan<Object?> c = _chanOf(value, 'Recv');
+  final (Object?, bool) got = c.receive();
+  // The frame of the channel gives the raw value of the element, and the
+  // package reflect needs an interface value. The wrapper converts it.
+  if ($blocked != null) {
+    $block(_RecvResume($blocked!, value!.desc));
+    return (null, false);
   }
-  final TypeDesc? elem = value.desc.elem?.call();
-  final (Object?, bool) got = v.receive();
-  if (elem == null || elem.kind == 'interface') {
-    return (got.$1 as Iface?, got.$2);
+  return (_wrapElem(value!.desc, got.$1), got.$2);
+}
+
+/// The frame of a goroutine that waits inside reflect.Value.Recv.
+final class _RecvResume implements WaitFrame {
+  final Frame inner;
+  final TypeDesc desc;
+
+  _RecvResume(this.inner, this.desc);
+
+  @override
+  String get $reason => 'chan receive';
+
+  @override
+  Object? resume() {
+    final Object? out = inner.resume();
+    final Frame? again = $blocked;
+    if (again != null) {
+      $block(_RecvResume(again, desc));
+      return (null, false);
+    }
+    final (Object?, bool) got = out as (Object?, bool);
+    return (_wrapElem(desc, got.$1), got.$2);
   }
-  return (Iface(elem, got.$1), got.$2);
 }
 
 /// Reports whether the last parameter of a function type is variadic.
@@ -1316,8 +1824,12 @@ GoString $descPkgPath(int handle) {
   }
   final String head = desc.name.substring(0, cut);
   // A composite type holds no package. Its name starts with a bracket, a star,
-  // or the word map, chan, func, or interface.
-  if (head.contains('[') || head.contains('*') || head.contains(' ')) {
+  // or the word map, chan, func, or interface. A function type also holds a
+  // parenthesis, and the name of a parameter of it holds the import path.
+  if (head.contains('[') ||
+      head.contains('*') ||
+      head.contains(' ') ||
+      head.contains('(')) {
     return GoString.empty;
   }
   return GoString.fromString(head);

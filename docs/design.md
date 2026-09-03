@@ -684,3 +684,37 @@ The work handled each of the 4 items. Point 1 needed no method table, because Go
 The builtin `new` accepts a type or an expression. `new(x)` with an expression
 of a type that is not a struct gives a rejected pointer. Stage 2 must reject it.
 
+
+## The freshness rule of a copy point
+
+Go gives a struct and an array value semantics, thus each copy point needs a
+fresh value. A copy of a value that no other expression names gives nothing,
+and the compiler holds 1 rule for that test.
+
+`ir.Fresh` of `internal/ir/ir.go` names 5 shapes: a composite literal, a call, a
+copy, a zero value, and a conversion. Stage 4 reads it at each copy point, and
+stage 5 reads it at the box of an interface value. The 2 must agree: a copy that
+only 1 of them writes gives either a wasted object or an alias.
+
+A builtin is not fresh. `iterkey` and `iterval` each read the object that the
+map holds, thus a `for k, v := range m` over a map of struct values gave the
+loop variables an alias of the entry. Read decision 255.
+
+`append` needs a copy of its own. The path that grows writes each element into a
+new array, and Go copies each 1 there. `elemAssign` of `internal/emit/call.go`
+writes that argument, and it gives an empty text for an element type that needs
+no copy. The spread form copies each element of the source, because it holds no
+call site where stage 4 could copy the argument. Read decision 256.
+
+## The shadow set of a package name
+
+A Dart class holds each method and each field of a Go struct type as a member.
+A package level name of the same Dart name is invisible inside such a class,
+thus `topName` of the emitter adds the suffix `$f` to it.
+
+The set holds each method name and each field name of each struct type of the
+package. `ccc[p.ccc]` of `vendor/golang.org/x/text/unicode/norm` reads the
+package variable `ccc` and the field `ccc`, and Dart read the field 2 times
+before the field names joined the set. The set comes from the type information,
+thus the emitter computes the same set for the package that it compiles and for
+a package that it imports. Read decision 305.

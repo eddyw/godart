@@ -464,6 +464,7 @@ var (
 	oidExtensionCRLDistributionPoints = asn1.ObjectIdentifier{2, 5, 29, 31}
 	oidExtensionAuthorityKeyId        = asn1.ObjectIdentifier{2, 5, 29, 35}
 	oidExtensionExtendedKeyUsage      = asn1.ObjectIdentifier{2, 5, 29, 37}
+	oidExtensionNameConstraints       = asn1.ObjectIdentifier{2, 5, 29, 30}
 	oidExtensionAuthorityInfoAccess   = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 1}
 
 	oidAuthorityInfoAccessOcsp    = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 48, 1}
@@ -472,8 +473,8 @@ var (
 
 // A Certificate holds 1 X.509 certificate.
 //
-// The overlay holds no PublicKey field, no name constraint field, and no
-// policy field. The package doc names the cause.
+// The overlay holds no PublicKey field and no policy field. The package doc
+// names the cause.
 type Certificate struct {
 	// Raw holds the whole DER of the certificate.
 	Raw []byte
@@ -536,6 +537,23 @@ type Certificate struct {
 
 	// CRLDistributionPoints holds each URI of the CRL distribution points.
 	CRLDistributionPoints []string
+
+	// The name constraints. RFC 5280, 4.2.1.10. A constraint holds the names
+	// that a certificate under this authority may carry, and the names that
+	// it may not carry.
+	//
+	// PermittedDNSDomainsCritical reports whether the extension carries the
+	// critical mark. The overlay reads each field, and it runs no check of a
+	// chain, thus no constraint below ever rejects a certificate here.
+	PermittedDNSDomainsCritical bool
+	PermittedDNSDomains         []string
+	ExcludedDNSDomains          []string
+	PermittedIPRanges           []*net.IPNet
+	ExcludedIPRanges            []*net.IPNet
+	PermittedEmailAddresses     []string
+	ExcludedEmailAddresses      []string
+	PermittedURIDomains         []string
+	ExcludedURIDomains          []string
 }
 
 // Equal reports whether the 2 certificates hold the same DER.
@@ -665,6 +683,9 @@ func parseExtension(out *Certificate, e pkix.Extension) (bool, error) {
 		return true, parseExtKeyUsage(out, e.Value)
 	case e.Id.Equal(oidExtensionAuthorityInfoAccess):
 		return true, parseAuthorityInfoAccess(out, e.Value)
+	case e.Id.Equal(oidExtensionNameConstraints):
+		unhandled, err := parseNameConstraints(out, e)
+		return !unhandled, err
 	}
 	return false, nil
 }

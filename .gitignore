@@ -4,3 +4,6 @@
 
 # goruntime is a library package, thus the lock file stays out of the tree.
 runtime/goruntime/pubspec.lock
+
+# A gart build writes dartout next to a test program.
+testdata/**/dartout/

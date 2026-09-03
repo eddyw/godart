@@ -27,10 +27,10 @@ The state of 2026-09-03. Each row names the section that holds the detail.
 | The file access | Synchronous, through `dart:io`. No handle of a directory, and no file descriptor. `Chmod`, `Chown`, and `Chtimes` reach a path, and `Stat` still reports a fixed mode. |
 | The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. `Getuid` and its family give -1. |
 | The network access | TCP, UDP, and a Unix socket. `IP`, `IPMask`, `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, `IPAddr`, and `UnixAddr` are present. The overlay holds a resolver of the DNS since 2026-09-02, thus the whole `Lookup` family reads. |
-| HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, and a multipart form are present. No file server. |
+| HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, a multipart form, and the file server family (`FileServer`, `FileServerFS`, `FS`, `Dir`) are present. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
-| JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. No `TextMarshaler`. The text of a syntax error of `Token` differs. |
-| `gart test` | The format of `go test`. `t.Parallel` does nothing, and `-cover`, `-short`, and `-count` stay out. |
+| JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `TextMarshaler`, `TextUnmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. The text of a syntax error of `Token` differs. |
+| `gart test` | The format of `go test`, with `t.Parallel`, `-cover`, `-short`, and `-count`. It runs each example, and no fuzz target. |
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
 | A stack trace | The module form of each file, with no offset. |
 | The garbage collector | `runtime.GC` gives up control only, and a cleanup follows the collector of Dart. |
@@ -126,19 +126,21 @@ form.
 
 | Item | Go | godart |
 |---|---|---|
-| `SliceOf`, `ArrayOf`, `MapOf`, `PointerTo` | Present | Equal for `Kind`, `Elem`, `Key`, `Len`, `String`, and `Comparable`. |
-| `MakeSlice`, `MakeMap`, `New`, `Zero` of such a type | A value of the type | A value that reads and writes through reflect. |
-| A type assertion of such a value to its Go type | The value | A Dart type error, because the container holds `Object?`. |
-| `MakeFunc` | Present | Not present. The Dart form of a Go function type is a closure of that exact signature, and the runtime holds no way to build one. |
-| A method value, from `Method`, `MethodByName`, or `Value.Method` | A function value of the method | A Dart closure of `Object?` parameters. Dart reads a parameter type against the other direction, thus the closure fits each function type of the same arity. The result stays `dynamic`, thus an assertion to a function type with a result fails. Read decision 228. |
+| `SliceOf`, `ArrayOf`, `MapOf`, `PointerTo` | Present | Equal. `_withType` threads through the 3 synthetic builders since 2026-09-03, thus the container holds the Dart type of the element. |
+| `MakeSlice`, `MakeMap`, `New`, `Zero` of such a type | A value of the type | Equal. A struct descriptor and each named descriptor carry a factory of the Dart type since 2026-09-03. |
+| A type assertion of such a value to its Go type | The value | Equal since 2026-09-03. |
+| `MakeFunc` | Present | Equal for each function type that the program names. The descriptor of a signature carries a bind factory that builds a closure of the exact Dart type. A type that the program never names holds no factory, and `MakeFunc` of it panics with that cause. |
+| `FuncOf`, `StructOf` | Present | Not present. Each 1 builds a type that no emitted code names, thus no factory exists for it. |
+| A function that gives up control | Runs inside `Value.Call` and inside a `MakeFunc` body | Rejected with a clear cause. |
+| A method value, from `Method`, `MethodByName`, or `Value.Method` | A function value of the method | Equal. The bind factory of the signature gives a closure of the exact Dart type, thus an assertion to a function type with a result reads. Decision 228 held the old limit. |
 | `Value.Pointer`, `Value.UnsafePointer` | The machine address | The identity of the object. 2 reads of the same object give the same number, and the number names no memory, thus `runtime.FuncForPC` of it gives nil. |
-| `Type.ChanDir` | The direction of the channel type | Always `BothDir`. The type descriptor of the runtime holds no direction. |
+| `Type.ChanDir` | The direction of the channel type | Equal. The type descriptor carries the direction since 2026-09-03. |
 | `Type.AssignableTo`, `ConvertibleTo`, `Implements` | The rule of the specification | The name of the type, the method set of an interface, and the kind of a number each answer. A conversion between 2 named struct types of the same shape gives false. |
 
-2 files of the test directory of Go witness the limit, and
-`internal/driver/gotest_test.go` names each 1: `fixedbugs/issue22605` and
-`fixedbugs/issue37716`. Each one builds a type that the program never names,
-and it then asserts the value to the Go type.
+`fixedbugs/issue22605` and `fixedbugs/issue37716` of the test directory of Go
+witnessed the limit until 2026-09-03. Each 1 builds a type that the program
+never names, and it then asserts the value to the Go type. The 2 pass now, and
+`internal/driver/gotest_test.go` holds no entry for either.
 
 ## The runtime
 
@@ -166,7 +168,13 @@ and it then asserts the value to the Go type.
 | `runtime.GOROOT` | The root of the Go tree | An empty text. The Dart output holds no such tree. |
 | `debug.SetMaxStack` | Writes the limit of the runtime | Keeps the value only. |
 | `filepath.EvalSymlinks` | Walks each element itself | Asks the system for the resolved path. A relative argument takes `Rel` against the resolved working directory, thus the result stays relative in each usual case. The error of a missing path holds a different text. |
-| A panic of a run time error that recover reads | The value implements `error`, and `Error()` gives the text | Equal. The value carries the description `runtime.errorString`, whose method table holds `Error`. |
+| A panic of a run time error that recover reads | The value implements `error`, and `Error()` gives the text | Equal in the text. The value carries the description `runtime.errorString` in each case, and Go also holds `runtime.plainError` and `*runtime.TypeAssertionError`. A type switch on the recovered value thus reads 1 type where Go reads 3. |
+| The text of a run time panic | Read the list of Go | Equal. A write to a nil map and the 3 faults of a channel write no prefix, a slice bound report names the bound that failed, and a failed assertion names the static interface type and the first missing method. Read decision 293 and decision 294. |
+| `fmt.Errorf` | `*errors.errorString`, `*fmt.wrapError`, or `*fmt.wrapErrors` | Equal. Read decision 295. |
+| A star width and a star precision, `%*d` and `%.*f` | Present | Equal since 2026-09-03. A value of a wrong type gives `%!(BADWIDTH)`, and a precision below 0 gives `%!(BADPREC)`. |
+| An explicit argument index, `%[2]d` | Present | Equal since 2026-09-03. An index that names no argument gives `%!d(BADINDEX)`. |
+| A precision on a string verb, `%.2s` | Cuts the text to 2 runes | Equal since 2026-09-03. |
+| The verb `%#v` | The Go syntax form, `main.point{X:3, Y:4}` | Not present. It writes the form of `%v`. |
 
 ## The subset of the language
 
@@ -244,11 +252,11 @@ reads the real Go source, because that source already stays inside the subset.
 | `encoding/json` | Overlay | Each name of the client surface. Read the section below. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native |
-| `io/fs` | Overlay | `FileMode`, `FileInfo`, `DirEntry`, `PathError`, `WalkDirFunc`, `SkipDir`, `SkipAll`, and `ValidPath`. No `FS` interface. |
+| `io/fs` | Native | Each exported name, the `FS` interface family included. |
 | `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. Read below. |
 | `path/filepath` | Overlay | The separator is always `/`. Read below. | |
 | `net` | Overlay | TCP, UDP, a Unix socket, `IP`, `ParseIP`, and the `Lookup` family. No TLS. Read the 2 sections below. |
-| `os` | Overlay | The file access, the environment, the identity of the process, and the process state. `Root`, `DirFS`, `Chmod`, and the signals stay out. Read the section below. |
+| `os` | Overlay | The file access, the environment, the identity of the process, and the process state. `Root`, `DirFS`, `Chmod`, and the signals each read. `File.Fd`, `NewFile`, and `StartProcess` stay out, because `dart:io` hides the descriptor. Read the section below. |
 | `path` | Native | |
 | `runtime` | Overlay | `GOMAXPROCS`, `NumCPU`, `NumGoroutine`, `GOROOT`, `GOOS`, `GOARCH`, `Caller`, `Callers`, `CallersFrames`, `FuncForPC`, `AddCleanup`, and `GC`. |
 | `runtime/debug` | Overlay | Each name of Go. `ReadBuildInfo` gives no record, and `ReadGCStats` writes the zero value. |
@@ -412,7 +420,9 @@ fields that Go gives.
 
 | Name | The difference |
 |---|---|
-| `Stat` after a `Chmod` | The mode of the result does not change. `dart:io` reports no permission bit. |
+| `Stat` after a `Chmod` | The mode of the result does not change. `dart:io` reports no permission bit. The write itself reaches the file, thus an exec of it behaves as in Go. |
+| A create with a permission, `os.WriteFile(name, data, 0o755)` | The bits of the call without the mask | Equal. The chmod stands after the open, and the new interop `Umask` reads the mask. A mode of 0644 after the mask runs no command. |
+| A relative `Cmd.Path` next to a `Cmd.Dir` | The child resolves it against Dir | Equal. The overlay joins the 2, because `Process.start` of Dart resolves against the parent. |
 | `Chtimes` | The precision is 1 millisecond. `dart:io` names a `DateTime`. |
 | `File.Chmod`, `File.Chown`, `File.Truncate` | Each 1 reaches the file by its path. Go reaches it by its descriptor, thus a rename between the 2 calls changes the target here. |
 | `OpenFile` with `O_EXCL` | A check and an open, and not 1 operation of the system. 2 processes can pass the check together. |
@@ -894,10 +904,10 @@ Go.
 | A redirect | Follows up to 10 | Equal. `CheckRedirect` and `ErrUseLastResponse` work. |
 | `Client.Timeout` | Present | Present. It reaches the deadline of the connection. |
 | `Handler`, `HandlerFunc`, `ResponseWriter`, `Flusher` | Present | Equal |
-| `ServeMux`, `Handle`, `HandleFunc`, `StripPrefix` | Present | The pattern holds a path and a subtree. A method and a wildcard of Go 1.22 stay out. |
-| `Server`, `ListenAndServe`, `Serve`, `Close` | Present | Equal |
+| `ServeMux`, `Handle`, `HandleFunc`, `StripPrefix` | Present | Equal. The routing tree, the conflict index, and the pattern reader of Go 1.22 each read the real Go source, thus the method, the `{id}` wildcard, the `{$}` anchor, the trailing slash redirect, and the status 405 each work. `Request.PathValue`, `SetPathValue`, and `Pattern` read. |
+| `Server`, `ListenAndServe`, `Serve`, `Close`, `Shutdown` | Present | Equal. The server tracks each listener and each connection, thus `Shutdown` waits for each connection to reach the idle state. The 4 timeouts, `MaxHeaderBytes`, `MaxHeaderValueCount`, `ConnState`, `BaseContext`, and `ConnContext` each read. |
 | `Error`, `NotFound`, `Redirect`, `StatusText` | Present | Equal |
-| `Cookie`, `SetCookie`, `Request.Cookies`, `Response.Cookies` | Present | Equal |
+| The cookie family | Present | Equal. `cookie.go` reads the real Go source with 1 change. `Cookie.Valid` cannot reject an `Expires` below the year 1601, because the `Time` of the overlay names no year below 1678. |
 | A chunked body | Present | Equal, for a read and for a write. |
 | Keep alive | Present | Present. The client holds a pool of 2 connections for each host. |
 | A Close of a body that stands before its end | The connection stays open when the read loop reaches the end first | The connection ends. |
@@ -906,13 +916,21 @@ Go.
 | The type of a body that the handler does not name | `DetectContentType` reads the first 512 bytes | `text/plain; charset=utf-8` for each body |
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |
 | `Request.RemoteAddr` | The address of the peer | Equal. The server reads `Conn.RemoteAddr` of the accepted connection. |
-| `Transport` | A pool, a proxy, and a set of timeouts | `TLSClientConfig`, `DisableKeepAlives`, `DisableCompression`, `MaxIdleConnsPerHost`, `ForceAttemptHTTP2`, `Proxy`, and `CloseIdleConnections`. Each timeout field stays out. |
+| `Transport` | A pool, a proxy, and a set of timeouts | Equal, less `TLSHandshakeTimeout` and `OnProxyConnectResponse`. `tls.Dial` of the overlay opens the socket and runs the handshake in 1 call, thus no clock measures the handshake alone. `Dial` and `DialContext` reach no https request, because the secure socket of Dart takes no socket that stands open. |
 | `httptest` | Present | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `NewTLSServer`, `StartTLS`, `Server.Client`, and `Server.Close`. `CloseClientConnections` and the wait of `Close` for each request that stands open stay out. `StartTLS` binds a fresh port, because the secure socket of Dart wraps no open listener, and the client of a TLS server drops the certificate check, because the surface holds no root pool. |
 | `CookieJar` and `net/http/cookiejar` | Present | Equal. `Client.Jar` reads a jar before each request, and it writes each cookie of the answer. |
 | `Transport.Proxy`, `ProxyURL`, `ProxyFromEnvironment` | Present | Equal. An http request holds the whole URL in the request line, and an https request rides a CONNECT tunnel. `socks5` stays out. |
 | `Request.ParseForm`, `FormValue`, `PostFormValue` | Present | Equal |
 | `Request.ParseMultipartForm`, `FormFile`, `MultipartReader` | Present | Equal, with `mime/multipart` |
-| `FileServer` and the `FS` family | Present | Not present |
+| `FileServer`, `FileServerFS`, `FS`, `Dir`, `ServeFile`, `ServeFileFS`, `ServeContent`, `NewFileTransport` | Present | Equal |
+| `TimeoutHandler`, `MaxBytesReader`, `MaxBytesHandler`, `RedirectHandler`, `AllowQuerySemicolons`, `NoBody`, and the 13 `Err` variables | Present | Equal |
+| `ReadResponse`, `ParseHTTPVersion`, `Header.WriteSubset`, `Request.Write`, `Request.WriteProxy`, `Response.Write` | Present | Equal. The transport writes the request line, `Host`, `User-Agent`, the length, and then each other field in order, thus the bytes match. |
+| A body of unknown length | The chunked form | Equal. `NewRequest` leaves `ContentLength` at 0, and a body next to a 0 takes the chunked form. |
+| A redirect of the status 307 or 308 | Keeps the method and the body | Equal. The client reads `GetBody` and it writes `Request.Response`. |
+| `Request.TLS`, `Response.TLS` | The whole state of the connection | Present since 2026-09-03. The `tls.ConnectionState` of the overlay holds `NegotiatedProtocol`, `ServerName`, and `HandshakeComplete`, thus each other member reads its zero value. |
+| `Request.TransferEncoding`, `Response.TransferEncoding` | Each encoding of the body | Present. The overlay writes the 1 element `chunked`, or nothing. |
+| `Request.Trailer`, `Response.Trailer` | The fields that follow the body | Present in the shape, and always nil. A request that declares a `Trailer` field gives the status 501, thus no trailer is lost with no report. |
+| `TrailerPrefix`, `CloseNotifier`, `Request.Cancel` | Present | Not present. The answer of the overlay writes no trailer, and Go marks the last 2 as deprecated. |
 | `Protocols`, with the 6 accessors and `String` | Present | Equal |
 | `Server.Protocols`, `Transport.Protocols` | Present | Not present. The overlay server reads the ALPN of the TLS listener, and no path carries HTTP/2 over a plain socket, thus `UnencryptedHTTP2` names nothing. |
 | `ResponseController`, `NewResponseController` | 5 methods | Equal. `Flush`, `Hijack`, `SetReadDeadline`, `SetWriteDeadline`, and `EnableFullDuplex` each reach the connection of the HTTP/1.1 server. |
@@ -1230,7 +1248,7 @@ for each test binary. The output holds the format of `go test`.
 | The source position of a log line | `file.go:12: text` | Equal. The harness reads the stack through the source map. |
 | The position of a log line of a helper that calls `t.Helper` | The position of the caller | Equal. |
 | The position of a deferred log line after `Fatal` | The position of the runtime of Go, for example `panic.go:694` | No position. |
-| `t.Parallel` | Runs the tests in parallel | Does nothing. All Go code runs in 1 isolate. |
+| `t.Parallel` | Runs the tests in parallel | Equal. Each test runs on a goroutine of its own, and the group wakes each paused test after the pass of the tests that are not parallel. The order of the report is the order of the ends, and the scheduler of 1 isolate makes it stable. |
 | `t.FailNow`, `t.SkipNow` | `runtime.Goexit` | A throw. Each deferred function still runs, and the subset has no `recover`. |
 | `-run` | A regular expression | Equal. A `\|` separates 2 alternatives, and a `/` separates the expression of each element of the name. |
 | A filter that keeps no test | `testing: warning: no tests to run`, and ` [no tests to run]` after the package | Equal. The driver writes the mark, and the harness writes the warning. |
@@ -1252,14 +1270,17 @@ for each test binary. The output holds the format of `go test`.
 | `testing.TB` | Holds `Setenv` and `Context` | Equal since 2026-09-03. `TB` holds the 7 names of the real `TB`, and `T`, `B`, and `F` each give them. |
 | `t.Attr` | Writes a key and a value to the test log | Present. A key with a space, or a value with a newline, reports an error and writes no line, as Go does. |
 | `t.Output` | Gives a writer of the test log | Present. Each line takes the prefix of the test, as Go writes it. |
-| `t.ArtifactDir`, `t.Deadline` | Read a flag of `testing.Init` | Present in the shape. `Init` registers no flag in gart, thus a call outside `go test` reads a nil pointer. |
+| `t.ArtifactDir`, `t.Deadline` | Read a flag of `testing.Init` | Present in the shape. `-timeout` stays out, thus `Deadline` reports no deadline. |
 | `b.Chdir`, `b.Context`, `b.Setenv`, `b.TempDir`, `b.Elapsed`, `b.SetParallelism` | Present | Equal. The benchmark path now cancels its context in front of the cleanups, as the test path does. |
 | `BenchmarkResult.MemAllocs`, `MemBytes`, `Extra`, `MemString` | Present | Present. Each memory number reads 0 on a measured run, because the Dart VM counts no allocation. `Extra` reads a value that the benchmark wrote. |
-| `testing.Init`, `MainStart`, `RunTests`, `RunBenchmarks`, `RunExamples` | Present | Not present. `Init` registers 20 flags and gart reads no flag, `MainStart` names the unexported type `testDeps`, and `RunExamples` compares standard output that the runtime does not capture. |
+| `testing.Init`, `MainStart`, `RunTests`, `RunBenchmarks`, `RunExamples` | Present | Present. `Init` registers the flags of the harness, thus a `TestMain` that parses `-test.v` works. `RunExamples` compares standard output, which the runtime captures. `RunTests` and `RunBenchmarks` run the list, and Go runs nothing there. |
+| An example with an output comment | `go test` runs it and compares the output | Equal. The generated entry point names the list, and `M.Run` runs each example after the tests and in front of the benchmarks. |
 | `testing.Benchmark` | Gives a BenchmarkResult | Equal. The field T holds a count of nanoseconds, and not a `time.Duration`. |
 | `-bench`, `-benchtime`, `-benchcount` | Present | Present. `-benchtime 100x` becomes `-benchcount 100`. |
 | `-benchmem` | Present | Not present. Read the row of `b.ReportAllocs`. |
-| `-short`, `-count`, `-timeout`, `-cover` | Present | Not present |
+| `-short`, `-count`, `-cover` | Present | Equal. `-cover` reads `go tool cover` of the tool chain, and it rejects a package that the overlay replaces, because the rewrite reads the file of the disk. |
+| `-timeout` | Present | Not present |
+| A fuzz target | `go test` runs each seed of `f.Add` and each file of `testdata/fuzz` as a subtest | Not present. `gart test` reports the target as a skipped test. |
 | A panic inside a test | Reports the test and ends the binary | Equal. A panic passes through the harness. |
 
 `testing.B` holds the state of a benchmark. The search of the count of

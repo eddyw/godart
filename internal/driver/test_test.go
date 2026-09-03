@@ -27,9 +27,9 @@ func TestTests(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, entry := range entries {
-		// The module unsupported holds a fuzz target and an example. go test
-		// runs them, and gart reports them as a skipped test. Thus the output
-		// differs on purpose, and a separate test reads it.
+		// The module unsupported holds a fuzz target. go test runs its seed
+		// corpus, and gart reports the target as a skipped test. Thus the
+		// output differs on purpose, and a separate test reads it.
 		if !entry.IsDir() || entry.Name() == "unsupported" {
 			continue
 		}
@@ -99,22 +99,25 @@ func TestTestsFiltersTheSkipLine(t *testing.T) {
 	}
 }
 
-// TestTestsReportsAnUnsupportedFunction proves that a fuzz target and an
-// example reach the output as a skipped test. A benchmark stays out, because
-// go test with no -bench flag also runs no benchmark.
+// TestTestsReportsAnUnsupportedFunction proves that a fuzz target reaches the
+// output as a skipped test, and that an example runs. A benchmark stays out,
+// because go test with no -bench flag also runs no benchmark.
 func TestTestsReportsAnUnsupportedFunction(t *testing.T) {
 	dir, err := filepath.Abs("../../testdata/tests/unsupported")
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := gartTest(t, dir, driver.TestOptions{})
+	got := gartTest(t, dir, driver.TestOptions{Verbose: true})
 	for _, want := range []string{
 		"--- SKIP: FuzzLength\n    gart runs no fuzz target",
-		"--- SKIP: ExampleLength\n    gart runs no example",
+		"--- PASS: ExampleLength",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the output holds no %q:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, "gart runs no example") {
+		t.Errorf("the output still skips an example:\n%s", got)
 	}
 	if strings.Contains(got, "BenchmarkLength") {
 		t.Errorf("the output names a benchmark:\n%s", got)

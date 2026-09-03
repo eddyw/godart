@@ -199,7 +199,14 @@ func (c *Cmd) Start() error {
 	if len(argv) == 0 {
 		argv = []string{c.Path}
 	}
-	full := append([]string{c.Path}, argv[1:]...)
+	// Go gives the child its directory before the exec, thus a relative Path
+	// resolves against Dir. Process.start of Dart resolves against the
+	// directory of the parent, thus the join stands here.
+	path := c.Path
+	if c.Dir != "" && !filepath.IsAbs(path) {
+		path = filepath.Join(c.Dir, path)
+	}
+	full := append([]string{path}, argv[1:]...)
 	pid, cause := dart.ProcStart(full, c.Dir, c.Env, c.Env != nil)
 	if cause != "" {
 		return &Error{Name: c.Path, Err: errors.New(cause)}

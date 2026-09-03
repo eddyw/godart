@@ -16,11 +16,11 @@ import (
 const defaultMaxMemory = 32 << 20
 
 // ErrNotMultipart reports a body whose type is not multipart/form-data.
-var ErrNotMultipart = errors.New("request Content-Type isn't multipart/form-data")
+var ErrNotMultipart = &ProtocolError{"request Content-Type isn't multipart/form-data"}
 
 // ErrMissingBoundary reports a header of the type multipart/form-data with no
 // boundary.
-var ErrMissingBoundary = errors.New("no multipart boundary param in Content-Type")
+var ErrMissingBoundary = &ProtocolError{"no multipart boundary param in Content-Type"}
 
 // ParseForm reads the query of the URL and the body of a form into Form, and it
 // reads the body alone into PostForm.

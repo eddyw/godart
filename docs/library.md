@@ -9,8 +9,9 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 116 import paths: 103 standard packages, `syscall/dart`, and
-12 internal packages. The run of `make surface` of 2026-09-03 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
+The surface holds 170 import paths: 140 standard packages, `syscall/dart`, 23
+internal packages, and 6 vendored packages of `golang.org/x`. The run of
+`make surface` of 2026-09-03 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
 names that each one holds. A package reaches the surface 3 ways.
 
@@ -385,6 +386,65 @@ word operations would be a second implementation to keep correct, and the Go
 form is correct already. `testdata/programs/biguse` proves an `Int`, a `Float`
 of 200 bits, and a `Rat`, and `testdata/programs/bigfmt` reads each line that
 the 3 later patches touch.
+
+## The packages of the fifteenth session
+
+11 import paths entered the surface on 2026-09-03, after `database/sql`.
+
+**`net/mail`, `net/smtp`, `net/rpc`, and `net/rpc/jsonrpc`** each read the real
+Go source. `net/mail` needs no patch. `net/smtp` takes a patch of `StartTLS`,
+which reports a cause and sends no command, because the overlay of `crypto/tls`
+raises no open connection. `net/rpc` takes a patch of 1 line, because
+`reflect.Method.Func` stays out. `net.Pipe` and `net.OpError` entered with
+them, and `pipe.go` of the real Go source needed no change.
+
+**`net/http/cgi`** reads the real Go source, and it needed 3 fields of
+`http.Request` and 5 vendored packages:
+`vendor/golang.org/x/net/http/httpguts`, `vendor/golang.org/x/net/idna`, and
+the 3 `x/text` packages that idna reads. Each vendored package compiles with no
+patch. Read decision 304 for the 3 fields.
+
+**A vendored package takes its full path.** The list of `native.go` names
+`vendor/golang.org/x/net/idna`, and not `golang.org/x/net/idna`. The loader
+reads the path that the go command reports, and the go command rewrites an
+import of the standard library to the vendored form.
+
+**The 4 `go` packages** stand in the same list. Read the report of that work
+below.
+
+## The database access
+
+`database/sql`, `database/sql/driver`, and `uuid` each read the real Go source.
+1 patch file of 1 line serves the 3.
+
+**The pool needs no second thread.** The backlog held the opposite reading, and
+the work of 2026-09-03 disproved it. `database/sql` is pure Go, and each
+package that it reads already stood in the surface. The pool runs a goroutine
+and a mutex, and 1 isolate serves the 2. A second thread is a property of a
+driver.
+
+**The patch.** `driver.go` writes `type ScanContext = internal.ScanContext` in
+place of a named type of its own. Go declares the 2 as separate types and
+converts between them at 2 places. The Dart class of `internal.ScanContext`
+holds its unexported field as a private member, and no other Dart library reads
+such a member. Read decision 289 for the price: `%T` gives
+`internal.ScanContext`.
+
+**`uuid` is a standard package of Go 1.27.** `go list -f {{.Standard}} uuid`
+reports true, and `database/sql/driver` imports it. It reads `bytes`, `cmp`,
+`crypto/rand`, `encoding/binary`, `encoding/hex`, `errors`, `sync`, and `time`,
+and it needs no patch.
+
+**No driver ships with the surface.** `testdata/programs/sqlmem` holds a driver
+in memory, and it runs an open, a query, a scan, a prepared statement, a
+transaction, a context that a cancel stops, a deadline, and the pool under
+load. A real driver of a network database is Go code like any other, thus a
+program can write 1 over `net`.
+
+**The tests of the Go repository do not run.** `sql_test.go` and
+`closemu_test.go` each read `testing/synctest`, and `driver/types_test.go`
+holds a conversion between 2 named struct types. Read the limits of
+`docs/parity.md`.
 
 ## The value surface of crypto/tls
 

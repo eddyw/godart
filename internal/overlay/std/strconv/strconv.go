@@ -102,6 +102,14 @@ func FormatFloat(f float64, verb byte, precision, bitSize int) string {
 		}
 		return expandExponent(dart.Format("v", f))
 	}
+	// The verb e with the precision -1 gives the shortest text in the exponent
+	// form. The bridge verb e writes 6 digits, exactly as fmt does.
+	if precision < 0 && (verb == 'e' || verb == 'E') {
+		if bitSize == 32 {
+			return shortestExponent(dart.Format("v", float32(f)), verb)
+		}
+		return shortestExponent(dart.Format("v", f), verb)
+	}
 	form := string(rune(verb))
 	if precision >= 0 {
 		form = "." + Itoa(precision) + form
@@ -112,6 +120,81 @@ func FormatFloat(f float64, verb byte, precision, bitSize int) string {
 		return dart.Format(form, float32(f))
 	}
 	return dart.Format(form, f)
+}
+
+// shortestExponent writes a shortest text in the exponent form of Go. The
+// exponent holds a sign and 2 digits at least.
+func shortestExponent(text string, verb byte) string {
+	if text == "NaN" || text == "+Inf" || text == "-Inf" {
+		return text
+	}
+	sign := ""
+	if len(text) > 0 && text[0] == '-' {
+		sign = "-"
+		text = text[1:]
+	}
+	mant := text
+	exp := 0
+	for i := 0; i < len(text); i++ {
+		if text[i] != 'e' && text[i] != 'E' {
+			continue
+		}
+		mant = text[:i]
+		value, err := Atoi(text[i+1:])
+		if err != nil {
+			return sign + text
+		}
+		exp = value
+		break
+	}
+	// digits holds each digit with no point, and point holds the count of the
+	// digits in front of the point.
+	digits := ""
+	point := -1
+	for i := 0; i < len(mant); i++ {
+		if mant[i] == '.' {
+			point = len(digits)
+			continue
+		}
+		digits += string(mant[i])
+	}
+	if point < 0 {
+		point = len(digits)
+	}
+	// A leading zero holds no value, thus the point moves with it.
+	lead := 0
+	for lead < len(digits) && digits[lead] == '0' {
+		lead++
+	}
+	digits = digits[lead:]
+	point -= lead
+	for len(digits) > 1 && digits[len(digits)-1] == '0' {
+		digits = digits[:len(digits)-1]
+	}
+	letter := "e"
+	if verb == 'E' {
+		letter = "E"
+	}
+	if digits == "" {
+		return sign + "0" + letter + "+00"
+	}
+	exp += point - 1
+	out := sign + string(digits[0])
+	if len(digits) > 1 {
+		out += "." + digits[1:]
+	}
+	out += letter
+	if exp < 0 {
+		out += "-"
+		exp = -exp
+	} else {
+		out += "+"
+	}
+	text = Itoa(exp)
+	if len(text) < 2 {
+		text = "0" + text
+	}
+	return out + text
 }
 
 // expandExponent unrolls the exponent form of a shortest text into the fixed
@@ -170,17 +253,26 @@ func expandExponent(text string) string {
 
 // Atoi reads a decimal int from text.
 func Atoi(text string) (int, error) {
-	v, err := ParseInt(text, 10, 64)
-	if err != nil {
-		return 0, &NumError{Func: "Atoi", Num: text, Err: ErrSyntax}
+	v, err := ParseInt(text, 10, 0)
+	if nerr, ok := err.(*NumError); ok {
+		nerr.Func = "Atoi"
 	}
-	return int(v), nil
+	return int(v), err
 }
 
 // ParseInt reads an int from text in the base.
+//
+// A bit size of 0 names the size of an int. A value outside the range of the
+// size gives the value of the nearest limit and ErrRange, exactly as Go does.
 func ParseInt(text string, base, bitSize int) (int64, error) {
 	if len(text) == 0 {
 		return 0, &NumError{Func: "ParseInt", Num: text, Err: ErrSyntax}
+	}
+	if bitSize == 0 {
+		bitSize = IntSize
+	}
+	if bitSize < 0 || bitSize > 64 {
+		return 0, &NumError{Func: "ParseInt", Num: text, Err: bitSizeError(bitSize)}
 	}
 	i := 0
 	negative := false
@@ -188,30 +280,62 @@ func ParseInt(text string, base, bitSize int) (int64, error) {
 		negative = text[0] == '-'
 		i = 1
 	}
-	out, err := parseDigits(text, i, base, "ParseInt")
+	out, over, err := parseDigits(text, i, base)
 	if err != nil {
-		return 0, err
+		return 0, &NumError{Func: "ParseInt", Num: text, Err: err}
+	}
+	cutoff := uint64(1) << uint(bitSize-1)
+	if !negative && (over || out >= cutoff) {
+		return int64(cutoff - 1), &NumError{Func: "ParseInt", Num: text, Err: ErrRange}
+	}
+	if negative && (over || out > cutoff) {
+		return -int64(cutoff), &NumError{Func: "ParseInt", Num: text, Err: ErrRange}
 	}
 	if negative {
-		return -out, nil
+		return -int64(out), nil
+	}
+	return int64(out), nil
+}
+
+// ParseUint reads an unsigned value from text.
+//
+// A bit size of 0 names the size of a uint. A value outside the range of the
+// size gives the largest value of the size and ErrRange, exactly as Go does.
+func ParseUint(text string, base, bitSize int) (uint64, error) {
+	if bitSize == 0 {
+		bitSize = IntSize
+	}
+	if bitSize < 0 || bitSize > 64 {
+		return 0, &NumError{Func: "ParseUint", Num: text, Err: bitSizeError(bitSize)}
+	}
+	out, over, err := parseDigits(text, 0, base)
+	if err != nil {
+		return 0, &NumError{Func: "ParseUint", Num: text, Err: err}
+	}
+	maxVal := ^uint64(0)
+	if bitSize < 64 {
+		maxVal = uint64(1)<<uint(bitSize) - 1
+	}
+	if over || out > maxVal {
+		return maxVal, &NumError{Func: "ParseUint", Num: text, Err: ErrRange}
 	}
 	return out, nil
 }
 
-// ParseUint reads an unsigned value from text.
-func ParseUint(text string, base, bitSize int) (uint64, error) {
-	out, err := parseDigits(text, 0, base, "ParseUint")
-	if err != nil {
-		return 0, err
-	}
-	return uint64(out), nil
+// bitSizeError gives the cause of a bit size outside the range 0 to 64.
+func bitSizeError(bitSize int) error {
+	return errors.New("invalid bit size " + Itoa(bitSize))
 }
 
 // parseDigits reads the digits of a value. A base of 0 reads the prefix of the
 // text, exactly as Go does, and it accepts an underscore between 2 digits.
-func parseDigits(text string, i, base int, name string) (int64, error) {
+//
+// The second result marks a value that passes the range of a uint64. The read
+// stops at that point, exactly as Go does, thus a digit after it reaches no
+// syntax test.
+func parseDigits(text string, i, base int) (uint64, bool, error) {
 	if i >= len(text) {
-		return 0, &NumError{Func: name, Num: text, Err: ErrSyntax}
+		return 0, false, ErrSyntax
 	}
 	underscore := false
 	if base == 0 {
@@ -219,7 +343,7 @@ func parseDigits(text string, i, base int, name string) (int64, error) {
 		base = 10
 		if text[i] == '0' {
 			if i+1 == len(text) {
-				return 0, nil
+				return 0, false, nil
 			}
 			switch text[i+1] {
 			case 'x', 'X':
@@ -234,25 +358,33 @@ func parseDigits(text string, i, base int, name string) (int64, error) {
 		}
 	}
 	if i >= len(text) {
-		return 0, &NumError{Func: name, Num: text, Err: ErrSyntax}
+		return 0, false, ErrSyntax
 	}
-	var out int64
+	var out uint64
 	digits := 0
+	cutoff := ^uint64(0)/uint64(base) + 1
 	for ; i < len(text); i++ {
 		if underscore && text[i] == '_' {
 			continue
 		}
 		digit := digitValue(text[i])
 		if digit < 0 || digit >= base {
-			return 0, &NumError{Func: name, Num: text, Err: ErrSyntax}
+			return 0, false, ErrSyntax
 		}
-		out = out*int64(base) + int64(digit)
 		digits++
+		if out >= cutoff {
+			return 0, true, nil
+		}
+		next := out*uint64(base) + uint64(digit)
+		if next < out {
+			return 0, true, nil
+		}
+		out = next
 	}
 	if digits == 0 {
-		return 0, &NumError{Func: name, Num: text, Err: ErrSyntax}
+		return 0, false, ErrSyntax
 	}
-	return out, nil
+	return out, false, nil
 }
 
 // ParseBool reads a bool from text.
@@ -267,10 +399,26 @@ func ParseBool(text string) (bool, error) {
 }
 
 // ParseFloat reads a float from text.
+//
+// The read goes through parseFloatPrefix, which holds the whole grammar of Go:
+// an infinity, a NaN, an underscore, and a hexadecimal float. The bridge of
+// Dart reads none of the 4.
 func ParseFloat(text string, bitSize int) (float64, error) {
-	v, ok := dart.ParseFloat(text)
-	if !ok {
+	size := 64
+	if bitSize == 32 {
+		size = 32
+	}
+	v, n, err := parseFloatPrefix(text, size)
+	if n != len(text) && err != ErrSyntax {
 		return 0, &NumError{Func: "ParseFloat", Num: text, Err: ErrSyntax}
+	}
+	if err != nil {
+		// A value out of range keeps the value that Go gives, an infinity or a
+		// zero, next to the error.
+		if err == ErrRange {
+			return v, &NumError{Func: "ParseFloat", Num: text, Err: err}
+		}
+		return 0, &NumError{Func: "ParseFloat", Num: text, Err: err}
 	}
 	return v, nil
 }

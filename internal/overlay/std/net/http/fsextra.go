@@ -65,8 +65,13 @@ var htmlReplacer = strings.NewReplacer(
 	"'", "&#39;",
 )
 
-// logf writes a message of the server. The real net/http writes to the field
-// ErrorLog of the Server, and the surface holds no such field.
+// logf writes a message of the server. The context of the request names the
+// Server, thus the line reaches the field ErrorLog of that server.
 func logf(r *Request, format string, v ...any) {
+	s, _ := r.Context().Value(ServerContextKey).(*Server)
+	if s != nil {
+		s.logf(format, v...)
+		return
+	}
 	log.Printf(format, v...)
 }
