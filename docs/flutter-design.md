@@ -224,8 +224,9 @@ mark that needs a note carries 1, and "The notes of the matrix" holds the text.
 2. **A lazy list.** A5 and A13 give the mark from a real run. The Go closure
    ran 43 times for a list of 100,000 rows. A1, A7, and A8 need the rule of
    constraint 2 for a callback with a result, thus the mark is `P` today. A9
-   holds a lazy `ListView.builder` too, and its index lookup is O(N) for each
-   index, thus a full scroll is O(N²). The source of `rfw` names that cost.
+   holds a lazy `ListView.builder` too, and `_listLookup` of `rfw` walks from
+   index 0 at each call, thus a first scroll is O(N²). A second visit to 1
+   index reads a cache, thus a scroll back up is O(1) for each row.
 3. **A theme.** No approach outside A3 and A4 lets Go call `Theme.of(context)`,
    because a Go value holds no `BuildContext`. The host reads the theme and
    passes a snapshot to the Go build. That gives the full behavior with a
@@ -235,6 +236,8 @@ mark that needs a note carries 1, and "The notes of the matrix" holds the text.
    `scheduler/ticker.dart:43` holds 1 method, and a Go type cannot implement a
    Dart interface today, thus Go cannot own the controller. The measured cost
    of a Go tree of 200 nodes is 8.66 microseconds, thus the frame budget holds.
+   A9 pays 169.8 microseconds for the same node count, and that budget holds
+   too. Read `flutter/rfwbench`.
 5. **Text input.** A5 and A13 give the mark from a real run. The Dart host
    builds a real `TextField`, thus Flutter keeps the text, the controller, and
    the focus across a rebuild that Go drives. A9 holds no text input widget of
@@ -721,10 +724,29 @@ counter example of the package increments in the host, and not in `rfw`.
 **The compiler work.** Very small. The blob is a byte slice, thus Go writes it
 with the packages that the surface already holds.
 
-**The runtime cost.** The binary blob decodes in 1 pass. The text form is about
-10 times slower, and the package discourages it on a mobile target. Each index
-of a lazy list re-walks the list from the start, thus a full scroll is O(N²).
-The source of the package names that cost.
+**The runtime cost.** Measured on 2026-09-04. `flutter/rfwbench` holds the
+harness and the whole table.
+
+| Nodes | Bytes | Encode | Decode | Total | The budget of 1 frame |
+|---|---|---|---|---|---|
+| 100 | 16,422 | 47.0 | 42.0 | 89.0 | 0.53% |
+| 200 | 32,822 | 90.0 | 79.9 | 169.8 | 1.02% |
+| 1000 | 164,022 | 496.6 | 411.8 | 908.4 | 5.44% |
+
+Each column of a time holds microseconds, and the budget of 1 frame at 60
+hertz is 16,700 of them. The frame budget holds, thus A9 renders at 60 hertz.
+
+A9 costs 20 times the Go tree of A5, which `flutter/bench` measured at 8.66
+microseconds for 200 nodes. The cause is the shape: A5 passes a live object,
+and A9 passes 32,822 bytes through an encoder and a decoder. A frame that
+changes 1 row writes and reads the whole library, because the format holds no
+partial update.
+
+The binary blob decodes in 1 pass. The text form is about 10 times slower, and
+the package discourages it on a mobile target. `_listLookup` of the package
+walks from index 0 to the target index at each call, thus a first scroll of a
+lazy list is O(N²). `_argsCache` holds each result by key, thus a scroll back
+up costs nothing more.
 
 Pros:
 
