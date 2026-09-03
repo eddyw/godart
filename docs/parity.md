@@ -30,7 +30,7 @@ The state of 2026-09-03. Each row names the section that holds the detail.
 | HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, a multipart form, and the file server family (`FileServer`, `FileServerFS`, `FS`, `Dir`) are present. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
 | JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `TextMarshaler`, `TextUnmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. The text of a syntax error of `Token` differs. |
-| `gart test` | The format of `go test`, with `t.Parallel`, `-cover`, `-short`, and `-count`. It runs each example, and no fuzz target. |
+| `gart test` | The format of `go test`, with `t.Parallel`, `-cover`, `-short`, and `-count`. It runs each example, and it runs the seed corpus of each fuzz target. No `-fuzz` flag, thus it generates no input. |
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
 | A stack trace | The module form of each file, with no offset. |
 | The garbage collector | `runtime.GC` gives up control only, and a cleanup follows the collector of Dart. |
@@ -1261,8 +1261,8 @@ for each test binary. The output holds the format of `go test`.
 | `b.Loop` | Runs the body 1 time and raises the count itself | Equal. The harness calls a body that reads `Loop` only 1 time. |
 | The clock of a benchmark | A monotonic nanosecond clock | `Stopwatch` of Dart. It also ticks each nanosecond. |
 | A benchmark build | The normal test binary | An ahead of time build. The warm up cost of the Dart VM hides the result. |
-| A fuzz target | Runs the seed corpus | Reported as a skipped test |
-| An example with an output comment | Runs and compares the output | Reported as a skipped test |
+| A fuzz target | Runs the seed corpus | Equal. Read decision 312. |
+| An example with an output comment | Runs and compares the output | Equal. Read decision 287. |
 | The working directory of a test | The directory of the package | Equal. The driver runs the binary there, thus a relative path reads the same file. |
 | `t.TempDir` | A new directory for the test | Equal. The cleanup of the test removes it. |
 | `t.Setenv` | Writes the environment for the test | Equal. It writes the map of the `os` overlay, and the cleanup writes the value of the start again. |
@@ -1280,7 +1280,14 @@ for each test binary. The output holds the format of `go test`.
 | `-benchmem` | Present | Not present. Read the row of `b.ReportAllocs`. |
 | `-short`, `-count`, `-cover` | Present | Equal. `-cover` reads `go tool cover` of the tool chain, and it rejects a package that the overlay replaces, because the rewrite reads the file of the disk. |
 | `-timeout` | Present | Not present |
-| A fuzz target | `go test` runs each seed of `f.Add` and each file of `testdata/fuzz` as a subtest | Not present. `gart test` reports the target as a skipped test. |
+| A fuzz target | `go test` runs each seed of `f.Add` and each file of `testdata/fuzz` as a subtest | Equal. A seed of `f.Add` takes the name `seed#<n>`, and a corpus file takes the name of the file. |
+| `f.Add`, `f.Fuzz`, and the `TB` set of `F` | Present | Equal. `F` holds a `*T`, thus each log line, each cleanup, and each skip follow the path of a test. |
+| The corpus file | The versioned text form of Go | Equal. The parser holds the grammar of `internal/fuzz/encoding.go`, and it reads each of the 15 types that `f.Add` accepts, `math.Float32frombits`, and `math.Float64frombits`. |
+| `-fuzz` | Generates new inputs | Not present. `gart test` holds no such flag, thus the command rejects it with `flag provided but not defined: -fuzz` and runs nothing. |
+| A fuzz body that gives up control | Runs | Outside the call. `dart.CallValue` reads no scheduler, exactly as `reflect.Value.Call` does. A body that reads a channel or that sleeps thus stays outside the subset. |
+| The cause of a corpus file with a bad literal | `literal value required for primitive type` | The text of `strconv`, for example `strconv.ParseInt: parsing "abc": invalid syntax`. Both reject the file and fail the target. |
+| The position of the line `returned without calling F.Fuzz, F.Fail, or F.Skip` | The position of the runtime of Go, for example `fuzz.go:666` | No position. Read the row of a deferred log line. |
+| `t.Parallel` inside a seed run | Runs the seeds at the same time | The cooperative order of 1 isolate. Go can put 2 `=== CONT` lines next to each other and write a `=== NAME` line in front of a log line, and gart writes each run one after the other. |
 | A panic inside a test | Reports the test and ends the binary | Equal. A panic passes through the harness. |
 
 `testing.B` holds the state of a benchmark. The search of the count of
@@ -1298,8 +1305,11 @@ writes a call of `testing.MainWith`, and that function builds the `testing.M`
 value and calls `TestMain`. Go passes the result of `m.Run` to `os.Exit` when
 `TestMain` returns, and the compiler holds the same rule.
 
-`testing.F` exists, thus a fuzz body type checks. Each method of it stops the
-program, and no path reaches such a method.
+`testing.F` holds a `*T` and the seed corpus of 1 fuzz target. `F.Fuzz` reads
+the type of the body through the type descriptor of the runtime, and it reads
+the corpus files of `testdata/fuzz/<name>`. It then runs the body 1 time for
+each input as a subtest, and `dart.CallValue` makes the call. Read decision
+312.
 
 `gart test` also reads the real test files of a package of GOROOT. Such a
 package belongs to no module, and the driver gives it the module `std`. The

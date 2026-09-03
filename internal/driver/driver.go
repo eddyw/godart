@@ -64,8 +64,6 @@ type TestBinary struct {
 	Dir string
 	// Tests is the count of test functions of the binary.
 	Tests int
-	// Skips lists each function of a test file that gart does not run.
-	Skips []string
 	// Benchmarks is the count of benchmark functions of the binary.
 	Benchmarks int
 }
@@ -199,7 +197,6 @@ func testBinaries(result *load.Result, module string) []TestBinary {
 			Entry:      filepath.Join("bin", testDir(b.Under, module)+"_test.dart"),
 			Dir:        b.Dir,
 			Tests:      len(b.Tests),
-			Skips:      b.Skips,
 			Benchmarks: len(b.Benchmarks),
 		})
 	}

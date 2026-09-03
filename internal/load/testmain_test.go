@@ -39,8 +39,8 @@ func TestLoadTestsFindsTheBinary(t *testing.T) {
 	if strings.Join(bin.Benchmarks, ",") != strings.Join(wantBench, ",") {
 		t.Errorf("got the benchmarks %v, want %v", bin.Benchmarks, wantBench)
 	}
-	if len(bin.Skips) != 0 {
-		t.Errorf("got the skips %v, want none", bin.Skips)
+	if len(bin.FuzzTargets) != 0 {
+		t.Errorf("got the fuzz targets %v, want none", bin.FuzzTargets)
 	}
 }
 

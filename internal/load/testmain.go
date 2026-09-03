@@ -39,8 +39,8 @@ type Binary struct {
 	Tests []string
 	// Benchmarks lists the benchmark functions in the order of the run.
 	Benchmarks []string
-	// Skips lists each function that the binary reports as a skipped test.
-	Skips []string
+	// FuzzTargets lists the fuzz targets in the order of the run.
+	FuzzTargets []string
 	// Cover holds the instrumented source of each file of the package under
 	// test. A key is the file path that the go command reports. The map is
 	// empty for a load that asked for no coverage.
@@ -101,7 +101,7 @@ func testBinaries(found []*packages.Package, cover bool, files map[string][]byte
 		}
 		bin.Tests = append(append([]string{}, inside.tests...), outside.tests...)
 		bin.Benchmarks = append(append([]string{}, inside.benchmarks...), outside.benchmarks...)
-		bin.Skips = append(append([]string{}, inside.skips...), outside.skips...)
+		bin.FuzzTargets = append(append([]string{}, inside.fuzzTargets...), outside.fuzzTargets...)
 		if cover {
 			bin.CoverMode = "set"
 			if err := coverPackage(bin, files, byID[under+" ["+p.PkgPath+"]"], byID[under]); err != nil {
@@ -130,11 +130,11 @@ func packageDir(pkgs ...*packages.Package) string {
 // functions holds the functions of 1 test variant that the entry point reads.
 type functions struct {
 	// pkgPath is empty when the variant does not exist.
-	pkgPath    string
-	tests      []string
-	benchmarks []string
-	examples   []example
-	skips      []string
+	pkgPath     string
+	tests       []string
+	benchmarks  []string
+	fuzzTargets []string
+	examples    []example
 	// testMain marks a TestMain function of the variant. Such a function runs
 	// the tests, thus the entry point calls it.
 	testMain bool
@@ -151,7 +151,7 @@ type example struct {
 // any reports whether the variant holds a function that the entry point names.
 func (f *functions) any() bool {
 	return len(f.tests) > 0 || len(f.benchmarks) > 0 ||
-		len(f.examples) > 0 || f.testMain
+		len(f.fuzzTargets) > 0 || len(f.examples) > 0 || f.testMain
 }
 
 // functionsOf reads the test functions of 1 test variant.
@@ -192,7 +192,7 @@ func functionsOf(p *packages.Package) (*functions, error) {
 			case isTestName(name, "Benchmark") && params(fn) == 1:
 				out.benchmarks = append(out.benchmarks, name)
 			case isTestName(name, "Fuzz") && params(fn) == 1:
-				out.skips = append(out.skips, name)
+				out.fuzzTargets = append(out.fuzzTargets, name)
 			}
 		}
 	}
@@ -281,12 +281,16 @@ func testMainSource(inside, outside *functions, bin *Binary) []byte {
 	}
 	fmt.Fprintf(&b, "\t%s\n", call)
 	b.WriteString("\t\t[]testing.InternalTest{\n")
-	writeList(&b, "gartTest", inside.tests)
-	writeList(&b, "gartXtest", outside.tests)
+	writeList(&b, "gartTest", "F", inside.tests)
+	writeList(&b, "gartXtest", "F", outside.tests)
 	b.WriteString("\t\t},\n")
 	b.WriteString("\t\t[]testing.InternalBenchmark{\n")
-	writeList(&b, "gartTest", inside.benchmarks)
-	writeList(&b, "gartXtest", outside.benchmarks)
+	writeList(&b, "gartTest", "F", inside.benchmarks)
+	writeList(&b, "gartXtest", "F", outside.benchmarks)
+	b.WriteString("\t\t},\n")
+	b.WriteString("\t\t[]testing.InternalFuzzTarget{\n")
+	writeList(&b, "gartTest", "Fn", inside.fuzzTargets)
+	writeList(&b, "gartXtest", "Fn", outside.fuzzTargets)
 	b.WriteString("\t\t},\n")
 	b.WriteString("\t\t[]testing.InternalExample{\n")
 	writeExamples(&b, "gartTest", inside.examples)
@@ -314,9 +318,11 @@ func testMainPrefix(inside, outside *functions) string {
 	return ""
 }
 
-func writeList(b *bytes.Buffer, prefix string, names []string) {
+// writeList writes 1 element for each function of a list. The field names the
+// member that holds the function, and InternalFuzzTarget calls it Fn.
+func writeList(b *bytes.Buffer, prefix, field string, names []string) {
 	for _, name := range names {
-		fmt.Fprintf(b, "\t\t\t{Name: %q, F: %s.%s},\n", name, prefix, name)
+		fmt.Fprintf(b, "\t\t\t{Name: %q, %s: %s.%s},\n", name, field, prefix, name)
 	}
 }
 
@@ -326,9 +332,4 @@ func writeExamples(b *bytes.Buffer, prefix string, list []example) {
 			"\t\t\t{Name: %q, F: %s.%s, Output: %q, Unordered: %v},\n",
 			ex.name, prefix, ex.name, ex.output, ex.unordered)
 	}
-}
-
-// SkipCause tells why gart does not run a function of a test file.
-func SkipCause(name string) string {
-	return "gart runs no fuzz target"
 }

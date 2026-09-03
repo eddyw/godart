@@ -27,10 +27,7 @@ func TestTests(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, entry := range entries {
-		// The module unsupported holds a fuzz target. go test runs its seed
-		// corpus, and gart reports the target as a skipped test. Thus the
-		// output differs on purpose, and a separate test reads it.
-		if !entry.IsDir() || entry.Name() == "unsupported" {
+		if !entry.IsDir() {
 			continue
 		}
 		t.Run(entry.Name(), func(t *testing.T) {
@@ -82,45 +79,28 @@ func TestTestsFilter(t *testing.T) {
 	}
 }
 
-// TestTestsFiltersTheSkipLine proves that the -run flag also reads a regular
-// expression for the skip line of an unsupported function. The driver writes
-// that line, and not the harness.
-func TestTestsFiltersTheSkipLine(t *testing.T) {
-	dir, err := filepath.Abs("../../testdata/tests/unsupported")
+// TestTestsFiltersASeed proves that the -run flag reads the name of a seed of a
+// fuzz target. A seed of f.Add takes the name seed#<n>, and a corpus file takes
+// the name of the file.
+func TestTestsFiltersASeed(t *testing.T) {
+	dir, err := filepath.Abs("../../testdata/tests/fuzzseed")
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := gartTest(t, dir, driver.TestOptions{Run: "^FuzzLength$"})
-	if !strings.Contains(got, "--- SKIP: FuzzLength") {
-		t.Errorf("the output holds no skip line of FuzzLength:\n%s", got)
-	}
-	if strings.Contains(got, "ExampleLength") {
-		t.Errorf("the filter kept ExampleLength:\n%s", got)
-	}
-}
-
-// TestTestsReportsAnUnsupportedFunction proves that a fuzz target reaches the
-// output as a skipped test, and that an example runs. A benchmark stays out,
-// because go test with no -bench flag also runs no benchmark.
-func TestTestsReportsAnUnsupportedFunction(t *testing.T) {
-	dir, err := filepath.Abs("../../testdata/tests/unsupported")
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := gartTest(t, dir, driver.TestOptions{Verbose: true})
-	for _, want := range []string{
-		"--- SKIP: FuzzLength\n    gart runs no fuzz target",
-		"--- PASS: ExampleLength",
+	out := t.TempDir()
+	for _, pattern := range []string{
+		"FuzzBytes",
+		"FuzzBytes/seed#1",
+		"FuzzText/plain|FuzzBytes/long",
+		"^FuzzReport$/^high$",
 	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("the output holds no %q:\n%s", want, got)
-		}
-	}
-	if strings.Contains(got, "gart runs no example") {
-		t.Errorf("the output still skips an example:\n%s", got)
-	}
-	if strings.Contains(got, "BenchmarkLength") {
-		t.Errorf("the output names a benchmark:\n%s", got)
+		t.Run(pattern, func(t *testing.T) {
+			want := goTest(t, dir, true, "-run", pattern)
+			got := gartTestIn(t, dir, out, driver.TestOptions{Verbose: true, Run: pattern})
+			if got != want {
+				t.Errorf("the output differs\ngo test:\n%s\ngart test:\n%s", want, got)
+			}
+		})
 	}
 }
 

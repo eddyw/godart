@@ -6,13 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/eddyw/godart/internal/load"
 	harness "github.com/eddyw/godart/internal/overlay/std/testing"
 )
 
@@ -91,12 +89,6 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 	}
 	failed := false
 	for _, bin := range stats.Binaries {
-		for _, name := range bin.Skips {
-			if !matches(name, testOpt.Run) {
-				continue
-			}
-			fmt.Fprintf(out, "--- SKIP: %s\n    %s\n", name, load.SkipCause(name))
-		}
 		if testOpt.Benchmarks {
 			writeBenchHeader(out, bin.Package)
 		}
@@ -220,12 +212,6 @@ func coverSuffix(text string) string {
 		}
 	}
 	return ""
-}
-
-// matches reads the filter of the -run flag and of the -bench flag. The harness
-// of a test binary reads the same file.
-func matches(name, pattern string) bool {
-	return harness.MatchName(name, pattern, regexp.MatchString)
 }
 
 func seconds(d time.Duration) string {

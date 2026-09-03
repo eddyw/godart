@@ -46,8 +46,7 @@ type InternalExample struct {
 	Unordered bool
 }
 
-// InternalFuzzTarget names 1 fuzz target. gart runs no fuzz target, and the
-// name stands here because a generated main of Go holds the list.
+// InternalFuzzTarget names 1 fuzz target. The compiler writes the list.
 type InternalFuzzTarget struct {
 	Name string
 	Fn   func(f *F)
@@ -56,9 +55,9 @@ type InternalFuzzTarget struct {
 // testDeps holds the calls that a generated main gives the harness. Go holds
 // an interface of the same name, and it also keeps the name unexported.
 //
-// Go asks for the profile calls and the fuzz calls too. gart writes no profile
-// and it runs no fuzz target, thus the interface holds the match function
-// alone. Read docs/parity.md.
+// Go asks for the profile calls and for the calls that generate new inputs too.
+// gart writes no profile, and it generates no input, thus the interface holds
+// the match function alone. Read docs/parity.md.
 type testDeps interface {
 	MatchString(pat, str string) (bool, error)
 }
@@ -93,8 +92,6 @@ var flagsReady bool
 
 // MainStart builds the state of a test binary. A generated main of Go calls
 // it, and the entry point of gart calls NewM.
-//
-// gart runs no fuzz target, thus the list of the targets reaches no run.
 func MainStart(deps testDeps, tests []InternalTest, benchmarks []InternalBenchmark,
 	fuzzTargets []InternalFuzzTarget, examples []InternalExample) *M {
 	if deps != nil && MatchString == nil {
@@ -615,8 +612,13 @@ func (t *T) Skipf(format string, args ...any) {
 }
 
 // Run runs a subtest and reports whether the subtest passed.
-func (t *T) Run(name string, f func(*T)) bool {
-	sub := &T{name: t.name + "/" + subName(name), level: t.level + 1}
+func (t *T) Run(name string, f func(*T)) bool { return t.runSub(subName(name), f) }
+
+// runSub runs a subtest under the exact name. Run maps a space of the name to
+// an underscore first, and the seed corpus of a fuzz target keeps the name of
+// its file, exactly as go test keeps it.
+func (t *T) runSub(name string, f func(*T)) bool {
+	sub := &T{name: t.name + "/" + name, level: t.level + 1}
 	if !matches(sub.name, runFilter) {
 		return true
 	}
@@ -722,6 +724,11 @@ func (m *M) Run() int {
 	flags := readFlags()
 	ran, ok := runList(m.tests, flags)
 	failed := !ok
+	// Go runs each fuzz target after the tests and in front of the examples.
+	if fuzzRan, fuzzOk := runFuzzTargets(m.fuzzTargets, flags); fuzzRan {
+		ran = true
+		failed = failed || !fuzzOk
+	}
 	// Go runs each example after the tests and before the benchmarks.
 	for _, ex := range m.examples {
 		if !matches(ex.Name, flags.run) {
@@ -821,8 +828,9 @@ func writeCoverage() {
 // -test.benchtime=<nanoseconds> or -test.benchcount=<count> for the length of
 // a benchmark.
 func Main(tests []InternalTest, benchmarks []InternalBenchmark,
-	examples []InternalExample) {
+	fuzzTargets []InternalFuzzTarget, examples []InternalExample) {
 	m := NewM(tests, benchmarks)
+	m.fuzzTargets = fuzzTargets
 	m.examples = examples
 	Finish(m, m.Run())
 }
@@ -841,8 +849,9 @@ func Finish(m *M, code int) {
 // MainWith runs a TestMain function and then stops the binary. The compiler
 // writes the call into the entry point of a binary with such a function.
 func MainWith(tests []InternalTest, benchmarks []InternalBenchmark,
-	examples []InternalExample, f func(*M)) {
+	fuzzTargets []InternalFuzzTarget, examples []InternalExample, f func(*M)) {
 	m := NewM(tests, benchmarks)
+	m.fuzzTargets = fuzzTargets
 	m.examples = examples
 	f(m)
 	if !m.ran {
@@ -1429,38 +1438,6 @@ func amount(v float64) string {
 	}
 	return strconv.FormatFloat(v, 'f', 4, 64)
 }
-
-// F holds the state of 1 fuzz target. gart runs no fuzz target, and Main
-// reports each target as a skipped test.
-type F struct{}
-
-const noFuzz = "gart runs no fuzz target"
-
-func (f *F) Name() string                      { panic(noFuzz) }
-func (f *F) Failed() bool                      { panic(noFuzz) }
-func (f *F) Skipped() bool                     { panic(noFuzz) }
-func (f *F) Helper()                           { panic(noFuzz) }
-func (f *F) Cleanup(g func())                  { panic(noFuzz) }
-func (f *F) Fail()                             { panic(noFuzz) }
-func (f *F) FailNow()                          { panic(noFuzz) }
-func (f *F) SkipNow()                          { panic(noFuzz) }
-func (f *F) Log(args ...any)                   { panic(noFuzz) }
-func (f *F) Logf(format string, args ...any)   { panic(noFuzz) }
-func (f *F) Error(args ...any)                 { panic(noFuzz) }
-func (f *F) Errorf(format string, args ...any) { panic(noFuzz) }
-func (f *F) Fatal(args ...any)                 { panic(noFuzz) }
-func (f *F) Fatalf(format string, args ...any) { panic(noFuzz) }
-func (f *F) Skip(args ...any)                  { panic(noFuzz) }
-func (f *F) Skipf(format string, args ...any)  { panic(noFuzz) }
-func (f *F) Add(args ...any)                   { panic(noFuzz) }
-func (f *F) Fuzz(body any)                     { panic(noFuzz) }
-func (f *F) ArtifactDir() string               { panic(noFuzz) }
-func (f *F) Attr(key, value string)            { panic(noFuzz) }
-func (f *F) Chdir(dir string)                  { panic(noFuzz) }
-func (f *F) Context() context.Context          { panic(noFuzz) }
-func (f *F) Output() io.Writer                 { panic(noFuzz) }
-func (f *F) Setenv(key, value string)          { panic(noFuzz) }
-func (f *F) TempDir() string                   { panic(noFuzz) }
 
 // CoverBlock holds the coverage of 1 basic block. The numbers count from 1,
 // exactly as an editor counts them, and a column counts bytes.

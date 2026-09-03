@@ -1,0 +1,6 @@
+go test fuzz v1
+bool(true)
+byte('z')
+rune('\u6771')
+float32(0.125)
+float64(3.25)
