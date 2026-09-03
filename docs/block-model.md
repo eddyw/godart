@@ -215,3 +215,16 @@ Verified on 2026-09-03:
   the deferred calls of the function can block. Stage 4 gave such a statement
   no state, thus stage 5 wrote a plain Dart return that left the defer stack
   untouched and no deferred call ran. Read decision 290.
+
+Verified on 2026-09-04:
+
+- `$go` gives the `Goroutine` that it starts, and a Dart host reads the end of
+  that goroutine there. The 3 ends of `$schedule` each report it: the normal
+  return, the catch of `GoPanic`, and the catch of `GoStop`. Read decision 316.
+- A body that blocks gives its result through `Frame.resume` of the last wake,
+  and not through the call of the body. The scheduler keeps that value, thus a
+  host reads the result of a Go function of the type `func() bool`.
+- The parameter of `$go` keeps the type `void Function()`. The type
+  `Object? Function()` makes the analyzer report
+  `body_might_complete_normally_nullable` for each closure that stage 5 writes,
+  because the context type reaches a closure with no result.

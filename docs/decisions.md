@@ -2458,3 +2458,42 @@ The plan left these points open. The work took the decisions below.
      `main.pair[int, string]`. The verb `%T` already held the difference, and
      the Go syntax form now shows it too. The fix lives in the emitter, thus it
      stays open.
+316. `$go` gives the handle of the goroutine that it starts, and the handle is
+     the `Goroutine` object itself. A Dart host reads `ended`, it reads
+     `result`, and it adds 1 hook with `whenEnd`. The scheduler runs that hook
+     at each of the 3 ends of a goroutine. The body returns, a panic leaves the
+     body, or `runtime.Goexit` stops the goroutine. A hook that a host adds
+     after the end runs at once. Decision 272 held this item open.
+
+     The handle allocates nothing new. The 3 members ride on the `Goroutine`
+     that `$go` already makes, thus a `go` statement of a Go program pays 3
+     fields and no object. The parameter of `$go` keeps the type
+     `void Function()`. The emitted Dart writes a closure with no result, and
+     the analyzer reports `body_might_complete_normally_nullable` for the type
+     `Object? Function()`. The field `start` takes `Object? Function()?`, and
+     Dart accepts the assignment because `void` and `Object?` are each a top
+     type. Thus the scheduler reads the result of a body that gives 1.
+
+     A body that blocks gives its result through the last resume of the frame
+     chain, and not through the call of the body. Thus a Dart wrapper around
+     the Go function loses the result, and a host that reads `result` must give
+     the Go function itself to `$go`. `goAsk` does exactly that.
+
+     `ui.Task` becomes `func()` and `ui.Ask` becomes `func() bool`. The old
+     `done` and `answer` callbacks are gone, and no caller keeps them. No
+     example and no test of `flutter/` called such a function before this
+     change. A second path for the old shape needs a second node type and a
+     second field in each of the 10 places that hold 1, and this task needs no
+     such option. A panic and `runtime.Goexit` each leave no result, thus an
+     `Ask` that ends 1 of those 2 ways answers false.
+
+     A Go program sees nothing new. The panic path of `$schedule` still leaves
+     the goroutine in the live set, thus `runtime.NumGoroutine` and
+     `runtime.Stack` give the answers of Go. `$hosted` still turns the deadlock
+     report off, and the report itself did not change.
+
+     `runtime/goruntime/test/goroutine_test.dart` covers the 3 ends and the
+     value of a body that blocks. A widget test of
+     `flutter/goflutter/test/convert_test.dart` drives a real
+     `RefreshIndicator`, and the indicator stops with no report of the Go side.
+

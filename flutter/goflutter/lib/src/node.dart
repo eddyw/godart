@@ -278,18 +278,18 @@ final class GoNode {
     return v is void Function(int, bool) ? v : null;
   }
 
-  /// task gives a `func(func())` field. The Go side calls the argument when
-  /// the work ends, thus the host can hold a Future. Read the Task type of
+  /// task gives a `func()` field that the host runs as a goroutine of its
+  /// own. The end of that goroutine ends the work. Read the Task type of
   /// flutter/ui/node.go.
-  void Function(void Function())? task(String name, [int at = noAt]) {
+  void Function()? task(String name, [int at = noAt]) {
     final Object? v = raw(name, at);
-    return v is void Function(void Function()) ? v : null;
+    return v is void Function() ? v : null;
   }
 
-  /// ask gives a `func(func(bool))` field.
-  void Function(void Function(bool))? ask(String name, [int at = noAt]) {
+  /// ask gives a `func() bool` field.
+  bool Function()? ask(String name, [int at = noAt]) {
     final Object? v = raw(name, at);
-    return v is void Function(void Function(bool)) ? v : null;
+    return v is bool Function() ? v : null;
   }
 
   /// buildText gives a `func(string) Node` field.

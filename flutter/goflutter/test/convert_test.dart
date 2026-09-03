@@ -48,6 +48,49 @@ TypeDesc sliceOf(TypeDesc elem) => TypeDesc(
   elem: () => elem,
 );
 
+/// _ch is the channel that the Go side of a Task and of an Ask waits for. A
+/// package variable of Go holds the same place.
+late Chan<bool> _ch;
+
+/// _AnswerFrame holds the shape that stage 5 writes for a Go function of the
+/// type `func() bool` that blocks on a channel receive.
+final class _AnswerFrame implements Frame {
+  bool c = false;
+  Frame? r;
+  (bool, bool) t = (false, false);
+
+  @override
+  Object? resume() => _answer(this);
+}
+
+/// _answer is such a function. It gives up control until _ch holds a value,
+/// and it reports no end of its own.
+bool _answer([_AnswerFrame? f]) {
+  bool c = false;
+  Frame? r;
+  (bool, bool) t = (false, false);
+  if (f != null) {
+    c = f.c;
+    r = f.r;
+    t = f.t;
+  }
+  if (c) {
+    t = r!.resume() as (bool, bool);
+  } else {
+    t = _ch.receive();
+  }
+  if ($blocked != null) {
+    $block(
+      _AnswerFrame()
+        ..c = true
+        ..r = $blocked
+        ..t = t,
+    );
+    return false;
+  }
+  return t.$1;
+}
+
 /// _Bridge holds no Go library. GoRuntime.run needs no bridge, because it
 /// starts a goroutine and runs the scheduler.
 final class _Bridge implements GoBridge {
@@ -92,6 +135,11 @@ final class _Bridge implements GoBridge {
 
 void main() {
   final GoRuntime rt = GoRuntime(_Bridge());
+
+  // A Task and an Ask each hold a goroutine that waits, thus the deadlock
+  // report stays off. GoRuntime.start sets the same flag for a real host.
+  setUpAll(() => $hosted = true);
+  tearDownAll(() => $hosted = false);
 
   test('a date and a time of the day cross as a number', () {
     expect(goDate(0), isNull, reason: '0 means no date');
@@ -232,29 +280,62 @@ void main() {
     expect(seen.single, <double>[10, 20, 0, 0]);
   });
 
-  test('a Task gives a Future that the Go side completes', () async {
-    void Function()? held;
-    void work(void Function() done) => held = done;
-
-    final Future<void> Function()? f = goTask(work, rt);
+  test('a Task ends its Future at the end of the goroutine', () async {
+    _ch = Chan<bool>(0, () => false);
+    final Future<void> Function()? f = goTask(_answer, rt);
     bool ended = false;
     final Future<void> waiting = f!()..then((void _) => ended = true);
     await Future<void>.delayed(Duration.zero);
-    expect(ended, isFalse, reason: 'the work still runs');
+    expect(ended, isFalse, reason: 'the Go work waits for the channel');
 
-    held!();
+    _ch.sendNow(true);
+    $schedule();
     await waiting;
     expect(ended, isTrue);
   });
 
-  test('an Ask gives the answer of the Go side', () async {
-    void Function(bool)? held;
-    void work(void Function(bool) answer) => held = answer;
-
-    final Future<bool> Function()? f = goAsk(work, rt);
+  test('an Ask gives the result of the goroutine', () async {
+    _ch = Chan<bool>(0, () => false);
+    final Future<bool> Function()? f = goAsk(_answer, rt);
     final Future<bool> waiting = f!();
-    held!(true);
+    _ch.sendNow(true);
+    $schedule();
     expect(await waiting, isTrue);
+  });
+
+  testWidgets('a pull to refresh ends with no report of the Go side', (
+    WidgetTester tester,
+  ) async {
+    _ch = Chan<bool>(0, () => false);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RefreshIndicator(
+          onRefresh: goTask(_answer, rt)!,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: <Widget>[
+              for (int i = 0; i < 4; i++)
+                SizedBox(height: 200, child: Text('item $i')),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.fling(find.text('item 0'), const Offset(0, 300), 1000);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    expect(
+      find.byType(RefreshProgressIndicator),
+      findsOneWidget,
+      reason: 'the Go work waits for the channel',
+    );
+
+    _ch.sendNow(true);
+    $schedule();
+    await tester.pumpAndSettle();
+    expect(find.byType(RefreshProgressIndicator), findsNothing);
   });
 
   testWidgets('an animation runs to its target', (WidgetTester tester) async {

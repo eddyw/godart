@@ -689,38 +689,29 @@ ThemeData? goThemeStyle(GoNode? n) {
 
 /// goTask wraps a Go function that the host waits for.
 ///
-/// The Go side runs as a goroutine, thus it may block, and it reports the end
-/// itself. Read the Task type of flutter/ui/node.go.
-Future<void> Function()? goTask(
-  void Function(void Function())? f,
-  GoRuntime rt,
-) {
+/// The Go side runs as a goroutine, thus it may block. The handle of that
+/// goroutine ends the Future, thus the Go side reports nothing itself. Read
+/// the Task type of flutter/ui/node.go.
+Future<void> Function()? goTask(void Function()? f, GoRuntime rt) {
   if (f == null) return null;
   return () {
     final Completer<void> done = Completer<void>();
-    rt.run(
-      () => f(() {
-        if (!done.isCompleted) done.complete();
-      }),
-    );
+    rt.run(f).whenEnd(done.complete);
     return done.future;
   };
 }
 
 /// goAsk wraps a Go function that the host waits for, and that gives an
 /// answer.
-Future<bool> Function()? goAsk(
-  void Function(void Function(bool))? f,
-  GoRuntime rt,
-) {
+///
+/// The result of the goroutine holds the answer. A panic and runtime.Goexit
+/// each leave no result, and the answer is then false.
+Future<bool> Function()? goAsk(bool Function()? f, GoRuntime rt) {
   if (f == null) return null;
   return () {
     final Completer<bool> done = Completer<bool>();
-    rt.run(
-      () => f((bool v) {
-        if (!done.isCompleted) done.complete(v);
-      }),
-    );
+    final Goroutine g = rt.run(f);
+    g.whenEnd(() => done.complete(g.result == true));
     return done.future;
   };
 }

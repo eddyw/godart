@@ -89,18 +89,19 @@ type SliverBuilder func(innerBoxIsScrolled bool) []Node
 // task runs.
 //
 // The Go function runs as a goroutine of its own, thus it may block. The host
-// sees no end of a goroutine, thus the function must call done itself. A
-// function that never calls done leaves the indicator turning.
+// reads the handle of that goroutine, thus the function reports nothing
+// itself. The indicator stops at each of the 3 ends of a goroutine: the
+// function returns, a panic leaves it, and runtime.Goexit stops it.
 //
-//	ui.RefreshIndicator{OnRefresh: func(done func()) {
+//	ui.RefreshIndicator{OnRefresh: func() {
 //		load()
-//		done()
 //	}}
-type Task func(done func())
+type Task func()
 
 // Ask is work that the host waits for, and that gives an answer. A back button
-// listener reads 1. The rule of Task applies to the answer.
-type Ask func(answer func(bool))
+// listener reads 1. The rule of Task applies, and a panic or runtime.Goexit
+// gives the answer false.
+type Ask func() bool
 
 // ExtentBuilder gives the size of 1 item of a list on the main axis. The first
 // argument holds the number of the item, and the 4 numbers after it hold the

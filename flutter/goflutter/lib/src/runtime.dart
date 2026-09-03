@@ -51,9 +51,13 @@ final class GoRuntime {
 
   /// run starts a Go closure that an event gives, and it applies the result.
   /// The closure may block, because it runs as a goroutine of its own.
-  void run(void Function() body) {
-    $go(body);
+  ///
+  /// The handle gives the end of that goroutine. A host that waits for the
+  /// work, such as a refresh indicator, reads it.
+  Goroutine run(void Function() body) {
+    final Goroutine g = $go(body);
     $schedule();
+    return g;
   }
 
   /// tick applies the work that a goroutine posted, and it rebuilds each dirty

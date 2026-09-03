@@ -104,8 +104,8 @@ then takes the default of Flutter.
 | `void Function()` | `func()` | The host runs it as a goroutine. |
 | `void Function(T)` for a mapped scalar or enum | `func(T)` | |
 | `void Function(RangeValues)` | `func(float64, float64)` | The host builds no Go struct, thus a range crosses as 2 numbers. |
-| `Future<void> Function()` | `ui.Task` | The Go side reports the end of the work. |
-| `Future<bool> Function()` | `ui.Ask` | The same, with an answer. |
+| `Future<void> Function()` | `ui.Task` | The end of the goroutine ends the work. |
+| `Future<bool> Function()` | `ui.Ask` | The same, and the result gives the answer. |
 | `Widget Function(BuildContext)` | `ui.Builder` | A synchronous position. Read decision 221. |
 | `Widget Function(BuildContext, int)` | `ui.ItemBuilder` | A synchronous position. |
 | `Widget Function(BuildContext, Orientation)` | `ui.OrientBuilder` | The same. The argument takes `portrait` or `landscape`. |

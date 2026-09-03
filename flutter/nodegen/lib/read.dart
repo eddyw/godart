@@ -544,8 +544,8 @@ GoType? mapFunction(Reading out, FunctionType t) {
     return null;
   }
   // A callback that gives a Future runs Go work that the host waits for. The
-  // Go side reports the end itself, because the host sees no end of a
-  // goroutine. Read the Task type of flutter/ui/node.go.
+  // host reads the handle of the goroutine, thus the end of the Go function
+  // ends the Future. Read the Task type of flutter/ui/node.go.
   if (ret == 'Future<void>' && params.isEmpty) {
     return const GoType('Task', 'task', pointer: false);
   }

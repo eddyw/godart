@@ -49,13 +49,16 @@ abstract interface class WaitFrame implements Frame {
 /// of the last caller, and a wake runs the chain again.
 Frame? $blocked;
 
-/// One goroutine.
+/// One goroutine, and the handle of its end.
+///
+/// `$go` gives the handle to a Dart host outside Go. The emitted Dart of a Go
+/// program drops it, thus a Go program reads no member of this class.
 final class Goroutine {
   /// The frame chain of a goroutine that gave up control.
   Frame? frame;
 
   /// The body of a goroutine that did not start.
-  void Function()? start;
+  Object? Function()? start;
 
   /// True for the goroutine of package main. Go ends the program when that
   /// goroutine returns.
@@ -64,7 +67,43 @@ final class Goroutine {
   /// The number of the goroutine. Go numbers each goroutine from 1.
   final int id;
 
+  bool _ended = false;
+  Object? _result;
+  void Function()? _hook;
+
   Goroutine({this.isMain = false}) : id = ++_lastId;
+
+  /// True after the goroutine ended. A goroutine ends 3 ways: the body
+  /// returns, a panic leaves the body, and `runtime.Goexit` stops it.
+  bool get ended => _ended;
+
+  /// The value that the body gave. A panic and `runtime.Goexit` each leave
+  /// null, and a body of the type `void Function()` leaves null too.
+  ///
+  /// A body that blocks gives its value through the frame of the last resume,
+  /// thus a Dart wrapper around the body loses that value. A host that reads
+  /// the result must give the Go function itself to `$go`.
+  Object? get result => _result;
+
+  /// Runs [hook] 1 time, at the end of the goroutine. A goroutine that ended
+  /// already runs it now. A second call replaces the hook.
+  void whenEnd(void Function() hook) {
+    if (_ended) {
+      hook();
+      return;
+    }
+    _hook = hook;
+  }
+
+  void _end(Object? value) {
+    if (_ended) return;
+    _ended = true;
+    _result = value;
+    final void Function()? hook = _hook;
+    if (hook == null) return;
+    _hook = null;
+    hook();
+  }
 }
 
 int _lastId = 0;
@@ -161,19 +200,23 @@ void $schedule() {
     final Goroutine g = _runq.removeFirst();
     $current = g;
     $blocked = null;
+    Object? value;
     try {
       final Frame? f = g.frame;
       if (f != null) {
         g.frame = null;
-        f.resume();
+        value = f.resume();
       } else {
-        final void Function()? body = g.start;
+        final Object? Function()? body = g.start;
         g.start = null;
-        if (body != null) body();
+        if (body != null) value = body();
       }
     } on GoPanic catch (p, trace) {
       _running = false;
       $current = null;
+      // The goroutine ends here, thus the handle reports the end. The live set
+      // keeps the goroutine, because the program itself ends now.
+      g._end(null);
       $goPanic(p, trace);
       return;
     } on GoStop {
@@ -184,6 +227,7 @@ void $schedule() {
       _live--;
       _liveSet.remove(g);
       if (g.isMain) _mainExited = true;
+      g._end(null);
       continue;
     }
     if ($blocked != null) {
@@ -193,6 +237,7 @@ void $schedule() {
       _live--;
       _liveSet.remove(g);
       if (g.isMain) _mainDone = true;
+      g._end(value);
     }
   }
   _running = false;
@@ -218,13 +263,21 @@ void $schedule() {
   }
 }
 
-/// Starts a goroutine. Go runs the body after the statement, thus the body
-/// waits for the scheduler.
-void $go(void Function() body) {
+/// Starts a goroutine and gives its handle. Go runs the body after the
+/// statement, thus the body waits for the scheduler.
+///
+/// The emitted Dart of a `go` statement drops the handle, thus a Go program
+/// pays nothing for it. A Dart host reads the end of the goroutine there.
+///
+/// The parameter takes the type `void Function()`, because the emitted Dart
+/// writes a closure with no result. A body that gives a value is a subtype of
+/// that type, thus the field [Goroutine.start] still keeps the value.
+Goroutine $go(void Function() body) {
   _live++;
   final Goroutine g = Goroutine()..start = body;
   _liveSet.add(g);
   $ready(g);
+  return g;
 }
 
 /// Runs package main as the first goroutine.
