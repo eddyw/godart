@@ -2532,3 +2532,36 @@ The plan left these points open. The work took the decisions below.
      The suite writes more than 1100 temporary modules, and `gopls` reads each
      1 that appears. `directoryFilters` of the editor answers that half, and
      `docs/support.md` holds the setting.
+
+318. An index and a slice bound of an unsigned type carry the sign to the panic
+     report. A Dart `int` holds 64 bits with a sign, thus a Go `uint64` above
+     2^63 reads as a negative number. The report wrote that negative number,
+     and Go writes the unsigned value.
+
+     Go carries the same information. `boundsError` of `runtime/error.go` holds
+     a field `signed`, and `Error` reads it to select between
+     `strconv.AppendInt` and `strconv.AppendUint`. Go also holds a second
+     format table, `boundsNegErrorFmts`, for a bound below 0. That table writes
+     no limit, because the bound alone names the fault. `index out of range
+     [-1]` thus carries no length, and the report of gart carried one.
+
+     `$panicIndex` and `$panicBound` of `panic.dart` take a flag `uns` now, and
+     `_boundText` writes the unsigned value of a negative bound through
+     `BigInt`. A bound of an unsigned type never takes the negative format,
+     because such a value is never below 0 in Go.
+
+     The flag travels from the emitter. `unsFlag` of `internal/emit/expr.go`
+     reads `isUnsigned64` of the bound, which already covers a type parameter
+     through `typeset.Describe`. A narrower unsigned type needs no flag,
+     because such a value fits in a Dart `int` with no sign change.
+
+     6 entry points carry the flag: `Slice.$at`, `Slice.$set`, `Slice.range`,
+     `$arrayIndex`, `$arraySet`, `GoString.$at`, and `$substring`. `Slice`
+     took the 2 named methods, because an operator of Dart holds a fixed
+     signature. `range` took named parameters, because a slice expression of 3
+     bounds needs 1 flag for each bound.
+
+     `fixedbugs/issue30116` and `fixedbugs/issue30116u` leave the skip table,
+     which holds 41 entries now. The output of each 1 matches the `.out` file
+     of Go, byte for byte. `testdata/programs/uindex` holds 15 cases of its
+     own, and it matches `go run` for each 1.

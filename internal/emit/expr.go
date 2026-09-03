@@ -297,40 +297,58 @@ func validUTF8(s string) bool {
 
 // index reads 1 element. A Go array keeps a plain Dart list, thus the read
 // needs the bounds check of the runtime.
+// unsFlag gives the argument that names a bound of an unsigned type. Go writes
+// the unsigned value of such a bound in a panic report, and a value above 2^63
+// reads as a negative Dart int. name is the parameter of the runtime helper.
+func unsFlag(name string, x ir.Expr) string {
+	if x == nil || !isUnsigned64(x.GoType()) {
+		return ""
+	}
+	return ", " + name + ": true"
+}
+
 func (e *emitter) index(x *ir.Index) string {
 	container := x.X.GoType()
 	if isMapType(container) {
 		return fmt.Sprintf("%s.get(%s)", e.expr(x.X), e.expr(x.Index))
 	}
+	uns := unsFlag("uns", x.Index)
 	if isString(container) {
-		return fmt.Sprintf("%s.$at(%s)", e.expr(x.X), e.expr(x.Index))
+		return fmt.Sprintf("%s.$at(%s%s)", e.expr(x.X), e.expr(x.Index), uns)
 	}
 	// The type argument stands in the text. Dart reads the context of the
 	// expression for it, and an operand of `-` gives `num`.
 	if isPointerType(container) {
-		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s))",
-			e.dartType(x.Type), e.derefRead(x.X), e.expr(x.Index))
+		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s)%s)",
+			e.dartType(x.Type), e.derefRead(x.X), e.expr(x.Index), uns)
 	}
 	if isArrayType(container) {
-		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s))",
-			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index))
+		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s)%s)",
+			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index), uns)
+	}
+	if uns != "" {
+		return fmt.Sprintf("%s.$at($ix(%s)%s)", e.expr(x.X), e.expr(x.Index), uns)
 	}
 	return fmt.Sprintf("%s[$ix(%s)]", e.expr(x.X), e.expr(x.Index))
 }
 
-// indexTarget gives the start of a write into an array. The result is empty
-// when the write uses the index operator of Dart.
-func (e *emitter) indexTarget(x *ir.Index) string {
+// indexTarget gives the start and the end of a write into an array. head is
+// empty when the write uses the index operator of Dart.
+func (e *emitter) indexTarget(x *ir.Index) (head, tail string) {
 	container := x.X.GoType()
+	uns := unsFlag("uns", x.Index)
 	if isPointerType(container) {
 		return fmt.Sprintf("$arraySet<%s>(%s, $ix(%s)",
-			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index))
+			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index)), uns
 	}
 	if isArrayType(container) {
 		return fmt.Sprintf("$arraySet<%s>(%s, $ix(%s)",
-			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index))
+			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index)), uns
 	}
-	return ""
+	if uns != "" {
+		return fmt.Sprintf("%s.$set($ix(%s)", e.expr(x.X), e.expr(x.Index)), uns
+	}
+	return "", ""
 }
 
 func (e *emitter) assignArray(dst string, t types.Type, value string) string {
@@ -346,13 +364,16 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 	if x.Low != nil {
 		low = "$ix(" + e.expr(x.Low) + ")"
 	}
+	bounds := unsFlag("lowUns", x.Low) + unsFlag("highUns", x.High) +
+		unsFlag("maxUns", x.Max)
 	source := x.X.GoType()
 	if isString(source) {
 		high := fmt.Sprintf("%s.length", e.expr(x.X))
 		if x.High != nil {
 			high = "$ix(" + e.expr(x.High) + ")"
 		}
-		return fmt.Sprintf("$substring(%s, %s, %s)", e.expr(x.X), low, high)
+		return fmt.Sprintf("$substring(%s, %s, %s%s)",
+			e.expr(x.X), low, high, bounds)
 	}
 	if isArrayType(source) || isPointerType(source) {
 		text := e.expr(x.X)
@@ -370,8 +391,9 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		}
 		// An array and a pointer to an array each report "with length" in a
 		// bound panic, and a slice reports "with capacity".
-		return fmt.Sprintf("Slice(%s, 0, %s, %s).range(%s, %s, %s, %v, true)",
-			text, size, size, low, high, max, x.Max != nil)
+		return fmt.Sprintf(
+			"Slice(%s, 0, %s, %s).range(%s, %s, %s, three: %v, byLen: true%s)",
+			text, size, size, low, high, max, x.Max != nil, bounds)
 	}
 	x0 := e.expr(x.X)
 	high := fmt.Sprintf("%s.len", x0)
@@ -383,9 +405,10 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		max = "$ix(" + e.expr(x.Max) + ")"
 	}
 	if x.Max != nil {
-		return fmt.Sprintf("%s.range(%s, %s, %s, true)", x0, low, high, max)
+		return fmt.Sprintf("%s.range(%s, %s, %s, three: true%s)",
+			x0, low, high, max, bounds)
 	}
-	return fmt.Sprintf("%s.range(%s, %s, %s)", x0, low, high, max)
+	return fmt.Sprintf("%s.range(%s, %s, %s%s)", x0, low, high, max, bounds)
 }
 
 func (e *emitter) copyExpr(x *ir.Copy) string {

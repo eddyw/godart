@@ -25,8 +25,6 @@ var goTestSkips = map[string]string{
 	"fixedbugs/issue4316":   "a deref of a type that names itself has no Dart form",
 	"fixedbugs/issue58300":  "reflect.Value.Pointer gives the identity of the object, and runtime.FuncForPC reads a program counter that the Dart VM gives not",
 	"fixedbugs/issue58300b": "reflect.Value.Pointer gives the identity of the object, and runtime.FuncForPC reads a program counter that the Dart VM gives not",
-	"fixedbugs/issue30116":  "a slice bound of an unsigned type above 2^63 reads as a negative number in the report, and Go writes the unsigned value",
-	"fixedbugs/issue30116u": "a slice bound of an unsigned type above 2^63 reads as a negative number in the report, and Go writes the unsigned value",
 	"fixedbugs/issue25897a": "the body of the reflect.MakeFunc value sends on a full channel, and a function that gives up control is outside MakeFunc, exactly as it is outside Value.Call",
 	"fixedbugs/issue59411":  "a clear of a map inside a range loop over that map must end the loop, and the iterator of GoMap walks the entries that stood there at the start",
 	"fixedbugs/issue4667":   "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one",

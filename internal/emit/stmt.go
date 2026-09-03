@@ -324,8 +324,8 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 		return
 	}
 	if idx, ok := lhs.(*ir.Index); ok {
-		if target := e.indexTarget(idx); target != "" {
-			e.line("%s, %s);", target, value)
+		if head, tail := e.indexTarget(idx); head != "" {
+			e.line("%s, %s%s);", head, value, tail)
 			return
 		}
 	}

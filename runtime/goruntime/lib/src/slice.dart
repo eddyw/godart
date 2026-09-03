@@ -27,13 +27,19 @@ final class Slice<T> {
   factory Slice.of(List<T> array) =>
       Slice(array, 0, array.length, array.length);
 
-  T operator [](int i) {
-    if (i < 0 || i >= len) $panicIndex(i, len);
+  T operator [](int i) => $at(i);
+
+  void operator []=(int i, T value) => $set(i, value);
+
+  /// The element at index i. uns names an index of an unsigned type, which
+  /// reads as a negative Dart int above 2^63.
+  T $at(int i, {bool uns = false}) {
+    if (i < 0 || i >= len) $panicIndex(i, len, uns);
     return array[off + i];
   }
 
-  void operator []=(int i, T value) {
-    if (i < 0 || i >= len) $panicIndex(i, len);
+  void $set(int i, T value, {bool uns = false}) {
+    if (i < 0 || i >= len) $panicIndex(i, len, uns);
     array[off + i] = value;
   }
 
@@ -46,25 +52,38 @@ final class Slice<T> {
   Slice<T> range(
     int low,
     int high,
-    int max, [
+    int max, {
     bool three = false,
     bool byLen = false,
-  ]) {
+    bool lowUns = false,
+    bool highUns = false,
+    bool maxUns = false,
+  }) {
     if (three) {
       if (max < 0 || max > cap) {
         $panicBound(
           byLen ? SliceBound.threeALen : SliceBound.threeACap,
           max,
           cap,
+          maxUns,
         );
       }
-      if (high < 0 || high > max) $panicBound(SliceBound.threeB, high, max);
-      if (low < 0 || low > high) $panicBound(SliceBound.threeC, low, high);
+      if (high < 0 || high > max) {
+        $panicBound(SliceBound.threeB, high, max, highUns);
+      }
+      if (low < 0 || low > high) {
+        $panicBound(SliceBound.threeC, low, high, lowUns);
+      }
     } else {
       if (high < 0 || high > cap) {
-        $panicBound(byLen ? SliceBound.aLen : SliceBound.aCap, high, cap);
+        $panicBound(
+          byLen ? SliceBound.aLen : SliceBound.aCap,
+          high,
+          cap,
+          highUns,
+        );
       }
-      if (low < 0 || low > high) $panicBound(SliceBound.b, low, high);
+      if (low < 0 || low > high) $panicBound(SliceBound.b, low, high, lowUns);
     }
     return Slice(array, off + low, high - low, max - low);
   }

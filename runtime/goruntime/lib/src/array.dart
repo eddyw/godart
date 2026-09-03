@@ -88,12 +88,14 @@ bool $equalArray<T>(List<T> a, List<T> b, [bool Function(T, T)? equal]) {
   return true;
 }
 
-T $arrayIndex<T>(List<T> a, int i) {
-  if (i < 0 || i >= a.length) $panicIndex(i, a.length);
+/// The element at index i of an array. uns names an index of an unsigned
+/// type, which reads as a negative Dart int above 2^63.
+T $arrayIndex<T>(List<T> a, int i, {bool uns = false}) {
+  if (i < 0 || i >= a.length) $panicIndex(i, a.length, uns);
   return a[i];
 }
 
-void $arraySet<T>(List<T> a, int i, T v) {
-  if (i < 0 || i >= a.length) $panicIndex(i, a.length);
+void $arraySet<T>(List<T> a, int i, T v, {bool uns = false}) {
+  if (i < 0 || i >= a.length) $panicIndex(i, a.length, uns);
   a[i] = v;
 }

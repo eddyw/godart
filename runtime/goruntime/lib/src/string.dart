@@ -46,7 +46,13 @@ final class GoString {
   }
 
   /// The byte at a Go index, as a Go integer. The emitted code reads it.
-  GoInt $at(GoInt i) => $gi(this[$ix(i)]);
+  /// uns names an index of an unsigned type, which reads as a negative Dart
+  /// int above 2^63.
+  GoInt $at(GoInt i, {bool uns = false}) {
+    final int n = $ix(i);
+    if (n < 0 || n >= bytes.length) $panicIndex(n, bytes.length, uns);
+    return $gi(bytes[n]);
+  }
 
   /// Decodes the bytes as UTF-8.
   ///
@@ -107,12 +113,18 @@ int $compare(GoString a, GoString b) {
 
 /// The Go expression `s[low:high]`. The result shares the storage, because a
 /// Go string never changes.
-GoString $substring(GoString s, int low, int high) {
+GoString $substring(
+  GoString s,
+  int low,
+  int high, {
+  bool lowUns = false,
+  bool highUns = false,
+}) {
   if (high < 0 || high > s.length) {
-    $panicBound(SliceBound.aLen, high, s.length);
+    $panicBound(SliceBound.aLen, high, s.length, highUns);
   }
   if (low < 0 || low > high) {
-    $panicBound(SliceBound.b, low, high);
+    $panicBound(SliceBound.b, low, high, lowUns);
   }
   if (low == 0 && high == s.length) return s;
   return GoString.take(

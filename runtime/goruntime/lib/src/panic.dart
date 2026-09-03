@@ -72,12 +72,23 @@ Never $panic(Object? value) {
   throw GoPanic(value);
 }
 
-Never $panicIndex(int index, int length) => throw GoPanic(
-  Iface(
-    $typeGoError,
-    GoError('index out of range [$index] with length $length'),
-  ),
-);
+/// The text of an index or of a slice bound. Go writes the unsigned value of
+/// a bound of an unsigned type, thus a value above 2^63 reads as itself and
+/// not as a negative number. Read boundsError of runtime/error.go.
+String _boundText(int v, bool uns) =>
+    uns && v < 0 ? BigInt.from(v).toUnsigned(64).toString() : '$v';
+
+/// Raises the panic of an index. uns names an index of an unsigned type.
+///
+/// Go writes no length behind a negative index, because the index alone names
+/// the fault. An index of an unsigned type is never negative in Go, thus it
+/// always takes the form with the length.
+Never $panicIndex(int index, int length, [bool uns = false]) {
+  final String text = !uns && index < 0
+      ? 'index out of range [$index]'
+      : 'index out of range [${_boundText(index, uns)}] with length $length';
+  throw GoPanic(Iface($typeGoError, GoError(text)));
+}
 
 /// The bound of a slice expression that failed. Go holds 1 message for each 1,
 /// and a second message for a bound below 0.
@@ -88,25 +99,26 @@ enum SliceBound { aLen, aCap, b, threeALen, threeACap, threeB, threeC }
 
 /// Raises the panic of a slice bound. x is the bound that failed, and y is the
 /// limit that it broke.
-Never $panicBound(SliceBound code, int x, int y) {
+Never $panicBound(SliceBound code, int x, int y, [bool uns = false]) {
   const String head = 'slice bounds out of range ';
-  final bool neg = x < 0;
+  final bool neg = !uns && x < 0;
+  final String v = _boundText(x, uns);
   String text;
   switch (code) {
     case SliceBound.aLen:
-      text = neg ? '$head[:$x]' : '$head[:$x] with length $y';
+      text = neg ? '$head[:$v]' : '$head[:$v] with length $y';
     case SliceBound.aCap:
-      text = neg ? '$head[:$x]' : '$head[:$x] with capacity $y';
+      text = neg ? '$head[:$v]' : '$head[:$v] with capacity $y';
     case SliceBound.b:
-      text = neg ? '$head[$x:]' : '$head[$x:$y]';
+      text = neg ? '$head[$v:]' : '$head[$v:$y]';
     case SliceBound.threeALen:
-      text = neg ? '$head[::$x]' : '$head[::$x] with length $y';
+      text = neg ? '$head[::$v]' : '$head[::$v] with length $y';
     case SliceBound.threeACap:
-      text = neg ? '$head[::$x]' : '$head[::$x] with capacity $y';
+      text = neg ? '$head[::$v]' : '$head[::$v] with capacity $y';
     case SliceBound.threeB:
-      text = neg ? '$head[:$x:]' : '$head[:$x:$y]';
+      text = neg ? '$head[:$v:]' : '$head[:$v:$y]';
     case SliceBound.threeC:
-      text = neg ? '$head[$x::]' : '$head[$x:$y:]';
+      text = neg ? '$head[$v::]' : '$head[$v:$y:]';
   }
   throw GoPanic(Iface($typeGoError, GoError(text)));
 }
