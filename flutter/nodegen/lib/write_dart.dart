@@ -190,14 +190,20 @@ String readExpr(Param p, int at) {
       return 'goThemeStyle(n.nested($f))';
     case 'actionIconStyle':
       return 'goActionIconStyle(n.nested($f), rt)';
+    case 'appBarStyle':
+      return 'goAppBarStyle(n.nested($f))';
     case 'badgeStyle':
       return 'goBadgeStyle(n.nested($f))';
+    case 'bottomAppBarStyle':
+      return 'goBottomAppBarStyle(n.nested($f))';
     case 'bottomNavigationBarStyle':
       return 'goBottomNavigationBarStyle(n.nested($f))';
     case 'buttonBarStyle':
       return 'goButtonBarStyle(n.nested($f))';
     case 'buttonThemeStyle':
       return 'goButtonThemeStyle(n.nested($f))';
+    case 'cardStyle':
+      return 'goCardStyle(n.nested($f))';
     case 'carouselViewStyle':
       return 'goCarouselViewStyle(n.nested($f))';
     case 'checkboxStyle':
@@ -210,6 +216,8 @@ String readExpr(Param p, int at) {
       return 'goDataTableStyle(n.nested($f))';
     case 'datePickerStyle':
       return 'goDatePickerStyle(n.nested($f))';
+    case 'dialogStyle':
+      return 'goDialogStyle(n.nested($f))';
     case 'dividerStyle':
       return 'goDividerStyle(n.nested($f))';
     case 'drawerStyle':
@@ -220,6 +228,12 @@ String readExpr(Param p, int at) {
       return 'goExpansionTileStyle(n.nested($f))';
     case 'floatingActionButtonStyle':
       return 'goFloatingActionButtonStyle(n.nested($f))';
+    case 'inputDecorationStyle':
+      return 'goInputDecorationStyle(n.nested($f))';
+    case 'listTileStyle':
+      return 'goListTileStyle(n.nested($f))';
+    case 'materialBannerStyle':
+      return 'goMaterialBannerStyle(n.nested($f))';
     case 'menuStyle':
       return 'goMenuStyle(n.nested($f))';
     case 'navigationBarStyle':
@@ -248,6 +262,8 @@ String readExpr(Param p, int at) {
       return 'goSnackBarStyle(n.nested($f))';
     case 'switchStyle':
       return 'goSwitchStyle(n.nested($f))';
+    case 'tabBarStyle':
+      return 'goTabBarStyle(n.nested($f))';
     case 'textSelectionStyle':
       return 'goTextSelectionStyle(n.nested($f))';
     case 'timePickerStyle':
@@ -282,6 +298,12 @@ String readExpr(Param p, int at) {
       return 'goStep(n.nested($f), rt)';
     case 'menuItem':
       return 'goMenuItem(n.nested($f), rt)';
+    case 'toolbarAnchors':
+      return 'goToolbarAnchors(n.nested($f))';
+    case 'selectionGeometry':
+      return 'goSelectionGeometry(n.nested($f))';
+    case 'semanticsProps':
+      return 'goSemanticsProps(n.nested($f), rt)';
     case 'menuItems':
       return 'goMenuItems(n.structs($f), rt)';
     case 'columns':
@@ -330,6 +352,8 @@ String readExpr(Param p, int at) {
       return 'goBoxBuilder(n.buildBox($f), rt)';
     case 'buildSlivers':
       return 'goSliverBuilder(n.buildSlivers($f), rt)';
+    case 'buildExtent':
+      return 'goExtentBuilder(n.buildExtent($f))';
     case 'cbRange':
       return 'goOnRange(n.onPair($f), rt)';
     case 'node':

@@ -312,4 +312,16 @@ final class GoNode {
     final Object? v = raw(name, at);
     return v is Slice<Iface?> Function(bool) ? v : null;
   }
+
+  /// buildExtent gives a
+  /// `func(int, float64, float64, float64, float64) float64` field.
+  double Function(int, double, double, double, double)? buildExtent(
+    String name, [
+    int at = noAt,
+  ]) {
+    final Object? v = raw(name, at);
+    return v is double Function(int, double, double, double, double)
+        ? v
+        : null;
+  }
 }

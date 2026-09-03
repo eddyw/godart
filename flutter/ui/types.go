@@ -404,3 +404,113 @@ type DataRow struct {
 	OnSelect func(bool)
 	Color    *StateColor
 }
+
+// ToolbarAnchors names the 2 places where a text selection toolbar can stand.
+//
+// PrimaryAnchor holds the place that Flutter tries first. SecondaryAnchor holds
+// the fallback, and a nil SecondaryAnchor gives no fallback.
+type ToolbarAnchors struct {
+	PrimaryAnchor   Offset
+	SecondaryAnchor *Offset
+}
+
+// SelectionGeometry holds the shape of 1 selection. A toolbar of a text
+// selection reads 1.
+//
+// Status takes "uncollapsed", "collapsed", or "none". An empty Status gives
+// "none", which means no selection. HasContent reports whether the widget
+// holds content that a user can select.
+//
+// startSelectionPoint, endSelectionPoint, and selectionRects stay out. A
+// SelectionPoint demands a handle type, and that field holds no default of
+// Flutter, thus an empty Go text would name no value. The node set reads a
+// SelectionGeometry in a toolbar alone, and a toolbar reads the status and the
+// content alone.
+type SelectionGeometry struct {
+	Status     string
+	HasContent bool
+}
+
+// SemanticsProperties holds the part of the Flutter SemanticsProperties that a
+// node field reads. It carries the same subset as the node ui.Semantics.
+//
+// A nil pointer and an empty text each give the default of Flutter. A text
+// field that names a value of an enum stands next to its list below.
+//
+// AccessibilityFocusBlockType takes "none", "blockSubtree", or "blockNode".
+// TextDirection takes "rtl" or "ltr". ValidationResult takes "none", "valid",
+// or "invalid". Role takes a value of the Flutter enum SemanticsRole, for
+// example "tab" or "menuItem". Read the node ui.Semantics for the whole list.
+//
+// These fields of the Flutter type stay out. An attributed text, a sort key, a
+// tag, a hint override, a custom action, and a set of controlled nodes each
+// hold a Dart object that no Go value carries. A linkUrl holds a Uri.
+// hitTestBehavior and inputType each name an enum of dart:ui, and the host
+// imports no dart:ui. onSetSelection takes a TextSelection.
+type SemanticsProperties struct {
+	Enabled                     *bool
+	Checked                     *bool
+	Mixed                       *bool
+	Selected                    *bool
+	Toggled                     *bool
+	Button                      *bool
+	Slider                      *bool
+	KeyboardKey                 *bool
+	Link                        *bool
+	Header                      *bool
+	HeadingLevel                *int
+	TextField                   *bool
+	ReadOnly                    *bool
+	Focusable                   *bool
+	Focused                     *bool
+	AccessibilityFocusBlockType string
+	InMutuallyExclusiveGroup    *bool
+	Obscured                    *bool
+	Multiline                   *bool
+	ScopesRoute                 *bool
+	NamesRoute                  *bool
+	Hidden                      *bool
+	Image                       *bool
+	LiveRegion                  *bool
+	Expanded                    *bool
+	IsRequired                  *bool
+	MaxValueLength              *int
+	CurrentValueLength          *int
+	Identifier                  string
+	TraversalParentIdentifier   string
+	TraversalChildIdentifier    string
+	Label                       string
+	Value                       string
+	IncreasedValue              string
+	DecreasedValue              string
+	Hint                        string
+	Tooltip                     string
+	TextDirection               string
+	Role                        string
+	ValidationResult            string
+	MinValue                    string
+	MaxValue                    string
+
+	OnTap                           func()
+	OnLongPress                     func()
+	OnScrollLeft                    func()
+	OnScrollRight                   func()
+	OnScrollUp                      func()
+	OnScrollDown                    func()
+	OnIncrease                      func()
+	OnDecrease                      func()
+	OnCopy                          func()
+	OnCut                           func()
+	OnPaste                         func()
+	OnDismiss                       func()
+	OnMoveCursorForwardByCharacter  func(bool)
+	OnMoveCursorBackwardByCharacter func(bool)
+	OnMoveCursorForwardByWord       func(bool)
+	OnMoveCursorBackwardByWord      func(bool)
+	OnSetText                       func(string)
+	OnDidGainAccessibilityFocus     func()
+	OnDidLoseAccessibilityFocus     func()
+	OnFocus                         func()
+	OnExpand                        func()
+	OnCollapse                      func()
+}

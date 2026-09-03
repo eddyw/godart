@@ -119,6 +119,43 @@ type ActionIconTheme struct {
 	Child Node
 }
 
+// AdaptiveTextSelectionToolbar maps AdaptiveTextSelectionToolbar of package:flutter/material.dart.
+type AdaptiveTextSelectionToolbar struct {
+	Children []Node
+	Anchors  ToolbarAnchors
+}
+
+// AdaptiveTextSelectionToolbarButtonItems maps AdaptiveTextSelectionToolbar.buttonItems of package:flutter/material.dart.
+type AdaptiveTextSelectionToolbarButtonItems struct {
+	ButtonItems []MenuButtonItem
+	Anchors     ToolbarAnchors
+}
+
+// AdaptiveTextSelectionToolbarEditable maps AdaptiveTextSelectionToolbar.editable of package:flutter/material.dart.
+//
+// ClipboardStatus takes "pasteable", "unknown", or "notPasteable".
+type AdaptiveTextSelectionToolbarEditable struct {
+	ClipboardStatus string
+	OnCopy          func()
+	OnCut           func()
+	OnPaste         func()
+	OnSelectAll     func()
+	OnLookUp        func()
+	OnSearchWeb     func()
+	OnShare         func()
+	OnLiveTextInput func()
+	Anchors         ToolbarAnchors
+}
+
+// AdaptiveTextSelectionToolbarSelectable maps AdaptiveTextSelectionToolbar.selectable of package:flutter/material.dart.
+type AdaptiveTextSelectionToolbarSelectable struct {
+	OnCopy            func()
+	OnSelectAll       func()
+	OnShare           func()
+	SelectionGeometry SelectionGeometry
+	Anchors           ToolbarAnchors
+}
+
 // AlertDialog maps AlertDialog of package:flutter/material.dart.
 //
 // ActionsAlignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
@@ -502,6 +539,7 @@ type AppBarTheme struct {
 	ToolbarTextStyle       *TextStyle
 	TitleTextStyle         *TextStyle
 	ActionsPadding         *Insets
+	Data                   *AppBarStyle
 	Child                  Node
 }
 
@@ -666,6 +704,7 @@ type BottomAppBarTheme struct {
 	SurfaceTintColor *Color
 	ShadowColor      *Color
 	Padding          *Insets
+	Data             *BottomAppBarStyle
 	Child            Node
 }
 
@@ -857,6 +896,7 @@ type CardTheme struct {
 	Elevation        *float64
 	Margin           *Insets
 	Shape            *Shape
+	Data             *CardStyle
 	Child            Node
 }
 
@@ -1483,6 +1523,42 @@ type CupertinoActivityIndicator struct {
 type CupertinoActivityIndicatorPartiallyRevealed struct {
 	Color    *Color
 	Progress *float64
+}
+
+// CupertinoAdaptiveTextSelectionToolbar maps CupertinoAdaptiveTextSelectionToolbar of package:flutter/cupertino.dart.
+type CupertinoAdaptiveTextSelectionToolbar struct {
+	Children []Node
+	Anchors  ToolbarAnchors
+}
+
+// CupertinoAdaptiveTextSelectionToolbarButtonItems maps CupertinoAdaptiveTextSelectionToolbar.buttonItems of package:flutter/cupertino.dart.
+type CupertinoAdaptiveTextSelectionToolbarButtonItems struct {
+	ButtonItems []MenuButtonItem
+	Anchors     ToolbarAnchors
+}
+
+// CupertinoAdaptiveTextSelectionToolbarEditable maps CupertinoAdaptiveTextSelectionToolbar.editable of package:flutter/cupertino.dart.
+//
+// ClipboardStatus takes "pasteable", "unknown", or "notPasteable".
+type CupertinoAdaptiveTextSelectionToolbarEditable struct {
+	ClipboardStatus string
+	OnCopy          func()
+	OnCut           func()
+	OnPaste         func()
+	OnSelectAll     func()
+	OnLookUp        func()
+	OnSearchWeb     func()
+	OnShare         func()
+	OnLiveTextInput func()
+	Anchors         ToolbarAnchors
+}
+
+// CupertinoAdaptiveTextSelectionToolbarSelectable maps CupertinoAdaptiveTextSelectionToolbar.selectable of package:flutter/cupertino.dart.
+type CupertinoAdaptiveTextSelectionToolbarSelectable struct {
+	OnCopy            func()
+	OnSelectAll       func()
+	SelectionGeometry SelectionGeometry
+	Anchors           ToolbarAnchors
 }
 
 // CupertinoAlertDialog maps CupertinoAlertDialog of package:flutter/cupertino.dart.
@@ -2121,6 +2197,12 @@ type CupertinoSliverRefreshControl struct {
 	OnRefresh Task
 }
 
+// CupertinoSpellCheckSuggestionsToolbar maps CupertinoSpellCheckSuggestionsToolbar of package:flutter/cupertino.dart.
+type CupertinoSpellCheckSuggestionsToolbar struct {
+	Anchors     ToolbarAnchors
+	ButtonItems []MenuButtonItem
+}
+
 // CupertinoSwitch maps CupertinoSwitch of package:flutter/cupertino.dart.
 //
 // DragStartBehavior takes "down", or "start".
@@ -2716,6 +2798,7 @@ type DialogTheme struct {
 	BarrierColor     *Color
 	InsetPadding     *Insets
 	ClipBehavior     *string
+	Data             *DialogStyle
 	Child            Node
 }
 
@@ -4503,6 +4586,7 @@ type InputDecorationTheme struct {
 	AlignLabelWithHint    *bool
 	Constraints           *Constraints
 	VisualDensity         *Density
+	Data                  *InputDecorationStyle
 	Child                 Node
 }
 
@@ -4662,6 +4746,7 @@ type ListTile struct {
 //
 // ControlAffinity takes "leading", "trailing", or "platform".
 type ListTileTheme struct {
+	Data               *ListTileStyle
 	Dense              *bool
 	Shape              *Shape
 	Style              *string
@@ -4699,6 +4784,7 @@ type ListView struct {
 	ShrinkWrap              *bool
 	Padding                 *Insets
 	ItemExtent              *float64
+	ItemExtentBuilder       ExtentBuilder
 	PrototypeItem           Node
 	AddAutomaticKeepAlives  *bool
 	AddRepaintBoundaries    *bool
@@ -4733,6 +4819,7 @@ type ListViewBuilder struct {
 	ShrinkWrap              *bool
 	Padding                 *Insets
 	ItemExtent              *float64
+	ItemExtentBuilder       ExtentBuilder
 	PrototypeItem           Node
 	ItemBuilder             ItemBuilder
 	ItemCount               *int
@@ -4769,6 +4856,7 @@ type ListViewCustom struct {
 	Padding                 *Insets
 	ItemExtent              *float64
 	PrototypeItem           Node
+	ItemExtentBuilder       ExtentBuilder
 	ChildrenDelegate        SliverChildren
 	CacheExtent             *float64
 	SemanticChildCount      *int
@@ -4983,6 +5071,7 @@ type MaterialBanner struct {
 
 // MaterialBannerTheme maps MaterialBannerTheme of package:flutter/material.dart.
 type MaterialBannerTheme struct {
+	Data  *MaterialBannerStyle
 	Child Node
 }
 
@@ -5956,6 +6045,7 @@ type ReorderableList struct {
 	OnReorderStart             func(int)
 	OnReorderEnd               func(int)
 	ItemExtent                 *float64
+	ItemExtentBuilder          ExtentBuilder
 	PrototypeItem              Node
 	Padding                    *Insets
 	ScrollDirection            *string
@@ -5987,6 +6077,7 @@ type ReorderableListView struct {
 	OnReorderStart             func(int)
 	OnReorderEnd               func(int)
 	ItemExtent                 *float64
+	ItemExtentBuilder          ExtentBuilder
 	PrototypeItem              Node
 	BuildDefaultDragHandles    *bool
 	Padding                    *Insets
@@ -6023,6 +6114,7 @@ type ReorderableListViewBuilder struct {
 	OnReorderStart             func(int)
 	OnReorderEnd               func(int)
 	ItemExtent                 *float64
+	ItemExtentBuilder          ExtentBuilder
 	PrototypeItem              Node
 	BuildDefaultDragHandles    *bool
 	Padding                    *Insets
@@ -6424,6 +6516,17 @@ type Semantics struct {
 // SemanticsDebugger maps SemanticsDebugger of package:flutter/widgets.dart.
 type SemanticsDebugger struct {
 	Child Node
+}
+
+// SemanticsFromProperties maps Semantics.fromProperties of package:flutter/widgets.dart.
+type SemanticsFromProperties struct {
+	Child              Node
+	Container          *bool
+	ExplicitChildNodes *bool
+	ExcludeSemantics   *bool
+	BlockUserActions   *bool
+	LocaleForSubtree   *string
+	Properties         SemanticsProperties
 }
 
 // SharedAppData maps SharedAppData of package:flutter/widgets.dart.
@@ -6975,6 +7078,7 @@ type SliverReorderableList struct {
 	OnReorderStart             func(int)
 	OnReorderEnd               func(int)
 	ItemExtent                 *float64
+	ItemExtentBuilder          ExtentBuilder
 	PrototypeItem              Node
 	AutoScrollerVelocityScalar *float64
 }
@@ -7078,9 +7182,45 @@ type SliverSemantics struct {
 	MaxValue                        *string
 }
 
+// SliverSemanticsFromProperties maps SliverSemantics.fromProperties of package:flutter/widgets.dart.
+type SliverSemanticsFromProperties struct {
+	Child              Node
+	Container          *bool
+	ExplicitChildNodes *bool
+	ExcludeSemantics   *bool
+	BlockUserActions   *bool
+	LocaleForSubtree   *string
+	Properties         SemanticsProperties
+}
+
 // SliverToBoxAdapter maps SliverToBoxAdapter of package:flutter/widgets.dart.
 type SliverToBoxAdapter struct {
 	Child Node
+}
+
+// SliverVariedExtentList maps SliverVariedExtentList of package:flutter/widgets.dart.
+type SliverVariedExtentList struct {
+	Delegate          SliverChildren
+	ItemExtentBuilder ExtentBuilder
+}
+
+// SliverVariedExtentListBuilder maps SliverVariedExtentList.builder of package:flutter/widgets.dart.
+type SliverVariedExtentListBuilder struct {
+	ItemBuilder            ItemBuilder
+	ItemExtentBuilder      ExtentBuilder
+	ItemCount              *int
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+}
+
+// SliverVariedExtentListList maps SliverVariedExtentList.list of package:flutter/widgets.dart.
+type SliverVariedExtentListList struct {
+	Children               []Node
+	ItemExtentBuilder      ExtentBuilder
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
 }
 
 // SliverVisibility maps SliverVisibility of package:flutter/widgets.dart.
@@ -7518,6 +7658,7 @@ type TabBarTheme struct {
 	OverlayColor         *StateColor
 	TabAlignment         *string
 	IndicatorAnimation   *string
+	Data                 *TabBarStyle
 	Child                Node
 }
 
@@ -8261,6 +8402,10 @@ func (AbsorbPointer) isNode()                                        {}
 func (ActionChip) isNode()                                           {}
 func (ActionChipElevated) isNode()                                   {}
 func (ActionIconTheme) isNode()                                      {}
+func (AdaptiveTextSelectionToolbar) isNode()                         {}
+func (AdaptiveTextSelectionToolbarButtonItems) isNode()              {}
+func (AdaptiveTextSelectionToolbarEditable) isNode()                 {}
+func (AdaptiveTextSelectionToolbarSelectable) isNode()               {}
 func (AlertDialog) isNode()                                          {}
 func (AlertDialogAdaptive) isNode()                                  {}
 func (Align) isNode()                                                {}
@@ -8352,6 +8497,10 @@ func (CupertinoActionSheet) isNode()                                 {}
 func (CupertinoActionSheetAction) isNode()                           {}
 func (CupertinoActivityIndicator) isNode()                           {}
 func (CupertinoActivityIndicatorPartiallyRevealed) isNode()          {}
+func (CupertinoAdaptiveTextSelectionToolbar) isNode()                {}
+func (CupertinoAdaptiveTextSelectionToolbarButtonItems) isNode()     {}
+func (CupertinoAdaptiveTextSelectionToolbarEditable) isNode()        {}
+func (CupertinoAdaptiveTextSelectionToolbarSelectable) isNode()      {}
 func (CupertinoAlertDialog) isNode()                                 {}
 func (CupertinoApp) isNode()                                         {}
 func (CupertinoAppRouter) isNode()                                   {}
@@ -8402,6 +8551,7 @@ func (CupertinoSlider) isNode()                                      {}
 func (CupertinoSliverNavigationBar) isNode()                         {}
 func (CupertinoSliverNavigationBarSearch) isNode()                   {}
 func (CupertinoSliverRefreshControl) isNode()                        {}
+func (CupertinoSpellCheckSuggestionsToolbar) isNode()                {}
 func (CupertinoSwitch) isNode()                                      {}
 func (CupertinoTabBar) isNode()                                      {}
 func (CupertinoTabScaffold) isNode()                                 {}
@@ -8679,6 +8829,7 @@ func (SelectionArea) isNode()                                        {}
 func (SelectionContainerDisabled) isNode()                           {}
 func (Semantics) isNode()                                            {}
 func (SemanticsDebugger) isNode()                                    {}
+func (SemanticsFromProperties) isNode()                              {}
 func (SharedAppData) isNode()                                        {}
 func (ShortcutRegistrar) isNode()                                    {}
 func (SimpleDialog) isNode()                                         {}
@@ -8733,7 +8884,11 @@ func (SliverReorderableList) isNode()                                {}
 func (SliverResizingHeader) isNode()                                 {}
 func (SliverSafeArea) isNode()                                       {}
 func (SliverSemantics) isNode()                                      {}
+func (SliverSemanticsFromProperties) isNode()                        {}
 func (SliverToBoxAdapter) isNode()                                   {}
+func (SliverVariedExtentList) isNode()                               {}
+func (SliverVariedExtentListBuilder) isNode()                        {}
+func (SliverVariedExtentListList) isNode()                           {}
 func (SliverVisibility) isNode()                                     {}
 func (SliverVisibilityMaintain) isNode()                             {}
 func (SnackBar) isNode()                                             {}

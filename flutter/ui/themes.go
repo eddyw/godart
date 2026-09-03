@@ -23,6 +23,31 @@ type ActionIconStyle struct {
 	EndDrawerButtonIconBuilder Builder
 }
 
+// AppBarStyle holds the part of the Flutter AppBarThemeData that a node field
+// reads.
+//
+// systemOverlayStyle stays out, because no Go value holds a
+// SystemUiOverlayStyle. The deprecated color stays out, because
+// BackgroundColor carries the same value.
+type AppBarStyle struct {
+	BackgroundColor        *Color
+	ForegroundColor        *Color
+	Elevation              *float64
+	ScrolledUnderElevation *float64
+	ShadowColor            *Color
+	SurfaceTintColor       *Color
+	Shape                  *Shape
+	IconTheme              *IconStyle
+	ActionsIconTheme       *IconStyle
+	CenterTitle            *bool
+	TitleSpacing           *float64
+	LeadingWidth           *float64
+	ToolbarHeight          *float64
+	ToolbarTextStyle       *TextStyle
+	TitleTextStyle         *TextStyle
+	ActionsPadding         *Insets
+}
+
 // BadgeStyle holds the part of the Flutter BadgeThemeData that a node field
 // reads.
 type BadgeStyle struct {
@@ -34,6 +59,19 @@ type BadgeStyle struct {
 	Padding         *Insets
 	Alignment       string
 	Offset          *Offset
+}
+
+// BottomAppBarStyle holds the part of the Flutter BottomAppBarThemeData that a
+// node field reads.
+//
+// shape stays out, because a Dart subclass must implement a NotchedShape.
+type BottomAppBarStyle struct {
+	Color            *Color
+	Elevation        *float64
+	Height           *float64
+	SurfaceTintColor *Color
+	ShadowColor      *Color
+	Padding          *Insets
 }
 
 // BottomNavigationBarStyle holds the part of the Flutter
@@ -89,6 +127,20 @@ type ButtonThemeStyle struct {
 	HighlightColor        *Color
 	SplashColor           *Color
 	MaterialTapTargetSize string
+}
+
+// CardStyle holds the part of the Flutter CardThemeData that a node field
+// reads.
+//
+// ClipBehavior names a value of the Flutter enum Clip.
+type CardStyle struct {
+	ClipBehavior     string
+	Color            *Color
+	ShadowColor      *Color
+	SurfaceTintColor *Color
+	Elevation        *float64
+	Margin           *Insets
+	Shape            *Shape
 }
 
 // CarouselViewStyle holds the part of the Flutter CarouselViewThemeData that a
@@ -221,6 +273,28 @@ type DatePickerStyle struct {
 	SubHeaderForegroundColor         *Color
 }
 
+// DialogStyle holds the part of the Flutter DialogThemeData that a node field
+// reads.
+//
+// Alignment names a value of the alignment table of the host. ClipBehavior
+// names a value of the Flutter enum Clip.
+type DialogStyle struct {
+	BackgroundColor  *Color
+	Elevation        *float64
+	ShadowColor      *Color
+	SurfaceTintColor *Color
+	Shape            *Shape
+	Alignment        string
+	IconColor        *Color
+	TitleTextStyle   *TextStyle
+	ContentTextStyle *TextStyle
+	ActionsPadding   *Insets
+	BarrierColor     *Color
+	InsetPadding     *Insets
+	ClipBehavior     string
+	Constraints      *Constraints
+}
+
 // DividerStyle holds the part of the Flutter DividerThemeData that a node
 // field reads.
 type DividerStyle struct {
@@ -297,6 +371,95 @@ type FloatingActionButtonStyle struct {
 	ExtendedPadding          *Insets
 	ExtendedTextStyle        *TextStyle
 	MouseCursor              string
+}
+
+// InputDecorationStyle holds the part of the Flutter InputDecorationThemeData
+// that a node field reads.
+//
+// FloatingLabelBehavior takes "never", "auto", or "always". HintFadeDuration
+// holds a count of milliseconds.
+//
+// The 6 border fields stay out, because a Dart subclass must implement an
+// InputBorder and ui.Shape gives an OutlinedBorder. floatingLabelAlignment
+// stays out, because a FloatingLabelAlignment is a Dart object and no Go value
+// holds 1.
+type InputDecorationStyle struct {
+	LabelStyle            *TextStyle
+	FloatingLabelStyle    *TextStyle
+	HelperStyle           *TextStyle
+	HelperMaxLines        *int
+	HintStyle             *TextStyle
+	HintFadeDuration      *int
+	HintMaxLines          *int
+	ErrorStyle            *TextStyle
+	ErrorMaxLines         *int
+	FloatingLabelBehavior string
+	IsDense               *bool
+	ContentPadding        *Insets
+	IsCollapsed           *bool
+	IconColor             *Color
+	PrefixStyle           *TextStyle
+	PrefixIconColor       *Color
+	PrefixIconConstraints *Constraints
+	SuffixStyle           *TextStyle
+	SuffixIconColor       *Color
+	SuffixIconConstraints *Constraints
+	CounterStyle          *TextStyle
+	Filled                *bool
+	FillColor             *Color
+	ActiveIndicatorBorder *BorderSide
+	OutlineBorder         *BorderSide
+	FocusColor            *Color
+	HoverColor            *Color
+	AlignLabelWithHint    *bool
+	Constraints           *Constraints
+	VisualDensity         *Density
+}
+
+// ListTileStyle holds the part of the Flutter ListTileThemeData that a node
+// field reads.
+//
+// Style names a value of the Flutter enum ListTileStyle, thus it takes "list"
+// or "drawer". TitleAlignment names a value of ListTileTitleAlignment, and
+// ControlAffinity names a value of ListTileControlAffinity. MouseCursor names
+// a value of the cursor table of the host, and the host gives that value to
+// each state.
+type ListTileStyle struct {
+	Dense                       *bool
+	Shape                       *Shape
+	Style                       string
+	SelectedColor               *Color
+	IconColor                   *Color
+	TextColor                   *Color
+	TitleTextStyle              *TextStyle
+	SubtitleTextStyle           *TextStyle
+	LeadingAndTrailingTextStyle *TextStyle
+	ContentPadding              *Insets
+	TileColor                   *Color
+	SelectedTileColor           *Color
+	HorizontalTitleGap          *float64
+	MinVerticalPadding          *float64
+	MinLeadingWidth             *float64
+	MinTileHeight               *float64
+	EnableFeedback              *bool
+	MouseCursor                 string
+	VisualDensity               *Density
+	TitleAlignment              string
+	ControlAffinity             string
+	IsThreeLine                 *bool
+}
+
+// MaterialBannerStyle holds the part of the Flutter MaterialBannerThemeData
+// that a node field reads.
+type MaterialBannerStyle struct {
+	BackgroundColor  *Color
+	SurfaceTintColor *Color
+	ShadowColor      *Color
+	DividerColor     *Color
+	ContentTextStyle *TextStyle
+	Elevation        *float64
+	Padding          *Insets
+	LeadingPadding   *Insets
 }
 
 // MenuStyle holds the part of the Flutter MenuStyle that a node field reads.
@@ -544,6 +707,35 @@ type SwitchStyle struct {
 	OverlayColor          *StateColor
 	SplashRadius          *float64
 	Padding               *Insets
+}
+
+// TabBarStyle holds the part of the Flutter TabBarThemeData that a node field
+// reads.
+//
+// IndicatorSize takes "tab" or "label". TabAlignment and IndicatorAnimation
+// each name a value of the Flutter enum of the same name. MouseCursor names a
+// value of the cursor table of the host, and the host gives that value to each
+// state.
+//
+// splashFactory stays out, because a Dart subclass must implement an
+// InteractiveInkFeatureFactory. textScaler stays out, because no Go value
+// holds a TextScaler.
+type TabBarStyle struct {
+	Indicator            *Decoration
+	IndicatorColor       *Color
+	IndicatorSize        string
+	DividerColor         *Color
+	DividerHeight        *float64
+	LabelColor           *Color
+	LabelPadding         *Insets
+	LabelStyle           *TextStyle
+	UnselectedLabelColor *Color
+	UnselectedLabelStyle *TextStyle
+	OverlayColor         *StateColor
+	MouseCursor          string
+	TabAlignment         string
+	IndicatorAnimation   string
+	SplashBorderRadius   *Radius
 }
 
 // TextSelectionStyle holds the part of the Flutter TextSelectionThemeData that

@@ -57,7 +57,7 @@ node type carries such a name.
 
 ## Why the host is per application
 
-A shared host would hold a case for each of the 550 node types, thus it would
+A shared host would hold a case for each of the 564 node types, thus it would
 name each Flutter widget. The tree shaker of Dart then keeps the whole
 framework. The measurement of 2026-09-02 read a set of 411 nodes, on an ahead
 of time build for macOS:
@@ -222,7 +222,7 @@ dart run bin/nodegen.dart report ../goflutter -all
 It names each widget that the reader dropped, the cause of each drop, and each
 Dart type that no Go type carries.
 
-The largest groups that stay out on 2026-09-03, with 133 dropped constructors:
+The largest groups that stay out on 2026-09-03, with 119 dropped constructors:
 
 | The group | Count | The cause |
 |---|---|---|

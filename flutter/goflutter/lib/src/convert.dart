@@ -1,5 +1,17 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+// The 8 names below stand outside material.dart and cupertino.dart. A show
+// clause holds them, thus no other name of rendering.dart reaches this file.
+import 'package:flutter/rendering.dart'
+    show
+        AccessibilityFocusBlockType,
+        ItemExtentBuilder,
+        SelectionGeometry,
+        SelectionStatus,
+        SemanticsProperties,
+        SemanticsRole,
+        SemanticsValidationResult,
+        SliverLayoutDimensions;
 import 'package:goruntime/goruntime.dart';
 
 import 'host.dart';
@@ -1671,3 +1683,363 @@ MenuThemeData? goMenuTheme(GoNode? n) =>
 /// goMenuBarTheme gives the MenuBarThemeData of 1 MenuStyle.
 MenuBarThemeData? goMenuBarTheme(GoNode? n) =>
     n == null ? null : MenuBarThemeData(style: goMenuStyle(n));
+
+/// _txt gives a text, and null for an empty 1. An empty Go text means "the
+/// default of Flutter".
+String? _txt(String s) => s.isEmpty ? null : s;
+
+/// goAppBarStyle reads the AppBarStyle struct of the Go side.
+AppBarThemeData? goAppBarStyle(GoNode? n) {
+  if (n == null) return null;
+  return AppBarThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    foregroundColor: goColorOpt(n.countOpt('ForegroundColor', 1)),
+    elevation: n.sizeOpt('Elevation', 2),
+    scrolledUnderElevation: n.sizeOpt('ScrolledUnderElevation', 3),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 4)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 5)),
+    shape: goShape(n.nested('Shape', 6)),
+    iconTheme: goIconStyle(n.nested('IconTheme', 7)),
+    actionsIconTheme: goIconStyle(n.nested('ActionsIconTheme', 8)),
+    centerTitle: n.flagOpt('CenterTitle', 9),
+    titleSpacing: n.sizeOpt('TitleSpacing', 10),
+    leadingWidth: n.sizeOpt('LeadingWidth', 11),
+    toolbarHeight: n.sizeOpt('ToolbarHeight', 12),
+    toolbarTextStyle: goTextStyle(n.nested('ToolbarTextStyle', 13)),
+    titleTextStyle: goTextStyle(n.nested('TitleTextStyle', 14)),
+    actionsPadding: goInsets(n.nested('ActionsPadding', 15)),
+  );
+}
+
+/// goBottomAppBarStyle reads the BottomAppBarStyle struct of the Go side.
+BottomAppBarThemeData? goBottomAppBarStyle(GoNode? n) {
+  if (n == null) return null;
+  return BottomAppBarThemeData(
+    color: goColorOpt(n.countOpt('Color', 0)),
+    elevation: n.sizeOpt('Elevation', 1),
+    height: n.sizeOpt('Height', 2),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 3)),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 4)),
+    padding: goInsets(n.nested('Padding', 5)),
+  );
+}
+
+/// goCardStyle reads the CardStyle struct of the Go side.
+CardThemeData? goCardStyle(GoNode? n) {
+  if (n == null) return null;
+  return CardThemeData(
+    clipBehavior: goEnumValue<Clip>(Clip.values, n.text('ClipBehavior', 0)),
+    color: goColorOpt(n.countOpt('Color', 1)),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 2)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 3)),
+    elevation: n.sizeOpt('Elevation', 4),
+    margin: goInsets(n.nested('Margin', 5)),
+    shape: goShape(n.nested('Shape', 6)),
+  );
+}
+
+/// goDialogStyle reads the DialogStyle struct of the Go side.
+DialogThemeData? goDialogStyle(GoNode? n) {
+  if (n == null) return null;
+  return DialogThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    elevation: n.sizeOpt('Elevation', 1),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 2)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 3)),
+    shape: goShape(n.nested('Shape', 4)),
+    alignment: goAlignment(n.text('Alignment', 5)),
+    iconColor: goColorOpt(n.countOpt('IconColor', 6)),
+    titleTextStyle: goTextStyle(n.nested('TitleTextStyle', 7)),
+    contentTextStyle: goTextStyle(n.nested('ContentTextStyle', 8)),
+    actionsPadding: goInsets(n.nested('ActionsPadding', 9)),
+    barrierColor: goColorOpt(n.countOpt('BarrierColor', 10)),
+    insetPadding: goInsets(n.nested('InsetPadding', 11)),
+    clipBehavior: goEnumValue<Clip>(Clip.values, n.text('ClipBehavior', 12)),
+    constraints: goConstraints(n.nested('Constraints', 13)),
+  );
+}
+
+/// goInputDecorationStyle reads the InputDecorationStyle struct of the Go
+/// side.
+///
+/// 5 parameters of the Flutter type take no null, thus each 1 reads the
+/// default of Flutter when the Go field holds none.
+InputDecorationThemeData? goInputDecorationStyle(GoNode? n) {
+  if (n == null) return null;
+  return InputDecorationThemeData(
+    labelStyle: goTextStyle(n.nested('LabelStyle', 0)),
+    floatingLabelStyle: goTextStyle(n.nested('FloatingLabelStyle', 1)),
+    helperStyle: goTextStyle(n.nested('HelperStyle', 2)),
+    helperMaxLines: n.countOpt('HelperMaxLines', 3),
+    hintStyle: goTextStyle(n.nested('HintStyle', 4)),
+    hintFadeDuration: goMillis(n.countOpt('HintFadeDuration', 5)),
+    hintMaxLines: n.countOpt('HintMaxLines', 6),
+    errorStyle: goTextStyle(n.nested('ErrorStyle', 7)),
+    errorMaxLines: n.countOpt('ErrorMaxLines', 8),
+    floatingLabelBehavior: goEnumValue<FloatingLabelBehavior>(
+          FloatingLabelBehavior.values,
+          n.text('FloatingLabelBehavior', 9),
+        ) ??
+        FloatingLabelBehavior.auto,
+    isDense: n.flagOpt('IsDense', 10) ?? false,
+    contentPadding: goInsets(n.nested('ContentPadding', 11)),
+    isCollapsed: n.flagOpt('IsCollapsed', 12) ?? false,
+    iconColor: goColorOpt(n.countOpt('IconColor', 13)),
+    prefixStyle: goTextStyle(n.nested('PrefixStyle', 14)),
+    prefixIconColor: goColorOpt(n.countOpt('PrefixIconColor', 15)),
+    prefixIconConstraints: goConstraints(
+      n.nested('PrefixIconConstraints', 16),
+    ),
+    suffixStyle: goTextStyle(n.nested('SuffixStyle', 17)),
+    suffixIconColor: goColorOpt(n.countOpt('SuffixIconColor', 18)),
+    suffixIconConstraints: goConstraints(
+      n.nested('SuffixIconConstraints', 19),
+    ),
+    counterStyle: goTextStyle(n.nested('CounterStyle', 20)),
+    filled: n.flagOpt('Filled', 21) ?? false,
+    fillColor: goColorOpt(n.countOpt('FillColor', 22)),
+    activeIndicatorBorder: goBorderSide(n.nested('ActiveIndicatorBorder', 23)),
+    outlineBorder: goBorderSide(n.nested('OutlineBorder', 24)),
+    focusColor: goColorOpt(n.countOpt('FocusColor', 25)),
+    hoverColor: goColorOpt(n.countOpt('HoverColor', 26)),
+    alignLabelWithHint: n.flagOpt('AlignLabelWithHint', 27) ?? false,
+    constraints: goConstraints(n.nested('Constraints', 28)),
+    visualDensity: goDensity(n.nested('VisualDensity', 29)),
+  );
+}
+
+/// goListTileStyle reads the ListTileStyle struct of the Go side.
+ListTileThemeData? goListTileStyle(GoNode? n) {
+  if (n == null) return null;
+  return ListTileThemeData(
+    dense: n.flagOpt('Dense', 0),
+    shape: goShape(n.nested('Shape', 1)),
+    style: goEnumValue<ListTileStyle>(
+      ListTileStyle.values,
+      n.text('Style', 2),
+    ),
+    selectedColor: goColorOpt(n.countOpt('SelectedColor', 3)),
+    iconColor: goColorOpt(n.countOpt('IconColor', 4)),
+    textColor: goColorOpt(n.countOpt('TextColor', 5)),
+    titleTextStyle: goTextStyle(n.nested('TitleTextStyle', 6)),
+    subtitleTextStyle: goTextStyle(n.nested('SubtitleTextStyle', 7)),
+    leadingAndTrailingTextStyle: goTextStyle(
+      n.nested('LeadingAndTrailingTextStyle', 8),
+    ),
+    contentPadding: goInsets(n.nested('ContentPadding', 9)),
+    tileColor: goColorOpt(n.countOpt('TileColor', 10)),
+    selectedTileColor: goColorOpt(n.countOpt('SelectedTileColor', 11)),
+    horizontalTitleGap: n.sizeOpt('HorizontalTitleGap', 12),
+    minVerticalPadding: n.sizeOpt('MinVerticalPadding', 13),
+    minLeadingWidth: n.sizeOpt('MinLeadingWidth', 14),
+    minTileHeight: n.sizeOpt('MinTileHeight', 15),
+    enableFeedback: n.flagOpt('EnableFeedback', 16),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 17))),
+    visualDensity: goDensity(n.nested('VisualDensity', 18)),
+    titleAlignment: goEnumValue<ListTileTitleAlignment>(
+      ListTileTitleAlignment.values,
+      n.text('TitleAlignment', 19),
+    ),
+    controlAffinity: goEnumValue<ListTileControlAffinity>(
+      ListTileControlAffinity.values,
+      n.text('ControlAffinity', 20),
+    ),
+    isThreeLine: n.flagOpt('IsThreeLine', 21),
+  );
+}
+
+/// goMaterialBannerStyle reads the MaterialBannerStyle struct of the Go side.
+MaterialBannerThemeData? goMaterialBannerStyle(GoNode? n) {
+  if (n == null) return null;
+  return MaterialBannerThemeData(
+    backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
+    surfaceTintColor: goColorOpt(n.countOpt('SurfaceTintColor', 1)),
+    shadowColor: goColorOpt(n.countOpt('ShadowColor', 2)),
+    dividerColor: goColorOpt(n.countOpt('DividerColor', 3)),
+    contentTextStyle: goTextStyle(n.nested('ContentTextStyle', 4)),
+    elevation: n.sizeOpt('Elevation', 5),
+    padding: goInsets(n.nested('Padding', 6)),
+    leadingPadding: goInsets(n.nested('LeadingPadding', 7)),
+  );
+}
+
+/// goTabBarStyle reads the TabBarStyle struct of the Go side.
+TabBarThemeData? goTabBarStyle(GoNode? n) {
+  if (n == null) return null;
+  return TabBarThemeData(
+    indicator: goDecoration(n.nested('Indicator', 0)),
+    indicatorColor: goColorOpt(n.countOpt('IndicatorColor', 1)),
+    indicatorSize: goEnumValue<TabBarIndicatorSize>(
+      TabBarIndicatorSize.values,
+      n.text('IndicatorSize', 2),
+    ),
+    dividerColor: goColorOpt(n.countOpt('DividerColor', 3)),
+    dividerHeight: n.sizeOpt('DividerHeight', 4),
+    labelColor: goColorOpt(n.countOpt('LabelColor', 5)),
+    labelPadding: goInsets(n.nested('LabelPadding', 6)),
+    labelStyle: goTextStyle(n.nested('LabelStyle', 7)),
+    unselectedLabelColor: goColorOpt(n.countOpt('UnselectedLabelColor', 8)),
+    unselectedLabelStyle: goTextStyle(n.nested('UnselectedLabelStyle', 9)),
+    overlayColor: goStateColor(n.nested('OverlayColor', 10)),
+    mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 11))),
+    tabAlignment: goEnumValue<TabAlignment>(
+      TabAlignment.values,
+      n.text('TabAlignment', 12),
+    ),
+    indicatorAnimation: goEnumValue<TabIndicatorAnimation>(
+      TabIndicatorAnimation.values,
+      n.text('IndicatorAnimation', 13),
+    ),
+    splashBorderRadius: goRadius(n.nested('SplashBorderRadius', 14)),
+  );
+}
+
+/// goToolbarAnchors reads the ToolbarAnchors struct of the Go side.
+TextSelectionToolbarAnchors? goToolbarAnchors(GoNode? n) {
+  if (n == null) return null;
+  return TextSelectionToolbarAnchors(
+    primaryAnchor: goOffset(n.nested('PrimaryAnchor', 0)) ?? Offset.zero,
+    secondaryAnchor: goOffset(n.nested('SecondaryAnchor', 1)),
+  );
+}
+
+/// goSelectionGeometry reads the SelectionGeometry struct of the Go side. An
+/// empty Status gives "none", which means no selection.
+SelectionGeometry? goSelectionGeometry(GoNode? n) {
+  if (n == null) return null;
+  return SelectionGeometry(
+    status:
+        goEnumValue<SelectionStatus>(
+          SelectionStatus.values,
+          n.text('Status', 0),
+        ) ??
+        SelectionStatus.none,
+    hasContent: n.flag('HasContent', 1),
+  );
+}
+
+/// goSemanticsProps reads the SemanticsProperties struct of the Go side. It
+/// carries the same subset as the node ui.Semantics.
+SemanticsProperties? goSemanticsProps(GoNode? n, GoRuntime rt) {
+  if (n == null) return null;
+  return SemanticsProperties(
+    enabled: n.flagOpt('Enabled', 0),
+    checked: n.flagOpt('Checked', 1),
+    mixed: n.flagOpt('Mixed', 2),
+    selected: n.flagOpt('Selected', 3),
+    toggled: n.flagOpt('Toggled', 4),
+    button: n.flagOpt('Button', 5),
+    slider: n.flagOpt('Slider', 6),
+    keyboardKey: n.flagOpt('KeyboardKey', 7),
+    link: n.flagOpt('Link', 8),
+    header: n.flagOpt('Header', 9),
+    headingLevel: n.countOpt('HeadingLevel', 10),
+    textField: n.flagOpt('TextField', 11),
+    readOnly: n.flagOpt('ReadOnly', 12),
+    // Flutter holds focusable as deprecated, and the node ui.Semantics carries
+    // it too.
+    // ignore: deprecated_member_use
+    focusable: n.flagOpt('Focusable', 13),
+    focused: n.flagOpt('Focused', 14),
+    accessibilityFocusBlockType: goEnumValue<AccessibilityFocusBlockType>(
+      AccessibilityFocusBlockType.values,
+      n.text('AccessibilityFocusBlockType', 15),
+    ),
+    inMutuallyExclusiveGroup: n.flagOpt('InMutuallyExclusiveGroup', 16),
+    obscured: n.flagOpt('Obscured', 17),
+    multiline: n.flagOpt('Multiline', 18),
+    scopesRoute: n.flagOpt('ScopesRoute', 19),
+    namesRoute: n.flagOpt('NamesRoute', 20),
+    hidden: n.flagOpt('Hidden', 21),
+    image: n.flagOpt('Image', 22),
+    liveRegion: n.flagOpt('LiveRegion', 23),
+    expanded: n.flagOpt('Expanded', 24),
+    isRequired: n.flagOpt('IsRequired', 25),
+    maxValueLength: n.countOpt('MaxValueLength', 26),
+    currentValueLength: n.countOpt('CurrentValueLength', 27),
+    identifier: _txt(n.text('Identifier', 28)),
+    traversalParentIdentifier: _txt(n.text('TraversalParentIdentifier', 29)),
+    traversalChildIdentifier: _txt(n.text('TraversalChildIdentifier', 30)),
+    label: _txt(n.text('Label', 31)),
+    value: _txt(n.text('Value', 32)),
+    increasedValue: _txt(n.text('IncreasedValue', 33)),
+    decreasedValue: _txt(n.text('DecreasedValue', 34)),
+    hint: _txt(n.text('Hint', 35)),
+    tooltip: _txt(n.text('Tooltip', 36)),
+    textDirection: goEnumValue<TextDirection>(
+      TextDirection.values,
+      n.text('TextDirection', 37),
+    ),
+    role: goEnumValue<SemanticsRole>(
+      SemanticsRole.values,
+      n.text('Role', 38),
+    ),
+    validationResult:
+        goEnumValue<SemanticsValidationResult>(
+          SemanticsValidationResult.values,
+          n.text('ValidationResult', 39),
+        ) ??
+        SemanticsValidationResult.none,
+    minValue: _txt(n.text('MinValue', 40)),
+    maxValue: _txt(n.text('MaxValue', 41)),
+    onTap: goAction(n.action('OnTap', 42), rt),
+    onLongPress: goAction(n.action('OnLongPress', 43), rt),
+    onScrollLeft: goAction(n.action('OnScrollLeft', 44), rt),
+    onScrollRight: goAction(n.action('OnScrollRight', 45), rt),
+    onScrollUp: goAction(n.action('OnScrollUp', 46), rt),
+    onScrollDown: goAction(n.action('OnScrollDown', 47), rt),
+    onIncrease: goAction(n.action('OnIncrease', 48), rt),
+    onDecrease: goAction(n.action('OnDecrease', 49), rt),
+    onCopy: goAction(n.action('OnCopy', 50), rt),
+    onCut: goAction(n.action('OnCut', 51), rt),
+    onPaste: goAction(n.action('OnPaste', 52), rt),
+    onDismiss: goAction(n.action('OnDismiss', 53), rt),
+    onMoveCursorForwardByCharacter: goOnBool(
+      n.onFlag('OnMoveCursorForwardByCharacter', 54),
+      rt,
+    ),
+    onMoveCursorBackwardByCharacter: goOnBool(
+      n.onFlag('OnMoveCursorBackwardByCharacter', 55),
+      rt,
+    ),
+    onMoveCursorForwardByWord: goOnBool(
+      n.onFlag('OnMoveCursorForwardByWord', 56),
+      rt,
+    ),
+    onMoveCursorBackwardByWord: goOnBool(
+      n.onFlag('OnMoveCursorBackwardByWord', 57),
+      rt,
+    ),
+    onSetText: goOnStr(n.onText('OnSetText', 58), rt),
+    onDidGainAccessibilityFocus: goAction(
+      n.action('OnDidGainAccessibilityFocus', 59),
+      rt,
+    ),
+    onDidLoseAccessibilityFocus: goAction(
+      n.action('OnDidLoseAccessibilityFocus', 60),
+      rt,
+    ),
+    onFocus: goAction(n.action('OnFocus', 61), rt),
+    onExpand: goAction(n.action('OnExpand', 62), rt),
+    onCollapse: goAction(n.action('OnCollapse', 63), rt),
+  );
+}
+
+/// goExtentBuilder wraps a builder that gives the size of 1 item of a list.
+/// The host gives the 4 fields of the SliverLayoutDimensions as plain numbers,
+/// and a result below 0 gives the null of Dart, which holds the end of the
+/// list.
+ItemExtentBuilder? goExtentBuilder(
+  double Function(int, double, double, double, double)? f,
+) => f == null
+    ? null
+    : (int index, SliverLayoutDimensions d) {
+        final double v = f(
+          index,
+          d.scrollOffset,
+          d.precedingScrollExtent,
+          d.viewportMainAxisExtent,
+          d.crossAxisExtent,
+        );
+        return v < 0 ? null : v;
+      };

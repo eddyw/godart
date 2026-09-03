@@ -335,23 +335,32 @@ const _scalars = <String, GoType>{
   // The theme of 1 widget family, and the value type of it. Read
   // flutter/ui/themes.go.
   'ActionIconThemeData': GoType('ActionIconStyle', 'actionIconStyle'),
+  'AppBarThemeData': GoType('AppBarStyle', 'appBarStyle'),
   'BadgeThemeData': GoType('BadgeStyle', 'badgeStyle'),
+  'BottomAppBarThemeData': GoType('BottomAppBarStyle', 'bottomAppBarStyle'),
   'BottomNavigationBarThemeData':
       GoType('BottomNavigationBarStyle', 'bottomNavigationBarStyle'),
   'ButtonBarThemeData': GoType('ButtonBarStyle', 'buttonBarStyle'),
   'ButtonThemeData': GoType('ButtonThemeStyle', 'buttonThemeStyle'),
+  'CardThemeData': GoType('CardStyle', 'cardStyle'),
   'CarouselViewThemeData': GoType('CarouselViewStyle', 'carouselViewStyle'),
   'CheckboxThemeData': GoType('CheckboxStyle', 'checkboxStyle'),
   'ChipThemeData': GoType('ChipStyle', 'chipStyle'),
   'CupertinoThemeData': GoType('CupertinoStyle', 'cupertinoStyle'),
   'DataTableThemeData': GoType('DataTableStyle', 'dataTableStyle'),
   'DatePickerThemeData': GoType('DatePickerStyle', 'datePickerStyle'),
+  'DialogThemeData': GoType('DialogStyle', 'dialogStyle'),
   'DividerThemeData': GoType('DividerStyle', 'dividerStyle'),
   'DrawerThemeData': GoType('DrawerStyle', 'drawerStyle'),
   'DropdownMenuThemeData': GoType('DropdownMenuStyle', 'dropdownMenuStyle'),
   'ExpansionTileThemeData': GoType('ExpansionTileStyle', 'expansionTileStyle'),
   'FloatingActionButtonThemeData':
       GoType('FloatingActionButtonStyle', 'floatingActionButtonStyle'),
+  'InputDecorationThemeData':
+      GoType('InputDecorationStyle', 'inputDecorationStyle'),
+  'ListTileThemeData': GoType('ListTileStyle', 'listTileStyle'),
+  'MaterialBannerThemeData':
+      GoType('MaterialBannerStyle', 'materialBannerStyle'),
   'MenuStyle': GoType('MenuStyle', 'menuStyle'),
   'NavigationBarThemeData': GoType('NavigationBarStyle', 'navigationBarStyle'),
   'NavigationDrawerThemeData':
@@ -370,6 +379,7 @@ const _scalars = <String, GoType>{
   'SliderThemeData': GoType('SliderStyle', 'sliderStyle'),
   'SnackBarThemeData': GoType('SnackBarStyle', 'snackBarStyle'),
   'SwitchThemeData': GoType('SwitchStyle', 'switchStyle'),
+  'TabBarThemeData': GoType('TabBarStyle', 'tabBarStyle'),
   'TextSelectionThemeData': GoType('TextSelectionStyle', 'textSelectionStyle'),
   'TimePickerThemeData': GoType('TimePickerStyle', 'timePickerStyle'),
   'ToggleButtonsThemeData': GoType('ToggleButtonsStyle', 'toggleButtonsStyle'),
@@ -388,6 +398,11 @@ const _scalars = <String, GoType>{
   'NavigationRailDestination': GoType('RailItem', 'railItem'),
   'Step': GoType('Step', 'step'),
   'ContextMenuButtonItem': GoType('MenuButtonItem', 'menuItem'),
+  // The place of a text selection toolbar, the shape of 1 selection, and the
+  // semantic meaning of a subtree. Each 1 holds a value alone.
+  'TextSelectionToolbarAnchors': GoType('ToolbarAnchors', 'toolbarAnchors'),
+  'SelectionGeometry': GoType('SelectionGeometry', 'selectionGeometry'),
+  'SemanticsProperties': GoType('SemanticsProperties', 'semanticsProps'),
   'List<DataColumn>': GoType('[]DataColumn', 'columns', pointer: false),
   'List<DataRow>': GoType('[]DataRow', 'rows', pointer: false),
   'List<ContextMenuButtonItem>':
@@ -557,6 +572,15 @@ GoType? mapFunction(Reading out, FunctionType t) {
       kinds.first == 'BuildContext' &&
       kinds[1] == 'bool') {
     return const GoType('SliverBuilder', 'buildSlivers', pointer: false);
+  }
+  // The size of 1 item of a list. The host gives the 4 fields of the
+  // SliverLayoutDimensions as plain numbers, and a result below 0 stands for
+  // the null of Dart. Read decision 273.
+  if (ret == 'double' &&
+      kinds.length == 2 &&
+      kinds.first == 'int' &&
+      kinds[1] == 'SliverLayoutDimensions') {
+    return const GoType('ExtentBuilder', 'buildExtent', pointer: false);
   }
   return null;
 }

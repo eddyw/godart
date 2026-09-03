@@ -2142,6 +2142,53 @@ The plan left these points open. The work took the decisions below.
      names that type under an ignore. The whole node set compiles. The host
      mode with `-all` writes a case for each of the 550 types, and
      `flutter analyze` of `goflutter` reports no issue.
+312. `gart test` runs the seed corpus of a fuzz target. `go test` with no
+     `-fuzz` flag runs each `FuzzXxx` function as a test. It calls the body 1
+     time for each seed of `f.Add`, and 1 time for each file of
+     `testdata/fuzz/<name>`. Each run is a subtest. The overlay held a
+     `testing.F` whose each method panicked, and the driver wrote a skip line
+     for the target.
+
+     `testing.F` now holds a `*T`. Thus each log line, each cleanup, each skip,
+     and the result line follow the path of a test. `F.Add` collects the values
+     of 1 seed. `F.Fuzz` reads the type of the body, reads the corpus files, and
+     runs the body 1 time for each input through `T.runSub`. `T.Run` maps a
+     space of a name to an underscore, and `runSub` keeps the exact name. Go
+     names a subtest of a fuzz target by the corpus file itself.
+
+     The call path is `syscall/dart`, and not `reflect`. `dart.DescOf`,
+     `dart.DescIn`, and `dart.CallValue` give the type of the body and the call.
+     `reflect` reads the same 3 intrinsics, thus the direct path holds the same
+     meaning and it keeps `reflect` out of each test binary.
+     `dart.DescIn(desc, 0)` compares with `dart.DescOf(f.t)`, thus the test of
+     the `*T` parameter needs no text of a type name.
+
+     The parser of a corpus file holds the grammar of
+     `internal/fuzz/encoding.go` of Go. It reads each of the 15 types that
+     `f.Add` accepts, and it also reads `math.Float32frombits` and
+     `math.Float64frombits`. The first line must read `go test fuzz v1`. Go
+     parses a value line with `go/parser`, and the overlay cannot. The name of
+     the type stands in front of the first parenthesis, and the literal stands
+     between that parenthesis and the last byte. The 2 rules agree, because a
+     parenthesis of a literal stands between the quotes.
+
+     `internal/load/testmain.go` writes the list of the fuzz targets into the
+     generated entry point, next to the list of the tests and of the examples.
+     `testing.Main` and `testing.MainWith` each take that list. `M.Run` runs the
+     targets after the tests and in front of the examples, which is the order of
+     Go.
+
+     The skip line of the driver leaves with the work. A fuzz target was the
+     only function that gart did not run, thus `Binary.Skips`, `SkipCause`, and
+     the loop of `driver.Test` hold nothing now.
+     `testdata/tests/unsupported` joins the comparison of `TestTests`, and it
+     now matches `go test` for the whole module. The new module
+     `testdata/tests/fuzzseed` proves each type of the parser with 6 targets, 11
+     seeds, and 12 corpus files.
+
+     `gart test` holds no `-fuzz` flag, and the command rejects `-fuzz` with
+     `flag provided but not defined: -fuzz`. Thus a run that asks for new inputs
+     gets a clear cause, and it never reports a success for the seeds alone.
 
 ## Answered questions of 2026-08-31
 
@@ -2262,3 +2309,33 @@ The plan left these points open. The work took the decisions below.
 - Does a `range` loop over a function stay outside the subset? No. Stage 2
   accepts it, and `TestRangeFuncBranch` of `internal/verify` proves the rule.
   Read decision 39 and decision 47.
+
+313. The node set holds 564 types with 4975 fields, and 119 constructors stay
+     out. 4 groups of decision 311 closed, and each 1 took the value form that
+     the project already holds.
+
+     `TextSelectionToolbarAnchors` blocked 7 constructors, and `ui.ToolbarAnchors`
+     carries the 2 offsets. `SemanticsProperties` blocked 2, and
+     `SelectionGeometry` blocked 2. A `double? Function(int,
+     SliverLayoutDimensions)` blocked 3, and `ui.ExtentBuilder` answers it: the
+     host gives the 4 fields of the Dart object as plain numbers, exactly as
+     `ui.BoxBuilder` of decision 273 does. A result below 0 stands for the null
+     of Dart, thus it means "no item at that number".
+
+     8 more theme types entered as a value type each: `AppBarStyle`,
+     `BottomAppBarStyle`, `CardStyle`, `DialogStyle`, `InputDecorationStyle`,
+     `ListTileStyle`, `MaterialBannerStyle`, and `TabBarStyle`. Each 1 stands
+     as an optional field of a node that already mapped, thus the count of the
+     nodes does not change and the count of the fields grows.
+
+     `Listenable` blocks 2 constructors and it stays out. An identity key would
+     name an object that the host owns, and no widget of the 2 gives the host a
+     way to build one: the value that Flutter wants is the notifier of the
+     program, and a Go program holds no Dart notifier. A signal of
+     `gart.dev/ui` names the change on the Go side already, thus the 2
+     constructors need no key.
+
+     `startSelectionPoint`, `endSelectionPoint`, and `selectionRects` of
+     `SelectionGeometry` stay out. A `SelectionPoint` demands a handle type
+     that holds no default of Flutter, thus an empty Go text would name no
+     value.

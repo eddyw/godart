@@ -101,3 +101,15 @@ type Task func(done func())
 // Ask is work that the host waits for, and that gives an answer. A back button
 // listener reads 1. The rule of Task applies to the answer.
 type Ask func(answer func(bool))
+
+// ExtentBuilder gives the size of 1 item of a list on the main axis. The first
+// argument holds the number of the item, and the 4 numbers after it hold the
+// fields of the Flutter SliverLayoutDimensions: the scroll offset, the
+// preceding scroll extent, the main axis extent of the viewport, and the cross
+// axis extent. Read decision 273.
+//
+// A result below 0 means "no item at that number", and Flutter then holds the
+// end of the list. A size of 0 is a valid size. The rule of Builder applies.
+//
+//gart:sync
+type ExtentBuilder func(index int, scrollOffset, precedingScrollExtent, viewportMainAxisExtent, crossAxisExtent float64) float64
