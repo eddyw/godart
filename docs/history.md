@@ -88,6 +88,7 @@ behind a green run of `make ci`.
 | `2ce75a2` | 166 names join the overlay of 9 packages. |
 | `060eef2` | `reflect.FuncOf` builds a function type at run time. |
 | `1b17894` | A pointer to an erased type wrote 2 question marks. |
+| `51595dc` | An operand list takes the order of the evaluation of gc. |
 
 **The open file limit of the machine.** The user ran out of file descriptors 3
 times and restarted the Mac each time. A sampler of `sysctl kern.num_files`
@@ -130,6 +131,16 @@ That is 20 times the 8.66 microseconds of the Go tree of A5.
 
 **The skip table holds 30 entries, and it held 43.** 3 of the 4 that stay hold
 a corrected cause, because the old text named the wrong thing.
+
+**The order of the evaluation.** gart read a non-call operand before a call of
+the same list, and gc reads it after. The specification leaves that order open,
+and real Go source depends on the answer of gc. The port of
+`crypto/x509.ParseOID` gave an empty OID until a person split the statement.
+Stage 4 holds the rule of gc now, at a cost of 2.8% more lines of Dart over 198
+programs. Each operation of a statement must take a variable when any 1 does,
+because a partial hoist would break the left to right order of the calls
+themselves. 5 positions still differ, and 4 of the 5 hold no place for a Dart
+statement in front of them.
 
 ### 2026-09-01, the eighth session
 
