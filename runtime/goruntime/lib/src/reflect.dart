@@ -740,12 +740,17 @@ TypeDesc _withReceiver(TypeDesc recv, TypeDesc sig) => TypeDesc(
   zero: () => null,
 );
 
-/// _funcText writes a function type in the form of Go, with 1 receiver in front
-/// of each parameter.
+/// _funcText writes a function type in the form of Go. recv stands in front of
+/// each parameter, and it is empty for a function type that holds no receiver.
 String _funcText(String recv, TypeDesc sig, String Function(TypeDesc) name) {
   final StringBuffer b = StringBuffer('func(')..write(recv);
+  var first = recv.isEmpty;
   for (int i = 0; i < sig.params.length; i++) {
-    b.write(', ');
+    if (first) {
+      first = false;
+    } else {
+      b.write(', ');
+    }
     final TypeDesc p = sig.params[i]();
     if (sig.variadic && i == sig.params.length - 1) {
       final TypeDesc? e = p.elem?.call();
@@ -1158,6 +1163,49 @@ int $sliceOf(int elem) {
           _withType<Object?>(e, <T>() => Slice<T>.of(_zeros<T>(e, n))),
       withType: <R>(R Function<T>() f) =>
           _withType<R>(e, <T>() => f<Slice<T>>()),
+    ),
+  );
+}
+
+/// A handle of the function type of a parameter list and a result list.
+///
+/// The Dart type of a function holds the type of each parameter, and that
+/// type lives only in the emitted code. A signature that the program already
+/// names thus gives its own descriptor, with its bind factory. A signature
+/// that no code names gives a descriptor with no bind, and reflect.MakeFunc
+/// of it panics with the cause.
+int $funcOf(Slice<GoInt> params, Slice<GoInt> results, bool variadic) {
+  final List<TypeDesc Function()> input = <TypeDesc Function()>[];
+  for (int i = 0; i < params.len; i++) {
+    final TypeDesc d = _typeAt($ix(params[i]));
+    input.add(() => d);
+  }
+  final List<TypeDesc Function()> output = <TypeDesc Function()>[];
+  for (int i = 0; i < results.len; i++) {
+    final TypeDesc d = _typeAt($ix(results[i]));
+    output.add(() => d);
+  }
+  // The name of the type reads the parts of the type, thus a shape carries
+  // them before the description itself stands.
+  final TypeDesc shape = TypeDesc(
+    '',
+    'func',
+    const <String, Function>{},
+    params: input,
+    results: output,
+    variadic: variadic,
+  );
+  return _syntheticHandle(
+    () => TypeDesc(
+      _funcText('', shape, (TypeDesc d) => d.name),
+      'func',
+      const <String, Function>{},
+      text: _funcText('', shape, (TypeDesc d) => d.display),
+      params: input,
+      results: output,
+      variadic: variadic,
+      comparable: false,
+      zero: () => null,
     ),
   );
 }

@@ -325,6 +325,12 @@ func SliceOf(elem int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// FuncOf gives the handle of the function type of a parameter list, a result
+// list, and the variadic flag.
+func FuncOf(params, results []int, variadic bool) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ArrayOf gives the handle of the array type of a length and an element type.
 func ArrayOf(length, elem int) int {
 	panic("syscall/dart needs the gart compiler")

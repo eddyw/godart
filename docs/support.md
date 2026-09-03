@@ -69,7 +69,7 @@ sixteenth session:
 | `sync/atomic` | 90/94 | 95% | The 4 `unsafe.Pointer` functions. `Pointer[T]` holds the same 4 operations with a typed pointer. |
 | `os` | 195/207 | 94% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr`, and the 3 time names of `ProcessState`. `dart:io` hides the descriptor, and it reports no CPU time. |
 | `os/exec` | 44/49 | 89% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, and the 3 time names of `ExitError` |
-| `reflect` | 180/188 | 95% | `FuncOf`, `StructOf`, `Method.Func`, `NewAt`, `SliceAt`, `Value.SetPointer`, `Value.InterfaceData`, `Value.UnsafeAddr`. Each 1 needs a type that no emitted code names, or an address. |
+| `reflect` | 181/188 | 96% | `StructOf`, `Method.Func`, `NewAt`, `SliceAt`, `Value.SetPointer`, `Value.InterfaceData`, `Value.UnsafeAddr`. Each 1 needs a type that no emitted code names, or an address. Read decision 325 for `Method.Func`. |
 | `encoding/json` | 67/92 | 72% | The option set of the v2 implementation, and the field `Type` of each error. `encoding/json/v2` stands outside the surface, and a `reflect.Type` costs the whole `reflect` library. |
 | `testing` | 145/145 | 100% | Full since 2026-09-03. |
 | `net/http` | 361/392 | 92% | `HTTP2Config`, `ClientConn`, `ServeTLS`, and `Transport.TLSHandshakeTimeout`. The runtime owns the HTTP/2 frame layer, and the secure socket of Dart takes over no socket that stands open. |

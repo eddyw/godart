@@ -891,6 +891,30 @@ func (v Value) descOf() int { return dart.DescOf(v.read()) }
 // SliceOf gives the slice type of an element type.
 func SliceOf(t Type) Type { return typeOf(dart.SliceOf(t.handle())) }
 
+// FuncOf gives the function type of a parameter list, a result list, and the
+// variadic flag.
+//
+// A signature that the program already names gives the type of that
+// signature, thus FuncOf of it equals TypeOf of a value of it and MakeFunc of
+// it works. A signature that no code names gives a type with the right shape
+// and the right text, and MakeFunc of it panics with the cause. The Dart type
+// of a function holds the type of each parameter, and no run time call builds
+// such a type.
+func FuncOf(in, out []Type, variadic bool) Type {
+	if variadic && (len(in) == 0 || in[len(in)-1].Kind() != Slice) {
+		panic("reflect.FuncOf: last arg of variadic func must be slice")
+	}
+	params := make([]int, len(in))
+	for i, t := range in {
+		params[i] = t.handle()
+	}
+	results := make([]int, len(out))
+	for i, t := range out {
+		results[i] = t.handle()
+	}
+	return typeOf(dart.FuncOf(params, results, variadic))
+}
+
 // ArrayOf gives the array type of a length and an element type.
 func ArrayOf(length int, t Type) Type {
 	if length < 0 {

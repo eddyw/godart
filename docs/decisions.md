@@ -2877,3 +2877,39 @@ The plan left these points open. The work took the decisions below.
      Each flag of the emitter takes a position, and not a name. A named
      argument gives no defect of its own, and 1 rule for each call site is
      easier to hold.
+
+325. `reflect.FuncOf` builds a function type at run time, and
+     `reflect.Method.Func` stays out with a measured cause. The 2 names were
+     the last of the reflect gap that needed a change of the Dart runtime
+     library.
+
+     The Dart type of a function holds the type of each parameter, and that
+     type lives only in the emitted code. No run time call builds such a type,
+     thus a function type that a program builds at run time can hold no Dart
+     type of its own.
+
+     `$funcOf` answers it through `_syntheticHandle`, which the type
+     constructors of a slice, an array, and a map already read. A signature
+     that the program already names gives its own descriptor, with its `bind`
+     factory. `FuncOf(...) == TypeOf(f)` thus holds, and `MakeFunc` of the
+     result gives a value that a type assertion reads.
+     `testdata/programs/funcof` proves each 1.
+
+     A signature that no code names gives a descriptor with the right shape
+     and the right text, and `MakeFunc` of it panics with the cause that
+     decision 255 wrote. Go builds such a value, thus the 2 differ. A program
+     that names the signature 1 time reaches the whole behavior of Go.
+     `docs/parity.md` holds the case.
+
+     `Method.Func` needs a `bind` factory on the signature that
+     `_withReceiver` builds, and that signature carries the receiver in front
+     of each parameter. Only the emitter can write such a factory, and it must
+     write 1 for each exported method of each type of a method table. The
+     program `testdata/programs/httpserve` holds 431 such tables with 2025
+     entries, and a factory of about 120 bytes each adds about 243,000 bytes.
+     That is 2.7% of the 8,957,501 bytes of Dart source of the program, on
+     each program, for 1 name that a program rarely reads.
+
+     The measure follows the rule of item 9 of the next list, which keeps
+     `crypto/rand.Int` out to keep `math/big` out of a TLS program. `reflect`
+     holds 181 of 188 names now.

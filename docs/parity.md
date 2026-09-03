@@ -131,7 +131,9 @@ form.
 | `MakeSlice`, `MakeMap`, `New`, `Zero` of such a type | A value of the type | Equal. A struct descriptor and each named descriptor carry a factory of the Dart type since 2026-09-03. |
 | A type assertion of such a value to its Go type | The value | Equal since 2026-09-03. |
 | `MakeFunc` | Present | Equal for each function type that the program names. The descriptor of a signature carries a bind factory that builds a closure of the exact Dart type. A type that the program never names holds no factory, and `MakeFunc` of it panics with that cause. |
-| `FuncOf`, `StructOf` | Present | Not present. Each 1 builds a type that no emitted code names, thus no factory exists for it. `FuncOf` also needs a builder of a function type in the runtime library, next to `$sliceOf` and its 3 companions. |
+| `FuncOf` | Present | Present. A signature that the program names 1 time gives its own description, thus the type equals the type of a value of it and `MakeFunc` of it works. A signature that no code names gives the shape and the text of Go, and `MakeFunc` of it panics with the cause, where Go builds a value. Read decision 325. |
+| `StructOf` | Present | Not present. It builds a type that no emitted code names, thus no factory exists for it. |
+| `Method.Func` | Present | Not present. The field needs a factory of the Dart type of each method, with the receiver in front. The emitter must write 1 for each exported method of each type of a method table, and that costs 2.7% of the Dart source of a program. Read decision 325. |
 | `Method.Func` | A func value whose first parameter is the receiver | Not present. `_withReceiver` builds that type with no bind factory, thus `MakeFunc` of it panics. |
 | A function that gives up control | Runs inside `Value.Call` and inside a `MakeFunc` body | Rejected with a clear cause. |
 | A method value, from `Method`, `MethodByName`, or `Value.Method` | A function value of the method | Equal. The bind factory of the signature gives a closure of the exact Dart type, thus an assertion to a function type with a result reads. Decision 228 held the old limit. |
