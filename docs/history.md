@@ -73,6 +73,64 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-04, the sixteenth session
+
+The user asked for each open task, end to end. 3 agents ran on disjoint
+directories, and the main session held the compiler core, the runtime, and the
+docs. The branch `backlog-43` holds 6 commits of the session, and each 1 stands
+behind a green run of `make ci`.
+
+| Commit | Content |
+|---|---|
+| `ba28b10` | An index and a slice bound of an unsigned type write the unsigned value. |
+| `36f8eae` | 13 defects of the skip table, and the wasm build of a bound flag. |
+| `fa22342` | The per frame cost of A9 is measured. |
+| `2ce75a2` | 166 names join the overlay of 9 packages. |
+| `060eef2` | `reflect.FuncOf` builds a function type at run time. |
+| `1b17894` | A pointer to an erased type wrote 2 question marks. |
+
+**The open file limit of the machine.** The user ran out of file descriptors 3
+times and restarted the Mac each time. A sampler of `sysctl kern.num_files`
+named `go mod tidy` of `gopls` at 5273 open files, 3 seconds after the editor
+started, and the report of the user named 10004 for the same process. The
+suite writes more than 1100 temporary Go modules, and `gopls` reads each 1
+that appears. The repository answered its own half: 3 helpers ran
+`exec.Command` with no deadline, and a probe proved that a deadline alone
+leaves an orphan, because `go run` starts the program as a child of its own.
+Each command takes a process group now, and `spawnSlots` holds 8 slots. A full
+run peaked at 8496 open files, against a limit of 491520.
+
+**11 defects behind the 5 silent wrong answers.** 3 of the 5 entries held more
+than 1. The hash of a key with no identity gave 0 in silence. A store through
+a nil pointer gave an error of Dart. A conversion of a slice to an array held
+3. The method table held 3. `reflect.MapIter` held a snapshot of the keys, and
+`reflect.Value.Clear` removed each key by a read, thus each NaN entry stayed,
+because a NaN never compares equal to itself.
+
+**A lost recover.** `runRecovered` kept the state of the outer chain in 2
+variables of the library, and a deferred call that opens a chain of its own
+overwrote them. A function that Go returns from normally let the panic escape.
+`fixedbugs/issue48898` gave `1` where Go gives `1234`.
+
+**A defect of dart2wasm.** A call that fills an optional parameter of a method
+of `GoString` crashes the type flow analysis of the Dart VM. A bisect against
+the last green tree proved each half, and the unsigned string index moved to a
+top level function.
+
+**166 names of the overlay.** `crypto/x509` went from 115 to 193, `net` from
+218 to 259, `net/http` from 341 to 361, and 6 more packages grew.
+`docs/support.md` holds a table of each name that stays out, with its cause. 3
+names were written, measured, and removed again, because each 1 gave a wrong
+answer or cost more than it gave.
+
+**The A9 measure.** A tree of 200 nodes costs 169.8 microseconds for an encode
+and a decode of an `rfw` blob, which is 1.02% of the frame budget at 60 hertz.
+That is 20 times the 8.66 microseconds of the Go tree of A5.
+`flutter/rfwbench` holds the harness.
+
+**The skip table holds 30 entries, and it held 43.** 3 of the 4 that stay hold
+a corrected cause, because the old text named the wrong thing.
+
 ### 2026-09-01, the eighth session
 
 The session measured the surface and wrote `docs/support.md`. A throwaway

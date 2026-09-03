@@ -16,9 +16,9 @@ The surface holds 170 import paths: 140 standard packages, the interop package
 `golang.org/x`. Stage 2 rejects an import of each other package with a source
 position.
 
-91 of the 103 hold each exported name of Go, and 12 hold a part of them.
-`docs/support.md` holds the level of each one and the largest gap of each
-partial package. `make surface` measures each one again.
+`make surface` measures 123 of them against the real API of Go. 112 hold each
+exported name, and 11 hold a part. `docs/support.md` holds the level of each 1
+and the largest gap of each partial package.
 
 | Present | Absent |
 |---|---|

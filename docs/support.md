@@ -45,7 +45,10 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-91 of the 103 standard packages hold each exported name of Go.
+112 of the 123 measured packages hold each exported name of Go. The table
+below names the 91 of them that this document lists by form. The 21 that stay
+out of the table are the packages of `docs/library.md` that no standard list
+of this document holds.
 
 | Form | Packages |
 |---|---|
