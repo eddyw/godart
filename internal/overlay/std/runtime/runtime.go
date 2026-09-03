@@ -19,6 +19,12 @@ import (
 // All Go code of gart runs in 1 isolate, thus the count is always 1.
 func GOMAXPROCS(n int) int { return 1 }
 
+// SetDefaultGOMAXPROCS writes the default value of GOMAXPROCS again.
+//
+// All Go code of gart runs in 1 isolate. Thus the default is 1, GOMAXPROCS
+// already gives 1, and the call needs no operation.
+func SetDefaultGOMAXPROCS() {}
+
 // NumCPU gives the count of processors that the program uses. The value is
 // always 1, exactly as GOMAXPROCS.
 func NumCPU() int { return 1 }

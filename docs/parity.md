@@ -26,9 +26,9 @@ The state of 2026-09-03. Each row names the section that holds the detail.
 | The zone of a date before 1901 | The modern offset of the zone. Dart names the zone, and Go reads its own database. |
 | The file access | Synchronous, through `dart:io`. No handle of a directory, and no file descriptor. `Chmod`, `Chown`, and `Chtimes` reach a path, and `Stat` still reports a fixed mode. |
 | The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. `Getuid` and its family give -1. |
-| The network access | TCP, UDP, and a Unix socket. `IP`, `IPMask`, `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, `IPAddr`, and `UnixAddr` are present. The overlay holds a resolver of the DNS since 2026-09-02, thus the whole `Lookup` family reads. |
+| The network access | TCP, UDP, and a Unix socket. `IP`, `IPMask`, `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, `IPAddr`, `UnixAddr`, `TCPListener`, and `UnixListener` are present. The overlay holds a resolver of the DNS since 2026-09-02, thus the whole `Lookup` family reads. No raw socket, no file descriptor, and no socket option. |
 | HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, a multipart form, and the file server family (`FileServer`, `FileServerFS`, `FS`, `Dir`) are present. |
-| TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. |
+| TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. `http.ListenAndServeTLS` and the `tls.Dialer` read since 2026-09-04. `crypto/x509` parses a certificate, a request, and a revocation list, and it checks no signature. |
 | JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `TextMarshaler`, `TextUnmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. The text of a syntax error of `Token` differs. |
 | `gart test` | The format of `go test`, with `t.Parallel`, `-cover`, `-short`, and `-count`. It runs each example, and it runs the seed corpus of each fuzz target. No `-fuzz` flag, thus it generates no input. |
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
@@ -99,7 +99,8 @@ The package `fmt` reads it.
 | `Type.PkgPath` | Present since 2026-09-03. A named type gives the import path of its package, and each other type gives an empty text. |
 | `Value.Elem` of a value that is not a pointer | Panics. Go gives the value inside an interface. |
 | `Type.Size`, `Type.Align`, `Type.FieldAlign`, `StructField.Offset` | Present. The result follows the rules of a 64-bit machine, exactly as the compiler of Go computes them. |
-| `Type.Align`, `Type.FieldAlign`, `Value.UnsafeAddr` | Not present. The target has no memory layout. |
+| `Value.UnsafeAddr` | Not present. Go gives the address of the value, and Dart gives no address. `Value.Addr` builds a new cell at each call for a field of a scalar type, thus 2 reads of 1 field would give 2 numbers. |
+| `reflect.SliceHeader`, `reflect.StringHeader` | Present since 2026-09-04. Each field holds a plain number, thus a read gives the value that the program wrote. The subset rejects the import of `unsafe`, thus no conversion of a slice or of a string reaches a header. |
 | `Value.Complex` and `Value.SetComplex` | Not present. `Complex64` and `Complex128` stand in the kind set, and no `Value` method reads such a value. |
 | `Type.NumMethod`, `Type.Method`, `Value.NumMethod`, `Value.Method` | Present. The order follows the name, exactly as in Go. `Method` gives the name and the index only. |
 | `Value.IsNil`, `Value.MapIndex` | Present |
@@ -130,7 +131,8 @@ form.
 | `MakeSlice`, `MakeMap`, `New`, `Zero` of such a type | A value of the type | Equal. A struct descriptor and each named descriptor carry a factory of the Dart type since 2026-09-03. |
 | A type assertion of such a value to its Go type | The value | Equal since 2026-09-03. |
 | `MakeFunc` | Present | Equal for each function type that the program names. The descriptor of a signature carries a bind factory that builds a closure of the exact Dart type. A type that the program never names holds no factory, and `MakeFunc` of it panics with that cause. |
-| `FuncOf`, `StructOf` | Present | Not present. Each 1 builds a type that no emitted code names, thus no factory exists for it. |
+| `FuncOf`, `StructOf` | Present | Not present. Each 1 builds a type that no emitted code names, thus no factory exists for it. `FuncOf` also needs a builder of a function type in the runtime library, next to `$sliceOf` and its 3 companions. |
+| `Method.Func` | A func value whose first parameter is the receiver | Not present. `_withReceiver` builds that type with no bind factory, thus `MakeFunc` of it panics. |
 | A function that gives up control | Runs inside `Value.Call` and inside a `MakeFunc` body | Rejected with a clear cause. |
 | A method value, from `Method`, `MethodByName`, or `Value.Method` | A function value of the method | Equal. The bind factory of the signature gives a closure of the exact Dart type, thus an assertion to a function type with a result reads. Decision 228 held the old limit. |
 | `Value.Pointer`, `Value.UnsafePointer` | The machine address | The identity of the object. 2 reads of the same object give the same number, and the number names no memory, thus `runtime.FuncForPC` of it gives nil. |
@@ -166,6 +168,14 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | `runtime.GC` | Runs a collection and waits for it | Allocates a block of garbage and gives up control. Dart holds no call that forces a collection, thus a cleanup can stay for a later call. |
 | The stack of a goroutine | Grows without a fixed limit | The Dart VM holds a fixed stack, thus a deep recursion overflows. `stack.go` of the Go repository is such a program. |
 | `runtime.GOROOT` | The root of the Go tree | An empty text. The Dart output holds no such tree. |
+| `runtime.GoroutineProfile`, `runtime.StackRecord` | 1 record for each live goroutine | Present since 2026-09-04. The scheduler gives the frames of each goroutine that waits, and a program counter is an index of a table of the runtime. Go stops the world for the read, and 1 isolate needs no stop. |
+| `runtime.Pinner` | The collector moves the object no more, and it frees it no more | Present since 2026-09-04. The Pinner keeps a reference, thus the collector of Dart frees no pinned object. The subset holds no address, thus no program reads the position of an object. Go ends the program when a Pinner reaches the collector with a pin, and gart writes no such report. |
+| `runtime.CPUProfile` | Panics with `CPUProfile no longer available` | Equal since 2026-09-04. Go removed the operation. |
+| `runtime.SetDefaultGOMAXPROCS` | Writes the default value again | Present since 2026-09-04. All Go code runs in 1 isolate, thus the value is already 1 and the call needs no operation. |
+| `runtime.MemStats`, `runtime.ReadMemStats` | The numbers of the heap | Not present. The Dart VM reports no number of its heap inside the process. Read `docs/support.md`. |
+| The memory profile, the block profile, the mutex profile, and the trace | Present | Not present. The Dart VM counts no allocation, no block, and no contention, and it writes no event of the tracer of Go. |
+| `runtime.SetFinalizer` | The finalizer takes the object itself | Not present. A Dart `Finalizer` must hold no reference of the object that it watches. `runtime.AddCleanup` maps to the Dart form. |
+| `runtime.Breakpoint` | A trap of the machine | Not present. `debugger` of `dart:developer` waits for a client of the service with no report, and Go ends the program with SIGTRAP. |
 | `debug.SetMaxStack` | Writes the limit of the runtime | Keeps the value only. |
 | `filepath.EvalSymlinks` | Walks each element itself | Asks the system for the resolved path. A relative argument takes `Rel` against the resolved working directory, thus the result stays relative in each usual case. The error of a missing path holds a different text. |
 | A panic of a run time error that recover reads | The value implements `error`, and `Error()` gives the text | Equal in the text. The value carries the description `runtime.errorString` in each case, and Go also holds `runtime.plainError` and `*runtime.TypeAssertionError`. A type switch on the recovered value thus reads 1 type where Go reads 3. |
@@ -376,34 +386,53 @@ report support and change nothing. `Config.PreferServerCipherSuites` is the 1
 field that stands, and Go documents it as ignored.
 
 `Certificate` holds the DER chain and the parsed leaf since 2026-09-03, and
-`X509KeyPair` fills the 2 as Go 1.23 does. `ConnectionState.PeerCertificates`
+`X509KeyPair` fills the 2 as Go 1.23 does. `LoadX509KeyPair` reads the 2 PEM
+files of the file system since 2026-09-04. `ConnectionState.PeerCertificates`
 and `Config.RootCAs` each stay out, because the runtime holds no call that
 reads the peer certificate of a secure socket.
 
+| Item | Go | godart |
+|---|---|---|
+| `Dialer` | `NetDialer`, `Config`, `Dial`, `DialContext` | Equal. The dial runs on a goroutine, and the select takes the first of the dial, the context, and the cancel channel of the `net.Dialer`. |
+| `DialWithDialer` | The timeout covers the dial and the handshake | Equal in the result. 1 call of the runtime opens the socket and runs the handshake, thus the limit covers the 2 together. |
+| `NetDialer.Resolver` | Reads the host name, and the handshake keeps the name of the user | Equal. The dial takes the address that the resolver gave, and `ServerName` of the config wins over the host name. |
+| `Conn.Handshake`, `Conn.HandshakeContext` | Runs the handshake | Each 1 gives nil. Dart runs the handshake inside the dial, thus each `Conn` of this package already holds a complete handshake. Go also gives nil at that point. |
+| `ConnectionState.NegotiatedProtocolIsMutual` | Always true | Equal. Go marks the field deprecated with the same rule. |
+
 ### crypto/x509
 
-The overlay parses a certificate and reads its fields. It builds no chain and
-it checks no signature, because `dart:io` owns the trust decision. A `Verify`
-that always gives nil is a security fault, thus the name is absent and a
-program that calls it takes a compile error.
+The overlay parses a certificate, a certificate request, and a revocation list,
+and it reads each field of the 3. It builds no chain and it checks no
+signature, because `dart:io` owns the trust decision. A `Verify` that always
+gives nil is a security fault, thus the name is absent and a program that calls
+it takes a compile error.
 
 | Item | Go | godart |
 |---|---|---|
 | `ParseCertificate`, `ParseCertificates` | Present | Equal for each field that the overlay reads. |
-| The fields of a `Certificate` | 40 fields | The 35 of RFC 5280 that the parse reads. The name constraint fields, `PolicyIdentifiers`, `Policies`, and `OID` stay out, and the extensions still stand in `Extensions`. |
+| The fields of a `Certificate` | 40 fields | 39. `PublicKey` alone stays out, and each other field reads. The name constraint fields, `Policies`, `PolicyIdentifiers`, `PolicyMappings`, and the 6 policy constraint fields each read since 2026-09-04. |
+| `OID`, `ParseOID`, `OIDFromInts`, `OIDFromASN1OID` | Present | Equal. The port reads the real Go source, and an arc above 64 bits keeps its value. |
+| `ExtKeyUsage.OID` | Present | Equal |
+| `CertificateRequest`, `ParseCertificateRequest` | Present | Present, less `PublicKey` and `CheckSignature`. The parse reads `encoding/asn1`, and it fills each other field. |
+| `RevocationList`, `RevocationListEntry`, `ParseRevocationList`, `ParseCRL`, `ParseDERCRL` | Present | Present, less `CheckSignatureFrom`. |
+| `SystemCertPool` | The root store of the platform | Present, and it always gives a `SystemRootsError`. The secure socket of Dart owns the store, and it exports no root certificate. |
+| `SetFallbackRoots` | Names the roots of a platform with no store | Not present. Go reads the pool inside `Verify` alone, and the overlay holds no `Verify`. |
+| `IsEncryptedPEMBlock` | Present | Equal. `DecryptPEMBlock` and `EncryptPEMBlock` stay out, because `crypto/des` and `crypto/aes` stand outside the surface. |
 | `Certificate.PublicKey` | An `any` of 1 of 3 key types | Not present. `crypto/rsa`, `crypto/ecdsa`, and `crypto/ed25519` stand outside the surface, thus the field could hold nil alone. `PublicKeyAlgorithm` names the algorithm, and `RawSubjectPublicKeyInfo` holds the DER. |
-| `Certificate.Verify`, `VerifyOptions`, `SystemCertPool`, and each verify error | Present | Not present. The trust store belongs to `dart:io`. |
+| `Certificate.Verify`, `VerifyOptions`, and each verify error | Present | Not present. The trust store belongs to `dart:io`. |
 | `Certificate.CheckSignature` and its 2 companions | Present | Not present. A check needs `crypto/rsa` and `crypto/ecdsa`. |
 | `Certificate.VerifyHostname` | Reads the names and the name constraints | Present. It matches the subject alternative names alone. |
 | `CreateCertificate` and each other name that signs | Present | Not present. Each 1 needs a private key. |
 | `CertPool` | 8 methods | `NewCertPool`, `AddCert`, `AppendCertsFromPEM`, `Subjects`, `Equal`, and `Clone`. |
 | The text of a parse error | The text of `cryptobyte` | The text of `encoding/asn1`. The overlay reads the DER with that package. |
-| A critical extension of a policy | Go reads `nameConstraints`, `certificatePolicies`, `policyMappings`, `policyConstraints`, and `inhibitAnyPolicy` | Each 1 lands in `UnhandledCriticalExtensions`. |
+| A critical extension of a policy | Go reads `nameConstraints`, `certificatePolicies`, `policyMappings`, `policyConstraints`, and `inhibitAnyPolicy` | Equal since 2026-09-04. The parse reads each of the 5, thus none of them lands in `UnhandledCriticalExtensions`. |
 | A URI of a subject alternative name | `url.Parse`, a label check, and a reverse label walk of Go | `url.Parse` and the label check. 1 rare malformed URI passes here. |
 
 `testdata/programs/x509use` reads a certificate that the program holds as a PEM
 constant, and it prints each field. A second check parsed the 128 certificates
 of `/etc/ssl/cert.pem` under the 2 commands, and each output was equal.
+`testdata/programs/n2x509` proves the `OID` family, each policy field, the
+certificate request, and the revocation list.
 
 ### net/http/httptest
 
@@ -657,13 +686,19 @@ offset of Go. `Decoder`, `Valid`, `Compact`, and `Indent` each read it, and
 | `UnmarshalTypeError` | `Value`, `Type`, `Offset`, `Struct`, `Field` | `Value`, `Struct`, and `Field`. Read below. |
 | `InvalidUnmarshalError`, `UnsupportedTypeError`, `UnsupportedValueError`, `MarshalerError` | Present | Present, with the text of Go. Read below. |
 
-Each error type of Go holds a field `Type` of the type `reflect.Type`. A
-`reflect.Type` of the overlay is a struct with a handle of a type descriptor,
-and the field of that struct is unexported. Thus `encoding/json` cannot build
-one, and each such field stays out. The text of the type stands in an unexported
-field, thus each `Error` method writes the text of Go. `UnmarshalTypeError` also
-holds no `Offset`, and `MarshalerError.Err` holds a new error with the text of
-the original one.
+Each error type of Go holds a field `Type` of the type `reflect.Type`. The walk
+of the type descriptor runs in the Dart runtime library, and it reports the
+name of the type as a text. `reflect` of the surface builds no `Type` from a
+name, thus 3 of the 5 such fields cannot hold a value at all. The text of the
+type stands in an unexported field, thus each `Error` method writes the text of
+Go. `UnmarshalTypeError` also holds no `Offset`, and `MarshalerError.Err` holds
+a new error with the text of the original one.
+
+`InvalidUnmarshalError.Type` and `UnmarshalFieldError.Type` are the 2 that a
+`reflect` import would fill, and a measure of 2026-09-04 kept the 2 out. The
+import adds 348 KB of Dart source and 208 KB of the AOT binary to each program
+that reads `encoding/json`. `docs/support.md` holds the numbers and the rule,
+and decision 320 holds the trade.
 
 The Dart walk gives a cause to the Go half through 1 string. A cause that starts
 with a null byte holds a code and the parts of a typed error, and the Go half
@@ -756,10 +791,12 @@ the child in a table by its process id. Decision 212 holds the shape.
 | `Cmd.Dir`, `Cmd.Env` | Present | Equal |
 | `Args[0]` differs from `Path` | The child sees `Args[0]` | The child sees `Path`. Dart takes the program and the arguments apart. |
 | `LookPath` | Reads the execute bit | Finds a plain file. Dart names no permission bit. |
-| `ExitError`, `os.ProcessState` | Present | The state holds the exit code and the signal only. |
-| `os.Process.Kill`, `Wait`, `Release` | Present | Equal. `Signal` stays out. |
-| `CommandContext` | Present | Out. The context needs a kill on a timer, and no program of the net asks for it. |
-| `SysProcAttr`, a process group | Present | Out |
+| `ExitError`, `os.ProcessState` | Present | The state holds the exit code and the signal only. `UserTime`, `SystemTime`, and `SysUsage` stay out, because `dart:io` reports no CPU time of a child. |
+| `os.ProcessState.Sys`, `exec.ExitError.Sys` | A `syscall.WaitStatus` | Equal since 2026-09-04. The overlay writes the exit code and the number of the signal into the word of a Unix wait state. `CoreDump` and `Stopped` are always false, and `StopSignal` always gives -1, because `dart:io` reports no such state. |
+| `os.Process.WithHandle` | A handle of the system on Linux 5.4 and on Windows | Gives `ErrNoHandle` and runs the function no time. `dart:io` names a child by its process id. Go gives the same error on a platform with no handle. |
+| `os.Process.Kill`, `Wait`, `Release`, `Signal` | Present | Equal. `Signal` reads the 12 signal numbers that macOS and Linux agree on. |
+| `CommandContext`, `Cmd.Cancel`, `Cmd.WaitDelay` | Present | Equal. |
+| `Cmd.SysProcAttr`, `Cmd.ExtraFiles`, a process group | Present | Out. `dart:io` gives the child 3 streams, and it honors no attribute of the platform. |
 | The error of `Start` for a bad program | `fs.PathError` inside `exec.Error` | The text of the Dart exception |
 
 ## The log package and the filepath package
@@ -875,11 +912,17 @@ The `net` package holds this surface:
 | `Listener` | `Accept`, `Close`, `Addr` | Equal |
 | `Addr` | `Network` and `String` | Equal |
 | `Error` | `Timeout` and `Temporary` | Equal. A deadline that passed reports true for each one. |
-| `Dialer` | 12 fields | `Timeout`, `Dial`, and `DialContext`. The dial runs on a goroutine, and the select takes the first of the dial and the context. |
+| `Dialer` | 12 fields, 6 methods | `Timeout`, `Deadline`, `Cancel`, and `Resolver`, with `Dial`, `DialContext`, `DialTCP`, `DialUDP`, and `DialUnix`. The dial runs on a goroutine, and the select takes the first of the dial, the context, and the cancel channel. `DialIP` and the 8 fields of a socket option stay out. Read `docs/support.md`. |
 | `DialTimeout` | Present | Equal. It reads a `Dialer` with the timeout. |
 | `TCPAddr`, `UDPAddr`, `IPAddr`, `UnixAddr`, `IP`, `IPMask`, `IPNet` | Present | Equal. `ParseCIDR`, `CIDRMask`, `IPv4Mask`, `IP.Mask`, and `IP.DefaultMask` are present. |
-| `ResolveTCPAddr`, `ResolveUDPAddr`, `ResolveUnixAddr` | Present, with a name lookup | Present. A host that is not an IP address gives a parse error, because the surface holds no resolver. |
-| `Resolver`, `LookupHost`, `LookupIP`, `Interfaces` | Present | Not present. `dart:io` holds `InternetAddress.lookup`, and no work names it yet. |
+| `ResolveTCPAddr`, `ResolveUDPAddr`, `ResolveIPAddr`, `ResolveUnixAddr` | Present, with a name lookup | Present. A host that is not an IP address gives a parse error. A lookup gives up control, and a Resolve function of Go holds no context, thus `Resolver.LookupIP` reads a name. |
+| `Resolver`, `LookupHost`, `LookupIP`, `Interfaces` | Present | Present since 2026-09-02. The overlay holds a resolver of its own. Read the section "The Lookup family of net". |
+| `IP.IsPrivate`, `IsMulticast`, `IsInterfaceLocalMulticast`, `IsLinkLocalMulticast`, `IsLinkLocalUnicast`, `IsGlobalUnicast` | Present | Equal since 2026-09-04. Each 1 reads the bytes of the address alone. |
+| `IPv4bcast`, `IPv4allsys`, `IPv4allrouter`, `IPv4zero`, `IPv6zero`, `IPv6unspecified`, `IPv6loopback`, and the 3 IPv6 groups | Present | Equal |
+| `InvalidAddrError`, `ParseError.Timeout`, `ParseError.Temporary` | Present | Equal |
+| `TCPListener`, `ListenTCP`, `UnixListener`, `ListenUnix` | Present | Present, less `File`, `SyscallConn`, `SetDeadline`, and `SetUnlinkOnClose`. `Listen` gives a `*TCPListener` for the network tcp and a `*UnixListener` for the network unix, exactly as in Go. |
+| `UnixConn.ReadFrom`, `UnixConn.ReadFromUnix` | The name of the source of a datagram | Present. Dart opens a stream socket of the Unix domain alone, and the system reports an empty name for the source of such a socket, thus the address is always nil. Go behaves the same way. |
+| `UnixConn.WriteTo`, `UnixConn.WriteToUnix` | A datagram of the Unix domain | Not present. Read `docs/support.md`. |
 | `TCPConn` | 20 methods | 10 methods: the 8 of `Conn`, plus `ReadFrom` and `WriteTo`. `Dial`, `Dialer.DialContext`, and `Listener.Accept` each give 1 for the network `tcp`. |
 | `TCPConn.CloseRead`, `CloseWrite` | A half close | Not present. `dart.ConnClose` maps to `Socket.destroy`, which ends the 2 directions. |
 | `TCPConn.SetNoDelay`, `SetLinger`, `SetKeepAlive`, `SetKeepAlivePeriod`, `SetKeepAliveConfig`, `SetReadBuffer`, `SetWriteBuffer` | Each writes a socket option | Not present. `syscall/dart` holds no option intrinsic. |
@@ -897,6 +940,9 @@ The `net` package holds this surface:
 | A connected UDP socket | The system drops a datagram of another source | The runtime drops it. Dart gives no connect of a datagram socket. |
 | The text of a failure | `dial tcp 127.0.0.1:0: connect: ...` | `dial tcp <address>: ` and the message of the Dart `SocketException`. |
 | The text of a deadline | `read tcp <local>-><remote>: i/o timeout` | `read tcp: i/o timeout` |
+
+`testdata/programs/n2net` proves the 6 address tests, each well-known address,
+`ResolveIPAddr`, the 2 listener types, and the 3 dial methods of a `Dialer`.
 
 ## The HTTP access
 
@@ -942,10 +988,20 @@ Go.
 | A redirect of the status 307 or 308 | Keeps the method and the body | Equal. The client reads `GetBody` and it writes `Request.Response`. |
 | `Request.TLS`, `Response.TLS` | The whole state of the connection | Present since 2026-09-03. The `tls.ConnectionState` of the overlay holds `NegotiatedProtocol`, `ServerName`, and `HandshakeComplete`, thus each other member reads its zero value. |
 | `Request.TransferEncoding`, `Response.TransferEncoding` | Each encoding of the body | Present. The overlay writes the 1 element `chunked`, or nothing. |
-| `Request.Trailer`, `Response.Trailer` | The fields that follow the body | Present in the shape, and always nil. A request that declares a `Trailer` field gives the status 501, thus no trailer is lost with no report. |
-| `TrailerPrefix`, `CloseNotifier`, `Request.Cancel` | Present | Not present. The answer of the overlay writes no trailer, and Go marks the last 2 as deprecated. |
+| `Request.Trailer` | The fields that follow the body of a request | Present in the shape, and always nil. A request that declares a `Trailer` field gives the status 501, thus no trailer is lost with no report. |
+| `Response.Trailer` | The fields that follow the body of an answer | Present in the shape, and always nil. The transport of the overlay reads no trailer of an answer. |
+| `TrailerPrefix` | Names a field of the answer that follows the body | Equal since 2026-09-04. The answer takes the chunked form, and each declared name and each name with the prefix follows the last chunk. An answer of HTTP/1.0 writes no trailer, exactly as in Go. |
+| `CloseNotifier` | The `ResponseWriter` of Go holds it | Present as a type. No `ResponseWriter` of the overlay holds it, thus an assertion gives false and the handler must read that result. The runtime reports a close of the peer at the next read alone. Go marks the interface deprecated. |
+| `Pusher`, `PushOptions` | The `ResponseWriter` of HTTP/2 holds `Pusher` | Present as a type. The HTTP/2 session of the runtime sends no push frame, thus an assertion gives false. |
+| `Request.Cancel` | Ends a request that stands open | Not present. The transport ends a request through a deadline of the connection, and Go marks the field deprecated. |
 | `Protocols`, with the 6 accessors and `String` | Present | Equal |
-| `Server.Protocols`, `Transport.Protocols` | Present | Not present. The overlay server reads the ALPN of the TLS listener, and no path carries HTTP/2 over a plain socket, thus `UnencryptedHTTP2` names nothing. |
+| `Server.Protocols`, `Transport.Protocols` | Present | Present since 2026-09-04. A nil field holds HTTP1 and HTTP2, and the set names the list of ALPN. A set that holds `UnencryptedHTTP2` gives an error, because no path of the runtime carries HTTP/2 over a plain socket. |
+| `ListenAndServeTLS`, `Server.ListenAndServeTLS`, `Server.TLSConfig` | Present | Present since 2026-09-04. An empty `Addr` names the port 443, and the 2 file names hold the PEM chain and the PEM key. `tls.Listen` of the overlay opens the secure listener. |
+| `ServeTLS`, `Server.ServeTLS` | Wrap a listener that stands open | Not present. The secure socket of Dart takes over no socket that another call opened. |
+| `Server.TLSNextProto`, `Transport.TLSNextProto` | Name 1 handler for each protocol of ALPN | Present since 2026-09-04. The protocol of the map joins the list of ALPN, and a connection of that protocol reaches the handler. |
+| `CrossOriginProtection`, `NewCrossOriginProtection` | Present | Equal. The check reads `Sec-Fetch-Site`, `Origin`, and `Host`, and it needs no socket. |
+| `HTTP2Config`, `Server.HTTP2`, `Transport.HTTP2` | Tune the HTTP/2 session | Not present. The session lives in the Dart runtime library, and it exposes no window, no frame size, and no ping. |
+| `ClientConn`, `Transport.NewClientConn` | 1 connection of the pool, with a count of the free streams | Not present. The pool of the overlay owns each connection, and it reports no such count. |
 | `ResponseController`, `NewResponseController` | 5 methods | Equal. `Flush`, `Hijack`, `SetReadDeadline`, `SetWriteDeadline`, and `EnableFullDuplex` each reach the connection of the HTTP/1.1 server. |
 | `Hijacker`, `ErrHijacked` | Present | Present for the HTTP/1.1 server. The answer of an HTTP/2 stream carries no connection of its own, thus it holds neither. |
 | `ResponseController.EnableFullDuplex` | Lets a handler read the body while it writes | Present, and it changes nothing. The overlay server reads the rest of a body after the handler ends, thus each handler already holds the 2 directions. |
@@ -957,6 +1013,8 @@ that 5 requests in a row share 1 connection. `testdata/programs/h2serve` runs
 an HTTP/2 server and its client, and the 2 sides print `HTTP/2.0`.
 `testdata/programs/httpclient` runs a cookie jar, a multipart form, and a proxy
 that carries a plain request and a CONNECT tunnel.
+`testdata/programs/n2httptls` runs `Server.ListenAndServeTLS`, the `Dialer` of
+`crypto/tls`, the cross origin protection, and a trailer of an answer.
 
 An https request through a proxy takes 1 name that Go does not hold. Go writes
 the CONNECT request itself and then wraps the connection with `tls.Client`. The

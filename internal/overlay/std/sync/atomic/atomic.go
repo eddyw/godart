@@ -5,6 +5,11 @@
 // All Go code runs in 1 Dart isolate, and a goroutine gives up control only at
 // a block operation. Thus a plain read and a plain write are atomic, and each
 // operation below needs no lock.
+//
+// LoadPointer, StorePointer, SwapPointer, and CompareAndSwapPointer stay out.
+// Each 1 names unsafe.Pointer in its signature, and stage 2 rejects an import
+// of the package unsafe. Pointer[T] holds the same 4 operations with a typed
+// pointer, and Go names it the safer form of each 1.
 package atomic
 
 // Value holds a value of any type.
@@ -213,7 +218,6 @@ func (x *Uint64) CompareAndSwap(old, new uint64) bool {
 	return true
 }
 
-// Pointer holds a pointer to a value of the type parameter.
 // Uintptr holds a uintptr.
 type Uintptr struct {
 	v uintptr
@@ -254,6 +258,7 @@ func (x *Uintptr) CompareAndSwap(old, new uintptr) bool {
 	return true
 }
 
+// Pointer holds a pointer to a value of the type parameter.
 type Pointer[T any] struct {
 	v *T
 }

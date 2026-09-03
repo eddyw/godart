@@ -20,6 +20,24 @@ type IP []byte
 // 16-byte form.
 var v4Prefix = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff}
 
+// The well-known IPv4 addresses.
+var (
+	IPv4bcast     = IPv4(255, 255, 255, 255) // The limited broadcast address.
+	IPv4allsys    = IPv4(224, 0, 0, 1)       // Each system of the link.
+	IPv4allrouter = IPv4(224, 0, 0, 2)       // Each router of the link.
+	IPv4zero      = IPv4(0, 0, 0, 0)         // The address of each zero byte.
+)
+
+// The well-known IPv6 addresses.
+var (
+	IPv6zero                   = IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	IPv6unspecified            = IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	IPv6loopback               = IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	IPv6interfacelocalallnodes = IP{0xff, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01}
+	IPv6linklocalallnodes      = IP{0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01}
+	IPv6linklocalallrouters    = IP{0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02}
+)
+
 // IPv4 gives the 16-byte form of an IPv4 address.
 func IPv4(a, b, c, d byte) IP {
 	out := make(IP, IPv6len)
@@ -89,7 +107,67 @@ func (ip IP) IsLoopback() bool {
 
 // IsUnspecified reports whether the address is 0.0.0.0 or ::.
 func (ip IP) IsUnspecified() bool {
-	return len(ip) > 0 && isZeros(ip)
+	return ip.Equal(IPv4zero) || ip.Equal(IPv6unspecified)
+}
+
+// IsPrivate reports an address of a private internet. RFC 1918, section 3
+// names 10.0.0.0/8, 172.16.0.0/12, and 192.168.0.0/16. RFC 4193, section 8
+// names fc00::/7.
+//
+// IsPrivate names no security property of an address. Do not read it for an
+// access control decision.
+func (ip IP) IsPrivate() bool {
+	if v4 := ip.To4(); v4 != nil {
+		return v4[0] == 10 ||
+			(v4[0] == 172 && v4[1]&0xf0 == 16) ||
+			(v4[0] == 192 && v4[1] == 168)
+	}
+	return len(ip) == IPv6len && ip[0]&0xfe == 0xfc
+}
+
+// IsMulticast reports a multicast address.
+func (ip IP) IsMulticast() bool {
+	if v4 := ip.To4(); v4 != nil {
+		return v4[0]&0xf0 == 0xe0
+	}
+	return len(ip) == IPv6len && ip[0] == 0xff
+}
+
+// IsInterfaceLocalMulticast reports a multicast address of the interface
+// scope. Only an IPv6 address holds that scope.
+func (ip IP) IsInterfaceLocalMulticast() bool {
+	return len(ip) == IPv6len && ip[0] == 0xff && ip[1]&0x0f == 0x01
+}
+
+// IsLinkLocalMulticast reports a multicast address of the link scope.
+func (ip IP) IsLinkLocalMulticast() bool {
+	if v4 := ip.To4(); v4 != nil {
+		return v4[0] == 224 && v4[1] == 0 && v4[2] == 0
+	}
+	return len(ip) == IPv6len && ip[0] == 0xff && ip[1]&0x0f == 0x02
+}
+
+// IsLinkLocalUnicast reports a unicast address of the link scope.
+func (ip IP) IsLinkLocalUnicast() bool {
+	if v4 := ip.To4(); v4 != nil {
+		return v4[0] == 169 && v4[1] == 254
+	}
+	return len(ip) == IPv6len && ip[0] == 0xfe && ip[1]&0xc0 == 0x80
+}
+
+// IsGlobalUnicast reports a global unicast address. RFC 1122, RFC 4632, and
+// RFC 4291 hold the rule, and a directed broadcast address of IPv4 is the 1
+// exception.
+//
+// An address of the private space of IPv4 and an address of the local unicast
+// space of IPv6 each give true.
+func (ip IP) IsGlobalUnicast() bool {
+	return (len(ip) == IPv4len || len(ip) == IPv6len) &&
+		!ip.Equal(IPv4bcast) &&
+		!ip.IsUnspecified() &&
+		!ip.IsLoopback() &&
+		!ip.IsMulticast() &&
+		!ip.IsLinkLocalUnicast()
 }
 
 // String gives the text of the address. An empty address gives `<nil>`.

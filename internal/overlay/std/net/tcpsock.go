@@ -19,6 +19,10 @@ import (
 // `SetWriteBuffer`, `MultipathTCP`, `SyscallConn`, and `File` each need 1 of
 // the 2, thus the overlay holds none of them.
 //
+// A listener of the network tcp holds the same 2 limits. `File` and
+// `SyscallConn` each need the descriptor, and `SetDeadline` needs an accept
+// with a deadline that the runtime does not give.
+//
 // Go embeds the unexported type `conn` in `TCPConn`. The overlay names each
 // method of the connection again, because a promoted method of an unexported
 // type reaches no other package in the Dart output.
@@ -110,4 +114,68 @@ func DialTCP(network string, laddr, raddr *TCPAddr) (*TCPConn, error) {
 		return nil, errors.New("dial " + network + ": the dial gave no TCP connection")
 	}
 	return tc, nil
+}
+
+// A TCPListener waits for a connection of the network tcp. `Listen` and
+// `ListenTCP` each give one, thus a program that names the type in an
+// assertion reads it.
+type TCPListener struct {
+	l listener
+}
+
+// newTCPListener wraps the handle of an open listener of the network tcp.
+func newTCPListener(handle int, addr Addr) *TCPListener {
+	return &TCPListener{l: listener{handle: handle, addr: addr, network: "tcp"}}
+}
+
+// Accept waits for 1 connection and gives it.
+func (l *TCPListener) Accept() (Conn, error) { return l.l.Accept() }
+
+// AcceptTCP waits for 1 connection and gives its TCP form.
+func (l *TCPListener) AcceptTCP() (*TCPConn, error) {
+	c, err := l.l.Accept()
+	if err != nil {
+		return nil, err
+	}
+	tc, ok := c.(*TCPConn)
+	if !ok {
+		c.Close()
+		return nil, errors.New("accept tcp: the accept gave no TCP connection")
+	}
+	return tc, nil
+}
+
+// Addr gives the address of the listener.
+func (l *TCPListener) Addr() Addr { return l.l.Addr() }
+
+// Close ends the listener. Each connection of it stays open, exactly as in
+// Go.
+func (l *TCPListener) Close() error { return l.l.Close() }
+
+// ListenTCP opens a listener on a TCP address. The network is tcp, tcp4, or
+// tcp6.
+//
+// A nil laddr binds each address of the host and a port that the system
+// takes, exactly as in Go. A port of 0 asks the system for a free port, and
+// Addr then gives the port that the system took.
+func ListenTCP(network string, laddr *TCPAddr) (*TCPListener, error) {
+	switch network {
+	case "tcp", "tcp4", "tcp6":
+	default:
+		return nil, UnknownNetworkError(network)
+	}
+	address := ":0"
+	if laddr != nil {
+		address = laddr.String()
+	}
+	l, err := Listen("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	tl, ok := l.(*TCPListener)
+	if !ok {
+		l.Close()
+		return nil, errors.New("listen " + network + ": the listen gave no TCP listener")
+	}
+	return tl, nil
 }

@@ -63,6 +63,13 @@ func (p *Process) Wait() (*ProcessState, error) {
 // a table by id, thus there is nothing to drop.
 func (p *Process) Release() error { return nil }
 
+// WithHandle runs f with a handle of the process.
+//
+// dart:io names a child by its process id and gives no handle of the system.
+// Thus the call runs f no time and gives ErrNoHandle, exactly as Go does on a
+// platform that holds no such handle.
+func (p *Process) WithHandle(f func(handle uintptr)) error { return ErrNoHandle }
+
 // ProcessState holds the exit state of a process. A negative code names the
 // signal that ended the process, as the Dart side gives it.
 type ProcessState struct {
@@ -83,6 +90,23 @@ func (p *ProcessState) ExitCode() int {
 func (p *ProcessState) Exited() bool { return p.code >= 0 }
 
 func (p *ProcessState) Success() bool { return p.code == 0 }
+
+// Sys gives the exit state of the system. The value holds the type
+// syscall.WaitStatus, exactly as it does on a Unix system of Go.
+//
+// dart:io reports the exit code and the number of the signal that ended the
+// child. The word below carries the 2, thus Exited, ExitStatus, Signaled, and
+// Signal each give the answer of Go. Read docs/parity.md for the 2 parts of
+// the word that hold no source.
+func (p *ProcessState) Sys() any { return p.status() }
+
+// status gives the word of the wait state of the process.
+func (p *ProcessState) status() syscall.WaitStatus {
+	if p.code < 0 {
+		return syscall.WaitStatus(-p.code) & 0x7F
+	}
+	return syscall.WaitStatus(p.code) << 8
+}
 
 func (p *ProcessState) String() string {
 	if p.code < 0 {

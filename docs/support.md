@@ -7,7 +7,7 @@ This file names how much of each standard library package the surface holds.
 ## The measure
 
 Run `make surface`. `internal/surface` holds the tool, and the numbers below
-come from the run of 2026-09-03.
+come from the run of 2026-09-04.
 
 The measure counts the exported names of a package: each name of the package
 scope, each exported method of the pointer to an exported named type, and each
@@ -61,27 +61,30 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 
 ## Partial support
 
-11 packages hold a part of the names of Go. The run of 2026-09-03, after the
-fifteenth session:
+11 packages hold a part of the names of Go. The run of 2026-09-04, after the
+sixteenth session:
 
 | Package | Names | Held | The largest gap |
 |---|---|---|---|
-| `sync/atomic` | 90/94 | 95% | The 4 `unsafe.Pointer` functions. `Pointer[T]` holds the same use. |
-| `os` | 193/207 | 93% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr`, and the 4 time names of `ProcessState`. `dart:io` hides the descriptor, and it reports no CPU time. |
-| `os/exec` | 43/49 | 87% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, `ExitError.Sys` and its 3 companions |
-| `reflect` | 173/188 | 92% | `FuncOf`, `NewAt`, `SliceAt`, `SliceHeader`, `StringHeader`, `Method.Func`. Each 1 needs a type that no emitted code names, or `unsafe`. |
-| `encoding/json` | 67/92 | 72% | The option set of the v2 implementation, and the field `Type` of each error |
+| `sync/atomic` | 90/94 | 95% | The 4 `unsafe.Pointer` functions. `Pointer[T]` holds the same 4 operations with a typed pointer. |
+| `os` | 195/207 | 94% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr`, and the 3 time names of `ProcessState`. `dart:io` hides the descriptor, and it reports no CPU time. |
+| `os/exec` | 44/49 | 89% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, and the 3 time names of `ExitError` |
+| `reflect` | 180/188 | 95% | `FuncOf`, `StructOf`, `Method.Func`, `NewAt`, `SliceAt`, `Value.SetPointer`, `Value.InterfaceData`, `Value.UnsafeAddr`. Each 1 needs a type that no emitted code names, or an address. |
+| `encoding/json` | 67/92 | 72% | The option set of the v2 implementation, and the field `Type` of each error. `encoding/json/v2` stands outside the surface, and a `reflect.Type` costs the whole `reflect` library. |
 | `testing` | 145/145 | 100% | Full since 2026-09-03. |
-| `net/http` | 341/392 | 87% | `HTTP2Config`, `Pusher`, `ClientConn`, `CrossOriginProtection`, `ListenAndServeTLS`. Dart owns the handshake and the HTTP 2 frame layer. |
-| `runtime` | 43/114 | 37% | `MemStats`, `ReadMemStats`, `Breakpoint`, `SetFinalizer`, `Pinner`, each profile, and the trace. The Dart VM reports none of the numbers. |
-| `net` | 218/346 | 63% | `IPConn`, `Resolver` as a configurable type, each socket option method, `FileConn`, and `FileListener`. Each 1 needs a raw socket or a file descriptor. |
-| `crypto/tls` | 118/263 | 44% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake |
-| `crypto/x509` | 115/261 | 44% | `Verify` and each verify error, `CheckSignature`, `PublicKey`, and each name that signs |
-| `syscall` | 15/2228 | 0% | Each system call, each error number, and each constant of the platform. |
+| `net/http` | 361/392 | 92% | `HTTP2Config`, `ClientConn`, `ServeTLS`, and `Transport.TLSHandshakeTimeout`. The runtime owns the HTTP/2 frame layer, and the secure socket of Dart takes over no socket that stands open. |
+| `runtime` | 52/114 | 45% | `MemStats`, `ReadMemStats`, `SetFinalizer`, `Breakpoint`, the profile of the memory, of the block, and of the mutex, and the trace. The Dart VM reports none of the numbers. |
+| `net` | 259/346 | 74% | `IPConn`, each socket option method, `FileConn`, and `FileListener`. Each 1 needs a raw socket or a file descriptor. |
+| `crypto/tls` | 126/263 | 48% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake. Dart owns the handshake. |
+| `crypto/x509` | 193/261 | 73% | `Verify` and each verify error, `CheckSignature`, `PublicKey`, and each name that signs. The surface holds no RSA and no ECDSA package. |
+| `syscall` | 24/2228 | 1% | Each system call, each error number, and each constant of the platform. |
 
-`testing` left this table on 2026-09-03. `reflect` went from 130 names to 173,
-`net/http` from 240 to 335, `net` from 142 to 218, `runtime` from 31 to 43,
-`encoding/json` from 59 to 67, and `crypto/x509` from 106 to 115.
+`testing` left this table on 2026-09-03. The sixteenth session added 166
+names: `crypto/x509` went from 115 to 193, `net` from 218 to 259, `net/http`
+from 341 to 361, `reflect` from 173 to 180, `runtime` from 43 to 52,
+`crypto/tls` from 118 to 126, `os` from 193 to 195, `os/exec` from 43 to 44,
+and `syscall` from 15 to 24. Decision 319 and decision 320 name each name that
+stays out, with its cause.
 
 `syscall` is a special case. The package of Go holds the whole system call
 interface of the platform, and the surface holds no such interface. The overlay
@@ -93,6 +96,181 @@ The gap of `encoding/json` is the option set of the v2 implementation. Go 1.27
 routes `encoding/json` through that implementation, thus the measure counts
 `DefaultOptionsV1`, `FormatDurationAsNano`, and 20 more names of it. The v1 API
 is complete, with `Token`, `Delim`, and `UseNumber` since 2026-09-02.
+
+## Why a name of 5 packages stays out
+
+The work of 2026-09-04 read each missing name of `runtime`, `os`, `os/exec`,
+`sync/atomic`, and `reflect`, and it asked 1 question of each 1: can the Dart
+VM or `dart:io` carry the name with the behavior of Go? A name that reached
+that bar joined the overlay. Each name below did not reach it, and the cause
+names the real limit. Read decision 319.
+
+A stub that gives a zero value is worse than a missing name, because the
+program then reads a wrong number with no report. A missing name gives an
+error of the compiler, and that error names the gap at the earliest point.
+
+The session added 19 names. `runtime` went from 43 to 52, `reflect` from 173 to
+180, `os` from 193 to 195, and `os/exec` from 43 to 44. `sync/atomic` stays at
+90, because each name of its gap needs the package `unsafe`.
+
+### runtime, 62 names
+
+| Name | The cause |
+|---|---|
+| `MemStats`, `ReadMemStats`, 34 names | The Dart VM reports no number of its own heap inside the process. `ProcessInfo.currentRss` of `dart:io` names the resident set of the whole process, and Go names no field that way. A read that fills 1 field and leaves 32 at 0 reports a wrong heap. |
+| `MemProfile`, `MemProfileRecord`, `MemProfileRate`, 11 names | The Dart VM counts no allocation of the program. Each record would carry an invented number. |
+| `BlockProfile`, `BlockProfileRecord`, `SetBlockProfileRate`, 7 names | The scheduler lives in the Dart runtime library, and it measures no time of a block. |
+| `MutexProfile`, `SetMutexProfileFraction` | A mutex of gart is a flag with a waiter queue, and it counts no contention. |
+| `SetCPUProfileRate` | The rate reaches no profile, because the Dart VM samples no Go frame. |
+| `ThreadCreateProfile` | The Dart VM makes each thread, and gart records no stack of such a creation. |
+| `StartTrace`, `StopTrace`, `ReadTrace` | The trace of Go holds the events of the Go runtime in the binary format of Go. The Dart VM writes no such event. |
+| `SetCgoTraceback` | The 3 parameters name `unsafe.Pointer`, and the subset holds no cgo. |
+| `SetFinalizer` | The finalizer of Go takes the object itself. A Dart `Finalizer` must hold no reference of the object that it watches, thus such a capture would stop each collection of it and the finalizer would never run. `runtime.AddCleanup` maps to the Dart form, and it stands already. |
+| `Breakpoint` | `debugger` of `dart:developer` is the Dart form. With no debugger it waits for a client of the service with no report, and Go ends the program with SIGTRAP. A wait with no report is a silent answer. |
+
+### os, 12 names
+
+| Name | The cause |
+|---|---|
+| `File.Fd` | `dart:io` gives a `RandomAccessFile` and no descriptor of the system. The index of the handle table is no descriptor, and a program compares the result against 0, 1, and 2. |
+| `File.SyscallConn` | The result holds the type `syscall.RawConn`, and the surface holds no such type. |
+| `NewFile` | The call takes a descriptor. Read `File.Fd`. |
+| `StartProcess`, `ProcAttr`, 6 names | `ProcAttr.Files` names 1 descriptor for each stream of the child, and `ProcAttr.Sys` names `syscall.SysProcAttr`. `dart:io` gives the child 3 streams and no other descriptor. |
+| `ProcessState.UserTime`, `SystemTime`, `SysUsage` | `dart:io` reports no CPU time of a child and no `rusage`. |
+
+### os/exec, 5 names
+
+| Name | The cause |
+|---|---|
+| `Cmd.ExtraFiles` | The child takes no descriptor beyond its 3 streams. Read `os.StartProcess`. |
+| `Cmd.SysProcAttr` | The field names `syscall.SysProcAttr`, and `dart:io` honors no field of it. |
+| `ExitError.UserTime`, `SystemTime`, `SysUsage` | Each 1 comes from `os.ProcessState`. Read the row of that type. |
+
+### sync/atomic, 4 names
+
+`LoadPointer`, `StorePointer`, `SwapPointer`, and `CompareAndSwapPointer` each
+name `unsafe.Pointer` in the signature, and stage 2 rejects an import of
+`unsafe`. `Pointer[T]` holds the same 4 operations with a typed pointer, and Go
+names it the safer form of each 1.
+
+### reflect, 8 names
+
+| Name | The cause |
+|---|---|
+| `FuncOf` | The type needs a descriptor of a function type that the program never names. `$sliceOf` and its 3 companions build such a descriptor in the Dart runtime library, and no builder of a function type stands there yet. The work needs `$funcOf`, an intrinsic of stage 5, and 1 name of `syscall/dart`. |
+| `Method.Func` | The value is a func value whose first parameter is the receiver. `_withReceiver` of the Dart runtime library builds that type with no bind factory, thus `MakeFunc` of it panics. |
+| `StructOf` | The type needs a Dart class that the emitter did not write. |
+| `NewAt`, `SliceAt`, `Value.SetPointer` | Each 1 takes an `unsafe.Pointer`. |
+| `Value.InterfaceData` | The result is the 2 words of an interface value. Dart holds no such pair. |
+| `Value.UnsafeAddr` | Go gives the address of the value. `Value.Pointer` gives the identity of an object instead, and `Value.Addr` builds a new cell at each call for a field of a scalar type. Thus 2 reads of 1 field would give 2 numbers, and a number that changes is a wrong answer. |
+
+## Why a name of the 5 network packages stays out
+
+The work of 2026-09-04 read each missing name of `net`, `net/http`,
+`crypto/tls`, `crypto/x509`, and `encoding/json`, and it asked 1 question of
+each 1: can `dart:io`, the ASN.1 parser of the overlay, or plain Go carry the
+name with the behavior of Go? A name that reached that bar joined the overlay.
+Each name below did not reach it, and the cause names the real limit. Read
+decision 320.
+
+The session added 147 names. `net` went from 218 to 259, `net/http` from 341
+to 361, `crypto/tls` from 118 to 126, and `crypto/x509` from 115 to 193.
+`encoding/json` stays at 67, and the section below holds the measure that kept
+its last 2 reachable names out.
+
+### net, 87 names
+
+| Name | The cause |
+|---|---|
+| `IPConn` and its 18 methods, `ListenIP`, `DialIP`, `Dialer.DialIP`, 22 names | A connection of the network ip is a raw socket. `dart:io` opens a stream socket, a datagram socket of UDP, and a socket of the Unix domain, and no raw socket. |
+| `FileConn`, `FileListener`, `FilePacketConn`, and the `File` method of 5 types, 8 names | Each 1 takes or gives an `*os.File` of the descriptor of a socket. `dart:io` hides the descriptor of each socket. |
+| The `SyscallConn` method of 5 types, 5 names | The result holds the type `syscall.RawConn`, and the surface holds no such type. |
+| `TCPConn.SetKeepAlive`, `SetKeepAliveConfig`, `SetKeepAlivePeriod`, `SetLinger`, `SetNoDelay`, and the `SetReadBuffer` and `SetWriteBuffer` pair of 3 connection types, 11 names | Each 1 writes a socket option. `Socket.setRawOption` of `dart:io` reaches the call of the system, and no intrinsic of `syscall/dart` names it. The number of the level and the number of the option each differ between macOS and Linux, thus the intrinsic needs a table of the platform. |
+| `KeepAliveConfig` and its 4 fields, `Dialer.KeepAlive`, `Dialer.KeepAliveConfig`, `ListenConfig.KeepAlive`, `ListenConfig.KeepAliveConfig`, 9 names | Each 1 carries the values of the socket option above. A field that reaches no operation lies. |
+| `Dialer.Control`, `Dialer.ControlContext`, `ListenConfig.Control` | Each 1 takes a `syscall.RawConn` of the new socket. |
+| `Dialer.LocalAddr` | Dart binds no local address of a dial. `DialTCP`, `DialUDP`, and `DialUnix` of this overlay each give an error for a laddr that holds a value, thus no dial binds the wrong address with no report. |
+| `Dialer.DualStack`, `Dialer.FallbackDelay` | Each 1 tunes the 2 dials of Happy Eyeballs. 1 dial of Dart resolves the name and opens the socket. |
+| `Dialer.MultipathTCP`, `Dialer.SetMultipathTCP`, `ListenConfig.MultipathTCP`, `ListenConfig.SetMultipathTCP`, `TCPConn.MultipathTCP` | Multipath TCP is a transport of Linux that Dart never opens. |
+| `Interface.MTU`, `Interface.HardwareAddr`, `Interface.Flags`, `Interface.MulticastAddrs` | `NetworkInterface.list` of `dart:io` gives the name, the index, and each address of an interface, and nothing else. |
+| `ListenMulticastUDP` | The call joins a multicast group on 1 named interface. `RawDatagramSocket` of Dart holds `joinMulticast`, and no intrinsic of `syscall/dart` names it. |
+| `ListenUnixgram` | Dart opens a stream socket of the Unix domain alone. |
+| `TCPConn.CloseRead`, `TCPConn.CloseWrite`, `UnixConn.CloseRead`, `UnixConn.CloseWrite` | Each 1 is a half close. `Socket.close` of Dart ends the write side and gives a future, and the runtime holds no such 1 way close. |
+| `UDPConn.ReadMsgUDP`, `WriteMsgUDP`, `ReadMsgUDPAddrPort`, `WriteMsgUDPAddrPort`, `UnixConn.ReadMsgUnix`, `WriteMsgUnix` | Each 1 reads or writes a control message. The read also reports MSG_TRUNC for a datagram that lost bytes, and the read of the runtime reports no such flag. |
+| `UnixConn.WriteTo`, `UnixConn.WriteToUnix` | Go writes the datagram with sendto. A socket that a dial connected gives `ErrWriteToConnected`, and a socket that an accept gave holds no such mark: macOS then writes the bytes and Linux gives EOPNOTSUPP. Dart holds no sendto, thus the overlay can match neither. |
+| `TCPListener.SetDeadline`, `UnixListener.SetDeadline` | The deadline ends a wait for an accept. The accept of the runtime takes no deadline, and a cancel of the Go side would drop a client that already arrived. |
+| `UnixListener.SetUnlinkOnClose` | The close of the runtime always removes the file of the socket. |
+
+### net/http, 31 names
+
+| Name | The cause |
+|---|---|
+| `HTTP2Config` and its 12 fields, `Server.HTTP2`, `Transport.HTTP2`, `Server.DisableClientPriority`, 16 names | The HTTP/2 session lives in the Dart runtime library, and it exposes no window, no frame size, no header table, and no ping. A config that reaches no operation lies. |
+| `ClientConn` and its 8 methods, `Transport.NewClientConn`, 10 names | The API of Go 1.27 hands 1 connection to the caller, with a count of the free streams and a hook of the state. The pool of the overlay owns each connection, and it reports no such count. |
+| `ServeTLS`, `Server.ServeTLS` | Each 1 wraps a listener that stands open. The secure socket of Dart takes over no socket that another call opened. `ListenAndServeTLS` opens the secure listener itself, thus it works. |
+| `Transport.TLSHandshakeTimeout` | The runtime opens the socket and runs the handshake in 1 call, thus no limit covers the handshake alone. A limit of the whole dial would end a slow connection that Go keeps. |
+| `Transport.OnProxyConnectResponse` | The runtime writes the CONNECT request and reads its answer inside `DialTLSProxy`, thus the answer reaches no Go code. |
+| `Request.Cancel` | The transport ends a request through a deadline of the connection. A watch of the channel needs a hook that lives up to the close of the body of the answer, and the transport holds no such hook. |
+
+### crypto/tls, 137 names
+
+| Name | The cause |
+|---|---|
+| Each QUIC name, 37 names | `dart:io` holds no QUIC transport, and it exports no TLS record layer of its own. |
+| Each `Config` field of the handshake, 28 names | Dart owns the whole handshake. `RootCAs`, `ClientCAs`, `ClientAuth`, `CurvePreferences`, `GetCertificate`, `VerifyPeerCertificate`, and the 22 others each reach no operation. |
+| `ClientHelloInfo` and its 12 members, `CertificateRequestInfo` and its 5 members, 19 names | Each 1 reaches Go through a callback of the handshake, and Dart calls none. |
+| `AlertError`, `CertificateVerificationError`, `RecordHeaderError`, `ECHRejectionError`, and their members, 15 names | Go gives each 1 at a point of the handshake. Dart reports a text, thus no path of the overlay builds them. A type that no path gives makes `errors.As` report false where Go reports true. |
+| `ConnectionState.Version`, `CipherSuite`, `CurveID`, `DidResume`, `ECHAccepted`, `HelloRetryRequest`, `LocalCertificate`, `TLSUnique`, `ExportKeyingMaterial`, 9 names | Dart reports the protocol of ALPN alone. |
+| `ConnectionState.PeerCertificates`, `VerifiedChains`, `OCSPResponse`, `SignedCertificateTimestamps`, `Conn.OCSPResponse`, `Conn.VerifyHostname`, 6 names | Dart holds the peer certificate inside `SecureSocket.peerCertificate`, and no intrinsic of `syscall/dart` gives its DER to Go. 1 new intrinsic would open each of the 6. |
+| `SessionState`, `ClientSessionCache`, `ClientSessionState`, `NewLRUClientSessionCache`, `ParseSessionState`, `NewResumptionState`, and their members, 10 names | Dart owns the cache of the session, and it exports no ticket. |
+| `Certificate.PrivateKey`, `OCSPStaple`, `SignedCertificateTimestamps`, `SupportedSignatureAlgorithms` | The overlay parses no private key, and Dart reads the 2 PEM blocks that `X509KeyPair` took. |
+| `EncryptedClientHelloKey` and its 3 fields | The encrypted client hello needs a key of the server inside the handshake, and Dart takes none. |
+| `Client`, `Server`, `NewListener` | Each 1 wraps a `net.Conn` that stands open. The secure socket of Dart takes over no socket that another call opened. |
+| `Conn.NetConn` | The result must name the socket under the TLS stream. A read of the value of the overlay would give the plain text of the stream, and Go gives the cipher text. |
+| `Conn.CloseWrite` | A half close. Read the row of `TCPConn.CloseWrite` of `net`. |
+
+### crypto/x509, 68 names
+
+| Name | The cause |
+|---|---|
+| `Certificate.Verify`, `VerifyOptions` and its 7 fields, `InvalidReason` and its 11 constants, `CertificateInvalidError`, `UnknownAuthorityError`, `ConstraintViolationError`, `UnhandledCriticalExtension`, and their members, 33 names | A chain check needs an RSA check and an ECDSA check of a signature. `crypto/rsa`, `crypto/ecdsa`, and `crypto/ed25519` each stand outside the surface, and no intrinsic of `syscall/dart` verifies a signature. A `Verify` that builds a chain and checks no signature would take a forged certificate, which is the worst silent wrong answer. Dart owns the trust decision of a handshake. |
+| `Certificate.CheckSignature`, `CheckSignatureFrom`, `CheckCRLSignature`, `CertificateRequest.CheckSignature`, `RevocationList.CheckSignatureFrom`, `ErrUnsupportedAlgorithm`, `InsecureAlgorithmError`, 8 names | Read the row above. |
+| `Certificate.PublicKey`, `CertificateRequest.PublicKey` | The type is `any`, and Go writes an `*rsa.PublicKey`, an `*ecdsa.PublicKey`, or an `ed25519.PublicKey`. No such type stands in the surface, thus no value fits and a nil field would lie. `RawSubjectPublicKeyInfo` holds the DER of the key, and `PublicKeyAlgorithm` names the algorithm. |
+| `ParsePKIXPublicKey`, `MarshalPKIXPublicKey`, `ParsePKCS1PublicKey`, `MarshalPKCS1PublicKey`, `ParsePKCS1PrivateKey`, `MarshalPKCS1PrivateKey`, `ParseECPrivateKey`, `MarshalECPrivateKey`, `ParsePKCS8PrivateKey`, `MarshalPKCS8PrivateKey` | Each 1 gives or takes a key of the 3 packages above. |
+| `CreateCertificate`, `CreateCertificateRequest`, `CreateRevocationList`, `Certificate.CreateCRL` | Each 1 signs with a private key. |
+| `DecryptPEMBlock`, `EncryptPEMBlock`, `IncorrectPasswordError`, `PEMCipher` and its 5 constants, 9 names | The PEM encryption of RFC 1423 reads DES, 3DES, and AES. `crypto/des` and `crypto/aes` each stand outside the surface. `IsEncryptedPEMBlock` needs no cipher, thus it stands. |
+| `SetFallbackRoots` | Go reads the fallback pool inside `Verify` alone, and the overlay holds no `Verify`. A call that writes a pool that no code reads would lie. |
+| `CertPool.AddCertWithConstraint` | The constraint reaches `Verify` alone. Read `SetFallbackRoots`. |
+
+### encoding/json, 25 names
+
+| Name | The cause |
+|---|---|
+| `Options`, `DefaultOptionsV1`, and the 12 option functions, 14 names | Each 1 gives a value that `encoding/json/v2` reads. `encoding/json/v2` and `encoding/json/jsontext` each stand outside the surface, thus no function of the surface takes an `Options` value. |
+| `Number.MarshalJSONTo`, `Number.UnmarshalJSONFrom` | Each 1 takes an encoder or a decoder of `encoding/json/jsontext`. |
+| `UnmarshalTypeError.Type`, `UnsupportedTypeError.Type`, `MarshalerError.Type` | The walk of the type descriptor runs in the Dart runtime library, and it reports the name of the type as a text. `reflect` of the surface builds no `Type` from a name. |
+| `UnsupportedValueError.Value` | The field holds a `reflect.Value` of the value that holds no JSON form. The walk reports the text of the value alone. |
+| `UnmarshalTypeError.Offset`, `UnmarshalTypeError.Err`, `UnmarshalTypeError.Unwrap` | The walk reports no offset of the input and no inner error. |
+| `InvalidUnmarshalError.Type`, `UnmarshalFieldError.Type` | The 2 are reachable, and a measure kept them out. Read below. |
+
+`InvalidUnmarshalError.Type` holds the type of the argument of `Unmarshal`, and
+`reflect.TypeOf` of that argument gives it. `UnmarshalFieldError` is deprecated,
+and no path of Go and no path of the overlay gives it. Thus the 2 names need
+only an import of `reflect` in `encoding/json`.
+
+That import costs each program that reads `encoding/json`. A measure of
+2026-09-04 built `testdata/programs/jsonuse` with the import and without it:
+
+| Measure | Without `reflect` | With `reflect` | The rise |
+|---|---|---|---|
+| The Dart source of the output | 2456 KB | 2804 KB | 348 KB, 14 percent |
+| The binary of `dart compile exe` | 8423360 bytes | 8636768 bytes | 208 KB, 2.5 percent |
+
+Item 9 of "The next list" holds the same trade: `crypto/rand.Int` and
+`crypto/rand.Prime` stay out, because the 2 names would give `math/big` to each
+program that reads `crypto/tls`. `encoding/json` reaches more programs than
+`crypto/tls`, and the value of the 2 names is smaller: 1 of the 2 names no path
+ever gives, and the other names a bug of the program that the text of the error
+already reports. Thus the 2 stay out under the same rule.
 
 ## The open file limit of the machine
 

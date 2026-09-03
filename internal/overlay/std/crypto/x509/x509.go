@@ -446,6 +446,21 @@ var extKeyUsageOIDs = []struct {
 	{ExtKeyUsageMicrosoftKernelCodeSigning, oidExtKeyUsageMicrosoftKernelCodeSigning},
 }
 
+// OID gives the object identifier of the extended key usage. It stops the
+// program for a value that the list above does not hold.
+func (eku ExtKeyUsage) OID() OID {
+	for _, pair := range extKeyUsageOIDs {
+		if pair.extKeyUsage == eku {
+			oid, err := OIDFromASN1OID(pair.oid)
+			if err != nil {
+				panic("x509: internal error: known ExtKeyUsage has invalid OID")
+			}
+			return oid
+		}
+	}
+	panic("x509: internal error: known ExtKeyUsage has no OID")
+}
+
 func extKeyUsageFromOID(oid asn1.ObjectIdentifier) (eku ExtKeyUsage, ok bool) {
 	for _, pair := range extKeyUsageOIDs {
 		if oid.Equal(pair.oid) {
@@ -466,6 +481,10 @@ var (
 	oidExtensionExtendedKeyUsage      = asn1.ObjectIdentifier{2, 5, 29, 37}
 	oidExtensionNameConstraints       = asn1.ObjectIdentifier{2, 5, 29, 30}
 	oidExtensionAuthorityInfoAccess   = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 1}
+	oidExtensionCertificatePolicies   = asn1.ObjectIdentifier{2, 5, 29, 32}
+	oidExtensionPolicyMappings        = asn1.ObjectIdentifier{2, 5, 29, 33}
+	oidExtensionPolicyConstraints     = asn1.ObjectIdentifier{2, 5, 29, 36}
+	oidExtensionInhibitAnyPolicy      = asn1.ObjectIdentifier{2, 5, 29, 54}
 
 	oidAuthorityInfoAccessOcsp    = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 48, 1}
 	oidAuthorityInfoAccessIssuers = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 48, 2}
@@ -473,8 +492,7 @@ var (
 
 // A Certificate holds 1 X.509 certificate.
 //
-// The overlay holds no PublicKey field and no policy field. The package doc
-// names the cause.
+// The overlay holds no PublicKey field. The package doc names the cause.
 type Certificate struct {
 	// Raw holds the whole DER of the certificate.
 	Raw []byte
@@ -503,6 +521,12 @@ type Certificate struct {
 
 	// Extensions holds each extension of the certificate in its raw form.
 	Extensions []pkix.Extension
+
+	// ExtraExtensions holds each extension that CreateCertificate copies raw
+	// into the certificate that it makes. Go leaves this field empty after a
+	// parse, thus the field stays empty here too, and that matches Go
+	// exactly. Read Extensions for each extension of a parsed certificate.
+	ExtraExtensions []pkix.Extension
 
 	// UnhandledCriticalExtensions names each critical extension that the
 	// parse did not read.
@@ -554,6 +578,73 @@ type Certificate struct {
 	ExcludedEmailAddresses      []string
 	PermittedURIDomains         []string
 	ExcludedURIDomains          []string
+
+	// PolicyIdentifiers holds each policy identifier of the
+	// certificatePolicies extension in the asn1.ObjectIdentifier form. That
+	// form holds a component of 31 bits at most. An identifier that needs
+	// more bits stands in Policies alone.
+	PolicyIdentifiers []asn1.ObjectIdentifier
+
+	// Policies holds each policy identifier of the certificatePolicies
+	// extension. RFC 5280, 4.2.1.4.
+	Policies []OID
+
+	// InhibitAnyPolicy and InhibitAnyPolicyZero report the presence and the
+	// value of the inhibitAnyPolicy extension. RFC 5280, 4.2.1.14.
+	//
+	// The value counts the certificates after this one in the path. Each such
+	// certificate may use the anyPolicy identifier to match any other policy.
+	//
+	// After a parse, a value above 0 reports a field that the extension held.
+	// A value of 0 with InhibitAnyPolicyZero false reports an absent field.
+	InhibitAnyPolicy int
+	// InhibitAnyPolicyZero reports a value of 0 that the extension held.
+	InhibitAnyPolicyZero bool
+
+	// InhibitPolicyMapping and InhibitPolicyMappingZero report the presence
+	// and the value of the inhibitPolicyMapping field of the policyConstraints
+	// extension. RFC 5280, 4.2.1.11.
+	//
+	// The value counts the certificates after this one in the path. Each such
+	// certificate may use the policyMappings extension.
+	//
+	// After a parse, a value above 0 reports a field that the extension held.
+	// A value of 0 with InhibitPolicyMappingZero false reports an absent
+	// field.
+	InhibitPolicyMapping int
+	// InhibitPolicyMappingZero reports a value of 0 that the extension held.
+	InhibitPolicyMappingZero bool
+
+	// RequireExplicitPolicy and RequireExplicitPolicyZero report the presence
+	// and the value of the requireExplicitPolicy field of the
+	// policyConstraints extension. RFC 5280, 4.2.1.11.
+	//
+	// The value counts the certificates after this one in the path. After
+	// that count, the rest of the path demands an explicit policy. Each such
+	// certificate must then hold a required policy identifier. The
+	// policyMappings extension may declare an identifier as the equal of one.
+	//
+	// After a parse, a value above 0 reports a field that the extension held.
+	// A value of 0 with RequireExplicitPolicyZero false reports an absent
+	// field.
+	RequireExplicitPolicy int
+	// RequireExplicitPolicyZero reports a value of 0 that the extension held.
+	RequireExplicitPolicyZero bool
+
+	// PolicyMappings holds each entry of the policyMappings extension. RFC
+	// 5280, 4.2.1.5.
+	PolicyMappings []PolicyMapping
+}
+
+// A PolicyMapping holds 1 entry of the policyMappings extension. RFC 5280,
+// 4.2.1.5.
+type PolicyMapping struct {
+	// IssuerDomainPolicy holds a policy identifier that the issuer treats as
+	// the equal of SubjectDomainPolicy in the subject certificate.
+	IssuerDomainPolicy OID
+	// SubjectDomainPolicy holds a policy identifier that the issuer treats as
+	// the equal of IssuerDomainPolicy in the issuer certificate.
+	SubjectDomainPolicy OID
 }
 
 // Equal reports whether the 2 certificates hold the same DER.
@@ -683,6 +774,14 @@ func parseExtension(out *Certificate, e pkix.Extension) (bool, error) {
 		return true, parseExtKeyUsage(out, e.Value)
 	case e.Id.Equal(oidExtensionAuthorityInfoAccess):
 		return true, parseAuthorityInfoAccess(out, e.Value)
+	case e.Id.Equal(oidExtensionCertificatePolicies):
+		return true, parseCertificatePolicies(out, e.Value)
+	case e.Id.Equal(oidExtensionPolicyMappings):
+		return true, parsePolicyMappings(out, e.Value)
+	case e.Id.Equal(oidExtensionPolicyConstraints):
+		return true, parsePolicyConstraints(out, e.Value)
+	case e.Id.Equal(oidExtensionInhibitAnyPolicy):
+		return true, parseInhibitAnyPolicy(out, e.Value)
 	case e.Id.Equal(oidExtensionNameConstraints):
 		unhandled, err := parseNameConstraints(out, e)
 		return !unhandled, err
@@ -820,6 +919,177 @@ func parseAuthorityInfoAccess(out *Certificate, value []byte) error {
 			out.IssuingCertificateURL = append(out.IssuingCertificateURL, string(v.Location.Bytes))
 		}
 	}
+	return nil
+}
+
+// parseCertificatePolicies reads the certificatePolicies extension. RFC 5280,
+// 4.2.1.4. The parse reads the policyIdentifier of each entry, and it steps
+// over each policy qualifier.
+func parseCertificatePolicies(out *Certificate, value []byte) error {
+	var seq asn1.RawValue
+	rest, err := asn1.Unmarshal(value, &seq)
+	if err != nil {
+		return err
+	}
+	if len(rest) != 0 {
+		return errors.New("x509: trailing data after X.509 certificate policies")
+	}
+	if !seq.IsCompound || seq.Tag != 16 || seq.Class != 0 {
+		return errors.New("x509: invalid certificate policies")
+	}
+	seenOIDs := map[string]bool{}
+	var policies []OID
+	body := seq.Bytes
+	for len(body) > 0 {
+		var info asn1.RawValue
+		body, err = asn1.Unmarshal(body, &info)
+		if err != nil {
+			return err
+		}
+		if !info.IsCompound || info.Tag != 16 || info.Class != 0 {
+			return errors.New("x509: invalid certificate policies")
+		}
+		var ident asn1.RawValue
+		if _, err = asn1.Unmarshal(info.Bytes, &ident); err != nil {
+			return err
+		}
+		if ident.IsCompound || ident.Tag != 6 || ident.Class != 0 {
+			return errors.New("x509: invalid certificate policies")
+		}
+		// RFC 5280, 4.2.1.4 allows 1 entry per policy identifier alone.
+		if seenOIDs[string(ident.Bytes)] {
+			return errors.New("x509: invalid certificate policies")
+		}
+		seenOIDs[string(ident.Bytes)] = true
+		oid, ok := newOIDFromDER(ident.Bytes)
+		if !ok {
+			return errors.New("x509: invalid certificate policies")
+		}
+		policies = append(policies, oid)
+	}
+	out.Policies = policies
+	// PolicyIdentifiers holds each identifier that fits the
+	// asn1.ObjectIdentifier form. An identifier of a wider component drops
+	// out, and Policies still holds it.
+	out.PolicyIdentifiers = make([]asn1.ObjectIdentifier, 0, len(policies))
+	for _, oid := range policies {
+		if asn1OID, ok := oid.toASN1OID(); ok {
+			out.PolicyIdentifiers = append(out.PolicyIdentifiers, asn1OID)
+		}
+	}
+	return nil
+}
+
+// parsePolicyMappings reads the policyMappings extension. RFC 5280, 4.2.1.5.
+func parsePolicyMappings(out *Certificate, value []byte) error {
+	var seq asn1.RawValue
+	rest, err := asn1.Unmarshal(value, &seq)
+	if err != nil {
+		return err
+	}
+	if len(rest) != 0 {
+		return errors.New("x509: trailing data after X.509 policy mappings")
+	}
+	if !seq.IsCompound || seq.Tag != 16 || seq.Class != 0 {
+		return errors.New("x509: invalid policy mappings extension")
+	}
+	body := seq.Bytes
+	for len(body) > 0 {
+		var pair asn1.RawValue
+		body, err = asn1.Unmarshal(body, &pair)
+		if err != nil {
+			return err
+		}
+		if !pair.IsCompound || pair.Tag != 16 || pair.Class != 0 {
+			return errors.New("x509: invalid policy mappings extension")
+		}
+		var issuer, subject asn1.RawValue
+		var pairBody []byte
+		pairBody, err = asn1.Unmarshal(pair.Bytes, &issuer)
+		if err != nil {
+			return err
+		}
+		if _, err = asn1.Unmarshal(pairBody, &subject); err != nil {
+			return err
+		}
+		if issuer.IsCompound || issuer.Tag != 6 || issuer.Class != 0 {
+			return errors.New("x509: invalid policy mappings extension")
+		}
+		if subject.IsCompound || subject.Tag != 6 || subject.Class != 0 {
+			return errors.New("x509: invalid policy mappings extension")
+		}
+		// Go holds the DER of each identifier here, and it runs no check of
+		// the base 128 form. The parse of the overlay does the same.
+		out.PolicyMappings = append(out.PolicyMappings, PolicyMapping{
+			IssuerDomainPolicy:  OID{der: issuer.Bytes},
+			SubjectDomainPolicy: OID{der: subject.Bytes},
+		})
+	}
+	return nil
+}
+
+// parsePolicyConstraints reads the policyConstraints extension. RFC 5280,
+// 4.2.1.11.
+func parsePolicyConstraints(out *Certificate, value []byte) error {
+	var seq asn1.RawValue
+	rest, err := asn1.Unmarshal(value, &seq)
+	if err != nil {
+		return err
+	}
+	if len(rest) != 0 {
+		return errors.New("x509: trailing data after X.509 policy constraints")
+	}
+	if !seq.IsCompound || seq.Tag != 16 || seq.Class != 0 {
+		return errors.New("x509: invalid policy constraints extension")
+	}
+	body := seq.Bytes
+	// The 2 fields are each optional. requireExplicitPolicy carries the
+	// context tag 0, thus the first octet of it holds the value 0x80.
+	// inhibitPolicyMapping carries the context tag 1, thus the first octet of
+	// it holds the value 0x81.
+	if len(body) > 0 && body[0] == 0x80 {
+		var v int64
+		body, err = asn1.UnmarshalWithParams(body, &v, "tag:0")
+		if err != nil {
+			return errors.New("x509: invalid policy constraints extension")
+		}
+		out.RequireExplicitPolicy = int(v)
+		if int64(out.RequireExplicitPolicy) != v {
+			return errors.New("x509: policy constraints requireExplicitPolicy field overflows int")
+		}
+		out.RequireExplicitPolicyZero = out.RequireExplicitPolicy == 0
+	}
+	if len(body) > 0 && body[0] == 0x81 {
+		var v int64
+		body, err = asn1.UnmarshalWithParams(body, &v, "tag:1")
+		if err != nil {
+			return errors.New("x509: invalid policy constraints extension")
+		}
+		out.InhibitPolicyMapping = int(v)
+		if int64(out.InhibitPolicyMapping) != v {
+			return errors.New("x509: policy constraints inhibitPolicyMapping field overflows int")
+		}
+		out.InhibitPolicyMappingZero = out.InhibitPolicyMapping == 0
+	}
+	return nil
+}
+
+// parseInhibitAnyPolicy reads the inhibitAnyPolicy extension. RFC 5280,
+// 4.2.1.14.
+func parseInhibitAnyPolicy(out *Certificate, value []byte) error {
+	var v int64
+	rest, err := asn1.Unmarshal(value, &v)
+	if err != nil {
+		return errors.New("x509: invalid inhibit any policy extension")
+	}
+	if len(rest) != 0 {
+		return errors.New("x509: trailing data after X.509 inhibit any policy")
+	}
+	out.InhibitAnyPolicy = int(v)
+	if int64(out.InhibitAnyPolicy) != v {
+		return errors.New("x509: invalid inhibit any policy extension")
+	}
+	out.InhibitAnyPolicyZero = out.InhibitAnyPolicy == 0
 	return nil
 }
 

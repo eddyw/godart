@@ -15,11 +15,13 @@
 package tls
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"io"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"syscall/dart"
@@ -148,6 +150,12 @@ type ConnectionState struct {
 	// holds the value true. A zero ConnectionState holds false, exactly as in
 	// Go.
 	HandshakeComplete bool
+	// NegotiatedProtocolIsMutual always holds true. Go 1.14 and later set the
+	// same value, and the handshake of Go fails when the 2 sides agree on no
+	// protocol.
+	//
+	// Deprecated: this value is always true.
+	NegotiatedProtocolIsMutual bool
 }
 
 // A Conn is a TLS connection. It holds each method of net.Conn.
@@ -228,6 +236,13 @@ func (c *Conn) apply() error {
 // Handshake does nothing. Dart runs the handshake inside the dial.
 func (c *Conn) Handshake() error { return nil }
 
+// HandshakeContext does nothing. Dart runs the handshake inside the dial,
+// thus each Conn of this package already holds a complete handshake.
+//
+// Go also gives nil for a complete handshake, and it reads the context no
+// more at that point.
+func (c *Conn) HandshakeContext(ctx context.Context) error { return nil }
+
 // ConnectionState gives the result of the handshake.
 func (c *Conn) ConnectionState() ConnectionState { return c.state }
 
@@ -283,7 +298,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	}
 	return &Conn{handle: handle,
 		state: ConnectionState{NegotiatedProtocol: proto,
-			HandshakeComplete: true}}, nil
+			HandshakeComplete: true, NegotiatedProtocolIsMutual: true}}, nil
 }
 
 // Close ends the listener. Each connection of it stays open, exactly as in
@@ -342,7 +357,7 @@ func Dial(network, addr string, config *Config) (*Conn, error) {
 	return &Conn{
 		handle: handle,
 		state: ConnectionState{NegotiatedProtocol: chosen, ServerName: name,
-			HandshakeComplete: true},
+			HandshakeComplete: true, NegotiatedProtocolIsMutual: true},
 	}, nil
 }
 
@@ -380,17 +395,157 @@ func DialProxy(proxyAddr, addr, head string, config *Config) (*Conn, error) {
 	return &Conn{
 		handle: handle,
 		state: ConnectionState{NegotiatedProtocol: chosen, ServerName: name,
-			HandshakeComplete: true},
+			HandshakeComplete: true, NegotiatedProtocolIsMutual: true},
 	}, nil
 }
 
-// DialWithDialer opens a TLS connection with the timeout of the dialer. Each
-// other field of the dialer reaches no operation.
+// DialWithDialer opens a TLS connection with the timeout, the deadline, and
+// the cancel channel of the dialer.
+//
+// The dial and the handshake share the 1 limit, because the secure socket of
+// Dart runs the 2 in 1 call. Go gives the handshake the limit alone.
 func DialWithDialer(dialer *net.Dialer, network, addr string, config *Config) (*Conn, error) {
-	if dialer != nil && dialer.Timeout != 0 {
-		return nil, errors.New("tls: a timeout of the dialer is outside the subset")
+	return dial(context.Background(), dialer, network, addr, config)
+}
+
+// A Dialer opens a TLS connection with a context.
+type Dialer struct {
+	// NetDialer holds the dialer of the plain connection. A nil field holds
+	// the zero net.Dialer.
+	NetDialer *net.Dialer
+
+	// Config holds the settings of the TLS connection. A nil field holds the
+	// zero Config.
+	Config *Config
+}
+
+// Dial opens a TLS connection with the settings of the dialer.
+//
+// The result holds a *Conn, exactly as in Go.
+func (d *Dialer) Dial(network, addr string) (net.Conn, error) {
+	return d.DialContext(context.Background(), network, addr)
+}
+
+// DialContext opens a TLS connection and ends the wait when the context ends.
+//
+// The dial runs on a goroutine, thus the select takes the first of the 2
+// events. A dial that ends after the wait closes its own connection.
+//
+// The dial and the handshake share the 1 limit, because the secure socket of
+// Dart runs the 2 in 1 call.
+func (d *Dialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	c, err := dial(ctx, d.NetDialer, network, addr, d.Config)
+	if err != nil {
+		return nil, err
 	}
-	return Dial(network, addr, config)
+	return c, nil
+}
+
+// dialResult holds the 2 results of a dial that runs on a goroutine.
+type dialResult struct {
+	conn  *Conn
+	cause error
+}
+
+// dial opens a TLS connection under the limits of a net.Dialer and of a
+// context.
+func dial(ctx context.Context, dialer *net.Dialer, network, addr string, config *Config) (*Conn, error) {
+	if dialer != nil {
+		if dialer.Timeout > 0 {
+			inner, cancel := context.WithTimeout(ctx, dialer.Timeout)
+			defer cancel()
+			ctx = inner
+		}
+		if !dialer.Deadline.IsZero() {
+			inner, cancel := context.WithDeadline(ctx, dialer.Deadline)
+			defer cancel()
+			ctx = inner
+		}
+	}
+	target, name, err := resolveTarget(ctx, dialer, addr, config)
+	if err != nil {
+		return nil, err
+	}
+	if name != "" {
+		inner := config.Clone()
+		if inner == nil {
+			inner = &Config{}
+		}
+		inner.ServerName = name
+		config = inner
+	}
+	var cancelChan <-chan struct{}
+	if dialer != nil {
+		cancelChan = dialer.Cancel
+	}
+	done := make(chan dialResult, 1)
+	go func() {
+		c, cause := Dial(network, target, config)
+		done <- dialResult{conn: c, cause: cause}
+	}()
+	select {
+	case r := <-done:
+		return r.conn, r.cause
+	case <-ctx.Done():
+		go closeLate(done)
+		return nil, ctx.Err()
+	case <-cancelChan:
+		go closeLate(done)
+		return nil, errors.New("tls: the dial ended, because the cancel channel closed")
+	}
+}
+
+// closeLate closes a connection of a dial that ended after the caller left.
+func closeLate(done chan dialResult) {
+	if r := <-done; r.conn != nil {
+		r.conn.Close()
+	}
+}
+
+// resolveTarget reads the host name of the address with the resolver of the
+// dialer. It gives the address of the dial and the name of the handshake.
+//
+// A nil resolver leaves the name to the runtime, thus the address passes
+// unchanged and the name of the handshake stays empty.
+func resolveTarget(ctx context.Context, dialer *net.Dialer, addr string, config *Config) (string, string, error) {
+	if dialer == nil || dialer.Resolver == nil {
+		return addr, "", nil
+	}
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", "", err
+	}
+	if host == "" || net.ParseIP(host) != nil {
+		return addr, "", nil
+	}
+	ips, err := dialer.Resolver.LookupIP(ctx, "ip", host)
+	if err != nil {
+		return "", "", err
+	}
+	if len(ips) == 0 {
+		return "", "", errors.New("tls: the resolver gave no address of " + host)
+	}
+	// The dial takes the address, thus the handshake keeps the name of the
+	// user. A ServerName of the config wins, exactly as in Go.
+	name := host
+	if config != nil && config.ServerName != "" {
+		name = config.ServerName
+	}
+	return net.JoinHostPort(ips[0].String(), port), name, nil
+}
+
+// LoadX509KeyPair reads a PEM chain and a PEM key of the file system, and it
+// builds a Certificate of the 2.
+func LoadX509KeyPair(certFile, keyFile string) (Certificate, error) {
+	certPEMBlock, err := os.ReadFile(certFile)
+	if err != nil {
+		return Certificate{}, err
+	}
+	keyPEMBlock, err := os.ReadFile(keyFile)
+	if err != nil {
+		return Certificate{}, err
+	}
+	return X509KeyPair(certPEMBlock, keyPEMBlock)
 }
 
 // reject stops the program for a field that Dart cannot honor. A silent change

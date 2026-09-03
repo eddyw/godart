@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -100,6 +101,21 @@ type Transport struct {
 	// DialTLSContext opens a connection whose handshake already ran. A result
 	// that also holds ConnectionState and Handle can carry HTTP/2.
 	DialTLSContext func(ctx context.Context, network, addr string) (net.Conn, error)
+	// TLSNextProto names 1 RoundTripper builder for each protocol of ALPN
+	// outside http/1.1 and h2. The transport calls the builder of the
+	// protocol that the handshake took, and the RoundTripper then owns the
+	// connection.
+	//
+	// A nil map leaves each protocol to the transport.
+	TLSNextProto map[string]func(authority string, c *tls.Conn) RoundTripper
+	// Protocols names the set of protocols that the transport offers. A nil
+	// field reads ForceAttemptHTTP2 and TLSClientConfig, exactly as the field
+	// list above names.
+	//
+	// The transport carries HTTP/2 over TLS alone. A set that holds
+	// UnencryptedHTTP2 gives an error at each request, because no path of the
+	// runtime carries HTTP/2 over a plain socket.
+	Protocols *Protocols
 
 	mu sync.Mutex
 	// idle holds the connections that stand open with no request, and
@@ -291,6 +307,9 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 	if req.URL == nil {
 		return nil, errors.New("http: nil Request.URL")
 	}
+	if err := t.checkProtocols(); err != nil {
+		return nil, err
+	}
 	// A RoundTripper of RegisterProtocol wins over the transport. A result of
 	// ErrSkipAltProtocol gives the request back.
 	if rt := t.altOf(req.URL.Scheme); rt != nil {
@@ -332,6 +351,11 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 		pc, reused, err := t.getConn(req.Context(), r, req)
 		if err != nil {
 			return nil, err
+		}
+		// A protocol of ALPN outside http/1.1 and h2 gives the connection to
+		// the RoundTripper of TLSNextProto.
+		if rt := t.nextProto(req.URL.Host, pc.conn); rt != nil {
+			return rt.RoundTrip(req)
 		}
 		if tc, ok := pc.conn.(h2Conn); ok &&
 			tc.ConnectionState().NegotiatedProtocol == "h2" {
@@ -1011,6 +1035,23 @@ func (c *connBody) Close() error {
 // its own wins. A transport with no config offers h2, exactly as the default
 // transport of Go does, and ForceAttemptHTTP2 offers h2 next to a config.
 func (t *Transport) protos() []string {
+	if t.Protocols != nil {
+		var out []string
+		for proto := range t.TLSNextProto {
+			if proto == "http/1.1" || proto == "h2" {
+				continue
+			}
+			out = append(out, proto)
+		}
+		slices.Sort(out)
+		if t.Protocols.HTTP2() {
+			out = append(out, "h2")
+		}
+		if t.Protocols.HTTP1() {
+			out = append(out, "http/1.1")
+		}
+		return out
+	}
 	if t.TLSClientConfig != nil && len(t.TLSClientConfig.NextProtos) > 0 {
 		return t.TLSClientConfig.NextProtos
 	}
@@ -1018,6 +1059,42 @@ func (t *Transport) protos() []string {
 		return []string{"h2", "http/1.1"}
 	}
 	return nil
+}
+
+// checkProtocols rejects a set of protocols that the transport cannot honor.
+func (t *Transport) checkProtocols() error {
+	if t.Protocols == nil {
+		return nil
+	}
+	if t.Protocols.UnencryptedHTTP2() {
+		return errors.New("http: the transport carries HTTP/2 over TLS alone, " +
+			"thus Protocols must hold no UnencryptedHTTP2")
+	}
+	if !t.Protocols.HTTP1() && !t.Protocols.HTTP2() {
+		return errors.New("http: Protocols holds no protocol that the transport carries")
+	}
+	return nil
+}
+
+// nextProto gives the RoundTripper of a connection whose ALPN took a protocol
+// of TLSNextProto. It gives nil for each other connection.
+func (t *Transport) nextProto(authority string, c net.Conn) RoundTripper {
+	if len(t.TLSNextProto) == 0 {
+		return nil
+	}
+	tc, ok := c.(*tls.Conn)
+	if !ok {
+		return nil
+	}
+	proto := tc.ConnectionState().NegotiatedProtocol
+	if proto == "" || proto == "http/1.1" || proto == "h2" {
+		return nil
+	}
+	build, ok := t.TLSNextProto[proto]
+	if !ok {
+		return nil
+	}
+	return build(authority, tc)
 }
 
 // h2Of gives the open HTTP/2 session of a host.

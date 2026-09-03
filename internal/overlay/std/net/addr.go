@@ -233,6 +233,13 @@ func (e *ParseError) Error() string {
 	return "invalid " + e.Type + ": " + e.Text
 }
 
+// Timeout reports whether the failure came from a deadline. A parse error
+// holds none.
+func (e *ParseError) Timeout() bool { return false }
+
+// Temporary reports whether a second try may work. A parse error gives false.
+func (e *ParseError) Temporary() bool { return false }
+
 // A TCPAddr is the address of a TCP connection or of a TCP listener.
 type TCPAddr struct {
 	IP   IP
@@ -324,6 +331,32 @@ func ResolveUDPAddr(network, address string) (*UDPAddr, error) {
 	return &UDPAddr{IP: ip, Port: port, Zone: zone}, nil
 }
 
+// ResolveIPAddr reads the text of an address that holds no port. The network
+// is ip, ip4, or ip6, and an empty network names ip.
+//
+// The 3 Resolve functions of this overlay each read a numeric address alone.
+// A host name gives an error, because a name lookup gives up control and a
+// Resolve function of Go holds no context. `Resolver.LookupIP` reads a name.
+func ResolveIPAddr(network, address string) (*IPAddr, error) {
+	switch network {
+	case "", "ip", "ip4", "ip6":
+	default:
+		return nil, UnknownNetworkError(network)
+	}
+	if address == "" {
+		return &IPAddr{}, nil
+	}
+	host, zone := address, ""
+	if i := strings.LastIndexByte(host, '%'); i >= 0 {
+		host, zone = host[:i], host[i+1:]
+	}
+	ip := ParseIP(host)
+	if ip == nil {
+		return nil, &ParseError{Type: "IP address", Text: host}
+	}
+	return &IPAddr{IP: ip, Zone: zone}, nil
+}
+
 // ResolveUnixAddr reads the text of a Unix socket address.
 func ResolveUnixAddr(network, address string) (*UnixAddr, error) {
 	switch network {
@@ -357,6 +390,20 @@ func (e *AddrError) Timeout() bool { return false }
 // Temporary reports whether a second try may work. An address error gives
 // false.
 func (e *AddrError) Temporary() bool { return false }
+
+// An InvalidAddrError names an address that an operation cannot take. The
+// text of the value is the whole message.
+type InvalidAddrError string
+
+func (e InvalidAddrError) Error() string { return string(e) }
+
+// Timeout reports whether the failure came from a deadline. An invalid
+// address holds none.
+func (e InvalidAddrError) Timeout() bool { return false }
+
+// Temporary reports whether a second try may work. An invalid address gives
+// false.
+func (e InvalidAddrError) Temporary() bool { return false }
 
 // An UnknownNetworkError names a network that no operation holds.
 type UnknownNetworkError string

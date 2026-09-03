@@ -52,6 +52,42 @@ type Flusher interface {
 	Flush()
 }
 
+// A CloseNotifier gives a channel that reports a client that left before the
+// answer ended.
+//
+// No ResponseWriter of this overlay holds the interface, thus an assertion of
+// it gives false. A handler must read that result, exactly as Go asks. The
+// runtime reports a close of the peer at the next read alone, and the writer
+// holds no read of its own.
+//
+// Deprecated: Read the context of the request. It ends when the client
+// leaves.
+type CloseNotifier interface {
+	CloseNotify() <-chan bool
+}
+
+// A Pusher sends a push of HTTP/2 to the client.
+//
+// No ResponseWriter of this overlay holds the interface, thus an assertion of
+// it gives false, and a handler then serves the resource on request. The
+// HTTP/2 session of the runtime sends no push frame.
+type Pusher interface {
+	// Push starts a push of the target. A target that holds no scheme and no
+	// host names a path of the same origin.
+	Push(target string, opts *PushOptions) error
+}
+
+// A PushOptions holds the fields of a push.
+type PushOptions struct {
+	// Method names the method of the push. An empty value names GET, and GET
+	// and HEAD are the 2 that a push allows.
+	Method string
+
+	// Header holds the fields of the request of the push. A field that names
+	// the method, the scheme, the authority, or the path is not allowed.
+	Header Header
+}
+
 // A Hijacker gives the connection of a request to the handler. The handler
 // then owns the connection, and the server writes no answer and no close of
 // its own.
@@ -163,6 +199,26 @@ type Server struct {
 	// ConnContext changes the context of 1 connection. The result must hold no
 	// nil value.
 	ConnContext func(ctx context.Context, c net.Conn) context.Context
+	// TLSConfig holds the settings of the TLS listener that ListenAndServeTLS
+	// opens. ListenAndServeTLS reads the certificate of the 2 file names of
+	// its own, or the field Certificates of this config.
+	//
+	// Read the package crypto/tls for each field that Dart honors. A field
+	// that would change the handshake stops the program at the listen.
+	TLSConfig *tls.Config
+	// TLSNextProto names 1 handler for each protocol of ALPN outside
+	// http/1.1 and h2. The server calls the handler of the protocol that the
+	// handshake took, and the handler then owns the connection.
+	//
+	// A nil map leaves each protocol to the server.
+	TLSNextProto map[string]func(*Server, *tls.Conn, Handler)
+	// Protocols names the set of protocols that the server accepts. A nil
+	// field holds HTTP1 and HTTP2.
+	//
+	// The server carries HTTP/2 over TLS alone. A set that holds
+	// UnencryptedHTTP2 gives an error at the listen, because no path of the
+	// runtime carries HTTP/2 over a plain socket.
+	Protocols *Protocols
 
 	// down marks a server that Close or Shutdown ended.
 	down atomic.Bool
@@ -206,6 +262,9 @@ func (s *Server) ListenAndServe() error {
 // Serve answers each connection of the listener. It gives ErrServerClosed after
 // Close or after Shutdown.
 func (s *Server) Serve(l net.Listener) error {
+	if err := s.checkProtocols(); err != nil {
+		return err
+	}
 	origin := l
 	var tracked net.Listener = &onceCloseListener{Listener: l}
 	defer tracked.Close()
@@ -430,6 +489,55 @@ func (s *Server) maxHeaderValueCount() int {
 }
 
 // logf writes a line to ErrorLog, or to the logger of the package log.
+// protocols gives the set of protocols of the server. A nil field holds
+// HTTP1 and HTTP2, exactly as in Go.
+func (s *Server) protocols() Protocols {
+	if s.Protocols != nil {
+		return *s.Protocols
+	}
+	var p Protocols
+	p.SetHTTP1(true)
+	p.SetHTTP2(true)
+	return p
+}
+
+// checkProtocols rejects a set of protocols that the server cannot honor.
+func (s *Server) checkProtocols() error {
+	if s.Protocols == nil {
+		return nil
+	}
+	p := *s.Protocols
+	if p.UnencryptedHTTP2() {
+		return errors.New("http: the server carries HTTP/2 over TLS alone, " +
+			"thus Protocols must hold no UnencryptedHTTP2")
+	}
+	if !p.HTTP1() && !p.HTTP2() {
+		return errors.New("http: Protocols holds no protocol that the server carries")
+	}
+	return nil
+}
+
+// alpn gives the list of ALPN of a TLS listener of the server. The list holds
+// the protocol of each handler of TLSNextProto first, exactly as in Go.
+func (s *Server) alpn() []string {
+	var out []string
+	for proto := range s.TLSNextProto {
+		if proto == "http/1.1" || proto == "h2" {
+			continue
+		}
+		out = append(out, proto)
+	}
+	slices.Sort(out)
+	p := s.protocols()
+	if p.HTTP2() {
+		out = append(out, "h2")
+	}
+	if p.HTTP1() {
+		out = append(out, "http/1.1")
+	}
+	return out
+}
+
 func (s *Server) logf(format string, args ...any) {
 	if s != nil && s.ErrorLog != nil {
 		s.ErrorLog.Printf(format, args...)
@@ -484,11 +592,37 @@ func (c *serverConn) serve(ctx context.Context) {
 		s.setState(c, StateClosed)
 	}()
 	// A TLS connection whose ALPN took h2 leaves the loop of HTTP/1.1, and the
-	// HTTP/2 session of the runtime drives its socket.
-	if tc, ok := c.conn.(h2Conn); ok &&
-		tc.ConnectionState().NegotiatedProtocol == "h2" {
+	// HTTP/2 session of the runtime drives its socket. A protocol outside
+	// http/1.1 and h2 reaches the handler of TLSNextProto.
+	proto := ""
+	if tc, ok := c.conn.(h2Conn); ok {
+		proto = tc.ConnectionState().NegotiatedProtocol
+	}
+	if proto != "" && proto != "http/1.1" && proto != "h2" {
+		if next, ok := s.TLSNextProto[proto]; ok {
+			tc, isTLS := c.conn.(*tls.Conn)
+			if !isTLS {
+				s.logf("http: the connection of the protocol %s holds no *tls.Conn", proto)
+				return
+			}
+			s.setState(c, StateActive)
+			taken = true
+			next(s, tc, serverHandler{s})
+			return
+		}
+	}
+	if proto == "h2" {
+		if !s.protocols().HTTP2() {
+			s.logf("http: the server takes no connection of h2, because Protocols holds no HTTP2")
+			return
+		}
+		tc, _ := c.conn.(h2Conn)
 		s.setState(c, StateActive)
 		s.serveH2(ctx, tc.Handle())
+		return
+	}
+	if !s.protocols().HTTP1() {
+		s.logf("http: the server takes no connection of HTTP/1, because Protocols holds no HTTP1")
 		return
 	}
 	ctx = context.WithValue(ctx, LocalAddrContextKey, c.conn.LocalAddr())
@@ -634,7 +768,22 @@ type response struct {
 	chunked bool
 	// hijacked marks a connection that the handler took.
 	hijacked bool
+	// trailers names each field of the head Trailer that the answer writes
+	// after the body.
+	trailers []string
+	// head holds the copy of the fields that WriteHeader took. An answer that
+	// declares no trailer holds nil, and the write then reads the live map.
+	head Header
 }
+
+// TrailerPrefix names a field that the server writes after the body. A
+// handler adds the prefix in front of the name of the field, and the server
+// removes the prefix at the write.
+//
+// The prefix reaches a field that the handler did not name in the head
+// Trailer. The chunked form of HTTP/1.1 carries such a field, thus an answer
+// of HTTP/1.0 writes none, exactly as in Go.
+const TrailerPrefix = "Trailer:"
 
 func (w *response) Header() Header { return w.header }
 
@@ -648,6 +797,80 @@ func (w *response) WriteHeader(code int) {
 	}
 	w.wroteHead = true
 	w.status = code
+	w.declareTrailers()
+}
+
+// declareTrailers reads the head Trailer and keeps a copy of the fields.
+//
+// A handler writes the value of a declared field after WriteHeader, thus the
+// copy holds the fields that the head of the answer takes. An answer that
+// declares no trailer keeps no copy.
+func (w *response) declareTrailers() {
+	var names []string
+	for _, v := range w.header.Values("Trailer") {
+		for _, part := range strings.Split(v, ",") {
+			name := strings.TrimSpace(part)
+			if name == "" {
+				continue
+			}
+			key := CanonicalHeaderKey(name)
+			switch key {
+			case "Transfer-Encoding", "Trailer", "Content-Length":
+				// RFC 9110, 6.5.1 forbids each of the 3 after the body.
+				continue
+			}
+			names = append(names, key)
+		}
+	}
+	if len(names) == 0 {
+		return
+	}
+	w.trailers = names
+	w.head = w.header.Clone()
+}
+
+// wire gives the fields that the head of the answer takes.
+func (w *response) wire() Header {
+	if w.head != nil {
+		return w.head
+	}
+	return w.header
+}
+
+// finalTrailers gives each field that follows the body. A key with the prefix
+// TrailerPrefix loses the prefix, and a name of the head Trailer keeps its
+// value of the live map.
+func (w *response) finalTrailers() Header {
+	var t Header
+	for k, vv := range w.header {
+		name, found := strings.CutPrefix(k, TrailerPrefix)
+		if !found {
+			continue
+		}
+		if t == nil {
+			t = Header{}
+		}
+		t[name] = vv
+	}
+	for _, k := range w.trailers {
+		for _, v := range w.header.Values(k) {
+			if t == nil {
+				t = Header{}
+			}
+			t.Add(k, v)
+		}
+	}
+	return t
+}
+
+// writeTrailers ends the chunked body. It writes each field that follows the
+// body, and then the empty line.
+func (w *response) writeTrailers(t Header) {
+	io.WriteString(w.conn, "0\r\n")
+	if len(t) > 0 {
+		t.Write(w.conn)
+	}
+	io.WriteString(w.conn, "\r\n")
 }
 
 func (w *response) Write(p []byte) (int, error) {
@@ -678,12 +901,13 @@ func (w *response) Flush() {
 		// flushes writes the bytes raw, and the end of the connection then
 		// names the end of the body.
 		w.chunked = w.req == nil || w.req.ProtoAtLeast(1, 1)
+		head := w.wire()
 		if w.chunked {
-			w.header.Set("Transfer-Encoding", "chunked")
+			head.Set("Transfer-Encoding", "chunked")
 		} else {
 			w.closeAfter = true
 		}
-		w.header.Del("Content-Length")
+		head.Del("Content-Length")
 		w.writeHead()
 		w.flushed = true
 		body := w.body
@@ -720,17 +944,29 @@ func (w *response) writeHead() {
 		text = "status code " + itoa(w.status)
 	}
 	io.WriteString(w.conn, "HTTP/1.1 "+itoa(w.status)+" "+text+"\r\n")
+	head := w.wire()
 	// Go reads the first bytes of the body and names the type. The overlay
 	// names text only. Read docs/parity.md.
-	if w.header.Get("Content-Type") == "" && len(w.body) > 0 {
-		w.header.Set("Content-Type", "text/plain; charset=utf-8")
+	if head.Get("Content-Type") == "" && len(w.body) > 0 {
+		head.Set("Content-Type", "text/plain; charset=utf-8")
 	}
 	if w.closeAfter {
-		w.header.Set("Connection", "close")
+		head.Set("Connection", "close")
 	} else if w.req != nil && !w.req.ProtoAtLeast(1, 1) {
-		w.header.Set("Connection", "keep-alive")
+		head.Set("Connection", "keep-alive")
 	}
-	w.header.Write(w.conn)
+	// A field with the prefix TrailerPrefix follows the body, thus the head
+	// holds none of them.
+	var skip map[string]bool
+	for k := range head {
+		if strings.HasPrefix(k, TrailerPrefix) {
+			if skip == nil {
+				skip = map[string]bool{}
+			}
+			skip[k] = true
+		}
+	}
+	head.WriteSubset(w.conn, skip)
 	io.WriteString(w.conn, "\r\n")
 }
 
@@ -742,13 +978,27 @@ func (w *response) finish() {
 	if !w.wroteHead {
 		w.WriteHeader(StatusOK)
 	}
+	trailers := w.finalTrailers()
 	if w.flushed {
 		if w.chunked {
-			io.WriteString(w.conn, "0\r\n\r\n")
+			w.writeTrailers(trailers)
 		}
 		return
 	}
-	w.header.Set("Content-Length", itoa(len(w.body)))
+	// A field that follows the body needs the chunked form of HTTP/1.1.
+	if len(trailers) > 0 && (w.req == nil || w.req.ProtoAtLeast(1, 1)) {
+		w.chunked = true
+		head := w.wire()
+		head.Set("Transfer-Encoding", "chunked")
+		head.Del("Content-Length")
+		w.writeHead()
+		if w.req == nil || w.req.Method != MethodHead {
+			w.writeChunk(w.body)
+		}
+		w.writeTrailers(trailers)
+		return
+	}
+	w.wire().Set("Content-Length", itoa(len(w.body)))
 	w.writeHead()
 	if w.req != nil && w.req.Method == MethodHead {
 		return

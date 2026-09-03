@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/netip"
 	"strconv"
 	"strings"
 	"syscall/dart"
@@ -386,6 +387,9 @@ func Dial(network, address string) (Conn, error) {
 
 // Listen opens a listener on an address. A port of 0 asks the system for a
 // free port, and Addr then gives the port that the system took.
+//
+// The network tcp gives a *TCPListener, and the network unix gives a
+// *UnixListener, exactly as in Go.
 func Listen(network, address string) (Listener, error) {
 	switch network {
 	case "tcp":
@@ -400,21 +404,13 @@ func Listen(network, address string) (Listener, error) {
 		if cause != "" {
 			return nil, errors.New("listen tcp " + address + ": " + cause)
 		}
-		return &listener{
-			handle:  handle,
-			addr:    tcpAddrOf(host, taken),
-			network: "tcp",
-		}, nil
+		return newTCPListener(handle, tcpAddrOf(host, taken)), nil
 	case "unix":
 		handle, cause := dart.ListenUnix(address)
 		if cause != "" {
 			return nil, errors.New("listen unix " + address + ": " + cause)
 		}
-		return &listener{
-			handle:  handle,
-			addr:    &UnixAddr{Name: address, Net: "unix"},
-			network: "unix",
-		}, nil
+		return newUnixListener(handle, &UnixAddr{Name: address, Net: "unix"}), nil
 	}
 	return nil, errors.New("listen " + network + ": the subset holds tcp and unix")
 }
@@ -451,6 +447,9 @@ func ListenPacket(network, address string) (PacketConn, error) {
 // 1 dial of Dart resolves the name and opens the socket. `MultipathTCP`
 // and `SetMultipathTCP` name a transport of Linux that Dart never opens. The
 // overlay holds none of the 8, because a field that reads no value lies.
+//
+// `DialIP` stays out too. It gives an `*IPConn`, and `dart:io` opens no raw
+// socket.
 type Dialer struct {
 	// Timeout ends the wait of a dial after the duration. A value of 0 holds
 	// no limit.
@@ -561,6 +560,100 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 		go closeLate(done)
 		return nil, errCanceled
 	}
+}
+
+// DialTCP opens a connection of the network tcp with the context. The network
+// is tcp, tcp4, or tcp6.
+//
+// Dart binds no local address of a dial, thus a laddr that holds a value
+// gives an error. The zero AddrPort names no local address.
+func (d *Dialer) DialTCP(ctx context.Context, network string, laddr, raddr netip.AddrPort) (*TCPConn, error) {
+	switch network {
+	case "tcp", "tcp4", "tcp6":
+	default:
+		return nil, UnknownNetworkError(network)
+	}
+	if laddr.IsValid() {
+		return nil, errors.New("dial " + network +
+			": a local address of a dial stays outside the subset")
+	}
+	if !raddr.IsValid() {
+		return nil, errors.New("dial " + network + ": the address is missing")
+	}
+	c, err := d.DialContext(ctx, "tcp", TCPAddrFromAddrPort(raddr).String())
+	if err != nil {
+		return nil, err
+	}
+	tc, ok := c.(*TCPConn)
+	if !ok {
+		c.Close()
+		return nil, errors.New("dial " + network + ": the dial gave no TCP connection")
+	}
+	return tc, nil
+}
+
+// DialUDP opens a datagram socket of the network udp with the context. The
+// network is udp, udp4, or udp6.
+//
+// Dart binds no local address of a dial, thus a laddr that holds a value
+// gives an error.
+func (d *Dialer) DialUDP(ctx context.Context, network string, laddr, raddr netip.AddrPort) (*UDPConn, error) {
+	switch network {
+	case "udp", "udp4", "udp6":
+	default:
+		return nil, UnknownNetworkError(network)
+	}
+	if laddr.IsValid() {
+		return nil, errors.New("dial " + network +
+			": a local address of a dial stays outside the subset")
+	}
+	if !raddr.IsValid() {
+		return nil, errors.New("dial " + network + ": the address is missing")
+	}
+	c, err := d.DialContext(ctx, "udp", UDPAddrFromAddrPort(raddr).String())
+	if err != nil {
+		return nil, err
+	}
+	uc, ok := c.(*UDPConn)
+	if !ok {
+		c.Close()
+		return nil, errors.New("dial " + network + ": the dial gave no UDP socket")
+	}
+	return uc, nil
+}
+
+// DialUnix opens a connection of the Unix domain with the context. The
+// network is unix.
+//
+// Dart opens a stream socket of the domain alone, thus the networks unixgram
+// and unixpacket give an error. Dart binds no local address of a dial, thus a
+// laddr that is not nil gives an error too.
+func (d *Dialer) DialUnix(ctx context.Context, network string, laddr, raddr *UnixAddr) (*UnixConn, error) {
+	switch network {
+	case "unix":
+	case "unixgram", "unixpacket":
+		return nil, errors.New("dial " + network +
+			": dart:io opens a stream socket of the Unix domain alone")
+	default:
+		return nil, UnknownNetworkError(network)
+	}
+	if laddr != nil {
+		return nil, errors.New("dial " + network +
+			": a local address of a dial stays outside the subset")
+	}
+	if raddr == nil {
+		return nil, errors.New("dial " + network + ": the address is missing")
+	}
+	c, err := d.DialContext(ctx, "unix", raddr.Name)
+	if err != nil {
+		return nil, err
+	}
+	uc, ok := c.(*UnixConn)
+	if !ok {
+		c.Close()
+		return nil, errors.New("dial " + network + ": the dial gave no Unix connection")
+	}
+	return uc, nil
 }
 
 // closeLate closes a connection of a dial that ended after the caller left.

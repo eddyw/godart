@@ -1212,6 +1212,12 @@ func (v Value) Pointer() uintptr { return dart.ValuePointer(v.read()) }
 // UnsafePointer gives the same number as Pointer.
 func (v Value) UnsafePointer() uintptr { return v.Pointer() }
 
+// Value.UnsafeAddr stays out. Go gives the address of the value, and Dart
+// gives no address: Pointer reads the identity of an object instead. Addr
+// builds a new cell at each call for a field of a scalar type, thus 2 reads of
+// 1 field would give 2 numbers. A number that changes is a wrong answer, thus
+// the name holds no place here. Read docs/support.md.
+
 // IsZero reports whether the value is the zero value of its type.
 func (v Value) IsZero() bool {
 	t := v.Type()
@@ -1273,35 +1279,37 @@ type errorText string
 
 func (e errorText) Error() string { return string(e) }
 
-// A MapIter walks the pairs of a map.
+// A MapIter walks the pairs of a map. The iterator reads the map itself, thus
+// a clear inside the loop ends the loop and a delete drops the entry. A
+// snapshot of the keys would walk each entry that the loop body dropped, and a
+// NaN key gives no second read.
 type MapIter struct {
-	keys []Value
-	m    Value
-	at   int
+	m  Value
+	it any
 }
 
 // MapRange gives an iterator of the pairs of a map.
 func (v Value) MapRange() *MapIter {
-	return &MapIter{keys: v.MapKeys(), m: v, at: -1}
+	return &MapIter{m: v, it: dart.MapIterOf(v.read())}
 }
 
 // Next steps to the next pair, and it reports whether a pair stands there.
-func (it *MapIter) Next() bool {
-	it.at++
-	return it.at < len(it.keys)
-}
+func (it *MapIter) Next() bool { return dart.MapIterNext(it.it) }
 
 // Key gives the key of the pair.
-func (it *MapIter) Key() Value { return it.keys[it.at] }
+func (it *MapIter) Key() Value {
+	return Value{value: dart.MapIterKey(it.m.read(), it.it)}
+}
 
 // Value gives the value of the pair.
-func (it *MapIter) Value() Value { return it.m.MapIndex(it.keys[it.at]) }
+func (it *MapIter) Value() Value {
+	return Value{value: dart.MapIterValue(it.m.read(), it.it)}
+}
 
 // Reset points the iterator at another map.
 func (it *MapIter) Reset(m Value) {
-	it.keys = m.MapKeys()
 	it.m = m
-	it.at = -1
+	it.it = dart.MapIterOf(m.read())
 }
 
 // IsExported reports whether the field is exported.
