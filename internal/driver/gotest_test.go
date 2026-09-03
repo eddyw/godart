@@ -1,10 +1,8 @@
 package driver_test
 
 import (
-	"context"
 	"go/build"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -71,13 +69,8 @@ var goTestSkips = map[string]string{
 // the suite alive. WaitDelay closes the pipes when a child keeps them open.
 func runWithin(t *testing.T, dir string, limit time.Duration, name string, args ...string) (string, bool) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), limit)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Dir = dir
-	cmd.WaitDelay = 10 * time.Second
-	text, _ := cmd.CombinedOutput()
-	return cutTrace(string(text)), ctx.Err() == nil
+	text, _, ok := output(dir, nil, limit, name, args...)
+	return cutTrace(string(text)), ok
 }
 
 // TestRunFilesOfGoTest compiles each file of the test directory of the Go

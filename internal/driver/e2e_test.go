@@ -57,9 +57,10 @@ func TestPrograms(t *testing.T) {
 // runtimes write a different trace, thus the test cuts the trace away.
 func runProgram(t *testing.T, dir string, name string, args ...string) string {
 	t.Helper()
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
-	text, _ := cmd.CombinedOutput()
+	text, _, ok := output(dir, nil, runLimit, name, args...)
+	if !ok {
+		t.Fatalf("%s %v did not end inside %v in %s", name, args, runLimit, dir)
+	}
 	return cutTrace(string(text))
 }
 
@@ -222,18 +223,19 @@ func TestZoneinfoZip(t *testing.T) {
 // runProgramEnv runs a compiled program with an environment.
 func runProgramEnv(t *testing.T, dir string, env []string, name string, args ...string) string {
 	t.Helper()
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
-	cmd.Env = env
-	text, _ := cmd.CombinedOutput()
+	text, _, ok := output(dir, env, runLimit, name, args...)
+	if !ok {
+		t.Fatalf("%s %v did not end inside %v in %s", name, args, runLimit, dir)
+	}
 	return cutTrace(string(text))
 }
 
 func run(t *testing.T, dir string, name string, args ...string) string {
 	t.Helper()
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
-	text, err := cmd.CombinedOutput()
+	text, err, ok := output(dir, nil, runLimit, name, args...)
+	if !ok {
+		t.Fatalf("%s %v did not end inside %v in %s", name, args, runLimit, dir)
+	}
 	if err != nil {
 		t.Fatalf("%s %v failed in %s: %v\n%s", name, args, dir, err, text)
 	}

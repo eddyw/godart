@@ -94,6 +94,42 @@ routes `encoding/json` through that implementation, thus the measure counts
 `DefaultOptionsV1`, `FormatDurationAsNano`, and 20 more names of it. The v1 API
 is complete, with `Token`, `Delim`, and `UseNumber` since 2026-09-02.
 
+## The open file limit of the machine
+
+A run of `make ci` writes more than 1100 temporary Go modules: 200 programs of
+`testdata/programs`, and 931 files of the test directory of Go. Each 1 holds a
+`go.mod`, thus `gopls` reads each 1 that appears.
+
+A measure of 2026-09-04 named `go mod tidy` of `gopls` at 5273 open files, 3
+seconds after the editor started. A report of the same day named 10004 for the
+same process. The machine then reaches `kern.maxfiles` and each process on it
+fails, `lsof` included.
+
+The repository answers its own half. `output` of
+`internal/driver/exec_test.go` gives each external command a deadline of 5
+minutes and a process group of its own, and `spawnSlots` holds 8 slots. Read
+decision 317.
+
+The editor answers the other half. `.vscode/settings.json` keeps `testdata`,
+`flutter/example`, `.claude`, and `build` out of the workspace of `gopls`:
+
+```json
+{
+  "gopls": {
+    "build.directoryFilters": ["-testdata", "-flutter/example", "-.claude", "-build"]
+  }
+}
+```
+
+`sysctl` needs no file descriptor, thus it answers when nothing else does:
+
+```sh
+sysctl kern.num_files kern.maxfiles
+```
+
+`scripts/fdwatch.sh` samples that counter each second, and it names the top
+holders before the machine runs out.
+
 ## No support
 
 Stage 2 rejects an import of each package below with a source position.

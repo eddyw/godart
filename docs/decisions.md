@@ -2497,3 +2497,38 @@ The plan left these points open. The work took the decisions below.
      `flutter/goflutter/test/convert_test.dart` drives a real
      `RefreshIndicator`, and the indicator stops with no report of the Go side.
 
+
+317. The test suite bounds each external command, and it kills the process
+     group of a command that passes its deadline. A run of `make ci` took the
+     machine to its open file limit 3 times, and each time every process on it
+     failed, the editor and `lsof` included.
+
+     `runProgram`, `runProgramEnv`, and `run` of `internal/driver/e2e_test.go`
+     each ran `exec.Command` with no deadline. The suite runs more than 1100
+     such commands: 200 programs of `testdata/programs`, and 931 files of the
+     test directory of Go. A program of that directory can loop for ever under
+     the block model.
+
+     A deadline alone does not answer it. `go run` starts the program as a
+     child of its own, thus a kill of `go run` leaves that program alive with
+     its pipes open. A probe measured the 2 forms against a program that never
+     ends. The old form gave the output after 8.002 seconds, which is the 3
+     second deadline plus the whole `WaitDelay`, and it left the program alive.
+     The new form gives the output after 3.004 seconds and it leaves nothing.
+
+     `output` of `internal/driver/exec_test.go` holds the 1 rule now. It sets
+     `Setpgid`, and `Cmd.Cancel` kills the negative process group identifier.
+     Each of the 5 call sites reads it, and `runWithin` of `gotest_test.go`
+     keeps its own limit for the Dart run.
+
+     `spawnSlots` holds 8 slots. 1 subtest spawns `go list`, `go run`,
+     `dart pub get`, and `dart run`, and Go gives each parallel subtest a slot
+     of `GOMAXPROCS`. 16 cores thus let 16 subtests hold about 48 tool chain
+     processes.
+
+     The largest single holder was not the suite. A measure of 2026-09-04
+     named `go mod tidy` of `gopls` at 5273 open files, 3 seconds after the
+     editor started. The report of the user named 10004 for the same process.
+     The suite writes more than 1100 temporary modules, and `gopls` reads each
+     1 that appears. `directoryFilters` of the editor answers that half, and
+     `docs/support.md` holds the setting.

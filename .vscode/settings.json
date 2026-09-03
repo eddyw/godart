@@ -1,0 +1,10 @@
+{
+  "gopls": {
+    "build.directoryFilters": [
+      "-testdata",
+      "-flutter/example",
+      "-.claude",
+      "-build"
+    ]
+  }
+}

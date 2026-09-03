@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"go/build"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -313,9 +312,10 @@ func goTest(t *testing.T, dir string, verbose bool, extra ...string) string {
 		args = append(args, "-v")
 	}
 	args = append(args, extra...)
-	cmd := exec.Command("go", append(args, "./...")...)
-	cmd.Dir = dir
-	text, _ := cmd.CombinedOutput()
+	text, _, ok := output(dir, nil, runLimit, "go", append(args, "./...")...)
+	if !ok {
+		t.Fatalf("go %v did not end inside %v in %s", args, runLimit, dir)
+	}
 	return normalize(string(text))
 }
 
