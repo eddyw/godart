@@ -819,8 +819,11 @@ Cons:
   exists.
 
   A10 would need the Flutter work that it skips for each unchanged node to
-  exceed 202 nanoseconds, which is its own cost for each node. That number
-  needs a Flutter harness, and it stays open.
+  exceed 202 nanoseconds, which is its own cost for each node.
+  `flutter/bench/flutter` measured that work on 2026-09-03: **645
+  nanoseconds**, thus the condition holds by a factor of 3.2. A10 beats A5 by
+  1.92 times for a frame where nothing changed, and the signal graph still
+  beats A10 by 76 times. Read decision 253.
 
   The generated `==` cannot serve as the compare. It reads each pointer field
   with `identical`, which is correct for Go, and a build allocates a fresh
