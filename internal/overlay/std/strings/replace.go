@@ -46,8 +46,8 @@ func (r *Replacer) Replace(s string) string {
 
 // WriteString writes the result of Replace to w.
 //
-// Go names the type of w io.Writer. An import of io would make a cycle here,
-// thus the parameter names the same method set, and Go holds the 2 types equal.
+// Go names the type of w io.Writer. The parameter names the same method set,
+// and Go holds the 2 types equal.
 func (r *Replacer) WriteString(w interface {
 	Write(p []byte) (int, error)
 }, s string) (int, error) {

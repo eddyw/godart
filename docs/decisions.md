@@ -2339,3 +2339,122 @@ The plan left these points open. The work took the decisions below.
      `SelectionGeometry` stay out. A `SelectionPoint` demands a handle type
      that holds no default of Flutter, thus an empty Go text would name no
      value.
+
+314. A pointer inside an interface compares by the location that it holds.
+     `$goEqual` of `runtime/goruntime/lib/src/iface.dart` held no `ptr` case,
+     thus the walk fell through to `a == b`. The Dart form of a pointer to a struct is the object of the
+     struct, and the class of that struct compares the fields. Thus 2 pointers
+     to 2 objects with equal fields compared equal, and Go reports false.
+
+     The import cycle of the comment was not real. `io` is a native package,
+     and the real Go `io` imports `errors` and `sync` alone. The overlay of
+     `strings` and the overlay of `os` each declare `io` now, and each 1
+     compiles and runs. The `strings` overlay held `endOfText`, and the `os`
+     overlay held `endOfFile`. Each 1 was a separate `errors.New("EOF")`, and
+     the structural comparison made `err == io.EOF` true by accident. The 2
+     names are gone. `strings.Reader` gives `io.EOF` at its 6 end points, the 3
+     end points of `os.File` give `io.EOF`, and `os.EOF` names `io.EOF`.
+
+     The order of the 2 fixes matters. A fix of the comparison alone breaks
+     `err == io.EOF` for a reader of `strings` and of `os`. The witness program
+     `testdata/programs/ptreq` proves the 2 directions. With the old `strings`
+     overlay it reports false for the 4 EOF lines. With no `ptr` case it
+     reports true for the 2 interface lines that must report false.
+
+     The rule of a pointer in `$goEqual`. A value of the kind `ptr` that is a
+     `$Ptr<Object?>` compares with `==`. Each other value compares with
+     `identical`. A `Box` holds 1 location, and the default `==` of Dart reads
+     its identity. A `$Ref` holds an object and an index, and its `==` compares
+     the 2 parts. Each other pointer is the object at the location itself, thus
+     `identical` names the location.
+
+     The rule of a pointer in `$goHash`. A `$Ptr<Object?>` gives `hashCode`,
+     and each other value gives `identityHashCode`. The 2 rules agree, thus 2
+     pointers that Go reports as equal give an equal number. A map with an
+     interface key that holds a pointer answers as Go does. The earlier form
+     read the descriptor of the element, and a descriptor with no element gave
+     the wrong answer in silence. The value itself names its own form, thus the
+     new rule needs no descriptor.
+
+     `equalText` and `hashText` of `internal/emit/type.go` already hold the
+     same rule. They write it for the generated `==` of a struct class, for a
+     dictionary of a type parameter, and for a direct comparison. `mapNew` of
+     `internal/emit/call.go` holds it for a map key. The 4 readers agree now.
+
+     The `strings` overlay held 1 more copy of a sentinel of `io`:
+     `errShortWrite`. `Reader.WriteTo` gives `io.ErrShortWrite` now.
+
+     `errEOF` of `internal/overlay/std/crypto/tls/tls.go` was the last copy,
+     and the same session closed it. Its comment named the text of the error as
+     the reason that it compares equal to `io.EOF`, and the change of the
+     comparison removed that reason. `crypto/tls` imports `io` now, and
+     `tls.Conn.Read` gives `io.EOF` itself.
+
+     No witness reached the case, thus the defect would have stayed latent.
+     `testdata/programs/tlserve` reads a raw TLS stream to its end now, and it
+     prints whether the error equals `io.EOF`. A search of each overlay for a
+     private copy of a sentinel of `io` finds no other.
+
+315. The verb `%#v` writes the Go syntax form of a value. `_value` of
+     `runtime/goruntime/lib/src/format.dart` takes a depth, and `_goSyntax`
+     reports the flag `#` in front of the letter `v`. The rules come from
+     `printValue` of `fmt/print.go` of the Go tree.
+
+     A struct writes the type name, then a brace pair that holds each field
+     name, a colon, the value, and `, ` between 2 fields. A slice, an array,
+     and a map each write the type name and a brace pair. A map writes a colon
+     between the key and the value. A nil slice and a nil map each write
+     `(nil)` after the name. A string writes a quoted Go literal. An unsigned
+     number writes hexadecimal with the prefix `0x`, and a signed number writes
+     decimal. A nil pointer writes `(*main.point)(nil)`, a nil interface writes
+     `interface {}(nil)`, and a nil channel writes `(chan int)(nil)`.
+
+     The method `GoString` replaces `String` and `Error` under this verb. Go
+     reads `GoStringer` in place of `Stringer` and of `error` when the flag `#`
+     stands with the letter `v`. Thus `_value` reads the method table for
+     `GoString()string` first. It reads `_viaMethod` for each other verb only.
+
+     The depth serves 1 rule of Go. The package fmt holds a type case of its
+     own for an argument of the type `[]byte`, and that case writes the name
+     `[]byte`. The package reflect names the same type `[]uint8`, thus a field
+     of that type writes `[]uint8`. `_goName` reads the depth and separates the
+     2 forms.
+
+     Go writes a machine address in 3 places, and Dart gives no address. A
+     pointer to a value that is not a struct, an array, a slice, or a map takes
+     the form `(*int)(0xc000014048)`. A pointer below the top level takes the
+     same form. Go stops the walk there, thus a cyclic structure ends. A
+     channel and a function each take the form `(chan int)(0x...)`.
+
+     The decision: the runtime writes `&` and the Go syntax form of the value
+     behind each pointer that is not nil, at each depth. It keeps `<chan>` and
+     `<func>`. A false address that looks real stays out. `&main.point{X:3,
+     Y:4}` is valid Go source, and it carries the data that the reader wants.
+     The walk of a cyclic structure does not end, and the plain verb `%v` of
+     `_value` already held that property. `docs/parity.md` holds 1 row for each
+     of the 3 places.
+
+     2 repairs came with the work. A nil channel is a `Chan` that holds the nil
+     flag, and not a null reference. Thus `%v` of it wrote `<chan>` where Go
+     writes `<nil>`. `_quote` wrote `\x07` for the bell, and it wrote the
+     delete character raw. The escape table now holds `\a`, `\b`, `\f`, `\v`,
+     and the code point 0x7F. The quoted form of the runtime now matches
+     `strconv.Quote` for each rune of the ASCII range.
+
+     `testdata/programs/sharpv` proves the work. It writes 36 lines. The lines
+     cover a struct, a nested struct, a pointer to a struct, a slice, a nil
+     slice, an empty slice, and a slice of bytes. They cover a map, a nil map,
+     a string, an array, a bool, an unsigned number, and a rune. They cover a
+     named integer type, a named unsigned type, and a named slice type. They
+     cover an interface value, a nil pointer, a nil channel, and a nil
+     function. They cover a `GoString` method and a `String` method. The suite
+     of `internal/driver` compares each line against `go run` of the same
+     program.
+
+     The work found 1 difference that it did not cause. `reflectText` of
+     `internal/emit/iface.go` reads `types.TypeString` for an instance of a
+     generic type. That function writes a space after each comma of the type
+     argument list. Go writes `main.pair[int,string]` and the compiler writes
+     `main.pair[int, string]`. The verb `%T` already held the difference, and
+     the Go syntax form now shows it too. The fix lives in the emitter, thus it
+     stays open.

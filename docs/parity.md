@@ -278,7 +278,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `net/url` | Native | The real source needs no patch. |
 | `unique` | Overlay | `Handle` and `Make`. The map keeps each value, because the subset holds no cleanup. |
 | `internal/godebug` | Overlay | Each setting holds its default, thus `Value` gives an empty text. |
-| `fmt` | Overlay | Each name of Go, except `Formatter`, `State`, and `FormatString`. |
+| `fmt` | Overlay | Each name of Go. |
 | `slices` | Overlay | The sort is a stable merge sort. |
 | `sort` | Overlay | Each name of Go. The order of `Slice` and of `Sort` is a quick sort, and it is not stable. |
 | `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. `ParseInt` and `ParseUint` each read a base of 0. |
@@ -433,7 +433,11 @@ fields that Go gives.
 
 | Verb | The difference |
 |---|---|
-| `%#v` | It gives the plain form of `%v`. The Go syntax form needs a printer of its own. |
+| `%#v` of a pointer that Go writes as an address | Go writes `(*int)(0xc000014048)` for a pointer to a value that is not a struct, and for each pointer below the top level. The runtime writes `&` and the value, because Dart gives no address. |
+| `%#v` of a channel or of a function that is not nil | Go writes `(chan int)(0xc000014048)`. The runtime writes `<chan>` and `<func>`, because Dart gives no address. A nil channel and a nil function each take the form of Go. |
+| `%#v` of a text with a rune above the ASCII range that Go does not print | Go writes the escape `\u0085`. The runtime writes the rune itself. The table of the printable categories of Unicode lives in `strconv`, and the runtime holds no such table. |
+| `%#v` of an error of the package `errors` | Go writes `&errors.errorString{s:"x"}`. The overlay names the field `text`, thus the output holds `text` in place of `s`. |
+| `%T` and `%#v` of an instance of a generic type | Go writes `main.pair[int,string]`. The compiler writes `main.pair[int, string]`, with a space after the comma. `reflectText` of `internal/emit/iface.go` reads `types.TypeString`, and that function writes the space. |
 | `%#q` | It gives the plain form of `%q`. Go writes a backquote when the text holds none. |
 | `%g` with a precision | The precision reaches no digit. `strconv.FormatFloat` passes the verb to the runtime, and `_float` of the runtime reads the precision for `f` and for `e` alone. |
 | A verb that the type rejects, with a width | The width reaches no text. Go writes `%!s(int=       5)` for `% 8s` of 5, and the runtime writes `%!s(int=5)`. A program that reaches this row already holds a bug. |
@@ -559,6 +563,12 @@ A pointer to a type parameter holds 1 form for both: the Dart type is `Object?`,
 `$deref` reads the value, and `$setDeref` writes it. The form of such a pointer
 follows the type argument, because a pointer to a struct is the object itself.
 
+A pointer inside an interface value follows the same rule. `$goEqual` and
+`$goHash` of the runtime read the value: a `$Ptr` takes `==` and `hashCode`, and
+each other pointer takes `identical` and `identityHashCode`. Thus a map with an
+interface key that holds a pointer answers as Go does. 2 pointers to a value
+with no size stay 2 locations here, and gc can give the 2 pointers 1 address.
+
 ## A call that fills each argument
 
 `f(g())` where `g` gives more than 1 result passes each result as its own
@@ -680,10 +690,10 @@ would put the whole file access and the clock of `time` into each program that
 reads `fmt`, and the web target holds neither. A web build reads 0 bytes of
 standard input, thus each scan of that input gives `io.EOF`.
 
-`fmt` also holds no `Formatter`, no `State`, and no `FormatString`. A write of
-the overlay calls the Dart side with 1 verb and 1 value, and a type that writes
-its own form needs a call back into Go. `Marshaler` of `encoding/json` holds the
-path that closes the gap.
+`fmt` holds `Formatter`, `State`, and `FormatString` since 2026-09-02.
+`Sprintf` calls the method `Format` of a value that holds 1, and the method
+then owns the width, the precision, and each flag.
+`testdata/programs/fmtformat` proves it.
 
 ## The file access
 
@@ -721,10 +731,13 @@ point, thus the block analysis of stage 3 stays simple.
 | `Symlink` | Present | Equal. The error of a failure holds a different text. |
 | `Chmod`, `Chown`, `Link` | Present | Not present. Dart gives no such call. |
 | `os.Pipe`, `os.StartProcess` | Present | Not present |
+| `os.EOF` | Not present | Present, and it names `io.EOF`. A program that reads the name compiles with gart and fails with the go command. |
 
 `fmt` holds `Stringer` and `GoStringer`. The formatter reads the method table of
 the type descriptor. Thus a value with a `String` method writes that text for
-the verb `%v` and for the verb `%s`.
+the verb `%v` and for the verb `%s`. A value with a `GoString` method writes
+that text for the verb `%#v`, and the verb reads neither `String` nor `Error`,
+exactly as in Go.
 
 `fmt` grows `Fprint`, `Fprintln`, and `Fprintf`. The parameter holds the
 interface `fmt.Writer` and not `io.Writer`, because an import of `io` would make
@@ -1453,10 +1466,11 @@ in Go. A byte that holds no rune of UTF-8 keeps its value through each write.
 U+DCFF, and `GoString.fromString` gives the byte again. A Dart String holds
 runes only, thus the format path needs that escape.
 
-The verb set of `fmt`: `%v`, `%+v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`, `%b`,
-`%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision work.
-The flags `-`, `0`, `+`, and `#` work. The flag `#` writes the prefix of the
-base in front of a whole number, and it reaches no other verb.
+The verb set of `fmt`: `%v`, `%+v`, `%#v`, `%T`, `%d`, `%s`, `%q`, `%t`, `%c`,
+`%b`, `%o`, `%x`, `%X`, `%f`, `%e`, `%g`, and `%%`. The width and the precision
+work. The flags `-`, `0`, `+`, and `#` work. The flag `#` writes the prefix of
+the base in front of a whole number. With the verb `v` it writes the Go syntax
+form. Read decision 315.
 
 A Dart double holds a `float32` with the precision of 64 bits. `%v` and `%g`
 write the shortest decimal text that reads back as the same 32-bit value, thus

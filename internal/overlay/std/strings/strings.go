@@ -6,6 +6,7 @@ package strings
 import "errors"
 
 import (
+	"io"
 	"iter"
 	"unicode"
 	"unicode/utf8"
@@ -735,7 +736,7 @@ func (r *Reader) Size() int64 { return int64(len(r.text)) }
 // when the text holds no more byte.
 func (r *Reader) Read(p []byte) (int, error) {
 	if r.pos >= len(r.text) {
-		return 0, endOfText
+		return 0, io.EOF
 	}
 	n := copy(p, r.text[r.pos:])
 	r.pos += n
@@ -745,7 +746,7 @@ func (r *Reader) Read(p []byte) (int, error) {
 // ReadByte reads 1 byte.
 func (r *Reader) ReadByte() (byte, error) {
 	if r.pos >= len(r.text) {
-		return 0, endOfText
+		return 0, io.EOF
 	}
 	c := r.text[r.pos]
 	r.pos++
@@ -755,14 +756,14 @@ func (r *Reader) ReadByte() (byte, error) {
 // ReadRune reads 1 rune with its size in bytes.
 func (r *Reader) ReadRune() (rune, int, error) {
 	if r.pos >= len(r.text) {
-		return 0, 0, endOfText
+		return 0, 0, io.EOF
 	}
 	for _, c := range r.text[r.pos:] {
 		size := len(string(c))
 		r.pos += size
 		return c, size, nil
 	}
-	return 0, 0, endOfText
+	return 0, 0, io.EOF
 }
 
 // Reset gives the Reader a new text.
@@ -773,11 +774,11 @@ func (r *Reader) ReadAt(p []byte, off int64) (int, error) {
 		return 0, errors.New("strings.Reader.ReadAt: negative offset")
 	}
 	if off >= int64(len(r.text)) {
-		return 0, endOfText
+		return 0, io.EOF
 	}
 	n := copy(p, r.text[off:])
 	if n < len(p) {
-		return n, endOfText
+		return n, io.EOF
 	}
 	return n, nil
 }
@@ -803,12 +804,5 @@ func (r *Reader) Seek(offset int64, whence int) (int64, error) {
 	r.pos = int(target)
 	return target, nil
 }
-
-// endOfText is the error of the end of a text. The package io holds the same
-// value under the name EOF.
-//
-// An import of io would make a cycle, thus this package holds its own value. A
-// caller that compares an error with io.EOF reads 2 different values.
-var endOfText = errors.New("EOF")
 
 var errNegative = errors.New("strings.Reader.Seek: negative position")

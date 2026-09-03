@@ -18,6 +18,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -181,7 +182,7 @@ func (c *Conn) Read(b []byte) (int, error) {
 		return n, errors.New("read tls: " + cause)
 	}
 	if n == 0 && len(b) > 0 {
-		return 0, errEOF
+		return 0, io.EOF
 	}
 	return n, nil
 }
@@ -234,10 +235,6 @@ func (c *Conn) ConnectionState() ConnectionState { return c.state }
 // transport of net/http wraps the socket behind it. The real tls.Conn of Go
 // holds no such method.
 func (c *Conn) Handle() int { return c.handle }
-
-// errEOF names the end of the stream. The package io imports no tls, thus the
-// value compares equal to io.EOF through the text of the error.
-var errEOF = errors.New("EOF")
 
 func deadlineNanos(t time.Time) int64 {
 	if t.IsZero() {

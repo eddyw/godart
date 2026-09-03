@@ -4,6 +4,7 @@ package strings
 
 import (
 	"errors"
+	"io"
 	"iter"
 	"unicode"
 	"unicode/utf8"
@@ -11,11 +12,6 @@ import (
 
 // errUnread reports an unread that stands at the start of a Reader.
 var errUnread = errors.New("strings.Reader: at beginning of string")
-
-// errShortWrite reports a write that took a part of the bytes. The package io
-// holds the same value under the name ErrShortWrite, and an import of io would
-// make a cycle here.
-var errShortWrite = errors.New("short write")
 
 // Clone gives a copy of s. A Dart string holds no shared array, thus the copy
 // is the string itself.
@@ -255,6 +251,9 @@ func (r *Reader) UnreadRune() error {
 }
 
 // WriteTo writes the rest of the text to w.
+//
+// Go names the type of w io.Writer. The parameter names the same method set,
+// and Go holds the 2 types equal.
 func (r *Reader) WriteTo(w interface {
 	Write(p []byte) (int, error)
 }) (int64, error) {
@@ -265,7 +264,7 @@ func (r *Reader) WriteTo(w interface {
 	n, err := w.Write([]byte(rest))
 	r.pos += n
 	if err == nil && n < len(rest) {
-		err = errShortWrite
+		err = io.ErrShortWrite
 	}
 	return int64(n), err
 }

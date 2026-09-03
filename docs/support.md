@@ -225,12 +225,11 @@ of each other type, thus only these 5 carry it. Read decision 254.
 | 2 | A type that the program never names gives an untyped container | **Done.** `_withType` threads through `$sliceOf`, `$arrayOf`, and `$mapOf`, and a struct descriptor and each named descriptor carry a factory. |
 | 3 | A sound source of the used node types of a Flutter host | **Done.** `flutter/nodescan` reads the Go module with full type information. Read decision 268. |
 
-**3 items stay open, and no work names a date for them.** Each 1 came out of
-the work of 2026-09-03. The fourth item, the seed corpus of a fuzz target, is
-done. Read decision 312.
+**1 item stays open, and no work names a date for it.** The seed corpus of a
+fuzz target is done, and decision 312 holds it. The verb `%#v` is done, and
+decision 315 holds it. The comparison of a pointer inside an interface is done,
+and decision 314 holds it.
 
 | # | Item | Cost | What it blocks |
 |---|---|---|---|
-| 1 | The verb `%#v` writes no Go syntax form | Medium | `%#v` of a struct gives `{3 4}` where Go gives `main.point{X:3, Y:4}`. The type descriptor holds the name and each field. A pointer to a value that is not a struct needs an address that Dart gives not. |
-| 2 | A pointer inside an interface compares by value | Medium | `$goEqual` reads the structural equality of the emitted class, and Go compares the location. `strings` and `os` each declare an `EOF` of their own, thus only the structural test makes `err == io.EOF` true. The honest fix gives the 2 packages the real `io.EOF` first. |
-| 3 | A slice bound of an unsigned type above 2^63 | Small | The report reads a negative number, and Go writes the unsigned value. The runtime call carries no sign of the bound. |
+| 1 | A slice bound of an unsigned type above 2^63 | Small | The report reads a negative number, and Go writes the unsigned value. The runtime call carries no sign of the bound. |

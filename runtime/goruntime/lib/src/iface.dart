@@ -1,3 +1,4 @@
+import 'box.dart';
 import 'complex.dart';
 import 'dict.dart';
 import 'goint.dart';
@@ -215,14 +216,15 @@ bool $goEqual(Object? a, Object? b, TypeDesc d, [TypeDesc? root]) {
       // The dynamic type of the interface value takes over, exactly as Go
       // reports it.
       return $goEqual(ia.value, ib.value, ia.desc);
+    case 'ptr':
+      // Go compares 2 pointers by the location that each 1 holds. A cell
+      // holds that location, and the == operator of the cell compares it.
+      // Each other pointer is the object at the location itself, thus
+      // identical of Dart compares the 2.
+      if (a is $Ptr<Object?>) return a == b;
+      return identical(a, b);
   }
   return a == b;
-}
-
-/// True for a pointer type whose element is a struct.
-bool _pointsToStruct(TypeDesc d) {
-  final TypeDesc? elem = d.elem?.call();
-  return elem != null && elem.kind == 'struct';
 }
 
 /// The hash of a Go value of 1 type. It holds the rule of [$goEqual]: 2 values
@@ -259,8 +261,8 @@ int $goHash(Object? v, TypeDesc d) {
       if (iv == null) return 0;
       return Object.hash(iv.desc.name, $goHash(iv.value, iv.desc));
     case 'ptr':
-      if (_pointsToStruct(d)) return identityHashCode(v);
-      return v.hashCode;
+      if (v is $Ptr<Object?>) return v.hashCode;
+      return identityHashCode(v);
   }
   return v.hashCode;
 }

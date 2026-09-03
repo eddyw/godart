@@ -47,5 +47,15 @@ func main() {
 		return
 	}
 	fmt.Println("alpn:", conn.ConnectionState().NegotiatedProtocol)
+
+	// The end of a TLS stream must give the io.EOF of the package io itself,
+	// and not a value of an equal text.
+	fmt.Fprint(conn, "GET /raw HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+	if _, err := io.ReadAll(conn); err != nil {
+		fmt.Println("read:", err)
+		return
+	}
+	_, err = conn.Read(make([]byte, 1))
+	fmt.Println("eof:", err == io.EOF)
 	conn.Close()
 }

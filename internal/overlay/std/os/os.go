@@ -178,7 +178,7 @@ func (f *File) Read(p []byte) (int, error) {
 			return n, pathError("read", f.name, cause)
 		}
 		if n == 0 {
-			return 0, endOfFile
+			return 0, io.EOF
 		}
 		return n, nil
 	}
@@ -190,7 +190,7 @@ func (f *File) Read(p []byte) (int, error) {
 		return n, pathError("read", f.name, cause)
 	}
 	if n == 0 && len(p) > 0 {
-		return 0, endOfFile
+		return 0, io.EOF
 	}
 	return n, nil
 }
@@ -220,7 +220,7 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 			break
 		}
 		if n == 0 {
-			err = endOfFile
+			err = io.EOF
 			break
 		}
 		read += n
@@ -311,12 +311,9 @@ func (f *File) WriteTo(w io.Writer) (int64, error) {
 	}
 }
 
-// endOfFile is the error of the end of a file. The package io holds the same
-// value under the name EOF.
-var endOfFile = errors.New("EOF")
-
-// EOF is the error of the end of a file.
-var EOF = endOfFile
+// EOF is the error of the end of a file. The package io holds the same value,
+// and a caller compares an error with either name.
+var EOF = io.EOF
 
 // Seek moves the read position and gives the new offset from the start.
 func (f *File) Seek(offset int64, whence int) (int64, error) {
