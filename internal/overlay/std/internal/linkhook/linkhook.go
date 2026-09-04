@@ -18,3 +18,10 @@ var CheckParallel func(t any)
 // SetCryptoReader replaces the source of each implicit read of a random value
 // of the crypto packages. The package crypto/internal/rand writes the field.
 var SetCryptoReader func(r io.Reader)
+
+// SynctestTest runs the body of a synctest bubble under a test of its own, and
+// it reports whether that test passed. The package testing writes the field.
+//
+// The first argument is the *testing.T of the test that holds the bubble, and
+// the argument of f is the *testing.T of the bubble.
+var SynctestTest func(t any, f func(any)) bool

@@ -1144,6 +1144,57 @@ plain write.
 | The function form, for example `AddInt64` | Present | Equal for `Add`, `And`, `Or`, `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
 | `LoadPointer`, `StorePointer`, `SwapPointer`, `CompareAndSwapPointer` | Present | Not present. Each one takes an `unsafe.Pointer`, which stands outside the subset. `Pointer[T]` holds the same use. |
 
+## The bubble of testing/synctest
+
+`testing/synctest` runs a function in a bubble with a clock of its own. The
+scheduler of the Dart runtime library holds that bubble. Read the section "The
+bubble of testing/synctest" of `docs/library.md` for the design. Decision 346
+holds the cause of it.
+
+| Item | Go | godart |
+|---|---|---|
+| `Test`, `Wait`, `Sleep` | Present | Equal |
+| The start of the clock | Midnight UTC of 2000-01-01 | Equal |
+| `time.Now`, `time.Since` inside a bubble | The fake clock | Equal |
+| `time.Sleep` inside a bubble | Takes no real time | Equal |
+| `time.AfterFunc`, `NewTimer`, `NewTicker`, `After`, `Tick` inside a bubble | The fake clock | Equal |
+| `context.WithTimeout`, `context.AfterFunc` inside a bubble | The fake clock | Equal |
+| A channel, `sync.Cond.Wait`, and `sync.WaitGroup.Wait` of the bubble | Durably blocked | Equal |
+| A read of a socket inside a bubble | Not durably blocked | Equal |
+| The clock after the end of the first goroutine of the bubble | Stops | Equal |
+| A bubble that makes no more progress | `panic: deadlock: all goroutines in bubble are blocked` | Equal, with the same 2 texts |
+| `Wait` outside a bubble, and `Test` inside a bubble | Panics | Equal, with the same 2 texts |
+| `t.Deadline`, `t.Parallel`, and `t.Run` on the T of a bubble | Panics | Equal, with the same 3 texts |
+| A channel of a bubble that a goroutine outside it reaches | `fatal error: send on synctest channel from outside bubble` | Equal for a send, a receive, a close, and a select. The report holds no goroutine trace. |
+| 2 bubbles that run at the same time | The order of the 2 is not defined | The 2 move in turn. Each bubble that moved goes to the end of the list. |
+| `sync.Mutex.Lock` inside a bubble | Not durably blocked | Durably blocked. Read below. |
+| `Timer.Stop` and `Timer.Reset` of a bubble from outside it | `fatal error: stop of synctest timer from outside bubble` | It cancels the timer, or it reports false after the end of the bubble. It writes no report. Read below. |
+
+**A goroutine that waits for a mutex is durably blocked here, and Go says it
+is not.** A goroutine of a bubble of Go can wake through a goroutine outside
+that bubble, thus Go keeps the bubble active. gart runs each goroutine in 1
+isolate, and `sync.Mutex.Lock` waits on a channel that the caller makes inside
+the bubble. The rule of the channel thus marks the wait durable.
+
+The measure of 2026-09-04 holds 2 goroutines of 1 bubble. The first one takes a
+lock, the second one sleeps 1 second and gives the lock back, and the first one
+takes the lock again. Go writes `fatal error: all goroutines are asleep -
+deadlock!`, because the clock never moves. gart moves the clock 1 second and
+the program ends. The gap thus reaches only a program that Go stops.
+
+**A timer of a bubble carries no bubble after the end of the bubble.** The end
+of a bubble frees each slot of its timers, thus `Timer.Stop` from outside the
+bubble finds no timer and reports false. Go keeps the bubble of the timer and
+stops the program. `Timer.Reset` inside the bubble of the timer works. A call
+of it from outside would report the text of a stop and not the text of a
+reset, because the overlay of `time` builds a reset from a stop and a start.
+
+**6 of the 19 real tests of the package skip.** Each 1 starts the test binary
+again as a helper process and it reads the output of that process. The Dart
+output does not start itself again, thus `internal/testenv.Executable` skips
+the test. The 13 other tests pass, and `TestHTTPTransport100Continue` is 1 of
+them.
+
 ## The root of a directory
 
 `os.Root` holds a directory, and each operation of it stays inside that

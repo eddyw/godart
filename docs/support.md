@@ -22,10 +22,10 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 251 import paths: 167 standard packages, the interop package
+The surface holds 252 import paths: 168 standard packages, the interop package
 `syscall/dart`, 71 internal packages, and 12 vendored packages of
-`golang.org/x`. `make surface` measures 172 of them against the real API, and
-162 of those hold each exported name. The measure skips the interop package
+`golang.org/x`. `make surface` measures 173 of them against the real API, and
+163 of those hold each exported name. The measure skips the interop package
 and each internal package, because no package of Go stands behind them.
 
 A native package that also holds a patch stands 2 times in the list of the
@@ -44,8 +44,8 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-162 of the 172 measured packages hold each exported name of Go. The table
-below names the 125 of them that this document lists by form. The 23 that stay
+163 of the 173 measured packages hold each exported name of Go. The table
+below names the 126 of them that this document lists by form. The 23 that stay
 out of the table are the packages of `docs/library.md` that no standard list
 of this document holds.
 
@@ -53,7 +53,7 @@ of this document holds.
 |---|---|
 | Native, 73 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `crypto`, `crypto/aes`, `crypto/des`, `crypto/dsa`, `crypto/ecdh`, `crypto/ecdsa`, `crypto/ed25519`, `crypto/elliptic`, `crypto/hkdf`, `crypto/pbkdf2`, `crypto/rc4`, `crypto/rsa`, `crypto/sha3`, `crypto/x509/pkix`, `debug/dwarf`, `debug/macho`, `debug/plan9obj`, `encoding`, `encoding/ascii85`, `encoding/base32`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/pem`, `encoding/xml`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/crc64`, `hash/fnv`, `html`, `html/template`, `image`, `image/color`, `image/color/palette`, `image/draw`, `image/gif`, `image/jpeg`, `index/suffixarray`, `io`, `io/fs`, `io/ioutil`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/fstest`, `testing/iotest`, `testing/slogtest`, `text/template`, `text/template/parse`, `unicode`, `unicode/utf16` |
 | Patch, 21 | `archive/tar`, `bytes`, `crypto/cipher`, `crypto/fips140`, `debug/elf`, `debug/pe`, `encoding/asn1`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `log/slog`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
-| Overlay, 31 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `crypto/x509`, `embed`, `encoding/binary`, `encoding/gob`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `net/http/httptest`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
+| Overlay, 32 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `crypto/x509`, `embed`, `encoding/binary`, `encoding/gob`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `net/http/httptest`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `testing/synctest`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.
@@ -329,9 +329,10 @@ holders before the machine runs out.
 
 ## No support
 
-Stage 2 rejects an import of each package below with a source position. 17
-packages of the standard library stand here after the eighteenth session. 30
-stood here at the start of that session, and 62 at the start of 2026-09-04.
+Stage 2 rejects an import of each package below with a source position. 16
+packages of the standard library stand here after the nineteenth session. 30
+stood here at the start of the eighteenth session, and 62 at the start of
+2026-09-04.
 
 | Package | The cause |
 |---|---|
@@ -343,7 +344,6 @@ stood here at the start of that session, and 62 at the start of 2026-09-04.
 | `log/syslog` | `unixSyslog` needs a datagram socket of the Unix domain, and `dart:io` opens the stream form alone. `Dial` over udp and over a stream socket each write the message end to end, and `New` and `NewLogger` each fail. |
 | `os/user` | The pure Go path of Go compiles under gart with the build tag `osusergo`, and `Current` still fails. It reads `os.Getuid`, and the overlay reports -1 because `dart:io` gives no user id. |
 | `encoding/json/v2` | The package compiles through each stage of gart, and the Dart front end then rejects 27 positions with 1 cause. Read decision 345. |
-| `testing/synctest` | A bubble needs a clock of its own. Each timer of gart is a real Timer of Dart, thus the fake clock needs a timer queue in the scheduler. Read the section below. |
 
 ## The focus list
 
@@ -474,15 +474,16 @@ unsigned slice bound each landed on 2026-09-04. Decisions 312 to 326 hold them.
 ## The road to full parity
 
 **The 7 phases of 2026-09-04 are closed, and the eighteenth session closed 12
-of the 15 items that stood after them.** The table below holds the state after
-each block of work, and the section after it names each item that stays out
-and its cause.
+of the 15 items that stood after them. The nineteenth session closed 1 of the 2
+packages that stood after it.** The table below holds the state after each
+block of work, and the section after it names each item that stays out and its
+cause.
 
-| Set | At the start of 2026-09-04 | After the 7 phases | After the eighteenth session |
+| Set | At the start of 2026-09-04 | After the 7 phases | After the nineteenth session |
 |---|---|---|---|
-| Packages that hold each exported name | 112 of 123 | 149 of 159 | **162 of 172** |
-| Standard packages outside the surface | 62 | 30 | **17** |
-| Import paths of the surface | 210 | 226 | **251** |
+| Packages that hold each exported name | 112 of 123 | 149 of 159 | **163 of 173** |
+| Standard packages outside the surface | 62 | 30 | **16** |
+| Import paths of the surface | 210 | 226 | **252** |
 | Entries of the skip table that hold a compiler defect | 5 | 2 | **2** |
 | Positions of the order of the evaluation that differ from gc | 5 | 0 | **0** |
 
@@ -514,23 +515,30 @@ rejects it.
 | `net` | 1 | `ListenMulticastUDP` needs an intrinsic that reaches `joinMulticast` of a datagram socket of Dart. |
 | `net/http` | 1 | `Request.Cancel` needs a hook that lives up to the close of the body of the answer. |
 
-### The 2 reachable packages, and the gate of each 1
+### The 1 reachable package, and its gate
 
-The eighteenth session closed 9 of the 11 packages of this list.
+The eighteenth session closed 9 of the 11 packages of this list, and the
+nineteenth session closed `testing/synctest`.
 
 | Package | The gate |
 |---|---|
 | `encoding/json/v2` | The Dart front end rejects 27 positions with 1 cause. `typedArshalers[Coder any]` holds a field of the type `func(*Coder, ...) error`. A pointer to a type parameter takes the Dart type `Object?`, and the value that reaches such a field carries the concrete type of the instance. A Dart function parameter is contravariant. The emitter must wrap a function value whose Dart parameter type is narrower than the type of the target. Read decision 345. |
-| `testing/synctest` | A bubble holds a clock of its own, and `time.Sleep` inside it takes no real time. Each timer of gart is a real `Timer` of Dart, thus the bubble needs a timer queue in the scheduler and a wall clock that reads it. The scheduler already names each goroutine that waits, which is the other half of the rule. |
 
 **The 9 that closed:** `crypto/mlkem`, `crypto/mldsa`, `crypto/hpke`,
 `testing/cryptotest`, `encoding/json/jsontext`, `debug/gosym`, `weak`,
 `net/http/httptrace`, and `net/http/httputil`. `image/png` and
 `crypto/mlkem/mlkemtest` joined them, and neither stood on that list.
 
+**`testing/synctest` holds each name of Go.** The scheduler holds a bubble: a
+fake clock, a timer queue of that clock, and the set of the goroutines of the
+bubble. The clock moves only when each goroutine of the bubble is durably
+blocked, thus a sleep inside a bubble takes no real time. Decision 346 holds
+the design, `testdata/programs/synctestuse` holds the witness, and the 13 real
+tests of the package pass under `make std-test STD=testing/synctest`.
+
 ### What stays out, and why no work removes it
 
-**17 packages.**
+**16 packages.**
 
 | Cause | Packages |
 |---|---|
@@ -539,7 +547,6 @@ The eighteenth session closed 9 of the 11 packages of this list.
 | gart writes no Go binary | `debug/buildinfo` |
 | `runtime.Compiler` reports `gart` | `go/importer` |
 | A function value of a narrower Dart type | `encoding/json/v2`. Read decision 345. |
-| Each timer of gart is a real Timer of Dart | `testing/synctest`. A bubble needs a clock of its own. |
 | `dart:io` hides the descriptor of a socket | `net/http/fcgi`, through `net.FileListener` |
 | `dart:io` opens no datagram socket of the Unix domain | `log/syslog`. `Dial` works over udp and over a stream socket, and `New` and `NewLogger` each need the datagram form. |
 | `dart:io` reports no user id | `os/user`. The pure Go path of Go compiles under gart, and `Current` still fails because `os.Getuid` reports -1. |

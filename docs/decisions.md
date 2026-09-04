@@ -3441,3 +3441,35 @@ The plan left these points open. The work took the decisions below.
      `encoding/json/v2` stays outside the surface until that rule stands. A
      package that compiles and whose output the Dart front end rejects gives a
      report far from the cause.
+
+346. The scheduler holds the bubble of `testing/synctest`, and each timer of a
+     bubble is a timer of the fake clock.
+
+     A bubble holds a clock of its own, and `time.Sleep` inside it takes no
+     real time. Each timer of gart was a real `Timer` of Dart, thus no bubble
+     could stand.
+
+     `runtime/goruntime/lib/src/sched.dart` now holds the class `Bubble`. It
+     carries the fake clock, the goroutines of the bubble, the goroutine that
+     waits inside `Wait`, and the goroutine that started the bubble. A timer of
+     a goroutine of a bubble becomes a `_FakeTimer` of that bubble. Such a
+     timer waits for the scheduler and not for the event loop.
+
+     The scheduler runs a step of each bubble when the run queue empties. The
+     frame of a wait names whether only the bubble can end that wait. The new
+     interface `DurableWait` carries the answer, and a channel holds the bubble
+     of the goroutine that made it. An idle bubble runs a timer that the clock
+     reached. It then ends a call of `Wait`, and it then moves the clock to the
+     next timer. A bubble that reaches none of the 3 ends, and `Test` panics
+     with the text of Go.
+
+     `syscall/dart` carries `InBubble`, `BubbleRun`, and `BubbleWait`.
+     `internal/linkhook` carries `SynctestTest`, because `testing/synctest`
+     needs the T of the bubble and the import rule of Go keeps the 2 packages
+     apart. `testdata/programs/synctestuse` holds the witness, and the 13 real
+     tests of the package pass.
+
+     A lock of a `sync.Mutex` waits on a channel that the caller makes, thus
+     gart marks such a wait durable and Go does not. The gap reaches only a
+     program that Go stops with a deadlock, and `docs/parity.md` holds the
+     measure of it.

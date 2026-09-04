@@ -30,9 +30,14 @@ final class Chan<T> {
   /// channel never end.
   final bool isNil;
 
-  Chan(this.capacity, this._zero) : isNil = false;
+  /// The bubble of the goroutine that made the channel, and null outside a
+  /// bubble. synctest reads it: a wait on a channel of the bubble of the
+  /// goroutine is durable, and no event outside that bubble ends it.
+  final Bubble? bubble;
 
-  Chan.nil(this._zero) : capacity = 0, isNil = true;
+  Chan(this.capacity, this._zero) : isNil = false, bubble = $current?.bubble;
+
+  Chan.nil(this._zero) : capacity = 0, isNil = true, bubble = null;
 
   int get length => _buffer.length;
 
@@ -51,14 +56,23 @@ final class Chan<T> {
   bool get _hasReceiver =>
       _receivers.any((_RecvWait<T> w) => w.sel?.done != true);
 
+  /// Ends the program when a goroutine outside the bubble of the channel
+  /// reaches the channel. Go holds the same rule, because such a call breaks
+  /// the isolation of the bubble.
+  void _outside(String op) {
+    if (identical(bubble, $current?.bubble)) return;
+    $fatalError('$op synctest channel from outside bubble');
+  }
+
   /// Reads 1 value. The caller reads [$blocked] after the call.
   (T, bool) receive() {
+    if (bubble != null) _outside('receive on');
     if (isNil) {
       $park('chan receive (nil chan)');
       return (_zero(), false);
     }
     if (readyToReceive) return receiveNow();
-    final _RecvWait<T> waiting = _RecvWait<T>($current!, _zero);
+    final _RecvWait<T> waiting = _RecvWait<T>($current!, _zero, bubble);
     _receivers.add(waiting);
     $block(waiting);
     return (_zero(), false);
@@ -114,11 +128,11 @@ final class Chan<T> {
   /// goroutine then meets the statement, also from a select statement of its
   /// own.
   void armSend(SelectState sel, int index, Goroutine g, T value) {
-    _senders.add(_SendWait<T>(g, value, sel, index));
+    _senders.add(_SendWait<T>(g, value, bubble, sel, index));
   }
 
   void armRecv(SelectState sel, int index, Goroutine g) {
-    _receivers.add(_RecvWait<T>(g, _zero, sel, index));
+    _receivers.add(_RecvWait<T>(g, _zero, bubble, sel, index));
   }
 
   /// Drops each waiter of a select statement that ended.
@@ -129,6 +143,7 @@ final class Chan<T> {
 
   /// Writes 1 value. The caller reads [$blocked] after the call.
   void send(T value) {
+    if (bubble != null) _outside('send on');
     if (isNil) {
       $park('chan send (nil chan)');
       return;
@@ -137,7 +152,7 @@ final class Chan<T> {
       sendNow(value);
       return;
     }
-    final _SendWait<T> waiting = _SendWait<T>($current!, value);
+    final _SendWait<T> waiting = _SendWait<T>($current!, value, bubble);
     _senders.add(waiting);
     $block(waiting);
   }
@@ -167,6 +182,7 @@ final class Chan<T> {
   }
 
   void close() {
+    if (bubble != null) _outside('close of');
     if (isNil) {
       $panic(
         Iface($typeGoError, const GoError('close of nil channel', plain: true)),
@@ -213,37 +229,49 @@ final class SelectState {
 }
 
 /// The frame of a goroutine that waits for a value of a channel.
-final class _RecvWait<T> implements WaitFrame {
+final class _RecvWait<T> implements WaitFrame, DurableWait {
   final Goroutine g;
   final T Function() _zero;
   (T, bool)? value;
+
+  /// The bubble of the channel of the wait.
+  final Bubble? bubble;
 
   /// The select statement of the waiter, and null for a plain receive.
   final SelectState? sel;
   final int index;
 
-  _RecvWait(this.g, this._zero, [this.sel, this.index = 0]);
+  _RecvWait(this.g, this._zero, this.bubble, [this.sel, this.index = 0]);
 
   @override
   String get $reason => sel == null ? 'chan receive' : 'select';
+
+  @override
+  bool $durableIn(Bubble b) => identical(bubble, b);
 
   @override
   Object? resume() => value ?? (_zero(), false);
 }
 
 /// The frame of a goroutine that waits to write a value into a channel.
-final class _SendWait<T> implements WaitFrame {
+final class _SendWait<T> implements WaitFrame, DurableWait {
   final Goroutine g;
   final T value;
+
+  /// The bubble of the channel of the wait.
+  final Bubble? bubble;
 
   /// The select statement of the waiter, and null for a plain send.
   final SelectState? sel;
   final int index;
 
-  _SendWait(this.g, this.value, [this.sel, this.index = 0]);
+  _SendWait(this.g, this.value, this.bubble, [this.sel, this.index = 0]);
 
   @override
   String get $reason => sel == null ? 'chan send' : 'select';
+
+  @override
+  bool $durableIn(Bubble b) => identical(bubble, b);
 
   @override
   Object? resume() => null;
@@ -286,9 +314,17 @@ Slice<GoInt> $worker(
 }
 
 /// Gives up control for a time.
+///
+/// A goroutine of a bubble waits on the clock of that bubble. Such a sleep
+/// takes no real time, exactly as Go does inside a bubble.
 void $sleep(int nanoseconds) {
   if (nanoseconds <= 0) return;
   final Goroutine g = $current!;
+  final Bubble? b = g.bubble;
+  if (b != null) {
+    $bubbleSleep(b, g, nanoseconds);
+    return;
+  }
   final EventWait waiting = EventWait();
   $holdEvent();
   Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
@@ -324,7 +360,13 @@ void $gc() {
 }
 
 /// The count of nanoseconds since the start of the Unix epoch.
-int $nowNanos() => DateTime.now().microsecondsSinceEpoch * 1000;
+///
+/// A goroutine of a bubble reads the fake clock of that bubble.
+int $nowNanos() {
+  final Bubble? b = $current?.bubble;
+  if (b != null) return b.now;
+  return DateTime.now().microsecondsSinceEpoch * 1000;
+}
 
 /// The local zone at an instant of the Unix epoch.
 ///

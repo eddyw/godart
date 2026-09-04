@@ -878,6 +878,7 @@ func blockingIntrinsic(fn *types.Func) bool {
 		"ValueRecv", "ValueSend", "SelectValue",
 		"H2Fetch", "H2Read", "H2Next",
 		"FetchStart", "FetchRead",
+		"BubbleRun", "BubbleWait",
 		"Gosched":
 		return true
 	}
