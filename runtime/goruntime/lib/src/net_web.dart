@@ -78,6 +78,11 @@ GoString $listenClose(int handle) => _noNet;
 
 (int, int, GoString) $dialUDP(GoString host, int port) => (0, 0, _noNet);
 
+(int, int, GoString) $listenMulticastUDP(GoString host, int port) =>
+    (0, 0, _noNet);
+
+GoString $joinMulticast(int handle, GoString group, GoString iface) => _noNet;
+
 (int, GoString, int, GoString) $packetRead(int handle, Slice<GoInt> p) =>
     (0, _empty, 0, _noNet);
 
