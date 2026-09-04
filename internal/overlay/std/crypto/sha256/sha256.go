@@ -4,16 +4,23 @@
 // in FIPS 180-4.
 //
 // The overlay holds the algorithm of crypto/internal/fips140/sha256, with the
-// public names of crypto/sha256. It drops the registration of the package
-// crypto and the FIPS mode of Go.
+// public names of crypto/sha256. It drops the FIPS mode of Go.
 package sha256
 
 import (
+	"crypto"
 	"errors"
 	"hash"
 	"internal/byteorder"
 	"math/bits"
 )
+
+// init registers the hash of this package with the package crypto, exactly as
+// the real package does.
+func init() {
+	crypto.RegisterHash(crypto.SHA224, New224)
+	crypto.RegisterHash(crypto.SHA256, New)
+}
 
 // The size of a SHA256 checksum in bytes.
 const Size = 32

@@ -16,7 +16,27 @@ final class GoPanic implements Exception {
   GoPanic(this.value);
 
   @override
-  String toString() => 'panic: $value';
+  String toString() => 'panic: ${$panicText(value)}';
+}
+
+/// The text of a panic value.
+///
+/// Go calls Error on a value that implements error, and String on a value that
+/// implements Stringer. Read preprintpanics of runtime/panic.go.
+String $panicText(Object? v) {
+  if (v is Iface) {
+    // The key of a method table holds the name and the signature.
+    for (final String name in const <String>[
+      'Error()string',
+      'String()string',
+    ]) {
+      final Function? m = v.desc.methods[name];
+      if (m == null || identical(m, $ifaceMethod)) continue;
+      final Object? text = Function.apply(m, <Object?>[v.value]);
+      if (text is GoString) return text.toDartString();
+    }
+  }
+  return '$v';
 }
 
 /// The text of the chain of active panics. Go writes the oldest panic first,
@@ -30,7 +50,7 @@ String $panicChain(GoPanic p) {
   final StringBuffer b = StringBuffer();
   for (final GoPanic at in chain.reversed) {
     if (!identical(at, chain.last)) b.write('\t');
-    b.write('panic: ${at.value}');
+    b.write('panic: ${$panicText(at.value)}');
     if (at.recovered) b.write(' [recovered]');
     b.write('\n');
   }

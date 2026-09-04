@@ -11,6 +11,7 @@ package log
 import (
 	"fmt"
 	"io"
+	"log/internal"
 	"os"
 	"runtime"
 	"strconv"
@@ -59,6 +60,28 @@ func (l *Logger) position(calldepth int) string {
 	if !ok {
 		file, line = "???", 0
 	}
+	return l.namePosition(file, line)
+}
+
+// positionOfPC names the source file and the line of a program counter. The
+// default handler of log/slog holds the counter of the caller of the line.
+func (l *Logger) positionOfPC(pc uintptr) string {
+	if l.flag&(Lshortfile|Llongfile) == 0 {
+		return ""
+	}
+	file, line := "???", 0
+	if pc != 0 {
+		frame, _ := runtime.CallersFrames([]uintptr{pc}).Next()
+		if frame.File != "" {
+			file, line = frame.File, frame.Line
+		}
+	}
+	return l.namePosition(file, line)
+}
+
+// namePosition writes the file and the line the way the flags ask. Lshortfile
+// cuts each element of the path in front of the base name.
+func (l *Logger) namePosition(file string, line int) string {
 	if l.flag&Lshortfile != 0 {
 		for i := len(file) - 1; i > 0; i-- {
 			if file[i] == '/' {
@@ -70,12 +93,9 @@ func (l *Logger) position(calldepth int) string {
 	return file + ":" + strconv.Itoa(line) + ": "
 }
 
-// header writes the prefix, the stamp of the clock, and the source position.
-func (l *Logger) header(t time.Time, calldepth int) string {
+// stamp writes the date and the clock the way the flags ask.
+func (l *Logger) stamp(t time.Time) string {
 	out := ""
-	if l.flag&Lmsgprefix == 0 {
-		out = l.prefix
-	}
 	if l.flag&(Ldate|Ltime|Lmicroseconds) != 0 {
 		if l.flag&LUTC != 0 {
 			t = t.UTC()
@@ -91,7 +111,32 @@ func (l *Logger) header(t time.Time, calldepth int) string {
 			}
 		}
 	}
+	return out
+}
+
+// header writes the prefix, the stamp of the clock, and the source position.
+func (l *Logger) header(t time.Time, calldepth int) string {
+	out := ""
+	if l.flag&Lmsgprefix == 0 {
+		out = l.prefix
+	}
+	out += l.stamp(t)
 	out += l.position(calldepth)
+	if l.flag&Lmsgprefix != 0 {
+		out += l.prefix
+	}
+	return out
+}
+
+// headerPC writes the header whose source position comes from a program
+// counter.
+func (l *Logger) headerPC(t time.Time, pc uintptr) string {
+	out := ""
+	if l.flag&Lmsgprefix == 0 {
+		out = l.prefix
+	}
+	out += l.stamp(t)
+	out += l.positionOfPC(pc)
 	if l.flag&Lmsgprefix != 0 {
 		out += l.prefix
 	}
@@ -110,6 +155,28 @@ func (l *Logger) Output(calldepth int, s string) error {
 	}
 	_, err := l.out.Write([]byte(line))
 	return err
+}
+
+// outputPC writes 1 line whose source position comes from a program counter.
+func (l *Logger) outputPC(pc uintptr, s string) error {
+	if l.out == nil {
+		return nil
+	}
+	line := l.headerPC(time.Now(), pc) + s
+	if len(line) == 0 || line[len(line)-1] != '\n' {
+		line += "\n"
+	}
+	_, err := l.out.Write([]byte(line))
+	return err
+}
+
+// The package log/slog reads DefaultOutput of log/internal. Its default
+// handler then writes each line through the standard logger, exactly as the
+// real log package arranges it.
+func init() {
+	internal.DefaultOutput = func(pc uintptr, data []byte) error {
+		return std.outputPC(pc, string(data))
+	}
 }
 
 func (l *Logger) Print(v ...any)                 { l.Output(2, fmt.Sprint(v...)) }

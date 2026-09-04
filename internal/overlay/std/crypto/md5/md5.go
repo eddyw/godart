@@ -9,17 +9,23 @@
 // MD5 is cryptographically broken and should not be used for secure
 // applications.
 //
-// The overlay drops the registration of the package crypto and the FIPS mode of
-// Go. The block function is the generic one, because the subset holds no
+// The overlay drops the FIPS mode of Go. The block function is the generic one, because the subset holds no
 // assembly.
 package md5
 
 import (
+	"crypto"
 	"errors"
 	"hash"
 	"internal/byteorder"
 	"math/bits"
 )
+
+// init registers the hash of this package with the package crypto, exactly as
+// the real package does.
+func init() {
+	crypto.RegisterHash(crypto.MD5, New)
+}
 
 // The size of an MD5 checksum in bytes.
 const Size = 16

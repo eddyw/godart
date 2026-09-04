@@ -242,12 +242,21 @@ reads the real Go source, because that source already stays inside the subset.
 | `encoding/gob` | Overlay | The source of Go. The wire bytes are the real ones, and the type ids of the bootstrap keep the numbers 1 to 23. The speed helpers, `internal/saferio`, `sync.Pool`, and `atomic.Pointer` each stay out, and the general path writes the same bytes. A decode into a pointer to a pointer whose element is not a struct panics. |
 | `encoding/asn1` | Patch | The source of Go. `asn1.go` drops `internal/saferio`, which holds `unsafe.Sizeof`. `marshal.go` writes a composite literal in place of a conversion between 2 struct types. |
 | `encoding/pem`, `crypto/x509/pkix`, `unicode/utf16` | Native | Each name of Go. |
-| `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
-| `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. |
-| `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. |
-| `crypto/sha512` | Overlay | The algorithm of `crypto/internal/fips140/sha512`, with the public names of `crypto/sha512`. |
+| `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. It registers MD5 with the package `crypto`. |
+| `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. It registers SHA-1 with the package `crypto`. |
+| `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. It registers SHA-224 and SHA-256 with the package `crypto`. |
+| `crypto/sha512` | Overlay | The algorithm of `crypto/internal/fips140/sha512`, with the public names of `crypto/sha512`. It registers the 4 hashes with the package `crypto`. |
 | `crypto/hmac` | Overlay | `New` and `Equal`, from FIPS 198-1. |
 | `crypto/rand` | Overlay | `Read`, `Reader`, and `Text`, over `Random.secure` of Dart. `Int` and `Prime` read `math/big`, thus the 2 stay out. |
+| `crypto` | Native | The `Hash` table, `Signer`, `Decrypter`, and each other name. A hash registers itself, thus `Hash.New` gives the digest of the package that the program imports. |
+| `crypto/cipher` | Native, with 1 patch | The patch replaces `cbc.go`. The real file converts a pointer to `cbc` into a pointer to `cbcEncrypter` and to `cbcDecrypter`, and the subset rejects a pointer conversion between 2 defined struct types. Each of the 2 holds `cbc` as an embedded field. |
+| `crypto/aes`, `crypto/des`, `crypto/rc4` | Native | Each name of Go. The block function of AES reads the generic path of `crypto/internal/fips140/aes`. |
+| `crypto/sha3` | Native | Each name of Go, SHA-3, SHAKE, and cSHAKE. |
+| `crypto/hkdf`, `crypto/pbkdf2` | Native | Each name of Go. |
+| `crypto/elliptic` | Native | Each name of Go. The 4 NIST curves read `crypto/internal/fips140/nistec`. |
+| `crypto/ecdh`, `crypto/ed25519`, `crypto/ecdsa`, `crypto/rsa`, `crypto/dsa` | Native | Each name of Go. |
+| `crypto/fips140` | Native, with 1 patch | The patch replaces `enforcement.go`, which reads 3 functions of the runtime through a `go:linkname` directive. The GODEBUG setting `fips140` always holds its default, thus `Enabled` and `Enforced` each give false and no bypass is ever necessary. |
+| The 37 internal packages of the crypto stack | 35 native, with 48 patches, and 2 overlays | Each patch replaces 1 file that holds assembly, a `go:linkname` directive, or a read of the package `unsafe`, and the generic form of Go stands in its place. `crypto/internal/sysrand` is an overlay over `Random.secure` of Dart. `crypto/internal/fips140cache` is an overlay that holds no entry, thus each `Get` calls `new` again, which the document of Go allows. `crypto/internal/fips140/alias` reports no overlap: a slice of gart names no address. The document of Go says that the destination and the source of a cipher operation "must overlap entirely or not at all", thus a call that breaks that rule writes the bytes in order and gives no report where Go panics. The FIPS 140-3 mode never turns on, because each GODEBUG setting holds its default. Thus no self test runs, and the service indicator reaches no name of the surface. |
 | `mime`, `mime/quotedprintable`, `mime/multipart` | Native | A patch of `mime/multipart` replaces the `go:linkname` stub of `readMIMEHeader`. |
 | `net/textproto`, `net/http/cookiejar` | Native | |
 | `net/http` | Overlay | An HTTP/1.1 client and an HTTP/1.1 server. Read the section of the HTTP access. |
@@ -420,38 +429,37 @@ reads the peer certificate of a secure socket.
 
 ### crypto/x509
 
-The overlay parses a certificate, a certificate request, and a revocation list,
-and it reads each field of the 3. It builds no chain and it checks no
-signature, because `dart:io` owns the trust decision. A `Verify` that always
-gives nil is a security fault, thus the name is absent and a program that calls
-it takes a compile error.
+The overlay holds each of the 261 exported names of Go since 2026-09-04. It
+parses a certificate, a certificate request, and a revocation list, it checks
+each signature, it builds a chain to a root, and it writes each of the 3 forms.
+The chain check is the verifier of Go itself: the file `verify.go` and the file
+`constraints.go` of the overlay each come from the real Go source.
 
 | Item | Go | godart |
 |---|---|---|
-| `ParseCertificate`, `ParseCertificates` | Present | Equal for each field that the overlay reads. |
-| The fields of a `Certificate` | 40 fields | 39. `PublicKey` alone stays out, and each other field reads. The name constraint fields, `Policies`, `PolicyIdentifiers`, `PolicyMappings`, and the 6 policy constraint fields each read since 2026-09-04. |
-| `OID`, `ParseOID`, `OIDFromInts`, `OIDFromASN1OID` | Present | Equal. The port reads the real Go source, and an arc above 64 bits keeps its value. |
-| `ExtKeyUsage.OID` | Present | Equal |
-| `CertificateRequest`, `ParseCertificateRequest` | Present | Present, less `PublicKey` and `CheckSignature`. The parse reads `encoding/asn1`, and it fills each other field. |
-| `RevocationList`, `RevocationListEntry`, `ParseRevocationList`, `ParseCRL`, `ParseDERCRL` | Present | Present, less `CheckSignatureFrom`. |
+| `Certificate.Verify`, `VerifyOptions`, `InvalidReason`, and the 4 verify errors | The verifier of Go, and the verifier of the platform on Windows, on macOS, and on iOS | The verifier of Go alone. The Dart target reaches no verifier of a platform, thus the block that calls one stays out of the port. |
+| `Certificate.CheckSignature`, `CheckSignatureFrom`, `CheckCRLSignature`, `CertificateRequest.CheckSignature`, `RevocationList.CheckSignatureFrom` | Present | Equal. Each check reads `crypto/rsa`, `crypto/ecdsa`, or `crypto/ed25519`. |
+| `Certificate.PublicKey`, `CertificateRequest.PublicKey` | An `any` of 1 of 5 key types | Equal for RSA, DSA, ECDSA, Ed25519, and X25519. A key of ML-DSA gives an error of the parse, because `crypto/mldsa` stands outside the surface. |
+| `CreateCertificate`, `CreateCertificateRequest`, `CreateRevocationList`, `Certificate.CreateCRL` | Present | Equal for a key of RSA, of ECDSA, and of Ed25519. A key of ML-DSA gives an error. The write of the whole DER reads the fields of the part again, because `reflect.Value.Bytes` of gart panics for a defined slice type such as `asn1.RawContent`. The 2 writes give the same DER. |
+| The 10 names of the key family, PKIX, PKCS 1, PKCS 8, and SEC 1 | Present | Equal. Each file comes from the real Go source, less the 2 branches of ML-DSA of `pkcs8.go`. |
+| `DecryptPEMBlock`, `EncryptPEMBlock`, `IsEncryptedPEMBlock`, `IncorrectPasswordError`, `PEMCipher` and its 5 constants | Present | Equal. The file `pem_decrypt.go` comes from the real Go source. |
 | `SystemCertPool` | The root store of the platform | Present, and it always gives a `SystemRootsError`. The secure socket of Dart owns the store, and it exports no root certificate. |
-| `SetFallbackRoots` | Names the roots of a platform with no store | Not present. Go reads the pool inside `Verify` alone, and the overlay holds no `Verify`. |
-| `IsEncryptedPEMBlock` | Present | Equal. `DecryptPEMBlock` and `EncryptPEMBlock` stay out, because `crypto/des` and `crypto/aes` stand outside the surface. |
-| `Certificate.PublicKey` | An `any` of 1 of 3 key types | Not present. `crypto/rsa`, `crypto/ecdsa`, and `crypto/ed25519` stand outside the surface, thus the field could hold nil alone. `PublicKeyAlgorithm` names the algorithm, and `RawSubjectPublicKeyInfo` holds the DER. |
-| `Certificate.Verify`, `VerifyOptions`, and each verify error | Present | Not present. The trust store belongs to `dart:io`. |
-| `Certificate.CheckSignature` and its 2 companions | Present | Not present. A check needs `crypto/rsa` and `crypto/ecdsa`. |
-| `Certificate.VerifyHostname` | Reads the names and the name constraints | Present. It matches the subject alternative names alone. |
-| `CreateCertificate` and each other name that signs | Present | Not present. Each 1 needs a private key. |
-| `CertPool` | 8 methods | `NewCertPool`, `AddCert`, `AppendCertsFromPEM`, `Subjects`, `Equal`, and `Clone`. |
-| The text of a parse error | The text of `cryptobyte` | The text of `encoding/asn1`. The overlay reads the DER with that package. |
-| A critical extension of a policy | Go reads `nameConstraints`, `certificatePolicies`, `policyMappings`, `policyConstraints`, and `inhibitAnyPolicy` | Equal since 2026-09-04. The parse reads each of the 5, thus none of them lands in `UnhandledCriticalExtensions`. |
+| `SetFallbackRoots` | Names the roots for a platform with no store, and Windows and macOS then still read the verifier of the platform | Present, and the roots always reach `Verify`, because the Dart target holds no store and no verifier of a platform. |
+| `Certificate.Verify` with no `Roots` | Reads the store of the platform | Gives a `SystemRootsError`, unless `SetFallbackRoots` named a pool. |
+| `CertPool` | 8 methods | Equal. The file `cert_pool.go` comes from the real Go source. |
+| A signature of ML-DSA | Present | `MLDSA44`, `MLDSA65`, and `MLDSA87` each name an algorithm, and no check accepts one. `crypto/mldsa` stands outside the surface. |
+| The text of a parse error | The text of `cryptobyte` | The text of `encoding/asn1`. The overlay reads the DER of a certificate with that package. |
 | A URI of a subject alternative name | `url.Parse`, a label check, and a reverse label walk of Go | `url.Parse` and the label check. 1 rare malformed URI passes here. |
 
+`testdata/programs/x509verify` builds a root, an intermediate, and a leaf, and
+it signs each 1. It checks the chain, and it also builds a forged leaf with
+another key and the same subject. `Verify` rejects the forged leaf, and
+`CheckSignatureFrom` rejects it too. The program also covers the key family,
+the certificate request, the revocation list, and the PEM encryption.
+
 `testdata/programs/x509use` reads a certificate that the program holds as a PEM
-constant, and it prints each field. A second check parsed the 128 certificates
-of `/etc/ssl/cert.pem` under the 2 commands, and each output was equal.
-`testdata/programs/n2x509` proves the `OID` family, each policy field, the
-certificate request, and the revocation list.
+constant, and it prints each field. `testdata/programs/n2x509` proves the `OID`
+family, each policy field, the certificate request, and the revocation list.
 
 ### net/http/httptest
 

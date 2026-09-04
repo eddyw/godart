@@ -4,16 +4,25 @@
 // hash algorithms as defined in FIPS 180-4.
 //
 // The overlay holds the algorithm of crypto/internal/fips140/sha512, with the
-// public names of crypto/sha512. It drops the registration of the package
-// crypto, the boring path, and the FIPS mode of Go.
+// public names of crypto/sha512. It drops the boring path and the FIPS mode of Go.
 package sha512
 
 import (
+	"crypto"
 	"errors"
 	"hash"
 	"internal/byteorder"
 	"math/bits"
 )
+
+// init registers the hash of this package with the package crypto, exactly as
+// the real package does.
+func init() {
+	crypto.RegisterHash(crypto.SHA384, New384)
+	crypto.RegisterHash(crypto.SHA512, New)
+	crypto.RegisterHash(crypto.SHA512_224, New512_224)
+	crypto.RegisterHash(crypto.SHA512_256, New512_256)
+}
 
 // block runs 1 step of the algorithm. Go selects an assembly form for each
 // architecture, and the subset holds the generic form only.

@@ -1682,7 +1682,26 @@ bool $descConvertible(int handle, int other) {
   if (a.kind == b.kind && a.kind == 'struct') {
     return a.name == b.name;
   }
+  // Go converts between 2 types whose underlying types are identical. A
+  // defined slice type and the slice itself hold 1 Dart list, thus the
+  // conversion performs no operation. `type Raw []byte` holds that shape.
+  if (a.kind == b.kind) {
+    switch (a.kind) {
+      case 'slice' || 'chan':
+        return _sameDesc(a.elem, b.elem);
+      case 'array':
+        return a.length == b.length && _sameDesc(a.elem, b.elem);
+      case 'map':
+        return _sameDesc(a.key, b.key) && _sameDesc(a.elem, b.elem);
+    }
+  }
   return false;
+}
+
+/// Reports whether 2 lazy descriptions name 1 type.
+bool _sameDesc(TypeDesc Function()? a, TypeDesc Function()? b) {
+  if (a == null || b == null) return false;
+  return a().name == b().name;
 }
 
 /// The direction of a channel type: 3 for both, 2 for send, and 1 for receive.

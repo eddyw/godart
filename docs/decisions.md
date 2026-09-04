@@ -3192,3 +3192,83 @@ The plan left these points open. The work took the decisions below.
      names the 2 types. `image/png` holds the shape: `writer.go` converts
      `*encoder` to `*EncoderBuffer` and back. That package stays outside the
      surface.
+
+336. The crypto stack joins the surface, and `crypto/x509` holds each name of
+     Go.
+
+     16 packages entered as native packages: `crypto`, `crypto/cipher`,
+     `crypto/aes`, `crypto/des`, `crypto/rc4`, `crypto/sha3`, `crypto/hkdf`,
+     `crypto/pbkdf2`, `crypto/elliptic`, `crypto/ecdh`, `crypto/ed25519`,
+     `crypto/ecdsa`, `crypto/rsa`, `crypto/dsa`, `crypto/fips140`, and the 2
+     vendored packages of `cryptobyte`. Each 1 reads the real Go source, and
+     each 1 holds each exported name.
+
+     48 patch files stand over 21 internal packages. Each patch replaces 1 file
+     that holds assembly with no Go body, that reads `unsafe`, or that carries
+     a `go:linkname`. The generic path of Go already stands in each of those
+     files, thus the patch holds the code of Go and not new code.
+
+     `nistec/p256_asm.go` carries the whole generic P-256 of `p256.go`, and the
+     precomputed table of the base point decodes through a new
+     `fiat.P256Element.SetMontgomery`. `bigmod/nat.go` calls the generic
+     `addMulVVW` with slices in place of the 3 assembly forms, and the comment
+     of Go says the 3 follow the same algorithm. The whole real test suite of
+     `crypto/elliptic` passes under gart.
+
+     `crypto/md5`, `crypto/sha1`, `crypto/sha256`, and `crypto/sha512` each
+     call `crypto.RegisterHash` in an init now, exactly as Go does. Without it
+     `crypto.SHA256.New()` panicked, and `rsa.SignPSS` and
+     `x509.CheckSignature` each failed.
+
+     **`crypto/x509` went from 193 of 261 names to each of the 261.**
+     `verify.go`, `constraints.go`, `cert_pool.go`, `pem_decrypt.go`,
+     `pkcs1.go`, `pkcs8.go`, `sec1.go`, and the PKIX key code are each a port
+     of the real Go source, thus the chain builder is the builder of Go.
+     `testdata/programs/x509verify` signs a real chain of a root, an
+     intermediate, and a leaf with ECDSA, RSA, and Ed25519, and it verifies it.
+     It then builds a forged leaf with the same subject and the same key,
+     signed by another intermediate. `Verify` rejects it, `CheckSignatureFrom`
+     rejects it, and a swap of the signature is rejected too.
+
+     Each of the 14 witness programs carries a published known answer: FIPS 197
+     C.1 to C.3, NIST SP 800-38A F.2 to F.5, GCM test case 4, the NIST vectors
+     of DES, RFC 6229 for RC4, FIPS 202 and the cSHAKE samples, RFC 5869 cases
+     1, 3, and 4, RFC 6070, RFC 7914, the curve parameters of FIPS 186-4, RFC
+     7748 section 6.1, RFC 8032 sections 7.1 to 7.3, and RFC 6979 A.2.5.
+
+     **4 behaviors differ from Go, and each 1 stands in the docs.**
+     `crypto/internal/fips140/alias` reports no overlap, because a slice of
+     gart names no address. A certificate that carries an ML-DSA key gives a
+     parse error and never a nil key. `SystemCertPool` still gives
+     `SystemRootsError`, thus `Verify` with no `Roots` needs
+     `SetFallbackRoots`. The FIPS 140-3 mode never turns on, thus no CAST runs.
+
+337. 3 more defects of the runtime fell, and `text/scanner` followed 1 of them.
+
+     **A panic wrote the Dart object of its value.** `panic(errors.New("boom"))`
+     gave `panic: Instance of 'errorString$'`, and Go gives `panic: boom`.
+     `$panicText` calls `Error` on a value that implements error, and `String`
+     on a value that implements Stringer, exactly as `preprintpanics` of
+     `runtime/panic.go` does. `testdata/programs/panicvalue` holds the witness,
+     and the chain of 2 panics proves the 2 methods in 1 report.
+
+     **`reflect.Value.Bytes` panicked for a defined slice type of bytes.**
+     `type Raw []byte` holds its own name in the descriptor, thus the assertion
+     to `[]byte` failed. The read converts first now, and the conversion keeps
+     the same Dart list. Thus a write through the result still reaches the
+     value, exactly as in Go.
+
+     That fix needed a second 1. `$descConvertible` refused a conversion
+     between 2 types whose underlying types are identical. Go allows such a
+     conversion, and the 2 forms hold 1 Dart value. The test now accepts a
+     slice, an array of the same length, a channel, and a map. A pointer stays
+     out, because decision 335 holds that shape.
+
+     The defect reached `encoding/asn1`. The marshal of a struct whose first
+     field is a non-empty `asn1.RawContent` read `Value.Bytes` of a defined
+     type.
+
+     **`text/scanner` joins the surface.** `Scan` reads
+     `s.Whitespace&(1<<uint(ch))` with `ch` equal to -1 at the end of the
+     input, and decision 328 fixed that shift. The package holds each exported
+     name, and `testdata/programs/scanneruse` holds the witness.

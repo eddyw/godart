@@ -312,3 +312,22 @@ func ParseDERCRL(derBytes []byte) (*pkix.CertificateList, error) {
 	}
 	return certList, nil
 }
+
+// CheckSignatureFrom reports whether the signature on rl is a valid signature
+// of parent.
+func (rl *RevocationList) CheckSignatureFrom(parent *Certificate) error {
+	if parent.Version == 3 && !parent.BasicConstraintsValid ||
+		parent.BasicConstraintsValid && !parent.IsCA {
+		return ConstraintViolationError{}
+	}
+
+	if parent.KeyUsage != 0 && parent.KeyUsage&KeyUsageCRLSign == 0 {
+		return ConstraintViolationError{}
+	}
+
+	if parent.PublicKeyAlgorithm == UnknownPublicKeyAlgorithm {
+		return ErrUnsupportedAlgorithm
+	}
+
+	return parent.CheckSignature(rl.SignatureAlgorithm, rl.RawTBSRevocationList, rl.Signature)
+}

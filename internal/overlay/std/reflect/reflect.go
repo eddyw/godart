@@ -1461,7 +1461,12 @@ func (v Value) Bytes() []byte {
 		if v.Type().Elem().Kind() != Uint8 {
 			panic("reflect.Value.Bytes of " + v.Type().String())
 		}
-		return v.Interface().([]byte)
+		// A defined slice type of bytes, for example `type Raw []byte`, holds
+		// its own name in the descriptor. Thus an assertion to []byte fails,
+		// and the value takes the conversion first. The conversion keeps the
+		// same Dart list, thus a write through the result still reaches the
+		// value, exactly as in Go.
+		return v.Convert(TypeOf([]byte(nil))).Interface().([]byte)
 	case Array:
 		if v.Type().Elem().Kind() != Uint8 {
 			panic("reflect.Value.Bytes of " + v.Type().String())

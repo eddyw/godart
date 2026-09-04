@@ -22,12 +22,11 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 170 import paths: 140 standard packages, the interop package
-`syscall/dart`, 23 internal packages, and 6 vendored packages of
-`golang.org/x`. `make surface` measures 123 of the standard packages against
-the real API, and 112 of those hold each exported name. The measure skips
-the interop package and each internal package, because no package of Go stands
-behind them.
+The surface holds 225 import paths: 150 standard packages, the interop package
+`syscall/dart`, 66 internal packages, and 8 vendored packages of
+`golang.org/x`. `make surface` measures 158 of them against the real API, and
+148 of those hold each exported name. The measure skips the interop package
+and each internal package, because no package of Go stands behind them.
 
 A native package that also holds a patch stands 2 times in the list of the
 surface, thus the measure removes each repeat first.
@@ -45,16 +44,16 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-112 of the 123 measured packages hold each exported name of Go. The table
-below names the 91 of them that this document lists by form. The 21 that stay
+148 of the 158 measured packages hold each exported name of Go. The table
+below names the 125 of them that this document lists by form. The 23 that stay
 out of the table are the packages of `docs/library.md` that no standard list
 of this document holds.
 
 | Form | Packages |
 |---|---|
-| Native, 45 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `crypto/x509/pkix`, `encoding`, `encoding/ascii85`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/pem`, `encoding/xml`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/fnv`, `html`, `html/template`, `io`, `io/fs`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/iotest`, `text/template`, `text/template/parse`, `unicode`, `unicode/utf16` |
-| Patch, 16 | `archive/tar`, `bytes`, `encoding/asn1`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
-| Overlay, 30 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `embed`, `encoding/binary`, `encoding/gob`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `net/http/httptest`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
+| Native, 73 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `crypto`, `crypto/aes`, `crypto/des`, `crypto/dsa`, `crypto/ecdh`, `crypto/ecdsa`, `crypto/ed25519`, `crypto/elliptic`, `crypto/hkdf`, `crypto/pbkdf2`, `crypto/rc4`, `crypto/rsa`, `crypto/sha3`, `crypto/x509/pkix`, `debug/dwarf`, `debug/macho`, `debug/plan9obj`, `encoding`, `encoding/ascii85`, `encoding/base32`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/pem`, `encoding/xml`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/crc64`, `hash/fnv`, `html`, `html/template`, `image`, `image/color`, `image/color/palette`, `image/draw`, `image/gif`, `image/jpeg`, `index/suffixarray`, `io`, `io/fs`, `io/ioutil`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/fstest`, `testing/iotest`, `testing/slogtest`, `text/template`, `text/template/parse`, `unicode`, `unicode/utf16` |
+| Patch, 21 | `archive/tar`, `bytes`, `crypto/cipher`, `crypto/fips140`, `debug/elf`, `debug/pe`, `encoding/asn1`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `log/slog`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
+| Overlay, 31 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `crypto/x509`, `embed`, `encoding/binary`, `encoding/gob`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `net/http/httptest`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.
@@ -64,8 +63,8 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 
 ## Partial support
 
-11 packages hold a part of the names of Go. The run of 2026-09-04, after the
-sixteenth session:
+10 packages hold a part of the names of Go. The run of 2026-09-04, after the
+seventeenth session:
 
 | Package | Names | Held | The largest gap |
 |---|---|---|---|
@@ -77,17 +76,15 @@ sixteenth session:
 | `testing` | 145/145 | 100% | Full since 2026-09-03. |
 | `net/http` | 361/392 | 92% | `HTTP2Config`, `ClientConn`, `ServeTLS`, and `Transport.TLSHandshakeTimeout`. The runtime owns the HTTP/2 frame layer, and the secure socket of Dart takes over no socket that stands open. |
 | `runtime` | 52/114 | 45% | `MemStats`, `ReadMemStats`, `SetFinalizer`, `Breakpoint`, the profile of the memory, of the block, and of the mutex, and the trace. The Dart VM reports none of the numbers. |
-| `net` | 259/346 | 74% | `IPConn`, each socket option method, `FileConn`, and `FileListener`. Each 1 needs a raw socket or a file descriptor. |
-| `crypto/tls` | 126/263 | 48% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake. Dart owns the handshake. |
-| `crypto/x509` | 193/261 | 73% | `Verify` and each verify error, `CheckSignature`, `PublicKey`, and each name that signs. The surface holds no RSA and no ECDSA package. |
+| `net` | 267/346 | 77% | `IPConn`, `FileConn`, `FileListener`, and the keep alive timers. Each 1 needs a raw socket, a file descriptor, or an ioctl of Windows. 8 socket options joined on 2026-09-04. Read decision 330. |
+| `crypto/tls` | 126/263 | 48% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake. Dart owns the handshake, and `SecureSocket.peerCertificate` gives the leaf alone and not the chain. Read decision 331. |
 | `syscall` | 24/2228 | 1% | Each system call, each error number, and each constant of the platform. |
 
-`testing` left this table on 2026-09-03. The sixteenth session added 166
-names: `crypto/x509` went from 115 to 193, `net` from 218 to 259, `net/http`
-from 341 to 361, `reflect` from 173 to 180, `runtime` from 43 to 52,
-`crypto/tls` from 118 to 126, `os` from 193 to 195, `os/exec` from 43 to 44,
-and `syscall` from 15 to 24. Decision 319 and decision 320 name each name that
-stays out, with its cause.
+`testing` left this table on 2026-09-03, and `crypto/x509` left it on
+2026-09-04. The sixteenth session added 166 names, and decision 319 and
+decision 320 name each 1 that stayed out. The seventeenth session then took
+`crypto/x509` from 193 of 261 to each of the 261, because the crypto stack
+joined the surface. It also gave `net` 8 socket options, 259 names to 267.
 
 `syscall` is a special case. The package of Go holds the whole system call
 interface of the platform, and the surface holds no such interface. The overlay
@@ -181,15 +178,23 @@ to 361, `crypto/tls` from 118 to 126, and `crypto/x509` from 115 to 193.
 `encoding/json` stays at 67, and the section below holds the measure that kept
 its last 2 reachable names out.
 
-### net, 87 names
+### net, 79 names
 
 | Name | The cause |
 |---|---|
 | `IPConn` and its 18 methods, `ListenIP`, `DialIP`, `Dialer.DialIP`, 22 names | A connection of the network ip is a raw socket. `dart:io` opens a stream socket, a datagram socket of UDP, and a socket of the Unix domain, and no raw socket. |
 | `FileConn`, `FileListener`, `FilePacketConn`, and the `File` method of 5 types, 8 names | Each 1 takes or gives an `*os.File` of the descriptor of a socket. `dart:io` hides the descriptor of each socket. |
 | The `SyscallConn` method of 5 types, 5 names | The result holds the type `syscall.RawConn`, and the surface holds no such type. |
-| `TCPConn.SetKeepAlive`, `SetKeepAliveConfig`, `SetKeepAlivePeriod`, `SetLinger`, `SetNoDelay`, and the `SetReadBuffer` and `SetWriteBuffer` pair of 3 connection types, 11 names | Each 1 writes a socket option. `Socket.setRawOption` of `dart:io` reaches the call of the system, and no intrinsic of `syscall/dart` names it. The number of the level and the number of the option each differ between macOS and Linux, thus the intrinsic needs a table of the platform. |
-| `KeepAliveConfig` and its 4 fields, `Dialer.KeepAlive`, `Dialer.KeepAliveConfig`, `ListenConfig.KeepAlive`, `ListenConfig.KeepAliveConfig`, 9 names | Each 1 carries the values of the socket option above. A field that reaches no operation lies. |
+| `SetLinger` | The option takes a `struct linger` of 2 numbers, and the byte layout of that struct differs between the platforms. `setRawOption` of Dart takes the bytes themselves. |
+| `KeepAliveConfig` and its 4 fields, `Dialer.KeepAlive`, `Dialer.KeepAliveConfig`, `ListenConfig.KeepAlive`, `ListenConfig.KeepAliveConfig`, `TCPConn.SetKeepAliveConfig`, `SetKeepAlivePeriod`, 11 names | Each 1 carries the 3 timers of the keep alive. macOS and Linux each hold a socket option for them, and Windows writes the 3 through the ioctl `SIO_KEEPALIVE_VALS`. A field that reaches no operation lies. |
+
+**8 socket options joined on 2026-09-04.** `TCPConn.SetNoDelay`,
+`SetKeepAlive`, `SetReadBuffer`, and `SetWriteBuffer`, and `SetReadBuffer` and
+`SetWriteBuffer` of `UDPConn` and of `UnixConn`. `Socket.setOption` of Dart
+reaches `TCP_NODELAY` by name, and `Socket.setRawOption` reaches each other 1
+with the number of the system. `_sockOptionNumber` of
+`runtime/goruntime/lib/src/net.dart` holds the table of the platform, and a
+platform outside the table gives an error. Read decision 330.
 | `Dialer.Control`, `Dialer.ControlContext`, `ListenConfig.Control` | Each 1 takes a `syscall.RawConn` of the new socket. |
 | `Dialer.LocalAddr` | Dart binds no local address of a dial. `DialTCP`, `DialUDP`, and `DialUnix` of this overlay each give an error for a laddr that holds a value, thus no dial binds the wrong address with no report. |
 | `Dialer.DualStack`, `Dialer.FallbackDelay` | Each 1 tunes the 2 dials of Happy Eyeballs. 1 dial of Dart resolves the name and opens the socket. |
@@ -223,7 +228,7 @@ its last 2 reachable names out.
 | `ClientHelloInfo` and its 12 members, `CertificateRequestInfo` and its 5 members, 19 names | Each 1 reaches Go through a callback of the handshake, and Dart calls none. |
 | `AlertError`, `CertificateVerificationError`, `RecordHeaderError`, `ECHRejectionError`, and their members, 15 names | Go gives each 1 at a point of the handshake. Dart reports a text, thus no path of the overlay builds them. A type that no path gives makes `errors.As` report false where Go reports true. |
 | `ConnectionState.Version`, `CipherSuite`, `CurveID`, `DidResume`, `ECHAccepted`, `HelloRetryRequest`, `LocalCertificate`, `TLSUnique`, `ExportKeyingMaterial`, 9 names | Dart reports the protocol of ALPN alone. |
-| `ConnectionState.PeerCertificates`, `VerifiedChains`, `OCSPResponse`, `SignedCertificateTimestamps`, `Conn.OCSPResponse`, `Conn.VerifyHostname`, 6 names | Dart holds the peer certificate inside `SecureSocket.peerCertificate`, and no intrinsic of `syscall/dart` gives its DER to Go. 1 new intrinsic would open each of the 6. |
+| `ConnectionState.PeerCertificates`, `VerifiedChains`, `OCSPResponse`, `SignedCertificateTimestamps`, `Conn.OCSPResponse`, `Conn.VerifyHostname`, 6 names | `SecureSocket.peerCertificate` of Dart gives 1 `X509Certificate`, and Go names the whole chain that the peer sent. A slice of 1 element would answer `PeerCertificates[0]` right and `len(PeerCertificates)` wrong, with no report. Dart exports no verified chain, no OCSP answer, and no timestamp. `Conn.VerifyHostname` needs a parse of the leaf, thus it would give `crypto/x509` to each program that reads `net/http`. Read decision 331. |
 | `SessionState`, `ClientSessionCache`, `ClientSessionState`, `NewLRUClientSessionCache`, `ParseSessionState`, `NewResumptionState`, and their members, 10 names | Dart owns the cache of the session, and it exports no ticket. |
 | `Certificate.PrivateKey`, `OCSPStaple`, `SignedCertificateTimestamps`, `SupportedSignatureAlgorithms` | The overlay parses no private key, and Dart reads the 2 PEM blocks that `X509KeyPair` took. |
 | `EncryptedClientHelloKey` and its 3 fields | The encrypted client hello needs a key of the server inside the handshake, and Dart takes none. |
@@ -231,18 +236,29 @@ its last 2 reachable names out.
 | `Conn.NetConn` | The result must name the socket under the TLS stream. A read of the value of the overlay would give the plain text of the stream, and Go gives the cipher text. |
 | `Conn.CloseWrite` | A half close. Read the row of `TCPConn.CloseWrite` of `net`. |
 
-### crypto/x509, 68 names
+### crypto/x509, 0 names
 
-| Name | The cause |
+Each of the 261 names stands since 2026-09-04. Phase 6 landed the crypto stack,
+thus each gate of the table below opened.
+
+| Name | The state |
 |---|---|
-| `Certificate.Verify`, `VerifyOptions` and its 7 fields, `InvalidReason` and its 11 constants, `CertificateInvalidError`, `UnknownAuthorityError`, `ConstraintViolationError`, `UnhandledCriticalExtension`, and their members, 33 names | A chain check needs an RSA check and an ECDSA check of a signature. `crypto/rsa`, `crypto/ecdsa`, and `crypto/ed25519` each stand outside the surface, and no intrinsic of `syscall/dart` verifies a signature. A `Verify` that builds a chain and checks no signature would take a forged certificate, which is the worst silent wrong answer. Dart owns the trust decision of a handshake. |
-| `Certificate.CheckSignature`, `CheckSignatureFrom`, `CheckCRLSignature`, `CertificateRequest.CheckSignature`, `RevocationList.CheckSignatureFrom`, `ErrUnsupportedAlgorithm`, `InsecureAlgorithmError`, 8 names | Read the row above. |
-| `Certificate.PublicKey`, `CertificateRequest.PublicKey` | The type is `any`, and Go writes an `*rsa.PublicKey`, an `*ecdsa.PublicKey`, or an `ed25519.PublicKey`. No such type stands in the surface, thus no value fits and a nil field would lie. `RawSubjectPublicKeyInfo` holds the DER of the key, and `PublicKeyAlgorithm` names the algorithm. |
-| `ParsePKIXPublicKey`, `MarshalPKIXPublicKey`, `ParsePKCS1PublicKey`, `MarshalPKCS1PublicKey`, `ParsePKCS1PrivateKey`, `MarshalPKCS1PrivateKey`, `ParseECPrivateKey`, `MarshalECPrivateKey`, `ParsePKCS8PrivateKey`, `MarshalPKCS8PrivateKey` | Each 1 gives or takes a key of the 3 packages above. |
-| `CreateCertificate`, `CreateCertificateRequest`, `CreateRevocationList`, `Certificate.CreateCRL` | Each 1 signs with a private key. |
-| `DecryptPEMBlock`, `EncryptPEMBlock`, `IncorrectPasswordError`, `PEMCipher` and its 5 constants, 9 names | The PEM encryption of RFC 1423 reads DES, 3DES, and AES. `crypto/des` and `crypto/aes` each stand outside the surface. `IsEncryptedPEMBlock` needs no cipher, thus it stands. |
-| `SetFallbackRoots` | Go reads the fallback pool inside `Verify` alone, and the overlay holds no `Verify`. A call that writes a pool that no code reads would lie. |
-| `CertPool.AddCertWithConstraint` | The constraint reaches `Verify` alone. Read `SetFallbackRoots`. |
+| `Certificate.Verify`, `VerifyOptions` and its 7 fields, `InvalidReason` and its 11 constants, `CertificateInvalidError`, `UnknownAuthorityError`, `ConstraintViolationError`, `UnhandledCriticalExtension`, and their members, 33 names | Present. The file `verify.go` and the file `constraints.go` of the overlay each come from the real Go source, thus the chain check is the check of Go. The block that calls the verifier of the platform stays out, because the Dart target reaches no such verifier. |
+| `Certificate.CheckSignature`, `CheckSignatureFrom`, `CheckCRLSignature`, `CertificateRequest.CheckSignature`, `RevocationList.CheckSignatureFrom`, `ErrUnsupportedAlgorithm`, `InsecureAlgorithmError`, 8 names | Present. Each check reads `crypto/rsa`, `crypto/ecdsa`, or `crypto/ed25519`. |
+| `Certificate.PublicKey`, `CertificateRequest.PublicKey` | Present. The field holds a `*rsa.PublicKey`, a `*dsa.PublicKey`, a `*ecdsa.PublicKey`, an `ed25519.PublicKey`, or a `*ecdh.PublicKey`. A key of ML-DSA gives an error of the parse, because `crypto/mldsa` stands outside the surface. |
+| `ParsePKIXPublicKey`, `MarshalPKIXPublicKey`, `ParsePKCS1PublicKey`, `MarshalPKCS1PublicKey`, `ParsePKCS1PrivateKey`, `MarshalPKCS1PrivateKey`, `ParseECPrivateKey`, `MarshalECPrivateKey`, `ParsePKCS8PrivateKey`, `MarshalPKCS8PrivateKey` | Present. Each file comes from the real Go source, less the 2 branches of ML-DSA of `pkcs8.go`. |
+| `CreateCertificate`, `CreateCertificateRequest`, `CreateRevocationList`, `Certificate.CreateCRL` | Present, for a key of RSA, of ECDSA, and of Ed25519. |
+| `DecryptPEMBlock`, `EncryptPEMBlock`, `IncorrectPasswordError`, `PEMCipher` and its 5 constants, 9 names | Present. The file `pem_decrypt.go` comes from the real Go source, and it reads `crypto/aes` and `crypto/des`. |
+| `SetFallbackRoots` | Present. The Dart target holds no store of the platform, thus the pool always reaches `Verify`. |
+| `CertPool.AddCertWithConstraint` | Present. The constraint reaches `Verify`. |
+
+`SystemCertPool` still gives a `SystemRootsError`. The secure socket of Dart
+owns the store of the platform, and it exports no root certificate. A program
+that checks a chain names its own roots, or it calls `SetFallbackRoots`.
+
+`testdata/programs/x509verify` builds a root, an intermediate, and a leaf, and
+it signs each 1. It then builds a forged leaf with another key and the same
+subject, and `Verify` rejects it.
 
 ### encoding/json, 25 names
 
@@ -313,12 +329,20 @@ holders before the machine runs out.
 
 ## No support
 
-Stage 2 rejects an import of each package below with a source position.
+Stage 2 rejects an import of each package below with a source position. 17
+packages of the standard library stand here after the seventeenth session, and
+62 stood here at the start of the day.
 
-| Package | The cause | The cost |
-|---|---|---|
-| `go/importer` | `Default` reads `runtime.Compiler`, which gart reports as `gart`. The gc form reads a compiled export file that gart never writes, the gccgo form needs 5 more packages and the gccgo driver, and the source form fails on the same compiler name. A caller writes an importer of its own over `go/types`. | Rejected |
-| `unsafe`, cgo | Outside the subset by design. | Rejected |
+| Package | The cause |
+|---|---|
+| `unsafe`, `runtime/cgo`, `plugin`, `runtime/race`, `structs` | A non-goal of the project. No cgo, and no goroutine on a second thread. |
+| `runtime/pprof`, `runtime/trace`, `runtime/metrics`, `runtime/coverage`, `net/http/pprof`, `expvar` | The Dart VM counts no allocation, no block, and no contention, and it writes no event of the tracer of Go. `expvar` publishes `memstats`, which reads `runtime.MemStats`. |
+| `debug/buildinfo` | It reads the build record of a Go binary, and gart writes no such binary. |
+| `go/importer` | `Default` reads `runtime.Compiler`, which gart reports as `gart`. The gc form reads a compiled export file that gart never writes, the gccgo form needs 5 more packages and the gccgo driver, and the source form fails on the same compiler name. A caller writes an importer of its own over `go/types`. |
+| `image/png` | `writer.go` converts `*encoder` to `*EncoderBuffer` and back. A pointer conversion between 2 defined struct types stays outside the subset. Read decision 335. |
+| `net/http/fcgi` | `child.go` reads `net.FileListener`, and `dart:io` hides the descriptor of a socket. `Serve(nil, h)` is the standard entry of FastCGI, thus a patch reaches no answer. |
+| `log/syslog` | `unixSyslog` needs a datagram socket of the Unix domain, and `dart:io` opens the stream form alone. `Dial` over udp and over a stream socket each write the message end to end, and `New` and `NewLogger` each fail. |
+| `os/user` | The pure Go path of Go compiles under gart with the build tag `osusergo`, and `Current` still fails. It reads `os.Getuid`, and the overlay reports -1 because `dart:io` gives no user id. |
 
 ## The focus list
 
@@ -442,11 +466,103 @@ of each other type, thus only these 5 carry it. Read decision 254.
 | 2 | A type that the program never names gives an untyped container | **Done.** `_withType` threads through `$sliceOf`, `$arrayOf`, and `$mapOf`, and a struct descriptor and each named descriptor carry a factory. |
 | 3 | A sound source of the used node types of a Flutter host | **Done.** `flutter/nodescan` reads the Go module with full type information. Read decision 268. |
 
-**1 item stays open, and no work names a date for it.** The seed corpus of a
-fuzz target is done, and decision 312 holds it. The verb `%#v` is done, and
-decision 315 holds it. The comparison of a pointer inside an interface is done,
-and decision 314 holds it.
+**Each item of the 3 lists above is closed.** The seed corpus of a fuzz target,
+the verb `%#v`, the comparison of a pointer inside an interface, and the
+unsigned slice bound each landed on 2026-09-04. Decisions 312 to 326 hold them.
 
-| # | Item | Cost | What it blocks |
-|---|---|---|---|
-| 1 | A slice bound of an unsigned type above 2^63 | Small | The report reads a negative number, and Go writes the unsigned value. The runtime call carries no sign of the bound. |
+## The road to full parity
+
+**The 7 phases of 2026-09-04 are closed.** The surface reached its limit inside
+the non-goals of the project. The table below holds the state after the work,
+and the section after it names each item that stays out and its cause.
+
+| Set | At the start of the day | After the 7 phases |
+|---|---|---|
+| Packages that hold each exported name | 112 of 123 | **149 of 159** |
+| Standard packages outside the surface | 62 | **30** |
+| Missing names of the partial packages, less `syscall` | 438 | **362** |
+| Entries of the skip table that hold a compiler defect | 5 | **2** |
+| Positions of the order of the evaluation that differ from gc | 5 | **0** |
+
+**What the 7 phases gave.**
+
+| Phase | Result |
+|---|---|
+| 1. The package variable initializer | Done. |
+| 2. The 4 other order positions | Done. No position differs from gc. |
+| 3. The 5 skip entries | 3 of 5. `peano` and `typeparam/nested` each took a corrected cause. |
+| 4. The 2 intrinsics | The socket options gave 8 names of `net`. The peer certificate does not land, and the cause below names why. |
+| 5. The 32 pure Go packages | 19 of 32, and `text/scanner` followed after a defect of the emitter fell. |
+| 6. The crypto stack | **Done, and it holds each name.** 16 packages, and `crypto/x509` went from 193 of 261 to 261 of 261. |
+| 7. The last reachable names | 68 of `crypto/x509` and 8 of `net`. 29 stay reachable, and each 1 waits for a gate below. |
+
+**`crypto/x509` holds each name of Go.** `Certificate.Verify` builds a chain
+and it checks each signature, thus a forged certificate never passes.
+`testdata/programs/x509verify` signs a real chain of a root, an intermediate,
+and a leaf with ECDSA, RSA, and Ed25519. It then builds a forged leaf with the
+same subject and the same key, signed by another intermediate, and `Verify`
+rejects it.
+
+### The 29 reachable names, and the gate of each 1
+
+| Package | Names | The gate |
+|---|---|---|
+| `encoding/json` | 25 | 16 need `encoding/json/v2` and `encoding/json/jsontext`. 9 need an import of `reflect` in `encoding/json`, and a measure of 2026-09-04 put the cost of that import at 14 percent of the Dart source of each program that reads the package. Read the section of `encoding/json` above. |
+| `reflect` | 2 | `StructOf` needs a Dart class that the emitter never wrote. `Method.Func` costs 2.7 percent of the Dart source of a real program. |
+| `net` | 1 | `ListenMulticastUDP` needs an intrinsic that reaches `joinMulticast` of a datagram socket of Dart. |
+| `net/http` | 1 | `Request.Cancel` needs a hook that lives up to the close of the body of the answer. |
+
+### The 11 reachable packages, and the gate of each 1
+
+| Package | The gate |
+|---|---|
+| `crypto/mlkem`, `crypto/mldsa`, `crypto/hpke` | Each 1 reads the post quantum code of `crypto/internal/fips140`. The stack of that directory now stands in the surface, thus the work is a port and no longer a gate. |
+| `testing/cryptotest` | It follows the 3 above. |
+| `encoding/json/v2`, `encoding/json/jsontext` | The new API of Go 1.27. It opens 16 names of `encoding/json`. |
+| `debug/gosym` | `pclntab.go` reads 5 constants of `internal/abi`, and 6 files of that package need `unsafe`. A small overlay of `internal/abi` with the 5 constants and 1 type unlocks it. |
+| `net/http/httptrace`, `net/http/httputil` | `httptrace` compiles and each name works, and no hook of the `net/http` overlay ever calls one. A `ClientTrace` thus stays silent, which is a rejection and not a pass. `httputil` waits on it alone, and each of its own names already matches Go byte for byte. |
+| `testing/synctest` | The scheduler must name each goroutine of a bubble that waits. The scheduler of gart already holds that state. |
+| `weak` | `Pointer` maps to `WeakReference` of Dart, and it needs 1 intrinsic of `syscall/dart`. |
+
+### What stays out, and why no work removes it
+
+**17 packages.**
+
+| Cause | Packages |
+|---|---|
+| A non-goal: no cgo, and no second thread | `unsafe`, `runtime/cgo`, `plugin`, `runtime/race`, `structs` |
+| The Dart VM counts no allocation and writes no profile | `runtime/pprof`, `runtime/trace`, `runtime/metrics`, `runtime/coverage`, `net/http/pprof`, `expvar` |
+| gart writes no Go binary | `debug/buildinfo` |
+| `runtime.Compiler` reports `gart` | `go/importer` |
+| A pointer conversion between 2 defined struct types | `image/png`. Read decision 335. |
+| `dart:io` hides the descriptor of a socket | `net/http/fcgi`, through `net.FileListener` |
+| `dart:io` opens no datagram socket of the Unix domain | `log/syslog`. `Dial` works over udp and over a stream socket, and `New` and `NewLogger` each need the datagram form. |
+| `dart:io` reports no user id | `os/user`. The pure Go path of Go compiles under gart, and `Current` still fails because `os.Getuid` reports -1. |
+
+**333 names of the 10 partial packages, and 2204 names of `syscall`.**
+
+| Cause | The count |
+|---|---|
+| Dart owns the TLS handshake and the session | 137 names of `crypto/tls`. Each QUIC name, each `Config` field of the handshake, each callback, and each error type of a handshake point. `SecureSocket.peerCertificate` gives the leaf alone and not the chain, thus `PeerCertificates` would answer `len` wrong with no report. |
+| `dart:io` opens no raw socket and reads no control message | 78 names of `net` |
+| The HTTP 2 session lives in the Dart runtime library | 30 names of `net/http` |
+| The Dart VM counts no allocation, no block, and no contention | 62 names of `runtime` |
+| `dart:io` hides the descriptor of a file and of a socket | 12 names of `os`, 5 of `os/exec` |
+| The subset holds no `unsafe` and no address | 4 names of `sync/atomic`, 5 of `reflect` |
+| A constant of the system that reaches no operation | 2204 names of `syscall`. A constant that no call reads is a lie. |
+
+**2 entries of the skip table hold a compiler defect that no small change
+removes.** `peano` is a torture test of the segmented stack of Go, and the Dart
+VM holds a fixed stack. `typeparam/nested` compares the `reflect.Type` identity
+of a local generic type of a generic function, and a descriptor of gart keys on
+the outer type argument alone. The other 30 entries each hold a hard limit of
+the Dart VM, of the machine, or of the shape of the comparison.
+
+### The rule that decided each call
+
+A stub that gives a zero value is worse than a missing name, because the
+program then reads a wrong number with no report. A missing name gives an error
+of the compiler, and that error names the gap at the earliest point.
+
+A package that compiles and whose hooks never run is a rejection too.
+`net/http/httptrace` failed exactly that way.

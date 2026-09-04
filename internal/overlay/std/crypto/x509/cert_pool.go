@@ -1,56 +1,217 @@
 //go:build dart
 
+// This file comes from the file cert_pool.go of crypto/x509 of Go. It holds
+// the set of certificates that Verify reads.
+//
+// SystemCertPool alone differs. Read the file root.go of the overlay.
 package x509
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/pem"
+	"sync"
 )
 
-// A CertPool holds a set of certificates.
-//
-// The real package builds a chain with a pool. This overlay holds no chain
-// builder, thus a pool is a set alone. A program passes it to another package
-// that owns the trust decision.
+type sum224 [sha256.Size224]byte
+
+// CertPool is a set of certificates.
 type CertPool struct {
-	certs []*Certificate
-	// haveSum names the DER of each certificate that the pool holds, thus
-	// AddCert takes 1 certificate 1 time.
-	haveSum map[string]bool
+	byName map[string][]int // cert.RawSubject => index into lazyCerts
+
+	// lazyCerts contains funcs that return a certificate,
+	// lazily parsing/decompressing it as needed.
+	lazyCerts []lazyCert
+
+	// haveSum maps from sum224(cert.Raw) to true. It's used only
+	// for AddCert duplicate detection, to avoid CertPool.contains
+	// calls in the AddCert path (because the contains method can
+	// call getCert and otherwise negate savings from lazy getCert
+	// funcs).
+	haveSum map[sum224]bool
+
+	// systemPool indicates whether this is a special pool derived from the
+	// system roots. If it includes additional roots, it requires doing two
+	// verifications, one using the roots provided by the caller, and one using
+	// the system platform verifier.
+	systemPool bool
 }
 
-// NewCertPool gives an empty pool.
+// lazyCert is minimal metadata about a Cert and a func to retrieve it
+// in its normal expanded *Certificate form.
+type lazyCert struct {
+	// rawSubject is the Certificate.RawSubject value.
+	// It's the same as the CertPool.byName key, but in []byte
+	// form to make CertPool.Subjects (as used by crypto/tls) do
+	// fewer allocations.
+	rawSubject []byte
+
+	// constraint is a function to run against a chain when it is a candidate to
+	// be added to the chain. This allows adding arbitrary constraints that are
+	// not specified in the certificate itself.
+	constraint func([]*Certificate) error
+
+	// getCert returns the certificate.
+	//
+	// It is not meant to do network operations or anything else
+	// where a failure is likely; the func is meant to lazily
+	// parse/decompress data that is already known to be good. The
+	// error in the signature primarily is meant for use in the
+	// case where a cert file existed on local disk when the program
+	// started up is deleted later before it's read.
+	getCert func() (*Certificate, error)
+}
+
+// NewCertPool returns a new, empty CertPool.
 func NewCertPool() *CertPool {
-	return &CertPool{haveSum: map[string]bool{}}
+	return &CertPool{
+		byName:  make(map[string][]int),
+		haveSum: make(map[sum224]bool),
+	}
 }
 
-// len gives the count of the certificates of the pool.
+// len returns the number of certs in the set.
+// A nil set is a valid empty set.
 func (s *CertPool) len() int {
 	if s == nil {
 		return 0
 	}
-	return len(s.certs)
+	return len(s.lazyCerts)
 }
 
-// AddCert puts a certificate into the pool. It panics with a nil certificate.
+// cert returns cert index n in s.
+func (s *CertPool) cert(n int) (*Certificate, func([]*Certificate) error, error) {
+	cert, err := s.lazyCerts[n].getCert()
+	return cert, s.lazyCerts[n].constraint, err
+}
+
+// Clone returns a copy of s.
+func (s *CertPool) Clone() *CertPool {
+	p := &CertPool{
+		byName:     make(map[string][]int, len(s.byName)),
+		lazyCerts:  make([]lazyCert, len(s.lazyCerts)),
+		haveSum:    make(map[sum224]bool, len(s.haveSum)),
+		systemPool: s.systemPool,
+	}
+	for k, v := range s.byName {
+		indexes := make([]int, len(v))
+		copy(indexes, v)
+		p.byName[k] = indexes
+	}
+	for k := range s.haveSum {
+		p.haveSum[k] = true
+	}
+	copy(p.lazyCerts, s.lazyCerts)
+	return p
+}
+
+// SystemCertPool always gives a SystemRootsError.
+//
+// Go reads the root certificates of the platform. Dart holds the store inside
+// its secure socket, and it exports no certificate of it. A pool with no root
+// would report an empty trust store, thus the overlay reports the failure of
+// the load.
+func SystemCertPool() (*CertPool, error) {
+	if sysRoots := systemRootsPool(); sysRoots != nil {
+		return sysRoots.Clone(), nil
+	}
+	return loadSystemRoots()
+}
+
+type potentialParent struct {
+	cert       *Certificate
+	constraint func([]*Certificate) error
+}
+
+// findPotentialParents returns the certificates in s which might have signed
+// cert.
+func (s *CertPool) findPotentialParents(cert *Certificate) []potentialParent {
+	if s == nil {
+		return nil
+	}
+
+	// consider all candidates where cert.Issuer matches cert.Subject.
+	// when picking possible candidates the list is built in the order
+	// of match plausibility as to save cycles in buildChains:
+	//   AKID and SKID match
+	//   AKID present, SKID missing / AKID missing, SKID present
+	//   AKID and SKID don't match
+	var matchingKeyID, oneKeyID, mismatchKeyID []potentialParent
+	for _, c := range s.byName[string(cert.RawIssuer)] {
+		candidate, constraint, err := s.cert(c)
+		if err != nil {
+			continue
+		}
+		kidMatch := bytes.Equal(candidate.SubjectKeyId, cert.AuthorityKeyId)
+		switch {
+		case kidMatch:
+			matchingKeyID = append(matchingKeyID, potentialParent{candidate, constraint})
+		case (len(candidate.SubjectKeyId) == 0 && len(cert.AuthorityKeyId) > 0) ||
+			(len(candidate.SubjectKeyId) > 0 && len(cert.AuthorityKeyId) == 0):
+			oneKeyID = append(oneKeyID, potentialParent{candidate, constraint})
+		default:
+			mismatchKeyID = append(mismatchKeyID, potentialParent{candidate, constraint})
+		}
+	}
+
+	found := len(matchingKeyID) + len(oneKeyID) + len(mismatchKeyID)
+	if found == 0 {
+		return nil
+	}
+	candidates := make([]potentialParent, 0, found)
+	candidates = append(candidates, matchingKeyID...)
+	candidates = append(candidates, oneKeyID...)
+	candidates = append(candidates, mismatchKeyID...)
+	return candidates
+}
+
+func (s *CertPool) contains(cert *Certificate) bool {
+	if s == nil {
+		return false
+	}
+	return s.haveSum[sha256.Sum224(cert.Raw)]
+}
+
+// AddCert adds a certificate to a pool.
 func (s *CertPool) AddCert(cert *Certificate) {
 	if cert == nil {
 		panic("adding nil Certificate to CertPool")
 	}
-	if s.haveSum == nil {
-		s.haveSum = map[string]bool{}
-	}
-	key := string(cert.Raw)
-	if s.haveSum[key] {
-		return
-	}
-	s.haveSum[key] = true
-	s.certs = append(s.certs, cert)
+	s.addCertFunc(sha256.Sum224(cert.Raw), string(cert.RawSubject), func() (*Certificate, error) {
+		return cert, nil
+	}, nil)
 }
 
-// AppendCertsFromPEM reads each PEM block of the type CERTIFICATE and puts the
-// certificate into the pool. It reports whether it added at least 1
-// certificate.
+// addCertFunc adds metadata about a certificate to a pool, along with
+// a func to fetch that certificate later when needed.
+//
+// The rawSubject is Certificate.RawSubject and must be non-empty.
+// The getCert func may be called 0 or more times.
+func (s *CertPool) addCertFunc(rawSum224 sum224, rawSubject string, getCert func() (*Certificate, error), constraint func([]*Certificate) error) {
+	if getCert == nil {
+		panic("getCert can't be nil")
+	}
+
+	// Check that the certificate isn't being added twice.
+	if s.haveSum[rawSum224] {
+		return
+	}
+
+	s.haveSum[rawSum224] = true
+	s.lazyCerts = append(s.lazyCerts, lazyCert{
+		rawSubject: []byte(rawSubject),
+		getCert:    getCert,
+		constraint: constraint,
+	})
+	s.byName[rawSubject] = append(s.byName[rawSubject], len(s.lazyCerts)-1)
+}
+
+// AppendCertsFromPEM attempts to parse a series of PEM encoded certificates.
+// It appends any certificates found to s and reports whether any certificates
+// were successfully parsed.
+//
+// On many Linux systems, /etc/ssl/cert.pem will contain the system wide set
+// of root CAs in a format suitable for this function.
 func (s *CertPool) AppendCertsFromPEM(pemCerts []byte) (ok bool) {
 	for len(pemCerts) > 0 {
 		var block *pem.Block
@@ -61,55 +222,69 @@ func (s *CertPool) AppendCertsFromPEM(pemCerts []byte) (ok bool) {
 		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
 			continue
 		}
-		cert, err := ParseCertificate(block.Bytes)
+
+		certBytes := block.Bytes
+		cert, err := ParseCertificate(certBytes)
 		if err != nil {
 			continue
 		}
-		s.AddCert(cert)
+		var lazyCert struct {
+			sync.Once
+			v *Certificate
+		}
+		s.addCertFunc(sha256.Sum224(cert.Raw), string(cert.RawSubject), func() (*Certificate, error) {
+			lazyCert.Do(func() {
+				// This can't fail, as the same bytes already parsed above.
+				lazyCert.v, _ = ParseCertificate(certBytes)
+				certBytes = nil
+			})
+			return lazyCert.v, nil
+		}, nil)
 		ok = true
 	}
+
 	return ok
 }
 
-// Subjects gives the DER of the subject of each certificate of the pool.
+// Subjects returns a list of the DER-encoded subjects of
+// all of the certificates in the pool.
 //
-// Deprecated: the pool of the real package can hold a certificate of the
-// system, and that pool gives no subject. This pool always holds each one.
+// Deprecated: if s was returned by [SystemCertPool], Subjects
+// will not include the system roots.
 func (s *CertPool) Subjects() [][]byte {
 	res := make([][]byte, s.len())
-	for i, cert := range s.certs {
-		res[i] = cert.RawSubject
+	for i, lc := range s.lazyCerts {
+		res[i] = lc.rawSubject
 	}
 	return res
 }
 
-// Equal reports whether the 2 pools hold the same certificates in the same
-// order.
+// Equal reports whether s and other are equal.
 func (s *CertPool) Equal(other *CertPool) bool {
 	if s == nil || other == nil {
 		return s == other
 	}
-	if s.len() != other.len() {
+	if s.systemPool != other.systemPool || len(s.haveSum) != len(other.haveSum) {
 		return false
 	}
-	for i := range s.certs {
-		if !bytes.Equal(s.certs[i].Raw, other.certs[i].Raw) {
+	for h := range s.haveSum {
+		if !other.haveSum[h] {
 			return false
 		}
 	}
 	return true
 }
 
-// Clone gives a copy of the pool.
-func (s *CertPool) Clone() *CertPool {
-	if s == nil {
-		return nil
+// AddCertWithConstraint adds a certificate to the pool with the additional
+// constraint. When Certificate.Verify builds a chain which is rooted by cert,
+// it will additionally pass the whole chain to constraint to determine its
+// validity. If constraint returns a non-nil error, the chain will be discarded.
+// constraint may be called concurrently from multiple goroutines.
+func (s *CertPool) AddCertWithConstraint(cert *Certificate, constraint func([]*Certificate) error) {
+	if cert == nil {
+		panic("adding nil Certificate to CertPool")
 	}
-	out := NewCertPool()
-	out.certs = make([]*Certificate, len(s.certs))
-	copy(out.certs, s.certs)
-	for k, v := range s.haveSum {
-		out.haveSum[k] = v
-	}
-	return out
+	s.addCertFunc(sha256.Sum224(cert.Raw), string(cert.RawSubject), func() (*Certificate, error) {
+		return cert, nil
+	}, constraint)
 }

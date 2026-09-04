@@ -54,13 +54,6 @@ type pkcs10Attribute struct {
 var oidExtensionRequest = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 14}
 
 // A CertificateRequest holds 1 PKCS #10 certificate request.
-//
-// The overlay holds no PublicKey field, because crypto/rsa, crypto/ecdsa, and
-// crypto/ed25519 stay outside the surface. PublicKeyAlgorithm names the
-// algorithm, and RawSubjectPublicKeyInfo holds the DER of the key.
-//
-// The overlay holds no CheckSignature method for the same cause. A check of
-// the signature needs 1 of those 3 packages.
 type CertificateRequest struct {
 	// Raw holds the whole DER of the request.
 	Raw []byte
@@ -79,6 +72,10 @@ type CertificateRequest struct {
 	SignatureAlgorithm SignatureAlgorithm
 
 	PublicKeyAlgorithm PublicKeyAlgorithm
+	// PublicKey holds the key of the subject. It is a *rsa.PublicKey, a
+	// *dsa.PublicKey, a *ecdsa.PublicKey, an ed25519.PublicKey, or a
+	// *ecdh.PublicKey for X25519.
+	PublicKey any
 
 	Subject pkix.Name
 
@@ -130,6 +127,13 @@ func buildCertificateRequest(in *certificateRequest) (*CertificateRequest, error
 	out.Signature = in.SignatureValue.RightAlign()
 	out.SignatureAlgorithm = getSignatureAlgorithmFromAI(in.SignatureAlgorithm.ident())
 	out.PublicKeyAlgorithm = getPublicKeyAlgorithmFromOID(in.TBSCSR.PublicKey.Algorithm.Algorithm)
+	if out.PublicKeyAlgorithm != UnknownPublicKeyAlgorithm {
+		key, err := parsePublicKey(&in.TBSCSR.PublicKey)
+		if err != nil {
+			return nil, err
+		}
+		out.PublicKey = key
+	}
 
 	out.Version = in.TBSCSR.Version
 	out.Attributes = parseRawAttributes(in.TBSCSR.RawAttributes)
@@ -218,4 +222,9 @@ func parseCSRExtensions(rawAttributes []asn1.RawValue) ([]pkix.Extension, error)
 		ret = append(ret, extensions...)
 	}
 	return ret, nil
+}
+
+// CheckSignature reports whether the signature on c is valid.
+func (c *CertificateRequest) CheckSignature() error {
+	return checkSignature(c.SignatureAlgorithm, c.RawTBSCertificateRequest, c.Signature, c.PublicKey, true)
 }
