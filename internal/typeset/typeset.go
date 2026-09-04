@@ -208,3 +208,39 @@ func HoldsParam(t types.Type) bool {
 	walk(t)
 	return found
 }
+
+// BytesOrText reports whether each term of the type set of a parameter is a
+// byte slice or a string.
+//
+// Such a set holds 2 Dart types, thus no Dart member fits both. The dictionary
+// of the parameter carries the length, the index, the slice, and the 2
+// conversions. The standard library declares such a parameter in
+// encoding/json/jsontext and in encoding/json/v2.
+func BytesOrText(t types.Type) bool {
+	tp, ok := types.Unalias(t).(*types.TypeParam)
+	if !ok {
+		return false
+	}
+	terms, ok := Terms(tp.Constraint())
+	if !ok || len(terms) == 0 {
+		return false
+	}
+	for _, term := range terms {
+		if !bytesOrTextTerm(term.Underlying()) {
+			return false
+		}
+	}
+	return true
+}
+
+func bytesOrTextTerm(u types.Type) bool {
+	if b, ok := u.(*types.Basic); ok {
+		return b.Kind() == types.String
+	}
+	s, ok := u.(*types.Slice)
+	if !ok {
+		return false
+	}
+	b, ok := types.Unalias(s.Elem()).Underlying().(*types.Basic)
+	return ok && b.Kind() == types.Uint8
+}

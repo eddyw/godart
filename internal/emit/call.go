@@ -1176,6 +1176,9 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 
 func (e *emitter) length(x ir.Expr) string {
 	t := x.GoType()
+	if typeset.BytesOrText(t) {
+		return fmt.Sprintf("%s.length!(%s)", e.dictOf(t), e.expr(x))
+	}
 	switch {
 	case isString(t):
 		return "$gi(" + e.expr(x) + ".length)"
@@ -1444,6 +1447,24 @@ func (e *emitter) textOf(x ir.Expr) string {
 func (e *emitter) conv(x *ir.Conv) string {
 	from, to := x.From, x.Type
 	text := e.expr(x.X)
+	// A type set that holds a byte slice and a string holds 2 Dart types, thus
+	// the dictionary carries the 2 conversions.
+	if typeset.BytesOrText(from) {
+		switch {
+		case isString(to):
+			return fmt.Sprintf("%s.text!(%s)", e.dictOf(from), text)
+		case isByteSlice(to):
+			return fmt.Sprintf("%s.bytes!(%s)", e.dictOf(from), text)
+		}
+	}
+	if typeset.BytesOrText(to) {
+		switch {
+		case isString(from):
+			return fmt.Sprintf("%s.fromText!(%s)", e.dictOf(to), text)
+		case isByteSlice(from):
+			return fmt.Sprintf("%s.fromBytes!(%s)", e.dictOf(to), text)
+		}
+	}
 	switch {
 	case isString(to) && isSliceType(from):
 		if isRuneSlice(from) {
@@ -1552,4 +1573,14 @@ func (e *emitter) sameClass(a, b types.Type) bool {
 		return false
 	}
 	return e.mergeRep(na.Obj()) == e.mergeRep(nb.Obj())
+}
+
+// isByteSlice reports whether a type is a slice of bytes.
+func isByteSlice(t types.Type) bool {
+	s, ok := typeset.Core(t).(*types.Slice)
+	if !ok {
+		return false
+	}
+	b, ok := types.Unalias(s.Elem()).Underlying().(*types.Basic)
+	return ok && b.Kind() == types.Uint8
 }

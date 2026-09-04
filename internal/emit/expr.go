@@ -322,6 +322,10 @@ func rangeTail(three, byLen bool, low, high, max ir.Expr) string {
 
 func (e *emitter) index(x *ir.Index) string {
 	container := x.X.GoType()
+	if typeset.BytesOrText(container) {
+		return fmt.Sprintf("%s.at!(%s, %s)",
+			e.dictOf(container), e.expr(x.X), e.expr(x.Index))
+	}
 	if isMapType(container) {
 		return fmt.Sprintf("%s.get(%s)", e.expr(x.X), e.expr(x.Index))
 	}
@@ -381,6 +385,14 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		low = "$ix(" + e.expr(x.Low) + ")"
 	}
 	source := x.X.GoType()
+	if typeset.BytesOrText(source) {
+		high := fmt.Sprintf("%s.length!(%s)", e.dictOf(source), e.expr(x.X))
+		if x.High != nil {
+			high = e.expr(x.High)
+		}
+		return fmt.Sprintf("%s.slice!(%s, %s, %s)",
+			e.dictOf(source), e.expr(x.X), lowOrZero(x.Low, e), high)
+	}
 	if isString(source) {
 		high := fmt.Sprintf("%s.length", e.expr(x.X))
 		if x.High != nil {
@@ -696,6 +708,10 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 		}
 		return fmt.Sprintf("$elemPtr(%s, $ix(%s))", e.expr(x.X), e.expr(x.Index))
 	}
+	if id, ok := x.(*ir.Ident); ok {
+		e.fail("the address of the name %s has no Dart form", id.Name)
+		return "null"
+	}
 	e.fail("the address of %T has no Dart form", x)
 	return "null"
 }
@@ -769,4 +785,13 @@ func (e *emitter) composite(x *ir.Composite) string {
 	}
 	e.fail("a literal of type %s has no Dart form", x.Type)
 	return "null"
+}
+
+// lowOrZero gives the first bound of a slice expression. Go reads 0 when the
+// expression holds none.
+func lowOrZero(low ir.Expr, e *emitter) string {
+	if low == nil {
+		return "$gi(0)"
+	}
+	return e.expr(low)
 }

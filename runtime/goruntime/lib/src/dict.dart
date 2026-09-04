@@ -4,6 +4,7 @@ import 'complex.dart';
 import 'goint.dart';
 import 'iface.dart';
 import 'int.dart';
+import 'slice.dart';
 import 'string.dart';
 
 /// The run time data of 1 type argument.
@@ -41,6 +42,17 @@ final class Dict<T> {
   /// correct. Null stores the source value.
   final T Function(T, T)? assign;
 
+  /// length, at, slice, bytes, and text serve a type set that holds a byte
+  /// slice and a string. Such a set holds 2 Dart types, thus no Dart member
+  /// fits both. Each other type set holds null.
+  final GoInt Function(T)? length;
+  final GoInt Function(T, GoInt)? at;
+  final T Function(T, GoInt, GoInt)? slice;
+  final Slice<GoInt> Function(T)? bytes;
+  final GoString Function(T)? text;
+  final T Function(Slice<GoInt>)? fromBytes;
+  final T Function(GoString)? fromText;
+
   const Dict(
     this.zero,
     this.equal,
@@ -51,6 +63,13 @@ final class Dict<T> {
     this.desc, {
     this.copy,
     this.assign,
+    this.length,
+    this.at,
+    this.slice,
+    this.bytes,
+    this.text,
+    this.fromBytes,
+    this.fromText,
   });
 
   T copyOf(T v) => copy == null ? v : copy!(v);
@@ -189,4 +208,16 @@ const Dict<GoString> $dictString = Dict<GoString>(
   $compare,
   $identity<GoString>,
   $typeString,
+  length: _lengthString,
+  at: _atString,
+  slice: _sliceString,
+  bytes: $stringToBytes,
+  text: $identity<GoString>,
+  fromBytes: $bytesToString,
+  fromText: $identity<GoString>,
 );
+
+GoInt _lengthString(GoString v) => $gi(v.length);
+GoInt _atString(GoString v, GoInt i) => v.$at(i);
+GoString _sliceString(GoString v, GoInt a, GoInt b) =>
+    $substring(v, $ix(a), $ix(b));

@@ -403,7 +403,7 @@ func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 		pre = append(pre, b.orderCall(c, s.Pos())...)
 		switch fun := c.Fun.(type) {
 		case *ir.Method:
-			hoisted, recv := b.forceHoist(b.receiverValue(fun), s.Pos(), "dr")
+			hoisted, recv := b.forceHoist(b.deferRecv(fun), s.Pos(), "dr")
 			pre = append(pre, hoisted...)
 			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type, TypeArgs: fun.TypeArgs}
 		default:
@@ -527,6 +527,30 @@ func (b *builder) selectStmt(s *ast.SelectStmt, label string) []ir.Stmt {
 // receiverValue reads the receiver of a deferred call or of a go statement. Go
 // copies a value receiver at that moment, and it keeps the reference of a
 // pointer receiver.
+// deferRecv reads the receiver of a deferred call at the point of the
+// statement, exactly as Go reads it.
+//
+// A method with a pointer receiver takes the address of an addressable
+// receiver there. A temporary that held the value would lose that location,
+// and the call would write into a copy.
+func (b *builder) deferRecv(m *ir.Method) ir.Expr {
+	value := b.receiverValue(m)
+	sig, ok := m.Obj.Type().(*types.Signature)
+	if !ok || sig.Recv() == nil {
+		return value
+	}
+	if _, isPointer := types.Unalias(sig.Recv().Type()).(*types.Pointer); !isPointer {
+		return value
+	}
+	if t := value.GoType(); t != nil {
+		if _, already := types.Unalias(t).Underlying().(*types.Pointer); already {
+			return value
+		}
+		return &ir.Unary{Op: token.AND, X: value, Type: types.NewPointer(t)}
+	}
+	return value
+}
+
 func (b *builder) receiverValue(m *ir.Method) ir.Expr {
 	sig, ok := m.Obj.Type().(*types.Signature)
 	if !ok || sig.Recv() == nil {

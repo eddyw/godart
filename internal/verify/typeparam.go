@@ -148,6 +148,11 @@ func (v *verifier) rejectMixed(pos token.Pos, t types.Type, what string) {
 	if !ok || !mixedDartForm(tp) {
 		return
 	}
+	// A type set of a byte slice and a string reads the length, the index, the
+	// slice, and the 2 conversions from its dictionary.
+	if typeset.BytesOrText(tp) {
+		return
+	}
 	v.reject(pos, "the compiler gives a type parameter 1 Dart type",
 		"%s reads the type parameter %s, and its constraint holds more than 1 Dart type",
 		what, tp.Obj().Name())

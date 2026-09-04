@@ -403,7 +403,32 @@ func (e *emitter) dictOf(t types.Type) string {
 	dart := e.dartType(t)
 	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s, %s%s)",
 		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t),
-		e.orderText(t), e.maskText(t), e.descriptorOf(t), e.dictCopy(t))
+		e.orderText(t), e.maskText(t), e.descriptorOf(t), e.dictCopy(t)+dictText(t))
+}
+
+// dictText gives the byte operations of a dictionary. A type set that holds a
+// byte slice and a string holds 2 Dart types, thus each such operation reads
+// the dictionary.
+func dictText(t types.Type) string {
+	u := types.Unalias(t).Underlying()
+	if b, ok := u.(*types.Basic); ok && b.Kind() == types.String {
+		return ", length: (v) => $gi(v.length), at: (v, i) => v.$at(i)," +
+			" slice: (v, a, b) => $substring(v, $ix(a), $ix(b))," +
+			" bytes: (v) => $stringToBytes(v), text: (v) => v," +
+			" fromBytes: (v) => $bytesToString(v), fromText: (v) => v"
+	}
+	s, ok := u.(*types.Slice)
+	if !ok {
+		return ""
+	}
+	if b, ok := types.Unalias(s.Elem()).Underlying().(*types.Basic); !ok ||
+		b.Kind() != types.Uint8 {
+		return ""
+	}
+	return ", length: (v) => $gi(v.len), at: (v, i) => v[$ix(i)]," +
+		" slice: (v, a, b) => v.range($ix(a), $ix(b), v.cap)," +
+		" bytes: (v) => v, text: (v) => $bytesToString(v)," +
+		" fromBytes: (v) => v, fromText: (v) => $stringToBytes(v)"
 }
 
 // dictCopy gives the copy and the assign of a dictionary. A struct and an
