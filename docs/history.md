@@ -73,6 +73,47 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-04, the seventeenth session
+
+The user asked for the 7 phases of the parity roadmap, end to end. 3 agents ran
+in sequence on the overlay, and the main session held the compiler core, the
+runtime, and the docs. Read "The road to full parity" of `docs/support.md` for
+the plan, and decisions 327 to 335 for the whole account.
+
+**The order of the evaluation is closed.** 5 positions differed from gc, and
+each 1 now holds the order of gc. The condition of a `for` loop and its third
+clause each move to the top of the body, the search of a `switch` becomes a
+nested chain, the initializer of a package variable takes a temporary variable
+in `$init`, and a conversion between a string and a slice takes 1 too.
+
+The first form of the hoist over applied. It marked each operation that stood
+behind a read, thus `for i := 0; i < len(s); i++` took a temporary variable.
+`len` writes nothing, thus the hoist changed no answer of the program. It
+changed 155 files of 1 output, and `dart compile wasm` then crashed with
+`type 'Call' is not a subtype of type 'Parameter' in type cast`. Only an
+operation that can write forces the hoisted form now.
+
+**6 defects fell, and 4 of them gave a silent wrong answer.**
+
+| The defect | What a program saw |
+|---|---|
+| `any` and `interface{}` held 2 type identities | Each assertion of a decoded JSON object to `map[string]any` reported false |
+| A `PathError` held the sentinel of the package | The text read "file does not exist" where Go writes "no such file or directory" |
+| The space flag of the verb `x` wrote no separator | `% x` of 2 bytes gave `4d5a`, and Go gives `4d 5a` |
+| A shift by a count of an unsigned type | `1 << uint(-1)` panicked, and Go gives 0 |
+| A pointer to a type that names itself held 2 Dart forms | The output did not compile |
+| A constraint that names its own type parameter | The bound expanded 33 levels, and the output did not compile |
+
+**3 entries of the skip table close.** `fixedbugs/issue4316`,
+`fixedbugs/issue72063`, and `typeparam/issue48137`. `fixedbugs/bug369` and
+`fixedbugs/issue9355` each pass too, because the comparison reads the exit
+status of the 2 runs on its own now.
+
+**2 items hold a measured cause and no date.** A pointer conversion between 2
+defined struct types needs 1 Dart class for 2 named types, and the 2 method
+sets differ. `typeparam/nested` needs a descriptor that keys on each type
+argument of a nested generic declaration.
+
 ### 2026-09-04, the sixteenth session
 
 The user asked for each open task, end to end. 3 agents ran on disjoint

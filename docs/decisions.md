@@ -3132,3 +3132,63 @@ The plan left these points open. The work took the decisions below.
      function, and a descriptor of gart keys on the outer type argument alone.
 
      The skip table holds 27 entries, and it held 30.
+
+333. A PathError holds the text of the system, and the comparison of the test
+     directory reads the exit status on its own.
+
+     `causeError` of the `os` overlay gave the sentinel of the package for a
+     failure of the system. `ErrNotExist` writes "file does not exist", and Go
+     holds a `syscall.Errno` there whose text is "no such file or directory".
+     Thus each program that printed such an error wrote another text.
+
+     `sysError` keeps the text of the system and answers `Is` with the
+     sentinel, exactly as `syscall.Errno` does. The map now writes the text of
+     Go for ENOENT, ENOTDIR, and EPERM. EACCES keeps the sentinel, because the
+     text of `ErrPermission` and the text of EACCES agree.
+
+     `go run` writes the line `exit status 1` when the program ends with a
+     value that is not 0, and `dart run` writes no such line. The comparison
+     of `internal/driver/gotest_test.go` cut no such line, thus each file that
+     ends with a failure differed. It cuts the line now, and it compares the
+     exit status of the 2 runs on its own. The comparison is thus stronger
+     than the form before it.
+
+     `fixedbugs/bug369` and `fixedbugs/issue9355` each pass now.
+
+     5 files of the test directory compile for the first time, because 21
+     packages joined the surface on this day. Each 1 holds an environment
+     shape and not a defect: `winbatch` reads a file under `runtime.GOROOT`,
+     `nosplit` picks the frame size from `runtime.GOARCH`, and `linkobj`,
+     `linkmain_run`, and `fixedbugs/issue21317` each write the name of a
+     temporary directory of the system.
+
+334. The space flag of the verb `x` writes a separator.
+
+     `fmt.Printf("% x", []byte{0x4d, 0x5a})` gave `4d5a`, and Go gives
+     `4d 5a`. The flag reached no path of a byte array, of a byte slice, or of
+     a string. `% X` failed the same way, and `% d` of a slice of integers was
+     already right.
+
+     Go puts 1 space between each pair of digits, and the flag `#` then writes
+     the prefix of the base on each byte. `% #x` of 2 bytes gives
+     `0x4d 0x5a`, and `%#x` gives `0x4d5a`.
+
+     The defect reached each program that writes a hexadecimal dump.
+     `testdata/programs/hexspace` holds the witness of the 9 forms.
+
+335. A pointer conversion between 2 defined struct types stays outside the
+     subset, and the cause is measured.
+
+     `type outer inner` names 2 Go types with 1 underlying type, and
+     `(*outer)(p)` gives a pointer to the same memory. A write through the
+     result reaches the value that `p` names.
+
+     The emitter gives each named struct type a Dart class of its own, thus no
+     value fits both classes. A copy would break the aliasing that Go gives,
+     and 1 class for the 2 types would need 1 method set. The 2 method sets
+     differ, thus that form is no answer either.
+
+     Stage 5 rejects such a conversion with a source position, and the report
+     names the 2 types. `image/png` holds the shape: `writer.go` converts
+     `*encoder` to `*EncoderBuffer` and back. That package stays outside the
+     surface.
