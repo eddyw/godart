@@ -938,6 +938,11 @@ func keyType(t types.Type) string {
 // stays. docs/parity.md holds that gap.
 func unaliasDeep(t types.Type) types.Type {
 	switch u := types.Unalias(t).(type) {
+	case *types.Basic:
+		// byte and uint8 name 1 type, and so do rune and int32. go/types holds
+		// 2 objects with 2 texts, thus the key comes from the kind. A method
+		// that spells uint8 must satisfy an interface that spells byte.
+		return types.Typ[u.Kind()]
 	case *types.Pointer:
 		return types.NewPointer(unaliasDeep(u.Elem()))
 	case *types.Slice:

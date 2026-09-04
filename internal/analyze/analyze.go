@@ -1016,6 +1016,10 @@ func typeKey(t types.Type) string {
 	switch t := types.Unalias(t).(type) {
 	case *types.TypeParam:
 		return wildcard
+	case *types.Basic:
+		// byte and uint8 name 1 type, and so do rune and int32. go/types holds
+		// 2 objects with 2 texts, thus the key comes from the kind.
+		return types.Typ[t.Kind()].String()
 	case *types.Pointer:
 		return "*" + typeKey(t.Elem())
 	case *types.Slice:
