@@ -352,6 +352,17 @@ func (e *emitter) bindPart(sig *types.Signature) string {
 // and the fmt package read the name, the tag, and the value.
 func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 	class := e.dartType(t)
+	// The class of an instance of a generic type writes each field with the
+	// type that the declaration holds. The accessor reads the substituted type,
+	// thus a function value needs the wrapper. Read funcAdapt.
+	decl := st
+	if named, ok := types.Unalias(t).(*types.Named); ok {
+		if ref := e.structRef(named); ref.TypeArgs().Len() > 0 {
+			if o, ok := ref.Origin().Underlying().(*types.Struct); ok {
+				decl = o
+			}
+		}
+	}
 	parts := make([]string, st.NumFields())
 	for i := range parts {
 		field := st.Field(i)
@@ -359,10 +370,14 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 		if field.Embedded() {
 			embedded = ", embedded: true"
 		}
+		declType := field.Type()
+		if i < decl.NumFields() {
+			declType = decl.Field(i).Type()
+		}
 		parts[i] = fmt.Sprintf("FieldDesc('%s', %s, %t, () => %s, %s%s)",
 			field.Name(), dartString(st.Tag(i)), field.Exported(),
-			e.descriptorOf(field.Type()), e.fieldAccess(t, field, i, class),
-			embedded)
+			e.descriptorOf(field.Type()),
+			e.fieldAccess(t, field, i, class, declType), embedded)
 	}
 	return ", fields: <FieldDesc>[" + strings.Join(parts, ", ") + "]"
 }
@@ -373,7 +388,8 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 // library holds each name that starts with an underscore, thus another library
 // cannot name it. The description of an instance of a generic type stands at
 // the point of the use, and that point can lie outside the package of the type.
-func (e *emitter) fieldAccess(owner types.Type, field *types.Var, i int, class string) string {
+func (e *emitter) fieldAccess(owner types.Type, field *types.Var, i int,
+	class string, declType types.Type) string {
 	if !field.Exported() && field.Pkg() != nil && field.Pkg() != e.pkg {
 		return "$noRead, $noWrite"
 	}
@@ -381,8 +397,11 @@ func (e *emitter) fieldAccess(owner types.Type, field *types.Var, i int, class s
 	if field.Name() != "_" {
 		dart = fieldDartName(owner, field.Name())
 	}
-	return fmt.Sprintf("($r) => ($r as %s).%s, ($r, $v) => ($r as %s).%s = $v as %s",
-		class, dart, class, dart, e.dartType(field.Type()))
+	read := fmt.Sprintf("($r as %s).%s", class, dart)
+	write := fmt.Sprintf("$v as %s", e.dartType(field.Type()))
+	return fmt.Sprintf("($r) => %s, ($r, $v) => ($r as %s).%s = %s",
+		e.funcAdapt(read, declType, field.Type()), class, dart,
+		e.funcAdapt("("+write+")", field.Type(), declType))
 }
 
 // dartText escapes a text for a Dart string literal that single quotes hold.
@@ -580,11 +599,20 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 	if selSig == nil {
 		selSig = sig
 	}
+	// 1 Dart function serves each instance of a generic declaration. The
+	// parameter of the target thus reads the origin, and a function value of a
+	// narrower Dart type needs the wrapper. Read funcAdapt.
+	orig := signatureOf(fn.Origin().Type())
 	params := make([]string, selSig.Params().Len())
 	args := make([]string, selSig.Params().Len())
 	for i := range params {
-		args[i] = fmt.Sprintf("$a%d", i)
-		params[i] = e.dartType(selSig.Params().At(i).Type()) + " " + args[i]
+		name := fmt.Sprintf("$a%d", i)
+		from := selSig.Params().At(i).Type()
+		params[i] = e.dartType(from) + " " + name
+		args[i] = name
+		if orig != nil && i < orig.Params().Len() {
+			args[i] = e.funcAdapt(name, from, orig.Params().At(i).Type())
+		}
 	}
 	recv := fmt.Sprintf("($r as %s)", e.dartType(elem))
 	_, wantPtr := types.Unalias(sig.Recv().Type()).(*types.Pointer)

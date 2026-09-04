@@ -677,17 +677,18 @@ func (e *emitter) typeArguments(args []types.Type) (string, []string) {
 // a slice, exactly as Go does.
 func (e *emitter) callArgs(x *ir.Call) []string {
 	sig := e.calleeSignature(x)
+	decl := e.declSignature(x)
 	if sig == nil || !x.Variadic || x.Spread {
 		out := make([]string, len(x.Args))
 		for i, a := range x.Args {
-			out[i] = e.expr(a)
+			out[i] = e.adaptArg(e.expr(a), a, decl, i)
 		}
 		return out
 	}
 	last := sig.Params().Len() - 1
 	out := make([]string, 0, last+1)
 	for i := 0; i < last && i < len(x.Args); i++ {
-		out = append(out, e.expr(x.Args[i]))
+		out = append(out, e.adaptArg(e.expr(x.Args[i]), x.Args[i], decl, i))
 	}
 	slice, _ := types.Unalias(sig.Params().At(last).Type()).Underlying().(*types.Slice)
 	if slice == nil {
@@ -1572,6 +1573,15 @@ func (e *emitter) sameClass(a, b types.Type) bool {
 	if na == nil || nb == nil {
 		return false
 	}
+	// A defined type over an instance of a generic type reads the class of the
+	// instance, and the 2 instances of 1 instantiation hold 1 struct object.
+	// Read instanceRep.
+	ra, rb := e.structRef(na), e.structRef(nb)
+	if ra != na || rb != nb {
+		sa, _ := ra.Underlying().(*types.Struct)
+		sb, _ := rb.Underlying().(*types.Struct)
+		return sa != nil && sa == sb
+	}
 	return e.mergeRep(na.Obj()) == e.mergeRep(nb.Obj())
 }
 
@@ -1583,4 +1593,81 @@ func isByteSlice(t types.Type) bool {
 	}
 	b, ok := types.Unalias(s.Elem()).Underlying().(*types.Basic)
 	return ok && b.Kind() == types.Uint8
+}
+
+// funcAdapt wraps a function value whose Dart type differs from the Dart type
+// of the target.
+//
+// The Dart declaration of a generic type erases a pointer to a type parameter
+// to Object?, and the substituted type of an instance holds the class of the
+// type argument. A Dart function parameter is contravariant, thus
+// `Function(Encoder$?)` is no subtype of `Function(Object?)` and the reverse
+// pair is no subtype either. The wrapper takes the parameter types of the
+// target and casts each parameter that differs. A result position stays
+// covariant, thus it needs no cast.
+//
+// A nil function value keeps its nil. Go panics at the call of such a value,
+// and a wrapper of it would hide that panic.
+func (e *emitter) funcAdapt(text string, from, want types.Type) string {
+	fs, ws := signatureOf(from), signatureOf(want)
+	if fs == nil || ws == nil {
+		return text
+	}
+	if e.dartType(want) == "Object?" {
+		return text
+	}
+	if fs.Params().Len() != ws.Params().Len() || fs.Variadic() != ws.Variadic() {
+		return text
+	}
+	// A type parameter of the declaration keeps its name in the Dart type, and
+	// Dart replaces that name with the type argument of the call. Only a
+	// parameter that the declaration erases to Object? needs the wrapper.
+	params := make([]string, ws.Params().Len())
+	args := make([]string, len(params))
+	erased := false
+	for i := range params {
+		wt := e.dartType(ws.Params().At(i).Type())
+		ft := e.dartType(fs.Params().At(i).Type())
+		n := fmt.Sprintf("$w%d", i)
+		if wt != ft && (wt == "Object?" || ft == "Object?") {
+			erased = true
+			params[i] = wt + " " + n
+			args[i] = "(" + n + " as " + ft + ")"
+			continue
+		}
+		params[i] = ft + " " + n
+		args[i] = n
+	}
+	if !erased {
+		return text
+	}
+	return fmt.Sprintf("((%s $f) => $f == null ? null : (%s) => $f!(%s))(%s)",
+		e.dartType(from), strings.Join(params, ", "),
+		strings.Join(args, ", "), text)
+}
+
+// declSignature gives the signature that the Dart declaration of the callee
+// writes. 1 Dart function serves each instance of a generic declaration, thus
+// the parameter types of an instance read the origin.
+func (e *emitter) declSignature(x *ir.Call) *types.Signature {
+	switch fun := x.Fun.(type) {
+	case *ir.Method:
+		if fun.Obj != nil {
+			return signatureOf(fun.Obj.Origin().Type())
+		}
+	case *ir.Ident:
+		if fn, ok := fun.Obj.(*types.Func); ok {
+			return signatureOf(fn.Origin().Type())
+		}
+	}
+	return signatureOf(x.Fun.GoType())
+}
+
+// adaptArg wraps 1 argument of a call against the parameter type that the
+// declaration of the callee writes.
+func (e *emitter) adaptArg(text string, a ir.Expr, decl *types.Signature, i int) string {
+	if decl == nil || i >= decl.Params().Len() {
+		return text
+	}
+	return e.funcAdapt(text, a.GoType(), decl.Params().At(i).Type())
 }

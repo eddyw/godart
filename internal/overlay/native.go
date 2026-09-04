@@ -211,6 +211,7 @@ var native = []string{
 	"encoding/json/internal/jsonopts",
 	"encoding/json/internal/jsonwire",
 	"encoding/json/jsontext",
+	"encoding/json/v2",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

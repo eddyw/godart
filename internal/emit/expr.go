@@ -453,8 +453,9 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	// struct type and the name of a shadowed function must reach the library
 	// file of the package.
 	inner := &emitter{pkg: e.pkg, prefixes: e.prefixes, base: e.base,
-		merges:  e.merges,
-		methods: e.methods, inClass: e.inClass, initNames: e.initNames,
+		merges:       e.merges,
+		instByStruct: e.instByStruct,
+		methods:      e.methods, inClass: e.inClass, initNames: e.initNames,
 		breakables: e.breakables, labelSeq: e.labelSeq,
 		anon: e.anon, localAnon: e.localAnon, shadowed: e.shadowed,
 		nilChans: e.nilChans, instDescs: e.instDescs, cfg: e.cfg, nilPrefix: e.nilPrefix,
@@ -749,6 +750,22 @@ func (e *emitter) composite(x *ir.Composite) string {
 	}
 	switch u := u.(type) {
 	case *types.Struct:
+		// The class of an instance of a generic type writes each field with the
+		// type that the declaration holds, thus a function value reads the
+		// declaration and not the substituted type.
+		decl := u
+		if named, ok := types.Unalias(x.Type).(*types.Named); ok {
+			if ref := e.structRef(named); ref.TypeArgs().Len() > 0 {
+				if st, ok := ref.Origin().Underlying().(*types.Struct); ok {
+					decl = st
+				}
+			}
+		}
+		for i, el := range x.Elems {
+			if i < decl.NumFields() {
+				parts[i] = e.funcAdapt(parts[i], el.GoType(), decl.Field(i).Type())
+			}
+		}
 		// Go evaluates the value of a blank field and then discards it, thus
 		// the field keeps its zero value.
 		for i := range parts {

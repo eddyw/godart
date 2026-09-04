@@ -84,9 +84,10 @@ func newEmitter(p *ir.Package, tpkg *types.Package, cfg Config) *emitter {
 	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: cfg.Base,
 		initNames: map[*ir.Func]string{},
 		anon:      map[string]*types.Struct{}, localAnon: map[string]*types.Struct{},
-		merges:   map[*types.Package]map[*types.Struct][]*types.TypeName{},
-		shadowed: map[string]map[string]bool{},
-		nilChans: map[string]types.Type{}, instDescs: map[string]types.Type{}, cfg: cfg,
+		merges:       map[*types.Package]map[*types.Struct][]*types.TypeName{},
+		instByStruct: map[*types.Package]map[*types.Struct]*types.Named{},
+		shadowed:     map[string]map[string]bool{},
+		nilChans:     map[string]types.Type{}, instDescs: map[string]types.Type{}, cfg: cfg,
 		anonParams:  map[string][]*types.TypeParam{},
 		groundTwins: map[string]*anonTwin{},
 		funcIds:     map[any]int{},
@@ -163,6 +164,9 @@ type emitter struct {
 	// merges groups the named struct types of a package that hold 1 struct
 	// object. Read mergeGroup.
 	merges map[*types.Package]map[*types.Struct][]*types.TypeName
+	// instByStruct gives the instance of a generic type that owns each struct
+	// object of a package. Read instanceRep.
+	instByStruct map[*types.Package]map[*types.Struct]*types.Named
 	// inClass marks the methods that a class holds, thus a part file skips
 	// them at top level.
 	inClass map[*ir.Func]bool
@@ -502,7 +506,12 @@ func (e *emitter) groupMethods(p *ir.Package) {
 						// and Dart calls no member of null. The function of a
 						// method of a generic type also takes the dictionary of
 						// each type parameter of the receiver type.
-						e.inClass[d] = !isPointerType(d.Recv.Type)
+						//
+						// A type that reads the class of an instance holds no
+						// class of its own, thus each method of it also becomes
+						// a top level function. Read instanceRep.
+						e.inClass[d] = !isPointerType(d.Recv.Type) &&
+							e.instanceRep(obj) == nil
 					}
 				case d.Name == "init":
 					e.initNames[d] = fmt.Sprintf("_init$%d", len(e.inits))

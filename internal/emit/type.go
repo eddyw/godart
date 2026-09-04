@@ -33,7 +33,8 @@ func (e *emitter) dartType(t types.Type) string {
 			if isLocalType(t.Obj()) {
 				return e.anonType(st)
 			}
-			return e.className(t.Obj()) + e.typeArgList(t.TypeArgs())
+			ref := e.structRef(t)
+			return e.className(ref.Obj()) + e.typeArgList(ref.TypeArgs())
 		}
 		// A type that names itself through a pointer, a slice, or a map has
 		// no finite Dart form. Each use of such a type takes Object?, thus
@@ -195,8 +196,9 @@ func (e *emitter) zero(t types.Type) string {
 			if isLocalType(named.Obj()) {
 				return e.anonZero(st)
 			}
-			return e.className(named.Obj()) + e.typeArgList(named.TypeArgs()) +
-				".$zero(" + strings.Join(e.dictArgs(named.TypeArgs()), ", ") + ")"
+			ref := e.structRef(named)
+			return e.className(ref.Obj()) + e.typeArgList(ref.TypeArgs()) +
+				".$zero(" + strings.Join(e.dictArgs(ref.TypeArgs()), ", ") + ")"
 		}
 		u = named.Underlying()
 	}
@@ -1150,4 +1152,132 @@ func (e *emitter) orderText(t types.Type) string {
 		return "(a, b) => a < b ? -1 : (a == b ? 0 : 1)"
 	}
 	return "$unordered<" + dart + ">"
+}
+
+// instanceRep gives the instance of a generic type whose struct object is the
+// underlying struct of obj.
+//
+// `type X G[A]` gives X the struct object of G[A]. A pointer conversion between
+// the 2 types names 1 value, and a write through the result reaches that value.
+// The 2 types thus need 1 Dart form. X takes the form of the instance, and it
+// declares no class of its own. Each method of X becomes a top level function,
+// exactly as a method of a named type over a basic type does.
+//
+// A generic type stays out, and so does a type whose package names the instance
+// nowhere. X keeps its own class in that case, and a conversion fails with the
+// report of the 2 classes.
+func (e *emitter) instanceRep(obj *types.TypeName) *types.Named {
+	named, _ := types.Unalias(obj.Type()).(*types.Named)
+	if named == nil || named.TypeParams().Len() > 0 || named.TypeArgs().Len() > 0 {
+		return nil
+	}
+	st, _ := named.Underlying().(*types.Struct)
+	if st == nil || obj.Pkg() == nil {
+		return nil
+	}
+	return e.packageInstances(obj.Pkg())[st]
+}
+
+// packageInstances gives the instance of a generic type that owns each struct
+// object of a package. The scope of a package holds each exported name and each
+// name of the package under compilation, thus the walk reaches the instance
+// that a declaration of the package names.
+func (e *emitter) packageInstances(pkg *types.Package) map[*types.Struct]*types.Named {
+	if m, ok := e.instByStruct[pkg]; ok {
+		return m
+	}
+	m := map[*types.Struct]*types.Named{}
+	scope := pkg.Scope()
+	if genericStructs(scope) {
+		seen := map[types.Type]bool{}
+		for _, n := range scope.Names() {
+			obj := scope.Lookup(n)
+			if obj != nil {
+				collectInstances(obj.Type(), m, seen)
+			}
+		}
+	}
+	e.instByStruct[pkg] = m
+	return m
+}
+
+// genericStructs reports whether a scope declares a generic type over a struct.
+// A package with no such type owns no instance, thus the walk is not needed.
+func genericStructs(scope *types.Scope) bool {
+	for _, n := range scope.Names() {
+		tn, _ := scope.Lookup(n).(*types.TypeName)
+		if tn == nil || tn.IsAlias() {
+			continue
+		}
+		named, _ := types.Unalias(tn.Type()).(*types.Named)
+		if named == nil || named.TypeParams().Len() == 0 {
+			continue
+		}
+		if _, ok := named.Underlying().(*types.Struct); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// collectInstances records each instance of a generic struct type that a type
+// names, keyed by the struct object of the instance.
+func collectInstances(t types.Type, out map[*types.Struct]*types.Named,
+	seen map[types.Type]bool) {
+	if t == nil || seen[t] {
+		return
+	}
+	seen[t] = true
+	switch t := types.Unalias(t).(type) {
+	case *types.Named:
+		if t.TypeArgs().Len() > 0 {
+			if st, ok := t.Underlying().(*types.Struct); ok {
+				if _, held := out[st]; !held {
+					out[st] = t
+				}
+			}
+			for i := range t.TypeArgs().Len() {
+				collectInstances(t.TypeArgs().At(i), out, seen)
+			}
+		}
+		collectInstances(t.Underlying(), out, seen)
+		for i := range t.NumMethods() {
+			collectInstances(t.Method(i).Type(), out, seen)
+		}
+	case *types.Struct:
+		for i := range t.NumFields() {
+			collectInstances(t.Field(i).Type(), out, seen)
+		}
+	case *types.Pointer:
+		collectInstances(t.Elem(), out, seen)
+	case *types.Slice:
+		collectInstances(t.Elem(), out, seen)
+	case *types.Array:
+		collectInstances(t.Elem(), out, seen)
+	case *types.Chan:
+		collectInstances(t.Elem(), out, seen)
+	case *types.Map:
+		collectInstances(t.Key(), out, seen)
+		collectInstances(t.Elem(), out, seen)
+	case *types.Signature:
+		collectInstances(t.Params(), out, seen)
+		collectInstances(t.Results(), out, seen)
+	case *types.Tuple:
+		for i := range t.Len() {
+			collectInstances(t.At(i).Type(), out, seen)
+		}
+	case *types.Interface:
+		for i := range t.NumMethods() {
+			collectInstances(t.Method(i).Type(), out, seen)
+		}
+	}
+}
+
+// structRef gives the named type that owns the Dart form of a named struct
+// type. A defined type over an instance of a generic type reads the instance.
+func (e *emitter) structRef(named *types.Named) *types.Named {
+	if inst := e.instanceRep(named.Obj()); inst != nil {
+		return inst
+	}
+	return named
 }

@@ -15,6 +15,10 @@ import (
 // fields, the copy operations that give the struct value semantics, and the
 // methods.
 func (e *emitter) class(obj *types.TypeName, named *types.Named, st *types.Struct) {
+	if e.instanceRep(obj) != nil {
+		// The instance of the generic type owns the class. Read instanceRep.
+		return
+	}
 	group := e.mergeGroup(obj)
 	if len(group) > 0 && group[0] != obj {
 		// The class of the group already holds the fields and each method.

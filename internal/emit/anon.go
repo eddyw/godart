@@ -595,19 +595,20 @@ func (e *emitter) sharedFiles() map[string]string {
 // thus each package that holds the shape writes equal bytes.
 func (e *emitter) anonFile(class string, st *types.Struct) (string, map[string]*types.Struct) {
 	inner := &emitter{
-		merges:      e.merges,
-		prefixes:    map[string]string{},
-		initNames:   map[*ir.Func]string{},
-		anon:        map[string]*types.Struct{},
-		localAnon:   map[string]*types.Struct{},
-		shadowed:    map[string]map[string]bool{},
-		nilChans:    map[string]types.Type{},
-		instDescs:   map[string]types.Type{},
-		cfg:         e.cfg,
-		nilPrefix:   class,
-		anonParams:  map[string][]*types.TypeParam{},
-		groundTwins: map[string]*anonTwin{},
-		funcIds:     e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
+		merges:       e.merges,
+		instByStruct: e.instByStruct,
+		prefixes:     map[string]string{},
+		initNames:    map[*ir.Func]string{},
+		anon:         map[string]*types.Struct{},
+		localAnon:    map[string]*types.Struct{},
+		shadowed:     map[string]map[string]bool{},
+		nilChans:     map[string]types.Type{},
+		instDescs:    map[string]types.Type{},
+		cfg:          e.cfg,
+		nilPrefix:    class,
+		anonParams:   map[string][]*types.TypeParam{},
+		groundTwins:  map[string]*anonTwin{},
+		funcIds:      e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
 	}
 	inner.setPrefixes(e.anonImports(st))
 	inner.line("/// %s", anonText(st))
