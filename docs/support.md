@@ -22,10 +22,10 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 225 import paths: 150 standard packages, the interop package
-`syscall/dart`, 66 internal packages, and 8 vendored packages of
-`golang.org/x`. `make surface` measures 158 of them against the real API, and
-148 of those hold each exported name. The measure skips the interop package
+The surface holds 251 import paths: 167 standard packages, the interop package
+`syscall/dart`, 71 internal packages, and 12 vendored packages of
+`golang.org/x`. `make surface` measures 171 of them against the real API, and
+161 of those hold each exported name. The measure skips the interop package
 and each internal package, because no package of Go stands behind them.
 
 A native package that also holds a patch stands 2 times in the list of the
@@ -44,7 +44,7 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-148 of the 158 measured packages hold each exported name of Go. The table
+161 of the 171 measured packages hold each exported name of Go. The table
 below names the 125 of them that this document lists by form. The 23 that stay
 out of the table are the packages of `docs/library.md` that no standard list
 of this document holds.
@@ -330,8 +330,8 @@ holders before the machine runs out.
 ## No support
 
 Stage 2 rejects an import of each package below with a source position. 17
-packages of the standard library stand here after the seventeenth session, and
-62 stood here at the start of the day.
+packages of the standard library stand here after the eighteenth session. 30
+stood here at the start of that session, and 62 at the start of 2026-09-04.
 
 | Package | The cause |
 |---|---|
@@ -339,10 +339,11 @@ packages of the standard library stand here after the seventeenth session, and
 | `runtime/pprof`, `runtime/trace`, `runtime/metrics`, `runtime/coverage`, `net/http/pprof`, `expvar` | The Dart VM counts no allocation, no block, and no contention, and it writes no event of the tracer of Go. `expvar` publishes `memstats`, which reads `runtime.MemStats`. |
 | `debug/buildinfo` | It reads the build record of a Go binary, and gart writes no such binary. |
 | `go/importer` | `Default` reads `runtime.Compiler`, which gart reports as `gart`. The gc form reads a compiled export file that gart never writes, the gccgo form needs 5 more packages and the gccgo driver, and the source form fails on the same compiler name. A caller writes an importer of its own over `go/types`. |
-| `image/png` | `writer.go` converts `*encoder` to `*EncoderBuffer` and back. A pointer conversion between 2 defined struct types stays outside the subset. Read decision 335. |
 | `net/http/fcgi` | `child.go` reads `net.FileListener`, and `dart:io` hides the descriptor of a socket. `Serve(nil, h)` is the standard entry of FastCGI, thus a patch reaches no answer. |
 | `log/syslog` | `unixSyslog` needs a datagram socket of the Unix domain, and `dart:io` opens the stream form alone. `Dial` over udp and over a stream socket each write the message end to end, and `New` and `NewLogger` each fail. |
 | `os/user` | The pure Go path of Go compiles under gart with the build tag `osusergo`, and `Current` still fails. It reads `os.Getuid`, and the overlay reports -1 because `dart:io` gives no user id. |
+| `encoding/json/v2` | The package compiles through each stage of gart, and the Dart front end then rejects 27 positions with 1 cause. Read decision 345. |
+| `testing/synctest` | A bubble needs a clock of its own. Each timer of gart is a real Timer of Dart, thus the fake clock needs a timer queue in the scheduler. Read the section below. |
 
 ## The focus list
 
@@ -472,17 +473,18 @@ unsigned slice bound each landed on 2026-09-04. Decisions 312 to 326 hold them.
 
 ## The road to full parity
 
-**The 7 phases of 2026-09-04 are closed.** The surface reached its limit inside
-the non-goals of the project. The table below holds the state after the work,
-and the section after it names each item that stays out and its cause.
+**The 7 phases of 2026-09-04 are closed, and the eighteenth session closed 12
+of the 15 items that stood after them.** The table below holds the state after
+each block of work, and the section after it names each item that stays out
+and its cause.
 
-| Set | At the start of the day | After the 7 phases |
-|---|---|---|
-| Packages that hold each exported name | 112 of 123 | **149 of 159** |
-| Standard packages outside the surface | 62 | **30** |
-| Missing names of the partial packages, less `syscall` | 438 | **362** |
-| Entries of the skip table that hold a compiler defect | 5 | **2** |
-| Positions of the order of the evaluation that differ from gc | 5 | **0** |
+| Set | At the start of 2026-09-04 | After the 7 phases | After the eighteenth session |
+|---|---|---|---|
+| Packages that hold each exported name | 112 of 123 | 149 of 159 | **161 of 171** |
+| Standard packages outside the surface | 62 | 30 | **17** |
+| Import paths of the surface | 210 | 226 | **251** |
+| Entries of the skip table that hold a compiler defect | 5 | 2 | **2** |
+| Positions of the order of the evaluation that differ from gc | 5 | 0 | **0** |
 
 **What the 7 phases gave.**
 
@@ -490,7 +492,7 @@ and the section after it names each item that stays out and its cause.
 |---|---|
 | 1. The package variable initializer | Done. |
 | 2. The 4 other order positions | Done. No position differs from gc. |
-| 3. The 5 skip entries | 3 of 5. `peano` and `typeparam/nested` each took a corrected cause. |
+| 3. The 5 skip entries | 3 of 5. `peano` and `typeparam/nested` each took a corrected cause, and the eighteenth session corrected the cause of `typeparam/nested` again. |
 | 4. The 2 intrinsics | The socket options gave 8 names of `net`. The peer certificate does not land, and the cause below names why. |
 | 5. The 32 pure Go packages | 19 of 32, and `text/scanner` followed after a defect of the emitter fell. |
 | 6. The crypto stack | **Done, and it holds each name.** 16 packages, and `crypto/x509` went from 193 of 261 to 261 of 261. |
@@ -507,22 +509,24 @@ rejects it.
 
 | Package | Names | The gate |
 |---|---|---|
-| `encoding/json` | 25 | 16 need `encoding/json/v2` and `encoding/json/jsontext`. 9 need an import of `reflect` in `encoding/json`, and a measure of 2026-09-04 put the cost of that import at 14 percent of the Dart source of each program that reads the package. Read the section of `encoding/json` above. |
-| `reflect` | 2 | `StructOf` needs a Dart class that the emitter never wrote. `Method.Func` costs 2.7 percent of the Dart source of a real program. |
+| `encoding/json` | 25 | 16 need `encoding/json/v2`, which decision 345 holds. 9 need an import of `reflect` in `encoding/json`, and a measure of 2026-09-04 put the cost of that import at 14 percent of the Dart source of each program that reads the package. The overlay reads the JSON of Dart, thus the decode path also needs the Go type of the target at the point of the failure. |
+| `reflect` | 2 | `StructOf` builds a struct type at run time, and Dart writes no class at run time. Such a value needs a form that only `reflect` reads. `Method.Func` costs 2.7 percent of the Dart source of a real program. |
 | `net` | 1 | `ListenMulticastUDP` needs an intrinsic that reaches `joinMulticast` of a datagram socket of Dart. |
 | `net/http` | 1 | `Request.Cancel` needs a hook that lives up to the close of the body of the answer. |
 
-### The 11 reachable packages, and the gate of each 1
+### The 2 reachable packages, and the gate of each 1
+
+The eighteenth session closed 9 of the 11 packages of this list.
 
 | Package | The gate |
 |---|---|
-| `crypto/mlkem`, `crypto/mldsa`, `crypto/hpke` | Each 1 reads the post quantum code of `crypto/internal/fips140`. The stack of that directory now stands in the surface, thus the work is a port and no longer a gate. |
-| `testing/cryptotest` | It follows the 3 above. |
-| `encoding/json/v2`, `encoding/json/jsontext` | The new API of Go 1.27. It opens 16 names of `encoding/json`. |
-| `debug/gosym` | `pclntab.go` reads 5 constants of `internal/abi`, and 6 files of that package need `unsafe`. A small overlay of `internal/abi` with the 5 constants and 1 type unlocks it. |
-| `net/http/httptrace`, `net/http/httputil` | `httptrace` compiles and each name works, and no hook of the `net/http` overlay ever calls one. A `ClientTrace` thus stays silent, which is a rejection and not a pass. `httputil` waits on it alone, and each of its own names already matches Go byte for byte. |
-| `testing/synctest` | The scheduler must name each goroutine of a bubble that waits. The scheduler of gart already holds that state. |
-| `weak` | `Pointer` maps to `WeakReference` of Dart, and it needs 1 intrinsic of `syscall/dart`. |
+| `encoding/json/v2` | The Dart front end rejects 27 positions with 1 cause. `typedArshalers[Coder any]` holds a field of the type `func(*Coder, ...) error`. A pointer to a type parameter takes the Dart type `Object?`, and the value that reaches such a field carries the concrete type of the instance. A Dart function parameter is contravariant. The emitter must wrap a function value whose Dart parameter type is narrower than the type of the target. Read decision 345. |
+| `testing/synctest` | A bubble holds a clock of its own, and `time.Sleep` inside it takes no real time. Each timer of gart is a real `Timer` of Dart, thus the bubble needs a timer queue in the scheduler and a wall clock that reads it. The scheduler already names each goroutine that waits, which is the other half of the rule. |
+
+**The 9 that closed:** `crypto/mlkem`, `crypto/mldsa`, `crypto/hpke`,
+`testing/cryptotest`, `encoding/json/jsontext`, `debug/gosym`, `weak`,
+`net/http/httptrace`, and `net/http/httputil`. `image/png` and
+`crypto/mlkem/mlkemtest` joined them, and neither stood on that list.
 
 ### What stays out, and why no work removes it
 
@@ -534,28 +538,32 @@ rejects it.
 | The Dart VM counts no allocation and writes no profile | `runtime/pprof`, `runtime/trace`, `runtime/metrics`, `runtime/coverage`, `net/http/pprof`, `expvar` |
 | gart writes no Go binary | `debug/buildinfo` |
 | `runtime.Compiler` reports `gart` | `go/importer` |
-| A pointer conversion between 2 defined struct types | `image/png`. Read decision 335. |
+| A function value of a narrower Dart type | `encoding/json/v2`. Read decision 345. |
+| Each timer of gart is a real Timer of Dart | `testing/synctest`. A bubble needs a clock of its own. |
 | `dart:io` hides the descriptor of a socket | `net/http/fcgi`, through `net.FileListener` |
 | `dart:io` opens no datagram socket of the Unix domain | `log/syslog`. `Dial` works over udp and over a stream socket, and `New` and `NewLogger` each need the datagram form. |
 | `dart:io` reports no user id | `os/user`. The pure Go path of Go compiles under gart, and `Current` still fails because `os.Getuid` reports -1. |
 
-**333 names of the 10 partial packages, and 2204 names of `syscall`.**
+**362 names of the 10 partial packages, and 2204 names of `syscall`.** 29 of
+the 362 stay reachable, and the 2 tables above hold each 1.
 
 | Cause | The count |
 |---|---|
 | Dart owns the TLS handshake and the session | 137 names of `crypto/tls`. Each QUIC name, each `Config` field of the handshake, each callback, and each error type of a handshake point. `SecureSocket.peerCertificate` gives the leaf alone and not the chain, thus `PeerCertificates` would answer `len` wrong with no report. |
-| `dart:io` opens no raw socket and reads no control message | 78 names of `net` |
-| The HTTP 2 session lives in the Dart runtime library | 30 names of `net/http` |
+| `dart:io` opens no raw socket and reads no control message | 78 of the 79 names of `net`. `ListenMulticastUDP` stays reachable. |
+| The HTTP 2 session lives in the Dart runtime library | 30 of the 31 names of `net/http`. `Request.Cancel` stays reachable. |
 | The Dart VM counts no allocation, no block, and no contention | 62 names of `runtime` |
 | `dart:io` hides the descriptor of a file and of a socket | 12 names of `os`, 5 of `os/exec` |
-| The subset holds no `unsafe` and no address | 4 names of `sync/atomic`, 5 of `reflect` |
+| The subset holds no `unsafe` and no address | 4 names of `sync/atomic`, 5 of the 7 names of `reflect`. `StructOf` and `Method.Func` stay reachable. |
+| `encoding/json/v2`, and the cost of an import of `reflect` | 25 names of `encoding/json`. Each 1 stays reachable. |
 | A constant of the system that reaches no operation | 2204 names of `syscall`. A constant that no call reads is a lie. |
 
 **2 entries of the skip table hold a compiler defect that no small change
 removes.** `peano` is a torture test of the segmented stack of Go, and the Dart
 VM holds a fixed stack. `typeparam/nested` compares the `reflect.Type` identity
-of a local generic type of a generic function, and a descriptor of gart keys on
-the outer type argument alone. The other 30 entries each hold a hard limit of
+of a local generic type of a generic function. The name of such a type now
+holds the type argument of that function, and the name of it inside a type
+argument of another instance still holds none. Read decision 343. The other 30 entries each hold a hard limit of
 the Dart VM, of the machine, or of the shape of the comparison.
 
 ### The rule that decided each call

@@ -9,8 +9,8 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 226 import paths: 151 standard packages, `syscall/dart`, 66
-internal packages, and 8 vendored packages of `golang.org/x`. The run of
+The surface holds 251 import paths: 167 standard packages, `syscall/dart`, 71
+internal packages, and 12 vendored packages of `golang.org/x`. The run of
 `make surface` of 2026-09-04 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
 names that each one holds. A package reaches the surface 3 ways.
@@ -590,6 +590,34 @@ function of a property through `reflect.Value.Call`. The work gave:
 The overlay of `testing/quick` is the source of Go with no complex case.
 `testdata/programs/quickuse` proves `Check`, `CheckEqual`, `Value` of 8 kinds,
 and a call through `reflect`.
+
+## The packages of the eighteenth session
+
+12 packages joined the surface on 2026-09-04, in the session after the 7
+phases. Each 1 holds every exported name of Go.
+
+| Package | Form | The design |
+|---|---|---|
+| `crypto/mlkem`, `crypto/mlkem/mlkemtest` | Native | The real Go source. The emitter needed a composite literal whose type is a type parameter. Read decision 338. |
+| `crypto/mldsa` | Native | The real Go source, with no change. |
+| `crypto/hpke` | Native | The real Go source. 2 vendored packages of `golang.org/x/crypto` took a patch: `internal/alias` reads `unsafe`, and `chacha20` declares a function of assembly with no body. |
+| `testing/cryptotest` | Patch | `rand.go` reaches 2 names with a `go:linkname` directive, and the import rule of Go keeps each 1 apart. The new package `internal/linkhook` carries the 2. Read decision 339. |
+| `debug/gosym` | Native | The new overlay of `internal/abi` holds the 5 names of the PC/line table alone. Each other name of that package reads `unsafe`. |
+| `weak` | Overlay | `Pointer[T]` holds a `WeakReference` of `dart:core`. The runtime keeps 1 reference for each value in an `Expando`, thus 2 weak pointers of 1 value compare equal. Read decision 340. |
+| `net/http/httptrace` | Native | The overlay of `net/http` calls 14 hooks of 16. `internal/nettrace` joined the surface with it, and `net` carries it exactly as the real `net` does. |
+| `net/http/httputil` | Native | The real Go source, with no change. |
+| `encoding/json/jsontext` | Native | The real Go source. The 4 internal packages of `encoding/json` joined with it. It needed a type parameter over a byte slice and a string. Read decision 344. |
+| `image/png` | Native | The real Go source. `writer.go` converts `*encoder` to `*EncoderBuffer` and back, and decision 341 gives the 2 names 1 Dart class. |
+
+`internal/linkhook` is a package of gart, and Go holds no such path. It carries
+a name of 1 standard library package to another 1 that the import rule of Go
+keeps apart. Go reaches such a name with a `go:linkname` directive, and the
+subset holds no such directive. The package that owns a name writes its field
+at the start of the program.
+
+`internal/abi` is a package of Go, and this overlay holds 5 of its names. Each
+other name reads `unsafe` or a value of the runtime of Go, and no package of
+the surface reads one.
 
 ## The tests of the Go repository
 

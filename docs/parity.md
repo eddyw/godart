@@ -18,7 +18,7 @@ The state of 2026-09-04. Each row names the section that holds the detail.
 | The order of the evaluation of an expression | Equal to gc. No position differs. A for clause, the value of a case, and the initializer of a package variable each took a new form on 2026-09-04. |
 | A `select` with 2 ready cases | The first case in source order. Go takes a random one. |
 | `sync.RWMutex` | A read lock is equal to a write lock. `sync.Map` is a plain map, and it needs no lock. |
-| A pointer | Present, also to a value that is not a struct. `&*p` and a conversion between 2 struct types stay out. |
+| A pointer | Present, also to a value that is not a struct. A conversion between 2 defined struct types of 1 package reads 1 Dart class since 2026-09-04. `&*p` stays out. |
 | `unsafe` and cgo | Outside the subset. |
 | `reflect` | A subset over a type descriptor. `Type` is a struct with a handle, and not an interface. |
 | An address | None. `%p` stays out, and a program counter is an index of a table of the runtime. |
@@ -28,7 +28,7 @@ The state of 2026-09-04. Each row names the section that holds the detail.
 | The file access | Synchronous, through `dart:io`. No handle of a directory, and no file descriptor. `Chmod`, `Chown`, and `Chtimes` reach a path, and `Stat` still reports a fixed mode. |
 | The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. `Getuid` and its family give -1. |
 | The network access | TCP, UDP, and a Unix socket. `IP`, `IPMask`, `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, `IPAddr`, `UnixAddr`, `TCPListener`, and `UnixListener` are present. The overlay holds a resolver of the DNS since 2026-09-02, thus the whole `Lookup` family reads. `SetKeepAlive`, `SetReadBuffer`, and `SetWriteBuffer` each reach a real socket option since 2026-09-04. No raw socket, and no file descriptor. |
-| HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, a multipart form, and the file server family (`FileServer`, `FileServerFS`, `FS`, `Dir`) are present. |
+| HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, a multipart form, the file server family (`FileServer`, `FileServerFS`, `FS`, `Dir`), and `net/http/httputil` are present. A `ClientTrace` of `net/http/httptrace` fires 14 hooks of 16 since 2026-09-04. |
 | TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. `http.ListenAndServeTLS` and the `tls.Dialer` read since 2026-09-04. `crypto/x509` holds each exported name since 2026-09-04. `Certificate.Verify` builds a chain and it checks each signature. |
 | JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `TextMarshaler`, `TextUnmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. The text of a syntax error of `Token` differs. |
 | `gart test` | The format of `go test`, with `t.Parallel`, `-cover`, `-short`, and `-count`. It runs each example, and it runs the seed corpus of each fuzz target. No `-fuzz` flag, thus it generates no input. |
@@ -83,6 +83,7 @@ The package `fmt` reads it.
 | Element type and key type of a container | Present |
 | `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
 | A descriptor of an instance of a generic type | Present. The description stands at the point of the use, and the name holds each type argument. |
+| A descriptor of a local type of a generic function | Present since 2026-09-04. Go names such a type after the arguments of the function, thus `type T[B any]` inside `func F[A any]` gives `main.T[A;B]`. The description stands at the point of the use, and the name reads the dictionary. The name of such a type inside a type argument of another instance still holds no outer argument. |
 | `reflect.DeepEqual` | Present. The walk reads the type descriptor. |
 | `Type.String` | Present. The text follows `reflect`, and not `go/types`. An unnamed struct type and an unnamed interface type each hold 1 space after the keyword. An alias gives the name of the element type since 2026-09-03, thus `[]byte` reads `[]uint8` and `rune` reads `int32`. |
 | `reflect.Type` | A struct with a handle of a descriptor of the runtime, and not an interface. Thus `Type` compares with `==` and holds no nil value. |
@@ -196,11 +197,11 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | A pointer to a value that is not a struct | Present. It holds a box. |
 | `new` of a type that is not a struct | Present |
 | A goto label inside a nested block | Present |
-| A conversion between 2 struct types | Rejected |
+| A conversion between 2 struct types | Present when the 2 names hold 1 struct object of 1 package, as `type outer inner` gives. The 2 names then hold 1 Dart class. A struct that a second declaration spells again keeps its own class, and a conversion to it stays rejected. |
 | A conversion of a slice to an array, as in `[4]byte(s)` | Present. It panics for a slice that is too short. |
 | The builtin `clear` of a slice | Present |
 | A method with a nil pointer receiver | Present. Such a method holds its body in a top level function. |
-| A method with a pointer receiver on a generic type | The method stays a member of its class, thus a nil receiver panics. |
+| A method with a pointer receiver on a generic type | The method stays a member of its class, thus a nil receiver panics. A call of such a method through a generic interface takes the dynamic path, because a Dart function parameter is contravariant. |
 | A function declaration with no body | Present. Stage 2 rejects a read of it, and the Dart form panics. |
 | `import _ "unsafe"` | Present. A blank import performs no operation. |
 | A method value of a named type that is not a struct | Present. It writes a closure. |
@@ -971,6 +972,27 @@ The `net` package holds this surface:
 `testdata/programs/n2net` proves the 6 address tests, each well-known address,
 `ResolveIPAddr`, the 2 listener types, and the 3 dial methods of a `Dialer`.
 
+## The trace of a client
+
+`net/http/httptrace` joined the surface on 2026-09-04, and each hook of a
+`ClientTrace` fires at a site of the overlay. 14 of the 16 hooks hold each
+argument of Go. The 2 below differ.
+
+| Hook | The difference |
+|---|---|
+| `DNSStart`, `DNSDone` | The 2 fire from `net.Resolver.LookupIP`. The default dial hands the host name to `Socket.connect` of `dart:io`, and that call reports no lookup event, thus a plain request fires neither hook. A `Transport` with a `DialContext` of its own over a `net.Dialer` reads both. |
+| `DNSDone.Coalesced` | Always false. gart holds no singleflight of a lookup. |
+
+`SecureSocket.connect` of Dart opens the socket and runs the handshake in 1
+call. The overlay fires `ConnectStart`, `ConnectDone`, `TLSHandshakeStart`, and
+`TLSHandshakeDone` in the order of Go around that call, and each argument is
+true. A caller that clocks the handshake alone thus reads about 0, and the
+interval of the connection covers the 2 steps.
+
+An HTTP 2 exchange fires `GetConn` and `GotConn` alone. The session lives in
+the Dart runtime library, thus no write hook and no read hook holds a truthful
+site there.
+
 ## The HTTP access
 
 The real `net/http` of Go holds 53000 lines. It reads a vendored HTTP/2 stack, a
@@ -1234,9 +1256,9 @@ dictionary of the type parameter.
 |---|---|
 | An assignment, an equality, a call | Present |
 | An order comparison | Present. It reads `Dict.order`. |
-| An index, a slice expression, a range loop | Rejected by stage 2 |
-| `len` and `cap` | Rejected by stage 2 |
-| An arithmetic operator and a conversion | Rejected by stage 2 |
+| An index, a slice expression, a range loop | Rejected by stage 2. A set of `~[]byte | ~string` reads the index and the slice from `Dict.at` and `Dict.slice` since 2026-09-04. |
+| `len` and `cap` | Rejected by stage 2. A set of `~[]byte | ~string` reads `Dict.length`. |
+| An arithmetic operator and a conversion | Rejected by stage 2. A set of `~[]byte | ~string` converts to `[]byte` and to `string` through the dictionary, and back. |
 
 A constraint whose terms give 1 Dart type keeps each operator. `int | int64`
 gives `int` 2 times, thus `+` and `<` work directly.

@@ -3272,3 +3272,172 @@ The plan left these points open. The work took the decisions below.
      `s.Whitespace&(1<<uint(ch))` with `ch` equal to -1 at the end of the
      input, and decision 328 fixed that shift. The package holds each exported
      name, and `testdata/programs/scanneruse` holds the witness.
+
+338. The post-quantum crypto stack joins the surface, and a composite literal
+     names a type parameter.
+
+     `crypto/mlkem`, `crypto/mldsa`, `crypto/hpke`, and `testing/cryptotest`
+     each read the real Go source and each hold every exported name. 10 paths
+     entered the native list, and 3 patch files stand over them.
+
+     `polyByteDecode[T ~[n]fieldElement]` of the ML-KEM field code writes
+     `T{}`. The underlying type of a type parameter is its constraint, which is
+     an interface, thus the emitter found no shape. The literal reads the core
+     type now, and `testdata/programs/paramlit` holds the witness of the array
+     form, the slice form, and the map form.
+
+     `vendor/golang.org/x/crypto/internal/alias` reads `unsafe` for the overlap
+     test, and its patch mirrors the patch that `crypto/internal/fips140/alias`
+     already holds. `vendor/golang.org/x/crypto/chacha20` declares
+     `xorKeyStreamVX` with no body, and its patch holds the body of
+     `chacha_noasm.go`.
+
+     3 witness programs prove the real cryptography. `mlkemuse` encapsulates
+     and decapsulates, and a changed ciphertext gives another key. `mldsause`
+     signs and verifies, and it rejects a forged signature, another message,
+     and another context. `hpkeuse` seals and opens, and it rejects a changed
+     ciphertext and a wrong info.
+
+339. `internal/linkhook` carries a name across an import boundary that Go
+     keeps closed.
+
+     `testing/cryptotest.SetGlobalRandom` reaches
+     `crypto/internal/rand.SetTestingReader` and `testing.checkParallel` with a
+     `go:linkname` directive. The subset holds no such directive, and the
+     import rule of Go rejects a direct import of each 1 from that package.
+
+     The new package `internal/linkhook` holds 1 field for each name. The
+     package that owns a name writes its field at the start of the program, and
+     it holds no import of the reader in the other direction. A field that
+     stays nil names a package that the program does not hold, thus a program
+     that reads no crypto package beyond `crypto/rand` writes `crypto/rand.Reader`
+     alone.
+
+     The overlay of `testing` held no parallel check. Go rejects `t.Setenv`,
+     `t.Chdir`, and `cryptotest.SetGlobalRandom` in a test whose chain of
+     parents holds a parallel test, and gart accepted each 1. `T` names its
+     parent now, and the 3 callers read the chain.
+
+340. `debug/gosym` and `weak` join the surface.
+
+     The new overlay of `internal/abi` holds the 5 names of the PC/line table
+     alone. Each other name of that package reads `unsafe` or a value of the
+     runtime of Go, and `debug/gosym` reads no other name.
+
+     `weak.Pointer[T]` maps to a `WeakReference` of `dart:core`. The 2 new
+     intrinsics `WeakRef` and `WeakTarget` carry it, and the runtime holds 1
+     reference for each value in an `Expando`. Thus 2 weak pointers of 1 value
+     compare equal, exactly as the document of Go says. The `Expando` drops the
+     entry of a value that no other name reads, and the entry holds no strong
+     link of that value.
+
+341. A pointer conversion between 2 defined struct types lands, and decision
+     335 closes.
+
+     `type outer inner` gives the 2 names 1 struct object of go/types, and
+     `(*outer)(p)` names the value that p names. The emitter gave each named
+     type a class of its own, thus stage 5 rejected the conversion.
+
+     The emitter now gives 1 Dart class to each named struct type of 1 package
+     that holds 1 struct object. The class carries the fields and the methods
+     of each member, and 2 members that declare 1 method name take 2 member
+     names. The conversion then needs no operation, thus a write through the
+     result reaches the value, and 2 conversions of 1 pointer compare equal.
+
+     Each member keeps a type descriptor of its own. A type assertion, the verb
+     `T`, and the dispatch of an interface each answer as Go answers.
+     `testdata/programs/structptrconv` holds the witness of each 1.
+
+     A struct that a second declaration spells again holds a struct object of
+     its own, and it keeps its own class. A group also holds 1 package, because
+     the class of a group carries the methods of each member. Such a conversion
+     still gives a rejection, and the report names the cause.
+
+     `ir.Fresh` held each conversion. A conversion between 2 struct types
+     performs no operation, thus the copy point of stage 4 must insert a copy.
+     `value := outer(*p)` wrote the value of p without it.
+
+     `image/png` waits on a second shape: `writer.go` converts `*encoder` to
+     `*EncoderBuffer`, and `EncoderBuffer` is a defined type of the same
+     package. That conversion reads this rule.
+
+342. An interface call of a method that reads a type parameter takes the
+     dynamic path.
+
+     A method table holds 1 adapter for each instance, and the Dart type of a
+     parameter there is the type of the argument. A call inside a generic body
+     writes `Object?` for the same parameter, and a Dart function parameter is
+     contravariant. The cast of the adapter thus failed at run time with the
+     report `type '(Object?, $Ptr<int>?) => void' is not a subtype of type
+     '(Object?, Object?) => void' in type cast`.
+
+     A call whose parameter reads a type parameter now takes the dynamic path
+     that the emitter already holds for a receiver that is not pure. A result
+     position stays covariant in Dart, thus it needs no change.
+     `testdata/programs/genptrparam` holds the witness.
+
+343. A local type of a generic function holds the type argument of that
+     function in its name.
+
+     Go writes `main.T[A;B]` for `type T[B any]` inside `func F[A any]`, and
+     `main.S[A]` for a local type with no parameter of its own. gart held
+     `main.T[B]` and `main.S`, thus 2 instances of F gave 1 type.
+
+     1 Dart function serves each instance of F, thus the description of such a
+     type now stands at the point of the use and the name reads the dictionary.
+     `testdata/programs/nestgeneric` holds the witness of 10 shapes.
+
+     2 defects fell next to it. An alias inside a type argument kept its own
+     name, thus `List[any]` and `List[interface{}]` gave 2 texts for 1 Go type.
+     And `fmt` called the placeholder of the method table of an interface type
+     with 1 argument, which gave a `NoSuchMethodError` of Dart in place of the
+     panic.
+
+     The skip entry `typeparam/nested` stays, and its cause is now exact: the
+     name of a local type inside a type argument of another instance still
+     holds no outer argument.
+
+344. A type parameter over a byte slice and a string reads 6 operations from
+     its dictionary.
+
+     A constraint that lists `~[]byte | ~string` holds 2 Dart types, thus stage
+     2 rejected the length, the index, the slice expression, and the 2
+     conversions. Decision 271 holds the general rule for a mixed constraint,
+     and this set is the 1 shape that the standard library declares.
+
+     The dictionary now carries `length`, `at`, `slice`, `bytes`, `text`,
+     `fromBytes`, and `fromText`. Each path that this change opens stood
+     rejected before it, thus no program that compiled takes another form.
+     `testdata/programs/bytesortext` holds the witness.
+
+     A deferred call of a method with a pointer receiver hoisted the value of
+     the receiver. Go reads the address at the point of the statement, thus
+     `defer e.Field.Method()` gave the report `the address of *ir.Ident has no
+     Dart form`. The hoist now holds the address.
+
+345. `encoding/json/jsontext` joins the surface, and `encoding/json/v2` waits
+     for 1 more rule.
+
+     `jsontext` reads the real Go source and holds each exported name. It needs
+     the 4 internal packages of `encoding/json` and the type parameter of
+     decision 344. `testdata/programs/jsontextuse` holds the witness of the
+     token stream, of the canonical form, of the compact form, and of an error
+     of the syntax.
+
+     `encoding/json/v2` compiles through each stage of gart, and the Dart front
+     end then rejects 27 positions with 1 cause. `typedArshalers[Coder any]`
+     holds a field of the type `func(*Coder, ...) error`. A pointer to a type
+     parameter takes the Dart type `Object?`, and the value that reaches such a
+     field carries the concrete type of the instance. A Dart function parameter
+     is contravariant, thus `Function(Encoder$?)` is no subtype of
+     `Function(Object?)`.
+
+     The rule that closes it: the emitter must wrap a function value whose Dart
+     parameter type is narrower than the parameter type of the target. Each
+     assignment point, each argument, each field of a composite literal, and
+     each return needs that wrapper. Decision 342 holds the same shape for a
+     method table, and it took the dynamic path there.
+
+     `encoding/json/v2` stays outside the surface until that rule stands. A
+     package that compiles and whose output the Dart front end rejects gives a
+     report far from the cause.

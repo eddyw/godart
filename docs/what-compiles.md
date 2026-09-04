@@ -7,16 +7,16 @@ count of the exported names that each package of the surface holds.
 
 Each row comes from a measurement of 2026-08-31. A `Present` row is a real build
 of a program that imports the package. The import surface holds the run of
-`make surface` of 2026-09-03.
+`make surface` of 2026-09-04.
 
 ## The import surface
 
-The surface holds 226 import paths: 151 standard packages, the interop package
-`syscall/dart`, 66 internal packages, and 8 vendored packages of
+The surface holds 251 import paths: 167 standard packages, the interop package
+`syscall/dart`, 71 internal packages, and 12 vendored packages of
 `golang.org/x`. Stage 2 rejects an import of each other package with a source
 position.
 
-`make surface` measures 159 of them against the real API of Go. 149 hold each
+`make surface` measures 171 of them against the real API of Go. 161 hold each
 exported name, and 10 hold a part. `docs/support.md` holds the level of each 1
 and the largest gap of each partial package.
 

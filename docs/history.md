@@ -73,6 +73,65 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-04, the eighteenth session
+
+The user asked for each of the 15 open items of the parity list, end to end. 2
+agents ran on the overlay, and the main session held the compiler core, the
+runtime, and the docs. 12 of the 15 items closed, and the 3 that stay each hold
+a measured cause.
+
+**The surface reaches 161 packages of 171.** 12 packages joined it:
+`crypto/mlkem`, `crypto/mlkem/mlkemtest`, `crypto/mldsa`, `crypto/hpke`,
+`testing/cryptotest`, `debug/gosym`, `weak`, `net/http/httptrace`,
+`net/http/httputil`, `encoding/json/jsontext`, `image/png`, and
+`internal/abi`. 17 packages of the standard library stay outside, and 30 stood
+there at the start of the session.
+
+**4 defects fell, and 2 of them gave a silent wrong answer.**
+
+| The defect | What a program saw |
+|---|---|
+| A method that spells `uint8` held another key than an interface that spells `byte` | The program compiled clean and read a null value inside `io.ReadAll` |
+| A local type of a generic function held no outer type argument | 2 instances of 1 generic function gave 1 `reflect.Type` |
+| A deferred call of a method with a pointer receiver hoisted the value | The report named no source position, and the build stopped |
+| `fmt` called the placeholder of an interface method table with 1 argument | A `NoSuchMethodError` of Dart in place of the panic of Go |
+
+**3 defects of the HTTP client and server fell too.** The server answered no
+request that carries the field `Expect`. `awaitContinue` left an expired read
+deadline on the connection. And the field `Accept-Encoding` stood inside the
+sorted header block, where Go writes it after the header of the caller.
+
+**3 rules of the language landed.**
+
+- A pointer conversion between 2 defined struct types of 1 package. The 2 names
+  now hold 1 Dart class, and each 1 keeps a type descriptor of its own. Decision
+  335 closes, and `image/png` needed no patch after it.
+- A type parameter over a byte slice and a string. The dictionary carries the
+  length, the index, the slice, and the 2 conversions.
+- A composite literal whose type is a type parameter.
+
+The branch `backlog-43` holds 10 commits of the session.
+
+| Commit | Content |
+|---|---|
+| `acc0cdc` | The post-quantum stack, and a literal of a type parameter. |
+| `0236772` | `testing/cryptotest`, and the parallel check of `Setenv` and `Chdir`. |
+| `d4ff99e` | `debug/gosym` and `weak`. |
+| `734b23a` | An interface call of a method that reads a type parameter. |
+| `6327ee9` | A pointer conversion between 2 defined struct types. |
+| `21fb378` | The name of a local type of a generic function, and 2 defects near it. |
+| `7813e13` | A type parameter over a byte slice and a string, and 2 fixes. |
+| `288286e` | A method that spells `uint8` satisfies an interface that spells `byte`. |
+| `9ceea65` | 5 packages join the surface, and 3 defects of the HTTP client fall. |
+| `e2991f7` | `crypto/mlkem/mlkemtest`. |
+
+**3 items stay, and each holds a measured cause.** `encoding/json/v2` needs an
+adapter for a function value whose Dart parameter type is narrower than the
+type of the target. `testing/synctest` needs a timer queue in the scheduler for
+the clock of a bubble. And the name of a local type of a generic function
+inside a type argument of another instance still holds no outer argument, which
+is the last cause of the skip entry `typeparam/nested`.
+
 ### 2026-09-04, the seventeenth session
 
 The user asked for the 7 phases of the parity roadmap, end to end. 3 agents ran
