@@ -24,8 +24,8 @@ not the percent alone.
 
 The surface holds 251 import paths: 167 standard packages, the interop package
 `syscall/dart`, 71 internal packages, and 12 vendored packages of
-`golang.org/x`. `make surface` measures 171 of them against the real API, and
-161 of those hold each exported name. The measure skips the interop package
+`golang.org/x`. `make surface` measures 172 of them against the real API, and
+162 of those hold each exported name. The measure skips the interop package
 and each internal package, because no package of Go stands behind them.
 
 A native package that also holds a patch stands 2 times in the list of the
@@ -44,7 +44,7 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-161 of the 171 measured packages hold each exported name of Go. The table
+162 of the 172 measured packages hold each exported name of Go. The table
 below names the 125 of them that this document lists by form. The 23 that stay
 out of the table are the packages of `docs/library.md` that no standard list
 of this document holds.
@@ -480,7 +480,7 @@ and its cause.
 
 | Set | At the start of 2026-09-04 | After the 7 phases | After the eighteenth session |
 |---|---|---|---|
-| Packages that hold each exported name | 112 of 123 | 149 of 159 | **161 of 171** |
+| Packages that hold each exported name | 112 of 123 | 149 of 159 | **162 of 172** |
 | Standard packages outside the surface | 62 | 30 | **17** |
 | Import paths of the surface | 210 | 226 | **251** |
 | Entries of the skip table that hold a compiler defect | 5 | 2 | **2** |

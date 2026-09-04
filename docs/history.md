@@ -80,7 +80,7 @@ agents ran on the overlay, and the main session held the compiler core, the
 runtime, and the docs. 12 of the 15 items closed, and the 3 that stay each hold
 a measured cause.
 
-**The surface reaches 161 packages of 171.** 12 packages joined it:
+**The surface reaches 162 packages of 172.** 12 packages joined it:
 `crypto/mlkem`, `crypto/mlkem/mlkemtest`, `crypto/mldsa`, `crypto/hpke`,
 `testing/cryptotest`, `debug/gosym`, `weak`, `net/http/httptrace`,
 `net/http/httputil`, `encoding/json/jsontext`, `image/png`, and
