@@ -18,7 +18,7 @@ The state of 2026-09-04. Each row names the section that holds the detail.
 | The order of the evaluation of an expression | Equal to gc. No position differs. A for clause, the value of a case, and the initializer of a package variable each took a new form on 2026-09-04. |
 | A `select` with 2 ready cases | The first case in source order. Go takes a random one. |
 | `sync.RWMutex` | A read lock is equal to a write lock. `sync.Map` is a plain map, and it needs no lock. |
-| A pointer | Present, also to a value that is not a struct. A conversion between 2 defined struct types of 1 package reads 1 Dart class since 2026-09-04. `&*p` stays out. |
+| A pointer | Present, also to a value that is not a struct. A conversion between 2 defined struct types of 1 package reads 1 Dart class since 2026-09-04, and so does a conversion between a defined type and the instance of a generic type behind it. `&*p` stays out. |
 | `unsafe` and cgo | Outside the subset. |
 | `reflect` | A subset over a type descriptor. `Type` is a struct with a handle, and not an interface. |
 | An address | None. `%p` stays out, and a program counter is an index of a table of the runtime. |

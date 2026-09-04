@@ -1220,6 +1220,95 @@ void $mapSet(Iface? target, Iface? key, Iface? value, bool drop) {
 // and MakeSlice, MakeMap, New, and Zero of it each panic with a clear text.
 // Read docs/parity.md.
 
+/// A handle of a struct type that a list of fields builds.
+///
+/// A program that already names the shape gives its own description, with the
+/// class that stage 5 wrote. Each value of such a type thus reaches every path
+/// of the program.
+///
+/// A shape that no code names holds its value in a list of the fields, and only
+/// the package reflect reads such a value. Dart writes no class at run time,
+/// thus no other path can name the type.
+int $structOf(
+  Slice<GoString> names,
+  Slice<GoString> tags,
+  Slice<GoInt> handles,
+  Slice<bool> anon,
+) {
+  final int n = names.len;
+  final List<TypeDesc> types = <TypeDesc>[
+    for (int i = 0; i < n; i++) _typeAt($ix(handles[i])),
+  ];
+  final List<String> field = <String>[
+    for (int i = 0; i < n; i++) names[i].toDartString(),
+  ];
+  final List<String> tag = <String>[
+    for (int i = 0; i < n; i++) tags[i].toDartString(),
+  ];
+  final StringBuffer key = StringBuffer('struct{');
+  final StringBuffer show = StringBuffer(n == 0 ? 'struct {}' : 'struct { ');
+  for (int i = 0; i < n; i++) {
+    if (i > 0) {
+      key.write('; ');
+      show.write('; ');
+    }
+    if (!anon[i]) {
+      key.write('${field[i]} ');
+      show.write('${field[i]} ');
+    }
+    key.write(types[i].name);
+    show.write(types[i].display);
+    if (tag[i].isNotEmpty) {
+      key.write(' ${_quoteTag(tag[i])}');
+      show.write(' ${_quoteTag(tag[i])}');
+    }
+  }
+  key.write('}');
+  if (n > 0) show.write(' }');
+  return _syntheticHandle(
+    () => TypeDesc(
+      key.toString(),
+      'struct',
+      const <String, Function>{},
+      text: show.toString(),
+      fields: <FieldDesc>[
+        for (int i = 0; i < n; i++)
+          FieldDesc(
+            field[i],
+            tag[i],
+            _exportedName(field[i]),
+            () => types[i],
+            (Object? r) => (r as List<Object?>)[i],
+            (Object? r, Object? v) => (r as List<Object?>)[i] = v,
+            embedded: anon[i],
+          ),
+      ],
+      comparable: types.every((TypeDesc t) => t.comparable),
+      zero: () => <Object?>[for (int i = 0; i < n; i++) types[i].zero?.call()],
+    ),
+  );
+}
+
+/// _quoteTag writes a struct tag in the form that go/types and reflect each
+/// write, with a double quotation mark and an escape of a backslash.
+String _quoteTag(String tag) {
+  final StringBuffer b = StringBuffer('"');
+  for (final int c in tag.codeUnits) {
+    if (c == 0x22 || c == 0x5C) b.write(r'\');
+    b.writeCharCode(c);
+  }
+  b.write('"');
+  return b.toString();
+}
+
+/// _exportedName reports whether a name of Go is exported. Go reads the first
+/// letter, and a letter of an upper case marks an exported name.
+bool _exportedName(String name) {
+  if (name.isEmpty) return false;
+  final int c = name.codeUnitAt(0);
+  return c >= 0x41 && c <= 0x5A;
+}
+
 /// A handle of the slice type of an element type.
 int $sliceOf(int elem) {
   final TypeDesc e = _typeAt(elem);

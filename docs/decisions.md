@@ -3473,3 +3473,59 @@ The plan left these points open. The work took the decisions below.
      gart marks such a wait durable and Go does not. The gap reaches only a
      program that Go stops with a deadlock, and `docs/parity.md` holds the
      measure of it.
+347. A defined type over an instance of a generic type reads the class of the
+     instance.
+
+     `type X G[A]` gives X the struct object of `G[A]`, and go/types holds 1
+     struct object for the 2 names. `(*X)(p)` thus names the value that p
+     names, and a write through the result reaches that value. The 2 types need
+     1 Dart form.
+
+     X declares no class of its own now. Each reference to X writes the form of
+     the instance, and each method of X becomes a top level function, exactly
+     as a method of a named type over a basic type does. The descriptor of X
+     keeps the method set of X, thus an interface assertion of a value of `G[A]`
+     still reports false for an interface that only X satisfies.
+
+     `instanceRep` of `internal/emit/type.go` finds the instance. It walks the
+     scope of the package for each named type that holds type arguments, and it
+     keys the result on the struct object. A package that names the instance
+     nowhere keeps the class of X, and a conversion there fails with the report
+     of the 2 classes.
+
+     `encoding/json/v2` holds 4 such conversions in `options.go`.
+     `testdata/programs/geninstconv` holds the witness.
+
+348. A function value whose Dart parameter type differs from the parameter type
+     of the target takes a wrapper.
+
+     The Dart declaration of a generic type erases a pointer to a type
+     parameter to `Object?`, because the form of such a pointer follows the type
+     argument. 1 Dart declaration serves each instance, thus the field of an
+     instance holds `Function(Object?)` and the value of the Go type holds
+     `Function(Encoder$?)`. A Dart function parameter is contravariant, thus
+     neither one is a subtype of the other.
+
+     `funcAdapt` of `internal/emit/call.go` writes the wrapper. It reads the
+     signature of the declaration and the signature of the value, and it builds
+     a closure that takes the parameter types of the declaration. A parameter
+     that the declaration erases takes a cast, and each other parameter passes
+     through. A result position stays covariant, thus it needs no cast. A nil
+     function value keeps its nil, because Go panics at the call of such a
+     value.
+
+     The wrapper stands at 4 places: each argument of a call, each field of a
+     composite literal, each entry of a method table, and each accessor of a
+     field description. The parameter type of the target reads the origin of
+     the declaration, and not the substituted type of the instance.
+
+     A type parameter of the declaration keeps its name in the Dart type, and
+     Dart replaces that name with the type argument of the call. Only a
+     parameter that the declaration erases to `Object?` needs the wrapper, thus
+     `slices.SortFunc` takes none.
+
+     `encoding/json/v2` joins the surface with the 2 rules above, and the
+     surface reaches 163 packages of 173.
+     `testdata/programs/jsonv2use` holds the witness of `MarshalFunc`,
+     `MarshalToFunc`, `UnmarshalFunc`, `WithMarshalers`, `WithUnmarshalers`,
+     and the indent option.

@@ -424,6 +424,13 @@ func DescMethodFunc(handle, index int) any {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// StructOf gives a handle of the struct type that a list of fields builds. The
+// 4 lists hold the name, the tag, the type handle, and the embedded mark of
+// each field, in the order of the fields.
+func StructOf(names, tags []string, types []int, anon []bool) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // MakeFunc gives a func value of a function type. Each call of it runs fn with
 // the arguments, and the results of fn become the results of the call.
 func MakeFunc(handle int, fn func(args []any) []any) any {

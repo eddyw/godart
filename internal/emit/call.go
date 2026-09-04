@@ -288,6 +288,9 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$callValue(%s, %s)", args[0], args[1]), true
 	case "DescNumMethod":
 		return fmt.Sprintf("$descNumMethod(%s)", args[0]), true
+	case "StructOf":
+		return fmt.Sprintf("$structOf(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
 	case "DescMethodFunc":
 		return fmt.Sprintf("$descMethodFunc(%s, %s)", args[0], args[1]), true
 	case "DescMethodName":

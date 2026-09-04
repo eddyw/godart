@@ -1034,6 +1034,41 @@ func MakeFunc(typ Type, fn func(args []Value) (results []Value)) Value {
 	})}
 }
 
+// StructOf gives the struct type of a list of fields.
+//
+// A program that already names the shape reads its own type, with the class
+// that the compiler wrote. Each path of the program thus reaches a value of
+// such a type.
+//
+// A shape that no code names holds its value in a list of the fields, and only
+// this package reads such a value. Dart writes no class at run time, thus no
+// other path can name the type. Read docs/parity.md.
+//
+// Go panics for a field with no name, for a field with no type, and for a
+// method of a field. This function follows each 1.
+func StructOf(fields []StructField) Type {
+	names := make([]string, len(fields))
+	tags := make([]string, len(fields))
+	handles := make([]int, len(fields))
+	anon := make([]bool, len(fields))
+	for i, f := range fields {
+		if f.Name == "" {
+			panic("reflect.StructOf: field " + itoa(i) + " has no name")
+		}
+		if f.Type == nil {
+			panic("reflect.StructOf: field " + f.Name + " has no type")
+		}
+		if f.Type.NumMethod() > 0 && !f.Anonymous {
+			panic("reflect.StructOf: field " + f.Name + " holds a method")
+		}
+		names[i] = f.Name
+		tags[i] = string(f.Tag)
+		handles[i] = f.Type.handle()
+		anon[i] = f.Anonymous
+	}
+	return typeOf(dart.StructOf(names, tags, handles, anon))
+}
+
 // PointerTo gives the pointer type of an element type.
 func PointerTo(t Type) Type { return typeOf(dart.PointerTo(t.handle())) }
 
