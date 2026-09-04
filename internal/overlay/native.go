@@ -20,6 +20,7 @@ var native = []string{
 	"encoding/base64",
 	"internal/byteorder",
 	"internal/oserror",
+	"internal/nettrace",
 	"io/fs",
 	"context",
 	"io",
@@ -105,6 +106,8 @@ var native = []string{
 	"net/http/cookiejar",
 	"net/http/internal/ascii",
 	"net/http/internal",
+	"net/http/httptrace",
+	"net/http/httputil",
 	"unicode/utf16",
 	"encoding/pem",
 	"encoding/asn1",
@@ -137,6 +140,7 @@ var native = []string{
 	"image/draw",
 	"image/gif",
 	"image/jpeg",
+	"image/png",
 	"crypto",
 	"crypto/internal/constanttime",
 	"crypto/internal/impl",
@@ -201,6 +205,11 @@ var native = []string{
 	"testing/cryptotest",
 	"internal/testlog",
 	"debug/gosym",
+	"encoding/json/internal",
+	"encoding/json/internal/jsonflags",
+	"encoding/json/internal/jsonopts",
+	"encoding/json/internal/jsonwire",
+	"encoding/json/jsontext",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

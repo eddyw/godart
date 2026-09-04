@@ -12,6 +12,7 @@ import (
 	"log"
 	"maps"
 	"net"
+	"net/http/internal/ascii"
 	"net/url"
 	"path"
 	"runtime"
@@ -685,6 +686,12 @@ func (c *serverConn) serve(ctx context.Context) {
 		reqCtx, cancel := context.WithCancel(ctx)
 		req.ctx = reqCtx
 		w := &response{conn: c.conn, reader: reader, header: Header{}, req: req}
+		// A request that carries the field Expect with the value 100-continue
+		// holds its body until the server approves it.
+		if req.Body != nil && req.ProtoAtLeast(1, 1) &&
+			ascii.EqualFold(req.Header.Get("Expect"), "100-continue") {
+			req.Body = &continueBody{body: req.Body, res: w}
+		}
 		if !s.doKeepAlives() || req.Close {
 			w.closeAfter = true
 		}
@@ -748,6 +755,34 @@ func drain(req *Request) bool {
 	}
 	n, err := io.Copy(io.Discard, io.LimitReader(req.Body, maxPostHandlerReadBytes+1))
 	return err == nil && n <= maxPostHandlerReadBytes
+}
+
+// A continueBody answers the field Expect of a request. The first read of the
+// body writes the line 100 Continue, thus the client sends the body.
+//
+// A handler that writes the answer with no read of the body sends no such line,
+// exactly as in Go. The client then waits for its own ExpectContinueTimeout.
+type continueBody struct {
+	body io.ReadCloser
+	res  *response
+	done bool
+}
+
+func (b *continueBody) Read(p []byte) (int, error) {
+	if !b.done {
+		b.done = true
+		if !b.res.wroteHead {
+			if _, err := io.WriteString(b.res.conn, "HTTP/1.1 100 Continue\r\n\r\n"); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return b.body.Read(p)
+}
+
+func (b *continueBody) Close() error {
+	b.done = true
+	return b.body.Close()
 }
 
 // A response writes the answer of 1 request. It holds the body in memory, thus

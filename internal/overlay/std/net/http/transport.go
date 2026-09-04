@@ -12,6 +12,8 @@ import (
 	"io"
 	"maps"
 	"net"
+	"net/http/httptrace"
+	"net/textproto"
 	"net/url"
 	"os"
 	"runtime"
@@ -168,6 +170,11 @@ type persistConn struct {
 	timer *time.Timer
 	// order names the place of the connection in the idle pool.
 	order int64
+	// idleAt names the point in time at which the connection joined the idle
+	// pool. The zero Time names a connection that never stood idle.
+	idleAt time.Time
+	// used marks a connection that already carried 1 request.
+	used bool
 }
 
 // close ends the connection and gives its place of the host back. It runs 1
@@ -337,7 +344,17 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 		// An open HTTP/2 session of the host carries the request. A session
 		// that broke leaves the pool, and a request with no body rides a
 		// fresh dial, exactly as a reused connection does.
-		if session, ok := t.h2Of(key); ok {
+		if session, pc, ok := t.h2Of(key); ok {
+			// The session of HTTP/2 carries each request of its host, thus the
+			// request takes no connection of the pool. The 2 hooks below still
+			// name the connection that carries it.
+			trace := httptrace.ContextClientTrace(req.Context())
+			if trace != nil && trace.GetConn != nil {
+				trace.GetConn(r.addr)
+			}
+			if pc != nil {
+				traceGotConn(trace, pc, false)
+			}
 			res, err := t.h2Exchange(session, req)
 			if err == nil {
 				return res, nil
@@ -400,34 +417,54 @@ func (t *Transport) setDeadline(pc *persistConn, req *Request) error {
 	return pc.conn.SetDeadline(time.Time{})
 }
 
+// An exchange holds the state of 1 request and 1 answer on a connection. The
+// trace of the client reads it, because a hook of the write and a hook of the
+// read each fire 1 time only.
+type exchangeState struct {
+	trace *httptrace.ClientTrace
+	// first marks the answer that no byte of the connection reached yet.
+	first bool
+}
+
+// gotFirstByte waits for the first byte of an answer and it reports that byte
+// 1 time for each exchange.
+func (x *exchangeState) gotFirstByte(pc *persistConn) {
+	if !x.first {
+		return
+	}
+	if x.trace == nil || x.trace.GotFirstResponseByte == nil {
+		x.first = false
+		return
+	}
+	// A wait that runs out reads no byte, thus the mark stays and the next
+	// answer of the exchange reports the first byte.
+	if peek, err := pc.reader.Peek(1); err == nil && len(peek) == 1 {
+		x.first = false
+		x.trace.GotFirstResponseByte()
+	}
+}
+
+// got1xx reports an answer of the family 100 to the trace. The result of the
+// hook ends the request.
+func (x *exchangeState) got1xx(res *Response) error {
+	if x.trace == nil || x.trace.Got1xxResponse == nil {
+		return nil
+	}
+	return x.trace.Got1xxResponse(res.StatusCode, textproto.MIMEHeader(res.Header))
+}
+
 // exchange writes 1 request and reads 1 answer on the connection.
 func (t *Transport) exchange(pc *persistConn, req *Request, r route) (*Response, error) {
 	if err := t.setDeadline(pc, req); err != nil {
 		return nil, err
 	}
+	x := &exchangeState{trace: httptrace.ContextClientTrace(req.Context()), first: true}
 	wire, gzipped := t.gzipRequest(req)
-	if err := wire.writeHead(pc.writer, r.absolute(req)); err != nil {
-		return nil, err
+	early, err := t.writeRequest(pc, wire, req, r, x)
+	if x.trace != nil && x.trace.WroteRequest != nil {
+		x.trace.WroteRequest(httptrace.WroteRequestInfo{Err: err})
 	}
-	// A request that carries the field Expect with the value 100-continue
-	// waits for the answer of the server before the body.
-	var early *Response
-	if wire.Body != nil && hasToken(wire.Header.Get("Expect"), "100-continue") {
-		if err := pc.writer.Flush(); err != nil {
-			return nil, err
-		}
-		res, err := t.awaitContinue(pc, req)
-		if err != nil {
-			return nil, err
-		}
-		early = res
-	}
-	if early == nil {
-		if err := wire.writeBody(pc.writer); err != nil {
-			return nil, err
-		}
-	}
-	if err := pc.writer.Flush(); err != nil {
+	if err != nil {
 		return nil, err
 	}
 	res := early
@@ -437,12 +474,16 @@ func (t *Transport) exchange(pc *persistConn, req *Request, r route) (*Response,
 				return nil, err
 			}
 		}
+		x.gotFirstByte(pc)
 		out, err := readResponseLimit(pc.reader, req, t.headLimit())
 		if err != nil {
 			return nil, err
 		}
 		// An answer of the family 100 stands before the real answer.
 		for out.StatusCode == StatusContinue {
+			if err := x.got1xx(out); err != nil {
+				return nil, err
+			}
 			out, err = readResponseLimit(pc.reader, req, t.headLimit())
 			if err != nil {
 				return nil, err
@@ -465,19 +506,60 @@ func (t *Transport) exchange(pc *persistConn, req *Request, r route) (*Response,
 	return res, nil
 }
 
+// writeRequest writes the head and the body of the request. The first result
+// holds an answer that the server gave before the body, and it is nil for each
+// other request.
+func (t *Transport) writeRequest(pc *persistConn, wire, req *Request, r route,
+	x *exchangeState) (*Response, error) {
+	if err := wire.writeHead(pc.writer, r.absolute(req), x.trace); err != nil {
+		return nil, err
+	}
+	// A request that carries the field Expect with the value 100-continue
+	// waits for the answer of the server before the body.
+	var early *Response
+	if wire.Body != nil && hasToken(wire.Header.Get("Expect"), "100-continue") {
+		if err := pc.writer.Flush(); err != nil {
+			return nil, err
+		}
+		res, err := t.awaitContinue(pc, req, x)
+		// The wait writes a read deadline of its own, thus the deadline of the
+		// request takes its place again.
+		if bad := t.setDeadline(pc, req); bad != nil && err == nil {
+			err = bad
+		}
+		if err != nil {
+			return nil, err
+		}
+		early = res
+	}
+	if early == nil {
+		if err := wire.writeBody(pc.writer); err != nil {
+			return nil, err
+		}
+	}
+	if err := pc.writer.Flush(); err != nil {
+		return nil, err
+	}
+	return early, nil
+}
+
 // awaitContinue waits for the answer 100 of the server. A nil result asks for
 // the body of the request, and an answer that holds a value ends the exchange
 // with no body.
 //
 // An ExpectContinueTimeout of 0 sends the body at once, exactly as in Go.
-func (t *Transport) awaitContinue(pc *persistConn, req *Request) (*Response, error) {
+func (t *Transport) awaitContinue(pc *persistConn, req *Request, x *exchangeState) (*Response, error) {
 	d := t.ExpectContinueTimeout
 	if d <= 0 {
 		return nil, nil
 	}
+	if x.trace != nil && x.trace.Wait100Continue != nil {
+		x.trace.Wait100Continue()
+	}
 	if err := pc.conn.SetReadDeadline(time.Now().Add(d)); err != nil {
 		return nil, err
 	}
+	x.gotFirstByte(pc)
 	res, err := readResponseLimit(pc.reader, req, t.headLimit())
 	if err != nil {
 		// The wait ran out, thus the body reaches the wire with no approval.
@@ -487,14 +569,21 @@ func (t *Transport) awaitContinue(pc *persistConn, req *Request) (*Response, err
 		return nil, err
 	}
 	if res.StatusCode == StatusContinue {
+		if x.trace != nil && x.trace.Got100Continue != nil {
+			x.trace.Got100Continue()
+		}
+		if err := x.got1xx(res); err != nil {
+			return nil, err
+		}
 		return nil, nil
 	}
 	return res, nil
 }
 
 // gzipRequest gives the request that reaches the wire, and it asks for the gzip
-// form of the body. Go adds the field to a copy, thus the request of the caller
-// keeps its header.
+// form of the body. The field stands in the extra header of a copy, thus the
+// header of the caller keeps its content and the field reaches the wire last,
+// exactly as in Go.
 func (t *Transport) gzipRequest(req *Request) (*Request, bool) {
 	if t.DisableCompression || req.Method == MethodHead {
 		return req, false
@@ -503,11 +592,7 @@ func (t *Transport) gzipRequest(req *Request) (*Request, bool) {
 		return req, false
 	}
 	out := *req
-	out.Header = req.Header.Clone()
-	if out.Header == nil {
-		out.Header = Header{}
-	}
-	out.Header.Set("Accept-Encoding", "gzip")
+	out.extra = Header{"Accept-Encoding": []string{"gzip"}}
 	return &out, true
 }
 
@@ -555,6 +640,9 @@ type route struct {
 	// key names the pool entry. 2 requests share a connection only when the 2
 	// keys are equal.
 	key string
+	// addr names the host and the port of the dial: the proxy of the request,
+	// or the target. The hook GetConn of a client trace reads it.
+	addr string
 	// proxy holds the proxy of the request, or nil.
 	proxy *url.URL
 }
@@ -582,10 +670,13 @@ func (t *Transport) route(req *Request) (route, error) {
 	}
 	host, port := hostPort(req.URL)
 	key := req.URL.Scheme + "|" + host + ":" + port
+	addr := host + ":" + port
 	if proxy != nil {
 		key += "|proxy " + proxy.String()
+		proxyHost, proxyPort := hostPort(proxy)
+		addr = proxyHost + ":" + proxyPort
 	}
-	return route{key: key, proxy: proxy}, nil
+	return route{key: key, addr: addr, proxy: proxy}, nil
 }
 
 // ProxyURL gives a Proxy function that always names 1 proxy.
@@ -670,8 +761,13 @@ func noProxy(list, host string) bool {
 // A transport with a MaxConnsPerHost that the host reached waits for a free
 // connection, or for the end of the context.
 func (t *Transport) getConn(ctx context.Context, r route, req *Request) (*persistConn, bool, error) {
+	trace := httptrace.ContextClientTrace(ctx)
+	if trace != nil && trace.GetConn != nil {
+		trace.GetConn(r.addr)
+	}
 	for {
 		if pc := t.takeIdle(r.key); pc != nil {
+			traceGotConn(trace, pc, true)
 			return pc, true, nil
 		}
 		taken, wait := t.acquire(r.key)
@@ -692,7 +788,21 @@ func (t *Transport) getConn(ctx context.Context, r route, req *Request) (*persis
 	pc := &persistConn{t: t, key: r.key, conn: conn}
 	pc.reader = bufio.NewReaderSize(conn, t.readBufferSize())
 	pc.writer = bufio.NewWriterSize(conn, t.writeBufferSize())
+	traceGotConn(trace, pc, false)
 	return pc, false, nil
+}
+
+// traceGotConn reports the connection of a request to a client trace. idle
+// marks a connection of the pool.
+func traceGotConn(trace *httptrace.ClientTrace, pc *persistConn, idle bool) {
+	if trace == nil || trace.GotConn == nil {
+		return
+	}
+	info := httptrace.GotConnInfo{Conn: pc.conn, Reused: pc.used, WasIdle: idle}
+	if idle && !pc.idleAt.IsZero() {
+		info.IdleTime = time.Since(pc.idleAt)
+	}
+	trace.GotConn(info)
 }
 
 // acquire takes a place of the host. It gives false and a channel for a host
@@ -773,16 +883,26 @@ func (t *Transport) takeIdle(key string) *persistConn {
 	return pc
 }
 
+// The 3 causes that keep a connection out of the idle pool. Go holds the same
+// 3 texts, and the hook PutIdleConn of a client trace reads them.
+var (
+	errKeepAlivesDisabled = errors.New("http: putIdleConn: keep alives disabled")
+	errCloseIdle          = errors.New("http: putIdleConn: connection is in bad state")
+	errTooManyIdleHost    = errors.New("http: putIdleConn: too many idle connections for host")
+)
+
 // putIdle gives a connection back to the pool. A pool of the host that is full,
 // and a pool that reached MaxIdleConns, each end a connection.
-func (t *Transport) putIdle(pc *persistConn) {
+//
+// The result names the cause of a connection that the pool did not take.
+func (t *Transport) putIdle(pc *persistConn) error {
 	if t.DisableKeepAlives {
 		pc.close()
-		return
+		return errKeepAlivesDisabled
 	}
 	if err := pc.conn.SetDeadline(time.Time{}); err != nil {
 		pc.close()
-		return
+		return errCloseIdle
 	}
 	limit := t.MaxIdleConnsPerHost
 	if limit <= 0 {
@@ -792,7 +912,7 @@ func (t *Transport) putIdle(pc *persistConn) {
 	if len(t.idle[pc.key]) >= limit {
 		t.mu.Unlock()
 		pc.close()
-		return
+		return errTooManyIdleHost
 	}
 	var old *persistConn
 	if t.MaxIdleConns > 0 && t.idleCount >= t.MaxIdleConns {
@@ -803,6 +923,8 @@ func (t *Transport) putIdle(pc *persistConn) {
 	}
 	t.stamp++
 	pc.order = t.stamp
+	pc.used = true
+	pc.idleAt = time.Now()
 	t.idle[pc.key] = append(t.idle[pc.key], pc)
 	t.idleCount++
 	if d := t.IdleConnTimeout; d > 0 {
@@ -816,6 +938,7 @@ func (t *Transport) putIdle(pc *persistConn) {
 	if ch != nil {
 		close(ch)
 	}
+	return nil
 }
 
 // dropOldestLocked takes the connection that stood in the pool the longest.
@@ -894,18 +1017,16 @@ func (t *Transport) dial(ctx context.Context, r route, req *Request) (net.Conn, 
 	address := host + ":" + port
 	switch req.URL.Scheme {
 	case "http":
-		target := address
-		if r.proxy != nil {
-			proxyHost, proxyPort := hostPort(r.proxy)
-			target = proxyHost + ":" + proxyPort
-		}
 		if f := t.DialContext; f != nil {
-			return f(ctx, "tcp", target)
+			return f(ctx, "tcp", r.addr)
 		}
 		if f := t.Dial; f != nil {
-			return f("tcp", target)
+			return f("tcp", r.addr)
 		}
-		return net.Dial("tcp", target)
+		// The dialer of net reports ConnectStart and ConnectDone to the trace
+		// of the context, exactly as the real net package does.
+		var d net.Dialer
+		return d.DialContext(ctx, "tcp", r.addr)
 	case "https":
 		if f := t.DialTLSContext; f != nil {
 			return f(ctx, "tcp", address)
@@ -926,22 +1047,50 @@ func (t *Transport) dial(ctx context.Context, r route, req *Request) (net.Conn, 
 			}
 			config.NextProtos = protos
 		}
-		if r.proxy != nil {
-			proxyHost, proxyPort := hostPort(r.proxy)
-			head, err := t.connectHead(ctx, address, r.proxy)
-			if err != nil {
-				return nil, err
-			}
-			return tls.DialProxy(proxyHost+":"+proxyPort, address, head, config)
-		}
-		c, err := tls.Dial("tcp", address, config)
-		if err != nil {
-			return nil, err
-		}
-		return c, nil
+		return t.dialTLS(ctx, r, address, config)
 	}
 	return nil, errors.New("http: the scheme " + strconv.Quote(req.URL.Scheme) +
 		" is outside the subset")
+}
+
+// dialTLS opens a secure connection and reports the 4 hooks of the dial and of
+// the handshake to the trace of the context.
+//
+// The secure socket of Dart opens the socket and it runs the handshake in 1
+// call. Thus the 4 hooks stand in the order of Go around that 1 call, and a
+// clock of the caller reads the 2 operations together under the dial.
+func (t *Transport) dialTLS(ctx context.Context, r route, address string, config *tls.Config) (net.Conn, error) {
+	trace := httptrace.ContextClientTrace(ctx)
+	if trace != nil && trace.ConnectStart != nil {
+		trace.ConnectStart("tcp", r.addr)
+	}
+	var c *tls.Conn
+	var err error
+	if r.proxy != nil {
+		var head string
+		head, err = t.connectHead(ctx, address, r.proxy)
+		if err == nil {
+			c, err = tls.DialProxy(r.addr, address, head, config)
+		}
+	} else {
+		c, err = tls.Dial("tcp", address, config)
+	}
+	if trace != nil && trace.ConnectDone != nil {
+		trace.ConnectDone("tcp", r.addr, err)
+	}
+	if trace != nil && trace.TLSHandshakeStart != nil {
+		trace.TLSHandshakeStart()
+	}
+	if err != nil {
+		if trace != nil && trace.TLSHandshakeDone != nil {
+			trace.TLSHandshakeDone(tls.ConnectionState{}, err)
+		}
+		return nil, err
+	}
+	if trace != nil && trace.TLSHandshakeDone != nil {
+		trace.TLSHandshakeDone(c.ConnectionState(), nil)
+	}
+	return c, nil
 }
 
 // connectHead writes the CONNECT request that opens a tunnel through a proxy.
@@ -1024,7 +1173,11 @@ func (c *connBody) Close() error {
 	c.body.Close()
 	c.pc.t.track(c.req, nil)
 	if c.reusable && c.eof {
-		c.pc.t.putIdle(c.pc)
+		err := c.pc.t.putIdle(c.pc)
+		trace := httptrace.ContextClientTrace(c.req.Context())
+		if trace != nil && trace.PutIdleConn != nil {
+			trace.PutIdleConn(err)
+		}
 		return nil
 	}
 	c.pc.close()
@@ -1097,12 +1250,12 @@ func (t *Transport) nextProto(authority string, c net.Conn) RoundTripper {
 	return build(authority, tc)
 }
 
-// h2Of gives the open HTTP/2 session of a host.
-func (t *Transport) h2Of(key string) (int, bool) {
+// h2Of gives the open HTTP/2 session of a host, and the connection of it.
+func (t *Transport) h2Of(key string) (int, *persistConn, bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	session, ok := t.h2[key]
-	return session, ok
+	return session, t.h2conn[key], ok
 }
 
 func (t *Transport) putH2(key string, session int, pc *persistConn) {
@@ -1113,6 +1266,7 @@ func (t *Transport) putH2(key string, session int, pc *persistConn) {
 	}
 	t.h2[key] = session
 	t.h2conn[key] = pc
+	pc.used = true
 	t.mu.Unlock()
 }
 

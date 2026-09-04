@@ -562,6 +562,8 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 		}
 		address = resolved
 	}
+	trace := traceOf(ctx)
+	traceConnectStart(trace, network, address)
 	done := make(chan dialResult, 1)
 	go func() {
 		c, cause := Dial(network, address)
@@ -569,12 +571,16 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 	}()
 	select {
 	case r := <-done:
+		traceConnectDone(trace, network, address, r.cause)
 		return r.conn, r.cause
 	case <-ctx.Done():
 		go closeLate(done)
-		return nil, mapErr(ctx.Err())
+		err := mapErr(ctx.Err())
+		traceConnectDone(trace, network, address, err)
+		return nil, err
 	case <-d.Cancel:
 		go closeLate(done)
+		traceConnectDone(trace, network, address, errCanceled)
 		return nil, errCanceled
 	}
 }

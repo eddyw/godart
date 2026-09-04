@@ -4,6 +4,7 @@ package http
 
 import (
 	"io"
+	"net/http/httptrace"
 	"sort"
 	"strings"
 )
@@ -67,6 +68,11 @@ func (h Header) Write(w io.Writer) error { return h.WriteSubset(w, nil) }
 // that the map exclude holds with the value true. The keys stand in order,
 // because a Go map holds no order.
 func (h Header) WriteSubset(w io.Writer, exclude map[string]bool) error {
+	return h.writeSubset(w, exclude, nil)
+}
+
+// writeSubset writes the header, and it reports each key to a client trace.
+func (h Header) writeSubset(w io.Writer, exclude map[string]bool, trace *httptrace.ClientTrace) error {
 	keys := make([]string, 0, len(h))
 	for k := range h {
 		if exclude[k] {
@@ -80,6 +86,9 @@ func (h Header) WriteSubset(w io.Writer, exclude map[string]bool) error {
 			if _, err := io.WriteString(w, k+": "+v+"\r\n"); err != nil {
 				return err
 			}
+		}
+		if trace != nil && trace.WroteHeaderField != nil {
+			trace.WroteHeaderField(k, h[k])
 		}
 	}
 	return nil

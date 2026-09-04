@@ -12,6 +12,7 @@ import (
 	"io"
 	"maps"
 	"mime/multipart"
+	"net/http/httptrace"
 	"net/http/internal/ascii"
 	"net/textproto"
 	"net/url"
@@ -88,6 +89,9 @@ type Request struct {
 	// origin names the request that a copy of withDeadline came from.
 	// Transport.CancelRequest reads it, thus the caller can name either 1.
 	origin *Request
+	// extra holds each field that the transport adds. It follows the header of
+	// the caller on the wire, exactly as in Go.
+	extra Header
 }
 
 // withDeadline gives a copy of the request with the end of its wait.
@@ -231,7 +235,7 @@ func (r *Request) WriteProxy(w io.Writer) error { return r.write(w, true) }
 
 // write writes the head and the body of the request.
 func (r *Request) write(w io.Writer, absolute bool) error {
-	if err := r.writeHead(w, absolute); err != nil {
+	if err := r.writeHead(w, absolute, nil); err != nil {
 		return err
 	}
 	return r.writeBody(w)
@@ -243,7 +247,7 @@ func (r *Request) write(w io.Writer, absolute bool) error {
 //
 // A request that rides an HTTP proxy holds the whole URL in the request line,
 // and each other request holds the path.
-func (r *Request) writeHead(w io.Writer, absolute bool) error {
+func (r *Request) writeHead(w io.Writer, absolute bool, trace *httptrace.ClientTrace) error {
 	host := r.Host
 	if host == "" && r.URL != nil {
 		host = r.URL.Host
@@ -259,6 +263,7 @@ func (r *Request) writeHead(w io.Writer, absolute bool) error {
 	if _, err := io.WriteString(w, head); err != nil {
 		return err
 	}
+	wroteField(trace, "Host", host)
 	// A header that holds the field User-Agent with an empty value writes no
 	// such line, exactly as in Go.
 	agent := defaultUserAgent
@@ -269,26 +274,43 @@ func (r *Request) writeHead(w io.Writer, absolute bool) error {
 		if _, err := io.WriteString(w, "User-Agent: "+agent+"\r\n"); err != nil {
 			return err
 		}
+		wroteField(trace, "User-Agent", agent)
 	}
-	line := ""
+	key, value := "", ""
 	switch length := r.outgoingLength(); {
 	case length < 0:
-		line = "Transfer-Encoding: chunked\r\n"
+		key, value = "Transfer-Encoding", "chunked"
 	case length > 0:
-		line = "Content-Length: " + strconv.FormatInt(length, 10) + "\r\n"
+		key, value = "Content-Length", strconv.FormatInt(length, 10)
 	case sendsZeroLength(r.Method):
-		line = "Content-Length: 0\r\n"
+		key, value = "Content-Length", "0"
 	}
-	if line != "" {
-		if _, err := io.WriteString(w, line); err != nil {
+	if key != "" {
+		if _, err := io.WriteString(w, key+": "+value+"\r\n"); err != nil {
 			return err
 		}
+		wroteField(trace, key, value)
 	}
-	if err := r.Header.WriteSubset(w, reqWriteExclude); err != nil {
+	if err := r.Header.writeSubset(w, reqWriteExclude, trace); err != nil {
 		return err
 	}
-	_, err := io.WriteString(w, "\r\n")
-	return err
+	if err := r.extra.writeSubset(w, reqWriteExclude, trace); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, "\r\n"); err != nil {
+		return err
+	}
+	if trace != nil && trace.WroteHeaders != nil {
+		trace.WroteHeaders()
+	}
+	return nil
+}
+
+// wroteField reports 1 field of the head of a request to a client trace.
+func wroteField(trace *httptrace.ClientTrace, key, value string) {
+	if trace != nil && trace.WroteHeaderField != nil {
+		trace.WroteHeaderField(key, []string{value})
+	}
 }
 
 // reqWriteExclude names each field that writeHead already wrote.

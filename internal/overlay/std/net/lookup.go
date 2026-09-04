@@ -458,12 +458,24 @@ func (r *Resolver) LookupIP(ctx context.Context, network, host string) ([]IP, er
 	default:
 		return nil, UnknownNetworkError(network)
 	}
+	// A numeric address needs no lookup, thus it reports no event. Go holds
+	// the same order.
 	if ip := ParseIP(host); ip != nil {
 		if keepIP(network, ip) {
 			return []IP{ip}, nil
 		}
 		return nil, &DNSError{Err: errNoSuchHost, Name: host, IsNotFound: true}
 	}
+	trace := traceOf(ctx)
+	traceDNSStart(trace, host)
+	out, err := r.lookupIP(ctx, types, network, host)
+	traceDNSDone(trace, out, err)
+	return out, err
+}
+
+// lookupIP reads the file of the hosts first, and then each server of the
+// resolver.
+func (r *Resolver) lookupIP(ctx context.Context, types []uint16, network, host string) ([]IP, error) {
 	if held := lookupStaticHost(host); len(held) > 0 {
 		var out []IP
 		for _, text := range held {
