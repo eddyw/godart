@@ -52,6 +52,10 @@ GoString $connClose(int handle) => _noNet;
 
 GoString $connDeadline(int handle, int read, int write) => _noNet;
 
+GoString $connOption(int handle, GoString name, int value) => _noNet;
+
+GoString $packetOption(int handle, GoString name, int value) => _noNet;
+
 (int, int, GoString) $listenTCP(GoString host, int port) => (0, 0, _noNet);
 
 (int, int, GoString) $listenTLS(
