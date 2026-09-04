@@ -402,9 +402,9 @@ String _string(GoString v, String verb, String letter) {
     case 'q':
       return _quote(v);
     case 'x':
-      return _base(_hexBytes(v, false), verb, letter);
+      return _hexText(v, verb, letter, false);
     case 'X':
-      return _base(_hexBytes(v, true), verb, letter);
+      return _hexText(v, verb, letter, true);
   }
   return '%!$letter(string=${v.toDartString()})';
 }
@@ -631,6 +631,25 @@ String _exponent(double v, int digits) {
 
 String _hexInt(GoInt v, bool unsigned, bool upper) {
   final String text = _radix(v, 16, unsigned);
+  return upper ? text.toUpperCase() : text;
+}
+
+/// _hexText writes the bytes of a value as hexadecimal digits.
+///
+/// The space flag puts 1 space between each pair of digits. Go also writes the
+/// prefix of the base on each byte then, thus `% #x` of 2 bytes gives
+/// `0x4d 0x5a` and `%#x` gives `0x4d5a`.
+String _hexText(GoString v, String verb, String letter, bool upper) {
+  final bool space = verb.contains(' ');
+  if (!space) return _base(_hexBytes(v, upper), verb, letter);
+  final bool sharp = verb.contains('#');
+  final StringBuffer out = StringBuffer();
+  for (int i = 0; i < v.bytes.length; i++) {
+    if (i > 0) out.write(' ');
+    if (sharp) out.write('0x');
+    out.write(v.bytes[i].toRadixString(16).padLeft(2, '0'));
+  }
+  final String text = out.toString();
   return upper ? text.toUpperCase() : text;
 }
 
