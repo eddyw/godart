@@ -355,25 +355,21 @@ func (enc *Encoder) encodeMap(b *encBuffer, mv reflect.Value, keyOp, elemOp encO
 // by the concrete value. A nil value gets sent as the empty string for the name,
 // followed by no value.
 func (enc *Encoder) encodeInterface(b *encBuffer, iv reflect.Value) {
-	// The overlay of reflect holds the dynamic value of an interface directly,
-	// and not a box around it. Thus Elem of such a value gives no inner value,
-	// IsValid answers the nil test, and Type gives the concrete type.
-	//
 	// Gobs can encode nil interface values but not typed interface
 	// values holding nil pointers, since nil pointers point to no value.
-	elem := iv
-	if elem.IsValid() && elem.Kind() == reflect.Pointer && elem.IsNil() {
+	elem := iv.Elem()
+	if elem.Kind() == reflect.Pointer && elem.IsNil() {
 		errorf("gob: cannot encode nil pointer of type %s inside interface", elem.Type())
 	}
 	state := enc.newEncoderState(b)
 	state.fieldnum = -1
 	state.sendZero = true
-	if !iv.IsValid() {
+	if !elem.IsValid() {
 		state.encodeUint(0)
 		return
 	}
 
-	ut := userType(iv.Type())
+	ut := userType(elem.Type())
 	name, ok := concreteTypeToName[ut.base]
 	if !ok {
 		errorf("type not registered for interface: %s", ut.base)
