@@ -193,6 +193,7 @@ type Type interface {
 	IsVariadic() bool
 	NumMethod() int
 	Method(i int) Method
+	MethodByName(name string) (Method, bool)
 	Size() uintptr
 	Align() int
 	FieldAlign() int
@@ -504,7 +505,14 @@ type Method struct {
 	// Type holds the function type of the method. The type of a method of a
 	// concrete type carries the receiver in front of each parameter, and the
 	// type of a method of an interface type carries no receiver.
-	Type  Type
+	Type Type
+	// Func holds a func value of the method, with the receiver in front of
+	// each parameter. A method of an interface type holds the zero Value.
+	//
+	// Call of the value runs the method. The signature carries no factory of a
+	// Dart type, thus Interface of the value gives a func value that no type
+	// assertion reads. Read decision 325.
+	Func  Value
 	Index int
 }
 
@@ -516,11 +524,27 @@ func (t *rtype) NumMethod() int { return dart.DescNumMethod(t.handle()) }
 
 // Method gives 1 exported method of the type, in the order of the name.
 func (t *rtype) Method(i int) Method {
-	return Method{
+	typ := typeOf(dart.DescMethodType(t.handle(), i))
+	m := Method{
 		Name:  dart.DescMethodName(t.handle(), i),
-		Type:  typeOf(dart.DescMethodType(t.handle(), i)),
+		Type:  typ,
 		Index: i,
 	}
+	if fn := dart.DescMethodFunc(t.handle(), i); fn != nil {
+		m.Func = Value{value: fn, typ: typ}
+	}
+	return m
+}
+
+// MethodByName gives the exported method of the name. A name that no method
+// holds gives the zero Method and false.
+func (t *rtype) MethodByName(name string) (Method, bool) {
+	for i := range t.NumMethod() {
+		if m := t.Method(i); m.Name == name {
+			return m, true
+		}
+	}
+	return Method{}, false
 }
 
 // Size gives the count of bytes that a value of the type holds in Go.
@@ -700,18 +724,29 @@ func (v Value) Interface() any { return v.read() }
 
 // Type gives the type of the value.
 func (v Value) Type() Type {
-	if v.read() == nil && v.typ != nil {
+	if v.typ != nil && v.staticType() {
 		return v.typ
 	}
 	return TypeOf(v.read())
 }
 
+// staticType reports whether the type of the location wins over the descriptor
+// of the value inside it.
+//
+// A location of an interface type holds a value of another type, and Go reads
+// the type of the location. A location of each other type holds a value of that
+// type alone, thus the 2 answers are equal there. A nil value carries no
+// descriptor, and only the location gives the type.
+func (v Value) staticType() bool {
+	return v.value == nil || v.typ.Kind() == Interface
+}
+
 // Kind gives the class of the type of the value.
 func (v Value) Kind() Kind {
+	if v.typ != nil && v.staticType() {
+		return v.typ.Kind()
+	}
 	if v.read() == nil {
-		if v.typ != nil {
-			return v.typ.Kind()
-		}
 		return Invalid
 	}
 	return v.Type().Kind()
@@ -719,7 +754,13 @@ func (v Value) Kind() Kind {
 
 // Elem gives the value behind a pointer. The result holds the pointer, thus Set
 // writes through it.
+//
+// Elem of an interface value gives the value inside it, with the type of that
+// value. Go gives no location there, thus Set of the result reports an error.
 func (v Value) Elem() Value {
+	if v.Kind() == Interface {
+		return Value{value: v.read()}
+	}
 	p := v.read()
 	out := Value{value: dart.PointerElem(p), owner: p, loc: locPointer}
 	if v.Kind() == Pointer {

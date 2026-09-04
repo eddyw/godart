@@ -401,7 +401,7 @@ func (e *emitter) fieldAccess(owner types.Type, field *types.Var, i int,
 	write := fmt.Sprintf("$v as %s", e.dartType(field.Type()))
 	return fmt.Sprintf("($r) => %s, ($r, $v) => ($r as %s).%s = %s",
 		e.funcAdapt(read, declType, field.Type()), class, dart,
-		e.funcAdapt("("+write+")", field.Type(), declType))
+		e.funcAdapt(write, field.Type(), declType))
 }
 
 // dartText escapes a text for a Dart string literal that single quotes hold.

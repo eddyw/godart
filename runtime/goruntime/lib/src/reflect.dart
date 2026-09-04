@@ -500,14 +500,47 @@ TypeDesc $ptrDesc(TypeDesc elem) {
   final TypeDesc out = TypeDesc(
     '*${elem.name}',
     'ptr',
-    const <String, Function>{},
+    _pointerMethods(elem),
     text: '*${elem.display}',
     elem: () => elem,
+    methodTypes: elem.methodTypes,
     zero: () => null,
   );
   _pointers[elem.name] = out;
   return out;
 }
+
+/// _pointerMethods gives the method table of a pointer to a type that the
+/// emitter wrote no pointer description for.
+///
+/// Go gives *T each method of T, and the adapter of T takes the value as the
+/// receiver. The Dart form of a pointer to a struct and of a pointer to an
+/// array is the value itself, thus the adapter of T reads it with no change.
+/// Each other pointer holds a cell, thus the adapter reads the value out of the
+/// cell first.
+Map<String, Function> _pointerMethods(TypeDesc elem) {
+  if (elem.methods.isEmpty) return const <String, Function>{};
+  if (_isObjectPointer(elem)) return elem.methods;
+  final Map<String, Function> out = <String, Function>{};
+  for (final MapEntry<String, Function> e in elem.methods.entries) {
+    final TypeDesc Function()? type = elem.methodTypes[e.key];
+    final Function fn = e.value;
+    out[e.key] = _looseFunc(
+      (List<Object?> args) => <Object?>[
+        Function.apply(fn, <Object?>[
+          args.isEmpty ? null : _cellValue(args[0]),
+          ...args.skip(1),
+        ]),
+      ],
+      (type == null ? 0 : type().params.length) + 1,
+    );
+  }
+  return out;
+}
+
+/// _cellValue reads the value that a cell holds. A pointer that is not the
+/// object itself holds such a cell.
+Object? _cellValue(Object? p) => p is $Ptr<Object?> ? p.v : p;
 
 /// The value of a pointer to a type parameter, in the form of the type
 /// argument.
@@ -722,6 +755,46 @@ int $descMethodType(int handle, int index) {
   final TypeDesc sig = type();
   if (desc.kind == 'interface') return _descHandle(sig);
   return _descHandle(_withReceiver(desc, sig));
+}
+
+/// The func value of 1 exported method of a type, with the receiver in front of
+/// each parameter. A type of an interface holds no such value, exactly as in Go.
+///
+/// The closure reads the adapter of the method table, and that adapter already
+/// takes the receiver first. The signature carries no factory of a Dart type,
+/// thus Call of the value works and an assertion of it to its function type
+/// fails. Read decision 325.
+Iface? $descMethodFunc(int handle, int index) {
+  final TypeDesc desc = _typeAt(handle);
+  if (desc.kind == 'interface') return null;
+  final List<String> keys = _exportedMethodKeys(desc);
+  if (index < 0 || index >= keys.length) {
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: ${desc.display} holds no method $index'),
+      ),
+    );
+  }
+  final String key = keys[index];
+  final Function? fn = desc.methods[key];
+  final TypeDesc Function()? type = desc.methodTypes[key];
+  if (fn == null || type == null) {
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: no type of the method $key of ${desc.display}'),
+      ),
+    );
+  }
+  final TypeDesc full = _withReceiver(desc, type());
+  return Iface(
+    full,
+    _typedFunc(
+      full,
+      (List<Object?> args) => _resultList(full, Function.apply(fn, args)),
+    ),
+  );
 }
 
 /// _withReceiver gives the function type of a method of a concrete type.
