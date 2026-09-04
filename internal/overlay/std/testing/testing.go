@@ -12,6 +12,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"internal/linkhook"
 	"io"
 	"os"
 	"path/filepath"
@@ -307,8 +308,29 @@ type T struct {
 	resume chan int
 	// parallel marks a test that called Parallel.
 	parallel bool
+	// parent names the test that started this one. Setenv, Chdir, and
+	// cryptotest.SetGlobalRandom each reach the whole process, thus each 1
+	// rejects a test whose chain of parents holds a parallel test.
+	parent *T
 	// group runs the subtests of this test. Read the type group.
 	group *group
+}
+
+const parallelConflict = `testing: test using t.Setenv, t.Chdir, or cryptotest.SetGlobalRandom can not use t.Parallel`
+
+func init() {
+	linkhook.CheckParallel = func(v any) { v.(*T).checkParallel() }
+}
+
+// checkParallel panics when this test or an ancestor of it called Parallel.
+// Such a test runs at the same time as another test, and each caller of this
+// check writes a value that the whole process reads.
+func (t *T) checkParallel() {
+	for c := t; c != nil; c = c.parent {
+		if c.parallel {
+			panic(parallelConflict)
+		}
+	}
 }
 
 func (t *T) Name() string { return t.name }
@@ -415,6 +437,7 @@ func (t *T) Context() context.Context {
 // The Dart VM gives no write to the environment of the process. The os overlay
 // holds a map of its own, thus the write reaches each reader of the program.
 func (t *T) Setenv(name, value string) {
+	t.checkParallel()
 	prev, held := os.LookupEnv(name)
 	if cause := os.Setenv(name, value); cause != nil {
 		t.Fatal("Setenv: " + cause.Error())
@@ -468,6 +491,7 @@ func (t *T) ArtifactDir() string {
 // Go holds the old directory as an open descriptor, and gart holds the path,
 // because the Dart VM gives no descriptor of a directory.
 func (t *T) Chdir(dir string) {
+	t.checkParallel()
 	old, cause := os.Getwd()
 	if cause != nil {
 		t.Fatal(cause)
@@ -618,7 +642,7 @@ func (t *T) Run(name string, f func(*T)) bool { return t.runSub(subName(name), f
 // an underscore first, and the seed corpus of a fuzz target keeps the name of
 // its file, exactly as go test keeps it.
 func (t *T) runSub(name string, f func(*T)) bool {
-	sub := &T{name: t.name + "/" + name, level: t.level + 1}
+	sub := &T{name: t.name + "/" + name, level: t.level + 1, parent: t}
 	if !matches(sub.name, runFilter) {
 		return true
 	}
