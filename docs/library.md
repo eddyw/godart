@@ -9,9 +9,9 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 170 import paths: 140 standard packages, `syscall/dart`, 23
-internal packages, and 6 vendored packages of `golang.org/x`. The run of
-`make surface` of 2026-09-03 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
+The surface holds 226 import paths: 151 standard packages, `syscall/dart`, 66
+internal packages, and 8 vendored packages of `golang.org/x`. The run of
+`make surface` of 2026-09-04 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
 names that each one holds. A package reaches the surface 3 ways.
 

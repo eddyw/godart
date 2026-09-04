@@ -11,18 +11,28 @@ of a program that imports the package. The import surface holds the run of
 
 ## The import surface
 
-The surface holds 170 import paths: 140 standard packages, the interop package
-`syscall/dart`, 23 internal packages, and 6 vendored packages of
+The surface holds 226 import paths: 151 standard packages, the interop package
+`syscall/dart`, 66 internal packages, and 8 vendored packages of
 `golang.org/x`. Stage 2 rejects an import of each other package with a source
 position.
 
-`make surface` measures 123 of them against the real API of Go. 112 hold each
-exported name, and 11 hold a part. `docs/support.md` holds the level of each 1
+`make surface` measures 159 of them against the real API of Go. 149 hold each
+exported name, and 10 hold a part. `docs/support.md` holds the level of each 1
 and the largest gap of each partial package.
 
 | Present | Absent |
 |---|---|
 | `bufio`, `bytes`, `cmp`, `net/http` | `go/importer` |
+| `crypto`, `crypto/cipher`, `crypto/aes`, `crypto/des`, `crypto/rc4` | `crypto/mlkem`, `crypto/mldsa`, `crypto/hpke` |
+| `crypto/sha3`, `crypto/hkdf`, `crypto/pbkdf2`, `crypto/fips140` | `testing/cryptotest` |
+| `crypto/elliptic`, `crypto/ecdh`, `crypto/ed25519` | `runtime/cgo`, `runtime/race`, `structs` |
+| `crypto/ecdsa`, `crypto/rsa`, `crypto/dsa` | `runtime/pprof`, `runtime/trace` |
+| `debug/dwarf`, `debug/elf`, `debug/macho`, `debug/pe`, `debug/plan9obj` | `runtime/metrics`, `runtime/coverage` |
+| `image`, `image/color`, `image/color/palette`, `image/draw` | `net/http/pprof`, `expvar` |
+| `image/gif`, `image/jpeg` | `image/png`, `debug/buildinfo`, `debug/gosym` |
+| `encoding/base32`, `hash/crc64`, `io/ioutil`, `index/suffixarray` | `encoding/json/v2`, `encoding/json/jsontext` |
+| `text/scanner`, `testing/fstest`, `testing/slogtest`, `log/slog` | `net/http/fcgi`, `net/http/httptrace`, `net/http/httputil` |
+| | `log/syslog`, `os/user`, `weak`, `testing/synctest` |
 | `container/heap`, `container/list`, `container/ring`, `os/exec` | |
 | `context`, `errors`, `flag`, `fmt`, `log` | |
 | `regexp`, `regexp/syntax`, `encoding/xml` | |
@@ -30,7 +40,7 @@ and the largest gap of each partial package.
 | `net/mail`, `net/smtp`, `net/rpc`, `net/http/cgi` | |
 | `encoding/ascii85`, `encoding/base64`, `encoding/binary`, `embed` | |
 | `database/sql`, `database/sql/driver`, `uuid` | |
-| `encoding/csv`, `encoding/hex`, `encoding/json`, `encoding/gob` | `unsafe`, cgo |
+| `encoding/csv`, `encoding/hex`, `encoding/json`, `encoding/gob` | `unsafe`, cgo, `plugin` |
 | `encoding/asn1`, `encoding/pem`, `unicode/utf16` | |
 | `compress/flate`, `compress/gzip`, `compress/zlib` | |
 | `compress/lzw`, `compress/bzip2`, `archive/zip`, `archive/tar` | |
@@ -169,6 +179,7 @@ Thus these categories build:
 |---|---|
 | `go/importer` | Each program that reads a compiled export file. A caller writes an importer of its own over `go/types`, thus the gate is narrow. |
 | A goroutine on a second thread | Each program that needs a parallel run. All Go code runs in 1 isolate. |
+| 15 more packages | `docs/support.md` holds the section "No support" with the cause of each 1. The Dart VM writes no profile, gart writes no Go binary, and `dart:io` hides the descriptor of a socket and reports no user id. |
 
 The list shortened on 2026-09-03. `html/template`, `encoding/xml`,
 `archive/zip`, `archive/tar`, `compress/lzw`, `compress/bzip2`, `math/big`,
