@@ -1094,6 +1094,13 @@ func (e *emitter) interfaceMethodValueOf(m *ir.Method, recv string) string {
 	call := fmt.Sprintf("($method($recv, %s) as %s Function(%s))(%s)",
 		e.methodKeyText(m.Obj.Name(), sig), e.resultType(sig),
 		strings.Join(types, ", "), strings.Join(args, ", "))
+	if paramsHoldParam(sig) {
+		call = fmt.Sprintf("$call($recv, %s, <Object?>[%s])",
+			e.methodKeyText(m.Obj.Name(), sig), strings.Join(args[1:], ", "))
+		if result := e.resultType(sig); result != "void" {
+			call = fmt.Sprintf("(%s as %s)", call, result)
+		}
+	}
 	return fmt.Sprintf("((Iface? $recv) => (%s) => %s)(%s)",
 		strings.Join(params, ", "), call, recv)
 }

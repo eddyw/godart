@@ -982,6 +982,23 @@ func (e *emitter) box(x ir.Expr, from types.Type) string {
 	return fmt.Sprintf("Iface(%s, %s)", e.descriptorOf(from), text)
 }
 
+// paramsHoldParam reports whether a parameter of a method reads a type
+// parameter.
+//
+// The method table holds 1 adapter for each instance, and the Dart type of
+// such a parameter is the type of the argument there. A call inside a generic
+// body writes Object? for the same parameter, and a Dart function parameter is
+// contravariant. The 2 forms thus fail the cast, and the call takes the
+// dynamic path.
+func paramsHoldParam(sig *types.Signature) bool {
+	for i := 0; i < sig.Params().Len(); i++ {
+		if typeset.HoldsParam(sig.Params().At(i).Type()) {
+			return true
+		}
+	}
+	return false
+}
+
 // interfaceCall calls a method through an interface value. The call reads the
 // method table of the descriptor.
 func (e *emitter) interfaceCall(m *ir.Method, args []string) string {
@@ -991,7 +1008,7 @@ func (e *emitter) interfaceCall(m *ir.Method, args []string) string {
 		return "null"
 	}
 	result := e.resultType(sig)
-	if isPure(m.Recv) {
+	if isPure(m.Recv) && !paramsHoldParam(sig) {
 		recv := e.expr(m.Recv)
 		params := []string{"Object?"}
 		for i := 0; i < sig.Params().Len(); i++ {
