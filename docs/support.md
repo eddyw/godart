@@ -22,11 +22,13 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 252 import paths: 168 standard packages, the interop package
-`syscall/dart`, 71 internal packages, and 12 vendored packages of
-`golang.org/x`. `make surface` measures 173 of them against the real API, and
-163 of those hold each exported name. The measure skips the interop package
+The surface holds 253 import paths: 164 standard packages, the interop package
+`syscall/dart`, 76 internal packages, and 12 vendored packages of
+`golang.org/x`. `make surface` measures 174 of them against the real API, and
+165 of those hold each exported name. The measure skips the interop package
 and each internal package, because no package of Go stands behind them.
+`make surface` with the flag `-absent` names each package of the standard
+library that the surface does not hold.
 
 A native package that also holds a patch stands 2 times in the list of the
 surface, thus the measure removes each repeat first.
@@ -71,12 +73,11 @@ seventeenth session:
 | `sync/atomic` | 90/94 | 95% | The 4 `unsafe.Pointer` functions. `Pointer[T]` holds the same 4 operations with a typed pointer. |
 | `os` | 195/207 | 94% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr`, and the 3 time names of `ProcessState`. `dart:io` hides the descriptor, and it reports no CPU time. |
 | `os/exec` | 44/49 | 89% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, and the 3 time names of `ExitError` |
-| `reflect` | 181/188 | 96% | `StructOf`, `Method.Func`, `NewAt`, `SliceAt`, `Value.SetPointer`, `Value.InterfaceData`, `Value.UnsafeAddr`. Each 1 needs a type that no emitted code names, or an address. Read decision 325 for `Method.Func`. |
-| `encoding/json` | 67/92 | 72% | The option set of the v2 implementation, and the field `Type` of each error. `encoding/json/v2` stands outside the surface, and a `reflect.Type` costs the whole `reflect` library. |
+| `reflect` | 183/188 | 97% | `NewAt`, `SliceAt`, `Value.SetPointer`, `Value.InterfaceData`, `Value.UnsafeAddr`. Each 1 needs an address or `unsafe.Pointer`, which non-goal N3 holds out. |
 | `testing` | 145/145 | 100% | Full since 2026-09-03. |
-| `net/http` | 361/392 | 92% | `HTTP2Config`, `ClientConn`, `ServeTLS`, and `Transport.TLSHandshakeTimeout`. The runtime owns the HTTP/2 frame layer, and the secure socket of Dart takes over no socket that stands open. |
+| `net/http` | 362/392 | 92% | `HTTP2Config`, `ClientConn`, `ServeTLS`, and `Transport.TLSHandshakeTimeout`. The runtime owns the HTTP/2 frame layer, and the secure socket of Dart takes over no socket that stands open. |
 | `runtime` | 52/114 | 45% | `MemStats`, `ReadMemStats`, `SetFinalizer`, `Breakpoint`, the profile of the memory, of the block, and of the mutex, and the trace. The Dart VM reports none of the numbers. |
-| `net` | 267/346 | 77% | `IPConn`, `FileConn`, `FileListener`, and the keep alive timers. Each 1 needs a raw socket, a file descriptor, or an ioctl of Windows. 8 socket options joined on 2026-09-04. Read decision 330. |
+| `net` | 268/346 | 77% | `IPConn`, `FileConn`, `FileListener`, and the keep alive timers. Each 1 needs a raw socket, a file descriptor, or an ioctl of Windows. 8 socket options joined on 2026-09-04. Read decision 330. |
 | `crypto/tls` | 126/263 | 48% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake. Dart owns the handshake, and `SecureSocket.peerCertificate` gives the leaf alone and not the chain. Read decision 331. |
 | `syscall` | 24/2228 | 1% | Each system call, each error number, and each constant of the platform. |
 
@@ -158,8 +159,6 @@ names it the safer form of each 1.
 | Name | The cause |
 |---|---|
 | `FuncOf` | The type needs a descriptor of a function type that the program never names. `$sliceOf` and its 3 companions build such a descriptor in the Dart runtime library, and no builder of a function type stands there yet. The work needs `$funcOf`, an intrinsic of stage 5, and 1 name of `syscall/dart`. |
-| `Method.Func` | The value is a func value whose first parameter is the receiver. `_withReceiver` of the Dart runtime library builds that type with no bind factory, thus `MakeFunc` of it panics. |
-| `StructOf` | The type needs a Dart class that the emitter did not write. |
 | `NewAt`, `SliceAt`, `Value.SetPointer` | Each 1 takes an `unsafe.Pointer`. |
 | `Value.InterfaceData` | The result is the 2 words of an interface value. Dart holds no such pair. |
 | `Value.UnsafeAddr` | Go gives the address of the value. `Value.Pointer` gives the identity of an object instead, and `Value.Addr` builds a new cell at each call for a field of a scalar type. Thus 2 reads of 1 field would give 2 numbers, and a number that changes is a wrong answer. |
@@ -200,7 +199,6 @@ platform outside the table gives an error. Read decision 330.
 | `Dialer.DualStack`, `Dialer.FallbackDelay` | Each 1 tunes the 2 dials of Happy Eyeballs. 1 dial of Dart resolves the name and opens the socket. |
 | `Dialer.MultipathTCP`, `Dialer.SetMultipathTCP`, `ListenConfig.MultipathTCP`, `ListenConfig.SetMultipathTCP`, `TCPConn.MultipathTCP` | Multipath TCP is a transport of Linux that Dart never opens. |
 | `Interface.MTU`, `Interface.HardwareAddr`, `Interface.Flags`, `Interface.MulticastAddrs` | `NetworkInterface.list` of `dart:io` gives the name, the index, and each address of an interface, and nothing else. |
-| `ListenMulticastUDP` | The call joins a multicast group on 1 named interface. `RawDatagramSocket` of Dart holds `joinMulticast`, and no intrinsic of `syscall/dart` names it. |
 | `ListenUnixgram` | Dart opens a stream socket of the Unix domain alone. |
 | `TCPConn.CloseRead`, `TCPConn.CloseWrite`, `UnixConn.CloseRead`, `UnixConn.CloseWrite` | Each 1 is a half close. `Socket.close` of Dart ends the write side and gives a future, and the runtime holds no such 1 way close. |
 | `UDPConn.ReadMsgUDP`, `WriteMsgUDP`, `ReadMsgUDPAddrPort`, `WriteMsgUDPAddrPort`, `UnixConn.ReadMsgUnix`, `WriteMsgUnix` | Each 1 reads or writes a control message. The read also reports MSG_TRUNC for a datagram that lost bytes, and the read of the runtime reports no such flag. |
@@ -217,7 +215,6 @@ platform outside the table gives an error. Read decision 330.
 | `ServeTLS`, `Server.ServeTLS` | Each 1 wraps a listener that stands open. The secure socket of Dart takes over no socket that another call opened. `ListenAndServeTLS` opens the secure listener itself, thus it works. |
 | `Transport.TLSHandshakeTimeout` | The runtime opens the socket and runs the handshake in 1 call, thus no limit covers the handshake alone. A limit of the whole dial would end a slow connection that Go keeps. |
 | `Transport.OnProxyConnectResponse` | The runtime writes the CONNECT request and reads its answer inside `DialTLSProxy`, thus the answer reaches no Go code. |
-| `Request.Cancel` | The transport ends a request through a deadline of the connection. A watch of the channel needs a hook that lives up to the close of the body of the answer, and the transport holds no such hook. |
 
 ### crypto/tls, 137 names
 
@@ -264,7 +261,6 @@ subject, and `Verify` rejects it.
 
 | Name | The cause |
 |---|---|
-| `Options`, `DefaultOptionsV1`, and the 12 option functions, 14 names | Each 1 gives a value that `encoding/json/v2` reads. `encoding/json/v2` and `encoding/json/jsontext` each stand outside the surface, thus no function of the surface takes an `Options` value. |
 | `Number.MarshalJSONTo`, `Number.UnmarshalJSONFrom` | Each 1 takes an encoder or a decoder of `encoding/json/jsontext`. |
 | `UnmarshalTypeError.Type`, `UnsupportedTypeError.Type`, `MarshalerError.Type` | The walk of the type descriptor runs in the Dart runtime library, and it reports the name of the type as a text. `reflect` of the surface builds no `Type` from a name. |
 | `UnsupportedValueError.Value` | The field holds a `reflect.Value` of the value that holds no JSON form. The walk reports the text of the value alone. |
@@ -358,7 +354,8 @@ and `docs/flutter-design.md` holds the design of that client.
    2026-09-03. `SliceOf`, `ArrayOf`, `MapOf`, `PointerTo`, `PtrTo`, `TypeFor`,
    `Append`, `AppendSlice`, `Copy`, and `Value.Cap`. `MakeSlice` honors its
    capacity. `MakeFunc` reads the bind factory of the signature descriptor,
-   which builds a closure of the exact Dart type. `FuncOf` and `StructOf` stay
+   which builds a closure of the exact Dart type. `FuncOf` and `StructOf` each
+   joined later, and the note below holds the earlier state.
    out, because each 1 builds a type that no emitted code names. Read
    `docs/parity.md`.
 3. **`text/template`.** Done 2026-09-02. `text/template` and
@@ -473,17 +470,19 @@ unsigned slice bound each landed on 2026-09-04. Decisions 312 to 326 hold them.
 
 ## The road to full parity
 
-**The 7 phases of 2026-09-04 are closed, and the eighteenth session closed 12
-of the 15 items that stood after them. The nineteenth session closed 1 of the 2
-packages that stood after it.** The table below holds the state after each
+**The 7 phases of 2026-09-04 are closed, the eighteenth session closed 12 of
+the 15 items that stood after them, and the nineteenth session closed each item
+that stayed.** No name and no package of the standard library stays reachable
+inside the non-goals now. The table below holds the state after each
 block of work, and the section after it names each item that stays out and its
 cause.
 
 | Set | At the start of 2026-09-04 | After the 7 phases | After the nineteenth session |
 |---|---|---|---|
-| Packages that hold each exported name | 112 of 123 | 149 of 159 | **163 of 173** |
+| Packages that hold each exported name | 112 of 123 | 149 of 159 | **165 of 174** |
 | Standard packages outside the surface | 62 | 30 | **16** |
-| Import paths of the surface | 210 | 226 | **252** |
+| Import paths of the surface | 210 | 226 | **253** |
+| Names of the surface that stay reachable | 60 | 29 | **0** |
 | Entries of the skip table that hold a compiler defect | 5 | 2 | **2** |
 | Positions of the order of the evaluation that differ from gc | 5 | 0 | **0** |
 
@@ -506,28 +505,35 @@ and a leaf with ECDSA, RSA, and Ed25519. It then builds a forged leaf with the
 same subject and the same key, signed by another intermediate, and `Verify`
 rejects it.
 
-### The 29 reachable names, and the gate of each 1
+### The reachable names and the reachable packages are closed
 
-| Package | Names | The gate |
-|---|---|---|
-| `encoding/json` | 25 | 16 need `encoding/json/v2`, which decision 345 holds. 9 need an import of `reflect` in `encoding/json`, and a measure of 2026-09-04 put the cost of that import at 14 percent of the Dart source of each program that reads the package. The overlay reads the JSON of Dart, thus the decode path also needs the Go type of the target at the point of the failure. |
-| `reflect` | 2 | `StructOf` builds a struct type at run time, and Dart writes no class at run time. Such a value needs a form that only `reflect` reads. `Method.Func` costs 2.7 percent of the Dart source of a real program. |
-| `net` | 1 | `ListenMulticastUDP` needs an intrinsic that reaches `joinMulticast` of a datagram socket of Dart. |
-| `net/http` | 1 | `Request.Cancel` needs a hook that lives up to the close of the body of the answer. |
+**No name of the surface and no package of the standard library stays reachable
+inside the non-goals.** The nineteenth session closed the last 29 names and the
+last 2 packages.
 
-### The 1 reachable package, and its gate
-
-The eighteenth session closed 9 of the 11 packages of this list, and the
-nineteenth session closed `testing/synctest`.
-
-| Package | The gate |
+| Item | Result |
 |---|---|
-| `encoding/json/v2` | The Dart front end rejects 27 positions with 1 cause. `typedArshalers[Coder any]` holds a field of the type `func(*Coder, ...) error`. A pointer to a type parameter takes the Dart type `Object?`, and the value that reaches such a field carries the concrete type of the instance. A Dart function parameter is contravariant. The emitter must wrap a function value whose Dart parameter type is narrower than the type of the target. Read decision 345. |
+| `encoding/json`, 25 names | **Closed.** The package reads the real Go source now, and it holds each of its 92 exported names. The hand-written overlay of 1850 lines is gone. |
+| `encoding/json/v2` | **Closed.** 2 rules of the emitter opened it: a defined type over an instance of a generic type, and a wrapper for a function value of a narrower Dart parameter type. Read decisions 347 and 348. |
+| `testing/synctest` | **Closed.** The scheduler holds a bubble with a clock of its own. Read decision 346. |
+| `reflect.StructOf` | **Closed.** A shape that the program names reads the class of that shape, and a fresh shape holds its value in a list of the fields. Read decision 349. |
+| `reflect.Method.Func` | **Closed.** `_callValue` reads `Function.apply`, thus Call of the value needs no factory of a Dart type. The 2.7 percent measure of decision 325 covered such a factory. |
+| `net.ListenMulticastUDP` | **Closed.** 2 intrinsics carry it, over `RawDatagramSocket.bind` with a shared port and over `joinMulticast`. |
+| `net/http.Request.Cancel` | **Closed.** `Transport.track` already lives up to the close of the body of the answer, thus the watch of the channel stands there. |
 
-**The 9 that closed:** `crypto/mlkem`, `crypto/mldsa`, `crypto/hpke`,
-`testing/cryptotest`, `encoding/json/jsontext`, `debug/gosym`, `weak`,
-`net/http/httptrace`, and `net/http/httputil`. `image/png` and
-`crypto/mlkem/mlkemtest` joined them, and neither stood on that list.
+**The measured cost of the real `encoding/json`.** The Dart source of
+`testdata/programs/jsonuse` grows from 2,072,121 bytes to 4,548,555 bytes,
+because the real package reads `reflect` and `encoding/json/v2`. The earlier
+measure of 2026-09-04 put that cost at 14 percent, and the real figure is 120
+percent. The project takes the real package, because a hand-written
+reimplementation of 1850 lines is a permanent risk of a silent divergence from
+Go.
+
+**The 9 packages that the eighteenth session closed:** `crypto/mlkem`,
+`crypto/mldsa`, `crypto/hpke`, `testing/cryptotest`, `encoding/json/jsontext`,
+`debug/gosym`, `weak`, `net/http/httptrace`, and `net/http/httputil`.
+`image/png` and `crypto/mlkem/mlkemtest` joined them, and neither stood on that
+list.
 
 **`testing/synctest` holds each name of Go.** The scheduler holds a bubble: a
 fake clock, a timer queue of that clock, and the set of the goroutines of the

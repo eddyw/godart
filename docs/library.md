@@ -607,6 +607,7 @@ phases. Each 1 holds every exported name of Go.
 | `net/http/httptrace` | Native | The overlay of `net/http` calls 14 hooks of 16. `internal/nettrace` joined the surface with it, and `net` carries it exactly as the real `net` does. |
 | `net/http/httputil` | Native | The real Go source, with no change. |
 | `encoding/json/jsontext` | Native | The real Go source. The 4 internal packages of `encoding/json` joined with it. It needed a type parameter over a byte slice and a string. Read decision 344. |
+| `encoding/json` | Native | The real Go source, and each of its 92 exported names. The hand-written overlay of 1850 lines is gone. It reads `reflect` and `encoding/json/v2`, thus the Dart source of a program that reads it grows. Read decision 350. |
 | `encoding/json/v2` | Native | The real Go source. It needed 2 rules of the emitter: a defined type over an instance of a generic type, and a wrapper for a function value of a narrower Dart parameter type. Read decisions 347 and 348. |
 | `image/png` | Native | The real Go source. `writer.go` converts `*encoder` to `*EncoderBuffer` and back, and decision 341 gives the 2 names 1 Dart class. |
 

@@ -3529,3 +3529,48 @@ The plan left these points open. The work took the decisions below.
      `testdata/programs/jsonv2use` holds the witness of `MarshalFunc`,
      `MarshalToFunc`, `UnmarshalFunc`, `WithMarshalers`, `WithUnmarshalers`,
      and the indent option.
+
+349. `reflect.StructOf` builds a struct type at run time, and 2 forms carry the
+     value of such a type.
+
+     A shape that the program already names reads the description that stage 5
+     wrote, with the Dart class of that shape. `_syntheticHandle` finds it by
+     the name of the type, exactly as `FuncOf` of decision 325 does. Each path
+     of the program thus reaches a value of such a type.
+
+     A shape that no code names holds its value in a `List<Object?>` of the
+     fields. Only the package `reflect` reads such a value, because Dart writes
+     no class at run time and no other path can name the type. `New`, `Zero`,
+     `Field`, `Set`, and each method of `Type` each answer as Go does.
+
+     `$structOf` writes the name of the type in the form of go/types and the
+     text in the form of `reflect`, thus the 2 forms meet at the name.
+     `testdata/programs/structof` holds the witness of a named shape, of a fresh
+     shape, of a tag, and of the empty struct.
+
+     `reflect` holds 183 of 188 names now. The 5 that stay are `NewAt`,
+     `SliceAt`, `Value.InterfaceData`, `Value.SetPointer`, and
+     `Value.UnsafeAddr`. Each 1 needs an address or `unsafe.Pointer`, which
+     non-goal N3 holds out.
+
+350. A location of an interface type reads the type of the location, and 3
+     defects of `reflect` fell with that rule.
+
+     `Value.Type` and `Value.Kind` read the description of the value inside the
+     location. A location of an interface type holds a value of another type,
+     thus `Kind` of a variable of an interface type reported the kind of the
+     value. `reflect.Value.IsNil` of such a location panicked with that kind.
+     A location of each other type holds a value of that type alone, thus the 2
+     answers stay equal there.
+
+     `Value.Elem` of an interface value read the value as a pointer. It gives
+     the value inside the interface now, with the type of that value.
+
+     The description of a pointer that stage 5 did not write held an empty
+     method table. Go gives `*T` each method of `T`, thus a type assertion of
+     such a pointer to an interface reported false. The table of the element
+     stands there now, and a pointer that holds a cell reads the value out of
+     the cell first.
+
+     `encoding/json` reads the real Go source with the 3 fixes, and the package
+     holds each of its 92 exported names.

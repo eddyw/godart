@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"go/types"
 	"os"
+	"os/exec"
 	"slices"
 	"sort"
 	"strings"
@@ -25,9 +26,20 @@ import (
 func main() {
 	full := flag.Bool("gaps", false, "name each missing exported name")
 	only := flag.String("pkg", "", "measure 1 package only")
+	absent := flag.Bool("absent", false,
+		"name each standard package that the surface does not hold")
 	flag.Parse()
 
 	paths := surfacePaths()
+	if *absent {
+		names := absentPaths()
+		fmt.Printf("%d packages of the standard library stand outside the surface.\n\n",
+			len(names))
+		for _, n := range names {
+			fmt.Println(n)
+		}
+		return
+	}
 	if *only != "" {
 		if !slices.Contains(paths, *only) {
 			fmt.Fprintf(os.Stderr, "the package %s is outside the surface\n", *only)
@@ -100,6 +112,34 @@ func surfacePaths() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// absentPaths gives each package of the standard library that the surface does
+// not hold. An internal package and a vendored package each stand outside the
+// measure, because no package of Go stands behind them.
+func absentPaths() []string {
+	held := map[string]bool{}
+	for _, p := range overlay.Surface() {
+		held[p] = true
+	}
+	out, err := exec.Command("go", "list", "std").Output()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	var names []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		p := strings.TrimSpace(line)
+		first, _, _ := strings.Cut(p, "/")
+		if p == "" || held[p] || first == "internal" || first == "vendor" ||
+			strings.Contains(p, "/internal/") || strings.Contains(p, "/vendor/") ||
+			strings.Contains(first, ".") {
+			continue
+		}
+		names = append(names, p)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func loadReal(paths []string) (map[string]*types.Scope, error) {

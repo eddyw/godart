@@ -73,6 +73,61 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-04, the nineteenth session
+
+The user asked for each open task, end to end, until no task stays. 1 agent ran
+on `testing/synctest` in a git worktree of its own, and the main session held
+the compiler core, the runtime, and the docs. **Each item closed.**
+
+**No name of the surface and no package of the standard library stays reachable
+inside the non-goals.** The surface reaches 165 packages of 174 and 253 import
+paths. 16 packages of the standard library stay outside, and `unsafe` is 1 of
+them. `make surface -absent` names each 1.
+
+| Set | At the start of the session | Now |
+|---|---|---|
+| Packages that hold each exported name | 162 of 172 | **165 of 174** |
+| Import paths of the surface | 251 | **253** |
+| Names of the surface that stay reachable | 29 | **0** |
+| Packages of the standard library outside the surface | 17 | **16** |
+
+**5 packages joined:** `encoding/json/v2`, `testing/synctest`, and the real
+`encoding/json` with each of its 92 exported names. `crypto/cipher` dropped its
+patch, and `encoding/json` dropped a hand-written overlay of 1850 lines.
+
+**5 defects fell, and 2 of them gave a silent wrong answer.**
+
+1. `reflect.Value.Type` and `reflect.Value.Kind` read the type of the value
+   inside a location of an interface type. Go reads the type of the location.
+   `IsNil` of such a location panicked with the kind of the value.
+2. `reflect.Value.Elem` of an interface value read the value as a pointer.
+3. The description of a pointer that stage 5 did not write held an empty method
+   table, thus a type assertion of `*T` to an interface that `T` satisfies
+   reported false.
+4. 2 bubbles of `testing/synctest` that ran at the same time starved the second
+   one, because the step always read the first bubble.
+5. The accessor of a field description cast a function value to the substituted
+   type of an instance, and the field holds the type of the declaration.
+
+**5 rules of the emitter and of the runtime landed.**
+
+- A defined type over an instance of a generic type reads the class of the
+  instance. Decision 347.
+- A function value whose Dart parameter type differs from the parameter type of
+  the target takes a wrapper. Decision 348.
+- The scheduler holds a bubble with a clock of its own. Decision 346.
+- `reflect.StructOf` builds a struct type at run time, in 2 forms. Decision 349.
+- A location of an interface type reads the type of the location. Decision 350.
+
+**The measured cost of the real `encoding/json`.** The Dart source of
+`testdata/programs/jsonuse` grows from 2,072,121 bytes to 4,548,555 bytes. The
+earlier measure put the cost at 14 percent, and the real figure is 120 percent.
+The project takes the real package, because a hand-written reimplementation is
+a permanent risk of a silent divergence from Go.
+
+**7 witness programs joined:** `geninstconv`, `jsonv2use`, `synctestuse`,
+`methodfunc`, `multicastuse`, `reqcancel`, and `structof`.
+
 ### 2026-09-04, the eighteenth session
 
 The user asked for each of the 15 open items of the parity list, end to end. 2

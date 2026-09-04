@@ -11,28 +11,31 @@ of a program that imports the package. The import surface holds the run of
 
 ## The import surface
 
-The surface holds 252 import paths: 168 standard packages, the interop package
-`syscall/dart`, 71 internal packages, and 12 vendored packages of
+The surface holds 253 import paths: 164 standard packages, the interop package
+`syscall/dart`, 76 internal packages, and 12 vendored packages of
 `golang.org/x`. Stage 2 rejects an import of each other package with a source
 position.
 
-`make surface` measures 173 of them against the real API of Go. 163 hold each
-exported name, and 10 hold a part. `docs/support.md` holds the level of each 1
+`make surface` measures 174 of them against the real API of Go. 165 hold each
+exported name, and 9 hold a part. `docs/support.md` holds the level of each 1
 and the largest gap of each partial package.
+
+16 packages of the standard library stand outside the surface, and `unsafe` is
+1 of them. `make surface` with the flag `-absent` names each 1.
 
 | Present | Absent |
 |---|---|
 | `bufio`, `bytes`, `cmp`, `net/http` | `go/importer` |
-| `crypto`, `crypto/cipher`, `crypto/aes`, `crypto/des`, `crypto/rc4` | `crypto/mlkem`, `crypto/mldsa`, `crypto/hpke` |
-| `crypto/sha3`, `crypto/hkdf`, `crypto/pbkdf2`, `crypto/fips140` | `testing/cryptotest` |
+| `crypto`, `crypto/cipher`, `crypto/aes`, `crypto/des`, `crypto/rc4` | `debug/buildinfo` |
+| `crypto/sha3`, `crypto/hkdf`, `crypto/pbkdf2`, `crypto/fips140` | `expvar` |
 | `crypto/elliptic`, `crypto/ecdh`, `crypto/ed25519` | `runtime/cgo`, `runtime/race`, `structs` |
 | `crypto/ecdsa`, `crypto/rsa`, `crypto/dsa` | `runtime/pprof`, `runtime/trace` |
 | `debug/dwarf`, `debug/elf`, `debug/macho`, `debug/pe`, `debug/plan9obj` | `runtime/metrics`, `runtime/coverage` |
-| `image`, `image/color`, `image/color/palette`, `image/draw` | `net/http/pprof`, `expvar` |
-| `image/gif`, `image/jpeg` | `image/png`, `debug/buildinfo`, `debug/gosym` |
-| `encoding/base32`, `hash/crc64`, `io/ioutil`, `index/suffixarray` | `encoding/json/v2`, `encoding/json/jsontext` |
-| `text/scanner`, `testing/fstest`, `testing/slogtest`, `log/slog` | `net/http/fcgi`, `net/http/httptrace`, `net/http/httputil` |
-| | `log/syslog`, `os/user`, `weak` |
+| `image`, `image/color`, `image/color/palette`, `image/draw` | `net/http/pprof` |
+| `image/gif`, `image/jpeg`, `image/png`, `debug/gosym` | `net/http/fcgi` |
+| `encoding/base32`, `hash/crc64`, `io/ioutil`, `index/suffixarray` | `log/syslog`, `os/user` |
+| `text/scanner`, `testing/fstest`, `testing/slogtest`, `log/slog` | |
+| `encoding/json/v2`, `encoding/json/jsontext`, `weak` | |
 | `container/heap`, `container/list`, `container/ring`, `os/exec` | |
 | `context`, `errors`, `flag`, `fmt`, `log` | |
 | `regexp`, `regexp/syntax`, `encoding/xml` | |
@@ -49,10 +52,10 @@ and the largest gap of each partial package.
 | `go/printer`, `go/format`, `go/build/constraint`, `go/doc/comment` | |
 | `text/tabwriter`, `text/template`, `text/template/parse` | |
 | `testing/iotest`, `testing/synctest`, `runtime/debug`, `os/signal`, `syscall` | |
-| `net/http/httptest`, `net/http/internal` | |
+| `net/http/httptest`, `net/http/internal`, `net/http/httptrace`, `net/http/httputil` | |
 | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle` | |
-| `crypto/hmac`, `crypto/rand`, `crypto/tls` | |
-| `crypto/x509`, `crypto/x509/pkix` | |
+| `crypto/hmac`, `crypto/rand`, `crypto/tls`, `testing/cryptotest` | |
+| `crypto/x509`, `crypto/x509/pkix`, `crypto/mlkem`, `crypto/mldsa`, `crypto/hpke` | |
 | `mime`, `mime/multipart`, `mime/quotedprintable` | |
 | `net/textproto`, `net/http/cookiejar` | |
 | `hash`, `hash/adler32`, `hash/crc32`, `hash/fnv` | |

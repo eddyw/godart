@@ -134,9 +134,8 @@ form.
 | A type assertion of such a value to its Go type | The value | Equal since 2026-09-03. |
 | `MakeFunc` | Present | Equal for each function type that the program names. The descriptor of a signature carries a bind factory that builds a closure of the exact Dart type. A type that the program never names holds no factory, and `MakeFunc` of it panics with that cause. |
 | `FuncOf` | Present | Present. A signature that the program names 1 time gives its own description, thus the type equals the type of a value of it and `MakeFunc` of it works. A signature that no code names gives the shape and the text of Go, and `MakeFunc` of it panics with the cause, where Go builds a value. Read decision 325. |
-| `StructOf` | Present | Not present. It builds a type that no emitted code names, thus no factory exists for it. |
-| `Method.Func` | Present | Not present. The field needs a factory of the Dart type of each method, with the receiver in front. The emitter must write 1 for each exported method of each type of a method table, and that costs 2.7% of the Dart source of a program. Read decision 325. |
-| `Method.Func` | A func value whose first parameter is the receiver | Not present. `_withReceiver` builds that type with no bind factory, thus `MakeFunc` of it panics. |
+| `StructOf` | Present | Present. A shape that the program already names reads the class of that shape. A shape that no code names holds its value in a list of the fields, and only `reflect` reads such a value. Read decision 349. |
+| `Method.Func` | A func value whose first parameter is the receiver | Present. `Call` of the value runs the method. The signature carries no factory of a Dart type, thus a type assertion of `Interface()` of the value to its function type fails. Read decision 325. |
 | A function that gives up control | Runs inside `Value.Call` and inside a `MakeFunc` body | Rejected with a clear cause. |
 | A method value, from `Method`, `MethodByName`, or `Value.Method` | A function value of the method | Equal. The bind factory of the signature gives a closure of the exact Dart type, thus an assertion to a function type with a result reads. Decision 228 held the old limit. |
 | `Value.Pointer`, `Value.UnsafePointer` | The machine address | The identity of the object. 2 reads of the same object give the same number, and the number names no memory, thus `runtime.FuncForPC` of it gives nil. |
@@ -250,7 +249,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/hmac` | Overlay | `New` and `Equal`, from FIPS 198-1. |
 | `crypto/rand` | Overlay | `Read`, `Reader`, and `Text`, over `Random.secure` of Dart. `Int` and `Prime` read `math/big`, thus the 2 stay out. |
 | `crypto` | Native | The `Hash` table, `Signer`, `Decrypter`, and each other name. A hash registers itself, thus `Hash.New` gives the digest of the package that the program imports. |
-| `crypto/cipher` | Native, with 1 patch | The patch replaces `cbc.go`. The real file converts a pointer to `cbc` into a pointer to `cbcEncrypter` and to `cbcDecrypter`, and the subset rejects a pointer conversion between 2 defined struct types. Each of the 2 holds `cbc` as an embedded field. |
+| `crypto/cipher` | Native | Each name of Go, with no patch. `cbc.go` converts a pointer to `cbc` into a pointer to `cbcEncrypter` and to `cbcDecrypter`, and the merge rule of 2026-09-04 gives the 3 names 1 Dart class. |
 | `crypto/aes`, `crypto/des`, `crypto/rc4` | Native | Each name of Go. The block function of AES reads the generic path of `crypto/internal/fips140/aes`. |
 | `crypto/sha3` | Native | Each name of Go, SHA-3, SHAKE, and cSHAKE. |
 | `crypto/hkdf`, `crypto/pbkdf2` | Native | Each name of Go. |
@@ -703,7 +702,7 @@ offset of Go. `Decoder`, `Valid`, `Compact`, and `Indent` each read it, and
 |---|---|---|
 | `NewDecoder`, `Decode`, `More`, `Buffered`, `InputOffset` | Present | Equal |
 | `Decoder.DisallowUnknownFields` | Present | Equal |
-| `Decoder.Token` | Present | Present. A valid input gives the same tokens. The text and the offset of a syntax error differ, because Go 1.27 routes `encoding/json` through the v2 implementation and that implementation blames a different character. `GOEXPERIMENT=none` gives the text of the overlay. |
+| `Decoder.Token` | Present | Present. The package reads the real Go source since 2026-09-04, thus each token and each text of an error match Go exactly. |
 | `Decoder.UseNumber` | A number of an `any` gives a `Number` | Present. The parse of the runtime keeps the text of each literal, thus the `Number` holds the text of the input. |
 | `NewEncoder`, `Encode`, `SetIndent` | Present | Equal |
 | `Encoder.SetEscapeHTML` | Turns the escape of `<`, `>`, and `&` on and off | Present, and it changes nothing. The encoder never escapes the 3 characters. |
@@ -1042,7 +1041,7 @@ Go.
 | `TrailerPrefix` | Names a field of the answer that follows the body | Equal since 2026-09-04. The answer takes the chunked form, and each declared name and each name with the prefix follows the last chunk. An answer of HTTP/1.0 writes no trailer, exactly as in Go. |
 | `CloseNotifier` | The `ResponseWriter` of Go holds it | Present as a type. No `ResponseWriter` of the overlay holds it, thus an assertion gives false and the handler must read that result. The runtime reports a close of the peer at the next read alone. Go marks the interface deprecated. |
 | `Pusher`, `PushOptions` | The `ResponseWriter` of HTTP/2 holds `Pusher` | Present as a type. The HTTP/2 session of the runtime sends no push frame, thus an assertion gives false. |
-| `Request.Cancel` | Ends a request that stands open | Not present. The transport ends a request through a deadline of the connection, and Go marks the field deprecated. |
+| `Request.Cancel` | Ends a request that stands open | Present. `Transport.track` watches the channel up to the close of the body of the answer, and the close of the channel closes the connection. Go marks the field deprecated. |
 | `Protocols`, with the 6 accessors and `String` | Present | Equal |
 | `Server.Protocols`, `Transport.Protocols` | Present | Present since 2026-09-04. A nil field holds HTTP1 and HTTP2, and the set names the list of ALPN. A set that holds `UnencryptedHTTP2` gives an error, because no path of the runtime carries HTTP/2 over a plain socket. |
 | `ListenAndServeTLS`, `Server.ListenAndServeTLS`, `Server.TLSConfig` | Present | Present since 2026-09-04. An empty `Addr` names the port 443, and the 2 file names hold the PEM chain and the PEM key. `tls.Listen` of the overlay opens the secure listener. |
