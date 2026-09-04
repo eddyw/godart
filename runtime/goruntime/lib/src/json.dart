@@ -10,17 +10,17 @@ import 'slice.dart';
 import 'string.dart';
 
 /// The key of the method of the interface json.Marshaler in a method table.
-const String _marshalKey = 'MarshalJSON()[]byte,error';
+const String _marshalKey = 'MarshalJSON()[]uint8,error';
 
 /// The key of the method of the interface json.Unmarshaler.
-const String _unmarshalKey = 'UnmarshalJSON([]byte)error';
+const String _unmarshalKey = 'UnmarshalJSON([]uint8)error';
 
 /// The key of the method of the interface encoding.TextMarshaler. Go writes the
 /// text of such a value as a JSON string, and MarshalJSON takes precedence.
-const String _textMarshalKey = 'MarshalText()[]byte,error';
+const String _textMarshalKey = 'MarshalText()[]uint8,error';
 
 /// The key of the method of the interface encoding.TextUnmarshaler.
-const String _textUnmarshalKey = 'UnmarshalText([]byte)error';
+const String _textUnmarshalKey = 'UnmarshalText([]uint8)error';
 
 /// The full name of the type encoding/json.Number. A field of that type holds
 /// the text of a JSON number, thus the walk holds it apart from a string.
