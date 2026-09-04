@@ -512,6 +512,9 @@ func (f *flat) forStmt(s *ir.For, label string) {
 	f.jump(top)
 	f.cur = top
 	if s.Cond != nil {
+		// The declaration of each temporary of the condition runs at the top
+		// of each pass, in front of the check.
+		f.block(s.CondPre)
 		cond := f.value(s.Cond)
 		f.emit(&ir.If{
 			Cond: &ir.Unary{Op: token.NOT, X: cond, Type: types.Typ[types.Bool]},
@@ -548,10 +551,24 @@ func (f *flat) switchStmt(s *ir.Switch, label string) {
 			def = i
 			continue
 		}
-		f.emit(&ir.If{
-			Cond: f.caseCond(tag, c.Values),
-			Then: &ir.Block{List: []ir.Stmt{&ir.Jump{State: states[i]}}},
-		})
+		if !caseNeedsPre(c) {
+			f.emit(&ir.If{
+				Cond: f.caseCond(tag, c.Values),
+				Then: &ir.Block{List: []ir.Stmt{&ir.Jump{State: states[i]}}},
+			})
+			continue
+		}
+		// A value that needs a declaration takes a test of its own. A jump
+		// leaves the state at the first match, thus no later value runs.
+		for k, v := range c.Values {
+			if k < len(c.Pre) {
+				f.block(c.Pre[k])
+			}
+			f.emit(&ir.If{
+				Cond: f.caseCond(tag, []ir.Expr{v}),
+				Then: &ir.Block{List: []ir.Stmt{&ir.Jump{State: states[i]}}},
+			})
+		}
 	}
 	if def >= 0 {
 		f.jump(states[def])
@@ -570,6 +587,17 @@ func (f *flat) switchStmt(s *ir.Switch, label string) {
 	}
 	f.loops = f.loops[:len(f.loops)-1]
 	f.cur = end
+}
+
+// caseNeedsPre reports whether a value of the case needs a declaration in
+// front of its test.
+func caseNeedsPre(c *ir.Case) bool {
+	for _, pre := range c.Pre {
+		if len(pre) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // caseCond builds the test of 1 case. A switch with no tag reads each value as

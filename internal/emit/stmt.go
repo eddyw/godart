@@ -379,7 +379,7 @@ func (e *emitter) ifStmt(s *ir.If) {
 func (e *emitter) forStmt(s *ir.For) {
 	init, initFits := e.forClause(s.Init)
 	post, postFits := e.forClause(s.Post)
-	if initFits && postFits {
+	if initFits && postFits && len(s.CondPre) == 0 {
 		cond := ""
 		if s.Cond != nil {
 			cond = e.expr(s.Cond)
@@ -406,7 +406,10 @@ func (e *emitter) wideFor(s *ir.For, init string, initFits, postFits bool) {
 	if postFits {
 		post, _ := e.forClause(s.Post)
 		cond := ""
-		if s.Cond != nil {
+		// A condition that needs a statement in front of it moves to the top
+		// of the body. The third clause stays in the header, thus a continue
+		// statement of Dart still runs it.
+		if s.Cond != nil && len(s.CondPre) == 0 {
 			cond = e.expr(s.Cond)
 		}
 		e.writeFor(s, init, cond, post, "")
@@ -432,9 +435,10 @@ func (e *emitter) writeFor(s *ir.For, init, cond, post, flag string) {
 		e.stmtList(s.Post)
 		e.line("}")
 		e.line("%s = true;", flag)
-		if s.Cond != nil {
-			e.line("if (!(%s)) break;", e.expr(s.Cond))
-		}
+	}
+	if cond == "" && s.Cond != nil {
+		e.list(s.CondPre)
+		e.line("if (!(%s)) break;", e.expr(s.Cond))
 	}
 	e.breakables = append(e.breakables, "")
 	e.list(s.Body.List)
@@ -493,41 +497,10 @@ func (e *emitter) switchStmt(s *ir.Switch) {
 	e.line("%s:", label)
 	e.line("{")
 	e.line("int %s = %d;", index, len(s.Cases))
-	defaultCase := -1
-	first := true
-	for i, c := range s.Cases {
-		if len(c.Values) == 0 {
-			defaultCase = i
-			continue
-		}
-		parts := make([]string, len(c.Values))
-		for k, v := range c.Values {
-			if s.Tag == nil {
-				// A switch with no tag compares each case with true. A case
-				// of an interface type needs that comparison, and a plain
-				// bool is its own condition.
-				if isInterfaceType(v.GoType()) {
-					parts[k] = e.expr(v) + " == Iface($typeBool, true)"
-					continue
-				}
-				parts[k] = e.expr(v)
-				continue
-			}
-			parts[k] = e.equal(s.Tag, v)
-		}
-		keyword := "else if"
-		if first {
-			keyword = "if"
-			first = false
-		}
-		e.line("%s (%s) { %s = %d; }", keyword, strings.Join(parts, " || "), index, i)
-	}
-	if defaultCase >= 0 {
-		if first {
-			e.line("%s = %d;", index, defaultCase)
-		} else {
-			e.line("else { %s = %d; }", index, defaultCase)
-		}
+	if e.casesNeedPre(s) {
+		e.nestedCaseIndex(s, index)
+	} else {
+		e.flatCaseIndex(s, index)
 	}
 	e.breakables = append(e.breakables, label)
 	for i, c := range s.Cases {
@@ -540,6 +513,93 @@ func (e *emitter) switchStmt(s *ir.Switch) {
 	}
 	e.breakables = e.breakables[:len(e.breakables)-1]
 	e.line("}")
+}
+
+// casesNeedPre reports whether a case value needs a declaration in front of
+// its test. The order pass writes such a declaration for a value that reads a
+// variable behind a call of the same value.
+func (e *emitter) casesNeedPre(s *ir.Switch) bool {
+	for _, c := range s.Cases {
+		for _, pre := range c.Pre {
+			if len(pre) > 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// caseTest writes the test of 1 case value.
+func (e *emitter) caseTest(s *ir.Switch, v ir.Expr) string {
+	if s.Tag != nil {
+		return e.equal(s.Tag, v)
+	}
+	// A switch with no tag compares each case with true. A case of an
+	// interface type needs that comparison, and a plain bool is its own
+	// condition.
+	if isInterfaceType(v.GoType()) {
+		return e.expr(v) + " == Iface($typeBool, true)"
+	}
+	return e.expr(v)
+}
+
+// flatCaseIndex writes the search of the matching case as 1 if-else chain.
+func (e *emitter) flatCaseIndex(s *ir.Switch, index string) {
+	defaultCase := -1
+	first := true
+	for i, c := range s.Cases {
+		if len(c.Values) == 0 {
+			defaultCase = i
+			continue
+		}
+		parts := make([]string, len(c.Values))
+		for k, v := range c.Values {
+			parts[k] = e.caseTest(s, v)
+		}
+		keyword := "else if"
+		if first {
+			keyword = "if"
+			first = false
+		}
+		e.line("%s (%s) { %s = %d; }", keyword, strings.Join(parts, " || "), index, i)
+	}
+	if defaultCase < 0 {
+		return
+	}
+	if first {
+		e.line("%s = %d;", index, defaultCase)
+		return
+	}
+	e.line("else { %s = %d; }", index, defaultCase)
+}
+
+// nestedCaseIndex writes the search of the matching case as a nested chain.
+// Each value takes 1 level, thus the declaration of a value stands inside the
+// alternative of the test in front of it. Go reads a case value only until a
+// case matches, and the nest holds that rule.
+func (e *emitter) nestedCaseIndex(s *ir.Switch, index string) {
+	defaultCase := -1
+	depth := 0
+	for i, c := range s.Cases {
+		if len(c.Values) == 0 {
+			defaultCase = i
+			continue
+		}
+		for k, v := range c.Values {
+			if k < len(c.Pre) {
+				e.list(c.Pre[k])
+			}
+			e.line("if (%s) { %s = %d; }", e.caseTest(s, v), index, i)
+			e.line("else {")
+			depth++
+		}
+	}
+	if defaultCase >= 0 {
+		e.line("%s = %d;", index, defaultCase)
+	}
+	for ; depth > 0; depth-- {
+		e.line("}")
+	}
 }
 
 // breakTarget gives the label of a break statement. A Go switch becomes a

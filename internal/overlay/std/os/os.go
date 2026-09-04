@@ -84,22 +84,49 @@ func pathError(op, path, cause string) error {
 	return &PathError{Op: op, Path: path, Err: causeError(cause)}
 }
 
-// causeError maps the text of the Dart side to an error value. A text that
-// names a missing path gives ErrNotExist, thus errors.Is finds it.
+// sysError names a failure of the system. Go holds a syscall.Errno in a
+// PathError, and the text of that value comes from the table of the system.
+// The sentinel of the package writes another text: ErrNotExist gives "file
+// does not exist" where the system gives "no such file or directory". Thus
+// this type keeps the text of the system, and errors.Is still finds the
+// sentinel, exactly as syscall.Errno does.
+type sysError struct {
+	text string
+	kind error
+}
+
+func (e *sysError) Error() string { return e.text }
+
+func (e *sysError) Is(target error) bool { return target == e.kind }
+
+// causeError maps the text of the Dart side to an error value. The text of
+// the Dart side holds the message of the system with a capital first letter,
+// thus the map writes the text of Go.
 func causeError(cause string) error {
-	if contains(cause, "No such file or directory") ||
-		contains(cause, "no such file or directory") ||
-		contains(cause, "cannot find the file") {
-		return ErrNotExist
-	}
-	if contains(cause, "file already closed") {
+	switch {
+	case contains(cause, "No such file or directory") ||
+		contains(cause, "no such file or directory"):
+		return &sysError{text: "no such file or directory", kind: ErrNotExist}
+	case contains(cause, "cannot find the file"):
+		return &sysError{
+			text: "The system cannot find the file specified.",
+			kind: ErrNotExist,
+		}
+	case contains(cause, "Not a directory") ||
+		contains(cause, "not a directory"):
+		return &sysError{text: "not a directory", kind: ErrNotExist}
+	case contains(cause, "file already closed"):
 		return ErrClosed
-	}
-	if contains(cause, "Permission denied") ||
-		contains(cause, "permission denied") ||
-		contains(cause, "Operation not permitted") ||
-		contains(cause, "operation not permitted") {
+	case contains(cause, "Operation not permitted") ||
+		contains(cause, "operation not permitted"):
+		return &sysError{text: "operation not permitted", kind: ErrPermission}
+	case contains(cause, "Permission denied") ||
+		contains(cause, "permission denied"):
+		// The text of ErrPermission and the text of EACCES agree, thus the
+		// sentinel itself fits here.
 		return ErrPermission
+	case contains(cause, "File exists") || contains(cause, "file exists"):
+		return errExist
 	}
 	return errors.New(cause)
 }

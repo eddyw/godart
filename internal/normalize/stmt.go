@@ -620,9 +620,9 @@ func (b *builder) ifStmt(s *ast.IfStmt) []ir.Stmt {
 // variable holds a reference, and the copy of Dart then shares 1 box, thus the
 // third clause takes a new box in front of it.
 func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
-	// The first clause and the third clause each stand inside the header of
-	// the Dart loop, thus no temporary variable of the order pass can stand in
-	// front of them. Read `docs/parity.md`.
+	// The first clause stands inside the header of the Dart loop, and Go 1.22
+	// gives each pass its own copy of the variable that it declares. Thus no
+	// temporary variable of the order pass can stand in front of it.
 	b.noOrder++
 	out := b.stmt(s.Init)
 	b.noOrder--
@@ -638,6 +638,12 @@ func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
 	b.popLoop()
 	if s.Cond != nil {
 		loop.Cond = b.expr(s.Cond)
+		// The condition runs more than 1 time, thus a temporary variable
+		// cannot stand in front of the loop. The emitter writes the condition
+		// at the top of the body, with each declaration in front of it.
+		loop.CondPre = b.orderRun(s.Cond.Pos(), func(o *orderer) {
+			loop.Cond = o.expr(loop.Cond)
+		})
 	}
 	var post []ir.Stmt
 	if d, ok := loop.Init.(*ir.Declare); ok {
@@ -652,9 +658,10 @@ func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
 		}
 	}
 	if s.Post != nil {
-		b.noOrder++
+		// The third clause runs more than 1 time. A declaration that the order
+		// pass writes makes the clause a list, thus the emitter moves the
+		// whole clause to the top of the body behind a flag.
 		post = append(post, b.stmt(s.Post)...)
-		b.noOrder--
 	}
 	if len(post) == 1 {
 		loop.Post = post[0]
@@ -827,7 +834,12 @@ func (b *builder) switchStmt(s *ast.SwitchStmt, label string) []ir.Stmt {
 			if node.Tag != nil {
 				want = node.Tag.GoType()
 			}
-			cs.Values = append(cs.Values, b.exprAs(value, want))
+			v := b.exprAs(value, want)
+			// A case value runs only until a case matches, thus a temporary
+			// variable cannot stand in front of the switch.
+			pre := b.orderRun(value.Pos(), func(o *orderer) { v = o.expr(v) })
+			cs.Values = append(cs.Values, v)
+			cs.Pre = append(cs.Pre, pre)
 		}
 		body := c.Body
 		if n := len(body); n > 0 {

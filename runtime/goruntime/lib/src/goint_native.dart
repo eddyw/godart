@@ -70,6 +70,11 @@ bool $ult(GoInt a, GoInt b) =>
 
 bool $ule(GoInt a, GoInt b) => !$ult(b, a);
 
+/// The count of a shift whose type is unsigned. Go holds no negative count of
+/// such a type, thus a pattern that reads as 64 or more unsigned takes the
+/// width and the shift gives the value that Go gives.
+GoInt $ucount(GoInt c) => $ult(c, $gi(64)) ? c : $gi(64);
+
 /// A left shift. Go gives 0 when the count reaches the width of the type.
 GoInt $shl(GoInt v, GoInt count) {
   if (count.$v < 0) $panicShift();

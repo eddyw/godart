@@ -3002,3 +3002,133 @@ The plan left these points open. The work took the decisions below.
 
      The 3 are open. Each 1 needs work on the generic form of the emitter, and
      each cause now names the real fault.
+
+327. Each of the 5 open positions of the order of the evaluation now holds the
+     order of gc, and a hoist applies only when the operation can write.
+
+     The 4 positions that run more than 1 time took a new shape. The condition
+     of a `for` loop moves to the top of the body, behind each declaration, and
+     the header then holds no condition. The third clause becomes a list, thus
+     the emitter moves the whole clause to the top of the body behind the flag
+     that decision 324 already described. The search of the matching case of a
+     `switch` becomes a nested chain: each value takes 1 level, and a
+     declaration stands inside the alternative of the test in front of it. Go
+     reads a case value only until a case matches, and the nest holds that
+     rule.
+
+     The initializer of a package variable reaches the routine `$init`, thus
+     each declaration stands in front of the assignment. `internal/normalize`
+     runs the order pass on the initializer now.
+
+     gc lowers a conversion between a string and a slice of bytes or of runes
+     to a call of its runtime. The order pass writes such a conversion into a
+     temporary variable, exactly as it writes a call.
+
+     **The rule of the hoist changed.** The first form marked each operation
+     that stood behind a read, thus `for i := 0; i < len(s); i++` took a
+     temporary variable. `len` reads a value and writes none, thus the hoist
+     changed no answer. It changed 155 files of the output of 1 program, and
+     `dart compile wasm` then crashed with
+     `type 'Call' is not a subtype of type 'Parameter' in type cast`.
+
+     Only an operation that can change a value which another operand reads
+     forces the hoisted form: a call, a receive, a binary logical operation,
+     `append`, `copy`, and `recover`. Each other operation still takes a
+     temporary variable when 1 of them forces the form, because a partial
+     hoist would break the left to right order of the calls.
+
+     `testdata/programs/orderrest` holds a witness of each of the 5 positions.
+
+328. A shift by a count of a 64 bit unsigned type gives the value that Go
+     gives.
+
+     `1 << uint(ch)` with `ch` equal to -1 reads the pattern of all 1 bits.
+     Go holds no negative count of an unsigned type, thus the count stands
+     above the width and the shift gives 0. The emitter wrote `$shl($gi(1),
+     ch)`, and the runtime panicked with `negative shift amount`.
+
+     `$ucount` saturates such a count at 64. The emitter writes it only for a
+     count of `uint`, `uint64`, or `uintptr`, because a narrower unsigned type
+     never reads as a negative number in a Dart int. `text/scanner` holds the
+     shape, and `testdata/programs/shiftuns` holds the witness.
+
+329. `any` and `interface{}` name 1 type, and the identity of a type now says
+     so.
+
+     `stripNames` walked each composite type and it read `types.Unalias` at
+     each level, and its last branch gave the type back with no unalias. Thus
+     `map[string]any` took the identity `map[string]any`, and
+     `map[string]interface{}` took another. An assertion between the 2
+     spellings reported false.
+
+     The decode of `encoding/json` into an empty interface built the map with
+     the name `map[string]interface {}`, which matched neither. Thus
+     `v.(map[string]any)` of a decoded object always reported false, with no
+     report and no panic. That is the shape of each program that reads a JSON
+     document with no struct.
+
+     The last branch of `stripNames` reads `types.Unalias` now. The 3
+     descriptors of `runtime/goruntime/lib/src/json.dart` took the identity
+     that `go/types` writes, and each 1 keeps the text of `reflect.Type.String`
+     for the display. `testdata/programs/anyalias` holds the witness.
+
+330. 8 socket options join `net`, and each 1 reads a table of the platform.
+
+     `Socket.setOption` of Dart reaches `TCP_NODELAY` with a name, thus
+     `TCPConn.SetNoDelay` needs no number. `Socket.setRawOption` reaches each
+     other option with the number of the system, and the 2 platform families
+     give 2 numbers for 1 option. macOS, iOS, and Windows each keep the
+     numbers of BSD, and Linux and Android each keep the numbers of Linux.
+
+     `_sockOptionNumber` of `runtime/goruntime/lib/src/net.dart` holds the
+     table. A platform outside the table gives an error, because a wrong
+     number writes another option with no report.
+
+     `SetKeepAlive`, `SetReadBuffer`, and `SetWriteBuffer` of `TCPConn`, and
+     `SetReadBuffer` and `SetWriteBuffer` of `UDPConn` and of `UnixConn`, each
+     read the table. `net` went from 259 names to 267.
+
+     `SetLinger` stays out, because `struct linger` holds a byte layout that
+     differs between the platforms. `SetKeepAlivePeriod`,
+     `SetKeepAliveConfig`, and `KeepAliveConfig` stay out, because Windows
+     writes the 3 timers through an ioctl and not through a socket option.
+
+331. `crypto/tls.ConnectionState.PeerCertificates` stays out, and the cause of
+     2026-09-04 was wrong.
+
+     The earlier reading said that 1 intrinsic would open 6 names.
+     `SecureSocket.peerCertificate` of Dart gives 1 `X509Certificate`, and Go
+     names the whole chain that the peer sent. A slice of 1 element would
+     answer `PeerCertificates[0]` right and `len(PeerCertificates)` wrong,
+     with no report.
+
+     `VerifiedChains`, `OCSPResponse`, and `SignedCertificateTimestamps` each
+     need a value that Dart never exports. `Conn.VerifyHostname` needs a parse
+     of the leaf, thus it would give `crypto/x509` to each program that reads
+     `net/http`. Read the measure of `encoding/json` and `reflect` in
+     `docs/support.md`.
+
+332. 3 entries of the skip table close, and 2 of them needed 1 rule.
+
+     `type Number *Number` names 1 Go type, and the compiler gave the 2
+     spellings 2 Dart forms: `Object?` for `Number` and `$Ptr<Object?>?` for
+     `*Number`. A pointer to a type that names itself takes the form of that
+     type now, and the deref casts the value back to the real cell type.
+     `fixedbugs/issue4316` passes.
+
+     `peano` holds the same shape, and it stays in the table with a new cause.
+     The file is a torture test of the segmented stack of Go, and the Dart VM
+     holds a fixed stack.
+
+     A constraint that names its own type parameter, for example `~func() T`
+     on `T`, has no finite Dart form. The depth guard wrote 33 levels of it,
+     and the 2 sides of a call then held 2 forms. Such a parameter takes
+     `Object?` now, and `typeParamBound` gives no bound for such a term.
+     `typeparam/issue48137` passes, and `fixedbugs/issue72063` passes with the
+     same rule.
+
+     `typeparam/nested` stays open with a corrected cause. The file compares
+     the `reflect.Type` identity of a local generic type of a generic
+     function, and a descriptor of gart keys on the outer type argument alone.
+
+     The skip table holds 27 entries, and it held 30.

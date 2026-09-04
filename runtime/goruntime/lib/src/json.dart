@@ -729,15 +729,19 @@ Object? _any(Object? tree) {
   throw _JsonCause('json: unsupported value');
 }
 
+// The first argument of TypeDesc is the identity of the type, and the compiler
+// writes it with the text of `go/types`. That text holds no space inside
+// `interface{}`. reflect.Type.String of Go writes a space, thus the display
+// text differs from the identity.
 const TypeDesc _anyDesc = TypeDesc(
-  'interface {}',
+  'interface{}',
   'interface',
   <String, Function>{},
   text: 'interface {}',
 );
 
 final TypeDesc _anySliceDesc = TypeDesc(
-  '[]interface {}',
+  '[]interface{}',
   'slice',
   const <String, Function>{},
   text: '[]interface {}',
@@ -745,7 +749,7 @@ final TypeDesc _anySliceDesc = TypeDesc(
 );
 
 final TypeDesc _anyMapDesc = TypeDesc(
-  'map[string]interface {}',
+  'map[string]interface{}',
   'map',
   const <String, Function>{},
   text: 'map[string]interface {}',

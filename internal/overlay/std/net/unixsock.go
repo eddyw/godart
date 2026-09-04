@@ -40,6 +40,16 @@ type UnixConn struct {
 	c conn
 }
 
+// SetReadBuffer writes the size of the receive buffer of the socket.
+func (c *UnixConn) SetReadBuffer(bytes int) error {
+	return c.c.setOption("rcvbuf", bytes)
+}
+
+// SetWriteBuffer writes the size of the send buffer of the socket.
+func (c *UnixConn) SetWriteBuffer(bytes int) error {
+	return c.c.setOption("sndbuf", bytes)
+}
+
 // newUnixConn wraps the handle of an open Unix socket.
 func newUnixConn(handle int) *UnixConn {
 	return &UnixConn{c: conn{handle: handle, network: "unix"}}

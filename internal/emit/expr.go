@@ -119,12 +119,21 @@ func (e *emitter) deref(x ir.Expr) string {
 	if tp, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
 		return fmt.Sprintf("$deref<%s>(%s)", e.dartType(tp), text)
 	}
+	form := e.dartType(p)
+	simple := exprIsSimple(x)
+	if form == "Object?" && needsBox(p.Elem()) {
+		// A pointer to a type that names itself erases to Object?, thus the
+		// read needs the real cell type back.
+		form = "$Ptr<" + e.dartType(p.Elem()) + ">?"
+		text = "(" + text + " as " + form + ")"
+		simple = false
+	}
 	var guard string
-	if exprIsSimple(x) {
+	if simple {
 		guard = "(" + text + " == null ? $panicNil() : " + text + "!)"
 	} else {
 		guard = fmt.Sprintf("((%s $p) => ($p == null ? $panicNil() : $p!))(%s)",
-			e.dartType(p), text)
+			form, text)
 	}
 	if needsBox(p.Elem()) {
 		return guard + ".v"
@@ -560,7 +569,14 @@ func (e *emitter) binary(x *ir.Binary) string {
 func (e *emitter) shiftCount(y ir.Expr) string {
 	c, ok := y.(*ir.Const)
 	if !ok {
-		return e.expr(y)
+		text := e.expr(y)
+		// A count of a 64 bit unsigned type is never negative in Go. Such a
+		// count above the largest int64 reads as a negative number in Dart,
+		// thus the helper saturates it at the width of the value.
+		if isUnsigned64(y.GoType()) {
+			return "$ucount(" + text + ")"
+		}
+		return text
 	}
 	i := constant.ToInt(c.Value)
 	if constant.Compare(i, token.GEQ, constant.MakeInt64(64)) {

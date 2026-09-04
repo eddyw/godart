@@ -33,6 +33,27 @@ type TCPConn struct {
 	c conn
 }
 
+// SetNoDelay writes the option TCP_NODELAY of the socket. Go enables the
+// option by default, thus a call with true changes nothing.
+func (c *TCPConn) SetNoDelay(noDelay bool) error {
+	return c.c.setOption("nodelay", flagValue(noDelay))
+}
+
+// SetKeepAlive writes the option SO_KEEPALIVE of the socket.
+func (c *TCPConn) SetKeepAlive(keepalive bool) error {
+	return c.c.setOption("keepalive", flagValue(keepalive))
+}
+
+// SetReadBuffer writes the size of the receive buffer of the socket.
+func (c *TCPConn) SetReadBuffer(bytes int) error {
+	return c.c.setOption("rcvbuf", bytes)
+}
+
+// SetWriteBuffer writes the size of the send buffer of the socket.
+func (c *TCPConn) SetWriteBuffer(bytes int) error {
+	return c.c.setOption("sndbuf", bytes)
+}
+
 // newTCPConn wraps the handle of an open TCP socket.
 func newTCPConn(handle int) *TCPConn {
 	return &TCPConn{c: conn{handle: handle, network: "tcp"}}

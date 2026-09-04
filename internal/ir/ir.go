@@ -247,11 +247,16 @@ type (
 
 	For struct {
 		Node
-		Init  Stmt
-		Cond  Expr
-		Post  Stmt
-		Body  *Block
-		Label string
+		Init Stmt
+		Cond Expr
+		// CondPre holds the declaration of each temporary variable that the
+		// order pass needs for Cond. The condition runs more than 1 time,
+		// thus such a declaration moves to the top of the body and the
+		// header holds no condition.
+		CondPre []Stmt
+		Post    Stmt
+		Body    *Block
+		Label   string
 	}
 
 	Return struct {
@@ -380,7 +385,12 @@ type SelectClause struct {
 
 // Case is 1 case of a switch. An empty Values list marks the default case.
 type Case struct {
-	Values      []Expr
+	Values []Expr
+	// Pre holds the declaration of each temporary variable of 1 value of
+	// Values, at the same index. A value runs only when no earlier value
+	// matched, thus each declaration stands inside the alternative of the
+	// test in front of it.
+	Pre         [][]Stmt
 	Body        *Block
 	Fallthrough bool
 }

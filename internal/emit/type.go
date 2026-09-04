@@ -56,6 +56,13 @@ func (e *emitter) dartType(t types.Type) string {
 			if st, ok := core.(*types.Struct); ok && typeset.HoldsParam(st) {
 				return "Object?"
 			}
+			// A constraint that names its own type parameter, for example
+			// `~func() T` on the parameter T, has no finite Dart form. The
+			// depth guard wrote 33 levels of it, and the 2 sides of a call
+			// then held 2 forms.
+			if mentionsParam(core, t, map[*types.TypeName]bool{}) {
+				return "Object?"
+			}
 			return e.dartType(core)
 		}
 		// A type set of integer types gives 1 Dart type. The dictionary holds
@@ -70,6 +77,12 @@ func (e *emitter) dartType(t types.Type) string {
 		// pointer holds a cell. Thus such a pointer takes 1 form that holds
 		// both, and $deref reads it.
 		if _, ok := types.Unalias(t.Elem()).(*types.TypeParam); ok {
+			return "Object?"
+		}
+		// A pointer to a type that names itself takes the form of that type.
+		// `type Number *Number` names 1 Go type, thus the 2 spellings must
+		// give 1 Dart form or an assignment of the 2 fails.
+		if named, ok := types.Unalias(t.Elem()).(*types.Named); ok && e.cyclic(named.Obj()) {
 			return "Object?"
 		}
 		if needsBox(t.Elem()) {
@@ -306,6 +319,12 @@ func (e *emitter) typeParamBound(tp *types.TypeParam) string {
 		// A struct term names a shape of the compiler, and no Dart bound
 		// holds the class of each type argument of the shape.
 		if _, ok := types.Unalias(t).(*types.Struct); ok {
+			return ""
+		}
+		// A term that names the parameter itself, for example `~func() T` on
+		// T, gives no finite bound. A type argument of such a parameter
+		// erases to Object?, thus no bound of Dart accepts it.
+		if mentionsParam(t, tp, map[*types.TypeName]bool{}) {
 			return ""
 		}
 		text := e.dartType(t)
@@ -758,6 +777,52 @@ func (e *emitter) cyclic(obj *types.TypeName) bool {
 		e.typeAcyclic[obj] = true
 	}
 	return out
+}
+
+// mentionsParam reports whether a type reaches the type parameter tp. A
+// constraint of tp that holds such a type names itself, thus its Dart form
+// never ends.
+func mentionsParam(t types.Type, tp *types.TypeParam, seen map[*types.TypeName]bool) bool {
+	switch u := types.Unalias(t).(type) {
+	case *types.TypeParam:
+		return u == tp
+	case *types.Named:
+		if seen[u.Obj()] {
+			return false
+		}
+		seen[u.Obj()] = true
+		for i := 0; i < u.TypeArgs().Len(); i++ {
+			if mentionsParam(u.TypeArgs().At(i), tp, seen) {
+				return true
+			}
+		}
+		if _, ok := u.Underlying().(*types.Struct); ok {
+			return false
+		}
+		return mentionsParam(u.Underlying(), tp, seen)
+	case *types.Pointer:
+		return mentionsParam(u.Elem(), tp, seen)
+	case *types.Slice:
+		return mentionsParam(u.Elem(), tp, seen)
+	case *types.Array:
+		return mentionsParam(u.Elem(), tp, seen)
+	case *types.Chan:
+		return mentionsParam(u.Elem(), tp, seen)
+	case *types.Map:
+		return mentionsParam(u.Key(), tp, seen) || mentionsParam(u.Elem(), tp, seen)
+	case *types.Signature:
+		for i := 0; i < u.Params().Len(); i++ {
+			if mentionsParam(u.Params().At(i).Type(), tp, seen) {
+				return true
+			}
+		}
+		for i := 0; i < u.Results().Len(); i++ {
+			if mentionsParam(u.Results().At(i).Type(), tp, seen) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // mentionsCyclic reports whether a type reaches a named type that names

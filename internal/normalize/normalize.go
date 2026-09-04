@@ -270,7 +270,9 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 			init := b.copyPoint(b.exprAs(spec.Values[i], v.Type))
 			pending := b.pending
 			b.pending = nil
-			out = append(out, &ir.Global{Var: v, Init: init, Pending: pending})
+			pre := b.orderRun(spec.Pos(), func(o *orderer) { init = o.expr(init) })
+			out = append(out, &ir.Global{Var: v, Init: init,
+				Pending: append(pending, pre...)})
 		}
 	case len(spec.Values) == 1:
 		// The call runs 1 time. A hidden variable holds the record of the
@@ -283,6 +285,7 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 		if call == nil {
 			break
 		}
+		pending = append(pending, b.orderRun(spec.Pos(), func(o *orderer) { call = o.expr(call) })...)
 		tuple, ok := call.GoType().(*types.Tuple)
 		if !ok || tuple.Len() != len(vars) {
 			b.fail(spec.Pos(), "a package variable with multiple results needs a call")

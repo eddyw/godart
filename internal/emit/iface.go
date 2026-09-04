@@ -1071,7 +1071,10 @@ func stripNames(t types.Type) types.Type {
 	case *types.Chan:
 		return types.NewChan(u.Dir(), stripNames(u.Elem()))
 	}
-	return t
+	// An alias and its target name 1 Go type. `any` inside `map[string]any`
+	// must give the text of `interface{}`, or an assertion between the 2
+	// spellings fails.
+	return types.Unalias(t)
 }
 
 // isStructUnder reports whether the underlying type is a struct.

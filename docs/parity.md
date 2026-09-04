@@ -187,7 +187,7 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | A star width and a star precision, `%*d` and `%.*f` | Present | Equal since 2026-09-03. A value of a wrong type gives `%!(BADWIDTH)`, and a precision below 0 gives `%!(BADPREC)`. |
 | An explicit argument index, `%[2]d` | Present | Equal since 2026-09-03. An index that names no argument gives `%!d(BADINDEX)`. |
 | A precision on a string verb, `%.2s` | Cuts the text to 2 runes | Equal since 2026-09-03. |
-| The verb `%#v` | The Go syntax form, `main.point{X:3, Y:4}` | Not present. It writes the form of `%v`. |
+| The verb `%#v` | The Go syntax form, `main.point{X:3, Y:4}` | Present since 2026-09-04. The 5 rows of "The fmt verbs" below hold each remaining difference. Read decision 315. |
 
 ## The subset of the language
 
@@ -266,7 +266,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native |
 | `io/fs` | Native | Each exported name, the `FS` interface family included. |
-| `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. Read below. |
+| `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. It also sets `DefaultOutput` of `log/internal`, thus the default handler of `log/slog` writes through the standard logger. Read below. |
 | `path/filepath` | Overlay | The separator is always `/`. Read below. | |
 | `net` | Overlay | TCP, UDP, a Unix socket, `IP`, `ParseIP`, and the `Lookup` family. No TLS. Read the 2 sections below. |
 | `os` | Overlay | The file access, the environment, the identity of the process, and the process state. `Root`, `DirFS`, `Chmod`, and the signals each read. `File.Fd`, `NewFile`, and `StartProcess` stay out, because `dart:io` hides the descriptor. Read the section below. |
@@ -303,6 +303,22 @@ reads the real Go source, because that source already stays inside the subset.
 | `time` | Overlay | The clock, the timer, the ticker, and the calendar. Read the section below. |
 | `unicode` | Native | |
 | `unicode/utf8` | Overlay | The real source needs an index of a mixed type parameter. Each test of the Go repository passes. |
+| `encoding/base32` | Native | The real source needs no patch. |
+| `hash/crc64` | Native | The real source needs no patch. |
+| `index/suffixarray` | Native | The real source needs no patch. `sais.go` holds the construction, thus the order of the array stays the order of Go. |
+| `io/ioutil` | Native | Each name of Go. `ReadDir` opens the directory as a file, and `os` gives no handle of a directory, thus it reports an error. |
+| `testing/fstest` | Native | `MapFS` and `TestFS`. The real source needs no patch. |
+| `log/internal`, `log/slog/internal`, `log/slog/internal/buffer` | Native | The 3 internal packages that `log/slog` reads. |
+| `log/slog` | Native, with 1 patch | The patch replaces `value.go`. The real file packs a string and a slice of `Attr` behind a pointer of the package `unsafe`. The patch holds the string and the slice themselves, and the field `num` keeps the length. `timeTime` holds a struct field, because the subset rejects a conversion between 2 struct types. |
+| `testing/slogtest` | Native | `TestHandler` and `Run`. A result map of the caller passes each check. A result map that `encoding/json` decodes fails each group check, because no assertion of the decoded value to `map[string]any` succeeds. |
+| `debug/dwarf` | Native | The real source needs no patch. |
+| `debug/macho`, `debug/plan9obj` | Native | Each name of Go. The real source of each 1 needs no patch. |
+| `debug/elf` | Native, with 1 patch | The patch replaces `file.go`. The real file reads `unsafe.Sizeof` and `unsafe.Offsetof` of the 8 header types. The patch holds the same numbers as constants. The layout of the ELF format never changes. |
+| `debug/pe` | Native, with 1 patch | The patch replaces `symbol.go`. The real file reads a `COFFSymbol` through the type `COFFSymbolAuxFormat5`. The 2 types hold the same 18 bytes at the same offsets. Thus the read of an aux record needs no conversion. `COFFSymbolReadSectionDefAux` gives a copy of the entry of `COFFSymbols`, and not a view of it. Each field holds the number of Go on a little-endian machine. A write through the pointer reaches no symbol. The text of the error of a bad signature holds the verb `% x`. `fmt` of the overlay writes no space between the 2 digits of a byte. |
+| `internal/saferio` | Native, with 1 patch | The patch replaces `io.go`. `SliceCap` reads `unsafe.Sizeof` of its type parameter, and the patch reads `reflect.TypeFor` instead. `reflect.Type.Size` follows the rules of a 64-bit machine, thus the capacity stays the capacity of Go. The 4 readers of `debug` each take `reflect` through this import. |
+| `internal/zstd` | Native | The decoder of the zstd format that `debug/elf` reads for a compressed section. |
+| `image`, `image/color`, `image/color/palette`, `image/draw`, `image/internal/imageutil` | Native | Each name of Go. The real source of each 1 needs no patch. |
+| `image/gif`, `image/jpeg` | Native | Each name of Go. The encoder writes the same bytes as Go, and the decoder reads them again. `image/png` stays out. `writer.go` of it converts a pointer of `encoder` to a pointer of `EncoderBuffer`, and the subset rejects that conversion. |
 
 Each other standard library package stays outside the surface. Stage 2 rejects
 an import of it with a source position.
@@ -1308,31 +1324,28 @@ statement, and a function that gives up control.
 
 ### The positions that still differ
 
-5 positions still differ. Each row holds a witness, and `set(n)` writes the
-variable `x` and gives 0.
+None. 5 positions differed until 2026-09-04, and each 1 now holds the order of
+gc. `testdata/programs/orderrest` holds the witness of each 1, and
+`testdata/programs/evalorder` holds the witness of the statement path.
 
-| Position | The witness | Go | godart |
-|---|---|---|---|
-| The condition of a for loop | `for x+set(3) < 3 { n++ }` | The condition reads the new `x`, thus the body runs 0 times | The condition reads the old `x`, thus the body runs 1 time |
-| The first clause and the third clause of a for loop | `for i := 0; i < 2; i, _ = x, set(5)` | The third clause reads the new `x`, thus the loop runs 1 time | The third clause reads the old `x`, thus the loop runs 2 times |
-| The value of a case | `switch 3 { case x + set(3): }` | The case matches | The case does not match |
-| The initializer of a package variable | `var sum = gx + gset(2)` | `sum` is 2 | `sum` is 1 |
-| A conversion of a string, of a byte slice, or of a rune slice | `fmt.Println(x, string([]byte(s)), grow())`, where `grow` writes `s` | The conversion reads the old `s` | The conversion reads the new `s` |
+| Position | The witness | The form that the stage writes |
+|---|---|---|
+| The condition of a for loop | `for x+set(3) < 3 { n++ }` | The condition moves to the top of the body, behind each declaration. The header then holds no condition. |
+| The third clause of a for loop | `for i := 0; i < 2; i, _ = x, set(5)` | The clause takes a declaration, thus it becomes a list. The emitter moves the whole clause to the top of the body behind a flag. |
+| The value of a case | `switch 3 { case x + set(3): }` | The search of the matching case becomes a nested chain. Each value takes 1 level, thus a declaration stands inside the alternative of the test in front of it. |
+| The initializer of a package variable | `var sum = gx + gset(2)` | The initializer reaches the routine `$init`, thus each declaration stands in front of the assignment. |
+| A conversion of a string, of a byte slice, or of a rune slice | `fmt.Println(x, string([]byte(s)), grow())` | gc lowers such a conversion to a call of its runtime, thus the order pass writes the result into a temporary variable. |
 
-The condition and the third clause of a for loop each run more than 1 time,
-and the value of a case runs only until a case matches. A temporary variable
-in front of the statement would change the count of the runs. The first clause
-stands in the header of the Dart loop, because Go 1.22 gives each pass of the
-loop its own copy of the variable. gc holds each of the 4 in the init list of
-the node, and Dart holds no such list.
+**An operation forces the hoisted form only when it can write.** A call, a
+receive, a binary logical operation, `append`, `copy`, and `recover` each can
+change a value that another operand reads. `len`, `cap`, `min`, `max`, `real`,
+`imag`, `complex`, `new`, `make`, a slice expression, and a conversion of a
+string each read only.
 
-The initializer of a package variable reaches a Dart routine, thus a variable
-can stand there. Stage 4 builds such an initializer outside the statement path,
-and the pass does not reach it.
-
-gc writes the result of a conversion of a string into a temporary variable,
-thus the conversion reads its operand early. Stage 4 reads such a conversion as
-a plain operand, thus it reads the operand late.
+Each operation still takes a temporary variable when 1 of them forces the
+form, because a partial hoist would break the left to right order of the
+calls. A statement that holds no writing operation keeps its shape, thus
+`for i := 0; i < len(s); i++` writes the plain Dart loop.
 
 ## The order of a package variable
 

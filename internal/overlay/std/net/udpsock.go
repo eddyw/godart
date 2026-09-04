@@ -39,6 +39,24 @@ type UDPConn struct {
 // newUDPConn wraps a socket that a listen opened.
 func newUDPConn(p *packet) *UDPConn { return &UDPConn{p: p} }
 
+// setOption writes 1 socket option of the datagram socket.
+func (c *UDPConn) setOption(name string, value int) error {
+	if cause := dart.PacketOption(c.p.handle, name, value); cause != "" {
+		return netError("set udp", cause)
+	}
+	return nil
+}
+
+// SetReadBuffer writes the size of the receive buffer of the socket.
+func (c *UDPConn) SetReadBuffer(bytes int) error {
+	return c.setOption("rcvbuf", bytes)
+}
+
+// SetWriteBuffer writes the size of the send buffer of the socket.
+func (c *UDPConn) SetWriteBuffer(bytes int) error {
+	return c.setOption("sndbuf", bytes)
+}
+
 // newDialedUDPConn wraps a socket that a dial connected to a peer.
 func newDialedUDPConn(p *packet, host string, port int) *UDPConn {
 	return &UDPConn{p: p, host: host, port: port}

@@ -226,6 +226,23 @@ func (c *conn) Write(b []byte) (int, error) {
 	return n, nil
 }
 
+// setOption writes 1 socket option of the connection. A flag takes the value
+// 0 or 1.
+func (c *conn) setOption(name string, value int) error {
+	if cause := dart.ConnOption(c.handle, name, value); cause != "" {
+		return netError("set "+c.network, cause)
+	}
+	return nil
+}
+
+// flagValue gives the value of a socket option that holds a flag.
+func flagValue(on bool) int {
+	if on {
+		return 1
+	}
+	return 0
+}
+
 func (c *conn) Close() error {
 	if cause := dart.ConnClose(c.handle); cause != "" {
 		return netError("close "+c.network, cause)

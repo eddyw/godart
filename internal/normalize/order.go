@@ -214,15 +214,15 @@ func (o *orderer) expr(x ir.Expr) ir.Expr {
 		}
 		return x
 	case *ir.Call:
-		return o.operation(x, func() {
+		return o.operation(x, true, func() {
 			x.Fun = o.expr(x.Fun)
 			x.Results = o.expr(x.Results)
 			o.list(x.Args)
 		})
 	case *ir.Recv:
-		return o.operation(x, func() { x.Chan = o.expr(x.Chan) })
+		return o.operation(x, true, func() { x.Chan = o.expr(x.Chan) })
 	case *ir.Slice:
-		return o.operation(x, func() {
+		return o.operation(x, false, func() {
 			x.X = o.expr(x.X)
 			x.Low = o.expr(x.Low)
 			x.High = o.expr(x.High)
@@ -232,10 +232,19 @@ func (o *orderer) expr(x ir.Expr) ir.Expr {
 		if !orderedBuiltin[x.Name] {
 			break
 		}
-		return o.operation(x, func() {
+		return o.operation(x, writingBuiltin[x.Name], func() {
 			x.Results = o.expr(x.Results)
 			o.list(x.Args)
 		})
+	case *ir.Conv:
+		if !runtimeConv(x.From, x.Type) {
+			break
+		}
+		// gc lowers a conversion between a string and a slice to a call of
+		// its runtime, thus the order pass writes the result into a temporary
+		// variable exactly as it writes a call. The call writes no value that
+		// the statement reads, thus it forces no temporary of its own.
+		return o.operation(x, false, func() { x.X = o.expr(x.X) })
 	case *ir.Binary:
 		if x.Op != token.LAND && x.Op != token.LOR {
 			break
@@ -245,7 +254,7 @@ func (o *orderer) expr(x ir.Expr) ir.Expr {
 		// variable. The right side runs only for 1 value of the left side,
 		// thus it keeps its place inside the operator. Dart holds the same
 		// short circuit.
-		return o.operation(x, func() { x.X = o.expr(x.X) })
+		return o.operation(x, true, func() { x.X = o.expr(x.X) })
 	}
 	o.push()
 	o.children(x)
@@ -258,9 +267,16 @@ func (o *orderer) expr(x ir.Expr) ir.Expr {
 // operation walks 1 operation that the order pass can write into a temporary
 // variable. The result of such an operation is a fresh value, thus it marks no
 // read of the operation that holds it.
-func (o *orderer) operation(x ir.Expr, walk func()) ir.Expr {
+//
+// writes reports whether the operation can change a value that another operand
+// reads. Only such an operation forces the statement into the hoisted form. A
+// read of a length or of a capacity changes nothing, thus a statement that
+// holds no writing operation keeps its shape. Each operation still takes a
+// temporary variable when 1 of them forces the form, because a partial hoist
+// would break the left to right order of the calls.
+func (o *orderer) operation(x ir.Expr, writes bool, walk func()) ir.Expr {
 	take := hoistable(x.GoType())
-	if !o.apply && take && o.pend > 0 {
+	if !o.apply && take && writes && o.pend > 0 {
 		o.need = true
 	}
 	o.push()
@@ -272,6 +288,55 @@ func (o *orderer) operation(x ir.Expr, walk func()) ir.Expr {
 	return x
 }
 
+// runtimeConv reports whether gc lowers a conversion to a call of its runtime.
+// `stringtoslicebyte`, `stringtoslicerune`, `slicebytetostring`,
+// `slicerunetostring`, and `intstring` each allocate, thus the order pass of
+// gc writes the result into a temporary variable.
+func runtimeConv(from, to types.Type) bool {
+	if from == nil || to == nil {
+		return false
+	}
+	if isStringType(from) {
+		return isByteSlice(to) || isRuneSlice(to)
+	}
+	if isStringType(to) {
+		return isByteSlice(from) || isRuneSlice(from) || isIntegerType(from)
+	}
+	return false
+}
+
+func isStringType(t types.Type) bool {
+	b, ok := types.Unalias(t).Underlying().(*types.Basic)
+	return ok && b.Info()&types.IsString != 0
+}
+
+func isIntegerType(t types.Type) bool {
+	b, ok := types.Unalias(t).Underlying().(*types.Basic)
+	return ok && b.Info()&types.IsInteger != 0
+}
+
+func isByteSlice(t types.Type) bool { return isSliceOf(t, types.IsUnsigned, 8) }
+
+func isRuneSlice(t types.Type) bool { return isSliceOf(t, types.IsInteger, 32) }
+
+func isSliceOf(t types.Type, info types.BasicInfo, bits int) bool {
+	sl, ok := types.Unalias(t).Underlying().(*types.Slice)
+	if !ok {
+		return false
+	}
+	b, ok := types.Unalias(sl.Elem()).Underlying().(*types.Basic)
+	if !ok || b.Info()&info == 0 {
+		return false
+	}
+	switch b.Kind() {
+	case types.Uint8:
+		return bits == 8
+	case types.Int32:
+		return bits == 32
+	}
+	return false
+}
+
 // orderedBuiltin lists each builtin that gc writes into a temporary variable
 // exactly as it writes a call. `cmd/compile/internal/walk/order.go` holds the
 // list. Each other builtin either gives no value or belongs to the stage.
@@ -279,6 +344,14 @@ var orderedBuiltin = map[string]bool{
 	"append": true, "cap": true, "complex": true, "copy": true,
 	"imag": true, "len": true, "make": true, "max": true,
 	"min": true, "new": true, "real": true, "recover": true,
+}
+
+// writingBuiltin lists each builtin of the set above that can change a value
+// which another operand of the same statement reads. `append` can write the
+// array behind a second slice, `copy` writes its destination, and `recover`
+// clears the panic of the goroutine. Each other builtin reads only.
+var writingBuiltin = map[string]bool{
+	"append": true, "copy": true, "recover": true,
 }
 
 // children walks the operands of each other node, in the order of the

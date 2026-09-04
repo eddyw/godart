@@ -470,7 +470,7 @@ func blocksStmt(s ir.Stmt) bool {
 	case *ir.If:
 		return blocksExpr(s.Cond) || blocksList(s.Then.List) || blocksStmt(s.Else)
 	case *ir.For:
-		return blocksStmt(s.Init) || blocksExpr(s.Cond) ||
+		return blocksStmt(s.Init) || blocksList(s.CondPre) || blocksExpr(s.Cond) ||
 			blocksStmt(s.Post) || blocksList(s.Body.List)
 	case *ir.Return:
 		for _, v := range s.Values {
@@ -488,6 +488,11 @@ func blocksStmt(s ir.Stmt) bool {
 		for _, c := range s.Cases {
 			for _, v := range c.Values {
 				if blocksExpr(v) {
+					return true
+				}
+			}
+			for _, pre := range c.Pre {
+				if blocksList(pre) {
 					return true
 				}
 			}

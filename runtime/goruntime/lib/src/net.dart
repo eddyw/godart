@@ -540,6 +540,71 @@ String _statusLine(Uint8List b) {
   );
 }
 
+/// The number of a socket option of the system.
+///
+/// The 2 platform families give 2 numbers for 1 option, thus the table names
+/// each 1. macOS, iOS, and Windows each keep the numbers of BSD, and Linux and
+/// Android each keep the numbers of Linux. A platform outside the table gives
+/// an error, because a wrong number writes another option with no report.
+int? _sockOptionNumber(String name) {
+  final bool bsd = Platform.isMacOS || Platform.isIOS || Platform.isWindows;
+  final bool linux = Platform.isLinux || Platform.isAndroid;
+  if (!bsd && !linux) return null;
+  switch (name) {
+    case 'keepalive':
+      return bsd ? 0x0008 : 9;
+    case 'rcvbuf':
+      return bsd ? 0x1002 : 8;
+    case 'sndbuf':
+      return bsd ? 0x1001 : 7;
+  }
+  return null;
+}
+
+GoString _optionCause(String name) => GoString.fromString(
+  'setsockopt: the option $name holds no number on ${Platform.operatingSystem}',
+);
+
+/// Writes a socket option of a connection. The name holds `nodelay`,
+/// `keepalive`, `rcvbuf`, or `sndbuf`. A flag reads the value 0 or 1.
+GoString $connOption(int handle, GoString name, int value) {
+  final _Conn? c = _at(handle);
+  if (c == null) return _closed();
+  final String key = name.toDartString();
+  try {
+    if (key == 'nodelay') {
+      c.socket.setOption(SocketOption.tcpNoDelay, value != 0);
+      return _empty;
+    }
+    final int? option = _sockOptionNumber(key);
+    if (option == null) return _optionCause(key);
+    c.socket.setRawOption(
+      RawSocketOption.fromInt(RawSocketOption.levelSocket, option, value),
+    );
+    return _empty;
+  } on Object catch (cause) {
+    return GoString.fromString('setsockopt: $cause');
+  }
+}
+
+/// Writes a socket option of a datagram socket. The name holds `rcvbuf` or
+/// `sndbuf`.
+GoString $packetOption(int handle, GoString name, int value) {
+  final _Packet? p = _packetAt(handle);
+  if (p == null) return _closed();
+  final String key = name.toDartString();
+  final int? option = _sockOptionNumber(key);
+  if (option == null) return _optionCause(key);
+  try {
+    p.socket.setRawOption(
+      RawSocketOption.fromInt(RawSocketOption.levelSocket, option, value),
+    );
+    return _empty;
+  } on Object catch (cause) {
+    return GoString.fromString('setsockopt: $cause');
+  }
+}
+
 GoString $connClose(int handle) {
   final _Conn? c = _at(handle);
   if (c == null) return _closed();
