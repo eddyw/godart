@@ -30,7 +30,7 @@ var goTestSkips = map[string]string{
 	"fixedbugs/issue5856":   "the panic path of Go holds a frame of gopanic, and the frame chain of the runtime holds none",
 	"fixedbugs/issue29312":  "the composite literal nests 253 levels, and the Dart front end rejects a file with that many nested expressions",
 	"fixedbugs/issue19182":  "a busy loop without a block operation never yields, and the other goroutine never runs",
-	"typeparam/nested":      "the file compares the reflect.Type identity of a local generic type of a generic function, and a descriptor of gart keys on the outer type argument alone",
+	"typeparam/nested":      "a local type of a generic function now holds the type argument of that function in its own name, and the name of such a type inside a type argument of another instance still holds none, thus 2 instances that differ only there compare equal",
 	"winbatch":              "the file reads a file of the tree of Go under runtime.GOROOT, and gart gives an empty text there",
 	"nosplit":               "the file picks the frame size of the test from runtime.GOARCH, and gart reports dart64",
 	"linkobj":               "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names",

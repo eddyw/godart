@@ -411,8 +411,9 @@ func (e *emitter) instDescVar(named *types.Named, pointer bool) string {
 		t = types.NewPointer(named)
 	}
 	// A description that reads a type parameter reads the dictionary of the
-	// enclosing function, thus it cannot stand at package level.
-	if holdsTypeParam(t) {
+	// enclosing function, thus it cannot stand at package level. The name of a
+	// local type of a generic function reads the same dictionary.
+	if holdsTypeParam(t) || len(outerTypeParams(named)) > 0 {
 		return e.instanceDesc(named, pointer)
 	}
 	sum := sha256.Sum256([]byte(e.typeName(t)))

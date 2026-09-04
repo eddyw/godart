@@ -54,6 +54,12 @@ func (e *emitter) scopeDescriptors(scope *types.Scope) {
 		if named.TypeParams() != nil && named.TypeParams().Len() > 0 {
 			continue
 		}
+		// The name of a local type of a generic function reads the dictionary
+		// of that function, thus the description stands at the point of the
+		// use.
+		if len(outerTypeParams(named)) > 0 {
+			continue
+		}
 		e.descriptor(named, false)
 		e.descriptor(named, true)
 	}
@@ -759,6 +765,9 @@ func (e *emitter) descriptorOf(t types.Type) string {
 			if isInstance(named) {
 				return e.instDescVar(named, true)
 			}
+			if len(outerTypeParams(named)) > 0 {
+				return e.instanceDesc(named, true)
+			}
 			// The package holds no variable for an interface type and for a
 			// predeclared type, thus a pointer to one takes its own
 			// description.
@@ -774,6 +783,9 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		if !isInterfaceType(named) && named.Obj().Pkg() != nil {
 			if isInstance(named) {
 				return e.instDescVar(named, false)
+			}
+			if len(outerTypeParams(named)) > 0 {
+				return e.instanceDesc(named, false)
 			}
 			if named.TypeParams() == nil || named.TypeParams().Len() == 0 {
 				return e.qualify(named.Obj(), e.descName(named.Obj(), false))
@@ -1087,10 +1099,24 @@ func stripNames(t types.Type) types.Type {
 		return types.NewMap(stripNames(u.Key()), stripNames(u.Elem()))
 	case *types.Chan:
 		return types.NewChan(u.Dir(), stripNames(u.Elem()))
+	case *types.Named:
+		// An alias inside a type argument also names its target. `List[any]`
+		// and `List[interface{}]` name 1 Go type, thus the 2 texts must agree.
+		if args := u.TypeArgs(); args != nil && args.Len() > 0 {
+			list := make([]types.Type, args.Len())
+			same := true
+			for i := range list {
+				list[i] = stripNames(args.At(i))
+				same = same && list[i] == args.At(i)
+			}
+			if !same {
+				if inst, err := types.Instantiate(nil, u.Origin(), list, false); err == nil {
+					return inst
+				}
+			}
+		}
+		return u
 	}
-	// An alias and its target name 1 Go type. `any` inside `map[string]any`
-	// must give the text of `interface{}`, or an assertion between the 2
-	// spellings fails.
 	return types.Unalias(t)
 }
 
@@ -1120,12 +1146,72 @@ func (e *emitter) typeNameText(t types.Type) string {
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
 		return e.dictOf(tp) + ".desc.name"
 	}
+	var text string
 	if !typeset.HoldsParam(t) {
-		return "'" + dartText(e.typeName(t)) + "'"
+		text = "'" + dartText(e.typeName(t)) + "'"
+	} else {
+		var reads []string
+		sub := e.substParams(t, &reads)
+		text = interpolate(types.TypeString(stripNames(sub), nil), reads)
 	}
-	var reads []string
-	sub := e.substParams(t, &reads)
-	return interpolate(types.TypeString(stripNames(sub), nil), reads)
+	return spliceOuter(text, e.outerReads(t, ".desc.name"))
+}
+
+// outerReads gives the run time read of the description of each type argument
+// of the generic function that declares a local type.
+//
+// Go names such a type after the arguments of the function and after its own
+// arguments. `type T[B any]` inside `func F[A any]` gives `main.T[A;B]`, and a
+// local type with no parameter of its own gives `main.S[A]`. 1 Dart function
+// serves each instance of F, thus the name reads the dictionary.
+func (e *emitter) outerReads(t types.Type, field string) []string {
+	params := outerTypeParams(namedOf(t))
+	if len(params) == 0 {
+		return nil
+	}
+	out := make([]string, len(params))
+	for i, tp := range params {
+		out[i] = "${" + e.dictOf(tp) + field + "}"
+	}
+	return out
+}
+
+// outerTypeParams gives the type parameters of the generic function that
+// declares a local type, in the order of the declaration.
+func outerTypeParams(named *types.Named) []*types.TypeParam {
+	if named == nil || !isLocalType(named.Obj()) {
+		return nil
+	}
+	var out []*types.TypeParam
+	for sc := named.Obj().Parent(); sc != nil && sc.Parent() != nil; sc = sc.Parent() {
+		for _, n := range sc.Names() {
+			tn, _ := sc.Lookup(n).(*types.TypeName)
+			if tn == nil {
+				continue
+			}
+			if tp, ok := types.Unalias(tn.Type()).(*types.TypeParam); ok {
+				out = append(out, tp)
+			}
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Index() < out[j].Index() })
+	return out
+}
+
+// spliceOuter puts the type arguments of the enclosing generic function into
+// the Dart text of a type name.
+func spliceOuter(text string, outer []string) string {
+	if len(outer) == 0 {
+		return text
+	}
+	list := strings.Join(outer, ",")
+	if i := strings.Index(text, "["); i >= 0 {
+		return text[:i+1] + list + ";" + text[i+1:]
+	}
+	if i := strings.Index(text, "\u00b7"); i >= 0 {
+		return text[:i] + "[" + list + "]" + text[i:]
+	}
+	return text[:len(text)-1] + "[" + list + "]'"
 }
 
 // interpolate writes the Dart string whose marker parts read a name at run
@@ -1181,15 +1267,18 @@ func (e *emitter) methodKeyListText(t types.Type) string {
 // reflectTextExpr writes the Dart expression of the reflect text of a type.
 // A type parameter reads the text of its dictionary at run time.
 func (e *emitter) reflectTextExpr(t types.Type) string {
+	var text string
 	if !typeset.HoldsParam(t) {
-		return "'" + dartText(reflectText(types.Unalias(t))) + "'"
+		text = "'" + dartText(reflectText(types.Unalias(t))) + "'"
+	} else {
+		var reads []string
+		sub := e.substParams(t, &reads)
+		for i := range reads {
+			reads[i] = strings.Replace(reads[i], ".desc.name", ".desc.display", 1)
+		}
+		text = interpolate(reflectText(types.Unalias(sub)), reads)
 	}
-	var reads []string
-	sub := e.substParams(t, &reads)
-	for i := range reads {
-		reads[i] = strings.Replace(reads[i], ".desc.name", ".desc.display", 1)
-	}
-	return interpolate(reflectText(types.Unalias(sub)), reads)
+	return spliceOuter(text, e.outerReads(t, ".desc.display"))
 }
 
 // substParams replaces each type parameter with a marker type, thus the name

@@ -329,7 +329,9 @@ String? _viaMethod(Object? v, TypeDesc type, String letter) {
   // The key of a method table holds the name and the signature.
   for (final name in const <String>['Error()string', 'String()string']) {
     final Function? m = type.methods[name];
-    if (m == null) continue;
+    // The table of an interface type holds the key of each method, and no call
+    // reaches the value. The description of the dynamic type holds the method.
+    if (m == null || identical(m, $ifaceMethod)) continue;
     final Object? text = Function.apply(m, <Object?>[v]);
     if (text is! GoString) continue;
     return letter == 'q' ? _quote(text) : text.toDartString();
