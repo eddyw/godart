@@ -762,7 +762,7 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 			joinTypeArgs(typeArgs, targs) +
 			"(" + strings.Join(all, ", ") + ")"
 	}
-	return fmt.Sprintf("%s.%s%s(%s)", e.deref(m.Recv), methodName(m.Obj), targs, list)
+	return fmt.Sprintf("%s.%s%s(%s)", e.deref(m.Recv), e.memberName(m.Obj), targs, list)
 }
 
 // topLevelRecv writes the receiver of a call to a method whose body stands in a
@@ -799,9 +799,9 @@ func (e *emitter) methodValue(m *ir.Method) string {
 	}
 	sig, _ := m.Obj.Type().(*types.Signature)
 	if sig != nil && sig.Recv() != nil && !isPointerType(sig.Recv().Type()) {
-		return fmt.Sprintf("%s.$copy().%s", e.deref(m.Recv), methodName(m.Obj))
+		return fmt.Sprintf("%s.$copy().%s", e.deref(m.Recv), e.memberName(m.Obj))
 	}
-	return fmt.Sprintf("%s.%s", e.deref(m.Recv), methodName(m.Obj))
+	return fmt.Sprintf("%s.%s", e.deref(m.Recv), e.memberName(m.Obj))
 }
 
 // genericMethodValue reads an instance of a generic method without a call. A
@@ -830,7 +830,7 @@ func (e *emitter) genericMethodValue(m *ir.Method) string {
 		rt = p.Elem()
 	}
 	all := append(append([]string{}, dicts...), names...)
-	call := "$recv." + methodName(m.Obj) + targs + "(" + strings.Join(all, ", ") + ")"
+	call := "$recv." + e.memberName(m.Obj) + targs + "(" + strings.Join(all, ", ") + ")"
 	if cast := e.methodValueCast(m); cast != "" {
 		call = "(" + call + " as " + cast + ")"
 	}
@@ -985,7 +985,7 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	if msig != nil && msig.Recv() != nil && !isPointerType(msig.Recv().Type()) {
 		recv += ".$copy()"
 	}
-	return closure(fmt.Sprintf("%s.%s%s(%s)", recv, methodName(x.Obj), mtargs,
+	return closure(fmt.Sprintf("%s.%s%s(%s)", recv, e.memberName(x.Obj), mtargs,
 		strings.Join(append(append([]string{}, mdicts...), names[1:]...), ", ")))
 }
 
@@ -1498,8 +1498,8 @@ func (e *emitter) conv(x *ir.Conv) string {
 		return e.box(x.X, from)
 	}
 	if types.Identical(types.Unalias(from).Underlying(), types.Unalias(to).Underlying()) {
-		if isStructType(to) {
-			e.fail("a conversion between 2 struct types is not supported yet")
+		if isStructType(to) && !e.sameClass(from, to) {
+			e.fail("the 2 struct types %s and %s hold 2 Dart classes", from, to)
 			return "null"
 		}
 		return text
@@ -1508,13 +1508,17 @@ func (e *emitter) conv(x *ir.Conv) string {
 	// underlying type. The Dart form of such a pointer is a box or a list, and
 	// the 2 forms are equal, thus the conversion performs no operation.
 	//
-	// A pointer to a struct holds the class of the struct, and 2 named struct
-	// types give 2 classes. Such a conversion stays outside the subset.
+	// A pointer to a struct holds the class of the struct. `type outer inner`
+	// gives the 2 names 1 class, thus the conversion performs no operation
+	// there too. Read mergeGroup.
 	if pf, ok := types.Unalias(from).Underlying().(*types.Pointer); ok {
 		if pt, ok := types.Unalias(to).Underlying().(*types.Pointer); ok {
-			if !isStructType(pt.Elem()) &&
-				types.Identical(types.Unalias(pf.Elem()).Underlying(),
-					types.Unalias(pt.Elem()).Underlying()) {
+			if isStructType(pt.Elem()) {
+				if e.sameClass(pf.Elem(), pt.Elem()) {
+					return text
+				}
+			} else if types.Identical(types.Unalias(pf.Elem()).Underlying(),
+				types.Unalias(pt.Elem()).Underlying()) {
 				return text
 			}
 		}
@@ -1539,4 +1543,13 @@ func isRuneSlice(t types.Type) bool {
 
 func methodName(fn *types.Func) string {
 	return name.Package(fn.Name())
+}
+
+// sameClass reports whether 2 named struct types share 1 Dart class.
+func (e *emitter) sameClass(a, b types.Type) bool {
+	na, nb := namedOf(a), namedOf(b)
+	if na == nil || nb == nil {
+		return false
+	}
+	return e.mergeRep(na.Obj()) == e.mergeRep(nb.Obj())
 }

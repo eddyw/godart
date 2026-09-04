@@ -520,7 +520,117 @@ func typedList(t types.Type) string {
 }
 
 func (e *emitter) className(obj *types.TypeName) string {
-	return e.qualify(obj, name.Type(obj.Name()))
+	rep := e.mergeRep(obj)
+	return e.qualify(rep, name.Type(rep.Name()))
+}
+
+// mergeGroup gives each named struct type of 1 package that holds the struct
+// object of obj. A group of 1 member gives no result.
+//
+// `type outer inner` gives outer the underlying type of inner, and go/types
+// holds 1 struct object for the 2 names. `(*outer)(p)` then names the value
+// that p names, and a write through the result reaches that value. The 2 types
+// thus need 1 Dart class. A struct that a second declaration spells again
+// holds a struct object of its own, and it keeps its own class.
+//
+// A group holds 1 package. The class of a group carries the methods of each
+// member, and a group of 2 packages would put the methods of 1 package in the
+// library of the other one.
+//
+// A generic type stays out. Each instance of such a type holds a struct object
+// of its own.
+func (e *emitter) mergeGroup(obj *types.TypeName) []*types.TypeName {
+	pkg := obj.Pkg()
+	if pkg == nil {
+		return nil
+	}
+	byStruct, ok := e.merges[pkg]
+	if !ok {
+		byStruct = map[*types.Struct][]*types.TypeName{}
+		scope := pkg.Scope()
+		for _, n := range scope.Names() {
+			if st, tn := packageStruct(scope, n); st != nil {
+				byStruct[st] = append(byStruct[st], tn)
+			}
+		}
+		for st, group := range byStruct {
+			if len(group) < 2 {
+				delete(byStruct, st)
+			}
+		}
+		e.merges[pkg] = byStruct
+	}
+	named, _ := types.Unalias(obj.Type()).(*types.Named)
+	if named == nil {
+		return nil
+	}
+	st, _ := named.Underlying().(*types.Struct)
+	if st == nil {
+		return nil
+	}
+	return byStruct[st]
+}
+
+// packageStruct gives the struct object of a named struct type of a scope.
+func packageStruct(scope *types.Scope, n string) (*types.Struct, *types.TypeName) {
+	tn, _ := scope.Lookup(n).(*types.TypeName)
+	if tn == nil || tn.IsAlias() {
+		return nil, nil
+	}
+	named, _ := types.Unalias(tn.Type()).(*types.Named)
+	if named == nil || named.TypeParams().Len() > 0 {
+		return nil, nil
+	}
+	st, _ := named.Underlying().(*types.Struct)
+	if st == nil {
+		return nil, nil
+	}
+	return st, tn
+}
+
+// mergeRep gives the type name that owns the Dart class of a group. The scope
+// gives each name in order, thus the first member is stable.
+func (e *emitter) mergeRep(obj *types.TypeName) *types.TypeName {
+	group := e.mergeGroup(obj)
+	if len(group) == 0 {
+		return obj
+	}
+	return group[0]
+}
+
+// memberName gives the name of a method inside its Dart class. A merged class
+// holds the methods of each member of the group, thus 2 members that declare 1
+// method name need 2 names.
+func (e *emitter) memberName(fn *types.Func) string {
+	base := name.Package(fn.Name())
+	sig, _ := fn.Type().(*types.Signature)
+	if sig == nil || sig.Recv() == nil {
+		return base
+	}
+	obj := receiverTypeName(sig.Recv().Type())
+	if obj == nil {
+		return base
+	}
+	for _, other := range e.mergeGroup(obj) {
+		if other != obj && declaresMethod(other, fn.Name()) {
+			return base + "$" + name.Type(obj.Name())
+		}
+	}
+	return base
+}
+
+// declaresMethod reports whether a named type declares a method of the name.
+func declaresMethod(obj *types.TypeName, method string) bool {
+	named, _ := types.Unalias(obj.Type()).(*types.Named)
+	if named == nil {
+		return false
+	}
+	for i := range named.NumMethods() {
+		if named.Method(i).Name() == method {
+			return true
+		}
+	}
+	return false
 }
 
 // qualify adds the import prefix when the object belongs to another package.

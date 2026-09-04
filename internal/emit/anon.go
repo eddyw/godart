@@ -594,6 +594,7 @@ func (e *emitter) sharedFiles() map[string]string {
 // thus each package that holds the shape writes equal bytes.
 func (e *emitter) anonFile(class string, st *types.Struct) (string, map[string]*types.Struct) {
 	inner := &emitter{
+		merges:      e.merges,
 		prefixes:    map[string]string{},
 		initNames:   map[*ir.Func]string{},
 		anon:        map[string]*types.Struct{},

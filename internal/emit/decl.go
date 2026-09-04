@@ -15,8 +15,20 @@ import (
 // fields, the copy operations that give the struct value semantics, and the
 // methods.
 func (e *emitter) class(obj *types.TypeName, named *types.Named, st *types.Struct) {
+	group := e.mergeGroup(obj)
+	if len(group) > 0 && group[0] != obj {
+		// The class of the group already holds the fields and each method.
+		return
+	}
+	methods := e.methods[obj]
+	if len(group) > 0 {
+		methods = nil
+		for _, member := range group {
+			methods = append(methods, e.methods[member]...)
+		}
+	}
 	e.structClass(name.Type(obj.Name()), typeParamsOf(named.TypeParams()), st,
-		structComparable(named, st), e.methods[obj])
+		structComparable(named, st), methods)
 }
 
 // structComparable reports whether the class of a named struct type needs the
@@ -276,14 +288,14 @@ func (e *emitter) method(f *ir.Func) {
 	if p := e.frameParam(f.Machine, all); p != "" {
 		params = append(params, p)
 	}
-	e.line("%s %s%s(%s) {", e.results(f), name.Package(f.Name),
+	e.line("%s %s%s(%s) {", e.results(f), e.methodMember(f),
 		e.typeParamDecl(own), strings.Join(params, ", "))
 	e.receiver(f)
 	f.TypeParams = all
 	e.body(f)
 	f.TypeParams = own
 	e.line("}")
-	e.frameOfWith(f, all, fmt.Sprintf("%s.%s%s(%s)", frameRecv(f.Recv), name.Package(f.Name),
+	e.frameOfWith(f, all, fmt.Sprintf("%s.%s%s(%s)", frameRecv(f.Recv), e.methodMember(f),
 		typeArgNames(own),
 		strings.Join(e.frameArgs(own, f.Params), ", ")))
 }
@@ -308,7 +320,7 @@ func (e *emitter) methodForward(f *ir.Func) {
 	for _, p := range f.Params {
 		args = append(args, paramName(p))
 	}
-	e.line("%s %s%s(%s) => %s%s(%s);", e.results(f), name.Package(f.Name),
+	e.line("%s %s%s(%s) => %s%s(%s);", e.results(f), e.methodMember(f),
 		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "),
 		methodFuncName(obj.Name(), f.Name),
 		typeArgNames(append(append([]*types.TypeParam{}, recv...), f.TypeParams...)),
@@ -712,4 +724,12 @@ func varRead(v *ir.Var) string {
 		return v.Name + ".v"
 	}
 	return v.Name
+}
+
+// methodMember gives the name of a method inside the class of its receiver.
+func (e *emitter) methodMember(f *ir.Func) string {
+	if f.Obj != nil {
+		return e.memberName(f.Obj)
+	}
+	return name.Package(f.Name)
 }

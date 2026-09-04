@@ -13,6 +13,7 @@ import (
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/overlay"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // Error reports 1 rejected construct.
@@ -105,8 +106,75 @@ func (v *verifier) visit(n ast.Node) bool {
 		v.checkCall(n)
 	case *ast.SelectorExpr:
 		v.checkEmbedNew(n)
+	case *ast.Ident:
+		v.checkStructArg(n)
 	}
 	return true
+}
+
+// checkStructArg rejects an instance whose type parameter holds an unnamed
+// struct core and whose argument is a named struct type.
+//
+// The Dart type of such a parameter is the class of the shape, and a named
+// struct type holds a class of its own. The dictionary of the instance thus
+// carries 2 Dart types for 1 Go type, and the Dart front end rejects the call.
+//
+// No package of the standard library declares such a parameter.
+func (v *verifier) checkStructArg(id *ast.Ident) {
+	inst, ok := v.info.Instances[id]
+	if !ok || inst.TypeArgs == nil {
+		return
+	}
+	params := originParams(v.info.Uses[id])
+	if params == nil || params.Len() != inst.TypeArgs.Len() {
+		return
+	}
+	for i := range inst.TypeArgs.Len() {
+		arg := inst.TypeArgs.At(i)
+		if _, named := types.Unalias(arg).(*types.Named); !named {
+			continue
+		}
+		if _, ok := types.Unalias(arg).Underlying().(*types.Struct); !ok {
+			continue
+		}
+		if _, ok := typeset.Core(params.At(i)).(*types.Struct); !ok {
+			continue
+		}
+		if _, unnamed := types.Unalias(coreTerm(params.At(i))).(*types.Named); unnamed {
+			continue
+		}
+		v.reject(id.Pos(),
+			"the Dart type of such a parameter is the class of the shape, and a named struct type holds a class of its own",
+			"the type argument %s of the parameter %s names a struct type, and the constraint holds an unnamed struct type",
+			arg, params.At(i).Obj().Name())
+		return
+	}
+}
+
+// originParams gives the type parameters of the generic declaration of an
+// object.
+func originParams(obj types.Object) *types.TypeParamList {
+	switch obj := obj.(type) {
+	case *types.Func:
+		if sig, ok := obj.Type().(*types.Signature); ok {
+			return sig.TypeParams()
+		}
+	case *types.TypeName:
+		if named, ok := types.Unalias(obj.Type()).(*types.Named); ok {
+			return named.TypeParams()
+		}
+	}
+	return nil
+}
+
+// coreTerm gives the single term of the type set of a parameter. A constraint
+// with 1 term names the type that the argument must hold.
+func coreTerm(tp *types.TypeParam) types.Type {
+	terms, ok := typeset.Terms(tp.Constraint())
+	if !ok || len(terms) != 1 {
+		return nil
+	}
+	return terms[0]
 }
 
 // checkEmbedNew rejects a read of the constructor of the package embed.
@@ -278,13 +346,17 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 	}
 }
 
-// checkStructConv rejects a conversion between 2 struct types that are not
-// identical.
+// checkStructConv rejects a conversion between 2 struct types that hold 2 Dart
+// classes.
 //
-// The Dart class of a struct holds an unexported field as a private member,
-// and a private member reaches no other Dart library. Thus no expression can
-// build the target from the source. Stage 5 rejected such a conversion, and it
-// gave no source position.
+// `type outer inner` gives the 2 names 1 struct object of go/types, and the
+// emitter gives them 1 Dart class. A conversion between such types thus needs
+// no operation.
+//
+// A struct that a second declaration spells again holds a struct object of its
+// own. The Dart class of it holds an unexported field as a private member, and
+// a private member reaches no other Dart library. Thus no expression builds the
+// target from the source.
 func (v *verifier) checkStructConv(call *ast.CallExpr) {
 	if len(call.Args) != 1 || call.Ellipsis.IsValid() {
 		return
@@ -298,11 +370,11 @@ func (v *verifier) checkStructConv(call *ast.CallExpr) {
 	if to == nil || from == nil || !isStruct(to) || !isStruct(from) {
 		return
 	}
-	if types.Identical(to, from) {
+	if types.Identical(to, from) || oneClass(to, from) {
 		return
 	}
 	v.reject(call.Pos(),
-		"the Dart class of a struct holds an unexported field as a private member",
+		"the 2 types hold 2 struct objects, thus the emitter gives them 2 Dart classes",
 		"a conversion between the 2 struct types %s and %s is outside the subset",
 		from, to)
 }
@@ -336,4 +408,24 @@ func unparen(e ast.Expr) ast.Expr {
 		}
 		e = p.X
 	}
+}
+
+// oneClass reports whether 2 named struct types hold 1 struct object of 1
+// package. The emitter gives such types 1 Dart class. Read mergeGroup of the
+// package emit.
+func oneClass(a, b types.Type) bool {
+	na, _ := types.Unalias(a).(*types.Named)
+	nb, _ := types.Unalias(b).(*types.Named)
+	if na == nil || nb == nil {
+		return false
+	}
+	if na.TypeParams().Len() > 0 || nb.TypeParams().Len() > 0 {
+		return false
+	}
+	if na.Obj().Pkg() == nil || na.Obj().Pkg() != nb.Obj().Pkg() {
+		return false
+	}
+	sa, _ := na.Underlying().(*types.Struct)
+	sb, _ := nb.Underlying().(*types.Struct)
+	return sa != nil && sa == sb
 }

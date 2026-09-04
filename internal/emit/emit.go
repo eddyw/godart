@@ -84,6 +84,7 @@ func newEmitter(p *ir.Package, tpkg *types.Package, cfg Config) *emitter {
 	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: cfg.Base,
 		initNames: map[*ir.Func]string{},
 		anon:      map[string]*types.Struct{}, localAnon: map[string]*types.Struct{},
+		merges:   map[*types.Package]map[*types.Struct][]*types.TypeName{},
 		shadowed: map[string]map[string]bool{},
 		nilChans: map[string]types.Type{}, instDescs: map[string]types.Type{}, cfg: cfg,
 		anonParams:  map[string][]*types.TypeParam{},
@@ -159,6 +160,9 @@ type emitter struct {
 
 	// methods groups each method by the name of its receiver type.
 	methods map[*types.TypeName][]*ir.Func
+	// merges groups the named struct types of a package that hold 1 struct
+	// object. Read mergeGroup.
+	merges map[*types.Package]map[*types.Struct][]*types.TypeName
 	// inClass marks the methods that a class holds, thus a part file skips
 	// them at top level.
 	inClass map[*ir.Func]bool

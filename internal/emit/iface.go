@@ -626,7 +626,7 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 			recv = nilRead(recv, false)
 		}
 	}
-	call := fmt.Sprintf("%s.%s(%s)", recv, methodName(fn), strings.Join(args, ", "))
+	call := fmt.Sprintf("%s.%s(%s)", recv, e.memberName(fn), strings.Join(args, ", "))
 	switch {
 	case fn.Pkg() != nil && fn.Pkg() != e.pkg && !fn.Exported():
 		// A Dart library holds each name that starts with an underscore, thus

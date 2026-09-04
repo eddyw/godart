@@ -9,6 +9,8 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // Package is 1 Go package. It becomes 1 Dart library.
@@ -721,8 +723,26 @@ func (t *MapIterType) String() string         { return "map iterator" }
 // A builtin is not fresh. iterkey and iterval each read the object that the
 // map holds.
 func Fresh(e Expr) bool {
-	switch e.(type) {
-	case *Composite, *Call, *Copy, *Zero, *Conv:
+	switch x := e.(type) {
+	case *Composite, *Call, *Copy, *Zero:
+		return true
+	case *Conv:
+		// A conversion between 2 struct types or between 2 array types
+		// performs no operation, thus the result names the value of the
+		// operand. Each other conversion builds a value of its own.
+		return !valueShape(x.Type) || !valueShape(x.From)
+	}
+	return false
+}
+
+// valueShape reports whether Go gives a type the semantics of a value. Such a
+// type needs a fresh copy at each copy point.
+func valueShape(t types.Type) bool {
+	if t == nil {
+		return false
+	}
+	switch typeset.Core(t).(type) {
+	case *types.Struct, *types.Array:
 		return true
 	}
 	return false

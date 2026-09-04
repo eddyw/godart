@@ -441,6 +441,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	// struct type and the name of a shadowed function must reach the library
 	// file of the package.
 	inner := &emitter{pkg: e.pkg, prefixes: e.prefixes, base: e.base,
+		merges:  e.merges,
 		methods: e.methods, inClass: e.inClass, initNames: e.initNames,
 		breakables: e.breakables, labelSeq: e.labelSeq,
 		anon: e.anon, localAnon: e.localAnon, shadowed: e.shadowed,
