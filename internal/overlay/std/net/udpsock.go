@@ -15,8 +15,7 @@ import (
 // descriptor and no socket option, thus `File`, `SyscallConn`,
 // `SetReadBuffer`, and `SetWriteBuffer` stay out. It reads no control
 // message, thus `ReadMsgUDP`, `WriteMsgUDP`, `ReadMsgUDPAddrPort`, and
-// `WriteMsgUDPAddrPort` stay out too. `ListenMulticastUDP` needs a join of a
-// group on 1 named interface, and Dart holds no such call.
+// `WriteMsgUDPAddrPort` stay out too.
 //
 // Go embeds the unexported type `conn` in `UDPConn`. The overlay names each
 // method again. A promoted method of an unexported type reaches no other
@@ -217,6 +216,41 @@ func ListenUDP(network string, laddr *UDPAddr) (*UDPConn, error) {
 		return nil, errors.New("listen " + network + ": " + cause)
 	}
 	return newUDPConn(&packet{handle: handle, local: udpAddrOf(host, taken)}), nil
+}
+
+// ListenMulticastUDP opens a datagram socket that reads the datagrams of a
+// multicast group. The network is udp, udp4, or udp6.
+//
+// An ifi of nil joins the group on each interface of the system. Go marks the
+// function as older than the direct use of ListenPacket with a join, and it
+// keeps the loopback of the group open.
+func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPConn, error) {
+	switch network {
+	case "udp", "udp4", "udp6":
+	default:
+		return nil, UnknownNetworkError(network)
+	}
+	if gaddr == nil || len(gaddr.IP) == 0 {
+		return nil, errors.New("listen " + network + ": missing address")
+	}
+	// The socket takes the port of the group and shares it, because each
+	// member of a group reads the same port.
+	handle, taken, cause := dart.ListenMulticastUDP("0.0.0.0", gaddr.Port)
+	if cause != "" {
+		return nil, errors.New("listen " + network + ": " + cause)
+	}
+	name := ""
+	if ifi != nil {
+		name = ifi.Name
+	}
+	if cause := dart.JoinMulticast(handle, gaddr.IP.String(), name); cause != "" {
+		dart.PacketClose(handle)
+		return nil, errors.New("listen " + network + ": " + cause)
+	}
+	return newUDPConn(&packet{
+		handle: handle,
+		local:  udpAddrOf("0.0.0.0", taken),
+	}), nil
 }
 
 // AddrPort gives the address in the form of net/netip. An address with no IP

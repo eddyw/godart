@@ -142,6 +142,9 @@ type Transport struct {
 	// running holds the connection of each request that stands open.
 	// CancelRequest reads it.
 	running map[*Request]*persistConn
+	// watch holds the channel that ends the watch of the Cancel channel of
+	// each request that names one.
+	watch map[*Request]chan struct{}
 }
 
 // DefaultTransport is the transport of DefaultClient.
@@ -267,9 +270,17 @@ func (t *Transport) CancelRequest(req *Request) {
 
 // track writes the connection of a request that stands open, and a nil
 // connection drops the entry.
+//
+// A request that names a Cancel channel takes a watch here. The entry stands up
+// to the close of the body of the answer, thus the watch covers the whole
+// request. The close of the entry ends the watch.
 func (t *Transport) track(req *Request, pc *persistConn) {
 	t.mu.Lock()
 	if pc == nil {
+		if done := t.watch[req]; done != nil {
+			close(done)
+			delete(t.watch, req)
+		}
 		delete(t.running, req)
 		t.mu.Unlock()
 		return
@@ -278,7 +289,29 @@ func (t *Transport) track(req *Request, pc *persistConn) {
 		t.running = map[*Request]*persistConn{}
 	}
 	t.running[req] = pc
+	cancel := req.Cancel
+	if cancel == nil && req.origin != nil {
+		cancel = req.origin.Cancel
+	}
+	var done chan struct{}
+	if cancel != nil {
+		done = make(chan struct{})
+		if t.watch == nil {
+			t.watch = map[*Request]chan struct{}{}
+		}
+		t.watch[req] = done
+	}
 	t.mu.Unlock()
+	if done == nil {
+		return
+	}
+	go func() {
+		select {
+		case <-cancel:
+			pc.close()
+		case <-done:
+		}
+	}()
 }
 
 func (t *Transport) readBufferSize() int {

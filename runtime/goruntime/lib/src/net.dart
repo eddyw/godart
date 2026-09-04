@@ -756,8 +756,69 @@ GoString $listenClose(int handle) {
   return (-1, 0, _empty);
 }
 
+/// Joins a multicast group on a datagram socket. An empty interface name reads
+/// each interface of the system, exactly as a nil Interface does in Go.
+///
+/// The call blocks the goroutine, thus the caller becomes an async function.
+GoString $joinMulticast(int handle, GoString group, GoString iface) {
+  final _Packet? p = _packetAt(handle);
+  if (p == null) return _closed();
+  $await(
+    _joinGroup(
+      p,
+      group.toDartString(),
+      iface.toDartString(),
+    ).then((_) => _empty),
+    (Object cause) => _cause(cause),
+  );
+  return _empty;
+}
+
+Future<void> _joinGroup(_Packet p, String group, String name) async {
+  NetworkInterface? found;
+  if (name.isNotEmpty) {
+    for (final NetworkInterface n in await NetworkInterface.list(
+      includeLoopback: true,
+      includeLinkLocal: true,
+    )) {
+      if (n.name == name) {
+        found = n;
+        break;
+      }
+    }
+    if (found == null) {
+      throw 'the interface $name is not present';
+    }
+  }
+  p.socket.joinMulticast(await _address(group), found);
+}
+
 Future<_Packet> _bindUDP(String host, int port) async {
   return _Packet(await RawDatagramSocket.bind(await _address(host), port));
+}
+
+/// Opens a datagram socket that shares its port with another socket of the
+/// system. A multicast listen of Go takes such a socket.
+(int, int, GoString) $listenMulticastUDP(GoString host, int port) {
+  $await(
+    _bindShared(
+      host.toDartString(),
+      port,
+    ).then((_Packet s) => (_packetSlot(s), s.socket.port, _empty)),
+    (Object cause) => (-1, 0, _cause(cause)),
+  );
+  return (-1, 0, _empty);
+}
+
+Future<_Packet> _bindShared(String host, int port) async {
+  return _Packet(
+    await RawDatagramSocket.bind(
+      await _address(host),
+      port,
+      reuseAddress: true,
+      reusePort: true,
+    ),
+  );
 }
 
 /// Opens a datagram socket that holds a remote address, and gives its handle

@@ -1059,6 +1059,24 @@ func ListenUDP(host string, port int) (int, int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ListenMulticastUDP opens a datagram socket that shares its port with another
+// socket of the system. The results are the handle, the port that the system
+// took, and the cause of a failure.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func ListenMulticastUDP(host string, port int) (int, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// JoinMulticast joins a multicast group on a datagram socket. An empty
+// interface name reads each interface of the system. The result is the cause of
+// a failure.
+//
+// The call blocks the goroutine, thus the caller becomes an async function.
+func JoinMulticast(handle int, group, iface string) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // DialUDP opens a datagram socket that holds a remote address. Such a socket
 // drops a datagram of another source. The results are the handle, the local
 // port that the system took, and the cause of a failure.

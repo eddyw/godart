@@ -76,6 +76,14 @@ type Request struct {
 	// The ConnectionState of the overlay holds 3 fields. Read docs/parity.md.
 	TLS *tls.ConnectionState
 
+	// Cancel names a channel whose close ends the request. The transport
+	// closes the connection of the request at that point, exactly as
+	// Transport.CancelRequest does. Go marks the field as deprecated: a
+	// context of the request holds the same power.
+	//
+	// A server request holds no such channel.
+	Cancel <-chan struct{}
+
 	ctx context.Context
 	// deadline holds the end that the Timeout of a client gives.
 	deadline time.Time
