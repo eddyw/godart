@@ -723,7 +723,9 @@ func (e *emitter) composite(x *ir.Composite) string {
 		return fmt.Sprintf("((%s %s) => %s)(%s)",
 			e.dartType(inner.GoType()), x.ResultsVar, body, e.expr(inner))
 	}
-	u := types.Unalias(x.Type).Underlying()
+	// A composite literal can name a type parameter. The constraint of such a
+	// parameter is an interface, and the core type holds the shape.
+	u := typeset.Core(x.Type)
 	parts := make([]string, len(x.Elems))
 	for i, el := range x.Elems {
 		parts[i] = e.expr(el)

@@ -189,6 +189,16 @@ var native = []string{
 	"crypto/internal/fips140/rsa",
 	"crypto/rsa",
 	"crypto/dsa",
+	"crypto/internal/fips140/mlkem",
+	"crypto/mlkem",
+	"crypto/internal/fips140/mldsa",
+	"crypto/mldsa",
+	"vendor/golang.org/x/crypto/internal/alias",
+	"vendor/golang.org/x/crypto/chacha20",
+	"vendor/golang.org/x/crypto/internal/poly1305",
+	"vendor/golang.org/x/crypto/chacha20poly1305",
+	"crypto/hpke",
+	"testing/cryptotest",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

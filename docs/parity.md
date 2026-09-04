@@ -8,14 +8,14 @@ holds. This file holds the behavior.
 
 ## At a glance
 
-The state of 2026-09-03. Each row names the section that holds the detail.
+The state of 2026-09-04. Each row names the section that holds the detail.
 
 | Area | The difference |
 |---|---|
 | A goroutine, a channel, and a `select` | Present. A function that blocks unwinds each frame to the scheduler, and the output holds no `Future` and no `await`. |
 | A parallel run | Out. All Go code runs in 1 isolate. `GOMAXPROCS` and `NumCPU` give 1, and a goroutine with no block operation never gives up control. |
 | The order of a map | The order of the writes. Go gives a random order. |
-| The order of the evaluation of an expression | Equal to gc for each statement. A for clause, the value of a case, and the initializer of a package variable each still read a plain operand in front of a call. |
+| The order of the evaluation of an expression | Equal to gc. No position differs. A for clause, the value of a case, and the initializer of a package variable each took a new form on 2026-09-04. |
 | A `select` with 2 ready cases | The first case in source order. Go takes a random one. |
 | `sync.RWMutex` | A read lock is equal to a write lock. `sync.Map` is a plain map, and it needs no lock. |
 | A pointer | Present, also to a value that is not a struct. `&*p` and a conversion between 2 struct types stay out. |
@@ -27,9 +27,9 @@ The state of 2026-09-03. Each row names the section that holds the detail.
 | The zone of a date before 1901 | The modern offset of the zone. Dart names the zone, and Go reads its own database. |
 | The file access | Synchronous, through `dart:io`. No handle of a directory, and no file descriptor. `Chmod`, `Chown`, and `Chtimes` reach a path, and `Stat` still reports a fixed mode. |
 | The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. `Getuid` and its family give -1. |
-| The network access | TCP, UDP, and a Unix socket. `IP`, `IPMask`, `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, `IPAddr`, `UnixAddr`, `TCPListener`, and `UnixListener` are present. The overlay holds a resolver of the DNS since 2026-09-02, thus the whole `Lookup` family reads. No raw socket, no file descriptor, and no socket option. |
+| The network access | TCP, UDP, and a Unix socket. `IP`, `IPMask`, `IPNet`, `ParseCIDR`, `TCPAddr`, `UDPAddr`, `IPAddr`, `UnixAddr`, `TCPListener`, and `UnixListener` are present. The overlay holds a resolver of the DNS since 2026-09-02, thus the whole `Lookup` family reads. `SetKeepAlive`, `SetReadBuffer`, and `SetWriteBuffer` each reach a real socket option since 2026-09-04. No raw socket, and no file descriptor. |
 | HTTP | 1.1 and 2, for the client and the server. A cookie jar, a proxy, a multipart form, and the file server family (`FileServer`, `FileServerFS`, `FS`, `Dir`) are present. |
-| TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. `http.ListenAndServeTLS` and the `tls.Dialer` read since 2026-09-04. `crypto/x509` parses a certificate, a request, and a revocation list, and it checks no signature. |
+| TLS | The secure socket of Dart holds the handshake. No cipher choice, and no root pool. `http.ListenAndServeTLS` and the `tls.Dialer` read since 2026-09-04. `crypto/x509` holds each exported name since 2026-09-04. `Certificate.Verify` builds a chain and it checks each signature. |
 | JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `TextMarshaler`, `TextUnmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. The text of a syntax error of `Token` differs. |
 | `gart test` | The format of `go test`, with `t.Parallel`, `-cover`, `-short`, and `-count`. It runs each example, and it runs the seed corpus of each fuzz target. No `-fuzz` flag, thus it generates no input. |
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
