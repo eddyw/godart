@@ -195,6 +195,7 @@ var native = []string{
 	"crypto/dsa",
 	"crypto/internal/fips140/mlkem",
 	"crypto/mlkem",
+	"crypto/mlkem/mlkemtest",
 	"crypto/internal/fips140/mldsa",
 	"crypto/mldsa",
 	"vendor/golang.org/x/crypto/internal/alias",

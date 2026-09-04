@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"crypto/mlkem"
+	"crypto/mlkem/mlkemtest"
 	"fmt"
 )
 
@@ -57,6 +58,30 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("1024 agree", bytes.Equal(s1, r1), len(s1))
+
+	seedBytes := make([]byte, 32)
+	for i := range seedBytes {
+		seedBytes[i] = byte(i)
+	}
+	fixed1, fixedCT, err := mlkemtest.Encapsulate768(ek, seedBytes)
+	if err != nil {
+		panic(err)
+	}
+	fixed2, _, err := mlkemtest.Encapsulate768(ek, seedBytes)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("fixed random agrees", bytes.Equal(fixed1, fixed2))
+	opened, err := dk.Decapsulate(fixedCT)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("fixed decapsulates", bytes.Equal(fixed1, opened))
+
+	if _, _, err := mlkemtest.Encapsulate768(ek, []byte{1}); err == nil {
+		panic("a short random must give an error")
+	}
+	fmt.Println("short random rejected")
 
 	if _, err := mlkem.NewEncapsulationKey768([]byte{1, 2, 3}); err == nil {
 		panic("a short encapsulation key must give an error")
