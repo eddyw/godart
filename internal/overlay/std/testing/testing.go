@@ -312,6 +312,10 @@ type T struct {
 	// cryptotest.SetGlobalRandom each reach the whole process, thus each 1
 	// rejects a test whose chain of parents holds a parallel test.
 	parent *T
+	// synctest marks the T of the body of a synctest bubble. Such a test reads
+	// a fake clock and it holds no result line of its own, thus Deadline,
+	// Parallel, and Run each panic on it.
+	synctest bool
 	// group runs the subtests of this test. Read the type group.
 	group *group
 }
@@ -354,6 +358,9 @@ func (t *T) Helper() { markHelper() }
 func (t *T) Parallel() {
 	if t.parallel {
 		panic("testing: t.Parallel called multiple times")
+	}
+	if t.synctest {
+		panic("testing: t.Parallel called inside synctest bubble")
 	}
 	if t.gate == nil {
 		// A benchmark holds a T that no group started, thus no runner waits.
@@ -519,7 +526,14 @@ func (t *T) Chdir(dir string) {
 //
 // gart holds no flag for a timeout, thus the flag of the result is always
 // false. Go reports the same for a run with the timeout 0.
-func (t *T) Deadline() (deadline time.Time, ok bool) { return time.Time{}, false }
+func (t *T) Deadline() (deadline time.Time, ok bool) {
+	if t.synctest {
+		// A test of a bubble reads a fake clock, thus a deadline of the real
+		// clock holds no meaning for it.
+		panic("testing: t.Deadline called inside synctest bubble")
+	}
+	return time.Time{}, false
+}
 
 // Attr writes 1 attribute of the test. A verbose run holds the line, and a
 // plain run drops it, exactly as go test does.
@@ -636,7 +650,12 @@ func (t *T) Skipf(format string, args ...any) {
 }
 
 // Run runs a subtest and reports whether the subtest passed.
-func (t *T) Run(name string, f func(*T)) bool { return t.runSub(subName(name), f) }
+func (t *T) Run(name string, f func(*T)) bool {
+	if t.synctest {
+		panic("testing: t.Run called inside synctest bubble")
+	}
+	return t.runSub(subName(name), f)
+}
 
 // runSub runs a subtest under the exact name. Run maps a space of the name to
 // an underscore first, and the seed corpus of a fuzz target keeps the name of

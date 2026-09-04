@@ -5,6 +5,9 @@ import 'sched.dart';
 sealed class SelectCase {
   bool get ready;
 
+  /// The bubble of the channel of the case, and null outside a bubble.
+  Bubble? get bubble;
+
   /// Puts a waiter of the statement into the channel of the case.
   void arm(SelectState sel, int index, Goroutine g);
 
@@ -23,6 +26,9 @@ final class RecvCase<T> extends SelectCase {
 
   @override
   bool get ready => chan.readyToReceive;
+
+  @override
+  Bubble? get bubble => chan.bubble;
 
   @override
   void arm(SelectState sel, int index, Goroutine g) =>
@@ -48,6 +54,9 @@ final class SendCase<T> extends SelectCase {
   bool get ready => chan.readyToSend;
 
   @override
+  Bubble? get bubble => chan.bubble;
+
+  @override
   void arm(SelectState sel, int index, Goroutine g) =>
       chan.armSend(sel, index, g, value);
 
@@ -67,6 +76,10 @@ final class SendCase<T> extends SelectCase {
 /// Go program must not depend on the choice.
 int $select(List<SelectCase> cases, bool hasDefault) {
   for (var i = 0; i < cases.length; i++) {
+    final Bubble? b = cases[i].bubble;
+    if (b != null && !identical(b, $current?.bubble)) {
+      $fatalError('select on synctest channel from outside bubble');
+    }
     if (!cases[i].ready) continue;
     _take(cases[i]);
     return i;
@@ -95,7 +108,7 @@ void _take(SelectCase c) {
 /// reaches such a waiter writes the number of the case, thus 2 select
 /// statements meet each other. A wake with no such number runs the statement
 /// again, because a second goroutine can take the value first.
-final class _SelectWait implements WaitFrame {
+final class _SelectWait implements WaitFrame, DurableWait {
   final List<SelectCase> cases;
   final Goroutine g;
   final SelectState state = SelectState();
@@ -104,6 +117,16 @@ final class _SelectWait implements WaitFrame {
 
   @override
   String get $reason => 'select';
+
+  /// Go names the wait durable only when each case reads a channel of the
+  /// bubble. A case of another channel can end the wait from outside.
+  @override
+  bool $durableIn(Bubble b) {
+    for (final SelectCase c in cases) {
+      if (!identical(c.bubble, b)) return false;
+    }
+    return true;
+  }
 
   void arm() {
     for (var i = 0; i < cases.length; i++) {

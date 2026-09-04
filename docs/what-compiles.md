@@ -11,12 +11,12 @@ of a program that imports the package. The import surface holds the run of
 
 ## The import surface
 
-The surface holds 251 import paths: 167 standard packages, the interop package
+The surface holds 252 import paths: 168 standard packages, the interop package
 `syscall/dart`, 71 internal packages, and 12 vendored packages of
 `golang.org/x`. Stage 2 rejects an import of each other package with a source
 position.
 
-`make surface` measures 172 of them against the real API of Go. 162 hold each
+`make surface` measures 173 of them against the real API of Go. 163 hold each
 exported name, and 10 hold a part. `docs/support.md` holds the level of each 1
 and the largest gap of each partial package.
 
@@ -32,7 +32,7 @@ and the largest gap of each partial package.
 | `image/gif`, `image/jpeg` | `image/png`, `debug/buildinfo`, `debug/gosym` |
 | `encoding/base32`, `hash/crc64`, `io/ioutil`, `index/suffixarray` | `encoding/json/v2`, `encoding/json/jsontext` |
 | `text/scanner`, `testing/fstest`, `testing/slogtest`, `log/slog` | `net/http/fcgi`, `net/http/httptrace`, `net/http/httputil` |
-| | `log/syslog`, `os/user`, `weak`, `testing/synctest` |
+| | `log/syslog`, `os/user`, `weak` |
 | `container/heap`, `container/list`, `container/ring`, `os/exec` | |
 | `context`, `errors`, `flag`, `fmt`, `log` | |
 | `regexp`, `regexp/syntax`, `encoding/xml` | |
@@ -48,7 +48,7 @@ and the largest gap of each partial package.
 | `go/token`, `go/scanner`, `go/ast`, `go/parser` | |
 | `go/printer`, `go/format`, `go/build/constraint`, `go/doc/comment` | |
 | `text/tabwriter`, `text/template`, `text/template/parse` | |
-| `testing/iotest`, `runtime/debug`, `os/signal`, `syscall` | |
+| `testing/iotest`, `testing/synctest`, `runtime/debug`, `os/signal`, `syscall` | |
 | `net/http/httptest`, `net/http/internal` | |
 | `crypto/md5`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle` | |
 | `crypto/hmac`, `crypto/rand`, `crypto/tls` | |

@@ -646,6 +646,12 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$startTimer(%s, %s)", args[0], args[1]), true
 	case "StopTimer":
 		return fmt.Sprintf("$stopTimer(%s)", args[0]), true
+	case "InBubble":
+		return "$inBubble()", true
+	case "BubbleRun":
+		return fmt.Sprintf("$bubbleRun(%s)", args[0]), true
+	case "BubbleWait":
+		return "$bubbleWait()", true
 	case "Worker":
 		return fmt.Sprintf("$worker(%s, %s)", args[0], args[1]), true
 	case "Stop":

@@ -68,6 +68,17 @@ func Command(t testing.TB, name string, args ...string) *exec.Cmd {
 	return nil
 }
 
+// MustHaveExec marks a test that starts a process. gart starts a process, thus
+// the call skips no test.
+func MustHaveExec(t testing.TB) {}
+
+// Executable skips the test. The Dart output is no test binary that starts
+// itself again.
+func Executable(t testing.TB) string {
+	t.Skip("testenv: the Dart output does not start itself again")
+	return ""
+}
+
 // CleanCmdEnv gives the command back with no change. The real form drops each
 // variable of the test environment.
 func CleanCmdEnv(cmd *exec.Cmd) *exec.Cmd { return cmd }

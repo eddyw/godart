@@ -32,7 +32,7 @@ bool $catch(void Function()? f) {
 ///
 /// The frame holds the stop signal of the inner chain, exactly as the first
 /// call does.
-final class _CatchWait implements WaitFrame {
+final class _CatchWait implements WaitFrame, DurableWait {
   Frame inner;
 
   _CatchWait(this.inner);
@@ -43,6 +43,10 @@ final class _CatchWait implements WaitFrame {
     if (f is WaitFrame) return f.$reason;
     return 'waiting';
   }
+
+  /// The wait of the inner chain holds the answer, thus the mark passes down.
+  @override
+  bool $durableIn(Bubble b) => $durableWait(inner, b);
 
   @override
   Object? resume() {

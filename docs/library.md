@@ -9,7 +9,7 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 251 import paths: 167 standard packages, `syscall/dart`, 71
+The surface holds 252 import paths: 168 standard packages, `syscall/dart`, 71
 internal packages, and 12 vendored packages of `golang.org/x`. The run of
 `make surface` of 2026-09-04 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
@@ -441,10 +441,10 @@ transaction, a context that a cancel stops, a deadline, and the pool under
 load. A real driver of a network database is Go code like any other, thus a
 program can write 1 over `net`.
 
-**The tests of the Go repository do not run.** `sql_test.go` and
-`closemu_test.go` each read `testing/synctest`, and `driver/types_test.go`
-holds a conversion between 2 named struct types. Read the limits of
-`docs/parity.md`.
+**The tests of the Go repository do not run.** `convert_test.go` reads
+`internal/asan` and `sql_test.go` reads `internal/race`, and the surface holds
+neither package. `driver/types_test.go` holds a conversion between 2 named
+struct types. Read the limits of `docs/parity.md`.
 
 ## The value surface of crypto/tls
 
@@ -618,6 +618,41 @@ at the start of the program.
 `internal/abi` is a package of Go, and this overlay holds 5 of its names. Each
 other name reads `unsafe` or a value of the runtime of Go, and no package of
 the surface reads one.
+
+## The bubble of testing/synctest
+
+`testing/synctest` runs a function in a bubble. The bubble holds a clock of its
+own, and that clock moves only when each goroutine of the bubble is durably
+blocked. A test of a timeout thus takes no real time. Go builds the bubble in
+its runtime, and gart builds it in the scheduler of the Dart runtime library.
+
+`runtime/goruntime/lib/src/sched.dart` holds the class `Bubble`. It carries the
+fake clock, the set of the goroutines of the bubble, the goroutine that waits
+inside `Wait`, and the goroutine that started the bubble. A timer of a
+goroutine of a bubble becomes a `_FakeTimer` of that bubble in place of a
+`Timer` of Dart. Such a timer waits for the scheduler and not for the event
+loop.
+
+The scheduler runs a step of each bubble when the run queue empties. A step
+first reads whether each goroutine of the bubble is durably blocked, and the
+frame of the wait holds that answer. A channel of the bubble, a select over
+such channels, a sleep of the bubble, a nil channel, and a call of `Wait` each
+mark the wait durable. A wait for the IO of Dart does not. `sync.Cond.Wait`,
+`sync.WaitGroup.Wait`, and `sync.Mutex.Lock` each wait on a channel that the
+caller makes, thus the same rule reaches them.
+
+An idle bubble takes 1 of 3 paths, in the order of Go. A timer that the clock
+reached runs first. A call of `Wait` ends next. The clock then moves to the
+next timer, and it stops after the first goroutine of the bubble ends. A bubble
+that reaches none of the 3 ends, and `Test` panics with the text of Go.
+
+`syscall/dart` carries the 3 new interop functions `InBubble`, `BubbleRun`, and
+`BubbleWait`. `time.Sleep` and `time.Now` each read the clock of the bubble of
+the caller through the runtime. `internal/linkhook` carries `SynctestTest`,
+because `testing/synctest` needs the T of the bubble and the import rule of Go
+keeps the 2 packages apart. `testdata/programs/synctestuse` holds the witness,
+and `make std-test STD=testing/synctest` runs the 13 real tests of the package.
+Read decision 346 and the limits of `docs/parity.md`.
 
 ## The tests of the Go repository
 

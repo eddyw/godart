@@ -3,6 +3,7 @@ import 'dart:collection';
 
 import 'panic.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
+import 'string.dart';
 
 /// The saved state of 1 call that gave up control.
 ///
@@ -41,6 +42,28 @@ abstract interface class WaitFrame implements Frame {
   String get $reason;
 }
 
+/// A wait that only a goroutine of 1 bubble can end.
+///
+/// synctest names such a state durably blocked. A frame of the IO of Dart
+/// holds no such mark, because an event outside the bubble ends that wait.
+abstract interface class DurableWait implements Frame {
+  /// True when a goroutine of the bubble b can end the wait, and no event
+  /// outside b can.
+  bool $durableIn(Bubble b);
+}
+
+/// True when only a goroutine of the bubble b can end the wait of the chain.
+///
+/// The chain holds the frame of each caller in front of the frame of the wait,
+/// thus the walk reads the last link.
+bool $durableWait(Frame? f, Bubble b) {
+  Frame? at = f;
+  while (at is TraceFrame) {
+    at = at.$next;
+  }
+  return at is DurableWait && at.$durableIn(b);
+}
+
 /// Not null when the current goroutine must give up control.
 ///
 /// The runtime writes the frame of the operation that blocks. Each caller on
@@ -66,6 +89,10 @@ final class Goroutine {
 
   /// The number of the goroutine. Go numbers each goroutine from 1.
   final int id;
+
+  /// The bubble of the goroutine, and null outside a bubble. A goroutine that
+  /// a bubble starts joins that bubble.
+  Bubble? bubble;
 
   bool _ended = false;
   Object? _result;
@@ -148,13 +175,19 @@ int get $eventWaits => _pending;
 void $block(Frame f) => $blocked = f;
 
 /// The frame of a goroutine that no operation wakes again.
-final class Park implements WaitFrame {
+///
+/// Go counts such a wait as durably blocked. A nil channel and a select
+/// statement with no case each hold a goroutine for the whole program.
+final class Park implements WaitFrame, DurableWait {
   final String reason;
 
   const Park([this.reason = 'waiting']);
 
   @override
   String get $reason => reason;
+
+  @override
+  bool $durableIn(Bubble b) => true;
 
   @override
   Object? resume() => null;
@@ -196,7 +229,11 @@ bool $hosted = false;
 void $schedule() {
   if (_running) return;
   _running = true;
-  while (_runq.isNotEmpty && !_mainDone) {
+  while (!_mainDone) {
+    if (_runq.isEmpty) {
+      if (!_stepBubbles()) break;
+      continue;
+    }
     final Goroutine g = _runq.removeFirst();
     $current = g;
     $blocked = null;
@@ -226,6 +263,7 @@ void $schedule() {
       $blocked = null;
       _live--;
       _liveSet.remove(g);
+      g.bubble?.leave(g);
       if (g.isMain) _mainExited = true;
       g._end(null);
       continue;
@@ -236,6 +274,7 @@ void $schedule() {
     } else {
       _live--;
       _liveSet.remove(g);
+      g.bubble?.leave(g);
       if (g.isMain) _mainDone = true;
       g._end(value);
     }
@@ -272,9 +311,17 @@ void $schedule() {
 /// The parameter takes the type `void Function()`, because the emitted Dart
 /// writes a closure with no result. A body that gives a value is a subtype of
 /// that type, thus the field [Goroutine.start] still keeps the value.
-Goroutine $go(void Function() body) {
+Goroutine $go(void Function() body) => _spawn(body, $current?.bubble);
+
+/// Starts a goroutine inside the bubble b, and gives its handle. A null bubble
+/// starts a goroutine outside each bubble.
+Goroutine _spawn(void Function() body, Bubble? b) {
   _live++;
   final Goroutine g = Goroutine()..start = body;
+  if (b != null) {
+    g.bubble = b;
+    b.members.add(g);
+  }
   _liveSet.add(g);
   $ready(g);
   return g;
@@ -372,9 +419,10 @@ void $await(Future<Object?> future, Object? Function(Object cause) onError) {
   $block(waiting);
 }
 
-/// The timers of the program, by handle. A slot of a timer that ran or that a
-/// stop cancelled holds null.
-final List<Timer?> _timers = <Timer?>[];
+/// The timers of the program, by handle. A slot holds a Timer of Dart, or a
+/// _FakeTimer of a bubble. A slot of a timer that ran or that a stop cancelled
+/// holds null.
+final List<Object?> _timers = <Object?>[];
 
 int _timerSlot() {
   for (int i = 0; i < _timers.length; i++) {
@@ -384,14 +432,35 @@ int _timerSlot() {
   return _timers.length - 1;
 }
 
+/// One timer of a bubble. The fake clock of the bubble runs it, thus it takes
+/// no real time and it holds no wake source of the Dart event loop.
+final class _FakeTimer {
+  final Bubble bubble;
+
+  /// The value of the fake clock at which the timer runs.
+  final int when;
+
+  final void Function() run;
+
+  _FakeTimer(this.bubble, this.when, this.run);
+}
+
 /// Starts a timer that runs a Go function after a time, and gives its handle.
 ///
 /// Go runs the function on a new goroutine, thus the function can block. The
 /// timer holds 1 wake source of the scheduler until it runs.
+///
+/// A timer of a bubble reads the clock of that bubble. Such a timer waits for
+/// the scheduler and not for the Dart event loop.
 int $startTimer(int nanoseconds, void Function()? body) {
   if (body == null) $panicNil();
   final void Function() run = body;
   final int handle = _timerSlot();
+  final Bubble? b = $current?.bubble;
+  if (b != null) {
+    _timers[handle] = _FakeTimer(b, b.now + nanoseconds, () => _spawn(run, b));
+    return handle;
+  }
   $holdEvent();
   _timers[handle] = Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
     _timers[handle] = null;
@@ -406,12 +475,234 @@ int $startTimer(int nanoseconds, void Function()? body) {
 /// the Stop method of Go does.
 bool $stopTimer(int handle) {
   if (handle < 0 || handle >= _timers.length) return false;
-  final Timer? timer = _timers[handle];
-  if (timer == null) return false;
+  final Object? held = _timers[handle];
+  if (held == null) return false;
   _timers[handle] = null;
-  timer.cancel();
+  if (held is _FakeTimer) return true;
+  (held as Timer).cancel();
   $freeEvent();
   return true;
+}
+
+/// The base of the fake clock of a bubble. Go starts each bubble at midnight
+/// UTC of 2000-01-01.
+const int _bubbleBase = 946684800000000000;
+
+/// Each bubble that did not end. A goroutine outside a bubble can start a
+/// bubble of its own, thus the list holds more than 1 entry.
+final List<Bubble> _bubbles = <Bubble>[];
+
+/// The clock, the timers, and the goroutines of 1 synctest bubble.
+///
+/// Go gives each bubble a clock of its own. The clock moves only when each
+/// goroutine of the bubble is durably blocked, thus a sleep inside a bubble
+/// takes no real time.
+final class Bubble {
+  /// The fake clock, in nanoseconds since the start of the Unix epoch.
+  int now = _bubbleBase;
+
+  /// Each goroutine of the bubble that did not end.
+  final Set<Goroutine> members = <Goroutine>{};
+
+  /// The goroutine outside the bubble that started it.
+  final Goroutine owner;
+
+  /// The frame of the owner. The end of the bubble writes the cause of a
+  /// deadlock into it.
+  final _BubbleWait _wait;
+
+  /// The first goroutine of the bubble. Go stops the clock after it ends.
+  Goroutine? root;
+
+  /// The goroutine that waits inside a call of synctest.Wait.
+  Goroutine? waiter;
+
+  /// True after the first goroutine of the bubble ended.
+  bool rootEnded = false;
+
+  Bubble._(this.owner, this._wait);
+
+  /// Drops a goroutine that ended.
+  void leave(Goroutine g) {
+    members.remove(g);
+    g.bubble = null;
+    if (identical(g, waiter)) waiter = null;
+    if (identical(g, root)) rootEnded = true;
+  }
+
+  /// True when each goroutine of the bubble is durably blocked.
+  bool get _idle {
+    for (final Goroutine g in members) {
+      if (!$durableWait(g.frame, this)) return false;
+    }
+    return true;
+  }
+
+  /// The time of the first timer of the bubble, and null when it holds none.
+  int? _nextTime() {
+    int? out;
+    for (final Object? t in _timers) {
+      if (t is! _FakeTimer || !identical(t.bubble, this)) continue;
+      if (out == null || t.when < out) out = t.when;
+    }
+    return out;
+  }
+
+  /// Runs each timer that the clock reached, and reports whether 1 ran.
+  bool _fire() {
+    var ran = false;
+    for (var i = 0; i < _timers.length; i++) {
+      final Object? t = _timers[i];
+      if (t is! _FakeTimer || !identical(t.bubble, this) || t.when > now) {
+        continue;
+      }
+      _timers[i] = null;
+      t.run();
+      ran = true;
+    }
+    return ran;
+  }
+
+  /// Moves the bubble 1 step and reports whether a goroutine can run now.
+  ///
+  /// The order follows Go. A timer that the clock reached runs first, then a
+  /// call of synctest.Wait ends, and then the clock moves to the next timer.
+  bool step() {
+    if (!_idle) return false;
+    final int? next = _nextTime();
+    if (next != null && next <= now && _fire()) return true;
+    final Goroutine? w = waiter;
+    if (w != null) {
+      waiter = null;
+      $ready(w);
+      return true;
+    }
+    if (next != null && !rootEnded) {
+      now = next;
+      if (_fire()) return true;
+    }
+    _end();
+    return true;
+  }
+
+  /// Ends the bubble and wakes the goroutine that started it.
+  void _end() {
+    _bubbles.remove(this);
+    for (var i = 0; i < _timers.length; i++) {
+      final Object? t = _timers[i];
+      if (t is _FakeTimer && identical(t.bubble, this)) _timers[i] = null;
+    }
+    if (members.isNotEmpty) {
+      _wait.cause = GoString.fromString(
+        rootEnded
+            ? 'deadlock: main bubble goroutine has exited but blocked '
+                  'goroutines remain'
+            : 'deadlock: all goroutines in bubble are blocked',
+      );
+    }
+    for (final Goroutine g in members) {
+      g.bubble = null;
+    }
+    members.clear();
+    $ready(owner);
+  }
+}
+
+/// Moves 1 bubble that is idle, and reports whether a goroutine can run now.
+///
+/// The bubble that moved goes to the end of the list. Go runs 2 bubbles at the
+/// same time, thus a bubble with a timer that never ends must not hold another
+/// bubble back.
+bool _stepBubbles() {
+  for (var i = 0; i < _bubbles.length; i++) {
+    final Bubble b = _bubbles[i];
+    if (!b.step()) continue;
+    if (_bubbles.remove(b)) _bubbles.add(b);
+    return true;
+  }
+  return false;
+}
+
+/// The frame of the goroutine that waits for the end of a bubble.
+final class _BubbleWait implements WaitFrame {
+  /// The cause of a deadlock of the bubble. It stays empty after a normal end.
+  GoString cause = GoString.empty;
+
+  @override
+  String get $reason => 'synctest.Run';
+
+  @override
+  Object? resume() => cause;
+}
+
+/// The frame of a goroutine that sleeps on the clock of a bubble.
+final class _BubbleSleep implements WaitFrame, DurableWait {
+  const _BubbleSleep();
+
+  @override
+  String get $reason => 'sleep';
+
+  @override
+  bool $durableIn(Bubble b) => true;
+
+  @override
+  Object? resume() => null;
+}
+
+/// The frame of a goroutine inside a call of synctest.Wait.
+final class _BubbleWaitCall implements WaitFrame, DurableWait {
+  const _BubbleWaitCall();
+
+  @override
+  String get $reason => 'synctest.Wait';
+
+  @override
+  bool $durableIn(Bubble b) => true;
+
+  @override
+  Object? resume() => true;
+}
+
+/// True when the goroutine of the caller stands inside a bubble.
+bool $inBubble() => $current?.bubble != null;
+
+/// Runs body on the first goroutine of a new bubble, and waits for the end of
+/// each goroutine of the bubble.
+///
+/// The result names the cause of a deadlock of the bubble, and it is empty
+/// after a normal end.
+GoString $bubbleRun(void Function()? body) {
+  if (body == null) $panicNil();
+  final void Function() start = body;
+  final _BubbleWait waiting = _BubbleWait();
+  final Bubble b = Bubble._($current!, waiting);
+  _bubbles.add(b);
+  b.root = _spawn(start, b);
+  $block(waiting);
+  return GoString.empty;
+}
+
+/// Waits until each other goroutine of the bubble of the caller is durably
+/// blocked.
+///
+/// It reports false when another goroutine of the bubble waits already, and it
+/// then gives up no control.
+bool $bubbleWait() {
+  final Goroutine g = $current!;
+  final Bubble? b = g.bubble;
+  if (b == null) return true;
+  if (b.waiter != null) return false;
+  b.waiter = g;
+  $block(const _BubbleWaitCall());
+  return true;
+}
+
+/// Gives up control until the clock of the bubble b moves the count of
+/// nanoseconds. The sleep of the package time reads it inside a bubble.
+void $bubbleSleep(Bubble b, Goroutine g, int nanoseconds) {
+  final int handle = _timerSlot();
+  _timers[handle] = _FakeTimer(b, b.now + nanoseconds, () => $ready(g));
+  $block(const _BubbleSleep());
 }
 
 /// The releases that run when package main returns.
@@ -431,6 +722,15 @@ void _exitMain() {
     release();
   }
   if (_pending > 0) $platformExit(0);
+}
+
+/// Ends the program with a report that no recover reads.
+///
+/// Go writes such a report for a fault that a program must not handle. A
+/// channel of a bubble that a goroutine outside it reached is 1 such fault.
+Never $fatalError(String text) {
+  $platformStderrText('fatal error: $text\n');
+  $platformExit(2);
 }
 
 /// Reports that no goroutine can run again. The report walks the frame chain

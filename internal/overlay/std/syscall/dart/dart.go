@@ -1173,6 +1173,36 @@ func StopTimer(handle int) bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// InBubble reports whether the goroutine of the caller stands inside a
+// synctest bubble.
+func InBubble() bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// BubbleRun runs f on the first goroutine of a new synctest bubble, and it
+// waits for the end of each goroutine of the bubble.
+//
+// The bubble holds a clock of its own. That clock moves only when each
+// goroutine of the bubble is durably blocked, thus a sleep inside the bubble
+// takes no real time.
+//
+// The result names the cause of a deadlock of the bubble, and it is empty
+// after a normal end. The call blocks the goroutine, thus the caller becomes
+// an async function.
+func BubbleRun(f func()) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// BubbleWait waits until each other goroutine of the bubble of the caller is
+// durably blocked.
+//
+// It reports false when another goroutine of the bubble waits already, and it
+// then gives up no control. The call blocks the goroutine, thus the caller
+// becomes an async function.
+func BubbleWait() bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ProcStart starts a process. argv holds the program and each argument, dir
 // holds the working directory, and env holds each variable in the form
 // name=value. An empty dir keeps the directory of the program. useEnv tells
