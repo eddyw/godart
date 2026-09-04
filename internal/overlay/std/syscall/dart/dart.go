@@ -1303,6 +1303,22 @@ func H2Close(session int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// WeakRef gives a weak reference of the Dart runtime to the value inside v.
+// The reference holds no strong link, thus the collector of Dart frees the
+// value when no other name reads it.
+//
+// A second call with the same value gives the same reference, thus 2 weak
+// pointers of 1 value compare equal.
+func WeakRef(v any) *Object {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// WeakTarget gives the value of r. It gives nil after the collector of Dart
+// freed the value.
+func WeakTarget(r *Object) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // An Object holds 1 object of the Dart host.
 //
 // The Dart form of this type is Object?, thus a value crosses the boundary of

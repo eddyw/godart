@@ -199,6 +199,8 @@ var native = []string{
 	"vendor/golang.org/x/crypto/chacha20poly1305",
 	"crypto/hpke",
 	"testing/cryptotest",
+	"internal/testlog",
+	"debug/gosym",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from

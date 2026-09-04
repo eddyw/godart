@@ -452,6 +452,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return "$monoNanos()", true
 	case "RandomBytes":
 		return fmt.Sprintf("$randomBytes(%s)", args[0]), true
+	case "WeakRef":
+		return fmt.Sprintf("$weakRef(%s)", args[0]), true
+	case "WeakTarget":
+		return fmt.Sprintf("$weakTarget(%s)", args[0]), true
 	case "MarshalJSON":
 		return fmt.Sprintf("$jsonMarshal(%s)", args[0]), true
 	case "UnmarshalJSON":
