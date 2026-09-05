@@ -16,36 +16,81 @@ import "gart.dev/ui"
 // Read flutter/nodegen/README.md to run the generator again.
 
 // AboutDialog maps AboutDialog of package:material_ui/material_ui.dart.
+//
+// An about box. This is a dialog box with the application's icon, name,
+// version number, and copyright, plus a button to show licenses for
+// software used by the application.
 type AboutDialog struct {
-	ApplicationName     *string
-	ApplicationVersion  *string
-	ApplicationIcon     ui.Node
+	// The name of the application.
+	ApplicationName *string
+
+	// The version of this build of the application.
+	ApplicationVersion *string
+
+	// The icon to show next to the application name.
+	ApplicationIcon ui.Node
+
+	// A string to show in small print.
 	ApplicationLegalese *string
-	Children            []ui.Node
+
+	// Widgets to add to the dialog box after the name, version, and legalese.
+	Children []ui.Node
 }
 
 // AboutDialogAdaptive maps AboutDialog.adaptive of package:material_ui/material_ui.dart.
+//
+// An about box. This is a dialog box with the application's icon, name,
+// version number, and copyright, plus a button to show licenses for
+// software used by the application.
 type AboutDialogAdaptive struct {
-	ApplicationName     *string
-	ApplicationVersion  *string
-	ApplicationIcon     ui.Node
+	// The name of the application.
+	ApplicationName *string
+
+	// The version of this build of the application.
+	ApplicationVersion *string
+
+	// The icon to show next to the application name.
+	ApplicationIcon ui.Node
+
+	// A string to show in small print.
 	ApplicationLegalese *string
-	Children            []ui.Node
+
+	// Widgets to add to the dialog box after the name, version, and legalese.
+	Children []ui.Node
 }
 
 // AboutListTile maps AboutListTile of package:material_ui/material_ui.dart.
+//
+// A ListTile that shows an about box.
 type AboutListTile struct {
-	Icon                ui.Node
-	Child               ui.Node
-	ApplicationName     *string
-	ApplicationVersion  *string
-	ApplicationIcon     ui.Node
+	// The icon to show for this drawer item.
+	Icon ui.Node
+
+	// The label to show on this drawer item.
+	Child ui.Node
+
+	// The name of the application.
+	ApplicationName *string
+
+	// The version of this build of the application.
+	ApplicationVersion *string
+
+	// The icon to show next to the application name in the AboutDialog.
+	ApplicationIcon ui.Node
+
+	// A string to show in small print in the AboutDialog.
 	ApplicationLegalese *string
-	AboutBoxChildren    []ui.Node
-	Dense               *bool
+
+	// Widgets to add to the AboutDialog after the name, version, and legalese.
+	AboutBoxChildren []ui.Node
+
+	// Whether this list tile is part of a vertically dense list.
+	Dense *bool
 }
 
 // ActionChip maps ActionChip of package:material_ui/material_ui.dart.
+//
+// A Material Design action chip.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
@@ -79,6 +124,8 @@ type ActionChip struct {
 
 // ActionChipElevated maps ActionChip.elevated of package:material_ui/material_ui.dart.
 //
+// A Material Design action chip.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
@@ -110,24 +157,41 @@ type ActionChipElevated struct {
 }
 
 // ActionIconTheme maps ActionIconTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that overrides the default icon of BackButtonIcon,
+// CloseButtonIcon, DrawerButtonIcon, and EndDrawerButtonIcon in this
+// widget's subtree.
 type ActionIconTheme struct {
-	Data  ui.ActionIconStyle
+	// Specifies the default icon overrides for descendant BackButtonIcon,
+	// CloseButtonIcon, DrawerButtonIcon, and EndDrawerButtonIcon widgets.
+	Data ui.ActionIconStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // AdaptiveTextSelectionToolbar maps AdaptiveTextSelectionToolbar of package:material_ui/material_ui.dart.
+//
+// The default context menu for text selection for the current platform.
 type AdaptiveTextSelectionToolbar struct {
+	// The children of the toolbar, typically buttons.
 	Children []ui.Node
 	Anchors  ui.ToolbarAnchors
 }
 
 // AdaptiveTextSelectionToolbarButtonItems maps AdaptiveTextSelectionToolbar.buttonItems of package:material_ui/material_ui.dart.
+//
+// The default context menu for text selection for the current platform.
 type AdaptiveTextSelectionToolbarButtonItems struct {
+	// The ContextMenuButtonItems that will be turned into the correct button
+	// widgets for the current platform.
 	ButtonItems []ui.MenuButtonItem
 	Anchors     ui.ToolbarAnchors
 }
 
 // AdaptiveTextSelectionToolbarEditable maps AdaptiveTextSelectionToolbar.editable of package:material_ui/material_ui.dart.
+//
+// The default context menu for text selection for the current platform.
 //
 // ClipboardStatus takes "pasteable", "unknown", or "notPasteable".
 type AdaptiveTextSelectionToolbarEditable struct {
@@ -144,6 +208,8 @@ type AdaptiveTextSelectionToolbarEditable struct {
 }
 
 // AdaptiveTextSelectionToolbarSelectable maps AdaptiveTextSelectionToolbar.selectable of package:material_ui/material_ui.dart.
+//
+// The default context menu for text selection for the current platform.
 type AdaptiveTextSelectionToolbarSelectable struct {
 	OnCopy            func()
 	OnSelectAll       func()
@@ -154,6 +220,8 @@ type AdaptiveTextSelectionToolbarSelectable struct {
 
 // AlertDialog maps AlertDialog of package:material_ui/material_ui.dart.
 //
+// A Material Design alert dialog.
+//
 // ActionsAlignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
 //
 // ActionsOverflowAlignment takes "start", "end", or "center".
@@ -162,36 +230,81 @@ type AdaptiveTextSelectionToolbarSelectable struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type AlertDialog struct {
-	Icon                         ui.Node
-	IconPadding                  *ui.Insets
-	IconColor                    *ui.Color
-	Title                        ui.Node
-	TitlePadding                 *ui.Insets
-	TitleTextStyle               *ui.TextStyle
-	Content                      ui.Node
-	ContentPadding               *ui.Insets
-	ContentTextStyle             *ui.TextStyle
-	Actions                      []ui.Node
-	ActionsPadding               *ui.Insets
-	ActionsAlignment             *string
-	ActionsOverflowAlignment     *string
-	ActionsOverflowDirection     *string
+	// An optional icon to display at the top of the dialog.
+	Icon ui.Node
+
+	// Padding around the icon.
+	IconPadding *ui.Insets
+
+	// Color for the Icon in the icon of this AlertDialog.
+	IconColor *ui.Color
+
+	// The (optional) title of the dialog is displayed in a large font at the
+	// top of the dialog, below the (optional) icon.
+	Title ui.Node
+
+	// Padding around the title.
+	TitlePadding *ui.Insets
+
+	// Style for the text in the title of this AlertDialog.
+	TitleTextStyle *ui.TextStyle
+
+	// The (optional) content of the dialog is displayed in the center of the
+	// dialog in a lighter font.
+	Content ui.Node
+
+	// Padding around the content.
+	ContentPadding *ui.Insets
+
+	// Style for the text in the content of this AlertDialog.
+	ContentTextStyle *ui.TextStyle
+
+	// The (optional) set of actions that are displayed at the bottom of the
+	// dialog with an OverflowBar.
+	Actions []ui.Node
+
+	// Padding around the set of actions at the bottom of the dialog.
+	ActionsPadding *ui.Insets
+
+	// Defines the horizontal layout of the actions according to the same rules
+	// as for mainAxisAlignment.
+	ActionsAlignment *string
+
+	// The horizontal alignment of actions within the vertical "overflow"
+	// layout.
+	ActionsOverflowAlignment *string
+
+	// The vertical direction of actions if the children overflow horizontally.
+	ActionsOverflowDirection *string
+
+	// The spacing between actions when the OverflowBar switches to a column
+	// layout because the actions don't fit horizontally.
 	ActionsOverflowButtonSpacing *float64
-	ButtonPadding                *ui.Insets
-	BackgroundColor              *ui.Color
-	Elevation                    *float64
-	ShadowColor                  *ui.Color
-	SurfaceTintColor             *ui.Color
-	SemanticLabel                *string
-	InsetPadding                 *ui.Insets
-	ClipBehavior                 *string
-	Shape                        *ui.Shape
-	Alignment                    *string
-	Constraints                  *ui.Constraints
-	Scrollable                   *bool
+
+	// The padding that surrounds each button in actions.
+	ButtonPadding    *ui.Insets
+	BackgroundColor  *ui.Color
+	Elevation        *float64
+	ShadowColor      *ui.Color
+	SurfaceTintColor *ui.Color
+
+	// The semantic label of the dialog used by accessibility frameworks to
+	// announce screen transitions when the dialog is opened and closed.
+	SemanticLabel *string
+	InsetPadding  *ui.Insets
+	ClipBehavior  *string
+	Shape         *ui.Shape
+	Alignment     *string
+	Constraints   *ui.Constraints
+
+	// Determines whether the title and content widgets are wrapped in a
+	// scrollable.
+	Scrollable *bool
 }
 
 // AlertDialogAdaptive maps AlertDialog.adaptive of package:material_ui/material_ui.dart.
+//
+// A Material Design alert dialog.
 //
 // ActionsAlignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
 //
@@ -201,82 +314,203 @@ type AlertDialog struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type AlertDialogAdaptive struct {
-	Icon                         ui.Node
-	IconPadding                  *ui.Insets
-	IconColor                    *ui.Color
-	Title                        ui.Node
-	TitlePadding                 *ui.Insets
-	TitleTextStyle               *ui.TextStyle
-	Content                      ui.Node
-	ContentPadding               *ui.Insets
-	ContentTextStyle             *ui.TextStyle
-	Actions                      []ui.Node
-	ActionsPadding               *ui.Insets
-	ActionsAlignment             *string
-	ActionsOverflowAlignment     *string
-	ActionsOverflowDirection     *string
+	// An optional icon to display at the top of the dialog.
+	Icon ui.Node
+
+	// Padding around the icon.
+	IconPadding *ui.Insets
+
+	// Color for the Icon in the icon of this AlertDialog.
+	IconColor *ui.Color
+
+	// The (optional) title of the dialog is displayed in a large font at the
+	// top of the dialog, below the (optional) icon.
+	Title ui.Node
+
+	// Padding around the title.
+	TitlePadding *ui.Insets
+
+	// Style for the text in the title of this AlertDialog.
+	TitleTextStyle *ui.TextStyle
+
+	// The (optional) content of the dialog is displayed in the center of the
+	// dialog in a lighter font.
+	Content ui.Node
+
+	// Padding around the content.
+	ContentPadding *ui.Insets
+
+	// Style for the text in the content of this AlertDialog.
+	ContentTextStyle *ui.TextStyle
+
+	// The (optional) set of actions that are displayed at the bottom of the
+	// dialog with an OverflowBar.
+	Actions []ui.Node
+
+	// Padding around the set of actions at the bottom of the dialog.
+	ActionsPadding *ui.Insets
+
+	// Defines the horizontal layout of the actions according to the same rules
+	// as for mainAxisAlignment.
+	ActionsAlignment *string
+
+	// The horizontal alignment of actions within the vertical "overflow"
+	// layout.
+	ActionsOverflowAlignment *string
+
+	// The vertical direction of actions if the children overflow horizontally.
+	ActionsOverflowDirection *string
+
+	// The spacing between actions when the OverflowBar switches to a column
+	// layout because the actions don't fit horizontally.
 	ActionsOverflowButtonSpacing *float64
-	ButtonPadding                *ui.Insets
-	BackgroundColor              *ui.Color
-	Elevation                    *float64
-	ShadowColor                  *ui.Color
-	SurfaceTintColor             *ui.Color
-	SemanticLabel                *string
-	ClipBehavior                 *string
-	Shape                        *ui.Shape
-	Alignment                    *string
-	Constraints                  *ui.Constraints
-	ScrollController             *ui.ScrollKey
-	ActionScrollController       *ui.ScrollKey
+
+	// The padding that surrounds each button in actions.
+	ButtonPadding    *ui.Insets
+	BackgroundColor  *ui.Color
+	Elevation        *float64
+	ShadowColor      *ui.Color
+	SurfaceTintColor *ui.Color
+
+	// The semantic label of the dialog used by accessibility frameworks to
+	// announce screen transitions when the dialog is opened and closed.
+	SemanticLabel          *string
+	ClipBehavior           *string
+	Shape                  *ui.Shape
+	Alignment              *string
+	Constraints            *ui.Constraints
+	ScrollController       *ui.ScrollKey
+	ActionScrollController *ui.ScrollKey
 }
 
 // AnimatedTheme maps AnimatedTheme of package:material_ui/material_ui.dart.
+//
+// Animated version of Theme which automatically transitions the colors,
+// etc, over a given duration whenever the given theme changes.
 type AnimatedTheme struct {
-	Data     ui.ThemeStyle
-	Curve    *string
+	// Specifies the color and typography values for descendant widgets.
+	Data ui.ThemeStyle
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
 	Duration *int
-	OnEnd    func()
-	Child    ui.Node
+
+	// Called every time an animation completes.
+	OnEnd func()
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // AppBar maps AppBar of package:material_ui/material_ui.dart.
 //
+// A Material Design app bar.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type AppBar struct {
-	Leading                   ui.Node
+	// A widget to display before the toolbar's title.
+	Leading ui.Node
+
+	// Controls whether we should try to imply the leading widget if null.
 	AutomaticallyImplyLeading *bool
-	Title                     ui.Node
-	Actions                   []ui.Node
+
+	// The primary widget displayed in the app bar.
+	Title ui.Node
+
+	// A list of Widgets to display in a row after the title widget.
+	Actions []ui.Node
+
+	// Controls whether we should try to imply the actions widget if null.
 	AutomaticallyImplyActions *bool
-	FlexibleSpace             ui.Node
-	Bottom                    ui.Node
-	Elevation                 *float64
-	ScrolledUnderElevation    *float64
-	ShadowColor               *ui.Color
-	SurfaceTintColor          *ui.Color
-	Shape                     *ui.Shape
-	BackgroundColor           *ui.Color
-	ForegroundColor           *ui.Color
-	IconTheme                 *ui.IconStyle
-	ActionsIconTheme          *ui.IconStyle
-	Primary                   *bool
-	CenterTitle               *bool
-	ExcludeHeaderSemantics    *bool
-	TitleSpacing              *float64
-	ToolbarOpacity            *float64
-	BottomOpacity             *float64
-	ToolbarHeight             *float64
-	LeadingWidth              *float64
-	ToolbarTextStyle          *ui.TextStyle
-	TitleTextStyle            *ui.TextStyle
+
+	// This widget is stacked behind the toolbar and the tab bar.
+	FlexibleSpace ui.Node
+
+	// This widget appears across the bottom of the app bar.
+	Bottom ui.Node
+
+	// The z-coordinate at which to place this app bar relative to its parent.
+	Elevation *float64
+
+	// The elevation that will be used if this app bar has something scrolled
+	// underneath it.
+	ScrolledUnderElevation *float64
+
+	// The color of the shadow below the app bar.
+	ShadowColor *ui.Color
+
+	// The color of the surface tint overlay applied to the app bar's
+	// background color to indicate elevation.
+	SurfaceTintColor *ui.Color
+
+	// The shape of the app bar's Material as well as its shadow.
+	Shape *ui.Shape
+
+	// The fill color to use for an app bar's Material.
+	BackgroundColor *ui.Color
+
+	// The default color for Text and Icons within the app bar.
+	ForegroundColor *ui.Color
+
+	// The color, opacity, and size to use for toolbar icons.
+	IconTheme *ui.IconStyle
+
+	// The color, opacity, and size to use for the icons that appear in the app
+	// bar's actions.
+	ActionsIconTheme *ui.IconStyle
+
+	// Whether this app bar is being displayed at the top of the screen.
+	Primary *bool
+
+	// Whether the title should be centered.
+	CenterTitle *bool
+
+	// Whether the title should be wrapped with header Semantics.
+	ExcludeHeaderSemantics *bool
+
+	// The spacing around title content on the horizontal axis.
+	TitleSpacing *float64
+
+	// How opaque the toolbar part of the app bar is.
+	ToolbarOpacity *float64
+
+	// How opaque the bottom part of the app bar is.
+	BottomOpacity *float64
+
+	// Defines the height of the toolbar component of an AppBar.
+	ToolbarHeight *float64
+
+	// Defines the width of leading widget.
+	LeadingWidth *float64
+
+	// The default text style for the AppBar's leading, and actions widgets,
+	// but not its title.
+	ToolbarTextStyle *ui.TextStyle
+
+	// The default text style for the AppBar's title widget.
+	TitleTextStyle *ui.TextStyle
+
+	// Forces the AppBar's Material widget type to be transparency (instead of
+	// Material's default type).
 	ForceMaterialTransparency *bool
-	UseDefaultSemanticsOrder  *bool
-	ClipBehavior              *string
-	ActionsPadding            *ui.Insets
-	AnimateColor              *bool
+
+	// Whether to use the default semantic ordering for the app bar's children
+	// for accessibility traversal order.
+	UseDefaultSemanticsOrder *bool
+	ClipBehavior             *string
+
+	// The padding between the actions and the end of the AppBar.
+	ActionsPadding *ui.Insets
+
+	// Whether the color should be animated.
+	AnimateColor *bool
 }
 
 // AppBarTheme maps AppBarTheme of package:material_ui/material_ui.dart.
+//
+// Defines default property values for descendant AppBar widgets.
 type AppBarTheme struct {
 	Color                  *ui.Color
 	BackgroundColor        *ui.Color
@@ -296,73 +530,165 @@ type AppBarTheme struct {
 	TitleTextStyle         *ui.TextStyle
 	ActionsPadding         *ui.Insets
 	Data                   *ui.AppBarStyle
-	Child                  ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // BackButton maps BackButton of package:material_ui/material_ui.dart.
+//
+// A Material Design back icon button.
 type BackButton struct {
-	Color     *ui.Color
-	Style     *ui.ButtonStyle
+	// The color to use for the icon inside the button, if the icon is enabled.
+	Color *ui.Color
+
+	// Customizes this button's appearance.
+	Style *ui.ButtonStyle
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
 	OnPressed func()
 }
 
 // BackButtonIcon maps BackButtonIcon of package:material_ui/material_ui.dart.
+//
+// A "back" icon that's appropriate for the current TargetPlatform.
 type BackButtonIcon struct {
 }
 
 // Badge maps Badge of package:material_ui/material_ui.dart.
+//
+// A Material Design "badge".
 type Badge struct {
+	// The badge's fill color.
 	BackgroundColor *ui.Color
-	TextColor       *ui.Color
-	SmallSize       *float64
-	LargeSize       *float64
-	TextStyle       *ui.TextStyle
-	Padding         *ui.Insets
-	Alignment       *string
-	Offset          *ui.Offset
-	Label           ui.Node
-	IsLabelVisible  *bool
-	Child           ui.Node
+
+	// The color of the badge's label text.
+	TextColor *ui.Color
+
+	// The diameter of the badge if label is null.
+	SmallSize *float64
+
+	// The badge's height if label is non-null.
+	LargeSize *float64
+
+	// The DefaultTextStyle for the badge's label.
+	TextStyle *ui.TextStyle
+
+	// The padding added to the badge's label.
+	Padding *ui.Insets
+
+	// Combined with offset to determine the location of the label relative to
+	// the child.
+	Alignment *string
+
+	// Combined with alignment to determine the location of the label relative
+	// to the child.
+	Offset *ui.Offset
+
+	// The badge's content, typically a Text widget that contains 1 to 4
+	// characters.
+	Label ui.Node
+
+	// If false, the badge's label is not included.
+	IsLabelVisible *bool
+
+	// The widget that the badge is stacked on top of.
+	Child ui.Node
 }
 
 // BadgeCount maps Badge.count of package:material_ui/material_ui.dart.
+//
+// A Material Design "badge".
 type BadgeCount struct {
+	// The badge's fill color.
 	BackgroundColor *ui.Color
-	TextColor       *ui.Color
-	SmallSize       *float64
-	LargeSize       *float64
-	TextStyle       *ui.TextStyle
-	Padding         *ui.Insets
-	Alignment       *string
-	Offset          *ui.Offset
-	Count           int
-	MaxCount        *int
-	IsLabelVisible  *bool
-	Child           ui.Node
+
+	// The color of the badge's label text.
+	TextColor *ui.Color
+
+	// The diameter of the badge if label is null.
+	SmallSize *float64
+
+	// The badge's height if label is non-null.
+	LargeSize *float64
+
+	// The DefaultTextStyle for the badge's label.
+	TextStyle *ui.TextStyle
+
+	// The padding added to the badge's label.
+	Padding *ui.Insets
+
+	// Combined with offset to determine the location of the label relative to
+	// the child.
+	Alignment *string
+
+	// Combined with alignment to determine the location of the label relative
+	// to the child.
+	Offset   *ui.Offset
+	Count    int
+	MaxCount *int
+
+	// If false, the badge's label is not included.
+	IsLabelVisible *bool
+
+	// The widget that the badge is stacked on top of.
+	Child ui.Node
 }
 
 // BadgeTheme maps BadgeTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that overrides the default color style, and size
+// parameters for Badges in this widget's subtree.
 type BadgeTheme struct {
-	Data  ui.BadgeStyle
+	// Specifies the default color and size overrides for descendant Badge
+	// widgets.
+	Data ui.BadgeStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // BottomAppBar maps BottomAppBar of package:material_ui/material_ui.dart.
 //
+// A container that is typically used with bottomNavigationBar.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type BottomAppBar struct {
-	Color            *ui.Color
-	Elevation        *float64
-	ClipBehavior     *string
-	NotchMargin      *float64
-	Child            ui.Node
-	Padding          *ui.Insets
+	// The bottom app bar's background color.
+	Color *ui.Color
+
+	// The z-coordinate at which to place this bottom app bar relative to its
+	// parent.
+	Elevation *float64
+
+	// Defaults to none.
+	ClipBehavior *string
+
+	// The margin between the FloatingActionButton and the BottomAppBar's
+	// notch.
+	NotchMargin *float64
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The amount of space to surround the child inside the bounds of the
+	// BottomAppBar.
+	Padding *ui.Insets
+
+	// A custom color for the Material 3 surface-tint elevation effect.
 	SurfaceTintColor *ui.Color
-	ShadowColor      *ui.Color
-	Height           *float64
+
+	// The color of the shadow below the app bar.
+	ShadowColor *ui.Color
+
+	// The double value used to indicate the height of the BottomAppBar.
+	Height *float64
 }
 
 // BottomAppBarTheme maps BottomAppBarTheme of package:material_ui/material_ui.dart.
+//
+// Defines default property values for descendant BottomAppBar widgets.
 type BottomAppBarTheme struct {
 	Color            *ui.Color
 	Elevation        *float64
@@ -371,64 +697,157 @@ type BottomAppBarTheme struct {
 	ShadowColor      *ui.Color
 	Padding          *ui.Insets
 	Data             *ui.BottomAppBarStyle
-	Child            ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // BottomNavigationBar maps BottomNavigationBar of package:material_ui/material_ui.dart.
+//
+// A material widget that's displayed at the bottom of an app for selecting
+// among a small number of views, typically between three and five.
 //
 // Type takes "fixed", or "shifting".
 //
 // LandscapeLayout takes "spread", "centered", or "linear".
 type BottomNavigationBar struct {
-	Items                []ui.BarItem
-	OnTap                func(int)
-	CurrentIndex         *int
-	Elevation            *float64
-	Type                 *string
-	FixedColor           *ui.Color
-	BackgroundColor      *ui.Color
-	IconSize             *float64
-	SelectedItemColor    *ui.Color
-	UnselectedItemColor  *ui.Color
-	SelectedIconTheme    *ui.IconStyle
-	UnselectedIconTheme  *ui.IconStyle
-	SelectedFontSize     *float64
-	UnselectedFontSize   *float64
-	SelectedLabelStyle   *ui.TextStyle
+	// Defines the appearance of the button items that are arrayed within the
+	// bottom navigation bar.
+	Items []ui.BarItem
+
+	// Called when one of the items is tapped.
+	OnTap func(int)
+
+	// The index into items for the current active BottomNavigationBarItem.
+	CurrentIndex *int
+
+	// The z-coordinate of this BottomNavigationBar.
+	Elevation *float64
+
+	// Defines the layout and behavior of a BottomNavigationBar.
+	Type       *string
+	FixedColor *ui.Color
+
+	// The color of the BottomNavigationBar itself.
+	BackgroundColor *ui.Color
+
+	// The size of all of the BottomNavigationBarItem icons.
+	IconSize *float64
+
+	// The color of the selected icon and label.
+	SelectedItemColor *ui.Color
+
+	// The color of the unselected icon and labels.
+	UnselectedItemColor *ui.Color
+
+	// The size, opacity, and color of the icon in the currently selected icon.
+	SelectedIconTheme *ui.IconStyle
+
+	// The size, opacity, and color of the icon in the currently unselected
+	// icons.
+	UnselectedIconTheme *ui.IconStyle
+
+	// The font size of the BottomNavigationBarItem labels when they are
+	// selected.
+	SelectedFontSize *float64
+
+	// The font size of the BottomNavigationBarItem labels when they are not
+	// selected.
+	UnselectedFontSize *float64
+
+	// The TextStyle of the BottomNavigationBarItem labels when they are
+	// selected.
+	SelectedLabelStyle *ui.TextStyle
+
+	// The TextStyle of the BottomNavigationBarItem labels when they are not
+	// selected.
 	UnselectedLabelStyle *ui.TextStyle
-	ShowSelectedLabels   *bool
+
+	// Whether the labels are shown for the selected BottomNavigationBarItem.
+	ShowSelectedLabels *bool
+
+	// Whether the labels are shown for the unselected
+	// BottomNavigationBarItems.
 	ShowUnselectedLabels *bool
-	MouseCursor          *string
-	EnableFeedback       *bool
-	LandscapeLayout      *string
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// items.
+	MouseCursor *string
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// The arrangement of the bar's items when the enclosing orientation is
+	// landscape.
+	LandscapeLayout *string
+
+	// This flag is controlling how BottomNavigationBar is going to use the
+	// colors provided by the selectedIconTheme, unselectedIconTheme,
+	// selectedItemColor, unselectedItemColor.
 	UseLegacyColorScheme *bool
 }
 
 // BottomNavigationBarTheme maps BottomNavigationBarTheme of package:material_ui/material_ui.dart.
+//
+// Applies a bottom navigation bar theme to descendant BottomNavigationBar
+// widgets.
 type BottomNavigationBarTheme struct {
-	Data  ui.BottomNavigationBarStyle
+	// The properties used for all descendant BottomNavigationBar widgets.
+	Data ui.BottomNavigationBarStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // BottomSheet maps BottomSheet of package:material_ui/material_ui.dart.
 //
+// A Material Design bottom sheet.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type BottomSheet struct {
-	EnableDrag      *bool
-	ShowDragHandle  *bool
+	// If true, the bottom sheet can be dragged up and down and dismissed by
+	// swiping downwards.
+	EnableDrag *bool
+
+	// Specifies whether a drag handle is shown.
+	ShowDragHandle *bool
+
+	// The bottom sheet drag handle's color.
 	DragHandleColor *ui.Color
-	DragHandleSize  *ui.Size
+
+	// Defaults to dragHandleSize.
+	DragHandleSize *ui.Size
+
+	// The bottom sheet's background color.
 	BackgroundColor *ui.Color
-	ShadowColor     *ui.Color
-	Elevation       *float64
-	Shape           *ui.Shape
-	ClipBehavior    *string
-	Constraints     *ui.Constraints
-	OnClosing       func()
-	Builder         ui.Builder
+
+	// The color of the shadow below the sheet.
+	ShadowColor *ui.Color
+
+	// The z-coordinate at which to place this material relative to its parent.
+	Elevation *float64
+
+	// The shape of the bottom sheet.
+	Shape *ui.Shape
+
+	// Defines the bottom sheet's clipBehavior.
+	ClipBehavior *string
+
+	// Defines minimum and maximum sizes for a BottomSheet.
+	Constraints *ui.Constraints
+
+	// Called when the bottom sheet begins to close.
+	OnClosing func()
+
+	// A builder for the contents of the sheet.
+	Builder ui.Builder
 }
 
 // ButtonBar maps ButtonBar of package:material_ui/material_ui.dart.
+//
+// An end-aligned row of buttons, laying out into a column if there is not
+// enough horizontal space.
 //
 // Alignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
 //
@@ -440,26 +859,59 @@ type BottomSheet struct {
 //
 // OverflowDirection takes "up", or "down".
 type ButtonBar struct {
-	Alignment             *string
-	MainAxisSize          *string
-	ButtonTextTheme       *string
-	ButtonMinWidth        *float64
-	ButtonHeight          *float64
-	ButtonPadding         *ui.Insets
+	// How the children should be placed along the horizontal axis.
+	Alignment *string
+
+	// How much horizontal space is available.
+	MainAxisSize *string
+
+	// Overrides the surrounding buttonTextTheme to define a button's base
+	// colors, size, internal padding and shape.
+	ButtonTextTheme *string
+
+	// Overrides the surrounding minWidth to define a button's minimum width.
+	ButtonMinWidth *float64
+
+	// Overrides the surrounding height to define a button's minimum height.
+	ButtonHeight *float64
+
+	// Overrides the surrounding padding to define the padding for a button's
+	// child (typically the button's label).
+	ButtonPadding *ui.Insets
+
+	// Overrides the surrounding alignedDropdown to define whether a
+	// DropdownButton menu's width will match the button's width.
 	ButtonAlignedDropdown *bool
-	LayoutBehavior        *string
-	OverflowDirection     *string
+
+	// Defines whether a ButtonBar should size itself with a minimum size
+	// constraint or with padding.
+	LayoutBehavior *string
+
+	// Defines the vertical direction of a ButtonBar's children if it
+	// overflows.
+	OverflowDirection *string
+
+	// The spacing between buttons when the button bar overflows.
 	OverflowButtonSpacing *float64
-	Children              []ui.Node
+
+	// The buttons to arrange horizontally.
+	Children []ui.Node
 }
 
 // ButtonBarTheme maps ButtonBarTheme of package:material_ui/material_ui.dart.
+//
+// Applies a button bar theme to descendant ButtonBar widgets.
 type ButtonBarTheme struct {
-	Data  ui.ButtonBarStyle
+	// The properties used for all descendant ButtonBar widgets.
+	Data ui.ButtonBarStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // ButtonTheme maps ButtonTheme of package:material_ui/material_ui.dart.
+//
+// Used with ButtonThemeData to configure the color and geometry of buttons.
 //
 // TextTheme takes "normal", "accent", or "primary".
 //
@@ -481,77 +933,171 @@ type ButtonTheme struct {
 	HighlightColor        *ui.Color
 	SplashColor           *ui.Color
 	MaterialTapTargetSize *string
-	Child                 ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // ButtonThemeFromButtonThemeData maps ButtonTheme.fromButtonThemeData of package:material_ui/material_ui.dart.
+//
+// Used with ButtonThemeData to configure the color and geometry of buttons.
 type ButtonThemeFromButtonThemeData struct {
-	Data  ui.ButtonThemeStyle
+	// Specifies the color and geometry of buttons.
+	Data ui.ButtonThemeStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // CalendarDatePicker maps CalendarDatePicker of package:material_ui/material_ui.dart.
 //
+// Displays a grid of days for a given month and allows the user to select a
+// date.
+//
 // InitialCalendarMode takes "day", or "year".
 type CalendarDatePicker struct {
-	InitialDate             int
-	FirstDate               int
-	LastDate                int
-	CurrentDate             *int
-	OnDateChanged           func(int)
+	// The initially selected DateTime that the picker should display.
+	InitialDate int
+
+	// The earliest allowable DateTime that the user can select.
+	FirstDate int
+
+	// The latest allowable DateTime that the user can select.
+	LastDate int
+
+	// The DateTime representing today.
+	CurrentDate *int
+
+	// Called when the user selects a date in the picker.
+	OnDateChanged func(int)
+
+	// Called when the user navigates to a new month/year in the picker.
 	OnDisplayedMonthChanged func(int)
-	InitialCalendarMode     *string
+
+	// The initial display of the calendar picker.
+	InitialCalendarMode *string
 }
 
 // Card maps Card of package:material_ui/material_ui.dart.
 //
+// A Material Design card: a panel with slightly rounded corners and an
+// elevation shadow.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Card struct {
-	Color              *ui.Color
-	ShadowColor        *ui.Color
-	SurfaceTintColor   *ui.Color
-	Elevation          *float64
-	Shape              *ui.Shape
+	// The card's background color.
+	Color *ui.Color
+
+	// The color to paint the shadow below the card.
+	ShadowColor *ui.Color
+
+	// The color used as an overlay on color to indicate elevation.
+	SurfaceTintColor *ui.Color
+
+	// The z-coordinate at which to place this card.
+	Elevation *float64
+
+	// The shape of the card's Material.
+	Shape *ui.Shape
+
+	// Whether to paint the shape border in front of the child.
 	BorderOnForeground *bool
-	Margin             *ui.Insets
-	ClipBehavior       *string
-	Child              ui.Node
-	SemanticContainer  *bool
+
+	// The empty space that surrounds the card.
+	Margin *ui.Insets
+
+	// If this property is null then the ambient clipBehavior is used.
+	ClipBehavior *string
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Whether this widget represents a single semantic container, or if false
+	// a collection of individual semantic nodes.
+	SemanticContainer *bool
 }
 
 // CardFilled maps Card.filled of package:material_ui/material_ui.dart.
 //
+// A Material Design card: a panel with slightly rounded corners and an
+// elevation shadow.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CardFilled struct {
-	Color              *ui.Color
-	ShadowColor        *ui.Color
-	SurfaceTintColor   *ui.Color
-	Elevation          *float64
-	Shape              *ui.Shape
+	// The card's background color.
+	Color *ui.Color
+
+	// The color to paint the shadow below the card.
+	ShadowColor *ui.Color
+
+	// The color used as an overlay on color to indicate elevation.
+	SurfaceTintColor *ui.Color
+
+	// The z-coordinate at which to place this card.
+	Elevation *float64
+
+	// The shape of the card's Material.
+	Shape *ui.Shape
+
+	// Whether to paint the shape border in front of the child.
 	BorderOnForeground *bool
-	Margin             *ui.Insets
-	ClipBehavior       *string
-	Child              ui.Node
-	SemanticContainer  *bool
+
+	// The empty space that surrounds the card.
+	Margin *ui.Insets
+
+	// If this property is null then the ambient clipBehavior is used.
+	ClipBehavior *string
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Whether this widget represents a single semantic container, or if false
+	// a collection of individual semantic nodes.
+	SemanticContainer *bool
 }
 
 // CardOutlined maps Card.outlined of package:material_ui/material_ui.dart.
 //
+// A Material Design card: a panel with slightly rounded corners and an
+// elevation shadow.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CardOutlined struct {
-	Color              *ui.Color
-	ShadowColor        *ui.Color
-	SurfaceTintColor   *ui.Color
-	Elevation          *float64
-	Shape              *ui.Shape
+	// The card's background color.
+	Color *ui.Color
+
+	// The color to paint the shadow below the card.
+	ShadowColor *ui.Color
+
+	// The color used as an overlay on color to indicate elevation.
+	SurfaceTintColor *ui.Color
+
+	// The z-coordinate at which to place this card.
+	Elevation *float64
+
+	// The shape of the card's Material.
+	Shape *ui.Shape
+
+	// Whether to paint the shape border in front of the child.
 	BorderOnForeground *bool
-	Margin             *ui.Insets
-	ClipBehavior       *string
-	Child              ui.Node
-	SemanticContainer  *bool
+
+	// The empty space that surrounds the card.
+	Margin *ui.Insets
+
+	// If this property is null then the ambient clipBehavior is used.
+	ClipBehavior *string
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Whether this widget represents a single semantic container, or if false
+	// a collection of individual semantic nodes.
+	SemanticContainer *bool
 }
 
 // CardTheme maps CardTheme of package:material_ui/material_ui.dart.
+//
+// Defines default property values for descendant Card widgets.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CardTheme struct {
@@ -563,166 +1109,403 @@ type CardTheme struct {
 	Margin           *ui.Insets
 	Shape            *ui.Shape
 	Data             *ui.CardStyle
-	Child            ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // CarouselView maps CarouselView of package:material_ui/material_ui.dart.
+//
+// A Material Design carousel widget.
 //
 // ItemClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // ScrollDirection takes "horizontal", or "vertical".
 type CarouselView struct {
-	Padding          *ui.Insets
-	BackgroundColor  *ui.Color
-	Elevation        *float64
-	Shape            *ui.Shape
+	// The amount of space to surround each carousel item with.
+	Padding *ui.Insets
+
+	// The background color for each carousel item.
+	BackgroundColor *ui.Color
+
+	// The z-coordinate of each carousel item.
+	Elevation *float64
+
+	// The shape of each carousel item's Material.
+	Shape *ui.Shape
+
+	// The clip behavior for each carousel item.
 	ItemClipBehavior *string
-	OverlayColor     *ui.StateColor
-	ItemSnapping     *bool
-	ShrinkExtent     *float64
-	ScrollDirection  *string
-	Reverse          *bool
-	OnTap            func(int)
-	EnableSplash     *bool
-	Infinite         *bool
-	ItemExtent       float64
-	Children         []ui.Node
-	OnIndexChanged   func(int)
+
+	// The highlight color to indicate the carousel items are in pressed,
+	// hovered or focused states.
+	OverlayColor *ui.StateColor
+
+	// Whether the carousel should keep scrolling to the next/previous items to
+	// maintain the original layout.
+	ItemSnapping *bool
+
+	// The minimum allowable extent (size) in the main axis for carousel items
+	// during scrolling transitions.
+	ShrinkExtent *float64
+
+	// The Axis along which the scroll view's offset increases with each item.
+	ScrollDirection *string
+
+	// Whether the carousel list scrolls in the reading direction.
+	Reverse *bool
+
+	// Called when one of the children is tapped.
+	OnTap func(int)
+
+	// Determines whether an InkWell will cover each Carousel item.
+	EnableSplash *bool
+
+	// Whether the carousel should loop infinitely.
+	Infinite *bool
+
+	// The extent the children are forced to have in the main axis.
+	ItemExtent float64
+
+	// The child widgets for the carousel.
+	Children []ui.Node
+
+	// A callback invoked when the leading item changes.
+	OnIndexChanged func(int)
 }
 
 // CarouselViewBuilder maps CarouselView.builder of package:material_ui/material_ui.dart.
+//
+// A Material Design carousel widget.
 //
 // ItemClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // ScrollDirection takes "horizontal", or "vertical".
 type CarouselViewBuilder struct {
-	Padding          *ui.Insets
-	BackgroundColor  *ui.Color
-	Elevation        *float64
-	Shape            *ui.Shape
+	// The amount of space to surround each carousel item with.
+	Padding *ui.Insets
+
+	// The background color for each carousel item.
+	BackgroundColor *ui.Color
+
+	// The z-coordinate of each carousel item.
+	Elevation *float64
+
+	// The shape of each carousel item's Material.
+	Shape *ui.Shape
+
+	// The clip behavior for each carousel item.
 	ItemClipBehavior *string
-	OverlayColor     *ui.StateColor
-	ItemSnapping     *bool
-	ShrinkExtent     *float64
-	ScrollDirection  *string
-	Reverse          *bool
-	OnTap            func(int)
-	EnableSplash     *bool
-	ItemExtent       float64
-	ItemBuilder      ui.ItemBuilder
-	ItemCount        *int
-	OnIndexChanged   func(int)
-	Infinite         *bool
+
+	// The highlight color to indicate the carousel items are in pressed,
+	// hovered or focused states.
+	OverlayColor *ui.StateColor
+
+	// Whether the carousel should keep scrolling to the next/previous items to
+	// maintain the original layout.
+	ItemSnapping *bool
+
+	// The minimum allowable extent (size) in the main axis for carousel items
+	// during scrolling transitions.
+	ShrinkExtent *float64
+
+	// The Axis along which the scroll view's offset increases with each item.
+	ScrollDirection *string
+
+	// Whether the carousel list scrolls in the reading direction.
+	Reverse *bool
+
+	// Called when one of the children is tapped.
+	OnTap func(int)
+
+	// Determines whether an InkWell will cover each Carousel item.
+	EnableSplash *bool
+
+	// The extent the children are forced to have in the main axis.
+	ItemExtent float64
+
+	// Called to build carousel item on demand.
+	ItemBuilder ui.ItemBuilder
+
+	// The number of items in the carousel.
+	ItemCount *int
+
+	// A callback invoked when the leading item changes.
+	OnIndexChanged func(int)
+
+	// Whether the carousel should loop infinitely.
+	Infinite *bool
 }
 
 // CarouselViewTheme maps CarouselViewTheme of package:material_ui/material_ui.dart.
+//
+// Applies a carousel theme to descendant CarouselView widgets.
 type CarouselViewTheme struct {
-	Data  ui.CarouselViewStyle
+	// The properties for descendant carousel widgets.
+	Data ui.CarouselViewStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // CarouselViewWeighted maps CarouselView.weighted of package:material_ui/material_ui.dart.
 //
+// A Material Design carousel widget.
+//
 // ItemClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // ScrollDirection takes "horizontal", or "vertical".
 type CarouselViewWeighted struct {
-	Padding          *ui.Insets
-	BackgroundColor  *ui.Color
-	Elevation        *float64
-	Shape            *ui.Shape
+	// The amount of space to surround each carousel item with.
+	Padding *ui.Insets
+
+	// The background color for each carousel item.
+	BackgroundColor *ui.Color
+
+	// The z-coordinate of each carousel item.
+	Elevation *float64
+
+	// The shape of each carousel item's Material.
+	Shape *ui.Shape
+
+	// The clip behavior for each carousel item.
 	ItemClipBehavior *string
-	OverlayColor     *ui.StateColor
-	ItemSnapping     *bool
-	ShrinkExtent     *float64
-	ScrollDirection  *string
-	Reverse          *bool
+
+	// The highlight color to indicate the carousel items are in pressed,
+	// hovered or focused states.
+	OverlayColor *ui.StateColor
+
+	// Whether the carousel should keep scrolling to the next/previous items to
+	// maintain the original layout.
+	ItemSnapping *bool
+
+	// The minimum allowable extent (size) in the main axis for carousel items
+	// during scrolling transitions.
+	ShrinkExtent *float64
+
+	// The Axis along which the scroll view's offset increases with each item.
+	ScrollDirection *string
+
+	// Whether the carousel list scrolls in the reading direction.
+	Reverse *bool
+
+	// Whether the collapsed items are allowed to expand to the max size.
 	ConsumeMaxWeight *bool
-	OnTap            func(int)
-	EnableSplash     *bool
-	Infinite         *bool
-	FlexWeights      []int
-	Children         []ui.Node
-	OnIndexChanged   func(int)
+
+	// Called when one of the children is tapped.
+	OnTap func(int)
+
+	// Determines whether an InkWell will cover each Carousel item.
+	EnableSplash *bool
+
+	// Whether the carousel should loop infinitely.
+	Infinite *bool
+
+	// The weights that each visible child should occupy in the viewport.
+	FlexWeights []int
+
+	// The child widgets for the carousel.
+	Children []ui.Node
+
+	// A callback invoked when the leading item changes.
+	OnIndexChanged func(int)
 }
 
 // CarouselViewWeightedBuilder maps CarouselView.weightedBuilder of package:material_ui/material_ui.dart.
+//
+// A Material Design carousel widget.
 //
 // ItemClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // ScrollDirection takes "horizontal", or "vertical".
 type CarouselViewWeightedBuilder struct {
-	Padding          *ui.Insets
-	BackgroundColor  *ui.Color
-	Elevation        *float64
-	Shape            *ui.Shape
+	// The amount of space to surround each carousel item with.
+	Padding *ui.Insets
+
+	// The background color for each carousel item.
+	BackgroundColor *ui.Color
+
+	// The z-coordinate of each carousel item.
+	Elevation *float64
+
+	// The shape of each carousel item's Material.
+	Shape *ui.Shape
+
+	// The clip behavior for each carousel item.
 	ItemClipBehavior *string
-	OverlayColor     *ui.StateColor
-	ItemSnapping     *bool
-	ShrinkExtent     *float64
-	ScrollDirection  *string
-	Reverse          *bool
+
+	// The highlight color to indicate the carousel items are in pressed,
+	// hovered or focused states.
+	OverlayColor *ui.StateColor
+
+	// Whether the carousel should keep scrolling to the next/previous items to
+	// maintain the original layout.
+	ItemSnapping *bool
+
+	// The minimum allowable extent (size) in the main axis for carousel items
+	// during scrolling transitions.
+	ShrinkExtent *float64
+
+	// The Axis along which the scroll view's offset increases with each item.
+	ScrollDirection *string
+
+	// Whether the carousel list scrolls in the reading direction.
+	Reverse *bool
+
+	// Whether the collapsed items are allowed to expand to the max size.
 	ConsumeMaxWeight *bool
-	OnTap            func(int)
-	EnableSplash     *bool
-	FlexWeights      []int
-	ItemBuilder      ui.ItemBuilder
-	ItemCount        *int
-	OnIndexChanged   func(int)
-	Infinite         *bool
+
+	// Called when one of the children is tapped.
+	OnTap func(int)
+
+	// Determines whether an InkWell will cover each Carousel item.
+	EnableSplash *bool
+
+	// The weights that each visible child should occupy in the viewport.
+	FlexWeights []int
+
+	// Called to build carousel item on demand.
+	ItemBuilder ui.ItemBuilder
+
+	// The number of items in the carousel.
+	ItemCount *int
+
+	// A callback invoked when the leading item changes.
+	OnIndexChanged func(int)
+
+	// Whether the carousel should loop infinitely.
+	Infinite *bool
 }
 
 // Checkbox maps Checkbox of package:material_ui/material_ui.dart.
 //
+// A Material Design checkbox.
+//
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 type Checkbox struct {
-	Value                 bool
-	Tristate              *bool
-	OnChanged             func(bool)
-	MouseCursor           *string
-	ActiveColor           *ui.Color
-	FillColor             *ui.StateColor
-	CheckColor            *ui.Color
-	FocusColor            *ui.Color
-	HoverColor            *ui.Color
-	OverlayColor          *ui.StateColor
-	SplashRadius          *float64
+	// Whether this checkbox is checked.
+	Value bool
+
+	// If true the checkbox's value can be true, false, or null.
+	Tristate *bool
+
+	// Called when the value of the checkbox should change.
+	OnChanged func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color to use when this checkbox is checked.
+	ActiveColor *ui.Color
+
+	// The color that fills the checkbox, in all WidgetStates.
+	FillColor *ui.StateColor
+
+	// The color to use for the check icon when this checkbox is checked.
+	CheckColor *ui.Color
+
+	// The color for the checkbox's Material when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the checkbox's Material when a pointer is hovering over
+	// it.
+	HoverColor *ui.Color
+
+	// The color for the checkbox's Material.
+	OverlayColor *ui.StateColor
+
+	// The splash radius of the circular Material ink response.
+	SplashRadius *float64
+
+	// Configures the minimum size of the tap target.
 	MaterialTapTargetSize *string
-	VisualDensity         *ui.Density
-	FocusNode             *ui.FocusKey
-	Autofocus             *bool
-	Shape                 *ui.Shape
-	Side                  *ui.BorderSide
-	IsError               *bool
-	SemanticLabel         *string
+
+	// Defines how compact the checkbox's layout will be.
+	VisualDensity *ui.Density
+	FocusNode     *ui.FocusKey
+	Autofocus     *bool
+
+	// The shape of the checkbox's Material.
+	Shape *ui.Shape
+
+	// The color and width of the checkbox's border.
+	Side *ui.BorderSide
+
+	// True if this checkbox wants to show an error state.
+	IsError *bool
+
+	// The semantic label for the checkbox that will be announced by screen
+	// readers.
+	SemanticLabel *string
 }
 
 // CheckboxAdaptive maps Checkbox.adaptive of package:material_ui/material_ui.dart.
 //
+// A Material Design checkbox.
+//
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 type CheckboxAdaptive struct {
-	Value                 bool
-	Tristate              *bool
-	OnChanged             func(bool)
-	MouseCursor           *string
-	ActiveColor           *ui.Color
-	FillColor             *ui.StateColor
-	CheckColor            *ui.Color
-	FocusColor            *ui.Color
-	HoverColor            *ui.Color
-	OverlayColor          *ui.StateColor
-	SplashRadius          *float64
+	// Whether this checkbox is checked.
+	Value bool
+
+	// If true the checkbox's value can be true, false, or null.
+	Tristate *bool
+
+	// Called when the value of the checkbox should change.
+	OnChanged func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color to use when this checkbox is checked.
+	ActiveColor *ui.Color
+
+	// The color that fills the checkbox, in all WidgetStates.
+	FillColor *ui.StateColor
+
+	// The color to use for the check icon when this checkbox is checked.
+	CheckColor *ui.Color
+
+	// The color for the checkbox's Material when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the checkbox's Material when a pointer is hovering over
+	// it.
+	HoverColor *ui.Color
+
+	// The color for the checkbox's Material.
+	OverlayColor *ui.StateColor
+
+	// The splash radius of the circular Material ink response.
+	SplashRadius *float64
+
+	// Configures the minimum size of the tap target.
 	MaterialTapTargetSize *string
-	VisualDensity         *ui.Density
-	FocusNode             *ui.FocusKey
-	Autofocus             *bool
-	Shape                 *ui.Shape
-	Side                  *ui.BorderSide
-	IsError               *bool
-	SemanticLabel         *string
+
+	// Defines how compact the checkbox's layout will be.
+	VisualDensity *ui.Density
+	FocusNode     *ui.FocusKey
+	Autofocus     *bool
+
+	// The shape of the checkbox's Material.
+	Shape *ui.Shape
+
+	// The color and width of the checkbox's border.
+	Side *ui.BorderSide
+
+	// True if this checkbox wants to show an error state.
+	IsError *bool
+
+	// The semantic label for the checkbox that will be announced by screen
+	// readers.
+	SemanticLabel *string
 }
 
 // CheckboxListTile maps CheckboxListTile of package:material_ui/material_ui.dart.
+//
+// A ListTile with a Checkbox. In other words, a checkbox with a label.
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 //
@@ -730,49 +1513,111 @@ type CheckboxAdaptive struct {
 //
 // TitleAlignment takes "threeLine", "titleHeight", "top", "center", or "bottom".
 type CheckboxListTile struct {
-	Value                       bool
-	OnChanged                   func(bool)
-	MouseCursor                 *string
-	ActiveColor                 *ui.Color
-	FillColor                   *ui.StateColor
-	CheckColor                  *ui.Color
-	HoverColor                  *ui.Color
-	OverlayColor                *ui.StateColor
-	SplashRadius                *float64
-	MaterialTapTargetSize       *string
-	VisualDensity               *ui.Density
-	FocusNode                   *ui.FocusKey
-	StatesController            *ui.StatesKey
-	Autofocus                   *bool
-	Shape                       *ui.Shape
-	Side                        *ui.BorderSide
-	IsError                     *bool
-	Enabled                     *bool
-	TileColor                   *ui.Color
-	Title                       ui.Node
-	Subtitle                    ui.Node
-	IsThreeLine                 *bool
-	Dense                       *bool
-	Secondary                   ui.Node
-	Selected                    *bool
-	ControlAffinity             *string
-	ContentPadding              *ui.Insets
-	Tristate                    *bool
-	CheckboxShape               *ui.Shape
-	SelectedTileColor           *ui.Color
-	OnFocusChange               func(bool)
-	EnableFeedback              *bool
-	HorizontalTitleGap          *float64
-	MinVerticalPadding          *float64
-	MinLeadingWidth             *float64
-	MinTileHeight               *float64
-	CheckboxSemanticLabel       *string
-	CheckboxScaleFactor         *float64
-	TitleAlignment              *string
+	// Whether this checkbox is checked.
+	Value bool
+
+	// Called when the value of the checkbox should change.
+	OnChanged func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color to use when this checkbox is checked.
+	ActiveColor *ui.Color
+
+	// The color that fills the checkbox.
+	FillColor *ui.StateColor
+
+	// The color to use for the check icon when this checkbox is checked.
+	CheckColor *ui.Color
+	HoverColor *ui.Color
+
+	// The color for the checkbox's Material.
+	OverlayColor *ui.StateColor
+
+	// If null, then the value of splashRadius is used.
+	SplashRadius *float64
+
+	// Defaults to shrinkWrap.
+	MaterialTapTargetSize *string
+
+	// Defines how compact the list tile's layout will be.
+	VisualDensity *ui.Density
+	FocusNode     *ui.FocusKey
+
+	// Controls the interactive states of the backing ListTile.
+	StatesController *ui.StatesKey
+	Autofocus        *bool
+	Shape            *ui.Shape
+
+	// The given value is passed directly to side.
+	Side *ui.BorderSide
+
+	// Defaults to false.
+	IsError *bool
+
+	// Whether the CheckboxListTile is interactive.
+	Enabled   *bool
+	TileColor *ui.Color
+
+	// The primary content of the list tile.
+	Title ui.Node
+
+	// Additional content displayed below the title.
+	Subtitle ui.Node
+
+	// Whether this list tile is intended to display three lines of text.
+	IsThreeLine *bool
+
+	// Whether this list tile is part of a vertically dense list.
+	Dense *bool
+
+	// A widget to display on the opposite side of the tile from the checkbox.
+	Secondary ui.Node
+
+	// Whether to render icons and text in the activeColor.
+	Selected *bool
+
+	// Where to place the control relative to the text.
+	ControlAffinity *string
+
+	// Defines insets surrounding the tile's contents.
+	ContentPadding *ui.Insets
+
+	// If true the checkbox's value can be true, false, or null.
+	Tristate *bool
+
+	// If this property is null then shape of checkboxTheme is used.
+	CheckboxShape *ui.Shape
+
+	// If non-null, defines the background color when selected is true.
+	SelectedTileColor *ui.Color
+	OnFocusChange     func(bool)
+
+	// See also:
+	EnableFeedback        *bool
+	HorizontalTitleGap    *float64
+	MinVerticalPadding    *float64
+	MinLeadingWidth       *float64
+	MinTileHeight         *float64
+	CheckboxSemanticLabel *string
+
+	// Controls the scaling factor applied to the Checkbox within the
+	// CheckboxListTile.
+	CheckboxScaleFactor *float64
+
+	// Defines how leading and trailing are vertically aligned relative to the
+	// ListTile's titles (title and subtitle).
+	TitleAlignment *string
+
+	// Whether to add button:true to the semantics if onTap is provided.
 	InternalAddSemanticForOnTap *bool
 }
 
 // CheckboxListTileAdaptive maps CheckboxListTile.adaptive of package:material_ui/material_ui.dart.
+//
+// A ListTile with a Checkbox. In other words, a checkbox with a label.
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 //
@@ -780,85 +1625,189 @@ type CheckboxListTile struct {
 //
 // TitleAlignment takes "threeLine", "titleHeight", "top", "center", or "bottom".
 type CheckboxListTileAdaptive struct {
-	Value                       bool
-	OnChanged                   func(bool)
-	MouseCursor                 *string
-	ActiveColor                 *ui.Color
-	FillColor                   *ui.StateColor
-	CheckColor                  *ui.Color
-	HoverColor                  *ui.Color
-	OverlayColor                *ui.StateColor
-	SplashRadius                *float64
-	MaterialTapTargetSize       *string
-	VisualDensity               *ui.Density
-	FocusNode                   *ui.FocusKey
-	StatesController            *ui.StatesKey
-	Autofocus                   *bool
-	Shape                       *ui.Shape
-	Side                        *ui.BorderSide
-	IsError                     *bool
-	Enabled                     *bool
-	TileColor                   *ui.Color
-	Title                       ui.Node
-	Subtitle                    ui.Node
-	IsThreeLine                 *bool
-	Dense                       *bool
-	Secondary                   ui.Node
-	Selected                    *bool
-	ControlAffinity             *string
-	ContentPadding              *ui.Insets
-	Tristate                    *bool
-	CheckboxShape               *ui.Shape
-	SelectedTileColor           *ui.Color
-	OnFocusChange               func(bool)
-	EnableFeedback              *bool
-	HorizontalTitleGap          *float64
-	MinVerticalPadding          *float64
-	MinLeadingWidth             *float64
-	MinTileHeight               *float64
-	CheckboxSemanticLabel       *string
-	CheckboxScaleFactor         *float64
-	TitleAlignment              *string
+	// Whether this checkbox is checked.
+	Value bool
+
+	// Called when the value of the checkbox should change.
+	OnChanged func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color to use when this checkbox is checked.
+	ActiveColor *ui.Color
+
+	// The color that fills the checkbox.
+	FillColor *ui.StateColor
+
+	// The color to use for the check icon when this checkbox is checked.
+	CheckColor *ui.Color
+	HoverColor *ui.Color
+
+	// The color for the checkbox's Material.
+	OverlayColor *ui.StateColor
+
+	// If null, then the value of splashRadius is used.
+	SplashRadius *float64
+
+	// Defaults to shrinkWrap.
+	MaterialTapTargetSize *string
+
+	// Defines how compact the list tile's layout will be.
+	VisualDensity *ui.Density
+	FocusNode     *ui.FocusKey
+
+	// Controls the interactive states of the backing ListTile.
+	StatesController *ui.StatesKey
+	Autofocus        *bool
+	Shape            *ui.Shape
+
+	// The given value is passed directly to side.
+	Side *ui.BorderSide
+
+	// Defaults to false.
+	IsError *bool
+
+	// Whether the CheckboxListTile is interactive.
+	Enabled   *bool
+	TileColor *ui.Color
+
+	// The primary content of the list tile.
+	Title ui.Node
+
+	// Additional content displayed below the title.
+	Subtitle ui.Node
+
+	// Whether this list tile is intended to display three lines of text.
+	IsThreeLine *bool
+
+	// Whether this list tile is part of a vertically dense list.
+	Dense *bool
+
+	// A widget to display on the opposite side of the tile from the checkbox.
+	Secondary ui.Node
+
+	// Whether to render icons and text in the activeColor.
+	Selected *bool
+
+	// Where to place the control relative to the text.
+	ControlAffinity *string
+
+	// Defines insets surrounding the tile's contents.
+	ContentPadding *ui.Insets
+
+	// If true the checkbox's value can be true, false, or null.
+	Tristate *bool
+
+	// If this property is null then shape of checkboxTheme is used.
+	CheckboxShape *ui.Shape
+
+	// If non-null, defines the background color when selected is true.
+	SelectedTileColor *ui.Color
+	OnFocusChange     func(bool)
+
+	// See also:
+	EnableFeedback        *bool
+	HorizontalTitleGap    *float64
+	MinVerticalPadding    *float64
+	MinLeadingWidth       *float64
+	MinTileHeight         *float64
+	CheckboxSemanticLabel *string
+
+	// Controls the scaling factor applied to the Checkbox within the
+	// CheckboxListTile.
+	CheckboxScaleFactor *float64
+
+	// Defines how leading and trailing are vertically aligned relative to the
+	// ListTile's titles (title and subtitle).
+	TitleAlignment *string
+
+	// Whether to add button:true to the semantics if onTap is provided.
 	InternalAddSemanticForOnTap *bool
 }
 
 // CheckboxMenuButton maps CheckboxMenuButton of package:material_ui/material_ui.dart.
 //
+// A menu item that combines a Checkbox widget with a MenuItemButton.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CheckboxMenuButton struct {
-	Value            bool
-	Tristate         *bool
-	IsError          *bool
-	OnChanged        func(bool)
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	FocusNode        *ui.FocusKey
+	// Whether this checkbox is checked.
+	Value bool
+
+	// If true, then the checkbox's value can be true, false, or null.
+	Tristate *bool
+
+	// True if this checkbox wants to show an error state.
+	IsError *bool
+
+	// Called when the value of the checkbox should change.
+	OnChanged func(bool)
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+	FocusNode     *ui.FocusKey
+
+	// Customizes this button's appearance.
 	Style            *ui.ButtonStyle
 	StatesController *ui.StatesKey
-	ClipBehavior     *string
-	TrailingIcon     ui.Node
-	CloseOnActivate  *bool
-	Child            ui.Node
+
+	// Defaults to none.
+	ClipBehavior *string
+
+	// An optional icon to display after the child label.
+	TrailingIcon    ui.Node
+	CloseOnActivate *bool
+
+	// The widget displayed in the center of this button.
+	Child ui.Node
 }
 
 // CheckboxTheme maps CheckboxTheme of package:material_ui/material_ui.dart.
+//
+// Applies a checkbox theme to descendant Checkbox widgets.
 type CheckboxTheme struct {
-	Data  ui.CheckboxStyle
+	// The properties used for all descendant Checkbox widgets.
+	Data ui.CheckboxStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // CheckedPopupMenuItem maps CheckedPopupMenuItem of package:material_ui/material_ui.dart.
+//
+// An item with a checkmark in a Material Design popup menu.
 type CheckedPopupMenuItem struct {
-	Checked     *bool
-	Enabled     *bool
-	Padding     *ui.Insets
-	Height      *float64
+	// Whether to display a checkmark next to the menu item.
+	Checked *bool
+
+	// Whether the user is permitted to select this item.
+	Enabled *bool
+
+	// The padding of the menu item.
+	Padding *ui.Insets
+
+	// The minimum height of the menu item.
+	Height *float64
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
 	MouseCursor *string
-	Child       ui.Node
-	OnTap       func()
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Called when the menu item is tapped.
+	OnTap func()
 }
 
 // Chip maps Chip of package:material_ui/material_ui.dart.
+//
+// A Material Design chip.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
@@ -892,12 +1841,21 @@ type Chip struct {
 }
 
 // ChipTheme maps ChipTheme of package:material_ui/material_ui.dart.
+//
+// Applies a chip theme to descendant RawChip-based widgets, like Chip,
+// InputChip, ChoiceChip, FilterChip, and ActionChip.
 type ChipTheme struct {
-	Data  ui.ChipStyle
+	// Specifies the color, shape, and text style values for descendant chip
+	// widgets.
+	Data ui.ChipStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // ChoiceChip maps ChoiceChip of package:material_ui/material_ui.dart.
+//
+// A Material Design choice chip.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
@@ -937,6 +1895,8 @@ type ChoiceChip struct {
 
 // ChoiceChipElevated maps ChoiceChip.elevated of package:material_ui/material_ui.dart.
 //
+// A Material Design choice chip.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
@@ -974,165 +1934,388 @@ type ChoiceChipElevated struct {
 }
 
 // CircleAvatar maps CircleAvatar of package:material_ui/material_ui.dart.
+//
+// A circle that represents a user.
 type CircleAvatar struct {
-	Child           ui.Node
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The color with which to fill the circle.
 	BackgroundColor *ui.Color
+
+	// The background image of the circle.
 	BackgroundImage *ui.ImageSource
+
+	// The foreground image of the circle.
 	ForegroundImage *ui.ImageSource
+
+	// The default text color for text in the circle.
 	ForegroundColor *ui.Color
-	Radius          *float64
-	MinRadius       *float64
-	MaxRadius       *float64
+
+	// The size of the avatar, expressed as the radius (half the diameter).
+	Radius *float64
+
+	// The minimum size of the avatar, expressed as the radius (half the
+	// diameter).
+	MinRadius *float64
+
+	// The maximum size of the avatar, expressed as the radius (half the
+	// diameter).
+	MaxRadius *float64
 }
 
 // CircularProgressIndicator maps CircularProgressIndicator of package:material_ui/material_ui.dart.
 //
+// A Material Design circular progress indicator, which spins to indicate
+// that the application is busy.
+//
 // StrokeCap takes "butt", "round", or "square".
 type CircularProgressIndicator struct {
-	Value           *float64
+	// If non-null, the value of this progress indicator.
+	Value *float64
+
+	// The progress indicator's background color.
 	BackgroundColor *ui.Color
-	Color           *ui.Color
-	StrokeWidth     *float64
-	StrokeAlign     *float64
-	SemanticsLabel  *string
-	SemanticsValue  *string
-	StrokeCap       *string
-	Constraints     *ui.Constraints
-	TrackGap        *float64
-	Year2023        *bool
-	Padding         *ui.Insets
+
+	// The progress indicator's color.
+	Color *ui.Color
+
+	// The width of the line used to draw the circle.
+	StrokeWidth *float64
+
+	// The relative position of the stroke on a CircularProgressIndicator.
+	StrokeAlign *float64
+
+	// The label for this progress indicator.
+	SemanticsLabel *string
+
+	// The value for this progress indicator.
+	SemanticsValue *string
+
+	// The progress indicator's line ending.
+	StrokeCap *string
+
+	// Defines minimum and maximum sizes for a CircularProgressIndicator.
+	Constraints *ui.Constraints
+
+	// The gap between the active indicator and the background track.
+	TrackGap *float64
+
+	// When true, the CircularProgressIndicator will use the 2023 Material
+	// Design 3 appearance.
+	Year2023 *bool
+
+	// The padding around the indicator track.
+	Padding *ui.Insets
 }
 
 // CircularProgressIndicatorAdaptive maps CircularProgressIndicator.adaptive of package:material_ui/material_ui.dart.
 //
+// A Material Design circular progress indicator, which spins to indicate
+// that the application is busy.
+//
 // StrokeCap takes "butt", "round", or "square".
 type CircularProgressIndicatorAdaptive struct {
-	Value           *float64
+	// If non-null, the value of this progress indicator.
+	Value *float64
+
+	// The progress indicator's background color.
 	BackgroundColor *ui.Color
-	StrokeWidth     *float64
-	SemanticsLabel  *string
-	SemanticsValue  *string
-	StrokeCap       *string
-	StrokeAlign     *float64
-	Constraints     *ui.Constraints
-	TrackGap        *float64
-	Year2023        *bool
-	Padding         *ui.Insets
+
+	// The width of the line used to draw the circle.
+	StrokeWidth *float64
+
+	// The label for this progress indicator.
+	SemanticsLabel *string
+
+	// The value for this progress indicator.
+	SemanticsValue *string
+
+	// The progress indicator's line ending.
+	StrokeCap *string
+
+	// The relative position of the stroke on a CircularProgressIndicator.
+	StrokeAlign *float64
+
+	// Defines minimum and maximum sizes for a CircularProgressIndicator.
+	Constraints *ui.Constraints
+
+	// The gap between the active indicator and the background track.
+	TrackGap *float64
+
+	// When true, the CircularProgressIndicator will use the 2023 Material
+	// Design 3 appearance.
+	Year2023 *bool
+
+	// The padding around the indicator track.
+	Padding *ui.Insets
 }
 
 // CloseButton maps CloseButton of package:material_ui/material_ui.dart.
+//
+// A Material Design close icon button.
 type CloseButton struct {
-	Color     *ui.Color
+	// The color to use for the icon inside the button, if the icon is enabled.
+	Color *ui.Color
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
 	OnPressed func()
-	Style     *ui.ButtonStyle
+
+	// Customizes this button's appearance.
+	Style *ui.ButtonStyle
 }
 
 // CloseButtonIcon maps CloseButtonIcon of package:material_ui/material_ui.dart.
+//
+// A "close" icon that's appropriate for the current TargetPlatform.
 type CloseButtonIcon struct {
 }
 
 // DataTable maps DataTable of package:material_ui/material_ui.dart.
 //
+// A data table that follows the Material
+// 2(https://material.io/go/design-data-tables) design specification.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type DataTable struct {
-	Columns                  []ui.DataColumn
-	SortColumnIndex          *int
-	SortAscending            *bool
-	OnSelectAll              func(bool)
-	Decoration               *ui.Decoration
-	DataRowColor             *ui.StateColor
-	DataRowHeight            *float64
-	DataRowMinHeight         *float64
-	DataRowMaxHeight         *float64
-	DataTextStyle            *ui.TextStyle
-	HeadingRowColor          *ui.StateColor
-	HeadingRowHeight         *float64
-	HeadingTextStyle         *ui.TextStyle
-	HorizontalMargin         *float64
-	ColumnSpacing            *float64
-	ShowCheckboxColumn       *bool
-	ShowBottomBorder         *bool
-	DividerThickness         *float64
-	Rows                     []ui.DataRow
+	// The configuration and labels for the columns in the table.
+	Columns []ui.DataColumn
+
+	// The current primary sort key's column.
+	SortColumnIndex *int
+
+	// Whether the column mentioned in sortColumnIndex, if any, is sorted in
+	// ascending order.
+	SortAscending *bool
+
+	// Invoked when the user selects or unselects every row, using the checkbox
+	// in the heading row.
+	OnSelectAll func(bool)
+
+	// The background and border decoration for the table.
+	Decoration *ui.Decoration
+
+	// The background color for the data rows.
+	DataRowColor  *ui.StateColor
+	DataRowHeight *float64
+
+	// The minimum height of each row (excluding the row that contains column
+	// headings).
+	DataRowMinHeight *float64
+
+	// The maximum height of each row (excluding the row that contains column
+	// headings).
+	DataRowMaxHeight *float64
+
+	// The text style for data rows.
+	DataTextStyle *ui.TextStyle
+
+	// The background color for the heading row.
+	HeadingRowColor *ui.StateColor
+
+	// The height of the heading row.
+	HeadingRowHeight *float64
+
+	// The text style for the heading row.
+	HeadingTextStyle *ui.TextStyle
+
+	// The horizontal margin between the edges of the table and the content in
+	// the first and last cells of each row.
+	HorizontalMargin *float64
+
+	// The horizontal margin between the contents of each data column.
+	ColumnSpacing *float64
+
+	// Whether the widget should display checkboxes for selectable rows.
+	ShowCheckboxColumn *bool
+
+	// Whether a border at the bottom of the table is displayed.
+	ShowBottomBorder *bool
+
+	// The width of the divider that appears between TableRows.
+	DividerThickness *float64
+
+	// The data to show in each row (excluding the row that contains the column
+	// headings).
+	Rows []ui.DataRow
+
+	// Horizontal margin around the checkbox, if it is displayed.
 	CheckboxHorizontalMargin *float64
-	ClipBehavior             *string
+
+	// This can be used to clip the content within the border of the DataTable.
+	ClipBehavior *string
 }
 
 // DataTableTheme maps DataTableTheme of package:material_ui/material_ui.dart.
+//
+// Applies a data table theme to descendant DataTable widgets.
 type DataTableTheme struct {
-	Data  ui.DataTableStyle
+	// The properties used for all descendant DataTable widgets.
+	Data ui.DataTableStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // DatePickerDialog maps DatePickerDialog of package:material_ui/material_ui.dart.
 //
+// A Material-style date picker dialog.
+//
 // InitialEntryMode takes "calendar", "input", "calendarOnly", or "inputOnly".
 //
 // InitialCalendarMode takes "day", or "year".
 type DatePickerDialog struct {
-	InitialDate                   *int
-	FirstDate                     int
-	LastDate                      int
-	CurrentDate                   *int
-	InitialEntryMode              *string
-	CancelText                    *string
-	ConfirmText                   *string
-	HelpText                      *string
-	InitialCalendarMode           *string
-	ErrorFormatText               *string
-	ErrorInvalidText              *string
-	FieldHintText                 *string
-	FieldLabelText                *string
-	RestorationId                 *string
+	// The initially selected DateTime that the picker should display.
+	InitialDate *int
+
+	// The earliest allowable DateTime that the user can select.
+	FirstDate int
+
+	// The latest allowable DateTime that the user can select.
+	LastDate int
+
+	// The DateTime representing today.
+	CurrentDate *int
+
+	// The initial mode of date entry method for the date picker dialog.
+	InitialEntryMode *string
+
+	// The text that is displayed on the cancel button.
+	CancelText *string
+
+	// The text that is displayed on the confirm button.
+	ConfirmText *string
+
+	// The text that is displayed at the top of the header.
+	HelpText *string
+
+	// The initial display of the calendar picker.
+	InitialCalendarMode *string
+
+	// The error text displayed if the entered date is not in the correct
+	// format.
+	ErrorFormatText *string
+
+	// The error text displayed if the date is not valid.
+	ErrorInvalidText *string
+
+	// The hint text displayed in the TextField.
+	FieldHintText *string
+
+	// The label text displayed in the TextField.
+	FieldLabelText *string
+
+	// Restoration ID to save and restore the state of the DatePickerDialog.
+	RestorationId *string
+
+	// Called when the DatePickerDialog is toggled between calendar,input.
 	OnDatePickerModeChange        func(string)
 	SwitchToInputEntryModeIcon    ui.Node
 	SwitchToCalendarEntryModeIcon ui.Node
 }
 
 // DatePickerTheme maps DatePickerTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the visual properties for
+// DatePickerDialogs in this widget's subtree.
 type DatePickerTheme struct {
-	Data  ui.DatePickerStyle
+	// Specifies the visual properties used by descendant DatePickerDialog
+	// widgets.
+	Data ui.DatePickerStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // DateRangePickerDialog maps DateRangePickerDialog of package:material_ui/material_ui.dart.
 //
+// A Material-style date range picker dialog.
+//
 // InitialEntryMode takes "calendar", "input", "calendarOnly", or "inputOnly".
 type DateRangePickerDialog struct {
-	FirstDate                     int
-	LastDate                      int
-	InitialEntryMode              *string
-	HelpText                      *string
-	CancelText                    *string
-	ConfirmText                   *string
-	SaveText                      *string
-	ErrorInvalidRangeText         *string
-	ErrorFormatText               *string
-	ErrorInvalidText              *string
-	FieldStartHintText            *string
-	FieldEndHintText              *string
-	FieldStartLabelText           *string
-	FieldEndLabelText             *string
+	// The earliest allowable date on the date range.
+	FirstDate int
+
+	// The latest allowable date on the date range.
+	LastDate int
+
+	// The initial date range picker entry mode.
+	InitialEntryMode *string
+
+	// The label displayed at the top of the dialog.
+	HelpText *string
+
+	// The label on the cancel button for the text input mode.
+	CancelText *string
+
+	// The label on the "OK" button for the text input mode.
+	ConfirmText *string
+
+	// The label on the save button for the fullscreen calendar mode.
+	SaveText *string
+
+	// The message used when the date range is invalid (e.g.
+	ErrorInvalidRangeText *string
+
+	// The message used when an input text isn't in a proper date format.
+	ErrorFormatText *string
+
+	// The message used when an input text isn't a selectable date.
+	ErrorInvalidText *string
+
+	// The text used to prompt the user when no text has been entered in the
+	// start field.
+	FieldStartHintText *string
+
+	// The text used to prompt the user when no text has been entered in the
+	// end field.
+	FieldEndHintText *string
+
+	// The label for the start date text input field.
+	FieldStartLabelText *string
+
+	// The label for the end date text input field.
+	FieldEndLabelText *string
+
+	// Restoration ID to save and restore the state of the
+	// DateRangePickerDialog.
 	RestorationId                 *string
 	SwitchToInputEntryModeIcon    ui.Node
 	SwitchToCalendarEntryModeIcon ui.Node
 }
 
 // DefaultTabController maps DefaultTabController of package:material_ui/material_ui.dart.
+//
+// The TabController for descendant widgets that don't specify one
+// explicitly.
 type DefaultTabController struct {
-	Length            int
-	InitialIndex      *int
-	Child             ui.Node
+	// The total number of tabs.
+	Length int
+
+	// The initial index of the selected tab.
+	InitialIndex *int
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Controls the duration of DefaultTabController and TabBarView animations.
 	AnimationDuration *int
 }
 
 // DesktopTextSelectionToolbar maps DesktopTextSelectionToolbar of package:material_ui/material_ui.dart.
+//
+// A Material-style desktop text selection toolbar.
 type DesktopTextSelectionToolbar struct {
-	Anchor   ui.Offset
+	Anchor ui.Offset
+
+	// See also:
 	Children []ui.Node
 }
 
 // DesktopTextSelectionToolbarButton maps DesktopTextSelectionToolbarButton of package:material_ui/material_ui.dart.
+//
+// A TextButton for the Material desktop text selection toolbar.
 type DesktopTextSelectionToolbarButton struct {
 	OnPressed func()
 	Child     ui.Node
@@ -1140,35 +2323,70 @@ type DesktopTextSelectionToolbarButton struct {
 
 // Dialog maps Dialog of package:material_ui/material_ui.dart.
 //
+// A Material Design dialog.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // SemanticsRole takes "none", "tab", "tabBar", "tabPanel", "dialog", "alertDialog", "table", "cell", "row", "columnHeader", "dragHandle", "spinButton", "comboBox", "menuBar", "menu", "menuItem", "menuItemCheckbox", "menuItemRadio", "list", "listItem", "form", "tooltip", "loadingSpinner", "progressBar", "hotKey", "radioGroup", "status", "alert", "complementary", "contentInfo", "main", "navigation", or "region".
 type Dialog struct {
-	BackgroundColor     *ui.Color
-	Elevation           *float64
-	ShadowColor         *ui.Color
+	// The background color of the surface of this Dialog.
+	BackgroundColor *ui.Color
+
+	// The z-coordinate of this Dialog.
+	Elevation *float64
+
+	// The color used to paint a drop shadow under the dialog's Material, which
+	// reflects the dialog's elevation.
+	ShadowColor *ui.Color
+
+	// The color used as a surface tint overlay on the dialog's background
+	// color, which reflects the dialog's elevation.
 	SurfaceTintColor    *ui.Color
 	InsetAnimationCurve *string
-	InsetPadding        *ui.Insets
-	ClipBehavior        *string
-	Shape               *ui.Shape
-	Alignment           *string
-	Child               ui.Node
-	SemanticsRole       *string
-	Constraints         *ui.Constraints
+
+	// The amount of padding added to viewInsets on the outside of the dialog.
+	InsetPadding *ui.Insets
+
+	// Controls how the contents of the dialog are clipped (or not) to the
+	// given shape.
+	ClipBehavior *string
+
+	// The shape of this dialog's border.
+	Shape *ui.Shape
+
+	// How to align the Dialog.
+	Alignment *string
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The role this dialog represent in assist technologies.
+	SemanticsRole *string
+
+	// Constrains the size of the dialog.
+	Constraints *ui.Constraints
 }
 
 // DialogFullscreen maps Dialog.fullscreen of package:material_ui/material_ui.dart.
 //
+// A Material Design dialog.
+//
 // SemanticsRole takes "none", "tab", "tabBar", "tabPanel", "dialog", "alertDialog", "table", "cell", "row", "columnHeader", "dragHandle", "spinButton", "comboBox", "menuBar", "menu", "menuItem", "menuItemCheckbox", "menuItemRadio", "list", "listItem", "form", "tooltip", "loadingSpinner", "progressBar", "hotKey", "radioGroup", "status", "alert", "complementary", "contentInfo", "main", "navigation", or "region".
 type DialogFullscreen struct {
+	// The background color of the surface of this Dialog.
 	BackgroundColor     *ui.Color
 	InsetAnimationCurve *string
-	Child               ui.Node
-	SemanticsRole       *string
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The role this dialog represent in assist technologies.
+	SemanticsRole *string
 }
 
 // DialogTheme maps DialogTheme of package:material_ui/material_ui.dart.
+//
+// Defines a theme for Dialog widgets.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type DialogTheme struct {
@@ -1186,131 +2404,278 @@ type DialogTheme struct {
 	InsetPadding     *ui.Insets
 	ClipBehavior     *string
 	Data             *ui.DialogStyle
-	Child            ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // Divider maps Divider of package:material_ui/material_ui.dart.
+//
+// A thin horizontal line, with padding on either side.
 type Divider struct {
-	Height    *float64
+	// The divider's height extent.
+	Height *float64
+
+	// The thickness of the line drawn within the divider.
 	Thickness *float64
-	Indent    *float64
+
+	// The amount of empty space to the leading edge of the divider.
+	Indent *float64
+
+	// The amount of empty space to the trailing edge of the divider.
 	EndIndent *float64
-	Color     *ui.Color
-	Radius    *ui.Radius
+
+	// The color to use when painting the line.
+	Color *ui.Color
+
+	// The amount of radius for the border of the divider.
+	Radius *ui.Radius
 }
 
 // DividerTheme maps DividerTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration for Dividers,
+// VerticalDividers, dividers between ListTiles, and dividers between rows
+// in DataTables in this widget's subtree.
 type DividerTheme struct {
-	Data  ui.DividerStyle
+	// The properties for descendant Dividers, VerticalDividers, dividers
+	// between ListTiles, and dividers between rows in DataTables.
+	Data ui.DividerStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // Drawer maps Drawer of package:material_ui/material_ui.dart.
 //
+// A Material Design panel that slides in horizontally from the edge of a
+// Scaffold to show navigation links in an application.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Drawer struct {
-	BackgroundColor  *ui.Color
-	Elevation        *float64
-	ShadowColor      *ui.Color
+	// Sets the color of the Material that holds all of the Drawer's contents.
+	BackgroundColor *ui.Color
+
+	// The z-coordinate at which to place this drawer relative to its parent.
+	Elevation *float64
+
+	// The color used to paint a drop shadow under the drawer's Material, which
+	// reflects the drawer's elevation.
+	ShadowColor *ui.Color
+
+	// The color used as a surface tint overlay on the drawer's background
+	// color, which reflects the drawer's elevation.
 	SurfaceTintColor *ui.Color
-	Shape            *ui.Shape
-	Width            *float64
-	Child            ui.Node
-	SemanticLabel    *string
-	ClipBehavior     *string
+
+	// The shape of the drawer.
+	Shape *ui.Shape
+
+	// The width of the drawer.
+	Width *float64
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The semantic label of the drawer used by accessibility frameworks to
+	// announce screen transitions when the drawer is opened and closed.
+	SemanticLabel *string
+
+	// The clipBehavior argument specifies how to clip the drawer's shape.
+	ClipBehavior *string
 }
 
 // DrawerButton maps DrawerButton of package:material_ui/material_ui.dart.
+//
+// A Material Design drawer icon button.
 type DrawerButton struct {
-	Color     *ui.Color
-	Style     *ui.ButtonStyle
+	// The color to use for the icon inside the button, if the icon is enabled.
+	Color *ui.Color
+
+	// Customizes this button's appearance.
+	Style *ui.ButtonStyle
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
 	OnPressed func()
 }
 
 // DrawerButtonIcon maps DrawerButtonIcon of package:material_ui/material_ui.dart.
+//
+// A "drawer" icon that's appropriate for the current TargetPlatform.
 type DrawerButtonIcon struct {
 }
 
 // DrawerController maps DrawerController of package:material_ui/material_ui.dart.
 //
+// Provides interactive behavior for Drawer widgets.
+//
 // Alignment takes "start", or "end".
 //
 // DragStartBehavior takes "down", or "start".
 type DrawerController struct {
-	Child                    ui.Node
-	Alignment                string
-	IsDrawerOpen             *bool
-	DrawerCallback           func(bool)
-	DragStartBehavior        *string
-	ScrimColor               *ui.Color
-	EdgeDragWidth            *float64
-	EnableOpenDragGesture    *bool
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The alignment of the Drawer.
+	Alignment string
+
+	// Whether or not the drawer is opened or closed.
+	IsDrawerOpen *bool
+
+	// Optional callback that is called when a Drawer is opened or closed.
+	DrawerCallback func(bool)
+
+	// Determines the way that drag start behavior is handled.
+	DragStartBehavior *string
+
+	// The color to use for the scrim that obscures the underlying content
+	// while a drawer is open.
+	ScrimColor *ui.Color
+
+	// The width of the area within which a horizontal swipe will open the
+	// drawer.
+	EdgeDragWidth *float64
+
+	// Determines if the Drawer can be opened with a drag gesture.
+	EnableOpenDragGesture *bool
+
+	// Whether tapping the barrier behind the Drawer dismisses it.
 	DrawerBarrierDismissible *bool
 }
 
 // DrawerHeader maps DrawerHeader of package:material_ui/material_ui.dart.
+//
+// The top-most region of a Material Design drawer. The header's child
+// widget, if any, is placed inside a Container whose decoration can be
+// passed as an argument, inset by the given padding.
 type DrawerHeader struct {
+	// Decoration for the main drawer header Container; useful for applying
+	// backgrounds.
 	Decoration *ui.Decoration
-	Margin     *ui.Insets
-	Padding    *ui.Insets
-	Curve      *string
-	Child      ui.Node
+
+	// The margin around the drawer header.
+	Margin *ui.Insets
+
+	// The padding by which to inset child.
+	Padding *ui.Insets
+
+	// The curve for animations of the decoration.
+	Curve *string
+
+	// A widget to be placed inside the drawer header, inset by the padding.
+	Child ui.Node
 }
 
 // DrawerTheme maps DrawerTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines visual properties for Drawers in this
+// widget's subtree.
 type DrawerTheme struct {
-	Data  ui.DrawerStyle
+	// Specifies the background color, scrim color, elevation, and shape for
+	// descendant Drawer widgets.
+	Data ui.DrawerStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // DropdownButtonHideUnderline maps DropdownButtonHideUnderline of package:material_ui/material_ui.dart.
+//
+// An inherited widget that causes any descendant DropdownButton widgets to
+// not include their regular underline.
 type DropdownButtonHideUnderline struct {
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // DropdownMenuItem maps DropdownMenuItem of package:material_ui/material_ui.dart.
+//
+// An item in a menu created by a DropdownButton.
 type DropdownMenuItem struct {
-	OnTap     func()
-	Enabled   *bool
+	// Called when the dropdown menu item is tapped.
+	OnTap func()
+
+	// Whether or not a user can select this menu item.
+	Enabled *bool
+
+	// Defines how the item is positioned within the container.
 	Alignment *string
-	Child     ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // DropdownMenuTheme maps DropdownMenuTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the visual properties for DropdownMenus
+// in this widget's subtree.
 type DropdownMenuTheme struct {
-	Data  ui.DropdownMenuStyle
+	// Specifies the visual properties used by descendant DropdownMenu widgets.
+	Data ui.DropdownMenuStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // ElevatedButton maps ElevatedButton of package:material_ui/material_ui.dart.
 //
+// A Material Design "elevated button".
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ElevatedButton struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
-	Child            ui.Node
+
+	// Typically the button's label.
+	Child ui.Node
 }
 
 // ElevatedButtonIcon maps ElevatedButton.icon of package:material_ui/material_ui.dart.
+//
+// A Material Design "elevated button".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // IconAlignment takes "start", or "end".
 type ElevatedButtonIcon struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
 	Icon             ui.Node
@@ -1319,55 +2684,119 @@ type ElevatedButtonIcon struct {
 }
 
 // ElevatedButtonTheme maps ElevatedButtonTheme of package:material_ui/material_ui.dart.
+//
+// Overrides the default ButtonStyle of its ElevatedButton descendants.
 type ElevatedButtonTheme struct {
-	Data  ui.ButtonStyle
+	// The configuration of this theme.
+	Data ui.ButtonStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // EndDrawerButton maps EndDrawerButton of package:material_ui/material_ui.dart.
+//
+// A Material Design end drawer icon button.
 type EndDrawerButton struct {
-	Color     *ui.Color
-	Style     *ui.ButtonStyle
+	// The color to use for the icon inside the button, if the icon is enabled.
+	Color *ui.Color
+
+	// Customizes this button's appearance.
+	Style *ui.ButtonStyle
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
 	OnPressed func()
 }
 
 // EndDrawerButtonIcon maps EndDrawerButtonIcon of package:material_ui/material_ui.dart.
+//
+// A "end drawer" icon that's appropriate for the current TargetPlatform.
 type EndDrawerButtonIcon struct {
 }
 
 // ExpandIcon maps ExpandIcon of package:material_ui/material_ui.dart.
+//
+// A widget representing a rotating expand/collapse button. The icon rotates
+// 180 degrees when pressed, then reverts the animation on a second press.
+// The underlying icon is expand_more.
 type ExpandIcon struct {
-	IsExpanded     *bool
-	Size           *float64
-	OnPressed      func(bool)
-	Padding        *ui.Insets
-	Color          *ui.Color
-	DisabledColor  *ui.Color
-	ExpandedColor  *ui.Color
-	SplashColor    *ui.Color
+	// Whether the icon is in an expanded state.
+	IsExpanded *bool
+
+	// The size of the icon.
+	Size *float64
+
+	// The callback triggered when the icon is pressed and the state changes
+	// between expanded and collapsed.
+	OnPressed func(bool)
+
+	// The padding around the icon.
+	Padding *ui.Insets
+
+	// The color of the icon.
+	Color *ui.Color
+
+	// The color of the icon when it is disabled, i.e.
+	DisabledColor *ui.Color
+
+	// The color of the icon when the icon is expanded.
+	ExpandedColor *ui.Color
+
+	// Defines the splash color of the IconButton.
+	SplashColor *ui.Color
+
+	// Defines the highlight color of the IconButton.
 	HighlightColor *ui.Color
 }
 
 // ExpansionPanelList maps ExpansionPanelList of package:material_ui/material_ui.dart.
+//
+// A material expansion panel list that lays out its children and animates
+// expansions.
 type ExpansionPanelList struct {
+	// The duration of the expansion animation.
 	AnimationDuration *int
-	DividerColor      *ui.Color
-	Elevation         *float64
-	ExpandIconColor   *ui.Color
-	MaterialGapSize   *float64
+
+	// Defines color for the divider when isExpanded is false.
+	DividerColor *ui.Color
+
+	// Defines elevation for the ExpansionPanel while it's expanded.
+	Elevation       *float64
+	ExpandIconColor *ui.Color
+
+	// Defines the size of the MaterialGap which is placed between the children
+	// when they're expanded.
+	MaterialGapSize *float64
 }
 
 // ExpansionPanelListRadio maps ExpansionPanelList.radio of package:material_ui/material_ui.dart.
+//
+// A material expansion panel list that lays out its children and animates
+// expansions.
 type ExpansionPanelListRadio struct {
-	AnimationDuration     *int
+	// The duration of the expansion animation.
+	AnimationDuration *int
+
+	// The value of the panel that initially begins open.
 	InitialOpenPanelValue *string
-	DividerColor          *ui.Color
-	Elevation             *float64
-	ExpandIconColor       *ui.Color
-	MaterialGapSize       *float64
+
+	// Defines color for the divider when isExpanded is false.
+	DividerColor *ui.Color
+
+	// Defines elevation for the ExpansionPanel while it's expanded.
+	Elevation       *float64
+	ExpandIconColor *ui.Color
+
+	// Defines the size of the MaterialGap which is placed between the children
+	// when they're expanded.
+	MaterialGapSize *float64
 }
 
 // ExpansionTile maps ExpansionTile of package:material_ui/material_ui.dart.
+//
+// A single-line ListTile with an expansion arrow icon that expands or
+// collapses the tile to reveal or hide the children.
 //
 // ExpandedCrossAxisAlignment takes "start", "end", "center", "stretch", or "baseline".
 //
@@ -1375,74 +2804,177 @@ type ExpansionPanelListRadio struct {
 //
 // ControlAffinity takes "leading", "trailing", or "platform".
 type ExpansionTile struct {
-	Leading                     ui.Node
-	Title                       ui.Node
-	Subtitle                    ui.Node
-	OnExpansionChanged          func(bool)
-	Children                    []ui.Node
-	Trailing                    ui.Node
-	ShowTrailingIcon            *bool
-	InitiallyExpanded           *bool
-	MaintainState               *bool
-	TilePadding                 *ui.Insets
-	ExpandedCrossAxisAlignment  *string
-	ExpandedAlignment           *string
-	ChildrenPadding             *ui.Insets
-	BackgroundColor             *ui.Color
-	CollapsedBackgroundColor    *ui.Color
-	TextColor                   *ui.Color
-	CollapsedTextColor          *ui.Color
-	IconColor                   *ui.Color
-	CollapsedIconColor          *ui.Color
-	Shape                       *ui.Shape
-	CollapsedShape              *ui.Shape
-	ClipBehavior                *string
-	ControlAffinity             *string
-	Dense                       *bool
-	SplashColor                 *ui.Color
-	VisualDensity               *ui.Density
-	MinTileHeight               *float64
-	EnableFeedback              *bool
-	Enabled                     *bool
+	// A widget to display before the title.
+	Leading ui.Node
+
+	// The primary content of the list item.
+	Title ui.Node
+
+	// Additional content displayed below the title.
+	Subtitle ui.Node
+
+	// Called when the tile expands or collapses.
+	OnExpansionChanged func(bool)
+
+	// The widgets that are displayed when the tile expands.
+	Children []ui.Node
+
+	// A widget to display after the title.
+	Trailing ui.Node
+
+	// Specifies if the ExpansionTile should build a default trailing icon if
+	// trailing is null.
+	ShowTrailingIcon *bool
+
+	// Specifies if the list tile is initially expanded (true) or collapsed
+	// (false).
+	InitiallyExpanded *bool
+
+	// Specifies whether the state of the children is maintained when the tile
+	// expands and collapses.
+	MaintainState *bool
+
+	// Specifies padding for the ListTile.
+	TilePadding *ui.Insets
+
+	// Specifies the alignment of each child within children when the tile is
+	// expanded.
+	ExpandedCrossAxisAlignment *string
+
+	// Specifies the alignment of children, which are arranged in a column when
+	// the tile is expanded.
+	ExpandedAlignment *string
+
+	// Specifies padding for children.
+	ChildrenPadding *ui.Insets
+
+	// The color to display behind the sublist when expanded.
+	BackgroundColor *ui.Color
+
+	// When not null, defines the background color of tile when the sublist is
+	// collapsed.
+	CollapsedBackgroundColor *ui.Color
+
+	// The color of the tile's titles when the sublist is expanded.
+	TextColor *ui.Color
+
+	// The color of the tile's titles when the sublist is collapsed.
+	CollapsedTextColor *ui.Color
+
+	// The icon color of tile's expansion arrow icon when the sublist is
+	// expanded.
+	IconColor *ui.Color
+
+	// The icon color of tile's expansion arrow icon when the sublist is
+	// collapsed.
+	CollapsedIconColor *ui.Color
+
+	// The tile's border shape when the sublist is expanded.
+	Shape *ui.Shape
+
+	// The tile's border shape when the sublist is collapsed.
+	CollapsedShape *ui.Shape
+
+	// If this is not null and a custom collapsed or expanded shape is
+	// provided, the value of clipBehavior will be used to clip the expansion
+	// tile.
+	ClipBehavior *string
+
+	// Typically used to force the expansion arrow icon to the tile's leading
+	// or trailing edge.
+	ControlAffinity *string
+	Dense           *bool
+
+	// The splash color of the ink response when the tile is tapped.
+	SplashColor *ui.Color
+
+	// Defines how compact the expansion tile's layout will be.
+	VisualDensity  *ui.Density
+	MinTileHeight  *float64
+	EnableFeedback *bool
+
+	// Whether this expansion tile is interactive.
+	Enabled *bool
+
+	// Whether to add button:true to the semantics if onTap is provided.
 	InternalAddSemanticForOnTap *bool
-	StatesController            *ui.StatesKey
+
+	// The controller that notifies when the widget's WidgetStates change.
+	StatesController *ui.StatesKey
 }
 
 // ExpansionTileTheme maps ExpansionTileTheme of package:material_ui/material_ui.dart.
+//
+// Overrides the default ExpansionTileTheme of its ExpansionTile
+// descendants.
 type ExpansionTileTheme struct {
-	Data  ui.ExpansionTileStyle
+	// Specifies color, alignment, and text style values for descendant
+	// ExpansionTile widgets.
+	Data ui.ExpansionTileStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // FilledButton maps FilledButton of package:material_ui/material_ui.dart.
 //
+// A Material Design filled button.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type FilledButton struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
-	Child            ui.Node
+
+	// Typically the button's label.
+	Child ui.Node
 }
 
 // FilledButtonIcon maps FilledButton.icon of package:material_ui/material_ui.dart.
+//
+// A Material Design filled button.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // IconAlignment takes "start", or "end".
 type FilledButtonIcon struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
 	Icon             ui.Node
@@ -1451,40 +2983,75 @@ type FilledButtonIcon struct {
 }
 
 // FilledButtonTheme maps FilledButtonTheme of package:material_ui/material_ui.dart.
+//
+// Overrides the default ButtonStyle of its FilledButton descendants.
 type FilledButtonTheme struct {
-	Data  ui.ButtonStyle
+	// The configuration of this theme.
+	Data ui.ButtonStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // FilledButtonTonal maps FilledButton.tonal of package:material_ui/material_ui.dart.
 //
+// A Material Design filled button.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type FilledButtonTonal struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
-	Child            ui.Node
+
+	// Typically the button's label.
+	Child ui.Node
 }
 
 // FilledButtonTonalIcon maps FilledButton.tonalIcon of package:material_ui/material_ui.dart.
+//
+// A Material Design filled button.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // IconAlignment takes "start", or "end".
 type FilledButtonTonalIcon struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
 	Icon             ui.Node
@@ -1493,6 +3060,8 @@ type FilledButtonTonalIcon struct {
 }
 
 // FilterChip maps FilterChip of package:material_ui/material_ui.dart.
+//
+// A Material Design filter chip.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
@@ -1537,6 +3106,8 @@ type FilterChip struct {
 
 // FilterChipElevated maps FilterChip.elevated of package:material_ui/material_ui.dart.
 //
+// A Material Design filter chip.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
@@ -1580,310 +3151,794 @@ type FilterChipElevated struct {
 
 // FlexibleSpaceBar maps FlexibleSpaceBar of package:material_ui/material_ui.dart.
 //
+// The part of a Material Design AppBar that expands, collapses, and
+// stretches.
+//
 // CollapseMode takes "parallax", "pin", or "none".
 type FlexibleSpaceBar struct {
-	Title              ui.Node
-	Background         ui.Node
-	CenterTitle        *bool
-	TitlePadding       *ui.Insets
-	CollapseMode       *string
+	// The primary contents of the flexible space bar when expanded.
+	Title ui.Node
+
+	// Shown behind the title when expanded.
+	Background ui.Node
+
+	// Whether the title should be centered.
+	CenterTitle *bool
+
+	// Defines how far the title is inset from either the widget's bottom-left
+	// or its center.
+	TitlePadding *ui.Insets
+
+	// Collapse effect while scrolling.
+	CollapseMode *string
+
+	// Defines how much the title is scaled when the FlexibleSpaceBar is
+	// expanded due to the user scrolling downwards.
 	ExpandedTitleScale *float64
 }
 
 // FlexibleSpaceBarSettings maps FlexibleSpaceBarSettings of package:material_ui/material_ui.dart.
+//
+// Provides sizing and opacity information to a FlexibleSpaceBar.
 type FlexibleSpaceBarSettings struct {
-	ToolbarOpacity  float64
-	MinExtent       float64
-	MaxExtent       float64
-	CurrentExtent   float64
-	Child           ui.Node
+	// Affects how transparent the text within the toolbar appears.
+	ToolbarOpacity float64
+
+	// Minimum height of the resulting FlexibleSpaceBar when fully collapsed.
+	MinExtent float64
+
+	// Maximum height of the resulting FlexibleSpaceBar when fully expanded.
+	MaxExtent float64
+
+	// If the title or the background is not null, then this value is used to
+	// calculate the relative scale of these elements upon initialization.
+	CurrentExtent float64
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// True if the FlexibleSpaceBar overlaps the primary scrollable's contents.
 	IsScrolledUnder *bool
-	HasLeading      *bool
+
+	// True if the FlexibleSpaceBar has a leading widget.
+	HasLeading *bool
 }
 
 // FloatingActionButton maps FloatingActionButton of package:material_ui/material_ui.dart.
+//
+// A Material Design floating action button.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 type FloatingActionButton struct {
-	Child                 ui.Node
-	Tooltip               *string
-	ForegroundColor       *ui.Color
-	BackgroundColor       *ui.Color
-	FocusColor            *ui.Color
-	HoverColor            *ui.Color
-	SplashColor           *ui.Color
-	HeroTag               *string
-	Elevation             *float64
-	FocusElevation        *float64
-	HoverElevation        *float64
-	HighlightElevation    *float64
-	DisabledElevation     *float64
-	OnPressed             func()
-	MouseCursor           *string
-	Mini                  *bool
-	Shape                 *ui.Shape
-	ClipBehavior          *string
-	FocusNode             *ui.FocusKey
-	Autofocus             *bool
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Text that describes the action that will occur when the button is
+	// pressed.
+	Tooltip *string
+
+	// The default foreground color for icons and text within the button.
+	ForegroundColor *ui.Color
+
+	// The button's background color.
+	BackgroundColor *ui.Color
+
+	// The color to use for filling the button when the button has input focus.
+	FocusColor *ui.Color
+
+	// The color to use for filling the button when the button has a pointer
+	// hovering over it.
+	HoverColor *ui.Color
+
+	// The splash color for this FloatingActionButton's InkWell.
+	SplashColor *ui.Color
+
+	// The tag to apply to the button's Hero widget.
+	HeroTag *string
+
+	// The z-coordinate at which to place this button relative to its parent.
+	Elevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the button has the input focus.
+	FocusElevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the button is enabled and has a pointer hovering over it.
+	HoverElevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the user is touching the button.
+	HighlightElevation *float64
+
+	// The z-coordinate at which to place this button when the button is
+	// disabled (onPressed is null).
+	DisabledElevation *float64
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// If this property is null, mouseCursor is used.
+	MouseCursor *string
+
+	// Controls the size of this button.
+	Mini *bool
+
+	// The shape of the button's Material.
+	Shape *ui.Shape
+
+	// Defaults to none.
+	ClipBehavior *string
+	FocusNode    *ui.FocusKey
+	Autofocus    *bool
+
+	// Configures the minimum size of the tap target.
 	MaterialTapTargetSize *string
-	IsExtended            *bool
-	EnableFeedback        *bool
+
+	// True if this is an "extended" floating action button.
+	IsExtended *bool
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
 }
 
 // FloatingActionButtonExtended maps FloatingActionButton.extended of package:material_ui/material_ui.dart.
+//
+// A Material Design floating action button.
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type FloatingActionButtonExtended struct {
-	Tooltip                  *string
-	ForegroundColor          *ui.Color
-	BackgroundColor          *ui.Color
-	FocusColor               *ui.Color
-	HoverColor               *ui.Color
-	HeroTag                  *string
-	Elevation                *float64
-	FocusElevation           *float64
-	HoverElevation           *float64
-	SplashColor              *ui.Color
-	HighlightElevation       *float64
-	DisabledElevation        *float64
-	OnPressed                func()
-	MouseCursor              *string
-	Shape                    *ui.Shape
-	IsExtended               *bool
-	MaterialTapTargetSize    *string
-	ClipBehavior             *string
-	FocusNode                *ui.FocusKey
-	Autofocus                *bool
+	// Text that describes the action that will occur when the button is
+	// pressed.
+	Tooltip *string
+
+	// The default foreground color for icons and text within the button.
+	ForegroundColor *ui.Color
+
+	// The button's background color.
+	BackgroundColor *ui.Color
+
+	// The color to use for filling the button when the button has input focus.
+	FocusColor *ui.Color
+
+	// The color to use for filling the button when the button has a pointer
+	// hovering over it.
+	HoverColor *ui.Color
+
+	// The tag to apply to the button's Hero widget.
+	HeroTag *string
+
+	// The z-coordinate at which to place this button relative to its parent.
+	Elevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the button has the input focus.
+	FocusElevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the button is enabled and has a pointer hovering over it.
+	HoverElevation *float64
+
+	// The splash color for this FloatingActionButton's InkWell.
+	SplashColor *ui.Color
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the user is touching the button.
+	HighlightElevation *float64
+
+	// The z-coordinate at which to place this button when the button is
+	// disabled (onPressed is null).
+	DisabledElevation *float64
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// If this property is null, mouseCursor is used.
+	MouseCursor *string
+
+	// The shape of the button's Material.
+	Shape *ui.Shape
+
+	// True if this is an "extended" floating action button.
+	IsExtended *bool
+
+	// Configures the minimum size of the tap target.
+	MaterialTapTargetSize *string
+
+	// Defaults to none.
+	ClipBehavior *string
+	FocusNode    *ui.FocusKey
+	Autofocus    *bool
+
+	// The spacing between the icon and the label for an extended
+	// FloatingActionButton.
 	ExtendedIconLabelSpacing *float64
-	ExtendedPadding          *ui.Insets
-	ExtendedTextStyle        *ui.TextStyle
-	Icon                     ui.Node
-	Label                    ui.Node
-	EnableFeedback           *bool
+
+	// The padding for an extended FloatingActionButton's content.
+	ExtendedPadding *ui.Insets
+
+	// The text style for an extended FloatingActionButton's label.
+	ExtendedTextStyle *ui.TextStyle
+	Icon              ui.Node
+	Label             ui.Node
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
 }
 
 // FloatingActionButtonLarge maps FloatingActionButton.large of package:material_ui/material_ui.dart.
+//
+// A Material Design floating action button.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 type FloatingActionButtonLarge struct {
-	Child                 ui.Node
-	Tooltip               *string
-	ForegroundColor       *ui.Color
-	BackgroundColor       *ui.Color
-	FocusColor            *ui.Color
-	HoverColor            *ui.Color
-	SplashColor           *ui.Color
-	HeroTag               *string
-	Elevation             *float64
-	FocusElevation        *float64
-	HoverElevation        *float64
-	HighlightElevation    *float64
-	DisabledElevation     *float64
-	OnPressed             func()
-	MouseCursor           *string
-	Shape                 *ui.Shape
-	ClipBehavior          *string
-	FocusNode             *ui.FocusKey
-	Autofocus             *bool
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Text that describes the action that will occur when the button is
+	// pressed.
+	Tooltip *string
+
+	// The default foreground color for icons and text within the button.
+	ForegroundColor *ui.Color
+
+	// The button's background color.
+	BackgroundColor *ui.Color
+
+	// The color to use for filling the button when the button has input focus.
+	FocusColor *ui.Color
+
+	// The color to use for filling the button when the button has a pointer
+	// hovering over it.
+	HoverColor *ui.Color
+
+	// The splash color for this FloatingActionButton's InkWell.
+	SplashColor *ui.Color
+
+	// The tag to apply to the button's Hero widget.
+	HeroTag *string
+
+	// The z-coordinate at which to place this button relative to its parent.
+	Elevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the button has the input focus.
+	FocusElevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the button is enabled and has a pointer hovering over it.
+	HoverElevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the user is touching the button.
+	HighlightElevation *float64
+
+	// The z-coordinate at which to place this button when the button is
+	// disabled (onPressed is null).
+	DisabledElevation *float64
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// If this property is null, mouseCursor is used.
+	MouseCursor *string
+
+	// The shape of the button's Material.
+	Shape *ui.Shape
+
+	// Defaults to none.
+	ClipBehavior *string
+	FocusNode    *ui.FocusKey
+	Autofocus    *bool
+
+	// Configures the minimum size of the tap target.
 	MaterialTapTargetSize *string
-	EnableFeedback        *bool
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
 }
 
 // FloatingActionButtonSmall maps FloatingActionButton.small of package:material_ui/material_ui.dart.
+//
+// A Material Design floating action button.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 type FloatingActionButtonSmall struct {
-	Child                 ui.Node
-	Tooltip               *string
-	ForegroundColor       *ui.Color
-	BackgroundColor       *ui.Color
-	FocusColor            *ui.Color
-	HoverColor            *ui.Color
-	SplashColor           *ui.Color
-	HeroTag               *string
-	Elevation             *float64
-	FocusElevation        *float64
-	HoverElevation        *float64
-	HighlightElevation    *float64
-	DisabledElevation     *float64
-	OnPressed             func()
-	MouseCursor           *string
-	Shape                 *ui.Shape
-	ClipBehavior          *string
-	FocusNode             *ui.FocusKey
-	Autofocus             *bool
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Text that describes the action that will occur when the button is
+	// pressed.
+	Tooltip *string
+
+	// The default foreground color for icons and text within the button.
+	ForegroundColor *ui.Color
+
+	// The button's background color.
+	BackgroundColor *ui.Color
+
+	// The color to use for filling the button when the button has input focus.
+	FocusColor *ui.Color
+
+	// The color to use for filling the button when the button has a pointer
+	// hovering over it.
+	HoverColor *ui.Color
+
+	// The splash color for this FloatingActionButton's InkWell.
+	SplashColor *ui.Color
+
+	// The tag to apply to the button's Hero widget.
+	HeroTag *string
+
+	// The z-coordinate at which to place this button relative to its parent.
+	Elevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the button has the input focus.
+	FocusElevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the button is enabled and has a pointer hovering over it.
+	HoverElevation *float64
+
+	// The z-coordinate at which to place this button relative to its parent
+	// when the user is touching the button.
+	HighlightElevation *float64
+
+	// The z-coordinate at which to place this button when the button is
+	// disabled (onPressed is null).
+	DisabledElevation *float64
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// If this property is null, mouseCursor is used.
+	MouseCursor *string
+
+	// The shape of the button's Material.
+	Shape *ui.Shape
+
+	// Defaults to none.
+	ClipBehavior *string
+	FocusNode    *ui.FocusKey
+	Autofocus    *bool
+
+	// Configures the minimum size of the tap target.
 	MaterialTapTargetSize *string
-	EnableFeedback        *bool
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
 }
 
 // FloatingActionButtonTheme maps FloatingActionButtonTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration for
+// FloatingActionButtons in this widget's subtree.
 type FloatingActionButtonTheme struct {
-	Data  ui.FloatingActionButtonStyle
+	// The properties for descendant FloatingActionButton widgets.
+	Data ui.FloatingActionButtonStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // GridTile maps GridTile of package:material_ui/material_ui.dart.
+//
+// A tile in a Material Design grid list.
 type GridTile struct {
+	// The widget to show over the top of this grid tile.
 	Header ui.Node
+
+	// The widget to show over the bottom of this grid tile.
 	Footer ui.Node
-	Child  ui.Node
+
+	// The widget that fills the tile.
+	Child ui.Node
 }
 
 // GridTileBar maps GridTileBar of package:material_ui/material_ui.dart.
+//
+// A header used in a Material Design GridTile.
 type GridTileBar struct {
+	// The color to paint behind the child widgets.
 	BackgroundColor *ui.Color
-	Leading         ui.Node
-	Title           ui.Node
-	Subtitle        ui.Node
-	Trailing        ui.Node
+
+	// A widget to display before the title.
+	Leading ui.Node
+
+	// The primary content of the list item.
+	Title ui.Node
+
+	// Additional content displayed below the title.
+	Subtitle ui.Node
+
+	// A widget to display after the title.
+	Trailing ui.Node
 }
 
 // IconButton maps IconButton of package:material_ui/material_ui.dart.
+//
+// A Material Design icon button.
 type IconButton struct {
-	IconSize         *float64
-	VisualDensity    *ui.Density
-	Padding          *ui.Insets
-	Alignment        *string
-	SplashRadius     *float64
-	Color            *ui.Color
-	FocusColor       *ui.Color
-	HoverColor       *ui.Color
-	HighlightColor   *ui.Color
-	SplashColor      *ui.Color
-	DisabledColor    *ui.Color
-	OnPressed        func()
-	OnHover          func(bool)
-	OnLongPress      func()
-	MouseCursor      *string
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
-	Tooltip          *string
-	EnableFeedback   *bool
-	Constraints      *ui.Constraints
-	Style            *ui.ButtonStyle
-	IsSelected       *bool
+	// The size of the icon inside the button.
+	IconSize *float64
+
+	// Defines how compact the icon button's layout will be.
+	VisualDensity *ui.Density
+
+	// The padding around the button's icon.
+	Padding *ui.Insets
+
+	// Defines how the icon is positioned within the IconButton.
+	Alignment *string
+
+	// The splash radius.
+	SplashRadius *float64
+
+	// The color to use for the icon inside the button, if the icon is enabled.
+	Color *ui.Color
+
+	// The color for the button when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the button when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The secondary color of the button when the button is in the down
+	// (pressed) state.
+	HighlightColor *ui.Color
+
+	// The primary color of the button when the button is in the down (pressed)
+	// state.
+	SplashColor *ui.Color
+
+	// The color to use for the icon inside the button, if the icon is
+	// disabled.
+	DisabledColor *ui.Color
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// The callback that is called when the button is hovered.
+	OnHover func(bool)
+
+	// The callback that is called when the button is long-pressed.
+	OnLongPress func()
+
+	// If set to null, will default to basic if onPressed is null, otherwise
+	// adaptiveClickable.
+	MouseCursor *string
+	FocusNode   *ui.FocusKey
+	Autofocus   *bool
+
+	// Text that describes the action that will occur when the button is
+	// pressed.
+	Tooltip *string
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// Optional size constraints for the button.
+	Constraints *ui.Constraints
+
+	// Customizes this button's appearance.
+	Style *ui.ButtonStyle
+
+	// The optional selection state of the icon button.
+	IsSelected *bool
+
+	// The icon to display inside the button when isSelected is true.
 	SelectedIcon     ui.Node
 	StatesController *ui.StatesKey
-	Icon             ui.Node
+
+	// The icon to display inside the button.
+	Icon ui.Node
 }
 
 // IconButtonFilled maps IconButton.filled of package:material_ui/material_ui.dart.
+//
+// A Material Design icon button.
 type IconButtonFilled struct {
-	IconSize         *float64
-	VisualDensity    *ui.Density
-	Padding          *ui.Insets
-	Alignment        *string
-	SplashRadius     *float64
-	Color            *ui.Color
-	FocusColor       *ui.Color
-	HoverColor       *ui.Color
-	HighlightColor   *ui.Color
-	SplashColor      *ui.Color
-	DisabledColor    *ui.Color
-	OnPressed        func()
-	OnHover          func(bool)
-	OnLongPress      func()
-	MouseCursor      *string
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
-	Tooltip          *string
-	EnableFeedback   *bool
-	Constraints      *ui.Constraints
-	Style            *ui.ButtonStyle
-	IsSelected       *bool
+	// The size of the icon inside the button.
+	IconSize *float64
+
+	// Defines how compact the icon button's layout will be.
+	VisualDensity *ui.Density
+
+	// The padding around the button's icon.
+	Padding *ui.Insets
+
+	// Defines how the icon is positioned within the IconButton.
+	Alignment *string
+
+	// The splash radius.
+	SplashRadius *float64
+
+	// The color to use for the icon inside the button, if the icon is enabled.
+	Color *ui.Color
+
+	// The color for the button when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the button when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The secondary color of the button when the button is in the down
+	// (pressed) state.
+	HighlightColor *ui.Color
+
+	// The primary color of the button when the button is in the down (pressed)
+	// state.
+	SplashColor *ui.Color
+
+	// The color to use for the icon inside the button, if the icon is
+	// disabled.
+	DisabledColor *ui.Color
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// The callback that is called when the button is hovered.
+	OnHover func(bool)
+
+	// The callback that is called when the button is long-pressed.
+	OnLongPress func()
+
+	// If set to null, will default to basic if onPressed is null, otherwise
+	// adaptiveClickable.
+	MouseCursor *string
+	FocusNode   *ui.FocusKey
+	Autofocus   *bool
+
+	// Text that describes the action that will occur when the button is
+	// pressed.
+	Tooltip *string
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// Optional size constraints for the button.
+	Constraints *ui.Constraints
+
+	// Customizes this button's appearance.
+	Style *ui.ButtonStyle
+
+	// The optional selection state of the icon button.
+	IsSelected *bool
+
+	// The icon to display inside the button when isSelected is true.
 	SelectedIcon     ui.Node
 	StatesController *ui.StatesKey
-	Icon             ui.Node
+
+	// The icon to display inside the button.
+	Icon ui.Node
 }
 
 // IconButtonFilledTonal maps IconButton.filledTonal of package:material_ui/material_ui.dart.
+//
+// A Material Design icon button.
 type IconButtonFilledTonal struct {
-	IconSize         *float64
-	VisualDensity    *ui.Density
-	Padding          *ui.Insets
-	Alignment        *string
-	SplashRadius     *float64
-	Color            *ui.Color
-	FocusColor       *ui.Color
-	HoverColor       *ui.Color
-	HighlightColor   *ui.Color
-	SplashColor      *ui.Color
-	DisabledColor    *ui.Color
-	OnPressed        func()
-	OnHover          func(bool)
-	OnLongPress      func()
-	MouseCursor      *string
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
-	Tooltip          *string
-	EnableFeedback   *bool
-	Constraints      *ui.Constraints
-	Style            *ui.ButtonStyle
-	IsSelected       *bool
+	// The size of the icon inside the button.
+	IconSize *float64
+
+	// Defines how compact the icon button's layout will be.
+	VisualDensity *ui.Density
+
+	// The padding around the button's icon.
+	Padding *ui.Insets
+
+	// Defines how the icon is positioned within the IconButton.
+	Alignment *string
+
+	// The splash radius.
+	SplashRadius *float64
+
+	// The color to use for the icon inside the button, if the icon is enabled.
+	Color *ui.Color
+
+	// The color for the button when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the button when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The secondary color of the button when the button is in the down
+	// (pressed) state.
+	HighlightColor *ui.Color
+
+	// The primary color of the button when the button is in the down (pressed)
+	// state.
+	SplashColor *ui.Color
+
+	// The color to use for the icon inside the button, if the icon is
+	// disabled.
+	DisabledColor *ui.Color
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// The callback that is called when the button is hovered.
+	OnHover func(bool)
+
+	// The callback that is called when the button is long-pressed.
+	OnLongPress func()
+
+	// If set to null, will default to basic if onPressed is null, otherwise
+	// adaptiveClickable.
+	MouseCursor *string
+	FocusNode   *ui.FocusKey
+	Autofocus   *bool
+
+	// Text that describes the action that will occur when the button is
+	// pressed.
+	Tooltip *string
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// Optional size constraints for the button.
+	Constraints *ui.Constraints
+
+	// Customizes this button's appearance.
+	Style *ui.ButtonStyle
+
+	// The optional selection state of the icon button.
+	IsSelected *bool
+
+	// The icon to display inside the button when isSelected is true.
 	SelectedIcon     ui.Node
 	StatesController *ui.StatesKey
-	Icon             ui.Node
+
+	// The icon to display inside the button.
+	Icon ui.Node
 }
 
 // IconButtonOutlined maps IconButton.outlined of package:material_ui/material_ui.dart.
+//
+// A Material Design icon button.
 type IconButtonOutlined struct {
-	IconSize         *float64
-	VisualDensity    *ui.Density
-	Padding          *ui.Insets
-	Alignment        *string
-	SplashRadius     *float64
-	Color            *ui.Color
-	FocusColor       *ui.Color
-	HoverColor       *ui.Color
-	HighlightColor   *ui.Color
-	SplashColor      *ui.Color
-	DisabledColor    *ui.Color
-	OnPressed        func()
-	OnHover          func(bool)
-	OnLongPress      func()
-	MouseCursor      *string
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
-	Tooltip          *string
-	EnableFeedback   *bool
-	Constraints      *ui.Constraints
-	Style            *ui.ButtonStyle
-	IsSelected       *bool
+	// The size of the icon inside the button.
+	IconSize *float64
+
+	// Defines how compact the icon button's layout will be.
+	VisualDensity *ui.Density
+
+	// The padding around the button's icon.
+	Padding *ui.Insets
+
+	// Defines how the icon is positioned within the IconButton.
+	Alignment *string
+
+	// The splash radius.
+	SplashRadius *float64
+
+	// The color to use for the icon inside the button, if the icon is enabled.
+	Color *ui.Color
+
+	// The color for the button when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the button when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The secondary color of the button when the button is in the down
+	// (pressed) state.
+	HighlightColor *ui.Color
+
+	// The primary color of the button when the button is in the down (pressed)
+	// state.
+	SplashColor *ui.Color
+
+	// The color to use for the icon inside the button, if the icon is
+	// disabled.
+	DisabledColor *ui.Color
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// The callback that is called when the button is hovered.
+	OnHover func(bool)
+
+	// The callback that is called when the button is long-pressed.
+	OnLongPress func()
+
+	// If set to null, will default to basic if onPressed is null, otherwise
+	// adaptiveClickable.
+	MouseCursor *string
+	FocusNode   *ui.FocusKey
+	Autofocus   *bool
+
+	// Text that describes the action that will occur when the button is
+	// pressed.
+	Tooltip *string
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// Optional size constraints for the button.
+	Constraints *ui.Constraints
+
+	// Customizes this button's appearance.
+	Style *ui.ButtonStyle
+
+	// The optional selection state of the icon button.
+	IsSelected *bool
+
+	// The icon to display inside the button when isSelected is true.
 	SelectedIcon     ui.Node
 	StatesController *ui.StatesKey
-	Icon             ui.Node
+
+	// The icon to display inside the button.
+	Icon ui.Node
 }
 
 // IconButtonTheme maps IconButtonTheme of package:material_ui/material_ui.dart.
+//
+// Overrides the default ButtonStyle of its IconButton descendants.
 type IconButtonTheme struct {
-	Data  ui.ButtonStyle
+	// The configuration of this theme.
+	Data ui.ButtonStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // Ink maps Ink of package:material_ui/material_ui.dart.
+//
+// A convenience widget for drawing images and other decorations on Material
+// widgets, so that InkWell and InkResponse splashes will render over them.
 type Ink struct {
-	Padding    *ui.Insets
-	Color      *ui.Color
+	// Empty space to inscribe inside the decoration.
+	Padding *ui.Insets
+	Color   *ui.Color
+
+	// The decoration to paint on the nearest ancestor Material widget.
 	Decoration *ui.Decoration
-	Width      *float64
-	Height     *float64
-	Child      ui.Node
+
+	// A width to apply to the decoration and the child.
+	Width *float64
+
+	// A height to apply to the decoration and the child.
+	Height *float64
+
+	// The child contained by the container.
+	Child ui.Node
 }
 
 // InkImage maps Ink.image of package:material_ui/material_ui.dart.
+//
+// A convenience widget for drawing images and other decorations on Material
+// widgets, so that InkWell and InkResponse splashes will render over them.
 //
 // Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
 //
 // Repeat takes "repeat", "repeatX", "repeatY", or "noRepeat".
 type InkImage struct {
+	// Empty space to inscribe inside the decoration.
 	Padding            *ui.Insets
 	Image              ui.ImageSource
 	Fit                *string
@@ -1891,78 +3946,205 @@ type InkImage struct {
 	CenterSlice        *ui.Rect
 	Repeat             *string
 	MatchTextDirection *bool
-	Width              *float64
-	Height             *float64
-	Child              ui.Node
+
+	// A width to apply to the decoration and the child.
+	Width *float64
+
+	// A height to apply to the decoration and the child.
+	Height *float64
+
+	// The child contained by the container.
+	Child ui.Node
 }
 
 // InkResponse maps InkResponse of package:material_ui/material_ui.dart.
 //
+// An area of a Material that responds to touch. Has a configurable shape
+// and can be configured to clip splashes that extend outside its bounds or
+// not.
+//
 // HighlightShape takes "rectangle", or "circle".
 type InkResponse struct {
-	Child                ui.Node
-	OnTap                func()
-	OnTapCancel          func()
-	OnDoubleTap          func()
-	OnLongPress          func()
-	OnLongPressUp        func()
-	OnSecondaryTap       func()
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Called when the user taps this part of the material.
+	OnTap func()
+
+	// Called when the user cancels a tap that was started on this part of the
+	// material.
+	OnTapCancel func()
+
+	// Called when the user double taps this part of the material.
+	OnDoubleTap func()
+
+	// Called when the user long-presses on this part of the material.
+	OnLongPress func()
+
+	// Called when the user lifts their finger after a long press on the
+	// button.
+	OnLongPressUp func()
+
+	// Called when the user taps this part of the material with a secondary
+	// button.
+	OnSecondaryTap func()
+
+	// Called when the user cancels a secondary button tap that was started on
+	// this part of the material.
 	OnSecondaryTapCancel func()
-	OnHighlightChanged   func(bool)
-	OnHover              func(bool)
-	MouseCursor          *string
-	ContainedInkWell     *bool
-	HighlightShape       *string
-	Radius               *float64
-	BorderRadius         *ui.Radius
-	CustomBorder         *ui.Shape
-	FocusColor           *ui.Color
-	HoverColor           *ui.Color
-	HighlightColor       *ui.Color
-	OverlayColor         *ui.StateColor
-	SplashColor          *ui.Color
-	EnableFeedback       *bool
+
+	// Called when this part of the material either becomes highlighted or
+	// stops being highlighted.
+	OnHighlightChanged func(bool)
+
+	// Called when a pointer enters or exits the ink response area.
+	OnHover func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// Whether this ink response should be clipped its bounds.
+	ContainedInkWell *bool
+
+	// The shape (e.g., circle, rectangle) to use for the highlight drawn
+	// around this part of the material when pressed, hovered over, or focused.
+	HighlightShape *string
+
+	// The radius of the ink splash.
+	Radius *float64
+
+	// The border radius of the containing rectangle.
+	BorderRadius *ui.Radius
+
+	// The custom clip border.
+	CustomBorder *ui.Shape
+
+	// The color of the ink response when the parent widget is focused.
+	FocusColor *ui.Color
+
+	// The color of the ink response when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The highlight color of the ink response when pressed.
+	HighlightColor *ui.Color
+
+	// Defines the ink response focus, hover, and splash colors.
+	OverlayColor *ui.StateColor
+
+	// The splash color of the ink response.
+	SplashColor *ui.Color
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// Whether to exclude the gestures introduced by this widget from the
+	// semantics tree.
 	ExcludeFromSemantics *bool
 	FocusNode            *ui.FocusKey
 	CanRequestFocus      *bool
 	OnFocusChange        func(bool)
 	Autofocus            *bool
-	StatesController     *ui.StatesKey
-	HoverDuration        *int
+
+	// Represents the interactive "state" of this widget in terms of a set of
+	// WidgetStates, like pressed and focused.
+	StatesController *ui.StatesKey
+
+	// The duration of the animation that animates the hover effect.
+	HoverDuration *int
 }
 
 // InkWell maps InkWell of package:material_ui/material_ui.dart.
+//
+// A rectangular area of a Material that responds to touch.
 type InkWell struct {
-	Child                ui.Node
-	OnTap                func()
-	OnDoubleTap          func()
-	OnLongPress          func()
-	OnLongPressUp        func()
-	OnTapCancel          func()
-	OnSecondaryTap       func()
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Called when the user taps this part of the material.
+	OnTap func()
+
+	// Called when the user double taps this part of the material.
+	OnDoubleTap func()
+
+	// Called when the user long-presses on this part of the material.
+	OnLongPress func()
+
+	// Called when the user lifts their finger after a long press on the
+	// button.
+	OnLongPressUp func()
+
+	// Called when the user cancels a tap that was started on this part of the
+	// material.
+	OnTapCancel func()
+
+	// Called when the user taps this part of the material with a secondary
+	// button.
+	OnSecondaryTap func()
+
+	// Called when the user cancels a secondary button tap that was started on
+	// this part of the material.
 	OnSecondaryTapCancel func()
-	OnHighlightChanged   func(bool)
-	OnHover              func(bool)
-	MouseCursor          *string
-	FocusColor           *ui.Color
-	HoverColor           *ui.Color
-	HighlightColor       *ui.Color
-	OverlayColor         *ui.StateColor
-	SplashColor          *ui.Color
-	Radius               *float64
-	BorderRadius         *ui.Radius
-	CustomBorder         *ui.Shape
-	EnableFeedback       *bool
+
+	// Called when this part of the material either becomes highlighted or
+	// stops being highlighted.
+	OnHighlightChanged func(bool)
+
+	// Called when a pointer enters or exits the ink response area.
+	OnHover func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color of the ink response when the parent widget is focused.
+	FocusColor *ui.Color
+
+	// The color of the ink response when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The highlight color of the ink response when pressed.
+	HighlightColor *ui.Color
+
+	// Defines the ink response focus, hover, and splash colors.
+	OverlayColor *ui.StateColor
+
+	// The splash color of the ink response.
+	SplashColor *ui.Color
+
+	// The radius of the ink splash.
+	Radius *float64
+
+	// The border radius of the containing rectangle.
+	BorderRadius *ui.Radius
+
+	// The custom clip border.
+	CustomBorder *ui.Shape
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// Whether to exclude the gestures introduced by this widget from the
+	// semantics tree.
 	ExcludeFromSemantics *bool
 	FocusNode            *ui.FocusKey
 	CanRequestFocus      *bool
 	OnFocusChange        func(bool)
 	Autofocus            *bool
-	StatesController     *ui.StatesKey
-	HoverDuration        *int
+
+	// Represents the interactive "state" of this widget in terms of a set of
+	// WidgetStates, like pressed and focused.
+	StatesController *ui.StatesKey
+
+	// The duration of the animation that animates the hover effect.
+	HoverDuration *int
 }
 
 // InputChip maps InputChip of package:material_ui/material_ui.dart.
+//
+// A Material Design input chip.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
@@ -2008,22 +4190,49 @@ type InputChip struct {
 }
 
 // InputDatePickerFormField maps InputDatePickerFormField of package:material_ui/material_ui.dart.
+//
+// A TextFormField configured to accept and validate a date entered by a
+// user.
 type InputDatePickerFormField struct {
-	InitialDate      *int
-	FirstDate        int
-	LastDate         int
-	OnDateSubmitted  func(int)
-	OnDateSaved      func(int)
-	ErrorFormatText  *string
+	// If provided, it will be used as the default value of the field.
+	InitialDate *int
+
+	// The earliest allowable DateTime that the user can input.
+	FirstDate int
+
+	// The latest allowable DateTime that the user can input.
+	LastDate int
+
+	// An optional method to call when the user indicates they are done editing
+	// the text in the field.
+	OnDateSubmitted func(int)
+
+	// An optional method to call with the final date when the form is saved
+	// via save.
+	OnDateSaved func(int)
+
+	// The error text displayed if the entered date is not in the correct
+	// format.
+	ErrorFormatText *string
+
+	// The error text displayed if the date is not valid.
 	ErrorInvalidText *string
-	FieldHintText    *string
-	FieldLabelText   *string
-	Autofocus        *bool
-	AcceptEmptyDate  *bool
-	FocusNode        *ui.FocusKey
+
+	// The hint text displayed in the TextField.
+	FieldHintText *string
+
+	// The label text displayed in the TextField.
+	FieldLabelText *string
+	Autofocus      *bool
+
+	// Determines if an empty date would show errorFormatText or not.
+	AcceptEmptyDate *bool
+	FocusNode       *ui.FocusKey
 }
 
 // InputDecorationTheme maps InputDecorationTheme of package:material_ui/material_ui.dart.
+//
+// Defines the default appearance of InputDecorators.
 //
 // FloatingLabelBehavior takes "never", "auto", or "always".
 type InputDecorationTheme struct {
@@ -2058,78 +4267,191 @@ type InputDecorationTheme struct {
 	Constraints           *ui.Constraints
 	VisualDensity         *ui.Density
 	Data                  *ui.InputDecorationStyle
-	Child                 ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // LicensePage maps LicensePage of package:material_ui/material_ui.dart.
+//
+// A page that shows licenses for software used by the application.
 type LicensePage struct {
-	ApplicationName     *string
-	ApplicationVersion  *string
-	ApplicationIcon     ui.Node
+	// The name of the application.
+	ApplicationName *string
+
+	// The version of this build of the application.
+	ApplicationVersion *string
+
+	// The icon to show below the application name.
+	ApplicationIcon ui.Node
+
+	// A string to show in small print.
 	ApplicationLegalese *string
 }
 
 // LinearProgressIndicator maps LinearProgressIndicator of package:material_ui/material_ui.dart.
+//
+// A Material Design linear progress indicator, also known as a progress
+// bar.
 type LinearProgressIndicator struct {
-	Value               *float64
-	BackgroundColor     *ui.Color
-	Color               *ui.Color
-	MinHeight           *float64
-	SemanticsLabel      *string
-	SemanticsValue      *string
-	BorderRadius        *ui.Radius
-	StopIndicatorColor  *ui.Color
+	// If non-null, the value of this progress indicator.
+	Value *float64
+
+	// The progress indicator's background color.
+	BackgroundColor *ui.Color
+
+	// The progress indicator's color.
+	Color *ui.Color
+
+	// The minimum height of the line used to draw the linear indicator.
+	MinHeight *float64
+
+	// The label for this progress indicator.
+	SemanticsLabel *string
+
+	// The value for this progress indicator.
+	SemanticsValue *string
+
+	// The border radius of both the indicator and the track.
+	BorderRadius *ui.Radius
+
+	// The color of the stop indicator.
+	StopIndicatorColor *ui.Color
+
+	// The radius of the stop indicator.
 	StopIndicatorRadius *float64
-	TrackGap            *float64
-	Year2023            *bool
+
+	// The gap between the indicator and the track.
+	TrackGap *float64
+
+	// When true, the LinearProgressIndicator will use the 2023 Material Design
+	// 3 appearance.
+	Year2023 *bool
 }
 
 // ListTile maps ListTile of package:material_ui/material_ui.dart.
+//
+// A single fixed-height row that typically contains some text as well as a
+// leading or trailing icon.
 //
 // Style takes "list", or "drawer".
 //
 // TitleAlignment takes "threeLine", "titleHeight", "top", "center", or "bottom".
 type ListTile struct {
-	Leading                     ui.Node
-	Title                       ui.Node
-	Subtitle                    ui.Node
-	Trailing                    ui.Node
-	IsThreeLine                 *bool
-	Dense                       *bool
-	VisualDensity               *ui.Density
-	Shape                       *ui.Shape
-	Style                       *string
-	SelectedColor               *ui.Color
-	IconColor                   *ui.Color
-	TextColor                   *ui.Color
-	TitleTextStyle              *ui.TextStyle
-	SubtitleTextStyle           *ui.TextStyle
+	// A widget to display before the title.
+	Leading ui.Node
+
+	// The primary content of the list tile.
+	Title ui.Node
+
+	// Additional content displayed below the title.
+	Subtitle ui.Node
+
+	// A widget to display after the title.
+	Trailing ui.Node
+
+	// Whether this list tile is intended to display three lines of text.
+	IsThreeLine *bool
+
+	// Whether this list tile is part of a vertically dense list.
+	Dense *bool
+
+	// Defines how compact the list tile's layout will be.
+	VisualDensity *ui.Density
+
+	// Defines the tile's customBorder and decoration shape.
+	Shape *ui.Shape
+
+	// Defines the font used for the title.
+	Style *string
+
+	// Defines the color used for icons and text when the list tile is
+	// selected.
+	SelectedColor *ui.Color
+
+	// Defines the default color for leading and trailing icons.
+	IconColor *ui.Color
+
+	// Defines the text color for the title, subtitle, leading, and trailing.
+	TextColor *ui.Color
+
+	// The text style for ListTile's title.
+	TitleTextStyle *ui.TextStyle
+
+	// The text style for ListTile's subtitle.
+	SubtitleTextStyle *ui.TextStyle
+
+	// The text style for ListTile's leading and trailing.
 	LeadingAndTrailingTextStyle *ui.TextStyle
-	ContentPadding              *ui.Insets
-	Enabled                     *bool
-	OnTap                       func()
-	OnLongPress                 func()
-	OnFocusChange               func(bool)
-	MouseCursor                 *string
-	Selected                    *bool
-	FocusColor                  *ui.Color
-	HoverColor                  *ui.Color
-	SplashColor                 *ui.Color
-	FocusNode                   *ui.FocusKey
-	Autofocus                   *bool
-	TileColor                   *ui.Color
-	SelectedTileColor           *ui.Color
-	EnableFeedback              *bool
-	HorizontalTitleGap          *float64
-	MinVerticalPadding          *float64
-	MinLeadingWidth             *float64
-	MinTileHeight               *float64
-	TitleAlignment              *string
+
+	// The tile's internal padding.
+	ContentPadding *ui.Insets
+
+	// Whether this list tile is interactive.
+	Enabled *bool
+
+	// Called when the user taps this list tile.
+	OnTap func()
+
+	// Called when the user long-presses on this list tile.
+	OnLongPress   func()
+	OnFocusChange func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// If this tile is also enabled then icons and text are rendered with the
+	// same color.
+	Selected *bool
+
+	// The color for the tile's Material when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the tile's Material when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The color of splash for the tile's Material.
+	SplashColor *ui.Color
+	FocusNode   *ui.FocusKey
+	Autofocus   *bool
+
+	// Defines the background color of ListTile when selected is false.
+	TileColor *ui.Color
+
+	// Defines the background color of ListTile when selected is true.
+	SelectedTileColor *ui.Color
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// The horizontal gap between the titles and the leading/trailing widgets.
+	HorizontalTitleGap *float64
+
+	// The minimum padding on the top and bottom of the title and subtitle
+	// widgets.
+	MinVerticalPadding *float64
+
+	// The minimum width allocated for the leading widget.
+	MinLeadingWidth *float64
+
+	// The minimum height allocated for the ListTile widget.
+	MinTileHeight *float64
+
+	// Defines how leading and trailing are vertically aligned relative to the
+	// ListTile's titles (title and subtitle).
+	TitleAlignment *string
+
+	// Whether to add button:true to the semantics if onTap is provided.
 	InternalAddSemanticForOnTap *bool
 	StatesController            *ui.StatesKey
 }
 
 // ListTileTheme maps ListTileTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines color and style parameters for ListTiles
+// in this widget's subtree.
 //
 // ControlAffinity takes "leading", "trailing", or "platform".
 type ListTileTheme struct {
@@ -2146,120 +4468,275 @@ type ListTileTheme struct {
 	MinVerticalPadding *float64
 	MinLeadingWidth    *float64
 	ControlAffinity    *string
-	Child              ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // Magnifier maps Magnifier of package:material_ui/material_ui.dart.
 //
+// A Material-styled magnifying glass.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Magnifier struct {
+	// Any additional offset the focal point requires to "point" to the correct
+	// place.
 	AdditionalFocalPointOffset *ui.Offset
-	FilmColor                  *ui.Color
-	ClipBehavior               *string
-	Size                       *ui.Size
+
+	// The color to tint the image in this Magnifier.
+	FilmColor *ui.Color
+
+	// Whether and how to clip the shadows that render inside the loupe.
+	ClipBehavior *string
+
+	// The Size of this Magnifier.
+	Size *ui.Size
 }
 
 // Material maps Material of package:material_ui/material_ui.dart.
+//
+// A piece of material.
 //
 // Type takes "canvas", "card", "circle", "button", or "transparency".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Material struct {
-	Type               *string
-	Elevation          *float64
-	Color              *ui.Color
-	ShadowColor        *ui.Color
-	SurfaceTintColor   *ui.Color
-	TextStyle          *ui.TextStyle
-	BorderRadius       *ui.Radius
-	Shape              *ui.Shape
+	// The kind of material to show (e.g., card or canvas).
+	Type *string
+
+	// The z-coordinate at which to place this material relative to its parent.
+	Elevation *float64
+
+	// The color to paint the material.
+	Color *ui.Color
+
+	// The color to paint the shadow below the material.
+	ShadowColor *ui.Color
+
+	// The color of the surface tint overlay applied to the material color to
+	// indicate elevation.
+	SurfaceTintColor *ui.Color
+
+	// The typographical style to use for text within this material.
+	TextStyle *ui.TextStyle
+
+	// If non-null, the corners of this box are rounded by this
+	// BorderRadiusGeometry value.
+	BorderRadius *ui.Radius
+
+	// Defines the material's shape as well its shadow.
+	Shape *ui.Shape
+
+	// Whether to paint the shape border in front of the child.
 	BorderOnForeground *bool
-	ClipBehavior       *string
-	AnimationDuration  *int
-	Child              ui.Node
-	AnimateColor       *bool
+
+	// Defaults to none.
+	ClipBehavior *string
+
+	// Defines the duration of animated changes for shape, elevation,
+	// shadowColor, surfaceTintColor and the elevation overlay if it is
+	// applied.
+	AnimationDuration *int
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Whether the color should be animated.
+	AnimateColor *bool
 }
 
 // MaterialApp maps MaterialApp of package:material_ui/material_ui.dart.
 //
+// An application that uses Material Design.
+//
 // ThemeMode takes "system", "light", or "dark".
 type MaterialApp struct {
-	Home                          ui.Node
-	InitialRoute                  *string
-	Title                         *string
-	Color                         *ui.Color
-	Theme                         *ui.ThemeStyle
-	DarkTheme                     *ui.ThemeStyle
-	HighContrastTheme             *ui.ThemeStyle
-	HighContrastDarkTheme         *ui.ThemeStyle
-	ThemeMode                     *string
-	ThemeAnimationDuration        *int
-	ThemeAnimationCurve           *string
-	Locale                        *string
-	DebugShowMaterialGrid         *bool
-	ShowPerformanceOverlay        *bool
+	Home         ui.Node
+	InitialRoute *string
+
+	// This value is passed unmodified to title.
+	Title *string
+	Color *ui.Color
+
+	// Default visual properties, like colors fonts and shapes, for this app's
+	// material widgets.
+	Theme *ui.ThemeStyle
+
+	// The ThemeData to use when a 'dark mode' is requested by the system.
+	DarkTheme *ui.ThemeStyle
+
+	// The ThemeData to use when 'high contrast' is requested by the system.
+	HighContrastTheme *ui.ThemeStyle
+
+	// The ThemeData to use when a 'dark mode' and 'high contrast' is requested
+	// by the system.
+	HighContrastDarkTheme *ui.ThemeStyle
+
+	// Determines which theme will be used by the application if both theme and
+	// darkTheme are provided.
+	ThemeMode *string
+
+	// The duration of animated theme changes.
+	ThemeAnimationDuration *int
+
+	// The curve to apply when animating theme changes.
+	ThemeAnimationCurve *string
+	Locale              *string
+
+	// Turns on a GridPaper overlay that paints a baseline grid Material apps.
+	DebugShowMaterialGrid *bool
+
+	// Turns on a performance overlay.
+	ShowPerformanceOverlay *bool
+
+	// Turns on checkerboarding of raster cache images.
 	CheckerboardRasterCacheImages *bool
-	CheckerboardOffscreenLayers   *bool
-	ShowSemanticsDebugger         *bool
-	DebugShowCheckedModeBanner    *bool
-	RestorationScopeId            *string
-	UseInheritedMediaQuery        *bool
+
+	// Turns on checkerboarding of layers rendered to offscreen bitmaps.
+	CheckerboardOffscreenLayers *bool
+
+	// Turns on an overlay that shows the accessibility information reported by
+	// the framework.
+	ShowSemanticsDebugger      *bool
+	DebugShowCheckedModeBanner *bool
+	RestorationScopeId         *string
+	UseInheritedMediaQuery     *bool
 }
 
 // MaterialAppRouter maps MaterialApp.router of package:material_ui/material_ui.dart.
 //
+// An application that uses Material Design.
+//
 // ThemeMode takes "system", "light", or "dark".
 type MaterialAppRouter struct {
-	Title                         *string
-	Color                         *ui.Color
-	Theme                         *ui.ThemeStyle
-	DarkTheme                     *ui.ThemeStyle
-	HighContrastTheme             *ui.ThemeStyle
-	HighContrastDarkTheme         *ui.ThemeStyle
-	ThemeMode                     *string
-	ThemeAnimationDuration        *int
-	ThemeAnimationCurve           *string
-	Locale                        *string
-	DebugShowMaterialGrid         *bool
-	ShowPerformanceOverlay        *bool
+	// This value is passed unmodified to title.
+	Title *string
+	Color *ui.Color
+
+	// Default visual properties, like colors fonts and shapes, for this app's
+	// material widgets.
+	Theme *ui.ThemeStyle
+
+	// The ThemeData to use when a 'dark mode' is requested by the system.
+	DarkTheme *ui.ThemeStyle
+
+	// The ThemeData to use when 'high contrast' is requested by the system.
+	HighContrastTheme *ui.ThemeStyle
+
+	// The ThemeData to use when a 'dark mode' and 'high contrast' is requested
+	// by the system.
+	HighContrastDarkTheme *ui.ThemeStyle
+
+	// Determines which theme will be used by the application if both theme and
+	// darkTheme are provided.
+	ThemeMode *string
+
+	// The duration of animated theme changes.
+	ThemeAnimationDuration *int
+
+	// The curve to apply when animating theme changes.
+	ThemeAnimationCurve *string
+	Locale              *string
+
+	// Turns on a GridPaper overlay that paints a baseline grid Material apps.
+	DebugShowMaterialGrid *bool
+
+	// Turns on a performance overlay.
+	ShowPerformanceOverlay *bool
+
+	// Turns on checkerboarding of raster cache images.
 	CheckerboardRasterCacheImages *bool
-	CheckerboardOffscreenLayers   *bool
-	ShowSemanticsDebugger         *bool
-	DebugShowCheckedModeBanner    *bool
-	RestorationScopeId            *string
-	UseInheritedMediaQuery        *bool
+
+	// Turns on checkerboarding of layers rendered to offscreen bitmaps.
+	CheckerboardOffscreenLayers *bool
+
+	// Turns on an overlay that shows the accessibility information reported by
+	// the framework.
+	ShowSemanticsDebugger      *bool
+	DebugShowCheckedModeBanner *bool
+	RestorationScopeId         *string
+	UseInheritedMediaQuery     *bool
 }
 
 // MaterialBanner maps MaterialBanner of package:material_ui/material_ui.dart.
 //
+// A Material Design banner.
+//
 // OverflowAlignment takes "start", "end", or "center".
 type MaterialBanner struct {
-	Content            ui.Node
-	ContentTextStyle   *ui.TextStyle
-	Actions            []ui.Node
-	Elevation          *float64
-	Leading            ui.Node
-	BackgroundColor    *ui.Color
-	SurfaceTintColor   *ui.Color
-	ShadowColor        *ui.Color
-	DividerColor       *ui.Color
-	Padding            *ui.Insets
-	Margin             *ui.Insets
-	LeadingPadding     *ui.Insets
-	ForceActionsBelow  *bool
-	OverflowAlignment  *string
-	Animation          *ui.AnimationKey
-	OnVisible          func()
+	// The content of the MaterialBanner.
+	Content ui.Node
+
+	// Style for the text in the content of the MaterialBanner.
+	ContentTextStyle *ui.TextStyle
+
+	// The set of actions that are displayed at the bottom or trailing side of
+	// the MaterialBanner.
+	Actions []ui.Node
+
+	// The z-coordinate at which to place the material banner.
+	Elevation *float64
+
+	// The (optional) leading widget of the MaterialBanner.
+	Leading ui.Node
+
+	// The color of the surface of this MaterialBanner.
+	BackgroundColor *ui.Color
+
+	// The color used as an overlay on backgroundColor to indicate elevation.
+	SurfaceTintColor *ui.Color
+
+	// The color of the shadow below the MaterialBanner.
+	ShadowColor *ui.Color
+
+	// The color of the divider.
+	DividerColor *ui.Color
+
+	// The amount of space by which to inset the content.
+	Padding *ui.Insets
+
+	// Empty space to surround the MaterialBanner.
+	Margin *ui.Insets
+
+	// The amount of space by which to inset the leading widget.
+	LeadingPadding *ui.Insets
+
+	// An override to force the actions to be below the content regardless of
+	// how many there are.
+	ForceActionsBelow *bool
+
+	// The horizontal alignment of the actions when the actions laid out in a
+	// column.
+	OverflowAlignment *string
+
+	// The animation driving the entrance and exit of the material banner when
+	// presented by the ScaffoldMessenger.
+	Animation *ui.AnimationKey
+
+	// Called the first time that the material banner is visible within a
+	// Scaffold when presented by the ScaffoldMessenger.
+	OnVisible func()
+
+	// The optional minimum action bar height.
 	MinActionBarHeight *float64
 }
 
 // MaterialBannerTheme maps MaterialBannerTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration for MaterialBanners in
+// this widget's subtree.
 type MaterialBannerTheme struct {
-	Data  *ui.MaterialBannerStyle
+	// The properties for descendant MaterialBanner widgets.
+	Data *ui.MaterialBannerStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // MaterialButton maps MaterialButton of package:material_ui/material_ui.dart.
+//
+// A utility class for building Material buttons that depend on the ambient
+// ButtonTheme and Theme.
 //
 // TextTheme takes "normal", "accent", or "primary".
 //
@@ -2269,280 +4746,690 @@ type MaterialBannerTheme struct {
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 type MaterialButton struct {
-	OnPressed             func()
-	OnLongPress           func()
-	OnHighlightChanged    func(bool)
-	MouseCursor           *string
-	TextTheme             *string
-	TextColor             *ui.Color
-	DisabledTextColor     *ui.Color
-	Color                 *ui.Color
-	DisabledColor         *ui.Color
-	FocusColor            *ui.Color
-	HoverColor            *ui.Color
-	HighlightColor        *ui.Color
-	SplashColor           *ui.Color
-	ColorBrightness       *string
-	Elevation             *float64
-	FocusElevation        *float64
-	HoverElevation        *float64
-	HighlightElevation    *float64
-	DisabledElevation     *float64
-	Padding               *ui.Insets
-	VisualDensity         *ui.Density
-	Shape                 *ui.Shape
-	ClipBehavior          *string
-	FocusNode             *ui.FocusKey
-	Autofocus             *bool
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// The callback that is called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called by the underlying InkWell widget's onHighlightChanged callback.
+	OnHighlightChanged func(bool)
+
+	// If this property is null, adaptiveClickable will be used.
+	MouseCursor *string
+
+	// Defines the button's base colors, and the defaults for the button's
+	// minimum size, internal padding, and shape.
+	TextTheme *string
+
+	// The color to use for this button's text.
+	TextColor *ui.Color
+
+	// The color to use for this button's text when the button is disabled.
+	DisabledTextColor *ui.Color
+
+	// The button's fill color, displayed by its Material, while it is in its
+	// default (unpressed, enabled) state.
+	Color *ui.Color
+
+	// The fill color of the button when the button is disabled.
+	DisabledColor *ui.Color
+
+	// The fill color of the button's Material when it has the input focus.
+	FocusColor *ui.Color
+
+	// The fill color of the button's Material when a pointer is hovering over
+	// it.
+	HoverColor *ui.Color
+
+	// The highlight color of the button's InkWell.
+	HighlightColor *ui.Color
+
+	// The splash color of the button's InkWell.
+	SplashColor *ui.Color
+
+	// The theme brightness to use for this button.
+	ColorBrightness *string
+
+	// The z-coordinate at which to place this button relative to its parent.
+	Elevation *float64
+
+	// The elevation for the button's Material when the button is enabled and
+	// has the input focus.
+	FocusElevation *float64
+
+	// The elevation for the button's Material when the button is enabled and a
+	// pointer is hovering over it.
+	HoverElevation *float64
+
+	// The elevation for the button's Material relative to its parent when the
+	// button is enabled and pressed.
+	HighlightElevation *float64
+
+	// The elevation for the button's Material relative to its parent when the
+	// button is not enabled.
+	DisabledElevation *float64
+
+	// The internal padding for the button's child.
+	Padding *ui.Insets
+
+	// Defines how compact the button's layout will be.
+	VisualDensity *ui.Density
+
+	// The shape of the button's Material.
+	Shape *ui.Shape
+
+	// Defaults to none.
+	ClipBehavior *string
+	FocusNode    *ui.FocusKey
+	Autofocus    *bool
+
+	// Configures the minimum size of the tap target.
 	MaterialTapTargetSize *string
-	AnimationDuration     *int
-	MinWidth              *float64
-	Height                *float64
-	EnableFeedback        *bool
-	Child                 ui.Node
+
+	// Defines the duration of animated changes for shape and elevation.
+	AnimationDuration *int
+
+	// The smallest horizontal extent that the button will occupy.
+	MinWidth *float64
+
+	// The vertical extent of the button.
+	Height *float64
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// The button's label.
+	Child ui.Node
 }
 
 // MaterialUiCompatibilityBridge maps MaterialUiCompatibilityBridge of package:material_ui/material_ui.dart.
+//
+// A bridge widget for applications that have migrated to
+// package:material_ui but still contain subtrees or package dependencies
+// using package:flutter/material.dart.
 type MaterialUiCompatibilityBridge struct {
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // MenuAcceleratorCallbackBinding maps MenuAcceleratorCallbackBinding of package:material_ui/material_ui.dart.
+//
+// An InheritedWidget that provides a descendant MenuAcceleratorLabel with
+// the function to invoke when the accelerator is pressed.
 type MenuAcceleratorCallbackBinding struct {
-	OnInvoke   func()
+	// The function that pressing the accelerator defined in a descendant
+	// MenuAcceleratorLabel will invoke.
+	OnInvoke func()
+
+	// Whether or not the associated label will host its own submenu or not.
 	HasSubmenu *bool
-	Child      ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // MenuAcceleratorLabel maps MenuAcceleratorLabel of package:material_ui/material_ui.dart.
+//
+// A widget that draws the label text for a menu item (typically a
+// MenuItemButton or SubmenuButton) and renders its child with information
+// about the currently active keyboard accelerator.
 type MenuAcceleratorLabel struct {
+	// The label string that should be displayed.
 	Label string
 }
 
 // MenuAnchor maps MenuAnchor of package:material_ui/material_ui.dart.
 //
+// A widget used to mark the "anchor" for a set of submenus, defining the
+// rectangle used to position the menu, which can be done either with an
+// explicit location, or with an alignment.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type MenuAnchor struct {
-	Controller               *ui.MenuKey
-	ChildFocusNode           *ui.FocusKey
-	Style                    *ui.MenuStyle
-	AlignmentOffset          *ui.Offset
-	ReservedPadding          *ui.Insets
-	LayerLink                *ui.LinkKey
-	ClipBehavior             *string
-	AnchorTapClosesMenu      *bool
-	ConsumeOutsideTap        *bool
-	OnOpen                   func()
-	OnClose                  func()
-	CrossAxisUnconstrained   *bool
-	UseRootOverlay           *bool
-	Animated                 *bool
+	// An optional controller that allows opening and closing of the menu from
+	// other widgets.
+	Controller *ui.MenuKey
+
+	// The childFocusNode attribute is the optional FocusNode also associated
+	// to the child or builder widget that opens the menu.
+	ChildFocusNode *ui.FocusKey
+
+	// The MenuStyle that defines the visual attributes of the menu bar.
+	Style *ui.MenuStyle
+
+	// The offset of the menu relative to the alignment origin determined by
+	// alignment on the style attribute and the ambient Directionality.
+	AlignmentOffset *ui.Offset
+
+	// The padding between the edge of the safe area and the menu panel.
+	ReservedPadding *ui.Insets
+
+	// An optional LayerLink to attach the menu to the widget that this
+	// MenuAnchor surrounds.
+	LayerLink *ui.LinkKey
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Whether the menus will be closed if the anchor area is tapped.
+	AnchorTapClosesMenu *bool
+
+	// Whether or not a tap event that closes the menu will be permitted to
+	// continue on to the gesture arena.
+	ConsumeOutsideTap *bool
+
+	// A callback that is invoked when the menu begins opening.
+	OnOpen func()
+
+	// A callback that is invoked when the menu finishes closing.
+	OnClose func()
+
+	// Determine if the menu panel can be wrapped by a UnconstrainedBox which
+	// allows the panel to render at its "natural" size.
+	CrossAxisUnconstrained *bool
+
+	// Defaults to false.
+	UseRootOverlay *bool
+
+	// Whether this widget should open or close a submenu with an animation.
+	Animated *bool
+
+	// An optional callback that is invoked when the AnimationStatus of the
+	// menu changes during open and close animations.
 	OnAnimationStatusChanged func(string)
-	MenuChildren             []ui.Node
-	Child                    ui.Node
+
+	// A list of children containing the menu items that are the contents of
+	// the menu surrounded by this MenuAnchor.
+	MenuChildren []ui.Node
+
+	// The optional child to be passed to the builder.
+	Child ui.Node
 }
 
 // MenuBar maps MenuBar of package:material_ui/material_ui.dart.
 //
+// A menu bar that manages cascading child menus.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type MenuBar struct {
-	Style        *ui.MenuStyle
+	// The MenuStyle that defines the visual attributes of the menu bar.
+	Style *ui.MenuStyle
+
+	// Defaults to none.
 	ClipBehavior *string
-	Controller   *ui.MenuKey
-	Children     []ui.Node
+
+	// The MenuController to use for this menu bar.
+	Controller *ui.MenuKey
+
+	// The list of menu items that are the top level children of the MenuBar.
+	Children []ui.Node
 }
 
 // MenuBarTheme maps MenuBarTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration for the MenuBar
+// widgets in this widget's descendants.
 type MenuBarTheme struct {
-	Data  ui.MenuStyle
+	// The properties to set for MenuBar in this widget's descendants.
+	Data ui.MenuStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // MenuButtonTheme maps MenuButtonTheme of package:material_ui/material_ui.dart.
+//
+// Overrides the default ButtonStyle of its MenuItemButton and SubmenuButton
+// descendants.
 type MenuButtonTheme struct {
-	Data  ui.ButtonStyle
+	// The configuration of this theme.
+	Data ui.ButtonStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // MenuItemButton maps MenuItemButton of package:material_ui/material_ui.dart.
 //
+// A button for use in a MenuBar, in a menu created with MenuAnchor, or on
+// its own, that can be activated by click or keyboard navigation.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // OverflowAxis takes "horizontal", or "vertical".
 type MenuItemButton struct {
-	OnPressed           func()
-	OnHover             func(bool)
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Determine if hovering can request focus.
 	RequestFocusOnHover *bool
-	OnFocusChange       func(bool)
-	FocusNode           *ui.FocusKey
-	Autofocus           *bool
-	SemanticsLabel      *string
-	Style               *ui.ButtonStyle
-	StatesController    *ui.StatesKey
-	ClipBehavior        *string
-	LeadingIcon         ui.Node
-	TrailingIcon        ui.Node
-	CloseOnActivate     *bool
-	OverflowAxis        *string
-	Child               ui.Node
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+	FocusNode     *ui.FocusKey
+	Autofocus     *bool
+
+	// An optional Semantics label, applied to the entire MenuItemButton.
+	SemanticsLabel *string
+
+	// Customizes this button's appearance.
+	Style            *ui.ButtonStyle
+	StatesController *ui.StatesKey
+
+	// Defaults to none.
+	ClipBehavior *string
+
+	// An optional icon to display before the child label.
+	LeadingIcon ui.Node
+
+	// An optional icon to display after the child label.
+	TrailingIcon ui.Node
+
+	// Determines if the menu will be closed when a MenuItemButton is pressed.
+	CloseOnActivate *bool
+
+	// The direction in which the menu item expands.
+	OverflowAxis *string
+
+	// The widget displayed in the center of this button.
+	Child ui.Node
 }
 
 // MenuTheme maps MenuTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration in this widget's
+// descendants for menus created by the SubmenuButton, MenuBar, or
+// MenuAnchor widgets.
 type MenuTheme struct {
-	Data  ui.MenuStyle
+	// The properties for MenuBar and MenuItemButton in this widget's
+	// descendants.
+	Data ui.MenuStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // MergeableMaterial maps MergeableMaterial of package:material_ui/material_ui.dart.
 //
+// Displays a list of MergeableMaterialItem children. The list contains
+// MaterialSlice items whose boundaries are either "merged" with adjacent
+// items or separated by a MaterialGap. The children are distributed along
+// the given mainAxis in the ...
+//
 // MainAxis takes "horizontal", or "vertical".
 type MergeableMaterial struct {
-	MainAxis     *string
-	Elevation    *float64
-	HasDividers  *bool
+	// The main layout axis.
+	MainAxis *string
+
+	// The z-coordinate at which to place all the Material slices.
+	Elevation *float64
+
+	// Whether connected pieces of MaterialSlice have dividers between them.
+	HasDividers *bool
+
+	// Defines color used for dividers if hasDividers is true.
 	DividerColor *ui.Color
 }
 
 // NavigationBar maps NavigationBar of package:material_ui/material_ui.dart.
 //
+// Material 3 Navigation Bar component.
+//
 // LabelBehavior takes "alwaysShow", "alwaysHide", or "onlyShowSelected".
 type NavigationBar struct {
-	AnimationDuration         *int
-	SelectedIndex             *int
-	Destinations              []ui.Node
-	OnDestinationSelected     func(int)
-	BackgroundColor           *ui.Color
-	Elevation                 *float64
-	ShadowColor               *ui.Color
-	SurfaceTintColor          *ui.Color
-	IndicatorColor            *ui.Color
-	IndicatorShape            *ui.Shape
-	Height                    *float64
-	LabelBehavior             *string
-	OverlayColor              *ui.StateColor
-	LabelPadding              *ui.Insets
+	// Determines the transition time for each destination as it goes between
+	// selected and unselected.
+	AnimationDuration *int
+
+	// Determines which one of the destinations is currently selected.
+	SelectedIndex *int
+
+	// The list of destinations (usually NavigationDestinations) in this
+	// NavigationBar.
+	Destinations []ui.Node
+
+	// Called when one of the destinations is selected.
+	OnDestinationSelected func(int)
+
+	// The color of the NavigationBar itself.
+	BackgroundColor *ui.Color
+
+	// The elevation of the NavigationBar itself.
+	Elevation *float64
+
+	// The color used for the drop shadow to indicate elevation.
+	ShadowColor *ui.Color
+
+	// The color used as an overlay on backgroundColor to indicate elevation.
+	SurfaceTintColor *ui.Color
+
+	// The color of the indicatorShape when this destination is selected.
+	IndicatorColor *ui.Color
+
+	// The shape of the selected indicator.
+	IndicatorShape *ui.Shape
+
+	// The height of the NavigationBar itself.
+	Height *float64
+
+	// Defines how the destinations' labels will be laid out and when they'll
+	// be displayed.
+	LabelBehavior *string
+
+	// The highlight color that's typically used to indicate that the
+	// NavigationDestination is focused, hovered, or pressed.
+	OverlayColor *ui.StateColor
+
+	// The padding around the label widget.
+	LabelPadding *ui.Insets
+
+	// Specifies whether the underlying SafeArea should maintain the bottom
+	// viewPadding instead of the bottom padding.
 	MaintainBottomViewPadding *bool
 }
 
 // NavigationBarTheme maps NavigationBarTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines visual properties for NavigationBars and
+// NavigationDestinations in this widget's subtree.
 type NavigationBarTheme struct {
-	Data  ui.NavigationBarStyle
+	// Specifies the background color, label text style, icon theme, and label
+	// type values for descendant NavigationBar widgets.
+	Data ui.NavigationBarStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // NavigationDestination maps NavigationDestination of package:material_ui/material_ui.dart.
+//
+// A Material 3 NavigationBar destination.
 type NavigationDestination struct {
-	Icon         ui.Node
+	// The Widget (usually an Icon) that's displayed for this
+	// NavigationDestination.
+	Icon ui.Node
+
+	// The optional Widget (usually an Icon) that's displayed when this
+	// NavigationDestination is selected.
 	SelectedIcon ui.Node
-	Label        string
-	Tooltip      *string
-	Enabled      *bool
+
+	// The text label that appears below the icon of this
+	// NavigationDestination.
+	Label string
+
+	// The text to display in the tooltip for this NavigationDestination, when
+	// the user long presses the destination.
+	Tooltip *string
+
+	// Indicates that this destination is selectable.
+	Enabled *bool
 }
 
 // NavigationDrawer maps NavigationDrawer of package:material_ui/material_ui.dart.
+//
+// Material Design Navigation Drawer component.
 type NavigationDrawer struct {
-	Children              []ui.Node
-	Header                ui.Node
-	Footer                ui.Node
-	BackgroundColor       *ui.Color
-	ShadowColor           *ui.Color
-	SurfaceTintColor      *ui.Color
-	Elevation             *float64
-	IndicatorColor        *ui.Color
-	IndicatorShape        *ui.Shape
+	// Defines the appearance of the items within the navigation drawer.
+	Children []ui.Node
+
+	// A widget to display at the top of the layout.
+	Header ui.Node
+
+	// A widget to display at the bottom of the layout.
+	Footer ui.Node
+
+	// The background color of the Material that holds the NavigationDrawer's
+	// contents.
+	BackgroundColor *ui.Color
+
+	// The color used for the drop shadow to indicate elevation.
+	ShadowColor *ui.Color
+
+	// The surface tint of the Material that holds the NavigationDrawer's
+	// contents.
+	SurfaceTintColor *ui.Color
+
+	// The elevation of the NavigationDrawer itself.
+	Elevation *float64
+
+	// The color of the indicatorShape when this destination is selected.
+	IndicatorColor *ui.Color
+
+	// The shape of the selected indicator.
+	IndicatorShape *ui.Shape
+
+	// Called when one of the NavigationDrawerDestination children is selected.
 	OnDestinationSelected func(int)
-	SelectedIndex         *int
+
+	// The index into destinations for the current selected
+	// NavigationDrawerDestination or null if no destination is selected.
+	SelectedIndex *int
 }
 
 // NavigationDrawerDestination maps NavigationDrawerDestination of package:material_ui/material_ui.dart.
+//
+// A Material Design NavigationDrawer destination.
 type NavigationDrawerDestination struct {
+	// The background color of the destination.
 	BackgroundColor *ui.Color
-	Icon            ui.Node
-	SelectedIcon    ui.Node
-	Label           ui.Node
-	Enabled         *bool
+
+	// The Widget (usually an Icon) that's displayed for this
+	// NavigationDestination.
+	Icon ui.Node
+
+	// The optional Widget (usually an Icon) that's displayed when this
+	// NavigationDestination is selected.
+	SelectedIcon ui.Node
+
+	// The text label that appears on the right of the icon
+	Label ui.Node
+
+	// Indicates that this destination is selectable.
+	Enabled *bool
 }
 
 // NavigationDrawerTheme maps NavigationDrawerTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines visual properties for NavigationDrawers
+// and NavigationDestinations in this widget's subtree.
 type NavigationDrawerTheme struct {
-	Data  ui.NavigationDrawerStyle
+	// Specifies the background color, label text style, icon theme, and label
+	// type values for descendant NavigationDrawer widgets.
+	Data ui.NavigationDrawerStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // NavigationIndicator maps NavigationIndicator of package:material_ui/material_ui.dart.
+//
+// Selection Indicator for the Material 3 NavigationBar and NavigationRail
+// components.
 type NavigationIndicator struct {
-	Animation    ui.AnimationKey
-	Color        *ui.Color
+	// Determines the scale of the indicator.
+	Animation ui.AnimationKey
+
+	// The fill color of this indicator.
+	Color *ui.Color
+
+	// The border radius of the shape of the indicator.
 	BorderRadius *ui.Radius
-	Shape        *ui.Shape
+
+	// The shape of the indicator.
+	Shape *ui.Shape
 }
 
 // NavigationRail maps NavigationRail of package:material_ui/material_ui.dart.
+//
+// A Material Design widget that is meant to be displayed at the left or
+// right of an app to navigate between a small number of views, typically
+// between three and five.
 //
 // LabelType takes "none", "selected", or "all".
 //
 // MainAxisAlignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
 type NavigationRail struct {
-	BackgroundColor          *ui.Color
-	Extended                 *bool
-	Leading                  ui.Node
-	Trailing                 ui.Node
-	Destinations             []ui.RailItem
-	SelectedIndex            int
-	OnDestinationSelected    func(int)
-	Elevation                *float64
-	GroupAlignment           *float64
-	LabelType                *string
+	// Sets the color of the Container that holds all of the NavigationRail's
+	// contents.
+	BackgroundColor *ui.Color
+
+	// Indicates that the NavigationRail should be in the extended state.
+	Extended *bool
+
+	// The leading widget in the rail that is placed above the destinations.
+	Leading ui.Node
+
+	// The trailing widget in the rail that is placed below the destinations.
+	Trailing ui.Node
+
+	// Defines the appearance of the button items that are arrayed within the
+	// navigation rail.
+	Destinations []ui.RailItem
+
+	// The index into destinations for the current selected
+	// NavigationRailDestination or null if no destination is selected.
+	SelectedIndex int
+
+	// Called when one of the destinations is selected.
+	OnDestinationSelected func(int)
+
+	// The rail's elevation or z-coordinate.
+	Elevation *float64
+
+	// The vertical alignment for the group of destinations within the rail.
+	GroupAlignment *float64
+
+	// Defines the layout and behavior of the labels for the default,
+	// unextended NavigationRail.
+	LabelType *string
+
+	// The TextStyle of a destination's label when it is unselected.
 	UnselectedLabelTextStyle *ui.TextStyle
-	SelectedLabelTextStyle   *ui.TextStyle
-	UnselectedIconTheme      *ui.IconStyle
-	SelectedIconTheme        *ui.IconStyle
-	MinWidth                 *float64
-	MinExtendedWidth         *float64
-	UseIndicator             *bool
-	IndicatorColor           *ui.Color
-	IndicatorShape           *ui.Shape
-	LeadingAtTop             *bool
-	TrailingAtBottom         *bool
-	Scrollable               *bool
-	MainAxisAlignment        *string
+
+	// The TextStyle of a destination's label when it is selected.
+	SelectedLabelTextStyle *ui.TextStyle
+
+	// The visual properties of the icon in the unselected destination.
+	UnselectedIconTheme *ui.IconStyle
+
+	// The visual properties of the icon in the selected destination.
+	SelectedIconTheme *ui.IconStyle
+
+	// The smallest possible width for the rail regardless of the destination's
+	// icon or label size.
+	MinWidth *float64
+
+	// The final width when the animation is complete for setting extended to
+	// true.
+	MinExtendedWidth *float64
+
+	// If true, adds a rounded NavigationIndicator behind the selected
+	// destination's icon.
+	UseIndicator *bool
+
+	// Overrides the default value of NavigationRail's selection indicator
+	// color, when useIndicator is true.
+	IndicatorColor *ui.Color
+
+	// Overrides the default value of NavigationRail's selection indicator
+	// shape, when useIndicator is true.
+	IndicatorShape *ui.Shape
+
+	// Pin the leading widget to the top.
+	LeadingAtTop *bool
+
+	// Pin the trailing widget to the bottom.
+	TrailingAtBottom *bool
+
+	// Whether the main group of items should be scrollable when vertical space
+	// is insufficient to show all of destinations, leading and trailing.
+	Scrollable *bool
+
+	// How the destinations should be placed along the vertical axis.
+	MainAxisAlignment *string
 }
 
 // NavigationRailTheme maps NavigationRailTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines visual properties for NavigationRails
+// and NavigationRailDestinations in this widget's subtree.
 type NavigationRailTheme struct {
-	Data  ui.NavigationRailStyle
+	// Specifies the background color, elevation, label text style, icon theme,
+	// group alignment, and label type and border values for descendant
+	// NavigationRail widgets.
+	Data ui.NavigationRailStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // OutlinedButton maps OutlinedButton of package:material_ui/material_ui.dart.
 //
+// A Material Design "Outlined Button"; essentially a TextButton with an
+// outlined border.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type OutlinedButton struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
-	Child            ui.Node
+
+	// Typically the button's label.
+	Child ui.Node
 }
 
 // OutlinedButtonIcon maps OutlinedButton.icon of package:material_ui/material_ui.dart.
+//
+// A Material Design "Outlined Button"; essentially a TextButton with an
+// outlined border.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // IconAlignment takes "start", or "end".
 type OutlinedButtonIcon struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
 	Icon             ui.Node
@@ -2551,71 +5438,152 @@ type OutlinedButtonIcon struct {
 }
 
 // OutlinedButtonTheme maps OutlinedButtonTheme of package:material_ui/material_ui.dart.
+//
+// Overrides the default ButtonStyle of its OutlinedButton descendants.
 type OutlinedButtonTheme struct {
-	Data  ui.ButtonStyle
+	// The configuration of this theme.
+	Data ui.ButtonStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // PopupMenuDivider maps PopupMenuDivider of package:material_ui/material_ui.dart.
+//
+// A horizontal divider in a Material Design popup menu.
 type PopupMenuDivider struct {
+	// The thickness of the line drawn within the PopupMenuDivider.
 	Thickness *float64
-	Indent    *float64
+
+	// The amount of empty space to the leading edge of the PopupMenuDivider.
+	Indent *float64
+
+	// The amount of empty space to the trailing edge of the PopupMenuDivider.
 	EndIndent *float64
-	Radius    *ui.Radius
-	Color     *ui.Color
+
+	// The amount of radius for the border of the PopupMenuDivider.
+	Radius *ui.Radius
+
+	// <callout-box>
+	Color *ui.Color
 }
 
 // PopupMenuItem maps PopupMenuItem of package:material_ui/material_ui.dart.
+//
+// An item in a Material Design popup menu.
 type PopupMenuItem struct {
-	OnTap       func()
-	Enabled     *bool
-	Height      *float64
-	Padding     *ui.Insets
-	TextStyle   *ui.TextStyle
+	// Called when the menu item is tapped.
+	OnTap func()
+
+	// Whether the user is permitted to select this item.
+	Enabled *bool
+
+	// The minimum height of the menu item.
+	Height *float64
+
+	// The padding of the menu item.
+	Padding *ui.Insets
+
+	// The text style of the popup menu item.
+	TextStyle *ui.TextStyle
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
 	MouseCursor *string
-	Child       ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // PopupMenuTheme maps PopupMenuTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration for popup menus in
+// this widget's subtree.
 type PopupMenuTheme struct {
-	Data  ui.PopupMenuStyle
+	// The properties for descendant popup menu widgets.
+	Data ui.PopupMenuStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // ProgressIndicatorTheme maps ProgressIndicatorTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration for ProgressIndicators
+// in this widget's subtree.
 type ProgressIndicatorTheme struct {
-	Data  ui.ProgressIndicatorStyle
+	// The properties for descendant ProgressIndicator widgets.
+	Data ui.ProgressIndicatorStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // RadioTheme maps RadioTheme of package:material_ui/material_ui.dart.
+//
+// Applies a radio theme to descendant Radio widgets.
 type RadioTheme struct {
-	Data  ui.RadioStyle
+	// The properties used for all descendant Radio widgets.
+	Data ui.RadioStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // RangeSlider maps RangeSlider of package:material_ui/material_ui.dart.
+//
+// A Material Design range slider.
 type RangeSlider struct {
-	Values        ui.Range
-	OnChanged     func(float64, float64)
+	// The currently selected values for this range slider.
+	Values ui.Range
+
+	// Called when the user is selecting a new value for the slider by
+	// dragging.
+	OnChanged func(float64, float64)
+
+	// Called when the user starts selecting new values for the slider.
 	OnChangeStart func(float64, float64)
-	OnChangeEnd   func(float64, float64)
-	Min           *float64
-	Max           *float64
-	Divisions     *int
-	ActiveColor   *ui.Color
+
+	// Called when the user is done selecting new values for the slider.
+	OnChangeEnd func(float64, float64)
+
+	// The minimum value the user can select.
+	Min *float64
+
+	// The maximum value the user can select.
+	Max *float64
+
+	// The number of discrete divisions.
+	Divisions *int
+
+	// The color of the track's active segment, i.e.
+	ActiveColor *ui.Color
+
+	// The color of the track's inactive segments, i.e.
 	InactiveColor *ui.Color
-	OverlayColor  *ui.StateColor
-	Padding       *ui.Insets
-	Year2023      *bool
+
+	// The highlight color that's typically used to indicate that the range
+	// slider thumb is hovered or dragged.
+	OverlayColor *ui.StateColor
+
+	// Determines the padding around the RangeSlider.
+	Padding *ui.Insets
+
+	// When true, the RangeSlider will use the 2023 Material Design 3
+	// appearance.
+	Year2023 *bool
 }
 
 // RawChip maps RawChip of package:material_ui/material_ui.dart.
+//
+// A raw Material Design chip.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 type RawChip struct {
+	// Defines the defaults for the chip properties if they are not specified
+	// elsewhere.
 	DefaultProperties          *ui.ChipStyle
 	Avatar                     ui.Node
 	Label                      ui.Node
@@ -2630,131 +5598,276 @@ type RawChip struct {
 	OnPressed                  func()
 	OnSelected                 func(bool)
 	PressElevation             *float64
-	TapEnabled                 *bool
-	Selected                   *bool
-	IsEnabled                  *bool
-	DisabledColor              *ui.Color
-	SelectedColor              *ui.Color
-	Tooltip                    *string
-	Side                       *ui.BorderSide
-	Shape                      *ui.Shape
-	ClipBehavior               *string
-	FocusNode                  *ui.FocusKey
-	Autofocus                  *bool
-	Color                      *ui.StateColor
-	BackgroundColor            *ui.Color
-	MaterialTapTargetSize      *string
-	Elevation                  *float64
-	ShadowColor                *ui.Color
-	SurfaceTintColor           *ui.Color
-	IconTheme                  *ui.IconStyle
-	SelectedShadowColor        *ui.Color
-	ShowCheckmark              *bool
-	CheckmarkColor             *ui.Color
-	AvatarBorder               *ui.Shape
-	AvatarBoxConstraints       *ui.Constraints
-	DeleteIconBoxConstraints   *ui.Constraints
-	MouseCursor                *string
+
+	// If set, this indicates that the chip should be disabled if all of the
+	// tap callbacks (onSelected, onPressed) are null.
+	TapEnabled               *bool
+	Selected                 *bool
+	IsEnabled                *bool
+	DisabledColor            *ui.Color
+	SelectedColor            *ui.Color
+	Tooltip                  *string
+	Side                     *ui.BorderSide
+	Shape                    *ui.Shape
+	ClipBehavior             *string
+	FocusNode                *ui.FocusKey
+	Autofocus                *bool
+	Color                    *ui.StateColor
+	BackgroundColor          *ui.Color
+	MaterialTapTargetSize    *string
+	Elevation                *float64
+	ShadowColor              *ui.Color
+	SurfaceTintColor         *ui.Color
+	IconTheme                *ui.IconStyle
+	SelectedShadowColor      *ui.Color
+	ShowCheckmark            *bool
+	CheckmarkColor           *ui.Color
+	AvatarBorder             *ui.Shape
+	AvatarBoxConstraints     *ui.Constraints
+	DeleteIconBoxConstraints *ui.Constraints
+	MouseCursor              *string
 }
 
 // RawMaterialButton maps RawMaterialButton of package:material_ui/material_ui.dart.
+//
+// Creates a button based on Semantics, Material, and InkWell widgets.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 type RawMaterialButton struct {
-	OnPressed             func()
-	OnLongPress           func()
-	OnHighlightChanged    func(bool)
-	MouseCursor           *string
-	TextStyle             *ui.TextStyle
-	FillColor             *ui.Color
-	FocusColor            *ui.Color
-	HoverColor            *ui.Color
-	HighlightColor        *ui.Color
-	SplashColor           *ui.Color
-	Elevation             *float64
-	FocusElevation        *float64
-	HoverElevation        *float64
-	HighlightElevation    *float64
-	DisabledElevation     *float64
-	Padding               *ui.Insets
-	VisualDensity         *ui.Density
-	Shape                 *ui.Shape
-	AnimationDuration     *int
-	ClipBehavior          *string
-	FocusNode             *ui.FocusKey
-	Autofocus             *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called by the underlying InkWell widget's onHighlightChanged callback.
+	OnHighlightChanged func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// button.
+	MouseCursor *string
+
+	// Defines the default text style, with textStyle, for the button's child.
+	TextStyle *ui.TextStyle
+
+	// The color of the button's Material.
+	FillColor *ui.Color
+
+	// The color for the button's Material when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the button's Material when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The highlight color for the button's InkWell.
+	HighlightColor *ui.Color
+
+	// The splash color for the button's InkWell.
+	SplashColor *ui.Color
+
+	// The elevation for the button's Material when the button is enabled but
+	// not pressed.
+	Elevation *float64
+
+	// The elevation for the button's Material when the button is enabled and
+	// has the input focus.
+	FocusElevation *float64
+
+	// The elevation for the button's Material when the button is enabled and a
+	// pointer is hovering over it.
+	HoverElevation *float64
+
+	// The elevation for the button's Material when the button is enabled and
+	// pressed.
+	HighlightElevation *float64
+
+	// The elevation for the button's Material when the button is not enabled.
+	DisabledElevation *float64
+
+	// The internal padding for the button's child.
+	Padding *ui.Insets
+
+	// Defines how compact the button's layout will be.
+	VisualDensity *ui.Density
+
+	// The shape of the button's Material.
+	Shape *ui.Shape
+
+	// Defines the duration of animated changes for shape and elevation.
+	AnimationDuration *int
+
+	// Defaults to none.
+	ClipBehavior *string
+	FocusNode    *ui.FocusKey
+	Autofocus    *bool
+
+	// Configures the minimum size of the tap target.
 	MaterialTapTargetSize *string
-	Child                 ui.Node
-	EnableFeedback        *bool
+
+	// Typically the button's label.
+	Child ui.Node
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
 }
 
 // RefreshIndicator maps RefreshIndicator of package:material_ui/material_ui.dart.
 //
+// A widget that supports the Material "swipe to refresh" idiom.
+//
 // TriggerMode takes "anywhere", or "onEdge".
 type RefreshIndicator struct {
-	Displacement    *float64
-	EdgeOffset      *float64
-	OnRefresh       ui.Task
-	Color           *ui.Color
+	// The distance from the child's top or bottom edgeOffset where the refresh
+	// indicator will settle.
+	Displacement *float64
+
+	// The offset where RefreshProgressIndicator starts to appear on drag
+	// start.
+	EdgeOffset *float64
+
+	// A function that's called when the user has dragged the refresh indicator
+	// far enough to demonstrate that they want the app to refresh.
+	OnRefresh ui.Task
+
+	// The progress indicator's foreground color.
+	Color *ui.Color
+
+	// The progress indicator's background color.
 	BackgroundColor *ui.Color
-	SemanticsLabel  *string
-	SemanticsValue  *string
-	StrokeWidth     *float64
-	TriggerMode     *string
-	Elevation       *float64
-	Child           ui.Node
+
+	// This will be defaulted to refreshIndicatorSemanticLabel if it is null.
+	SemanticsLabel *string
+	SemanticsValue *string
+
+	// Defines strokeWidth for RefreshIndicator.
+	StrokeWidth *float64
+
+	// Defines how this RefreshIndicator can be triggered when users
+	// overscroll.
+	TriggerMode *string
+
+	// Defines the elevation of the underlying RefreshIndicator.
+	Elevation *float64
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // RefreshIndicatorAdaptive maps RefreshIndicator.adaptive of package:material_ui/material_ui.dart.
 //
+// A widget that supports the Material "swipe to refresh" idiom.
+//
 // TriggerMode takes "anywhere", or "onEdge".
 type RefreshIndicatorAdaptive struct {
-	Displacement    *float64
-	EdgeOffset      *float64
-	OnRefresh       ui.Task
-	Color           *ui.Color
+	// The distance from the child's top or bottom edgeOffset where the refresh
+	// indicator will settle.
+	Displacement *float64
+
+	// The offset where RefreshProgressIndicator starts to appear on drag
+	// start.
+	EdgeOffset *float64
+
+	// A function that's called when the user has dragged the refresh indicator
+	// far enough to demonstrate that they want the app to refresh.
+	OnRefresh ui.Task
+
+	// The progress indicator's foreground color.
+	Color *ui.Color
+
+	// The progress indicator's background color.
 	BackgroundColor *ui.Color
-	SemanticsLabel  *string
-	SemanticsValue  *string
-	StrokeWidth     *float64
-	TriggerMode     *string
-	Elevation       *float64
-	Child           ui.Node
+
+	// This will be defaulted to refreshIndicatorSemanticLabel if it is null.
+	SemanticsLabel *string
+	SemanticsValue *string
+
+	// Defines strokeWidth for RefreshIndicator.
+	StrokeWidth *float64
+
+	// Defines how this RefreshIndicator can be triggered when users
+	// overscroll.
+	TriggerMode *string
+
+	// Defines the elevation of the underlying RefreshIndicator.
+	Elevation *float64
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // RefreshIndicatorNoSpinner maps RefreshIndicator.noSpinner of package:material_ui/material_ui.dart.
 //
+// A widget that supports the Material "swipe to refresh" idiom.
+//
 // TriggerMode takes "anywhere", or "onEdge".
 type RefreshIndicatorNoSpinner struct {
-	OnRefresh      ui.Task
+	// A function that's called when the user has dragged the refresh indicator
+	// far enough to demonstrate that they want the app to refresh.
+	OnRefresh ui.Task
+
+	// Called to get the current status of the RefreshIndicator to update the
+	// UI as needed.
 	OnStatusChange func(string)
+
+	// This will be defaulted to refreshIndicatorSemanticLabel if it is null.
 	SemanticsLabel *string
 	SemanticsValue *string
-	TriggerMode    *string
-	Elevation      *float64
-	Child          ui.Node
+
+	// Defines how this RefreshIndicator can be triggered when users
+	// overscroll.
+	TriggerMode *string
+
+	// Defines the elevation of the underlying RefreshIndicator.
+	Elevation *float64
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // RefreshProgressIndicator maps RefreshProgressIndicator of package:material_ui/material_ui.dart.
 //
+// An indicator for the progress of refreshing the contents of a widget.
+//
 // StrokeCap takes "butt", "round", or "square".
 type RefreshProgressIndicator struct {
-	Value            *float64
-	BackgroundColor  *ui.Color
-	Color            *ui.Color
-	StrokeWidth      *float64
-	StrokeAlign      *float64
-	SemanticsLabel   *string
-	SemanticsValue   *string
-	StrokeCap        *string
-	Elevation        *float64
-	IndicatorMargin  *ui.Insets
+	// If non-null, the value of this progress indicator.
+	Value *float64
+
+	// The progress indicator's background color.
+	BackgroundColor *ui.Color
+
+	// The progress indicator's color.
+	Color *ui.Color
+
+	// The width of the line used to draw the circle.
+	StrokeWidth *float64
+
+	// The relative position of the stroke on a CircularProgressIndicator.
+	StrokeAlign *float64
+
+	// The label for this progress indicator.
+	SemanticsLabel *string
+
+	// The value for this progress indicator.
+	SemanticsValue *string
+
+	// The progress indicator's line ending.
+	StrokeCap *string
+	Elevation *float64
+
+	// The amount of space by which to inset the whole indicator.
+	IndicatorMargin *ui.Insets
+
+	// The amount of space by which to inset the inner refresh indicator.
 	IndicatorPadding *ui.Insets
 }
 
 // ReorderableListView maps ReorderableListView of package:material_ui/material_ui.dart.
+//
+// A list whose items the user can interactively reorder by dragging.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -2764,33 +5877,56 @@ type RefreshProgressIndicator struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ReorderableListView struct {
-	Children                   []ui.Node
-	OnReorderStart             func(int)
-	OnReorderEnd               func(int)
-	ItemExtent                 *float64
-	ItemExtentBuilder          ui.ExtentBuilder
-	PrototypeItem              ui.Node
-	BuildDefaultDragHandles    *bool
-	Padding                    *ui.Insets
-	Header                     ui.Node
-	Footer                     ui.Node
-	ScrollDirection            *string
-	Reverse                    *bool
-	ScrollController           *ui.ScrollKey
-	Primary                    *bool
-	Physics                    *string
-	ShrinkWrap                 *bool
-	Anchor                     *float64
-	CacheExtent                *float64
-	DragStartBehavior          *string
-	KeyboardDismissBehavior    *string
-	RestorationId              *string
+	Children          []ui.Node
+	OnReorderStart    func(int)
+	OnReorderEnd      func(int)
+	ItemExtent        *float64
+	ItemExtentBuilder ui.ExtentBuilder
+	PrototypeItem     ui.Node
+
+	// If true: on desktop platforms, a drag handle is stacked over the center
+	// of each item's trailing edge; on mobile platforms, a long press anywhere
+	// on the item starts a drag.
+	BuildDefaultDragHandles *bool
+	Padding                 *ui.Insets
+
+	// A non-reorderable header item to show before the items of the list.
+	Header ui.Node
+
+	// A non-reorderable footer item to show after the items of the list.
+	Footer           ui.Node
+	ScrollDirection  *string
+	Reverse          *bool
+	ScrollController *ui.ScrollKey
+
+	// Defaults to true when scrollDirection is vertical and scrollController
+	// is null.
+	Primary    *bool
+	Physics    *string
+	ShrinkWrap *bool
+
+	// The relative position of the zero scroll offset.
+	Anchor            *float64
+	CacheExtent       *float64
+	DragStartBehavior *string
+
+	// If keyboardDismissBehavior is null then it will fallback to the
+	// inherited getKeyboardDismissBehavior.
+	KeyboardDismissBehavior *string
+	RestorationId           *string
+
+	// Defaults to hardEdge.
 	ClipBehavior               *string
 	AutoScrollerVelocityScalar *float64
-	MouseCursor                *string
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// drag handle.
+	MouseCursor *string
 }
 
 // ReorderableListViewBuilder maps ReorderableListView.builder of package:material_ui/material_ui.dart.
+//
+// A list whose items the user can interactively reorder by dragging.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -2800,87 +5936,186 @@ type ReorderableListView struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ReorderableListViewBuilder struct {
-	ItemBuilder                ui.ItemBuilder
-	ItemCount                  int
-	OnReorderStart             func(int)
-	OnReorderEnd               func(int)
-	ItemExtent                 *float64
-	ItemExtentBuilder          ui.ExtentBuilder
-	PrototypeItem              ui.Node
-	BuildDefaultDragHandles    *bool
-	Padding                    *ui.Insets
-	Header                     ui.Node
-	Footer                     ui.Node
-	ScrollDirection            *string
-	Reverse                    *bool
-	ScrollController           *ui.ScrollKey
-	Primary                    *bool
-	Physics                    *string
-	ShrinkWrap                 *bool
-	Anchor                     *float64
-	CacheExtent                *float64
-	DragStartBehavior          *string
-	KeyboardDismissBehavior    *string
-	RestorationId              *string
+	ItemBuilder       ui.ItemBuilder
+	ItemCount         int
+	OnReorderStart    func(int)
+	OnReorderEnd      func(int)
+	ItemExtent        *float64
+	ItemExtentBuilder ui.ExtentBuilder
+	PrototypeItem     ui.Node
+
+	// If true: on desktop platforms, a drag handle is stacked over the center
+	// of each item's trailing edge; on mobile platforms, a long press anywhere
+	// on the item starts a drag.
+	BuildDefaultDragHandles *bool
+	Padding                 *ui.Insets
+
+	// A non-reorderable header item to show before the items of the list.
+	Header ui.Node
+
+	// A non-reorderable footer item to show after the items of the list.
+	Footer           ui.Node
+	ScrollDirection  *string
+	Reverse          *bool
+	ScrollController *ui.ScrollKey
+
+	// Defaults to true when scrollDirection is vertical and scrollController
+	// is null.
+	Primary    *bool
+	Physics    *string
+	ShrinkWrap *bool
+
+	// The relative position of the zero scroll offset.
+	Anchor            *float64
+	CacheExtent       *float64
+	DragStartBehavior *string
+
+	// If keyboardDismissBehavior is null then it will fallback to the
+	// inherited getKeyboardDismissBehavior.
+	KeyboardDismissBehavior *string
+	RestorationId           *string
+
+	// Defaults to hardEdge.
 	ClipBehavior               *string
 	AutoScrollerVelocityScalar *float64
-	MouseCursor                *string
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// drag handle.
+	MouseCursor *string
 }
 
 // Scaffold maps Scaffold of package:material_ui/material_ui.dart.
 //
+// Implements the basic Material Design visual layout structure.
+//
 // DrawerDragStartBehavior takes "down", or "start".
 type Scaffold struct {
-	AppBar                         ui.Node
-	Body                           ui.Node
-	FloatingActionButton           ui.Node
-	PersistentFooterButtons        []ui.Node
-	PersistentFooterDecoration     *ui.Decoration
-	Drawer                         ui.Node
-	OnDrawerChanged                func(bool)
-	EndDrawer                      ui.Node
-	OnEndDrawerChanged             func(bool)
-	BottomNavigationBar            ui.Node
-	BottomSheet                    ui.Node
-	BackgroundColor                *ui.Color
-	ResizeToAvoidBottomInset       *bool
-	Primary                        *bool
-	DrawerDragStartBehavior        *string
-	ExtendBody                     *bool
-	DrawerBarrierDismissible       *bool
-	ExtendBodyBehindAppBar         *bool
-	DrawerScrimColor               *ui.Color
-	DrawerEdgeDragWidth            *float64
-	DrawerEnableOpenDragGesture    *bool
+	// An app bar to display at the top of the scaffold.
+	AppBar ui.Node
+
+	// The primary content of the scaffold.
+	Body ui.Node
+
+	// A button displayed floating above body, in the bottom right corner.
+	FloatingActionButton ui.Node
+
+	// A set of buttons that are displayed at the bottom of the scaffold.
+	PersistentFooterButtons []ui.Node
+
+	// Decoration for the container that holds the persistentFooterButtons.
+	PersistentFooterDecoration *ui.Decoration
+
+	// A panel displayed to the side of the body, often hidden on mobile
+	// devices.
+	Drawer ui.Node
+
+	// Optional callback that is called when the drawer is opened or closed.
+	OnDrawerChanged func(bool)
+
+	// A panel displayed to the side of the body, often hidden on mobile
+	// devices.
+	EndDrawer ui.Node
+
+	// Optional callback that is called when the endDrawer is opened or closed.
+	OnEndDrawerChanged func(bool)
+
+	// A bottom navigation bar to display at the bottom of the scaffold.
+	BottomNavigationBar ui.Node
+
+	// The persistent bottom sheet to display.
+	BottomSheet ui.Node
+
+	// The color of the Material widget that underlies the entire Scaffold.
+	BackgroundColor *ui.Color
+
+	// If true the body and the scaffold's floating widgets should size
+	// themselves to avoid the onscreen keyboard whose height is defined by the
+	// ambient MediaQuery's viewInsets bottom property.
+	ResizeToAvoidBottomInset *bool
+
+	// Whether this scaffold is being displayed at the top of the screen.
+	Primary                 *bool
+	DrawerDragStartBehavior *string
+
+	// If true, and bottomNavigationBar or persistentFooterButtons is
+	// specified, then the body extends to the bottom of the Scaffold, instead
+	// of only extending to the top of the bottomNavigationBar or the
+	// persistentFooterButtons.
+	ExtendBody *bool
+
+	// Whether the drawer can be dismissed by tapping on the barrier.
+	DrawerBarrierDismissible *bool
+
+	// If true, and an appBar is specified, then the height of the body is
+	// extended to include the height of the app bar and the top of the body is
+	// aligned with the top of the app bar.
+	ExtendBodyBehindAppBar *bool
+
+	// The color to use for the scrim that obscures primary content while a
+	// drawer is open.
+	DrawerScrimColor *ui.Color
+
+	// The width of the area within which a horizontal swipe will open the
+	// drawer.
+	DrawerEdgeDragWidth *float64
+
+	// Determines if the drawer can be opened with a drag gesture on mobile.
+	DrawerEnableOpenDragGesture *bool
+
+	// Determines if the endDrawer can be opened with a gesture on mobile.
 	EndDrawerEnableOpenDragGesture *bool
-	RestorationId                  *string
+
+	// Restoration ID to save and restore the state of the Scaffold.
+	RestorationId *string
 }
 
 // ScaffoldMessenger maps ScaffoldMessenger of package:material_ui/material_ui.dart.
+//
+// Manages SnackBars and MaterialBanners for descendant Scaffolds.
 type ScaffoldMessenger struct {
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // Scrollbar maps Scrollbar of package:material_ui/material_ui.dart.
 //
+// A Material Design scrollbar.
+//
 // ScrollbarOrientation takes "left", "right", "top", or "bottom".
 type Scrollbar struct {
-	Child                ui.Node
-	Controller           *ui.ScrollKey
-	ThumbVisibility      *bool
-	TrackVisibility      *bool
+	Child ui.Node
+
+	// The ScrollController used to implement Scrollbar dragging.
+	Controller *ui.ScrollKey
+
+	// Indicates that the scrollbar thumb should be visible, even when a scroll
+	// is not underway.
+	ThumbVisibility *bool
+
+	// If this property is null, then trackVisibility of scrollbarTheme is
+	// used.
+	TrackVisibility *bool
+
+	// The thickness of the scrollbar in the cross axis of the scrollable.
 	Thickness            *float64
 	Interactive          *bool
 	ScrollbarOrientation *string
 }
 
 // ScrollbarTheme maps ScrollbarTheme of package:material_ui/material_ui.dart.
+//
+// Applies a scrollbar theme to descendant Scrollbar widgets.
 type ScrollbarTheme struct {
-	Data  ui.ScrollbarStyle
+	// The properties used for all descendant Scrollbar widgets.
+	Data ui.ScrollbarStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // SearchBar maps SearchBar of package:material_ui/material_ui.dart.
+//
+// A Material Design search bar.
 //
 // TextCapitalization takes "words", "sentences", "characters", or "none".
 //
@@ -2890,47 +6125,98 @@ type ScrollbarTheme struct {
 //
 // SmartQuotesType takes "disabled", or "enabled".
 type SearchBar struct {
-	Controller         *ui.TextKey
-	FocusNode          *ui.FocusKey
-	HintText           *string
-	Leading            ui.Node
-	OnTap              func()
-	OnChanged          func(string)
-	OnSubmitted        func(string)
-	Constraints        *ui.Constraints
-	BackgroundColor    *ui.StateColor
-	ShadowColor        *ui.StateColor
-	SurfaceTintColor   *ui.StateColor
+	// Controls the text being edited in the search bar's text field.
+	Controller *ui.TextKey
+	FocusNode  *ui.FocusKey
+
+	// Text that suggests what sort of input the field accepts.
+	HintText *string
+
+	// A widget to display before the text input field.
+	Leading ui.Node
+
+	// Called when the user taps this search bar.
+	OnTap func()
+
+	// Invoked upon user input.
+	OnChanged func(string)
+
+	// Called when the user indicates that they are done editing the text in
+	// the field.
+	OnSubmitted func(string)
+
+	// Optional size constraints for the search bar.
+	Constraints *ui.Constraints
+
+	// The search bar's background fill color.
+	BackgroundColor *ui.StateColor
+
+	// The shadow color of the search bar's Material.
+	ShadowColor *ui.StateColor
+
+	// The surface tint color of the search bar's Material.
+	SurfaceTintColor *ui.StateColor
+
+	// The highlight color that's typically used to indicate that the search
+	// bar is focused, hovered, or pressed.
 	OverlayColor       *ui.StateColor
 	TextCapitalization *string
-	Enabled            *bool
-	AutoFocus          *bool
-	TextInputAction    *string
-	ScrollPadding      *ui.Insets
-	ReadOnly           *bool
-	SmartDashesType    *string
-	SmartQuotesType    *string
+
+	// Whether or not this widget is currently interactive.
+	Enabled         *bool
+	AutoFocus       *bool
+	TextInputAction *string
+	ScrollPadding   *ui.Insets
+	ReadOnly        *bool
+
+	// Configures how smart dashes are handled in the text field used by this
+	// SearchBar.
+	SmartDashesType *string
+
+	// Configures how smart quotes are handled in the text field used by this
+	// SearchBar.
+	SmartQuotesType *string
 }
 
 // SearchBarTheme maps SearchBarTheme of package:material_ui/material_ui.dart.
+//
+// Applies a search bar theme to descendant SearchBar widgets.
 type SearchBarTheme struct {
-	Data  ui.SearchBarStyle
+	// The properties used for all descendant SearchBar widgets.
+	Data ui.SearchBarStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // SearchViewTheme maps SearchViewTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration in this widget's
+// descendants for search view created by the SearchAnchor widget.
 type SearchViewTheme struct {
-	Data  ui.SearchViewStyle
+	// The properties used for all descendant SearchAnchor widgets.
+	Data ui.SearchViewStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // SegmentedButtonTheme maps SegmentedButtonTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the visual properties for
+// SegmentedButtons in this widget's subtree.
 type SegmentedButtonTheme struct {
-	Data  ui.SegmentedButtonStyle
+	// Specifies the visual properties used by descendant SegmentedButton
+	// widgets.
+	Data ui.SegmentedButtonStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // SelectableText maps SelectableText of package:material_ui/material_ui.dart.
+//
+// A run of selectable text with a single style.
 //
 // TextAlign takes "left", "right", "center", "justify", "start", or "end".
 //
@@ -2940,29 +6226,42 @@ type SegmentedButtonTheme struct {
 //
 // TextWidthBasis takes "parent", or "longestLine".
 type SelectableText struct {
-	Data                       string
-	FocusNode                  *ui.FocusKey
-	Style                      *ui.TextStyle
-	TextAlign                  *string
-	TextDirection              *string
-	TextScaleFactor            *float64
-	ShowCursor                 *bool
-	Autofocus                  *bool
-	MinLines                   *int
-	MaxLines                   *int
-	CursorWidth                *float64
-	CursorHeight               *float64
-	CursorColor                *ui.Color
+	// The text to display.
+	Data string
+
+	// Defines the focus for this widget.
+	FocusNode *ui.FocusKey
+
+	// The style to use for the text.
+	Style           *ui.TextStyle
+	TextAlign       *string
+	TextDirection   *string
+	TextScaleFactor *float64
+	ShowCursor      *bool
+	Autofocus       *bool
+	MinLines        *int
+	MaxLines        *int
+	CursorWidth     *float64
+	CursorHeight    *float64
+
+	// The color of the cursor.
+	CursorColor *ui.Color
+
+	// The color to use when painting the selection.
 	SelectionColor             *ui.Color
 	DragStartBehavior          *string
 	EnableInteractiveSelection *bool
-	OnTap                      func()
-	ScrollPhysics              *string
-	SemanticsLabel             *string
-	TextWidthBasis             *string
+
+	// Called when the user taps on this selectable text.
+	OnTap          func()
+	ScrollPhysics  *string
+	SemanticsLabel *string
+	TextWidthBasis *string
 }
 
 // SelectableTextRich maps SelectableText.rich of package:material_ui/material_ui.dart.
+//
+// A run of selectable text with a single style.
 //
 // TextAlign takes "left", "right", "center", "justify", "start", or "end".
 //
@@ -2972,254 +6271,619 @@ type SelectableText struct {
 //
 // TextWidthBasis takes "parent", or "longestLine".
 type SelectableTextRich struct {
-	TextSpan                   ui.Span
-	FocusNode                  *ui.FocusKey
-	Style                      *ui.TextStyle
-	TextAlign                  *string
-	TextDirection              *string
-	TextScaleFactor            *float64
-	ShowCursor                 *bool
-	Autofocus                  *bool
-	MinLines                   *int
-	MaxLines                   *int
-	CursorWidth                *float64
-	CursorHeight               *float64
-	CursorColor                *ui.Color
+	// The text to display as a TextSpan.
+	TextSpan ui.Span
+
+	// Defines the focus for this widget.
+	FocusNode *ui.FocusKey
+
+	// The style to use for the text.
+	Style           *ui.TextStyle
+	TextAlign       *string
+	TextDirection   *string
+	TextScaleFactor *float64
+	ShowCursor      *bool
+	Autofocus       *bool
+	MinLines        *int
+	MaxLines        *int
+	CursorWidth     *float64
+	CursorHeight    *float64
+
+	// The color of the cursor.
+	CursorColor *ui.Color
+
+	// The color to use when painting the selection.
 	SelectionColor             *ui.Color
 	DragStartBehavior          *string
 	EnableInteractiveSelection *bool
-	OnTap                      func()
-	ScrollPhysics              *string
-	SemanticsLabel             *string
-	TextWidthBasis             *string
+
+	// Called when the user taps on this selectable text.
+	OnTap          func()
+	ScrollPhysics  *string
+	SemanticsLabel *string
+	TextWidthBasis *string
 }
 
 // SelectionArea maps SelectionArea of package:material_ui/material_ui.dart.
+//
+// A widget that introduces an area for user selections with adaptive
+// selection controls.
 type SelectionArea struct {
 	FocusNode *ui.FocusKey
-	Child     ui.Node
+
+	// The child widget this selection area applies to.
+	Child ui.Node
 }
 
 // SimpleDialog maps SimpleDialog of package:material_ui/material_ui.dart.
 //
+// A simple Material Design dialog.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type SimpleDialog struct {
-	Title            ui.Node
-	TitlePadding     *ui.Insets
-	TitleTextStyle   *ui.TextStyle
-	Children         []ui.Node
-	ContentPadding   *ui.Insets
+	// The (optional) title of the dialog is displayed in a large font at the
+	// top of the dialog.
+	Title ui.Node
+
+	// Padding around the title.
+	TitlePadding *ui.Insets
+
+	// Style for the text in the title of this SimpleDialog.
+	TitleTextStyle *ui.TextStyle
+
+	// The (optional) content of the dialog is displayed in a
+	// SingleChildScrollView underneath the title.
+	Children []ui.Node
+
+	// Padding around the content.
+	ContentPadding *ui.Insets
+
+	// Style for the text in the children of this SimpleDialog.
 	ContentTextStyle *ui.TextStyle
 	BackgroundColor  *ui.Color
 	Elevation        *float64
 	ShadowColor      *ui.Color
 	SurfaceTintColor *ui.Color
-	SemanticLabel    *string
-	InsetPadding     *ui.Insets
-	ClipBehavior     *string
-	Shape            *ui.Shape
-	Alignment        *string
-	Constraints      *ui.Constraints
+
+	// The semantic label of the dialog used by accessibility frameworks to
+	// announce screen transitions when the dialog is opened and closed.
+	SemanticLabel *string
+	InsetPadding  *ui.Insets
+	ClipBehavior  *string
+	Shape         *ui.Shape
+	Alignment     *string
+	Constraints   *ui.Constraints
 }
 
 // SimpleDialogOption maps SimpleDialogOption of package:material_ui/material_ui.dart.
+//
+// An option used in a SimpleDialog.
 type SimpleDialogOption struct {
+	// The callback that is called when this option is selected.
 	OnPressed func()
-	Padding   *ui.Insets
-	Child     ui.Node
+
+	// The amount of space to surround the child with.
+	Padding *ui.Insets
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // Slider maps Slider of package:material_ui/material_ui.dart.
+//
+// A Material Design slider.
 //
 // AllowedInteraction takes "tapAndSlide", "tapOnly", "slideOnly", or "slideThumb".
 //
 // ShowValueIndicator takes "onlyForDiscrete", "onlyForContinuous", "always", "onDrag", "alwaysVisible", or "never".
 type Slider struct {
-	Value                float64
-	SecondaryTrackValue  *float64
-	OnChanged            func(float64)
-	OnChangeStart        func(float64)
-	OnChangeEnd          func(float64)
-	Min                  *float64
-	Max                  *float64
-	Divisions            *int
-	Label                *string
-	ActiveColor          *ui.Color
-	InactiveColor        *ui.Color
+	// The currently selected value for this slider.
+	Value float64
+
+	// The secondary track value for this slider.
+	SecondaryTrackValue *float64
+
+	// Called during a drag when the user is selecting a new value for the
+	// slider by dragging.
+	OnChanged func(float64)
+
+	// Called when the user starts selecting a new value for the slider.
+	OnChangeStart func(float64)
+
+	// Called when the user is done selecting a new value for the slider.
+	OnChangeEnd func(float64)
+
+	// The minimum value the user can select.
+	Min *float64
+
+	// The maximum value the user can select.
+	Max *float64
+
+	// The number of discrete divisions.
+	Divisions *int
+
+	// A label to show above the slider when the slider is active and
+	// showValueIndicator is satisfied.
+	Label *string
+
+	// The color to use for the portion of the slider track that is active.
+	ActiveColor *ui.Color
+
+	// The color for the inactive portion of the slider track.
+	InactiveColor *ui.Color
+
+	// The color to use for the portion of the slider track between the thumb
+	// and the secondaryTrackValue.
 	SecondaryActiveColor *ui.Color
-	ThumbColor           *ui.Color
-	OverlayColor         *ui.StateColor
-	MouseCursor          *string
-	FocusNode            *ui.FocusKey
-	Autofocus            *bool
-	AllowedInteraction   *string
-	Padding              *ui.Insets
-	ShowValueIndicator   *string
-	Year2023             *bool
+
+	// The color of the thumb.
+	ThumbColor *ui.Color
+
+	// The highlight color that's typically used to indicate that the slider
+	// thumb is focused, hovered, or dragged.
+	OverlayColor *ui.StateColor
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+	FocusNode   *ui.FocusKey
+	Autofocus   *bool
+
+	// Allowed way for the user to interact with the Slider.
+	AllowedInteraction *string
+
+	// Determines the padding around the Slider.
+	Padding *ui.Insets
+
+	// Determines the conditions under which the value indicator is shown.
+	ShowValueIndicator *string
+
+	// When true, the Slider will use the 2023 Material Design 3 appearance.
+	Year2023 *bool
 }
 
 // SliderAdaptive maps Slider.adaptive of package:material_ui/material_ui.dart.
+//
+// A Material Design slider.
 //
 // AllowedInteraction takes "tapAndSlide", "tapOnly", "slideOnly", or "slideThumb".
 //
 // ShowValueIndicator takes "onlyForDiscrete", "onlyForContinuous", "always", "onDrag", "alwaysVisible", or "never".
 type SliderAdaptive struct {
-	Value                float64
-	SecondaryTrackValue  *float64
-	OnChanged            func(float64)
-	OnChangeStart        func(float64)
-	OnChangeEnd          func(float64)
-	Min                  *float64
-	Max                  *float64
-	Divisions            *int
-	Label                *string
-	MouseCursor          *string
-	ActiveColor          *ui.Color
-	InactiveColor        *ui.Color
+	// The currently selected value for this slider.
+	Value float64
+
+	// The secondary track value for this slider.
+	SecondaryTrackValue *float64
+
+	// Called during a drag when the user is selecting a new value for the
+	// slider by dragging.
+	OnChanged func(float64)
+
+	// Called when the user starts selecting a new value for the slider.
+	OnChangeStart func(float64)
+
+	// Called when the user is done selecting a new value for the slider.
+	OnChangeEnd func(float64)
+
+	// The minimum value the user can select.
+	Min *float64
+
+	// The maximum value the user can select.
+	Max *float64
+
+	// The number of discrete divisions.
+	Divisions *int
+
+	// A label to show above the slider when the slider is active and
+	// showValueIndicator is satisfied.
+	Label *string
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color to use for the portion of the slider track that is active.
+	ActiveColor *ui.Color
+
+	// The color for the inactive portion of the slider track.
+	InactiveColor *ui.Color
+
+	// The color to use for the portion of the slider track between the thumb
+	// and the secondaryTrackValue.
 	SecondaryActiveColor *ui.Color
-	ThumbColor           *ui.Color
-	OverlayColor         *ui.StateColor
-	FocusNode            *ui.FocusKey
-	Autofocus            *bool
-	AllowedInteraction   *string
-	ShowValueIndicator   *string
-	Year2023             *bool
+
+	// The color of the thumb.
+	ThumbColor *ui.Color
+
+	// The highlight color that's typically used to indicate that the slider
+	// thumb is focused, hovered, or dragged.
+	OverlayColor *ui.StateColor
+	FocusNode    *ui.FocusKey
+	Autofocus    *bool
+
+	// Allowed way for the user to interact with the Slider.
+	AllowedInteraction *string
+
+	// Determines the conditions under which the value indicator is shown.
+	ShowValueIndicator *string
+
+	// When true, the Slider will use the 2023 Material Design 3 appearance.
+	Year2023 *bool
 }
 
 // SliderTheme maps SliderTheme of package:material_ui/material_ui.dart.
+//
+// Applies a slider theme to descendant Slider widgets.
 type SliderTheme struct {
-	Data  ui.SliderStyle
+	// Specifies the color and shape values for descendant slider widgets.
+	Data ui.SliderStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // SliverAppBar maps SliverAppBar of package:material_ui/material_ui.dart.
 //
+// A Material Design app bar that integrates with a CustomScrollView.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type SliverAppBar struct {
-	Leading                   ui.Node
+	// This property is used to configure an AppBar.
+	Leading ui.Node
+
+	// This property is used to configure an AppBar.
 	AutomaticallyImplyLeading *bool
-	Title                     ui.Node
-	Actions                   []ui.Node
+
+	// This property is used to configure an AppBar.
+	Title ui.Node
+
+	// This property is used to configure an AppBar.
+	Actions []ui.Node
+
+	// This property is used to configure an AppBar.
 	AutomaticallyImplyActions *bool
-	FlexibleSpace             ui.Node
-	Bottom                    ui.Node
-	Elevation                 *float64
-	ScrolledUnderElevation    *float64
-	ShadowColor               *ui.Color
-	SurfaceTintColor          *ui.Color
-	ForceElevated             *bool
-	BackgroundColor           *ui.Color
-	ForegroundColor           *ui.Color
-	IconTheme                 *ui.IconStyle
-	ActionsIconTheme          *ui.IconStyle
-	Primary                   *bool
-	CenterTitle               *bool
-	ExcludeHeaderSemantics    *bool
-	TitleSpacing              *float64
-	CollapsedHeight           *float64
-	ExpandedHeight            *float64
-	Floating                  *bool
-	Pinned                    *bool
-	Snap                      *bool
-	Stretch                   *bool
-	StretchTriggerOffset      *float64
-	OnStretchTrigger          ui.Task
-	Shape                     *ui.Shape
-	ToolbarHeight             *float64
-	LeadingWidth              *float64
-	ToolbarTextStyle          *ui.TextStyle
-	TitleTextStyle            *ui.TextStyle
+
+	// This property is used to configure an AppBar.
+	FlexibleSpace ui.Node
+
+	// This property is used to configure an AppBar.
+	Bottom ui.Node
+
+	// This property is used to configure an AppBar.
+	Elevation *float64
+
+	// This property is used to configure an AppBar.
+	ScrolledUnderElevation *float64
+
+	// This property is used to configure an AppBar.
+	ShadowColor *ui.Color
+
+	// This property is used to configure an AppBar.
+	SurfaceTintColor *ui.Color
+
+	// Whether to show the shadow appropriate for the elevation even if the
+	// content is not scrolled under the AppBar.
+	ForceElevated *bool
+
+	// This property is used to configure an AppBar.
+	BackgroundColor *ui.Color
+
+	// This property is used to configure an AppBar.
+	ForegroundColor *ui.Color
+
+	// This property is used to configure an AppBar.
+	IconTheme *ui.IconStyle
+
+	// This property is used to configure an AppBar.
+	ActionsIconTheme *ui.IconStyle
+
+	// This property is used to configure an AppBar.
+	Primary *bool
+
+	// This property is used to configure an AppBar.
+	CenterTitle *bool
+
+	// This property is used to configure an AppBar.
+	ExcludeHeaderSemantics *bool
+
+	// This property is used to configure an AppBar.
+	TitleSpacing *float64
+
+	// Defines the height of the app bar when it is collapsed.
+	CollapsedHeight *float64
+
+	// The size of the app bar when it is fully expanded.
+	ExpandedHeight *float64
+
+	// Whether the app bar should become visible as soon as the user scrolls
+	// towards the app bar.
+	Floating *bool
+
+	// Whether the app bar should remain visible at the start of the scroll
+	// view.
+	Pinned *bool
+
+	// If snap and floating are true then the floating app bar will "snap" into
+	// view.
+	Snap *bool
+
+	// Whether the app bar should stretch to fill the over-scroll area.
+	Stretch *bool
+
+	// The offset of overscroll required to activate onStretchTrigger.
+	StretchTriggerOffset *float64
+
+	// The callback function to be executed when a user over-scrolls to the
+	// offset specified by stretchTriggerOffset.
+	OnStretchTrigger ui.Task
+
+	// This property is used to configure an AppBar.
+	Shape *ui.Shape
+
+	// This property is used to configure an AppBar.
+	ToolbarHeight *float64
+
+	// This property is used to configure an AppBar.
+	LeadingWidth *float64
+
+	// This property is used to configure an AppBar.
+	ToolbarTextStyle *ui.TextStyle
+
+	// This property is used to configure an AppBar.
+	TitleTextStyle *ui.TextStyle
+
+	// This property is used to configure an AppBar.
 	ForceMaterialTransparency *bool
-	UseDefaultSemanticsOrder  *bool
-	ClipBehavior              *string
-	ActionsPadding            *ui.Insets
+
+	// This property is used to configure an AppBar.
+	UseDefaultSemanticsOrder *bool
+	ClipBehavior             *string
+
+	// This property is used to configure an AppBar.
+	ActionsPadding *ui.Insets
 }
 
 // SliverAppBarLarge maps SliverAppBar.large of package:material_ui/material_ui.dart.
 //
+// A Material Design app bar that integrates with a CustomScrollView.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type SliverAppBarLarge struct {
-	Leading                   ui.Node
+	// This property is used to configure an AppBar.
+	Leading ui.Node
+
+	// This property is used to configure an AppBar.
 	AutomaticallyImplyLeading *bool
-	Title                     ui.Node
-	Actions                   []ui.Node
+
+	// This property is used to configure an AppBar.
+	Title ui.Node
+
+	// This property is used to configure an AppBar.
+	Actions []ui.Node
+
+	// This property is used to configure an AppBar.
 	AutomaticallyImplyActions *bool
-	FlexibleSpace             ui.Node
-	Bottom                    ui.Node
-	Elevation                 *float64
-	ScrolledUnderElevation    *float64
-	ShadowColor               *ui.Color
-	SurfaceTintColor          *ui.Color
-	ForceElevated             *bool
-	BackgroundColor           *ui.Color
-	ForegroundColor           *ui.Color
-	IconTheme                 *ui.IconStyle
-	ActionsIconTheme          *ui.IconStyle
-	Primary                   *bool
-	CenterTitle               *bool
-	ExcludeHeaderSemantics    *bool
-	TitleSpacing              *float64
-	CollapsedHeight           *float64
-	ExpandedHeight            *float64
-	Floating                  *bool
-	Pinned                    *bool
-	Snap                      *bool
-	Stretch                   *bool
-	StretchTriggerOffset      *float64
-	OnStretchTrigger          ui.Task
-	Shape                     *ui.Shape
-	LeadingWidth              *float64
-	ToolbarTextStyle          *ui.TextStyle
-	TitleTextStyle            *ui.TextStyle
+
+	// This property is used to configure an AppBar.
+	FlexibleSpace ui.Node
+
+	// This property is used to configure an AppBar.
+	Bottom ui.Node
+
+	// This property is used to configure an AppBar.
+	Elevation *float64
+
+	// This property is used to configure an AppBar.
+	ScrolledUnderElevation *float64
+
+	// This property is used to configure an AppBar.
+	ShadowColor *ui.Color
+
+	// This property is used to configure an AppBar.
+	SurfaceTintColor *ui.Color
+
+	// Whether to show the shadow appropriate for the elevation even if the
+	// content is not scrolled under the AppBar.
+	ForceElevated *bool
+
+	// This property is used to configure an AppBar.
+	BackgroundColor *ui.Color
+
+	// This property is used to configure an AppBar.
+	ForegroundColor *ui.Color
+
+	// This property is used to configure an AppBar.
+	IconTheme *ui.IconStyle
+
+	// This property is used to configure an AppBar.
+	ActionsIconTheme *ui.IconStyle
+
+	// This property is used to configure an AppBar.
+	Primary *bool
+
+	// This property is used to configure an AppBar.
+	CenterTitle *bool
+
+	// This property is used to configure an AppBar.
+	ExcludeHeaderSemantics *bool
+
+	// This property is used to configure an AppBar.
+	TitleSpacing *float64
+
+	// Defines the height of the app bar when it is collapsed.
+	CollapsedHeight *float64
+
+	// The size of the app bar when it is fully expanded.
+	ExpandedHeight *float64
+
+	// Whether the app bar should become visible as soon as the user scrolls
+	// towards the app bar.
+	Floating *bool
+
+	// Whether the app bar should remain visible at the start of the scroll
+	// view.
+	Pinned *bool
+
+	// If snap and floating are true then the floating app bar will "snap" into
+	// view.
+	Snap *bool
+
+	// Whether the app bar should stretch to fill the over-scroll area.
+	Stretch *bool
+
+	// The offset of overscroll required to activate onStretchTrigger.
+	StretchTriggerOffset *float64
+
+	// The callback function to be executed when a user over-scrolls to the
+	// offset specified by stretchTriggerOffset.
+	OnStretchTrigger ui.Task
+
+	// This property is used to configure an AppBar.
+	Shape *ui.Shape
+
+	// This property is used to configure an AppBar.
+	LeadingWidth *float64
+
+	// This property is used to configure an AppBar.
+	ToolbarTextStyle *ui.TextStyle
+
+	// This property is used to configure an AppBar.
+	TitleTextStyle *ui.TextStyle
+
+	// This property is used to configure an AppBar.
 	ForceMaterialTransparency *bool
-	UseDefaultSemanticsOrder  *bool
-	ClipBehavior              *string
-	ActionsPadding            *ui.Insets
+
+	// This property is used to configure an AppBar.
+	UseDefaultSemanticsOrder *bool
+	ClipBehavior             *string
+
+	// This property is used to configure an AppBar.
+	ActionsPadding *ui.Insets
 }
 
 // SliverAppBarMedium maps SliverAppBar.medium of package:material_ui/material_ui.dart.
 //
+// A Material Design app bar that integrates with a CustomScrollView.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type SliverAppBarMedium struct {
-	Leading                   ui.Node
+	// This property is used to configure an AppBar.
+	Leading ui.Node
+
+	// This property is used to configure an AppBar.
 	AutomaticallyImplyLeading *bool
-	Title                     ui.Node
-	Actions                   []ui.Node
+
+	// This property is used to configure an AppBar.
+	Title ui.Node
+
+	// This property is used to configure an AppBar.
+	Actions []ui.Node
+
+	// This property is used to configure an AppBar.
 	AutomaticallyImplyActions *bool
-	FlexibleSpace             ui.Node
-	Bottom                    ui.Node
-	Elevation                 *float64
-	ScrolledUnderElevation    *float64
-	ShadowColor               *ui.Color
-	SurfaceTintColor          *ui.Color
-	ForceElevated             *bool
-	BackgroundColor           *ui.Color
-	ForegroundColor           *ui.Color
-	IconTheme                 *ui.IconStyle
-	ActionsIconTheme          *ui.IconStyle
-	Primary                   *bool
-	CenterTitle               *bool
-	ExcludeHeaderSemantics    *bool
-	TitleSpacing              *float64
-	CollapsedHeight           *float64
-	ExpandedHeight            *float64
-	Floating                  *bool
-	Pinned                    *bool
-	Snap                      *bool
-	Stretch                   *bool
-	StretchTriggerOffset      *float64
-	OnStretchTrigger          ui.Task
-	Shape                     *ui.Shape
-	LeadingWidth              *float64
-	ToolbarTextStyle          *ui.TextStyle
-	TitleTextStyle            *ui.TextStyle
+
+	// This property is used to configure an AppBar.
+	FlexibleSpace ui.Node
+
+	// This property is used to configure an AppBar.
+	Bottom ui.Node
+
+	// This property is used to configure an AppBar.
+	Elevation *float64
+
+	// This property is used to configure an AppBar.
+	ScrolledUnderElevation *float64
+
+	// This property is used to configure an AppBar.
+	ShadowColor *ui.Color
+
+	// This property is used to configure an AppBar.
+	SurfaceTintColor *ui.Color
+
+	// Whether to show the shadow appropriate for the elevation even if the
+	// content is not scrolled under the AppBar.
+	ForceElevated *bool
+
+	// This property is used to configure an AppBar.
+	BackgroundColor *ui.Color
+
+	// This property is used to configure an AppBar.
+	ForegroundColor *ui.Color
+
+	// This property is used to configure an AppBar.
+	IconTheme *ui.IconStyle
+
+	// This property is used to configure an AppBar.
+	ActionsIconTheme *ui.IconStyle
+
+	// This property is used to configure an AppBar.
+	Primary *bool
+
+	// This property is used to configure an AppBar.
+	CenterTitle *bool
+
+	// This property is used to configure an AppBar.
+	ExcludeHeaderSemantics *bool
+
+	// This property is used to configure an AppBar.
+	TitleSpacing *float64
+
+	// Defines the height of the app bar when it is collapsed.
+	CollapsedHeight *float64
+
+	// The size of the app bar when it is fully expanded.
+	ExpandedHeight *float64
+
+	// Whether the app bar should become visible as soon as the user scrolls
+	// towards the app bar.
+	Floating *bool
+
+	// Whether the app bar should remain visible at the start of the scroll
+	// view.
+	Pinned *bool
+
+	// If snap and floating are true then the floating app bar will "snap" into
+	// view.
+	Snap *bool
+
+	// Whether the app bar should stretch to fill the over-scroll area.
+	Stretch *bool
+
+	// The offset of overscroll required to activate onStretchTrigger.
+	StretchTriggerOffset *float64
+
+	// The callback function to be executed when a user over-scrolls to the
+	// offset specified by stretchTriggerOffset.
+	OnStretchTrigger ui.Task
+
+	// This property is used to configure an AppBar.
+	Shape *ui.Shape
+
+	// This property is used to configure an AppBar.
+	LeadingWidth *float64
+
+	// This property is used to configure an AppBar.
+	ToolbarTextStyle *ui.TextStyle
+
+	// This property is used to configure an AppBar.
+	TitleTextStyle *ui.TextStyle
+
+	// This property is used to configure an AppBar.
 	ForceMaterialTransparency *bool
-	UseDefaultSemanticsOrder  *bool
-	ClipBehavior              *string
-	ActionsPadding            *ui.Insets
+
+	// This property is used to configure an AppBar.
+	UseDefaultSemanticsOrder *bool
+	ClipBehavior             *string
+
+	// This property is used to configure an AppBar.
+	ActionsPadding *ui.Insets
 }
 
 // SnackBar maps SnackBar of package:material_ui/material_ui.dart.
+//
+// A lightweight message with an optional action which briefly displays at
+// the bottom of the screen.
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 //
@@ -3229,162 +6893,381 @@ type SliverAppBarMedium struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type SnackBar struct {
-	Content                 ui.Node
-	BackgroundColor         *ui.Color
-	Elevation               *float64
-	Margin                  *ui.Insets
-	Padding                 *ui.Insets
-	Width                   *float64
-	Shape                   *ui.Shape
-	HitTestBehavior         *string
-	Behavior                *string
-	Action                  ui.Node
+	// The primary content of the snack bar.
+	Content ui.Node
+
+	// The snack bar's background color.
+	BackgroundColor *ui.Color
+
+	// The z-coordinate at which to place the snack bar.
+	Elevation *float64
+
+	// Empty space to surround the snack bar.
+	Margin *ui.Insets
+
+	// The amount of padding to apply to the snack bar's content and optional
+	// action.
+	Padding *ui.Insets
+
+	// The width of the snack bar.
+	Width *float64
+
+	// The shape of the snack bar's Material.
+	Shape *ui.Shape
+
+	// Defines how the snack bar area, including margin, will behave during hit
+	// testing.
+	HitTestBehavior *string
+
+	// This defines the behavior and location of the snack bar.
+	Behavior *string
+
+	// (optional) An action that the user can take based on the snack bar.
+	Action ui.Node
+
+	// (optional) The percentage threshold for action widget's width before it
+	// overflows to a new line.
 	ActionOverflowThreshold *float64
-	ShowCloseIcon           *bool
-	CloseIconColor          *ui.Color
-	Persist                 *bool
-	Animation               *ui.AnimationKey
-	OnVisible               func()
-	DismissDirection        *string
-	ClipBehavior            *string
+
+	// (optional) Whether to include a "close" icon widget.
+	ShowCloseIcon *bool
+
+	// An optional color for the close icon, if showCloseIcon is true.
+	CloseIconColor *ui.Color
+
+	// Whether the snack bar will stay or auto-dismiss after timeout.
+	Persist *bool
+
+	// The animation driving the entrance and exit of the snack bar.
+	Animation *ui.AnimationKey
+
+	// Called the first time that the snackbar is visible within a Scaffold.
+	OnVisible func()
+
+	// The direction in which the SnackBar can be dismissed.
+	DismissDirection *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
 }
 
 // SnackBarAction maps SnackBarAction of package:material_ui/material_ui.dart.
+//
+// A button for a SnackBar, known as an "action".
 type SnackBarAction struct {
-	TextColor               *ui.Color
-	DisabledTextColor       *ui.Color
-	BackgroundColor         *ui.Color
+	// The button label color.
+	TextColor *ui.Color
+
+	// The button disabled label color.
+	DisabledTextColor *ui.Color
+
+	// The button background fill color.
+	BackgroundColor *ui.Color
+
+	// The button disabled background color.
 	DisabledBackgroundColor *ui.Color
-	Label                   string
-	OnPressed               func()
+
+	// The button label.
+	Label string
+
+	// The callback to be called when the button is pressed.
+	OnPressed func()
 }
 
 // SnackBarTheme maps SnackBarTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration for SnackBars in this
+// widget's subtree.
 type SnackBarTheme struct {
-	Data  ui.SnackBarStyle
+	// The properties for descendant SnackBar widgets.
+	Data ui.SnackBarStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // SpellCheckSuggestionsToolbar maps SpellCheckSuggestionsToolbar of package:material_ui/material_ui.dart.
+//
+// The default spell check suggestions toolbar for Android.
 type SpellCheckSuggestionsToolbar struct {
-	Anchor      ui.Offset
+	// The focal point below which the toolbar attempts to position itself.
+	Anchor ui.Offset
+
+	// The ContextMenuButtonItems that will be turned into the correct button
+	// widgets and displayed in the spell check suggestions toolbar.
 	ButtonItems []ui.MenuButtonItem
 }
 
 // Stepper maps Stepper of package:material_ui/material_ui.dart.
 //
+// A material stepper widget that displays progress through a sequence of
+// steps. Steppers are particularly useful in the case of forms where one
+// step requires the completion of another one, or where multiple steps need
+// to be completed in order ...
+//
 // Type takes "vertical", or "horizontal".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Stepper struct {
-	Steps              []ui.Step
-	Controller         *ui.ScrollKey
-	Physics            *string
-	Type               *string
-	CurrentStep        *int
-	OnStepTapped       func(int)
-	OnStepContinue     func()
-	OnStepCancel       func()
-	Elevation          *float64
-	Margin             *ui.Insets
-	ConnectorColor     *ui.StateColor
+	// The steps of the stepper whose titles, subtitles, icons always get
+	// shown.
+	Steps []ui.Step
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ui.ScrollKey
+
+	// How the stepper's scroll view should respond to user input.
+	Physics *string
+
+	// The type of stepper that determines the layout.
+	Type *string
+
+	// The index into steps of the current step whose content is displayed.
+	CurrentStep *int
+
+	// The callback called when a step is tapped, with its index passed as an
+	// argument.
+	OnStepTapped func(int)
+
+	// The callback called when the 'continue' button is tapped.
+	OnStepContinue func()
+
+	// The callback called when the 'cancel' button is tapped.
+	OnStepCancel func()
+
+	// The elevation of this stepper's Material when type is horizontal.
+	Elevation *float64
+
+	// Custom margin on vertical stepper.
+	Margin *ui.Insets
+
+	// Customize connected lines colors.
+	ConnectorColor *ui.StateColor
+
+	// The thickness of the connecting lines.
 	ConnectorThickness *float64
-	StepIconHeight     *float64
-	StepIconWidth      *float64
-	StepIconMargin     *ui.Insets
-	ClipBehavior       *string
-	HeaderPadding      *ui.Insets
-	ContentPadding     *ui.Insets
+
+	// Overrides the default step icon size height.
+	StepIconHeight *float64
+
+	// Overrides the default step icon size width.
+	StepIconWidth *float64
+
+	// Overrides the default step icon margin.
+	StepIconMargin *ui.Insets
+
+	// The content will be clipped to this Clip type.
+	ClipBehavior *string
+
+	// The padding around the header row in both vertical and horizontal
+	// steppers.
+	HeaderPadding *ui.Insets
+
+	// The padding around the content area in both vertical and horizontal
+	// steppers.
+	ContentPadding *ui.Insets
 }
 
 // SubmenuButton maps SubmenuButton of package:material_ui/material_ui.dart.
 //
+// A menu button that displays a cascading menu.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type SubmenuButton struct {
-	OnHover                  func(bool)
-	OnFocusChange            func(bool)
-	OnOpen                   func()
-	OnClose                  func()
-	Controller               *ui.MenuKey
-	Style                    *ui.ButtonStyle
-	MenuStyle                *ui.MenuStyle
-	AlignmentOffset          *ui.Offset
-	ClipBehavior             *string
-	FocusNode                *ui.FocusKey
-	StatesController         *ui.StatesKey
-	LeadingIcon              ui.Node
-	TrailingIcon             ui.Node
-	UseRootOverlay           *bool
-	Animated                 *bool
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// A callback that is invoked when the menu is opened.
+	OnOpen func()
+
+	// A callback that is invoked when the menu is closed.
+	OnClose func()
+
+	// An optional MenuController for this submenu.
+	Controller *ui.MenuKey
+
+	// Customizes this button's appearance.
+	Style *ui.ButtonStyle
+
+	// The MenuStyle of the menu specified by menuChildren.
+	MenuStyle *ui.MenuStyle
+
+	// The offset of the menu relative to the alignment origin determined by
+	// alignment on the style attribute.
+	AlignmentOffset *ui.Offset
+
+	// Defaults to hardEdge.
+	ClipBehavior     *string
+	FocusNode        *ui.FocusKey
+	StatesController *ui.StatesKey
+
+	// An optional icon to display before the child.
+	LeadingIcon ui.Node
+
+	// An optional icon to display after the child.
+	TrailingIcon ui.Node
+
+	// Defaults to false.
+	UseRootOverlay *bool
+
+	// Whether the menu should open and close with an animation.
+	Animated *bool
+
+	// An optional callback that is invoked when the AnimationStatus of the
+	// menu changes during open and close animations.
 	OnAnimationStatusChanged func(string)
-	MenuChildren             []ui.Node
-	Child                    ui.Node
+
+	// The list of widgets that appear in the menu when it is opened.
+	MenuChildren []ui.Node
+
+	// The widget displayed in the middle portion of this button.
+	Child ui.Node
 }
 
 // Switch maps Switch of package:material_ui/material_ui.dart.
+//
+// A Material Design switch.
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 //
 // DragStartBehavior takes "down", or "start".
 type Switch struct {
-	Value                 bool
-	OnChanged             func(bool)
-	ActiveColor           *ui.Color
-	ActiveThumbColor      *ui.Color
-	ActiveTrackColor      *ui.Color
-	InactiveThumbColor    *ui.Color
-	InactiveTrackColor    *ui.Color
-	ActiveThumbImage      *ui.ImageSource
-	InactiveThumbImage    *ui.ImageSource
-	ThumbColor            *ui.StateColor
-	TrackColor            *ui.StateColor
-	TrackOutlineColor     *ui.StateColor
+	// Whether this switch is on or off.
+	Value bool
+
+	// Called when the user toggles the switch on or off.
+	OnChanged func(bool)
+
+	// The color to use when this switch is on.
+	ActiveColor *ui.Color
+
+	// The color to use when this switch is on.
+	ActiveThumbColor *ui.Color
+
+	// The color to use on the track when this switch is on.
+	ActiveTrackColor *ui.Color
+
+	// The color to use on the thumb when this switch is off.
+	InactiveThumbColor *ui.Color
+
+	// The color to use on the track when this switch is off.
+	InactiveTrackColor *ui.Color
+	ActiveThumbImage   *ui.ImageSource
+	InactiveThumbImage *ui.ImageSource
+
+	// The color of this Switch's thumb.
+	ThumbColor *ui.StateColor
+
+	// The color of this Switch's track.
+	TrackColor *ui.StateColor
+
+	// The outline color of this Switch's track.
+	TrackOutlineColor *ui.StateColor
+
+	// Configures the minimum size of the tap target.
 	MaterialTapTargetSize *string
 	DragStartBehavior     *string
-	MouseCursor           *string
-	FocusColor            *ui.Color
-	HoverColor            *ui.Color
-	OverlayColor          *ui.StateColor
-	SplashRadius          *float64
-	FocusNode             *ui.FocusKey
-	OnFocusChange         func(bool)
-	Autofocus             *bool
-	Padding               *ui.Insets
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color for the button's Material when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the button's Material when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The color for the switch's Material.
+	OverlayColor *ui.StateColor
+
+	// The splash radius of the circular Material ink response.
+	SplashRadius  *float64
+	FocusNode     *ui.FocusKey
+	OnFocusChange func(bool)
+	Autofocus     *bool
+
+	// The amount of space to surround the child inside the bounds of the
+	// Switch.
+	Padding *ui.Insets
 }
 
 // SwitchAdaptive maps Switch.adaptive of package:material_ui/material_ui.dart.
+//
+// A Material Design switch.
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 //
 // DragStartBehavior takes "down", or "start".
 type SwitchAdaptive struct {
-	Value                 bool
-	OnChanged             func(bool)
-	ActiveColor           *ui.Color
-	ActiveThumbColor      *ui.Color
-	ActiveTrackColor      *ui.Color
-	InactiveThumbColor    *ui.Color
-	InactiveTrackColor    *ui.Color
-	ActiveThumbImage      *ui.ImageSource
-	InactiveThumbImage    *ui.ImageSource
+	// Whether this switch is on or off.
+	Value bool
+
+	// Called when the user toggles the switch on or off.
+	OnChanged func(bool)
+
+	// The color to use when this switch is on.
+	ActiveColor *ui.Color
+
+	// The color to use when this switch is on.
+	ActiveThumbColor *ui.Color
+
+	// The color to use on the track when this switch is on.
+	ActiveTrackColor *ui.Color
+
+	// The color to use on the thumb when this switch is off.
+	InactiveThumbColor *ui.Color
+
+	// The color to use on the track when this switch is off.
+	InactiveTrackColor *ui.Color
+	ActiveThumbImage   *ui.ImageSource
+	InactiveThumbImage *ui.ImageSource
+
+	// Configures the minimum size of the tap target.
 	MaterialTapTargetSize *string
-	ThumbColor            *ui.StateColor
-	TrackColor            *ui.StateColor
-	TrackOutlineColor     *ui.StateColor
-	DragStartBehavior     *string
-	MouseCursor           *string
-	FocusColor            *ui.Color
-	HoverColor            *ui.Color
-	OverlayColor          *ui.StateColor
-	SplashRadius          *float64
-	FocusNode             *ui.FocusKey
-	OnFocusChange         func(bool)
-	Autofocus             *bool
-	Padding               *ui.Insets
-	ApplyCupertinoTheme   *bool
+
+	// The color of this Switch's thumb.
+	ThumbColor *ui.StateColor
+
+	// The color of this Switch's track.
+	TrackColor *ui.StateColor
+
+	// The outline color of this Switch's track.
+	TrackOutlineColor *ui.StateColor
+	DragStartBehavior *string
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color for the button's Material when it has the input focus.
+	FocusColor *ui.Color
+
+	// The color for the button's Material when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// The color for the switch's Material.
+	OverlayColor *ui.StateColor
+
+	// The splash radius of the circular Material ink response.
+	SplashRadius  *float64
+	FocusNode     *ui.FocusKey
+	OnFocusChange func(bool)
+	Autofocus     *bool
+
+	// The amount of space to surround the child inside the bounds of the
+	// Switch.
+	Padding             *ui.Insets
+	ApplyCupertinoTheme *bool
 }
 
 // SwitchListTile maps SwitchListTile of package:material_ui/material_ui.dart.
+//
+// A ListTile with a Switch. In other words, a switch with a label.
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 //
@@ -3392,49 +7275,110 @@ type SwitchAdaptive struct {
 //
 // ControlAffinity takes "leading", "trailing", or "platform".
 type SwitchListTile struct {
-	Value                       bool
-	OnChanged                   func(bool)
-	ActiveColor                 *ui.Color
-	ActiveThumbColor            *ui.Color
-	ActiveTrackColor            *ui.Color
-	InactiveThumbColor          *ui.Color
-	InactiveTrackColor          *ui.Color
-	ActiveThumbImage            *ui.ImageSource
-	InactiveThumbImage          *ui.ImageSource
-	ThumbColor                  *ui.StateColor
-	TrackColor                  *ui.StateColor
-	TrackOutlineColor           *ui.StateColor
-	MaterialTapTargetSize       *string
-	DragStartBehavior           *string
-	MouseCursor                 *string
-	OverlayColor                *ui.StateColor
-	SplashRadius                *float64
-	FocusNode                   *ui.FocusKey
-	StatesController            *ui.StatesKey
-	OnFocusChange               func(bool)
-	Autofocus                   *bool
-	TileColor                   *ui.Color
-	Title                       ui.Node
-	Subtitle                    ui.Node
-	IsThreeLine                 *bool
-	Dense                       *bool
-	ContentPadding              *ui.Insets
-	Secondary                   ui.Node
-	Selected                    *bool
-	ControlAffinity             *string
-	Shape                       *ui.Shape
-	SelectedTileColor           *ui.Color
-	VisualDensity               *ui.Density
-	EnableFeedback              *bool
-	HorizontalTitleGap          *float64
-	MinVerticalPadding          *float64
-	MinLeadingWidth             *float64
-	MinTileHeight               *float64
-	HoverColor                  *ui.Color
+	// Whether this switch is checked.
+	Value bool
+
+	// Called when the user toggles the switch on or off.
+	OnChanged func(bool)
+
+	// Defaults to secondary of the current Theme.
+	ActiveColor *ui.Color
+
+	// Defaults to secondary of the current Theme.
+	ActiveThumbColor *ui.Color
+
+	// Defaults to secondary with the opacity set at 50%.
+	ActiveTrackColor *ui.Color
+
+	// Defaults to the colors described in the Material design specification.
+	InactiveThumbColor *ui.Color
+
+	// Defaults to the colors described in the Material design specification.
+	InactiveTrackColor *ui.Color
+	ActiveThumbImage   *ui.ImageSource
+
+	// Ignored if created with adaptive.
+	InactiveThumbImage *ui.ImageSource
+
+	// The color of this switch's thumb.
+	ThumbColor *ui.StateColor
+
+	// The color of this switch's track.
+	TrackColor *ui.StateColor
+
+	// The ListTile will be focused when this SwitchListTile requests focus, so
+	// the focused outline color of the switch will be ignored.
+	TrackOutlineColor *ui.StateColor
+
+	// defaults to shrinkWrap.
+	MaterialTapTargetSize *string
+	DragStartBehavior     *string
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color for the switch's Material.
+	OverlayColor *ui.StateColor
+
+	// If null, then the value of splashRadius is used.
+	SplashRadius *float64
+	FocusNode    *ui.FocusKey
+
+	// Controls the interactive states of the backing ListTile.
+	StatesController *ui.StatesKey
+	OnFocusChange    func(bool)
+	Autofocus        *bool
+	TileColor        *ui.Color
+
+	// The primary content of the list tile.
+	Title ui.Node
+
+	// Additional content displayed below the title.
+	Subtitle ui.Node
+
+	// Whether this list tile is intended to display three lines of text.
+	IsThreeLine *bool
+
+	// Whether this list tile is part of a vertically dense list.
+	Dense *bool
+
+	// The tile's internal padding.
+	ContentPadding *ui.Insets
+
+	// A widget to display on the opposite side of the tile from the switch.
+	Secondary ui.Node
+
+	// Whether to render icons and text in the activeThumbColor.
+	Selected *bool
+
+	// Defines the position of control and secondary, relative to text.
+	ControlAffinity *string
+	Shape           *ui.Shape
+
+	// If non-null, defines the background color when selected is true.
+	SelectedTileColor *ui.Color
+
+	// Defines how compact the list tile's layout will be.
+	VisualDensity *ui.Density
+
+	// See also:
+	EnableFeedback     *bool
+	HorizontalTitleGap *float64
+	MinVerticalPadding *float64
+	MinLeadingWidth    *float64
+	MinTileHeight      *float64
+
+	// The color for the tile's Material when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// Whether to add button:true to the semantics if onTap is provided.
 	InternalAddSemanticForOnTap *bool
 }
 
 // SwitchListTileAdaptive maps SwitchListTile.adaptive of package:material_ui/material_ui.dart.
+//
+// A ListTile with a Switch. In other words, a switch with a label.
 //
 // MaterialTapTargetSize takes "padded", or "shrinkWrap".
 //
@@ -3442,65 +7386,142 @@ type SwitchListTile struct {
 //
 // ControlAffinity takes "leading", "trailing", or "platform".
 type SwitchListTileAdaptive struct {
-	Value                       bool
-	OnChanged                   func(bool)
-	ActiveColor                 *ui.Color
-	ActiveThumbColor            *ui.Color
-	ActiveTrackColor            *ui.Color
-	InactiveThumbColor          *ui.Color
-	InactiveTrackColor          *ui.Color
-	ActiveThumbImage            *ui.ImageSource
-	InactiveThumbImage          *ui.ImageSource
-	ThumbColor                  *ui.StateColor
-	TrackColor                  *ui.StateColor
-	TrackOutlineColor           *ui.StateColor
-	MaterialTapTargetSize       *string
-	DragStartBehavior           *string
-	MouseCursor                 *string
-	OverlayColor                *ui.StateColor
-	SplashRadius                *float64
-	FocusNode                   *ui.FocusKey
-	StatesController            *ui.StatesKey
-	OnFocusChange               func(bool)
-	Autofocus                   *bool
-	ApplyCupertinoTheme         *bool
-	TileColor                   *ui.Color
-	Title                       ui.Node
-	Subtitle                    ui.Node
-	IsThreeLine                 *bool
-	Dense                       *bool
-	ContentPadding              *ui.Insets
-	Secondary                   ui.Node
-	Selected                    *bool
-	ControlAffinity             *string
-	Shape                       *ui.Shape
-	SelectedTileColor           *ui.Color
-	VisualDensity               *ui.Density
-	EnableFeedback              *bool
-	HorizontalTitleGap          *float64
-	MinVerticalPadding          *float64
-	MinLeadingWidth             *float64
-	MinTileHeight               *float64
-	HoverColor                  *ui.Color
+	// Whether this switch is checked.
+	Value bool
+
+	// Called when the user toggles the switch on or off.
+	OnChanged func(bool)
+
+	// Defaults to secondary of the current Theme.
+	ActiveColor *ui.Color
+
+	// Defaults to secondary of the current Theme.
+	ActiveThumbColor *ui.Color
+
+	// Defaults to secondary with the opacity set at 50%.
+	ActiveTrackColor *ui.Color
+
+	// Defaults to the colors described in the Material design specification.
+	InactiveThumbColor *ui.Color
+
+	// Defaults to the colors described in the Material design specification.
+	InactiveTrackColor *ui.Color
+	ActiveThumbImage   *ui.ImageSource
+
+	// Ignored if created with adaptive.
+	InactiveThumbImage *ui.ImageSource
+
+	// The color of this switch's thumb.
+	ThumbColor *ui.StateColor
+
+	// The color of this switch's track.
+	TrackColor *ui.StateColor
+
+	// The ListTile will be focused when this SwitchListTile requests focus, so
+	// the focused outline color of the switch will be ignored.
+	TrackOutlineColor *ui.StateColor
+
+	// defaults to shrinkWrap.
+	MaterialTapTargetSize *string
+	DragStartBehavior     *string
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color for the switch's Material.
+	OverlayColor *ui.StateColor
+
+	// If null, then the value of splashRadius is used.
+	SplashRadius *float64
+	FocusNode    *ui.FocusKey
+
+	// Controls the interactive states of the backing ListTile.
+	StatesController    *ui.StatesKey
+	OnFocusChange       func(bool)
+	Autofocus           *bool
+	ApplyCupertinoTheme *bool
+	TileColor           *ui.Color
+
+	// The primary content of the list tile.
+	Title ui.Node
+
+	// Additional content displayed below the title.
+	Subtitle ui.Node
+
+	// Whether this list tile is intended to display three lines of text.
+	IsThreeLine *bool
+
+	// Whether this list tile is part of a vertically dense list.
+	Dense *bool
+
+	// The tile's internal padding.
+	ContentPadding *ui.Insets
+
+	// A widget to display on the opposite side of the tile from the switch.
+	Secondary ui.Node
+
+	// Whether to render icons and text in the activeThumbColor.
+	Selected *bool
+
+	// Defines the position of control and secondary, relative to text.
+	ControlAffinity *string
+	Shape           *ui.Shape
+
+	// If non-null, defines the background color when selected is true.
+	SelectedTileColor *ui.Color
+
+	// Defines how compact the list tile's layout will be.
+	VisualDensity *ui.Density
+
+	// See also:
+	EnableFeedback     *bool
+	HorizontalTitleGap *float64
+	MinVerticalPadding *float64
+	MinLeadingWidth    *float64
+	MinTileHeight      *float64
+
+	// The color for the tile's Material when a pointer is hovering over it.
+	HoverColor *ui.Color
+
+	// Whether to add button:true to the semantics if onTap is provided.
 	InternalAddSemanticForOnTap *bool
 }
 
 // SwitchTheme maps SwitchTheme of package:material_ui/material_ui.dart.
+//
+// Applies a switch theme to descendant Switch widgets.
 type SwitchTheme struct {
-	Data  ui.SwitchStyle
+	// The properties used for all descendant Switch widgets.
+	Data ui.SwitchStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // Tab maps Tab of package:material_ui/material_ui.dart.
+//
+// A Material Design TabBar tab.
 type Tab struct {
-	Text       *string
-	Icon       ui.Node
+	// The text to display as the tab's label.
+	Text *string
+
+	// An icon to display as the tab's label.
+	Icon ui.Node
+
+	// The margin added around the tab's icon.
 	IconMargin *ui.Insets
-	Height     *float64
-	Child      ui.Node
+
+	// The height of the Tab.
+	Height *float64
+
+	// The widget to be used as the tab's label.
+	Child ui.Node
 }
 
 // TabBar maps TabBar of package:material_ui/material_ui.dart.
+//
+// A Material Design primary tab bar.
 //
 // IndicatorSize takes "tab", or "label".
 //
@@ -3510,34 +7531,86 @@ type Tab struct {
 //
 // IndicatorAnimation takes "linear", or "elastic".
 type TabBar struct {
-	Tabs                              []ui.Node
-	IsScrollable                      *bool
-	Padding                           *ui.Insets
-	IndicatorColor                    *ui.Color
+	// Typically a list of two or more Tab widgets.
+	Tabs []ui.Node
+
+	// Whether this tab bar can be scrolled horizontally.
+	IsScrollable *bool
+
+	// The amount of space by which to inset the tab bar.
+	Padding *ui.Insets
+
+	// The color of the line that appears below the selected tab.
+	IndicatorColor *ui.Color
+
+	// Whether this tab bar should automatically adjust the indicatorColor.
 	AutomaticIndicatorColorAdjustment *bool
-	IndicatorWeight                   *float64
-	IndicatorPadding                  *ui.Insets
-	Indicator                         *ui.Decoration
-	IndicatorSize                     *string
-	DividerColor                      *ui.Color
-	DividerHeight                     *float64
-	LabelColor                        *ui.Color
-	LabelStyle                        *ui.TextStyle
-	LabelPadding                      *ui.Insets
-	UnselectedLabelColor              *ui.Color
-	UnselectedLabelStyle              *ui.TextStyle
-	DragStartBehavior                 *string
-	OverlayColor                      *ui.StateColor
-	MouseCursor                       *string
-	EnableFeedback                    *bool
-	OnTap                             func(int)
-	Physics                           *string
-	SplashBorderRadius                *ui.Radius
-	TabAlignment                      *string
-	IndicatorAnimation                *string
+
+	// The thickness of the line that appears below the selected tab.
+	IndicatorWeight *float64
+
+	// The padding for the indicator.
+	IndicatorPadding *ui.Insets
+
+	// Defines the appearance of the selected tab indicator.
+	Indicator *ui.Decoration
+
+	// Defines how the selected tab indicator's size is computed.
+	IndicatorSize *string
+
+	// The color of the divider.
+	DividerColor *ui.Color
+
+	// The height of the divider.
+	DividerHeight *float64
+
+	// The color of selected tab labels.
+	LabelColor *ui.Color
+
+	// The text style of the selected tab labels.
+	LabelStyle *ui.TextStyle
+
+	// The padding added to each of the tab labels.
+	LabelPadding *ui.Insets
+
+	// The color of unselected tab labels.
+	UnselectedLabelColor *ui.Color
+
+	// The text style of the unselected tab labels.
+	UnselectedLabelStyle *ui.TextStyle
+	DragStartBehavior    *string
+
+	// Defines the ink response focus, hover, and splash colors.
+	OverlayColor *ui.StateColor
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// individual tab widgets.
+	MouseCursor *string
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// An optional callback that's called when the TabBar is tapped.
+	OnTap func(int)
+
+	// How the TabBar's scroll view should respond to user input.
+	Physics *string
+
+	// Defines the clipping radius of splashes that extend outside the bounds
+	// of the tab.
+	SplashBorderRadius *ui.Radius
+
+	// Specifies the horizontal alignment of the tabs within a TabBar.
+	TabAlignment *string
+
+	// Specifies the animation behavior of the tab indicator.
+	IndicatorAnimation *string
 }
 
 // TabBarSecondary maps TabBar.secondary of package:material_ui/material_ui.dart.
+//
+// A Material Design primary tab bar.
 //
 // IndicatorSize takes "tab", or "label".
 //
@@ -3547,34 +7620,86 @@ type TabBar struct {
 //
 // IndicatorAnimation takes "linear", or "elastic".
 type TabBarSecondary struct {
-	Tabs                              []ui.Node
-	IsScrollable                      *bool
-	Padding                           *ui.Insets
-	IndicatorColor                    *ui.Color
+	// Typically a list of two or more Tab widgets.
+	Tabs []ui.Node
+
+	// Whether this tab bar can be scrolled horizontally.
+	IsScrollable *bool
+
+	// The amount of space by which to inset the tab bar.
+	Padding *ui.Insets
+
+	// The color of the line that appears below the selected tab.
+	IndicatorColor *ui.Color
+
+	// Whether this tab bar should automatically adjust the indicatorColor.
 	AutomaticIndicatorColorAdjustment *bool
-	IndicatorWeight                   *float64
-	IndicatorPadding                  *ui.Insets
-	Indicator                         *ui.Decoration
-	IndicatorSize                     *string
-	DividerColor                      *ui.Color
-	DividerHeight                     *float64
-	LabelColor                        *ui.Color
-	LabelStyle                        *ui.TextStyle
-	LabelPadding                      *ui.Insets
-	UnselectedLabelColor              *ui.Color
-	UnselectedLabelStyle              *ui.TextStyle
-	DragStartBehavior                 *string
-	OverlayColor                      *ui.StateColor
-	MouseCursor                       *string
-	EnableFeedback                    *bool
-	OnTap                             func(int)
-	Physics                           *string
-	SplashBorderRadius                *ui.Radius
-	TabAlignment                      *string
-	IndicatorAnimation                *string
+
+	// The thickness of the line that appears below the selected tab.
+	IndicatorWeight *float64
+
+	// The padding for the indicator.
+	IndicatorPadding *ui.Insets
+
+	// Defines the appearance of the selected tab indicator.
+	Indicator *ui.Decoration
+
+	// Defines how the selected tab indicator's size is computed.
+	IndicatorSize *string
+
+	// The color of the divider.
+	DividerColor *ui.Color
+
+	// The height of the divider.
+	DividerHeight *float64
+
+	// The color of selected tab labels.
+	LabelColor *ui.Color
+
+	// The text style of the selected tab labels.
+	LabelStyle *ui.TextStyle
+
+	// The padding added to each of the tab labels.
+	LabelPadding *ui.Insets
+
+	// The color of unselected tab labels.
+	UnselectedLabelColor *ui.Color
+
+	// The text style of the unselected tab labels.
+	UnselectedLabelStyle *ui.TextStyle
+	DragStartBehavior    *string
+
+	// Defines the ink response focus, hover, and splash colors.
+	OverlayColor *ui.StateColor
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// individual tab widgets.
+	MouseCursor *string
+
+	// Whether detected gestures should provide acoustic and/or haptic
+	// feedback.
+	EnableFeedback *bool
+
+	// An optional callback that's called when the TabBar is tapped.
+	OnTap func(int)
+
+	// How the TabBar's scroll view should respond to user input.
+	Physics *string
+
+	// Defines the clipping radius of splashes that extend outside the bounds
+	// of the tab.
+	SplashBorderRadius *ui.Radius
+
+	// Specifies the horizontal alignment of the tabs within a TabBar.
+	TabAlignment *string
+
+	// Specifies the animation behavior of the tab indicator.
+	IndicatorAnimation *string
 }
 
 // TabBarTheme maps TabBarTheme of package:material_ui/material_ui.dart.
+//
+// Defines default property values for descendant TabBar widgets.
 //
 // IndicatorSize takes "tab", or "label".
 //
@@ -3596,85 +7721,171 @@ type TabBarTheme struct {
 	TabAlignment         *string
 	IndicatorAnimation   *string
 	Data                 *ui.TabBarStyle
-	Child                ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // TabBarView maps TabBarView of package:material_ui/material_ui.dart.
+//
+// A page view that displays the widget which corresponds to the currently
+// selected tab.
 //
 // DragStartBehavior takes "down", or "start".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type TabBarView struct {
-	Children          []ui.Node
+	// One widget per tab.
+	Children []ui.Node
+
+	// How the page view should respond to user input.
 	Physics           *string
 	DragStartBehavior *string
 	ViewportFraction  *float64
-	ClipBehavior      *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
 }
 
 // TabPageSelector maps TabPageSelector of package:material_ui/material_ui.dart.
 //
+// Uses TabPageSelectorIndicator to display a row of small circular
+// indicators, one per tab.
+//
 // BorderStyle takes "none", or "solid".
 type TabPageSelector struct {
+	// The indicator circle's diameter (the default value is 12.0).
 	IndicatorSize *float64
-	Color         *ui.Color
+
+	// The indicator circle's fill color for unselected pages.
+	Color *ui.Color
+
+	// The indicator circle's fill color for selected pages and border color
+	// for all indicator circles.
 	SelectedColor *ui.Color
-	BorderStyle   *string
+
+	// The indicator circle's border style.
+	BorderStyle *string
 }
 
 // TabPageSelectorIndicator maps TabPageSelectorIndicator of package:material_ui/material_ui.dart.
 //
+// Displays a single circle with the specified size, border style, border
+// color and background colors.
+//
 // BorderStyle takes "none", or "solid".
 type TabPageSelectorIndicator struct {
+	// The indicator circle's background color.
 	BackgroundColor ui.Color
-	BorderColor     ui.Color
-	Size            float64
-	BorderStyle     *string
+
+	// The indicator circle's border color.
+	BorderColor ui.Color
+
+	// The indicator circle's diameter.
+	Size float64
+
+	// The indicator circle's border style.
+	BorderStyle *string
 }
 
 // TableRowInkWell maps TableRowInkWell of package:material_ui/material_ui.dart.
+//
+// A rectangular area of a Material that responds to touch but clips its ink
+// splashes to the current table row of the nearest table.
 type TableRowInkWell struct {
-	Child              ui.Node
-	OnTap              func()
-	OnDoubleTap        func()
-	OnLongPress        func()
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Called when the user taps this part of the material.
+	OnTap func()
+
+	// Called when the user double taps this part of the material.
+	OnDoubleTap func()
+
+	// Called when the user long-presses on this part of the material.
+	OnLongPress func()
+
+	// Called when this part of the material either becomes highlighted or
+	// stops being highlighted.
 	OnHighlightChanged func(bool)
-	OnHover            func(bool)
-	OnSecondaryTap     func()
-	OverlayColor       *ui.StateColor
-	MouseCursor        *string
+
+	// Called when a pointer enters or exits the ink response area.
+	OnHover func(bool)
+
+	// Called when the user taps this part of the material with a secondary
+	// button.
+	OnSecondaryTap func()
+
+	// Defines the ink response focus, hover, and splash colors.
+	OverlayColor *ui.StateColor
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
 }
 
 // TextButton maps TextButton of package:material_ui/material_ui.dart.
 //
+// A Material Design "Text Button".
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type TextButton struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
+
+	// Determine whether this subtree represents a button.
 	IsSemanticButton *bool
-	Child            ui.Node
+
+	// Typically the button's label.
+	Child ui.Node
 }
 
 // TextButtonIcon maps TextButton.icon of package:material_ui/material_ui.dart.
+//
+// A Material Design "Text Button".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // IconAlignment takes "start", or "end".
 type TextButtonIcon struct {
-	OnPressed        func()
-	OnLongPress      func()
-	OnHover          func(bool)
-	OnFocusChange    func(bool)
-	Style            *ui.ButtonStyle
-	FocusNode        *ui.FocusKey
-	Autofocus        *bool
+	// Called when the button is tapped or otherwise activated.
+	OnPressed func()
+
+	// Called when the button is long-pressed.
+	OnLongPress func()
+
+	// Called when a pointer enters or exits the button response area.
+	OnHover func(bool)
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Customizes this button's appearance.
+	Style     *ui.ButtonStyle
+	FocusNode *ui.FocusKey
+	Autofocus *bool
+
+	// Defaults to none unless backgroundBuilder or foregroundBuilder is
+	// specified.
 	ClipBehavior     *string
 	StatesController *ui.StatesKey
 	Icon             ui.Node
@@ -3683,12 +7894,19 @@ type TextButtonIcon struct {
 }
 
 // TextButtonTheme maps TextButtonTheme of package:material_ui/material_ui.dart.
+//
+// Overrides the default ButtonStyle of its TextButton descendants.
 type TextButtonTheme struct {
-	Data  ui.ButtonStyle
+	// The configuration of this theme.
+	Data ui.ButtonStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // TextField maps TextField of package:material_ui/material_ui.dart.
+//
+// A Material Design text field.
 //
 // TextInputAction takes "none", "unspecified", "done", "go", "search", "send", "next", "previous", "continueAction", "join", "route", "emergencyCall", or "newline".
 //
@@ -3710,59 +7928,105 @@ type TextButtonTheme struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type TextField struct {
-	GroupId                       *string
-	Controller                    *ui.TextKey
-	FocusNode                     *ui.FocusKey
-	TextInputAction               *string
-	TextCapitalization            *string
-	Style                         *ui.TextStyle
-	TextAlign                     *string
-	TextDirection                 *string
-	ReadOnly                      *bool
-	ShowCursor                    *bool
-	Autofocus                     *bool
-	StatesController              *ui.StatesKey
-	ObscuringCharacter            *string
-	ObscureText                   *bool
-	Autocorrect                   *bool
-	SmartDashesType               *string
-	SmartQuotesType               *string
-	EnableSuggestions             *bool
-	MaxLines                      *int
-	MinLines                      *int
-	Expands                       *bool
-	MaxLength                     *int
-	MaxLengthEnforcement          *string
-	OnChanged                     func(string)
-	OnEditingComplete             func()
-	OnSubmitted                   func(string)
-	Enabled                       *bool
-	IgnorePointers                *bool
-	CursorWidth                   *float64
-	CursorHeight                  *float64
-	CursorOpacityAnimates         *bool
-	CursorColor                   *ui.Color
-	CursorErrorColor              *ui.Color
-	KeyboardAppearance            *string
-	ScrollPadding                 *ui.Insets
-	DragStartBehavior             *string
-	EnableInteractiveSelection    *bool
-	SelectAllOnFocus              *bool
-	OnTap                         func()
-	OnTapAlwaysCalled             *bool
-	MouseCursor                   *string
-	ScrollController              *ui.ScrollKey
-	ScrollPhysics                 *string
+	GroupId *string
+
+	// Controls the text being edited.
+	Controller *ui.TextKey
+
+	// Defines the keyboard focus for this widget.
+	FocusNode *ui.FocusKey
+
+	// The type of action button to use for the keyboard.
+	TextInputAction    *string
+	TextCapitalization *string
+
+	// The style to use for the text being edited.
+	Style         *ui.TextStyle
+	TextAlign     *string
+	TextDirection *string
+	ReadOnly      *bool
+	ShowCursor    *bool
+	Autofocus     *bool
+
+	// Represents the interactive "state" of this widget in terms of a set of
+	// WidgetStates, including disabled, hovered, error, and focused.
+	StatesController   *ui.StatesKey
+	ObscuringCharacter *string
+	ObscureText        *bool
+	Autocorrect        *bool
+	SmartDashesType    *string
+	SmartQuotesType    *string
+	EnableSuggestions  *bool
+	MaxLines           *int
+	MinLines           *int
+	Expands            *bool
+
+	// The maximum number of characters (Unicode grapheme clusters) to allow in
+	// the text field.
+	MaxLength *int
+
+	// Determines how the maxLength limit should be enforced.
+	MaxLengthEnforcement *string
+
+	// Called when the user initiates a change to the TextField's value: when
+	// they have inserted or deleted text.
+	OnChanged         func(string)
+	OnEditingComplete func()
+
+	// See also:
+	OnSubmitted func(string)
+
+	// If false the text field is "disabled": it ignores taps and its
+	// decoration is rendered in grey.
+	Enabled *bool
+
+	// Determines whether this widget ignores pointer events.
+	IgnorePointers        *bool
+	CursorWidth           *float64
+	CursorHeight          *float64
+	CursorOpacityAnimates *bool
+
+	// The color of the cursor.
+	CursorColor *ui.Color
+
+	// The color of the cursor when the InputDecorator is showing an error.
+	CursorErrorColor *ui.Color
+
+	// The appearance of the keyboard.
+	KeyboardAppearance         *string
+	ScrollPadding              *ui.Insets
+	DragStartBehavior          *string
+	EnableInteractiveSelection *bool
+	SelectAllOnFocus           *bool
+
+	// If onTapAlwaysCalled is enabled, this will also be called for
+	// consecutive taps.
+	OnTap func()
+
+	// Whether onTap should be called for every tap.
+	OnTapAlwaysCalled *bool
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor      *string
+	ScrollController *ui.ScrollKey
+	ScrollPhysics    *string
+
+	// Defaults to hardEdge.
 	ClipBehavior                  *string
 	RestorationId                 *string
 	ScribbleEnabled               *bool
 	StylusHandwritingEnabled      *bool
 	EnableIMEPersonalizedLearning *bool
 	EnableInlinePrediction        *bool
-	CanRequestFocus               *bool
+
+	// Determine whether this text field can request the primary focus.
+	CanRequestFocus *bool
 }
 
 // TextFormField maps TextFormField of package:material_ui/material_ui.dart.
+//
+// A FormField that contains a TextField.
 //
 // TextCapitalization takes "words", "sentences", "characters", or "none".
 //
@@ -3786,49 +8050,67 @@ type TextField struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type TextFormField struct {
-	GroupId                       *string
-	Controller                    *ui.TextKey
-	InitialValue                  *string
-	FocusNode                     *ui.FocusKey
-	ForceErrorText                *string
-	TextCapitalization            *string
-	TextInputAction               *string
-	Style                         *ui.TextStyle
-	TextDirection                 *string
-	TextAlign                     *string
-	Autofocus                     *bool
-	ReadOnly                      *bool
-	ShowCursor                    *bool
-	ObscuringCharacter            *string
-	ObscureText                   *bool
-	Autocorrect                   *bool
-	SmartDashesType               *string
-	SmartQuotesType               *string
-	EnableSuggestions             *bool
-	MaxLengthEnforcement          *string
-	MaxLines                      *int
-	MinLines                      *int
-	Expands                       *bool
-	MaxLength                     *int
-	OnChanged                     func(string)
-	OnTap                         func()
-	OnTapAlwaysCalled             *bool
-	OnEditingComplete             func()
-	OnFieldSubmitted              func(string)
-	OnSaved                       func(string)
-	Enabled                       *bool
-	IgnorePointers                *bool
-	CursorWidth                   *float64
-	CursorHeight                  *float64
-	CursorColor                   *ui.Color
-	CursorErrorColor              *ui.Color
-	KeyboardAppearance            *string
-	ScrollPadding                 *ui.Insets
-	EnableInteractiveSelection    *bool
-	SelectAllOnFocus              *bool
-	ScrollPhysics                 *string
-	AutovalidateMode              *string
-	ScrollController              *ui.ScrollKey
+	GroupId *string
+
+	// Controls the text being edited.
+	Controller *ui.TextKey
+
+	// An optional value to initialize the form field to, or null otherwise.
+	InitialValue *string
+	FocusNode    *ui.FocusKey
+
+	// An optional property that forces the FormFieldState into an error state
+	// by directly setting the errorText property without running the validator
+	// function.
+	ForceErrorText       *string
+	TextCapitalization   *string
+	TextInputAction      *string
+	Style                *ui.TextStyle
+	TextDirection        *string
+	TextAlign            *string
+	Autofocus            *bool
+	ReadOnly             *bool
+	ShowCursor           *bool
+	ObscuringCharacter   *string
+	ObscureText          *bool
+	Autocorrect          *bool
+	SmartDashesType      *string
+	SmartQuotesType      *string
+	EnableSuggestions    *bool
+	MaxLengthEnforcement *string
+	MaxLines             *int
+	MinLines             *int
+	Expands              *bool
+	MaxLength            *int
+	OnChanged            func(string)
+	OnTap                func()
+	OnTapAlwaysCalled    *bool
+	OnEditingComplete    func()
+	OnFieldSubmitted     func(string)
+
+	// An optional method to call with the final value when the form is saved
+	// via save.
+	OnSaved func(string)
+
+	// Whether the form is able to receive user input.
+	Enabled                    *bool
+	IgnorePointers             *bool
+	CursorWidth                *float64
+	CursorHeight               *float64
+	CursorColor                *ui.Color
+	CursorErrorColor           *ui.Color
+	KeyboardAppearance         *string
+	ScrollPadding              *ui.Insets
+	EnableInteractiveSelection *bool
+	SelectAllOnFocus           *bool
+	ScrollPhysics              *string
+
+	// Used to enable/disable this form field auto validation and update its
+	// error text.
+	AutovalidateMode *string
+	ScrollController *ui.ScrollKey
+
+	// Restoration ID to save and restore the state of the form field.
 	RestorationId                 *string
 	EnableIMEPersonalizedLearning *bool
 	MouseCursor                   *string
@@ -3842,54 +8124,107 @@ type TextFormField struct {
 }
 
 // TextSelectionTheme maps TextSelectionTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the appearance of text selection in this
+// widget's subtree.
 type TextSelectionTheme struct {
+	// The properties for descendant TextField and SelectableText widgets.
 	Data ui.TextSelectionStyle
 }
 
 // TextSelectionToolbar maps TextSelectionToolbar of package:material_ui/material_ui.dart.
+//
+// A fully-functional Material-style text selection toolbar.
 type TextSelectionToolbar struct {
 	AnchorAbove ui.Offset
 	AnchorBelow ui.Offset
-	Children    []ui.Node
+
+	// See also:
+	Children []ui.Node
 }
 
 // TextSelectionToolbarTextButton maps TextSelectionToolbarTextButton of package:material_ui/material_ui.dart.
+//
+// A button styled like a Material native Android text selection menu
+// button.
 type TextSelectionToolbarTextButton struct {
-	Child     ui.Node
-	Padding   ui.Insets
+	// The child of this button.
+	Child ui.Node
+
+	// The padding between the button's edge and its child.
+	Padding ui.Insets
+
+	// Called when this button is pressed.
 	OnPressed func()
+
+	// The alignment of the button's child.
 	Alignment *string
 }
 
 // TimePickerDialog maps TimePickerDialog of package:material_ui/material_ui.dart.
 //
+// A Material Design time picker designed to appear inside a popup dialog.
+//
 // InitialEntryMode takes "dial", "input", "dialOnly", or "inputOnly".
 //
 // Orientation takes "portrait", or "landscape".
 type TimePickerDialog struct {
-	InitialTime                int
-	CancelText                 *string
-	ConfirmText                *string
-	HelpText                   *string
-	ErrorInvalidText           *string
-	HourLabelText              *string
-	MinuteLabelText            *string
-	RestorationId              *string
-	InitialEntryMode           *string
-	Orientation                *string
+	// The time initially selected when the dialog is shown.
+	InitialTime int
+
+	// Optionally provide your own text for the cancel button.
+	CancelText *string
+
+	// Optionally provide your own text for the confirm button.
+	ConfirmText *string
+
+	// Optionally provide your own help text to the header of the time picker.
+	HelpText *string
+
+	// Optionally provide your own validation error text.
+	ErrorInvalidText *string
+
+	// Optionally provide your own hour label text.
+	HourLabelText *string
+
+	// Optionally provide your own minute label text.
+	MinuteLabelText *string
+
+	// Restoration ID to save and restore the state of the TimePickerDialog.
+	RestorationId *string
+
+	// The entry mode for the picker.
+	InitialEntryMode *string
+
+	// The optional orientation parameter sets the Orientation to use when
+	// displaying the dialog.
+	Orientation *string
+
+	// Callback called when the selected entry mode is changed.
 	OnEntryModeChanged         func(string)
 	SwitchToInputEntryModeIcon ui.Node
 	SwitchToTimerEntryModeIcon ui.Node
-	EmptyInitialInput          *bool
+
+	// If true and entry mode is input, the hour and minute fields will be
+	// empty on start instead of pre-filled with initialTime.
+	EmptyInitialInput *bool
 }
 
 // TimePickerTheme maps TimePickerTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines the configuration for time pickers
+// displayed using showTimePicker in this widget's subtree.
 type TimePickerTheme struct {
-	Data  ui.TimePickerStyle
+	// The properties for descendant time picker widgets.
+	Data ui.TimePickerStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // ToggleButtons maps ToggleButtons of package:material_ui/material_ui.dart.
+//
+// A set of toggle buttons.
 //
 // TapTargetSize takes "padded", or "shrinkWrap".
 //
@@ -3897,112 +8232,269 @@ type TimePickerTheme struct {
 //
 // VerticalDirection takes "up", or "down".
 type ToggleButtons struct {
-	Children            []ui.Node
-	IsSelected          []bool
-	OnPressed           func(int)
-	MouseCursor         *string
-	TapTargetSize       *string
-	TextStyle           *ui.TextStyle
-	Constraints         *ui.Constraints
-	Color               *ui.Color
-	SelectedColor       *ui.Color
-	DisabledColor       *ui.Color
-	FillColor           *ui.Color
-	FocusColor          *ui.Color
-	HighlightColor      *ui.Color
-	HoverColor          *ui.Color
-	SplashColor         *ui.Color
-	RenderBorder        *bool
-	BorderColor         *ui.Color
+	// The toggle button widgets.
+	Children []ui.Node
+
+	// The corresponding selection state of each toggle button.
+	IsSelected []bool
+
+	// The callback that is called when a button is tapped.
+	OnPressed func(int)
+
+	// If this property is null, adaptiveClickable is used.
+	MouseCursor *string
+
+	// Configures the minimum size of the area within which the buttons may be
+	// pressed.
+	TapTargetSize *string
+
+	// The TextStyle to apply to any text in these toggle buttons.
+	TextStyle *ui.TextStyle
+
+	// Defines the button's size.
+	Constraints *ui.Constraints
+
+	// The color for descendant Text and Icon widgets if the button is enabled
+	// and not selected.
+	Color *ui.Color
+
+	// The color for descendant Text and Icon widgets if the button is
+	// selected.
+	SelectedColor *ui.Color
+
+	// The color for descendant Text and Icon widgets if the button is
+	// disabled.
+	DisabledColor *ui.Color
+
+	// The fill color for selected toggle buttons.
+	FillColor *ui.Color
+
+	// The color to use for filling the button when the button has input focus.
+	FocusColor *ui.Color
+
+	// The highlight color for the button's InkWell.
+	HighlightColor *ui.Color
+
+	// The color to use for filling the button when the button has a pointer
+	// hovering over it.
+	HoverColor *ui.Color
+
+	// The splash color for the button's InkWell.
+	SplashColor *ui.Color
+
+	// Whether or not to render a border around each toggle button.
+	RenderBorder *bool
+
+	// The border color to display when the toggle button is enabled and not
+	// selected.
+	BorderColor *ui.Color
+
+	// The border color to display when the toggle button is selected.
 	SelectedBorderColor *ui.Color
+
+	// The border color to display when the toggle button is disabled.
 	DisabledBorderColor *ui.Color
-	BorderRadius        *ui.Radius
-	BorderWidth         *float64
-	Direction           *string
-	VerticalDirection   *string
+
+	// The radii of the border's corners.
+	BorderRadius *ui.Radius
+
+	// The width of the border surrounding each toggle button.
+	BorderWidth *float64
+
+	// The direction along which the buttons are rendered.
+	Direction *string
+
+	// If direction is vertical, this parameter determines whether to lay out
+	// the buttons starting from the first or last child from top to bottom.
+	VerticalDirection *string
 }
 
 // ToggleButtonsTheme maps ToggleButtonsTheme of package:material_ui/material_ui.dart.
+//
+// An inherited widget that defines color and border parameters for
+// ToggleButtons in this widget's subtree.
 type ToggleButtonsTheme struct {
-	Data  ui.ToggleButtonsStyle
+	// Specifies the color and border values for descendant ToggleButtons
+	// widgets.
+	Data ui.ToggleButtonsStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // Tooltip maps Tooltip of package:material_ui/material_ui.dart.
 //
+// A Material Design tooltip.
+//
 // TextAlign takes "left", "right", "center", "justify", "start", or "end".
 //
 // TriggerMode takes "manual", "longPress", or "tap".
 type Tooltip struct {
-	Message              *string
-	RichMessage          *ui.Span
-	Height               *float64
-	Constraints          *ui.Constraints
-	Padding              *ui.Insets
-	Margin               *ui.Insets
-	VerticalOffset       *float64
-	PreferBelow          *bool
+	// The text to display in the tooltip.
+	Message *string
+
+	// The rich text to display in the tooltip.
+	RichMessage *ui.Span
+
+	// The minimum height of the Tooltip's message.
+	Height *float64
+
+	// Constrains the size of the Tooltip's message.
+	Constraints *ui.Constraints
+
+	// The amount of space by which to inset the Tooltip's message.
+	Padding *ui.Insets
+
+	// The empty space that surrounds the tooltip.
+	Margin *ui.Insets
+
+	// The vertical gap between the widget and the displayed tooltip.
+	VerticalOffset *float64
+
+	// Whether the tooltip defaults to being displayed below the widget.
+	PreferBelow *bool
+
+	// Whether the tooltip's message or richMessage should be excluded from the
+	// semantics tree.
 	ExcludeFromSemantics *bool
-	Decoration           *ui.Decoration
-	TextStyle            *ui.TextStyle
-	TextAlign            *string
-	WaitDuration         *int
-	ShowDuration         *int
-	ExitDuration         *int
-	EnableTapToDismiss   *bool
-	TriggerMode          *string
-	EnableFeedback       *bool
-	OnTriggered          func()
-	MouseCursor          *string
-	IgnorePointer        *bool
-	Child                ui.Node
+
+	// Specifies the tooltip's shape and background color.
+	Decoration *ui.Decoration
+
+	// The style to use for the message of the tooltip.
+	TextStyle *ui.TextStyle
+
+	// How the message of the tooltip is aligned horizontally.
+	TextAlign    *string
+	WaitDuration *int
+
+	// See also:
+	ShowDuration *int
+
+	// See also:
+	ExitDuration       *int
+	EnableTapToDismiss *bool
+
+	// If this property is null, then triggerMode is used.
+	TriggerMode    *string
+	EnableFeedback *bool
+	OnTriggered    func()
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// Whether this tooltip should be invisible to hit testing.
+	IgnorePointer *bool
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // TooltipTheme maps TooltipTheme of package:material_ui/material_ui.dart.
+//
+// Applies a tooltip theme to descendant Tooltip widgets.
 type TooltipTheme struct {
-	Data  ui.TooltipStyle
+	// The properties for descendant Tooltip widgets.
+	Data ui.TooltipStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // TooltipVisibility maps TooltipVisibility of package:material_ui/material_ui.dart.
+//
+// Overrides the visibility of descendant Tooltip widgets.
 type TooltipVisibility struct {
+	// Determines the visibility of Tooltip widgets that inherit from this
+	// widget.
 	Visible bool
-	Child   ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // UserAccountsDrawerHeader maps UserAccountsDrawerHeader of package:material_ui/material_ui.dart.
+//
+// A Material Design Drawer header that identifies the app's user.
 type UserAccountsDrawerHeader struct {
-	Decoration                *ui.Decoration
-	Margin                    *ui.Insets
-	CurrentAccountPicture     ui.Node
-	OtherAccountsPictures     []ui.Node
+	// The header's background.
+	Decoration *ui.Decoration
+
+	// The margin around the drawer header.
+	Margin *ui.Insets
+
+	// A widget placed in the upper-left corner that represents the current
+	// user's account.
+	CurrentAccountPicture ui.Node
+
+	// A list of widgets that represent the current user's other accounts.
+	OtherAccountsPictures []ui.Node
+
+	// The size of the currentAccountPicture.
 	CurrentAccountPictureSize *ui.Size
+
+	// The size of each widget in otherAccountsPicturesSize.
 	OtherAccountsPicturesSize *ui.Size
-	AccountName               ui.Node
-	AccountEmail              ui.Node
-	OnDetailsPressed          func()
-	ArrowColor                *ui.Color
+
+	// A widget that represents the user's current account name.
+	AccountName ui.Node
+
+	// A widget that represents the email address of the user's current
+	// account.
+	AccountEmail ui.Node
+
+	// A callback that is called when the horizontal area which contains the
+	// accountName and accountEmail is tapped.
+	OnDetailsPressed func()
+
+	// The Color of the arrow icon.
+	ArrowColor *ui.Color
 }
 
 // VerticalDivider maps VerticalDivider of package:material_ui/material_ui.dart.
+//
+// A thin vertical line, with padding on either side.
 type VerticalDivider struct {
-	Width     *float64
+	// The divider's width.
+	Width *float64
+
+	// The thickness of the line drawn within the divider.
 	Thickness *float64
-	Indent    *float64
+
+	// The amount of empty space on top of the divider.
+	Indent *float64
+
+	// The amount of empty space under the divider.
 	EndIndent *float64
-	Color     *ui.Color
-	Radius    *ui.Radius
+
+	// The color to use when painting the line.
+	Color *ui.Color
+
+	// The amount of radius for the border of the divider.
+	Radius *ui.Radius
 }
 
 // YearPicker maps YearPicker of package:material_ui/material_ui.dart.
 //
+// A scrollable grid of years to allow picking a year.
+//
 // DragStartBehavior takes "down", or "start".
 type YearPicker struct {
-	CurrentDate       *int
-	FirstDate         int
-	LastDate          int
-	InitialDate       *int
-	SelectedDate      int
+	// The current date.
+	CurrentDate *int
+
+	// The earliest date the user is permitted to pick.
+	FirstDate int
+
+	// The latest date the user is permitted to pick.
+	LastDate    int
+	InitialDate *int
+
+	// The currently selected date.
+	SelectedDate int
+
+	// Called when the user picks a year.
 	OnChanged         func(int)
 	DragStartBehavior *string
 }

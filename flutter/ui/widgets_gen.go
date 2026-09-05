@@ -14,21 +14,43 @@ package ui
 // Read flutter/nodegen/README.md to run the generator again.
 
 // AbsorbPointer maps AbsorbPointer of package:flutter/widgets.dart.
+//
+// A widget that absorbs pointers during hit testing.
 type AbsorbPointer struct {
-	Absorbing         *bool
+	// Whether this widget absorbs pointers during hit testing.
+	Absorbing *bool
+
+	// Whether the semantics of this render object is ignored when compiling
+	// the semantics tree.
 	IgnoringSemantics *bool
-	Child             Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Align maps Align of package:flutter/widgets.dart.
+//
+// A widget that aligns its child within itself and optionally sizes itself
+// based on the child's size.
 type Align struct {
-	Alignment    *string
-	WidthFactor  *float64
+	// How to align the child.
+	Alignment *string
+
+	// If non-null, sets its width to the child's width multiplied by this
+	// factor.
+	WidthFactor *float64
+
+	// If non-null, sets its height to the child's height multiplied by this
+	// factor.
 	HeightFactor *float64
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // AndroidView maps AndroidView of package:flutter/widgets.dart.
+//
+// Embeds an Android view in the Widget hierarchy.
 //
 // HitTestBehavior takes "opaque", "translucent", or "transparent".
 //
@@ -36,67 +58,158 @@ type Align struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type AndroidView struct {
-	ViewType              string
+	// The unique identifier for Android view type to be embedded by this
+	// widget.
+	ViewType string
+
+	// Callback to invoke after the platform view has been created.
 	OnPlatformViewCreated func(int)
-	HitTestBehavior       *string
-	LayoutDirection       *string
-	ClipBehavior          *string
+
+	// How this widget should behave during hit testing.
+	HitTestBehavior *string
+
+	// The text direction to use for the embedded view.
+	LayoutDirection *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
 }
 
 // AnimatedAlign maps AnimatedAlign of package:flutter/widgets.dart.
+//
+// Animated version of Align which automatically transitions the child's
+// position over a given duration whenever the given alignment changes.
 type AnimatedAlign struct {
-	Alignment    string
-	Child        Node
+	// How to align the child.
+	Alignment string
+
+	// The widget below this widget in the tree.
+	Child Node
+
+	// If non-null, sets its height to the child's height multiplied by this
+	// factor.
 	HeightFactor *float64
-	WidthFactor  *float64
-	Curve        *string
-	Duration     int
-	OnEnd        func()
+
+	// If non-null, sets its width to the child's width multiplied by this
+	// factor.
+	WidthFactor *float64
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
+	Duration int
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedContainer maps AnimatedContainer of package:flutter/widgets.dart.
 //
+// Animated version of Container that gradually changes its values over a
+// period of time.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type AnimatedContainer struct {
-	Alignment            *string
-	Padding              *Insets
-	Color                *Color
-	Decoration           *Decoration
+	// Align the child within the container.
+	Alignment *string
+
+	// Empty space to inscribe inside the decoration.
+	Padding *Insets
+	Color   *Color
+
+	// The decoration to paint behind the child.
+	Decoration *Decoration
+
+	// The decoration to paint in front of the child.
 	ForegroundDecoration *Decoration
 	Width                *float64
 	Height               *float64
-	Constraints          *Constraints
-	Margin               *Insets
-	Transform            []float64
-	TransformAlignment   *string
-	Child                Node
-	ClipBehavior         *string
-	Curve                *string
-	Duration             int
-	OnEnd                func()
+
+	// Additional constraints to apply to the child.
+	Constraints *Constraints
+
+	// Empty space to surround the decoration and child.
+	Margin *Insets
+
+	// The transformation matrix to apply before painting the container.
+	Transform []float64
+
+	// The alignment of the origin, relative to the size of the container, if
+	// transform is specified.
+	TransformAlignment *string
+
+	// The child contained by the container.
+	Child Node
+
+	// The clip behavior when decoration is not null.
+	ClipBehavior *string
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
+	Duration int
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedCrossFade maps AnimatedCrossFade of package:flutter/widgets.dart.
+//
+// A widget that cross-fades between two given children and animates itself
+// between their sizes.
 //
 // CrossFadeState takes "showFirst", or "showSecond".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type AnimatedCrossFade struct {
-	FirstChild         Node
-	SecondChild        Node
-	FirstCurve         *string
-	SecondCurve        *string
-	SizeCurve          *string
-	Alignment          *string
-	CrossFadeState     string
-	Duration           int
-	ReverseDuration    *int
+	// The child that is visible when crossFadeState is showFirst.
+	FirstChild Node
+
+	// The child that is visible when crossFadeState is showSecond.
+	SecondChild Node
+
+	// The fade curve of the first child.
+	FirstCurve *string
+
+	// The fade curve of the second child.
+	SecondCurve *string
+
+	// The curve of the animation between the two children's sizes.
+	SizeCurve *string
+
+	// How the children should be aligned while the size is animating.
+	Alignment *string
+
+	// The child that will be shown when the animation has completed.
+	CrossFadeState string
+
+	// The duration of the whole orchestrated animation.
+	Duration int
+
+	// The duration of the whole orchestrated animation when running in
+	// reverse.
+	ReverseDuration *int
+
+	// When true, this is equivalent to wrapping the bottom widget with an
+	// ExcludeFocus widget while it is at the bottom of the cross-fade stack.
 	ExcludeBottomFocus *bool
-	ClipBehavior       *string
-	OnEnd              func()
+
+	// Controls whether the content is clipped during the cross-fade
+	// transition.
+	ClipBehavior *string
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedDefaultTextStyle maps AnimatedDefaultTextStyle of package:flutter/widgets.dart.
+//
+// Animated version of DefaultTextStyle which automatically transitions the
+// default text style (the text style to apply to descendant Text widgets
+// without explicit style) over a given duration whenever the given style
+// changes.
 //
 // TextAlign takes "left", "right", "center", "justify", "start", or "end".
 //
@@ -104,168 +217,393 @@ type AnimatedCrossFade struct {
 //
 // TextWidthBasis takes "parent", or "longestLine".
 type AnimatedDefaultTextStyle struct {
-	Child          Node
-	Style          TextStyle
-	TextAlign      *string
-	SoftWrap       *bool
-	Overflow       *string
-	MaxLines       *int
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The target text style.
+	Style TextStyle
+
+	// How the text should be aligned horizontally.
+	TextAlign *string
+
+	// Whether the text should break at soft line breaks.
+	SoftWrap *bool
+
+	// How visual overflow should be handled.
+	Overflow *string
+
+	// An optional maximum number of lines for the text to span, wrapping if
+	// necessary.
+	MaxLines *int
+
+	// The strategy to use when calculating the width of the Text.
 	TextWidthBasis *string
-	Curve          *string
-	Duration       int
-	OnEnd          func()
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
+	Duration int
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedFractionallySizedBox maps AnimatedFractionallySizedBox of package:flutter/widgets.dart.
+//
+// Animated version of FractionallySizedBox which automatically transitions
+// the child's size over a given duration whenever the given widthFactor or
+// heightFactor changes, as well as the position whenever the given
+// alignment changes.
 type AnimatedFractionallySizedBox struct {
-	Alignment    *string
+	Alignment *string
+
+	// The widget below this widget in the tree.
 	Child        Node
 	HeightFactor *float64
 	WidthFactor  *float64
-	Curve        *string
-	Duration     int
-	OnEnd        func()
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
+	Duration int
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedOpacity maps AnimatedOpacity of package:flutter/widgets.dart.
+//
+// Animated version of Opacity which automatically transitions the child's
+// opacity over a given duration whenever the given opacity changes.
 type AnimatedOpacity struct {
-	Child                  Node
-	Opacity                float64
-	Curve                  *string
-	Duration               int
-	OnEnd                  func()
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The target opacity.
+	Opacity float64
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
+	Duration int
+
+	// Called every time an animation completes.
+	OnEnd func()
+
+	// Whether the semantic information of the children is always included.
 	AlwaysIncludeSemantics *bool
 }
 
 // AnimatedPadding maps AnimatedPadding of package:flutter/widgets.dart.
+//
+// Animated version of Padding which automatically transitions the
+// indentation over a given duration whenever the given inset changes.
 type AnimatedPadding struct {
-	Padding  Insets
-	Child    Node
-	Curve    *string
+	// The amount of space by which to inset the child.
+	Padding Insets
+
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
 	Duration int
-	OnEnd    func()
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedPhysicalModel maps AnimatedPhysicalModel of package:flutter/widgets.dart.
+//
+// Animated version of PhysicalModel.
 //
 // Shape takes "rectangle", or "circle".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type AnimatedPhysicalModel struct {
-	Child              Node
-	Shape              *string
-	ClipBehavior       *string
-	BorderRadius       *Radius
-	Elevation          *float64
-	Color              Color
-	AnimateColor       *bool
-	ShadowColor        Color
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The type of shape.
+	Shape *string
+
+	// Defaults to none.
+	ClipBehavior *string
+
+	// The target border radius of the rounded corners for a rectangle shape.
+	BorderRadius *Radius
+
+	// The target z-coordinate relative to the parent at which to place this
+	// physical object.
+	Elevation *float64
+
+	// The target background color.
+	Color Color
+
+	// Whether the color should be animated.
+	AnimateColor *bool
+
+	// The target shadow color.
+	ShadowColor Color
+
+	// Whether the shadow color should be animated.
 	AnimateShadowColor *bool
-	Curve              *string
-	Duration           int
-	OnEnd              func()
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
+	Duration int
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedPositioned maps AnimatedPositioned of package:flutter/widgets.dart.
+//
+// Animated version of Positioned which automatically transitions the
+// child's position over a given duration whenever the given position
+// changes.
 type AnimatedPositioned struct {
-	Child    Node
-	Left     *float64
-	Top      *float64
-	Right    *float64
-	Bottom   *float64
-	Width    *float64
-	Height   *float64
-	Curve    *string
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The offset of the child's left edge from the left of the stack.
+	Left *float64
+
+	// The offset of the child's top edge from the top of the stack.
+	Top *float64
+
+	// The offset of the child's right edge from the right of the stack.
+	Right *float64
+
+	// The offset of the child's bottom edge from the bottom of the stack.
+	Bottom *float64
+
+	// The child's width.
+	Width *float64
+
+	// The child's height.
+	Height *float64
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
 	Duration int
-	OnEnd    func()
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedPositionedDirectional maps AnimatedPositionedDirectional of package:flutter/widgets.dart.
+//
+// Animated version of PositionedDirectional which automatically transitions
+// the child's position over a given duration whenever the given position
+// changes.
 type AnimatedPositionedDirectional struct {
-	Child    Node
-	Start    *float64
-	Top      *float64
-	End      *float64
-	Bottom   *float64
-	Width    *float64
-	Height   *float64
-	Curve    *string
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The offset of the child's start edge from the start of the stack.
+	Start *float64
+
+	// The offset of the child's top edge from the top of the stack.
+	Top *float64
+
+	// The offset of the child's end edge from the end of the stack.
+	End *float64
+
+	// The offset of the child's bottom edge from the bottom of the stack.
+	Bottom *float64
+
+	// The child's width.
+	Width *float64
+
+	// The child's height.
+	Height *float64
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
 	Duration int
-	OnEnd    func()
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedPositionedFromRect maps AnimatedPositioned.fromRect of package:flutter/widgets.dart.
+//
+// Animated version of Positioned which automatically transitions the
+// child's position over a given duration whenever the given position
+// changes.
 type AnimatedPositionedFromRect struct {
-	Child    Node
-	Rect     Rect
-	Curve    *string
+	// The widget below this widget in the tree.
+	Child Node
+	Rect  Rect
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
 	Duration int
-	OnEnd    func()
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedRotation maps AnimatedRotation of package:flutter/widgets.dart.
 //
+// Animated version of rotate which automatically transitions the child's
+// rotation over a given duration whenever the given rotation changes.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type AnimatedRotation struct {
-	Child         Node
-	Turns         float64
-	Alignment     *string
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The animation that controls the rotation of the child.
+	Turns float64
+
+	// The alignment of the origin of the coordinate system in which the
+	// rotation takes place, relative to the size of the box.
+	Alignment *string
+
+	// The filter quality with which to apply the transform as a bitmap
+	// operation.
 	FilterQuality *string
-	Curve         *string
-	Duration      int
-	OnEnd         func()
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
+	Duration int
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedScale maps AnimatedScale of package:flutter/widgets.dart.
 //
+// Animated version of scale which automatically transitions the child's
+// scale over a given duration whenever the given scale changes.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type AnimatedScale struct {
-	Child         Node
-	Scale         float64
-	Alignment     *string
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The target scale.
+	Scale float64
+
+	// The alignment of the origin of the coordinate system in which the scale
+	// takes place, relative to the size of the box.
+	Alignment *string
+
+	// The filter quality with which to apply the transform as a bitmap
+	// operation.
 	FilterQuality *string
-	Curve         *string
-	Duration      int
-	OnEnd         func()
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
+	Duration int
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedSize maps AnimatedSize of package:flutter/widgets.dart.
 //
+// Animated widget that automatically transitions its size over a given
+// duration whenever the given child's size changes.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type AnimatedSize struct {
-	Child           Node
-	Alignment       *string
-	Curve           *string
-	Duration        int
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The alignment of the child within the parent when the parent is not yet
+	// the same size as the child.
+	Alignment *string
+
+	// The animation curve when transitioning this widget's size to match the
+	// child's size.
+	Curve *string
+
+	// The duration when transitioning this widget's size to match the child's
+	// size.
+	Duration int
+
+	// The duration when transitioning this widget's size to match the child's
+	// size when going in reverse.
 	ReverseDuration *int
-	ClipBehavior    *string
-	OnEnd           func()
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedSlide maps AnimatedSlide of package:flutter/widgets.dart.
+//
+// Widget which automatically transitions the child's offset relative to its
+// normal position whenever the given offset changes.
 type AnimatedSlide struct {
-	Child    Node
-	Offset   Offset
-	Curve    *string
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The target offset.
+	Offset Offset
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
 	Duration int
-	OnEnd    func()
+
+	// Called every time an animation completes.
+	OnEnd func()
 }
 
 // AnimatedSwitcher maps AnimatedSwitcher of package:flutter/widgets.dart.
+//
+// A widget that by default does a cross-fade between a new widget and the
+// widget previously set on the AnimatedSwitcher as a child.
 type AnimatedSwitcher struct {
-	Child           Node
-	Duration        int
+	// The current child widget to display.
+	Child Node
+
+	// The duration of the transition from the old child value to the new one.
+	Duration int
+
+	// The duration of the transition from the new child value to the old one.
 	ReverseDuration *int
-	SwitchInCurve   *string
-	SwitchOutCurve  *string
+
+	// The animation curve to use when transitioning in a new child.
+	SwitchInCurve *string
+
+	// The animation curve to use when transitioning a previous child out.
+	SwitchOutCurve *string
 }
 
 // AppKitView maps AppKitView of package:flutter/widgets.dart.
+//
+// Widget that contains a macOS AppKit view.
 //
 // HitTestBehavior takes "opaque", "translucent", or "transparent".
 //
 // LayoutDirection takes "rtl", or "ltr".
 type AppKitView struct {
+	// The unique identifier for iOS view type to be embedded by this widget.
 	ViewType              string
 	OnPlatformViewCreated func(int)
 	HitTestBehavior       *string
@@ -273,54 +611,101 @@ type AppKitView struct {
 }
 
 // AspectRatio maps AspectRatio of package:flutter/widgets.dart.
+//
+// A widget that attempts to size the child to a specific aspect ratio.
 type AspectRatio struct {
+	// The aspect ratio to attempt to use.
 	AspectRatio float64
-	Child       Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // AutofillGroup maps AutofillGroup of package:flutter/widgets.dart.
 //
+// An AutofillScope widget that groups AutofillClients together.
+//
 // OnDisposeAction takes "commit", or "cancel".
 type AutofillGroup struct {
-	Child           Node
+	Child Node
+
+	// The AutofillContextAction to be run when this AutofillGroup is the
+	// topmost AutofillGroup and it's being disposed, in order to clean up the
+	// current autofill context.
 	OnDisposeAction *string
 }
 
 // AutomaticKeepAlive maps AutomaticKeepAlive of package:flutter/widgets.dart.
+//
+// Allows subtrees to request to be kept alive in lazy lists.
 type AutomaticKeepAlive struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // BackButtonListener maps BackButtonListener of package:flutter/widgets.dart.
+//
+// A convenience widget that registers a callback for when the back button
+// is pressed.
 type BackButtonListener struct {
-	Child               Node
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The callback function that will be called when the back button is
+	// pressed.
 	OnBackButtonPressed Ask
 }
 
 // BackdropFilter maps BackdropFilter of package:flutter/widgets.dart.
 //
+// A widget that applies a filter to the existing painted content and then
+// paints child.
+//
 // BlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 type BackdropFilter struct {
-	Child     Node
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The blend mode to use to apply the filtered background content onto the
+	// background surface.
 	BlendMode *string
-	Enabled   *bool
+
+	// Whether or not to apply the backdrop filter operation to the child of
+	// this widget.
+	Enabled *bool
 }
 
 // BackdropFilterGrouped maps BackdropFilter.grouped of package:flutter/widgets.dart.
 //
+// A widget that applies a filter to the existing painted content and then
+// paints child.
+//
 // BlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 type BackdropFilterGrouped struct {
-	Child     Node
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The blend mode to use to apply the filtered background content onto the
+	// background surface.
 	BlendMode *string
-	Enabled   *bool
+
+	// Whether or not to apply the backdrop filter operation to the child of
+	// this widget.
+	Enabled *bool
 }
 
 // BackdropGroup maps BackdropGroup of package:flutter/widgets.dart.
+//
+// A widget that establishes a shared backdrop layer for all child
+// BackdropFilter widgets that opt into using it.
 type BackdropGroup struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // Banner maps Banner of package:flutter/widgets.dart.
+//
+// Displays a diagonal message above the corner of another widget.
 //
 // TextDirection takes "rtl", or "ltr".
 //
@@ -328,90 +713,166 @@ type BackdropGroup struct {
 //
 // LayoutDirection takes "rtl", or "ltr".
 type Banner struct {
-	Child           Node
-	Message         string
-	TextDirection   *string
-	Location        string
+	// The widget to show behind the banner.
+	Child Node
+
+	// The message to show in the banner.
+	Message string
+
+	// The directionality of the text.
+	TextDirection *string
+
+	// Where to show the banner (e.g., the upper right corner).
+	Location string
+
+	// The directionality of the layout.
 	LayoutDirection *string
 }
 
 // Baseline maps Baseline of package:flutter/widgets.dart.
 //
+// A widget that positions its child according to the child's baseline.
+//
 // BaselineType takes "alphabetic", or "ideographic".
 type Baseline struct {
-	Baseline     float64
+	// The number of logical pixels from the top of this box at which to
+	// position the child's baseline.
+	Baseline float64
+
+	// The type of baseline to use for positioning the child.
 	BaselineType string
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // BlockSemantics maps BlockSemantics of package:flutter/widgets.dart.
+//
+// A widget that drops the semantics of all widget that were painted before
+// it in the same semantic container.
 type BlockSemantics struct {
+	// Whether this widget is blocking semantics of all widget that were
+	// painted before it in the same semantic container.
 	Blocking *bool
-	Child    Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Center maps Center of package:flutter/widgets.dart.
+//
+// A widget that centers its child within itself.
 type Center struct {
-	WidthFactor  *float64
+	// If non-null, sets its width to the child's width multiplied by this
+	// factor.
+	WidthFactor *float64
+
+	// If non-null, sets its height to the child's height multiplied by this
+	// factor.
 	HeightFactor *float64
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // CheckedModeBanner maps CheckedModeBanner of package:flutter/widgets.dart.
+//
+// Displays a Banner saying "DEBUG" when running in debug mode. MaterialApp
+// builds one of these by default.
 type CheckedModeBanner struct {
+	// The widget to show behind the banner.
 	Child Node
 }
 
 // ClipOval maps ClipOval of package:flutter/widgets.dart.
 //
+// A widget that clips its child using an oval.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ClipOval struct {
+	// Defaults to antiAlias.
 	ClipBehavior *string
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // ClipPath maps ClipPath of package:flutter/widgets.dart.
 //
+// A widget that clips its child using a path.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ClipPath struct {
+	// Defaults to antiAlias.
 	ClipBehavior *string
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // ClipRRect maps ClipRRect of package:flutter/widgets.dart.
 //
+// A widget that clips its child using a rounded rectangle.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ClipRRect struct {
+	// The border radius of the rounded corners.
 	BorderRadius *Radius
+
+	// Defaults to antiAlias.
 	ClipBehavior *string
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // ClipRSuperellipse maps ClipRSuperellipse of package:flutter/widgets.dart.
 //
+// A widget that clips its child using a rounded superellipse.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ClipRSuperellipse struct {
+	// The border radius of the rounded corners.
 	BorderRadius *Radius
+
+	// Defaults to antiAlias.
 	ClipBehavior *string
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // ClipRect maps ClipRect of package:flutter/widgets.dart.
 //
+// A widget that clips its child using a rectangle.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ClipRect struct {
+	// Defaults to hardEdge.
 	ClipBehavior *string
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // ColoredBox maps ColoredBox of package:flutter/widgets.dart.
+//
+// A widget that paints its area with a specified Color and then draws its
+// child on top of that color.
 type ColoredBox struct {
-	Color       Color
+	// The color to paint the background area with.
+	Color Color
+
+	// Whether to apply anti-aliasing when painting the box.
 	IsAntiAlias *bool
-	Child       Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Column maps Column of package:flutter/widgets.dart.
+//
+// A widget that displays its children in a vertical array.
 //
 // MainAxisAlignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
 //
@@ -425,67 +886,150 @@ type ColoredBox struct {
 //
 // TextBaseline takes "alphabetic", or "ideographic".
 type Column struct {
-	MainAxisAlignment  *string
-	MainAxisSize       *string
+	// How the children should be placed along the main axis.
+	MainAxisAlignment *string
+
+	// How much space should be occupied in the main axis.
+	MainAxisSize *string
+
+	// How the children should be placed along the cross axis.
 	CrossAxisAlignment *string
-	TextDirection      *string
-	VerticalDirection  *string
-	TextBaseline       *string
-	Spacing            *float64
-	Children           []Node
+
+	// Determines the order to lay children out horizontally and how to
+	// interpret start and end in the horizontal direction.
+	TextDirection *string
+
+	// Determines the order to lay children out vertically and how to interpret
+	// start and end in the vertical direction.
+	VerticalDirection *string
+
+	// If aligning items according to their baseline, which baseline to use.
+	TextBaseline *string
+	Spacing      *float64
+
+	// The widgets below this widget in the tree.
+	Children []Node
 }
 
 // CompositedTransformFollower maps CompositedTransformFollower of package:flutter/widgets.dart.
+//
+// A widget that follows a CompositedTransformTarget.
 type CompositedTransformFollower struct {
-	Link             LinkKey
+	// The link object that connects this CompositedTransformFollower with a
+	// CompositedTransformTarget.
+	Link LinkKey
+
+	// Whether to show the widget's contents when there is no corresponding
+	// CompositedTransformTarget with the same link.
 	ShowWhenUnlinked *bool
-	Offset           *Offset
-	TargetAnchor     *string
-	FollowerAnchor   *string
-	Child            Node
+
+	// The additional offset to apply to the targetAnchor of the linked
+	// CompositedTransformTarget to obtain this widget's followerAnchor
+	// position.
+	Offset *Offset
+
+	// The anchor point on the linked CompositedTransformTarget that
+	// followerAnchor will line up with.
+	TargetAnchor *string
+
+	// The anchor point on this widget that will line up with targetAnchor on
+	// the linked CompositedTransformTarget.
+	FollowerAnchor *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // CompositedTransformTarget maps CompositedTransformTarget of package:flutter/widgets.dart.
+//
+// A widget that can be targeted by a CompositedTransformFollower.
 type CompositedTransformTarget struct {
-	Link  LinkKey
+	// The link object that connects this CompositedTransformTarget with one or
+	// more CompositedTransformFollowers.
+	Link LinkKey
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // ConstrainedBox maps ConstrainedBox of package:flutter/widgets.dart.
+//
+// A widget that imposes additional constraints on its child.
 type ConstrainedBox struct {
+	// The additional constraints to impose on the child.
 	Constraints Constraints
-	Child       Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Container maps Container of package:flutter/widgets.dart.
 //
+// A convenience widget that combines common painting, positioning, and
+// sizing widgets.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Container struct {
-	Alignment            *string
-	Padding              *Insets
-	Color                *Color
-	IsAntiAlias          *bool
-	Decoration           *Decoration
+	// Align the child within the container.
+	Alignment *string
+
+	// Empty space to inscribe inside the decoration.
+	Padding *Insets
+
+	// The color to paint behind the child.
+	Color       *Color
+	IsAntiAlias *bool
+
+	// The decoration to paint behind the child.
+	Decoration *Decoration
+
+	// The decoration to paint in front of the child.
 	ForegroundDecoration *Decoration
 	Width                *float64
 	Height               *float64
-	Constraints          *Constraints
-	Margin               *Insets
-	Transform            []float64
-	TransformAlignment   *string
-	Child                Node
-	ClipBehavior         *string
+
+	// Additional constraints to apply to the child.
+	Constraints *Constraints
+
+	// Empty space to surround the decoration and child.
+	Margin *Insets
+
+	// The transformation matrix to apply before painting the container.
+	Transform []float64
+
+	// The alignment of the origin, relative to the size of the container, if
+	// transform is specified.
+	TransformAlignment *string
+
+	// The child contained by the container.
+	Child Node
+
+	// The clip behavior when decoration is not null.
+	ClipBehavior *string
 }
 
 // CustomPaint maps CustomPaint of package:flutter/widgets.dart.
+//
+// A widget that provides a canvas on which to draw during the paint phase.
 type CustomPaint struct {
-	Size       *Size
-	IsComplex  *bool
+	// The size that this CustomPaint should aim for, given the layout
+	// constraints, if there is no child.
+	Size *Size
+
+	// Whether the painting is complex enough to benefit from caching.
+	IsComplex *bool
+
+	// Whether the raster cache should be told that this painting is likely to
+	// change in the next frame.
 	WillChange *bool
-	Child      Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // CustomScrollView maps CustomScrollView of package:flutter/widgets.dart.
+//
+// A ScrollView that creates custom scroll effects using slivers.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -499,60 +1043,122 @@ type CustomPaint struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type CustomScrollView struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Anchor                  *float64
-	CacheExtent             *float64
-	PaintOrder              *string
-	Slivers                 []Node
-	SemanticChildCount      *int
-	DragStartBehavior       *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The relative position of the zero scroll offset.
+	Anchor      *float64
+	CacheExtent *float64
+
+	// Defaults to firstIsTop.
+	PaintOrder *string
+
+	// The slivers to place inside the viewport.
+	Slivers []Node
+
+	// The number of children that will contribute semantic information.
+	SemanticChildCount *int
+	DragStartBehavior  *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // DecoratedBox maps DecoratedBox of package:flutter/widgets.dart.
 //
+// A widget that paints a Decoration either before or after its child
+// paints.
+//
 // Position takes "background", or "foreground".
 type DecoratedBox struct {
+	// What decoration to paint.
 	Decoration Decoration
-	Position   *string
-	Child      Node
+
+	// Whether to paint the box decoration behind or in front of the child.
+	Position *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // DecoratedSliver maps DecoratedSliver of package:flutter/widgets.dart.
 //
+// A sliver widget that paints a Decoration either before or after its child
+// paints.
+//
 // Position takes "background", or "foreground".
 type DecoratedSliver struct {
+	// What decoration to paint.
 	Decoration Decoration
-	Position   *string
-	Sliver     Node
+
+	// Whether to paint the box decoration behind or in front of the child.
+	Position *string
+	Sliver   Node
 }
 
 // DefaultSelectionStyle maps DefaultSelectionStyle of package:flutter/widgets.dart.
+//
+// The selection style to apply to descendant EditableText widgets which
+// don't have an explicit style.
 type DefaultSelectionStyle struct {
-	CursorColor    *Color
+	// The color of the text field's cursor.
+	CursorColor *Color
+
+	// The background color of selected text.
 	SelectionColor *Color
-	MouseCursor    *string
-	Child          Node
+
+	// The MouseCursor for mouse pointers hovering over selectable Text
+	// widgets.
+	MouseCursor *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // DefaultSelectionStyleFallback maps DefaultSelectionStyle.fallback of package:flutter/widgets.dart.
+//
+// The selection style to apply to descendant EditableText widgets which
+// don't have an explicit style.
 type DefaultSelectionStyleFallback struct {
 }
 
 // DefaultTextEditingShortcuts maps DefaultTextEditingShortcuts of package:flutter/widgets.dart.
+//
+// A widget with the shortcuts used for the default text editing behavior.
 type DefaultTextEditingShortcuts struct {
 	Child Node
 }
 
 // DefaultTextStyle maps DefaultTextStyle of package:flutter/widgets.dart.
+//
+// The text style to apply to descendant Text widgets which don't have an
+// explicit style.
 //
 // TextAlign takes "left", "right", "center", "justify", "start", or "end".
 //
@@ -560,49 +1166,90 @@ type DefaultTextEditingShortcuts struct {
 //
 // TextWidthBasis takes "parent", or "longestLine".
 type DefaultTextStyle struct {
-	Style          TextStyle
-	TextAlign      *string
-	SoftWrap       *bool
-	Overflow       *string
-	MaxLines       *int
+	// The text style to apply.
+	Style TextStyle
+
+	// How each line of text in the Text widget should be aligned horizontally.
+	TextAlign *string
+
+	// Whether the text should break at soft line breaks.
+	SoftWrap *bool
+
+	// How visual overflow should be handled.
+	Overflow *string
+
+	// An optional maximum number of lines for the text to span, wrapping if
+	// necessary.
+	MaxLines *int
+
+	// The strategy to use when calculating the width of the Text.
 	TextWidthBasis *string
-	Child          Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // DefaultTextStyleFallback maps DefaultTextStyle.fallback of package:flutter/widgets.dart.
+//
+// The text style to apply to descendant Text widgets which don't have an
+// explicit style.
 type DefaultTextStyleFallback struct {
 }
 
 // DeviceOrientationBuilder maps DeviceOrientationBuilder of package:flutter/widgets.dart.
+//
+// Builds a widget tree that can depend on the device's orientation.
 type DeviceOrientationBuilder struct {
+	// Builds the widgets below this widget given the device's orientation.
 	Builder OrientBuilder
 }
 
 // Directionality maps Directionality of package:flutter/widgets.dart.
 //
+// A widget that determines the ambient directionality of text and
+// text-direction-sensitive render objects.
+//
 // TextDirection takes "rtl", or "ltr".
 type Directionality struct {
+	// The text direction for this subtree.
 	TextDirection string
-	Child         Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // DisableWidgetInspectorScope maps DisableWidgetInspectorScope of package:flutter/widgets.dart.
+//
+// Disables the Flutter DevTools Widget Inspector for a Widget subtree.
 type DisableWidgetInspectorScope struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // DisplayFeatureSubScreen maps DisplayFeatureSubScreen of package:flutter/widgets.dart.
+//
+// Positions child such that it avoids overlapping any DisplayFeature that
+// splits the screen into sub-screens.
 type DisplayFeatureSubScreen struct {
+	// The anchor point used to pick the closest sub-screen.
 	AnchorPoint *Offset
-	Child       Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // DragBoundary maps DragBoundary of package:flutter/widgets.dart.
+//
+// Provides a DragBoundaryDelegate for its descendants whose bounds are
+// those defined by this widget.
 type DragBoundary struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // Draggable maps Draggable of package:flutter/widgets.dart.
+//
+// A widget that can be dragged from to a DragTarget.
 //
 // Axis takes "horizontal", or "vertical".
 //
@@ -610,27 +1257,63 @@ type DragBoundary struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type Draggable struct {
-	Child                     Node
-	Feedback                  Node
-	Axis                      *string
-	ChildWhenDragging         Node
-	FeedbackOffset            *Offset
-	Affinity                  *string
-	MaxSimultaneousDrags      *int
-	OnDragStarted             func()
-	OnDragCompleted           func()
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The widget to show under the pointer when a drag is under way.
+	Feedback Node
+
+	// The Axis to restrict this draggable's movement, if specified.
+	Axis *string
+
+	// The widget to display instead of child when one or more drags are under
+	// way.
+	ChildWhenDragging Node
+
+	// The feedbackOffset can be used to set the hit test target point for the
+	// purposes of finding a drag target.
+	FeedbackOffset *Offset
+
+	// Controls how this widget competes with other gestures to initiate a
+	// drag.
+	Affinity *string
+
+	// How many simultaneous drags to support.
+	MaxSimultaneousDrags *int
+
+	// Called when the draggable starts being dragged.
+	OnDragStarted func()
+
+	// Called when the draggable is dropped and accepted by a DragTarget.
+	OnDragCompleted func()
+
+	// Whether the semantics of the feedback widget is ignored when building
+	// the semantics tree.
 	IgnoringFeedbackSemantics *bool
-	IgnoringFeedbackPointer   *bool
-	RootOverlay               *bool
-	HitTestBehavior           *string
+
+	// Whether the feedback widget is ignored during hit testing.
+	IgnoringFeedbackPointer *bool
+
+	// Whether the feedback widget will be put on the root Overlay.
+	RootOverlay *bool
+
+	// How to behave during hit test.
+	HitTestBehavior *string
 }
 
 // DraggableScrollableActuator maps DraggableScrollableActuator of package:flutter/widgets.dart.
+//
+// A widget that can notify a descendent DraggableScrollableSheet that it
+// should reset its position to the initial state.
 type DraggableScrollableActuator struct {
+	// This child's DraggableScrollableSheet descendant will be reset when the
+	// reset method is applied to a context that includes it.
 	Child Node
 }
 
 // EditableText maps EditableText of package:flutter/widgets.dart.
+//
+// A basic text input field.
 //
 // SmartDashesType takes "disabled", or "enabled".
 //
@@ -652,100 +1335,231 @@ type DraggableScrollableActuator struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type EditableText struct {
-	Controller                    TextKey
-	FocusNode                     FocusKey
-	ReadOnly                      *bool
-	ObscuringCharacter            *string
-	ObscureText                   *bool
-	Autocorrect                   *bool
-	SmartDashesType               *string
-	SmartQuotesType               *string
-	EnableSuggestions             *bool
-	Style                         TextStyle
-	CursorColor                   Color
-	BackgroundCursorColor         Color
-	TextAlign                     *string
-	TextDirection                 *string
-	Locale                        *string
-	TextScaleFactor               *float64
-	MaxLines                      *int
-	MinLines                      *int
-	Expands                       *bool
-	ForceLine                     *bool
-	TextWidthBasis                *string
-	Autofocus                     *bool
-	ShowCursor                    *bool
-	ShowSelectionHandles          *bool
-	SelectionColor                *Color
-	TextInputAction               *string
-	TextCapitalization            *string
-	OnChanged                     func(string)
-	OnEditingComplete             func()
-	OnSubmitted                   func(string)
-	OnSelectionHandleTapped       func()
-	GroupId                       *string
-	MouseCursor                   *string
-	RendererIgnoresPointer        *bool
-	CursorWidth                   *float64
-	CursorHeight                  *float64
-	CursorOpacityAnimates         *bool
-	CursorOffset                  *Offset
-	PaintCursorAboveText          *bool
-	ScrollPadding                 *Insets
-	KeyboardAppearance            *string
-	DragStartBehavior             *string
-	EnableInteractiveSelection    *bool
-	SelectAllOnFocus              *bool
-	ScrollController              *ScrollKey
-	ScrollPhysics                 *string
-	AutocorrectionTextRectColor   *Color
-	ClipBehavior                  *string
-	RestorationId                 *string
+	// Controls the text being edited.
+	Controller TextKey
+
+	// Controls whether this widget has keyboard focus.
+	FocusNode FocusKey
+
+	// Whether the text can be changed.
+	ReadOnly *bool
+
+	// Character used for obscuring text if obscureText is true.
+	ObscuringCharacter *string
+
+	// Whether to hide the text being edited (e.g., for passwords).
+	ObscureText *bool
+
+	// Whether to enable autocorrection.
+	Autocorrect       *bool
+	SmartDashesType   *string
+	SmartQuotesType   *string
+	EnableSuggestions *bool
+
+	// The text style to use for the editable text.
+	Style TextStyle
+
+	// The color to use when painting the cursor.
+	CursorColor Color
+
+	// The color to use when painting the background cursor aligned with the
+	// text while rendering the floating cursor.
+	BackgroundCursorColor Color
+
+	// How the text should be aligned horizontally.
+	TextAlign *string
+
+	// The directionality of the text.
+	TextDirection *string
+
+	// Used to select a font when the same Unicode character can be rendered
+	// differently, depending on the locale.
+	Locale *string
+
+	// Deprecated.
+	TextScaleFactor *float64
+
+	// The maximum number of lines to show at one time, wrapping if necessary.
+	MaxLines *int
+
+	// The minimum number of lines to occupy when the content spans fewer
+	// lines.
+	MinLines *int
+
+	// Whether this widget's height will be sized to fill its parent.
+	Expands *bool
+
+	// Whether the text will take the full width regardless of the text width.
+	ForceLine      *bool
+	TextWidthBasis *string
+
+	// Whether this text field should focus itself if nothing else is already
+	// focused.
+	Autofocus *bool
+
+	// Whether to show cursor.
+	ShowCursor *bool
+
+	// Whether to show selection handles.
+	ShowSelectionHandles *bool
+
+	// The color to use when painting the selection.
+	SelectionColor *Color
+
+	// The type of action button to use with the soft keyboard.
+	TextInputAction *string
+
+	// Configures how the platform keyboard will select an uppercase or
+	// lowercase keyboard.
+	TextCapitalization *string
+
+	// Called when the user initiates a change to the TextField's value: when
+	// they have inserted or deleted text.
+	OnChanged func(string)
+
+	// Called when the user submits editable content (e.g., user presses the
+	// "done" button on the keyboard).
+	OnEditingComplete func()
+
+	// Called when the user indicates that they are done editing the text in
+	// the field.
+	OnSubmitted             func(string)
+	OnSelectionHandleTapped func()
+
+	// The group identifier for the TextFieldTapRegion of this text field.
+	GroupId *string
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// Whether the caller will provide gesture handling (true), or if the
+	// EditableText is expected to handle basic gestures (false).
+	RendererIgnoresPointer *bool
+
+	// How thick the cursor will be.
+	CursorWidth *float64
+
+	// How tall the cursor will be.
+	CursorHeight *float64
+
+	// Whether the cursor will animate from fully transparent to fully opaque
+	// during each cursor blink.
+	CursorOpacityAnimates *bool
+	CursorOffset          *Offset
+	PaintCursorAboveText  *bool
+
+	// Configures the padding for the edges surrounding a Scrollable when the
+	// text field scrolls into view.
+	ScrollPadding *Insets
+
+	// The appearance of the keyboard.
+	KeyboardAppearance *string
+	DragStartBehavior  *string
+
+	// Whether to enable user interface affordances for changing the text
+	// selection.
+	EnableInteractiveSelection *bool
+
+	// Whether this field should select all text when gaining focus.
+	SelectAllOnFocus *bool
+
+	// The ScrollController to use when vertically scrolling the input.
+	ScrollController *ScrollKey
+
+	// The ScrollPhysics to use when vertically scrolling the input.
+	ScrollPhysics *string
+
+	// The color to use when painting the autocorrection Rect.
+	AutocorrectionTextRectColor *Color
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Restoration ID to save and restore the scroll offset of the
+	// EditableText.
+	RestorationId *string
+
+	// Whether iOS 14 Scribble features are enabled for this widget.
 	ScribbleEnabled               *bool
 	EnableIMEPersonalizedLearning *bool
 	EnableInlinePrediction        *bool
 }
 
 // EnableWidgetInspectorScope maps EnableWidgetInspectorScope of package:flutter/widgets.dart.
+//
+// Enables the Flutter DevTools Widget Inspector for a Widget subtree.
 type EnableWidgetInspectorScope struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // ErrorWidget maps ErrorWidget of package:flutter/widgets.dart.
+//
+// A widget that renders an exception's message.
 type ErrorWidget struct {
 	Exception string
 }
 
 // ErrorWidgetWithDetails maps ErrorWidget.withDetails of package:flutter/widgets.dart.
+//
+// A widget that renders an exception's message.
 type ErrorWidgetWithDetails struct {
+	// The message to display.
 	Message *string
 }
 
 // ExcludeFocus maps ExcludeFocus of package:flutter/widgets.dart.
+//
+// A widget that controls whether or not the descendants of this widget are
+// focusable.
 type ExcludeFocus struct {
+	// If true, will make this widget's descendants unfocusable.
 	Excluding *bool
-	Child     Node
+
+	// The child widget of this ExcludeFocus.
+	Child Node
 }
 
 // ExcludeFocusTraversal maps ExcludeFocusTraversal of package:flutter/widgets.dart.
+//
+// A widget that controls whether or not the descendants of this widget are
+// traversable.
 type ExcludeFocusTraversal struct {
+	// If true, will make this widget's descendants untraversable.
 	Excluding *bool
-	Child     Node
+
+	// The child widget of this ExcludeFocusTraversal.
+	Child Node
 }
 
 // ExcludeSemantics maps ExcludeSemantics of package:flutter/widgets.dart.
+//
+// A widget that drops all the semantics of its descendants.
 type ExcludeSemantics struct {
+	// Whether this widget is excluded in the semantics tree.
 	Excluding *bool
-	Child     Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Expanded maps Expanded of package:flutter/widgets.dart.
+//
+// A widget that expands a child of a Row, Column, or Flex so that the child
+// fills the available space.
 type Expanded struct {
-	Flex  *int
+	// The flex factor to use for this child.
+	Flex *int
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // FadeInImage maps FadeInImage of package:flutter/widgets.dart.
+//
+// An image that shows a placeholder image while the target image is
+// loading, then fades in the new image when it loads.
 //
 // ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 //
@@ -761,28 +1575,71 @@ type Expanded struct {
 //
 // Repeat takes "repeat", "repeatX", "repeatY", or "noRepeat".
 type FadeInImage struct {
-	Placeholder               ImageSource
-	Image                     ImageSource
-	ExcludeFromSemantics      *bool
-	ImageSemanticLabel        *string
-	FadeOutCurve              *string
-	FadeInCurve               *string
-	Color                     *Color
-	ColorBlendMode            *string
-	PlaceholderColor          *Color
+	// Image displayed while the target image is loading.
+	Placeholder ImageSource
+
+	// The target image that is displayed once it has loaded.
+	Image ImageSource
+
+	// Whether to exclude this image from semantics.
+	ExcludeFromSemantics *bool
+
+	// A semantic description of the image.
+	ImageSemanticLabel *string
+
+	// The curve of the fade-out animation for the placeholder.
+	FadeOutCurve *string
+
+	// The curve of the fade-in animation for the image.
+	FadeInCurve *string
+
+	// If non-null, this color is blended with each image pixel using
+	// colorBlendMode.
+	Color *Color
+
+	// Used to combine color with this image.
+	ColorBlendMode *string
+
+	// If non-null, this color is blended with each placeholder image pixel
+	// using placeholderColorBlendMode.
+	PlaceholderColor *Color
+
+	// Used to combine placeholderColor with the placeholder image.
 	PlaceholderColorBlendMode *string
-	Width                     *float64
-	Height                    *float64
-	Fit                       *string
-	PlaceholderFit            *string
-	FilterQuality             *string
-	PlaceholderFilterQuality  *string
-	Alignment                 *string
-	Repeat                    *string
-	MatchTextDirection        *bool
+
+	// If non-null, require the image to have this width.
+	Width *float64
+
+	// If non-null, require the image to have this height.
+	Height *float64
+
+	// How to inscribe the image into the space allocated during layout.
+	Fit *string
+
+	// How to inscribe the placeholder image into the space allocated during
+	// layout.
+	PlaceholderFit *string
+
+	// The rendering quality of the image.
+	FilterQuality *string
+
+	// The rendering quality of the placeholder image.
+	PlaceholderFilterQuality *string
+
+	// How to align the image within its bounds.
+	Alignment *string
+
+	// How to paint any portions of the layout bounds not covered by the image.
+	Repeat *string
+
+	// Whether to paint the image in the direction of the TextDirection.
+	MatchTextDirection *bool
 }
 
 // FadeInImageAssetNetwork maps FadeInImage.assetNetwork of package:flutter/widgets.dart.
+//
+// An image that shows a placeholder image while the target image is
+// loading, then fades in the new image when it loads.
 //
 // Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
 //
@@ -798,34 +1655,77 @@ type FadeInImage struct {
 //
 // Repeat takes "repeat", "repeatX", "repeatY", or "noRepeat".
 type FadeInImageAssetNetwork struct {
-	Placeholder               string
-	Image                     string
-	PlaceholderScale          *float64
-	ImageScale                *float64
-	ExcludeFromSemantics      *bool
-	ImageSemanticLabel        *string
-	FadeOutCurve              *string
-	FadeInCurve               *string
-	Width                     *float64
-	Height                    *float64
-	Fit                       *string
-	Color                     *Color
-	ColorBlendMode            *string
-	PlaceholderColor          *Color
+	// Image displayed while the target image is loading.
+	Placeholder string
+
+	// The target image that is displayed once it has loaded.
+	Image            string
+	PlaceholderScale *float64
+	ImageScale       *float64
+
+	// Whether to exclude this image from semantics.
+	ExcludeFromSemantics *bool
+
+	// A semantic description of the image.
+	ImageSemanticLabel *string
+
+	// The curve of the fade-out animation for the placeholder.
+	FadeOutCurve *string
+
+	// The curve of the fade-in animation for the image.
+	FadeInCurve *string
+
+	// If non-null, require the image to have this width.
+	Width *float64
+
+	// If non-null, require the image to have this height.
+	Height *float64
+
+	// How to inscribe the image into the space allocated during layout.
+	Fit *string
+
+	// If non-null, this color is blended with each image pixel using
+	// colorBlendMode.
+	Color *Color
+
+	// Used to combine color with this image.
+	ColorBlendMode *string
+
+	// If non-null, this color is blended with each placeholder image pixel
+	// using placeholderColorBlendMode.
+	PlaceholderColor *Color
+
+	// Used to combine placeholderColor with the placeholder image.
 	PlaceholderColorBlendMode *string
-	PlaceholderFit            *string
-	FilterQuality             *string
-	PlaceholderFilterQuality  *string
-	Alignment                 *string
-	Repeat                    *string
-	MatchTextDirection        *bool
-	PlaceholderCacheWidth     *int
-	PlaceholderCacheHeight    *int
-	ImageCacheWidth           *int
-	ImageCacheHeight          *int
+
+	// How to inscribe the placeholder image into the space allocated during
+	// layout.
+	PlaceholderFit *string
+
+	// The rendering quality of the image.
+	FilterQuality *string
+
+	// The rendering quality of the placeholder image.
+	PlaceholderFilterQuality *string
+
+	// How to align the image within its bounds.
+	Alignment *string
+
+	// How to paint any portions of the layout bounds not covered by the image.
+	Repeat *string
+
+	// Whether to paint the image in the direction of the TextDirection.
+	MatchTextDirection     *bool
+	PlaceholderCacheWidth  *int
+	PlaceholderCacheHeight *int
+	ImageCacheWidth        *int
+	ImageCacheHeight       *int
 }
 
 // FadeInImageMemoryNetwork maps FadeInImage.memoryNetwork of package:flutter/widgets.dart.
+//
+// An image that shows a placeholder image while the target image is
+// loading, then fades in the new image when it loads.
 //
 // Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
 //
@@ -841,53 +1741,111 @@ type FadeInImageAssetNetwork struct {
 //
 // Repeat takes "repeat", "repeatX", "repeatY", or "noRepeat".
 type FadeInImageMemoryNetwork struct {
-	Placeholder               []byte
-	Image                     string
-	PlaceholderScale          *float64
-	ImageScale                *float64
-	ExcludeFromSemantics      *bool
-	ImageSemanticLabel        *string
-	FadeOutCurve              *string
-	FadeInCurve               *string
-	Width                     *float64
-	Height                    *float64
-	Fit                       *string
-	Color                     *Color
-	ColorBlendMode            *string
-	PlaceholderColor          *Color
+	// Image displayed while the target image is loading.
+	Placeholder []byte
+
+	// The target image that is displayed once it has loaded.
+	Image            string
+	PlaceholderScale *float64
+	ImageScale       *float64
+
+	// Whether to exclude this image from semantics.
+	ExcludeFromSemantics *bool
+
+	// A semantic description of the image.
+	ImageSemanticLabel *string
+
+	// The curve of the fade-out animation for the placeholder.
+	FadeOutCurve *string
+
+	// The curve of the fade-in animation for the image.
+	FadeInCurve *string
+
+	// If non-null, require the image to have this width.
+	Width *float64
+
+	// If non-null, require the image to have this height.
+	Height *float64
+
+	// How to inscribe the image into the space allocated during layout.
+	Fit *string
+
+	// If non-null, this color is blended with each image pixel using
+	// colorBlendMode.
+	Color *Color
+
+	// Used to combine color with this image.
+	ColorBlendMode *string
+
+	// If non-null, this color is blended with each placeholder image pixel
+	// using placeholderColorBlendMode.
+	PlaceholderColor *Color
+
+	// Used to combine placeholderColor with the placeholder image.
 	PlaceholderColorBlendMode *string
-	PlaceholderFit            *string
-	FilterQuality             *string
-	PlaceholderFilterQuality  *string
-	Alignment                 *string
-	Repeat                    *string
-	MatchTextDirection        *bool
-	PlaceholderCacheWidth     *int
-	PlaceholderCacheHeight    *int
-	ImageCacheWidth           *int
-	ImageCacheHeight          *int
+
+	// How to inscribe the placeholder image into the space allocated during
+	// layout.
+	PlaceholderFit *string
+
+	// The rendering quality of the image.
+	FilterQuality *string
+
+	// The rendering quality of the placeholder image.
+	PlaceholderFilterQuality *string
+
+	// How to align the image within its bounds.
+	Alignment *string
+
+	// How to paint any portions of the layout bounds not covered by the image.
+	Repeat *string
+
+	// Whether to paint the image in the direction of the TextDirection.
+	MatchTextDirection     *bool
+	PlaceholderCacheWidth  *int
+	PlaceholderCacheHeight *int
+	ImageCacheWidth        *int
+	ImageCacheHeight       *int
 }
 
 // FadeTransition maps FadeTransition of package:flutter/widgets.dart.
+//
+// Animates the opacity of a widget.
 type FadeTransition struct {
-	Opacity                AnimationKey
+	// The animation that controls the opacity of the child.
+	Opacity AnimationKey
+
+	// Whether the semantic information of the children is always included.
 	AlwaysIncludeSemantics *bool
-	Child                  Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // FittedBox maps FittedBox of package:flutter/widgets.dart.
+//
+// Scales and positions its child within itself according to fit.
 //
 // Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type FittedBox struct {
-	Fit          *string
-	Alignment    *string
+	// How to inscribe the child into the space allocated during layout.
+	Fit *string
+
+	// How to align the child within its parent's bounds.
+	Alignment *string
+
+	// Defaults to none.
 	ClipBehavior *string
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Flex maps Flex of package:flutter/widgets.dart.
+//
+// A widget that displays its children in a one-dimensional array.
 //
 // Direction takes "horizontal", or "vertical".
 //
@@ -905,161 +1863,376 @@ type FittedBox struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Flex struct {
-	Direction          string
-	MainAxisAlignment  *string
-	MainAxisSize       *string
+	// The direction to use as the main axis.
+	Direction string
+
+	// How the children should be placed along the main axis.
+	MainAxisAlignment *string
+
+	// How much space should be occupied in the main axis.
+	MainAxisSize *string
+
+	// How the children should be placed along the cross axis.
 	CrossAxisAlignment *string
-	TextDirection      *string
-	VerticalDirection  *string
-	TextBaseline       *string
-	ClipBehavior       *string
-	Spacing            *float64
-	Children           []Node
+
+	// Determines the order to lay children out horizontally and how to
+	// interpret start and end in the horizontal direction.
+	TextDirection *string
+
+	// Determines the order to lay children out vertically and how to interpret
+	// start and end in the vertical direction.
+	VerticalDirection *string
+
+	// If aligning items according to their baseline, which baseline to use.
+	TextBaseline *string
+
+	// Defaults to none.
+	ClipBehavior *string
+	Spacing      *float64
+
+	// The widgets below this widget in the tree.
+	Children []Node
 }
 
 // Flexible maps Flexible of package:flutter/widgets.dart.
 //
+// A widget that controls how a child of a Row, Column, or Flex flexes.
+//
 // Fit takes "tight", or "loose".
 type Flexible struct {
-	Flex  *int
-	Fit   *string
+	// The flex factor to use for this child.
+	Flex *int
+
+	// How a flexible child is inscribed into the available space.
+	Fit *string
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // FlutterLogo maps FlutterLogo of package:flutter/widgets.dart.
 //
+// The Flutter logo, in widget form. This widget respects the IconTheme. For
+// guidelines on using the Flutter logo, visit https://flutter.dev/brand.
+//
 // Style takes "markOnly", "horizontal", or "stacked".
 type FlutterLogo struct {
-	Size      *float64
+	// The size of the logo in logical pixels.
+	Size *float64
+
+	// The color used to paint the "Flutter" text on the logo, if style is
+	// horizontal or stacked.
 	TextColor *Color
-	Style     *string
-	Curve     *string
+
+	// Whether and where to draw the "Flutter" text.
+	Style *string
+
+	// The curve for the logo animation if the style or textColor change.
+	Curve *string
 }
 
 // Focus maps Focus of package:flutter/widgets.dart.
+//
+// A widget that manages a FocusNode to allow keyboard focus to be given to
+// this widget and its descendants.
 type Focus struct {
-	Child                     Node
-	FocusNode                 *FocusKey
-	ParentNode                *FocusKey
-	Autofocus                 *bool
+	// The child widget of this Focus.
+	Child Node
+
+	// An optional focus node to use as the focus node for this widget.
+	FocusNode *FocusKey
+
+	// The optional parent node to use when reparenting the focusNode for this
+	// Focus widget.
+	ParentNode *FocusKey
+
+	// True if this widget will be selected as the initial focus when no other
+	// node in its scope is currently focused.
+	Autofocus *bool
+
+	// Handler called when the focus changes.
 	OnFocusChange             func(bool)
 	CanRequestFocus           *bool
 	SkipTraversal             *bool
 	DescendantsAreFocusable   *bool
 	DescendantsAreTraversable *bool
-	IncludeSemantics          *bool
-	DebugLabel                *string
+
+	// Include semantics information in this widget.
+	IncludeSemantics *bool
+	DebugLabel       *string
 }
 
 // FocusScope maps FocusScope of package:flutter/widgets.dart.
+//
+// A FocusScope is similar to a Focus, but also serves as a scope for its
+// descendants, restricting focus traversal to the scoped controls.
 type FocusScope struct {
-	Node                      *ScopeKey
-	ParentNode                *FocusKey
-	Child                     Node
-	Autofocus                 *bool
-	OnFocusChange             func(bool)
-	CanRequestFocus           *bool
-	SkipTraversal             *bool
-	DebugLabel                *string
+	Node *ScopeKey
+
+	// The optional parent node to use when reparenting the focusNode for this
+	// Focus widget.
+	ParentNode *FocusKey
+
+	// The child widget of this Focus.
+	Child Node
+
+	// True if this widget will be selected as the initial focus when no other
+	// node in its scope is currently focused.
+	Autofocus *bool
+
+	// Handler called when the focus changes.
+	OnFocusChange   func(bool)
+	CanRequestFocus *bool
+	SkipTraversal   *bool
+	DebugLabel      *string
+
+	// Include semantics information in this widget.
 	IncludeSemantics          *bool
 	DescendantsAreFocusable   *bool
 	DescendantsAreTraversable *bool
 }
 
 // FocusScopeWithExternalFocusNode maps FocusScope.withExternalFocusNode of package:flutter/widgets.dart.
+//
+// A FocusScope is similar to a Focus, but also serves as a scope for its
+// descendants, restricting focus traversal to the scoped controls.
 type FocusScopeWithExternalFocusNode struct {
+	// The child widget of this Focus.
 	Child          Node
 	FocusScopeNode ScopeKey
-	ParentNode     *FocusKey
-	OnFocusChange  func(bool)
+
+	// The optional parent node to use when reparenting the focusNode for this
+	// Focus widget.
+	ParentNode *FocusKey
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
 }
 
 // FocusTraversalGroup maps FocusTraversalGroup of package:flutter/widgets.dart.
+//
+// A widget that describes the inherited focus policy for focus traversal
+// for its descendants, grouping them into a separate traversal group.
 type FocusTraversalGroup struct {
 	DescendantsAreFocusable   *bool
 	DescendantsAreTraversable *bool
-	ParentNode                *FocusKey
-	Child                     Node
+
+	// The optional parent node to use when reparenting this group's FocusNode.
+	ParentNode *FocusKey
+
+	// The child widget of this FocusTraversalGroup.
+	Child Node
 }
 
 // FocusWithExternalFocusNode maps Focus.withExternalFocusNode of package:flutter/widgets.dart.
+//
+// A widget that manages a FocusNode to allow keyboard focus to be given to
+// this widget and its descendants.
 type FocusWithExternalFocusNode struct {
-	Child         Node
-	FocusNode     FocusKey
-	ParentNode    *FocusKey
+	// The child widget of this Focus.
+	Child Node
+
+	// An optional focus node to use as the focus node for this widget.
+	FocusNode FocusKey
+
+	// The optional parent node to use when reparenting the focusNode for this
+	// Focus widget.
+	ParentNode *FocusKey
+
+	// Handler called when the focus changes.
 	OnFocusChange func(bool)
 }
 
 // FocusableActionDetector maps FocusableActionDetector of package:flutter/widgets.dart.
+//
+// A widget that combines the functionality of Actions, Shortcuts,
+// MouseRegion and a Focus widget to create a detector that defines actions
+// and key bindings, and provides callbacks for handling focus and hover
+// highlights.
 type FocusableActionDetector struct {
+	// Is this widget enabled or not.
 	Enabled                   *bool
 	FocusNode                 *FocusKey
 	Autofocus                 *bool
 	DescendantsAreFocusable   *bool
 	DescendantsAreTraversable *bool
-	OnShowFocusHighlight      func(bool)
-	OnShowHoverHighlight      func(bool)
-	OnFocusChange             func(bool)
-	MouseCursor               *string
-	IncludeFocusSemantics     *bool
-	Child                     Node
+
+	// A function that will be called when the focus highlight should be shown
+	// or hidden.
+	OnShowFocusHighlight func(bool)
+
+	// A function that will be called when the hover highlight should be shown
+	// or hidden.
+	OnShowHoverHighlight func(bool)
+
+	// A function that will be called when the focus changes.
+	OnFocusChange func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// Whether to include semantics from Focus.
+	IncludeFocusSemantics *bool
+
+	// The child widget for this FocusableActionDetector widget.
+	Child Node
 }
 
 // Form maps Form of package:flutter/widgets.dart.
 //
+// An optional container for grouping together multiple form field widgets
+// (e.g. TextField widgets).
+//
 // AutovalidateMode takes "disabled", "always", "onUserInteraction", "onUnfocus", or "onUserInteractionIfError".
 type Form struct {
-	Child            Node
-	CanPop           *bool
-	OnPopInvoked     func(bool)
-	OnWillPop        Ask
-	OnChanged        func()
+	// The widget below this widget in the tree.
+	Child Node
+
+	// This sample demonstrates how to use this parameter to show a
+	// confirmation dialog when a navigation pop would cause form data to be
+	// lost.
+	CanPop       *bool
+	OnPopInvoked func(bool)
+
+	// Enables the form to veto attempts by the user to dismiss the ModalRoute
+	// that contains the form.
+	OnWillPop Ask
+
+	// Called when one of the form fields changes.
+	OnChanged func()
+
+	// Used to enable/disable form fields auto validation and update their
+	// error text.
 	AutovalidateMode *string
 }
 
 // FractionalTranslation maps FractionalTranslation of package:flutter/widgets.dart.
+//
+// Applies a translation transformation before painting its child.
 type FractionalTranslation struct {
-	Translation       Offset
+	// The translation to apply to the child, scaled to the child's size.
+	Translation Offset
+
+	// Whether to apply the translation when performing hit tests.
 	TransformHitTests *bool
-	Child             Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // FractionallySizedBox maps FractionallySizedBox of package:flutter/widgets.dart.
+//
+// A widget that sizes its child to a fraction of the total available space.
+// For more details about the layout algorithm, see
+// RenderFractionallySizedOverflowBox.
 type FractionallySizedBox struct {
-	Alignment    *string
-	WidthFactor  *float64
+	// How to align the child.
+	Alignment *string
+
+	// If non-null, the fraction of the incoming width given to the child.
+	WidthFactor *float64
+
+	// If non-null, the fraction of the incoming height given to the child.
 	HeightFactor *float64
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // GestureDetector maps GestureDetector of package:flutter/widgets.dart.
+//
+// A widget that detects gestures.
 //
 // Behavior takes "deferToChild", "opaque", or "translucent".
 //
 // DragStartBehavior takes "down", or "start".
 type GestureDetector struct {
-	Child                       Node
-	OnTap                       func()
-	OnTapCancel                 func()
-	OnSecondaryTap              func()
-	OnSecondaryTapCancel        func()
-	OnTertiaryTapCancel         func()
-	OnDoubleTap                 func()
-	OnDoubleTapCancel           func()
-	OnLongPressCancel           func()
-	OnLongPress                 func()
-	OnLongPressUp               func()
-	OnSecondaryLongPressCancel  func()
-	OnSecondaryLongPress        func()
-	OnSecondaryLongPressUp      func()
-	OnTertiaryLongPressCancel   func()
-	OnTertiaryLongPress         func()
-	OnTertiaryLongPressUp       func()
-	OnVerticalDragCancel        func()
-	OnHorizontalDragCancel      func()
-	OnPanCancel                 func()
-	Behavior                    *string
-	ExcludeFromSemantics        *bool
+	// The widget below this widget in the tree.
+	Child Node
+
+	// A tap with a primary button has occurred.
+	OnTap func()
+
+	// The pointer that previously triggered onTapDown will not end up causing
+	// a tap.
+	OnTapCancel func()
+
+	// A tap with a secondary button has occurred.
+	OnSecondaryTap func()
+
+	// The pointer that previously triggered onSecondaryTapDown will not end up
+	// causing a tap.
+	OnSecondaryTapCancel func()
+
+	// The pointer that previously triggered onTertiaryTapDown will not end up
+	// causing a tap.
+	OnTertiaryTapCancel func()
+
+	// The user has tapped the screen with a primary button at the same
+	// location twice in quick succession.
+	OnDoubleTap func()
+
+	// The pointer that previously triggered onDoubleTapDown will not end up
+	// causing a double tap.
+	OnDoubleTapCancel func()
+
+	// A pointer that previously triggered onLongPressDown will not end up
+	// causing a long-press.
+	OnLongPressCancel func()
+
+	// Called when a long press gesture with a primary button has been
+	// recognized.
+	OnLongPress func()
+
+	// A pointer that has triggered a long-press with a primary button has
+	// stopped contacting the screen.
+	OnLongPressUp func()
+
+	// A pointer that previously triggered onSecondaryLongPressDown will not
+	// end up causing a long-press.
+	OnSecondaryLongPressCancel func()
+
+	// Called when a long press gesture with a secondary button has been
+	// recognized.
+	OnSecondaryLongPress func()
+
+	// A pointer that has triggered a long-press with a secondary button has
+	// stopped contacting the screen.
+	OnSecondaryLongPressUp func()
+
+	// A pointer that previously triggered onTertiaryLongPressDown will not end
+	// up causing a long-press.
+	OnTertiaryLongPressCancel func()
+
+	// Called when a long press gesture with a tertiary button has been
+	// recognized.
+	OnTertiaryLongPress func()
+
+	// A pointer that has triggered a long-press with a tertiary button has
+	// stopped contacting the screen.
+	OnTertiaryLongPressUp func()
+
+	// The pointer that previously triggered onVerticalDragDown did not
+	// complete.
+	OnVerticalDragCancel func()
+
+	// The pointer that previously triggered onHorizontalDragDown did not
+	// complete.
+	OnHorizontalDragCancel func()
+
+	// The pointer that previously triggered onPanDown did not complete.
+	OnPanCancel func()
+
+	// How this gesture detector should behave during hit testing when deciding
+	// how the hit test propagates to children and whether to consider targets
+	// behind this one.
+	Behavior *string
+
+	// Whether to exclude these gestures from the semantics tree.
+	ExcludeFromSemantics *bool
+
+	// Determines the way that drag start behavior is handled.
 	DragStartBehavior           *string
 	TrackpadScrollCausesScale   *bool
 	TrackpadScrollToScaleFactor *Offset
@@ -1067,25 +2240,53 @@ type GestureDetector struct {
 
 // GlowingOverscrollIndicator maps GlowingOverscrollIndicator of package:flutter/widgets.dart.
 //
+// A visual indication that a scroll view has overscrolled.
+//
 // AxisDirection takes "up", "right", "down", or "left".
 type GlowingOverscrollIndicator struct {
-	ShowLeading   *bool
-	ShowTrailing  *bool
+	// Whether to show the overscroll glow on the side with negative scroll
+	// offsets.
+	ShowLeading *bool
+
+	// Whether to show the overscroll glow on the side with positive scroll
+	// offsets.
+	ShowTrailing *bool
+
+	// The direction of positive scroll offsets in the Scrollable whose
+	// overscrolls are to be visualized.
 	AxisDirection string
-	Color         Color
-	Child         Node
+
+	// The color of the glow.
+	Color Color
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // GridPaper maps GridPaper of package:flutter/widgets.dart.
+//
+// A widget that draws a rectilinear grid of lines one pixel wide.
 type GridPaper struct {
-	Color        *Color
-	Interval     *float64
-	Divisions    *int
+	// The color to draw the lines in the grid.
+	Color *Color
+
+	// The distance between the primary lines in the grid, in logical pixels.
+	Interval *float64
+
+	// The number of major divisions within each primary grid cell.
+	Divisions *int
+
+	// The number of minor divisions within each major division, including the
+	// major division itself.
 	Subdivisions *int
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // GridView maps GridView of package:flutter/widgets.dart.
+//
+// A scrollable, 2D array of widgets.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1097,28 +2298,57 @@ type GridPaper struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type GridView struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Padding                 *Insets
-	GridDelegate            GridSpec
-	AddAutomaticKeepAlives  *bool
-	AddRepaintBoundaries    *bool
-	AddSemanticIndexes      *bool
-	CacheExtent             *float64
-	Children                []Node
-	SemanticChildCount      *int
-	DragStartBehavior       *string
-	ClipBehavior            *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The amount of space by which to inset the children.
+	Padding *Insets
+
+	// A delegate that controls the layout of the children within the GridView.
+	GridDelegate           GridSpec
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+	CacheExtent            *float64
+	Children               []Node
+
+	// The number of children that will contribute semantic information.
+	SemanticChildCount *int
+	DragStartBehavior  *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	HitTestBehavior         *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // GridViewBuilder maps GridView.builder of package:flutter/widgets.dart.
+//
+// A scrollable, 2D array of widgets.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1130,29 +2360,58 @@ type GridView struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type GridViewBuilder struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Padding                 *Insets
-	GridDelegate            GridSpec
-	ItemBuilder             ItemBuilder
-	ItemCount               *int
-	AddAutomaticKeepAlives  *bool
-	AddRepaintBoundaries    *bool
-	AddSemanticIndexes      *bool
-	CacheExtent             *float64
-	SemanticChildCount      *int
-	DragStartBehavior       *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The amount of space by which to inset the children.
+	Padding *Insets
+
+	// A delegate that controls the layout of the children within the GridView.
+	GridDelegate           GridSpec
+	ItemBuilder            ItemBuilder
+	ItemCount              *int
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+	CacheExtent            *float64
+
+	// The number of children that will contribute semantic information.
+	SemanticChildCount *int
+	DragStartBehavior  *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // GridViewCount maps GridView.count of package:flutter/widgets.dart.
+//
+// A scrollable, 2D array of widgets.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1164,32 +2423,59 @@ type GridViewBuilder struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type GridViewCount struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Padding                 *Insets
-	CrossAxisCount          int
-	MainAxisSpacing         *float64
-	CrossAxisSpacing        *float64
-	ChildAspectRatio        *float64
-	MainAxisExtent          *float64
-	AddAutomaticKeepAlives  *bool
-	AddRepaintBoundaries    *bool
-	AddSemanticIndexes      *bool
-	CacheExtent             *float64
-	Children                []Node
-	SemanticChildCount      *int
-	DragStartBehavior       *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The amount of space by which to inset the children.
+	Padding                *Insets
+	CrossAxisCount         int
+	MainAxisSpacing        *float64
+	CrossAxisSpacing       *float64
+	ChildAspectRatio       *float64
+	MainAxisExtent         *float64
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+	CacheExtent            *float64
+	Children               []Node
+
+	// The number of children that will contribute semantic information.
+	SemanticChildCount *int
+	DragStartBehavior  *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // GridViewCustom maps GridView.custom of package:flutter/widgets.dart.
+//
+// A scrollable, 2D array of widgets.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1201,25 +2487,56 @@ type GridViewCount struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type GridViewCustom struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Padding                 *Insets
-	GridDelegate            GridSpec
-	ChildrenDelegate        SliverChildren
-	CacheExtent             *float64
-	SemanticChildCount      *int
-	DragStartBehavior       *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The amount of space by which to inset the children.
+	Padding *Insets
+
+	// A delegate that controls the layout of the children within the GridView.
+	GridDelegate GridSpec
+
+	// A delegate that provides the children for the GridView.
+	ChildrenDelegate SliverChildren
+	CacheExtent      *float64
+
+	// The number of children that will contribute semantic information.
+	SemanticChildCount *int
+	DragStartBehavior  *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // GridViewExtent maps GridView.extent of package:flutter/widgets.dart.
+//
+// A scrollable, 2D array of widgets.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1231,62 +2548,119 @@ type GridViewCustom struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type GridViewExtent struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Padding                 *Insets
-	MaxCrossAxisExtent      float64
-	MainAxisSpacing         *float64
-	CrossAxisSpacing        *float64
-	ChildAspectRatio        *float64
-	MainAxisExtent          *float64
-	AddAutomaticKeepAlives  *bool
-	AddRepaintBoundaries    *bool
-	AddSemanticIndexes      *bool
-	CacheExtent             *float64
-	Children                []Node
-	SemanticChildCount      *int
-	DragStartBehavior       *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The amount of space by which to inset the children.
+	Padding                *Insets
+	MaxCrossAxisExtent     float64
+	MainAxisSpacing        *float64
+	CrossAxisSpacing       *float64
+	ChildAspectRatio       *float64
+	MainAxisExtent         *float64
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+	CacheExtent            *float64
+	Children               []Node
+
+	// The number of children that will contribute semantic information.
+	SemanticChildCount *int
+	DragStartBehavior  *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // Hero maps Hero of package:flutter/widgets.dart.
+//
+// A widget that marks its child as being a candidate for hero
+// animations(https://docs.flutter.dev/ui/animations/hero-animations).
 type Hero struct {
-	Tag                      string
+	// The identifier for this particular hero.
+	Tag string
+
+	// Whether to perform the hero transition if the PageRoute transition was
+	// triggered by a user gesture, such as a back swipe on iOS.
 	TransitionOnUserGestures *bool
-	Curve                    *string
-	ReverseCurve             *string
-	Child                    Node
+
+	// The curve to use in the forward direction.
+	Curve *string
+
+	// The curve to use in the reverse direction.
+	ReverseCurve *string
+
+	// The widget subtree that will "fly" from one route to another during a
+	// Navigator push or pop transition.
+	Child Node
 }
 
 // HeroControllerScopeNone maps HeroControllerScope.none of package:flutter/widgets.dart.
+//
+// An inherited widget to host a hero controller.
 type HeroControllerScopeNone struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // HeroMode maps HeroMode of package:flutter/widgets.dart.
+//
+// Enables or disables Heroes in the widget subtree.
 type HeroMode struct {
-	Child   Node
+	// The subtree to place inside the HeroMode.
+	Child Node
+
+	// Whether or not Heroes are enabled in this subtree.
 	Enabled *bool
 }
 
 // HtmlElementView maps HtmlElementView of package:flutter/widgets.dart.
 //
+// Embeds an HTML element in the Widget hierarchy in Flutter web.
+//
 // HitTestBehavior takes "opaque", "translucent", or "transparent".
 type HtmlElementView struct {
-	ViewType              string
+	// The unique identifier for the HTML view type to be embedded by this
+	// widget.
+	ViewType string
+
+	// Callback to invoke after the platform view has been created.
 	OnPlatformViewCreated func(int)
-	CreationParams        *string
-	HitTestBehavior       *string
+
+	// Passed as the 2nd argument (i.e.
+	CreationParams  *string
+	HitTestBehavior *string
 }
 
 // HtmlElementViewFromTagName maps HtmlElementView.fromTagName of package:flutter/widgets.dart.
+//
+// Embeds an HTML element in the Widget hierarchy in Flutter web.
 //
 // HitTestBehavior takes "opaque", "translucent", or "transparent".
 type HtmlElementViewFromTagName struct {
@@ -1297,42 +2671,86 @@ type HtmlElementViewFromTagName struct {
 
 // Icon maps Icon of package:flutter/widgets.dart.
 //
+// A graphical icon widget drawn with a glyph from a font described in an
+// IconData such as material's predefined IconDatas in Icons.
+//
 // TextDirection takes "rtl", or "ltr".
 //
 // BlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 type Icon struct {
-	Icon             string
-	Size             *float64
-	Fill             *float64
-	Weight           *float64
-	Grade            *float64
-	OpticalSize      *float64
-	Color            *Color
-	SemanticLabel    *string
-	TextDirection    *string
+	// The icon to display.
+	Icon string
+
+	// The size of the icon in logical pixels.
+	Size *float64
+
+	// The fill for drawing the icon.
+	Fill *float64
+
+	// The stroke weight for drawing the icon.
+	Weight *float64
+
+	// The grade (granular stroke weight) for drawing the icon.
+	Grade *float64
+
+	// The optical size for drawing the icon.
+	OpticalSize *float64
+
+	// The color to use when drawing the icon.
+	Color *Color
+
+	// Semantic label for the icon.
+	SemanticLabel *string
+
+	// The text direction to use for rendering the icon.
+	TextDirection *string
+
+	// Whether to scale the size of this widget using the ambient MediaQuery's
+	// TextScaler.
 	ApplyTextScaling *bool
-	BlendMode        *string
+
+	// The BlendMode to apply to the foreground of the icon.
+	BlendMode *string
 }
 
 // IconTheme maps IconTheme of package:flutter/widgets.dart.
+//
+// Controls the default properties of icons in a widget subtree.
 type IconTheme struct {
-	Data  IconStyle
+	// The set of properties to use for icons in this subtree.
+	Data IconStyle
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // IgnoreBaseline maps IgnoreBaseline of package:flutter/widgets.dart.
+//
+// A widget that causes the parent to ignore the child for the purposes of
+// baseline alignment.
 type IgnoreBaseline struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // IgnorePointer maps IgnorePointer of package:flutter/widgets.dart.
+//
+// A widget that is invisible during hit testing.
 type IgnorePointer struct {
-	Ignoring          *bool
+	// Whether this widget is ignored during hit testing.
+	Ignoring *bool
+
+	// Whether the semantics of this widget is ignored when compiling the
+	// semantics subtree.
 	IgnoringSemantics *bool
-	Child             Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Image maps Image of package:flutter/widgets.dart.
+//
+// A widget that displays an image.
 //
 // ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 //
@@ -1342,25 +2760,61 @@ type IgnorePointer struct {
 //
 // FilterQuality takes "none", "low", "medium", or "high".
 type Image struct {
-	Image                ImageSource
-	SemanticLabel        *string
+	// The image to display.
+	Image ImageSource
+
+	// A Semantic description of the image.
+	SemanticLabel *string
+
+	// Whether to exclude this image from semantics.
 	ExcludeFromSemantics *bool
-	Width                *float64
-	Height               *float64
-	Color                *Color
-	Opacity              *AnimationKey
-	ColorBlendMode       *string
-	Fit                  *string
-	Alignment            *string
-	Repeat               *string
-	CenterSlice          *Rect
-	MatchTextDirection   *bool
-	GaplessPlayback      *bool
-	IsAntiAlias          *bool
-	FilterQuality        *string
+
+	// If non-null, require the image to have this width (in logical pixels).
+	Width *float64
+
+	// If non-null, require the image to have this height (in logical pixels).
+	Height *float64
+
+	// If non-null, this color is blended with each image pixel using
+	// colorBlendMode.
+	Color *Color
+
+	// If non-null, the value from the Animation is multiplied with the opacity
+	// of each image pixel before painting onto the canvas.
+	Opacity *AnimationKey
+
+	// Used to combine color with this image.
+	ColorBlendMode *string
+
+	// How to inscribe the image into the space allocated during layout.
+	Fit *string
+
+	// How to align the image within its bounds.
+	Alignment *string
+
+	// How to paint any portions of the layout bounds not covered by the image.
+	Repeat *string
+
+	// The center slice for a nine-patch image.
+	CenterSlice *Rect
+
+	// Whether to paint the image in the direction of the TextDirection.
+	MatchTextDirection *bool
+
+	// Whether to continue showing the old image (true), or briefly show
+	// nothing (false), when the image provider changes.
+	GaplessPlayback *bool
+
+	// Whether to paint the image with anti-aliasing.
+	IsAntiAlias *bool
+
+	// The rendering quality of the image.
+	FilterQuality *string
 }
 
 // ImageAsset maps Image.asset of package:flutter/widgets.dart.
+//
+// A widget that displays an image.
 //
 // ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 //
@@ -1370,38 +2824,84 @@ type Image struct {
 //
 // FilterQuality takes "none", "low", "medium", or "high".
 type ImageAsset struct {
-	Name                 string
-	SemanticLabel        *string
+	Name string
+
+	// A Semantic description of the image.
+	SemanticLabel *string
+
+	// Whether to exclude this image from semantics.
 	ExcludeFromSemantics *bool
 	Scale                *float64
-	Width                *float64
-	Height               *float64
-	Color                *Color
-	Opacity              *AnimationKey
-	ColorBlendMode       *string
-	Fit                  *string
-	Alignment            *string
-	Repeat               *string
-	CenterSlice          *Rect
-	MatchTextDirection   *bool
-	GaplessPlayback      *bool
-	IsAntiAlias          *bool
-	Package              *string
-	FilterQuality        *string
-	CacheWidth           *int
-	CacheHeight          *int
+
+	// If non-null, require the image to have this width (in logical pixels).
+	Width *float64
+
+	// If non-null, require the image to have this height (in logical pixels).
+	Height *float64
+
+	// If non-null, this color is blended with each image pixel using
+	// colorBlendMode.
+	Color *Color
+
+	// If non-null, the value from the Animation is multiplied with the opacity
+	// of each image pixel before painting onto the canvas.
+	Opacity *AnimationKey
+
+	// Used to combine color with this image.
+	ColorBlendMode *string
+
+	// How to inscribe the image into the space allocated during layout.
+	Fit *string
+
+	// How to align the image within its bounds.
+	Alignment *string
+
+	// How to paint any portions of the layout bounds not covered by the image.
+	Repeat *string
+
+	// The center slice for a nine-patch image.
+	CenterSlice *Rect
+
+	// Whether to paint the image in the direction of the TextDirection.
+	MatchTextDirection *bool
+
+	// Whether to continue showing the old image (true), or briefly show
+	// nothing (false), when the image provider changes.
+	GaplessPlayback *bool
+
+	// Whether to paint the image with anti-aliasing.
+	IsAntiAlias *bool
+	Package     *string
+
+	// The rendering quality of the image.
+	FilterQuality *string
+	CacheWidth    *int
+	CacheHeight   *int
 }
 
 // ImageIcon maps ImageIcon of package:flutter/widgets.dart.
+//
+// An icon that comes from an ImageProvider, e.g. an AssetImage.
 type ImageIcon struct {
-	Image             ImageSource
-	Size              *float64
-	Color             *Color
-	SemanticLabel     *string
+	// The image to display as the icon.
+	Image ImageSource
+
+	// The size of the icon in logical pixels.
+	Size *float64
+
+	// The color to use when drawing the icon.
+	Color *Color
+
+	// Semantic label for the icon.
+	SemanticLabel *string
+
+	// Whether to render the image using its original colors.
 	UseOriginalColors *bool
 }
 
 // ImageMemory maps Image.memory of package:flutter/widgets.dart.
+//
+// A widget that displays an image.
 //
 // ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 //
@@ -1411,28 +2911,63 @@ type ImageIcon struct {
 //
 // FilterQuality takes "none", "low", "medium", or "high".
 type ImageMemory struct {
-	Bytes                []byte
-	Scale                *float64
-	SemanticLabel        *string
+	Bytes []byte
+	Scale *float64
+
+	// A Semantic description of the image.
+	SemanticLabel *string
+
+	// Whether to exclude this image from semantics.
 	ExcludeFromSemantics *bool
-	Width                *float64
-	Height               *float64
-	Color                *Color
-	Opacity              *AnimationKey
-	ColorBlendMode       *string
-	Fit                  *string
-	Alignment            *string
-	Repeat               *string
-	CenterSlice          *Rect
-	MatchTextDirection   *bool
-	GaplessPlayback      *bool
-	IsAntiAlias          *bool
-	FilterQuality        *string
-	CacheWidth           *int
-	CacheHeight          *int
+
+	// If non-null, require the image to have this width (in logical pixels).
+	Width *float64
+
+	// If non-null, require the image to have this height (in logical pixels).
+	Height *float64
+
+	// If non-null, this color is blended with each image pixel using
+	// colorBlendMode.
+	Color *Color
+
+	// If non-null, the value from the Animation is multiplied with the opacity
+	// of each image pixel before painting onto the canvas.
+	Opacity *AnimationKey
+
+	// Used to combine color with this image.
+	ColorBlendMode *string
+
+	// How to inscribe the image into the space allocated during layout.
+	Fit *string
+
+	// How to align the image within its bounds.
+	Alignment *string
+
+	// How to paint any portions of the layout bounds not covered by the image.
+	Repeat *string
+
+	// The center slice for a nine-patch image.
+	CenterSlice *Rect
+
+	// Whether to paint the image in the direction of the TextDirection.
+	MatchTextDirection *bool
+
+	// Whether to continue showing the old image (true), or briefly show
+	// nothing (false), when the image provider changes.
+	GaplessPlayback *bool
+
+	// Whether to paint the image with anti-aliasing.
+	IsAntiAlias *bool
+
+	// The rendering quality of the image.
+	FilterQuality *string
+	CacheWidth    *int
+	CacheHeight   *int
 }
 
 // ImageNetwork maps Image.network of package:flutter/widgets.dart.
+//
+// A widget that displays an image.
 //
 // ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 //
@@ -1444,22 +2979,55 @@ type ImageMemory struct {
 //
 // WebHtmlElementStrategy takes "never", "fallback", or "prefer".
 type ImageNetwork struct {
-	Src                    string
-	Scale                  *float64
-	SemanticLabel          *string
-	ExcludeFromSemantics   *bool
-	Width                  *float64
-	Height                 *float64
-	Color                  *Color
-	Opacity                *AnimationKey
-	ColorBlendMode         *string
-	Fit                    *string
-	Alignment              *string
-	Repeat                 *string
-	CenterSlice            *Rect
-	MatchTextDirection     *bool
-	GaplessPlayback        *bool
-	FilterQuality          *string
+	Src   string
+	Scale *float64
+
+	// A Semantic description of the image.
+	SemanticLabel *string
+
+	// Whether to exclude this image from semantics.
+	ExcludeFromSemantics *bool
+
+	// If non-null, require the image to have this width (in logical pixels).
+	Width *float64
+
+	// If non-null, require the image to have this height (in logical pixels).
+	Height *float64
+
+	// If non-null, this color is blended with each image pixel using
+	// colorBlendMode.
+	Color *Color
+
+	// If non-null, the value from the Animation is multiplied with the opacity
+	// of each image pixel before painting onto the canvas.
+	Opacity *AnimationKey
+
+	// Used to combine color with this image.
+	ColorBlendMode *string
+
+	// How to inscribe the image into the space allocated during layout.
+	Fit *string
+
+	// How to align the image within its bounds.
+	Alignment *string
+
+	// How to paint any portions of the layout bounds not covered by the image.
+	Repeat *string
+
+	// The center slice for a nine-patch image.
+	CenterSlice *Rect
+
+	// Whether to paint the image in the direction of the TextDirection.
+	MatchTextDirection *bool
+
+	// Whether to continue showing the old image (true), or briefly show
+	// nothing (false), when the image provider changes.
+	GaplessPlayback *bool
+
+	// The rendering quality of the image.
+	FilterQuality *string
+
+	// Whether to paint the image with anti-aliasing.
 	IsAntiAlias            *bool
 	CacheWidth             *int
 	CacheHeight            *int
@@ -1467,12 +3035,19 @@ type ImageNetwork struct {
 }
 
 // IndexedSemantics maps IndexedSemantics of package:flutter/widgets.dart.
+//
+// A widget that annotates the child semantics with an index.
 type IndexedSemantics struct {
+	// The index used to annotate the first child semantics node.
 	Index int
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // IndexedStack maps IndexedStack of package:flutter/widgets.dart.
+//
+// A Stack that shows a single child from a list of children.
 //
 // TextDirection takes "rtl", or "ltr".
 //
@@ -1480,97 +3055,183 @@ type IndexedSemantics struct {
 //
 // Sizing takes "loose", "expand", or "passthrough".
 type IndexedStack struct {
-	Alignment     *string
+	// How to align the non-positioned and partially-positioned children in the
+	// stack.
+	Alignment *string
+
+	// The text direction with which to resolve alignment.
 	TextDirection *string
-	ClipBehavior  *string
-	Sizing        *string
-	Index         *int
-	Children      []Node
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// How to size the non-positioned children in the stack.
+	Sizing *string
+
+	// The index of the child to show.
+	Index *int
+
+	// The child widgets of the stack.
+	Children []Node
 }
 
 // InteractiveViewer maps InteractiveViewer of package:flutter/widgets.dart.
+//
+// A widget that enables pan and zoom interactions with its child.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
 // PanAxis takes "horizontal", "vertical", "aligned", or "free".
 type InteractiveViewer struct {
-	ClipBehavior              *string
-	PanAxis                   *string
-	BoundaryMargin            *Insets
-	Constrained               *bool
-	MaxScale                  *float64
-	MinScale                  *float64
-	PanEnabled                *bool
-	ScaleEnabled              *bool
-	ScaleFactor               *float64
+	// If set to none, the child may extend beyond the size of the
+	// InteractiveViewer, but it will not receive gestures in these areas.
+	ClipBehavior *string
+
+	// When set to aligned, panning is only allowed in the horizontal axis or
+	// the vertical axis, diagonal panning is not allowed.
+	PanAxis *string
+
+	// A margin for the visible boundaries of the child.
+	BoundaryMargin *Insets
+
+	// Whether the normal size constraints at this point in the widget tree are
+	// applied to the child.
+	Constrained *bool
+
+	// The maximum allowed scale.
+	MaxScale *float64
+
+	// The minimum allowed scale.
+	MinScale *float64
+
+	// If false, the user will be prevented from panning.
+	PanEnabled *bool
+
+	// If false, the user will be prevented from scaling.
+	ScaleEnabled *bool
+
+	// Determines the amount of scale to be performed per pointer scroll.
+	ScaleFactor *float64
+
+	// The alignment of the child's origin, relative to the size of the box.
 	Alignment                 *string
 	TrackpadScrollCausesScale *bool
-	Child                     Node
+
+	// The child Widget that is transformed by InteractiveViewer.
+	Child Node
 }
 
 // IntrinsicHeight maps IntrinsicHeight of package:flutter/widgets.dart.
+//
+// A widget that sizes its child to the child's intrinsic height.
 type IntrinsicHeight struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // IntrinsicWidth maps IntrinsicWidth of package:flutter/widgets.dart.
+//
+// A widget that sizes its child to the child's maximum intrinsic width.
 type IntrinsicWidth struct {
-	StepWidth  *float64
+	// If non-null, force the child's width to be a multiple of this value.
+	StepWidth *float64
+
+	// If non-null, force the child's height to be a multiple of this value.
 	StepHeight *float64
-	Child      Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // KeepAlive maps KeepAlive of package:flutter/widgets.dart.
+//
+// Mark a child as needing to stay alive even when it's in a lazy list that
+// would otherwise remove it.
 type KeepAlive struct {
+	// Whether to keep the child alive.
 	KeepAlive bool
-	Child     Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // KeyboardListener maps KeyboardListener of package:flutter/widgets.dart.
+//
+// A widget that calls a callback whenever the user presses or releases a
+// key on a keyboard.
 type KeyboardListener struct {
+	// Controls whether this widget has keyboard focus.
 	FocusNode        FocusKey
 	Autofocus        *bool
 	IncludeSemantics *bool
-	Child            Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // KeyedSubtree maps KeyedSubtree of package:flutter/widgets.dart.
+//
+// A widget that builds its child.
 type KeyedSubtree struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // KeyedSubtreeWrap maps KeyedSubtree.wrap of package:flutter/widgets.dart.
+//
+// A widget that builds its child.
 type KeyedSubtreeWrap struct {
+	// The widget below this widget in the tree.
 	Child      Node
 	ChildIndex int
 }
 
 // LayoutBuilder maps LayoutBuilder of package:flutter/widgets.dart.
+//
+// Builds a widget tree that can depend on the parent widget's size.
 type LayoutBuilder struct {
 	Builder BoxBuilder
 }
 
 // LayoutId maps LayoutId of package:flutter/widgets.dart.
+//
+// Metadata for identifying children in a CustomMultiChildLayout.
 type LayoutId struct {
-	Id    string
+	// An object representing the identity of this child.
+	Id string
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // LimitedBox maps LimitedBox of package:flutter/widgets.dart.
+//
+// A box that limits its size only when it's unconstrained.
 type LimitedBox struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // ListBody maps ListBody of package:flutter/widgets.dart.
 //
+// A widget that arranges its children sequentially along a given axis,
+// forcing them to the dimension of the parent in the other axis.
+//
 // MainAxis takes "horizontal", or "vertical".
 type ListBody struct {
+	// The direction to use as the main axis.
 	MainAxis *string
-	Reverse  *bool
+
+	// Whether the list body positions children in the reading direction.
+	Reverse *bool
+
+	// The widgets below this widget in the tree.
 	Children []Node
 }
 
 // ListView maps ListView of package:flutter/widgets.dart.
+//
+// A scrollable list of widgets arranged linearly.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1582,30 +3243,66 @@ type ListBody struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type ListView struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Padding                 *Insets
-	ItemExtent              *float64
-	ItemExtentBuilder       ExtentBuilder
-	PrototypeItem           Node
-	AddAutomaticKeepAlives  *bool
-	AddRepaintBoundaries    *bool
-	AddSemanticIndexes      *bool
-	CacheExtent             *float64
-	Children                []Node
-	SemanticChildCount      *int
-	DragStartBehavior       *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The amount of space by which to inset the children.
+	Padding *Insets
+
+	// If non-null, forces the children to have the given extent in the scroll
+	// direction.
+	ItemExtent *float64
+
+	// If non-null, forces the children to have the corresponding extent
+	// returned by the builder.
+	ItemExtentBuilder ExtentBuilder
+
+	// If non-null, forces the children to have the same extent as the given
+	// widget in the scroll direction.
+	PrototypeItem          Node
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+	CacheExtent            *float64
+	Children               []Node
+
+	// The number of children that will contribute semantic information.
+	SemanticChildCount *int
+	DragStartBehavior  *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // ListViewBuilder maps ListView.builder of package:flutter/widgets.dart.
+//
+// A scrollable list of widgets arranged linearly.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1617,31 +3314,67 @@ type ListView struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type ListViewBuilder struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Padding                 *Insets
-	ItemExtent              *float64
-	ItemExtentBuilder       ExtentBuilder
-	PrototypeItem           Node
-	ItemBuilder             ItemBuilder
-	ItemCount               *int
-	AddAutomaticKeepAlives  *bool
-	AddRepaintBoundaries    *bool
-	AddSemanticIndexes      *bool
-	CacheExtent             *float64
-	SemanticChildCount      *int
-	DragStartBehavior       *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The amount of space by which to inset the children.
+	Padding *Insets
+
+	// If non-null, forces the children to have the given extent in the scroll
+	// direction.
+	ItemExtent *float64
+
+	// If non-null, forces the children to have the corresponding extent
+	// returned by the builder.
+	ItemExtentBuilder ExtentBuilder
+
+	// If non-null, forces the children to have the same extent as the given
+	// widget in the scroll direction.
+	PrototypeItem          Node
+	ItemBuilder            ItemBuilder
+	ItemCount              *int
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+	CacheExtent            *float64
+
+	// The number of children that will contribute semantic information.
+	SemanticChildCount *int
+	DragStartBehavior  *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // ListViewCustom maps ListView.custom of package:flutter/widgets.dart.
+//
+// A scrollable list of widgets arranged linearly.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1653,27 +3386,65 @@ type ListViewBuilder struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type ListViewCustom struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Padding                 *Insets
-	ItemExtent              *float64
-	PrototypeItem           Node
-	ItemExtentBuilder       ExtentBuilder
-	ChildrenDelegate        SliverChildren
-	CacheExtent             *float64
-	SemanticChildCount      *int
-	DragStartBehavior       *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The amount of space by which to inset the children.
+	Padding *Insets
+
+	// If non-null, forces the children to have the given extent in the scroll
+	// direction.
+	ItemExtent *float64
+
+	// If non-null, forces the children to have the same extent as the given
+	// widget in the scroll direction.
+	PrototypeItem Node
+
+	// If non-null, forces the children to have the corresponding extent
+	// returned by the builder.
+	ItemExtentBuilder ExtentBuilder
+
+	// A delegate that provides the children for the ListView.
+	ChildrenDelegate SliverChildren
+	CacheExtent      *float64
+
+	// The number of children that will contribute semantic information.
+	SemanticChildCount *int
+	DragStartBehavior  *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // ListViewSeparated maps ListView.separated of package:flutter/widgets.dart.
+//
+// A scrollable list of widgets arranged linearly.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1685,28 +3456,53 @@ type ListViewCustom struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type ListViewSeparated struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Controller              *ScrollKey
-	Primary                 *bool
-	Physics                 *string
-	ShrinkWrap              *bool
-	Padding                 *Insets
-	ItemBuilder             ItemBuilder
-	SeparatorBuilder        ItemBuilder
-	ItemCount               int
-	AddAutomaticKeepAlives  *bool
-	AddRepaintBoundaries    *bool
-	AddSemanticIndexes      *bool
-	CacheExtent             *float64
-	DragStartBehavior       *string
+	// The Axis along which the scroll view's offset increases.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// Whether this is the primary scroll view associated with the parent
+	// PrimaryScrollController.
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// Whether the extent of the scroll view in the scrollDirection should be
+	// determined by the contents being viewed.
+	ShrinkWrap *bool
+
+	// The amount of space by which to inset the children.
+	Padding                *Insets
+	ItemBuilder            ItemBuilder
+	SeparatorBuilder       ItemBuilder
+	ItemCount              int
+	AddAutomaticKeepAlives *bool
+	AddRepaintBoundaries   *bool
+	AddSemanticIndexes     *bool
+	CacheExtent            *float64
+	DragStartBehavior      *string
+
+	// The ScrollViewKeyboardDismissBehavior defines how this ScrollView will
+	// dismiss the keyboard automatically.
 	KeyboardDismissBehavior *string
 	RestorationId           *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
 }
 
 // ListWheelScrollView maps ListWheelScrollView of package:flutter/widgets.dart.
+//
+// A box in which children on a wheel can be scrolled.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
@@ -1716,103 +3512,206 @@ type ListViewSeparated struct {
 //
 // ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
 type ListWheelScrollView struct {
-	Controller                    *ScrollKey
-	Physics                       *string
-	DiameterRatio                 *float64
-	Perspective                   *float64
-	OffAxisFraction               *float64
-	UseMagnifier                  *bool
-	Magnification                 *float64
-	OverAndUnderCenterOpacity     *float64
-	ItemExtent                    float64
-	Squeeze                       *float64
+	// Typically a FixedExtentScrollController used to control the current
+	// item.
+	Controller *ScrollKey
+
+	// How the scroll view should respond to user input.
+	Physics                   *string
+	DiameterRatio             *float64
+	Perspective               *float64
+	OffAxisFraction           *float64
+	UseMagnifier              *bool
+	Magnification             *float64
+	OverAndUnderCenterOpacity *float64
+
+	// Size of each child in the main axis.
+	ItemExtent float64
+
+	// Defaults to 1.
+	Squeeze *float64
+
+	// On optional listener that's called when the centered item changes.
 	OnSelectedItemChanged         func(int)
 	RenderChildrenOutsideViewport *bool
-	ClipBehavior                  *string
-	HitTestBehavior               *string
-	RestorationId                 *string
-	DragStartBehavior             *string
-	ChangeReportingBehavior       *string
-	Children                      []Node
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior   *string
+	RestorationId     *string
+	DragStartBehavior *string
+
+	// The behavior of reporting the selected item index.
+	ChangeReportingBehavior *string
+	Children                []Node
 }
 
 // Listener maps Listener of package:flutter/widgets.dart.
 //
+// A widget that calls callbacks in response to common pointer events.
+//
 // Behavior takes "deferToChild", "opaque", or "translucent".
 type Listener struct {
+	// How to behave during hit testing.
 	Behavior *string
-	Child    Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // LongPressDraggable maps LongPressDraggable of package:flutter/widgets.dart.
+//
+// Makes its child draggable starting from long press.
 //
 // Axis takes "horizontal", or "vertical".
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type LongPressDraggable struct {
-	Child                     Node
-	Feedback                  Node
-	Axis                      *string
-	ChildWhenDragging         Node
-	FeedbackOffset            *Offset
-	MaxSimultaneousDrags      *int
-	OnDragStarted             func()
-	OnDragCompleted           func()
-	HapticFeedbackOnStart     *bool
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The widget to show under the pointer when a drag is under way.
+	Feedback Node
+
+	// The Axis to restrict this draggable's movement, if specified.
+	Axis *string
+
+	// The widget to display instead of child when one or more drags are under
+	// way.
+	ChildWhenDragging Node
+
+	// The feedbackOffset can be used to set the hit test target point for the
+	// purposes of finding a drag target.
+	FeedbackOffset *Offset
+
+	// How many simultaneous drags to support.
+	MaxSimultaneousDrags *int
+
+	// Called when the draggable starts being dragged.
+	OnDragStarted func()
+
+	// Called when the draggable is dropped and accepted by a DragTarget.
+	OnDragCompleted func()
+
+	// Whether haptic feedback should be triggered on drag start.
+	HapticFeedbackOnStart *bool
+
+	// Whether the semantics of the feedback widget is ignored when building
+	// the semantics tree.
 	IgnoringFeedbackSemantics *bool
-	IgnoringFeedbackPointer   *bool
-	Delay                     *int
-	HitTestBehavior           *string
-	RootOverlay               *bool
+
+	// Whether the feedback widget is ignored during hit testing.
+	IgnoringFeedbackPointer *bool
+
+	// The duration that a user has to press down before a long press is
+	// registered.
+	Delay *int
+
+	// How to behave during hit test.
+	HitTestBehavior *string
+
+	// Whether the feedback widget will be put on the root Overlay.
+	RootOverlay *bool
 }
 
 // LookupBoundary maps LookupBoundary of package:flutter/widgets.dart.
+//
+// A lookup boundary controls what entities are visible to descendants of
+// the boundary via the static lookup methods provided by the boundary.
 type LookupBoundary struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // MergeSemantics maps MergeSemantics of package:flutter/widgets.dart.
+//
+// A widget that merges the semantics of its descendants.
 type MergeSemantics struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // MetaData maps MetaData of package:flutter/widgets.dart.
 //
+// Holds opaque meta data in the render tree.
+//
 // Behavior takes "deferToChild", "opaque", or "translucent".
 type MetaData struct {
+	// How to behave during hit testing.
 	Behavior *string
-	Child    Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // ModalBarrier maps ModalBarrier of package:flutter/widgets.dart.
+//
+// A widget that prevents the user from interacting with widgets behind
+// itself.
 type ModalBarrier struct {
-	Color                       *Color
-	Dismissible                 *bool
-	OnDismiss                   func()
-	SemanticsLabel              *string
+	// If non-null, fill the barrier with this color.
+	Color *Color
+
+	// Specifies if the barrier will be dismissed when the user taps on it.
+	Dismissible *bool
+
+	// Called when the barrier is being dismissed.
+	OnDismiss func()
+
+	// Semantics label used for the barrier if it is dismissible.
+	SemanticsLabel *string
+
+	// Whether the modal barrier semantics are included in the semantics tree.
 	BarrierSemanticsDismissible *bool
 	SemanticsOnTapHint          *string
 }
 
 // MouseRegion maps MouseRegion of package:flutter/widgets.dart.
 //
+// A widget that tracks the movement of mice.
+//
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type MouseRegion struct {
-	Cursor          *string
-	Opaque          *bool
+	// The mouse cursor for mouse pointers that are hovering over the region.
+	Cursor *string
+
+	// Whether this widget should prevent other MouseRegions visually behind it
+	// from detecting the pointer.
+	Opaque *bool
+
+	// How to behave during hit testing.
 	HitTestBehavior *string
-	Child           Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // NavigationToolbar maps NavigationToolbar of package:flutter/widgets.dart.
+//
+// NavigationToolbar is a layout helper to position 3 widgets or groups of
+// widgets along a horizontal axis that's sensible for an application's
+// navigation bar such as in Material Design and in iOS.
 type NavigationToolbar struct {
-	Leading      Node
-	Middle       Node
-	Trailing     Node
+	// Widget to place at the start of the horizontal toolbar.
+	Leading Node
+
+	// Widget to place in the middle of the horizontal toolbar, occupying as
+	// much remaining space as possible.
+	Middle Node
+
+	// Widget to place at the end of the horizontal toolbar.
+	Trailing Node
+
+	// Whether to align the middle widget to the center of this widget or next
+	// to the leading widget when false.
 	CenterMiddle *bool
 }
 
 // Navigator maps Navigator of package:flutter/widgets.dart.
+//
+// A widget that manages a set of child widgets with a stack discipline.
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 //
@@ -1820,23 +3719,54 @@ type NavigationToolbar struct {
 //
 // RouteDirectionalTraversalEdgeBehavior takes "closedLoop", "leaveFlutterView", "parentScope", or "stop".
 type Navigator struct {
-	InitialRoute                          *string
-	ReportsRouteUpdateToEngine            *bool
-	ClipBehavior                          *string
-	RequestFocus                          *bool
-	RestorationScopeId                    *string
-	RouteTraversalEdgeBehavior            *string
+	// The name of the first route to show.
+	InitialRoute *string
+
+	// Whether this navigator should report route update message back to the
+	// engine when the top-most route changes.
+	ReportsRouteUpdateToEngine *bool
+
+	// In cases where clipping is not desired, consider setting this property
+	// to none.
+	ClipBehavior *string
+
+	// Whether or not the navigator and it's new topmost route should request
+	// focus when the new route is pushed onto the navigator.
+	RequestFocus *bool
+
+	// Restoration ID to save and restore the state of the navigator, including
+	// its history.
+	RestorationScopeId *string
+
+	// Controls the transfer of focus beyond the first and the last items of a
+	// focus scope that defines focus traversal of widgets within a route.
+	RouteTraversalEdgeBehavior *string
+
+	// Controls the directional transfer of focus beyond the first and the last
+	// items of a focus scope that defines focus traversal of widgets within a
+	// route.
 	RouteDirectionalTraversalEdgeBehavior *string
 }
 
 // NavigatorPopHandler maps NavigatorPopHandler of package:flutter/widgets.dart.
+//
+// Enables the handling of system back gestures.
 type NavigatorPopHandler struct {
-	OnPop   func()
+	// Called when a handleable pop event happens.
+	OnPop func()
+
+	// Whether this widget's ability to handle system back gestures is enabled
+	// or disabled.
 	Enabled *bool
-	Child   Node
+
+	// The widget to place below this in the widget tree.
+	Child Node
 }
 
 // NestedScrollView maps NestedScrollView of package:flutter/widgets.dart.
+//
+// A scrolling view inside of which can be nested other scrolling views,
+// with their scroll positions being intrinsically linked.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1846,43 +3776,89 @@ type NavigatorPopHandler struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type NestedScrollView struct {
-	Controller          *ScrollKey
-	ScrollDirection     *string
-	Reverse             *bool
-	Physics             *string
+	// An object that can be used to control the position to which the outer
+	// scroll view is scrolled.
+	Controller *ScrollKey
+
+	// This property only applies to the Axis of the outer scroll view,
+	// composed of the slivers returned from headerSliverBuilder.
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// A builder for any widgets that are to precede the inner scroll views (as
+	// given by body).
 	HeaderSliverBuilder SliverBuilder
-	Body                Node
-	DragStartBehavior   *string
-	FloatHeaderSlivers  *bool
-	ClipBehavior        *string
-	HitTestBehavior     *string
-	RestorationId       *string
+
+	// The widget to show inside the NestedScrollView.
+	Body              Node
+	DragStartBehavior *string
+
+	// Whether or not the NestedScrollView's coordinator should prioritize the
+	// outer scrollable over the inner when scrolling back.
+	FloatHeaderSlivers *bool
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
+	RestorationId   *string
 }
 
 // NotificationListener maps NotificationListener of package:flutter/widgets.dart.
+//
+// A widget that listens for Notifications bubbling up the tree.
 type NotificationListener struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // Offstage maps Offstage of package:flutter/widgets.dart.
+//
+// A widget that lays the child out as if it was in the tree, but without
+// painting anything, without making the child available for hit testing,
+// and without taking any room in the parent.
 type Offstage struct {
+	// Whether the child is hidden from the rest of the tree.
 	Offstage *bool
-	Child    Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Opacity maps Opacity of package:flutter/widgets.dart.
+//
+// A widget that makes its child partially transparent.
 type Opacity struct {
-	Opacity                float64
+	// The fraction to scale the child's alpha value.
+	Opacity float64
+
+	// Whether the semantic information of the children is always included.
 	AlwaysIncludeSemantics *bool
-	Child                  Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // OrientationBuilder maps OrientationBuilder of package:flutter/widgets.dart.
+//
+// Builds a widget tree that can depend on the parent widget's orientation
+// (distinct from the device orientation).
 type OrientationBuilder struct {
+	// Builds the widgets below this widget given this widget's orientation.
 	Builder OrientBuilder
 }
 
 // OverflowBar maps OverflowBar of package:flutter/widgets.dart.
+//
+// A widget that lays out its children in a row unless they "overflow" the
+// available horizontal space, in which case it lays them out in a column
+// instead.
 //
 // Alignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
 //
@@ -1892,66 +3868,138 @@ type OrientationBuilder struct {
 //
 // TextDirection takes "rtl", or "ltr".
 type OverflowBar struct {
-	Spacing           *float64
-	Alignment         *string
-	OverflowSpacing   *float64
+	// The width of the gap between children for the default horizontal layout.
+	Spacing *float64
+
+	// Defines the children's horizontal layout according to the same rules as
+	// for mainAxisAlignment.
+	Alignment *string
+
+	// The height of the gap between children in the vertical "overflow"
+	// layout.
+	OverflowSpacing *float64
+
+	// The horizontal alignment of the children within the vertical "overflow"
+	// layout.
 	OverflowAlignment *string
+
+	// Defines the order that the children appear in, if the horizontal layout
+	// overflows.
 	OverflowDirection *string
-	TextDirection     *string
-	Children          []Node
+
+	// Determines the order that the children appear in for the default
+	// horizontal layout, and the interpretation of start and end for the
+	// vertical overflow layout.
+	TextDirection *string
+
+	// The widgets below this widget in the tree.
+	Children []Node
 }
 
 // OverflowBox maps OverflowBox of package:flutter/widgets.dart.
 //
+// A widget that imposes different constraints on its child than it gets
+// from its parent, possibly allowing the child to overflow the parent.
+//
 // Fit takes "max", or "deferToChild".
 type OverflowBox struct {
+	// How to align the child.
 	Alignment *string
-	MinWidth  *float64
-	MaxWidth  *float64
+
+	// The minimum width constraint to give the child.
+	MinWidth *float64
+
+	// The maximum width constraint to give the child.
+	MaxWidth *float64
+
+	// The minimum height constraint to give the child.
 	MinHeight *float64
+
+	// The maximum height constraint to give the child.
 	MaxHeight *float64
-	Fit       *string
-	Child     Node
+
+	// The way to size the render object.
+	Fit *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Overlay maps Overlay of package:flutter/widgets.dart.
 //
+// A stack of entries that can be managed independently.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Overlay struct {
-	ClipBehavior        *string
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Determines that the overlay should always size itself to content.
 	AlwaysSizeToContent *bool
 }
 
 // OverlayPortal maps OverlayPortal of package:flutter/widgets.dart.
 //
+// A widget that renders its overlay child on an Overlay.
+//
 // OverlayLocation takes "nearestOverlay", or "rootOverlay".
 type OverlayPortal struct {
-	Controller          OverlayKey
+	// The controller to show, hide and bring to top the overlay child.
+	Controller OverlayKey
+
+	// A WidgetBuilder used to build a widget below this widget in the tree,
+	// that renders on the closest Overlay.
 	OverlayChildBuilder Builder
-	OverlayLocation     *string
-	Child               Node
+
+	// The Overlay that the widget returns from overlayChildBuilder is attached
+	// to.
+	OverlayLocation *string
+
+	// A widget below this widget in the tree.
+	Child Node
 }
 
 // OverlayPortalTargetsRootOverlay maps OverlayPortal.targetsRootOverlay of package:flutter/widgets.dart.
+//
+// A widget that renders its overlay child on an Overlay.
 type OverlayPortalTargetsRootOverlay struct {
-	Controller          OverlayKey
+	// The controller to show, hide and bring to top the overlay child.
+	Controller OverlayKey
+
+	// A WidgetBuilder used to build a widget below this widget in the tree,
+	// that renders on the closest Overlay.
 	OverlayChildBuilder Builder
-	Child               Node
+
+	// A widget below this widget in the tree.
+	Child Node
 }
 
 // Padding maps Padding of package:flutter/widgets.dart.
+//
+// A widget that insets its child by the given padding.
 type Padding struct {
+	// The amount of space by which to inset the child.
 	Padding Insets
-	Child   Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // PageStorage maps PageStorage of package:flutter/widgets.dart.
+//
+// Establish a subtree in which widgets can opt into persisting states after
+// being destroyed.
 type PageStorage struct {
+	// The page storage bucket to use for this subtree.
 	Bucket StorageKey
-	Child  Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // PageView maps PageView of package:flutter/widgets.dart.
+//
+// A scrollable list that works page by page.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1961,21 +4009,42 @@ type PageStorage struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type PageView struct {
-	ScrollDirection        *string
-	Reverse                *bool
-	Physics                *string
-	PageSnapping           *bool
-	OnPageChanged          func(int)
-	Children               []Node
-	DragStartBehavior      *string
+	// The Axis along which the scroll view's offset increases with each page.
+	ScrollDirection *string
+
+	// Whether the page view scrolls in the reading direction.
+	Reverse *bool
+
+	// How the page view should respond to user input.
+	Physics *string
+
+	// Set to false to disable page snapping, useful for custom scroll
+	// behavior.
+	PageSnapping *bool
+
+	// Called whenever the page in the center of the viewport changes.
+	OnPageChanged     func(int)
+	Children          []Node
+	DragStartBehavior *string
+
+	// Controls whether the widget's pages will respond to showOnScreen, which
+	// will allow for implicit accessibility scrolling.
 	AllowImplicitScrolling *bool
 	RestorationId          *string
-	ClipBehavior           *string
-	HitTestBehavior        *string
-	PadEnds                *bool
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
+
+	// Whether to add padding to both ends of the list.
+	PadEnds *bool
 }
 
 // PageViewBuilder maps PageView.builder of package:flutter/widgets.dart.
+//
+// A scrollable list that works page by page.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -1985,22 +4054,43 @@ type PageView struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type PageViewBuilder struct {
-	ScrollDirection        *string
-	Reverse                *bool
-	Physics                *string
-	PageSnapping           *bool
-	OnPageChanged          func(int)
-	ItemBuilder            ItemBuilder
-	ItemCount              *int
-	DragStartBehavior      *string
+	// The Axis along which the scroll view's offset increases with each page.
+	ScrollDirection *string
+
+	// Whether the page view scrolls in the reading direction.
+	Reverse *bool
+
+	// How the page view should respond to user input.
+	Physics *string
+
+	// Set to false to disable page snapping, useful for custom scroll
+	// behavior.
+	PageSnapping *bool
+
+	// Called whenever the page in the center of the viewport changes.
+	OnPageChanged     func(int)
+	ItemBuilder       ItemBuilder
+	ItemCount         *int
+	DragStartBehavior *string
+
+	// Controls whether the widget's pages will respond to showOnScreen, which
+	// will allow for implicit accessibility scrolling.
 	AllowImplicitScrolling *bool
 	RestorationId          *string
-	ClipBehavior           *string
-	HitTestBehavior        *string
-	PadEnds                *bool
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
+
+	// Whether to add padding to both ends of the list.
+	PadEnds *bool
 }
 
 // PageViewCustom maps PageView.custom of package:flutter/widgets.dart.
+//
+// A scrollable list that works page by page.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -2010,146 +4100,298 @@ type PageViewBuilder struct {
 //
 // HitTestBehavior takes "deferToChild", "opaque", or "translucent".
 type PageViewCustom struct {
-	ScrollDirection        *string
-	Reverse                *bool
-	Physics                *string
-	PageSnapping           *bool
-	OnPageChanged          func(int)
-	ChildrenDelegate       SliverChildren
-	DragStartBehavior      *string
+	// The Axis along which the scroll view's offset increases with each page.
+	ScrollDirection *string
+
+	// Whether the page view scrolls in the reading direction.
+	Reverse *bool
+
+	// How the page view should respond to user input.
+	Physics *string
+
+	// Set to false to disable page snapping, useful for custom scroll
+	// behavior.
+	PageSnapping *bool
+
+	// Called whenever the page in the center of the viewport changes.
+	OnPageChanged func(int)
+
+	// A delegate that provides the children for the PageView.
+	ChildrenDelegate  SliverChildren
+	DragStartBehavior *string
+
+	// Controls whether the widget's pages will respond to showOnScreen, which
+	// will allow for implicit accessibility scrolling.
 	AllowImplicitScrolling *bool
 	RestorationId          *string
-	ClipBehavior           *string
-	HitTestBehavior        *string
-	PadEnds                *bool
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
+
+	// Whether to add padding to both ends of the list.
+	PadEnds *bool
 }
 
 // PerformanceOverlay maps PerformanceOverlay of package:flutter/widgets.dart.
+//
+// Displays performance statistics.
 type PerformanceOverlay struct {
+	// The mask is created by shifting 1 by the index of the specific
+	// PerformanceOverlayOption to enable.
 	OptionsMask *int
 }
 
 // PerformanceOverlayAllEnabled maps PerformanceOverlay.allEnabled of package:flutter/widgets.dart.
+//
+// Displays performance statistics.
 type PerformanceOverlayAllEnabled struct {
 }
 
 // PhysicalModel maps PhysicalModel of package:flutter/widgets.dart.
 //
+// A widget representing a physical layer that clips its children to a
+// shape.
+//
 // Shape takes "rectangle", or "circle".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type PhysicalModel struct {
-	Shape        *string
+	// The type of shape.
+	Shape *string
+
+	// Defaults to none.
 	ClipBehavior *string
+
+	// The border radius of the rounded corners.
 	BorderRadius *Radius
-	Elevation    *float64
-	Color        Color
-	ShadowColor  *Color
-	Child        Node
+
+	// The z-coordinate relative to the parent at which to place this physical
+	// object.
+	Elevation *float64
+
+	// The background color.
+	Color Color
+
+	// The shadow color.
+	ShadowColor *Color
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // PinnedHeaderSliver maps PinnedHeaderSliver of package:flutter/widgets.dart.
+//
+// A sliver that keeps its Widget child at the top of the a
+// CustomScrollView.
 type PinnedHeaderSliver struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // Placeholder maps Placeholder of package:flutter/widgets.dart.
+//
+// A widget that draws a box that represents where other widgets will one
+// day be added.
 type Placeholder struct {
-	Color          *Color
-	StrokeWidth    *float64
-	FallbackWidth  *float64
+	// The color to draw the placeholder box.
+	Color *Color
+
+	// The width of the lines in the placeholder box.
+	StrokeWidth *float64
+
+	// The width to use when the placeholder is in a situation with an
+	// unbounded width.
+	FallbackWidth *float64
+
+	// The height to use when the placeholder is in a situation with an
+	// unbounded height.
 	FallbackHeight *float64
-	Child          Node
+
+	// The child contained by the placeholder box.
+	Child Node
 }
 
 // PlatformSelectableRegionContextMenu maps PlatformSelectableRegionContextMenu of package:flutter/widgets.dart.
+//
+// A widget that provides native selection context menu for its child
+// subtree.
 type PlatformSelectableRegionContextMenu struct {
 	Child Node
 }
 
 // PopScope maps PopScope of package:flutter/widgets.dart.
+//
+// Manages back navigation gestures.
 type PopScope struct {
-	Child        Node
-	CanPop       *bool
+	// The widget below this widget in the tree.
+	Child Node
+
+	// When false, blocks the current route from being popped.
+	CanPop *bool
+
+	// Called after a route pop was handled.
 	OnPopInvoked func(bool)
 }
 
 // Positioned maps Positioned of package:flutter/widgets.dart.
+//
+// A widget that controls where a child of a Stack is positioned.
 type Positioned struct {
-	Left   *float64
-	Top    *float64
-	Right  *float64
+	// The distance that the child's left edge is inset from the left of the
+	// stack.
+	Left *float64
+
+	// The distance that the child's top edge is inset from the top of the
+	// stack.
+	Top *float64
+
+	// The distance that the child's right edge is inset from the right of the
+	// stack.
+	Right *float64
+
+	// The distance that the child's bottom edge is inset from the bottom of
+	// the stack.
 	Bottom *float64
-	Width  *float64
+
+	// The child's width.
+	Width *float64
+
+	// The child's height.
 	Height *float64
-	Child  Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // PositionedDirectional maps Positioned.directional of package:flutter/widgets.dart.
+//
+// A widget that controls where a child of a Stack is positioned.
 //
 // TextDirection takes "rtl", or "ltr".
 type PositionedDirectional struct {
 	TextDirection string
 	Start         *float64
-	Top           *float64
-	End           *float64
-	Bottom        *float64
-	Width         *float64
-	Height        *float64
-	Child         Node
+
+	// The distance that the child's top edge is inset from the top of the
+	// stack.
+	Top *float64
+	End *float64
+
+	// The distance that the child's bottom edge is inset from the bottom of
+	// the stack.
+	Bottom *float64
+
+	// The child's width.
+	Width *float64
+
+	// The child's height.
+	Height *float64
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // PositionedFill maps Positioned.fill of package:flutter/widgets.dart.
+//
+// A widget that controls where a child of a Stack is positioned.
 type PositionedFill struct {
-	Left   *float64
-	Top    *float64
-	Right  *float64
+	// The distance that the child's left edge is inset from the left of the
+	// stack.
+	Left *float64
+
+	// The distance that the child's top edge is inset from the top of the
+	// stack.
+	Top *float64
+
+	// The distance that the child's right edge is inset from the right of the
+	// stack.
+	Right *float64
+
+	// The distance that the child's bottom edge is inset from the bottom of
+	// the stack.
 	Bottom *float64
-	Child  Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // PositionedFromRect maps Positioned.fromRect of package:flutter/widgets.dart.
+//
+// A widget that controls where a child of a Stack is positioned.
 type PositionedFromRect struct {
-	Rect  Rect
+	Rect Rect
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // PositionedFromRelativeRect maps Positioned.fromRelativeRect of package:flutter/widgets.dart.
+//
+// A widget that controls where a child of a Stack is positioned.
 type PositionedFromRelativeRect struct {
-	Rect  Rect
+	Rect Rect
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // PreferredSize maps PreferredSize of package:flutter/widgets.dart.
+//
+// A widget with a preferred size.
 type PreferredSize struct {
 	PreferredSize Size
-	Child         Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // PrimaryScrollController maps PrimaryScrollController of package:flutter/widgets.dart.
 //
+// Associates a ScrollController with a subtree.
+//
 // ScrollDirection takes "horizontal", or "vertical".
 type PrimaryScrollController struct {
-	Controller      ScrollKey
+	// The ScrollController associated with the subtree.
+	Controller ScrollKey
+
+	// The Axis this controller is configured for ScrollViews to automatically
+	// inherit.
 	ScrollDirection *string
-	Child           Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // PrimaryScrollControllerNone maps PrimaryScrollController.none of package:flutter/widgets.dart.
+//
+// Associates a ScrollController with a subtree.
 type PrimaryScrollControllerNone struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // RawGestureDetector maps RawGestureDetector of package:flutter/widgets.dart.
 //
+// A widget that detects gestures described by the given gesture factories.
+//
 // Behavior takes "deferToChild", "opaque", or "translucent".
 type RawGestureDetector struct {
-	Child                Node
-	Behavior             *string
+	// The widget below this widget in the tree.
+	Child Node
+
+	// How this gesture detector should behave during hit testing.
+	Behavior *string
+
+	// Whether to exclude these gestures from the semantics tree.
 	ExcludeFromSemantics *bool
 }
 
 // RawImage maps RawImage of package:flutter/widgets.dart.
+//
+// A widget that displays a Image directly.
 //
 // ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 //
@@ -2159,84 +4401,197 @@ type RawGestureDetector struct {
 //
 // FilterQuality takes "none", "low", "medium", or "high".
 type RawImage struct {
-	DebugImageLabel    *string
-	Width              *float64
-	Height             *float64
-	Scale              *float64
-	Color              *Color
-	Opacity            *AnimationKey
-	ColorBlendMode     *string
-	Fit                *string
-	Alignment          *string
-	Repeat             *string
-	CenterSlice        *Rect
+	// A string identifying the source of the image.
+	DebugImageLabel *string
+
+	// If non-null, require the image to have this width.
+	Width *float64
+
+	// If non-null, require the image to have this height.
+	Height *float64
+
+	// The linear scale factor for drawing this image at its intended size.
+	Scale *float64
+
+	// If non-null, this color is blended with each image pixel using
+	// colorBlendMode.
+	Color *Color
+
+	// If non-null, the value from the Animation is multiplied with the opacity
+	// of each image pixel before painting onto the canvas.
+	Opacity *AnimationKey
+
+	// Used to combine color with this image.
+	ColorBlendMode *string
+
+	// How to inscribe the image into the space allocated during layout.
+	Fit *string
+
+	// How to align the image within its bounds.
+	Alignment *string
+
+	// How to paint any portions of the layout bounds not covered by the image.
+	Repeat *string
+
+	// The center slice for a nine-patch image.
+	CenterSlice *Rect
+
+	// Whether to paint the image in the direction of the TextDirection.
 	MatchTextDirection *bool
-	InvertColors       *bool
-	FilterQuality      *string
-	IsAntiAlias        *bool
+
+	// Whether the colors of the image are inverted when drawn.
+	InvertColors *bool
+
+	// Used to set the filterQuality of the image.
+	FilterQuality *string
+
+	// Whether to paint the image with anti-aliasing.
+	IsAntiAlias *bool
 }
 
 // RawKeyboardListener maps RawKeyboardListener of package:flutter/widgets.dart.
+//
+// A widget that calls a callback whenever the user presses or releases a
+// key on a keyboard.
 type RawKeyboardListener struct {
+	// Controls whether this widget has keyboard focus.
 	FocusNode        FocusKey
 	Autofocus        *bool
 	IncludeSemantics *bool
-	Child            Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // RawMagnifier maps RawMagnifier of package:flutter/widgets.dart.
 //
+// A common base class for magnifiers.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type RawMagnifier struct {
-	Child              Node
-	ClipBehavior       *string
-	FocalPointOffset   *Offset
+	// An optional widget to position inside the len of the RawMagnifier.
+	Child Node
+
+	// Whether and how to clip the parts of decoration that render inside the
+	// loupe.
+	ClipBehavior *string
+
+	// The offset of the magnifier from RawMagnifier's center.
+	FocalPointOffset *Offset
+
+	// How "zoomed in" the magnification subject is in the lens.
 	MagnificationScale *float64
-	Size               Size
+
+	// The size of the magnifier.
+	Size Size
 }
 
 // RawMenuAnchorGroup maps RawMenuAnchorGroup of package:flutter/widgets.dart.
+//
+// Creates a menu anchor that is always visible and is not displayed in an
+// OverlayPortal.
 type RawMenuAnchorGroup struct {
-	Child      Node
+	// The child displayed by the RawMenuAnchorGroup.
+	Child Node
+
+	// An MenuController that allows the closing of the menu from other
+	// widgets.
 	Controller MenuKey
 }
 
 // RawScrollbar maps RawScrollbar of package:flutter/widgets.dart.
 //
+// An extendable base class for building scrollbars that fade in and out.
+//
 // ScrollbarOrientation takes "left", "right", "top", or "bottom".
 type RawScrollbar struct {
-	Child                Node
-	Controller           *ScrollKey
-	ThumbVisibility      *bool
-	Shape                *Shape
-	Thickness            *float64
-	ThumbColor           *Color
-	MinOverscrollLength  *float64
-	TrackVisibility      *bool
-	TrackColor           *Color
-	TrackBorderColor     *Color
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The ScrollController used to implement Scrollbar dragging.
+	Controller *ScrollKey
+
+	// Indicates that the scrollbar thumb should be visible, even when a scroll
+	// is not underway.
+	ThumbVisibility *bool
+
+	// The OutlinedBorder of the scrollbar's thumb.
+	Shape *Shape
+
+	// The thickness of the scrollbar in the cross axis of the scrollable.
+	Thickness *float64
+
+	// The color of the scrollbar thumb.
+	ThumbColor *Color
+
+	// The preferred smallest size the scrollbar thumb can shrink to when
+	// viewport is overscrolled.
+	MinOverscrollLength *float64
+
+	// Indicates that the scrollbar track should be visible.
+	TrackVisibility *bool
+
+	// The color of the scrollbar track.
+	TrackColor *Color
+
+	// The color of the scrollbar track's border.
+	TrackBorderColor *Color
+
+	// Whether the Scrollbar should be interactive and respond to dragging on
+	// the thumb, or tapping in the track area.
 	Interactive          *bool
 	ScrollbarOrientation *string
-	MainAxisMargin       *float64
-	CrossAxisMargin      *float64
-	Padding              *Insets
+
+	// Distance from the scrollbar thumb's start or end to the nearest edge of
+	// the viewport in logical pixels.
+	MainAxisMargin *float64
+
+	// Distance from the scrollbar thumb's side to the nearest cross axis edge
+	// in logical pixels.
+	CrossAxisMargin *float64
+
+	// The insets by which the scrollbar thumb and track should be padded.
+	Padding *Insets
 }
 
 // ReorderableDelayedDragStartListener maps ReorderableDelayedDragStartListener of package:flutter/widgets.dart.
+//
+// A wrapper widget that will recognize the start of a drag operation by
+// looking for a long press event. Once it is recognized, it will start a
+// drag operation on the wrapped item in the reorderable list.
 type ReorderableDelayedDragStartListener struct {
-	Child   Node
-	Index   int
+	// The widget for which the application would like to respond to a tap and
+	// drag gesture by starting a reordering drag on a reorderable list.
+	Child Node
+
+	// The index of the associated item that will be dragged in the list.
+	Index int
+
+	// Whether the child item can be dragged and moved in the list.
 	Enabled *bool
 }
 
 // ReorderableDragStartListener maps ReorderableDragStartListener of package:flutter/widgets.dart.
+//
+// A wrapper widget that will recognize the start of a drag on the wrapped
+// widget by a PointerDownEvent, and immediately initiate dragging the
+// wrapped item to a new location in a reorderable list.
 type ReorderableDragStartListener struct {
-	Child   Node
-	Index   int
+	// The widget for which the application would like to respond to a tap and
+	// drag gesture by starting a reordering drag on a reorderable list.
+	Child Node
+
+	// The index of the associated item that will be dragged in the list.
+	Index int
+
+	// Whether the child item can be dragged and moved in the list.
 	Enabled *bool
 }
 
 // ReorderableList maps ReorderableList of package:flutter/widgets.dart.
+//
+// A scrolling container that allows the user to interactively reorder the
+// list items.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -2246,47 +4601,76 @@ type ReorderableDragStartListener struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type ReorderableList struct {
-	ItemBuilder                ItemBuilder
-	ItemCount                  int
-	OnReorderStart             func(int)
-	OnReorderEnd               func(int)
-	ItemExtent                 *float64
-	ItemExtentBuilder          ExtentBuilder
-	PrototypeItem              Node
-	Padding                    *Insets
-	ScrollDirection            *string
-	Reverse                    *bool
-	Controller                 *ScrollKey
-	Primary                    *bool
-	Physics                    *string
-	ShrinkWrap                 *bool
-	Anchor                     *float64
-	CacheExtent                *float64
-	DragStartBehavior          *string
-	KeyboardDismissBehavior    *string
-	RestorationId              *string
+	// Called, as needed, to build list item widgets.
+	ItemBuilder ItemBuilder
+
+	// The number of items in the list.
+	ItemCount int
+
+	// A callback that is called when an item drag has started.
+	OnReorderStart func(int)
+
+	// A callback that is called when the dragged item is dropped.
+	OnReorderEnd      func(int)
+	ItemExtent        *float64
+	ItemExtentBuilder ExtentBuilder
+	PrototypeItem     Node
+
+	// The amount of space by which to inset the list contents.
+	Padding           *Insets
+	ScrollDirection   *string
+	Reverse           *bool
+	Controller        *ScrollKey
+	Primary           *bool
+	Physics           *string
+	ShrinkWrap        *bool
+	Anchor            *float64
+	CacheExtent       *float64
+	DragStartBehavior *string
+
+	// If keyboardDismissBehavior is null then it will fallback to the
+	// inherited getKeyboardDismissBehavior.
+	KeyboardDismissBehavior *string
+	RestorationId           *string
+
+	// Defaults to hardEdge.
 	ClipBehavior               *string
 	AutoScrollerVelocityScalar *float64
 }
 
 // RepaintBoundary maps RepaintBoundary of package:flutter/widgets.dart.
+//
+// A widget that creates a separate display list for its child.
 type RepaintBoundary struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // RepaintBoundaryWrap maps RepaintBoundary.wrap of package:flutter/widgets.dart.
+//
+// A widget that creates a separate display list for its child.
 type RepaintBoundaryWrap struct {
+	// The widget below this widget in the tree.
 	Child      Node
 	ChildIndex int
 }
 
 // RestorationScope maps RestorationScope of package:flutter/widgets.dart.
+//
+// Creates a new scope for restoration IDs used by descendant widgets to
+// claim RestorationBuckets.
 type RestorationScope struct {
+	// The restoration ID used by this widget to obtain a child bucket from the
+	// surrounding RestorationScope.
 	RestorationId string
-	Child         Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // RichText maps RichText of package:flutter/widgets.dart.
+//
+// A paragraph of rich text.
 //
 // TextAlign takes "left", "right", "center", "justify", "start", or "end".
 //
@@ -2296,47 +4680,93 @@ type RestorationScope struct {
 //
 // TextWidthBasis takes "parent", or "longestLine".
 type RichText struct {
-	Text            Span
-	TextAlign       *string
-	TextDirection   *string
-	SoftWrap        *bool
+	// The text to display in this widget.
+	Text Span
+
+	// How the text should be aligned horizontally.
+	TextAlign *string
+
+	// The directionality of the text.
+	TextDirection *string
+
+	// Whether the text should break at soft line breaks.
+	SoftWrap *bool
+
+	// How visual overflow should be handled.
 	Overflow        *string
 	TextScaleFactor *float64
-	MaxLines        *int
-	Locale          *string
-	TextWidthBasis  *string
-	SelectionColor  *Color
+
+	// An optional maximum number of lines for the text to span, wrapping if
+	// necessary.
+	MaxLines *int
+
+	// Used to select a font when the same Unicode character can be rendered
+	// differently, depending on the locale.
+	Locale         *string
+	TextWidthBasis *string
+
+	// The color to use when painting the selection.
+	SelectionColor *Color
 }
 
 // RootRestorationScope maps RootRestorationScope of package:flutter/widgets.dart.
+//
+// Inserts a child bucket of rootBucket into the widget tree and makes it
+// available to descendants via of.
 type RootRestorationScope struct {
+	// The restoration ID used to identify the child bucket that this widget
+	// will insert into the tree.
 	RestorationId string
-	Child         Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // RootWidget maps RootWidget of package:flutter/widgets.dart.
+//
+// A widget for the root of the widget tree.
 type RootWidget struct {
-	Child                 Node
+	// The widget below this widget in the tree.
+	Child Node
+
+	// A short description of this widget used by debugging aids.
 	DebugShortDescription *string
 }
 
 // RotatedBox maps RotatedBox of package:flutter/widgets.dart.
+//
+// A widget that rotates its child by a integral number of quarter turns.
 type RotatedBox struct {
+	// The number of clockwise quarter turns the child should be rotated.
 	QuarterTurns int
-	Child        Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // RotationTransition maps RotationTransition of package:flutter/widgets.dart.
 //
+// Animates the rotation of a widget.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type RotationTransition struct {
-	Turns         AnimationKey
-	Alignment     *string
+	Turns AnimationKey
+
+	// The alignment of the origin of the coordinate system in which the
+	// transform takes place, relative to the size of the box.
+	Alignment *string
+
+	// The filter quality with which to apply the transform as a bitmap
+	// operation.
 	FilterQuality *string
-	Child         Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Row maps Row of package:flutter/widgets.dart.
+//
+// A widget that displays its children in a horizontal array.
 //
 // MainAxisAlignment takes "start", "end", "center", "spaceBetween", "spaceAround", or "spaceEvenly".
 //
@@ -2350,48 +4780,100 @@ type RotationTransition struct {
 //
 // TextBaseline takes "alphabetic", or "ideographic".
 type Row struct {
-	MainAxisAlignment  *string
-	MainAxisSize       *string
+	// How the children should be placed along the main axis.
+	MainAxisAlignment *string
+
+	// How much space should be occupied in the main axis.
+	MainAxisSize *string
+
+	// How the children should be placed along the cross axis.
 	CrossAxisAlignment *string
-	TextDirection      *string
-	VerticalDirection  *string
-	TextBaseline       *string
-	Spacing            *float64
-	Children           []Node
+
+	// Determines the order to lay children out horizontally and how to
+	// interpret start and end in the horizontal direction.
+	TextDirection *string
+
+	// Determines the order to lay children out vertically and how to interpret
+	// start and end in the vertical direction.
+	VerticalDirection *string
+
+	// If aligning items according to their baseline, which baseline to use.
+	TextBaseline *string
+	Spacing      *float64
+
+	// The widgets below this widget in the tree.
+	Children []Node
 }
 
 // SafeArea maps SafeArea of package:flutter/widgets.dart.
+//
+// A widget that insets its child with sufficient padding to avoid
+// intrusions by the operating system.
 type SafeArea struct {
-	Left                      *bool
-	Top                       *bool
-	Right                     *bool
-	Bottom                    *bool
-	Minimum                   *Insets
+	// Whether to avoid system intrusions on the left.
+	Left *bool
+
+	// Whether to avoid system intrusions at the top of the screen, typically
+	// the system status bar.
+	Top *bool
+
+	// Whether to avoid system intrusions on the right.
+	Right *bool
+
+	// Whether to avoid system intrusions on the bottom side of the screen.
+	Bottom *bool
+
+	// This minimum padding to apply.
+	Minimum *Insets
+
+	// Specifies whether the SafeArea should maintain the bottom viewPadding
+	// instead of the bottom padding, defaults to false.
 	MaintainBottomViewPadding *bool
-	Child                     Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // ScaleTransition maps ScaleTransition of package:flutter/widgets.dart.
 //
+// Animates the scale of a transformed widget.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type ScaleTransition struct {
-	Scale         AnimationKey
-	Alignment     *string
+	Scale AnimationKey
+
+	// The alignment of the origin of the coordinate system in which the
+	// transform takes place, relative to the size of the box.
+	Alignment *string
+
+	// The filter quality with which to apply the transform as a bitmap
+	// operation.
 	FilterQuality *string
-	Child         Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // ScrollNotificationObserver maps ScrollNotificationObserver of package:flutter/widgets.dart.
+//
+// Notifies its listeners when a descendant scrolls.
 type ScrollNotificationObserver struct {
+	// The subtree below this widget.
 	Child Node
 }
 
 // SelectionContainerDisabled maps SelectionContainer.disabled of package:flutter/widgets.dart.
+//
+// A container that handles SelectionEvents for the Selectables in the
+// subtree.
 type SelectionContainerDisabled struct {
 	Child Node
 }
 
 // Semantics maps Semantics of package:flutter/widgets.dart.
+//
+// A widget that annotates the widget tree with a description of the meaning
+// of the widgets.
 //
 // AccessibilityFocusBlockType takes "none", "blockSubtree", or "blockNode".
 //
@@ -2401,10 +4883,21 @@ type SelectionContainerDisabled struct {
 //
 // ValidationResult takes "none", "valid", or "invalid".
 type Semantics struct {
-	Child                           Node
-	Container                       *bool
-	ExplicitChildNodes              *bool
-	ExcludeSemantics                *bool
+	// The widget below this widget in the tree.
+	Child Node
+
+	// If container is true, this widget will introduce a new node in the
+	// semantics tree.
+	Container *bool
+
+	// Whether descendants of this widget are allowed to add semantic
+	// information to the SemanticsNode annotated by this widget.
+	ExplicitChildNodes *bool
+
+	// Whether to replace all child semantics with this node.
+	ExcludeSemantics *bool
+
+	// Whether to block user interactions for the rendering subtree.
 	BlockUserActions                *bool
 	Enabled                         *bool
 	Checked                         *bool
@@ -2468,38 +4961,72 @@ type Semantics struct {
 	OnCollapse                      func()
 	Role                            *string
 	ValidationResult                *string
-	LocaleForSubtree                *string
-	MinValue                        *string
-	MaxValue                        *string
+
+	// The Locale for widgets in the subtree.
+	LocaleForSubtree *string
+	MinValue         *string
+	MaxValue         *string
 }
 
 // SemanticsDebugger maps SemanticsDebugger of package:flutter/widgets.dart.
+//
+// A widget that visualizes the semantics for the child.
 type SemanticsDebugger struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // SemanticsFromProperties maps Semantics.fromProperties of package:flutter/widgets.dart.
+//
+// A widget that annotates the widget tree with a description of the meaning
+// of the widgets.
 type SemanticsFromProperties struct {
-	Child              Node
-	Container          *bool
+	// The widget below this widget in the tree.
+	Child Node
+
+	// If container is true, this widget will introduce a new node in the
+	// semantics tree.
+	Container *bool
+
+	// Whether descendants of this widget are allowed to add semantic
+	// information to the SemanticsNode annotated by this widget.
 	ExplicitChildNodes *bool
-	ExcludeSemantics   *bool
-	BlockUserActions   *bool
-	LocaleForSubtree   *string
-	Properties         SemanticsProperties
+
+	// Whether to replace all child semantics with this node.
+	ExcludeSemantics *bool
+
+	// Whether to block user interactions for the rendering subtree.
+	BlockUserActions *bool
+
+	// The Locale for widgets in the subtree.
+	LocaleForSubtree *string
+
+	// Contains properties used by assistive technologies to make the
+	// application more accessible.
+	Properties SemanticsProperties
 }
 
 // SharedAppData maps SharedAppData of package:flutter/widgets.dart.
+//
+// Enables sharing key/value data with its child and all of the child's
+// descendants.
 type SharedAppData struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // ShortcutRegistrar maps ShortcutRegistrar of package:flutter/widgets.dart.
+//
+// A widget that holds a ShortcutRegistry which allows descendants to add,
+// remove, or replace shortcuts.
 type ShortcutRegistrar struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // SingleChildScrollView maps SingleChildScrollView of package:flutter/widgets.dart.
+//
+// A box in which a single widget can be scrolled.
 //
 // ScrollDirection takes "horizontal", or "vertical".
 //
@@ -2511,136 +5038,260 @@ type ShortcutRegistrar struct {
 //
 // KeyboardDismissBehavior takes "manual", or "onDrag".
 type SingleChildScrollView struct {
-	ScrollDirection         *string
-	Reverse                 *bool
-	Padding                 *Insets
-	Primary                 *bool
-	Physics                 *string
-	Controller              *ScrollKey
-	Child                   Node
-	DragStartBehavior       *string
-	ClipBehavior            *string
-	HitTestBehavior         *string
-	RestorationId           *string
+	ScrollDirection *string
+
+	// Whether the scroll view scrolls in the reading direction.
+	Reverse *bool
+
+	// The amount of space by which to inset the child.
+	Padding *Insets
+	Primary *bool
+
+	// How the scroll view should respond to user input.
+	Physics *string
+
+	// An object that can be used to control the position to which this scroll
+	// view is scrolled.
+	Controller *ScrollKey
+
+	// The widget that scrolls.
+	Child             Node
+	DragStartBehavior *string
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Defaults to opaque.
+	HitTestBehavior *string
+	RestorationId   *string
+
+	// If keyboardDismissBehavior is null then it will fallback to the
+	// inherited getKeyboardDismissBehavior.
 	KeyboardDismissBehavior *string
 }
 
 // SizeChangedLayoutNotifier maps SizeChangedLayoutNotifier of package:flutter/widgets.dart.
+//
+// A widget that automatically dispatches a SizeChangedLayoutNotification
+// when the layout dimensions of its child change.
 type SizeChangedLayoutNotifier struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // SizeTransition maps SizeTransition of package:flutter/widgets.dart.
 //
+// Animates its own size and clips and aligns its child.
+//
 // Axis takes "horizontal", or "vertical".
 type SizeTransition struct {
-	Axis                     *string
-	SizeFactor               AnimationKey
-	AxisAlignment            *float64
-	Alignment                *string
+	// horizontal if sizeFactor modifies the width, otherwise vertical.
+	Axis       *string
+	SizeFactor AnimationKey
+
+	// Describes how to align the child along the axis that sizeFactor is
+	// modifying.
+	AxisAlignment *float64
+
+	// The alignment of the child within the parent during the transition.
+	Alignment *string
+
+	// The factor by which to multiply the cross axis size of the child.
 	FixedCrossAxisSizeFactor *float64
-	Child                    Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // SizedBox maps SizedBox of package:flutter/widgets.dart.
+//
+// A box with a specified size.
 type SizedBox struct {
-	Width  *float64
+	// If non-null, requires the child to have exactly this width.
+	Width *float64
+
+	// If non-null, requires the child to have exactly this height.
 	Height *float64
-	Child  Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // SizedBoxExpand maps SizedBox.expand of package:flutter/widgets.dart.
+//
+// A box with a specified size.
 type SizedBoxExpand struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // SizedBoxFromSize maps SizedBox.fromSize of package:flutter/widgets.dart.
+//
+// A box with a specified size.
 type SizedBoxFromSize struct {
+	// The widget below this widget in the tree.
 	Child Node
 	Size  *Size
 }
 
 // SizedBoxShrink maps SizedBox.shrink of package:flutter/widgets.dart.
+//
+// A box with a specified size.
 type SizedBoxShrink struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // SizedBoxSquare maps SizedBox.square of package:flutter/widgets.dart.
+//
+// A box with a specified size.
 type SizedBoxSquare struct {
+	// The widget below this widget in the tree.
 	Child     Node
 	Dimension *float64
 }
 
 // SizedOverflowBox maps SizedOverflowBox of package:flutter/widgets.dart.
+//
+// A widget that is a specific size but passes its original constraints
+// through to its child, which may then overflow.
 type SizedOverflowBox struct {
-	Size      Size
+	// The size this widget should attempt to be.
+	Size Size
+
+	// How to align the child.
 	Alignment *string
-	Child     Node
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // SliverAnimatedOpacity maps SliverAnimatedOpacity of package:flutter/widgets.dart.
+//
+// Animated version of SliverOpacity which automatically transitions the
+// sliver child's opacity over a given duration whenever the given opacity
+// changes.
 type SliverAnimatedOpacity struct {
-	Sliver                 Node
-	Opacity                float64
-	Curve                  *string
-	Duration               int
-	OnEnd                  func()
+	// The sliver below this widget in the tree.
+	Sliver Node
+
+	// The target opacity.
+	Opacity float64
+
+	// The curve to apply when animating the parameters of this container.
+	Curve *string
+
+	// The duration over which to animate the parameters of this container.
+	Duration int
+
+	// Called every time an animation completes.
+	OnEnd func()
+
+	// Whether the semantic information of the children is always included.
 	AlwaysIncludeSemantics *bool
 }
 
 // SliverConstrainedCrossAxis maps SliverConstrainedCrossAxis of package:flutter/widgets.dart.
+//
+// A sliver that constrains the cross axis extent of its sliver child.
 type SliverConstrainedCrossAxis struct {
+	// The cross axis extent to apply to the sliver child.
 	MaxExtent float64
-	Sliver    Node
+
+	// The widget below this widget in the tree.
+	Sliver Node
 }
 
 // SliverCrossAxisExpanded maps SliverCrossAxisExpanded of package:flutter/widgets.dart.
+//
+// Set a flex factor for allocating space in the cross axis direction.
 type SliverCrossAxisExpanded struct {
+	// Flex value for allocating cross axis extent left after laying out the
+	// children with constrained cross axis.
 	Flex   int
 	Sliver Node
 }
 
 // SliverCrossAxisGroup maps SliverCrossAxisGroup of package:flutter/widgets.dart.
+//
+// A sliver that places multiple sliver children in a linear array along the
+// cross axis.
 type SliverCrossAxisGroup struct {
 	Slivers []Node
 }
 
 // SliverEnsureSemantics maps SliverEnsureSemantics of package:flutter/widgets.dart.
+//
+// A sliver that ensures its sliver child is included in the semantics tree.
 type SliverEnsureSemantics struct {
 	Sliver Node
 }
 
 // SliverFadeTransition maps SliverFadeTransition of package:flutter/widgets.dart.
+//
+// Animates the opacity of a sliver widget.
 type SliverFadeTransition struct {
-	Opacity                AnimationKey
+	// The animation that controls the opacity of the sliver child.
+	Opacity AnimationKey
+
+	// Whether the semantic information of the sliver child is always included.
 	AlwaysIncludeSemantics *bool
 	Sliver                 Node
 }
 
 // SliverFillRemaining maps SliverFillRemaining of package:flutter/widgets.dart.
+//
+// A sliver that contains a single box child that fills the remaining space
+// in the viewport.
 type SliverFillRemaining struct {
-	Child          Node
-	HasScrollBody  *bool
+	// Box child widget that fills the remaining space in the viewport.
+	Child Node
+
+	// Indicates whether the child has a scrollable body, this value cannot be
+	// null.
+	HasScrollBody *bool
+
+	// Indicates whether the child should stretch to fill the overscroll area
+	// created by certain scroll physics, such as iOS' default scroll physics.
 	FillOverscroll *bool
 }
 
 // SliverFillViewport maps SliverFillViewport of package:flutter/widgets.dart.
+//
+// A sliver that contains multiple box children that each fills the
+// viewport.
 type SliverFillViewport struct {
-	Delegate               SliverChildren
-	ViewportFraction       *float64
+	Delegate SliverChildren
+
+	// The fraction of the viewport that each child should fill in the main
+	// axis.
+	ViewportFraction *float64
+
+	// Whether to add padding to both ends of the list.
 	PadEnds                *bool
 	AllowImplicitScrolling *bool
 }
 
 // SliverFixedExtentList maps SliverFixedExtentList of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children with the same main axis extent
+// in a linear array.
 type SliverFixedExtentList struct {
-	Delegate   SliverChildren
+	// The delegate that provides the children for this widget.
+	Delegate SliverChildren
+
+	// The extent the children are forced to have in the main axis.
 	ItemExtent float64
 }
 
 // SliverFixedExtentListBuilder maps SliverFixedExtentList.builder of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children with the same main axis extent
+// in a linear array.
 type SliverFixedExtentListBuilder struct {
-	ItemBuilder            ItemBuilder
+	ItemBuilder ItemBuilder
+
+	// The extent the children are forced to have in the main axis.
 	ItemExtent             float64
 	ItemCount              *int
 	AddAutomaticKeepAlives *bool
@@ -2650,8 +5301,13 @@ type SliverFixedExtentListBuilder struct {
 }
 
 // SliverFixedExtentListList maps SliverFixedExtentList.list of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children with the same main axis extent
+// in a linear array.
 type SliverFixedExtentListList struct {
-	Children               []Node
+	Children []Node
+
+	// The extent the children are forced to have in the main axis.
 	ItemExtent             float64
 	AddAutomaticKeepAlives *bool
 	AddRepaintBoundaries   *bool
@@ -2660,20 +5316,37 @@ type SliverFixedExtentListList struct {
 
 // SliverFloatingHeader maps SliverFloatingHeader of package:flutter/widgets.dart.
 //
+// A sliver that shows its child when the user scrolls forward and hides it
+// when the user scrolls backwards.
+//
 // SnapMode takes "overlay", or "scroll".
 type SliverFloatingHeader struct {
+	// Specifies how a partially visible SliverFloatingHeader animates into a
+	// view when a user scroll gesture ends.
 	SnapMode *string
-	Child    Node
+
+	// The widget contained by this sliver.
+	Child Node
 }
 
 // SliverGrid maps SliverGrid of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children in a two dimensional
+// arrangement.
 type SliverGrid struct {
-	Delegate     SliverChildren
+	// The delegate that provides the children for this widget.
+	Delegate SliverChildren
+
+	// The delegate that controls the size and position of the children.
 	GridDelegate GridSpec
 }
 
 // SliverGridBuilder maps SliverGrid.builder of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children in a two dimensional
+// arrangement.
 type SliverGridBuilder struct {
+	// The delegate that controls the size and position of the children.
 	GridDelegate           GridSpec
 	ItemBuilder            ItemBuilder
 	ItemCount              *int
@@ -2684,6 +5357,9 @@ type SliverGridBuilder struct {
 }
 
 // SliverGridCount maps SliverGrid.count of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children in a two dimensional
+// arrangement.
 type SliverGridCount struct {
 	CrossAxisCount   int
 	MainAxisSpacing  *float64
@@ -2693,6 +5369,9 @@ type SliverGridCount struct {
 }
 
 // SliverGridExtent maps SliverGrid.extent of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children in a two dimensional
+// arrangement.
 type SliverGridExtent struct {
 	MaxCrossAxisExtent float64
 	MainAxisSpacing    *float64
@@ -2702,7 +5381,11 @@ type SliverGridExtent struct {
 }
 
 // SliverGridList maps SliverGrid.list of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children in a two dimensional
+// arrangement.
 type SliverGridList struct {
+	// The delegate that controls the size and position of the children.
 	GridDelegate           GridSpec
 	Children               []Node
 	AddAutomaticKeepAlives *bool
@@ -2712,18 +5395,31 @@ type SliverGridList struct {
 }
 
 // SliverIgnorePointer maps SliverIgnorePointer of package:flutter/widgets.dart.
+//
+// A sliver widget that is invisible during hit testing.
 type SliverIgnorePointer struct {
-	Ignoring          *bool
+	// Whether this sliver is ignored during hit testing.
+	Ignoring *bool
+
+	// Whether the semantics of this sliver is ignored when compiling the
+	// semantics tree.
 	IgnoringSemantics *bool
 	Sliver            Node
 }
 
 // SliverList maps SliverList of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children in a linear array along the
+// main axis.
 type SliverList struct {
+	// The delegate that provides the children for this widget.
 	Delegate SliverChildren
 }
 
 // SliverListBuilder maps SliverList.builder of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children in a linear array along the
+// main axis.
 type SliverListBuilder struct {
 	ItemBuilder            ItemBuilder
 	ItemCount              *int
@@ -2734,6 +5430,9 @@ type SliverListBuilder struct {
 }
 
 // SliverListList maps SliverList.list of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children in a linear array along the
+// main axis.
 type SliverListList struct {
 	Children               []Node
 	AddAutomaticKeepAlives *bool
@@ -2742,6 +5441,9 @@ type SliverListList struct {
 }
 
 // SliverListSeparated maps SliverList.separated of package:flutter/widgets.dart.
+//
+// A sliver that places multiple box children in a linear array along the
+// main axis.
 type SliverListSeparated struct {
 	ItemBuilder            ItemBuilder
 	SeparatorBuilder       ItemBuilder
@@ -2752,50 +5454,85 @@ type SliverListSeparated struct {
 }
 
 // SliverMainAxisGroup maps SliverMainAxisGroup of package:flutter/widgets.dart.
+//
+// A sliver that places multiple sliver children in a linear array along the
+// main axis, one after another.
 type SliverMainAxisGroup struct {
 	Slivers []Node
 }
 
 // SliverOffstage maps SliverOffstage of package:flutter/widgets.dart.
+//
+// A sliver that lays its sliver child out as if it was in the tree, but
+// without painting anything, without making the sliver child available for
+// hit testing, and without taking any room in the parent.
 type SliverOffstage struct {
+	// Whether the sliver child is hidden from the rest of the tree.
 	Offstage *bool
 	Sliver   Node
 }
 
 // SliverOpacity maps SliverOpacity of package:flutter/widgets.dart.
+//
+// A sliver widget that makes its sliver child partially transparent.
 type SliverOpacity struct {
-	Opacity                float64
+	// The fraction to scale the sliver child's alpha value.
+	Opacity float64
+
+	// Whether the semantic information of the sliver child is always included.
 	AlwaysIncludeSemantics *bool
 	Sliver                 Node
 }
 
 // SliverOverlapAbsorber maps SliverOverlapAbsorber of package:flutter/widgets.dart.
+//
+// A sliver that wraps another, forcing its layout extent to be treated as
+// overlap.
 type SliverOverlapAbsorber struct {
+	// The object in which the absorbed overlap is recorded.
 	Handle OverlapKey
 	Sliver Node
 }
 
 // SliverOverlapInjector maps SliverOverlapInjector of package:flutter/widgets.dart.
+//
+// A sliver that has a sliver geometry based on the values stored in a
+// SliverOverlapAbsorberHandle.
 type SliverOverlapInjector struct {
+	// The handle to the SliverOverlapAbsorber that is feeding this injector.
 	Handle OverlapKey
 	Sliver Node
 }
 
 // SliverPadding maps SliverPadding of package:flutter/widgets.dart.
+//
+// A sliver that applies padding on each side of another sliver.
 type SliverPadding struct {
+	// The amount of space by which to inset the child sliver.
 	Padding Insets
 	Sliver  Node
 }
 
 // SliverPrototypeExtentList maps SliverPrototypeExtentList of package:flutter/widgets.dart.
+//
+// A sliver that places its box children in a linear array and constrains
+// them to have the same extent as a prototype item along the main axis.
 type SliverPrototypeExtentList struct {
-	Delegate      SliverChildren
+	// The delegate that provides the children for this widget.
+	Delegate SliverChildren
+
+	// Defines the main axis extent of all of this sliver's children.
 	PrototypeItem Node
 }
 
 // SliverPrototypeExtentListBuilder maps SliverPrototypeExtentList.builder of package:flutter/widgets.dart.
+//
+// A sliver that places its box children in a linear array and constrains
+// them to have the same extent as a prototype item along the main axis.
 type SliverPrototypeExtentListBuilder struct {
-	ItemBuilder            ItemBuilder
+	ItemBuilder ItemBuilder
+
+	// Defines the main axis extent of all of this sliver's children.
 	PrototypeItem          Node
 	ItemCount              *int
 	AddAutomaticKeepAlives *bool
@@ -2804,8 +5541,13 @@ type SliverPrototypeExtentListBuilder struct {
 }
 
 // SliverPrototypeExtentListList maps SliverPrototypeExtentList.list of package:flutter/widgets.dart.
+//
+// A sliver that places its box children in a linear array and constrains
+// them to have the same extent as a prototype item along the main axis.
 type SliverPrototypeExtentListList struct {
-	Children               []Node
+	Children []Node
+
+	// Defines the main axis extent of all of this sliver's children.
 	PrototypeItem          Node
 	AddAutomaticKeepAlives *bool
 	AddRepaintBoundaries   *bool
@@ -2813,35 +5555,69 @@ type SliverPrototypeExtentListList struct {
 }
 
 // SliverReorderableList maps SliverReorderableList of package:flutter/widgets.dart.
+//
+// A sliver list that allows the user to interactively reorder the list
+// items.
 type SliverReorderableList struct {
-	ItemBuilder                ItemBuilder
-	ItemCount                  int
-	OnReorderStart             func(int)
-	OnReorderEnd               func(int)
-	ItemExtent                 *float64
-	ItemExtentBuilder          ExtentBuilder
-	PrototypeItem              Node
+	ItemBuilder       ItemBuilder
+	ItemCount         int
+	OnReorderStart    func(int)
+	OnReorderEnd      func(int)
+	ItemExtent        *float64
+	ItemExtentBuilder ExtentBuilder
+	PrototypeItem     Node
+
+	// Defaults to 50 if not set or set to null.
 	AutoScrollerVelocityScalar *float64
 }
 
 // SliverResizingHeader maps SliverResizingHeader of package:flutter/widgets.dart.
+//
+// A sliver that is pinned to the start of its CustomScrollView and reacts
+// to scrolling by resizing between the intrinsic sizes of its min and max
+// extent prototypes.
 type SliverResizingHeader struct {
+	// Laid out once to define the minimum size of this sliver along the
+	// scrollDirection axis.
 	MinExtentPrototype Node
+
+	// Laid out once to define the maximum size of this sliver along the
+	// scrollDirection axis.
 	MaxExtentPrototype Node
-	Child              Node
+
+	// The widget contained by this sliver.
+	Child Node
 }
 
 // SliverSafeArea maps SliverSafeArea of package:flutter/widgets.dart.
+//
+// A sliver that insets another sliver by sufficient padding to avoid
+// intrusions by the operating system.
 type SliverSafeArea struct {
-	Left    *bool
-	Top     *bool
-	Right   *bool
-	Bottom  *bool
+	// Whether to avoid system intrusions on the left.
+	Left *bool
+
+	// Whether to avoid system intrusions at the top of the screen, typically
+	// the system status bar.
+	Top *bool
+
+	// Whether to avoid system intrusions on the right.
+	Right *bool
+
+	// Whether to avoid system intrusions on the bottom side of the screen.
+	Bottom *bool
+
+	// This minimum padding to apply.
 	Minimum *Insets
-	Sliver  Node
+
+	// The sliver below this sliver in the tree.
+	Sliver Node
 }
 
 // SliverSemantics maps SliverSemantics of package:flutter/widgets.dart.
+//
+// A sliver that annotates its subtree with a description of the meaning of
+// the slivers.
 //
 // AccessibilityFocusBlockType takes "none", "blockSubtree", or "blockNode".
 //
@@ -2851,10 +5627,20 @@ type SliverSafeArea struct {
 //
 // ValidationResult takes "none", "valid", or "invalid".
 type SliverSemantics struct {
-	Sliver                          Node
-	Container                       *bool
-	ExplicitChildNodes              *bool
-	ExcludeSemantics                *bool
+	Sliver Node
+
+	// If container is true, this widget will introduce a new node in the
+	// semantics tree.
+	Container *bool
+
+	// Whether descendants of this widget are allowed to add semantic
+	// information to the SemanticsNode annotated by this widget.
+	ExplicitChildNodes *bool
+
+	// Whether to replace all child semantics with this node.
+	ExcludeSemantics *bool
+
+	// Whether to block user interactions for the rendering subtree.
 	BlockUserActions                *bool
 	Enabled                         *bool
 	Checked                         *bool
@@ -2918,36 +5704,71 @@ type SliverSemantics struct {
 	OnCollapse                      func()
 	Role                            *string
 	ValidationResult                *string
-	LocaleForSubtree                *string
-	MinValue                        *string
-	MaxValue                        *string
+
+	// The Locale for widgets in the subtree.
+	LocaleForSubtree *string
+	MinValue         *string
+	MaxValue         *string
 }
 
 // SliverSemanticsFromProperties maps SliverSemantics.fromProperties of package:flutter/widgets.dart.
+//
+// A sliver that annotates its subtree with a description of the meaning of
+// the slivers.
 type SliverSemanticsFromProperties struct {
-	Child              Node
-	Container          *bool
+	// The widget below this widget in the tree.
+	Child Node
+
+	// If container is true, this widget will introduce a new node in the
+	// semantics tree.
+	Container *bool
+
+	// Whether descendants of this widget are allowed to add semantic
+	// information to the SemanticsNode annotated by this widget.
 	ExplicitChildNodes *bool
-	ExcludeSemantics   *bool
-	BlockUserActions   *bool
-	LocaleForSubtree   *string
-	Properties         SemanticsProperties
+
+	// Whether to replace all child semantics with this node.
+	ExcludeSemantics *bool
+
+	// Whether to block user interactions for the rendering subtree.
+	BlockUserActions *bool
+
+	// The Locale for widgets in the subtree.
+	LocaleForSubtree *string
+
+	// Contains properties used by assistive technologies to make the
+	// application more accessible.
+	Properties SemanticsProperties
 }
 
 // SliverToBoxAdapter maps SliverToBoxAdapter of package:flutter/widgets.dart.
+//
+// A sliver that contains a single box widget.
 type SliverToBoxAdapter struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // SliverVariedExtentList maps SliverVariedExtentList of package:flutter/widgets.dart.
+//
+// A sliver that places its box children in a linear array and constrains
+// them to have the corresponding extent returned by itemExtentBuilder.
 type SliverVariedExtentList struct {
-	Delegate          SliverChildren
+	// The delegate that provides the children for this widget.
+	Delegate SliverChildren
+
+	// The children extent builder.
 	ItemExtentBuilder ExtentBuilder
 }
 
 // SliverVariedExtentListBuilder maps SliverVariedExtentList.builder of package:flutter/widgets.dart.
+//
+// A sliver that places its box children in a linear array and constrains
+// them to have the corresponding extent returned by itemExtentBuilder.
 type SliverVariedExtentListBuilder struct {
-	ItemBuilder            ItemBuilder
+	ItemBuilder ItemBuilder
+
+	// The children extent builder.
 	ItemExtentBuilder      ExtentBuilder
 	ItemCount              *int
 	AddAutomaticKeepAlives *bool
@@ -2956,8 +5777,13 @@ type SliverVariedExtentListBuilder struct {
 }
 
 // SliverVariedExtentListList maps SliverVariedExtentList.list of package:flutter/widgets.dart.
+//
+// A sliver that places its box children in a linear array and constrains
+// them to have the corresponding extent returned by itemExtentBuilder.
 type SliverVariedExtentListList struct {
-	Children               []Node
+	Children []Node
+
+	// The children extent builder.
 	ItemExtentBuilder      ExtentBuilder
 	AddAutomaticKeepAlives *bool
 	AddRepaintBoundaries   *bool
@@ -2965,30 +5791,64 @@ type SliverVariedExtentListList struct {
 }
 
 // SliverVisibility maps SliverVisibility of package:flutter/widgets.dart.
+//
+// Whether to show or hide a sliver child.
 type SliverVisibility struct {
-	Sliver                Node
-	ReplacementSliver     Node
-	Visible               *bool
-	MaintainState         *bool
-	MaintainAnimation     *bool
-	MaintainSize          *bool
-	MaintainSemantics     *bool
+	// The sliver to show or hide, as controlled by visible.
+	Sliver Node
+
+	// The widget to use when the sliver child is not visible, assuming that
+	// none of the maintain flags (in particular, maintainState) are set.
+	ReplacementSliver Node
+
+	// Switches between showing the sliver or hiding it.
+	Visible *bool
+
+	// Whether to maintain the State objects of the sliver subtree when it is
+	// not visible.
+	MaintainState *bool
+
+	// Whether to maintain animations within the sliver subtree when it is not
+	// visible.
+	MaintainAnimation *bool
+
+	// Whether to maintain space for where the sliver would have been.
+	MaintainSize *bool
+
+	// Whether to maintain the semantics for the sliver when it is hidden (e.g.
+	MaintainSemantics *bool
+
+	// Whether to allow the sliver to be interactive when hidden.
 	MaintainInteractivity *bool
 }
 
 // SliverVisibilityMaintain maps SliverVisibility.maintain of package:flutter/widgets.dart.
+//
+// Whether to show or hide a sliver child.
 type SliverVisibilityMaintain struct {
-	Sliver            Node
+	// The sliver to show or hide, as controlled by visible.
+	Sliver Node
+
+	// The widget to use when the sliver child is not visible, assuming that
+	// none of the maintain flags (in particular, maintainState) are set.
 	ReplacementSliver Node
-	Visible           *bool
+
+	// Switches between showing the sliver or hiding it.
+	Visible *bool
 }
 
 // Spacer maps Spacer of package:flutter/widgets.dart.
+//
+// Spacer creates an adjustable, empty spacer that can be used to tune the
+// spacing between widgets in a Flex container, like Row or Column.
 type Spacer struct {
+	// The flex factor to use in determining how much space to take up.
 	Flex *int
 }
 
 // Stack maps Stack of package:flutter/widgets.dart.
+//
+// A widget that positions its children relative to the edges of its box.
 //
 // TextDirection takes "rtl", or "ltr".
 //
@@ -2996,34 +5856,59 @@ type Spacer struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Stack struct {
-	Alignment     *string
+	// How to align the non-positioned and partially-positioned children in the
+	// stack.
+	Alignment *string
+
+	// The text direction with which to resolve alignment.
 	TextDirection *string
-	Fit           *string
-	ClipBehavior  *string
-	Children      []Node
+
+	// How to size the non-positioned children in the stack.
+	Fit *string
+
+	// Stacks only clip children whose _geometry_ overflows the stack.
+	ClipBehavior *string
+
+	// The widgets below this widget in the tree.
+	Children []Node
 }
 
 // StretchEffect maps StretchEffect of package:flutter/widgets.dart.
 //
+// A widget that applies a stretching visual effect to its child.
+//
 // Axis takes "horizontal", or "vertical".
 type StretchEffect struct {
+	// The overscroll strength applied for the stretching effect.
 	StretchStrength *float64
-	Axis            string
-	Child           Node
+
+	// The axis along which the stretching overscroll effect is applied.
+	Axis string
+
+	// The child widget that the stretching overscroll effect applies to.
+	Child Node
 }
 
 // StretchingOverscrollIndicator maps StretchingOverscrollIndicator of package:flutter/widgets.dart.
+//
+// A Material Design visual indication that a scroll view has overscrolled.
 //
 // AxisDirection takes "up", "right", "down", or "left".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type StretchingOverscrollIndicator struct {
 	AxisDirection string
-	ClipBehavior  *string
-	Child         Node
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // Table maps Table of package:flutter/widgets.dart.
+//
+// A widget that uses the table layout algorithm for its children.
 //
 // TextDirection takes "rtl", or "ltr".
 //
@@ -3031,37 +5916,76 @@ type StretchingOverscrollIndicator struct {
 //
 // TextBaseline takes "alphabetic", or "ideographic".
 type Table struct {
-	TextDirection            *string
+	// The direction in which the columns are ordered.
+	TextDirection *string
+
+	// How cells that do not explicitly specify a vertical alignment are
+	// aligned vertically.
 	DefaultVerticalAlignment *string
-	TextBaseline             *string
+
+	// The text baseline to use when aligning rows using baseline.
+	TextBaseline *string
 }
 
 // TableCell maps TableCell of package:flutter/widgets.dart.
 //
+// A widget that controls how a child of a Table is aligned.
+//
 // VerticalAlignment takes "top", "middle", "bottom", "baseline", "fill", or "intrinsicHeight".
 type TableCell struct {
+	// How this cell is aligned vertically.
 	VerticalAlignment *string
-	Child             Node
+
+	// The child of this cell.
+	Child Node
 }
 
 // TapRegion maps TapRegion of package:flutter/widgets.dart.
 //
+// A widget that defines a region that can detect taps inside or outside of
+// itself and any group of regions it belongs to, without participating in
+// the gesture disambiguation(https://flutter.dev/to/gesture-disambiguation)
+// system (other than to ...
+//
 // Behavior takes "deferToChild", "opaque", or "translucent".
 type TapRegion struct {
-	Child              Node
-	Enabled            *bool
-	Behavior           *string
-	GroupId            *string
+	// The widget below this widget in the tree.
+	Child Node
+
+	// Whether or not this TapRegion is enabled as part of the composite
+	// region.
+	Enabled *bool
+
+	// How to behave during hit testing when deciding how the hit test
+	// propagates to children and whether to consider targets behind this
+	// TapRegion.
+	Behavior *string
+
+	// An optional group ID that groups TapRegions together so that they
+	// operate as one region.
+	GroupId *string
+
+	// If true, then the group that this region belongs to will stop the
+	// propagation of all events in the gesture arena.
 	ConsumeOutsideTaps *bool
-	DebugLabel         *string
+
+	// An optional debug label to help with debugging in debug mode.
+	DebugLabel *string
 }
 
 // TapRegionSurface maps TapRegionSurface of package:flutter/widgets.dart.
+//
+// A widget that provides notification of a tap inside or outside of a set
+// of registered regions, without participating in the gesture
+// disambiguation(https://flutter.dev/to/gesture-disambiguation) system.
 type TapRegionSurface struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // Text maps Text of package:flutter/widgets.dart.
+//
+// A run of text with a single style.
 //
 // TextAlign takes "left", "right", "center", "justify", "start", or "end".
 //
@@ -3071,31 +5995,74 @@ type TapRegionSurface struct {
 //
 // TextWidthBasis takes "parent", or "longestLine".
 type Text struct {
-	Data                string
-	Style               *TextStyle
-	TextAlign           *string
-	TextDirection       *string
-	Locale              *string
-	SoftWrap            *bool
-	Overflow            *string
-	TextScaleFactor     *float64
-	MaxLines            *int
-	SemanticsLabel      *string
+	// The text to display.
+	Data string
+
+	// If non-null, the style to use for this text.
+	Style *TextStyle
+
+	// How the text should be aligned horizontally.
+	TextAlign *string
+
+	// The directionality of the text.
+	TextDirection *string
+
+	// Used to select a font when the same Unicode character can be rendered
+	// differently, depending on the locale.
+	Locale *string
+
+	// Whether the text should break at soft line breaks.
+	SoftWrap *bool
+
+	// How visual overflow should be handled.
+	Overflow *string
+
+	// Deprecated.
+	TextScaleFactor *float64
+
+	// An optional maximum number of lines for the text to span, wrapping if
+	// necessary.
+	MaxLines *int
+
+	// An alternative semantics label for this text.
+	SemanticsLabel *string
+
+	// A unique identifier for the semantics node for this widget.
 	SemanticsIdentifier *string
 	TextWidthBasis      *string
-	SelectionColor      *Color
+
+	// The color to use when painting the selection.
+	SelectionColor *Color
 }
 
 // TextFieldTapRegion maps TextFieldTapRegion of package:flutter/widgets.dart.
+//
+// A TapRegion that adds its children to the tap region group for widgets
+// based on the EditableText text editing widget, such as TextField and
+// CupertinoTextField.
 type TextFieldTapRegion struct {
-	Child              Node
-	Enabled            *bool
+	// The widget below this widget in the tree.
+	Child Node
+
+	// Whether or not this TapRegion is enabled as part of the composite
+	// region.
+	Enabled *bool
+
+	// If true, then the group that this region belongs to will stop the
+	// propagation of all events in the gesture arena.
 	ConsumeOutsideTaps *bool
-	DebugLabel         *string
-	GroupId            *string
+
+	// An optional debug label to help with debugging in debug mode.
+	DebugLabel *string
+
+	// An optional group ID that groups TapRegions together so that they
+	// operate as one region.
+	GroupId *string
 }
 
 // TextRich maps Text.rich of package:flutter/widgets.dart.
+//
+// A run of text with a single style.
 //
 // TextAlign takes "left", "right", "center", "justify", "start", or "end".
 //
@@ -3105,120 +6072,266 @@ type TextFieldTapRegion struct {
 //
 // TextWidthBasis takes "parent", or "longestLine".
 type TextRich struct {
-	TextSpan            Span
-	Style               *TextStyle
-	TextAlign           *string
-	TextDirection       *string
-	Locale              *string
-	SoftWrap            *bool
-	Overflow            *string
-	TextScaleFactor     *float64
-	MaxLines            *int
-	SemanticsLabel      *string
+	// The text to display as a InlineSpan.
+	TextSpan Span
+
+	// If non-null, the style to use for this text.
+	Style *TextStyle
+
+	// How the text should be aligned horizontally.
+	TextAlign *string
+
+	// The directionality of the text.
+	TextDirection *string
+
+	// Used to select a font when the same Unicode character can be rendered
+	// differently, depending on the locale.
+	Locale *string
+
+	// Whether the text should break at soft line breaks.
+	SoftWrap *bool
+
+	// How visual overflow should be handled.
+	Overflow *string
+
+	// Deprecated.
+	TextScaleFactor *float64
+
+	// An optional maximum number of lines for the text to span, wrapping if
+	// necessary.
+	MaxLines *int
+
+	// An alternative semantics label for this text.
+	SemanticsLabel *string
+
+	// A unique identifier for the semantics node for this widget.
 	SemanticsIdentifier *string
 	TextWidthBasis      *string
-	SelectionColor      *Color
+
+	// The color to use when painting the selection.
+	SelectionColor *Color
 }
 
 // TextSelectionGestureDetector maps TextSelectionGestureDetector of package:flutter/widgets.dart.
 //
+// A gesture detector to respond to non-exclusive event chains for a text
+// field.
+//
 // Behavior takes "deferToChild", "opaque", or "translucent".
 type TextSelectionGestureDetector struct {
-	OnTapTrackStart       func()
-	OnTapTrackReset       func()
-	OnSecondaryTap        func()
-	OnSingleTapCancel     func()
-	OnUserTap             func()
+	// Callback used to indicate that a tap tracking has started upon a
+	// PointerDownEvent.
+	OnTapTrackStart func()
+
+	// Callback used to indicate that a tap tracking has been reset which
+	// happens on the next PointerDownEvent after the timer between two taps
+	// elapses, the recognizer loses the arena, the gesture is cancelled or the
+	// recognizer is disposed of.
+	OnTapTrackReset func()
+
+	// Called for a tap event with the secondary mouse button.
+	OnSecondaryTap func()
+
+	// Called for each touch that becomes recognized as a gesture that is not a
+	// short tap, such as a long tap or drag.
+	OnSingleTapCancel func()
+
+	// Called for the first tap in a series of taps when onUserTapAlwaysCalled
+	// is disabled, which is the default behavior.
+	OnUserTap func()
+
+	// Called after onSingleLongTapStart when the pointer is canceled.
 	OnSingleLongTapCancel func()
+
+	// Whether onUserTap will be called for all taps including consecutive
+	// taps.
 	OnUserTapAlwaysCalled *bool
-	Behavior              *string
-	Child                 Node
+
+	// How this gesture detector should behave during hit testing.
+	Behavior *string
+
+	// Child below this widget.
+	Child Node
 }
 
 // Texture maps Texture of package:flutter/widgets.dart.
 //
+// A rectangle upon which a backend texture is mapped.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type Texture struct {
-	TextureId     int
-	Freeze        *bool
+	// The identity of the backend texture.
+	TextureId int
+
+	// When true the texture will not be updated with new frames.
+	Freeze *bool
+
+	// The quality of sampling the texture and rendering it on screen.
 	FilterQuality *string
 }
 
 // TickerMode maps TickerMode of package:flutter/widgets.dart.
+//
+// Enables or disables tickers (and thus animation controllers) in the
+// widget subtree.
 type TickerMode struct {
-	Enabled     bool
-	Child       Node
+	// The requested ticker mode for this subtree.
+	Enabled bool
+
+	// The widget below this widget in the tree.
+	Child Node
+
+	// If true, tickers in this subtree will force frames even if frames would
+	// normally not be scheduled (e.g.
 	ForceFrames *bool
 }
 
 // Title maps Title of package:flutter/widgets.dart.
+//
+// A widget that describes this app in the operating system.
 type Title struct {
+	// A one-line description of this app for use in the window manager.
 	Title *string
+
+	// A color that the window manager should use to identify this app.
 	Color Color
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // Transform maps Transform of package:flutter/widgets.dart.
 //
+// A widget that applies a transformation before painting its child.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type Transform struct {
-	Transform         []float64
-	Origin            *Offset
-	Alignment         *string
+	// The matrix to transform the child by during painting.
+	Transform []float64
+
+	// The origin of the coordinate system in which to apply the matrix,
+	// described relative to the point given by alignment.
+	Origin *Offset
+
+	// The alignment of the origin, relative to the size of the box.
+	Alignment *string
+
+	// Whether to transform registered hits into the child's resulting
+	// coordinate system.
 	TransformHitTests *bool
-	FilterQuality     *string
-	Child             Node
+
+	// The filter quality with which to apply the transform as a bitmap
+	// operation.
+	FilterQuality *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // TransformFlip maps Transform.flip of package:flutter/widgets.dart.
 //
+// A widget that applies a transformation before painting its child.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type TransformFlip struct {
-	FlipX             *bool
-	FlipY             *bool
-	Origin            *Offset
+	FlipX *bool
+	FlipY *bool
+
+	// The origin of the coordinate system in which to apply the matrix,
+	// described relative to the point given by alignment.
+	Origin *Offset
+
+	// Whether to transform registered hits into the child's resulting
+	// coordinate system.
 	TransformHitTests *bool
-	FilterQuality     *string
-	Child             Node
+
+	// The filter quality with which to apply the transform as a bitmap
+	// operation.
+	FilterQuality *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // TransformRotate maps Transform.rotate of package:flutter/widgets.dart.
 //
+// A widget that applies a transformation before painting its child.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type TransformRotate struct {
-	Angle             float64
-	Origin            *Offset
-	Alignment         *string
+	Angle float64
+
+	// The origin of the coordinate system in which to apply the matrix,
+	// described relative to the point given by alignment.
+	Origin *Offset
+
+	// The alignment of the origin, relative to the size of the box.
+	Alignment *string
+
+	// Whether to transform registered hits into the child's resulting
+	// coordinate system.
 	TransformHitTests *bool
-	FilterQuality     *string
-	Child             Node
+
+	// The filter quality with which to apply the transform as a bitmap
+	// operation.
+	FilterQuality *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // TransformScale maps Transform.scale of package:flutter/widgets.dart.
 //
+// A widget that applies a transformation before painting its child.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type TransformScale struct {
-	Scale             *float64
-	ScaleX            *float64
-	ScaleY            *float64
-	Origin            *Offset
-	Alignment         *string
+	Scale  *float64
+	ScaleX *float64
+	ScaleY *float64
+
+	// The origin of the coordinate system in which to apply the matrix,
+	// described relative to the point given by alignment.
+	Origin *Offset
+
+	// The alignment of the origin, relative to the size of the box.
+	Alignment *string
+
+	// Whether to transform registered hits into the child's resulting
+	// coordinate system.
 	TransformHitTests *bool
-	FilterQuality     *string
-	Child             Node
+
+	// The filter quality with which to apply the transform as a bitmap
+	// operation.
+	FilterQuality *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // TransformTranslate maps Transform.translate of package:flutter/widgets.dart.
 //
+// A widget that applies a transformation before painting its child.
+//
 // FilterQuality takes "none", "low", "medium", or "high".
 type TransformTranslate struct {
-	Offset            Offset
+	Offset Offset
+
+	// Whether to transform registered hits into the child's resulting
+	// coordinate system.
 	TransformHitTests *bool
-	FilterQuality     *string
-	Child             Node
+
+	// The filter quality with which to apply the transform as a bitmap
+	// operation.
+	FilterQuality *string
+
+	// The widget below this widget in the tree.
+	Child Node
 }
 
 // UiKitView maps UiKitView of package:flutter/widgets.dart.
+//
+// Embeds an iOS view in the Widget hierarchy.
 //
 // GestureBlockingPolicy takes "eager", "waitUntilTouchesEnded", "doNotBlockGesture", or "fallbackToPluginDefault".
 //
@@ -3226,7 +6339,11 @@ type TransformTranslate struct {
 //
 // LayoutDirection takes "rtl", or "ltr".
 type UiKitView struct {
-	ViewType              string
+	// The unique identifier for iOS view type to be embedded by this widget.
+	ViewType string
+
+	// The gesture blocking policy that controls touch and gesture blocking
+	// behaviors.
 	GestureBlockingPolicy *string
 	OnPlatformViewCreated func(int)
 	HitTestBehavior       *string
@@ -3235,91 +6352,210 @@ type UiKitView struct {
 
 // UnconstrainedBox maps UnconstrainedBox of package:flutter/widgets.dart.
 //
+// A widget that imposes no constraints on its child, allowing it to render
+// at its "natural" size.
+//
 // TextDirection takes "rtl", or "ltr".
 //
 // ConstrainedAxis takes "horizontal", or "vertical".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type UnconstrainedBox struct {
-	Child           Node
-	TextDirection   *string
-	Alignment       *string
+	// The widget below this widget in the tree.
+	Child Node
+
+	// The text direction to use when interpreting the alignment if it is an
+	// AlignmentDirectional.
+	TextDirection *string
+
+	// The alignment to use when laying out the child.
+	Alignment *string
+
+	// The axis to retain constraints on, if any.
 	ConstrainedAxis *string
-	ClipBehavior    *string
+
+	// Defaults to none.
+	ClipBehavior *string
 }
 
 // UnmanagedRestorationScope maps UnmanagedRestorationScope of package:flutter/widgets.dart.
+//
+// Inserts a provided RestorationBucket into the widget tree and makes it
+// available to descendants via of.
 type UnmanagedRestorationScope struct {
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // ViewAnchor maps ViewAnchor of package:flutter/widgets.dart.
+//
+// Decorates a child widget with a side View.
 type ViewAnchor struct {
-	View  Node
+	// The widget that defines the view anchored to this widget.
+	View Node
+
+	// The widget below this widget in the tree.
 	Child Node
 }
 
 // ViewCollection maps ViewCollection of package:flutter/widgets.dart.
+//
+// A collection of sibling Views.
 type ViewCollection struct {
 	Views []Node
 }
 
 // Visibility maps Visibility of package:flutter/widgets.dart.
+//
+// Whether to show or hide a child.
 type Visibility struct {
-	Child                 Node
-	Replacement           Node
-	Visible               *bool
-	MaintainState         *bool
-	MaintainAnimation     *bool
-	MaintainSize          *bool
-	MaintainSemantics     *bool
+	// The widget to show or hide, as controlled by visible.
+	Child Node
+
+	// The widget to use when the child is not visible, assuming that none of
+	// the maintain flags (in particular, maintainState) are set.
+	Replacement Node
+
+	// Switches between showing the child or hiding it.
+	Visible *bool
+
+	// Whether to maintain the State objects of the child subtree when it is
+	// not visible.
+	MaintainState *bool
+
+	// Whether to maintain animations within the child subtree when it is not
+	// visible.
+	MaintainAnimation *bool
+
+	// Whether to maintain space for where the widget would have been.
+	MaintainSize *bool
+
+	// Whether to maintain the semantics for the widget when it is hidden (e.g.
+	MaintainSemantics *bool
+
+	// Whether to allow the widget to be interactive when hidden.
 	MaintainInteractivity *bool
-	MaintainFocusability  *bool
+
+	// Whether to allow the widget to receive focus when hidden.
+	MaintainFocusability *bool
 }
 
 // VisibilityMaintain maps Visibility.maintain of package:flutter/widgets.dart.
+//
+// Whether to show or hide a child.
 type VisibilityMaintain struct {
-	Child   Node
+	// The widget to show or hide, as controlled by visible.
+	Child Node
+
+	// Switches between showing the child or hiding it.
 	Visible *bool
 }
 
 // WidgetsApp maps WidgetsApp of package:flutter/widgets.dart.
+//
+// A convenience widget that wraps a number of widgets that are commonly
+// required for an application.
 type WidgetsApp struct {
-	InitialRoute               *string
-	Home                       Node
-	Title                      *string
-	TextStyle                  *TextStyle
-	Color                      Color
-	Locale                     *string
-	ShowPerformanceOverlay     *bool
-	ShowSemanticsDebugger      *bool
-	DebugShowWidgetInspector   *bool
+	// The name of the first route to show, if a Navigator is built.
+	InitialRoute *string
+
+	// The widget for the default route of the app (defaultRouteName, which is
+	// /).
+	Home Node
+
+	// A one-line description used by the device to identify the app for the
+	// user.
+	Title *string
+
+	// The default text style for Text in the application.
+	TextStyle *TextStyle
+
+	// The primary color to use for the application in the operating system
+	// interface.
+	Color Color
+
+	// The initial locale for this app's Localizations widget is based on this
+	// value.
+	Locale *string
+
+	// Turns on a performance overlay.
+	ShowPerformanceOverlay *bool
+
+	// Turns on an overlay that shows the accessibility information reported by
+	// the framework.
+	ShowSemanticsDebugger *bool
+
+	// Turns on an overlay that enables inspecting the widget tree.
+	DebugShowWidgetInspector *bool
+
+	// Turns on a little "DEBUG" banner in debug mode to indicate that the app
+	// is in debug mode.
 	DebugShowCheckedModeBanner *bool
-	RestorationScopeId         *string
-	UseInheritedMediaQuery     *bool
+
+	// The identifier to use for state restoration of this app.
+	RestorationScopeId *string
+
+	// Deprecated.
+	UseInheritedMediaQuery *bool
 }
 
 // WidgetsAppRouter maps WidgetsApp.router of package:flutter/widgets.dart.
+//
+// A convenience widget that wraps a number of widgets that are commonly
+// required for an application.
 type WidgetsAppRouter struct {
-	Title                      *string
-	TextStyle                  *TextStyle
-	Color                      Color
-	Locale                     *string
-	ShowPerformanceOverlay     *bool
-	ShowSemanticsDebugger      *bool
-	DebugShowWidgetInspector   *bool
+	// A one-line description used by the device to identify the app for the
+	// user.
+	Title *string
+
+	// The default text style for Text in the application.
+	TextStyle *TextStyle
+
+	// The primary color to use for the application in the operating system
+	// interface.
+	Color Color
+
+	// The initial locale for this app's Localizations widget is based on this
+	// value.
+	Locale *string
+
+	// Turns on a performance overlay.
+	ShowPerformanceOverlay *bool
+
+	// Turns on an overlay that shows the accessibility information reported by
+	// the framework.
+	ShowSemanticsDebugger *bool
+
+	// Turns on an overlay that enables inspecting the widget tree.
+	DebugShowWidgetInspector *bool
+
+	// Turns on a little "DEBUG" banner in debug mode to indicate that the app
+	// is in debug mode.
 	DebugShowCheckedModeBanner *bool
-	RestorationScopeId         *string
-	UseInheritedMediaQuery     *bool
+
+	// The identifier to use for state restoration of this app.
+	RestorationScopeId *string
+
+	// Deprecated.
+	UseInheritedMediaQuery *bool
 }
 
 // WillPopScope maps WillPopScope of package:flutter/widgets.dart.
+//
+// Registers a callback to veto attempts by the user to dismiss the
+// enclosing ModalRoute.
 type WillPopScope struct {
-	Child     Node
+	// The widget below this widget in the tree.
+	Child Node
+
+	// Called to veto attempts by the user to dismiss the enclosing ModalRoute.
 	OnWillPop Ask
 }
 
 // Wrap maps Wrap of package:flutter/widgets.dart.
+//
+// A widget that displays its children in multiple horizontal or vertical
+// runs.
 //
 // Direction takes "horizontal", or "vertical".
 //
@@ -3335,16 +6571,38 @@ type WillPopScope struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type Wrap struct {
-	Direction          *string
-	Alignment          *string
-	Spacing            *float64
-	RunAlignment       *string
-	RunSpacing         *float64
+	// The direction to use as the main axis.
+	Direction *string
+
+	// How the children within a run should be placed in the main axis.
+	Alignment *string
+
+	// How much space to place between children in a run in the main axis.
+	Spacing *float64
+
+	// How the runs themselves should be placed in the cross axis.
+	RunAlignment *string
+
+	// How much space to place between the runs themselves in the cross axis.
+	RunSpacing *float64
+
+	// How the children within a run should be aligned relative to each other
+	// in the cross axis.
 	CrossAxisAlignment *string
-	TextDirection      *string
-	VerticalDirection  *string
-	ClipBehavior       *string
-	Children           []Node
+
+	// Determines the order to lay children out horizontally and how to
+	// interpret start and end in the horizontal direction.
+	TextDirection *string
+
+	// Determines the order to lay children out vertically and how to interpret
+	// start and end in the vertical direction.
+	VerticalDirection *string
+
+	// Defaults to none.
+	ClipBehavior *string
+
+	// The widgets below this widget in the tree.
+	Children []Node
 }
 
 func (AbsorbPointer) IsNode() Mark                       { return Mark{} }

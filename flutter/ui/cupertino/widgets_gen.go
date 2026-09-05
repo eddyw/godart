@@ -16,51 +16,107 @@ import "gart.dev/ui"
 // Read flutter/nodegen/README.md to run the generator again.
 
 // CupertinoActionSheet maps CupertinoActionSheet of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style action sheet.
 type CupertinoActionSheet struct {
-	Title                   ui.Node
-	Message                 ui.Node
-	Actions                 []ui.Node
+	// An optional title of the action sheet.
+	Title ui.Node
+
+	// An optional descriptive message that provides more details about the
+	// reason for the alert.
+	Message ui.Node
+
+	// The set of actions that are displayed for the user to select.
+	Actions []ui.Node
+
+	// A scroll controller that can be used to control the scrolling of the
+	// message in the action sheet.
 	MessageScrollController *ui.ScrollKey
-	ActionScrollController  *ui.ScrollKey
-	CancelButton            ui.Node
+
+	// A scroll controller that can be used to control the scrolling of the
+	// actions in the action sheet.
+	ActionScrollController *ui.ScrollKey
+
+	// The optional cancel button that is grouped separately from the other
+	// actions.
+	CancelButton ui.Node
 }
 
 // CupertinoActionSheetAction maps CupertinoActionSheetAction of package:cupertino_ui/cupertino_ui.dart.
+//
+// The content of a typical action button in a CupertinoActionSheet.
 type CupertinoActionSheetAction struct {
-	OnPressed           func()
-	IsDefaultAction     *bool
+	// The callback that is called when the button is selected.
+	OnPressed func()
+
+	// Whether this action is the default choice in the action sheet.
+	IsDefaultAction *bool
+
+	// Whether this action might change or delete data.
 	IsDestructiveAction *bool
-	MouseCursor         *string
-	FocusNode           *ui.FocusKey
-	FocusColor          *ui.Color
-	Child               ui.Node
+
+	// The cursor that will be shown when hovering over the button.
+	MouseCursor *string
+	FocusNode   *ui.FocusKey
+
+	// The color of the background that highlights active focus.
+	FocusColor *ui.Color
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // CupertinoActivityIndicator maps CupertinoActivityIndicator of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style activity indicator that spins clockwise.
 type CupertinoActivityIndicator struct {
-	Color     *ui.Color
+	// Color of the activity indicator.
+	Color *ui.Color
+
+	// Whether the activity indicator is running its animation.
 	Animating *bool
 }
 
 // CupertinoActivityIndicatorPartiallyRevealed maps CupertinoActivityIndicator.partiallyRevealed of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style activity indicator that spins clockwise.
 type CupertinoActivityIndicatorPartiallyRevealed struct {
-	Color    *ui.Color
+	// Color of the activity indicator.
+	Color *ui.Color
+
+	// Determines the percentage of spinner ticks that will be shown.
 	Progress *float64
 }
 
 // CupertinoAdaptiveTextSelectionToolbar maps CupertinoAdaptiveTextSelectionToolbar of package:cupertino_ui/cupertino_ui.dart.
+//
+// The default Cupertino context menu for text selection for the current
+// platform with the given children.
 type CupertinoAdaptiveTextSelectionToolbar struct {
+	// The children of the toolbar, typically buttons.
 	Children []ui.Node
-	Anchors  ui.ToolbarAnchors
+
+	// The location on which to anchor the menu.
+	Anchors ui.ToolbarAnchors
 }
 
 // CupertinoAdaptiveTextSelectionToolbarButtonItems maps CupertinoAdaptiveTextSelectionToolbar.buttonItems of package:cupertino_ui/cupertino_ui.dart.
+//
+// The default Cupertino context menu for text selection for the current
+// platform with the given children.
 type CupertinoAdaptiveTextSelectionToolbarButtonItems struct {
+	// The ContextMenuButtonItems that will be turned into the correct button
+	// widgets for the current platform.
 	ButtonItems []ui.MenuButtonItem
-	Anchors     ui.ToolbarAnchors
+
+	// The location on which to anchor the menu.
+	Anchors ui.ToolbarAnchors
 }
 
 // CupertinoAdaptiveTextSelectionToolbarEditable maps CupertinoAdaptiveTextSelectionToolbar.editable of package:cupertino_ui/cupertino_ui.dart.
+//
+// The default Cupertino context menu for text selection for the current
+// platform with the given children.
 //
 // ClipboardStatus takes "pasteable", "unknown", or "notPasteable".
 type CupertinoAdaptiveTextSelectionToolbarEditable struct {
@@ -73,167 +129,385 @@ type CupertinoAdaptiveTextSelectionToolbarEditable struct {
 	OnSearchWeb     func()
 	OnShare         func()
 	OnLiveTextInput func()
-	Anchors         ui.ToolbarAnchors
+
+	// The location on which to anchor the menu.
+	Anchors ui.ToolbarAnchors
 }
 
 // CupertinoAdaptiveTextSelectionToolbarSelectable maps CupertinoAdaptiveTextSelectionToolbar.selectable of package:cupertino_ui/cupertino_ui.dart.
+//
+// The default Cupertino context menu for text selection for the current
+// platform with the given children.
 type CupertinoAdaptiveTextSelectionToolbarSelectable struct {
 	OnCopy            func()
 	OnSelectAll       func()
 	SelectionGeometry ui.SelectionGeometry
-	Anchors           ui.ToolbarAnchors
+
+	// The location on which to anchor the menu.
+	Anchors ui.ToolbarAnchors
 }
 
 // CupertinoAlertDialog maps CupertinoAlertDialog of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style alert dialog.
 type CupertinoAlertDialog struct {
-	Title                  ui.Node
-	Content                ui.Node
-	Actions                []ui.Node
-	ScrollController       *ui.ScrollKey
+	// The (optional) title of the dialog is displayed in a large font at the
+	// top of the dialog.
+	Title ui.Node
+
+	// The (optional) content of the dialog is displayed in the center of the
+	// dialog in a lighter font.
+	Content ui.Node
+
+	// The (optional) set of actions that are displayed at the bottom of the
+	// dialog.
+	Actions []ui.Node
+
+	// A scroll controller that can be used to control the scrolling of the
+	// content in the dialog.
+	ScrollController *ui.ScrollKey
+
+	// A scroll controller that can be used to control the scrolling of the
+	// actions in the dialog.
 	ActionScrollController *ui.ScrollKey
-	InsetAnimationCurve    *string
+
+	// The curve to use for the animation shown when the system keyboard
+	// intrudes into the space that the dialog is placed in.
+	InsetAnimationCurve *string
 }
 
 // CupertinoApp maps CupertinoApp of package:cupertino_ui/cupertino_ui.dart.
+//
+// An application that uses Cupertino design.
 type CupertinoApp struct {
-	Home                          ui.Node
-	Theme                         *ui.CupertinoStyle
-	InitialRoute                  *string
-	Title                         *string
-	Color                         *ui.Color
-	Locale                        *string
-	ShowPerformanceOverlay        *bool
+	Home ui.Node
+
+	// The top-level CupertinoTheme styling.
+	Theme        *ui.CupertinoStyle
+	InitialRoute *string
+
+	// This value is passed unmodified to title.
+	Title  *string
+	Color  *ui.Color
+	Locale *string
+
+	// Turns on a performance overlay.
+	ShowPerformanceOverlay *bool
+
+	// Turns on checkerboarding of raster cache images.
 	CheckerboardRasterCacheImages *bool
-	CheckerboardOffscreenLayers   *bool
-	ShowSemanticsDebugger         *bool
-	DebugShowCheckedModeBanner    *bool
-	RestorationScopeId            *string
-	UseInheritedMediaQuery        *bool
+
+	// Turns on checkerboarding of layers rendered to offscreen bitmaps.
+	CheckerboardOffscreenLayers *bool
+
+	// Turns on an overlay that shows the accessibility information reported by
+	// the framework.
+	ShowSemanticsDebugger      *bool
+	DebugShowCheckedModeBanner *bool
+	RestorationScopeId         *string
+	UseInheritedMediaQuery     *bool
 }
 
 // CupertinoAppRouter maps CupertinoApp.router of package:cupertino_ui/cupertino_ui.dart.
+//
+// An application that uses Cupertino design.
 type CupertinoAppRouter struct {
-	Theme                         *ui.CupertinoStyle
-	Title                         *string
-	Color                         *ui.Color
-	Locale                        *string
-	ShowPerformanceOverlay        *bool
+	// The top-level CupertinoTheme styling.
+	Theme *ui.CupertinoStyle
+
+	// This value is passed unmodified to title.
+	Title  *string
+	Color  *ui.Color
+	Locale *string
+
+	// Turns on a performance overlay.
+	ShowPerformanceOverlay *bool
+
+	// Turns on checkerboarding of raster cache images.
 	CheckerboardRasterCacheImages *bool
-	CheckerboardOffscreenLayers   *bool
-	ShowSemanticsDebugger         *bool
-	DebugShowCheckedModeBanner    *bool
-	RestorationScopeId            *string
-	UseInheritedMediaQuery        *bool
+
+	// Turns on checkerboarding of layers rendered to offscreen bitmaps.
+	CheckerboardOffscreenLayers *bool
+
+	// Turns on an overlay that shows the accessibility information reported by
+	// the framework.
+	ShowSemanticsDebugger      *bool
+	DebugShowCheckedModeBanner *bool
+	RestorationScopeId         *string
+	UseInheritedMediaQuery     *bool
 }
 
 // CupertinoButton maps CupertinoButton of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-style button.
+//
 // SizeStyle takes "small", "medium", or "large".
 type CupertinoButton struct {
-	Child           ui.Node
-	SizeStyle       *string
-	Padding         *ui.Insets
-	Color           *ui.Color
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The size of the button.
+	SizeStyle *string
+
+	// The amount of space to surround the child inside the bounds of the
+	// button.
+	Padding *ui.Insets
+
+	// The color of the button's background.
+	Color *ui.Color
+
+	// The color of the button's text and icons.
 	ForegroundColor *ui.Color
-	DisabledColor   *ui.Color
-	MinSize         *float64
-	MinimumSize     *ui.Size
-	PressedOpacity  *float64
-	BorderRadius    *ui.Radius
-	Alignment       *string
-	FocusColor      *ui.Color
-	FocusNode       *ui.FocusKey
-	OnFocusChange   func(bool)
-	Autofocus       *bool
-	MouseCursor     *string
-	OnLongPress     func()
-	OnPressed       func()
+
+	// The color of the button's background when the button is disabled.
+	DisabledColor *ui.Color
+
+	// Minimum size of the button.
+	MinSize *float64
+
+	// The minimum size of the button.
+	MinimumSize *ui.Size
+
+	// The opacity that the button will fade to when it is pressed.
+	PressedOpacity *float64
+
+	// The radius of the button's corners when it has a background color.
+	BorderRadius *ui.Radius
+
+	// The alignment of the button's child.
+	Alignment *string
+
+	// The color to use for the focus highlight for keyboard interactions.
+	FocusColor *ui.Color
+	FocusNode  *ui.FocusKey
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+	Autofocus     *bool
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// If onPressed and onLongPress callbacks are null, then the button will be
+	// disabled.
+	OnLongPress func()
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
 }
 
 // CupertinoButtonFilled maps CupertinoButton.filled of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-style button.
+//
 // SizeStyle takes "small", "medium", or "large".
 type CupertinoButtonFilled struct {
-	Child           ui.Node
-	SizeStyle       *string
-	Padding         *ui.Insets
-	Color           *ui.Color
-	DisabledColor   *ui.Color
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The size of the button.
+	SizeStyle *string
+
+	// The amount of space to surround the child inside the bounds of the
+	// button.
+	Padding *ui.Insets
+
+	// The color of the button's background.
+	Color *ui.Color
+
+	// The color of the button's background when the button is disabled.
+	DisabledColor *ui.Color
+
+	// The color of the button's text and icons.
 	ForegroundColor *ui.Color
-	MinSize         *float64
-	MinimumSize     *ui.Size
-	PressedOpacity  *float64
-	BorderRadius    *ui.Radius
-	Alignment       *string
-	FocusColor      *ui.Color
-	FocusNode       *ui.FocusKey
-	OnFocusChange   func(bool)
-	Autofocus       *bool
-	MouseCursor     *string
-	OnLongPress     func()
-	OnPressed       func()
+
+	// Minimum size of the button.
+	MinSize *float64
+
+	// The minimum size of the button.
+	MinimumSize *ui.Size
+
+	// The opacity that the button will fade to when it is pressed.
+	PressedOpacity *float64
+
+	// The radius of the button's corners when it has a background color.
+	BorderRadius *ui.Radius
+
+	// The alignment of the button's child.
+	Alignment *string
+
+	// The color to use for the focus highlight for keyboard interactions.
+	FocusColor *ui.Color
+	FocusNode  *ui.FocusKey
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+	Autofocus     *bool
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// If onPressed and onLongPress callbacks are null, then the button will be
+	// disabled.
+	OnLongPress func()
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
 }
 
 // CupertinoButtonTinted maps CupertinoButton.tinted of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-style button.
+//
 // SizeStyle takes "small", "medium", or "large".
 type CupertinoButtonTinted struct {
-	Child           ui.Node
-	SizeStyle       *string
-	Padding         *ui.Insets
-	Color           *ui.Color
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The size of the button.
+	SizeStyle *string
+
+	// The amount of space to surround the child inside the bounds of the
+	// button.
+	Padding *ui.Insets
+
+	// The color of the button's background.
+	Color *ui.Color
+
+	// The color of the button's text and icons.
 	ForegroundColor *ui.Color
-	DisabledColor   *ui.Color
-	MinSize         *float64
-	MinimumSize     *ui.Size
-	PressedOpacity  *float64
-	BorderRadius    *ui.Radius
-	Alignment       *string
-	FocusColor      *ui.Color
-	FocusNode       *ui.FocusKey
-	OnFocusChange   func(bool)
-	Autofocus       *bool
-	MouseCursor     *string
-	OnLongPress     func()
-	OnPressed       func()
+
+	// The color of the button's background when the button is disabled.
+	DisabledColor *ui.Color
+
+	// Minimum size of the button.
+	MinSize *float64
+
+	// The minimum size of the button.
+	MinimumSize *ui.Size
+
+	// The opacity that the button will fade to when it is pressed.
+	PressedOpacity *float64
+
+	// The radius of the button's corners when it has a background color.
+	BorderRadius *ui.Radius
+
+	// The alignment of the button's child.
+	Alignment *string
+
+	// The color to use for the focus highlight for keyboard interactions.
+	FocusColor *ui.Color
+	FocusNode  *ui.FocusKey
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+	Autofocus     *bool
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// If onPressed and onLongPress callbacks are null, then the button will be
+	// disabled.
+	OnLongPress func()
+
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
 }
 
 // CupertinoCheckbox maps CupertinoCheckbox of package:cupertino_ui/cupertino_ui.dart.
+//
+// A macOS style checkbox.
 type CupertinoCheckbox struct {
-	Value         bool
-	Tristate      *bool
-	OnChanged     func(bool)
-	MouseCursor   *string
-	ActiveColor   *ui.Color
+	// Whether this checkbox is checked.
+	Value bool
+
+	// If true, the checkbox's value can be true, false, or null.
+	Tristate *bool
+
+	// Called when the value of the checkbox should change.
+	OnChanged func(bool)
+
+	// The cursor for a mouse pointer when it enters or is hovering over the
+	// widget.
+	MouseCursor *string
+
+	// The color to use when this checkbox is checked.
+	ActiveColor *ui.Color
+
+	// The color used if the checkbox is inactive.
 	InactiveColor *ui.Color
-	FillColor     *ui.StateColor
-	CheckColor    *ui.Color
-	FocusColor    *ui.Color
-	FocusNode     *ui.FocusKey
-	Autofocus     *bool
-	Side          *ui.BorderSide
-	Shape         *ui.Shape
+
+	// The color used to fill this checkbox.
+	FillColor *ui.StateColor
+
+	// The color to use for the check icon when this checkbox is checked.
+	CheckColor *ui.Color
+
+	// The color for the checkbox's border shadow when it has the input focus.
+	FocusColor *ui.Color
+	FocusNode  *ui.FocusKey
+	Autofocus  *bool
+
+	// The color and width of the checkbox's border.
+	Side *ui.BorderSide
+
+	// The shape of the checkbox.
+	Shape *ui.Shape
+
+	// The tap target and layout size of the checkbox.
 	TapTargetSize *ui.Size
+
+	// The semantic label for the checkbox that will be announced by screen
+	// readers.
 	SemanticLabel *string
 }
 
 // CupertinoContextMenu maps CupertinoContextMenu of package:cupertino_ui/cupertino_ui.dart.
+//
+// A full-screen modal route that opens when the child is long-pressed.
 type CupertinoContextMenu struct {
-	Actions              []ui.Node
-	Child                ui.Node
+	// The actions that are shown in the menu.
+	Actions []ui.Node
+
+	// The widget that can be "opened" with the CupertinoContextMenu.
+	Child ui.Node
+
+	// If true, clicking on the CupertinoContextMenuActions will produce haptic
+	// feedback.
 	EnableHapticFeedback *bool
 }
 
 // CupertinoContextMenuAction maps CupertinoContextMenuAction of package:cupertino_ui/cupertino_ui.dart.
+//
+// A button in a _ContextMenuSheet.
 type CupertinoContextMenuAction struct {
-	Child               ui.Node
-	IsDefaultAction     *bool
+	// The widget that will be placed inside the action.
+	Child ui.Node
+
+	// Indicates whether this action should receive the style of an emphasized,
+	// default action.
+	IsDefaultAction *bool
+
+	// Indicates whether this action should receive the style of a destructive
+	// action.
 	IsDestructiveAction *bool
-	OnPressed           func()
-	TrailingIcon        *string
+
+	// Called when the action is pressed.
+	OnPressed func()
+
+	// An optional icon to display to the right of the child.
+	TrailingIcon *string
 }
 
 // CupertinoDatePicker maps CupertinoDatePicker of package:cupertino_ui/cupertino_ui.dart.
+//
+// A date picker widget in iOS style.
 //
 // Mode takes "time", "date", "dateAndTime", or "monthYear".
 //
@@ -241,368 +515,802 @@ type CupertinoContextMenuAction struct {
 //
 // ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
 type CupertinoDatePicker struct {
-	Mode                    *string
-	OnDateTimeChanged       func(int)
-	InitialDateTime         *int
-	MinimumDate             *int
-	MaximumDate             *int
-	MinimumYear             *int
-	MaximumYear             *int
-	MinuteInterval          *int
-	Use24hFormat            *bool
-	DateOrder               *string
-	BackgroundColor         *ui.Color
-	ShowDayOfWeek           *bool
-	ShowTimeSeparator       *bool
+	// The mode of the date picker as one of CupertinoDatePickerMode.
+	Mode *string
+
+	// Callback called when the selected date and/or time changes.
+	OnDateTimeChanged func(int)
+
+	// The initial date and/or time of the picker.
+	InitialDateTime *int
+
+	// The minimum selectable date that the picker can settle on.
+	MinimumDate *int
+
+	// The maximum selectable date that the picker can settle on.
+	MaximumDate *int
+
+	// Minimum year that the picker can be scrolled to in date mode.
+	MinimumYear *int
+
+	// Maximum year that the picker can be scrolled to in date mode.
+	MaximumYear *int
+
+	// The granularity of the minutes spinner, if it is shown in the current
+	// mode.
+	MinuteInterval *int
+
+	// Whether to use 24 hour format.
+	Use24hFormat *bool
+
+	// Determines the order of the columns inside CupertinoDatePicker in date
+	// and monthYear mode.
+	DateOrder *string
+
+	// Background color of date picker.
+	BackgroundColor *ui.Color
+
+	// Whether to show the day of week alongside the day in date mode.
+	ShowDayOfWeek *bool
+
+	// Whether to show the time separator between hour and minute in the time
+	// time and datetime dateAndTime picker modes.
+	ShowTimeSeparator *bool
+
+	// The behavior of reporting the selected date.
 	ChangeReportingBehavior *string
 }
 
 // CupertinoDesktopTextSelectionToolbar maps CupertinoDesktopTextSelectionToolbar of package:cupertino_ui/cupertino_ui.dart.
+//
+// A macOS-style text selection toolbar.
 type CupertinoDesktopTextSelectionToolbar struct {
-	Anchor   ui.Offset
+	// The point where the toolbar will attempt to position itself as closely
+	// as possible.
+	Anchor ui.Offset
+
+	// See also:
 	Children []ui.Node
 }
 
 // CupertinoDesktopTextSelectionToolbarButton maps CupertinoDesktopTextSelectionToolbarButton of package:cupertino_ui/cupertino_ui.dart.
+//
+// A button in the style of the Mac context menu buttons.
 type CupertinoDesktopTextSelectionToolbarButton struct {
 	OnPressed func()
 	Child     ui.Node
 }
 
 // CupertinoDesktopTextSelectionToolbarButtonButtonItem maps CupertinoDesktopTextSelectionToolbarButton.buttonItem of package:cupertino_ui/cupertino_ui.dart.
+//
+// A button in the style of the Mac context menu buttons.
 type CupertinoDesktopTextSelectionToolbarButtonButtonItem struct {
 	ButtonItem ui.MenuButtonItem
 }
 
 // CupertinoDesktopTextSelectionToolbarButtonText maps CupertinoDesktopTextSelectionToolbarButton.text of package:cupertino_ui/cupertino_ui.dart.
+//
+// A button in the style of the Mac context menu buttons.
 type CupertinoDesktopTextSelectionToolbarButtonText struct {
 	OnPressed func()
 	Text      string
 }
 
 // CupertinoDialogAction maps CupertinoDialogAction of package:cupertino_ui/cupertino_ui.dart.
+//
+// A button typically used in a CupertinoAlertDialog.
 type CupertinoDialogAction struct {
-	OnPressed           func()
-	IsDefaultAction     *bool
+	// The callback that is called when the button is tapped or otherwise
+	// activated.
+	OnPressed func()
+
+	// Set to true if button is the default choice in the dialog.
+	IsDefaultAction *bool
+
+	// Whether this action destroys an object.
 	IsDestructiveAction *bool
-	TextStyle           *ui.TextStyle
-	MouseCursor         *string
-	Child               ui.Node
+
+	// TextStyle to apply to any text that appears in this button.
+	TextStyle *ui.TextStyle
+
+	// The cursor that will be shown when hovering over the button.
+	MouseCursor *string
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // CupertinoExpansionTile maps CupertinoExpansionTile of package:cupertino_ui/cupertino_ui.dart.
 //
+// A single-line CupertinoListTile with an expansion arrow icon that expands
+// or collapses the tile to reveal or hide the child.
+//
 // TransitionMode takes "fade", or "scroll".
 type CupertinoExpansionTile struct {
-	Title          ui.Node
-	Child          ui.Node
+	// Used to convey the central information.
+	Title ui.Node
+
+	// The body of the CupertinoExpansionTile.
+	Child ui.Node
+
+	// How the CupertinoExpansionTile should transition its child between its
+	// collapsed state and its expanded state.
 	TransitionMode *string
 }
 
 // CupertinoFocusHaloWithRRect maps CupertinoFocusHalo.withRRect of package:cupertino_ui/cupertino_ui.dart.
+//
+// Applies an iOS-style focus border around its child when any of child
+// focus nodes gain focus.
 type CupertinoFocusHaloWithRRect struct {
+	// The child to draw the focused border around.
 	Child ui.Node
 }
 
 // CupertinoFocusHaloWithRect maps CupertinoFocusHalo.withRect of package:cupertino_ui/cupertino_ui.dart.
+//
+// Applies an iOS-style focus border around its child when any of child
+// focus nodes gain focus.
 type CupertinoFocusHaloWithRect struct {
+	// The child to draw the focused border around.
 	Child ui.Node
 }
 
 // CupertinoFocusHaloWithRoundedSuperellipse maps CupertinoFocusHalo.withRoundedSuperellipse of package:cupertino_ui/cupertino_ui.dart.
+//
+// Applies an iOS-style focus border around its child when any of child
+// focus nodes gain focus.
 type CupertinoFocusHaloWithRoundedSuperellipse struct {
+	// The child to draw the focused border around.
 	Child ui.Node
 }
 
 // CupertinoFormRow maps CupertinoFormRow of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style form row.
 type CupertinoFormRow struct {
-	Child   ui.Node
-	Prefix  ui.Node
+	// Child widget.
+	Child ui.Node
+
+	// A widget that is displayed at the start of the row.
+	Prefix ui.Node
+
+	// Content padding for the row.
 	Padding *ui.Insets
-	Helper  ui.Node
-	Error   ui.Node
+
+	// A widget that is displayed underneath the prefix and child widgets.
+	Helper ui.Node
+
+	// A widget that is displayed underneath the prefix and child widgets.
+	Error ui.Node
 }
 
 // CupertinoFormSection maps CupertinoFormSection of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-style form section.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoFormSection struct {
-	Children        []ui.Node
-	Header          ui.Node
-	Footer          ui.Node
-	Margin          *ui.Insets
+	// The list of rows in the section.
+	Children []ui.Node
+
+	// Sets the form section header.
+	Header ui.Node
+
+	// Sets the form section footer.
+	Footer ui.Node
+
+	// Margin around the content area of the section encapsulating children.
+	Margin *ui.Insets
+
+	// Sets the background color behind the section.
 	BackgroundColor *ui.Color
-	Decoration      *ui.Decoration
-	ClipBehavior    *string
+
+	// Sets the decoration around children.
+	Decoration *ui.Decoration
+
+	// Defaults to none.
+	ClipBehavior *string
 }
 
 // CupertinoFormSectionInsetGrouped maps CupertinoFormSection.insetGrouped of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-style form section.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoFormSectionInsetGrouped struct {
-	Children        []ui.Node
-	Header          ui.Node
-	Footer          ui.Node
+	// The list of rows in the section.
+	Children []ui.Node
+
+	// Sets the form section header.
+	Header ui.Node
+
+	// Sets the form section footer.
+	Footer ui.Node
+
+	// Sets the background color behind the section.
 	BackgroundColor *ui.Color
-	Decoration      *ui.Decoration
-	ClipBehavior    *string
+
+	// Sets the decoration around children.
+	Decoration *ui.Decoration
+
+	// Defaults to none.
+	ClipBehavior *string
 }
 
 // CupertinoFullscreenDialogTransition maps CupertinoFullscreenDialogTransition of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style transition used for summoning fullscreen dialogs.
 type CupertinoFullscreenDialogTransition struct {
 	PrimaryRouteAnimation   ui.AnimationKey
 	SecondaryRouteAnimation ui.AnimationKey
-	Child                   ui.Node
-	LinearTransition        bool
+
+	// The widget below this widget in the tree.
+	Child            ui.Node
+	LinearTransition bool
 }
 
 // CupertinoLinearActivityIndicator maps CupertinoLinearActivityIndicator of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style linear activity indicator.
 type CupertinoLinearActivityIndicator struct {
+	// The current progress of the linear activity indicator.
 	Progress float64
-	Height   *float64
-	Color    *ui.Color
+
+	// The height of the line used to draw the linear activity indicator.
+	Height *float64
+
+	// The color of the progress bar.
+	Color *ui.Color
 }
 
 // CupertinoListSection maps CupertinoListSection of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-style list section.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoListSection struct {
-	Children                []ui.Node
-	Header                  ui.Node
-	Footer                  ui.Node
-	BackgroundColor         *ui.Color
-	Decoration              *ui.Decoration
-	ClipBehavior            *string
+	// The list of rows in the section.
+	Children []ui.Node
+
+	// Sets the form section header.
+	Header ui.Node
+
+	// Sets the form section footer.
+	Footer ui.Node
+
+	// Sets the background color behind the section.
+	BackgroundColor *ui.Color
+
+	// Sets the decoration around children.
+	Decoration *ui.Decoration
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Additional starting inset of the divider used between rows.
 	AdditionalDividerMargin *float64
-	TopMargin               *float64
-	HasLeading              *bool
-	SeparatorColor          *ui.Color
+
+	// Margin above the list section.
+	TopMargin  *float64
+	HasLeading *bool
+
+	// Sets the color for the dividers between rows, and borders on top and
+	// bottom of the rows.
+	SeparatorColor *ui.Color
 }
 
 // CupertinoListSectionInsetGrouped maps CupertinoListSection.insetGrouped of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-style list section.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoListSectionInsetGrouped struct {
-	Children                []ui.Node
-	Header                  ui.Node
-	Footer                  ui.Node
-	Margin                  *ui.Insets
-	BackgroundColor         *ui.Color
-	Decoration              *ui.Decoration
-	ClipBehavior            *string
+	// The list of rows in the section.
+	Children []ui.Node
+
+	// Sets the form section header.
+	Header ui.Node
+
+	// Sets the form section footer.
+	Footer ui.Node
+
+	// Margin around the content area of the section encapsulating children.
+	Margin *ui.Insets
+
+	// Sets the background color behind the section.
+	BackgroundColor *ui.Color
+
+	// Sets the decoration around children.
+	Decoration *ui.Decoration
+
+	// Defaults to hardEdge.
+	ClipBehavior *string
+
+	// Additional starting inset of the divider used between rows.
 	AdditionalDividerMargin *float64
-	TopMargin               *float64
-	HasLeading              *bool
-	SeparatorColor          *ui.Color
+
+	// Margin above the list section.
+	TopMargin  *float64
+	HasLeading *bool
+
+	// Sets the color for the dividers between rows, and borders on top and
+	// bottom of the rows.
+	SeparatorColor *ui.Color
 }
 
 // CupertinoListTile maps CupertinoListTile of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style list tile.
 type CupertinoListTile struct {
-	Title                    ui.Node
-	Subtitle                 ui.Node
-	AdditionalInfo           ui.Node
-	Leading                  ui.Node
-	Trailing                 ui.Node
-	BackgroundColor          *ui.Color
+	// A title is used to convey the central information.
+	Title ui.Node
+
+	// A subtitle is used to display additional information.
+	Subtitle ui.Node
+
+	// Similar to subtitle, an additionalInfo is used to display additional
+	// information.
+	AdditionalInfo ui.Node
+
+	// A widget displayed at the start of the CupertinoListTile.
+	Leading ui.Node
+
+	// A widget displayed at the end of the CupertinoListTile.
+	Trailing ui.Node
+
+	// The backgroundColor of the tile in normal state.
+	BackgroundColor *ui.Color
+
+	// The backgroundColorActivated is the background color of the tile after
+	// the tile was tapped.
 	BackgroundColorActivated *ui.Color
-	Padding                  *ui.Insets
+
+	// Padding of the content inside CupertinoListTile.
+	Padding *ui.Insets
 }
 
 // CupertinoListTileChevron maps CupertinoListTileChevron of package:cupertino_ui/cupertino_ui.dart.
+//
+// A typical iOS trailing widget used to denote that a CupertinoListTile is
+// a button with an action.
 type CupertinoListTileChevron struct {
 }
 
 // CupertinoListTileNotched maps CupertinoListTile.notched of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style list tile.
 type CupertinoListTileNotched struct {
-	Title                    ui.Node
-	Subtitle                 ui.Node
-	AdditionalInfo           ui.Node
-	Leading                  ui.Node
-	Trailing                 ui.Node
-	BackgroundColor          *ui.Color
+	// A title is used to convey the central information.
+	Title ui.Node
+
+	// A subtitle is used to display additional information.
+	Subtitle ui.Node
+
+	// Similar to subtitle, an additionalInfo is used to display additional
+	// information.
+	AdditionalInfo ui.Node
+
+	// A widget displayed at the start of the CupertinoListTile.
+	Leading ui.Node
+
+	// A widget displayed at the end of the CupertinoListTile.
+	Trailing ui.Node
+
+	// The backgroundColor of the tile in normal state.
+	BackgroundColor *ui.Color
+
+	// The backgroundColorActivated is the background color of the tile after
+	// the tile was tapped.
 	BackgroundColorActivated *ui.Color
-	Padding                  *ui.Insets
+
+	// Padding of the content inside CupertinoListTile.
+	Padding *ui.Insets
 }
 
 // CupertinoMagnifier maps CupertinoMagnifier of package:cupertino_ui/cupertino_ui.dart.
 //
+// A RawMagnifier used for magnifying text in cases where a user's finger
+// may be blocking the point of interest, like a selection handle.
+//
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoMagnifier struct {
-	BorderRadius               *ui.Radius
+	// The border radius of this magnifier.
+	BorderRadius *ui.Radius
+
+	// Any additional focal point offset, applied over the regular focal point
+	// offset defined in kMagnifierAboveFocalPoint.
 	AdditionalFocalPointOffset *ui.Offset
-	ClipBehavior               *string
-	InOutAnimation             *ui.AnimationKey
-	MagnificationScale         *float64
+
+	// Whether and how to clip the shadows that render inside the loupe.
+	ClipBehavior *string
+
+	// This RawMagnifier's controller.
+	InOutAnimation *ui.AnimationKey
+
+	// The magnification scale for the magnifier.
+	MagnificationScale *float64
 }
 
 // CupertinoMenuAnchor maps CupertinoMenuAnchor of package:cupertino_ui/cupertino_ui.dart.
+//
+// A widget used to mark the "anchor" for a menu, defining the rectangle
+// used to position the menu, which can be done with an explicit location,
+// or with an alignment.
 type CupertinoMenuAnchor struct {
-	Controller               *ui.MenuKey
-	OnOpen                   func()
-	OnClose                  func()
+	// An optional controller that allows opening and closing of the menu from
+	// other widgets.
+	Controller *ui.MenuKey
+
+	// A callback that is invoked when the menu begins opening.
+	OnOpen func()
+
+	// A callback that is invoked when the menu finishes closing.
+	OnClose func()
+
+	// An optional callback that is invoked when the AnimationStatus of the
+	// menu changes.
 	OnAnimationStatusChanged func(string)
-	Constraints              *ui.Constraints
-	ConstrainCrossAxis       *bool
-	ConsumeOutsideTaps       *bool
-	EnableSwipe              *bool
-	EnableLongPressToOpen    *bool
-	UseRootOverlay           *bool
-	OverlayPadding           *ui.Insets
-	MenuChildren             []ui.Node
-	Child                    ui.Node
-	ChildFocusNode           *ui.FocusKey
+
+	// The constraints to apply to the menu scrollable.
+	Constraints *ui.Constraints
+
+	// Whether the menu's cross axis should be constrained by the overlay.
+	ConstrainCrossAxis *bool
+
+	// Whether or not a tap event that closes the menu will be permitted to
+	// continue on to the gesture arena.
+	ConsumeOutsideTaps *bool
+
+	// Whether or not swiping is enabled on the menu.
+	EnableSwipe *bool
+
+	// Whether or not the menu should open in response to a long-press on the
+	// anchor.
+	EnableLongPressToOpen *bool
+	UseRootOverlay        *bool
+
+	// The padding inside the overlay between its boundary and the menu
+	// content.
+	OverlayPadding *ui.Insets
+
+	// A list of menu items to display in the menu.
+	MenuChildren []ui.Node
+
+	// An optional child to be passed to the builder.
+	Child ui.Node
+
+	// The childFocusNode attribute is the optional FocusNode also associated
+	// the child or builder widget that opens the menu.
+	ChildFocusNode *ui.FocusKey
 }
 
 // CupertinoMenuDivider maps CupertinoMenuDivider of package:cupertino_ui/cupertino_ui.dart.
+//
+// A large horizontal divider that is used to separate CupertinoMenuItems in
+// a CupertinoMenuAnchor.
 type CupertinoMenuDivider struct {
 }
 
 // CupertinoMenuItem maps CupertinoMenuItem of package:cupertino_ui/cupertino_ui.dart.
 //
+// A menu item for use in a CupertinoMenuAnchor.
+//
 // Behavior takes "deferToChild", "opaque", or "translucent".
 type CupertinoMenuItem struct {
-	Child                     ui.Node
-	Subtitle                  ui.Node
-	Leading                   ui.Node
-	LeadingWidth              *float64
-	LeadingMidpointAlignment  *string
-	Trailing                  ui.Node
-	TrailingWidth             *float64
+	// The widget displayed in the center of this button.
+	Child ui.Node
+
+	// A widget displayed underneath the child.
+	Subtitle ui.Node
+
+	// The widget shown before the label.
+	Leading ui.Node
+
+	// The horizontal space in which the leading widget can be placed.
+	LeadingWidth *float64
+
+	// The alignment of the center point of the leading widget within the
+	// leadingWidth of the menu item.
+	LeadingMidpointAlignment *string
+
+	// The widget shown after the label.
+	Trailing ui.Node
+
+	// The horizontal space in which the trailing widget can be placed.
+	TrailingWidth *float64
+
+	// The alignment of the center point of the trailing widget within the
+	// trailingWidth of the menu item.
 	TrailingMidpointAlignment *string
-	Padding                   *ui.Insets
-	Constraints               *ui.Constraints
-	Autofocus                 *bool
-	FocusNode                 *ui.FocusKey
-	OnFocusChange             func(bool)
-	OnHover                   func(bool)
-	OnPressed                 func()
-	Behavior                  *string
-	RequestCloseOnActivate    *bool
-	RequestFocusOnHover       *bool
-	IsDestructiveAction       *bool
+
+	// The padding applied to this menu item.
+	Padding *ui.Insets
+
+	// The BoxConstraints to apply to the menu item.
+	Constraints *ui.Constraints
+	Autofocus   *bool
+	FocusNode   *ui.FocusKey
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+
+	// Triggered when a pointer moves into a position within this widget
+	// without buttons pressed.
+	OnHover func(bool)
+
+	// Called when this menu is tapped or otherwise activated.
+	OnPressed func()
+
+	// How the menu item should respond to hit tests.
+	Behavior *string
+
+	// Determines if the menu will be closed when a CupertinoMenuItem is
+	// pressed.
+	RequestCloseOnActivate *bool
+
+	// Whether hovering should request focus for this widget.
+	RequestFocusOnHover *bool
+
+	// Whether pressing this item will perform a destructive action
+	IsDestructiveAction *bool
 }
 
 // CupertinoNavigationBar maps CupertinoNavigationBar of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-styled navigation bar.
+//
 // Brightness takes "dark", or "light".
 type CupertinoNavigationBar struct {
-	Leading                       ui.Node
-	AutomaticallyImplyLeading     *bool
-	AutomaticallyImplyMiddle      *bool
-	PreviousPageTitle             *string
-	Middle                        ui.Node
-	Trailing                      ui.Node
-	BackgroundColor               *ui.Color
+	// Widget to place at the start of the navigation bar.
+	Leading ui.Node
+
+	// Controls whether we should try to imply the leading widget if null.
+	AutomaticallyImplyLeading *bool
+
+	// Controls whether we should try to imply the middle widget if null.
+	AutomaticallyImplyMiddle *bool
+
+	// Manually specify the previous route's title when automatically implying
+	// the leading back button.
+	PreviousPageTitle *string
+
+	// The navigation bar's default title.
+	Middle ui.Node
+
+	// Widget to place at the end of the navigation bar.
+	Trailing ui.Node
+
+	// The background color of the navigation bar.
+	BackgroundColor *ui.Color
+
+	// Whether the navigation bar appears transparent when no content is
+	// scrolled under.
 	AutomaticBackgroundVisibility *bool
-	EnableBackgroundFilterBlur    *bool
-	Brightness                    *string
-	TransitionBetweenRoutes       *bool
-	Bottom                        ui.Node
+
+	// Whether to have a blur effect when a non-opaque background color is
+	// used.
+	EnableBackgroundFilterBlur *bool
+
+	// The brightness of the specified backgroundColor.
+	Brightness *string
+
+	// Whether to transition between navigation bars.
+	TransitionBetweenRoutes *bool
+
+	// A widget to place at the bottom of the navigation bar.
+	Bottom ui.Node
 }
 
 // CupertinoNavigationBarBackButton maps CupertinoNavigationBarBackButton of package:cupertino_ui/cupertino_ui.dart.
+//
+// A nav bar back button typically used in CupertinoNavigationBar.
 type CupertinoNavigationBarBackButton struct {
-	Color             *ui.Color
+	// The Color of the back button.
+	Color *ui.Color
+
+	// An override for showing the previous route's title.
 	PreviousPageTitle *string
-	OnPressed         func()
+
+	// An override callback to perform instead of the default behavior which is
+	// to pop the Navigator.
+	OnPressed func()
 }
 
 // CupertinoNavigationBarLarge maps CupertinoNavigationBar.large of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-styled navigation bar.
+//
 // Brightness takes "dark", or "light".
 type CupertinoNavigationBarLarge struct {
-	LargeTitle                    ui.Node
-	Leading                       ui.Node
-	AutomaticallyImplyLeading     *bool
-	AutomaticallyImplyTitle       *bool
-	PreviousPageTitle             *string
-	Trailing                      ui.Node
-	BackgroundColor               *ui.Color
+	// The navigation bar's title, when using large.
+	LargeTitle ui.Node
+
+	// Widget to place at the start of the navigation bar.
+	Leading ui.Node
+
+	// Controls whether we should try to imply the leading widget if null.
+	AutomaticallyImplyLeading *bool
+	AutomaticallyImplyTitle   *bool
+
+	// Manually specify the previous route's title when automatically implying
+	// the leading back button.
+	PreviousPageTitle *string
+
+	// Widget to place at the end of the navigation bar.
+	Trailing ui.Node
+
+	// The background color of the navigation bar.
+	BackgroundColor *ui.Color
+
+	// Whether the navigation bar appears transparent when no content is
+	// scrolled under.
 	AutomaticBackgroundVisibility *bool
-	EnableBackgroundFilterBlur    *bool
-	Brightness                    *string
-	TransitionBetweenRoutes       *bool
-	Bottom                        ui.Node
+
+	// Whether to have a blur effect when a non-opaque background color is
+	// used.
+	EnableBackgroundFilterBlur *bool
+
+	// The brightness of the specified backgroundColor.
+	Brightness *string
+
+	// Whether to transition between navigation bars.
+	TransitionBetweenRoutes *bool
+
+	// A widget to place at the bottom of the navigation bar.
+	Bottom ui.Node
 }
 
 // CupertinoPageScaffold maps CupertinoPageScaffold of package:cupertino_ui/cupertino_ui.dart.
+//
+// Implements a single iOS application page's layout.
 type CupertinoPageScaffold struct {
-	NavigationBar            ui.Node
-	BackgroundColor          *ui.Color
+	// The navigationBar, typically a CupertinoNavigationBar, is drawn at the
+	// top of the screen.
+	NavigationBar ui.Node
+
+	// The color of the widget that underlies the entire scaffold.
+	BackgroundColor *ui.Color
+
+	// Whether the child should size itself to avoid the window's bottom inset.
 	ResizeToAvoidBottomInset *bool
-	Child                    ui.Node
+
+	// Widget to show in the main content area.
+	Child ui.Node
 }
 
 // CupertinoPageScaffoldBackgroundColor maps CupertinoPageScaffoldBackgroundColor of package:cupertino_ui/cupertino_ui.dart.
+//
+// InheritedWidget indicating what the current scaffold background color is
+// for its children.
 type CupertinoPageScaffoldBackgroundColor struct {
+	// The widget below this widget in the tree.
 	Child ui.Node
+
+	// The background color defined in CupertinoPageScaffold.
 	Color ui.Color
 }
 
 // CupertinoPageTransition maps CupertinoPageTransition of package:cupertino_ui/cupertino_ui.dart.
+//
+// Provides an iOS-style page transition animation.
 type CupertinoPageTransition struct {
 	PrimaryRouteAnimation   ui.AnimationKey
 	SecondaryRouteAnimation ui.AnimationKey
-	Child                   ui.Node
-	LinearTransition        bool
+
+	// The widget below this widget in the tree.
+	Child            ui.Node
+	LinearTransition bool
 }
 
 // CupertinoPicker maps CupertinoPicker of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-styled picker.
+//
 // ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
 type CupertinoPicker struct {
-	BackgroundColor         *ui.Color
-	OffAxisFraction         *float64
-	UseMagnifier            *bool
-	Magnification           *float64
+	// Background color behind the children.
+	BackgroundColor *ui.Color
+	OffAxisFraction *float64
+	UseMagnifier    *bool
+	Magnification   *float64
+
+	// The behavior of reporting the selected item index.
 	ChangeReportingBehavior *string
-	ItemExtent              float64
-	OnSelectedItemChanged   func(int)
-	Children                []ui.Node
-	SelectionOverlay        ui.Node
-	Looping                 *bool
+
+	// The uniform height of all children.
+	ItemExtent float64
+
+	// Called when the selected item changes.
+	OnSelectedItemChanged func(int)
+	Children              []ui.Node
+
+	// A widget overlaid on the picker to highlight the currently selected
+	// entry.
+	SelectionOverlay ui.Node
+	Looping          *bool
 }
 
 // CupertinoPickerBuilder maps CupertinoPicker.builder of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-styled picker.
+//
 // ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
 type CupertinoPickerBuilder struct {
-	BackgroundColor         *ui.Color
-	OffAxisFraction         *float64
-	UseMagnifier            *bool
-	Magnification           *float64
+	// Background color behind the children.
+	BackgroundColor *ui.Color
+	OffAxisFraction *float64
+	UseMagnifier    *bool
+	Magnification   *float64
+
+	// The behavior of reporting the selected item index.
 	ChangeReportingBehavior *string
-	ItemExtent              float64
-	OnSelectedItemChanged   func(int)
-	ItemBuilder             ui.ItemBuilder
-	ChildCount              *int
-	SelectionOverlay        ui.Node
+
+	// The uniform height of all children.
+	ItemExtent float64
+
+	// Called when the selected item changes.
+	OnSelectedItemChanged func(int)
+	ItemBuilder           ui.ItemBuilder
+	ChildCount            *int
+
+	// A widget overlaid on the picker to highlight the currently selected
+	// entry.
+	SelectionOverlay ui.Node
 }
 
 // CupertinoPickerDefaultSelectionOverlay maps CupertinoPickerDefaultSelectionOverlay of package:cupertino_ui/cupertino_ui.dart.
+//
+// A default selection overlay for CupertinoPickers.
 type CupertinoPickerDefaultSelectionOverlay struct {
-	Background   *ui.Color
+	// The color to fill in the background of the
+	// CupertinoPickerDefaultSelectionOverlay.
+	Background *ui.Color
+
+	// Whether to use the default use rounded corners and margin on the start
+	// side.
 	CapStartEdge *bool
-	CapEndEdge   *bool
+
+	// Whether to use the default use rounded corners and margin on the end
+	// side.
+	CapEndEdge *bool
 }
 
 // CupertinoPopupSurface maps CupertinoPopupSurface of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style component for creating modal overlays like dialogs and
+// action sheets.
 type CupertinoPopupSurface struct {
+	// Whether or not to paint a translucent white on top of this surface's
+	// blurred background.
 	IsSurfacePainted *bool
-	Child            ui.Node
+
+	// The widget below this widget in the tree.
+	Child ui.Node
 }
 
 // CupertinoScrollbar maps CupertinoScrollbar of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS style scrollbar.
+//
 // ScrollbarOrientation takes "left", "right", "top", or "bottom".
 type CupertinoScrollbar struct {
-	Child                ui.Node
-	Controller           *ui.ScrollKey
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// The ScrollController used to implement Scrollbar dragging.
+	Controller *ui.ScrollKey
+
+	// Indicates that the scrollbar thumb should be visible, even when a scroll
+	// is not underway.
 	ThumbVisibility      *bool
 	ScrollbarOrientation *string
 }
 
 // CupertinoSearchTextField maps CupertinoSearchTextField of package:cupertino_ui/cupertino_ui.dart.
+//
+// A CupertinoTextField that mimics the look and behavior of UIKit's
+// UISearchTextField.
 //
 // SuffixMode takes "never", "editing", "notEditing", or "always".
 //
@@ -610,172 +1318,377 @@ type CupertinoScrollbar struct {
 //
 // SmartDashesType takes "disabled", or "enabled".
 type CupertinoSearchTextField struct {
-	Controller                    *ui.TextKey
-	OnChanged                     func(string)
-	OnSubmitted                   func(string)
-	Style                         *ui.TextStyle
-	Placeholder                   *string
-	PlaceholderStyle              *ui.TextStyle
-	Decoration                    *ui.Decoration
-	BackgroundColor               *ui.Color
-	BorderRadius                  *ui.Radius
-	Padding                       *ui.Insets
-	ItemColor                     *ui.Color
-	ItemSize                      *float64
-	PrefixInsets                  *ui.Insets
-	PrefixIcon                    ui.Node
-	SuffixInsets                  *ui.Insets
-	SuffixIcon                    ui.Node
-	SuffixMode                    *string
-	OnSuffixTap                   func()
-	RestorationId                 *string
-	FocusNode                     *ui.FocusKey
-	SmartQuotesType               *string
+	// Controls the text being edited.
+	Controller *ui.TextKey
+
+	// Invoked upon user input.
+	OnChanged func(string)
+
+	// Invoked upon keyboard submission.
+	OnSubmitted func(string)
+
+	// Allows changing the style of the text.
+	Style *ui.TextStyle
+
+	// A hint placeholder text that appears when the text entry is empty.
+	Placeholder *string
+
+	// Sets the style of the placeholder of the text field.
+	PlaceholderStyle *ui.TextStyle
+
+	// Sets the decoration for the text field.
+	Decoration *ui.Decoration
+
+	// Set the decoration property's background color.
+	BackgroundColor *ui.Color
+
+	// Sets the decoration property's border radius.
+	BorderRadius *ui.Radius
+
+	// Sets the padding insets for the text and placeholder.
+	Padding *ui.Insets
+
+	// Sets the color for the suffix and prefix icons.
+	ItemColor *ui.Color
+
+	// Sets the base icon size for the suffix and prefix icons.
+	ItemSize *float64
+
+	// Sets the padding insets for the suffix.
+	PrefixInsets *ui.Insets
+
+	// Sets a prefix widget.
+	PrefixIcon ui.Node
+
+	// Sets the padding insets for the prefix.
+	SuffixInsets *ui.Insets
+
+	// Sets the suffix widget's icon.
+	SuffixIcon ui.Node
+
+	// Dictates when the X-Mark (suffix) should be visible.
+	SuffixMode *string
+
+	// Sets the X-Mark (suffix) action.
+	OnSuffixTap   func()
+	RestorationId *string
+	FocusNode     *ui.FocusKey
+
+	// Whether to allow the platform to automatically format quotes.
+	SmartQuotesType *string
+
+	// Whether to allow the platform to automatically format dashes.
 	SmartDashesType               *string
 	EnableIMEPersonalizedLearning *bool
 	Autofocus                     *bool
 	OnTap                         func()
-	Autocorrect                   *bool
-	Enabled                       *bool
-	CursorWidth                   *float64
-	CursorHeight                  *float64
-	CursorOpacityAnimates         *bool
-	CursorColor                   *ui.Color
+
+	// Whether to enable autocorrection.
+	Autocorrect *bool
+
+	// Disables the text field when false.
+	Enabled               *bool
+	CursorWidth           *float64
+	CursorHeight          *float64
+	CursorOpacityAnimates *bool
+
+	// The color to use when painting the cursor.
+	CursorColor *ui.Color
 }
 
 // CupertinoSheetTransition maps CupertinoSheetTransition of package:cupertino_ui/cupertino_ui.dart.
+//
+// Provides an iOS-style sheet transition.
 type CupertinoSheetTransition struct {
-	PrimaryRouteAnimation   ui.AnimationKey
+	// primaryRouteAnimation is a linear route animation from 0.0 to 1.0 when
+	// this screen is being pushed.
+	PrimaryRouteAnimation ui.AnimationKey
+
+	// secondaryRouteAnimation is a linear route animation from 0.0 to 1.0 when
+	// another screen is being pushed on top of this one.
 	SecondaryRouteAnimation ui.AnimationKey
-	Child                   ui.Node
-	LinearTransition        bool
+
+	// The widget below this widget in the tree.
+	Child ui.Node
+
+	// Whether to perform the transition linearly.
+	LinearTransition bool
 }
 
 // CupertinoSlider maps CupertinoSlider of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style slider.
 type CupertinoSlider struct {
-	Value         float64
-	OnChanged     func(float64)
+	// The currently selected value for this slider.
+	Value float64
+
+	// Called when the user selects a new value for the slider.
+	OnChanged func(float64)
+
+	// Called when the user starts selecting a new value for the slider.
 	OnChangeStart func(float64)
-	OnChangeEnd   func(float64)
-	Min           *float64
-	Max           *float64
-	Divisions     *int
-	ActiveColor   *ui.Color
-	ThumbColor    *ui.Color
+
+	// Called when the user is done selecting a new value for the slider.
+	OnChangeEnd func(float64)
+
+	// The minimum value the user can select.
+	Min *float64
+
+	// The maximum value the user can select.
+	Max *float64
+
+	// The number of discrete divisions.
+	Divisions *int
+
+	// The color to use for the portion of the slider that has been selected.
+	ActiveColor *ui.Color
+
+	// The color to use for the thumb of the slider.
+	ThumbColor *ui.Color
 }
 
 // CupertinoSliverNavigationBar maps CupertinoSliverNavigationBar of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-styled navigation bar with iOS-11-style large titles using
+// slivers.
 //
 // Brightness takes "dark", or "light".
 //
 // BottomMode takes "automatic", or "always".
 type CupertinoSliverNavigationBar struct {
-	LargeTitle                    ui.Node
-	Leading                       ui.Node
-	AutomaticallyImplyLeading     *bool
-	AutomaticallyImplyTitle       *bool
-	AlwaysShowMiddle              *bool
-	PreviousPageTitle             *string
-	Middle                        ui.Node
+	// The navigation bar's title.
+	LargeTitle ui.Node
+
+	// This widget is visible in both collapsed and expanded states.
+	Leading                   ui.Node
+	AutomaticallyImplyLeading *bool
+
+	// Controls whether we should try to imply the largeTitle widget if null.
+	AutomaticallyImplyTitle *bool
+
+	// Controls whether middle widget should always be visible (even in
+	// expanded state).
+	AlwaysShowMiddle  *bool
+	PreviousPageTitle *string
+
+	// A widget to place in the middle of the static navigation bar instead of
+	// the largeTitle.
+	Middle ui.Node
+
+	// This widget is visible in both collapsed and expanded states.
 	Trailing                      ui.Node
 	BackgroundColor               *ui.Color
 	AutomaticBackgroundVisibility *bool
 	EnableBackgroundFilterBlur    *bool
 	Brightness                    *string
 	TransitionBetweenRoutes       *bool
-	Stretch                       *bool
-	Bottom                        ui.Node
-	BottomMode                    *string
+
+	// Whether the nav bar should stretch to fill the over-scroll area.
+	Stretch *bool
+
+	// A widget to place at the bottom of the large title or static navigation
+	// bar if there is no large title.
+	Bottom ui.Node
+
+	// Modes that determine how to display the navigation bar's bottom, or the
+	// search field in a search.
+	BottomMode *string
 }
 
 // CupertinoSliverNavigationBarSearch maps CupertinoSliverNavigationBar.search of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-styled navigation bar with iOS-11-style large titles using
+// slivers.
 //
 // Brightness takes "dark", or "light".
 //
 // BottomMode takes "automatic", or "always".
 type CupertinoSliverNavigationBarSearch struct {
-	SearchField                   ui.Node
-	LargeTitle                    ui.Node
-	Leading                       ui.Node
-	AutomaticallyImplyLeading     *bool
-	AutomaticallyImplyTitle       *bool
-	AlwaysShowMiddle              *bool
-	PreviousPageTitle             *string
-	Middle                        ui.Node
+	// The search field used in search.
+	SearchField ui.Node
+
+	// The navigation bar's title.
+	LargeTitle ui.Node
+
+	// This widget is visible in both collapsed and expanded states.
+	Leading                   ui.Node
+	AutomaticallyImplyLeading *bool
+
+	// Controls whether we should try to imply the largeTitle widget if null.
+	AutomaticallyImplyTitle *bool
+
+	// Controls whether middle widget should always be visible (even in
+	// expanded state).
+	AlwaysShowMiddle  *bool
+	PreviousPageTitle *string
+
+	// A widget to place in the middle of the static navigation bar instead of
+	// the largeTitle.
+	Middle ui.Node
+
+	// This widget is visible in both collapsed and expanded states.
 	Trailing                      ui.Node
 	BackgroundColor               *ui.Color
 	AutomaticBackgroundVisibility *bool
 	EnableBackgroundFilterBlur    *bool
 	Brightness                    *string
 	TransitionBetweenRoutes       *bool
-	Stretch                       *bool
-	BottomMode                    *string
-	OnSearchableBottomTap         func(bool)
+
+	// Whether the nav bar should stretch to fill the over-scroll area.
+	Stretch *bool
+
+	// Modes that determine how to display the navigation bar's bottom, or the
+	// search field in a search.
+	BottomMode *string
+
+	// Called when the search field in search is tapped, toggling between an
+	// active and an inactive search state.
+	OnSearchableBottomTap func(bool)
 }
 
 // CupertinoSliverRefreshControl maps CupertinoSliverRefreshControl of package:cupertino_ui/cupertino_ui.dart.
+//
+// A sliver widget implementing the iOS-style pull to refresh content
+// control.
 type CupertinoSliverRefreshControl struct {
+	// Callback invoked when pulled by refreshTriggerPullDistance.
 	OnRefresh ui.Task
 }
 
 // CupertinoSpellCheckSuggestionsToolbar maps CupertinoSpellCheckSuggestionsToolbar of package:cupertino_ui/cupertino_ui.dart.
+//
+// The default spell check suggestions toolbar for iOS.
 type CupertinoSpellCheckSuggestionsToolbar struct {
-	Anchors     ui.ToolbarAnchors
+	// The location on which to anchor the menu.
+	Anchors ui.ToolbarAnchors
+
+	// The ContextMenuButtonItems that will be turned into the correct button
+	// widgets and displayed in the spell check suggestions toolbar.
 	ButtonItems []ui.MenuButtonItem
 }
 
 // CupertinoSwitch maps CupertinoSwitch of package:cupertino_ui/cupertino_ui.dart.
 //
+// An iOS-style switch.
+//
 // DragStartBehavior takes "down", or "start".
 type CupertinoSwitch struct {
-	Value              bool
-	OnChanged          func(bool)
-	ActiveColor        *ui.Color
-	TrackColor         *ui.Color
-	ActiveTrackColor   *ui.Color
+	// Whether this switch is on or off.
+	Value bool
+
+	// Called when the user toggles the switch on or off.
+	OnChanged   func(bool)
+	ActiveColor *ui.Color
+	TrackColor  *ui.Color
+
+	// The color to use for the track when the switch is on.
+	ActiveTrackColor *ui.Color
+
+	// The color to use for the track when the switch is off.
 	InactiveTrackColor *ui.Color
-	ThumbColor         *ui.Color
+
+	// The color to use for the thumb when the switch is on.
+	ThumbColor *ui.Color
+
+	// The color to use on the thumb when the switch is off.
 	InactiveThumbColor *ui.Color
-	ApplyTheme         *bool
-	FocusColor         *ui.Color
-	OnLabelColor       *ui.Color
-	OffLabelColor      *ui.Color
-	ActiveThumbImage   *ui.ImageSource
+
+	// Whether to apply the ambient CupertinoThemeData.
+	ApplyTheme *bool
+
+	// The color to use for the focus highlight for keyboard interactions.
+	FocusColor *ui.Color
+
+	// The color to use for the accessibility label when the switch is on.
+	OnLabelColor *ui.Color
+
+	// The color to use for the accessibility label when the switch is off.
+	OffLabelColor *ui.Color
+
+	// An image to use on the thumb of this switch when the switch is on.
+	ActiveThumbImage *ui.ImageSource
+
+	// An image to use on the thumb of this switch when the switch is off.
 	InactiveThumbImage *ui.ImageSource
-	TrackOutlineColor  *ui.StateColor
-	FocusNode          *ui.FocusKey
-	OnFocusChange      func(bool)
-	Autofocus          *bool
-	DragStartBehavior  *string
+
+	// The outline color of this CupertinoSwitch's track.
+	TrackOutlineColor *ui.StateColor
+	FocusNode         *ui.FocusKey
+
+	// Handler called when the focus changes.
+	OnFocusChange func(bool)
+	Autofocus     *bool
+
+	// Determines the way that drag start behavior is handled.
+	DragStartBehavior *string
 }
 
 // CupertinoTabBar maps CupertinoTabBar of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-styled bottom navigation tab bar.
 type CupertinoTabBar struct {
-	Items           []ui.BarItem
-	OnTap           func(int)
-	CurrentIndex    *int
+	// The interactive items laid out within the bottom navigation bar.
+	Items []ui.BarItem
+
+	// The callback that is called when a item is tapped.
+	OnTap func(int)
+
+	// The index into items of the current active item.
+	CurrentIndex *int
+
+	// The background color of the tab bar.
 	BackgroundColor *ui.Color
-	ActiveColor     *ui.Color
-	IconSize        *float64
+
+	// The foreground color of the icon and title for the
+	// BottomNavigationBarItem of the selected tab.
+	ActiveColor *ui.Color
+
+	// The size of all of the BottomNavigationBarItem icons.
+	IconSize *float64
 }
 
 // CupertinoTabScaffold maps CupertinoTabScaffold of package:cupertino_ui/cupertino_ui.dart.
+//
+// Implements a tabbed iOS application's root layout and behavior structure.
 type CupertinoTabScaffold struct {
-	TabBar                   ui.Node
-	TabBuilder               ui.ItemBuilder
-	BackgroundColor          *ui.Color
+	// The tabBar is a CupertinoTabBar drawn at the bottom of the screen that
+	// lets the user switch between different tabs in the main content area
+	// when present.
+	TabBar ui.Node
+
+	// An IndexedWidgetBuilder that's called when tabs become active.
+	TabBuilder ui.ItemBuilder
+
+	// The color of the widget that underlies the entire scaffold.
+	BackgroundColor *ui.Color
+
+	// Whether the body should size itself to avoid the window's bottom inset.
 	ResizeToAvoidBottomInset *bool
-	RestorationId            *string
+
+	// Restoration ID to save and restore the state of the
+	// CupertinoTabScaffold.
+	RestorationId *string
 }
 
 // CupertinoTabView maps CupertinoTabView of package:cupertino_ui/cupertino_ui.dart.
+//
+// A single tab view with its own Navigator state and history.
 type CupertinoTabView struct {
-	Builder            ui.Builder
-	DefaultTitle       *string
+	// The widget builder for the default route of the tab view
+	// (defaultRouteName, which is /).
+	Builder ui.Builder
+
+	// The title of the default route.
+	DefaultTitle *string
+
+	// Restoration ID to save and restore the state of the Navigator built by
+	// this CupertinoTabView.
 	RestorationScopeId *string
 }
 
 // CupertinoTextField maps CupertinoTextField of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style text field.
 //
 // PrefixMode takes "never", "editing", "notEditing", or "always".
 //
@@ -805,56 +1718,111 @@ type CupertinoTabView struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoTextField struct {
-	GroupId                       *string
-	Controller                    *ui.TextKey
-	FocusNode                     *ui.FocusKey
-	Decoration                    *ui.Decoration
-	Padding                       *ui.Insets
-	Placeholder                   *string
-	PlaceholderStyle              *ui.TextStyle
-	Prefix                        ui.Node
-	PrefixMode                    *string
-	Suffix                        ui.Node
-	SuffixMode                    *string
-	CrossAxisAlignment            *string
-	ClearButtonMode               *string
-	ClearButtonSemanticLabel      *string
-	TextInputAction               *string
-	TextCapitalization            *string
-	Style                         *ui.TextStyle
-	TextAlign                     *string
-	TextDirection                 *string
-	ReadOnly                      *bool
-	ShowCursor                    *bool
-	Autofocus                     *bool
-	ObscuringCharacter            *string
-	ObscureText                   *bool
-	Autocorrect                   *bool
-	SmartDashesType               *string
-	SmartQuotesType               *string
-	EnableSuggestions             *bool
-	MaxLines                      *int
-	MinLines                      *int
-	Expands                       *bool
-	MaxLength                     *int
-	MaxLengthEnforcement          *string
-	OnChanged                     func(string)
-	OnEditingComplete             func()
-	OnSubmitted                   func(string)
-	Enabled                       *bool
-	CursorWidth                   *float64
-	CursorHeight                  *float64
-	CursorOpacityAnimates         *bool
-	CursorColor                   *ui.Color
-	KeyboardAppearance            *string
-	ScrollPadding                 *ui.Insets
-	DragStartBehavior             *string
-	EnableInteractiveSelection    *bool
-	SelectAllOnFocus              *bool
-	OnTap                         func()
-	ScrollController              *ui.ScrollKey
-	ScrollPhysics                 *string
-	ClipBehavior                  *string
+	GroupId *string
+
+	// Controls the text being edited.
+	Controller *ui.TextKey
+	FocusNode  *ui.FocusKey
+
+	// Controls the BoxDecoration of the box behind the text input.
+	Decoration *ui.Decoration
+
+	// Padding around the text entry area between the prefix and suffix or the
+	// clear button when clearButtonMode is not never.
+	Padding *ui.Insets
+
+	// A lighter colored placeholder hint that appears on the first line of the
+	// text field when the text entry is empty.
+	Placeholder *string
+
+	// The style to use for the placeholder text.
+	PlaceholderStyle *ui.TextStyle
+
+	// An optional Widget to display before the text.
+	Prefix ui.Node
+
+	// Controls the visibility of the prefix widget based on the state of text
+	// entry when the prefix argument is not null.
+	PrefixMode *string
+
+	// An optional Widget to display after the text.
+	Suffix ui.Node
+
+	// Controls the visibility of the suffix widget based on the state of text
+	// entry when the suffix argument is not null.
+	SuffixMode *string
+
+	// Controls the vertical alignment of the prefix and the suffix widget in
+	// relation to content.
+	CrossAxisAlignment *string
+
+	// Show an iOS-style clear button to clear the current text entry.
+	ClearButtonMode *string
+
+	// The semantic label for the clear button used by screen readers.
+	ClearButtonSemanticLabel *string
+
+	// The type of action button to use for the keyboard.
+	TextInputAction    *string
+	TextCapitalization *string
+
+	// The style to use for the text being edited.
+	Style              *ui.TextStyle
+	TextAlign          *string
+	TextDirection      *string
+	ReadOnly           *bool
+	ShowCursor         *bool
+	Autofocus          *bool
+	ObscuringCharacter *string
+	ObscureText        *bool
+	Autocorrect        *bool
+	SmartDashesType    *string
+	SmartQuotesType    *string
+	EnableSuggestions  *bool
+	MaxLines           *int
+	MinLines           *int
+	Expands            *bool
+
+	// The maximum number of characters (Unicode grapheme clusters) to allow in
+	// the text field.
+	MaxLength *int
+
+	// Determines how the maxLength limit should be enforced.
+	MaxLengthEnforcement *string
+
+	// Called when the user initiates a change to the TextField's value: when
+	// they have inserted or deleted text.
+	OnChanged         func(string)
+	OnEditingComplete func()
+
+	// See also:
+	OnSubmitted func(string)
+
+	// Disables the text field when false.
+	Enabled               *bool
+	CursorWidth           *float64
+	CursorHeight          *float64
+	CursorOpacityAnimates *bool
+
+	// The color to use when painting the cursor.
+	CursorColor *ui.Color
+
+	// The appearance of the keyboard.
+	KeyboardAppearance         *string
+	ScrollPadding              *ui.Insets
+	DragStartBehavior          *string
+	EnableInteractiveSelection *bool
+	SelectAllOnFocus           *bool
+
+	// Called for the first tap in a series of taps.
+	OnTap            func()
+	ScrollController *ui.ScrollKey
+	ScrollPhysics    *string
+
+	// The content will be clipped (or not) according to this option.
+	ClipBehavior *string
+
+	// Restoration ID to save and restore the state of the text field.
 	RestorationId                 *string
 	ScribbleEnabled               *bool
 	StylusHandwritingEnabled      *bool
@@ -863,6 +1831,8 @@ type CupertinoTextField struct {
 }
 
 // CupertinoTextFieldBorderless maps CupertinoTextField.borderless of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style text field.
 //
 // PrefixMode takes "never", "editing", "notEditing", or "always".
 //
@@ -892,56 +1862,111 @@ type CupertinoTextField struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoTextFieldBorderless struct {
-	GroupId                       *string
-	Controller                    *ui.TextKey
-	FocusNode                     *ui.FocusKey
-	Decoration                    *ui.Decoration
-	Padding                       *ui.Insets
-	Placeholder                   *string
-	PlaceholderStyle              *ui.TextStyle
-	Prefix                        ui.Node
-	PrefixMode                    *string
-	Suffix                        ui.Node
-	SuffixMode                    *string
-	CrossAxisAlignment            *string
-	ClearButtonMode               *string
-	ClearButtonSemanticLabel      *string
-	TextInputAction               *string
-	TextCapitalization            *string
-	Style                         *ui.TextStyle
-	TextAlign                     *string
-	TextDirection                 *string
-	ReadOnly                      *bool
-	ShowCursor                    *bool
-	Autofocus                     *bool
-	ObscuringCharacter            *string
-	ObscureText                   *bool
-	Autocorrect                   *bool
-	SmartDashesType               *string
-	SmartQuotesType               *string
-	EnableSuggestions             *bool
-	MaxLines                      *int
-	MinLines                      *int
-	Expands                       *bool
-	MaxLength                     *int
-	MaxLengthEnforcement          *string
-	OnChanged                     func(string)
-	OnEditingComplete             func()
-	OnSubmitted                   func(string)
-	Enabled                       *bool
-	CursorWidth                   *float64
-	CursorHeight                  *float64
-	CursorOpacityAnimates         *bool
-	CursorColor                   *ui.Color
-	KeyboardAppearance            *string
-	ScrollPadding                 *ui.Insets
-	DragStartBehavior             *string
-	EnableInteractiveSelection    *bool
-	SelectAllOnFocus              *bool
-	OnTap                         func()
-	ScrollController              *ui.ScrollKey
-	ScrollPhysics                 *string
-	ClipBehavior                  *string
+	GroupId *string
+
+	// Controls the text being edited.
+	Controller *ui.TextKey
+	FocusNode  *ui.FocusKey
+
+	// Controls the BoxDecoration of the box behind the text input.
+	Decoration *ui.Decoration
+
+	// Padding around the text entry area between the prefix and suffix or the
+	// clear button when clearButtonMode is not never.
+	Padding *ui.Insets
+
+	// A lighter colored placeholder hint that appears on the first line of the
+	// text field when the text entry is empty.
+	Placeholder *string
+
+	// The style to use for the placeholder text.
+	PlaceholderStyle *ui.TextStyle
+
+	// An optional Widget to display before the text.
+	Prefix ui.Node
+
+	// Controls the visibility of the prefix widget based on the state of text
+	// entry when the prefix argument is not null.
+	PrefixMode *string
+
+	// An optional Widget to display after the text.
+	Suffix ui.Node
+
+	// Controls the visibility of the suffix widget based on the state of text
+	// entry when the suffix argument is not null.
+	SuffixMode *string
+
+	// Controls the vertical alignment of the prefix and the suffix widget in
+	// relation to content.
+	CrossAxisAlignment *string
+
+	// Show an iOS-style clear button to clear the current text entry.
+	ClearButtonMode *string
+
+	// The semantic label for the clear button used by screen readers.
+	ClearButtonSemanticLabel *string
+
+	// The type of action button to use for the keyboard.
+	TextInputAction    *string
+	TextCapitalization *string
+
+	// The style to use for the text being edited.
+	Style              *ui.TextStyle
+	TextAlign          *string
+	TextDirection      *string
+	ReadOnly           *bool
+	ShowCursor         *bool
+	Autofocus          *bool
+	ObscuringCharacter *string
+	ObscureText        *bool
+	Autocorrect        *bool
+	SmartDashesType    *string
+	SmartQuotesType    *string
+	EnableSuggestions  *bool
+	MaxLines           *int
+	MinLines           *int
+	Expands            *bool
+
+	// The maximum number of characters (Unicode grapheme clusters) to allow in
+	// the text field.
+	MaxLength *int
+
+	// Determines how the maxLength limit should be enforced.
+	MaxLengthEnforcement *string
+
+	// Called when the user initiates a change to the TextField's value: when
+	// they have inserted or deleted text.
+	OnChanged         func(string)
+	OnEditingComplete func()
+
+	// See also:
+	OnSubmitted func(string)
+
+	// Disables the text field when false.
+	Enabled               *bool
+	CursorWidth           *float64
+	CursorHeight          *float64
+	CursorOpacityAnimates *bool
+
+	// The color to use when painting the cursor.
+	CursorColor *ui.Color
+
+	// The appearance of the keyboard.
+	KeyboardAppearance         *string
+	ScrollPadding              *ui.Insets
+	DragStartBehavior          *string
+	EnableInteractiveSelection *bool
+	SelectAllOnFocus           *bool
+
+	// Called for the first tap in a series of taps.
+	OnTap            func()
+	ScrollController *ui.ScrollKey
+	ScrollPhysics    *string
+
+	// The content will be clipped (or not) according to this option.
+	ClipBehavior *string
+
+	// Restoration ID to save and restore the state of the text field.
 	RestorationId                 *string
 	ScribbleEnabled               *bool
 	StylusHandwritingEnabled      *bool
@@ -950,6 +1975,9 @@ type CupertinoTextFieldBorderless struct {
 }
 
 // CupertinoTextFormFieldRow maps CupertinoTextFormFieldRow of package:cupertino_ui/cupertino_ui.dart.
+//
+// Creates a CupertinoFormRow containing a FormField that wraps a
+// CupertinoTextField.
 //
 // TextCapitalization takes "words", "sentences", "characters", or "none".
 //
@@ -967,35 +1995,50 @@ type CupertinoTextFieldBorderless struct {
 //
 // AutovalidateMode takes "disabled", "always", "onUserInteraction", "onUnfocus", or "onUserInteractionIfError".
 type CupertinoTextFormFieldRow struct {
-	Prefix                     ui.Node
-	Padding                    *ui.Insets
-	Controller                 *ui.TextKey
-	InitialValue               *string
-	FocusNode                  *ui.FocusKey
-	Decoration                 *ui.Decoration
-	TextCapitalization         *string
-	TextInputAction            *string
-	Style                      *ui.TextStyle
-	TextDirection              *string
-	TextAlign                  *string
-	Autofocus                  *bool
-	ReadOnly                   *bool
-	ShowCursor                 *bool
-	ObscuringCharacter         *string
-	ObscureText                *bool
-	Autocorrect                *bool
-	SmartDashesType            *string
-	SmartQuotesType            *string
-	EnableSuggestions          *bool
-	MaxLines                   *int
-	MinLines                   *int
-	Expands                    *bool
-	MaxLength                  *int
-	OnChanged                  func(string)
-	OnTap                      func()
-	OnEditingComplete          func()
-	OnFieldSubmitted           func(string)
-	OnSaved                    func(string)
+	// A widget that is displayed at the start of the row.
+	Prefix ui.Node
+
+	// Content padding for the row.
+	Padding *ui.Insets
+
+	// Controls the text being edited.
+	Controller *ui.TextKey
+
+	// An optional value to initialize the form field to, or null otherwise.
+	InitialValue       *string
+	FocusNode          *ui.FocusKey
+	Decoration         *ui.Decoration
+	TextCapitalization *string
+	TextInputAction    *string
+	Style              *ui.TextStyle
+	TextDirection      *string
+	TextAlign          *string
+	Autofocus          *bool
+	ReadOnly           *bool
+	ShowCursor         *bool
+	ObscuringCharacter *string
+	ObscureText        *bool
+	Autocorrect        *bool
+	SmartDashesType    *string
+	SmartQuotesType    *string
+	EnableSuggestions  *bool
+	MaxLines           *int
+	MinLines           *int
+	Expands            *bool
+	MaxLength          *int
+
+	// Called when the user initiates a change to the TextField's value: when
+	// they have inserted or deleted text or reset the form.
+	OnChanged         func(string)
+	OnTap             func()
+	OnEditingComplete func()
+	OnFieldSubmitted  func(string)
+
+	// An optional method to call with the final value when the form is saved
+	// via save.
+	OnSaved func(string)
+
+	// Whether the form is able to receive user input.
 	Enabled                    *bool
 	CursorWidth                *float64
 	CursorHeight               *float64
@@ -1004,70 +2047,131 @@ type CupertinoTextFormFieldRow struct {
 	ScrollPadding              *ui.Insets
 	EnableInteractiveSelection *bool
 	ScrollPhysics              *string
-	AutovalidateMode           *string
-	Placeholder                *string
-	PlaceholderStyle           *ui.TextStyle
-	RestorationId              *string
+
+	// Used to enable/disable this form field auto validation and update its
+	// error text.
+	AutovalidateMode *string
+	Placeholder      *string
+	PlaceholderStyle *ui.TextStyle
+
+	// Restoration ID to save and restore the state of the form field.
+	RestorationId *string
 }
 
 // CupertinoTextSelectionToolbar maps CupertinoTextSelectionToolbar of package:cupertino_ui/cupertino_ui.dart.
+//
+// An iOS-style text selection toolbar.
 type CupertinoTextSelectionToolbar struct {
+	// The focal point above which the toolbar attempts to position itself.
 	AnchorAbove ui.Offset
+
+	// The focal point below which the toolbar attempts to position itself, if
+	// it doesn't fit above anchorAbove.
 	AnchorBelow ui.Offset
-	Children    []ui.Node
+
+	// The children that will be displayed in the text selection toolbar.
+	Children []ui.Node
 }
 
 // CupertinoTextSelectionToolbarButton maps CupertinoTextSelectionToolbarButton of package:cupertino_ui/cupertino_ui.dart.
+//
+// A button in the style of the iOS text selection toolbar buttons.
 type CupertinoTextSelectionToolbarButton struct {
+	// Called when this button is pressed.
 	OnPressed func()
-	Child     ui.Node
+
+	// The child of this button.
+	Child ui.Node
 }
 
 // CupertinoTextSelectionToolbarButtonButtonItem maps CupertinoTextSelectionToolbarButton.buttonItem of package:cupertino_ui/cupertino_ui.dart.
+//
+// A button in the style of the iOS text selection toolbar buttons.
 type CupertinoTextSelectionToolbarButtonButtonItem struct {
+	// The buttonItem used to generate the button when using buttonItem.
 	ButtonItem ui.MenuButtonItem
 }
 
 // CupertinoTextSelectionToolbarButtonText maps CupertinoTextSelectionToolbarButton.text of package:cupertino_ui/cupertino_ui.dart.
+//
+// A button in the style of the iOS text selection toolbar buttons.
 type CupertinoTextSelectionToolbarButtonText struct {
+	// Called when this button is pressed.
 	OnPressed func()
-	Text      string
+
+	// The text used in the button's label when using text.
+	Text string
 }
 
 // CupertinoTheme maps CupertinoTheme of package:cupertino_ui/cupertino_ui.dart.
+//
+// Applies a visual styling theme to descendant Cupertino widgets.
 type CupertinoTheme struct {
-	Data  ui.CupertinoStyle
+	// The CupertinoThemeData styling for this theme.
+	Data ui.CupertinoStyle
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // CupertinoTimerPicker maps CupertinoTimerPicker of package:cupertino_ui/cupertino_ui.dart.
 //
+// A countdown timer picker in iOS style.
+//
 // Mode takes "hm", "ms", or "hms".
 //
 // ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
 type CupertinoTimerPicker struct {
-	Mode                    *string
-	MinuteInterval          *int
-	SecondInterval          *int
-	Alignment               *string
-	BackgroundColor         *ui.Color
-	OnTimerDurationChanged  func(int)
+	// The mode of the timer picker.
+	Mode *string
+
+	// The granularity of the minute spinner.
+	MinuteInterval *int
+
+	// The granularity of the second spinner.
+	SecondInterval *int
+
+	// Defines how the timer picker should be positioned within its parent.
+	Alignment *string
+
+	// Background color of timer picker.
+	BackgroundColor *ui.Color
+
+	// Callback called when the timer duration changes.
+	OnTimerDurationChanged func(int)
+
+	// The behavior of reporting the selected duration.
 	ChangeReportingBehavior *string
 }
 
 // CupertinoUiCompatibilityBridge maps CupertinoUiCompatibilityBridge of package:cupertino_ui/cupertino_ui.dart.
+//
+// A bridge widget for applications that have migrated to
+// package:cupertino_ui but still contain subtrees or package dependencies
+// using package:flutter/cupertino.dart.
 type CupertinoUiCompatibilityBridge struct {
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // CupertinoUserInterfaceLevel maps CupertinoUserInterfaceLevel of package:cupertino_ui/cupertino_ui.dart.
+//
+// Establishes a subtree in which of resolves to the given visual elevation
+// from the CupertinoUserInterfaceLevelData. This can be used to apply style
+// differences based on a widget's elevation.
 type CupertinoUserInterfaceLevel struct {
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 
 // InheritedCupertinoTheme maps InheritedCupertinoTheme of package:cupertino_ui/cupertino_ui.dart.
+//
+// Provides a CupertinoTheme to all descendants.
 type InheritedCupertinoTheme struct {
+	// The CupertinoTheme that is provided to widgets lower in the tree.
 	Theme ui.Node
+
+	// The widget below this widget in the tree.
 	Child ui.Node
 }
 

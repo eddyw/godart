@@ -30,6 +30,10 @@ String writeGo(Reading r, Pack pack, String stamp) {
   for (final w in widgets) {
     b.writeln();
     b.writeln('// ${w.goName} maps ${w.dartCall} of ${w.pack.uri}.');
+    if (w.doc.isNotEmpty) {
+      b.writeln('//');
+      writeWrapped(b, w.doc, '// ');
+    }
     if (w.params.any((p) => p.type.kind.startsWith('enum:'))) {
       for (final p in w.params.where((p) => p.type.kind.startsWith('enum:'))) {
         final name = p.type.kind.substring(5);
@@ -39,7 +43,12 @@ String writeGo(Reading r, Pack pack, String stamp) {
       }
     }
     b.writeln('type ${w.goName} struct {');
-    for (final p in w.params) {
+    for (var i = 0; i < w.params.length; i++) {
+      final p = w.params[i];
+      if (p.doc.isNotEmpty) {
+        if (i > 0) b.writeln();
+        writeWrapped(b, p.doc, '\t// ');
+      }
       b.writeln('\t${goDecl(p, pack)}');
     }
     b.writeln('}');
@@ -79,4 +88,23 @@ String quoteList(List<String> values) {
   if (quoted.length == 1) return quoted.first;
   return '${quoted.sublist(0, quoted.length - 1).join(", ")}, '
       'or ${quoted.last}';
+}
+
+/// writeWrapped writes 1 comment of a maximum of 76 columns.
+void writeWrapped(StringBuffer b, String text, String head) {
+  final width = 76 - head.length;
+  var line = '';
+  for (final word in text.split(' ')) {
+    if (line.isEmpty) {
+      line = word;
+      continue;
+    }
+    if (line.length + 1 + word.length > width) {
+      b.writeln('$head$line');
+      line = word;
+      continue;
+    }
+    line = '$line $word';
+  }
+  if (line.isNotEmpty) b.writeln('$head$line');
 }

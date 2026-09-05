@@ -79,7 +79,12 @@ class Param {
     required this.nullable,
     required this.defaultCode,
     required this.named,
+    this.doc = '',
   });
+
+  /// The first sentence of the dartdoc of the field of the Flutter class, or
+  /// an empty text.
+  final String doc;
 
   /// The name of the Dart parameter.
   final String dartName;
@@ -118,6 +123,7 @@ class WidgetSpec {
     required this.params,
     required this.isConst,
     required this.needed,
+    this.doc = '',
   });
 
   /// The Flutter class, for example ListView.
@@ -138,6 +144,10 @@ class WidgetSpec {
   /// The libraries that a default of this widget names. The host imports each
   /// 1 only when it holds the case.
   final Set<String> needed;
+
+  /// The first paragraph of the dartdoc of the Flutter class, or an empty
+  /// text.
+  final String doc;
 
   /// The kind of the node, as the Dart host reads it from the type
   /// descriptor.
@@ -219,7 +229,7 @@ Future<Reading> read(String root) async {
         }
         final goName = goStructName(name, ctor.name ?? '');
         if (!seen.add(goName)) continue;
-        readCtor(out, pack, name, ctor, goName);
+        readCtor(out, pack, name, ctor, goName, docsOf(element));
       }
     }
   }
@@ -233,6 +243,7 @@ void readCtor(
   String className,
   ConstructorElement ctor,
   String goName,
+  ClassDocs docs,
 ) {
   final params = <Param>[];
   final needed = <String>{};
@@ -273,6 +284,7 @@ void readCtor(
       nullable: nullable,
       defaultCode: p.defaultValueCode,
       named: p.isNamed,
+      doc: firstSentence(docs.fields[pname] ?? ''),
     ));
   }
   // A constructor with no mapped parameter still reaches the node set. Each
@@ -286,6 +298,7 @@ void readCtor(
     params: params,
     isConst: ctor.isConst,
     needed: needed,
+    doc: firstParagraph(docs.owner),
   ));
 }
 
@@ -693,4 +706,89 @@ String? lockVersion(String root, String name) {
     if (line.length > 2 && line[2] != ' ') return null;
   }
   return null;
+}
+
+/// ClassDocs holds the dartdoc of 1 Flutter class and of each field of it.
+class ClassDocs {
+  ClassDocs(this.owner, this.fields);
+
+  /// The dartdoc of the class.
+  final String owner;
+
+  /// The dartdoc of each field, by the name of the field. A constructor
+  /// parameter carries no doc of its own, and the field of the same name
+  /// carries 1.
+  final Map<String, String> fields;
+}
+
+/// docsOf reads the dartdoc of a class and of each field of it, and of each
+/// class above it.
+ClassDocs docsOf(InterfaceElement element) {
+  final fields = <String, String>{};
+  void add(InterfaceElement c) {
+    for (final f in c.fields) {
+      final doc = f.documentationComment;
+      final name = f.name;
+      if (doc == null || name == null) continue;
+      fields.putIfAbsent(name, () => doc);
+    }
+  }
+
+  add(element);
+  for (final t in element.allSupertypes) {
+    add(t.element);
+  }
+  return ClassDocs(element.documentationComment ?? '', fields);
+}
+
+/// firstParagraph gives the first paragraph of 1 dartdoc, with no markup.
+String firstParagraph(String doc) => clean(doc, sentence: false);
+
+/// firstSentence gives the first sentence of 1 dartdoc, with no markup.
+String firstSentence(String doc) => clean(doc, sentence: true);
+
+/// The blocks of dartdoc that carry no text for a reader of the Go source.
+final _blocks = RegExp(r'\{@[a-z]+[^}]*\}');
+
+/// clean reads the head of 1 dartdoc and it gives plain text.
+///
+/// A dartdoc holds markdown, a sample block, and a link of the form [Name].
+/// The Go doc comment holds the first paragraph or the first sentence of that
+/// text, and no markup.
+String clean(String doc, {required bool sentence}) {
+  final lines = <String>[];
+  for (final raw in doc.split('\n')) {
+    var line = raw.trim();
+    if (line.startsWith('///')) line = line.substring(3).trim();
+    if (line.startsWith('//')) line = line.substring(2).trim();
+    line = line.replaceAll(_blocks, '').trim();
+    if (line.isEmpty) {
+      if (lines.isEmpty) continue;
+      break;
+    }
+    // A list, a heading, and a code fence each need more than 1 line, thus the
+    // head of the doc stops here.
+    if (line.startsWith('*') ||
+        line.startsWith('-') ||
+        line.startsWith('#') ||
+        line.startsWith('```') ||
+        line.startsWith('>')) {
+      break;
+    }
+    lines.add(line);
+    if (sentence && line.contains('. ')) break;
+  }
+  var text = lines.join(' ');
+  text = text.replaceAllMapped(
+      RegExp(r'\[([^\]]+)\]'), (m) => m.group(1)!.split('.').last);
+  text = text.replaceAll('`', '').replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (sentence) {
+    final stop = text.indexOf('. ');
+    if (stop > 0) text = text.substring(0, stop + 1);
+  }
+  if (text.length > 240) {
+    final cut = text.lastIndexOf(' ', 240);
+    text = '${text.substring(0, cut > 0 ? cut : 240)} ...';
+  }
+  return text;
 }
