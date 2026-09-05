@@ -258,6 +258,10 @@ String $ustring(GoInt v) {
 }
 
 /// The value of an unsigned 64-bit pattern as a double.
+/// The float64 value of a Go integer. The JS form holds a pair of halves,
+/// thus the method of the class already gives the value with no virtual call.
+double $todouble(GoInt v) => v.toDouble();
+
 double $utodouble(GoInt v) => _u32(v.$h) * 4294967296.0 + v.$l.toDouble();
 
 /// _bits reads the same 8 bytes as a double and as 2 32-bit halves. The JS

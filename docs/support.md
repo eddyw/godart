@@ -286,6 +286,45 @@ program that reads `crypto/tls`. `encoding/json` reaches more programs than
 ever gives, and the other names a bug of the program that the text of the error
 already reports. Thus the 2 stay out under the same rule.
 
+## A fused multiply and addition moves the last bit
+
+The specification of Go lets an implementation join a multiply and an addition
+into 1 operation, and give a result that differs from the 2 rounded steps. gc
+joins them on arm64 and the Dart compiler does not, thus 8 functions of `math`
+differ from real Go by 1 unit of the last place.
+
+`testdata/programs/mathbits` measured it on 2026-09-06. It reads 517 inputs
+that hold each special value of IEEE 754 and a spread of bit patterns, and it
+covers 33 functions of `math`.
+
+| Function | Values that differ | Largest difference |
+|---|---|---|
+| `Hypot` | 11 of 3,102 | 2 units |
+| `Tan` | 9 of 517 | 1 unit |
+| `Sin` | 5 of 517 | 1 unit |
+| `Log2` | 5 of 517 | 1 unit |
+| `Cos` | 3 of 517 | 1 unit |
+| `Asin`, `Atan2`, `Expm1` | 1 each | 1 unit |
+
+Each other function of the witness agrees bit for bit, `Sqrt`, `Exp`, `Log`,
+`Pow`, `Cbrt`, `Acos`, `Atan`, `Sinh`, `Cosh`, and `Tanh` included. The witness
+thus writes the 8 functions above with 11 significant digits, and each other
+function with the whole bit pattern.
+
+**A program must not depend on the last bit of a transcendental function.** Go
+gives no such rule of its own: gc writes a different last bit on amd64 and on
+arm64 for the same source.
+
+## A conversion of a float to an integer outside the range
+
+`int32(f)` of a float64 above the range of an int32 gives a result that the
+specification of Go leaves to the implementation. gc saturates on arm64,
+`2147483647`, and it gives the indefinite value on amd64, `-2147483648`. gart
+holds the low 32 bits of the int64 form.
+
+No answer is correct, thus `testdata/programs/intfloat` holds the range of the
+type for that case. The conversion to an int64 agrees with gc on arm64.
+
 ## The open file limit of the machine
 
 A run of `make ci` writes more than 1100 temporary Go modules: 200 programs of

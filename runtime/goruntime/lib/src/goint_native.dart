@@ -104,9 +104,17 @@ String $ustring(GoInt v) {
 }
 
 /// The value of an unsigned 64-bit pattern as a double.
+/// The float64 value of a Go integer.
+///
+/// int.toDouble() is a virtual call, because a Dart int holds 2 forms. The
+/// compiler does not fold it, and it costs 5 times an addition of 0.0. The
+/// operator + of int reads a double operand and it gives the same value,
+/// because a Go integer holds no negative zero and no NaN.
+double $todouble(GoInt v) => v.$v + 0.0;
+
 double $utodouble(GoInt v) {
-  if (v.$v >= 0) return v.$v.toDouble();
-  return (v.$v >>> 1).toDouble() * 2.0 + (v.$v & 1).toDouble();
+  if (v.$v >= 0) return v.$v + 0.0;
+  return ((v.$v >>> 1) + 0.0) * 2.0 + ((v.$v & 1) + 0.0);
 }
 
 /// _bits reads the same 8 bytes as a double and as an integer. The 2 views

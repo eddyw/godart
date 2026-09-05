@@ -835,3 +835,22 @@ String _struct(Object? v, TypeDesc type, String verb, bool plus, int depth) {
   if (sharp) return '${type.display}{${parts.join(', ')}}';
   return '{${parts.join(' ')}}';
 }
+
+/// The decimal text of a Go integer, as a Go string.
+///
+/// The portable Go form builds the text 1 digit at a time and it joins each
+/// digit to the front, thus it allocates 1 string for each digit. Dart holds
+/// the whole conversion in 1 call.
+GoString $intText(GoInt v) => GoString.ascii(v.toString());
+
+/// The decimal text of a Go integer of an unsigned type.
+GoString $uintText(GoInt v) => GoString.ascii($ustring(v));
+
+/// The text of a Go integer in a base of 2 to 36, with the digits of Go.
+GoString $intRadix(GoInt v, int radix) {
+  if (v < GoInt.zero) return GoString.ascii('-${$uradix(-v, radix)}');
+  return GoString.ascii($uradix(v, radix));
+}
+
+/// The text of a Go integer of an unsigned type, in a base of 2 to 36.
+GoString $uintRadix(GoInt v, int radix) => GoString.ascii($uradix(v, radix));
