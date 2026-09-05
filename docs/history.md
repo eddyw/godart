@@ -73,6 +73,55 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-05, the twentieth session
+
+The user asked for each open task, end to end, and for a port of the Flutter
+sample `compass_app`. 2 agents ran in a git worktree of their own, and the main
+session held the port, the Flutter host, and the docs.
+
+**The port of `compass_app` runs.** The sample of the Flutter team carries the
+reference architecture of Flutter: MVVM, a repository for each source, a use
+case, and a server. `flutter/example/compass` holds the whole application in
+Go, 1,745 lines against 5,804 lines of Dart, with no package of pub.dev and no
+code generation of a data class. 5 widget tests run the whole flow in a real
+Flutter tree, and 8 Go tests run it with no Flutter. The server of the sample
+also stands in Go, and `server/prove.sh` proves that the Go run and the Dart
+run give the same bytes for 17 requests.
+
+The port needed 2 rules of the host, and decision 353 holds the 2:
+
+- `ui.Pages` carries the stack of the navigator. A Go application held 1 screen
+  before it.
+- `GoRuntime.tick` runs the queue of the scheduler again. A goroutine that a
+  posted function starts waited for the next gesture of the user, thus a screen
+  that reads the server when it opens read nothing.
+
+**Each limit of the port stands outside the compiler.** A package of pub.dev
+holds no node type, and a Flutter API that needs a `BuildContext` reaches no Go
+value. `flutter/example/compass/README.md` names each 1.
+
+**3 gaps of `testing/synctest` closed.** A wait for a lock is not durable now,
+and each timer holds a handle that no other timer takes. Read decision 351.
+
+**The Dart output is 12.4 percent smaller** for a program that reads
+`encoding/json`. The library holds 1 variable for the description of each type
+with no name of its own. A tree shake of the emitter stays out, and decision
+352 holds the measure of it.
+
+**4 defects fell, and each 1 gave a wrong answer with no report:**
+
+| Defect | The report before the fix |
+|---|---|
+| `Timer.Reset` of a timer of `AfterFunc` | The function never ran again, and the program waited forever |
+| `Timer.Stop` and `Timer.Reset` of a Timer that no constructor made | No panic, and Go panics |
+| A timer of a bubble took the slot of another timer | A stop cancelled the wrong timer |
+| A goroutine that a posted function starts | It waited for the next event of the host |
+
+The documentation sweep of the nineteenth session left 5 stale claims in
+`docs/support.md`, and each 1 now agrees with the tool that measures it.
+`TestTestsOfGoroot` holds `testing/synctest` now, thus 21 packages of GOROOT
+run their real tests under `make ci`.
+
 ### 2026-09-04, the nineteenth session
 
 The user asked for each open task, end to end, until no task stays. 1 agent ran
