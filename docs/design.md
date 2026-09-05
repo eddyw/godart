@@ -657,6 +657,68 @@ Stage 5 takes none of it, because 4 rules break a plain reachability walk:
 A rule that drops such a declaration gives a wrong answer with no report, and
 that is worse than a large file.
 
+### A shake at the level of the package
+
+The session of 2026-09-05 asked a narrower question: does a shake that drops a
+whole package give the bytes, and is such a shake safe? The answer is no to
+both, and the measure names 3 causes.
+
+**1. The output already holds the import closure alone.** `order` of
+`internal/driver/driver.go` walks the imports from the root package, and it
+keeps each package that the Dart runtime library does not hold. The Go tool
+chain names 73 packages for `jsonuse`, and gart writes 32 of them. A shake that
+drops a package outside the closure thus finds nothing.
+
+**2. The entry point reaches each package.** The `$init` routine of a package
+calls the `$init` routine of each package that it imports, because an `init`
+function and a package variable of that package must run first. A walk from
+`bin/main.dart` over those calls reaches each of the 32 packages of `jsonuse`
+and each of the 117 packages of `httpuse`. A shake at the level of the package
+thus drops 0 bytes.
+
+**3. It reaches no table of `unicode`.** 5 packages of `jsonuse` import
+`unicode`, and each 1 calls a function of it: `bytes`, `strings`, `reflect`,
+`encoding/json/v2`, and `encoding/json/internal/jsonwire`.
+
+To drop a package the compiler must first prove 2 things: no live declaration
+names a declaration of that package, and the `$init` routine of that package
+writes nothing that the program reads. The first proof is the declaration walk
+that the 4 rules above break. The second proof holds a 5th rule: a package that
+writes a field of `internal/linkhook` at the start reaches a reader that names
+no declaration of it.
+
+gart thus ships no shake at the level of the package.
+
+### Where the tables of `unicode` stand
+
+The tables hold 527,984 bytes of the 4,134,163 bytes of `jsonuse`, and 481,816
+of those bytes stand inside the `$init` routine of the package, in 538
+statements. Go writes each table as a package variable with a composite
+literal, thus stage 4 makes each 1 a statement of `init`, and stage 5 writes
+that statement into `$init`. A shake at the level of the package keeps the
+whole routine, because the routine always runs.
+
+The rest of the program names 14 declarations of `unicode`: `CaseRange`,
+`IsDigit`, `IsGraphic`, `IsLetter`, `IsNumber`, `IsPrint`, `IsSpace`,
+`SimpleFold`, `ToLower`, `ToTitle`, `ToUpper`, and the 3 case methods of
+`SpecialCase`.
+
+A name walk at the level of the package variable, from those 14 names, keeps
+119,302 bytes of the routine and drops 362,514. That is 68.7 percent of the
+package and 8.8 percent of the output of `jsonuse`. The largest tables that
+stay: `L`, `CaseRanges`, `M`, `S`, `P`, and `N`. The largest tables that go:
+`C`, `Cn`, `Lo`, `Mn`, the map `Scripts`, and each script table under it. A
+script and a category reach the program through the 3 maps `Categories`,
+`Scripts`, and `Properties` alone, and no live declaration names those 3.
+
+A program of the measure read the emitted Dart, thus the number names an upper
+bound and no shipped gain.
+
+Such a shake stands at the level of the package variable, and it is not the
+shake of this section. gart holds neither proof that it needs: the initializer
+of a variable must hold no side effect, and no `go:linkname` directive may bind
+the variable to another package. The work stays open.
+
 ## The start time of a large program on the Dart VM
 
 The output of a large program holds many megabytes of Dart, and the Dart VM
