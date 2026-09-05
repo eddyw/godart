@@ -65,7 +65,7 @@ cd <root of the repository>
 go run ./flutter/nodescan flutter/example/counter/go > nodes.txt
 ```
 
-`build.sh` of an application runs `nodescan` and then the host mode.
+`glutter gen` of an application runs `nodescan` and then the host mode.
 
 An earlier reader took each `ui.<Name>` of the Go source with a regular
 expression. Such a scan reads a name of a comment and a name of a string, and
@@ -76,7 +76,7 @@ node type carries such a name.
 
 ## Why the host is per application
 
-A shared host would hold a case for each of the 564 node types, thus it would
+A shared host would hold a case for each of the 566 node types, thus it would
 name each Flutter widget. The tree shaker of Dart then keeps the whole
 framework. The measurement of 2026-09-02 read a set of 411 nodes, on an ahead
 of time build for macOS:

@@ -118,7 +118,7 @@ holds the state of 2026-09-03.
 | Android, through Flutter | Present. `flutter build apk --debug` builds the 3. It needs `ANDROID_HOME`, and it does not need the cmdline-tools that `flutter doctor` asks for. |
 | The web, `dart compile js` and `dart compile wasm` | Present. Each program compiles, and a file or a socket operation gives the error that Go gives under `GOOS=js`. A Flutter web build reads the same path. Read decision 251 and `docs/js-integers.md`. |
 
-`flutter/example/platform.sh` writes the platform runner of an example. git
+`glutter create` writes the platform runner of an example. git
 holds no such directory, because `flutter test` needs none and each file comes
 from `flutter create`. The script also gives a macOS runner the entitlement
 `com.apple.security.network.client`, and an Android runner

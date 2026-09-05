@@ -994,6 +994,15 @@ set holds 564 node types. Each node type thus costs about 3,280 bytes of Dart
 source. The Dart tree shaker drops an unused descriptor, thus an ahead of time
 build carries the types of the application alone.
 
+**The pack split of 2026-09-05.** The node set stands in 3 Go packages now, and
+an application compiles the packs that it names alone. compass names the core
+and Material, thus the Dart of `gart.dev` falls from 3,064,035 bytes to
+2,878,623, and the descriptor library of the core falls from 1,911,012 to
+948,233. The generated host of compass falls from 3,195 lines to 1,324, because
+the converter of an enum reaches the host only when a case of the host reads
+that enum. compass names 40 node types of the 491 that its 2 packs hold, thus a
+filter of the application would give the rest.
+
 Pros:
 
 - The Go side is the most beautiful of the 13, and it holds no tag, no
