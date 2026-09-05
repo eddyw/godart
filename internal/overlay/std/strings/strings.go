@@ -185,7 +185,7 @@ func Count(s, substr string) int {
 	n := 0
 	i := 0
 	for i+len(substr) <= len(s) {
-		if s[i:i+len(substr)] == substr {
+		if matchAt(s, substr, i) {
 			n++
 			i += len(substr)
 			continue
@@ -219,12 +219,32 @@ func Join(elems []string, sep string) string {
 	return out
 }
 
+// matchAt reports whether sep stands in s at the position i. The caller must
+// hold i plus the length of sep inside s.
+//
+// A comparison of 2 substrings builds 1 Go string for each read, and a scan of
+// a text reads each position. matchAt thus reads the bytes and it allocates
+// nothing.
+func matchAt(s, sep string, i int) bool {
+	for k := 0; k < len(sep); k++ {
+		if s[i+k] != sep[k] {
+			return false
+		}
+	}
+	return true
+}
+
 // Split cuts s at each sep.
 func Split(s, sep string) []string {
 	if len(sep) == 0 {
+		// Go slices s at each rune boundary, thus a byte that holds no rune
+		// stays as it is. A build from the rune would give the replacement
+		// character.
 		out := []string{}
-		for _, r := range s {
-			out = append(out, string(r))
+		for i := 0; i < len(s); {
+			_, width := utf8.DecodeRuneInString(s[i:])
+			out = append(out, s[i:i+width])
+			i += width
 		}
 		return out
 	}
@@ -232,7 +252,7 @@ func Split(s, sep string) []string {
 	start := 0
 	i := 0
 	for i+len(sep) <= len(s) {
-		if s[i:i+len(sep)] != sep {
+		if !matchAt(s, sep, i) {
 			i++
 			continue
 		}
@@ -248,8 +268,11 @@ func Split(s, sep string) []string {
 func SplitSeq(s, sep string) iter.Seq[string] {
 	return func(yield func(string) bool) {
 		if len(sep) == 0 {
-			for _, r := range s {
-				if !yield(string(r)) {
+			for i := 0; i < len(s); {
+				_, width := utf8.DecodeRuneInString(s[i:])
+				part := s[i : i+width]
+				i += width
+				if !yield(part) {
 					return
 				}
 			}
@@ -258,7 +281,7 @@ func SplitSeq(s, sep string) iter.Seq[string] {
 		start := 0
 		i := 0
 		for i+len(sep) <= len(s) {
-			if s[i:i+len(sep)] != sep {
+			if !matchAt(s, sep, i) {
 				i++
 				continue
 			}
@@ -317,19 +340,42 @@ func SplitN(s, sep string, n int) []string {
 // Replace changes the first n occurrences of old to new. A negative n changes
 // each one.
 func Replace(s, old, new string, n int) string {
-	if len(old) == 0 || n == 0 {
+	if n == 0 {
 		return s
 	}
-	out := ""
+	if len(old) == 0 {
+		// An empty old stands at the front of s and after each rune, thus a
+		// text of k runes takes up to k plus 1 replacements.
+		most := utf8.RuneCountInString(s) + 1
+		if n < 0 || n > most {
+			n = most
+		}
+		var out Builder
+		out.WriteString(new)
+		count := 1
+		i := 0
+		for i < len(s) {
+			_, width := utf8.DecodeRuneInString(s[i:])
+			out.WriteString(s[i : i+width])
+			i += width
+			if count < n {
+				out.WriteString(new)
+				count++
+			}
+		}
+		return out.String()
+	}
+	var out Builder
 	count := 0
 	i := 0
 	start := 0
 	for i+len(old) <= len(s) {
-		if s[i:i+len(old)] != old {
+		if !matchAt(s, old, i) {
 			i++
 			continue
 		}
-		out += s[start:i] + new
+		out.WriteString(s[start:i])
+		out.WriteString(new)
 		i += len(old)
 		start = i
 		count++
@@ -337,7 +383,8 @@ func Replace(s, old, new string, n int) string {
 			break
 		}
 	}
-	return out + s[start:]
+	out.WriteString(s[start:])
+	return out.String()
 }
 
 // ReplaceAll changes each old to new.

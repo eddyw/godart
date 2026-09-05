@@ -31,9 +31,24 @@ final class GoString {
   /// Encodes a Dart string as UTF-8. A code unit of the escape range gives the
   /// 1 byte that it stands for. Read toDartString.
   ///
+  /// A text of ASCII takes 1 loop over the code units, and it holds that text
+  /// as its own decode. The UTF-8 encoder of Dart reached 9 percent of the
+  /// cost of fmt.Sprintf.
+  ///
   /// _encode gives a fresh buffer that no other code holds, thus this factory
   /// adopts the buffer and makes no second copy.
-  factory GoString.fromString(String s) => GoString.take(_encode(s));
+  factory GoString.fromString(String s) {
+    final int n = s.length;
+    final Uint8List out = Uint8List(n);
+    for (var i = 0; i < n; i++) {
+      final int unit = s.codeUnitAt(i);
+      if (unit >= 0x80) return GoString.take(_encode(s));
+      out[i] = unit;
+    }
+    final g = GoString._(out.asUnmodifiableView());
+    g._dart = s;
+    return g;
+  }
 
   /// Copies the bytes into unmodifiable storage.
   factory GoString.fromBytes(List<int> bytes) =>
@@ -204,6 +219,17 @@ Slice<GoInt> $appendString(
   final int n = str.bytes.length;
   if (n == 0) return s;
   if ($isJS) return $appendSlice(s, $stringToBytes(str), alloc);
+  // strings.Builder, fmt, and encoding/json each reach this line for each
+  // write. The element type stands here, thus 1 test of the class gives a
+  // direct move of the bytes and a direct build of the header.
+  if (s is $ByteSlice) {
+    final int need = s.len + n;
+    if (need <= s.cap) {
+      final Uint8List dst = s.bytes;
+      dst.setRange(s.off + s.len, s.off + need, str.bytes, 0);
+      return $ByteSlice(dst, s.off, need, s.cap);
+    }
+  }
   return $appendRange(s, str.bytes as List<GoInt>, 0, n, alloc);
 }
 
@@ -219,6 +245,12 @@ Slice<GoInt> $stringToBytes(GoString s) {
 /// The Go conversion `string(b)` for a byte slice.
 GoString $bytesToString(Slice<GoInt> b) {
   final out = Uint8List(b.len);
+  // A byte slice holds a Uint8List, thus 1 move of the memory replaces the
+  // loop. The loop stands for the JS target, where an element is a pair.
+  if (b is $ByteSlice) {
+    out.setRange(0, b.len, b.bytes, b.off);
+    return GoString.take(out);
+  }
   for (var i = 0; i < b.len; i++) {
     out[i] = $ix(b.array[b.off + i]);
   }

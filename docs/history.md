@@ -118,7 +118,40 @@ ASCII, and GopherJS holds no memo. A JS engine holds a rope and a sliced
 string, and Dart holds neither: the substring of gart shares the byte storage
 and it beats the substring of Dart, 4.72 milliseconds against 5.91.
 
-Read decisions 357 and 358.
+**5 changes of the speed and of the correctness followed, and each 1 carries a
+witness that compares the output against real Go.**
+
+**math.Sqrt compiled to a loop of 54 steps.** The compiler of Go replaces
+`math.sqrt` with 1 machine instruction, and gart holds no such rule. `Sqrt`,
+`Floor`, `Ceil`, `Trunc`, and `Abs` read the instruction of Dart now, and IEEE
+754 names 1 correct result for each input of the 5. `float.math.1m` falls from
+144 milliseconds to 0.74.
+
+**A conversion of an integer to a float64 cost 5 times too much.**
+`int.toDouble` is a virtual call that the ahead of time compiler does not fold,
+because a Dart int holds 2 forms. The operator + of int reads a double operand
+and gives the same value. `float.sum.1m` falls from 3.43 milliseconds to 0.69,
+and `struct.alloc.1m` falls from 3.90 to 0.68, which is 5 times less than the
+same loop in Dart and equal to Go.
+
+**strconv.FormatInt joined 1 digit at a time to the front.** 1 `Itoa` of 9
+digits thus allocated 9 Go strings. `int.format.100k` falls from 21.97
+milliseconds to 1.96, and `map.string.100k` falls from 57.92 to 25.27 with it.
+
+**The float formatter held 7 defects.** `%.0f` of 0.5 gave 1 and Go gives 0,
+because Dart rounds away from zero and Go rounds to the even digit. A precision
+above 20 crashed the program, because `toStringAsFixed` of Dart rejects such a
+count. The verbs `b` and `x` of `strconv.FormatFloat` gave an error text. 3
+rules of the verb stood wrong. `testdata/programs/floattext` gave 6,155
+differences of 28,414 lines, and each 1 is closed.
+
+**A cache of the type descriptor handle gave 0 gain and it went back.** A JIT
+profile of the JSON encode put 13 percent of the time in a map keyed by the
+full Go name of a type. The ahead of time build showed no difference, and the
+median of 22 cases stood at 0.995. A profile of the Dart VM service ranks the
+wrong work for an ahead of time build.
+
+Read decisions 357 to 362.
 
 ### 2026-09-05, the twenty-first session
 

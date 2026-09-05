@@ -3951,3 +3951,50 @@ The plan left these points open. The work took the decisions below.
      The real test files of `strconv` cannot run, because `export_test.go`
      reads `baseError` and `number_test.go` reads `bitSizeError` with 3
      arguments. The overlay holds neither name in that form.
+
+362. The float formatter rounds as Go rounds, and it holds no limit of
+     precision.
+
+     `testdata/programs/floattext` writes the text of 300 float values under 6
+     verbs and 8 precisions, for 32 bits and for 64, plus 9 verbs of `fmt`. It
+     gave 6,155 differences against real Go of 28,414 lines, and 7 causes.
+
+     **A round at a middle point.** Dart rounds away from zero and Go rounds to
+     the even digit, thus `%.0f` of 0.5 gave 1 and Go gives 0. That reached
+     `fmt` too, and a price of 2.5 units wrote 3.
+
+     The exact value of a double is m times 2 to the power e with m odd. Such a
+     value sits at the middle of 2 multiples of 10 to the power q only when e is
+     q minus 1, and only when 5 to the power q divides m. `_tieAt` reads the bit
+     pattern in 2 halves of 32 bits, thus a JS number holds each half with no
+     loss. `_evenDigit` then steps the last digit down by 1 when that digit is
+     odd, because a round away from zero gives the digit above the exact digit.
+
+     A round that gave 1 with zeros only came from the digit 9, and Go rounds
+     that digit up too, thus `_carried` holds such a text.
+
+     **A precision above 20 crashed the program.** `toStringAsFixed` and
+     `toStringAsExponential` of Dart reject a count above 20, and Go holds no
+     limit. `fmt.Printf("%.30f", 0.1)` thus threw a `RangeError`.
+
+     `_exactFixed` and `_exactSig` give the exact decimal of a double through
+     `BigInt`: m times 2 to the power e is m shifted for a whole value, and m
+     times 5 to the power minus e with minus e fractional digits for a value
+     under 1. The exact path also carries the rounding of Go, thus it needs no
+     second correction. It runs only above 20 digits and at or above 10 to the
+     power 21, thus the common path keeps the fast form of Dart.
+
+     **The verbs b and x.** `strconv.FormatFloat(45, 'b', -1, 64)` gave
+     `%!b(float64=45)`, and Go gives `6333186975989760p-47`. The verb x gives
+     `0x1.68p+05`. `_parts` reads the significand and the exponent of 2 of a
+     value of 32 bits or of 64, and the 2 verbs read it.
+
+     **3 rules of the verb.** `FormatFloat` holds 8 verbs, and each other 1
+     gives the percent sign and the letter, thus the verb `F` of `fmt` is not a
+     verb of that function. A value that is not a number stands in front of that
+     check, thus an infinity gives `+Inf` under each verb. The upper case of the
+     verbs `E` and `G` reached the text `NaN`, `+Inf`, and `-Inf`, and Go writes
+     those with the same letters under each verb.
+
+     The real test files of `strconv` cannot run, thus the witness is the gate.
+     Read decision 361.
