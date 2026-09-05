@@ -27,9 +27,17 @@ final class Slice<T> {
   factory Slice.of(List<T> array) =>
       Slice(array, 0, array.length, array.length);
 
-  T operator [](int i) => $at(i);
+  // The 2 operators hold the body of $at and of $set. A call of a helper
+  // would stand in each read of a byte, and a scanner reads 2 megabytes.
+  T operator [](int i) {
+    if (i < 0 || i >= len) $panicIndex(i, len);
+    return array[off + i];
+  }
 
-  void operator []=(int i, T value) => $set(i, value);
+  void operator []=(int i, T value) {
+    if (i < 0 || i >= len) $panicIndex(i, len);
+    array[off + i] = value;
+  }
 
   /// The element at index i. uns names an index of an unsigned type, which
   /// reads as a negative Dart int above 2^63.
