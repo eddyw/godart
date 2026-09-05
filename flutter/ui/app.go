@@ -78,7 +78,12 @@ type MediaData struct {
 	Width     float64
 	Height    float64
 	TextScale float64
-	TopInset  float64
+	// TopInset is the part of the screen that the status bar and the notch
+	// hold.
+	TopInset float64
+	// BottomInset is the part of the screen that the keyboard holds. A form
+	// reads it and it moves its content above the keyboard.
+	BottomInset float64
 }
 
 var (
@@ -114,4 +119,5 @@ func Reset() {
 	hostDirty = nil
 	themeSig = Signal[ThemeData]{}
 	mediaSig = Signal[MediaData]{}
+	resetCalls()
 }

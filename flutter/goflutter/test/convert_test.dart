@@ -130,7 +130,14 @@ final class _Bridge implements GoBridge {
     required double height,
     required double textScale,
     required double topInset,
+    required double bottomInset,
   }) {}
+
+  @override
+  String takeCalls() => '';
+
+  @override
+  void answer(int id, String value, String error) {}
 }
 
 void main() {

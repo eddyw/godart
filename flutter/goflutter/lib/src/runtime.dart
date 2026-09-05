@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:goruntime/goruntime.dart';
 
@@ -75,6 +77,40 @@ final class GoRuntime {
       bridge.pump();
       flush();
     }
+    _calls();
+  }
+
+  /// _calls gives each request of Go to the handler of the application.
+  ///
+  /// A goroutine that calls ui.Call parks on a channel, thus the scheduler
+  /// stops before this line. The answer wakes the goroutine, and the tick of
+  /// the answer runs it.
+  void _calls() {
+    final String text = bridge.takeCalls();
+    if (text.isEmpty) return;
+    for (final Object? item in jsonDecode(text) as List<Object?>) {
+      final Map<String, Object?> m = item as Map<String, Object?>;
+      _answer(m['id']! as int, m['name']! as String, m['arg']! as String);
+    }
+  }
+
+  /// _answer runs the Dart work of 1 request and it writes the result back.
+  Future<void> _answer(int id, String name, String arg) async {
+    String value = '';
+    String error = '';
+    final GoCall? handler = goCallHandler;
+    if (handler == null) {
+      error = 'the application holds no handler of the call $name. '
+          'Call goSetCall before runApp.';
+    } else {
+      try {
+        value = await handler(name, arg);
+      } catch (e) {
+        error = e.toString();
+      }
+    }
+    bridge.answer(id, value, error);
+    tick();
   }
 
   /// flush rebuilds each boundary that the Go graph marked.
@@ -88,4 +124,22 @@ final class GoRuntime {
       _boundaries[id]?.call();
     }
   }
+}
+
+/// GoCall runs the Dart work of 1 request of Go. The name tells it which call
+/// it must run, and the argument and the answer each hold a text of the
+/// application.
+typedef GoCall = Future<String> Function(String name, String arg);
+
+/// goCallHandler holds the handler that goSetCall installed.
+GoCall? goCallHandler;
+
+/// goSetCall installs the handler of each call of Go. The application calls it
+/// before runApp.
+///
+/// A Go tree carries no call of Dart, thus a date picker, a share sheet, a
+/// dialog with an answer, and each plugin of a platform channel reach Go
+/// through this handler. Read flutter/ui/ask.go.
+void goSetCall(GoCall f) {
+  goCallHandler = f;
 }

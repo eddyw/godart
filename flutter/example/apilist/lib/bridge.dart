@@ -58,7 +58,21 @@ final class ApiListBridge implements GoBridge {
     required double height,
     required double textScale,
     required double topInset,
+    required double bottomInset,
   }) {
-    ui.SetMedia(ui.MediaData$(width, height, textScale, topInset));
+    ui.SetMedia(
+      ui.MediaData$(width, height, textScale, topInset, bottomInset),
+    );
   }
+
+  @override
+  String takeCalls() => ui.TakeCalls().toDartString();
+
+  @override
+  void answer(int id, String value, String error) => ui.Answer(
+    $gi(id),
+    GoString.fromString(value),
+    GoString.fromString(error),
+  );
+
 }

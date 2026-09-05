@@ -12,8 +12,32 @@ Widget harness() {
 void main() {
   setUp(() {
     goSetWidgets(goGenWidget);
+    goSetCall((String name, String arg) async => '$name: $arg');
     app.$init();
     app.Restart();
+  });
+
+  testWidgets('a Go call reaches the host and the answer reaches the screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(harness());
+    await tester.tap(find.byTooltip('share the greeting'));
+    await tester.pumpAndSettle();
+
+    // The Go side parked a goroutine on a channel, the host ran the handler,
+    // and the answer woke the goroutine.
+    expect(find.text('share: Hello'), findsOneWidget);
+  });
+
+  testWidgets('an error of the host reaches the Go side', (
+    WidgetTester tester,
+  ) async {
+    goSetCall((String name, String arg) async => throw StateError('no sheet'));
+    await tester.pumpWidget(harness());
+    await tester.tap(find.byTooltip('share the greeting'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('no sheet'), findsOneWidget);
   });
 
   testWidgets('the Go tree builds real Flutter widgets', (

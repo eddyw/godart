@@ -55,6 +55,7 @@ class _GoAppState extends State<GoApp> with TickerProviderStateMixin {
       height: m.size.height,
       textScale: m.textScaler.scale(1),
       topInset: m.padding.top,
+      bottomInset: m.viewInsets.bottom,
     );
   }
 

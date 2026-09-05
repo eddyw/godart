@@ -21,6 +21,11 @@ type App struct {
 	fail  ui.Signal[bool]
 	load  *ui.Command
 
+	// shared holds the answer of the host after a share, and share runs the
+	// call. A Go tree carries no call of Dart, thus ui.Call reaches the host.
+	shared ui.Signal[string]
+	share  *ui.Command
+
 	// The 4 signals below hold the note section. note decides whether the
 	// field stands in the tree, and the other 3 hold the state that the host
 	// reports through a key of flutter/ui/identity.go.
@@ -34,6 +39,7 @@ type App struct {
 func New() *App {
 	a := &App{}
 	a.load = ui.NewCommand(a.fetch)
+	a.share = ui.NewCommand(a.shout)
 	a.note.Set(true)
 	return a
 }
@@ -50,6 +56,17 @@ func (a *App) fetch() error {
 		rows[i] = fmt.Sprintf("row %d", i)
 	}
 	ui.Post(func() { a.rows.Set(rows) })
+	return nil
+}
+
+// shout asks the host to share the greeting, and it holds the answer of the
+// host. The call parks this goroutine, and the answer of the host wakes it.
+func (a *App) shout() error {
+	answer, err := ui.Call("share", a.Greeting())
+	if err != nil {
+		return err
+	}
+	ui.Post(func() { a.shared.Set(answer) })
 	return nil
 }
 
@@ -113,6 +130,11 @@ func (a *App) Build() ui.Node {
 					Tooltip:   ui.P("load the list"),
 					OnPressed: a.load.Run,
 				},
+				material.IconButton{
+					Icon:      ui.Icon{Icon: "share"},
+					Tooltip:   ui.P("share the greeting"),
+					OnPressed: a.share.Run,
+				},
 			),
 		},
 		Body: ui.Column{Children: ui.Kids(
@@ -127,6 +149,7 @@ func (a *App) Build() ui.Node {
 				},
 			},
 			ui.Padding{Padding: ui.AllSides(16), Child: ui.Watch{Build: a.counterRow}},
+			ui.Padding{Padding: ui.Sides(16, 0), Child: ui.Watch{Build: a.shareRow}},
 			ui.Padding{Padding: ui.Sides(16, 0), Child: ui.Watch{Build: a.noteSection}},
 			ui.Padding{
 				Padding: ui.Sides(16, 0),
@@ -304,3 +327,12 @@ func Restart() {
 // The name differs from the method Build, because a top level name that a
 // method of the package shadows takes a suffix in the Dart output.
 func Tree() ui.Node { return root.Build() }
+
+// shareRow gives the answer of the host, and an empty text before the first
+// share. An error of the host reaches the same line.
+func (a *App) shareRow() ui.Node {
+	if err := a.share.Err(); err != nil {
+		return ui.Text{Data: err.Error()}
+	}
+	return ui.Text{Data: a.shared.Get()}
+}

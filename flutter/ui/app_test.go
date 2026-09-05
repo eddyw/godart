@@ -166,9 +166,14 @@ func TestMediaIsASignal(t *testing.T) {
 		return ui.SizedBox{Width: ui.P(ui.Media().Width)}
 	})
 	ui.TakeDirty()
-	ui.SetMedia(ui.MediaData{Width: 390, Height: 844})
+	ui.SetMedia(ui.MediaData{Width: 390, Height: 844, BottomInset: 336})
 	if got := ui.TakeDirty(); !slices.Contains(got, id) {
 		t.Fatalf("a media change marked %v, want the id %d", got, id)
+	}
+	// The keyboard of the platform holds the bottom inset. A form reads it and
+	// it moves its content above the keyboard.
+	if got := ui.Media().BottomInset; got != 336 {
+		t.Fatalf("the bottom inset gave %v, want 336", got)
 	}
 }
 

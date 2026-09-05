@@ -45,7 +45,17 @@ abstract interface class GoBridge {
     required double height,
     required double textScale,
     required double topInset,
+    required double bottomInset,
   });
+
+  /// Gives each request of Go that waits for an answer of the host, as a JSON
+  /// array. An empty text means that no request stands. Read
+  /// flutter/ui/ask.go.
+  String takeCalls();
+
+  /// Writes the answer of 1 request. An empty error means that the call gave
+  /// the value.
+  void answer(int id, String value, String error);
 }
 
 /// rootID names the whole tree in the result of takeDirty. It holds the value
