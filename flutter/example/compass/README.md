@@ -14,7 +14,7 @@ hold" names each limit that the work found, with the cause of each 1.
 | Path | Content |
 |---|---|
 | `server/` | The server of the sample in Go. 9 routes over `net/http` and `encoding/json`. |
-| `go/` | The application. The model, the API client, each repository, the use case, each view model, and the 6 screens. |
+| `go/` | The application. The model, the API client, each repository, the use case, each view model, and the 7 screens. |
 | `lib/` | The Dart host. 87 lines, and `widgets_gen.dart` that `nodegen` writes. |
 | `assets/` | The 2 JSON files of the sample: 137 destinations and 2,723 activities. |
 
@@ -31,6 +31,7 @@ flutter test                   # 5 widget tests
 
 `example/platform.sh compass macos` writes the platform runner, and
 `flutter run -d macos` then opens the application against the server.
+`flutter build macos --debug` wrote `compass_app.app` on 2026-09-05.
 
 The server also runs on the Dart VM. `server/prove.sh` runs it 2 times, first
 with `go run` and then with the Dart output of gart, and it diffs the 2
@@ -53,7 +54,7 @@ sample.
 
 | Test | Count | What it covers |
 |---|---|---|
-| `go test ./go/...` | 8 | The whole flow with no Flutter: the login, the home, the search, the results, the activities, and the booking. It reads a real HTTP server of `httptest`. |
+| `go test ./go/...` | 11 | The whole flow with no Flutter: the login, the home, the search, the calendar, the results, the activities, and the booking. It reads a real HTTP server of `httptest`. |
 | `flutter test` | 5 | The same flow in a real Flutter tree, with a real navigator, a real page transition, and a real socket. |
 | `go test ./server/...` | 8 | Each route of the server, and each status of the sample. |
 | `server/prove.sh` | 17 requests | The Go run and the Dart run of the server give the same bytes. |
@@ -81,7 +82,7 @@ sample.
 | `shared_preferences` | The same cause. A plugin needs a platform channel, and a Go value cannot answer 1. | The token lives in memory. A restart asks for the login again, exactly as the dev flavor of the sample does. |
 | `flutter_svg`, `google_fonts`, `cached_network_image`, `share_plus` | The same cause. | A text logo, the default font, `Image.network` with no cache, and a share button that does nothing. |
 | `Dismissible`, to delete a booking with a swipe | The constructor takes a `Key`, and `nodegen` drops each widget that needs 1. Read the section "What the tool drops" of `flutter/nodegen/README.md`. | A delete button in the row. |
-| `showDateRangePicker` | The call gives a `Future` and it needs a `BuildContext`. A node describes a widget, and not a call. | The form takes the 7 days after today. |
+| `showDateRangePicker` | The call gives a `Future` and it needs a `BuildContext`. A node describes a widget, and not a call. The generated `DateRangePickerDialog` also carries no callback, because the dialog gives its answer to `Navigator.pop`. | A screen of its own holds a real `CalendarDatePicker`. The first tap names the first day, the second one names the last day, and Go holds the 2. |
 | `AppLocalization` | `Localizations.of(context)` needs a `BuildContext`. | The strings live in `go/text.go`. |
 | The theme of `ui/core/themes/` | `Theme.of(context)` needs a `BuildContext`. The host reads the theme and it passes a snapshot to the Go build. | The default Material theme of the host, and `ui.Theme()` for the colors of the snapshot. |
 

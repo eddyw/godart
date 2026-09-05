@@ -245,7 +245,7 @@ mark that needs a note carries 1, and "The notes of the matrix" holds the text.
 6. **Navigation.** The host owns the `Navigator`. A13 holds the stack of the
    pages in Go since 2026-09-05: `ui.Pages` carries 1 key and 1 child for each
    page, the host builds 1 `MaterialPage` for each child, and a back gesture of
-   the platform reaches `OnPop`. `flutter/example/compass` runs 6 screens that
+   the platform reaches `OnPop`. `flutter/example/compass` runs 7 screens that
    way, with the page transition of Material. A Go call that waits for the
    result of a pop still needs the `$await` intrinsic, because
    `Navigator.push` gives a `Future<T?>` at `widgets/navigator.dart:5060`. A

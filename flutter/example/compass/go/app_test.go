@@ -268,6 +268,78 @@ func TestTheWholeFlowMakesABooking(t *testing.T) {
 	}
 }
 
+func TestTheCalendarNamesTheRange(t *testing.T) {
+	ui.Reset()
+	newFake(t)
+	a := New()
+	login(t, a)
+	a.push(route{name: screenSearch})
+	a.search.Load.Wait()
+	ui.Pump()
+
+	a.search.openDates()
+	if got := a.Stack(); got[len(got)-1] != screenDates {
+		t.Fatalf("the stack holds %v", got)
+	}
+	if got := text(a.Build()); !strings.Contains(got, "Choose the first day") {
+		t.Fatalf("the calendar screen gave %q", got)
+	}
+
+	first := time.Date(2026, 9, 10, 0, 0, 0, 0, time.UTC)
+	a.search.Pick(first)
+	if !a.search.start.Peek().Equal(first) {
+		t.Fatalf("the start is %v", a.search.start.Peek())
+	}
+	if got := a.Stack(); got[len(got)-1] != screenDates {
+		t.Fatalf("the first pick left the calendar: %v", got)
+	}
+
+	last := time.Date(2026, 9, 17, 0, 0, 0, 0, time.UTC)
+	a.search.Pick(last)
+	if !a.search.end.Peek().Equal(last) {
+		t.Fatalf("the end is %v", a.search.end.Peek())
+	}
+	if got := a.Stack(); got[len(got)-1] != screenSearch {
+		t.Fatalf("the second pick stayed on the calendar: %v", got)
+	}
+	if got := text(a.Build()); !strings.Contains(got, "10 - 17 Sep") {
+		t.Fatalf("the form gave %q", got)
+	}
+}
+
+func TestTheCalendarReadsTheDayOfTheLocalZone(t *testing.T) {
+	// The calendar of Flutter gives the midnight of the local zone. A read in
+	// UTC alone moves the day by 1 in a zone east of UTC.
+	local := time.Date(2026, 9, 10, 0, 0, 0, 0, time.Local)
+	got := dayOf(int(local.UnixMilli()))
+	if got.Year() != 2026 || got.Month() != time.September || got.Day() != 10 {
+		t.Fatalf("the calendar gave %v", got)
+	}
+	if got.Location() != time.UTC {
+		t.Fatalf("the day holds the location %v", got.Location())
+	}
+}
+
+func TestAPickBeforeTheStartNamesTheStart(t *testing.T) {
+	ui.Reset()
+	newFake(t)
+	a := New()
+	login(t, a)
+	a.push(route{name: screenSearch})
+	a.search.Load.Wait()
+	ui.Pump()
+
+	a.search.openDates()
+	a.search.Pick(time.Date(2026, 9, 10, 0, 0, 0, 0, time.UTC))
+	a.search.Pick(time.Date(2026, 9, 3, 0, 0, 0, 0, time.UTC))
+	if got := a.search.start.Peek().Day(); got != 3 {
+		t.Fatalf("the start is the day %d", got)
+	}
+	if !a.search.end.Peek().IsZero() {
+		t.Fatalf("the end holds %v", a.search.end.Peek())
+	}
+}
+
 func TestTheCloseOfTheBookingReachesTheHome(t *testing.T) {
 	ui.Reset()
 	newFake(t)

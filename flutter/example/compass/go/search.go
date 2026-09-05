@@ -17,6 +17,8 @@ type SearchModel struct {
 	start      ui.Signal[time.Time]
 	end        ui.Signal[time.Time]
 	guests     ui.Signal[int]
+	// picking reports that the next date of the calendar names the start.
+	picking ui.Signal[bool]
 
 	// Load reads the continents and the choices of the last visit.
 	Load *ui.Command
@@ -167,8 +169,7 @@ func (m *SearchModel) continentCard(c model.Continent, on bool) ui.Node {
 	}}
 }
 
-// dateRow gives the 2 dates of the trip. A tap opens the date picker of
-// Flutter, and the sample opens the same 1.
+// dateRow gives the 2 dates of the trip. A tap opens the calendar screen.
 func (m *SearchModel) dateRow() ui.Node {
 	label := textAddDates
 	if r := dateRange(m.start.Get(), m.end.Get()); r != "" {
@@ -178,16 +179,83 @@ func (m *SearchModel) dateRow() ui.Node {
 		Leading:  ui.Icon{Icon: "calendar_month"},
 		Title:    ui.Text{Data: textWhen},
 		Subtitle: ui.Text{Data: label},
-		OnTap:    m.pickDates,
+		OnTap:    m.openDates,
 	}
 }
 
-// pickDates names the 2 dates. The node set holds no call of
-// showDateRangePicker, because that call gives a Future and it needs a
-// BuildContext. The form thus takes the 7 days after today.
-func (m *SearchModel) pickDates() {
-	start := time.Now()
-	m.SetDates(start, start.AddDate(0, 0, 7))
+// openDates opens the calendar screen. The sample calls showDateRangePicker,
+// and that call gives a Future and it needs a BuildContext. A node describes a
+// widget and not a call, thus the screen holds the calendar of Flutter and Go
+// holds the 2 dates.
+func (m *SearchModel) openDates() {
+	m.picking.Set(true)
+	m.app.push(route{name: screenDates})
+}
+
+// Pick names 1 date of the calendar. The first pick names the start and it
+// drops the end, and the second pick names the end. A date before the start
+// becomes the new start.
+func (m *SearchModel) Pick(day time.Time) {
+	day = day.UTC().Truncate(24 * time.Hour)
+	if m.picking.Peek() || day.Before(m.start.Peek()) {
+		m.start.Set(day)
+		m.end.Set(time.Time{})
+		m.picking.Set(false)
+		return
+	}
+	m.end.Set(day)
+	m.app.pop()
+}
+
+// BuildDates gives the tree of the calendar screen.
+func (m *SearchModel) BuildDates() ui.Node {
+	return ui.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.datesBody}}}
+}
+
+func (m *SearchModel) datesBody() ui.Node {
+	now := time.Now().UTC()
+	start := m.start.Get()
+	if start.IsZero() {
+		start = now
+	}
+	label := "Choose the first day"
+	if !m.picking.Get() && !m.start.Get().IsZero() {
+		label = "Choose the last day"
+	}
+	return ui.Column{
+		Children: ui.Kids(
+			ui.Row{Children: ui.Kids(
+				backButton(m.app.pop),
+				ui.Text{
+					Data:  textWhen,
+					Style: &ui.TextStyle{Size: ui.P(22.0), Weight: "w600"},
+				},
+			)},
+			ui.Padding{
+				Padding: ui.Insets{Left: 20, Top: 4, Right: 20, Bottom: 8},
+				Child:   ui.Text{Data: label},
+			},
+			ui.Expanded{Child: ui.CalendarDatePicker{
+				InitialDate:   millis(start),
+				FirstDate:     millis(now.AddDate(0, 0, -1)),
+				LastDate:      millis(now.AddDate(2, 0, 0)),
+				OnDateChanged: func(ms int) { m.Pick(dayOf(ms)) },
+			}},
+		),
+	}
+}
+
+// millis gives the count of milliseconds of the Unix epoch. A date node of the
+// set carries that form.
+func millis(t time.Time) int { return int(t.UnixMilli()) }
+
+// dayOf gives the day that the user saw. The calendar names a date of the zone
+// of the machine, thus a read in UTC alone moves the day by 1 in a zone east
+// of UTC. The read takes the calendar day of the local zone, and it writes that
+// day at midnight UTC.
+func dayOf(ms int) time.Time {
+	d := time.UnixMilli(int64(ms))
+	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 func (m *SearchModel) guestRow() ui.Node {

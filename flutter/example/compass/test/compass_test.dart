@@ -296,8 +296,28 @@ void main() {
 
     await tester.tap(find.text('Europe'));
     await tester.pump();
+
+    // The calendar of Flutter stands on a screen of its own, and Go holds the
+    // 2 dates. The first tap names the first day, and the second one names the
+    // last day and pops the screen.
     await tester.tap(find.text('Add Dates'));
     await tester.pump();
+    await settle(tester, 'dates');
+    expect(find.byType(CalendarDatePicker), findsOneWidget);
+    expect(find.text('Choose the first day'), findsOneWidget);
+    // The calendar opens on the month of today, and a day before today takes
+    // no tap. The next month lies whole in the future, thus each day of it
+    // takes one.
+    await tester.tap(find.byTooltip('Next month'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('10').first);
+    await tester.pump();
+    expect(find.text('Choose the last day'), findsOneWidget);
+    await tester.tap(find.text('11').first);
+    await tester.pump();
+    await settle(tester, 'search');
+    expect(find.text('Add Dates'), findsNothing);
+
     await tester.tap(find.byTooltip('1 guest more'));
     await tester.pump();
     expect(find.text('1 guest'), findsOneWidget);

@@ -27,6 +27,7 @@ const (
 	screenLogin      = "login"
 	screenHome       = "home"
 	screenSearch     = "search"
+	screenDates      = "dates"
 	screenResults    = "results"
 	screenActivities = "activities"
 	screenBooking    = "booking"
@@ -170,6 +171,8 @@ func (a *App) screen(r route) ui.Node {
 		return a.home.Build()
 	case screenSearch:
 		return a.search.Build()
+	case screenDates:
+		return a.search.BuildDates()
 	case screenResults:
 		return a.results.Build()
 	case screenActivities:

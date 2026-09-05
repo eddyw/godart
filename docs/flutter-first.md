@@ -278,3 +278,8 @@ hold. Each 1 stands on a package outside the Flutter SDK, for example
 `go_router` or `shared_preferences`, or on a Flutter API that needs a
 `BuildContext`, for example `showDateRangePicker`. No limit comes from the Go
 subset of the compiler.
+
+A widget that carries a callback of its own needs neither. The port opens the 2
+dates of a trip with a page of its own that holds a real `CalendarDatePicker`,
+because `OnDateChanged` gives the day to Go. A dialog that answers through
+`Navigator.pop` reaches no Go value.

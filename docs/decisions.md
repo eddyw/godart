@@ -3683,7 +3683,7 @@ The plan left these points open. The work took the decisions below.
 353. The stack of the navigator stands in the Go tree, and the idle hook runs
      the queue of the scheduler again.
 
-     The port of the Flutter sample `compass_app` holds 6 screens. The
+     The port of the Flutter sample `compass_app` holds 7 screens. The
      generated node set carries no page of a navigator, because the
      constructor of a `Page` takes a Flutter `Key` and a `Route` builder, and
      a Go value holds neither 1. A Go application thus held 1 screen.
@@ -3710,3 +3710,12 @@ The plan left these points open. The work took the decisions below.
 
      `flutter/example/compass` holds the witness. 5 widget tests run the whole
      application in a real Flutter tree, and each screen reads a real socket.
+
+     The stack also answers a second question of the port. The sample opens the
+     2 dates of a trip with `showDateRangePicker`, and that call gives a
+     `Future` and it takes a `BuildContext`. The generated
+     `DateRangePickerDialog` carries no callback either, because the dialog
+     gives its answer to `Navigator.pop`. A widget that carries a callback needs
+     none of the 2: the port holds a page with a real `CalendarDatePicker`, and
+     `OnDateChanged` gives the day to Go. **A dialog that answers through a pop
+     reaches no Go value, and a widget with a callback of its own does.**
