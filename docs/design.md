@@ -468,7 +468,9 @@ The output holds a source map, and 4 readers use it.
 - The map of 1 package stands in the part file `<base>.map.dart`, and the init
   routine of the package registers it. A key names a Dart file the way a stack
   trace names it. The value holds each function and each line, with a delta in
-  base 36. The map costs 7 percent of the bytes of the output.
+  base 36. The map costs between 2.7 percent and 4.1 percent of the bytes of
+  the output. The measure of 2026-09-05 read `fmtuse`, `jsonuse`, and
+  `httpuse`.
 - The runtime library holds the reader. `$goStack` maps a Dart stack trace to
   the Go frames, and `$stack` gives them to Go through `syscall/dart`.
 - The 4 readers: a stack trace of a panic, `runtime.Caller` with each function
@@ -580,6 +582,73 @@ false. `internal/emit/iface.go` holds `instanceDesc`.
 
 `testdata/programs/genericiface` proves an interface method call, a type
 assertion, a type switch, the verb `%T`, and a pointer to an instance.
+
+## The size of the Dart output
+
+The emitter writes each declaration of each package that the program imports,
+and it removes no unreachable one. The session of 2026-09-05 measured the
+output of 4 programs and cut the largest contributor.
+
+Each byte count below sums the bytes of every `.dart` file of the output, the
+source map parts included. `make run` and `make compare` write that tree.
+
+| program | files | bytes before | bytes after | cut |
+| --- | --- | --- | --- | --- |
+| `hello` | 3 | 2,527 | 2,527 | 0.0 percent |
+| `fmtuse` | 64 | 1,182,810 | 1,109,564 | 6.2 percent |
+| `jsonuse` | 255 | 4,721,053 | 4,133,345 | 12.4 percent |
+| `httpuse` | 1,054 | 14,593,511 | 13,071,001 | 10.4 percent |
+
+The 10 largest packages of `jsonuse` held these bytes. A package holds its
+library file, its part files, and its source map part.
+
+| package | bytes before | bytes after |
+| --- | --- | --- |
+| `encoding/json/v2` | 1,000,076 | 879,900 |
+| `encoding/json/jsontext` | 607,380 | 520,650 |
+| `unicode` | 528,283 | 525,901 |
+| `reflect` | 318,052 | 214,046 |
+| `time` | 274,038 | 218,577 |
+| `fmt` | 193,735 | 184,955 |
+| `math` | 191,970 | 191,970 |
+| `encoding/binary` | 177,341 | 119,675 |
+| `io` | 171,676 | 137,373 |
+| `encoding/json` | 146,860 | 126,940 |
+
+### Where the bytes stood
+
+The type descriptions held 25.7 percent of `jsonuse` before the cut. The
+description of a pointer type held 14.4 percent, the description of a value
+type held 9.9 percent, and the rest held 1.4 percent.
+
+The `methodTypes` table alone held 14.3 percent. The description of a type and
+the description of a pointer to it each wrote 1 function type for each exported
+method, thus the text stood twice.
+
+Decision 352 gives each description with no name of its own 1 variable of the
+library. The type descriptions hold 16.1 percent of `jsonuse` now, and
+`methodTypes` holds 1.4 percent.
+
+### What a tree shake would still give
+
+A name walk of the emitted Dart, from `main` and from each `$init` routine,
+marks about 25 percent of the bytes of `jsonuse` as dead. Of the whole output,
+dead functions and dead classes hold 21 percent. The description of a pointer
+that no code names holds 1.9 percent.
+
+Stage 5 takes none of it, because 4 rules break a plain reachability walk:
+
+1. `reflect` reads a description by name. `TypeOf`, `StructOf`, `FuncOf`, a
+   method table, and `iface.dart` each read a description that no call site
+   names.
+2. An `init` function of a package runs for its effect.
+3. A method of a type reaches a call through an interface, and no direct call
+   names it.
+4. A linkname hook and an intrinsic of stage 5 reach code that the Go source
+   does not name.
+
+A rule that drops such a declaration gives a wrong answer with no report, and
+that is worse than a large file.
 
 ## A deferred call that can block
 

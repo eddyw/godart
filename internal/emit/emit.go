@@ -87,7 +87,8 @@ func newEmitter(p *ir.Package, tpkg *types.Package, cfg Config) *emitter {
 		merges:       map[*types.Package]map[*types.Struct][]*types.TypeName{},
 		instByStruct: map[*types.Package]map[*types.Struct]*types.Named{},
 		shadowed:     map[string]map[string]bool{},
-		nilChans:     map[string]types.Type{}, instDescs: map[string]types.Type{}, cfg: cfg,
+		nilChans:     map[string]types.Type{}, instDescs: map[string]types.Type{},
+		descTexts: map[string]string{}, cfg: cfg,
 		anonParams:  map[string][]*types.TypeParam{},
 		groundTwins: map[string]*anonTwin{},
 		funcIds:     map[any]int{},
@@ -120,6 +121,7 @@ func (e *emitter) resetDiscovery() {
 	e.nilChansDone = nil
 	e.instDescs = map[string]types.Type{}
 	e.instDescsDone = nil
+	e.descTexts = map[string]string{}
 	e.descBusy = nil
 	// The emitter runs 2 passes, and the second one writes the output. A frame
 	// class that the first pass counted must reach the file of the second pass.
@@ -218,6 +220,14 @@ type emitter struct {
 	// descriptions can reach each other, thus each one stands in a variable.
 	instDescs     map[string]types.Type
 	instDescsDone map[string]bool
+	// descTexts holds the written text of each description that groundDescVar
+	// registered. An instance description holds no text here, because
+	// writeInstDescs writes it again.
+	descTexts map[string]string
+	// dictReads counts the reads of the dictionary of a type parameter. Such a
+	// read names a local of the enclosing function, thus a description that
+	// holds one stands in no variable of the library. Read groundDescVar.
+	dictReads int
 	// descBusy keeps each instance description that the emitter writes now.
 	descBusy map[string]bool
 	// anonDone keeps each local shape class that writeAnonClasses wrote.

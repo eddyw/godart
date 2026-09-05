@@ -416,17 +416,26 @@ func (e *emitter) instDescVar(named *types.Named, pointer bool) string {
 	if holdsTypeParam(t) || len(outerTypeParams(named)) > 0 {
 		return e.instanceDesc(named, pointer)
 	}
-	sum := sha256.Sum256([]byte(e.typeName(t)))
+	name := e.typeName(t)
+	sum := sha256.Sum256([]byte(name))
 	key := e.nilPrefix + "$desc" + hex.EncodeToString(sum[:4])
-	if _, ok := e.instDescs[key]; !ok {
+	held, ok := e.instDescs[key]
+	if !ok {
 		e.instDescs[key] = t
+		return key
+	}
+	// 1 variable serves 1 type. The text stands at the point of the use when 2
+	// names meet at 1 key.
+	if e.typeName(held) != name {
+		return e.instanceDesc(named, pointer)
 	}
 	return key
 }
 
-// writeInstDescs writes the variable of each instance description that the
-// package reads. A description can name another one, thus the loop reads the
-// map again, exactly as writeNilChans does.
+// writeInstDescs writes the variable of each description that the package holds
+// in a variable: the description of an instance of a generic type, and the
+// description of a type with no name of its own. A description can name another
+// one, thus the loop reads the map again, exactly as writeNilChans does.
 func (e *emitter) writeInstDescs() {
 	if e.instDescsDone == nil {
 		e.instDescsDone = map[string]bool{}
@@ -445,6 +454,10 @@ func (e *emitter) writeInstDescs() {
 		sort.Strings(names)
 		for _, key := range names {
 			written[key] = true
+			if text, ok := e.descTexts[key]; ok {
+				e.line("final TypeDesc %s = %s;", key, text)
+				continue
+			}
 			t := e.instDescs[key]
 			named, _ := types.Unalias(t).(*types.Named)
 			pointer := false
@@ -604,6 +617,7 @@ func (e *emitter) anonFile(class string, st *types.Struct) (string, map[string]*
 		shadowed:     map[string]map[string]bool{},
 		nilChans:     map[string]types.Type{},
 		instDescs:    map[string]types.Type{},
+		descTexts:    map[string]string{},
 		cfg:          e.cfg,
 		nilPrefix:    class,
 		anonParams:   map[string][]*types.TypeParam{},

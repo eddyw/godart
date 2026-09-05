@@ -52,32 +52,8 @@ final TypeDesc $descP$Greeter = TypeDesc(
   },
   text: '*greet.Greeter',
   methodTypes: <String, TypeDesc Function()>{
-    'SetStyle(example.com/multi/greet.Style)': () => TypeDesc(
-      'func(example.com/multi/greet.Style)',
-      'func',
-      const <String, Function>{},
-      text: 'func(greet.Style)',
-      params: <TypeDesc Function()>[() => $desc$Style],
-      results: <TypeDesc Function()>[],
-      bind: (List<Object?> Function(List<Object?>) $f) =>
-          (GoInt $a0) => $f(<Object?>[$a0]),
-      withType: <$R>($R Function<$T>() $f) => $f<void Function(GoInt)?>(),
-      comparable: false,
-      zero: () => null,
-    ),
-    'Text()string': () => TypeDesc(
-      'func() string',
-      'func',
-      const <String, Function>{},
-      text: 'func() string',
-      params: <TypeDesc Function()>[],
-      results: <TypeDesc Function()>[() => $typeString],
-      bind: (List<Object?> Function(List<Object?>) $f) =>
-          () => $f(<Object?>[])[0] as GoString,
-      withType: <$R>($R Function<$T>() $f) => $f<GoString Function()?>(),
-      comparable: false,
-      zero: () => null,
-    ),
+    'SetStyle(example.com/multi/greet.Style)': () => $descce6992f7,
+    'Text()string': () => $descfe1f5563,
   },
   elem: () => $desc$Greeter,
   withType: <$R>($R Function<$T>() $f) => $f<Greeter$?>(),
@@ -108,3 +84,30 @@ void $init() {
   $initDone = true;
   $srcmap($srcmapData);
 }
+
+final TypeDesc $descce6992f7 = TypeDesc(
+  'func(example.com/multi/greet.Style)',
+  'func',
+  const <String, Function>{},
+  text: 'func(greet.Style)',
+  params: <TypeDesc Function()>[() => $desc$Style],
+  results: <TypeDesc Function()>[],
+  bind: (List<Object?> Function(List<Object?>) $f) =>
+      (GoInt $a0) => $f(<Object?>[$a0]),
+  withType: <$R>($R Function<$T>() $f) => $f<void Function(GoInt)?>(),
+  comparable: false,
+  zero: () => null,
+);
+final TypeDesc $descfe1f5563 = TypeDesc(
+  'func() string',
+  'func',
+  const <String, Function>{},
+  text: 'func() string',
+  params: <TypeDesc Function()>[],
+  results: <TypeDesc Function()>[() => $typeString],
+  bind: (List<Object?> Function(List<Object?>) $f) =>
+      () => $f(<Object?>[])[0] as GoString,
+  withType: <$R>($R Function<$T>() $f) => $f<GoString Function()?>(),
+  comparable: false,
+  zero: () => null,
+);

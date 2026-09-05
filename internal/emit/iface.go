@@ -1,6 +1,8 @@
 package emit
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"go/token"
 	"go/types"
@@ -825,12 +827,52 @@ func (e *emitter) descriptorOf(t types.Type) string {
 			return text
 		}
 	}
-	// An unnamed struct type holds the promoted method of each embedded field,
-	// thus its description also needs a method table. A pointer to such a
-	// struct holds the same set, and each pointer method of it. An interface
-	// type holds the key of each method that it needs, because a type
-	// assertion to a type parameter reads that set. A slice, a map, and a
-	// channel hold no method.
+	// The library holds 1 variable for the description of a type with no type
+	// parameter, thus 2 uses of 1 type write the text once. Read decision 352.
+	if !holdsTypeParam(t) {
+		if key := e.groundDescVar(t); key != "" {
+			return key
+		}
+	}
+	return e.inlineDescriptor(t)
+}
+
+// groundDescVar names the variable of the library that holds the description of
+// a type with no type parameter, and it registers the type on the first read.
+//
+// The name is empty when the description reads a dictionary of the enclosing
+// function, because such a text stands in no variable of the library. It is
+// also empty when 2 type names meet at 1 key, because 1 variable serves 1 type.
+func (e *emitter) groundDescVar(t types.Type) string {
+	name := e.typeName(t)
+	sum := sha256.Sum256([]byte(name))
+	key := e.nilPrefix + "$desc" + hex.EncodeToString(sum[:4])
+	if held, ok := e.instDescs[key]; ok {
+		if e.typeName(held) != name {
+			return ""
+		}
+		return key
+	}
+	before := e.dictReads
+	text := e.inlineDescriptor(t)
+	if e.dictReads != before {
+		return ""
+	}
+	e.instDescs[key] = t
+	e.descTexts[key] = text
+	return key
+}
+
+// inlineDescriptor writes the description of a type that holds no name of its
+// own.
+//
+// An unnamed struct type holds the promoted method of each embedded field,
+// thus its description also needs a method table. A pointer to such a struct
+// holds the same set, and each pointer method of it. An interface type holds
+// the key of each method that it needs, because a type assertion to a type
+// parameter reads that set. A slice, a map, and a channel hold no method.
+func (e *emitter) inlineDescriptor(t types.Type) string {
+	u := types.Unalias(t)
 	table := "const <String, Function>{}"
 	methodTypes := ""
 	owner := u
