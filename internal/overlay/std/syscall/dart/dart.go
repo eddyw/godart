@@ -640,6 +640,59 @@ func ZoneOffset(nanos int64) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// IntText gives the decimal text of a signed value.
+//
+// The portable Go form builds the text 1 digit at a time and it joins each
+// digit to the front, thus it allocates 1 string for each digit.
+func IntText(v int64) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// UintText gives the decimal text of an unsigned value.
+func UintText(v uint64) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// IntRadix gives the text of a signed value in a base of 2 to 36. The digits
+// are 0 to 9 and a to z, exactly as strconv writes them.
+func IntRadix(v int64, base int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// UintRadix gives the text of an unsigned value in a base of 2 to 36.
+func UintRadix(v uint64, base int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Sqrt gives the square root of a value, with the rounding of IEEE 754.
+//
+// The portable Go form builds the result bit by bit in a loop of 54 steps.
+// The compiler of Go replaces the call with 1 machine instruction, and gart
+// holds no such rule, thus the interop gives the same instruction.
+func Sqrt(v float64) float64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Floor gives the largest whole value that is not above the argument.
+func Floor(v float64) float64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Ceil gives the smallest whole value that is not below the argument.
+func Ceil(v float64) float64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Trunc gives the whole part of a value, toward zero.
+func Trunc(v float64) float64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Abs gives the value with no sign.
+func Abs(v float64) float64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Float64Bits gives the IEEE 754 bit pattern of a 64-bit value.
 func Float64Bits(v float64) uint64 {
 	panic("syscall/dart needs the gart compiler")

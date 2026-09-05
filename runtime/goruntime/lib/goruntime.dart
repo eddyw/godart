@@ -23,6 +23,7 @@ export 'src/iface.dart';
 export 'src/int.dart';
 export 'src/json.dart';
 export 'src/map.dart';
+export 'src/mathfn.dart';
 export 'src/net.dart' if (dart.library.js_interop) 'src/net_web.dart';
 export 'src/panic.dart';
 export 'src/print.dart';

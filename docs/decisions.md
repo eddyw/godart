@@ -3849,3 +3849,105 @@ The plan left these points open. The work took the decisions below.
      root costs about 140 nanoseconds, and the whole Dart step costs 0.77.
      `Exp`, `Log`, `Floor`, `Ceil`, `Trunc`, `Max`, and `Min` each take the
      portable path too.
+
+359. math.Sqrt, math.Floor, math.Ceil, math.Trunc, and math.Abs read the
+     instruction of Dart.
+
+     The compiler of Go replaces a call of `math.sqrt` with 1 machine
+     instruction, and gart holds no such rule. gart thus compiled the portable
+     Go form: a loop of 54 steps that builds the result bit by bit with 64 bit
+     integer arithmetic, and 2 calls of `Float64bits` and `Float64frombits`
+     around it. 1 square root cost about 140 nanoseconds against 0.77 for the
+     whole step of the Dart form.
+
+     `syscall/dart` holds `Sqrt`, `Floor`, `Ceil`, `Trunc`, and `Abs` now.
+     `internal/overlay/std/math/sqrt.go` and `abs.go` join the patch set, and
+     `floor_asm.go` sets `haveArchFloor`, `haveArchCeil`, and `haveArchTrunc`
+     to true. IEEE 754 names 1 correct result for each input of the 5, thus the
+     2 runtimes agree bit for bit.
+
+     `Exp`, `Log`, `Exp2`, `Max`, `Min`, and `Hypot` keep the portable path. The
+     standard names no exact result for those, thus a change would move the
+     last bit with no rule to hold it.
+
+     **`testdata/programs/mathbits` proves the change.** It writes the bit
+     pattern of the result of 25 functions of `math`, for 517 inputs that hold
+     each special value and a spread of bit patterns. The witness found 533
+     differences against real Go before the change, and 497 of them were the
+     NaN payload of `Sqrt`: gc gives the NaN of the machine, `7ff8000000000000`,
+     and the portable Go form gives `NaN()`, `7ff8000000000001`. The other 36
+     stay, and the witness writes those 8 functions with 11 significant digits.
+     Read the section of `docs/support.md` on the fused operation.
+
+360. A conversion of a Go integer to a float64 costs 5 times less through the
+     operator + of Dart than through int.toDouble.
+
+     `float.sum.1m` held `s += float64(i) * 0.5` and nothing else: no call, no
+     allocation, and no slice. It cost 3.43 milliseconds against 0.68 for the
+     same loop in Dart. The whole gap sat in 1 method call.
+
+     A Dart int holds 2 forms, a small value and a large value, thus
+     `int.toDouble` is a virtual call that the ahead of time compiler does not
+     fold. The operator + of int reads a double operand, and it gives
+     `this.toDouble() + other` by the specification of Dart. The compiler holds
+     a rule for that operator and it writes 1 instruction.
+
+     `$todouble(GoInt v)` gives `v.$v + 0.0` on the native target, and
+     `v.toDouble()` on the JS target, where a Go integer is a pair of halves and
+     holds no such operator. A Go integer carries no negative zero and no NaN,
+     thus the addition of 0.0 changes no value.
+
+     | Case | Before | After | Against Dart |
+     |---|---|---|---|
+     | `float.sum.1m` | 3.43 ms | 0.69 ms | 1.1 |
+     | `float.math.1m` | 3.41 ms | 0.74 ms | 1.0 |
+     | `struct.alloc.1m` | 3.90 ms | 0.68 ms | 0.2 |
+
+     `struct.alloc.1m` builds 1,000,000 rectangles of 4 float64 fields. It now
+     costs 5 times less than the same loop in Dart, and it matches Go.
+
+     **`testdata/programs/intfloat` proves the change.** It writes the bit
+     pattern of each conversion between an integer type and a float type, for
+     326 integers and 20 float64 values. The witness also found 1 difference
+     that stands outside this change: `int32(f)` of a value above the range of
+     an int32. The specification of Go leaves that result to the
+     implementation, and gc saturates on arm64 and gives the indefinite value
+     on amd64, thus no answer is correct. The witness holds the range of the
+     type for that case.
+
+361. strconv.FormatInt and strconv.FormatUint read the text of Dart.
+
+     The overlay built the text 1 digit at a time and it joined each digit to
+     the front. 1 call of `Itoa` on a value of 9 digits thus allocated 9 Go
+     strings and it copied 9 times, and it cost 210 nanoseconds against 8 for
+     `int.toString` of Dart.
+
+     `syscall/dart` holds `IntText`, `UintText`, `IntRadix`, and `UintRadix`
+     now. `toRadixString` of Dart writes the digits 0 to 9 and a to z, exactly
+     as Go does, and a negative value takes a sign in front. `GoInt` already
+     held `$ustring` and `$uradix` for the unsigned form of 64 bits.
+
+     `GoString.ascii` joins the runtime. It reads a Dart string whose code
+     units each stand under 128, and it holds that text as the decode of the
+     new value. The UTF-8 encoder thus never runs, and a read back at the
+     boundary costs nothing.
+
+     | Case | Before | After | Against Dart |
+     |---|---|---|---|
+     | `int.format.100k` | 21.97 ms | 1.96 ms | 2.4 |
+     | `map.string.100k` | 57.92 ms | 25.27 ms | 2.8 |
+
+     `map.string.100k` builds each key with `strconv.Itoa`, thus it falls with
+     the same change.
+
+     **`testdata/programs/inttext` proves the change.** It writes the text of
+     230 integers in each base of 2 to 36, with `Itoa`, `FormatInt`,
+     `FormatUint`, `AppendInt`, `AppendUint`, and the 5 verbs of `fmt`. The
+     witness found 1 defect that stands outside this change: the overlay
+     panicked with "strconv: illegal base" and Go writes "strconv: illegal
+     AppendInt/FormatInt base". Go holds 1 text for the signed form and the
+     unsigned form, because `formatBits` holds the check.
+
+     The real test files of `strconv` cannot run, because `export_test.go`
+     reads `baseError` and `number_test.go` reads `bitSizeError` with 3
+     arguments. The overlay holds neither name in that form.

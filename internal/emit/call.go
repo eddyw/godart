@@ -180,6 +180,10 @@ var intrinsicRaw = map[string]bool{
 	"Float32Bits":     true,
 	"Float32FromBits": true,
 	"Worker":          true,
+	"IntText":         true,
+	"UintText":        true,
+	"IntRadix":        true,
+	"UintRadix":       true,
 }
 
 // goIntResult wraps the integer results of an interop call. A single integer
@@ -466,6 +470,24 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "UnmarshalJSON":
 		return fmt.Sprintf("$jsonUnmarshal(%s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3]), true
+	case "IntText":
+		return fmt.Sprintf("$intText(%s)", args[0]), true
+	case "UintText":
+		return fmt.Sprintf("$uintText(%s)", args[0]), true
+	case "IntRadix":
+		return fmt.Sprintf("$intRadix(%s, $ix(%s))", args[0], args[1]), true
+	case "UintRadix":
+		return fmt.Sprintf("$uintRadix(%s, $ix(%s))", args[0], args[1]), true
+	case "Sqrt":
+		return fmt.Sprintf("$sqrt(%s)", args[0]), true
+	case "Floor":
+		return fmt.Sprintf("(%s).floorToDouble()", args[0]), true
+	case "Ceil":
+		return fmt.Sprintf("(%s).ceilToDouble()", args[0]), true
+	case "Trunc":
+		return fmt.Sprintf("(%s).truncateToDouble()", args[0]), true
+	case "Abs":
+		return fmt.Sprintf("(%s).abs()", args[0]), true
 	case "Float64Bits":
 		return fmt.Sprintf("$f64ToBits(%s)", args[0]), true
 	case "Float64FromBits":
@@ -1528,7 +1550,7 @@ func (e *emitter) conv(x *ir.Conv) string {
 		if isUnsigned64(from) {
 			return e.narrow(to, fmt.Sprintf("$utodouble(%s)", text))
 		}
-		return e.narrow(to, fmt.Sprintf("%s.toDouble()", text))
+		return e.narrow(to, fmt.Sprintf("$todouble(%s)", text))
 	case isInteger(to) && isFloat(from):
 		return e.narrow(to, fmt.Sprintf("$fromF64(%s)", text))
 	case isFloat(to) && isFloat(from):

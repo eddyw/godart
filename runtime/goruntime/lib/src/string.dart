@@ -39,6 +39,21 @@ final class GoString {
   factory GoString.fromBytes(List<int> bytes) =>
       GoString._(Uint8List.fromList(bytes).asUnmodifiableView());
 
+  /// The Go string of a Dart string that holds ASCII only.
+  ///
+  /// The caller must give a text whose code units each stand under 128. The
+  /// factory holds the text as the decode too, thus a read at the boundary
+  /// costs nothing and the UTF-8 encoder never runs.
+  factory GoString.ascii(String s) {
+    final out = Uint8List(s.length);
+    for (var i = 0; i < s.length; i++) {
+      out[i] = s.codeUnitAt(i);
+    }
+    final g = GoString._(out.asUnmodifiableView());
+    g._dart = s;
+    return g;
+  }
+
   /// Wraps bytes that the caller never changes again.
   factory GoString.take(Uint8List bytes) =>
       GoString._(bytes.asUnmodifiableView());

@@ -41,26 +41,12 @@ func Itoa(i int) string {
 // FormatInt gives the text of i in the base.
 func FormatInt(i int64, base int) string {
 	if base < 2 || base > 36 {
-		panic("strconv: illegal base")
+		panic("strconv: illegal AppendInt/FormatInt base")
 	}
-	if i == 0 {
-		return "0"
+	if base == 10 {
+		return dart.IntText(i)
 	}
-	negative := i < 0
-	digits := "0123456789abcdefghijklmnopqrstuvwxyz"
-	out := ""
-	v := i
-	if negative {
-		v = -v
-	}
-	for v > 0 {
-		out = string(digits[v%int64(base)]) + out
-		v /= int64(base)
-	}
-	if negative {
-		return "-" + out
-	}
-	return out
+	return dart.IntRadix(i, base)
 }
 
 // AppendInt adds the text of i in the base to dst.
@@ -856,19 +842,12 @@ func hexFloat(mantissa uint64, exp int, neg, trunc bool, bitSize int) (float64, 
 // FormatUint gives the text of i in the base.
 func FormatUint(i uint64, base int) string {
 	if base < 2 || base > 36 {
-		panic("strconv: illegal base")
+		panic("strconv: illegal AppendInt/FormatInt base")
 	}
-	if i == 0 {
-		return "0"
+	if base == 10 {
+		return dart.UintText(i)
 	}
-	digits := "0123456789abcdefghijklmnopqrstuvwxyz"
-	out := ""
-	v := i
-	for v > 0 {
-		out = string(digits[int(v%uint64(base))]) + out
-		v /= uint64(base)
-	}
-	return out
+	return dart.UintRadix(i, base)
 }
 
 // CanBackquote reports whether s fits inside back quotes with no change.
