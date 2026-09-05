@@ -6,6 +6,7 @@ import (
 	"example.dev/gocompass/domain"
 	"example.dev/gocompass/model"
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // errNoDestination reports that the itinerary holds no destination.
@@ -62,7 +63,7 @@ func (m *BookingModel) Booking() model.Booking { return m.booking.Peek() }
 
 // Build gives the tree of the booking.
 func (m *BookingModel) Build() ui.Node {
-	return ui.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
+	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
 }
 
 func (m *BookingModel) body() ui.Node {
@@ -83,13 +84,13 @@ func (m *BookingModel) body() ui.Node {
 	return ui.Column{
 		Children: ui.Kids(
 			ui.Row{Children: ui.Kids(
-				ui.IconButton{
+				material.IconButton{
 					Icon:      ui.Icon{Icon: "close"},
 					Tooltip:   ui.P(textClose),
 					OnPressed: func() { m.app.popTo(screenHome) },
 				},
 				ui.Expanded{Child: ui.Text{Data: b.Destination.Name}},
-				ui.IconButton{
+				material.IconButton{
 					Icon:      ui.Icon{Icon: "share"},
 					Tooltip:   ui.P(textShareTrip),
 					OnPressed: nil,
@@ -143,7 +144,7 @@ func (m *BookingModel) chosenHeader() ui.Node {
 }
 
 func (m *BookingModel) row(a model.Activity) ui.Node {
-	return ui.Keyed{Key: "chosen-" + a.Ref, Child: ui.ListTile{
+	return ui.Keyed{Key: "chosen-" + a.Ref, Child: material.ListTile{
 		Leading:  ui.Icon{Icon: "star"},
 		Title:    ui.Text{Data: a.Name},
 		Subtitle: ui.Text{Data: a.LocationName},

@@ -9,12 +9,32 @@ String writeDart(Reading r, {Set<String>? only}) {
   b.writeln('// ignore_for_file: deprecated_member_use');
   b.writeln('// ignore_for_file: sort_child_properties_last');
   b.writeln('// ignore_for_file: unused_import');
+  // A pack of Material or of Cupertino exports widgets.dart again, thus the
+  // import of widgets.dart is unnecessary for such a host and necessary for a
+  // host that holds no such case.
+  b.writeln('// ignore_for_file: unnecessary_import');
   b.writeln();
+  final kept =
+      r.widgets.where((w) => only == null || only.contains(w.goName)).toList();
+  final usedEnums = <String>{};
+  for (final w in kept) {
+    for (final p in w.params) {
+      if (p.type.kind.startsWith('enum:')) {
+        usedEnums.add(p.type.kind.substring(5));
+      }
+    }
+  }
+  // The host imports the pack of each case that it holds, and no other 1. An
+  // application that names no Material widget thus needs no material_ui. The
+  // converter of an enum names its type, thus the library of each enum joins
+  // the list.
   final imports = <String>{
-    'package:flutter/cupertino.dart',
-    'package:flutter/material.dart',
+    'package:flutter/widgets.dart',
     'package:goruntime/goruntime.dart',
-    ...r.needed,
+    for (final w in kept) w.pack.uri,
+    for (final w in kept) ...w.needed,
+    for (final name in usedEnums)
+      if (r.visible[name] != null) r.visible[name]!,
   }.toList()
     ..sort();
   for (final uri in imports) {
@@ -29,9 +49,8 @@ String writeDart(Reading r, {Set<String>? only}) {
   b.writeln('Widget? goGenWidget(GoNode n, GoRuntime rt) {');
   b.writeln('  switch (n.kind) {');
 
-  for (final w in r.widgets) {
-    if (only != null && !only.contains(w.goName)) continue;
-    b.writeln("    case 'gart.dev/ui.${w.goName}':");
+  for (final w in kept) {
+    b.writeln("    case '${w.kind}':");
     b.writeln('      return ${w.dartCall}(');
     for (var i = 0; i < w.params.length; i++) {
       final p = w.params[i];
@@ -45,13 +64,13 @@ String writeDart(Reading r, {Set<String>? only}) {
   b.writeln('  return null;');
   b.writeln('}');
 
-  writeEnums(b, r);
+  writeEnums(b, r, usedEnums);
   return b.toString();
 }
 
 /// argExpr gives the Dart expression of 1 constructor argument. The position
 /// of the field stands next to its name, and GoNode reads the position first.
-/// The Go struct of flutter/ui/widgets_gen.go holds the fields in this order,
+/// The Go struct of the pack holds the fields in this order,
 /// because writeGo writes the same list.
 String argExpr(WidgetSpec w, Param p, int at) {
   final read = readExpr(p, at);
@@ -399,10 +418,14 @@ String cb1Expr(String arg, String f) {
   throw StateError('the callback argument $arg holds no read');
 }
 
-/// writeEnums gives 1 pair of converters for each Dart enum that a field
-/// reads. The Go side carries the name of the value as a string.
-void writeEnums(StringBuffer b, Reading r) {
-  final names = r.enums.keys.toList()..sort();
+/// writeEnums gives 1 pair of converters for each Dart enum that a field of
+/// the cases below reads. The Go side carries the name of the value as a
+/// string.
+///
+/// An enum of a pack that the host does not hold would name a type that the
+/// host does not import, thus the writer reads the fields of the cases alone.
+void writeEnums(StringBuffer b, Reading r, Set<String> used) {
+  final names = r.enums.keys.where(used.contains).toList()..sort();
   for (final name in names) {
     final values = r.enums[name]!;
     b.writeln();

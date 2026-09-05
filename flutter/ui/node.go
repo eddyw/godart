@@ -8,8 +8,14 @@ package ui
 // from each one. A nil Node means no child, and a nil pointer field means "the
 // default of Flutter".
 
-// Node is a description of 1 Flutter widget. Only this package declares one.
-type Node interface{ isNode() }
+// Mark seals the node set. A struct holds a node type when it declares
+// IsNode, and the writer of that struct needs the name of this package for
+// the answer. A pack of another package thus joins the set on purpose, and no
+// value joins it by chance.
+type Mark struct{}
+
+// Node is a description of 1 Flutter widget.
+type Node interface{ IsNode() Mark }
 
 // Kids gives a child list. It saves the element type of a slice literal.
 func Kids(n ...Node) []Node { return n }
@@ -41,8 +47,8 @@ type Builder func() Node
 //gart:sync
 type ItemBuilder func(int) Node
 
-func (Keyed) isNode() {}
-func (Watch) isNode() {}
+func (Keyed) IsNode() Mark { return Mark{} }
+func (Watch) IsNode() Mark { return Mark{} }
 
 // TextInput is a text field whose value Go owns. The host keeps the Flutter
 // controller and the focus across a rebuild that Go drives, thus the cursor
@@ -57,7 +63,7 @@ type TextInput struct {
 	OnSubmit  func(string)
 }
 
-func (TextInput) isNode() {}
+func (TextInput) IsNode() Mark { return Mark{} }
 
 // OrientBuilder builds 1 subtree from the orientation of the parent. The
 // argument takes "portrait" or "landscape". The rule of Builder applies.
@@ -131,4 +137,4 @@ type Pages struct {
 	OnPop    func(int)
 }
 
-func (Pages) isNode() {}
+func (Pages) IsNode() Mark { return Mark{} }

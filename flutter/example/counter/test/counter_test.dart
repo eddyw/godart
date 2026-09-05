@@ -1,6 +1,6 @@
 import 'package:counter_app/bridge.dart';
 import 'package:counter_app/widgets_gen.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gocounter/app.dart' as app;
 import 'package:goflutter/goflutter.dart';
@@ -21,7 +21,7 @@ void main() {
   ) async {
     await tester.pumpWidget(harness());
 
-    expect(find.text('Go drives Flutter'), findsOneWidget);
+    expect(find.text('This is Go!'), findsOneWidget);
     expect(find.text('Hello'), findsOneWidget);
     expect(find.text('count 0'), findsOneWidget);
     expect(find.text('press refresh to load 100,000 rows'), findsOneWidget);

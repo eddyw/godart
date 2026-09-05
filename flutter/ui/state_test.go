@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // cart holds the shape of ChangeNotifier: a method writes a field, and it calls
@@ -242,14 +243,14 @@ func newFeed(fetch func() ([]string, error)) *feed {
 }
 
 func (f *feed) Build() ui.Node {
-	return ui.Scaffold{
-		AppBar: ui.AppBar{
+	return material.Scaffold{
+		AppBar: material.AppBar{
 			Title:   ui.Text{Data: "Feed"},
-			Actions: ui.Kids(ui.IconButton{Icon: ui.Icon{Icon: "refresh"}, OnPressed: f.load.Run}),
+			Actions: ui.Kids(material.IconButton{Icon: ui.Icon{Icon: "refresh"}, OnPressed: f.load.Run}),
 		},
 		Body: ui.Watch{Build: func() ui.Node {
 			if f.load.Busy() {
-				return ui.Center{Child: ui.CircularProgressIndicator{}}
+				return ui.Center{Child: material.CircularProgressIndicator{}}
 			}
 			if err := f.load.Err(); err != nil {
 				return ui.Center{Child: ui.Text{Data: "error: " + err.Error()}}

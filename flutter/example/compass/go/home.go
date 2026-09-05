@@ -5,6 +5,7 @@ import (
 
 	"example.dev/gocompass/model"
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // HomeModel holds the home screen. It reads the bookings of the account and
@@ -60,8 +61,8 @@ func (m *HomeModel) Bookings() []model.BookingSummary { return m.bookings.Peek()
 
 // Build gives the tree of the home screen.
 func (m *HomeModel) Build() ui.Node {
-	return ui.Scaffold{
-		FloatingActionButton: ui.FloatingActionButtonExtended{
+	return material.Scaffold{
+		FloatingActionButton: material.FloatingActionButtonExtended{
 			Label:     ui.Text{Data: textBookNewTrip},
 			Icon:      ui.Icon{Icon: "add"},
 			OnPressed: func() { m.app.push(route{name: screenSearch}) },
@@ -88,7 +89,7 @@ func (m *HomeModel) body() ui.Node {
 					Data:  trips(user.Name),
 					Style: &ui.TextStyle{Size: ui.P(28.0), Weight: "w600"},
 				}},
-				ui.CircleAvatar{
+				material.CircleAvatar{
 					Radius: ui.P(24.0),
 					Child:  ui.Text{Data: initial(user.Name)},
 				},
@@ -111,7 +112,7 @@ func (m *HomeModel) body() ui.Node {
 // the place of the swipe of the sample, because the node set holds no
 // Dismissible. Read the section "What the port could not hold" of the README.
 func (m *HomeModel) card(b model.BookingSummary) ui.Node {
-	return ui.Keyed{Key: "booking-" + strconv.Itoa(b.ID), Child: ui.InkWell{
+	return ui.Keyed{Key: "booking-" + strconv.Itoa(b.ID), Child: material.InkWell{
 		OnTap: func() { m.app.push(route{name: screenBooking, id: b.ID}) },
 		Child: ui.Padding{
 			Padding: ui.Sides(20, 8),
@@ -127,7 +128,7 @@ func (m *HomeModel) card(b model.BookingSummary) ui.Node {
 							ui.Text{Data: dateRange(b.StartDate, b.EndDate)},
 						),
 					}},
-					ui.IconButton{
+					material.IconButton{
 						Icon:      ui.Icon{Icon: "delete"},
 						Tooltip:   ui.P("delete the trip"),
 						OnPressed: func() { m.Delete.Run(b.ID) },

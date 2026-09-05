@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // Issue holds the part of a GitHub issue that the screen reads.
@@ -83,11 +84,11 @@ func Subtitle(it Issue) string {
 
 // Build gives the tree of the screen.
 func (a *App) Build() ui.Node {
-	return ui.Scaffold{
-		AppBar: ui.AppBar{
+	return material.Scaffold{
+		AppBar: material.AppBar{
 			Title: ui.Text{Data: "golang/go issues"},
 			Actions: ui.Kids(
-				ui.IconButton{
+				material.IconButton{
 					Icon:        ui.Icon{Icon: "refresh"},
 					Tooltip:     ui.P("read the API"),
 					MouseCursor: ui.P("click"),
@@ -101,14 +102,14 @@ func (a *App) Build() ui.Node {
 
 func (a *App) body() ui.Node {
 	if a.load.Busy() {
-		return ui.Center{Child: ui.CircularProgressIndicator{}}
+		return ui.Center{Child: material.CircularProgressIndicator{}}
 	}
 	if err := a.load.Err(); err != nil {
 		return ui.Center{Child: ui.Column{
 			MainAxisAlignment: ui.P("center"),
 			Children: ui.Kids(
 				ui.Text{Data: "error: " + err.Error()},
-				ui.TextButton{Child: ui.Text{Data: "try again"}, OnPressed: a.Load},
+				material.TextButton{Child: ui.Text{Data: "try again"}, OnPressed: a.Load},
 			),
 		}}
 	}
@@ -124,7 +125,7 @@ func (a *App) body() ui.Node {
 }
 
 func row(it Issue) ui.Node {
-	return ui.Keyed{Key: fmt.Sprint(it.Number), Child: ui.Card{
+	return ui.Keyed{Key: fmt.Sprint(it.Number), Child: material.Card{
 		Margin: ui.P(ui.Sides(12, 6)),
 		Shape: &ui.Shape{
 			Kind:   "rounded",

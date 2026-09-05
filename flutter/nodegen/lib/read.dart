@@ -6,19 +6,56 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 
-/// The Flutter libraries that the node set covers.
-const libraries = <String>[
-  'package:flutter/widgets.dart',
-  'package:flutter/material.dart',
-  'package:flutter/cupertino.dart',
+/// A pack holds the node types of 1 Dart package, and it names the Go package
+/// that carries them.
+///
+/// The core pack holds the widgets of the Flutter framework itself, and the
+/// hand written nodes of flutter/ui stand beside them. Each other pack holds
+/// the widgets of 1 package of pub.dev, thus a package that an application
+/// does not name costs it no Dart.
+class Pack {
+  const Pack(this.uri, this.short, this.goPath, this.goPackage);
+
+  /// The Dart library that the reader walks.
+  final String uri;
+
+  /// The short name of the pack. The report groups by it.
+  final String short;
+
+  /// The Go import path of the pack.
+  final String goPath;
+
+  /// The Go package name.
+  final String goPackage;
+
+  /// The core pack declares the interface Node itself, thus its structs need
+  /// no import and no qualified type.
+  bool get isCore => goPath == 'gart.dev/ui';
+}
+
+/// The packs that the node set covers.
+///
+/// Flutter moved Material and Cupertino out of the framework, thus each 1
+/// stands here as a package of pub.dev. Read
+/// https://pub.dev/packages/material_ui.
+const packs = <Pack>[
+  Pack('package:flutter/widgets.dart', 'widgets', 'gart.dev/ui', 'ui'),
+  Pack('package:material_ui/material_ui.dart', 'material_ui',
+      'gart.dev/ui/material', 'material'),
+  Pack('package:cupertino_ui/cupertino_ui.dart', 'cupertino_ui',
+      'gart.dev/ui/cupertino', 'cupertino'),
 ];
+
+/// corePack holds the widgets of the Flutter framework, and the hand written
+/// nodes of flutter/ui stand beside them.
+final Pack corePack = packs[0];
 
 /// The libraries that the generated host may import, in the order of the
 /// search. A name that no 1 of them exports does not compile in the host, thus
 /// the reader drops the field that reads it.
 const candidates = <String>[
-  'package:flutter/material.dart',
-  'package:flutter/cupertino.dart',
+  'package:material_ui/material_ui.dart',
+  'package:cupertino_ui/cupertino_ui.dart',
   'package:flutter/widgets.dart',
   'package:flutter/painting.dart',
   'package:flutter/rendering.dart',
@@ -76,9 +113,10 @@ class WidgetSpec {
     required this.dartClass,
     required this.ctor,
     required this.goName,
-    required this.library,
+    required this.pack,
     required this.params,
     required this.isConst,
+    required this.needed,
   });
 
   /// The Flutter class, for example ListView.
@@ -90,11 +128,19 @@ class WidgetSpec {
   /// The Go struct, for example ListViewBuilder.
   final String goName;
 
-  /// The Dart library that exports the class.
-  final String library;
+  /// The pack that exports the class.
+  final Pack pack;
 
   final List<Param> params;
   final bool isConst;
+
+  /// The libraries that a default of this widget names. The host imports each
+  /// 1 only when it holds the case.
+  final Set<String> needed;
+
+  /// The kind of the node, as the Dart host reads it from the type
+  /// descriptor.
+  String get kind => '${pack.goPath}.$goName';
 
   String get dartCall => ctor.isEmpty ? dartClass : '$dartClass.$ctor';
 }
@@ -136,7 +182,7 @@ class Reading {
   final needed = <String>{};
 }
 
-/// read walks the 3 Flutter libraries and maps each widget constructor.
+/// read walks the library of each pack and maps each widget constructor.
 Future<Reading> read(String root) async {
   final path = Directory(root).absolute.resolveSymbolicLinksSync();
   final collection = AnalysisContextCollection(includedPaths: <String>[path]);
@@ -152,12 +198,11 @@ Future<Reading> read(String root) async {
     }
   }
 
-  for (final uri in libraries) {
-    final result = await session.getLibraryByUri(uri);
+  for (final pack in packs) {
+    final result = await session.getLibraryByUri(pack.uri);
     if (result is! LibraryElementResult) {
-      throw StateError('$uri does not resolve: $result');
+      throw StateError('${pack.uri} does not resolve: $result');
     }
-    final short = uri.split('/').last.replaceAll('.dart', '');
     for (final entry in result.element.exportNamespace.definedNames2.entries) {
       final element = entry.value;
       if (element is! ClassElement) continue;
@@ -173,7 +218,7 @@ Future<Reading> read(String root) async {
         }
         final goName = goStructName(name, ctor.name ?? '');
         if (!seen.add(goName)) continue;
-        readCtor(out, short, name, ctor, goName);
+        readCtor(out, pack, name, ctor, goName);
       }
     }
   }
@@ -183,12 +228,13 @@ Future<Reading> read(String root) async {
 
 void readCtor(
   Reading out,
-  String library,
+  Pack pack,
   String className,
   ConstructorElement ctor,
   String goName,
 ) {
   final params = <Param>[];
+  final needed = <String>{};
   for (final p in ctor.formalParameters) {
     final pname = p.name;
     if (pname == null || pname.startsWith('_')) continue;
@@ -210,7 +256,9 @@ void readCtor(
       out.skipped.add(Skipped(goName, pname, 'a positional place of its own'));
       return;
     }
-    if (!p.isRequired && !nullable && !usableDefault(out, p.defaultValueCode)) {
+    if (!p.isRequired &&
+        !nullable &&
+        !usableDefault(out, needed, p.defaultValueCode)) {
       // The host cannot write the call without the default of Flutter, and a
       // default that names a private symbol does not compile outside its
       // library.
@@ -233,9 +281,10 @@ void readCtor(
     dartClass: className,
     ctor: ctor.name == 'new' ? '' : (ctor.name ?? ''),
     goName: goName,
-    library: library,
+    pack: pack,
     params: params,
     isConst: ctor.isConst,
+    needed: needed,
   ));
 }
 
@@ -256,16 +305,19 @@ const _words = <String>{
 /// A default that names a private symbol does not compile outside its library,
 /// and a default that names a static member of the class without the class,
 /// for example defaultThickness, does not resolve in the host either.
-bool usableDefault(Reading out, String? code) {
+bool usableDefault(Reading out, Set<String> needed, String? code) {
   if (code == null) return false;
   if (RegExp(r'(^|[^A-Za-z0-9])_').hasMatch(code)) return false;
+  final found = <String>{};
   for (final m in RegExp(r'(?<![.\w])[A-Za-z][A-Za-z0-9]*').allMatches(code)) {
     final word = m.group(0)!;
     if (_words.contains(word)) continue;
     final lib = out.visible[word];
     if (lib == null) return false;
-    out.needed.add(lib);
+    found.add(lib);
   }
+  needed.addAll(found);
+  out.needed.addAll(found);
   return true;
 }
 

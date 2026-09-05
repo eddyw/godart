@@ -3,18 +3,37 @@
 nodegen reads the public API of Flutter with `package:analyzer`, and it writes
 the node set of milestone 3. It needs no change of the compiler.
 
+## The packs
+
+A pack holds the node types of 1 Dart package. Flutter moved Material and
+Cupertino out of the framework, thus each 1 stands as a package of pub.dev.
+
+| Pack | The Dart package | The Go package | Node types |
+|---|---|---|---|
+| The core | `package:flutter/widgets.dart` | `gart.dev/ui` | 273 |
+| Material | `package:material_ui/material_ui.dart` | `gart.dev/ui/material` | 218 |
+| Cupertino | `package:cupertino_ui/cupertino_ui.dart` | `gart.dev/ui/cupertino` | 75 |
+
+`packs` of `lib/read.dart` holds the list. The core package declares the
+interface `ui.Node`, and each pack gives its structs the method `IsNode` that
+answers `ui.Mark`. A struct of another module joins the node set the same way,
+thus a package of pub.dev such as `macos_ui` needs no change of the reader.
+
+The host imports the Dart package of each case that it holds, and no other 1.
+An application that names no Material widget thus needs no `material_ui`.
+
 ## The 3 modes
 
 | Output | Scope | Command |
 |---|---|---|
-| `flutter/ui/widgets_gen.go` | The whole project. 1 Go struct for each Flutter widget constructor. | `nodegen go` |
+| `flutter/ui/**/widgets_gen.go` | The whole project. 1 Go struct for each Flutter widget constructor, in the package of its pack. | `nodegen go` |
 | `<app>/lib/widgets_gen.dart` | 1 application. 1 case for each node type that the application names. | `nodegen host` |
 | The yield of the reader | A report on the terminal. | `nodegen report` |
 
 ```sh
 cd flutter/nodegen
 dart pub get
-dart run bin/nodegen.dart go     ../goflutter ../ui/widgets_gen.go   # runs gofmt
+dart run bin/nodegen.dart go     ../goflutter ../ui   # 1 file for each pack, and it runs gofmt
 dart run bin/nodegen.dart report ../goflutter -all
 dart run bin/nodegen.dart host   ../goflutter ../example/counter/lib/widgets_gen.dart nodes.txt
 ```
@@ -37,8 +56,8 @@ cd ../goflutter && flutter analyze && rm lib/all_gen_check.dart
 ## Where the name list comes from
 
 `flutter/nodescan` is a Go command that reads the application module with
-`golang.org/x/tools/go/packages`, and it names each type of `gart.dev/ui` that
-the module uses. The answer is exact, because it reads the type information of
+`golang.org/x/tools/go/packages`, and it names each type of `gart.dev/ui` and
+of each pack under it that the module uses. The answer is exact, because it reads the type information of
 the Go tool chain.
 
 ```sh

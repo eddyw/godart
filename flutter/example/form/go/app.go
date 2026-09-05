@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // Reply holds the answer of the server.
@@ -95,8 +96,8 @@ func (a *App) post() error {
 
 // Build gives the tree of the screen.
 func (a *App) Build() ui.Node {
-	return ui.Scaffold{
-		AppBar: ui.AppBar{Title: ui.Text{Data: "Go validates a form"}},
+	return material.Scaffold{
+		AppBar: material.AppBar{Title: ui.Text{Data: "Go validates a form"}},
 		Body: ui.Padding{
 			Padding: ui.AllSides(16),
 			Child:   ui.Watch{Build: a.body},
@@ -150,9 +151,9 @@ func (a *App) field(label, hint, value string, set func(string), report string) 
 
 func (a *App) button() ui.Node {
 	if a.send.Busy() {
-		return ui.Center{Child: ui.CircularProgressIndicator{}}
+		return ui.Center{Child: material.CircularProgressIndicator{}}
 	}
-	return ui.FilledButton{
+	return material.FilledButton{
 		OnPressed: a.Submit,
 		Style: &ui.ButtonStyle{
 			BackgroundColor: &ui.StateColor{

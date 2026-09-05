@@ -6,6 +6,7 @@ import (
 
 	"example.dev/gocompass/model"
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // SearchModel holds the search form: the continent, the 2 dates, and the
@@ -85,7 +86,7 @@ func (m *SearchModel) Submit() {
 
 // Build gives the tree of the search form.
 func (m *SearchModel) Build() ui.Node {
-	return ui.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
+	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
 }
 
 func (m *SearchModel) body() ui.Node {
@@ -139,7 +140,7 @@ func (m *SearchModel) continentCard(c model.Continent, on bool) ui.Node {
 	}
 	return ui.Keyed{Key: "continent-" + c.Name, Child: ui.Padding{
 		Padding: ui.Sides(6, 8),
-		Child: ui.InkWell{
+		Child: material.InkWell{
 			OnTap: func() { m.Choose(c.Name) },
 			Child: ui.Container{
 				Width: ui.P(160.0),
@@ -175,7 +176,7 @@ func (m *SearchModel) dateRow() ui.Node {
 	if r := dateRange(m.start.Get(), m.end.Get()); r != "" {
 		label = r
 	}
-	return ui.ListTile{
+	return material.ListTile{
 		Leading:  ui.Icon{Icon: "calendar_month"},
 		Title:    ui.Text{Data: textWhen},
 		Subtitle: ui.Text{Data: label},
@@ -209,7 +210,7 @@ func (m *SearchModel) Pick(day time.Time) {
 
 // BuildDates gives the tree of the calendar screen.
 func (m *SearchModel) BuildDates() ui.Node {
-	return ui.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.datesBody}}}
+	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.datesBody}}}
 }
 
 func (m *SearchModel) datesBody() ui.Node {
@@ -235,7 +236,7 @@ func (m *SearchModel) datesBody() ui.Node {
 				Padding: ui.Insets{Left: 20, Top: 4, Right: 20, Bottom: 8},
 				Child:   ui.Text{Data: label},
 			},
-			ui.Expanded{Child: ui.CalendarDatePicker{
+			ui.Expanded{Child: material.CalendarDatePicker{
 				InitialDate:   millis(start),
 				FirstDate:     millis(now.AddDate(0, 0, -1)),
 				LastDate:      millis(now.AddDate(2, 0, 0)),
@@ -260,20 +261,20 @@ func dayOf(ms int) time.Time {
 
 func (m *SearchModel) guestRow() ui.Node {
 	n := m.guests.Get()
-	return ui.ListTile{
+	return material.ListTile{
 		Leading:  ui.Icon{Icon: "person"},
 		Title:    ui.Text{Data: "Who"},
 		Subtitle: ui.Text{Data: guestText(n)},
 		Trailing: ui.Row{
 			MainAxisSize: ui.P("min"),
 			Children: ui.Kids(
-				ui.IconButton{
+				material.IconButton{
 					Icon:      ui.Icon{Icon: "remove"},
 					Tooltip:   ui.P("1 guest less"),
 					OnPressed: func() { m.SetGuests(n - 1) },
 				},
 				ui.Text{Data: strconv.Itoa(n)},
-				ui.IconButton{
+				material.IconButton{
 					Icon:      ui.Icon{Icon: "add"},
 					Tooltip:   ui.P("1 guest more"),
 					OnPressed: func() { m.SetGuests(n + 1) },
@@ -287,7 +288,7 @@ func (m *SearchModel) submitRow() ui.Node {
 	if !m.Valid() {
 		return ui.Padding{
 			Padding: ui.AllSides(20),
-			Child: ui.FilledButton{
+			Child: material.FilledButton{
 				Child:     ui.Text{Data: textSearch},
 				OnPressed: nil,
 			},
@@ -295,7 +296,7 @@ func (m *SearchModel) submitRow() ui.Node {
 	}
 	return ui.Padding{
 		Padding: ui.AllSides(20),
-		Child: ui.FilledButton{
+		Child: material.FilledButton{
 			Child:     ui.Text{Data: textSearch},
 			OnPressed: m.Submit,
 		},

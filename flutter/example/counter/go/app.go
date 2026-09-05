@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // App holds the state of the screen. Each field is a signal, thus a write of 1
@@ -103,11 +104,11 @@ func (a *App) Greeting() string {
 
 // Build gives the tree of the screen.
 func (a *App) Build() ui.Node {
-	return ui.Scaffold{
-		AppBar: ui.AppBar{
-			Title: ui.Text{Data: "Go drives Flutter"},
+	return material.Scaffold{
+		AppBar: material.AppBar{
+			Title: ui.Text{Data: "This is Go!"},
 			Actions: ui.Kids(
-				ui.IconButton{
+				material.IconButton{
 					Icon:      ui.Icon{Icon: "refresh"},
 					Tooltip:   ui.P("load the list"),
 					OnPressed: a.load.Run,
@@ -135,10 +136,10 @@ func (a *App) Build() ui.Node {
 					ui.Watch{Build: a.failSwitch},
 				)},
 			},
-			ui.Divider{},
+			material.Divider{},
 			ui.Expanded{Child: ui.Watch{Build: a.listPanel}},
 		)},
-		FloatingActionButton: ui.IconButton{
+		FloatingActionButton: material.IconButton{
 			Icon:      ui.Icon{Icon: "add"},
 			Tooltip:   ui.P("count 1 up"),
 			OnPressed: a.Add,
@@ -197,7 +198,7 @@ func (a *App) counterRow() ui.Node {
 				Style: &ui.TextStyle{Size: ui.P(18.0)},
 			},
 			ui.SizedBox{Width: ui.P(16.0)},
-			ui.TextButton{Child: ui.Text{Data: "reset"}, OnPressed: a.Reset},
+			material.TextButton{Child: ui.Text{Data: "reset"}, OnPressed: a.Reset},
 		),
 	}
 }
@@ -208,7 +209,7 @@ func (a *App) counterRow() ui.Node {
 // rebuilds this boundary alone.
 func (a *App) noteSection() ui.Node {
 	kids := ui.Kids(
-		ui.ElevatedButton{
+		material.ElevatedButton{
 			OnPressed:        a.ToggleNote,
 			StatesController: &ui.StatesKey{Name: "toggle", OnStates: a.SetMarks},
 			Child:            ui.Text{Data: a.noteLabel()},
@@ -216,7 +217,7 @@ func (a *App) noteSection() ui.Node {
 		ui.SizedBox{Width: ui.P(12.0)},
 	)
 	if a.note.Get() {
-		kids = append(kids, ui.Expanded{Child: ui.TextField{
+		kids = append(kids, ui.Expanded{Child: material.TextField{
 			FocusNode: &ui.FocusKey{Name: "note", OnFocus: a.SetNoteFocus},
 		}})
 	} else {
@@ -259,12 +260,12 @@ func (a *App) listPanel() ui.Node {
 }
 
 func (a *App) failSwitch() ui.Node {
-	return ui.Switch{Value: a.fail.Get(), OnChanged: a.SetFail}
+	return material.Switch{Value: a.fail.Get(), OnChanged: a.SetFail}
 }
 
 func (a *App) listBody() ui.Node {
 	if a.load.Busy() {
-		return ui.Center{Child: ui.CircularProgressIndicator{}}
+		return ui.Center{Child: material.CircularProgressIndicator{}}
 	}
 	if err := a.load.Err(); err != nil {
 		return ui.Center{Child: ui.Text{Data: "error: " + err.Error()}}
@@ -277,7 +278,7 @@ func (a *App) listBody() ui.Node {
 		Controller: &ui.ScrollKey{Name: "rows", OnScroll: a.SetOffset},
 		ItemCount:  ui.P(len(rows)),
 		ItemBuilder: func(i int) ui.Node {
-			return ui.Keyed{Key: fmt.Sprint(i), Child: ui.Card{
+			return ui.Keyed{Key: fmt.Sprint(i), Child: material.Card{
 				Child: ui.Padding{
 					Padding: ui.AllSides(12),
 					Child:   ui.Text{Data: rows[i]},

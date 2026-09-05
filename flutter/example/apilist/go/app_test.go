@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // The whole screen runs under `go test`. No Flutter, no Dart, and no gart.
@@ -195,7 +196,7 @@ func errorText(t *testing.T, a *App) string {
 // rowText joins the 2 lines of 1 row.
 func rowText(t *testing.T, keyed ui.Keyed) string {
 	t.Helper()
-	card, ok := keyed.Child.(ui.Card)
+	card, ok := keyed.Child.(material.Card)
 	if !ok {
 		t.Fatalf("the child is %T, want a Card", keyed.Child)
 	}

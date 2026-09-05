@@ -5,6 +5,7 @@ import (
 
 	"example.dev/gocompass/model"
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // ActivitiesModel holds the 2 lists of the activities of the destination, and
@@ -73,7 +74,7 @@ func (m *ActivitiesModel) Confirm() {
 
 // Build gives the tree of the activities.
 func (m *ActivitiesModel) Build() ui.Node {
-	return ui.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
+	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
 }
 
 func (m *ActivitiesModel) body() ui.Node {
@@ -118,7 +119,7 @@ func (m *ActivitiesModel) header(name string) ui.Node {
 
 func (m *ActivitiesModel) row(a model.Activity) ui.Node {
 	on := slices.Contains(m.chosen.Get(), a.Ref)
-	return ui.Keyed{Key: "activity-" + a.Ref, Child: ui.CheckboxListTile{
+	return ui.Keyed{Key: "activity-" + a.Ref, Child: material.CheckboxListTile{
 		Value:     on,
 		Title:     ui.Text{Data: a.Name},
 		Subtitle:  ui.Text{Data: a.LocationName + "  " + duration(a.Duration)},
@@ -131,7 +132,7 @@ func (m *ActivitiesModel) confirmRow() ui.Node {
 	if n == 0 {
 		return ui.Padding{
 			Padding: ui.AllSides(20),
-			Child: ui.FilledButton{
+			Child: material.FilledButton{
 				Child:     ui.Text{Data: textConfirm},
 				OnPressed: nil,
 			},
@@ -142,7 +143,7 @@ func (m *ActivitiesModel) confirmRow() ui.Node {
 		Child: ui.Row{
 			Children: ui.Kids(
 				ui.Expanded{Child: ui.Text{Data: selected(n)}},
-				ui.FilledButton{
+				material.FilledButton{
 					Child:     ui.Text{Data: textConfirm},
 					OnPressed: m.Confirm,
 				},

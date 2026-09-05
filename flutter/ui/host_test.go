@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // host is a test host. It does the work that the Dart host does: it walks the
@@ -101,11 +102,11 @@ func (h *host) walk(n ui.Node) {
 		}
 		h.watches++
 		h.walk(ui.RunWatch(h.ids[i], v.Build))
-	case ui.Scaffold:
+	case material.Scaffold:
 		h.walk(v.AppBar)
 		h.walk(v.Body)
 		h.walk(v.FloatingActionButton)
-	case ui.AppBar:
+	case material.AppBar:
 		h.walk(v.Title)
 		h.each(v.Actions)
 	case ui.Column:
@@ -132,25 +133,25 @@ func (h *host) walk(n ui.Node) {
 		h.walk(v.Child)
 	case ui.Container:
 		h.walk(v.Child)
-	case ui.Card:
+	case material.Card:
 		h.walk(v.Child)
 	case ui.Keyed:
 		h.walk(v.Child)
-	case ui.InkWell:
+	case material.InkWell:
 		h.walk(v.Child)
 	case ui.Text:
 		h.write(v.Data)
 	case ui.Icon:
 		h.write("[" + v.Icon + "]")
-	case ui.CircularProgressIndicator:
+	case material.CircularProgressIndicator:
 		h.write("[busy]")
-	case ui.Divider:
+	case material.Divider:
 		h.write("---")
-	case ui.ElevatedButton:
+	case material.ElevatedButton:
 		h.button(v.Child, v.OnPressed)
-	case ui.TextButton:
+	case material.TextButton:
 		h.button(v.Child, v.OnPressed)
-	case ui.IconButton:
+	case material.IconButton:
 		name := iconName(v.Icon)
 		h.write("<" + name + ">")
 		if v.OnPressed != nil {
@@ -161,9 +162,9 @@ func (h *host) walk(n ui.Node) {
 		if v.OnChanged != nil {
 			h.changes[v.Label] = v.OnChanged
 		}
-	case ui.Switch:
+	case material.Switch:
 		h.write(fmt.Sprintf("(%t)", v.Value))
-	case ui.Checkbox:
+	case material.Checkbox:
 		h.write(fmt.Sprintf("[%t]", v.Value))
 	default:
 		panic(fmt.Sprintf("the test host holds no case for %T", n))

@@ -5,6 +5,7 @@ import (
 
 	"example.dev/gocompass/model"
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // ResultsModel holds the list of the destinations of the chosen continent.
@@ -53,7 +54,7 @@ func (m *ResultsModel) Choose(ref string) {
 
 // Build gives the tree of the results.
 func (m *ResultsModel) Build() ui.Node {
-	return ui.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
+	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
 }
 
 func (m *ResultsModel) body() ui.Node {
@@ -100,7 +101,7 @@ func (m *ResultsModel) card(d model.Destination) ui.Node {
 	}
 	return ui.Keyed{Key: "dest-" + d.Ref, Child: ui.Padding{
 		Padding: ui.Sides(20, 8),
-		Child: ui.InkWell{
+		Child: material.InkWell{
 			OnTap: func() { m.Choose(d.Ref) },
 			Child: ui.Column{
 				CrossAxisAlignment: ui.P("start"),

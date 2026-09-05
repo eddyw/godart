@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:compass_app/bridge.dart';
 import 'package:compass_app/widgets_gen.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gocompass/app.dart' as app;
 import 'package:goflutter/goflutter.dart';

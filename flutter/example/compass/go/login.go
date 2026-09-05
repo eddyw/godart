@@ -1,6 +1,9 @@
 package app
 
-import "gart.dev/ui"
+import (
+	"gart.dev/ui"
+	"gart.dev/ui/material"
+)
 
 // LoginModel holds the login screen. The 2 fields carry the account of the
 // sample, thus the user needs no keyboard to enter.
@@ -32,7 +35,7 @@ func (m *LoginModel) run() error {
 
 // Build gives the tree of the login screen.
 func (m *LoginModel) Build() ui.Node {
-	return ui.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
+	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
 }
 
 func (m *LoginModel) body() ui.Node {
@@ -57,9 +60,9 @@ func (m *LoginModel) body() ui.Node {
 		ui.SizedBox{Height: ui.P(24.0)},
 	)
 	if m.Login.Busy() {
-		kids = append(kids, ui.CircularProgressIndicator{})
+		kids = append(kids, material.CircularProgressIndicator{})
 	} else {
-		kids = append(kids, ui.FilledButton{
+		kids = append(kids, material.FilledButton{
 			Child:     ui.Text{Data: textLogin},
 			OnPressed: m.Login.Run,
 		})

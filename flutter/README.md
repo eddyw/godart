@@ -11,7 +11,7 @@ targets.
 
 | Path | Content |
 |---|---|
-| `ui/` | The Go module `gart.dev/ui`. The signal graph, the state shapes, the value types, the identity keys, and 564 node types. |
+| `ui/` | The Go module `gart.dev/ui`. The signal graph, the state shapes, the value types, the identity keys, and the 3 packs of 566 node types. |
 | `goflutter/` | The Dart package that hosts a Go tree in Flutter. |
 | `nodegen/` | The generator. It reads the Flutter API and writes the node set and the host. Read its README. |
 | `example/counter/` | Proof program 1. Go holds the whole screen. |
@@ -144,10 +144,23 @@ cd flutter/example/form/go && go test ./...
    widget test.
 6. `GoApp(bridge: YourBridge())` inside a `MaterialApp`.
 
-The node set holds 564 types of `widgets`, `material`, and `cupertino`. A
-Cupertino screen needs no extra step. A widget of a `pub.dev` package costs 1 Go
-struct in a package of your own and 1 case that you write, and `goSetWidgets`
-takes a function that reads your case first and the generated 1 after it.
+The node set holds 566 types in 3 packs. A pack holds the node types of 1 Dart
+package, and it stands in a Go package of its own.
+
+| Pack | The Dart package | The Go import | Node types |
+|---|---|---|---|
+| The core | `package:flutter/widgets.dart` | `gart.dev/ui` | 273 |
+| Material | `package:material_ui/material_ui.dart` | `gart.dev/ui/material` | 218 |
+| Cupertino | `package:cupertino_ui/cupertino_ui.dart` | `gart.dev/ui/cupertino` | 75 |
+
+Write `ui.Column{}` and `material.Scaffold{}`. The generated host imports the
+Dart package of each case that it holds and no other 1, thus an application
+that names no Material widget carries no `material_ui`.
+
+A widget of another `pub.dev` package costs 1 Go struct in a package of your
+own. Give it the method `IsNode` that answers `ui.Mark`, and it joins the node
+set. `goSetWidgets` takes a function that reads your case first and the
+generated 1 after it.
 
 A field of a node that a call leaves unset is a pointer, and nil means "the
 default of Flutter". Write `ui.P(14.0)` to set one.

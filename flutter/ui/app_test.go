@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // counter is the proof program of milestone 1. It holds its state in a signal,
@@ -17,12 +18,12 @@ type counter struct {
 func (c *counter) Add() { c.n.Update(func(v int) int { return v + 1 }) }
 
 func (c *counter) Build() ui.Node {
-	return ui.Scaffold{
-		AppBar: ui.AppBar{Title: ui.Text{Data: "Counter"}},
+	return material.Scaffold{
+		AppBar: material.AppBar{Title: ui.Text{Data: "Counter"}},
 		Body: ui.Center{Child: ui.Watch{Build: func() ui.Node {
 			return ui.Text{Data: fmt.Sprintf("count %d", c.n.Get())}
 		}}},
-		FloatingActionButton: ui.IconButton{
+		FloatingActionButton: material.IconButton{
 			Icon:      ui.Icon{Icon: "add"},
 			OnPressed: c.Add,
 		},

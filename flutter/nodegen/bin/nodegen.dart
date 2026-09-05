@@ -3,7 +3,7 @@
 //
 // The 3 modes:
 //
-//   nodegen go     <flutter package dir> <go file>
+//   nodegen go     <flutter package dir> <go module dir>
 //   nodegen host   <flutter package dir> <dart file> <name list>
 //   nodegen report <flutter package dir> [-all]
 //
@@ -23,7 +23,7 @@ import 'package:nodegen/report.dart';
 import 'package:nodegen/write_dart.dart';
 import 'package:nodegen/write_go.dart';
 
-const _usage = 'usage: nodegen go     <flutter package dir> <go file>\n'
+const _usage = 'usage: nodegen go     <flutter package dir> <go module dir>\n'
     '       nodegen host   <flutter package dir> <dart file> <name list>\n'
     '       nodegen report <flutter package dir> [-all]';
 
@@ -49,16 +49,23 @@ Future<void> main(List<String> args) async {
 
   switch (mode) {
     case 'go':
-      File(args[2]).writeAsStringSync(writeGo(r));
-      // The emitter writes 1 space between the name and the type of a field,
-      // and gofmt aligns the block.
-      final fmt = Process.runSync('gofmt', <String>['-w', args[2]]);
-      if (fmt.exitCode != 0) {
-        stderr.writeln('gofmt failed: ${fmt.stderr}');
-        exitCode = 1;
-        return;
+      for (final pack in packs) {
+        final sub = pack.goPath.substring(corePack.goPath.length);
+        final dir = Directory('${args[2]}$sub');
+        dir.createSync(recursive: true);
+        final path = '${dir.path}/widgets_gen.go';
+        File(path).writeAsStringSync(writeGo(r, pack));
+        // The emitter writes 1 space between the name and the type of a
+        // field, and gofmt aligns the block.
+        final fmt = Process.runSync('gofmt', <String>['-w', path]);
+        if (fmt.exitCode != 0) {
+          stderr.writeln('gofmt failed: ${fmt.stderr}');
+          exitCode = 1;
+          return;
+        }
+        final count = r.widgets.where((w) => w.pack == pack).length;
+        stdout.writeln('$path holds $count node types of ${pack.uri}');
       }
-      stdout.writeln('${args[2]} holds the Go node set');
 
     case 'report':
       final all = args.length == 3 && args[2] == '-all';

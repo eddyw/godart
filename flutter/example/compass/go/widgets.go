@@ -1,9 +1,12 @@
 package app
 
-import "gart.dev/ui"
+import (
+	"gart.dev/ui"
+	"gart.dev/ui/material"
+)
 
 // busy gives the indicator of a read that runs.
-func busy() ui.Node { return ui.Center{Child: ui.CircularProgressIndicator{}} }
+func busy() ui.Node { return ui.Center{Child: material.CircularProgressIndicator{}} }
 
 // failed gives the message of a read that failed, and a button that runs the
 // read again.
@@ -16,7 +19,7 @@ func failed(msg string, retry func()) ui.Node {
 				Padding: ui.AllSides(12),
 				Child:   ui.Text{Data: msg, TextAlign: ui.P("center")},
 			},
-			ui.FilledButton{Child: ui.Text{Data: textTryAgain}, OnPressed: retry},
+			material.FilledButton{Child: ui.Text{Data: textTryAgain}, OnPressed: retry},
 		),
 	}}
 }
@@ -25,7 +28,7 @@ func failed(msg string, retry func()) ui.Node {
 func tag(name string) ui.Node {
 	return ui.Padding{
 		Padding: ui.Insets{Left: 0, Top: 0, Right: 4, Bottom: 4},
-		Child: ui.Chip{
+		Child: material.Chip{
 			Label:           ui.Text{Data: name},
 			LabelPadding:    ui.P(ui.Sides(6, 0)),
 			BackgroundColor: ui.P(ui.Color(0xFFEFEFEF)),
@@ -46,7 +49,7 @@ func image(url string, height float64) ui.Node {
 
 // backButton gives the arrow of the top left corner.
 func backButton(pop func()) ui.Node {
-	return ui.IconButton{
+	return material.IconButton{
 		Icon:      ui.Icon{Icon: "arrow_back"},
 		OnPressed: pop,
 	}

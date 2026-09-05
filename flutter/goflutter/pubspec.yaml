@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Flutter moved Material and Cupertino out of the framework. The hand
+  # written nodes of the host read TextField, MaterialPage, ThemeData, and
+  # CupertinoThemeData, thus the host names the 2 packages.
+  material_ui: ^1.1.1
+  cupertino_ui: ^1.0.2
   goruntime:
     path: ../../runtime/goruntime
 

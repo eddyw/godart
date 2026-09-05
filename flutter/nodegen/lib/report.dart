@@ -21,7 +21,7 @@ String report(Reading r, {bool all = false}) {
 
   final byLib = <String, int>{};
   for (final w in r.widgets) {
-    byLib[w.library] = (byLib[w.library] ?? 0) + 1;
+    byLib[w.pack.short] = (byLib[w.pack.short] ?? 0) + 1;
   }
   b.writeln('by library: $byLib');
 
