@@ -3581,3 +3581,48 @@ The plan left these points open. The work took the decisions below.
      inside it. `encodeInterface` reads `iv.Elem()` now, exactly as the real Go
      source does. Each overlay that holds a comment about the earlier rule
      needs the same read.
+
+352. The library holds 1 variable for the description of each type with no name
+     of its own, and 2 uses of 1 type write the text once.
+
+     Stage 5 wrote the description of a slice, of a map, and of a function type
+     at the point of each use. An interface type took the same path. The
+     `methodTypes` table of a description holds 1 function type for each
+     exported method. The description of a type and the description of a
+     pointer to it each carry that table. Thus the text of `func() string` stood
+     82 times in the output of `testdata/programs/jsonuse`, and `methodTypes`
+     held 14.3 percent of the bytes.
+
+     `groundDescVar` of `internal/emit/iface.go` names each such description
+     after the hash of the name of the type, and `writeInstDescs` writes 1
+     variable for each name. The mechanism already held the description of an
+     instance of a generic type, and the 2 kinds share it now.
+
+     The rule drops no declaration, thus no reachable name falls away. 2 uses of
+     1 type read 1 object now. The runtime keeps its table of the handles by the
+     name of the type, thus each answer of `reflect` stays equal. Each cross
+     reference stands inside a closure, thus no variable of the library reaches
+     itself at the first read.
+
+     A description that reads the dictionary of a type parameter names a local
+     of the function that holds it. Such a text stands at the point of the use.
+     `dictReads` counts each read of a dictionary, and `groundDescVar` compares
+     the counter before the text and after it. The inner emitter of a function
+     literal shares the 2 maps and the counter with its outer emitter. The
+     variable stands in the library file of the package.
+
+     2 type names can meet at 1 key, because a key holds 4 bytes of the hash.
+     The text stands at the point of the use in that case, thus 1 variable
+     serves 1 type.
+
+     The output of `jsonuse` fell from 4,721,053 bytes to 4,133,345 bytes, and
+     the output of `testdata/programs/httpuse` fell from 14,593,511 bytes to
+     13,071,001 bytes. `methodTypes` holds 1.4 percent of the output now.
+
+     A tree shake of stage 5 stays out. `reflect` reads a description by name,
+     and an `init` function runs for its effect. A method reaches a call through
+     an interface, and a linkname hook reaches code that the Go source does not
+     name. A rule that drops such a declaration gives a wrong answer with no
+     report. The measure of the session gives a shake 25 percent of the bytes at
+     most. The description of a pointer that no code names holds 1.9 percent of
+     that. Read the section "The size of the Dart output" of `docs/design.md`.
