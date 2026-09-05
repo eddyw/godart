@@ -512,7 +512,28 @@ Object? $call(Iface? x, String name, List<Object?> args) {
     // Go panics with a nil dereference.
     $panicNil();
   }
-  return Function.apply(m, <Object?>[x!.value, ...args]);
+  return $invoke(m, x!.value, args);
+}
+
+/// Calls a method with a receiver and a list of arguments.
+///
+/// Function.apply builds a list and reads the signature at run time, thus it
+/// costs about 10 times a plain call. A small count of arguments takes the
+/// plain form, and each larger count falls back.
+Object? $invoke(Function m, Object? recv, List<Object?> args) {
+  switch (args.length) {
+    case 0:
+      return m(recv);
+    case 1:
+      return m(recv, args[0]);
+    case 2:
+      return m(recv, args[0], args[1]);
+    case 3:
+      return m(recv, args[0], args[1], args[2]);
+    case 4:
+      return m(recv, args[0], args[1], args[2], args[3]);
+  }
+  return Function.apply(m, <Object?>[recv, ...args]);
 }
 
 /// $noMethod stands in place of an unexported method of a type of another
