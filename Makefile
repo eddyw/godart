@@ -45,7 +45,7 @@ help:
 	@echo "  make compare-tests SUITE=x    Run go test and gart test, and diff."
 	@echo "  make bench SUITE=x            Run the benchmarks of the module with gart."
 	@echo "  make std-test STD=x           Run the real tests of a GOROOT package with gart."
-	@echo "  make install          Put the gart command on the PATH."
+	@echo "  make install          Put the gart and glutter commands on the PATH."
 	@echo "  make clean            Delete the build directory."
 
 get: dart-get
@@ -56,6 +56,7 @@ dart-get:
 
 build:
 	go build -o build/gart ./cmd/gart
+	go build -o build/glutter ./cmd/glutter
 
 # The driver tests compile each program of testdata with the Dart VM, thus the
 # suite runs for about 30 minutes. The default of the go command is 10.
@@ -194,7 +195,7 @@ bench: build
 		-bench . ./...
 
 install:
-	go install ./cmd/gart
+	go install ./cmd/gart ./cmd/glutter
 
 clean:
 	rm -rf build

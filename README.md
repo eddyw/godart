@@ -45,6 +45,27 @@ make bench SUITE=async        # run the benchmarks of the module with gart
 `gart watch` compiles the module again after each change of a Go file. It
 recompiles only the packages that need a second compile.
 
+`docs/gart.md` holds the whole command line.
+
+## A Flutter application
+
+`glutter` is to the `flutter` command what `gart` is to the `go` command. A Go
+program builds a tree of plain structs, and the Dart host builds real Flutter
+widgets from it.
+
+```bash
+make build
+make install
+glutter new hello
+cd hello
+glutter run -d macos
+```
+
+`glutter run` holds the Go source under watch. A change of 1 Go line reaches
+the running application in about 1 second, and the screen and the state hold.
+`docs/glutter.md` holds each command and each limit, and `flutter/README.md`
+holds the parts of the model.
+
 ## State
 
 The compiler holds all 6 stages. The subset covers:
@@ -108,6 +129,8 @@ curated surface.
 
 | File | Content |
 |---|---|
+| `docs/gart.md` | The compiler command, and each flag of it |
+| `docs/glutter.md` | The Flutter command, and the first application |
 | `docs/what-compiles.md` | The shape of a Go program that the compiler accepts |
 | `docs/parity.md` | Each difference between Go and the Dart output |
 | `docs/design.md` | The architecture, each stage, and each compiler feature |
@@ -130,4 +153,6 @@ byte equal output of 2 equal builds.
 
 ## Versions
 
-The project targets Go 1.27.0 and Dart 3.13.0.
+The project targets Go 1.27.0 and Dart 3.13.0. A Flutter application needs
+Flutter 3.47, `material_ui` 1.1, and `cupertino_ui` 1.0. `glutter doctor`
+reports the version of the machine against the node set.
