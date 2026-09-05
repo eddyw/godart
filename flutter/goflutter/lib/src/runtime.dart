@@ -62,9 +62,19 @@ final class GoRuntime {
 
   /// tick applies the work that a goroutine posted, and it rebuilds each dirty
   /// boundary. The idle hook of the Go scheduler calls it.
+  ///
+  /// A posted function can start a goroutine, for example a command that a new
+  /// screen runs at once. The scheduler already left its loop when the hook
+  /// runs, thus that goroutine waits for the next event of the host. The loop
+  /// below runs it now.
   void tick() {
     bridge.pump();
     flush();
+    while (!$runqEmpty) {
+      $schedule();
+      bridge.pump();
+      flush();
+    }
   }
 
   /// flush rebuilds each boundary that the Go graph marked.

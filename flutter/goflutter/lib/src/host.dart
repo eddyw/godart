@@ -64,6 +64,26 @@ Widget goRender(Iface? node, GoRuntime rt) {
         child: goRender(n.child('Child', 1), rt),
       );
 
+    case 'gart.dev/ui.Pages':
+      final List<String> keys = n.texts('Keys', 0);
+      final List<Iface?> kids = n.children('Children', 1);
+      final void Function(int)? onPop = n.onCount('OnPop', 2);
+      return Navigator(
+        pages: <Page<Object?>>[
+          for (int i = 0; i < kids.length; i++)
+            MaterialPage<Object?>(
+              key: ValueKey<String>(i < keys.length ? keys[i] : '$i'),
+              child: goRender(kids[i], rt),
+            ),
+        ],
+        onDidRemovePage: (Page<Object?> page) {
+          final Object? key = page.key;
+          if (onPop == null || key is! ValueKey<String>) return;
+          final int i = keys.indexOf(key.value);
+          if (i >= 0) onPop(i);
+        },
+      );
+
     case 'gart.dev/ui.TextInput':
       return GoTextField(
         value: n.text('Value', 0),

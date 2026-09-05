@@ -114,3 +114,21 @@ type Ask func() bool
 //
 //gart:sync
 type ExtentBuilder func(index int, scrollOffset, precedingScrollExtent, viewportMainAxisExtent, crossAxisExtent float64) float64
+
+// Pages holds the stack of the Flutter navigator. The host builds 1 page for
+// each child, and the last child stands on top. A gesture of the platform and
+// the back button of the system each pop the top page, and the host then calls
+// OnPop with the number of that page.
+//
+// Keys names 1 key for each page. Flutter keeps the state of a page whose key
+// stays in the list across a rebuild.
+//
+// The generated Navigator carries no page, because a Go value holds no Flutter
+// Page.
+type Pages struct {
+	Keys     []string
+	Children []Node
+	OnPop    func(int)
+}
+
+func (Pages) isNode() {}
