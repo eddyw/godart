@@ -41,7 +41,7 @@ answers of the 17 requests of `server/requests.sh`. The 2 answers are equal.
 
 | Part | The sample | The port |
 |---|---|---|
-| The application | 5,804 lines of Dart, and 3,331 lines that `build_runner` writes | 1,745 lines of Go |
+| The application | 5,804 lines of Dart, and 3,331 lines that `build_runner` writes | 1,816 lines of Go |
 | The server | 620 lines of Dart over `shelf`, and 14 generated files | 300 lines of Go over `net/http` |
 | The host of the application | — | 87 lines of Dart, and 3,195 lines that `nodegen` writes |
 | The packages of pub.dev | 11 | 0 |

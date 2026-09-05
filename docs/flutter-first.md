@@ -261,7 +261,7 @@ since 2026-09-02, and `make flutter-test` runs each 1.
 **The port of `compass_app`.** Done 2026-09-05. `flutter/example/compass`
 holds it. The sample of the Flutter team carries the reference architecture:
 MVVM, a repository for each source, a use case, and a server. The port holds
-1,745 lines of Go against 5,804 lines of Dart, and it needs no package of
+1,816 lines of Go against 5,804 lines of Dart, and it needs no package of
 pub.dev and no code generation of a data class.
 
 It needed 2 items outside the example, and decision 353 holds the 2:

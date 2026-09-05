@@ -82,7 +82,7 @@ session held the port, the Flutter host, and the docs.
 **The port of `compass_app` runs.** The sample of the Flutter team carries the
 reference architecture of Flutter: MVVM, a repository for each source, a use
 case, and a server. `flutter/example/compass` holds the whole application in
-Go, 1,745 lines against 5,804 lines of Dart, with no package of pub.dev and no
+Go, 1,816 lines against 5,804 lines of Dart, with no package of pub.dev and no
 code generation of a data class. 5 widget tests run the whole flow in a real
 Flutter tree, and 8 Go tests run it with no Flutter. The server of the sample
 also stands in Go, and `server/prove.sh` proves that the Go run and the Dart
