@@ -25,6 +25,7 @@ func Strip(text string) (string, string) {
 	pendingLine := 0
 	pendingSet := false
 	lastFunc, lastDart, lastGo := 0, 0, 0
+	dropped := false
 	for _, line := range lines {
 		trimmed := strings.TrimLeft(line, " \t")
 		switch {
@@ -32,6 +33,7 @@ func Strip(text string) (string, string) {
 			rest := trimmed[len(fileMark):]
 			file, fn, _ := strings.Cut(rest, "|")
 			pendingFile, pendingFunc = file, fn
+			dropped = true
 			continue
 		case strings.HasPrefix(trimmed, lineMark):
 			rest := trimmed[len(lineMark):]
@@ -45,9 +47,19 @@ func Strip(text string) (string, string) {
 				pendingLineFile = file
 				pendingSet = true
 			}
+			dropped = true
 			continue
 		}
-		out = append(out, line)
+		// A marker that stood alone in a body leaves the body empty. dart
+		// format writes an empty body on 1 line, thus the 2 lines join again
+		// and the output keeps the form that dart format gives.
+		if dropped && trimmed == "}" && len(out) > 0 &&
+			strings.HasSuffix(out[len(out)-1], "{") {
+			out[len(out)-1] += "}"
+		} else {
+			out = append(out, line)
+		}
+		dropped = false
 		at := len(out)
 		if pendingFunc != "" {
 			funcs = append(funcs, base36(at-lastFunc)+"|"+pendingFile+"|"+pendingFunc)

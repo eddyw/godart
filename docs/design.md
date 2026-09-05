@@ -118,7 +118,8 @@ list, because it is the authority.
 ### Stage 5: Emit
 
 - Walk the intermediate tree and write Dart source code.
-- Run `dart format` on the output.
+- Run `dart format` on the files that the build wrote. A cached package needs no
+  second format run, because its files stand formatted on disk already.
 
 ### Stage 6: Write metadata
 
@@ -465,6 +466,12 @@ The output holds a source map, and 4 readers use it.
   of each function body. Stage 6 runs after `dart format`, removes each marker,
   and writes the map of the file. Thus the line numbers of the map name the
   lines that a Dart stack trace reports, and the output holds no marker.
+- A function with an empty body holds the marker of the function alone. The
+  removal of that marker leaves an empty body on 2 lines, and `dart format`
+  writes such a body on 1 line. Stage 6 thus joins the 2 lines. The map file
+  passes no format run, thus the writer gives an empty map the form of
+  `dart format` also. Both rules keep the output equal to the output of
+  `dart format`, and the map keeps the line numbers of the file on disk.
 - The map of 1 package stands in the part file `<base>.map.dart`, and the init
   routine of the package registers it. A key names a Dart file the way a stack
   trace names it. The value holds each function and each line, with a delta in
@@ -649,6 +656,107 @@ Stage 5 takes none of it, because 4 rules break a plain reachability walk:
 
 A rule that drops such a declaration gives a wrong answer with no report, and
 that is worse than a large file.
+
+### A shake at the level of the package
+
+The session of 2026-09-05 asked a narrower question: does a shake that drops a
+whole package give the bytes, and is such a shake safe? The answer is no to
+both, and the measure names 3 causes.
+
+**1. The output already holds the import closure alone.** `order` of
+`internal/driver/driver.go` walks the imports from the root package, and it
+keeps each package that the Dart runtime library does not hold. The Go tool
+chain names 73 packages for `jsonuse`, and gart writes 32 of them. A shake that
+drops a package outside the closure thus finds nothing.
+
+**2. The entry point reaches each package.** The `$init` routine of a package
+calls the `$init` routine of each package that it imports, because an `init`
+function and a package variable of that package must run first. A walk from
+`bin/main.dart` over those calls reaches each of the 32 packages of `jsonuse`
+and each of the 117 packages of `httpuse`. A shake at the level of the package
+thus drops 0 bytes.
+
+**3. It reaches no table of `unicode`.** 5 packages of `jsonuse` import
+`unicode`, and each 1 calls a function of it: `bytes`, `strings`, `reflect`,
+`encoding/json/v2`, and `encoding/json/internal/jsonwire`.
+
+To drop a package the compiler must first prove 2 things: no live declaration
+names a declaration of that package, and the `$init` routine of that package
+writes nothing that the program reads. The first proof is the declaration walk
+that the 4 rules above break. The second proof holds a 5th rule: a package that
+writes a field of `internal/linkhook` at the start reaches a reader that names
+no declaration of it.
+
+gart thus ships no shake at the level of the package.
+
+### Where the tables of `unicode` stand
+
+The tables hold 527,984 bytes of the 4,134,163 bytes of `jsonuse`, and 481,816
+of those bytes stand inside the `$init` routine of the package, in 538
+statements. Go writes each table as a package variable with a composite
+literal, thus stage 4 makes each 1 a statement of `init`, and stage 5 writes
+that statement into `$init`. A shake at the level of the package keeps the
+whole routine, because the routine always runs.
+
+The rest of the program names 14 declarations of `unicode`: `CaseRange`,
+`IsDigit`, `IsGraphic`, `IsLetter`, `IsNumber`, `IsPrint`, `IsSpace`,
+`SimpleFold`, `ToLower`, `ToTitle`, `ToUpper`, and the 3 case methods of
+`SpecialCase`.
+
+A name walk at the level of the package variable, from those 14 names, keeps
+119,302 bytes of the routine and drops 362,514. That is 68.7 percent of the
+package and 8.8 percent of the output of `jsonuse`. The largest tables that
+stay: `L`, `CaseRanges`, `M`, `S`, `P`, and `N`. The largest tables that go:
+`C`, `Cn`, `Lo`, `Mn`, the map `Scripts`, and each script table under it. A
+script and a category reach the program through the 3 maps `Categories`,
+`Scripts`, and `Properties` alone, and no live declaration names those 3.
+
+A program of the measure read the emitted Dart, thus the number names an upper
+bound and no shipped gain.
+
+Such a shake stands at the level of the package variable, and it is not the
+shake of this section. gart holds neither proof that it needs: the initializer
+of a variable must hold no side effect, and no `go:linkname` directive may bind
+the variable to another package. The work stays open.
+
+## The start time of a large program on the Dart VM
+
+The output of a large program holds many megabytes of Dart, and the Dart VM
+reads all of it at each start. The session of 2026-09-05 measured that cost.
+
+The program is `flutter/example/compass/server`, the server of the sample with
+9 routes over `net/http` and `encoding/json`. gart wrote 1,122 `.dart` files
+with 15,029,679 bytes, and the runtime library adds 40 files. The server reads
+2 JSON files of 2,076,698 bytes at the start, and then it listens.
+
+The measure counts the time from the start of the process to the first answer
+of the route `/login`. A poll loop sends a request each 2 milliseconds. Each
+row gives the median of 5 runs, with a warm file cache.
+
+| Step | Time | Size |
+| --- | --- | --- |
+| `dart run bin/main.dart` to the first answer | 5.41 seconds | — |
+| `dart compile kernel` | 2.87 seconds | 47,881,256 bytes |
+| `dart run` of that kernel file to the first answer | 1.33 seconds | — |
+| `dart compile exe` | 18.3 to 18.7 seconds | 35,444,096 bytes |
+| The binary to the first answer | 0.41 seconds | — |
+| `go build`, and the binary to the first answer | 0.012 seconds | 9,400,690 bytes |
+
+The numbers name 3 costs. The front end holds the largest part of the 5.41
+seconds: a run of the kernel file alone takes 1.33 seconds. The Dart VM itself
+starts fast, because `dart run` of a 3 line file takes 0.17 seconds. The load
+and the just in time compile of the kernel hold the other 1.16 seconds.
+
+The ahead of time build removes both costs. The binary answers after 0.41
+seconds, which is 13 times faster than `dart run`. It costs 18.5 seconds of
+build time, and the file holds 35.4 megabytes against 9.4 megabytes for the Go
+binary.
+
+A server thus wants `dart compile exe`. A short program that runs 1 time wants
+`dart run`, because the build costs more than the 5 seconds of the start.
+
+The machine: an Apple M4 Max with 16 cores and 128 gigabytes, macOS 27.0, Dart
+3.13.2, and Go 1.27.0.
 
 ## A deferred call that can block
 

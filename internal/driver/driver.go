@@ -132,6 +132,9 @@ func BuildWithStats(opt Options) (*Stats, error) {
 			files[path] = text
 			written = append(written, path)
 		}
+		// The order of a map over the files is random, thus a sort gives the
+		// source map and the archive an equal order at each build.
+		sort.Strings(written)
 		mapAt := filepath.Join(dir, out.MapFile)
 		maps = append(maps, srcPackage{base: baseName(p, module), mapAt: mapAt,
 			files: append([]string{}, written...)})
@@ -166,7 +169,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		return nil, err
 	}
 	if opt.Format && len(stats.Compiled) > 0 {
-		if err := format(opt.Out); err != nil {
+		if err := format(opt.Out, dartFiles(files)); err != nil {
 			return nil, err
 		}
 	}
@@ -601,11 +604,40 @@ func writeFiles(out string, files map[string]string) error {
 	return nil
 }
 
-func format(out string) error {
-	cmd := exec.Command("dart", "format", ".")
-	cmd.Dir = out
-	if text, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("dart format: %v\n%s", err, text)
+// dartFiles names each Dart file of the map, in a stable order. The map holds
+// the files that the build wrote, thus a cached package gives no path.
+func dartFiles(files map[string]string) []string {
+	out := make([]string, 0, len(files))
+	for path := range files {
+		if filepath.Ext(path) == ".dart" {
+			out = append(out, path)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// argBudget limits the bytes of 1 argument list. The limit of the operating
+// system is near 1 megabyte, thus 128 kilobytes keeps a wide margin.
+const argBudget = 128 << 10
+
+// format runs dart format on the given files, which stand under out. A build
+// that wrote no Dart file runs no command. A long list needs more than 1 run,
+// because the argument list of a process has a limit.
+func format(out string, paths []string) error {
+	for len(paths) > 0 {
+		n, size := 0, 0
+		for n < len(paths) && (n == 0 || size+len(paths[n])+1 <= argBudget) {
+			size += len(paths[n]) + 1
+			n++
+		}
+		args := append([]string{"format"}, paths[:n]...)
+		cmd := exec.Command("dart", args...)
+		cmd.Dir = out
+		if text, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("dart format: %v\n%s", err, text)
+		}
+		paths = paths[n:]
 	}
 	return nil
 }
