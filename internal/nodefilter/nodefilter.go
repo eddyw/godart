@@ -76,8 +76,11 @@ type pack struct {
 // dependency, thus a type that only a test names is dead weight too.
 func filterDir(dir string, want map[string]bool, out map[string][]byte) error {
 	p, err := readPack(dir)
-	if err != nil || len(p.made) == 0 {
+	if err != nil {
 		return err
+	}
+	if p == nil || len(p.made) == 0 {
+		return nil
 	}
 	keep := map[string]bool{}
 	for n := range want {
@@ -103,7 +106,9 @@ func filterDir(dir string, want map[string]bool, out map[string][]byte) error {
 	return nil
 }
 
-// readPack parses each Go file of a directory that holds no test.
+// readPack parses each Go file of a directory that holds no test. A file that
+// does not parse gives no pack, thus the build reads the whole directory from
+// disk and the compiler reports the error of the source itself.
 func readPack(dir string) (*pack, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -122,7 +127,7 @@ func readPack(dir string) (*pack, error) {
 		}
 		f, err := parser.ParseFile(p.fset, path, src, parser.ParseComments)
 		if err != nil {
-			return nil, err
+			return nil, nil
 		}
 		if bytes.HasPrefix(src, []byte(Mark)) {
 			p.made = append(p.made, f)

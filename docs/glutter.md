@@ -45,8 +45,9 @@ user. Press `r` for a hot reload of your own, `R` for a hot restart, and `q` to
 stop the application and the watch together.
 
 A change that names a new node type needs the host again, and glutter runs
-`nodegen` for you. The scan of the node types runs after the reload, thus it
-costs the fast path nothing. Such a change reaches the screen 1 reload later.
+`nodegen` for you. The scan of the node types runs in front of each build, and
+the host reads the answer of that same run. Such a change reaches the screen 1
+reload later, because the host stands after the first reload.
 
 ## The commands
 
@@ -124,7 +125,7 @@ The Go side of a pack is also per application. `glutter` scans the module and
 it drops each node type that no code names, thus the Dart output holds no class
 and no type descriptor of a widget that the application never builds. compass
 names 27 of the 491 types of its 2 packs, and its Dart output fell from
-18,316,492 bytes to 16,087,506 on 2026-09-06.
+18,318,376 bytes to 16,089,390 on 2026-09-06.
 
 The scan runs in front of each build. A new node type thus reaches the next
 build with no further step, and `glutter doctor` reports no stale file.

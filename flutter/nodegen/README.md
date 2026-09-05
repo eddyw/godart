@@ -104,7 +104,7 @@ through `packages.Config.Overlay`. The file on disk never changes, thus 2
 applications of 1 checkout each hold their own set and no `glutter doctor`
 reports a stale file.
 
-The filter cut the Dart output of compass from 18,316,492 bytes to 16,087,506,
+The filter cut the Dart output of compass from 18,318,376 bytes to 16,089,390,
 and the tree of `gart.dev/ui` from 2,922,881 bytes to 693,895. Read the section
 "The node filter of the Go side" of `docs/flutter-design.md`.
 

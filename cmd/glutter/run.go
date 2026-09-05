@@ -47,9 +47,11 @@ func (a *app) run(args []string) error {
 // watch compiles the module again after each change, and it asks flutter run
 // for a hot reload.
 //
-// The scan of the node types runs after the reload. It costs about 1 second,
-// and the application already holds the new code of each node type that its
-// host covers. A new node type thus reaches the screen 1 reload later.
+// The scan of the node types runs in front of each build, because the node
+// filter of the build reads it. It costs about 1 second, and writeHost reads
+// the answer of that same run. The application already holds the new code of
+// each node type that its host covers, thus a new node type reaches the screen
+// 1 reload later.
 func (a *app) watch(pidFile string) {
 	opt := a.options(false)
 	err := driver.WatchWith(opt, os.Stdout, func(stats *driver.Stats, err error) {

@@ -1341,7 +1341,7 @@ because a second agent ran a test suite. A byte count reads no load.
 
 | Measure | Before | After | Cut |
 |---|---|---|---|
-| The whole Dart output | 18,316,492 | 16,087,506 | 12.2 percent |
+| The whole Dart output | 18,318,376 | 16,089,390 | 12.2 percent |
 | The tree of `gart.dev/ui` | 2,922,881 | 693,895 | 76.3 percent |
 | `ui.dart`, the descriptor library of the core | 948,233 | 310,204 | 67.3 percent |
 | `ui/material.dart`, the descriptor library of Material | 875,599 | 70,580 | 91.9 percent |
