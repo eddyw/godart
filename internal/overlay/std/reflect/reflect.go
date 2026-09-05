@@ -220,9 +220,14 @@ type rtype struct {
 	kindPlus1 Kind
 }
 
-// types interns 1 rtype for each handle, thus 2 reads of the same type give 2
+// types interns 1 Type for each handle, thus 2 reads of the same type give 2
 // equal values, as they do in Go.
-var types = map[int]*rtype{}
+//
+// The index of the table is the handle minus 1. A handle is a small whole
+// number that counts up, thus the table needs no hash. The element holds the
+// interface value, and not the pointer, thus 1 read builds it and each later
+// read gives the same value with no allocation.
+var types []Type
 
 // typeOf gives the Type of a handle. The handle 0 names no type, and it gives
 // nil, exactly as a nil interface does in Go.
@@ -230,11 +235,16 @@ func typeOf(handle int) Type {
 	if handle == 0 {
 		return nil
 	}
-	if t := types[handle]; t != nil {
-		return t
+	if handle <= len(types) {
+		if t := types[handle-1]; t != nil {
+			return t
+		}
+	}
+	for len(types) < handle {
+		types = append(types, nil)
 	}
 	t := &rtype{desc: handle}
-	types[handle] = t
+	types[handle-1] = t
 	return t
 }
 
