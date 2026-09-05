@@ -118,7 +118,8 @@ list, because it is the authority.
 ### Stage 5: Emit
 
 - Walk the intermediate tree and write Dart source code.
-- Run `dart format` on the output.
+- Run `dart format` on the files that the build wrote. A cached package needs no
+  second format run, because its files stand formatted on disk already.
 
 ### Stage 6: Write metadata
 
@@ -465,6 +466,12 @@ The output holds a source map, and 4 readers use it.
   of each function body. Stage 6 runs after `dart format`, removes each marker,
   and writes the map of the file. Thus the line numbers of the map name the
   lines that a Dart stack trace reports, and the output holds no marker.
+- A function with an empty body holds the marker of the function alone. The
+  removal of that marker leaves an empty body on 2 lines, and `dart format`
+  writes such a body on 1 line. Stage 6 thus joins the 2 lines. The map file
+  passes no format run, thus the writer gives an empty map the form of
+  `dart format` also. Both rules keep the output equal to the output of
+  `dart format`, and the map keeps the line numbers of the file on disk.
 - The map of 1 package stands in the part file `<base>.map.dart`, and the init
   routine of the package registers it. A key names a Dart file the way a stack
   trace names it. The value holds each function and each line, with a delta in

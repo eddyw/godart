@@ -64,8 +64,10 @@ cd flutter/example
 | The change to the new Dart on disk | 1.3 to 1.9 seconds |
 | The hot reload of the new Dart | 213 to 314 milliseconds, and 3 of 955 libraries |
 
-The watch build passes `-format=false`, because `dart format` reads the whole
-output directory. It holds 10.4 seconds of an 11.8 second cycle for compass.
+The watch build passes `-format=false`, because the hot reload needs no format.
+`dart format` now reads the files that the build wrote alone, thus it holds
+about 0.3 seconds of a 1.8 second cycle for compass. Before that change it read
+the whole output directory, and it held 10.4 seconds of an 11.9 second cycle.
 `build.sh` formats the output again.
 
 A compile error stops the reload, because `gart watch` writes the error and no
