@@ -131,6 +131,8 @@ func (e *emitter) resetDiscovery() {
 	e.errs = nil
 	e.labelSeq = 0
 	e.goLine = 0
+	e.fileSeq = 0
+	e.lits = nil
 }
 
 func (e *emitter) generate(p *ir.Package, cfg Config) *Result {
@@ -292,6 +294,63 @@ type emitter struct {
 	litSeq int
 	// extra holds each import that the emitter added. Read addImport.
 	extra []Import
+	// lits holds the string constants of the file that the emitter writes.
+	// A literal in a function literal joins the pool of the file, thus the 2
+	// emitters share 1 pointer.
+	lits *litPool
+	// fileSeq numbers the part files of the package. The number stands in the
+	// name of each hoisted constant, thus 2 files of 1 library never clash.
+	fileSeq int
+}
+
+// A litPool holds the hoisted string constants of 1 output file.
+//
+// A Go string constant needs a GoString, and GoString.fromString encodes the
+// text as UTF-8. A literal inside a loop would pay that cost at each pass,
+// thus the emitter writes 1 top level constant and reads it by name.
+type litPool struct {
+	// names gives the Dart name of each text that the file holds already.
+	names map[string]string
+	// decls holds the declaration of each name, in the order of the first
+	// read.
+	decls []string
+	// tag numbers the file, and seq numbers the constants inside it.
+	tag int
+	seq int
+}
+
+// stringLit gives the name of the hoisted constant of a Go string constant.
+//
+// The empty string needs no constant, because GoString.empty stands already.
+func (e *emitter) stringLit(text string) string {
+	if text == "" {
+		return "GoString.empty"
+	}
+	if e.lits == nil {
+		return stringConst(text)
+	}
+	if name, ok := e.lits.names[text]; ok {
+		return name
+	}
+	name := fmt.Sprintf("$gs%d_%d", e.lits.tag, e.lits.seq)
+	e.lits.seq++
+	e.lits.names[text] = name
+	e.lits.decls = append(e.lits.decls,
+		fmt.Sprintf("final GoString %s = %s;", name, stringConst(text)))
+	return name
+}
+
+// writeLits writes the declaration of each hoisted constant of the file. A
+// top level final of Dart runs its initializer at the first read, thus the
+// order of the declarations holds no meaning.
+func (e *emitter) writeLits() {
+	if e.lits == nil || len(e.lits.decls) == 0 {
+		return
+	}
+	e.line("")
+	for _, decl := range e.lits.decls {
+		e.line("%s", decl)
+	}
 }
 
 // The 2 markers of the source map. Each one stands on a line of its own, thus
@@ -613,6 +672,9 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Path < sorted[j].Path })
 	e.buf.Reset()
 	e.goLine = 0
+	// The library file holds a pool of its own. Each part file wrote its own
+	// pool already, thus the tag 0 stays free for this file.
+	e.lits = &litPool{names: map[string]string{}}
 	e.writeAnonClasses()
 	e.writeNilChans()
 	e.writeInstDescs()
@@ -626,6 +688,7 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	if p.Name == "main" {
 		e.writeMain()
 	}
+	e.writeLits()
 	body := e.buf.String()
 
 	// The body can add an import, thus the list of the file stands after it. An
@@ -723,6 +786,8 @@ func (e *emitter) writeMain() {
 func (e *emitter) partFile(base string, f *ir.File) string {
 	e.buf.Reset()
 	e.goLine = 0
+	e.fileSeq++
+	e.lits = &litPool{names: map[string]string{}, tag: e.fileSeq}
 	e.buf.WriteString(header)
 	e.line("")
 	e.line("part of '../%s.dart';", base)
@@ -731,6 +796,7 @@ func (e *emitter) partFile(base string, f *ir.File) string {
 		e.decl(d)
 		e.flushFrames()
 	}
+	e.writeLits()
 	return e.buf.String()
 }
 
