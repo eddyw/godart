@@ -162,7 +162,7 @@ func exprIsSimple(x ir.Expr) bool {
 func (e *emitter) constant(v constant.Value, t types.Type) string {
 	switch {
 	case isString(t):
-		return stringConst(constant.StringVal(v))
+		return e.stringLit(constant.StringVal(v))
 	case isFloat(t):
 		f, _ := constant.Float64Val(constant.ToFloat(v))
 		return floatConst(f)
@@ -464,6 +464,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		typeParams: e.typeParams,
 		anonParams: e.anonParams, groundTwins: e.groundTwins,
 		funcIds: e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
+		lits:    e.lits,
 		renames: e.withRenames(e.captureRenames(x.Captured))}
 	inner.curFuncId = e.funcId(x)
 	inner.boxParams(x.Params)

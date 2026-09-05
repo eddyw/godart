@@ -39,6 +39,9 @@ int _descHandle(TypeDesc desc) {
     if (_synthetic.contains(found)) {
       _descTable[found - 1] = desc;
       _synthetic.remove(found);
+      // The new descriptor can hold another text, thus the cache drops the
+      // answer of the old one.
+      if (found <= _descInfoTable.length) _descInfoTable[found - 1] = null;
     }
     return found;
   }
@@ -67,15 +70,28 @@ TypeDesc? _descAt(int handle) {
 /// A handle of the type of an interface value. A nil value gives 0.
 int $descOf(Iface? value) => value == null ? 0 : _descHandle(value.desc);
 
+/// The answer of $descInfo for each handle. A GoString holds UTF-8 bytes, thus
+/// each build of one encodes the text again. The package reflect reads the
+/// kind of a type for each value, and 1 build stands for each later read.
+final List<(GoString, GoString, bool)?> _descInfoTable =
+    <(GoString, GoString, bool)?>[];
+
 /// The text, the kind, and the comparable flag of a type handle.
 (GoString, GoString, bool) $descInfo(int handle) {
   final TypeDesc? desc = _descAt(handle);
   if (desc == null) return (GoString.empty, GoString.empty, false);
-  return (
+  while (_descInfoTable.length < handle) {
+    _descInfoTable.add(null);
+  }
+  final (GoString, GoString, bool)? found = _descInfoTable[handle - 1];
+  if (found != null) return found;
+  final (GoString, GoString, bool) info = (
     GoString.fromString(desc.display),
     GoString.fromString(desc.kind),
     desc.comparable,
   );
+  _descInfoTable[handle - 1] = info;
+  return info;
 }
 
 /// A handle of the element type of a type. A type that holds no element type

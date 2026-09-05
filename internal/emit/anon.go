@@ -623,6 +623,7 @@ func (e *emitter) anonFile(class string, st *types.Struct) (string, map[string]*
 		anonParams:   map[string][]*types.TypeParam{},
 		groundTwins:  map[string]*anonTwin{},
 		funcIds:      e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
+		lits: &litPool{names: map[string]string{}},
 	}
 	inner.setPrefixes(e.anonImports(st))
 	inner.line("/// %s", anonText(st))
@@ -630,6 +631,7 @@ func (e *emitter) anonFile(class string, st *types.Struct) (string, map[string]*
 	inner.writeNilChans()
 	inner.writeInstDescs()
 	inner.flushFrames()
+	inner.writeLits()
 	body := inner.buf.String()
 
 	inner.buf.Reset()

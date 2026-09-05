@@ -135,6 +135,39 @@ GoString $substring(
   );
 }
 
+/// The bytes of a string, as a slice that shares the storage.
+///
+/// The Go builtins append and copy read the source and hold it not, thus the
+/// share reaches no other code and a write to the result never stands. The
+/// conversion `[]byte(s)` must copy, and it reads $stringToBytes.
+///
+/// The JS form builds a pair for each byte, exactly as $stringToBytes does,
+/// because a GoInt is an object there.
+Slice<GoInt> $stringBytes(GoString s) {
+  if ($isJS) return $stringToBytes(s);
+  return Slice<GoInt>(
+    s.bytes as List<GoInt>,
+    0,
+    s.bytes.length,
+    s.bytes.length,
+  );
+}
+
+/// The Go expression `append(b, s...)` for a byte slice and a string.
+///
+/// The bytes of the string reach the slice with no header between them, thus
+/// the call allocates 1 object and not 2. Read $stringBytes for the share.
+Slice<GoInt> $appendString(
+  Slice<GoInt> s,
+  GoString str,
+  List<GoInt> Function(int) alloc,
+) {
+  final int n = str.bytes.length;
+  if (n == 0) return s;
+  if ($isJS) return $appendSlice(s, $stringToBytes(str), alloc);
+  return $appendRange(s, str.bytes as List<GoInt>, 0, n, alloc);
+}
+
 /// The Go conversion `[]byte(s)`. Go copies the bytes. The native form keeps
 /// the dense byte list, because the list type erases there.
 Slice<GoInt> $stringToBytes(GoString s) {
@@ -328,8 +361,9 @@ Object? $maxOf(Object? a, Object? b) {
   return (a as num) >= (b as num) ? a : b;
 }
 
-/// The spread of a value of a union of a string and a byte slice.
+/// The spread of a value of a union of a string and a byte slice. Only append
+/// reads it, thus the string form shares the storage. Read $stringBytes.
 Slice<GoInt> $spreadBytes(Object? v) {
-  if (v is GoString) return $stringToBytes(v);
+  if (v is GoString) return $stringBytes(v);
   return v as Slice<GoInt>;
 }
