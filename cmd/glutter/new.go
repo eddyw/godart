@@ -41,15 +41,19 @@ func newApp(args []string) error {
 		return p
 	}
 	title := strings.ToUpper(name[:1]) + name[1:]
+	// The Dart package of the application and the Dart package of the Go
+	// output stand in the same resolution, thus the 2 names must differ.
+	appName := name + "_app"
+	goName := "go" + name
 
 	files := map[string]string{
-		"pubspec.yaml": fmt.Sprintf(pubspecTemplate, name, relDart("flutter/goflutter"),
-			relDart("runtime/goruntime"), name),
+		"pubspec.yaml": fmt.Sprintf(pubspecTemplate, appName,
+			relDart("flutter/goflutter"), relDart("runtime/goruntime"), goName),
 		"analysis_options.yaml": analysisTemplate,
-		"go/go.mod":             fmt.Sprintf(goModTemplate, name, rel("flutter/ui")),
+		"go/go.mod":             fmt.Sprintf(goModTemplate, goName, rel("flutter/ui")),
 		"go/app.go":             appTemplate,
 		"lib/main.dart":         fmt.Sprintf(mainTemplate, name, title, title, title, title),
-		"lib/bridge.dart":       fmt.Sprintf(bridgeTemplate, name, title),
+		"lib/bridge.dart":       fmt.Sprintf(bridgeTemplate, goName, title),
 		".gitignore":            gitignoreTemplate,
 	}
 	for path, body := range files {
