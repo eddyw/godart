@@ -73,7 +73,12 @@ func (a *app) options(format bool) driver.Options {
 func (a *app) filter() (load.Filter, error) {
 	names, err := a.scan()
 	if err != nil {
-		return nil, err
+		// The module holds an error, thus the scan reads no type information.
+		// The build then reads the whole node set, and the compiler reports
+		// the error of the source itself. A build with no filter is correct,
+		// and it writes more bytes.
+		a.nodes = ""
+		return nil, nil
 	}
 	a.nodes = names
 	root, err := a.uiModule()
