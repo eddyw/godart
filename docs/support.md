@@ -513,7 +513,7 @@ last 2 packages.
 |---|---|
 | `encoding/json`, 25 names | **Closed.** The package reads the real Go source now, and it holds each of its 92 exported names. The hand-written overlay of 1850 lines is gone. |
 | `encoding/json/v2` | **Closed.** 2 rules of the emitter opened it: a defined type over an instance of a generic type, and a wrapper for a function value of a narrower Dart parameter type. Read decisions 347 and 348. |
-| `testing/synctest` | **Closed.** The scheduler holds a bubble with a clock of its own. Read decision 346. |
+| `testing/synctest` | **Closed.** The scheduler holds a bubble with a clock of its own. Read decision 346, and decision 351 for the rule of a lock and of a timer. |
 | `reflect.StructOf` | **Closed.** A shape that the program names reads the class of that shape, and a fresh shape holds its value in a list of the fields. Read decision 349. |
 | `reflect.Method.Func` | **Closed.** `_callValue` reads `Function.apply`, thus Call of the value needs no factory of a Dart type. The 2.7 percent measure of decision 325 covered such a factory. |
 | `net.ListenMulticastUDP` | **Closed.** 2 intrinsics carry it, over `RawDatagramSocket.bind` with a shared port and over `joinMulticast`. |
@@ -537,9 +537,10 @@ list.
 fake clock, a timer queue of that clock, and the set of the goroutines of the
 bubble. The clock moves only when each goroutine of the bubble is durably
 blocked, thus a sleep inside a bubble takes no real time. Decision 346 holds
-the design, `testdata/programs/synctestuse` holds the witness, and the 13 real
-tests of the package pass under `TestTestsOfGoroot`. The 6 other tests each
-skip, because each 1 runs the test binary again as a subprocess.
+the design, and decision 351 holds the rule of a lock and of a timer.
+`testdata/programs/synctestuse` holds the witness, and the 13 real tests of the
+package pass under `TestTestsOfGoroot`. The 6 other tests each skip, because
+each 1 runs the test binary again as a subprocess.
 
 ### What stays out, and why no work removes it
 
