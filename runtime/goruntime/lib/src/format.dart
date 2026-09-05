@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'box.dart';
 import 'chan.dart';
 import 'complex.dart';
@@ -512,21 +514,36 @@ String _float(double v, String letter, int precision, bool single) {
       if (precision < 0) return single ? $f32string(v) : $fstring(v);
       return _gPrecision(v, precision);
     case 'G':
-      if (precision < 0) return single ? $f32string(v) : $fstring(v);
-      return _gPrecision(v, precision).toUpperCase();
+      if (precision < 0) return _upperExponent(single ? $f32string(v) : $fstring(v));
+      return _upperExponent(_gPrecision(v, precision));
     case 'f':
     case 'F':
       if (v.isNaN) return 'NaN';
       if (v.isInfinite) return v > 0 ? '+Inf' : '-Inf';
-      return v.toStringAsFixed(precision < 0 ? 6 : precision);
+      return _fixed(v, precision < 0 ? 6 : precision);
     case 'e':
       return _exponent(v, precision < 0 ? 6 : precision);
     case 'E':
-      return _exponent(v, precision < 0 ? 6 : precision).toUpperCase();
+      return _upperExponent(_exponent(v, precision < 0 ? 6 : precision));
+    case 'b':
+      return _binaryFloat(v, single);
+    case 'x':
+      return _hexFloat(v, precision, single);
+    case 'X':
+      return _upperExponent(_hexFloat(v, precision, single));
     case 'd':
       return '%!d(float64=${$fstring(v)})';
   }
   return '%!$letter(float64=${$fstring(v)})';
+}
+
+/// _upperExponent writes each letter of a number in upper case, and it holds
+/// the text of a value that is not a number.
+///
+/// Go writes NaN, +Inf, and -Inf with the same letters under each verb.
+String _upperExponent(String text) {
+  if (text == 'NaN' || text == '+Inf' || text == '-Inf') return text;
+  return text.toUpperCase();
 }
 
 /// The text of a float in the form %g of Go, with a count of the significant
@@ -541,10 +558,22 @@ String _gPrecision(double v, int prec) {
   if (v.isInfinite) return v > 0 ? '+Inf' : '-Inf';
   if (prec <= 0) prec = 1;
   final String sign = v.isNegative ? '-' : '';
-  final String text = v.abs().toStringAsExponential(prec - 1);
-  final int at = text.indexOf('e');
-  final int exp10 = int.parse(text.substring(at + 1));
-  String mant = text.substring(0, at).replaceAll('.', '');
+  String mant;
+  int exp10;
+  if (prec > 21) {
+    final (String d, int x) = _exactSig(v, prec);
+    mant = d;
+    exp10 = x;
+  } else {
+    final String text = v.abs().toStringAsExponential(prec - 1);
+    final int at = text.indexOf('e');
+    exp10 = int.parse(text.substring(at + 1));
+    String head = text.substring(0, at);
+    if (!_carried(head) && _tieAt(v, exp10 - prec + 1)) {
+      head = _evenDigit(head);
+    }
+    mant = head.replaceAll('.', '');
+  }
   int nd = mant.length;
   while (nd > 1 && mant.codeUnitAt(nd - 1) == 0x30) {
     nd--;
@@ -622,13 +651,26 @@ String _complex(GoComplex c, String kind, String letter, String verb) {
 String _exponent(double v, int digits) {
   if (v.isNaN) return 'NaN';
   if (v.isInfinite) return v > 0 ? '+Inf' : '-Inf';
+  if (digits > 20) {
+    final (String d, int x) = _exactSig(v, digits + 1);
+    final String head = digits > 0 ? '${d[0]}.${d.substring(1)}' : d;
+    final String s = v.isNegative ? '-' : '';
+    return '$s${head}e${x < 0 ? '-' : '+'}${x.abs().toString().padLeft(2, '0')}';
+  }
   final String text = v.abs().toStringAsExponential(digits);
   final int e = text.indexOf('e');
   final int exponent = int.parse(text.substring(e + 1));
+  String mant = text.substring(0, e);
+  // The round of Dart moves away from zero at a middle point, and Go moves to
+  // the even digit. A round that gave 1 with zeros only came from the digit 9,
+  // and Go rounds that digit up too.
+  if (!_carried(mant) && _tieAt(v, exponent - digits)) {
+    mant = _evenDigit(mant);
+  }
   final String sign = v.isNegative ? '-' : '';
   final String exponentSign = exponent < 0 ? '-' : '+';
   final String pad = exponent.abs().toString().padLeft(2, '0');
-  return '$sign${text.substring(0, e)}e$exponentSign$pad';
+  return '$sign${mant}e$exponentSign$pad';
 }
 
 String _hexInt(GoInt v, bool unsigned, bool upper) {
@@ -854,3 +896,220 @@ GoString $intRadix(GoInt v, int radix) {
 
 /// The text of a Go integer of an unsigned type, in a base of 2 to 36.
 GoString $uintRadix(GoInt v, int radix) => GoString.ascii($uradix(v, radix));
+
+/// The bits of a value, in 2 halves of 32 bits. A JS number holds each half
+/// with no loss, and it holds no value of 64 bits.
+final ByteData _tieBits = ByteData(8);
+
+/// _tieAt reports whether the exact value of v sits at the middle of the 2
+/// multiples of 10 to the power q that surround it.
+///
+/// Go rounds such a value to the even neighbour. toStringAsFixed and
+/// toStringAsExponential of Dart round away from zero, thus the caller steps
+/// the last digit down by 1 when this function answers true.
+///
+/// The exact value of a double is m times 2 to the power e, with m odd. Such a
+/// value is a middle point of 10 to the power q only when e is q minus 1, and
+/// only when 5 to the power q divides m.
+bool _tieAt(double v, int q) {
+  if (v == 0 || v.isNaN || v.isInfinite) return false;
+  _tieBits.setFloat64(0, v);
+  final int hi = _tieBits.getUint32(0);
+  final int lo = _tieBits.getUint32(4);
+  int exp = (hi >> 20) & 0x7FF;
+  int m = (hi & 0xFFFFF) * 4294967296 + lo;
+  if (exp == 0) {
+    exp = -1074;
+  } else {
+    m += 4503599627370496;
+    exp -= 1075;
+  }
+  while (m % 2 == 0 && m != 0) {
+    m = m ~/ 2;
+    exp++;
+  }
+  if (exp != q - 1) return false;
+  for (var i = 0; i < q; i++) {
+    if (m % 5 != 0) return false;
+    m = m ~/ 5;
+  }
+  return true;
+}
+
+/// _evenDigit steps the last digit of text down by 1 when that digit is odd.
+///
+/// text holds the result of a round away from zero at a middle point, thus its
+/// last digit stands 1 above the digit of the exact value. Go keeps that digit
+/// when it is even, and it takes the digit above when it is odd.
+String _evenDigit(String text) {
+  final int n = text.length;
+  final int last = text.codeUnitAt(n - 1) - 0x30;
+  if (last < 0 || last > 9 || last % 2 == 0) return text;
+  return text.substring(0, n - 1) + String.fromCharCode(0x30 + last - 1);
+}
+
+/// _carried reports whether a round of the mantissa gave 1 with zeros only.
+///
+/// Such a round came from the digit 9, which is odd, thus Go rounds up too and
+/// the caller must hold the text.
+bool _carried(String mant) {
+  if (mant.isEmpty || mant.codeUnitAt(0) != 0x31) return false;
+  for (var i = 1; i < mant.length; i++) {
+    final int c = mant.codeUnitAt(i);
+    if (c != 0x30 && c != 0x2E) return false;
+  }
+  return true;
+}
+
+/// _fixed writes a value with a count of digits after the point, in the
+/// rounding of Go.
+String _fixed(double v, int p) {
+  // toStringAsFixed of Dart gives the exponent form above 10 to the power 21,
+  // and it rejects a count above 20. Go holds neither limit.
+  if (p > 20 || v.abs() >= 1e21) return _exactFixed(v, p);
+  final String text = v.toStringAsFixed(p);
+  if (!_tieAt(v, -p)) return text;
+  return _evenDigit(text);
+}
+
+/// The significand and the exponent of 2 of a value.
+///
+/// The significand holds the leading bit, thus it stands between 2 to the
+/// power 52 and 2 to the power 53 for a value of the normal range.
+(int, int) _parts(double v, bool single) {
+  if (single) {
+    _tieBits.setFloat32(0, v);
+    final int b = _tieBits.getUint32(0);
+    final int raw = (b >> 23) & 0xFF;
+    final int m = b & 0x7FFFFF;
+    if (raw == 0) return (m, -149);
+    return (m + 8388608, raw - 150);
+  }
+  _tieBits.setFloat64(0, v);
+  final int hi = _tieBits.getUint32(0);
+  final int lo = _tieBits.getUint32(4);
+  final int raw = (hi >> 20) & 0x7FF;
+  final int m = (hi & 0xFFFFF) * 4294967296 + lo;
+  if (raw == 0) return (m, -1074);
+  return (m + 4503599627370496, raw - 1075);
+}
+
+/// The text of a value in the form b of Go: the whole significand, the letter
+/// p, and the exponent of 2.
+String _binaryFloat(double v, bool single) {
+  if (v.isNaN) return 'NaN';
+  if (v.isInfinite) return v > 0 ? '+Inf' : '-Inf';
+  final String sign = v.isNegative ? '-' : '';
+  final (int m, int exp) = _parts(v.abs(), single);
+  return '$sign${m}p${exp < 0 ? '-' : '+'}${exp.abs()}';
+}
+
+/// The text of a value in the form x of Go: a hexadecimal significand with 1
+/// digit in front of the point, and the exponent of 2 in decimal.
+String _hexFloat(double v, int precision, bool single) {
+  if (v.isNaN) return 'NaN';
+  if (v.isInfinite) return v > 0 ? '+Inf' : '-Inf';
+  final String sign = v.isNegative ? '-' : '';
+  final double a = v.abs();
+  if (a == 0) {
+    final String zeros = precision <= 0 ? '' : '.${'0' * precision}';
+    return '${sign}0x0${zeros}p+00';
+  }
+  final int width = single ? 6 : 13;
+  final int lead = single ? 8388608 : 4503599627370496;
+  final int least = single ? -126 : -1022;
+  var (int m, int exp) = _parts(a, single);
+  // A value below the normal range holds no leading bit, thus the shift moves
+  // the highest bit of the significand into that place.
+  if (m < lead) {
+    exp = least;
+    while (m < lead) {
+      m *= 2;
+      exp--;
+    }
+  } else {
+    exp += single ? 23 : 52;
+  }
+  m -= lead;
+  var digits = m.toRadixString(16).padLeft(width, '0');
+  if (precision < 0) {
+    while (digits.isNotEmpty && digits.endsWith('0')) {
+      digits = digits.substring(0, digits.length - 1);
+    }
+  } else if (precision < digits.length) {
+    digits = digits.substring(0, precision);
+  } else {
+    digits = digits.padRight(precision, '0');
+  }
+  final String frac = digits.isEmpty ? '' : '.$digits';
+  final String es = exp < 0 ? '-' : '+';
+  return '${sign}0x1${frac}p$es${exp.abs().toString().padLeft(2, '0')}';
+}
+
+/// The exact decimal digits of a value, rounded to n significant digits, and
+/// the decimal exponent of the first digit.
+///
+/// A double holds m times 2 to the power e exactly, thus its decimal form
+/// ends. toStringAsFixed and toStringAsExponential of Dart reach 20 digits
+/// only, and Go writes each digit that the caller asks for. This path also
+/// holds the rounding of Go at a middle point, which takes the even digit.
+(String, int) _exactSig(double v, int n) {
+  if (v == 0) return ('0' * n, 0);
+  final (int m, int exp) = _parts(v.abs(), false);
+  BigInt whole;
+  int frac;
+  if (exp >= 0) {
+    whole = BigInt.from(m) << exp;
+    frac = 0;
+  } else {
+    whole = BigInt.from(m) * BigInt.from(5).pow(-exp);
+    frac = -exp;
+  }
+  String text = whole.toString();
+  int point = text.length - 1 - frac;
+  final int drop = text.length - n;
+  if (drop <= 0) return (text.padRight(n, '0'), point);
+  final BigInt div = BigInt.from(10).pow(drop);
+  final BigInt q = whole ~/ div;
+  final BigInt r = whole % div;
+  final BigInt half = div >> 1;
+  final BigInt out = (r > half || (r == half && q.isOdd)) ? q + BigInt.one : q;
+  text = out.toString();
+  if (text.length > n) {
+    text = text.substring(0, n);
+    point++;
+  }
+  return (text, point);
+}
+
+/// The exact text of a value with p digits after the point.
+String _exactFixed(double v, int p) {
+  final String sign = v.isNegative ? '-' : '';
+  if (v == 0) return p <= 0 ? '${sign}0' : '${sign}0.${'0' * p}';
+  final (int m, int exp) = _parts(v.abs(), false);
+  BigInt whole;
+  int frac;
+  if (exp >= 0) {
+    whole = BigInt.from(m) << exp;
+    frac = 0;
+  } else {
+    whole = BigInt.from(m) * BigInt.from(5).pow(-exp);
+    frac = -exp;
+  }
+  if (p >= frac) {
+    whole = whole * BigInt.from(10).pow(p - frac);
+  } else {
+    final BigInt div = BigInt.from(10).pow(frac - p);
+    final BigInt q = whole ~/ div;
+    final BigInt r = whole % div;
+    final BigInt half = div >> 1;
+    whole = (r > half || (r == half && q.isOdd)) ? q + BigInt.one : q;
+  }
+  String text = whole.toString();
+  if (p > 0) {
+    text = text.padLeft(p + 1, '0');
+    final int cut = text.length - p;
+    text = '${text.substring(0, cut)}.${text.substring(cut)}';
+  }
+  return sign + text;
+}

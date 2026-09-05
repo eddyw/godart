@@ -80,6 +80,25 @@ func FormatBool(b bool) string {
 // FormatFloat gives the text of f. The verb is one of 'f', 'e', and 'g', and a
 // negative precision gives the shortest text.
 func FormatFloat(f float64, verb byte, precision, bitSize int) string {
+	// Go answers a value that is not a number in front of the check of the
+	// verb, thus an infinity gives its own text under each verb.
+	bits := dart.Float64Bits(f)
+	if bits&0x7FF0000000000000 == 0x7FF0000000000000 {
+		if bits&0x000FFFFFFFFFFFFF != 0 {
+			return "NaN"
+		}
+		if bits&0x8000000000000000 != 0 {
+			return "-Inf"
+		}
+		return "+Inf"
+	}
+	// Go holds 8 verbs, and each other 1 gives the percent sign and the letter.
+	// The verb F stands for a verb of fmt and not for a verb of this function.
+	switch verb {
+	case 'b', 'e', 'E', 'f', 'g', 'G', 'x', 'X':
+	default:
+		return "%" + string([]byte{verb})
+	}
 	// The verb f with the precision -1 gives the shortest fixed text with no
 	// exponent. The bridge verb f writes 6 digits, exactly as fmt does.
 	if precision < 0 && verb == 'f' {
