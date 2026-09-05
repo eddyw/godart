@@ -391,6 +391,9 @@ func (e *emitter) dictArgs(args *types.TypeList) []string {
 func (e *emitter) dictOf(t types.Type) string {
 	u := types.Unalias(t)
 	if tp, ok := u.(*types.TypeParam); ok {
+		// The name stands for a local of the enclosing function, thus a
+		// description that holds it stands in no variable of the library.
+		e.dictReads++
 		return "$d" + typeParamName(tp)
 	}
 	if b, ok := u.Underlying().(*types.Basic); ok {

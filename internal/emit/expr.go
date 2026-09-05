@@ -453,12 +453,14 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	// struct type and the name of a shadowed function must reach the library
 	// file of the package.
 	inner := &emitter{pkg: e.pkg, prefixes: e.prefixes, base: e.base,
+		dictReads:    e.dictReads,
 		merges:       e.merges,
 		instByStruct: e.instByStruct,
 		methods:      e.methods, inClass: e.inClass, initNames: e.initNames,
 		breakables: e.breakables, labelSeq: e.labelSeq,
 		anon: e.anon, localAnon: e.localAnon, shadowed: e.shadowed,
-		nilChans: e.nilChans, instDescs: e.instDescs, cfg: e.cfg, nilPrefix: e.nilPrefix,
+		nilChans: e.nilChans, instDescs: e.instDescs, descTexts: e.descTexts,
+		cfg: e.cfg, nilPrefix: e.nilPrefix,
 		typeParams: e.typeParams,
 		anonParams: e.anonParams, groundTwins: e.groundTwins,
 		funcIds: e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
@@ -468,6 +470,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	inner.emitBody(x.Results, x.Defers, x.Body, x.End)
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
+	e.dictReads = inner.dictReads
 	e.frames = append(e.frames, inner.frames...)
 	// The 2 emitters share the map of the prefixes and hold a list of the
 	// added imports of their own. An import that the body of the literal
