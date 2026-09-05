@@ -3524,8 +3524,9 @@ The plan left these points open. The work took the decisions below.
      parameter that the declaration erases to `Object?` needs the wrapper, thus
      `slices.SortFunc` takes none.
 
-     `encoding/json/v2` joins the surface with the 2 rules above, and the
-     surface reaches 163 packages of 173.
+     `encoding/json/v2` joins the surface with the 2 rules above. The surface
+     read 163 packages of 173 at that point, and the work of the session took it
+     to 165 of 174.
      `testdata/programs/jsonv2use` holds the witness of `MarshalFunc`,
      `MarshalToFunc`, `UnmarshalFunc`, `WithMarshalers`, `WithUnmarshalers`,
      and the indent option.
@@ -3574,3 +3575,9 @@ The plan left these points open. The work took the decisions below.
 
      `encoding/json` reads the real Go source with the 3 fixes, and the package
      holds each of its 92 exported names.
+
+     The rule also reached the overlay of `encoding/gob`, which read
+     `iv.Type()` of an interface value and expected the type of the value
+     inside it. `encodeInterface` reads `iv.Elem()` now, exactly as the real Go
+     source does. Each overlay that holds a comment about the earlier rule
+     needs the same read.

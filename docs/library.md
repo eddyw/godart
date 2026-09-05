@@ -9,7 +9,7 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 252 import paths: 168 standard packages, `syscall/dart`, 71
+The surface holds 253 import paths: 164 standard packages, `syscall/dart`, 76
 internal packages, and 12 vendored packages of `golang.org/x`. The run of
 `make surface` of 2026-09-04 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
@@ -660,7 +660,7 @@ Read decision 346 and the limits of `docs/parity.md`.
 
 The user asked on 2026-08-29 whether the compiler can run the tests of the Go
 repository, exactly as GopherJS does. The answer is yes for a package whose test
-files stay inside the subset. 17 packages now run their real tests, and `make
+files stay inside the subset. 20 packages now run their real tests, and `make
 ci` proves each one through `TestTestsOfGoroot`.
 
 ```bash

@@ -27,7 +27,7 @@ The surface holds 253 import paths: 164 standard packages, the interop package
 `golang.org/x`. `make surface` measures 174 of them against the real API, and
 165 of those hold each exported name. The measure skips the interop package
 and each internal package, because no package of Go stands behind them.
-`make surface` with the flag `-absent` names each package of the standard
+`make surface ARGS=-absent` names each package of the standard
 library that the surface does not hold.
 
 A native package that also holds a patch stands 2 times in the list of the

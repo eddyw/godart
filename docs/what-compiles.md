@@ -21,7 +21,7 @@ exported name, and 9 hold a part. `docs/support.md` holds the level of each 1
 and the largest gap of each partial package.
 
 16 packages of the standard library stand outside the surface, and `unsafe` is
-1 of them. `make surface` with the flag `-absent` names each 1.
+1 of them. `make surface ARGS=-absent` names each 1.
 
 | Present | Absent |
 |---|---|

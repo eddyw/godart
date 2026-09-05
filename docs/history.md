@@ -82,7 +82,7 @@ the compiler core, the runtime, and the docs. **Each item closed.**
 **No name of the surface and no package of the standard library stays reachable
 inside the non-goals.** The surface reaches 165 packages of 174 and 253 import
 paths. 16 packages of the standard library stay outside, and `unsafe` is 1 of
-them. `make surface -absent` names each 1.
+them. `make surface ARGS=-absent` names each 1.
 
 | Set | At the start of the session | Now |
 |---|---|---|
@@ -127,6 +127,21 @@ a permanent risk of a silent divergence from Go.
 
 **7 witness programs joined:** `geninstconv`, `jsonv2use`, `synctestuse`,
 `methodfunc`, `multicastuse`, `reqcancel`, and `structof`.
+
+**The full CI found 2 more defects, and each 1 came from the work above.**
+
+1. The `encoding/gob` overlay read `iv.Type()` of an interface value, because
+   the earlier `reflect` reported the type of the value inside the location.
+   Decision 350 corrected that rule, thus the encoder reported `type not
+   registered for interface`. The function reads `iv.Elem()` now, exactly as the
+   real Go source does.
+2. `net_web.dart` held no form of the 2 multicast intrinsics, thus
+   `dart compile js` reported `Method not found`. A browser opens no socket, and
+   the web form gives the cause that Go gives under `GOOS=js`.
+
+Neither defect reached a witness program of the repository. `TestPrograms` found
+the first 1 and `TestWebIO` found the second 1, thus 3 runs of `make ci` stood
+between the last code change and a green log.
 
 ### 2026-09-04, the eighteenth session
 

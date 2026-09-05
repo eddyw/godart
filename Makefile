@@ -35,6 +35,7 @@ help:
 	@echo "  make flutter-test     Build each example and run the Flutter tests."
 	@echo "  make flutter-nodes    Write the Go node set again from the Flutter API."
 	@echo "  make surface          Measure the standard library surface."
+	@echo "  make surface ARGS=-absent   Name each package that the surface holds not."
 	@echo "  make ci               Run the full check that CI runs."
 	@echo "  make programs         List the Go programs of testdata."
 	@echo "  make run PROG=x       Compile testdata/programs/x and run the Dart output."
