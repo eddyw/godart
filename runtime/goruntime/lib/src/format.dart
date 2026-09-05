@@ -514,7 +514,8 @@ String _float(double v, String letter, int precision, bool single) {
       if (precision < 0) return single ? $f32string(v) : $fstring(v);
       return _gPrecision(v, precision);
     case 'G':
-      if (precision < 0) return _upperExponent(single ? $f32string(v) : $fstring(v));
+      if (precision < 0)
+        return _upperExponent(single ? $f32string(v) : $fstring(v));
       return _upperExponent(_gPrecision(v, precision));
     case 'f':
     case 'F':
