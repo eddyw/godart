@@ -1,0 +1,13 @@
+gen/
+.dart_tool/
+build/
+.flutter-plugins*
+lib/widgets_gen.dart
+macos/
+ios/
+android/
+linux/
+windows/
+web/
+.metadata
+*.iml
