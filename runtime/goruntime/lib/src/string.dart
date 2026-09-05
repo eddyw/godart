@@ -153,6 +153,21 @@ Slice<GoInt> $stringBytes(GoString s) {
   );
 }
 
+/// The Go expression `append(b, s...)` for a byte slice and a string.
+///
+/// The bytes of the string reach the slice with no header between them, thus
+/// the call allocates 1 object and not 2. Read $stringBytes for the share.
+Slice<GoInt> $appendString(
+  Slice<GoInt> s,
+  GoString str,
+  List<GoInt> Function(int) alloc,
+) {
+  final int n = str.bytes.length;
+  if (n == 0) return s;
+  if ($isJS) return $appendSlice(s, $stringToBytes(str), alloc);
+  return $appendRange(s, str.bytes as List<GoInt>, 0, n, alloc);
+}
+
 /// The Go conversion `[]byte(s)`. Go copies the bytes. The native form keeps
 /// the dense byte list, because the list type erases there.
 Slice<GoInt> $stringToBytes(GoString s) {

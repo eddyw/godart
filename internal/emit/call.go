@@ -1323,8 +1323,10 @@ func (e *emitter) appendCall(x *ir.Builtin) string {
 		source := e.expr(x.Args[1])
 		if isString(x.Args[1].GoType()) {
 			// Go allows append of a string to a byte slice. append reads the
-			// source and holds it not, thus the slice shares the bytes.
-			source = fmt.Sprintf("$stringBytes(%s)", source)
+			// source and holds it not, thus the bytes need no copy and no
+			// slice header.
+			return fmt.Sprintf("$appendString(%s, %s, %s)",
+				e.expr(x.Args[0]), source, e.alloc(slice.Elem()))
 		} else if tp, ok := types.Unalias(x.Args[1].GoType()).(*types.TypeParam); ok &&
 			typeset.Core(tp) == nil {
 			// A union of a string and a byte slice branches at run time.
