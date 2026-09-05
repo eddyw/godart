@@ -754,14 +754,22 @@ func (v Value) staticType() bool {
 }
 
 // Kind gives the class of the type of the value.
+//
+// The body reads the location 1 time and it reads the static kind 1 time.
+// Each read of a location behind a pointer builds an interface value, thus a
+// second read costs an allocation.
 func (v Value) Kind() Kind {
-	if v.typ != nil && v.staticType() {
-		return v.typ.Kind()
+	if v.typ != nil {
+		k := v.typ.Kind()
+		if v.value == nil || k == Interface {
+			return k
+		}
 	}
-	if v.read() == nil {
+	got := v.read()
+	if got == nil {
 		return Invalid
 	}
-	return v.Type().Kind()
+	return TypeOf(got).Kind()
 }
 
 // Elem gives the value behind a pointer. The result holds the pointer, thus Set
@@ -770,12 +778,13 @@ func (v Value) Kind() Kind {
 // Elem of an interface value gives the value inside it, with the type of that
 // value. Go gives no location there, thus Set of the result reports an error.
 func (v Value) Elem() Value {
-	if v.Kind() == Interface {
+	kind := v.Kind()
+	if kind == Interface {
 		return Value{value: v.read()}
 	}
 	p := v.read()
 	out := Value{value: dart.PointerElem(p), owner: p, loc: locPointer}
-	if v.Kind() == Pointer {
+	if kind == Pointer {
 		out.typ = v.Type().Elem()
 	}
 	return out
@@ -840,10 +849,11 @@ func (v Value) Bool() bool { return dart.AsBool(v.read()) }
 // String gives the text of a value of the kind string. Each other kind gives a
 // description of the value, exactly as in Go.
 func (v Value) String() string {
+	got := v.read()
 	if v.Kind() == String {
-		return dart.AsString(v.read())
+		return dart.AsString(got)
 	}
-	if v.read() == nil {
+	if got == nil {
 		return "<invalid Value>"
 	}
 	return "<" + v.Type().String() + " Value>"
@@ -888,10 +898,11 @@ func (v Value) SetMapIndex(key, value Value) {
 func (v Value) IsNil() bool {
 	switch v.Kind() {
 	case Chan, Func, Interface, Map, Pointer, Slice:
-		if v.read() == nil {
+		got := v.read()
+		if got == nil {
 			return true
 		}
-		return dart.ValueIsNil(v.read())
+		return dart.ValueIsNil(got)
 	}
 	panic("reflect: IsNil of " + v.Kind().String())
 }
