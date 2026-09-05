@@ -121,11 +121,25 @@ Slice<T> $append<T>(
   void Function(T, T)? assign,
 ]) {
   if (add.isEmpty) return s;
-  final int need = s.len + add.length;
+  return $appendRange(s, add, 0, add.length, alloc, assign);
+}
+
+/// Adds n elements of src, from the index off. $append and $appendSlice each
+/// read this body, thus 1 place holds the growth rule.
+///
+/// setRange moves a whole range. A list of typed data then copies the bytes
+/// with 1 move, and no per element call stands in the loop.
+Slice<T> $appendRange<T>(
+  Slice<T> s,
+  List<T> src,
+  int off,
+  int n,
+  List<T> Function(int) alloc, [
+  void Function(T, T)? assign,
+]) {
+  final int need = s.len + n;
   if (need <= s.cap) {
-    for (var i = 0; i < add.length; i++) {
-      s.array[s.off + s.len + i] = add[i];
-    }
+    s.array.setRange(s.off + s.len, s.off + need, src, off);
     return Slice(s.array, s.off, need, s.cap);
   }
   int cap = s.cap == 0 ? need : s.cap;
@@ -138,13 +152,9 @@ Slice<T> $append<T>(
       assign(array[i], s.array[s.off + i]);
     }
   } else {
-    for (var i = 0; i < s.len; i++) {
-      array[i] = s.array[s.off + i];
-    }
+    array.setRange(0, s.len, s.array, s.off);
   }
-  for (var i = 0; i < add.length; i++) {
-    array[s.len + i] = add[i];
-  }
+  array.setRange(s.len, need, src, off);
   return Slice(array, 0, need, cap);
 }
 
@@ -180,21 +190,16 @@ int $sliceLen(Object? value) {
 /// element needs a field copy, and not a reference write.
 int $copySlice<T>(Slice<T> dst, Slice<T> src, [void Function(T, T)? assign]) {
   final int n = dst.len < src.len ? dst.len : src.len;
+  if (n == 0) return 0;
   if (assign != null) {
     for (var i = 0; i < n; i++) {
       assign(dst.array[dst.off + i], src.array[src.off + i]);
     }
     return n;
   }
-  if (identical(dst.array, src.array) && dst.off > src.off) {
-    for (var i = n - 1; i >= 0; i--) {
-      dst.array[dst.off + i] = src.array[src.off + i];
-    }
-    return n;
-  }
-  for (var i = 0; i < n; i++) {
-    dst.array[dst.off + i] = src.array[src.off + i];
-  }
+  // setRange moves a whole range, and it holds the result of Go when the 2
+  // ranges overlap.
+  dst.array.setRange(dst.off, dst.off + n, src.array, src.off);
   return n;
 }
 
@@ -205,22 +210,18 @@ Slice<T> $appendSlice<T>(
   List<T> Function(int) alloc, [
   void Function(T, T)? assign,
 ]) {
-  final add = <T>[];
-  if (assign != null && other.len > 0) {
+  if (other.len == 0) return s;
+  if (assign != null) {
     // Go copies each element of the source. A plain append copies its argument
     // at the call site, and a spread has no such point, thus the copy stands
     // here.
     final List<T> fresh = alloc(other.len);
     for (var i = 0; i < other.len; i++) {
       assign(fresh[i], other.array[other.off + i]);
-      add.add(fresh[i]);
     }
-    return $append(s, add, alloc, assign);
+    return $appendRange(s, fresh, 0, other.len, alloc, assign);
   }
-  for (var i = 0; i < other.len; i++) {
-    add.add(other.array[other.off + i]);
-  }
-  return $append(s, add, alloc, assign);
+  return $appendRange(s, other.array, other.off, other.len, alloc);
 }
 
 /// Writes the zero value into each element of a slice. The Go builtin clear
