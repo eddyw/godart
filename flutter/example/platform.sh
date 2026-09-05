@@ -22,7 +22,14 @@ flutter create --platforms="$platform" . > /dev/null
 
 # flutter create writes a template test and 3 editor files that the example
 # does not want. The template test names a widget that no example declares.
-rm -rf .idea .metadata README.md ./*.iml test/widget_test.dart
+rm -rf .idea .metadata ./*.iml test/widget_test.dart
+# An example that holds a README of its own keeps it. flutter create writes a
+# README too, thus the untracked form goes.
+if git ls-files --error-unmatch README.md > /dev/null 2>&1; then
+  git checkout -- README.md
+else
+  rm -f README.md
+fi
 git checkout -- pubspec.lock 2>/dev/null || true
 
 # The macOS sandbox blocks an outgoing connection until the entitlement names
