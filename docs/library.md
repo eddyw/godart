@@ -660,7 +660,7 @@ Read decision 346 and the limits of `docs/parity.md`.
 
 The user asked on 2026-08-29 whether the compiler can run the tests of the Go
 repository, exactly as GopherJS does. The answer is yes for a package whose test
-files stay inside the subset. 20 packages now run their real tests, and `make
+files stay inside the subset. 21 packages now run their real tests, and `make
 ci` proves each one through `TestTestsOfGoroot`.
 
 ```bash
@@ -696,7 +696,7 @@ The work gave:
 - A mode for a package of GOROOT. Such a package belongs to no module, thus
   `moduleOf` gives it the module `std`. The test variants of it reach the build
   through the 2 reserved suffixes `_test` and `.test`.
-- `TestTestsOfGoroot` in `internal/driver` runs the 3 packages from the Go
+- `TestTestsOfGoroot` in `internal/driver` runs 21 packages from the Go
   installation of the machine. A new Go release can add a test file outside the
   subset, and the test then fails.
 

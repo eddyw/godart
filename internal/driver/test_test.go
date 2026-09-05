@@ -222,6 +222,10 @@ func TestTestsOfGoroot(t *testing.T) {
 			"--- PASS: TestParseSimple ", "--- PASS: TestSimplify "}},
 		{"math/rand/v2", "", []string{
 			"--- PASS: TestRegress ", "--- PASS: TestChaCha8Read "}},
+		// 6 tests of the package read testenv.MustHaveExec, because they run
+		// the test binary again as a subprocess. Each 1 skips.
+		{"testing/synctest", "", []string{
+			"--- PASS: TestNow ", "--- PASS: TestWait "}},
 		{"compress/gzip", "", []string{
 			"--- PASS: TestRoundTrip ", "--- PASS: TestConcat "}},
 		// The whole run of the flate tests takes 8 minutes, thus the row

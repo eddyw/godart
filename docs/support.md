@@ -7,7 +7,7 @@ This file names how much of each standard library package the surface holds.
 ## The measure
 
 Run `make surface`. `internal/surface` holds the tool, and the numbers below
-come from the run of 2026-09-04.
+come from the run of 2026-09-05.
 
 The measure counts the exported names of a package: each name of the package
 scope, each exported method of the pointer to an exported named type, and each
@@ -46,8 +46,8 @@ source stands behind them. Each partial package below is an overlay.
 
 ## Full support
 
-163 of the 173 measured packages hold each exported name of Go. The table
-below names the 126 of them that this document lists by form. The 23 that stay
+165 of the 174 measured packages hold each exported name of Go. The table
+below names the 126 of them that this document lists by form. The 39 that stay
 out of the table are the packages of `docs/library.md` that no standard list
 of this document holds.
 
@@ -65,8 +65,8 @@ and the separator is always `/`. `docs/parity.md` holds each such difference.
 
 ## Partial support
 
-10 packages hold a part of the names of Go. The run of 2026-09-04, after the
-seventeenth session:
+9 packages hold a part of the names of Go. The run of 2026-09-05, after the
+nineteenth session:
 
 | Package | Names | Held | The largest gap |
 |---|---|---|---|
@@ -74,15 +74,14 @@ seventeenth session:
 | `os` | 195/207 | 94% | `File.Fd`, `File.SyscallConn`, `NewFile`, `StartProcess`, `ProcAttr`, and the 3 time names of `ProcessState`. `dart:io` hides the descriptor, and it reports no CPU time. |
 | `os/exec` | 44/49 | 89% | `Cmd.ExtraFiles`, `Cmd.SysProcAttr`, and the 3 time names of `ExitError` |
 | `reflect` | 183/188 | 97% | `NewAt`, `SliceAt`, `Value.SetPointer`, `Value.InterfaceData`, `Value.UnsafeAddr`. Each 1 needs an address or `unsafe.Pointer`, which non-goal N3 holds out. |
-| `testing` | 145/145 | 100% | Full since 2026-09-03. |
 | `net/http` | 362/392 | 92% | `HTTP2Config`, `ClientConn`, `ServeTLS`, and `Transport.TLSHandshakeTimeout`. The runtime owns the HTTP/2 frame layer, and the secure socket of Dart takes over no socket that stands open. |
 | `runtime` | 52/114 | 45% | `MemStats`, `ReadMemStats`, `SetFinalizer`, `Breakpoint`, the profile of the memory, of the block, and of the mutex, and the trace. The Dart VM reports none of the numbers. |
 | `net` | 268/346 | 77% | `IPConn`, `FileConn`, `FileListener`, and the keep alive timers. Each 1 needs a raw socket, a file descriptor, or an ioctl of Windows. 8 socket options joined on 2026-09-04. Read decision 330. |
-| `crypto/tls` | 126/263 | 48% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake. Dart owns the handshake, and `SecureSocket.peerCertificate` gives the leaf alone and not the chain. Read decision 331. |
+| `crypto/tls` | 126/263 | 47% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake. Dart owns the handshake, and `SecureSocket.peerCertificate` gives the leaf alone and not the chain. Read decision 331. |
 | `syscall` | 24/2228 | 1% | Each system call, each error number, and each constant of the platform. |
 
-`testing` left this table on 2026-09-03, and `crypto/x509` left it on
-2026-09-04. The sixteenth session added 166 names, and decision 319 and
+`testing` left this table on 2026-09-03, `crypto/x509` left it on 2026-09-04,
+and `encoding/json` left it on 2026-09-04. The sixteenth session added 166 names, and decision 319 and
 decision 320 name each 1 that stayed out. The seventeenth session then took
 `crypto/x509` from 193 of 261 to each of the 261, because the crypto stack
 joined the surface. It also gave `net` 8 socket options, 259 names to 267.
@@ -339,7 +338,6 @@ stood here at the start of the eighteenth session, and 62 at the start of
 | `net/http/fcgi` | `child.go` reads `net.FileListener`, and `dart:io` hides the descriptor of a socket. `Serve(nil, h)` is the standard entry of FastCGI, thus a patch reaches no answer. |
 | `log/syslog` | `unixSyslog` needs a datagram socket of the Unix domain, and `dart:io` opens the stream form alone. `Dial` over udp and over a stream socket each write the message end to end, and `New` and `NewLogger` each fail. |
 | `os/user` | The pure Go path of Go compiles under gart with the build tag `osusergo`, and `Current` still fails. It reads `os.Getuid`, and the overlay reports -1 because `dart:io` gives no user id. |
-| `encoding/json/v2` | The package compiles through each stage of gart, and the Dart front end then rejects 27 positions with 1 cause. Read decision 345. |
 
 ## The focus list
 
@@ -540,7 +538,8 @@ fake clock, a timer queue of that clock, and the set of the goroutines of the
 bubble. The clock moves only when each goroutine of the bubble is durably
 blocked, thus a sleep inside a bubble takes no real time. Decision 346 holds
 the design, `testdata/programs/synctestuse` holds the witness, and the 13 real
-tests of the package pass under `make std-test STD=testing/synctest`.
+tests of the package pass under `TestTestsOfGoroot`. The 6 other tests each
+skip, because each 1 runs the test binary again as a subprocess.
 
 ### What stays out, and why no work removes it
 
@@ -552,23 +551,21 @@ tests of the package pass under `make std-test STD=testing/synctest`.
 | The Dart VM counts no allocation and writes no profile | `runtime/pprof`, `runtime/trace`, `runtime/metrics`, `runtime/coverage`, `net/http/pprof`, `expvar` |
 | gart writes no Go binary | `debug/buildinfo` |
 | `runtime.Compiler` reports `gart` | `go/importer` |
-| A function value of a narrower Dart type | `encoding/json/v2`. Read decision 345. |
 | `dart:io` hides the descriptor of a socket | `net/http/fcgi`, through `net.FileListener` |
 | `dart:io` opens no datagram socket of the Unix domain | `log/syslog`. `Dial` works over udp and over a stream socket, and `New` and `NewLogger` each need the datagram form. |
 | `dart:io` reports no user id | `os/user`. The pure Go path of Go compiles under gart, and `Current` still fails because `os.Getuid` reports -1. |
 
-**362 names of the 10 partial packages, and 2204 names of `syscall`.** 29 of
-the 362 stay reachable, and the 2 tables above hold each 1.
+**333 names of the 9 partial packages, and 2204 names of `syscall`.** No name
+of them stays reachable. The nineteenth session closed the last 29.
 
 | Cause | The count |
 |---|---|
 | Dart owns the TLS handshake and the session | 137 names of `crypto/tls`. Each QUIC name, each `Config` field of the handshake, each callback, and each error type of a handshake point. `SecureSocket.peerCertificate` gives the leaf alone and not the chain, thus `PeerCertificates` would answer `len` wrong with no report. |
-| `dart:io` opens no raw socket and reads no control message | 78 of the 79 names of `net`. `ListenMulticastUDP` stays reachable. |
-| The HTTP 2 session lives in the Dart runtime library | 30 of the 31 names of `net/http`. `Request.Cancel` stays reachable. |
+| `dart:io` opens no raw socket and reads no control message | 78 names of `net` |
+| The HTTP 2 session lives in the Dart runtime library | 30 names of `net/http` |
 | The Dart VM counts no allocation, no block, and no contention | 62 names of `runtime` |
 | `dart:io` hides the descriptor of a file and of a socket | 12 names of `os`, 5 of `os/exec` |
-| The subset holds no `unsafe` and no address | 4 names of `sync/atomic`, 5 of the 7 names of `reflect`. `StructOf` and `Method.Func` stay reachable. |
-| `encoding/json/v2`, and the cost of an import of `reflect` | 25 names of `encoding/json`. Each 1 stays reachable. |
+| The subset holds no `unsafe` and no address | 4 names of `sync/atomic`, 5 names of `reflect` |
 | A constant of the system that reaches no operation | 2204 names of `syscall`. A constant that no call reads is a lie. |
 
 **2 entries of the skip table hold a compiler defect that no small change
