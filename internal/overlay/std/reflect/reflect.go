@@ -775,11 +775,31 @@ func (v Value) Kind() Kind {
 			return k
 		}
 	}
-	got := v.read()
+	return v.kindAt(v.read())
+}
+
+// kindAt gives the same answer as Kind for a value that a read already gave.
+// A method that holds the value of the location reads this one, thus the
+// location gives its value 1 time.
+func (v Value) kindAt(got any) Kind {
+	if v.typ != nil {
+		k := v.typ.Kind()
+		if v.value == nil || k == Interface {
+			return k
+		}
+	}
 	if got == nil {
 		return Invalid
 	}
 	return TypeOf(got).Kind()
+}
+
+// typeAt gives the same answer as Type for a value that a read already gave.
+func (v Value) typeAt(got any) Type {
+	if v.typ != nil && v.staticType() {
+		return v.typ
+	}
+	return TypeOf(got)
 }
 
 // Elem gives the value behind a pointer. The result holds the pointer, thus Set
@@ -788,14 +808,14 @@ func (v Value) Kind() Kind {
 // Elem of an interface value gives the value inside it, with the type of that
 // value. Go gives no location there, thus Set of the result reports an error.
 func (v Value) Elem() Value {
-	kind := v.Kind()
-	if kind == Interface {
-		return Value{value: v.read()}
-	}
 	p := v.read()
+	kind := v.kindAt(p)
+	if kind == Interface {
+		return Value{value: p}
+	}
 	out := Value{value: dart.PointerElem(p), owner: p, loc: locPointer}
 	if kind == Pointer {
-		out.typ = v.Type().Elem()
+		out.typ = v.typeAt(p).Elem()
 	}
 	return out
 }
@@ -808,9 +828,9 @@ func (v Value) Len() int { return dart.ValueLen(v.read()) }
 func (v Value) Index(i int) Value {
 	owner := v.read()
 	out := Value{value: dart.ValueIndex(owner, i)}
-	if v.Kind() != String {
+	if v.kindAt(owner) != String {
 		out.owner, out.index, out.loc = owner, i, locIndex
-		out.typ = v.Type().Elem()
+		out.typ = v.typeAt(owner).Elem()
 	}
 	return out
 }
@@ -823,7 +843,7 @@ func (v Value) NumField() int { return v.Type().NumField() }
 func (v Value) Field(i int) Value {
 	owner := v.read()
 	return Value{value: dart.FieldRead(owner, i), owner: owner,
-		index: i, loc: locField, typ: v.Type().Field(i).Type}
+		index: i, loc: locField, typ: v.typeAt(owner).Field(i).Type}
 }
 
 // CanSet reports whether Set writes through v.
@@ -860,13 +880,13 @@ func (v Value) Bool() bool { return dart.AsBool(v.read()) }
 // description of the value, exactly as in Go.
 func (v Value) String() string {
 	got := v.read()
-	if v.Kind() == String {
+	if v.kindAt(got) == String {
 		return dart.AsString(got)
 	}
 	if got == nil {
 		return "<invalid Value>"
 	}
-	return "<" + v.Type().String() + " Value>"
+	return "<" + v.typeAt(got).String() + " Value>"
 }
 
 // NumMethod gives the count of the exported methods of the type of v.
@@ -900,21 +920,23 @@ func (v Value) Call(in []Value) []Value {
 
 // SetMapIndex writes 1 entry of a map. A key with no value drops the entry.
 func (v Value) SetMapIndex(key, value Value) {
-	dart.MapSet(v.read(), key.read(), value.read(), !value.IsValid())
+	got := value.read()
+	dart.MapSet(v.read(), key.read(), got, got == nil)
 }
 
 // IsNil reports whether the value of a kind that can hold nil holds nil. Each
 // other kind panics.
 func (v Value) IsNil() bool {
-	switch v.Kind() {
+	got := v.read()
+	kind := v.kindAt(got)
+	switch kind {
 	case Chan, Func, Interface, Map, Pointer, Slice:
-		got := v.read()
 		if got == nil {
 			return true
 		}
 		return dart.ValueIsNil(got)
 	}
-	panic("reflect: IsNil of " + v.Kind().String())
+	panic("reflect: IsNil of " + kind.String())
 }
 
 // MapKeys gives the keys of a map value. The order follows the insertion.
@@ -930,7 +952,8 @@ func (v Value) MapKeys() []Value {
 // MapIndex gives the value of 1 key of a map value. A key that the map does
 // not hold gives the zero Value.
 func (v Value) MapIndex(key Value) Value {
-	return Value{value: dart.MapIndex(v.read(), key.read()), typ: v.Type().Elem()}
+	m := v.read()
+	return Value{value: dart.MapIndex(m, key.read()), typ: v.typeAt(m).Elem()}
 }
 
 // SetZero writes the zero value of the type into the location that v names.
