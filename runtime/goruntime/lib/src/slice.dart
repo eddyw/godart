@@ -21,7 +21,10 @@ final class Slice<T> {
 
   const Slice._(this.array, this.off, this.len, this.cap, this.isNil);
 
-  factory Slice.nil() => Slice._(<T>[], 0, 0, 0, true);
+  /// The zero value of a slice type. The backing array is 1 shared empty
+  /// list, because a nil slice holds a length of 0 and a capacity of 0, thus
+  /// no write ever reaches it. A List of Never fits each List of T.
+  factory Slice.nil() => Slice._(const <Never>[], 0, 0, 0, true);
 
   /// Wraps a full backing array.
   factory Slice.of(List<T> array) =>
