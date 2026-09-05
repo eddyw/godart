@@ -1,0 +1,13 @@
+name: bench_driver
+description: The Dart driver of the benchmark of bench/.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  cases:
+    path: ../gen
+  goruntime:
+    path: ../../runtime/goruntime
