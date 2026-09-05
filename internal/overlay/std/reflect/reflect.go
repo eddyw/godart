@@ -211,6 +211,13 @@ type Type interface {
 // An rtype holds the handle of 1 type descriptor of the runtime.
 type rtype struct {
 	desc int
+	// kindPlus1 holds the Kind of the type plus 1, and 0 marks a field that no
+	// read filled yet. The name of a handle never changes, thus the kind of a
+	// handle never changes, and 1 read answers each later read.
+	//
+	// The package interns 1 rtype for each handle, thus the cache holds for
+	// the whole program.
+	kindPlus1 Kind
 }
 
 // types interns 1 rtype for each handle, thus 2 reads of the same type give 2
@@ -360,8 +367,13 @@ func composite(text string) bool {
 
 // Kind gives the class of the type.
 func (t *rtype) Kind() Kind {
+	if t.kindPlus1 != 0 {
+		return t.kindPlus1 - 1
+	}
 	_, kind, _ := dart.DescInfo(t.handle())
-	return kindByName(kind)
+	k := kindByName(kind)
+	t.kindPlus1 = k + 1
+	return k
 }
 
 // PkgPath gives the import path of the package of a named type, and it gives
