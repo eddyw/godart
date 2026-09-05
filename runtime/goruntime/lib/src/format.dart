@@ -916,24 +916,57 @@ bool _tieAt(double v, int q) {
   _tieBits.setFloat64(0, v);
   final int hi = _tieBits.getUint32(0);
   final int lo = _tieBits.getUint32(4);
-  int exp = (hi >> 20) & 0x7FF;
-  int m = (hi & 0xFFFFF) * 4294967296 + lo;
-  if (exp == 0) {
+  final int raw = (hi >> 20) & 0x7FF;
+  int top = hi & 0xFFFFF;
+  int exp;
+  if (raw == 0) {
     exp = -1074;
   } else {
-    m += 4503599627370496;
-    exp -= 1075;
+    top += 0x100000;
+    exp = raw - 1075;
   }
-  while (m % 2 == 0 && m != 0) {
+  // The count of the low zero bits gives the odd significand with no loop.
+  // This function runs at each call of the verb f, thus the cost of a loop of
+  // 52 steps stands in each such call.
+  final int zeros = lo != 0 ? _lowZeros(lo) : 32 + _lowZeros(top);
+  if (exp + zeros != q - 1) return false;
+  if (q <= 0) return true;
+  // A middle point of 10 to a positive power also needs the factor 5. This
+  // line runs only when the exponent already matches, thus it is rare.
+  int m = top * 4294967296 + lo;
+  for (var i = 0; i < zeros; i++) {
     m = m ~/ 2;
-    exp++;
   }
-  if (exp != q - 1) return false;
   for (var i = 0; i < q; i++) {
     if (m % 5 != 0) return false;
     m = m ~/ 5;
   }
   return true;
+}
+
+/// The count of the zero bits below the lowest bit that stands, for a value of
+/// 32 bits or less. A value of 0 gives 32.
+int _lowZeros(int x) {
+  if (x == 0) return 32;
+  var n = 0;
+  if (x & 0xFFFF == 0) {
+    n += 16;
+    x >>= 16;
+  }
+  if (x & 0xFF == 0) {
+    n += 8;
+    x >>= 8;
+  }
+  if (x & 0xF == 0) {
+    n += 4;
+    x >>= 4;
+  }
+  if (x & 0x3 == 0) {
+    n += 2;
+    x >>= 2;
+  }
+  if (x & 0x1 == 0) n += 1;
+  return n;
 }
 
 /// _evenDigit steps the last digit of text down by 1 when that digit is odd.

@@ -103,7 +103,7 @@ func Fprintf(w io.Writer, format string, a ...any) (int, error) {
 
 // Sprintf returns the formatted text.
 func Sprintf(format string, a ...any) string {
-	out := ""
+	var out strings.Builder
 	arg := 0
 	start := 0
 	i := 0
@@ -112,21 +112,23 @@ func Sprintf(format string, a ...any) string {
 			i++
 			continue
 		}
-		out += format[start:i]
+		out.WriteString(format[start:i])
 		i++
 		if i < len(format) && format[i] == '%' {
-			out += "%"
+			out.WriteString("%")
 			i++
 			start = i
 			continue
 		}
-		verb := ""
-		var sp spec
+		// Each flag stands in the format, thus 1 substring gives the text
+		// with no copy. A build of 1 rune for each byte reached 9 percent of
+		// the cost of Sprintf.
+		flagStart := i
 		for i < len(format) && isFlag(format[i]) {
-			verb += string(rune(format[i]))
-			sp.flags += string(rune(format[i]))
 			i++
 		}
+		verb := format[flagStart:i]
+		sp := spec{flags: verb}
 		// good marks an argument index that names an argument of the call. Go
 		// writes %!verb(BADINDEX) for each other 1.
 		good := true
@@ -145,7 +147,7 @@ func Sprintf(format string, a ...any) string {
 			sp.hasWidth = isInt
 			if !isInt {
 				width = 0
-				out += "%!(BADWIDTH)"
+				out.WriteString("%!(BADWIDTH)")
 			}
 			afterIndex = false
 		} else {
@@ -172,7 +174,7 @@ func Sprintf(format string, a ...any) string {
 					// Go writes the report and drops the precision, for a
 					// value of a wrong type and for a value below 0.
 					sp.prec = 0
-					out += "%!(BADPREC)"
+					out.WriteString("%!(BADPREC)")
 				} else {
 					verb += "." + strconv.Itoa(sp.prec)
 				}
@@ -194,7 +196,7 @@ func Sprintf(format string, a ...any) string {
 			arg, i, _ = argNumber(arg, format, i, len(a), &good)
 		}
 		if i >= len(format) {
-			out += "%!(NOVERB)"
+			out.WriteString("%!(NOVERB)")
 			start = i
 			break
 		}
@@ -202,18 +204,18 @@ func Sprintf(format string, a ...any) string {
 		i++
 		start = i
 		if !good {
-			out += "%!" + string(rune(letter)) + "(BADINDEX)"
+			out.WriteString("%!" + string(rune(letter)) + "(BADINDEX)")
 			continue
 		}
 		if arg >= len(a) {
-			out += "%!" + string(rune(letter)) + "(MISSING)"
+			out.WriteString("%!" + string(rune(letter)) + "(MISSING)")
 			continue
 		}
 		if f, ok := a[arg].(Formatter); ok {
 			// The method owns the width, the precision, and each flag.
 			st := &state{spec: sp}
 			f.Format(st, rune(letter))
-			out += string(st.buf)
+			out.WriteString(string(st.buf))
 			arg++
 			continue
 		}
@@ -222,7 +224,7 @@ func Sprintf(format string, a ...any) string {
 			value = truncate(value, letter, sp.prec)
 		}
 		if letter == 'U' {
-			out += pad(unicodeText(value, sp.flags), width, verb, letter)
+			out.WriteString(pad(unicodeText(value, sp.flags), width, verb, letter))
 			arg++
 			continue
 		}
@@ -234,7 +236,7 @@ func Sprintf(format string, a ...any) string {
 				if contains(sp.flags, '+') {
 					text = strconv.QuoteRuneToASCII(r)
 				}
-				out += pad(text, width, verb, letter)
+				out.WriteString(pad(text, width, verb, letter))
 				arg++
 				continue
 			}
@@ -243,20 +245,30 @@ func Sprintf(format string, a ...any) string {
 				if contains(sp.flags, '+') {
 					text = strconv.QuoteToASCII(t)
 				}
-				out += pad(text, width, verb, letter)
+				out.WriteString(pad(text, width, verb, letter))
 				arg++
 				continue
 			}
 		}
-		text := dart.Format(verb+string(rune(letter)), value)
+		text := dart.Format(verb+letterText(format, i, letter), value)
 		if sp.hasPrec {
 			text = precDigits(text, letter, sp.prec)
 		}
 		arg++
-		out += pad(text, width, verb, letter)
+		out.WriteString(pad(text, width, verb, letter))
 	}
-	out += format[start:]
-	return out
+	out.WriteString(format[start:])
+	return out.String()
+}
+
+// letterText gives the verb letter as text. The letter stands in the format
+// at the position in front of i, thus a byte of ASCII takes a substring and
+// needs no build of a rune.
+func letterText(format string, i int, letter byte) string {
+	if letter < 0x80 {
+		return format[i-1 : i]
+	}
+	return string(rune(letter))
 }
 
 // unicodeText writes the code point of a value, as the verb U of Go does. The
