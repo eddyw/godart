@@ -43,6 +43,40 @@ absolute number carries that load. The ratios stand.
 | `str.builder.200k`, 200,000 writes | 0.74 ms | 2.87 ms | **50.3 ms** | 1.08 ms |
 | `str.substr.100k`, 100,000 substrings | 0.58 ms | 6.10 ms | **46.3 ms** | 1.12 ms |
 
+### The result of 2026-09-06, after the performance work
+
+The same benchmark on the same machine, after the 13 commits of the overlay
+work. The load average stood at 10.9, thus each absolute number carries that
+load, and the ratio against the run above stands.
+
+| Case | Go | Dart | gart, before | gart, now | bun |
+|---|---|---|---|---|---|
+| `bytes.count` | 0.53 ms | 2.83 ms | 5.16 ms | **3.59 ms** | — |
+| `json.scan` | 1.02 ms | — | 16.4 ms | **13.2 ms** | — |
+| `json.decode.any` | 6.28 ms | 5.28 ms | 401.5 ms | **111.6 ms** | 1.34 ms |
+| `json.decode.typed` | 3.41 ms | 5.52 ms | 354.3 ms | **101.9 ms** | 1.37 ms |
+| `json.encode.typed` | 1.59 ms | 8.10 ms | 379.6 ms | **53.1 ms** | 1.72 ms |
+| `str.concat.5k` | 7.59 ms | 4.57 ms | 4.95 ms | 4.71 ms | 0.013 ms |
+| `str.builder.200k` | 0.75 ms | 2.99 ms | 50.3 ms | **4.12 ms** | 1.15 ms |
+| `str.substr.100k` | 0.57 ms | 6.09 ms | 46.3 ms | **4.65 ms** | 1.11 ms |
+
+The decode of JSON falls by a factor of 3.6, the encode by 7.2, the builder by
+12.2, and the substring by 10. A substring now costs less than the `substring`
+of Dart itself. The builder costs 1.4 times the `StringBuffer` of Dart, and 5.5
+times the builder of Go.
+
+**The largest cause was a string constant.** The emitter wrote
+`GoString.fromString('...')` at each read of a Go string constant, thus the
+UTF-8 encoder ran again at each evaluation. `reflect.kindByName` holds a switch
+of 26 such constants, and the decoder calls it for each value: 32 percent of a
+decode sat in that encoder. The emitter hoists each constant to a name of the
+file now.
+
+The floor stays. A byte read of a Go slice costs about 7 times the same read in
+Go, because `Slice.array` holds a `List<T>` whose real shape varies, thus each
+read takes a polymorphic dispatch. A change of the slice representation is the
+next step, and no such change stands.
+
 ### What the numbers say
 
 1. **The decoder of `encoding/json` is the hot spot, and not the scanner.**
