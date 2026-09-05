@@ -20,6 +20,13 @@ const settle = 120 * time.Millisecond
 // file. The cache of stage 6 gives the early cutoff, thus only the packages
 // that need a second compile take one.
 func Watch(opt Options, log io.Writer) error {
+	return WatchWith(opt, log, nil)
+}
+
+// WatchWith holds the same loop as Watch, and it calls after with the outcome
+// of each build. A caller thus reads the result of a build with no parse of
+// the log.
+func WatchWith(opt Options, log io.Writer, after func(*Stats, error)) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -28,7 +35,7 @@ func Watch(opt Options, log io.Writer) error {
 	if err := watchTree(watcher, opt.Dir, opt.Out); err != nil {
 		return err
 	}
-	report(log, buildOnce(opt))
+	tell(log, after, buildOnce(opt))
 	fmt.Fprintf(log, "gart: watch %s\n", opt.Dir)
 	timer := time.NewTimer(settle)
 	if !timer.Stop() {
@@ -55,7 +62,7 @@ func Watch(opt Options, log io.Writer) error {
 			}
 			fmt.Fprintf(log, "gart: watch error: %v\n", err)
 		case <-timer.C:
-			report(log, buildOnce(opt))
+			tell(log, after, buildOnce(opt))
 		}
 	}
 }
@@ -68,6 +75,15 @@ type outcome struct {
 func buildOnce(opt Options) outcome {
 	stats, err := BuildWithStats(opt)
 	return outcome{stats: stats, err: err}
+}
+
+// tell reports the outcome to the log, and it gives the same outcome to the
+// caller of WatchWith.
+func tell(log io.Writer, after func(*Stats, error), done outcome) {
+	report(log, done)
+	if after != nil {
+		after(done.stats, done.err)
+	}
 }
 
 func report(log io.Writer, done outcome) {

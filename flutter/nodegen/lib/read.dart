@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
@@ -646,3 +647,50 @@ String goStructName(String className, String ctor) {
 
 /// goFieldName gives the exported Go name of a Dart parameter.
 String goFieldName(String dart) => dart[0].toUpperCase() + dart.substring(1);
+
+/// packageOf gives the name of the Dart package of a library URI.
+String packageOf(String uri) => uri.split('/').first.replaceAll('package:', '');
+
+/// stampOf gives the comment line that names each version of the read. glutter
+/// doctor reads it, and it stops a build when the machine holds another
+/// Flutter. A Flutter that drops a parameter of a constructor gives a Go field
+/// that the host does not read, and no error stands.
+String stampOf(String root, Pack pack) {
+  final parts = <String>['flutter=${flutterVersion()}'];
+  final name = packageOf(pack.uri);
+  // The framework itself carries the version of Flutter, and its entry of the
+  // lock file holds 0.0.0.
+  if (name != 'flutter') {
+    final version = lockVersion(root, name);
+    if (version != null) parts.add('$name=$version');
+  }
+  return '// nodegen: ${parts.join(" ")}';
+}
+
+/// flutterVersion reads the version of the Flutter of the machine.
+String flutterVersion() {
+  final out = Process.runSync('flutter', <String>['--version', '--machine']);
+  if (out.exitCode != 0) return 'unknown';
+  final m = jsonDecode(out.stdout as String) as Map<String, dynamic>;
+  return (m['frameworkVersion'] as String?) ?? 'unknown';
+}
+
+/// lockVersion reads the version of 1 package of the lock file of root.
+String? lockVersion(String root, String name) {
+  final file = File('$root/pubspec.lock');
+  if (!file.existsSync()) return null;
+  var found = false;
+  for (final line in const LineSplitter().convert(file.readAsStringSync())) {
+    if (line == '  $name:') {
+      found = true;
+      continue;
+    }
+    if (!found) continue;
+    final trimmed = line.trim();
+    if (trimmed.startsWith('version:')) {
+      return trimmed.substring(8).trim().replaceAll('"', '');
+    }
+    if (line.length > 2 && line[2] != ' ') return null;
+  }
+  return null;
+}

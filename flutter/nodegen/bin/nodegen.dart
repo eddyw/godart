@@ -54,7 +54,7 @@ Future<void> main(List<String> args) async {
         final dir = Directory('${args[2]}$sub');
         dir.createSync(recursive: true);
         final path = '${dir.path}/widgets_gen.go';
-        File(path).writeAsStringSync(writeGo(r, pack));
+        File(path).writeAsStringSync(writeGo(r, pack, stampOf(args[1], pack)));
         // The emitter writes 1 space between the name and the type of a
         // field, and gofmt aligns the block.
         final fmt = Process.runSync('gofmt', <String>['-w', path]);
