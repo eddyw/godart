@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'goint.dart';
 
 import 'iface.dart';
@@ -7,6 +9,12 @@ import 'panic.dart';
 ///
 /// The header is a value, thus each field is final. An operation that changes
 /// the header, for example append, returns a new header.
+///
+/// The real class of `array` varies: Uint8List, Int32List, Float64List, a
+/// growable list, and more. Dart thus cannot resolve `array[i]` to 1 target,
+/// and each read of a byte takes a megamorphic dispatch. `$ByteSlice` holds
+/// the storage of a byte slice in a field of the type Uint8List, thus a call
+/// site of `[]` sees 2 targets at most and each read reaches 1 list class.
 final class Slice<T> {
   final List<T> array;
   final int off;
@@ -17,18 +25,27 @@ final class Slice<T> {
   /// nil, but it allows len, cap, and append on it.
   final bool isNil;
 
-  const Slice(this.array, this.off, this.len, this.cap) : isNil = false;
+  /// Builds a header. A backing array of bytes gives a `$ByteSlice`.
+  ///
+  /// The JS target holds a pair for each Go integer, thus no byte slice holds
+  /// a Uint8List there and the constant `$isJS` removes the test.
+  factory Slice(List<T> array, int off, int len, int cap) {
+    if (!$isJS && array is Uint8List) {
+      return $ByteSlice(array as Uint8List, off, len, cap) as Slice<T>;
+    }
+    return Slice<T>._(array, off, len, cap, false);
+  }
 
   const Slice._(this.array, this.off, this.len, this.cap, this.isNil);
 
   /// The zero value of a slice type. The backing array is 1 shared empty
   /// list, because a nil slice holds a length of 0 and a capacity of 0, thus
   /// no write ever reaches it. A List of Never fits each List of T.
-  factory Slice.nil() => Slice._(const <Never>[], 0, 0, 0, true);
+  factory Slice.nil() => Slice<T>._(const <Never>[], 0, 0, 0, true);
 
   /// Wraps a full backing array.
   factory Slice.of(List<T> array) =>
-      Slice(array, 0, array.length, array.length);
+      Slice<T>(array, 0, array.length, array.length);
 
   // The 2 operators hold the body of $at and of $set. A call of a helper
   // would stand in each read of a byte, and a scanner reads 2 megabytes.
@@ -52,6 +69,38 @@ final class Slice<T> {
   void $set(int i, T value, [bool uns = false]) {
     if (i < 0 || i >= len) $panicIndex(i, len, uns);
     array[off + i] = value;
+  }
+
+  /// Adds n elements of src at the end, inside the capacity, and gives the
+  /// new header. The class of the result is the class of this header.
+  ///
+  /// 1 call holds the move and the header, thus the hot path of append takes
+  /// 1 virtual call and no test of the storage.
+  Slice<T> $grow(List<T> src, int srcOff, int n) {
+    final int need = len + n;
+    // `append(b, x)` adds 1 element, and that shape holds most of the calls.
+    // A move of a range reads an iterator of the source, thus the direct
+    // write costs less.
+    if (n == 1) {
+      array[off + len] = src[srcOff];
+    } else {
+      array.setRange(off + len, off + need, src, srcOff);
+    }
+    return Slice<T>._(array, off, need, cap, false);
+  }
+
+  /// Writes 1 element at an absolute index of the backing array. The caller
+  /// holds the bounds check.
+  void $put(int index, T value) {
+    array[index] = value;
+  }
+
+  /// Moves a range of src into the backing array, at an absolute index.
+  ///
+  /// The 2 lists can share 1 buffer. setRange holds the result of Go for such
+  /// a move, exactly as memmove does.
+  void $fill(int start, int end, List<T> src, int srcOff) {
+    array.setRange(start, end, src, srcOff);
   }
 
   /// The Go expression `s[low:high]`, and `s[low:high:max]` when three is
@@ -96,7 +145,80 @@ final class Slice<T> {
       }
       if (low < 0 || low > high) $panicBound(SliceBound.b, low, high, lowUns);
     }
-    return Slice(array, off + low, high - low, max - low);
+    return $view(off + low, high - low, max - low);
+  }
+
+  /// A header on the same storage, with an absolute offset. The class of the
+  /// result is the class of this header.
+  Slice<T> $view(int start, int n, int room) =>
+      Slice<T>._(array, start, n, room, false);
+}
+
+/// A Go slice with a backing array of bytes. `[]byte` is the common case,
+/// because strconv, strings.Builder, fmt, and encoding/json each write into 1.
+///
+/// The field `bytes` holds the same list as `array`, with the exact class.
+/// Dart thus resolves each read and each write of this class to 1 target, and
+/// no megamorphic dispatch stands in a byte loop.
+///
+/// The element type is `GoInt`, which erases to `int` at run time. The 2
+/// casts of the class thus hold no test after the erasure, and a value of
+/// `Slice<int>` accepts this class too.
+final class $ByteSlice extends Slice<GoInt> {
+  final Uint8List bytes;
+
+  $ByteSlice(this.bytes, int off, int len, int cap)
+    : super._(bytes as List<GoInt>, off, len, cap, false);
+
+  @override
+  GoInt operator [](int i) {
+    if (i < 0 || i >= len) $panicIndex(i, len);
+    return $gi(bytes[off + i]);
+  }
+
+  @override
+  void operator []=(int i, GoInt value) {
+    if (i < 0 || i >= len) $panicIndex(i, len);
+    bytes[off + i] = $ix(value);
+  }
+
+  @override
+  GoInt $at(int i, [bool uns = false]) {
+    if (i < 0 || i >= len) $panicIndex(i, len, uns);
+    return $gi(bytes[off + i]);
+  }
+
+  @override
+  void $set(int i, GoInt value, [bool uns = false]) {
+    if (i < 0 || i >= len) $panicIndex(i, len, uns);
+    bytes[off + i] = $ix(value);
+  }
+
+  @override
+  Slice<GoInt> $grow(List<GoInt> src, int srcOff, int n) {
+    final int need = len + n;
+    if (n == 1) {
+      bytes[off + len] = $ix(src[srcOff]);
+    } else {
+      // A GoInt erases to an int on the native target, thus the cast holds no
+      // test there. The JS target builds no $ByteSlice, thus it never runs.
+      bytes.setRange(off + len, off + need, src as List<int>, srcOff);
+    }
+    return $ByteSlice(bytes, off, need, cap);
+  }
+
+  @override
+  Slice<GoInt> $view(int start, int n, int room) =>
+      $ByteSlice(bytes, start, n, room);
+
+  @override
+  void $put(int index, GoInt value) {
+    bytes[index] = $ix(value);
+  }
+
+  @override
+  void $fill(int start, int end, List<GoInt> src, int srcOff) {
+    bytes.setRange(start, end, src as List<int>, srcOff);
   }
 }
 
@@ -138,7 +260,7 @@ Slice<T> $append<T>(
 /// Adds n elements of src, from the index off. $append and $appendSlice each
 /// read this body, thus 1 place holds the growth rule.
 ///
-/// setRange moves a whole range. A list of typed data then copies the bytes
+/// $fill moves a whole range. A list of typed data then copies the bytes
 /// with 1 move, and no per element call stands in the loop.
 Slice<T> $appendRange<T>(
   Slice<T> s,
@@ -149,24 +271,26 @@ Slice<T> $appendRange<T>(
   void Function(T, T)? assign,
 ]) {
   final int need = s.len + n;
-  if (need <= s.cap) {
-    s.array.setRange(s.off + s.len, s.off + need, src, off);
-    return Slice(s.array, s.off, need, s.cap);
-  }
+  if (need <= s.cap) return s.$grow(src, off, n);
   int cap = s.cap == 0 ? need : s.cap;
   while (cap < need) {
     cap += cap < 256 ? cap : cap ~/ 4;
   }
   final List<T> array = alloc(cap);
+  final Slice<T> out = Slice<T>(array, 0, need, cap);
   if (assign != null) {
     for (var i = 0; i < s.len; i++) {
       assign(array[i], s.array[s.off + i]);
     }
   } else {
-    array.setRange(0, s.len, s.array, s.off);
+    out.$fill(0, s.len, s.array, s.off);
   }
-  array.setRange(s.len, need, src, off);
-  return Slice(array, 0, need, cap);
+  if (n == 1) {
+    out.$put(s.len, src[off]);
+  } else {
+    out.$fill(s.len, need, src, off);
+  }
+  return out;
 }
 
 /// Exchanges 2 elements of a slice. The package sort uses it, because a Go
@@ -208,9 +332,9 @@ int $copySlice<T>(Slice<T> dst, Slice<T> src, [void Function(T, T)? assign]) {
     }
     return n;
   }
-  // setRange moves a whole range, and it holds the result of Go when the 2
+  // $fill moves a whole range, and it holds the result of Go when the 2
   // ranges overlap.
-  dst.array.setRange(dst.off, dst.off + n, src.array, src.off);
+  dst.$fill(dst.off, dst.off + n, src.array, src.off);
   return n;
 }
 
