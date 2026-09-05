@@ -424,20 +424,30 @@ func Until(t Time) Duration {
 type Timer struct {
 	C <-chan Time
 
-	send   chan Time
+	send chan Time
+	// body holds the function of AfterFunc. Reset starts the timer again with
+	// the same function, exactly as Go does.
+	body   func()
 	handle int
 }
 
 // Stop cancels a timer. It reports false when the timer ran already.
 func (t *Timer) Stop() bool {
+	if t.send == nil && t.body == nil {
+		panic("time: Stop called on uninitialized Timer")
+	}
 	return dart.StopTimer(t.handle)
 }
 
 // Reset stops the timer and starts it again with the new duration. It reports
 // whether the timer was active.
 func (t *Timer) Reset(d Duration) bool {
+	if t.send == nil && t.body == nil {
+		panic("time: Reset called on uninitialized Timer")
+	}
 	active := dart.ResetTimer(t.handle)
 	if t.send == nil {
+		t.handle = dart.StartTimer(int64(d), t.body)
 		return active
 	}
 	t.handle = dart.StartTimer(int64(d), func() { sendTime(t.send) })
@@ -446,7 +456,7 @@ func (t *Timer) Reset(d Duration) bool {
 
 // AfterFunc runs f on a new goroutine after the duration.
 func AfterFunc(d Duration, f func()) *Timer {
-	return &Timer{handle: dart.StartTimer(int64(d), f)}
+	return &Timer{body: f, handle: dart.StartTimer(int64(d), f)}
 }
 
 // NewTimer gives a timer that writes the time into its channel after the

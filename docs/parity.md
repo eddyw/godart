@@ -1086,6 +1086,8 @@ builds each other location from the zone database.
 | `Duration.String` | `1h2m3s` | Equal |
 | `AfterFunc` | Runs f on a new goroutine | Equal. A Dart timer holds 1 wake source of the scheduler. |
 | `Timer.Stop` | Reports false after the run | Equal |
+| `Timer.Reset` of a timer of `AfterFunc` | Runs the function again | Equal since 2026-09-05. The Timer holds the function now. Read `testdata/programs/timerreset`. |
+| `Timer.Stop` and `Timer.Reset` of a Timer that no constructor made | Panics with `time: Stop called on uninitialized Timer` | Equal, with the same 2 texts |
 | `NewTimer`, `Timer.C`, `Timer.Reset`, `After` | Present | Equal. The channel holds 1 value, thus a write of the timer never blocks. |
 | `NewTicker`, `Ticker.C`, `Ticker.Stop`, `Ticker.Reset`, `Tick` | Present | Equal. Each pass starts the timer of the next pass. |
 | `Time.String` | `2006-01-02 15:04:05.999999999 -0700 MST` | Equal, with no value of the monotonic clock. Read below. |
