@@ -657,6 +657,45 @@ Stage 5 takes none of it, because 4 rules break a plain reachability walk:
 A rule that drops such a declaration gives a wrong answer with no report, and
 that is worse than a large file.
 
+## The start time of a large program on the Dart VM
+
+The output of a large program holds many megabytes of Dart, and the Dart VM
+reads all of it at each start. The session of 2026-09-05 measured that cost.
+
+The program is `flutter/example/compass/server`, the server of the sample with
+9 routes over `net/http` and `encoding/json`. gart wrote 1,122 `.dart` files
+with 15,029,679 bytes, and the runtime library adds 40 files. The server reads
+2 JSON files of 2,076,698 bytes at the start, and then it listens.
+
+The measure counts the time from the start of the process to the first answer
+of the route `/login`. A poll loop sends a request each 2 milliseconds. Each
+row gives the median of 5 runs, with a warm file cache.
+
+| Step | Time | Size |
+| --- | --- | --- |
+| `dart run bin/main.dart` to the first answer | 5.41 seconds | — |
+| `dart compile kernel` | 2.87 seconds | 47,881,256 bytes |
+| `dart run` of that kernel file to the first answer | 1.33 seconds | — |
+| `dart compile exe` | 18.3 to 18.7 seconds | 35,444,096 bytes |
+| The binary to the first answer | 0.41 seconds | — |
+| `go build`, and the binary to the first answer | 0.012 seconds | 9,400,690 bytes |
+
+The numbers name 3 costs. The front end holds the largest part of the 5.41
+seconds: a run of the kernel file alone takes 1.33 seconds. The Dart VM itself
+starts fast, because `dart run` of a 3 line file takes 0.17 seconds. The load
+and the just in time compile of the kernel hold the other 1.16 seconds.
+
+The ahead of time build removes both costs. The binary answers after 0.41
+seconds, which is 13 times faster than `dart run`. It costs 18.5 seconds of
+build time, and the file holds 35.4 megabytes against 9.4 megabytes for the Go
+binary.
+
+A server thus wants `dart compile exe`. A short program that runs 1 time wants
+`dart run`, because the build costs more than the 5 seconds of the start.
+
+The machine: an Apple M4 Max with 16 cores and 128 gigabytes, macOS 27.0, Dart
+3.13.2, and Go 1.27.0.
+
 ## A deferred call that can block
 
 The deferred calls ran at the return of a function, and the machine kept no
