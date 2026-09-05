@@ -9,7 +9,7 @@ The port answers 1 question: **what can a Go program build with Flutter
 today, and where does the model stop?** The section "What the port could not
 hold" names each limit that the work found, with the cause of each 1.
 
-## The 2 programs
+## The parts
 
 | Path | Content |
 |---|---|

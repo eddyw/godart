@@ -122,6 +122,10 @@ The documentation sweep of the nineteenth session left 5 stale claims in
 `TestTestsOfGoroot` holds `testing/synctest` now, thus 21 packages of GOROOT
 run their real tests under `make ci`.
 
+**A run of each entry of the skip table confirmed 28 causes, and it opened 2.**
+`fixedbugs/issue13169` and `fixedbugs/issue78081` each needed more capacity
+than the machine gave, and the 2 pass now. The table holds 30 entries.
+
 ### 2026-09-04, the nineteenth session
 
 The user asked for each open task, end to end, until no task stays. 1 agent ran

@@ -41,9 +41,7 @@ var goTestSkips = map[string]string{
 	"fixedbugs/bug260":     "the test reads the machine address of a value, and Dart gives none",
 	"fixedbugs/bug352":     "2 values with no size take 2 cells, and gc gives them 1 address",
 	"fixedbugs/issue75764": "the Dart VM holds a fixed stack, and the recursion overflows",
-	"fixedbugs/issue13169": "the run holds 100000 channel rounds with a deep stack, and it needs more than the cap",
 	"fixedbugs/issue34395": "a global array of 100 MB fills element by element, and the run needs more than the cap",
-	"fixedbugs/issue78081": "the run holds 1600000 rounds of a byte append, and it needs more than the cap",
 
 	"devirtualization_nil_panics": "the test reads the line of the panic site in the recovered stack, and the source map gives none",
 	"fixedbugs/issue29190":        "the test allocates a list of 4 billion elements, and the Dart VM runs out of memory",

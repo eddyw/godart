@@ -6,7 +6,7 @@ set -e
 example=$1
 platform=${2:-macos}
 if [ -z "$example" ]; then
-  echo "usage: platform.sh <counter|apilist|form> [macos|ios|android|linux|windows|web]" >&2
+  echo "usage: platform.sh <counter|apilist|form|compass> [macos|ios|android|linux|windows|web]" >&2
   exit 2
 fi
 

@@ -574,8 +574,16 @@ removes.** `peano` is a torture test of the segmented stack of Go, and the Dart
 VM holds a fixed stack. `typeparam/nested` compares the `reflect.Type` identity
 of a local generic type of a generic function. The name of such a type now
 holds the type argument of that function, and the name of it inside a type
-argument of another instance still holds none. Read decision 343. The other 30 entries each hold a hard limit of
-the Dart VM, of the machine, or of the shape of the comparison.
+argument of another instance still holds none. Read decision 343. The other 28
+entries each hold a hard limit of the Dart VM, of the machine, or of the shape
+of the comparison.
+
+**A run of each entry on 2026-09-05 confirmed the cause of 28 of the 30, and it
+opened 2.** `fixedbugs/issue13169` runs 100000 channel rounds with a deep
+stack, and `fixedbugs/issue78081` runs 1600000 rounds of a byte append. The 2
+needed more capacity than the machine gave, and the 2 pass now. They left the
+table, and `TestRunFilesOfGoTest` runs them. `fixedbugs/issue34395` fills a
+global array of 100 MB, and the run reached no end inside 10 minutes.
 
 ### The rule that decided each call
 
