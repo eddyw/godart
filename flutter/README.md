@@ -24,58 +24,41 @@ targets.
 ```sh
 make build                          # from the root of the repository
 cd flutter/example/counter
-./build.sh                          # go vet, go test, and gart build into gen
-flutter test                        # 11 widget tests
+glutter gen                         # go vet, go test, and gart build into gen
+flutter test                        # 13 widget tests
 ```
 
-Run `./build.sh` again after each change of the Go source, or run
-`example/watch.sh` and change nothing by hand. Read "Watch mode" below.
-
-`flutter test` needs no platform runner. `flutter run` needs one, and git holds
-no such directory, because `flutter create` writes each file of it.
-`example/platform.sh` writes the runner and cleans the template files:
-
-```sh
-cd flutter/example
-./platform.sh counter macos         # or ios, android, linux, windows, web
-cd counter
-flutter run -d macos
-```
-
-The script also patches the 2 permissions that a network demo needs. A macOS
+`glutter run -d macos` opens the application, and it holds the Go source under
+watch. It writes the platform runner when the directory of the platform is
+absent, and it patches the 2 permissions that a network demo needs. A macOS
 runner gets the entitlement `com.apple.security.network.client`, and an Android
-runner gets `android.permission.INTERNET` in the main manifest. `flutter create`
-writes neither 1, thus `apilist` and `form` would reach no server.
+runner gets `android.permission.INTERNET` in the main manifest. `flutter
+create` writes neither 1, thus `apilist` and `form` would reach no server.
+
+`flutter test` needs no platform runner.
 
 ## Watch mode
 
-`example/watch.sh <example> [platform]` runs the application and it holds the
-Go source under watch. `gart watch` compiles the package that changed, and the
-script sends SIGUSR1 to `flutter run`, which does a hot reload. The keys of
-`flutter run` stay, thus `q` stops the application and the watch together.
+`glutter run` compiles the package that changed and it asks `flutter run` for a
+hot reload. The keys of `flutter run` stay, thus `q` stops the application and
+the watch together.
 
-```sh
-cd flutter/example
-./watch.sh compass macos            # after build.sh, and after platform.sh
-```
-
-| Step of 1 changed line, measured 2026-09-05 with compass | Time |
+| Step of 1 changed line, measured 2026-09-05 | Time |
 |---|---|
-| The change to the new Dart on disk | 1.3 to 1.9 seconds |
-| The hot reload of the new Dart | 213 to 314 milliseconds, and 3 of 955 libraries |
+| The change to the screen, with the counter | 1 second |
+| The hot reload alone | 182 milliseconds, and 3 of 1,113 libraries |
+| An incremental build of compass | 1.78 seconds, and `dart format` holds 0.3 of them |
 
-The watch build passes `-format=false`, because the hot reload needs no format.
-`dart format` now reads the files that the build wrote alone, thus it holds
-about 0.3 seconds of a 1.8 second cycle for compass. Before that change it read
-the whole output directory, and it held 10.4 seconds of an 11.9 second cycle.
-`build.sh` formats the output again.
+The watch build passes `-format=false`, because a hot reload needs no format.
+`dart format` reads the files that the build wrote alone, thus a build of the
+whole output no longer holds 10.4 seconds of an 11.9 second cycle.
 
 A compile error stops the reload, because `gart watch` writes the error and no
 count of compiled packages. The application keeps the code that ran before.
 
-A change that names a new node type of `gart.dev/ui` needs `build.sh` again,
-because `nodegen` writes `lib/widgets_gen.dart` from the list of the types that
-the application names. The host names such a node in its error.
+A change that names a new node type of `gart.dev/ui` needs the host again.
+glutter runs the scan after the reload, thus such a change reaches the screen
+1 reload later. Read `docs/glutter.md`.
 
 | Platform | State of 2026-09-02 |
 |---|---|
@@ -113,7 +96,7 @@ for (int i = 0; i < 200 && !app.Loaded(); i++) {
 }
 ```
 
-`build.sh` does 3 things. It writes the Dart output of `./go` into `gen`, which
+`glutter gen` does 3 things. It writes the Dart output of `./go` into `gen`, which
 the pubspec of the application names as a path dependency. It then runs
 `nodescan`, which reads the type information of the Go tool chain and reports
 each node type that the application names. It then runs `nodegen host`, which
@@ -140,8 +123,8 @@ cd flutter/example/form/go && go test ./...
    output then takes a suffix.
 3. A Dart class that implements `GoBridge`. Copy
    `example/counter/lib/bridge.dart` and change the 2 import lines.
-4. A `build.sh` that runs `gart build`, then `nodescan`, then `nodegen host`.
-   Copy `example/counter/build.sh`.
+4. Nothing else. `glutter gen` runs `gart build`, then `nodescan`, then
+   `nodegen host`, and `glutter new <name>` writes each file above.
 5. `goSetWidgets(goGenWidget)` before `runApp`, and in the `setUp` of each
    widget test.
 6. `GoApp(bridge: YourBridge())` inside a `MaterialApp`.

@@ -98,10 +98,10 @@ flutter-go:
 # flutter-test builds the example and runs the widget tests. It needs the
 # Flutter SDK, thus ci does not run it.
 flutter-test: build
-	cd flutter/example/counter && ./build.sh
-	cd flutter/example/apilist && ./build.sh
-	cd flutter/example/form && ./build.sh
-	cd flutter/example/compass && ./build.sh
+	cd flutter/example/counter && $(CURDIR)/build/glutter gen
+	cd flutter/example/apilist && $(CURDIR)/build/glutter gen
+	cd flutter/example/form && $(CURDIR)/build/glutter gen
+	cd flutter/example/compass && $(CURDIR)/build/glutter gen
 	cd flutter/goflutter && $(FLUTTER) analyze
 	cd flutter/example/counter && $(FLUTTER) analyze
 	cd flutter/example/apilist && $(FLUTTER) analyze

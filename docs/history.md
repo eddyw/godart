@@ -73,6 +73,58 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-05, the twenty-first session
+
+The user asked for each of the 15 open tasks, end to end. 3 streams ran: the
+main session held the Flutter model, 1 agent held the performance of the
+standard library, and 1 agent held the driver and the size of the output. Each
+agent worked in a git worktree of its own, thus no build output collided.
+
+**1 node pack for each Dart package.** Flutter moved Material and Cupertino
+out of the framework, thus the node set reads `material_ui` 1.1.1 and
+`cupertino_ui` 1.0.2 of flutter.dev now. The set grows from 564 types to 566,
+and each pack stands in a Go package of its own: `gart.dev/ui` with 273 types,
+`gart.dev/ui/material` with 218, and `gart.dev/ui/cupertino` with 75. The
+interface `ui.Node` holds the method `IsNode` that answers `ui.Mark`, thus a
+struct of another module joins the node set with no change of the reader.
+
+The generated host imports the Dart package of each case that it holds and the
+converter of each enum that those cases read. The host of compass falls from
+3,195 lines to 1,324, and the descriptor library of the core falls from
+1,911,012 bytes to 948,233.
+
+**glutter.** 1 command runs the Go build and the Flutter command. It replaces
+`build.sh`, `platform.sh`, and `watch.sh`, and git holds none of the 3 now. A
+change of 1 Go line reaches the running application in 1 second, and the hot
+reload takes 182 milliseconds. `glutter doctor` reads the version stamp that
+nodegen writes, and it names each difference against the Flutter of the
+machine.
+
+**`ui.Call` asks the host for a value.** The bridge ran 1 way before this
+change. A goroutine parks on a channel, the host runs the handler of
+`goSetCall`, and `ui.Answer` wakes the goroutine. The counter example holds the
+proof, and 2 widget tests cover the answer and the error.
+
+**Each node type carries the dartdoc of Flutter.** `documentationComment` of
+the analyzer gives the text, thus `go doc ui.Column` answers with the words of
+the Flutter team. The 3 packs grow from 8,994 lines to 17,851, and the Dart
+output does not change.
+
+**`dart format` reads the files of the build alone.** An incremental build of
+compass falls from 11.94 seconds to 1.78. The work also found 2 defects: the
+old format collapsed an empty function body of a cached package and it moved
+each source map line after it by 1, and the file list of a source map kept the
+order of a map, thus 2 builds wrote 38 different map files for `httpuse`.
+
+**The start time of a large program.** The compass server takes 5.41 seconds
+to its first answer under `dart run`, and 0.41 seconds as an ahead of time
+build. The Go binary takes 0.012.
+
+**A shake at the level of the package gives 0 bytes.** Each package of the
+output stands in the import closure already, and each `$init` calls the `$init`
+of each import. The tables of `unicode` need a walk at the level of the
+package variable, and that walk needs 2 proofs that the compiler lacks.
+
 ### 2026-09-05, the twentieth session
 
 The user asked for each open task, end to end, and for a port of the Flutter
