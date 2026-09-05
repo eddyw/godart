@@ -370,11 +370,15 @@ func (v *verifier) checkStructConv(call *ast.CallExpr) {
 	if to == nil || from == nil || !isStruct(to) || !isStruct(from) {
 		return
 	}
-	if types.Identical(to, from) || oneClass(to, from) {
+	if types.Identical(to, from) || oneClass(to, from) || foreignClass(to, from) {
 		return
 	}
-	v.reject(call.Pos(),
-		"the 2 types hold 2 struct objects, thus the emitter gives them 2 Dart classes",
+	cause := "the 2 types hold 2 struct objects, thus the emitter gives them 2 Dart classes"
+	if sharedStruct(to, from) != nil {
+		cause = "1 of the 2 types declares a method with a value receiver, " +
+			"thus its Dart class holds the body of that method"
+	}
+	v.reject(call.Pos(), cause,
 		"a conversion between the 2 struct types %s and %s is outside the subset",
 		from, to)
 }
@@ -428,4 +432,113 @@ func oneClass(a, b types.Type) bool {
 	sa, _ := na.Underlying().(*types.Struct)
 	sb, _ := nb.Underlying().(*types.Struct)
 	return sa != nil && sa == sb
+}
+
+// foreignClass reports whether 2 named struct types read the Dart class of the
+// package that declares their struct object.
+//
+// `type X q.Y` gives X the struct object of q.Y, and the emitter gives X the
+// class of q.Y. Read foreignRep of the package emit, which holds the same
+// rule. The 2 must agree: a conversion that stage 2 accepts and stage 5
+// rejects gives a late report, and the other order loses a form of Go.
+func foreignClass(a, b types.Type) bool {
+	st := sharedStruct(a, b)
+	if st == nil {
+		return false
+	}
+	home := st.Field(0).Pkg()
+	if len(namedStructs(home, st)) == 0 {
+		return false
+	}
+	na, _ := types.Unalias(a).(*types.Named)
+	nb, _ := types.Unalias(b).(*types.Named)
+	return readsHomeClass(na, home, st) && readsHomeClass(nb, home, st)
+}
+
+// sharedStruct gives the struct object that 2 named struct types hold, when
+// another package declares that object. It gives nil for each other pair.
+func sharedStruct(a, b types.Type) *types.Struct {
+	na, _ := types.Unalias(a).(*types.Named)
+	nb, _ := types.Unalias(b).(*types.Named)
+	if na == nil || nb == nil {
+		return nil
+	}
+	sa, sb := namedStruct(na), namedStruct(nb)
+	if sa == nil || sa != sb || sa.NumFields() == 0 {
+		return nil
+	}
+	home := sa.Field(0).Pkg()
+	if home == nil || home.Path() == overlay.IntrinsicPath {
+		return nil
+	}
+	if na.Obj().Pkg() == home && nb.Obj().Pkg() == home {
+		return nil
+	}
+	return sa
+}
+
+// namedStruct gives the struct object of a named type that holds no type
+// parameter and no type argument.
+func namedStruct(n *types.Named) *types.Struct {
+	if n.TypeParams().Len() > 0 || n.TypeArgs().Len() > 0 {
+		return nil
+	}
+	st, _ := n.Underlying().(*types.Struct)
+	return st
+}
+
+// readsHomeClass reports whether a named struct type reads the Dart class of
+// the package that declares its struct object. A type of that package owns the
+// class already, and a type of another package reads it only when no named
+// type of its own package declares a method with a value receiver.
+func readsHomeClass(n *types.Named, home *types.Package, st *types.Struct) bool {
+	pkg := n.Obj().Pkg()
+	if pkg == nil || namedStruct(n) != st {
+		return false
+	}
+	if pkg == home {
+		return true
+	}
+	for _, member := range namedStructs(pkg, st) {
+		if valueMethod(member) {
+			return false
+		}
+	}
+	return true
+}
+
+// namedStructs gives each named type of a package that holds the struct
+// object, in the order of the scope.
+func namedStructs(pkg *types.Package, st *types.Struct) []*types.Named {
+	if pkg == nil {
+		return nil
+	}
+	var out []*types.Named
+	scope := pkg.Scope()
+	for _, n := range scope.Names() {
+		tn, _ := scope.Lookup(n).(*types.TypeName)
+		if tn == nil || tn.IsAlias() {
+			continue
+		}
+		named, _ := types.Unalias(tn.Type()).(*types.Named)
+		if named != nil && namedStruct(named) == st {
+			out = append(out, named)
+		}
+	}
+	return out
+}
+
+// valueMethod reports whether a named type declares a method with a value
+// receiver. The Dart class of the type holds the body of such a method.
+func valueMethod(n *types.Named) bool {
+	for i := range n.NumMethods() {
+		sig, ok := n.Method(i).Type().(*types.Signature)
+		if !ok || sig.Recv() == nil {
+			continue
+		}
+		if _, ok := types.Unalias(sig.Recv().Type()).(*types.Pointer); !ok {
+			return true
+		}
+	}
+	return false
 }

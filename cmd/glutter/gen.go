@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/eddyw/godart/internal/driver"
+	"github.com/eddyw/godart/internal/load"
+	"github.com/eddyw/godart/internal/nodefilter"
 )
 
 // checks names the tests of the Go module that a command runs first.
@@ -56,7 +59,29 @@ func (a *app) options(format bool) driver.Options {
 		Out:      a.outPath(),
 		Runtime:  a.runtimePath(),
 		Format:   format,
+		Filter:   a.filter,
 	}
+}
+
+// filter drops each node type that the application does not name from the
+// generated file of each pack. The compiler then writes no Dart class and no
+// type descriptor of a widget that no code builds. Read internal/nodefilter.
+//
+// The driver calls it in front of each load, thus a watch cycle reads the
+// names of that moment and a new node type reaches the build at once. The scan
+// runs 1 time for each build, and writeHost reads the same answer.
+func (a *app) filter() (load.Filter, error) {
+	names, err := a.scan()
+	if err != nil {
+		return nil, err
+	}
+	a.nodes = names
+	root, err := a.uiModule()
+	if err != nil {
+		// The application reads no node module, thus no pack stands here.
+		return nil, nil
+	}
+	return nodefilter.Sources(root, strings.Fields(names))
 }
 
 // cacheDir holds the state of glutter for 1 application.
@@ -71,7 +96,7 @@ func (a *app) cacheDir() string {
 // seconds. The set of node types changes only when the application names a new
 // widget, and the cache below holds the set of the run before.
 func (a *app) writeHost() (bool, error) {
-	names, err := a.scan()
+	names, err := a.nodeNames()
 	if err != nil {
 		return false, err
 	}
@@ -88,6 +113,15 @@ func (a *app) writeHost() (bool, error) {
 		return false, err
 	}
 	return true, os.WriteFile(cache, []byte(names), 0o644)
+}
+
+// nodeNames gives the node types of the last build of this process. The filter
+// of the build already ran the scan, thus the host needs no second run of it.
+func (a *app) nodeNames() (string, error) {
+	if a.nodes != "" {
+		return a.nodes, nil
+	}
+	return a.scan()
 }
 
 // scan names each node type that the application uses.

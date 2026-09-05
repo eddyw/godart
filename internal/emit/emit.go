@@ -165,8 +165,8 @@ type emitter struct {
 
 	// methods groups each method by the name of its receiver type.
 	methods map[*types.TypeName][]*ir.Func
-	// merges groups the named struct types of a package that hold 1 struct
-	// object. Read mergeGroup.
+	// merges groups the named struct types of a package by the struct object
+	// that each 1 holds. Read structNames.
 	merges map[*types.Package]map[*types.Struct][]*types.TypeName
 	// instByStruct gives the instance of a generic type that owns each struct
 	// object of a package. Read instanceRep.
@@ -576,11 +576,11 @@ func (e *emitter) groupMethods(p *ir.Package) {
 						// method of a generic type also takes the dictionary of
 						// each type parameter of the receiver type.
 						//
-						// A type that reads the class of an instance holds no
+						// A type that reads the class of another type holds no
 						// class of its own, thus each method of it also becomes
-						// a top level function. Read instanceRep.
+						// a top level function. Read structOwner.
 						e.inClass[d] = !isPointerType(d.Recv.Type) &&
-							e.instanceRep(obj) == nil
+							e.structOwner(obj) == nil
 					}
 				case d.Name == "init":
 					e.initNames[d] = fmt.Sprintf("_init$%d", len(e.inits))

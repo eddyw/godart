@@ -37,11 +37,11 @@ const embedMark = "// go:embed"
 func embedRewrites(found []*packages.Package, files map[string][]byte) (map[string]bool, error) {
 	var pkgs []*packages.Package
 	packages.Visit(found, nil, func(p *packages.Package) {
-		// A package of the standard library holds no module, and the overlay
-		// of the surface already carries its files.
-		if p.Module != nil {
-			pkgs = append(pkgs, p)
-		}
+		// A native package of the standard library also holds a directive.
+		// `encoding/json/internal/jsontest` embeds the corpus of the real test
+		// files of `encoding/json`. The loop below skips each file that the
+		// overlay already replaced.
+		pkgs = append(pkgs, p)
 	})
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
 
@@ -324,9 +324,9 @@ func resolveEmbed(dir string, patterns []string) ([]embedFile, error) {
 			if !info.Mode().IsRegular() {
 				continue
 			}
-			if !all && hiddenName(rel) {
-				return nil, fmt.Errorf("the pattern %s names the file %s, and a name that starts with a dot or with a low line needs the prefix all:",
-					pattern, rel)
+			if elem := vcsName(rel); elem != "" {
+				return nil, fmt.Errorf("the pattern %s names the file %s, and no module holds the directory %s of a version control system",
+					pattern, rel, elem)
 			}
 			if err := add(match, rel); err != nil {
 				return nil, err
@@ -370,15 +370,27 @@ func walkEmbedDir(dir, root string, all bool, add func(full, rel string) error) 
 	return count, err
 }
 
-// hiddenName reports whether any element of the path starts with a dot or with
-// a low line. The go command keeps such a file out of a directory pattern.
-func hiddenName(rel string) bool {
+// hiddenName reports whether the name starts with a dot or with a low line.
+// The go command keeps such a file out of a directory pattern.
+func hiddenName(name string) bool {
+	return strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_")
+}
+
+// vcsName gives the first element of the path that names the directory of a
+// version control system, and it gives an empty text for each other path. No
+// module holds such a directory, thus the go command embeds no file under it.
+//
+// The rule of the dot and of the low line reaches a directory walk alone. A
+// pattern that names a file under `_embed` thus embeds it, and
+// `encoding/json/internal/jsontest` of Go holds exactly that directive.
+func vcsName(rel string) string {
 	for _, elem := range strings.Split(rel, "/") {
-		if strings.HasPrefix(elem, ".") || strings.HasPrefix(elem, "_") {
-			return true
+		switch elem {
+		case ".bzr", ".hg", ".git", ".svn":
+			return elem
 		}
 	}
-	return false
+	return ""
 }
 
 // validEmbedPattern reports whether the pattern stays inside the directory of

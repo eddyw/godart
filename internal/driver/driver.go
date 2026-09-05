@@ -40,6 +40,11 @@ type Options struct {
 	// Cover writes a counter into each statement of each package under test.
 	// It needs Tests.
 	Cover bool
+	// Filter gives a source that replaces a file of the build. The driver
+	// calls it in front of each load, thus a watch cycle reads the state of
+	// that moment and a new declaration reaches the build at once. A nil field
+	// replaces no file, and a build with Tests reads it not.
+	Filter func() (load.Filter, error)
 }
 
 // Stats reports what the build did. A cached package needs no second compile.
@@ -188,7 +193,14 @@ func loadModule(opt Options) (*load.Result, error) {
 	if opt.Tests {
 		return load.LoadTests(opt.Dir, opt.Patterns...)
 	}
-	return load.Load(opt.Dir, opt.Patterns...)
+	if opt.Filter == nil {
+		return load.Load(opt.Dir, opt.Patterns...)
+	}
+	filter, err := opt.Filter()
+	if err != nil {
+		return nil, err
+	}
+	return load.LoadFiltered(opt.Dir, filter, opt.Patterns...)
 }
 
 // testBinaries names the Dart entry point of each test binary of the build.

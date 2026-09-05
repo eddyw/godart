@@ -343,14 +343,23 @@ func anonComparable(st *types.Struct) bool {
 }
 
 // anonPrivate reports whether an unnamed struct type inside the type holds an
-// unexported field. The walk stops at a named type, because such a type holds a
-// class of its own.
+// unexported field. The walk stops at a named type of a package scope, because
+// such a type holds a class of its own.
+//
+// A named struct type of a function body holds no class of its own. It reads
+// the class of its shape, thus the walk reads the fields of that shape. A test
+// file of encoding/json declares `type S1 struct{ x, X int }` inside a
+// function, and it embeds S1 in an unnamed struct type.
 func anonPrivate(t types.Type, seen map[types.Type]bool) bool {
 	if t == nil || seen[t] {
 		return false
 	}
 	seen[t] = true
 	switch t := types.Unalias(t).(type) {
+	case *types.Named:
+		if isLocalType(t.Obj()) {
+			return anonPrivate(t.Underlying(), seen)
+		}
 	case *types.Struct:
 		for i := 0; i < t.NumFields(); i++ {
 			f := t.Field(i)

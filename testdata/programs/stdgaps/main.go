@@ -83,6 +83,15 @@ func stringsRun() {
 	n, err := r.WriteString(&out, "ab")
 	fmt.Println(out.String(), n, err == nil)
 
+	// The 4 replacers of the package each take a shape of the pair list. An
+	// empty old text matches in front of each rune, and the trie of the
+	// generic replacer holds that rule.
+	fmt.Println(strings.NewReplacer("", "+").Replace("ab"))
+	fmt.Println(strings.NewReplacer("a", "1", "", "+").Replace("ab"))
+	fmt.Println(strings.NewReplacer("ab", "X").Replace("abcab"))
+	fmt.Println(strings.NewReplacer("a", "xy", "b", "z").Replace("abc"))
+	fmt.Println(strings.NewReplacer("ab", "1", "abc", "2").Replace("abcd"))
+
 	var b strings.Builder
 	b.WriteString("xy")
 	fmt.Println(b.Cap() >= 2)

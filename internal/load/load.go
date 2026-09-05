@@ -62,28 +62,43 @@ func (r *Result) Binary(id string) *Binary {
 	return nil
 }
 
+// Filter replaces a file of the build before the load. A key is the path of
+// the file on disk, and the value is the source that the compiler reads. The
+// file on disk never changes.
+//
+// A Flutter application reads it: `internal/nodefilter` drops each node type
+// that the application does not name, thus the Dart output holds no class and
+// no type descriptor of a widget that no code builds.
+type Filter map[string][]byte
+
 // Load reads the packages that match the patterns in dir.
 //
 // The load runs 2 times. The first load finds the files of each standard
 // library package, and the second load replaces those files with the overlay.
 func Load(dir string, patterns ...string) (*Result, error) {
-	return load(dir, false, false, patterns)
+	return load(dir, false, false, nil, patterns)
+}
+
+// LoadFiltered reads the packages, and the filter replaces a file of the build
+// first.
+func LoadFiltered(dir string, filter Filter, patterns ...string) (*Result, error) {
+	return load(dir, false, false, filter, patterns)
 }
 
 // LoadTests reads the packages and also each test variant of them. It replaces
 // the test entry point of the go command with the entry point of the compiler.
 func LoadTests(dir string, patterns ...string) (*Result, error) {
-	return load(dir, true, false, patterns)
+	return load(dir, true, false, nil, patterns)
 }
 
 // LoadTestsCover reads the packages as LoadTests does, and it also writes a
 // counter into each statement of each package under test. The entry point of
 // the test binary then reports the coverage. Read testmain.go.
 func LoadTestsCover(dir string, patterns ...string) (*Result, error) {
-	return load(dir, true, true, patterns)
+	return load(dir, true, true, nil, patterns)
 }
 
-func load(dir string, tests, cover bool, patterns []string) (*Result, error) {
+func load(dir string, tests, cover bool, filter Filter, patterns []string) (*Result, error) {
 	found, err := packages.Load(&packages.Config{
 		Mode:       findMode,
 		Dir:        dir,
@@ -100,6 +115,11 @@ func load(dir string, tests, cover bool, patterns []string) (*Result, error) {
 	files, err := overlayFiles(found, surface)
 	if err != nil {
 		return nil, err
+	}
+	// The filter stands in front of the rewrite of the directives, because a
+	// file that it replaces holds no `//go:embed` directive.
+	for name, content := range filter {
+		files[name] = content
 	}
 	embeds, err := embedRewrites(found, files)
 	if err != nil {

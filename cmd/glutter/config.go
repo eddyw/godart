@@ -22,6 +22,9 @@ type app struct {
 	// root is the directory of the godart repository. nodegen and the runtime
 	// library of Dart stand under it.
 	root string
+	// nodes holds the node types of the last scan, 1 name for each line. The
+	// filter of the build writes it, and the host of nodegen reads it.
+	nodes string
 }
 
 func (a *app) modulePath() string  { return filepath.Join(a.dir, a.module) }

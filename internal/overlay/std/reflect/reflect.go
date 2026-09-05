@@ -1590,15 +1590,26 @@ func (t *rtype) FieldByIndex(index []int) StructField {
 func (v Value) Bytes() []byte {
 	switch v.Kind() {
 	case Slice:
-		if v.Type().Elem().Kind() != Uint8 {
+		elem := v.Type().Elem()
+		if elem.Kind() != Uint8 {
 			panic("reflect.Value.Bytes of " + v.Type().String())
 		}
-		// A defined slice type of bytes, for example `type Raw []byte`, holds
-		// its own name in the descriptor. Thus an assertion to []byte fails,
-		// and the value takes the conversion first. The conversion keeps the
-		// same Dart list, thus a write through the result still reaches the
-		// value, exactly as in Go.
-		return v.Convert(TypeOf([]byte(nil))).Interface().([]byte)
+		if elem.PkgPath() == "" {
+			// A defined slice type of bytes, for example `type Raw []byte`,
+			// holds its own name in the descriptor. Thus an assertion to
+			// []byte fails, and the value takes the conversion first. The
+			// conversion keeps the same Dart list, thus a write through the
+			// result still reaches the value, exactly as in Go.
+			return v.Convert(TypeOf([]byte(nil))).Interface().([]byte)
+		}
+		// A defined element type, for example `type raw byte`, gives a slice
+		// that no conversion of Go reaches. Go reads the memory of such a
+		// slice again with the element type byte, and the Dart form of the 2
+		// slices is 1 object. A write of that object into the box of a []byte
+		// variable thus gives the alias that Go gives.
+		var out []byte
+		dart.PointerSet(&out, v.read())
+		return out
 	case Array:
 		if v.Type().Elem().Kind() != Uint8 {
 			panic("reflect.Value.Bytes of " + v.Type().String())

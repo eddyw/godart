@@ -574,31 +574,112 @@ func (e *emitter) mergeGroup(obj *types.TypeName) []*types.TypeName {
 	if pkg == nil {
 		return nil
 	}
-	byStruct, ok := e.merges[pkg]
-	if !ok {
-		byStruct = map[*types.Struct][]*types.TypeName{}
-		scope := pkg.Scope()
-		for _, n := range scope.Names() {
-			if st, tn := packageStruct(scope, n); st != nil {
-				byStruct[st] = append(byStruct[st], tn)
-			}
-		}
-		for st, group := range byStruct {
-			if len(group) < 2 {
-				delete(byStruct, st)
-			}
-		}
-		e.merges[pkg] = byStruct
-	}
-	named, _ := types.Unalias(obj.Type()).(*types.Named)
-	if named == nil {
-		return nil
-	}
-	st, _ := named.Underlying().(*types.Struct)
+	st := structObject(obj)
 	if st == nil {
 		return nil
 	}
-	return byStruct[st]
+	group := e.structNames(pkg)[st]
+	if len(group) < 2 {
+		return nil
+	}
+	return group
+}
+
+// structNames gives each named struct type of 1 package for each struct object
+// that the package holds. The scope gives the names in order, thus the first
+// member of a list is stable.
+func (e *emitter) structNames(pkg *types.Package) map[*types.Struct][]*types.TypeName {
+	if byStruct, ok := e.merges[pkg]; ok {
+		return byStruct
+	}
+	byStruct := map[*types.Struct][]*types.TypeName{}
+	scope := pkg.Scope()
+	for _, n := range scope.Names() {
+		if st, tn := packageStruct(scope, n); st != nil {
+			byStruct[st] = append(byStruct[st], tn)
+		}
+	}
+	e.merges[pkg] = byStruct
+	return byStruct
+}
+
+// structObject gives the struct object of a named struct type that holds no
+// type parameter and no type argument. It gives nil for each other type.
+func structObject(obj *types.TypeName) *types.Struct {
+	named, _ := types.Unalias(obj.Type()).(*types.Named)
+	if named == nil || named.TypeParams().Len() > 0 || named.TypeArgs().Len() > 0 {
+		return nil
+	}
+	st, _ := named.Underlying().(*types.Struct)
+	return st
+}
+
+// foreignRep gives the named struct type of another package that owns the Dart
+// class of the struct object of obj.
+//
+// `type X q.Y` gives X the struct object of q.Y, and go/types holds 1 struct
+// object for the 2 names. A conversion between the 2 thus names 1 value, and
+// the 2 types need 1 Dart form. X takes the form of q.Y, and it declares no
+// class of its own.
+//
+// The class must stand in the library of q. Go gives an unexported field of
+// the object the identity of q, and a Dart library holds each name that starts
+// with an underscore, thus a class of the library of X could never read such a
+// field.
+//
+// A method with a value receiver stands in the Dart class of its type, and the
+// class of q.Y cannot hold a method of the package of X. Such a type thus
+// keeps its own class, and a conversion keeps its rejection. The test reads
+// each named type of the package of X that holds the object, because the
+// merge group of 1 package needs 1 answer.
+func (e *emitter) foreignRep(obj *types.TypeName) *types.TypeName {
+	st := structObject(obj)
+	if st == nil || st.NumFields() == 0 || obj.Pkg() == nil {
+		return nil
+	}
+	home := st.Field(0).Pkg()
+	if home == nil || home == obj.Pkg() || home.Path() == dartObjectPath {
+		return nil
+	}
+	owners := e.structNames(home)[st]
+	if len(owners) == 0 {
+		return nil
+	}
+	for _, member := range e.structNames(obj.Pkg())[st] {
+		if valueMethod(member) {
+			return nil
+		}
+	}
+	return owners[0]
+}
+
+// valueMethod reports whether a named type declares a method with a value
+// receiver. The Dart class of the type holds the body of such a method.
+func valueMethod(obj *types.TypeName) bool {
+	named, _ := types.Unalias(obj.Type()).(*types.Named)
+	if named == nil {
+		return false
+	}
+	for i := range named.NumMethods() {
+		if !pointerMethod(named.Method(i)) {
+			return true
+		}
+	}
+	return false
+}
+
+// structOwner gives the named type that owns the Dart class of a named struct
+// type. It gives nil for a type that owns its own class.
+func (e *emitter) structOwner(obj *types.TypeName) *types.Named {
+	if inst := e.instanceRep(obj); inst != nil {
+		return inst
+	}
+	rep := e.foreignRep(obj)
+	if rep == nil {
+		return nil
+	}
+	named, _ := types.Unalias(rep.Type()).(*types.Named)
+	return named
 }
 
 // packageStruct gives the struct object of a named struct type of a scope.
@@ -1277,10 +1358,11 @@ func collectInstances(t types.Type, out map[*types.Struct]*types.Named,
 }
 
 // structRef gives the named type that owns the Dart form of a named struct
-// type. A defined type over an instance of a generic type reads the instance.
+// type. A defined type over an instance of a generic type reads the instance,
+// and a defined type over a struct of another package reads that package.
 func (e *emitter) structRef(named *types.Named) *types.Named {
-	if inst := e.instanceRep(named.Obj()); inst != nil {
-		return inst
+	if rep := e.structOwner(named.Obj()); rep != nil {
+		return rep
 	}
 	return named
 }

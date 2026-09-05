@@ -213,6 +213,9 @@ var native = []string{
 	"encoding/json/jsontext",
 	"encoding/json/v2",
 	"encoding/json",
+	// jsontest holds the corpus of the real test files of encoding/json and of
+	// encoding/json/v2. It reads internal/zstd and embed, and both stand above.
+	"encoding/json/internal/jsontest",
 }
 
 // NativePaths gives the standard library packages that the compiler reads from
