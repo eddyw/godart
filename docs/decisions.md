@@ -3998,3 +3998,153 @@ The plan left these points open. The work took the decisions below.
 
      The real test files of `strconv` cannot run, thus the witness is the gate.
      Read decision 361.
+
+363. A byte slice holds its storage in a field of the type Uint8List, and
+     append takes 1 virtual call.
+
+     `Slice<T>.array` holds a `List<T>` whose real class varies: `Uint8List`,
+     `Int32List`, `Int64List`, `Float64List`, and a growable list of objects.
+     Dart thus cannot fold `array[i]`, and each read and each write of a byte
+     took a dispatch over many targets.
+
+     `$ByteSlice` extends `Slice<GoInt>` and it holds the same storage in a
+     field of the type `Uint8List`. The unnamed constructor of `Slice` is a
+     factory now, and it gives that class when the array is a `Uint8List`. Each
+     call site of the index operator thus meets 2 targets at most.
+
+     The element type is `GoInt`, which erases to `int`, thus the 2 casts of
+     the class cost nothing. **A generic form `$ByteSlice<T>` with a cast of
+     each element was a loss over the whole program.** Such a cast is cheap in
+     a small program, and it becomes a real test of the subtype when the type
+     flow analysis meets many instantiations. That is the decisive detail.
+
+     4 virtual methods, `$grow`, `$view`, `$put`, and `$fill`, hold `range`,
+     `append`, and `copy` on the subclass with no generic cast. The in place
+     path of `$appendRange` is 1 call that moves the bytes and builds the
+     header. `$isJS` is a constant of the compile, thus the JS target builds no
+     such class and pays nothing.
+
+     **3 dense classes were worse than 1.** A measurement of the byte loop gave
+     2.21 milliseconds with 1 subclass, 2.70 with 3, and 3.05 with none. The
+     gain comes from the count of the classes and not from the type of the
+     element.
+
+     `bytes.count` fell from 3.79 milliseconds to 2.49, which is the cost of
+     the same loop in Dart. `slice.append.1m` fell from 24.65 to 19.74, and
+     `json.decode.typed` fell 7 percent.
+
+364. The overlay of strings holds the real Replacer of Go, and the real tests
+     of encoding/json run.
+
+     **strings.** The overlay held a `Replacer` of 40 lines that skipped a pair
+     whose old text is empty. `replace.go` and `search.go` of Go replace it,
+     thus each name that `export_test.go` reads now stands:
+     `Replacer.once`, `Replacer.r`, `buildOnce`, `genericReplacer`, `trieNode`,
+     and `makeStringFinder`. `testdata/programs/stdgaps` proves each of the 4
+     replacers of Go.
+
+     `make std-test STD=strings` still stops in stage 2, and each cause sits
+     inside the test files of Go: 4 files import `unsafe`, 2 import
+     `internal/asan`, and 10 tables of `strings_test.go` are an exported
+     variable of an unnamed struct type with an unexported field, which rule
+     M15 rejects.
+
+     **encoding/json.** The package went from "does not compile" to "compiles
+     and runs", and `TestUnmarshal` passes. 8 items landed:
+
+     - `encoding/json/internal/jsontest` joined the native surface.
+     - Stage 1 reads a `//go:embed` directive of a native package of GOROOT.
+     - Stage 1 follows the real rule of the go command for `_embed/*.json.zst`:
+       the rule of the dot and of the low line covers a walk of a directory,
+       and not a file that the pattern names.
+     - A conversion between a struct type of another package and a defined type
+       over it compiles. `structOwner` gives the Dart class to the package that
+       declares the struct object, because Go gives its unexported fields the
+       identity of that package. Read `testdata/programs/structpkgconv`.
+     - `anonPrivate` walks a local named struct type.
+     - `reflect.Value.Bytes` of a slice of a defined byte type gives an alias.
+     - **`reflect.Value.SetMapIndex` gave a silent wrong answer.** A decode into
+       `map[K]Struct` gave each key the same object. It copies the struct now,
+       and a valid value that holds a nil interface writes the entry.
+     - 2 nil channels of 1 element type compare equal. Each library wrote its
+       own nil channel, thus `reflect.DeepEqual` reported false.
+
+     `reflect.Value.IsZero` also walks an array and a struct that hold no
+     identity, and it answers a channel, a function, a map, and a slice with
+     `IsNil`.
+
+     **1 blocker stays.** A marshal of a value whose type declares
+     `MarshalJSON` or `MarshalText` reports that a Dart function type is not a
+     subtype. The descriptor of a pointer that `reflect` builds at run time
+     holds a method whose Dart type erases the record of the 2 results. That is
+     the shape of decision 342, for a result instead of a parameter.
+
+365. glutter filters the node types of an application at the build.
+
+     `flutter/ui` holds 273 node types, `flutter/ui/material` holds 218, and
+     `flutter/ui/cupertino` holds 75. compass names 40 of the 491 that its 2
+     packs hold. The generated Dart host was filtered already, and the Go side
+     was not, thus the type descriptor of each node type that no program names
+     stood in the output.
+
+     `internal/nodefilter` reads each file that nodegen wrote and it keeps the
+     types that the application names. `flutter/nodescan` gives the set, and
+     `glutter` passes it through `driver.Options.Filter`, which is a function
+     that the driver calls in front of each load.
+
+     **Nothing on disk changes.** The filter rides `packages.Config.Overlay`,
+     thus 2 applications of 1 checkout each hold their own set, a watch cycle
+     reads a new node type at once, and the type checker of Go validates the
+     filtered source. A stale filter is thus a loud error of the compile, and
+     never a silent wrong answer. The scan runs in front of the build now, and
+     `writeHost` reads the same answer, thus the count of the scans stays.
+
+     | Measure | Before | After | Cut |
+     |---|---|---|---|
+     | The whole Dart output of compass | 18,318,376 | 16,089,390 | 12.2 percent |
+     | The tree of `gart.dev/ui` | 2,922,881 | 693,895 | 76.3 percent |
+     | `ui/material.dart` | 875,599 | 70,580 | 91.9 percent |
+     | The node classes of the 2 packs | 491 | 27 | 94.5 percent |
+
+     A probe proved the rule: `ui.Opacity` joined the counter example, `glutter
+     gen` ran, and the host held 22 cases against 21.
+
+     `ui/themes.part.dart` holds 139,198 bytes and no filter reaches it, because
+     the theme value types stand in a file that a person wrote.
+
+366. The scan of the strings overlay reads bytes, a Go string of ASCII skips
+     the encoder, and Sprintf builds with a Builder.
+
+     `testdata/programs/strmatch` writes the result of 12 functions of `strings`
+     that scan for a separator, over 19 texts and 12 separators, and it holds a
+     byte that carries no rune. It gave 101 differences of 2,509 lines.
+
+     `matchAt` reads the bytes at a position, and `Index`, `Count`, `Split`,
+     `SplitSeq`, and `Replace` each call it. The 4 loops built 1 Go string for
+     each position of the text, and each build allocates a view and a header.
+     `str.split.100k` fell from 92.14 milliseconds to 48.32, and
+     `str.replace.100k` from 74.28 to 48.26.
+
+     **2 defects of an empty separator fall.** `Replace` with an empty old gave
+     the text back, and Go writes the replacement at the front and after each
+     rune. `Split` and `SplitSeq` built each part from the rune, thus a byte
+     that carries no rune became the replacement character, and Go slices the
+     text at each rune boundary.
+
+     **`GoString.fromString` holds a path for a text of ASCII.** It writes 1
+     byte for each code unit and it holds that text as the decode of the new
+     value. The UTF-8 encoder held 9 percent of the cost of `fmt.Sprintf`, and
+     it never runs for such a text. A write of 100,000 bytes into Go fell from
+     195.32 microseconds to 51.63, and `json.encode.typed` fell 28 percent.
+
+     **`_tieAt` counts the low zero bits of the significand.** The first form
+     divided by 2 in a loop of up to 52 steps, at each call of the verb `f`, and
+     it cost about 100 nanoseconds of each such call. `float.format.100k` fell
+     from 35.06 milliseconds to 23.57.
+
+     **`Sprintf` builds the result with `strings.Builder`,** it reads each flag
+     as 1 substring of the format, and it reads the verb letter as 1 substring.
+     The old form joined 1 string for each part, and it built 1 rune for each
+     byte of a flag. That case still costs 8.8 times the same call in Go,
+     because the bridge boxes the value and it parses the verb again for each
+     verb of the format.

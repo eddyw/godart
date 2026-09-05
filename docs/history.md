@@ -151,7 +151,38 @@ full Go name of a type. The ahead of time build showed no difference, and the
 median of 22 cases stood at 0.995. A profile of the Dart VM service ranks the
 wrong work for an ahead of time build.
 
-Read decisions 357 to 362.
+**2 agents held the other 2 streams.**
+
+**A byte slice holds its storage in a field of the type `Uint8List`.**
+`Slice.array` held a `List<T>` whose real class varies, thus each read of a
+byte took a dispatch over many targets. `bytes.count` now costs what the same
+loop costs in Dart, and `slice.append.1m` fell 20 percent. A generic form of
+the subclass was a loss over the whole program, and 3 dense classes were worse
+than 1: the gain comes from the count of the classes.
+
+**The overlay of `strings` holds the real `Replacer` of Go**, and the real
+tests of `encoding/json` run. That package went from "does not compile" to
+"compiles and runs", and `TestUnmarshal` passes. 8 items landed, and 1 of them
+closed a silent wrong answer: `reflect.Value.SetMapIndex` gave each key of a
+`map[K]Struct` the same object.
+
+**glutter filters the node types of an application at the build.** compass
+names 40 of the 491 node types that its 2 packs hold. The whole Dart output
+falls 12.2 percent, and the tree of `gart.dev/ui` falls 76.3 percent. The
+filter rides the overlay of the loader, thus nothing on disk changes and the
+type checker of Go validates the filtered source. A stale filter is a loud
+error of the compile.
+
+**The scan of the `strings` overlay reads bytes now.** `Index`, `Count`,
+`Split`, `SplitSeq`, and `Replace` built 1 Go string for each position of the
+text. `str.split.100k` fell 47 percent. A new witness also found 2 defects of
+an empty separator, and both are closed.
+
+**A Go string of ASCII skips the UTF-8 encoder**, and it holds that text as its
+own decode. A write of 100,000 bytes into Go fell from 195.32 microseconds to
+51.63, and `json.encode.typed` fell 28 percent.
+
+Read decisions 357 to 366.
 
 ### 2026-09-05, the twenty-first session
 
