@@ -514,8 +514,9 @@ String _float(double v, String letter, int precision, bool single) {
       if (precision < 0) return single ? $f32string(v) : $fstring(v);
       return _gPrecision(v, precision);
     case 'G':
-      if (precision < 0)
+      if (precision < 0) {
         return _upperExponent(single ? $f32string(v) : $fstring(v));
+      }
       return _upperExponent(_gPrecision(v, precision));
     case 'f':
     case 'F':
@@ -966,7 +967,9 @@ int _lowZeros(int x) {
     n += 2;
     x >>= 2;
   }
-  if (x & 0x1 == 0) n += 1;
+  if (x & 0x1 == 0) {
+    n += 1;
+  }
   return n;
 }
 
