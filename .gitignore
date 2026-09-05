@@ -7,3 +7,6 @@ runtime/goruntime/pubspec.lock
 
 # A gart build writes dartout next to a test program.
 testdata/**/dartout/
+
+# The worktrees of a parallel session.
+/.claude/
