@@ -91,6 +91,26 @@ The Go node set costs nothing that the application does not use. The shaker
 drops each Dart class and each type descriptor that no code reaches. The whole
 cost of 7.2 megabytes comes from the switch of the host.
 
+## Why the Go node set is per application too
+
+The Go file of a pack holds each node type, and the emitter writes a Dart class
+and a type descriptor for each 1. compass names 27 of the 491 types that its 2
+packs hold, thus 464 classes and 464 descriptors stood in its Dart output.
+
+`internal/nodefilter` of the compiler reads the file that this tool wrote, and
+it keeps the types that the application names. `glutter` gives that set from the
+same `nodescan` run that writes the host, and the filter reaches the load
+through `packages.Config.Overlay`. The file on disk never changes, thus 2
+applications of 1 checkout each hold their own set and no `glutter doctor`
+reports a stale file.
+
+The filter cut the Dart output of compass from 18,316,492 bytes to 16,087,506,
+and the tree of `gart.dev/ui` from 2,922,881 bytes to 693,895. Read the section
+"The node filter of the Go side" of `docs/flutter-design.md`.
+
+A node type that the application does not name today reaches the build the
+moment 1 line names it, because the driver runs the scan in front of each load.
+
 ## The mapping
 
 `lib/read.dart` holds the rules. A widget reaches the node set when each

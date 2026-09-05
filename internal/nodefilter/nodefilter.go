@@ -152,10 +152,21 @@ func typeNames(f *ast.File) map[string]bool {
 }
 
 // readNames adds each identifier of a node of the syntax tree to the set.
+//
+// The name of a struct field, the name of a parameter, and the field of a
+// selector each stay out. Such a name is no type, and `Opacity float64` of the
+// node type Opacity would otherwise keep that type in each application.
 func readNames(n ast.Node, out map[string]bool) {
 	ast.Inspect(n, func(n ast.Node) bool {
-		if id, ok := n.(*ast.Ident); ok {
-			out[id.Name] = true
+		switch n := n.(type) {
+		case *ast.Ident:
+			out[n.Name] = true
+		case *ast.Field:
+			readNames(n.Type, out)
+			return false
+		case *ast.SelectorExpr:
+			readNames(n.X, out)
+			return false
 		}
 		return true
 	})

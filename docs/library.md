@@ -9,7 +9,7 @@ before a change of an overlay or before a new package of the surface.
 
 ## Standard library
 
-The surface holds 253 import paths: 164 standard packages, `syscall/dart`, 76
+The surface holds 254 import paths: 164 standard packages, `syscall/dart`, 77
 internal packages, and 12 vendored packages of `golang.org/x`. The run of
 `make surface` of 2026-09-04 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
@@ -701,6 +701,11 @@ make std-test STD=unicode/utf8    # each test passes
 `TestParseInvalidRegexps` of `regexp/syntax` reads a limit of a resource, and
 the recovered panic of the real `parse.go` serves it. `TestTestsOfGoroot` runs
 each test of that package.
+
+`strings` and `encoding/json` each stay out, and the section "strings and
+encoding/json, the state of 2026-09-06" of `docs/parity.md` names the cause of
+each 1. The test files of `strings` import `unsafe` and `internal/asan`, and
+`encoding/json` compiles and runs with 2 differences of `reflect`.
 
 The work gave:
 

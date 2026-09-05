@@ -284,8 +284,8 @@ between Go and the Dart output. Read the 2 pages before a large port.
 
 ## The standard library
 
-The surface holds 253 import paths. The set covers 164 standard packages, the
-interop package `syscall/dart`, 76 internal packages, and 12 vendored packages
+The surface holds 254 import paths. The set covers 164 standard packages, the
+interop package `syscall/dart`, 77 internal packages, and 12 vendored packages
 of `golang.org/x`. Stage 2 rejects an import of each other package.
 
 `make surface` measures the surface against the real API of Go 1.27. The run of

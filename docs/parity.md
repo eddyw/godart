@@ -304,7 +304,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `slices` | Overlay | The sort is a stable merge sort. |
 | `sort` | Overlay | Each name of Go. The order of `Slice` and of `Sort` is a quick sort, and it is not stable. |
 | `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. `ParseInt` and `ParseUint` each read a base of 0. |
-| `strings` | Overlay | Each name of Go. `NewReplacer` skips a pair whose old text is empty. |
+| `strings` | Overlay | Each name of Go. `replace.go` and `search.go` come from the real Go source since 2026-09-06, thus each of the 4 replacers of Go stands and an empty old text matches in front of each rune. |
 | `sync` | Overlay | `Mutex`, `RWMutex`, `Map`, `Cond`, `Locker`, `WaitGroup`, `Once`, `OnceFunc`, `OnceValue`, `OnceValues`, and `Pool`. |
 | `syscall/dart` | Intrinsic | The compiler replaces each call. |
 | `testing` | Overlay | |
@@ -369,6 +369,14 @@ The package reads the real Go source. It needed 6 reflect names, and
 because the runtime holds no address of an element. Go gives the array itself
 when the value holds an address. A write through the result of that case thus
 reaches no array here.
+
+`Value.Bytes` of a slice whose element type is a defined byte type, for example
+`type raw byte`, gives an alias since 2026-09-06. No conversion of Go reaches
+such a slice, and Go reads the memory again with the element type `byte`. The
+Dart form of the 2 slices is 1 object, thus the overlay writes that object into
+the box of a `[]byte` variable and the result names the same list.
+`encoding/json/v2` reads the name for a `[]namedByte` under the legacy option
+set of `encoding/json`.
 
 ### crypto/rand
 
@@ -527,9 +535,16 @@ the directory tree alone. A pattern that reaches such a directory thus gives
 more files here than under the go command.
 
 The other rules follow the go command: a pattern that names no file gives a
-rejection, a pattern with `..` or an absolute path gives a rejection, a name
-that starts with a dot or with a low line needs the prefix `all:`, and a
+rejection, a pattern with `..` or an absolute path gives a rejection, and a
 variable of the type `string` or `[]byte` takes 1 file.
+
+The rule of the dot and of the low line also follows the go command since
+2026-09-06. A walk of a directory that a pattern names drops each file whose
+name starts with a dot or with a low line, and the prefix `all:` takes it. A
+pattern that names a file itself embeds that file with no such test, and only a
+directory of a version control system stays out. `//go:embed _embed/*.json.zst`
+of `encoding/json/internal/jsontest` reads this rule. The loader rejected it
+before, and `resolveEmbed` of `cmd/go` holds the rule of Go.
 
 ## The Lookup family of net
 
@@ -1576,6 +1591,67 @@ A test file of GOROOT holds code outside the subset in many packages. `recover`,
 `unsafe`, and the address of a byte each appear, and each one stays outside the
 subset. Thus a package reaches a full run only when each of its test files stays
 inside the subset.
+
+### strings and encoding/json, the state of 2026-09-06
+
+`make std-test STD=strings` reaches no run, and 3 causes stand. Each 1 lives in
+a test file of Go, thus no change of the overlay removes it.
+
+| The cause | The files |
+|---|---|
+| An import of `unsafe` | `clone_test.go`, `compare_test.go`, `example_test.go`, `strings_test.go` |
+| An import of `internal/asan` | `builder_test.go`, `strings_test.go` |
+| An exported variable of an unnamed struct type with an unexported field | 10 tables of `strings_test.go`, for example `RepeatTests` and `ReplaceTests` |
+
+The third cause is the rule of M15: Go gives an unexported field the identity of
+its package, and Dart holds such a name private to 1 library. The external test
+package `strings_test` reads each table, thus the shape must cross a library.
+
+`export_test.go` reads `genericReplacer`, `trieNode`, `makeStringFinder`, and
+the 3 fields of `Replacer`. The overlay holds the real `replace.go` and the
+real `search.go` since 2026-09-06, thus that file now compiles.
+
+`make std-test STD=encoding/json` compiles each test file and it runs the
+binary since 2026-09-06. 8 items landed for it, and 4 opened the build:
+
+1. `encoding/json/internal/jsontest` joined the surface. The package holds the
+   corpus of the real test files, and it reads `embed` and `internal/zstd`.
+2. Stage 1 reads a `//go:embed` directive of a native package of GOROOT. It
+   read a directive of the module alone before.
+3. Stage 1 follows the rule of the go command for `_embed/*.json.zst`. The rule
+   of the dot and of the low line reaches a directory walk alone.
+4. A conversion between `time.Time` and a defined type over it compiles. Read
+   "A defined type over a struct of another package" of `docs/design.md`.
+
+4 more closed a defect that the run of the tests found:
+
+5. A shape of an unnamed struct type that embeds a named struct type of a
+   function body reached a file of its own, and the class of that named type
+   stayed inside the package. `anonPrivate` now walks such a type, thus the
+   shape keeps the class of the package. The Dart output held a name that no
+   library declared before.
+6. `reflect.Value.Bytes` of a slice of a defined byte type gives an alias. Read
+   the section of `encoding/xml` above.
+7. `reflect.Value.SetMapIndex` writes a copy of a struct value. The map decoder
+   of `encoding/json/v2` reuses 1 cell for each entry, thus 2 keys held 1
+   object and the second key overwrote the value of the first.
+   `testdata/programs/reflectmapset` holds the witness.
+8. 2 nil channels of 1 element type compare equal. Each library writes its own
+   nil channel of an element type, and the file of a shared unnamed struct type
+   writes 1 more, thus `reflect.DeepEqual` reported false where Go reports
+   true. `Chan` of the runtime library now holds the equality of Go, and
+   `testdata/programs/reflectdeep` holds the witness.
+
+`reflect.Value.IsZero` also walks an array and a struct that hold no
+comparison. Go answers a channel, a function, a map, and a slice with `IsNil`,
+and the equality of the runtime reported false for a struct with a field of a
+function type. `testdata/programs/reflectzero` holds the witness.
+
+2 limits of `reflect` stay. `Value.SetMapIndex` copies 1 level, thus a field of
+a struct type keeps the reference of the source, exactly as `Value.Set` does. A
+`Value` of the overlay also holds no mark of its own validity: `MapIndex` of a
+key whose value is a nil interface gives a `Value` that `IsValid` reports
+false, and Go reports true.
 
 The cause that blocks each package of the survey of 2026-08-31:
 

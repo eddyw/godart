@@ -596,6 +596,41 @@ false. `internal/emit/iface.go` holds `instanceDesc`.
 `testdata/programs/genericiface` proves an interface method call, a type
 assertion, a type switch, the verb `%T`, and a pointer to an instance.
 
+## A defined type over a struct of another package
+
+`type Time3339 time.Time` gives the 2 names 1 struct object of go/types, thus a
+conversion between them names 1 value. The emitter gave each name a class of
+its own before, and stage 2 rejected the conversion.
+
+The class must stand in the library of `time`. Go gives the unexported fields
+`wall`, `ext`, and `loc` the identity of that package, and a Dart library holds
+each name that starts with an underscore, thus a class of another library could
+never read them.
+
+`Time3339` thus declares no class. `structOwner` of `internal/emit/type.go`
+gives the owner of the class: the instance of a generic type of decision 347,
+or the named type of the package that declares the struct object. `structRef`
+reads it, and each reference to `Time3339` writes the form of `time.Time`. The
+descriptor of `Time3339` keeps the name and the method set of `Time3339`, thus
+a type assertion and the verb `%T` each answer as Go answers.
+
+The owner comes from the fields. `st.Field(0).Pkg()` names the package that
+wrote the struct type, and the first named struct type of the scope of that
+package owns the class. The answer thus reads the type alone, and 2 packages
+that both compile the reference give 1 answer. A struct with no field names no
+package, and such a type keeps its own class.
+
+A method with a value receiver stands in the Dart class of its type, and the
+class of `time.Time` cannot hold a method of another package. A pack of named
+types of 1 package that holds such a method thus keeps its own class, and the
+conversion keeps its rejection with a report that names that cause.
+`internal/verify/verify.go` holds the same rule, because stage 2 and stage 5
+must agree.
+
+`testdata/programs/structpkgconv` proves the conversion in the 2 directions, a
+pointer conversion, a method with a pointer receiver, an interface, the verb
+`%T`, a type assertion, the equality, and the copy point.
+
 ## The size of the Dart output
 
 The emitter writes each declaration of each package that the program imports,

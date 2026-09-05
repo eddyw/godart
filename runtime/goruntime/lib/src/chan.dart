@@ -43,6 +43,22 @@ final class Chan<T> {
 
   bool get isClosed => _closed;
 
+  /// The equality of Go. 2 nil channels of 1 element type are 1 value, and
+  /// each other pair compares by identity.
+  ///
+  /// Each library writes its own nil channel of an element type, and the file
+  /// of a shared unnamed struct type writes 1 more. The identity of the object
+  /// thus names no value of Go. The type stands outside the test, because the
+  /// caller already compared the 2 types: Go rejects a comparison of 2 channel
+  /// types that differ, and the equality of an interface value reads the name
+  /// of the descriptor first.
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is Chan && isNil && other.isNil);
+
+  @override
+  int get hashCode => isNil ? 0 : identityHashCode(this);
+
   /// True when a receive gives a value at this moment.
   bool get readyToReceive =>
       !isNil && (_buffer.isNotEmpty || _hasSender || _closed);

@@ -921,7 +921,25 @@ func (v Value) Call(in []Value) []Value {
 // SetMapIndex writes 1 entry of a map. A key with no value drops the entry.
 func (v Value) SetMapIndex(key, value Value) {
 	got := value.read()
-	dart.MapSet(v.read(), key.read(), got, got == nil)
+	// Go removes the entry only for the zero Value. A valid value that holds a
+	// nil interface writes the entry, and the key stays. The read of such a
+	// value also gives nil, thus the test reads the location and the static
+	// type of the Value. `{"T":null}` into a map[string]any needs that rule.
+	del := got == nil && value.loc == 0 && value.typ == nil && value.owner == nil
+	if got != nil && value.Kind() == Struct {
+		// Go copies the value into the map. The Dart form of a struct is an
+		// object, thus a caller that reuses 1 cell for each entry would give
+		// each key the same object. The map decoder of encoding/json/v2 reuses
+		// exactly 1 cell, and 2 keys then held 1 value.
+		//
+		// The copy reads the field list of the descriptor, thus a field of a
+		// struct type keeps the reference of the source. docs/parity.md holds
+		// that gap, and Value.Set holds it already.
+		cell := New(value.Type()).Elem()
+		cell.Set(value)
+		got = cell.read()
+	}
+	dart.MapSet(v.read(), key.read(), got, del)
 }
 
 // IsNil reports whether the value of a kind that can hold nil holds nil. Each
@@ -1378,6 +1396,33 @@ func (v Value) UnsafePointer() uintptr { return v.Pointer() }
 func (v Value) IsZero() bool {
 	t := v.Type()
 	if t == nil {
+		return true
+	}
+	// Go answers each of these kinds with IsNil, and it walks an array and a
+	// struct that hold no comparison. A struct with a field of a function type
+	// is such a struct, and the equality of the runtime reports false for it.
+	switch v.Kind() {
+	case Chan, Func, Interface, Map, Pointer, Slice, UnsafePointer:
+		return v.IsNil()
+	case Array:
+		if t.Comparable() {
+			break
+		}
+		for i := 0; i < v.Len(); i++ {
+			if !v.Index(i).IsZero() {
+				return false
+			}
+		}
+		return true
+	case Struct:
+		if t.Comparable() {
+			break
+		}
+		for i := 0; i < v.NumField(); i++ {
+			if !v.Field(i).IsZero() {
+				return false
+			}
+		}
 		return true
 	}
 	return dart.ValueEqual(v.read(), dart.DescZero(t.handle()))

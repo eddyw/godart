@@ -11,8 +11,8 @@ of a program that imports the package. The import surface holds the run of
 
 ## The import surface
 
-The surface holds 253 import paths: 164 standard packages, the interop package
-`syscall/dart`, 76 internal packages, and 12 vendored packages of
+The surface holds 254 import paths: 164 standard packages, the interop package
+`syscall/dart`, 77 internal packages, and 12 vendored packages of
 `golang.org/x`. Stage 2 rejects an import of each other package with a source
 position.
 

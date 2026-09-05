@@ -1304,6 +1304,59 @@ alone, and the descriptor library of the core holds 948,233 bytes. The measure o
 2026-09-02 named 1,271 bytes for each type, and it read a struct with fewer
 fields than a node type holds.
 
+## The node filter of the Go side
+
+The generated Dart host held a case for each of the 566 node types before
+2026-09-02, and the host is per application since then. The Go side was not.
+`gart.dev/ui` declares 273 node types, `gart.dev/ui/material` 218, and
+`gart.dev/ui/cupertino` 75. compass names 27 of the 491 that its 2 packs hold.
+The emitter writes each declaration of each package that the program imports,
+thus the Dart output carried 464 dead classes and 464 dead descriptors.
+
+`internal/nodefilter` reads each file that nodegen wrote and it keeps the types
+of a name set. `glutter` gives the set: `flutter/nodescan` reads the module of
+the application with the type information of the Go tool chain, and it names
+each type of `gart.dev/ui` and of each pack under it that the code uses. The
+answer is exact, and it already drives the host.
+
+**The filter runs at the build.** `driver.Options.Filter` is a function, and
+the driver calls it in front of each load. The result reaches
+`packages.Config.Overlay`, thus the file on disk never changes: 2 applications
+of 1 checkout each hold their own set, and a watch cycle that meets a new node
+type reads it at once. The Go type checker then reads the filtered source, thus
+an application that names a type outside the set gives a plain compile error
+and no build reads a stale file.
+
+The keep set grows 3 ways. It holds each name of the scan, each name that a
+hand written file of the pack reads, and each declared type that a kept
+declaration names. The walk of the names skips the name of a struct field and
+the field of a selector, because such a name is no type: `Opacity float64` of
+the node type `Opacity` would otherwise keep that type in each application.
+
+**The measure of 2026-09-06.** The build is `flutter/example/compass`, first
+with `gart build` and then with `glutter gen`, on the same commit and the same
+compiler. Each number sums the bytes of every `.dart` file of the output. The
+load average of the machine stood between 215 and 270 during the 2 runs,
+because a second agent ran a test suite. A byte count reads no load.
+
+| Measure | Before | After | Cut |
+|---|---|---|---|
+| The whole Dart output | 18,316,492 | 16,087,506 | 12.2 percent |
+| The tree of `gart.dev/ui` | 2,922,881 | 693,895 | 76.3 percent |
+| `ui.dart`, the descriptor library of the core | 948,233 | 310,204 | 67.3 percent |
+| `ui/material.dart`, the descriptor library of Material | 875,599 | 70,580 | 91.9 percent |
+| `ui/widgets_gen.part.dart`, the classes of the core | 350,524 | 27,527 | 92.1 percent |
+| `ui/material/widgets_gen.part.dart` | 464,387 | 37,740 | 91.9 percent |
+| Node classes of the 2 packs | 491 | 27 | 94.5 percent |
+
+The other 3 examples read the same filter. counter keeps 21 node types of 37
+names, apilist 13 of 21, and form 9 of 19. Each 1 passes `flutter analyze` and
+its widget tests.
+
+`themes.part.dart` holds 139,198 bytes, and no filter reaches it. The theme
+value types stand in a hand written file, and an application that names 1 theme
+carries each other 1.
+
 ## The probes of the language
 
 Each probe below ran again on 2026-09-03, under Dart 3.13.2 and Flutter 3.47.2.

@@ -22,8 +22,8 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 253 import paths: 164 standard packages, the interop package
-`syscall/dart`, 76 internal packages, and 12 vendored packages of
+The surface holds 254 import paths: 164 standard packages, the interop package
+`syscall/dart`, 77 internal packages, and 12 vendored packages of
 `golang.org/x`. `make surface` measures 174 of them against the real API, and
 165 of those hold each exported name. The measure skips the interop package
 and each internal package, because no package of Go stands behind them.
@@ -286,6 +286,23 @@ program that reads `crypto/tls`. `encoding/json` reaches more programs than
 ever gives, and the other names a bug of the program that the text of the error
 already reports. Thus the 2 stay out under the same rule.
 
+## jsontest joined the surface on 2026-09-06
+
+`encoding/json/internal/jsontest` holds the corpus of the real test files of
+`encoding/json` and of `encoding/json/v2`. The 7 files of `_embed` hold
+275,490 bytes of JSON under zstd, and the package reads them through `embed`
+and `internal/zstd`. Both stood in the surface already, thus the package needed
+1 line of `internal/overlay/native.go`.
+
+The surface holds 254 import paths now, and 253 stood before. `make surface`
+measures no internal package, thus the count of 165 packages of 174 holds.
+
+The work needed 2 rules of stage 1. The loader read a `//go:embed` directive of
+the module alone, and a native package of GOROOT holds one too. It also
+rejected `_embed/*.json.zst`, and the go command embeds a file that a pattern
+names with no test of the dot and of the low line. `docs/parity.md` holds the
+2 rules.
+
 ## A fused multiply and addition moves the last bit
 
 The specification of Go lets an implementation join a multiply and an addition
@@ -518,7 +535,7 @@ cause.
 |---|---|---|---|
 | Packages that hold each exported name | 112 of 123 | 149 of 159 | **165 of 174** |
 | Standard packages outside the surface | 62 | 30 | **16** |
-| Import paths of the surface | 210 | 226 | **253** |
+| Import paths of the surface | 210 | 226 | **254** |
 | Names of the surface that stay reachable | 60 | 29 | **0** |
 | Entries of the skip table that hold a compiler defect | 5 | 2 | **2** |
 | Positions of the order of the evaluation that differ from gc | 5 | 0 | **0** |

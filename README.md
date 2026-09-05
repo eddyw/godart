@@ -83,7 +83,7 @@ The compiler holds all 6 stages. The subset covers:
 | Generics | Generic function, generic type, generic method of Go 1.27, a generic function as a value |
 | Isolates | `dart.Worker` runs a pure function in a second isolate |
 | Structs | A named struct and an unnamed struct, with value semantics |
-| Library | 253 import paths. `docs/what-compiles.md` holds the whole list. |
+| Library | 254 import paths. `docs/what-compiles.md` holds the whole list. |
 | Tests | `gart test` runs a `TestXxx` function and a subtest |
 | Iterators | A range loop over a function, and `iter.Pull` over a goroutine |
 | Files | `os` and `io` read and write a file through `dart:io` |
@@ -95,7 +95,7 @@ The compiler holds all 6 stages. The subset covers:
 | JSON | `json.Marshal` walks the type descriptor of a value |
 | Benchmarks | `gart test -bench <expression>` runs a `BenchmarkXxx` function |
 
-The standard library surface holds 253 import paths, for example `fmt`,
+The standard library surface holds 254 import paths, for example `fmt`,
 `net/http`, `regexp`, `reflect`, `encoding/json`, `text/template`, `embed`,
 `database/sql`, `go/types`, and the interop package `syscall/dart`.
 `make surface` measures 174 of them against the real API of Go, and 165 hold
