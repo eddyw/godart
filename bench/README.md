@@ -9,6 +9,8 @@ writes from the Go source, Dart, and bun. It holds 3 groups of cases:
 3. **The scalar.** An integer, a float64, a slice, a map, and a struct. Each
    case holds no string and no document, thus it gives the cost of the
    arithmetic and of the memory alone.
+4. **The text of a client.** A format, a split, a join, a replace, and a sort
+   of a struct by a field.
 
 The group of the server stays out on purpose. The question of 2026-09-06 is
 the cost of a client.
@@ -48,76 +50,98 @@ runs its own JIT.
 `Math.imul` gives bun the low 32 bits of the product, because a plain multiply
 would lose the low bits above 2^53.
 
-## The result of 2026-09-06, late
+## The result of 2026-09-06, the end of the day
 
-The load average stood at 9.9, thus each absolute number carries that load.
-The ratios stand.
+Each number is the lower of 2 runs, on a machine whose load average stood near
+7. The 3 groups above hold 27 cases now, plus the 14 cases of the boundary.
 
 | Case | Go | Dart | gart | bun | gart/Dart | gart/Go |
 |---|---|---|---|---|---|---|
-| `bytes.count` | 514.04 us | 2.76 ms | **3.61 ms** | — | 1.3 | 7.0 |
-| `json.scan` | 978.98 us | — | **13.20 ms** | — | — | 13.5 |
-| `json.decode.any` | 6.11 ms | 5.03 ms | **97.82 ms** | 1.34 ms | 19.4 | 16.0 |
-| `json.decode.typed` | 3.30 ms | 5.39 ms | **93.88 ms** | 1.35 ms | 17.4 | 28.5 |
-| `json.encode.typed` | 1.54 ms | 7.83 ms | **50.25 ms** | 1.68 ms | 6.4 | 32.5 |
-| `str.concat.5k` | 5.47 ms | 4.33 ms | **4.41 ms** | 12.62 us | 1.0 | 0.8 |
-| `str.builder.200k` | 770.85 us | 2.92 ms | **4.13 ms** | 1.19 ms | 1.4 | 5.4 |
-| `str.substr.100k` | 597.73 us | 5.74 ms | **4.47 ms** | 1.15 ms | 0.8 | 7.5 |
-| `int.sum.1m` | 253.03 us | 303.04 us | **303.86 us** | 254.71 us | 1.0 | 1.2 |
-| `int.hash.1m` | 1.01 ms | 1.00 ms | **1.02 ms** | 22.57 ms | 1.0 | 1.0 |
-| `int.div.1m` | 1.01 ms | 1.02 ms | **599.25 us** | 1.10 ms | 0.6 | 0.6 |
-| `int.parse.100k` | 416.59 us | 421.26 us | **2.89 ms** | 467.34 us | 6.9 | 6.9 |
-| `int.format.100k` | 1.16 ms | 845.42 us | **21.97 ms** | 1.50 ms | 26.0 | 19.0 |
-| `float.sum.1m` | 903.46 us | 685.42 us | **3.64 ms** | 660.82 us | 5.3 | 4.0 |
-| `float.math.1m` | 752.26 us | 767.34 us | **143.99 ms** | 955.44 us | 187.7 | 191.4 |
-| `float.parse.100k` | 1.70 ms | 1.29 ms | **8.35 ms** | 1.47 ms | 6.5 | 4.9 |
-| `float.format.100k` | 3.72 ms | 7.14 ms | **25.47 ms** | 3.74 ms | 3.6 | 6.8 |
-| `slice.append.1m` | 1.94 ms | 5.57 ms | **25.24 ms** | 2.21 ms | 4.5 | 13.0 |
-| `slice.sort.100k` | 4.82 ms | 23.42 ms | **26.62 ms** | 10.56 ms | 1.1 | 5.5 |
-| `map.string.100k` | 4.61 ms | 8.99 ms | **58.59 ms** | 8.41 ms | 6.5 | 12.7 |
-| `map.int.100k` | 1.61 ms | 5.30 ms | **11.30 ms** | 2.06 ms | 2.1 | 7.0 |
-| `struct.alloc.1m` | 703.95 us | 3.45 ms | **4.22 ms** | 345.17 us | 1.2 | 6.0 |
+| `bytes.count` | 498.99 us | 2.53 ms | **2.49 ms** | — | 1.0 | 5.0 |
+| `json.scan` | 931.81 us | — | **11.00 ms** | — | — | 11.8 |
+| `json.decode.any` | 5.79 ms | 5.04 ms | **87.96 ms** | 1.23 ms | 17.5 | 15.2 |
+| `json.decode.typed` | 3.16 ms | 5.17 ms | **70.94 ms** | 1.29 ms | 13.7 | 22.5 |
+| `json.encode.typed` | 1.50 ms | 7.58 ms | **36.20 ms** | 1.66 ms | 4.8 | 24.1 |
+| `str.concat.5k` | 5.31 ms | 4.19 ms | **4.24 ms** | 11.96 us | 1.0 | 0.8 |
+| `str.builder.200k` | 692.47 us | 2.81 ms | **3.91 ms** | 1.03 ms | 1.4 | 5.6 |
+| `str.substr.100k` | 531.10 us | 5.58 ms | **4.12 ms** | 1.08 ms | 0.7 | 7.8 |
+| `int.sum.1m` | 241.94 us | 299.10 us | **298.37 us** | 244.35 us | 1.0 | 1.2 |
+| `int.hash.1m` | 928.75 us | 963.96 us | **962.67 us** | 22.42 ms | 1.0 | 1.0 |
+| `int.div.1m` | 949.92 us | 1.01 ms | **623.34 us** | 1.07 ms | 0.6 | 0.7 |
+| `int.parse.100k` | 401.02 us | 440.73 us | **2.86 ms** | 458.76 us | 6.5 | 7.1 |
+| `int.format.100k` | 1.15 ms | 797.61 us | **1.90 ms** | 1.43 ms | 2.4 | 1.7 |
+| `float.sum.1m` | 844.44 us | 662.80 us | **686.31 us** | 628.49 us | 1.0 | 0.8 |
+| `float.math.1m` | 731.46 us | 751.26 us | **711.36 us** | 911.13 us | 0.9 | 1.0 |
+| `float.parse.100k` | 1.61 ms | 1.24 ms | **8.17 ms** | 1.41 ms | 6.6 | 5.1 |
+| `float.format.100k` | 3.58 ms | 6.96 ms | **23.57 ms** | 3.66 ms | 3.4 | 6.6 |
+| `slice.append.1m` | 1.82 ms | 5.57 ms | **19.74 ms** | 2.07 ms | 3.5 | 10.8 |
+| `slice.sort.100k` | 4.69 ms | 22.87 ms | **26.00 ms** | 10.31 ms | 1.1 | 5.5 |
+| `map.string.100k` | 4.27 ms | 8.38 ms | **23.44 ms** | 7.72 ms | 2.8 | 5.5 |
+| `map.int.100k` | 1.55 ms | 5.10 ms | **10.19 ms** | 1.98 ms | 2.0 | 6.6 |
+| `struct.alloc.1m` | 688.23 us | 3.37 ms | **679.21 us** | 343.08 us | 0.2 | 1.0 |
+| `fmt.sprintf.100k` | 10.03 ms | 12.31 ms | **88.65 ms** | 5.97 ms | 7.2 | 8.8 |
+| `str.split.100k` | 4.36 ms | 6.13 ms | **48.32 ms** | 5.40 ms | 7.9 | 11.1 |
+| `str.join.100k` | 4.00 ms | 14.69 ms | **11.33 ms** | 4.14 ms | 0.8 | 2.8 |
+| `str.replace.100k` | 5.26 ms | 13.14 ms | **48.26 ms** | 11.18 ms | 3.7 | 9.2 |
+| `sort.struct.50k` | 5.09 ms | 8.69 ms | **13.16 ms** | 5.83 ms | 1.5 | 2.6 |
 
-### What the scalar cases say
+### What the numbers say
 
 1. **The integer of gart costs what a Dart int costs, and it holds 64 bits.**
    `GoInt` is an extension type, thus the ahead of time build sees a plain
    `int` and the arithmetic reaches the machine. `int.sum` and `int.hash` each
-   sit at 1.0 against Dart and against Go. `int.div` sits at 0.7, because Dart
-   holds a faster path than the division of Go.
-2. **bun loses the 64 bit integer by a factor of 22.6.** A JS number holds 53
-   bits, thus `int.hash.1m` reads a BigInt and it costs 22.57 milliseconds
-   against 1.02. This is the 1 case where the ahead of time build of Dart
-   stands far ahead of the JIT of bun.
-3. **A float64 loop costs 5 times the same loop in Dart.** `float.sum` holds
-   no call and no allocation, thus the gap comes from the emitted form of the
-   conversion of an integer to a float64.
-4. **`float.math.1m` is a defect and not a floor.** Read the section below.
-5. **The floor of the slice reaches each case that writes bytes.**
-   `int.format`, `float.format`, `int.parse`, `float.parse`, and
-   `slice.append` each sit 3.6 to 26 times above Dart, because each 1 writes
-   into a `[]byte` and `Slice.array` holds a `List<T>` whose real shape
-   varies.
-6. **bun stands ahead of Go on `struct.alloc` and near Go on `slice.append`.**
-   The JIT holds a hidden class for `Point`, and the nursery of the JS engine
-   is faster than the allocator of Dart. This case gives no work to gart.
+   sit at 1.0 against Dart and against Go, and `int.div` sits at 0.6.
+2. **bun loses the 64 bit integer by a factor of 23.** A JS number holds 53
+   bits, thus `int.hash.1m` reads a BigInt and it costs 22.42 milliseconds
+   against 0.96. This is the case where the ahead of time build of Dart stands
+   far ahead of the JIT of bun.
+3. **5 cases now cost less than the same work in Dart.** `struct.alloc` sits at
+   0.2, `int.div` at 0.6, `str.substr` at 0.7, `str.join` at 0.8, and
+   `float.math` at 0.9. `bytes.count` sits at 1.0.
+4. **The decoder of `encoding/json` holds the largest gap, and it is flat.** A
+   profile of 2026-09-06 puts the Go code of that package at 24 percent, the
+   read of a slice at 9, and the layer of `reflect` at 8. No single change
+   reaches it, thus a large win needs an overlay of that package that reads the
+   decoder of Dart.
+5. **`fmt.Sprintf` costs 8.8 times the same call in Go.** The overlay parses
+   the format and it calls the bridge 1 time for each verb. Each such call
+   boxes the value, it decodes the verb, and it parses the verb again.
+6. **A scan of a text still allocates.** `str.split` gives a slice of
+   substrings, and each substring is 1 Go string with a view of the storage.
 
-### The defect of `math.Sqrt`
+### The 6 changes of 2026-09-06
 
-`float.math.1m` costs 144 milliseconds under gart and 767 microseconds under
-Dart. That is a factor of 188, and the cause is 1 file of GOROOT.
+| Case | Before | After | Factor |
+|---|---|---|---|
+| `float.math.1m` | 143.99 ms | 711 us | 202 |
+| `int.format.100k` | 21.97 ms | 1.90 ms | 11.6 |
+| `struct.alloc.1m` | 3.90 ms | 679 us | 5.7 |
+| `float.sum.1m` | 3.43 ms | 693 us | 4.9 |
+| `str.split.100k` | 92.14 ms | 48.32 ms | 1.9 |
+| `str.replace.100k` | 74.28 ms | 48.26 ms | 1.5 |
+| `float.format.100k` | 35.06 ms | 23.57 ms | 1.5 |
+| `json.encode.typed` | 52.23 ms | 36.20 ms | 1.4 |
+| `json.decode.typed` | 98.71 ms | 70.94 ms | 1.4 |
+| `map.string.100k` | 76.24 ms | 23.44 ms | 3.3 |
+| `slice.append.1m` | 24.65 ms | 19.74 ms | 1.2 |
 
-`math.Sqrt` calls `math.sqrt`, and the compiler of Go replaces that call with
-1 machine instruction. gart holds no such rule, thus it compiles the portable
-Go form: a loop of 54 steps that builds the result bit by bit with 64 bit
-integer arithmetic, and 2 calls of `Float64bits` and `Float64frombits` around
-it. 1 square root thus costs about 140 nanoseconds, and the whole step of
-the Dart form costs 0.77.
-
-`internal/overlay/std/math/` already holds 5 files that set `haveArchExp`,
-`haveArchLog`, `haveArchFloor`, `haveArchCeil`, `haveArchTrunc`, `haveArchMax`,
-and `haveArchMin` to false. Each 1 of those names takes the portable path too,
-and `dart:math` holds the fast form of each 1.
+1. **`math.Sqrt` compiled to a loop of 54 steps.** The compiler of Go replaces
+   `math.sqrt` with 1 machine instruction, and gart held no such rule. `Sqrt`,
+   `Floor`, `Ceil`, `Trunc`, and `Abs` read the instruction of Dart now. Read
+   decision 359.
+2. **`float64(i)` compiled to `int.toDouble`,** a virtual call that the ahead
+   of time compiler does not fold. The operator + of int reads a double
+   operand and gives the same value. Read decision 360.
+3. **`strconv.FormatInt` joined 1 digit at a time to the front.** Read
+   decision 361.
+4. **A byte slice holds its storage in a field of the type `Uint8List`.**
+   `Slice.array` held a `List<T>` whose real class varies, thus each read took
+   a dispatch over many targets.
+5. **A Go string of ASCII skips the UTF-8 encoder,** and it holds that text as
+   its own decode. The encoder held 9 percent of the cost of `fmt.Sprintf`.
+6. **The scan of the `strings` overlay reads bytes.** `Index`, `Count`,
+   `Split`, `SplitSeq`, and `Replace` built 1 Go string for each position of
+   the text.
 
 ## The memo of the decode
 
@@ -136,7 +160,11 @@ reads the memo against the second baseline.
 | `cross.todart.100000` | 1 string of 100,000 bytes, read again | 31.72 us | 18 ns | 1,762 |
 | `cross.todart.2000000` | 1 string of 2 megabytes, read again | 777.23 us | 18 ns | 43,179 |
 | `cross.fresh.20` | a new string at each read | 39 ns | 40 ns | 0.97 |
-| `cross.fresh.2000000` | a new string of 2 megabytes | 776.26 us | 766.24 us | 1.01 |
+| `cross.fresh.2000000` | a new string of 2 megabytes | 776.26 us | 753.51 us | 1.03 |
+
+The other crossing also fell, because `GoString.fromString` holds a path for a
+text of ASCII now. A write of 100,000 bytes into Go fell from 195.32 to 51.63
+microseconds, and a write of 2 megabytes fell from 3.61 milliseconds to 1.10.
 
 The `cross.fresh` cases give the cost of the field on a string that no code
 reads 2 times. That cost stands at 1 to 3 percent, and each case that holds no
