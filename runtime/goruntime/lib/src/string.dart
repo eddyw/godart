@@ -204,6 +204,17 @@ Slice<GoInt> $appendString(
   final int n = str.bytes.length;
   if (n == 0) return s;
   if ($isJS) return $appendSlice(s, $stringToBytes(str), alloc);
+  // strings.Builder, fmt, and encoding/json each reach this line for each
+  // write. The element type stands here, thus 1 test of the class gives a
+  // direct move of the bytes and a direct build of the header.
+  if (s is $ByteSlice) {
+    final int need = s.len + n;
+    if (need <= s.cap) {
+      final Uint8List dst = s.bytes;
+      dst.setRange(s.off + s.len, s.off + need, str.bytes, 0);
+      return $ByteSlice(dst, s.off, need, s.cap);
+    }
+  }
   return $appendRange(s, str.bytes as List<GoInt>, 0, n, alloc);
 }
 
@@ -219,6 +230,12 @@ Slice<GoInt> $stringToBytes(GoString s) {
 /// The Go conversion `string(b)` for a byte slice.
 GoString $bytesToString(Slice<GoInt> b) {
   final out = Uint8List(b.len);
+  // A byte slice holds a Uint8List, thus 1 move of the memory replaces the
+  // loop. The loop stands for the JS target, where an element is a pair.
+  if (b is $ByteSlice) {
+    out.setRange(0, b.len, b.bytes, b.off);
+    return GoString.take(out);
+  }
   for (var i = 0; i < b.len; i++) {
     out[i] = $ix(b.array[b.off + i]);
   }
