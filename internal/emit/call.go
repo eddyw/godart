@@ -1322,8 +1322,9 @@ func (e *emitter) appendCall(x *ir.Builtin) string {
 	if x.Spread {
 		source := e.expr(x.Args[1])
 		if isString(x.Args[1].GoType()) {
-			// Go allows append of a string to a byte slice.
-			source = fmt.Sprintf("$stringToBytes(%s)", source)
+			// Go allows append of a string to a byte slice. append reads the
+			// source and holds it not, thus the slice shares the bytes.
+			source = fmt.Sprintf("$stringBytes(%s)", source)
 		} else if tp, ok := types.Unalias(x.Args[1].GoType()).(*types.TypeParam); ok &&
 			typeset.Core(tp) == nil {
 			// A union of a string and a byte slice branches at run time.
@@ -1371,7 +1372,9 @@ func (e *emitter) copyCall(x *ir.Builtin) string {
 	dst, src := x.Args[0], x.Args[1]
 	source := e.expr(src)
 	if isString(src.GoType()) {
-		source = fmt.Sprintf("$stringToBytes(%s)", source)
+		// copy reads the source and holds it not, thus the slice shares the
+		// bytes of the string.
+		source = fmt.Sprintf("$stringBytes(%s)", source)
 	}
 	slice, _ := typeset.Core(dst.GoType()).(*types.Slice)
 	if slice != nil && needsElementCopy(slice.Elem()) {
