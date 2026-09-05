@@ -56,4 +56,10 @@ func main() {
 	measure("map.string.100k", func() int { return cases.MapString(100000) })
 	measure("map.int.100k", func() int { return cases.MapInt(100000) })
 	measure("struct.alloc.1m", func() int { return int(cases.StructAlloc(1000000)) })
+
+	measure("fmt.sprintf.100k", func() int { return cases.Sprintf(100000) })
+	measure("str.split.100k", func() int { return cases.Split(100000) })
+	measure("str.join.100k", func() int { return cases.Join(100000) })
+	measure("str.replace.100k", func() int { return cases.Replace(100000) })
+	measure("sort.struct.50k", func() int { return cases.SortStruct(50000) })
 }

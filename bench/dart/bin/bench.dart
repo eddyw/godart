@@ -26,6 +26,18 @@ const List<String> decimals = <String>[
   '0.5', '3.14159', '-2.5', '1e3', '12345.6789', '0.0001', //
 ];
 
+const List<String> words = <String>[
+  'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', //
+];
+
+/// Row holds the 2 fields of the sort case.
+class Row {
+  Row(this.key, this.name);
+
+  final int key;
+  final String name;
+}
+
 /// Point holds the 4 numbers of a rectangle, exactly as the Go struct does.
 class Point {
   Point(this.x, this.y, this.w, this.h);
@@ -283,6 +295,49 @@ void main(List<String> args) {
     return s.toInt();
   });
 
+  measure('fmt.sprintf.100k', 'dart', () {
+    int total = 0;
+    for (int i = 0; i < 100000; i++) {
+      final String s =
+          '${words[i % words.length]}-$i-${(i * 1.5).toStringAsFixed(2)}';
+      total += s.length;
+    }
+    return total;
+  });
+  measure('str.split.100k', 'dart', () {
+    final String line = words.join(',');
+    int total = 0;
+    for (int i = 0; i < 100000; i++) {
+      total += line.split(',').length;
+    }
+    return total;
+  });
+  measure('str.join.100k', 'dart', () {
+    int total = 0;
+    for (int i = 0; i < 100000; i++) {
+      total += words.join(',').length;
+    }
+    return total;
+  });
+  measure('str.replace.100k', 'dart', () {
+    final String line = words.join(',');
+    int total = 0;
+    for (int i = 0; i < 100000; i++) {
+      total += line.replaceAll(',', ' | ').length;
+    }
+    return total;
+  });
+  measure('sort.struct.50k', 'dart', () {
+    final List<Row> rows = <Row>[];
+    int x = 1;
+    for (int i = 0; i < 50000; i++) {
+      x = (x * 1103515245 + 12345) & 0x7FFFFFFF;
+      rows.add(Row(x, words[i % words.length]));
+    }
+    rows.sort((Row a, Row b) => a.key - b.key);
+    return rows[25000].key;
+  });
+
   // The same cases, in the Dart that gart wrote.
   measure('bytes.count', 'gart', () => go.CountBytes().toInt());
   measure('json.scan', 'gart', () => go.Scan().toInt());
@@ -323,6 +378,11 @@ void main(List<String> args) {
     'gart',
     () => go.StructAlloc(GoInt(1000000)).toInt(),
   );
+  measure('fmt.sprintf.100k', 'gart', () => go.Sprintf(GoInt(100000)).toInt());
+  measure('str.split.100k', 'gart', () => go.Split(GoInt(100000)).toInt());
+  measure('str.join.100k', 'gart', () => go.Join(GoInt(100000)).toInt());
+  measure('str.replace.100k', 'gart', () => go.Replace(GoInt(100000)).toInt());
+  measure('sort.struct.50k', 'gart', () => go.SortStruct(GoInt(50000)).toInt());
 
   // The boundary. A Go string holds UTF-8 bytes, and a Dart string holds UTF-16
   // code units, thus each crossing encodes or decodes the whole text.

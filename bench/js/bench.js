@@ -173,3 +173,42 @@ measure("struct.alloc.1m", () => {
   }
   return Math.trunc(s);
 });
+
+// The text work of a client: a format, a split, a join, a replace, and a sort
+// of an object by a field.
+const words = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"];
+
+measure("fmt.sprintf.100k", () => {
+  let total = 0;
+  for (let i = 0; i < 100000; i++) {
+    total += `${words[i % words.length]}-${i}-${(i * 1.5).toFixed(2)}`.length;
+  }
+  return total;
+});
+measure("str.split.100k", () => {
+  const line = words.join(",");
+  let total = 0;
+  for (let i = 0; i < 100000; i++) total += line.split(",").length;
+  return total;
+});
+measure("str.join.100k", () => {
+  let total = 0;
+  for (let i = 0; i < 100000; i++) total += words.join(",").length;
+  return total;
+});
+measure("str.replace.100k", () => {
+  const line = words.join(",");
+  let total = 0;
+  for (let i = 0; i < 100000; i++) total += line.replaceAll(",", " | ").length;
+  return total;
+});
+measure("sort.struct.50k", () => {
+  const rows = new Array(50000);
+  let x = 1;
+  for (let i = 0; i < 50000; i++) {
+    x = (Math.imul(x, 1103515245) + 12345) & 0x7fffffff;
+    rows[i] = { key: x, name: words[i % words.length] };
+  }
+  rows.sort((a, b) => a.key - b.key);
+  return rows[25000].key;
+});

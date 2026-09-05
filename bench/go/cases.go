@@ -8,6 +8,7 @@ package cases
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"sort"
@@ -326,4 +327,66 @@ func Labels(count, size int) []string {
 		out[i] = b.String()[:size]
 	}
 	return out
+}
+
+// The cases below hold the text work of a client: a format, a split, a join, a
+// replace, and a sort of a struct by a field.
+
+var words = []string{"alpha", "beta", "gamma", "delta", "epsilon", "zeta"}
+
+// Sprintf builds n lines with 3 verbs.
+func Sprintf(n int) int {
+	total := 0
+	for i := 0; i < n; i++ {
+		s := fmt.Sprintf("%s-%d-%.2f", words[i%len(words)], i, float64(i)*1.5)
+		total += len(s)
+	}
+	return total
+}
+
+// Split cuts a line of 6 words n times.
+func Split(n int) int {
+	line := strings.Join(words, ",")
+	total := 0
+	for i := 0; i < n; i++ {
+		total += len(strings.Split(line, ","))
+	}
+	return total
+}
+
+// Join builds a line of 6 words n times.
+func Join(n int) int {
+	total := 0
+	for i := 0; i < n; i++ {
+		total += len(strings.Join(words, ","))
+	}
+	return total
+}
+
+// Replace changes each comma of a line n times.
+func Replace(n int) int {
+	line := strings.Join(words, ",")
+	total := 0
+	for i := 0; i < n; i++ {
+		total += len(strings.ReplaceAll(line, ",", " | "))
+	}
+	return total
+}
+
+// Row holds 1 element of the sort case.
+type Row struct {
+	Key  int
+	Name string
+}
+
+// SortStruct orders n rows by the key.
+func SortStruct(n int) int {
+	rows := make([]Row, n)
+	x := 1
+	for i := range rows {
+		x = step(x)
+		rows[i] = Row{Key: x, Name: words[i%len(words)]}
+	}
+	sort.Slice(rows, func(a, b int) bool { return rows[a].Key < rows[b].Key })
+	return rows[n/2].Key
 }
