@@ -4,5 +4,5 @@ part of 'main.dart';
 
 const $srcmapData = <String>[
   'bin/main/main.part.dart',
-  'g|example.com/multi/main.go|main.main\ng+9,1+1,1+1,1+1,1+1,1+1,1+1',
+  'h|example.com/multi/main.go|main.main\nh+9,1+1,1+1,1+1,1+1,1+1,1+1',
 ];

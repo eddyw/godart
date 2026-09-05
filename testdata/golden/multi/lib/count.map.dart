@@ -4,5 +4,5 @@ part of 'count.dart';
 
 const $srcmapData = <String>[
   'package:multi/count/count.part.dart',
-  'g|example.com/multi/count/count.go|example.com/multi/count.Runes\ng+5,1+1,6+1,2+2',
+  'h|example.com/multi/count/count.go|example.com/multi/count.Runes\nh+5,1+1,6+1,2+2',
 ];
