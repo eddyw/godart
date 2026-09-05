@@ -1653,6 +1653,33 @@ a struct type keeps the reference of the source, exactly as `Value.Set` does. A
 key whose value is a nil interface gives a `Value` that `IsValid` reports
 false, and Go reports true.
 
+**The full run does not end, and 2 items hold it.**
+
+`TestUnmarshalMaxDepth` builds a JSON value that stands 10000 levels deep, and
+the run of it reached no end inside 4 minutes. Each other test of the package
+ends inside a few seconds.
+
+A marshal of a value whose type declares `MarshalJSON` or `MarshalText` ends
+the binary with a cast of Dart:
+
+```
+type '(Object?) => Object?' is not a subtype of
+type '(Object?) => (Slice<int>, Iface?)' in type cast
+```
+
+`_makeMethodArshaler` of `encoding/json/v2` reads
+`reflect.TypeAssert[Marshaler](va.Addr())` and it calls `MarshalJSON` through
+that interface. The emitter writes the call as a tear off of the method table
+with a cast to the exact Dart function type, and the pointer descriptor that
+`reflect` builds at run time holds a method whose Dart type erases the record
+of the 2 results. Decision 342 holds the same shape for a parameter, and the
+result of a method needs the rule too. `TestEncodeBytekind`,
+`TestRefValMarshal`, and `TestMarshalTextFloatMap` each end there.
+
+`TestUnmarshal` holds the largest table of the package, and it passes. 16 top
+level tests of the range A to L and 14 of the range N to T pass in front of the
+first cast.
+
 The cause that blocks each package of the survey of 2026-08-31:
 
 | Package | Cause |

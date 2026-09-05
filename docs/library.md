@@ -704,8 +704,10 @@ each test of that package.
 
 `strings` and `encoding/json` each stay out, and the section "strings and
 encoding/json, the state of 2026-09-06" of `docs/parity.md` names the cause of
-each 1. The test files of `strings` import `unsafe` and `internal/asan`, and
-`encoding/json` compiles and runs with 2 differences of `reflect`.
+each 1. The test files of `strings` import `unsafe` and `internal/asan`.
+`encoding/json` compiles and runs since 2026-09-06, and 2 items hold the full
+run: a marshal through `MarshalJSON` ends with a cast of Dart, and
+`TestUnmarshalMaxDepth` reads a value of 10000 levels.
 
 The work gave:
 
