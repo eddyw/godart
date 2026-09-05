@@ -1188,7 +1188,7 @@ acceptable and the first open question is answered. The output:
 
 | Output | Scope |
 |---|---|
-| `flutter/ui/widgets_gen.go`, 564 node types and 4975 fields | The whole project |
+| `flutter/ui/**/widgets_gen.go`, 566 node types and 4970 fields in 3 packs | The whole project |
 | `<app>/lib/widgets_gen.dart` | 1 application |
 
 **The 3 questions of the plan.**
@@ -1292,7 +1292,9 @@ The last 2 rows carry the risk of a large node set. The measure of 2026-09-05
 gives about 3,280 bytes of descriptor source for each node type of
 `gart.dev/ui`, thus the 564 node types cost 1.85 megabytes of Dart source. The
 Dart tree shaker drops a descriptor that no code reads, thus an ahead of time
-build carries the node types of the application alone. The measure of
+build carries the node types of the application alone. The pack split of
+2026-09-05 cut that cost: an application compiles the packs that it names
+alone, and the descriptor library of the core holds 948,233 bytes. The measure of
 2026-09-02 named 1,271 bytes for each type, and it read a struct with fewer
 fields than a node type holds.
 

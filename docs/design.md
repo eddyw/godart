@@ -46,8 +46,11 @@ clear error and a source position. The verifier rejects:
 
 - An import of the `unsafe` package, and all cgo code. A blank import of
   `unsafe` stays in the subset, because such an import performs no operation.
-- The address of a field, of an element, and of the result of a call. Only a
-  variable holds a box. Read the "Pointers" section.
+- The address of a value that names no location. A variable, a composite
+  literal, a field of a struct, and an element of a slice or of an array each
+  name one, and the result of a call names none. Read the "Pointers" section.
+- The address of an exported package variable. The box of such a variable does
+  not cross a package boundary.
 - An index, a slice expression, a range loop, `len`, and `cap` on a type
   parameter with more than 1 Dart type.
 - An unnamed struct type in an exported declaration of a package.
@@ -261,8 +264,11 @@ point. The copy points are:
   the Dart List. Such a pointer needs no box, and it has no extra cost.
 - A pointer to a value of each other type holds a `Box<T>` of 1 field. The
   compiler writes a box only for a variable whose address the code takes.
-- Only a variable holds a box. Stage 2 rejects the address of a field, of an
-  element, and of the result of a call.
+- A variable and a composite literal each hold a box. A field of a struct and
+  an element of a slice or of an array each hold a `$Ref` of the object and the
+  index, thus the code takes the address of each 1. Stage 2 rejects the address
+  of a form that names no location, and it rejects the address of an exported
+  package variable.
 
 ### Interfaces
 
