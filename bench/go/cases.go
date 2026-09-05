@@ -8,7 +8,10 @@ package cases
 
 import (
 	"encoding/json"
+	"math"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -30,6 +33,13 @@ var (
 	raw   []byte
 	text  string
 	typed []Activity
+)
+
+// numbers and decimals hold the input of IntParse and of FloatParse. A build
+// of the text inside the loop would measure the write and not the read.
+var (
+	numbers  = []string{"0", "7", "42", "1234", "99999", "2147483647", "-58", "300"}
+	decimals = []string{"0.5", "3.14159", "-2.5", "1e3", "12345.6789", "0.0001"}
 )
 
 // Load reads the document of the benchmark and it gives the byte count.
@@ -136,3 +146,184 @@ func Text(n int) string {
 
 // Take reads a Dart string that crossed the boundary and it gives the length.
 func Take(s string) int { return len(s) }
+
+// The cases below hold no string and no document. They measure the work that
+// each client does between 2 frames: arithmetic, a list, and a map.
+//
+// A Dart int and a Go int each hold 64 bits. A JavaScript number holds 53
+// bits of an integer, thus IntHash gives a value that a JS number cannot
+// hold, and the bun form of that case reads a BigInt.
+
+// step gives the next value of a linear congruential generator. Each runtime
+// builds the same sequence with it, thus each sort reads the same input.
+func step(x int) int { return (x*1103515245 + 12345) & 0x7FFFFFFF }
+
+// IntSum adds the first n integers. The total stays under 2^53, thus a JS
+// number holds it with no loss.
+func IntSum(n int) int {
+	s := 0
+	for i := 0; i < n; i++ {
+		s += i
+	}
+	return s
+}
+
+// IntHash mixes n values with a 64 bit multiply that wraps. Go and Dart wrap
+// at 64 bits, and a JS number cannot hold the value.
+func IntHash(n int) int {
+	h := 0x1000193
+	for i := 0; i < n; i++ {
+		h = (h ^ i) * 0x100000001B3
+	}
+	return h
+}
+
+// IntDiv takes the quotient and the remainder n times.
+func IntDiv(n int) int {
+	s := 0
+	for i := 1; i <= n; i++ {
+		s += 1000003/i + 1000003%i
+	}
+	return s
+}
+
+// IntParse reads n integers from text.
+func IntParse(n int) int {
+	s := 0
+	for i := 0; i < n; i++ {
+		v, err := strconv.Atoi(numbers[i%len(numbers)])
+		if err != nil {
+			panic(err)
+		}
+		s += v
+	}
+	return s
+}
+
+// IntFormat writes n integers as text.
+func IntFormat(n int) int {
+	s := 0
+	for i := 0; i < n; i++ {
+		s += len(strconv.Itoa(i * 7919))
+	}
+	return s
+}
+
+// FloatSum adds n float64 values.
+func FloatSum(n int) float64 {
+	s := 0.0
+	for i := 0; i < n; i++ {
+		s += float64(i) * 0.5
+	}
+	return s
+}
+
+// FloatMath runs the work of a layout pass: a square root and a multiply
+// with an addition, n times.
+func FloatMath(n int) float64 {
+	s := 0.0
+	for i := 0; i < n; i++ {
+		x := float64(i) * 0.001
+		s += math.Sqrt(x)*1.5 + x*x
+	}
+	return s
+}
+
+// FloatParse reads n float64 values from text.
+func FloatParse(n int) int {
+	s := 0
+	for i := 0; i < n; i++ {
+		v, err := strconv.ParseFloat(decimals[i%len(decimals)], 64)
+		if err != nil {
+			panic(err)
+		}
+		s += int(v)
+	}
+	return s
+}
+
+// FloatFormat writes n float64 values as text.
+func FloatFormat(n int) int {
+	s := 0
+	for i := 0; i < n; i++ {
+		s += len(strconv.FormatFloat(float64(i)*1.5, 'f', 3, 64))
+	}
+	return s
+}
+
+// SliceAppend grows a slice to n elements with append.
+func SliceAppend(n int) int {
+	var s []int
+	for i := 0; i < n; i++ {
+		s = append(s, i)
+	}
+	return len(s)
+}
+
+// SliceSort sorts n integers of the generator.
+func SliceSort(n int) int {
+	s := make([]int, n)
+	x := 1
+	for i := 0; i < n; i++ {
+		x = step(x)
+		s[i] = x
+	}
+	sort.Ints(s)
+	return s[n/2]
+}
+
+// MapString fills a map of n string keys and it reads each key 1 time.
+func MapString(n int) int {
+	m := make(map[string]int, n)
+	for i := 0; i < n; i++ {
+		m[strconv.Itoa(i)] = i
+	}
+	s := 0
+	for i := 0; i < n; i++ {
+		s += m[strconv.Itoa(i)]
+	}
+	return s
+}
+
+// MapInt fills a map of n integer keys and it reads each key 1 time.
+func MapInt(n int) int {
+	m := make(map[int]int, n)
+	for i := 0; i < n; i++ {
+		m[i*7919] = i
+	}
+	s := 0
+	for i := 0; i < n; i++ {
+		s += m[i*7919]
+	}
+	return s
+}
+
+// Point holds the 4 numbers of a rectangle. StructAlloc builds n of them.
+type Point struct {
+	X, Y, W, H float64
+}
+
+// StructAlloc builds n rectangles and it adds the area of each 1.
+func StructAlloc(n int) float64 {
+	s := 0.0
+	for i := 0; i < n; i++ {
+		p := Point{X: float64(i), Y: float64(i) * 2, W: 10, H: 20}
+		s += p.W*p.H + p.X + p.Y
+	}
+	return s
+}
+
+// Labels gives count strings of len bytes each. The Dart driver reads them to
+// measure 1 frame of a screen that holds that many text fields.
+func Labels(count, size int) []string {
+	out := make([]string, count)
+	for i := range out {
+		var b strings.Builder
+		b.WriteString(strconv.Itoa(i))
+		for b.Len() < size {
+			b.WriteString(piece)
+		}
+		out[i] = b.String()[:size]
+	}
+	return out
+}

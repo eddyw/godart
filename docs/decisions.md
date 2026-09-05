@@ -3785,3 +3785,67 @@ The plan left these points open. The work took the decisions below.
      host does not read, and no error stands. nodegen thus writes
      `// nodegen: flutter=<version> <pack>=<version>` into the head of each
      generated file, and `glutter doctor` reads it and names each difference.
+
+357. A GoString holds the decode and the hash after the first read.
+
+     `toDartString` decoded the bytes at each call, and `hashCode` built an
+     iterator of the byte list at each call. A rebuild of a Flutter tree reads
+     the same label again at each pass, and a Go map calls the hash getter for
+     each key.
+
+     A Go string never changes, thus 1 decode and 1 hash hold for the life of
+     the value. 2 nullable fields carry them, and the private constructor lost
+     the word `const`. No call site read it as a constant.
+
+     The measurement ran A, B, A, because the machine drifted 4.5 percent
+     between the 2 baselines. A screen of 500 labels of 20 bytes fell from 7.65
+     to 0.79 microseconds, and 200 labels of 500 bytes fell from 35.09 to 0.32.
+     `map.string.100k` fell from 76.24 to 58.59 milliseconds, and the decode of
+     the document fell 7 percent.
+
+     A string that no code reads 2 times pays 1 to 3 percent for the field. A
+     string that crosses 1 time also holds the decode for its whole life, thus a
+     document of 100 megabytes needs the memory 2 times.
+
+     The mix is FNV-1a with a mask of 26 bits. The mask holds the product under
+     2^50, thus a JS number carries it with no loss and the 2 targets give the
+     same hash. `GoMap` holds the order in a linked list of entries, thus the
+     new hash moves no iteration.
+
+     **The first mix was the Jenkins form of Dart, and it crashed dart2wasm.**
+     The type flow analysis reports `type 'Call' is not a subtype of type
+     'Parameter' in type cast`, exactly as decision 323 reports. That decision
+     names a call that fills an optional parameter of a method of `GoString`,
+     and the Jenkins mix holds no parameter at all. The rule of decision 323 is
+     thus narrower than the defect: a method of `GoString` reaches it, and the
+     body decides. A bisect against `TestWebIO` found it, and the runtime tests
+     and the golden tests each stayed green through the crash.
+
+     GopherJS meets the same problem and takes the opposite decision: a Go
+     string is a JS string with 1 byte in each code unit, and the boundary is
+     free for ASCII. That decision is right for a JS engine, which holds a rope
+     and a sliced string, and wrong for Dart, which holds neither. Read
+     `bench/README.md`.
+
+358. The benchmark holds a scalar group, and it names 1 defect of `math.Sqrt`.
+
+     The 3 groups of `bench/` covered a document and a string. Neither group
+     reads an integer, a float64, a slice, or a map alone, thus no number stood
+     for the work that a client does between 2 frames.
+
+     14 cases join: `int.sum`, `int.hash`, `int.div`, `int.parse`,
+     `int.format`, `float.sum`, `float.math`, `float.parse`, `float.format`,
+     `slice.append`, `slice.sort`, `map.string`, `map.int`, and `struct.alloc`.
+
+     The integer of gart costs what a Dart int costs, and it holds 64 bits.
+     `int.sum` and `int.hash` each sit at 1.0 against Dart and against Go, and
+     `int.div` sits at 0.7. bun needs a BigInt for a 64 bit multiply, thus
+     `int.hash.1m` costs 23.09 milliseconds there against 1.02.
+
+     `float.math.1m` costs 144 milliseconds against 767 microseconds for Dart.
+     `math.Sqrt` calls `math.sqrt`, and the compiler of Go replaces that call
+     with 1 machine instruction. gart holds no such rule, thus it compiles the
+     portable form: a loop of 54 steps of 64 bit integer arithmetic. 1 square
+     root costs about 140 nanoseconds, and the whole Dart step costs 0.77.
+     `Exp`, `Log`, `Floor`, `Ceil`, `Trunc`, `Max`, and `Min` each take the
+     portable path too.

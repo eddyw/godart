@@ -1282,6 +1282,12 @@ repository, and the session deleted it.
 | The type descriptor bytes against the code bytes, for 5 named types | 6,353 against 7,676 |
 | The Dart source of `goruntime` | 6,978 lines in 288 kilobytes |
 
+**The 2 rows of `toDartString` moved on 2026-09-06.** A `GoString` holds the
+decode after the first read now, thus a rebuild that meets the same label again
+pays nothing. A screen of 500 labels of 20 bytes fell from 7.65 to 0.78
+microseconds, and 200 labels of 500 bytes fell from 35.09 to 0.32. Read
+decision 357 and `bench/README.md`.
+
 **The 2026-09-01 date of that table holds.** The Dart source of `goruntime`
 grew with the surface: it reads 8,457 lines in 340 kilobytes on 2026-09-03,
 against the 6,978 lines in 288 kilobytes of the row above. Each other row of

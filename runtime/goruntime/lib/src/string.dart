@@ -16,7 +16,14 @@ final class GoString {
   /// reference and makes no copy.
   final Uint8List bytes;
 
-  const GoString._(this.bytes);
+  GoString._(this.bytes);
+
+  /// The decode of the bytes, after the first read.
+  ///
+  /// A Go string never changes, thus 1 decode holds for the life of the value.
+  /// A rebuild of a Flutter tree reads the same label again at each pass, and
+  /// a large document that crosses the boundary again pays 1 decode only.
+  String? _dart;
 
   /// The zero value of a Go string.
   static final GoString empty = GoString.fromBytes(const <int>[]);
@@ -53,7 +60,9 @@ final class GoString {
   /// A byte that holds no rune of UTF-8 becomes 1 code unit of the range U+DC80
   /// to U+DCFF, thus GoString.fromString gives the same bytes again. Go writes
   /// such a byte with no change, and a Dart String holds runes only.
-  String toDartString() {
+  String toDartString() => _dart ??= _decode();
+
+  String _decode() {
     try {
       return utf8.decode(bytes);
     } on FormatException {
@@ -71,8 +80,23 @@ final class GoString {
     return true;
   }
 
+  int? _hash;
+
   @override
-  int get hashCode => Object.hashAll(bytes);
+  int get hashCode => _hash ??= _mix();
+
+  /// The FNV-1a hash of the bytes. Object.hashAll builds an iterator of the
+  /// byte list, and a Go map calls this getter for each key.
+  ///
+  /// The mask holds the value under 26 bits, thus the product stays under 2^50
+  /// and a JS number carries it with no loss.
+  int _mix() {
+    var h = 0x01C9DC5;
+    for (var i = 0; i < bytes.length; i++) {
+      h = ((h ^ bytes[i]) * 0x01000193) & 0x03FFFFFF;
+    }
+    return h;
+  }
 
   @override
   String toString() => toDartString();

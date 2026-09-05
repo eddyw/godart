@@ -38,6 +38,17 @@ void main() {
       expect(a.hashCode, b.hashCode);
     });
 
+    test('gives the same text and the same hash at each read', () {
+      final a = GoString.fromString('h\u00e9llo');
+      final b = GoString.fromString('h\u00e9llo');
+      expect(a.toDartString(), b.toDartString());
+      expect(a.toDartString(), b.toDartString());
+      expect(a.hashCode, b.hashCode);
+      expect(a.hashCode, b.hashCode);
+      final bad = GoString.fromBytes(<int>[0x68, 0xFF, 0x69]);
+      expect(bad.toDartString(), bad.toDartString());
+    });
+
     test('keeps a byte that holds no rune through a round trip', () {
       final GoString bad = GoString.fromBytes(<int>[0x68, 0xFF, 0x69]);
       expect(GoString.fromString(bad.toDartString()).bytes, bad.bytes);
@@ -100,6 +111,14 @@ void _moreTests() {
       final s = GoString.fromString('godart');
       expect($substring(s, $gi(2), $gi(6)).toDartString(), 'dart');
       expect(() => $substring(s, $gi(0), $gi(7)), throwsA(isA<GoPanic>()));
+    });
+
+    test('a substring gives the hash of the equal value that stands alone', () {
+      final part = $substring(GoString.fromString('godart'), $gi(2), $gi(6));
+      final same = GoString.fromString('dart');
+      expect(part, same);
+      expect(part.hashCode, same.hashCode);
+      expect(part.toDartString(), same.toDartString());
     });
 
     test('a rune round trip keeps the text', () {

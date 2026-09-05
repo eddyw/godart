@@ -73,6 +73,53 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-06, the twenty-second session
+
+The user asked 3 things: run the memo of the decode against the real
+benchmark, read what GopherJS does with the same problem, and add a benchmark
+of an integer, a float64, and a basic type. The group of the server stays out,
+because the question is the cost of a client.
+
+**A GoString holds the decode and the hash after the first read.** A Go string
+never changes, thus 1 decode and 1 hash hold for the life of the value. The
+measurement ran A, B, A, because the machine drifted 4.5 percent between the 2
+baselines. A screen of 500 labels of 20 bytes falls from 7.65 to 0.78
+microseconds, 200 labels of 500 bytes fall from 35.09 to 0.32, and a string of
+2 megabytes that crosses again falls from 777 microseconds to 18 nanoseconds.
+`map.string.100k` falls from 76.24 to 58.59 milliseconds, and the decode of the
+document falls 7 percent. A string that no code reads 2 times pays 1 to 3
+percent for the field.
+
+The first mix of the hash was the Jenkins form of Dart, and it crashed
+dart2wasm with the message of decision 323. That decision names a call that
+fills an optional parameter of a method of `GoString`, and the Jenkins mix
+holds no parameter. The rule is thus narrower than the defect. The mix is
+FNV-1a with a mask of 26 bits now, and the 3 wasm tests pass.
+
+**14 scalar cases join the benchmark.** The integer of gart costs what a Dart
+int costs, and it holds 64 bits. `int.sum.1m` and `int.hash.1m` each sit at 1.0
+against Dart and against Go, and `int.div.1m` sits at 0.7. bun needs a BigInt
+for a 64 bit multiply, thus `int.hash.1m` costs 23.09 milliseconds there
+against 1.02. That is the first case where the ahead of time build of Dart
+stands far ahead of the JIT of bun.
+
+**The benchmark found 1 defect.** `math.Sqrt` calls `math.sqrt`, and the
+compiler of Go replaces that call with 1 machine instruction. gart holds no
+such rule, thus it compiles the portable Go form: a loop of 54 steps of 64 bit
+integer arithmetic. `float.math.1m` costs 144 milliseconds under gart and 767
+microseconds under Dart, a factor of 188. `Exp`, `Log`, `Floor`, `Ceil`,
+`Trunc`, `Max`, and `Min` each take the portable path too.
+
+**GopherJS takes the opposite decision, and it is right for JavaScript.** A Go
+string is a JS string with 1 byte in each code unit, thus `s[i]` is
+`charCodeAt(i)` and `len(s)` is `s.length`. `$externalize` gives the same
+string back when each code unit stands under 128, thus the boundary is free for
+ASCII, and GopherJS holds no memo. A JS engine holds a rope and a sliced
+string, and Dart holds neither: the substring of gart shares the byte storage
+and it beats the substring of Dart, 4.72 milliseconds against 5.91.
+
+Read decisions 357 and 358.
+
 ### 2026-09-05, the twenty-first session
 
 The user asked for each of the 15 open tasks, end to end. 3 streams ran: the
