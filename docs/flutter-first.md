@@ -255,3 +255,26 @@ since 2026-09-02, and `make flutter-test` runs each 1.
    keystroke, and a POST of the fields as JSON. It needed no item of the
    compiler list. `net/mail` stands outside the subset, thus the address rule
    of the form reads the text itself.
+
+## The fourth program: a whole application
+
+**The port of `compass_app`.** Done 2026-09-05. `flutter/example/compass`
+holds it. The sample of the Flutter team carries the reference architecture:
+MVVM, a repository for each source, a use case, and a server. The port holds
+1,745 lines of Go against 5,804 lines of Dart, and it needs no package of
+pub.dev and no code generation of a data class.
+
+It needed 2 items outside the example, and decision 353 holds the 2:
+
+- `ui.Pages` carries the stack of the navigator, thus a Go application holds
+  more than 1 screen. Item 6 of the note list of `docs/flutter-design.md`
+  named the gap, and this node closes the part that a page stack needs.
+- `GoRuntime.tick` runs the queue of the scheduler again. A goroutine that a
+  posted function starts waited for the next gesture of the user, thus a
+  screen that reads the server when it opens read nothing.
+
+`flutter/example/compass/README.md` names each limit that the port could not
+hold. Each 1 stands on a package outside the Flutter SDK, for example
+`go_router` or `shared_preferences`, or on a Flutter API that needs a
+`BuildContext`, for example `showDateRangePicker`. No limit comes from the Go
+subset of the compiler.

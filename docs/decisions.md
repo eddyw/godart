@@ -3679,3 +3679,34 @@ The plan left these points open. The work took the decisions below.
      report. The measure of the session gives a shake 25 percent of the bytes at
      most. The description of a pointer that no code names holds 1.9 percent of
      that. Read the section "The size of the Dart output" of `docs/design.md`.
+
+353. The stack of the navigator stands in the Go tree, and the idle hook runs
+     the queue of the scheduler again.
+
+     The port of the Flutter sample `compass_app` holds 6 screens. The
+     generated node set carries no page of a navigator, because the
+     constructor of a `Page` takes a Flutter `Key` and a `Route` builder, and
+     a Go value holds neither 1. A Go application thus held 1 screen.
+
+     `ui.Pages` names the stack now. It carries 1 key and 1 child for each
+     page, and the host builds 1 `MaterialPage` for each child. A back gesture
+     of the platform removes a page, and the host then calls `OnPop` with the
+     number of that page. The Go side drops the same page of its own list, thus
+     the 2 stacks stay equal. A page that stays in the list keeps its state,
+     because the key of it stays equal.
+
+     The second rule closed a defect that reached each program of the host.
+     `GoRuntime.tick` runs on the idle hook of the scheduler, and the hook runs
+     after the scheduler leaves its loop. A function that a goroutine posts can
+     start a goroutine of its own, for example the command that a new screen
+     runs at once. That goroutine stood in the run queue with no scheduler
+     behind it, thus it waited for the next gesture of the user. The measure:
+     the login of `compass_app` opened the home screen, and the home screen
+     read no booking until a tap reached the screen.
+
+     `tick` now runs `$schedule` while the run queue holds a goroutine, and it
+     applies the posted work after each turn. The hook of the scheduler holds
+     the flag `_inIdle`, thus no second hook runs inside the first 1.
+
+     `flutter/example/compass` holds the witness. 5 widget tests run the whole
+     application in a real Flutter tree, and each screen reads a real socket.

@@ -17,6 +17,7 @@ targets.
 | `example/counter/` | Proof program 1. Go holds the whole screen. |
 | `example/apilist/` | Proof program 2. Go reads an HTTP API and gives a list. |
 | `example/form/` | Proof program 3. Go validates a form and sends it. |
+| `example/compass/` | The port of the Flutter sample compass_app. 6 screens, a stack of the navigator, and the server of the sample in Go. Read its README for each limit that the port found. |
 
 ## Run an example
 
@@ -58,6 +59,13 @@ and it gives a `ListView` of cards.
 
 `example/form` holds 7 widget tests. 3 text fields, a validation in Go on each
 keystroke, and a POST of the fields as JSON.
+
+`example/compass` holds 5 widget tests and 8 Go tests. It is the reference
+architecture of the Flutter team with the whole application in Go: 6 screens,
+a stack of the navigator over `ui.Pages`, an API client with a token, and the
+server of the sample in Go. `example/compass/README.md` names each limit of
+the model that the port found, and each 1 stands on a package outside the
+Flutter SDK or on a Flutter API that needs a `BuildContext`.
 
 Each widget test of the 2 points the application at a local server of
 `dart:io`, thus no test reaches the network.

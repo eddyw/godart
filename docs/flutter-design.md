@@ -242,9 +242,14 @@ mark that needs a note carries 1, and "The notes of the matrix" holds the text.
    builds a real `TextField`, thus Flutter keeps the text, the controller, and
    the focus across a rebuild that Go drives. A9 holds no text input widget of
    any kind.
-6. **Navigation.** The host owns the `Navigator`. A Go call that waits for the
-   result of a pop needs the `$await` intrinsic, because `Navigator.push` gives
-   a `Future<T?>` at `widgets/navigator.dart:5060`.
+6. **Navigation.** The host owns the `Navigator`. A13 holds the stack of the
+   pages in Go since 2026-09-05: `ui.Pages` carries 1 key and 1 child for each
+   page, the host builds 1 `MaterialPage` for each child, and a back gesture of
+   the platform reaches `OnPop`. `flutter/example/compass` runs 6 screens that
+   way, with the page transition of Material. A Go call that waits for the
+   result of a pop still needs the `$await` intrinsic, because
+   `Navigator.push` gives a `Future<T?>` at `widgets/navigator.dart:5060`. A
+   named route and a URL of the web also stay out, thus the mark stays `P`.
 7. **A `const` subtree.** A5, A9, A10, and A13 build a fresh Dart widget at
    each pass. Thus `Element.updateChild` at `widgets/framework.dart:4027` never
    takes its identity short cut. A2 and A4 cannot write a const constructor,
@@ -982,9 +987,12 @@ already holds.
 
 **The runtime cost.** The same as A5: 8.66 microseconds for a Go tree of 200
 nodes, and 2.89 microseconds for the Dart walk. The generated node set adds a
-type descriptor pair for each node type, at about 1,271 bytes of Dart source
-for each 1. The Dart tree shaker drops an unused descriptor. The milestone 3
-section holds the measurement of 2026-09-02.
+type descriptor pair for each node type. The measure of 2026-09-05 reads the
+Dart output of `gart.dev/ui` in `flutter/example/compass`: the library holds
+1,911,012 bytes, the descriptions of the types hold 1,849,946 of them, and the
+set holds 564 node types. Each node type thus costs about 3,280 bytes of Dart
+source. The Dart tree shaker drops an unused descriptor, thus an ahead of time
+build carries the types of the application alone.
 
 Pros:
 
@@ -1271,10 +1279,13 @@ against the 6,978 lines in 288 kilobytes of the row above. Each other row of
 the table names a speed, and no measurement of 2026-09-03 moved 1 of them by
 more than 2%.
 
-The last 2 rows carry the risk of a large node set. Each named Go type costs
-about 1,271 bytes of descriptor source. A generated set of 300 node types then
-costs about 380 kilobytes of Dart source. The Dart tree shaker drops a
-descriptor that no code reads. The milestone 3 section holds the measurement.
+The last 2 rows carry the risk of a large node set. The measure of 2026-09-05
+gives about 3,280 bytes of descriptor source for each node type of
+`gart.dev/ui`, thus the 564 node types cost 1.85 megabytes of Dart source. The
+Dart tree shaker drops a descriptor that no code reads, thus an ahead of time
+build carries the node types of the application alone. The measure of
+2026-09-02 named 1,271 bytes for each type, and it read a struct with fewer
+fields than a node type holds.
 
 ## The probes of the language
 
