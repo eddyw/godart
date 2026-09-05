@@ -33,6 +33,15 @@ flutter test                   # 5 widget tests
 `flutter run -d macos` then opens the application against the server.
 `flutter build macos --debug` wrote `compass_app.app` on 2026-09-05.
 
+The login screen carries the account of the sample, thus the button needs no
+keyboard. The destination images stay empty, because the image host of the
+sample answers 403 to each request. The 2 JSON files hold the URLs.
+
+`example/watch.sh compass macos` runs the application and it holds the Go
+source under watch. A change of 1 Go line reaches the running application in
+about 2 seconds, and it keeps the screen and the state. Read "Watch mode" of
+`flutter/README.md`.
+
 The server also runs on the Dart VM. `server/prove.sh` runs it 2 times, first
 with `go run` and then with the Dart output of gart, and it diffs the 2
 answers of the 17 requests of `server/requests.sh`. The 2 answers are equal.

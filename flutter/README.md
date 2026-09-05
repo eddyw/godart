@@ -28,7 +28,8 @@ cd flutter/example/counter
 flutter test                        # 11 widget tests
 ```
 
-Run `./build.sh` again after each change of the Go source.
+Run `./build.sh` again after each change of the Go source, or run
+`example/watch.sh` and change nothing by hand. Read "Watch mode" below.
 
 `flutter test` needs no platform runner. `flutter run` needs one, and git holds
 no such directory, because `flutter create` writes each file of it.
@@ -45,6 +46,34 @@ The script also patches the 2 permissions that a network demo needs. A macOS
 runner gets the entitlement `com.apple.security.network.client`, and an Android
 runner gets `android.permission.INTERNET` in the main manifest. `flutter create`
 writes neither 1, thus `apilist` and `form` would reach no server.
+
+## Watch mode
+
+`example/watch.sh <example> [platform]` runs the application and it holds the
+Go source under watch. `gart watch` compiles the package that changed, and the
+script sends SIGUSR1 to `flutter run`, which does a hot reload. The keys of
+`flutter run` stay, thus `q` stops the application and the watch together.
+
+```sh
+cd flutter/example
+./watch.sh compass macos            # after build.sh, and after platform.sh
+```
+
+| Step of 1 changed line, measured 2026-09-05 with compass | Time |
+|---|---|
+| The change to the new Dart on disk | 1.3 to 1.9 seconds |
+| The hot reload of the new Dart | 213 to 314 milliseconds, and 3 of 955 libraries |
+
+The watch build passes `-format=false`, because `dart format` reads the whole
+output directory. It holds 10.4 seconds of an 11.8 second cycle for compass.
+`build.sh` formats the output again.
+
+A compile error stops the reload, because `gart watch` writes the error and no
+count of compiled packages. The application keeps the code that ran before.
+
+A change that names a new node type of `gart.dev/ui` needs `build.sh` again,
+because `nodegen` writes `lib/widgets_gen.dart` from the list of the types that
+the application names. The host names such a node in its error.
 
 | Platform | State of 2026-09-02 |
 |---|---|
