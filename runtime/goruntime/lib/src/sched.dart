@@ -197,6 +197,45 @@ final class Park implements WaitFrame, DurableWait {
 /// goroutine header of the deadlock report.
 void $park([String reason = 'waiting']) => $block(Park(reason));
 
+/// The frame of a goroutine that waits for a lock.
+///
+/// Go marks such a wait not durable, because a goroutine outside the bubble
+/// can give the lock back. The frame thus holds no DurableWait.
+final class _LockWait implements WaitFrame {
+  const _LockWait();
+
+  @override
+  String get $reason => 'sync.Mutex.Lock';
+
+  @override
+  Object? resume() => null;
+}
+
+/// The goroutine of each wait for a lock, by token.
+final Map<int, Goroutine> _lockWaits = <int, Goroutine>{};
+
+/// The count of the tokens that $lockToken gave.
+int _lastLockToken = 0;
+
+/// Gives a token for 1 wait on a lock.
+int $lockToken() => ++_lastLockToken;
+
+/// Gives up control until $lockWake runs with the same token.
+///
+/// The wait is not durable. A bubble of synctest that holds such a goroutine
+/// thus stands still, and its clock does not move.
+void $lockWait(int token) {
+  _lockWaits[token] = $current!;
+  $block(const _LockWait());
+}
+
+/// Ends the wait of the token. It performs no operation for a token that no
+/// goroutine waits on.
+void $lockWake(int token) {
+  final Goroutine? g = _lockWaits.remove(token);
+  if (g != null) $ready(g);
+}
+
 /// Puts a goroutine on the run queue and runs the scheduler.
 ///
 /// A timer and a future of the Dart event loop call this function, thus the
@@ -419,18 +458,21 @@ void $await(Future<Object?> future, Object? Function(Object cause) onError) {
   $block(waiting);
 }
 
-/// The timers of the program, by handle. A slot holds a Timer of Dart, or a
-/// _FakeTimer of a bubble. A slot of a timer that ran or that a stop cancelled
-/// holds null.
-final List<Object?> _timers = <Object?>[];
+/// The timers that did not run, by handle. An entry holds a Timer of Dart, or
+/// a _FakeTimer of a bubble. A timer that ran, and a timer that a stop
+/// cancelled, holds no entry.
+final Map<int, Object> _timers = <int, Object>{};
 
-int _timerSlot() {
-  for (int i = 0; i < _timers.length; i++) {
-    if (_timers[i] == null) return i;
-  }
-  _timers.add(null);
-  return _timers.length - 1;
-}
+/// The count of the handles that _timerHandle gave.
+int _lastTimer = 0;
+
+/// Gives a handle that no earlier timer holds.
+///
+/// An odd handle names a timer of a bubble, exactly as the flag isFake of the
+/// runtime of Go does. The handle of a timer that ran keeps that mark, thus a
+/// stop from outside each bubble still finds the mark. No handle repeats, thus
+/// a stop of a timer that ran reaches no later timer.
+int _timerHandle(bool fake) => (++_lastTimer) * 2 + (fake ? 1 : 0);
 
 /// One timer of a bubble. The fake clock of the bubble runs it, thus it takes
 /// no real time and it holds no wake source of the Dart event loop.
@@ -445,6 +487,12 @@ final class _FakeTimer {
   _FakeTimer(this.bubble, this.when, this.run);
 }
 
+/// The mark of a timer that stood armed at the end of its bubble.
+///
+/// Go keeps such a timer, thus a stop of it reports true. The mark carries no
+/// bubble and no body, thus the timer runs never.
+const Object _endedTimer = Object();
+
 /// Starts a timer that runs a Go function after a time, and gives its handle.
 ///
 /// Go runs the function on a new goroutine, thus the function can block. The
@@ -455,15 +503,16 @@ final class _FakeTimer {
 int $startTimer(int nanoseconds, void Function()? body) {
   if (body == null) $panicNil();
   final void Function() run = body;
-  final int handle = _timerSlot();
   final Bubble? b = $current?.bubble;
   if (b != null) {
+    final int handle = _timerHandle(true);
     _timers[handle] = _FakeTimer(b, b.now + nanoseconds, () => _spawn(run, b));
     return handle;
   }
+  final int handle = _timerHandle(false);
   $holdEvent();
   _timers[handle] = Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
-    _timers[handle] = null;
+    _timers.remove(handle);
     $freeEvent();
     $go(run);
     $schedule();
@@ -473,14 +522,24 @@ int $startTimer(int nanoseconds, void Function()? body) {
 
 /// Cancels a timer. It reports false when the timer ran already, exactly as
 /// the Stop method of Go does.
-bool $stopTimer(int handle) {
-  if (handle < 0 || handle >= _timers.length) return false;
-  final Object? held = _timers[handle];
+bool $stopTimer(int handle) => _cancelTimer(handle, 'stop');
+
+/// Cancels a timer for a restart. It reports false when the timer ran already.
+///
+/// Go names the operation in the report of a timer of a bubble. A reset thus
+/// needs a name of its own.
+bool $resetTimer(int handle) => _cancelTimer(handle, 'reset');
+
+bool _cancelTimer(int handle, String op) {
+  if (handle.isOdd && $current?.bubble == null) {
+    $fatalError('$op of synctest timer from outside bubble');
+  }
+  final Object? held = _timers.remove(handle);
   if (held == null) return false;
-  _timers[handle] = null;
-  if (held is _FakeTimer) return true;
-  (held as Timer).cancel();
-  $freeEvent();
+  if (held is Timer) {
+    held.cancel();
+    $freeEvent();
+  }
   return true;
 }
 
@@ -541,7 +600,7 @@ final class Bubble {
   /// The time of the first timer of the bubble, and null when it holds none.
   int? _nextTime() {
     int? out;
-    for (final Object? t in _timers) {
+    for (final Object t in _timers.values) {
       if (t is! _FakeTimer || !identical(t.bubble, this)) continue;
       if (out == null || t.when < out) out = t.when;
     }
@@ -551,12 +610,12 @@ final class Bubble {
   /// Runs each timer that the clock reached, and reports whether 1 ran.
   bool _fire() {
     var ran = false;
-    for (var i = 0; i < _timers.length; i++) {
-      final Object? t = _timers[i];
+    for (final int handle in _timers.keys.toList()) {
+      final Object? t = _timers[handle];
       if (t is! _FakeTimer || !identical(t.bubble, this) || t.when > now) {
         continue;
       }
-      _timers[i] = null;
+      _timers.remove(handle);
       t.run();
       ran = true;
     }
@@ -588,9 +647,11 @@ final class Bubble {
   /// Ends the bubble and wakes the goroutine that started it.
   void _end() {
     _bubbles.remove(this);
-    for (var i = 0; i < _timers.length; i++) {
-      final Object? t = _timers[i];
-      if (t is _FakeTimer && identical(t.bubble, this)) _timers[i] = null;
+    for (final int handle in _timers.keys.toList()) {
+      final Object? t = _timers[handle];
+      if (t is _FakeTimer && identical(t.bubble, this)) {
+        _timers[handle] = _endedTimer;
+      }
     }
     if (members.isNotEmpty) {
       _wait.cause = GoString.fromString(
@@ -700,7 +761,7 @@ bool $bubbleWait() {
 /// Gives up control until the clock of the bubble b moves the count of
 /// nanoseconds. The sleep of the package time reads it inside a bubble.
 void $bubbleSleep(Bubble b, Goroutine g, int nanoseconds) {
-  final int handle = _timerSlot();
+  final int handle = _timerHandle(true);
   _timers[handle] = _FakeTimer(b, b.now + nanoseconds, () => $ready(g));
   $block(const _BubbleSleep());
 }
