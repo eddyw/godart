@@ -3581,3 +3581,57 @@ The plan left these points open. The work took the decisions below.
      inside it. `encodeInterface` reads `iv.Elem()` now, exactly as the real Go
      source does. Each overlay that holds a comment about the earlier rule
      needs the same read.
+
+351. A wait for a lock is not durable, and each timer holds a handle that no
+     other timer takes.
+
+     Decision 346 built the bubble of `testing/synctest` on 3 rules of the
+     scheduler. 3 gaps stood after that work, and the measures of 2026-09-05
+     closed them.
+
+     `sync.Mutex.Lock` waited on a channel that the caller makes. A channel of
+     a bubble marks a wait durable, thus a bubble that waited for a lock moved
+     its clock. Go marks such a wait not durable, because a goroutine outside
+     the bubble can give the lock back. The measure holds 2 goroutines of 1
+     bubble. The first one takes a lock, the second one sleeps 1 second and
+     gives the lock back, and the first one takes the lock again. Go writes
+     `fatal error: all goroutines are asleep - deadlock!`, and gart moved the
+     clock 1 second.
+
+     The lock now reads the 3 interop functions `LockToken`, `LockWait`, and
+     `LockWake` of `syscall/dart`. The frame `_LockWait` of the scheduler holds
+     no `DurableWait`, thus a bubble with such a goroutine stands still. The
+     wait also carries no bubble, thus a goroutine outside the bubble gives the
+     lock back with no report. `sync.Cond.Wait` and `sync.WaitGroup.Wait` keep
+     their channel, because Go marks the 2 durable.
+
+     The timers of the scheduler stood in a list, and a stop freed the slot. A
+     later timer took that slot, thus a stop of the first timer cancelled the
+     second one. The end of a bubble freed each slot of its timers too. A stop
+     from outside the bubble thus found no timer and reported false, and Go
+     writes `fatal error: stop of synctest timer from outside bubble`.
+
+     The timers stand in a map now, and each handle counts up. An odd handle
+     names a timer of a bubble, exactly as the flag `isFake` of the runtime of
+     Go does. `$stopTimer` and the new `$resetTimer` end the program when the
+     handle is odd and the goroutine of the caller stands outside each bubble.
+     The 2 texts of Go name the operation, thus `Timer.Reset` needs the second
+     function. The end of a bubble replaces each armed timer of the bubble with
+     a mark that runs never. Go reports true for a stop of such a timer, thus
+     the mark must stand.
+
+     A bubble that ends with many armed timers thus leaves 1 map entry for each
+     one. The mark holds no bubble and no body, and only a test builds a
+     bubble.
+
+     The third gap needed no code change. 2 bubbles that run at the same time
+     move in turn, and each bubble that moved goes to the end of the list. Go
+     leaves the order of the 2 open, thus that order conforms.
+     `testdata/programs/synctestbubbles` proves that the 2 clocks reach a
+     different value and that each bubble reaches its end.
+
+     `testdata/programs/synctestlock`, `synctesttimer`, and `synctesttimerout`
+     hold the 3 other witnesses. The last one writes the report alone, because
+     the 2 runtimes write a trace of their own after it, exactly as
+     `testdata/programs/deadlock` does. The 13 real tests of the package still
+     pass.

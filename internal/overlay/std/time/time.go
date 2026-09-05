@@ -436,7 +436,7 @@ func (t *Timer) Stop() bool {
 // Reset stops the timer and starts it again with the new duration. It reports
 // whether the timer was active.
 func (t *Timer) Reset(d Duration) bool {
-	active := dart.StopTimer(t.handle)
+	active := dart.ResetTimer(t.handle)
 	if t.send == nil {
 		return active
 	}
@@ -513,7 +513,7 @@ func (t *Ticker) Reset(d Duration) {
 	if d <= 0 {
 		panic("non-positive interval for Reset")
 	}
-	dart.StopTimer(t.handle)
+	dart.ResetTimer(t.handle)
 	t.period = d
 	t.stopped = false
 	t.arm()

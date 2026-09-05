@@ -7,18 +7,24 @@
 // atomic operation.
 package sync
 
+import "syscall/dart"
+
 // A Mutex is a lock. The zero value is an open lock.
+//
+// The wait reads a token of the runtime and not a channel. Go marks a wait for
+// a lock not durable, and a wait on a channel of a synctest bubble carries the
+// opposite rule.
 type Mutex struct {
 	held    bool
-	waiters []chan bool
+	waiters []int
 }
 
 // Lock takes the lock. It waits while another goroutine holds it.
 func (m *Mutex) Lock() {
 	for m.held {
-		w := make(chan bool)
+		w := dart.LockToken()
 		m.waiters = append(m.waiters, w)
-		<-w
+		dart.LockWait(w)
 	}
 	m.held = true
 }
@@ -34,7 +40,7 @@ func (m *Mutex) Unlock() {
 	}
 	w := m.waiters[0]
 	m.waiters = m.waiters[1:]
-	close(w)
+	dart.LockWake(w)
 }
 
 // TryLock takes the lock when the lock is open.

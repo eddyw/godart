@@ -1148,7 +1148,8 @@ plain write.
 `testing/synctest` runs a function in a bubble with a clock of its own. The
 scheduler of the Dart runtime library holds that bubble. Read the section "The
 bubble of testing/synctest" of `docs/library.md` for the design. Decision 346
-holds the cause of it.
+holds the cause of it, and decision 351 holds the rule of a lock and of a
+timer.
 
 | Item | Go | godart |
 |---|---|---|
@@ -1165,28 +1166,38 @@ holds the cause of it.
 | `Wait` outside a bubble, and `Test` inside a bubble | Panics | Equal, with the same 2 texts |
 | `t.Deadline`, `t.Parallel`, and `t.Run` on the T of a bubble | Panics | Equal, with the same 3 texts |
 | A channel of a bubble that a goroutine outside it reaches | `fatal error: send on synctest channel from outside bubble` | Equal for a send, a receive, a close, and a select. The report holds no goroutine trace. |
-| 2 bubbles that run at the same time | The order of the 2 is not defined | The 2 move in turn. Each bubble that moved goes to the end of the list. |
-| `sync.Mutex.Lock` inside a bubble | Not durably blocked | Durably blocked. Read below. |
-| `Timer.Stop` and `Timer.Reset` of a bubble from outside it | `fatal error: stop of synctest timer from outside bubble` | It cancels the timer, or it reports false after the end of the bubble. It writes no report. Read below. |
+| 2 bubbles that run at the same time | The order of the 2 is not defined | Equal. The 2 move in turn, and that order is 1 of the orders that Go permits. |
+| `sync.Mutex.Lock` and `sync.RWMutex.Lock` inside a bubble | Not durably blocked | Equal. The wait reads a token of the runtime, and not a channel. |
+| `Timer.Stop` and `Timer.Reset` of a bubble from outside each bubble | `fatal error: stop of synctest timer from outside bubble`, and the same text for a reset | Equal, with the same 2 texts. The report holds no goroutine trace. |
+| The same 2 calls from inside another bubble | No report, and the answer of a normal stop | Equal |
+| A stop of a timer that ran | False, and no later timer takes the cancel | Equal |
+| A stop of a timer that stood armed at the end of its bubble | True | Equal |
 
-**A goroutine that waits for a mutex is durably blocked here, and Go says it
-is not.** A goroutine of a bubble of Go can wake through a goroutine outside
-that bubble, thus Go keeps the bubble active. gart runs each goroutine in 1
-isolate, and `sync.Mutex.Lock` waits on a channel that the caller makes inside
-the bubble. The rule of the channel thus marks the wait durable.
+**A wait for a lock is not durable.** `sync.Mutex.Lock` waits on a token of the
+runtime, and not on a channel. The frame of such a wait carries no durable
+mark, thus a bubble that holds such a goroutine stands still. Decision 351
+holds the cause, and `testdata/programs/synctestlock` holds the witness.
 
-The measure of 2026-09-04 holds 2 goroutines of 1 bubble. The first one takes a
+The measure of 2026-09-05 holds 2 goroutines of 1 bubble. The first one takes a
 lock, the second one sleeps 1 second and gives the lock back, and the first one
-takes the lock again. Go writes `fatal error: all goroutines are asleep -
-deadlock!`, because the clock never moves. gart moves the clock 1 second and
-the program ends. The gap thus reaches only a program that Go stops.
+takes the lock again. Go and gart each write `fatal error: all goroutines are
+asleep - deadlock!`, because the clock of the bubble never moves.
 
-**A timer of a bubble carries no bubble after the end of the bubble.** The end
-of a bubble frees each slot of its timers, thus `Timer.Stop` from outside the
-bubble finds no timer and reports false. Go keeps the bubble of the timer and
-stops the program. `Timer.Reset` inside the bubble of the timer works. A call
-of it from outside would report the text of a stop and not the text of a
-reset, because the overlay of `time` builds a reset from a stop and a start.
+**A timer keeps the mark of its bubble.** An odd handle names a timer of a
+bubble, exactly as the flag `isFake` of the runtime of Go does. The end of the
+bubble keeps that mark, thus the report of a stop from outside each bubble
+stands after that end too. No handle repeats, thus a stop of a timer that ran
+reaches no later timer.
+
+`testdata/programs/synctesttimer` and `testdata/programs/synctesttimerout` hold
+the 2 witnesses. The second one writes the report alone, because the 2 runtimes
+write a trace of their own after it.
+
+**2 bubbles that run at the same time each reach their end.** The scheduler
+moves 1 idle bubble for each empty run queue, and the bubble that moved goes to
+the end of the list. A bubble with a timer that never ends thus holds no other
+bubble back. `testdata/programs/synctestbubbles` holds the witness of 2 clocks
+that reach a different value.
 
 **6 of the 19 real tests of the package skip.** Each 1 starts the test binary
 again as a helper process and it reads the output of that process. The Dart

@@ -1176,7 +1176,39 @@ func StartTimer(nanoseconds int64, f func()) int {
 }
 
 // StopTimer cancels a timer. It reports false when the timer ran already.
+//
+// A timer of a synctest bubble that a goroutine outside each bubble reaches
+// ends the program, exactly as Go does.
 func StopTimer(handle int) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ResetTimer cancels a timer for a restart. It reports false when the timer
+// ran already.
+//
+// The result is equal to the result of StopTimer. Go names the operation in
+// the report of a timer of a synctest bubble, thus the report of this function
+// names a reset.
+func ResetTimer(handle int) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// LockToken gives a token for 1 wait on a lock.
+func LockToken() int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// LockWait gives up control until LockWake runs with the same token.
+//
+// The wait is not durable. A synctest bubble that holds such a goroutine thus
+// stands still, and its clock does not move. Go gives a lock the same rule.
+func LockWait(token int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// LockWake ends the wait of the token. It performs no operation for a token
+// that no goroutine waits on.
+func LockWake(token int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

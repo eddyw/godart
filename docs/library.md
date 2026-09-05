@@ -635,26 +635,41 @@ goroutine of a bubble becomes a `_FakeTimer` of that bubble in place of a
 `Timer` of Dart. Such a timer waits for the scheduler and not for the event
 loop.
 
-The scheduler runs a step of each bubble when the run queue empties. A step
-first reads whether each goroutine of the bubble is durably blocked, and the
-frame of the wait holds that answer. A channel of the bubble, a select over
-such channels, a sleep of the bubble, a nil channel, and a call of `Wait` each
-mark the wait durable. A wait for the IO of Dart does not. `sync.Cond.Wait`,
-`sync.WaitGroup.Wait`, and `sync.Mutex.Lock` each wait on a channel that the
-caller makes, thus the same rule reaches them.
+The scheduler moves 1 idle bubble when the run queue empties, and the bubble
+that moved goes to the end of the list. A step first reads whether each
+goroutine of the bubble is durably blocked, and the frame of the wait holds
+that answer. A channel of the bubble, a select over such channels, a sleep of
+the bubble, a nil channel, and a call of `Wait` each mark the wait durable. A
+wait for the IO of Dart does not. `sync.Cond.Wait` and `sync.WaitGroup.Wait`
+each wait on a channel that the caller makes, thus the same rule reaches them.
+
+`sync.Mutex.Lock` waits on a token of the runtime, and not on a channel. Go
+gives a lock no durable mark, because a goroutine outside the bubble can give
+the lock back. A bubble that holds a goroutine of such a wait thus stands
+still.
 
 An idle bubble takes 1 of 3 paths, in the order of Go. A timer that the clock
 reached runs first. A call of `Wait` ends next. The clock then moves to the
 next timer, and it stops after the first goroutine of the bubble ends. A bubble
 that reaches none of the 3 ends, and `Test` panics with the text of Go.
 
-`syscall/dart` carries the 3 new interop functions `InBubble`, `BubbleRun`, and
-`BubbleWait`. `time.Sleep` and `time.Now` each read the clock of the bubble of
-the caller through the runtime. `internal/linkhook` carries `SynctestTest`,
-because `testing/synctest` needs the T of the bubble and the import rule of Go
-keeps the 2 packages apart. `testdata/programs/synctestuse` holds the witness,
-and `make std-test STD=testing/synctest` runs the 13 real tests of the package.
-Read decision 346 and the limits of `docs/parity.md`.
+Each timer holds a handle that no other timer takes. An odd handle names a
+timer of a bubble, exactly as the flag `isFake` of the runtime of Go does. A
+stop or a reset of such a timer from a goroutine outside each bubble ends the
+program with the report of Go. The end of the bubble keeps that mark, and it
+replaces each armed timer of the bubble with a mark that runs never.
+
+`syscall/dart` carries the interop functions `InBubble`, `BubbleRun`,
+`BubbleWait`, `LockToken`, `LockWait`, `LockWake`, and `ResetTimer`.
+`time.Sleep` and `time.Now` each read the clock of the bubble of the caller
+through the runtime. `internal/linkhook` carries `SynctestTest`, because
+`testing/synctest` needs the T of the bubble and the import rule of Go keeps
+the 2 packages apart.
+
+`testdata/programs/synctestuse`, `synctestlock`, `synctesttimer`,
+`synctesttimerout`, and `synctestbubbles` hold the 5 witnesses, and
+`make std-test STD=testing/synctest` runs the 13 real tests of the package.
+Read decision 346, decision 351, and the limits of `docs/parity.md`.
 
 ## The tests of the Go repository
 

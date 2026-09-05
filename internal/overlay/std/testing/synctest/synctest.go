@@ -10,8 +10,8 @@
 // A goroutine is durably blocked when only another goroutine of the same
 // bubble can wake it. A send or a receive on a channel of the bubble, a select
 // statement over such channels, and time.Sleep each block a goroutine that
-// way. sync.Cond.Wait and sync.WaitGroup.Wait do too, and a read of a socket
-// does not.
+// way. sync.Cond.Wait and sync.WaitGroup.Wait do too. A lock of a sync.Mutex
+// and a read of a socket each block a goroutine another way.
 package synctest
 
 import (
