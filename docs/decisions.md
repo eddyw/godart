@@ -3719,3 +3719,69 @@ The plan left these points open. The work took the decisions below.
      none of the 2: the port holds a page with a real `CalendarDatePicker`, and
      `OnDateChanged` gives the day to Go. **A dialog that answers through a pop
      reaches no Go value, and a widget with a callback of its own does.**
+
+354. 1 node pack for each Dart package, and the method `IsNode` seals the set
+     across a package boundary.
+
+     The node set read 3 libraries of the Flutter framework, and it wrote 564
+     structs into 1 Go package. Flutter moved Material and Cupertino out of the
+     framework on 2026-09-03, thus `material_ui` and `cupertino_ui` of
+     flutter.dev hold them now. A user also asked for `macos_ui`, `fluent_ui`,
+     and `yaru`.
+
+     `packs` of `flutter/nodegen/lib/read.dart` holds 1 entry for each pack: the
+     Dart library, the Go import path, and the Go package name. The generator
+     writes 1 file for each pack, thus `gart.dev/ui` holds 273 types,
+     `gart.dev/ui/material` holds 218, and `gart.dev/ui/cupertino` holds 75.
+
+     `ui.Node` demanded the unexported method `isNode`, and a struct of another
+     package cannot declare 1. The interface demands `IsNode() Mark` now, and
+     `Mark` is an empty struct of the core package. A pack of another module
+     thus joins the set on purpose, and no value joins it by chance.
+
+     The generated host imports the Dart package of each case that it holds,
+     and the converter of each enum that those cases read. The host of the
+     compass application fell from 3,195 lines to 1,324, and each application
+     that names no Cupertino widget carries no `cupertino_ui`.
+
+355. `ui.Call` sends a request to the host, and the host wakes the goroutine
+     with the answer.
+
+     The bridge ran 1 way: the host called the Go build, and the Go tree held no
+     call of Dart. A share sheet, a dialog with an answer, a date picker, and
+     each plugin of a platform channel thus reached no Go value. Decision 353
+     named the same wall.
+
+     `ui.Call(name, arg)` writes a request and it parks the goroutine on a
+     channel. `GoRuntime.tick` reads `TakeCalls` after the scheduler stops, and
+     it gives each request to the handler of `goSetCall`. `ui.Answer` sends the
+     result into the channel, and the tick of the answer runs the goroutine.
+
+     The queue crosses as 1 JSON array, and `ask.go` writes the escape itself.
+     A build must not call it, and the verifier already rejects a build that
+     reads a channel.
+
+     `flutter/example/counter` holds the witness. A share button asks the host,
+     and 2 widget tests prove that the answer and the error each reach the
+     screen.
+
+356. glutter holds the Go build, the generation of the host, and the Flutter
+     command, and nodegen stamps the version of each pack.
+
+     3 shell scripts held the work of a Flutter application: `build.sh` per
+     example, `platform.sh`, and `watch.sh`. A user of the project had to know
+     the 3, and a new application copied the first 1.
+
+     `cmd/glutter` holds 8 commands. `glutter run` compiles the Go module, it
+     writes the platform runner when that directory is absent, it starts
+     `flutter run`, and it sends SIGUSR1 after each build. A change of 1 Go line
+     reaches the screen in 1 second, and the hot reload takes 182 milliseconds.
+
+     The scan of the node types runs after the reload, thus it costs the fast
+     path nothing. A cache of the node list also skips nodegen, thus a second
+     `glutter gen` takes 1.26 seconds against 15.6.
+
+     A Flutter that drops a parameter of a constructor gives a Go field that the
+     host does not read, and no error stands. nodegen thus writes
+     `// nodegen: flutter=<version> <pack>=<version>` into the head of each
+     generated file, and `glutter doctor` reads it and names each difference.
