@@ -258,11 +258,15 @@ Future<InternetAddress> _address(String host) async {
   return names.first;
 }
 
+/// The bytes of a slice, as a list of Dart.
+///
+/// A byte slice holds its storage in a Uint8List, thus setRange moves the whole
+/// range in 1 call. A loop over the bytes reads and writes 1 element at a time,
+/// and a write of 1 megabyte then costs a million bounds checks. A store into a
+/// Uint8List holds the low 8 bits, exactly as the mask of the loop did.
 Uint8List _bytes(Slice<int> p) {
   final Uint8List out = Uint8List(p.len);
-  for (int i = 0; i < p.len; i++) {
-    out[i] = p.array[p.off + i] & 0xFF;
-  }
+  if (p.len != 0) out.setRange(0, p.len, p.array, p.off);
   return out;
 }
 
@@ -270,9 +274,7 @@ Uint8List _bytes(Slice<int> p) {
 /// count. A Go read takes no more bytes than the slice holds.
 int _take(_Conn c, Slice<int> p) {
   final int n = c.rest.length < p.len ? c.rest.length : p.len;
-  for (int i = 0; i < n; i++) {
-    p.array[p.off + i] = c.rest[i];
-  }
+  if (n != 0) p.$fill(p.off, p.off + n, c.rest, 0);
   c.rest = n == c.rest.length ? Uint8List(0) : Uint8List.sublistView(c.rest, n);
   return n;
 }
@@ -882,9 +884,7 @@ Future<int> _fillPacket(_Packet s) {
       if (code == 1 && s.held.isEmpty) return (0, _empty, 0, _closed());
       final Datagram d = s.held.removeAt(0);
       final int n = d.data.length < p.len ? d.data.length : p.len;
-      for (int i = 0; i < n; i++) {
-        p.array[p.off + i] = d.data[i];
-      }
+      if (n != 0) p.$fill(p.off, p.off + n, d.data, 0);
       return (n, GoString.fromString(d.address.address), d.port, _empty);
     }),
     (Object cause) => (0, _empty, 0, _cause(cause)),

@@ -91,11 +91,9 @@ FileMode _mode(int mode) {
   if (f == null) return (0, GoString.fromString('file already closed'));
   if (p.len == 0) return (0, _empty);
   try {
-    final Uint8List buf = Uint8List(p.len);
-    final int n = f.readIntoSync(buf);
-    for (int i = 0; i < n; i++) {
-      p.array[p.off + i] = buf[i];
-    }
+    // readIntoSync writes into the storage of the slice itself, thus the
+    // read needs no buffer of its own and no loop over the bytes.
+    final int n = f.readIntoSync(p.array, p.off, p.off + p.len);
     return (n, _empty);
   } catch (e) {
     return (0, _cause(e));
@@ -107,7 +105,9 @@ FileMode _mode(int mode) {
   final RandomAccessFile? f = _at(handle);
   if (f == null) return (0, GoString.fromString('file already closed'));
   try {
-    f.writeFromSync(_bytes(p));
+    // writeFromSync reads the range of the storage itself, thus the write
+    // needs no copy.
+    f.writeFromSync(p.array, p.off, p.off + p.len);
     return (p.len, _empty);
   } catch (e) {
     return (0, _cause(e));
@@ -170,11 +170,15 @@ RandomAccessFile? _at(int handle) {
   return _open[handle];
 }
 
+/// The bytes of a slice, as a list of Dart.
+///
+/// A byte slice holds its storage in a Uint8List, thus setRange moves the whole
+/// range in 1 call. A loop over the bytes reads and writes 1 element at a time,
+/// and a write of 1 megabyte then costs a million bounds checks. A store into a
+/// Uint8List holds the low 8 bits, exactly as the mask of the loop did.
 Uint8List _bytes(Slice<int> p) {
   final Uint8List out = Uint8List(p.len);
-  for (int i = 0; i < p.len; i++) {
-    out[i] = p.array[p.off + i] & 0xFF;
-  }
+  if (p.len != 0) out.setRange(0, p.len, p.array, p.off);
   return out;
 }
 
