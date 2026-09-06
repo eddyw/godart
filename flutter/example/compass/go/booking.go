@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"strings"
 
 	"example.dev/gocompass/domain"
 	"example.dev/gocompass/model"
@@ -61,9 +62,40 @@ func (m *BookingModel) load(id int) error {
 // Booking gives the trip of the screen. A test reads it.
 func (m *BookingModel) Booking() model.Booking { return m.booking.Peek() }
 
+// Share gives the trip to the share sheet of the platform.
+func (m *BookingModel) Share() {
+	b := m.booking.Peek()
+	if b.ID == 0 && !m.made.Peek() {
+		return
+	}
+	u := domain.BookingShare{}
+	if err := ui.Share(u.TextOf(b)); err != nil {
+		toast(textErrorShare, textTryAgain, m.Share)
+	}
+}
+
 // Build gives the tree of the booking.
 func (m *BookingModel) Build() ui.Node {
-	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
+	return ui.PopScope{
+		CanPop:       ui.P(false),
+		OnPopInvoked: func(bool) { m.app.replace(route{name: screenHome}) },
+		Child: material.Scaffold{
+			FloatingActionButton: ui.Watch{Build: m.shareButton},
+			Body:                 ui.Watch{Build: m.body},
+		},
+	}
+}
+
+func (m *BookingModel) shareButton() ui.Node {
+	press := m.Share
+	if m.booking.Get().Destination.Ref == "" {
+		press = nil
+	}
+	return ui.Keyed{Key: "share-button", Child: material.FloatingActionButtonExtended{
+		Label:     ui.Text{Data: textShareTrip},
+		Icon:      ui.Icon{Icon: "share_outlined"},
+		OnPressed: press,
+	}}
 }
 
 func (m *BookingModel) body() ui.Node {
@@ -71,82 +103,157 @@ func (m *BookingModel) body() ui.Node {
 		return busy()
 	}
 	if m.Create.Err() != nil {
-		return failed("Error while saving itinerary", m.Create.Run)
+		return ui.Center{Child: errorIndicator(
+			textErrorBooking, textTryAgain, m.Create.Run,
+		)}
 	}
 	if m.Load.Err() != nil {
-		return failed("Error while loading booking", func() {})
+		return ui.Center{Child: errorIndicator(textErrorBooking, textClose, func() {
+			m.app.replace(route{name: screenHome})
+		})}
 	}
 	b := m.booking.Get()
-	rows := []ui.Node{m.header(b), m.chosenHeader()}
+	if b.Destination.Ref == "" {
+		return ui.SizedBox{}
+	}
+	rows := make([]ui.Node, 0, len(b.Activities)+2)
+	rows = append(rows, ui.SliverToBoxAdapter{Child: m.header(b)})
 	for _, a := range b.Activities {
-		rows = append(rows, m.row(a))
+		rows = append(rows, ui.SliverToBoxAdapter{Child: activityRow(a)})
 	}
-	return ui.Column{
-		Children: ui.Kids(
-			ui.Row{Children: ui.Kids(
-				material.IconButton{
-					Icon:      ui.Icon{Icon: "close"},
-					Tooltip:   ui.P(textClose),
-					OnPressed: func() { m.app.popTo(screenHome) },
-				},
-				ui.Expanded{Child: ui.Text{Data: b.Destination.Name}},
-				material.IconButton{
-					Icon:      ui.Icon{Icon: "share"},
-					Tooltip:   ui.P(textShareTrip),
-					OnPressed: nil,
-				},
-			)},
-			ui.Expanded{Child: ui.ListView{Children: rows}},
-		),
-	}
+	rows = append(rows, ui.SliverToBoxAdapter{
+		Child: ui.SizedBox{Height: ui.P(200.0)},
+	})
+	return ui.CustomScrollView{Slivers: rows}
 }
 
+// header gives the picture, the name, the 2 dates, the text of the place, and
+// the tags.
 func (m *BookingModel) header(b model.Booking) ui.Node {
-	return ui.Stack{
+	return ui.Column{
+		CrossAxisAlignment: ui.P("start"),
 		Children: ui.Kids(
-			ui.ClipRRect{
-				BorderRadius: ui.P(ui.AllCorners(12)),
-				Child:        image(b.Destination.ImageURL, 200),
+			bookingTop(b),
+			ui.Padding{
+				Padding: screenX(),
+				Child: ui.Text{
+					Data:  b.Destination.KnownFor,
+					Style: ui.Theme().Text.BodyLarge,
+				},
 			},
-			ui.Positioned{
-				Left:   ui.P(16.0),
-				Bottom: ui.P(16.0),
-				Child: ui.Column{
-					CrossAxisAlignment: ui.P("start"),
-					Children: ui.Kids(
-						ui.Text{
-							Data: b.Destination.Name + ", " + b.Destination.Continent,
-							Style: &ui.TextStyle{
-								Color:  ui.P(ui.Color(0xFFFFFFFF)),
-								Size:   ui.P(24.0),
-								Weight: "w700",
-							},
-						},
-						ui.Text{
-							Data:  dateRange(b.StartDate, b.EndDate),
-							Style: &ui.TextStyle{Color: ui.P(ui.Color(0xFFFFFFFF))},
-						},
-					),
+			ui.SizedBox{Height: ui.P(paddingVertical)},
+			bookingTags(b),
+			ui.SizedBox{Height: ui.P(paddingVertical)},
+			ui.Padding{
+				Padding: screenX(),
+				Child: ui.Text{
+					Data:  textChosenActivities,
+					Style: ui.Theme().Text.HeadlineSmall,
 				},
 			},
 		),
 	}
 }
 
-func (m *BookingModel) chosenHeader() ui.Node {
-	return ui.Padding{
-		Padding: ui.Insets{Left: 20, Top: 16, Right: 20, Bottom: 4},
-		Child: ui.Text{
-			Data:  textChosenActivities,
-			Style: &ui.TextStyle{Size: ui.P(18.0), Weight: "w700"},
+// bookingTop gives the picture of the destination, the gradient over it, and
+// the 2 lines of the head.
+func bookingTop(b model.Booking) ui.Node {
+	return ui.SizedBox{
+		Height: ui.P(260.0),
+		Child: ui.Stack{
+			Fit: ui.P("expand"),
+			Children: ui.Kids(
+				picture(b.Destination.ImageURL, 0, 0, "fitWidth"),
+				ui.DecoratedBox{Decoration: ui.Decoration{Gradient: &ui.Gradient{
+					Kind:   "linear",
+					Begin:  "topCenter",
+					End:    "bottomCenter",
+					Colors: []ui.Color{0, ui.Theme().Colors.Surface},
+				}}},
+				ui.Align{
+					Alignment: ui.P("bottomLeft"),
+					Child: ui.Padding{
+						Padding: screenSides(),
+						Child: ui.Column{
+							MainAxisSize:       ui.P("min"),
+							CrossAxisAlignment: ui.P("start"),
+							Children: ui.Kids(
+								ui.Text{
+									Data:  b.Destination.Name,
+									Style: ui.Theme().Text.HeadlineLarge,
+								},
+								ui.Text{
+									Data:  dateRange(b.StartDate, b.EndDate),
+									Style: ui.Theme().Text.HeadlineSmall,
+								},
+							),
+						},
+					},
+				},
+			),
 		},
 	}
 }
 
-func (m *BookingModel) row(a model.Activity) ui.Node {
-	return ui.Keyed{Key: "chosen-" + a.Ref, Child: material.ListTile{
-		Leading:  ui.Icon{Icon: "star"},
-		Title:    ui.Text{Data: a.Name},
-		Subtitle: ui.Text{Data: a.LocationName},
-	}}
+// bookingTags gives the tags of the destination. The chip of this screen
+// stands over the color of the surface, thus it reads the other 2 colors.
+func bookingTags(b model.Booking) ui.Node {
+	chip := colorBlackTransparent
+	if ui.Theme().Dark {
+		chip = colorWhiteTransparent
+	}
+	onChip := ui.Theme().Colors.OnSurface
+	chips := make([]ui.Node, len(b.Destination.Tags))
+	for i, t := range b.Destination.Tags {
+		chips[i] = tagChip(t, 16, 32, chip, onChip)
+	}
+	return ui.Padding{
+		Padding: screenX(),
+		Child: ui.Wrap{
+			Spacing:    ui.P(6.0),
+			RunSpacing: ui.P(6.0),
+			Children:   chips,
+		},
+	}
+}
+
+// activityRow gives 1 activity of the trip.
+func activityRow(a model.Activity) ui.Node {
+	d := screen()
+	return ui.Padding{
+		Padding: ui.Insets{
+			Left:  d.ScreenHorizontal,
+			Top:   paddingVertical,
+			Right: d.ScreenHorizontal,
+		},
+		Child: ui.Row{Children: ui.Kids(
+			ui.ClipRRect{
+				BorderRadius: ui.P(ui.AllCorners(8)),
+				Child:        picture(a.ImageURL, 80, 80, "cover"),
+			},
+			ui.SizedBox{Width: ui.P(20.0)},
+			ui.Expanded{Child: ui.Column{
+				CrossAxisAlignment: ui.P("start"),
+				MainAxisAlignment:  ui.P("start"),
+				Children: ui.Kids(
+					ui.Text{
+						Data:  strings.ToUpper(a.TimeOfDay),
+						Style: ui.Theme().Text.LabelSmall,
+					},
+					ui.Text{
+						Data:     a.Name,
+						MaxLines: ui.P(1),
+						Overflow: ui.P("ellipsis"),
+						Style:    ui.Theme().Text.BodyMedium,
+					},
+					ui.Text{
+						Data:     a.Description,
+						MaxLines: ui.P(2),
+						Overflow: ui.P("ellipsis"),
+						Style:    ui.Theme().Text.BodySmall,
+					},
+				),
+			}},
+		)},
+	}
 }

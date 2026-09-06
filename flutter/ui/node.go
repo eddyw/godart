@@ -52,6 +52,21 @@ func (Watch) IsNode() Mark      { return Mark{} }
 func (Anchor) IsNode() Mark     { return Mark{} }
 func (ShaderMask) IsNode() Mark { return Mark{} }
 func (Picture) IsNode() Mark    { return Mark{} }
+func (Blur) IsNode() Mark       { return Mark{} }
+
+// Blur draws the content behind the child through a blur, and it then draws
+// the child.
+//
+// The generated BackdropFilter node carries no filter, because the parameter
+// of Flutter takes an ImageFilter and a Go value builds none. SigmaX and
+// SigmaY each hold the width of the blur in logical pixels. BlendMode names a
+// value of the Flutter enum BlendMode, and an empty text gives "srcOver".
+type Blur struct {
+	SigmaX    float64
+	SigmaY    float64
+	BlendMode string
+	Child     Node
+}
 
 // AskText runs Go work that the host waits for, and it gives an answer. The
 // text names the value of a Flutter enum, for example the direction of a

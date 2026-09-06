@@ -66,6 +66,17 @@ type TextStyle struct {
 	Decoration    string
 	Family        string
 	Shadows       []Shadow
+	Variations    []FontVariation
+}
+
+// FontVariation names 1 axis of a variable font.
+//
+// Axis holds the 4 letters of the axis, for example "wght" for the weight and
+// "wdth" for the width. Weight of a TextStyle names a face of the family, and
+// a variable font needs this axis for a weight between 2 faces.
+type FontVariation struct {
+	Axis  string
+	Value float64
 }
 
 // BorderSide holds 1 edge of a border. A nil field takes the default of

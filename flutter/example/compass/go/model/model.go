@@ -2,7 +2,10 @@
 // behavior, thus a test reads it as a table.
 package model
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // Destination holds 1 place of the catalog.
 type Destination struct {
@@ -80,3 +83,15 @@ type ItineraryConfig struct {
 
 // Set reports whether the user chose the 2 dates.
 func (c ItineraryConfig) Set() bool { return !c.StartDate.IsZero() && !c.EndDate.IsZero() }
+
+// DateRange gives the 2 days of a trip, for example "20 - 25 Jul". The sample
+// holds the same rule in ui/core/ui/date_format_start_end.dart.
+func DateRange(start, end time.Time) string {
+	if start.IsZero() || end.IsZero() {
+		return ""
+	}
+	if start.Month() == end.Month() && start.Year() == end.Year() {
+		return fmt.Sprintf("%d - %d %s", start.Day(), end.Day(), start.Format("Jan"))
+	}
+	return fmt.Sprintf("%s - %s", start.Format("2 Jan"), end.Format("2 Jan"))
+}

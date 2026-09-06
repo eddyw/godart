@@ -160,7 +160,9 @@ String readExpr(Param p, int at) {
     case 'tag':
       return p.optional ? 'n.textOpt($f)' : 'n.text($f)';
     case 'valueKey':
-      return 'ValueKey<String>(n.text($f))';
+      return p.optional
+          ? 'goValueKey(n.textOpt($f))'
+          : 'ValueKey<String>(n.text($f))';
     case 'f64':
       return p.optional ? 'n.sizeOpt($f)' : 'n.size($f)';
     case 'i64':

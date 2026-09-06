@@ -1065,7 +1065,7 @@ type CustomScrollView struct {
 	ShrinkWrap *bool
 
 	// The first child in the forward growth direction.
-	Center string
+	Center *string
 
 	// The relative position of the zero scroll offset.
 	Anchor      *float64

@@ -392,7 +392,7 @@ class GoType {
 
 const _scalars = <String, GoType>{
   'String': GoType('string', 'str'),
-  'Key': GoType('string', 'valueKey', pointer: false),
+  'Key': GoType('string', 'valueKey'),
   'double': GoType('float64', 'f64'),
   'int': GoType('int', 'i64'),
   'bool': GoType('bool', 'boolean'),

@@ -3,6 +3,8 @@ package app
 import (
 	"fmt"
 	"time"
+
+	"example.dev/gocompass/model"
 )
 
 // The text of the screens. The sample holds the same strings in
@@ -22,6 +24,20 @@ const (
 	textTryAgain          = "Try again"
 	textChosenActivities  = "Your chosen activities"
 	textWhen              = "When"
+	textWho               = "Who"
+
+	textBookingDeleted   = "Booking deleted"
+	textErrorActivities  = "Error while loading activities"
+	textErrorBooking     = "Error while loading booking"
+	textErrorContinents  = "Error while loading continents"
+	textErrorDelete      = "Error while deleting booking"
+	textErrorDestination = "Error while loading destinations"
+	textErrorHome        = "Error while loading home"
+	textErrorLogin       = "Error while trying to login"
+	textErrorLogout      = "Error while trying to logout"
+	textErrorSaveActs    = "Error while saving activities"
+	textErrorSaveTrip    = "Error while saving itinerary"
+	textErrorShare       = "Error while sharing booking"
 )
 
 // trips gives the title of the home screen.
@@ -36,15 +52,7 @@ func trips(name string) string {
 func selected(n int) string { return fmt.Sprintf("%d selected", n) }
 
 // dateRange gives the 2 dates of a trip, for example "20 - 25 Jul".
-func dateRange(start, end time.Time) string {
-	if start.IsZero() || end.IsZero() {
-		return ""
-	}
-	if start.Month() == end.Month() && start.Year() == end.Year() {
-		return fmt.Sprintf("%d - %d %s", start.Day(), end.Day(), start.Format("Jan"))
-	}
-	return fmt.Sprintf("%s - %s", start.Format("2 Jan"), end.Format("2 Jan"))
-}
+func dateRange(start, end time.Time) string { return model.DateRange(start, end) }
 
 // guestText gives the line of the guest count.
 func guestText(n int) string {

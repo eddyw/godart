@@ -18,8 +18,6 @@ type SearchModel struct {
 	start      ui.Signal[time.Time]
 	end        ui.Signal[time.Time]
 	guests     ui.Signal[int]
-	// picking reports that the next date of the calendar names the start.
-	picking ui.Signal[bool]
 
 	// Load reads the continents and the choices of the last visit.
 	Load *ui.Command
@@ -86,219 +84,250 @@ func (m *SearchModel) Submit() {
 
 // Build gives the tree of the search form.
 func (m *SearchModel) Build() ui.Node {
-	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
+	return ui.PopScope{
+		CanPop:       ui.P(false),
+		OnPopInvoked: func(bool) { m.app.replace(route{name: screenHome}) },
+		Child:        material.Scaffold{Body: ui.Watch{Build: m.body}},
+	}
 }
 
 func (m *SearchModel) body() ui.Node {
-	if m.Load.Busy() {
-		return busy()
-	}
-	if m.Load.Err() != nil {
-		return failed("Error while loading continents", m.Load.Run)
-	}
+	d := screen()
 	return ui.Column{
+		CrossAxisAlignment: ui.P("stretch"),
 		Children: ui.Kids(
-			ui.Row{Children: ui.Kids(
-				backButton(m.app.pop),
-				ui.Text{
-					Data:  textSearch,
-					Style: &ui.TextStyle{Size: ui.P(22.0), Weight: "w600"},
+			ui.SafeArea{
+				Top:    ui.P(true),
+				Bottom: ui.P(false),
+				Child: ui.Padding{
+					Padding: ui.Insets{
+						Left:   d.ScreenHorizontal,
+						Top:    d.ScreenVertical,
+						Right:  d.ScreenHorizontal,
+						Bottom: paddingVertical,
+					},
+					Child: m.app.searchBar("", nil),
 				},
-			)},
-			ui.Expanded{Child: ui.ListView{Children: ui.Kids(
-				m.continentGrid(),
-				m.dateRow(),
-				m.guestRow(),
-			)}},
+			},
+			m.continentRow(),
+			m.dateRow(),
+			m.guestRow(),
+			ui.Spacer{},
 			m.submitRow(),
 		),
 	}
 }
 
-// continentGrid gives the picture of each continent. The chosen 1 carries a
-// border.
-func (m *SearchModel) continentGrid() ui.Node {
+// continentRow gives the carousel of the continents. The card of a continent
+// that the user did not choose carries a cover of the color onPrimary.
+func (m *SearchModel) continentRow() ui.Node {
+	if m.Load.Busy() {
+		return ui.SizedBox{Height: ui.P(140.0), Child: busy()}
+	}
+	if m.Load.Err() != nil {
+		return ui.SizedBox{Height: ui.P(140.0), Child: ui.Center{
+			Child: errorIndicator(textErrorContinents, textTryAgain, m.Load.Run),
+		}}
+	}
 	list := m.continents.Get()
 	chosen := m.chosen.Get()
-	rows := make([]ui.Node, 0, len(list))
-	for _, c := range list {
-		rows = append(rows, m.continentCard(c, c.Name == chosen))
+	kids := make([]ui.Node, 0, len(list)*2)
+	for i, c := range list {
+		if i > 0 {
+			kids = append(kids, ui.SizedBox{Width: ui.P(8.0)})
+		}
+		kids = append(kids, m.continentCard(c, chosen == "" || chosen == c.Name))
 	}
 	return ui.SizedBox{
 		Height: ui.P(140.0),
 		Child: ui.ListView{
 			ScrollDirection: ui.P("horizontal"),
-			Children:        rows,
+			Padding:         ui.P(screenX()),
+			Children:        kids,
 		},
 	}
 }
 
 func (m *SearchModel) continentCard(c model.Continent, on bool) ui.Node {
-	border := 0.0
+	cover := 0.7
 	if on {
-		border = 3.0
+		cover = 0
 	}
-	return ui.Keyed{Key: "continent-" + c.Name, Child: ui.Padding{
-		Padding: ui.Sides(6, 8),
-		Child: material.InkWell{
-			OnTap: func() { m.Choose(c.Name) },
-			Child: ui.Container{
-				Width: ui.P(160.0),
-				Decoration: &ui.Decoration{
-					Radius: ui.P(ui.AllCorners(12)),
-					Border: &ui.BorderSide{Width: ui.P(border)},
-				},
-				Child: ui.Stack{
-					Fit: ui.P("expand"),
-					Children: ui.Kids(
-						ui.ClipRRect{
-							BorderRadius: ui.P(ui.AllCorners(12)),
-							Child:        image(c.ImageURL, 120),
-						},
-						ui.Center{Child: ui.Text{
-							Data: c.Name,
+	return ui.Keyed{Key: "continent-" + c.Name, Child: ui.SizedBox{
+		Width:  ui.P(140.0),
+		Height: ui.P(140.0),
+		Child: ui.ClipRRect{
+			BorderRadius: ui.P(ui.AllCorners(10)),
+			Child: ui.Stack{Children: ui.Kids(
+				picture(c.ImageURL, 140, 140, "cover"),
+				ui.Align{
+					Alignment: ui.P("center"),
+					Child: ui.Padding{
+						Padding: ui.AllSides(16),
+						Child: ui.Text{
+							Data:      c.Name,
+							TextAlign: ui.P("center"),
 							Style: &ui.TextStyle{
-								Color:  ui.P(ui.Color(0xFFFFFFFF)),
-								Size:   ui.P(20.0),
-								Weight: "w700",
+								Family:     fontOpenSans,
+								Size:       ui.P(18.0),
+								Weight:     "w500",
+								Variations: weight(500),
+								Color:      ui.P(colorWhite1),
 							},
-						}},
-					),
+						},
+					},
 				},
-			},
+				ui.PositionedFill{Child: ui.AnimatedOpacity{
+					Opacity:  cover,
+					Duration: 200,
+					Child: ui.DecoratedBox{Decoration: ui.Decoration{
+						Color: ui.P(ui.Theme().Colors.OnPrimary),
+					}},
+				}},
+				ui.PositionedFill{Child: material.Material{
+					Color: ui.P(ui.Color(0)),
+					Child: material.InkWell{OnTap: func() { m.Toggle(c.Name) }},
+				}},
+			)},
 		},
 	}}
 }
 
-// dateRow gives the 2 dates of the trip. A tap opens the calendar screen.
-func (m *SearchModel) dateRow() ui.Node {
-	label := textAddDates
-	if r := dateRange(m.start.Get(), m.end.Get()); r != "" {
-		label = r
-	}
-	return material.ListTile{
-		Leading:  ui.Icon{Icon: "calendar_month"},
-		Title:    ui.Text{Data: textWhen},
-		Subtitle: ui.Text{Data: label},
-		OnTap:    m.openDates,
-	}
-}
-
-// openDates opens the calendar screen. The sample calls showDateRangePicker,
-// and that call gives a Future and it needs a BuildContext. A node describes a
-// widget and not a call, thus the screen holds the calendar of Flutter and Go
-// holds the 2 dates.
-func (m *SearchModel) openDates() {
-	m.picking.Set(true)
-	m.app.push(route{name: screenDates})
-}
-
-// Pick names 1 date of the calendar. The first pick names the start and it
-// drops the end, and the second pick names the end. A date before the start
-// becomes the new start.
-func (m *SearchModel) Pick(day time.Time) {
-	day = day.UTC().Truncate(24 * time.Hour)
-	if m.picking.Peek() || day.Before(m.start.Peek()) {
-		m.start.Set(day)
-		m.end.Set(time.Time{})
-		m.picking.Set(false)
+// Toggle names the continent, and a second tap of the same 1 drops it.
+func (m *SearchModel) Toggle(name string) {
+	if m.chosen.Peek() == name {
+		m.chosen.Set("")
 		return
 	}
-	m.end.Set(day)
-	m.app.pop()
+	m.chosen.Set(name)
 }
 
-// BuildDates gives the tree of the calendar screen.
-func (m *SearchModel) BuildDates() ui.Node {
-	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.datesBody}}}
-}
-
-func (m *SearchModel) datesBody() ui.Node {
-	now := time.Now().UTC()
-	start := m.start.Get()
-	if start.IsZero() {
-		start = now
-	}
-	label := "Choose the first day"
-	if !m.picking.Get() && !m.start.Get().IsZero() {
-		label = "Choose the last day"
-	}
-	return ui.Column{
-		Children: ui.Kids(
-			ui.Row{Children: ui.Kids(
-				backButton(m.app.pop),
-				ui.Text{
-					Data:  textWhen,
-					Style: &ui.TextStyle{Size: ui.P(22.0), Weight: "w600"},
-				},
-			)},
-			ui.Padding{
-				Padding: ui.Insets{Left: 20, Top: 4, Right: 20, Bottom: 8},
-				Child:   ui.Text{Data: label},
+// formBox gives the box of 64 pixels that the 2 rows of the form carry.
+func formBox(child ui.Node) ui.Node {
+	d := screen()
+	return ui.Padding{
+		Padding: ui.Insets{
+			Left:  d.ScreenHorizontal,
+			Top:   paddingVertical,
+			Right: d.ScreenHorizontal,
+		},
+		Child: ui.Container{
+			Height: ui.P(64.0),
+			Decoration: &ui.Decoration{
+				Border: &ui.BorderSide{Color: ui.P(colorGrey1)},
+				Radius: ui.P(ui.AllCorners(16)),
 			},
-			ui.Expanded{Child: material.CalendarDatePicker{
-				InitialDate:   millis(start),
-				FirstDate:     millis(now.AddDate(0, 0, -1)),
-				LastDate:      millis(now.AddDate(2, 0, 0)),
-				OnDateChanged: func(ms int) { m.Pick(dayOf(ms)) },
-			}},
-		),
+			Child: ui.Padding{
+				Padding: ui.Sides(paddingHorizontal, 0),
+				Child:   child,
+			},
+		},
 	}
 }
 
-// millis gives the count of milliseconds of the Unix epoch. A date node of the
-// set carries that form.
-func millis(t time.Time) int { return int(t.UnixMilli()) }
+// dateRow opens the date range dialog of Material.
+func (m *SearchModel) dateRow() ui.Node {
+	var value ui.Node
+	if r := dateRange(m.start.Get(), m.end.Get()); r != "" {
+		value = ui.Text{Data: r, Style: ui.Theme().Text.BodyLarge}
+	} else {
+		value = ui.Text{Data: textAddDates, Style: hintStyle()}
+	}
+	return material.InkWell{
+		BorderRadius: ui.P(ui.AllCorners(16)),
+		OnTap:        m.pickDates,
+		Child: formBox(ui.Row{
+			MainAxisAlignment: ui.P("spaceBetween"),
+			Children: ui.Kids(
+				ui.Text{Data: textWhen, Style: ui.Theme().Text.TitleMedium},
+				value,
+			),
+		}),
+	}
+}
 
-// dayOf gives the day that the user saw. The calendar names a date of the zone
+// pickDates asks the host for the 2 days. The call runs in the goroutine of
+// the tap, and it parks until the user closes the dialog.
+func (m *SearchModel) pickDates() {
+	from, to, err := ui.DateRange(0, 0, millis(m.start.Peek()), millis(m.end.Peek()))
+	if err != nil || from == 0 || to == 0 {
+		return
+	}
+	ui.Post(func() { m.SetDates(dayOf(from), dayOf(to)) })
+}
+
+// millis gives the count of milliseconds of the Unix epoch. A date of the host
+// carries that form, and a date that holds no value gives 0.
+func millis(t time.Time) int {
+	if t.IsZero() {
+		return 0
+	}
+	return int(t.UnixMilli())
+}
+
+// dayOf gives the day that the user saw. The dialog names a date of the zone
 // of the machine, thus a read in UTC alone moves the day by 1 in a zone east
-// of UTC. The read takes the calendar day of the local zone, and it writes that
-// day at midnight UTC.
+// of UTC. The read takes the calendar day of the local zone, and it writes
+// that day at midnight UTC.
 func dayOf(ms int) time.Time {
 	d := time.UnixMilli(int64(ms))
 	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
 }
 
+// guestRow gives the count of the guests and the 2 buttons of that count.
 func (m *SearchModel) guestRow() ui.Node {
 	n := m.guests.Get()
-	return material.ListTile{
-		Leading:  ui.Icon{Icon: "person"},
-		Title:    ui.Text{Data: "Who"},
-		Subtitle: ui.Text{Data: guestText(n)},
-		Trailing: ui.Row{
-			MainAxisSize: ui.P("min"),
-			Children: ui.Kids(
-				material.IconButton{
-					Icon:      ui.Icon{Icon: "remove"},
-					Tooltip:   ui.P("1 guest less"),
-					OnPressed: func() { m.SetGuests(n - 1) },
-				},
-				ui.Text{Data: strconv.Itoa(n)},
-				material.IconButton{
-					Icon:      ui.Icon{Icon: "add"},
-					Tooltip:   ui.P("1 guest more"),
-					OnPressed: func() { m.SetGuests(n + 1) },
-				},
-			),
-		},
+	style := ui.Theme().Text.BodyMedium
+	if n == 0 {
+		style = hintStyle()
 	}
+	return formBox(ui.Row{
+		MainAxisAlignment: ui.P("spaceBetween"),
+		Children: ui.Kids(
+			ui.Text{Data: textWho, Style: ui.Theme().Text.TitleMedium},
+			ui.SizedBox{Width: ui.P(90.0), Child: ui.Row{
+				MainAxisAlignment: ui.P("spaceBetween"),
+				Children: ui.Kids(
+					ui.Keyed{Key: "remove-guests", Child: material.InkWell{
+						OnTap: func() { m.SetGuests(n - 1) },
+						Child: ui.Icon{
+							Icon:  "remove_circle_outline",
+							Color: ui.P(colorGrey3),
+						},
+					}},
+					ui.Text{Data: strconv.Itoa(n), Style: style},
+					ui.Keyed{Key: "add-guests", Child: material.InkWell{
+						OnTap: func() { m.SetGuests(n + 1) },
+						Child: ui.Icon{
+							Icon:  "add_circle_outline",
+							Color: ui.P(colorGrey3),
+						},
+					}},
+				),
+			}},
+		),
+	})
 }
 
 func (m *SearchModel) submitRow() ui.Node {
+	d := screen()
+	press := m.Submit
 	if !m.Valid() {
-		return ui.Padding{
-			Padding: ui.AllSides(20),
-			Child: material.FilledButton{
-				Child:     ui.Text{Data: textSearch},
-				OnPressed: nil,
-			},
-		}
+		press = nil
 	}
 	return ui.Padding{
-		Padding: ui.AllSides(20),
-		Child: material.FilledButton{
-			Child:     ui.Text{Data: textSearch},
-			OnPressed: m.Submit,
+		Padding: ui.Insets{
+			Left:   d.ScreenHorizontal,
+			Top:    paddingVertical,
+			Right:  d.ScreenHorizontal,
+			Bottom: d.ScreenVertical,
 		},
+		Child: ui.Keyed{Key: "submit-button", Child: material.FilledButton{
+			OnPressed: press,
+			Child: ui.SizedBox{
+				Height: ui.P(52.0),
+				Child:  ui.Center{Child: ui.Text{Data: textSearch}},
+			},
+		}},
 	}
 }

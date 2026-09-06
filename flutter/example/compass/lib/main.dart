@@ -1,29 +1,24 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:goflutter/goflutter.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'bridge.dart';
 import 'widgets_gen.dart';
 
 void main() {
-  goSetWidgets(goGenWidget);
-  runApp(const CompassApp());
+  goGenInstall();
+  goSetCall(compassCall);
+  runApp(const GoApp(bridge: CompassBridge()));
 }
 
-/// CompassApp holds the Material theme. Each widget under it comes from Go.
-class CompassApp extends StatelessWidget {
-  const CompassApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'compass',
-      theme: ThemeData(colorSchemeSeed: const Color(0xFF3F51B5), useMaterial3: true),
-      darkTheme: ThemeData(
-        colorSchemeSeed: const Color(0xFF3F51B5),
-        brightness: Brightness.dark,
-        useMaterial3: true,
-      ),
-      home: const GoApp(bridge: CompassBridge()),
-    );
+/// compassCall answers the 1 call that the host of goflutter does not hold.
+///
+/// The Go source calls ui.Share, and a share sheet needs a plugin of the
+/// platform. Each other name reaches goHostCall.
+Future<String> compassCall(String name, String arg) async {
+  if (name == 'share') {
+    await SharePlus.instance.share(ShareParams(text: arg));
+    return '';
   }
+  return goHostCall(name, arg);
 }

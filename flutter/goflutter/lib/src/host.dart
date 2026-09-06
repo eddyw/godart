@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:goruntime/goruntime.dart';
 
@@ -128,6 +130,18 @@ Widget goRender(Iface? node, GoRuntime rt) {
             BlendMode.modulate,
         shaderCallback: (Rect bounds) => paint.createShader(bounds),
         child: child,
+      );
+
+    case 'gart.dev/ui.Blur':
+      return BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: n.size('SigmaX', 0),
+          sigmaY: n.size('SigmaY', 1),
+        ),
+        blendMode:
+            goEnumValue<BlendMode>(BlendMode.values, n.text('BlendMode', 2)) ??
+            BlendMode.srcOver,
+        child: goRender(n.child('Child', 3), rt),
       );
 
     case 'gart.dev/ui.Picture':

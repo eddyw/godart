@@ -46,12 +46,14 @@ func (m *HomeModel) load() error {
 
 func (m *HomeModel) delete(id int) error {
 	if err := m.app.repos.Booking.Delete(id); err != nil {
+		toast(textErrorDelete, "", nil)
 		return err
 	}
 	list, err := m.app.repos.Booking.List()
 	if err != nil {
 		return err
 	}
+	toast(textBookingDeleted, "", nil)
 	ui.Post(func() { m.bookings.Set(list) })
 	return nil
 }
@@ -64,10 +66,14 @@ func (m *HomeModel) Build() ui.Node {
 	return material.Scaffold{
 		FloatingActionButton: material.FloatingActionButtonExtended{
 			Label:     ui.Text{Data: textBookNewTrip},
-			Icon:      ui.Icon{Icon: "add"},
+			Icon:      ui.Icon{Icon: "add_location_outlined"},
 			OnPressed: func() { m.app.push(route{name: screenSearch}) },
 		},
-		Body: ui.SafeArea{Child: ui.Watch{Build: m.body}},
+		Body: ui.SafeArea{
+			Top:    ui.P(true),
+			Bottom: ui.P(true),
+			Child:  ui.Watch{Build: m.body},
+		},
 	}
 }
 
@@ -76,73 +82,104 @@ func (m *HomeModel) body() ui.Node {
 		return busy()
 	}
 	if m.Load.Err() != nil {
-		return failed("Error while loading home", m.Load.Run)
+		return errorIndicator(textErrorHome, textTryAgain, m.Load.Run)
 	}
 	list := m.bookings.Get()
-	user := m.user.Get()
-	rows := make([]ui.Node, 0, len(list)+2)
-	rows = append(rows, ui.Padding{
-		Padding: ui.Insets{Left: 20, Top: 24, Right: 20, Bottom: 8},
-		Child: ui.Row{
-			Children: ui.Kids(
-				ui.Expanded{Child: ui.Text{
-					Data:  trips(user.Name),
-					Style: &ui.TextStyle{Size: ui.P(28.0), Weight: "w600"},
-				}},
-				material.CircleAvatar{
-					Radius: ui.P(24.0),
-					Child:  ui.Text{Data: initial(user.Name)},
-				},
-			),
-		},
-	})
+	rows := make([]ui.Node, 0, len(list)+1)
+	rows = append(rows, ui.SliverToBoxAdapter{Child: ui.Padding{
+		Padding: screenSides(),
+		Child:   m.header(),
+	}})
 	for _, b := range list {
-		rows = append(rows, m.card(b))
+		rows = append(rows, ui.SliverToBoxAdapter{Child: m.row(b)})
 	}
-	if len(list) == 0 {
-		rows = append(rows, ui.Padding{
-			Padding: ui.AllSides(40),
-			Child:   ui.Center{Child: ui.Text{Data: "no trip yet"}},
-		})
-	}
-	return ui.ListView{Children: rows}
+	return ui.CustomScrollView{Slivers: rows}
 }
 
-// card gives 1 row of the list of the bookings. The delete button stands in
-// the place of the swipe of the sample, because the node set holds no
-// Dismissible. Read the section "What the port could not hold" of the README.
-func (m *HomeModel) card(b model.BookingSummary) ui.Node {
-	return ui.Keyed{Key: "booking-" + strconv.Itoa(b.ID), Child: material.InkWell{
-		OnTap: func() { m.app.push(route{name: screenBooking, id: b.ID}) },
-		Child: ui.Padding{
-			Padding: ui.Sides(20, 8),
-			Child: ui.Row{
+// header gives the picture of the account, the logout button, and the title.
+func (m *HomeModel) header() ui.Node {
+	user := m.user.Get()
+	if user.Name == "" {
+		return ui.SizedBox{}
+	}
+	size := screen().ProfilePicture
+	return ui.Column{
+		CrossAxisAlignment: ui.P("stretch"),
+		Children: ui.Kids(
+			ui.Row{
+				MainAxisAlignment:  ui.P("spaceBetween"),
+				CrossAxisAlignment: ui.P("start"),
 				Children: ui.Kids(
-					ui.Expanded{Child: ui.Column{
-						CrossAxisAlignment: ui.P("start"),
-						Children: ui.Kids(
-							ui.Text{
-								Data:  b.Name,
-								Style: &ui.TextStyle{Weight: "w600"},
-							},
-							ui.Text{Data: dateRange(b.StartDate, b.EndDate)},
-						),
+					ui.ClipOval{Child: ui.Image{
+						Image:  ui.AssetImage(user.Picture),
+						Width:  ui.P(size),
+						Height: ui.P(size),
 					}},
-					material.IconButton{
-						Icon:      ui.Icon{Icon: "delete"},
-						Tooltip:   ui.P("delete the trip"),
-						OnPressed: func() { m.Delete.Run(b.ID) },
-					},
+					m.app.logoutButton(),
 				),
 			},
-		},
-	}}
+			ui.SizedBox{Height: ui.P(paddingVertical)},
+			title(trips(user.Name)),
+		),
+	}
 }
 
-// initial gives the first letter of the name of the account.
-func initial(name string) string {
-	if name == "" {
-		return "?"
+// title gives the head of the home screen. The gradient of the sample paints
+// each pixel of the text, thus the mask reads the mode srcIn.
+func title(text string) ui.Node {
+	style := ui.TextStyle{Family: fontRubik}
+	if s := ui.Theme().Text.HeadlineLarge; s != nil {
+		style = *s
+		style.Family = fontRubik
 	}
-	return string([]rune(name)[:1])
+	return ui.ShaderMask{
+		BlendMode: "srcIn",
+		Gradient: ui.Gradient{
+			Kind:   "radial",
+			Center: "bottomLeft",
+			Radius: 2,
+			Colors: []ui.Color{colorPurple700, colorPurple400},
+		},
+		Child: ui.Text{Data: text, Style: &style},
+	}
+}
+
+// row gives 1 booking of the list. A swipe to the left removes it, and the row
+// stays when the request of the server fails.
+func (m *HomeModel) row(b model.BookingSummary) ui.Node {
+	d := screen()
+	return ui.Dismissible{
+		Key:       "booking-" + strconv.Itoa(b.ID),
+		Direction: ui.P("endToStart"),
+		// The sample waits for the command and it keeps the row when the
+		// request fails. This call runs in a goroutine of the host, thus it
+		// reads the server itself and it answers with the result.
+		ConfirmDismiss: func(string) bool { return m.delete(b.ID) == nil },
+		Background: ui.Container{
+			Color: ui.P(colorGrey1),
+			Child: ui.Row{
+				MainAxisAlignment: ui.P("end"),
+				Children: ui.Kids(ui.Padding{
+					Padding: ui.Insets{Right: paddingHorizontal},
+					Child:   ui.Icon{Icon: "delete"},
+				}),
+			},
+		},
+		Child: material.InkWell{
+			OnTap: func() { m.app.push(route{name: screenBooking, id: b.ID}) },
+			Child: ui.Padding{
+				Padding: ui.Sides(d.ScreenHorizontal, paddingVertical),
+				Child: ui.Column{
+					CrossAxisAlignment: ui.P("start"),
+					Children: ui.Kids(
+						ui.Text{Data: b.Name, Style: ui.Theme().Text.TitleLarge},
+						ui.Text{
+							Data:  dateRange(b.StartDate, b.EndDate),
+							Style: ui.Theme().Text.BodyLarge,
+						},
+					),
+				},
+			},
+		},
+	}
 }

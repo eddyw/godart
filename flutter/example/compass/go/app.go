@@ -13,6 +13,7 @@ import (
 
 	"example.dev/gocompass/data"
 	"gart.dev/ui"
+	"gart.dev/ui/material"
 )
 
 // baseURL names the server of the application.
@@ -27,7 +28,6 @@ const (
 	screenLogin      = "login"
 	screenHome       = "home"
 	screenSearch     = "search"
-	screenDates      = "dates"
 	screenResults    = "results"
 	screenActivities = "activities"
 	screenBooking    = "booking"
@@ -57,6 +57,7 @@ type App struct {
 // New gives an application that reads the server of SetBaseURL. The first
 // screen is the login.
 func New() *App {
+	ui.UseTheme(&lightTheme, &darkTheme)
 	a := &App{repos: data.NewRepos(baseURL)}
 	a.login = newLoginModel(a)
 	a.stack.Set([]route{{name: screenLogin}})
@@ -149,17 +150,41 @@ func (a *App) open(r route) {
 }
 
 // Build gives the tree of the whole application.
+//
+// The Go tree holds the MaterialApp itself, thus the theme of theme.go reaches
+// Flutter and ui.Theme() gives the same values to each build. The Anchor node
+// stands under the application, because a dialog and a snack bar each need a
+// BuildContext of that place.
 func (a *App) Build() ui.Node {
-	return ui.Watch{Build: func() ui.Node {
-		s := a.stack.Get()
-		keys := make([]string, len(s))
-		kids := make([]ui.Node, len(s))
-		for i, r := range s {
-			keys[i] = r.name + "/" + strconv.Itoa(r.id)
-			kids[i] = a.screen(r)
-		}
-		return ui.Pages{Keys: keys, Children: kids, OnPop: a.onPop}
-	}}
+	return material.MaterialApp{
+		Title:     ui.P("compass"),
+		Theme:     &lightTheme,
+		DarkTheme: &darkTheme,
+		ThemeMode: ui.P("system"),
+		Home:      ui.Anchor{Child: ui.Watch{Build: a.pages}},
+	}
+}
+
+// pages gives the stack of the navigator.
+func (a *App) pages() ui.Node {
+	s := a.stack.Get()
+	keys := make([]string, len(s))
+	kids := make([]ui.Node, len(s))
+	for i, r := range s {
+		keys[i] = r.name + "/" + strconv.Itoa(r.id)
+		kids[i] = a.screen(r)
+	}
+	return ui.Pages{Keys: keys, Children: kids, OnPop: a.onPop}
+}
+
+// logout drops the token and it opens the login screen. The sample reports a
+// failure with a snack bar, and this port does the same.
+func (a *App) logout() {
+	if err := a.repos.Auth.Logout(); err != nil {
+		toast(textErrorLogout, textTryAgain, a.logout)
+		return
+	}
+	ui.Post(func() { a.replace(route{name: screenLogin}) })
 }
 
 // screen gives the tree of 1 screen.
@@ -171,8 +196,6 @@ func (a *App) screen(r route) ui.Node {
 		return a.home.Build()
 	case screenSearch:
 		return a.search.Build()
-	case screenDates:
-		return a.search.BuildDates()
 	case screenResults:
 		return a.results.Build()
 	case screenActivities:

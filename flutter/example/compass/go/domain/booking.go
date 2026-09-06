@@ -4,6 +4,7 @@ package domain
 import (
 	"errors"
 	"slices"
+	"strings"
 
 	"example.dev/gocompass/data"
 	"example.dev/gocompass/model"
@@ -57,4 +58,24 @@ func (u BookingCreate) CreateFrom(c model.ItineraryConfig) (model.Booking, error
 		return model.Booking{}, err
 	}
 	return b, nil
+}
+
+// BookingShare writes the text of 1 trip. The sample holds the same text in
+// domain/use_cases/booking/booking_share_use_case.dart.
+type BookingShare struct{}
+
+// TextOf gives the text of the share sheet.
+func (BookingShare) TextOf(b model.Booking) string {
+	var out strings.Builder
+	out.WriteString("Trip to " + b.Destination.Name + "\n")
+	out.WriteString("on " + model.DateRange(b.StartDate, b.EndDate) + "\n")
+	out.WriteString("Activities:\n")
+	for i, a := range b.Activities {
+		if i > 0 {
+			out.WriteString("\n")
+		}
+		out.WriteString(" - " + a.Name)
+	}
+	out.WriteString(".")
+	return out.String()
 }

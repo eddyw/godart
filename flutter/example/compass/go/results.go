@@ -54,73 +54,114 @@ func (m *ResultsModel) Choose(ref string) {
 
 // Build gives the tree of the results.
 func (m *ResultsModel) Build() ui.Node {
-	return material.Scaffold{Body: ui.SafeArea{Child: ui.Watch{Build: m.body}}}
+	return ui.PopScope{
+		CanPop:       ui.P(false),
+		OnPopInvoked: func(bool) { m.app.replace(route{name: screenSearch}) },
+		Child:        material.Scaffold{Body: ui.Watch{Build: m.body}},
+	}
 }
 
 func (m *ResultsModel) body() ui.Node {
 	if m.Search.Busy() {
-		return busy()
+		return ui.Column{Children: ui.Kids(
+			m.bar(),
+			ui.Expanded{Child: busy()},
+		)}
 	}
 	if m.Search.Err() != nil {
-		return failed("Error while loading destinations", m.Search.Run)
+		return ui.Column{Children: ui.Kids(
+			m.bar(),
+			ui.Expanded{Child: ui.Center{Child: errorIndicator(
+				textErrorDestination, textTryAgain, m.Search.Run,
+			)}},
+		)}
 	}
-	q := strings.ToLower(m.query.Get())
-	var rows []ui.Node
-	for _, d := range m.found.Get() {
-		if q != "" && !strings.Contains(strings.ToLower(d.Name), q) &&
-			!strings.Contains(strings.ToLower(d.Country), q) {
-			continue
-		}
-		rows = append(rows, m.card(d))
+	list := m.found.Get()
+	cards := make([]ui.Node, len(list))
+	for i, d := range list {
+		cards[i] = m.card(d)
 	}
-	if len(rows) == 0 {
-		rows = append(rows, ui.Padding{
-			Padding: ui.AllSides(40),
-			Child:   ui.Center{Child: ui.Text{Data: "no destination"}},
-		})
-	}
-	return ui.Column{
-		Children: ui.Kids(
-			ui.Row{Children: ui.Kids(
-				backButton(m.app.pop),
-				ui.Expanded{Child: ui.TextInput{
-					Label:     textSearchDestination,
-					Value:     m.query.Get(),
-					OnChanged: func(s string) { m.query.Set(s) },
-				}},
-			)},
-			ui.Expanded{Child: ui.ListView{Children: rows}},
-		),
+	return ui.Padding{
+		Padding: screenX(),
+		Child: ui.CustomScrollView{Slivers: ui.Kids(
+			ui.SliverToBoxAdapter{Child: m.bar()},
+			ui.SliverGrid{
+				GridDelegate: ui.GridSpec{
+					Kind:         "count",
+					Count:        2,
+					MainSpacing:  8,
+					CrossSpacing: 8,
+					AspectRatio:  182.0 / 222.0,
+				},
+				Delegate: ui.SliverChildren{Children: cards},
+			},
+		)},
 	}
 }
 
-func (m *ResultsModel) card(d model.Destination) ui.Node {
-	tags := make([]ui.Node, 0, len(d.Tags))
-	for _, t := range d.Tags {
-		tags = append(tags, tag(t))
+// bar gives the search bar over the grid. A tap of it opens the form again.
+func (m *ResultsModel) bar() ui.Node {
+	d := screen()
+	return ui.SafeArea{
+		Top:    ui.P(true),
+		Bottom: ui.P(false),
+		Child: ui.Padding{
+			Padding: ui.Insets{Top: d.ScreenVertical, Bottom: paddingVertical},
+			Child:   m.app.searchBar(m.query.Get(), m.app.pop),
+		},
 	}
-	return ui.Keyed{Key: "dest-" + d.Ref, Child: ui.Padding{
-		Padding: ui.Sides(20, 8),
-		Child: material.InkWell{
-			OnTap: func() { m.Choose(d.Ref) },
-			Child: ui.Column{
-				CrossAxisAlignment: ui.P("start"),
-				Children: ui.Kids(
-					ui.ClipRRect{
-						BorderRadius: ui.P(ui.AllCorners(12)),
-						Child:        image(d.ImageURL, 160),
+}
+
+// card gives 1 destination of the grid: the picture, the name, and the tags.
+func (m *ResultsModel) card(d model.Destination) ui.Node {
+	chips := make([]ui.Node, len(d.Tags))
+	for i, t := range d.Tags {
+		chips[i] = tagChipSmall(t)
+	}
+	return ui.Keyed{Key: "result-" + d.Ref, Child: ui.ClipRRect{
+		BorderRadius: ui.P(ui.AllCorners(10)),
+		Child: ui.Stack{
+			Fit: ui.P("expand"),
+			Children: ui.Kids(
+				picture(d.ImageURL, 0, 0, "fitHeight"),
+				ui.Positioned{
+					Bottom: ui.P(12.0),
+					Left:   ui.P(12.0),
+					Right:  ui.P(12.0),
+					Child: ui.Column{
+						MainAxisSize:       ui.P("min"),
+						CrossAxisAlignment: ui.P("start"),
+						Children: ui.Kids(
+							ui.Text{Data: strings.ToUpper(d.Name), Style: cardTitle()},
+							ui.SizedBox{Height: ui.P(6.0)},
+							ui.Wrap{
+								Spacing:    ui.P(4.0),
+								RunSpacing: ui.P(4.0),
+								Direction:  ui.P("horizontal"),
+								Children:   chips,
+							},
+						),
 					},
-					ui.Padding{
-						Padding: ui.Insets{Left: 0, Top: 8, Right: 0, Bottom: 4},
-						Child: ui.Text{
-							Data:  d.Name + ", " + d.Continent,
-							Style: &ui.TextStyle{Size: ui.P(18.0), Weight: "w600"},
-						},
-					},
-					ui.Text{Data: d.Country},
-					ui.Wrap{Children: tags},
-				),
-			},
+				},
+				ui.PositionedFill{Child: material.Material{
+					Color: ui.P(ui.Color(0)),
+					Child: material.InkWell{OnTap: func() { m.Choose(d.Ref) }},
+				}},
+			),
 		},
 	}}
+}
+
+// cardTitle gives the name of a destination. The shadow of the sample makes
+// the text stand out over a light picture.
+func cardTitle() *ui.TextStyle {
+	return &ui.TextStyle{
+		Family:        fontRubik,
+		Weight:        "w800",
+		Variations:    weight(800),
+		Size:          ui.P(15.0),
+		Color:         ui.P(colorWhite),
+		LetterSpacing: ui.P(1.0),
+		Shadows:       []ui.Shadow{{Color: colorBlack, BlurRadius: 3}},
+	}
 }

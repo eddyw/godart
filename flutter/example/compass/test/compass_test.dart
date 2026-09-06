@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:compass_app/bridge.dart';
 import 'package:compass_app/widgets_gen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gocompass/app.dart' as app;
@@ -104,8 +105,30 @@ class _ImageResponse implements HttpClientResponse {
       super.noSuchMethod(invocation);
 }
 
+/// _nextMonth gives the header of the month after this 1, for example
+/// "October 2026". The date range dialog writes that text over each month.
+String _nextMonth() {
+  final DateTime now = DateTime.now();
+  final DateTime next = DateTime(now.year, now.month + 1);
+  return '${_months[next.month - 1]} ${next.year}';
+}
+
+/// _shortMonth gives the 3 letters of the month after this 1.
+String _shortMonth() {
+  final DateTime now = DateTime.now();
+  final DateTime next = DateTime(now.year, now.month + 1);
+  return _months[next.month - 1].substring(0, 3);
+}
+
+const List<String> _months = <String>[
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 Widget harness() {
-  return const MaterialApp(home: GoApp(bridge: CompassBridge()));
+  // The Go tree holds the MaterialApp itself, thus this widget stands above
+  // it. Read the Build method of go/app.go.
+  return const GoApp(bridge: CompassBridge());
 }
 
 void main() {
@@ -220,7 +243,7 @@ void main() {
       await request.response.close();
     });
 
-    goSetWidgets(goGenWidget);
+    goGenInstall();
     app.$init();
     app.SetBaseURL(
       GoString.fromString('http://127.0.0.1:${server.port}'),
@@ -251,7 +274,17 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// phone gives the window the size of a telephone. The default of a widget
+  /// test is 800 by 600, and the sample draws a column that stands taller than
+  /// 600 pixels.
+  void phone(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1290, 2796);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+  }
+
   Future<void> logIn(WidgetTester tester) async {
+    phone(tester);
     await tester.pumpWidget(harness());
     await tester.tap(find.text('Login'));
     await tester.pump();
@@ -261,9 +294,10 @@ void main() {
   testWidgets('the first screen holds the login form', (
     WidgetTester tester,
   ) async {
+    phone(tester);
     await tester.pumpWidget(harness());
 
-    expect(find.text('compass'), findsOneWidget);
+    expect(find.byType(SvgPicture), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2));
     expect(find.text('Login'), findsOneWidget);
     expect(seen, isEmpty);
@@ -294,42 +328,45 @@ void main() {
     expect(find.text('Europe'), findsOneWidget);
     expect(find.text('Add Dates'), findsOneWidget);
 
-    await tester.tap(find.text('Europe'));
+    // The card holds an InkWell over the name, exactly as the sample does,
+    // thus the tap reaches that widget and not the text.
+    await tester.tap(find.text('Europe'), warnIfMissed: false);
     await tester.pump();
 
-    // The calendar of Flutter stands on a screen of its own, and Go holds the
-    // 2 dates. The first tap names the first day, and the second one names the
-    // last day and pops the screen.
+    // The sample opens showDateRangePicker. The Go side calls ui.DateRange,
+    // the host runs the dialog of Material, and the answer wakes the goroutine
+    // of the tap.
     await tester.tap(find.text('Add Dates'));
-    await tester.pump();
-    await settle(tester, 'dates');
-    expect(find.byType(CalendarDatePicker), findsOneWidget);
-    expect(find.text('Choose the first day'), findsOneWidget);
-    // The calendar opens on the month of today, and a day before today takes
-    // no tap. The next month lies whole in the future, thus each day of it
-    // takes one.
-    await tester.tap(find.byTooltip('Next month'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('10').first);
+    expect(find.text('Save'), findsOneWidget);
+    // The dialog opens on the month of today. The next month lies whole in the
+    // future, thus each day of it takes a tap.
+    await tester.scrollUntilVisible(find.text(_nextMonth()), 200,
+        scrollable: find.byType(Scrollable).last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('10').last);
     await tester.pump();
-    expect(find.text('Choose the last day'), findsOneWidget);
-    await tester.tap(find.text('11').first);
+    await tester.tap(find.text('12').last);
     await tester.pump();
+    await tester.tap(find.text('Save'));
     await settle(tester, 'search');
     expect(find.text('Add Dates'), findsNothing);
+    // The dialog opens on the month of today, thus the 2 days stand in a
+    // month that the run of the test names.
+    expect(find.textContaining('10 - 12 '), findsOneWidget);
 
-    await tester.tap(find.byTooltip('1 guest more'));
+    await tester.tap(find.byKey(const ValueKey<String>('add-guests')));
     await tester.pump();
-    expect(find.text('1 guest'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Search'));
     await tester.pump();
     await settle(tester, 'results');
-    expect(find.text('Alps, Switzerland'), findsNothing);
-    expect(find.text('Alps, Europe'), findsOneWidget);
-    expect(find.text('Kyoto, Asia'), findsNothing);
+    expect(find.text('ALPS'), findsOneWidget);
+    expect(find.text('KYOTO'), findsNothing);
 
-    await tester.tap(find.text('Alps, Europe'));
+    await tester.tap(find.text('ALPS'), warnIfMissed: false);
     await tester.pump();
     await settle(tester, 'activities');
     expect(find.text('Daytime'), findsOneWidget);
@@ -337,7 +374,7 @@ void main() {
     expect(find.text('Evening'), findsOneWidget);
     expect(find.text('Fondue'), findsOneWidget);
 
-    await tester.tap(find.text('Ski'));
+    await tester.tap(find.byKey(const ValueKey<String>('ski-checkbox')));
     await tester.pump();
     expect(find.text('1 selected'), findsOneWidget);
 
@@ -364,7 +401,10 @@ void main() {
 
     final NavigatorState nav = tester.state(find.byType(Navigator).last);
     nav.pop();
-    await tester.pumpAndSettle();
+    await tester.pump();
+    // The PopScope of the search form opens the home screen again, thus the
+    // home reads the server 1 more time.
+    await settle(tester, 'home');
 
     expect(app.Top().toDartString(), 'home');
     expect(find.text("Sofie's Trips"), findsOneWidget);
@@ -373,7 +413,7 @@ void main() {
   testWidgets('the delete removes a booking', (WidgetTester tester) async {
     await logIn(tester);
 
-    await tester.tap(find.byTooltip('delete the trip'));
+    await tester.fling(find.text('Alps, Europe'), const Offset(-600, 0), 2000);
     await tester.pump();
     // The tap starts a goroutine, and the command reads the list again after
     // the delete. The loop below gives time to the 2 requests.

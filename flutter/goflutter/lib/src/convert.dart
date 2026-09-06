@@ -50,6 +50,11 @@ IconData? goIcon(String? name) {
   return out;
 }
 
+/// goValueKey reads an optional key field. An empty text and a nil pointer
+/// each give no key, thus the widget takes the key that its place gives.
+Key? goValueKey(String? name) =>
+    name == null || name.isEmpty ? null : ValueKey<String>(name);
+
 /// goChildOpt builds 1 child, and it gives null when the Go field holds no
 /// node. A required child then reports its own name.
 Widget? goChildOpt(Iface? node, GoRuntime rt) =>
@@ -177,7 +182,18 @@ TextStyle? goTextStyle(GoNode? n) {
     height: n.sizeOpt('Height', 6),
     decoration: _decorations[n.text('Decoration', 7)],
     fontFamily: family.isEmpty ? null : family,
+    shadows: goShadows(n.structs('Shadows', 9)),
+    fontVariations: goVariations(n.structs('Variations', 10)),
   );
+}
+
+/// goVariations reads the FontVariation structs of a text style.
+List<FontVariation>? goVariations(List<GoNode> list) {
+  if (list.isEmpty) return null;
+  return <FontVariation>[
+    for (final GoNode n in list)
+      FontVariation(n.text('Axis', 0), n.size('Value', 1)),
+  ];
 }
 
 const Map<String, Alignment> _alignments = <String, Alignment>{

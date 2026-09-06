@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/eddyw/godart/internal/driver"
 	"github.com/eddyw/godart/internal/load"
@@ -154,9 +155,12 @@ func (a *app) scan() (string, error) {
 
 // scanner builds the scanner 1 time and it gives the path of the binary. A go
 // run of each cycle costs about 1 second more.
+//
+// A binary that stands older than the source of the scanner gives the answer
+// of the version before, thus the build runs again in that case.
 func (a *app) scanner() (string, error) {
 	bin := filepath.Join(a.cacheDir(), "nodescan")
-	if _, err := os.Stat(bin); err == nil {
+	if info, err := os.Stat(bin); err == nil && !a.scannerIsOld(info.ModTime()) {
 		return bin, nil
 	}
 	if err := os.MkdirAll(a.cacheDir(), 0o755); err != nil {
@@ -166,6 +170,23 @@ func (a *app) scanner() (string, error) {
 		return "", err
 	}
 	return bin, nil
+}
+
+// scannerIsOld reports whether a source file of the scanner is newer than the
+// binary that the cache holds.
+func (a *app) scannerIsOld(built time.Time) bool {
+	dir := filepath.Join(a.root, "flutter", "nodescan")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return true
+	}
+	for _, e := range entries {
+		info, err := e.Info()
+		if err != nil || info.ModTime().After(built) {
+			return true
+		}
+	}
+	return false
 }
 
 // nodegen writes the host of the names.
