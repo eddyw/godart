@@ -4263,6 +4263,14 @@ The plan left these points open. The work took the decisions below.
      The Dart output of the compass application: `themes.part.dart` fell from
      139,198 bytes to 8,021, and `types.part.dart` from 69,670 to 53,650.
 
+     **The filter reads the whole tree of the node package.** A field of a
+     Material node names `ui.ButtonStyle`, and the value types stand in another
+     directory. The first form walked 1 directory at a time, thus it dropped
+     that type and the Go type checker reported an undefined name for 9 fields
+     of the Material pack. `readNames` also took the field of a selector as no
+     type, thus `ui.ButtonStyle` recorded the name `ui` alone. `readTypeNames`
+     reads the type of a field, and it records the field of a selector.
+
 373. A lazy package variable saves 508,896 bytes, and dart2wasm rejects it. The
      work stays open.
 
