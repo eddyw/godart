@@ -47,15 +47,61 @@ func Sources(root string, keep []string) (map[string][]byte, error) {
 	for _, n := range keep {
 		want[n] = true
 	}
-	out := map[string][]byte{}
+	var packs []*pack
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil || !entry.IsDir() {
 			return err
 		}
-		return filterDir(path, want, out)
+		p, err := readPack(path)
+		if err != nil {
+			return err
+		}
+		if p != nil && len(p.made) > 0 {
+			packs = append(packs, p)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	return filterPacks(packs, want)
+}
+
+// filterPacks gives the filtered source of each generated file of the whole
+// tree.
+//
+// The walk holds each directory together, because a pack under the node
+// package reads the value types of the node package: a field of a Material
+// node names ui.ButtonStyle. A walk of 1 directory at a time would drop that
+// type, and the Go type checker would then report an undefined name.
+func filterPacks(packs []*pack, want map[string]bool) (map[string][]byte, error) {
+	keep := map[string]bool{}
+	for n := range want {
+		keep[n] = true
+	}
+	declared := map[string]bool{}
+	var made []*ast.File
+	for _, p := range packs {
+		for _, f := range p.other {
+			readNames(f, keep)
+		}
+		for _, f := range p.made {
+			for name := range typeNames(f) {
+				declared[name] = true
+			}
+			made = append(made, f)
+		}
+	}
+	grow(made, declared, keep)
+	out := map[string][]byte{}
+	for _, p := range packs {
+		for i, f := range p.made {
+			text, err := write(p.fset, f, declared, keep)
+			if err != nil {
+				return nil, err
+			}
+			out[p.paths[i]] = text
+		}
 	}
 	return out, nil
 }
@@ -69,47 +115,6 @@ type pack struct {
 	paths []string
 	// other lists each hand written file of the package.
 	other []*ast.File
-}
-
-// filterDir writes the filtered source of each generated file of 1 directory
-// into out. A directory that holds no such file gives no entry.
-//
-// A hand written file of the package can name a generated type, and a type of
-// the set can name another 1. The keep set thus grows until it holds each name
-// that a kept declaration reads.
-//
-// A test file stays out of the walk. The compiler reads no test file of a
-// dependency, thus a type that only a test names is dead weight too.
-func filterDir(dir string, want map[string]bool, out map[string][]byte) error {
-	p, err := readPack(dir)
-	if err != nil {
-		return err
-	}
-	if p == nil || len(p.made) == 0 {
-		return nil
-	}
-	keep := map[string]bool{}
-	for n := range want {
-		keep[n] = true
-	}
-	for _, f := range p.other {
-		readNames(f, keep)
-	}
-	declared := map[string]bool{}
-	for _, f := range p.made {
-		for name := range typeNames(f) {
-			declared[name] = true
-		}
-	}
-	grow(p.made, declared, keep)
-	for i, f := range p.made {
-		text, err := write(p.fset, f, declared, keep)
-		if err != nil {
-			return err
-		}
-		out[p.paths[i]] = text
-	}
-	return nil
 }
 
 // readPack parses each Go file of a directory that holds no test. A file that
@@ -173,10 +178,30 @@ func readNames(n ast.Node, out map[string]bool) {
 		case *ast.Ident:
 			out[n.Name] = true
 		case *ast.Field:
-			readNames(n.Type, out)
+			readTypeNames(n.Type, out)
 			return false
 		case *ast.SelectorExpr:
 			readNames(n.X, out)
+			return false
+		}
+		return true
+	})
+}
+
+// readTypeNames adds each name of a type expression to the set.
+//
+// A qualified name of another package, for example ui.ButtonStyle, holds the
+// type in the field of the selector. A field of a Material node reads such a
+// name, and the value types of the node package stand in another directory,
+// thus the walk must hold that name.
+func readTypeNames(n ast.Node, out map[string]bool) {
+	ast.Inspect(n, func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.Ident:
+			out[n.Name] = true
+		case *ast.SelectorExpr:
+			out[n.Sel.Name] = true
+			readTypeNames(n.X, out)
 			return false
 		}
 		return true

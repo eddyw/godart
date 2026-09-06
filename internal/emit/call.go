@@ -1468,7 +1468,8 @@ func (e *emitter) minMax(x *ir.Builtin) string {
 	// A Go value of an unsigned 64-bit type above 2 to the power 63 holds a
 	// negative Dart int, thus the signed compare of the 2 helpers inverts the
 	// order. A narrow unsigned type holds no such value.
-	if isUnsigned64(x.Type) {
+	unsigned := isUnsigned64(x.Type)
+	if unsigned {
 		fn = "$uminOf"
 		if x.Name == "max" {
 			fn = "$umaxOf"
@@ -1477,6 +1478,11 @@ func (e *emitter) minMax(x *ir.Builtin) string {
 	out := e.expr(x.Args[0])
 	for _, a := range x.Args[1:] {
 		out = fmt.Sprintf("%s(%s, %s)", fn, out, e.expr(a))
+	}
+	// The 2 unsigned helpers each give a GoInt, thus a cast of the result
+	// would read as unnecessary.
+	if unsigned {
+		return out
 	}
 	return fmt.Sprintf("(%s as %s)", out, e.dartType(x.Type))
 }
