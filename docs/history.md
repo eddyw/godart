@@ -969,7 +969,9 @@ declaration | Only a statement drained the list that the builder holds |
 
 - The end to end test in `internal/driver`. It compiles each Go program of
   `testdata/programs`, runs the Dart output, and compares the output with the
-  output of `go run`.
+  output of `go run`. 311 programs stand there, and 26 of them carry the name
+  prefix `conf`: the conformance suite of the Go language of 2026-09-06, which
+  writes 2,184 labelled lines. Read decision 375.
 - The end to end test of `gart test`. It runs the tests of each module of
   `testdata/tests` with `go test` and with `gart test`. It runs the plain mode
   and the verbose mode, and it compares the 2 outputs.
