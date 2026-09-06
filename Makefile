@@ -125,7 +125,7 @@ surface:
 # Take it after an upgrade of the Flutter SDK. Read flutter/nodegen/README.md.
 flutter-nodes:
 	cd flutter/nodegen && dart pub get && dart run bin/nodegen.dart go \
-		../goflutter ../ui/widgets_gen.go
+		../goflutter ../ui
 
 ci: fmt-check vet test flutter-go dart-analyze dart-test
 
