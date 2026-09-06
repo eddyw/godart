@@ -17,6 +17,8 @@ hold" names each limit that the work found, with the cause of each 1.
 | `go/` | The application. The model, the API client, each repository, the use case, each view model, and the 7 screens. |
 | `lib/` | The Dart host. 24 lines, and `widgets_gen.dart` that `nodegen` writes. |
 | `assets/` | The 2 JSON files of the sample, the logo, the picture of the account, and the 2 fonts. |
+| `doc/` | 1 picture of each screen. |
+| `tool/` | `shot.dart` writes those pictures. |
 
 ## Run it
 
@@ -43,6 +45,28 @@ picture today. The 2 JSON files of `assets/` name a host that answers, and the
 seed of each URL holds the reference of the destination, thus 1 place keeps 1
 picture. The 3 cards of the login screen and the 7 continents keep the host of
 the sample, because `rstr.in` answers each of those requests.
+
+## The screens
+
+`doc/` holds 1 picture of each screen. `flutter test tool/shot.dart
+--update-goldens` writes them again.
+
+| Screen | Picture |
+|---|---|
+| The login, with the 3 tilted cards and the logo | `doc/1-login.png` |
+| The home, with the title under a radial gradient | `doc/2-home.png` |
+| The search form, with the carousel of the continents | `doc/3-search.png` |
+| The same form after 2 choices | `doc/4-search-filled.png` |
+| The date range dialog of Material | `doc/4b-dates.png` |
+| The grid of the results, with the tag chips | `doc/5-results.png` |
+| The 2 lists of the activities | `doc/6-activities.png` |
+| The booking, with the gradient over the picture | `doc/7-booking.png` |
+
+The tool loads the 2 fonts of the application and it answers each request of an
+image with 1 small picture, thus the shot holds the text and the layout of each
+screen. It stands outside `test/`, thus `flutter test` does not run it: a
+golden file reads the font of the machine, and a second machine would give
+another picture.
 
 `glutter run -d macos` also holds the Go source under watch. A change of 1 Go
 line reaches the running application in about 1 second, and it keeps the screen

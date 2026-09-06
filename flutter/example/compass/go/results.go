@@ -1,6 +1,7 @@
 package app
 
 import (
+	"strconv"
 	"strings"
 
 	"example.dev/gocompass/model"
@@ -36,7 +37,12 @@ func (m *ResultsModel) search() error {
 			out = append(out, d)
 		}
 	}
-	ui.Post(func() { m.found.Set(out) })
+	line := cfg.Continent + " - " + dateRange(cfg.StartDate, cfg.EndDate) +
+		" - Guests: " + strconv.Itoa(cfg.Guests)
+	ui.Post(func() {
+		m.found.Set(out)
+		m.query.Set(line)
+	})
 	return nil
 }
 
