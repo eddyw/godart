@@ -206,6 +206,7 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | A method value of a named type that is not a struct | Present. It writes a closure. |
 | A method value of an interface value, for example `r.Read` | Present. The closure holds the value, and each call reads the method table. |
 | A range loop over a function | Present. Read the section below. |
+| A range loop over an array value | Present. The walk holds a copy, thus a write of the array inside the body does not reach a later pass, exactly as gc does. A slice and a pointer to an array each share the storage. |
 | A deferred call that can block | Present. The chain of the deferred calls holds states of its own. |
 | A complex number and the builtins `complex`, `real`, and `imag` | Present. Each operation of `complex64` rounds the 2 parts to 32 bits. The division is the division of the Go runtime. `fmt` writes the `(1+2i)` form for the verbs `v`, `f`, `e`, and `g`. |
 | A type declaration inside a function, of a struct type | Present. It takes the class of its shape. |
@@ -1352,11 +1353,20 @@ The width differs per type argument, thus the dictionary holds a mask.
 each arithmetic operation and after each conversion to the parameter. The mask
 of a type that fills the width of a Dart int is the identity.
 
+A constraint that lists only float types follows the same rule since
+2026-09-06. Each term gives the Dart type `double`, the dictionary of
+`float32` holds the round of 32 bits, and the dictionary of `float64` holds
+the identity. Thus `~float32 | ~float64`, which
+`golang.org/x/exp/constraints.Float` spells, keeps each operator of a float.
+
 | Type set | godart |
 |---|---|
 | Each term reads the signed operators (`~int8`, `~uint16`, `~int64`) | Each operator |
 | Each term is unsigned and 64 bits (`~uint`, `~uint64`, `~uintptr`) | Each operator, with the unsigned helpers |
 | The 2 forms together (`~int \| ~uint64`) | `/`, `%`, `>>`, a conversion to a float, and the builtin `print` are rejected by stage 2 |
+| Each term is a float type (`~float32 \| ~float64`) | Each operator. The dictionary rounds the result to the width. |
+| An integer type and a float type, with no narrow term (`~int \| ~float64`) | Each operator that Go allows on both. `/` is rejected, because the Dart operator `/` always gives a double. |
+| An integer type and a narrow float type (`~int \| ~float32`) | Rejected by stage 2. The Dart bound of such a set is `num`, and no mask of a narrow width fits that bound. |
 
 Go reads the bit pattern of an unsigned type of 64 bits as unsigned, and Dart
 reads the same pattern as a negative number. Thus a division, a remainder, and a

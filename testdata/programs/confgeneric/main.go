@@ -61,6 +61,24 @@ func sumF[T floating](list []T) T {
 	return total
 }
 
+// floatOps reads each operator of a float on a type parameter of a set of
+// float types. The dictionary of the type argument holds the mask of the
+// width, thus float32 rounds each result to 32 bits.
+func floatOps[T floating](a, b T) []T {
+	sum := a + b
+	diff := a - b
+	prod := a * b
+	quo := a / b
+	neg := -a
+	acc := a
+	acc += b
+	acc *= 2
+	step := a
+	step++
+	conv := T(3)
+	return []T{sum, diff, prod, quo, neg, acc, step, conv}
+}
+
 // sumMixed reads a set that holds an integer type and a float type. No term
 // of the set is narrow, thus each operation holds 1 Dart form.
 func sumMixed[T real](list []T) T {
@@ -147,6 +165,9 @@ func basics() {
 	row("a mixed set of ints", sumMixed([]int{1, 2}))
 	row("a mixed set of floats", sumMixed([]float64{0.5, 0.25}))
 	row("a mixed set of int64", sumMixed([]int64{5, 6}))
+	row("float64 operators", floatOps(1.0, 3.0))
+	row("float32 operators", floatOps[float32](1.0, 3.0))
+	row("the widths differ", fmt.Sprint(floatOps(1.0, 3.0)[3] == float64(floatOps[float32](1.0, 3.0)[3])))
 }
 
 // The constraint with a method.

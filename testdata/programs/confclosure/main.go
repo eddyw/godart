@@ -224,17 +224,18 @@ func deferNamed() (n int) {
 	return n
 }
 
-func deferArg() string {
+// deferArg proves the 2 rules together. A deferred call reads each argument
+// at the defer statement, and a closure reads the variable at the run. The
+// second defer runs first, thus it writes the argument into the result, and
+// the first defer then reads the variable and that result.
+func deferArg() (out string) {
 	n := 1
-	out := ""
+	defer func() {
+		out = fmt.Sprint("the closure sees ", n, ", and the argument was ", out)
+	}()
 	defer func(seen int) { out = fmt.Sprint(seen) }(n)
 	n = 99
-	// The deferred call runs at the return, thus the read of out must stand
-	// inside another deferred call.
-	got := ""
-	defer func() { got = out }()
-	_ = got
-	return fmt.Sprint("the argument holds ", n)
+	return ""
 }
 
 func deferLoop() []int {

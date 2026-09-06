@@ -2,9 +2,9 @@
 
 The suite covers the Go language itself. Each program stands in
 `testdata/programs/` with the name prefix `conf`. `TestPrograms` of
-`internal/driver` finds each directory with no registration. It runs the
-program with `go run .` and with the Dart output of gart, and it compares the
-2 outputs byte for byte.
+`internal/driver` finds each directory with no registration. It runs the program
+with `go run .` and with the Dart output of gart. It compares the 2 outputs
+byte for byte.
 
 Each program writes a table of results, and each line holds a label. 1 build
 thus gives many assertions. The column "Lines" holds the count of the output
@@ -90,14 +90,14 @@ fmt.Println("max", max(u, v))
 
 The cause: `minMax` of `internal/emit/call.go`, line 1457, writes a call of
 `$minOf` or of `$maxOf` for each element type. The 2 helpers stand in
-`runtime/goruntime/lib/src/string.dart`, line 418 and line 427, and each 1
+`runtime/goruntime/lib/src/string.dart`, at line 418 and at line 427. Each 1
 compares a `GoInt` with the signed operator `<=` of Dart. A Go `uint64` holds
 its high values as a negative Dart int, thus the order inverts. A narrow
 unsigned type keeps a value that is not negative, thus only `uint64`, `uint`,
 and `uintptr` show the defect.
 
 The fix: `minMax` must write `$uminOf` and `$umaxOf` for an unsigned 64-bit
-type, and `string.dart` must hold the 2 new helpers over the unsigned compare.
+type. `string.dart` must hold the 2 new helpers over the unsigned compare.
 The emitter alone knows the signedness, thus no change of the runtime alone
 closes it.
 
@@ -119,19 +119,18 @@ fmt.Println(uint64(f))
 | Go | `9223372036854775808` |
 | gart | `9223372036854775807` |
 
-The value 2 to the power 63 stands inside the range of a `uint64`, thus Go
-gives the exact result and the case is not implementation-defined.
+The value 2 to the power 63 stands inside the range of a `uint64`. Go thus
+gives the exact result, and the case is not implementation-defined.
 
 The cause: `conv` of `internal/emit/call.go`, line 1555, writes `$fromF64(x)`
 for each conversion of a float to an integer. `$fromF64` of
 `runtime/goruntime/lib/src/goint_native.dart`, line 155, calls
-`double.truncate()` of Dart, which clamps the result to the range of a signed
-64-bit int.
+`double.truncate()` of Dart. That call clamps the result to the range of a
+signed 64-bit int.
 
 The fix: `conv` must write a helper `$fromF64U` for an unsigned 64-bit target,
-and `goint_native.dart` and `goint_js.dart` must hold that helper. The helper
-subtracts 2 to the power 64 from a value of at least 2 to the power 63 and it
-then truncates, thus the bit pattern is right.
+and `goint_native.dart` and `goint_js.dart` must hold that helper. The helper subtracts 2 to the power 64 from a value of at least 2 to the
+power 63. It truncates the result after that, thus the bit pattern is right.
 
 ### 3. A width of a verb does not reach each element of a compound value
 
@@ -149,8 +148,8 @@ fmt.Printf("[%-8v]\n", []int{1, 2})
 | Go | `[[1        2       ]]` |
 | gart | `[[1 2]]` |
 
-Go gives the width to each element of a slice, of an array, of a map, and of a
-struct, and not to the whole text. The rule reaches each key and each value of
+Go gives the width to each element of a slice, of an array, of a map, and of
+a struct. It gives no width to the whole text. The rule reaches each key and each value of
 a map too: `%-8v` of `map[string]int{"a": 1}` gives `map[a       :1       ]`.
 
 The cause: the printer of gart writes the whole compound value first, and it
@@ -175,9 +174,9 @@ The verb `%x` of a `float64` is right. Only the 32-bit form differs.
 
 The cause: `_hexFloat` of `format.dart`, line 1070, holds `m -= lead;` and it
 then writes the fraction in 6 hexadecimal digits. The fraction of a `float32`
-holds 23 bits, and 6 digits hold 24 bits. Go shifts the fraction 1 place to
-the left to fill the 24 bits, and the Dart form pads on the left, thus each
-digit stands 1 place too low. The fraction of a `float64` holds 52 bits, which
+holds 23 bits, and 6 digits hold 24 bits. Go shifts the fraction 1 place to the
+left to fill the 24 bits. The Dart form pads on the left, thus each digit
+stands 1 place too low. The fraction of a `float64` holds 52 bits, which
 fills 13 digits exactly, thus that path is right.
 
 The fix: `_hexFloat` must write `m = (m - lead) << 1;` for the single form.
@@ -200,7 +199,7 @@ fmt.Println(a[:0] == nil)
 The specification says that a valid slice expression of a nil slice gives a
 nil slice. `Slice.range` called `$view`, which builds a header with the nil
 flag false. A nil slice holds a capacity of 0, thus each bound of a valid
-expression is 0 and the source header is already the right result. `range`
+expression is 0. The source header is thus already the right result. `range`
 now gives the source header back for a nil slice, behind the bound tests.
 
 The witness stays in `testdata/programs/confslice`, section "nil against
@@ -230,9 +229,8 @@ func f() (out string) {
 A recover consumes the panic. `gorecover` of Go marks the panic with
 `p.recovered` and each later call reads that mark and gives nil. `$recover`
 set the flag `$recovered` and it read no flag, thus each call gave the value.
-`$recover` now reads `$recovered` first. The flag belongs to the chain of 1
-function, thus a new panic inside a deferred call clears it and the calls that
-remain read that new panic.
+`$recover` now reads `$recovered` first. The flag belongs to the chain of 1 function. A new panic inside a deferred
+call clears it, thus the calls that remain read that new panic.
 
 The witness stays in `testdata/programs/confdefer`, section "recover".
 
@@ -254,10 +252,9 @@ _ = c.(shape)
 
 A type descriptor holds 2 names: `name` is the identity, with the import path,
 and `text` is the name that Go writes, with the package name. `$assertIface`
-read `name`, and the emitter passed the identity name of the target type. The
-report now reads `desc.display`, which gives `text` and falls back to `name`
-for a predeclared type, and the new `typeDisplayText` of the emitter writes
-the reflect text of the target.
+read `name`, and the emitter passed the identity name of the target type. The report now reads `desc.display`. That getter gives `text`, and it falls
+back to `name` for a predeclared type. The new `typeDisplayText` of the
+emitter writes the reflect text of the target.
 
 The witness stays in `testdata/programs/confpanic`, section "a type
 assertion".
@@ -298,11 +295,10 @@ _ = make([]int, n, n)
 | gart after | equal to Go |
 
 Go compares the length against `maxAlloc` divided by the size of the element.
-`maxAlloc` holds 2 to the power 48 on a 64-bit machine, thus a slice of an
-element of 8 bytes reaches 2 to the power 45 elements. The allocator of Dart
-takes no element size, thus 1 bound stands for each element type. A count
-between this bound and the bound of Go needs at least 32 terabytes, which no
-machine holds, and Go reports "out of memory" there too.
+`maxAlloc` holds 2 to the power 48 on a 64-bit machine. A slice of an element
+of 8 bytes thus reaches 2 to the power 45 elements. The allocator of Dart
+takes no element size, thus 1 bound stands for each element type. A count between this bound and the bound of Go needs at least 32 terabytes.
+No machine holds that much, and Go reports "out of memory" there too.
 
 The witness stays in `testdata/programs/confpanic`, section "a builtin".
 
@@ -329,13 +325,12 @@ func sum[T floating](list []T) T {
 | gart before | `the operator += reads the type parameter T, and its constraint holds a type that needs a mask of its width` |
 | gart after | equal to Go |
 
-A set of integer types already erased to the Dart type `GoInt`, and the
+A set of integer types already erased to the Dart type `GoInt`. The
 dictionary of the type argument carried the mask of the width. A set of float
-types held no such rule, and the emitter kept the Dart type parameter. The
-dictionary of `float32` already holds the round of 32 bits and the dictionary
-of `float64` holds the identity, thus the same rule fits. `dartType` now
-gives `double` for such a set, `mixedForm` accepts it, `isFloat` reports it,
-`narrow` reads the mask of the dictionary, and stage 2 rejects only a set that
+types held no such rule, and the emitter kept the Dart type parameter. The dictionary of `float32` already holds the round of 32 bits, and the
+dictionary of `float64` holds the identity. The same rule thus fits. `dartType` now gives
+`double` for such a set, and `mixedForm` accepts it. `isFloat` reports it, and
+`narrow` reads the mask of the dictionary. Stage 2 rejects only a set that
 mixes an integer type with a narrow float type.
 
 A constraint that mixes a narrow integer type with a float type stays out. The
@@ -368,8 +363,8 @@ fmt.Println(errors.As(err, &target))
 | gart | `false` and an empty text |
 
 The cause: `$assignError` writes the value through a `$Ptr` cell. The Dart
-form of a pointer to a struct is the object itself and not a cell, thus the
-test `box is $Ptr<Object?>` fails and the function reports false. A write must
+form of a pointer to a struct is the object itself, and not a cell. The test
+`box is $Ptr<Object?>` thus fails, and the function reports false. A write must
 copy the fields of the value into the object of the target there.
 
 `errors.AsType` of Go 1.27 takes no pointer, and it finds the same value.
@@ -437,11 +432,10 @@ fmt.Println(got)
 | gart before | `[1 99 3 4]` |
 | gart after | `[1 2 3 4]` |
 
-Go reads a range expression of an array type as a value, thus the walk holds
-a copy and a write inside the body does not reach a later pass. A slice and a
-pointer to an array each share the storage, and neither one takes a copy. The
-stage now writes `copyPoint` around the container when the core type is an
-array and the loop reads the value variable. `copyPoint` gives a fresh value
+Go reads a range expression of an array type as a value. The walk thus holds
+a copy, and a write inside the body does not reach a later pass. A slice and a
+pointer to an array each share the storage, and neither one takes a copy. The stage now writes `copyPoint` around the container. It does that when the
+core type is an array and the loop reads the value variable. `copyPoint` gives a fresh value
 back with no copy, thus the result of a call costs nothing.
 
 The witness stays in `testdata/programs/confrange`, section "an array and a
@@ -463,8 +457,8 @@ fmt.Println(n, m)
 | gart before | `11 31` |
 | gart after | `11 21` |
 
-The specification runs an assignment in 2 phases: it reads each operand of the
-left side and each expression of the right side first, and it writes each
+The specification runs an assignment in 2 phases. It reads each operand of
+the left side and each expression of the right side first. It writes each
 target after that, from left to right. The left side of a short variable
 declaration can hold a name that already exists, and such a name takes an
 assignment. The stage wrote that name at once, thus a value that stands behind
@@ -532,8 +526,8 @@ The suite does not test these, because Go itself gives no answer.
 
 ## A trap of gc, and how the suite works around it
 
-gc reads the index of a panic report from a register. An inlined body can hold
-another value there, thus `s[100]` of a slice inside a closure reports
+gc reads the index of a panic report from a register. An inlined body can hold another value
+there. `s[100]` of a slice inside a closure thus reports
 `index out of range [0] with length 3`. A call of a function that carries the
 directive `//go:noinline` gives the true index in each case.
 
