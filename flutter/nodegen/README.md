@@ -10,9 +10,10 @@ Cupertino out of the framework, thus each 1 stands as a package of pub.dev.
 
 | Pack | The Dart package | The Go package | Node types |
 |---|---|---|---|
-| The core | `package:flutter/widgets.dart` | `gart.dev/ui` | 273 |
-| Material | `package:material_ui/material_ui.dart` | `gart.dev/ui/material` | 218 |
-| Cupertino | `package:cupertino_ui/cupertino_ui.dart` | `gart.dev/ui/cupertino` | 75 |
+| The core | `package:flutter/widgets.dart` | `gart.dev/ui` | 274 |
+| Material | `package:material_ui/material_ui.dart` | `gart.dev/ui/material` | 217 |
+| Cupertino | `package:cupertino_ui/cupertino_ui.dart` | `gart.dev/ui/cupertino` | 72 |
+| SVG | `package:flutter_svg/flutter_svg.dart` | `gart.dev/ui/svg` | 4 |
 
 `packs` of `lib/read.dart` holds the list. The core package declares the
 interface `ui.Node`, and each pack gives its structs the method `IsNode` that
@@ -111,6 +112,27 @@ and the tree of `gart.dev/ui` from 2,922,881 bytes to 693,895. Read the section
 A node type that the application does not name today reaches the build the
 moment 1 line names it, because the driver runs the scan in front of each load.
 
+`flutter/ui/themes.go` and `flutter/ui/types.go` each carry the line
+`// nodefilter:values` on the first line, thus the filter reads the value types
+of the node set the same way. A type of such a file stays when a kept
+declaration names it. The Dart output of compass held 139,198 bytes of theme
+value types, and it holds 8,021 now.
+
+## The icons
+
+A Go `ui.Icon` node names its icon with a string, and `goIcons` of the host
+maps that name to the Material set. Material holds 8,825 icons, thus a map of
+each 1 would keep the whole table in each application.
+
+`nodescan` writes each string constant of the module after the node names, with
+a quotation mark in front. This tool keeps each 1 that names an icon of
+Material, and it writes `goAppIcons` and `goGenInstall` into the host of the
+application. The compass application names 61 such icons.
+
+`goIcon` reports an unknown name. A name that the Go source builds at run time
+reaches no string constant, and the application then adds it to `goIcons`
+itself.
+
 ## The mapping
 
 `lib/read.dart` holds the rules. A widget reaches the node set when each
@@ -137,6 +159,7 @@ then takes the default of Flutter.
 | `Rect`, `RelativeRect` | `ui.Rect` | 4 edges. A RelativeRect reads each 1 as a distance from the parent. |
 | `Alignment`, `AlignmentGeometry`, `Curve` | `string` | A name of the table of `convert.dart`. |
 | An enum | `string` | The name of the value. |
+| `Key` | `string` | The host builds a `ValueKey<String>`. A parameter named `key` reaches the set only when the constructor demands it, because `ui.Keyed` gives a key to any child. |
 | `Widget` | `ui.Node` | |
 | A subtype of `Widget`, for example `PreferredSizeWidget` | `ui.Node` | The host casts the result. |
 | `List<Widget>`, `List<String>` | `[]ui.Node`, `[]string` | |
@@ -145,6 +168,7 @@ then takes the default of Flutter.
 | `void Function(RangeValues)` | `func(float64, float64)` | The host builds no Go struct, thus a range crosses as 2 numbers. |
 | `Future<void> Function()` | `ui.Task` | The end of the goroutine ends the work. |
 | `Future<bool> Function()` | `ui.Ask` | The same, and the result gives the answer. |
+| `Future<bool?> Function(<enum>)` | `ui.AskText` | The same. The Go side reads the name of the value of that enum, for example the direction of a `Dismissible`. |
 | `Widget Function(BuildContext)` | `ui.Builder` | A synchronous position. Read decision 221. |
 | `Widget Function(BuildContext, int)` | `ui.ItemBuilder` | A synchronous position. |
 | `Widget Function(BuildContext, Orientation)` | `ui.OrientBuilder` | The same. The argument takes `portrait` or `landscape`. |
@@ -231,6 +255,10 @@ then takes the default of Flutter.
 A parameter that the constructor does not demand takes a pointer field, and a
 nil pointer means "the default of Flutter". A parameter of any other type does
 not reach the node set.
+
+A constructor that demands a private field formal, for example
+`required this._borderRadius` of `CupertinoFocusHalo.withRRect`, leaves the
+set. No code outside the library of that class can name such a parameter.
 
 The name of the value type of a theme strips "ThemeData" and adds "Style". A
 field that Flutter carries for each state holds 1 value in the Go struct, as

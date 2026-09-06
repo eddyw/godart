@@ -4148,3 +4148,155 @@ The plan left these points open. The work took the decisions below.
      byte of a flag. That case still costs 8.8 times the same call in Go,
      because the bridge boxes the value and it parses the verb again for each
      verb of the format.
+
+367. A Go program names its own theme, and the tree holds the MaterialApp.
+
+     `ui.ThemeStyle` carried 7 fields, thus a Go program could not name a color
+     scheme, a text theme, or the decoration of an input. The port of the
+     sample compass_app then drew the default theme of Material, and the
+     section "What the port could not hold" named that limit.
+
+     `ui.ColorScheme` holds each of the 47 colors of the Flutter class. The 9
+     values that the Flutter constructor demands stand as plain fields, and
+     each other 1 is a pointer. `Resolve` gives the color that Flutter derives
+     for each nil pointer, thus a Go build reads no transparent color for a
+     field that the program left out.
+
+     `ui.UseTheme` names the 2 themes of the application, and `ui.Theme()`
+     gives the 1 of the brightness that the host reports. The same 2 values
+     stand in the fields `Theme` and `DarkTheme` of `material.MaterialApp`,
+     thus Flutter draws with the theme that the Go build reads.
+
+     `GoApp` can stand above that MaterialApp now. No MediaQuery stands over it
+     in that place, thus it reads `MediaQueryData.fromView` and the brightness
+     of the platform. `ui.HostTheme` holds the 5 values that the host writes,
+     and a program that calls no `UseTheme` reads them as before.
+
+     **The font weight table held 7 names.** A Go program that wrote the name
+     of Flutter, for example `w600`, read no weight at all, and the text drew
+     with the default. The table holds each name of Flutter now, and
+     `ui.TextStyle` also carries `Shadows` and `Variations`. A variable font
+     needs the axis `wght`, because `fontWeight` names a face of the family.
+
+368. A widget that demands a Key carries a Go field of the type string.
+
+     `nodegen` dropped each constructor whose `key` parameter is required, thus
+     the node set held no `Dismissible` and the home screen of the sample
+     carried a delete button in the place of the swipe.
+
+     Such a widget holds a Go field `Key string` now, and the host builds a
+     `ValueKey<String>` from it. An optional `key` parameter still falls away,
+     because `ui.Keyed` gives a key to any child.
+
+     A parameter of the type `Key` that carries another name, for example the
+     `center` of a `CustomScrollView`, takes a pointer field. The first form of
+     this rule wrote `ValueKey<String>("")` for such a field, thus the viewport
+     named a sliver that no key carries and the home screen did not build.
+
+     `Future<bool?> Function(<enum>)` maps to `ui.AskText`, thus the
+     `ConfirmDismiss` of a `Dismissible` waits for the server and it keeps the
+     row after a failure.
+
+369. 4 nodes stand in `flutter/ui/node.go` by hand.
+
+     Each 1 needs a Dart function that reads a `BuildContext`, an `ImageFilter`,
+     or a `Rect`, and a Go value builds none of the 3.
+
+     - `ShaderMask` takes a `ui.Gradient` and a blend mode. The title of the
+       home screen of the sample reads it.
+     - `Picture` draws an image, and it gives a node while the image loads and
+       a node after a failure. The generated `Image` node holds no such field,
+       because Flutter takes a builder.
+     - `Anchor` keeps the `BuildContext` of its place while it stands on the
+       screen. A dialog and a snack bar each need such a context.
+     - `Blur` names the 2 sigma values of a blur. The generated
+       `BackdropFilter` carries no filter at all, thus it drew nothing, and
+       that is a silent wrong render.
+
+370. 5 calls of the host stand in `flutter/ui/calls.go`.
+
+     `ui.Call` reached the host since 2026-09-04, and no name of the standard
+     library rode on it. `DateRange`, `Share`, `SnackBar`, `SaveValue`, and
+     `ReadValue` each name 1 such call.
+
+     `goHostCall` of `goflutter` answers each 1 with no code of the
+     application: it opens `showDateRangePicker`, it shows a `SnackBar` of the
+     `ScaffoldMessenger`, and it holds a value in memory. A handler that
+     `goSetCall` installs answers its own names first, and it gives each other
+     name to that call. The compass application answers `share` with
+     `share_plus`.
+
+     Each call needs a goroutine, because it parks until the host answers. A
+     button of the host already runs its Go closure as a goroutine.
+
+371. The host holds the icon of each string constant of the application.
+
+     `goIcons` held 20 names, and a name outside that map gave `null`. Flutter
+     then drew no icon at all, and no report reached the program.
+
+     `nodescan` writes each string constant of the module after the node names,
+     and `nodegen` keeps each 1 that names an icon of Material. The compass
+     application names 61 such icons, and the host of that application holds
+     each 1. A Go program thus names an icon with no change of a Dart file.
+
+     `goIcon` reports an unknown name now. A name that the Go source builds at
+     run time reaches no constant, and the application then adds it to
+     `goIcons` itself.
+
+     **`glutter` kept the binary of `nodescan` in its cache and it never built
+     it again.** A change of the scanner thus never reached an application. The
+     build runs again when a source file stands newer than the binary.
+
+372. The value files of the node set join the node filter.
+
+     `flutter/ui/themes.go` holds 42 theme value types and
+     `flutter/ui/types.go` holds 45 more. The emitter wrote a Dart class and a
+     type descriptor for each 1, and an application that names 3 themes carried
+     each 1 of the 42.
+
+     The 2 files carry the line `// nodefilter:values` now, thus the filter
+     reads them as it reads a file of `nodegen`. A type stays when a kept
+     declaration names it, and it leaves the file when no 1 does. A function
+     with no receiver leaves the file when its signature names a type that the
+     set drops, for example `NetworkImage` and `ImageSource`.
+
+     The Dart output of the compass application: `themes.part.dart` fell from
+     139,198 bytes to 8,021, and `types.part.dart` from 69,670 to 53,650.
+
+373. A package variable whose initializer is pure holds that initializer in its
+     own declaration.
+
+     481,816 of the 527,984 bytes of `unicode` stood inside `$init`, because Go
+     gives each table its value before `main`. The tree shaker of Dart keeps
+     each 1, because `$init` names each 1.
+
+     A declaration of the form `late T x = <value>;` runs its initializer at
+     the first read, thus the shaker drops the variable and the whole value
+     when no code reads it. The move is safe only when the initializer cannot
+     panic and holds no side effect: `pureExpr` of `internal/emit` allows a
+     constant, a zero value, an identifier, a conversion, a unary operator, and
+     a composite literal of those, and it allows no other kind.
+
+     A `late` variable that is not final still takes an assignment, thus a
+     package variable that the program writes needs no other rule. An
+     assignment before the first read drops the initializer, and that
+     initializer holds no side effect.
+
+     A program that reads 1 table of `unicode` gave an ahead of time binary of
+     7,651,808 bytes before the change and 7,142,912 after it, thus 508,896
+     bytes left the snapshot.
+
+374. `nodegen` skipped a private field formal, and 8 node types did not compile.
+
+     `CupertinoFocusHalo.withRRect` demands `this._borderRadius`, and the
+     reader dropped each parameter whose name starts with an underscore. The
+     host then wrote a call with no argument for a parameter that Dart demands.
+     A constructor that demands such a parameter leaves the set now, because no
+     code outside its library can name it.
+
+     A callback of 1 enum named the table `goName$<enum>` of that enum, and
+     `writeEnums` wrote that table only for a field of the enum type. 4 more
+     node types did not compile for that cause.
+
+     `nodegen host -all` gives 567 node types, and `dart analyze` of
+     `goflutter` reads each 1.

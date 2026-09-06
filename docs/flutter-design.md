@@ -1188,7 +1188,7 @@ acceptable and the first open question is answered. The output:
 
 | Output | Scope |
 |---|---|
-| `flutter/ui/**/widgets_gen.go`, 566 node types and 4970 fields in 3 packs | The whole project |
+| `flutter/ui/**/widgets_gen.go`, 567 node types and 5,032 fields in 4 packs | The whole project |
 | `<app>/lib/widgets_gen.dart` | 1 application |
 
 **The 3 questions of the plan.**
@@ -1356,9 +1356,71 @@ The other 3 examples read the same filter. counter keeps 21 node types of 37
 names, apilist 13 of 21, and form 9 of 19. Each 1 passes `flutter analyze` and
 its widget tests.
 
-`themes.part.dart` holds 139,198 bytes, and no filter reaches it. The theme
-value types stand in a hand written file, and an application that names 1 theme
-carries each other 1.
+**The value files join the filter on 2026-09-06.** `flutter/ui/themes.go` and
+`flutter/ui/types.go` each carry the line `// nodefilter:values` on the first
+line, thus the filter reads them as it reads a file of nodegen. A type of such
+a file stays when a kept declaration names it, and a function with no receiver
+leaves the file when its signature names a type that the set drops.
+`themes.part.dart` fell from 139,198 bytes to 8,021, and `types.part.dart` from
+69,670 to 53,650.
+
+## The theme of a Go program
+
+`Theme.of(context)` needs a `BuildContext`, and a Go value holds none. The host
+thus read the theme of Flutter and it wrote 5 values into `ui.ThemeData` before
+each build. A Go program could name no theme of its own, and the port of the
+Flutter sample compass_app drew the default theme of Material.
+
+**The Go tree holds the application now.** `material.MaterialApp` is a node of
+the generated set, and its fields `Theme` and `DarkTheme` each take a
+`ui.ThemeStyle`. That value carries a color scheme, a text theme, and the
+decoration of an input since 2026-09-06.
+
+| Type | Content |
+|---|---|
+| `ui.ColorScheme` | Each of the 47 colors of the Flutter class. The 9 that the Flutter constructor demands stand as plain fields, and each other 1 is a pointer. |
+| `ui.TextTheme` | The 15 named styles of the Flutter `TextTheme`. |
+| `ui.InputDecorationStyle` | The decoration of a text field. `themes.go` already held it. |
+
+`Resolve` of `ui.ColorScheme` gives the color that Flutter derives for each nil
+pointer: `primaryContainer` reads `primary`, `outline` reads `onSurface`,
+`shadow` reads black, and so on. A Go build thus reads no transparent color for
+a field that the program left out, and a zero value gives no silent wrong
+paint.
+
+`ui.UseTheme(light, dark)` names the 2 themes, and `ui.Theme()` gives the 1 of
+the brightness that the host reports. A program names the same 2 values in the
+MaterialApp node, thus 1 source holds the theme and Flutter draws with it.
+
+`GoApp` can stand above that MaterialApp. No `MediaQuery` stands over it in
+that place, thus it reads `MediaQueryData.fromView(View.of(context))` and the
+brightness of the platform. `ui.HostTheme` holds the 5 values that the host
+writes, and a program that calls no `UseTheme` reads them as before.
+
+**A variable font needs an axis.** `fontWeight` of Flutter names a face of a
+family, and a variable font holds 1 face. `ui.TextStyle.Variations` names the
+axis `wght` with a number, thus a Go program reads Rubik at the weight 800.
+
+## The calls of the host
+
+`ui.Call` of `flutter/ui/ask.go` reached the host since 2026-09-04, and no name
+of the library rode on it. 5 calls stand in `flutter/ui/calls.go` now.
+
+| Call | What the host runs |
+|---|---|
+| `DateRange` | `showDateRangePicker` of Material. |
+| `SnackBar` | A `SnackBar` of the `ScaffoldMessenger`. The answer names the button that the user pressed. |
+| `Share` | The share sheet of the platform. The host holds no such sheet, thus the application answers this name. |
+| `SaveValue`, `ReadValue` | A value that survives a restart. The host holds a map in memory, thus an application that needs more names `shared_preferences`. |
+
+`goHostCall` of `goflutter` answers each 1 with no code of the application, and
+a handler that `goSetCall` installs answers its own names first. Each call
+needs a goroutine, because it parks until the host answers.
+
+**A dialog and a snack bar each need a `BuildContext` under the application.**
+The node `ui.Anchor` keeps the context of its place while it stands on the
+screen, and the 2 calls read it. A program puts 1 Anchor under the `Home` of
+the application.
 
 ## The probes of the language
 
