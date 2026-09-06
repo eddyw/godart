@@ -4351,3 +4351,101 @@ The plan left these points open. The work took the decisions below.
      inlined body writes over. A conversion of a float64 outside the range of
      the target is implementation dependent, and gc itself differs between
      arm64 and amd64, thus each program stays inside the defined range.
+
+376. The method table of a run time pointer descriptor carries the Dart type of
+     each result.
+
+     A marshal of a type that declares `MarshalJSON` or `MarshalText` aborted
+     with `type '(Object?) => Object?' is not a subtype of type
+     '(Object?) => (Slice<int>, Iface?)' in type cast`.
+
+     The compiler writes the description of `*T` only when the pointer holds a
+     method that `T` does not hold. Each method of the witness reads a value
+     receiver, thus the 2 method sets are equal and no such description stands
+     in the output. `$ptrDesc` builds 1 at run time, and `_pointerMethods`
+     built each entry with a closure of the Dart type `(Object?) => Object?`.
+
+     A Dart function type is covariant in a result, thus the cast of the call
+     site rejects such a closure. `_typedResultFunc` reads the Dart type of
+     each result of the signature, and `_arityFunc` gives the closure the count
+     of the parameters. A method of more than 4 results falls back to the old
+     form, and no package of the surface holds such a method.
+
+     `encoding/json/v2` asks `reflect` for the pointer to the type first, thus
+     each addressable value of a named base type took that path. 4 tests of the
+     real suite pass now, and `testdata/programs/rtmarshaler` holds 26 shapes.
+
+377. A `reflect.Value` carries a validity mark, and a write of a map value
+     copies each level.
+
+     `IsValid` read `read() != nil` before, thus `MapIndex` of a key whose
+     value is a nil interface reported false and Go reports true. The value
+     holds the field `ok` now, `MapIndex` reads the new intrinsic `MapHas`, and
+     `ValueOf(nil)` gives the zero value. The encoder of `encoding/gob` read
+     `IsValid` as its test of a nil interface, and it reads
+     `Elem().IsValid()` now.
+
+     `SetMapIndex`, `$pointerSet`, and `$fieldWrite` each wrote the reference of
+     a nested struct or array. `_assignInto` walks each level and it keeps the
+     object of the target. A pointer to an array panicked before.
+
+     `testdata/programs/rtvalid` and `rtmapset2` hold the 2 witnesses.
+
+378. The bridge of `fmt` takes the parsed verb.
+
+     The overlay parses the format and it calls the bridge 1 time for each verb.
+     Each call built a Go string of the verb, and the runtime parsed that text
+     again with a switch and 3 scans for a flag. The bridge takes the letter,
+     the flags as bits, the width, and the precision now.
+
+     `fmt.sprintf.100k` fell from 89.71 milliseconds to 61.63, and the ratio
+     against Go moves from 8.8 to 6.1. The measurement ran B, A, B, and the 2
+     runs of the new form stand 1.0 percent apart.
+
+     **The width of a verb reaches each leaf now.** `%5d` of a slice writes the
+     width on each element, exactly as Go does, and it wrote it on the whole
+     text before. `%x` of a float32 writes the fraction at the right bit, `%w`
+     of a value that is not an error writes the bad verb form, and `errors.As`
+     holds a target of a struct type and a pointer to an interface.
+
+379. A scan of `strings` reads the length of the result first.
+
+     `Split` and `Replace` count the parts before the build, `Grow` of `Builder`
+     held an empty body, and `Index` and `LastIndex` compared 2 substrings at
+     each position. `str.split.100k` fell from 47.85 milliseconds to 36.02, and
+     `str.replace.100k` from 47.54 to 38.65.
+
+     **`Repeat` and `Join` held a square cost.** Each 1 joined 1 part at a time,
+     thus the cost stood at the square of the result. `Repeat` of 300,000 bytes
+     fell from 2,923 milliseconds to 0, and the whole real suite of
+     `encoding/json` ends in 8.1 seconds against no result after 14 minutes.
+     `Join` of 2,000 elements fell from 37.5 milliseconds to 0.9, and it costs
+     17 percent more for the 6 elements of `str.join.100k`. A library must hold
+     no square cost, and Go itself holds this form.
+
+380. The input and output runtime moves a block, and not 1 byte.
+
+     6 loops read and wrote 1 byte at a time: the write and the read of a file,
+     of a connection, of a datagram, of a pipe, and of an HTTP/2 stream. No case
+     of `bench/` covered 1 of them.
+
+     | The path | Before | After |
+     |---|---|---|
+     | A write of a file of 16 megabytes | 41.4 ms | 2.0 ms |
+     | A read of a file of 16 megabytes | 34.8 ms | 0.5 ms |
+     | 8 megabytes through a pipe | 74.7 ms | 10.3 ms |
+     | 8 megabytes through a TCP echo | 127.0 ms | 8.1 ms |
+
+     `testdata/programs/rtio` moves a block through each of the 6 paths, and it
+     writes the length and the FNV-1a hash of the result. The pattern holds each
+     value of a byte, thus a copy that loses the high bit fails.
+
+381. The largest count of elements of `make` stands as a decimal literal.
+
+     The conformance stream wrote `1 << 45` for that bound. The operator `<<` of
+     the JS target holds 32 bits, thus that expression gives 8,192 there, and
+     each slice above that length panicked with `makeslice: len out of range`.
+     `TestWebIO` and `TestWebFetch` each failed on the JS build.
+
+     A constant of more than 31 bits takes a decimal literal in the runtime,
+     because the same source serves the native target and the JS target.
