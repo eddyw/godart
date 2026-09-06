@@ -263,9 +263,7 @@ GoString $runeToString(GoInt goRune) {
 }
 
 GoString _runeToString(int rune) {
-  if (rune < 0 || rune > 0x10FFFF || (rune >= 0xD800 && rune <= 0xDFFF)) {
-    rune = 0xFFFD;
-  }
+  rune = _validRune(rune);
   if (rune < 0x80) return GoString.take(Uint8List.fromList(<int>[rune]));
   if (rune < 0x800) {
     return GoString.take(
@@ -307,12 +305,53 @@ Slice<GoInt> $stringToRunes(GoString s) {
 }
 
 /// The Go conversion `string(r)` for a rune slice.
+///
+/// The first pass counts the bytes and the second pass writes them, thus the
+/// cost stays linear in the count of runes. A concatenation of 1 rune at a
+/// time copied the whole result for each rune.
 GoString $runesToString(Slice<GoInt> runes) {
-  var out = GoString.empty;
-  for (var i = 0; i < runes.len; i++) {
-    out = $concat(out, _runeToString($ix(runes.array[runes.off + i])));
+  final int n = runes.len;
+  int size = 0;
+  for (int i = 0; i < n; i++) {
+    size += _runeSize(_validRune($ix(runes.array[runes.off + i])));
   }
-  return out;
+  final Uint8List out = Uint8List(size);
+  int j = 0;
+  for (int i = 0; i < n; i++) {
+    final int rune = _validRune($ix(runes.array[runes.off + i]));
+    if (rune < 0x80) {
+      out[j++] = rune;
+    } else if (rune < 0x800) {
+      out[j++] = 0xC0 | (rune >> 6);
+      out[j++] = 0x80 | (rune & 0x3F);
+    } else if (rune < 0x10000) {
+      out[j++] = 0xE0 | (rune >> 12);
+      out[j++] = 0x80 | ((rune >> 6) & 0x3F);
+      out[j++] = 0x80 | (rune & 0x3F);
+    } else {
+      out[j++] = 0xF0 | (rune >> 18);
+      out[j++] = 0x80 | ((rune >> 12) & 0x3F);
+      out[j++] = 0x80 | ((rune >> 6) & 0x3F);
+      out[j++] = 0x80 | (rune & 0x3F);
+    }
+  }
+  return GoString.take(out);
+}
+
+/// The rune that Go encodes for a value: the value itself, or U+FFFD for a
+/// negative value, a surrogate, and a value above U+10FFFF.
+int _validRune(int rune) {
+  if (rune < 0 || rune > 0x10FFFF || (rune >= 0xD800 && rune <= 0xDFFF)) {
+    return 0xFFFD;
+  }
+  return rune;
+}
+
+int _runeSize(int rune) {
+  if (rune < 0x80) return 1;
+  if (rune < 0x800) return 2;
+  if (rune < 0x10000) return 3;
+  return 4;
 }
 
 /// Reads 1 UTF-8 rune at a byte index. An invalid sequence gives U+FFFD with

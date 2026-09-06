@@ -1,0 +1,26 @@
+The test builds a string over the bytes of a slice with unsafe.String, and
+the subset holds no unsafe. The diff copies the bytes in its place.
+--- compare_test.go
++++ compare_test.go
+@@ -11,7 +11,6 @@
+ 	"internal/testenv"
+ 	. "strings"
+ 	"testing"
+-	"unsafe"
+ )
+ 
+ var compareTests = []struct {
+@@ -58,10 +57,10 @@
+ }
+ 
+ func TestCompareStrings(t *testing.T) {
+-	// unsafeString converts a []byte to a string with no allocation.
+-	// The caller must not modify b while the result string is in use.
++	// unsafeString converts a []byte to a string. The subset holds no
++	// unsafe.String, thus the conversion copies the bytes.
+ 	unsafeString := func(b []byte) string {
+-		return unsafe.String(unsafe.SliceData(b), len(b))
++		return string(b)
+ 	}
+ 
+ 	lengths := make([]int, 0) // lengths to test in ascending order

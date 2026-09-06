@@ -73,6 +73,16 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-07, the twenty-fourth session
+
+The real test suites of `strings` and of `bytes` run. 3 changes opened them,
+and decision 382 holds each 1: an overlay of `internal/asan`, rule M15 skips a
+package that no import names, and a diff mechanism changes a test file of Go
+without a copy of it. The `strings` suite found 6 defects and 2 paths of a
+square cost in the overlay, and the real text of Go replaces the 6 functions.
+`string([]rune)` of 1,114,112 runes fell from 276 seconds to 25 milliseconds,
+and the suite from 1,452 seconds with 6 failures to 11.6 seconds with none.
+
 ### 2026-09-06, the twenty-third session
 
 The user parked the name of the project, and asked for each open task end to

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"go/build"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -198,7 +199,54 @@ func overlayFiles(found, surface []*packages.Package) (map[string][]byte, error)
 		}
 		replaceFiles(out, o, p)
 	}
+	for _, o := range overlay.Packages() {
+		if err := patchTestFiles(out, o, append(found, surface...)); err != nil {
+			return nil, err
+		}
+	}
 	return out, nil
+}
+
+// patchTestFiles applies each diff of an overlay package to the test files of
+// the package under test. 2 test variants of a directory hold the test files:
+// the variant of the package itself, and the external test package whose path
+// carries the suffix _test.
+//
+// A build with no test variant of the package applies nothing. A diff that
+// names no file of a test variant stops the build, because no build tag of an
+// architecture selects a test file.
+func patchTestFiles(out map[string][]byte, o overlay.Package, roots []*packages.Package) error {
+	if len(o.Patches) == 0 {
+		return nil
+	}
+	byBase := map[string]string{}
+	packages.Visit(roots, nil, func(p *packages.Package) {
+		if !holdsTestFile(p) || (p.PkgPath != o.Path && p.PkgPath != o.Path+"_test") {
+			return
+		}
+		for _, name := range p.CompiledGoFiles {
+			byBase[filepath.Base(name)] = name
+		}
+	})
+	if len(byBase) == 0 {
+		return nil
+	}
+	for _, f := range o.Patches {
+		name, ok := byBase[strings.TrimSuffix(f.Name, ".patch")]
+		if !ok {
+			return fmt.Errorf("the diff %s of %s names no test file of the package", f.Name, o.Path)
+		}
+		src, err := os.ReadFile(name)
+		if err != nil {
+			return err
+		}
+		patched, err := applyPatch(src, f.Content, f.Name)
+		if err != nil {
+			return err
+		}
+		out[name] = patched
+	}
+	return nil
 }
 
 // surfacePackages gives the real file list of each overlay package.

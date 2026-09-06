@@ -1,0 +1,28 @@
+The test reads the address of the storage of a string with
+unsafe.StringData, and the subset holds no unsafe. The diff removes that
+read and it keeps each other line of the file.
+--- clone_test.go
++++ clone_test.go
+@@ -7,7 +7,6 @@
+ import (
+ 	"strings"
+ 	"testing"
+-	"unsafe"
+ )
+ 
+ var emptyString string
+@@ -25,14 +24,6 @@
+ 		if clone != input {
+ 			t.Errorf("Clone(%q) = %q; want %q", input, clone, input)
+ 		}
+-
+-		if len(input) != 0 && unsafe.StringData(clone) == unsafe.StringData(input) {
+-			t.Errorf("Clone(%q) return value should not reference inputs backing memory.", input)
+-		}
+-
+-		if len(input) == 0 && unsafe.StringData(clone) != unsafe.StringData(emptyString) {
+-			t.Errorf("Clone(%#v) return value should be equal to empty string.", unsafe.StringData(input))
+-		}
+ 	}
+ }
+ 

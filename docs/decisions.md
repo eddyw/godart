@@ -4457,3 +4457,57 @@ The plan left these points open. The work took the decisions below.
 
      A constant of more than 31 bits takes a decimal literal in the runtime,
      because the same source serves the native target and the JS target.
+
+382. The real test suites of `strings` and of `bytes` run, and 3 changes opened
+     them.
+
+     `make std-test STD=strings` reached no run before 2026-09-07, and 3 causes
+     stood in the test files of Go: an import of `unsafe` in 4 files, an import
+     of `internal/asan` in 2 files, and 10 exported tables of an unnamed struct
+     type with an unexported field, which rule M15 rejected.
+
+     An overlay of `internal/asan` gives `Enabled` as false, the value of a
+     build of Go with no `-asan` flag.
+
+     Rule M15 skips a package that no import names. No import names a main
+     package or an external test package, thus an exported declaration of one
+     reaches no other package, and the class of the shape stays inside 1
+     library. `importable` of the verifier already held that rule for the box
+     of an exported variable.
+
+     A **diff** changes a test file of the package under test. `<base>.patch`
+     in the directory of the overlay holds a unified diff, and the load applies
+     it to the real file of the test variant or of the external test package.
+     Each hunk must match at the line of its header, and a mismatch stops the
+     build with the line, because a test file of Go changes with each release
+     and a copy of it would age in silence. 5 diffs remove the 6 reads of
+     `unsafe.StringData`, `unsafe.String`, and `unsafe.SliceData`. Each 1
+     tests the identity of a storage, which the subset cannot observe. The
+     diff of `TestMap` compares the 2 values in the place of the 2 addresses,
+     and the diff of `TestCompareStrings` copies the bytes.
+
+     The generated main of Go 1.27 writes `testdeps.ImportPath` and
+     `testdeps.ModulePath`, and the overlay of `testdeps` holds the 2 variables
+     now.
+
+     **The suite of `strings` found 6 defects and 2 quadratic paths of the
+     overlay.** `Fields`, `TrimSpace`, and `FieldsSeq` read the ASCII spaces
+     alone, and Go reads `unicode.IsSpace` for a text with a byte above 127.
+     `Trim`, `TrimLeft`, and `TrimRight` compared bytes, and Go decodes each
+     rune and treats an invalid byte as U+FFFD. `SplitAfterSeq` with an empty
+     separator gave the whole text, and Go gives each rune. `Reader.UnreadRune`
+     gave no error after a read that was not `ReadRune`. A copy of a `Builder`
+     by value did not panic on a write. `Map` and `string([]rune)` each
+     concatenated 1 rune at a time: `TestCaseConsistency` took 1,440 seconds,
+     and `string(a)` of 1,114,112 runes alone took 276 seconds against 4
+     milliseconds in Go. The real text of Go replaces each of the 6 functions,
+     the `Reader`, and the 3 special case forms. `Builder` holds the `addr`
+     check of Go, and the runtime writes the bytes of a rune slice in 2 passes.
+     The conversion takes 25 milliseconds now, and the suite ends in 11.6
+     seconds: 123 tests pass, and 5 skip at a call of `AllocsPerRun`.
+
+     The suite of `bytes` needed the asan overlay and 1 diff of `TestClone`.
+     170 tests pass, 8 skip at `AllocsPerRun`, and the run takes 117 seconds.
+
+     The 2 suites are the gate of the 2 packages now, and the witness programs
+     of `testdata/programs` stay as the fast check.

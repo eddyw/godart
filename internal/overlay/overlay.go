@@ -29,6 +29,11 @@ type Package struct {
 	// Files holds the base name and the content of each file, in the order of
 	// the base name.
 	Files []File
+	// Patches holds each unified diff of the directory, in the order of the
+	// base name. A diff `<base>.patch` changes the test file `<base>` of the
+	// package under test, because a test file of Go stays outside the overlay
+	// and a copy of it would age with each release of Go.
+	Patches []File
 }
 
 // File is 1 overlay file.
@@ -50,16 +55,23 @@ func Packages() []Package {
 
 func walk(root string) []Package {
 	byPath := map[string][]File{}
+	patches := map[string][]File{}
 	err := fs.WalkDir(tree, root, func(name string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() || !strings.HasSuffix(name, ".go") {
+		if err != nil || entry.IsDir() {
 			return err
+		}
+		into := byPath
+		if strings.HasSuffix(name, ".patch") {
+			into = patches
+		} else if !strings.HasSuffix(name, ".go") {
+			return nil
 		}
 		content, err := tree.ReadFile(name)
 		if err != nil {
 			return err
 		}
 		pkgPath := path.Dir(strings.TrimPrefix(name, root+"/"))
-		byPath[pkgPath] = append(byPath[pkgPath], File{Name: path.Base(name), Content: content})
+		into[pkgPath] = append(into[pkgPath], File{Name: path.Base(name), Content: content})
 		return nil
 	})
 	if err != nil {
@@ -69,12 +81,19 @@ func walk(root string) []Package {
 	for p := range byPath {
 		paths = append(paths, p)
 	}
+	for p := range patches {
+		if byPath[p] == nil {
+			paths = append(paths, p)
+		}
+	}
 	sort.Strings(paths)
 	out := make([]Package, 0, len(paths))
 	for _, p := range paths {
 		files := byPath[p]
 		sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
-		out = append(out, Package{Path: p, Name: path.Base(p), Files: files})
+		diffs := patches[p]
+		sort.Slice(diffs, func(i, j int) bool { return diffs[i].Name < diffs[j].Name })
+		out = append(out, Package{Path: p, Name: path.Base(p), Files: files, Patches: diffs})
 	}
 	return out
 }

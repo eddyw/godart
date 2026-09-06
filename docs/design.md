@@ -545,7 +545,10 @@ The parts of the work:
 
 1. A shape with an unexported field. Go gives such a field the identity of its
    package. Dart holds a name that starts with an underscore private to 1
-   library. Stage 2 still rejects such a shape in an exported declaration.
+   library. Stage 2 still rejects such a shape in an exported declaration of a
+   package that an import can name. No import names a main package or an
+   external test package, thus the exported tables of the test files of Go
+   pass.
 2. A shape that names a type of a package that no library holds. Package main is
    such a package, and no other package names a type of it.
 

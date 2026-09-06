@@ -25,3 +25,11 @@ type TestDeps struct{}
 func (TestDeps) MatchString(pat, str string) (bool, error) {
 	return regexp.MatchString(pat, str)
 }
+
+// ImportPath and ModulePath hold the 2 paths that the generated main of Go
+// writes before the run. The harness of gart reads neither, and a main that
+// names them must compile.
+var (
+	ImportPath string
+	ModulePath string
+)

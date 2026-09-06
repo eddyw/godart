@@ -3,15 +3,10 @@
 package strings
 
 import (
-	"errors"
-	"io"
 	"iter"
 	"unicode"
 	"unicode/utf8"
 )
-
-// errUnread reports an unread that stands at the start of a Reader.
-var errUnread = errors.New("strings.Reader: at beginning of string")
 
 // Clone gives a copy of s. A Dart string holds no shared array, thus the copy
 // is the string itself.
@@ -78,23 +73,6 @@ func SplitAfterN(s, sep string, n int) []string {
 		s = s[i+len(sep):]
 	}
 	return append(out, s)
-}
-
-// SplitAfterSeq cuts s after each sep, and it gives each part as a sequence.
-func SplitAfterSeq(s, sep string) iter.Seq[string] {
-	return func(yield func(string) bool) {
-		for {
-			i := Index(s, sep)
-			if i < 0 || sep == "" {
-				yield(s)
-				return
-			}
-			if !yield(s[:i+len(sep)]) {
-				return
-			}
-			s = s[i+len(sep):]
-		}
-	}
 }
 
 // explode cuts s into its runes, and it gives a maximum of n parts.
@@ -225,46 +203,4 @@ func ToValidUTF8(s, replacement string) string {
 		}
 	}
 	return b.String()
-}
-
-// Cap gives the count of bytes that the Builder holds room for. A Dart list
-// grows on its own, thus the value is the length.
-func (b *Builder) Cap() int { return len(b.parts) }
-
-// UnreadByte gives the last byte of a read back to the Reader.
-func (r *Reader) UnreadByte() error {
-	if r.pos <= 0 {
-		return errUnread
-	}
-	r.pos--
-	return nil
-}
-
-// UnreadRune gives the last rune of a read back to the Reader.
-func (r *Reader) UnreadRune() error {
-	if r.pos <= 0 {
-		return errUnread
-	}
-	_, size := utf8.DecodeLastRuneInString(r.text[:r.pos])
-	r.pos -= size
-	return nil
-}
-
-// WriteTo writes the rest of the text to w.
-//
-// Go names the type of w io.Writer. The parameter names the same method set,
-// and Go holds the 2 types equal.
-func (r *Reader) WriteTo(w interface {
-	Write(p []byte) (int, error)
-}) (int64, error) {
-	if r.pos >= len(r.text) {
-		return 0, nil
-	}
-	rest := r.text[r.pos:]
-	n, err := w.Write([]byte(rest))
-	r.pos += n
-	if err == nil && n < len(rest) {
-		err = io.ErrShortWrite
-	}
-	return int64(n), err
 }

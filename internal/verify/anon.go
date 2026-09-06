@@ -7,7 +7,7 @@ import (
 )
 
 // checkExported rejects an unnamed struct type with an unexported field in an
-// exported declaration.
+// exported declaration of a package that an import can name.
 //
 // A shape whose fields all carry an exported name reaches a file of its own,
 // and each package that holds the shape writes that file with equal bytes. Go
@@ -15,6 +15,10 @@ import (
 // Dart holds a name with a leading underscore private to 1 library. Thus the
 // class of such a shape stays inside 1 package, and 2 packages give 2 classes
 // that Dart holds apart.
+//
+// No import names a main package or an external test package, thus an exported
+// declaration of one reaches no other package. The test files of Go hold many
+// exported tables of an unnamed struct type with unexported fields.
 func (v *verifier) checkExported(n ast.Node) {
 	switch n := n.(type) {
 	case *ast.FuncDecl:
@@ -25,7 +29,7 @@ func (v *verifier) checkExported(n ast.Node) {
 		if obj == nil {
 			return
 		}
-		v.rejectAnon(n.Name.Pos(), obj.Type(), "the function "+n.Name.Name)
+		v.rejectAnon(n.Name.Pos(), obj, "the function "+n.Name.Name)
 	case *ast.ValueSpec:
 		for _, id := range n.Names {
 			obj := v.info.Defs[id]
@@ -35,7 +39,7 @@ func (v *verifier) checkExported(n ast.Node) {
 			if _, ok := obj.(*types.Var); !ok {
 				continue
 			}
-			v.rejectAnon(id.Pos(), obj.Type(), "the variable "+id.Name)
+			v.rejectAnon(id.Pos(), obj, "the variable "+id.Name)
 		}
 	case *ast.TypeSpec:
 		if !n.Name.IsExported() {
@@ -45,7 +49,7 @@ func (v *verifier) checkExported(n ast.Node) {
 		if obj == nil {
 			return
 		}
-		v.rejectAnon(n.Name.Pos(), obj.Type(), "the type "+n.Name.Name)
+		v.rejectAnon(n.Name.Pos(), obj, "the type "+n.Name.Name)
 	}
 }
 
@@ -75,8 +79,8 @@ func receiverExported(e ast.Expr) bool {
 	return false
 }
 
-func (v *verifier) rejectAnon(pos token.Pos, t types.Type, what string) {
-	if !mentionsAnon(t, map[types.Type]bool{}) {
+func (v *verifier) rejectAnon(pos token.Pos, obj types.Object, what string) {
+	if !importable(obj.Pkg()) || !mentionsAnon(obj.Type(), map[types.Type]bool{}) {
 		return
 	}
 	v.reject(pos, "Go gives an unexported field the identity of its package, and "+

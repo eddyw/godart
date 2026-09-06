@@ -1619,18 +1619,18 @@ inside the subset.
 
 ### strings and encoding/json, the state of 2026-09-06
 
-`make std-test STD=strings` reaches no run, and 3 causes stand. Each 1 lives in
-a test file of Go, thus no change of the overlay removes it.
+`make std-test STD=strings` runs since 2026-09-07: 123 tests pass, 5 skip at a
+call of `AllocsPerRun`, and the run takes 12 seconds. 3 causes stood in the test
+files of Go before, and decision 382 holds each 1 with its answer.
 
-| The cause | The files |
-|---|---|
-| An import of `unsafe` | `clone_test.go`, `compare_test.go`, `example_test.go`, `strings_test.go` |
-| An import of `internal/asan` | `builder_test.go`, `strings_test.go` |
-| An exported variable of an unnamed struct type with an unexported field | 10 tables of `strings_test.go`, for example `RepeatTests` and `ReplaceTests` |
+| The cause | The files | The answer |
+|---|---|---|
+| An import of `unsafe` | `clone_test.go`, `compare_test.go`, `example_test.go`, `strings_test.go` | A diff of each file removes the read of the address of a storage. |
+| An import of `internal/asan` | `builder_test.go`, `strings_test.go` | An overlay of `internal/asan` gives `Enabled` as false. |
+| An exported variable of an unnamed struct type with an unexported field | 10 tables of `strings_test.go`, for example `RepeatTests` and `ReplaceTests` | Rule M15 skips an external test package, because no import names it. |
 
-The third cause is the rule of M15: Go gives an unexported field the identity of
-its package, and Dart holds such a name private to 1 library. The external test
-package `strings_test` reads each table, thus the shape must cross a library.
+The suite found 6 defects of the overlay and 2 paths of a square cost, and
+decision 382 names each 1. The real text of Go replaces the 6 functions now.
 
 `export_test.go` reads `genericReplacer`, `trieNode`, `makeStringFinder`, and
 the 3 fields of `Replacer`. The overlay holds the real `replace.go` and the
@@ -1713,7 +1713,7 @@ The cause that blocks each package of the survey of 2026-08-31:
 | `io` | Runs. Each test passes. |
 | `maps` | Runs. Each test passes. |
 | `math/rand/v2` | `Type.NumMethod`, `Type.Method`, `Value.Method`, and `os.Pipe`. |
-| `bytes` | `internal/testenv`, `internal/asan`, and 7 calls of `recover`. |
+| `bytes` | Runs since 2026-09-07. 170 tests pass, and 8 skip at `AllocsPerRun`. 1 diff of `TestClone` removes a read of `unsafe.SliceData`. |
 | `regexp` | 5 rejections in `regexp/syntax/parse.go`: 1 call of `recover` and 4 addresses of a `[]rune` field. |
 
 ### The block model

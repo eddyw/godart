@@ -1,0 +1,23 @@
+TestClone reads the address of the storage of a slice with unsafe.SliceData,
+and the subset holds no unsafe. The diff removes that read and it keeps each
+other line of the file.
+--- bytes_test.go
++++ bytes_test.go
+@@ -17,7 +17,6 @@
+ 	"testing"
+ 	"unicode"
+ 	"unicode/utf8"
+-	"unsafe"
+ )
+ 
+ func sliceOfString(s [][]byte) []string {
+@@ -2520,9 +2519,5 @@
+ 		if input != nil && clone == nil {
+ 			t.Errorf("Clone(%#v) return value should not be equal to nil slice.", input)
+ 		}
+-
+-		if cap(input) != 0 && unsafe.SliceData(input) == unsafe.SliceData(clone) {
+-			t.Errorf("Clone(%q) return value should not reference inputs backing memory.", input)
+-		}
+ 	}
+ }

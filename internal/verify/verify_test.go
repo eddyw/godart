@@ -198,6 +198,16 @@ func Ref() *int { return &Sink }
 // underscore private to 1 library, thus 2 packages give 2 classes.
 func TestAnonStructCrossesAPackage(t *testing.T) {
 	const want = "unnamed struct type with an unexported field"
+	acceptFile(t, "an exported table of an external test package", `package a_test
+
+var Cases = []struct{ in, out string }{{"a", "b"}}
+`)
+	acceptFile(t, "an exported variable of package main", `package main
+
+var Value struct{ n int }
+
+func main() {}
+`)
 	rejectFile(t, "an exported result", want, `package a
 
 func Make() struct{ n int } { return struct{ n int }{n: 1} }

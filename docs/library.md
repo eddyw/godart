@@ -28,6 +28,16 @@ A **patch** replaces 1 file of a native package by its base name. Each other
 file keeps the real Go source. A patch that matches no file stays out, because a
 build tag of the architecture selects the file set of a package.
 
+A **diff** changes a test file of a package under test. `<base>.patch` in the
+directory of the overlay holds a unified diff, and the load applies it to the
+real file `<base>` of the test variant or of the external test package. The
+text before the first hunk header holds the cause. Each hunk must match the
+file at the line of its header, and a mismatch stops the build with the line,
+because a test file of Go changes with each release and a copy of it would age
+in silence. A diff that names no test file also stops the build. `strings` and
+`bytes` each hold such a diff, because a test of the 2 reads the address of a
+storage with `unsafe`.
+
 `internal/overlay/native.go` holds the native list and each patch.
 `internal/overlay/std/` holds the source of each overlay. The 2 files are the
 authority, because each build reads them.
@@ -702,12 +712,12 @@ make std-test STD=unicode/utf8    # each test passes
 the recovered panic of the real `parse.go` serves it. `TestTestsOfGoroot` runs
 each test of that package.
 
-`strings` and `encoding/json` each stay out, and the section "strings and
-encoding/json, the state of 2026-09-06" of `docs/parity.md` names the cause of
-each 1. The test files of `strings` import `unsafe` and `internal/asan`.
-`encoding/json` compiles and runs since 2026-09-06, and 2 items hold the full
-run: a marshal through `MarshalJSON` ends with a cast of Dart, and
-`TestUnmarshalMaxDepth` reads a value of 10000 levels.
+`strings` and `bytes` run since 2026-09-07, and decision 382 holds the 3
+changes that opened them: an overlay of `internal/asan`, the relaxation of rule
+M15 for an external test package, and a diff of each test file that reads an
+address with `unsafe`. `encoding/json` compiles and runs since 2026-09-06, and
+the section "strings and encoding/json, the state of 2026-09-06" of
+`docs/parity.md` names the 2 items that hold its full run.
 
 The work gave:
 

@@ -1,0 +1,23 @@
+The test reads the address of the storage of a string with
+unsafe.StringData, and the subset holds no unsafe. The diff removes that
+read and it keeps each other line of the file.
+--- example_test.go
++++ example_test.go
+@@ -8,17 +8,14 @@
+ 	"fmt"
+ 	"strings"
+ 	"unicode"
+-	"unsafe"
+ )
+ 
+ func ExampleClone() {
+ 	s := "abc"
+ 	clone := strings.Clone(s)
+ 	fmt.Println(s == clone)
+-	fmt.Println(unsafe.StringData(s) == unsafe.StringData(clone))
+ 	// Output:
+ 	// true
+-	// false
+ }
+ 
+ func ExampleBuilder() {
