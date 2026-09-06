@@ -19,6 +19,19 @@ func Format(verb string, value any) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// FormatVerb writes 1 value in the parsed form of a Go verb.
+//
+// letter holds the code of the letter of the verb, flags holds the bit of each
+// flag, and prec holds the number after the point or -1. The width belongs to
+// the caller.
+//
+// The package fmt reads the format text already. A bridge that takes the text
+// again builds 1 Go string, decodes it, and scans it 1 time for each flag, and
+// Sprintf calls the bridge 1 time for each verb.
+func FormatVerb(letter, flags, prec int, value any) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Stack gives 1 item for each frame of the Go stack, in the form
 // "function|file|line". The count of skip drops the first frames, and frame 0
 // is the function that calls Stack.

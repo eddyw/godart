@@ -11,13 +11,155 @@ import 'print.dart';
 import 'slice.dart';
 import 'string.dart';
 
+/// The bit of each flag of a verb. The package fmt writes the same numbers.
+const int $flagMinus = 1;
+const int $flagPlus = 2;
+const int $flagSharp = 4;
+const int $flagSpace = 8;
+const int $flagZero = 16;
+
+/// The parsed form of a verb: the letter, the flags, and the precision.
+///
+/// The package fmt reads the format text, thus it already holds these 3 parts.
+/// A bridge that takes the text again builds 1 Go string, decodes it, and scans
+/// it 1 time for each flag. `fmt.Sprintf` calls the bridge 1 time for each verb,
+/// thus that work stood at the front of the cost.
+final class _Verb {
+  /// The letter of the verb, as 1 character.
+  final String letter;
+
+  /// The bits of the flags, in the constants above.
+  final int flags;
+
+  /// The number after the point, or -1 for a verb that holds none.
+  final int prec;
+
+  const _Verb(this.letter, this.flags, this.prec);
+
+  bool get minus => flags & $flagMinus != 0;
+  bool get plus => flags & $flagPlus != 0;
+  bool get sharp => flags & $flagSharp != 0;
+  bool get space => flags & $flagSpace != 0;
+
+  /// True for the verb %#v, which asks for the Go syntax form of a value.
+  bool get goSyntax => letter == 'v' && sharp;
+
+  /// The verb again as text. Only a report of a wrong verb reads it.
+  String get text {
+    final StringBuffer b = StringBuffer();
+    if (minus) b.write('-');
+    if (plus) b.write('+');
+    if (sharp) b.write('#');
+    if (space) b.write(' ');
+    if (flags & $flagZero != 0) b.write('0');
+    if (prec >= 0) b.write('.$prec');
+    b.write(letter);
+    return b.toString();
+  }
+}
+
+/// The verb v, which each caller that holds no verb of its own reads.
+const _Verb _plainVerb = _Verb('v', 0, -1);
+
 /// Writes 1 value in the format of a Go verb.
 ///
 /// The verb holds the letter and the flags that come before it, for example
 /// `v`, `+v`, or `q`. The Go package fmt reads the format text and gives the
 /// width and the precision, thus this function needs neither.
 GoString $goFormat(Iface? value, GoString verb) =>
-    GoString.fromString(_format(value, verb.toDartString()));
+    GoString.fromString(_format(value, _parseVerb(verb.toDartString())));
+
+/// Writes 1 value in the parsed form of a Go verb.
+///
+/// letter holds the code of the letter, flags holds the bit of each flag, and
+/// prec holds the number after the point or -1. `fmt.Sprintf` reads the format
+/// text already, thus it gives the 3 parts and no scan runs a second time.
+GoString $goFormatVerb(int letter, int flags, int prec, Iface? value) =>
+    GoString.fromString(_format(value, _Verb(_letterOf(letter), flags, prec)));
+
+/// The letter of a verb as text. A const text needs no build, thus the path of
+/// each verb of Go allocates nothing here.
+String _letterOf(int code) {
+  switch (code) {
+    case 0x62:
+      return 'b';
+    case 0x63:
+      return 'c';
+    case 0x64:
+      return 'd';
+    case 0x65:
+      return 'e';
+    case 0x66:
+      return 'f';
+    case 0x67:
+      return 'g';
+    case 0x6F:
+      return 'o';
+    case 0x70:
+      return 'p';
+    case 0x71:
+      return 'q';
+    case 0x73:
+      return 's';
+    case 0x74:
+      return 't';
+    case 0x76:
+      return 'v';
+    case 0x78:
+      return 'x';
+    case 0x45:
+      return 'E';
+    case 0x46:
+      return 'F';
+    case 0x47:
+      return 'G';
+    case 0x4F:
+      return 'O';
+    case 0x54:
+      return 'T';
+    case 0x55:
+      return 'U';
+    case 0x58:
+      return 'X';
+  }
+  return String.fromCharCode(code);
+}
+
+/// Reads the text of a verb into the parsed form. The flags stand in front, the
+/// point and its digits follow, and the letter ends the text.
+_Verb _parseVerb(String verb) {
+  final int n = verb.length;
+  if (n == 0) return const _Verb('', 0, -1);
+  var flags = 0;
+  var i = 0;
+  scan:
+  for (; i < n - 1; i++) {
+    switch (verb.codeUnitAt(i)) {
+      case 0x2D:
+        flags |= $flagMinus;
+      case 0x2B:
+        flags |= $flagPlus;
+      case 0x23:
+        flags |= $flagSharp;
+      case 0x20:
+        flags |= $flagSpace;
+      case 0x30:
+        flags |= $flagZero;
+      default:
+        break scan;
+    }
+  }
+  var prec = -1;
+  if (i < n - 1 && verb.codeUnitAt(i) == 0x2E) {
+    prec = 0;
+    for (i++; i < n - 1; i++) {
+      final int digit = verb.codeUnitAt(i) - 0x30;
+      if (digit < 0 || digit > 9) break;
+      prec = prec * 10 + digit;
+    }
+  }
+  return _Verb(verb.substring(n - 1), flags, prec);
+}
 
 /// Reads a float from text. The second value is false when the text holds no
 /// float.
@@ -155,30 +297,18 @@ GoString $zeroText(Iface? value) {
   return value.desc.info;
 }
 
-String _format(Iface? x, String verb) {
-  if (verb.endsWith('T')) return x == null ? '<nil>' : x.desc.display;
-  if (x == null) return verb.endsWith('v') ? '<nil>' : '%!$verb(<nil>)';
-  return _value(x.value, x.desc, verb);
-}
-
-/// The number after the point of a verb, for example 2 in `.2f`. The result is
-/// -1 when the verb holds no precision.
-int _precision(String verb) {
-  final int dot = verb.indexOf('.');
-  if (dot < 0) return -1;
-  var out = 0;
-  for (var i = dot + 1; i < verb.length - 1; i++) {
-    final int digit = verb.codeUnitAt(i) - 0x30;
-    if (digit < 0 || digit > 9) break;
-    out = out * 10 + digit;
+String _format(Iface? x, _Verb verb) {
+  if (verb.letter == 'T') return x == null ? '<nil>' : x.desc.display;
+  if (x == null) {
+    return verb.letter == 'v' ? '<nil>' : '%!${verb.text}(<nil>)';
   }
-  return out;
+  return _value(x.value, x.desc, verb);
 }
 
 /// _base writes the prefix of the base in front of a whole number. Go writes it
 /// for the flag # only.
-String _base(String text, String verb, String letter) {
-  if (!verb.contains('#')) return text;
+String _base(String text, _Verb verb, String letter) {
+  if (!verb.sharp) return text;
   String prefix;
   switch (letter) {
     case 'x':
@@ -209,10 +339,10 @@ String _base(String text, String verb, String letter) {
 /// _sign writes the flag + or the flag space in front of a value that is not
 /// negative. Go writes each 1 for a numeric verb only, and not for the verb v.
 /// The flag + wins when the verb holds both.
-String _sign(String text, String verb, String letter) {
+String _sign(String text, _Verb verb, String letter) {
   if (text.startsWith('-')) return text;
-  final bool plus = verb.contains('+');
-  final bool space = verb.contains(' ');
+  final bool plus = verb.plus;
+  final bool space = verb.space;
   if (!plus && !space) return text;
   switch (letter) {
     case 'd':
@@ -232,11 +362,11 @@ String _sign(String text, String verb, String letter) {
   return text;
 }
 
-String _value(Object? v, TypeDesc type, String verb, [int depth = 0]) {
-  final bool plus = verb.contains('+');
-  final String letter = verb.substring(verb.length - 1);
+String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
+  final bool plus = verb.plus;
+  final String letter = verb.letter;
   if (letter == 'T') return type.display;
-  final bool sharp = _goSyntax(verb);
+  final bool sharp = verb.goSyntax;
   if (sharp) {
     final String? text = _goStringMethod(v, type);
     if (text != null) return text;
@@ -253,7 +383,7 @@ String _value(Object? v, TypeDesc type, String verb, [int depth = 0]) {
     case 'float32':
     case 'float64':
       return _sign(
-        _float(v as double, letter, _precision(verb), type.kind == 'float32'),
+        _float(v as double, letter, verb.prec, type.kind == 'float32'),
         verb,
         letter,
       );
@@ -264,7 +394,7 @@ String _value(Object? v, TypeDesc type, String verb, [int depth = 0]) {
     case 'uint64':
     case 'uintptr':
       return _sign(
-        _base(_int(v as GoInt, letter, true, verb.contains('#')), verb, letter),
+        _base(_int(v as GoInt, letter, true, verb.sharp), verb, letter),
         verb,
         letter,
       );
@@ -277,11 +407,7 @@ String _value(Object? v, TypeDesc type, String verb, [int depth = 0]) {
     case 'uint16':
     case 'uint32':
       return _sign(
-        _base(
-          _int(v as GoInt, letter, false, verb.contains('#')),
-          verb,
-          letter,
-        ),
+        _base(_int(v as GoInt, letter, false, verb.sharp), verb, letter),
         verb,
         letter,
       );
@@ -341,9 +467,6 @@ String? _viaMethod(Object? v, TypeDesc type, String letter) {
   return null;
 }
 
-/// True for the verb %#v, which asks for the Go syntax form of a value.
-bool _goSyntax(String verb) => verb.endsWith('v') && verb.contains('#');
-
 /// True for a kind that Go writes as hexadecimal in the Go syntax form.
 bool _unsigned(String kind) {
   switch (kind) {
@@ -381,7 +504,7 @@ String _goList(
   List<Object?> items,
   TypeDesc? elem,
   String name,
-  String verb,
+  _Verb verb,
   int depth,
 ) {
   final List<String> parts = <String>[
@@ -396,10 +519,10 @@ String _bool(bool v, String letter) {
   return '%!$letter(bool=$v)';
 }
 
-String _string(GoString v, String verb, String letter) {
+String _string(GoString v, _Verb verb, String letter) {
   switch (letter) {
     case 'v':
-      if (_goSyntax(verb)) return _quote(v);
+      if (verb.goSyntax) return _quote(v);
       return v.toDartString();
     case 's':
       return v.toDartString();
@@ -634,20 +757,20 @@ String _digitsFixed(String mant, int dp, int frac) {
 
 /// The text of a complex number, in the form (1+2i) of Go. The imaginary part
 /// always carries a sign.
-String _complex(GoComplex c, String kind, String letter, String verb) {
+String _complex(GoComplex c, String kind, String letter, _Verb verb) {
   switch (letter) {
     case 'v':
     case 'g':
     case 'f':
     case 'e':
       final bool single = kind == 'complex64';
-      final int precision = _precision(verb);
+      final int precision = verb.prec;
       final String re = _float(c.re, letter, precision, single);
       String im = _float(c.im, letter, precision, single);
       if (!im.startsWith('-') && !im.startsWith('+')) im = '+$im';
       return '($re${im}i)';
   }
-  return '%!$letter($kind=${_complex(c, kind, 'v', 'v')})';
+  return '%!$letter($kind=${_complex(c, kind, 'v', _plainVerb)})';
 }
 
 String _exponent(double v, int digits) {
@@ -685,10 +808,10 @@ String _hexInt(GoInt v, bool unsigned, bool upper) {
 /// The space flag puts 1 space between each pair of digits. Go also writes the
 /// prefix of the base on each byte then, thus `% #x` of 2 bytes gives
 /// `0x4d 0x5a` and `%#x` gives `0x4d5a`.
-String _hexText(GoString v, String verb, String letter, bool upper) {
-  final bool space = verb.contains(' ');
+String _hexText(GoString v, _Verb verb, String letter, bool upper) {
+  final bool space = verb.space;
   if (!space) return _base(_hexBytes(v, upper), verb, letter);
-  final bool sharp = verb.contains('#');
+  final bool sharp = verb.sharp;
   final StringBuffer out = StringBuffer();
   for (int i = 0; i < v.bytes.length; i++) {
     if (i > 0) out.write(' ');
@@ -750,14 +873,14 @@ String _quote(GoString v) {
   return out.toString();
 }
 
-String _slice(Object? v, TypeDesc type, String verb, int depth) {
+String _slice(Object? v, TypeDesc type, _Verb verb, int depth) {
   if (v is! Slice<Object?>) return '$v';
   final TypeDesc? elem = type.elem?.call();
   final List<Object?> items = <Object?>[];
   for (var i = 0; i < v.len; i++) {
     items.add(v.array[v.off + i]);
   }
-  if (_goSyntax(verb)) {
+  if (verb.goSyntax) {
     final String name = _goName(type, depth);
     if (v.isNil) return '$name(nil)';
     return _goList(items, elem, name, verb, depth);
@@ -765,16 +888,16 @@ String _slice(Object? v, TypeDesc type, String verb, int depth) {
   return _list(items, elem, verb, depth);
 }
 
-String _array(List<Object?> v, TypeDesc type, String verb, int depth) {
+String _array(List<Object?> v, TypeDesc type, _Verb verb, int depth) {
   final TypeDesc? elem = type.elem?.call();
-  if (_goSyntax(verb)) return _goList(v, elem, type.display, verb, depth);
+  if (verb.goSyntax) return _goList(v, elem, type.display, verb, depth);
   return _list(v, elem, verb, depth);
 }
 
 /// _list writes each element of a slice or of an array. Go reads a list of
 /// bytes as text for the verbs s, q, x, and X.
-String _list(List<Object?> items, TypeDesc? elem, String verb, int depth) {
-  final String letter = verb.substring(verb.length - 1);
+String _list(List<Object?> items, TypeDesc? elem, _Verb verb, int depth) {
+  final String letter = verb.letter;
   if (elem != null && elem.kind == 'uint8' && _textVerb(letter)) {
     final List<int> bytes = <int>[];
     for (final Object? item in items) {
@@ -792,9 +915,9 @@ String _list(List<Object?> items, TypeDesc? elem, String verb, int depth) {
 bool _textVerb(String letter) =>
     letter == 's' || letter == 'q' || letter == 'x' || letter == 'X';
 
-String _map(Object? v, TypeDesc type, String verb, int depth) {
+String _map(Object? v, TypeDesc type, _Verb verb, int depth) {
   if (v is! GoMap<Object?, Object?>) return '$v';
-  final bool sharp = _goSyntax(verb);
+  final bool sharp = verb.goSyntax;
   if (sharp && v.isNil) return '${type.display}(nil)';
   final TypeDesc? keyType = type.key?.call();
   final TypeDesc? elem = type.elem?.call();
@@ -868,8 +991,8 @@ int _compareKeys(
   return aText.compareTo(bText);
 }
 
-String _struct(Object? v, TypeDesc type, String verb, bool plus, int depth) {
-  final bool sharp = _goSyntax(verb);
+String _struct(Object? v, TypeDesc type, _Verb verb, bool plus, int depth) {
+  final bool sharp = verb.goSyntax;
   final List<String> parts = <String>[];
   for (final field in type.fields) {
     final Object? value = field.get(v);
