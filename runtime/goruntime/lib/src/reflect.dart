@@ -207,6 +207,47 @@ void _assignInto(Object? dst, Object? src, TypeDesc desc) {
   }
 }
 
+/// Writes a value into the target of errors.As.
+///
+/// The target holds a pointer. The Dart form of a pointer to a struct and of a
+/// pointer to an array is the object itself, thus the write there copies each
+/// part of the value. Each other pointer holds a cell.
+///
+/// A target of a pointer to an interface type takes the method set: the
+/// description of such a type holds the key of each method of it.
+bool $assignError(Iface? value, Iface? target) {
+  if (value == null || target == null) return false;
+  final TypeDesc desc = target.desc;
+  if (desc.kind != 'ptr' || desc.elem == null) {
+    $panic(
+      Iface(
+        $typeGoError,
+        const GoError('errors: target must be a non-nil pointer'),
+      ),
+    );
+  }
+  final TypeDesc elem = desc.elem!();
+  final Object? box = target.value;
+  if (elem.kind == 'interface') {
+    if (!$implements(value, elem.methods.keys.toList())) return false;
+    if (box is $Ptr<Object?>) {
+      box.v = value;
+      return true;
+    }
+    return false;
+  }
+  if (elem.name != value.desc.name) return false;
+  if (box is $Ptr<Object?>) {
+    box.v = value.value;
+    return true;
+  }
+  if (_holdsValue(elem) && box != null) {
+    _assignInto(box, value.value, elem);
+    return true;
+  }
+  return false;
+}
+
 /// _copyOf gives a fresh value of a struct or of an array, and it reaches each
 /// level. Each other kind holds no object of its own, thus it gives the value
 /// again.

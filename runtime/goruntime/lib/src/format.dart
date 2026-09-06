@@ -31,10 +31,15 @@ final class _Verb {
   /// The bits of the flags, in the constants above.
   final int flags;
 
+  /// The least count of characters of the text, or 0 for a verb that holds no
+  /// width. Go writes the width on each leaf of a value, thus a slice, an
+  /// array, a map, and a struct each give it to every element.
+  final int width;
+
   /// The number after the point, or -1 for a verb that holds none.
   final int prec;
 
-  const _Verb(this.letter, this.flags, this.prec);
+  const _Verb(this.letter, this.flags, this.width, this.prec);
 
   bool get minus => flags & $flagMinus != 0;
   bool get plus => flags & $flagPlus != 0;
@@ -52,6 +57,7 @@ final class _Verb {
     if (sharp) b.write('#');
     if (space) b.write(' ');
     if (flags & $flagZero != 0) b.write('0');
+    if (width > 0) b.write('$width');
     if (prec >= 0) b.write('.$prec');
     b.write(letter);
     return b.toString();
@@ -59,7 +65,7 @@ final class _Verb {
 }
 
 /// The verb v, which each caller that holds no verb of its own reads.
-const _Verb _plainVerb = _Verb('v', 0, -1);
+const _Verb _plainVerb = _Verb('v', 0, 0, -1);
 
 /// Writes 1 value in the format of a Go verb.
 ///
@@ -74,8 +80,15 @@ GoString $goFormat(Iface? value, GoString verb) =>
 /// letter holds the code of the letter, flags holds the bit of each flag, and
 /// prec holds the number after the point or -1. `fmt.Sprintf` reads the format
 /// text already, thus it gives the 3 parts and no scan runs a second time.
-GoString $goFormatVerb(int letter, int flags, int prec, Iface? value) =>
-    GoString.fromString(_format(value, _Verb(_letterOf(letter), flags, prec)));
+GoString $goFormatVerb(
+  int letter,
+  int flags,
+  int width,
+  int prec,
+  Iface? value,
+) => GoString.fromString(
+  _format(value, _Verb(_letterOf(letter), flags, width, prec)),
+);
 
 /// The letter of a verb as text. A const text needs no build, thus the path of
 /// each verb of Go allocates nothing here.
@@ -129,7 +142,7 @@ String _letterOf(int code) {
 /// point and its digits follow, and the letter ends the text.
 _Verb _parseVerb(String verb) {
   final int n = verb.length;
-  if (n == 0) return const _Verb('', 0, -1);
+  if (n == 0) return const _Verb('', 0, 0, -1);
   var flags = 0;
   var i = 0;
   scan:
@@ -158,7 +171,7 @@ _Verb _parseVerb(String verb) {
       prec = prec * 10 + digit;
     }
   }
-  return _Verb(verb.substring(n - 1), flags, prec);
+  return _Verb(verb.substring(n - 1), flags, 0, prec);
 }
 
 /// Reads a float from text. The second value is false when the text holds no
@@ -237,43 +250,6 @@ bool _deepValue(Object? x, Object? y, TypeDesc desc) {
   return x == y;
 }
 
-/// Writes a value into the target of errors.As.
-///
-/// The target holds a pointer, and the write reads the box of it. A target of a
-/// pointer to an interface type panics: the runtime library holds no method
-/// name of such a type, thus the check of the method set has no source.
-bool $assignError(Iface? value, Iface? target) {
-  if (value == null || target == null) return false;
-  final TypeDesc desc = target.desc;
-  if (desc.kind != 'ptr' || desc.elem == null) {
-    $panic(
-      Iface(
-        $typeGoError,
-        const GoError('errors: target must be a non-nil pointer'),
-      ),
-    );
-  }
-  final TypeDesc elem = desc.elem!();
-  if (elem.kind == 'interface') {
-    $panic(
-      Iface(
-        $typeGoError,
-        const GoError(
-          'errors.As with a pointer to an interface type is '
-          'outside the subset',
-        ),
-      ),
-    );
-  }
-  if (elem.name != value.desc.name) return false;
-  final Object? box = target.value;
-  if (box is $Ptr<Object?>) {
-    box.v = value.value;
-    return true;
-  }
-  return false;
-}
-
 /// The text of the String method of the zero value of the type of a value. The
 /// package flag reads it, and Go builds the zero value through reflect.New.
 GoString $zeroText(Iface? value) {
@@ -298,11 +274,131 @@ GoString $zeroText(Iface? value) {
 }
 
 String _format(Iface? x, _Verb verb) {
-  if (verb.letter == 'T') return x == null ? '<nil>' : x.desc.display;
+  if (verb.letter == 'T') {
+    return _leaf(x == null ? '<nil>' : x.desc.display, verb);
+  }
   if (x == null) {
-    return verb.letter == 'v' ? '<nil>' : '%!${verb.text}(<nil>)';
+    // Go writes the width on the nil form of the verb v, and the bad verb form
+    // of each other verb takes none.
+    return verb.letter == 'v' ? _leaf('<nil>', verb) : '%!${verb.text}(<nil>)';
   }
   return _value(x.value, x.desc, verb);
+}
+
+/// _leaf writes the precision digits and the width of a verb on 1 leaf text.
+///
+/// Go writes the width on each leaf of a value: a slice, an array, a map, and a
+/// struct each give the width to every element, and the brackets take none.
+String _leaf(String text, _Verb verb) => _pad(
+  verb.prec < 0 ? text : _precDigits(text, verb.letter, verb.prec),
+  verb,
+);
+
+/// _pad gives the text the width of the verb. The flag `-` puts the fill after
+/// the text, and the flag `0` writes a zero in place of each space.
+String _pad(String text, _Verb verb) {
+  if (verb.width <= 0) return text;
+  // Go turns the flag 0 off for the verb U, thus a width there gives spaces.
+  if (verb.letter != 'U' && verb.flags & $flagZero != 0 && !verb.minus) {
+    return _zeroPad(text, verb);
+  }
+  final int n = verb.width - _runeCount(text);
+  if (n <= 0) return text;
+  return verb.minus ? '$text${' ' * n}' : '${' ' * n}$text';
+}
+
+/// _zeroPad writes the zeros of the flag 0.
+///
+/// Go puts the zeros after the sign and after the base prefix of the flag #,
+/// and it counts the sign against the width and the prefix not. The prefix of
+/// an octal is 1 zero, and Go writes that zero only when the digits hold none,
+/// thus the padding gives it.
+String _zeroPad(String text, _Verb verb) {
+  var body = text;
+  var sign = '';
+  if (body.isNotEmpty) {
+    final int c = body.codeUnitAt(0);
+    if (c == 0x2D || c == 0x2B || c == 0x20) {
+      sign = body.substring(0, 1);
+      body = body.substring(1);
+    }
+  }
+  final bool alt = verb.sharp;
+  var prefix = '';
+  final bool octal = alt && verb.letter == 'o';
+  if (octal) {
+    // The writer already put the leading zero of the octal. The width covers
+    // the digits alone, thus that zero comes off first.
+    if (body.length > 1 && body.codeUnitAt(0) == 0x30) body = body.substring(1);
+  } else if (alt || verb.letter == 'O') {
+    // The verb O writes its prefix with no flag, thus the width covers the
+    // digits alone for that verb too.
+    final (String head, String rest) = _cutBase(body);
+    prefix = head;
+    body = rest;
+  }
+  final int n = verb.width - _runeCount(sign) - _runeCount(body);
+  if (n > 0) body = '${'0' * n}$body';
+  if (octal && (body.isEmpty || body.codeUnitAt(0) != 0x30)) body = '0$body';
+  return '$sign$prefix$body';
+}
+
+/// _cutBase splits the 2 character base prefix that the flag # writes from the
+/// digits behind it.
+(String, String) _cutBase(String text) {
+  if (text.length >= 2 && text.codeUnitAt(0) == 0x30) {
+    switch (text.codeUnitAt(1)) {
+      case 0x78 || 0x58 || 0x62 || 0x42 || 0x6F || 0x4F:
+        return (text.substring(0, 2), text.substring(2));
+    }
+  }
+  return ('', text);
+}
+
+/// _runeCount counts the runes of a text. A pair of surrogates holds 1 rune,
+/// and Go counts the width in runes.
+int _runeCount(String text) {
+  var n = 0;
+  for (var i = 0; i < text.length; i++) {
+    final int c = text.codeUnitAt(i);
+    if (c >= 0xD800 && c < 0xDC00 && i + 1 < text.length) i++;
+    n++;
+  }
+  return n;
+}
+
+/// _precDigits writes the leading zeros of a precision on a whole number. Go
+/// reads the precision of such a verb as the smallest count of digits, thus
+/// `%.2d` of 5 gives 05 and `%.0d` of 0 gives an empty text.
+///
+/// The sign and the base prefix of the flag # each stand in front of the zeros.
+String _precDigits(String text, String letter, int prec) {
+  switch (letter) {
+    case 'd' || 'b' || 'o' || 'O' || 'x' || 'X':
+      break;
+    default:
+      return text;
+  }
+  var body = text;
+  var sign = '';
+  if (body.isNotEmpty) {
+    final int c = body.codeUnitAt(0);
+    if (c == 0x2D || c == 0x2B || c == 0x20) {
+      sign = body.substring(0, 1);
+      body = body.substring(1);
+    }
+  }
+  var prefix = '';
+  if (body.length > 1 && body.codeUnitAt(0) == 0x30) {
+    switch (body.codeUnitAt(1)) {
+      case 0x78 || 0x58 || 0x6F || 0x62:
+        prefix = body.substring(0, 2);
+        body = body.substring(2);
+    }
+  }
+  if (prec == 0 && body == '0') return '$sign$prefix';
+  if (body.length < prec) body = '${'0' * (prec - body.length)}$body';
+  return '$sign$prefix$body';
 }
 
 /// _base writes the prefix of the base in front of a whole number. Go writes it
@@ -365,38 +461,46 @@ String _sign(String text, _Verb verb, String letter) {
 String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
   final bool plus = verb.plus;
   final String letter = verb.letter;
-  if (letter == 'T') return type.display;
+  if (letter == 'T') return _leaf(type.display, verb);
   final bool sharp = verb.goSyntax;
   if (sharp) {
     final String? text = _goStringMethod(v, type);
-    if (text != null) return text;
+    if (text != null) return _leaf(text, verb);
   } else if (letter == 'v' || letter == 's' || letter == 'q') {
     final String? text = _viaMethod(v, type, letter);
-    if (text != null) return text;
+    if (text != null) return _leaf(text, verb);
   }
-  if (sharp && _unsigned(type.kind)) return '0x${$uradix(v as GoInt, 16)}';
+  if (sharp && _unsigned(type.kind)) {
+    return _leaf('0x${$uradix(v as GoInt, 16)}', verb);
+  }
   switch (type.kind) {
     case 'bool':
-      return _bool(v as bool, letter);
+      return _leaf(_bool(v as bool, letter), verb);
     case 'string':
-      return _string(v as GoString, verb, letter);
+      return _leaf(_string(v as GoString, verb, letter), verb);
     case 'float32':
     case 'float64':
-      return _sign(
-        _float(v as double, letter, verb.prec, type.kind == 'float32'),
+      return _leaf(
+        _sign(
+          _float(v as double, letter, verb.prec, type.kind == 'float32'),
+          verb,
+          letter,
+        ),
         verb,
-        letter,
       );
     case 'complex64':
     case 'complex128':
-      return _complex(v as GoComplex, type.kind, letter, verb);
+      return _leaf(_complex(v as GoComplex, type.kind, letter, verb), verb);
     case 'uint':
     case 'uint64':
     case 'uintptr':
-      return _sign(
-        _base(_int(v as GoInt, letter, true, verb.sharp), verb, letter),
+      return _leaf(
+        _sign(
+          _base(_int(v as GoInt, letter, true, verb.sharp), verb, letter),
+          verb,
+          letter,
+        ),
         verb,
-        letter,
       );
     case 'int':
     case 'int8':
@@ -406,10 +510,13 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
     case 'uint8':
     case 'uint16':
     case 'uint32':
-      return _sign(
-        _base(_int(v as GoInt, letter, false, verb.sharp), verb, letter),
+      return _leaf(
+        _sign(
+          _base(_int(v as GoInt, letter, false, verb.sharp), verb, letter),
+          verb,
+          letter,
+        ),
         verb,
-        letter,
       );
     case 'slice':
       return _slice(v, type, verb, depth);
@@ -421,7 +528,9 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
       return _struct(v, type, verb, plus, depth);
     case 'ptr':
       final TypeDesc? inner = type.elem?.call();
-      if (v == null) return sharp ? '(${type.display})(nil)' : '<nil>';
+      if (v == null) {
+        return _leaf(sharp ? '(${type.display})(nil)' : '<nil>', verb);
+      }
       if (sharp) {
         // The Dart form of a pointer to a struct is the object of the struct,
         // and each other pointer holds a cell.
@@ -434,21 +543,25 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
       }
       return '&${inner == null ? v : _value(v, inner, verb, depth + 1)}';
     case 'interface':
-      if (v == null) return sharp ? '${type.display}(nil)' : '<nil>';
+      if (v == null) {
+        return _leaf(sharp ? '${type.display}(nil)' : '<nil>', verb);
+      }
       if (v is Iface) return _value(v.value, v.desc, verb, depth + 1);
-      return '$v';
+      return _leaf('$v', verb);
     case 'chan':
       // The Dart form of a nil channel is a Chan that holds the nil flag, and
       // not a null reference.
       if (v == null || (v is Chan<Object?> && v.isNil)) {
-        return sharp ? '(${type.display})(nil)' : '<nil>';
+        return _leaf(sharp ? '(${type.display})(nil)' : '<nil>', verb);
       }
-      return '<chan>';
+      return _leaf('<chan>', verb);
     case 'func':
-      if (v == null) return sharp ? '(${type.display})(nil)' : '<nil>';
-      return '<func>';
+      if (v == null) {
+        return _leaf(sharp ? '(${type.display})(nil)' : '<nil>', verb);
+      }
+      return _leaf('<func>', verb);
   }
-  return '$v';
+  return _leaf('$v', verb);
 }
 
 /// Reads the text of a value that holds the method Error or String. The Go
@@ -903,7 +1016,9 @@ String _list(List<Object?> items, TypeDesc? elem, _Verb verb, int depth) {
     for (final Object? item in items) {
       bytes.add($ix(item as GoInt) & 0xff);
     }
-    return _string(GoString.fromBytes(bytes), verb, letter);
+    // Go reads such a list as 1 text, thus the width covers the whole text and
+    // not each byte.
+    return _leaf(_string(GoString.fromBytes(bytes), verb, letter), verb);
   }
   final List<String> parts = <String>[];
   for (final item in items) {
@@ -1190,7 +1305,10 @@ String _hexFloat(double v, int precision, bool single) {
   } else {
     exp += single ? 23 : 52;
   }
-  m -= lead;
+  // 6 hexadecimal digits hold 24 bits, and the fraction of a float32 holds 23.
+  // Go fills the 24 bits from the left, thus the fraction moves 1 place. The
+  // fraction of a float64 holds 52 bits, which fills 13 digits exactly.
+  m = single ? (m - lead) << 1 : m - lead;
   var digits = m.toRadixString(16).padLeft(width, '0');
   if (precision < 0) {
     while (digits.isNotEmpty && digits.endsWith('0')) {

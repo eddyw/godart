@@ -263,12 +263,10 @@ func Sprintf(format string, a ...any) string {
 		if hasPrec {
 			want = prec
 		}
-		text := dart.FormatVerb(int(letter), bits, want, value)
-		if hasPrec {
-			text = precDigits(text, letter, prec)
-		}
+		// The runtime owns the width and the precision digits here, because Go
+		// writes each 1 on the leaves of a value and not on the whole text.
 		arg++
-		out.WriteString(pad(text, width, bits, letter))
+		out.WriteString(dart.FormatVerb(int(letter), bits, width, want, value))
 	}
 	out.WriteString(format[start:])
 	return out.String()
@@ -333,37 +331,6 @@ func unicodeText(v any, flags string) string {
 		out += " '" + string(r) + "'"
 	}
 	return out
-}
-
-// precDigits writes the leading zeros of a precision on a whole number. Go
-// reads the precision of such a verb as the smallest count of digits, thus
-// `%.2d` of 5 gives 05 and `%.0d` of 0 gives an empty text.
-//
-// The sign and the base prefix of the flag # each stand in front of the zeros.
-func precDigits(text string, letter byte, prec int) string {
-	switch letter {
-	case 'd', 'b', 'o', 'O', 'x', 'X':
-	default:
-		return text
-	}
-	sign := ""
-	if len(text) > 0 && (text[0] == '-' || text[0] == '+' || text[0] == ' ') {
-		sign, text = text[:1], text[1:]
-	}
-	prefix := ""
-	if len(text) > 1 && text[0] == '0' {
-		switch text[1] {
-		case 'x', 'X', 'o', 'b':
-			prefix, text = text[:2], text[2:]
-		}
-	}
-	if prec == 0 && text == "0" {
-		return sign + prefix
-	}
-	for len(text) < prec {
-		text = "0" + text
-	}
-	return sign + prefix + text
 }
 
 // runeOf reads a code point from an integer value of any width.
@@ -516,12 +483,21 @@ func Errorf(format string, a ...any) error {
 			j++
 		}
 		if j < len(format) && format[j] == 'w' {
+			// The verb w takes an operand that holds the interface error.
+			// Each other operand keeps the letter w, thus Sprintf writes the
+			// bad verb form of Go: %!w(<nil>) and %!w(string=a text).
+			wraps := false
 			if k := verbIndex(format, i); k >= 0 && k < len(a) {
-				if err, ok := a[k].(error); ok {
+				if err, ok := a[k].(error); ok && err != nil {
 					held = append(held, err)
+					wraps = true
 				}
 			}
-			plain += format[i:j] + "v"
+			if wraps {
+				plain += format[i:j] + "v"
+			} else {
+				plain += format[i : j+1]
+			}
 			i = j
 			continue
 		}

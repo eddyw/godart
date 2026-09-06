@@ -22,13 +22,17 @@ func Format(verb string, value any) string {
 // FormatVerb writes 1 value in the parsed form of a Go verb.
 //
 // letter holds the code of the letter of the verb, flags holds the bit of each
-// flag, and prec holds the number after the point or -1. The width belongs to
-// the caller.
+// flag, width holds the least count of characters or 0, and prec holds the
+// number after the point or -1.
+//
+// The runtime owns the width, because Go writes it on each leaf of a value. A
+// slice, an array, a map, and a struct each give the width to every element,
+// and the brackets take none.
 //
 // The package fmt reads the format text already. A bridge that takes the text
 // again builds 1 Go string, decodes it, and scans it 1 time for each flag, and
 // Sprintf calls the bridge 1 time for each verb.
-func FormatVerb(letter, flags, prec int, value any) string {
+func FormatVerb(letter, flags, width, prec int, value any) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
