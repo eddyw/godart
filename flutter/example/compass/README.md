@@ -15,8 +15,8 @@ hold" names each limit that the work found, with the cause of each 1.
 |---|---|
 | `server/` | The server of the sample in Go. 9 routes over `net/http` and `encoding/json`. |
 | `go/` | The application. The model, the API client, each repository, the use case, each view model, and the 7 screens. |
-| `lib/` | The Dart host. 101 lines, and `widgets_gen.dart` that `nodegen` writes. |
-| `assets/` | The 2 JSON files of the sample: 137 destinations and 2,723 activities. |
+| `lib/` | The Dart host. 24 lines, and `widgets_gen.dart` that `nodegen` writes. |
+| `assets/` | The 2 JSON files of the sample, the logo, the picture of the account, and the 2 fonts. |
 
 ## Run it
 
@@ -31,11 +31,18 @@ flutter test                   # 5 widget tests
 
 `glutter run -d macos` opens the application against the server, and it writes
 the platform runner when that directory is absent.
-`flutter build macos --debug` wrote `compass_app.app` on 2026-09-05.
+`flutter build macos --debug` wrote `compass_app.app` on 2026-09-06.
 
 The login screen carries the account of the sample, thus the button needs no
-keyboard. The destination images stay empty, because the image host of the
-sample answers 403 to each request. The 2 JSON files hold the URLs.
+keyboard.
+
+**The image host of the sample answers 403.** The bucket
+`storage.googleapis.com/tripedia-images` gives `AccessDenied` to each request
+of a destination and of an activity, thus the sample itself draws no such
+picture today. The 2 JSON files of `assets/` name a host that answers, and the
+seed of each URL holds the reference of the destination, thus 1 place keeps 1
+picture. The 3 cards of the login screen and the 7 continents keep the host of
+the sample, because `rstr.in` answers each of those requests.
 
 `glutter run -d macos` also holds the Go source under watch. A change of 1 Go
 line reaches the running application in about 1 second, and it keeps the screen
@@ -49,10 +56,10 @@ answers of the 17 requests of `server/requests.sh`. The 2 answers are equal.
 
 | Part | The sample | The port |
 |---|---|---|
-| The application | 5,804 lines of Dart, and 3,331 lines that `build_runner` writes | 1,827 lines of Go |
+| The application | 5,804 lines of Dart, and 3,331 lines that `build_runner` writes | 2,675 lines of Go |
 | The server | 620 lines of Dart over `shelf`, and 14 generated files | 300 lines of Go over `net/http` |
-| The host of the application | — | 101 lines of Dart, and 1,324 lines that `nodegen` writes |
-| The packages of pub.dev | 11 | 0 |
+| The host of the application | — | 24 lines of Dart, and 1,450 lines that `nodegen` writes |
+| The packages of pub.dev | 11 | 2: `flutter_svg` for the logo, and `share_plus` for the share sheet |
 
 The port needs no code generation of the data classes. A Go struct tag and
 `encoding/json` hold what `freezed` and `json_serializable` write in the
@@ -83,21 +90,34 @@ sample.
 
 ## What the port could not hold
 
-| The item of the sample | The cause | What the port holds |
-|---|---|---|
-| `go_router` | The node set holds widgets, and a router is no widget. A pack of nodegen reads the widgets of a package of pub.dev, and `go_router` exports none that the mapping covers. | `ui.Pages` and a stack of routes in Go. It holds no URL and no deep link. |
-| `provider` | The same cause. | The `App` struct holds each view model. |
-| `shared_preferences` | A plugin needs a platform channel. `ui.Call` reaches the host now, thus a port of this row costs 1 case of the handler. | The token lives in memory. A restart asks for the login again, exactly as the dev flavor of the sample does. |
-| `flutter_svg`, `google_fonts`, `cached_network_image`, `share_plus` | The 3 first ones export a widget, thus a pack of nodegen reaches each 1. `share_plus` is a call, and `ui.Call` reaches it. | A text logo, the default font, `Image.network` with no cache, and a share button that does nothing. |
-| `Dismissible`, to delete a booking with a swipe | The constructor takes a `Key`, and `nodegen` drops each widget that needs 1. Read the section "What the tool drops" of `flutter/nodegen/README.md`. | A delete button in the row. |
-| `showDateRangePicker` | The call gives a `Future` and it needs a `BuildContext`. A node describes a widget, and not a call. The generated `DateRangePickerDialog` also carries no callback, because the dialog gives its answer to `Navigator.pop`. | A screen of its own holds a real `CalendarDatePicker`. The first tap names the first day, the second one names the last day, and Go holds the 2. |
-| `AppLocalization` | `Localizations.of(context)` needs a `BuildContext`. | The strings live in `go/text.go`. |
-| The theme of `ui/core/themes/` | `Theme.of(context)` needs a `BuildContext`. The host reads the theme and it passes a snapshot to the Go build. | The default Material theme of the host, and `ui.Theme()` for the colors of the snapshot. |
+**Nothing of the sample stays out.** The port of 2026-09-05 named 8 items, and
+the work of 2026-09-06 closed each 1. The table holds the answer of each.
 
-**Each limit above stands on 1 of 2 causes: a package that exports no widget of
-the mapping, or a Flutter API that needs a `BuildContext`.** No limit comes from the Go
-subset of the compiler. The whole application, the whole server, and each
-model of the sample compile with no change of the compiler.
+| The item of the sample | The answer of the port |
+|---|---|
+| The theme of `ui/core/themes/` | `go/theme.go`. `ui.ColorScheme` holds each of the 47 colors of the Flutter class and it derives each 1 that the program leaves out. `ui.UseTheme` names the 2 themes, and `material.MaterialApp` of the Go tree carries them to Flutter. `ui.Theme()` gives the same values to each build, thus no `BuildContext` stands in the way. |
+| `google_fonts` | The package exports no widget, thus no pack of `nodegen` reaches it. `assets/fonts/` holds Rubik and Open Sans, and `ui.TextStyle` names the axis `wght` of each variable font. |
+| `flutter_svg` | A pack of `nodegen`. `gart.dev/ui/svg` holds 4 node types, and the login screen draws the real `assets/logo.svg`. |
+| `cached_network_image` | `ui.Picture`. It gives a node while the image loads and a node after a failure. The cache of the sample is a plugin of the file system, and the port holds the cache of Flutter alone. |
+| `share_plus` | `ui.Share` reaches the handler of `goSetCall` in `lib/main.dart`, and that handler calls the plugin. |
+| `Dismissible` | `ui.Dismissible`. `nodegen` writes a Go field `Key` for each widget whose constructor demands a `Key`, and `ConfirmDismiss` waits for the server and keeps the row after a failure. |
+| `showDateRangePicker` | `ui.DateRange`. The call reaches the host through `ui.Call`, the host opens the dialog of Material under the `ui.Anchor` node, and the answer wakes the goroutine of the tap. |
+| `ScaffoldMessenger` | `ui.SnackBar`. The same path, and the answer names the button that the user pressed. |
+| `go_router` | `ui.Pages` and a stack of routes in Go. It holds no URL and no deep link. |
+| `provider` | The `App` struct holds each view model. |
+| `shared_preferences` | `ui.SaveValue` and `ui.ReadValue` reach the host. The port keeps the token in memory, exactly as the development flavor of the sample does, thus a restart asks for the login again. |
+| `AppLocalization` | The strings live in `go/text.go`. |
+
+**The 3 defects that the work found**, each in a tool and not in the compiler:
+
+1. An optional key field wrote `ValueKey<String>("")` in the host, thus the
+   `center` of a `CustomScrollView` named a sliver that no key carries and the
+   home screen did not build.
+2. `glutter` kept the binary of `nodescan` in its cache and it never built it
+   again, thus a change of the scanner never reached an application.
+3. `BackdropFilter` of the generated set carries no filter, because the
+   parameter of Flutter takes an `ImageFilter`. The node `ui.Blur` names the 2
+   sigma values.
 
 ## The origin
 
