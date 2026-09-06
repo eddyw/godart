@@ -113,13 +113,6 @@ String _nextMonth() {
   return '${_months[next.month - 1]} ${next.year}';
 }
 
-/// _shortMonth gives the 3 letters of the month after this 1.
-String _shortMonth() {
-  final DateTime now = DateTime.now();
-  final DateTime next = DateTime(now.year, now.month + 1);
-  return _months[next.month - 1].substring(0, 3);
-}
-
 const List<String> _months = <String>[
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',

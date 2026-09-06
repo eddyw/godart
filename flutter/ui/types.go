@@ -1,3 +1,5 @@
+// nodefilter:values
+
 package ui
 
 // This file holds the value types that a field of the generated node set

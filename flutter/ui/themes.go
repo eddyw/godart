@@ -1,3 +1,5 @@
+// nodefilter:values
+
 package ui
 
 // This file holds the value type of each theme of 1 widget family, for example
