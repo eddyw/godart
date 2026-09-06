@@ -236,7 +236,7 @@ func deleteInRange() {
 	// reads no content of o here.
 	row("loop ends", steps <= 100)
 	row("o len at most 4", len(o) <= 4)
-	dump2("the keys of n", map[int]int{1: 10, 2: 20})
+	dump2("a map of an int key", map[int]int{2: 20, 1: 10, 3: 30})
 
 	// A delete of a key that the map does not hold performs no operation.
 	p := map[string]int{"a": 1}

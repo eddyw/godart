@@ -14,7 +14,11 @@ The cause of the suite is the defect of 2026-09-06: `fmt.Printf("%.0f", 0.5)`
 wrote 1, and real Go writes 0. No test caught it. The suite closes that class
 of hole for the language itself.
 
-**The 24 programs write 2180 lines, and each 1 passes.**
+`make ci` runs `TestPrograms`, thus each program of the suite joins CI with
+no registration. Run 1 program with `make compare PROG=confslice`, or with
+`go test ./internal/driver -run 'TestPrograms/confslice' -count=1`.
+
+**The 24 programs write 2184 lines, and each 1 passes.**
 
 ## The areas
 
@@ -26,7 +30,7 @@ of hole for the language itself.
 | 4 | `conffloat` | 156 | NaN, the 2 infinities, a negative zero, a denormal, each comparison, the verbs v, g, e, f, E, G, and the bit pattern | Passes |
 | 5 | `confstring` | 102 | An index, a slice, a range over a byte that carries no rune, len against the count of runes, a concatenation, a comparison | Passes |
 | 6 | `confslice` | 90 | An append that shares the storage and 1 that grows, the 3 index form, a copy of 2 ranges that overlap, a slice of an array, clear, nil against empty | Passes |
-| 7 | `confmap` | 78 | A struct key, an array key, an interface key, an absent key, a delete during a range, the 2 result form, clear | Passes |
+| 7 | `confmap` | 79 | A struct key, an array key, an interface key, an absent key, a delete during a range, the 2 result form, clear | Passes |
 | 8 | `confstruct` | 120 | A comparison, an embedded field, a promoted method, an unnamed struct type, a field of a zero size, the size and the offset from reflect | Passes |
 | 9 | `confiface` | 89 | Each form of a type assertion, a type switch, a nil interface against a typed nil, a value type against a pointer type, an embedded interface | Passes |
 | 10 | `confmethod` | 90 | A value receiver against a pointer receiver, a method value, a method expression, a method of an embedded field, the 2 method sets | Passes |
@@ -35,7 +39,7 @@ of hole for the language itself.
 | 13 | `confpanic` | 96 | A nil map write, an index, a nil pointer, a division by zero, a failed assertion, a slice bound, and the text of each 1 | Passes |
 | 14 | `confchan` | 64 | A buffered and an unbuffered channel, a closed channel, the 2 result form, a nil channel in a select, a default, a range, len and cap | Passes |
 | 15 | `confgoroutine` | 68 | sync.WaitGroup, sync.Mutex, sync.RWMutex, sync.Once, sync.Map, sync/atomic, and an order that a channel fixes | Passes |
-| 16 | `confgeneric` | 98 | A type parameter, a constraint with a method, a union constraint, the inference, a generic type with a method, any and comparable | Passes |
+| 16 | `confgeneric` | 101 | A type parameter, a constraint with a method, a union constraint, the inference, a generic type with a method, any and comparable | Passes |
 | 17 | `confrange` | 58 | A range over an integer, over a function of 1 and of 2 values, over a string, over a pointer to an array, over a channel | Passes |
 | 18 | `confflow` | 67 | A labeled break and continue, goto, a switch with no condition, fallthrough, a type switch, a select with a default | Passes |
 | 19 | `confassign` | 69 | The order of an assignment of many values, a swap, a read of the old value, the order of the operands, a value of a map | Passes |
@@ -73,7 +77,7 @@ witness under `/tmp/gart-conformance/`.
 
 ### 1. min and max compare a uint64 as signed
 
-**Open.** `internal/emit/call.go`, line 1457, owns the fix.
+**Open.** `internal/emit/call.go`, line 1458, owns the fix.
 
 The witness: `conf-blocked/confminmaxu64`
 
@@ -88,7 +92,7 @@ fmt.Println("max", max(u, v))
 | Go | `min 0` and `max 18446744073709551615` |
 | gart | `min 18446744073709551615` and `max 0` |
 
-The cause: `minMax` of `internal/emit/call.go`, line 1457, writes a call of
+The cause: `minMax` of `internal/emit/call.go`, line 1458, writes a call of
 `$minOf` or of `$maxOf` for each element type. The 2 helpers stand in
 `runtime/goruntime/lib/src/string.dart`, at line 418 and at line 427. Each 1
 compares a `GoInt` with the signed operator `<=` of Dart. A Go `uint64` holds
@@ -146,7 +150,7 @@ fmt.Printf("[%-8v]\n", []int{1, 2})
 | | Output |
 |---|---|
 | Go | `[[1        2       ]]` |
-| gart | `[[1 2]]` |
+| gart | `[[1 2]   ]` |
 
 Go gives the width to each element of a slice, of an array, of a map, and of
 a struct. It gives no width to the whole text. The rule reaches each key and each value of
@@ -323,20 +327,24 @@ func sum[T floating](list []T) T {
 |---|---|
 | Go | `4` for `[]float64{1.5, 2.5}` |
 | gart before | `the operator += reads the type parameter T, and its constraint holds a type that needs a mask of its width` |
-| gart after | equal to Go |
+| gart after | `4` |
 
 A set of integer types already erased to the Dart type `GoInt`. The
 dictionary of the type argument carried the mask of the width. A set of float
-types held no such rule, and the emitter kept the Dart type parameter. The dictionary of `float32` already holds the round of 32 bits, and the
-dictionary of `float64` holds the identity. The same rule thus fits. `dartType` now gives
-`double` for such a set, and `mixedForm` accepts it. `isFloat` reports it, and
-`narrow` reads the mask of the dictionary. Stage 2 rejects only a set that
-mixes an integer type with a narrow float type.
+types held no such rule, and the emitter kept the Dart type parameter.
+
+The dictionary of `float32` already holds the round of 32 bits, and the
+dictionary of `float64` holds the identity. The same rule thus fits.
+`dartType` now gives `double` for such a set, and `mixedForm` accepts it.
+`isFloat` reports it, and `narrow` reads the mask of the dictionary. Stage 2
+rejects only a set that mixes an integer type with a narrow float type.
 
 A constraint that mixes a narrow integer type with a float type stays out. The
 Dart bound of such a set is `num`, and no mask of a narrow width fits that
 bound. `conf-blocked/confmixedparam` holds the witness, and
-`golang.org/x/exp/constraints.Ordered` is such a set.
+`golang.org/x/exp/constraints.Ordered` is such a set. gart writes this cause
+there: `the operator += reads the type parameter T, and its constraint mixes
+an integer type with a float type that needs a mask of its width`.
 
 The witness stays in `testdata/programs/confgeneric`.
 
@@ -405,7 +413,7 @@ fmt.Println(fmt.Errorf("a text: %w", "not an error"))
 | | Output |
 |---|---|
 | Go | `nothing: %!w(<nil>)` and `a text: %!w(string=not an error)` |
-| gart | `nothing: <nil>` and the second line differs too |
+| gart | `nothing: <nil>` and `a text: not an error` |
 
 `%w` accepts an operand that holds the interface `error` only. Each other
 operand writes the bad verb form of Go.
