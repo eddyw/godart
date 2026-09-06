@@ -4263,28 +4263,40 @@ The plan left these points open. The work took the decisions below.
      The Dart output of the compass application: `themes.part.dart` fell from
      139,198 bytes to 8,021, and `types.part.dart` from 69,670 to 53,650.
 
-373. A package variable whose initializer is pure holds that initializer in its
-     own declaration.
+373. A lazy package variable saves 508,896 bytes, and dart2wasm rejects it. The
+     work stays open.
 
-     481,816 of the 527,984 bytes of `unicode` stood inside `$init`, because Go
+     481,816 of the 527,984 bytes of `unicode` stand inside `$init`, because Go
      gives each table its value before `main`. The tree shaker of Dart keeps
      each 1, because `$init` names each 1.
 
      A declaration of the form `late T x = <value>;` runs its initializer at
      the first read, thus the shaker drops the variable and the whole value
      when no code reads it. The move is safe only when the initializer cannot
-     panic and holds no side effect: `pureExpr` of `internal/emit` allows a
-     constant, a zero value, an identifier, a conversion, a unary operator, and
-     a composite literal of those, and it allows no other kind.
+     panic and holds no side effect: a constant, a zero value, an identifier, a
+     conversion, a unary operator, and a composite literal of those.
 
-     A `late` variable that is not final still takes an assignment, thus a
-     package variable that the program writes needs no other rule. An
-     assignment before the first read drops the initializer, and that
-     initializer holds no side effect.
+     **The change works.** A program that reads 1 table of `unicode` gave an
+     ahead of time binary of 7,651,808 bytes before it and 7,142,912 after it.
 
-     A program that reads 1 table of `unicode` gave an ahead of time binary of
-     7,651,808 bytes before the change and 7,142,912 after it, thus 508,896
-     bytes left the snapshot.
+     **dart2wasm stops on it.** `TestWebIO` reports `type 'Call' is not a
+     subtype of type 'Parameter' in type cast` at `Summary.apply` of the type
+     flow analysis, the same message as decision 323. A bisect of 2026-09-06
+     over the packages of `testdata/web/webio` named the cause: 2 map variables
+     of `net/http`, `reqWriteExclude` and `stateName`. The build passes when
+     either 1 of the 2 keeps its place in the init routine, thus the analysis
+     holds a state that 2 such variables together break.
+
+     A map literal builds a `GoMap` with a closure that gives the zero value.
+     A rule that keeps each map literal in the init routine builds under
+     dart2wasm, and it saves 32,832 bytes alone: the 3 maps `Categories`,
+     `Scripts`, and `Properties` of `unicode` name each table, thus an eager
+     map holds each table.
+
+     The next step: `mapNew` of `internal/emit` writes `GoMap<K, V>(() =>
+     <zero>)`, and a top level function in the place of that closure would take
+     the closure out of each lazy initializer. Test the wasm build again after
+     that change.
 
 374. `nodegen` skipped a private field formal, and 8 node types did not compile.
 
