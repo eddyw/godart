@@ -218,6 +218,12 @@ func MapIndex(target, key any) any {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// MapHas reports whether a map value holds the key. An entry that holds a nil
+// interface reads as nil, thus MapIndex alone cannot answer it.
+func MapHas(target, key any) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // MapIterOf gives an iterator over the pairs of a map value. The iterator
 // reads the map itself, thus a clear inside the loop ends the loop.
 func MapIterOf(target any) any {

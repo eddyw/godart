@@ -21,9 +21,10 @@
 // # What the reflect subset changes
 //
 //   - A `reflect.Value` of an interface holds the dynamic value directly. Thus
-//     `encodeInterface` reads `IsValid` in place of `IsNil`, and it takes the
-//     value itself in place of `Elem`. `encode` reads the kind of the base
-//     type, and not the kind of the value.
+//     the encoder reads `Elem().IsValid()` in place of `IsNil`: `IsNil` of the
+//     overlay answers the value inside the interface, and a typed nil pointer
+//     would read as a nil interface. `encode` reads the kind of the base type,
+//     and not the kind of the value.
 //   - `decodeMap` takes a fresh cell for each pair. A write of the overlay
 //     stores the reference of the cell, and a write of Go copies it.
 //   - A decode into a pointer to a pointer whose element is not a struct, for

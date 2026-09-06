@@ -196,15 +196,32 @@ func Count(s, substr string) int {
 }
 
 // Repeat gives s a count of times.
+//
+// A concatenation in a loop builds a fresh text at each step, thus the cost
+// stands at the square of the result. The build below doubles the text, and it
+// reaches the length in a logarithm of the count. TestUnmarshalMaxDepth of
+// encoding/json asks for 3,000,000 parts.
 func Repeat(s string, count int) string {
 	if count < 0 {
 		panic("strings: negative Repeat count")
 	}
-	out := ""
-	for range count {
-		out += s
+	if count == 0 || len(s) == 0 {
+		return ""
 	}
-	return out
+	total := len(s) * count
+	if total/count != len(s) {
+		panic("strings: Repeat output length overflow")
+	}
+	out := make([]byte, 0, total)
+	out = append(out, s...)
+	for len(out) < total {
+		n := len(out)
+		if n > total-n {
+			n = total - n
+		}
+		out = append(out, out[:n]...)
+	}
+	return string(out)
 }
 
 // Join puts sep between each element of elems.

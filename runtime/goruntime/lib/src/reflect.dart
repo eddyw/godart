@@ -144,10 +144,8 @@ void $pointerSet(Iface? pointer, Iface? value) {
     target.v = stored;
     return;
   }
-  if (elem.kind == 'struct') {
-    for (final FieldDesc field in elem.fields) {
-      field.set(target, field.get(stored));
-    }
+  if (_holdsValue(elem)) {
+    _assignInto(target, stored, elem);
     return;
   }
   $panic(
@@ -156,6 +154,73 @@ void $pointerSet(Iface? pointer, Iface? value) {
       GoError('reflect: Set on a pointer to ${elem.display}'),
     ),
   );
+}
+
+/// True for a kind whose Dart form is an object and whose Go form is a value. A
+/// write of such a value copies each part.
+bool _holdsValue(TypeDesc desc) =>
+    desc.kind == 'struct' || desc.kind == 'array';
+
+/// _assignInto writes a value into a location that already holds the object.
+///
+/// Go copies a struct and an array at an assignment, and a field of such a type
+/// holds a value of its own. The Dart form of each 1 is an object, thus a write
+/// of the reference alone joins the 2 values and a later write of the source
+/// reaches the target. The walk below reaches each level.
+///
+/// The object of the target stays, because Go holds the address of a field of
+/// the target and a fresh object would leave that address behind.
+void _assignInto(Object? dst, Object? src, TypeDesc desc) {
+  if (dst == null) return;
+  if (desc.kind == 'array') {
+    final List<Object?> a = dst as List<Object?>;
+    final List<Object?> b = src is List<Object?> ? src : const <Object?>[];
+    final TypeDesc t = desc.elem!();
+    final int n = a.length < b.length ? a.length : b.length;
+    if (!_holdsValue(t)) {
+      a.setRange(0, n, b);
+      return;
+    }
+    for (int i = 0; i < n; i++) {
+      final Object? inner = a[i];
+      if (inner == null) {
+        a[i] = _copyOf(b[i], t);
+        continue;
+      }
+      _assignInto(inner, b[i], t);
+    }
+    return;
+  }
+  for (final FieldDesc field in desc.fields) {
+    final TypeDesc t = field.type();
+    final Object? part = field.get(src);
+    if (!_holdsValue(t)) {
+      field.set(dst, part);
+      continue;
+    }
+    final Object? inner = field.get(dst);
+    if (inner == null) {
+      field.set(dst, _copyOf(part, t));
+      continue;
+    }
+    _assignInto(inner, part, t);
+  }
+}
+
+/// _copyOf gives a fresh value of a struct or of an array, and it reaches each
+/// level. Each other kind holds no object of its own, thus it gives the value
+/// again.
+///
+/// A type that the program never names holds no zero, and the copy then gives
+/// the value itself. Only reflect.StructOf builds such a type.
+Object? _copyOf(Object? v, TypeDesc desc) {
+  if (v == null || !_holdsValue(desc)) return v;
+  final Object? Function()? zero = desc.zero;
+  if (zero == null) return v;
+  final Object? out = zero();
+  if (out == null) return v;
+  _assignInto(out, v, desc);
+  return out;
 }
 
 TypeDesc _pointerElemDesc(Iface? pointer) {
@@ -221,7 +286,17 @@ Iface? $fieldRead(Iface? value, int index) {
 void $fieldWrite(Iface? value, int index, Iface? x) {
   final FieldDesc field = _fieldOf(value, index);
   final TypeDesc type = field.type();
-  field.set(value!.value, type.kind == 'interface' ? x : x?.value);
+  final Object? stored = type.kind == 'interface' ? x : x?.value;
+  if (_holdsValue(type)) {
+    // Go copies a struct and an array into the field, and the address of the
+    // field stays. Read _assignInto.
+    final Object? target = field.get(value!.value);
+    if (target != null) {
+      _assignInto(target, stored, type);
+      return;
+    }
+  }
+  field.set(value!.value, stored);
 }
 
 FieldDesc _fieldOf(Iface? value, int index) {
@@ -280,11 +355,21 @@ void $valueSetIndex(Iface? value, int index, Iface? x) {
   final Object? v = value.value;
   if (v is Slice<Object?>) {
     if (index < 0 || index >= v.len) $panicIndex(index, v.len);
+    final Object? held = v.array[v.off + index];
+    if (_holdsValue(elem) && held != null) {
+      _assignInto(held, stored, elem);
+      return;
+    }
     v.array[v.off + index] = stored;
     return;
   }
   if (v is List<Object?>) {
     if (index < 0 || index >= v.length) $panicIndex(index, v.length);
+    final Object? held = v[index];
+    if (_holdsValue(elem) && held != null) {
+      _assignInto(held, stored, elem);
+      return;
+    }
     v[index] = stored;
     return;
   }
@@ -541,14 +626,32 @@ Map<String, Function> _pointerMethods(TypeDesc elem) {
   for (final MapEntry<String, Function> e in elem.methods.entries) {
     final TypeDesc Function()? type = elem.methodTypes[e.key];
     final Function fn = e.value;
-    out[e.key] = _looseFunc(
-      (List<Object?> args) => <Object?>[
+    if (type == null) {
+      // An unexported method carries no type, thus the result stays dynamic.
+      // Only a call inside the package that declares the type reaches such a
+      // method, and no such call reads this table today.
+      out[e.key] = _looseFunc(
+        (List<Object?> args) => <Object?>[
+          Function.apply(fn, <Object?>[
+            args.isEmpty ? null : _cellValue(args[0]),
+            ...args.skip(1),
+          ]),
+        ],
+        1,
+      );
+      continue;
+    }
+    final TypeDesc sig = type();
+    out[e.key] = _typedResultFunc(
+      sig,
+      (List<Object?> args) => _resultList(
+        sig,
         Function.apply(fn, <Object?>[
           args.isEmpty ? null : _cellValue(args[0]),
           ...args.skip(1),
         ]),
-      ],
-      (type == null ? 0 : type().params.length) + 1,
+      ),
+      sig.params.length + 1,
     );
   }
   return out;
@@ -953,7 +1056,117 @@ Function _typedFunc(TypeDesc sig, List<Object?> Function(List<Object?>) body) {
   final Function Function(List<Object?> Function(List<Object?>))? bind =
       sig.bind;
   if (bind != null) return bind(body);
-  return _looseFunc(body, sig.params.length);
+  return _typedResultFunc(sig, body, sig.params.length);
+}
+
+/// _typedResultFunc gives a closure whose result type is the Dart type of the
+/// results of a signature.
+///
+/// A Dart function type reads a parameter against the other direction, thus a
+/// closure of Object? parameters fits each function type of the same arity. A
+/// result stands the same way as the function, thus a closure that gives
+/// Object? fits no location of a result type. The report of such a cast names
+/// the function type of the closure and the function type of the location.
+///
+/// The description of each result names its Dart type, thus the closure below
+/// carries the exact type. Decision 342 holds the same shape for a parameter.
+Function _typedResultFunc(
+  TypeDesc sig,
+  List<Object?> Function(List<Object?>) body,
+  int arity,
+) {
+  final List<TypeDesc Function()> rs = sig.results;
+  switch (rs.length) {
+    case 0:
+      // A Dart location of a void result accepts each other result type.
+      return _looseFunc(body, arity);
+    case 1:
+      return _withType<Function>(
+        rs[0](),
+        <A>() => _arityFunc<A>((List<Object?> a) => body(a)[0] as A, arity),
+      );
+    case 2:
+      return _withType<Function>(
+        rs[0](),
+        <A>() => _withType<Function>(
+          rs[1](),
+          <B>() => _arityFunc<(A, B)>((List<Object?> a) {
+            final List<Object?> o = body(a);
+            return (o[0] as A, o[1] as B);
+          }, arity),
+        ),
+      );
+    case 3:
+      return _withType<Function>(
+        rs[0](),
+        <A>() => _withType<Function>(
+          rs[1](),
+          <B>() => _withType<Function>(
+            rs[2](),
+            <C>() => _arityFunc<(A, B, C)>((List<Object?> a) {
+              final List<Object?> o = body(a);
+              return (o[0] as A, o[1] as B, o[2] as C);
+            }, arity),
+          ),
+        ),
+      );
+    case 4:
+      return _withType<Function>(
+        rs[0](),
+        <A>() => _withType<Function>(
+          rs[1](),
+          <B>() => _withType<Function>(
+            rs[2](),
+            <C>() => _withType<Function>(
+              rs[3](),
+              <D>() => _arityFunc<(A, B, C, D)>((List<Object?> a) {
+                final List<Object?> o = body(a);
+                return (o[0] as A, o[1] as B, o[2] as C, o[3] as D);
+              }, arity),
+            ),
+          ),
+        ),
+      );
+  }
+  // A method of more than 4 results stands in no package of the surface.
+  return _looseFunc(body, arity);
+}
+
+/// _arityFunc gives a closure of the count of the parameters, and of the result
+/// type R. Each parameter takes the type Object?, which fits each function type
+/// of that arity.
+Function _arityFunc<R>(R Function(List<Object?>) make, int arity) {
+  switch (arity) {
+    case 0:
+      return () => make(const <Object?>[]);
+    case 1:
+      return (Object? a) => make(<Object?>[a]);
+    case 2:
+      return (Object? a, Object? b) => make(<Object?>[a, b]);
+    case 3:
+      return (Object? a, Object? b, Object? c) => make(<Object?>[a, b, c]);
+    case 4:
+      return (Object? a, Object? b, Object? c, Object? d) =>
+          make(<Object?>[a, b, c, d]);
+    case 5:
+      return (Object? a, Object? b, Object? c, Object? d, Object? e) =>
+          make(<Object?>[a, b, c, d, e]);
+    case 6:
+      return (
+        Object? a,
+        Object? b,
+        Object? c,
+        Object? d,
+        Object? e,
+        Object? f,
+      ) => make(<Object?>[a, b, c, d, e, f]);
+  }
+  $panic(
+    Iface(
+      $typeGoError,
+      GoError('reflect: a function of $arity parameters is outside the subset'),
+    ),
+  );
 }
 
 /// _resultList gives the raw results of a call as a list. A call of more than 1
@@ -1185,6 +1398,26 @@ Iface? $mapIndex(Iface? target, Iface? key) {
   final Object? out = m.get(k);
   if (elem == null || elem.kind == 'interface') return out as Iface?;
   return Iface(elem, out);
+}
+
+/// Reports whether a map value holds the key.
+///
+/// An entry that holds a nil interface reads as nil, exactly as a key that the
+/// map does not hold. reflect.Value.MapIndex needs the 2 answers apart, because
+/// Go marks the first 1 valid and the second 1 the zero Value.
+bool $mapHas(Iface? target, Iface? key) {
+  if (target == null) $panicNil();
+  final Object? m = target.value;
+  if (m is! GoMap<Object?, Object?>) {
+    $panic(
+      Iface(
+        $typeGoError,
+        GoError('reflect: MapIndex of ${target.desc.display}'),
+      ),
+    );
+  }
+  final TypeDesc? keyType = target.desc.key?.call();
+  return m.has(keyType?.kind == 'interface' ? key : key?.value);
 }
 
 /// A map of the type.
