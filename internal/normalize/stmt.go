@@ -296,19 +296,53 @@ func (b *builder) define(s *ast.AssignStmt) []ir.Stmt {
 		}
 	}
 	out := b.orderValues(values, s.Pos())
+	// Go reads each value of the right side before the first write. A name of
+	// the left side that already exists takes an assignment, thus a value
+	// that stands behind it could read the new value. `n, m := n+10, n+20`
+	// with an n that already exists holds that shape. A temporary variable
+	// for each value gives the rule of the specification. A list of new names
+	// alone needs no such variable, because no value can read one of them.
+	if len(s.Lhs) > 1 && definesExisting(objs, s.Lhs) {
+		staged := make([]ir.Expr, len(values))
+		for i, lhs := range s.Lhs {
+			if isBlank(lhs) {
+				out = append(out, &ir.ExprStmt{X: values[i]})
+				continue
+			}
+			t := values[i].GoType()
+			v := b.tempVar(s.Rhs[i].Pos(), "a", t)
+			out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: values[i]})
+			staged[i] = &ir.Ident{Name: v.Name, Type: t}
+		}
+		values = staged
+	}
 	for i, lhs := range s.Lhs {
 		switch {
 		case objs[i] != nil:
 			v := b.declareLocal(objs[i], objs[i].Name())
 			out = append(out, &ir.Declare{Vars: []*ir.Var{v}, Init: values[i]})
 		case isBlank(lhs):
-			out = append(out, &ir.ExprStmt{X: values[i]})
+			if values[i] != nil {
+				out = append(out, &ir.ExprStmt{X: values[i]})
+			}
 		default:
 			_, _, set := b.lvalue(lhs)
 			out = append(out, set(values[i]))
 		}
 	}
 	return out
+}
+
+// definesExisting reports whether the left side of a short variable
+// declaration holds a name that already exists. Such a name takes an
+// assignment, and each other name takes a declaration.
+func definesExisting(objs []*types.Var, lhs []ast.Expr) bool {
+	for i := range lhs {
+		if objs[i] == nil && !isBlank(lhs[i]) {
+			return true
+		}
+	}
+	return false
 }
 
 // assignMulti writes the parts of 1 expression with multiple values.

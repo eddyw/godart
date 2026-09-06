@@ -476,6 +476,21 @@ func reflectText(t types.Type) string {
 		return signatureText(t)
 	case *types.Basic:
 		return basicText(t)
+	case *types.Named:
+		// reflect writes the type arguments of an instance with no space
+		// behind a comma: `main.pair[int,string]`. go/types writes 1 space
+		// there, thus the fallback below does not fit an instance.
+		if args := t.TypeArgs(); args != nil && args.Len() > 0 {
+			parts := make([]string, args.Len())
+			for i := range parts {
+				parts[i] = reflectText(args.At(i))
+			}
+			name := t.Obj().Name()
+			if pkg := t.Obj().Pkg(); pkg != nil {
+				name = shortQualifier(pkg) + "." + name
+			}
+			return name + "[" + strings.Join(parts, ",") + "]"
+		}
 	}
 	return types.TypeString(t, shortQualifier)
 }
