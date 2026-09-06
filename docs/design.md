@@ -755,10 +755,22 @@ script and a category reach the program through the 3 maps `Categories`,
 A program of the measure read the emitted Dart, thus the number names an upper
 bound and no shipped gain.
 
-Such a shake stands at the level of the package variable, and it is not the
-shake of this section. gart holds neither proof that it needs: the initializer
-of a variable must hold no side effect, and no `go:linkname` directive may bind
-the variable to another package. The work stays open.
+**A lazy declaration closed the gap on 2026-09-06.** Such a shake stands at the
+level of the package variable, and it is not the shake of this section. gart
+holds neither proof that a name walk needs: the initializer of a variable must
+hold no side effect, and no `go:linkname` directive may bind the variable to
+another package.
+
+The emitter thus moves the work to Dart. A package variable whose initializer
+cannot panic and holds no side effect takes the form `late T x = <value>;`, and
+`$init` names it no more. Dart runs such an initializer at the first read, thus
+the tree shaker of Dart drops the variable and the whole value when no code
+reads it. `pureExpr` of `internal/emit` allows a constant, a zero value, an
+identifier, a conversion, a unary operator, and a composite literal of those.
+
+A program that reads 1 table of `unicode` gave an ahead of time binary of
+7,651,808 bytes before the change and 7,142,912 after it, thus 508,896 bytes
+left the snapshot. Read decision 373.
 
 ## The start time of a large program on the Dart VM
 

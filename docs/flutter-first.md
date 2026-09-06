@@ -258,11 +258,11 @@ since 2026-09-02, and `make flutter-test` runs each 1.
 
 ## The fourth program: a whole application
 
-**The port of `compass_app`.** Done 2026-09-05. `flutter/example/compass`
-holds it. The sample of the Flutter team carries the reference architecture:
-MVVM, a repository for each source, a use case, and a server. The port holds
-1,816 lines of Go against 5,804 lines of Dart, and it needs no package of
-pub.dev and no code generation of a data class.
+**The port of `compass_app`.** Done 2026-09-05, and 1 for 1 since 2026-09-06.
+`flutter/example/compass` holds it. The sample of the Flutter team carries the
+reference architecture: MVVM, a repository for each source, a use case, and a
+server. The port holds 2,675 lines of Go against 5,804 lines of Dart, and it
+needs no code generation of a data class.
 
 It needed 2 items outside the example, and decision 353 holds the 2:
 
@@ -273,13 +273,21 @@ It needed 2 items outside the example, and decision 353 holds the 2:
   posted function starts waited for the next gesture of the user, thus a
   screen that reads the server when it opens read nothing.
 
-`flutter/example/compass/README.md` names each limit that the port could not
-hold. Each 1 stands on a package outside the Flutter SDK, for example
-`go_router` or `shared_preferences`, or on a Flutter API that needs a
-`BuildContext`, for example `showDateRangePicker`. No limit comes from the Go
-subset of the compiler.
+**The port named 8 limits on 2026-09-05, and the work of 2026-09-06 closed each
+1.** The theme, the 2 fonts, the logo, the picture of a network, the share
+sheet, the swipe of a `Dismissible`, the date range dialog, and the snack bar
+each reach a Go program now. The table of
+`flutter/example/compass/README.md` holds the answer of each, and `doc/` holds
+1 picture of each screen.
 
-A widget that carries a callback of its own needs neither. The port opens the 2
-dates of a trip with a page of its own that holds a real `CalendarDatePicker`,
-because `OnDateChanged` gives the day to Go. A dialog that answers through
-`Navigator.pop` reaches no Go value.
+3 mechanisms closed the 8:
+
+- `ui.ThemeStyle` carries a color scheme, a text theme, and the decoration of
+  an input, and the Go tree holds `material.MaterialApp` itself. Read decision
+  367.
+- `ui.Call` carries a call that needs a `BuildContext`, and the node
+  `ui.Anchor` keeps that context. Read decision 370.
+- A pack of `nodegen` reads a package of pub.dev with no change of the reader,
+  and `flutter_svg` proves it. Read decision 371.
+
+No limit came from the Go subset of the compiler.
