@@ -73,6 +73,57 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-06, the twenty-third session
+
+The user parked the name of the project, and asked for each open task end to
+end. The user also asked for a clone of the Flutter sample compass_app that
+holds each part of the sample, and named the goal of a first alpha release:
+the syntax and the features of Go must carry a test. 3 streams ran: this
+session for Flutter, 1 agent for the standard library and the runtime, and 1
+agent for a conformance suite of the Go language.
+
+**The port of compass_app is 1 for 1 now.** The port of 2026-09-05 named 8
+items that it could not hold, and each 1 closed. `ui.ThemeStyle` carries a
+color scheme of 47 colors, a text theme of 15 styles, and the decoration of an
+input, thus a Go program names its own theme and `material.MaterialApp` of the
+Go tree carries it to Flutter. `ui.Call` carries a call that needs a
+`BuildContext`, thus `showDateRangePicker` and the `ScaffoldMessenger` reach
+Go. `flutter_svg` joined the packs of `nodegen`, thus the login screen draws
+the real logo of the sample. `Dismissible` joined the node set, because a
+widget that demands a `Key` now carries a Go field of the type string.
+`tool/shot.dart` writes 1 picture of each of the 8 screens into
+`flutter/example/compass/doc/`.
+
+**The image host of the sample answers 403.** The bucket of the destinations
+and of the activities gives `AccessDenied` to each request, thus the sample
+itself draws no such picture today. The 2 JSON files name a host that answers.
+
+**7 defects of the tools fell.** The font weight table held 7 names, thus a Go
+program that wrote `w600` read no weight and the text drew with the default.
+`nodegen` skipped a private field formal, thus 4 node types did not compile,
+and a callback of 1 enum named a table that `writeEnums` did not write, thus 4
+more did not. An optional key field wrote `ValueKey<String>("")`, thus the
+`center` of a `CustomScrollView` named a sliver that no key carries. `glutter`
+kept the binary of `nodescan` in its cache and it never built it again.
+`BackdropFilter` of the generated set carries no filter, thus each blur of the
+sample drew nothing. The search bar of the results screen wrote the hint in the
+place of the query.
+
+**The value files join the node filter.** `themes.part.dart` of the compass
+output fell from 139,198 bytes to 8,021, and `types.part.dart` from 69,670 to
+53,650.
+
+**The lazy package variable saves 508,896 bytes, and dart2wasm rejects it.**
+The type flow analysis stops with the message of decision 323. A bisect named
+the cause: 2 map variables of `net/http` break it together. The work stays
+open, and decision 373 holds the measure and the next step.
+
+**A conformance suite of 24 programs covers the Go language.** The 24 write
+2,184 labelled lines, and each 1 matches real Go byte for byte. The suite found
+17 defects, and 10 closed. 2 of the 10 give a silent wrong answer: a `range`
+over an array read the array itself, and a short declaration wrote a name in
+front of the read of a later value.
+
 ### 2026-09-06, the twenty-second session
 
 The user asked 3 things: run the memo of the decode against the real
