@@ -149,7 +149,7 @@ func TestThemeRebuildsOnlyTheReaderOfTheTheme(t *testing.T) {
 	})
 	ui.TakeDirty()
 
-	ui.SetTheme(ui.ThemeData{Dark: true, TextSize: 18})
+	ui.SetTheme(ui.HostTheme{Dark: true, TextSize: 18})
 	got := ui.TakeDirty()
 	if len(got) != 1 || got[0] != idThemed {
 		t.Fatalf("a theme change marked %v, want [%d]", got, idThemed)

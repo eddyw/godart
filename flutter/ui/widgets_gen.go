@@ -1064,6 +1064,9 @@ type CustomScrollView struct {
 	// determined by the contents being viewed.
 	ShrinkWrap *bool
 
+	// The first child in the forward growth direction.
+	Center string
+
 	// The relative position of the zero scroll offset.
 	Anchor      *float64
 	CacheExtent *float64
@@ -1224,6 +1227,56 @@ type Directionality struct {
 type DisableWidgetInspectorScope struct {
 	// The widget below this widget in the tree.
 	Child Node
+}
+
+// Dismissible maps Dismissible of package:flutter/widgets.dart.
+//
+// A widget that can be dismissed by dragging in the indicated direction.
+//
+// Direction takes "vertical", "horizontal", "endToStart", "startToEnd", "up", "down", or "none".
+//
+// DragStartBehavior takes "down", or "start".
+//
+// Behavior takes "deferToChild", "opaque", or "translucent".
+type Dismissible struct {
+	// Controls how one widget replaces another widget in the tree.
+	Key string
+
+	// The widget below this widget in the tree.
+	Child Node
+
+	// A widget that is stacked behind the child.
+	Background Node
+
+	// A widget that is stacked behind the child and is exposed when the child
+	// has been dragged up or to the left.
+	SecondaryBackground Node
+
+	// Gives the app an opportunity to confirm or veto a pending dismissal.
+	ConfirmDismiss AskText
+
+	// Called when the widget changes size (i.e., when contracting before being
+	// dismissed).
+	OnResize func()
+
+	// Called when the widget has been dismissed, after finishing resizing.
+	OnDismissed func(string)
+
+	// The direction in which the widget can be dismissed.
+	Direction *string
+
+	// The amount of time the widget will spend contracting before onDismissed
+	// is called.
+	ResizeDuration *int
+
+	// Defines the end offset across the main axis after the card is dismissed.
+	CrossAxisEndOffset *float64
+
+	// Determines the way that drag start behavior is handled.
+	DragStartBehavior *string
+
+	// How to behave during hit tests.
+	Behavior *string
 }
 
 // DisplayFeatureSubScreen maps DisplayFeatureSubScreen of package:flutter/widgets.dart.
@@ -6660,6 +6713,7 @@ func (DefaultTextStyleFallback) IsNode() Mark            { return Mark{} }
 func (DeviceOrientationBuilder) IsNode() Mark            { return Mark{} }
 func (Directionality) IsNode() Mark                      { return Mark{} }
 func (DisableWidgetInspectorScope) IsNode() Mark         { return Mark{} }
+func (Dismissible) IsNode() Mark                         { return Mark{} }
 func (DisplayFeatureSubScreen) IsNode() Mark             { return Mark{} }
 func (DragBoundary) IsNode() Mark                        { return Mark{} }
 func (Draggable) IsNode() Mark                           { return Mark{} }

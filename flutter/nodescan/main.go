@@ -7,6 +7,11 @@
 // that list, and it writes 1 host case for each node type of the list. Read
 // flutter/nodegen/README.md.
 //
+// After the names it writes 1 line for each string constant of the module,
+// with a quotation mark in front. nodegen keeps each 1 that names an icon of
+// Material, and it writes that icon into the host. A Go program thus names an
+// icon with no change of a Dart file.
+//
 // The answer is exact. A regular expression over the source reads a name of a
 // comment, a name of a string, and a name that no code names, and it misses
 // each name that an import alias or a dot import carries. This program reads
@@ -17,6 +22,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go/constant"
 	"go/types"
 	"os"
 	"sort"
@@ -37,7 +43,7 @@ func main() {
 		flag.Usage()
 		os.Exit(2)
 	}
-	names, err := scan(flag.Arg(0), *pkg)
+	names, texts, err := scan(flag.Arg(0), *pkg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "nodescan:", err)
 		os.Exit(1)
@@ -45,6 +51,26 @@ func main() {
 	for _, n := range names {
 		fmt.Println(n)
 	}
+	for _, t := range texts {
+		fmt.Println(`"` + t)
+	}
+}
+
+// iconName reports whether a string constant can name an icon of Material.
+// Such a name holds a lower case letter, a digit, or an underscore, and it
+// starts with a letter.
+func iconName(s string) bool {
+	if len(s) == 0 || len(s) > 64 || s[0] < 'a' || s[0] > 'z' {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // inSet reports whether path names the node package or 1 pack under it. Each
@@ -60,7 +86,7 @@ func inSet(path, pkg string) bool {
 // The load reads each dependency from source, thus a library of another module
 // that builds nodes also reports its types. The node package itself names each
 // 1 of its own types, and the walk skips it for that reason.
-func scan(dir, pkg string) ([]string, error) {
+func scan(dir, pkg string) ([]string, []string, error) {
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedImports | packages.NeedDeps |
 			packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo,
@@ -68,10 +94,10 @@ func scan(dir, pkg string) ([]string, error) {
 	}
 	roots, err := packages.Load(cfg, "./...")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if len(roots) == 0 {
-		return nil, fmt.Errorf("the directory %s holds no package", dir)
+		return nil, nil, fmt.Errorf("the directory %s holds no package", dir)
 	}
 	var bad error
 	packages.Visit(roots, nil, func(p *packages.Package) {
@@ -82,10 +108,11 @@ func scan(dir, pkg string) ([]string, error) {
 		}
 	})
 	if bad != nil {
-		return nil, bad
+		return nil, nil, bad
 	}
 
 	found := map[string]bool{}
+	texts := map[string]bool{}
 	packages.Visit(roots, nil, func(p *packages.Package) {
 		if inSet(p.PkgPath, pkg) || p.TypesInfo == nil {
 			return
@@ -97,11 +124,25 @@ func scan(dir, pkg string) ([]string, error) {
 			}
 			found[name.Name()] = true
 		}
+		for _, tv := range p.TypesInfo.Types {
+			if tv.Value == nil || tv.Value.Kind() != constant.String {
+				continue
+			}
+			v := constant.StringVal(tv.Value)
+			if iconName(v) {
+				texts[v] = true
+			}
+		}
 	})
 	out := make([]string, 0, len(found))
 	for n := range found {
 		out = append(out, n)
 	}
 	sort.Strings(out)
-	return out, nil
+	list := make([]string, 0, len(texts))
+	for n := range texts {
+		list = append(list, n)
+	}
+	sort.Strings(list)
+	return out, list, nil
 }

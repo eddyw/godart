@@ -47,8 +47,56 @@ type Builder func() Node
 //gart:sync
 type ItemBuilder func(int) Node
 
-func (Keyed) IsNode() Mark { return Mark{} }
-func (Watch) IsNode() Mark { return Mark{} }
+func (Keyed) IsNode() Mark      { return Mark{} }
+func (Watch) IsNode() Mark      { return Mark{} }
+func (Anchor) IsNode() Mark     { return Mark{} }
+func (ShaderMask) IsNode() Mark { return Mark{} }
+func (Picture) IsNode() Mark    { return Mark{} }
+
+// AskText runs Go work that the host waits for, and it gives an answer. The
+// text names the value of a Flutter enum, for example the direction of a
+// dismiss. Read the Ask type for the form with no argument.
+type AskText func(string) bool
+
+// Anchor marks the place of the tree where a call of the host runs.
+//
+// DateRange, SnackBar, and each dialog of Flutter need a BuildContext under
+// the application. A Go value holds no such context, thus the host keeps the
+// context of this node while the node stands on the screen. Put 1 Anchor under
+// the Home of the application.
+type Anchor struct {
+	Child Node
+}
+
+// ShaderMask paints the child, and it then puts the gradient over each pixel
+// that the child drew.
+//
+// BlendMode names a value of the Flutter enum BlendMode, for example "srcIn".
+// An empty BlendMode gives "modulate", the default of Flutter. The generated
+// node set holds no ShaderMask, because the constructor of Flutter takes a
+// function that builds a Shader from a Rect.
+type ShaderMask struct {
+	Gradient  Gradient
+	BlendMode string
+	Child     Node
+}
+
+// Picture draws an image, and it gives a node of its own while the image loads
+// and after a failure.
+//
+// The generated Image node holds no such node, because Flutter takes a builder
+// that reads a BuildContext. Fit and BlendMode each name a value of a Flutter
+// enum, for example "cover" and "darken".
+type Picture struct {
+	Image     ImageSource
+	Width     *float64
+	Height    *float64
+	Fit       string
+	Color     *Color
+	BlendMode string
+	Loading   Node
+	Error     Node
+}
 
 // TextInput is a text field whose value Go owns. The host keeps the Flutter
 // controller and the focus across a rebuild that Go drives, thus the cursor

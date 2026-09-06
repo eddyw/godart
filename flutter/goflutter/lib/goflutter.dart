@@ -12,9 +12,18 @@ library;
 
 export 'src/app.dart' show GoApp;
 export 'src/bridge.dart' show GoBridge, rootID;
+export 'src/calls.dart' show goHostCall, goStore;
 export 'src/convert.dart';
 export 'src/host.dart'
-    show GoTextField, GoWatch, GoWidgets, goIcons, goRender, goSetWidgets;
+    show
+        GoAnchor,
+        GoTextField,
+        GoWatch,
+        GoWidgets,
+        goAnchorContext,
+        goIcons,
+        goRender,
+        goSetWidgets;
 export 'src/identity.dart'
     show
         GoIdentities,

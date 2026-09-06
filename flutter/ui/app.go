@@ -62,15 +62,33 @@ func TakeDirty() []int {
 	return out
 }
 
-// ThemeData holds the part of the Flutter theme that a Go build reads. A Go
-// value holds no BuildContext, thus the host reads the theme and writes it
-// here before each build.
-type ThemeData struct {
+// HostTheme holds the part of the Flutter theme that the host reads with
+// Theme.of(context). A Go value holds no BuildContext, thus the host writes it
+// before each build.
+//
+// A program that calls UseTheme reads its own theme through Theme(), and the
+// host value then gives the brightness alone.
+type HostTheme struct {
 	Dark      bool
 	Primary   uint32
 	Surface   uint32
 	OnSurface uint32
 	TextSize  float64
+}
+
+// ThemeData holds the theme that a Go build reads through Theme().
+//
+// A program that calls UseTheme reads the theme that it declared. A program
+// that calls no UseTheme reads the 4 values of the host, and Colors then holds
+// the 3 colors of the host on each field that derives from them.
+type ThemeData struct {
+	Dark     bool
+	Colors   ColorScheme
+	Text     TextTheme
+	TextSize float64
+	// Input holds the input decoration of the theme. It is nil when the
+	// program declared none.
+	Input *InputDecorationStyle
 }
 
 // MediaData holds the part of the media query that a Go build reads.
@@ -87,16 +105,75 @@ type MediaData struct {
 }
 
 var (
-	themeSig Signal[ThemeData]
+	themeSig Signal[HostTheme]
 	mediaSig Signal[MediaData]
+
+	lightTheme *ThemeStyle
+	darkTheme  *ThemeStyle
 )
+
+// UseTheme names the theme of the application. Theme() then gives the theme
+// of the brightness that the host reports.
+//
+// Give the same 2 values to the fields Theme and DarkTheme of
+// material.MaterialApp, thus Flutter draws with the theme that the Go build
+// reads. A nil value for the dark theme makes each brightness read the light
+// theme.
+func UseTheme(light, dark *ThemeStyle) {
+	lightTheme = light
+	darkTheme = dark
+	Dirty()
+}
 
 // Theme gives the current theme, and it records a dependency. A change of the
 // theme rebuilds only the boundaries that read it.
-func Theme() ThemeData { return themeSig.Get() }
+func Theme() ThemeData {
+	h := themeSig.Get()
+	style := lightTheme
+	if h.Dark && darkTheme != nil {
+		style = darkTheme
+	}
+	if style == nil {
+		return hostThemeData(h)
+	}
+	out := ThemeData{Dark: h.Dark, TextSize: h.TextSize, Input: style.InputDecoration}
+	if style.ColorScheme != nil {
+		out.Colors = style.ColorScheme.Resolve()
+	} else {
+		out.Colors = hostThemeData(h).Colors
+	}
+	if style.TextTheme != nil {
+		out.Text = *style.TextTheme
+	}
+	if s := out.Text.BodyMedium; s != nil && s.Size != nil {
+		out.TextSize = *s.Size
+	}
+	return out
+}
 
-// SetTheme writes the theme. The host calls it.
-func SetTheme(t ThemeData) { themeSig.Set(t) }
+// hostThemeData builds the theme of a program that calls no UseTheme. Each
+// color that Flutter derives reads the 3 colors that the host wrote.
+func hostThemeData(h HostTheme) ThemeData {
+	brightness := "light"
+	if h.Dark {
+		brightness = "dark"
+	}
+	c := ColorScheme{
+		Brightness:  brightness,
+		Primary:     Color(h.Primary),
+		OnPrimary:   Color(h.Surface),
+		Secondary:   Color(h.Primary),
+		OnSecondary: Color(h.Surface),
+		Error:       ARGB(0xff, 0xb3, 0x26, 0x1e),
+		OnError:     ARGB(0xff, 0xff, 0xff, 0xff),
+		Surface:     Color(h.Surface),
+		OnSurface:   Color(h.OnSurface),
+	}
+	return ThemeData{Dark: h.Dark, Colors: c.Resolve(), TextSize: h.TextSize}
+}
+
+// SetTheme writes the theme of the host. The host calls it.
+func SetTheme(t HostTheme) { themeSig.Set(t) }
 
 // Media gives the current media query, and it records a dependency.
 func Media() MediaData { return mediaSig.Get() }
@@ -117,7 +194,9 @@ func Reset() {
 	depth = 0
 	pending = nil
 	hostDirty = nil
-	themeSig = Signal[ThemeData]{}
+	themeSig = Signal[HostTheme]{}
+	lightTheme = nil
+	darkTheme = nil
 	mediaSig = Signal[MediaData]{}
 	resetCalls()
 }

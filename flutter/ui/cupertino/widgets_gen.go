@@ -638,29 +638,11 @@ type CupertinoExpansionTile struct {
 	TransitionMode *string
 }
 
-// CupertinoFocusHaloWithRRect maps CupertinoFocusHalo.withRRect of package:cupertino_ui/cupertino_ui.dart.
-//
-// Applies an iOS-style focus border around its child when any of child
-// focus nodes gain focus.
-type CupertinoFocusHaloWithRRect struct {
-	// The child to draw the focused border around.
-	Child ui.Node
-}
-
 // CupertinoFocusHaloWithRect maps CupertinoFocusHalo.withRect of package:cupertino_ui/cupertino_ui.dart.
 //
 // Applies an iOS-style focus border around its child when any of child
 // focus nodes gain focus.
 type CupertinoFocusHaloWithRect struct {
-	// The child to draw the focused border around.
-	Child ui.Node
-}
-
-// CupertinoFocusHaloWithRoundedSuperellipse maps CupertinoFocusHalo.withRoundedSuperellipse of package:cupertino_ui/cupertino_ui.dart.
-//
-// Applies an iOS-style focus border around its child when any of child
-// focus nodes gain focus.
-type CupertinoFocusHaloWithRoundedSuperellipse struct {
 	// The child to draw the focused border around.
 	Child ui.Node
 }
@@ -2154,16 +2136,6 @@ type CupertinoUiCompatibilityBridge struct {
 	Child ui.Node
 }
 
-// CupertinoUserInterfaceLevel maps CupertinoUserInterfaceLevel of package:cupertino_ui/cupertino_ui.dart.
-//
-// Establishes a subtree in which of resolves to the given visual elevation
-// from the CupertinoUserInterfaceLevelData. This can be used to apply style
-// differences based on a widget's elevation.
-type CupertinoUserInterfaceLevel struct {
-	// The widget below this widget in the tree.
-	Child ui.Node
-}
-
 // InheritedCupertinoTheme maps InheritedCupertinoTheme of package:cupertino_ui/cupertino_ui.dart.
 //
 // Provides a CupertinoTheme to all descendants.
@@ -2199,9 +2171,7 @@ func (CupertinoDesktopTextSelectionToolbarButtonButtonItem) IsNode() ui.Mark { r
 func (CupertinoDesktopTextSelectionToolbarButtonText) IsNode() ui.Mark       { return ui.Mark{} }
 func (CupertinoDialogAction) IsNode() ui.Mark                                { return ui.Mark{} }
 func (CupertinoExpansionTile) IsNode() ui.Mark                               { return ui.Mark{} }
-func (CupertinoFocusHaloWithRRect) IsNode() ui.Mark                          { return ui.Mark{} }
 func (CupertinoFocusHaloWithRect) IsNode() ui.Mark                           { return ui.Mark{} }
-func (CupertinoFocusHaloWithRoundedSuperellipse) IsNode() ui.Mark            { return ui.Mark{} }
 func (CupertinoFormRow) IsNode() ui.Mark                                     { return ui.Mark{} }
 func (CupertinoFormSection) IsNode() ui.Mark                                 { return ui.Mark{} }
 func (CupertinoFormSectionInsetGrouped) IsNode() ui.Mark                     { return ui.Mark{} }
@@ -2248,5 +2218,4 @@ func (CupertinoTextSelectionToolbarButtonText) IsNode() ui.Mark              { r
 func (CupertinoTheme) IsNode() ui.Mark                                       { return ui.Mark{} }
 func (CupertinoTimerPicker) IsNode() ui.Mark                                 { return ui.Mark{} }
 func (CupertinoUiCompatibilityBridge) IsNode() ui.Mark                       { return ui.Mark{} }
-func (CupertinoUserInterfaceLevel) IsNode() ui.Mark                          { return ui.Mark{} }
 func (InheritedCupertinoTheme) IsNode() ui.Mark                              { return ui.Mark{} }

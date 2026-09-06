@@ -42,7 +42,7 @@ final class CompassBridge implements GoBridge {
     required double textSize,
   }) {
     ui.SetTheme(
-      ui.ThemeData$(dark, $gi(primary), $gi(surface), $gi(onSurface), textSize),
+      ui.HostTheme$(dark, $gi(primary), $gi(surface), $gi(onSurface), textSize),
     );
   }
 

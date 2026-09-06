@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:goruntime/goruntime.dart';
 
 import 'bridge.dart';
+import 'calls.dart';
 import 'identity.dart';
 
 /// GoRuntime drives 1 Go library from Flutter.
@@ -98,16 +99,11 @@ final class GoRuntime {
   Future<void> _answer(int id, String name, String arg) async {
     String value = '';
     String error = '';
-    final GoCall? handler = goCallHandler;
-    if (handler == null) {
-      error = 'the application holds no handler of the call $name. '
-          'Call goSetCall before runApp.';
-    } else {
-      try {
-        value = await handler(name, arg);
-      } catch (e) {
-        error = e.toString();
-      }
+    final GoCall handler = goCallHandler ?? goHostCall;
+    try {
+      value = await handler(name, arg);
+    } catch (e) {
+      error = e.toString();
     }
     bridge.answer(id, value, error);
     tick();
@@ -140,6 +136,10 @@ GoCall? goCallHandler;
 /// A Go tree carries no call of Dart, thus a date picker, a share sheet, a
 /// dialog with an answer, and each plugin of a platform channel reach Go
 /// through this handler. Read flutter/ui/ask.go.
+///
+/// goHostCall answers each call of flutter/ui/calls.go, and it runs when the
+/// application installs no handler. A handler of the application answers its
+/// own names first, and it gives each other name to goHostCall.
 void goSetCall(GoCall f) {
   goCallHandler = f;
 }

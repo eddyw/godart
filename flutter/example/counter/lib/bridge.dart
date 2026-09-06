@@ -42,7 +42,7 @@ final class CounterBridge implements GoBridge {
     required double textSize,
   }) {
     ui.SetTheme(
-      ui.ThemeData$(
+      ui.HostTheme$(
         dark,
         $gi(primary),
         $gi(surface),

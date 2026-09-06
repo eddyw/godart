@@ -45,17 +45,24 @@ const packs = <Pack>[
       'gart.dev/ui/material', 'material'),
   Pack('package:cupertino_ui/cupertino_ui.dart', 'cupertino_ui',
       'gart.dev/ui/cupertino', 'cupertino'),
+  Pack('package:flutter_svg/flutter_svg.dart', 'flutter_svg',
+      'gart.dev/ui/svg', 'svg'),
 ];
 
 /// corePack holds the widgets of the Flutter framework, and the hand written
 /// nodes of flutter/ui stand beside them.
 final Pack corePack = packs[0];
 
+/// materialPack holds the widgets of Material. The icon table of the host
+/// reads the class Icons of that package.
+final Pack materialPack = packs[1];
+
 /// The libraries that the generated host may import, in the order of the
 /// search. A name that no 1 of them exports does not compile in the host, thus
 /// the reader drops the field that reads it.
 const candidates = <String>[
   'package:material_ui/material_ui.dart',
+  'package:flutter_svg/flutter_svg.dart',
   'package:cupertino_ui/cupertino_ui.dart',
   'package:flutter/widgets.dart',
   'package:flutter/painting.dart',
@@ -191,6 +198,11 @@ class Reading {
 
   /// needed holds each library that the generated host must import.
   final needed = <String>{};
+
+  /// icons holds the name of each icon of the Material set. nodescan gives the
+  /// string constants of the application, and the host keeps each 1 that this
+  /// set holds.
+  final icons = <String>{};
 }
 
 /// read walks the library of each pack and maps each widget constructor.
@@ -209,6 +221,19 @@ Future<Reading> read(String root) async {
     }
   }
 
+  final iconLib = await session.getLibraryByUri(materialPack.uri);
+  if (iconLib is LibraryElementResult) {
+    final Object? icons = iconLib.element.exportNamespace.definedNames2['Icons'];
+    if (icons is ClassElement) {
+      for (final f in icons.fields) {
+        final n = f.name;
+        if (n == null || n.startsWith('_') || !f.isStatic) continue;
+        if (f.type.getDisplayString() != 'IconData') continue;
+        out.icons.add(n);
+      }
+    }
+  }
+
   for (final pack in packs) {
     final result = await session.getLibraryByUri(pack.uri);
     if (result is! LibraryElementResult) {
@@ -223,10 +248,6 @@ Future<Reading> read(String root) async {
       if (_skip.contains(name)) continue;
       for (final ctor in element.constructors) {
         if (!ctor.isPublic) continue;
-        if (ctor.formalParameters
-            .any((p) => p.name == 'key' && p.isRequired)) {
-          continue;
-        }
         final goName = goStructName(name, ctor.name ?? '');
         if (!seen.add(goName)) continue;
         readCtor(out, pack, name, ctor, goName, docsOf(element));
@@ -249,8 +270,20 @@ void readCtor(
   final needed = <String>{};
   for (final p in ctor.formalParameters) {
     final pname = p.name;
-    if (pname == null || pname.startsWith('_')) continue;
-    if (pname == 'key') continue;
+    if (pname == null || pname.startsWith('_')) {
+      // A private field formal, for example `required this._borderRadius` of
+      // CupertinoFocusHalo.withRRect. No code outside the library can name it,
+      // thus a constructor that demands 1 reaches no host.
+      if (p.isRequired) {
+        out.skipped.add(Skipped(goName, pname ?? '?', 'a private name'));
+        return;
+      }
+      continue;
+    }
+    // A widget carries an optional key, and ui.Keyed gives that key to any
+    // child. A widget that demands a key, for example Dismissible, needs the
+    // key on itself, thus the node holds 1 field of its own.
+    if (pname == 'key' && !p.isRequired) continue;
     final nullable = p.type.nullabilitySuffix == NullabilitySuffix.question;
     final go = mapType(out, p.type);
     if (go == null) {
@@ -359,6 +392,7 @@ class GoType {
 
 const _scalars = <String, GoType>{
   'String': GoType('string', 'str'),
+  'Key': GoType('string', 'valueKey', pointer: false),
   'double': GoType('float64', 'f64'),
   'int': GoType('int', 'i64'),
   'bool': GoType('bool', 'boolean'),
@@ -617,6 +651,14 @@ GoType? mapFunction(Reading out, FunctionType t) {
   }
   if (ret == 'Future<bool>' && params.isEmpty) {
     return const GoType('Ask', 'ask', pointer: false);
+  }
+  // The same work with 1 enum argument, for example the confirmDismiss of a
+  // Dismissible. The Go side reads the name of the value of that enum.
+  if (ret == 'Future<bool>' && params.length == 1) {
+    final arg = mapType(out, params.first.type);
+    if (arg != null && arg.kind.startsWith('enum:')) {
+      return const GoType('AskText', 'askText', pointer: false);
+    }
   }
   if (ret == 'Widget') {
     if (kinds.length == 1 && kinds.first == 'BuildContext') {

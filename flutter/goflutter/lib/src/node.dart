@@ -292,6 +292,12 @@ final class GoNode {
     return v is bool Function() ? v : null;
   }
 
+  /// askText gives a `func(string) bool` field.
+  bool Function(GoString)? askText(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    return v is bool Function(GoString) ? v : null;
+  }
+
   /// buildText gives a `func(string) Node` field.
   Iface? Function(GoString)? buildText(String name, [int at = noAt]) {
     final Object? v = raw(name, at);

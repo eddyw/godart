@@ -78,31 +78,44 @@ Future<void> main(List<String> args) async {
 
     case 'host':
       final only = await readNames(args[3]);
-      File(args[2]).writeAsStringSync(writeDart(r, only: only));
+      final texts = only == null ? null : only.$1;
+      File(args[2]).writeAsStringSync(
+        writeDart(r, only: only?.$2, texts: texts),
+      );
       if (only == null) {
         stdout.writeln('${args[2]} holds a case for each of the '
             '${r.widgets.length} node types');
         return;
       }
-      final kept = r.widgets.where((w) => only.contains(w.goName)).length;
+      final kept = r.widgets.where((w) => only.$2.contains(w.goName)).length;
+      final icons = only.$1.where(r.icons.contains).length;
       stdout.writeln('${args[2]} holds $kept cases of the '
-          '${only.length} names that ${args[3]} gives');
+          '${only.$2.length} names that ${args[3]} gives, and $icons icons');
   }
 }
 
-/// readNames gives the node types that the host must build.
+/// readNames gives the string constants and the node types that the host must
+/// build.
 ///
-/// The source holds 1 name for each line. A dash reads the standard input, and
-/// -all gives no set, thus the host holds a case for each node type.
-Future<Set<String>?> readNames(String source) async {
+/// The source holds 1 name for each line. A line with a quotation mark in
+/// front holds a string constant of the application. A dash reads the standard
+/// input, and -all gives no set, thus the host holds a case for each node
+/// type.
+Future<(Set<String>, Set<String>)?> readNames(String source) async {
   if (source == '-all') return null;
   final text = source == '-'
       ? await stdin.transform(utf8.decoder).join()
       : File(source).readAsStringSync();
-  final out = <String>{};
+  final names = <String>{};
+  final texts = <String>{};
   for (final line in const LineSplitter().convert(text)) {
     final name = line.trim();
-    if (name.isNotEmpty) out.add(name);
+    if (name.isEmpty) continue;
+    if (name.startsWith('"')) {
+      texts.add(name.substring(1));
+      continue;
+    }
+    names.add(name);
   }
-  return out;
+  return (texts, names);
 }

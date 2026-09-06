@@ -65,6 +65,7 @@ type TextStyle struct {
 	Height        *float64
 	Decoration    string
 	Family        string
+	Shadows       []Shadow
 }
 
 // BorderSide holds 1 edge of a border. A nil field takes the default of
@@ -363,6 +364,155 @@ type ThemeStyle struct {
 	FontFamily         string
 	Density            *Density
 	IconStyle          *IconStyle
+	ColorScheme        *ColorScheme
+	TextTheme          *TextTheme
+	InputDecoration    *InputDecorationStyle
+}
+
+// ColorScheme holds each color of the Flutter ColorScheme.
+//
+// Brightness takes "light" or "dark". The 8 colors after it and Brightness are
+// the set that the Flutter constructor demands. Each other field is a pointer,
+// and a nil pointer takes the color that Flutter derives. Resolve gives that
+// derived value, thus a Go build reads no transparent color for a field that
+// the program left out.
+type ColorScheme struct {
+	Brightness  string
+	Primary     Color
+	OnPrimary   Color
+	Secondary   Color
+	OnSecondary Color
+	Error       Color
+	OnError     Color
+	Surface     Color
+	OnSurface   Color
+
+	PrimaryContainer        *Color
+	OnPrimaryContainer      *Color
+	PrimaryFixed            *Color
+	PrimaryFixedDim         *Color
+	OnPrimaryFixed          *Color
+	OnPrimaryFixedVariant   *Color
+	SecondaryContainer      *Color
+	OnSecondaryContainer    *Color
+	SecondaryFixed          *Color
+	SecondaryFixedDim       *Color
+	OnSecondaryFixed        *Color
+	OnSecondaryFixedVariant *Color
+	Tertiary                *Color
+	OnTertiary              *Color
+	TertiaryContainer       *Color
+	OnTertiaryContainer     *Color
+	TertiaryFixed           *Color
+	TertiaryFixedDim        *Color
+	OnTertiaryFixed         *Color
+	OnTertiaryFixedVariant  *Color
+	ErrorContainer          *Color
+	OnErrorContainer        *Color
+	SurfaceDim              *Color
+	SurfaceBright           *Color
+	SurfaceContainerLowest  *Color
+	SurfaceContainerLow     *Color
+	SurfaceContainer        *Color
+	SurfaceContainerHigh    *Color
+	SurfaceContainerHighest *Color
+	OnSurfaceVariant        *Color
+	Outline                 *Color
+	OutlineVariant          *Color
+	Shadow                  *Color
+	Scrim                   *Color
+	InverseSurface          *Color
+	OnInverseSurface        *Color
+	InversePrimary          *Color
+	SurfaceTint             *Color
+}
+
+// pick gives the color of the pointer, or the fallback when the pointer is
+// nil.
+func pick(v *Color, fallback Color) Color {
+	if v == nil {
+		return fallback
+	}
+	return *v
+}
+
+// Resolve gives a color scheme whose each field holds a color. It follows the
+// derivation of the Flutter ColorScheme, thus a field that the program left
+// out reads the same value that Flutter draws.
+func (c ColorScheme) Resolve() ColorScheme {
+	out := c
+	if out.Brightness == "" {
+		out.Brightness = "light"
+	}
+	set := func(dst **Color, v Color) { *dst = P(v) }
+
+	set(&out.PrimaryContainer, pick(c.PrimaryContainer, c.Primary))
+	set(&out.OnPrimaryContainer, pick(c.OnPrimaryContainer, c.OnPrimary))
+	set(&out.PrimaryFixed, pick(c.PrimaryFixed, c.Primary))
+	set(&out.PrimaryFixedDim, pick(c.PrimaryFixedDim, c.Primary))
+	set(&out.OnPrimaryFixed, pick(c.OnPrimaryFixed, c.OnPrimary))
+	set(&out.OnPrimaryFixedVariant, pick(c.OnPrimaryFixedVariant, c.OnPrimary))
+
+	set(&out.SecondaryContainer, pick(c.SecondaryContainer, c.Secondary))
+	set(&out.OnSecondaryContainer, pick(c.OnSecondaryContainer, c.OnSecondary))
+	set(&out.SecondaryFixed, pick(c.SecondaryFixed, c.Secondary))
+	set(&out.SecondaryFixedDim, pick(c.SecondaryFixedDim, c.Secondary))
+	set(&out.OnSecondaryFixed, pick(c.OnSecondaryFixed, c.OnSecondary))
+	set(&out.OnSecondaryFixedVariant, pick(c.OnSecondaryFixedVariant, c.OnSecondary))
+
+	tertiary := pick(c.Tertiary, c.Secondary)
+	onTertiary := pick(c.OnTertiary, c.OnSecondary)
+	set(&out.Tertiary, tertiary)
+	set(&out.OnTertiary, onTertiary)
+	set(&out.TertiaryContainer, pick(c.TertiaryContainer, tertiary))
+	set(&out.OnTertiaryContainer, pick(c.OnTertiaryContainer, onTertiary))
+	set(&out.TertiaryFixed, pick(c.TertiaryFixed, tertiary))
+	set(&out.TertiaryFixedDim, pick(c.TertiaryFixedDim, tertiary))
+	set(&out.OnTertiaryFixed, pick(c.OnTertiaryFixed, onTertiary))
+	set(&out.OnTertiaryFixedVariant, pick(c.OnTertiaryFixedVariant, onTertiary))
+
+	set(&out.ErrorContainer, pick(c.ErrorContainer, c.Error))
+	set(&out.OnErrorContainer, pick(c.OnErrorContainer, c.OnError))
+
+	set(&out.SurfaceDim, pick(c.SurfaceDim, c.Surface))
+	set(&out.SurfaceBright, pick(c.SurfaceBright, c.Surface))
+	set(&out.SurfaceContainerLowest, pick(c.SurfaceContainerLowest, c.Surface))
+	set(&out.SurfaceContainerLow, pick(c.SurfaceContainerLow, c.Surface))
+	set(&out.SurfaceContainer, pick(c.SurfaceContainer, c.Surface))
+	set(&out.SurfaceContainerHigh, pick(c.SurfaceContainerHigh, c.Surface))
+	set(&out.SurfaceContainerHighest, pick(c.SurfaceContainerHighest, c.Surface))
+	set(&out.OnSurfaceVariant, pick(c.OnSurfaceVariant, c.OnSurface))
+
+	outline := pick(c.Outline, c.OnSurface)
+	set(&out.Outline, outline)
+	set(&out.OutlineVariant, pick(c.OutlineVariant, c.OnSurface))
+	set(&out.Shadow, pick(c.Shadow, ARGB(0xff, 0, 0, 0)))
+	set(&out.Scrim, pick(c.Scrim, ARGB(0xff, 0, 0, 0)))
+	set(&out.InverseSurface, pick(c.InverseSurface, c.OnSurface))
+	set(&out.OnInverseSurface, pick(c.OnInverseSurface, c.Surface))
+	set(&out.InversePrimary, pick(c.InversePrimary, c.OnPrimary))
+	set(&out.SurfaceTint, pick(c.SurfaceTint, c.Primary))
+	return out
+}
+
+// TextTheme holds the 15 named text styles of the Flutter TextTheme. A nil
+// field takes the style of the Material default.
+type TextTheme struct {
+	DisplayLarge   *TextStyle
+	DisplayMedium  *TextStyle
+	DisplaySmall   *TextStyle
+	HeadlineLarge  *TextStyle
+	HeadlineMedium *TextStyle
+	HeadlineSmall  *TextStyle
+	TitleLarge     *TextStyle
+	TitleMedium    *TextStyle
+	TitleSmall     *TextStyle
+	BodyLarge      *TextStyle
+	BodyMedium     *TextStyle
+	BodySmall      *TextStyle
+	LabelLarge     *TextStyle
+	LabelMedium    *TextStyle
+	LabelSmall     *TextStyle
 }
 
 // MenuButtonItem holds 1 button of a text selection toolbar.

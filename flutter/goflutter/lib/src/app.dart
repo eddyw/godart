@@ -12,6 +12,16 @@ import 'runtime.dart';
 ///
 /// It runs the init of the Go library, it gives the theme and the media query
 /// to the Go build, and it rebuilds each boundary that the Go graph marks.
+///
+/// The Go tree can also hold the whole application:
+///
+///     void main() {
+///       runApp(GoApp(bridge: CompassBridge()));
+///     }
+///
+/// The root node of Go is then material.MaterialApp, and the Go program names
+/// its own theme with ui.UseTheme. This widget reads the brightness of the
+/// platform, because it stands above the MaterialApp of the tree.
 final class GoApp extends StatefulWidget {
   final GoBridge bridge;
 
@@ -41,10 +51,21 @@ class _GoAppState extends State<GoApp> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // The Go tree can hold the MaterialApp itself, thus this widget can stand
+    // above each inherited widget of Flutter. The 2 reads below then take the
+    // value of the view, and the theme takes the default of Material.
     final ThemeData t = Theme.of(context);
-    final MediaQueryData m = MediaQuery.of(context);
+    final MediaQueryData? inherited = MediaQuery.maybeOf(context);
+    final MediaQueryData m =
+        inherited ?? MediaQueryData.fromView(View.of(context));
+    // No MediaQuery stands above this widget when the Go tree holds the
+    // MaterialApp. Theme.of then gives the default of Material, thus the
+    // brightness comes from the platform.
+    final bool dark = inherited != null
+        ? t.brightness == Brightness.dark
+        : m.platformBrightness == Brightness.dark;
     widget.bridge.setTheme(
-      dark: t.brightness == Brightness.dark,
+      dark: dark,
       primary: t.colorScheme.primary.toARGB32(),
       surface: t.colorScheme.surface.toARGB32(),
       onSurface: t.colorScheme.onSurface.toARGB32(),

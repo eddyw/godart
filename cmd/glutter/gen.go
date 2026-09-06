@@ -86,7 +86,21 @@ func (a *app) filter() (load.Filter, error) {
 		// The application reads no node module, thus no pack stands here.
 		return nil, nil
 	}
-	return nodefilter.Sources(root, strings.Fields(names))
+	return nodefilter.Sources(root, typeNames(names))
+}
+
+// typeNames keeps the node types of the answer of the scan. A line with a
+// quotation mark in front holds a string constant of the module, and nodegen
+// alone reads such a line.
+func typeNames(names string) []string {
+	out := make([]string, 0, 64)
+	for _, line := range strings.Fields(names) {
+		if strings.HasPrefix(line, `"`) {
+			continue
+		}
+		out = append(out, line)
+	}
+	return out
 }
 
 // cacheDir holds the state of glutter for 1 application.

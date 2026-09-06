@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:goruntime/goruntime.dart';
 
+import 'convert.dart';
 import 'identity.dart';
 import 'node.dart';
 import 'runtime.dart';
@@ -35,6 +36,36 @@ final Map<String, IconData> goIcons = <String, IconData>{
 typedef GoWidgets = Widget? Function(GoNode n, GoRuntime rt);
 
 GoWidgets? _widgets;
+
+/// goAnchorContext holds the BuildContext of the Anchor node of the tree.
+///
+/// showDateRangePicker, a dialog, and a snack bar each need a context under
+/// the application. Read the Anchor node of flutter/ui/node.go.
+BuildContext? goAnchorContext;
+
+/// GoAnchor keeps its own context while it stands on the screen.
+final class GoAnchor extends StatefulWidget {
+  final Widget child;
+
+  const GoAnchor({super.key, required this.child});
+
+  @override
+  State<GoAnchor> createState() => _GoAnchorState();
+}
+
+class _GoAnchorState extends State<GoAnchor> {
+  @override
+  void dispose() {
+    if (identical(goAnchorContext, context)) goAnchorContext = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    goAnchorContext = context;
+    return widget.child;
+  }
+}
 
 /// goSetWidgets installs the generated node set of the application.
 ///
@@ -82,6 +113,46 @@ Widget goRender(Iface? node, GoRuntime rt) {
           final int i = keys.indexOf(key.value);
           if (i >= 0) onPop(i);
         },
+      );
+
+    case 'gart.dev/ui.Anchor':
+      return GoAnchor(child: goRender(n.child('Child', 0), rt));
+
+    case 'gart.dev/ui.ShaderMask':
+      final Widget child = goRender(n.child('Child', 2), rt);
+      final Gradient? paint = goGradient(n.nested('Gradient', 0));
+      if (paint == null) return child;
+      return ShaderMask(
+        blendMode:
+            goEnumValue<BlendMode>(BlendMode.values, n.text('BlendMode', 1)) ??
+            BlendMode.modulate,
+        shaderCallback: (Rect bounds) => paint.createShader(bounds),
+        child: child,
+      );
+
+    case 'gart.dev/ui.Picture':
+      final ImageProvider<Object>? source = goImage(n.nested('Image', 0));
+      if (source == null) return const SizedBox.shrink();
+      final Iface? loading = n.child('Loading', 6);
+      final Iface? failed = n.child('Error', 7);
+      return Image(
+        image: source,
+        width: n.sizeOpt('Width', 1),
+        height: n.sizeOpt('Height', 2),
+        fit: goEnumValue<BoxFit>(BoxFit.values, n.text('Fit', 3)),
+        color: goColorOpt(n.countOpt('Color', 4)),
+        colorBlendMode: goEnumValue<BlendMode>(
+          BlendMode.values,
+          n.text('BlendMode', 5),
+        ),
+        errorBuilder: failed == null
+            ? null
+            : (BuildContext c, Object e, StackTrace? t) =>
+                  goRender(failed, rt),
+        frameBuilder: loading == null
+            ? null
+            : (BuildContext c, Widget child, int? frame, bool sync) =>
+                  frame == null && !sync ? goRender(loading, rt) : child,
       );
 
     case 'gart.dev/ui.TextInput':

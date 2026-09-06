@@ -8123,15 +8123,6 @@ type TextFormField struct {
 	CanRequestFocus               *bool
 }
 
-// TextSelectionTheme maps TextSelectionTheme of package:material_ui/material_ui.dart.
-//
-// An inherited widget that defines the appearance of text selection in this
-// widget's subtree.
-type TextSelectionTheme struct {
-	// The properties for descendant TextField and SelectableText widgets.
-	Data ui.TextSelectionStyle
-}
-
 // TextSelectionToolbar maps TextSelectionToolbar of package:material_ui/material_ui.dart.
 //
 // A fully-functional Material-style text selection toolbar.
@@ -8704,7 +8695,6 @@ func (TextButtonIcon) IsNode() ui.Mark                          { return ui.Mark
 func (TextButtonTheme) IsNode() ui.Mark                         { return ui.Mark{} }
 func (TextField) IsNode() ui.Mark                               { return ui.Mark{} }
 func (TextFormField) IsNode() ui.Mark                           { return ui.Mark{} }
-func (TextSelectionTheme) IsNode() ui.Mark                      { return ui.Mark{} }
 func (TextSelectionToolbar) IsNode() ui.Mark                    { return ui.Mark{} }
 func (TextSelectionToolbarTextButton) IsNode() ui.Mark          { return ui.Mark{} }
 func (TimePickerDialog) IsNode() ui.Mark                        { return ui.Mark{} }

@@ -32,9 +32,23 @@ Color? goColorOpt(int? argb) => argb == null ? null : Color(argb);
 Duration? goMillis(int? ms) =>
     ms == null ? null : Duration(milliseconds: ms);
 
-/// goIcon reads the name of an icon. An application adds a name to goIcons.
-IconData? goIcon(String? name) =>
-    name == null || name.isEmpty ? null : goIcons[name];
+/// goIcon reads the name of an icon.
+///
+/// nodegen writes each icon that a string constant of the Go source names, and
+/// goGenInstall puts that set into goIcons. A name that the Go source builds at
+/// run time reaches no such constant, thus the application adds it to goIcons
+/// itself. An unknown name reports its own name, because a silent empty icon
+/// reads as a defect of the layout.
+IconData? goIcon(String? name) {
+  if (name == null || name.isEmpty) return null;
+  final IconData? out = goIcons[name];
+  if (out == null) {
+    throw StateError('the host holds no icon of the name $name. '
+        'Add it to goIcons, or name it with a string constant of the Go '
+        'source.');
+  }
+  return out;
+}
 
 /// goChildOpt builds 1 child, and it gives null when the Go field holds no
 /// node. A required child then reports its own name.
@@ -122,12 +136,25 @@ BoxConstraints? goConstraints(GoNode? n) {
 
 const Map<String, FontWeight> _weights = <String, FontWeight>{
   'thin': FontWeight.w100,
+  'extralight': FontWeight.w200,
   'light': FontWeight.w300,
   'normal': FontWeight.w400,
   'medium': FontWeight.w500,
   'semibold': FontWeight.w600,
   'bold': FontWeight.w700,
+  'extrabold': FontWeight.w800,
   'black': FontWeight.w900,
+  // Flutter names each weight w100 to w900. A Go program that reads the
+  // Flutter documentation writes such a name, thus the table holds each 1.
+  'w100': FontWeight.w100,
+  'w200': FontWeight.w200,
+  'w300': FontWeight.w300,
+  'w400': FontWeight.w400,
+  'w500': FontWeight.w500,
+  'w600': FontWeight.w600,
+  'w700': FontWeight.w700,
+  'w800': FontWeight.w800,
+  'w900': FontWeight.w900,
 };
 
 const Map<String, TextDecoration> _decorations = <String, TextDecoration>{
@@ -670,20 +697,109 @@ List<Step> goSteps(List<GoNode> list, GoRuntime rt) => <Step>[
   for (final GoNode n in list) goStep(n, rt)!,
 ];
 
+/// goColorScheme reads the ColorScheme struct of the Go side.
+///
+/// The Go side resolves each color that Flutter derives, thus a nil field
+/// reaches this call as the derived color and no field stays null.
+ColorScheme? goColorScheme(GoNode? n) {
+  if (n == null) return null;
+  Color at(String name, int i) => Color(n.count(name, i));
+  Color? opt(String name, int i) => goColorOpt(n.countOpt(name, i));
+  return ColorScheme(
+    brightness: n.text('Brightness', 0) == 'dark'
+        ? Brightness.dark
+        : Brightness.light,
+    primary: at('Primary', 1),
+    onPrimary: at('OnPrimary', 2),
+    secondary: at('Secondary', 3),
+    onSecondary: at('OnSecondary', 4),
+    error: at('Error', 5),
+    onError: at('OnError', 6),
+    surface: at('Surface', 7),
+    onSurface: at('OnSurface', 8),
+    primaryContainer: opt('PrimaryContainer', 9),
+    onPrimaryContainer: opt('OnPrimaryContainer', 10),
+    primaryFixed: opt('PrimaryFixed', 11),
+    primaryFixedDim: opt('PrimaryFixedDim', 12),
+    onPrimaryFixed: opt('OnPrimaryFixed', 13),
+    onPrimaryFixedVariant: opt('OnPrimaryFixedVariant', 14),
+    secondaryContainer: opt('SecondaryContainer', 15),
+    onSecondaryContainer: opt('OnSecondaryContainer', 16),
+    secondaryFixed: opt('SecondaryFixed', 17),
+    secondaryFixedDim: opt('SecondaryFixedDim', 18),
+    onSecondaryFixed: opt('OnSecondaryFixed', 19),
+    onSecondaryFixedVariant: opt('OnSecondaryFixedVariant', 20),
+    tertiary: opt('Tertiary', 21),
+    onTertiary: opt('OnTertiary', 22),
+    tertiaryContainer: opt('TertiaryContainer', 23),
+    onTertiaryContainer: opt('OnTertiaryContainer', 24),
+    tertiaryFixed: opt('TertiaryFixed', 25),
+    tertiaryFixedDim: opt('TertiaryFixedDim', 26),
+    onTertiaryFixed: opt('OnTertiaryFixed', 27),
+    onTertiaryFixedVariant: opt('OnTertiaryFixedVariant', 28),
+    errorContainer: opt('ErrorContainer', 29),
+    onErrorContainer: opt('OnErrorContainer', 30),
+    surfaceDim: opt('SurfaceDim', 31),
+    surfaceBright: opt('SurfaceBright', 32),
+    surfaceContainerLowest: opt('SurfaceContainerLowest', 33),
+    surfaceContainerLow: opt('SurfaceContainerLow', 34),
+    surfaceContainer: opt('SurfaceContainer', 35),
+    surfaceContainerHigh: opt('SurfaceContainerHigh', 36),
+    surfaceContainerHighest: opt('SurfaceContainerHighest', 37),
+    onSurfaceVariant: opt('OnSurfaceVariant', 38),
+    outline: opt('Outline', 39),
+    outlineVariant: opt('OutlineVariant', 40),
+    shadow: opt('Shadow', 41),
+    scrim: opt('Scrim', 42),
+    inverseSurface: opt('InverseSurface', 43),
+    onInverseSurface: opt('OnInverseSurface', 44),
+    inversePrimary: opt('InversePrimary', 45),
+    surfaceTint: opt('SurfaceTint', 46),
+  );
+}
+
+/// goTextTheme reads the TextTheme struct of the Go side.
+TextTheme? goTextTheme(GoNode? n) {
+  if (n == null) return null;
+  return TextTheme(
+    displayLarge: goTextStyle(n.nested('DisplayLarge', 0)),
+    displayMedium: goTextStyle(n.nested('DisplayMedium', 1)),
+    displaySmall: goTextStyle(n.nested('DisplaySmall', 2)),
+    headlineLarge: goTextStyle(n.nested('HeadlineLarge', 3)),
+    headlineMedium: goTextStyle(n.nested('HeadlineMedium', 4)),
+    headlineSmall: goTextStyle(n.nested('HeadlineSmall', 5)),
+    titleLarge: goTextStyle(n.nested('TitleLarge', 6)),
+    titleMedium: goTextStyle(n.nested('TitleMedium', 7)),
+    titleSmall: goTextStyle(n.nested('TitleSmall', 8)),
+    bodyLarge: goTextStyle(n.nested('BodyLarge', 9)),
+    bodyMedium: goTextStyle(n.nested('BodyMedium', 10)),
+    bodySmall: goTextStyle(n.nested('BodySmall', 11)),
+    labelLarge: goTextStyle(n.nested('LabelLarge', 12)),
+    labelMedium: goTextStyle(n.nested('LabelMedium', 13)),
+    labelSmall: goTextStyle(n.nested('LabelSmall', 14)),
+  );
+}
+
 /// goThemeStyle reads the ThemeStyle struct of the Go side.
 ThemeData? goThemeStyle(GoNode? n) {
   if (n == null) return null;
   final String family = n.text('FontFamily', 4);
+  final ColorScheme? scheme = goColorScheme(n.nested('ColorScheme', 7));
   return ThemeData(
-    brightness: n.text('Brightness', 0) == 'dark'
-        ? Brightness.dark
-        : (n.text('Brightness', 0) == 'light' ? Brightness.light : null),
-    colorSchemeSeed: goColorOpt(n.countOpt('Seed', 1)),
+    brightness: scheme != null
+        ? null
+        : (n.text('Brightness', 0) == 'dark'
+              ? Brightness.dark
+              : (n.text('Brightness', 0) == 'light' ? Brightness.light : null)),
+    colorScheme: scheme,
+    colorSchemeSeed: scheme != null ? null : goColorOpt(n.countOpt('Seed', 1)),
     primaryColor: goColorOpt(n.countOpt('PrimaryColor', 2)),
     scaffoldBackgroundColor: goColorOpt(n.countOpt('ScaffoldBackground', 3)),
     fontFamily: family.isEmpty ? null : family,
     visualDensity: goDensity(n.nested('Density', 5)),
     iconTheme: goIconStyle(n.nested('IconStyle', 6)),
+    textTheme: goTextTheme(n.nested('TextTheme', 8)),
+    inputDecorationTheme: goInputDecorationStyle(n.nested('InputDecoration', 9)),
   );
 }
 
@@ -697,6 +813,25 @@ Future<void> Function()? goTask(void Function()? f, GoRuntime rt) {
   return () {
     final Completer<void> done = Completer<void>();
     rt.run(f).whenEnd(done.complete);
+    return done.future;
+  };
+}
+
+/// goAskEnum wraps a Go function that the host waits for, and that takes the
+/// name of a value of a Flutter enum.
+///
+/// The confirmDismiss of a Dismissible is such a function. The result of the
+/// goroutine holds the answer, and a panic gives false.
+Future<bool?> Function(T)? goAskEnum<T extends Enum>(
+  bool Function(GoString)? f,
+  GoRuntime rt,
+) {
+  if (f == null) return null;
+  return (T value) {
+    final Completer<bool> done = Completer<bool>();
+    final GoString name = GoString.fromString(value.name);
+    final Goroutine g = rt.run(() => f(name));
+    g.whenEnd(() => done.complete(g.result == true));
     return done.future;
   };
 }

@@ -65,13 +65,19 @@ import "probe.dev/app/ui"
 var Deep = ui.Missed{}
 `)
 
-	got, err := scan(dir, "probe.dev/app/ui")
+	got, texts, err := scan(dir, "probe.dev/app/ui")
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := "Card Missed Node Text"
 	if strings.Join(got, " ") != want {
 		t.Errorf("scan gave %q, and it must give %q", strings.Join(got, " "), want)
+	}
+	// The scan keeps each string constant that can name an icon. "ui.Unused"
+	// holds a period, thus no icon carries that name.
+	if strings.Join(texts, " ") != "hello" {
+		t.Errorf("scan gave the strings %q, and it must give %q",
+			strings.Join(texts, " "), "hello")
 	}
 }
 
@@ -88,7 +94,7 @@ func TestScanReportsABadPackage(t *testing.T) {
 		[]byte("package bad\n\nfunc F() { return 1 }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := scan(dir, "probe.dev/bad/ui"); err == nil {
+	if _, _, err := scan(dir, "probe.dev/bad/ui"); err == nil {
 		t.Error("scan gave no error for a package that does not compile")
 	}
 }

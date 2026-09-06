@@ -14,6 +14,10 @@ dependencies:
   # CupertinoThemeData, thus the host names the 2 packages.
   material_ui: ^1.1.1
   cupertino_ui: ^1.0.2
+  # A pack of nodegen reads the widgets of a package of pub.dev. flutter_svg
+  # holds no plugin of a platform, thus the shaker of Dart drops it from an
+  # application that names no SvgPicture.
+  flutter_svg: ^2.2.1
   goruntime:
     path: ../../runtime/goruntime
 
