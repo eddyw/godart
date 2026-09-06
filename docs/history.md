@@ -120,9 +120,25 @@ open, and decision 373 holds the measure and the next step.
 
 **A conformance suite of 24 programs covers the Go language.** The 24 write
 2,184 labelled lines, and each 1 matches real Go byte for byte. The suite found
-17 defects, and 10 closed. 2 of the 10 give a silent wrong answer: a `range`
-over an array read the array itself, and a short declaration wrote a name in
-front of the read of a later value.
+17 defects, and each 1 closed by the end of the day. 2 of them give a silent
+wrong answer: a `range` over an array read the array itself, and a short
+declaration wrote a name in front of the read of a later value. 2 more stood in
+the emitter: `min` and `max` compared a `uint64` as signed, and a conversion of
+a float64 to a `uint64` stopped at the largest signed value.
+
+**Each of the 12 items of the list of 2026-09-06 closed, except 2.** The
+marshal of a type that declares `MarshalJSON` aborted, and the method table of
+a run time pointer descriptor now carries the Dart type of each result.
+`fmt.Sprintf` fell from 8.8 times Go to 6.1, because the bridge takes the
+parsed verb. `str.split.100k` fell from 47.85 milliseconds to 36.02.
+`strings.Repeat` and `strings.Join` each held a square cost, thus the real
+suite of `encoding/json` ends in 8.1 seconds against no result after 14
+minutes. 6 per byte loops of the input and output runtime move a block now: a
+write of a file of 16 megabytes fell from 41.4 milliseconds to 2.0.
+
+**The 2 that stay open:** the decoder of `encoding/json` needs a session of its
+own, and the shake of the package variable waits on the defect of dart2wasm of
+decision 373.
 
 ### 2026-09-06, the twenty-second session
 
