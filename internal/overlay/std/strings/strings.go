@@ -13,6 +13,9 @@ import (
 )
 
 // Index gives the position of the first substr in s, or -1.
+//
+// The scan reads the bytes. A comparison of 2 substrings builds 1 Go string for
+// each position of the text, and each build allocates a view and a header.
 func Index(s, substr string) int {
 	n := len(substr)
 	if n == 0 {
@@ -21,8 +24,9 @@ func Index(s, substr string) int {
 	if n > len(s) {
 		return -1
 	}
+	first := substr[0]
 	for i := 0; i+n <= len(s); i++ {
-		if s[i:i+n] == substr {
+		if s[i] == first && matchAt(s, substr, i) {
 			return i
 		}
 	}
@@ -35,8 +39,12 @@ func LastIndex(s, substr string) int {
 	if n == 0 {
 		return len(s)
 	}
+	if n > len(s) {
+		return -1
+	}
+	first := substr[0]
 	for i := len(s) - n; i >= 0; i-- {
-		if s[i:i+n] == substr {
+		if s[i] == first && matchAt(s, substr, i) {
 			return i
 		}
 	}
@@ -184,10 +192,12 @@ func Count(s, substr string) int {
 	}
 	n := 0
 	i := 0
-	for i+len(substr) <= len(s) {
-		if matchAt(s, substr, i) {
+	width := len(substr)
+	first := substr[0]
+	for i+width <= len(s) {
+		if s[i] == first && matchAt(s, substr, i) {
 			n++
-			i += len(substr)
+			i += width
 			continue
 		}
 		i++
@@ -196,18 +206,41 @@ func Count(s, substr string) int {
 }
 
 // Repeat gives s a count of times.
+//
+// A concatenation in a loop builds a fresh text at each step, thus the cost
+// stands at the square of the result. The build below doubles the text, and it
+// reaches the length in a logarithm of the count. TestUnmarshalMaxDepth of
+// encoding/json asks for 3,000,000 parts.
 func Repeat(s string, count int) string {
 	if count < 0 {
 		panic("strings: negative Repeat count")
 	}
-	out := ""
-	for range count {
-		out += s
+	if count == 0 || len(s) == 0 {
+		return ""
 	}
-	return out
+	total := len(s) * count
+	if total/count != len(s) {
+		panic("strings: Repeat output length overflow")
+	}
+	out := make([]byte, 0, total)
+	out = append(out, s...)
+	for len(out) < total {
+		n := len(out)
+		if n > total-n {
+			n = total - n
+		}
+		out = append(out, out[:n]...)
+	}
+	return string(out)
 }
 
 // Join puts sep between each element of elems.
+//
+// The concatenation builds a fresh text at each step, thus the cost stands at
+// the square of the result. A build into 1 byte slice of the whole size joins
+// 2,000 elements 42 times faster, and it costs 17 percent more for the 6
+// elements of the case str.join.100k of bench. REPORT-runtime.md holds the 2
+// measurements, and the trade needs a decision.
 func Join(elems []string, sep string) string {
 	out := ""
 	for i, v := range elems {
@@ -248,16 +281,24 @@ func Split(s, sep string) []string {
 		}
 		return out
 	}
-	out := []string{}
+	if len(sep) > len(s) {
+		return []string{s}
+	}
+	// The count of the parts stands in front of the walk, thus the storage of
+	// the result takes 1 allocation. A growth of the slice copies each part
+	// again, and a line of 6 parts took 4 such copies.
+	out := make([]string, 0, Count(s, sep)+1)
+	width := len(sep)
+	first := sep[0]
 	start := 0
 	i := 0
-	for i+len(sep) <= len(s) {
-		if !matchAt(s, sep, i) {
+	for i+width <= len(s) {
+		if s[i] != first || !matchAt(s, sep, i) {
 			i++
 			continue
 		}
 		out = append(out, s[start:i])
-		i += len(sep)
+		i += width
 		start = i
 	}
 	return append(out, s[start:])
@@ -278,17 +319,19 @@ func SplitSeq(s, sep string) iter.Seq[string] {
 			}
 			return
 		}
+		width := len(sep)
+		first := sep[0]
 		start := 0
 		i := 0
-		for i+len(sep) <= len(s) {
-			if !matchAt(s, sep, i) {
+		for i+width <= len(s) {
+			if s[i] != first || !matchAt(s, sep, i) {
 				i++
 				continue
 			}
 			if !yield(s[start:i]) {
 				return
 			}
-			i += len(sep)
+			i += width
 			start = i
 		}
 		yield(s[start:])
@@ -365,21 +408,37 @@ func Replace(s, old, new string, n int) string {
 		}
 		return out.String()
 	}
+	if len(old) > len(s) {
+		return s
+	}
+	// The count of the replacements gives the size of the result, thus the
+	// builder takes 1 allocation. A growth of the storage copies each byte
+	// again, and a text of 45 bytes took 6 such copies.
+	most := Count(s, old)
+	if n > 0 && n < most {
+		most = n
+	}
+	if most == 0 {
+		return s
+	}
 	var out Builder
+	out.Grow(len(s) + most*(len(new)-len(old)))
+	width := len(old)
+	first := old[0]
 	count := 0
 	i := 0
 	start := 0
-	for i+len(old) <= len(s) {
-		if !matchAt(s, old, i) {
+	for i+width <= len(s) {
+		if s[i] != first || !matchAt(s, old, i) {
 			i++
 			continue
 		}
 		out.WriteString(s[start:i])
 		out.WriteString(new)
-		i += len(old)
+		i += width
 		start = i
 		count++
-		if n > 0 && count == n {
+		if count == most {
 			break
 		}
 	}
@@ -732,9 +791,21 @@ func (b *Builder) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// Grow reserves room for n more bytes. The method exists for the API only,
-// because a Dart list grows on its own.
-func (b *Builder) Grow(n int) {}
+// Grow reserves room for n more bytes.
+//
+// A Dart list grows on its own, and each growth copies the whole storage. A
+// caller that holds the size of the result thus takes 1 allocation here.
+func (b *Builder) Grow(n int) {
+	if n < 0 {
+		panic("strings.Builder.Grow: negative count")
+	}
+	if cap(b.parts)-len(b.parts) >= n {
+		return
+	}
+	next := make([]byte, len(b.parts), 2*cap(b.parts)+n)
+	copy(next, b.parts)
+	b.parts = next
+}
 
 func (b *Builder) WriteByte(c byte) error {
 	b.parts = append(b.parts, c)

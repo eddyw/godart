@@ -19,6 +19,23 @@ func Format(verb string, value any) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// FormatVerb writes 1 value in the parsed form of a Go verb.
+//
+// letter holds the code of the letter of the verb, flags holds the bit of each
+// flag, width holds the least count of characters or 0, and prec holds the
+// number after the point or -1.
+//
+// The runtime owns the width, because Go writes it on each leaf of a value. A
+// slice, an array, a map, and a struct each give the width to every element,
+// and the brackets take none.
+//
+// The package fmt reads the format text already. A bridge that takes the text
+// again builds 1 Go string, decodes it, and scans it 1 time for each flag, and
+// Sprintf calls the bridge 1 time for each verb.
+func FormatVerb(letter, flags, width, prec int, value any) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Stack gives 1 item for each frame of the Go stack, in the form
 // "function|file|line". The count of skip drops the first frames, and frame 0
 // is the function that calls Stack.
@@ -215,6 +232,12 @@ func MapKeys(target any) []any {
 
 // MapIndex gives the value of 1 key of a map value, or nil.
 func MapIndex(target, key any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// MapHas reports whether a map value holds the key. An entry that holds a nil
+// interface reads as nil, thus MapIndex alone cannot answer it.
+func MapHas(target, key any) bool {
 	panic("syscall/dart needs the gart compiler")
 }
 

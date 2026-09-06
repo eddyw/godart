@@ -46,19 +46,21 @@ GoString _cause(Object e) {
 GoString _unknown(int pid) =>
     GoString.fromString('process $pid is not a child');
 
+/// The bytes of a slice, as a list of Dart.
+///
+/// A byte slice holds its storage in a Uint8List, thus setRange moves the whole
+/// range in 1 call. A loop over the bytes reads and writes 1 element at a time,
+/// and a write of 1 megabyte then costs a million bounds checks. A store into a
+/// Uint8List holds the low 8 bits, exactly as the mask of the loop did.
 Uint8List _bytes(Slice<int> p) {
   final Uint8List out = Uint8List(p.len);
-  for (int i = 0; i < p.len; i++) {
-    out[i] = p.array[p.off + i] & 0xFF;
-  }
+  if (p.len != 0) out.setRange(0, p.len, p.array, p.off);
   return out;
 }
 
 int _take(_Pipe pipe, Slice<int> p) {
   final int n = pipe.rest.length < p.len ? pipe.rest.length : p.len;
-  for (int i = 0; i < n; i++) {
-    p.array[p.off + i] = pipe.rest[i];
-  }
+  if (n != 0) p.$fill(p.off, p.off + n, pipe.rest, 0);
   pipe.rest = n == pipe.rest.length
       ? Uint8List(0)
       : Uint8List.sublistView(pipe.rest, n);

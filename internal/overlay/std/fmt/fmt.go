@@ -120,15 +120,23 @@ func Sprintf(format string, a ...any) string {
 			start = i
 			continue
 		}
-		// Each flag stands in the format, thus 1 substring gives the text
-		// with no copy. A build of 1 rune for each byte reached 9 percent of
-		// the cost of Sprintf.
+		// The bits of the flags travel to the runtime, thus no verb text
+		// stands in this loop. A build of the text costs 1 Go string for each
+		// verb, and the runtime scans that text again for each flag.
 		flagStart := i
+		bits := 0
 		for i < len(format) && isFlag(format[i]) {
+			bits |= flagBit(format[i])
 			i++
 		}
-		verb := format[flagStart:i]
-		sp := spec{flags: verb}
+		flagEnd := i
+		// The parts of the verb stand in a local each. A spec is an object of
+		// Dart, and only a Format method reads one.
+		hasWidth := false
+		prec := 0
+		hasPrec := false
+		// starMinus marks a star width below 0, which Go reads as the flag -.
+		starMinus := false
 		// good marks an argument index that names an argument of the call. Go
 		// writes %!verb(BADINDEX) for each other 1.
 		good := true
@@ -141,10 +149,10 @@ func Sprintf(format string, a ...any) string {
 			width, isInt, arg = intFromArg(a, arg)
 			if width < 0 {
 				width = -width
-				verb += "-"
-				sp.flags += "-"
+				bits |= flagMinus
+				starMinus = true
 			}
-			sp.hasWidth = isInt
+			hasWidth = isInt
 			if !isInt {
 				width = 0
 				out.WriteString("%!(BADWIDTH)")
@@ -153,12 +161,11 @@ func Sprintf(format string, a ...any) string {
 		} else {
 			var present bool
 			width, present, i = parseNum(format, i)
-			sp.hasWidth = present
+			hasWidth = present
 			if afterIndex && present {
 				good = false
 			}
 		}
-		sp.width = width
 		if i+1 < len(format) && format[i] == '.' {
 			i++
 			if afterIndex {
@@ -168,25 +175,19 @@ func Sprintf(format string, a ...any) string {
 			if i < len(format) && format[i] == '*' {
 				i++
 				var isInt bool
-				sp.prec, isInt, arg = intFromArg(a, arg)
-				sp.hasPrec = isInt && sp.prec >= 0
-				if !sp.hasPrec {
+				prec, isInt, arg = intFromArg(a, arg)
+				hasPrec = isInt && prec >= 0
+				if !hasPrec {
 					// Go writes the report and drops the precision, for a
 					// value of a wrong type and for a value below 0.
-					sp.prec = 0
+					prec = 0
 					out.WriteString("%!(BADPREC)")
-				} else {
-					verb += "." + strconv.Itoa(sp.prec)
 				}
 				afterIndex = false
 			} else {
-				verb += "."
 				var present bool
-				sp.prec, present, i = parseNum(format, i)
-				sp.hasPrec = true
-				if present {
-					verb += strconv.Itoa(sp.prec)
-				}
+				prec, present, i = parseNum(format, i)
+				hasPrec = true
 				if afterIndex && present {
 					good = false
 				}
@@ -212,19 +213,27 @@ func Sprintf(format string, a ...any) string {
 			continue
 		}
 		if f, ok := a[arg].(Formatter); ok {
-			// The method owns the width, the precision, and each flag.
-			st := &state{spec: sp}
+			// The method owns the width, the precision, and each flag, thus
+			// the text of the flags stands here and in no other place.
+			st := &state{spec: spec{
+				flags:    flagText(format, flagStart, flagEnd, starMinus),
+				width:    width,
+				hasWidth: hasWidth,
+				prec:     prec,
+				hasPrec:  hasPrec,
+			}}
 			f.Format(st, rune(letter))
 			out.WriteString(string(st.buf))
 			arg++
 			continue
 		}
 		value := a[arg]
-		if sp.hasPrec {
-			value = truncate(value, letter, sp.prec)
+		if hasPrec {
+			value = truncate(value, letter, prec)
 		}
 		if letter == 'U' {
-			out.WriteString(pad(unicodeText(value, sp.flags), width, verb, letter))
+			flags := flagText(format, flagStart, flagEnd, starMinus)
+			out.WriteString(pad(unicodeText(value, flags), width, bits, letter))
 			arg++
 			continue
 		}
@@ -233,42 +242,73 @@ func Sprintf(format string, a ...any) string {
 		if letter == 'q' {
 			if r, ok := runeOf(value); ok {
 				text := strconv.QuoteRune(r)
-				if contains(sp.flags, '+') {
+				if bits&flagPlus != 0 {
 					text = strconv.QuoteRuneToASCII(r)
 				}
-				out.WriteString(pad(text, width, verb, letter))
+				out.WriteString(pad(text, width, bits, letter))
 				arg++
 				continue
 			}
 			if t, ok := value.(string); ok {
 				text := strconv.Quote(t)
-				if contains(sp.flags, '+') {
+				if bits&flagPlus != 0 {
 					text = strconv.QuoteToASCII(t)
 				}
-				out.WriteString(pad(text, width, verb, letter))
+				out.WriteString(pad(text, width, bits, letter))
 				arg++
 				continue
 			}
 		}
-		text := dart.Format(verb+letterText(format, i, letter), value)
-		if sp.hasPrec {
-			text = precDigits(text, letter, sp.prec)
+		want := -1
+		if hasPrec {
+			want = prec
 		}
+		// The runtime owns the width and the precision digits here, because Go
+		// writes each 1 on the leaves of a value and not on the whole text.
 		arg++
-		out.WriteString(pad(text, width, verb, letter))
+		out.WriteString(dart.FormatVerb(int(letter), bits, width, want, value))
 	}
 	out.WriteString(format[start:])
 	return out.String()
 }
 
-// letterText gives the verb letter as text. The letter stands in the format
-// at the position in front of i, thus a byte of ASCII takes a substring and
-// needs no build of a rune.
-func letterText(format string, i int, letter byte) string {
-	if letter < 0x80 {
-		return format[i-1 : i]
+// The bit of each flag of a verb. The Dart runtime reads the same numbers.
+const (
+	flagMinus = 1 << iota
+	flagPlus
+	flagSharp
+	flagSpace
+	flagZero
+)
+
+// flagBit gives the bit of 1 flag byte, and 0 for each other byte.
+func flagBit(c byte) int {
+	switch c {
+	case '-':
+		return flagMinus
+	case '+':
+		return flagPlus
+	case '#':
+		return flagSharp
+	case ' ':
+		return flagSpace
+	case '0':
+		return flagZero
 	}
-	return string(rune(letter))
+	return 0
+}
+
+// flagText gives the flags of a verb as text. Only a Format method, the verb U,
+// and a report read it, thus the hot path of Sprintf never builds it.
+func flagText(format string, start, end int, minus bool) string {
+	out := ""
+	if start < end {
+		out = format[start:end]
+	}
+	if minus {
+		out += "-"
+	}
+	return out
 }
 
 // unicodeText writes the code point of a value, as the verb U of Go does. The
@@ -291,37 +331,6 @@ func unicodeText(v any, flags string) string {
 		out += " '" + string(r) + "'"
 	}
 	return out
-}
-
-// precDigits writes the leading zeros of a precision on a whole number. Go
-// reads the precision of such a verb as the smallest count of digits, thus
-// `%.2d` of 5 gives 05 and `%.0d` of 0 gives an empty text.
-//
-// The sign and the base prefix of the flag # each stand in front of the zeros.
-func precDigits(text string, letter byte, prec int) string {
-	switch letter {
-	case 'd', 'b', 'o', 'O', 'x', 'X':
-	default:
-		return text
-	}
-	sign := ""
-	if len(text) > 0 && (text[0] == '-' || text[0] == '+' || text[0] == ' ') {
-		sign, text = text[:1], text[1:]
-	}
-	prefix := ""
-	if len(text) > 1 && text[0] == '0' {
-		switch text[1] {
-		case 'x', 'X', 'o', 'b':
-			prefix, text = text[:2], text[2:]
-		}
-	}
-	if prec == 0 && text == "0" {
-		return sign + prefix
-	}
-	for len(text) < prec {
-		text = "0" + text
-	}
-	return sign + prefix + text
 }
 
 // runeOf reads a code point from an integer value of any width.
@@ -474,12 +483,21 @@ func Errorf(format string, a ...any) error {
 			j++
 		}
 		if j < len(format) && format[j] == 'w' {
+			// The verb w takes an operand that holds the interface error.
+			// Each other operand keeps the letter w, thus Sprintf writes the
+			// bad verb form of Go: %!w(<nil>) and %!w(string=a text).
+			wraps := false
 			if k := verbIndex(format, i); k >= 0 && k < len(a) {
-				if err, ok := a[k].(error); ok {
+				if err, ok := a[k].(error); ok && err != nil {
 					held = append(held, err)
+					wraps = true
 				}
 			}
-			plain += format[i:j] + "v"
+			if wraps {
+				plain += format[i:j] + "v"
+			} else {
+				plain += format[i : j+1]
+			}
 			i = j
 			continue
 		}
@@ -552,16 +570,21 @@ func isDigit(c byte) bool {
 
 // pad gives the text the width of the verb. The flag `-` puts the fill after
 // the text, and the flag `0` writes a zero in place of each space.
-func pad(text string, width int, verb string, letter byte) string {
+func pad(text string, width int, bits int, letter byte) string {
+	// A width of 0 leaves the text as it stands. The walk of the runes below
+	// reads each byte, thus the test stands in front of it.
+	if width <= 0 {
+		return text
+	}
 	// Go turns the flag 0 off for the verb U, thus a width there gives spaces.
-	if letter != 'U' && contains(verb, '0') && !contains(verb, '-') {
-		return zeroPad(text, width, verb, letter)
+	if letter != 'U' && bits&flagZero != 0 && bits&flagMinus == 0 {
+		return zeroPad(text, width, bits, letter)
 	}
 	n := width - runeCount(text)
 	if n <= 0 {
 		return text
 	}
-	if contains(verb, '-') {
+	if bits&flagMinus != 0 {
 		return text + fill(n, ' ')
 	}
 	return fill(n, ' ') + text
@@ -573,12 +596,12 @@ func pad(text string, width int, verb string, letter byte) string {
 // and it counts the sign against the width and the prefix not. The prefix of
 // an octal is 1 zero, and Go writes that zero only when the digits hold none,
 // thus the padding gives it.
-func zeroPad(text string, width int, verb string, letter byte) string {
+func zeroPad(text string, width int, bits int, letter byte) string {
 	sign := ""
 	if len(text) > 0 && (text[0] == '-' || text[0] == '+' || text[0] == ' ') {
 		sign, text = text[:1], text[1:]
 	}
-	alt := contains(verb, '#')
+	alt := bits&flagSharp != 0
 	prefix := ""
 	octal := alt && letter == 'o'
 	switch {
@@ -615,11 +638,7 @@ func cutBase(text string) (string, string) {
 }
 
 func fill(n int, c byte) string {
-	out := ""
-	for range n {
-		out += string(rune(c))
-	}
-	return out
+	return strings.Repeat(string(rune(c)), n)
 }
 
 func runeCount(text string) int {

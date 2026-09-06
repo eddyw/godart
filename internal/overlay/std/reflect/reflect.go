@@ -553,7 +553,7 @@ func (t *rtype) Method(i int) Method {
 		Index: i,
 	}
 	if fn := dart.DescMethodFunc(t.handle(), i); fn != nil {
-		m.Func = Value{value: fn, typ: typ}
+		m.Func = Value{value: fn, typ: typ, ok: true}
 	}
 	return m
 }
@@ -672,10 +672,23 @@ type Value struct {
 	// typ holds the static type when the value itself is nil, for example
 	// the element of a pointer to an interface.
 	typ Type
+	// ok marks a Value that holds a value. Only the zero Value holds false.
+	//
+	// A nil interface, a nil pointer, and a nil map each read as nil in Dart,
+	// thus the value alone cannot answer IsValid. Go answers true for an entry
+	// of a map that holds a nil interface, and false for a key that the map
+	// does not hold.
+	ok bool
 }
 
-// ValueOf gives the value inside an interface.
-func ValueOf(v any) Value { return Value{value: v} }
+// ValueOf gives the value inside an interface. A nil interface gives the zero
+// Value, exactly as Go does.
+func ValueOf(v any) Value {
+	if v == nil {
+		return Value{}
+	}
+	return Value{value: v, ok: true}
+}
 
 // Indirect gives the value behind a pointer. A value that is no pointer gives
 // itself.
@@ -691,11 +704,11 @@ func Indirect(v Value) Value {
 // interface type holds no descriptor of its own. A Value that holds neither a
 // value nor a type is the zero Value, and MakeFunc rejects such a result.
 func Zero(t Type) Value {
-	return Value{value: dart.DescZero(t.handle()), typ: t}
+	return Value{value: dart.DescZero(t.handle()), typ: t, ok: true}
 }
 
 // New gives a Value that holds a pointer to a fresh zero value of the type.
-func New(t Type) Value { return Value{value: dart.NewValue(t.handle())} }
+func New(t Type) Value { return Value{value: dart.NewValue(t.handle()), ok: true} }
 
 // MakeSlice gives a slice of the type, with the length and the capacity. The
 // overlay gives each slice a capacity that is equal to its length.
@@ -706,7 +719,7 @@ func MakeSlice(t Type, length, capacity int) Value {
 	if length < 0 || capacity < length {
 		panic("reflect: MakeSlice with a wrong length")
 	}
-	return Value{value: dart.MakeValue(t.handle(), length, capacity)}
+	return Value{value: dart.MakeValue(t.handle(), length, capacity), ok: true}
 }
 
 // MakeMap gives an empty map of the type.
@@ -714,7 +727,7 @@ func MakeMap(t Type) Value {
 	if t.Kind() != Map {
 		panic("reflect: MakeMap of " + t.String())
 	}
-	return Value{value: dart.MakeMap(t.handle())}
+	return Value{value: dart.MakeMap(t.handle()), ok: true}
 }
 
 // TypeAssert reads the value inside v as the type T. The flag is false when the
@@ -738,8 +751,13 @@ func (v Value) read() any {
 	return v.value
 }
 
-// IsValid reports whether v holds a value.
-func (v Value) IsValid() bool { return v.read() != nil }
+// IsValid reports whether v holds a value. Only the zero Value gives false.
+//
+// A read of the location cannot answer it. A nil interface, a nil pointer, and
+// a nil map each read as nil, and Go holds each 1 valid. An entry of a map that
+// holds a nil interface is valid, and a key that the map does not hold gives
+// the zero Value.
+func (v Value) IsValid() bool { return v.ok }
 
 // Interface gives the value of v inside an interface.
 func (v Value) Interface() any { return v.read() }
@@ -811,9 +829,19 @@ func (v Value) Elem() Value {
 	p := v.read()
 	kind := v.kindAt(p)
 	if kind == Interface {
-		return Value{value: p}
+		// Go gives the zero Value for the value inside a nil interface.
+		if p == nil {
+			return Value{}
+		}
+		return Value{value: p, ok: true}
 	}
-	out := Value{value: dart.PointerElem(p), owner: p, loc: locPointer}
+	if kind == Pointer && dart.ValueIsNil(p) {
+		// Go gives the zero Value for the element of a nil pointer. A nil
+		// pointer inside an interface carries the type, thus the value that
+		// the read gives is not nil and only ValueIsNil answers.
+		return Value{}
+	}
+	out := Value{value: dart.PointerElem(p), owner: p, loc: locPointer, ok: true}
 	if kind == Pointer {
 		out.typ = v.typeAt(p).Elem()
 	}
@@ -827,7 +855,7 @@ func (v Value) Len() int { return dart.ValueLen(v.read()) }
 // slice and of an array holds its location, thus Set writes through it.
 func (v Value) Index(i int) Value {
 	owner := v.read()
-	out := Value{value: dart.ValueIndex(owner, i)}
+	out := Value{value: dart.ValueIndex(owner, i), ok: true}
 	if v.kindAt(owner) != String {
 		out.owner, out.index, out.loc = owner, i, locIndex
 		out.typ = v.typeAt(owner).Elem()
@@ -843,7 +871,7 @@ func (v Value) NumField() int { return v.Type().NumField() }
 func (v Value) Field(i int) Value {
 	owner := v.read()
 	return Value{value: dart.FieldRead(owner, i), owner: owner,
-		index: i, loc: locField, typ: v.typeAt(owner).Field(i).Type}
+		index: i, loc: locField, typ: v.typeAt(owner).Field(i).Type, ok: true}
 }
 
 // CanSet reports whether Set writes through v.
@@ -894,7 +922,7 @@ func (v Value) NumMethod() int { return v.Type().NumMethod() }
 
 // Method gives a func value that binds 1 exported method of the type to v.
 func (v Value) Method(i int) Value {
-	return Value{value: dart.MethodValue(v.read(), i)}
+	return Value{value: dart.MethodValue(v.read(), i), ok: true}
 }
 
 // Call runs the function that v holds and gives each result.
@@ -913,7 +941,7 @@ func (v Value) Call(in []Value) []Value {
 	t := v.Type()
 	out := make([]Value, len(raw))
 	for i, r := range raw {
-		out[i] = Value{value: r, typ: t.Out(i)}
+		out[i] = Value{value: r, typ: t.Out(i), ok: true}
 	}
 	return out
 }
@@ -923,18 +951,17 @@ func (v Value) SetMapIndex(key, value Value) {
 	got := value.read()
 	// Go removes the entry only for the zero Value. A valid value that holds a
 	// nil interface writes the entry, and the key stays. The read of such a
-	// value also gives nil, thus the test reads the location and the static
-	// type of the Value. `{"T":null}` into a map[string]any needs that rule.
-	del := got == nil && value.loc == 0 && value.typ == nil && value.owner == nil
-	if got != nil && value.Kind() == Struct {
-		// Go copies the value into the map. The Dart form of a struct is an
-		// object, thus a caller that reuses 1 cell for each entry would give
-		// each key the same object. The map decoder of encoding/json/v2 reuses
-		// exactly 1 cell, and 2 keys then held 1 value.
+	// value also gives nil, thus the test reads the mark of the Value.
+	// `{"T":null}` into a map[string]any needs that rule.
+	del := !value.ok
+	if got != nil && (value.Kind() == Struct || value.Kind() == Array) {
+		// Go copies the value into the map. The Dart form of a struct and of an
+		// array is an object, thus a caller that reuses 1 cell for each entry
+		// would give each key the same object. The map decoder of
+		// encoding/json/v2 reuses exactly 1 cell, and 2 keys then held 1 value.
 		//
-		// The copy reads the field list of the descriptor, thus a field of a
-		// struct type keeps the reference of the source. docs/parity.md holds
-		// that gap, and Value.Set holds it already.
+		// Set walks each level of the value now, thus a field of a struct type
+		// and an element of an array each hold a copy of their own.
 		cell := New(value.Type()).Elem()
 		cell.Set(value)
 		got = cell.read()
@@ -962,35 +989,42 @@ func (v Value) MapKeys() []Value {
 	raw := dart.MapKeys(v.read())
 	out := make([]Value, len(raw))
 	for i, k := range raw {
-		out[i] = Value{value: k}
+		out[i] = Value{value: k, ok: true}
 	}
 	return out
 }
 
 // MapIndex gives the value of 1 key of a map value. A key that the map does
 // not hold gives the zero Value.
+//
+// An entry that holds a nil interface reads as nil, exactly as a key that the
+// map does not hold. The test of the key thus stands in front of the read.
 func (v Value) MapIndex(key Value) Value {
 	m := v.read()
-	return Value{value: dart.MapIndex(m, key.read()), typ: v.typeAt(m).Elem()}
+	k := key.read()
+	if !dart.MapHas(m, k) {
+		return Value{}
+	}
+	return Value{value: dart.MapIndex(m, k), typ: v.typeAt(m).Elem(), ok: true}
 }
 
 // SetZero writes the zero value of the type into the location that v names.
 func (v Value) SetZero() { v.Set(Zero(v.Type())) }
 
 // SetInt writes a whole number into the location that v names.
-func (v Value) SetInt(x int64) { v.Set(Value{value: dart.WithInt(v.descOf(), x)}) }
+func (v Value) SetInt(x int64) { v.Set(Value{value: dart.WithInt(v.descOf(), x), ok: true}) }
 
 // SetUint writes a whole number into the location that v names.
-func (v Value) SetUint(x uint64) { v.Set(Value{value: dart.WithInt(v.descOf(), int64(x))}) }
+func (v Value) SetUint(x uint64) { v.Set(Value{value: dart.WithInt(v.descOf(), int64(x)), ok: true}) }
 
 // SetFloat writes a float into the location that v names.
-func (v Value) SetFloat(x float64) { v.Set(Value{value: dart.WithFloat(v.descOf(), x)}) }
+func (v Value) SetFloat(x float64) { v.Set(Value{value: dart.WithFloat(v.descOf(), x), ok: true}) }
 
 // SetBool writes a flag into the location that v names.
-func (v Value) SetBool(x bool) { v.Set(Value{value: dart.WithBool(v.descOf(), x)}) }
+func (v Value) SetBool(x bool) { v.Set(Value{value: dart.WithBool(v.descOf(), x), ok: true}) }
 
 // SetString writes text into the location that v names.
-func (v Value) SetString(x string) { v.Set(Value{value: dart.WithString(v.descOf(), x)}) }
+func (v Value) SetString(x string) { v.Set(Value{value: dart.WithString(v.descOf(), x), ok: true}) }
 
 func (v Value) descOf() int { return dart.DescOf(v.read()) }
 
@@ -1066,7 +1100,7 @@ func MakeChan(t Type, buffer int) Value {
 	if buffer < 0 {
 		panic("reflect: MakeChan with a negative buffer")
 	}
-	return Value{value: dart.MakeChan(t.handle(), buffer)}
+	return Value{value: dart.MakeChan(t.handle(), buffer), ok: true}
 }
 
 // MakeFunc gives a func value of the function type. Each call of that value
@@ -1091,21 +1125,20 @@ func MakeFunc(typ Type, fn func(args []Value) (results []Value)) Value {
 	return Value{value: dart.MakeFunc(typ.handle(), func(args []any) []any {
 		in := make([]Value, len(args))
 		for i, a := range args {
-			in[i] = Value{value: a, typ: typ.In(i)}
+			in[i] = Value{value: a, typ: typ.In(i), ok: true}
 		}
 		out := fn(in)
 		res := make([]any, len(out))
 		for i, o := range out {
 			// Go rejects a result that holds the zero Value. Such a Value
-			// carries no value and no type, and reflect.Zero of an interface
-			// type carries the type.
-			if o.value == nil && o.typ == nil && o.loc == locNone {
+			// carries no mark, and reflect.Zero of an interface type does.
+			if !o.ok {
 				panic("reflect: function created by MakeFunc using closure returned zero Value")
 			}
 			res[i] = o.read()
 		}
 		return res
-	})}
+	}), ok: true}
 }
 
 // StructOf gives the struct type of a list of fields.
@@ -1173,7 +1206,7 @@ func Append(s Value, x ...Value) Value {
 	for i, v := range x {
 		items[i] = v.read()
 	}
-	return Value{value: dart.AppendValue(s.read(), items)}
+	return Value{value: dart.AppendValue(s.read(), items), ok: true}
 }
 
 // AppendSlice gives a slice that holds each element of s and each element of t.
@@ -1181,7 +1214,7 @@ func AppendSlice(s, t Value) Value {
 	if s.Kind() != Slice {
 		panic("reflect: AppendSlice of " + s.Type().String())
 	}
-	return Value{value: dart.AppendSliceValue(s.read(), t.read())}
+	return Value{value: dart.AppendSliceValue(s.read(), t.read()), ok: true}
 }
 
 // Copy writes each element of src into dst, and it gives the count that it
@@ -1322,7 +1355,7 @@ func (v Value) Addr() Value {
 	if v.loc == locNone {
 		panic("reflect: Addr of a value that holds no address")
 	}
-	return Value{value: dart.ValueAddr(v.read(), v.owner, v.index, v.loc)}
+	return Value{value: dart.ValueAddr(v.read(), v.owner, v.index, v.loc), ok: true}
 }
 
 // MethodByName gives the method of the name, bound to the value. A name that
@@ -1332,7 +1365,7 @@ func (v Value) MethodByName(name string) Value {
 	if out == nil {
 		return Value{}
 	}
-	return Value{value: out}
+	return Value{value: out, ok: true}
 }
 
 // Equal reports whether the 2 values hold the same type and the same value.
@@ -1343,7 +1376,7 @@ func (v Value) Convert(t Type) Value {
 	if t == nil {
 		panic("reflect: nil type passed to Value.Convert")
 	}
-	return Value{value: dart.ValueConvert(v.read(), t.handle())}
+	return Value{value: dart.ValueConvert(v.read(), t.handle()), ok: true}
 }
 
 // CanConvert reports whether a conversion of the value to t holds.
@@ -1360,12 +1393,12 @@ func (v Value) Slice(i, j int) Value {
 	if v.Kind() == String {
 		max = v.Len()
 	}
-	return Value{value: dart.ValueSlice(v.read(), i, j, max)}
+	return Value{value: dart.ValueSlice(v.read(), i, j, max), ok: true}
 }
 
 // Slice3 gives the slice v[i:j:k].
 func (v Value) Slice3(i, j, k int) Value {
-	return Value{value: dart.ValueSlice(v.read(), i, j, k)}
+	return Value{value: dart.ValueSlice(v.read(), i, j, k), ok: true}
 }
 
 // Complex gives the complex value.
@@ -1373,7 +1406,7 @@ func (v Value) Complex() complex128 { return dart.AsComplex(v.read()) }
 
 // SetComplex writes a complex value through the location.
 func (v Value) SetComplex(x complex128) {
-	v.Set(Value{value: dart.WithComplex(v.descOf(), x)})
+	v.Set(Value{value: dart.WithComplex(v.descOf(), x), ok: true})
 }
 
 // Pointer gives a number that names the object of the value.
@@ -1499,12 +1532,12 @@ func (it *MapIter) Next() bool { return dart.MapIterNext(it.it) }
 
 // Key gives the key of the pair.
 func (it *MapIter) Key() Value {
-	return Value{value: dart.MapIterKey(it.m.read(), it.it)}
+	return Value{value: dart.MapIterKey(it.m.read(), it.it), ok: true}
 }
 
 // Value gives the value of the pair.
 func (it *MapIter) Value() Value {
-	return Value{value: dart.MapIterValue(it.m.read(), it.it)}
+	return Value{value: dart.MapIterValue(it.m.read(), it.it), ok: true}
 }
 
 // Reset points the iterator at another map.
@@ -1519,7 +1552,7 @@ func (f StructField) IsExported() bool { return f.PkgPath == "" }
 // Recv reads 1 value of a channel. The flag is false when the channel closed.
 func (v Value) Recv() (Value, bool) {
 	out, ok := dart.ValueRecv(v.read())
-	return Value{value: out}, ok
+	return Value{value: out, ok: true}, ok
 }
 
 // Seq gives a sequence of 1 value for each element.
@@ -1529,7 +1562,7 @@ func (v Value) Seq() iter.Seq[Value] {
 		case Int, Int8, Int16, Int32, Int64,
 			Uint, Uint8, Uint16, Uint32, Uint64, Uintptr:
 			for i := int64(0); i < v.Int(); i++ {
-				if !yield(Value{value: dart.WithInt(v.descOf(), i)}) {
+				if !yield(Value{value: dart.WithInt(v.descOf(), i), ok: true}) {
 					return
 				}
 			}
@@ -1567,7 +1600,7 @@ func (v Value) Seq2() iter.Seq2[Value, Value] {
 		switch v.Kind() {
 		case Slice, Array, String:
 			for i := range v.Len() {
-				if !yield(Value{value: dart.WithInt(intDesc(), int64(i))}, v.Index(i)) {
+				if !yield(Value{value: dart.WithInt(intDesc(), int64(i)), ok: true}, v.Index(i)) {
 					return
 				}
 			}
@@ -1754,7 +1787,7 @@ func (v Value) TryRecv() (Value, bool) {
 	if !valid {
 		return Value{}, false
 	}
-	return Value{value: out, typ: v.Type().Elem()}, ok
+	return Value{value: out, typ: v.Type().Elem(), ok: true}, ok
 }
 
 // TrySend writes 1 value into the channel that v holds and gives up no control.
@@ -1856,7 +1889,7 @@ func Select(cases []SelectCase) (chosen int, recv Value, recvOK bool) {
 	if at < 0 || at >= len(cases) || cases[at].Dir != SelectRecv {
 		return at, Value{}, false
 	}
-	return at, Value{value: out, typ: cases[at].Chan.Type().Elem()}, ok
+	return at, Value{value: out, typ: cases[at].Chan.Type().Elem(), ok: true}, ok
 }
 
 // The predicates of a Value, and the small names of the package.
@@ -2055,7 +2088,7 @@ func (v Value) CallSlice(in []Value) []Value {
 	raw := dart.CallSliceValue(v.read(), args)
 	out := make([]Value, len(raw))
 	for i, r := range raw {
-		out[i] = Value{value: r, typ: t.Out(i)}
+		out[i] = Value{value: r, typ: t.Out(i), ok: true}
 	}
 	return out
 }

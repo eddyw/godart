@@ -511,9 +511,11 @@ func encOpFor(rt reflect.Type, inProgress map[reflect.Type]*encOp, building map[
 			}
 		case reflect.Interface:
 			op = func(i *encInstr, state *encoderState, iv reflect.Value) {
-				// IsValid answers the nil test of an interface. Read the note
-				// of encodeInterface.
-				if !state.sendZero && !iv.IsValid() {
+				// Go reads IsNil here. IsNil of the overlay answers the value
+				// inside the interface, thus a typed nil pointer would read as
+				// a nil interface. Elem of a nil interface gives the zero
+				// Value, and Elem of each other 1 gives a valid Value.
+				if !state.sendZero && !iv.Elem().IsValid() {
 					return
 				}
 				state.update(i)

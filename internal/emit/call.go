@@ -236,6 +236,9 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$stdout(%s)", args[0]), true
 	case "Format":
 		return fmt.Sprintf("$goFormat(%s, %s)", args[1], args[0]), true
+	case "FormatVerb":
+		return fmt.Sprintf("$goFormatVerb(%s, %s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3], args[4]), true
 	case "DialTLS":
 		return fmt.Sprintf("$dialTLS(%s, %s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3], args[4]), true
@@ -307,6 +310,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$mapKeys(%s)", args[0]), true
 	case "MapIndex":
 		return fmt.Sprintf("$mapIndex(%s, %s)", args[0], args[1]), true
+	case "MapHas":
+		return fmt.Sprintf("$mapHas(%s, %s)", args[0], args[1]), true
 	case "FuncOf":
 		return fmt.Sprintf("$funcOf(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "MapIterOf":

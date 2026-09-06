@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'box.dart';
 import 'goint.dart';
@@ -208,9 +209,17 @@ bool _hasMethod(TypeDesc desc, String key) =>
 
 String? _base64(Slice<Object?>? s) {
   if (s == null || s.isNil) return null;
-  final List<int> out = List<int>.filled(s.len, 0);
+  // A byte slice holds its storage in a Uint8List, thus the encoder reads a
+  // view of that storage and no loop over the bytes runs. The list of the
+  // JavaScript target holds a pair for each Go integer, and that target takes
+  // the loop below.
+  final List<Object?> array = s.array;
+  if (array is Uint8List) {
+    return base64.encode(Uint8List.sublistView(array, s.off, s.off + s.len));
+  }
+  final Uint8List out = Uint8List(s.len);
   for (int i = 0; i < s.len; i++) {
-    out[i] = $ix(s.array[s.off + i] as GoInt);
+    out[i] = $ix(array[s.off + i] as GoInt);
   }
   return base64.encode(out);
 }
