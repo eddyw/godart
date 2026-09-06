@@ -1339,6 +1339,21 @@ dictionary of the type parameter.
 | `len` and `cap` | Rejected by stage 2. A set of `~[]byte | ~string` reads `Dict.length`. |
 | An arithmetic operator and a conversion | Rejected by stage 2. A set of `~[]byte | ~string` converts to `[]byte` and to `string` through the dictionary, and back. |
 
+**A numeric type set keeps each operator.** A set of integer types and a set of
+float types each hold 1 Dart type, and the dictionary of the type argument
+holds the mask of the width: the dictionary of `int32` cuts to 32 bits, and the
+dictionary of `float32` rounds to 32 bits. `testdata/programs/confgeneric` holds
+the witness of the 2.
+
+**A set that mixes a narrow integer type with a float type stays out.** The
+Dart bound of such a set is `num`, and the dictionary of `int32` holds a mask
+of the type `GoInt Function(GoInt)`. A function type takes no wider parameter,
+thus that mask does not fit the bound. Stage 2 names the cause: `the operator
++= reads the type parameter T, and its constraint mixes an integer type with a
+float type that needs a mask of its width`.
+`golang.org/x/exp/constraints.Ordered` is such a set, and an operator that
+needs no mask, for example an order comparison, still reads it.
+
 A constraint whose terms give 1 Dart type keeps each operator. `int | int64`
 gives `int` 2 times, thus `+` and `<` work directly.
 
