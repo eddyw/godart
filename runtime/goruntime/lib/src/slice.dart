@@ -145,6 +145,9 @@ final class Slice<T> {
       }
       if (low < 0 || low > high) $panicBound(SliceBound.b, low, high, lowUns);
     }
+    // Go gives a nil slice for each valid slice expression of a nil slice.
+    // Such a slice holds a capacity of 0, thus each bound is 0 here.
+    if (isNil) return this;
     return $view(off + low, high - low, max - low);
   }
 
