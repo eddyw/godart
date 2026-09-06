@@ -432,6 +432,13 @@ Object? $maxOf(Object? a, Object? b) {
   return (a as num) >= (b as num) ? a : b;
 }
 
+/// The smaller of 2 values of an unsigned 64-bit type. A Go uint64 above 2 to
+/// the power 63 holds a negative Dart int, thus the signed order inverts.
+GoInt $uminOf(GoInt a, GoInt b) => $ule(a, b) ? a : b;
+
+/// The larger of 2 values of an unsigned 64-bit type.
+GoInt $umaxOf(GoInt a, GoInt b) => $ule(a, b) ? b : a;
+
 /// The spread of a value of a union of a string and a byte slice. Only append
 /// reads it, thus the string form shares the storage. Read $stringBytes.
 Slice<GoInt> $spreadBytes(Object? v) {

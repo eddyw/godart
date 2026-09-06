@@ -1460,6 +1460,15 @@ func (e *emitter) minMax(x *ir.Builtin) string {
 	if x.Name == "max" {
 		fn = "$maxOf"
 	}
+	// A Go value of an unsigned 64-bit type above 2 to the power 63 holds a
+	// negative Dart int, thus the signed compare of the 2 helpers inverts the
+	// order. A narrow unsigned type holds no such value.
+	if isUnsigned64(x.Type) {
+		fn = "$uminOf"
+		if x.Name == "max" {
+			fn = "$umaxOf"
+		}
+	}
 	out := e.expr(x.Args[0])
 	for _, a := range x.Args[1:] {
 		out = fmt.Sprintf("%s(%s, %s)", fn, out, e.expr(a))
@@ -1552,6 +1561,11 @@ func (e *emitter) conv(x *ir.Conv) string {
 		}
 		return e.narrow(to, fmt.Sprintf("$todouble(%s)", text))
 	case isInteger(to) && isFloat(from):
+		// truncate of Dart stops at the largest signed value, thus a target of
+		// an unsigned 64-bit type needs the wrap of the unsigned range.
+		if isUnsigned64(to) {
+			return e.narrow(to, fmt.Sprintf("$fromF64U(%s)", text))
+		}
 		return e.narrow(to, fmt.Sprintf("$fromF64(%s)", text))
 	case isFloat(to) && isFloat(from):
 		return e.narrow(to, text)

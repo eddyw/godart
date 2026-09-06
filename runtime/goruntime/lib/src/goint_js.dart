@@ -305,6 +305,10 @@ GoInt $fromF64(double v) {
   return GoInt._(_s32(((t - low) / 4294967296).toInt()), low.toInt());
 }
 
+/// The value of a float64 as an unsigned 64-bit integer. The pair form already
+/// holds the whole 64-bit pattern, thus the 2 conversions agree.
+GoInt $fromF64U(double v) => $fromF64(v);
+
 /// True inside the build of the JS target. The conditional import selects
 /// this file per target, thus the value is a constant of the file.
 const bool $isJS = true;
