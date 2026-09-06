@@ -235,7 +235,11 @@ final class $ByteSlice extends Slice<GoInt> {
 /// takes no element size, thus 1 bound stands for each element type. A count
 /// between this bound and the bound of Go needs at least 32 terabytes, which
 /// no machine holds, and Go reports "out of memory" there.
-const int $maxSliceLen = 1 << 45;
+///
+/// The value stands as a decimal literal, because the operator << of the JS
+/// target holds 32 bits. `1 << 45` gives 8,192 there, and each slice above
+/// that length would panic.
+const int $maxSliceLen = 35184372088832;
 
 Slice<T> $makeSlice<T>(int len, int cap, List<T> Function(int) alloc) {
   if (len < 0 || len > $maxSliceLen) {
