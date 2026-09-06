@@ -236,20 +236,31 @@ func Repeat(s string, count int) string {
 
 // Join puts sep between each element of elems.
 //
-// The concatenation builds a fresh text at each step, thus the cost stands at
-// the square of the result. A build into 1 byte slice of the whole size joins
-// 2,000 elements 42 times faster, and it costs 17 percent more for the 6
-// elements of the case str.join.100k of bench. REPORT-runtime.md holds the 2
-// measurements, and the trade needs a decision.
+// The call reads the length of the result first, and Grow then holds the whole
+// text in 1 buffer. A concatenation of 1 element at a time builds a fresh text
+// at each step, thus its cost stands at the square of the result: 2,000
+// elements took 37.5 milliseconds and they take 0.9 now. That form costs 17
+// percent more for the 6 elements of the case str.join.100k of bench, and a
+// library must hold no square cost. Go itself holds this form.
 func Join(elems []string, sep string) string {
-	out := ""
-	for i, v := range elems {
-		if i > 0 {
-			out += sep
-		}
-		out += v
+	switch len(elems) {
+	case 0:
+		return ""
+	case 1:
+		return elems[0]
 	}
-	return out
+	n := len(sep) * (len(elems) - 1)
+	for _, elem := range elems {
+		n += len(elem)
+	}
+	var b Builder
+	b.Grow(n)
+	b.WriteString(elems[0])
+	for _, s := range elems[1:] {
+		b.WriteString(sep)
+		b.WriteString(s)
+	}
+	return b.String()
 }
 
 // matchAt reports whether sep stands in s at the position i. The caller must
