@@ -50,40 +50,40 @@ runs its own JIT.
 `Math.imul` gives bun the low 32 bits of the product, because a plain multiply
 would lose the low bits above 2^53.
 
-## The result of 2026-09-06, the end of the day
+## The result of 2026-09-06, after the third block of the day
 
-Each number is the lower of 2 runs, on a machine whose load average stood near
-7. The 3 groups above hold 27 cases now, plus the 14 cases of the boundary.
+Each number is 1 run, on a machine whose load average stood near 7. The 3
+groups above hold 27 cases, plus the 14 cases of the boundary.
 
 | Case | Go | Dart | gart | bun | gart/Dart | gart/Go |
 |---|---|---|---|---|---|---|
-| `bytes.count` | 498.99 us | 2.53 ms | **2.49 ms** | — | 1.0 | 5.0 |
-| `json.scan` | 931.81 us | — | **11.00 ms** | — | — | 11.8 |
-| `json.decode.any` | 5.79 ms | 5.04 ms | **87.96 ms** | 1.23 ms | 17.5 | 15.2 |
-| `json.decode.typed` | 3.16 ms | 5.17 ms | **70.94 ms** | 1.29 ms | 13.7 | 22.5 |
-| `json.encode.typed` | 1.50 ms | 7.58 ms | **36.20 ms** | 1.66 ms | 4.8 | 24.1 |
-| `str.concat.5k` | 5.31 ms | 4.19 ms | **4.24 ms** | 11.96 us | 1.0 | 0.8 |
-| `str.builder.200k` | 692.47 us | 2.81 ms | **3.91 ms** | 1.03 ms | 1.4 | 5.6 |
-| `str.substr.100k` | 531.10 us | 5.58 ms | **4.12 ms** | 1.08 ms | 0.7 | 7.8 |
-| `int.sum.1m` | 241.94 us | 299.10 us | **298.37 us** | 244.35 us | 1.0 | 1.2 |
-| `int.hash.1m` | 928.75 us | 963.96 us | **962.67 us** | 22.42 ms | 1.0 | 1.0 |
-| `int.div.1m` | 949.92 us | 1.01 ms | **623.34 us** | 1.07 ms | 0.6 | 0.7 |
-| `int.parse.100k` | 401.02 us | 440.73 us | **2.86 ms** | 458.76 us | 6.5 | 7.1 |
-| `int.format.100k` | 1.15 ms | 797.61 us | **1.90 ms** | 1.43 ms | 2.4 | 1.7 |
-| `float.sum.1m` | 844.44 us | 662.80 us | **686.31 us** | 628.49 us | 1.0 | 0.8 |
-| `float.math.1m` | 731.46 us | 751.26 us | **711.36 us** | 911.13 us | 0.9 | 1.0 |
-| `float.parse.100k` | 1.61 ms | 1.24 ms | **8.17 ms** | 1.41 ms | 6.6 | 5.1 |
-| `float.format.100k` | 3.58 ms | 6.96 ms | **23.57 ms** | 3.66 ms | 3.4 | 6.6 |
-| `slice.append.1m` | 1.82 ms | 5.57 ms | **19.74 ms** | 2.07 ms | 3.5 | 10.8 |
-| `slice.sort.100k` | 4.69 ms | 22.87 ms | **26.00 ms** | 10.31 ms | 1.1 | 5.5 |
-| `map.string.100k` | 4.27 ms | 8.38 ms | **23.44 ms** | 7.72 ms | 2.8 | 5.5 |
-| `map.int.100k` | 1.55 ms | 5.10 ms | **10.19 ms** | 1.98 ms | 2.0 | 6.6 |
-| `struct.alloc.1m` | 688.23 us | 3.37 ms | **679.21 us** | 343.08 us | 0.2 | 1.0 |
-| `fmt.sprintf.100k` | 10.03 ms | 12.31 ms | **88.65 ms** | 5.97 ms | 7.2 | 8.8 |
-| `str.split.100k` | 4.36 ms | 6.13 ms | **48.32 ms** | 5.40 ms | 7.9 | 11.1 |
-| `str.join.100k` | 4.00 ms | 14.69 ms | **11.33 ms** | 4.14 ms | 0.8 | 2.8 |
-| `str.replace.100k` | 5.26 ms | 13.14 ms | **48.26 ms** | 11.18 ms | 3.7 | 9.2 |
-| `sort.struct.50k` | 5.09 ms | 8.69 ms | **13.16 ms** | 5.83 ms | 1.5 | 2.6 |
+| `bytes.count` | 508.08 us | 2.62 ms | **2.60 ms** | — | 1.0 | 5.1 |
+| `json.scan` | 988.16 us | — | **10.78 ms** | — | — | 10.9 |
+| `json.decode.any` | 5.68 ms | 4.90 ms | **83.58 ms** | 1.16 ms | 17.1 | 14.7 |
+| `json.decode.typed` | 3.05 ms | 5.09 ms | **69.43 ms** | 1.19 ms | 13.6 | 22.7 |
+| `json.encode.typed` | 1.43 ms | 7.75 ms | **36.45 ms** | 1.51 ms | 4.7 | 25.4 |
+| `str.concat.5k` | 5.62 ms | 3.82 ms | **4.03 ms** | 11.58 us | 1.1 | 0.7 |
+| `str.builder.200k` | 734.07 us | 2.75 ms | **3.60 ms** | 1.04 ms | 1.3 | 4.9 |
+| `str.substr.100k` | 556.84 us | 5.50 ms | **3.85 ms** | 1.01 ms | 0.7 | 6.9 |
+| `int.sum.1m` | 253.26 us | 294.71 us | **293.39 us** | 234.04 us | 1.0 | 1.2 |
+| `int.hash.1m` | 909.23 us | 922.78 us | **923.73 us** | 22.34 ms | 1.0 | 1.0 |
+| `int.div.1m` | 908.22 us | 987.85 us | **552.87 us** | 1.07 ms | 0.6 | 0.6 |
+| `int.parse.100k` | 404.03 us | 450.45 us | **2.80 ms** | 458.33 us | 6.2 | 6.9 |
+| `int.format.100k` | 1.11 ms | 778.88 us | **1.82 ms** | 1.47 ms | 2.3 | 1.6 |
+| `float.sum.1m` | 804.09 us | 663.23 us | **662.40 us** | 591.34 us | 1.0 | 0.8 |
+| `float.math.1m` | 715.73 us | 760.80 us | **807.82 us** | 850.87 us | 1.1 | 1.1 |
+| `float.parse.100k` | 1.58 ms | 1.26 ms | **8.19 ms** | 1.42 ms | 6.5 | 5.2 |
+| `float.format.100k` | 3.54 ms | 6.86 ms | **23.04 ms** | 3.70 ms | 3.4 | 6.5 |
+| `slice.append.1m` | 1.62 ms | 5.73 ms | **19.77 ms** | 1.91 ms | 3.5 | 12.2 |
+| `slice.sort.100k` | 4.58 ms | 23.00 ms | **26.00 ms** | 10.37 ms | 1.1 | 5.7 |
+| `map.string.100k` | 4.30 ms | 8.52 ms | **22.76 ms** | 7.41 ms | 2.7 | 5.3 |
+| `map.int.100k` | 1.53 ms | 5.00 ms | **10.12 ms** | 1.89 ms | 2.0 | 6.6 |
+| `struct.alloc.1m` | 663.67 us | 3.28 ms | **661.78 us** | 335.05 us | 0.2 | 1.0 |
+| `fmt.sprintf.100k` | 10.42 ms | 12.32 ms | **61.19 ms** | 5.95 ms | 5.0 | 5.9 |
+| `str.split.100k` | 4.49 ms | 6.18 ms | **35.70 ms** | 5.52 ms | 5.8 | 7.9 |
+| `str.join.100k` | 3.99 ms | 14.99 ms | **16.62 ms** | 4.12 ms | 1.1 | 4.2 |
+| `str.replace.100k` | 5.20 ms | 13.43 ms | **37.26 ms** | 11.08 ms | 2.8 | 7.2 |
+| `sort.struct.50k` | 5.07 ms | 8.75 ms | **12.84 ms** | 5.90 ms | 1.5 | 2.5 |
 
 ### What the numbers say
 
@@ -95,9 +95,14 @@ Each number is the lower of 2 runs, on a machine whose load average stood near
    bits, thus `int.hash.1m` reads a BigInt and it costs 22.42 milliseconds
    against 0.96. This is the case where the ahead of time build of Dart stands
    far ahead of the JIT of bun.
-3. **5 cases now cost less than the same work in Dart.** `struct.alloc` sits at
-   0.2, `int.div` at 0.6, `str.substr` at 0.7, `str.join` at 0.8, and
-   `float.math` at 0.9. `bytes.count` sits at 1.0.
+3. **4 cases now cost less than the same work in Dart.** `struct.alloc` sits at
+   0.2, `int.div` at 0.6, and `str.substr` at 0.7. `bytes.count`, `int.sum`,
+   `int.hash`, and `float.sum` each sit at 1.0.
+4. **`str.join.100k` rose from 11.33 milliseconds to 16.62 on purpose.**
+   `strings.Join` joined 1 element at a time, thus its cost stood at the square
+   of the result: 2,000 elements took 37.5 milliseconds and they take 0.9 now.
+   The case of the benchmark holds 6 elements, and a library must hold no
+   square cost. Read decision 379.
 4. **The decoder of `encoding/json` holds the largest gap, and it is flat.** A
    profile of 2026-09-06 puts the Go code of that package at 24 percent, the
    read of a slice at 9, and the layer of `reflect` at 8. No single change
@@ -108,6 +113,26 @@ Each number is the lower of 2 runs, on a machine whose load average stood near
    boxes the value, it decodes the verb, and it parses the verb again.
 6. **A scan of a text still allocates.** `str.split` gives a slice of
    substrings, and each substring is 1 Go string with a view of the storage.
+
+### The 4 changes of the third block of 2026-09-06
+
+| Case | Before | After | Factor |
+|---|---|---|---|
+| `fmt.sprintf.100k` | 88.65 ms | 61.19 ms | 1.45 |
+| `str.split.100k` | 48.32 ms | 35.70 ms | 1.35 |
+| `str.replace.100k` | 48.26 ms | 37.26 ms | 1.30 |
+| `str.join.100k`, 2,000 elements | 37.5 ms | 0.9 ms | 42 |
+
+The bridge of `fmt` takes the parsed verb now: the letter, the flags as bits,
+the width, and the precision. It built a Go string of the verb before, and the
+runtime parsed that text again with a switch and 3 scans. `Split` and `Replace`
+count the parts before the build, and `Grow` of `Builder` held an empty body.
+
+**4 paths of the input and output runtime hold no case of this benchmark.** A
+probe of 2026-09-06 measured them ahead of time: a write of a file of 16
+megabytes fell from 41.4 milliseconds to 2.0, a read from 34.8 to 0.5, a pipe
+of 8 megabytes from 74.7 to 10.3, and a TCP echo of 8 megabytes from 127.0 to
+8.1. 6 loops read and wrote 1 byte at a time before.
 
 ### The 6 changes of 2026-09-06
 
