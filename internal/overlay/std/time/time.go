@@ -31,30 +31,33 @@ func (d Duration) Seconds() float64 { return float64(d) / 1e9 }
 
 // String gives the text of the duration, in the format of Go. A duration of 1
 // second or more holds the hour, the minute, and the second.
+//
+// The magnitude reads a uint64. The smallest Duration is -2 to the power 63,
+// and its magnitude is 2 to the power 63, which does not fit an int64.
 func (d Duration) String() string {
 	if d == 0 {
 		return "0s"
 	}
-	u := int64(d)
-	negative := u < 0
+	negative := d < 0
+	u := uint64(d)
 	if negative {
 		u = -u
 	}
 	out := ""
 	switch {
-	case u < int64(Microsecond):
-		out = itoa(u) + "ns"
-	case u < int64(Millisecond):
-		out = part(u, 1000) + "µs"
-	case u < int64(Second):
-		out = part(u, 1000000) + "ms"
+	case u < uint64(Microsecond):
+		out = uitoa(u) + "ns"
+	case u < uint64(Millisecond):
+		out = upart(u, 1000) + "µs"
+	case u < uint64(Second):
+		out = upart(u, 1000000) + "ms"
 	default:
-		out = part(u%int64(Minute), 1000000000) + "s"
-		minutes := u / int64(Minute)
+		out = upart(u%uint64(Minute), 1000000000) + "s"
+		minutes := u / uint64(Minute)
 		if minutes > 0 {
-			out = itoa(minutes%60) + "m" + out
+			out = uitoa(minutes%60) + "m" + out
 			if hours := minutes / 60; hours > 0 {
-				out = itoa(hours) + "h" + out
+				out = uitoa(hours) + "h" + out
 			}
 		}
 	}
@@ -62,6 +65,36 @@ func (d Duration) String() string {
 		return "-" + out
 	}
 	return out
+}
+
+// uitoa writes an unsigned value.
+func uitoa(v uint64) string {
+	if v == 0 {
+		return "0"
+	}
+	out := ""
+	for v > 0 {
+		out = string(rune('0'+v%10)) + out
+		v /= 10
+	}
+	return out
+}
+
+// upart writes an unsigned value and the digits after the point, with no
+// trailing zero.
+func upart(v, unit uint64) string {
+	whole := v / unit
+	rest := v % unit
+	if rest == 0 {
+		return uitoa(whole)
+	}
+	digits := ""
+	for unit > 1 {
+		unit /= 10
+		digits += string(rune('0' + rest/unit))
+		rest %= unit
+	}
+	return uitoa(whole) + "." + trimZeros(digits)
 }
 
 // Sleep gives up control for the duration.

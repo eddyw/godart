@@ -641,7 +641,11 @@ func (e *emitter) narrow(t types.Type, text string) string {
 		return m + "(" + text + ")"
 	}
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
-		if set, ok := typeset.Describe(tp); ok && set.Integer {
+		// A set of integer types and a set of float types each hold 1 Dart
+		// type, thus the dictionary of the type argument carries the mask of
+		// its width. float32 rounds to 32 bits there, and float64 holds the
+		// identity.
+		if set, ok := typeset.Describe(tp); ok && (set.Integer || set.Float) {
 			return e.dictOf(tp) + ".mask(" + text + ")"
 		}
 		return "(" + text + " as " + typeParamName(tp) + ")"

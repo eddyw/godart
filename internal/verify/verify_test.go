@@ -335,19 +335,30 @@ type plainType interface{ ~int8 | ~int16 }
 
 type wideType interface{ ~int | ~float64 }
 
+type narrowMix interface{ ~int | ~float32 }
+
 `
 	rejectFile(t, "the operator + on 2 Dart types", "more than 1 Dart type",
 		head+"func f[T mixType](a, b T) T { return a + b }\n")
-	rejectFile(t, "the operator + on 2 float widths", "a mask of its width",
+	// A type set of float types gives the Dart type double, and the
+	// dictionary of the type argument holds the mask of the width: float32
+	// rounds to 32 bits, and float64 holds the identity. Thus each operator
+	// of a float applies.
+	acceptFile(t, "the operator + on 2 float widths",
 		head+"func f[T floatType](a, b T) T { return a + b }\n")
-	rejectFile(t, "the operator += on 2 float widths", "a mask of its width",
+	acceptFile(t, "the operator += on 2 float widths",
 		head+"func f[T floatType](a, b T) T { a += b; return a }\n")
-	rejectFile(t, "the operator ++ on 2 float widths", "a mask of its width",
+	acceptFile(t, "the operator ++ on 2 float widths",
 		head+"func f[T floatType](a T) T { a++; return a }\n")
-	rejectFile(t, "the unary - on 2 float widths", "a mask of its width",
+	acceptFile(t, "the unary - on 2 float widths",
 		head+"func f[T floatType](a T) T { return -a }\n")
-	rejectFile(t, "a conversion to 2 float widths", "more than 1 Dart type",
+	acceptFile(t, "a division on 2 float widths",
+		head+"func f[T floatType](a, b T) T { return a / b }\n")
+	acceptFile(t, "a conversion to 2 float widths",
 		head+"func f[T floatType](a int) T { return T(a) }\n")
+	rejectFile(t, "the operator + on an int and a narrow float",
+		"mixes an integer type with a float type",
+		head+"func f[T narrowMix](a, b T) T { return a + b }\n")
 
 	rejectFile(t, "a division of mixed sign", "an unsigned type of 64 bits",
 		head+"func f[T intType](a, b T) T { return a / b }\n")

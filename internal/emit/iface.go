@@ -476,6 +476,21 @@ func reflectText(t types.Type) string {
 		return signatureText(t)
 	case *types.Basic:
 		return basicText(t)
+	case *types.Named:
+		// reflect writes the type arguments of an instance with no space
+		// behind a comma: `main.pair[int,string]`. go/types writes 1 space
+		// there, thus the fallback below does not fit an instance.
+		if args := t.TypeArgs(); args != nil && args.Len() > 0 {
+			parts := make([]string, args.Len())
+			for i := range parts {
+				parts[i] = reflectText(args.At(i))
+			}
+			name := t.Obj().Name()
+			if pkg := t.Obj().Pkg(); pkg != nil {
+				name = shortQualifier(pkg) + "." + name
+			}
+			return name + "[" + strings.Join(parts, ",") + "]"
+		}
 	}
 	return types.TypeString(t, shortQualifier)
 }
@@ -1232,6 +1247,22 @@ func (e *emitter) typeNameText(t types.Type) string {
 	return spliceOuter(text, e.outerReads(t, ".desc.name"))
 }
 
+// typeDisplayText writes the text that a report of a failed assertion names.
+// Go names a type with the name of its package, and not with the import path
+// of it, thus the text follows reflect. typeNameText holds the identity name,
+// which a type test compares.
+func (e *emitter) typeDisplayText(t types.Type) string {
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return e.dictOf(tp) + ".desc.text"
+	}
+	if !typeset.HoldsParam(t) && len(e.outerReads(t, ".desc.text")) == 0 {
+		return "'" + dartText(reflectText(t)) + "'"
+	}
+	// A type that reads a type parameter keeps the identity name. Such a name
+	// holds the import path, and no program of the suite reaches it.
+	return e.typeNameText(t)
+}
+
 // outerReads gives the run time read of the description of each type argument
 // of the generic function that declares a local type.
 //
@@ -1418,7 +1449,7 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 		if isInterfaceType(x.Assert) {
 			return fmt.Sprintf("$assertIface(%s, %s, %s)",
 				e.expr(x.X), e.methodKeyListText(x.Assert),
-				e.typeNameText(x.Assert))
+				e.typeDisplayText(x.Assert))
 		}
 		if isParam {
 			return fmt.Sprintf("$assertDict(%s, %s)", e.expr(x.X), e.dictOf(tp))

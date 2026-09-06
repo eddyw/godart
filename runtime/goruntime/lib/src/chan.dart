@@ -35,7 +35,17 @@ final class Chan<T> {
   /// goroutine is durable, and no event outside that bubble ends it.
   final Bubble? bubble;
 
-  Chan(this.capacity, this._zero) : isNil = false, bubble = $current?.bubble;
+  Chan(this.capacity, this._zero) : isNil = false, bubble = $current?.bubble {
+    // Go reports a capacity below 0 with a plain text and no prefix.
+    if (capacity < 0) {
+      $panic(
+        Iface(
+          $typeGoError,
+          const GoError('makechan: size out of range', plain: true),
+        ),
+      );
+    }
+  }
 
   Chan.nil(this._zero) : capacity = 0, isNil = true, bubble = null;
 

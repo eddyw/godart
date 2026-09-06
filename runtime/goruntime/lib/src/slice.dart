@@ -145,6 +145,9 @@ final class Slice<T> {
       }
       if (low < 0 || low > high) $panicBound(SliceBound.b, low, high, lowUns);
     }
+    // Go gives a nil slice for each valid slice expression of a nil slice.
+    // Such a slice holds a capacity of 0, thus each bound is 0 here.
+    if (isNil) return this;
     return $view(off + low, high - low, max - low);
   }
 
@@ -224,11 +227,21 @@ final class $ByteSlice extends Slice<GoInt> {
 
 /// The Go expression `make([]T, len, cap)`. The allocator returns a list of
 /// the given length that holds a fresh zero value in each slot.
+/// The largest count of elements that make accepts.
+///
+/// Go compares the length against maxAlloc divided by the size of the
+/// element. maxAlloc holds 2 to the power 48 on a 64-bit machine, thus a
+/// slice of an element of 8 bytes reaches this count. The allocator of Dart
+/// takes no element size, thus 1 bound stands for each element type. A count
+/// between this bound and the bound of Go needs at least 32 terabytes, which
+/// no machine holds, and Go reports "out of memory" there.
+const int $maxSliceLen = 1 << 45;
+
 Slice<T> $makeSlice<T>(int len, int cap, List<T> Function(int) alloc) {
-  if (len < 0) {
+  if (len < 0 || len > $maxSliceLen) {
     $panic(Iface($typeGoError, const GoError('makeslice: len out of range')));
   }
-  if (cap < len) {
+  if (cap < len || cap > $maxSliceLen) {
     $panic(Iface($typeGoError, const GoError('makeslice: cap out of range')));
   }
   return Slice(alloc(cap), 0, len, cap);

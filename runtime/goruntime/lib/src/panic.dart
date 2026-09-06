@@ -368,9 +368,14 @@ int $pendingTok = 0;
 
 /// The value of recover. A call outside the deferred function of a panicking
 /// function gives null.
+///
+/// A recover consumes the panic. Each call after that gives null, exactly as
+/// gorecover of Go does with the mark p.recovered. The flag [$recovered]
+/// belongs to the chain, thus a new panic inside a deferred call clears it
+/// and the calls that remain read that new panic.
 Iface? $recover(int tok) {
   final GoPanic? p = $chainPanic;
-  if (p == null || tok == 0 || tok != $pendingTok) return null;
+  if (p == null || $recovered || tok == 0 || tok != $pendingTok) return null;
   $recovered = true;
   return p.value as Iface?;
 }

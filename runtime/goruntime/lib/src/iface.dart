@@ -477,7 +477,7 @@ Iface $assertIface(Iface? x, List<String> methods, String name) {
       Iface(
         $typeGoError,
         GoError(
-          'interface conversion: ${x.desc.name} is not $name: '
+          'interface conversion: ${x.desc.display} is not $name: '
           'missing method ${$missingMethod(x, methods)}',
           plain: true,
         ),

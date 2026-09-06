@@ -133,7 +133,18 @@ func (b *builder) rangeList(s *ast.RangeStmt, label string) []ir.Stmt {
 			}}
 		}
 	}
-	pre, container := b.forceHoist(b.expr(s.X), s.X.Pos(), "range")
+	x := b.expr(s.X)
+	// Go reads a range expression of an array type as a value, thus the walk
+	// takes a copy. A write of the array inside the body then does not reach
+	// the value of a later pass. A slice and a pointer to an array each share
+	// the storage, and neither one takes a copy. copyPoint gives a fresh
+	// value back with no copy, thus the result of a call costs nothing.
+	if s.Value != nil && !isBlank(s.Value) {
+		if _, ok := typeset.Core(b.typeOf(s.X)).(*types.Array); ok {
+			x = b.copyPoint(x)
+		}
+	}
+	pre, container := b.forceHoist(x, s.X.Pos(), "range")
 	iv, i := b.intVar(s.Pos(), "i")
 	lv, length := b.intVar(s.Pos(), "n")
 	pre = append(pre,

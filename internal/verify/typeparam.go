@@ -88,10 +88,13 @@ func (v *verifier) checkTypeParamAssign(s *ast.AssignStmt) {
 // rejectArith rejects an arithmetic operation that holds no single Dart form.
 //
 // A type set of integer types keeps each operator, because the dictionary holds
-// the mask of the width. A set that mixes an integer type with a float type
-// keeps each operator that Go allows on both, and a division of such a set
-// falls outside the subset, because the Dart operator `/` always gives a
-// double.
+// the mask of the width. A set of float types keeps the same rule: the
+// dictionary of float32 holds the round of 32 bits, and the dictionary of
+// float64 holds the identity. A set that mixes an integer type with a float
+// type keeps each operator that Go allows on both, and a division of such a
+// set falls outside the subset, because the Dart operator `/` always gives a
+// double. Such a mixed set holds 1 Dart bound of `num`, and no mask of a
+// narrow width fits that bound, thus a narrow term of a mixed set stays out.
 func (v *verifier) rejectArith(pos token.Pos, t types.Type, op token.Token, what string) {
 	set, ok := typeset.Describe(t)
 	if !ok || typeset.Core(t) != nil {
@@ -103,9 +106,9 @@ func (v *verifier) rejectArith(pos token.Pos, t types.Type, op token.Token, what
 		v.reject(pos, "the compiler gives a type parameter 1 Dart type",
 			"%s reads the type parameter %s, and its constraint holds more than 1 Dart type",
 			what, tp.Obj().Name())
-	case !set.Integer && set.Narrow:
-		v.reject(pos, "the dictionary holds a mask for a type set of integer types only",
-			"%s reads the type parameter %s, and its constraint holds a type that needs a mask of its width",
+	case !set.Integer && !set.Float && set.Narrow:
+		v.reject(pos, "the dictionary holds a mask for a set of integer types or of float types",
+			"%s reads the type parameter %s, and its constraint mixes an integer type with a float type that needs a mask of its width",
 			what, tp.Obj().Name())
 	case op == token.QUO && !set.Integer && !set.Float:
 		v.reject(pos, "the Dart operator / always gives a double",
@@ -176,12 +179,13 @@ func (v *verifier) rejectMixedSign(pos token.Pos, t types.Type, what string) {
 //
 // A type parameter with a core type gives 1 Dart type, thus each operation of
 // the core type applies. A type set of integer types also gives 1 Dart type,
-// and the dictionary holds the mask of the width. Each other parameter with no
-// core type holds more than 1 Dart type.
+// and the dictionary holds the mask of the width. A type set of float types
+// gives the Dart type double, and the dictionary of float32 holds the round of
+// 32 bits. Each other parameter with no core type holds more than 1 Dart type.
 func mixedDartForm(tp *types.TypeParam) bool {
 	if typeset.Core(tp) != nil {
 		return false
 	}
 	set, ok := typeset.Describe(tp)
-	return !ok || !set.Integer
+	return !ok || (!set.Integer && !set.Float)
 }
