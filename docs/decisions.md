@@ -4312,3 +4312,42 @@ The plan left these points open. The work took the decisions below.
 
      `nodegen host -all` gives 567 node types, and `dart analyze` of
      `goflutter` reads each 1.
+
+375. A conformance suite of 24 programs covers the Go language itself.
+
+     `fmt.Printf("%.0f", 0.5)` wrote 1 on 2026-09-06, and real Go writes 0. No
+     test caught it. The suite closes that class of hole for the language.
+
+     Each program stands in `testdata/programs/` with the name prefix `conf`,
+     and `TestPrograms` finds each 1 with no registration. Each program writes
+     a table of labelled results, thus 1 build gives many assertions. The 24
+     write 2,184 lines, and each line matches real Go byte for byte.
+
+     The areas: a constant and `iota`, an integer, a conversion, a float64, a
+     string, a slice, a map, a struct, an interface, a method, a closure, a
+     `defer`, a `panic`, a channel, a goroutine, a generic, a `range`, the
+     control flow, an assignment, the init order, an error, a sort, a time, and
+     an embedded field.
+
+     **The suite found 17 defects, and 10 closed.** 2 of the 10 give a silent
+     wrong answer on ordinary Go code:
+
+     - A `range` over an array read the array itself. Go reads a copy, thus a
+       write to the array inside the loop must not change what the loop reads.
+     - A short declaration wrote a name in front of the read of a later value.
+       `n, m := n+10, n+20` gave 11 and 31, and Go gives 11 and 21, because Go
+       reads each value on the right first.
+
+     The other 8: a nil slice lost its nil mark after `a[:0]`, `recover` gave
+     the value a second time in 1 deferred call, a failed assertion to an
+     interface type named the import path in the place of the package,
+     `make(chan int, -1)` built the channel, `make([]int, 1<<62)` killed the
+     process with no report, a type parameter of a set of float types was
+     rejected, `%T` of an instance of a generic type held a space behind the
+     comma, and `Duration.String` of the most negative value wrote `--ns`.
+
+     **2 rules of the suite.** A panic of an index reads a helper that carries
+     `//go:noinline`, because gc reports the index of a register that an
+     inlined body writes over. A conversion of a float64 outside the range of
+     the target is implementation dependent, and gc itself differs between
+     arm64 and amd64, thus each program stays inside the defined range.
