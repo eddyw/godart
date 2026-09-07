@@ -997,6 +997,7 @@ argument of Go. The 2 below differ.
 |---|---|
 | `DNSStart`, `DNSDone` | The 2 fire from `net.Resolver.LookupIP`. The default dial hands the host name to `Socket.connect` of `dart:io`, and that call reports no lookup event, thus a plain request fires neither hook. A `Transport` with a `DialContext` of its own over a `net.Dialer` reads both. |
 | `DNSDone.Coalesced` | Always false. gart holds no singleflight of a lookup. |
+| `ConnectStart`, `ConnectDone` of a name that holds 2 addresses | Go dials each address in order and it takes the first that answers, thus the 2 hooks fire 1 time for each attempt. The runtime gives the name to `dart:io`, and the 2 hooks fire 1 time. `localhost` holds `[::1]` and `127.0.0.1` on this machine, and a server of `httptest` listens on the second alone, thus Go writes a failed attempt that gart does not write. `testdata/programs/httptraceuse` holds the successful connection of that section alone. |
 
 `SecureSocket.connect` of Dart opens the socket and runs the handshake in 1
 call. The overlay fires `ConnectStart`, `ConnectDone`, `TLSHandshakeStart`, and

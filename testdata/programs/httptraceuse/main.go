@@ -19,6 +19,12 @@ import (
 // events holds each hook call in the order that the transport made it.
 var events []string
 
+// goodOnly holds the connection that stands, and it drops each attempt that
+// failed. A name can hold more than 1 address: Go dials each 1 in order and it
+// takes the first that answers, and the runtime of gart gives the name to
+// dart:io and dials 1 address. docs/parity.md holds the difference.
+var goodOnly bool
+
 func note(format string, args ...any) {
 	events = append(events, fmt.Sprintf(format, args...))
 }
@@ -39,6 +45,20 @@ func mask(addr string) string {
 		return addr
 	}
 	return addr[:i] + ":PORT"
+}
+
+// maskErr replaces the port of the address inside the text of an error. A dial
+// that fails names the address with its port, and the mask of the address
+// alone leaves that text.
+func maskErr(err error, addr string) any {
+	if err == nil {
+		return nil
+	}
+	i := strings.LastIndex(addr, ":")
+	if i < 0 {
+		return err
+	}
+	return strings.ReplaceAll(err.Error(), addr[i:], ":PORT")
 }
 
 func newTrace() *httptrace.ClientTrace {
@@ -74,10 +94,24 @@ func newTrace() *httptrace.ClientTrace {
 			note("DNSDone found=%t coalesced=%t err=%v", len(i.Addrs) > 0, i.Coalesced, i.Err)
 		},
 		ConnectStart: func(network, addr string) {
+			if goodOnly {
+				return
+			}
 			note("ConnectStart %s %s", network, mask(addr))
 		},
 		ConnectDone: func(network, addr string, err error) {
-			note("ConnectDone %s %s err=%v", network, mask(addr), err)
+			// The text of the error holds the port too, and the resolver of
+			// the system gives 2 addresses for the name localhost. Go dials
+			// the second 1 only when the first 1 fails, thus the mask covers
+			// the whole text.
+			if goodOnly {
+				if err == nil {
+					note("ConnectStart %s %s", network, mask(addr))
+					note("ConnectDone %s %s err=<nil>", network, mask(addr))
+				}
+				return
+			}
+			note("ConnectDone %s %s err=%v", network, mask(addr), maskErr(err, addr))
 		},
 		TLSHandshakeStart: func() {
 			note("TLSHandshakeStart")
@@ -161,7 +195,9 @@ func main() {
 		DialContext: (&net.Dialer{Resolver: net.DefaultResolver}).DialContext,
 	}}
 	req, _ = http.NewRequest("GET", "http://localhost:"+target.Port()+"/five", nil)
+	goodOnly = true
 	read(named, req)
+	goodOnly = false
 	flush("the lookup of a host name")
 
 	secure := httptest.NewTLSServer(http.HandlerFunc(handler))
