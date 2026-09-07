@@ -356,9 +356,15 @@ type narrowMix interface{ ~int | ~float32 }
 		head+"func f[T floatType](a, b T) T { return a / b }\n")
 	acceptFile(t, "a conversion to 2 float widths",
 		head+"func f[T floatType](a int) T { return T(a) }\n")
-	rejectFile(t, "the operator + on an int and a narrow float",
-		"mixes an integer type with a float type",
+	// A set that mixes an integer type with a float type holds the bound num,
+	// and the emitter casts each result to the parameter in front of the
+	// mask, thus a narrow term keeps each operator too.
+	acceptFile(t, "the operator + on an int and a narrow float",
 		head+"func f[T narrowMix](a, b T) T { return a + b }\n")
+	acceptFile(t, "the unary - on an int and a narrow float",
+		head+"func f[T narrowMix](a T) T { return -a }\n")
+	rejectFile(t, "a division of an int and a narrow float", "the Dart operator / always gives a double",
+		head+"func f[T narrowMix](a, b T) T { return a / b }\n")
 
 	rejectFile(t, "a division of mixed sign", "an unsigned type of 64 bits",
 		head+"func f[T intType](a, b T) T { return a / b }\n")

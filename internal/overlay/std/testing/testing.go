@@ -926,35 +926,84 @@ type options struct {
 // defaultBenchNanos is the length that 1 benchmark targets. Go uses 1 second.
 const defaultBenchNanos = 1000000000
 
+// readFlags reads the flags of the arguments of the program, with the rules of
+// the flag package of Go. A flag that is not a bool takes its value after an
+// equal sign or in the next argument. The flags end at the first argument that
+// holds no dash and at a lone "--".
 func readFlags() options {
 	out := options{nanoseconds: defaultBenchNanos, rounds: 1}
-	for _, arg := range dart.Args() {
-		switch {
-		case arg == "-test.v" || arg == "-test.v=true":
-			verbose = true
-		case arg == "-test.short" || arg == "-test.short=true":
-			short = true
-		case strings.HasPrefix(arg, "-test.count="):
-			if v, err := strconv.Atoi(strings.TrimPrefix(arg, "-test.count=")); err == nil {
-				out.rounds = v
+	args := dart.Args()
+	for i := 0; i < len(args); i++ {
+		name, value, hasValue, ok := splitFlag(args[i])
+		if !ok {
+			break
+		}
+		switch name {
+		case "test.v":
+			verbose = boolValue(value, hasValue)
+		case "test.short":
+			short = boolValue(value, hasValue)
+		case "test.count", "test.run", "test.bench", "test.benchtime", "test.benchcount":
+			if !hasValue {
+				if i+1 >= len(args) {
+					emit("flag needs an argument: -" + name)
+					dart.Exit(2)
+				}
+				i++
+				value = args[i]
 			}
-		case strings.HasPrefix(arg, "-test.run="):
-			out.run = strings.TrimPrefix(arg, "-test.run=")
-			runFilter = out.run
-		case strings.HasPrefix(arg, "-test.bench="):
-			out.benchmarks = true
-			out.bench = strings.TrimPrefix(arg, "-test.bench=")
-		case strings.HasPrefix(arg, "-test.benchtime="):
-			if v, err := strconv.Atoi(strings.TrimPrefix(arg, "-test.benchtime=")); err == nil {
-				out.nanoseconds = int64(v)
-			}
-		case strings.HasPrefix(arg, "-test.benchcount="):
-			if v, err := strconv.Atoi(strings.TrimPrefix(arg, "-test.benchcount=")); err == nil {
-				out.count = v
-			}
+			out.set(name, value)
 		}
 	}
 	return out
+}
+
+// splitFlag reads the name and the value of 1 argument. The flag package of Go
+// accepts 1 dash or 2 in front of the name. ok is false for an argument that
+// is no flag.
+func splitFlag(arg string) (name, value string, hasValue, ok bool) {
+	if len(arg) < 2 || arg[0] != '-' || arg == "--" {
+		return "", "", false, false
+	}
+	arg = arg[1:]
+	if arg[0] == '-' {
+		arg = arg[1:]
+	}
+	name, value, hasValue = strings.Cut(arg, "=")
+	return name, value, hasValue, true
+}
+
+// boolValue reads the value of a bool flag. The bare flag means true.
+func boolValue(value string, hasValue bool) bool {
+	if !hasValue {
+		return true
+	}
+	v, err := strconv.ParseBool(value)
+	return err == nil && v
+}
+
+// set writes the value of 1 flag that takes a value.
+func (o *options) set(name, value string) {
+	switch name {
+	case "test.count":
+		if v, err := strconv.Atoi(value); err == nil {
+			o.rounds = v
+		}
+	case "test.run":
+		o.run = value
+		runFilter = value
+	case "test.bench":
+		o.benchmarks = true
+		o.bench = value
+	case "test.benchtime":
+		if v, err := strconv.Atoi(value); err == nil {
+			o.nanoseconds = int64(v)
+		}
+	case "test.benchcount":
+		if v, err := strconv.Atoi(value); err == nil {
+			o.count = v
+		}
+	}
 }
 
 // MatchString matches 1 element of a test name against 1 part of the pattern of

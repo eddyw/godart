@@ -250,6 +250,26 @@ func (c *conn) Close() error {
 	return nil
 }
 
+// connCloseWrite ends the write side of a connection. The result is empty on
+// success, and it names the cause on a failure.
+//
+//gart:dart package:goruntime/goruntime.dart $connCloseWrite
+func connCloseWrite(handle int) string
+
+// closeWrite ends the write side of the connection. The peer then reads the
+// end of the stream, and this side still reads. A write after it gives an
+// error.
+//
+// The runtime holds a Socket of dart:io, and Socket.close ends the send
+// direction alone. The receive direction alone needs RawSocket.shutdown, and
+// the runtime holds no raw socket, thus no closeRead stands here.
+func (c *conn) closeWrite() error {
+	if cause := connCloseWrite(c.handle); cause != "" {
+		return netError("close "+c.network, cause)
+	}
+	return nil
+}
+
 func (c *conn) SetDeadline(t time.Time) error {
 	c.read = deadlineNanos(t)
 	c.write = c.read

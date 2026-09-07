@@ -50,6 +50,8 @@ final GoString _empty = GoString.empty;
 
 GoString $connClose(int handle) => _noNet;
 
+String $connCloseWrite(int handle) => 'operation not supported';
+
 GoString $connDeadline(int handle, int read, int write) => _noNet;
 
 GoString $connOption(int handle, GoString name, int value) => _noNet;

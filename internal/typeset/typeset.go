@@ -100,10 +100,6 @@ type Set struct {
 	// Float reports that each term is a float type.
 	Float bool
 
-	// Narrow reports that a term holds fewer bits than a Dart int or a Dart
-	// double. An operation on such a term needs a mask of its width.
-	Narrow bool
-
 	// Wide reports that a term is an unsigned integer type of 64 bits. Go
 	// reads the bit pattern of such a type as unsigned, and Dart reads the
 	// same pattern as a negative number.
@@ -146,11 +142,6 @@ func Describe(t types.Type) (Set, bool) {
 			out.Integer = false
 		default:
 			return Set{}, true
-		}
-		switch b.Kind() {
-		case types.Int8, types.Int16, types.Int32,
-			types.Uint8, types.Uint16, types.Uint32, types.Float32:
-			out.Narrow = true
 		}
 		switch b.Kind() {
 		case types.Uint, types.Uint64, types.Uintptr:

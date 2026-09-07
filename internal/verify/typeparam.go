@@ -91,10 +91,10 @@ func (v *verifier) checkTypeParamAssign(s *ast.AssignStmt) {
 // the mask of the width. A set of float types keeps the same rule: the
 // dictionary of float32 holds the round of 32 bits, and the dictionary of
 // float64 holds the identity. A set that mixes an integer type with a float
-// type keeps each operator that Go allows on both, and a division of such a
-// set falls outside the subset, because the Dart operator `/` always gives a
-// double. Such a mixed set holds 1 Dart bound of `num`, and no mask of a
-// narrow width fits that bound, thus a narrow term of a mixed set stays out.
+// type holds the Dart bound `num`, and the emitter casts each result to the
+// parameter in front of the mask, thus the same rule holds. A division of such
+// a set falls outside the subset, because the Dart operator `/` always gives a
+// double.
 func (v *verifier) rejectArith(pos token.Pos, t types.Type, op token.Token, what string) {
 	set, ok := typeset.Describe(t)
 	if !ok || typeset.Core(t) != nil {
@@ -105,10 +105,6 @@ func (v *verifier) rejectArith(pos token.Pos, t types.Type, op token.Token, what
 	case !set.Numeric:
 		v.reject(pos, "the compiler gives a type parameter 1 Dart type",
 			"%s reads the type parameter %s, and its constraint holds more than 1 Dart type",
-			what, tp.Obj().Name())
-	case !set.Integer && !set.Float && set.Narrow:
-		v.reject(pos, "the dictionary holds a mask for a set of integer types or of float types",
-			"%s reads the type parameter %s, and its constraint mixes an integer type with a float type that needs a mask of its width",
 			what, tp.Obj().Name())
 	case op == token.QUO && !set.Integer && !set.Float:
 		v.reject(pos, "the Dart operator / always gives a double",

@@ -1284,8 +1284,8 @@ func (e *emitter) capacity(x ir.Expr) string {
 // value in Go, and a Dart list compares by identity, thus such a map takes
 // its own equality and its own hash.
 func (e *emitter) mapNew(m *types.Map) string {
-	base := fmt.Sprintf("GoMap<%s, %s>(() => %s",
-		e.dartType(m.Key()), e.dartType(m.Elem()), e.zero(m.Elem()))
+	base := fmt.Sprintf("GoMap<%s, %s>(%s",
+		e.dartType(m.Key()), e.dartType(m.Elem()), e.zeroFunc(m.Elem()))
 	// A pointer compares by identity in Go. A pointer to a struct is the Dart
 	// object of the struct, and the class compares the fields, thus such a
 	// key needs the identity of Dart.
@@ -1435,8 +1435,8 @@ func (e *emitter) makeCall(x *ir.Builtin) string {
 		if len(x.Args) > 0 {
 			capacity = "$ix(" + e.expr(x.Args[0]) + ")"
 		}
-		return fmt.Sprintf("Chan<%s>(%s, () => %s)",
-			e.dartType(u.Elem()), capacity, e.zero(u.Elem()))
+		return fmt.Sprintf("Chan<%s>(%s, %s)",
+			e.dartType(u.Elem()), capacity, e.zeroFunc(u.Elem()))
 	}
 	e.fail("make does not apply to the type %s yet", x.Type)
 	return "null"
