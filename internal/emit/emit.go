@@ -311,6 +311,9 @@ type emitter struct {
 type litPool struct {
 	// names gives the Dart name of each text that the file holds already.
 	names map[string]string
+	// zeros gives the name of the zero function of each Dart type that the
+	// file holds already. Read zeroHoist.
+	zeros map[string]string
 	// decls holds the declaration of each name, in the order of the first
 	// read.
 	decls []string

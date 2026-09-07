@@ -107,6 +107,12 @@ A scanner of the runtime serves the decoder of `encoding/json` (decision 386).
 costs. `TestUnmarshalMaxDepth` and `TestUnmarshalEmbeddedUnexported` each pass,
 and a `reflect.Value` carries the read only mark of Go.
 
+The third stream closed 4 gaps and 1 defect of the web build (decision 387):
+`-test.run` with a space, a type set that mixes a narrow integer type with a
+float type, 1 view object of a substring, and `net.TCPConn.CloseWrite`. The
+lazy package variable stays out, and a bisect names 1 declaration of
+`net/http` that breaks dart2wasm on its own.
+
 ### 2026-09-06, the twenty-third session
 
 The user parked the name of the project, and asked for each open task end to

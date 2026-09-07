@@ -160,6 +160,9 @@ func exprIsSimple(x ir.Expr) bool {
 }
 
 func (e *emitter) constant(v constant.Value, t types.Type) string {
+	if text, ok := e.mixedConst(v, t); ok {
+		return text
+	}
 	switch {
 	case isString(t):
 		return e.stringLit(constant.StringVal(v))
@@ -176,6 +179,26 @@ func (e *emitter) constant(v constant.Value, t types.Type) string {
 	}
 	e.fail("the constant %s has no Dart form", v)
 	return "null"
+}
+
+// mixedConst writes a constant of a type parameter whose set mixes an integer
+// type with a float type. The Dart form of such a value is an int or a double,
+// and only the type argument tells which, thus the zero value of the
+// dictionary carries the form and the sum with the Dart int takes it. Go
+// accepts only a constant that each type of the set holds, thus the value is a
+// whole number.
+func (e *emitter) mixedConst(v constant.Value, t types.Type) (string, bool) {
+	tp, ok := types.Unalias(t).(*types.TypeParam)
+	if !ok {
+		return "", false
+	}
+	set, ok := typeset.Describe(tp)
+	if !ok || !set.Numeric || set.Integer || set.Float {
+		return "", false
+	}
+	d := e.dictOf(tp)
+	return fmt.Sprintf("%s.mask((%s.zero() + %s) as %s)", d, d,
+		intConst(v, types.Typ[types.Int]), typeParamName(tp)), true
 }
 
 // complexConst writes a complex constant. A constant of complex64 rounds each
@@ -644,9 +667,13 @@ func (e *emitter) narrow(t types.Type, text string) string {
 		// A set of integer types and a set of float types each hold 1 Dart
 		// type, thus the dictionary of the type argument carries the mask of
 		// its width. float32 rounds to 32 bits there, and float64 holds the
-		// identity.
-		if set, ok := typeset.Describe(tp); ok && (set.Integer || set.Float) {
-			return e.dictOf(tp) + ".mask(" + text + ")"
+		// identity. A set that mixes the 2 holds the bound num, and the mask
+		// takes the parameter, thus the value takes a cast first.
+		if set, ok := typeset.Describe(tp); ok && set.Numeric {
+			if set.Integer || set.Float {
+				return e.dictOf(tp) + ".mask(" + text + ")"
+			}
+			return e.dictOf(tp) + ".mask(" + text + " as " + typeParamName(tp) + ")"
 		}
 		return "(" + text + " as " + typeParamName(tp) + ")"
 	}

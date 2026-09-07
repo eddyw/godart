@@ -505,8 +505,8 @@ func (e *emitter) writeNilChans() {
 			// variable, thus the loop reads the map again.
 			written[key] = true
 			elem := e.nilChans[key]
-			e.line("final Chan<%s> %s = Chan<%s>.nil(() => %s);",
-				e.dartType(elem), key, e.dartType(elem), e.zero(elem))
+			e.line("final Chan<%s> %s = Chan<%s>.nil(%s);",
+				e.dartType(elem), key, e.dartType(elem), e.zeroFunc(elem))
 		}
 		e.line("")
 	}

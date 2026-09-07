@@ -80,6 +80,49 @@ func TestTestsCount(t *testing.T) {
 	}
 }
 
+// TestTestsFlagWithASpace proves that the harness of a test binary reads a flag
+// whose value stands in the next argument, exactly as the flag package of Go
+// does. gart test writes the form with the equal sign, and a caller that runs
+// the binary itself can write either form.
+func TestTestsFlagWithASpace(t *testing.T) {
+	dir, err := filepath.Abs("../../testdata/tests/cover")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := t.TempDir()
+	stats, err := driver.BuildWithStats(driver.Options{
+		Dir:      dir,
+		Patterns: []string{"./..."},
+		Out:      out,
+		Runtime:  runtimeDir(t),
+		Tests:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stats.Binaries) != 1 {
+		t.Fatalf("the module gave %d test binaries, and 1 is the answer", len(stats.Binaries))
+	}
+	run(t, out, "dart", "pub", "get")
+	entry := filepath.Join(out, stats.Binaries[0].Entry)
+	for _, c := range []struct {
+		args []string
+		runs int
+	}{
+		{[]string{"-test.v", "-test.run", "TestClassify"}, 1},
+		{[]string{"-test.v", "-test.count", "2", "-test.run", "TestClassify"}, 2},
+		{[]string{"-test.v", "--test.run", "TestClassify"}, 1},
+	} {
+		got := run(t, dir, "dart", append([]string{"run", entry}, c.args...)...)
+		if n := strings.Count(got, "--- PASS: TestClassify"); n != c.runs {
+			t.Errorf("%v ran TestClassify %d times, and %d is the answer:\n%s", c.args, n, c.runs, got)
+		}
+		if strings.Contains(got, "TestShort") {
+			t.Errorf("%v ran TestShort, and the filter must drop it:\n%s", c.args, got)
+		}
+	}
+}
+
 // TestTestsCoverWithNoRun proves that the line of the package holds the
 // coverage in front of the mark of an empty run, exactly as go test writes it.
 func TestTestsCoverWithNoRun(t *testing.T) {

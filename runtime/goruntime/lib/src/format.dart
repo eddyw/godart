@@ -205,12 +205,14 @@ void $setFormatHooks(
 /// The key of the method of the interface fmt.Formatter in a method table.
 const String _formatKey = 'Format(fmt.State,int32)';
 
-/// The 64-bit pattern of an integer value, and false for each other kind.
+/// The parts of an integer value that the verb U and the verb q of the package
+/// fmt read: the 64-bit pattern in upper case, and the rune of the value.
 ///
-/// The package fmt reads the code point of the verb U and of the verb q here,
-/// because a type switch of Go reads the named type of a value not.
-(GoInt, bool) $goIntBits(Iface? value) {
-  if (value == null) return (GoInt.zero, false);
+/// A value outside the range of a rune gives the replacement rune, exactly as
+/// fmtQc of Go gives it. The pattern crosses as text, because the JS target
+/// holds a Go integer as a pair and a Dart int holds 53 bits.
+(GoString, int, bool) $goIntVerb(Iface? value) {
+  if (value == null) return (GoString.empty, 0, false);
   switch (value.desc.kind) {
     case 'int':
     case 'int8':
@@ -223,9 +225,16 @@ const String _formatKey = 'Format(fmt.State,int32)';
     case 'uint32':
     case 'uint64':
     case 'uintptr':
-      return (value.value as GoInt, true);
+      final GoInt n = value.value as GoInt;
+      final String hex = $uradix(n, 16).toUpperCase();
+      final int r = hex.length > 6 ? 0xFFFD : $ix(n);
+      return (
+        GoString.fromString(hex),
+        r < 0 || r > 0x10FFFF ? 0xFFFD : r,
+        true,
+      );
   }
-  return (GoInt.zero, false);
+  return (GoString.empty, 0, false);
 }
 
 /// The deep comparison of the package reflect.

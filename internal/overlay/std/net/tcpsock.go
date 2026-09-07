@@ -14,10 +14,10 @@ import (
 //
 // `dart:io` owns the socket. It gives no file descriptor, and it exposes only
 // 1 socket option that no intrinsic of `syscall/dart` reaches. The methods
-// `CloseRead`, `CloseWrite`, `SetLinger`, `SetNoDelay`, `SetKeepAlive`,
-// `SetKeepAlivePeriod`, `SetKeepAliveConfig`, `SetReadBuffer`,
-// `SetWriteBuffer`, `MultipathTCP`, `SyscallConn`, and `File` each need 1 of
-// the 2, thus the overlay holds none of them.
+// `CloseRead`, `SetLinger`, `SetKeepAlivePeriod`, `SetKeepAliveConfig`,
+// `MultipathTCP`, `SyscallConn`, and `File` each need 1 of the 2, thus the
+// overlay holds none of them. `CloseWrite` rides `Socket.close`, which ends
+// the send direction alone.
 //
 // A listener of the network tcp holds the same 2 limits. `File` and
 // `SyscallConn` each need the descriptor, and `SetDeadline` needs an accept
@@ -67,6 +67,10 @@ func (t *TCPConn) Write(b []byte) (int, error) { return t.c.Write(b) }
 
 // Close ends the connection in both directions.
 func (t *TCPConn) Close() error { return t.c.Close() }
+
+// CloseWrite ends the write side of the connection. The peer then reads the
+// end of the stream, and this side still reads.
+func (t *TCPConn) CloseWrite() error { return t.c.closeWrite() }
 
 // LocalAddr gives the address of this side of the connection.
 func (t *TCPConn) LocalAddr() Addr { return t.c.LocalAddr() }

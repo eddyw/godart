@@ -4727,3 +4727,50 @@ The plan left these points open. The work took the decisions below.
      the escape of 5 characters, the shortest float text, the sorted keys of a
      map, the report of a cycle above 1,000 levels, and the base64 form of a
      byte slice. `json.encode.typed` stands at 25 times the cost of Go.
+
+387. The zero value of a composite takes a tear off, and 4 gaps of the surface
+     close.
+
+     `mapNew` of stage 5 wrote `GoMap<K, V>(() => <zero>)`, thus each map, each
+     channel, and each array of the output carried a closure of its own.
+     `zeroFunc` writes a tear off now: `$intZero`, `Slice<T>.nil`,
+     `<Class>.$zero`, or `Dict.zero`. A form that no tear off serves takes a
+     top level function `$zf<file>_<n>`, and 2 equal Dart forms share 1
+     function.
+
+     **The lazy package variable stays out, and the closure was not the cause.**
+     Decision 373 named `mapNew` as the next step. The measurement: 7,651,808
+     bytes before, 7,077,248 with the lazy form, and 7,651,808 with the tear
+     off alone. A bisect of 670 lazy variables ends at 1 declaration:
+     `late Iface? DefaultTransport = null;` of `net/http` breaks
+     `Summary.apply` of the type flow analysis of dart2wasm on its own. The
+     initializer is a null literal, thus no rule of the form removes the
+     failure. The work needs a witness that stands outside godart, and a report
+     to the Dart team.
+
+     **`-test.run <pattern>` with a space runs the pattern.** The reader of the
+     flags held only the form with an equals sign, thus a whole suite ran where
+     the caller asked for 1 test. It follows the rule of the package flag now,
+     and a missing value ends the binary with the status 2.
+
+     **A type set that mixes a narrow integer type with a float type enters the
+     subset.** The Dart bound of such a set is `num`, and the mask of the
+     dictionary of `int32` takes a `GoInt`. `narrow` writes the cast to the
+     type parameter in front of the mask now, thus `$dT.mask(v as T)` fits the
+     bound. `golang.org/x/exp/constraints.Ordered` and `Integer | Float` each
+     stand inside the subset, and `testdata/programs/genmixed` proves 46 lines
+     that wrap or round.
+
+     **`$substring` builds 1 view object.** The second view held the
+     unmodifiable form, and that form serves a send between 2 isolates. Only
+     `Isolate.run` of `chan.dart` crosses an isolate, and it sends a copy of
+     the bytes, thus no rule of the runtime needs the unmodifiable form.
+
+     **`net.TCPConn.CloseWrite` writes the end of the send direction.**
+     `Socket.close` of `dart:io` ends that direction alone, thus a later write
+     of the peer gives a broken pipe. `CloseRead` needs `RawSocket.shutdown`
+     and stays out. `testdata/programs/nethalf` holds the witness.
+
+     **A `//gart:dart` declaration of an integer broke each web build.** The
+     JS target holds a Go integer as a pair, thus the argument needs `$ix`.
+     `TestWebIO` and `TestWebFetch` found it.

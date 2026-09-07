@@ -242,18 +242,106 @@ func (e *emitter) zero(t types.Type) string {
 	case *types.Array:
 		return e.makeArray(u)
 	case *types.Map:
-		return fmt.Sprintf("GoMap<%s, %s>.nil(() => %s)",
-			e.dartType(u.Key()), e.dartType(u.Elem()), e.cycleZero(u.Elem()))
+		return fmt.Sprintf("GoMap<%s, %s>.nil(%s)",
+			e.dartType(u.Key()), e.dartType(u.Elem()), e.cycleZeroFunc(u.Elem()))
 	case *types.Chan:
 		if !holdsTypeParam(u.Elem()) {
 			return e.nilChan(u.Elem())
 		}
-		return fmt.Sprintf("Chan<%s>.nil(() => %s)", e.dartType(u.Elem()), e.cycleZero(u.Elem()))
+		return fmt.Sprintf("Chan<%s>.nil(%s)", e.dartType(u.Elem()), e.cycleZeroFunc(u.Elem()))
 	case *types.Pointer, *types.Signature, *types.Interface:
 		return "null"
 	}
 	e.fail("the type %s has no zero value in the subset", t)
 	return "null"
+}
+
+// zeroFunc gives a Dart function value that gives the zero value of a Go type.
+// A map, a channel, and an array each take such a function.
+//
+// A tear off of a top level function or of a constructor stands in the place
+// of a closure. Dart holds 1 such tear off for the life of the program, and a
+// closure builds a fresh object at each read of the expression. A type with no
+// tear off takes a top level function of the output file.
+func (e *emitter) zeroFunc(t types.Type) string {
+	u := types.Unalias(t)
+	if tp, ok := u.(*types.TypeParam); ok {
+		return e.dictOf(tp) + ".zero"
+	}
+	if named, ok := u.(*types.Named); ok {
+		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
+			if isLocalType(named.Obj()) {
+				return e.anonZeroFunc(st)
+			}
+			ref := e.structRef(named)
+			if ref.TypeArgs().Len() == 0 {
+				return e.className(ref.Obj()) + ".$zero"
+			}
+			return e.zeroHoist(t)
+		}
+		u = named.Underlying()
+	}
+	if st, ok := u.(*types.Struct); ok {
+		return e.anonZeroFunc(st)
+	}
+	switch u := u.Underlying().(type) {
+	case *types.Basic:
+		switch {
+		case u.Kind() == types.Bool || u.Kind() == types.UntypedBool:
+			return "$boolZero"
+		case u.Kind() == types.String || u.Kind() == types.UntypedString:
+			return "$stringZero"
+		case u.Info()&types.IsFloat != 0:
+			return "$doubleZero"
+		case u.Info()&types.IsComplex != 0:
+			return "$complexZero"
+		case u.Info()&types.IsInteger != 0:
+			return "$intZero"
+		}
+		return "$nullZero"
+	case *types.Slice:
+		return "Slice<" + e.dartType(u.Elem()) + ">.nil"
+	case *types.Pointer, *types.Signature, *types.Interface:
+		return "$nullZero"
+	}
+	return e.zeroHoist(t)
+}
+
+// anonZeroFunc gives the zero function of an unnamed struct shape. A shape
+// with no dictionary takes the tear off of its zero constructor.
+func (e *emitter) anonZeroFunc(st *types.Struct) string {
+	if len(e.anonDicts(st)) == 0 {
+		return e.anonType(st) + ".$zero"
+	}
+	return e.zeroHoist(st)
+}
+
+// zeroHoist writes a top level function that gives the zero value of a type,
+// and gives its name. 2 types with 1 Dart form share 1 function.
+//
+// A zero value that reads the dictionary of a type parameter names a local of
+// the enclosing function, thus it stays a closure.
+func (e *emitter) zeroHoist(t types.Type) string {
+	if e.lits == nil || holdsTypeParam(t) {
+		return "() => " + e.zero(t)
+	}
+	reads := e.dictReads
+	body := e.zero(t)
+	if e.dictReads != reads {
+		return "() => " + body
+	}
+	if e.lits.zeros == nil {
+		e.lits.zeros = map[string]string{}
+	}
+	if name, ok := e.lits.zeros[body]; ok {
+		return name
+	}
+	name := fmt.Sprintf("$zf%d_%d", e.lits.tag, e.lits.seq)
+	e.lits.seq++
+	e.lits.zeros[body] = name
+	e.lits.decls = append(e.lits.decls,
+		fmt.Sprintf("%s %s() => %s;", e.dartType(t), name, body))
+	return name
 }
 
 // anonZero gives the zero value of an unnamed struct shape. A shape that
@@ -263,14 +351,14 @@ func (e *emitter) anonZero(st *types.Struct) string {
 		strings.Join(e.anonDicts(st), ", "))
 }
 
-// cycleZero gives the zero of an element type inside a zero closure. The Dart
-// type of a type that names itself erases to Object?, thus null is its zero,
-// and the text of the true zero has no end.
-func (e *emitter) cycleZero(t types.Type) string {
+// cycleZeroFunc gives the zero function of an element type of a zero value.
+// The Dart type of a type that names itself erases to Object?, thus null is
+// its zero, and the text of the true zero has no end.
+func (e *emitter) cycleZeroFunc(t types.Type) string {
 	if n, ok := types.Unalias(t).(*types.Named); ok && e.cyclic(n.Obj()) {
-		return "null"
+		return "$nullZero"
 	}
-	return e.zero(t)
+	return e.zeroFunc(t)
 }
 
 // coreDispatch reports whether a method call on a type parameter with this
@@ -308,8 +396,8 @@ func (e *emitter) chanExpr(x ir.Expr) string {
 }
 
 func (e *emitter) makeArray(a *types.Array) string {
-	return fmt.Sprintf("$makeArray<%s>(%d, () => %s)",
-		e.dartType(a.Elem()), a.Len(), e.zero(a.Elem()))
+	return fmt.Sprintf("$makeArray<%s>(%d, %s)",
+		e.dartType(a.Elem()), a.Len(), e.zeroFunc(a.Elem()))
 }
 
 // typeParamBound gives the Dart bound of a type parameter.

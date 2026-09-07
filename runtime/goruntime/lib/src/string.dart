@@ -10,10 +10,15 @@ import 'slice.dart';
 /// A Dart `String` holds UTF-16 code units, thus it cannot hold the bytes of a
 /// Go string. Convert between the 2 types only at an interop boundary.
 final class GoString {
-  /// The bytes of the string. A write to this list throws.
+  /// The bytes of the string.
   ///
-  /// The storage is unmodifiable, thus Dart passes it between 2 isolates by
-  /// reference and makes no copy.
+  /// A Go string never changes, and the compiler writes no store into this
+  /// list. The storage of a string that a conversion or a concatenation
+  /// builds is an unmodifiable view, thus a write of a Dart caller throws. A
+  /// substring is a plain view of the storage of its source, because a scan
+  /// that gives many parts pays 1 view object for each part and not 2. No
+  /// code sends a string to another isolate, thus no rule of the isolate
+  /// boundary holds the form of the storage.
   final Uint8List bytes;
 
   GoString._(this.bytes);
@@ -169,7 +174,8 @@ GoInt $atUns(GoString s, GoInt i) {
 }
 
 /// The Go expression `s[low:high]`. The result shares the storage, because a
-/// Go string never changes.
+/// Go string never changes. The view is the 1 object of the result next to
+/// the string itself. Read the field bytes.
 GoString $substring(
   GoString s,
   int low,
@@ -184,7 +190,7 @@ GoString $substring(
     $panicBound(SliceBound.b, low, high, lowUns);
   }
   if (low == 0 && high == s.length) return s;
-  return GoString.take(
+  return GoString._(
     Uint8List.view(s.bytes.buffer, s.bytes.offsetInBytes + low, high - low),
   );
 }

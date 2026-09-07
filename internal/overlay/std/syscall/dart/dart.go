@@ -144,12 +144,16 @@ func StopCleanup(handle int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// IntBits gives the 64-bit pattern of an integer value of any width and of any
-// named type. The second result is false when the value holds no integer.
+// IntVerb gives the parts of an integer value that the verb U and the verb q
+// of the package fmt read.
 //
-// The package fmt reads a code point of the verb U from a value of an unknown
-// type, and a type switch of Go reads the named type of such a value not.
-func IntBits(value any) (uint64, bool) {
+// hex holds the 64-bit pattern in upper case with no padding, and r holds the
+// rune of the value or the replacement rune when the value stands outside the
+// range of a rune. ok is false when the value holds no integer.
+//
+// A type switch of Go reads the named type of a value not, thus fmt reads the
+// value here and not with such a switch.
+func IntVerb(value any) (hex string, r rune, ok bool) {
 	panic("syscall/dart needs the gart compiler")
 }
 

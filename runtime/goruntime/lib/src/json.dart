@@ -45,7 +45,7 @@ const int _any = 1;
 const int _typed = 2;
 
 /// Reports whether the bytes hold 1 valid JSON value.
-bool $jsonValid(Slice<int> data) {
+bool $jsonValid(Slice<GoInt> data) {
   final _Scanner s = _Scanner(_bytesOf(data), _Build.skipAll());
   s.run();
   return s.code == 0;
@@ -57,7 +57,7 @@ bool $jsonValid(Slice<int> data) {
 /// the bracket that broke the limit in the first number. [$jsonMethod] holds
 /// the bounds of the value, thus the Go patch calls UnmarshalJSON with those
 /// bytes. Each other answer holds 2 zeros.
-(int, int, int) $jsonUnmarshal(Slice<int> data, Iface? target) {
+(int, int, int) $jsonUnmarshal(Slice<GoInt> data, Iface? target) {
   if (target == null || target.desc.kind != 'ptr' || target.value == null) {
     return ($jsonGoPath, 0, 0);
   }
@@ -76,13 +76,16 @@ bool $jsonValid(Slice<int> data) {
 
 /// The bytes of a byte slice. The JS target holds a pair for each Go integer,
 /// thus that target takes a copy.
-Uint8List _bytesOf(Slice<int> data) {
-  if (data is $ByteSlice) {
-    return Uint8List.sublistView(data.bytes, data.off, data.off + data.len);
+Uint8List _bytesOf(Slice<GoInt> data) {
+  // A Slice of the JS target holds no subtype relation to $ByteSlice, thus the
+  // test reads the object itself.
+  final Object slice = data;
+  if (slice is $ByteSlice) {
+    return Uint8List.sublistView(slice.bytes, slice.off, slice.off + slice.len);
   }
   final Uint8List out = Uint8List(data.len);
   for (int i = 0; i < data.len; i++) {
-    out[i] = $ix(data.array[data.off + i] as GoInt);
+    out[i] = $ix(data.array[data.off + i]);
   }
   return out;
 }

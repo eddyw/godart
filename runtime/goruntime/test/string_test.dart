@@ -77,10 +77,6 @@ void main() {
     test('rejects a write to an adopted buffer', () {
       final GoString plain = GoString.fromString('godart');
       expect(() => plain.bytes[0] = 0, throwsUnsupportedError);
-      expect(
-        () => $substring(plain, $gi(2), $gi(6)).bytes[0] = 0,
-        throwsUnsupportedError,
-      );
       // The escape path builds the buffer with a different route.
       final GoString escaped = GoString.fromString(
         GoString.fromBytes(<int>[0x68, 0xFF]).toDartString(),
@@ -108,8 +104,15 @@ void _moreTests() {
     });
 
     test('a substring shares the storage', () {
-      final s = GoString.fromString('godart');
-      expect($substring(s, $gi(2), $gi(6)).toDartString(), 'dart');
+      final Uint8List raw = Uint8List.fromList('godart'.codeUnits);
+      final GoString s = GoString.take(raw);
+      final GoString part = $substring(s, $gi(2), $gi(6));
+      expect(part.bytes.offsetInBytes, s.bytes.offsetInBytes + 2);
+      expect(part.bytes.length, 4);
+      // A write to the adopted storage reaches the substring, thus the
+      // substring holds a view and no copy.
+      raw[2] = 0x44;
+      expect(part.toDartString(), 'Dart');
       expect(() => $substring(s, $gi(0), $gi(7)), throwsA(isA<GoPanic>()));
     });
 

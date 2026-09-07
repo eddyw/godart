@@ -397,18 +397,17 @@ func flagText(format string, start, end int, minus bool) string {
 // strconv.IsPrint reads the tables of Go, thus the answer matches Go for each
 // rune. The Dart side holds no such table.
 func unicodeText(v any, flags string) string {
-	bits, ok := dart.IntBits(v)
+	// Go writes the 64-bit pattern of the value, thus a negative value gives 16
+	// digits and no sign.
+	digits, r, ok := dart.IntVerb(v)
 	if !ok {
 		return dart.FormatVerb('U', 0, 0, -1, v)
 	}
-	// Go writes the 64-bit pattern of the value, thus a negative value gives 16
-	// digits and no sign.
-	digits := strings.ToUpper(strconv.FormatUint(bits, 16))
 	for len(digits) < 4 {
 		digits = "0" + digits
 	}
 	out := "U+" + digits
-	if r := rune(bits); uint64(r) == bits && contains(flags, '#') && strconv.IsPrint(r) {
+	if len(digits) <= 6 && contains(flags, '#') && strconv.IsPrint(r) {
 		out += " '" + string(r) + "'"
 	}
 	return out
@@ -429,8 +428,8 @@ func holdsText(v any) bool {
 // of Go reads the named type of such a value not, thus the read goes through
 // the intrinsic.
 func runeOf(v any) (rune, bool) {
-	bits, ok := dart.IntBits(v)
-	return rune(bits), ok
+	_, r, ok := dart.IntVerb(v)
+	return r, ok
 }
 
 // truncate cuts a text argument to the precision. Go reads the precision of a

@@ -21,6 +21,10 @@ final class _Conn {
   /// True after the peer closed the write side. Each read then gives 0.
   bool ended = false;
 
+  /// True after this side closed the write side. Each write then gives a
+  /// cause, because the sink of the socket rejects a late byte with a throw.
+  bool writeEnded = false;
+
   /// The read that stands open. A deadline ends the wait of the caller, and
   /// the read of the stream stays, thus the next read takes the same future.
   Future<int>? pending;
@@ -506,6 +510,7 @@ String _statusLine(Uint8List b) {
 (int, GoString) $connWrite(int handle, Slice<int> p) {
   final _Conn? c = _at(handle);
   if (c == null) return (0, _closed());
+  if (c.writeEnded) return (0, GoString.fromString('broken pipe'));
   if (p.len == 0) return (0, _empty);
   c.socket.add(_bytes(p));
   $await(
@@ -614,6 +619,23 @@ GoString $connClose(int handle) {
   unawaited(c.packets.cancel());
   c.socket.destroy();
   return _empty;
+}
+
+/// Ends the write side of a connection, and gives an empty text or the cause.
+/// The peer then reads the end of the stream, and this side still reads.
+///
+/// Socket.close of dart:io shuts the send direction down after the flush of
+/// each pending byte, and each write of this runtime waits for its own flush,
+/// thus the close holds no pending byte. The result is a Dart String, because
+/// an external declaration of the overlay reads it.
+String $connCloseWrite(int handle) {
+  final _Conn? c = _at(handle);
+  if (c == null) return 'use of closed network connection';
+  if (!c.writeEnded) {
+    c.writeEnded = true;
+    c.socket.close().ignore();
+  }
+  return '';
 }
 
 /// Writes the 2 deadlines of a connection, in nanoseconds after the start of

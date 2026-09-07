@@ -37,3 +37,4 @@ export 'src/srcmap.dart';
 export 'src/string.dart';
 export 'src/test.dart';
 export 'src/weak.dart';
+export 'src/zero.dart';
