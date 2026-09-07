@@ -7,7 +7,7 @@ This file names how much of each standard library package the surface holds.
 ## The measure
 
 Run `make surface`. `internal/surface` holds the tool, and the numbers below
-come from the run of 2026-09-05.
+come from the run of 2026-09-07.
 
 The measure counts the exported names of a package: each name of the package
 scope, each exported method of the pointer to an exported named type, and each
@@ -47,15 +47,15 @@ source stands behind them. Each partial package below is an overlay.
 ## Full support
 
 165 of the 174 measured packages hold each exported name of Go. The table
-below names the 126 of them that this document lists by form. The 39 that stay
+below names the 129 of them that this document lists by form. The 39 that stay
 out of the table are the packages of `docs/library.md` that no standard list
 of this document holds.
 
 | Form | Packages |
 |---|---|
-| Native, 73 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `crypto`, `crypto/aes`, `crypto/des`, `crypto/dsa`, `crypto/ecdh`, `crypto/ecdsa`, `crypto/ed25519`, `crypto/elliptic`, `crypto/hkdf`, `crypto/pbkdf2`, `crypto/rc4`, `crypto/rsa`, `crypto/sha3`, `crypto/x509/pkix`, `debug/dwarf`, `debug/macho`, `debug/plan9obj`, `encoding`, `encoding/ascii85`, `encoding/base32`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/pem`, `encoding/xml`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/crc64`, `hash/fnv`, `html`, `html/template`, `image`, `image/color`, `image/color/palette`, `image/draw`, `image/gif`, `image/jpeg`, `index/suffixarray`, `io`, `io/fs`, `io/ioutil`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/fstest`, `testing/iotest`, `testing/slogtest`, `text/template`, `text/template/parse`, `unicode`, `unicode/utf16` |
-| Patch, 21 | `archive/tar`, `bytes`, `crypto/cipher`, `crypto/fips140`, `debug/elf`, `debug/pe`, `encoding/asn1`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `log/slog`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `text/tabwriter` |
-| Overlay, 32 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `crypto/x509`, `embed`, `encoding/binary`, `encoding/gob`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `net/http/httptest`, `os/signal`, `path/filepath`, `runtime/debug`, `slices`, `sort`, `strconv`, `strings`, `sync`, `testing/quick`, `testing/synctest`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
+| Native, 76 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `crypto`, `crypto/aes`, `crypto/des`, `crypto/dsa`, `crypto/ecdh`, `crypto/ecdsa`, `crypto/ed25519`, `crypto/elliptic`, `crypto/hkdf`, `crypto/pbkdf2`, `crypto/rc4`, `crypto/rsa`, `crypto/sha3`, `crypto/x509/pkix`, `debug/dwarf`, `debug/macho`, `debug/plan9obj`, `encoding`, `encoding/ascii85`, `encoding/base32`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/pem`, `encoding/xml`, `encoding/json/jsontext`, `encoding/json/v2`, `go/doc/comment`, `go/format`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/crc64`, `hash/fnv`, `html`, `html/template`, `image`, `image/color`, `image/color/palette`, `image/draw`, `image/gif`, `image/jpeg`, `index/suffixarray`, `io`, `io/fs`, `io/ioutil`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/textproto`, `net/url`, `path`, `regexp`, `testing/fstest`, `testing/iotest`, `testing/slogtest`, `text/template`, `text/template/parse`, `text/tabwriter`, `unicode`, `unicode/utf16` |
+| Patch, 23 | `archive/tar`, `bytes`, `crypto/cipher`, `crypto/fips140`, `debug/elf`, `debug/pe`, `encoding/asn1`, `go/ast`, `go/build/constraint`, `go/parser`, `hash/crc32`, `log/slog`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `regexp/syntax`, `encoding/json`, `slices`, `sort` |
+| Overlay, 30 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `crypto/x509`, `embed`, `encoding/binary`, `encoding/gob`, `errors`, `flag`, `fmt`, `iter`, `log`, `maps`, `net/http/httptest`, `os/signal`, `path/filepath`, `runtime/debug`, `strconv`, `strings`, `sync`, `testing/quick`, `testing/synctest`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.
@@ -92,10 +92,9 @@ holds the `Signal` type and the 12 signal numbers that macOS and Linux agree
 on, because `os` and `os/signal` need them. A Go program reaches the system
 through `os`, through `net`, and through the interop package `syscall/dart`.
 
-The gap of `encoding/json` is the option set of the v2 implementation. Go 1.27
-routes `encoding/json` through that implementation, thus the measure counts
-`DefaultOptionsV1`, `FormatDurationAsNano`, and 20 more names of it. The v1 API
-is complete, with `Token`, `Delim`, and `UseNumber` since 2026-09-02.
+`encoding/json` left the table on 2026-09-06. The package reads the real source
+of Go with 2 patches since then, thus it holds each name of the v1 API and of
+the option set of the v2 implementation. Decision 386 holds the patches.
 
 ## Why a name of 5 packages stays out
 
@@ -153,11 +152,13 @@ name `unsafe.Pointer` in the signature, and stage 2 rejects an import of
 `unsafe`. `Pointer[T]` holds the same 4 operations with a typed pointer, and Go
 names it the safer form of each 1.
 
-### reflect, 8 names
+### reflect, 5 names
+
+`FuncOf` joined the surface on 2026-09-03. The 5 names below each need a
+machine address, and non-goal N3 holds such an address out.
 
 | Name | The cause |
 |---|---|
-| `FuncOf` | The type needs a descriptor of a function type that the program never names. `$sliceOf` and its 3 companions build such a descriptor in the Dart runtime library, and no builder of a function type stands there yet. The work needs `$funcOf`, an intrinsic of stage 5, and 1 name of `syscall/dart`. |
 | `NewAt`, `SliceAt`, `Value.SetPointer` | Each 1 takes an `unsafe.Pointer`. |
 | `Value.InterfaceData` | The result is the 2 words of an interface value. Dart holds no such pair. |
 | `Value.UnsafeAddr` | Go gives the address of the value. `Value.Pointer` gives the identity of an object instead, and `Value.Addr` builds a new cell at each call for a field of a scalar type. Thus 2 reads of 1 field would give 2 numbers, and a number that changes is a wrong answer. |
@@ -256,35 +257,12 @@ that checks a chain names its own roots, or it calls `SetFallbackRoots`.
 it signs each 1. It then builds a forged leaf with another key and the same
 subject, and `Verify` rejects it.
 
-### encoding/json, 25 names
+### encoding/json, 0 names
 
-| Name | The cause |
-|---|---|
-| `Number.MarshalJSONTo`, `Number.UnmarshalJSONFrom` | Each 1 takes an encoder or a decoder of `encoding/json/jsontext`. |
-| `UnmarshalTypeError.Type`, `UnsupportedTypeError.Type`, `MarshalerError.Type` | The walk of the type descriptor runs in the Dart runtime library, and it reports the name of the type as a text. `reflect` of the surface builds no `Type` from a name. |
-| `UnsupportedValueError.Value` | The field holds a `reflect.Value` of the value that holds no JSON form. The walk reports the text of the value alone. |
-| `UnmarshalTypeError.Offset`, `UnmarshalTypeError.Err`, `UnmarshalTypeError.Unwrap` | The walk reports no offset of the input and no inner error. |
-| `InvalidUnmarshalError.Type`, `UnmarshalFieldError.Type` | The 2 are reachable, and a measure kept them out. Read below. |
-
-`InvalidUnmarshalError.Type` holds the type of the argument of `Unmarshal`, and
-`reflect.TypeOf` of that argument gives it. `UnmarshalFieldError` is deprecated,
-and no path of Go and no path of the overlay gives it. Thus the 2 names need
-only an import of `reflect` in `encoding/json`.
-
-That import costs each program that reads `encoding/json`. A measure of
-2026-09-04 built `testdata/programs/jsonuse` with the import and without it:
-
-| Measure | Without `reflect` | With `reflect` | The rise |
-|---|---|---|---|
-| The Dart source of the output | 2456 KB | 2804 KB | 348 KB, 14 percent |
-| The binary of `dart compile exe` | 8423360 bytes | 8636768 bytes | 208 KB, 2.5 percent |
-
-Item 9 of "The next list" holds the same trade: `crypto/rand.Int` and
-`crypto/rand.Prime` stay out, because the 2 names would give `math/big` to each
-program that reads `crypto/tls`. `encoding/json` reaches more programs than
-`crypto/tls`, and the value of the 2 names is smaller: 1 of the 2 names no path
-ever gives, and the other names a bug of the program that the text of the error
-already reports. Thus the 2 stay out under the same rule.
+The package left this list on 2026-09-06. It reads the real source of Go now,
+thus each name of it stands in the surface. The 25 names below stayed out while
+the overlay held a walk of the type descriptor of its own, and each 1 named a
+`reflect.Type` or an offset of the input that the walk did not hold.
 
 ## jsontest joined the surface on 2026-09-06
 

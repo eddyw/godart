@@ -11,7 +11,7 @@ before a change of an overlay or before a new package of the surface.
 
 The surface holds 254 import paths: 164 standard packages, `syscall/dart`, 77
 internal packages, and 12 vendored packages of `golang.org/x`. The run of
-`make surface` of 2026-09-04 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
+`make surface` of 2026-09-07 gives the count. `docs/what-compiles.md` holds the whole list and the gate of
 each package that stays out. `docs/support.md` holds the count of the exported
 names that each one holds. A package reaches the surface 3 ways.
 

@@ -272,7 +272,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq`, `Seq2`, `Pull`, and `Pull2`. Read the section below. |
 | `maps` | Overlay | |
-| `encoding/json` | Overlay | Each name of the client surface. Read the section below. |
+| `encoding/json` | Patch | The real source of Go. 2 patches give `Unmarshal` and `Valid` the scanner of the runtime, and decision 386 holds the rule of that scanner. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native |
 | `io/fs` | Native | Each exported name, the `FS` interface family included. |
@@ -302,8 +302,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `unique` | Overlay | `Handle` and `Make`. The map keeps each value, because the subset holds no cleanup. |
 | `internal/godebug` | Overlay | Each setting holds its default, thus `Value` gives an empty text. |
 | `fmt` | Overlay | Each name of Go. |
-| `slices` | Overlay | The sort is a stable merge sort. |
-| `sort` | Overlay | Each name of Go. The order of `Slice` and of `Sort` is a quick sort, and it is not stable. |
+| `slices` | Patch | The real source of Go. `slices.go` holds the 1 patch, and the intrinsic `dart.SliceOverlap` serves `overlaps`. |
+| `sort` | Patch | The real source of Go, thus the order of `Sort` is the pdqsort of Go and the order of `Stable` is its merge sort. `slice.go` holds the 1 patch, and it reads the 2 slice intrinsics. |
 | `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. `ParseInt` and `ParseUint` each read a base of 0. |
 | `strings` | Overlay | Each name of Go. `replace.go` and `search.go` come from the real Go source since 2026-09-06, thus each of the 4 replacers of Go stands and an empty old text matches in front of each rune. |
 | `sync` | Overlay | `Mutex`, `RWMutex`, `Map`, `Cond`, `Locker`, `WaitGroup`, `Once`, `OnceFunc`, `OnceValue`, `OnceValues`, and `Pool`. |
