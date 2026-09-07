@@ -1,0 +1,9 @@
+gen/
+.dart_tool/
+build/
+lib/widgets_gen.dart
+.flutter-plugins-dependencies
+*.iml
+.idea/
+doc/capture/
+doc/reference/
