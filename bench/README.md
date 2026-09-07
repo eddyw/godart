@@ -50,123 +50,127 @@ runs its own JIT.
 `Math.imul` gives bun the low 32 bits of the product, because a plain multiply
 would lose the low bits above 2^53.
 
-## The result of 2026-09-06, after the third block of the day
+## The result of 2026-09-07
 
-Each number is 1 run, on a machine whose load average stood near 7. The 3
-groups above hold 27 cases, plus the 14 cases of the boundary.
+Each number is 1 run, on a machine whose load average stood near 5. The 3
+groups above hold 27 cases, plus the 14 cases of the boundary. A second run
+of the same set stands 5 percent or less apart on each case above 1
+millisecond.
+
+### The document, 1,995,467 bytes of JSON
 
 | Case | Go | Dart | gart | bun | gart/Dart | gart/Go |
 |---|---|---|---|---|---|---|
-| `bytes.count` | 508.08 us | 2.62 ms | **2.60 ms** | — | 1.0 | 5.1 |
-| `json.scan` | 988.16 us | — | **10.78 ms** | — | — | 10.9 |
-| `json.decode.any` | 5.68 ms | 4.90 ms | **83.58 ms** | 1.16 ms | 17.1 | 14.7 |
-| `json.decode.typed` | 3.05 ms | 5.09 ms | **69.43 ms** | 1.19 ms | 13.6 | 22.7 |
-| `json.encode.typed` | 1.43 ms | 7.75 ms | **36.45 ms** | 1.51 ms | 4.7 | 25.4 |
-| `str.concat.5k` | 5.62 ms | 3.82 ms | **4.03 ms** | 11.58 us | 1.1 | 0.7 |
-| `str.builder.200k` | 734.07 us | 2.75 ms | **3.60 ms** | 1.04 ms | 1.3 | 4.9 |
-| `str.substr.100k` | 556.84 us | 5.50 ms | **3.85 ms** | 1.01 ms | 0.7 | 6.9 |
-| `int.sum.1m` | 253.26 us | 294.71 us | **293.39 us** | 234.04 us | 1.0 | 1.2 |
-| `int.hash.1m` | 909.23 us | 922.78 us | **923.73 us** | 22.34 ms | 1.0 | 1.0 |
-| `int.div.1m` | 908.22 us | 987.85 us | **552.87 us** | 1.07 ms | 0.6 | 0.6 |
-| `int.parse.100k` | 404.03 us | 450.45 us | **2.80 ms** | 458.33 us | 6.2 | 6.9 |
-| `int.format.100k` | 1.11 ms | 778.88 us | **1.82 ms** | 1.47 ms | 2.3 | 1.6 |
-| `float.sum.1m` | 804.09 us | 663.23 us | **662.40 us** | 591.34 us | 1.0 | 0.8 |
-| `float.math.1m` | 715.73 us | 760.80 us | **807.82 us** | 850.87 us | 1.1 | 1.1 |
-| `float.parse.100k` | 1.58 ms | 1.26 ms | **8.19 ms** | 1.42 ms | 6.5 | 5.2 |
-| `float.format.100k` | 3.54 ms | 6.86 ms | **23.04 ms** | 3.70 ms | 3.4 | 6.5 |
-| `slice.append.1m` | 1.62 ms | 5.73 ms | **19.77 ms** | 1.91 ms | 3.5 | 12.2 |
-| `slice.sort.100k` | 4.58 ms | 23.00 ms | **26.00 ms** | 10.37 ms | 1.1 | 5.7 |
-| `map.string.100k` | 4.30 ms | 8.52 ms | **22.76 ms** | 7.41 ms | 2.7 | 5.3 |
-| `map.int.100k` | 1.53 ms | 5.00 ms | **10.12 ms** | 1.89 ms | 2.0 | 6.6 |
-| `struct.alloc.1m` | 663.67 us | 3.28 ms | **661.78 us** | 335.05 us | 0.2 | 1.0 |
-| `fmt.sprintf.100k` | 10.42 ms | 12.32 ms | **61.19 ms** | 5.95 ms | 5.0 | 5.9 |
-| `str.split.100k` | 4.49 ms | 6.18 ms | **35.70 ms** | 5.52 ms | 5.8 | 7.9 |
-| `str.join.100k` | 3.99 ms | 14.99 ms | **16.62 ms** | 4.12 ms | 1.1 | 4.2 |
-| `str.replace.100k` | 5.20 ms | 13.43 ms | **37.26 ms** | 11.08 ms | 2.8 | 7.2 |
-| `sort.struct.50k` | 5.07 ms | 8.75 ms | **12.84 ms** | 5.90 ms | 1.5 | 2.5 |
+| `bytes.count` | 479.59 us | 2.54 ms | **2.42 ms** | — | 1.0 | 5.0 |
+| `json.scan` | 940.60 us | — | **1.72 ms** | — | — | 1.8 |
+| `json.decode.any` | 5.84 ms | 5.21 ms | **4.39 ms** | 1.23 ms | 0.8 | 0.8 |
+| `json.decode.typed` | 3.11 ms | 5.32 ms | **3.63 ms** | 1.29 ms | 0.7 | 1.2 |
+| `json.encode.typed` | 1.48 ms | 7.72 ms | **45.06 ms** | 1.59 ms | 5.8 | 30.5 |
 
-### What the numbers say
+### The string
 
-1. **The integer of gart costs what a Dart int costs, and it holds 64 bits.**
-   `GoInt` is an extension type, thus the ahead of time build sees a plain
-   `int` and the arithmetic reaches the machine. `int.sum` and `int.hash` each
-   sit at 1.0 against Dart and against Go, and `int.div` sits at 0.6.
-2. **bun loses the 64 bit integer by a factor of 23.** A JS number holds 53
-   bits, thus `int.hash.1m` reads a BigInt and it costs 22.42 milliseconds
-   against 0.96. This is the case where the ahead of time build of Dart stands
-   far ahead of the JIT of bun.
-3. **4 cases now cost less than the same work in Dart.** `struct.alloc` sits at
-   0.2, `int.div` at 0.6, and `str.substr` at 0.7. `bytes.count`, `int.sum`,
-   `int.hash`, and `float.sum` each sit at 1.0.
-4. **`str.join.100k` rose from 11.33 milliseconds to 16.62 on purpose.**
-   `strings.Join` joined 1 element at a time, thus its cost stood at the square
-   of the result: 2,000 elements took 37.5 milliseconds and they take 0.9 now.
-   The case of the benchmark holds 6 elements, and a library must hold no
-   square cost. Read decision 379.
-4. **The decoder of `encoding/json` holds the largest gap, and it is flat.** A
-   profile of 2026-09-06 puts the Go code of that package at 24 percent, the
-   read of a slice at 9, and the layer of `reflect` at 8. No single change
-   reaches it, thus a large win needs an overlay of that package that reads the
-   decoder of Dart.
-5. **`fmt.Sprintf` costs 8.8 times the same call in Go.** The overlay parses
-   the format and it calls the bridge 1 time for each verb. Each such call
-   boxes the value, it decodes the verb, and it parses the verb again.
-6. **A scan of a text still allocates.** `str.split` gives a slice of
-   substrings, and each substring is 1 Go string with a view of the storage.
+| Case | Go | Dart | gart | bun | gart/Dart | gart/Go |
+|---|---|---|---|---|---|---|
+| `str.concat.5k` | 5.41 ms | 4.27 ms | **4.32 ms** | 12.12 us | 1.0 | 0.8 |
+| `str.builder.200k` | 740.02 us | 2.85 ms | **3.80 ms** | 1.14 ms | 1.3 | 5.1 |
+| `str.substr.100k` | 571.70 us | 5.52 ms | **3.95 ms** | 1.07 ms | 0.7 | 6.9 |
 
-### The 4 changes of the third block of 2026-09-06
+### The integer
 
-| Case | Before | After | Factor |
+| Case | Go | Dart | gart | bun | gart/Dart | gart/Go |
+|---|---|---|---|---|---|---|
+| `int.sum.1m` | 245.57 us | 302.23 us | **301.92 us** | 248.61 us | 1.0 | 1.2 |
+| `int.hash.1m` | 955.58 us | 1.00 ms | **1.01 ms** | 22.26 ms | 1.0 | 1.1 |
+| `int.div.1m` | 967.19 us | 1.01 ms | **567.18 us** | 1.06 ms | 0.6 | 0.6 |
+| `int.parse.100k` | 400.89 us | 433.08 us | **3.83 ms** | 461.06 us | 8.8 | 9.6 |
+| `int.format.100k` | 1.17 ms | 819.57 us | **1.92 ms** | 1.45 ms | 2.3 | 1.6 |
+
+### The float64
+
+| Case | Go | Dart | gart | bun | gart/Dart | gart/Go |
+|---|---|---|---|---|---|---|
+| `float.sum.1m` | 848.79 us | 675.49 us | **685.41 us** | 638.55 us | 1.0 | 0.8 |
+| `float.math.1m` | 738.38 us | 753.13 us | **854.97 us** | 934.81 us | 1.1 | 1.2 |
+| `float.parse.100k` | 1.65 ms | 1.25 ms | **8.28 ms** | 1.44 ms | 6.6 | 5.0 |
+| `float.format.100k` | 3.57 ms | 7.03 ms | **25.37 ms** | 3.70 ms | 3.6 | 7.1 |
+
+### The memory
+
+| Case | Go | Dart | gart | bun | gart/Dart | gart/Go |
+|---|---|---|---|---|---|---|
+| `slice.append.1m` | 1.67 ms | 5.67 ms | **19.60 ms** | 2.06 ms | 3.5 | 11.7 |
+| `slice.sort.100k` | 4.78 ms | 23.17 ms | **30.77 ms** | 10.40 ms | 1.3 | 6.4 |
+| `map.string.100k` | 4.30 ms | 8.76 ms | **25.64 ms** | 7.87 ms | 2.9 | 6.0 |
+| `map.int.100k` | 1.55 ms | 5.12 ms | **11.20 ms** | 2.03 ms | 2.2 | 7.2 |
+| `struct.alloc.1m` | 695.05 us | 3.38 ms | **684.91 us** | 336.17 us | 0.2 | 1.0 |
+
+### The text of a client
+
+| Case | Go | Dart | gart | bun | gart/Dart | gart/Go |
+|---|---|---|---|---|---|---|
+| `fmt.sprintf.100k` | 9.89 ms | 12.44 ms | **69.35 ms** | 6.15 ms | 5.6 | 7.0 |
+| `str.split.100k` | 4.30 ms | 6.29 ms | **35.05 ms** | 5.44 ms | 5.6 | 8.1 |
+| `str.join.100k` | 3.98 ms | 15.11 ms | **18.13 ms** | 4.15 ms | 1.2 | 4.6 |
+| `str.replace.100k` | 5.25 ms | 13.47 ms | **38.09 ms** | 11.07 ms | 2.8 | 7.3 |
+| `sort.struct.50k` | 5.12 ms | 9.03 ms | **16.11 ms** | 5.92 ms | 1.8 | 3.1 |
+
+### The boundary, gart alone
+
+| Case | Cost |
+|---|---|
+| 1 string of 20 bytes, read again | 17 ns |
+| A new string of 20 bytes | 40 ns |
+| A write of 20 bytes into Go | 33 ns |
+| 1 string of 1,000 bytes, read again | 17 ns |
+| A new string of 1,000 bytes | 331 ns |
+| A write of 1,000 bytes into Go | 549 ns |
+| 1 string of 100,000 bytes, read again | 17 ns |
+| A new string of 100,000 bytes | 30.39 us |
+| A write of 100,000 bytes into Go | 51.72 us |
+| 1 string of 2 megabytes, read again | 17 ns |
+| A new string of 2 megabytes | 778.76 us |
+| A write of 2 megabytes into Go | 1.17 ms |
+| A screen of 500 labels of 20 bytes | 896 ns |
+| A screen of 200 labels of 500 bytes | 368 ns |
+
+### The change of the session
+
+The 2 runs stand on 1 machine with a load average near 5, and the Go
+column of the 2 differs by 3 percent or less.
+
+| Case | 2026-09-06 | 2026-09-07 | Factor |
 |---|---|---|---|
-| `fmt.sprintf.100k` | 88.65 ms | 61.19 ms | 1.45 |
-| `str.split.100k` | 48.32 ms | 35.70 ms | 1.35 |
-| `str.replace.100k` | 48.26 ms | 37.26 ms | 1.30 |
-| `str.join.100k`, 2,000 elements | 37.5 ms | 0.9 ms | 42 |
+| `bytes.count` | 2.60 ms | 2.42 ms | 1.08 |
+| `json.scan` | 10.96 ms | 1.72 ms | 6.39 |
+| `json.decode.any` | 86.70 ms | 4.39 ms | 19.75 |
+| `json.decode.typed` | 71.33 ms | 3.63 ms | 19.67 |
+| `json.encode.typed` | 35.94 ms | 45.06 ms | 0.80 |
+| `str.builder.200k` | 3.58 ms | 3.80 ms | 0.94 |
+| `int.div.1m` | 627.13 us | 567.18 us | 1.11 |
+| `int.parse.100k` | 2.86 ms | 3.83 ms | 0.75 |
+| `float.math.1m` | 724.71 us | 854.97 us | 0.85 |
+| `float.format.100k` | 23.02 ms | 25.37 ms | 0.91 |
+| `slice.sort.100k` | 26.02 ms | 30.77 ms | 0.85 |
+| `fmt.sprintf.100k` | 61.63 ms | 69.35 ms | 0.89 |
+| `str.join.100k` | 16.83 ms | 18.13 ms | 0.93 |
+| `sort.struct.50k` | 13.15 ms | 16.11 ms | 0.82 |
 
-The bridge of `fmt` takes the parsed verb now: the letter, the flags as bits,
-the width, and the precision. It built a Go string of the verb before, and the
-runtime parsed that text again with a switch and 3 scans. `Split` and `Replace`
-count the parts before the build, and `Grow` of `Builder` held an empty body.
+**The decode of JSON costs less than Go costs.** A scanner of the runtime
+proves the whole decode before it writes the target, and each doubt hands the
+work back to the Go code. Read decision 386.
 
-**4 paths of the input and output runtime hold no case of this benchmark.** A
-probe of 2026-09-06 measured them ahead of time: a write of a file of 16
-megabytes fell from 41.4 milliseconds to 2.0, a read from 34.8 to 0.5, a pipe
-of 8 megabytes from 74.7 to 10.3, and a TCP echo of 8 megabytes from 127.0 to
-8.1. 6 loops read and wrote 1 byte at a time before.
+**5 cases rose, and 4 of the 5 pay for a rule of Go.** `sort` and `slices` read
+the real algorithm of Go now, thus `slice.sort` and `sort.struct` hold the
+count of the swaps and of the comparisons that 4 tests of Go measure.
+`int.parse` reads the real `atoi.go`, which holds the rule of the underscore.
+`str.builder` holds the copy check of Go. `fmt.sprintf` pays 12 percent for the
+report of a wrong verb: the walk reads the kind of each leaf against the verb,
+and 9 defects of `fmt` closed with that read.
 
-### The 6 changes of 2026-09-06
-
-| Case | Before | After | Factor |
-|---|---|---|---|
-| `float.math.1m` | 143.99 ms | 711 us | 202 |
-| `int.format.100k` | 21.97 ms | 1.90 ms | 11.6 |
-| `struct.alloc.1m` | 3.90 ms | 679 us | 5.7 |
-| `float.sum.1m` | 3.43 ms | 693 us | 4.9 |
-| `str.split.100k` | 92.14 ms | 48.32 ms | 1.9 |
-| `str.replace.100k` | 74.28 ms | 48.26 ms | 1.5 |
-| `float.format.100k` | 35.06 ms | 23.57 ms | 1.5 |
-| `json.encode.typed` | 52.23 ms | 36.20 ms | 1.4 |
-| `json.decode.typed` | 98.71 ms | 70.94 ms | 1.4 |
-| `map.string.100k` | 76.24 ms | 23.44 ms | 3.3 |
-| `slice.append.1m` | 24.65 ms | 19.74 ms | 1.2 |
-
-1. **`math.Sqrt` compiled to a loop of 54 steps.** The compiler of Go replaces
-   `math.sqrt` with 1 machine instruction, and gart held no such rule. `Sqrt`,
-   `Floor`, `Ceil`, `Trunc`, and `Abs` read the instruction of Dart now. Read
-   decision 359.
-2. **`float64(i)` compiled to `int.toDouble`,** a virtual call that the ahead
-   of time compiler does not fold. The operator + of int reads a double
-   operand and gives the same value. Read decision 360.
-3. **`strconv.FormatInt` joined 1 digit at a time to the front.** Read
-   decision 361.
-4. **A byte slice holds its storage in a field of the type `Uint8List`.**
-   `Slice.array` held a `List<T>` whose real class varies, thus each read took
-   a dispatch over many targets.
-5. **A Go string of ASCII skips the UTF-8 encoder,** and it holds that text as
-   its own decode. The encoder held 9 percent of the cost of `fmt.Sprintf`.
-6. **The scan of the `strings` overlay reads bytes.** `Index`, `Count`,
-   `Split`, `SplitSeq`, and `Replace` built 1 Go string for each position of
-   the text.
+**`json.encode.typed` rose 26 percent**, and no rule of Go asks for it. A
+`reflect.Value` carries the read only mark now, and the encoder walks each
+field through `reflect`. A fast encode path removes that walk, and item 1 of
+the next tasks holds its design.
 
 ## The memo of the decode
 

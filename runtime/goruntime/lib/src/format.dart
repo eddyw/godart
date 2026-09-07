@@ -214,6 +214,9 @@ void $setValueHook((Iface?, bool) Function(Iface?) read) {
 
 /// The name of the type reflect.Value. The package fmt holds a case of its own
 /// for it, and the walk of the runtime reads that case here.
+///
+/// The emitter writes the import path of the package in the name of a
+/// descriptor, thus the text below holds that path.
 const String _reflectValue = 'reflect.Value';
 
 /// The key of the method of the interface fmt.Formatter in a method table.
@@ -559,78 +562,118 @@ String _badVerb(Object? v, TypeDesc type, _Verb verb) {
   return '%!${verb.letter}(${type.display}=$text)';
 }
 
-/// The verbs that a kind of Go accepts. Go writes the report of a wrong verb
-/// for each other letter.
+/// Reports whether a kind of Go accepts a verb. Go writes the report of a
+/// wrong verb for each other letter.
 ///
 /// A compound kind holds no set of its own: Go gives the verb to each element,
 /// and the element answers. A byte slice is the exception, and _slice holds
 /// its rule.
-const Map<String, String> _verbsOfKind = <String, String>{
-  'bool': 'vt',
-  'string': 'vsxXq',
-  'int': 'vdboOxXcqU',
-  'int8': 'vdboOxXcqU',
-  'int16': 'vdboOxXcqU',
-  'int32': 'vdboOxXcqU',
-  'int64': 'vdboOxXcqU',
-  'uint': 'vdboOxXcqU',
-  'uint8': 'vdboOxXcqU',
-  'uint16': 'vdboOxXcqU',
-  'uint32': 'vdboOxXcqU',
-  'uint64': 'vdboOxXcqU',
-  'uintptr': 'vdboOxXcqU',
-  'float32': 'vbgGxXfeEF',
-  'float64': 'vbgGxXfeEF',
-  'complex64': 'vbgGxXeEfF',
-  'complex128': 'vbgGxXeEfF',
-};
+bool _verbFits(String kind, String letter) {
+  switch (kind) {
+    case 'bool':
+      return letter == 't';
+    case 'string':
+      return letter == 's' || letter == 'q' || letter == 'x' || letter == 'X';
+    case 'int':
+    case 'int8':
+    case 'int16':
+    case 'int32':
+    case 'int64':
+    case 'uint':
+    case 'uint8':
+    case 'uint16':
+    case 'uint32':
+    case 'uint64':
+    case 'uintptr':
+      return letter == 'd' ||
+          letter == 'x' ||
+          letter == 'X' ||
+          letter == 'b' ||
+          letter == 'o' ||
+          letter == 'O' ||
+          letter == 'c' ||
+          letter == 'q' ||
+          letter == 'U';
+    case 'float32':
+    case 'float64':
+      return letter == 'f' ||
+          letter == 'e' ||
+          letter == 'E' ||
+          letter == 'F' ||
+          letter == 'g' ||
+          letter == 'G' ||
+          letter == 'b' ||
+          letter == 'x' ||
+          letter == 'X';
+    case 'complex64':
+    case 'complex128':
+      return letter == 'f' ||
+          letter == 'e' ||
+          letter == 'E' ||
+          letter == 'F' ||
+          letter == 'g' ||
+          letter == 'G' ||
+          letter == 'b' ||
+          letter == 'x' ||
+          letter == 'X';
+  }
+  return true;
+}
 
 String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
   final bool plus = verb.plus;
   final String letter = verb.letter;
   if (letter == 'T') return _leaf(type.display, verb);
-  // The package fmt reads the value that a reflect.Value holds, and it does so
-  // at the top level alone. A Value below that level takes its String method,
-  // exactly as each other value with such a method does.
-  final (Iface?, bool) Function(Iface?)? valueHook = _valueHook;
-  if (depth == 0 && valueHook != null && type.display == _reflectValue) {
-    final (Iface? inner, bool valid) = valueHook(Iface(type, v));
-    if (!valid) return _leaf('<invalid reflect.Value>', verb);
-    if (inner == null) return _leaf('<nil>', verb);
-    return _value(inner.value, inner.desc, verb, depth);
-  }
+  // A type with no method reaches neither hook, and a leaf of a table or of a
+  // struct is the common case. Thus the 2 tests below stand behind that 1.
   final bool sharp = verb.goSyntax;
-  final Function? formatMethod = type.methods[_formatKey];
-  if (formatMethod != null &&
-      !identical(formatMethod, $ifaceMethod) &&
-      _formatHook != null) {
-    // The method owns the width, the precision, and each flag, thus the text
-    // of it takes no padding here.
-    return _formatHook!(
-      Iface(type, v),
-      $gi(letter.codeUnitAt(0)),
-      $gi(verb.flags),
-      $gi(verb.width),
-      $gi(verb.prec),
-    ).toDartString();
+  if (type.methods.isNotEmpty) {
+    // The package fmt reads the value that a reflect.Value holds, and it does
+    // so at the top level alone. A Value below that level takes its String
+    // method, exactly as each other value with such a method does.
+    final (Iface?, bool) Function(Iface?)? valueHook = _valueHook;
+    if (depth == 0 && valueHook != null && type.name == _reflectValue) {
+      final (Iface? inner, bool valid) = valueHook(Iface(type, v));
+      if (!valid) return _leaf('<invalid reflect.Value>', verb);
+      if (inner == null) return _leaf('<nil>', verb);
+      return _value(inner.value, inner.desc, verb, depth);
+    }
+    final Function? formatMethod = type.methods[_formatKey];
+    if (formatMethod != null &&
+        !identical(formatMethod, $ifaceMethod) &&
+        _formatHook != null) {
+      // The method owns the width, the precision, and each flag, thus the
+      // text of it takes no padding here.
+      return _formatHook!(
+        Iface(type, v),
+        $gi(letter.codeUnitAt(0)),
+        $gi(verb.flags),
+        $gi(verb.width),
+        $gi(verb.prec),
+      ).toDartString();
+    }
   }
-  if (sharp) {
-    final String? text = _goStringMethod(v, type);
-    if (text != null) return _leaf(text, verb);
-  } else if (letter == 'v' ||
-      letter == 's' ||
-      letter == 'q' ||
-      letter == 'x' ||
-      letter == 'X') {
-    final String? text = _viaMethod(v, type, verb);
-    if (text != null) return _leaf(text, verb);
+  if (type.methods.isNotEmpty) {
+    if (sharp) {
+      final String? text = _goStringMethod(v, type);
+      if (text != null) return _leaf(text, verb);
+    } else if (letter == 'v' ||
+        letter == 's' ||
+        letter == 'q' ||
+        letter == 'x' ||
+        letter == 'X') {
+      final String? text = _viaMethod(v, type, verb);
+      if (text != null) return _leaf(text, verb);
+    }
   }
   if (letter == 'p') {
     final String? text = _pointerText(v, type.kind);
     if (text != null) return _leaf(text, verb);
   }
-  final String? verbs = _verbsOfKind[type.kind];
-  if (verbs != null && !verbs.contains(letter)) {
+  // The verb v serves each kind, thus the test of the verb stands behind that
+  // 1. A comparison of 2 literals costs less than a read of a table, and the
+  // walk reaches this line 1 time for each leaf of a value.
+  if (letter != 'v' && !_verbFits(type.kind, letter)) {
     return _badVerb(v, type, verb);
   }
   if (sharp && _unsigned(type.kind)) {

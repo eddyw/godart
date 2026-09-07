@@ -126,6 +126,11 @@ type, a parallel assignment wrote a field of a pointer through the new value,
 and an unexported field of a shape carried no read only mark. A 4th defect
 stood in the return of a function with named results.
 
+The session closed with 5 gates: `go test ./internal/driver` with no failure,
+`make flutter-test` with 15 clean analyzes and each widget test, `go vet`,
+`dart analyze`, and the 53 tests of the runtime. The 2 Compass examples each
+stand in the tree, and the user picks the 1 that the repository keeps.
+
 ### 2026-09-06, the twenty-third session
 
 The user parked the name of the project, and asked for each open task end to
