@@ -394,8 +394,50 @@ func anonPrivate(t types.Type, seen map[types.Type]bool) bool {
 // thus 2 packages of the same build give the same text.
 func anonText(t types.Type) string {
 	var b strings.Builder
-	writeType(&b, t, map[types.Type]bool{})
+	writeType(&b, t, qualifyPath, map[types.Type]bool{})
 	return b.String()
+}
+
+// typeText writes the text of a type with the package name of each named type,
+// exactly as types.TypeString with no qualifier writes it. The name of a
+// descriptor reads it.
+func typeText(t types.Type) string {
+	var b strings.Builder
+	writeType(&b, t, nil, map[types.Type]bool{})
+	return b.String()
+}
+
+// mentionsStruct reports whether an unnamed struct type stands inside the type.
+// types.TypeString gives no exact text for such a type, thus the name of the
+// descriptor reads typeText for it.
+func mentionsStruct(t types.Type, seen map[types.Type]bool) bool {
+	if t == nil || seen[t] {
+		return false
+	}
+	seen[t] = true
+	switch u := types.Unalias(t).(type) {
+	case *types.Struct:
+		return true
+	case *types.Pointer:
+		return mentionsStruct(u.Elem(), seen)
+	case *types.Slice:
+		return mentionsStruct(u.Elem(), seen)
+	case *types.Array:
+		return mentionsStruct(u.Elem(), seen)
+	case *types.Chan:
+		return mentionsStruct(u.Elem(), seen)
+	case *types.Map:
+		return mentionsStruct(u.Key(), seen) || mentionsStruct(u.Elem(), seen)
+	case *types.Signature:
+		return mentionsStruct(u.Params(), seen) || mentionsStruct(u.Results(), seen)
+	case *types.Tuple:
+		for i := 0; i < u.Len(); i++ {
+			if mentionsStruct(u.At(i).Type(), seen) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // writeType writes the text of a type that names the same text for 2 types
@@ -406,7 +448,7 @@ func anonText(t types.Type) string {
 // alias Int give 1 text, and it writes an alias by its name, thus 2 local
 // aliases of 1 name in 2 blocks give 1 text. The walk below writes each field
 // name and it reads each alias.
-func writeType(b *strings.Builder, t types.Type, seen map[types.Type]bool) {
+func writeType(b *strings.Builder, t types.Type, qual types.Qualifier, seen map[types.Type]bool) {
 	if t == nil {
 		b.WriteString("<nil>")
 		return
@@ -419,25 +461,25 @@ func writeType(b *strings.Builder, t types.Type, seen map[types.Type]bool) {
 	case *types.Basic:
 		b.WriteString(u.Name())
 	case *types.Named:
-		b.WriteString(types.TypeString(u, qualifyPath))
+		b.WriteString(types.TypeString(u, qual))
 	case *types.TypeParam:
-		b.WriteString(types.TypeString(u, qualifyPath))
+		b.WriteString(types.TypeString(u, qual))
 	case *types.Pointer:
 		seen[t] = true
 		b.WriteString("*")
-		writeType(b, u.Elem(), seen)
+		writeType(b, u.Elem(), qual, seen)
 		delete(seen, t)
 	case *types.Slice:
 		b.WriteString("[]")
-		writeType(b, u.Elem(), seen)
+		writeType(b, u.Elem(), qual, seen)
 	case *types.Array:
 		fmt.Fprintf(b, "[%d]", u.Len())
-		writeType(b, u.Elem(), seen)
+		writeType(b, u.Elem(), qual, seen)
 	case *types.Map:
 		b.WriteString("map[")
-		writeType(b, u.Key(), seen)
+		writeType(b, u.Key(), qual, seen)
 		b.WriteString("]")
-		writeType(b, u.Elem(), seen)
+		writeType(b, u.Elem(), qual, seen)
 	case *types.Chan:
 		switch u.Dir() {
 		case types.SendOnly:
@@ -447,7 +489,7 @@ func writeType(b *strings.Builder, t types.Type, seen map[types.Type]bool) {
 		default:
 			b.WriteString("chan ")
 		}
-		writeType(b, u.Elem(), seen)
+		writeType(b, u.Elem(), qual, seen)
 	case *types.Struct:
 		seen[t] = true
 		b.WriteString("struct{")
@@ -461,7 +503,7 @@ func writeType(b *strings.Builder, t types.Type, seen map[types.Type]bool) {
 				b.WriteString("@" + f.Pkg().Path())
 			}
 			b.WriteString(" ")
-			writeType(b, f.Type(), seen)
+			writeType(b, f.Type(), qual, seen)
 			if tag := u.Tag(i); tag != "" {
 				fmt.Fprintf(b, " %q", tag)
 			}
@@ -470,9 +512,9 @@ func writeType(b *strings.Builder, t types.Type, seen map[types.Type]bool) {
 		delete(seen, t)
 	case *types.Signature:
 		b.WriteString("func(")
-		writeTuple(b, u.Params(), u.Variadic(), seen)
+		writeTuple(b, u.Params(), u.Variadic(), qual, seen)
 		b.WriteString(")(")
-		writeTuple(b, u.Results(), false, seen)
+		writeTuple(b, u.Results(), false, qual, seen)
 		b.WriteString(")")
 	case *types.Interface:
 		seen[t] = true
@@ -486,17 +528,17 @@ func writeType(b *strings.Builder, t types.Type, seen map[types.Type]bool) {
 			if !m.Exported() && m.Pkg() != nil {
 				b.WriteString("@" + m.Pkg().Path())
 			}
-			writeType(b, m.Type(), seen)
+			writeType(b, m.Type(), qual, seen)
 		}
 		b.WriteString("}")
 		delete(seen, t)
 	default:
-		b.WriteString(types.TypeString(t, qualifyPath))
+		b.WriteString(types.TypeString(t, qual))
 	}
 }
 
 // writeTuple writes the type of each element of a tuple.
-func writeTuple(b *strings.Builder, tuple *types.Tuple, variadic bool, seen map[types.Type]bool) {
+func writeTuple(b *strings.Builder, tuple *types.Tuple, variadic bool, qual types.Qualifier, seen map[types.Type]bool) {
 	for i := 0; i < tuple.Len(); i++ {
 		if i > 0 {
 			b.WriteString(", ")
@@ -504,7 +546,7 @@ func writeTuple(b *strings.Builder, tuple *types.Tuple, variadic bool, seen map[
 		if variadic && i == tuple.Len()-1 {
 			b.WriteString("...")
 		}
-		writeType(b, tuple.At(i).Type(), seen)
+		writeType(b, tuple.At(i).Type(), qual, seen)
 	}
 }
 

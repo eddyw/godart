@@ -1156,12 +1156,13 @@ func isPure(x ir.Expr) bool {
 // An alias carries the name of its own declaration, thus the name comes from
 // the type behind it.
 func (e *emitter) typeName(t types.Type) string {
-	// An unnamed struct type needs the exact text: types.TypeString writes an
-	// embedded field as its type alone, and it writes an alias by its name,
-	// thus 2 shapes that Go holds apart can give 1 text. The name of a
-	// descriptor is the identity of the type at run time.
-	if _, ok := types.Unalias(t).(*types.Struct); ok {
-		return anonText(stripNames(types.Unalias(t)))
+	// A type that mentions an unnamed struct type needs the exact text:
+	// types.TypeString writes an embedded field as its type alone, and it
+	// writes an alias by its name, thus 2 shapes that Go holds apart can give
+	// 1 text. The name of a descriptor is the identity of the type at run
+	// time, and a pointer to a shape must agree with the shape itself.
+	if mentionsStruct(t, map[types.Type]bool{}) {
+		return typeText(stripNames(types.Unalias(t)))
 	}
 	text := types.TypeString(stripNames(types.Unalias(t)), nil)
 	// 2 local types of 2 functions can share 1 printed name, and the
@@ -1260,7 +1261,7 @@ func (e *emitter) typeNameText(t types.Type) string {
 	} else {
 		var reads []string
 		sub := e.substParams(t, &reads)
-		text = interpolate(types.TypeString(stripNames(sub), nil), reads)
+		text = interpolate(typeText(stripNames(sub)), reads)
 	}
 	return spliceOuter(text, e.outerReads(t, ".desc.name"))
 }

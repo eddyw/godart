@@ -37,6 +37,7 @@ final TypeDesc $desc$Greeter = TypeDesc(
       () => $desc$Style,
       ($r) => ($r as Greeter$)._style,
       ($r, $v) => ($r as Greeter$)._style = $v as GoInt,
+      pkg: 'example.com/multi/greet',
     ),
   ],
   withType: <$R>($R Function<$T>() $f) => $f<Greeter$>(),

@@ -4877,3 +4877,11 @@ The plan left these points open. The work took the decisions below.
      real named results held the same defect before this session.
 
      `testdata/programs/anonshape` holds the 4 rules.
+
+     **The exact text reaches each place that names a type.** A first form of
+     the change gave the exact text to a struct type alone, thus a pointer to a
+     shape kept the text of `types.TypeString` and the 2 names disagreed. A
+     type assertion then reported "types from different scopes" for 1 type. The
+     name of a type that mentions an unnamed struct type reads the exact text
+     now, and the interpolated name of a shape that holds a type parameter
+     reads it too.
