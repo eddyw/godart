@@ -94,6 +94,7 @@ flutter-go:
 	cd flutter/example/form/go && go vet ./... && go test ./...
 	cd flutter/example/compass/go && go vet ./... && go test ./...
 	cd flutter/example/compass/server && go vet ./... && go test ./...
+	cd flutter/example/compass_v2/go && go vet ./... && go test ./...
 
 # flutter-test builds the example and runs the widget tests. It needs the
 # Flutter SDK, thus ci does not run it.
@@ -102,11 +103,13 @@ flutter-test: build
 	cd flutter/example/apilist && $(CURDIR)/build/glutter gen
 	cd flutter/example/form && $(CURDIR)/build/glutter gen
 	cd flutter/example/compass && $(CURDIR)/build/glutter gen
+	cd flutter/example/compass_v2 && $(CURDIR)/build/glutter gen
 	cd flutter/goflutter && $(FLUTTER) analyze
 	cd flutter/example/counter && $(FLUTTER) analyze
 	cd flutter/example/apilist && $(FLUTTER) analyze
 	cd flutter/example/form && $(FLUTTER) analyze
 	cd flutter/example/compass && $(FLUTTER) analyze
+	cd flutter/example/compass_v2 && $(FLUTTER) analyze
 	cd flutter/bench/flutter && $(FLUTTER) pub get && $(FLUTTER) analyze
 	cd flutter/nodegen && dart pub get && dart analyze
 	cd flutter/goflutter && $(FLUTTER) test
@@ -114,6 +117,7 @@ flutter-test: build
 	cd flutter/example/apilist && $(FLUTTER) test
 	cd flutter/example/form && $(FLUTTER) test
 	cd flutter/example/compass && $(FLUTTER) test
+	cd flutter/example/compass_v2 && $(FLUTTER) test
 	cd flutter/bench/flutter && $(FLUTTER) test
 
 # surface measures how much of each package of the standard library the
