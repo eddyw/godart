@@ -4569,3 +4569,43 @@ The plan left these points open. The work took the decisions below.
      `unicode/utf8`, and `unicode/utf16` each run the real tests of Go.
      `path/filepath` needs `syscall.ENOTDIR` and `testenv.SkipFlaky`, and
      `slices` needs `internal/msan`, `internal/race`, and 3 reads of `unsafe`.
+
+384. A conformance suite of 14 programs covers the Go library.
+
+     Decision 375 gives the language 24 programs. The library held no such
+     suite, and 5 packages held 1 witness program each. The 14 programs stand
+     in `testdata/programs/` with the name prefix `conf`, they write 8,021
+     lines, and each line matches real Go byte for byte.
+
+     The areas: `bufio`, `bytes`, `io`, `os`, `path` with `path/filepath`,
+     `regexp`, `text/template`, `text/tabwriter` with `text/scanner`,
+     `strings`, `strconv`, `unicode` with the 2 encodings, `errors` with `sort`
+     and `slices` and `maps`, `math` with `math/bits`, and `fmt`.
+
+     **The suite found 22 defects.** 3 closed inside the run: the hexadecimal
+     form of a float rounded down, because `FormatFloat` gave the verb to Dart
+     and Dart holds no such form; `ParseInt` and `ParseUint` held a parser of
+     their own that accepted a bad underscore and reported the wrong cause for
+     a bad base, and the 2 read the real `atoi.go` of Go now; and
+     `CanBackquote` rejected a valid replacement rune.
+
+     The `os` overlay took 6 more: `Rename` gave a `PathError` where Go gives a
+     `LinkError`, `OpenFile` with no `O_CREATE` made the file, `Mkdir` of an
+     existing path gave no error, `Open` of a directory failed, a closed file
+     reported no error, and `Expand` kept the characters of a bad form.
+
+     **19 defects stay open, and 9 of them stand in `fmt`.** The largest:
+     `_value` of the runtime reads the Dart kind of a value and not the Go
+     kind, thus `%e` of an integer writes a float where Go writes
+     `%!e(int=42)`. `fmt` also writes no `%!(EXTRA int=2)`, a panic inside a
+     `String` method escapes where Go writes `%!v(PANIC=...)`, and a width of
+     2^40 exhausts the heap where Go writes `%!(BADWIDTH)`.
+
+     3 more give a silent wrong answer outside `fmt`: `slices.Delete` does not
+     clear the tail of the source, a nil `*os.File` panics where Go gives
+     `ErrInvalid`, and `path.ErrBadPattern` and `filepath.ErrBadPattern` are 1
+     value where Go holds 2.
+
+     4 names of the task list stay outside the surface: `os.Pipe`,
+     `os.File.Fd`, `os.NewFile`, and `os.StartProcess`. `dart:io` holds no pipe
+     and it hides the descriptor.

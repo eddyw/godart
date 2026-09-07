@@ -115,6 +115,17 @@ func causeError(cause string) error {
 	case contains(cause, "Not a directory") ||
 		contains(cause, "not a directory"):
 		return &sysError{text: "not a directory", kind: ErrNotExist}
+	case contains(cause, "Is a directory") || contains(cause, "is a directory"):
+		return &sysError{text: "is a directory"}
+	case contains(cause, "Directory not empty") ||
+		contains(cause, "directory not empty"):
+		return &sysError{text: "directory not empty"}
+	case contains(cause, "Invalid argument") ||
+		contains(cause, "invalid argument"):
+		return &sysError{text: "invalid argument", kind: ErrInvalid}
+	case contains(cause, "Bad file descriptor") ||
+		contains(cause, "bad file descriptor"):
+		return &sysError{text: "bad file descriptor"}
 	case contains(cause, "file already closed"):
 		return ErrClosed
 	case contains(cause, "Operation not permitted") ||
@@ -152,6 +163,13 @@ type File struct {
 	name   string
 	// std marks standard output or standard error. Such a file holds no handle.
 	std int
+	// closed marks a file after Close, thus a later call reports ErrClosed.
+	closed bool
+	// dir marks an open directory. dart:io gives no handle of a directory,
+	// thus such a file reads the directory by its name.
+	dir bool
+	// dirPos counts the entries that ReadDir gave.
+	dirPos int
 }
 
 // The value of the field std.
@@ -189,9 +207,16 @@ func (f *File) Write(p []byte) (int, error) {
 	case stdInFile:
 		return 0, &PathError{Op: "write", Path: f.name, Err: errors.New("bad file descriptor")}
 	}
+	if f.dir {
+		return 0, &PathError{Op: "write", Path: f.name, Err: errBadDescriptor}
+	}
 	n, cause := dart.FileWrite(f.handle, p)
 	return n, pathError("write", f.name, cause)
 }
+
+var errBadDescriptor = &sysError{text: "bad file descriptor"}
+
+var errIsDir = &sysError{text: "is a directory"}
 
 // WriteString writes the text and gives the count of bytes.
 func (f *File) WriteString(s string) (int, error) { return f.Write([]byte(s)) }
@@ -212,6 +237,9 @@ func (f *File) Read(p []byte) (int, error) {
 	if f.std != stdNone {
 		return 0, &PathError{Op: "read", Path: f.name, Err: errors.New("bad file descriptor")}
 	}
+	if f.dir {
+		return 0, &PathError{Op: "read", Path: f.name, Err: errIsDir}
+	}
 	n, cause := dart.FileRead(f.handle, p)
 	if cause != "" {
 		return n, pathError("read", f.name, cause)
@@ -227,6 +255,9 @@ func (f *File) Read(p []byte) (int, error) {
 func (f *File) ReadAt(p []byte, off int64) (int, error) {
 	if f.std != stdNone {
 		return 0, &PathError{Op: "read", Path: f.name, Err: errors.New("bad file descriptor")}
+	}
+	if f.dir {
+		return 0, &PathError{Op: "read", Path: f.name, Err: errIsDir}
 	}
 	if off < 0 {
 		return 0, &PathError{Op: "readat", Path: f.name, Err: errors.New("negative offset")}
@@ -263,6 +294,9 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 func (f *File) WriteAt(p []byte, off int64) (int, error) {
 	if f.std != stdNone {
 		return 0, &PathError{Op: "write", Path: f.name, Err: errors.New("bad file descriptor")}
+	}
+	if f.dir {
+		return 0, &PathError{Op: "write", Path: f.name, Err: errBadDescriptor}
 	}
 	if off < 0 {
 		return 0, &PathError{Op: "writeat", Path: f.name, Err: errors.New("negative offset")}
@@ -355,6 +389,13 @@ func (f *File) Close() error {
 	if f.std != stdNone {
 		return nil
 	}
+	if f.closed {
+		return &PathError{Op: "close", Path: f.name, Err: ErrClosed}
+	}
+	f.closed = true
+	if f.dir {
+		return nil
+	}
 	return pathError("close", f.name, dart.FileClose(f.handle))
 }
 
@@ -367,12 +408,15 @@ func (f *File) Sync() error {
 }
 
 // Stat reads the metadata of the file.
-func (f *File) Stat() (FileInfo, error) { return Stat(f.name) }
+func (f *File) Stat() (FileInfo, error) {
+	if f.closed {
+		return nil, &PathError{Op: "stat", Path: f.name, Err: ErrClosed}
+	}
+	return Stat(f.name)
+}
 
-// Open opens a file for a read.
-//
-// Go also opens a directory this way. The Dart side gives no handle of a
-// directory, thus such a call fails. Read a directory with ReadNames.
+// Open opens a file for a read. A directory gives a File that reads the
+// directory by its name, because dart:io gives no handle of a directory.
 func Open(name string) (*File, error) {
 	return openMode(name, dart.OpenRead, "open")
 }
@@ -412,10 +456,13 @@ func OpenFile(name string, flag int, perm FileMode) (*File, error) {
 	// dart:io writes no mode, thus the chmod stands after the open, and it
 	// runs only for a path that the call itself makes.
 	fresh := false
-	if flag&O_CREATE != 0 {
-		if _, err := Lstat(name); err != nil {
-			fresh = true
+	if _, err := Lstat(name); err != nil {
+		if flag&O_CREATE == 0 {
+			// Each write mode of dart:io makes a file that does not exist,
+			// and Go makes 1 with O_CREATE alone.
+			return nil, &PathError{Op: "open", Path: name, Err: underlyingError(err)}
 		}
+		fresh = true
 	}
 	mode := dart.OpenRead
 	switch {
@@ -446,6 +493,11 @@ func applyPerm(name string, perm FileMode) {
 }
 
 func openMode(name string, mode int, op string) (*File, error) {
+	if mode == dart.OpenRead {
+		if info, err := Stat(name); err == nil && info.IsDir() {
+			return &File{handle: -1, name: name, dir: true}, nil
+		}
+	}
 	handle, cause := dart.FileOpen(name, mode)
 	if cause != "" {
 		return nil, pathError(op, name, cause)
@@ -615,14 +667,33 @@ func ReadDir(name string) ([]DirEntry, error) {
 	return out, nil
 }
 
-// ReadDir gives each member of the directory of the file. A count that is not
-// positive gives each member.
+// ReadDir gives the next members of the directory of the file. A count that
+// is not positive gives each member that stays, and a later call gives none. A
+// positive count gives at most that many, and io.EOF at the end.
 func (f *File) ReadDir(n int) ([]DirEntry, error) {
-	out, err := ReadDir(f.name)
-	if err != nil || n <= 0 || n >= len(out) {
-		return out, err
+	if f.closed {
+		return nil, &PathError{Op: "readdir", Path: f.name, Err: ErrClosed}
 	}
-	return out[:n], nil
+	all, err := ReadDir(f.name)
+	if err != nil {
+		return nil, err
+	}
+	if f.dirPos > len(all) {
+		f.dirPos = len(all)
+	}
+	rest := all[f.dirPos:]
+	if n <= 0 {
+		f.dirPos = len(all)
+		return rest, nil
+	}
+	if len(rest) == 0 {
+		return nil, io.EOF
+	}
+	if n < len(rest) {
+		rest = rest[:n]
+	}
+	f.dirPos += len(rest)
+	return rest, nil
 }
 
 // Readdir reads the directory and gives the metadata of each entry. A count of
@@ -657,14 +728,20 @@ func (f *File) Readdirnames(n int) ([]string, error) {
 	return out, nil
 }
 
-// base gives the last part of a path.
+// base gives the last part of a path. A trailing separator does not count,
+// exactly as in Go.
 func base(path string) string {
 	sep := dart.PathSeparator()
 	if sep == "" || path == "" {
 		return path
 	}
 	c := sep[0]
-	for i := len(path) - 1; i >= 0; i-- {
+	i := len(path) - 1
+	for i > 0 && path[i] == c {
+		path = path[:i]
+		i--
+	}
+	for i--; i >= 0; i-- {
 		if path[i] == c {
 			return path[i+1:]
 		}
@@ -683,18 +760,57 @@ func RemoveAll(name string) error {
 }
 
 // Mkdir makes 1 directory. The permission argument reaches no operation of the
-// Dart side.
+// Dart side. A path that exists gives ErrExist, because the Dart side accepts
+// such a path with no report.
 func Mkdir(name string, perm FileMode) error {
+	if _, err := Lstat(name); err == nil {
+		return &PathError{Op: "mkdir", Path: name, Err: errExist}
+	}
 	return pathError("mkdir", name, dart.Mkdir(name, false))
 }
 
-// MkdirAll makes a directory and each parent directory of it.
+// MkdirAll makes a directory and each parent directory of it. The logic comes
+// from the file path.go of Go, thus a parent that is a file gives the error of
+// Go with the path of that parent.
 func MkdirAll(name string, perm FileMode) error {
-	return pathError("mkdir", name, dart.Mkdir(name, true))
+	info, err := Stat(name)
+	if err == nil {
+		if info.IsDir() {
+			return nil
+		}
+		return &PathError{Op: "mkdir", Path: name, Err: &sysError{text: "not a directory"}}
+	}
+	i := len(name)
+	for i > 0 && IsPathSeparator(name[i-1]) {
+		i--
+	}
+	j := i
+	for j > 0 && !IsPathSeparator(name[j-1]) {
+		j--
+	}
+	if j > 1 {
+		if err := MkdirAll(name[:j-1], perm); err != nil {
+			return err
+		}
+	}
+	err = Mkdir(name, perm)
+	if err != nil {
+		if info, err1 := Lstat(name); err1 == nil && info.IsDir() {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
+// Rename moves a path. A failure gives a LinkError that names the 2 paths,
+// exactly as Go does.
 func Rename(from, to string) error {
-	return pathError("rename", from, dart.Rename(from, to))
+	cause := dart.Rename(from, to)
+	if cause == "" {
+		return nil
+	}
+	return &LinkError{Op: "rename", Old: from, New: to, Err: causeError(cause)}
 }
 
 // ReadNames reads the names inside a directory. Each name holds no directory

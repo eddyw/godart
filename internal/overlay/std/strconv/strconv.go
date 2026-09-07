@@ -115,6 +115,9 @@ func FormatFloat(f float64, verb byte, precision, bitSize int) string {
 		}
 		return shortestExponent(dart.Format("v", f), verb)
 	}
+	if verb == 'x' || verb == 'X' {
+		return string(formatHex(nil, f, verb, precision, bitSize))
+	}
 	form := string(rune(verb))
 	if precision >= 0 {
 		form = "." + Itoa(precision) + form
@@ -257,6 +260,114 @@ func expandExponent(text string) string {
 }
 
 // Atoi reads a decimal int from text.
+// formatHex writes the form %x or %X of a float. It takes the mantissa and the
+// exponent of the bits, and fmtX of Go writes the digits.
+func formatHex(dst []byte, f float64, verb byte, prec, bitSize int) []byte {
+	var bits uint64
+	mantBits, expBits, bias := 52, 11, -1023
+	if bitSize == 32 {
+		bits = uint64(dart.Float32Bits(float32(f)))
+		mantBits, expBits, bias = 23, 8, -127
+	} else {
+		bits = dart.Float64Bits(f)
+	}
+	neg := bits>>(expBits+mantBits) != 0
+	exp := int(bits>>mantBits) & (1<<expBits - 1)
+	mant := bits & (uint64(1)<<mantBits - 1)
+	switch exp {
+	case 0:
+		exp++
+	default:
+		mant |= uint64(1) << mantBits
+	}
+	exp += bias
+	return fmtX(dst, prec, verb, neg, mant, exp, mantBits)
+}
+
+// fmtX comes from the file ftoa.go of internal/strconv of Go, with no change.
+// It writes the form 0x1.23p+04 of a mantissa and an exponent.
+func fmtX(dst []byte, prec int, fmt byte, neg bool, mant uint64, exp, mantBits int) []byte {
+	if mant == 0 {
+		exp = 0
+	}
+
+	// Shift digits so leading 1 (if any) is at bit 1<<60.
+	mant <<= 60 - mantBits
+	for mant != 0 && mant&(1<<60) == 0 {
+		mant <<= 1
+		exp--
+	}
+
+	// Round if requested.
+	if prec >= 0 && prec < 15 {
+		shift := uint(prec * 4)
+		extra := (mant << shift) & (1<<60 - 1)
+		mant >>= 60 - shift
+		if extra|(mant&1) > 1<<59 {
+			mant++
+		}
+		mant <<= 60 - shift
+		if mant&(1<<61) != 0 {
+			// Wrapped around.
+			mant >>= 1
+			exp++
+		}
+	}
+
+	hex := lowerhex
+	if fmt == 'X' {
+		hex = upperhex
+	}
+
+	// sign, 0x, leading digit
+	if neg {
+		dst = append(dst, '-')
+	}
+	dst = append(dst, '0', fmt, '0'+byte((mant>>60)&1))
+
+	// .fraction
+	mant <<= 4 // remove leading 0 or 1
+	if prec < 0 && mant != 0 {
+		dst = append(dst, '.')
+		for mant != 0 {
+			dst = append(dst, hex[(mant>>60)&15])
+			mant <<= 4
+		}
+	} else if prec > 0 {
+		dst = append(dst, '.')
+		for i := 0; i < prec; i++ {
+			dst = append(dst, hex[(mant>>60)&15])
+			mant <<= 4
+		}
+	}
+
+	// p±
+	ch := byte('P')
+	if fmt == lower(fmt) {
+		ch = 'p'
+	}
+	dst = append(dst, ch)
+	if exp < 0 {
+		ch = '-'
+		exp = -exp
+	} else {
+		ch = '+'
+	}
+	dst = append(dst, ch)
+
+	// dd or ddd or dddd
+	switch {
+	case exp < 100:
+		dst = append(dst, byte(exp/10)+'0', byte(exp%10)+'0')
+	case exp < 1000:
+		dst = append(dst, byte(exp/100)+'0', byte((exp/10)%10)+'0', byte(exp%10)+'0')
+	default:
+		dst = append(dst, byte(exp/1000)+'0', byte(exp/100)%10+'0', byte((exp/10)%10)+'0', byte(exp%10)+'0')
+	}
+
+	return dst
+}
+
 func Atoi(text string) (int, error) {
 	v, err := ParseInt(text, 10, 0)
 	if nerr, ok := err.(*NumError); ok {
@@ -265,75 +376,181 @@ func Atoi(text string) (int, error) {
 	return int(v), err
 }
 
-// ParseInt reads an int from text in the base.
+// ParseInt interprets a string s in the given base (0, 2 to 36) and
+// bit size (0 to 64) and returns the corresponding value i.
 //
-// A bit size of 0 names the size of an int. A value outside the range of the
-// size gives the value of the nearest limit and ErrRange, exactly as Go does.
-func ParseInt(text string, base, bitSize int) (int64, error) {
-	if len(text) == 0 {
-		return 0, &NumError{Func: "ParseInt", Num: text, Err: ErrSyntax}
+// The string may begin with a leading sign: "+" or "-".
+//
+// If the base argument is 0, the true base is implied by the string's
+// prefix following the sign (if present): 2 for "0b", 8 for "0" or "0o",
+// 16 for "0x", and 10 otherwise. Also, for argument base 0 only,
+// underscore characters are permitted as defined by the Go syntax for
+// [integer literals].
+//
+// The bitSize argument specifies the integer type
+// that the result must fit into. Bit sizes 0, 8, 16, 32, and 64
+// correspond to int, int8, int16, int32, and int64.
+// If bitSize is below 0 or above 64, an error is returned.
+//
+// The errors that ParseInt returns have concrete type [*NumError]
+// and include err.Num = s. If s is empty or contains invalid
+// digits, err.Err = [ErrSyntax] and the returned value is 0;
+// if the value corresponding to s cannot be represented by a
+// signed integer of the given size, err.Err = [ErrRange] and the
+// returned value is the maximum magnitude integer of the
+// appropriate bitSize and sign.
+//
+// [integer literals]: https://go.dev/ref/spec#Integer_literals
+func ParseInt(s string, base int, bitSize int) (i int64, err error) {
+	const fnParseInt = "ParseInt"
+
+	s0 := s
+	if s == "" {
+		return 0, syntaxError(fnParseInt, s0)
 	}
-	if base != 0 && (base < 2 || base > 36) {
-		return 0, baseError("ParseInt", text, base)
+
+	// Pick off leading sign.
+	neg := false
+	switch s[0] {
+	case '+':
+		s = s[1:]
+	case '-':
+		s = s[1:]
+		neg = true
 	}
+
+	// Convert unsigned and check range.
+	var un uint64
+	un, err = ParseUint(s, base, bitSize)
+	if err != nil {
+		e, ok := err.(*NumError)
+		if !ok || e.Err != ErrRange {
+			if ok {
+				e.Func = fnParseInt
+				e.Num = s0
+			}
+			return 0, err
+		}
+	}
+
 	if bitSize == 0 {
 		bitSize = IntSize
 	}
-	if bitSize < 0 || bitSize > 64 {
-		return 0, bitSizeError("ParseInt", text, bitSize)
+
+	cutoff := uint64(1 << uint(bitSize-1))
+	if !neg && un >= cutoff {
+		return int64(cutoff - 1), rangeError(fnParseInt, s0)
 	}
-	i := 0
-	negative := false
-	if text[0] == '+' || text[0] == '-' {
-		negative = text[0] == '-'
-		i = 1
+	if neg && un > cutoff {
+		return -int64(cutoff), rangeError(fnParseInt, s0)
 	}
-	out, over, err := parseDigits(text, i, base)
-	if err != nil {
-		return 0, &NumError{Func: "ParseInt", Num: text, Err: err}
+	n := int64(un)
+	if neg {
+		n = -n
 	}
-	cutoff := uint64(1) << uint(bitSize-1)
-	if !negative && (over || out >= cutoff) {
-		return int64(cutoff - 1), &NumError{Func: "ParseInt", Num: text, Err: ErrRange}
-	}
-	if negative && (over || out > cutoff) {
-		return -int64(cutoff), &NumError{Func: "ParseInt", Num: text, Err: ErrRange}
-	}
-	if negative {
-		return -int64(out), nil
-	}
-	return int64(out), nil
+	return n, nil
 }
 
-// ParseUint reads an unsigned value from text.
+// ParseUint is like [ParseInt] but for unsigned numbers.
 //
-// A bit size of 0 names the size of a uint. A value outside the range of the
-// size gives the largest value of the size and ErrRange, exactly as Go does.
-func ParseUint(text string, base, bitSize int) (uint64, error) {
-	if len(text) == 0 {
-		return 0, &NumError{Func: "ParseUint", Num: text, Err: ErrSyntax}
+// A sign prefix is not permitted.
+func ParseUint(s string, base int, bitSize int) (uint64, error) {
+	const fnParseUint = "ParseUint"
+
+	s0 := s
+	if s == "" {
+		return 0, syntaxError(fnParseUint, s0)
 	}
-	if base != 0 && (base < 2 || base > 36) {
-		return 0, baseError("ParseUint", text, base)
+
+	base0 := base == 0
+	switch {
+	case 2 <= base && base <= 36:
+		// valid base; nothing to do
+
+	case base == 0:
+		// Look for octal, hex prefix.
+		base = 10
+		if s[0] == '0' {
+			switch {
+			case len(s) >= 3 && lower(s[1]) == 'b':
+				base = 2
+				s = s[2:]
+			case len(s) >= 3 && lower(s[1]) == 'o':
+				base = 8
+				s = s[2:]
+			case len(s) >= 3 && lower(s[1]) == 'x':
+				base = 16
+				s = s[2:]
+			default:
+				base = 8
+				s = s[1:]
+			}
+		}
+
+	default:
+		return 0, baseError(fnParseUint, s0, base)
 	}
+
 	if bitSize == 0 {
 		bitSize = IntSize
+	} else if bitSize < 0 || bitSize > 64 {
+		return 0, bitSizeError(fnParseUint, s0, bitSize)
 	}
-	if bitSize < 0 || bitSize > 64 {
-		return 0, bitSizeError("ParseUint", text, bitSize)
+
+	// Cutoff is the smallest number such that cutoff*base > maxUint64.
+	// Use compile-time constants for common cases.
+	const maxUint64 = 1<<64 - 1
+	var cutoff uint64
+	switch base {
+	case 10:
+		cutoff = maxUint64/10 + 1
+	case 16:
+		cutoff = maxUint64/16 + 1
+	default:
+		cutoff = maxUint64/uint64(base) + 1
 	}
-	out, over, err := parseDigits(text, 0, base)
-	if err != nil {
-		return 0, &NumError{Func: "ParseUint", Num: text, Err: err}
+
+	maxVal := uint64(1)<<uint(bitSize) - 1
+
+	underscores := false
+	var n uint64
+	for _, c := range []byte(s) {
+		var d byte
+		switch {
+		case c == '_' && base0:
+			underscores = true
+			continue
+		case '0' <= c && c <= '9':
+			d = c - '0'
+		case 'a' <= lower(c) && lower(c) <= 'z':
+			d = lower(c) - 'a' + 10
+		default:
+			return 0, syntaxError(fnParseUint, s0)
+		}
+
+		if d >= byte(base) {
+			return 0, syntaxError(fnParseUint, s0)
+		}
+
+		if n >= cutoff {
+			// n*base overflows
+			return maxVal, rangeError(fnParseUint, s0)
+		}
+		n *= uint64(base)
+
+		n1 := n + uint64(d)
+		if n1 < n || n1 > maxVal {
+			// n+d overflows
+			return maxVal, rangeError(fnParseUint, s0)
+		}
+		n = n1
 	}
-	maxVal := ^uint64(0)
-	if bitSize < 64 {
-		maxVal = uint64(1)<<uint(bitSize) - 1
+
+	if underscores && !underscoreOK(s0) {
+		return 0, syntaxError(fnParseUint, s0)
 	}
-	if over || out > maxVal {
-		return maxVal, &NumError{Func: "ParseUint", Num: text, Err: ErrRange}
-	}
-	return out, nil
+
+	return n, nil
 }
 
 // baseError gives the error of a base outside the range 2 to 36.
@@ -341,70 +558,75 @@ func baseError(fn, str string, base int) *NumError {
 	return &NumError{fn, str, errors.New("invalid base " + Itoa(base))}
 }
 
+// syntaxError gives the error of a text that holds no value of the form.
+func syntaxError(fn, str string) *NumError {
+	return &NumError{fn, str, ErrSyntax}
+}
+
+// rangeError gives the error of a value outside the range of the bit size.
+func rangeError(fn, str string) *NumError {
+	return &NumError{fn, str, ErrRange}
+}
+
 // bitSizeError gives the error of a bit size outside the range 0 to 64.
 func bitSizeError(fn, str string, bitSize int) *NumError {
 	return &NumError{fn, str, errors.New("invalid bit size " + Itoa(bitSize))}
 }
 
-// parseDigits reads the digits of a value. A base of 0 reads the prefix of the
-// text, exactly as Go does, and it accepts an underscore between 2 digits.
-//
-// The second result marks a value that passes the range of a uint64. The read
-// stops at that point, exactly as Go does, thus a digit after it reaches no
-// syntax test.
-func parseDigits(text string, i, base int) (uint64, bool, error) {
-	if i >= len(text) {
-		return 0, false, ErrSyntax
+// underscoreOK reports whether the underscores in s are allowed.
+// Checking them in this one function lets all the parsers skip over them simply.
+// Underscore must appear only between digits or between a base prefix and a digit.
+func underscoreOK(s string) bool {
+	// saw tracks the last character (class) we saw:
+	// ^ for beginning of number,
+	// 0 for a digit or base prefix,
+	// _ for an underscore,
+	// ! for none of the above.
+	saw := '^'
+	i := 0
+
+	// Optional sign.
+	if len(s) >= 1 && (s[0] == '-' || s[0] == '+') {
+		s = s[1:]
 	}
-	underscore := false
-	if base == 0 {
-		underscore = true
-		base = 10
-		if text[i] == '0' {
-			if i+1 == len(text) {
-				return 0, false, nil
-			}
-			switch text[i+1] {
-			case 'x', 'X':
-				base, i = 16, i+2
-			case 'b', 'B':
-				base, i = 2, i+2
-			case 'o', 'O':
-				base, i = 8, i+2
-			default:
-				base, i = 8, i+1
-			}
-		}
+
+	// Optional base prefix.
+	hex := false
+	if len(s) >= 2 && s[0] == '0' && (lower(s[1]) == 'b' || lower(s[1]) == 'o' || lower(s[1]) == 'x') {
+		i = 2
+		saw = '0' // base prefix counts as a digit for "underscore as digit separator"
+		hex = lower(s[1]) == 'x'
 	}
-	if i >= len(text) {
-		return 0, false, ErrSyntax
-	}
-	var out uint64
-	digits := 0
-	cutoff := ^uint64(0)/uint64(base) + 1
-	for ; i < len(text); i++ {
-		if underscore && text[i] == '_' {
+
+	// Number proper.
+	for ; i < len(s); i++ {
+		// Digits are always okay.
+		if '0' <= s[i] && s[i] <= '9' || hex && 'a' <= lower(s[i]) && lower(s[i]) <= 'f' {
+			saw = '0'
 			continue
 		}
-		digit := digitValue(text[i])
-		if digit < 0 || digit >= base {
-			return 0, false, ErrSyntax
+		// Underscore must follow digit.
+		if s[i] == '_' {
+			if saw != '0' {
+				return false
+			}
+			saw = '_'
+			continue
 		}
-		digits++
-		if out >= cutoff {
-			return 0, true, nil
+		// Underscore must also be followed by digit.
+		if saw == '_' {
+			return false
 		}
-		next := out*uint64(base) + uint64(digit)
-		if next < out {
-			return 0, true, nil
-		}
-		out = next
+		// Saw non-digit, non-underscore.
+		saw = '!'
 	}
-	if digits == 0 {
-		return 0, false, ErrSyntax
-	}
-	return out, false, nil
+	return saw != '_'
 }
+
+// lower(c) is a lower-case letter if and only if
+// c is either that lower-case letter or the equivalent upper-case letter.
+// Instead of writing c == 'x' || c == 'X' one can write lower(c) == 'x'.
+// Note that lower of non-letters can produce other non-letters.
 
 // ParseBool reads a bool from text.
 func ParseBool(text string) (bool, error) {
@@ -738,43 +960,6 @@ func readFloat(s string) (mantissa uint64, exp int, neg, trunc, isHex bool, i in
 	return
 }
 
-// underscoreOK reports a text where each underscore stands between 2 digits, or
-// between a base prefix and a digit.
-func underscoreOK(s string) bool {
-	// saw holds the class of the last byte. ^ marks the start, 0 a digit or a
-	// base prefix, _ an underscore, and ! any other byte.
-	saw := '^'
-	i := 0
-	if len(s) >= 1 && (s[0] == '-' || s[0] == '+') {
-		s = s[1:]
-	}
-	hex := false
-	if len(s) >= 2 && s[0] == '0' &&
-		(lower(s[1]) == 'b' || lower(s[1]) == 'o' || lower(s[1]) == 'x') {
-		i = 2
-		saw = '0'
-		hex = lower(s[1]) == 'x'
-	}
-	for ; i < len(s); i++ {
-		if s[i] >= '0' && s[i] <= '9' || hex && lower(s[i]) >= 'a' && lower(s[i]) <= 'f' {
-			saw = '0'
-			continue
-		}
-		if s[i] == '_' {
-			if saw != '0' {
-				return false
-			}
-			saw = '_'
-			continue
-		}
-		if saw == '_' {
-			return false
-		}
-		saw = '!'
-	}
-	return saw != '_'
-}
-
 // decimalFloat gives the value of a decimal float that readFloat accepts. The
 // bridge of Dart reads no underscore, thus each one goes first.
 func decimalFloat(text string, bitSize int) (float64, error) {
@@ -885,14 +1070,19 @@ func FormatUint(i uint64, base int) string {
 
 // CanBackquote reports whether s fits inside back quotes with no change.
 func CanBackquote(s string) bool {
-	for _, r := range s {
-		if r == 0xFEFF || r == utf8.RuneError {
-			return false
-		}
-		if r > 0x7F {
+	for len(s) > 0 {
+		r, wid := utf8.DecodeRuneInString(s)
+		s = s[wid:]
+		if wid > 1 {
+			if r == '\ufeff' {
+				return false
+			}
 			continue
 		}
-		if r < ' ' && r != '\t' || r == '`' || r == 0x7F {
+		if r == utf8.RuneError {
+			return false
+		}
+		if (r < ' ' && r != '\t') || r == '`' || r == '\u007F' {
 			return false
 		}
 	}
@@ -901,6 +1091,9 @@ func CanBackquote(s string) bool {
 
 // lowerhex holds the digits of the base 16 that an escape form takes.
 const lowerhex = "0123456789abcdef"
+
+// upperhex holds the digits of the base 16 in upper case.
+const upperhex = "0123456789ABCDEF"
 
 // Quote gives the Go text of s inside double quotes. A rune outside the set of
 // IsPrint takes an escape form.

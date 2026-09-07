@@ -90,6 +90,10 @@ return of a function of blank results compiles, a format of a pointer to a
 pointer ends no program, `math/bits` gives a `runtime.Error`, and
 `text/tabwriter` needs no patch. 13 packages run their real tests now.
 
+A conformance suite of 14 programs covers the library (decision 384). The 14
+write 8,021 lines, and each line matches real Go. The suite found 22 defects,
+and 9 of the 19 that stay open stand in `fmt`.
+
 ### 2026-09-06, the twenty-third session
 
 The user parked the name of the project, and asked for each open task end to

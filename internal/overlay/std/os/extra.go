@@ -98,8 +98,7 @@ func Expand(s string, mapping func(string) string) string {
 		}
 		name, width := shellName(s[i+1:])
 		if name == "" && width > 0 {
-			// A `$` with no name keeps the character itself.
-			out = append(out, s[i])
+			// A bad form such as `${` drops its characters, exactly as Go.
 		} else if name == "" {
 			out = append(out, s[i])
 			continue
