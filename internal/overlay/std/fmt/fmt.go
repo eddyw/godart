@@ -103,6 +103,7 @@ func Fprintf(w io.Writer, format string, a ...any) (int, error) {
 
 // Sprintf returns the formatted text.
 func Sprintf(format string, a ...any) string {
+	reordered := false
 	var out strings.Builder
 	arg := 0
 	start := 0
@@ -141,12 +142,13 @@ func Sprintf(format string, a ...any) string {
 		// writes %!verb(BADINDEX) for each other 1.
 		good := true
 		var afterIndex bool
+		reordered = reordered || holdsIndex(format, i)
 		arg, i, afterIndex = argNumber(arg, format, i, len(a), &good)
 		width := 0
 		if i < len(format) && format[i] == '*' {
 			i++
 			var isInt bool
-			width, isInt, arg = intFromArg(a, arg)
+			width, isInt, arg = sizedArg(a, arg)
 			if width < 0 {
 				width = -width
 				bits |= flagMinus
@@ -171,11 +173,12 @@ func Sprintf(format string, a ...any) string {
 			if afterIndex {
 				good = false
 			}
+			reordered = reordered || holdsIndex(format, i)
 			arg, i, afterIndex = argNumber(arg, format, i, len(a), &good)
 			if i < len(format) && format[i] == '*' {
 				i++
 				var isInt bool
-				prec, isInt, arg = intFromArg(a, arg)
+				prec, isInt, arg = sizedArg(a, arg)
 				hasPrec = isInt && prec >= 0
 				if !hasPrec {
 					// Go writes the report and drops the precision, for a
@@ -194,6 +197,7 @@ func Sprintf(format string, a ...any) string {
 			}
 		}
 		if !afterIndex {
+			reordered = reordered || holdsIndex(format, i)
 			arg, i, _ = argNumber(arg, format, i, len(a), &good)
 		}
 		if i >= len(format) {
@@ -237,9 +241,13 @@ func Sprintf(format string, a ...any) string {
 			arg++
 			continue
 		}
-		// The verb q of a rune reads the escape table of Go. strconv holds it,
-		// and the Dart side holds no such table.
-		if letter == 'q' {
+		// The verb q of a rune and of a text reads the escape table of Go.
+		// strconv holds it, and the Dart side holds no such table.
+		//
+		// Go gives an Error method and a String method the first place for
+		// this verb, thus a value that holds one takes the path of the
+		// runtime.
+		if letter == 'q' && !holdsText(value) {
 			if r, ok := runeOf(value); ok {
 				text := strconv.QuoteRune(r)
 				if bits&flagPlus != 0 {
@@ -249,9 +257,16 @@ func Sprintf(format string, a ...any) string {
 				arg++
 				continue
 			}
-			if t, ok := value.(string); ok {
+			if dart.Kind(value) == "string" {
+				t := dart.Format("s", value)
+				if hasPrec {
+					t = cutRunes(t, prec)
+				}
 				text := strconv.Quote(t)
-				if bits&flagPlus != 0 {
+				switch {
+				case bits&flagSharp != 0 && strconv.CanBackquote(t):
+					text = "`" + t + "`"
+				case bits&flagPlus != 0:
 					text = strconv.QuoteToASCII(t)
 				}
 				out.WriteString(pad(text, width, bits, letter))
@@ -269,7 +284,31 @@ func Sprintf(format string, a ...any) string {
 		out.WriteString(dart.FormatVerb(int(letter), bits, width, want, value))
 	}
 	out.WriteString(format[start:])
+	// Go writes no report of an extra argument when the format text held an
+	// explicit index, because the count of the arguments that it read is not
+	// the count of the verbs.
+	if arg < len(a) && !reordered {
+		out.WriteString("%!(EXTRA ")
+		for i := arg; i < len(a); i++ {
+			if i > arg {
+				out.WriteString(", ")
+			}
+			if a[i] != nil {
+				out.WriteString(dart.Format("T", a[i]))
+				out.WriteString("=")
+			}
+			out.WriteString(dart.Format("v", a[i]))
+		}
+		out.WriteString(")")
+	}
 	return out.String()
+}
+
+// tooLarge reports a width or a precision that Go rejects. A value above the
+// limit gives no format, and Go writes BADWIDTH or BADPREC in its place.
+func tooLarge(x int) bool {
+	const max int = 1e6
+	return x > max || x < -max
 }
 
 // The bit of each flag of a verb. The Dart runtime reads the same numbers.
@@ -317,47 +356,40 @@ func flagText(format string, start, end int, minus bool) string {
 // strconv.IsPrint reads the tables of Go, thus the answer matches Go for each
 // rune. The Dart side holds no such table.
 func unicodeText(v any, flags string) string {
-	r, ok := runeOf(v)
+	bits, ok := dart.IntBits(v)
 	if !ok {
-		// Go names the type of the value in the report of a wrong verb.
-		return "%!U(" + dart.Kind(v) + "=" + dart.Format("v", v) + ")"
+		return dart.FormatVerb('U', 0, 0, -1, v)
 	}
-	digits := strings.ToUpper(strconv.FormatInt(int64(r), 16))
+	// Go writes the 64-bit pattern of the value, thus a negative value gives 16
+	// digits and no sign.
+	digits := strings.ToUpper(strconv.FormatUint(bits, 16))
 	for len(digits) < 4 {
 		digits = "0" + digits
 	}
 	out := "U+" + digits
-	if contains(flags, '#') && strconv.IsPrint(r) {
+	if r := rune(bits); uint64(r) == bits && contains(flags, '#') && strconv.IsPrint(r) {
 		out += " '" + string(r) + "'"
 	}
 	return out
 }
 
-// runeOf reads a code point from an integer value of any width.
-func runeOf(v any) (rune, bool) {
-	switch n := v.(type) {
-	case rune:
-		return n, true
-	case int:
-		return rune(n), true
-	case int8:
-		return rune(n), true
-	case int16:
-		return rune(n), true
-	case int64:
-		return rune(n), true
-	case uint:
-		return rune(n), true
-	case uint8:
-		return rune(n), true
-	case uint16:
-		return rune(n), true
-	case uint32:
-		return rune(n), true
-	case uint64:
-		return rune(n), true
+// holdsText reports whether the value holds an Error method or a String
+// method. Go gives such a method the first place for the verbs v, s, q, x, and
+// X.
+func holdsText(v any) bool {
+	if _, ok := v.(error); ok {
+		return true
 	}
-	return 0, false
+	_, ok := v.(Stringer)
+	return ok
+}
+
+// runeOf reads a code point from an integer value of any width. A type switch
+// of Go reads the named type of such a value not, thus the read goes through
+// the intrinsic.
+func runeOf(v any) (rune, bool) {
+	bits, ok := dart.IntBits(v)
+	return rune(bits), ok
 }
 
 // truncate cuts a text argument to the precision. Go reads the precision of a
@@ -396,11 +428,23 @@ func parseNum(format string, i int) (int, bool, int) {
 	num := 0
 	present := false
 	for i < len(format) && isDigit(format[i]) {
+		if tooLarge(num) {
+			// A number of many digits gives no width and no precision. Go
+			// drops the rest of the format text, thus the verb writes NOVERB.
+			return 0, false, len(format)
+		}
 		num = num*10 + int(format[i]-'0')
 		present = true
 		i++
 	}
 	return num, present, i
+}
+
+// holdsIndex reports whether an explicit argument index stands at the
+// position. Go counts a format text that holds one as reordered, and it then
+// writes no report of an argument that no verb read.
+func holdsIndex(format string, i int) bool {
+	return i < len(format) && format[i] == '['
 }
 
 // argNumber reads the form [n] of an explicit argument index. Go counts from 1,
@@ -465,6 +509,16 @@ func intFromArg(a []any, arg int) (int, bool, int) {
 		return int(n), true, arg
 	}
 	return 0, false, arg
+}
+
+// sizedArg reads a width or a precision from an argument, and it rejects a
+// value that stands above the limit of Go.
+func sizedArg(a []any, arg int) (int, bool, int) {
+	n, ok, next := intFromArg(a, arg)
+	if ok && tooLarge(n) {
+		return 0, false, next
+	}
+	return n, ok, next
 }
 
 // Errorf returns an error that holds the formatted text.

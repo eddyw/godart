@@ -64,9 +64,6 @@ final class _Verb {
   }
 }
 
-/// The verb v, which each caller that holds no verb of its own reads.
-const _Verb _plainVerb = _Verb('v', 0, 0, -1);
-
 /// Writes 1 value in the format of a Go verb.
 ///
 /// The verb holds the letter and the flags that come before it, for example
@@ -185,6 +182,29 @@ _Verb _parseVerb(String verb) {
 /// The kind of the value of an interface, in the words of the package reflect.
 GoString $goKind(Iface? value) =>
     GoString.fromString(value == null ? 'nil' : value.desc.kind);
+
+/// The 64-bit pattern of an integer value, and false for each other kind.
+///
+/// The package fmt reads the code point of the verb U and of the verb q here,
+/// because a type switch of Go reads the named type of a value not.
+(GoInt, bool) $goIntBits(Iface? value) {
+  if (value == null) return (GoInt.zero, false);
+  switch (value.desc.kind) {
+    case 'int':
+    case 'int8':
+    case 'int16':
+    case 'int32':
+    case 'int64':
+    case 'uint':
+    case 'uint8':
+    case 'uint16':
+    case 'uint32':
+    case 'uint64':
+    case 'uintptr':
+      return (value.value as GoInt, true);
+  }
+  return (GoInt.zero, false);
+}
 
 /// The deep comparison of the package reflect.
 ///
@@ -458,6 +478,68 @@ String _sign(String text, _Verb verb, String letter) {
   return text;
 }
 
+/// The text of the verb p. Go writes the machine address of the object, and
+/// Dart gives no address, thus the number is the identity of the object. Read
+/// docs/parity.md.
+///
+/// A kind that holds no object gives null, and the report of a wrong verb
+/// stands for it.
+String? _pointerText(Object? v, String kind) {
+  switch (kind) {
+    case 'ptr':
+    case 'map':
+    case 'slice':
+    case 'chan':
+    case 'func':
+    case 'unsafe.Pointer':
+      if (v == null) return '0x0';
+      return '0x${identityHashCode(v).toRadixString(16)}';
+  }
+  return null;
+}
+
+/// The report of a verb that the kind of a value rejects.
+///
+/// Go writes `%!<verb>(<type>=<value>)`, and the value takes the verb v with
+/// the flags, the width, and the precision of the call. Thus the padding
+/// stands inside the parentheses and not around the whole report.
+String _badVerb(Object? v, TypeDesc type, _Verb verb) {
+  // Go sets the Go syntax form for the verb v alone, thus the flag # of the
+  // rejected verb does not reach the value.
+  final String text = _value(
+    v,
+    type,
+    _Verb('v', verb.flags & ~$flagSharp, verb.width, verb.prec),
+  );
+  return '%!${verb.letter}(${type.display}=$text)';
+}
+
+/// The verbs that a kind of Go accepts. Go writes the report of a wrong verb
+/// for each other letter.
+///
+/// A compound kind holds no set of its own: Go gives the verb to each element,
+/// and the element answers. A byte slice is the exception, and _slice holds
+/// its rule.
+const Map<String, String> _verbsOfKind = <String, String>{
+  'bool': 'vt',
+  'string': 'vsxXq',
+  'int': 'vdboOxXcqU',
+  'int8': 'vdboOxXcqU',
+  'int16': 'vdboOxXcqU',
+  'int32': 'vdboOxXcqU',
+  'int64': 'vdboOxXcqU',
+  'uint': 'vdboOxXcqU',
+  'uint8': 'vdboOxXcqU',
+  'uint16': 'vdboOxXcqU',
+  'uint32': 'vdboOxXcqU',
+  'uint64': 'vdboOxXcqU',
+  'uintptr': 'vdboOxXcqU',
+  'float32': 'vbgGxXfeEF',
+  'float64': 'vbgGxXfeEF',
+  'complex64': 'vbgGxXeEfF',
+  'complex128': 'vbgGxXeEfF',
+};
+
 String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
   final bool plus = verb.plus;
   final String letter = verb.letter;
@@ -466,16 +548,28 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
   if (sharp) {
     final String? text = _goStringMethod(v, type);
     if (text != null) return _leaf(text, verb);
-  } else if (letter == 'v' || letter == 's' || letter == 'q') {
-    final String? text = _viaMethod(v, type, letter);
+  } else if (letter == 'v' ||
+      letter == 's' ||
+      letter == 'q' ||
+      letter == 'x' ||
+      letter == 'X') {
+    final String? text = _viaMethod(v, type, verb);
     if (text != null) return _leaf(text, verb);
+  }
+  if (letter == 'p') {
+    final String? text = _pointerText(v, type.kind);
+    if (text != null) return _leaf(text, verb);
+  }
+  final String? verbs = _verbsOfKind[type.kind];
+  if (verbs != null && !verbs.contains(letter)) {
+    return _badVerb(v, type, verb);
   }
   if (sharp && _unsigned(type.kind)) {
     return _leaf('0x${$uradix(v as GoInt, 16)}', verb);
   }
   switch (type.kind) {
     case 'bool':
-      return _leaf(_bool(v as bool, letter), verb);
+      return _leaf(_bool(v as bool), verb);
     case 'string':
       return _leaf(_string(v as GoString, verb, letter), verb);
     case 'float32':
@@ -566,7 +660,8 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
 
 /// Reads the text of a value that holds the method Error or String. The Go
 /// package fmt gives such a method the first place.
-String? _viaMethod(Object? v, TypeDesc type, String letter) {
+String? _viaMethod(Object? v, TypeDesc type, _Verb verb) {
+  final String letter = verb.letter;
   // The key of a method table holds the name and the signature.
   for (final name in const <String>['Error()string', 'String()string']) {
     final Function? m = type.methods[name];
@@ -576,18 +671,30 @@ String? _viaMethod(Object? v, TypeDesc type, String letter) {
     Object? text;
     try {
       text = Function.apply(m, <Object?>[v]);
-    } catch (_) {
+    } catch (e) {
       // A method of a nil pointer that reads a field fails. Go recovers such a
       // panic and it writes <nil>, because a Stringer that holds no guard is
-      // the usual cause.
+      // the usual cause. Each other panic reaches the report of Go.
       if (v == null) return '<nil>';
-      rethrow;
+      final String kind = name == 'Error()string' ? 'Error' : 'String';
+      return '%!$letter(PANIC=$kind method: ${$panicText(_panicValue(e))})';
     }
     if (text is! GoString) continue;
-    return letter == 'q' ? _quote(text) : text.toDartString();
+    switch (letter) {
+      case 'q':
+        return _quote(text);
+      case 'x':
+      case 'X':
+        return _hexText(text, verb, letter, letter == 'X');
+    }
+    return text.toDartString();
   }
   return null;
 }
+
+/// The Go value of a failure that a method of a value raised. A panic of Go
+/// carries the value, and each other failure of Dart gives its own text.
+Object? _panicValue(Object e) => e is GoPanic ? e.value : e;
 
 /// True for a kind that Go writes as hexadecimal in the Go syntax form.
 bool _unsigned(String kind) {
@@ -636,10 +743,7 @@ String _goList(
   return '$name{${parts.join(', ')}}';
 }
 
-String _bool(bool v, String letter) {
-  if (letter == 'v' || letter == 't') return v ? 'true' : 'false';
-  return '%!$letter(bool=$v)';
-}
+String _bool(bool v) => v ? 'true' : 'false';
 
 String _string(GoString v, _Verb verb, String letter) {
   switch (letter) {
@@ -655,7 +759,7 @@ String _string(GoString v, _Verb verb, String letter) {
     case 'X':
       return _hexText(v, verb, letter, true);
   }
-  return '%!$letter(string=${v.toDartString()})';
+  return v.toDartString();
 }
 
 String _int(GoInt v, String letter, bool unsigned, bool sharp) {
@@ -681,12 +785,8 @@ String _int(GoInt v, String letter, bool unsigned, bool sharp) {
       return _quoteRune($ix(v));
     case 'U':
       return _unicode(v, sharp);
-    case 'f':
-    case 'e':
-    case 'g':
-      return _float(v.toDouble(), letter, -1, false);
   }
-  return '%!$letter(int=$v)';
+  return v.toString();
 }
 
 /// The text of a code point. Go writes `U+0061`, with 4 hexadecimal digits at
@@ -778,10 +878,8 @@ String _float(double v, String letter, int precision, bool single) {
       return _hexFloat(v, precision, single);
     case 'X':
       return _upperExponent(_hexFloat(v, precision, single));
-    case 'd':
-      return '%!d(float64=${$fstring(v)})';
   }
-  return '%!$letter(float64=${$fstring(v)})';
+  return $fstring(v);
 }
 
 /// _upperExponent writes each letter of a number in upper case, and it holds
@@ -880,19 +978,14 @@ String _digitsFixed(String mant, int dp, int frac) {
 /// The text of a complex number, in the form (1+2i) of Go. The imaginary part
 /// always carries a sign.
 String _complex(GoComplex c, String kind, String letter, _Verb verb) {
-  switch (letter) {
-    case 'v':
-    case 'g':
-    case 'f':
-    case 'e':
-      final bool single = kind == 'complex64';
-      final int precision = verb.prec;
-      final String re = _float(c.re, letter, precision, single);
-      String im = _float(c.im, letter, precision, single);
-      if (!im.startsWith('-') && !im.startsWith('+')) im = '+$im';
-      return '($re${im}i)';
-  }
-  return '%!$letter($kind=${_complex(c, kind, 'v', _plainVerb)})';
+  // Go writes the 2 parts with the verb of the call, and it gives the sign of
+  // the imaginary part a place of its own.
+  final bool single = kind == 'complex64';
+  final int precision = verb.prec;
+  final String re = _float(c.re, letter, precision, single);
+  String im = _float(c.im, letter, precision, single);
+  if (!im.startsWith('-') && !im.startsWith('+')) im = '+$im';
+  return '($re${im}i)';
 }
 
 String _exponent(double v, int digits) {

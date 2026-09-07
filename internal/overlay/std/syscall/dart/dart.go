@@ -144,6 +144,15 @@ func StopCleanup(handle int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// IntBits gives the 64-bit pattern of an integer value of any width and of any
+// named type. The second result is false when the value holds no integer.
+//
+// The package fmt reads a code point of the verb U from a value of an unknown
+// type, and a type switch of Go reads the named type of such a value not.
+func IntBits(value any) (uint64, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Kind gives the kind of a value, in the words of the package reflect.
 func Kind(value any) string {
 	panic("syscall/dart needs the gart compiler")

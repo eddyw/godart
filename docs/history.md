@@ -94,6 +94,13 @@ A conformance suite of 14 programs covers the library (decision 384). The 14
 write 8,021 lines, and each line matches real Go. The suite found 22 defects,
 and 9 of the 19 that stay open stand in `fmt`.
 
+8 of those 9 `fmt` defects close (decision 385). The runtime reads the Go kind
+of a value now, thus each verb that a kind rejects gives the report of Go with
+the type name and the width inside the parentheses. `fmt` also writes
+`%!(EXTRA ...)`, `%!(BADWIDTH)`, the report of a panic inside a `String`
+method, and the back quote of `%#q`. The verb `p` writes the identity of the
+object.
+
 ### 2026-09-06, the twenty-third session
 
 The user parked the name of the project, and asked for each open task end to

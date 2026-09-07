@@ -4609,3 +4609,60 @@ The plan left these points open. The work took the decisions below.
      4 names of the task list stay outside the surface: `os.Pipe`,
      `os.File.Fd`, `os.NewFile`, and `os.StartProcess`. `dart:io` holds no pipe
      and it hides the descriptor.
+
+385. The reports of `fmt` follow Go, and the runtime reads the Go kind of a
+     value.
+
+     Decision 384 named 9 defects of `fmt`, and 8 close here.
+
+     **A verb that a kind rejects gives the report of Go.** `_value` of the
+     runtime read the Dart form of a value, thus `%e` of 42 wrote
+     `4.200000e+01` where Go writes `%!e(int=42)`. A table of the verbs of each
+     kind now stands in front of the switch, and `_badVerb` builds the report
+     from the descriptor: the type name of Go, and the value in the verb v with
+     the flags, the width, and the precision of the call. Thus the padding
+     stands inside the parentheses, exactly as Go writes it. The 5 leaf writers
+     hold no report of their own any more.
+
+     **The verb U and the verb q read the 64-bit pattern of the value.** The
+     overlay read the code point with a type switch on `any`, and such a switch
+     of Go matches the named type of a value not. `uintptr` and each named
+     integer type fell through. The new intrinsic `dart.IntBits` reads the
+     descriptor, thus `%U` of `int8(-128)` writes `U+FFFFFFFFFFFFFF80` and each
+     named type reaches its code point.
+
+     **An Error method and a String method take the first place for the verb q,
+     the verb x, and the verb X.** `_viaMethod` served the verbs v, s, and q,
+     and the overlay took the verb q of an integer before it. A named integer
+     type with a `String` method then wrote the rune and not the text.
+
+     **A panic inside such a method gives the report of Go.** The call stands
+     inside a guard now, and it writes `%!v(PANIC=String method: boom)`. A
+     method of a nil pointer that reads a field keeps the answer `<nil>` of Go.
+
+     **An argument that no verb reads gives `%!(EXTRA int=2)`.** A format text
+     that holds an explicit index writes no such report, because the count of
+     the arguments that it read is not the count of the verbs.
+
+     **A width or a precision above 1,000,000 gives `%!(BADWIDTH)`.** A width
+     of 2^40 exhausted the heap before. A number of many digits in the format
+     text drops the rest of that text, exactly as `parseNum` of Go does.
+
+     **The flag # with the verb q writes a back quote** when the text holds no
+     character that a back quote rejects.
+
+     **The verb p writes the identity of the object.** Dart gives no machine
+     address, thus the number is the identity hash. A pointer, a map, a slice,
+     a channel, and a function each give `0x` and that number, and a nil value
+     gives `0x0`. `%p` of a pointer wrote `&` and the value before, and the
+     leaves of it each wrote a report of a wrong verb.
+
+     **A complex value reads each verb of a float.** `%b`, `%x`, and `%X` of
+     such a value wrote the form of the verb v.
+
+     `testdata/programs/fmtbad` holds 280 lines of the reports of each kind,
+     and `testdata/programs/fmtreport` holds the other 4 groups.
+
+     1 defect of the 9 stays open: a `Formatter` inside a slice, a map, or a
+     struct reaches its method not, because the walk of the runtime cannot call
+     a method that takes a `fmt.State`.

@@ -155,7 +155,7 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | `select` with 2 ready cases | Random | The first case in source order |
 | Deadlock | The runtime reports it, writes the stack of each goroutine, and exits | Equal. The report walks the frame chain of each live goroutine. Go also writes the arguments, an offset, and a created-by line, and the chain holds none of them. The goroutine numbers can differ. |
 | A pointer value in `%v` | An address | `&` and the value, or `<func>` and `<chan>` |
-| `%p` | An address | Not supported |
+| `%p` | An address | `0x` and the identity of the object. The number names no memory. |
 | A goroutine on a second thread | Yes | No. All Go code runs in 1 isolate. |
 | `recover` | Present | Present. A deferred call of the panicking function reads the value, and each other call gives nil. A panic inside a deferred call replaces the chain panic. |
 | `unsafe` and cgo | Present | Outside the subset |
