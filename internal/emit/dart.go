@@ -20,10 +20,14 @@ import (
 // the file.
 const dartCoreLib = "dart:core"
 
+// runtimeLib names the runtime library. Each emitted file imports it with no
+// prefix, thus a declaration that names a symbol of it needs no second import.
+const runtimeLib = "package:goruntime/goruntime.dart"
+
 // dartPrefix gives the import prefix of a Dart library, and it holds the order
 // of the first read. The core library takes no prefix and no import.
 func (e *emitter) dartPrefix(uri string) string {
-	if uri == dartCoreLib {
+	if uri == dartCoreLib || uri == runtimeLib {
 		return ""
 	}
 	if p, ok := e.dartLibs[uri]; ok {
