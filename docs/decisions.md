@@ -4825,6 +4825,20 @@ The plan left these points open. The work took the decisions below.
      patch of `handlePanic` removed the `recover`, and decision 383 dropped
      that patch. The case needed no work of its own.
 
+     **The scan family of `fmt` reads 1 rune at a time.** The reader of the
+     overlay took 512 bytes at each read, thus a second `Fscan` over 1
+     `io.Reader` found no input. A reader that holds a `ReadRune` serves the
+     scan itself now, and each other reader takes a wrapper of 1 byte, exactly
+     as Go builds it.
+
+     8 more rules of the scan family follow Go now: the report of a verb that
+     the kind of the target rejects names that kind, an overflow names the
+     token, a target that is no pointer names its own text, a boolean reads 1
+     rune and it accepts each letter that follows, the verb v accepts an
+     underscore between 2 digits, a complex value reads its 2 float tokens, and
+     the 2 newline reports each stand at their own site.
+     `testdata/programs/fmtscan` holds the witness.
+
 389. The relaxation of rule M15 opened 3 files of the test directory of Go, and
      each 1 named a defect.
 

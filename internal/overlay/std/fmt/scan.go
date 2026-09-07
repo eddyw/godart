@@ -38,10 +38,13 @@ type Scanner interface {
 
 // The errors of a scan. Each text matches the text of Go.
 var (
-	errEOF        = io.EOF
-	errNewline    = errors.New("unexpected newline")
-	errWantNL     = errors.New("expected newline")
-	errNoNewline  = errors.New("newline in input does not match format")
+	errEOF     = io.EOF
+	errNewline = errors.New("unexpected newline")
+	errWantNL  = errors.New("expected newline")
+	// errNoNewline names a newline of the format that the input holds not, and
+	// errNoInputNL names a newline of the input that the format holds not.
+	errNoNewline  = errors.New("newline in format does not match input")
+	errNoInputNL  = errors.New("newline in input does not match format")
 	errNoMatch    = errors.New("input does not match format")
 	errNoSpace    = errors.New("expected space in input to match format")
 	errTooMany    = errors.New("too many operands")
@@ -50,6 +53,7 @@ var (
 	errNumber     = errors.New("syntax error scanning number")
 	errCharacter  = errors.New("expected character")
 	errBadVerbNil = errors.New("bad verb")
+	errComplex    = errors.New("syntax error scanning complex number")
 )
 
 // eof marks the end of the input inside the scanner.
@@ -267,10 +271,12 @@ func (s *ss) SkipSpace() {
 			if s.nlIsSpace {
 				continue
 			}
+			// A scan that ends at a newline reports the newline itself, and
+			// each other scan reports the input against the format.
 			if s.nlIsEnd {
 				panic(scanFail{errNewline})
 			}
-			panic(scanFail{errNoNewline})
+			panic(scanFail{errNoInputNL})
 		}
 		if !isSpace(r) {
 			s.UnreadRune()
@@ -358,7 +364,14 @@ func (s *ss) scanOne(verb rune, arg any) {
 		*v = float32(s.scanFloat(verb, 32))
 	case *float64:
 		*v = s.scanFloat(verb, 64)
+	case *complex64:
+		*v = complex64(s.scanComplex(verb, 64))
+	case *complex128:
+		*v = s.scanComplex(verb, 128)
 	default:
+		if !isPointer(arg) {
+			panic(scanFail{errors.New("type not a pointer: " + typeText(arg))})
+		}
 		panic(scanFail{errors.New("can't scan type: " + typeText(arg))})
 	}
 }
@@ -366,20 +379,39 @@ func (s *ss) scanOne(verb rune, arg any) {
 // typeText names the type of an argument. The Dart side holds the descriptor.
 func typeText(arg any) string { return Sprintf("%T", arg) }
 
+// isPointer reports whether the argument holds a pointer. Go writes another
+// text for a target that is no pointer.
+func isPointer(arg any) bool { return dart.Kind(arg) == "ptr" }
+
 // scanBool reads a boolean.
 func (s *ss) scanBool(verb rune) bool {
 	if verb != 'v' && verb != 't' {
 		panic(scanFail{badVerb(verb, "bool")})
 	}
-	text := string(s.token(true, notSpace))
-	if text == "" {
+	// Go reads 1 rune and it takes each letter that follows it, thus a text
+	// that starts with no digit and with no t or f gives false and no error.
+	s.SkipSpace()
+	if s.peek() == eof {
 		panic(scanFail{errEOF})
 	}
-	out, err := strconv.ParseBool(text)
-	if err != nil {
-		panic(scanFail{errBool})
+	switch s.scanRune() {
+	case '0':
+		return false
+	case '1':
+		return true
+	case 't', 'T':
+		if s.acceptSet("rR") && (!s.acceptSet("uU") || !s.acceptSet("eE")) {
+			panic(scanFail{errBool})
+		}
+		return true
+	case 'f', 'F':
+		if s.acceptSet("aA") &&
+			(!s.acceptSet("lL") || !s.acceptSet("sS") || !s.acceptSet("eE")) {
+			panic(scanFail{errBool})
+		}
+		return false
 	}
-	return out
+	return false
 }
 
 // digitsOf gives the base of a verb and the set of its digits.
@@ -428,6 +460,13 @@ func (s *ss) scanNumber(verb rune, signed bool) string {
 	}
 	for {
 		r := s.peek()
+		// A Go literal accepts an underscore between 2 digits, and the verb v
+		// reads a Go literal. strconv holds the rule of the position.
+		if r == '_' && verb == 'v' {
+			s.ReadRune()
+			b.WriteRune(r)
+			continue
+		}
 		if r == eof || !strings.ContainsRune(digits, r) {
 			break
 		}
@@ -456,6 +495,7 @@ func (s *ss) scanInt(verb rune, bits int) int64 {
 	if verb == 'c' {
 		return int64(s.scanRune())
 	}
+	okVerb(verb, "bdoUxXv", "integer")
 	base, _ := digitsOf(verb)
 	text := s.scanNumber(verb, true)
 	if verb == 'v' {
@@ -463,6 +503,12 @@ func (s *ss) scanInt(verb rune, bits int) int64 {
 	}
 	out, err := strconv.ParseInt(text, base, bits)
 	if err != nil {
+		// Go writes the value that a wider parse gave, thus a value outside
+		// the width names the overflow and not the syntax.
+		if wide, second := strconv.ParseInt(text, base, 64); second == nil {
+			_ = wide
+			panic(scanFail{errors.New("integer overflow on token " + text)})
+		}
 		panic(scanFail{errNumber})
 	}
 	return out
@@ -473,6 +519,7 @@ func (s *ss) scanUint(verb rune, bits int) uint64 {
 	if verb == 'c' {
 		return uint64(s.scanRune())
 	}
+	okVerb(verb, "bdoUxXv", "integer")
 	base, _ := digitsOf(verb)
 	text := s.scanNumber(verb, false)
 	if verb == 'v' {
@@ -480,6 +527,10 @@ func (s *ss) scanUint(verb rune, bits int) uint64 {
 	}
 	out, err := strconv.ParseUint(text, base, bits)
 	if err != nil {
+		if wide, second := strconv.ParseUint(text, base, 64); second == nil {
+			_ = wide
+			panic(scanFail{errors.New("unsigned integer overflow on token " + text)})
+		}
 		panic(scanFail{errNumber})
 	}
 	return out
@@ -511,6 +562,55 @@ func (s *ss) scanFloat(verb rune, bits int) float64 {
 		panic(scanFail{errNumber})
 	}
 	return out
+}
+
+// acceptSet reads the next rune when the set holds it. It reads nothing and
+// gives false otherwise.
+func (s *ss) acceptSet(set string) bool {
+	r := s.peek()
+	if r == eof || !strings.ContainsRune(set, r) {
+		return false
+	}
+	s.ReadRune()
+	return true
+}
+
+// scanComplex reads a complex value of the width of bits. Go writes such a
+// value as 2 float tokens with a sign between them and the letter i behind
+// them, and a pair of parentheses can hold the whole form.
+func (s *ss) scanComplex(verb rune, bits int) complex128 {
+	switch verb {
+	case 'v', 'b', 'e', 'E', 'f', 'F', 'g', 'G':
+	default:
+		panic(scanFail{badVerb(verb, "complex")})
+	}
+	s.SkipSpace()
+	if s.peek() == eof {
+		panic(scanFail{errEOF})
+	}
+	parens := s.acceptSet("(")
+	realText := s.floatToken()
+	sign := s.peek()
+	if sign != '+' && sign != '-' {
+		panic(scanFail{errComplex})
+	}
+	s.ReadRune()
+	imagText := string(sign) + s.floatToken()
+	if !s.acceptSet("i") {
+		panic(scanFail{errComplex})
+	}
+	if parens && !s.acceptSet(")") {
+		panic(scanFail{errComplex})
+	}
+	realPart, err := strconv.ParseFloat(realText, bits/2)
+	if err != nil {
+		panic(scanFail{errNumber})
+	}
+	imagPart, err := strconv.ParseFloat(imagText, bits/2)
+	if err != nil {
+		panic(scanFail{errNumber})
+	}
+	return complex(realPart, imagPart)
 }
 
 // accept reads the next rune when the set holds it, and it writes that rune
@@ -653,6 +753,15 @@ func (s *ss) hexDigit() (int, bool) {
 	return 0, false
 }
 
+// okVerb stops the scan when the kind of the target rejects the verb. Go
+// writes the kind of the target, thus an integer names the word integer.
+func okVerb(verb rune, okVerbs, kind string) {
+	if strings.ContainsRune(okVerbs, verb) {
+		return
+	}
+	panic(scanFail{badVerb(verb, kind)})
+}
+
 func badVerb(verb rune, kind string) error {
 	return errors.New("bad verb '%" + string(verb) + "' for " + kind)
 }
@@ -746,15 +855,17 @@ func (s *ss) matchSpace(c rune) {
 	if c == '\n' {
 		for {
 			r := s.peek()
+			// Go reads each space of the input, and it takes the end of the
+			// input for the newline of the format.
 			if r == eof {
-				panic(scanFail{errEOF})
+				return
 			}
 			if r == '\n' {
 				s.ReadRune()
 				return
 			}
 			if !isSpace(r) {
-				panic(scanFail{errWantNL})
+				panic(scanFail{errNoNewline})
 			}
 			s.ReadRune()
 		}
@@ -780,7 +891,7 @@ func (s *ss) matchRune(c rune) {
 	if r != c {
 		s.UnreadRune()
 		if r == '\n' {
-			panic(scanFail{errNoNewline})
+			panic(scanFail{errNoInputNL})
 		}
 		panic(scanFail{errNoMatch})
 	}

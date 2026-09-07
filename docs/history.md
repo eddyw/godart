@@ -116,7 +116,9 @@ lazy package variable stays out, and a bisect names 1 declaration of
 4 more defects of the library suite close (decision 388): `slices` reads the
 real source of Go with 1 patch, each method of a nil `*os.File` gives
 `ErrInvalid`, a call of a nil function value panics with the text of Go, and
-`fmt` writes the value that a `reflect.Value` holds.
+`fmt` writes the value that a `reflect.Value` holds. The scan family reads 1
+rune at a time, thus a second `Fscan` over 1 reader finds the rest of the
+input, and 8 more of its rules follow Go.
 
 The relaxation of rule M15 opened 3 files of the test directory of Go, and each
 1 named a defect (decision 389): 2 shapes that differ in a field name were 1
