@@ -4666,3 +4666,56 @@ The plan left these points open. The work took the decisions below.
      1 defect of the 9 stays open: a `Formatter` inside a slice, a map, or a
      struct reaches its method not, because the walk of the runtime cannot call
      a method that takes a `fmt.State`.
+
+386. A scanner of the runtime serves the decoder of `encoding/json` and
+     `json.Valid`.
+
+     `json.decode.any` of the benchmark cost 79 to 88 milliseconds against 4.90
+     for `dart:convert`, and it was the largest gap of the table. A profile
+     gave a flat answer, thus no single change of the compiler reached it.
+
+     **The rule: the scanner writes the target only after it proves the whole
+     decode.** A target that the build cannot serve, and each syntax error but
+     the depth limit, hand the work back to the Go code. That code then reads
+     the document again from the start, thus each value, each error type, each
+     error text, and each error offset stays the answer of Go. The depth limit
+     is the 1 error that the scanner reports itself, because the Go code cannot
+     reach 10,000 levels on the stack of Dart.
+
+     **The build serves 3 target sets.** An empty interface type with a slice
+     and a map of one. A type whose pointer holds `UnmarshalJSON`, and the
+     scanner then names the bounds of the value. A struct, a slice, an array, a
+     map with a string key, or a basic type with no marshal method, no
+     `json.Number`, no `time.Time`, and no `jsontext.Value` in the tree. The
+     target must hold its zero value, because the option set of v1 merges into
+     a target that holds a value.
+
+     | Case | Before | After | Against Go |
+     |---|---|---|---|
+     | `json.decode.any` | 79.35 ms | **4.32 ms** | 0.76 |
+     | `json.decode.typed` | 65.09 ms | **3.60 ms** | 1.16 |
+     | `json.scan` | 10.38 ms | **1.82 ms** | 1.96 |
+
+     The decode into a slice of an empty interface type costs less than the
+     decode of `dart:convert` costs, and less than Go costs.
+
+     **`TestUnmarshalMaxDepth` passes**, with each of its 24 subtests. The
+     scanner holds a stack of its own, thus a document of 3,000,000 brackets
+     costs no stack of Dart.
+
+     **`TestUnmarshalEmbeddedUnexported` passes**, with each of its 9 subtests.
+     A `reflect.Value` carries the read only mark of Go now: `Field` gives an
+     unexported field the sticky mark, and an embedded field the embedded mark,
+     thus a field that an unexported embedded struct forwards stays writable
+     and each other unexported field does not. `CanSet` and `CanInterface`
+     answer false for a marked value, and `Set` panics with the text of Go.
+
+     `jsonparse.dart` and the 2 intrinsics of the old walk leave the tree,
+     because no code reached them. `testdata/programs/jsonany` holds 136 lines
+     of the differential cases, and `jsonembedptr` holds the 9 cases of the
+     read only mark.
+
+     **The encode path stays open**, and the count of the rules is the cause:
+     the escape of 5 characters, the shortest float text, the sorted keys of a
+     map, the report of a cycle above 1,000 levels, and the base64 form of a
+     byte slice. `json.encode.typed` stands at 25 times the cost of Go.

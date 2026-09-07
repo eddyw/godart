@@ -755,23 +755,25 @@ func Float32FromBits(b uint32) float32 {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// MarshalJSON writes the JSON form of a value. The walk reads the type
-// descriptor of the value, thus the name of each member comes from the json tag
-// of the field.
-//
-// The second result holds the cause of a failure, and it is empty after a
-// success. A cause that starts with a null byte holds the code and the parts of
-// a typed error of the package encoding/json.
-func MarshalJSON(v any) (string, string) {
+// JSONValid reports whether the bytes hold 1 valid JSON value. The scanner of
+// the runtime holds each rule of encoding/json/jsontext, the depth limit of
+// 10000 levels included.
+func JSONValid(data []byte) bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// UnmarshalJSON reads the JSON form into a value. The target holds a pointer,
-// and the walk reads the type descriptor of the element. The flag strict
-// reports a member of the input that matches no field of the target struct.
+// JSONUnmarshal decodes 1 JSON document into a target that the scanner of the
+// runtime serves. The results are a code and 2 numbers.
 //
-// The result holds the cause of a failure, and it is empty after a success.
-func UnmarshalJSON(v any, data string, strict, useNumber bool) string {
+// The code jsonFastDone reports that the runtime wrote the target.
+// jsonFastGoPath asks the Go code of this package to run from the start, and
+// the runtime then wrote nothing. jsonFastMethod names the bounds of the value
+// in the 2 numbers, thus the caller calls UnmarshalJSON with those bytes.
+// jsonFastMaxDepth names the offset of the bracket that broke the depth limit.
+//
+// The scanner walks the bytes with a stack of its own. The decoder of the Go
+// code descends, and the stack of Dart holds about 1,400 levels of it.
+func JSONUnmarshal(data []byte, target any) (int, int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

@@ -662,6 +662,18 @@ const (
 	locIndex
 )
 
+// The 2 read only marks of a Value. Go refuses a write and a read through an
+// interface for a value that an unexported field gave.
+//
+// The 2 marks differ in the way that they reach a field of the value. A field
+// of a struct that an unexported and embedded field gave is writable, and a
+// field of each other unexported field is not. Go holds the same rule, and
+// the test TestUnmarshalEmbeddedUnexported of encoding/json reads it.
+const (
+	roSticky = 1 << iota
+	roEmbed
+)
+
 // A Value holds a Go value. A Value that Elem, Field, or Index read also holds
 // its location, thus Set writes through it.
 type Value struct {
@@ -669,6 +681,9 @@ type Value struct {
 	owner any
 	index int
 	loc   int
+	// ro holds the read only marks. A value of the mark 0 accepts a write and
+	// a read through an interface.
+	ro uint8
 	// typ holds the static type when the value itself is nil, for example
 	// the element of a pointer to an interface.
 	typ Type
@@ -833,7 +848,7 @@ func (v Value) Elem() Value {
 		if p == nil {
 			return Value{}
 		}
-		return Value{value: p, ok: true}
+		return Value{value: p, ro: v.ro, ok: true}
 	}
 	if kind == Pointer && dart.ValueIsNil(p) {
 		// Go gives the zero Value for the element of a nil pointer. A nil
@@ -841,7 +856,7 @@ func (v Value) Elem() Value {
 		// the read gives is not nil and only ValueIsNil answers.
 		return Value{}
 	}
-	out := Value{value: dart.PointerElem(p), owner: p, loc: locPointer, ok: true}
+	out := Value{value: dart.PointerElem(p), owner: p, loc: locPointer, ro: v.ro, ok: true}
 	if kind == Pointer {
 		out.typ = v.typeAt(p).Elem()
 	}
@@ -855,7 +870,7 @@ func (v Value) Len() int { return dart.ValueLen(v.read()) }
 // slice and of an array holds its location, thus Set writes through it.
 func (v Value) Index(i int) Value {
 	owner := v.read()
-	out := Value{value: dart.ValueIndex(owner, i), ok: true}
+	out := Value{value: dart.ValueIndex(owner, i), ro: v.ro, ok: true}
 	if v.kindAt(owner) != String {
 		out.owner, out.index, out.loc = owner, i, locIndex
 		out.typ = v.typeAt(owner).Elem()
@@ -870,16 +885,30 @@ func (v Value) NumField() int { return v.Type().NumField() }
 // Set writes through it.
 func (v Value) Field(i int) Value {
 	owner := v.read()
+	f := v.typeAt(owner).Field(i)
+	// Only the sticky mark reaches a field. Thus a field of a struct that an
+	// unexported and embedded field gave accepts a write.
+	ro := v.ro & roSticky
+	if !f.IsExported() {
+		if f.Anonymous {
+			ro |= roEmbed
+		} else {
+			ro |= roSticky
+		}
+	}
 	return Value{value: dart.FieldRead(owner, i), owner: owner,
-		index: i, loc: locField, typ: v.typeAt(owner).Field(i).Type, ok: true}
+		index: i, loc: locField, ro: ro, typ: f.Type, ok: true}
 }
 
 // CanSet reports whether Set writes through v.
-func (v Value) CanSet() bool { return v.loc != locNone }
+func (v Value) CanSet() bool { return v.loc != locNone && v.ro == 0 }
 
 // Set writes x into the location that v names. A Value that holds no location
 // panics.
 func (v Value) Set(x Value) {
+	if v.ro != 0 {
+		panic("reflect: reflect.Value.Set using value obtained using unexported field")
+	}
 	switch v.loc {
 	case locPointer:
 		dart.PointerSet(v.owner, x.read())
@@ -1355,7 +1384,11 @@ func (v Value) Addr() Value {
 	if v.loc == locNone {
 		panic("reflect: Addr of a value that holds no address")
 	}
-	return Value{value: dart.ValueAddr(v.read(), v.owner, v.index, v.loc), ok: true}
+	ro := uint8(0)
+	if v.ro != 0 {
+		ro = roSticky
+	}
+	return Value{value: dart.ValueAddr(v.read(), v.owner, v.index, v.loc), ro: ro, ok: true}
 }
 
 // MethodByName gives the method of the name, bound to the value. A name that
@@ -1463,7 +1496,7 @@ func (v Value) IsZero() bool {
 
 // CanInterface reports whether Interface gives the value. Each value of the
 // overlay reads, thus the answer is always true.
-func (v Value) CanInterface() bool { return v.IsValid() }
+func (v Value) CanInterface() bool { return v.IsValid() && v.ro == 0 }
 
 // FieldByName gives the field of the name. A name that no field holds gives
 // the zero Value.

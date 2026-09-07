@@ -474,11 +474,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$weakRef(%s)", args[0]), true
 	case "WeakTarget":
 		return fmt.Sprintf("$weakTarget(%s)", args[0]), true
-	case "MarshalJSON":
-		return fmt.Sprintf("$jsonMarshal(%s)", args[0]), true
-	case "UnmarshalJSON":
-		return fmt.Sprintf("$jsonUnmarshal(%s, %s, %s, %s)",
-			args[0], args[1], args[2], args[3]), true
+	case "JSONValid":
+		return fmt.Sprintf("$jsonValid(%s)", args[0]), true
+	case "JSONUnmarshal":
+		return fmt.Sprintf("$jsonUnmarshal(%s, %s)", args[0], args[1]), true
 	case "IntText":
 		return fmt.Sprintf("$intText(%s)", args[0]), true
 	case "UintText":
