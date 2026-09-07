@@ -1,17 +1,25 @@
 //go:build dart
 
-// Package slices holds the API of the standard library package slices.
+// This file patches the file of the same name of the package slices.
 //
-// The compiler cannot read the real source. The sort of that package takes the
-// address of a local integer, and only a pointer to a struct or to an array
-// stays in the subset. This file holds the same behavior.
+// The real overlaps reads the address of the first element and of the last
+// element of each slice, and the subset holds no such read. The intrinsic
+// SliceOverlap gives the same answer. Each other line comes from the real
+// file.
 package slices
 
 import (
 	"cmp"
-	"iter"
+	"math/bits"
+	"syscall/dart"
 )
 
+// Equal reports whether two slices are equal: the same length and all
+// elements equal. If the lengths are different, Equal returns false.
+// Otherwise, the elements are compared in increasing index order, and the
+// comparison stops at the first unequal pair.
+// Empty and nil slices are considered equal.
+// Floating point NaNs are not considered equal.
 func Equal[S ~[]E, E comparable](s1, s2 S) bool {
 	if len(s1) != len(s2) {
 		return false
@@ -24,24 +32,38 @@ func Equal[S ~[]E, E comparable](s1, s2 S) bool {
 	return true
 }
 
+// EqualFunc reports whether two slices are equal using an equality
+// function on each pair of elements. If the lengths are different,
+// EqualFunc returns false. Otherwise, the elements are compared in
+// increasing index order, and the comparison stops at the first index
+// for which eq returns false.
 func EqualFunc[S1 ~[]E1, S2 ~[]E2, E1, E2 any](s1 S1, s2 S2, eq func(E1, E2) bool) bool {
 	if len(s1) != len(s2) {
 		return false
 	}
-	for i := range s1 {
-		if !eq(s1[i], s2[i]) {
+	for i, v1 := range s1 {
+		v2 := s2[i]
+		if !eq(v1, v2) {
 			return false
 		}
 	}
 	return true
 }
 
+// Compare compares the elements of s1 and s2, using [cmp.Compare] on each pair
+// of elements. The elements are compared sequentially, starting at index 0,
+// until one element is not equal to the other.
+// The result of comparing the first non-matching elements is returned.
+// If both slices are equal until one of them ends, the shorter slice is
+// considered less than the longer one.
+// The result is 0 if s1 == s2, -1 if s1 < s2, and +1 if s1 > s2.
 func Compare[S ~[]E, E cmp.Ordered](s1, s2 S) int {
 	for i, v1 := range s1 {
 		if i >= len(s2) {
-			return 1
+			return +1
 		}
-		if c := cmp.Compare(v1, s2[i]); c != 0 {
+		v2 := s2[i]
+		if c := cmp.Compare(v1, v2); c != 0 {
 			return c
 		}
 	}
@@ -51,12 +73,18 @@ func Compare[S ~[]E, E cmp.Ordered](s1, s2 S) int {
 	return 0
 }
 
+// CompareFunc is like [Compare] but uses a custom comparison function on each
+// pair of elements.
+// The result is the first non-zero result of cmp; if cmp always
+// returns 0 the result is 0 if len(s1) == len(s2), -1 if len(s1) < len(s2),
+// and +1 if len(s1) > len(s2).
 func CompareFunc[S1 ~[]E1, S2 ~[]E2, E1, E2 any](s1 S1, s2 S2, cmp func(E1, E2) int) int {
 	for i, v1 := range s1 {
 		if i >= len(s2) {
-			return 1
+			return +1
 		}
-		if c := cmp(v1, s2[i]); c != 0 {
+		v2 := s2[i]
+		if c := cmp(v1, v2); c != 0 {
 			return c
 		}
 	}
@@ -66,15 +94,19 @@ func CompareFunc[S1 ~[]E1, S2 ~[]E2, E1, E2 any](s1 S1, s2 S2, cmp func(E1, E2) 
 	return 0
 }
 
+// Index returns the index of the first occurrence of v in s,
+// or -1 if not present.
 func Index[S ~[]E, E comparable](s S, v E) int {
 	for i := range s {
-		if s[i] == v {
+		if v == s[i] {
 			return i
 		}
 	}
 	return -1
 }
 
+// IndexFunc returns the first index i satisfying f(s[i]),
+// or -1 if none do.
 func IndexFunc[S ~[]E, E any](s S, f func(E) bool) int {
 	for i := range s {
 		if f(s[i]) {
@@ -84,384 +116,412 @@ func IndexFunc[S ~[]E, E any](s S, f func(E) bool) int {
 	return -1
 }
 
-func Contains[S ~[]E, E comparable](s S, v E) bool { return Index(s, v) >= 0 }
+// Contains reports whether v is present in s.
+func Contains[S ~[]E, E comparable](s S, v E) bool {
+	return Index(s, v) >= 0
+}
 
-func ContainsFunc[S ~[]E, E any](s S, f func(E) bool) bool { return IndexFunc(s, f) >= 0 }
+// ContainsFunc reports whether at least one
+// element e of s satisfies f(e).
+// It stops as soon as a call to f returns true.
+func ContainsFunc[S ~[]E, E any](s S, f func(E) bool) bool {
+	return IndexFunc(s, f) >= 0
+}
 
+// Insert modifies s in place by inserting the values v... at index i,
+// and returns the modified slice.
+// The elements at s[i:] are shifted up to make room.
+// In the returned slice r, r[i] == v[0],
+// and, if i < len(s), r[i+len(v)] == value originally at s[i].
+// Insert panics if i > len(s).
+// This function is O(len(s) + len(v)).
+// If the result is empty, it has the same nilness as s.
 func Insert[S ~[]E, E any](s S, i int, v ...E) S {
-	out := make(S, 0, len(s)+len(v))
-	out = append(out, s[:i]...)
-	out = append(out, v...)
-	return append(out, s[i:]...)
-}
+	_ = s[i:] // bounds check
 
-func Delete[S ~[]E, E any](s S, i, j int) S {
-	return append(s[:i], s[j:]...)
-}
-
-func DeleteFunc[S ~[]E, E any](s S, del func(E) bool) S {
-	i := IndexFunc(s, del)
-	if i < 0 {
+	m := len(v)
+	if m == 0 {
 		return s
 	}
+	n := len(s)
+	if i == n {
+		return append(s, v...)
+	}
+	if n+m > cap(s) {
+		// Use append rather than make so that we bump the size of
+		// the slice up to the next storage class.
+		// This is what Grow does but we don't call Grow because
+		// that might copy the values twice.
+		s2 := append(s[:i], make(S, n+m-i)...)
+		copy(s2[i:], v)
+		copy(s2[i+m:], s[i:])
+		return s2
+	}
+	s = s[:n+m]
+
+	// before:
+	// s: aaaaaaaabbbbccccccccdddd
+	//            ^   ^       ^   ^
+	//            i  i+m      n  n+m
+	// after:
+	// s: aaaaaaaavvvvbbbbcccccccc
+	//            ^   ^       ^   ^
+	//            i  i+m      n  n+m
+	//
+	// a are the values that don't move in s.
+	// v are the values copied in from v.
+	// b and c are the values from s that are shifted up in index.
+	// d are the values that get overwritten, never to be seen again.
+
+	if !overlaps(v, s[i+m:]) {
+		// Easy case - v does not overlap either the c or d regions.
+		// (It might be in some of a or b, or elsewhere entirely.)
+		// The data we copy up doesn't write to v at all, so just do it.
+
+		copy(s[i+m:], s[i:])
+
+		// Now we have
+		// s: aaaaaaaabbbbbbbbcccccccc
+		//            ^   ^       ^   ^
+		//            i  i+m      n  n+m
+		// Note the b values are duplicated.
+
+		copy(s[i:], v)
+
+		// Now we have
+		// s: aaaaaaaavvvvbbbbcccccccc
+		//            ^   ^       ^   ^
+		//            i  i+m      n  n+m
+		// That's the result we want.
+		return s
+	}
+
+	// The hard case - v overlaps c or d. We can't just shift up
+	// the data because we'd move or clobber the values we're trying
+	// to insert.
+	// So instead, write v on top of d, then rotate.
+	copy(s[n:], v)
+
+	// Now we have
+	// s: aaaaaaaabbbbccccccccvvvv
+	//            ^   ^       ^   ^
+	//            i  i+m      n  n+m
+
+	rotateRight(s[i:], m)
+
+	// Now we have
+	// s: aaaaaaaavvvvbbbbcccccccc
+	//            ^   ^       ^   ^
+	//            i  i+m      n  n+m
+	// That's the result we want.
+	return s
+}
+
+// Delete modifies s in place by removing the elements s[i:j],
+// and returns the modified slice.
+// Delete panics if j > len(s) or s[i:j] is not a valid slice of s.
+// Delete is O(len(s)-i), so if many items must be deleted, it is better to
+// make a single call deleting them all together than to delete one at a time.
+// Delete zeroes the elements s[len(s)-(j-i):len(s)].
+// If the result is empty, it has the same nilness as s.
+func Delete[S ~[]E, E any](s S, i, j int) S {
+	_ = s[i:j:len(s)] // bounds check
+
+	if i == j {
+		return s
+	}
+
+	oldlen := len(s)
+	s = append(s[:i], s[j:]...)
+	clear(s[len(s):oldlen]) // zero/nil out the obsolete elements, for GC
+	return s
+}
+
+// DeleteFunc modifies s in place by removing any elements for which del returns true,
+// and returns the modified slice.
+// DeleteFunc zeroes the elements between the new length and the original length.
+// If the result is empty, it has the same nilness as s.
+func DeleteFunc[S ~[]E, E any](s S, del func(E) bool) S {
+	i := IndexFunc(s, del)
+	if i == -1 {
+		return s
+	}
+	// Don't start copying elements until we find one to delete.
 	for j := i + 1; j < len(s); j++ {
-		if !del(s[j]) {
-			s[i] = s[j]
+		if v := s[j]; !del(v) {
+			s[i] = v
 			i++
 		}
 	}
+	clear(s[i:]) // zero/nil out the obsolete elements, for GC
 	return s[:i]
 }
 
+// Replace modifies s in place by replacing the elements s[i:j] with the given v,
+// and returns the modified slice.
+// Replace panics if j > len(s) or s[i:j] is not a valid slice of s.
+// When len(v) < (j-i), Replace zeroes the elements between the new length and the original length.
+// If the result is empty, it has the same nilness as s.
 func Replace[S ~[]E, E any](s S, i, j int, v ...E) S {
-	out := make(S, 0, len(s)-(j-i)+len(v))
-	out = append(out, s[:i]...)
-	out = append(out, v...)
-	return append(out, s[j:]...)
+	_ = s[i:j] // bounds check
+
+	if i == j {
+		return Insert(s, i, v...)
+	}
+	if j == len(s) {
+		s2 := append(s[:i], v...)
+		if len(s2) < len(s) {
+			clear(s[len(s2):]) // zero/nil out the obsolete elements, for GC
+		}
+		return s2
+	}
+
+	tot := len(s[:i]) + len(v) + len(s[j:])
+	if tot > cap(s) {
+		// Too big to fit, allocate and copy over.
+		s2 := append(s[:i], make(S, tot-i)...) // See Insert
+		copy(s2[i:], v)
+		copy(s2[i+len(v):], s[j:])
+		return s2
+	}
+
+	r := s[:tot]
+
+	if i+len(v) <= j {
+		// Easy, as v fits in the deleted portion.
+		copy(r[i:], v)
+		copy(r[i+len(v):], s[j:])
+		clear(s[tot:]) // zero/nil out the obsolete elements, for GC
+		return r
+	}
+
+	// We are expanding (v is bigger than j-i).
+	// The situation is something like this:
+	// (example has i=4,j=8,len(s)=16,len(v)=6)
+	// s: aaaaxxxxbbbbbbbbyy
+	//        ^   ^       ^ ^
+	//        i   j  len(s) tot
+	// a: prefix of s
+	// x: deleted range
+	// b: more of s
+	// y: area to expand into
+
+	if !overlaps(r[i+len(v):], v) {
+		// Easy, as v is not clobbered by the first copy.
+		copy(r[i+len(v):], s[j:])
+		copy(r[i:], v)
+		return r
+	}
+
+	// This is a situation where we don't have a single place to which
+	// we can copy v. Parts of it need to go to two different places.
+	// We want to copy the prefix of v into y and the suffix into x, then
+	// rotate |y| spots to the right.
+	//
+	//        v[2:]      v[:2]
+	//         |           |
+	// s: aaaavvvvbbbbbbbbvv
+	//        ^   ^       ^ ^
+	//        i   j  len(s) tot
+	//
+	// If either of those two destinations don't alias v, then we're good.
+	y := len(v) - (j - i) // length of y portion
+
+	if !overlaps(r[i:j], v) {
+		copy(r[i:j], v[y:])
+		copy(r[len(s):], v[:y])
+		rotateRight(r[i:], y)
+		return r
+	}
+	if !overlaps(r[len(s):], v) {
+		copy(r[len(s):], v[:y])
+		copy(r[i:j], v[y:])
+		rotateRight(r[i:], y)
+		return r
+	}
+
+	// Now we know that v overlaps both x and y.
+	// That means that the entirety of b is *inside* v.
+	// So we don't need to preserve b at all; instead we
+	// can copy v first, then copy the b part of v out of
+	// v to the right destination.
+	k := startIdx(v, s[j:])
+	copy(r[i:], v)
+	copy(r[i+len(v):], r[i+k:])
+	return r
 }
 
+// Clone returns a copy of the slice.
+// The elements are copied using assignment, so this is a shallow clone.
+// The result may have additional unused capacity.
+// The result preserves the nilness of s.
 func Clone[S ~[]E, E any](s S) S {
+	// Preserve nilness in case it matters.
 	if s == nil {
 		return nil
 	}
-	return append(S(nil), s...)
+	// Avoid s[:0:0] as it leads to unwanted liveness when cloning a
+	// zero-length slice of a large array; see https://go.dev/issue/68488.
+	return append(S{}, s...)
 }
 
+// Compact replaces consecutive runs of equal elements with a single copy.
+// This is like the uniq command found on Unix.
+// Compact modifies the contents of the slice s and returns the modified slice,
+// which may have a smaller length.
+// Compact zeroes the elements between the new length and the original length.
+// The result preserves the nilness of s.
 func Compact[S ~[]E, E comparable](s S) S {
 	if len(s) < 2 {
 		return s
 	}
-	k := 1
-	for i := 1; i < len(s); i++ {
-		if s[i] != s[k-1] {
-			s[k] = s[i]
-			k++
+	for k := 1; k < len(s); k++ {
+		if s[k] == s[k-1] {
+			s2 := s[k:]
+			for k2 := 1; k2 < len(s2); k2++ {
+				if s2[k2] != s2[k2-1] {
+					s[k] = s2[k2]
+					k++
+				}
+			}
+
+			clear(s[k:]) // zero/nil out the obsolete elements, for GC
+			return s[:k]
 		}
 	}
-	return s[:k]
+	return s
 }
 
+// CompactFunc is like [Compact] but uses an equality function to compare elements.
+// For runs of elements that compare equal, CompactFunc keeps the first one.
+// CompactFunc zeroes the elements between the new length and the original length.
+// The result preserves the nilness of s.
 func CompactFunc[S ~[]E, E any](s S, eq func(E, E) bool) S {
 	if len(s) < 2 {
 		return s
 	}
-	k := 1
-	for i := 1; i < len(s); i++ {
-		if !eq(s[i], s[k-1]) {
-			s[k] = s[i]
-			k++
+	for k := 1; k < len(s); k++ {
+		if eq(s[k], s[k-1]) {
+			s2 := s[k:]
+			for k2 := 1; k2 < len(s2); k2++ {
+				if !eq(s2[k2], s2[k2-1]) {
+					s[k] = s2[k2]
+					k++
+				}
+			}
+
+			clear(s[k:]) // zero/nil out the obsolete elements, for GC
+			return s[:k]
 		}
 	}
-	return s[:k]
+	return s
 }
 
+// Grow increases the slice's capacity, if necessary, to guarantee space for
+// another n elements. After Grow(n), at least n elements can be appended
+// to the slice without another allocation. If n is negative or too large to
+// allocate the memory, Grow panics.
+// The result preserves the nilness of s.
 func Grow[S ~[]E, E any](s S, n int) S {
 	if n < 0 {
 		panic("cannot be negative")
 	}
-	if cap(s)-len(s) >= n {
-		return s
+	if n -= cap(s) - len(s); n > 0 {
+		// This expression allocates only once (see test).
+		s = append(s[:cap(s)], make([]E, n)...)[:len(s)]
 	}
-	out := make(S, len(s), len(s)+n)
-	copy(out, s)
-	return out
+	return s
 }
 
-// Clip gives a slice whose capacity is its length. The Dart form of a slice
-// holds an offset and a length over 1 array, thus the operation is a reslice.
-func Clip[S ~[]E, E any](s S) S { return s[:len(s):len(s)] }
+// Clip removes unused capacity from the slice, returning s[:len(s):len(s)].
+// The result preserves the nilness of s.
+func Clip[S ~[]E, E any](s S) S {
+	return s[:len(s):len(s)]
+}
 
+// TODO: There are other rotate algorithms.
+// This algorithm has the desirable property that it moves each element at most twice.
+// The follow-cycles algorithm can be 1-write but it is not very cache friendly.
+
+// rotateLeft rotates s left by r spaces.
+// s_final[i] = s_orig[i+r], wrapping around.
+func rotateLeft[E any](s []E, r int) {
+	Reverse(s[:r])
+	Reverse(s[r:])
+	Reverse(s)
+}
+func rotateRight[E any](s []E, r int) {
+	rotateLeft(s, len(s)-r)
+}
+
+// overlaps reports whether the memory ranges a[:len(a)] and b[:len(b)] overlap.
+func overlaps[E any](a, b []E) bool {
+	if len(a) == 0 || len(b) == 0 {
+		return false
+	}
+	return dart.SliceOverlap(a, b)
+}
+
+// startIdx returns the index in haystack where the needle starts.
+// prerequisite: the needle must be aliased entirely inside the haystack.
+func startIdx[E any](haystack, needle []E) int {
+	p := &needle[0]
+	for i := range haystack {
+		if p == &haystack[i] {
+			return i
+		}
+	}
+	// TODO: what if the overlap is by a non-integral number of Es?
+	panic("needle not found")
+}
+
+// Reverse reverses the elements of the slice in place.
 func Reverse[S ~[]E, E any](s S) {
 	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
 		s[i], s[j] = s[j], s[i]
 	}
 }
 
+// Concat returns a new slice concatenating the passed in slices.
+// If the concatenation is empty, the result is nil.
 func Concat[S ~[]E, E any](slices ...S) S {
-	n := 0
+	size := 0
 	for _, s := range slices {
-		n += len(s)
+		size += len(s)
+		if size < 0 {
+			panic("len out of range")
+		}
 	}
-	out := make(S, 0, n)
+	// Use Grow, not make, to round up to the size class:
+	// the extra space is otherwise unused and helps
+	// callers that append a few elements to the result.
+	newslice := Grow[S](nil, size)
 	for _, s := range slices {
-		out = append(out, s...)
+		newslice = append(newslice, s...)
 	}
-	return out
+	return newslice
 }
 
+// Repeat returns a new slice that repeats the provided slice the given number of times.
+// The result has length and capacity (len(x) * count).
+// The result is never nil.
+// Repeat panics if count is negative or if the result of (len(x) * count)
+// overflows.
 func Repeat[S ~[]E, E any](x S, count int) S {
 	if count < 0 {
 		panic("cannot be negative")
 	}
-	out := make(S, 0, len(x)*count)
-	for i := 0; i < count; i++ {
-		out = append(out, x...)
-	}
-	return out
-}
 
-func Min[S ~[]E, E cmp.Ordered](x S) E {
-	if len(x) < 1 {
-		panic("slices.Min: empty list")
+	const maxInt = ^uint(0) >> 1
+	hi, lo := bits.Mul(uint(len(x)), uint(count))
+	if hi > 0 || lo > maxInt {
+		panic("the result of (len(x) * count) overflows")
 	}
-	out := x[0]
-	for _, v := range x[1:] {
-		out = cmp.Or(minOne(out, v), out)
-	}
-	return out
-}
 
-// minOne gives the smaller value. A NaN gives NaN, exactly as cmp.Less does.
-func minOne[E cmp.Ordered](a, b E) E {
-	if cmp.Less(b, a) {
-		return b
+	newslice := make(S, int(lo)) // lo = len(x) * count
+	n := copy(newslice, x)
+	for n < len(newslice) {
+		n += copy(newslice[n:], newslice[:n])
 	}
-	if isNaN(b) {
-		return b
-	}
-	return a
-}
-
-func MinFunc[S ~[]E, E any](x S, cmp func(a, b E) int) E {
-	if len(x) < 1 {
-		panic("slices.MinFunc: empty list")
-	}
-	out := x[0]
-	for _, v := range x[1:] {
-		if cmp(v, out) < 0 {
-			out = v
-		}
-	}
-	return out
-}
-
-func Max[S ~[]E, E cmp.Ordered](x S) E {
-	if len(x) < 1 {
-		panic("slices.Max: empty list")
-	}
-	out := x[0]
-	for _, v := range x[1:] {
-		if cmp.Less(out, v) || isNaN(v) {
-			out = v
-		}
-	}
-	return out
-}
-
-func MaxFunc[S ~[]E, E any](x S, cmp func(a, b E) int) E {
-	if len(x) < 1 {
-		panic("slices.MaxFunc: empty list")
-	}
-	out := x[0]
-	for _, v := range x[1:] {
-		if cmp(v, out) > 0 {
-			out = v
-		}
-	}
-	return out
-}
-
-// isNaN reports whether a value is not equal to itself. Only a float holds such
-// a value.
-func isNaN[E cmp.Ordered](v E) bool { return v != v }
-
-func IsSorted[S ~[]E, E cmp.Ordered](x S) bool {
-	for i := len(x) - 1; i > 0; i-- {
-		if cmp.Less(x[i], x[i-1]) {
-			return false
-		}
-	}
-	return true
-}
-
-func IsSortedFunc[S ~[]E, E any](x S, cmp func(a, b E) int) bool {
-	for i := len(x) - 1; i > 0; i-- {
-		if cmp(x[i], x[i-1]) < 0 {
-			return false
-		}
-	}
-	return true
-}
-
-func BinarySearch[S ~[]E, E cmp.Ordered](x S, target E) (int, bool) {
-	i, j := 0, len(x)
-	for i < j {
-		h := int(uint(i+j) >> 1)
-		if cmp.Less(x[h], target) {
-			i = h + 1
-			continue
-		}
-		j = h
-	}
-	return i, i < len(x) && (x[i] == target || (isNaN(x[i]) && isNaN(target)))
-}
-
-func BinarySearchFunc[S ~[]E, E, T any](x S, target T, cmp func(E, T) int) (int, bool) {
-	i, j := 0, len(x)
-	for i < j {
-		h := int(uint(i+j) >> 1)
-		if cmp(x[h], target) < 0 {
-			i = h + 1
-			continue
-		}
-		j = h
-	}
-	return i, i < len(x) && cmp(x[i], target) == 0
-}
-
-func Sort[S ~[]E, E cmp.Ordered](x S) {
-	SortFunc(x, func(a, b E) int { return cmp.Compare(a, b) })
-}
-
-// SortFunc sorts the slice with a merge sort. The sort is stable, and the
-// standard library gives no such promise for this function.
-//
-// A merge sort needs 1 extra buffer of the length of the slice. The pdqsort of
-// the standard library needs none, and it takes the address of a local integer.
-// Only a pointer to a struct or to an array stays in the subset.
-func SortFunc[S ~[]E, E any](x S, cmp func(a, b E) int) {
-	if len(x) < 2 {
-		return
-	}
-	buf := make(S, len(x))
-	mergeSort(x, buf, cmp)
-}
-
-func SortStableFunc[S ~[]E, E any](x S, cmp func(a, b E) int) { SortFunc(x, cmp) }
-
-func mergeSort[S ~[]E, E any](x, buf S, cmp func(a, b E) int) {
-	if len(x) < 2 {
-		return
-	}
-	if len(x) < 12 {
-		insertionSort(x, cmp)
-		return
-	}
-	mid := len(x) / 2
-	mergeSort(x[:mid], buf[:mid], cmp)
-	mergeSort(x[mid:], buf[mid:], cmp)
-	if cmp(x[mid-1], x[mid]) <= 0 {
-		return
-	}
-	copy(buf, x)
-	merge(x, buf[:mid], buf[mid:len(x)], cmp)
-}
-
-func merge[S ~[]E, E any](out, left, right S, cmp func(a, b E) int) {
-	i, j, k := 0, 0, 0
-	for i < len(left) && j < len(right) {
-		if cmp(right[j], left[i]) < 0 {
-			out[k] = right[j]
-			j++
-		} else {
-			out[k] = left[i]
-			i++
-		}
-		k++
-	}
-	for i < len(left) {
-		out[k] = left[i]
-		i++
-		k++
-	}
-	for j < len(right) {
-		out[k] = right[j]
-		j++
-		k++
-	}
-}
-
-func insertionSort[S ~[]E, E any](x S, cmp func(a, b E) int) {
-	for i := 1; i < len(x); i++ {
-		for j := i; j > 0 && cmp(x[j], x[j-1]) < 0; j-- {
-			x[j], x[j-1] = x[j-1], x[j]
-		}
-	}
-}
-
-// All gives a sequence of the index and the value of each element.
-func All[S ~[]E, E any](s S) iter.Seq2[int, E] {
-	return func(yield func(int, E) bool) {
-		for i, v := range s {
-			if !yield(i, v) {
-				return
-			}
-		}
-	}
-}
-
-// Values gives a sequence of the value of each element.
-func Values[S ~[]E, E any](s S) iter.Seq[E] {
-	return func(yield func(E) bool) {
-		for _, v := range s {
-			if !yield(v) {
-				return
-			}
-		}
-	}
-}
-
-// Backward gives a sequence of the index and the value, from the last element to
-// the first.
-func Backward[S ~[]E, E any](s S) iter.Seq2[int, E] {
-	return func(yield func(int, E) bool) {
-		for i := len(s) - 1; i >= 0; i-- {
-			if !yield(i, s[i]) {
-				return
-			}
-		}
-	}
-}
-
-// AppendSeq adds each value of the sequence to the slice.
-func AppendSeq[S ~[]E, E any](s S, seq iter.Seq[E]) S {
-	for v := range seq {
-		s = append(s, v)
-	}
-	return s
-}
-
-// Collect gives a slice of each value of the sequence.
-func Collect[E any](seq iter.Seq[E]) []E {
-	return AppendSeq([]E(nil), seq)
-}
-
-// Sorted gives a sorted slice of each value of the sequence.
-func Sorted[E cmp.Ordered](seq iter.Seq[E]) []E {
-	out := Collect(seq)
-	Sort(out)
-	return out
-}
-
-// SortedFunc gives a slice of each value of the sequence, sorted with the
-// comparison.
-func SortedFunc[E any](seq iter.Seq[E], cmp func(E, E) int) []E {
-	out := Collect(seq)
-	SortFunc(out, cmp)
-	return out
-}
-
-// SortedStableFunc holds the same behavior as SortedFunc. The sort of this
-// package is stable.
-func SortedStableFunc[E any](seq iter.Seq[E], cmp func(E, E) int) []E {
-	return SortedFunc(seq, cmp)
-}
-
-// Chunk gives a sequence of the parts of the slice. Each part holds n elements,
-// and the last part may hold fewer.
-func Chunk[S ~[]E, E any](s S, n int) iter.Seq[S] {
-	if n < 1 {
-		panic("cannot be less than 1")
-	}
-	return func(yield func(S) bool) {
-		for i := 0; i < len(s); i += n {
-			end := i + n
-			if end > len(s) {
-				end = len(s)
-			}
-			if !yield(s[i:end:end]) {
-				return
-			}
-		}
-	}
+	return newslice
 }

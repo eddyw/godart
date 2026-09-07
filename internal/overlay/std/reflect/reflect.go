@@ -774,6 +774,18 @@ func (v Value) read() any {
 // the zero Value.
 func (v Value) IsValid() bool { return v.ok }
 
+func init() { dart.SetValueHook(readValue) }
+
+// readValue gives the value that a Value holds. The package fmt writes that
+// value, and not the text of the String method of the Value.
+func readValue(v any) (any, bool) {
+	value, ok := v.(Value)
+	if !ok || !value.ok {
+		return nil, false
+	}
+	return value.read(), true
+}
+
 // Interface gives the value of v inside an interface.
 func (v Value) Interface() any { return v.read() }
 

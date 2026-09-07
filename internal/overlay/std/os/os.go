@@ -193,10 +193,28 @@ func Pipe() (*File, *File, error) {
 	return nil, nil, &PathError{Op: "pipe", Err: errors.New("not supported")}
 }
 
+// Name gives the name that the caller of Open gave. Go reads the field with no
+// test of the receiver, thus a nil pointer panics here too.
 func (f *File) Name() string { return f.name }
+
+// checkValid gives ErrInvalid for a nil receiver. Go tests the receiver of
+// each method of a File, thus a call on a nil pointer gives an error and no
+// panic.
+func (f *File) checkValid(op string) error {
+	if f == nil {
+		return ErrInvalid
+	}
+	if f.closed {
+		return &PathError{Op: op, Path: f.name, Err: ErrClosed}
+	}
+	return nil
+}
 
 // Write writes the bytes and gives the count.
 func (f *File) Write(p []byte) (int, error) {
+	if err := f.checkValid("write"); err != nil {
+		return 0, err
+	}
 	switch f.std {
 	case stdOut:
 		dart.Print(string(p))
@@ -224,6 +242,9 @@ func (f *File) WriteString(s string) (int, error) { return f.Write([]byte(s)) }
 // Read reads bytes into the slice and gives the count. It gives io.EOF at the
 // end of the file, and the caller compares the error with that value.
 func (f *File) Read(p []byte) (int, error) {
+	if err := f.checkValid("read"); err != nil {
+		return 0, err
+	}
 	if f.std == stdInFile {
 		n, cause := dart.StdinRead(p)
 		if cause != "" {
@@ -253,6 +274,9 @@ func (f *File) Read(p []byte) (int, error) {
 // ReadAt reads at the offset. It does not move the read position of the file,
 // thus the call reads the position first and writes it again.
 func (f *File) ReadAt(p []byte, off int64) (int, error) {
+	if err := f.checkValid("readat"); err != nil {
+		return 0, err
+	}
 	if f.std != stdNone {
 		return 0, &PathError{Op: "read", Path: f.name, Err: errors.New("bad file descriptor")}
 	}
@@ -292,6 +316,9 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 // WriteAt writes at the offset. It does not move the write position of the
 // file, thus the call reads the position first and writes it again.
 func (f *File) WriteAt(p []byte, off int64) (int, error) {
+	if err := f.checkValid("writeat"); err != nil {
+		return 0, err
+	}
 	if f.std != stdNone {
 		return 0, &PathError{Op: "write", Path: f.name, Err: errors.New("bad file descriptor")}
 	}
@@ -324,6 +351,9 @@ func (f *File) WriteAt(p []byte, off int64) (int, error) {
 // Go reaches the copy call of the kernel here. The loop below is the fallback
 // that Go also takes when that call does not fit.
 func (f *File) ReadFrom(r io.Reader) (int64, error) {
+	if err := f.checkValid("readfrom"); err != nil {
+		return 0, err
+	}
 	buf := make([]byte, 32*1024)
 	var total int64
 	for {
@@ -349,6 +379,9 @@ func (f *File) ReadFrom(r io.Reader) (int64, error) {
 
 // WriteTo writes each byte of the file to the writer and gives the count.
 func (f *File) WriteTo(w io.Writer) (int64, error) {
+	if err := f.checkValid("writeto"); err != nil {
+		return 0, err
+	}
 	buf := make([]byte, 32*1024)
 	var total int64
 	for {
@@ -378,6 +411,9 @@ var EOF = io.EOF
 
 // Seek moves the read position and gives the new offset from the start.
 func (f *File) Seek(offset int64, whence int) (int64, error) {
+	if err := f.checkValid("seek"); err != nil {
+		return 0, err
+	}
 	if f.std != stdNone {
 		return 0, &PathError{Op: "seek", Path: f.name, Err: errors.New("bad file descriptor")}
 	}
@@ -386,6 +422,9 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (f *File) Close() error {
+	if f == nil {
+		return ErrInvalid
+	}
 	if f.std != stdNone {
 		return nil
 	}
@@ -401,6 +440,9 @@ func (f *File) Close() error {
 
 // Sync writes each held byte to the storage.
 func (f *File) Sync() error {
+	if err := f.checkValid("sync"); err != nil {
+		return err
+	}
 	if f.std != stdNone {
 		return nil
 	}
@@ -409,8 +451,8 @@ func (f *File) Sync() error {
 
 // Stat reads the metadata of the file.
 func (f *File) Stat() (FileInfo, error) {
-	if f.closed {
-		return nil, &PathError{Op: "stat", Path: f.name, Err: ErrClosed}
+	if err := f.checkValid("stat"); err != nil {
+		return nil, err
 	}
 	return Stat(f.name)
 }
@@ -671,8 +713,8 @@ func ReadDir(name string) ([]DirEntry, error) {
 // is not positive gives each member that stays, and a later call gives none. A
 // positive count gives at most that many, and io.EOF at the end.
 func (f *File) ReadDir(n int) ([]DirEntry, error) {
-	if f.closed {
-		return nil, &PathError{Op: "readdir", Path: f.name, Err: ErrClosed}
+	if err := f.checkValid("readdir"); err != nil {
+		return nil, err
 	}
 	all, err := ReadDir(f.name)
 	if err != nil {
@@ -700,6 +742,9 @@ func (f *File) ReadDir(n int) ([]DirEntry, error) {
 // 0 or less gives each entry. Go marks the method as older than ReadDir, and
 // http.File reads it.
 func (f *File) Readdir(n int) ([]FileInfo, error) {
+	if err := f.checkValid("readdir"); err != nil {
+		return nil, err
+	}
 	entries, err := f.ReadDir(n)
 	if err != nil {
 		return nil, err
@@ -717,6 +762,9 @@ func (f *File) Readdir(n int) ([]FileInfo, error) {
 
 // Readdirnames reads the directory and gives the name of each entry.
 func (f *File) Readdirnames(n int) ([]string, error) {
+	if err := f.checkValid("readdirnames"); err != nil {
+		return nil, err
+	}
 	entries, err := f.ReadDir(n)
 	if err != nil {
 		return nil, err

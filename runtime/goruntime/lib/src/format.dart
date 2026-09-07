@@ -202,6 +202,20 @@ void $setFormatHooks(
   _isPrintHook = isPrint;
 }
 
+/// The read of a reflect.Value. The package fmt writes the value that such a
+/// value holds, thus the walk reaches it through the overlay of reflect.
+(Iface?, bool) Function(Iface?)? _valueHook;
+
+/// Installs the read of a reflect.Value. The init of that package runs it 1
+/// time.
+void $setValueHook((Iface?, bool) Function(Iface?) read) {
+  _valueHook = read;
+}
+
+/// The name of the type reflect.Value. The package fmt holds a case of its own
+/// for it, and the walk of the runtime reads that case here.
+const String _reflectValue = 'reflect.Value';
+
 /// The key of the method of the interface fmt.Formatter in a method table.
 const String _formatKey = 'Format(fmt.State,int32)';
 
@@ -575,6 +589,16 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
   final bool plus = verb.plus;
   final String letter = verb.letter;
   if (letter == 'T') return _leaf(type.display, verb);
+  // The package fmt reads the value that a reflect.Value holds, and it does so
+  // at the top level alone. A Value below that level takes its String method,
+  // exactly as each other value with such a method does.
+  final (Iface?, bool) Function(Iface?)? valueHook = _valueHook;
+  if (depth == 0 && valueHook != null && type.display == _reflectValue) {
+    final (Iface? inner, bool valid) = valueHook(Iface(type, v));
+    if (!valid) return _leaf('<invalid reflect.Value>', verb);
+    if (inner == null) return _leaf('<nil>', verb);
+    return _value(inner.value, inner.desc, verb, depth);
+  }
   final bool sharp = verb.goSyntax;
   final Function? formatMethod = type.methods[_formatKey];
   if (formatMethod != null &&

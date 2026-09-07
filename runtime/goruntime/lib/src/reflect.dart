@@ -796,6 +796,14 @@ Slice<Iface?> _callValue(Iface? fn, Slice<Iface?> args, bool spread) {
   if (desc.kind != 'func') {
     $panic(Iface($typeGoError, GoError('reflect: Call of ${desc.display}')));
   }
+  if (fn.value == null) {
+    $panic(
+      Iface(
+        $typeGoError,
+        const GoError('reflect.Value.Call: call of nil function', plain: true),
+      ),
+    );
+  }
   if (spread && !desc.variadic) {
     $panic(
       Iface(

@@ -429,7 +429,32 @@ func misc() {
 	row("DirFS WalkDir", err)
 }
 
+// nilFile proves that each method of a nil *os.File gives ErrInvalid, and that
+// Name reads the field with no test, exactly as Go does.
+func nilFile() {
+	var f *os.File
+	n, err := f.Write([]byte("x"))
+	row("nil write", fmt.Sprint(n, " ", err, " ", errors.Is(err, os.ErrInvalid)))
+	n, err = f.Read(make([]byte, 1))
+	row("nil read", fmt.Sprint(n, " ", err))
+	row("nil close", fmt.Sprint(f.Close()))
+	_, err = f.Seek(0, io.SeekStart)
+	row("nil seek", fmt.Sprint(err))
+	_, err = f.Stat()
+	row("nil stat", fmt.Sprint(err))
+	_, err = f.ReadDir(1)
+	row("nil readdir", fmt.Sprint(err))
+	row("nil sync", fmt.Sprint(f.Sync()))
+	_, err = f.WriteString("y")
+	row("nil writestring", fmt.Sprint(err))
+	_, err = f.ReadAt(make([]byte, 1), 0)
+	row("nil readat", fmt.Sprint(err))
+	_, err = f.WriteAt([]byte("y"), 0)
+	row("nil writeat", fmt.Sprint(err))
+}
+
 func main() {
+	nilFile()
 	dir, err := os.MkdirTemp("", "confos-")
 	if err != nil {
 		fmt.Println("MkdirTemp failed:", err)

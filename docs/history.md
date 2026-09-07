@@ -113,6 +113,11 @@ float type, 1 view object of a substring, and `net.TCPConn.CloseWrite`. The
 lazy package variable stays out, and a bisect names 1 declaration of
 `net/http` that breaks dart2wasm on its own.
 
+4 more defects of the library suite close (decision 388): `slices` reads the
+real source of Go with 1 patch, each method of a nil `*os.File` gives
+`ErrInvalid`, a call of a nil function value panics with the text of Go, and
+`fmt` writes the value that a `reflect.Value` holds.
+
 ### 2026-09-06, the twenty-third session
 
 The user parked the name of the project, and asked for each open task end to

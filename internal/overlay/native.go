@@ -209,6 +209,11 @@ var native = []string{
 	// sort reads the real algorithm of Go, because 4 tests measure the count
 	// of the swaps and of the comparisons. slice.go holds the 1 patch.
 	"sort",
+	// slices reads the real source, because 4 rules of it hold a value that
+	// the hand written form gave in another way: the clear of the tail of a
+	// Delete, the bound of an Insert, the nil result of an empty Concat, and
+	// the overlap test. slices.go holds the 1 patch.
+	"slices",
 	"encoding/json/internal",
 	"encoding/json/internal/jsonflags",
 	"encoding/json/internal/jsonopts",

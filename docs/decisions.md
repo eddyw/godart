@@ -4774,3 +4774,38 @@ The plan left these points open. The work took the decisions below.
      **A `//gart:dart` declaration of an integer broke each web build.** The
      JS target holds a Go integer as a pair, thus the argument needs `$ix`.
      `TestWebIO` and `TestWebFetch` found it.
+
+388. `slices` reads the real source, and 4 more defects of the library close.
+
+     The hand written overlay of `slices` gave another value in 4 rules of Go.
+     `Delete` did not clear the tail of the source, thus a program that reads
+     the source after a delete sees the old elements and the garbage collector
+     holds each pointer. `Insert` and `Delete` each reported another bound in a
+     panic, and `Concat` of no argument gave a slice of length 0 where Go gives
+     nil.
+
+     The package is native now, and `slices.go` holds the 1 patch: `overlaps`
+     reads the address of the first element and of the last element of each
+     slice, and the new intrinsic `dart.SliceOverlap` gives the same answer
+     from the identity of the 2 backing lists and the 2 ranges.
+     `testdata/programs/slicesedge` holds the witness.
+
+     **Each method of a nil `*os.File` gives `ErrInvalid`.** The overlay read a
+     field of the receiver with no test, thus the program ended with a nil
+     dereference. `checkValid` of Go stands in front of each method now, and it
+     also holds the test of a closed file. `Name` keeps the panic, because Go
+     reads the field there with no test.
+
+     **A call of a nil function value panics with the text of Go.** The runtime
+     cast the value to a Dart function with no test, thus the program ended
+     with an unhandled exception and the caller read no error. `text/template`
+     reports `error calling call: reflect.Value.Call: call of nil function`
+     now.
+
+     **`fmt` writes the value that a `reflect.Value` holds.** Go holds a case
+     of its own for that type at the top level, and the overlay held none, thus
+     the `String` method wrote `<[]int Value>` where Go writes `[1]`. The
+     overlay of `reflect` installs the read at its init, because only that
+     package names the type. A `Value` below the top level keeps its `String`
+     method, exactly as Go keeps it. `testdata/programs/reflectfmt` holds the
+     witness.

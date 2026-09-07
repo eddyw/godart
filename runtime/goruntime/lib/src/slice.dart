@@ -396,3 +396,16 @@ Slice<GoInt> $gils(Slice<int> v) {
   }
   return Slice<GoInt>(v.array as List<GoInt>, v.off, v.len, v.cap);
 }
+
+/// Reports whether 2 slices share a range of 1 backing array. The package
+/// slices reads it, and Go reads the address of the elements there.
+///
+/// A slice of no element overlaps nothing, exactly as Go answers.
+bool $sliceOverlap(Iface? a, Iface? b) {
+  final Object? x = a?.value;
+  final Object? y = b?.value;
+  if (x is! Slice<Object?> || y is! Slice<Object?>) return false;
+  if (x.len == 0 || y.len == 0) return false;
+  if (!identical(x.array, y.array)) return false;
+  return x.off <= y.off + y.len - 1 && y.off <= x.off + x.len - 1;
+}

@@ -170,6 +170,26 @@ func SetFormatHooks(format func(v any, letter, flags, width, prec int) string, i
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SliceOverlap reports whether 2 slices share a range of 1 backing array.
+//
+// Go reads the address of the first element and of the last element of each
+// slice, and the subset holds no such read. The Dart form of a slice holds the
+// backing list itself, thus the runtime compares the identity of the 2 lists
+// and the 2 ranges.
+func SliceOverlap(a, b any) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SetValueHook gives the runtime the read of a reflect.Value. The package fmt
+// writes the value that such a value holds, and not the text of its String
+// method, thus the runtime must reach the value inside it.
+//
+// The overlay of reflect installs the hook, because only that package names
+// the type.
+func SetValueHook(read func(v any) (any, bool)) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Kind gives the kind of a value, in the words of the package reflect.
 func Kind(value any) string {
 	panic("syscall/dart needs the gart compiler")
