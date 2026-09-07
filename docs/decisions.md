@@ -4663,9 +4663,17 @@ The plan left these points open. The work took the decisions below.
      `testdata/programs/fmtbad` holds 280 lines of the reports of each kind,
      and `testdata/programs/fmtreport` holds the other 4 groups.
 
-     1 defect of the 9 stays open: a `Formatter` inside a slice, a map, or a
-     struct reaches its method not, because the walk of the runtime cannot call
-     a method that takes a `fmt.State`.
+     **Each leaf reads the 2 calls that the Dart side cannot hold.** The
+     package `fmt` gives the runtime 2 closures at its init:
+     `formatLeaf` writes a leaf whose type holds a `Format` method, and
+     `strconv.IsPrint` reports whether Go prints a rune as itself. Thus a
+     `Formatter` inside a slice, a map, or a struct now gets its method with
+     the flags, the width, and the precision of the call, and `%q` of a text
+     escapes each rune outside the print set. The flag + writes the ASCII form,
+     and the flag # writes a back quote. The precision also cuts the text of a
+     method, exactly as Go cuts it.
+
+     Each of the 9 defects of decision 384 closes.
 
 386. A scanner of the runtime serves the decoder of `encoding/json` and
      `json.Valid`.

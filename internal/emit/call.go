@@ -257,6 +257,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$stopCleanup(%s)", args[0]), true
 	case "Kind":
 		return fmt.Sprintf("$goKind(%s)", args[0]), true
+	case "SetFormatHooks":
+		return fmt.Sprintf("$setFormatHooks(%s, %s)", args[0], args[1]), true
 	case "IntBits":
 		return fmt.Sprintf("$goIntBits(%s)", args[0]), true
 	case "Stack":

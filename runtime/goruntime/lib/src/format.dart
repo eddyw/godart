@@ -183,6 +183,28 @@ _Verb _parseVerb(String verb) {
 GoString $goKind(Iface? value) =>
     GoString.fromString(value == null ? 'nil' : value.desc.kind);
 
+/// The call of the package fmt that writes 1 leaf whose type holds a Format
+/// method. The method takes a fmt.State, and the Dart side builds no such
+/// value.
+GoString Function(Iface?, GoInt, GoInt, GoInt, GoInt)? _formatHook;
+
+/// The call of the package fmt that reports whether Go prints a rune as
+/// itself. The table of the graphic categories of Unicode lives in strconv.
+bool Function(GoInt)? _isPrintHook;
+
+/// Installs the 2 calls of the package fmt. The init of that package runs it 1
+/// time.
+void $setFormatHooks(
+  GoString Function(Iface?, GoInt, GoInt, GoInt, GoInt) format,
+  bool Function(GoInt) isPrint,
+) {
+  _formatHook = format;
+  _isPrintHook = isPrint;
+}
+
+/// The key of the method of the interface fmt.Formatter in a method table.
+const String _formatKey = 'Format(fmt.State,int32)';
+
 /// The 64-bit pattern of an integer value, and false for each other kind.
 ///
 /// The package fmt reads the code point of the verb U and of the verb q here,
@@ -545,6 +567,20 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
   final String letter = verb.letter;
   if (letter == 'T') return _leaf(type.display, verb);
   final bool sharp = verb.goSyntax;
+  final Function? formatMethod = type.methods[_formatKey];
+  if (formatMethod != null &&
+      !identical(formatMethod, $ifaceMethod) &&
+      _formatHook != null) {
+    // The method owns the width, the precision, and each flag, thus the text
+    // of it takes no padding here.
+    return _formatHook!(
+      Iface(type, v),
+      $gi(letter.codeUnitAt(0)),
+      $gi(verb.flags),
+      $gi(verb.width),
+      $gi(verb.prec),
+    ).toDartString();
+  }
   if (sharp) {
     final String? text = _goStringMethod(v, type);
     if (text != null) return _leaf(text, verb);
@@ -680,9 +716,10 @@ String? _viaMethod(Object? v, TypeDesc type, _Verb verb) {
       return '%!$letter(PANIC=$kind method: ${$panicText(_panicValue(e))})';
     }
     if (text is! GoString) continue;
+    if (verb.prec >= 0) text = _cutRunes(text, verb.prec);
     switch (letter) {
       case 'q':
-        return _quote(text);
+        return _quote(text, verb);
       case 'x':
       case 'X':
         return _hexText(text, verb, letter, letter == 'X');
@@ -690,6 +727,20 @@ String? _viaMethod(Object? v, TypeDesc type, _Verb verb) {
     return text.toDartString();
   }
   return null;
+}
+
+/// The first n runes of a text. The precision of a text verb counts runes, and
+/// Go cuts the value before it writes it.
+GoString _cutRunes(GoString v, int n) {
+  int at = 0;
+  int count = 0;
+  while (at < v.length && count < n) {
+    final (int _, int size) = $decodeRuneRaw(v, at);
+    at += size;
+    count++;
+  }
+  if (at >= v.length) return v;
+  return GoString.fromBytes(v.bytes.sublist(0, at));
 }
 
 /// The Go value of a failure that a method of a value raised. A panic of Go
@@ -748,12 +799,12 @@ String _bool(bool v) => v ? 'true' : 'false';
 String _string(GoString v, _Verb verb, String letter) {
   switch (letter) {
     case 'v':
-      if (verb.goSyntax) return _quote(v);
+      if (verb.goSyntax) return _quote(v, verb);
       return v.toDartString();
     case 's':
       return v.toDartString();
     case 'q':
-      return _quote(v);
+      return _quote(v, verb);
     case 'x':
       return _hexText(v, verb, letter, false);
     case 'X':
@@ -1046,7 +1097,41 @@ String _hexBytes(GoString v, bool upper) {
   return upper ? text.toUpperCase() : text;
 }
 
-String _quote(GoString v) {
+/// Reports whether a back quote holds each character of the text. Go rejects a
+/// control character other than a tab, a back quote, and a byte that holds no
+/// rune. Read strconv.CanBackquote.
+bool _canBackquote(GoString v) {
+  int at = 0;
+  while (at < v.length) {
+    final (int r, int size) = $decodeRuneRaw(v, at);
+    at += size;
+    if (size > 1) {
+      if (r == 0xFEFF) return false;
+      continue;
+    }
+    if (r == 0xFFFD) return false;
+    if ((r < 0x20 && r != 0x09) || r == 0x60 || r == 0x7F) return false;
+  }
+  return true;
+}
+
+/// The escape of a rune that Go does not print as itself. Go writes 4
+/// hexadecimal digits below U+10000 and 8 above it.
+String _escapeRune(int r) {
+  if (r > 0xFFFF) {
+    return '\\U${r.toRadixString(16).padLeft(8, '0')}';
+  }
+  return '\\u${r.toRadixString(16).padLeft(4, '0')}';
+}
+
+String _quote(GoString v, _Verb verb) {
+  // The flag # writes a back quote when the text holds each character that a
+  // back quote keeps, and the verb v of the Go syntax form takes no such form.
+  if (verb.sharp && verb.letter == 'q' && _canBackquote(v)) {
+    return '`${v.toDartString()}`';
+  }
+  // The flag + writes the escape of each rune outside the ASCII range.
+  final bool ascii = verb.plus;
   final StringBuffer out = StringBuffer('"');
   int at = 0;
   while (at < v.length) {
@@ -1079,6 +1164,15 @@ String _quote(GoString v) {
       default:
         if (r < 0x20 || r == 0x7F) {
           out.write('\\x${r.toRadixString(16).padLeft(2, '0')}');
+          break;
+        }
+        final bool Function(GoInt)? isPrint = _isPrintHook;
+        if (ascii && r >= 0x80) {
+          out.write(_escapeRune(r));
+          break;
+        }
+        if (isPrint != null && !isPrint($gi(r))) {
+          out.write(_escapeRune(r));
           break;
         }
         out.writeCharCode(r);

@@ -3,9 +3,26 @@
 // with the verb q, and a panic inside a String method or an Error method.
 package main
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type named string
+
+type spec struct{}
+
+func (spec) Format(st fmt.State, verb rune) {
+	fmt.Fprintf(st, "<%c w=%v p=%v>", verb, flagText(st), fmt.FormatString(st, verb))
+}
+
+func flagText(st fmt.State) string {
+	w, ok := st.Width()
+	if !ok {
+		return "none"
+	}
+	return fmt.Sprint(w)
+}
 
 type failing struct{}
 
@@ -46,7 +63,22 @@ func panics() {
 	fmt.Printf("%v|\n", []any{failing{}, hexed{1}})
 }
 
+// leaves proves that a Format method reaches each leaf of a compound value,
+// that the precision cuts the text of a method, and that the quote of a text
+// reads the print table of Go.
+func leaves() {
+	e := errors.New("plain")
+	fmt.Printf("%x|%.2s|%.3v|%8.2s|%.1q|\n", e, e, e, e, e)
+	fmt.Printf("%q|%v|%d|%8v|\n", []any{spec{}}, []any{spec{}}, map[string]spec{"a": {}}, []any{spec{}})
+	fmt.Printf("%v|%+v|%#v|\n", struct{ S spec }{}, [2]spec{}, map[int]spec{1: {}})
+	for _, v := range []any{"\uffff", "é", "a`b", "tab\there", "\x00", "日本", []byte("\uffff"), []byte("é"), []byte("abc")} {
+		fmt.Printf("%q|%+q|%#q|%v|\n", v, v, v, v)
+	}
+	fmt.Printf("%q|%q|\n", []string{"\uffff", "é"}, map[string]string{"a": "\uffff"})
+}
+
 func main() {
 	reports()
 	panics()
+	leaves()
 }

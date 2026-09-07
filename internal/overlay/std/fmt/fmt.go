@@ -304,6 +304,47 @@ func Sprintf(format string, a ...any) string {
 	return out.String()
 }
 
+func init() { dart.SetFormatHooks(formatLeaf, strconv.IsPrint) }
+
+// formatLeaf writes 1 leaf whose type holds a Format method. The runtime calls
+// it, because the method takes a fmt.State and the Dart side builds no such
+// value.
+func formatLeaf(v any, letter, flags, width, prec int) string {
+	f, ok := v.(Formatter)
+	if !ok {
+		return ""
+	}
+	st := &state{spec: spec{
+		flags:    flagsText(flags),
+		width:    width,
+		hasWidth: width > 0,
+		prec:     prec,
+		hasPrec:  prec >= 0,
+	}}
+	f.Format(st, rune(letter))
+	return string(st.buf)
+}
+
+// flagsText gives the flags of a verb as the text that a Format method reads.
+func flagsText(bits int) string {
+	out := ""
+	for _, f := range []struct {
+		bit  int
+		char byte
+	}{
+		{flagPlus, '+'},
+		{flagSharp, '#'},
+		{flagSpace, ' '},
+		{flagZero, '0'},
+		{flagMinus, '-'},
+	} {
+		if bits&f.bit != 0 {
+			out += string(f.char)
+		}
+	}
+	return out
+}
+
 // tooLarge reports a width or a precision that Go rejects. A value above the
 // limit gives no format, and Go writes BADWIDTH or BADPREC in its place.
 func tooLarge(x int) bool {

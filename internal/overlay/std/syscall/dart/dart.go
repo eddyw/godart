@@ -153,6 +153,19 @@ func IntBits(value any) (uint64, bool) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SetFormatHooks gives the runtime the 2 calls of the package fmt that the
+// Dart side cannot hold.
+//
+// format writes 1 leaf whose type holds a Format method, with the letter of
+// the verb, the bits of the flags, the width, and the precision. The result is
+// the whole text of that leaf.
+//
+// isPrint reports whether Go prints a rune as itself. The table of the graphic
+// categories of Unicode lives in the package strconv.
+func SetFormatHooks(format func(v any, letter, flags, width, prec int) string, isPrint func(r rune) bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Kind gives the kind of a value, in the words of the package reflect.
 func Kind(value any) string {
 	panic("syscall/dart needs the gart compiler")

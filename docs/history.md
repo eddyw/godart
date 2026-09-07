@@ -99,7 +99,8 @@ of a value now, thus each verb that a kind rejects gives the report of Go with
 the type name and the width inside the parentheses. `fmt` also writes
 `%!(EXTRA ...)`, `%!(BADWIDTH)`, the report of a panic inside a `String`
 method, and the back quote of `%#q`. The verb `p` writes the identity of the
-object.
+object. The 2 hooks of the last defect landed in the same block: a `Formatter`
+inside a compound value gets its method, and `%q` reads the print table of Go.
 
 A scanner of the runtime serves the decoder of `encoding/json` (decision 386).
 `json.decode.any` falls from 79 milliseconds to 4.32, which is less than Go
