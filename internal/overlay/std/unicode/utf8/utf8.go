@@ -185,20 +185,25 @@ func EncodeRune(p []byte, r rune) int {
 	if !ValidRune(r) {
 		r = RuneError
 	}
+	// Go reads the last byte of the room that it needs first, thus a slice
+	// that holds too few bytes panics with the index of that byte.
 	switch {
 	case r <= rune1Max:
 		p[0] = byte(r)
 		return 1
 	case r <= rune2Max:
+		_ = p[1]
 		p[0] = 0xC0 | byte(r>>6)
 		p[1] = 0x80 | byte(r)&0x3F
 		return 2
 	case r <= rune3Max:
+		_ = p[2]
 		p[0] = 0xE0 | byte(r>>12)
 		p[1] = 0x80 | byte(r>>6)&0x3F
 		p[2] = 0x80 | byte(r)&0x3F
 		return 3
 	}
+	_ = p[3]
 	p[0] = 0xF0 | byte(r>>18)
 	p[1] = 0x80 | byte(r>>12)&0x3F
 	p[2] = 0x80 | byte(r>>6)&0x3F

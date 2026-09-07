@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -227,7 +228,26 @@ func walk() {
 	row("EvalSymlinks missing", fmt.Sprintf("%v %v", errors.Is(err, fs.ErrNotExist), filepath.Base(err.(*fs.PathError).Path)))
 }
 
+// sentinels proves that path and path/filepath each hold a value of
+// ErrBadPattern of their own, and that a match of the 1 finds the sentinel of
+// the other not.
+func sentinels() {
+	row("same value", fmt.Sprint(path.ErrBadPattern == filepath.ErrBadPattern))
+	_, err := path.Match("[", "a")
+	row("path error is filepath", fmt.Sprint(errors.Is(err, filepath.ErrBadPattern)))
+	row("path error is path", fmt.Sprint(errors.Is(err, path.ErrBadPattern)))
+	_, err = filepath.Match("[", "a")
+	row("filepath error is path", fmt.Sprint(errors.Is(err, path.ErrBadPattern)))
+	row("filepath error is filepath", fmt.Sprint(errors.Is(err, filepath.ErrBadPattern)))
+	for _, p := range []string{"a[", "a\\", "[]a]", "[^]", "[a-", "*[", "?["} {
+		_, e1 := path.Match(p, "a")
+		_, e2 := filepath.Match(p, "a")
+		row("match "+strconv.Quote(p), fmt.Sprint(e1, " ", e2))
+	}
+}
+
 func main() {
+	sentinels()
 	fmt.Println("== the table ==")
 	table()
 	fmt.Println("== Join and the slash functions ==")

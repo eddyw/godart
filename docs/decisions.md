@@ -4809,3 +4809,18 @@ The plan left these points open. The work took the decisions below.
      package names the type. A `Value` below the top level keeps its `String`
      method, exactly as Go keeps it. `testdata/programs/reflectfmt` holds the
      witness.
+
+     **`path/filepath` holds its own `ErrBadPattern` and its own `Match`.** The
+     overlay read the value and the function of `path`, thus `errors.Is` of a
+     pattern error of `path` found the sentinel of `filepath` and Go finds
+     none. The real `match.go` of Go stands in the overlay now, and each test
+     of the Windows target reads a constant.
+
+     **`utf8.EncodeRune` panics with the index of Go.** Go reads the last byte
+     of the room that it needs first, thus a slice of 1 byte and the rune of 3
+     bytes name the index 2. The overlay wrote the first byte first and it
+     named the index 1.
+
+     **A failure of the writer of `text/tabwriter` gives an error again.** The
+     patch of `handlePanic` removed the `recover`, and decision 383 dropped
+     that patch. The case needed no work of its own.

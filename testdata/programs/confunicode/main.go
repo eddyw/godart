@@ -167,7 +167,24 @@ func utf16s() {
 	}
 }
 
+// encodeRoom proves the panic of EncodeRune and of AppendRune when the slice
+// holds too few bytes. Go reads the last byte of the room that it needs first,
+// thus the index of the panic names that byte.
+func encodeRoom() {
+	for _, c := range []struct {
+		size int
+		r    rune
+	}{{1, 'a'}, {0, 'a'}, {1, 'é'}, {1, '日'}, {2, '日'}, {1, '\U0001F600'}, {3, '\U0001F600'}} {
+		func() {
+			defer func() { fmt.Printf("%-22s %v\n", fmt.Sprintf("encode %d %q", c.size, c.r), recover()) }()
+			n := utf8.EncodeRune(make([]byte, c.size), c.r)
+			fmt.Printf("%-22s %v\n", fmt.Sprintf("encode %d %q", c.size, c.r), n)
+		}()
+	}
+}
+
 func main() {
+	encodeRoom()
 	fmt.Println("== the predicates ==")
 	predicates()
 	fmt.Println("== the tables ==")
