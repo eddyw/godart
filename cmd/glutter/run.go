@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -35,6 +36,11 @@ func (a *app) run(args []string) error {
 	os.Remove(pidFile)
 	full := append([]string{"run", "--pid-file=" + pidFile}, args...)
 	cmd := exec1(a.dir, "flutter", full)
+	// Both processes receive terminal interrupts. Keep the parent alive until
+	// Flutter restores the terminal and exits.
+	interrupts := make(chan os.Signal, 1)
+	signal.Notify(interrupts, os.Interrupt)
+	defer signal.Stop(interrupts)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
