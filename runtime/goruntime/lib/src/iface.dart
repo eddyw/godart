@@ -18,6 +18,13 @@ final class FieldDesc {
   /// True for an embedded field. The package reflect reads it as Anonymous.
   final bool embedded;
 
+  /// The import path of the package that declares an unexported field. An
+  /// exported field holds an empty text.
+  ///
+  /// The package reflect reads it as PkgPath, and an unnamed struct type holds
+  /// no package of its own.
+  final String pkg;
+
   const FieldDesc(
     this.name,
     this.tag,
@@ -26,6 +33,7 @@ final class FieldDesc {
     this.get,
     this.set, {
     this.embedded = false,
+    this.pkg = '',
   });
 }
 

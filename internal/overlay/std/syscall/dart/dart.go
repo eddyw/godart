@@ -551,6 +551,15 @@ func FieldCount(handle int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// FieldPkgPath gives the import path of the package that declares an
+// unexported field. An exported field gives an empty text.
+//
+// An unnamed struct type holds no package of its own, thus the path of the
+// type of the struct gives no answer for such a field.
+func FieldPkgPath(handle, index int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // FieldInfo gives the name, the tag, the exported flag, and the type handle of
 // 1 field of a struct type.
 func FieldInfo(handle, index int) (string, string, bool, int) {

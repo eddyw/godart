@@ -118,6 +118,12 @@ real source of Go with 1 patch, each method of a nil `*os.File` gives
 `ErrInvalid`, a call of a nil function value panics with the text of Go, and
 `fmt` writes the value that a `reflect.Value` holds.
 
+The relaxation of rule M15 opened 3 files of the test directory of Go, and each
+1 named a defect (decision 389): 2 shapes that differ in a field name were 1
+type, a parallel assignment wrote a field of a pointer through the new value,
+and an unexported field of a shape carried no read only mark. A 4th defect
+stood in the return of a function with named results.
+
 ### 2026-09-06, the twenty-third session
 
 The user parked the name of the project, and asked for each open task end to

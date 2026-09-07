@@ -3,6 +3,7 @@ package emit
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"go/types"
 	"sort"
 	"strings"
@@ -392,8 +393,123 @@ func anonPrivate(t types.Type, seen map[types.Type]bool) bool {
 // anonText writes the Go text of a type. A named type takes its import path,
 // thus 2 packages of the same build give the same text.
 func anonText(t types.Type) string {
-	return types.TypeString(t, func(p *types.Package) string { return p.Path() })
+	var b strings.Builder
+	writeType(&b, t, map[types.Type]bool{})
+	return b.String()
 }
+
+// writeType writes the text of a type that names the same text for 2 types
+// that Go holds identical, and another text for each other pair.
+//
+// types.TypeString gives no such text for 2 shapes: it writes an embedded
+// field as its type alone, thus `struct{ int }` and `struct{ Int }` of an
+// alias Int give 1 text, and it writes an alias by its name, thus 2 local
+// aliases of 1 name in 2 blocks give 1 text. The walk below writes each field
+// name and it reads each alias.
+func writeType(b *strings.Builder, t types.Type, seen map[types.Type]bool) {
+	if t == nil {
+		b.WriteString("<nil>")
+		return
+	}
+	if seen[t] {
+		b.WriteString("<cycle>")
+		return
+	}
+	switch u := types.Unalias(t).(type) {
+	case *types.Basic:
+		b.WriteString(u.Name())
+	case *types.Named:
+		b.WriteString(types.TypeString(u, qualifyPath))
+	case *types.TypeParam:
+		b.WriteString(types.TypeString(u, qualifyPath))
+	case *types.Pointer:
+		seen[t] = true
+		b.WriteString("*")
+		writeType(b, u.Elem(), seen)
+		delete(seen, t)
+	case *types.Slice:
+		b.WriteString("[]")
+		writeType(b, u.Elem(), seen)
+	case *types.Array:
+		fmt.Fprintf(b, "[%d]", u.Len())
+		writeType(b, u.Elem(), seen)
+	case *types.Map:
+		b.WriteString("map[")
+		writeType(b, u.Key(), seen)
+		b.WriteString("]")
+		writeType(b, u.Elem(), seen)
+	case *types.Chan:
+		switch u.Dir() {
+		case types.SendOnly:
+			b.WriteString("chan<- ")
+		case types.RecvOnly:
+			b.WriteString("<-chan ")
+		default:
+			b.WriteString("chan ")
+		}
+		writeType(b, u.Elem(), seen)
+	case *types.Struct:
+		seen[t] = true
+		b.WriteString("struct{")
+		for i := 0; i < u.NumFields(); i++ {
+			f := u.Field(i)
+			if i > 0 {
+				b.WriteString("; ")
+			}
+			b.WriteString(f.Name())
+			if !f.Exported() && f.Pkg() != nil {
+				b.WriteString("@" + f.Pkg().Path())
+			}
+			b.WriteString(" ")
+			writeType(b, f.Type(), seen)
+			if tag := u.Tag(i); tag != "" {
+				fmt.Fprintf(b, " %q", tag)
+			}
+		}
+		b.WriteString("}")
+		delete(seen, t)
+	case *types.Signature:
+		b.WriteString("func(")
+		writeTuple(b, u.Params(), u.Variadic(), seen)
+		b.WriteString(")(")
+		writeTuple(b, u.Results(), false, seen)
+		b.WriteString(")")
+	case *types.Interface:
+		seen[t] = true
+		b.WriteString("interface{")
+		for i := 0; i < u.NumMethods(); i++ {
+			m := u.Method(i)
+			if i > 0 {
+				b.WriteString("; ")
+			}
+			b.WriteString(m.Name())
+			if !m.Exported() && m.Pkg() != nil {
+				b.WriteString("@" + m.Pkg().Path())
+			}
+			writeType(b, m.Type(), seen)
+		}
+		b.WriteString("}")
+		delete(seen, t)
+	default:
+		b.WriteString(types.TypeString(t, qualifyPath))
+	}
+}
+
+// writeTuple writes the type of each element of a tuple.
+func writeTuple(b *strings.Builder, tuple *types.Tuple, variadic bool, seen map[types.Type]bool) {
+	for i := 0; i < tuple.Len(); i++ {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if variadic && i == tuple.Len()-1 {
+			b.WriteString("...")
+		}
+		writeType(b, tuple.At(i).Type(), seen)
+	}
+}
+
+// qualifyPath names a package by its import path.
+func qualifyPath(p *types.Package) string { return p.Path() }
 
 // nilChan gives the name of the shared nil channel of an element type.
 //

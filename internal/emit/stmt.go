@@ -671,6 +671,25 @@ func (e *emitter) namedReturn(s *ir.Return) {
 			parts[i] = r.Name
 		}
 		e.line("(%s) = %s;", strings.Join(parts, ", "), e.expr(s.Values[0]))
+	case len(s.Values) > 1:
+		// Go reads each operand first and it writes the result variables after
+		// that, thus an operand that panics leaves each variable with its old
+		// value.
+		parts := make([]string, 0, len(s.Values))
+		for i, v := range s.Values {
+			if i >= len(e.returnVars) {
+				break
+			}
+			parts = append(parts, e.expr(v))
+		}
+		e.labelSeq++
+		tmp := fmt.Sprintf("$rv%d", e.labelSeq)
+		e.line("final %s = (%s);", tmp, strings.Join(parts, ", "))
+		for i := range parts {
+			r := e.returnVars[i]
+			id := &ir.Ident{Name: r.Name, Type: r.Type, Boxed: r.Boxed}
+			e.line("%s = %s.$%d;", e.expr(id), tmp, i+1)
+		}
 	default:
 		for i, v := range s.Values {
 			if i >= len(e.returnVars) {

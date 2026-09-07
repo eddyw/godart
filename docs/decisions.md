@@ -4824,3 +4824,42 @@ The plan left these points open. The work took the decisions below.
      **A failure of the writer of `text/tabwriter` gives an error again.** The
      patch of `handlePanic` removed the `recover`, and decision 383 dropped
      that patch. The case needed no work of its own.
+
+389. The relaxation of rule M15 opened 3 files of the test directory of Go, and
+     each 1 named a defect.
+
+     Decision 382 gave rule M15 the exception of a package that no import
+     names. 3 files of the test directory then compiled for the first time, and
+     `TestRunFilesOfGoTest` ran them.
+
+     **`fixedbugs/issue50190`: 2 shapes that differ in a field name were 1
+     type.** `types.TypeString` writes an embedded field as its type alone,
+     thus `struct{ int }` and `struct{ Int }` of an alias `Int` gave 1 text.
+     It also writes an alias by its name, thus 2 local aliases of 1 name in 2
+     blocks gave 1 text. `writeType` of `internal/emit/anon.go` writes the name
+     of each field and it reads each alias now, and the name of the descriptor
+     of a shape reads that text. Thus the identity of a shape at run time
+     follows `types.Identical`.
+
+     **`fixedbugs/issue23017`: a parallel assignment wrote a field of a pointer
+     through the new value of that pointer.** `p, p.i = new(T), 4` must write 4
+     into the old target, because Go reads each operand of the left side before
+     the first write. `lvalueStaged` held the base of a field with its name,
+     and a variable is stable storage only for a struct value. The base of a
+     field of a pointer lands in a variable now.
+
+     **`fixedbugs/bug461`: an unexported field of an unnamed struct type
+     carried no read only mark.** `reflect.StructField.PkgPath` read the
+     package of the type, and a shape holds no package of its own. A
+     `FieldDesc` of the runtime carries the path of the package that declares
+     each unexported field now, and the new intrinsic `dart.FieldPkgPath`
+     reads it.
+
+     **`fixedbugs/issue43835` found a defect of decision 383.** A blank result
+     name now declares a result variable, thus a `return` of such a function
+     took the path of a named result. That path wrote each result variable 1 at
+     a time, and Go reads each operand of the return first. The 2 emitters of a
+     named return build the record of the operands first now. A function with
+     real named results held the same defect before this session.
+
+     `testdata/programs/anonshape` holds the 4 rules.

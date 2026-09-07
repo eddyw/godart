@@ -460,6 +460,23 @@ func (e *emitter) writeNamedResults(s *ir.Return, results []*ir.Var) {
 			parts[i] = varRead(r)
 		}
 		e.line("(%s) = %s;", strings.Join(parts, ", "), e.expr(s.Values[0]))
+	case len(s.Values) > 1:
+		// Go reads each operand first and it writes the result variables after
+		// that, thus an operand that panics leaves each variable with its old
+		// value.
+		parts := make([]string, 0, len(s.Values))
+		for i, v := range s.Values {
+			if i >= len(results) {
+				break
+			}
+			parts = append(parts, e.expr(v))
+		}
+		e.labelSeq++
+		tmp := fmt.Sprintf("$rv%d", e.labelSeq)
+		e.line("final %s = (%s);", tmp, strings.Join(parts, ", "))
+		for i := range parts {
+			e.line("%s = %s.$%d;", varRead(results[i]), tmp, i+1)
+		}
 	default:
 		for i, v := range s.Values {
 			if i >= len(results) {

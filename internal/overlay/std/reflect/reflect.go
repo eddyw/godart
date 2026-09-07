@@ -437,7 +437,12 @@ func (t *rtype) Field(i int) StructField {
 	name, tag, exported, desc := dart.FieldInfo(t.handle(), i)
 	pkg := ""
 	if !exported {
-		pkg = dart.DescPkgPath(t.handle())
+		// An unnamed struct type holds no package of its own, thus the field
+		// carries the path of the package that declares it.
+		pkg = dart.FieldPkgPath(t.handle(), i)
+		if pkg == "" {
+			pkg = dart.DescPkgPath(t.handle())
+		}
 	}
 	return StructField{
 		Name:      name,

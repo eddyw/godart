@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/token"
 	"go/types"
+	"strconv"
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/typeset"
@@ -92,6 +93,28 @@ func (f *flat) deferReturn(s *ir.Return) {
 			lhs[i] = identOf(v)
 		}
 		f.emit(&ir.AssignMulti{Lhs: lhs, Rhs: s.Values[0]})
+		f.emit(&ir.Jump{State: f.m.DeferState})
+		return
+	}
+	// Go reads each operand of a return first and it writes the result
+	// variables after that, thus an operand that panics leaves each variable
+	// with its old value.
+	if len(s.Values) > 1 {
+		tmps := make([]*ir.Var, 0, len(s.Values))
+		for i, v := range s.Values {
+			if i >= len(f.m.ResultVars) {
+				break
+			}
+			t := f.b.tempVar(f.pos, "rv"+strconv.Itoa(i), f.m.ResultVars[i].Type)
+			tmps = append(tmps, t)
+			f.emit(&ir.Declare{Vars: []*ir.Var{t}, Init: v})
+		}
+		for i, t := range tmps {
+			f.emit(&ir.Assign{
+				Lhs: identOf(f.m.ResultVars[i]),
+				Rhs: &ir.Ident{Name: t.Name, Type: t.Type},
+			})
+		}
 		f.emit(&ir.Jump{State: f.m.DeferState})
 		return
 	}

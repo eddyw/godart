@@ -120,6 +120,23 @@ func (b *builder) lvalueStaged(e ast.Expr) (pre []ir.Stmt, set func(ir.Expr) ir.
 				return &ir.Assign{Lhs: read, Rhs: v}
 			}
 		}
+	case *ast.SelectorExpr:
+		x := b.expr(e)
+		if field, ok := x.(*ir.Field); ok {
+			// A field of a pointer stages the pointer value itself, thus a
+			// write of the variable in the same statement misses it. A field
+			// of a struct variable writes through the variable, and the name
+			// stays.
+			hoistBase := b.hoist
+			if _, ok := typeset.Core(b.typeOf(e.X)).(*types.Pointer); ok {
+				hoistBase = b.forceHoist
+			}
+			pre, base := hoistBase(field.X, e.X.Pos(), "b")
+			read := &ir.Field{X: base, Name: field.Name, Type: field.Type}
+			return pre, func(v ir.Expr) ir.Stmt {
+				return &ir.Assign{Lhs: read, Rhs: v}
+			}
+		}
 	case *ast.StarExpr:
 		x := b.expr(e)
 		if un, ok := x.(*ir.Unary); ok {

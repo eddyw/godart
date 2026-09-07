@@ -416,6 +416,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$descLength(%s)", args[0]), true
 	case "FieldCount":
 		return fmt.Sprintf("$fieldCount(%s)", args[0]), true
+	case "FieldPkgPath":
+		return fmt.Sprintf("$fieldPkgPath(%s, %s)", args[0], args[1]), true
 	case "FieldInfo":
 		return fmt.Sprintf("$fieldInfo(%s, %s)", args[0], args[1]), true
 	case "FieldRead":

@@ -57,7 +57,7 @@ const eof = -1
 
 // ss holds the state of 1 scan.
 type ss struct {
-	r     io.Reader
+	rs    io.RuneScanner
 	buf   []byte
 	off   int
 	atEOF bool
@@ -80,24 +80,110 @@ type ss struct {
 }
 
 // newScanner gives a scanner of a reader.
+//
+// A reader that holds no ReadRune takes the wrapper below, which reads 1 byte
+// at a time. A read of a block would take the bytes of the next call of the
+// caller, thus a second Fscan over 1 reader would find no input.
 func newScanner(r io.Reader, nlIsSpace, nlIsEnd bool) *ss {
-	return &ss{r: r, nlIsSpace: nlIsSpace, nlIsEnd: nlIsEnd}
+	if rs, ok := r.(io.RuneScanner); ok {
+		return &ss{rs: rs, nlIsSpace: nlIsSpace, nlIsEnd: nlIsEnd}
+	}
+	return &ss{rs: &readRune{reader: r, peekRune: -1}, nlIsSpace: nlIsSpace, nlIsEnd: nlIsEnd}
 }
 
-// fill reads more bytes into the buffer. It reports the end of the input.
+// readRune reads 1 rune of UTF-8 from a reader that holds no ReadRune. It
+// takes 1 byte at a time, exactly as Go does, thus it holds no byte that the
+// caller of the next scan needs.
+type readRune struct {
+	reader   io.Reader
+	buf      [utf8.UTFMax]byte
+	pending  int
+	pendBuf  [utf8.UTFMax]byte
+	peekRune rune
+}
+
+// readByte gives the next byte of the input.
+func (r *readRune) readByte() (byte, error) {
+	if r.pending > 0 {
+		b := r.pendBuf[0]
+		copy(r.pendBuf[0:], r.pendBuf[1:])
+		r.pending--
+		return b, nil
+	}
+	n, err := io.ReadFull(r.reader, r.pendBuf[:1])
+	if n != 1 {
+		return 0, err
+	}
+	return r.pendBuf[0], err
+}
+
+// ReadRune gives the next rune of the input, with its size in bytes.
+func (r *readRune) ReadRune() (rr rune, size int, err error) {
+	if r.peekRune >= 0 {
+		rr = r.peekRune
+		r.peekRune = ^r.peekRune
+		size = utf8.RuneLen(rr)
+		return
+	}
+	r.buf[0], err = r.readByte()
+	if err != nil {
+		return
+	}
+	if r.buf[0] < utf8.RuneSelf {
+		rr = rune(r.buf[0])
+		size = 1
+		r.peekRune = ^rr
+		return
+	}
+	var n int
+	for n = 1; !utf8.FullRune(r.buf[:n]); n++ {
+		r.buf[n], err = r.readByte()
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				break
+			}
+			return
+		}
+	}
+	rr, size = utf8.DecodeRune(r.buf[:n])
+	if size < n {
+		copy(r.pendBuf[r.pending:], r.buf[size:n])
+		r.pending += n - size
+	}
+	r.peekRune = ^rr
+	return
+}
+
+// UnreadRune gives the last rune back. The reader holds 1 rune, exactly as Go
+// holds it.
+func (r *readRune) UnreadRune() error {
+	if r.peekRune >= 0 {
+		return errors.New("fmt: scanning called UnreadRune with no rune available")
+	}
+	r.peekRune = ^r.peekRune
+	return nil
+}
+
+// fill reads 1 rune into the buffer. It reports the end of the input.
 func (s *ss) fill() bool {
 	if s.atEOF {
 		return false
 	}
-	chunk := make([]byte, 512)
-	n, err := s.r.Read(chunk)
-	if n > 0 {
-		s.buf = append(s.buf, chunk[:n]...)
-	}
+	r, size, err := s.rs.ReadRune()
 	if err != nil {
 		s.atEOF = true
+		return false
 	}
-	return n > 0
+	var chunk [utf8.UTFMax]byte
+	n := utf8.EncodeRune(chunk[:], r)
+	if r == utf8.RuneError && size == 1 {
+		// A byte that holds no rune keeps its own value.
+		n = 1
+		chunk[0] = 0xFF
+	}
+	s.buf = append(s.buf, chunk[:n]...)
+	return true
 }
 
 // ReadRune gives the next rune of the input.

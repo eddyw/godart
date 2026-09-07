@@ -372,6 +372,17 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 		if field.Embedded() {
 			embedded = ", embedded: true"
 		}
+		if !field.Exported() && field.Pkg() != nil {
+			// An unnamed struct type holds no package of its own, and the
+			// package reflect reads the package of each unexported field. Go
+			// names the package of a command main, and the emitter names it
+			// with the path of the module.
+			path := field.Pkg().Path()
+			if field.Pkg().Name() == "main" {
+				path = "main"
+			}
+			embedded += ", pkg: " + dartString(path)
+		}
 		declType := field.Type()
 		if i < decl.NumFields() {
 			declType = decl.Field(i).Type()
@@ -1145,6 +1156,13 @@ func isPure(x ir.Expr) bool {
 // An alias carries the name of its own declaration, thus the name comes from
 // the type behind it.
 func (e *emitter) typeName(t types.Type) string {
+	// An unnamed struct type needs the exact text: types.TypeString writes an
+	// embedded field as its type alone, and it writes an alias by its name,
+	// thus 2 shapes that Go holds apart can give 1 text. The name of a
+	// descriptor is the identity of the type at run time.
+	if _, ok := types.Unalias(t).(*types.Struct); ok {
+		return anonText(stripNames(types.Unalias(t)))
+	}
 	text := types.TypeString(stripNames(types.Unalias(t)), nil)
 	// 2 local types of 2 functions can share 1 printed name, and the
 	// identity of a type reads the name. The position keeps them apart, and

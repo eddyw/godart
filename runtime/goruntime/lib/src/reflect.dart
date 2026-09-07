@@ -2412,6 +2412,15 @@ final class _RecvResume implements WaitFrame {
 /// Reports whether the last parameter of a function type is variadic.
 bool $descVariadic(int handle) => _typeAt(handle).variadic;
 
+/// The import path of the package that declares an unexported field.
+GoString $fieldPkgPath(int handle, int index) {
+  final TypeDesc? desc = _descAt(handle);
+  if (desc == null || index < 0 || index >= desc.fields.length) {
+    return GoString.empty;
+  }
+  return GoString.fromString(desc.fields[index].pkg);
+}
+
 /// The import path of the package of a type. A type that no package holds, for
 /// example a slice type, gives an empty text.
 GoString $descPkgPath(int handle) {
