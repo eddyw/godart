@@ -289,7 +289,7 @@ interop package `syscall/dart`, 77 internal packages, and 12 vendored packages
 of `golang.org/x`. Stage 2 rejects an import of each other package.
 
 `make surface` measures the surface against the real API of Go 1.27. The run of
-2026-09-05 gives this result:
+2026-09-07 gives this result:
 
 ```
 165 packages of 174 hold each exported name, and 9 hold a part.
