@@ -531,17 +531,17 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
       if (v == null) {
         return _leaf(sharp ? '(${type.display})(nil)' : '<nil>', verb);
       }
+      // The Dart form of a pointer to a struct and of a pointer to an array is
+      // the value itself, and each other pointer holds a cell.
+      final Object? target = v is $Ptr<Object?> ? v.v : v;
       if (sharp) {
-        // The Dart form of a pointer to a struct is the object of the struct,
-        // and each other pointer holds a cell.
-        final Object? target = v is $Ptr<Object?> ? v.v : v;
         if (inner == null) return '&$target';
         return '&${_value(target, inner, verb, depth + 1)}';
       }
       if (inner != null && inner.kind == 'struct') {
-        return '&${_struct(v, inner, verb, plus, depth)}';
+        return '&${_struct(target, inner, verb, plus, depth)}';
       }
-      return '&${inner == null ? v : _value(v, inner, verb, depth + 1)}';
+      return '&${inner == null ? target : _value(target, inner, verb, depth + 1)}';
     case 'interface':
       if (v == null) {
         return _leaf(sharp ? '${type.display}(nil)' : '<nil>', verb);
@@ -573,7 +573,16 @@ String? _viaMethod(Object? v, TypeDesc type, String letter) {
     // The table of an interface type holds the key of each method, and no call
     // reaches the value. The description of the dynamic type holds the method.
     if (m == null || identical(m, $ifaceMethod)) continue;
-    final Object? text = Function.apply(m, <Object?>[v]);
+    Object? text;
+    try {
+      text = Function.apply(m, <Object?>[v]);
+    } catch (_) {
+      // A method of a nil pointer that reads a field fails. Go recovers such a
+      // panic and it writes <nil>, because a Stringer that holds no guard is
+      // the usual cause.
+      if (v == null) return '<nil>';
+      rethrow;
+    }
     if (text is! GoString) continue;
     return letter == 'q' ? _quote(text) : text.toDartString();
   }

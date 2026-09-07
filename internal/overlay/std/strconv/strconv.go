@@ -273,11 +273,14 @@ func ParseInt(text string, base, bitSize int) (int64, error) {
 	if len(text) == 0 {
 		return 0, &NumError{Func: "ParseInt", Num: text, Err: ErrSyntax}
 	}
+	if base != 0 && (base < 2 || base > 36) {
+		return 0, baseError("ParseInt", text, base)
+	}
 	if bitSize == 0 {
 		bitSize = IntSize
 	}
 	if bitSize < 0 || bitSize > 64 {
-		return 0, &NumError{Func: "ParseInt", Num: text, Err: bitSizeError(bitSize)}
+		return 0, bitSizeError("ParseInt", text, bitSize)
 	}
 	i := 0
 	negative := false
@@ -307,11 +310,17 @@ func ParseInt(text string, base, bitSize int) (int64, error) {
 // A bit size of 0 names the size of a uint. A value outside the range of the
 // size gives the largest value of the size and ErrRange, exactly as Go does.
 func ParseUint(text string, base, bitSize int) (uint64, error) {
+	if len(text) == 0 {
+		return 0, &NumError{Func: "ParseUint", Num: text, Err: ErrSyntax}
+	}
+	if base != 0 && (base < 2 || base > 36) {
+		return 0, baseError("ParseUint", text, base)
+	}
 	if bitSize == 0 {
 		bitSize = IntSize
 	}
 	if bitSize < 0 || bitSize > 64 {
-		return 0, &NumError{Func: "ParseUint", Num: text, Err: bitSizeError(bitSize)}
+		return 0, bitSizeError("ParseUint", text, bitSize)
 	}
 	out, over, err := parseDigits(text, 0, base)
 	if err != nil {
@@ -327,9 +336,14 @@ func ParseUint(text string, base, bitSize int) (uint64, error) {
 	return out, nil
 }
 
-// bitSizeError gives the cause of a bit size outside the range 0 to 64.
-func bitSizeError(bitSize int) error {
-	return errors.New("invalid bit size " + Itoa(bitSize))
+// baseError gives the error of a base outside the range 2 to 36.
+func baseError(fn, str string, base int) *NumError {
+	return &NumError{fn, str, errors.New("invalid base " + Itoa(base))}
+}
+
+// bitSizeError gives the error of a bit size outside the range 0 to 64.
+func bitSizeError(fn, str string, bitSize int) *NumError {
+	return &NumError{fn, str, errors.New("invalid bit size " + Itoa(bitSize))}
 }
 
 // parseDigits reads the digits of a value. A base of 0 reads the prefix of the

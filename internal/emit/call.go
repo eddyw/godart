@@ -277,6 +277,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$deepEqual(%s, %s)", args[0], args[1]), true
 	case "AssignError":
 		return fmt.Sprintf("$assignError(%s, %s)", args[0], args[1]), true
+	case "CheckErrorTarget":
+		return fmt.Sprintf("$checkErrorTarget(%s)", args[0]), true
 	case "DescOf":
 		return fmt.Sprintf("$descOf(%s)", args[0]), true
 	case "DescInfo":

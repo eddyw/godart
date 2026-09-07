@@ -1,0 +1,19 @@
+TestUintSize reads the size of a uint with unsafe.Sizeof, and the subset
+holds no unsafe. A uint of the Dart output holds 64 bits, thus the diff
+writes that count.
+--- bits_test.go
++++ bits_test.go
+@@ -8,12 +8,10 @@
+ 	. "math/bits"
+ 	"runtime"
+ 	"testing"
+-	"unsafe"
+ )
+ 
+ func TestUintSize(t *testing.T) {
+-	var x uint
+-	if want := unsafe.Sizeof(x) * 8; UintSize != want {
++	if want := uintptr(64); UintSize != want {
+ 		t.Fatalf("UintSize = %d; want %d", UintSize, want)
+ 	}
+ }

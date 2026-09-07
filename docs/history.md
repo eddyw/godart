@@ -83,6 +83,13 @@ square cost in the overlay, and the real text of Go replaces the 6 functions.
 `string([]rune)` of 1,114,112 runes fell from 276 seconds to 25 milliseconds,
 and the suite from 1,452 seconds with 6 failures to 11.6 seconds with none.
 
+A sweep of 13 more packages of GOROOT ran their real tests. 6 passed with no
+change, and 7 causes closed (decision 383): `sort` reads the real pdqsort of
+Go, `errors.As` reads an `As` method and it writes the 2 panics of Go, a naked
+return of a function of blank results compiles, a format of a pointer to a
+pointer ends no program, `math/bits` gives a `runtime.Error`, and
+`text/tabwriter` needs no patch. 13 packages run their real tests now.
+
 ### 2026-09-06, the twenty-third session
 
 The user parked the name of the project, and asked for each open task end to

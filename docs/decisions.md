@@ -4511,3 +4511,61 @@ The plan left these points open. The work took the decisions below.
 
      The 2 suites are the gate of the 2 packages now, and the witness programs
      of `testdata/programs` stay as the fast check.
+
+383. 8 more real test suites run, and 7 defects opened them.
+
+     A sweep of 2026-09-07 ran the real tests of 13 packages of GOROOT.
+     `bufio`, `maps`, `path`, `unicode`, `unicode/utf8`, and `unicode/utf16`
+     each passed with no change. 7 causes stood in the other 7, and each 1
+     closed.
+
+     **`sort` reads the real algorithm of Go now.** 4 tests measure the count
+     of the swaps and of the comparisons, and the hand written quicksort of the
+     overlay failed each 1: `TestCountStableOps` reported 2,147,483,647 swaps
+     of 100,000 elements, thus the stable sort held a square cost. The package
+     is native now, and 1 patch of `slice.go` replaces the 2 reads of
+     `internal/reflectlite` with `dart.SliceLen` and `dart.SliceSwap`. The
+     suite ends in 23 seconds against 517, and 47 tests pass.
+
+     **`errors.As` held 3 gaps.** It read no `As(any) bool` method of an error
+     of the chain, it wrote no panic for a target that holds no pointer or a
+     nil pointer or a pointer to a type outside the error interface, and
+     `AsType` held the same 2 gaps. The new intrinsic `dart.CheckErrorTarget`
+     reads the descriptor of the target and it gives the 2 texts of Go. `As`
+     and `AsType` follow `wrap.go` of Go now, the skip of a nil error of a list
+     included. `errors.Is` asks the comparability of the target first, because
+     a comparison of a target that holds no comparison panics.
+
+     **A naked return of a function whose results are all blank did not
+     compile.** Go declares a result variable for each named result, and a
+     blank name declares one that no code can write. `hasNamedResult` reported
+     false for such a function, thus stage 4 wrote `return;` in a Dart function
+     that must give a value. A blank result name marks the variable now.
+     `testdata/programs/nakedret` holds the witness.
+
+     **A format of a pointer to a pointer ended the program.** The `ptr` case
+     of the runtime passed the cell itself to the read of the element, thus a
+     cast of Dart failed. The case unwraps the cell now, exactly as the form of
+     `%#v` already did. A method of a nil pointer that reads a field then
+     panicked, and Go recovers such a panic and writes `<nil>`. The runtime
+     holds that recovery now.
+
+     **`math/bits` gives a `runtime.Error`.** `Div` of a quotient that
+     overflows must panic with a value that holds `RuntimeError()`, and the
+     patch gave a value of `errors.New`. The patch holds the type
+     `runtimeError` now.
+
+     **`text/tabwriter` needs no patch.** The patch removed the `recover` of
+     `handlePanic`, and `recover` left the non-goal list on 2026-08-31. The
+     package is native with no patch now, and its 2 panic tests pass.
+
+     **`internal/asan`, `internal/testenv`, and `math/bits` each grew.**
+     `testenv` gives `OptimizationOff` and `MustHaveSymlink`, and the diff
+     `bits_test.go.patch` writes the size of a uint in the place of
+     `unsafe.Sizeof`.
+
+     The state after the sweep: `bufio`, `bytes`, `errors`, `maps`, `math/bits`,
+     `path`, `sort`, `strconv`, `strings`, `text/tabwriter`, `unicode`,
+     `unicode/utf8`, and `unicode/utf16` each run the real tests of Go.
+     `path/filepath` needs `syscall.ENOTDIR` and `testenv.SkipFlaky`, and
+     `slices` needs `internal/msan`, `internal/race`, and 3 reads of `unsafe`.

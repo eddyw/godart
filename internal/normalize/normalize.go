@@ -471,12 +471,15 @@ func (b *builder) results(sig *types.Signature) []*ir.Var {
 			out[i].Named = true
 			continue
 		}
-		out[i] = &ir.Var{Name: fmt.Sprintf("$r%d", i), Type: v.Type()}
+		// A blank result name still declares a result variable of Go, thus a
+		// naked return of such a function gives the zero value of each result.
+		out[i] = &ir.Var{Name: fmt.Sprintf("$r%d", i), Type: v.Type(), Named: v.Name() == "_"}
 	}
 	return out
 }
 
-// hasNamedResult reports whether the Go source gives a name to a result.
+// hasNamedResult reports whether the Go source gives a name to a result. A
+// blank name counts, because Go accepts a naked return of such a function.
 func hasNamedResult(f *ir.Func) bool {
 	for _, r := range f.Results {
 		if r.Named {

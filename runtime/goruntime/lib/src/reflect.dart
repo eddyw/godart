@@ -207,6 +207,35 @@ void _assignInto(Object? dst, Object? src, TypeDesc desc) {
   }
 }
 
+/// Stops the program when the target of errors.As holds no pointer, holds a
+/// nil pointer, or points to a type that is neither an interface type nor a
+/// type of the error interface.
+///
+/// errors.As holds the case of a nil target itself, thus this check reads a
+/// target that stands.
+void $checkErrorTarget(Iface? target) {
+  if (target == null) return;
+  final TypeDesc desc = target.desc;
+  if (desc.kind != 'ptr' || desc.elem == null || target.value == null) {
+    $panic(
+      Iface(
+        $typeGoError,
+        const GoError('errors: target must be a non-nil pointer'),
+      ),
+    );
+  }
+  final TypeDesc elem = desc.elem!();
+  if (elem.kind == 'interface') return;
+  if (!elem.methods.containsKey('Error()string')) {
+    $panic(
+      Iface(
+        $typeGoError,
+        const GoError('errors: *target must be interface or implement error'),
+      ),
+    );
+  }
+}
+
 /// Writes a value into the target of errors.As.
 ///
 /// The target holds a pointer. The Dart form of a pointer to a struct and of a
@@ -218,14 +247,6 @@ void _assignInto(Object? dst, Object? src, TypeDesc desc) {
 bool $assignError(Iface? value, Iface? target) {
   if (value == null || target == null) return false;
   final TypeDesc desc = target.desc;
-  if (desc.kind != 'ptr' || desc.elem == null) {
-    $panic(
-      Iface(
-        $typeGoError,
-        const GoError('errors: target must be a non-nil pointer'),
-      ),
-    );
-  }
   final TypeDesc elem = desc.elem!();
   final Object? box = target.value;
   if (elem.kind == 'interface') {

@@ -7,8 +7,14 @@
 // of an overflow and the error of a division by zero.
 package bits
 
-import "errors"
+// A runtimeError is an error of the run time. Go gives the 2 values below the
+// type runtime.errorString, thus a caller reads runtime.Error of them.
+type runtimeError string
 
-var overflowError error = errors.New("runtime error: integer overflow")
+func (e runtimeError) RuntimeError() {}
 
-var divideError error = errors.New("runtime error: integer divide by zero")
+func (e runtimeError) Error() string { return string(e) }
+
+var overflowError error = runtimeError("runtime error: integer overflow")
+
+var divideError error = runtimeError("runtime error: integer divide by zero")

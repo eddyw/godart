@@ -206,6 +206,9 @@ var native = []string{
 	"testing/cryptotest",
 	"internal/testlog",
 	"debug/gosym",
+	// sort reads the real algorithm of Go, because 4 tests measure the count
+	// of the swaps and of the comparisons. slice.go holds the 1 patch.
+	"sort",
 	"encoding/json/internal",
 	"encoding/json/internal/jsonflags",
 	"encoding/json/internal/jsonopts",

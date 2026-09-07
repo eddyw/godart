@@ -9,6 +9,7 @@
 package testenv
 
 import (
+	"os"
 	"os/exec"
 	"testing"
 )
@@ -17,9 +18,27 @@ import (
 // an empty name, and each caller of the surface reads it for that reason.
 func Builder() string { return "" }
 
+// OptimizationOff reports whether the build runs with no optimization. The
+// Dart toolchain holds no such mode.
+func OptimizationOff() bool { return false }
+
 // SkipIfOptimizationOff skips a test that needs the optimizations of the
 // compiler. The Dart toolchain holds no mode with no optimization.
 func SkipIfOptimizationOff(t testing.TB) {}
+
+// MustHaveSymlink skips a test when the system cannot make a symbolic link.
+// The check makes 1 link in a temporary directory, exactly as Go does on
+// Windows.
+func MustHaveSymlink(t testing.TB) {
+	dir, err := os.MkdirTemp("", "symtest")
+	if err != nil {
+		t.Skipf("skipping test: cannot make a temporary directory: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	if err := os.Symlink("target", dir+"/link"); err != nil {
+		t.Skipf("skipping test: cannot make symlinks: %v", err)
+	}
+}
 
 // MustHaveSource skips the test. The Dart output holds no source tree of Go.
 func MustHaveSource(t testing.TB) {

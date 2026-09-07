@@ -615,6 +615,16 @@ func AssignError(value any, target any) bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// CheckErrorTarget stops the program when the target of errors.As holds no
+// pointer, holds a nil pointer, or points to a type that is neither an
+// interface type nor a type of the error interface.
+//
+// Go reads the type of the target with reflect, and it writes the same 2
+// texts.
+func CheckErrorTarget(target any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ZeroText gives the text of the String method of the zero value of the type of
 // a value. An empty text means that the type holds no such method.
 //

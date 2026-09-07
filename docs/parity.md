@@ -1709,11 +1709,18 @@ The cause that blocks each package of the survey of 2026-08-31:
 
 | Package | Cause |
 |---|---|
-| `errors` | 1 call of `recover` in `wrap_test.go`. |
+| `errors` | Runs since 2026-09-07. 22 tests pass. |
 | `io` | Runs. Each test passes. |
 | `maps` | Runs. Each test passes. |
 | `math/rand/v2` | `Type.NumMethod`, `Type.Method`, `Value.Method`, and `os.Pipe`. |
 | `bytes` | Runs since 2026-09-07. 170 tests pass, and 8 skip at `AllocsPerRun`. 1 diff of `TestClone` removes a read of `unsafe.SliceData`. |
+| `sort` | Runs since 2026-09-07. 47 tests pass. The package is native, and 1 patch of `slice.go` reads the 2 slice intrinsics. |
+| `strconv` | Runs since 2026-09-07. 70 tests pass, and 1 skips. |
+| `text/tabwriter` | Runs since 2026-09-07. 6 tests pass, and the patch of `handlePanic` is gone. |
+| `math/bits` | Runs since 2026-09-07. 62 tests pass. 1 diff of `TestUintSize` removes a read of `unsafe.Sizeof`. |
+| `bufio`, `maps`, `path`, `unicode`, `unicode/utf8`, `unicode/utf16` | Each runs since 2026-09-07 with no change. |
+| `path/filepath` | `syscall.ENOTDIR` and `testenv.SkipFlaky`. |
+| `slices` | `internal/msan`, `internal/race`, and 3 reads of `unsafe`. |
 | `regexp` | 5 rejections in `regexp/syntax/parse.go`: 1 call of `recover` and 4 addresses of a `[]rune` field. |
 
 ### The block model

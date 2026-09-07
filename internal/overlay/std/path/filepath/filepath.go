@@ -169,10 +169,14 @@ var SkipAll = fs.SkipAll
 // WalkFunc runs for each file and each directory of a walk of Walk.
 type WalkFunc func(path string, info fs.FileInfo, err error) error
 
+// lstat reads the metadata of a path and follows no symbolic link. A test of
+// Go swaps it, thus each walk reads it and not os.Lstat.
+var lstat = os.Lstat
+
 // WalkDir walks the tree that starts at root, and it runs fn for each file and
 // each directory. It reads no symbolic link.
 func WalkDir(root string, fn fs.WalkDirFunc) error {
-	info, err := os.Lstat(root)
+	info, err := lstat(root)
 	if err != nil {
 		err = fn(root, nil, err)
 	} else {
@@ -213,7 +217,7 @@ func walkDir(name string, d fs.DirEntry, fn fs.WalkDirFunc) error {
 // Walk walks the tree that starts at root, and it runs fn for each file and
 // each directory. It reads the metadata of each entry, thus WalkDir is faster.
 func Walk(root string, fn WalkFunc) error {
-	info, err := os.Lstat(root)
+	info, err := lstat(root)
 	if err != nil {
 		err = fn(root, nil, err)
 	} else {

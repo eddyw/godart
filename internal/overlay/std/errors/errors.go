@@ -3,7 +3,10 @@
 // Package errors gives the error values of the standard library.
 package errors
 
-import "syscall/dart"
+import (
+	"internal/reflectlite"
+	"syscall/dart"
+)
 
 type errorString struct {
 	text string
@@ -39,16 +42,28 @@ func Unwrap(err error) error {
 	return inner.Unwrap()
 }
 
-// Is reports whether err or an error inside it is equal to target.
+// Is reports whether any error in err's tree matches target.
 //
-// An error that holds an Is method decides for itself, and an error that wraps
-// a list gives each error of the list.
+// The tree consists of err itself, followed by the errors obtained by repeatedly
+// calling its Unwrap() error or Unwrap() []error method. When err wraps multiple
+// errors, Is examines err followed by a depth-first traversal of its children.
+//
+// An error is considered to match a target if it is equal to that target or if
+// it implements a method Is(error) bool such that Is(target) returns true.
+//
+// A target that holds no comparison, for example a slice, never equals err, and
+// a comparison of the 2 would panic. Go asks the type of the target first.
 func Is(err, target error) bool {
-	if target == nil {
+	if err == nil || target == nil {
 		return err == target
 	}
+	isComparable := reflectlite.TypeOf(target).Comparable()
+	return is(err, target, isComparable)
+}
+
+func is(err, target error, targetComparable bool) bool {
 	for {
-		if err == target {
+		if targetComparable && err == target {
 			return true
 		}
 		if x, ok := err.(interface{ Is(error) bool }); ok && x.Is(target) {
@@ -61,8 +76,8 @@ func Is(err, target error) bool {
 				return false
 			}
 		case multi:
-			for _, inner := range x.Unwrap() {
-				if Is(inner, target) {
+			for _, err := range x.Unwrap() {
+				if is(err, target, targetComparable) {
 					return true
 				}
 			}
@@ -73,18 +88,33 @@ func Is(err, target error) bool {
 	}
 }
 
-// As finds the first error of the chain that holds the type of the target, and
-// it writes that error to the target.
+// As finds the first error in err's tree that matches target, and if one is
+// found, sets target to that error value and returns true. Otherwise, it
+// returns false.
 //
-// The target must be a pointer to a type that holds the error interface. Go
-// also accepts a pointer to an interface type, and such a target stays outside
-// the subset: the runtime library holds no method name of an interface type.
+// An error matches target if the error's concrete type is assignable to the
+// value pointed to by target, or if the error has a method As(any) bool such
+// that As(target) returns true.
+//
+// As panics if target is not a non-nil pointer to either a type that
+// implements error, or to any interface type.
 func As(err error, target any) bool {
+	if err == nil {
+		return false
+	}
 	if target == nil {
 		panic("errors: target cannot be nil")
 	}
+	dart.CheckErrorTarget(target)
+	return as(err, target)
+}
+
+func as(err error, target any) bool {
 	for {
 		if dart.AssignError(err, target) {
+			return true
+		}
+		if x, ok := err.(interface{ As(any) bool }); ok && x.As(target) {
 			return true
 		}
 		switch x := err.(type) {
@@ -94,8 +124,11 @@ func As(err error, target any) bool {
 				return false
 			}
 		case multi:
-			for _, inner := range x.Unwrap() {
-				if As(inner, target) {
+			for _, err := range x.Unwrap() {
+				if err == nil {
+					continue
+				}
+				if as(err, target) {
 					return true
 				}
 			}
@@ -106,31 +139,53 @@ func As(err error, target any) bool {
 	}
 }
 
-// AsType finds the first error of the chain that holds the type E. Go 1.27 gives
-// this form, and it needs no pointer.
+// AsType finds the first error in err's tree that matches the type E, and if
+// one is found, returns that error value and true. Otherwise, it returns the
+// zero value of E and false.
+//
+// An error err matches the type E if the type assertion err.(E) holds, or if
+// the error has a method As(any) bool such that err.As(target) returns true
+// when target is a non-nil *E.
 func AsType[E error](err error) (E, bool) {
+	if err == nil {
+		var zero E
+		return zero, false
+	}
+	var pe *E
+	return asType(err, &pe)
+}
+
+func asType[E error](err error, ppe **E) (_ E, _ bool) {
 	for {
-		if e, ok := any(err).(E); ok {
+		if e, ok := err.(E); ok {
 			return e, true
+		}
+		if x, ok := err.(interface{ As(any) bool }); ok {
+			if *ppe == nil {
+				*ppe = new(E)
+			}
+			if x.As(*ppe) {
+				return **ppe, true
+			}
 		}
 		switch x := err.(type) {
 		case wrapped:
 			err = x.Unwrap()
 			if err == nil {
-				var zero E
-				return zero, false
+				return
 			}
 		case multi:
-			for _, inner := range x.Unwrap() {
-				if e, ok := AsType[E](inner); ok {
-					return e, true
+			for _, err := range x.Unwrap() {
+				if err == nil {
+					continue
+				}
+				if x, ok := asType(err, ppe); ok {
+					return x, true
 				}
 			}
-			var zero E
-			return zero, false
+			return
 		default:
-			var zero E
-			return zero, false
+			return
 		}
 	}
 }
