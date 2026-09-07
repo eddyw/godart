@@ -207,6 +207,11 @@ void _assignInto(Object? dst, Object? src, TypeDesc desc) {
   }
 }
 
+/// Writes a value into a location that holds the object of a struct or of an
+/// array. The decoder of encoding/json writes a target of such a kind with it.
+void $assignValue(Object? dst, Object? src, TypeDesc desc) =>
+    _assignInto(dst, src, desc);
+
 /// Writes a value into the target of errors.As.
 ///
 /// The target holds a pointer. The Dart form of a pointer to a struct and of a
