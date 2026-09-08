@@ -5,6 +5,12 @@ import 'sched.dart';
 sealed class SelectCase {
   bool get ready;
 
+  /// True when the channel of the case is the zero value of a channel type.
+  ///
+  /// Go omits such a case from the statement. It never becomes ready, it
+  /// holds no waiter, and it names no bubble.
+  bool get isNil;
+
   /// The bubble of the channel of the case, and null outside a bubble.
   Bubble? get bubble;
 
@@ -26,6 +32,9 @@ final class RecvCase<T> extends SelectCase {
 
   @override
   bool get ready => chan.readyToReceive;
+
+  @override
+  bool get isNil => chan.isNil;
 
   @override
   Bubble? get bubble => chan.bubble;
@@ -52,6 +61,9 @@ final class SendCase<T> extends SelectCase {
 
   @override
   bool get ready => chan.readyToSend;
+
+  @override
+  bool get isNil => chan.isNil;
 
   @override
   Bubble? get bubble => chan.bubble;
@@ -120,9 +132,13 @@ final class _SelectWait implements WaitFrame, DurableWait {
 
   /// Go names the wait durable only when each case reads a channel of the
   /// bubble. A case of another channel can end the wait from outside.
+  ///
+  /// A case of a nil channel stands outside the rule, exactly as it does in
+  /// Go. Such a case never becomes ready, thus it can end the wait never.
   @override
   bool $durableIn(Bubble b) {
     for (final SelectCase c in cases) {
+      if (c.isNil) continue;
       if (!identical(c.bubble, b)) return false;
     }
     return true;
@@ -130,6 +146,9 @@ final class _SelectWait implements WaitFrame, DurableWait {
 
   void arm() {
     for (var i = 0; i < cases.length; i++) {
+      // Go omits a case of a nil channel. A waiter there would also join the
+      // queue of the shared nil channel of the element type.
+      if (cases[i].isNil) continue;
       cases[i].arm(state, i, g);
       // A wake of another goroutine can take a case at this point, thus each
       // later case stays out.
@@ -141,6 +160,7 @@ final class _SelectWait implements WaitFrame, DurableWait {
   @override
   Object? resume() {
     for (final c in cases) {
+      if (c.isNil) continue;
       c.disarm(state);
     }
     if (!state.done) return $select(cases, false);
