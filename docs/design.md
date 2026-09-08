@@ -796,6 +796,7 @@ getter that calls `Object.hash` with the shape id in front of each field.
 The lazy form only changed the order in which the analysis reached that call.
 `padRecord` of stage 4 adds 1 element of the type `bool` to such a record, and
 no code reads it. Read decision 395.
+`testdata/dartbug/record20/` holds the witness of 3 lines and the report.
 
 ## The start time of a large program on the Dart VM
 
