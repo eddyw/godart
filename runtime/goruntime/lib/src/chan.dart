@@ -397,8 +397,8 @@ int $nowNanos() {
 /// The local zone at an instant of the Unix epoch.
 ///
 /// The instant is a count of seconds, because a Time of the package time
-/// reaches the year 1 and the count of nanoseconds of that instant does not
-/// fit an int64.
+/// reaches the year 1. The count of nanoseconds of that instant does not fit
+/// an int64.
 ///
 /// The first value is the offset in seconds east of UTC, and the second value
 /// is the name of the zone. Go writes both in the text of a time.

@@ -102,11 +102,12 @@ func Sleep(d Duration) {
 	dart.Sleep(int64(d))
 }
 
-// A Time is a point in time. It holds a count of seconds since January 1 of
-// the year 1, a count of nanoseconds inside that second, and the location of
-// its wall clock.
+// A Time is a point in time.
 //
-// Go holds the same origin, thus the zero value of the 2 runtimes is midnight
+// It holds a count of seconds since January 1 of the year 1. It also holds a
+// count of nanoseconds inside that second, and the location of its wall clock.
+//
+// Go holds the same origin. The zero value of the 2 runtimes is thus midnight
 // UTC of January 1 of the year 1. A Time of Go also holds a reading of the
 // monotonic clock, and a Time here holds no such reading.
 type Time struct {
@@ -118,8 +119,8 @@ type Time struct {
 // unixSec gives the count of seconds of t since the start of the Unix epoch.
 func (t Time) unixSec() int64 { return t.sec - unixToInternal }
 
-// unixTime builds a Time of a count of seconds since the start of the Unix
-// epoch and a count of nanoseconds inside that second.
+// unixTime builds a Time of 2 counts. The first 1 holds seconds since the
+// start of the Unix epoch, and the second 1 nanoseconds inside that second.
 func unixTime(sec int64, nsec int32) Time {
 	return Time{sec: sec + unixToInternal, nsec: nsec, loc: Local}
 }
@@ -145,8 +146,8 @@ func Unix(sec, nsec int64) Time {
 
 // UnixNano gives the count of nanoseconds since the start of the Unix epoch.
 //
-// The result is undefined outside the year range 1678 to 2262, exactly as in
-// Go, because the count does not fit an int64.
+// The result is undefined outside the year range 1678 to 2262. The count does
+// not fit an int64 there, and Go names the same bound.
 func (t Time) UnixNano() int64 {
 	return t.unixSec()*1000000000 + int64(t.nsec)
 }

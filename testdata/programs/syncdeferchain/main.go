@@ -2,9 +2,9 @@
 // holds the panic of that function alone.
 //
 // A function whose deferred calls can block runs its chain inside its state
-// machine. The end of that chain read a variable of the library, thus a normal
-// return inside the chain of a panicking caller threw the panic of the caller
-// again. The real test suite of database/sql found the defect.
+// machine. The end of that chain read a variable of the library. A normal
+// return inside the chain of a panicking caller thus threw the panic of that
+// caller again. The real test suite of database/sql found the defect.
 package main
 
 import "fmt"

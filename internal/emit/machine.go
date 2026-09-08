@@ -275,8 +275,8 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	if m.Defer {
 		e.line("DeferStack $defer = DeferStack();")
 	}
-	// The chain of the deferred calls of such a machine can give up control,
-	// thus its state rides the frame and not a local of the Dart stack.
+	// The chain of the deferred calls of such a machine can give up control.
+	// The state of the chain thus rides the frame, and not a local.
 	if m.DeferBlocks {
 		e.line("ChainState? $chain;")
 	}
@@ -352,9 +352,9 @@ func (e *emitter) deferNext(s *ir.DeferNext) {
 	// panic in that case, thus a recover inside it gives null. The open stands
 	// in front of the test, because the end of the chain always closes it.
 	//
-	// The name of the variable holds no form that a capture of a local can
-	// take. A capture writes "$c" and the Go name, thus a local named s would
-	// take a shorter name of the chain.
+	// The name of the variable holds no form that a capture can take. A
+	// capture writes "$c" and the Go name. A local named s thus took the
+	// shorter name of the chain before.
 	e.line("$chain ??= $chainOpen(null);")
 	e.line("if ($defer.isEmpty) { $s = %d; continue $m; }", s.Done)
 	// Each exit of the function shares this state, thus the frame of a

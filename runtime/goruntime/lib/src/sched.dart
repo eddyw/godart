@@ -46,7 +46,7 @@ abstract interface class WaitFrame implements Frame {
 ///
 /// `$catch` of the test harness and the 2 wrappers of the package reflect each
 /// hold such a chain. The wait of the inner chain gives the reason and the
-/// durable mark, thus each walk of the runtime reads through the wrapper.
+/// durable mark. Each walk of the runtime thus reads through the wrapper.
 abstract interface class NestedFrame implements Frame {
   Frame get $inner;
 }

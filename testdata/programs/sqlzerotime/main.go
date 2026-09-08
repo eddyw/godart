@@ -1,8 +1,8 @@
 // Command sqlzerotime proves that a Time counts from January 1 of the year 1.
 //
 // The real test suite of database/sql found the gap. convertAssign writes a
-// Time into a string with the layout RFC 3339, and the zero value of the
-// overlay wrote the start of the Unix epoch.
+// Time into a string with the layout RFC 3339. The zero value of the overlay
+// wrote the start of the Unix epoch.
 package main
 
 import (

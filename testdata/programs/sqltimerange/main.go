@@ -2,8 +2,8 @@
 //
 // A Time counts seconds from January 1 of the year 1 since this session, thus
 // each year of Go reads. The witness walks 8 instants from the year 1 to the
-// year 3000, and it reads each method that the new shape touched: the
-// calendar, the zone, the round family, the Unix family, and the binary form.
+// year 3000. Each 1 reads the calendar, the zone, the round family, the Unix
+// family, and the binary form.
 package main
 
 import (
@@ -57,8 +57,8 @@ func main() {
 		fmt.Println("  binary", i, err, err2, back.Equal(d), back.Location())
 	}
 
-	// The distance of the 2 ends of the range leaves the range of a Duration,
-	// thus Sub gives the bound of Go.
+	// The distance of the 2 ends leaves the range of a Duration. Sub thus
+	// gives the bound of Go.
 	low := dates[0]
 	high := dates[len(dates)-1]
 	fmt.Println("sub", high.Sub(low), low.Sub(high))

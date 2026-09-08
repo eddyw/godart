@@ -3,7 +3,7 @@
 //
 // reflect.Select and reflect.Value.Recv each wrap the frame of the runtime in
 // a frame of their own. Such a wrapper must give the mark of the wait that it
-// holds, or the clock of the bubble stands still.
+// holds. The clock of the bubble stands still without that mark.
 package main
 
 import (

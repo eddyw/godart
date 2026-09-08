@@ -1,9 +1,9 @@
 // Command syncnilselect proves that a select case of a nil channel keeps the
 // wait of a synctest bubble durable.
 //
-// context.Background gives a Done channel that is nil. The pool of database/sql
-// waits in a select over that channel and over a channel of the bubble, and the
-// clock of the bubble must still move.
+// context.Background gives a Done channel that is nil. The pool of
+// database/sql waits in a select over that channel and over a channel of the
+// bubble. The clock of the bubble must still move.
 package main
 
 import (
@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-// pool holds the shape of TestPoolExhaustOnCancel of database/sql: each worker
-// waits in a select over the Done channel of a context with no cancel and over
-// a channel of the bubble, and 1 goroutine sleeps on the clock of the bubble.
+// pool holds the shape of TestPoolExhaustOnCancel of database/sql. Each worker
+// waits in a select over 2 channels: the Done channel of a context with no
+// cancel, and a channel of the bubble. 1 goroutine sleeps on the clock.
 func pool(t *testing.T) {
 	start := time.Now()
 	done := make(chan bool)
