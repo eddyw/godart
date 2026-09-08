@@ -233,6 +233,14 @@ func TestTestsOfGoroot(t *testing.T) {
 		// of the encoder at each level.
 		{"compress/flate", "TestDeflate$|TestDeflateInflate$|TestDeflateInflateString$|TestReaderDict$|TestWriterDict$|TestBulkHash4$",
 			[]string{"--- PASS: TestDeflateInflateString ", "--- PASS: TestWriterDict "}},
+		// 3 tests of slices read AllocsPerRun, and each 1 skips. The diff
+		// slices_test.go.patch names the 3 tests that the file holds not.
+		{"slices", "", []string{
+			"--- PASS: TestClone ", "--- PASS: TestNilness "}},
+		// TestClean reads AllocsPerRun, and TestBug3486 reads the source tree
+		// of Go. The 2 skip.
+		{"path/filepath", "", []string{
+			"--- PASS: TestEvalSymlinks ", "--- PASS: TestWalk "}},
 	}
 	for _, c := range cases {
 		t.Run(c.pkg, func(t *testing.T) {
