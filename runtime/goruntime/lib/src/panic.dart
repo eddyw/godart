@@ -361,9 +361,16 @@ final class ChainState {
 /// for it.
 ChainState $chainOpen(Object? e) {
   final ChainState saved = ChainState($chainPanic, $recovered);
+  $chainReset(e);
+  return saved;
+}
+
+/// Puts a value that reached an open chain in the place of the panic of that
+/// chain. A chain that already stands open thus keeps the state of the chain
+/// that holds it.
+void $chainReset(Object? e) {
   $recovered = false;
   $chainPanic = e is GoPanic ? e : null;
-  return saved;
 }
 
 /// Closes the chain and gives the state of the chain that holds it back.

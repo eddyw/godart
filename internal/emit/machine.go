@@ -317,7 +317,10 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	if m.DeferBlocks {
 		e.line("} catch ($e) {")
 		e.line("if ($defer.isEmpty) rethrow;")
-		e.line("$cs = $chainOpen($e);")
+		// A value that reaches the catch while the chain already stands open
+		// must not save the state again. The chain of the caller stands in the
+		// value that the first open gave.
+		e.line("if ($cs == null) { $cs = $chainOpen($e); } else { $chainReset($e); }")
 		e.line("$s = %d;", m.DeferState)
 		e.line("continue $m;")
 		e.line("}")
