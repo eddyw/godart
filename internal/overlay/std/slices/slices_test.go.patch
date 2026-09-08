@@ -1,0 +1,129 @@
+The subset holds no unsafe, and the Dart output holds 1 cell of a list for each
+element of a slice. The diff removes 3 tests for those 2 causes, and it keeps
+each other line of the file.
+
+TestIssue68488 reads the machine address of the storage of a slice with
+unsafe.SliceData. The test measures a liveness rule of the garbage collector of
+Go: a clone of a slice of length 0 must hold no pointer into the array of the
+source. The Dart output can express no such rule. A slice of the runtime holds
+a list, an offset, a length, and a capacity, and an append above the capacity
+always copies, thus no program can read the difference. TestClone and
+TestNilness cover each value rule of Clone.
+
+TestConcat_too_large and the big slices of TestRepeat build a slice of about 2
+to the power 63 elements of a type of no size. Go gives such an allocation 1
+address and no storage, thus the length costs nothing there. A cell of a list
+of Dart costs a word for each element, also for a type of no size, and the
+bound $maxSliceLen of the runtime stands at 2 to the power 45. The make of the
+operand thus panics before Concat or Repeat runs. TestConcat and the normal
+cases of TestRepeat cover each value rule of the 2 functions, and
+TestRepeatPanics still proves the overflow rule of Repeat. docs/parity.md holds
+the bound.
+
+--- slices_test.go
++++ slices_test.go
+@@ -14,5 +14,4 @@
+ 	. "slices"
+ 	"strings"
+ 	"testing"
+-	"unsafe"
+ )
+@@ -1326,58 +1326,2 @@
+ 
+-func TestConcat_too_large(t *testing.T) {
+-	// Use zero length element to minimize memory in testing
+-	type void struct{}
+-	cases := []struct {
+-		lengths     []int
+-		shouldPanic bool
+-	}{
+-		{
+-			lengths:     []int{0, 0},
+-			shouldPanic: false,
+-		},
+-		{
+-			lengths:     []int{math.MaxInt, 0},
+-			shouldPanic: false,
+-		},
+-		{
+-			lengths:     []int{0, math.MaxInt},
+-			shouldPanic: false,
+-		},
+-		{
+-			lengths:     []int{math.MaxInt - 1, 1},
+-			shouldPanic: false,
+-		},
+-		{
+-			lengths:     []int{math.MaxInt - 1, 1, 1},
+-			shouldPanic: true,
+-		},
+-		{
+-			lengths:     []int{math.MaxInt, 1},
+-			shouldPanic: true,
+-		},
+-		{
+-			lengths:     []int{math.MaxInt, math.MaxInt},
+-			shouldPanic: true,
+-		},
+-	}
+-	for _, tc := range cases {
+-		var r any
+-		ss := make([][]void, 0, len(tc.lengths))
+-		for _, l := range tc.lengths {
+-			s := make([]void, l)
+-			ss = append(ss, s)
+-		}
+-		func() {
+-			defer func() {
+-				r = recover()
+-			}()
+-			_ = Concat(ss...)
+-		}()
+-		if didPanic := r != nil; didPanic != tc.shouldPanic {
+-			t.Errorf("slices.Concat(lens(%v)) got panic == %v",
+-				tc.lengths, didPanic)
+-		}
+-	}
+-}
+-
+ func TestRepeat(t *testing.T) {
+@@ -1416,24 +1416,2 @@
+ 	}
+-
+-	// big slices
+-	for _, tc := range []struct {
+-		x     []struct{}
+-		count int
+-		want  []struct{}
+-	}{
+-		{x: make([]struct{}, math.MaxInt/1-0), count: 1, want: make([]struct{}, 1*(math.MaxInt/1-0))},
+-		{x: make([]struct{}, math.MaxInt/2-1), count: 2, want: make([]struct{}, 2*(math.MaxInt/2-1))},
+-		{x: make([]struct{}, math.MaxInt/3-2), count: 3, want: make([]struct{}, 3*(math.MaxInt/3-2))},
+-		{x: make([]struct{}, math.MaxInt/4-3), count: 4, want: make([]struct{}, 4*(math.MaxInt/4-3))},
+-		{x: make([]struct{}, math.MaxInt/5-4), count: 5, want: make([]struct{}, 5*(math.MaxInt/5-4))},
+-		{x: make([]struct{}, math.MaxInt/6-5), count: 6, want: make([]struct{}, 6*(math.MaxInt/6-5))},
+-		{x: make([]struct{}, math.MaxInt/7-6), count: 7, want: make([]struct{}, 7*(math.MaxInt/7-6))},
+-		{x: make([]struct{}, math.MaxInt/8-7), count: 8, want: make([]struct{}, 8*(math.MaxInt/8-7))},
+-		{x: make([]struct{}, math.MaxInt/9-8), count: 9, want: make([]struct{}, 9*(math.MaxInt/9-8))},
+-	} {
+-		if got := Repeat(tc.x, tc.count); got == nil || len(got) != len(tc.want) || cap(got) != cap(tc.want) {
+-			t.Errorf("Repeat(make([]struct{}, %v), %v): (got == nil): %v, len(got): %v, len(want): %v, cap(got): %v, cap(want): %v",
+-				len(tc.x), tc.count, got == nil, len(got), len(tc.want), cap(got), cap(tc.want))
+-		}
+-	}
+ }
+@@ -1456,14 +1456,2 @@
+ 
+-var leak *int
+-
+-func TestIssue68488(t *testing.T) {
+-	s := make([]int, 3)
+-	clone := Clone(s[1:1])
+-	switch unsafe.SliceData(clone) {
+-	case &s[0], &s[1], &s[2]:
+-		t.Error("clone keeps alive s due to array overlap")
+-	}
+-	leak = &s[1] // see go.dev/issue/74387
+-}
+-
+ // This test asserts the behavior when the primary slice operand is nil.
