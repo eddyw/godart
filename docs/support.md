@@ -78,7 +78,7 @@ nineteenth session:
 | `runtime` | 52/114 | 45% | `MemStats`, `ReadMemStats`, `SetFinalizer`, `Breakpoint`, the profile of the memory, of the block, and of the mutex, and the trace. The Dart VM reports none of the numbers. |
 | `net` | 268/346 | 77% | `IPConn`, `FileConn`, `FileListener`, and the keep alive timers. Each 1 needs a raw socket, a file descriptor, or an ioctl of Windows. 8 socket options joined on 2026-09-04. Read decision 330. |
 | `crypto/tls` | 126/263 | 47% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake. Dart owns the handshake, and `SecureSocket.peerCertificate` gives the leaf alone and not the chain. Read decision 331. |
-| `syscall` | 24/2228 | 1% | Each system call, each error number, and each constant of the platform. |
+| `syscall` | 55/2228 | 2% | Each system call, each constant of the platform, and each error number whose value or its text differs between macOS and Linux. |
 
 `testing` left this table on 2026-09-03, `crypto/x509` left it on 2026-09-04,
 and `encoding/json` left it on 2026-09-04. The sixteenth session added 166 names, and decision 319 and
@@ -88,9 +88,12 @@ joined the surface. It also gave `net` 8 socket options, 259 names to 267.
 
 `syscall` is a special case. The package of Go holds the whole system call
 interface of the platform, and the surface holds no such interface. The overlay
-holds the `Signal` type and the 12 signal numbers that macOS and Linux agree
-on, because `os` and `os/signal` need them. A Go program reaches the system
-through `os`, through `net`, and through the interop package `syscall/dart`.
+holds the `Signal` type with the 12 signal numbers, and the `Errno` type with
+the 28 error numbers, that macOS and Linux agree on, because `os`,
+`os/signal`, and `path/filepath` need them. A number that the 2 systems write
+differently, for example `SIGUSR1` and `ENOTEMPTY`, stays out. A Go program
+reaches the system through `os`, through `net`, and through the interop
+package `syscall/dart`.
 
 `encoding/json` left the table on 2026-09-06. The package reads the real source
 of Go with 2 patches since then, thus it holds each name of the v1 API and of
@@ -590,7 +593,7 @@ each 1 runs the test binary again as a subprocess.
 | `dart:io` opens no datagram socket of the Unix domain | `log/syslog`. `Dial` works over udp and over a stream socket, and `New` and `NewLogger` each need the datagram form. |
 | `dart:io` reports no user id | `os/user`. The pure Go path of Go compiles under gart, and `Current` still fails because `os.Getuid` reports -1. |
 
-**333 names of the 9 partial packages, and 2204 names of `syscall`.** No name
+**333 names of the 9 partial packages, and 2173 names of `syscall`.** No name
 of them stays reachable. The nineteenth session closed the last 29.
 
 | Cause | The count |
@@ -601,7 +604,7 @@ of them stays reachable. The nineteenth session closed the last 29.
 | The Dart VM counts no allocation, no block, and no contention | 62 names of `runtime` |
 | `dart:io` hides the descriptor of a file and of a socket | 12 names of `os`, 5 of `os/exec` |
 | The subset holds no `unsafe` and no address | 4 names of `sync/atomic`, 5 names of `reflect` |
-| A constant of the system that reaches no operation | 2204 names of `syscall`. A constant that no call reads is a lie. |
+| A constant of the system that reaches no operation | 2173 names of `syscall`. A constant that no call reads is a lie, and a number that macOS and Linux write differently is 1 too. |
 
 **2 entries of the skip table hold a compiler defect that no small change
 removes.** `peano` is a torture test of the segmented stack of Go, and the Dart

@@ -685,11 +685,13 @@ Read decision 346, decision 351, and the limits of `docs/parity.md`.
 
 The user asked on 2026-08-29 whether the compiler can run the tests of the Go
 repository, exactly as GopherJS does. The answer is yes for a package whose test
-files stay inside the subset. 21 packages now run their real tests, and `make
+files stay inside the subset. 23 packages now run their real tests, and `make
 ci` proves each one through `TestTestsOfGoroot`.
 
 ```bash
 make std-test STD=path            # 8 PASS, 1 SKIP, and 8 examples skipped
+make std-test STD=slices          # 101 pass, and 3 skip
+make std-test STD=path/filepath   # 49 pass, and 3 skip
 make std-test STD=container/list  # each test passes
 make std-test STD=container/heap  # each test passes
 make std-test STD=container/ring  # each test passes
@@ -821,7 +823,7 @@ that the overlay does not hold. `unicode/utf8` is the only one that runs.
 | Package | Cause that blocks the run |
 |---|---|
 | `unicode/utf8` | Runs. Each test passes. |
-| `slices` | `internal/asan`, `internal/msan`, `internal/race`, `unsafe`, and 3 calls of `recover`. |
+| `slices` | Runs since this session. Read `docs/parity.md`. |
 | `sort` | `SearchStrings`, `SearchFloat64s`, `SliceIsSorted`, `Float64sAreSorted`, `Reverse`, and `IntSlice`. |
 | `strconv` | `IsGraphic`, `IsPrint`, `QuoteRune`, `QuoteRuneToASCII`, and `QuoteRuneToGraphic`. |
 | `strings` | `Builder.Cap`. |
@@ -835,7 +837,7 @@ that the overlay does not hold. `unicode/utf8` is the only one that runs.
 | `flag` | `FlagSet.Duration`. |
 | `os` | `Clearenv`. |
 | `io/fs` | `Glob` and `ReadFile`. |
-| `path/filepath` | `lstat`, an unexported name of the real source. |
+| `path/filepath` | Runs since this session. The hook `lstat` is present now. |
 | `reflect`, `internal/reflectlite` | A large part of the real API. |
 | `runtime` | `SetFinalizer` and each other name of the real runtime. |
 | `testing` | `B.Context`. |

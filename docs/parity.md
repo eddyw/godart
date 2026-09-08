@@ -180,7 +180,11 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | `runtime.SetFinalizer` | The finalizer takes the object itself | Not present. A Dart `Finalizer` must hold no reference of the object that it watches. `runtime.AddCleanup` maps to the Dart form. |
 | `runtime.Breakpoint` | A trap of the machine | Not present. `debugger` of `dart:developer` waits for a client of the service with no report, and Go ends the program with SIGTRAP. |
 | `debug.SetMaxStack` | Writes the limit of the runtime | Keeps the value only. |
-| `filepath.EvalSymlinks` | Walks each element itself | Asks the system for the resolved path. A relative argument takes `Rel` against the resolved working directory, thus the result stays relative in each usual case. The error of a missing path holds a different text. |
+| `filepath.EvalSymlinks` | Walks each element itself | Equal since this session. The overlay walks the elements too, thus `syscall.ENOTDIR`, the error of the element that failed, and the bound of 255 links each match. |
+| `make([]T, n)` of a type of no size | 1 address and no storage, thus `n` can reach the largest int | 1 cell of a list for each element. The bound `$maxSliceLen` of the runtime is 2 to the power 45, and a larger length gives `makeslice: len out of range`. Go reaches the same report above 2 to the power 48 divided by the element size. |
+| `reflect.Type.AssignableTo` | The rule of the specification | Equal for a slice, a pointer, a channel, an array, and a map. A struct type and a function type each read the name alone, thus 2 named struct types of 1 underlying type give false. The emitter rejects a conversion between the 2 anyway. |
+| `reflect.Type.ConvertibleTo` | The rule of the specification | Equal since this session for a channel, which keeps its direction. 2 named struct types of 1 underlying type give false, because a conversion between the 2 is outside the subset. |
+| The flag `0` beside a precision, `%08.2d` | The flag falls, and the width takes spaces | Equal since this session. A float keeps the flag, and a whole number of the verb `v` reads the precision. |
 | A panic of a run time error that recover reads | The value implements `error`, and `Error()` gives the text | Equal in the text. The value carries the description `runtime.errorString` in each case, and Go also holds `runtime.plainError` and `*runtime.TypeAssertionError`. A type switch on the recovered value thus reads 1 type where Go reads 3. |
 | The text of a run time panic | Read the list of Go | Equal. A write to a nil map and the 3 faults of a channel write no prefix, a slice bound report names the bound that failed and writes the unsigned value of a bound of an unsigned type, and a failed assertion names the static interface type and the first missing method. Read decision 293 and decision 294. |
 | `fmt.Errorf` | `*errors.errorString`, `*fmt.wrapError`, or `*fmt.wrapErrors` | Equal. Read decision 295. |
@@ -862,7 +866,7 @@ Dart names the system only at run time.
 | `Separator`, `ListSeparator` | The separator of the system | Always `/` and `:` |
 | `Walk`, `WalkDir`, `SkipDir`, `SkipAll` | Present | Equal |
 | `Localize`, `HasPrefix` | Present | Equal |
-| `EvalSymlinks` | Present | Present. The table of the runtime above holds the 2 gaps. |
+| `EvalSymlinks` | Present | Present. Equal. |
 
 ## The web target
 
@@ -1720,8 +1724,8 @@ The cause that blocks each package of the survey of 2026-08-31:
 | `text/tabwriter` | Runs since 2026-09-07. 6 tests pass, and the patch of `handlePanic` is gone. |
 | `math/bits` | Runs since 2026-09-07. 62 tests pass. 1 diff of `TestUintSize` removes a read of `unsafe.Sizeof`. |
 | `bufio`, `maps`, `path`, `unicode`, `unicode/utf8`, `unicode/utf16` | Each runs since 2026-09-07 with no change. |
-| `path/filepath` | `syscall.ENOTDIR` and `testenv.SkipFlaky`. |
-| `slices` | `internal/msan`, `internal/race`, and 3 reads of `unsafe`. |
+| `path/filepath` | Runs since this session. 49 tests pass, and 3 skip. It needed `syscall.ENOTDIR`, `testenv.SkipFlaky`, and the real algorithm of `EvalSymlinks`, of `Walk`, and of `Glob`. |
+| `slices` | Runs since this session. 101 tests pass, and 3 skip at `AllocsPerRun`. It needed `internal/msan`, `internal/race`, and a diff that removes 3 tests. |
 | `regexp` | 5 rejections in `regexp/syntax/parse.go`: 1 call of `recover` and 4 addresses of a `[]rune` field. |
 
 ### The block model

@@ -4885,3 +4885,114 @@ The plan left these points open. The work took the decisions below.
      name of a type that mentions an unnamed struct type reads the exact text
      now, and the interpolated name of a shape that holds a type parameter
      reads it too.
+
+390. `slices` and `path/filepath` run their real test suites, and `os` cannot.
+
+     Decision 383 left 3 packages open. 2 of the 3 run now.
+
+     **`slices` needed 2 overlays and 1 diff.** `internal/msan` and
+     `internal/race` each give `Enabled = false` and nothing else, because each
+     other name of the 2 packages takes an `unsafe.Pointer`. The sanitizer is
+     genuinely absent, thus the answer is honest and not a stub. The diff
+     `slices_test.go.patch` removes 3 tests. `TestIssue68488` reads the machine
+     address of the storage of a slice, and it measures a liveness rule of the
+     garbage collector of Go: the Dart output can express no such rule, because
+     an append above the capacity always copies. `TestConcat_too_large` and the
+     big slices of `TestRepeat` each build a slice of about 2 to the power 63
+     elements of a type of no size. Go gives such an allocation 1 address and no
+     storage, and a cell of a list of Dart costs a word for each element, thus
+     the bound `$maxSliceLen` of 2 to the power 45 stops the `make` of the
+     operand. 101 tests pass, and 3 skip at `AllocsPerRun`.
+
+     **`path/filepath` needed the error numbers and 3 real algorithms.** The
+     overlay of `syscall` gives the type `Errno` with `Error` and `Is`, and the
+     28 error numbers that macOS and Linux number the same way and name with the
+     same text. Each other error number of POSIX stays out, exactly as each
+     signal number that the 2 systems disagree about already does: `ENOTEMPTY`
+     is 66 and 39, `EAGAIN` is 35 and 11, and the text of `ERANGE` differs. A
+     program of the Dart output reads no table of the system, thus a constant
+     with the number of the wrong system would be a silent wrong answer.
+
+     The suite then found 4 defects of the overlay, and the real source of Go
+     closed each 1. `EvalSymlinks` called the resolver of the platform on the
+     whole path, thus each failure gave 1 `PathError`. It walks the elements
+     itself now, and it gives `syscall.ENOTDIR` for a non directory that
+     another element follows and its own error above 255 links. `Walk` read the
+     metadata of a child from `os.ReadDir`, it called the walk function twice
+     for a directory that it could not read, and `SkipDir` of a subdirectory
+     dropped each sibling. The real body of Go closed the 3. `Glob` read
+     `os.Stat` for a pattern with no meta character where Go reads `os.Lstat`,
+     thus a symbolic link with no target matched nothing, and its walk of the
+     elements called itself once for each element. The bound of Go is 10,000
+     calls, and that chain fills the fixed stack of the Dart VM, thus
+     `TestCVE202230632` ended the binary. The walk holds a list now. 49 tests
+     pass, and 3 skip.
+
+     **`os` cannot run, and the cause is structural.** 38 names stay undefined.
+     `export_test.go` and `export_unix_test.go` read 7 unexported names of the
+     real implementation: `atime`, `splitPath`, `stathook`, `checkWrapErr`,
+     `readFileContents`, `errWriteAtInAppendMode`, and
+     `errPatternHasSeparator`. The overlay replaces the whole package and it
+     reaches the file system through `dart:io`, thus no honest form of the 7
+     exists, and `os_test.go` reads each export of that file. 8 of the 20 test
+     files also need a raw file descriptor: `syscall.Open`, `Pipe`, `Mkfifo`,
+     `SetNonblock`, `Umask`, `Stat_t`, and the 4 names that stay out for good.
+     A diff that empties the 8 files and guts `export_test.go` would report a
+     pass that proves nothing, and a compromise is a rejection.
+
+391. The residue of the conformance work of the library closes.
+
+     Decision 384 recorded 19 open defects, and decision 385 closed the 8 of
+     `fmt`. A sweep with 8 new witness programs proves that 15 of the 19 closed,
+     and it closes the 4 that stayed. 3.19 is no defect.
+
+     **A panic inside a `Format` method escaped.** The runtime already wrapped
+     a call of `String` and of `Error`, and the dispatch of a `Formatter` stands
+     in the overlay of `fmt` and held no guard. `callFormatter` holds the
+     recover now: a nil pointer receiver gives `<nil>` with the width of the
+     verb, and each other panic gives `%!v(PANIC=Format method: ...)` with no
+     flag, exactly as `catchPanic` of Go does.
+
+     **`errors.As` panicked with the wrong kind.** `$checkErrorTarget` of the
+     runtime raised a `GoError`, thus a recover read `runtime error: errors:
+     target must be a non-nil pointer`. Go panics with a text of the kind
+     `string`. The 2 panics now carry a `GoString`.
+
+     **7 methods of a nil `*os.File` read the receiver.** `stdError` of
+     `attr.go` tested the field `std` before it tested the pointer, thus
+     `Chmod`, `Chown`, `Truncate`, and `Chdir` ended the program. `stdError`
+     calls `checkValid` first now, and the 3 deadline methods call it too. Go
+     gives `ErrInvalid` for a nil receiver and `ErrClosed` for a closed file.
+
+     **The flag `0` of a whole number stayed beside a precision.** Go drops the
+     flag there and it pads with spaces, thus `%08.2d` of 1 gives 6 spaces and
+     then `01`. gart gave `00000001`, and it also dropped the precision of the
+     verb `v` of a whole number. `_leafInt` of the runtime holds the 2 rules.
+
+     The 8 programs are `parfmtverb`, `parfmtguard`, `parscan`, `parslices`,
+     `parerrorsas`, `parosnil`, `partemplate`, and `parmisc`. They put back the
+     63 verb and value pairs that decision 384 had to cut from `conffmt`.
+
+392. `reflect.Type.AssignableTo` reads the underlying type.
+
+     The overlay of `internal/race` of decision 390 opened the real test suite
+     of `database/sql`, and the suite found 2 defects of the runtime.
+
+     `$descAssignable` answered true for 2 equal handles, for 2 equal names,
+     and for an interface that the type holds. Go also assigns a value when the
+     2 underlying types are identical and at least 1 of the 2 types holds no
+     name of its own, thus `[]byte` fits a location of `type Raw []byte`.
+     `convertAssign` of `database/sql` reads that rule to pick its `cloneBytes`
+     path, thus the destination shared the list of the driver and
+     `TestUserDefinedBytes` reported dirty memory. The rule now covers a slice,
+     a pointer, a channel, an array, and a map, because the Dart form of such a
+     type and of each type that names it is 1 object. A struct type and a
+     function type stay out: each 1 needs the identity of every member, and the
+     emitter rejects a conversion between 2 named struct types anyway.
+
+     `$descConvertible` compared the element type of a channel and not its
+     direction, thus a receive channel converted to a two way channel. The
+     underlying type of a channel holds the direction, and the branch reads it
+     now.
+
+     `testdata/programs/parptreq` holds the witness of the 2.
