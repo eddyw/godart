@@ -722,9 +722,14 @@ func NowNanos() int64 {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// ZoneOffset gives the local zone at an instant of the Unix epoch. The 2 values
-// are the offset in seconds east of UTC and the name of the zone.
-func ZoneOffset(nanos int64) (int, string) {
+// ZoneOffset gives the local zone at an instant of the Unix epoch.
+//
+// The argument is a count of seconds. The 2 values are the offset in seconds
+// east of UTC and the name of the zone.
+//
+// The argument holds seconds, because a Time of the package time reaches the
+// year 1. The count of nanoseconds of that instant does not fit an int64.
+func ZoneOffset(sec int64) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 

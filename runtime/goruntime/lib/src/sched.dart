@@ -42,6 +42,15 @@ abstract interface class WaitFrame implements Frame {
   String get $reason;
 }
 
+/// A frame that holds the chain of an inner call in front of the wait.
+///
+/// `$catch` of the test harness and the 2 wrappers of the package reflect each
+/// hold such a chain. The wait of the inner chain gives the reason and the
+/// durable mark. Each walk of the runtime thus reads through the wrapper.
+abstract interface class NestedFrame implements Frame {
+  Frame get $inner;
+}
+
 /// A wait that only a goroutine of 1 bubble can end.
 ///
 /// synctest names such a state durably blocked. A frame of the IO of Dart
@@ -52,15 +61,53 @@ abstract interface class DurableWait implements Frame {
   bool $durableIn(Bubble b);
 }
 
-/// True when only a goroutine of the bubble b can end the wait of the chain.
+/// The frame of the wait at the end of a chain, and null for a chain that
+/// holds none.
 ///
 /// The chain holds the frame of each caller in front of the frame of the wait,
-/// thus the walk reads the last link.
-bool $durableWait(Frame? f, Bubble b) {
+/// and a nested frame holds the chain of an inner call.
+Frame? $waitFrame(Frame? f) {
   Frame? at = f;
-  while (at is TraceFrame) {
-    at = at.$next;
+  while (true) {
+    if (at is TraceFrame) {
+      at = at.$next;
+      continue;
+    }
+    if (at is NestedFrame) {
+      at = at.$inner;
+      continue;
+    }
+    return at;
   }
+}
+
+/// The reason of the wait at the end of a chain, in the words of Go.
+String $waitReason(Frame? f) {
+  final Frame? at = $waitFrame(f);
+  return at is WaitFrame ? at.$reason : 'waiting';
+}
+
+/// The Go frames of a chain, from the outermost caller to the innermost.
+List<TraceFrame> $traceFrames(Frame? f) {
+  final List<TraceFrame> out = <TraceFrame>[];
+  Frame? at = f;
+  while (true) {
+    if (at is TraceFrame) {
+      out.add(at);
+      at = at.$next;
+      continue;
+    }
+    if (at is NestedFrame) {
+      at = at.$inner;
+      continue;
+    }
+    return out;
+  }
+}
+
+/// True when only a goroutine of the bubble b can end the wait of the chain.
+bool $durableWait(Frame? f, Bubble b) {
+  final Frame? at = $waitFrame(f);
   return at is DurableWait && at.$durableIn(b);
 }
 
@@ -805,18 +852,8 @@ void _deadlock() {
         : 'fatal error: all goroutines are asleep - deadlock!\n',
   );
   for (final Goroutine g in _liveSet) {
-    var reason = 'waiting';
-    final List<TraceFrame> stack = <TraceFrame>[];
-    Frame? f = g.frame;
-    while (f != null) {
-      if (f is TraceFrame) {
-        stack.add(f);
-        f = f.$next;
-        continue;
-      }
-      if (f is WaitFrame) reason = f.$reason;
-      break;
-    }
+    final String reason = $waitReason(g.frame);
+    final List<TraceFrame> stack = $traceFrames(g.frame);
     $platformStderrText('\ngoroutine ${g.id} [$reason]:\n');
     for (final TraceFrame t in stack.reversed) {
       $platformStderrText('${t.$name}()\n\t${t.$goFile}:${t.$goLine}\n');

@@ -10,14 +10,9 @@ const (
 )
 
 // unixToInternal is the count of seconds between the start of the year 1 and
-// the start of the Unix epoch. The binary form of Go counts from the year 1,
-// and a Time of the overlay counts from the epoch.
+// the start of the Unix epoch. A Time counts from the year 1, and each call of
+// the Unix family counts from the epoch.
 const unixToInternal int64 = (1969*365 + 1969/4 - 1969/100 + 1969/400) * 86400
-
-// sec gives the count of seconds since the start of the year 1.
-func (t Time) sec() int64 {
-	return floorDiv(t.nanos, 1000000000) + unixToInternal
-}
 
 // AppendBinary writes the binary form of t after b.
 func (t Time) AppendBinary(b []byte) ([]byte, error) {
@@ -27,7 +22,7 @@ func (t Time) AppendBinary(b []byte) ([]byte, error) {
 	if t.Location() == UTC {
 		offsetMin = -1
 	} else {
-		offset, _ := t.Location().lookup(t.nanos)
+		offset, _ := t.Location().lookup(t.unixSec())
 		if offset%60 != 0 {
 			version = timeBinaryVersionV2
 			offsetSec = int8(offset % 60)
@@ -38,7 +33,7 @@ func (t Time) AppendBinary(b []byte) ([]byte, error) {
 		}
 		offsetMin = int16(offset)
 	}
-	sec := t.sec()
+	sec := t.sec
 	nsec := t.nanosecond()
 	b = append(b,
 		version,
@@ -101,28 +96,49 @@ func (t *Time) UnmarshalBinary(data []byte) error {
 	if version == timeBinaryVersionV2 {
 		offset += int(int8(buf[2]))
 	}
-	nanos := (sec-unixToInternal)*1000000000 + int64(nsec)
 	loc := UTC
 	if offset != -1*60 {
-		if o, _ := Local.lookup(nanos); o == offset {
+		if o, _ := Local.lookup(sec - unixToInternal); o == offset {
 			loc = Local
 		} else {
 			loc = FixedZone("", offset)
 		}
 	}
-	*t = Time{nanos: nanos, loc: loc}
+	*t = Time{sec: sec, nsec: nsec, loc: loc}
 	return nil
+}
+
+// appendStrictRFC3339 writes the RFC 3339 text of t after b, and it reports
+// each value that the standard cannot hold.
+//
+// The year must take 4 digits, thus a year outside the range 0 to 9999 gives an
+// error. The hour of a zone must stand in the range 0 to 23.
+func (t Time) appendStrictRFC3339(b []byte) ([]byte, error) {
+	n0 := len(b)
+	b = t.appendFormat(b, RFC3339Nano)
+	if len(b) < n0+len("9999") || b[n0+len("9999")] != '-' {
+		return b, errors.New("year outside of range [0,9999]")
+	}
+	if b[len(b)-1] != 'Z' {
+		c := b[len(b)-len("Z07:00")]
+		hour := 10*(b[len(b)-len("07:00")]-'0') + (b[len(b)-len("7:00")] - '0')
+		if ('0' <= c && c <= '9') || hour >= 24 {
+			return b, errors.New("timezone hour outside of range [0,23]")
+		}
+	}
+	return b, nil
 }
 
 // MarshalJSON gives the RFC 3339 text of t between 2 quotation marks.
 //
-// Go reports an error when the year stands outside the range 0 to 9999. A Time
-// of the overlay counts nanoseconds in an int64, thus the year stays inside the
-// range 1678 to 2262.
+// Go reports an error when the year stands outside the range 0 to 9999.
 func (t Time) MarshalJSON() ([]byte, error) {
 	b := make([]byte, 0, len(RFC3339Nano)+2)
 	b = append(b, '"')
-	b = t.appendFormat(b, RFC3339Nano)
+	b, err := t.appendStrictRFC3339(b)
+	if err != nil {
+		return nil, errors.New("Time.MarshalJSON: " + err.Error())
+	}
 	return append(b, '"'), nil
 }
 
@@ -143,8 +159,15 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 }
 
 // AppendText writes the RFC 3339 text of t after b.
+//
+// Go reports an error when the year stands outside the range 0 to 9999.
 func (t Time) AppendText(b []byte) ([]byte, error) {
-	return t.appendFormat(b, RFC3339Nano), nil
+	n0 := len(b)
+	b, err := t.appendStrictRFC3339(b)
+	if err != nil {
+		return b[:n0], errors.New("Time.MarshalText: " + err.Error())
+	}
+	return b, nil
 }
 
 // MarshalText gives the RFC 3339 text of t.

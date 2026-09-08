@@ -73,18 +73,18 @@ func (l *Location) String() string {
 }
 
 // lookup gives the offset in seconds east of UTC and the name of the zone at an
-// instant of the Unix epoch.
-func (l *Location) lookup(nanos int64) (int, string) {
+// instant of the Unix epoch. The instant is a count of seconds.
+func (l *Location) lookup(sec int64) (int, string) {
 	if l == nil {
 		return 0, "UTC"
 	}
 	if l.local {
-		return dart.ZoneOffset(nanos)
+		return dart.ZoneOffset(sec)
 	}
 	if len(l.zone) == 0 {
 		return l.offset, l.name
 	}
-	name, offset, _, _, _ := l.lookupSec(floorDiv(nanos, 1000000000))
+	name, offset, _, _, _ := l.lookupSec(sec)
 	return offset, name
 }
 
@@ -173,18 +173,18 @@ func (l *Location) firstZoneUsed() bool {
 
 // lookupName gives the offset of a zone of the location that carries the name
 // at an instant. It reports whether the location holds such a zone.
-func (l *Location) lookupName(name string, nanos int64) (int, bool) {
+func (l *Location) lookupName(name string, sec int64) (int, bool) {
 	if l == nil {
 		return 0, false
 	}
 	if l.local {
-		offset, zone := dart.ZoneOffset(nanos)
+		offset, zone := dart.ZoneOffset(sec)
 		if zone != name {
 			return 0, false
 		}
 		return offset, true
 	}
-	unix := floorDiv(nanos, 1000000000)
+	unix := sec
 
 	// The first pass takes a zone of the name that is in effect at the
 	// instant, because 2 zones of a location can share a name.
@@ -209,7 +209,7 @@ func (l *Location) lookupName(name string, nanos int64) (int, bool) {
 }
 
 // offsetOf gives the offset of the location at a reading of its wall clock, in
-// nanoseconds as if the reading were UTC.
+// seconds as if the reading were UTC.
 //
 // The Dart runtime names the offset of an instant, and a wall clock reading is
 // not such an instant. The first lookup reads the wall clock as if it were UTC,
@@ -223,13 +223,13 @@ func (l *Location) offsetOf(wall int64) int {
 	}
 	if l.local {
 		guess, _ := dart.ZoneOffset(wall)
-		offset, _ := dart.ZoneOffset(wall - int64(guess)*1000000000)
+		offset, _ := dart.ZoneOffset(wall - int64(guess))
 		return offset
 	}
 	if len(l.zone) == 0 {
 		return l.offset
 	}
-	sec := floorDiv(wall, 1000000000)
+	sec := wall
 	_, offset, start, end, _ := l.lookupSec(sec)
 	if offset != 0 {
 		switch utc := sec - int64(offset); {
