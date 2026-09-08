@@ -5082,3 +5082,99 @@ The plan left these points open. The work took the decisions below.
      record of exactly 20 fields, and no code reads it. `dart compile wasm` of
      `testdata/web/webio` passes with the pad and stops without it. The witness
      of the defect stands outside godart, and the user holds the report.
+
+396. The boundary of a `//gart:dart` declaration of the runtime library.
+
+     A `//gart:dart` declaration names 1 Dart symbol, and stage 2 held its
+     value boundary to `bool`, `int`, `float64`, `string`, and `dart.Object`. A
+     wider set would need a conversion for each direction, and a wrong
+     conversion of a foreign library would give a wrong value with no report:
+     `jsonEncode` of `dart:convert` takes an `Object?`, thus an `Iface?`
+     reaches it with no error.
+
+     The runtime library of gart is not a foreign library. The compiler writes
+     the Dart form of each Go type, and the runtime function names that form in
+     its own signature, thus the Dart compiler proves the pair of a declaration
+     and its target. A declaration whose library is
+     `package:goruntime/goruntime.dart` now carries each type of the subset,
+     and each other library keeps the 5 forms. The count of the results still
+     holds at 1, because `dartCall` writes 1.
+
+     `ir.DartRuntimeLib` holds the name, and `internal/emit/dart.go` reads the
+     same constant. The fast marshal of `encoding/json` is the first reader:
+     `func jsonFastMarshal(v any) []byte` needs an `any` and a `[]byte`, and
+     each 1 crosses with no conversion.
+
+     The other road was a function of `syscall/dart` with a case of
+     `intrinsicText`. That road grows a switch of 200 cases for each new call,
+     and it belongs to another agent in this session. The 2 roads stay open,
+     and a later session can move the hook.
+
+397. The fast marshal of `encoding/json`.
+
+     A profile of `json.encode.typed` of 2026-09-09 gave 43 percent of the cost
+     to `reflect.Value.Field` and 40 percent more to the closures of the
+     arshalers of `encoding/json/v2`. The document holds 2,723 objects of 10
+     fields, thus 1 marshal costs 27,230 reads of a field through the reflect
+     bridge.
+
+     `$jsonMarshal` of the runtime library walks the descriptor of the type and
+     the getter of each field, and it writes into a `Uint8List` that doubles.
+     It holds each rule of the v1 option set, and it gives no bytes for a value
+     that it cannot prove: a marshal method, a special type of the decoder, a
+     float32, a NaN, a map whose key is not a string, an embedded field, a tag
+     option other than `omitempty`, and a value deeper than 500 levels. The Go
+     code then marshals that value from the start, thus every byte and every
+     error keeps the answer of Go.
+
+     The design of the decoder asked for a stack of the walk and a set of the
+     identity of each open container above 1,000 levels. The marshal holds a
+     cap of 500 levels instead. The Go code of this build reports a cycle from
+     the depth of 100, thus a give up at 500 levels reaches the report of Go
+     with no set of its own, and the walk pays 1 comparison for each level in
+     place of a hash of each container.
+
+     The measure: 46.5 milliseconds becomes 5.90 milliseconds, against 1.55
+     milliseconds for Go and 7.7 milliseconds for the hand written Dart of the
+     same case. `testdata/programs/jsonencode` proves 30 values against `go
+     run`, byte for byte.
+
+398. The depth of a walk of `encoding/json`.
+
+     3 walks of the JSON packages descended 1 level for each level of the
+     value, and each level cost 2 frames of the machine or more. The stack of
+     Dart holds about 2,000 frames, and Go holds a limit of 10,000 levels.
+
+     - `consumeValue` of `jsontext` and `reformatValue` of `jsontext` each keep
+       the open containers in a slice of their own now. The wrapper of an error
+       adds the name of a member and the index of an element in the order of the
+       recursive form, thus each report holds the text, the offset, and the JSON
+       pointer of Go.
+     - `marshalValueAny` of `encoding/json/v2` holds the same form. A member of
+       an object reaches the walk through a slice of the names, and the recursive
+       form of Go builds such a slice for the deterministic order alone.
+     - A cycle of a pointer, of a map, or of a slice runs through the arshalers
+       of `reflect`, and 1 level of that descent costs about 7 frames.
+       `startDetectingCyclesAfter` holds 100 in this build, and Go holds 1000.
+       The report of a cycle names a shorter JSON pointer than Go names, and each
+       other answer holds. Each test of Go that reads the constant builds its own
+       expectation from it.
+
+     The patch of `arshal_default.go` carries 2,043 lines for 1 constant,
+     because the `.patch` diff mechanism reaches a test file alone.
+
+399. A return of a state machine reads its values first.
+
+     Go evaluates the values of a return statement, and the deferred calls run
+     after that. A machine of stage 4 ran `$defer.run()` in front of the return
+     expression, thus a deferred call that changes a value that the expression
+     reads gave the wrong answer. `internal/emit/machine.go` now writes `{
+     final $ret = <values>; $defer.run(); return $ret; }` for an unnamed
+     result. A named result keeps the other order, because a deferred call
+     writes it.
+
+     `jsontext.AppendFormat` holds that shape: it reads `e.s.Buf` in its
+     return, and the deferred `putBufferedEncoder` drops that buffer when it
+     stands under 25 percent of its capacity 4 times in a row.
+     `ExampleRawMessage_marshal` of `encoding/json` wrote no byte because of
+     it.
