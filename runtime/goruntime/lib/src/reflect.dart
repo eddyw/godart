@@ -211,6 +211,9 @@ void _assignInto(Object? dst, Object? src, TypeDesc desc) {
 /// nil pointer, or points to a type that is neither an interface type nor a
 /// type of the error interface.
 ///
+/// Go panics with a text of the kind string there, and not with a runtime
+/// error, thus a recover of such a panic reads a string.
+///
 /// errors.As holds the case of a nil target itself, thus this check reads a
 /// target that stands.
 void $checkErrorTarget(Iface? target) {
@@ -219,8 +222,8 @@ void $checkErrorTarget(Iface? target) {
   if (desc.kind != 'ptr' || desc.elem == null || target.value == null) {
     $panic(
       Iface(
-        $typeGoError,
-        const GoError('errors: target must be a non-nil pointer'),
+        $typeString,
+        GoString.fromString('errors: target must be a non-nil pointer'),
       ),
     );
   }
@@ -229,8 +232,10 @@ void $checkErrorTarget(Iface? target) {
   if (!elem.methods.containsKey('Error()string')) {
     $panic(
       Iface(
-        $typeGoError,
-        const GoError('errors: *target must be interface or implement error'),
+        $typeString,
+        GoString.fromString(
+          'errors: *target must be interface or implement error',
+        ),
       ),
     );
   }
@@ -2127,6 +2132,58 @@ bool $descAssignable(int handle, int other) {
   final TypeDesc b = _typeAt(other);
   if (a.name == b.name) return true;
   if (b.kind == 'interface') return $descImplements(handle, other);
+  // Go assigns a value of the first type to a location of the second one when
+  // the 2 underlying types are identical and at least 1 of the 2 holds no name
+  // of its own. `[]byte` fits a location of `type Raw []byte` for that reason.
+  if (_unnamedType(a.text) || _unnamedType(b.text)) {
+    return _sameUnderlying(a, b);
+  }
+  return false;
+}
+
+/// The start of the text of a type that Go writes with no name of its own.
+/// The package reflect holds the same list, because Type.Name gives an empty
+/// text for such a type.
+const List<String> _unnamedHeads = <String>[
+  '[',
+  '*',
+  'map[',
+  'chan ',
+  '<-chan ',
+  'func(',
+  'struct{',
+  'struct {',
+  'interface{',
+  'interface {',
+];
+
+bool _unnamedType(String text) {
+  for (final String head in _unnamedHeads) {
+    if (text.startsWith(head)) return true;
+  }
+  return false;
+}
+
+/// Reports whether the 2 types hold the same underlying type.
+///
+/// The test covers the 5 kinds whose Dart form is 1 object for the type and
+/// for each type that names it. A struct type and a function type each need
+/// the identity of every field or of every parameter with its tag, thus the
+/// test leaves the 2 out and gives false there.
+bool _sameUnderlying(TypeDesc a, TypeDesc b) {
+  if (a.kind != b.kind) return false;
+  switch (a.kind) {
+    case 'slice' || 'ptr':
+      return _sameDesc(a.elem, b.elem);
+    case 'chan':
+      // Go needs a two way channel on the left, because the assignment can
+      // narrow the direction and never widen it.
+      return a.dir == 3 && _sameDesc(a.elem, b.elem);
+    case 'array':
+      return a.length == b.length && _sameDesc(a.elem, b.elem);
+    case 'map':
+      return _sameDesc(a.key, b.key) && _sameDesc(a.elem, b.elem);
+  }
   return false;
 }
 
@@ -2173,8 +2230,13 @@ bool $descConvertible(int handle, int other) {
   // conversion performs no operation. `type Raw []byte` holds that shape.
   if (a.kind == b.kind) {
     switch (a.kind) {
-      case 'slice' || 'chan':
+      case 'slice':
         return _sameDesc(a.elem, b.elem);
+      case 'chan':
+        // The underlying type of a channel holds its direction, thus a
+        // conversion needs the same direction. $descAssignable above already
+        // gave true for a two way channel that narrows.
+        return a.dir == b.dir && _sameDesc(a.elem, b.elem);
       case 'array':
         return a.length == b.length && _sameDesc(a.elem, b.elem);
       case 'map':

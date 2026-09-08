@@ -362,6 +362,26 @@ String _leaf(String text, _Verb verb) => _pad(
   verb,
 );
 
+/// _leafInt writes the precision digits and the width of a verb on the text of
+/// a whole number. Go reads the precision of such a verb as the smallest count
+/// of digits, and it drops the flag 0 when a precision stands beside it, thus
+/// `%08.2d` of 1 gives 6 spaces and then 01. The verb v of a whole number
+/// holds the rule of the verb d there.
+String _leafInt(String text, _Verb verb) {
+  switch (verb.letter) {
+    case 'd' || 'b' || 'o' || 'O' || 'x' || 'X' || 'v':
+      break;
+    default:
+      return _leaf(text, verb);
+  }
+  if (verb.prec < 0) return _leaf(text, verb);
+  final String letter = verb.letter == 'v' ? 'd' : verb.letter;
+  return _pad(
+    _precDigits(text, letter, verb.prec),
+    _Verb(verb.letter, verb.flags & ~$flagZero, verb.width, -1),
+  );
+}
+
 /// _pad gives the text the width of the verb. The flag `-` puts the fill after
 /// the text, and the flag `0` writes a zero in place of each space.
 String _pad(String text, _Verb verb) {
@@ -700,7 +720,7 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
     case 'uint':
     case 'uint64':
     case 'uintptr':
-      return _leaf(
+      return _leafInt(
         _sign(
           _base(_int(v as GoInt, letter, true, verb.sharp), verb, letter),
           verb,
@@ -716,7 +736,7 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
     case 'uint8':
     case 'uint16':
     case 'uint32':
-      return _leaf(
+      return _leafInt(
         _sign(
           _base(_int(v as GoInt, letter, false, verb.sharp), verb, letter),
           verb,

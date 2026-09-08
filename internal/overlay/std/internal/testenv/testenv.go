@@ -101,3 +101,11 @@ func Executable(t testing.TB) string {
 // CleanCmdEnv gives the command back with no change. The real form drops each
 // variable of the test environment.
 func CleanCmdEnv(cmd *exec.Cmd) *exec.Cmd { return cmd }
+
+// SkipFlaky skips a test that the Go project marks as flaky. The real form
+// runs the test with the flag -flaky, and the test binary of gart holds no
+// such flag, thus the call always skips.
+func SkipFlaky(t testing.TB, issue int) {
+	t.Helper()
+	t.Skipf("skipping known flaky test; see golang.org/issue/%d", issue)
+}
