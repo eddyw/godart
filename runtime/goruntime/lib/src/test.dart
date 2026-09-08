@@ -32,17 +32,16 @@ bool $catch(void Function()? f) {
 ///
 /// The frame holds the stop signal of the inner chain, exactly as the first
 /// call does.
-final class _CatchWait implements WaitFrame, DurableWait {
+final class _CatchWait implements WaitFrame, DurableWait, NestedFrame {
   Frame inner;
 
   _CatchWait(this.inner);
 
   @override
-  String get $reason {
-    final Frame f = inner;
-    if (f is WaitFrame) return f.$reason;
-    return 'waiting';
-  }
+  Frame get $inner => inner;
+
+  @override
+  String get $reason => $waitReason(inner);
 
   /// The wait of the inner chain holds the answer, thus the mark passes down.
   @override

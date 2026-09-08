@@ -64,18 +64,8 @@ Slice<GoString> $parked() {
   final List<GoString> out = <GoString>[];
   for (final Goroutine g in $goroutines) {
     if (identical(g, $current)) continue;
-    String reason = g.frame == null ? 'runnable' : 'waiting';
-    final List<TraceFrame> stack = <TraceFrame>[];
-    Frame? f = g.frame;
-    while (f != null) {
-      if (f is TraceFrame) {
-        stack.add(f);
-        f = f.$next;
-        continue;
-      }
-      if (f is WaitFrame) reason = f.$reason;
-      break;
-    }
+    final String reason = g.frame == null ? 'runnable' : $waitReason(g.frame);
+    final List<TraceFrame> stack = $traceFrames(g.frame);
     final StringBuffer text = StringBuffer('${g.id}|$reason');
     for (final TraceFrame t in stack) {
       text.write('\n${t.$name}|${t.$goFile}|${t.$goLine}');

@@ -1964,7 +1964,7 @@ bool $valueTrySend(Iface? value, Iface? x) {
 /// The frame of the runtime gives the number of the case, and the package
 /// reflect needs the value of a receive as well. The conversion stands here,
 /// because the caller reads the result of the resume.
-final class _SelectResume implements WaitFrame {
+final class _SelectResume implements WaitFrame, DurableWait, NestedFrame {
   final Frame inner;
   final List<SelectCase> cases;
   final List<int> order;
@@ -1973,7 +1973,14 @@ final class _SelectResume implements WaitFrame {
   _SelectResume(this.inner, this.cases, this.order, this.descs);
 
   @override
-  String get $reason => 'select';
+  Frame get $inner => inner;
+
+  @override
+  String get $reason => $waitReason(inner);
+
+  /// The wait of the select statement of the runtime holds the answer.
+  @override
+  bool $durableIn(Bubble b) => $durableWait(inner, b);
 
   @override
   Object? resume() {
@@ -2449,14 +2456,21 @@ int $valuePointer(Iface? value) {
 }
 
 /// The frame of a goroutine that waits inside reflect.Value.Recv.
-final class _RecvResume implements WaitFrame {
+final class _RecvResume implements WaitFrame, DurableWait, NestedFrame {
   final Frame inner;
   final TypeDesc desc;
 
   _RecvResume(this.inner, this.desc);
 
   @override
-  String get $reason => 'chan receive';
+  Frame get $inner => inner;
+
+  @override
+  String get $reason => $waitReason(inner);
+
+  /// The wait of the channel of the runtime holds the answer.
+  @override
+  bool $durableIn(Bubble b) => $durableWait(inner, b);
 
   @override
   Object? resume() {
