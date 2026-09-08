@@ -256,15 +256,33 @@ func (c *conn) Close() error {
 //gart:dart package:goruntime/goruntime.dart $connCloseWrite
 func connCloseWrite(handle int) string
 
+// connCloseRead ends the read side of a connection. The result is empty on
+// success, and it names the cause on a failure.
+//
+//gart:dart package:goruntime/goruntime.dart $connCloseRead
+func connCloseRead(handle int) string
+
 // closeWrite ends the write side of the connection. The peer then reads the
 // end of the stream, and this side still reads. A write after it gives an
 // error.
 //
-// The runtime holds a Socket of dart:io, and Socket.close ends the send
-// direction alone. The receive direction alone needs RawSocket.shutdown, and
-// the runtime holds no raw socket, thus no closeRead stands here.
+// A plain connection rides a RawSocket of dart:io, thus the runtime writes the
+// shutdown of the send direction. Go writes the same call of the system.
 func (c *conn) closeWrite() error {
 	if cause := connCloseWrite(c.handle); cause != "" {
+		return netError("close "+c.network, cause)
+	}
+	return nil
+}
+
+// closeRead ends the read side of the connection. Each read of this side then
+// gives io.EOF, and the system drops each byte that arrives after it.
+//
+// The runtime writes the shutdown of the receive direction of the RawSocket,
+// exactly as CloseRead of Go does. A peer of a BSD system reads a reset for
+// the bytes that it wrote after the call, because the system holds that rule.
+func (c *conn) closeRead() error {
+	if cause := connCloseRead(c.handle); cause != "" {
 		return netError("close "+c.network, cause)
 	}
 	return nil

@@ -10,23 +10,27 @@ import 'string.dart';
 
 /// One open connection.
 ///
-/// The iterator takes 1 packet of the stream at a time. The rest holds the
-/// bytes of a packet that a read did not take, because a Go read gives only
-/// the count that the slice holds.
-final class _Conn {
-  final Socket socket;
-  final StreamIterator<Uint8List> packets;
+/// The rest holds the bytes that a read did not take, because a Go read gives
+/// only the count that the slice holds.
+///
+/// The class holds 2 forms. A plain TCP connection and a connection of the
+/// Unix domain each ride a RawSocket, thus each 1 reaches the half close of
+/// the system. A TLS connection rides a Socket, because the secure socket of
+/// Dart owns the record layer and it drains the socket under it.
+abstract class _Conn {
   Uint8List rest = Uint8List(0);
 
-  /// True after the peer closed the write side. Each read then gives 0.
+  /// True after the receive direction ended. Each read then gives 0.
   bool ended = false;
 
-  /// True after this side closed the write side. Each write then gives a
-  /// cause, because the sink of the socket rejects a late byte with a throw.
+  /// True after this side ended the write side. Each write then gives a cause.
   bool writeEnded = false;
 
+  /// True after this side ended the read side.
+  bool readEnded = false;
+
   /// The read that stands open. A deadline ends the wait of the caller, and
-  /// the read of the stream stays, thus the next read takes the same future.
+  /// the read of the socket stays, thus the next read takes the same future.
   Future<int>? pending;
 
   /// The 2 deadlines, in nanoseconds after the start of the Unix epoch. A
@@ -34,7 +38,273 @@ final class _Conn {
   int readDeadline = 0;
   int writeDeadline = 0;
 
-  _Conn(this.socket) : packets = StreamIterator<Uint8List>(socket);
+  /// The local address, the local port, the address of the peer, and the port
+  /// of the peer.
+  InternetAddress get local;
+  int get localPort;
+  InternetAddress get remote;
+  int get remotePort;
+
+  /// fill reads the next bytes into the rest. It gives 0 for bytes and 1 for
+  /// the end of the receive direction.
+  Future<int> fill();
+
+  /// send writes each byte and gives the count.
+  Future<int> send(Uint8List bytes);
+
+  /// endWrite ends the send direction. The peer then reads the end of the
+  /// stream, and this side still reads.
+  void endWrite();
+
+  /// endRead ends the receive direction. Each read of this side then gives the
+  /// end of the stream, and the system drops each byte that arrives after it.
+  ///
+  /// A raw socket holds the operation, and a Socket of Dart holds none, thus
+  /// the result names the cause on a form that cannot reach it.
+  String endRead();
+
+  /// destroy ends the 2 directions and frees the socket.
+  void destroy();
+
+  /// option writes 1 socket option.
+  void setFlag(SocketOption option, bool on);
+  void setRaw(RawSocketOption option);
+}
+
+/// A connection over a Socket of dart:io. The TLS connections take this form.
+///
+/// The iterator takes 1 packet of the stream at a time.
+final class _StreamConn extends _Conn {
+  final Socket socket;
+  final StreamIterator<Uint8List> packets;
+
+  _StreamConn(this.socket) : packets = StreamIterator<Uint8List>(socket);
+
+  @override
+  InternetAddress get local => socket.address;
+  @override
+  int get localPort => socket.port;
+  @override
+  InternetAddress get remote => socket.remoteAddress;
+  @override
+  int get remotePort => socket.remotePort;
+
+  @override
+  Future<int> fill() => packets.moveNext().then((bool more) {
+    if (!more) {
+      ended = true;
+      return 1;
+    }
+    rest = packets.current;
+    return 0;
+  });
+
+  @override
+  Future<int> send(Uint8List bytes) {
+    socket.add(bytes);
+    return socket.flush().then((_) => bytes.length);
+  }
+
+  @override
+  void endWrite() {
+    socket.close().ignore();
+  }
+
+  @override
+  String endRead() =>
+      'close: the secure socket of Dart holds no half close of the read side';
+
+  @override
+  void destroy() {
+    unawaited(packets.cancel());
+    socket.destroy();
+  }
+
+  @override
+  void setFlag(SocketOption option, bool on) => socket.setOption(option, on);
+  @override
+  void setRaw(RawSocketOption option) => socket.setRawOption(option);
+}
+
+/// A connection over a RawSocket of dart:io.
+///
+/// The class drives the byte stream itself. A read enables the read event and
+/// waits for it, thus the socket holds the bytes that no read took and the
+/// system applies the back pressure of TCP. A write repeats until the socket
+/// took each byte, because 1 write of a raw socket can take a part alone.
+final class _RawConn extends _Conn {
+  final RawSocket socket;
+  late final StreamSubscription<RawSocketEvent> events;
+
+  /// The read that waits for the next event of the socket.
+  Completer<int>? reader;
+
+  /// The write that waits for room in the buffer of the socket.
+  Completer<void>? writer;
+
+  /// True after a close or a failure took the socket. A write then reports the
+  /// cause, because a write of a socket that no longer stands takes no byte
+  /// and the loop of send would never end.
+  bool gone = false;
+
+  _RawConn(this.socket) {
+    socket.readEventsEnabled = false;
+    socket.writeEventsEnabled = false;
+    events = socket.listen(
+      _event,
+      onDone: _end,
+      onError: (Object cause, StackTrace trace) => _fail(cause),
+    );
+  }
+
+  void _event(RawSocketEvent e) {
+    if (e == RawSocketEvent.read) {
+      _wakeRead();
+      return;
+    }
+    if (e == RawSocketEvent.write) {
+      final Completer<void>? w = writer;
+      writer = null;
+      w?.complete();
+      return;
+    }
+    if (e == RawSocketEvent.readClosed || e == RawSocketEvent.closed) {
+      _end();
+    }
+  }
+
+  void _wakeRead() {
+    final Completer<int>? w = reader;
+    if (w == null) {
+      socket.readEventsEnabled = false;
+      return;
+    }
+    final Uint8List? got = _drain();
+    if (got == null) return;
+    reader = null;
+    socket.readEventsEnabled = false;
+    rest = got;
+    w.complete(0);
+  }
+
+  /// _drain takes each byte that the socket holds, and it gives null for a
+  /// socket that holds none.
+  ///
+  /// The count stands in the call, because a read with no count asserts that
+  /// the socket holds at least 1 byte. A build with the assertions on then
+  /// reports the failure `Read failed` in the place of an empty answer.
+  Uint8List? _drain() {
+    final int have = socket.available();
+    if (have <= 0) return null;
+    final Uint8List? got = socket.read(have);
+    if (got == null || got.isEmpty) return null;
+    return got;
+  }
+
+  void _end() {
+    ended = true;
+    final Completer<int>? w = reader;
+    if (w == null) return;
+    reader = null;
+    w.complete(1);
+  }
+
+  void _fail(Object cause) {
+    ended = true;
+    gone = true;
+    final Completer<int>? w = reader;
+    if (w != null) {
+      reader = null;
+      w.completeError(cause);
+    }
+    final Completer<void>? p = writer;
+    if (p != null) {
+      writer = null;
+      p.completeError(cause);
+    }
+  }
+
+  @override
+  InternetAddress get local => socket.address;
+  @override
+  int get localPort => socket.port;
+  @override
+  InternetAddress get remote => socket.remoteAddress;
+  @override
+  int get remotePort => socket.remotePort;
+
+  @override
+  Future<int> fill() {
+    // The socket can hold bytes that no event announced, because the read
+    // event stands off while no read waits.
+    final Uint8List? got = _drain();
+    if (got != null) {
+      rest = got;
+      return Future<int>.value(0);
+    }
+    if (ended) return Future<int>.value(1);
+    final Completer<int> done = Completer<int>();
+    reader = done;
+    socket.readEventsEnabled = true;
+    return done.future;
+  }
+
+  @override
+  Future<int> send(Uint8List bytes) async {
+    int off = 0;
+    while (off < bytes.length) {
+      if (gone) {
+        throw const SocketException('use of closed network connection');
+      }
+      final int n = socket.write(bytes, off, bytes.length - off);
+      off += n;
+      if (off >= bytes.length) break;
+      final Completer<void> room = Completer<void>();
+      writer = room;
+      socket.writeEventsEnabled = true;
+      await room.future;
+    }
+    return off;
+  }
+
+  @override
+  void endWrite() {
+    socket.shutdown(SocketDirection.send);
+  }
+
+  @override
+  String endRead() {
+    socket.shutdown(SocketDirection.receive);
+    return '';
+  }
+
+  /// destroy ends the socket, and it wakes each operation that waits.
+  ///
+  /// A goroutine that waits for a read or for room holds the frame of that
+  /// wait. A close that woke no such frame would hold the goroutine for ever,
+  /// exactly as a cancel of a request of net/http showed.
+  @override
+  void destroy() {
+    gone = true;
+    ended = true;
+    unawaited(events.cancel());
+    unawaited(socket.close());
+    final Completer<int>? r = reader;
+    if (r != null) {
+      reader = null;
+      r.complete(1);
+    }
+    final Completer<void>? w = writer;
+    if (w != null) {
+      writer = null;
+      w.complete();
+    }
+  }
+
+  @override
+  void setFlag(SocketOption option, bool on) => socket.setOption(option, on);
+  @override
+  void setRaw(RawSocketOption option) => socket.setRawOption(option);
 }
 
 /// The open connections of the program, by handle.
@@ -48,8 +318,11 @@ final List<_Conn?> _open = <_Conn?>[];
 /// The iterator takes 1 connection of the stream at a time. A cancel of the
 /// iterator closes the server socket, and a pending accept then gives no
 /// connection.
+///
+/// A plain listener gives a RawSocket and a TLS listener gives a SecureSocket,
+/// thus the element type of the stream is Object and each accept casts it.
 final class _Listener {
-  final StreamIterator<Socket> incoming;
+  final StreamIterator<Object> incoming;
 
   /// close ends the server socket. A plain listener and a TLS listener hold
   /// 2 server classes with no shared base, thus the class keeps a function.
@@ -59,8 +332,8 @@ final class _Listener {
   /// The value is empty for a TCP listener.
   final String unixPath;
 
-  _Listener(Stream<Socket> stream, this.close, [this.unixPath = ''])
-    : incoming = StreamIterator<Socket>(stream);
+  _Listener(Stream<Object> stream, this.close, [this.unixPath = ''])
+    : incoming = StreamIterator<Object>(stream);
 }
 
 /// The open listeners of the program, by handle. The handles of a listener, of
@@ -154,8 +427,7 @@ void _closeAll() {
     final _Conn? c = _open[i];
     if (c == null) continue;
     _open[i] = null;
-    unawaited(c.packets.cancel());
-    c.socket.destroy();
+    c.destroy();
   }
   for (int i = 0; i < _listeners.length; i++) {
     final _Listener? l = _listeners[i];
@@ -193,9 +465,12 @@ _Conn? _at(int handle) {
 /// wraps the socket, and the handle then answers no read and no write. The
 /// take works only while no read ran, because the first read subscribes the
 /// iterator of the connection to the stream.
+///
+/// Only a TLS connection reaches the HTTP/2 session, and such a connection
+/// holds a Socket. A plain connection holds a raw socket and gives null.
 Socket? $takeSocket(int handle) {
   final _Conn? c = _at(handle);
-  if (c == null) return null;
+  if (c is! _StreamConn) return null;
   _open[handle] = null;
   return c.socket;
 }
@@ -386,23 +661,18 @@ int _take(_Conn c, Slice<int> p) {
   return n;
 }
 
-/// _fill reads the next packet of a connection into its rest. It gives 0 for a
-/// packet and 1 for the end of the stream.
+/// _fill reads the next bytes of a connection into its rest. It gives 0 for
+/// bytes and 1 for the end of the stream.
 ///
-/// The iterator of a stream holds 1 open read, thus the connection keeps the
-/// future. A read that a deadline ended leaves that future open, and the next
-/// read takes it again.
+/// The socket holds 1 open read, thus the connection keeps the future. A read
+/// that a deadline ended leaves that future open, and the next read takes it
+/// again.
 Future<int> _fill(_Conn c) {
   final Future<int>? open = c.pending;
   if (open != null) return open;
-  final Future<int> next = c.packets.moveNext().then((bool more) {
+  final Future<int> next = c.fill().then((int code) {
     c.pending = null;
-    if (!more) {
-      c.ended = true;
-      return 1;
-    }
-    c.rest = c.packets.current;
-    return 0;
+    return code;
   });
   c.pending = next;
   return next;
@@ -416,10 +686,10 @@ Future<int> _fill(_Conn c) {
 /// frame of the wait gives the value to the caller.
 (int, GoString) $dialTCP(GoString host, int port) {
   $await(
-    Socket.connect(
+    RawSocket.connect(
       host.toDartString(),
       port,
-    ).then((Socket s) => (_slot(_Conn(s)), _empty)),
+    ).then((RawSocket s) => (_slot(_RawConn(s)), _empty)),
     (Object cause) => (-1, _connectCause(cause)),
   );
   return (-1, _empty);
@@ -459,7 +729,7 @@ Future<int> _fill(_Conn c) {
         )
         .then(
           (SecureSocket s) => (
-            _slot(_Conn(s)),
+            _slot(_StreamConn(s)),
             GoString.fromString(s.selectedProtocol ?? ''),
             _empty,
           ),
@@ -550,7 +820,7 @@ Future<(int, GoString, GoString)> _tunnel(
     onBadCertificate: insecure ? (X509Certificate c) => true : null,
   );
   return (
-    _slot(_Conn(s)),
+    _slot(_StreamConn(s)),
     GoString.fromString(s.selectedProtocol ?? ''),
     _empty,
   );
@@ -578,11 +848,11 @@ String _statusLine(Uint8List b) {
 /// Opens a connection to a Unix socket and gives its handle.
 (int, GoString) $dialUnix(GoString path) {
   $await(
-    Socket.connect(
+    RawSocket.connect(
       InternetAddress(path.toDartString(), type: InternetAddressType.unix),
       0,
-    ).then((Socket s) => (_slot(_Conn(s)), _empty)),
-    (Object cause) => (-1, _cause(cause)),
+    ).then((RawSocket s) => (_slot(_RawConn(s)), _empty)),
+    (Object cause) => (-1, _connectCause(cause)),
   );
   return (-1, _empty);
 }
@@ -615,10 +885,9 @@ String _statusLine(Uint8List b) {
   if (c == null) return (0, _closed());
   if (c.writeEnded) return (0, GoString.fromString('broken pipe'));
   if (p.len == 0) return (0, _empty);
-  c.socket.add(_bytes(p));
   $await(
     _limit<(int, GoString)>(
-      c.socket.flush().then((_) => (p.len, _empty)),
+      c.send(_bytes(p)).then((int n) => (n, _empty)),
       c.writeDeadline,
       (0, _timeout()),
     ),
@@ -642,10 +911,10 @@ String _statusLine(Uint8List b) {
     );
   }
   return (
-    GoString.fromString(c.socket.address.address),
-    c.socket.port,
-    GoString.fromString(c.socket.remoteAddress.address),
-    c.socket.remotePort,
+    GoString.fromString(c.local.address),
+    c.localPort,
+    GoString.fromString(c.remote.address),
+    c.remotePort,
     GoString.empty,
   );
 }
@@ -683,12 +952,12 @@ GoString $connOption(int handle, GoString name, int value) {
   final String key = name.toDartString();
   try {
     if (key == 'nodelay') {
-      c.socket.setOption(SocketOption.tcpNoDelay, value != 0);
+      c.setFlag(SocketOption.tcpNoDelay, value != 0);
       return _empty;
     }
     final int? option = _sockOptionNumber(key);
     if (option == null) return _optionCause(key);
-    c.socket.setRawOption(
+    c.setRaw(
       RawSocketOption.fromInt(RawSocketOption.levelSocket, option, value),
     );
     return _empty;
@@ -719,25 +988,46 @@ GoString $connClose(int handle) {
   final _Conn? c = _at(handle);
   if (c == null) return _closed();
   _open[handle] = null;
-  unawaited(c.packets.cancel());
-  c.socket.destroy();
+  c.destroy();
   return _empty;
 }
 
 /// Ends the write side of a connection, and gives an empty text or the cause.
 /// The peer then reads the end of the stream, and this side still reads.
 ///
-/// Socket.close of dart:io shuts the send direction down after the flush of
-/// each pending byte, and each write of this runtime waits for its own flush,
-/// thus the close holds no pending byte. The result is a Dart String, because
-/// an external declaration of the overlay reads it.
+/// A raw socket writes the shutdown of the send direction. A Socket of Dart
+/// reaches the same operation through close, which shuts that direction down
+/// after the flush of each pending byte. Each write of this runtime waits for
+/// its own flush, thus the close holds no pending byte.
+///
+/// The result is a Dart String, because an external declaration of the overlay
+/// reads it.
 String $connCloseWrite(int handle) {
   final _Conn? c = _at(handle);
   if (c == null) return 'use of closed network connection';
   if (!c.writeEnded) {
     c.writeEnded = true;
-    c.socket.close().ignore();
+    c.endWrite();
   }
+  return '';
+}
+
+/// Ends the read side of a connection, and gives an empty text or the cause.
+/// Each read of this side then gives the end of the stream.
+///
+/// RawSocket.shutdown of dart:io writes the shutdown of the receive direction.
+/// The system then drops each byte that arrives after it, and the peer of a
+/// BSD system reads a reset for the bytes that it wrote. Go holds the same
+/// behavior, because CloseRead of Go writes the same call of the system.
+String $connCloseRead(int handle) {
+  final _Conn? c = _at(handle);
+  if (c == null) return 'use of closed network connection';
+  if (c.readEnded) return '';
+  final String cause = c.endRead();
+  if (cause != '') return cause;
+  c.readEnded = true;
+  c.ended = true;
+  c.rest = Uint8List(0);
   return '';
 }
 
@@ -757,8 +1047,8 @@ GoString $connDeadline(int handle, int read, int write) {
 /// The call gives up control, thus the result of the call itself is dead.
 (int, int, GoString) $listenTCP(GoString host, int port) {
   $await(
-    ServerSocket.bind(host.toDartString(), port).then(
-      (ServerSocket s) =>
+    RawServerSocket.bind(host.toDartString(), port).then(
+      (RawServerSocket s) =>
           (_listenSlot(_Listener(s, () => s.close())), s.port, _empty),
     ),
     (Object cause) => (-1, 0, _cause(cause)),
@@ -808,9 +1098,9 @@ GoString $connDeadline(int handle, int read, int write) {
   $await(
     l.incoming.moveNext().then((bool more) {
       if (!more) return (-1, _empty, _closed());
-      final Socket s = l.incoming.current;
+      final Socket s = l.incoming.current as Socket;
       final String proto = s is SecureSocket ? s.selectedProtocol ?? '' : '';
-      return (_slot(_Conn(s)), GoString.fromString(proto), _empty);
+      return (_slot(_StreamConn(s)), GoString.fromString(proto), _empty);
     }),
     (Object cause) => (-1, _empty, _cause(cause)),
   );
@@ -821,11 +1111,11 @@ GoString $connDeadline(int handle, int read, int write) {
 (int, GoString) $listenUnix(GoString path) {
   final String name = path.toDartString();
   $await(
-    ServerSocket.bind(
+    RawServerSocket.bind(
       InternetAddress(name, type: InternetAddressType.unix),
       0,
     ).then(
-      (ServerSocket s) =>
+      (RawServerSocket s) =>
           (_listenSlot(_Listener(s, () => s.close(), name)), _empty),
     ),
     (Object cause) => (-1, _cause(cause)),
@@ -840,7 +1130,7 @@ GoString $connDeadline(int handle, int read, int write) {
   $await(
     l.incoming.moveNext().then((bool more) {
       if (!more) return (-1, _closed());
-      return (_slot(_Conn(l.incoming.current)), _empty);
+      return (_slot(_RawConn(l.incoming.current as RawSocket)), _empty);
     }),
     (Object cause) => (-1, _cause(cause)),
   );
