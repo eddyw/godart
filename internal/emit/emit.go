@@ -176,6 +176,9 @@ type emitter struct {
 	inClass map[*ir.Func]bool
 	// globals lists each package variable in declaration order.
 	globals []*ir.Global
+	// lazyGlobals marks each package variable that takes the lazy form. Read
+	// lazyGlobal.
+	lazyGlobals map[*ir.Global]bool
 	// inits lists each init function of the package.
 	inits []*ir.Func
 	// mainFunc holds the entry function of package main.
@@ -601,6 +604,98 @@ func (e *emitter) groupMethods(p *ir.Package) {
 		}
 	}
 	e.globals = initOrder(e.globals, p.InitOrder)
+	e.lazyGlobals = map[*ir.Global]bool{}
+	for _, g := range e.globals {
+		if lazyGlobal(g) {
+			e.lazyGlobals[g] = true
+		}
+	}
+}
+
+// lazyGlobal reports whether a package variable takes the form
+// `late T x = <value>;`.
+//
+// Dart runs the initializer of such a declaration at the first read, thus the
+// tree shaker drops the variable and its whole value when no code reads it.
+// The init routine writes each other variable, and the shaker keeps each 1
+// because that routine always runs.
+//
+// The move holds only for an initializer that cannot panic and that writes
+// nothing outside the variable. A blank variable holds its initializer for the
+// effect alone, a boxed variable takes its box from the init routine, and a
+// pending local function stands in that routine too, thus each of the 3 stays
+// eager.
+func lazyGlobal(g *ir.Global) bool {
+	if g.Var.Name == "_" || g.Var.Boxed || len(g.Pending) != 0 {
+		return false
+	}
+	return lazyValue(g.Init)
+}
+
+// isArrayConv reports a conversion of a slice to an array or to a pointer to
+// an array. Go 1.20 gave that form, and it panics for a slice that holds fewer
+// elements than the array.
+func isArrayConv(x *ir.Conv) bool {
+	if _, ok := types.Unalias(x.From).Underlying().(*types.Slice); !ok {
+		return false
+	}
+	to := types.Unalias(x.Type).Underlying()
+	if p, ok := to.(*types.Pointer); ok {
+		to = types.Unalias(p.Elem()).Underlying()
+	}
+	_, ok := to.(*types.Array)
+	return ok
+}
+
+// lazyValue reports whether an initializer of a package variable can run at
+// the first read.
+//
+// A nil expression is the zero value of the type. Each form below builds a
+// value out of a constant, out of a name that another package variable holds,
+// or out of another such form. No form calls a function, reads a channel, or
+// writes a value that another name reads.
+func lazyValue(x ir.Expr) bool {
+	switch x := x.(type) {
+	case nil:
+		return true
+	case *ir.Const, *ir.Zero:
+		return true
+	case *ir.Ident:
+		// A boxed name reads the box that the init routine builds.
+		return !x.Boxed
+	case *ir.Unary:
+		// A star reads the value at a pointer, and a nil pointer panics.
+		switch x.Op {
+		case token.ADD, token.SUB, token.XOR, token.NOT, token.AND:
+			return lazyValue(x.X)
+		}
+		return false
+	case *ir.Conv:
+		// A conversion of a slice to an array, or to a pointer to an array,
+		// panics for a slice that holds too few elements.
+		if isArrayConv(x) {
+			return false
+		}
+		return lazyValue(x.X)
+	case *ir.Composite:
+		// A literal that the order pass split reads a record of the init
+		// routine.
+		if x.Results != nil {
+			return false
+		}
+		for _, k := range x.Keys {
+			if !lazyValue(k) {
+				return false
+			}
+		}
+		for _, v := range x.Elems {
+			if !lazyValue(v) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 
 // initOrder sorts the package variables into the order that Go gives them a
@@ -750,6 +845,11 @@ func (e *emitter) writeInit(imports []Import) {
 			}
 			continue
 		}
+		// A lazy variable holds its value in its own declaration, thus the
+		// routine writes nothing for it.
+		if e.lazyGlobals[g] {
+			continue
+		}
 		// A function literal of the initializer that can block becomes a local
 		// function of the init routine.
 		e.list(g.Pending)
@@ -819,6 +919,15 @@ func (e *emitter) decl(d ir.Decl) {
 		}
 		if d.Var.Boxed {
 			e.line("late Box<%s> %s;", e.dartType(d.Var.Type), e.topName(e.pkg, d.Var.Name))
+			return
+		}
+		if e.lazyGlobals[d] {
+			value := e.zero(d.Var.Type)
+			if d.Init != nil {
+				value = e.expr(d.Init)
+			}
+			e.line("late %s %s = %s;", e.dartType(d.Var.Type),
+				e.topName(e.pkg, d.Var.Name), value)
 			return
 		}
 		e.line("late %s %s;", e.dartType(d.Var.Type), e.topName(e.pkg, d.Var.Name))

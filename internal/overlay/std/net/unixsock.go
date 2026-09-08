@@ -14,11 +14,11 @@ import (
 // networks unixgram and unixpacket stay out. `ListenUnixgram` needs a
 // datagram socket of the domain, and Dart opens none.
 //
-// The socket gives no file descriptor and no close of the receive direction
-// alone, thus `CloseRead`, `File`, `SyscallConn`, `SetReadBuffer`, and
-// `SetWriteBuffer` stay out. `CloseWrite` rides `Socket.close`, which ends
-// the send direction alone. The socket reads no control message, thus
-// `ReadMsgUnix` and `WriteMsgUnix` stay out.
+// The socket gives no file descriptor, thus `File`, `SyscallConn`,
+// `SetReadBuffer`, and `SetWriteBuffer` stay out. `CloseWrite` and `CloseRead`
+// each ride `RawSocket.shutdown`, which ends 1 direction of the socket. The
+// socket reads no control message, thus `ReadMsgUnix` and `WriteMsgUnix` stay
+// out.
 //
 // `WriteTo` and `WriteToUnix` stay out too. Go writes such a datagram with
 // sendto, and a socket that a dial connected gives ErrWriteToConnected. A
@@ -68,6 +68,10 @@ func (u *UnixConn) Close() error { return u.c.Close() }
 // CloseWrite ends the write side of the connection. The peer then reads the
 // end of the stream, and this side still reads.
 func (u *UnixConn) CloseWrite() error { return u.c.closeWrite() }
+
+// CloseRead ends the read side of the connection. Each read of this side then
+// gives io.EOF, and the system drops each byte that the peer writes after it.
+func (u *UnixConn) CloseRead() error { return u.c.closeRead() }
 
 // LocalAddr gives the address of this side of the connection.
 func (u *UnixConn) LocalAddr() Addr { return u.c.LocalAddr() }

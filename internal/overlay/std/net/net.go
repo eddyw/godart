@@ -256,15 +256,33 @@ func (c *conn) Close() error {
 //gart:dart package:goruntime/goruntime.dart $connCloseWrite
 func connCloseWrite(handle int) string
 
+// connCloseRead ends the read side of a connection. The result is empty on
+// success, and it names the cause on a failure.
+//
+//gart:dart package:goruntime/goruntime.dart $connCloseRead
+func connCloseRead(handle int) string
+
 // closeWrite ends the write side of the connection. The peer then reads the
 // end of the stream, and this side still reads. A write after it gives an
 // error.
 //
-// The runtime holds a Socket of dart:io, and Socket.close ends the send
-// direction alone. The receive direction alone needs RawSocket.shutdown, and
-// the runtime holds no raw socket, thus no closeRead stands here.
+// A plain connection rides a RawSocket of dart:io, thus the runtime writes the
+// shutdown of the send direction. Go writes the same call of the system.
 func (c *conn) closeWrite() error {
 	if cause := connCloseWrite(c.handle); cause != "" {
+		return netError("close "+c.network, cause)
+	}
+	return nil
+}
+
+// closeRead ends the read side of the connection. Each read of this side then
+// gives io.EOF, and the system drops each byte that arrives after it.
+//
+// The runtime writes the shutdown of the receive direction of the RawSocket,
+// exactly as CloseRead of Go does. A peer of a BSD system reads a reset for
+// the bytes that it wrote after the call, because the system holds that rule.
+func (c *conn) closeRead() error {
+	if cause := connCloseRead(c.handle); cause != "" {
 		return netError("close "+c.network, cause)
 	}
 	return nil
@@ -380,7 +398,17 @@ func (l *listener) Close() error {
 func (l *listener) Addr() Addr { return l.addr }
 
 // Dial opens a connection to an address. The network is tcp, udp, or unix.
+//
+// A host name can hold more than 1 address. The dial reads the whole list and
+// it tries each address in turn, exactly as Go does.
 func Dial(network, address string) (Conn, error) {
+	var d Dialer
+	return d.DialContext(context.Background(), network, address)
+}
+
+// dialOne opens 1 connection to 1 address. The host of the address holds a
+// numeric form, or the name of a socket of the Unix domain.
+func dialOne(network, address string) (Conn, error) {
 	switch network {
 	case "tcp":
 		host, port, err := hostPort(address)
@@ -575,32 +603,93 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 		defer cancel()
 		ctx = inner
 	}
-	if d.Resolver != nil {
-		resolved, err := d.resolve(ctx, network, address)
-		if err != nil {
-			return nil, err
-		}
-		address = resolved
+	list, err := d.addrList(ctx, network, address)
+	if err != nil {
+		return nil, err
 	}
 	trace := traceOf(ctx)
-	traceConnectStart(trace, network, address)
+	var first error
+	for _, one := range list {
+		traceConnectStart(trace, network, one)
+		c, cause := d.dialOneAddr(ctx, network, one)
+		traceConnectDone(trace, network, one, cause)
+		if cause == nil {
+			return c, nil
+		}
+		if first == nil {
+			first = cause
+		}
+		if ctx.Err() != nil {
+			break
+		}
+	}
+	if first == nil {
+		first = &OpError{Op: "dial", Net: network, Err: errMissingAddress}
+	}
+	return nil, first
+}
+
+// errMissingAddress names a dial that holds no address. Go gives the same
+// text.
+var errMissingAddress = errors.New("missing address")
+
+// addrList gives each address that a dial tries, in the order of the
+// resolver. Go resolves the host of a dial 1 time and it then tries each
+// address of the list.
+//
+// A socket of the Unix domain names a path, and a numeric host names itself,
+// thus each of the 2 gives a list of 1 item with no lookup.
+func (d *Dialer) addrList(ctx context.Context, network, address string) ([]string, error) {
+	if network == "unix" || network == "unixgram" || network == "unixpacket" {
+		return []string{address}, nil
+	}
+	host, port, err := SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+	if host == "" || ParseIP(host) != nil {
+		return []string{address}, nil
+	}
+	ips, err := d.resolver().LookupIP(ctx, "ip", host)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		out = append(out, JoinHostPort(ip.String(), port))
+	}
+	return out, nil
+}
+
+// resolver gives the resolver of the dialer, or the resolver of the package.
+func (d *Dialer) resolver() *Resolver {
+	if d.Resolver != nil {
+		return d.Resolver
+	}
+	return DefaultResolver
+}
+
+// dialOneAddr opens 1 connection and it ends the wait when the context ends.
+//
+// A context that holds no end and a dialer that holds no Cancel need no
+// second goroutine, thus a plain dial costs 1 call.
+func (d *Dialer) dialOneAddr(ctx context.Context, network, address string) (Conn, error) {
+	if ctx.Done() == nil && d.Cancel == nil {
+		return dialOne(network, address)
+	}
 	done := make(chan dialResult, 1)
 	go func() {
-		c, cause := Dial(network, address)
+		c, cause := dialOne(network, address)
 		done <- dialResult{conn: c, cause: cause}
 	}()
 	select {
 	case r := <-done:
-		traceConnectDone(trace, network, address, r.cause)
 		return r.conn, r.cause
 	case <-ctx.Done():
 		go closeLate(done)
-		err := mapErr(ctx.Err())
-		traceConnectDone(trace, network, address, err)
-		return nil, err
+		return nil, mapErr(ctx.Err())
 	case <-d.Cancel:
 		go closeLate(done)
-		traceConnectDone(trace, network, address, errCanceled)
 		return nil, errCanceled
 	}
 }
@@ -706,37 +795,55 @@ func closeLate(done chan dialResult) {
 	}
 }
 
-// resolve gives the address again with the host name replaced by the first
-// address that the resolver of the dialer gives.
-func (d *Dialer) resolve(ctx context.Context, network, address string) (string, error) {
-	if network == "unix" {
-		return address, nil
-	}
-	host, port, err := SplitHostPort(address)
-	if err != nil {
-		return "", err
-	}
-	if host == "" || ParseIP(host) != nil {
-		return address, nil
-	}
-	ips, err := d.Resolver.LookupIP(ctx, "ip", host)
-	if err != nil {
-		return "", err
-	}
-	if len(ips) == 0 {
-		return "", &DNSError{Err: errNoSuchHost, Name: host, IsNotFound: true}
-	}
-	return JoinHostPort(ips[0].String(), port), nil
-}
+// The 2 texts that SplitHostPort reports. Go holds the same 2.
+const (
+	errMissingPort  = "missing port in address"
+	errTooManyColon = "too many colons in address"
+)
 
-// SplitHostPort reads the host and the port of an address. Go accepts an IPv6
-// host in brackets, and this form stays outside the subset.
+// SplitHostPort reads the host and the port of an address. An IPv6 host stands
+// in brackets, exactly as in Go, thus `[::1]:80` gives the host `::1`.
 func SplitHostPort(address string) (string, string, error) {
+	fail := func(why string) (string, string, error) {
+		return "", "", &AddrError{Err: why, Addr: address}
+	}
 	i := strings.LastIndex(address, ":")
 	if i < 0 {
-		return "", "", errors.New("address " + address + ": missing port")
+		return fail(errMissingPort)
 	}
-	return address[:i], address[i+1:], nil
+	var host string
+	j, k := 0, 0
+	if len(address) > 0 && address[0] == '[' {
+		end := strings.IndexByte(address, ']')
+		if end < 0 {
+			return fail("missing ']' in address")
+		}
+		switch end + 1 {
+		case len(address):
+			return fail(errMissingPort)
+		case i:
+			// The bracket ends right in front of the colon of the port.
+		default:
+			if address[end+1] == ':' {
+				return fail(errTooManyColon)
+			}
+			return fail(errMissingPort)
+		}
+		host = address[1:end]
+		j, k = 1, end+1
+	} else {
+		host = address[:i]
+		if strings.IndexByte(host, ':') >= 0 {
+			return fail(errTooManyColon)
+		}
+	}
+	if strings.IndexByte(address[j:], '[') >= 0 {
+		return fail("unexpected '[' in address")
+	}
+	if strings.IndexByte(address[k:], ']') >= 0 {
+		return fail("unexpected ']' in address")
+	}
+	return host, address[i+1:], nil
 }
 
 // JoinHostPort writes an address from a host and a port.

@@ -12,12 +12,11 @@ import (
 // and `Listener.Accept` each give a `*TCPConn` for the network tcp, thus a
 // program that names the type in an assertion reads it.
 //
-// `dart:io` owns the socket. It gives no file descriptor, and it exposes only
-// 1 socket option that no intrinsic of `syscall/dart` reaches. The methods
-// `CloseRead`, `SetLinger`, `SetKeepAlivePeriod`, `SetKeepAliveConfig`,
-// `MultipathTCP`, `SyscallConn`, and `File` each need 1 of the 2, thus the
-// overlay holds none of them. `CloseWrite` rides `Socket.close`, which ends
-// the send direction alone.
+// `dart:io` owns the socket. It gives no file descriptor. The methods
+// `SetLinger`, `SetKeepAlivePeriod`, `SetKeepAliveConfig`, `MultipathTCP`,
+// `SyscallConn`, and `File` each need it, thus the overlay holds none of them.
+// `CloseWrite` and `CloseRead` each ride `RawSocket.shutdown`, which ends 1
+// direction of the socket, exactly as the same call of Go does.
 //
 // A listener of the network tcp holds the same 2 limits. `File` and
 // `SyscallConn` each need the descriptor, and `SetDeadline` needs an accept
@@ -71,6 +70,10 @@ func (t *TCPConn) Close() error { return t.c.Close() }
 // CloseWrite ends the write side of the connection. The peer then reads the
 // end of the stream, and this side still reads.
 func (t *TCPConn) CloseWrite() error { return t.c.closeWrite() }
+
+// CloseRead ends the read side of the connection. Each read of this side then
+// gives io.EOF, and the system drops each byte that the peer writes after it.
+func (t *TCPConn) CloseRead() error { return t.c.closeRead() }
 
 // LocalAddr gives the address of this side of the connection.
 func (t *TCPConn) LocalAddr() Addr { return t.c.LocalAddr() }
