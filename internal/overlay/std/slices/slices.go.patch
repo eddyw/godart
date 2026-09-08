@@ -1,0 +1,42 @@
+The file patches the real Go source of slices/slices.go.
+
+@@ -1,14 +1,17 @@
+-// Copyright 2021 The Go Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style
+-// license that can be found in the LICENSE file.
+-
+-// Package slices defines various functions useful with slices of any type.
++//go:build dart
++
++// This file patches the file of the same name of the package slices.
++//
++// The real overlaps reads the address of the first element and of the last
++// element of each slice, and the subset holds no such read. The intrinsic
++// SliceOverlap gives the same answer. Each other line comes from the real
++// file.
+ package slices
+ 
+ import (
+ 	"cmp"
+ 	"math/bits"
+-	"unsafe"
++	"syscall/dart"
+ )
+ 
+ // Equal reports whether two slices are equal: the same length and all
+@@ -456,14 +459,7 @@
+ 	if len(a) == 0 || len(b) == 0 {
+ 		return false
+ 	}
+-	elemSize := unsafe.Sizeof(a[0])
+-	if elemSize == 0 {
+-		return false
+-	}
+-	// TODO: use a runtime/unsafe facility once one becomes available. See issue 12445.
+-	// Also see crypto/internal/fips140/alias/alias.go:AnyOverlap
+-	return uintptr(unsafe.Pointer(&a[0])) <= uintptr(unsafe.Pointer(&b[len(b)-1]))+(elemSize-1) &&
+-		uintptr(unsafe.Pointer(&b[0])) <= uintptr(unsafe.Pointer(&a[len(a)-1]))+(elemSize-1)
++	return dart.SliceOverlap(a, b)
+ }
+ 
+ // startIdx returns the index in haystack where the needle starts.

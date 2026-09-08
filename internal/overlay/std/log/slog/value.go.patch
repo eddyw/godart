@@ -1,0 +1,108 @@
+The file patches the real Go source of log/slog/value.go.
+
+The real file packs a string and a slice of Attr into the field any of a Value.
+It holds the pointer of the data alone, and it reads the package unsafe to
+build the value again. The subset holds no pointer arithmetic, thus stringptr
+holds the string and groupptr holds the slice. The field num keeps the length,
+exactly as the real file writes it.
+
+The type timeTime holds a struct field, because the subset rejects a conversion
+between 2 struct types. stands in any. The field num keeps the length.
+
+@@ -12,7 +21,6 @@
+ 	"strconv"
+ 	"strings"
+ 	"time"
+-	"unsafe"
+ )
+ 
+ // A Value can represent any Go value, but unlike type any,
+@@ -36,8 +44,8 @@
+ }
+ 
+ type (
+-	stringptr *byte // used in Value.any when the Value is a string
+-	groupptr  *Attr // used in Value.any when the Value is a []Attr
++	stringptr string // used in Value.any when the Value is a string
++	groupptr  []Attr // used in Value.any when the Value is a []Attr
+ )
+ 
+ // Kind is the kind of a [Value].
+@@ -107,7 +115,7 @@
+ 
+ // StringValue returns a new [Value] for a string.
+ func StringValue(value string) Value {
+-	return Value{num: uint64(len(value)), any: stringptr(unsafe.StringData(value))}
++	return Value{num: uint64(len(value)), any: stringptr(value)}
+ }
+ 
+ // IntValue returns a [Value] for an int.
+@@ -145,7 +153,7 @@
+ 	timeLocation *time.Location
+ 
+ 	// timeTime is for times where UnixNano is undefined.
+-	timeTime time.Time
++	timeTime struct{ t time.Time }
+ )
+ 
+ // TimeValue returns a [Value] for a [time.Time].
+@@ -166,7 +174,7 @@
+ 	}
+ 	// Fall back to the general form.
+ 	// Strip the monotonic portion to match the other representation.
+-	return Value{any: timeTime(v.Round(0))}
++	return Value{any: timeTime{v.Round(0)}}
+ }
+ 
+ // DurationValue returns a [Value] for a [time.Duration].
+@@ -189,7 +197,7 @@
+ 		}
+ 		as = as2
+ 	}
+-	return Value{num: uint64(len(as)), any: groupptr(unsafe.SliceData(as))}
++	return Value{num: uint64(len(as)), any: groupptr(as)}
+ }
+ 
+ // countEmptyGroups returns the number of empty group values in its argument.
+@@ -303,14 +311,14 @@
+ // wrong kind, String never panics.
+ func (v Value) String() string {
+ 	if sp, ok := v.any.(stringptr); ok {
+-		return unsafe.String(sp, v.num)
++		return string(sp)
+ 	}
+ 	var buf []byte
+ 	return string(v.append(buf))
+ }
+ 
+ func (v Value) str() string {
+-	return unsafe.String(v.any.(stringptr), v.num)
++	return string(v.any.(stringptr))
+ }
+ 
+ // Int64 returns v's value as an int64. It panics
+@@ -390,7 +398,7 @@
+ 		}
+ 		return time.Unix(0, int64(v.num)).In(a)
+ 	case timeTime:
+-		return time.Time(a)
++		return a.t
+ 	default:
+ 		panic(fmt.Sprintf("bad time type %T", v.any))
+ 	}
+@@ -406,13 +414,13 @@
+ // It panics if v's [Kind] is not [KindGroup].
+ func (v Value) Group() []Attr {
+ 	if sp, ok := v.any.(groupptr); ok {
+-		return unsafe.Slice((*Attr)(sp), v.num)
++		return []Attr(sp)
+ 	}
+ 	panic("Group: bad kind")
+ }
+ 
+ func (v Value) group() []Attr {
+-	return unsafe.Slice((*Attr)(v.any.(groupptr)), v.num)
++	return []Attr(v.any.(groupptr))
+ }
+ 
+ //////////////// Other

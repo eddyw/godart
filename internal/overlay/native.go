@@ -11,7 +11,10 @@ import (
 //
 // A package enters this list when stage 2 accepts each file of it, and when
 // each package that it imports also stays in the surface. A directory of the
-// same path inside std then patches 1 file of the package by its base name.
+// same path inside std then changes 1 file of the package by its base name: a
+// `.go` file replaces the whole file, and a `.patch` file changes the named
+// lines of the real Go source. A diff is the better form for a small change,
+// because it names the lines that differ and it ages with no copy.
 var native = []string{
 	"bufio",
 	"bytes",

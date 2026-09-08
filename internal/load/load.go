@@ -193,52 +193,94 @@ func overlayFiles(found, surface []*packages.Package) (map[string][]byte, error)
 			patchFiles(out, o, p)
 			continue
 		}
-		if len(o.Files) > len(p.CompiledGoFiles) {
-			return nil, fmt.Errorf("the overlay of %s holds %d files, and the package holds %d",
-				o.Path, len(o.Files), len(p.CompiledGoFiles))
-		}
 		replaceFiles(out, o, p)
 	}
+	roots := append(found, surface...)
 	for _, o := range overlay.Packages() {
-		if err := patchTestFiles(out, o, append(found, surface...)); err != nil {
+		if err := patchDiffs(out, o, existing[o.Path], roots); err != nil {
 			return nil, err
 		}
 	}
 	return out, nil
 }
 
-// patchTestFiles applies each diff of an overlay package to the test files of
-// the package under test. 2 test variants of a directory hold the test files:
-// the variant of the package itself, and the external test package whose path
-// carries the suffix _test.
+// fileStands reports whether a path names a file on disk.
+func fileStands(name string) bool {
+	info, err := os.Stat(name)
+	return err == nil && !info.IsDir()
+}
+
+// patchDiffs applies each diff of an overlay package. A diff `<base>.patch`
+// names the file `<base>` by its base name, and 2 kinds of file carry that
+// name.
 //
-// A build with no test variant of the package applies nothing. A diff that
-// names no file of a test variant stops the build, because no build tag of an
-// architecture selects a test file.
-func patchTestFiles(out map[string][]byte, o overlay.Package, roots []*packages.Package) error {
+// A test file of the package under test is the first kind. 2 test variants of
+// a directory hold such a file: the variant of the package itself, and the
+// external test package whose path carries the suffix _test. A build with no
+// test variant of the package holds no such file.
+//
+// A source file of the real package is the second kind. The compiler reads a
+// native package from the real Go source, thus a change of 1 constant needs no
+// copy of the whole file. A package that the overlay replaces also keeps such a
+// file, because replaceFiles leaves the slot of a diff alone.
+//
+// A diff that names no file of either kind stops the build, unless the file
+// stands in the directory of the package and a build tag of the architecture
+// leaves it out, or unless it is a test file and the build holds no test
+// variant. A name that matches nothing at all is a mistake of the overlay.
+func patchDiffs(out map[string][]byte, o overlay.Package, real *packages.Package,
+	roots []*packages.Package) error {
 	if len(o.Patches) == 0 {
 		return nil
 	}
-	byBase := map[string]string{}
+	sources := map[string]string{}
+	dir := ""
+	if real != nil {
+		for _, name := range real.CompiledGoFiles {
+			sources[filepath.Base(name)] = name
+		}
+		if len(real.CompiledGoFiles) > 0 {
+			dir = filepath.Dir(real.CompiledGoFiles[0])
+		}
+	}
+	tests := map[string]string{}
 	packages.Visit(roots, nil, func(p *packages.Package) {
 		if !holdsTestFile(p) || (p.PkgPath != o.Path && p.PkgPath != o.Path+"_test") {
 			return
 		}
 		for _, name := range p.CompiledGoFiles {
-			byBase[filepath.Base(name)] = name
+			tests[filepath.Base(name)] = name
 		}
 	})
-	if len(byBase) == 0 {
-		return nil
-	}
 	for _, f := range o.Patches {
-		name, ok := byBase[strings.TrimSuffix(f.Name, ".patch")]
+		base := strings.TrimSuffix(f.Name, ".patch")
+		name, ok := sources[base]
 		if !ok {
-			return fmt.Errorf("the diff %s of %s names no test file of the package", f.Name, o.Path)
+			name, ok = tests[base]
 		}
-		src, err := os.ReadFile(name)
-		if err != nil {
-			return err
+		if !ok {
+			// A build tag of the architecture selects the file set of a
+			// package, thus a diff of a file that stands in the directory and
+			// outside the build applies to nothing. The overlay of nistec
+			// holds the generic form of P-256, and a machine with the assembly
+			// reads another file.
+			if dir != "" && fileStands(filepath.Join(dir, base)) {
+				continue
+			}
+			// A test file needs a test variant of the build, and a build with
+			// no test holds none.
+			if strings.HasSuffix(base, "_test.go") && len(tests) == 0 {
+				continue
+			}
+			return fmt.Errorf("the diff %s of %s names no file of the package", f.Name, o.Path)
+		}
+		src, ok := out[name]
+		if !ok {
+			read, err := os.ReadFile(name)
+			if err != nil {
+				return err
+			}
+			src = read
 		}
 		patched, err := applyPatch(src, f.Content, f.Name)
 		if err != nil {
@@ -300,37 +342,46 @@ func holdsTestFile(p *packages.Package) bool {
 //
 // A file of the overlay takes the file of the same base name. The output path
 // of a Dart part file comes from the name of the Go file, thus an equal name
-// keeps the 2 paths equal. An overlay file with a new name takes the first free
-// file of the package.
+// keeps the 2 paths equal.
+//
+// An overlay file with a new base name takes a new path inside the directory
+// of the package. The go command reads such a file, exactly as it reads the
+// files of a package that the standard library does not hold. A file that took
+// the free slot of a real file instead would carry the path of that real file,
+// thus each report of the compiler would name a source that holds no such
+// line.
+//
+// A diff of the same directory names a real file, and that file keeps its own
+// content. Read patchDiffs.
 func replaceFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
 	byBase := map[string]string{}
 	for _, name := range p.CompiledGoFiles {
 		byBase[filepath.Base(name)] = name
 	}
+	dir := filepath.Join(build.Default.GOROOT, "src", filepath.FromSlash(o.Path))
+	if len(p.CompiledGoFiles) > 0 {
+		dir = filepath.Dir(p.CompiledGoFiles[0])
+	}
 	taken := map[string]bool{}
-	rest := make([]overlay.File, 0, len(o.Files))
 	for _, f := range o.Files {
 		name, ok := byBase[f.Name]
 		if !ok {
-			rest = append(rest, f)
+			out[filepath.Join(dir, f.Name)] = f.Content
 			continue
 		}
 		out[name] = f.Content
 		taken[name] = true
 	}
-	free := make([]string, 0, len(p.CompiledGoFiles))
-	for _, name := range p.CompiledGoFiles {
-		if !taken[name] {
-			free = append(free, name)
-		}
+	// A diff of the directory changes a real file, thus that file keeps its
+	// content and no empty file replaces it.
+	for _, f := range o.Patches {
+		taken[filepath.Join(dir, strings.TrimSuffix(f.Name, ".patch"))] = true
 	}
 	empty := []byte("package " + p.Name + "\n")
-	for i, name := range free {
-		if i < len(rest) {
-			out[name] = rest[i].Content
-			continue
+	for _, name := range p.CompiledGoFiles {
+		if !taken[name] {
+			out[name] = empty
 		}
-		out[name] = empty
 	}
 }
 

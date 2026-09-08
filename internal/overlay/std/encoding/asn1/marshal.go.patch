@@ -1,0 +1,18 @@
+The file patches the real Go source of encoding/asn1/marshal.go.
+
+The real file converts a BitString into a bitStringEncoder, and the 2 are
+struct types. A conversion between 2 struct types stays outside the subset,
+thus makeBody builds the value with a composite literal.
+
+@@ -467,7 +477,10 @@
+ 		return makeUTCTime(t)
+ 	case bitStringType:
+ 		v, _ := reflect.TypeAssert[BitString](value)
+-		return bitStringEncoder(v), nil
++		// The real file writes bitStringEncoder(v). A conversion between 2
++		// struct types stays outside the subset, thus the literal below builds
++		// the same value.
++		return bitStringEncoder{Bytes: v.Bytes, BitLength: v.BitLength}, nil
+ 	case objectIdentifierType:
+ 		v, _ := reflect.TypeAssert[ObjectIdentifier](value)
+ 		return makeObjectIdentifier(v)

@@ -1,0 +1,38 @@
+The file patches the real Go source of go/build/constraint/expr.go.
+
+The real parseExpr holds a deferred call of recover. It turns a panic of a
+SyntaxError into an error result. The subset holds no recover, thus a malformed
+constraint stops the program.
+
+@@ -211,16 +212,6 @@
+ 
+ // parseExpr parses a boolean build tag expression.
+ func parseExpr(text string) (x Expr, err error) {
+-	defer func() {
+-		if e := recover(); e != nil {
+-			if e, ok := e.(*SyntaxError); ok {
+-				err = e
+-				return
+-			}
+-			panic(e) // unreachable unless parser has a bug
+-		}
+-	}()
+-
+ 	p := &exprParser{s: text}
+ 	x = p.or()
+ 	if p.tok != "" {
+@@ -277,14 +268,6 @@
+ 	// first token already in p.tok
+ 	if p.tok == "(" {
+ 		pos := p.pos
+-		defer func() {
+-			if e := recover(); e != nil {
+-				if e, ok := e.(*SyntaxError); ok && e.Err == "unexpected end of expression" {
+-					e.Err = "missing close paren"
+-				}
+-				panic(e)
+-			}
+-		}()
+ 		x := p.or()
+ 		if p.tok != ")" {
+ 			panic(&SyntaxError{Offset: pos, Err: "missing close paren"})

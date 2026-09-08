@@ -1,0 +1,21 @@
+The file patches the real Go source of math/big/ftoa.go.
+
+go of the package math/big.
+
+The real file writes the message of an unknown verb with fmt.Fprintf and
+fmt.Fprint. The 2 functions take an io.Writer, and the flow of stage 3 then
+gives the call the group of each Write method of the program. That group holds
+a Write that blocks, thus each program that formats a value of this package
+loses a //gart:sync position. This file writes the same bytes through the
+fmt.State that the caller gives. Read the section "The method group of an
+interface call" of docs/parity.md.
+
+@@ -482,7 +490,7 @@
+ 			prec = -1 // default precision for 'g', 'G'
+ 		}
+ 	default:
+-		fmt.Fprintf(s, "%%!%c(*big.Float=%s)", format, x.String())
++		s.Write([]byte(fmt.Sprintf("%%!%c(*big.Float=%s)", format, x.String())))
+ 		return
+ 	}
+ 	var buf []byte

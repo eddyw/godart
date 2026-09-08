@@ -1,0 +1,49 @@
+The file patches the real Go source of math/big/natconv.go.
+
+go of the package math/big.
+
+The real file guards the divisor cache of base 10 with a sync.Mutex. All Go
+code runs in 1 Dart isolate, and a goroutine yields only at a point that
+blocks. The critical section holds nat arithmetic alone, thus no other
+goroutine reaches the cache while 1 goroutine builds it, and the lock never
+finds the cache held.
+
+The lock costs more than nothing. Mutex.Lock of the overlay waits on a channel,
+thus stage 3 marks each caller of nat.itoa as a function that blocks. A
+//gart:sync position then rejects each build method that formats a value of
+this package. Once of the overlay drops its own lock for the same reason.
+
+@@ -13,7 +25,6 @@
+ 	"math"
+ 	"math/bits"
+ 	"slices"
+-	"sync"
+ )
+ 
+ const digits = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+@@ -483,7 +494,6 @@
+ }
+ 
+ var cacheBase10 struct {
+-	sync.Mutex
+ 	table [64]divisor // cached divisors for base 10
+ }
+ 
+@@ -508,7 +518,6 @@
+ 	// reuse and extend existing table of divisors or create new table as appropriate
+ 	var table []divisor // for b == 10, table overlaps with cacheBase10.table
+ 	if b == 10 {
+-		cacheBase10.Lock()
+ 		table = cacheBase10.table[0:k] // reuse old table for this conversion
+ 	} else {
+ 		table = make([]divisor, k) // create new table for this conversion
+@@ -540,9 +549,5 @@
+ 		}
+ 	}
+ 
+-	if b == 10 {
+-		cacheBase10.Unlock()
+-	}
+-
+ 	return table
+ }

@@ -1,0 +1,61 @@
+The file patches the real Go source of debug/pe/symbol.go.
+
+The real file reads the package unsafe 2 times. Each 1 reads the 18 bytes of a
+COFFSymbol through the type COFFSymbolAuxFormat5. The 2 types hold the same
+layout. Thus each field of the second type stands at a fixed offset of the
+first 1.
+
+The read of an aux symbol needs no conversion at all. binary.Read of a
+COFFSymbolAuxFormat5 takes the same 18 bytes as binary.Read of a COFFSymbol. It
+also writes each byte at the same offset. Thus the patch reads a COFFSymbol.
+
+COFFSymbolReadSectionDefAux gives a copy, and not a view of the entry of
+COFFSymbols. Each field holds the number that Go reads on a little-endian
+machine. Read docs/parity.md.
+
+@@ -10,7 +24,6 @@
+ 	"fmt"
+ 	"internal/saferio"
+ 	"io"
+-	"unsafe"
+ )
+ 
+ const COFFSymbolSize = 18
+@@ -76,13 +89,11 @@
+ 			// Record how many auxiliary symbols it has.
+ 			naux = int(sym.NumberOfAuxSymbols)
+ 		} else {
+-			// Read an aux symbol. At the moment we assume all
+-			// aux symbols are format 5 (obviously this doesn't always
+-			// hold; more cases will be needed below if more aux formats
+-			// are supported in the future).
++			// Read an aux symbol. The real file reads it through the type
++			// COFFSymbolAuxFormat5. The 2 types hold the same 18 bytes at the
++			// same offsets, thus this read takes the same bytes.
+ 			naux--
+-			aux := (*COFFSymbolAuxFormat5)(unsafe.Pointer(&sym))
+-			err = binary.Read(r, binary.LittleEndian, aux)
++			err = binary.Read(r, binary.LittleEndian, &sym)
+ 			if err != nil {
+ 				return nil, fmt.Errorf("fail to read symbol table: %v", err)
+ 			}
+@@ -207,8 +218,17 @@
+ 	if pesym.NumberOfAuxSymbols == 0 || idx+1 >= len(f.COFFSymbols) {
+ 		return rv, fmt.Errorf("aux symbol unavailable")
+ 	}
+-	// Locate and return a pointer to the successor aux symbol.
++	// Read the 18 bytes of the successor aux symbol again through the second
++	// view. The real file gives a pointer into COFFSymbols, and this file
++	// gives a copy of the same numbers.
+ 	pesymn := &f.COFFSymbols[idx+1]
+-	rv = (*COFFSymbolAuxFormat5)(unsafe.Pointer(pesymn))
++	rv = &COFFSymbolAuxFormat5{
++		Size:           binary.LittleEndian.Uint32(pesymn.Name[0:4]),
++		NumRelocs:      binary.LittleEndian.Uint16(pesymn.Name[4:6]),
++		NumLineNumbers: binary.LittleEndian.Uint16(pesymn.Name[6:8]),
++		Checksum:       pesymn.Value,
++		SecNum:         uint16(pesymn.SectionNumber),
++		Selection:      uint8(pesymn.Type),
++	}
+ 	return rv, nil
+ }

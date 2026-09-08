@@ -1162,18 +1162,71 @@ func (e *emitter) typeName(t types.Type) string {
 	// 1 text. The name of a descriptor is the identity of the type at run
 	// time, and a pointer to a shape must agree with the shape itself.
 	if mentionsStruct(t, map[types.Type]bool{}) {
-		return typeText(stripNames(types.Unalias(t)))
+		return typeText(stripNames(types.Unalias(t))) + e.localMarks(t)
 	}
-	text := types.TypeString(stripNames(types.Unalias(t)), nil)
-	// 2 local types of 2 functions can share 1 printed name, and the
-	// identity of a type reads the name. The position keeps them apart, and
-	// the display text stays short.
-	if named, ok := types.Unalias(t).(*types.Named); ok &&
-		isLocalType(named.Obj()) && e.cfg.Fset != nil {
-		p := e.cfg.Fset.Position(named.Obj().Pos())
-		text += fmt.Sprintf("·%d_%d", p.Line, p.Column)
+	return types.TypeString(stripNames(types.Unalias(t)), nil) + e.localMarks(t)
+}
+
+// localMarks names the position of each local type that t mentions.
+//
+// 2 local types of 2 functions can share 1 printed name, and the identity of a
+// type reads the name. A derived type of such a type holds the same printed
+// name as the derived type of a package level type of that name, thus the walk
+// reaches every level. The package encoding/json_test holds `type Animal int`
+// at the top and `type Animal struct{...}` inside an example, and `[]Animal`
+// of the example took the descriptor of `[]Animal` of the integer.
+//
+// The walk of a named type reads its type arguments alone. Go reads the name of
+// such a type as its identity, thus the fields of the type behind it stay out.
+func (e *emitter) localMarks(t types.Type) string {
+	if e.cfg.Fset == nil {
+		return ""
 	}
-	return text
+	var out strings.Builder
+	seen := map[types.Type]bool{}
+	var walk func(types.Type)
+	walk = func(t types.Type) {
+		if t == nil || seen[t] {
+			return
+		}
+		seen[t] = true
+		switch u := types.Unalias(t).(type) {
+		case *types.Named:
+			if isLocalType(u.Obj()) {
+				p := e.cfg.Fset.Position(u.Obj().Pos())
+				fmt.Fprintf(&out, "·%d_%d", p.Line, p.Column)
+			}
+			if args := u.TypeArgs(); args != nil {
+				for i := range args.Len() {
+					walk(args.At(i))
+				}
+			}
+		case *types.Pointer:
+			walk(u.Elem())
+		case *types.Slice:
+			walk(u.Elem())
+		case *types.Array:
+			walk(u.Elem())
+		case *types.Chan:
+			walk(u.Elem())
+		case *types.Map:
+			walk(u.Key())
+			walk(u.Elem())
+		case *types.Signature:
+			walk(u.Params())
+			walk(u.Results())
+		case *types.Tuple:
+			for i := range u.Len() {
+				walk(u.At(i).Type())
+			}
+		case *types.Struct:
+			for i := range u.NumFields() {
+				walk(u.Field(i).Type())
+			}
+		}
+	}
+	walk(t)
+	return out.String()
 }
 
 // stripNames gives the type with no parameter name inside a function type.

@@ -1,0 +1,34 @@
+The file patches the real Go source of go/types/union.go.
+
+The real file writes the conversion (*term)(t). The type Term and the type term
+hold the same 2 fields, and Go gives 1 memory block for the 2 forms. The subset
+holds no conversion between 2 struct types, thus this file builds a term of the
+same 2 fields. No method of a term writes a field, and no operation of a
+termlist compares 2 pointers, thus the 2 forms hold 1 meaning.
+
+@@ -41,7 +52,15 @@
+ 
+ func (t *Term) Tilde() bool    { return t.tilde }
+ func (t *Term) Type() Type     { return t.typ }
+-func (t *Term) String() string { return (*term)(t).String() }
++func (t *Term) String() string { return t.asTerm().String() }
++
++// asTerm gives the term form of t. Read the head of this file.
++func (t *Term) asTerm() *term {
++	if t == nil {
++		return nil
++	}
++	return &term{t.tilde, t.typ}
++}
+ 
+ // ----------------------------------------------------------------------------
+ // Implementation
+@@ -181,7 +200,7 @@
+ 				panic("empty or top union term")
+ 			}
+ 		}
+-		if !(*term)(x).disjoint((*term)(y)) {
++		if !x.asTerm().disjoint(y.asTerm()) {
+ 			return i
+ 		}
+ 	}

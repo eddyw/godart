@@ -711,6 +711,16 @@ func ParseFloat(text string) (float64, bool) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ParseFloat32 reads a 32-bit float from text, with the single rounding of Go.
+// The second result is false when the text holds no float.
+//
+// A read that gives a float64 first and narrows second rounds 2 times, thus a
+// decimal that stands exactly between 2 values of float32 takes the wrong
+// neighbour.
+func ParseFloat32(text string) (float32, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Sleep gives up control for a count of nanoseconds. The call blocks the
 // goroutine, thus the caller becomes an async function.
 func Sleep(nanoseconds int64) {

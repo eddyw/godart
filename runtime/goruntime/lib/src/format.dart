@@ -990,13 +990,151 @@ String _radix(GoInt v, int radix, bool unsigned) {
 /// Go writes the shortest decimal text that reads back as the same value of the
 /// width of the value. A Dart double holds a 32-bit value with the precision of
 /// 64 bits, thus the shortest text of 64 bits holds more digits than Go writes.
+///
+/// The round trip test reads the candidate text with the single rounding of Go.
+/// A read that rounds 2 times rejects a text that Go accepts, and the result
+/// then carries 1 digit too many.
 String $f32string(double v) {
   if (v.isNaN || v.isInfinite || v == 0) return $fstring(v);
   for (int digits = 1; digits <= 9; digits++) {
-    final double short = double.parse(v.toStringAsPrecision(digits));
-    if ($f32FromBits($f32ToBits(short)) == v) return $fstring(short);
+    final String text = v.toStringAsPrecision(digits);
+    final double short = double.parse(text);
+    if (_f32round(text, short) == v) return $fstring(short);
   }
   return $fstring(v);
+}
+
+/// Reads a 32-bit float from text. The second value is false when the text
+/// holds no float.
+///
+/// The result carries the single rounding of Go. Read _f32round.
+(double, bool) $parseFloat32(GoString text) {
+  final String s = text.toDartString().trim();
+  final double? v = double.tryParse(s);
+  if (v == null) return (0.0, false);
+  return (_f32round(s, v), true);
+}
+
+/// The bits of a float, in 2 halves of 32 bits. Read the note of _tieBits.
+final ByteData _roundBits = ByteData(8);
+
+/// A second buffer, thus a power of 2 keeps the bits of the value.
+final ByteData _powBits = ByteData(8);
+
+/// 2 raised to the power of the exponent, as an exact double. The exponent
+/// must name a normal double, thus it stands between -1022 and 1023.
+double _pow2(int exponent) {
+  _powBits.setUint32(0, (1023 + exponent) << 20);
+  _powBits.setUint32(4, 0);
+  return _powBits.getFloat64(0);
+}
+
+/// 2 to the power -125. Below it each value of float32 is a multiple of 2 to
+/// the power -149, thus each middle point is an odd multiple of 2 to the
+/// power -150.
+final double _twoDown125 = _pow2(-125);
+
+/// 2 to the power 150, which scales such a middle point to an odd integer.
+final double _twoUp150 = _pow2(150);
+
+/// The value of float32 that the decimal text names, with the single rounding
+/// of Go.
+///
+/// v holds the value of the text in 64 bits, with 1 rounding. A second
+/// rounding to 32 bits gives the answer of Go, except at 1 shape: each middle
+/// point of 2 neighbour values of float32 is an exact double, and a rounding
+/// to 64 bits keeps the order, thus a text lands on such a middle point only
+/// when its exact value stands nearer to it than any other double. The 2
+/// neighbours then stand at the same distance from v, and the rounding to 32
+/// bits reads the even one. Go reads the exact decimal instead.
+///
+/// The test of the shape costs 1 comparison and 1 mask, thus each other text
+/// pays almost nothing. The exact comparison runs only at a middle point.
+double _f32round(String text, double v) {
+  if (v.isNaN || v.isInfinite || v == 0) return v;
+  final double a = v.abs();
+  int sig; // a holds sig times 2 to the power exp2, and sig is odd.
+  int exp2;
+  if (a < _twoDown125) {
+    final double scaled = a * _twoUp150;
+    if (scaled != scaled.truncateToDouble()) return _f32narrow(v);
+    sig = scaled.toInt();
+    if (sig.isEven) return _f32narrow(v);
+    exp2 = -150;
+  } else {
+    _roundBits.setFloat64(0, a);
+    final int hi = _roundBits.getUint32(0);
+    final int lo = _roundBits.getUint32(4);
+    // A middle point holds 25 significant bits, and the lowest of them is 1.
+    // The 53 bits of the double thus end with 1 and 28 zeros.
+    if ((lo & 0x1FFFFFFF) != 0x10000000) return _f32narrow(v);
+    exp2 = ((hi >> 20) & 0x7FF) - 1047;
+    sig = 0x1000000 | ((hi & 0xFFFFF) << 4) | (lo >> 28);
+  }
+  final double step = _pow2(exp2);
+  final int order = _cmpDecimalPow2(text, sig, exp2);
+  double pick;
+  if (order > 0) {
+    pick = a + step;
+  } else if (order < 0) {
+    pick = a - step;
+  } else {
+    // The exact decimal is the middle point, thus Go reads the even
+    // neighbour. The lower one holds the mantissa (sig - 1) / 2.
+    pick = (sig & 3) == 1 ? a - step : a + step;
+  }
+  return _f32narrow(v.isNegative ? -pick : pick);
+}
+
+/// The value of float32 of a double, with the rounding of IEEE 754.
+double _f32narrow(double v) => $f32FromBits($f32ToBits(v));
+
+/// Compares the exact value of a decimal text with sig times 2 to the power
+/// exp2, and it gives -1, 0, or 1. The comparison reads the magnitude alone,
+/// thus a sign of the text stays out.
+///
+/// The 2 sides become whole numbers first: a negative power of 10 multiplies
+/// the right side, and a negative power of 2 multiplies the left side.
+int _cmpDecimalPow2(String text, int sig, int exp2) {
+  final int n = text.length;
+  int i = 0;
+  if (i < n) {
+    final int c = text.codeUnitAt(i);
+    if (c == 0x2B || c == 0x2D) i++;
+  }
+  final StringBuffer digits = StringBuffer();
+  int fraction = 0;
+  bool point = false;
+  for (; i < n; i++) {
+    final int c = text.codeUnitAt(i);
+    if (c == 0x2E) {
+      point = true;
+      continue;
+    }
+    if (c < 0x30 || c > 0x39) break;
+    digits.writeCharCode(c);
+    if (point) fraction++;
+  }
+  if (digits.isEmpty) return 0;
+  int exp10 = -fraction;
+  if (i < n && (text.codeUnitAt(i) | 0x20) == 0x65) {
+    final int? extra = int.tryParse(text.substring(i + 1));
+    if (extra == null || extra > 100000 || extra < -100000) return 0;
+    exp10 += extra;
+  }
+  BigInt left = BigInt.parse(digits.toString());
+  BigInt right = BigInt.from(sig);
+  if (exp10 >= 0) {
+    left *= BigInt.from(10).pow(exp10);
+  } else {
+    right *= BigInt.from(10).pow(-exp10);
+  }
+  if (exp2 >= 0) {
+    right *= BigInt.two.pow(exp2);
+  } else {
+    left *= BigInt.two.pow(-exp2);
+  }
+  return left.compareTo(right);
 }
 
 String _float(double v, String letter, int precision, bool single) {

@@ -1,0 +1,82 @@
+The file patches the real Go source of encoding/json/v2_decode.go.
+
+@@ -2,23 +2,44 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-//go:build goexperiment.jsonv2
+-
+-// Represents JSON data structure using native Go types: booleans, floats,
+-// strings, arrays, and maps.
++//go:build dart
++
++// This file patches the file of the same name of the package encoding/json.
++//
++// Unmarshal reads the scanner of the runtime library first. That scanner walks
++// the bytes with a stack of its own, and the decoder of encoding/json/v2
++// descends 1 level for each level of the document. The stack of Dart holds
++// about 1,400 levels of that descent, and Go holds 10,000.
++//
++// The scanner writes the target only when it proves the whole decode. Each
++// other input reaches the code of encoding/json/v2 below, thus every value and
++// every error keeps the answer of Go.
++//
++// Each other line comes from the real file.
+ 
+ package json
+ 
+ import (
+ 	"cmp"
++	"errors"
+ 	"fmt"
+ 	"reflect"
+ 	"strconv"
+ 	"strings"
++	"syscall/dart"
+ 
+ 	"encoding/json/internal/jsonwire"
+ 	"encoding/json/jsontext"
+ 	jsonv2 "encoding/json/v2"
++)
++
++// The answers of dart.JSONUnmarshal. runtime/goruntime/lib/src/json.dart holds
++// the same numbers.
++const (
++	jsonFastDone     = 0
++	jsonFastGoPath   = 1
++	jsonFastMethod   = 2
++	jsonFastMaxDepth = 3
+ )
+ 
+ // Unmarshal parses the JSON-encoded data and stores the result
+@@ -108,7 +129,30 @@
+ // Instead, they are replaced by the Unicode replacement
+ // character U+FFFD.
+ func Unmarshal(data []byte, v any) error {
++	switch code, a, b := dart.JSONUnmarshal(data, v); code {
++	case jsonFastDone:
++		return nil
++	case jsonFastMethod:
++		return callUnmarshalJSON(v.(Unmarshaler), data[a:b])
++	case jsonFastMaxDepth:
++		// jsontext reports the offset of the bracket, and the legacy rule of
++		// v1 adds 1 byte to the offset of a structural error.
++		return &SyntaxError{msg: "exceeded max depth", Offset: int64(a) + 1}
++	}
+ 	return jsonv2.Unmarshal(data, v, DefaultOptionsV1())
++}
++
++// callUnmarshalJSON gives the bytes of the value to the method of the target.
++//
++// The v1 options hold ReportErrorsWithLegacySemantics, thus the caller reads
++// the error of the method with no wrapper. errors.ErrUnsupported is the 1
++// answer that the package replaces.
++func callUnmarshalJSON(u Unmarshaler, val []byte) error {
++	err := u.UnmarshalJSON(val)
++	if errors.Is(err, errors.ErrUnsupported) {
++		return errors.New("UnmarshalJSON method may not return errors.ErrUnsupported")
++	}
++	return err
+ }
+ 
+ // Unmarshaler is the interface implemented by types

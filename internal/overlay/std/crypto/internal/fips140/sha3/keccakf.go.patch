@@ -1,0 +1,56 @@
+The file patches the real Go source of crypto/internal/fips140/sha3/keccakf.go.
+
+@@ -1,14 +1,19 @@
+-// Copyright 2014 The Go Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style
+-// license that can be found in the LICENSE file.
+-
++//go:build dart
++
++// This file patches the file keccakf.go of the package
++// crypto/internal/fips140/sha3.
++//
++// The real file reads the 200 bytes of the state as 25 words of 64 bits through
++// the package unsafe on a little-endian machine. This file always reads and
++// writes the words with byteorder, which is the path that Go takes on a
++// big-endian machine. The result is the same on each machine.
++//
++// Each other line comes from the real file.
+ package sha3
+ 
+ import (
+ 	"crypto/internal/fips140deps/byteorder"
+-	"crypto/internal/fips140deps/cpu"
+ 	"math/bits"
+-	"unsafe"
+ )
+ 
+ // rc stores the round constants for use in the ι step.
+@@ -41,20 +46,15 @@
+ 
+ // keccakF1600Generic applies the Keccak permutation.
+ func keccakF1600Generic(da *[200]byte) {
+-	var a *[25]uint64
+-	if cpu.BigEndian {
+-		a = new([25]uint64)
++	a := new([25]uint64)
++	for i := range a {
++		a[i] = byteorder.LEUint64(da[i*8:])
++	}
++	defer func() {
+ 		for i := range a {
+-			a[i] = byteorder.LEUint64(da[i*8:])
++			byteorder.LEPutUint64(da[i*8:], a[i])
+ 		}
+-		defer func() {
+-			for i := range a {
+-				byteorder.LEPutUint64(da[i*8:], a[i])
+-			}
+-		}()
+-	} else {
+-		a = (*[25]uint64)(unsafe.Pointer(da))
+-	}
++	}()
+ 
+ 	// Implementation translated from Keccak-inplace.c
+ 	// in the keccak reference code.

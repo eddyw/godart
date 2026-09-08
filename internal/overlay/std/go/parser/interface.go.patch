@@ -1,0 +1,40 @@
+The file patches the real Go source of go/parser/interface.go.
+
+The real ParseFile and the real ParseExprFrom each hold a deferred call of
+recover. It turns a panic of the bailout into a position error, and the bailout
+fires when the count of the syntax errors passes a limit. The subset holds no
+recover, thus a source with that many errors stops the program.
+
+@@ -96,16 +100,6 @@
+ 
+ 	var p parser
+ 	defer func() {
+-		if e := recover(); e != nil {
+-			// resume same panic if it's not a bailout
+-			bail, ok := e.(bailout)
+-			if !ok {
+-				panic(e)
+-			} else if bail.msg != "" {
+-				p.errors.Add(p.file.Position(bail.pos), bail.msg)
+-			}
+-		}
+-
+ 		// set result values
+ 		if f == nil {
+ 			// source is not a valid Go source file - satisfy
+@@ -213,15 +207,6 @@
+ 
+ 	var p parser
+ 	defer func() {
+-		if e := recover(); e != nil {
+-			// resume same panic if it's not a bailout
+-			bail, ok := e.(bailout)
+-			if !ok {
+-				panic(e)
+-			} else if bail.msg != "" {
+-				p.errors.Add(p.file.Position(bail.pos), bail.msg)
+-			}
+-		}
+ 		p.errors.Sort()
+ 		err = p.errors.Err()
+ 	}()

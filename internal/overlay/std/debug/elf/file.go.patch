@@ -1,0 +1,307 @@
+The file patches the real Go source of debug/elf/file.go.
+
+The real file reads unsafe.Sizeof and unsafe.Offsetof of the 8 header types of
+the ELF format. Each 1 names the layout of the format itself, and that layout
+never changes. The constant block below holds the same numbers. Each other line
+of the file stands as the real file writes it.
+
+A test of the Go repository reads the same numbers again. Thus a change of the
+format would break the real package first.
+
+The real file also declares a variable of each header type. The 2 calls of the
+package unsafe read that variable. The constants need no such variable, thus
+each declaration goes.
+
+@@ -28,7 +40,89 @@
+ 	"math"
+ 	"os"
+ 	"strings"
+-	"unsafe"
++)
++
++// The size of each header of the ELF format, in bytes.
++const (
++	sizeofHeader32 = 52
++	sizeofHeader64 = 64
++	sizeofChdr32   = 12
++	sizeofChdr64   = 24
++)
++
++// The offset of each field that the reader of a header takes, in bytes.
++const (
++	offHeader32Type      = 16
++	offHeader32Machine   = 18
++	offHeader32Version   = 20
++	offHeader32Entry     = 24
++	offHeader32Phoff     = 28
++	offHeader32Shoff     = 32
++	offHeader32Phentsize = 42
++	offHeader32Phnum     = 44
++	offHeader32Shentsize = 46
++	offHeader32Shnum     = 48
++	offHeader32Shstrndx  = 50
++
++	offHeader64Type      = 16
++	offHeader64Machine   = 18
++	offHeader64Version   = 20
++	offHeader64Entry     = 24
++	offHeader64Phoff     = 32
++	offHeader64Shoff     = 40
++	offHeader64Phentsize = 54
++	offHeader64Phnum     = 56
++	offHeader64Shentsize = 58
++	offHeader64Shnum     = 60
++	offHeader64Shstrndx  = 62
++
++	offProg32Type   = 0
++	offProg32Flags  = 24
++	offProg32Off    = 4
++	offProg32Vaddr  = 8
++	offProg32Paddr  = 12
++	offProg32Filesz = 16
++	offProg32Memsz  = 20
++	offProg32Align  = 28
++
++	offProg64Type   = 0
++	offProg64Flags  = 4
++	offProg64Off    = 8
++	offProg64Vaddr  = 16
++	offProg64Paddr  = 24
++	offProg64Filesz = 32
++	offProg64Memsz  = 40
++	offProg64Align  = 48
++
++	offSection32Name      = 0
++	offSection32Type      = 4
++	offSection32Flags     = 8
++	offSection32Addr      = 12
++	offSection32Off       = 16
++	offSection32Size      = 20
++	offSection32Link      = 24
++	offSection32Info      = 28
++	offSection32Addralign = 32
++	offSection32Entsize   = 36
++
++	offSection64Name      = 0
++	offSection64Type      = 4
++	offSection64Flags     = 8
++	offSection64Addr      = 16
++	offSection64Off       = 24
++	offSection64Size      = 32
++	offSection64Link      = 40
++	offSection64Info      = 44
++	offSection64Addralign = 48
++	offSection64Entsize   = 56
++
++	offChdr32Type      = 0
++	offChdr32Size      = 4
++	offChdr32Addralign = 8
++
++	offChdr64Type      = 0
++	offChdr64Size      = 8
++	offChdr64Addralign = 16
+ )
+ 
+ // TODO: error reporting detail
+@@ -333,43 +427,41 @@
+ 	var shentsize, shnum, shstrndx int
+ 	switch f.Class {
+ 	case ELFCLASS32:
+-		var hdr Header32
+-		data := make([]byte, unsafe.Sizeof(hdr))
++		data := make([]byte, sizeofHeader32)
+ 		if _, err := sr.ReadAt(data, 0); err != nil {
+ 			return nil, err
+ 		}
+-		f.Type = Type(bo.Uint16(data[unsafe.Offsetof(hdr.Type):]))
+-		f.Machine = Machine(bo.Uint16(data[unsafe.Offsetof(hdr.Machine):]))
+-		f.Entry = uint64(bo.Uint32(data[unsafe.Offsetof(hdr.Entry):]))
+-		if v := Version(bo.Uint32(data[unsafe.Offsetof(hdr.Version):])); v != f.Version {
++		f.Type = Type(bo.Uint16(data[offHeader32Type:]))
++		f.Machine = Machine(bo.Uint16(data[offHeader32Machine:]))
++		f.Entry = uint64(bo.Uint32(data[offHeader32Entry:]))
++		if v := Version(bo.Uint32(data[offHeader32Version:])); v != f.Version {
+ 			return nil, &FormatError{0, "mismatched ELF version", v}
+ 		}
+-		phoff = int64(bo.Uint32(data[unsafe.Offsetof(hdr.Phoff):]))
+-		phentsize = int(bo.Uint16(data[unsafe.Offsetof(hdr.Phentsize):]))
+-		phnum = int(bo.Uint16(data[unsafe.Offsetof(hdr.Phnum):]))
+-		shoff = int64(bo.Uint32(data[unsafe.Offsetof(hdr.Shoff):]))
+-		shentsize = int(bo.Uint16(data[unsafe.Offsetof(hdr.Shentsize):]))
+-		shnum = int(bo.Uint16(data[unsafe.Offsetof(hdr.Shnum):]))
+-		shstrndx = int(bo.Uint16(data[unsafe.Offsetof(hdr.Shstrndx):]))
++		phoff = int64(bo.Uint32(data[offHeader32Phoff:]))
++		phentsize = int(bo.Uint16(data[offHeader32Phentsize:]))
++		phnum = int(bo.Uint16(data[offHeader32Phnum:]))
++		shoff = int64(bo.Uint32(data[offHeader32Shoff:]))
++		shentsize = int(bo.Uint16(data[offHeader32Shentsize:]))
++		shnum = int(bo.Uint16(data[offHeader32Shnum:]))
++		shstrndx = int(bo.Uint16(data[offHeader32Shstrndx:]))
+ 	case ELFCLASS64:
+-		var hdr Header64
+-		data := make([]byte, unsafe.Sizeof(hdr))
++		data := make([]byte, sizeofHeader64)
+ 		if _, err := sr.ReadAt(data, 0); err != nil {
+ 			return nil, err
+ 		}
+-		f.Type = Type(bo.Uint16(data[unsafe.Offsetof(hdr.Type):]))
+-		f.Machine = Machine(bo.Uint16(data[unsafe.Offsetof(hdr.Machine):]))
+-		f.Entry = bo.Uint64(data[unsafe.Offsetof(hdr.Entry):])
+-		if v := Version(bo.Uint32(data[unsafe.Offsetof(hdr.Version):])); v != f.Version {
++		f.Type = Type(bo.Uint16(data[offHeader64Type:]))
++		f.Machine = Machine(bo.Uint16(data[offHeader64Machine:]))
++		f.Entry = bo.Uint64(data[offHeader64Entry:])
++		if v := Version(bo.Uint32(data[offHeader64Version:])); v != f.Version {
+ 			return nil, &FormatError{0, "mismatched ELF version", v}
+ 		}
+-		phoff = int64(bo.Uint64(data[unsafe.Offsetof(hdr.Phoff):]))
+-		phentsize = int(bo.Uint16(data[unsafe.Offsetof(hdr.Phentsize):]))
+-		phnum = int(bo.Uint16(data[unsafe.Offsetof(hdr.Phnum):]))
+-		shoff = int64(bo.Uint64(data[unsafe.Offsetof(hdr.Shoff):]))
+-		shentsize = int(bo.Uint16(data[unsafe.Offsetof(hdr.Shentsize):]))
+-		shnum = int(bo.Uint16(data[unsafe.Offsetof(hdr.Shnum):]))
+-		shstrndx = int(bo.Uint16(data[unsafe.Offsetof(hdr.Shstrndx):]))
++		phoff = int64(bo.Uint64(data[offHeader64Phoff:]))
++		phentsize = int(bo.Uint16(data[offHeader64Phentsize:]))
++		phnum = int(bo.Uint16(data[offHeader64Phnum:]))
++		shoff = int64(bo.Uint64(data[offHeader64Shoff:]))
++		shentsize = int(bo.Uint16(data[offHeader64Shentsize:]))
++		shnum = int(bo.Uint16(data[offHeader64Shnum:]))
++		shstrndx = int(bo.Uint16(data[offHeader64Shstrndx:]))
+ 	}
+ 
+ 	if shoff < 0 {
+@@ -484,28 +576,26 @@
+ 		p := new(Prog)
+ 		switch f.Class {
+ 		case ELFCLASS32:
+-			var ph Prog32
+ 			p.ProgHeader = ProgHeader{
+-				Type:   ProgType(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Type):])),
+-				Flags:  ProgFlag(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Flags):])),
+-				Off:    uint64(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Off):])),
+-				Vaddr:  uint64(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Vaddr):])),
+-				Paddr:  uint64(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Paddr):])),
+-				Filesz: uint64(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Filesz):])),
+-				Memsz:  uint64(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Memsz):])),
+-				Align:  uint64(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Align):])),
++				Type:   ProgType(bo.Uint32(phdata[off+offProg32Type:])),
++				Flags:  ProgFlag(bo.Uint32(phdata[off+offProg32Flags:])),
++				Off:    uint64(bo.Uint32(phdata[off+offProg32Off:])),
++				Vaddr:  uint64(bo.Uint32(phdata[off+offProg32Vaddr:])),
++				Paddr:  uint64(bo.Uint32(phdata[off+offProg32Paddr:])),
++				Filesz: uint64(bo.Uint32(phdata[off+offProg32Filesz:])),
++				Memsz:  uint64(bo.Uint32(phdata[off+offProg32Memsz:])),
++				Align:  uint64(bo.Uint32(phdata[off+offProg32Align:])),
+ 			}
+ 		case ELFCLASS64:
+-			var ph Prog64
+ 			p.ProgHeader = ProgHeader{
+-				Type:   ProgType(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Type):])),
+-				Flags:  ProgFlag(bo.Uint32(phdata[off+unsafe.Offsetof(ph.Flags):])),
+-				Off:    bo.Uint64(phdata[off+unsafe.Offsetof(ph.Off):]),
+-				Vaddr:  bo.Uint64(phdata[off+unsafe.Offsetof(ph.Vaddr):]),
+-				Paddr:  bo.Uint64(phdata[off+unsafe.Offsetof(ph.Paddr):]),
+-				Filesz: bo.Uint64(phdata[off+unsafe.Offsetof(ph.Filesz):]),
+-				Memsz:  bo.Uint64(phdata[off+unsafe.Offsetof(ph.Memsz):]),
+-				Align:  bo.Uint64(phdata[off+unsafe.Offsetof(ph.Align):]),
++				Type:   ProgType(bo.Uint32(phdata[off+offProg64Type:])),
++				Flags:  ProgFlag(bo.Uint32(phdata[off+offProg64Flags:])),
++				Off:    bo.Uint64(phdata[off+offProg64Off:]),
++				Vaddr:  bo.Uint64(phdata[off+offProg64Vaddr:]),
++				Paddr:  bo.Uint64(phdata[off+offProg64Paddr:]),
++				Filesz: bo.Uint64(phdata[off+offProg64Filesz:]),
++				Memsz:  bo.Uint64(phdata[off+offProg64Memsz:]),
++				Align:  bo.Uint64(phdata[off+offProg64Align:]),
+ 			}
+ 		}
+ 		if int64(p.Off) < 0 {
+@@ -542,32 +632,30 @@
+ 		s := new(Section)
+ 		switch f.Class {
+ 		case ELFCLASS32:
+-			var sh Section32
+-			names = append(names, bo.Uint32(shdata[off+unsafe.Offsetof(sh.Name):]))
++			names = append(names, bo.Uint32(shdata[off+offSection32Name:]))
+ 			s.SectionHeader = SectionHeader{
+-				Type:      SectionType(bo.Uint32(shdata[off+unsafe.Offsetof(sh.Type):])),
+-				Flags:     SectionFlag(bo.Uint32(shdata[off+unsafe.Offsetof(sh.Flags):])),
+-				Addr:      uint64(bo.Uint32(shdata[off+unsafe.Offsetof(sh.Addr):])),
+-				Offset:    uint64(bo.Uint32(shdata[off+unsafe.Offsetof(sh.Off):])),
+-				FileSize:  uint64(bo.Uint32(shdata[off+unsafe.Offsetof(sh.Size):])),
+-				Link:      bo.Uint32(shdata[off+unsafe.Offsetof(sh.Link):]),
+-				Info:      bo.Uint32(shdata[off+unsafe.Offsetof(sh.Info):]),
+-				Addralign: uint64(bo.Uint32(shdata[off+unsafe.Offsetof(sh.Addralign):])),
+-				Entsize:   uint64(bo.Uint32(shdata[off+unsafe.Offsetof(sh.Entsize):])),
++				Type:      SectionType(bo.Uint32(shdata[off+offSection32Type:])),
++				Flags:     SectionFlag(bo.Uint32(shdata[off+offSection32Flags:])),
++				Addr:      uint64(bo.Uint32(shdata[off+offSection32Addr:])),
++				Offset:    uint64(bo.Uint32(shdata[off+offSection32Off:])),
++				FileSize:  uint64(bo.Uint32(shdata[off+offSection32Size:])),
++				Link:      bo.Uint32(shdata[off+offSection32Link:]),
++				Info:      bo.Uint32(shdata[off+offSection32Info:]),
++				Addralign: uint64(bo.Uint32(shdata[off+offSection32Addralign:])),
++				Entsize:   uint64(bo.Uint32(shdata[off+offSection32Entsize:])),
+ 			}
+ 		case ELFCLASS64:
+-			var sh Section64
+-			names = append(names, bo.Uint32(shdata[off+unsafe.Offsetof(sh.Name):]))
++			names = append(names, bo.Uint32(shdata[off+offSection64Name:]))
+ 			s.SectionHeader = SectionHeader{
+-				Type:      SectionType(bo.Uint32(shdata[off+unsafe.Offsetof(sh.Type):])),
+-				Flags:     SectionFlag(bo.Uint64(shdata[off+unsafe.Offsetof(sh.Flags):])),
+-				Offset:    bo.Uint64(shdata[off+unsafe.Offsetof(sh.Off):]),
+-				FileSize:  bo.Uint64(shdata[off+unsafe.Offsetof(sh.Size):]),
+-				Addr:      bo.Uint64(shdata[off+unsafe.Offsetof(sh.Addr):]),
+-				Link:      bo.Uint32(shdata[off+unsafe.Offsetof(sh.Link):]),
+-				Info:      bo.Uint32(shdata[off+unsafe.Offsetof(sh.Info):]),
+-				Addralign: bo.Uint64(shdata[off+unsafe.Offsetof(sh.Addralign):]),
+-				Entsize:   bo.Uint64(shdata[off+unsafe.Offsetof(sh.Entsize):]),
++				Type:      SectionType(bo.Uint32(shdata[off+offSection64Type:])),
++				Flags:     SectionFlag(bo.Uint64(shdata[off+offSection64Flags:])),
++				Offset:    bo.Uint64(shdata[off+offSection64Off:]),
++				FileSize:  bo.Uint64(shdata[off+offSection64Size:]),
++				Addr:      bo.Uint64(shdata[off+offSection64Addr:]),
++				Link:      bo.Uint32(shdata[off+offSection64Link:]),
++				Info:      bo.Uint32(shdata[off+offSection64Info:]),
++				Addralign: bo.Uint64(shdata[off+offSection64Addralign:]),
++				Entsize:   bo.Uint64(shdata[off+offSection64Entsize:]),
+ 			}
+ 		}
+ 		if int64(s.Offset) < 0 {
+@@ -585,25 +673,23 @@
+ 			// Read the compression header.
+ 			switch f.Class {
+ 			case ELFCLASS32:
+-				var ch Chdr32
+-				chdata := make([]byte, unsafe.Sizeof(ch))
++				chdata := make([]byte, sizeofChdr32)
+ 				if _, err := s.sr.ReadAt(chdata, 0); err != nil {
+ 					return nil, err
+ 				}
+-				s.compressionType = CompressionType(bo.Uint32(chdata[unsafe.Offsetof(ch.Type):]))
+-				s.Size = uint64(bo.Uint32(chdata[unsafe.Offsetof(ch.Size):]))
+-				s.Addralign = uint64(bo.Uint32(chdata[unsafe.Offsetof(ch.Addralign):]))
+-				s.compressionOffset = int64(unsafe.Sizeof(ch))
++				s.compressionType = CompressionType(bo.Uint32(chdata[offChdr32Type:]))
++				s.Size = uint64(bo.Uint32(chdata[offChdr32Size:]))
++				s.Addralign = uint64(bo.Uint32(chdata[offChdr32Addralign:]))
++				s.compressionOffset = int64(sizeofChdr32)
+ 			case ELFCLASS64:
+-				var ch Chdr64
+-				chdata := make([]byte, unsafe.Sizeof(ch))
++				chdata := make([]byte, sizeofChdr64)
+ 				if _, err := s.sr.ReadAt(chdata, 0); err != nil {
+ 					return nil, err
+ 				}
+-				s.compressionType = CompressionType(bo.Uint32(chdata[unsafe.Offsetof(ch.Type):]))
+-				s.Size = bo.Uint64(chdata[unsafe.Offsetof(ch.Size):])
+-				s.Addralign = bo.Uint64(chdata[unsafe.Offsetof(ch.Addralign):])
+-				s.compressionOffset = int64(unsafe.Sizeof(ch))
++				s.compressionType = CompressionType(bo.Uint32(chdata[offChdr64Type:]))
++				s.Size = bo.Uint64(chdata[offChdr64Size:])
++				s.Addralign = bo.Uint64(chdata[offChdr64Addralign:])
++				s.compressionOffset = int64(sizeofChdr64)
+ 			}
+ 		}
+ 

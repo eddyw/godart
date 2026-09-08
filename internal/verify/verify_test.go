@@ -16,7 +16,9 @@ import (
 func run(t *testing.T, src string) error {
 	t.Helper()
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "a.go", src, 0)
+	// The comments reach the tree, because a directive of gart stands in a
+	// comment. The loader of stage 1 reads them the same way.
+	file, err := parser.ParseFile(fset, "a.go", src, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("the source does not parse: %v", err)
 	}
@@ -408,4 +410,71 @@ type narrowMix interface{ ~int | ~float32 }
 
 	rejectFile(t, "a division of an int and a float64", "the Dart operator / always gives a double",
 		head+"func f[T wideType](a, b T) T { return a / b }\n")
+}
+
+// TestDartDecl proves the value boundary of an external Dart declaration in
+// both directions.
+//
+// A declaration of the runtime library of gart carries each type of the
+// subset. The compiler writes the Dart form of each Go type, and the runtime
+// function names that form in its own signature, thus the Dart compiler proves
+// the pair.
+//
+// Each other library holds the 5 forms of the boundary: bool, int, float64,
+// string, and dart.Object. A foreign signature of Object? or of dynamic takes
+// a wrong value with no report, thus the verifier names the position of the
+// parameter or of the result.
+func TestDartDecl(t *testing.T) {
+	const runtime = "package:goruntime/goruntime.dart"
+	const other = "dart:convert"
+
+	acceptFile(t, "the runtime library carries a slice", `package a
+
+//gart:dart `+runtime+` $jsonMarshal
+func jsonFastMarshal(v any) []byte
+`)
+	acceptFile(t, "the runtime library carries a struct", `package a
+
+type point struct{ x, y int }
+
+//gart:dart `+runtime+` $shift
+func shift(p point, by []int) map[string]point
+`)
+	acceptFile(t, "another library carries the 4 basic forms", `package a
+
+//gart:dart `+other+` encode
+func encode(flag bool, count int, ratio float64, name string) string
+`)
+	rejectFile(t, "another library rejects a slice parameter",
+		"the parameter v of jsonFastMarshal holds the type any", `package a
+
+//gart:dart `+other+` jsonEncode
+func jsonFastMarshal(v any) []byte
+`)
+	rejectFile(t, "another library rejects a slice result",
+		"the result of jsonFastMarshal holds the type []byte", `package a
+
+//gart:dart `+other+` jsonEncode
+func jsonFastMarshal(name string) []byte
+`)
+	rejectFile(t, "the runtime library gives 1 value",
+		"carries //gart:dart and 2 results", `package a
+
+//gart:dart `+runtime+` $split
+func split(name string) ([]byte, bool)
+`)
+	rejectFile(t, "the runtime library takes no variadic parameter",
+		"carries //gart:dart and a variadic parameter", `package a
+
+//gart:dart `+runtime+` $join
+func join(parts ...string) string
+`)
+	rejectFile(t, "only a function carries the directive",
+		"carries //gart:dart, and only a function carries it", `package a
+
+type point struct{ x, y int }
+
+//gart:dart `+runtime+` $shift
+func (p point) shift() int
+`)
 }

@@ -1,0 +1,29 @@
+The file patches 1 constant of the real Go source.
+
+startDetectingCyclesAfter holds 1000 in Go, and 100 in this build. A cycle of
+a pointer, of a map, or of a slice runs through the arshalers of reflect, and
+1 level of that descent costs about 7 frames of the machine. The stack of Dart
+holds about 2,000 frames, thus the guard of Go would never run.
+
+Each test of Go that reads the constant builds its own expectation from it,
+thus each 1 passes. The report of a cycle names a shorter JSON pointer than Go
+names, and each other answer holds. Read docs/parity.md.
+
+@@ -47,7 +47,16 @@
+ 	emptyStructType = reflect.TypeFor[struct{}]()
+ )
+ 
+-const startDetectingCyclesAfter = 1000
++// startDetectingCyclesAfter is the depth at which the marshal starts to hold
++// the set of the open pointers. Go holds 1000, and this build holds 100.
++//
++// A cycle costs 1 level of the descent of the arshalers for each level of the
++// value, and 1 level of that descent costs about 7 frames of the machine. The
++// stack of Dart holds about 2,000 frames, thus a cycle of a pointer, of a map,
++// or of a slice would overflow the stack far below the depth of 1000. The
++// report of the cycle names a shorter path than Go names, and each other
++// answer holds. Read docs/parity.md.
++const startDetectingCyclesAfter = 100
+ 
+ type seenPointers = map[any]struct{}
+ 

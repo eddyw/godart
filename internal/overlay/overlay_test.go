@@ -15,12 +15,19 @@ func TestPackages(t *testing.T) {
 		}
 	}
 	for _, p := range overlay.Packages() {
-		if len(p.Files) == 0 {
+		// A native package needs no file of its own. A diff of 1 source file
+		// then holds the whole change of the package.
+		if len(p.Files) == 0 && len(p.Patches) == 0 {
 			t.Errorf("the package %s holds no file", p.Path)
 		}
 		for _, f := range p.Files {
 			if len(f.Content) == 0 {
 				t.Errorf("the file %s of %s is empty", f.Name, p.Path)
+			}
+		}
+		for _, f := range p.Patches {
+			if len(f.Content) == 0 {
+				t.Errorf("the diff %s of %s is empty", f.Name, p.Path)
 			}
 		}
 	}

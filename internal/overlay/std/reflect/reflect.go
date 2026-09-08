@@ -1434,7 +1434,14 @@ func (v Value) Convert(t Type) Value {
 	if t == nil {
 		panic("reflect: nil type passed to Value.Convert")
 	}
-	return Value{value: dart.ValueConvert(v.read(), t.handle()), ok: true}
+	got := dart.ValueConvert(v.read(), t.handle())
+	if t.Kind() == Interface {
+		// The result holds the dynamic value with its own type, and the
+		// interface is the static type of the location. Interface of the
+		// result thus gives the concrete value, exactly as Go gives it.
+		return Value{value: got, typ: t, ok: true}
+	}
+	return Value{value: got, ok: true}
 }
 
 // CanConvert reports whether a conversion of the value to t holds.

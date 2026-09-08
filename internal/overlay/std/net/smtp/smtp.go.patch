@@ -1,0 +1,29 @@
+The file patches the real Go source of net/smtp/smtp.go.
+
+1 part of the real file stays outside the subset. StartTLS raises a connection
+that already stands to TLS, and it calls tls.Client. The overlay of crypto/tls
+holds no such function, because the secure socket of Dart owns the whole
+handshake. StartTLS thus reports the cause and sends no command. SendMail
+already gives that error to its caller, thus no password reaches a server in
+the clear.
+
+@@ -155,14 +168,11 @@
+ 	if err := c.hello(); err != nil {
+ 		return err
+ 	}
+-	_, _, err := c.cmd(220, "STARTTLS")
+-	if err != nil {
+-		return err
+-	}
+-	c.conn = tls.Client(c.conn, config)
+-	c.Text = textproto.NewConn(c.conn)
+-	c.tls = true
+-	return c.ehlo()
++	// The overlay of crypto/tls holds no Client, thus no code can raise a
++	// connection that already stands to TLS. A silent send of the credentials
++	// in the clear is outside the rule of the project, thus the command never
++	// reaches the server and the caller reads the cause.
++	return errors.New("smtp: crypto/tls holds no Client, thus STARTTLS stays outside the subset")
+ }
+ 
+ // TLSConnectionState returns the client's TLS connection state.
