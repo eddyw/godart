@@ -29,21 +29,25 @@ func (d Duration) Abs() Duration {
 }
 
 // UnixMilli gives the count of milliseconds since the start of the Unix epoch.
-func (t Time) UnixMilli() int64 { return floorDiv(t.nanos, 1000000) }
+func (t Time) UnixMilli() int64 {
+	return t.unixSec()*1000 + int64(t.nsec)/1000000
+}
 
 // UnixMicro gives the count of microseconds since the start of the Unix epoch.
-func (t Time) UnixMicro() int64 { return floorDiv(t.nanos, 1000) }
+func (t Time) UnixMicro() int64 {
+	return t.unixSec()*1000000 + int64(t.nsec)/1000
+}
 
 // UnixMilli gives the Time of a count of milliseconds since the start of the
 // Unix epoch.
 func UnixMilli(msec int64) Time {
-	return Time{nanos: msec * 1000000, loc: Local}
+	return Unix(floorDiv(msec, 1000), floorMod(msec, 1000)*1000000)
 }
 
 // UnixMicro gives the Time of a count of microseconds since the start of the
 // Unix epoch.
 func UnixMicro(usec int64) Time {
-	return Time{nanos: usec * 1000, loc: Local}
+	return Unix(floorDiv(usec, 1000000), floorMod(usec, 1000000)*1000)
 }
 
 // AddDate gives the time after the count of years, months, and days. A value
@@ -58,7 +62,7 @@ func (t Time) AddDate(years int, months int, days int) Time {
 // Zone gives the name of the zone of the wall clock of t and its offset in
 // seconds east of UTC.
 func (t Time) Zone() (string, int) {
-	offset, name := t.Location().lookup(t.nanos)
+	offset, name := t.Location().lookup(t.unixSec())
 	return name, offset
 }
 
@@ -71,13 +75,13 @@ func (t Time) ZoneBounds() (Time, Time) {
 		// all time, thus the 2 bounds stay empty.
 		return Time{}, Time{}
 	}
-	_, _, start, end, _ := loc.lookupSec(floorDiv(t.nanos, 1000000000))
+	_, _, start, end, _ := loc.lookupSec(t.unixSec())
 	var from, to Time
 	if start != alpha {
-		from = Time{nanos: start * 1000000000, loc: t.loc}
+		from = Time{sec: start + unixToInternal, loc: t.loc}
 	}
 	if end != omega {
-		to = Time{nanos: end * 1000000000, loc: t.loc}
+		to = Time{sec: end + unixToInternal, loc: t.loc}
 	}
 	return from, to
 }
@@ -88,7 +92,7 @@ func (t Time) IsDST() bool {
 	if len(loc.zone) == 0 {
 		return false
 	}
-	_, _, _, _, isDST := loc.lookupSec(floorDiv(t.nanos, 1000000000))
+	_, _, _, _, isDST := loc.lookupSec(t.unixSec())
 	return isDST
 }
 

@@ -926,7 +926,10 @@ func (e *emitter) decl(d ir.Decl) {
 			if d.Init != nil {
 				value = e.expr(d.Init)
 			}
-			e.line("late %s %s = %s;", e.dartType(d.Var.Type),
+			// A top level variable of Dart with an initializer is lazy
+			// already, thus the keyword late adds nothing and the lint
+			// unnecessary_late reports it.
+			e.line("%s %s = %s;", e.dartType(d.Var.Type),
 				e.topName(e.pkg, d.Var.Name), value)
 			return
 		}

@@ -241,6 +241,19 @@ func TestTestsOfGoroot(t *testing.T) {
 		// of Go. The 2 skip.
 		{"path/filepath", "", []string{
 			"--- PASS: TestEvalSymlinks ", "--- PASS: TestWalk "}},
+		// TestContextErrDoneRace holds a loop that reads ctx.Err with no
+		// yield, and it yields only on the architecture wasm. Each goroutine
+		// of gart runs on 1 thread, thus that loop never ends. The filter
+		// holds each test whose name does not start with TestCo, and
+		// TestContextErrDoneRace is the only such name. TestAllocs reads
+		// AllocsPerRun, and it skips.
+		{"context", "Test[^C]|TestC[^o]", []string{
+			"--- PASS: TestValues ", "--- PASS: TestDeadline "}},
+		// TestRawBytesAllocs reads AllocsPerRun, and it skips.
+		// TestPoolExhaustOnCancel holds a synctest bubble, and TestConversions
+		// reads the zero value of a time.Time.
+		{"database/sql", "", []string{
+			"--- PASS: TestConversions ", "--- PASS: TestPoolExhaustOnCancel "}},
 	}
 	for _, c := range cases {
 		t.Run(c.pkg, func(t *testing.T) {

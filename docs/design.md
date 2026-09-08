@@ -778,8 +778,11 @@ directive may bind the variable to another package.
 
 **A lazy declaration ships, and it saves 574,560 bytes.** A package variable
 whose initializer cannot panic and writes nothing takes the form
-`late T x = <value>;`. Dart runs such an initializer at the first read, thus
-the tree shaker drops the variable and the whole value when no code reads it.
+`T x = <value>;`. Dart runs the initializer of a top level variable at the
+first read, thus the tree shaker drops the variable and the whole value when no
+code reads it. The keyword `late` adds nothing there, and `flutter analyze`
+reports `unnecessary_late` for it. A package variable with no initializer keeps
+the keyword.
 The measure of this session, over a program that reads 1 table of `unicode`:
 an ahead of time binary of 7,684,640 bytes before the change and 7,110,080
 after it, thus 574,560 bytes and 7.5 percent. A map literal takes the lazy

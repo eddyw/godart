@@ -435,12 +435,7 @@ func validCookieDomain(v string) bool {
 // validCookieExpires reports whether v is a valid cookie expires-value.
 func validCookieExpires(t time.Time) bool {
 	// IETF RFC 6265 Section 5.1.1.5, the year must not be less than 1601.
-	//
-	// The Time of the overlay counts nanoseconds from the start of the Unix
-	// epoch, thus the zero Time reads the year 1970 and not the year 1. The
-	// test of IsZero holds the meaning of Go for each time that the overlay
-	// can name. docs/parity.md holds the limit of the type.
-	return !t.IsZero() && t.Year() >= 1601
+	return t.Year() >= 1601
 }
 
 // isCookieDomainName reports whether s is a valid domain name or a valid

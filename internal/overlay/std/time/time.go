@@ -102,60 +102,118 @@ func Sleep(d Duration) {
 	dart.Sleep(int64(d))
 }
 
-// A Time is a point in time. It holds a count of nanoseconds since the start of
-// the Unix epoch and the location of its wall clock.
+// A Time is a point in time.
 //
-// Go holds a count of seconds since the year 1, thus the zero value of Go is
-// that year. The zero value here is the start of the Unix epoch.
-// docs/parity.md holds that gap.
+// It holds a count of seconds since January 1 of the year 1. It also holds a
+// count of nanoseconds inside that second, and the location of its wall clock.
+//
+// Go holds the same origin. The zero value of the 2 runtimes is thus midnight
+// UTC of January 1 of the year 1. A Time of Go also holds a reading of the
+// monotonic clock, and a Time here holds no such reading.
 type Time struct {
-	nanos int64
-	loc   *Location
+	sec  int64
+	nsec int32
+	loc  *Location
+}
+
+// unixSec gives the count of seconds of t since the start of the Unix epoch.
+func (t Time) unixSec() int64 { return t.sec - unixToInternal }
+
+// unixTime builds a Time of 2 counts. The first 1 holds seconds since the
+// start of the Unix epoch, and the second 1 nanoseconds inside that second.
+func unixTime(sec int64, nsec int32) Time {
+	return Time{sec: sec + unixToInternal, nsec: nsec, loc: Local}
 }
 
 // Now gives the time of the clock.
 func Now() Time {
-	return Time{nanos: dart.NowNanos(), loc: Local}
+	nanos := dart.NowNanos()
+	return unixTime(floorDiv(nanos, 1000000000),
+		int32(floorMod(nanos, 1000000000)))
 }
 
 // Unix gives the time of a count of seconds and a count of nanoseconds since
-// the start of the Unix epoch.
+// the start of the Unix epoch. A count of nanoseconds outside the range 0 to
+// 999999999 moves into the count of seconds, exactly as in Go.
 func Unix(sec, nsec int64) Time {
-	return Time{nanos: sec*1000000000 + nsec, loc: Local}
+	if nsec < 0 || nsec >= 1000000000 {
+		n := floorDiv(nsec, 1000000000)
+		sec += n
+		nsec -= n * 1000000000
+	}
+	return unixTime(sec, int32(nsec))
 }
 
 // UnixNano gives the count of nanoseconds since the start of the Unix epoch.
-func (t Time) UnixNano() int64 { return t.nanos }
+//
+// The result is undefined outside the year range 1678 to 2262. The count does
+// not fit an int64 there, and Go names the same bound.
+func (t Time) UnixNano() int64 {
+	return t.unixSec()*1000000000 + int64(t.nsec)
+}
 
 // Unix gives the count of seconds since the start of the Unix epoch.
-func (t Time) Unix() int64 { return t.nanos / 1000000000 }
+func (t Time) Unix() int64 { return t.unixSec() }
 
-// Sub gives the duration between t and u.
-func (t Time) Sub(u Time) Duration { return Duration(t.nanos - u.nanos) }
+// Sub gives the duration between t and u. A result outside the range of a
+// Duration gives the largest or the smallest Duration, exactly as in Go.
+func (t Time) Sub(u Time) Duration {
+	d := Duration(t.sec-u.sec)*Second + Duration(t.nsec-u.nsec)
+	switch {
+	case u.Add(d).Equal(t):
+		return d
+	case t.Before(u):
+		return minDuration
+	default:
+		return maxDuration
+	}
+}
 
 // Add gives the time after the duration.
-func (t Time) Add(d Duration) Time { return Time{nanos: t.nanos + int64(d), loc: t.loc} }
+func (t Time) Add(d Duration) Time {
+	dsec := int64(d / 1000000000)
+	nsec := t.nsec + int32(d%1000000000)
+	if nsec >= 1000000000 {
+		dsec++
+		nsec -= 1000000000
+	} else if nsec < 0 {
+		dsec--
+		nsec += 1000000000
+	}
+	t.sec += dsec
+	t.nsec = nsec
+	return t
+}
 
 // Before reports whether t comes before u.
-func (t Time) Before(u Time) bool { return t.nanos < u.nanos }
+func (t Time) Before(u Time) bool {
+	return t.sec < u.sec || t.sec == u.sec && t.nsec < u.nsec
+}
 
 // After reports whether t comes after u.
-func (t Time) After(u Time) bool { return t.nanos > u.nanos }
+func (t Time) After(u Time) bool {
+	return t.sec > u.sec || t.sec == u.sec && t.nsec > u.nsec
+}
 
 // Compare gives -1 when t comes before u, 0 when the 2 name the same instant,
 // and 1 when t comes after u.
 func (t Time) Compare(u Time) int {
-	if t.nanos < u.nanos {
+	switch {
+	case t.sec < u.sec:
 		return -1
-	}
-	if t.nanos > u.nanos {
+	case t.sec > u.sec:
+		return 1
+	case t.nsec < u.nsec:
+		return -1
+	case t.nsec > u.nsec:
 		return 1
 	}
 	return 0
 }
 
-// IsZero reports whether t holds the zero time.
-func (t Time) IsZero() bool { return t.nanos == 0 }
+// IsZero reports whether t holds the zero time, which is midnight UTC of
+// January 1 of the year 1.
+func (t Time) IsZero() bool { return t.sec == 0 && t.nsec == 0 }
 
 // String gives the text of the time, in the format of Go.
 //
@@ -180,7 +238,7 @@ func (t Time) In(loc *Location) Time {
 	if loc == nil {
 		panic("time: missing Location in call to Time.In")
 	}
-	return Time{nanos: t.nanos, loc: loc}
+	return Time{sec: t.sec, nsec: t.nsec, loc: loc}
 }
 
 // UTC gives t with the location UTC.
@@ -191,20 +249,19 @@ func (t Time) Local() Time { return t.In(Local) }
 
 // Equal reports whether t and u name the same instant. The location of each
 // one changes nothing.
-func (t Time) Equal(u Time) bool { return t.nanos == u.nanos }
+func (t Time) Equal(u Time) bool { return t.sec == u.sec && t.nsec == u.nsec }
 
 // locWall gives the name of the zone, the offset in seconds east of UTC, and
-// the reading of the wall clock of the location in nanoseconds.
+// the reading of the wall clock of the location in seconds since the start of
+// the Unix epoch.
 func (t Time) locWall() (string, int, int64) {
-	offset, name := t.Location().lookup(t.nanos)
-	return name, offset, t.nanos + int64(offset)*1000000000
+	offset, name := t.Location().lookup(t.unixSec())
+	return name, offset, t.unixSec() + int64(offset)
 }
 
 // nanosecond gives the count of nanoseconds inside the second of t. A zone
 // offset holds a whole count of seconds, thus the location changes nothing.
-func (t Time) nanosecond() int {
-	return int(floorMod(t.nanos, 1000000000))
-}
+func (t Time) nanosecond() int { return int(t.nsec) }
 
 // Date gives the Time of a date and a clock in a location. A value outside its
 // range moves into the next unit, exactly as in Go.
@@ -220,10 +277,10 @@ func Date(year int, month Month, day, hour, min, sec, nsec int, loc *Location) T
 	year, m = norm(year, m, 12)
 	month = Month(m) + 1
 
-	wall := daysFromCivil(int64(year), int(month), day)*86400000000000 +
-		int64(hour)*3600000000000 + int64(min)*60000000000 +
-		int64(sec)*1000000000 + int64(nsec)
-	return Time{nanos: wall - int64(loc.offsetOf(wall))*1000000000, loc: loc}
+	wall := daysFromCivil(int64(year), int(month), day)*86400 +
+		int64(hour)*3600 + int64(min)*60 + int64(sec)
+	return Time{sec: wall - int64(loc.offsetOf(wall)) + unixToInternal,
+		nsec: int32(nsec), loc: loc}
 }
 
 // norm moves a value that stands outside its base into the next unit.
@@ -356,8 +413,8 @@ var shortDayNames = []string{
 }
 
 // daysOf gives the count of days since the start of the Unix epoch of a reading
-// of a wall clock.
-func daysOf(wall int64) int64 { return floorDiv(wall, 86400000000000) }
+// of a wall clock. The reading is a count of seconds.
+func daysOf(wall int64) int64 { return floorDiv(wall, 86400) }
 
 // dateOf gives the year, the month, and the day of a reading of a wall clock.
 func dateOf(wall int64) (int, Month, int) { return civilFromDays(daysOf(wall)) }
@@ -365,8 +422,8 @@ func dateOf(wall int64) (int, Month, int) { return civilFromDays(daysOf(wall)) }
 // clockOf gives the hour, the minute, and the second of a reading of a wall
 // clock.
 func clockOf(wall int64) (int, int, int) {
-	rest := wall - daysOf(wall)*86400000000000
-	return int(rest / 3600000000000), int(rest / 60000000000 % 60), int(rest / 1000000000 % 60)
+	rest := wall - daysOf(wall)*86400
+	return int(rest / 3600), int(rest / 60 % 60), int(rest % 60)
 }
 
 // weekdayOf gives the day of the week of a reading of a wall clock. January 1

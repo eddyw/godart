@@ -48,10 +48,6 @@ func lessThanHalf(x, y Duration) bool {
 	return uint64(x)+uint64(x) < uint64(y)
 }
 
-// unixToAbsolute holds the count of seconds from January 1 of the year 1 to the
-// start of the Unix epoch. Go rounds a Time against that day.
-const unixToAbsolute = 62135596800
-
 // Truncate gives t rounded down to a multiple of d since January 1 of the year
 // 1. It gives t again for a d that is not positive.
 func (t Time) Truncate(d Duration) Time {
@@ -78,12 +74,21 @@ func (t Time) Round(d Duration) Time {
 // div gives the parity of the quotient of t by d, and the remainder. The count
 // of nanoseconds of t since January 1 of the year 1 does not fit an int64, thus
 // the general case builds a 128 bit value from 2 words.
-//
-// The range of the overlay starts in the year 1678, thus the count of seconds
-// stays positive and the negative case of Go never runs.
 func div(t Time, d Duration) (int, Duration) {
-	sec := floorDiv(t.nanos, 1000000000) + unixToAbsolute
-	nsec := floorMod(t.nanos, 1000000000)
+	neg := false
+	sec := t.sec
+	nsec := int64(t.nsec)
+	if sec < 0 {
+		// The 2 counts take their magnitude, and the parity and the remainder
+		// read the sign again at the end.
+		neg = true
+		sec = -sec
+		nsec = -nsec
+		if nsec < 0 {
+			nsec += 1000000000
+			sec--
+		}
+	}
 	qmod2 := 0
 	var r Duration
 	switch {
@@ -139,6 +144,10 @@ func div(t Time, d Duration) (int, Duration) {
 			d1 >>= 1
 		}
 		r = Duration(u0)
+	}
+	if neg && r != 0 {
+		qmod2 ^= 1
+		r = d - r
 	}
 	return qmod2, r
 }

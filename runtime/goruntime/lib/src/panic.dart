@@ -340,25 +340,43 @@ GoPanic? $chainPanic;
 /// True when a deferred call of the chain recovered the chain panic.
 bool $recovered = false;
 
-/// The state of the chain that holds this one. A deferred call can hold a
-/// chain of its own, and its end gives the state back.
-GoPanic? $savedChain;
-bool $savedRec = false;
+/// The state of the chain of deferred calls that holds another chain.
+///
+/// A deferred call can open a chain of its own, and 2 chains can stand open at
+/// the same time. The state thus rides a local of the caller, and a machine
+/// keeps it in its frame. A pair of variables of the library would lose the
+/// state of the outer chain.
+final class ChainState {
+  final GoPanic? panic;
+  final bool recovered;
 
-/// Opens the chain of the deferred calls of 1 function for a panic that
-/// reached it. A panic of another class runs the chain too, and recover gives
-/// null for it.
-void $chainSave(Object e) {
-  $savedChain = $chainPanic;
-  $savedRec = $recovered;
+  const ChainState(this.panic, this.recovered);
+}
+
+/// Opens the chain of the deferred calls of 1 function, and gives the state of
+/// the chain that holds it.
+///
+/// e is the panic that reached the function, and null for a normal return. A
+/// value of another class opens a chain with no panic, thus recover gives null
+/// for it.
+ChainState $chainOpen(Object? e) {
+  final ChainState saved = ChainState($chainPanic, $recovered);
+  $chainReset(e);
+  return saved;
+}
+
+/// Puts a value that reached an open chain in the place of the panic of that
+/// chain. A chain that already stands open thus keeps the state of the chain
+/// that holds it.
+void $chainReset(Object? e) {
   $recovered = false;
   $chainPanic = e is GoPanic ? e : null;
 }
 
-/// Closes the chain and gives the state of the chain that holds this one back.
-void $chainRestore() {
-  $chainPanic = $savedChain;
-  $recovered = $savedRec;
+/// Closes the chain and gives the state of the chain that holds it back.
+void $chainClose(ChainState saved) {
+  $chainPanic = saved.panic;
+  $recovered = saved.recovered;
 }
 
 /// The token of the function that the chain of the deferred calls runs now.
