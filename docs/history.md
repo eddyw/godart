@@ -73,6 +73,159 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-09, the twenty-fifth session
+
+The user asked for each open task end to end. 5 streams ran in git worktrees,
+and the 10 recorded items each closed or reached a proven cause.
+
+The real test suites of `slices` and of `path/filepath` run (decision 390).
+`internal/msan` and `internal/race` each give the flag of a sanitizer that the
+Dart output holds not, `syscall` gives the type `Errno` with the 28 error
+numbers that macOS and Linux number and name alike, and `testenv` gives
+`SkipFlaky`. The suite of `path/filepath` then found 4 defects of the overlay,
+and the real source of Go closed each 1: `EvalSymlinks` walks the elements
+itself, `Walk` reads the metadata of a child through the hook `lstat`, and
+`Glob` holds a list in the place of a chain of 10,000 calls. The suite of `os`
+cannot run, and the cause is structural: `export_test.go` reads 7 unexported
+names of the real implementation over `syscall`, and 8 of the 20 test files
+need a raw file descriptor.
+
+The residue of the conformance work of the library closes (decision 391). Of
+the 19 defects that decision 384 recorded, 15 closed in the last session and 4
+close here: a panic inside a `Format` method reaches the caller as a report,
+`errors.As` panics with a text of the kind `string`, each method of a nil
+`*os.File` tests the receiver first, and the flag `0` of a whole number falls
+when a precision stands beside it. 8 witness programs `par*` hold the 63 verb
+and value pairs that the conformance run had to cut.
+
+The 2 new sanitizer overlays opened the real test suite of `database/sql`, and
+it found 2 defects of `reflect` at once (decision 392). `AssignableTo` reads
+the underlying type now, thus `[]byte` fits a location of a defined slice type
+and `convertAssign` copies the bytes of the driver in the place of an alias.
+`ConvertibleTo` reads the direction of a channel.
+
+A dial reads each address of a name, in the order of Go (decision 393).
+`Dialer.DialContext` tries each address of the list and it gives the first
+cause when each 1 fails, exactly as `dialSerial` does. The order needs RFC
+6724, whose rules read a source address that `dart:io` cannot give, thus the
+overlay reads the resolver of the platform on darwin, on ios, on android, and
+on windows, exactly as Go does. `httptraceuse` writes the 2 lines that it lost.
+`//gart:dart` takes a third field `blocking`, thus a package of the overlay
+declares its own Dart call that waits, with no entry in the intrinsic table.
+
+A plain connection rides a `RawSocket`, and `CloseRead` lands (decision 394).
+`dart:io` holds `shutdown` on `RawSocket` alone, and no public call turns a
+`Socket` into the `RawSocket` under it. The runtime drives the byte stream of a
+plain TCP connection and of a connection of the Unix domain itself, and a TLS
+connection keeps its `Socket`, because Dart owns the record layer there.
+
+The lazy package variable lands, and decision 387 named the wrong cause
+(decision 395). An ahead of time binary of a program that reads 1 table of
+`unicode` falls from 7,684,640 bytes to 7,110,080. dart2wasm does not reject
+the lazy form. It rejects an ordering record of exactly 20 fields, because it
+gives such a record a `hashCode` getter that calls `Object.hash` with the shape
+id and each field, thus 21 arguments against 20 positional parameters. A delta
+debug over 1,051 files and then 224 bodies found it, `padRecord` of stage 4
+removes the shape, and `testdata/dartbug/record20/` holds the witness of 3
+lines and the report for the Dart team.
+
+A `//gart:dart` declaration of the runtime library carries each type of the
+subset now (decision 396). The compiler writes the Dart form of each Go type
+and the runtime names that form, thus the Dart compiler proves the pair. Each
+other library keeps the 5 forms of the value boundary.
+
+The fast marshal of the runtime serves `encoding/json` (decision 397).
+`json.encode.typed` falls from 46.5 milliseconds to 5.90, against 1.55 for Go
+and 7.7 for the hand written Dart of the same case. A profile gave 43 percent
+of the cost to `reflect.Value.Field`, thus `$jsonMarshal` walks the descriptor
+of the type and the getter of each field. It gives no bytes for a value that it
+cannot prove, and the Go code then marshals that value from the start.
+
+3 walks of the JSON packages take an iterative form (decision 398), thus 1,001
+levels of a slice stand where the stack of Dart held about 1,000.
+
+A return of a state machine reads its values first (decision 399). Go evaluates
+the values of a return and it runs the deferred calls after that, and a machine
+of stage 4 held the other order. `jsontext.AppendFormat` reads its buffer in
+the return, and a deferred call dropped that buffer, thus the function wrote no
+byte.
+
+A select case of a nil channel keeps the wait of a synctest bubble durable
+(decision 400). The runtime holds 1 shared nil channel for each element type,
+and that object stands outside each bubble, thus a wait over
+`context.Background().Done()` never counted as durably blocked and the fake
+clock stopped. `TestPoolExhaustOnCancel` of `database/sql` reported the
+deadlock, and 4 probes of the last session each missed it.
+
+The chain of the deferred calls of a machine holds the panic of its own
+function (decision 401). The last state of that chain read a variable of the
+library, thus a normal return inside the chain of a panicking caller threw the
+panic of that caller again. `TestBadDriver` lost the rest of a deferred
+`db.Close` because of it. The state rides a value of the class `ChainState`
+now.
+
+A `time.Time` counts from January 1 of the year 1 (decision 402), exactly as Go
+does. The zero value of the 2 runtimes is thus 1 instant, and 4 more rules of
+Go became reachable and landed. A frame that wraps an inner chain gives the
+wait of that chain (decision 403), thus `reflect.Select` and
+`reflect.Value.Recv` no longer stop a bubble.
+
+`database/sql` and `context` each run their real suite (decision 404), and
+`sync` and `time` cannot.
+
+The fast marshal of the runtime serves `encoding/json` (decision 397).
+`json.encode.typed` falls from 46.5 milliseconds to 5.36, against 1.55 for Go
+and 7.7 for the hand written Dart of the same case. A profile gave 43 percent
+of the cost to `reflect.Value.Field`, thus `$jsonMarshal` walks the descriptor
+of the type and the getter of each field. It writes no byte for a value that it
+cannot prove, and the Go code then marshals that value from the start.
+
+A decimal reaches 32 bits with 1 rounding (decision 406). The bridge of Dart
+gives a float64, thus a narrowing to 32 bits rounded a second time and a
+decimal at the middle point of 2 neighbours took the wrong 1. A wrong float32
+is a silent wrong answer, and it reaches each package. `dart.ParseFloat32`
+holds the single rounding, and `testdata/programs/resfloat32` proves 19,917
+values against the Go toolchain.
+
+A diff reaches a source file of the real package (decision 407). An overlay
+file that replaces a file of a native package carried each line of the real Go
+source for the few lines that differ, and such a copy ages with each release.
+25 copies became diffs, and 16,228 lines left the repository. 2 proofs stand
+behind each 1: the code of the patched file equals the code of the copy line
+for line, and the Dart output differs only in the name of a temporary.
+
+An overlay file with a new base name keeps a path of its own (decision 408). 36
+files of 19 packages took the free slot of an unrelated real file, thus each
+report of the compiler named a source that holds no such line.
+
+A type built from a local type carries the position of that type (decision
+409). 2 local types of 1 package can share 1 printed name, thus `[]Animal` of
+an example and `[]Animal` of the package shared 1 descriptor and 1 zero value.
+2 more defects of `reflect` closed with the same suites: a conversion of a
+`reflect.Value` to an interface keeps the concrete type (decision 410), and a
+description that the run time builds names its Dart type (decision 411).
+
+**`encoding/json` and `encoding/json/jsontext` each pass whole**, with 627 and
+with 943 subtests. `encoding/json/v2` builds its test binary and it runs 1,491
+subtests, and it ran 378 before.
+
+9 more packages of GOROOT join `TestTestsOfGoroot` (decision 405). Each 1
+passed under `make std-test` since an earlier session, and no test of the
+repository ran it. **34 packages of GOROOT run their real tests now**, and 13
+ran at the end of the last session.
+
+**A regression of the session, found and closed by a gate.** The lazy package
+variable wrote `late T x = <value>;`, and `flutter analyze` reported
+`unnecessary_late` 386 times in the generated tables of `unicode`. A top level
+variable of Dart with an initializer is lazy already, thus the keyword goes and
+the binary holds the same 7,110,080 bytes.
+
+The 2 Compass examples each answer a different question, thus the repository
+keeps both. `flutter/example/compass` carries 3,676 lines of Go over MVVM and a
+server of 9 routes, and `flutter/example/compass_v2` carries 759 lines with no
+server and matches 32 captures of the pinned reference byte for byte.
+`flutter/README.md` names which question each 1 answers.
+
 ### 2026-09-07, the twenty-fourth session
 
 The real test suites of `strings` and of `bytes` run. 3 changes opened them,
