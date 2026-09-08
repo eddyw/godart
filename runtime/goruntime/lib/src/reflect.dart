@@ -2347,6 +2347,20 @@ Iface? $valueSlice(Iface? value, int low, int high, int max) {
   if (v is Slice<Object?>) {
     return Iface(value.desc, v.range(low, high, max));
   }
+  final TypeDesc? elem = value.desc.elem?.call();
+  if (value.desc.kind == 'array' && v is List<Object?> && elem != null) {
+    // Go gives a slice that shares the storage of the array. The Dart form of
+    // an array is 1 list, thus a slice over that list holds the same list and
+    // a write through it reaches the array.
+    final TypeDesc desc = _typeAt($sliceOf(_descHandle(elem)));
+    return Iface(
+      desc,
+      _withType<Slice<Object?>>(
+        elem,
+        <T>() => Slice<T>(v as List<T>, low, high - low, max - low),
+      ),
+    );
+  }
   $panic(
     Iface($typeGoError, GoError('reflect: Slice of ${value.desc.display}')),
   );

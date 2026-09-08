@@ -1021,7 +1021,12 @@ func (v Value) IsNil() bool {
 	got := v.read()
 	kind := v.kindAt(got)
 	switch kind {
-	case Chan, Func, Interface, Map, Pointer, Slice:
+	case Interface:
+		// A nil interface holds no type and no value, and it reads as nil.
+		// An interface that holds a nil pointer is not nil, thus the value
+		// inside decides nothing here.
+		return got == nil
+	case Chan, Func, Map, Pointer, Slice:
 		if got == nil {
 			return true
 		}
@@ -1742,11 +1747,10 @@ func (v Value) Bytes() []byte {
 		if v.Type().Elem().Kind() != Uint8 {
 			panic("reflect.Value.Bytes of " + v.Type().String())
 		}
-		out := make([]byte, v.Len())
-		for i := range out {
-			out[i] = byte(v.Index(i).Uint())
-		}
-		return out
+		// Go gives a slice that shares the storage of the array, thus a write
+		// through the result reaches the array. The Dart form of an array is 1
+		// list, and the slice of that list holds the same list.
+		return v.Slice(0, v.Len()).Bytes()
 	}
 	panic("reflect.Value.Bytes of " + v.Type().String())
 }
