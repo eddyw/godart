@@ -973,18 +973,25 @@ func decimalFloat(text string, bitSize int) (float64, error) {
 		}
 		clean = string(buf)
 	}
-	v, ok := dart.ParseFloat(clean)
-	if !ok {
-		return 0, ErrSyntax
-	}
 	// specialFloat holds the text of an infinity, thus an infinity here comes
 	// from a value above the range of the type.
+	//
+	// A read of 32 bits takes its own bridge. A read that gives a float64 and
+	// narrows it rounds 2 times, thus a decimal that stands exactly between 2
+	// values of float32 takes the wrong neighbour.
 	if bitSize == 32 {
-		f := float32(v)
+		f, ok := dart.ParseFloat32(clean)
+		if !ok {
+			return 0, ErrSyntax
+		}
 		if dart.Float32Bits(f)&0x7FFFFFFF == 0x7F800000 {
 			return float64(f), ErrRange
 		}
 		return float64(f), nil
+	}
+	v, ok := dart.ParseFloat(clean)
+	if !ok {
+		return 0, ErrSyntax
 	}
 	if dart.Float64Bits(v)&0x7FFFFFFFFFFFFFFF == 0x7FF0000000000000 {
 		return v, ErrRange
