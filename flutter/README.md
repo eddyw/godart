@@ -17,7 +17,8 @@ targets.
 | `example/counter/` | Proof program 1. Go holds the whole screen. |
 | `example/apilist/` | Proof program 2. Go reads an HTTP API and gives a list. |
 | `example/form/` | Proof program 3. Go validates a form and sends it. |
-| `example/compass/` | The port of the Flutter sample compass_app. 7 screens, a stack of the navigator, and the server of the sample in Go. Read its README for each limit that the port found. |
+| `example/compass/` | Proof program 4. The architecture port of the Flutter sample compass_app. 7 screens, a stack of the navigator, and the server of the sample in Go. Read its README for each limit that the port found. |
+| `example/compass_v2/` | Proof program 5. The pixel parity of the same sample, with no server. 32 captures match the pinned reference byte for byte, and the iOS runner stands. |
 
 ## Run an example
 
@@ -80,6 +81,17 @@ a stack of the navigator over `ui.Pages`, an API client with a token, and the
 server of the sample in Go. `example/compass/README.md` names each limit of
 the model that the port found, and each 1 stands on a package outside the
 Flutter SDK or on a Flutter API that needs a `BuildContext`.
+
+**The 2 Compass examples answer 2 different questions, thus the repository
+keeps both.** `example/compass` asks what a real Go architecture can build. It
+carries 3,676 lines of Go over MVVM, a repository for each source, a use case,
+and a server of 9 routes over `net/http` and `encoding/json`.
+`example/compass_v2` asks how close the pixels come. It carries 759 lines of
+Go with local data and no server, and `tool/compare_upstream.py` builds the
+pinned reference and matches 32 captures byte for byte, in 2 sizes and 2
+themes. `example/compass_v2/doc/validation.md` holds that record, and
+`doc/parity.json` holds the count. Only compass_v2 holds an iOS runner and a
+test of the native share channel.
 
 Each widget test of the 2 points the application at a local server of
 `dart:io`, thus no test reaches the network.
