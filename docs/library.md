@@ -308,7 +308,7 @@ function. Read decision 124.
    `Type.Comparable`. The type descriptor of the runtime holds a comparable
    flag, and the new intrinsic `dart.TypeInfo` reads the text and the flag.
 2. `time.Time.String`. The `time` overlay now holds a calendar. The conversion
-   from a count of nanoseconds to a year, a month, and a day follows the
+   from a count of seconds to a year, a month, and a day follows the
    algorithm of Howard Hinnant. The new intrinsic `dart.ZoneOffset` gives the
    offset and the name of the local zone.
 
@@ -322,7 +322,7 @@ The work found 3 defects. Read the defect table.
 
 ## The calendar of the time overlay
 
-M16 gave `Time.String` a calendar of 1 direction: a count of nanoseconds to a
+M16 gave `Time.String` a calendar of 1 direction: a count of seconds to a
 date. M18 gave the other direction and the layout scanner of Go.
 
 - `Location` holds a name and a flag. `UTC` and `Local` are the 2 locations, and
@@ -451,10 +451,12 @@ transaction, a context that a cancel stops, a deadline, and the pool under
 load. A real driver of a network database is Go code like any other, thus a
 program can write 1 over `net`.
 
-**The tests of the Go repository do not run.** `convert_test.go` reads
-`internal/asan` and `sql_test.go` reads `internal/race`, and the surface holds
-neither package. `driver/types_test.go` holds a conversion between 2 named
-struct types. Read the limits of `docs/parity.md`.
+**The tests of the Go repository run.** `make std-test STD=database/sql` gives
+123 PASS, 1 SKIP, and 0 FAIL. `TestRawBytesAllocs` reads `AllocsPerRun`, and it
+skips. The suite named 3 defects that stood outside the package, and each 1
+closed: the durable mark of a select case of a nil channel inside a synctest
+bubble, the chain of the deferred calls of a machine, and the origin of a
+`time.Time`.
 
 ## The value surface of crypto/tls
 

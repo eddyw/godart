@@ -23,7 +23,8 @@ The state of 2026-09-04. Each row names the section that holds the detail.
 | `reflect` | A subset over a type descriptor. `Type` is a struct with a handle, and not an interface. |
 | An address | None. `%p` stays out, and a program counter is an index of a table of the runtime. |
 | An integer | 64 bits on each target. The JS target holds the pair form of GopherJS, and `reflect` and `json` read 53 bits there. |
-| A `Time` | 1 count of nanoseconds, thus the range is the year 1678 to the year 2262, and it holds no monotonic value. |
+| A `Time` | 1 count of seconds since January 1 of the year 1 and 1 count of nanoseconds, exactly as Go holds it. It holds no monotonic value. `UnixNano` reads the range of the year 1678 to the year 2262, and Go names the same bound. |
+| A busy loop with no yield | The scheduler of Go preempts it | It holds the isolate for ever. Each goroutine runs on 1 thread, thus a loop must reach a channel, a sleep, or `runtime.Gosched`. |
 | The zone of a date before 1901 | The modern offset of the zone. Dart names the zone, and Go reads its own database. |
 | The file access | Synchronous, through `dart:io`. No handle of a directory, and no file descriptor. `Chmod`, `Chown`, and `Chtimes` reach a path, and `Stat` still reports a fixed mode. |
 | The process access | Present through `Process` of `dart:io`. No signal to a child, and no process group. `Getuid` and its family give -1. |
@@ -1040,7 +1041,7 @@ Go.
 | `ServeMux`, `Handle`, `HandleFunc`, `StripPrefix` | Present | Equal. The routing tree, the conflict index, and the pattern reader of Go 1.22 each read the real Go source, thus the method, the `{id}` wildcard, the `{$}` anchor, the trailing slash redirect, and the status 405 each work. `Request.PathValue`, `SetPathValue`, and `Pattern` read. |
 | `Server`, `ListenAndServe`, `Serve`, `Close`, `Shutdown` | Present | Equal. The server tracks each listener and each connection, thus `Shutdown` waits for each connection to reach the idle state. The 4 timeouts, `MaxHeaderBytes`, `MaxHeaderValueCount`, `ConnState`, `BaseContext`, and `ConnContext` each read. |
 | `Error`, `NotFound`, `Redirect`, `StatusText` | Present | Equal |
-| The cookie family | Present | Equal. `cookie.go` reads the real Go source with 1 change. `Cookie.Valid` cannot reject an `Expires` below the year 1601, because the `Time` of the overlay names no year below 1678. |
+| The cookie family | Present | Equal. `cookie.go` reads the real Go source with 1 change. |
 | A chunked body | Present | Equal, for a read and for a write. |
 | Keep alive | Present | Present. The client holds a pool of 2 connections for each host. |
 | A Close of a body that stands before its end | The connection stays open when the read loop reaches the end first | The connection ends. |
@@ -1099,8 +1100,10 @@ holds the whole exchange, and `crypto/tls.DialProxy` names it. `tls.Client` and
 ## The clock and the timer
 
 `time` reads the clock of `dart:io` and the scheduler of the runtime. A value of
-`Time` holds a count of nanoseconds after the start of the Unix epoch and a
-location. `UTC` and `Local` are the 2 built locations, and `Local` reads the
+`Time` holds a count of seconds since January 1 of the year 1, a count of
+nanoseconds inside that second, and a location. The zero value is thus midnight
+UTC of January 1 of the year 1, exactly as in Go.
+`UTC` and `Local` are the 2 built locations, and `Local` reads the
 offset and the name of the zone from Dart at each instant. `LoadLocation`
 builds each other location from the zone database.
 
@@ -1131,15 +1134,14 @@ builds each other location from the zone database.
 | `Time.Parse`, `ParseInLocation`, `ParseError` | Present | Equal. Read below. |
 | `Time.MarshalJSON`, `MarshalText`, `AppendText`, and the 2 read methods | RFC 3339 with the nanosecond | Equal |
 | `Time.MarshalBinary`, `AppendBinary`, `UnmarshalBinary` | The versioned form of Go | Equal. The bytes of the 2 runtimes match. |
-| `Time.MarshalJSON` outside the year range 0 to 9999 | Gives an error | The range of a Time cannot reach it, thus the method reports no error. |
+| `Time.MarshalJSON` outside the year range 0 to 9999 | Gives an error | Equal since this session. `appendStrictRFC3339` holds the 2 tests of Go, and `MarshalText` reads it too. |
 | `ParseDuration`, `Duration.Truncate`, `Duration.Round` | Present | Equal |
 | `Time.Truncate`, `Time.Round` | Round against January 1 of the year 1 | Equal. The count of nanoseconds of that day does not fit an int64, thus the general case builds a value of 128 bits. |
-| The zero value of `Time` | January 1 of the year 1 | The start of the Unix epoch. A Time holds 1 count of nanoseconds, thus the range is the year 1678 to the year 2262. |
+| The zero value of `Time` | January 1 of the year 1 | Equal since this session. |
 
 `Parse` reads each chunk of the layout that `Format` writes, and it gives a
 `*ParseError` with the text of Go. A layout that names no year gives the year 0,
-and that year stands outside the range of the overlay. Such a value wraps. Give
-the layout a year, or read the clock of the result only.
+exactly as in Go.
 
 A Go `Time` of `time.Now` also holds a value of the monotonic clock, and
 `String` writes it as ` m=+1.234567890`. A `Time` of the overlay holds no such
@@ -1198,6 +1200,9 @@ timer.
 | `sync.Mutex.Lock` and `sync.RWMutex.Lock` inside a bubble | Not durably blocked | Equal. The wait reads a token of the runtime, and not a channel. |
 | `Timer.Stop` and `Timer.Reset` of a bubble from outside each bubble | `fatal error: stop of synctest timer from outside bubble`, and the same text for a reset | Equal, with the same 2 texts. The report holds no goroutine trace. |
 | The same 2 calls from inside another bubble | No report, and the answer of a normal stop | Equal |
+| A select statement of the bubble that holds a case of a nil channel | Durably blocked | Equal since this session. `selectgo` of Go omits a case with no channel before it reads the bubble, and the runtime does too. |
+| A select statement over nil channels alone inside a bubble | Durably blocked, thus the bubble reports the deadlock | Equal |
+| `reflect.Select` and `reflect.Value.Recv` inside a bubble | Durably blocked | Equal since this session. The 2 wrappers of the frame of the runtime hold the mark now. |
 | A stop of a timer that ran | False, and no later timer takes the cancel | Equal |
 | A stop of a timer that stood armed at the end of its bubble | True | Equal |
 
@@ -1205,6 +1210,12 @@ timer.
 runtime, and not on a channel. The frame of such a wait carries no durable
 mark, thus a bubble that holds such a goroutine stands still. Decision 351
 holds the cause, and `testdata/programs/synctestlock` holds the witness.
+
+**A frame that wraps an inner chain gives the wait of that chain.** `dart.Catch`
+of the test harness, `reflect.Select`, and `reflect.Value.Recv` each hold the
+frame chain of an inner call. The interface `NestedFrame` names such a frame,
+and the durable mark, the reason of a wait, and the Go frames of a chain each
+read through it. `testdata/programs/syncreflectselect` holds the witness.
 
 The measure of 2026-09-05 holds 2 goroutines of 1 bubble. The first one takes a
 lock, the second one sleeps 1 second and gives the lock back, and the first one
@@ -1731,6 +1742,9 @@ The cause that blocks each package of the survey of 2026-08-31:
 | `bufio`, `maps`, `path`, `unicode`, `unicode/utf8`, `unicode/utf16` | Each runs since 2026-09-07 with no change. |
 | `path/filepath` | Runs since this session. 49 tests pass, and 3 skip. It needed `syscall.ENOTDIR`, `testenv.SkipFlaky`, and the real algorithm of `EvalSymlinks`, of `Walk`, and of `Glob`. |
 | `slices` | Runs since this session. 101 tests pass, and 3 skip at `AllocsPerRun`. It needed `internal/msan`, `internal/race`, and a diff that removes 3 tests. |
+| `database/sql` | Runs since this session. 123 tests pass, and 1 skips at `AllocsPerRun`. It needed the durable mark of a select case of a nil channel, the chain of the deferred calls of a machine, and the origin of a `time.Time`. |
+| `context` | Runs since this session, with 1 test out. 37 tests pass, and 1 skips. `TestContextErrDoneRace` reads `ctx.Err` in a loop with no yield, and 1 thread cannot leave such a loop. |
+| `sync`, `time` | Cannot run. Each 1 reads the unexported implementation of the real package over the runtime of Go. |
 | `regexp` | 5 rejections in `regexp/syntax/parse.go`: 1 call of `recover` and 4 addresses of a `[]rune` field. |
 
 ### The block model
