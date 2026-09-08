@@ -8,6 +8,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -86,6 +87,21 @@ func main() {
 	// Parse gives the zero value back.
 	parsed, err := time.Parse(time.RFC3339, "0001-01-01T00:00:00Z")
 	fmt.Println("parse", parsed.Equal(zero), err)
+
+	// A layout that names no year gives the year 0, and that year reads.
+	noYear, err := time.Parse("15:04", "10:30")
+	fmt.Println("no year", noYear.Format(time.RFC3339Nano), err)
+	noYear2, err := time.Parse("Jan 2", "Mar 5")
+	fmt.Println("no year 2", noYear2.Format(time.RFC3339Nano), err)
+
+	// Cookie.Valid reads the bound of the year 1601 of RFC 6265.
+	c := &http.Cookie{Name: "a", Value: "b",
+		Expires: time.Date(1500, time.January, 1, 0, 0, 0, 0, time.UTC)}
+	fmt.Println("cookie 1500", c.Valid())
+	c.Expires = time.Date(1700, time.January, 1, 0, 0, 0, 0, time.UTC)
+	fmt.Println("cookie 1700", c.Valid())
+	c.Expires = time.Time{}
+	fmt.Println("cookie zero", c.Valid())
 
 	// The zero value of a struct that holds a Time.
 	type row struct {
