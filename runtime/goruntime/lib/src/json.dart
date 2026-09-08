@@ -1143,10 +1143,13 @@ final class _StructInfo {
   }
 }
 
-final Map<String, _StructInfo> _structInfos = <String, _StructInfo>{};
+/// The cache reads the descriptor itself and not its name. 2 local types of 1
+/// package hold 1 name, thus a cache of the name gives the fields of the wrong
+/// type.
+final Map<TypeDesc, _StructInfo> _structInfos = <TypeDesc, _StructInfo>{};
 
 _StructInfo _structInfo(TypeDesc t) {
-  final _StructInfo? held = _structInfos[t.name];
+  final _StructInfo? held = _structInfos[t];
   if (held != null) return held;
   final List<int> indexes = <int>[];
   final List<String> names = <String>[];
@@ -1165,7 +1168,7 @@ _StructInfo _structInfo(TypeDesc t) {
     names.add(name);
   }
   final _StructInfo out = _StructInfo(indexes, names);
-  _structInfos[t.name] = out;
+  _structInfos[t] = out;
   return out;
 }
 
@@ -1364,3 +1367,560 @@ final TypeDesc _anyMapDesc = TypeDesc(
   comparable: false,
   zero: () => GoMap<GoString, Iface?>.nil(_nilIface),
 );
+
+// The fast marshal of encoding/json.
+//
+// The Go code of the package walks the value with the arshalers of
+// encoding/json/v2, and each field of a struct reaches reflect.Value.Field. A
+// measure of 2026-09-09 gave 43 percent of the cost of a marshal to that 1
+// call. The walk below reads the descriptor of the type and the getter of each
+// field, thus it needs no Value and no handle of the reflect bridge.
+//
+// The walk holds each rule of the v1 options: the escape of the 5 characters
+// that Go escapes beyond the JSON minimum, the shortest float text that reads
+// back, the sorted keys of a map, the base64 form of a byte slice, and the
+// array form of a byte array. A value that the walk cannot prove ends the
+// build, and the Go code then marshals it from the start.
+
+/// The depth that the fast marshal serves. A deeper value, and each value that
+/// holds a cycle, goes back to the Go code. The Go code of this build reports
+/// a cycle from the depth of 100, thus it needs no stack of its own for one.
+const int _maxMarshalDepth = 500;
+
+/// Marshals 1 Go value with the rules of encoding/json v1.
+///
+/// A nil result reports that the fast path cannot prove the value. The Go code
+/// then marshals it from the start, thus each byte and each error keeps the
+/// answer of Go.
+Slice<GoInt> $jsonMarshal(Iface? value) {
+  final _Enc e = _Enc();
+  try {
+    if (value == null) {
+      e.text('null');
+    } else {
+      e.value(value.desc, value.value, 0);
+    }
+  } on _GiveUp {
+    return Slice<GoInt>.nil();
+  }
+  return $gils(Slice<int>.of(Uint8List.sublistView(e.buf, 0, e.n)));
+}
+
+/// The buffer and the walk of the fast marshal.
+final class _Enc {
+  Uint8List buf = Uint8List(1024);
+  int n = 0;
+
+  void _room(int need) {
+    if (n + need <= buf.length) return;
+    int cap = buf.length * 2;
+    while (cap < n + need) {
+      cap *= 2;
+    }
+    final Uint8List out = Uint8List(cap);
+    out.setRange(0, n, buf);
+    buf = out;
+  }
+
+  void byte(int c) {
+    if (n == buf.length) _room(1);
+    buf[n++] = c;
+  }
+
+  void raw(Uint8List b, int start, int end) {
+    final int len = end - start;
+    if (len <= 0) return;
+    _room(len);
+    buf.setRange(n, n + len, b, start);
+    n += len;
+  }
+
+  /// Writes the code units of a text of ASCII.
+  void text(String s) {
+    _room(s.length);
+    for (int i = 0; i < s.length; i++) {
+      buf[n++] = s.codeUnitAt(i);
+    }
+  }
+
+  /// Writes 1 value of the type.
+  void value(TypeDesc t, Object? v, int depth) {
+    if (depth > _maxMarshalDepth) throw const _GiveUp();
+    if (_hasMarshalMethod(t)) throw const _GiveUp();
+    switch (t.kind) {
+      case 'bool':
+        text((v as bool) ? 'true' : 'false');
+        return;
+      case 'string':
+        quote((v as GoString).bytes);
+        return;
+      case 'int' || 'int8' || 'int16' || 'int32' || 'int64':
+        text((v as GoInt).toString());
+        return;
+      case 'uint' || 'uint8' || 'uint16' || 'uint32' || 'uint64' || 'uintptr':
+        text($ustring(v as GoInt));
+        return;
+      case 'float64':
+        number(v as double);
+        return;
+      case 'interface':
+        final Iface? held = v as Iface?;
+        if (held == null) {
+          text('null');
+          return;
+        }
+        value(held.desc, held.value, depth + 1);
+        return;
+      case 'ptr':
+        if (v == null) {
+          text('null');
+          return;
+        }
+        final TypeDesc elem = t.elem!();
+        value(elem, v is $Ptr<Object?> ? v.v : v, depth + 1);
+        return;
+      case 'slice':
+        slice(t, v as Slice<Object?>, depth);
+        return;
+      case 'array':
+        array(t, v as List<Object?>, depth);
+        return;
+      case 'map':
+        object(t, v as GoMap<Object?, Object?>, depth);
+        return;
+      case 'struct':
+        record(t, v, depth);
+        return;
+    }
+    throw const _GiveUp();
+  }
+
+  /// Writes a slice. A slice of bytes takes the base64 form of Go, and a nil
+  /// slice takes the null of the v1 options.
+  void slice(TypeDesc t, Slice<Object?> s, int depth) {
+    final TypeDesc elem = t.elem!();
+    if (elem.kind == 'uint8' && !_hasMarshalMethod(elem)) {
+      if (s.isNil) {
+        text('null');
+        return;
+      }
+      base64(s);
+      return;
+    }
+    if (s.isNil) {
+      text('null');
+      return;
+    }
+    byte(0x5b);
+    for (int i = 0; i < s.len; i++) {
+      if (i > 0) byte(0x2c);
+      value(elem, s.array[s.off + i], depth + 1);
+    }
+    byte(0x5d);
+  }
+
+  /// Writes an array. The v1 options hold FormatByteArrayAsArray, thus an
+  /// array of bytes takes the form of an array of numbers.
+  void array(TypeDesc t, List<Object?> a, int depth) {
+    final TypeDesc elem = t.elem!();
+    byte(0x5b);
+    for (int i = 0; i < a.length; i++) {
+      if (i > 0) byte(0x2c);
+      value(elem, a[i], depth + 1);
+    }
+    byte(0x5d);
+  }
+
+  /// Writes a map. Only a key of the string kind stands, and the keys sort by
+  /// their bytes, exactly as the deterministic order of the v1 options asks.
+  void object(TypeDesc t, GoMap<Object?, Object?> m, int depth) {
+    final TypeDesc key = t.key!();
+    if (key.kind != 'string' || _hasMarshalMethod(key)) throw const _GiveUp();
+    if (m.isNil) {
+      text('null');
+      return;
+    }
+    final TypeDesc elem = t.elem!();
+    final Slice<Object?> keys = m.keys();
+    final List<GoString> names = <GoString>[];
+    for (int i = 0; i < keys.len; i++) {
+      names.add(keys.array[keys.off + i]! as GoString);
+    }
+    if (names.length > 1) names.sort(_compareBytes);
+    byte(0x7b);
+    for (int i = 0; i < names.length; i++) {
+      if (i > 0) byte(0x2c);
+      quote(names[i].bytes);
+      byte(0x3a);
+      value(elem, m.get(names[i]), depth + 1);
+    }
+    byte(0x7d);
+  }
+
+  /// Writes a struct.
+  void record(TypeDesc t, Object? v, int depth) {
+    final _EncInfo info = _encInfo(t);
+    byte(0x7b);
+    bool first = true;
+    for (int i = 0; i < info.indexes.length; i++) {
+      final FieldDesc f = t.fields[info.indexes[i]];
+      final Object? held = f.get(v);
+      final TypeDesc ft = f.type();
+      if (info.omitEmpty[i] && _legacyEmpty(held, ft)) continue;
+      if (!first) byte(0x2c);
+      first = false;
+      byte(0x22);
+      text(info.names[i]);
+      byte(0x22);
+      byte(0x3a);
+      value(ft, held, depth + 1);
+    }
+    byte(0x7d);
+  }
+
+  /// Writes a JSON string, with the escapes of the v1 options: the 2 of the
+  /// grammar, each control character, the 3 of HTML, and the 2 of JavaScript.
+  /// A byte that no valid sequence of UTF-8 holds gives U+FFFD.
+  void quote(Uint8List src) {
+    byte(0x22);
+    int i = 0;
+    int run = 0;
+    final int len = src.length;
+    while (i < len) {
+      final int c = src[i];
+      if (c < 0x80) {
+        if (_escapeASCII[c] == 0) {
+          i++;
+          continue;
+        }
+        raw(src, run, i);
+        i++;
+        run = i;
+        _escaped(c);
+        continue;
+      }
+      final int size = _sizeOf(src, i, len);
+      if (size == 0) {
+        raw(src, run, i);
+        i++;
+        run = i;
+        byte(0xef);
+        byte(0xbf);
+        byte(0xbd);
+        continue;
+      }
+      if (size == 3 &&
+          src[i] == 0xe2 &&
+          src[i + 1] == 0x80 &&
+          src[i + 2] >= 0xa8 &&
+          src[i + 2] <= 0xa9) {
+        raw(src, run, i);
+        i += 3;
+        run = i;
+        text(src[i - 1] == 0xa8 ? r'\u2028' : r'\u2029');
+        continue;
+      }
+      i += size;
+    }
+    raw(src, run, len);
+    byte(0x22);
+  }
+
+  void _escaped(int c) {
+    switch (c) {
+      case 0x22 || 0x5c:
+        byte(0x5c);
+        byte(c);
+      case 0x08:
+        text(r'\b');
+      case 0x0c:
+        text(r'\f');
+      case 0x0a:
+        text(r'\n');
+      case 0x0d:
+        text(r'\r');
+      case 0x09:
+        text(r'\t');
+      default:
+        text(r'\u00');
+        byte(_hexDigits.codeUnitAt((c >> 4) & 0xf));
+        byte(_hexDigits.codeUnitAt(c & 0xf));
+    }
+  }
+
+  /// Writes the base64 form of a byte slice, with the alphabet and the padding
+  /// of RFC 4648.
+  void base64(Slice<Object?> s) {
+    final Uint8List b = _sliceBytes(s);
+    byte(0x22);
+    int i = 0;
+    while (i + 3 <= b.length) {
+      final int x = (b[i] << 16) | (b[i + 1] << 8) | b[i + 2];
+      byte(_b64.codeUnitAt((x >> 18) & 0x3f));
+      byte(_b64.codeUnitAt((x >> 12) & 0x3f));
+      byte(_b64.codeUnitAt((x >> 6) & 0x3f));
+      byte(_b64.codeUnitAt(x & 0x3f));
+      i += 3;
+    }
+    final int rest = b.length - i;
+    if (rest == 1) {
+      final int x = b[i] << 16;
+      byte(_b64.codeUnitAt((x >> 18) & 0x3f));
+      byte(_b64.codeUnitAt((x >> 12) & 0x3f));
+      byte(0x3d);
+      byte(0x3d);
+    } else if (rest == 2) {
+      final int x = (b[i] << 16) | (b[i + 1] << 8);
+      byte(_b64.codeUnitAt((x >> 18) & 0x3f));
+      byte(_b64.codeUnitAt((x >> 12) & 0x3f));
+      byte(_b64.codeUnitAt((x >> 6) & 0x3f));
+      byte(0x3d);
+    }
+    byte(0x22);
+  }
+
+  /// Writes a JSON number of a float64, with the rule of jsonwire.AppendFloat.
+  ///
+  /// Go takes the exponent form below 1e-6 and from 1e21, and the fixed form
+  /// between the 2. The text holds the shortest digits that read back as the
+  /// same value.
+  void number(double v) {
+    if (v.isNaN || v.isInfinite) throw const _GiveUp();
+    if (v == 0) {
+      if (v.isNegative) byte(0x2d);
+      byte(0x30);
+      return;
+    }
+    final double abs = v.abs();
+    final String form = abs.toStringAsExponential();
+    final int at = form.indexOf('e');
+    String digits = form.substring(0, at).replaceAll('.', '');
+    final int exp = int.parse(form.substring(at + 1));
+    while (digits.length > 1 && digits.endsWith('0')) {
+      digits = digits.substring(0, digits.length - 1);
+    }
+    if (v.isNegative) byte(0x2d);
+    if (abs < 1e-6 || abs >= 1e21) {
+      byte(digits.codeUnitAt(0));
+      if (digits.length > 1) {
+        byte(0x2e);
+        text(digits.substring(1));
+      }
+      byte(0x65);
+      if (exp < 0) {
+        byte(0x2d);
+        text(exp.abs().toString());
+      } else {
+        byte(0x2b);
+        text(exp.toString().padLeft(2, '0'));
+      }
+      return;
+    }
+    if (exp < 0) {
+      text('0.');
+      for (int i = 0; i < -exp - 1; i++) {
+        byte(0x30);
+      }
+      text(digits);
+      return;
+    }
+    if (digits.length > exp + 1) {
+      text(digits.substring(0, exp + 1));
+      byte(0x2e);
+      text(digits.substring(exp + 1));
+      return;
+    }
+    text(digits);
+    for (int i = 0; i < exp + 1 - digits.length; i++) {
+      byte(0x30);
+    }
+  }
+}
+
+const String _hexDigits = '0123456789abcdef';
+const String _b64 =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+/// The bytes of a byte slice of the walk.
+Uint8List _sliceBytes(Slice<Object?> s) {
+  final Object slice = s;
+  if (slice is $ByteSlice) {
+    return Uint8List.sublistView(slice.bytes, slice.off, slice.off + slice.len);
+  }
+  final Uint8List out = Uint8List(s.len);
+  for (int i = 0; i < s.len; i++) {
+    out[i] = $ix(s.array[s.off + i]! as GoInt);
+  }
+  return out;
+}
+
+/// The order of 2 Go strings. Go compares the bytes.
+int _compareBytes(GoString a, GoString b) {
+  final Uint8List x = a.bytes;
+  final Uint8List y = b.bytes;
+  final int n = x.length < y.length ? x.length : y.length;
+  for (int i = 0; i < n; i++) {
+    if (x[i] != y[i]) return x[i] - y[i];
+  }
+  return x.length - y.length;
+}
+
+/// The size of the UTF-8 sequence at the position, and 0 for a byte that no
+/// valid sequence holds. The rule is the rule of utf8.DecodeRune.
+int _sizeOf(Uint8List b, int i, int n) {
+  final int b0 = b[i];
+  int size;
+  int lo = 0x80;
+  int hi = 0xbf;
+  if (b0 >= 0xc2 && b0 <= 0xdf) {
+    size = 2;
+  } else if (b0 >= 0xe0 && b0 <= 0xef) {
+    size = 3;
+    if (b0 == 0xe0) lo = 0xa0;
+    if (b0 == 0xed) hi = 0x9f;
+  } else if (b0 >= 0xf0 && b0 <= 0xf4) {
+    size = 4;
+    if (b0 == 0xf0) lo = 0x90;
+    if (b0 == 0xf4) hi = 0x8f;
+  } else {
+    return 0;
+  }
+  if (i + size > n) return 0;
+  final int b1 = b[i + 1];
+  if (b1 < lo || b1 > hi) return 0;
+  for (int k = 2; k < size; k++) {
+    final int bk = b[i + k];
+    if (bk < 0x80 || bk > 0xbf) return 0;
+  }
+  return size;
+}
+
+/// The table of escapeASCII of encoding/json/internal/jsonwire. The v1 options
+/// hold EscapeForHTML, thus the 3 characters of HTML also stand.
+final Uint8List _escapeASCII = Uint8List.fromList(<int>[
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //
+  0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, //
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, //
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, //
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //
+]);
+
+/// True when the type or the pointer to it holds a method that the encoder of
+/// Go calls in place of the default of the kind.
+bool _hasMarshalMethod(TypeDesc t) {
+  if (_specialNames.contains(t.name)) return true;
+  return _tableHasMarshal(t.methods) || _tableHasMarshal(t.ptr?.call().methods);
+}
+
+bool _tableHasMarshal(Map<String, Function>? table) {
+  if (table == null) return false;
+  for (final String key in table.keys) {
+    if (key.startsWith('MarshalJSON(') ||
+        key.startsWith('MarshalJSONTo(') ||
+        key.startsWith('MarshalText(') ||
+        key.startsWith('AppendText(')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// True for the empty value of the v1 rule of omitempty. Go reads the Go value
+/// and not the JSON form: isLegacyEmpty of encoding/json/v2 holds the list.
+bool _legacyEmpty(Object? v, TypeDesc t) {
+  switch (t.kind) {
+    case 'bool':
+      return v == false;
+    case 'string':
+      return (v as GoString).bytes.isEmpty;
+    case 'float64' || 'float32':
+      return v == 0.0;
+    case 'ptr' || 'interface':
+      return v == null;
+    case 'slice':
+      return (v as Slice<Object?>).len == 0;
+    case 'array':
+      return (v as List<Object?>).isEmpty;
+    case 'map':
+      return (v as GoMap<Object?, Object?>).length == 0;
+    case 'int' ||
+        'int8' ||
+        'int16' ||
+        'int32' ||
+        'int64' ||
+        'uint' ||
+        'uint8' ||
+        'uint16' ||
+        'uint32' ||
+        'uint64' ||
+        'uintptr':
+      return (v as GoInt) == $gi(0);
+  }
+  return false;
+}
+
+/// The fields of a struct type that the fast marshal writes, in the order of
+/// the declaration. A struct that holds a rule outside the walk gives up.
+final class _EncInfo {
+  final List<int> indexes;
+  final List<String> names;
+  final List<bool> omitEmpty;
+
+  _EncInfo(this.indexes, this.names, this.omitEmpty);
+}
+
+/// The cache reads the descriptor itself and not its name. Read the comment of
+/// _structInfos.
+final Map<TypeDesc, _EncInfo> _encInfos = <TypeDesc, _EncInfo>{};
+
+_EncInfo _encInfo(TypeDesc t) {
+  final _EncInfo? held = _encInfos[t];
+  if (held != null) return held;
+  final List<int> indexes = <int>[];
+  final List<String> names = <String>[];
+  final List<bool> omit = <bool>[];
+  for (int i = 0; i < t.fields.length; i++) {
+    final FieldDesc f = t.fields[i];
+    if (f.embedded) throw const _GiveUp();
+    if (!f.exported) continue;
+    final String? tag = _tagValue(f.tag, 'json');
+    String name = f.name;
+    bool omitEmpty = false;
+    if (tag != null) {
+      if (tag == '-') continue;
+      final int comma = tag.indexOf(',');
+      final String head = comma < 0 ? tag : tag.substring(0, comma);
+      for (int k = 0; k < head.length; k++) {
+        final int c = head.codeUnitAt(k);
+        if (c >= 0x80 || c == 0x22 || c == 0x27 || c == 0x5c || c == 0x60) {
+          throw const _GiveUp();
+        }
+      }
+      if (head.isNotEmpty) name = head;
+      if (comma >= 0) {
+        for (final String opt in tag.substring(comma + 1).split(',')) {
+          if (opt == 'omitempty') {
+            omitEmpty = true;
+            continue;
+          }
+          if (opt.isEmpty) continue;
+          throw const _GiveUp();
+        }
+      }
+    }
+    for (int k = 0; k < name.length; k++) {
+      final int c = name.codeUnitAt(k);
+      if (c >= 0x80 || c == 0x22 || c == 0x5c) throw const _GiveUp();
+    }
+    if (names.contains(name)) throw const _GiveUp();
+    indexes.add(i);
+    names.add(name);
+    omit.add(omitEmpty);
+  }
+  final _EncInfo out = _EncInfo(indexes, names, omit);
+  _encInfos[t] = out;
+  return out;
+}

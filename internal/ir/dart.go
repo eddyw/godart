@@ -14,6 +14,15 @@ import (
 //	func dartMax(a, b float64) float64
 const DartDirective = "//gart:dart"
 
+// DartRuntimeLib names the runtime library of gart. A declaration of that
+// library carries each type of the subset, because the compiler writes the
+// Dart form of each Go type and the runtime function names that form. The Dart
+// compiler thus proves the pair, and no wrong value reaches a caller.
+//
+// Each other library holds the 5 forms of the value boundary. Read
+// internal/verify/dart.go.
+const DartRuntimeLib = "package:goruntime/goruntime.dart"
+
 // DartRef names the Dart library and the Dart symbol of a declaration.
 type DartRef struct {
 	Lib  string
