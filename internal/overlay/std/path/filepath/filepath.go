@@ -12,8 +12,9 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
 	"strings"
-	"syscall/dart"
+	"syscall"
 	"unicode/utf8"
 )
 
@@ -371,13 +372,16 @@ var SkipAll = fs.SkipAll
 type WalkFunc func(path string, info fs.FileInfo, err error) error
 
 // lstat reads the metadata of a path and follows no symbolic link. A test of
-// Go swaps it, thus each walk reads it and not os.Lstat.
+// Go swaps it, thus the walk of a child reads it and not os.Lstat.
 var lstat = os.Lstat
 
 // WalkDir walks the tree that starts at root, and it runs fn for each file and
 // each directory. It reads no symbolic link.
+//
+// The body below holds the walk of the real path.go of Go. The order of the
+// calls and the answer of each error rule thus agree with Go.
 func WalkDir(root string, fn fs.WalkDirFunc) error {
-	info, err := lstat(root)
+	info, err := os.Lstat(root)
 	if err != nil {
 		err = fn(root, nil, err)
 	} else {
@@ -392,20 +396,29 @@ func WalkDir(root string, fn fs.WalkDirFunc) error {
 func walkDir(name string, d fs.DirEntry, fn fs.WalkDirFunc) error {
 	if err := fn(name, d, nil); err != nil || !d.IsDir() {
 		if err == SkipDir && d.IsDir() {
-			// The walk leaves the directory, thus the caller of this call
+			// The walk left the directory, thus the caller of this call
 			// continues.
-			return nil
+			err = nil
 		}
 		return err
 	}
-	entries, err := os.ReadDir(name)
+
+	dirs, err := os.ReadDir(name)
 	if err != nil {
 		// The read of the directory failed after the first call of fn, thus
 		// the second call names the cause.
-		return fn(name, d, err)
+		err = fn(name, d, err)
+		if err != nil {
+			if err == SkipDir && d.IsDir() {
+				err = nil
+			}
+			return err
+		}
 	}
-	for _, e := range entries {
-		if err := walkDir(Join(name, e.Name()), e, fn); err != nil {
+
+	for _, e := range dirs {
+		child := Join(name, e.Name())
+		if err := walkDir(child, e, fn); err != nil {
 			if err == SkipDir {
 				break
 			}
@@ -418,7 +431,7 @@ func walkDir(name string, d fs.DirEntry, fn fs.WalkDirFunc) error {
 // Walk walks the tree that starts at root, and it runs fn for each file and
 // each directory. It reads the metadata of each entry, thus WalkDir is faster.
 func Walk(root string, fn WalkFunc) error {
-	info, err := lstat(root)
+	info, err := os.Lstat(root)
 	if err != nil {
 		err = fn(root, nil, err)
 	} else {
@@ -434,77 +447,114 @@ func walk(name string, info fs.FileInfo, fn WalkFunc) error {
 	if !info.IsDir() {
 		return fn(name, info, nil)
 	}
-	err := fn(name, info, nil)
-	if err != nil {
-		if err == SkipDir {
-			return nil
-		}
-		return err
+
+	names, err := readDirNames(name)
+	err1 := fn(name, info, err)
+	// A read that failed holds the walk out of the directory, and an answer
+	// of fn that is not nil asks the walk to leave the directory or to stop.
+	// The walk gives the answer of fn back in each of the 2 cases, and the
+	// caller reads SkipDir and SkipAll there.
+	if err != nil || err1 != nil {
+		return err1
 	}
-	entries, err := os.ReadDir(name)
-	if err != nil {
-		return fn(name, info, err)
-	}
-	for _, e := range entries {
-		child := Join(name, e.Name())
-		childInfo, err := e.Info()
+
+	for _, entry := range names {
+		child := Join(name, entry)
+		childInfo, err := lstat(child)
 		if err != nil {
-			if err := fn(child, nil, err); err != nil && err != SkipDir {
+			if err := fn(child, childInfo, err); err != nil && err != SkipDir {
 				return err
 			}
-			continue
-		}
-		if err := walk(child, childInfo, fn); err != nil {
-			if err == SkipDir {
-				break
+		} else {
+			err = walk(child, childInfo, fn)
+			if err != nil {
+				if !childInfo.IsDir() || err != SkipDir {
+					return err
+				}
 			}
-			return err
 		}
 	}
 	return nil
 }
 
-// Glob gives each path that fits the pattern. It reports no error for a path
-// that it cannot read.
-func Glob(pattern string) ([]string, error) {
-	return globWithLimit(pattern, 0)
-}
-
-// pathSeparatorsLimit bounds the depth of the walk of a pattern. A deeper walk
-// would fill the stack.
-const pathSeparatorsLimit = 10000
-
-func globWithLimit(pattern string, depth int) ([]string, error) {
-	if depth == pathSeparatorsLimit {
-		return nil, ErrBadPattern
-	}
-	if _, err := Match(pattern, ""); err != nil {
-		return nil, err
-	}
-	if !hasMeta(pattern) {
-		if _, err := os.Stat(pattern); err != nil {
-			return nil, nil
-		}
-		return []string{pattern}, nil
-	}
-	dir, file := Split(pattern)
-	dir = cleanGlobPath(dir)
-	if !hasMeta(dir) {
-		return glob(dir, file, nil)
-	}
-	if dir == pattern {
-		return nil, ErrBadPattern
-	}
-	m, err := globWithLimit(dir, depth+1)
+// readDirNames gives the name of each entry of the directory, ordered.
+func readDirNames(dirname string) ([]string, error) {
+	f, err := os.Open(dirname)
 	if err != nil {
 		return nil, err
 	}
+	names, err := f.Readdirnames(-1)
+	f.Close()
+	if err != nil {
+		return nil, err
+	}
+	slices.Sort(names)
+	return names, nil
+}
+
+// Glob gives each path that fits the pattern. It reports no error for a path
+// that it cannot read.
+func Glob(pattern string) ([]string, error) {
+	return globWithLimit(pattern)
+}
+
+// pathSeparatorsLimit bounds the count of the elements of a pattern. Go holds
+// the same bound, and CVE-2022-30632 gave it: a pattern of 4 million
+// separators filled the stack before the bound stood there.
+const pathSeparatorsLimit = 10000
+
+// globWithLimit walks the elements of the pattern from the last one to the
+// first one, and it then reads the directories from the first one to the last
+// one. The real source of Go calls itself for each element, and a chain of
+// 10,000 calls fills the fixed stack of the Dart VM. The list files below
+// holds the same state as that chain.
+func globWithLimit(pattern string) ([]string, error) {
+	// files holds the last element of each level, from the last level to the
+	// first one.
+	var files []string
 	var matches []string
-	for _, d := range m {
-		matches, err = glob(d, file, matches)
-		if err != nil {
+	p := pattern
+	for {
+		if len(files) == pathSeparatorsLimit {
+			return nil, ErrBadPattern
+		}
+		if _, err := Match(p, ""); err != nil {
 			return nil, err
 		}
+		if !hasMeta(p) {
+			// Go reads Lstat here, thus a symbolic link with no target still
+			// fits a pattern that holds no meta character.
+			if _, err := os.Lstat(p); err == nil {
+				matches = []string{p}
+			}
+			break
+		}
+		dir, file := Split(p)
+		dir = cleanGlobPath(dir)
+		if !hasMeta(dir) {
+			m, err := glob(dir, file, nil)
+			if err != nil {
+				return nil, err
+			}
+			matches = m
+			break
+		}
+		if dir == p {
+			return nil, ErrBadPattern
+		}
+		files = append(files, file)
+		p = dir
+	}
+	for i := len(files) - 1; i >= 0; i-- {
+		var next []string
+		for _, d := range matches {
+			var err error
+			next, err = glob(d, files[i], next)
+			if err != nil {
+				return nil, err
+			}
+		}
+		matches = next
 	}
 	return matches, nil
 }
@@ -558,30 +608,111 @@ func sortNames(names []string) {
 
 // EvalSymlinks gives the path after each symbolic link. The path must exist.
 //
-// Go walks each element itself, and the result of a relative path stays
-// relative. The Dart side gives the resolved path from the root, thus a
-// relative argument takes Rel against the resolved working directory.
+// The body holds the walk of the real symlink.go of Go, with the parts of
+// Windows and of Plan 9 out. The separator is always `/` here, thus the volume
+// name is empty and the special case of `.` under Windows stays out.
+//
+// A walk of the elements gives the answers of Go that 1 call of the resolver
+// of the platform cannot give: the error of a missing element names the
+// element and not the whole path, a non directory that another element follows
+// gives syscall.ENOTDIR, a chain above 255 links gives its own error, and the
+// result of a relative path stays relative.
 func EvalSymlinks(path string) (string, error) {
-	resolved, cause := dart.ResolveSymlinks(path)
-	if cause != "" {
-		return "", &fs.PathError{Op: "lstat", Path: path, Err: fs.ErrNotExist}
+	volLen := 0
+	if len(path) > 0 && path[0] == Separator {
+		volLen = 1
 	}
-	if IsAbs(path) {
-		return resolved, nil
+	vol := path[:volLen]
+	dest := vol
+	linksWalked := 0
+	for start, end := volLen, volLen; start < len(path); start = end {
+		for start < len(path) && path[start] == Separator {
+			start++
+		}
+		end = start
+		for end < len(path) && path[end] != Separator {
+			end++
+		}
+
+		// The next element of the path stands in path[start:end].
+		if end == start {
+			// No element stays.
+			break
+		} else if path[start:end] == "." {
+			// The element `.` names the same directory.
+			continue
+		} else if path[start:end] == ".." {
+			// Go back 1 element when the result holds one.
+			r := len(dest) - 1
+			for ; r >= volLen; r-- {
+				if dest[r] == Separator {
+					break
+				}
+			}
+			if r < volLen || dest[r+1:] == ".." {
+				// The result holds no separator, or it ends with a `..` that
+				// the walk had to keep. The new `..` joins it.
+				if len(dest) > volLen {
+					dest += string(Separator)
+				}
+				dest += ".."
+			} else {
+				dest = dest[:r]
+			}
+			continue
+		}
+
+		// An ordinary element joins the result.
+		if len(dest) > volLen && dest[len(dest)-1] != Separator {
+			dest += string(Separator)
+		}
+		dest += path[start:end]
+
+		fi, err := os.Lstat(dest)
+		if err != nil {
+			return "", err
+		}
+		if fi.Mode()&fs.ModeSymlink == 0 {
+			if !fi.Mode().IsDir() && end < len(path) {
+				return "", syscall.ENOTDIR
+			}
+			continue
+		}
+
+		// The element is a symbolic link.
+		linksWalked++
+		if linksWalked > 255 {
+			return "", errors.New("EvalSymlinks: too many links")
+		}
+		link, err := os.Readlink(dest)
+		if err != nil {
+			return "", err
+		}
+		path = link + path[end:]
+		if len(link) > 0 && link[0] == Separator {
+			// The link names an absolute path.
+			dest = link[:1]
+			end = 1
+			vol = link[:1]
+			volLen = 1
+		} else {
+			// The link names a relative path, thus it replaces the last
+			// element of the result.
+			r := len(dest) - 1
+			for ; r >= volLen; r-- {
+				if dest[r] == Separator {
+					break
+				}
+			}
+			if r < volLen {
+				dest = vol
+			} else {
+				dest = dest[:r]
+			}
+			end = 0
+		}
 	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return resolved, nil
-	}
-	wdResolved, cause := dart.ResolveSymlinks(wd)
-	if cause != "" {
-		return resolved, nil
-	}
-	rel, err := Rel(wdResolved, resolved)
-	if err != nil {
-		return resolved, nil
-	}
-	return rel, nil
+	return Clean(dest), nil
 }
 
 // errInvalidPath names an argument that Localize rejects.
