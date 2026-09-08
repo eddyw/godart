@@ -76,7 +76,7 @@ nineteenth session:
 | `reflect` | 183/188 | 97% | `NewAt`, `SliceAt`, `Value.SetPointer`, `Value.InterfaceData`, `Value.UnsafeAddr`. Each 1 needs an address or `unsafe.Pointer`, which non-goal N3 holds out. |
 | `net/http` | 362/392 | 92% | `HTTP2Config`, `ClientConn`, `ServeTLS`, and `Transport.TLSHandshakeTimeout`. The runtime owns the HTTP/2 frame layer, and the secure socket of Dart takes over no socket that stands open. |
 | `runtime` | 52/114 | 45% | `MemStats`, `ReadMemStats`, `SetFinalizer`, `Breakpoint`, the profile of the memory, of the block, and of the mutex, and the trace. The Dart VM reports none of the numbers. |
-| `net` | 268/346 | 77% | `IPConn`, `FileConn`, `FileListener`, and the keep alive timers. Each 1 needs a raw socket, a file descriptor, or an ioctl of Windows. 8 socket options joined on 2026-09-04. Read decision 330. |
+| `net` | 272/346 | 78% | `IPConn`, `FileConn`, `FileListener`, and the keep alive timers. Each 1 needs a raw socket, a file descriptor, or an ioctl of Windows. 8 socket options joined on 2026-09-04. Read decision 330. |
 | `crypto/tls` | 126/263 | 47% | The QUIC connection, `ConnectionState.PeerCertificates`, and each `Config` field that would change the handshake. Dart owns the handshake, and `SecureSocket.peerCertificate` gives the leaf alone and not the chain. Read decision 331. |
 | `syscall` | 55/2228 | 2% | Each system call, each constant of the platform, and each error number whose value or its text differs between macOS and Linux. |
 
@@ -203,7 +203,6 @@ platform outside the table gives an error. Read decision 330.
 | `Dialer.MultipathTCP`, `Dialer.SetMultipathTCP`, `ListenConfig.MultipathTCP`, `ListenConfig.SetMultipathTCP`, `TCPConn.MultipathTCP` | Multipath TCP is a transport of Linux that Dart never opens. |
 | `Interface.MTU`, `Interface.HardwareAddr`, `Interface.Flags`, `Interface.MulticastAddrs` | `NetworkInterface.list` of `dart:io` gives the name, the index, and each address of an interface, and nothing else. |
 | `ListenUnixgram` | Dart opens a stream socket of the Unix domain alone. |
-| `TCPConn.CloseRead`, `TCPConn.CloseWrite`, `UnixConn.CloseRead`, `UnixConn.CloseWrite` | Each 1 is a half close. `Socket.close` of Dart ends the write side and gives a future, and the runtime holds no such 1 way close. |
 | `UDPConn.ReadMsgUDP`, `WriteMsgUDP`, `ReadMsgUDPAddrPort`, `WriteMsgUDPAddrPort`, `UnixConn.ReadMsgUnix`, `WriteMsgUnix` | Each 1 reads or writes a control message. The read also reports MSG_TRUNC for a datagram that lost bytes, and the read of the runtime reports no such flag. |
 | `UnixConn.WriteTo`, `UnixConn.WriteToUnix` | Go writes the datagram with sendto. A socket that a dial connected gives `ErrWriteToConnected`, and a socket that an accept gave holds no such mark: macOS then writes the bytes and Linux gives EOPNOTSUPP. Dart holds no sendto, thus the overlay can match neither. |
 | `TCPListener.SetDeadline`, `UnixListener.SetDeadline` | The deadline ends a wait for an accept. The accept of the runtime takes no deadline, and a cancel of the Go side would drop a client that already arrived. |
@@ -234,7 +233,7 @@ platform outside the table gives an error. Read decision 330.
 | `EncryptedClientHelloKey` and its 3 fields | The encrypted client hello needs a key of the server inside the handshake, and Dart takes none. |
 | `Client`, `Server`, `NewListener` | Each 1 wraps a `net.Conn` that stands open. The secure socket of Dart takes over no socket that another call opened. |
 | `Conn.NetConn` | The result must name the socket under the TLS stream. A read of the value of the overlay would give the plain text of the stream, and Go gives the cipher text. |
-| `Conn.CloseWrite` | A half close. Read the row of `TCPConn.CloseWrite` of `net`. |
+| `Conn.CloseWrite` | A half close. Dart owns the record layer, thus the runtime holds a `Socket` for a TLS connection and it reaches no `shutdown` of 1 direction. |
 
 ### crypto/x509, 0 names
 
@@ -593,13 +592,13 @@ each 1 runs the test binary again as a subprocess.
 | `dart:io` opens no datagram socket of the Unix domain | `log/syslog`. `Dial` works over udp and over a stream socket, and `New` and `NewLogger` each need the datagram form. |
 | `dart:io` reports no user id | `os/user`. The pure Go path of Go compiles under gart, and `Current` still fails because `os.Getuid` reports -1. |
 
-**333 names of the 9 partial packages, and 2173 names of `syscall`.** No name
+**329 names of the 9 partial packages, and 2173 names of `syscall`.** No name
 of them stays reachable. The nineteenth session closed the last 29.
 
 | Cause | The count |
 |---|---|
 | Dart owns the TLS handshake and the session | 137 names of `crypto/tls`. Each QUIC name, each `Config` field of the handshake, each callback, and each error type of a handshake point. `SecureSocket.peerCertificate` gives the leaf alone and not the chain, thus `PeerCertificates` would answer `len` wrong with no report. |
-| `dart:io` opens no raw socket and reads no control message | 78 names of `net` |
+| `dart:io` opens no raw socket and reads no control message | 74 names of `net` |
 | The HTTP 2 session lives in the Dart runtime library | 30 names of `net/http` |
 | The Dart VM counts no allocation, no block, and no contention | 62 names of `runtime` |
 | `dart:io` hides the descriptor of a file and of a socket | 12 names of `os`, 5 of `os/exec` |

@@ -565,11 +565,13 @@ reads /etc/services, and `parsePort` of Go holds the rule for a number.
 
 5 differences stand.
 
-- `Resolver.PreferGo` and `Resolver.StrictErrors` each read no field. This
-  resolver is always the resolver of Go, and each error of a server reaches the
-  caller.
-- The order of the addresses of `LookupIP` follows the answer, and Go sorts by
-  RFC 6724. A caller that needs 1 order sorts the result.
+- `Resolver.StrictErrors` reads no field, thus each error of a server reaches
+  the caller. `Resolver.PreferGo` reads a field: it forces the resolver of the
+  overlay on a platform where Go reads the resolver of the system.
+- The order of the addresses of `LookupIP` follows the answer of the resolver
+  of the overlay, and Go sorts by RFC 6724. The resolver of the platform
+  answers on darwin, on ios, on android, and on windows, and that resolver
+  applies RFC 6724 already.
 - `LookupMX` and `LookupSRV` each sort by the preference and by the priority
   alone. Go also shuffles the records of equal weight, and this resolver keeps
   the order of the answer, thus 2 runs give 1 order.
@@ -971,7 +973,10 @@ The `net` package holds this surface:
 | `UnixConn.ReadFrom`, `UnixConn.ReadFromUnix` | The name of the source of a datagram | Present. Dart opens a stream socket of the Unix domain alone, and the system reports an empty name for the source of such a socket, thus the address is always nil. Go behaves the same way. |
 | `UnixConn.WriteTo`, `UnixConn.WriteToUnix` | A datagram of the Unix domain | Not present. Read `docs/support.md`. |
 | `TCPConn` | 20 methods | 10 methods: the 8 of `Conn`, plus `ReadFrom` and `WriteTo`. `Dial`, `Dialer.DialContext`, and `Listener.Accept` each give 1 for the network `tcp`. |
-| `TCPConn.CloseRead`, `CloseWrite` | A half close | Not present. `dart.ConnClose` maps to `Socket.destroy`, which ends the 2 directions. |
+| `TCPConn.CloseRead`, `CloseWrite` | A half close | Present. Equal, with 1 difference. `CloseWrite` writes `shutdown(SocketDirection.send)` and `CloseRead` writes `shutdown(SocketDirection.receive)` of the `RawSocket`, exactly as the 2 calls of Go do. A second `CloseRead` or `CloseWrite` of the same connection gives `nil`, and Go gives `shutdown: socket is not connected`, because `RawSocket.shutdown` of Dart takes a second call with no report. |
+| `Dial`, `Dialer.Dial`, `Dialer.DialContext` | Tries each address of a host name | Equal. Each 1 reads the whole address list and tries each address in turn, and each 1 gives the first cause when every address fails. Go races the first address of each family after `FallbackDelay`, and the overlay holds no such timer, thus a name whose first address hangs costs the whole timeout of the dial. `Dialer.FallbackDelay` and `Dialer.DualStack` each stay out. |
+| A dial that a peer refused | `dial tcp <address>: connect: connection refused` | Equal since this session. |
+| `Resolver.LookupHost`, `LookupIP`, `LookupIPAddr`, `LookupNetIP` | The resolver of the platform on darwin, ios, android, and windows | Equal. `Resolver.PreferGo` and `Resolver.Dial` each force the resolver of the overlay, exactly as in Go. The other members of the `Lookup` family always read the resolver of the overlay, because `dart:io` gives no CNAME, no MX, no NS, no SRV, no TXT, and no PTR. |
 | `TCPConn.SetNoDelay`, `SetLinger`, `SetKeepAlive`, `SetKeepAlivePeriod`, `SetKeepAliveConfig`, `SetReadBuffer`, `SetWriteBuffer` | Each writes a socket option | Not present. `syscall/dart` holds no option intrinsic. |
 | `TCPConn.SyscallConn`, `TCPConn.File`, `TCPConn.MultipathTCP` | Present | Not present. `dart:io` owns the socket and gives no file descriptor. |
 | `DialTCP` | A local address and a remote address | Present. A local address that is not nil gives an error, because Dart binds no local address of a dial. |
@@ -979,7 +984,7 @@ The `net` package holds this surface:
 | `IPConn`, `DialIP`, `ListenIP` | A raw IP socket | Not present. `dart:io` opens no `SOCK_RAW` socket, and `ReadMsgIP` needs a control message that Dart never exposes. |
 | An empty host of `Dial` | The local system | `127.0.0.1` |
 | An empty host of `Listen` | Each interface | `0.0.0.0` |
-| `SplitHostPort` | Accepts an IPv6 host in brackets | Only a host with no bracket. |
+| `SplitHostPort` | Accepts an IPv6 host in brackets | Equal since this session. The 5 texts of the error match Go: `missing port in address`, `too many colons in address`, `missing ']' in address`, `unexpected '[' in address`, and `unexpected ']' in address`. |
 | `JoinHostPort` | Adds brackets for an IPv6 host | It joins the 2 parts with a colon. |
 | TLS | `crypto/tls` | Present through the overlay of `crypto/tls`. `SecureSocket` and `SecureServerSocket` of Dart hold the whole handshake. |
 | A deadline that a read already waits on | Ends that read | Reaches the next read only. The runtime applies the limit at the start of an operation. |

@@ -4996,3 +4996,89 @@ The plan left these points open. The work took the decisions below.
      now.
 
      `testdata/programs/parptreq` holds the witness of the 2.
+
+393. A dial reads each address of a name, and the resolver of the platform
+     gives the order.
+
+     Go resolves the host of a dial 1 time and it tries each address of the
+     list. The trace of `net/http/httptrace` records a `ConnectStart` and a
+     `ConnectDone` for each try, thus `testdata/programs/httptraceuse` lost 2
+     lines: the runtime dialed 1 address. `Dialer.DialContext` reads the whole
+     list now, and it gives the first cause when each address fails, exactly as
+     `dialSerial` of Go does. `net.Dial` reads the same path.
+
+     **The order needs the resolver of the platform.** Go sorts each address
+     list with RFC 6724. Rule 1, rule 2, and rule 5 of that algorithm each read
+     the source address that the system would take for the destination, and Go
+     learns it with a connected datagram socket. `RawDatagramSocket` of
+     `dart:io` holds `bind`, `send`, and `receive` and no `connect`, and
+     `dart:io` exports no route, thus no code of the overlay can compute that
+     order. `getaddrinfo` applies the same RFC already, and Go reads it on
+     darwin, on ios, on android, and on windows. `Resolver.lookupIP` holds the
+     same rule now, and a `Resolver` that names `PreferGo` or its own `Dial`
+     always reads the resolver of Go.
+
+     **`//gart:dart` takes a third field `blocking`.** The overlay needs a Dart
+     call that gives up control, and each such call stood in the intrinsic
+     table of `syscall/dart`. An external Dart declaration that carries the
+     field marks a state boundary at each call of it, thus a package of the
+     overlay declares its own Dart shim with no entry in that table. Stage 5
+     already writes a plain call of the symbol, and the frame of the wait gives
+     the value to the caller.
+
+     **A refusal reads the text of Go.** `$dialTCP` writes `connect: ` in front
+     of the message of the errno, thus a dial that a peer refused gives
+     `dial tcp [::1]:PORT: connect: connection refused`. `SplitHostPort` also
+     reads the bracket form of an IPv6 host now.
+
+394. A plain connection rides a `RawSocket`, and `CloseRead` lands.
+
+     `CloseRead` of Go writes `shutdown(SHUT_RD)`. `dart:io` holds that call on
+     `RawSocket` alone, and no public call turns a `Socket` into the
+     `RawSocket` under it: `Socket._detachRaw` and `Socket._fromRawSocket` each
+     stand private, and `ResourceHandle` reaches the descriptor on Unix alone
+     and gives a second socket object over it.
+
+     The runtime holds a `RawSocket` for a plain TCP connection and for a
+     connection of the Unix domain now, and it drives the byte stream itself. A
+     read enables the read event, waits for it, and takes each byte that the
+     socket holds, thus the system keeps the back pressure of TCP. The count
+     stands in each call of `read`, because a read with no count asserts a
+     socket that holds a byte. A write repeats until the socket took each byte.
+     A close wakes each operation that waits, and a cancel of a request of
+     `net/http` found that rule.
+
+     A TLS connection keeps its `Socket`, because the record layer of Dart
+     drains the socket under it. Go holds no `CloseRead` on a `tls.Conn`
+     either, and the HTTP/2 session reads that same `Socket`.
+
+     A second `CloseRead` gives `nil` where Go gives
+     `shutdown: socket is not connected`, because `RawSocket.shutdown` takes a
+     second call with no report. `CloseWrite` already held that difference.
+
+395. The lazy package variable lands, and decision 387 named the wrong cause.
+
+     A package variable whose initializer cannot panic and writes nothing takes
+     the form `late T x = <value>;` now, and the init routine writes nothing
+     for it. The tree shaker of Dart then drops the variable and its whole
+     value when no code reads it. An ahead of time binary of a program that
+     reads 1 table of `unicode` went from 7,684,640 bytes to 7,110,080.
+
+     **The defect of dart2wasm is a record of 20 fields.** Decision 387 named
+     `late Iface? DefaultTransport = null;` of `net/http`. That declaration is
+     not the fault. A delta debug over the 1,051 files and then over the 224
+     bodies of `transport.part.dart` ended at `Transport$Clone`, which holds an
+     ordering record of exactly 20 fields. dart2wasm writes 1 class for each
+     shape of a record and gives it a `hashCode` getter that calls
+     `Object.hash` with the shape id in front of each field. `Object.hash`
+     holds 20 positional parameters, thus a record of 20 fields gives 21
+     arguments and `Summary.apply` of the type flow analysis casts a `Call` to
+     a `Parameter`. A record of 19 fields and a record of 21 fields each pass.
+     The lazy variable only changed the order in which the analysis reached
+     `Object.hash`, because the analysis reads raw arguments after 10 direct
+     invocations of a large summary.
+
+     `padRecord` of stage 4 adds 1 element of the type `bool` to an ordering
+     record of exactly 20 fields, and no code reads it. `dart compile wasm` of
+     `testdata/web/webio` passes with the pad and stops without it. The witness
+     of the defect stands outside godart, and the user holds the report.

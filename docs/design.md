@@ -159,6 +159,19 @@ The output holds `import 'dart:math' as $d0;` and the body
 prefixed import of it hides the plain names and `double` and `String` would
 leave the file.
 
+A third field `blocking` marks a Dart symbol that gives up control. The Dart
+form of such a symbol waits for a future of the event loop, thus stage 3 marks
+each call of it as a state boundary and the caller becomes a machine.
+
+```go
+//gart:dart package:goruntime/goruntime.dart $lookupAddrs blocking
+func lookupAddrs(host string, family int) string
+```
+
+Only the intrinsic table of `syscall/dart` held such a call before, thus each
+new Dart call that waits cost an edit of `internal/emit/call.go`. A package of
+the overlay declares its own now.
+
 **The value boundary.** The call holds no type descriptor, thus each parameter
 type and the result type must hold 1 Dart form.
 
@@ -763,20 +776,26 @@ shake of this section. gart holds neither proof that a name walk needs: the
 initializer of a variable must hold no side effect, and no `go:linkname`
 directive may bind the variable to another package.
 
-**A lazy declaration gives the same gain, and dart2wasm rejects it.** A package
-variable whose initializer cannot panic and holds no side effect can take the
-form `late T x = <value>;`. Dart runs such an initializer at the first read,
-thus the tree shaker drops the variable and the whole value when no code reads
-it. The measure of 2026-09-06: a program that reads 1 table of `unicode` gave
-an ahead of time binary of 7,651,808 bytes before the change and 7,142,912
-after it.
+**A lazy declaration ships, and it saves 574,560 bytes.** A package variable
+whose initializer cannot panic and writes nothing takes the form
+`late T x = <value>;`. Dart runs such an initializer at the first read, thus
+the tree shaker drops the variable and the whole value when no code reads it.
+The measure of this session, over a program that reads 1 table of `unicode`:
+an ahead of time binary of 7,684,640 bytes before the change and 7,110,080
+after it, thus 574,560 bytes and 7.5 percent. A map literal takes the lazy
+form too.
 
-The type flow analysis of dart2wasm stops on that output with `type 'Call' is
-not a subtype of type 'Parameter' in type cast`. 2 map variables of `net/http`
-together break it, and the build passes when either 1 keeps its place in the
-init routine. A rule that keeps each map literal eager builds, and it saves
-32,832 bytes alone, because the 3 maps of `unicode` name each table. The work
-stays open. Read decision 373.
+**dart2wasm rejects a record of exactly 20 fields, and not the lazy form.** The
+type flow analysis stopped with `type 'Call' is not a subtype of type
+'Parameter' in type cast`. Decision 373 named 2 map variables of `net/http`,
+and decision 387 named 1 declaration of that package. Neither is the cause. A
+delta debug ended at the ordering record of 20 fields of `Transport$Clone`:
+dart2wasm writes 1 class for each shape of a record and gives it a `hashCode`
+getter that calls `Object.hash` with the shape id in front of each field.
+`Object.hash` holds 20 positional parameters, thus 20 fields give 21 arguments.
+The lazy form only changed the order in which the analysis reached that call.
+`padRecord` of stage 4 adds 1 element of the type `bool` to such a record, and
+no code reads it. Read decision 395.
 
 ## The start time of a large program on the Dart VM
 
