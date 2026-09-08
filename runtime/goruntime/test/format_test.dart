@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:goruntime/goruntime.dart';
 import 'package:test/test.dart';
 
