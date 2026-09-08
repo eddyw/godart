@@ -687,13 +687,17 @@ Read decision 346, decision 351, and the limits of `docs/parity.md`.
 
 The user asked on 2026-08-29 whether the compiler can run the tests of the Go
 repository, exactly as GopherJS does. The answer is yes for a package whose test
-files stay inside the subset. 23 packages now run their real tests, and `make
+files stay inside the subset. 34 packages now run their real tests, and `make
 ci` proves each one through `TestTestsOfGoroot`.
 
 ```bash
 make std-test STD=path            # 8 PASS, 1 SKIP, and 8 examples skipped
 make std-test STD=slices          # 101 pass, and 3 skip
 make std-test STD=path/filepath   # 49 pass, and 3 skip
+make std-test STD=database/sql    # 123 pass, and 1 skips
+make std-test STD=context         # 37 pass, and 1 skips
+make std-test STD=strings         # 123 pass, and 5 skip
+make std-test STD=bytes           # 151 pass, and 8 skip
 make std-test STD=container/list  # each test passes
 make std-test STD=container/heap  # each test passes
 make std-test STD=container/ring  # each test passes

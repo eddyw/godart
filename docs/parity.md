@@ -1624,14 +1624,16 @@ command needs no flag for it:
 cd $(go env GOROOT)/src/path && gart test -o /tmp/x -runtime <path> .
 ```
 
-21 packages of GOROOT run their real tests, and `TestTestsOfGoroot` proves
-each one. The 21 are `path`, `container/list`, `container/heap`,
-`container/ring`, `unicode`, `encoding/hex`, `encoding/ascii85`, `encoding/csv`,
-`hash/crc32`, `hash/fnv`, `hash/adler32`, `maps`, `io`,
-`internal/chacha8rand`, `unicode/utf8`, `compress/zlib`, `regexp/syntax`,
-`math/rand/v2`, `testing/synctest`, `compress/gzip`, and `compress/flate`. 19
-of them run each test. `regexp/syntax` and `compress/flate` each run a filter,
-and the row of the test names the cause.
+34 packages of GOROOT run their real tests, and `TestTestsOfGoroot` proves
+each one. The 34 are `path`, `container/list`, `container/heap`, `container/ring`, `unicode`,
+`encoding/hex`, `encoding/ascii85`, `encoding/csv`, `hash/crc32`, `hash/fnv`,
+`hash/adler32`, `maps`, `io`, `internal/chacha8rand`, `unicode/utf8`,
+`compress/zlib`, `regexp/syntax`, `math/rand/v2`, `testing/synctest`,
+`compress/gzip`, `compress/flate`, `slices`, `path/filepath`, `context`,
+`database/sql`, `bufio`, `bytes`, `errors`, `math/bits`, `sort`, `strconv`,
+`strings`, `text/tabwriter`, and `unicode/utf16`. 31
+of them run each test. `regexp/syntax`, `compress/flate`, and `context` each
+run a filter, and the row of the test names the cause.
 
 A test file of GOROOT holds code outside the subset in many packages. `recover`,
 `unsafe`, and the address of a byte each appear, and each one stays outside the

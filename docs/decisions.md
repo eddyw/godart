@@ -5185,3 +5185,152 @@ The plan left these points open. The work took the decisions below.
      stands under 25 percent of its capacity 4 times in a row.
      `ExampleRawMessage_marshal` of `encoding/json` wrote no byte because of
      it.
+
+400. A select case of a nil channel keeps the wait of a synctest bubble
+     durable.
+
+     `make std-test STD=database/sql` stopped with `all goroutines are asleep -
+     deadlock!` inside the bubble of `TestPoolExhaustOnCancel`, and the 4
+     probes of the last session each missed it.
+
+     `_SelectWait.$durableIn` read the bubble of each case. The runtime holds 1
+     shared nil channel for each element type, and that object is born outside
+     every bubble. `context.Background().Done()` gives such a channel, thus the
+     wait `select { case <-ctx.Done(): case <-donePing: }` of the fake driver
+     counted as not durable. The bubble never reached the idle state, its clock
+     never moved, and a `time.Sleep` of 100 milliseconds inside it waited for a
+     clock that could not move.
+
+     `selectgo` of Go omits a case with no channel from the poll order and from
+     the lock order before it computes the mark `allSynctest`, thus a nil case
+     never lowers the wait reason. The class `SelectCase` holds `isNil` now,
+     and the durable mark, the arm, and the disarm each skip such a case. A
+     waiter of a select statement thus also no longer joins the queue of the
+     shared nil channel, which grew without bound before. A select whose cases
+     are all nil channels stays durable, and it blocks for ever.
+
+     `testdata/programs/syncnilselect` holds the witness.
+
+401. The chain of the deferred calls of a machine holds the panic of its own
+     function.
+
+     A machine whose deferred calls can block runs its chain inside the state
+     machine, because such a call gives up control between 2 entries. The last
+     state of that chain read the library variable `$chainPanic` to decide
+     whether the panic of the function reaches the caller.
+
+     A normal return also reaches that state. A function that ran inside the
+     chain of a panicking caller thus read the panic of the caller and threw it
+     again in the middle of its own body. `TestBadDriver` of `database/sql` ran
+     `defer db.Close()` while a panic of the driver unwound, `DB.Close` holds a
+     deferred `Unlock` that can block, and the chain end threw the panic of the
+     test again. `db.stop()` never ran, thus the connection opener stood in the
+     bubble and the bubble reported a deadlock. `TestConnRaw` lost the release
+     of its connection the same way. A recover of such a callee also read the
+     panic of the caller.
+
+     `$chainSave` and `$chainRestore` also kept the outer state in 2 variables
+     of the library, thus 2 open chains lost the state of the first 1.
+
+     The pair becomes `$chainOpen` and `$chainClose`, and the state rides a
+     value of the class `ChainState`. A machine keeps that value in a local and
+     in its frame. The chain opens at the first state of the chain, thus a
+     normal return runs its deferred calls with no panic and a recover inside
+     them gives null. A value that reaches an open chain replaces the panic of
+     that chain in place, thus the state of the chain of the caller survives.
+
+     `testdata/programs/syncdeferchain` holds the witness.
+
+402. A time.Time counts from January 1 of the year 1.
+
+     The type held 1 count of nanoseconds after the start of the Unix epoch,
+     thus the zero value read the year 1970 and the range was the year 1678 to
+     the year 2262. `TestConversions` of `database/sql` reads the difference:
+     `convertAssign` writes a Time into a string with the layout RFC 3339, and
+     Go writes `0001-01-01T00:00:00Z`.
+
+     The type now holds a count of seconds since January 1 of the year 1 and a
+     count of nanoseconds inside that second, which is the shape of Go. The
+     zero value of the 2 runtimes is thus 1 instant, and an int64 of seconds
+     covers each year that Go covers. `UnixNano` alone keeps the old bound, and
+     Go documents the same bound for itself.
+
+     The wider range made 4 rules of Go reachable, and each 1 landed: `Sub`
+     clamps a result outside the range of a Duration, `div` of `Truncate` and
+     of `Round` holds the negative case of a date before the year 1,
+     `MarshalText` and `MarshalJSON` report a year outside the range 0 to 9999,
+     and `Parse` with a layout that names no year gives the year 0 with no
+     wrap. `http.Cookie.Valid` can reject an `Expires` below the year 1601 now.
+
+     `dart.ZoneOffset` takes a count of seconds. The count of nanoseconds of
+     the year 1 does not fit an int64, thus the old form could not name the
+     instant. The name and the arity of the intrinsic stay, thus stage 5 needed
+     no change.
+
+     The packed `wall` and `ext` form of Go stays out. It buys a smaller struct
+     in Go, and a field of a Dart object costs the same either way.
+
+     `testdata/programs/sqlzerotime` holds the witness with 40 lines.
+
+403. A frame that wraps an inner chain gives the wait of that chain.
+
+     Decision 400 closed 1 shape of the same defect: a frame that hides the
+     wait under it. A sweep of each such frame of the runtime found 2 more.
+
+     `_SelectResume` and `_RecvResume` of the package reflect wrap the frame of
+     the runtime, because `reflect.Select` and `reflect.Value.Recv` must
+     convert the value of the wake. Neither 1 held the mark `DurableWait`, thus
+     a wait of the package reflect inside a synctest bubble counted as not
+     durable and the clock of the bubble stopped. `_CatchWait` of the test
+     harness held the mark, and the deadlock report and `runtime.Stack` each
+     cut the frame chain at it, thus a trace lost each Go frame under a call of
+     `dart.Catch`.
+
+     The interface `NestedFrame` names a frame that holds the chain of an inner
+     call, and 3 walks of the runtime read through it: the durable mark of
+     synctest, the reason of a wait, and the Go frames of a chain.
+
+     `testdata/programs/syncreflectselect` holds the witness, and it reports
+     `all goroutines are asleep - deadlock!` against the tree before the change.
+
+404. `database/sql` and `context` run their real test suites, and `sync` and
+     `time` cannot.
+
+     `database/sql` gives 123 PASS, 1 SKIP, and 0 FAIL. It needed the 3
+     decisions above and no change of its own overlay. `TestRawBytesAllocs`
+     reads `AllocsPerRun`, and it skips.
+
+     `context` gives 37 PASS, 1 SKIP, and 0 FAIL with the filter
+     `Test[^C]|TestC[^o]`, and it needed no change at all.
+     `TestContextErrDoneRace` stays out: it reads `ctx.Err` in a loop and it
+     yields only on the architecture wasm. Each goroutine of gart runs on 1
+     thread of 1 Dart isolate, thus a loop with no yield holds the isolate for
+     ever. A preemptive scheduler is a non goal.
+
+     `sync` cannot run. `export_test.go` reads 15 unexported names of the real
+     implementation over the runtime of Go, among them `runtime_Semacquire`,
+     `poolDequeue`, and `poolChain`, and `pool_test.go` reads
+     `runtime.MemStats`. The overlay replaces the whole package, and its mutex
+     is the token of the cooperative scheduler.
+
+     `time` cannot run. `abs_test.go` reads 8 unexported names of the absolute
+     calendar of Go, `internal_test.go` builds a Time from the fields `wall`
+     and `ext`, and `export_test.go` reads `setMono`, `mono`, `zoneinfo`, and 6
+     more. A run needs the whole real implementation over a real runtime.
+
+     25 packages of GOROOT run their real tests now. Read decision 405.
+
+405. 9 more packages of GOROOT join `TestTestsOfGoroot`.
+
+     Each 1 of the 9 passed under `make std-test` since an earlier session, and
+     no row of the test held it. A suite that no test of the repository runs
+     proves nothing about the next change, thus each 1 joins the list: `bufio`,
+     `bytes`, `errors`, `math/bits`, `sort`, `strconv`, `strings`,
+     `text/tabwriter`, and `unicode/utf16`.
+
+     The 9 give 575 more real tests of Go, and each 1 runs with no filter. Each
+     1 also holds a skip that reads `AllocsPerRun` or a size class of the
+     allocator of Go, which the Dart heap does not hold. The whole test of 34
+     rows takes 156 seconds.
+
+     34 packages of GOROOT run their real tests now.
