@@ -165,6 +165,9 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	if m.Defer {
 		w("late DeferStack $defer;")
 	}
+	if m.DeferBlocks {
+		w("ChainState? $cs;")
+	}
 
 	if fnType != "" {
 		w("late %s $fn;", fnType)
@@ -272,6 +275,11 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	if m.Defer {
 		e.line("DeferStack $defer = DeferStack();")
 	}
+	// The chain of the deferred calls of such a machine can give up control,
+	// thus its state rides the frame and not a local of the Dart stack.
+	if m.DeferBlocks {
+		e.line("ChainState? $cs;")
+	}
 
 	if m.Blocking {
 		e.line("if ($f != null) {")
@@ -280,6 +288,9 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 		e.line("$r = $f.$r;")
 		if m.Defer {
 			e.line("$defer = $f.$defer;")
+		}
+		if m.DeferBlocks {
+			e.line("$cs = $f.$cs;")
 		}
 
 		for _, v := range m.Locals {
@@ -306,7 +317,7 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	if m.DeferBlocks {
 		e.line("} catch ($e) {")
 		e.line("if ($defer.isEmpty) rethrow;")
-		e.line("$chainSave($e);")
+		e.line("$cs = $chainOpen($e);")
 		e.line("$s = %d;", m.DeferState)
 		e.line("continue $m;")
 		e.line("}")
@@ -317,10 +328,10 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	}
 	if m.Defer && !m.DeferBlocks {
 		e.line("} catch ($e) {")
-		e.line("$chainSave($e);")
+		e.line("final ChainState $cs = $chainOpen($e);")
 		e.mark(f.End)
-		e.line("if (!$defer.runRecovered()) { $chainRestore(); rethrow; }")
-		e.line("$chainRestore();")
+		e.line("if (!$defer.runRecovered()) { $chainClose($cs); rethrow; }")
+		e.line("$chainClose($cs);")
 		if hasNamedResults(f.Results) {
 			e.line("return %s;", e.resultRead(f.Results))
 		} else {
@@ -333,6 +344,11 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 
 // deferNext writes the state that runs the next deferred call.
 func (e *emitter) deferNext(s *ir.DeferNext) {
+	// A return of the function also reaches this state, and the chain of the
+	// caller still stands open then. The chain of this function must hold no
+	// panic in that case, thus a recover inside it gives null. The open stands
+	// in front of the test, because the end of the chain always closes it.
+	e.line("$cs ??= $chainOpen(null);")
 	e.line("if ($defer.isEmpty) { $s = %d; continue $m; }", s.Done)
 	// Each exit of the function shares this state, thus the frame of a
 	// deferred call names the closing brace. Go names the line of a return
@@ -348,10 +364,14 @@ func (e *emitter) deferNext(s *ir.DeferNext) {
 // deferEnd writes the end of the defer chain. A panic that the chain holds
 // reaches the caller here, unless a deferred call recovered it.
 func (e *emitter) deferEnd() {
-	e.line("if ($chainPanic != null) {")
-	e.line("if (!$recovered) { final GoPanic $pv = $chainPanic!; $chainRestore(); throw $pv; }")
-	e.line("$chainRestore();")
+	e.line("final ChainState $co = $cs!;")
+	e.line("$cs = null;")
+	e.line("if ($chainPanic != null && !$recovered) {")
+	e.line("final GoPanic $pv = $chainPanic!;")
+	e.line("$chainClose($co);")
+	e.line("throw $pv;")
 	e.line("}")
+	e.line("$chainClose($co);")
 }
 
 // machineSave writes the frame of a call that gave up control.
@@ -364,6 +384,9 @@ func (e *emitter) machineSave(f *ir.Func, fn string) {
 	e.line("..$r = $blocked")
 	if m.Defer {
 		e.line("..$defer = $defer")
+	}
+	if m.DeferBlocks {
+		e.line("..$cs = $cs")
 	}
 
 	if fn != "" {
