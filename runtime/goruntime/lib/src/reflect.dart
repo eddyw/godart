@@ -677,6 +677,14 @@ TypeDesc $ptrDesc(TypeDesc elem) {
     text: '*${elem.display}',
     elem: () => elem,
     methodTypes: elem.methodTypes,
+    // The Dart type of the pointer comes from the Dart type of the value. A
+    // description with no such type gives a cell of Object?, and no typed
+    // location takes it: the setter of a field of the type `**int` casts to
+    // `$Ptr<$Ptr<GoInt>?>?`, and Dart rejects a `Box<Object?>` there.
+    withType: <R>(R Function<T>() f) => _withType<R>(
+      elem,
+      <E>() => _isObjectPointer(elem) ? f<E?>() : f<$Ptr<E>?>(),
+    ),
     zero: () => null,
   );
   _pointers[elem.name] = out;
@@ -2237,6 +2245,10 @@ bool $descConvertible(int handle, int other) {
   // conversion performs no operation. `type Raw []byte` holds that shape.
   if (a.kind == b.kind) {
     switch (a.kind) {
+      case 'bool' || 'string':
+        // 2 defined types of 1 basic kind hold 1 underlying type. A number
+        // already stands above, because Go also converts between 2 kinds.
+        return true;
       case 'slice':
         return _sameDesc(a.elem, b.elem);
       case 'chan':
