@@ -211,6 +211,9 @@ void _assignInto(Object? dst, Object? src, TypeDesc desc) {
 /// nil pointer, or points to a type that is neither an interface type nor a
 /// type of the error interface.
 ///
+/// Go panics with a text of the kind string there, and not with a runtime
+/// error, thus a recover of such a panic reads a string.
+///
 /// errors.As holds the case of a nil target itself, thus this check reads a
 /// target that stands.
 void $checkErrorTarget(Iface? target) {
@@ -219,8 +222,8 @@ void $checkErrorTarget(Iface? target) {
   if (desc.kind != 'ptr' || desc.elem == null || target.value == null) {
     $panic(
       Iface(
-        $typeGoError,
-        const GoError('errors: target must be a non-nil pointer'),
+        $typeString,
+        GoString.fromString('errors: target must be a non-nil pointer'),
       ),
     );
   }
@@ -229,8 +232,10 @@ void $checkErrorTarget(Iface? target) {
   if (!elem.methods.containsKey('Error()string')) {
     $panic(
       Iface(
-        $typeGoError,
-        const GoError('errors: *target must be interface or implement error'),
+        $typeString,
+        GoString.fromString(
+          'errors: *target must be interface or implement error',
+        ),
       ),
     );
   }

@@ -226,8 +226,7 @@ func Sprintf(format string, a ...any) string {
 				prec:     prec,
 				hasPrec:  hasPrec,
 			}}
-			f.Format(st, rune(letter))
-			out.WriteString(string(st.buf))
+			out.WriteString(callFormatter(f, st, letter, bits, width, a[arg]))
 			arg++
 			continue
 		}
@@ -653,6 +652,29 @@ type wrapErrors struct {
 func (e *wrapErrors) Error() string { return e.text }
 
 func (e *wrapErrors) Unwrap() []error { return e.errs }
+
+// callFormatter runs the Format method of a value and it gives the text. Go
+// wraps each call of a method of the value in a recover, thus a panic inside
+// Format reaches the caller as a report and not as the end of the program.
+//
+// A nil pointer receiver gives <nil>, because a method that holds no guard of
+// the receiver is the usual cause. Each other panic gives the report, and Go
+// writes that report with no flag of the verb.
+func callFormatter(f Formatter, st *state, letter byte, bits, width int, arg any) (text string) {
+	defer func() {
+		e := recover()
+		if e == nil {
+			return
+		}
+		if dart.Kind(arg) == "ptr" && dart.ValueIsNil(arg) {
+			text = pad("<nil>", width, bits, letter)
+			return
+		}
+		text = "%!" + string(rune(letter)) + "(PANIC=Format method: " + Sprint(e) + ")"
+	}()
+	f.Format(st, rune(letter))
+	return string(st.buf)
+}
 
 func isFlag(c byte) bool {
 	return c == '+' || c == '-' || c == '#' || c == ' ' || c == '0'

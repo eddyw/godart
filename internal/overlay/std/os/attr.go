@@ -40,7 +40,14 @@ func syscallMode(mode FileMode) int {
 
 // stdError reports the 3 files that the process holds at its start. The surface
 // holds no descriptor of them, thus an operation that needs 1 fails.
+//
+// The test of the receiver stands first, exactly as each method of Go starts
+// with checkValid: a nil file gives ErrInvalid, and a closed file gives
+// ErrClosed.
 func (f *File) stdError(op string) error {
+	if err := f.checkValid(op); err != nil {
+		return err
+	}
 	if f.std == stdNone {
 		return nil
 	}
@@ -153,11 +160,26 @@ func Link(oldname, newname string) error {
 //
 // A read of the Dart side is 1 synchronous call, and no deadline stops it. Go
 // gives the same error for an ordinary file of a platform whose poller holds no
-// such file.
-func (f *File) SetDeadline(t time.Time) error { return ErrNoDeadline }
+// such file. The test of the receiver stands first, exactly as in Go.
+func (f *File) SetDeadline(t time.Time) error {
+	if err := f.checkValid("SetDeadline"); err != nil {
+		return err
+	}
+	return ErrNoDeadline
+}
 
 // SetReadDeadline gives ErrNoDeadline, as SetDeadline does.
-func (f *File) SetReadDeadline(t time.Time) error { return ErrNoDeadline }
+func (f *File) SetReadDeadline(t time.Time) error {
+	if err := f.checkValid("SetReadDeadline"); err != nil {
+		return err
+	}
+	return ErrNoDeadline
+}
 
 // SetWriteDeadline gives ErrNoDeadline, as SetDeadline does.
-func (f *File) SetWriteDeadline(t time.Time) error { return ErrNoDeadline }
+func (f *File) SetWriteDeadline(t time.Time) error {
+	if err := f.checkValid("SetWriteDeadline"); err != nil {
+		return err
+	}
+	return ErrNoDeadline
+}
