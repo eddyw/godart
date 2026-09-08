@@ -1,0 +1,27 @@
+The file patches the real Go source of math/big/intconv.go.
+
+go of the package math/big.
+
+The real file writes the message of an unknown verb with fmt.Fprintf and
+fmt.Fprint. The 2 functions take an io.Writer, and the flow of stage 3 then
+gives the call the group of each Write method of the program. That group holds
+a Write that blocks, thus each program that formats a value of this package
+loses a //gart:sync position. This file writes the same bytes through the
+fmt.State that the caller gives. Read the section "The method group of an
+interface call" of docs/parity.md.
+
+@@ -92,12 +100,12 @@
+ 		base = 16
+ 	default:
+ 		// unknown format
+-		fmt.Fprintf(s, "%%!%c(big.Int=%s)", ch, x.String())
++		s.Write([]byte(fmt.Sprintf("%%!%c(big.Int=%s)", ch, x.String())))
+ 		return
+ 	}
+ 
+ 	if x == nil {
+-		fmt.Fprint(s, "<nil>")
++		s.Write([]byte("<nil>"))
+ 		return
+ 	}
+ 

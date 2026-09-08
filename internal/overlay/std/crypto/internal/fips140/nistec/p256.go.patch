@@ -1,0 +1,72 @@
+The file patches the real Go source of crypto/internal/fips140/nistec/p256.go.
+
+@@ -1,20 +1,22 @@
+-// Copyright 2022 The Go Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style
+-// license that can be found in the LICENSE file.
+-
+-//go:build (!amd64 && !arm64 && !ppc64le && !s390x) || purego
+-
++//go:build dart
++
++// This file patches the file p256.go of the package
++// crypto/internal/fips140/nistec.
++//
++// The real file reads the precomputed table with a pointer. This file holds the generic form of
++// P-256 of the file p256.go, and it reads the precomputed table of the base
++// point with byteorder.
++//
++// Each other line comes from the real file p256.go.
+ package nistec
+ 
+ import (
+ 	"crypto/internal/constanttime"
+ 	"crypto/internal/fips140/nistec/fiat"
+ 	"crypto/internal/fips140deps/byteorder"
+-	"crypto/internal/fips140deps/cpu"
+ 	"errors"
+ 	"math/bits"
+ 	"sync"
+-	"unsafe"
+ )
+ 
+ // P256Point is a P-256 point. The zero value is NOT valid.
+@@ -566,18 +568,27 @@
+ // sliding window used in ScalarBaseMult, and having each table already
+ // pre-doubled lets us avoid the doublings between windows entirely. This table
+ // aliases into p256PrecomputedEmbed.
+-var p256GeneratorTables *[43]p256AffineTable
+-
++var p256GeneratorTables = new([43]p256AffineTable)
++
++// init reads p256PrecomputedEmbed, which holds the 4 limbs of the Montgomery
++// form of each coordinate in little-endian order. Go reads the same bytes as a
++// table of points, and that read needs a pointer of another type.
+ func init() {
+-	p256GeneratorTablesPtr := unsafe.Pointer(&p256PrecomputedEmbed)
+-	if cpu.BigEndian {
+-		var newTable [43 * 32 * 2 * 4]uint64
+-		for i, x := range (*[43 * 32 * 2 * 4][8]byte)(p256GeneratorTablesPtr) {
+-			newTable[i] = byteorder.LEUint64(x[:])
+-		}
+-		p256GeneratorTablesPtr = unsafe.Pointer(&newTable)
+-	}
+-	p256GeneratorTables = (*[43]p256AffineTable)(p256GeneratorTablesPtr)
++	var limbs [4]uint64
++	at := 0
++	read := func() *[4]uint64 {
++		for i := range limbs {
++			limbs[i] = byteorder.LEUint64(p256PrecomputedEmbed[at:])
++			at += 8
++		}
++		return &limbs
++	}
++	for t := range p256GeneratorTables {
++		for p := range p256GeneratorTables[t] {
++			p256GeneratorTables[t][p].x.SetMontgomery(read())
++			p256GeneratorTables[t][p].y.SetMontgomery(read())
++		}
++	}
+ }
+ 
+ func boothW6(in uint64) (uint8, int) {

@@ -93,3 +93,36 @@ func TestLoadReportsATypeError(t *testing.T) {
 		t.Fatal("got no error for a package that does not type check")
 	}
 }
+
+// TestADiffReachesASourceFileOfANativePackage proves that a `.patch` file of
+// the overlay changes the real Go source of a native package.
+//
+// The compiler reads bytes from the real Go source, and
+// bytes/buffer.go.patch removes the deferred call of recover of growSlice. The
+// subset holds no recover, thus the load must give a body with no such call
+// and with every other line of Go.
+func TestADiffReachesASourceFileOfANativePackage(t *testing.T) {
+	dir, err := filepath.Abs("testdata/hello")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, err := load.Load(dir, "./...")
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := filepath.Join(build.Default.GOROOT, "src", "bytes", "buffer.go")
+	src, ok := found.Sources[name]
+	if !ok {
+		t.Fatalf("the load holds no source of %s", name)
+	}
+	text := string(src)
+	if !strings.Contains(text, "func growSlice(b []byte, n int) []byte {") {
+		t.Error("the patched file holds no growSlice")
+	}
+	if strings.Contains(text, "if recover() != nil {") {
+		t.Error("the patched file still holds the deferred call of recover")
+	}
+	if !strings.Contains(text, "func (b *Buffer) ReadFrom(r io.Reader) (n int64, err error) {") {
+		t.Error("the patched file lost a line that the diff does not name")
+	}
+}

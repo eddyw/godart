@@ -1,0 +1,20 @@
+The file patches the real Go source of go/ast/print.go.
+
+The real fprint holds a deferred call of recover. It turns a panic of a write
+error into an error result. The subset holds no recover, thus a write that
+fails stops the program.
+
+@@ -49,13 +51,6 @@
+ 		ptrmap: make(map[any]int),
+ 		last:   '\n', // force printing of line number on first line
+ 	}
+-
+-	// install error handler
+-	defer func() {
+-		if e := recover(); e != nil {
+-			err = e.(localError).err // re-panics if it's not a localError
+-		}
+-	}()
+ 
+ 	// print x
+ 	if x == nil {

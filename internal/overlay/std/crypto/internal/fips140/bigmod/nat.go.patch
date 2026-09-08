@@ -1,0 +1,71 @@
+The file patches the real Go source of crypto/internal/fips140/bigmod/nat.go.
+
+go of the package crypto/internal/fips140/bigmod.
+
+The real file names addMulVVW1024, addMulVVW1536, and addMulVVW2048 in the 3
+cases of the size that RSA uses most. An assembly file holds each 1, and each 1
+takes the address of the first word of a slice. This file names the generic
+addMulVVW with the slice itself. The comment of Go says that the 3 cases
+"follow the exact same algorithm", thus the result stays the result of Go.
+
+@@ -862,9 +870,9 @@
+ 		var c uint
+ 		for i := 0; i < n; i++ {
+ 			d := bLimbs[i]
+-			c1 := addMulVVW1024(&T[i], &aLimbs[0], d)
++			c1 := addMulVVW(T[i:n+i], aLimbs, d)
+ 			Y := T[i] * m.m0inv
+-			c2 := addMulVVW1024(&T[i], &mLimbs[0], Y)
++			c2 := addMulVVW(T[i:n+i], mLimbs, Y)
+ 			T[n+i], c = bits.Add(c1, c2, c)
+ 		}
+ 		copy(x.reset(n).limbs, T[n:])
+@@ -876,9 +884,9 @@
+ 		var c uint
+ 		for i := 0; i < n; i++ {
+ 			d := bLimbs[i]
+-			c1 := addMulVVW1536(&T[i], &aLimbs[0], d)
++			c1 := addMulVVW(T[i:n+i], aLimbs, d)
+ 			Y := T[i] * m.m0inv
+-			c2 := addMulVVW1536(&T[i], &mLimbs[0], Y)
++			c2 := addMulVVW(T[i:n+i], mLimbs, Y)
+ 			T[n+i], c = bits.Add(c1, c2, c)
+ 		}
+ 		copy(x.reset(n).limbs, T[n:])
+@@ -890,9 +898,9 @@
+ 		var c uint
+ 		for i := 0; i < n; i++ {
+ 			d := bLimbs[i]
+-			c1 := addMulVVW2048(&T[i], &aLimbs[0], d)
++			c1 := addMulVVW(T[i:n+i], aLimbs, d)
+ 			Y := T[i] * m.m0inv
+-			c2 := addMulVVW2048(&T[i], &mLimbs[0], Y)
++			c2 := addMulVVW(T[i:n+i], mLimbs, Y)
+ 			T[n+i], c = bits.Add(c1, c2, c)
+ 		}
+ 		copy(x.reset(n).limbs, T[n:])
+@@ -964,21 +972,21 @@
+ 		const n = 1024 / _W // compiler hint
+ 		T := make([]uint, n*2)
+ 		for i := 0; i < n; i++ {
+-			T[n+i] = addMulVVW1024(&T[i], &xLimbs[0], yLimbs[i])
++			T[n+i] = addMulVVW(T[i:n+i], xLimbs, yLimbs[i])
+ 		}
+ 		return x.Mod(&Nat{limbs: T}, m)
+ 	case 1536 / _W:
+ 		const n = 1536 / _W // compiler hint
+ 		T := make([]uint, n*2)
+ 		for i := 0; i < n; i++ {
+-			T[n+i] = addMulVVW1536(&T[i], &xLimbs[0], yLimbs[i])
++			T[n+i] = addMulVVW(T[i:n+i], xLimbs, yLimbs[i])
+ 		}
+ 		return x.Mod(&Nat{limbs: T}, m)
+ 	case 2048 / _W:
+ 		const n = 2048 / _W // compiler hint
+ 		T := make([]uint, n*2)
+ 		for i := 0; i < n; i++ {
+-			T[n+i] = addMulVVW2048(&T[i], &xLimbs[0], yLimbs[i])
++			T[n+i] = addMulVVW(T[i:n+i], xLimbs, yLimbs[i])
+ 		}
+ 		return x.Mod(&Nat{limbs: T}, m)
+ 	}

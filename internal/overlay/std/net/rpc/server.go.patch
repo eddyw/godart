@@ -1,0 +1,25 @@
+The file patches the real Go source of net/rpc/server.go.
+
+1 line of the real file stays outside the subset. call reads
+reflect.Method.Func, the unbound form of a method, and the subset holds no such
+value. The patch takes the method value of the receiver, which holds the same
+call.
+
+@@ -378,9 +389,15 @@
+ 	mtype.Lock()
+ 	mtype.numCalls++
+ 	mtype.Unlock()
+-	function := mtype.method.Func
++	// The subset holds no reflect.Method.Func. A Go function value of this
++	// compiler is a Dart closure of the exact signature, thus no code can
++	// build the unbound form of a method. A method value of the receiver
++	// holds the same call, and it takes no receiver in front of the
++	// arguments. mtype.method.Index names the same method, because
++	// suitableMethods read the method set of the type of the same receiver.
++	function := s.rcvr.Method(mtype.method.Index)
+ 	// Invoke the method, providing a new value for the reply.
+-	returnValues := function.Call([]reflect.Value{s.rcvr, argv, replyv})
++	returnValues := function.Call([]reflect.Value{argv, replyv})
+ 	// The return value for the method is an error.
+ 	errInter := returnValues[0].Interface()
+ 	errmsg := ""

@@ -199,46 +199,92 @@ func overlayFiles(found, surface []*packages.Package) (map[string][]byte, error)
 		}
 		replaceFiles(out, o, p)
 	}
+	roots := append(found, surface...)
 	for _, o := range overlay.Packages() {
-		if err := patchTestFiles(out, o, append(found, surface...)); err != nil {
+		if err := patchDiffs(out, o, existing[o.Path], roots); err != nil {
 			return nil, err
 		}
 	}
 	return out, nil
 }
 
-// patchTestFiles applies each diff of an overlay package to the test files of
-// the package under test. 2 test variants of a directory hold the test files:
-// the variant of the package itself, and the external test package whose path
-// carries the suffix _test.
+// fileStands reports whether a path names a file on disk.
+func fileStands(name string) bool {
+	info, err := os.Stat(name)
+	return err == nil && !info.IsDir()
+}
+
+// patchDiffs applies each diff of an overlay package. A diff `<base>.patch`
+// names the file `<base>` by its base name, and 2 kinds of file carry that
+// name.
 //
-// A build with no test variant of the package applies nothing. A diff that
-// names no file of a test variant stops the build, because no build tag of an
-// architecture selects a test file.
-func patchTestFiles(out map[string][]byte, o overlay.Package, roots []*packages.Package) error {
+// A test file of the package under test is the first kind. 2 test variants of
+// a directory hold such a file: the variant of the package itself, and the
+// external test package whose path carries the suffix _test. A build with no
+// test variant of the package holds no such file.
+//
+// A source file of a native package is the second kind. The compiler reads
+// such a package from the real Go source, thus a change of 1 constant needs no
+// copy of the whole file. A package that the overlay replaces takes no diff of
+// a source file, because each file of it already stands in the overlay.
+//
+// A diff that names no file of either kind stops the build, unless the file
+// stands in the directory of the package and a build tag of the architecture
+// leaves it out, or unless it is a test file and the build holds no test
+// variant. A name that matches nothing at all is a mistake of the overlay.
+func patchDiffs(out map[string][]byte, o overlay.Package, native *packages.Package,
+	roots []*packages.Package) error {
 	if len(o.Patches) == 0 {
 		return nil
 	}
-	byBase := map[string]string{}
+	sources := map[string]string{}
+	dir := ""
+	if o.Patch && native != nil {
+		for _, name := range native.CompiledGoFiles {
+			sources[filepath.Base(name)] = name
+		}
+		if len(native.CompiledGoFiles) > 0 {
+			dir = filepath.Dir(native.CompiledGoFiles[0])
+		}
+	}
+	tests := map[string]string{}
 	packages.Visit(roots, nil, func(p *packages.Package) {
 		if !holdsTestFile(p) || (p.PkgPath != o.Path && p.PkgPath != o.Path+"_test") {
 			return
 		}
 		for _, name := range p.CompiledGoFiles {
-			byBase[filepath.Base(name)] = name
+			tests[filepath.Base(name)] = name
 		}
 	})
-	if len(byBase) == 0 {
-		return nil
-	}
 	for _, f := range o.Patches {
-		name, ok := byBase[strings.TrimSuffix(f.Name, ".patch")]
+		base := strings.TrimSuffix(f.Name, ".patch")
+		name, ok := sources[base]
 		if !ok {
-			return fmt.Errorf("the diff %s of %s names no test file of the package", f.Name, o.Path)
+			name, ok = tests[base]
 		}
-		src, err := os.ReadFile(name)
-		if err != nil {
-			return err
+		if !ok {
+			// A build tag of the architecture selects the file set of a
+			// package, thus a diff of a file that stands in the directory and
+			// outside the build applies to nothing. The overlay of nistec
+			// holds the generic form of P-256, and a machine with the assembly
+			// reads another file.
+			if dir != "" && fileStands(filepath.Join(dir, base)) {
+				continue
+			}
+			// A test file needs a test variant of the build, and a build with
+			// no test holds none.
+			if strings.HasSuffix(base, "_test.go") && len(tests) == 0 {
+				continue
+			}
+			return fmt.Errorf("the diff %s of %s names no file of the package", f.Name, o.Path)
+		}
+		src, ok := out[name]
+		if !ok {
+			read, err := os.ReadFile(name)
+			if err != nil {
+				return err
+			}
+			src = read
 		}
 		patched, err := applyPatch(src, f.Content, f.Name)
 		if err != nil {

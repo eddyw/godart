@@ -30,9 +30,17 @@ type Package struct {
 	// the base name.
 	Files []File
 	// Patches holds each unified diff of the directory, in the order of the
-	// base name. A diff `<base>.patch` changes the test file `<base>` of the
-	// package under test, because a test file of Go stays outside the overlay
-	// and a copy of it would age with each release of Go.
+	// base name. A diff `<base>.patch` changes the file `<base>` of the
+	// package, and 2 kinds of file take one.
+	//
+	// A test file of the package under test is the first kind. Such a file
+	// stays outside the overlay, and a copy of it would age with each release
+	// of Go.
+	//
+	// A source file of a native package is the second kind. The compiler reads
+	// such a package from the real Go source, thus a change of 1 line needs no
+	// copy of the whole file. A native package that holds a diff of each of
+	// its changes carries no file of its own.
 	Patches []File
 }
 

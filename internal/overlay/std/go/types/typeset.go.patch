@@ -1,0 +1,17 @@
+The file patches the real Go source of go/types/typeset.go.
+
+The real file writes the conversion (*term)(t). The type Term and the type term
+hold the same 2 fields, and Go gives 1 memory block for the 2 forms. The subset
+holds no conversion between 2 struct types, thus this file builds a term of the
+same 2 fields. No method of a term writes a field, and no operation of a
+termlist compares 2 pointers, thus the 2 forms hold 1 meaning.
+
+@@ -396,7 +407,7 @@
+ 				// The corresponding type set is empty.
+ 				t = nil // ∅ term
+ 			}
+-			terms = termlist{(*term)(t)}
++			terms = termlist{t.asTerm()}
+ 		}
+ 		// The type set of a union expression is the union
+ 		// of the type sets of each term.

@@ -1,0 +1,51 @@
+The file patches the real Go source of encoding/asn1/asn1.go.
+
+1 part of the real file stays outside the subset. It reads internal/saferio for
+the cap of the slice of a SEQUENCE OF. That package holds unsafe.Sizeof, thus
+it stays outside the surface. The function sliceCapWithSize at the end of this
+file holds the body of saferio.SliceCapWithSize.
+
+@@ -22,7 +34,6 @@
+ import (
+ 	"errors"
+ 	"fmt"
+-	"internal/saferio"
+ 	"math"
+ 	"math/big"
+ 	"reflect"
+@@ -669,7 +680,7 @@
+ 		numElements++
+ 	}
+ 	elemSize := uint64(elemType.Size())
+-	safeCap := saferio.SliceCapWithSize(elemSize, uint64(numElements))
++	safeCap := sliceCapWithSize(elemSize, uint64(numElements))
+ 	if safeCap < 0 {
+ 		err = SyntaxError{fmt.Sprintf("%s slice too big: %d elements of %d bytes", elemType.Kind(), numElements, elemSize)}
+ 		return
+@@ -1180,3 +1191,26 @@
+ 	}
+ 	return b[offset:], nil
+ }
++
++// chunkSize is the limit of the memory that the parse takes with no check.
++// internal/saferio holds the same value.
++const chunkSize = 10 << 20
++
++// sliceCapWithSize gives the cap for a slice of c values of the named size. A
++// negative result names a count that is always too big. The body comes from
++// saferio.SliceCapWithSize.
++func sliceCapWithSize(size, c uint64) int {
++	if int64(c) < 0 || c != uint64(int(c)) {
++		return -1
++	}
++	if size > 0 && c > (1<<64-1)/size {
++		return -1
++	}
++	if c*size > chunkSize {
++		c = chunkSize / size
++		if c == 0 {
++			c = 1
++		}
++	}
++	return int(c)
++}
