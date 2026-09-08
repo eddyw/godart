@@ -254,6 +254,28 @@ func TestTestsOfGoroot(t *testing.T) {
 		// reads the zero value of a time.Time.
 		{"database/sql", "", []string{
 			"--- PASS: TestConversions ", "--- PASS: TestPoolExhaustOnCancel "}},
+		// The 9 rows below each passed under make std-test since an earlier
+		// session, and no row of this test held them. Each 1 runs every test.
+		// A skip in each 1 reads AllocsPerRun or a size class of the
+		// allocator of Go, which the Dart heap does not hold.
+		{"bufio", "", []string{
+			"--- PASS: TestReaderSimple ", "--- PASS: TestLargeReader "}},
+		{"bytes", "", []string{
+			"--- PASS: TestNewBuffer ", "--- PASS: TestReaderZero "}},
+		{"errors", "", []string{
+			"--- PASS: TestNewEqual ", "--- PASS: TestUnwrap "}},
+		{"math/bits", "", []string{
+			"--- PASS: TestUintSize ", "--- PASS: TestRem64Overflow "}},
+		{"sort", "", []string{
+			"--- PASS: TestSearch ", "--- PASS: TestCountSortOps "}},
+		{"strconv", "", []string{
+			"--- PASS: TestParseBool ", "--- PASS: TestErrorPrefixes "}},
+		{"strings", "", []string{
+			"--- PASS: TestBuilder ", "--- PASS: TestCutSuffix "}},
+		{"text/tabwriter", "", []string{
+			"--- PASS: Test ", "--- PASS: TestPanicDuringWrite "}},
+		{"unicode/utf16", "", []string{
+			"--- PASS: TestConstants ", "--- PASS: TestIsSurrogate "}},
 	}
 	for _, c := range cases {
 		t.Run(c.pkg, func(t *testing.T) {
