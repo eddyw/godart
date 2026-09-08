@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/typeset"
 	"golang.org/x/tools/go/packages"
 )
@@ -204,6 +205,13 @@ func (a *analyzer) file(f *ast.File) {
 			}
 			if d.Body != nil {
 				a.walkFunc(any(obj), d.Body)
+				continue
+			}
+			// An external Dart declaration that carries the mark `blocking`
+			// gives up control. The declaration holds no body, thus the walk
+			// finds no such operation and the mark names it.
+			if ref := ir.DartMarker(d.Doc); ref != nil && ref.Blocks {
+				a.result.blocking[any(obj)] = true
 			}
 		case *ast.GenDecl:
 			for _, spec := range d.Specs {

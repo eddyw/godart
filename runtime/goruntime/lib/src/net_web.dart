@@ -22,6 +22,10 @@ final GoString _empty = GoString.empty;
 
 (int, GoString) $dialTCP(GoString host, int port) => (0, _noNet);
 
+/// Reads each address of a host name. A web target holds no resolver, thus the
+/// first line names the cause and no address follows it.
+String $lookupAddrs(String host, int family) => 'operation not supported';
+
 (int, GoString, GoString) $dialTLS(
   GoString host,
   int port,

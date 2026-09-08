@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math/rand/v2"
 	"net/netip"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -473,9 +474,84 @@ func (r *Resolver) LookupIP(ctx context.Context, network, host string) ([]IP, er
 	return out, err
 }
 
+// lookupAddrs reads each address of a host name through the resolver of the
+// system, and it gives the addresses in the order that the system holds.
+//
+// family holds 4 for the network ip4, 6 for the network ip6, and 0 for each
+// family. The first line of the result names the cause of a failure, and each
+// line after it holds 1 address. An empty first line means a success.
+//
+//gart:dart package:goruntime/goruntime.dart $lookupAddrs blocking
+func lookupAddrs(host string, family int) string
+
+// readsSystem reports whether Go reads the resolver of the platform for a
+// lookup of a host name.
+//
+// Go reads it on darwin, on ios, on android, and on windows, and it reads the
+// resolver of Go on each other platform. A Resolver that names PreferGo or its
+// own Dial always reads the resolver of Go, exactly as in Go.
+//
+// The order of the addresses holds the difference. Go sorts the list with RFC
+// 6724, and rule 1, rule 2, and rule 5 of that algorithm each read the source
+// address that the system would take for a destination. Go reads that address
+// with a connected datagram socket, and dart:io opens no such socket and
+// exports no route, thus the resolver of the overlay cannot sort the list. The
+// resolver of the platform gives the list in that order already.
+func (r *Resolver) readsSystem() bool {
+	if r != nil && (r.PreferGo || r.Dial != nil) {
+		return false
+	}
+	switch runtime.GOOS {
+	case "darwin", "ios", "android", "windows":
+		return true
+	}
+	return false
+}
+
+// familyOf gives the number of the family of a network of the lookup.
+func familyOf(network string) int {
+	switch network {
+	case "ip4":
+		return 4
+	case "ip6":
+		return 6
+	}
+	return 0
+}
+
+// systemLookupIP reads each address of a host through the resolver of the
+// platform.
+func systemLookupIP(network, host string) ([]IP, error) {
+	lines := strings.Split(lookupAddrs(host, familyOf(network)), "\n")
+	if cause := lines[0]; cause != "" {
+		return nil, &DNSError{
+			Err:         cause,
+			Name:        host,
+			IsNotFound:  cause == errNoSuchHost,
+			IsTemporary: cause == errServerMisbehave,
+		}
+	}
+	var out []IP
+	for _, text := range lines[1:] {
+		if text == "" {
+			continue
+		}
+		if ip := ParseIP(text); ip != nil && keepIP(network, ip) {
+			out = append(out, ip)
+		}
+	}
+	if len(out) == 0 {
+		return nil, &DNSError{Err: errNoSuchHost, Name: host, IsNotFound: true}
+	}
+	return out, nil
+}
+
 // lookupIP reads the file of the hosts first, and then each server of the
 // resolver.
 func (r *Resolver) lookupIP(ctx context.Context, types []uint16, network, host string) ([]IP, error) {
+	if r.readsSystem() {
+		return systemLookupIP(network, host)
+	}
 	if held := lookupStaticHost(host); len(held) > 0 {
 		var out []IP
 		for _, text := range held {

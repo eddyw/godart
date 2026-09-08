@@ -12,12 +12,23 @@ import (
 //
 //	//gart:dart dart:math max
 //	func dartMax(a, b float64) float64
+//
+// A third field `blocking` marks a symbol that gives up control. The Dart form
+// of such a symbol waits for a future of the event loop, thus each call of it
+// is a state boundary.
 const DartDirective = "//gart:dart"
+
+// DartBlockMark is the third field of a directive that names a symbol which
+// gives up control.
+const DartBlockMark = "blocking"
 
 // DartRef names the Dart library and the Dart symbol of a declaration.
 type DartRef struct {
 	Lib  string
 	Name string
+
+	// Blocks marks a symbol that gives up control.
+	Blocks bool
 }
 
 // DartMarker reads the //gart:dart directive of a declaration. It gives nil
@@ -33,10 +44,15 @@ func DartMarker(doc *ast.CommentGroup) *DartRef {
 			continue
 		}
 		fields := strings.Fields(rest)
-		if len(fields) != 2 {
-			continue
+		switch len(fields) {
+		case 2:
+			return &DartRef{Lib: fields[0], Name: fields[1]}
+		case 3:
+			if fields[2] != DartBlockMark {
+				continue
+			}
+			return &DartRef{Lib: fields[0], Name: fields[1], Blocks: true}
 		}
-		return &DartRef{Lib: fields[0], Name: fields[1]}
 	}
 	return nil
 }

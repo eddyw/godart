@@ -253,6 +253,109 @@ Future<T> _limit<T>(Future<T> f, int deadline, T expired) {
   );
 }
 
+/// _lowerFirst writes the first letter of a text in the lower case. The
+/// message of the system starts with a capital letter, and the same message of
+/// Go starts with a small letter.
+String _lowerFirst(String text) {
+  if (text.isEmpty) return text;
+  return text[0].toLowerCase() + text.substring(1);
+}
+
+/// _connectCause writes the message of a failure of a connect.
+///
+/// Go names the operation of the system and the message of the errno, thus a
+/// refusal reads `connect: connection refused`. The 2 tables of the message
+/// hold the same text, and only the first letter differs.
+GoString _connectCause(Object e) {
+  if (e is SocketException) {
+    final String os = e.osError?.message ?? '';
+    if (os.isNotEmpty) {
+      return GoString.fromString('connect: ${_lowerFirst(os)}');
+    }
+  }
+  return _cause(e);
+}
+
+/// The codes of the resolver that Go names with a text of its own. The
+/// platforms hold 2 tables: BSD counts up, Linux counts down, and Windows
+/// holds a table of its own.
+///
+/// EAI_NONAME and EAI_NODATA each name a host that the resolver did not find,
+/// and EAI_AGAIN names a failure that a second try may pass.
+const int _eaiNoNameBSD = 8;
+const int _eaiNoDataBSD = 7;
+const int _eaiAgainBSD = 2;
+const int _eaiNoNameLinux = -2;
+const int _eaiNoDataLinux = -5;
+const int _eaiAgainLinux = -3;
+const int _hostNotFoundWindows = 11001;
+const int _tryAgainWindows = 11002;
+
+/// _lookupCause classifies a failure of the resolver of the system. Go gives
+/// the text `no such host` for a name that the resolver did not find, and the
+/// text `server misbehaving` for a failure that a second try may pass.
+String _lookupCause(Object e) {
+  if (e is SocketException) {
+    final OSError? os = e.osError;
+    if (os != null) {
+      final int code = os.errorCode;
+      if (code == _eaiNoNameBSD ||
+          code == _eaiNoDataBSD ||
+          code == _eaiNoNameLinux ||
+          code == _eaiNoDataLinux ||
+          code == _hostNotFoundWindows) {
+        return 'no such host';
+      }
+      if (code == _eaiAgainBSD ||
+          code == _eaiAgainLinux ||
+          code == _tryAgainWindows) {
+        return 'server misbehaving';
+      }
+      if (os.message.isNotEmpty) return _lowerFirst(os.message);
+    }
+    return e.message;
+  }
+  return e.toString();
+}
+
+/// The type of a lookup of 1 family. Go names the network ip4, ip6, or ip,
+/// and the overlay carries 4, 6, and 0.
+InternetAddressType _familyOf(int family) {
+  if (family == 4) return InternetAddressType.IPv4;
+  if (family == 6) return InternetAddressType.IPv6;
+  return InternetAddressType.any;
+}
+
+/// Reads each address of a host name through the resolver of the system.
+///
+/// family holds 4 for IPv4, 6 for IPv6, and 0 for each family. The result
+/// holds the cause of a failure on the first line, and 1 address on each line
+/// after it. An empty first line means a success.
+///
+/// The resolver of the system orders the addresses with RFC 6724, exactly as
+/// the resolver of Go does. That order reads the source address of each
+/// destination, and dart:io opens no connected datagram socket, thus no code
+/// of the overlay can compute it.
+///
+/// The call gives up control, thus the result of the call itself is dead. The
+/// frame of the wait gives the value to the caller.
+String $lookupAddrs(String host, int family) {
+  $await(
+    InternetAddress.lookup(host, type: _familyOf(family)).then((
+      List<InternetAddress> found,
+    ) {
+      final StringBuffer out = StringBuffer();
+      for (final InternetAddress a in found) {
+        out.write('\n');
+        out.write(a.address);
+      }
+      return GoString.fromString(out.toString());
+    }),
+    (Object cause) => GoString.fromString(_lookupCause(cause)),
+  );
+  return '';
+}
+
 /// _address reads a numeric address, or it asks the system for the name.
 Future<InternetAddress> _address(String host) async {
   final InternetAddress? found = InternetAddress.tryParse(host);
@@ -317,7 +420,7 @@ Future<int> _fill(_Conn c) {
       host.toDartString(),
       port,
     ).then((Socket s) => (_slot(_Conn(s)), _empty)),
-    (Object cause) => (-1, _cause(cause)),
+    (Object cause) => (-1, _connectCause(cause)),
   );
   return (-1, _empty);
 }
