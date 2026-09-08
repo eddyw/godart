@@ -1202,8 +1202,11 @@ func MakeFunc(typ Type, fn func(args []Value) (results []Value)) Value {
 // this package reads such a value. Dart writes no class at run time, thus no
 // other path can name the type. Read docs/parity.md.
 //
-// Go panics for a field with no name, for a field with no type, and for a
-// method of a field. This function follows each 1.
+// Go panics for a field with no name and for a field with no type, and this
+// function follows the 2. Go also promotes the method set of an embedded field
+// into the struct, and a synthetic type of this package holds no method table,
+// thus such a field stays out. A field that the struct does not embed promotes
+// no method, and Go accepts it.
 func StructOf(fields []StructField) Type {
 	names := make([]string, len(fields))
 	tags := make([]string, len(fields))
@@ -1216,8 +1219,8 @@ func StructOf(fields []StructField) Type {
 		if f.Type == nil {
 			panic("reflect.StructOf: field " + f.Name + " has no type")
 		}
-		if f.Type.NumMethod() > 0 && !f.Anonymous {
-			panic("reflect.StructOf: field " + f.Name + " holds a method")
+		if f.Anonymous && f.Type.NumMethod() > 0 {
+			panic("reflect.StructOf: the embedded field " + f.Name + " holds a method")
 		}
 		names[i] = f.Name
 		tags[i] = string(f.Tag)
