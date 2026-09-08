@@ -241,6 +241,11 @@ func TestTestsOfGoroot(t *testing.T) {
 		// of Go. The 2 skip.
 		{"path/filepath", "", []string{
 			"--- PASS: TestEvalSymlinks ", "--- PASS: TestWalk "}},
+		// TestRawBytesAllocs reads AllocsPerRun, and it skips.
+		// TestPoolExhaustOnCancel holds a synctest bubble, and TestConversions
+		// reads the zero value of a time.Time.
+		{"database/sql", "", []string{
+			"--- PASS: TestConversions ", "--- PASS: TestPoolExhaustOnCancel "}},
 	}
 	for _, c := range cases {
 		t.Run(c.pkg, func(t *testing.T) {
