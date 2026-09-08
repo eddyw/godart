@@ -5334,3 +5334,176 @@ The plan left these points open. The work took the decisions below.
      rows takes 156 seconds.
 
      34 packages of GOROOT run their real tests now.
+
+406. A decimal reaches 32 bits with 1 rounding.
+
+     Go reads a decimal into a float32 with 1 rounding, and it writes the
+     shortest decimal that reads back as the same value of 32 bits. The bridge
+     of Dart gives a float64, thus a narrowing to 32 bits rounds a second time.
+     A decimal that stands exactly between 2 neighbour values of float32 then
+     takes the wrong neighbour, and the shortest text of such a value holds 1
+     digit too many. A wrong float32 is a silent wrong answer, and it reaches
+     every package.
+
+     The 2 roundings differ at 1 shape alone. Each middle point of 2 neighbour
+     values of float32 is an exact double, and the rounding of a decimal to 64
+     bits keeps the order, thus a decimal reaches such a middle point only when
+     no other double stands nearer to it. The 2 neighbours then stand at the
+     same distance, and the rounding to 32 bits reads the even one. Each other
+     decimal falls strictly on one side of every middle point in both widths,
+     thus the 2 roundings agree.
+
+     The test of the shape reads the bits of the double. A middle point holds
+     25 significant bits and the lowest of them is 1, thus the 53 bits of the
+     double end with 1 and 28 zeros, which 1 mask of the low 32 bits answers.
+     Below 2 to the power -125 each value of float32 is a multiple of 2 to the
+     power -149, thus each middle point is an odd multiple of 2 to the power
+     -150 and 1 multiplication finds it. The cost of a read that is not a
+     middle point is 1 comparison and 1 mask.
+
+     The slow path compares the exact decimal with the middle point. `BigInt`
+     of Dart holds the 2 sides as whole numbers: a negative power of 10
+     multiplies the right side, and a negative power of 2 multiplies the left
+     side. The result then reads the neighbour of Go.
+
+     The other road was a decimal parser of 32 bits in the overlay of
+     `strconv`. Such a parser needs the 128-bit arithmetic of Eisel-Lemire and
+     a slow path of its own, and `math/big` reads `strconv`, thus no big
+     integer of Go stands there. The road of the runtime library costs 1 bridge
+     and about 130 lines.
+
+     `dart.ParseFloat32` is the bridge. `testdata/programs/resfloat32` proves
+     19,917 values of float32 against the Go toolchain, and `format_test.dart`
+     holds the 2 middle points that Go names: `9000000000.0000001` and
+     `±7.038531e-26`.
+
+407. A diff reaches a source file of the real package.
+
+     An overlay file that replaces a file of a native package carries every
+     line of the real Go source, and it exists for the few lines that differ.
+     `arshal_default.go` of `encoding/json/v2` carried 2,043 lines for 1
+     constant. Such a copy ages with each release of Go, and a reader cannot
+     see the change without a diff of his own.
+
+     The `.patch` mechanism of stage 1 already held the answer for a test file
+     of Go, and the rule of it is strict: each hunk must match at the line of
+     its header, and a mismatch stops the build with the line. The mechanism
+     now reads a source file of the real package by the same base name.
+
+     A diff that names no file stops the build, with 2 exceptions. A build tag
+     of the architecture selects the file set of a package, thus a file that
+     stands in the directory and outside the build applies to nothing: the
+     overlay of `nistec` holds the generic form of P-256, and a machine with
+     the assembly reads another file. A test file also needs a test variant of
+     the build.
+
+     25 copies became diffs, and 16,228 lines left the repository. The
+     conversion was mechanical: a hunk whose changed lines hold only a comment,
+     a blank, or a build tag carries no code, thus it goes and its note moves
+     to the free text of the diff. Each other hunk stays whole. 2 proofs stand
+     behind it. The code of each patched file equals the code of the copy that
+     it replaced, line for line. The Dart output of a program that imports each
+     of the 19 packages differs only in the name of a temporary, which carries
+     the line of its source.
+
+     3 files stay as copies, because each 1 is a rewrite and not a copy: the 2
+     walks of `jsontext` and `maphash.go`.
+
+408. An overlay file with a new base name keeps a path of its own.
+
+     An overlay file takes the file of the same base name of the real package,
+     because the output path of a Dart part file comes from the name of the Go
+     file. An overlay file with a new base name took the first free file of the
+     package instead. The go command then read the content of
+     `strings/extra.go` at the path of `strings/builder.go`, and each report of
+     the compiler named a source that holds no such line. A person who read the
+     position looked at code of another subject. 36 files of 19 packages stood
+     that way.
+
+     Such a file now takes its own path inside the directory of the package.
+     The loader already wrote such a path for a package that the standard
+     library does not hold, thus the go command reads an added file of an
+     overlay and no new rule stands behind it. Each real file that no overlay
+     file and no diff names becomes empty, as before.
+
+     2 limits go with it. An overlay may hold more files than the real package.
+     A diff of a source file also reaches a package that the overlay replaces,
+     because the slot of such a file stays free.
+
+409. A type built from a local type carries the position.
+
+     The name of a descriptor is the identity of a type at run time. 2 local
+     types of 2 function bodies can share 1 printed name, and a package level
+     type of that name shares it too, thus the name of a local type already
+     carried the position of its declaration.
+
+     A type built from a local type did not. `[]Animal` of a function body and
+     `[]Animal` of the package each printed as `[]pkg.Animal`, thus the 2
+     shared 1 descriptor: 1 element type, 1 maker, 1 zero value, and 1 field
+     table. `encoding/json_test` holds `type Animal int` at the top and `type
+     Animal struct{...}` inside an example. `reflect.Value.Grow` of the example
+     built a slice of integers for a slot of structs, and the binary ended.
+
+     The walk now names the position of each local type that a type mentions,
+     at every level: the element of a slice, of an array, of a pointer, and of
+     a channel, the key and the element of a map, each parameter and each
+     result of a function type, each field of an unnamed struct type, and each
+     type argument of a named type. The walk of a named type reads its type
+     arguments alone, because Go reads the name of such a type as its identity
+     and not the type behind it.
+
+     `TestAnonymousFields/EmbeddedStructPointer` of `encoding/json` wrote 1
+     wrong letter of a field name because of it, and `ExampleUnmarshal` ended
+     the binary. The whole package passes now.
+
+410. A conversion of a `reflect.Value` to an interface.
+
+     `reflect.Value.Convert` to an interface type wrote the descriptor of the
+     interface into the result. The value inside then carried the interface as
+     its dynamic type, thus a type assertion to the concrete type failed and
+     the report named the interface as the type of the value.
+
+     Go holds the interface as the static type of the location alone.
+     `Value.Type` gives the interface, `Value.Kind` gives `Interface`, and
+     `Value.Interface` gives the concrete value with its own type. The `Value`
+     of the overlay already holds a field for the static type of a location,
+     because a location of an interface type holds a value of another type,
+     thus the fix reads that field and nothing else grows.
+
+     `MarshalFunc` and `UnmarshalFunc` of `encoding/json/v2` read that shape:
+     each 1 converts the address of a value to its type parameter, and the body
+     of the function asserts the concrete type. A conversion that no method set
+     allows still panics, with the report of Go.
+
+411. A description that the run time builds names its Dart type.
+
+     The Dart form of a Go value lives in the emitted code, thus a cell of
+     `Object?` fits no typed location. The setter of a field of the type
+     `**int` casts to `$Ptr<$Ptr<GoInt>?>?`, and Dart rejects a `Box<Object?>`
+     there. A description that the emitter writes carries a `withType` closure
+     for that reason, and the runtime reads it through `_withType`.
+
+     `$ptrDesc` builds the description of a pointer that no emitted table
+     holds, and it wrote no such closure. `reflect.New` of that type then gave
+     a cell of `Object?`. The closure now reads the Dart type of the element
+     and it wraps that type in a pointer, thus a chain of any depth holds its
+     type: `**int` reads `*int`, and `*int` reads `int`. A pointer to a struct
+     and a pointer to an array each keep the object itself, because the Dart
+     form of such a pointer is the value.
+
+     The defect stood only after a type constructor of `reflect` ran, thus the
+     order of the tests decided it. `PointerTo` registers the description that
+     it builds, and a name that the table already holds keeps its own
+     description.
+
+     `$descConvertible` holds the second half of the same shape. Go converts
+     between 2 types whose underlying types are identical, and the switch of
+     that function held a case for a slice, a channel, an array, and a map. A
+     bool and a string each hold 1 underlying type for every defined type of
+     that kind, thus the answer is true with no further test. A number already
+     stood above, because Go also converts between 2 kinds of number.
+
+     `makePointerArshaler` of `encoding/json/v2` allocates the element of a
+     field type, and `unmarshalEmbeddedFallbackNext` converts a string to a
+     defined string type. The suite of that package runs 1,491 subtests now,
+     and it ran 378 before.

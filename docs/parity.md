@@ -277,7 +277,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq`, `Seq2`, `Pull`, and `Pull2`. Read the section below. |
 | `maps` | Overlay | |
-| `encoding/json` | Patch | The real source of Go. 2 patches give `Unmarshal` and `Valid` the scanner of the runtime, and decision 386 holds the rule of that scanner. |
+| `encoding/json` | Patch | The real source of Go. 3 patches: 2 give `Unmarshal` and `Valid` the scanner of the runtime, and the third gives `Marshal` the fast walk of it. Decision 386 and decision 397 hold the 2 rules. |
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native |
 | `io/fs` | Native | Each exported name, the `FS` interface family included. |
@@ -1701,32 +1701,22 @@ a struct type keeps the reference of the source, exactly as `Value.Set` does. A
 key whose value is a nil interface gives a `Value` that `IsValid` reports
 false, and Go reports true.
 
-**The full run does not end, and 2 items hold it.**
+**The whole suite of `encoding/json` passes**, with 627 tests and subtests.
+The 2 items that held the full run each closed. `TestUnmarshalMaxDepth` passes
+since the scanner of the decoder landed (decision 386). The cast of a marshal
+method passes since `reflect.Value.Convert` to an interface keeps the concrete
+type (decision 410).
 
-`TestUnmarshalMaxDepth` builds a JSON value that stands 10000 levels deep, and
-the run of it reached no end inside 4 minutes. Each other test of the package
-ends inside a few seconds.
+**The whole suite of `encoding/json/jsontext` passes**, with 27 tests and 943
+subtests.
 
-A marshal of a value whose type declares `MarshalJSON` or `MarshalText` ends
-the binary with a cast of Dart:
+**`encoding/json/v2` builds its test binary and it runs 1,491 subtests.** It
+ran 378 before the cast of an erased container landed, and 10 subtests and
+`ExampleWithMarshalers_errors` still fail. `Example_textMarshal` ends the run.
 
-```
-type '(Object?) => Object?' is not a subtype of
-type '(Object?) => (Slice<int>, Iface?)' in type cast
-```
-
-`_makeMethodArshaler` of `encoding/json/v2` reads
-`reflect.TypeAssert[Marshaler](va.Addr())` and it calls `MarshalJSON` through
-that interface. The emitter writes the call as a tear off of the method table
-with a cast to the exact Dart function type, and the pointer descriptor that
-`reflect` builds at run time holds a method whose Dart type erases the record
-of the 2 results. Decision 342 holds the same shape for a parameter, and the
-result of a method needs the rule too. `TestEncodeBytekind`,
-`TestRefValMarshal`, and `TestMarshalTextFloatMap` each end there.
-
-`TestUnmarshal` holds the largest table of the package, and it passes. 16 top
-level tests of the range A to L and 14 of the range N to T pass in front of the
-first cast.
+The report of a cycle of `encoding/json/v2` differs: this build starts the set
+of the open pointers at the depth of 100, and Go starts it at 1000, thus the
+JSON pointer of the error names a shorter path.
 
 The cause that blocks each package of the survey of 2026-08-31:
 
@@ -1735,7 +1725,7 @@ The cause that blocks each package of the survey of 2026-08-31:
 | `errors` | Runs since 2026-09-07. 22 tests pass. |
 | `io` | Runs. Each test passes. |
 | `maps` | Runs. Each test passes. |
-| `math/rand/v2` | `Type.NumMethod`, `Type.Method`, `Value.Method`, and `os.Pipe`. |
+| `math/rand/v2` | Runs. Each test passes. |
 | `bytes` | Runs since 2026-09-07. 170 tests pass, and 8 skip at `AllocsPerRun`. 1 diff of `TestClone` removes a read of `unsafe.SliceData`. |
 | `sort` | Runs since 2026-09-07. 47 tests pass. The package is native, and 1 patch of `slice.go` reads the 2 slice intrinsics. |
 | `strconv` | Runs since 2026-09-07. 70 tests pass, and 1 skips. |

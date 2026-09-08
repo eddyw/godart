@@ -20,6 +20,11 @@ the files, and each one carries the build tag `dart`. The go command skips such
 a file, and the compiler reads it. The load pairs the files by base name. Thus
 the name of the Dart part file of the output holds the name of the overlay file.
 
+An overlay file whose base name matches no file of the real package takes its
+own path inside the directory of that package. An overlay may thus hold more
+files than the real package holds, and each report of the compiler names the
+file that holds the line. Read decision 408.
+
 A **native** package reads the real Go source. `internal/overlay/native.go`
 holds the list. Such a package needs no overlay, because its source already
 stays inside the subset.
@@ -28,15 +33,21 @@ A **patch** replaces 1 file of a native package by its base name. Each other
 file keeps the real Go source. A patch that matches no file stays out, because a
 build tag of the architecture selects the file set of a package.
 
-A **diff** changes a test file of a package under test. `<base>.patch` in the
-directory of the overlay holds a unified diff, and the load applies it to the
-real file `<base>` of the test variant or of the external test package. The
-text before the first hunk header holds the cause. Each hunk must match the
-file at the line of its header, and a mismatch stops the build with the line,
-because a test file of Go changes with each release and a copy of it would age
-in silence. A diff that names no test file also stops the build. `strings` and
-`bytes` each hold such a diff, because a test of the 2 reads the address of a
-storage with `unsafe`.
+A **diff** changes a named line of a real file. `<base>.patch` in the directory
+of the overlay holds a unified diff, and the load applies it to the real file
+`<base>`: a source file of the package, a test file of the test variant, or a
+test file of the external test package. The text before the first hunk header
+holds the cause. Each hunk must match the file at the line of its header, and a
+mismatch stops the build with the line, because a file of Go changes with each
+release and a copy of it would age in silence. A diff that names no file also
+stops the build, with 2 exceptions: a build tag of the architecture can hide a
+file of the directory, and a test file needs a test variant of the build.
+
+A diff of a source file replaces a copy of that file. Such a copy carries each
+line of the real Go source for the few lines that differ, thus a reader cannot
+see the change. 25 copies became diffs on 2026-09-09, and 16,228 lines left the
+repository. Read decision 407. 3 files stay as copies, because each 1 is a
+rewrite and not a copy: the 2 walks of `jsontext`, and `maphash.go`.
 
 `internal/overlay/native.go` holds the native list and each patch.
 `internal/overlay/std/` holds the source of each overlay. The 2 files are the
@@ -311,7 +322,6 @@ function. Read decision 124.
    from a count of seconds to a year, a month, and a day follows the
    algorithm of Howard Hinnant. The new intrinsic `dart.ZoneOffset` gives the
    offset and the name of the local zone.
-
 `defer cancel()` also needed the defer that can block. Read the section "A
 deferred call that can block" of `docs/design.md`.
 
