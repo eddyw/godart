@@ -5059,7 +5059,7 @@ The plan left these points open. The work took the decisions below.
 395. The lazy package variable lands, and decision 387 named the wrong cause.
 
      A package variable whose initializer cannot panic and writes nothing takes
-     the form `late T x = <value>;` now, and the init routine writes nothing
+     the form `T x = <value>;` now, and the init routine writes nothing
      for it. The tree shaker of Dart then drops the variable and its whole
      value when no code reads it. An ahead of time binary of a program that
      reads 1 table of `unicode` went from 7,684,640 bytes to 7,110,080.
@@ -5082,6 +5082,13 @@ The plan left these points open. The work took the decisions below.
      record of exactly 20 fields, and no code reads it. `dart compile wasm` of
      `testdata/web/webio` passes with the pad and stops without it. The witness
      of the defect stands outside godart, and the user holds the report.
+
+     **The keyword `late` stays out.** A top level variable of Dart with an
+     initializer is lazy already, thus the keyword adds nothing and
+     `flutter analyze` reports `unnecessary_late` for each 1. The measurement
+     holds without it: the same program gives 7,110,080 bytes with the keyword
+     and 7,110,080 without it. A package variable with no initializer keeps the
+     keyword, because Dart needs it there.
 
 396. The boundary of a `//gart:dart` declaration of the runtime library.
 
