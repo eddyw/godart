@@ -354,13 +354,10 @@ func (b *builder) listLit(e *ast.CompositeLit, elem types.Type, t types.Type) ir
 	// Go evaluates the values in the order of the source, and the slots take
 	// them by the index. The record holds the source order.
 	if !pure && !ordered {
-		vars := make([]*types.Var, len(values))
-		for i, v := range values {
-			vars[i] = anonVar(v.GoType())
-		}
+		elems, vars := padRecord(append([]ir.Expr{}, values...))
 		tuple := types.NewTuple(vars...)
 		recv := b.temp(e.Pos(), "cl")
-		out.Results = &ir.Record{Elems: append([]ir.Expr{}, values...), Type: tuple}
+		out.Results = &ir.Record{Elems: elems, Type: tuple}
 		out.ResultsVar = recv
 		for i := range values {
 			values[i] = &ir.RecordField{
@@ -432,13 +429,10 @@ func (b *builder) keyedStructLit(e *ast.CompositeLit, t types.Type, st *types.St
 		pure = pure && pureExpr(values[i])
 	}
 	if !pure && len(entries) > 1 {
-		vars := make([]*types.Var, len(values))
-		for i, v := range values {
-			vars[i] = anonVar(v.GoType())
-		}
+		elems, vars := padRecord(values)
 		tuple := types.NewTuple(vars...)
 		recv := b.temp(e.Pos(), "cl")
-		rec := &ir.Record{Elems: values, Type: tuple}
+		rec := &ir.Record{Elems: elems, Type: tuple}
 		values = make([]ir.Expr, len(entries))
 		for i := range values {
 			values[i] = &ir.RecordField{
@@ -572,4 +566,32 @@ func constantInt(tv types.TypeAndValue) (int, bool) {
 	}
 	n, ok := constant.Int64Val(constant.ToInt(tv.Value))
 	return int(n), ok
+}
+
+// wasmRecordFields names the field count of a record that dart2wasm rejects.
+//
+// dart2wasm writes 1 class for each shape of a record, and the hashCode of
+// that class calls Object.hash with the shape and with each field. Object.hash
+// holds 20 positional parameters, thus a record of 20 fields gives 21
+// arguments. The type flow analysis of the Dart VM then stops with `type
+// 'Call' is not a subtype of type 'Parameter' in type cast`. A record of 19
+// fields passes, and a record of 21 fields passes too, because dart2wasm reads
+// Object.hashAll above 20 fields.
+const wasmRecordFields = 20
+
+// padRecord builds the variable of each element of an ordering record, and it
+// adds 1 element to a record of exactly 20 fields.
+//
+// No code reads the added element. The shape then stands outside the defect of
+// dart2wasm above, and the ahead of time build of the Dart VM holds 1 more
+// word for such a record.
+func padRecord(values []ir.Expr) ([]ir.Expr, []*types.Var) {
+	if len(values) == wasmRecordFields {
+		values = append(values, &ir.Zero{Type: types.Typ[types.Bool]})
+	}
+	vars := make([]*types.Var, len(values))
+	for i, v := range values {
+		vars[i] = anonVar(v.GoType())
+	}
+	return values, vars
 }
