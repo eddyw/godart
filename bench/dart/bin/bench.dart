@@ -16,7 +16,8 @@ import 'package:goruntime/goruntime.dart';
 /// Run it as an ahead of time build. The warm up of the Dart VM hides the
 /// result of a short case.
 
-const int budgetMs = 300;
+/// The window of 1 case, in milliseconds. A study of 1 case raises it.
+final int budgetMs = int.tryParse(Platform.environment['BUDGET'] ?? '') ?? 300;
 const String piece = '0123456789';
 
 const List<String> numbers = <String>[
@@ -48,7 +49,12 @@ class Point {
   final double h;
 }
 
+/// The name of 1 case, from the environment. A run of the whole set leaves it
+/// empty, and a study of 1 case sets it.
+final String only = Platform.environment['CASE'] ?? '';
+
 void measure(String name, String runtime, int Function() f) {
+  if (only.isNotEmpty && name != only) return;
   f();
   final Stopwatch sw = Stopwatch()..start();
   int n = 0;

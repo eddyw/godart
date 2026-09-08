@@ -22,7 +22,7 @@ const dartCoreLib = "dart:core"
 
 // runtimeLib names the runtime library. Each emitted file imports it with no
 // prefix, thus a declaration that names a symbol of it needs no second import.
-const runtimeLib = "package:goruntime/goruntime.dart"
+const runtimeLib = ir.DartRuntimeLib
 
 // dartPrefix gives the import prefix of a Dart library, and it holds the order
 // of the first read. The core library takes no prefix and no import.

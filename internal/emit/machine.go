@@ -414,27 +414,44 @@ func (e *emitter) machineReturn(s *ir.Return) {
 	}
 	// A machine whose deferred calls can block runs the chain in its own
 	// states, thus the return statement of the chain runs no call.
-	if ctx.m.Defer && !ctx.m.DeferBlocks {
+	runs := ctx.m.Defer && !ctx.m.DeferBlocks
+	if runs && !s.Pos.IsValid() {
 		// A return that stage 4 built for a fall off the end holds no
 		// position, and Go names the closing brace there.
-		if !s.Pos.IsValid() {
-			e.mark(ctx.end)
-		}
-		e.line("$defer.run();")
+		e.mark(ctx.end)
 	}
 	if named {
+		if runs {
+			e.line("$defer.run();")
+		}
 		e.line("return %s;", e.resultRead(ctx.results))
 		return
 	}
+	// Go evaluates each value of the return first, and the deferred calls run
+	// after that. A value that a deferred call changes thus keeps the answer of
+	// Go. A named result reads the other order, because such a call writes it.
 	switch len(s.Values) {
 	case 0:
+		if runs {
+			e.line("$defer.run();")
+		}
 		e.line("return;")
 	case 1:
+		if runs {
+			e.line("{ final $ret = %s; $defer.run(); return $ret; }",
+				e.expr(s.Values[0]))
+			return
+		}
 		e.line("return %s;", e.expr(s.Values[0]))
 	default:
 		parts := make([]string, len(s.Values))
 		for i, v := range s.Values {
 			parts[i] = e.expr(v)
+		}
+		if runs {
+			e.line("{ final $ret = (%s); $defer.run(); return $ret; }",
+				strings.Join(parts, ", "))
+			return
 		}
 		e.line("return (%s);", strings.Join(parts, ", "))
 	}

@@ -56,6 +56,17 @@ func (v *verifier) checkDartDecls(f *ast.File) {
 				fn.Name.Name, ir.DartDirective)
 			continue
 		}
+		if sig.Results().Len() > 1 {
+			v.reject(fn.Pos(), "a Dart function gives 1 value",
+				"the function %s carries %s and %d results",
+				fn.Name.Name, ir.DartDirective, sig.Results().Len())
+			continue
+		}
+		// The runtime library of gart holds the Dart form of each Go type of
+		// the subset, thus a declaration of it reads no rule of the type.
+		if ref.Lib == ir.DartRuntimeLib {
+			continue
+		}
 		for i := range sig.Params().Len() {
 			p := sig.Params().At(i)
 			if !dartBoundary(p.Type()) {
@@ -63,12 +74,6 @@ func (v *verifier) checkDartDecls(f *ast.File) {
 					"the parameter %s of %s holds the type %s, and %s carries no form of it",
 					p.Name(), fn.Name.Name, p.Type(), ir.DartDirective)
 			}
-		}
-		if sig.Results().Len() > 1 {
-			v.reject(fn.Pos(), "a Dart function gives 1 value",
-				"the function %s carries %s and %d results",
-				fn.Name.Name, ir.DartDirective, sig.Results().Len())
-			continue
 		}
 		if sig.Results().Len() == 1 {
 			r := sig.Results().At(0)
@@ -87,6 +92,9 @@ func (v *verifier) checkDartDecls(f *ast.File) {
 // Each type below holds 1 Dart form. A bool and a float64 pass as they are, a
 // Go int is an extension type over the Dart int, and a GoString holds 2
 // methods that give the Dart String and read it back.
+//
+// A declaration of the runtime library of gart reads no rule here. Read
+// ir.DartRuntimeLib.
 func dartBoundary(t types.Type) bool {
 	if named, ok := types.Unalias(t).(*types.Named); ok {
 		return isDartObject(named.Obj())

@@ -350,7 +350,7 @@ func (e *emitter) index(x *ir.Index) string {
 			e.dictOf(container), e.expr(x.X), e.expr(x.Index))
 	}
 	if isMapType(container) {
-		return fmt.Sprintf("%s.get(%s)", e.expr(x.X), e.expr(x.Index))
+		return fmt.Sprintf("%s.get(%s)", e.container(x.X), e.expr(x.Index))
 	}
 	uns := unsArg(x.Index)
 	if isString(container) {
@@ -370,10 +370,38 @@ func (e *emitter) index(x *ir.Index) string {
 			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index), uns)
 	}
 	if uns != "" {
-		return fmt.Sprintf("%s.$at($ix(%s)%s)", e.expr(x.X), e.expr(x.Index), uns)
+		return fmt.Sprintf("%s.$at($ix(%s)%s)", e.container(x.X), e.expr(x.Index), uns)
 	}
-	return fmt.Sprintf("%s[$ix(%s)]", e.expr(x.X), e.expr(x.Index))
+	return fmt.Sprintf("%s[$ix(%s)]", e.container(x.X), e.expr(x.Index))
 }
+
+// container gives the Dart text of the container of an index expression, with
+// a cast when the Dart form of its type is the top type of Dart.
+//
+// A type that names itself through a slice or a map holds no finite Dart form,
+// thus each use of it takes Object?. Dart reads no index operator and no set
+// method on that type, and the cast names the form of the underlying type.
+func (e *emitter) container(x ir.Expr) string {
+	text := e.expr(x)
+	t := x.GoType()
+	if t == nil || e.dartType(t) != erasedDartType {
+		return text
+	}
+	under := types.Unalias(t).Underlying()
+	switch under.(type) {
+	case *types.Map, *types.Slice:
+	default:
+		return text
+	}
+	form := e.dartType(under)
+	if form == erasedDartType {
+		return text
+	}
+	return fmt.Sprintf("(%s as %s)", text, form)
+}
+
+// erasedDartType is the Dart form of a Go type that holds no finite one.
+const erasedDartType = "Object?"
 
 // indexTarget gives the start and the end of a write into an array. head is
 // empty when the write uses the index operator of Dart.
@@ -389,7 +417,7 @@ func (e *emitter) indexTarget(x *ir.Index) (head, tail string) {
 			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index)), uns
 	}
 	if uns != "" {
-		return fmt.Sprintf("%s.$set($ix(%s)", e.expr(x.X), e.expr(x.Index)), uns
+		return fmt.Sprintf("%s.$set($ix(%s)", e.container(x.X), e.expr(x.Index)), uns
 	}
 	return "", ""
 }

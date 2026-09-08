@@ -13,7 +13,14 @@ import (
 
 const budget = 300 * time.Millisecond
 
+// only names 1 case, from the environment. A run of the whole set leaves it
+// empty, and a study of 1 case sets it.
+var only = os.Getenv("CASE")
+
 func measure(name string, f func() int) {
+	if only != "" && name != only {
+		return
+	}
 	f()
 	start := time.Now()
 	n := 0
