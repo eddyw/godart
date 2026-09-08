@@ -2345,6 +2345,25 @@ bool $valueEqual(Iface? a, Iface? b) {
 /// The value of a type conversion.
 Iface? $valueConvert(Iface? value, int handle) {
   final TypeDesc to = _typeAt(handle);
+  // A conversion to an interface keeps the value and its own descriptor. The
+  // dynamic type of a value inside an interface is the type of that value, and
+  // the interface stands as the static type of the result alone. A result that
+  // carried the descriptor of the interface would lose the concrete type, thus
+  // a later type assertion to that type would fail.
+  if (to.kind == 'interface') {
+    if (value == null) return null;
+    if (!$descConvertible(_descHandle(value.desc), handle)) {
+      $panic(
+        Iface(
+          $typeGoError,
+          GoError(
+            'reflect: cannot convert ${value.desc.display} to ${to.display}',
+          ),
+        ),
+      );
+    }
+    return value;
+  }
   if (value == null) return Iface(to, to.zero?.call());
   final TypeDesc from = value.desc;
   if (from.name == to.name) return Iface(to, value.value);
