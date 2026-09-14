@@ -6,7 +6,7 @@
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/.." && pwd)
-data=${DATA:-$root/flutter/example/compass/assets/activities.json}
+data=${DATA:-$here/data/activities.json}
 
 if [ ! -x "$root/build/gart" ]; then
   echo "build/gart is missing. Run make build from $root first." >&2

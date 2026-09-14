@@ -24,8 +24,9 @@ cat bench/out.csv
 ```
 
 `DATA` names another document. The default is
-`flutter/example/compass/assets/activities.json`, 1,995,467 bytes and 2,723
-objects of 10 fields.
+`bench/data/activities.json`, 1,921,945 bytes and 2,723 objects of 10 fields.
+The fixture retains the original Compass data byte for byte. `data/LICENSE`
+holds its source license.
 
 The Go runner and the Dart driver call the same functions of `go/cases.go`.
 The Dart driver also holds a Dart form of each case, thus the 2 numbers of 1

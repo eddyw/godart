@@ -147,6 +147,20 @@ The full JSON v2 suite failed outside the container task scope on this date.
 The 2026-09-15 entry records its subsequent correction. The complete `os`
 suite remains outside the supported subset.
 
+The user then selected removal of the earlier Compass example. The cleanup
+removed its 48 tracked files and 5 Makefile commands. Current documentation
+now points to Compass v2. Historical references name commit `f2652a3`.
+
+`bench/data/activities.json` retains the original fixture byte for byte,
+with its source license. The fixture has 1,921,945 bytes and 2,723 objects.
+Its SHA256 is `dd9744ca2d61a509a2c29a0f1f21107e29e3722e5cdf8c4a4e6a7f4e499064ba`.
+The benchmark completes with 120 result rows across Go, Dart, gart, and bun.
+
+All retained Flutter Go targets pass. Compass v2 passes its analyzer,
+3 widget tests, and both native macOS trip flows. Flutter reports a window
+activation failure, but both native tests finish successfully. The cleanup
+changes no tracked Compass v2 file. All 11 quest tasks are complete.
+
 ### 2026-09-09, the twenty-fifth session
 
 The user asked for each open task end to end. 5 streams ran in git worktrees,

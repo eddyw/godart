@@ -817,8 +817,9 @@ no code reads it. Read decision 395.
 The output of a large program holds many megabytes of Dart, and the Dart VM
 reads all of it at each start. The session of 2026-09-05 measured that cost.
 
-The program is `flutter/example/compass/server`, the server of the sample with
-9 routes over `net/http` and `encoding/json`. gart wrote 1,122 `.dart` files
+The historical program was `flutter/example/compass/server`, with 9 routes
+over `net/http` and `encoding/json`. Commit `f2652a3` retains its source.
+The cleanup removed the example on 2026-09-14. gart wrote 1,122 `.dart` files
 with 15,029,679 bytes, and the runtime library adds 40 files. The server reads
 2 JSON files of 2,076,698 bytes at the start, and then it listens.
 

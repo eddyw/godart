@@ -194,8 +194,8 @@ sheet, a dialog with an answer, a date picker, and each plugin of a platform
 channel reach Go this way. A build must not call it, and the verifier of the
 compiler rejects a build that reads a channel.
 
-`flutter/example/compass/README.md` names each limit that a port of a real
-application found.
+`flutter/example/compass_v2/README.md` describes the retained application and
+its validation.
 
 ## What to read next
 
@@ -205,4 +205,4 @@ application found.
 | `flutter/README.md` | The parts of the Flutter model, and the rule of a builder. |
 | `flutter/nodegen/README.md` | The generator of the node set and of the host. |
 | `docs/flutter-design.md` | Why the model looks like this, and each measurement behind it. |
-| `flutter/example/compass/` | A port of the Flutter sample compass_app, with the whole application in Go. |
+| `flutter/example/compass_v2/` | The retained Compass example, with Go screens and state. |

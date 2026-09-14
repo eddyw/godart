@@ -259,7 +259,9 @@ since 2026-09-02, and `make flutter-test` runs each 1.
 ## The fourth program: a whole application
 
 **The port of `compass_app`.** Done 2026-09-05, and 1 for 1 since 2026-09-06.
-`flutter/example/compass` holds it. The sample of the Flutter team carries the
+Commit `f2652a3` retains the earlier `flutter/example/compass` source.
+The cleanup removed the example on 2026-09-14. Compass v2 remains at
+`flutter/example/compass_v2`. The sample of the Flutter team carries the
 reference architecture: MVVM, a repository for each source, a use case, and a
 server. The port holds 2,675 lines of Go against 5,804 lines of Dart, and it
 needs no code generation of a data class.
@@ -276,9 +278,9 @@ It needed 2 items outside the example, and decision 353 holds the 2:
 **The port named 8 limits on 2026-09-05, and the work of 2026-09-06 closed each
 1.** The theme, the 2 fonts, the logo, the picture of a network, the share
 sheet, the swipe of a `Dismissible`, the date range dialog, and the snack bar
-each reach a Go program now. The table of
-`flutter/example/compass/README.md` holds the answer of each, and `doc/` holds
-1 picture of each screen.
+each reach a Go program now. The README and captures of the earlier example
+remain in commit `f2652a3`. The retained example has current validation in
+`flutter/example/compass_v2/doc/validation.md`.
 
 3 mechanisms closed the 8:
 
