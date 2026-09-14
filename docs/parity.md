@@ -223,6 +223,9 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 
 ## The standard library surface
 
+The 2026-09-15 count is 257 import paths: 164 standard packages, 1 interop
+package, 80 internal packages, and 12 vendored packages.
+
 The compiler reaches a standard library package 2 ways. An overlay replaces the
 real source with a small file that holds the same behavior. A native package
 reads the real Go source, because that source already stays inside the subset.
@@ -331,6 +334,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `debug/elf` | Native, with 1 patch | The patch replaces `file.go`. The real file reads `unsafe.Sizeof` and `unsafe.Offsetof` of the 8 header types. The patch holds the same numbers as constants. The layout of the ELF format never changes. |
 | `debug/pe` | Native, with 1 patch | The patch replaces `symbol.go`. The real file reads a `COFFSymbol` through the type `COFFSymbolAuxFormat5`. The 2 types hold the same 18 bytes at the same offsets. Thus the read of an aux record needs no conversion. `COFFSymbolReadSectionDefAux` gives a copy of the entry of `COFFSymbols`, and not a view of it. Each field holds the number of Go on a little-endian machine. A write through the pointer reaches no symbol. The text of the error of a bad signature holds the verb `% x`. `fmt` of the overlay writes no space between the 2 digits of a byte. |
 | `internal/saferio` | Native, with 1 patch | The patch replaces `io.go`. `SliceCap` reads `unsafe.Sizeof` of its type parameter, and the patch reads `reflect.TypeFor` instead. `reflect.Type.Size` follows the rules of a 64-bit machine, thus the capacity stays the capacity of Go. The 4 readers of `debug` each take `reflect` through this import. |
+| `internal/asan`, `internal/msan`, `internal/race` | Overlay | Each exposes `Enabled` as false. The Dart target has no Go sanitizer or race detector. |
 | `internal/zstd` | Native | The decoder of the zstd format that `debug/elf` reads for a compressed section. |
 | `image`, `image/color`, `image/color/palette`, `image/draw`, `image/internal/imageutil` | Native | Each name of Go. The real source of each 1 needs no patch. |
 | `image/gif`, `image/jpeg` | Native | Each name of Go. The encoder writes the same bytes as Go, and the decoder reads them again. `image/png` stays out. `writer.go` of it converts a pointer of `encoder` to a pointer of `EncoderBuffer`, and the subset rejects that conversion. |
@@ -1005,9 +1009,9 @@ argument of Go. The 2 below differ.
 
 | Hook | The difference |
 |---|---|
-| `DNSStart`, `DNSDone` | The 2 fire from `net.Resolver.LookupIP`. The default dial hands the host name to `Socket.connect` of `dart:io`, and that call reports no lookup event, thus a plain request fires neither hook. A `Transport` with a `DialContext` of its own over a `net.Dialer` reads both. |
+| `DNSStart`, `DNSDone` | The default HTTP dial and a custom `net.Dialer` report both hooks through `net.Resolver.LookupIP`. A numeric address requires no lookup and reports neither hook. |
 | `DNSDone.Coalesced` | Always false. gart holds no singleflight of a lookup. |
-| `ConnectStart`, `ConnectDone` of a name that holds 2 addresses | Go dials each address in order and it takes the first that answers, thus the 2 hooks fire 1 time for each attempt. The runtime gives the name to `dart:io`, and the 2 hooks fire 1 time. `localhost` holds `[::1]` and `127.0.0.1` on this machine, and a server of `httptest` listens on the second alone, thus Go writes a failed attempt that gart does not write. `testdata/programs/httptraceuse` holds the successful connection of that section alone. |
+| `ConnectStart`, `ConnectDone` of a name with multiple addresses | The dial reports both hooks for each address attempt. `httptraceuse` matches Go for the IPv6 refusal and the successful IPv4 connection on localhost. Decision 393 describes the resolver order. |
 
 `SecureSocket.connect` of Dart opens the socket and runs the handshake in 1
 call. The overlay fires `ConnectStart`, `ConnectDone`, `TLSHandshakeStart`, and
@@ -1624,16 +1628,17 @@ command needs no flag for it:
 cd $(go env GOROOT)/src/path && gart test -o /tmp/x -runtime <path> .
 ```
 
-34 packages of GOROOT run their real tests, and `TestTestsOfGoroot` proves
-each one. The 34 are `path`, `container/list`, `container/heap`, `container/ring`, `unicode`,
+`TestTestsOfGoroot` runs real tests from 37 GOROOT packages:
+`path`, `container/list`, `container/heap`, `container/ring`, `unicode`,
 `encoding/hex`, `encoding/ascii85`, `encoding/csv`, `hash/crc32`, `hash/fnv`,
 `hash/adler32`, `maps`, `io`, `internal/chacha8rand`, `unicode/utf8`,
 `compress/zlib`, `regexp/syntax`, `math/rand/v2`, `testing/synctest`,
 `compress/gzip`, `compress/flate`, `slices`, `path/filepath`, `context`,
 `database/sql`, `bufio`, `bytes`, `errors`, `math/bits`, `sort`, `strconv`,
-`strings`, `text/tabwriter`, and `unicode/utf16`. 31
-of them run each test. `regexp/syntax`, `compress/flate`, and `context` each
-run a filter, and the row of the test names the cause.
+`strings`, `text/tabwriter`, `unicode/utf16`, `encoding/json`,
+`encoding/json/jsontext`, and `encoding/json/v2`. 34 entries run all tests.
+`regexp/syntax`, `compress/flate`, and `context` use filters. Each test row
+states the cause of its filter.
 
 A test file of GOROOT holds code outside the subset in many packages. `recover`,
 `unsafe`, and the address of a byte each appear, and each one stays outside the
@@ -1710,9 +1715,19 @@ type (decision 410).
 **The whole suite of `encoding/json/jsontext` passes**, with 27 tests and 943
 subtests.
 
-**`encoding/json/v2` builds its test binary and it runs 1,491 subtests.** It
-ran 378 before the cast of an erased container landed, and 10 subtests and
-`ExampleWithMarshalers_errors` still fail. `Example_textMarshal` ends the run.
+**The whole suite of `encoding/json/v2` passes** on 2026-09-15, with 46
+top-level passes, 1504 total pass entries, and 1 skip. Struct tags now decode
+escapes and reject invalid escapes. Reflected struct copies preserve private
+fields of generic instances, which netip addresses require. Pointer descriptors
+carry the Go method set, and anonymous structs expose their pointer methods.
+Both examples that failed before now pass. Decision 412 records these fixes.
+`testdata/programs/jsonv2regress` compares the affected behavior with Go and
+also covers an anonymous generic struct with a pointer method.
+
+The validation of 2026-09-14 corrects the `Slices/NonCyclicSlice` expectation.
+Its input has 1000 outer levels. The expected output used the cycle threshold,
+which this runtime sets to 100. `arshal_test.go.patch` preserves the input and
+expects all 1000 levels. All map and slice marshal cases pass.
 
 The report of a cycle of `encoding/json/v2` differs: this build starts the set
 of the open pointers at the depth of 100, and Go starts it at 1000, thus the

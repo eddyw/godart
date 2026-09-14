@@ -95,6 +95,9 @@ final class TypeDesc {
   /// a field of a struct through it.
   final Object? Function()? zero;
 
+  /// Copies all struct fields, even private fields of generic instances.
+  final void Function(Object?, Object?)? assign;
+
   /// make builds a slice of the length, or an empty map. A decoder reads it,
   /// because the Dart type of the element lives only in the emitted code.
   final Object? Function(int)? make;
@@ -150,6 +153,7 @@ final class TypeDesc {
     this.results = const <TypeDesc Function()>[],
     this.variadic = false,
     this.zero,
+    this.assign,
     this.make,
     this.comparable = true,
     this.ptr,

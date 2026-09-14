@@ -134,8 +134,7 @@ Iface? $pointerElem(Iface? pointer) {
 /// Writes a value behind a pointer.
 ///
 /// A pointer to a struct is the object itself, thus the write copies each
-/// field. A field of a struct type keeps the reference of the source, and
-/// docs/parity.md holds that gap.
+/// field into the target object and preserves the address of each field.
 void $pointerSet(Iface? pointer, Iface? value) {
   final TypeDesc elem = _pointerElemDesc(pointer);
   final Object? target = pointer!.value;
@@ -172,6 +171,11 @@ bool _holdsValue(TypeDesc desc) =>
 /// the target and a fresh object would leave that address behind.
 void _assignInto(Object? dst, Object? src, TypeDesc desc) {
   if (dst == null) return;
+  final void Function(Object?, Object?)? assign = desc.assign;
+  if (assign != null) {
+    assign(dst, src);
+    return;
+  }
   if (desc.kind == 'array') {
     final List<Object?> a = dst as List<Object?>;
     final List<Object?> b = src is List<Object?> ? src : const <Object?>[];
@@ -676,7 +680,9 @@ TypeDesc $ptrDesc(TypeDesc elem) {
     _pointerMethods(elem),
     text: '*${elem.display}',
     elem: () => elem,
-    methodTypes: elem.methodTypes,
+    methodTypes: elem.kind == 'ptr' || elem.kind == 'interface'
+        ? const <String, TypeDesc Function()>{}
+        : elem.methodTypes,
     // The Dart type of the pointer comes from the Dart type of the value. A
     // description with no such type gives a cell of Object?, and no typed
     // location takes it: the setter of a field of the type `**int` casts to
@@ -700,6 +706,9 @@ TypeDesc $ptrDesc(TypeDesc elem) {
 /// Each other pointer holds a cell, thus the adapter reads the value out of the
 /// cell first.
 Map<String, Function> _pointerMethods(TypeDesc elem) {
+  if (elem.kind == 'ptr' || elem.kind == 'interface') {
+    return const <String, Function>{};
+  }
   if (elem.methods.isEmpty) return const <String, Function>{};
   if (_isObjectPointer(elem)) return elem.methods;
   final Map<String, Function> out = <String, Function>{};

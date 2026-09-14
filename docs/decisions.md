@@ -5507,3 +5507,31 @@ The plan left these points open. The work took the decisions below.
      field type, and `unmarshalEmbeddedFallbackNext` converts a string to a
      defined string type. The suite of that package runs 1,491 subtests now,
      and it ran 378 before.
+
+412. JSON v2 requires exact struct copies and pointer method sets.
+
+     `StructTag.Lookup` must decode Go string escapes. `strconv.Unquote`
+     now decodes the selected value and rejects invalid escapes. A raw
+     substring exposed escape bytes to the JSON field parser.
+
+     Reflection copied a struct through its field accessors. Private fields
+     of a generic instance have no such accessor outside their library.
+     A copy of `netip.Addr` thus lost the private pointer in `unique.Handle`.
+     Each emitted struct descriptor now carries an assignment closure that
+     calls its generated `$assign` method. This method copies private fields
+     inside the class library and preserves nested value semantics.
+
+     A pointer to an interface or another pointer has no methods in Go.
+     The runtime previously inherited the element methods. That method set
+     selected an incorrect custom marshaler. Both the method table and the
+     method type table now follow the Go rule.
+
+     An anonymous struct can inherit pointer methods from an embedded field.
+     Its descriptor now links the pointer descriptor, as a named struct does.
+     A ground descriptor reserves its variable before the pointer link refers
+     to it. A generic anonymous descriptor uses a local reference for this
+     cycle, because its type dictionary exists only at the use site.
+
+     The complete JSON v2 suite passes. `jsonv2regress` compares tag escapes,
+     netip addresses, anonymous methods, generic anonymous pointer methods,
+     and custom error marshalers against Go.

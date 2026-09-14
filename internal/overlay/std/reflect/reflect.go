@@ -14,6 +14,7 @@ package reflect
 
 import (
 	"iter"
+	"strconv"
 	"syscall/dart"
 )
 
@@ -297,9 +298,13 @@ func (tag StructTag) Lookup(key string) (string, bool) {
 		if i >= len(tag) {
 			break
 		}
-		value := string(tag[1:i])
+		quoted := string(tag[:i+1])
 		tag = tag[i+1:]
 		if key == name {
+			value, err := strconv.Unquote(quoted)
+			if err != nil {
+				break
+			}
 			return value, true
 		}
 	}

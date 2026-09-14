@@ -73,6 +73,80 @@ tests in CI.
 Each table names the commits of 1 session, in order. `git log --oneline` gives
 the same hashes.
 
+### 2026-09-15, complete JSON v2 suite
+
+The complete `encoding/json/v2` suite passes after the fixes of decision 412.
+The run reports 46 top-level passes, 1504 total pass entries, and 1 skip.
+`StructTag.Lookup` decodes escapes through `strconv.Unquote`. Generated
+assignment closures preserve private generic fields through reflection.
+Pointer descriptors use the Go method set. Anonymous structs expose pointer
+methods, and generic anonymous descriptors use a local reference to prevent
+recursive expansion.
+
+The new `jsonv2regress` program matches Go for these defects. The runtime
+analyzer and all 60 runtime tests pass. `TestTestsOfGoroot` now runs the
+complete JSON v2 suite, with no package filter. Its 37 package entries consist
+of 34 complete suites and 3 filtered suites.
+
+The complete `make flutter-test` target also passes with the current compiler.
+All retained examples pass their analyzers and widget tests.
+
+Full CI exposed a stale surface count. The 3 existing overlays `internal/asan`,
+`internal/msan`, and `internal/race` increase the total from 254 to 257 paths.
+The count test and current documentation now report 80 internal packages.
+Full `make ci` then passes. Its driver suite completes in 1428.605 seconds,
+and the final run reuses that successful result after the count correction.
+
+### 2026-09-14, quest validation
+
+The quest omitted the completed work of 2026-09-09. The repository started
+clean at `f2652a3`. Fresh validation used Go 1.27.0 and Dart 3.13.3 on
+darwin/arm64.
+
+The JSON v2 noncyclic slice input has 1000 outer levels. Its expectation
+used `startDetectingCyclesAfter`, which the runtime lowers to 100.
+`arshal_test.go.patch` now expects the actual input depth. The input retains
+all 1000 levels, and the runtime output needs no change.
+
+`TestTestsOfGoroot` now includes the complete `encoding/json` and
+`encoding/json/jsontext` suites and the map and slice marshal cases of
+`encoding/json/v2`. All 3 entries pass. The test suite now covers 37 packages,
+with filters for 4 packages.
+
+Fresh results:
+
+| Validation | Result |
+|---|---|
+| `encoding/json` | 627 passing test entries and 1 skip. All 3 marshal regressions pass. |
+| `encoding/json/jsontext` | 943 passing test entries and 90 skips. Valid and invalid depth cases pass. |
+| JSON v2 maps and slices | 35 passing test entries, including the parent test. |
+| `TestSliceNoCycle` | Passes alone and after the earlier tests. |
+| `slices` | 101 top-level tests pass and 3 skip. |
+| `path/filepath` | 49 top-level tests pass and 3 skip. |
+| 17 parity programs | Equal Go and Dart output. Includes JSON, HTTP trace, TCP half-close, fmt, templates, and OS behavior. |
+| `TestWebIO` | JS and wasm compile and produce the expected output. |
+| `record20` witness | Still reproduces `Summary.apply` on Dart 3.13.3. The compiler workaround passes `TestWebIO`. |
+| Load and overlay tests | Pass. |
+| Targeted `go vet` | Passes for driver, load, and overlay packages. |
+
+The encoder benchmark used the original Compass activity data and 3 trials.
+The median is 5.209333 ms for generated Dart and 1.436243 ms for Go.
+The saved 37.50 ms Dart baseline is about 7.2 times slower.
+The current encoder still costs about 3.6 times the Go result.
+The 5 extra escapes are `<`, `>`, `&`, U+2028, and U+2029.
+`MarshalJSON`, `MarshalJSONTo`, `MarshalText`, and `AppendText` each select the
+Go fallback. The 500-level fast-path limit also selects that fallback.
+
+The full `os` suite still rejects unsupported descriptors, process APIs,
+platform-dependent errno constants, and internal names of the real package.
+The 4 OS exclusions in the library report remain. The report gives no list
+for the separate claim of 16 missing API names. The fmt and template
+regressions pass, including the 8 `par*` programs from decision 391.
+
+The full JSON v2 suite failed outside the container task scope on this date.
+The 2026-09-15 entry records its subsequent correction. The complete `os`
+suite remains outside the supported subset.
+
 ### 2026-09-09, the twenty-fifth session
 
 The user asked for each open task end to end. 5 streams ran in git worktrees,

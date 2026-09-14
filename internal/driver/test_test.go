@@ -276,6 +276,14 @@ func TestTestsOfGoroot(t *testing.T) {
 			"--- PASS: Test ", "--- PASS: TestPanicDuringWrite "}},
 		{"unicode/utf16", "", []string{
 			"--- PASS: TestConstants ", "--- PASS: TestIsSurrogate "}},
+		{"encoding/json", "", []string{
+			"--- PASS: TestSliceNoCycle ", "--- PASS: TestNilMarshal ",
+			"--- PASS: TestOmitEmptyOption ", "--- PASS: TestByteArrays "}},
+		{"encoding/json/jsontext", "", []string{
+			"--- PASS: TestCoderMaxDepth ", "--- PASS: TestCoderMaxDepth/Decoder/ArraysInvalid/SingleValue "}},
+		{"encoding/json/v2", "", []string{
+			"--- PASS: TestMarshal/Maps/CyclicMap ", "--- PASS: TestMarshal/Slices/NonCyclicSlice ",
+			"--- PASS: TestMarshal/Methods/Anonymous ", "--- PASS: Example_textMarshal "}},
 	}
 	for _, c := range cases {
 		t.Run(c.pkg, func(t *testing.T) {

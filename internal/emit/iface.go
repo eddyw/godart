@@ -154,22 +154,22 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 		e.zero(t))
 }
 
-// pointerPart links the 2 descriptions of a named type whose pointer type holds
+// pointerPart links the 2 descriptions of a type whose pointer type holds
 // a method that the value type does not hold.
 //
 // A method with a pointer receiver stays out of the value method set.
 // encoding/json reads such a method, because Unmarshal writes through a
 // pointer. The value description names the pointer description, and the pointer
 // description builds a pointer to a fresh value.
-func (e *emitter) pointerPart(named *types.Named, pointer bool) string {
-	if types.NewMethodSet(types.NewPointer(named)).Len() <=
-		types.NewMethodSet(named).Len() {
+func (e *emitter) pointerPart(t types.Type, pointer bool) string {
+	if types.NewMethodSet(types.NewPointer(t)).Len() <=
+		types.NewMethodSet(t).Len() {
 		return ""
 	}
 	if !pointer {
-		return ", ptr: () => " + e.descriptorOf(types.NewPointer(named))
+		return ", ptr: () => " + e.descriptorOf(types.NewPointer(t))
 	}
-	return ", newPtr: () => " + e.freshPointer(named)
+	return ", newPtr: () => " + e.freshPointer(t)
 }
 
 // freshPointer writes a pointer to the zero value of a type. The Dart form of a
@@ -218,6 +218,12 @@ func (e *emitter) methodTypeTable(t types.Type) string {
 // key type of a container type.
 func (e *emitter) descParts(t types.Type) string {
 	out := e.descShape(t) + withTypePart(e, t)
+	if _, ok := types.Unalias(t).Underlying().(*types.Struct); ok {
+		class := e.dartType(t)
+		if class != "Object?" {
+			out += fmt.Sprintf(", assign: ($d, $s) => ($d as %s).$assign($s as %s)", class, class)
+		}
+	}
 	// The package internal/reflectlite reads the flag. Go compares 2 values of
 	// each type except a slice, a map, a function, and a type that holds one.
 	if !types.Comparable(t) {
@@ -803,6 +809,11 @@ func structOf(t types.Type) *types.Struct {
 
 // descriptorOf gives the Dart expression that describes a Go type.
 func (e *emitter) descriptorOf(t types.Type) string {
+	for i, held := range e.inlineDescTypes {
+		if types.Identical(t, held) {
+			return fmt.Sprintf("$inlineDesc%d", i)
+		}
+	}
 	u := types.Unalias(t)
 	// A type parameter reads its description from its dictionary. The caller
 	// gives 1 dictionary for each type argument.
@@ -880,11 +891,13 @@ func (e *emitter) groundDescVar(t types.Type) string {
 		return key
 	}
 	before := e.dictReads
+	// Reserve the descriptor before its pointer descriptor refers back to it.
+	e.instDescs[key] = t
 	text := e.inlineDescriptor(t)
 	if e.dictReads != before {
+		delete(e.instDescs, key)
 		return ""
 	}
-	e.instDescs[key] = t
 	e.descTexts[key] = text
 	return key
 }
@@ -899,14 +912,25 @@ func (e *emitter) groundDescVar(t types.Type) string {
 // parameter reads that set. A slice, a map, and a channel hold no method.
 func (e *emitter) inlineDescriptor(t types.Type) string {
 	u := types.Unalias(t)
+	self := ""
+	if _, ok := u.(*types.Struct); ok && holdsTypeParam(t) &&
+		types.NewMethodSet(types.NewPointer(t)).Len() > types.NewMethodSet(t).Len() {
+		// A generic descriptor needs a local reference for the pointer's element.
+		self = fmt.Sprintf("$inlineDesc%d", len(e.inlineDescTypes))
+		e.inlineDescTypes = append(e.inlineDescTypes, t)
+		defer func() { e.inlineDescTypes = e.inlineDescTypes[:len(e.inlineDescTypes)-1] }()
+	}
 	table := "const <String, Function>{}"
 	methodTypes := ""
+	pointerParts := ""
 	owner := u
+	_, pointer := owner.(*types.Pointer)
 	if p, ok := owner.(*types.Pointer); ok {
 		owner = types.Unalias(p.Elem())
 	}
 	switch {
 	case isStructUnder(owner):
+		pointerParts = e.pointerPart(owner, pointer)
 		if entries := e.methodTable(owner, t); len(entries) > 0 {
 			table = "<String, Function>{" + strings.Join(entries, ", ") + "}"
 			methodTypes = e.methodTypeTable(t)
@@ -920,9 +944,13 @@ func (e *emitter) inlineDescriptor(t types.Type) string {
 			table = "<String, Function>{" + strings.Join(parts, ", ") + "}"
 		}
 	}
-	return fmt.Sprintf("TypeDesc(%s, '%s', %s, text: %s%s, zero: () => %s)",
+	text := fmt.Sprintf("TypeDesc(%s, '%s', %s, text: %s%s, zero: () => %s)",
 		e.typeNameText(t), kindOf(t), table, e.reflectTextExpr(t),
-		methodTypes+e.descParts(t), e.zero(t))
+		methodTypes+e.descParts(t)+pointerParts, e.zero(t))
+	if self != "" {
+		return fmt.Sprintf("(() { late final TypeDesc %s; %s = %s; return %s; })()", self, self, text, self)
+	}
+	return text
 }
 
 // basicDesc names the description of a predeclared type. The runtime library

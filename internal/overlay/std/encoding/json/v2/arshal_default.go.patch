@@ -5,9 +5,10 @@ a pointer, of a map, or of a slice runs through the arshalers of reflect, and
 1 level of that descent costs about 7 frames of the machine. The stack of Dart
 holds about 2,000 frames, thus the guard of Go would never run.
 
-Each test of Go that reads the constant builds its own expectation from it,
-thus each 1 passes. The report of a cycle names a shorter JSON pointer than Go
-names, and each other answer holds. Read docs/parity.md.
+Cycle tests derive their expected error depth from the constant. The noncyclic
+slice test retains its 1000-level input and expected output through
+arshal_test.go.patch. A cycle error names a shorter JSON pointer than Go.
+Read docs/parity.md.
 
 @@ -47,7 +47,16 @@
  	emptyStructType = reflect.TypeFor[struct{}]()

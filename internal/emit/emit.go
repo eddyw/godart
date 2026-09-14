@@ -234,7 +234,8 @@ type emitter struct {
 	// holds one stands in no variable of the library. Read groundDescVar.
 	dictReads int
 	// descBusy keeps each instance description that the emitter writes now.
-	descBusy map[string]bool
+	descBusy        map[string]bool
+	inlineDescTypes []types.Type
 	// anonDone keeps each local shape class that writeAnonClasses wrote.
 	anonDone map[string]bool
 	// anonParams holds the type parameters of each shape class that reads a

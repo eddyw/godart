@@ -612,6 +612,17 @@ false. `internal/emit/iface.go` holds `instanceDesc`.
 `testdata/programs/genericiface` proves an interface method call, a type
 assertion, a type switch, the verb `%T`, and a pointer to an instance.
 
+A struct descriptor carries an `assign` closure that calls the generated
+`$assign` method. Reflection uses this closure to copy all fields. Private
+fields of a generic instance have no external field accessor, but `$assign`
+can reach them inside the class library.
+
+An anonymous struct descriptor links its pointer descriptor when the pointer
+has additional methods. A ground descriptor reserves its variable before it
+builds that link. A generic anonymous descriptor uses a local variable when
+its pointer descriptor must refer to it. This local reference prevents a
+recursive descriptor expansion and retains access to the type dictionary.
+
 ## A defined type over a struct of another package
 
 `type Time3339 time.Time` gives the 2 names 1 struct object of go/types, thus a

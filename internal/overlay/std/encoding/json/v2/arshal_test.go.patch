@@ -1,0 +1,11 @@
+The noncyclic slice input has 1000 outer levels. Its expected output must use
+that depth even when the runtime starts cycle detection at 100 levels.
+Keep the input intact to exercise the complete deep-slice walk.
+
+@@ -3116,5 +3116,5 @@
+ 			return v
+ 		}(),
+-		want: strings.Repeat(`[`, startDetectingCyclesAfter) + `[null,[null]]` + strings.Repeat(`]`, startDetectingCyclesAfter),
++		want: strings.Repeat(`[`, 1000) + `[null,[null]]` + strings.Repeat(`]`, 1000),
+ 	}, {
+ 		name: jsontest.Name("Slices/IgnoreInvalidFormat"),

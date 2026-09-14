@@ -6,8 +6,8 @@ This file names how much of each standard library package the surface holds.
 
 ## The measure
 
-Run `make surface`. `internal/surface` holds the tool, and the numbers below
-come from the run of 2026-09-07.
+Run `make surface`. `internal/surface` holds the tool. The API name counts
+come from 2026-09-07. The import path counts below come from 2026-09-15.
 
 The measure counts the exported names of a package: each name of the package
 scope, each exported method of the pointer to an exported named type, and each
@@ -22,13 +22,17 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 254 import paths: 164 standard packages, the interop package
-`syscall/dart`, 77 internal packages, and 12 vendored packages of
+The surface holds 257 import paths: 164 standard packages, the interop package
+`syscall/dart`, 80 internal packages, and 12 vendored packages of
 `golang.org/x`. `make surface` measures 174 of them against the real API, and
 165 of those hold each exported name. The measure skips the interop package
 and each internal package, because no package of Go stands behind them.
 `make surface ARGS=-absent` names each package of the standard
 library that the surface does not hold.
+
+The earlier count omitted `internal/asan`, `internal/msan`, and `internal/race`.
+Their overlays already existed before this validation. Each exposes a disabled
+sanitizer or race detector flag.
 
 A native package that also holds a patch stands 2 times in the list of the
 surface, thus the measure removes each repeat first.

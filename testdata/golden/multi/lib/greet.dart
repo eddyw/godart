@@ -41,6 +41,7 @@ final TypeDesc $desc$Greeter = TypeDesc(
     ),
   ],
   withType: <$R>($R Function<$T>() $f) => $f<Greeter$>(),
+  assign: ($d, $s) => ($d as Greeter$).$assign($s as Greeter$),
   ptr: () => $descP$Greeter,
   zero: () => Greeter$.$zero(),
 );
