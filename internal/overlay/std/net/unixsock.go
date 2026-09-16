@@ -4,6 +4,7 @@ package net
 
 import (
 	"errors"
+	"runtime"
 	"time"
 )
 
@@ -91,19 +92,26 @@ func (u *UnixConn) SetWriteDeadline(t time.Time) error { return u.c.SetWriteDead
 // ReadFromUnix reads bytes of the connection into the slice, and it gives the
 // name of the source.
 //
-// Dart opens a stream socket of the domain alone. Such a socket holds a peer,
-// and the system reports an empty name for the source. Thus the address of
-// the result is always nil, exactly as in Go for a connected socket.
+// Linux reports a named peer for a successful stream read. macOS reports no
+// source address for a stream read.
 func (u *UnixConn) ReadFromUnix(b []byte) (int, *UnixAddr, error) {
 	n, err := u.c.Read(b)
+	if err == nil && runtime.GOOS == "linux" {
+		addr := u.RemoteAddr().(*UnixAddr)
+		if addr.Name != "" {
+			return n, addr, nil
+		}
+	}
 	return n, nil, err
 }
 
 // ReadFrom reads bytes of the connection into the slice, and it gives the
-// name of the source. The address of the result is always nil. ReadFromUnix
-// holds the cause.
+// name of the source.
 func (u *UnixConn) ReadFrom(b []byte) (int, Addr, error) {
-	n, err := u.c.Read(b)
+	n, addr, err := u.ReadFromUnix(b)
+	if addr != nil {
+		return n, addr, err
+	}
 	return n, nil, err
 }
 

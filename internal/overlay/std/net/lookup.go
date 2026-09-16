@@ -859,7 +859,24 @@ var (
 // file on each platform of Unix.
 func readServices() {
 	servicesOnce.Do(func() {
-		servicePorts = map[string]int{}
+		// Go provides these ports even when /etc/services is absent.
+		servicePorts = map[string]int{
+			"udp/domain":      53,
+			"tcp/ftp":         21,
+			"tcp/ftps":        990,
+			"tcp/gopher":      70,
+			"tcp/http":        80,
+			"tcp/https":       443,
+			"tcp/imap2":       143,
+			"tcp/imap3":       220,
+			"tcp/imaps":       993,
+			"tcp/pop3":        110,
+			"tcp/pop3s":       995,
+			"tcp/smtp":        25,
+			"tcp/submissions": 465,
+			"tcp/ssh":         22,
+			"tcp/telnet":      23,
+		}
 		text, cause := dart.ReadFile("/etc/services")
 		if cause != "" {
 			return

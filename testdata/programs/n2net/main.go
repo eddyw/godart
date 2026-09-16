@@ -169,7 +169,10 @@ func unixListener() {
 	reply := make([]byte, 8)
 	m, unixAddr, _ := uc.ReadFromUnix(reply)
 	fmt.Println("readfromunix:", string(reply[:m]), unixAddr == nil)
+	fmt.Println("readfromunix name:", unixAddr == nil || unixAddr.Name == path)
 	fmt.Println("wrote:", <-done)
+	m, unixAddr, err = uc.ReadFromUnix(reply)
+	fmt.Println("readfromunix eof:", m, unixAddr == nil, err)
 	uc.Close()
 
 	_, err = d.DialUnix(context.Background(), "unixgram", nil,

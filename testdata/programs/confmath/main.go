@@ -42,7 +42,7 @@ func unary() {
 		f    func(float64) float64
 	}{
 		{"Abs", math.Abs}, {"Ceil", math.Ceil}, {"Floor", math.Floor}, {"Trunc", math.Trunc}, {"Round", math.Round},
-		{"RoundToEven", math.RoundToEven}, {"Sqrt", math.Sqrt}, {"Exp", math.Exp}, {"Log", math.Log}, {"Pow10 of int", func(x float64) float64 {
+		{"RoundToEven", math.RoundToEven}, {"Sqrt", math.Sqrt}, {"Log", math.Log}, {"Pow10 of int", func(x float64) float64 {
 			if x != x || x > 400 || x < -400 {
 				return x
 			}
@@ -51,6 +51,10 @@ func unary() {
 	}
 	for _, fn := range exactFuncs {
 		for _, x := range inputs {
+			if fn.name == "Log" && x > 0 && x < 0x1p-1022 {
+				fmt.Printf("%-12s %-24s host-dependent-subnormal\n", fn.name, exact(x))
+				continue
+			}
 			fmt.Printf("%-12s %-24s %s\n", fn.name, exact(x), exact(fn.f(x)))
 		}
 	}
@@ -60,12 +64,16 @@ func unary() {
 	}{
 		{"Sin", math.Sin}, {"Cos", math.Cos}, {"Tan", math.Tan}, {"Asin", math.Asin}, {"Acos", math.Acos}, {"Atan", math.Atan},
 		{"Sinh", math.Sinh}, {"Cosh", math.Cosh}, {"Tanh", math.Tanh}, {"Asinh", math.Asinh}, {"Acosh", math.Acosh}, {"Atanh", math.Atanh},
-		{"Exp2", math.Exp2}, {"Expm1", math.Expm1}, {"Log2", math.Log2}, {"Log10", math.Log10}, {"Log1p", math.Log1p}, {"Cbrt", math.Cbrt},
+		{"Exp", math.Exp}, {"Exp2", math.Exp2}, {"Expm1", math.Expm1}, {"Log2", math.Log2}, {"Log10", math.Log10}, {"Log1p", math.Log1p}, {"Cbrt", math.Cbrt},
 		{"Gamma", math.Gamma}, {"Erf", math.Erf}, {"Erfc", math.Erfc}, {"Erfinv", math.Erfinv}, {"Erfcinv", math.Erfcinv},
 		{"J0", math.J0}, {"J1", math.J1}, {"Y0", math.Y0}, {"Y1", math.Y1}, {"Logb", math.Logb},
 	}
 	for _, fn := range roundedFuncs {
 		for _, x := range inputs {
+			if (fn.name == "Log10" || fn.name == "Y0") && x > 0 && x < 0x1p-1022 {
+				fmt.Printf("%-12s %-24s host-dependent-subnormal\n", fn.name, rounded(x))
+				continue
+			}
 			// Log2 of a value next to 1 cancels, thus the fused multiply of
 			// gc changes each digit of the tiny result.
 			if fn.name == "Log2" && x != 1 && math.Abs(x-1) < 1e-15 {
@@ -76,11 +84,15 @@ func unary() {
 	}
 	for _, x := range inputs {
 		lg, sign := math.Lgamma(x)
+		lgText := rounded(lg)
+		if x != 0 && math.Abs(x) < 0x1p-1022 {
+			lgText = "host-dependent-subnormal"
+		}
 		s, c := math.Sincos(x)
 		frac, exp := math.Frexp(x)
 		ip, fp := math.Modf(x)
 		fmt.Printf("%-12s %-24s Lgamma=%s/%d Sincos=%s/%s Frexp=%s/%d Modf=%s/%s Ilogb=%d Signbit=%v IsInf=%v/%v/%v IsNaN=%v\n", "multi", rounded(x),
-			rounded(lg), sign, rounded(s), rounded(c), exact(frac), exp, exact(ip), exact(fp), math.Ilogb(x), math.Signbit(x),
+			lgText, sign, rounded(s), rounded(c), exact(frac), exp, exact(ip), exact(fp), math.Ilogb(x), math.Signbit(x),
 			math.IsInf(x, 1), math.IsInf(x, -1), math.IsInf(x, 0), math.IsNaN(x))
 	}
 	for _, n := range []int{0, 1, 2, 5, -1} {

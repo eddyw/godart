@@ -7,6 +7,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -229,7 +230,11 @@ func main() {
 	plain, err := x509.DecryptPEMBlock(block, []byte("secret"))
 	must(err)
 	fmt.Println("pem round trip:", len(plain) == len(p1))
-	_, err = x509.DecryptPEMBlock(block, []byte("wrong"))
+	// Legacy PEM can accept a wrong password when random data has valid padding.
+	badPasswordBlock, err := x509.EncryptPEMBlock(bytes.NewReader([]byte("0123456789abcdef")),
+		"X", []byte("fixed PEM payload"), []byte("secret"), x509.PEMCipherAES256)
+	must(err)
+	_, err = x509.DecryptPEMBlock(badPasswordBlock, []byte("wrong"))
 	fmt.Println("pem bad password:", err)
 	fmt.Println(pem.EncodeToMemory(&pem.Block{Type: "X", Bytes: []byte{1, 2, 3}}) != nil)
 

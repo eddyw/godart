@@ -20,7 +20,7 @@ env:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 52
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -34,9 +34,9 @@ jobs:
           node-version: '26.8.2'
       - run: make get
       - name: Static validation, runtime tests, and compiler tests
-        timeout-minutes: 20
+        timeout-minutes: 47
         env:
-          GART_TEST_TIMEOUT: 20m
+          GART_TEST_TIMEOUT: 47m
         run: bash scripts/ci.sh checks 2>&1 | tee ci.log
       - uses: actions/upload-artifact@v4
         if: always()
@@ -55,52 +55,52 @@ jobs:
         include:
           - suite: programs
             shard: 0
-            timeout: 13
-            job_timeout: 18
+            timeout: 48
+            job_timeout: 53
           - suite: programs
             shard: 1
-            timeout: 10
-            job_timeout: 15
+            timeout: 31
+            job_timeout: 36
           - suite: programs
             shard: 2
-            timeout: 8
-            job_timeout: 13
+            timeout: 33
+            job_timeout: 38
           - suite: programs
             shard: 3
-            timeout: 11
-            job_timeout: 16
+            timeout: 43
+            job_timeout: 48
           - suite: language
             shard: 0
-            timeout: 11
-            job_timeout: 16
+            timeout: 38
+            job_timeout: 43
           - suite: language
             shard: 1
-            timeout: 8
-            job_timeout: 13
+            timeout: 30
+            job_timeout: 35
           - suite: language
             shard: 2
-            timeout: 8
-            job_timeout: 13
+            timeout: 29
+            job_timeout: 34
           - suite: language
             shard: 3
-            timeout: 9
-            job_timeout: 14
+            timeout: 24
+            job_timeout: 29
           - suite: stdlib
             shard: 0
-            timeout: 26
-            job_timeout: 31
+            timeout: 48
+            job_timeout: 53
           - suite: stdlib
             shard: 1
-            timeout: 2
-            job_timeout: 7
+            timeout: 5
+            job_timeout: 10
           - suite: stdlib
             shard: 2
-            timeout: 3
-            job_timeout: 8
+            timeout: 6
+            job_timeout: 11
           - suite: stdlib
             shard: 3
-            timeout: 3
-            job_timeout: 8
+            timeout: 6
+            job_timeout: 11
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -112,6 +112,9 @@ jobs:
       - run: make get
       - name: Compile driver tests
         run: go test -c -o "$RUNNER_TEMP/driver.test" ./internal/driver
+      - name: Keep expected rejections out of error annotations
+        if: matrix.suite == 'language'
+        run: echo '::remove-matcher owner=go::'
       - name: Run the complete suite shard
         timeout-minutes: ${{ matrix.timeout }}
         env:

@@ -3,9 +3,8 @@
 //
 // The program holds 2 groups.
 //
-// The exact group writes the bit pattern of each result. IEEE 754 names 1
-// correct result for each input of those functions, thus the 2 runtimes must
-// agree on each bit.
+// The exact group writes the bit pattern of each result. Positive subnormal
+// Log and Log10 inputs carry an explicit host-dependent marker.
 //
 // The near group writes 11 significant digits. Each function of that group
 // evaluates a polynomial, and the specification of Go lets an implementation
@@ -53,6 +52,10 @@ var second = []float64{2, -3, 0.5, 0, math.Inf(1), math.NaN()}
 
 func exact1(name string, f func(float64) float64, in []float64) {
 	for _, v := range in {
+		if (name == "Log" || name == "Log10") && v > 0 && v < 0x1p-1022 {
+			fmt.Printf("%s %016x host-dependent-subnormal\n", name, math.Float64bits(v))
+			continue
+		}
 		fmt.Printf("%s %016x %016x\n", name,
 			math.Float64bits(v), math.Float64bits(f(v)))
 	}
@@ -93,7 +96,7 @@ func main() {
 	exact1("Trunc", math.Trunc, in)
 	exact1("Round", math.Round, in)
 	exact1("RoundToEven", math.RoundToEven, in)
-	exact1("Exp", math.Exp, in)
+	near1("Exp", math.Exp, in)
 	exact1("Exp2", math.Exp2, in)
 	exact1("Log", math.Log, in)
 	exact1("Log10", math.Log10, in)
@@ -101,9 +104,9 @@ func main() {
 	exact1("Cbrt", math.Cbrt, in)
 	exact1("Acos", math.Acos, in)
 	exact1("Atan", math.Atan, in)
-	exact1("Sinh", math.Sinh, in)
-	exact1("Cosh", math.Cosh, in)
-	exact1("Tanh", math.Tanh, in)
+	near1("Sinh", math.Sinh, in)
+	near1("Cosh", math.Cosh, in)
+	near1("Tanh", math.Tanh, in)
 	exact2("Pow", math.Pow, in)
 	exact2("Mod", math.Mod, in)
 	exact2("Max", math.Max, in)

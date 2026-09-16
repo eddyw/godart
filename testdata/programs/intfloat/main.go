@@ -33,7 +33,7 @@ func floats() []float64 {
 	return []float64{
 		0, math.Copysign(0, -1), 1, -1, 0.5, -0.5, 2.5, -2.5,
 		1e15, -1e15, 1<<53 - 1, 1 << 53, 1 << 62,
-		9.2233720368547758e18, -9.2233720368547758e18,
+		math.Nextafter(0x1p63, 0), 9.2233720368547758e18, -9.2233720368547758e18,
 		1e300, -1e300, 1e-300,
 		math.MaxFloat64, math.SmallestNonzeroFloat64,
 	}
@@ -64,7 +64,11 @@ func main() {
 	}
 	for _, f := range floats() {
 		b := math.Float64bits(f)
-		fmt.Printf("f2i64 %016x %016x\n", b, uint64(int64(f)))
+		if f >= -0x1p63 && f < 0x1p63 {
+			fmt.Printf("f2i64 %016x %016x\n", b, uint64(int64(f)))
+		} else {
+			fmt.Printf("f2i64 %016x implementation-dependent\n", b)
+		}
 		fmt.Printf("f2f32 %016x %08x\n", b, math.Float32bits(float32(f)))
 	}
 	for _, f := range small() {

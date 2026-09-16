@@ -14,17 +14,24 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 )
 
-// events holds each hook call in the order that the transport made it.
 var events []string
+var eventsMu sync.Mutex
 
 func note(format string, args ...any) {
+	eventsMu.Lock()
+	defer eventsMu.Unlock()
 	events = append(events, fmt.Sprintf(format, args...))
 }
 
 func flush(title string) {
+	eventsMu.Lock()
+	defer eventsMu.Unlock()
 	fmt.Println("--", title)
+	// Transport hooks can run concurrently, without a fixed total order.
+	sort.Strings(events)
 	for _, line := range events {
 		fmt.Println("   " + line)
 	}
@@ -55,7 +62,7 @@ func maskErr(err error, addr string) any {
 	return strings.ReplaceAll(err.Error(), addr[i:], ":PORT")
 }
 
-func newTrace() *httptrace.ClientTrace {
+func newTrace(written, idle chan struct{}) *httptrace.ClientTrace {
 	return &httptrace.ClientTrace{
 		GetConn: func(hostPort string) {
 			note("GetConn %s", mask(hostPort))
@@ -65,6 +72,7 @@ func newTrace() *httptrace.ClientTrace {
 		},
 		PutIdleConn: func(err error) {
 			note("PutIdleConn err=%v", err)
+			close(idle)
 		},
 		GotFirstResponseByte: func() {
 			note("GotFirstResponseByte")
@@ -118,13 +126,16 @@ func newTrace() *httptrace.ClientTrace {
 		},
 		WroteRequest: func(i httptrace.WroteRequestInfo) {
 			note("WroteRequest err=%v", i.Err)
+			close(written)
 		},
 	}
 }
 
 // read runs 1 request with the trace and prints the body of the answer.
 func read(client *http.Client, req *http.Request) {
-	ctx := httptrace.WithClientTrace(req.Context(), newTrace())
+	written := make(chan struct{})
+	idle := make(chan struct{})
+	ctx := httptrace.WithClientTrace(req.Context(), newTrace(written, idle))
 	res, err := client.Do(req.WithContext(ctx))
 	if err != nil {
 		note("error %v", err)
@@ -132,6 +143,8 @@ func read(client *http.Client, req *http.Request) {
 	}
 	body, err := io.ReadAll(res.Body)
 	res.Body.Close()
+	<-written
+	<-idle
 	if err != nil {
 		note("error %v", err)
 		return
@@ -167,16 +180,27 @@ func main() {
 	read(client, req)
 	flush("the answer 100 of the server")
 
-	// A dial that names a Resolver of Go reads the host name here, thus the 2
-	// hooks of the lookup fire. A dial with no Resolver gives the name to the
-	// socket, which reports no event of the lookup.
+	// Resolve IPv4 explicitly because the test server listens only on IPv4.
 	target, err := url.Parse(plain.URL)
 	if err != nil {
 		fmt.Println("parse:", err)
 		return
 	}
 	named := &http.Client{Transport: &http.Transport{
-		DialContext: (&net.Dialer{Resolver: net.DefaultResolver}).DialContext,
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(address)
+			if err != nil {
+				return nil, err
+			}
+			ips, err := net.DefaultResolver.LookupIP(ctx, "ip4", host)
+			if err != nil {
+				return nil, err
+			}
+			if len(ips) == 0 {
+				return nil, fmt.Errorf("no IPv4 address for %s", host)
+			}
+			return (&net.Dialer{}).DialContext(ctx, network, net.JoinHostPort(ips[0].String(), port))
+		},
 	}}
 	req, _ = http.NewRequest("GET", "http://localhost:"+target.Port()+"/five", nil)
 	read(named, req)

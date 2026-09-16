@@ -307,14 +307,21 @@ covers 33 functions of `math`.
 | `Cos` | 3 of 517 | 1 unit |
 | `Asin`, `Atan2`, `Expm1` | 1 each | 1 unit |
 
-Each other function of the witness agrees bit for bit, `Sqrt`, `Exp`, `Log`,
-`Pow`, `Cbrt`, `Acos`, `Atan`, `Sinh`, `Cosh`, and `Tanh` included. The witness
-thus writes the 8 functions above with 11 significant digits, and each other
-function with the whole bit pattern.
+The Linux/AMD64 repeat on 2026-09-16 found 1-unit differences in `Exp` (19 inputs),
+`Sinh` (16), `Cosh` (16), and `Tanh` (1).
+The fixture uses 11 significant digits for these 4 functions and the 8 functions above.
+All other results retain the complete bit pattern, with the explicit exception below.
 
-**A program must not depend on the last bit of a transcendental function.** Go
-gives no such rule of its own: gc writes a different last bit on amd64 and on
-arm64 for the same source.
+The AMD64 `archLog` assembly in Go 1.27.0 does not normalize positive subnormal inputs.
+Its result differs substantially from the portable Go implementation that gart uses.
+`Log10` inherits that difference. The fixture has 3 such inputs for each function.
+These 6 comparisons print `host-dependent-subnormal` and do not count as parity passes.
+The fixture retains all other logarithm inputs and comparisons.
+The `confmath` fixture marks 9 additional result occurrences in `Log`, `Log10`, `Y0`, and `Lgamma`.
+`Y0` and `Lgamma` inherit the same subnormal `Log` difference. Other results and the `Lgamma` sign remain exact comparisons.
+
+**A program must not depend on the last bit of a transcendental function.**
+Go can produce different final bits on AMD64 and ARM64 for the same source.
 
 ## A conversion of a float to an integer outside the range
 
@@ -323,8 +330,13 @@ specification of Go leaves to the implementation. gc saturates on arm64,
 `2147483647`, and it gives the indefinite value on amd64, `-2147483648`. gart
 holds the low 32 bits of the int64 form.
 
-No answer is correct, thus `testdata/programs/intfloat` holds the range of the
-type for that case. The conversion to an int64 agrees with gc on arm64.
+The same limit applies to `int64(f)` outside `[-2^63, 2^63)`.
+For positive overflow, Go on AMD64 gives `MinInt64`. Go on ARM64 and gart give `MaxInt64`.
+The [Go specification](https://go.dev/ref/spec#Conversions_between_numeric_types) permits different results when the result type cannot represent the value.
+
+`testdata/programs/intfloat` compares integer results only within the representable range.
+It marks the other int64 cases as `implementation-dependent` and retains all float-to-float comparisons.
+It also covers the largest float64 below `2^63`, which remains a valid int64 input.
 
 ## The open file limit of the machine
 

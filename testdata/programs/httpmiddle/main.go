@@ -25,15 +25,18 @@ func main() {
 // timeout reads TimeoutHandler and ErrHandlerTimeout.
 func timeout() {
 	late := make(chan bool, 1)
+	returned := make(chan struct{})
 	slow := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-r.Context().Done()
-		// The time ran out, thus each write gives ErrHandlerTimeout.
+		// Context cancellation can precede the wrapper's timeout error.
+		<-returned
 		_, err := io.WriteString(w, "late")
 		late <- errors.Is(err, http.ErrHandlerTimeout)
 	})
 	h := http.TimeoutHandler(slow, 50*time.Millisecond, "took too long")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/", nil))
+	close(returned)
 	res := w.Result()
 	body, _ := io.ReadAll(res.Body)
 	fmt.Printf("timeout %d %q\n", res.StatusCode, string(body))
