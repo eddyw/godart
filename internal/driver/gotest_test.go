@@ -162,9 +162,8 @@ func TestRunFilesOfGoTest(t *testing.T) {
 				run(t, out, "dart", "pub", "get")
 				limit := 2 * time.Minute
 				if name == "fixedbugs/issue13169" {
-					// The Linux/AMD64 stress case took 117 seconds locally.
-					// Allow twice that duration, with whole-minute rounding.
-					limit = 4 * time.Minute
+					// This upstream stress case performs 1 million channel transfers.
+					limit = 5 * time.Minute
 				}
 				got, gotFail, ended := runWithin(t, out, limit, "dart", "run", "bin/main.dart")
 				if !ended {

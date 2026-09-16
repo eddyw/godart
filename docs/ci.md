@@ -90,8 +90,8 @@ Suite jobs compile the driver test binary before the timed test step.
 This step matches the local compilation-cache state and exposes a cold build as a separate CI step.
 `GART_TEST_TIMEOUT` controls the Go test timeout for a manual wrapper run.
 
-The Linux/AMD64 `fixedbugs/issue13169` stress case completed in 116.89 seconds under local emulation.
-Its generated program has a 4-minute limit, which follows the same doubled-duration rule.
+The Linux/AMD64 `fixedbugs/issue13169` stress case completed in 129.35 seconds in the CPU-limited local matrix.
+Its generated program has a 5-minute limit, which follows the same doubled-duration rule.
 Other generated language programs retain their 2-minute limit.
 
 ## Platform exclusions
