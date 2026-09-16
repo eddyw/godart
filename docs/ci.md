@@ -1,5 +1,16 @@
 # Continuous integration
 
+CI runs only through manual dispatch while the repository is private.
+Pushes and pull requests do not start a run.
+Run the local tests before a push. Use GitHub Actions for occasional Linux validation.
+Restore automatic push and pull request triggers when the repository becomes public.
+
+Start a manual run from **Actions → CI → Run workflow**, or use:
+
+```bash
+gh workflow run ci.yml --repo eddyw/godart --ref main
+```
+
 The CI toolchain uses Go 1.27.0 and Dart 3.13.3.
 The JavaScript and WebAssembly tests use Node.js 26.8.2.
 GitHub Actions uses Ubuntu 24.04 on AMD64. The final local baseline uses Linux/AMD64 containers under emulation.
@@ -62,7 +73,7 @@ These estimates select shards. They do not determine test timeout limits.
 All Go CI tests use `-count=1`. Go compilation and dependency caches can remain warm.
 The wrapper reports elapsed seconds and preserves the command exit status.
 GitHub Actions retains the log for 7 days and reports the duration in the job summary.
-A new run cancels a superseded run for the same branch or pull request.
+A new manual run cancels a superseded run for the same ref.
 
 ## Cost and coverage controls
 
