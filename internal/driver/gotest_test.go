@@ -41,6 +41,7 @@ var goTestSkips = map[string]string{
 	"fixedbugs/issue19182": "a busy loop without a block operation never yields, and the other goroutine never runs",
 
 	// The fixture requires a Go tree, a native architecture, or a different harness.
+	"fixedbugs/issue10607": "the test exercises native Go linker flags and requires a companion source outside this single-file harness",
 	"winbatch":             "the file reads a file of the tree of Go under runtime.GOROOT, and gart gives an empty text there",
 	"nosplit":              "the file picks the frame size of the test from runtime.GOARCH, and gart reports dart64",
 	"linkobj":              "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names",
@@ -106,12 +107,24 @@ func TestRunFilesOfGoTest(t *testing.T) {
 				continue
 			}
 			name := path.Join(dir, base)
+			if !inTestShard(name) {
+				continue
+			}
 			source, err := os.ReadFile(filepath.Join(root, dir, entry.Name()))
 			if err != nil || !strings.HasPrefix(string(source), "// run\n") {
 				continue
 			}
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
+				ctx := build.Default
+				ctx.BuildTags = append(slices.Clone(ctx.BuildTags), "dart")
+				eligible, err := ctx.MatchFile(filepath.Join(root, dir), entry.Name())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !eligible {
+					t.Skipf("upstream build constraints exclude %s/%s", ctx.GOOS, ctx.GOARCH)
+				}
 				if cause, ok := goTestSkips[name]; ok {
 					t.Skip(cause)
 				}
@@ -119,7 +132,7 @@ func TestRunFilesOfGoTest(t *testing.T) {
 				writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/gotest\n\ngo 1.27\n")
 				writeFile(t, filepath.Join(dir, entry.Name()), string(source))
 				out := filepath.Join(dir, "out")
-				err := driver.Build(driver.Options{
+				err = driver.Build(driver.Options{
 					Dir:      dir,
 					Patterns: []string{"./..."},
 					Out:      out,
@@ -147,9 +160,15 @@ func TestRunFilesOfGoTest(t *testing.T) {
 				}
 				want = cutExitStatus(want)
 				run(t, out, "dart", "pub", "get")
-				got, gotFail, ended := runWithin(t, out, 2*time.Minute, "dart", "run", "bin/main.dart")
+				limit := 2 * time.Minute
+				if name == "fixedbugs/issue13169" {
+					// The Linux/AMD64 stress case took 117 seconds locally.
+					// Allow twice that duration, with whole-minute rounding.
+					limit = 4 * time.Minute
+				}
+				got, gotFail, ended := runWithin(t, out, limit, "dart", "run", "bin/main.dart")
 				if !ended {
-					t.Error("the run did not end within 2 minutes")
+					t.Errorf("the run did not end within %v", limit)
 					return
 				}
 				if got != want {

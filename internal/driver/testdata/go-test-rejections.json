@@ -98,14 +98,19 @@
   "fixedbugs/bug517": [
     "$DIR/bug517.go:13:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
-  "fixedbugs/issue10607": [
-    "no package matches [./...] in $DIR"
-  ],
   "fixedbugs/issue15002": [
-    "no package matches [./...] in $DIR"
+    "$DIR/issue15002.go:18:17: undefined: syscall.Getpagesize",
+    "$DIR/issue15002.go:24:100: undefined: syscall.MAP_PRIVATE",
+    "$DIR/issue15002.go:24:20: undefined: syscall.Mmap",
+    "$DIR/issue15002.go:24:45: undefined: syscall.PROT_READ",
+    "$DIR/issue15002.go:24:63: undefined: syscall.PROT_WRITE",
+    "$DIR/issue15002.go:24:83: undefined: syscall.MAP_ANON",
+    "$DIR/issue15002.go:29:16: undefined: syscall.Mprotect",
+    "$DIR/issue15002.go:29:40: undefined: syscall.PROT_NONE"
   ],
   "fixedbugs/issue15277": [
-    "no package matches [./...] in $DIR"
+    "$DIR/issue15277.go:38:17: undefined: runtime.MemStats",
+    "$DIR/issue15277.go:39:10: undefined: runtime.ReadMemStats"
   ],
   "fixedbugs/issue15281": [
     "$DIR/issue15281.go:62:17: undefined: runtime.MemStats",
@@ -346,7 +351,7 @@
     "$DIR/mallocfin.go:63:11: undefined: runtime.SetFinalizer"
   ],
   "nilptr": [
-    "no package matches [./...] in $DIR"
+    "$DIR/nilptr.go:15:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "nilptr2": [
     "print does not accept the type *[10]int yet",

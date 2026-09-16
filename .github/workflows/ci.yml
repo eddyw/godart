@@ -5,9 +5,22 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  GOMAXPROCS: '2'
+  GOFLAGS: '-p=2'
+
 jobs:
-  check:
-    runs-on: ubuntu-latest
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -15,6 +28,98 @@ jobs:
           go-version: '1.27.0'
       - uses: dart-lang/setup-dart@v1
         with:
-          sdk: '3.13.0'
+          sdk: '3.13.3'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.8.2'
       - run: make get
-      - run: make ci
+      - name: Static validation, runtime tests, and compiler tests
+        timeout-minutes: 20
+        env:
+          GART_TEST_TIMEOUT: 20m
+        run: bash scripts/ci.sh checks 2>&1 | tee ci.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-checks
+          path: ci.log
+          retention-days: 7
+
+  suites:
+    name: ${{ matrix.suite }} / ${{ matrix.shard }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ matrix.job_timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: programs
+            shard: 0
+            timeout: 13
+            job_timeout: 18
+          - suite: programs
+            shard: 1
+            timeout: 10
+            job_timeout: 15
+          - suite: programs
+            shard: 2
+            timeout: 8
+            job_timeout: 13
+          - suite: programs
+            shard: 3
+            timeout: 11
+            job_timeout: 16
+          - suite: language
+            shard: 0
+            timeout: 11
+            job_timeout: 16
+          - suite: language
+            shard: 1
+            timeout: 8
+            job_timeout: 13
+          - suite: language
+            shard: 2
+            timeout: 8
+            job_timeout: 13
+          - suite: language
+            shard: 3
+            timeout: 9
+            job_timeout: 14
+          - suite: stdlib
+            shard: 0
+            timeout: 26
+            job_timeout: 31
+          - suite: stdlib
+            shard: 1
+            timeout: 2
+            job_timeout: 7
+          - suite: stdlib
+            shard: 2
+            timeout: 3
+            job_timeout: 8
+          - suite: stdlib
+            shard: 3
+            timeout: 3
+            job_timeout: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: '3.13.3'
+      - run: make get
+      - name: Compile driver tests
+        run: go test -c -o "$RUNNER_TEMP/driver.test" ./internal/driver
+      - name: Run the complete suite shard
+        timeout-minutes: ${{ matrix.timeout }}
+        env:
+          GART_TEST_TIMEOUT: ${{ matrix.timeout }}m
+        run: bash scripts/ci.sh '${{ matrix.suite }}' '${{ matrix.shard }}' 4 2>&1 | tee ci.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-${{ matrix.suite }}-${{ matrix.shard }}
+          path: ci.log
+          retention-days: 7

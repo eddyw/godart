@@ -26,7 +26,7 @@ func TestPrograms(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		if !entry.IsDir() || !inTestShard(entry.Name()) {
 			continue
 		}
 		t.Run(entry.Name(), func(t *testing.T) {

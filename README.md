@@ -135,6 +135,7 @@ curated surface.
 | `docs/gart.md` | The compiler command, and each flag of it |
 | `docs/glutter.md` | The Flutter command, and the first application |
 | `docs/what-compiles.md` | The shape of a Go program that the compiler accepts |
+| `docs/ci.md` | The CI suites, local commands, durations, and timeout limits |
 | `docs/parity.md` | Each difference between Go and the Dart output |
 | `docs/design.md` | The architecture, each stage, and each compiler feature |
 | `docs/block-model.md` | The unwind model of a function that can block |
@@ -156,7 +157,7 @@ byte equal output of 2 equal builds.
 
 ## Versions
 
-The project targets Go 1.27.0 and Dart 3.13.0. A Flutter application needs
+The project targets Go 1.27.0 and Dart 3.13.3. A Flutter application needs
 Flutter 3.47, `material_ui` 1.1, and `cupertino_ui` 1.0. `glutter doctor`
 reports the version of the machine against the node set.
 

@@ -281,6 +281,9 @@ func TestTestsOfGoroot(t *testing.T) {
 			"--- PASS: TestMarshal/Methods/Anonymous ", "--- PASS: Example_textMarshal "}},
 	}
 	for _, c := range cases {
+		if !inTestShard(c.pkg) {
+			continue
+		}
 		t.Run(c.pkg, func(t *testing.T) {
 			t.Parallel()
 			dir := filepath.Join(build.Default.GOROOT, "src", filepath.FromSlash(c.pkg))
@@ -299,6 +302,16 @@ func TestTestsOfGoroot(t *testing.T) {
 				t.Fatalf("the test build failed:\n%v", err)
 			}
 			got := out.String()
+			if c.pkg == "bytes" && build.Default.GOOS == "linux" {
+				for _, want := range []string{
+					"--- SKIP: TestEqualNearPageBoundary ",
+					"gart does not expose mmap or protected memory pages",
+				} {
+					if !strings.Contains(got, want) {
+						t.Errorf("the output holds no %q:\n%s", want, got)
+					}
+				}
+			}
 			if code != 0 {
 				t.Errorf("got the exit code %d, want 0:\n%s", code, got)
 			}

@@ -1,0 +1,22 @@
+The Dart runtime exposes no mmap or protected memory pages.
+The native boundary tests remain visible as explicit skips.
+
+@@ -11 +10,0 @@
+-	"syscall"
+@@ -27,14 +26,2 @@
+-	pagesize := syscall.Getpagesize()
+-	b, err := syscall.Mmap(0, 0, 3*pagesize, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_ANONYMOUS|syscall.MAP_PRIVATE)
+-	if err != nil {
+-		t.Fatalf("mmap failed %s", err)
+-	}
+-	err = syscall.Mprotect(b[:pagesize], syscall.PROT_NONE)
+-	if err != nil {
+-		t.Fatalf("mprotect low failed %s\n", err)
+-	}
+-	err = syscall.Mprotect(b[2*pagesize:], syscall.PROT_NONE)
+-	if err != nil {
+-		t.Fatalf("mprotect high failed %s\n", err)
+-	}
+-	return b[pagesize : 2*pagesize]
++	t.Skip("gart does not expose mmap or protected memory pages")
++	return nil
