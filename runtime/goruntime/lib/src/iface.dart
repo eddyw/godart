@@ -565,8 +565,8 @@ Never $noMethod(String name) => $panic(
 /// $boxDesc puts a value into an interface value with the given description.
 /// A type argument can name an interface type, and a value of such a type
 /// parameter already holds an interface value. That value passes through.
-Iface $boxDesc(TypeDesc d, Object? v) {
-  if (v is Iface && d.kind == 'interface') return v;
+Iface? $boxDesc(TypeDesc d, Object? v) {
+  if (d.kind == 'interface') return v as Iface?;
   return Iface(d, v);
 }
 

@@ -199,6 +199,9 @@ func (e *emitter) zero(t types.Type) string {
 		return e.dictOf(tp) + ".zero()"
 	}
 	if named, ok := u.(*types.Named); ok {
+		if isDartObject(named.Obj()) {
+			return "null"
+		}
 		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
 			if isLocalType(named.Obj()) {
 				return e.anonZero(st)

@@ -9,7 +9,7 @@
 // ignore_for_file: no_leading_underscores_for_local_identifiers, unused_label
 // ignore_for_file: prefer_conditional_assignment
 // ignore_for_file: prefer_function_declarations_over_variables
-// ignore_for_file: library_prefixes
+// ignore_for_file: library_prefixes, unnecessary_getters_setters
 
 import 'package:goruntime/goruntime.dart';
 

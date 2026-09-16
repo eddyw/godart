@@ -19,6 +19,13 @@ void main() {
       expect(GoString.fromString('é').bytes, <int>[0xC3, 0xA9]);
     });
 
+    test('preserves surrogate pairs beside escaped bytes', () {
+      final bytes = <int>[0xF0, 0x9F, 0x92, 0xA9];
+      expect(GoString.fromString('\u{1f4a9}').bytes, bytes);
+      final mixed = GoString.fromBytes(<int>[0xFF, ...bytes, 0x80]);
+      expect(GoString.fromString(mixed.toDartString()).bytes, mixed.bytes);
+    });
+
     test('rejects a write to the storage', () {
       final s = GoString.fromString('go');
       expect(() => s.bytes[0] = 0, throwsUnsupportedError);

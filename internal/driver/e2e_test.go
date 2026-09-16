@@ -40,7 +40,9 @@ func TestPrograms(t *testing.T) {
 		t.Run(entry.Name(), func(t *testing.T) {
 			t.Parallel()
 			dir := filepath.Join(root, entry.Name())
-			want := runProgram(t, dir, "go", "run", ".")
+			native := filepath.Join(t.TempDir(), "program")
+			run(t, dir, "go", "build", "-o", native, ".")
+			want := programOutcome(t, dir, native)
 			out := t.TempDir()
 			err := driver.Build(driver.Options{
 				Trace:    traceBuild(t),
@@ -54,9 +56,9 @@ func TestPrograms(t *testing.T) {
 				t.Fatalf("the build failed:\n%v", err)
 			}
 			prepareDart(t, out)
-			got := runProgram(t, out, "dart", "--packages=.dart_tool/package_config.json", "bin/main.dart")
+			got := programOutcome(t, out, "dart", "--packages=.dart_tool/package_config.json", "bin/main.dart")
 			if got != want {
-				t.Errorf("the output differs\nGo:\n%s\nDart:\n%s", want, got)
+				t.Errorf("the output or exit status differs\nGo:\n%+v\nDart:\n%+v", want, got)
 			}
 		})
 	}
@@ -66,13 +68,35 @@ func TestPrograms(t *testing.T) {
 // runtimes write a different trace, thus the test cuts the trace away.
 func runProgram(t *testing.T, dir string, name string, args ...string) string {
 	t.Helper()
+	result := programOutcome(t, dir, name, args...)
+	if result.Exit != 0 {
+		t.Fatalf("%s %v: exit %d\n%s", name, args, result.Exit, result.Text)
+	}
+	return result.Text
+}
+
+type programResult struct {
+	Text string
+	Exit int
+}
+
+func programOutcome(t *testing.T, dir, name string, args ...string) programResult {
+	t.Helper()
 	start := time.Now()
-	text, _, ok := output(dir, nil, runLimit, name, args...)
+	text, err, ok := output(dir, nil, runLimit, name, args...)
 	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
 	if !ok {
-		t.Fatalf("%s %v did not end inside %v in %s", name, args, runLimit, dir)
+		t.Fatalf("%s %v exceeded %v:\n%s", name, args, runLimit, text)
 	}
-	return cutTrace(string(text))
+	code := 0
+	if err != nil {
+		if e, ok := err.(*exec.ExitError); ok {
+			code = e.ExitCode()
+		} else {
+			t.Fatal(err)
+		}
+	}
+	return programResult{cutTrace(string(text)), code}
 }
 
 func cutTrace(text string) string {
@@ -243,10 +267,13 @@ func TestZoneinfoZip(t *testing.T) {
 func runProgramEnv(t *testing.T, dir string, env []string, name string, args ...string) string {
 	t.Helper()
 	start := time.Now()
-	text, _, ok := output(dir, env, runLimit, name, args...)
+	text, err, ok := output(dir, env, runLimit, name, args...)
 	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
 	if !ok {
 		t.Fatalf("%s %v did not end inside %v in %s", name, args, runLimit, dir)
+	}
+	if err != nil {
+		t.Fatalf("%s %v: %v\n%s", name, args, err, text)
 	}
 	return cutTrace(string(text))
 }

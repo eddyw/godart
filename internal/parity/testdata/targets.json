@@ -1,0 +1,115 @@
+[
+  {
+    "package": "container/list",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "container/heap",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "container/ring",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "encoding/hex",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "encoding/ascii85",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "encoding/csv",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "unicode",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "errors",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ],
+    "exclude": {
+      "js": {
+        "TestAs": "The test calls os.Open. The browser target has no local filesystem.",
+        "TestAsType": "The test calls os.Open. The browser target has no local filesystem.",
+        "ExampleIs": "The test calls os.Open. The browser target has no local filesystem.",
+        "ExampleAs": "The test calls os.Open. The browser target has no local filesystem.",
+        "ExampleAsType": "The test calls os.Open. The browser target has no local filesystem."
+      },
+      "wasm": {
+        "TestAs": "The test calls os.Open. The browser target has no local filesystem.",
+        "TestAsType": "The test calls os.Open. The browser target has no local filesystem.",
+        "ExampleIs": "The test calls os.Open. The browser target has no local filesystem.",
+        "ExampleAs": "The test calls os.Open. The browser target has no local filesystem.",
+        "ExampleAsType": "The test calls os.Open. The browser target has no local filesystem."
+      }
+    }
+  },
+  {
+    "package": "math/bits",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "hash/adler32",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "hash/fnv",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "encoding/json/jsontext",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ],
+    "run": "^FuzzCoder$"
+  }
+]

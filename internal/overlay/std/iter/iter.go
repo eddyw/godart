@@ -1,143 +1,152 @@
 //go:build dart
 
-// Package iter holds the 2 iterator types of the standard library package iter,
-// and the 2 functions that turn a sequence into a pair of functions.
+// Package iter provides push and pull iterators.
 package iter
 
-// Seq is a sequence of 1 value for each step.
-type Seq[V any] func(yield func(V) bool)
+import "syscall/dart"
 
-// Seq2 is a sequence of 2 values for each step.
+type Seq[V any] func(yield func(V) bool)
 type Seq2[K, V any] func(yield func(K, V) bool)
 
-// Pull turns a sequence into a pair of functions. next gives the next value of
-// the sequence, and stop ends it. The caller must call stop after the last
-// call of next.
-//
-// The Go runtime holds a coroutine for this work. The subset holds no
-// coroutine, thus the sequence runs on a goroutine of its own. 2 channels with
-// no buffer hand the control back and forth, and the 2 goroutines never run at
-// the same time.
+// Pull converts a push iterator into next and stop functions.
 func Pull[V any](seq Seq[V]) (next func() (V, bool), stop func()) {
-	resume := make(chan bool)
-	values := make(chan V)
-	done := make(chan bool)
-	started := false
-	over := false
-
-	body := func() {
-		stopped := false
+	resume := make(chan struct{})
+	yielded := make(chan struct{})
+	var value V
+	var ok, done, yieldNext, seqDone, exited bool
+	var panicValue any
+	go func() {
+		<-resume
+		if done {
+			close(yielded)
+			return
+		}
+		defer func() {
+			panicValue = recover()
+			exited = panicValue == nil && !seqDone
+			done = true
+			close(yielded)
+		}()
 		seq(func(v V) bool {
-			if stopped {
+			if done {
 				return false
 			}
-			values <- v
-			if <-resume {
-				return true
+			if !yieldNext {
+				panic("iter.Pull: yield called again before next")
 			}
-			stopped = true
-			return false
+			yieldNext = false
+			value, ok = v, true
+			yielded <- struct{}{}
+			<-resume
+			return !done
 		})
-		done <- true
-	}
-
-	next = func() (V, bool) {
 		var zero V
-		if over {
-			return zero, false
+		value, ok = zero, false
+		seqDone = true
+	}()
+	propagate := func() {
+		if exited {
+			dart.Goexit()
 		}
-		if started {
-			resume <- true
-		} else {
-			started = true
-			go body()
-		}
-		select {
-		case v := <-values:
-			return v, true
-		case <-done:
-			over = true
-			return zero, false
+		if panicValue != nil {
+			panic(panicValue)
 		}
 	}
-
+	next = func() (V, bool) {
+		if done {
+			var zero V
+			return zero, false
+		}
+		if yieldNext {
+			panic("iter.Pull: next called again before yield")
+		}
+		yieldNext = true
+		resume <- struct{}{}
+		<-yielded
+		propagate()
+		return value, ok
+	}
 	stop = func() {
-		if over {
+		if done {
 			return
 		}
-		over = true
-		if !started {
-			return
-		}
-		// The goroutine of the sequence stands at the read of resume, because
-		// the last call of next took its value.
-		resume <- false
-		<-done
+		done = true
+		resume <- struct{}{}
+		<-yielded
+		propagate()
 	}
 	return next, stop
 }
 
-// Pull2 turns a sequence of 2 values into a pair of functions. Read Pull.
+// Pull2 converts a push iterator into next and stop functions.
 func Pull2[K, V any](seq Seq2[K, V]) (next func() (K, V, bool), stop func()) {
-	resume := make(chan bool)
-	values := make(chan pair[K, V])
-	done := make(chan bool)
-	started := false
-	over := false
-
-	body := func() {
-		stopped := false
+	resume := make(chan struct{})
+	yielded := make(chan struct{})
+	var key K
+	var value V
+	var ok, done, yieldNext, seqDone, exited bool
+	var panicValue any
+	go func() {
+		<-resume
+		if done {
+			close(yielded)
+			return
+		}
+		defer func() {
+			panicValue = recover()
+			exited = panicValue == nil && !seqDone
+			done = true
+			close(yielded)
+		}()
 		seq(func(k K, v V) bool {
-			if stopped {
+			if done {
 				return false
 			}
-			values <- pair[K, V]{k, v}
-			if <-resume {
-				return true
+			if !yieldNext {
+				panic("iter.Pull2: yield called again before next")
 			}
-			stopped = true
-			return false
+			yieldNext = false
+			key, value, ok = k, v, true
+			yielded <- struct{}{}
+			<-resume
+			return !done
 		})
-		done <- true
-	}
-
-	next = func() (K, V, bool) {
 		var zeroK K
 		var zeroV V
-		if over {
-			return zeroK, zeroV, false
+		key, value, ok = zeroK, zeroV, false
+		seqDone = true
+	}()
+	propagate := func() {
+		if exited {
+			dart.Goexit()
 		}
-		if started {
-			resume <- true
-		} else {
-			started = true
-			go body()
-		}
-		select {
-		case p := <-values:
-			return p.k, p.v, true
-		case <-done:
-			over = true
-			return zeroK, zeroV, false
+		if panicValue != nil {
+			panic(panicValue)
 		}
 	}
-
+	next = func() (K, V, bool) {
+		if done {
+			var zeroK K
+			var zeroV V
+			return zeroK, zeroV, false
+		}
+		if yieldNext {
+			panic("iter.Pull2: next called again before yield")
+		}
+		yieldNext = true
+		resume <- struct{}{}
+		<-yielded
+		propagate()
+		return key, value, ok
+	}
 	stop = func() {
-		if over {
+		if done {
 			return
 		}
-		over = true
-		if !started {
-			return
-		}
-		resume <- false
-		<-done
+		done = true
+		resume <- struct{}{}
+		<-yielded
+		propagate()
 	}
 	return next, stop
-}
-
-// pair holds the 2 values of 1 step of a Seq2.
-type pair[K, V any] struct {
-	k K
-	v V
 }

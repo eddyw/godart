@@ -24,6 +24,24 @@ import (
 // expression, recv is the receiver type, and fn is the method that the
 // selection names.
 func (a *analyzer) methodSource(x ast.Expr, recv types.Type, fn *types.Func) (source, bool) {
+	if candidates, ok := a.concreteInterfaces(x, a.pkg.TypesInfo, map[types.Object]bool{}); ok {
+		var keys []any
+		complete := true
+		for _, candidate := range candidates {
+			if basic, ok := candidate.Underlying().(*types.Basic); ok && basic.Kind() == types.UntypedNil {
+				continue
+			}
+			method, _, _ := types.LookupFieldOrMethod(candidate, false, fn.Pkg(), fn.Name())
+			if method, ok := method.(*types.Func); ok {
+				keys = append(keys, method.Origin())
+			} else {
+				complete = false
+			}
+		}
+		if complete {
+			return source{keys: keys}, true
+		}
+	}
 	msig, ok := fn.Type().(*types.Signature)
 	if !ok {
 		return source{}, false

@@ -972,7 +972,7 @@ func tempName(dir, pattern string) string {
 		dir = TempDir()
 	}
 	prefix, suffix := pattern, ""
-	for i := 0; i < len(pattern); i++ {
+	for i := len(pattern) - 1; i >= 0; i-- {
 		if pattern[i] == '*' {
 			prefix, suffix = pattern[:i], pattern[i+1:]
 			break
@@ -997,6 +997,11 @@ func itoa(v int64) string {
 // directory of the system. The last star of the pattern holds the place of the
 // random part, and a pattern with no star takes the part at the end.
 func CreateTemp(dir, pattern string) (*File, error) {
+	for i := 0; i < len(pattern); i++ {
+		if IsPathSeparator(pattern[i]) {
+			return nil, &PathError{Op: "createtemp", Path: pattern, Err: errors.New("pattern contains path separator")}
+		}
+	}
 	for i := 0; i < 100; i++ {
 		name := tempName(dir, pattern)
 		if _, err := Stat(name); err == nil {
@@ -1009,12 +1014,25 @@ func CreateTemp(dir, pattern string) (*File, error) {
 
 // MkdirTemp makes a new directory. It reads the pattern of CreateTemp.
 func MkdirTemp(dir, pattern string) (string, error) {
+	if dir == "" {
+		dir = TempDir()
+	}
+	for i := 0; i < len(pattern); i++ {
+		if IsPathSeparator(pattern[i]) {
+			return "", &PathError{Op: "mkdirtemp", Path: pattern, Err: errors.New("pattern contains path separator")}
+		}
+	}
 	for i := 0; i < 100; i++ {
 		name := tempName(dir, pattern)
 		if _, err := Stat(name); err == nil {
 			continue
 		}
 		if err := Mkdir(name, 0o700); err != nil {
+			if IsNotExist(err) {
+				if _, dirErr := Stat(dir); IsNotExist(dirErr) {
+					return "", dirErr
+				}
+			}
 			return "", err
 		}
 		return name, nil

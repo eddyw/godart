@@ -34,7 +34,11 @@ func testShard(t *testing.T, names []string) map[string]bool {
 		t.Fatal(err)
 	}
 	weight := func(name string) float64 {
-		if d := durations[t.Name()+"/"+name]; d > 0 {
+		key := t.Name() + "/" + name
+		if testing.Short() && t.Name() == "TestTestsOfGoroot" {
+			key = t.Name() + "/short/" + name
+		}
+		if d := durations[key]; d > 0 {
 			return d
 		}
 		return 1

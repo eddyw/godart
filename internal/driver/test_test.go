@@ -2,9 +2,11 @@ package driver_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"go/build"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -192,106 +194,26 @@ func TestAllocs(t *testing.T) {
 // test file that falls outside the subset, and the assertion then fails.
 func TestTestsOfGoroot(t *testing.T) {
 	type stdCase struct {
-		pkg string
-		// run holds the filter of -run. An empty filter runs each test.
-		run   string
-		wants []string
+		Package string `json:"package"`
+		Run     string `json:"run"`
 	}
-	cases := []stdCase{
-		{"path", "", []string{"--- PASS: TestClean ", "--- SKIP: TestCleanMallocs "}},
-		{"container/list", "", []string{"--- PASS: TestList ", "--- PASS: TestZeroList "}},
-		{"container/heap", "", []string{"--- PASS: TestInit0 ", "--- PASS: TestRemove2 "}},
-		{"container/ring", "", []string{"--- PASS: TestNew ", "--- PASS: TestLink1 "}},
-		{"unicode", "", []string{"--- PASS: TestLetterOptimizations ", "--- PASS: TestSpecialCaseNoMapping "}},
-		{"encoding/hex", "", []string{"--- PASS: TestEncode ", "--- PASS: TestEncoderDecoder "}},
-		{"encoding/ascii85", "", []string{"--- PASS: TestEncode ", "--- PASS: TestEncoderBuffering "}},
-		{"encoding/csv", "", []string{"--- PASS: TestRead ", "--- PASS: TestWrite "}},
-		{"hash/crc32", "", []string{"--- PASS: TestGolden ", "--- PASS: TestSimple "}},
-		{"hash/fnv", "", []string{"--- PASS: TestGolden32 ", "--- PASS: TestGolden64 "}},
-		{"hash/adler32", "", []string{"--- PASS: TestGolden ", "--- PASS: TestGoldenMarshal "}},
-		{"maps", "", []string{"--- PASS: TestEqualFunc ", "--- PASS: TestCloneLarge "}},
-		{"io", "", []string{
-			"--- PASS: TestCopy ", "--- PASS: TestMultiReaderFreesExhaustedReaders "}},
-		{"internal/chacha8rand", "", []string{
-			"--- PASS: TestOutput ", "--- PASS: TestMarshal "}},
-		{"unicode/utf8", "", []string{
-			"--- PASS: TestFullRune ", "--- PASS: TestDecodeInvalidSequence "}},
-		// The tests of zlib read testdata through a relative path, thus the
-		// binary must run in the directory of the package.
-		{"compress/zlib", "", []string{
-			"--- PASS: TestWriterBig ", "--- PASS: TestWriterDict "}},
-		{"regexp/syntax", "", []string{
-			"--- PASS: TestParseSimple ", "--- PASS: TestSimplify "}},
-		{"math/rand/v2", "", []string{
-			"--- PASS: TestRegress ", "--- PASS: TestChaCha8Read "}},
-		// 6 tests of the package read testenv.MustHaveExec, because they run
-		// the test binary again as a subprocess. Each 1 skips.
-		{"testing/synctest", "", []string{
-			"--- PASS: TestNow ", "--- PASS: TestWait "}},
-		{"compress/gzip", "", []string{
-			"--- PASS: TestRoundTrip ", "--- PASS: TestConcat "}},
-		{"compress/flate", "",
-			[]string{"--- PASS: TestDeflateInflateString ", "--- PASS: TestWriterDict "}},
-		// 3 tests of slices read AllocsPerRun, and each 1 skips. The diff
-		// slices_test.go.patch names the 3 tests that the file holds not.
-		{"slices", "", []string{
-			"--- PASS: TestClone ", "--- PASS: TestNilness "}},
-		// TestClean reads AllocsPerRun, and TestBug3486 reads the source tree
-		// of Go. The 2 skip.
-		{"path/filepath", "", []string{
-			"--- PASS: TestEvalSymlinks ", "--- PASS: TestWalk "}},
-		// TestContextErrDoneRace holds a loop that reads ctx.Err with no
-		// yield, and it yields only on the architecture wasm. Each goroutine
-		// of gart runs on 1 thread, thus that loop never ends. The filter
-		// holds each test whose name does not start with TestCo, and
-		// TestContextErrDoneRace is the only such name. TestAllocs reads
-		// AllocsPerRun, and it skips.
-		{"context", "Test[^C]|TestC[^o]", []string{
-			"--- PASS: TestValues ", "--- PASS: TestDeadline "}},
-		// TestRawBytesAllocs reads AllocsPerRun, and it skips.
-		// TestPoolExhaustOnCancel holds a synctest bubble, and TestConversions
-		// reads the zero value of a time.Time.
-		{"database/sql", "", []string{
-			"--- PASS: TestConversions ", "--- PASS: TestPoolExhaustOnCancel "}},
-		// The 9 rows below each passed under make std-test since an earlier
-		// session, and no row of this test held them. Each 1 runs every test.
-		// A skip in each 1 reads AllocsPerRun or a size class of the
-		// allocator of Go, which the Dart heap does not hold.
-		{"bufio", "", []string{
-			"--- PASS: TestReaderSimple ", "--- PASS: TestLargeReader "}},
-		{"bytes", "", []string{
-			"--- PASS: TestNewBuffer ", "--- PASS: TestReaderZero "}},
-		{"errors", "", []string{
-			"--- PASS: TestNewEqual ", "--- PASS: TestUnwrap "}},
-		{"math/bits", "", []string{
-			"--- PASS: TestUintSize ", "--- PASS: TestRem64Overflow "}},
-		{"sort", "", []string{
-			"--- PASS: TestSearch ", "--- PASS: TestCountSortOps "}},
-		{"strconv", "", []string{
-			"--- PASS: TestParseBool ", "--- PASS: TestErrorPrefixes "}},
-		{"strings", "", []string{
-			"--- PASS: TestBuilder ", "--- PASS: TestCutSuffix "}},
-		{"text/tabwriter", "", []string{
-			"--- PASS: Test ", "--- PASS: TestPanicDuringWrite "}},
-		{"unicode/utf16", "", []string{
-			"--- PASS: TestConstants ", "--- PASS: TestIsSurrogate "}},
-		{"encoding/json", "", []string{
-			"--- PASS: TestSliceNoCycle ", "--- PASS: TestNilMarshal ",
-			"--- PASS: TestOmitEmptyOption ", "--- PASS: TestByteArrays "}},
-		{"encoding/json/jsontext", "", []string{
-			"--- PASS: TestCoderMaxDepth ", "--- PASS: TestCoderMaxDepth/Decoder/ArraysInvalid/SingleValue "}},
-		{"encoding/json/v2", "", []string{
-			"--- PASS: TestMarshal/Maps/CyclicMap ", "--- PASS: TestMarshal/Slices/NonCyclicSlice ",
-			"--- PASS: TestMarshal/Methods/Anonymous ", "--- PASS: Example_textMarshal "}},
+	data, err := os.ReadFile("../parity/testdata/vm-suites.json")
+	if err != nil {
+		t.Fatal(err)
 	}
+	var cases []stdCase
+	if err := json.Unmarshal(data, &cases); err != nil {
+		t.Fatal(err)
+	}
+
 	type namedCase struct {
 		name string
 		stdCase
 	}
 	var runs []namedCase
 	for _, c := range cases {
-		if c.pkg != "compress/flate" {
-			runs = append(runs, namedCase{c.pkg, c})
+		if c.Package != "compress/flate" || testing.Short() {
+			runs = append(runs, namedCase{c.Package, c})
 			continue
 		}
 		// Preserve all upstream cases. Only the independent reset subtests split.
@@ -302,20 +224,11 @@ func TestTestsOfGoroot(t *testing.T) {
 				others = append(others, regexp.QuoteMeta(name))
 			}
 		}
-		c.run = "^(" + strings.Join(others, "|") + ")$"
-		runs = append(runs, namedCase{c.pkg, c})
+		c.Run = "^(" + strings.Join(others, "|") + ")$"
+		runs = append(runs, namedCase{c.Package, c})
 		for i, levels := range []string{"[0157]", "[268]", "[349]"} {
-			wants := []string{"--- PASS: TestWriter_Reset "}
-			for _, level := range levels[1 : len(levels)-1] {
-				status := "PASS"
-				if level == '0' || level >= '7' {
-					status = "SKIP"
-				}
-				wants = append(wants, fmt.Sprintf("--- %s: TestWriter_Reset/level=%c ", status, level))
-			}
 			runs = append(runs, namedCase{fmt.Sprintf("compress/flate-reset-%d", i), stdCase{
-				pkg: c.pkg, run: "^TestWriter_Reset$/^level=" + levels + "$",
-				wants: wants,
+				Package: c.Package, Run: "^TestWriter_Reset$/^level=" + levels + "$",
 			}})
 		}
 	}
@@ -330,42 +243,38 @@ func TestTestsOfGoroot(t *testing.T) {
 		}
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			dir := filepath.Join(build.Default.GOROOT, "src", filepath.FromSlash(c.pkg))
+			dir := filepath.Join(build.Default.GOROOT, "src", filepath.FromSlash(c.Package))
 			if _, err := os.Stat(dir); err != nil {
-				t.Skipf("the machine holds no source of the package %s: %v", c.pkg, err)
+				t.Fatalf("the machine holds no source of the package %s: %v", c.Package, err)
 			}
-			out := &bytes.Buffer{}
-			code, err := driver.Test(driver.Options{
-				Trace:    traceBuild(t),
-				Dir:      dir,
-				Patterns: []string{"."},
-				Out:      t.TempDir(),
-				Runtime:  runtimeDir(t),
-				Format:   false,
-			}, driver.TestOptions{Verbose: true, Run: c.run}, out)
+			outDir := t.TempDir()
+			stats, err := driver.BuildWithStats(driver.Options{Trace: traceBuild(t), Dir: dir, Patterns: []string{"."}, Out: outDir, Runtime: runtimeDir(t), Tests: true, TrimPath: true})
 			if err != nil {
-				t.Fatalf("the test build failed:\n%v", err)
+				t.Logf("upstream test build failed: %v", err)
+				compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, "the test build failed: "+err.Error(), 1)
+				return
 			}
-			got := out.String()
+			if len(stats.Binaries) != 1 {
+				t.Fatalf("got %d upstream test binaries", len(stats.Binaries))
+			}
+			prepareDart(t, outDir)
+			text, execErr, finished := output(dir, nil, upstreamLimit(), "dart", filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run="+c.Run, "-test.skip="+upstreamSkip(t, c.Package))
+			if !finished {
+				compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124)
+				return
+			}
+			code := 0
+			if execErr != nil {
+				if e, ok := execErr.(*exec.ExitError); ok {
+					code = e.ExitCode()
+				} else {
+					t.Fatal(execErr)
+				}
+			}
+			got := string(text)
 			t.Logf("upstream results:\n%s", got)
-			if c.pkg == "bytes" && build.Default.GOOS == "linux" {
-				for _, want := range []string{
-					"--- SKIP: TestEqualNearPageBoundary ",
-					"gart does not expose mmap or protected memory pages",
-				} {
-					if !strings.Contains(got, want) {
-						t.Errorf("the output holds no %q:\n%s", want, got)
-					}
-				}
-			}
-			if code != 0 {
-				t.Errorf("got the exit code %d, want 0:\n%s", code, got)
-			}
-			for _, want := range c.wants {
-				if !strings.Contains(got, want) {
-					t.Errorf("the output holds no %q:\n%s", want, got)
-				}
-			}
+			compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, got, code)
+
 		})
 	}
 }
@@ -421,7 +330,16 @@ func goTest(t *testing.T, dir string, verbose bool, extra ...string) string {
 		args = append(args, "-v")
 	}
 	args = append(args, extra...)
-	text, _, ok := output(dir, nil, runLimit, "go", append(args, "./...")...)
+	text, err, ok := output(dir, nil, runLimit, "go", append(args, "./...")...)
+	code := 0
+	if err != nil {
+		if e, ok := err.(*exec.ExitError); ok {
+			code = e.ExitCode()
+		} else {
+			t.Fatal(err)
+		}
+	}
+	assertTestExit(t, code, string(text))
 	if !ok {
 		t.Fatalf("go %v did not end inside %v in %s", args, runLimit, dir)
 	}
@@ -439,17 +357,30 @@ func gartTest(t *testing.T, dir string, options driver.TestOptions) string {
 func gartTestIn(t *testing.T, dir, out string, options driver.TestOptions) string {
 	t.Helper()
 	text := &bytes.Buffer{}
-	if _, err := driver.Test(driver.Options{
+	code, err := driver.Test(driver.Options{
 		Trace:    traceBuild(t),
 		Dir:      dir,
 		Patterns: []string{"./..."},
 		Out:      out,
 		Runtime:  runtimeDir(t),
 		Format:   false,
-	}, options, text); err != nil {
+	}, options, text)
+	if err != nil {
 		t.Fatalf("the test build failed:\n%v", err)
 	}
+	assertTestExit(t, code, text.String())
 	return normalize(text.String())
+}
+
+func assertTestExit(t *testing.T, code int, text string) {
+	t.Helper()
+	want := 0
+	if strings.HasSuffix(text, "FAIL\n") {
+		want = 1
+	}
+	if code != want {
+		t.Fatalf("test process exit %d disagrees with output, want %d:\n%s", code, want, text)
+	}
 }
 
 var (

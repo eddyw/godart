@@ -2,6 +2,12 @@ name: CI
 
 on:
   workflow_dispatch:
+    inputs:
+      upstream_mode:
+        description: Upstream Go test mode
+        type: choice
+        default: short
+        options: [short, full]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,10 +33,10 @@ jobs:
         run: echo "jobs=$(python3 -c 'import json; print(json.dumps(json.load(open("scripts/ci-matrix.json"))))')" >> "$GITHUB_OUTPUT"
 
   suites:
-    name: ${{ matrix.suite }} / ${{ matrix.shard }}
+    name: ${{ matrix.suite }} / ${{ matrix.shard }} / ${{ matrix.runner || 'ubuntu-24.04' }}
     needs: matrix
-    runs-on: ubuntu-24.04
-    timeout-minutes: ${{ matrix.job_timeout }}
+    runs-on: ${{ matrix.runner || 'ubuntu-24.04' }}
+    timeout-minutes: ${{ inputs.upstream_mode == 'full' && matrix.full_job_timeout || matrix.job_timeout }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix.outputs.jobs) }}
@@ -43,9 +49,12 @@ jobs:
         with:
           sdk: '3.13.3'
       - uses: actions/setup-node@v7
-        if: matrix.suite == 'targets' || matrix.suite == 'web-io' || matrix.suite == 'web-fetch'
+        if: matrix.suite == 'targets' || matrix.suite == 'upstream-targets' || matrix.suite == 'web-io' || matrix.suite == 'web-fetch'
         with:
           node-version: '26.8.2'
+      - name: Install upstream test tools
+        if: matrix.suite == 'stdlib'
+        run: sudo apt-get update && sudo apt-get install -y zstd xxhash
       - run: make get
       - name: Compile driver tests
         if: matrix.suite != 'checks'
@@ -54,13 +63,17 @@ jobs:
         if: matrix.suite == 'language'
         run: echo '::remove-matcher owner=go::'
       - name: Run the complete suite shard
-        timeout-minutes: ${{ matrix.timeout }}
+        timeout-minutes: ${{ inputs.upstream_mode == 'full' && matrix.full_timeout || matrix.timeout }}
         env:
-          GART_TEST_TIMEOUT: ${{ matrix.timeout }}m
+          GART_UPSTREAM_MODE: ${{ inputs.upstream_mode }}
+          GART_TEST_TIMEOUT: ${{ inputs.upstream_mode == 'full' && matrix.full_timeout || matrix.timeout }}m
+          GART_PARITY_REPORT_DIR: ${{ github.workspace }}/build/parity-results
         run: bash scripts/ci.sh '${{ matrix.suite }}' '${{ matrix.shard }}' '${{ matrix.shards }}' 2>&1 | tee ci.log
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: ci-${{ matrix.suite }}-${{ matrix.shard }}
-          path: ci.log
+          name: ci-${{ matrix.suite }}-${{ matrix.shard }}-${{ runner.os }}
+          path: |
+            ci.log
+            build/parity-results
           retention-days: 7

@@ -469,7 +469,7 @@ func Listen(network, address string) (Listener, error) {
 		if cause != "" {
 			return nil, errors.New("listen tcp " + address + ": " + cause)
 		}
-		return newTCPListener(handle, tcpAddrOf(host, taken)), nil
+		return newTCPListener(handle, tcpAddrOf(dart.ListenTCPHost(handle), taken)), nil
 	case "unix":
 		handle, cause := dart.ListenUnix(address)
 		if cause != "" {

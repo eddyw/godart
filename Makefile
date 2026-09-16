@@ -58,8 +58,7 @@ build:
 	go build -o build/gart ./cmd/gart
 	go build -o build/glutter ./cmd/glutter
 
-# The driver tests compile each program of testdata with the Dart VM, thus the
-# suite runs for about 30 minutes. The default of the go command is 10.
+# Full upstream suites exceed the default Go test timeout.
 test:
 	go test -v -p=1 -count=1 -timeout 90m ./...
 
@@ -126,7 +125,10 @@ flutter-nodes:
 	cd flutter/nodegen && dart pub get && dart run bin/nodegen.dart go \
 		../goflutter ../ui
 
-ci: fmt-check vet test flutter-go dart-analyze dart-test
+ci:
+	@for suite in checks driver integration targets web-io web-fetch programs language stdlib upstream-priority upstream-targets upstream-blockers; do \
+		bash scripts/ci.sh $$suite || exit $$?; \
+	done
 
 programs:
 	@ls testdata/programs
@@ -171,10 +173,10 @@ NORMALIZE = sed -E \
 # reports each difference.
 compare-tests: build
 	@mkdir -p $(dir $(SUITE_OUT))
-	@cd testdata/tests/$(SUITE) && go test -count=1 -v ./... > $(SUITE_OUT).go.txt 2>&1 || true
+	@cd testdata/tests/$(SUITE) && go test -count=1 -v ./... > $(SUITE_OUT).go.txt 2>&1
 	@cd testdata/tests/$(SUITE) && \
 		$(CURDIR)/build/gart test -o $(SUITE_OUT) -runtime $(CURDIR)/$(RUNTIME) -v ./... \
-		> $(SUITE_OUT).dart.txt 2>&1 || true
+		> $(SUITE_OUT).dart.txt 2>&1
 	@$(NORMALIZE) $(SUITE_OUT).go.txt > $(SUITE_OUT).go.norm.txt
 	@$(NORMALIZE) $(SUITE_OUT).dart.txt > $(SUITE_OUT).dart.norm.txt
 	@diff $(SUITE_OUT).go.norm.txt $(SUITE_OUT).dart.norm.txt && \

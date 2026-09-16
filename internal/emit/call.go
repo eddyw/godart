@@ -374,8 +374,6 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$descVariadic(%s)", args[0]), true
 	case "DescChanDir":
 		return fmt.Sprintf("$descChanDir(%s)", args[0]), true
-	case "DescFieldByName":
-		return fmt.Sprintf("$descFieldByName(%s, %s)", args[0], args[1]), true
 	case "SliceOf":
 		return fmt.Sprintf("$sliceOf(%s)", args[0]), true
 	case "ArrayOf":
@@ -658,6 +656,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$connClose(%s)", args[0]), true
 	case "ListenTCP":
 		return fmt.Sprintf("$listenTCP(%s, %s)", args[0], args[1]), true
+	case "ListenTCPHost":
+		return fmt.Sprintf("$listenTCPHost(%s)", args[0]), true
 	case "ListenTLS":
 		return fmt.Sprintf("$listenTLS(%s, %s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3], args[4]), true

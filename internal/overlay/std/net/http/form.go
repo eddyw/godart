@@ -106,6 +106,10 @@ func (r *Request) multipartReader() (*multipart.Reader, error) {
 //
 // It also calls ParseForm, and each value of the form joins Form.
 func (r *Request) ParseMultipartForm(maxMemory int64) error {
+	var parseFormErr error
+	if r.Form == nil {
+		parseFormErr = r.ParseForm()
+	}
 	if r.MultipartForm != nil {
 		return nil
 	}
@@ -120,24 +124,12 @@ func (r *Request) ParseMultipartForm(maxMemory int64) error {
 	if r.PostForm == nil {
 		r.PostForm = url.Values{}
 	}
-	if r.Form == nil {
-		r.Form = url.Values{}
-		if r.URL != nil {
-			query, err := url.ParseQuery(r.URL.RawQuery)
-			if err != nil {
-				return err
-			}
-			for key, values := range query {
-				r.Form[key] = append(r.Form[key], values...)
-			}
-		}
-	}
 	for key, values := range form.Value {
 		r.Form[key] = append(r.Form[key], values...)
 		r.PostForm[key] = append(r.PostForm[key], values...)
 	}
 	r.MultipartForm = form
-	return nil
+	return parseFormErr
 }
 
 // FormValue gives the first value of a key of Form. It calls ParseMultipartForm

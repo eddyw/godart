@@ -5,7 +5,6 @@ package testing
 import (
 	"context"
 	"io"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -18,7 +17,8 @@ import (
 // time for each file of testdata/fuzz/<name>, which is the behavior of go test
 // with no -fuzz flag. Read docs/parity.md.
 type F struct {
-	t *T
+	files []InternalFuzzInput
+	t     *T
 	// corpus holds 1 input for each seed and for each corpus file, in the order
 	// of the run.
 	corpus []corpusEntry
@@ -124,7 +124,7 @@ func (f *F) Fuzz(body any) {
 			f.Fatal(cause)
 		}
 	}
-	files, cause := readCorpus(filepath.Join(corpusDir, f.t.name), types)
+	files, cause := readCorpus(filepath.Join(corpusDir, f.t.name), f.files, types)
 	if cause != "" {
 		f.Fatal(cause)
 	}
@@ -201,31 +201,14 @@ func checkCorpus(values []any, types []string) string {
 	return ""
 }
 
-// readCorpus reads each corpus file of a directory, in the order of the file
-// name. A directory that does not exist holds no input, exactly as go test
-// reads it.
-//
-// The second result names the cause of each file that the grammar rejects.
-func readCorpus(dir string, types []string) ([]corpusEntry, string) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, ""
-		}
-		return nil, "reading seed corpus from testdata: " + err.Error()
-	}
+// readCorpus validates the original corpus bytes embedded by the compiler.
+// The ordered snapshot lets browser targets use the same seeds without file I/O.
+func readCorpus(dir string, files []InternalFuzzInput, types []string) ([]corpusEntry, string) {
 	var out []corpusEntry
 	var causes []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		name := filepath.Join(dir, entry.Name())
-		data, err := os.ReadFile(name)
-		if err != nil {
-			return nil, "failed to read corpus file: " + err.Error()
-		}
-		values, cause := unmarshalCorpusFile(string(data))
+	for _, file := range files {
+		name := filepath.Join(dir, file.Name)
+		values, cause := unmarshalCorpusFile(file.Data)
 		if cause != "" {
 			cause = "unmarshal: " + cause
 		} else {
@@ -235,7 +218,7 @@ func readCorpus(dir string, types []string) ([]corpusEntry, string) {
 			causes = append(causes, strconv.Quote(name)+": "+cause)
 			continue
 		}
-		out = append(out, corpusEntry{name: entry.Name(), values: values})
+		out = append(out, corpusEntry{name: file.Name, values: values})
 	}
 	if len(causes) > 0 {
 		return out, strings.Join(causes, "\n")
@@ -442,12 +425,12 @@ func runFuzzTargets(targets []InternalFuzzTarget, flags options) (ran, ok bool) 
 	for round := 0; round < flags.rounds; round++ {
 		g := &group{}
 		for _, target := range targets {
-			if !matches(target.Name, flags.run) {
+			if !matches(target.Name, flags.run) || skips(target.Name) {
 				continue
 			}
 			ran = true
 			t := &T{name: target.Name}
-			f := &F{t: t}
+			f := &F{t: t, files: FuzzCorpus[target.Name]}
 			fn := target.Fn
 			// F holds no Parallel, thus the target never parks and the group
 			// needs no second pass.

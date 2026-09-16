@@ -47,6 +47,14 @@ type InternalExample struct {
 	Unordered bool
 }
 
+// FuzzCorpus holds the compiler snapshot of source corpus files, in filename order.
+var FuzzCorpus map[string][]InternalFuzzInput
+
+type InternalFuzzInput struct {
+	Name string
+	Data string
+}
+
 // InternalFuzzTarget names 1 fuzz target. The compiler writes the list.
 type InternalFuzzTarget struct {
 	Name string
@@ -80,6 +88,7 @@ func Init() {
 	flag.BoolVar(&short, "test.short", short, "run smaller test suite to save time")
 	flag.StringVar(&runFilter, "test.run", runFilter,
 		"run only tests and examples matching `regexp`")
+	flag.StringVar(&skipFilter, "test.skip", skipFilter, "exclude tests and examples matching `regexp`")
 	flag.String("test.bench", "", "run only benchmarks matching `regexp`")
 	flag.String("test.benchtime", "1s", "run each benchmark for duration `d`")
 	flag.Int("test.count", 1, "run tests and benchmarks `n` times")
@@ -128,7 +137,7 @@ func RunBenchmarks(matchString func(pat, str string) (bool, error), benchmarks [
 	flags := readFlags()
 	flags.benchmarks = true
 	for _, bc := range benchmarks {
-		if !matches(bc.Name, flags.bench) {
+		if !matches(bc.Name, flags.bench) || skips(bc.Name) {
 			continue
 		}
 		runBenchmark(bc.Name, bc.F, flags)
@@ -276,6 +285,7 @@ func AllocsPerRun(runs int, f func()) float64 {
 
 // T holds the state of 1 test.
 type T struct {
+	names    *subtestNames
 	name     string
 	level    int
 	failed   bool
@@ -661,8 +671,11 @@ func (t *T) Run(name string, f func(*T)) bool {
 // an underscore first, and the seed corpus of a fuzz target keeps the name of
 // its file, exactly as go test keeps it.
 func (t *T) runSub(name string, f func(*T)) bool {
-	sub := &T{name: t.name + "/" + name, level: t.level + 1, parent: t}
-	if !matches(sub.name, runFilter) {
+	if t.names == nil {
+		t.names = &subtestNames{subNames: make(map[string]int32)}
+	}
+	sub := &T{name: t.names.unique(t.name, name), names: t.names, level: t.level + 1, parent: t}
+	if !matches(sub.name, runFilter) || skips(sub.name) {
 		return true
 	}
 	if t.group == nil {
@@ -774,7 +787,7 @@ func (m *M) Run() int {
 	}
 	// Go runs each example after the tests and before the benchmarks.
 	for _, ex := range m.examples {
-		if !matches(ex.Name, flags.run) {
+		if !matches(ex.Name, flags.run) || skips(ex.Name) {
 			continue
 		}
 		ran = true
@@ -784,7 +797,7 @@ func (m *M) Run() int {
 	}
 	if flags.benchmarks {
 		for _, bc := range m.benchmarks {
-			if !matches(bc.Name, flags.bench) {
+			if !matches(bc.Name, flags.bench) || skips(bc.Name) {
 				continue
 			}
 			if !runBenchmark(bc.Name, bc.F, flags) {
@@ -817,7 +830,7 @@ func runList(tests []InternalTest, flags options) (ran, ok bool) {
 	for round := 0; round < flags.rounds; round++ {
 		g := &group{}
 		for _, tc := range tests {
-			if !matches(tc.Name, flags.run) {
+			if !matches(tc.Name, flags.run) || skips(tc.Name) {
 				continue
 			}
 			ran = true
@@ -906,6 +919,7 @@ func MainWith(tests []InternalTest, benchmarks []InternalBenchmark,
 
 // runFilter holds the pattern of -test.run. Run of T reads it for a subtest.
 var runFilter string
+var skipFilter string
 
 // options holds the flags of a run.
 type options struct {
@@ -943,7 +957,7 @@ func readFlags() options {
 			verbose = boolValue(value, hasValue)
 		case "test.short":
 			short = boolValue(value, hasValue)
-		case "test.count", "test.run", "test.bench", "test.benchtime", "test.benchcount":
+		case "test.count", "test.run", "test.skip", "test.bench", "test.benchtime", "test.benchcount":
 			if !hasValue {
 				if i+1 >= len(args) {
 					emit("flag needs an argument: -" + name)
@@ -989,6 +1003,8 @@ func (o *options) set(name, value string) {
 		if v, err := strconv.Atoi(value); err == nil {
 			o.rounds = v
 		}
+	case "test.skip":
+		skipFilter = value
 	case "test.run":
 		o.run = value
 		runFilter = value
@@ -1014,6 +1030,8 @@ var MatchString func(pattern, name string) (bool, error)
 
 // matches reports whether a test name passes a filter. match.go holds the rule,
 // and the driver of the compiler reads the same file.
+func skips(name string) bool { return SkipName(name, skipFilter, MatchString) }
+
 func matches(name, pattern string) bool {
 	return MatchName(name, pattern, MatchString)
 }
@@ -1098,10 +1116,6 @@ func withNewline(text string) string {
 	}
 	return text + "\n"
 }
-
-// subName maps a subtest name to the name that go test writes. A space becomes
-// an underscore.
-func subName(name string) string { return strings.ReplaceAll(name, " ", "_") }
 
 // seconds writes a count of nanoseconds as a count of seconds, with 2 digits
 // after the point.

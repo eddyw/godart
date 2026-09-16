@@ -1033,7 +1033,9 @@ func (w *response) finish() {
 		w.writeTrailers(trailers)
 		return
 	}
-	w.wire().Set("Content-Length", itoa(len(w.body)))
+	if w.wire().Get("Content-Length") == "" {
+		w.wire().Set("Content-Length", itoa(len(w.body)))
+	}
 	w.writeHead()
 	if w.req != nil && w.req.Method == MethodHead {
 		return
@@ -1721,7 +1723,9 @@ func (w *h2Response) finish() {
 		w.WriteHeader(StatusOK)
 	}
 	if !w.headSent {
-		w.header.Set("Content-Length", itoa(len(w.body)))
+		if w.header.Get("Content-Length") == "" {
+			w.header.Set("Content-Length", itoa(len(w.body)))
+		}
 		if w.req != nil && w.req.Method == MethodHead {
 			w.sendHead(true)
 			dart.H2End(w.stream)

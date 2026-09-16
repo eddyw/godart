@@ -4,9 +4,6 @@
 
 // Package quick implements utility functions to help with black box testing.
 //
-// The overlay drops each complex case, because the subset holds no complex
-// number. Each other line comes from the real file.
-//
 // The testing/quick package is frozen and is not accepting new features.
 //go:build dart
 
@@ -77,6 +74,10 @@ func sizedValue(t reflect.Type, rand *rand.Rand, size int) (value reflect.Value,
 	switch concrete := t; concrete.Kind() {
 	case reflect.Bool:
 		v.SetBool(rand.Int()&1 == 0)
+	case reflect.Complex64:
+		v.SetComplex(complex(float64(randFloat32(rand)), float64(randFloat32(rand))))
+	case reflect.Complex128:
+		v.SetComplex(complex(randFloat64(rand), randFloat64(rand)))
 	case reflect.Float32:
 		v.SetFloat(float64(randFloat32(rand)))
 	case reflect.Float64:

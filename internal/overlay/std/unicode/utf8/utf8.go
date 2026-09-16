@@ -151,6 +151,13 @@ func full(read func(int) byte, length int) bool {
 	if length >= size {
 		return true
 	}
+	if length > 1 {
+		first, second := read(0), read(1)
+		if first == 0xE0 && second < 0xA0 || first == 0xED && second >= 0xA0 ||
+			first == 0xF0 && second < 0x90 || first == 0xF4 && second >= 0x90 {
+			return true
+		}
+	}
 	for i := 1; i < length; i++ {
 		if !continuation(read(i)) {
 			return true

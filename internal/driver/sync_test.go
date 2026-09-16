@@ -399,3 +399,118 @@ func main() {
 		t.Fatal("the build accepted a function that reaches a Write that blocks")
 	}
 }
+
+func TestSyncFormatRejectsBlockingOperands(t *testing.T) {
+	for name, operand := range map[string]string{
+		"value":     "slow{}",
+		"field":     "struct{ V slow }{slow{}}",
+		"slice":     "[]slow{{}}",
+		"map":       "map[int]slow{1: {}}",
+		"interface": "any(slow{})",
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := buildSync(t, `package main
+import "fmt"
+//gart:sync
+type Builder func() string
+type slow struct{}
+func (slow) String() string { <-make(chan int); return "" }
+func text() string { return fmt.Sprintf("%v", `+operand+`) }
+var build Builder = text
+func main() { println(build()) }
+`)
+			if err == nil {
+				t.Fatal("accepted a formatter that can block")
+			}
+		})
+	}
+}
+
+func TestSyncInterfaceOriginRejectsMutableValues(t *testing.T) {
+	for name, setup := range map[string]string{
+		"assignment":   "var value error = safe(); func init() { value = slow{} }",
+		"address":      "var value error = safe(); func init() { change(&value) }; func change(p *error) { *p = slow{} }",
+		"named-result": "var value error = factory(); func factory() (e error) { defer func() { e = slow{} }(); return quiet{} }",
+		"parameter":    "var value error = identity(slow{}); func identity(e error) error { return e }",
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := buildSync(t, `package main
+//gart:sync
+type Builder func() string
+type quiet struct{}
+func (quiet) Error() string { return "quiet" }
+func safe() error { return quiet{} }
+type slow struct{}
+func (slow) Error() string { <-make(chan int); return "" }
+`+setup+`
+func text() string { return value.Error() }
+var build Builder = text
+func main() { println(build()) }
+`)
+			if err == nil {
+				t.Fatal("accepted an interface method that can block")
+			}
+		})
+	}
+}
+
+func TestSyncFormatRejectsBlockingPanicValue(t *testing.T) {
+	err := buildSync(t, `package main
+import "fmt"
+//gart:sync
+type Builder func() string
+type slow struct{}
+func (slow) String() string { <-make(chan int); return "" }
+type broken struct{}
+func (broken) String() string { panic(slow{}) }
+func text() string { return fmt.Sprintf("%v", broken{}) }
+var build Builder = text
+func main() { println(build()) }
+`)
+	if err == nil {
+		t.Fatal("accepted a formatter whose panic value can block")
+	}
+}
+
+func TestSyncAcceptsInterfaceErrorText(t *testing.T) {
+	err := buildSync(t, `package main
+import (
+ "fmt"
+ "net/http"
+)
+//gart:sync
+type Builder func() string
+var failure error
+func text() string { return fmt.Sprintf("error: %q %% %s", failure, http.StatusText(200)) }
+var build Builder = text
+func main() { println(build()) }
+`)
+	if err != nil {
+		t.Fatalf("rejected synchronous interface error text: %v", err)
+	}
+}
+
+func TestSyncInterfaceFormatRejectsBlockingMethods(t *testing.T) {
+	for name, methods := range map[string]string{
+		"error":     `func (value) Error() string { <-make(chan int); return "" }`,
+		"formatter": `func (value) Error() string { return "" }; func (value) Format(fmt.State, rune) { <-make(chan int) }`,
+		"panic":     `func (value) Error() string { panic(slow{}) }; type slow struct{}; func (slow) String() string { <-make(chan int); return "" }`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := buildSync(t, `package main
+import "fmt"
+//gart:sync
+type Builder func() string
+type value struct{}
+`+methods+`
+var failure error = value{}
+func text() string { return fmt.Sprintf("error: %q", failure) }
+var build Builder = text
+func main() { println(build()) }
+`)
+			if err == nil {
+				t.Fatal("accepted an error formatter that can block")
+			}
+		})
+	}
+}

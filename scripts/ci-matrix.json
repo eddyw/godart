@@ -113,25 +113,87 @@
       "job_timeout": 26
     },
     {
+      "suite": "upstream-targets",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 16,
+      "job_timeout": 21
+    },
+    {
+      "suite": "upstream-priority",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 5,
+      "job_timeout": 10
+    },
+    {
+      "suite": "upstream-blockers",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 3,
+      "job_timeout": 8
+    },
+    {
+      "suite": "upstream-priority",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 4,
+      "job_timeout": 9,
+      "runner": "macos-15"
+    },
+    {
       "suite": "stdlib",
       "shard": 0,
-      "shards": 3,
-      "timeout": 12,
-      "job_timeout": 17
+      "shards": 6,
+      "timeout": 7,
+      "job_timeout": 12,
+      "full_timeout": 27,
+      "full_job_timeout": 32
     },
     {
       "suite": "stdlib",
       "shard": 1,
-      "shards": 3,
-      "timeout": 13,
-      "job_timeout": 18
+      "shards": 6,
+      "timeout": 8,
+      "job_timeout": 13,
+      "full_timeout": 14,
+      "full_job_timeout": 19
     },
     {
       "suite": "stdlib",
       "shard": 2,
-      "shards": 3,
-      "timeout": 13,
-      "job_timeout": 18
+      "shards": 6,
+      "timeout": 7,
+      "job_timeout": 12,
+      "full_timeout": 9,
+      "full_job_timeout": 14
+    },
+    {
+      "suite": "stdlib",
+      "shard": 3,
+      "shards": 6,
+      "timeout": 7,
+      "job_timeout": 12,
+      "full_timeout": 18,
+      "full_job_timeout": 23
+    },
+    {
+      "suite": "stdlib",
+      "shard": 4,
+      "shards": 6,
+      "timeout": 7,
+      "job_timeout": 12,
+      "full_timeout": 27,
+      "full_job_timeout": 32
+    },
+    {
+      "suite": "stdlib",
+      "shard": 5,
+      "shards": 6,
+      "timeout": 7,
+      "job_timeout": 12,
+      "full_timeout": 8,
+      "full_job_timeout": 13
     }
   ]
 }

@@ -36,8 +36,8 @@ abstract class _Conn {
 
   /// The 2 deadlines, in nanoseconds after the start of the Unix epoch. A
   /// value of 0 holds no limit.
-  int readDeadline = 0;
-  int writeDeadline = 0;
+  final _Deadline readDeadline = _Deadline();
+  final _Deadline writeDeadline = _Deadline();
 
   /// The local address, the local port, the address of the peer, and the port
   /// of the peer.
@@ -332,9 +332,14 @@ final class _Listener {
   /// The path of a Unix socket. A close removes the file, exactly as Go does.
   /// The value is empty for a TCP listener.
   final String unixPath;
+  final String tcpHost;
 
-  _Listener(Stream<Object> stream, this.close, [this.unixPath = ''])
-    : incoming = StreamIterator<Object>(stream);
+  _Listener(
+    Stream<Object> stream,
+    this.close, [
+    this.unixPath = '',
+    this.tcpHost = '',
+  ]) : incoming = StreamIterator<Object>(stream);
 }
 
 /// The open listeners of the program, by handle. The handles of a listener, of
@@ -359,8 +364,8 @@ final class _Packet {
   bool ended = false;
   Completer<int>? waiter;
   Future<int>? pending;
-  int readDeadline = 0;
-  int writeDeadline = 0;
+  final _Deadline readDeadline = _Deadline();
+  final _Deadline writeDeadline = _Deadline();
 
   _Packet(this.socket) {
     socket.listen(_event, onDone: _end, onError: (Object cause) => _end());
@@ -514,19 +519,49 @@ GoString _closed() => GoString.fromString('use of closed network connection');
 
 GoString _timeout() => GoString.fromString('i/o timeout');
 
-/// _limit ends a wait at a deadline. A deadline of 0 holds no limit, and a
-/// deadline that passed already gives the expired value at once.
-///
-/// The source future stays open. Each caller holds it in a field, thus the
-/// next call of the same operation takes the same future.
-Future<T> _limit<T>(Future<T> f, int deadline, T expired) {
-  if (deadline == 0) return f;
-  final int left = deadline - $ix($nowNanos());
-  if (left <= 0) return Future<T>.value(expired);
-  return f.timeout(
-    Duration(microseconds: left ~/ 1000),
-    onTimeout: () => expired,
-  );
+// SetDeadline must also change operations that already await the socket.
+final class _Deadline {
+  int nanos = 0;
+  final Set<void Function()> waits = <void Function()>{};
+
+  void set(int value) {
+    nanos = value;
+    for (final reset in waits) {
+      reset();
+    }
+  }
+
+  Future<T> limit<T>(Future<T> source, T expired) {
+    final done = Completer<T>();
+    Timer? timer;
+    void reset() {
+      timer?.cancel();
+      if (done.isCompleted || nanos == 0) return;
+      final left = nanos - $ix($nowNanos());
+      if (left <= 0) {
+        done.complete(expired);
+      } else {
+        timer = Timer(Duration(microseconds: (left + 999) ~/ 1000), () {
+          if (!done.isCompleted) done.complete(expired);
+        });
+      }
+    }
+
+    waits.add(reset);
+    reset();
+    source.then(
+      (value) {
+        if (!done.isCompleted) done.complete(value);
+      },
+      onError: (Object error, StackTrace stack) {
+        if (!done.isCompleted) done.completeError(error, stack);
+      },
+    );
+    return done.future.whenComplete(() {
+      timer?.cancel();
+      waits.remove(reset);
+    });
+  }
 }
 
 /// _lowerFirst writes the first letter of a text in the lower case. The
@@ -867,7 +902,7 @@ String _statusLine(Uint8List b) {
   if (c.rest.isNotEmpty) return (_take(c, p), _empty);
   if (c.ended) return (0, _empty);
   $await(
-    _limit<int>(_fill(c), c.readDeadline, 2).then((int code) {
+    c.readDeadline.limit<int>(_fill(c), 2).then((int code) {
       if (code == 2) return (0, _timeout());
       if (code == 1) return (0, _empty);
       return (_take(c, p), _empty);
@@ -887,9 +922,8 @@ String _statusLine(Uint8List b) {
   if (c.writeEnded) return (0, GoString.fromString('broken pipe'));
   if (p.len == 0) return (0, _empty);
   $await(
-    _limit<(int, GoString)>(
+    c.writeDeadline.limit<(int, GoString)>(
       c.send(_bytes(p)).then((int n) => (n, _empty)),
-      c.writeDeadline,
       (0, _timeout()),
     ),
     (Object cause) => (0, _cause(cause)),
@@ -1037,25 +1071,30 @@ String $connCloseRead(int handle) {
 GoString $connDeadline(int handle, int read, int write) {
   final _Conn? c = _at(handle);
   if (c == null) return _closed();
-  c.readDeadline = read;
-  c.writeDeadline = write;
+  c.readDeadline.set(read);
+  c.writeDeadline.set(write);
   return _empty;
 }
 
-/// Opens a listener on a host and a port, and gives its handle and the port
-/// that the system took. A port of 0 asks the system for a free port.
-///
-/// The call gives up control, thus the result of the call itself is dead.
+/// Gives the listener handle, bound port, and failure cause.
+/// A port of 0 asks the system for a free port.
+/// The call yields control. The synchronous return value is unused.
 (int, int, GoString) $listenTCP(GoString host, int port) {
   $await(
     RawServerSocket.bind(host.toDartString(), port).then(
-      (RawServerSocket s) =>
-          (_listenSlot(_Listener(s, () => s.close())), s.port, _empty),
+      (RawServerSocket s) => (
+        _listenSlot(_Listener(s, () => s.close(), '', s.address.address)),
+        s.port,
+        _empty,
+      ),
     ),
     (Object cause) => (-1, 0, _cause(cause)),
   );
   return (-1, 0, _empty);
 }
+
+GoString $listenTCPHost(int handle) =>
+    GoString.fromString(_listenerAt(handle)?.tcpHost ?? '');
 
 /// Opens a TLS listener on a host and a port, and gives its handle and the
 /// port that the system took. The certificate chain and the key each hold the
@@ -1295,7 +1334,7 @@ Future<int> _fillPacket(_Packet s) {
   final _Packet? s = _packetAt(handle);
   if (s == null) return (0, _empty, 0, _closed());
   $await(
-    _limit<int>(_fillPacket(s), s.readDeadline, 2).then((int code) {
+    s.readDeadline.limit<int>(_fillPacket(s), 2).then((int code) {
       if (code == 2) return (0, _empty, 0, _timeout());
       if (code == 1 && s.held.isEmpty) return (0, _empty, 0, _closed());
       final Datagram d = s.held.removeAt(0);
@@ -1318,9 +1357,8 @@ Future<int> _fillPacket(_Packet s) {
   final _Packet? s = _packetAt(handle);
   if (s == null) return (0, _closed());
   $await(
-    _limit<(int, GoString)>(
+    s.writeDeadline.limit<(int, GoString)>(
       _sendTo(s, _bytes(p), host.toDartString(), port),
-      s.writeDeadline,
       (0, _timeout()),
     ),
     (Object cause) => (0, _cause(cause)),
@@ -1354,8 +1392,8 @@ GoString $packetClose(int handle) {
 GoString $packetDeadline(int handle, int read, int write) {
   final _Packet? s = _packetAt(handle);
   if (s == null) return _closed();
-  s.readDeadline = read;
-  s.writeDeadline = write;
+  s.readDeadline.set(read);
+  s.writeDeadline.set(write);
   return _empty;
 }
 

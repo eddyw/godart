@@ -67,8 +67,11 @@ func (s source) empty() bool { return len(s.keys) == 0 && len(s.cells) == 0 }
 // each argument into the parameters of a target, and each result of the
 // target into the results of the call.
 type callSite struct {
-	summary *summary
-	call    *ast.CallExpr
+	formatSource   source
+	formatOperands bool
+	formatMethods  []any
+	summary        *summary
+	call           *ast.CallExpr
 	// rng marks the call of a range loop over a function. The loop holds no
 	// ast.CallExpr, thus the async state lands in rangeAsync.
 	rng    *ast.RangeStmt

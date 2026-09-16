@@ -108,6 +108,16 @@ func readResponseLimit(r *bufio.Reader, req *Request, limit int) (*Response, err
 	}
 	res.Body = body
 	res.ContentLength = length
+	if req != nil && req.Method == MethodHead {
+		res.ContentLength = -1
+		if text := header.Get("Content-Length"); text != "" {
+			n, err := strconv.ParseInt(text, 10, 64)
+			if err != nil || n < 0 {
+				return nil, errors.New("bad Content-Length " + strconv.Quote(text))
+			}
+			res.ContentLength = n
+		}
+	}
 	res.bodyEnds = ends
 	return res, nil
 }

@@ -1,0 +1,2176 @@
+{
+  "bufio": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Unix packet sockets are outside the Dart socket surface. Native Darwin also lacks this protocol.",
+      "test": "TestCopyUnixpacket"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestReadStringAllocs"
+    }
+  ],
+  "bytes": [
+    {
+      "gart": "pass",
+      "native": "pass",
+      "reason": "The patch removes the backing-address assertion. This is partial assertion coverage.",
+      "test": "TestClone"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestEqual"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestGrow"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestIndex"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestIndexRune"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestLastIndex"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestNewBufferShallow"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestReplace"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestWriteAppend"
+    }
+  ],
+  "compress/flate": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestDeflateInflateString"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestVeryLongSparseChunk"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream skips this level because it does not use the fast encoder.",
+      "test": "TestWriter_Reset/level=0"
+    }
+  ],
+  "compress/gzip": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream test requires an official Go builder environment.",
+      "test": "TestGZIPFilesHaveZeroMTimes"
+    }
+  ],
+  "context": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocs"
+    }
+  ],
+  "crypto": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires native Go compiler or source-tree inspection through internal/testenv.",
+      "test": "TestDisallowedAssemblyInstructions"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires native Go compiler or source-tree inspection through internal/testenv.",
+      "test": "TestPureGoTag"
+    }
+  ],
+  "crypto/elliptic": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestMarshalCompressed"
+    }
+  ],
+  "crypto/hpke": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream has no implementation for the KEM or KDF of this test vector.",
+      "test": "TestVectors/hpke-pq/mode_0000_kem_0020_kdf_0012_aead_0003"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream has no implementation for the KEM or KDF of this test vector.",
+      "test": "TestVectors/hpke-pq/mode_0000_kem_0021_kdf_0013_aead_0003"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream has no implementation for the KEM or KDF of this test vector.",
+      "test": "TestVectors/hpke-pq/mode_0000_kem_0040_kdf_0001_aead_0001"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream has no implementation for the KEM or KDF of this test vector.",
+      "test": "TestVectors/hpke-pq/mode_0000_kem_0042_kdf_0013_aead_0001"
+    }
+  ],
+  "crypto/internal/fips140/mldsa": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestAccumulated"
+    }
+  ],
+  "crypto/internal/fips140/rsa": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_100"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_105"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_110"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_115"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_120"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_125"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_133"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_138"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_143"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_148"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_153"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_158"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_163"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_173"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_178"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_183"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_188"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_193"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_198"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_203"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_208"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_215"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_220"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_225"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_230"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_235"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_240"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_245"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_250"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_255"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_260"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_37"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_47"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_52"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_57"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_62"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestMillerRabin/line_95"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_104"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_109"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_114"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_119"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_124"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_134"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_139"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_14"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_144"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_149"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_154"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_159"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_164"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_169"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_174"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_179"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_184"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_189"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_19"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_194"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_199"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_204"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_209"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_214"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_219"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_224"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_229"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_234"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_239"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_244"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_249"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_254"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_259"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_264"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_269"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_274"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_279"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_29"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_34"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_39"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_44"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_49"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_59"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_64"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_69"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_74"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_84"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_89"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_9"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream rejects this vector because it does not satisfy the arithmetic precondition of the test.",
+      "test": "TestTotient/line_94"
+    }
+  ],
+  "database/sql": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestRawBytesAllocs"
+    }
+  ],
+  "debug/elf": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "FuzzReader"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "test": "TestLargeNumberOfSegments"
+    }
+  ],
+  "debug/gosym": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "test": "TestPCLine"
+    }
+  ],
+  "debug/pe": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "FuzzReader"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "test": "TestBSSHasZeros"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "test": "TestBuildingWindowsGUI"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "test": "TestDWARF"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "test": "TestDefaultLinkerDWARF"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "test": "TestExternalLinkerDWARF"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "test": "TestImportTableInUnknownSection"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "test": "TestInternalLinkerDWARF"
+    }
+  ],
+  "encoding/json": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream unconditionally skips pending Go issue 71631.",
+      "test": "TestTimeDurations"
+    }
+  ],
+  "encoding/json/jsontext": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#114"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#129"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#142"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#146"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#147"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#148"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#149"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#150"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#151"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#152"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#153"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#154"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#155"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#156"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#157"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#158"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#159"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#160"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#161"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#162"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#25"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#29"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#30"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#31"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#32"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#33"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#34"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#35"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#36"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#37"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#38"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#39"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#40"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#41"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#42"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#43"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#44"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#45"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#46"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#47"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#48"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#49"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#50"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#51"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#52"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#53"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#54"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#55"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#56"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#57"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#58"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#59"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#60"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#61"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#62"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#65"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#66"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#67"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#68"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#69"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#70"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#71"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#73"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#74"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#75"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#76"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#77"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#78"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#79"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#80"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#81"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#82"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#83"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#84"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#85"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#86"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#87"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#88"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#89"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#90"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#91"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#92"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#93"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#94"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#95"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#96"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#97"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#98"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream fuzz target rejects this existing seed as invalid input.",
+      "test": "FuzzCoder/seed#99"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestTokenStringAllocations"
+    }
+  ],
+  "encoding/json/v2": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestBenchmarkTextValue"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestFoldRune"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream compiler-inlining test requires its explicit enable flag.",
+      "test": "TestInline"
+    }
+  ],
+  "fmt": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestCountMallocs"
+    }
+  ],
+  "go/build": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestDependencies"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestEmptyImport"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestImportDirNotExist"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestImportPackageOutsideModule"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestImportVendor"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestImportVendorFailure"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestImportVendorParentFailure"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestMissingImportErrorRepetition"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestStdlibLowercase"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestVendorPackages"
+    },
+    {
+      "gart": "",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestImportDirNotExist/GO111MODULE=off"
+    },
+    {
+      "gart": "",
+      "native": "pass",
+      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
+      "test": "TestImportDirNotExist/GO111MODULE=on"
+    }
+  ],
+  "hash/crc32": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The Dart target uses portable CRC code and has no native assembly implementation.",
+      "test": "TestArchCastagnoli"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The Dart target uses portable CRC code and has no native assembly implementation.",
+      "test": "TestArchIEEE"
+    }
+  ],
+  "image/jpeg": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "FuzzDecode"
+    }
+  ],
+  "image/png": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "FuzzDecode"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestDimensionOverflow"
+    }
+  ],
+  "internal/zstd": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestLarge"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestLargeXXHash"
+    }
+  ],
+  "io": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestMultiWriter_WriteStringSingleAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestPipeAllocations"
+    }
+  ],
+  "log/slog/internal/buffer": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestAlloc"
+    }
+  ],
+  "math/rand": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestDefaultRace"
+    }
+  ],
+  "math/rand/v2": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream example regeneration requires the explicit update flag.",
+      "test": "TestUpdateExample"
+    }
+  ],
+  "mime": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestLookupMallocs"
+    }
+  ],
+  "mime/multipart": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestReadForm_NonFileMaxMemory"
+    }
+  ],
+  "net-selected": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestIPAppendTextNoAllocs"
+    }
+  ],
+  "net/http/internal": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestChunkReaderAllocs"
+    }
+  ],
+  "net/netip": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestAddrStringAllocs/ipv4"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestAddrStringAllocs/ipv4-in-ipv6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestAddrStringAllocs/ipv4-in-ipv6+zone"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestAddrStringAllocs/ipv6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestAddrStringAllocs/ipv6+zone"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestAddrStringAllocs/zero"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case requires native Go compiler diagnostics.",
+      "test": "TestInlining"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.As16"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.As4"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.BitLen"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Compare"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Is4"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Is4In6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Is6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.IsGlobalUnicast"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.IsInterfaceLocalMulticast"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.IsLinkLocalMulticast"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.IsLinkLocalUnicast"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.IsLoopback"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.IsMulticast"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.IsPrivate"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.IsUnspecified"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.IsZero"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Less"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Next"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Prefix/4"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Prefix/6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Prev"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Unmap"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.WithZone"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Zone/4"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Zone/6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Addr.Zone/6zone"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/AddrFrom16"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/AddrFrom4"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/AddrPortFrom"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/IPv4"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/IPv6LinkLocalAllNodes"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/IPv6LinkLocalAllRouters"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/IPv6Loopback"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/IPv6Unspecified"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/MustParseAddr"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/MustParseAddrPort"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/MustParsePrefix"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/ParseAddr/4"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/ParseAddr/6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/ParseAddrPort"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/ParsePrefix/4"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/ParsePrefix/6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Prefix.Contains"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Prefix.IsSingleIP"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Prefix.IsZero"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Prefix.Masked"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/Prefix.Overlaps"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestNoAllocs/PrefixFrom"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestParsePrefixAllocs/192.168.1.0/24"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestParsePrefixAllocs/aaaa:bbbb:cccc::/24"
+    }
+  ],
+  "net/rpc": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestCountMallocs"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestCountMallocsOverHTTP"
+    }
+  ],
+  "path": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestCleanMallocs"
+    }
+  ],
+  "path/filepath": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The test requires the native Go source-tree facility from internal/testenv.",
+      "test": "TestBug3486"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestClean"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestWalk/PermErr"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestWalkDir/PermErr"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Upstream Windows-only test.",
+      "test": "TestWindowsGlob"
+    }
+  ],
+  "regexp": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestRE2Exhaustive"
+    }
+  ],
+  "slices": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestConcat"
+    },
+    {
+      "gart": "",
+      "native": "pass",
+      "reason": "Upstream tests zero-size slices near MaxInt. Dart stores a list cell per element. The test patch omits this test.",
+      "test": "TestConcat_too_large"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestGrow"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestInsert"
+    },
+    {
+      "gart": "",
+      "native": "pass",
+      "reason": "Upstream asserts native backing-storage liveness through unsafe.SliceData. The test patch omits this test.",
+      "test": "TestIssue68488"
+    },
+    {
+      "gart": "pass",
+      "native": "pass",
+      "reason": "The patch removes the near-MaxInt zero-size cases. This is partial assertion coverage.",
+      "test": "TestRepeat"
+    }
+  ],
+  "sort": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The case measures native allocation counts. Dart exposes no allocation count.",
+      "test": "TestSearchWrappersDontAlloc"
+    }
+  ],
+  "strconv": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/AppendQuote"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/AppendQuoteToASCII"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/AppendQuoteToGraphic"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/Atoi"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/CanBackquote"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/ParseBool"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/ParseComplex"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/ParseFloat"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/ParseInt"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsFromBytes/ParseUint"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Native Go skips with GOMAXPROCS > 1. Dart exposes no allocation count.",
+      "test": "TestCountMallocs"
+    }
+  ],
+  "strings": [
+    {
+      "gart": "pass",
+      "native": "pass",
+      "reason": "The patch removes the pointer-identity output and expected result. This is a partial example.",
+      "test": "ExampleClone"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestBuilderAllocs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestBuilderGrow"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestBuilderGrowSizeclasses"
+    },
+    {
+      "gart": "pass",
+      "native": "pass",
+      "reason": "The patch removes backing-address assertions. This is partial assertion coverage.",
+      "test": "TestClone"
+    },
+    {
+      "gart": "pass",
+      "native": "pass",
+      "reason": "The adapter copies bytes instead of preserving original storage alignment. Value assertions remain, but native layout coverage is partial.",
+      "test": "TestCompareStrings"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestIndexRune"
+    },
+    {
+      "gart": "pass",
+      "native": "pass",
+      "reason": "The patch replaces backing-address identity with value equality. This is partial assertion coverage.",
+      "test": "TestMap"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestReplace"
+    }
+  ],
+  "testing/synctest": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream test reexecutes its native test binary. The Dart testing runtime does not support that facility.",
+      "test": "TestError"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream test reexecutes its native test binary. The Dart testing runtime does not support that facility.",
+      "test": "TestFatal"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream test reexecutes its native test binary. The Dart testing runtime does not support that facility.",
+      "test": "TestHelper"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream test reexecutes its native test binary. The Dart testing runtime does not support that facility.",
+      "test": "TestSkip"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream test reexecutes its native test binary. The Dart testing runtime does not support that facility.",
+      "test": "TestVerboseError"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream test reexecutes its native test binary. The Dart testing runtime does not support that facility.",
+      "test": "TestVerboseSkip"
+    }
+  ],
+  "unicode/utf16": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAllocationsDecode"
+    }
+  ],
+  "unicode/utf8": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestRuneCountNonASCIIAllocation"
+    }
+  ]
+}

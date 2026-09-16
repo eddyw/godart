@@ -1,0 +1,466 @@
+[
+  {
+    "package": "path",
+    "run": ""
+  },
+  {
+    "package": "container/list",
+    "run": ""
+  },
+  {
+    "package": "container/heap",
+    "run": ""
+  },
+  {
+    "package": "container/ring",
+    "run": ""
+  },
+  {
+    "package": "unicode",
+    "run": ""
+  },
+  {
+    "package": "encoding/hex",
+    "run": ""
+  },
+  {
+    "package": "encoding/ascii85",
+    "run": ""
+  },
+  {
+    "package": "encoding/csv",
+    "run": ""
+  },
+  {
+    "package": "hash/crc32",
+    "run": ""
+  },
+  {
+    "package": "hash/fnv",
+    "run": ""
+  },
+  {
+    "package": "hash/adler32",
+    "run": ""
+  },
+  {
+    "package": "maps",
+    "run": ""
+  },
+  {
+    "package": "io",
+    "run": ""
+  },
+  {
+    "package": "internal/chacha8rand",
+    "run": ""
+  },
+  {
+    "package": "unicode/utf8",
+    "run": ""
+  },
+  {
+    "package": "compress/zlib",
+    "run": ""
+  },
+  {
+    "package": "regexp/syntax",
+    "run": ""
+  },
+  {
+    "package": "math/rand/v2",
+    "run": ""
+  },
+  {
+    "package": "testing/synctest",
+    "run": ""
+  },
+  {
+    "package": "compress/gzip",
+    "run": ""
+  },
+  {
+    "package": "compress/flate",
+    "run": ""
+  },
+  {
+    "package": "slices",
+    "run": ""
+  },
+  {
+    "package": "path/filepath",
+    "run": ""
+  },
+  {
+    "package": "context",
+    "run": ""
+  },
+  {
+    "package": "database/sql",
+    "run": ""
+  },
+  {
+    "package": "bufio",
+    "run": ""
+  },
+  {
+    "package": "bytes",
+    "run": ""
+  },
+  {
+    "package": "errors",
+    "run": ""
+  },
+  {
+    "package": "math/bits",
+    "run": ""
+  },
+  {
+    "package": "sort",
+    "run": ""
+  },
+  {
+    "package": "strconv",
+    "run": ""
+  },
+  {
+    "package": "strings",
+    "run": ""
+  },
+  {
+    "package": "text/tabwriter",
+    "run": ""
+  },
+  {
+    "package": "unicode/utf16",
+    "run": ""
+  },
+  {
+    "package": "encoding/json",
+    "run": ""
+  },
+  {
+    "package": "encoding/json/jsontext",
+    "run": ""
+  },
+  {
+    "package": "encoding/json/v2",
+    "run": ""
+  },
+  {
+    "package": "compress/lzw",
+    "run": ""
+  },
+  {
+    "package": "crypto",
+    "run": ""
+  },
+  {
+    "package": "crypto/elliptic",
+    "run": ""
+  },
+  {
+    "package": "crypto/hpke",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/boring",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/aes",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/ecdh",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/ecdsa",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/edwards25519",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/edwards25519/field",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/mldsa",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/mlkem",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/rsa",
+    "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/subtle",
+    "run": ""
+  },
+  {
+    "package": "database/sql/driver",
+    "run": ""
+  },
+  {
+    "package": "debug/dwarf",
+    "run": ""
+  },
+  {
+    "package": "debug/elf",
+    "run": ""
+  },
+  {
+    "package": "debug/gosym",
+    "run": ""
+  },
+  {
+    "package": "debug/pe",
+    "run": ""
+  },
+  {
+    "package": "debug/plan9obj",
+    "run": ""
+  },
+  {
+    "package": "encoding/base32",
+    "run": ""
+  },
+  {
+    "package": "encoding/base64",
+    "run": ""
+  },
+  {
+    "package": "encoding/json/internal/jsonflags",
+    "run": ""
+  },
+  {
+    "package": "encoding/json/internal/jsonopts",
+    "run": ""
+  },
+  {
+    "package": "encoding/json/internal/jsonwire",
+    "run": ""
+  },
+  {
+    "package": "encoding/pem",
+    "run": ""
+  },
+  {
+    "package": "encoding/xml",
+    "run": ""
+  },
+  {
+    "package": "go/ast",
+    "run": ""
+  },
+  {
+    "package": "go/build",
+    "run": ""
+  },
+  {
+    "package": "go/build/constraint",
+    "run": ""
+  },
+  {
+    "package": "go/constant",
+    "run": ""
+  },
+  {
+    "package": "go/format",
+    "run": ""
+  },
+  {
+    "package": "go/parser",
+    "run": ""
+  },
+  {
+    "package": "go/scanner",
+    "run": ""
+  },
+  {
+    "package": "go/token",
+    "run": ""
+  },
+  {
+    "package": "go/version",
+    "run": ""
+  },
+  {
+    "package": "hash",
+    "run": ""
+  },
+  {
+    "package": "hash/crc64",
+    "run": ""
+  },
+  {
+    "package": "html",
+    "run": ""
+  },
+  {
+    "package": "image",
+    "run": ""
+  },
+  {
+    "package": "image/color",
+    "run": ""
+  },
+  {
+    "package": "image/draw",
+    "run": ""
+  },
+  {
+    "package": "image/jpeg",
+    "run": ""
+  },
+  {
+    "package": "image/png",
+    "run": ""
+  },
+  {
+    "package": "index/suffixarray",
+    "run": ""
+  },
+  {
+    "package": "internal/buildcfg",
+    "run": ""
+  },
+  {
+    "package": "internal/dag",
+    "run": ""
+  },
+  {
+    "package": "internal/gover",
+    "run": ""
+  },
+  {
+    "package": "internal/saferio",
+    "run": ""
+  },
+  {
+    "package": "internal/zstd",
+    "run": ""
+  },
+  {
+    "package": "io/fs",
+    "run": ""
+  },
+  {
+    "package": "io/ioutil",
+    "run": ""
+  },
+  {
+    "package": "iter",
+    "run": ""
+  },
+  {
+    "package": "log/slog/internal/buffer",
+    "run": ""
+  },
+  {
+    "package": "math/cmplx",
+    "run": ""
+  },
+  {
+    "package": "math/rand",
+    "run": ""
+  },
+  {
+    "package": "mime",
+    "run": ""
+  },
+  {
+    "package": "mime/multipart",
+    "run": ""
+  },
+  {
+    "package": "mime/quotedprintable",
+    "run": ""
+  },
+  {
+    "package": "net/http/cgi",
+    "run": ""
+  },
+  {
+    "package": "net/http/cookiejar",
+    "run": ""
+  },
+  {
+    "package": "net/http/httptrace",
+    "run": ""
+  },
+  {
+    "package": "net/http/internal",
+    "run": ""
+  },
+  {
+    "package": "net/http/internal/ascii",
+    "run": ""
+  },
+  {
+    "package": "net/mail",
+    "run": ""
+  },
+  {
+    "package": "net/netip",
+    "run": ""
+  },
+  {
+    "package": "net/rpc",
+    "run": ""
+  },
+  {
+    "package": "net/rpc/jsonrpc",
+    "run": ""
+  },
+  {
+    "package": "regexp",
+    "run": ""
+  },
+  {
+    "package": "testing/cryptotest",
+    "run": ""
+  },
+  {
+    "package": "testing/fstest",
+    "run": ""
+  },
+  {
+    "package": "testing/iotest",
+    "run": ""
+  },
+  {
+    "package": "testing/quick",
+    "run": ""
+  },
+  {
+    "package": "testing/slogtest",
+    "run": ""
+  },
+  {
+    "package": "text/scanner",
+    "run": ""
+  },
+  {
+    "package": "text/template/parse",
+    "run": ""
+  },
+  {
+    "package": "uuid",
+    "run": ""
+  },
+  {
+    "package": "fmt",
+    "run": ""
+  }
+]

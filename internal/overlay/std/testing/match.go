@@ -32,6 +32,20 @@ func MatchName(name, pattern string, matchString func(pat, str string) (bool, er
 	return false
 }
 
+// SkipName requires a complete match. A matching parent still runs when only a subtest is excluded.
+func SkipName(name, pattern string, matchString func(pat, str string) (bool, error)) bool {
+	if pattern == "" || matchString == nil {
+		return false
+	}
+	elems := strings.Split(name, "/")
+	for _, alt := range alternatives(pattern) {
+		if len(elems) >= len(alt) && matchElems(elems, alt, matchString) {
+			return true
+		}
+	}
+	return false
+}
+
 func matchElems(elems, alt []string, matchString func(pat, str string) (bool, error)) bool {
 	for i, elem := range elems {
 		if i >= len(alt) {

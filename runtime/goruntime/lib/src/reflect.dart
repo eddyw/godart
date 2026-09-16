@@ -2377,17 +2377,6 @@ int $descChanDir(int handle) {
   return desc.dir == 0 ? 3 : desc.dir;
 }
 
-/// The index of a field of a struct type, by name. A name that no field holds
-/// gives -1.
-int $descFieldByName(int handle, GoString name) {
-  final TypeDesc desc = _typeAt(handle);
-  final String want = name.toDartString();
-  for (int i = 0; i < desc.fields.length; i++) {
-    if (desc.fields[i].name == want) return i;
-  }
-  return -1;
-}
-
 // The value operations that text/template reads.
 
 /// A pointer to the location that a Value names.
@@ -2622,8 +2611,8 @@ Iface? $withComplex(int handle, GoComplex x) => Iface(_typeAt(handle), x);
 /// A number that names the object of a value. Dart gives no machine address,
 /// thus the number is the identity hash of the object. Read docs/parity.md.
 int $valuePointer(Iface? value) {
+  if ($valueIsNil(value)) return 0;
   final Object? v = value?.value;
-  if (v == null) return 0;
   return identityHashCode(v);
 }
 

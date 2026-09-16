@@ -6,9 +6,6 @@
 // The compiler cannot read the real source. That source holds assembly, the
 // package unsafe, and a type parameter with the constraint `string | []byte`.
 // The 2 terms of that constraint give 2 Dart types.
-//
-// Each function below holds a plain search. The real package holds a Rabin Karp
-// search and an assembly path, and the 2 give the same result.
 package bytealg
 
 // MaxLen is the length of a pattern that the assembly path accepts. A value of
@@ -20,8 +17,7 @@ var MaxLen int = 0
 const MaxBruteForce = 0
 
 // Cutover gives the count of failures that the caller accepts before it changes
-// to the Rabin Karp search. This package holds no such search, thus the result
-// stays above each count.
+// to the Rabin Karp search.
 func Cutover(n int) int { return (n + 16) / 8 }
 
 func Equal(a, b []byte) bool {
@@ -170,9 +166,21 @@ func IndexRabinKarpBytes(s, sep []byte) int {
 	if len(sep) > len(s) {
 		return -1
 	}
-	for i := 0; i+len(sep) <= len(s); i++ {
-		if Equal(s[i:i+len(sep)], sep) {
-			return i
+	const prime uint32 = 16777619
+	var hash, window uint32
+	power := uint32(1)
+	for i := range sep {
+		hash = hash*prime + uint32(sep[i])
+		window = window*prime + uint32(s[i])
+		power *= prime
+	}
+	if window == hash && Equal(s[:len(sep)], sep) {
+		return 0
+	}
+	for i := len(sep); i < len(s); i++ {
+		window = window*prime + uint32(s[i]) - power*uint32(s[i-len(sep)])
+		if window == hash && Equal(s[i-len(sep)+1:i+1], sep) {
+			return i - len(sep) + 1
 		}
 	}
 	return -1

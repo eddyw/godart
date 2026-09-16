@@ -192,7 +192,7 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | A star width and a star precision, `%*d` and `%.*f` | Present | Equal since 2026-09-03. A value of a wrong type gives `%!(BADWIDTH)`, and a precision below 0 gives `%!(BADPREC)`. |
 | An explicit argument index, `%[2]d` | Present | Equal since 2026-09-03. An index that names no argument gives `%!d(BADINDEX)`. |
 | A precision on a string verb, `%.2s` | Cuts the text to 2 runes | Equal since 2026-09-03. |
-| The verb `%#v` | The Go syntax form, `main.point{X:3, Y:4}` | Present since 2026-09-04. The 5 rows of "The fmt verbs" below hold each remaining difference. Read decision 315. |
+| The verb `%#v` | The Go syntax form, `main.point{X:3, Y:4}` | Present. The fmt section below records the remaining representation differences. |
 
 ## The subset of the language
 
@@ -270,7 +270,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `net/textproto`, `net/http/cookiejar` | Native | |
 | `net/http` | Overlay | An HTTP/1.1 client and an HTTP/1.1 server. Read the section of the HTTP access. |
 | `net/http/httptest` | Overlay | `NewRecorder`, `NewRequest`, `NewServer`, `NewUnstartedServer`, `NewTLSServer`, and `StartTLS`. |
-| `testing/quick` | Overlay | The source of Go, with no complex case. |
+| `testing/quick` | Overlay | The source of Go, including complex values. |
 | `crypto/tls` | Overlay | A client and a server over the secure socket of Dart. `Dial`, `DialWithDialer`, `Listen`, `X509KeyPair`, `Config`, `Certificate`, `Conn`, and `ConnectionState`. |
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
@@ -309,7 +309,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `net/url` | Native | The real source needs no patch. |
 | `unique` | Overlay | `Handle` and `Make`. The map retains canonical values for the process lifetime. Static type identity separates interface and concrete instantiations. |
 | `internal/godebug` | Overlay | Each setting holds its default, thus `Value` gives an empty text. |
-| `fmt` | Overlay | Each name of Go. |
+| `fmt` | Patch | Original Go source with portable pointer and integer conversion operations. |
 | `slices` | Patch | The real source of Go. `slices.go` holds the 1 patch, and the intrinsic `dart.SliceOverlap` serves `overlaps`. |
 | `sort` | Patch | The real source of Go, thus the order of `Sort` is the pdqsort of Go and the order of `Stable` is its merge sort. `slice.go` holds the 1 patch, and it reads the 2 slice intrinsics. |
 | `strconv` | Overlay | The integer form, the float form, the bool form, and the quote form. `ParseInt` and `ParseUint` each read a base of 0. |
@@ -332,7 +332,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `debug/dwarf` | Native | The real source needs no patch. |
 | `debug/macho`, `debug/plan9obj` | Native | Each name of Go. The real source of each 1 needs no patch. |
 | `debug/elf` | Native, with 1 patch | The patch replaces `file.go`. The real file reads `unsafe.Sizeof` and `unsafe.Offsetof` of the 8 header types. The patch holds the same numbers as constants. The layout of the ELF format never changes. |
-| `debug/pe` | Native, with 1 patch | The patch replaces `symbol.go`. The real file reads a `COFFSymbol` through the type `COFFSymbolAuxFormat5`. The 2 types hold the same 18 bytes at the same offsets. Thus the read of an aux record needs no conversion. `COFFSymbolReadSectionDefAux` gives a copy of the entry of `COFFSymbols`, and not a view of it. Each field holds the number of Go on a little-endian machine. A write through the pointer reaches no symbol. The text of the error of a bad signature holds the verb `% x`. `fmt` of the overlay writes no space between the 2 digits of a byte. |
+| `debug/pe` | Native, with 1 patch | The patch replaces `symbol.go`. The real file reads a `COFFSymbol` through the type `COFFSymbolAuxFormat5`. The 2 types hold the same 18 bytes at the same offsets. Thus the read of an aux record needs no conversion. `COFFSymbolReadSectionDefAux` gives a copy of the entry of `COFFSymbols`, and not a view of it. Each field holds the number of Go on a little-endian machine. A write through the pointer reaches no symbol. The original formatter supplies the error text. |
 | `internal/saferio` | Native, with 1 patch | The patch replaces `io.go`. `SliceCap` reads `unsafe.Sizeof` of its type parameter, and the patch reads `reflect.TypeFor` instead. `reflect.Type.Size` follows the rules of a 64-bit machine, thus the capacity stays the capacity of Go. The 4 readers of `debug` each take `reflect` through this import. |
 | `internal/asan`, `internal/msan`, `internal/race` | Overlay | Each exposes `Enabled` as false. The Dart target has no Go sanitizer or race detector. |
 | `internal/zstd` | Native | The decoder of the zstd format that `debug/elf` reads for a compressed section. |
@@ -400,29 +400,19 @@ a `//gart:sync` position.
 
 ## The method group of an interface call
 
-The flow of stage 3 resolves an interface method call to each method of that
-name and that signature in the program. It reads no interface type at the call
-site, thus a method of a type that the interface rejects still joins the group.
+The compiler groups interface methods by name, signature, and receiver interface.
+Only compatible receiver types join a dispatch group.
+Type assertions preserve both the original and asserted interface constraints.
+Immutable interface initializers can also preserve concrete receiver types.
+Reassignment, address escape, named factory results, and unknown producers prevent that proof.
 
-1 chain shows the cost. `fmt.Formatter` names `Format(fmt.State, rune)`, and a
-body of it calls `s.Write`. The group of `Write([]byte) (int, error)` holds
-`(*io.PipeWriter).Write`, which runs a `select` and thus blocks. `io.PipeWriter`
-implements no `fmt.State`, and the group takes it anyway.
+String formatting calls use known operand methods when the compiler can prove their types.
+Plain string verbs on error interfaces preserve both Formatter and Error dispatch.
+The analysis also follows panic values because fmt can recover and format those values.
+Unknown formats and operand types retain conservative analysis.
 
-The effect reaches the `//gart:sync` check alone. A program with 1
-`fmt.Formatter` in it makes each call of `err.Error()` reach that `select`, thus
-a build method that only formats an error takes a rejection. Each of the 3
-Flutter examples that read `net/http` hit this on 2026-09-03, for the few hours
-that `crypto/rand` carried `Int`.
-
-`TestSyncAcceptsAnErrorFormatWithHTTP` of `internal/driver/sync_test.go` holds
-the shape, thus the fault cannot return without a report.
-
-**The fix.** The group needs the interface type of the call site as part of its
-key, and a concrete method joins only a group whose interface its receiver
-implements. The check stays sound, because a dynamic dispatch through an
-interface reaches no type outside that interface. The work is a change of
-`methodCell` and of the wiring in `internal/analyze/flow.go`, and it is open.
+Synchronous callback regressions cover ordinary error text, concrete formatters, mutable interfaces, and blocking formatted panic values.
+Flutter example generation, analysis, and widget tests exercise the complete callback boundary.
 
 ### crypto/tls
 
@@ -505,20 +495,17 @@ fields that Go gives.
 
 ### The fmt verbs
 
-| Verb | The difference |
-|---|---|
-| `%#v` of a pointer that Go writes as an address | Go writes `(*int)(0xc000014048)` for a pointer to a value that is not a struct, and for each pointer below the top level. The runtime writes `&` and the value, because Dart gives no address. |
-| `%#v` of a channel or of a function that is not nil | Go writes `(chan int)(0xc000014048)`. The runtime writes `<chan>` and `<func>`, because Dart gives no address. A nil channel and a nil function each take the form of Go. |
-| `%#v` of a text with a rune above the ASCII range that Go does not print | Go writes the escape `\u0085`. The runtime writes the rune itself. The table of the printable categories of Unicode lives in `strconv`, and the runtime holds no such table. |
-| `%#v` of an error of the package `errors` | Go writes `&errors.errorString{s:"x"}`. The overlay names the field `text`, thus the output holds `text` in place of `s`. |
-| `%T` and `%#v` of an instance of a generic type | Go writes `main.pair[int,string]`. The compiler writes `main.pair[int, string]`, with a space after the comma. `reflectText` of `internal/emit/iface.go` reads `types.TypeString`, and that function writes the space. |
-| `%#q` | It gives the plain form of `%q`. Go writes a backquote when the text holds none. |
-| `%g` with a precision | The precision reaches no digit. `strconv.FormatFloat` passes the verb to the runtime, and `_float` of the runtime reads the precision for `f` and for `e` alone. |
-| A verb that the type rejects, with a width | The width reaches no text. Go writes `%!s(int=       5)` for `% 8s` of 5, and the runtime writes `%!s(int=5)`. A program that reaches this row already holds a bug. |
+The formatter uses the original Go implementation with portable pointer and integer conversion operations.
+The upstream suite exercises verbs, widths, precision, argument indexes, invalid input, and method dispatch.
 
-`strconv.ParseFloat` stays loose. It reads `double.tryParse` of Dart, thus it
-accepts text with a space around it, it accepts a bare `0x10`, and it reports
-no `ErrRange`. `ParseComplex` holds a scanner of its own and it matches Go.
+| Item | Remaining difference |
+|---|---|
+| Pointer, channel, and function addresses | Output uses the Dart reflection identity. It cannot expose a native Go address. |
+| Private fields of overlay types | `%#v` can expose an overlay field name. For example, `errors.errorString` stores `text` where Go stores `s`. |
+| Allocation counts and extreme recursive scanners | Explicit exclusions preserve the runtime limits. |
+
+`strconv.ParseFloat` validates the Go grammar and reports syntax and range errors.
+The [upstream parity report](upstream-parity.md) separates successful assertions from exclusions and partial coverage.
 
 ## The go:embed directive
 
@@ -760,24 +747,20 @@ builds the error of that code.
 
 ### The scan family of fmt
 
-`Sscan`, `Fscan`, `Scan`, and each other member read the runes of an input. A
-scanner of the overlay holds the state, and each error text matches Go.
+The format and scan families use the original Go 1.27 implementation and assertions.
+`Scan`, `Scanln`, and `Scanf` read `os.Stdin`.
 
-| Item | Go | godart |
-|---|---|---|
-| `Sscan`, `Sscanln`, `Sscanf` | Present | Equal |
-| `Fscan`, `Fscanln`, `Fscanf` | Present | Equal |
-| `Scan`, `Scanln`, `Scanf` | Read `os.Stdin` | Equal. The reader calls the runtime, and not `os`. Read below. |
-| `ScanState` and `Scanner` | Present | Equal |
-| The verbs `%v %d %b %o %x %X %s %q %c %t %e %f %g` | Present | Equal |
-| A width, for example `%3d` | Present | Equal |
-| `%p` and a complex number | Present | Not present |
-| The error of a broken input | Present | Equal, with the text of Go |
+| Item | godart |
+|---|---|
+| `Sscan`, `Sscanln`, `Sscanf`, `Fscan`, `Fscanln`, `Fscanf` | Present |
+| `ScanState`, `Scanner`, widths, defined types, and complex numbers | Present |
+| Invalid input and end-of-input errors | Original upstream behavior |
+| 800 nested scanners in `TestScanInts` | Excluded because Dart has a fixed stack |
 
-The scan family reads standard input through `syscall/dart`. An import of `os`
-would put the whole file access and the clock of `time` into each program that
-reads `fmt`, and the web target holds neither. A web build reads 0 bytes of
-standard input, thus each scan of that input gives `io.EOF`.
+The full upstream `fmt` suite has 78 matching outcome identities.
+Allocation counts and nested scanners remain explicit exclusions.
+Pointer output uses the existing reflection identity, not a machine address.
+Browser standard input remains unavailable.
 
 `fmt` holds `Formatter`, `State`, and `FormatString` since 2026-09-02.
 `Sprintf` calls the method `Format` of a value that holds 1, and the method
@@ -1049,7 +1032,7 @@ Go.
 | A chunked body | Present | Equal, for a read and for a write. |
 | Keep alive | Present | Present. The client holds a pool of 2 connections for each host. |
 | A Close of a body that stands before its end | The connection stays open when the read loop reaches the end first | The connection ends. |
-| HTTP/2 | The vendored stack of Go | Present over the Dart package http2, for the client and the server, behind ALPN. The request body reaches the wire as 1 piece, a push of the server and a trailer stay out, and `Request.TLS` stays nil. |
+| HTTP/2 | The vendored stack of Go | Present over the Dart package http2, for the client and the server, behind ALPN. The request body reaches the wire as 1 piece. Server push and trailers remain unavailable. Responses include TLS metadata. |
 | `Accept-Encoding: gzip` | The client adds it and reads the answer | Equal. `DisableCompression` stops it, and `Response.Uncompressed` marks the answer. |
 | The type of a body that the handler does not name | `DetectContentType` reads the first 512 bytes | `text/plain; charset=utf-8` for each body |
 | A body that is larger than the buffer of the server | The chunked form | The overlay names the length of each body that a handler writes with no Flush. |

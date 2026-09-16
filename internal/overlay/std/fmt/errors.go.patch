@@ -1,0 +1,13 @@
+Use the supported strings package for the stringslite operations.
+
+--- errors.go
++++ errors.go
+@@ -6,7 +6,7 @@
+ 
+ import (
+ 	"errors"
+-	"internal/stringslite"
++	stringslite "strings"
+ 	"slices"
+ )
+ 

@@ -1,0 +1,47 @@
+package http_test
+
+import (
+ . "net/http"
+ "net/http/httptest"
+ "testing"
+)
+
+type testMode string
+const (
+ http1Mode testMode="h1"
+ http2Mode testMode="h2"
+)
+
+type clientServerTest struct {
+ ts *httptest.Server
+ tr *Transport
+ c *Client
+}
+
+func (c *clientServerTest) close() {
+ c.tr.CloseIdleConnections()
+ c.ts.Close()
+}
+
+func setParallel(t *testing.T) { t.Parallel() }
+
+// The selected upstream tests require real HTTP/1 and TLS HTTP/2 servers.
+// This adapter omits upstream facilities for HTTP/3 and fake network internals.
+func newClientServerTest(t *testing.T,mode testMode,h Handler,opts ...any) *clientServerTest {
+ ts:=httptest.NewUnstartedServer(h)
+ if mode==http2Mode { ts.EnableHTTP2=true;ts.StartTLS() } else { ts.Start() }
+ c:=ts.Client()
+ tr:=c.Transport.(*Transport)
+ for _,opt:=range opts { opt.(func(*Transport))(tr) }
+ cst:=&clientServerTest{ts:ts,tr:tr,c:c}
+ t.Cleanup(cst.close)
+ return cst
+}
+
+var http3SkippedMode=[]testMode{http1Mode,http2Mode}
+
+func run(t *testing.T,f func(*testing.T,testMode),modes ...[]testMode) {
+ for _,mode:=range http3SkippedMode {
+  t.Run(string(mode),func(t *testing.T) { f(t,mode) })
+ }
+}

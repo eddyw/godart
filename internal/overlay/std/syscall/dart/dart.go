@@ -400,12 +400,6 @@ func DescChanDir(handle int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// DescFieldByName gives the index of a field of a struct type, by name. A name
-// that no field holds gives -1.
-func DescFieldByName(handle int, name string) int {
-	panic("syscall/dart needs the gart compiler")
-}
-
 // SliceOf gives the handle of the slice type of an element type.
 func SliceOf(elem int) int {
 	panic("syscall/dart needs the gart compiler")
@@ -1154,12 +1148,16 @@ func ConnClose(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// ListenTCP opens a listener on a host and a port. The 3 results are the
-// handle, the port that the system took, and the cause of a failure. A port of
-// 0 asks the system for a free port.
+// ListenTCP gives the handle, port, and failure cause.
+// A port of 0 asks the system for a free port.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
 func ListenTCP(host string, port int) (int, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ListenTCPHost gives the bound IP address of an open TCP listener.
+func ListenTCPHost(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 

@@ -434,7 +434,11 @@ Uint8List _encode(String s) {
   var escaped = false;
   for (var i = 0; i < s.length; i++) {
     final int unit = s.codeUnitAt(i);
-    if (unit >= 0xDC80 && unit <= 0xDCFF) {
+    if (unit >= 0xDC80 &&
+        unit <= 0xDCFF &&
+        (i == 0 ||
+            s.codeUnitAt(i - 1) < 0xD800 ||
+            s.codeUnitAt(i - 1) > 0xDBFF)) {
       escaped = true;
       break;
     }
@@ -444,7 +448,11 @@ Uint8List _encode(String s) {
   final StringBuffer part = StringBuffer();
   for (var i = 0; i < s.length; i++) {
     final int unit = s.codeUnitAt(i);
-    if (unit >= 0xDC80 && unit <= 0xDCFF) {
+    if (unit >= 0xDC80 &&
+        unit <= 0xDCFF &&
+        (i == 0 ||
+            s.codeUnitAt(i - 1) < 0xD800 ||
+            s.codeUnitAt(i - 1) > 0xDBFF)) {
       if (part.isNotEmpty) {
         out.addAll(utf8.encode(part.toString()));
         part.clear();

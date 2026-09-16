@@ -7,6 +7,7 @@ import (
 	"go/doc"
 	"go/parser"
 	"go/token"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -41,6 +42,7 @@ type Binary struct {
 	Benchmarks []string
 	// FuzzTargets lists the fuzz targets in the order of the run.
 	FuzzTargets []string
+	FuzzCorpus  map[string][]fuzzInput
 	// Cover holds the instrumented source of each file of the package under
 	// test. A key is the file path that the go command reports. The map is
 	// empty for a load that asked for no coverage.
@@ -102,6 +104,10 @@ func testBinaries(found []*packages.Package, cover bool, files map[string][]byte
 		bin.Tests = append(append([]string{}, inside.tests...), outside.tests...)
 		bin.Benchmarks = append(append([]string{}, inside.benchmarks...), outside.benchmarks...)
 		bin.FuzzTargets = append(append([]string{}, inside.fuzzTargets...), outside.fuzzTargets...)
+		bin.FuzzCorpus, err = readTestCorpus(bin.Dir, bin.FuzzTargets)
+		if err != nil {
+			return nil, err
+		}
 		if cover {
 			bin.CoverMode = "set"
 			if err := coverPackage(bin, files, byID[under+" ["+p.PkgPath+"]"], byID[under]); err != nil {
@@ -276,6 +282,9 @@ func testMainSource(inside, outside *functions, bin *Binary) []byte {
 		tail = fmt.Sprintf("\t\t%s.TestMain,\n\t)\n", prefix)
 	}
 	b.WriteString("func main() {\n")
+	if len(bin.FuzzTargets) > 0 {
+		writeFuzzCorpus(&b, bin.FuzzTargets, bin.FuzzCorpus)
+	}
 	if cover {
 		b.WriteString("\tgartSetCover()\n")
 	}
@@ -332,4 +341,43 @@ func writeExamples(b *bytes.Buffer, prefix string, list []example) {
 			"\t\t\t{Name: %q, F: %s.%s, Output: %q, Unordered: %v},\n",
 			ex.name, prefix, ex.name, ex.output, ex.unordered)
 	}
+}
+
+type fuzzInput struct{ name, data string }
+
+func readTestCorpus(dir string, targets []string) (map[string][]fuzzInput, error) {
+	corpus := map[string][]fuzzInput{}
+	for _, target := range targets {
+		path := filepath.Join(dir, "testdata", "fuzz", target)
+		entries, err := os.ReadDir(path)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(path, entry.Name()))
+			if err != nil {
+				return nil, err
+			}
+			corpus[target] = append(corpus[target], fuzzInput{entry.Name(), string(data)})
+		}
+	}
+	return corpus, nil
+}
+
+func writeFuzzCorpus(b *bytes.Buffer, names []string, corpus map[string][]fuzzInput) {
+	b.WriteString("\ttesting.FuzzCorpus = map[string][]testing.InternalFuzzInput{\n")
+	for _, name := range names {
+		fmt.Fprintf(b, "\t\t%q: {", name)
+		for _, input := range corpus[name] {
+			fmt.Fprintf(b, "{Name: %q, Data: %q},", input.name, input.data)
+		}
+		b.WriteString("},\n")
+	}
+	b.WriteString("\t}\n")
 }

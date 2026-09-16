@@ -257,6 +257,9 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	e.machine = &machineCtx{m: m, results: f.Results, fn: fn, locals: locals,
 		end: f.End}
 	e.boxParams(f.Params)
+	if f.Recv != nil && !e.inClass[f] {
+		e.boxRecv(f.Recv)
+	}
 	skip := map[*ir.Var]bool{f.Recv: true}
 	for _, p := range f.Params {
 		skip[p] = true

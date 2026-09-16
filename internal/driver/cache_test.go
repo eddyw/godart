@@ -255,3 +255,95 @@ func tree(t *testing.T, root string) string {
 	}
 	return b.String()
 }
+
+func TestFuzzCorpusCache(t *testing.T) {
+	source, out := t.TempDir(), t.TempDir()
+	writeFile(t, filepath.Join(source, "go.mod"), "module example.com/corpus\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(source, "corpus_test.go"), `package corpus
+import "testing"
+func FuzzValue(f *testing.F) { f.Fuzz(func(t *testing.T, value string) { t.Log(value) }) }
+`)
+	seed := filepath.Join(source, "testdata", "fuzz", "FuzzValue", "input")
+	if err := os.MkdirAll(filepath.Dir(seed), 0755); err != nil {
+		t.Fatal(err)
+	}
+	opts := driver.Options{Dir: source, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true}
+	build := func() *driver.Stats {
+		t.Helper()
+		s, err := driver.BuildWithStats(opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	writeFile(t, seed, "go test fuzz v1\nstring(\"first\")\n")
+	build()
+	if s := build(); len(s.Compiled) != 0 {
+		t.Fatalf("warm build compiled %v", s.Compiled)
+	}
+	writeFile(t, seed, "go test fuzz v1\nstring(\"second\")\n")
+	s := build()
+	if !slices.Contains(s.Compiled, "example.com/corpus.test") {
+		t.Fatal("corpus change reused stale entry point")
+	}
+	prepareDart(t, out)
+	result := programOutcome(t, source, "dart", filepath.Join(out, s.Binaries[0].Entry), "-test.v")
+	if result.Exit != 0 || !strings.Contains(result.Text, "second") || strings.Contains(result.Text, "first") {
+		t.Fatalf("%+v", result)
+	}
+	if err := os.Remove(seed); err != nil {
+		t.Fatal(err)
+	}
+	s = build()
+	if !slices.Contains(s.Compiled, "example.com/corpus.test") {
+		t.Fatal("corpus removal reused stale entry point")
+	}
+	result = programOutcome(t, source, "dart", filepath.Join(out, s.Binaries[0].Entry), "-test.v")
+	if strings.Contains(result.Text, "FuzzValue/input") {
+		t.Fatal("removed seed still executes")
+	}
+}
+
+func TestCacheRemovesObsoleteParts(t *testing.T) {
+	source, out := t.TempDir(), t.TempDir()
+	writeFile(t, filepath.Join(source, "go.mod"), "module stale\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(source, "main.go"), "package main\nfunc main() { println(1) }\n")
+	old := filepath.Join(source, "old.go")
+	writeFile(t, old, "package main\nfunc unused() {}\n")
+	build := func() {
+		t.Helper()
+		if err := driver.Build(driver.Options{Dir: source, Out: out, Patterns: []string{"."}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	build()
+	var stale string
+	if err := filepath.WalkDir(out, func(path string, entry os.DirEntry, err error) error {
+		if err == nil && entry.Name() == "old.part.dart" {
+			stale = path
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if stale == "" {
+		t.Fatal("no generated part for old.go")
+	}
+	manual := filepath.Join(filepath.Dir(stale), "manual.part.dart")
+	writeFile(t, manual, "// authored separately\n")
+	if err := os.Remove(old); err != nil {
+		t.Fatal(err)
+	}
+	build()
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("obsolete generated part remains: %v", err)
+	}
+	if _, err := os.Stat(manual); err != nil {
+		t.Fatal(err)
+	}
+	build()
+	run(t, out, "dart", "pub", "get")
+	if got := runProgram(t, out, "dart", "run", "bin/main.dart"); strings.TrimSpace(got) != "1" {
+		t.Fatalf("generated program output: %q", got)
+	}
+}

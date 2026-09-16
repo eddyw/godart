@@ -215,8 +215,7 @@ func ParseCIDR(s string) (IP, *IPNet, error) {
 		bits = 8 * IPv6len
 	}
 	ones, err := strconv.Atoi(mask)
-	if err != nil || mask == "" || ones < 0 || ones > bits ||
-		(len(mask) > 1 && mask[0] == '0') {
+	if err != nil || mask == "" || ones < 0 || ones > bits || mask[0] < '0' || mask[0] > '9' {
 		return nil, nil, &ParseError{Type: "CIDR address", Text: s}
 	}
 	m := CIDRMask(ones, bits)

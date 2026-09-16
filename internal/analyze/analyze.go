@@ -79,8 +79,10 @@ func (r *Result) Digest(p *packages.Package) string {
 
 // summary holds what 1 function does. The fixed point reads it.
 type summary struct {
-	key    any
-	direct bool
+	panicMethods []any
+	unknownPanic bool
+	key          any
+	direct       bool
 	// directPos and directWhat name the first operation of the body that
 	// blocks. The synchronous check of sync.go reports the pair, thus the
 	// error names a position inside the function and not only its declaration.
@@ -110,24 +112,28 @@ func Module(pkgs []*packages.Package) *Result {
 			rangeAsync: map[*ast.RangeStmt]bool{},
 			sigAsync:   map[string]bool{},
 		},
-		summaries:    map[any]*summary{},
-		byMethod:     map[string][]any{},
-		methodCells:  map[methodCell]*types.Interface{},
-		assertNarrow: map[*types.Var]*types.Interface{},
-		assertDrop:   map[*types.Var]bool{},
-		parent:       map[string]string{},
-		pts:          map[cell]map[any]bool{},
-		edges:        map[cell]map[cell]bool{},
-		inWork:       map[cell]bool{},
-		watchers:     map[cell][]*callSite{},
-		litSigs:      map[*ast.FuncLit]*types.Signature{},
-		rangeShape:   map[*ast.RangeStmt][]cell{},
+		summaries:        map[any]*summary{},
+		interfaceOrigins: map[*types.Var]interfaceOrigin{},
+		interfaceReturns: map[retCell][]interfaceOrigin{},
+		originMutable:    map[*types.Var]bool{},
+		byMethod:         map[string][]any{},
+		methodCells:      map[methodCell]*types.Interface{},
+		assertNarrow:     map[*types.Var]*types.Interface{},
+		assertDrop:       map[*types.Var]bool{},
+		parent:           map[string]string{},
+		pts:              map[cell]map[any]bool{},
+		edges:            map[cell]map[cell]bool{},
+		inWork:           map[cell]bool{},
+		watchers:         map[cell][]*callSite{},
+		litSigs:          map[*ast.FuncLit]*types.Signature{},
+		rangeShape:       map[*ast.RangeStmt][]cell{},
 	}
 	for _, p := range pkgs {
 		a.reflection = a.reflection || p.PkgPath == "reflect"
 		a.pkg = p
 		for _, f := range p.Syntax {
 			a.collectAsserts(f)
+			a.collectOrigins(f)
 		}
 	}
 	for _, p := range pkgs {
@@ -149,12 +155,15 @@ func Module(pkgs []*packages.Package) *Result {
 }
 
 type analyzer struct {
-	reflection bool
-	pkg        *packages.Package
-	fset       *token.FileSet
-	result     *Result
-	summaries  map[any]*summary
-	order      []any
+	interfaceOrigins map[*types.Var]interfaceOrigin
+	interfaceReturns map[retCell][]interfaceOrigin
+	originMutable    map[*types.Var]bool
+	reflection       bool
+	pkg              *packages.Package
+	fset             *token.FileSet
+	result           *Result
+	summaries        map[any]*summary
+	order            []any
 
 	// syncTypes holds each named function type that carries //gart:sync. Read
 	// sync.go.
@@ -584,6 +593,10 @@ func (a *analyzer) callExpr(s *summary, call *ast.CallExpr) {
 		argEsc:  map[int]string{},
 		done:    map[any]bool{},
 	}
+	if targets, ok := a.formatTargets(call, callee); ok {
+		site.formatOperands = true
+		site.formatSource = targets
+	}
 	for i, arg := range call.Args {
 		sig := funcSig(a.typeOf(arg))
 		if sig == nil {
@@ -605,6 +618,12 @@ func (a *analyzer) calleeSource(s *summary, call *ast.CallExpr, fun ast.Expr) (s
 		case *types.Func:
 			return a.funcCallee(s, call, obj)
 		case *types.Builtin:
+			if obj.Name() == "panic" {
+				candidates, known := a.concreteInterfaces(call.Args[0], a.pkg.TypesInfo, map[types.Object]bool{})
+				methods, safe := formatTypeTargets(candidates)
+				s.unknownPanic = s.unknownPanic || !known || !safe
+				s.panicMethods = append(s.panicMethods, methods...)
+			}
 			a.escapeArgs(call)
 			return source{}, true
 		case *types.Var:
@@ -854,6 +873,9 @@ func (a *analyzer) resolveSites() {
 			site.targets = append(site.targets, blockTarget(t))
 		}
 		site.fallbacks = sigFallbacks(site.callee)
+		for _, t := range a.targets(site.formatSource) {
+			site.formatMethods = append(site.formatMethods, blockTarget(t))
+		}
 	}
 }
 
@@ -945,6 +967,15 @@ func (a *analyzer) blocksNow(s *summary) bool {
 // siteAsync reports whether a call site must wait. A target that blocks or an
 // escape group that holds a function that blocks each give true.
 func (a *analyzer) siteAsync(site *callSite) bool {
+	if site.formatOperands {
+		seen := map[any]bool{}
+		for _, fn := range site.formatMethods {
+			if a.formatMethodAsync(fn, seen) {
+				return true
+			}
+		}
+		return false
+	}
 	for _, t := range site.targets {
 		if a.result.blocking[t] {
 			return true

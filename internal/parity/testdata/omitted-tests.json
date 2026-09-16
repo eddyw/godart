@@ -1,0 +1,80 @@
+{
+  "context": {
+    "TestContextErrDoneRace": "The test requires preemption of a busy loop on another Go execution thread. Gart runs Go in 1 isolate."
+  },
+  "debug/elf": {
+    "TestNoSectionOverlaps": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image."
+  },
+  "debug/gosym": {
+    "TestLineAline": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image.",
+    "TestLineFromAline": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image.",
+    "TestSymVersion": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image."
+  },
+  "encoding/xml": {
+    "TestCVE202228131": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion.",
+    "TestCVE202230633": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion.",
+    "TestDecodeElementDepthBypass": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion.",
+    "TestDecodeElementRecursion": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion.",
+    "TestRecursiveUnmarshalInterfaceDepth": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion."
+  },
+  "fmt": {
+    "TestScanInts": "The unchanged case builds 800 nested scanners and exceeds the fixed Dart stack."
+  },
+  "go/build": {
+    "TestAllTags": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain.",
+    "TestAllTagsNonSourceFile": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain.",
+    "TestCgoImportsIgnored": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain.",
+    "TestDirectives": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain.",
+    "TestDotSlashImport": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain.",
+    "TestFindImports": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain.",
+    "TestGoodOSArch": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain.",
+    "TestImportCmd": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain.",
+    "TestIssue23594": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain.",
+    "TestLocalDirectory": "The test assumes the native compiler identity, native architecture, or an installed Go source tree. Gart reports its own toolchain."
+  },
+  "go/parser": {
+    "TestParseDepthLimit": "The case validates the native parser nesting limit on a growing Go stack. Dart has a fixed stack.",
+    "TestScopeDepthLimit": "The case validates the native parser nesting limit on a growing Go stack. Dart has a fixed stack."
+  },
+  "io/fs": {
+    "TestCVE202230630": "The case requires over 10000 recursive frames. Dart has a fixed stack, a documented runtime exclusion."
+  },
+  "math/rand": {
+    "TestSeedNop/randseednop=0": "The GODEBUG runtime compatibility settings are outside the documented Dart surface."
+  },
+  "mime/multipart": {
+    "TestReadFormLimits/values=0/files=2/extraKeysPerFile=48/godebug=multipartmaxheaders=100": "The GODEBUG runtime compatibility settings are outside the documented Dart surface.",
+    "TestReadFormLimits/values=0/files=2/extraKeysPerFile=50/godebug=multipartmaxheaders=100": "The GODEBUG runtime compatibility settings are outside the documented Dart surface.",
+    "TestReadFormLimits/values=100/files=0/extraKeysPerFile=0/godebug=multipartmaxparts=100": "The GODEBUG runtime compatibility settings are outside the documented Dart surface.",
+    "TestReadFormLimits/values=101/files=0/extraKeysPerFile=0/godebug=multipartmaxparts=100": "The GODEBUG runtime compatibility settings are outside the documented Dart surface.",
+    "TestReadForm_ManyFiles_Distinct": "The GODEBUG runtime compatibility settings are outside the documented Dart surface."
+  },
+  "net": {
+    "TestNetworkNumberAndMask": "The test requires the native private networkNumberAndMask helper, which the net overlay does not contain."
+  },
+  "net/http/cgi": {
+    "TestCGIBasicGet": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestCGIBasicGetAbsPath": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestCGIBasicPost": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestCGIEnvIPv6": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestChildContentType": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestChildOnlyHeaders": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestCopyError": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestDir": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestDropProxyHeader": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestDupHeaders": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestEnvOverride": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestHandlerStderr": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestHostingOurselves": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestInternalRedirect": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestKillChildAfterCopyError": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestNilRequestBody": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestPathInfo": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestPathInfoDirRoot": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestPathInfoNoRoot": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
+    "TestRedirect": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source."
+  },
+  "testing/cryptotest": {
+    "TestSetGlobalRandom/cryptocustomrand=1": "The GODEBUG runtime compatibility settings are outside the documented Dart surface."
+  }
+}

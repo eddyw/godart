@@ -137,6 +137,7 @@ curated surface.
 | `docs/what-compiles.md` | The shape of a Go program that the compiler accepts |
 | `docs/ci.md` | The CI suites, local commands, durations, and timeout limits |
 | `docs/parity.md` | Each difference between Go and the Dart output |
+| `docs/upstream-parity.md` | Pinned upstream assertions, coverage, exclusions, and parity evidence |
 | `docs/design.md` | The architecture, each stage, and each compiler feature |
 | `docs/block-model.md` | The unwind model of a function that can block |
 | `docs/decisions.md` | Each decision, by number, and each answered question |
@@ -150,10 +151,13 @@ curated surface.
 make ci
 ```
 
-`internal/driver` holds the end to end test. It compiles each Go program of
-`testdata/programs`, runs the Dart output, and compares the output with the
-output of `go run`. The suite also proves the cache, the early cutoff, and the
-byte equal output of 2 equal builds.
+`internal/driver` compares native Go and Gart program outputs and exit statuses.
+It also exercises the cache, dependency invalidation, and deterministic output.
+
+The upstream gate runs original Go assertions and compares test identities, subtests, outcomes, and process exits.
+It records compile blockers, exclusions, and partial coverage separately from complete passes.
+Routine standard library tests use Go's `-short` mode. `GART_UPSTREAM_MODE=full` selects the full suites.
+GitHub Actions requires manual dispatch.
 
 ## Versions
 

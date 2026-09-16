@@ -385,7 +385,7 @@ GoString $h2WriteHead(
   }
 }
 
-/// Ends the send side of a stream, and drops the stream out of the table.
+/// Closes a stream and releases unread incoming data.
 GoString $h2End(int stream) {
   final _H2Stream? s = _streamAt(stream);
   if (s == null) return _none;
@@ -395,6 +395,7 @@ GoString $h2End(int stream) {
   } catch (_) {
     // The head with endStream closed the sink already.
   }
+  unawaited(s.messages.cancel());
   return _none;
 }
 

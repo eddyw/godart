@@ -96,11 +96,6 @@ func TestLoadReportsATypeError(t *testing.T) {
 
 // TestADiffReachesASourceFileOfANativePackage proves that a `.patch` file of
 // the overlay changes the real Go source of a native package.
-//
-// The compiler reads bytes from the real Go source, and
-// bytes/buffer.go.patch removes the deferred call of recover of growSlice. The
-// subset holds no recover, thus the load must give a body with no such call
-// and with every other line of Go.
 func TestADiffReachesASourceFileOfANativePackage(t *testing.T) {
 	dir, err := filepath.Abs("testdata/hello")
 	if err != nil {
@@ -110,19 +105,19 @@ func TestADiffReachesASourceFileOfANativePackage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	name := filepath.Join(build.Default.GOROOT, "src", "bytes", "buffer.go")
+	name := filepath.Join(build.Default.GOROOT, "src", "bytes", "bytes.go")
 	src, ok := found.Sources[name]
 	if !ok {
 		t.Fatalf("the load holds no source of %s", name)
 	}
 	text := string(src)
-	if !strings.Contains(text, "func growSlice(b []byte, n int) []byte {") {
-		t.Error("the patched file holds no growSlice")
+	if !strings.Contains(text, "return bytealg.IndexRabinKarpBytes(s, sep)") {
+		t.Error("the patched file lacks the portable search")
 	}
-	if strings.Contains(text, "if recover() != nil {") {
-		t.Error("the patched file still holds the deferred call of recover")
+	if strings.Contains(text, "case n <= bytealg.MaxLen:") {
+		t.Error("the patched file retains the native architecture search")
 	}
-	if !strings.Contains(text, "func (b *Buffer) ReadFrom(r io.Reader) (n int64, err error) {") {
+	if !strings.Contains(text, "func Clone(b []byte) []byte {") {
 		t.Error("the patched file lost a line that the diff does not name")
 	}
 }

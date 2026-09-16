@@ -374,6 +374,12 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 	}
 	key := r.key
 	for {
+		if err := req.Context().Err(); err != nil {
+			if req.Body != nil {
+				req.Body.Close()
+			}
+			return nil, err
+		}
 		// An open HTTP/2 session of the host carries the request. A session
 		// that broke leaves the pool, and a request with no body rides a
 		// fresh dial, exactly as a reused connection does.
@@ -388,7 +394,7 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 			if pc != nil {
 				traceGotConn(trace, pc, false)
 			}
-			res, err := t.h2Exchange(session, req)
+			res, err := t.h2Exchange(session, pc, req)
 			if err == nil {
 				return res, nil
 			}
@@ -415,7 +421,7 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 				return nil, cause
 			}
 			t.putH2(key, session, pc)
-			res, err := t.h2Exchange(session, req)
+			res, err := t.h2Exchange(session, pc, req)
 			if err != nil {
 				t.dropH2(key, session)
 				return nil, err
@@ -648,9 +654,13 @@ type gzipBody struct {
 	source io.ReadCloser
 	reader *gzip.Reader
 	err    error
+	closed bool
 }
 
 func (g *gzipBody) Read(p []byte) (int, error) {
+	if g.closed {
+		return 0, ErrBodyReadAfterClose
+	}
 	if g.err != nil {
 		return 0, g.err
 	}
@@ -665,7 +675,10 @@ func (g *gzipBody) Read(p []byte) (int, error) {
 	return g.reader.Read(p)
 }
 
-func (g *gzipBody) Close() error { return g.source.Close() }
+func (g *gzipBody) Close() error {
+	g.closed = true
+	return g.source.Close()
+}
 
 // connectKey names the pool of a request.
 // A route names the connection that 1 request needs.
@@ -1175,9 +1188,8 @@ func hostPort(u *url.URL) (string, string) {
 	return host, port
 }
 
-// A connBody holds the connection of a response. A Close of the body gives the
-// connection back to the pool. A Close that stands before the end of the body
-// ends the connection, exactly as in Go.
+// A connBody returns its connection to the pool at EOF. Close before EOF
+// ends the connection. A later Close must not affect a subsequent request.
 type connBody struct {
 	body     io.ReadCloser
 	pc       *persistConn
@@ -1191,9 +1203,22 @@ func (c *connBody) Read(p []byte) (int, error) {
 	if c.done {
 		return 0, ErrBodyReadAfterClose
 	}
+	if c.eof {
+		return 0, io.EOF
+	}
 	n, err := c.body.Read(p)
 	if err == io.EOF {
 		c.eof = true
+		c.pc.t.track(c.req, nil)
+		if c.reusable {
+			idleErr := c.pc.t.putIdle(c.pc)
+			trace := httptrace.ContextClientTrace(c.req.Context())
+			if trace != nil && trace.PutIdleConn != nil {
+				trace.PutIdleConn(idleErr)
+			}
+		} else {
+			c.pc.close()
+		}
 	}
 	return n, err
 }
@@ -1204,16 +1229,10 @@ func (c *connBody) Close() error {
 	}
 	c.done = true
 	c.body.Close()
-	c.pc.t.track(c.req, nil)
-	if c.reusable && c.eof {
-		err := c.pc.t.putIdle(c.pc)
-		trace := httptrace.ContextClientTrace(c.req.Context())
-		if trace != nil && trace.PutIdleConn != nil {
-			trace.PutIdleConn(err)
-		}
-		return nil
+	if !c.eof {
+		c.pc.t.track(c.req, nil)
+		c.pc.close()
 	}
-	c.pc.close()
 	return nil
 }
 
@@ -1334,7 +1353,7 @@ func dartH2Client(handle int) (int, error) {
 // h2Exchange runs 1 request over an HTTP/2 session. The body of the request
 // reaches the wire as 1 piece, because the fetch of the runtime takes the
 // bytes.
-func (t *Transport) h2Exchange(session int, req *Request) (*Response, error) {
+func (t *Transport) h2Exchange(session int, pc *persistConn, req *Request) (*Response, error) {
 	wire, gzipped := t.gzipRequest(req)
 	var body []byte
 	if wire.Body != nil {
@@ -1364,11 +1383,13 @@ func (t *Transport) h2Exchange(session int, req *Request) (*Response, error) {
 			length = n
 		}
 	}
+	state := pc.conn.(h2Conn).ConnectionState()
 	res := &Response{
 		Status:        itoa(status) + " " + StatusText(status),
 		StatusCode:    status,
 		Proto:         "HTTP/2.0",
 		ProtoMajor:    2,
+		TLS:           &state,
 		Header:        header,
 		ContentLength: length,
 		Body:          &h2Body{stream: stream},
@@ -1396,6 +1417,11 @@ func h2Fields(req *Request) []string {
 		}
 		for _, v := range values {
 			out = append(out, name, v)
+		}
+	}
+	for name, values := range req.extra {
+		for _, value := range values {
+			out = append(out, name, value)
 		}
 	}
 	return out

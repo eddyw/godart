@@ -404,18 +404,20 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 
 // fieldAccess writes the getter and the setter of 1 field.
 //
-// An unexported field of a type of another package reaches no accessor. A Dart
-// library holds each name that starts with an underscore, thus another library
-// cannot name it. The description of an instance of a generic type stands at
-// the point of the use, and that point can lie outside the package of the type.
+// Generic instance descriptors can stand outside the declaring package.
+// Generated accessors expose their private Dart fields to those descriptors.
 func (e *emitter) fieldAccess(owner types.Type, field *types.Var, i int,
 	class string, declType types.Type) string {
-	if !field.Exported() && field.Pkg() != nil && field.Pkg() != e.pkg {
-		return "$noRead, $noWrite"
-	}
 	dart := structFieldName(field, i)
 	if field.Name() != "_" {
 		dart = fieldDartName(owner, field.Name())
+	}
+	if !field.Exported() && field.Pkg() != nil && field.Pkg() != e.pkg {
+		if named, ok := types.Unalias(owner).(*types.Named); ok && named.TypeArgs().Len() > 0 {
+			dart = fmt.Sprintf("$field%d", i)
+		} else {
+			return "$noRead, $noWrite"
+		}
 	}
 	read := fmt.Sprintf("($r as %s).%s", class, dart)
 	write := fmt.Sprintf("$v as %s", e.dartType(field.Type()))

@@ -140,7 +140,7 @@ func (s *Server) startCommon(loopback bool) {
 func (s *Server) Start() {
 	s.startCommon(true)
 	s.URL = "http://" + s.Listener.Addr().String()
-	s.client = &http.Client{}
+	s.client = &http.Client{Transport: &http.Transport{}}
 	go s.Config.Serve(s.track(s.Listener))
 }
 
@@ -368,7 +368,7 @@ func (s *Server) Client() *http.Client {
 		s.once.Do(s.startFake)
 	}
 	if s.client == nil {
-		s.client = &http.Client{}
+		s.client = &http.Client{Transport: &http.Transport{}}
 	}
 	return s.client
 }

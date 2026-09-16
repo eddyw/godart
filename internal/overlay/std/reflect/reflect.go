@@ -1238,7 +1238,7 @@ func PtrTo(t Type) Type { return PointerTo(t) }
 // TypeFor gives the type of T.
 func TypeFor[T any]() Type {
 	var zero T
-	if t := TypeOf(zero); t.handle() != 0 {
+	if t := TypeOf(zero); t != nil {
 		return t
 	}
 	// The zero value of an interface type holds no descriptor, thus the type
@@ -1366,11 +1366,12 @@ func (t *rtype) FieldByName(name string) (StructField, bool) {
 	if t.Kind() != Struct {
 		panic("reflect: FieldByName of " + t.String())
 	}
-	i := dart.DescFieldByName(t.handle(), name)
-	if i < 0 {
-		return StructField{}, false
+	for _, field := range VisibleFields(t) {
+		if field.Name == name {
+			return field, true
+		}
 	}
-	return t.Field(i), true
+	return StructField{}, false
 }
 
 // CanSeq reports whether a range loop over a value of the type gives 1 value.
@@ -1557,7 +1558,7 @@ func (v Value) FieldByIndexErr(index []int) (Value, error) {
 	for i, x := range index {
 		if i > 0 && out.Kind() == Pointer {
 			if out.IsNil() {
-				return Value{}, errNilField
+				return Value{}, errorText("reflect: indirection through nil pointer to embedded struct field " + out.Type().Elem().Name())
 			}
 			out = out.Elem()
 		}
@@ -1565,9 +1566,6 @@ func (v Value) FieldByIndexErr(index []int) (Value, error) {
 	}
 	return out, nil
 }
-
-// errNilField names a nil pointer inside the path of FieldByIndexErr.
-var errNilField = errorText("reflect: indirection through a nil pointer to an embedded struct")
 
 // errorText is an error that holds 1 text. The overlay reads no errors
 // package, because that package reads no reflect and the surface keeps the 2
@@ -1595,12 +1593,12 @@ func (it *MapIter) Next() bool { return dart.MapIterNext(it.it) }
 
 // Key gives the key of the pair.
 func (it *MapIter) Key() Value {
-	return Value{value: dart.MapIterKey(it.m.read(), it.it), ok: true}
+	return Value{value: dart.MapIterKey(it.m.read(), it.it), typ: it.m.Type().Key(), ok: true}
 }
 
 // Value gives the value of the pair.
 func (it *MapIter) Value() Value {
-	return Value{value: dart.MapIterValue(it.m.read(), it.it), ok: true}
+	return Value{value: dart.MapIterValue(it.m.read(), it.it), typ: it.m.Type().Elem(), ok: true}
 }
 
 // Reset points the iterator at another map.

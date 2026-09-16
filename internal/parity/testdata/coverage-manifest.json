@@ -1,0 +1,1169 @@
+[
+  {
+    "package": "archive/tar",
+    "status": "compile-blocked",
+    "diagnostic": "the package internal/obscuretestdata is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "archive/zip",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: testenv.CPUIsSlow"
+  },
+  {
+    "package": "bufio",
+    "status": "vm-suite"
+  },
+  {
+    "package": "bytes",
+    "status": "vm-suite"
+  },
+  {
+    "package": "cmp",
+    "status": "compile-blocked",
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  },
+  {
+    "package": "compress/bzip2",
+    "status": "compile-blocked",
+    "diagnostic": "the package internal/obscuretestdata is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "compress/flate",
+    "status": "vm-suite"
+  },
+  {
+    "package": "compress/gzip",
+    "status": "vm-suite"
+  },
+  {
+    "package": "compress/lzw",
+    "status": "vm-suite"
+  },
+  {
+    "package": "compress/zlib",
+    "status": "vm-suite"
+  },
+  {
+    "package": "container/heap",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "container/list",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "container/ring",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "context",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/aes",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/cipher",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/des",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/dsa",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/ecdh",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/ecdsa",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/ed25519",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/elliptic",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/fips140",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: testenv.SetGODEBUG"
+  },
+  {
+    "package": "crypto/hkdf",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/hmac",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/hpke",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/boring",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/boring/bbig",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/boring/sig",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/constanttime",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/aes",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/aes/gcm",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/alias",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/bigmod",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: addMulVVW1024"
+  },
+  {
+    "package": "crypto/internal/fips140/check",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/drbg",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/ecdh",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/ecdsa",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/ed25519",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/edwards25519",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/edwards25519/field",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/hkdf",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/hmac",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/mldsa",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/mlkem",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/nistec",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: syscall.Getpagesize"
+  },
+  {
+    "package": "crypto/internal/fips140/nistec/fiat",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/pbkdf2",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/rsa",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/sha256",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/sha3",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/sha512",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/subtle",
+    "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140cache",
+    "status": "compile-blocked",
+    "diagnostic": "c.m undefined (type *Cache[key, value] has no field or method m)"
+  },
+  {
+    "package": "crypto/internal/fips140deps/byteorder",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140deps/cpu",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140deps/godebug",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140deps/time",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140hash",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140only",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/internal/impl",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/rand",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/randutil",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/sysrand",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: testingOnlyFailRead",
+    "platform_diagnostics": {
+      "linux-amd64": "undefined: syscall.ENOSYS"
+    }
+  },
+  {
+    "package": "crypto/md5",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/mldsa",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/mlkem",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/mlkem/mlkemtest",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/pbkdf2",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/rand",
+    "status": "compile-blocked",
+    "diagnostic": "typ.Methods undefined (type reflect.Type has no field or method Methods)"
+  },
+  {
+    "package": "crypto/rc4",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/rsa",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/sha1",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/sha256",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/sha3",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/sha512",
+    "status": "compile-blocked",
+    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/subtle",
+    "status": "compile-blocked",
+    "diagnostic": "the package internal/cpu is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "crypto/tls",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: selectSignatureScheme"
+  },
+  {
+    "package": "crypto/x509",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: testenv.HasExternalNetwork"
+  },
+  {
+    "package": "crypto/x509/pkix",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "database/sql",
+    "status": "vm-suite"
+  },
+  {
+    "package": "database/sql/driver",
+    "status": "vm-suite"
+  },
+  {
+    "package": "database/sql/internal",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "debug/dwarf",
+    "status": "vm-suite"
+  },
+  {
+    "package": "debug/elf",
+    "status": "vm-suite"
+  },
+  {
+    "package": "debug/gosym",
+    "status": "vm-suite"
+  },
+  {
+    "package": "debug/macho",
+    "status": "compile-blocked",
+    "diagnostic": "the package internal/obscuretestdata is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "debug/pe",
+    "status": "vm-suite"
+  },
+  {
+    "package": "debug/plan9obj",
+    "status": "vm-suite"
+  },
+  {
+    "package": "embed",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "encoding",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "encoding/ascii85",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "encoding/asn1",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: runtime.MemStats"
+  },
+  {
+    "package": "encoding/base32",
+    "status": "vm-suite"
+  },
+  {
+    "package": "encoding/base64",
+    "status": "vm-suite"
+  },
+  {
+    "package": "encoding/binary",
+    "status": "compile-blocked",
+    "diagnostic": "cannot use sync.Map{} (value of struct type sync.Map) as map[reflect.Type]int value in assignment"
+  },
+  {
+    "package": "encoding/csv",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "encoding/gob",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: debugFunc"
+  },
+  {
+    "package": "encoding/hex",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "encoding/json",
+    "status": "vm-suite"
+  },
+  {
+    "package": "encoding/json/internal",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "encoding/json/internal/jsonflags",
+    "status": "vm-suite"
+  },
+  {
+    "package": "encoding/json/internal/jsonopts",
+    "status": "vm-suite"
+  },
+  {
+    "package": "encoding/json/internal/jsontest",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "encoding/json/internal/jsonwire",
+    "status": "vm-suite"
+  },
+  {
+    "package": "encoding/json/jsontext",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ],
+    "target_run": "^FuzzCoder$"
+  },
+  {
+    "package": "encoding/json/v2",
+    "status": "vm-suite"
+  },
+  {
+    "package": "encoding/pem",
+    "status": "vm-suite"
+  },
+  {
+    "package": "encoding/xml",
+    "status": "vm-suite"
+  },
+  {
+    "package": "errors",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "flag",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: commandLineUsage"
+  },
+  {
+    "package": "fmt",
+    "status": "vm-suite"
+  },
+  {
+    "package": "go/ast",
+    "status": "vm-suite"
+  },
+  {
+    "package": "go/build",
+    "status": "vm-suite"
+  },
+  {
+    "package": "go/build/constraint",
+    "status": "vm-suite"
+  },
+  {
+    "package": "go/constant",
+    "status": "vm-suite"
+  },
+  {
+    "package": "go/doc",
+    "status": "compile-blocked",
+    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "go/doc/comment",
+    "status": "compile-blocked",
+    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "go/format",
+    "status": "vm-suite"
+  },
+  {
+    "package": "go/parser",
+    "status": "vm-suite"
+  },
+  {
+    "package": "go/printer",
+    "status": "compile-blocked",
+    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "go/scanner",
+    "status": "vm-suite"
+  },
+  {
+    "package": "go/token",
+    "status": "vm-suite"
+  },
+  {
+    "package": "go/types",
+    "status": "compile-blocked",
+    "diagnostic": "cannot convert v.FieldByName(name).Addr().UnsafePointer() (value of type uintptr) to type *bool"
+  },
+  {
+    "package": "go/version",
+    "status": "vm-suite"
+  },
+  {
+    "package": "hash",
+    "status": "vm-suite"
+  },
+  {
+    "package": "hash/adler32",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "hash/crc32",
+    "status": "vm-suite"
+  },
+  {
+    "package": "hash/crc64",
+    "status": "vm-suite"
+  },
+  {
+    "package": "hash/fnv",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "hash/maphash",
+    "status": "compile-blocked",
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  },
+  {
+    "package": "html",
+    "status": "vm-suite"
+  },
+  {
+    "package": "html/template",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: testenv.SetGODEBUG"
+  },
+  {
+    "package": "image",
+    "status": "vm-suite"
+  },
+  {
+    "package": "image/color",
+    "status": "vm-suite"
+  },
+  {
+    "package": "image/color/palette",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "image/draw",
+    "status": "vm-suite"
+  },
+  {
+    "package": "image/gif",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: runtime.MemStats"
+  },
+  {
+    "package": "image/internal/imageutil",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "image/jpeg",
+    "status": "vm-suite"
+  },
+  {
+    "package": "image/png",
+    "status": "vm-suite"
+  },
+  {
+    "package": "index/suffixarray",
+    "status": "vm-suite"
+  },
+  {
+    "package": "internal/abi",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: abi.FuncPCABI0"
+  },
+  {
+    "package": "internal/asan",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/buildcfg",
+    "status": "vm-suite"
+  },
+  {
+    "package": "internal/bytealg",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/byteorder",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/chacha8rand",
+    "status": "vm-suite"
+  },
+  {
+    "package": "internal/dag",
+    "status": "vm-suite"
+  },
+  {
+    "package": "internal/fmtsort",
+    "status": "compile-blocked",
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  },
+  {
+    "package": "internal/godebug",
+    "status": "compile-blocked",
+    "diagnostic": "the package runtime/metrics is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "internal/goexperiment",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/goroot",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/gover",
+    "status": "vm-suite"
+  },
+  {
+    "package": "internal/goversion",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/lazyregexp",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/msan",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/nettrace",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/oserror",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/platform",
+    "status": "compile-blocked",
+    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "internal/race",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/reflectlite",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: ValueOf"
+  },
+  {
+    "package": "internal/saferio",
+    "status": "vm-suite"
+  },
+  {
+    "package": "internal/syslist",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/testenv",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: testenv.MustHaveExecPath"
+  },
+  {
+    "package": "internal/testhash",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/testlog",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/types/errors",
+    "status": "compile-blocked",
+    "diagnostic": "the package go/importer is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "internal/zstd",
+    "status": "vm-suite"
+  },
+  {
+    "package": "io",
+    "status": "vm-suite"
+  },
+  {
+    "package": "io/fs",
+    "status": "vm-suite"
+  },
+  {
+    "package": "io/ioutil",
+    "status": "vm-suite"
+  },
+  {
+    "package": "iter",
+    "status": "vm-suite"
+  },
+  {
+    "package": "log",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: itoa"
+  },
+  {
+    "package": "log/internal",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "log/slog",
+    "status": "compile-blocked",
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  },
+  {
+    "package": "log/slog/internal",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "log/slog/internal/buffer",
+    "status": "vm-suite"
+  },
+  {
+    "package": "maps",
+    "status": "vm-suite"
+  },
+  {
+    "package": "math",
+    "status": "compile-blocked",
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  },
+  {
+    "package": "math/big",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: runtime.MemStats",
+    "platform_diagnostics": {
+      "linux-amd64": "invalid operation: cannot take address of hasADX (untyped bool constant false)"
+    }
+  },
+  {
+    "package": "math/bits",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "math/cmplx",
+    "status": "vm-suite"
+  },
+  {
+    "package": "math/rand",
+    "status": "vm-suite"
+  },
+  {
+    "package": "math/rand/v2",
+    "status": "vm-suite"
+  },
+  {
+    "package": "mime",
+    "status": "vm-suite"
+  },
+  {
+    "package": "mime/multipart",
+    "status": "vm-suite"
+  },
+  {
+    "package": "mime/quotedprintable",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: sortByRFC6724withSrcs"
+  },
+  {
+    "package": "net/http",
+    "status": "compile-blocked",
+    "diagnostic": "unknown field RootCAs in struct literal of type tls.Config"
+  },
+  {
+    "package": "net/http/cgi",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net/http/cookiejar",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net/http/httptest",
+    "status": "compile-blocked",
+    "diagnostic": "unknown field Version in struct literal of type tls.ConnectionState"
+  },
+  {
+    "package": "net/http/httptrace",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net/http/httputil",
+    "status": "compile-blocked",
+    "diagnostic": "the package runtime/pprof is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "net/http/internal",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net/http/internal/ascii",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net/mail",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net/netip",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net/rpc",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net/rpc/jsonrpc",
+    "status": "vm-suite"
+  },
+  {
+    "package": "net/smtp",
+    "status": "compile-blocked",
+    "diagnostic": "cs.Version undefined (type tls.ConnectionState has no field or method Version)"
+  },
+  {
+    "package": "net/textproto",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: runtime.MemStats"
+  },
+  {
+    "package": "net/url",
+    "status": "compile-blocked",
+    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+  },
+  {
+    "package": "os",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: syscall.ENOTEMPTY"
+  },
+  {
+    "package": "os/exec",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: dedupEnvCase"
+  },
+  {
+    "package": "os/signal",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: testenv.CommandContext"
+  },
+  {
+    "package": "path",
+    "status": "vm-suite"
+  },
+  {
+    "package": "path/filepath",
+    "status": "vm-suite"
+  },
+  {
+    "package": "reflect",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: abi.IntArgRegs"
+  },
+  {
+    "package": "regexp",
+    "status": "vm-suite"
+  },
+  {
+    "package": "regexp/syntax",
+    "status": "vm-suite"
+  },
+  {
+    "package": "runtime",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: runtime.SetFinalizer"
+  },
+  {
+    "package": "runtime/debug",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: runtime.MemStats"
+  },
+  {
+    "package": "slices",
+    "status": "vm-suite"
+  },
+  {
+    "package": "sort",
+    "status": "vm-suite"
+  },
+  {
+    "package": "strconv",
+    "status": "vm-suite"
+  },
+  {
+    "package": "strings",
+    "status": "vm-suite"
+  },
+  {
+    "package": "sync",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: runtime_procPin"
+  },
+  {
+    "package": "sync/atomic",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: CompareAndSwapPointer"
+  },
+  {
+    "package": "syscall",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: syscall.Open",
+    "platform_diagnostics": {
+      "linux-amd64": "undefined: syscall.MSG_CMSG_CLOEXEC"
+    }
+  },
+  {
+    "package": "testing",
+    "status": "compile-blocked",
+    "diagnostic": "invalid operation: cannot call testing.PrettyPrint (variable with invalid type): invalid type is not a function"
+  },
+  {
+    "package": "testing/cryptotest",
+    "status": "vm-suite"
+  },
+  {
+    "package": "testing/fstest",
+    "status": "vm-suite"
+  },
+  {
+    "package": "testing/internal/testdeps",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "testing/iotest",
+    "status": "vm-suite"
+  },
+  {
+    "package": "testing/quick",
+    "status": "vm-suite"
+  },
+  {
+    "package": "testing/slogtest",
+    "status": "vm-suite"
+  },
+  {
+    "package": "testing/synctest",
+    "status": "vm-suite"
+  },
+  {
+    "package": "text/scanner",
+    "status": "vm-suite"
+  },
+  {
+    "package": "text/tabwriter",
+    "status": "vm-suite"
+  },
+  {
+    "package": "text/template",
+    "status": "compile-blocked",
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  },
+  {
+    "package": "text/template/parse",
+    "status": "vm-suite"
+  },
+  {
+    "package": "time",
+    "status": "compile-blocked",
+    "diagnostic": "-: import cycle not allowed in test"
+  },
+  {
+    "package": "time/tzdata",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "unicode",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "unicode/utf16",
+    "status": "vm-suite"
+  },
+  {
+    "package": "unicode/utf8",
+    "status": "vm-suite"
+  },
+  {
+    "package": "unique",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: canonMap"
+  },
+  {
+    "package": "uuid",
+    "status": "vm-suite"
+  },
+  {
+    "package": "vendor/golang.org/x/crypto/chacha20",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/crypto/chacha20poly1305",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/crypto/cryptobyte",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/crypto/cryptobyte/asn1",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/crypto/internal/alias",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/crypto/internal/poly1305",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/net/http/httpguts",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/net/idna",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/text/secure/bidirule",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/text/transform",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/text/unicode/bidi",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/text/unicode/norm",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "weak",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: runtime.SetFinalizer"
+  }
+]
