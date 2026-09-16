@@ -59,7 +59,7 @@ func (b *builder) markVar(e ast.Expr, out map[*types.Var]bool, global bool) {
 	if !ok {
 		v, ok = b.info.Defs[id].(*types.Var)
 	}
-	if !ok || !needsBox(v.Type()) || isGlobalVar(v) != global {
+	if !ok || !needsBox(v.Type()) || isGlobalVar(v) != global || (global && v.Exported()) {
 		return
 	}
 	out[v] = true

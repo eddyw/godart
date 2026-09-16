@@ -46,12 +46,16 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 	}
 	sig := signatureOf(b.typeOf(e.Fun))
 	out := &ir.Call{
+		Pos:      e.Fun.Pos(),
 		Fun:      fun,
 		Type:     b.typeOf(e),
 		Async:    b.blocks.CallAsync(e),
 		Spread:   e.Ellipsis.IsValid(),
 		Variadic: sig != nil && sig.Variadic(),
 		TypeArgs: b.typeArgs(e.Fun),
+	}
+	if selector, ok := unparenExpr(e.Fun).(*ast.SelectorExpr); ok {
+		out.Pos = selector.Sel.Pos()
 	}
 	if !b.spreadResults(out, e, sig) {
 		out.Args = b.args(e, sig)
@@ -542,7 +546,7 @@ func (b *builder) fieldPathOf(t types.Type, key ast.Expr) []int {
 		break
 	}
 	var path []int
-	current := t
+	current := typeset.Core(t)
 	for _, n := range names {
 		obj, index, _ := types.LookupFieldOrMethod(current, true, b.pkg, n)
 		field, ok := obj.(*types.Var)

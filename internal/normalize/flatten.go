@@ -347,17 +347,12 @@ func (f *flat) spawn(s ir.Stmt, target ir.Expr) {
 		list = append(list, &ir.Declare{Vars: []*ir.Var{v}, Init: id})
 		return identOf(v)
 	}
-	_, spawns := s.(*ir.Go)
 	switch call := target.(type) {
 	case *ir.Call:
 		if m, ok := call.Fun.(*ir.Method); ok {
 			call.Fun = &ir.Method{Recv: snap(m.Recv), Obj: m.Obj, Type: m.Type,
 				TypeArgs: m.TypeArgs}
-		} else if spawns {
-			// The chain of the deferred calls reads the name of the function
-			// value of a defer statement, and it gives that call the token of
-			// recover. A copy of that name would lose the token, thus only a
-			// go statement takes a copy of its function value.
+		} else {
 			call.Fun = snap(call.Fun)
 		}
 		for i, a := range call.Args {
@@ -755,9 +750,9 @@ func (f *flat) send(s *ir.Send) {
 func (f *flat) lvalue(x ir.Expr) ir.Expr {
 	switch x := x.(type) {
 	case *ir.Index:
-		return &ir.Index{X: f.indexBase(x.X), Index: f.temp(f.value(x.Index)), Type: x.Type}
+		return &ir.Index{Pos: x.Pos, X: f.indexBase(x.X), Index: f.temp(f.value(x.Index)), Type: x.Type}
 	case *ir.Field:
-		return &ir.Field{X: f.lvalueBase(x.X), Name: x.Name, Type: x.Type}
+		return &ir.Field{Pos: x.Pos, X: f.lvalueBase(x.X), Name: x.Name, Type: x.Type}
 	case *ir.Unary:
 		return &ir.Unary{Op: x.Op, X: f.temp(f.value(x.X)), Type: x.Type}
 	}
@@ -799,9 +794,9 @@ func (f *flat) lvalueBase(x ir.Expr) ir.Expr {
 	case *ir.Ident:
 		return x
 	case *ir.Field:
-		return &ir.Field{X: f.lvalueBase(x.X), Name: x.Name, Type: x.Type}
+		return &ir.Field{Pos: x.Pos, X: f.lvalueBase(x.X), Name: x.Name, Type: x.Type}
 	case *ir.Index:
-		return &ir.Index{X: f.indexBase(x.X), Index: f.temp(f.value(x.Index)), Type: x.Type}
+		return &ir.Index{Pos: x.Pos, X: f.indexBase(x.X), Index: f.temp(f.value(x.Index)), Type: x.Type}
 	case *ir.Unary:
 		return &ir.Unary{Op: x.Op, X: f.temp(f.value(x.X)), Type: x.Type}
 	}

@@ -229,6 +229,11 @@ bool $goEqual(Object? a, Object? b, TypeDesc d, [TypeDesc? root]) {
       // reports it.
       return $goEqual(ia.value, ib.value, ia.desc);
     case 'ptr':
+      final String? elem = d.elem?.call().kind;
+      if (elem == 'struct' || elem == 'array') {
+        if (a is $Ptr<Object?>) a = a.v;
+        if (b is $Ptr<Object?>) b = b.v;
+      }
       // Go compares 2 pointers by the location that each 1 holds. A cell
       // holds that location, and the == operator of the cell compares it.
       // Each other pointer is the object at the location itself, thus
@@ -283,6 +288,8 @@ int $goHash(Object? v, TypeDesc d, [TypeDesc? root]) {
       if (iv == null) return 0;
       return Object.hash(iv.desc.name, $goHash(iv.value, iv.desc));
     case 'ptr':
+      final String? elem = d.elem?.call().kind;
+      if ((elem == 'struct' || elem == 'array') && v is $Ptr<Object?>) v = v.v;
       if (v is $Ptr<Object?>) return v.hashCode;
       return identityHashCode(v);
   }

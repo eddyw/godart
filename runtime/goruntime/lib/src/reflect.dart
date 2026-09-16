@@ -11,6 +11,7 @@ import 'complex.dart';
 import 'format.dart';
 import 'goint.dart';
 import 'iface.dart';
+import 'int.dart';
 import 'map.dart';
 import 'panic.dart';
 import 'sched.dart';
@@ -478,10 +479,10 @@ final TypeDesc _byteDesc = TypeDesc(
 );
 
 /// The whole number inside a value of an integer kind.
-int $asInt(Iface? value) {
+GoInt $asInt(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
-  if (v is GoInt) return $ix(v);
+  if (v is GoInt) return v;
   $panic(
     Iface(
       $typeGoError,
@@ -531,7 +532,20 @@ GoString $asString(Iface? value) {
 }
 
 /// A value of the type, with the whole number inside it.
-Iface? $withInt(int handle, int x) => Iface(_typeAt(handle), x);
+Iface? $withInt(int handle, GoInt x) {
+  final desc = _typeAt(handle);
+  return Iface(desc, _integerValue(x, desc.kind));
+}
+
+GoInt _integerValue(GoInt x, String kind) => switch (kind) {
+  'int8' => $i8(x),
+  'int16' => $i16(x),
+  'int32' => $i32(x),
+  'uint8' => $u8(x),
+  'uint16' => $u16(x),
+  'uint32' => $u32(x),
+  _ => x,
+};
 
 /// A value of the type, with the float inside it.
 Iface? $withFloat(int handle, double x) => Iface(_typeAt(handle), x);
@@ -798,8 +812,7 @@ int $descOut(int handle, int index) {
 
 /// Calls a function value with the arguments, and gives each result.
 ///
-/// A function that gives up control is outside this call: the Dart form of such
-/// a function gives a sentinel, and the call reads no scheduler.
+/// A suspended function retains its result conversion in the frame chain.
 Slice<Iface?> $callValue(Iface? fn, Slice<Iface?> args) =>
     _callValue(fn, args, false);
 
@@ -844,7 +857,11 @@ Slice<Iface?> _callValue(Iface? fn, Slice<Iface?> args, bool spread) {
       final Iface? a = args[i];
       raw.add(desc.params[i]().kind == 'interface' ? a : a?.value);
     }
-    return _resultSlice(desc, Function.apply(fn.value as Function, raw));
+    return $resumeReflect<Slice<Iface?>>(
+      Function.apply(fn.value as Function, raw),
+      (Object? out) => _resultSlice(desc, out),
+      Slice<Iface?>.nil(),
+    );
   }
   final int fixed = desc.variadic ? desc.params.length - 1 : desc.params.length;
   final bool wrong = desc.variadic
@@ -882,7 +899,43 @@ Slice<Iface?> _callValue(Iface? fn, Slice<Iface?> args, bool spread) {
     }
     raw.add(tail);
   }
-  return _resultSlice(desc, Function.apply(fn.value as Function, raw));
+  return $resumeReflect<Slice<Iface?>>(
+    Function.apply(fn.value as Function, raw),
+    (Object? out) => _resultSlice(desc, out),
+    Slice<Iface?>.nil(),
+  );
+}
+
+/// Retains a result conversion across a suspended reflection call.
+T $resumeReflect<T>(Object? out, T Function(Object?) convert, T zero) {
+  final Frame? frame = $blocked;
+  if (frame == null) return convert(out);
+  $block(_ReflectResume(frame, convert));
+  return zero;
+}
+
+final class _ReflectResume implements WaitFrame, DurableWait, NestedFrame {
+  final Frame inner;
+  final Object? Function(Object?) convert;
+  _ReflectResume(this.inner, this.convert);
+
+  @override
+  Frame get $inner => inner;
+  @override
+  String get $reason => $waitReason(inner);
+  @override
+  bool $durableIn(Bubble b) => $durableWait(inner, b);
+
+  @override
+  Object? resume() {
+    final Object? out = inner.resume();
+    final Frame? again = $blocked;
+    if (again != null) {
+      $block(_ReflectResume(again, convert));
+      return null;
+    }
+    return convert(out);
+  }
 }
 
 /// _resultSlice gives the results of a call as a slice of interface values.
@@ -1139,8 +1192,11 @@ Iface? $methodValue(Iface? value, int index) {
 /// result. Read decision 228 for the earlier limit.
 Function _bindMethod(TypeDesc sig, Function fn, Object? recv) => _typedFunc(
   sig,
-  (List<Object?> args) =>
-      _resultList(sig, Function.apply(fn, <Object?>[recv, ...args])),
+  (List<Object?> args) => $resumeReflect<List<Object?>>(
+    Function.apply(fn, <Object?>[recv, ...args]),
+    (Object? out) => _resultList(sig, out),
+    <Object?>[],
+  ),
 );
 
 /// _typedFunc builds a closure of the Dart type of a function type.
@@ -1351,38 +1407,29 @@ Iface? $makeFunc(int handle, Object? body) {
           p.kind == 'interface' ? args[i] as Iface? : Iface(p, args[i]),
         );
       }
-      final Slice<Iface?> out = run(Slice<Iface?>.of(input)) as Slice<Iface?>;
-      // A function that gives up control is outside this call, exactly as it
-      // is outside Value.Call. The sentinel of the scheduler names the cause.
-      if ($blocked != null) {
-        $panic(
-          Iface(
-            $typeGoError,
-            GoError(
-              'reflect: MakeFunc of ${desc.display} ran a body that gives up '
-              'control',
+      return $resumeReflect<List<Object?>>(run(Slice<Iface?>.of(input)), (
+        Object? value,
+      ) {
+        final Slice<Iface?> out = value as Slice<Iface?>;
+        final int n = desc.results.length;
+        if (out.len != n) {
+          $panic(
+            Iface(
+              $typeGoError,
+              GoError(
+                'reflect: MakeFunc of ${desc.display} gave ${out.len} '
+                'results, and the type holds $n',
+              ),
             ),
-          ),
-        );
-      }
-      final int n = desc.results.length;
-      if (out.len != n) {
-        $panic(
-          Iface(
-            $typeGoError,
-            GoError(
-              'reflect: MakeFunc of ${desc.display} gave ${out.len} '
-              'results, and the type holds $n',
-            ),
-          ),
-        );
-      }
-      final List<Object?> raw = <Object?>[];
-      for (int i = 0; i < n; i++) {
-        final Iface? o = out[i];
-        raw.add(desc.results[i]().kind == 'interface' ? o : o?.value);
-      }
-      return raw;
+          );
+        }
+        final List<Object?> raw = <Object?>[];
+        for (int i = 0; i < n; i++) {
+          final Iface? o = out[i];
+          raw.add(desc.results[i]().kind == 'interface' ? o : o?.value);
+        }
+        return raw;
+      }, <Object?>[]);
     }),
   );
 }
@@ -2197,6 +2244,8 @@ bool _unnamedType(String text) {
 bool _sameUnderlying(TypeDesc a, TypeDesc b) {
   if (a.kind != b.kind) return false;
   switch (a.kind) {
+    case 'struct':
+      return _sameStruct(a, b, false);
     case 'slice' || 'ptr':
       return _sameDesc(a.elem, b.elem);
     case 'chan':
@@ -2247,7 +2296,7 @@ bool $descConvertible(int handle, int other) {
     }
   }
   if (a.kind == b.kind && a.kind == 'struct') {
-    return a.name == b.name;
+    return _sameStruct(a, b, true);
   }
   // Go converts between 2 types whose underlying types are identical. A
   // defined slice type and the slice itself hold 1 Dart list, thus the
@@ -2270,6 +2319,45 @@ bool $descConvertible(int handle, int other) {
       case 'map':
         return _sameDesc(a.key, b.key) && _sameDesc(a.elem, b.elem);
     }
+  }
+  return false;
+}
+
+bool _sameStruct(TypeDesc a, TypeDesc b, bool ignoreTags) {
+  if (a.fields.length != b.fields.length) return false;
+  for (int i = 0; i < a.fields.length; i++) {
+    final FieldDesc x = a.fields[i], y = b.fields[i];
+    if (x.name != y.name ||
+        x.pkg != y.pkg ||
+        x.embedded != y.embedded ||
+        (!ignoreTags && x.tag != y.tag) ||
+        !_sameFieldType(x.type(), y.type(), ignoreTags)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool _sameFieldType(TypeDesc a, TypeDesc b, bool ignoreTags) {
+  if (a.name == b.name) return true;
+  if (!ignoreTags ||
+      !_unnamedType(a.text) ||
+      !_unnamedType(b.text) ||
+      a.kind != b.kind) {
+    return false;
+  }
+  switch (a.kind) {
+    case 'struct':
+      return _sameStruct(a, b, true);
+    case 'array':
+      return a.length == b.length && _sameFieldType(a.elem!(), b.elem!(), true);
+    case 'slice' || 'ptr':
+      return _sameFieldType(a.elem!(), b.elem!(), true);
+    case 'chan':
+      return a.dir == b.dir && _sameFieldType(a.elem!(), b.elem!(), true);
+    case 'map':
+      return _sameFieldType(a.key!(), b.key!(), true) &&
+          _sameFieldType(a.elem!(), b.elem!(), true);
   }
   return false;
 }
@@ -2406,7 +2494,38 @@ Iface? $valueConvert(Iface? value, int handle) {
   return Iface(to, _converted(from, to, value.value));
 }
 
+/// The compiler supplies types that Go permits in a conversion.
+T $convert<T>(Object? value, TypeDesc from, TypeDesc to) =>
+    _converted(from, to, value) as T;
+
+Object? $structLiteral(TypeDesc desc, List<Object?> fields) {
+  final Object? out = desc.zero!();
+  for (int i = 0; i < fields.length; i++) {
+    if (desc.fields[i].name != '_') desc.fields[i].set(out, fields[i]);
+  }
+  return out;
+}
+
 Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
+  if (to.kind == 'struct') {
+    final Object? out = to.zero!();
+    for (int i = 0; i < to.fields.length; i++) {
+      final FieldDesc src = from.fields[i];
+      final FieldDesc dst = to.fields[i];
+      if (dst.name != '_') {
+        dst.set(out, _converted(src.type(), dst.type(), src.get(v)));
+      }
+    }
+    return out;
+  }
+  if (to.kind == 'array') {
+    final List<Object?> out = to.zero!() as List<Object?>;
+    final List<Object?> src = v as List<Object?>;
+    for (int i = 0; i < out.length; i++) {
+      out[i] = _converted(from.elem!(), to.elem!(), src[i]);
+    }
+    return out;
+  }
   if (to.kind == 'string') {
     if (_numberKinds.contains(from.kind)) {
       return GoString.fromString(String.fromCharCode(($ix(v as GoInt))));
@@ -2439,9 +2558,22 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
     return Slice<Object?>.of(out);
   }
   if (_numberKinds.contains(to.kind)) {
-    final double x = v is GoInt ? $ix(v).toDouble() : (v as double);
-    if (to.kind == 'float32' || to.kind == 'float64') return x;
-    return $gi(x.toInt());
+    if (to.kind == 'float32' || to.kind == 'float64') {
+      final double x = v is GoInt
+          ? (from.kind == 'uint64' ||
+                    from.kind == 'uint' ||
+                    from.kind == 'uintptr'
+                ? $utodouble(v)
+                : $todouble(v))
+          : v as double;
+      return to.kind == 'float32' ? $f32(x) : x;
+    }
+    final x = v is GoInt
+        ? v
+        : (to.kind == 'uint64' || to.kind == 'uint' || to.kind == 'uintptr'
+              ? $fromF64U(v as double)
+              : $fromF64(v as double));
+    return _integerValue(x, to.kind);
   }
   return v;
 }

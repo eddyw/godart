@@ -51,6 +51,7 @@ func lessThanHalf(x, y Duration) bool {
 // Truncate gives t rounded down to a multiple of d since January 1 of the year
 // 1. It gives t again for a d that is not positive.
 func (t Time) Truncate(d Duration) Time {
+	t.stripMono()
 	if d <= 0 {
 		return t
 	}
@@ -61,6 +62,7 @@ func (t Time) Truncate(d Duration) Time {
 // Round gives t rounded to the nearest multiple of d since January 1 of the
 // year 1. A tie rounds up. It gives t again for a d that is not positive.
 func (t Time) Round(d Duration) Time {
+	t.stripMono()
 	if d <= 0 {
 		return t
 	}

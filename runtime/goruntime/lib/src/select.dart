@@ -1,5 +1,9 @@
+import 'dart:math';
+
 import 'chan.dart';
 import 'sched.dart';
+
+final Random _selectRandom = Random();
 
 /// One case of a select statement.
 sealed class SelectCase {
@@ -83,18 +87,21 @@ final class SendCase<T> extends SelectCase {
 /// The result is -1 when no case is ready and the statement holds a default.
 /// The caller reads [$blocked] after the call, because the statement blocks
 /// when no case is ready and the statement holds no default.
-///
-/// Go takes a ready case at random, and this function takes the first one. A
-/// Go program must not depend on the choice.
 int $select(List<SelectCase> cases, bool hasDefault) {
+  var chosen = -1;
+  var ready = 0;
   for (var i = 0; i < cases.length; i++) {
     final Bubble? b = cases[i].bubble;
     if (b != null && !identical(b, $current?.bubble)) {
       $fatalError('select on synctest channel from outside bubble');
     }
     if (!cases[i].ready) continue;
-    _take(cases[i]);
-    return i;
+    ready++;
+    if (_selectRandom.nextInt(ready) == 0) chosen = i;
+  }
+  if (chosen >= 0) {
+    _take(cases[chosen]);
+    return chosen;
   }
   if (hasDefault) return -1;
   if (cases.isEmpty) {
@@ -145,7 +152,9 @@ final class _SelectWait implements WaitFrame, DurableWait {
   }
 
   void arm() {
-    for (var i = 0; i < cases.length; i++) {
+    final order = List<int>.generate(cases.length, (i) => i)
+      ..shuffle(_selectRandom);
+    for (final i in order) {
       // Go omits a case of a nil channel. A waiter there would also join the
       // queue of the shared nil channel of the element type.
       if (cases[i].isNil) continue;

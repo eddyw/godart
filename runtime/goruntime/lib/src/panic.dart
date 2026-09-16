@@ -5,6 +5,8 @@ import 'string.dart';
 final class GoPanic implements Exception {
   final Object? value;
 
+  final StackTrace trace;
+
   /// The panic that stood when this one started. A deferred call that panics
   /// again holds such a link, and Go writes the whole chain.
   GoPanic? link;
@@ -13,7 +15,7 @@ final class GoPanic implements Exception {
   /// [recovered] behind such a panic.
   bool recovered = false;
 
-  GoPanic(this.value);
+  GoPanic(this.value) : trace = StackTrace.current;
 
   @override
   String toString() => 'panic: ${$panicText(value)}';

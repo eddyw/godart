@@ -1,3 +1,5 @@
+import 'goint.dart';
+import 'iface.dart';
 import 'panic.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'srcmap.dart';
@@ -42,6 +44,14 @@ void $print(List<String> parts) => $platformStderrText(parts.join());
 /// 2 values.
 void $println(List<String> parts) =>
     $platformStderrText('${parts.join(' ')}\n');
+
+String $numericText(Object? value, TypeDesc desc) {
+  if (value is double) return $fstring(value);
+  if (desc.kind == 'uint' || desc.kind == 'uint64' || desc.kind == 'uintptr') {
+    return $ustring(value as GoInt);
+  }
+  return value.toString();
+}
 
 /// The text of a float, in the format that the Go builtin print uses.
 ///

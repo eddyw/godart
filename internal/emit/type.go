@@ -54,7 +54,7 @@ func (e *emitter) dartType(t types.Type) string {
 			// the class of a type argument of the shape is not the class of
 			// the shape. Each operation on such a parameter reads its
 			// dictionary, thus the value takes no Dart type.
-			if st, ok := core.(*types.Struct); ok && typeset.HoldsParam(st) {
+			if _, ok := core.(*types.Struct); ok {
 				return "Object?"
 			}
 			// A constraint that names its own type parameter, for example
@@ -362,21 +362,17 @@ func (e *emitter) cycleZeroFunc(t types.Type) string {
 }
 
 // coreDispatch reports whether a method call on a type parameter with this
-// core type goes through the method table. A struct core gives a Dart class
-// with the method as a member, and each other core erases the method. A struct
-// core that reads a type parameter takes no single class, thus it reads the
-// table.
+// core type goes through the method table. A struct constraint holds no single
+// Dart class for all its type arguments.
 func coreDispatch(core types.Type) bool {
 	if core == nil {
 		return true
 	}
-	switch core := types.Unalias(core).(type) {
-	case *types.Struct, *types.Pointer:
-		if st, ok := core.(*types.Struct); ok {
-			return typeset.HoldsParam(st)
-		}
+	switch types.Unalias(core).(type) {
+	case *types.Pointer:
 		return false
 	}
+
 	return true
 }
 
@@ -411,7 +407,6 @@ func (e *emitter) typeParamBound(tp *types.TypeParam) string {
 		return ""
 	}
 	dart := ""
-	numeric := true
 	for _, t := range terms {
 		// A struct term names a shape of the compiler, and no Dart bound
 		// holds the class of each type argument of the shape.
@@ -425,18 +420,11 @@ func (e *emitter) typeParamBound(tp *types.TypeParam) string {
 			return ""
 		}
 		text := e.dartType(t)
-		if text != "GoInt" && text != "double" {
-			numeric = false
-		}
 		if dart == "" {
 			dart = text
 			continue
 		}
 		if dart != text {
-			if numeric {
-				dart = "num"
-				continue
-			}
 			return ""
 		}
 	}
@@ -537,9 +525,9 @@ func dictText(t types.Type) string {
 func (e *emitter) dictCopy(t types.Type) string {
 	switch {
 	case isStructType(t):
-		return ", copy: (v) => v.$copy(), assign: (d, s) { d.$assign(s); return s; }"
+		return ", copy: (v) => v.$copy(), assign: (d, s) { d.$assign(s); return d; }"
 	case isArrayType(t):
-		return fmt.Sprintf(", copy: (v) => %s, assign: (d, s) { %s; return s; }",
+		return fmt.Sprintf(", copy: (v) => %s, assign: (d, s) { %s; return d; }",
 			e.copyOf("v", t), e.assignElem("d", "s", t))
 	}
 	return ""
@@ -547,11 +535,17 @@ func (e *emitter) dictCopy(t types.Type) string {
 
 // equalText writes the Go equality of 2 values of a type.
 func (e *emitter) equalText(a, b string, t types.Type) string {
+	if isDartObjectPointer(t) {
+		return fmt.Sprintf("identical(%s, %s)", a, b)
+	}
 	if isArrayType(t) {
-		return fmt.Sprintf("$equalArray(%s, %s)", a, b)
+		return fmt.Sprintf("$goEqual(%s, %s, %s)", a, b, e.descriptorOf(t))
 	}
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
 		return fmt.Sprintf("%s.equal(%s, %s)", e.dictOf(tp), a, b)
+	}
+	if _, ok := types.Unalias(t).Underlying().(*types.Pointer); ok {
+		return fmt.Sprintf("$goEqual(%s, %s, %s)", a, b, e.descriptorOf(t))
 	}
 	if isReference(t) {
 		return fmt.Sprintf("identical(%s, %s)", a, b)
@@ -560,11 +554,17 @@ func (e *emitter) equalText(a, b string, t types.Type) string {
 }
 
 func (e *emitter) hashText(v string, t types.Type) string {
+	if isDartObjectPointer(t) {
+		return fmt.Sprintf("identityHashCode(%s)", v)
+	}
 	if isArrayType(t) {
-		return fmt.Sprintf("Object.hashAll(%s)", v)
+		return fmt.Sprintf("$goHash(%s, %s)", v, e.descriptorOf(t))
 	}
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
 		return fmt.Sprintf("%s.hash(%s)", e.dictOf(tp), v)
+	}
+	if _, ok := types.Unalias(t).Underlying().(*types.Pointer); ok {
+		return fmt.Sprintf("$goHash(%s, %s)", v, e.descriptorOf(t))
 	}
 	if isReference(t) {
 		return fmt.Sprintf("identityHashCode(%s)", v)

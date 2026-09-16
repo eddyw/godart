@@ -13,7 +13,6 @@ import (
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/overlay"
-	"github.com/eddyw/godart/internal/typeset"
 )
 
 // Error reports 1 rejected construct.
@@ -106,75 +105,8 @@ func (v *verifier) visit(n ast.Node) bool {
 		v.checkCall(n)
 	case *ast.SelectorExpr:
 		v.checkEmbedNew(n)
-	case *ast.Ident:
-		v.checkStructArg(n)
 	}
 	return true
-}
-
-// checkStructArg rejects an instance whose type parameter holds an unnamed
-// struct core and whose argument is a named struct type.
-//
-// The Dart type of such a parameter is the class of the shape, and a named
-// struct type holds a class of its own. The dictionary of the instance thus
-// carries 2 Dart types for 1 Go type, and the Dart front end rejects the call.
-//
-// No package of the standard library declares such a parameter.
-func (v *verifier) checkStructArg(id *ast.Ident) {
-	inst, ok := v.info.Instances[id]
-	if !ok || inst.TypeArgs == nil {
-		return
-	}
-	params := originParams(v.info.Uses[id])
-	if params == nil || params.Len() != inst.TypeArgs.Len() {
-		return
-	}
-	for i := range inst.TypeArgs.Len() {
-		arg := inst.TypeArgs.At(i)
-		if _, named := types.Unalias(arg).(*types.Named); !named {
-			continue
-		}
-		if _, ok := types.Unalias(arg).Underlying().(*types.Struct); !ok {
-			continue
-		}
-		if _, ok := typeset.Core(params.At(i)).(*types.Struct); !ok {
-			continue
-		}
-		if _, unnamed := types.Unalias(coreTerm(params.At(i))).(*types.Named); unnamed {
-			continue
-		}
-		v.reject(id.Pos(),
-			"the Dart type of such a parameter is the class of the shape, and a named struct type holds a class of its own",
-			"the type argument %s of the parameter %s names a struct type, and the constraint holds an unnamed struct type",
-			arg, params.At(i).Obj().Name())
-		return
-	}
-}
-
-// originParams gives the type parameters of the generic declaration of an
-// object.
-func originParams(obj types.Object) *types.TypeParamList {
-	switch obj := obj.(type) {
-	case *types.Func:
-		if sig, ok := obj.Type().(*types.Signature); ok {
-			return sig.TypeParams()
-		}
-	case *types.TypeName:
-		if named, ok := types.Unalias(obj.Type()).(*types.Named); ok {
-			return named.TypeParams()
-		}
-	}
-	return nil
-}
-
-// coreTerm gives the single term of the type set of a parameter. A constraint
-// with 1 term names the type that the argument must hold.
-func coreTerm(tp *types.TypeParam) types.Type {
-	terms, ok := typeset.Terms(tp.Constraint())
-	if !ok || len(terms) != 1 {
-		return nil
-	}
-	return terms[0]
 }
 
 // checkEmbedNew rejects a read of the constructor of the package embed.
@@ -197,11 +129,6 @@ func (v *verifier) checkEmbedNew(sel *ast.SelectorExpr) {
 	}
 	v.reject(sel.Pos(), "the package embed of Go holds no such name",
 		"a value of embed.FS comes from a //go:embed directive")
-}
-
-func isFloat(t types.Type) bool {
-	b, ok := types.Unalias(t).Underlying().(*types.Basic)
-	return ok && b.Info()&types.IsFloat != 0
 }
 
 func (v *verifier) checkImport(spec *ast.ImportSpec) {
@@ -249,15 +176,7 @@ func (v *verifier) checkAddress(e *ast.UnaryExpr) {
 			"the compiler rejects the address of %s", types.TypeString(t, nil))
 		return
 	}
-	// A package variable that holds a box carries the box in its declaration,
-	// thus each package that reads the variable must know the box. An exported
-	// variable reaches another package, and the archive holds no such field.
-	if id, ok := unparen(e.X).(*ast.Ident); ok && id.IsExported() {
-		if obj, ok := v.info.Uses[id].(*types.Var); ok && isGlobal(obj) && importable(obj.Pkg()) {
-			v.reject(e.Pos(), "the box of a package variable does not cross a package boundary",
-				"the compiler rejects the address of the exported package variable %s", id.Name)
-		}
-	}
+
 }
 
 // importable reports whether an import of another package can name the
@@ -267,22 +186,17 @@ func importable(pkg *types.Package) bool {
 	return pkg != nil && pkg.Name() != "main" && !strings.HasSuffix(pkg.Name(), "_test")
 }
 
-// isGlobal reports whether the variable stands at package level.
-func isGlobal(obj *types.Var) bool {
-	return obj.Pkg() != nil && obj.Parent() == obj.Pkg().Scope()
-}
-
 // isLocation reports whether the expression names a field of a struct, an
 // element of a slice or an array, or a composite literal. A pointer to a field
 // and to an element holds the object and the index, and a pointer to a literal
 // holds a box of its own.
 func (v *verifier) isLocation(e ast.Expr) bool {
 	switch e := unparen(e).(type) {
-	case *ast.CompositeLit:
+	case *ast.CompositeLit, *ast.StarExpr:
 		return true
 	case *ast.SelectorExpr:
 		obj, ok := v.info.Uses[e.Sel].(*types.Var)
-		return ok && obj.IsField()
+		return ok && (obj.IsField() || obj.Parent() == obj.Pkg().Scope())
 	case *ast.IndexExpr:
 		t := v.typeOf(e.X)
 		if t == nil {
@@ -331,7 +245,6 @@ func (v *verifier) checkBodyless(n ast.Node) {
 }
 
 func (v *verifier) checkCall(call *ast.CallExpr) {
-	v.checkStructConv(call)
 	id, _ := unparen(call.Fun).(*ast.Ident)
 	if id == nil {
 		return
@@ -344,43 +257,6 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 	case "len", "cap", "print", "println":
 		v.checkTypeParamBuiltin(call, b.Name())
 	}
-}
-
-// checkStructConv rejects a conversion between 2 struct types that hold 2 Dart
-// classes.
-//
-// `type outer inner` gives the 2 names 1 struct object of go/types, and the
-// emitter gives them 1 Dart class. A conversion between such types thus needs
-// no operation.
-//
-// A struct that a second declaration spells again holds a struct object of its
-// own. The Dart class of it holds an unexported field as a private member, and
-// a private member reaches no other Dart library. Thus no expression builds the
-// target from the source.
-func (v *verifier) checkStructConv(call *ast.CallExpr) {
-	if len(call.Args) != 1 || call.Ellipsis.IsValid() {
-		return
-	}
-	tv, ok := v.info.Types[unparen(call.Fun)]
-	if !ok || !tv.IsType() {
-		return
-	}
-	to := tv.Type
-	from := v.typeOf(call.Args[0])
-	if to == nil || from == nil || !isStruct(to) || !isStruct(from) {
-		return
-	}
-	if types.Identical(to, from) || oneClass(to, from) || foreignClass(to, from) {
-		return
-	}
-	cause := "the 2 types hold 2 struct objects, thus the emitter gives them 2 Dart classes"
-	if sharedStruct(to, from) != nil {
-		cause = "1 of the 2 types declares a method with a value receiver, " +
-			"thus its Dart class holds the body of that method"
-	}
-	v.reject(call.Pos(), cause,
-		"a conversion between the 2 struct types %s and %s is outside the subset",
-		from, to)
 }
 
 func (v *verifier) typeOf(e ast.Expr) types.Type {
@@ -412,133 +288,4 @@ func unparen(e ast.Expr) ast.Expr {
 		}
 		e = p.X
 	}
-}
-
-// oneClass reports whether 2 named struct types hold 1 struct object of 1
-// package. The emitter gives such types 1 Dart class. Read mergeGroup of the
-// package emit.
-func oneClass(a, b types.Type) bool {
-	na, _ := types.Unalias(a).(*types.Named)
-	nb, _ := types.Unalias(b).(*types.Named)
-	if na == nil || nb == nil {
-		return false
-	}
-	if na.TypeParams().Len() > 0 || nb.TypeParams().Len() > 0 {
-		return false
-	}
-	if na.Obj().Pkg() == nil || na.Obj().Pkg() != nb.Obj().Pkg() {
-		return false
-	}
-	sa, _ := na.Underlying().(*types.Struct)
-	sb, _ := nb.Underlying().(*types.Struct)
-	return sa != nil && sa == sb
-}
-
-// foreignClass reports whether 2 named struct types read the Dart class of the
-// package that declares their struct object.
-//
-// `type X q.Y` gives X the struct object of q.Y, and the emitter gives X the
-// class of q.Y. Read foreignRep of the package emit, which holds the same
-// rule. The 2 must agree: a conversion that stage 2 accepts and stage 5
-// rejects gives a late report, and the other order loses a form of Go.
-func foreignClass(a, b types.Type) bool {
-	st := sharedStruct(a, b)
-	if st == nil {
-		return false
-	}
-	home := st.Field(0).Pkg()
-	if len(namedStructs(home, st)) == 0 {
-		return false
-	}
-	na, _ := types.Unalias(a).(*types.Named)
-	nb, _ := types.Unalias(b).(*types.Named)
-	return readsHomeClass(na, home, st) && readsHomeClass(nb, home, st)
-}
-
-// sharedStruct gives the struct object that 2 named struct types hold, when
-// another package declares that object. It gives nil for each other pair.
-func sharedStruct(a, b types.Type) *types.Struct {
-	na, _ := types.Unalias(a).(*types.Named)
-	nb, _ := types.Unalias(b).(*types.Named)
-	if na == nil || nb == nil {
-		return nil
-	}
-	sa, sb := namedStruct(na), namedStruct(nb)
-	if sa == nil || sa != sb || sa.NumFields() == 0 {
-		return nil
-	}
-	home := sa.Field(0).Pkg()
-	if home == nil || home.Path() == overlay.IntrinsicPath {
-		return nil
-	}
-	if na.Obj().Pkg() == home && nb.Obj().Pkg() == home {
-		return nil
-	}
-	return sa
-}
-
-// namedStruct gives the struct object of a named type that holds no type
-// parameter and no type argument.
-func namedStruct(n *types.Named) *types.Struct {
-	if n.TypeParams().Len() > 0 || n.TypeArgs().Len() > 0 {
-		return nil
-	}
-	st, _ := n.Underlying().(*types.Struct)
-	return st
-}
-
-// readsHomeClass reports whether a named struct type reads the Dart class of
-// the package that declares its struct object. A type of that package owns the
-// class already, and a type of another package reads it only when no named
-// type of its own package declares a method with a value receiver.
-func readsHomeClass(n *types.Named, home *types.Package, st *types.Struct) bool {
-	pkg := n.Obj().Pkg()
-	if pkg == nil || namedStruct(n) != st {
-		return false
-	}
-	if pkg == home {
-		return true
-	}
-	for _, member := range namedStructs(pkg, st) {
-		if valueMethod(member) {
-			return false
-		}
-	}
-	return true
-}
-
-// namedStructs gives each named type of a package that holds the struct
-// object, in the order of the scope.
-func namedStructs(pkg *types.Package, st *types.Struct) []*types.Named {
-	if pkg == nil {
-		return nil
-	}
-	var out []*types.Named
-	scope := pkg.Scope()
-	for _, n := range scope.Names() {
-		tn, _ := scope.Lookup(n).(*types.TypeName)
-		if tn == nil || tn.IsAlias() {
-			continue
-		}
-		named, _ := types.Unalias(tn.Type()).(*types.Named)
-		if named != nil && namedStruct(named) == st {
-			out = append(out, named)
-		}
-	}
-	return out
-}
-
-// valueMethod reports whether a named type declares a method with a value
-// receiver. The Dart class of the type holds the body of such a method.
-func valueMethod(n *types.Named) bool {
-	for i := range n.NumMethods() {
-		sig, ok := n.Method(i).Type().(*types.Signature)
-		if !ok || sig.Recv() == nil {
-			continue
-		}
-		if _, ok := types.Unalias(sig.Recv().Type()).(*types.Pointer); !ok {
-			return true
-		}
-	}
-	return false
 }

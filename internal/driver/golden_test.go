@@ -82,6 +82,7 @@ func buildOnce(t *testing.T, source string) map[string]string {
 		Runtime:  runtime,
 		Format:   true,
 		NoCache:  true,
+		TrimPath: true,
 	}); err != nil {
 		t.Fatal(err)
 	}

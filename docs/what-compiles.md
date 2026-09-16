@@ -81,7 +81,7 @@ and the largest gap of each partial package.
 | A `//go:embed` directive | Present. Stage 1 writes the files into the declaration of the variable. |
 | The address of a value behind a pointer, for example `&*p` | Rejected. Read `p`. |
 | A goroutine on a second thread | All Go code runs in 1 Dart isolate. `GOMAXPROCS` gives 1. |
-| A conversion between 2 struct types | Rejected |
+| A conversion between 2 struct types | Descriptor copies preserve value semantics, private fields, and tags. Reference fields retain shared storage. |
 | A function that can block, in a value of a type that carries `//gart:sync` | Rejected. Read decision 221. |
 | A function declaration with no body | Rejected, and a `//gart:dart` directive accepts it. Read decision 239. |
 | A function type that names itself, for example `type stateFn func(*lexer) stateFn` | Present. The type erases to `Object?`, and a call of such a value goes through a dynamic call. Read decision 227. |
@@ -205,5 +205,5 @@ that stay out, with the cause and the cost of each one.
 `compress/bzip2`, `math/big`, `encoding/gob`, and `crypto/x509` until
 2026-09-03. Each 1 builds now. `encoding/gob` needed 6 reflect names and a
 `reflect.Kind` that is a `uint`, and `crypto/x509` needed the whole ASN.1
-stack. `crypto/x509` holds 115 of 261 names, and chain verification stays out
-because `dart:io` owns the trust decision.
+stack. The overlay now includes chain verification through the Go verifier.
+The platform trust verifier remains outside the Dart runtime. Read `docs/parity.md`.

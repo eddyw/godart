@@ -41,12 +41,24 @@ class Pack {
 /// https://pub.dev/packages/material_ui.
 const packs = <Pack>[
   Pack('package:flutter/widgets.dart', 'widgets', 'gart.dev/ui', 'ui'),
-  Pack('package:material_ui/material_ui.dart', 'material_ui',
-      'gart.dev/ui/material', 'material'),
-  Pack('package:cupertino_ui/cupertino_ui.dart', 'cupertino_ui',
-      'gart.dev/ui/cupertino', 'cupertino'),
-  Pack('package:flutter_svg/flutter_svg.dart', 'flutter_svg',
-      'gart.dev/ui/svg', 'svg'),
+  Pack(
+    'package:material_ui/material_ui.dart',
+    'material_ui',
+    'gart.dev/ui/material',
+    'material',
+  ),
+  Pack(
+    'package:cupertino_ui/cupertino_ui.dart',
+    'cupertino_ui',
+    'gart.dev/ui/cupertino',
+    'cupertino',
+  ),
+  Pack(
+    'package:flutter_svg/flutter_svg.dart',
+    'flutter_svg',
+    'gart.dev/ui/svg',
+    'svg',
+  ),
 ];
 
 /// corePack holds the widgets of the Flutter framework, and the hand written
@@ -104,7 +116,7 @@ class Param {
   /// A parameter that the constructor demands.
   final bool required;
 
-  /// A Dart type that accepts null. Such a parameter needs no default.
+  /// A Dart type that accepts null.
   final bool nullable;
 
   /// The default of the Dart parameter, verbatim, or null.
@@ -223,7 +235,8 @@ Future<Reading> read(String root) async {
 
   final iconLib = await session.getLibraryByUri(materialPack.uri);
   if (iconLib is LibraryElementResult) {
-    final Object? icons = iconLib.element.exportNamespace.definedNames2['Icons'];
+    final Object? icons =
+        iconLib.element.exportNamespace.definedNames2['Icons'];
     if (icons is ClassElement) {
       for (final f in icons.fields) {
         final n = f.name;
@@ -302,37 +315,42 @@ void readCtor(
       return;
     }
     if (!p.isRequired &&
-        !nullable &&
+        (!nullable ||
+            p.defaultValueCode != null && p.defaultValueCode != 'null') &&
         !usableDefault(out, needed, p.defaultValueCode)) {
       // The host cannot write the call without the default of Flutter, and a
       // default that names a private symbol does not compile outside its
       // library.
       continue;
     }
-    params.add(Param(
-      dartName: pname,
-      goName: goFieldName(pname),
-      type: go,
-      required: p.isRequired,
-      nullable: nullable,
-      defaultCode: p.defaultValueCode,
-      named: p.isNamed,
-      doc: firstSentence(docs.fields[pname] ?? ''),
-    ));
+    params.add(
+      Param(
+        dartName: pname,
+        goName: goFieldName(pname),
+        type: go,
+        required: p.isRequired,
+        nullable: nullable,
+        defaultCode: p.defaultValueCode,
+        named: p.isNamed,
+        doc: firstSentence(docs.fields[pname] ?? ''),
+      ),
+    );
   }
   // A constructor with no mapped parameter still reaches the node set. Each
   // parameter of it then takes the default of Flutter, thus the node holds the
   // whole meaning of the widget. ui.CupertinoActivityIndicator is such a node.
-  out.widgets.add(WidgetSpec(
-    dartClass: className,
-    ctor: ctor.name == 'new' ? '' : (ctor.name ?? ''),
-    goName: goName,
-    pack: pack,
-    params: params,
-    isConst: ctor.isConst,
-    needed: needed,
-    doc: firstParagraph(docs.owner),
-  ));
+  out.widgets.add(
+    WidgetSpec(
+      dartClass: className,
+      ctor: ctor.name == 'new' ? '' : (ctor.name ?? ''),
+      goName: goName,
+      pack: pack,
+      params: params,
+      isConst: ctor.isConst,
+      needed: needed,
+      doc: firstParagraph(docs.owner),
+    ),
+  );
 }
 
 /// The widgets that the Go model cannot use. Builder exists only to give a
@@ -344,7 +362,15 @@ const _skip = <String>{'Builder', 'Theme'};
 
 /// The words of a default that name no declaration.
 const _words = <String>{
-  'const', 'true', 'false', 'null', 'new', 'if', 'else', 'is', 'as',
+  'const',
+  'true',
+  'false',
+  'null',
+  'new',
+  'if',
+  'else',
+  'is',
+  'as',
 };
 
 /// usableDefault reports whether the host can write the default verbatim.
@@ -438,8 +464,10 @@ const _scalars = <String, GoType>{
   'AppBarThemeData': GoType('AppBarStyle', 'appBarStyle'),
   'BadgeThemeData': GoType('BadgeStyle', 'badgeStyle'),
   'BottomAppBarThemeData': GoType('BottomAppBarStyle', 'bottomAppBarStyle'),
-  'BottomNavigationBarThemeData':
-      GoType('BottomNavigationBarStyle', 'bottomNavigationBarStyle'),
+  'BottomNavigationBarThemeData': GoType(
+    'BottomNavigationBarStyle',
+    'bottomNavigationBarStyle',
+  ),
   'ButtonBarThemeData': GoType('ButtonBarStyle', 'buttonBarStyle'),
   'ButtonThemeData': GoType('ButtonThemeStyle', 'buttonThemeStyle'),
   'CardThemeData': GoType('CardStyle', 'cardStyle'),
@@ -454,28 +482,42 @@ const _scalars = <String, GoType>{
   'DrawerThemeData': GoType('DrawerStyle', 'drawerStyle'),
   'DropdownMenuThemeData': GoType('DropdownMenuStyle', 'dropdownMenuStyle'),
   'ExpansionTileThemeData': GoType('ExpansionTileStyle', 'expansionTileStyle'),
-  'FloatingActionButtonThemeData':
-      GoType('FloatingActionButtonStyle', 'floatingActionButtonStyle'),
-  'InputDecorationThemeData':
-      GoType('InputDecorationStyle', 'inputDecorationStyle'),
+  'FloatingActionButtonThemeData': GoType(
+    'FloatingActionButtonStyle',
+    'floatingActionButtonStyle',
+  ),
+  'InputDecorationThemeData': GoType(
+    'InputDecorationStyle',
+    'inputDecorationStyle',
+  ),
   'ListTileThemeData': GoType('ListTileStyle', 'listTileStyle'),
-  'MaterialBannerThemeData':
-      GoType('MaterialBannerStyle', 'materialBannerStyle'),
+  'MaterialBannerThemeData': GoType(
+    'MaterialBannerStyle',
+    'materialBannerStyle',
+  ),
   'MenuStyle': GoType('MenuStyle', 'menuStyle'),
   'NavigationBarThemeData': GoType('NavigationBarStyle', 'navigationBarStyle'),
-  'NavigationDrawerThemeData':
-      GoType('NavigationDrawerStyle', 'navigationDrawerStyle'),
-  'NavigationRailThemeData':
-      GoType('NavigationRailStyle', 'navigationRailStyle'),
+  'NavigationDrawerThemeData': GoType(
+    'NavigationDrawerStyle',
+    'navigationDrawerStyle',
+  ),
+  'NavigationRailThemeData': GoType(
+    'NavigationRailStyle',
+    'navigationRailStyle',
+  ),
   'PopupMenuThemeData': GoType('PopupMenuStyle', 'popupMenuStyle'),
-  'ProgressIndicatorThemeData':
-      GoType('ProgressIndicatorStyle', 'progressIndicatorStyle'),
+  'ProgressIndicatorThemeData': GoType(
+    'ProgressIndicatorStyle',
+    'progressIndicatorStyle',
+  ),
   'RadioThemeData': GoType('RadioStyle', 'radioStyle'),
   'ScrollbarThemeData': GoType('ScrollbarStyle', 'scrollbarStyle'),
   'SearchBarThemeData': GoType('SearchBarStyle', 'searchBarStyle'),
   'SearchViewThemeData': GoType('SearchViewStyle', 'searchViewStyle'),
-  'SegmentedButtonThemeData':
-      GoType('SegmentedButtonStyle', 'segmentedButtonStyle'),
+  'SegmentedButtonThemeData': GoType(
+    'SegmentedButtonStyle',
+    'segmentedButtonStyle',
+  ),
   'SliderThemeData': GoType('SliderStyle', 'sliderStyle'),
   'SnackBarThemeData': GoType('SnackBarStyle', 'snackBarStyle'),
   'SwitchThemeData': GoType('SwitchStyle', 'switchStyle'),
@@ -505,8 +547,11 @@ const _scalars = <String, GoType>{
   'SemanticsProperties': GoType('SemanticsProperties', 'semanticsProps'),
   'List<DataColumn>': GoType('[]DataColumn', 'columns', pointer: false),
   'List<DataRow>': GoType('[]DataRow', 'rows', pointer: false),
-  'List<ContextMenuButtonItem>':
-      GoType('[]MenuButtonItem', 'menuItems', pointer: false),
+  'List<ContextMenuButtonItem>': GoType(
+    '[]MenuButtonItem',
+    'menuItems',
+    pointer: false,
+  ),
   // A matrix holds 16 numbers, in the order of the columns.
   'Matrix4': GoType('[]float64', 'matrix', pointer: false),
   // A date and a time of the day each take a plain number. A date holds the
@@ -521,10 +566,16 @@ const _scalars = <String, GoType>{
   'List<int>': GoType('[]int', 'counts', pointer: false),
   'List<double>': GoType('[]float64', 'sizes', pointer: false),
   'List<bool>': GoType('[]bool', 'flags', pointer: false),
-  'List<BottomNavigationBarItem>':
-      GoType('[]BarItem', 'barItems', pointer: false),
-  'List<NavigationRailDestination>':
-      GoType('[]RailItem', 'railItems', pointer: false),
+  'List<BottomNavigationBarItem>': GoType(
+    '[]BarItem',
+    'barItems',
+    pointer: false,
+  ),
+  'List<NavigationRailDestination>': GoType(
+    '[]RailItem',
+    'railItems',
+    pointer: false,
+  ),
   'List<Step>': GoType('[]Step', 'steps', pointer: false),
   // The objects below hold an identity that no Go value carries. The Go side
   // names 1, and the host owns the object. Read flutter/ui/identity.go.
@@ -562,9 +613,10 @@ GoType? mapType(Reading out, DartType t) {
   // argument of a generic type changes the Dart type of the converter. A
   // WidgetStateProperty<Color?> takes no value of a WidgetStateProperty<Color>.
   final exact = t.getDisplayString();
-  final raw = _scalars[exact.endsWith('?')
-      ? exact.substring(0, exact.length - 1)
-      : exact];
+  final raw =
+      _scalars[exact.endsWith('?')
+          ? exact.substring(0, exact.length - 1)
+          : exact];
   if (raw != null) return raw;
 
   final display = exact.replaceAll('?', '');
@@ -582,7 +634,8 @@ GoType? mapType(Reading out, DartType t) {
   }
 
   final element = t.element;
-  if (element is InterfaceElement && element is! EnumElement &&
+  if (element is InterfaceElement &&
+      element is! EnumElement &&
       isWidget(element)) {
     // A parameter that takes a subtype of Widget, for example the appBar of a
     // Scaffold. The host builds the node and casts the result.
@@ -631,8 +684,11 @@ GoType? mapFunction(Reading out, FunctionType t) {
       // A pair of numbers stands for a range, because the host cannot build a
       // Go struct: it imports no output of a Go module.
       if (kinds.first == 'RangeValues') {
-        return const GoType('func(float64, float64)', 'cbRange',
-            pointer: false);
+        return const GoType(
+          'func(float64, float64)',
+          'cbRange',
+          pointer: false,
+        );
       }
       final arg = mapType(out, params.first.type);
       if (arg == null) return null;
@@ -822,7 +878,9 @@ String clean(String doc, {required bool sentence}) {
   }
   var text = lines.join(' ');
   text = text.replaceAllMapped(
-      RegExp(r'\[([^\]]+)\]'), (m) => m.group(1)!.split('.').last);
+    RegExp(r'\[([^\]]+)\]'),
+    (m) => m.group(1)!.split('.').last,
+  );
   text = text.replaceAll('`', '').replaceAll(RegExp(r'\s+'), ' ').trim();
   if (sentence) {
     final stop = text.indexOf('. ');

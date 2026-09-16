@@ -8,7 +8,7 @@ holds. This file holds the behavior.
 
 ## At a glance
 
-The state of 2026-09-04. Each row names the section that holds the detail.
+The current summary reflects the 2026-09-16 compatibility work. Dated sections retain their original validation dates.
 
 | Area | The difference |
 |---|---|
@@ -16,14 +16,14 @@ The state of 2026-09-04. Each row names the section that holds the detail.
 | A parallel run | Out. All Go code runs in 1 isolate. `GOMAXPROCS` and `NumCPU` give 1, and a goroutine with no block operation never gives up control. |
 | The order of a map | The order of the writes. Go gives a random order. |
 | The order of the evaluation of an expression | Equal to gc. No position differs. A for clause, the value of a case, and the initializer of a package variable each took a new form on 2026-09-04. |
-| A `select` with 2 ready cases | The first case in source order. Go takes a random one. |
-| `sync.RWMutex` | A read lock is equal to a write lock. `sync.Map` is a plain map, and it needs no lock. |
-| A pointer | Present, also to a value that is not a struct. A conversion between 2 defined struct types of 1 package reads 1 Dart class since 2026-09-04, and so does a conversion between a defined type and the instance of a generic type behind it. `&*p` stays out. |
+| A `select` with 2 ready cases | A random ready case, as in Go. |
+| `sync.RWMutex` | Shared readers or 1 writer. A pending writer blocks new readers. `sync.Map` uses a plain map within the single isolate. |
+| A pointer | Present, also to a value that is not a struct. A conversion between 2 defined struct types of 1 package reads 1 Dart class since 2026-09-04, and so does a conversion between a defined type and the instance of a generic type behind it. `&*p` and exported scalar addresses are supported. A nil operand of `&*p` panics. |
 | `unsafe` and cgo | Outside the subset. |
-| `reflect` | A subset over a type descriptor. `Type` is a struct with a handle, and not an interface. |
+| `reflect` | A subset over a type descriptor. `Type` is an interface with descriptor identity and nil semantics. |
 | An address | None. `%p` stays out, and a program counter is an index of a table of the runtime. |
 | An integer | 64 bits on each target. The JS target holds the pair form of GopherJS, and `reflect` and `json` read 53 bits there. |
-| A `Time` | 1 count of seconds since January 1 of the year 1 and 1 count of nanoseconds, exactly as Go holds it. It holds no monotonic value. `UnixNano` reads the range of the year 1678 to the year 2262, and Go names the same bound. |
+| A `Time` | 1 count of seconds since January 1 of the year 1 and 1 count of nanoseconds, exactly as Go holds it. `Now` also retains a monotonic value for arithmetic and comparisons. `UnixNano` reads the range of the year 1678 to the year 2262, and Go names the same bound. |
 | A busy loop with no yield | The scheduler of Go preempts it | It holds the isolate for ever. Each goroutine runs on 1 thread, thus a loop must reach a channel, a sleep, or `runtime.Gosched`. |
 | The zone of a date before 1901 | The modern offset of the zone. Dart names the zone, and Go reads its own database. |
 | The file access | Synchronous, through `dart:io`. No handle of a directory, and no file descriptor. `Chmod`, `Chown`, and `Chtimes` reach a path, and `Stat` still reports a fixed mode. |
@@ -34,7 +34,7 @@ The state of 2026-09-04. Each row names the section that holds the detail.
 | JSON | The client surface is present: `Marshaler`, `Unmarshaler`, `TextMarshaler`, `TextUnmarshaler`, `Decoder`, `Encoder`, `RawMessage`, `Number`, `Token`, `Delim`, and `UseNumber`. The text of a syntax error of `Token` differs. |
 | `gart test` | The format of `go test`, with `t.Parallel`, `-cover`, `-short`, and `-count`. It runs each example, and it runs the seed corpus of each fuzz target. No `-fuzz` flag, thus it generates no input. |
 | A benchmark | Present, with the format of `go test`. No count of allocations. |
-| A stack trace | The module form of each file, with no offset. |
+| A stack trace | Absolute source paths by default. `-trimpath` uses module/package paths. No native Go instruction offset. |
 | The garbage collector | `runtime.GC` gives up control only, and a cleanup follows the collector of Dart. |
 | The web target | `dart compile js` and `dart compile wasm` each build any program. `net/http` reaches a server through the fetch API. A file or a socket operation gives the error that Go gives under `GOOS=js`. |
 
@@ -82,30 +82,30 @@ The package `fmt` reads it.
 | Method table by name and signature | Present. 2 methods of 1 name and 2 signatures stay apart. |
 | An unexported method of a type of another package | The method table holds a placeholder that panics. A Dart library reaches no name that starts with an underscore. |
 | Element type and key type of a container | Present |
-| `reflect.Value.Set` on a struct field | The write replaces the reference. It does not copy the fields. |
+| `reflect.Value.Set` on a struct field | Copies fields into the destination and preserves addresses. |
 | A descriptor of an instance of a generic type | Present. The description stands at the point of the use, and the name holds each type argument. |
-| A descriptor of a local type of a generic function | Present since 2026-09-04. Go names such a type after the arguments of the function, thus `type T[B any]` inside `func F[A any]` gives `main.T[A;B]`. The description stands at the point of the use, and the name reads the dictionary. The name of such a type inside a type argument of another instance still holds no outer argument. |
+| A descriptor of a local type of a generic function | Present since 2026-09-04. Go names such a type after the arguments of the function, thus `type T[B any]` inside `func F[A any]` gives `main.T[A;B]`. The description stands at the point of the use, and the name reads the dictionary. Nested type arguments also retain the enclosing function arguments. |
 | `reflect.DeepEqual` | Present. The walk reads the type descriptor. |
 | `Type.String` | Present. The text follows `reflect`, and not `go/types`. An unnamed struct type and an unnamed interface type each hold 1 space after the keyword. An alias gives the name of the element type since 2026-09-03, thus `[]byte` reads `[]uint8` and `rune` reads `int32`. |
-| `reflect.Type` | A struct with a handle of a descriptor of the runtime, and not an interface. Thus `Type` compares with `==` and holds no nil value. |
-| `reflect.TypeOf(nil)` | Gives a Type with an empty text and an empty kind. Go gives nil. |
+| `reflect.Type` | An interface. Descriptor handles retain type identity, including nil. |
+| `reflect.TypeOf(nil)` | Gives nil. |
 | `reflect.ValueOf`, `Value.Interface`, `Value.Elem`, `Value.Set`, `reflect.Zero`, `Type.Elem` | Present |
 | `Value.Kind`, `Type`, `Len`, `Index`, `NumField`, `Field`, `CanSet`, `IsValid` | Present |
-| `Value.Call` | Present. A function that gives up control stays out, because the call reads no scheduler. |
+| `Value.Call` | Present, including suspended calls and result conversion. |
 | `Value.SetMapIndex`, `Value.SetZero`, `reflect.MakeMap`, `reflect.TypeAssert` | Present |
 | `Type.NumIn`, `In`, `NumOut`, `Out`, `Key` | Present |
-| `Type.IsVariadic` | Always false. The description of a function type holds no such flag. |
+| `Type.IsVariadic` | Reads the variadic flag of the function descriptor. |
 | `Value.Int`, `Uint`, `Float`, `Bool`, `String`, and each `Set` form of them | Present |
 | `reflect.New`, `reflect.MakeSlice`, `reflect.Indirect` | Present |
 | `Type.NumField`, `Type.Field`, `Type.Len`, `Type.Name`, `StructTag.Get` | Present |
 | `reflect.Kind` | Equal since 2026-09-03. The type is a `uint` with the 27 constants of Go under `iota`, and each number matches Go. `String` gives the text of Go, and an array that indexes by a kind thus compiles. |
 | `Type.PkgPath` | Present since 2026-09-03. A named type gives the import path of its package, and each other type gives an empty text. |
-| `Value.Elem` of a value that is not a pointer | Panics. Go gives the value inside an interface. |
+| `Value.Elem` | Reads a pointer or an interface. Other kinds panic. |
 | `Type.Size`, `Type.Align`, `Type.FieldAlign`, `StructField.Offset` | Present. The result follows the rules of a 64-bit machine, exactly as the compiler of Go computes them. |
-| `Value.UnsafeAddr` | Not present. Go gives the address of the value, and Dart gives no address. `Value.Addr` builds a new cell at each call for a field of a scalar type, thus 2 reads of 1 field would give 2 numbers. |
+| `Value.UnsafeAddr` | Not present. Go gives the address of the value, and Dart gives no address. Address cells preserve location identity, but their identity numbers are not memory addresses. |
 | `reflect.SliceHeader`, `reflect.StringHeader` | Present since 2026-09-04. Each field holds a plain number, thus a read gives the value that the program wrote. The subset rejects the import of `unsafe`, thus no conversion of a slice or of a string reaches a header. |
-| `Value.Complex` and `Value.SetComplex` | Not present. `Complex64` and `Complex128` stand in the kind set, and no `Value` method reads such a value. |
-| `Type.NumMethod`, `Type.Method`, `Value.NumMethod`, `Value.Method` | Present. The order follows the name, exactly as in Go. `Method` gives the name and the index only. |
+| `Value.Complex` and `Value.SetComplex` | Present. The descriptor preserves the complex width. |
+| `Type.NumMethod`, `Type.Method`, `Value.NumMethod`, `Value.Method` | Present. The order follows the name, exactly as in Go. `Method` gives the name, index, type, and function value. |
 | `Value.IsNil`, `Value.MapIndex` | Present |
 | `Value.MapKeys` | Present. The order follows the insertion, and Go gives a random order. |
 | `Value.Addr().Interface()` | A typed pointer since 2026-09-03, thus a type assertion of it reads. The description of a slice, a map, a channel, a function, and a pointer carries the Dart type of a value, because the kind alone does not name it. |
@@ -137,11 +137,11 @@ form.
 | `FuncOf` | Present | Present. A signature that the program names 1 time gives its own description, thus the type equals the type of a value of it and `MakeFunc` of it works. A signature that no code names gives the shape and the text of Go, and `MakeFunc` of it panics with the cause, where Go builds a value. Read decision 325. |
 | `StructOf` | Present | Present. A shape that the program already names reads the class of that shape. A shape that no code names holds its value in a list of the fields, and only `reflect` reads such a value. Read decision 349. |
 | `Method.Func` | A func value whose first parameter is the receiver | Present. `Call` of the value runs the method. The signature carries no factory of a Dart type, thus a type assertion of `Interface()` of the value to its function type fails. Read decision 325. |
-| A function that gives up control | Runs inside `Value.Call` and inside a `MakeFunc` body | Rejected with a clear cause. |
+| A function that gives up control | Runs inside `Value.Call` and inside a `MakeFunc` body | Supported through the scheduler. |
 | A method value, from `Method`, `MethodByName`, or `Value.Method` | A function value of the method | Equal. The bind factory of the signature gives a closure of the exact Dart type, thus an assertion to a function type with a result reads. Decision 228 held the old limit. |
 | `Value.Pointer`, `Value.UnsafePointer` | The machine address | The identity of the object. 2 reads of the same object give the same number, and the number names no memory, thus `runtime.FuncForPC` of it gives nil. |
 | `Type.ChanDir` | The direction of the channel type | Equal. The type descriptor carries the direction since 2026-09-03. |
-| `Type.AssignableTo`, `ConvertibleTo`, `Implements` | The rule of the specification | The name of the type, the method set of an interface, and the kind of a number each answer. A conversion between 2 named struct types of the same shape gives false. |
+| `Type.AssignableTo`, `ConvertibleTo`, `Implements` | The rule of the specification | The name of the type, the method set of an interface, and the kind of a number each answer. Struct conversions compare field types and ignore tags, as Go specifies. |
 
 `fixedbugs/issue22605` and `fixedbugs/issue37716` of the test directory of Go
 witnessed the limit until 2026-09-03. Each 1 builds a type that the program
@@ -153,7 +153,7 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | Item | Go | godart |
 |---|---|---|
 | Map order | Random for each run | The order of the writes |
-| `select` with 2 ready cases | Random | The first case in source order |
+| `select` with 2 ready cases | Random | A random ready case |
 | Deadlock | The runtime reports it, writes the stack of each goroutine, and exits | Equal. The report walks the frame chain of each live goroutine. Go also writes the arguments, an offset, and a created-by line, and the chain holds none of them. The goroutine numbers can differ. |
 | A pointer value in `%v` | An address | `&` and the value, or `<func>` and `<chan>` |
 | `%p` | An address | `0x` and the identity of the object. The number names no memory. |
@@ -164,9 +164,9 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | `runtime.NumGoroutine` | The count of goroutines | Always 1. The runtime library holds no such count. |
 | `runtime.GOOS` | A constant of the build | A variable. Dart names the system at the start of the program. |
 | `runtime.GOARCH` | A constant of the build | Always `dart64`. A Dart int holds 64 bits on each target. |
-| A stack trace of a panic | The path of the build machine in each frame, and an offset | The module form: the package path and the base name, as a build with `-trimpath` gives. No offset. The text of a line directive passes verbatim, and a relative directive resolves against the directory of the source, exactly as in Go. |
+| A stack trace of a panic | The path of the build machine in each frame, and an offset | Absolute paths by default. `-trimpath` uses the package path and the base name. No native Go instruction offset. The text of a line directive passes verbatim, and a relative directive resolves against the directory of the source, exactly as in Go. |
 | A frame of a goroutine that waits | Present | Present in the deadlock report, from the frame chain of the scheduler. A panic trace still holds the frames of the running goroutine only. |
-| `runtime.Caller`, `runtime.Callers`, `runtime.CallersFrames`, `runtime.FuncForPC` | The program counters of the stack | Equal, with the module form of each file. A program counter is an index of a table of the runtime, and not an address. |
+| `runtime.Caller`, `runtime.Callers`, `runtime.CallersFrames`, `runtime.FuncForPC` | The program counters of the stack | Absolute filenames by default, or module/package filenames with `-trimpath`. A program counter is an index of a table of the runtime, and not an address. |
 | The frame of a deferred call | The line of the return, or the closing brace at a fall or a panic | Equal, except 2 forms: a return inside a defer chain that can block gives the brace, and the panic path of Go holds a frame of gopanic that the chain does not hold. |
 | `runtime.AddCleanup` | Present | Present, with a Dart `Finalizer`. The time of the run follows the collector of Dart. |
 | `runtime.GC` | Runs a collection and waits for it | Allocates a block of garbage and gives up control. Dart holds no call that forces a collection, thus a cleanup can stay for a later call. |
@@ -183,8 +183,8 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 | `debug.SetMaxStack` | Writes the limit of the runtime | Keeps the value only. |
 | `filepath.EvalSymlinks` | Walks each element itself | Equal since this session. The overlay walks the elements too, thus `syscall.ENOTDIR`, the error of the element that failed, and the bound of 255 links each match. |
 | `make([]T, n)` of a type of no size | 1 address and no storage, thus `n` can reach the largest int | 1 cell of a list for each element. The bound `$maxSliceLen` of the runtime is 2 to the power 45, and a larger length gives `makeslice: len out of range`. Go reaches the same report above 2 to the power 48 divided by the element size. |
-| `reflect.Type.AssignableTo` | The rule of the specification | Equal for a slice, a pointer, a channel, an array, and a map. A struct type and a function type each read the name alone, thus 2 named struct types of 1 underlying type give false. The emitter rejects a conversion between the 2 anyway. |
-| `reflect.Type.ConvertibleTo` | The rule of the specification | Equal since this session for a channel, which keeps its direction. 2 named struct types of 1 underlying type give false, because a conversion between the 2 is outside the subset. |
+| `reflect.Type.AssignableTo` | The rule of the specification | Equal for a slice, a pointer, a channel, an array, and a map. A struct type and a function type each read the name alone, thus 2 named struct types of 1 underlying type give false. Struct value conversions use descriptor accessors, including private fields and tags. |
+| `reflect.Type.ConvertibleTo` | The rule of the specification | Equal since this session for a channel, which keeps its direction. Struct value conversions compare their fields and ignore tags. |
 | The flag `0` beside a precision, `%08.2d` | The flag falls, and the width takes spaces | Equal since this session. A float keeps the flag, and a whole number of the verb `v` reads the precision. |
 | A panic of a run time error that recover reads | The value implements `error`, and `Error()` gives the text | Equal in the text. The value carries the description `runtime.errorString` in each case, and Go also holds `runtime.plainError` and `*runtime.TypeAssertionError`. A type switch on the recovered value thus reads 1 type where Go reads 3. |
 | The text of a run time panic | Read the list of Go | Equal. A write to a nil map and the 3 faults of a channel write no prefix, a slice bound report names the bound that failed and writes the unsigned value of a bound of an unsigned type, and a failed assertion names the static interface type and the first missing method. Read decision 293 and decision 294. |
@@ -198,14 +198,14 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 
 | Item | State |
 |---|---|
-| A pointer to a value that is not a struct | Present. It holds a box. |
+| A pointer to a value that is not a struct | Present. Scalar locations use address cells. |
 | `new` of a type that is not a struct | Present |
 | A goto label inside a nested block | Present |
-| A conversion between 2 struct types | Present when the 2 names hold 1 struct object of 1 package, as `type outer inner` gives. The 2 names then hold 1 Dart class. A struct that a second declaration spells again keeps its own class, and a conversion to it stays rejected. |
+| A conversion between 2 struct types | Present through descriptor copies, including private fields, nested arrays, and tags. Anonymous storage classes ignore tags. Reference fields retain shared storage. |
 | A conversion of a slice to an array, as in `[4]byte(s)` | Present. It panics for a slice that is too short. |
 | The builtin `clear` of a slice | Present |
 | A method with a nil pointer receiver | Present. Such a method holds its body in a top level function. |
-| A method with a pointer receiver on a generic type | The method stays a member of its class, thus a nil receiver panics. A call of such a method through a generic interface takes the dynamic path, because a Dart function parameter is contravariant. |
+| A method with a pointer receiver on a generic type | The method uses a top-level function and accepts nil receivers. Generic interface calls use the method table. |
 | A function declaration with no body | Present. Stage 2 rejects a read of it, and the Dart form panics. |
 | `import _ "unsafe"` | Present. A blank import performs no operation. |
 | A method value of a named type that is not a struct | Present. It writes a closure. |
@@ -307,7 +307,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `hash/fnv` | Native | The real source needs no patch. |
 | `net/netip` | Native, with 1 patch | The patch replaces `uint128.go`, which gives the address of a field. |
 | `net/url` | Native | The real source needs no patch. |
-| `unique` | Overlay | `Handle` and `Make`. The map keeps each value, because the subset holds no cleanup. |
+| `unique` | Overlay | `Handle` and `Make`. The map retains canonical values for the process lifetime. Static type identity separates interface and concrete instantiations. |
 | `internal/godebug` | Overlay | Each setting holds its default, thus `Value` gives an empty text. |
 | `fmt` | Overlay | Each name of Go. |
 | `slices` | Patch | The real source of Go. `slices.go` holds the 1 patch, and the intrinsic `dart.SliceOverlap` serves `overlaps`. |
@@ -327,7 +327,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `io/ioutil` | Native | Each name of Go. `ReadDir` opens the directory as a file, and `os` gives no handle of a directory, thus it reports an error. |
 | `testing/fstest` | Native | `MapFS` and `TestFS`. The real source needs no patch. |
 | `log/internal`, `log/slog/internal`, `log/slog/internal/buffer` | Native | The 3 internal packages that `log/slog` reads. |
-| `log/slog` | Native, with 1 patch | The patch replaces `value.go`. The real file packs a string and a slice of `Attr` behind a pointer of the package `unsafe`. The patch holds the string and the slice themselves, and the field `num` keeps the length. `timeTime` holds a struct field, because the subset rejects a conversion between 2 struct types. |
+| `log/slog` | Native, with 1 patch | The patch replaces `value.go`. The real file packs a string and a slice of `Attr` behind a pointer of the package `unsafe`. The patch holds the string and the slice themselves, and the field `num` keeps the length. `timeTime` holds a struct field in the overlay representation. |
 | `testing/slogtest` | Native | `TestHandler` and `Run`. A result map of the caller passes each check. A result map that `encoding/json` decodes fails each group check, because no assertion of the decoded value to `map[string]any` succeeds. |
 | `debug/dwarf` | Native | The real source needs no patch. |
 | `debug/macho`, `debug/plan9obj` | Native | Each name of Go. The real source of each 1 needs no patch. |
@@ -978,7 +978,7 @@ The `net` package holds this surface:
 | `UnixConn.ReadFrom`, `UnixConn.ReadFromUnix` | The name of the source of a datagram | Present. Dart opens a stream socket of the Unix domain alone, and the system reports an empty name for the source of such a socket, thus the address is always nil. Go behaves the same way. |
 | `UnixConn.WriteTo`, `UnixConn.WriteToUnix` | A datagram of the Unix domain | Not present. Read `docs/support.md`. |
 | `TCPConn` | 20 methods | 10 methods: the 8 of `Conn`, plus `ReadFrom` and `WriteTo`. `Dial`, `Dialer.DialContext`, and `Listener.Accept` each give 1 for the network `tcp`. |
-| `TCPConn.CloseRead`, `CloseWrite` | A half close | Present. Equal, with 1 difference. `CloseWrite` writes `shutdown(SocketDirection.send)` and `CloseRead` writes `shutdown(SocketDirection.receive)` of the `RawSocket`, exactly as the 2 calls of Go do. A second `CloseRead` or `CloseWrite` of the same connection gives `nil`, and Go gives `shutdown: socket is not connected`, because `RawSocket.shutdown` of Dart takes a second call with no report. |
+| `TCPConn.CloseRead`, `CloseWrite` | A half close | Present. Equal, with 1 difference. `CloseWrite` writes `shutdown(SocketDirection.send)` and `CloseRead` writes `shutdown(SocketDirection.receive)` of the `RawSocket`, exactly as the 2 calls of Go do. A second `CloseRead` or `CloseWrite` of the same connection gives `nil`. The macOS probe confirms that Go returns `shutdown: socket is not connected`. Dart `RawSocket.shutdown` exposes no errno result. Normal half-close operations and rejection after full close pass the probe. |
 | `Dial`, `Dialer.Dial`, `Dialer.DialContext` | Tries each address of a host name | Equal. Each 1 reads the whole address list and tries each address in turn, and each 1 gives the first cause when every address fails. Go races the first address of each family after `FallbackDelay`, and the overlay holds no such timer, thus a name whose first address hangs costs the whole timeout of the dial. `Dialer.FallbackDelay` and `Dialer.DualStack` each stay out. |
 | A dial that a peer refused | `dial tcp <address>: connect: connection refused` | Equal since this session. |
 | `Resolver.LookupHost`, `LookupIP`, `LookupIPAddr`, `LookupNetIP` | The resolver of the platform on darwin, ios, android, and windows | Equal. `Resolver.PreferGo` and `Resolver.Dial` each force the resolver of the overlay, exactly as in Go. The other members of the `Lookup` family always read the resolver of the overlay, because `dart:io` gives no CNAME, no MX, no NS, no SRV, no TXT, and no PTR. |
@@ -1123,7 +1123,7 @@ builds each other location from the zone database.
 | `Timer.Stop` and `Timer.Reset` of a Timer that no constructor made | Panics with `time: Stop called on uninitialized Timer` | Equal, with the same 2 texts |
 | `NewTimer`, `Timer.C`, `Timer.Reset`, `After` | Present | Equal. The channel holds 1 value, thus a write of the timer never blocks. |
 | `NewTicker`, `Ticker.C`, `Ticker.Stop`, `Ticker.Reset`, `Tick` | Present | Equal. Each pass starts the timer of the next pass. |
-| `Time.String` | `2006-01-02 15:04:05.999999999 -0700 MST` | Equal, with no value of the monotonic clock. Read below. |
+| `Time.String` | `2006-01-02 15:04:05.999999999 -0700 MST` | Includes the monotonic suffix when the value retains its monotonic clock. |
 | `Time.Format` | Present | Equal. The scanner holds each chunk of a layout, and the 19 layout constants are present. |
 | `Date`, `Month`, `Weekday`, and the name of each | Present | Equal |
 | `Time.In`, `Time.Location` | Present | Present |
@@ -1147,9 +1147,11 @@ builds each other location from the zone database.
 `*ParseError` with the text of Go. A layout that names no year gives the year 0,
 exactly as in Go.
 
-A Go `Time` of `time.Now` also holds a value of the monotonic clock, and
-`String` writes it as ` m=+1.234567890`. A `Time` of the overlay holds no such
-value, thus the text ends with the name of the zone.
+`time.Now` retains both wall time and monotonic time. `String` includes the
+monotonic suffix. `Add` preserves it unless the result exceeds its range.
+Comparisons and `Sub` use monotonic time when both values have it.
+Location changes, `AddDate`, `Round`, `Truncate`, and serialization discard it.
+The direct clock tests include wall shifts, overflow, and serialization.
 
 `time.Date` with the location `Local` reads the offset of the system 2 times.
 The Dart runtime names the offset of an instant, and the argument of `Date` is a
@@ -1159,20 +1161,21 @@ inside 1 offset of a transition of the zone can take the offset of the other
 side.
 
 Go reads the zone of an instant from its own copy of the zone database, and Dart
-reads the zone from the platform. The 2 agree for each date after 1901. A date
-before that year reads a historical offset in Go, for example `+0805 LMT`, and
-Dart gives the modern offset of the zone.
+reads the zone from the platform. The 2026-09-16 probe matched the sampled 2024 New York DST transitions.
+The 1880 New York offset differed by 238 seconds. These samples do not prove
+parity for all zones or dates. Explicit IANA locations use Go zone data.
+The overlay reads `ZONEINFO` from the process startup environment.
 
-`sync/atomic` holds `Value` with `Load`, `Store`, and `Swap`, and `Int32` with
+`sync/atomic` holds `Value` with `Load`, `Store`, `Swap`, and `CompareAndSwap`, and `Int32` with
 `Load`, `Store`, and `Add`. All Go code runs in 1 isolate, and a goroutine gives
 up control only at a block operation. Thus each operation is a plain read or a
 plain write.
 
 | Item | Go | godart |
 |---|---|---|
-| `Value.Load`, `Store`, `Swap`, `CompareAndSwap` | Present | Equal, with no check of the type. |
+| `Value.Load`, `Store`, `Swap`, `CompareAndSwap` | Present | Equal, including nil and concrete-type validation. |
 | `Int32`, `Int64`, `Uint32`, `Uint64`, `Uintptr`, `Bool` | Present | Equal. Each one holds `Load`, `Store`, `Swap`, and `CompareAndSwap`, and each integer type holds `Add`, `And`, and `Or`. |
-| A `Store` of a second concrete type | Panics | It writes the value. |
+| A `Store` of a second concrete type | Panics | Panics with the Go error text. |
 | `Pointer[T]` | Present | Equal |
 | The function form, for example `AddInt64` | Present | Equal for `Add`, `And`, `Or`, `Load`, `Store`, `Swap`, and `CompareAndSwap`. |
 | `LoadPointer`, `StorePointer`, `SwapPointer`, `CompareAndSwapPointer` | Present | Not present. Each one takes an `unsafe.Pointer`, which stands outside the subset. `Pointer[T]` holds the same use. |
@@ -1359,7 +1362,7 @@ dictionary of the type parameter.
 | Operation | godart |
 |---|---|
 | An assignment, an equality, a call | Present |
-| An order comparison | Present. It reads `Dict.order`. |
+| An order comparison | Present. Dictionary comparisons preserve unsigned and NaN behavior. |
 | An index, a slice expression, a range loop | Rejected by stage 2. A set of `~[]byte | ~string` reads the index and the slice from `Dict.at` and `Dict.slice` since 2026-09-04. |
 | `len` and `cap` | Rejected by stage 2. A set of `~[]byte | ~string` reads `Dict.length`. |
 | An arithmetic operator and a conversion | Rejected by stage 2. A set of `~[]byte | ~string` converts to `[]byte` and to `string` through the dictionary, and back. |
@@ -1370,14 +1373,10 @@ holds the mask of the width: the dictionary of `int32` cuts to 32 bits, and the
 dictionary of `float32` rounds to 32 bits. `testdata/programs/confgeneric` holds
 the witness of the 2.
 
-**A set that mixes a narrow integer type with a float type stays out.** The
-Dart bound of such a set is `num`, and the dictionary of `int32` holds a mask
-of the type `GoInt Function(GoInt)`. A function type takes no wider parameter,
-thus that mask does not fit the bound. Stage 2 names the cause: `the operator
-+= reads the type parameter T, and its constraint mixes an integer type with a
-float type that needs a mask of its width`.
-`golang.org/x/exp/constraints.Ordered` is such a set, and an operator that
-needs no mask, for example an order comparison, still reads it.
+**Mixed numeric sets support the operators that Go permits.** Dictionaries select
+integer or float division, preserve unsigned arithmetic, and apply width masks.
+Comparisons preserve NaN behavior. Conversions use the source and target descriptors.
+The `genops` and `genmixed` parity cases run on VM and JavaScript.
 
 A constraint whose terms give 1 Dart type keeps each operator. `int | int64`
 gives `int` 2 times, thus `+` and `<` work directly.
@@ -1403,15 +1402,14 @@ the identity. Thus `~float32 | ~float64`, which
 |---|---|
 | Each term reads the signed operators (`~int8`, `~uint16`, `~int64`) | Each operator |
 | Each term is unsigned and 64 bits (`~uint`, `~uint64`, `~uintptr`) | Each operator, with the unsigned helpers |
-| The 2 forms together (`~int \| ~uint64`) | `/`, `%`, `>>`, a conversion to a float, and the builtin `print` are rejected by stage 2 |
+| The 2 forms together (`~int \| ~uint64`) | Supported. The dictionary selects the sign behavior. |
 | Each term is a float type (`~float32 \| ~float64`) | Each operator. The dictionary rounds the result to the width. |
-| An integer type and a float type, with no narrow term (`~int \| ~float64`) | Each operator that Go allows on both. `/` is rejected, because the Dart operator `/` always gives a double. |
-| An integer type and a narrow float type (`~int \| ~float32`) | Rejected by stage 2. The Dart bound of such a set is `num`, and no mask of a narrow width fits that bound. |
+| An integer type and a float type, with no narrow term (`~int \| ~float64`) | Each operator that Go permits, including integer or float division. |
+| An integer type and a narrow float type (`~int \| ~float32`) | Supported. The dictionary applies the width mask. |
 
 Go reads the bit pattern of an unsigned type of 64 bits as unsigned, and Dart
 reads the same pattern as a negative number. Thus a division, a remainder, and a
-right shift take 2 Dart expressions, and no type argument selects one at compile
-time. `math/rand/v2` holds such a type set in `N` and in `Rand.N`, and neither
+right shift use dictionary operations that select the expression at runtime. `math/rand/v2` holds such a type set in `N` and in `Rand.N`, and neither
 one reads those 3 operators.
 
 A conversion of a value of a type parameter to an interface reads `Dict.desc`.
@@ -1558,7 +1556,7 @@ for each test binary. The output holds the format of `go test`.
 | The position of a log line of a helper that calls `t.Helper` | The position of the caller | Equal. |
 | The position of a deferred log line after `Fatal` | The position of the runtime of Go, for example `panic.go:694` | No position. |
 | `t.Parallel` | Runs the tests in parallel | Equal. Each test runs on a goroutine of its own, and the group wakes each paused test after the pass of the tests that are not parallel. The order of the report is the order of the ends, and the scheduler of 1 isolate makes it stable. |
-| `t.FailNow`, `t.SkipNow` | `runtime.Goexit` | A throw. Each deferred function still runs, and the subset has no `recover`. |
+| `t.FailNow`, `t.SkipNow` | `runtime.Goexit` | A throw. Each deferred function still runs, and the runtime preserves deferred panic recovery. |
 | `-run` | A regular expression | Equal. A `\|` separates 2 alternatives, and a `/` separates the expression of each element of the name. |
 | A filter that keeps no test | `testing: warning: no tests to run`, and ` [no tests to run]` after the package | Equal. The driver writes the mark, and the harness writes the warning. |
 | A duplicate subtest name | The second name takes `#01` | The 2 names stay equal |
@@ -1636,13 +1634,11 @@ cd $(go env GOROOT)/src/path && gart test -o /tmp/x -runtime <path> .
 `compress/gzip`, `compress/flate`, `slices`, `path/filepath`, `context`,
 `database/sql`, `bufio`, `bytes`, `errors`, `math/bits`, `sort`, `strconv`,
 `strings`, `text/tabwriter`, `unicode/utf16`, `encoding/json`,
-`encoding/json/jsontext`, and `encoding/json/v2`. 34 entries run all tests.
-`regexp/syntax`, `compress/flate`, and `context` use filters. Each test row
+`encoding/json/jsontext`, and `encoding/json/v2`. 36 entries select complete suites.
+Only `context` retains a test-name filter. Each test row
 states the cause of its filter.
 
-A test file of GOROOT holds code outside the subset in many packages. `recover`,
-`unsafe`, and the address of a byte each appear, and each one stays outside the
-subset. Thus a package reaches a full run only when each of its test files stays
+Many GOROOT test files require unsupported native APIs, `unsafe`, or test-only runtime internals. Thus a package reaches a full run only when each of its test files stays
 inside the subset.
 
 ### strings and encoding/json, the state of 2026-09-06
@@ -1752,7 +1748,7 @@ The cause that blocks each package of the survey of 2026-08-31:
 | `database/sql` | Runs since this session. 123 tests pass, and 1 skips at `AllocsPerRun`. It needed the durable mark of a select case of a nil channel, the chain of the deferred calls of a machine, and the origin of a `time.Time`. |
 | `context` | Runs since this session, with 1 test out. 37 tests pass, and 1 skips. `TestContextErrDoneRace` reads `ctx.Err` in a loop with no yield, and 1 thread cannot leave such a loop. |
 | `sync`, `time` | Cannot run. Each 1 reads the unexported implementation of the real package over the runtime of Go. |
-| `regexp` | 5 rejections in `regexp/syntax/parse.go`: 1 call of `recover` and 4 addresses of a `[]rune` field. |
+| `regexp` | The complete `regexp/syntax` suite now runs without the former recovery patch. |
 
 ### The block model
 
@@ -1855,7 +1851,7 @@ each package and the whole list:
 
 | Item | State |
 |---|---|
-| `sync.RWMutex` | A read lock is equal to a write lock. The single isolate gives no parallel read. |
+| `sync.RWMutex` | Shared readers or 1 writer. A pending writer blocks new readers. |
 | `strconv.Unquote`, `strconv.UnquoteChar` | Present. The source comes from Go. |
 | `strings.Title` | Not present. Go deprecated it. |
 | `sort.Sort` with an interface | Present. `sort.Reverse` and the 3 typed slice types stay out. |

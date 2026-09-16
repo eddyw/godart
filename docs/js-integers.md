@@ -1,8 +1,6 @@
 # The Go integer of the JS target
 
-The status: built, on 2026-09-01. The design of decision 209 stands, and
-decision 214 holds the build. `TestJS` of `internal/driver` proves 1 program
-of 64-bit work under node, byte-equal with `go run`.
+The 2026-09-16 suite covers 10 VM/JS parity programs. It includes integer boundaries, reflection, generic operations, clocks, pointers, and identity.
 
 ## The problem
 
@@ -73,8 +71,8 @@ The interop boundary is 1 uniform rule of stage 5, in `intrinsic` of
 `$ix`, and each integer result comes back through `$gi`, `$gils`, or a small
 typed closure over the result record. Thus the runtime library keeps the
 plain int inside, and no wrapper of `net.dart` or `file.dart` changed for
-the cutover. The float bit functions and the worker opt out with
-`intrinsicRaw`, because their values cannot ride a plain int on JS.
+the cutover. Float-bit operations, reflection integers, and clock timestamps use raw
+`GoInt` boundaries because their values can exceed the exact JS integer range.
 
 A Go constant of an integer type emits as a lazy `final`, because `$gi` is
 no Dart constant.
@@ -86,20 +84,17 @@ no Dart constant.
 | VM, AOT, wasm | None. The extension type erases, and the output text stays equal. |
 | JS | Each 64-bit operation runs several JS operations, and a division rides BigInt. |
 
-The gaps of the JS target:
+The 2026-09-16 changes preserve `GoInt` across reflection integer access and
+JSON paths. Mixed numeric generics use dictionaries without a `num` bound.
+Wall-clock and scheduler timestamps retain nanosecond precision.
 
-- A generic function over a mixed numeric type set takes the Dart bound
-  `num`, and the JS form of GoInt is no num, thus such a program fails in
-  the dart2js compile. The other targets keep it.
-- `reflect` and `json` read the plain int out of a Go integer, thus a value
-  outside 53 bits loses its low bits on JS in those 2 paths.
-- The nanosecond clock of JS rounds, because the count since the epoch does
-  not fit 53 bits.
-- A `dart:io` program compiles since 2026-09-03, and each file and socket
-  operation reports the cause of Go under `GOOS=js`. Read decision 251.
-- The address of an index needed the `$ix` conversion, and the emitter wrote
-  none. `GoInt` implements `int` on each other target, thus the fault showed
-  itself on dart2js alone. `internal/emit/expr.go` writes the conversion now.
+Remaining limits:
+
+- Timer durations and some network deadlines still pass through Dart `int`.
+  Values outside the exact JS integer range can lose precision there.
+- Browser file and raw socket operations remain unavailable.
+- `$ix` narrows to a JS number. Interop callers must use it only where the
+  value fits the exact range or the target API requires that conversion.
 
 ## The proof
 

@@ -11,18 +11,6 @@ import 'theme/colors.dart';
 
 Widget? compassWidget(GoNode node, GoRuntime runtime) {
   switch (node.kind) {
-    case 'gart.dev/ui.PositionedFill':
-      // Null insets cancel the zero insets of Positioned.fill.
-      return Positioned.fill(child: goRender(node.child('Child'), runtime));
-    case 'gart.dev/ui/material.Scaffold':
-      // An empty footer list adds 17 pixels. The sample has no footer list.
-      return Scaffold(
-        body: goChildOpt(node.child('Body'), runtime),
-        floatingActionButton: goChildOpt(
-          node.child('FloatingActionButton'),
-          runtime,
-        ),
-      );
     case 'example.dev/gocompass_v2.Label':
       return Builder(builder: (context) => _label(context, node));
     case 'example.dev/gocompass_v2.Photo':

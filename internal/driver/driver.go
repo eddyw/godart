@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"go/types"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,6 +24,7 @@ import (
 	"github.com/eddyw/godart/internal/normalize"
 	"github.com/eddyw/godart/internal/overlay"
 	"github.com/eddyw/godart/internal/verify"
+	runtimelib "github.com/eddyw/godart/runtime"
 )
 
 // Options holds the input of a build.
@@ -32,6 +34,7 @@ type Options struct {
 	Out      string
 	Runtime  string
 	Format   bool
+	TrimPath bool
 	// NoCache compiles each package again, also when the cache holds it.
 	NoCache bool
 	// Tests compiles the test variants of each package, and 1 entry point for
@@ -109,8 +112,17 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		if err != nil {
 			return nil, err
 		}
+		flags := fmt.Sprintf("%s\x00trimpath=%t", dartPkg, opt.TrimPath)
+		if !opt.TrimPath {
+			var paths []string
+			for _, file := range p.Syntax {
+				paths = append(paths, p.Fset.PositionFor(file.Pos(), false).Filename)
+			}
+			slices.Sort(paths)
+			flags += "\x00" + strings.Join(paths, "\x00")
+		}
 		sourceHash := meta.SourceHash(sources, dependencyHashes(p, module, exports),
-			dartPkg, blocks.Digest(p))
+			flags, blocks.Digest(p))
 		if !opt.NoCache {
 			if old, ok := store.Read(p.ID); ok && old.SourceHash == sourceHash &&
 				outputExists(opt.Out, old.Files) {
@@ -119,7 +131,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 				continue
 			}
 		}
-		out, err := compile(p, module, dartPkg, blocks, bin)
+		out, err := compile(p, module, dartPkg, blocks, bin, opt.TrimPath)
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +336,7 @@ func outputExists(out string, files []string) bool {
 }
 
 func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result,
-	bin *load.Binary) (*emit.Result, error) {
+	bin *load.Binary, trimpath bool) (*emit.Result, error) {
 	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks)
 	if err != nil {
 		return nil, err
@@ -351,6 +363,7 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 		Imports:     imports,
 		DartPackage: dartPkg,
 		Fset:        p.Fset,
+		TrimPath:    trimpath,
 		URIs:        libraryURIs(p, module, dartPkg),
 	})
 }
@@ -581,7 +594,24 @@ dependencies:
 
 func runtimePath(runtime, out string) (string, error) {
 	if runtime == "" {
-		return "", fmt.Errorf("the build needs the path of the goruntime package")
+		files := map[string]string{}
+		if err := fs.WalkDir(runtimelib.Files, "goruntime", func(name string, entry fs.DirEntry, err error) error {
+			if err != nil || entry.IsDir() {
+				return err
+			}
+			data, err := runtimelib.Files.ReadFile(name)
+			if err != nil {
+				return err
+			}
+			files[name] = string(data)
+			return nil
+		}); err != nil {
+			return "", err
+		}
+		if err := writeFiles(out, files); err != nil {
+			return "", err
+		}
+		return "goruntime", nil
 	}
 	abs, err := filepath.Abs(runtime)
 	if err != nil {

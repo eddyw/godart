@@ -12,6 +12,8 @@
 // pointer, and Go names it the safer form of each 1.
 package atomic
 
+import "syscall/dart"
+
 // Value holds a value of any type.
 type Value struct {
 	v any
@@ -19,15 +21,38 @@ type Value struct {
 
 func (v *Value) Load() any { return v.v }
 
-func (v *Value) Store(val any) { v.v = val }
+func (v *Value) Store(val any) {
+	if val == nil {
+		panic("sync/atomic: store of nil value into Value")
+	}
+	if v.v != nil && dart.DescOf(v.v) != dart.DescOf(val) {
+		panic("sync/atomic: store of inconsistently typed value into Value")
+	}
+	v.v = val
+}
 
 func (v *Value) Swap(new any) any {
+	if new == nil {
+		panic("sync/atomic: swap of nil value into Value")
+	}
+	if v.v != nil && dart.DescOf(v.v) != dart.DescOf(new) {
+		panic("sync/atomic: swap of inconsistently typed value into Value")
+	}
 	old := v.v
 	v.v = new
 	return old
 }
 
 func (v *Value) CompareAndSwap(old, new any) bool {
+	if new == nil {
+		panic("sync/atomic: compare and swap of nil value into Value")
+	}
+	if old != nil && dart.DescOf(old) != dart.DescOf(new) {
+		panic("sync/atomic: compare and swap of inconsistently typed values")
+	}
+	if v.v != nil && dart.DescOf(v.v) != dart.DescOf(new) {
+		panic("sync/atomic: compare and swap of inconsistently typed value into Value")
+	}
 	if v.v != old {
 		return false
 	}

@@ -18,9 +18,8 @@ func (e *emitter) stmt(s ir.Stmt) {
 //
 // A machine keeps each local in 1 variable and writes a new box at each pass of
 // a loop, thus a literal that a statement builds takes a copy of the box. The
-// copy stands in a block in front of the statement. A local function keeps its
-// name for the statements that follow it, thus the block of such a function
-// ends with the list.
+// copy stands in a block in front of the statement. A declaration keeps its
+// name for the statements that follow it, thus its block ends with the list.
 func (e *emitter) list(stmts []ir.Stmt) {
 	prev := e.captures
 	open := 0
@@ -32,7 +31,8 @@ func (e *emitter) list(stmts []ir.Stmt) {
 			continue
 		}
 		e.openCaptures(mark)
-		if _, ok := s.(*ir.LocalFunc); ok {
+		switch s.(type) {
+		case *ir.LocalFunc, *ir.Declare:
 			open++
 			continue
 		}
@@ -110,13 +110,15 @@ func (e *emitter) stmtOne(s ir.Stmt) {
 			// recover the panic value only in the function that the defer
 			// pushed, and each function that it calls reads nil.
 			if id := e.deferredId(m.Fun); id != 0 {
+				call := e.expr(s.Call)
 				e.markDrop()
-				e.line("$defer.push(() => $dcall(%d, () => %s));", id, e.expr(s.Call))
+				e.line("$defer.push(() => $dcall(%d, () => %s));", id, call)
 				return
 			}
 		}
+		call := e.expr(s.Call)
 		e.markDrop()
-		e.line("$defer.push(() => %s);", e.expr(s.Call))
+		e.line("$defer.push(() => %s);", call)
 	case *ir.Send:
 		e.line("%s.send(%s);", e.chanExpr(s.Chan), e.expr(s.Value))
 	case *ir.Go:
@@ -184,6 +186,11 @@ func (e *emitter) declare(s *ir.Declare) {
 			// variable, and the defer statement reads the token of the
 			// literal through this name.
 			e.varLitId[v.Name] = e.funcId(lit)
+		}
+		if id, ok := s.Init.(*ir.Ident); ok {
+			if token, ok := e.varLitId[id.Name]; ok {
+				e.varLitId[v.Name] = token
+			}
 		}
 		e.declareOne(v, e.expr(s.Init))
 		return
@@ -254,6 +261,11 @@ func anyBoxed(list []ir.Expr) bool {
 // does not write through the old one.
 func (e *emitter) defineAssign(s *ir.Assign) {
 	value := e.expr(s.Rhs)
+	if lit, ok := s.Rhs.(*ir.FuncLit); ok {
+		if id, ok := s.Lhs.(*ir.Ident); ok {
+			e.varLitId[id.Name] = e.funcId(lit)
+		}
+	}
 	if id, ok := s.Lhs.(*ir.Ident); ok && id.Boxed {
 		e.line("%s = Box(%s);", id.Name, value)
 		return
@@ -280,6 +292,11 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 	}
 	t := lhs.GoType()
 	value := e.expr(rhs)
+	if lit, ok := rhs.(*ir.FuncLit); ok {
+		if id, ok := lhs.(*ir.Ident); ok {
+			e.varLitId[id.Name] = e.funcId(lit)
+		}
+	}
 	// A copy of a variable that holds the literal of a deferred call keeps
 	// the token of the literal, because the defer statement reads it through
 	// the copy.
@@ -310,6 +327,10 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 				return
 			}
 		}
+	}
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		e.line("%s = %s.assignOf(%s, %s);", e.expr(lhs), e.dictOf(tp), e.expr(lhs), value)
+		return
 	}
 	if isStructType(t) {
 		e.line("%s.$assign(%s);", e.expr(lhs), value)
@@ -476,7 +497,7 @@ func (e *emitter) forClause(s ir.Stmt) (string, bool) {
 			return "", false
 		}
 		if isStructType(s.Lhs.GoType()) {
-			return fmt.Sprintf("%s.$assign(%s)", e.expr(s.Lhs), e.expr(s.Rhs)), true
+			return e.assignElem(e.expr(s.Lhs), e.expr(s.Rhs), s.Lhs.GoType()), true
 		}
 		return fmt.Sprintf("%s = %s", e.expr(s.Lhs), e.expr(s.Rhs)), true
 	case *ir.ExprStmt:

@@ -108,13 +108,17 @@ func Sleep(d Duration) {
 // count of nanoseconds inside that second, and the location of its wall clock.
 //
 // Go holds the same origin. The zero value of the 2 runtimes is thus midnight
-// UTC of January 1 of the year 1. A Time of Go also holds a reading of the
-// monotonic clock, and a Time here holds no such reading.
+// UTC of January 1 of the year 1. Values from Now also hold a monotonic clock.
 type Time struct {
-	sec  int64
-	nsec int32
-	loc  *Location
+	sec     int64
+	nsec    int32
+	loc     *Location
+	mono    int64
+	hasMono bool
 }
+
+const minMonoWall = (1884*365 + 1884/4 - 1884/100 + 1884/400) * 86400
+const maxMonoWall = minMonoWall + (1 << 33) - 1
 
 // unixSec gives the count of seconds of t since the start of the Unix epoch.
 func (t Time) unixSec() int64 { return t.sec - unixToInternal }
@@ -128,8 +132,13 @@ func unixTime(sec int64, nsec int32) Time {
 // Now gives the time of the clock.
 func Now() Time {
 	nanos := dart.NowNanos()
-	return unixTime(floorDiv(nanos, 1000000000),
+	t := unixTime(floorDiv(nanos, 1000000000),
 		int32(floorMod(nanos, 1000000000)))
+	if t.sec >= minMonoWall && t.sec <= maxMonoWall {
+		t.mono = dart.MonoNanos() + 1
+		t.hasMono = true
+	}
+	return t
 }
 
 // Unix gives the time of a count of seconds and a count of nanoseconds since
@@ -158,6 +167,18 @@ func (t Time) Unix() int64 { return t.unixSec() }
 // Sub gives the duration between t and u. A result outside the range of a
 // Duration gives the largest or the smallest Duration, exactly as in Go.
 func (t Time) Sub(u Time) Duration {
+	if t.hasMono && u.hasMono {
+		d := Duration(t.mono - u.mono)
+		if t.mono < u.mono && d > 0 {
+			return minDuration
+		}
+		if t.mono > u.mono && d < 0 {
+			return maxDuration
+		}
+		return d
+	}
+	t.stripMono()
+	u.stripMono()
 	d := Duration(t.sec-u.sec)*Second + Duration(t.nsec-u.nsec)
 	switch {
 	case u.Add(d).Equal(t):
@@ -182,22 +203,47 @@ func (t Time) Add(d Duration) Time {
 	}
 	t.sec += dsec
 	t.nsec = nsec
+	if t.hasMono {
+		mono := t.mono + int64(d)
+		if t.sec < minMonoWall || t.sec > maxMonoWall ||
+			d < 0 && mono > t.mono || d > 0 && mono < t.mono {
+			t.stripMono()
+		} else {
+			t.mono = mono
+		}
+	}
 	return t
 }
 
 // Before reports whether t comes before u.
 func (t Time) Before(u Time) bool {
+	if t.hasMono && u.hasMono {
+		return t.mono < u.mono
+	}
 	return t.sec < u.sec || t.sec == u.sec && t.nsec < u.nsec
 }
 
 // After reports whether t comes after u.
 func (t Time) After(u Time) bool {
+	if t.hasMono && u.hasMono {
+		return t.mono > u.mono
+	}
 	return t.sec > u.sec || t.sec == u.sec && t.nsec > u.nsec
 }
 
 // Compare gives -1 when t comes before u, 0 when the 2 name the same instant,
 // and 1 when t comes after u.
 func (t Time) Compare(u Time) int {
+	if t.hasMono && u.hasMono {
+		switch {
+		case t.mono < u.mono:
+			return -1
+		case t.mono > u.mono:
+			return 1
+		default:
+			return 0
+		}
+	}
 	switch {
 	case t.sec < u.sec:
 		return -1
@@ -216,11 +262,27 @@ func (t Time) Compare(u Time) int {
 func (t Time) IsZero() bool { return t.sec == 0 && t.nsec == 0 }
 
 // String gives the text of the time, in the format of Go.
-//
-// Go also writes the reading of the monotonic clock, and a Time of the overlay
-// holds no such reading. docs/parity.md holds that gap.
 func (t Time) String() string {
-	return t.Format("2006-01-02 15:04:05.999999999 -0700 MST")
+	out := t.Format("2006-01-02 15:04:05.999999999 -0700 MST")
+	if !t.hasMono {
+		return out
+	}
+	sign := "+"
+	u := uint64(t.mono)
+	if t.mono < 0 {
+		sign = "-"
+		u = -u
+	}
+	frac := uitoa(u % 1000000000)
+	for len(frac) < 9 {
+		frac = "0" + frac
+	}
+	return out + " m=" + sign + uitoa(u/1000000000) + "." + frac
+}
+
+func (t *Time) stripMono() {
+	t.mono = 0
+	t.hasMono = false
 }
 
 // Location gives the location of the wall clock of t. A Time with no location
@@ -249,7 +311,12 @@ func (t Time) Local() Time { return t.In(Local) }
 
 // Equal reports whether t and u name the same instant. The location of each
 // one changes nothing.
-func (t Time) Equal(u Time) bool { return t.sec == u.sec && t.nsec == u.nsec }
+func (t Time) Equal(u Time) bool {
+	if t.hasMono && u.hasMono {
+		return t.mono == u.mono
+	}
+	return t.sec == u.sec && t.nsec == u.nsec
+}
 
 // locWall gives the name of the zone, the offset in seconds east of UTC, and
 // the reading of the wall clock of the location in seconds since the start of

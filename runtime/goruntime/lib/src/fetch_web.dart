@@ -125,7 +125,7 @@ GoString _cause(Object cause) => GoString.fromString(cause.toString());
 /// widening at the call gives a type error on dart2wasm.
 Future<T?> _limit<T>(Future<T> f, int deadline) {
   if (deadline == 0) return f;
-  final int left = deadline - $nowNanos();
+  final int left = deadline - $ix($nowNanos());
   if (left <= 0) return Future<T?>.value(null);
   return f
       .then<T?>((T value) => value)

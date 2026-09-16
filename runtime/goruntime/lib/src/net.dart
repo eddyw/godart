@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'chan.dart';
+import 'goint.dart';
 import 'sched.dart';
 import 'slice.dart';
 import 'string.dart';
@@ -520,7 +521,7 @@ GoString _timeout() => GoString.fromString('i/o timeout');
 /// next call of the same operation takes the same future.
 Future<T> _limit<T>(Future<T> f, int deadline, T expired) {
   if (deadline == 0) return f;
-  final int left = deadline - $nowNanos();
+  final int left = deadline - $ix($nowNanos());
   if (left <= 0) return Future<T>.value(expired);
   return f.timeout(
     Duration(microseconds: left ~/ 1000),

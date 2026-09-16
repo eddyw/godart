@@ -14,8 +14,9 @@ String writeDart(Reading r, {Set<String>? only, Set<String>? texts}) {
   // host that holds no such case.
   b.writeln('// ignore_for_file: unnecessary_import');
   b.writeln();
-  final kept =
-      r.widgets.where((w) => only == null || only.contains(w.goName)).toList();
+  final kept = r.widgets
+      .where((w) => only == null || only.contains(w.goName))
+      .toList();
   final usedEnums = <String>{};
   for (final w in kept) {
     for (final p in w.params) {
@@ -41,15 +42,16 @@ String writeDart(Reading r, {Set<String>? only, Set<String>? texts}) {
     for (final w in kept) ...w.needed,
     for (final name in usedEnums)
       if (r.visible[name] != null) r.visible[name]!,
-  }.toList()
-    ..sort();
+  }.toList()..sort();
   for (final uri in imports) {
     b.writeln("import '$uri';");
   }
   b.writeln();
   b.writeln("import 'package:goflutter/goflutter.dart';");
   b.writeln();
-  b.writeln('/// goGenWidget builds the Flutter widget of 1 generated node. It');
+  b.writeln(
+    '/// goGenWidget builds the Flutter widget of 1 generated node. It',
+  );
   b.writeln('/// gives null when the node stands outside the generated set,');
   b.writeln('/// and goRender then reads its own cases.');
   b.writeln('Widget? goGenWidget(GoNode n, GoRuntime rt) {');
@@ -104,7 +106,9 @@ String writeDart(Reading r, {Set<String>? only, Set<String>? texts}) {
 String argExpr(WidgetSpec w, Param p, int at) {
   final read = readExpr(p, at);
   if (!exprNullable(p)) return read;
-  if (p.nullable) return read;
+  if (p.nullable && (p.defaultCode == null || p.defaultCode == 'null')) {
+    return read;
+  }
   if (p.required) {
     return "$read ?? (throw StateError('the field ${p.goName} of "
         "${w.goName} holds no value'))";
@@ -115,6 +119,7 @@ String argExpr(WidgetSpec w, Param p, int at) {
 /// exprNullable reports whether the read of 1 field can give null.
 bool exprNullable(Param p) {
   if (p.optional) return true;
+  if (p.type.kind == 'nodes' && p.nullable) return true;
   switch (p.type.kind) {
     case 'str':
     case 'valueKey':
@@ -414,6 +419,7 @@ String readExpr(Param p, int at) {
     case 'node':
       return 'goChildOpt(n.child($f), rt)';
     case 'nodes':
+      if (p.nullable) return 'goChildrenOpt(n.childrenOpt($f), rt)';
       return 'goChildren(n.children($f), rt)';
     case 'strs':
       return 'n.texts($f)';

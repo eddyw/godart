@@ -22,9 +22,9 @@ final class GoNode {
   final List<FieldDesc> _fields;
 
   GoNode(Iface node)
-      : value = node.value,
-        desc = node.desc,
-        _fields = node.desc.fields;
+    : value = node.value,
+      desc = node.desc,
+      _fields = node.desc.fields;
 
   /// GoNode.struct reads a struct that stands inside a node, for example the
   /// Insets of a padding field.
@@ -228,6 +228,13 @@ final class GoNode {
     return <Iface?>[for (int i = 0; i < v.len; i++) v[i]];
   }
 
+  /// A nil Go slice preserves the null constructor argument.
+  List<Iface?>? childrenOpt(String name, [int at = noAt]) {
+    final Object? v = raw(name, at);
+    if (v is! Slice<Iface?> || v.isNil) return null;
+    return <Iface?>[for (int i = 0; i < v.len; i++) v[i]];
+  }
+
   /// action gives a `func()` field.
   void Function()? action(String name, [int at = noAt]) {
     final Object? v = raw(name, at);
@@ -326,8 +333,6 @@ final class GoNode {
     int at = noAt,
   ]) {
     final Object? v = raw(name, at);
-    return v is double Function(int, double, double, double, double)
-        ? v
-        : null;
+    return v is double Function(int, double, double, double, double) ? v : null;
   }
 }

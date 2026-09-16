@@ -5,6 +5,7 @@
 /// it, and the value holds the functions and the lines of that file.
 library;
 
+import 'panic.dart';
 import 'slice.dart';
 import 'string.dart';
 
@@ -162,7 +163,21 @@ int _floor(List<int> list, int value) {
 /// "function|file|line". The count of skip drops the first frames, and frame 0
 /// is the function that calls this one.
 Slice<GoString> $stack(int skip) {
-  final frames = $goStack(StackTrace.current);
+  var frames = $goStack(StackTrace.current);
+  final panic = $chainPanic;
+  if (panic != null) {
+    final origin = $goStack(panic.trace);
+    var common = 0;
+    while (common < frames.length && common < origin.length) {
+      final current = frames[frames.length - common - 1];
+      final saved = origin[origin.length - common - 1];
+      if (current.function != saved.function || current.file != saved.file) {
+        break;
+      }
+      common++;
+    }
+    frames = <GoPos>[...frames.take(frames.length - common), ...origin];
+  }
   final out = <GoString>[];
   for (var i = skip; i < frames.length; i++) {
     final f = frames[i];

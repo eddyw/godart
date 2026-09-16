@@ -1,0 +1,526 @@
+{
+  "bigalg": [
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet"
+  ],
+  "blank": [
+    "$DIR/blank.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "chancap": [
+    "$DIR/chancap.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "closure": [
+    "$DIR/closure.go:108:10: undefined: runtime.ReadMemStats",
+    "$DIR/closure.go:98:26: undefined: runtime.MemStats",
+    "$DIR/closure.go:99:10: undefined: runtime.ReadMemStats"
+  ],
+  "cmp": [
+    "$DIR/cmp.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "convT2X": [
+    "print does not accept the type interface{} yet",
+    "print does not accept the type interface{} yet",
+    "print does not accept the type interface{} yet"
+  ],
+  "deferfin": [
+    "$DIR/deferfin.go:43:12: undefined: runtime.SetFinalizer"
+  ],
+  "deferprint": [
+    "print does not accept the type []int yet",
+    "print does not accept the type chan int yet",
+    "print does not accept the type func() yet",
+    "print does not accept the type map[string]int yet"
+  ],
+  "finprofiled": [
+    "$DIR/finprofiled.go:20:10: undefined: runtime.MemProfileRate",
+    "$DIR/finprofiled.go:33:12: undefined: runtime.SetFinalizer",
+    "$DIR/finprofiled.go:46:21: undefined: runtime.MemProfileRecord",
+    "$DIR/finprofiled.go:48:23: undefined: runtime.MemProfile",
+    "$DIR/finprofiled.go:52:26: undefined: runtime.MemProfileRecord"
+  ],
+  "fixedbugs/bug141": [
+    "print does not accept the type example.com/gotest.Empty yet"
+  ],
+  "fixedbugs/bug225": [
+    "$DIR/bug225.go:12:7: the identifier _ has no object",
+    "$DIR/bug225.go:18:7: the identifier _ has no object"
+  ],
+  "fixedbugs/bug246": [
+    "$DIR/bug246.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/bug262": [
+    "print does not accept the type error yet"
+  ],
+  "fixedbugs/bug273": [
+    "$DIR/bug273.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/bug279": [
+    "$DIR/bug279.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/bug292": [
+    "$DIR/bug292.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/bug312": [
+    "print does not accept the type interface{} yet"
+  ],
+  "fixedbugs/bug328": [
+    "$DIR/bug328.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/bug329": [
+    "print does not accept the type complex128 yet",
+    "print does not accept the type complex128 yet"
+  ],
+  "fixedbugs/bug331": [
+    "print does not accept the type error yet"
+  ],
+  "fixedbugs/bug339": [
+    "$DIR/bug339.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/bug343": [
+    "print does not accept the type map[string]string yet"
+  ],
+  "fixedbugs/bug491": [
+    "print does not accept the type complex128 yet",
+    "print does not accept the type complex128 yet"
+  ],
+  "fixedbugs/bug514": [
+    "$DIR/bug514.go:11:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
+  ],
+  "fixedbugs/bug517": [
+    "$DIR/bug517.go:13:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue10607": [
+    "no package matches [./...] in $DIR"
+  ],
+  "fixedbugs/issue15002": [
+    "no package matches [./...] in $DIR"
+  ],
+  "fixedbugs/issue15277": [
+    "no package matches [./...] in $DIR"
+  ],
+  "fixedbugs/issue15281": [
+    "$DIR/issue15281.go:62:17: undefined: runtime.MemStats",
+    "$DIR/issue15281.go:63:10: undefined: runtime.ReadMemStats"
+  ],
+  "fixedbugs/issue15329": [
+    "$DIR/issue15329.go:37:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue15528": [
+    "$DIR/issue15528.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue15550": [
+    "$DIR/issue15550.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue16870": [
+    "$DIR/issue16870.go:47:7: the identifier _ has no object",
+    "$DIR/issue16870.go:62:7: the identifier _ has no object",
+    "$DIR/issue16870.go:79:7: the identifier _ has no object"
+  ],
+  "fixedbugs/issue17381": [
+    "$DIR/issue17381.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue19078": [
+    "$DIR/issue19078.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue21221": [
+    "$DIR/issue21221.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue24187": [
+    "no package matches [./...] in $DIR"
+  ],
+  "fixedbugs/issue24491a": [
+    "$DIR/issue24491a.go:20:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue24491b": [
+    "$DIR/issue24491b.go:21:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue27518b": [
+    "$DIR/issue27518b.go:48:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue27695b": [
+    "$DIR/issue27695b.go:16:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue27695c": [
+    "$DIR/issue27695c.go:17:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue29362": [
+    "$DIR/issue29362.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue29362b": [
+    "$DIR/issue29362b.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue30041": [
+    "$DIR/issue30041.go:15:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue30476": [
+    "$DIR/issue30476.go:15:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue30709": [
+    "$DIR/issue30709.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue31419": [
+    "print does not accept the type *example.com/gotest.T yet",
+    "print does not accept the type example.com/gotest.I yet"
+  ],
+  "fixedbugs/issue32477": [
+    "$DIR/issue32477.go:47:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue38093": [
+    "no package matches [./...] in $DIR"
+  ],
+  "fixedbugs/issue4085b": [
+    "$DIR/issue4085b.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue40954": [
+    "$DIR/issue40954.go:12:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)",
+    "$DIR/issue40954.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue42032": [
+    "$DIR/issue42032.go:11:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
+  ],
+  "fixedbugs/issue42076": [
+    "$DIR/issue42076.go:13:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
+  ],
+  "fixedbugs/issue44830": [
+    "$DIR/issue44830.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue45045": [
+    "$DIR/issue45045.go:17:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue4585": [
+    "$DIR/issue4585.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue46725": [
+    "$DIR/issue46725.go:21:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue46903": [
+    "$DIR/issue46903.go:10:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
+  ],
+  "fixedbugs/issue48536": [
+    "$DIR/issue48536.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue51733": [
+    "$DIR/issue51733.go:13:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)",
+    "$DIR/issue51733.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue52612": [
+    "$DIR/issue52612.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue53137": [
+    "$DIR/issue53137.go:10:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue54220": [
+    "$DIR/issue54220.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue54343": [
+    "$DIR/issue54343.go:25:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue5493": [
+    "$DIR/issue5493.go:27:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue56990": [
+    "$DIR/issue56990.go:118:15: cannot use matchString (value of type func(a string, b string) (bool, error)) as []testing.InternalTest value in argument to testing.Main",
+    "$DIR/issue56990.go:118:28: cannot use testSuite (variable of type []testing.InternalTest) as []testing.InternalBenchmark value in argument to testing.Main"
+  ],
+  "fixedbugs/issue57823": [
+    "$DIR/issue57823.go:40:10: undefined: runtime.SetFinalizer",
+    "$DIR/issue57823.go:63:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue59293": [
+    "$DIR/issue59293.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue60601": [
+    "$DIR/issue60601.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue65417": [
+    "$DIR/issue65417.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue7083": [
+    "print does not accept the type *string yet"
+  ],
+  "fixedbugs/issue73748a": [
+    "$DIR/issue73748a.go:12:2: the package runtime/trace is outside the supported surface (the standard library surface is curated)"
+  ],
+  "fixedbugs/issue73748b": [
+    "$DIR/issue73748b.go:12:2: the package runtime/trace is outside the supported surface (the standard library surface is curated)"
+  ],
+  "fixedbugs/issue75365": [
+    "$DIR/issue75365.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue79812": [
+    "the conversion from complex128 to T is not supported yet"
+  ],
+  "fixedbugs/issue79874": [
+    "$DIR/issue79874.go:32:22: undefined: syscall.Getpagesize",
+    "$DIR/issue79874.go:37:20: undefined: syscall.Mmap",
+    "$DIR/issue79874.go:37:52: undefined: syscall.PROT_READ",
+    "$DIR/issue79874.go:37:71: undefined: syscall.MAP_ANON",
+    "$DIR/issue79874.go:37:88: undefined: syscall.MAP_PRIVATE",
+    "$DIR/issue79874.go:43:20: undefined: syscall.Mprotect",
+    "$DIR/issue79874.go:43:68: undefined: syscall.PROT_READ",
+    "$DIR/issue79874.go:43:86: undefined: syscall.PROT_WRITE"
+  ],
+  "fixedbugs/issue80004": [
+    "$DIR/issue80004.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue8004": [
+    "$DIR/issue8004.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue80196": [
+    "print does not accept the type *byte yet",
+    "print does not accept the type *byte yet",
+    "print does not accept the type *byte yet",
+    "print does not accept the type *byte yet",
+    "print does not accept the type *byte yet"
+  ],
+  "fixedbugs/issue8347": [
+    "$DIR/issue8347.go:14:8: the identifier _ has no object"
+  ],
+  "fixedbugs/issue8606b": [
+    "$DIR/issue8606b.go:43:15: undefined: syscall.Getpagesize",
+    "$DIR/issue8606b.go:44:20: undefined: syscall.Mmap",
+    "$DIR/issue8606b.go:44:43: undefined: syscall.PROT_READ",
+    "$DIR/issue8606b.go:44:61: undefined: syscall.PROT_WRITE",
+    "$DIR/issue8606b.go:44:81: undefined: syscall.MAP_ANON",
+    "$DIR/issue8606b.go:44:98: undefined: syscall.MAP_PRIVATE",
+    "$DIR/issue8606b.go:48:16: undefined: syscall.Mprotect",
+    "$DIR/issue8606b.go:48:36: undefined: syscall.PROT_NONE"
+  ],
+  "fixedbugs/issue9110": [
+    "$DIR/issue9110.go:23:36: undefined: runtime.MemStats",
+    "$DIR/issue9110.go:23:36: undefined: runtime.MemStats",
+    "$DIR/issue9110.go:23:36: undefined: runtime.MemStats",
+    "$DIR/issue9110.go:29:12: undefined: runtime.ReadMemStats",
+    "$DIR/issue9110.go:86:10: undefined: runtime.ReadMemStats"
+  ],
+  "fixedbugs/issue9321": [
+    "$DIR/issue9321.go:12:2: the package runtime/pprof is outside the supported surface (the standard library surface is curated)"
+  ],
+  "gc2": [
+    "$DIR/gc2.go:24:20: undefined: runtime.MemStats",
+    "$DIR/gc2.go:25:26: undefined: runtime.MemStats",
+    "$DIR/gc2.go:26:10: undefined: runtime.ReadMemStats",
+    "$DIR/gc2.go:40:10: undefined: runtime.ReadMemStats"
+  ],
+  "gcstring": [
+    "$DIR/gcstring.go:41:11: undefined: runtime.SetFinalizer"
+  ],
+  "goprint": [
+    "print does not accept the type []int yet",
+    "print does not accept the type chan int yet",
+    "print does not accept the type func() yet",
+    "print does not accept the type map[string]int yet"
+  ],
+  "heapsampling": [
+    "$DIR/heapsampling.go:166:41: undefined: runtime.MemProfileRecord",
+    "$DIR/heapsampling.go:226:39: undefined: runtime.MemProfileRecord",
+    "$DIR/heapsampling.go:239:18: undefined: runtime.MemProfileRecord",
+    "$DIR/heapsampling.go:240:19: undefined: runtime.MemProfile",
+    "$DIR/heapsampling.go:245:22: undefined: runtime.MemProfileRecord",
+    "$DIR/heapsampling.go:246:19: undefined: runtime.MemProfile",
+    "$DIR/heapsampling.go:263:37: undefined: runtime.MemProfileRecord",
+    "$DIR/heapsampling.go:293:79: undefined: runtime.MemProfileRate",
+    "$DIR/heapsampling.go:31:10: undefined: runtime.MemProfileRate"
+  ],
+  "init1": [
+    "$DIR/init1.go:28:26: undefined: runtime.MemStats",
+    "$DIR/init1.go:29:10: undefined: runtime.ReadMemStats",
+    "$DIR/init1.go:39:10: undefined: runtime.ReadMemStats"
+  ],
+  "makeslice": [
+    "$DIR/makeslice.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "mallocfin": [
+    "$DIR/mallocfin.go:60:11: undefined: runtime.SetFinalizer",
+    "$DIR/mallocfin.go:61:11: undefined: runtime.SetFinalizer",
+    "$DIR/mallocfin.go:62:11: undefined: runtime.SetFinalizer",
+    "$DIR/mallocfin.go:63:11: undefined: runtime.SetFinalizer"
+  ],
+  "nilptr": [
+    "no package matches [./...] in $DIR"
+  ],
+  "nilptr2": [
+    "print does not accept the type *[10]int yet",
+    "print does not accept the type *[]byte yet",
+    "print does not accept the type *[]byte yet",
+    "print does not accept the type *[]byte yet",
+    "print does not accept the type *byte yet",
+    "print does not accept the type *byte yet",
+    "print does not accept the type *byte yet",
+    "print does not accept the type *byte yet",
+    "print does not accept the type *byte yet",
+    "print does not accept the type *byte yet",
+    "print does not accept the type *example.com/gotest.BigStruct yet",
+    "print does not accept the type *example.com/gotest.Struct yet",
+    "print does not accept the type *float64 yet",
+    "print does not accept the type *float64 yet",
+    "print does not accept the type *int yet",
+    "print does not accept the type *int yet",
+    "print does not accept the type *int yet",
+    "print does not accept the type *int yet",
+    "print does not accept the type *int yet",
+    "print does not accept the type *int yet",
+    "print does not accept the type *int yet",
+    "print does not accept the type *int yet",
+    "print does not accept the type *string yet",
+    "print does not accept the type *string yet",
+    "print does not accept the type []byte yet",
+    "print does not accept the type []byte yet",
+    "print does not accept the type []byte yet"
+  ],
+  "nilptr_aix": [
+    "no package matches [./...] in $DIR"
+  ],
+  "noinit": [
+    "$DIR/noinit.go:16:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "print": [
+    "print does not accept the type []int yet",
+    "print does not accept the type []int yet",
+    "print does not accept the type complex128 yet",
+    "print does not accept the type complex128 yet",
+    "print does not accept the type interface{f()} yet",
+    "print does not accept the type interface{f()} yet",
+    "print does not accept the type interface{} yet",
+    "print does not accept the type interface{} yet",
+    "print does not accept the type map[int]int yet",
+    "print does not accept the type map[int]int yet"
+  ],
+  "recover": [
+    "$DIR/recover.go:71:10: undefined: runtime.Breakpoint"
+  ],
+  "recover1": [
+    "$DIR/recover1.go:25:10: undefined: runtime.Breakpoint"
+  ],
+  "recover2": [
+    "print does not accept the type []byte yet",
+    "print does not accept the type []byte yet"
+  ],
+  "recover3": [
+    "print does not accept the type example.com/gotest.m yet"
+  ],
+  "recover4": [
+    "$DIR/recover4.go:49:18: undefined: syscall.Getpagesize",
+    "$DIR/recover4.go:52:107: undefined: syscall.MAP_PRIVATE",
+    "$DIR/recover4.go:52:23: undefined: syscall.Mmap",
+    "$DIR/recover4.go:52:52: undefined: syscall.PROT_READ",
+    "$DIR/recover4.go:52:70: undefined: syscall.PROT_WRITE",
+    "$DIR/recover4.go:52:90: undefined: syscall.MAP_ANON",
+    "$DIR/recover4.go:62:20: undefined: syscall.Mprotect",
+    "$DIR/recover4.go:62:43: undefined: syscall.PROT_NONE"
+  ],
+  "rename": [
+    "$DIR/rename.go:58:11: undefined: runtime.Breakpoint"
+  ],
+  "sigchld": [
+    "$DIR/sigchld.go:16:10: undefined: syscall.Kill",
+    "$DIR/sigchld.go:16:23: undefined: syscall.Getpid",
+    "$DIR/sigchld.go:16:41: undefined: syscall.SIGCHLD"
+  ],
+  "sizeof": [
+    "$DIR/sizeof.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "slicecap": [
+    "$DIR/slicecap.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "stackobj": [
+    "$DIR/stackobj.go:45:10: undefined: runtime.SetFinalizer"
+  ],
+  "stackobj3": [
+    "$DIR/stackobj3.go:65:10: undefined: runtime.SetFinalizer",
+    "$DIR/stackobj3.go:80:10: undefined: runtime.SetFinalizer"
+  ],
+  "strcopy": [
+    "$DIR/strcopy.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "tinyfin": [
+    "$DIR/tinyfin.go:28:11: undefined: runtime.SetFinalizer"
+  ],
+  "typeparam/absdiff": [
+    "$DIR/absdiff.go:25:7: the operator - reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/absdiff2": [
+    "$DIR/absdiff2.go:34:7: the operator - reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
+    "$DIR/absdiff2.go:99:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/absdiff3": [
+    "$DIR/absdiff3.go:24:13: the operator - reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
+    "$DIR/absdiff3.go:66:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/adder": [
+    "$DIR/adder.go:19:9: the operator + reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/chans": [
+    "$DIR/chans.go:190:10: undefined: runtime.SetFinalizer"
+  ],
+  "typeparam/index2": [
+    "$DIR/index2.go:15:2: an index reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
+    "$DIR/index2.go:16:9: an index reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/issue47258": [
+    "$DIR/issue47258.go:19:2: the operator ++ reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/issue47716": [
+    "$DIR/issue47716.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "typeparam/issue48013": [
+    "$DIR/issue48013.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "typeparam/issue49659b": [
+    "$DIR/issue49659b.go:17:6: the compiler rejects the address of int (a value of such a type needs a cell, and only a variable or a location holds one)",
+    "$DIR/issue49659b.go:17:7: an index reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/issue50193": [
+    "$DIR/issue50193.go:18:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
+    "$DIR/issue50193.go:21:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
+    "$DIR/issue50193.go:24:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/issue50690a": [
+    "$DIR/issue50690a.go:25:3: the operator += reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/orderedmap": [
+    "$DIR/orderedmap.go:237:10: undefined: runtime.SetFinalizer"
+  ],
+  "typeparam/pair": [
+    "$DIR/pair.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "typeparam/settable": [
+    "the conversion from *T to PT is not supported yet",
+    "the conversion from *T to PT is not supported yet"
+  ],
+  "typeparam/typeswitch5": [
+    "print does not accept the type T yet"
+  ],
+  "uintptrescapes3": [
+    "$DIR/uintptrescapes3.go:51:11: undefined: runtime.SetFinalizer"
+  ],
+  "unsafe_slice_data": [
+    "$DIR/unsafe_slice_data.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "unsafe_string": [
+    "$DIR/unsafe_string.go:10:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "unsafe_string_data": [
+    "$DIR/unsafe_string_data.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "unsafebuiltins": [
+    "$DIR/unsafebuiltins.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "zerosize": [
+    "print does not accept the type *[0]int yet",
+    "print does not accept the type *[0]int yet",
+    "print does not accept the type *[0]int yet",
+    "print does not accept the type *[0]int yet",
+    "print does not accept the type *[0]int yet",
+    "print does not accept the type *[0]int yet"
+  ]
+}

@@ -216,9 +216,7 @@ func TestTestsOfGoroot(t *testing.T) {
 		// binary must run in the directory of the package.
 		{"compress/zlib", "", []string{
 			"--- PASS: TestWriterBig ", "--- PASS: TestWriterDict "}},
-		// TestParseInvalidRegexps reads a limit of a resource, and the patch of
-		// parse.go holds no recover for it. Read docs/parity.md.
-		{"regexp/syntax", "Test[^P]|TestParse[SFLMN]", []string{
+		{"regexp/syntax", "", []string{
 			"--- PASS: TestParseSimple ", "--- PASS: TestSimplify "}},
 		{"math/rand/v2", "", []string{
 			"--- PASS: TestRegress ", "--- PASS: TestChaCha8Read "}},
@@ -228,10 +226,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			"--- PASS: TestNow ", "--- PASS: TestWait "}},
 		{"compress/gzip", "", []string{
 			"--- PASS: TestRoundTrip ", "--- PASS: TestConcat "}},
-		// The whole run of the flate tests takes 8 minutes, thus the row
-		// keeps a fast set. TestDeflateInflateString proves the size limit
-		// of the encoder at each level.
-		{"compress/flate", "TestDeflate$|TestDeflateInflate$|TestDeflateInflateString$|TestReaderDict$|TestWriterDict$|TestBulkHash4$",
+		{"compress/flate", "",
 			[]string{"--- PASS: TestDeflateInflateString ", "--- PASS: TestWriterDict "}},
 		// 3 tests of slices read AllocsPerRun, and each 1 skips. The diff
 		// slices_test.go.patch names the 3 tests that the file holds not.

@@ -124,6 +124,7 @@ func Module(pkgs []*packages.Package) *Result {
 		rangeShape:   map[*ast.RangeStmt][]cell{},
 	}
 	for _, p := range pkgs {
+		a.reflection = a.reflection || p.PkgPath == "reflect"
 		a.pkg = p
 		for _, f := range p.Syntax {
 			a.collectAsserts(f)
@@ -148,11 +149,12 @@ func Module(pkgs []*packages.Package) *Result {
 }
 
 type analyzer struct {
-	pkg       *packages.Package
-	fset      *token.FileSet
-	result    *Result
-	summaries map[any]*summary
-	order     []any
+	reflection bool
+	pkg        *packages.Package
+	fset       *token.FileSet
+	result     *Result
+	summaries  map[any]*summary
+	order      []any
 
 	// syncTypes holds each named function type that carries //gart:sync. Read
 	// sync.go.
@@ -202,6 +204,10 @@ func (a *analyzer) file(f *ast.File) {
 			if sig, ok := obj.Type().(*types.Signature); ok && sig.Recv() != nil {
 				key := methodKey(obj.Name(), sig)
 				a.byMethod[key] = append(a.byMethod[key], any(obj))
+				// Reflection can extract an exported method without a Go selector.
+				if a.reflection && obj.Exported() {
+					a.addTarget(sigCell{signatureKey(sig)}, obj)
+				}
 			}
 			if d.Body != nil {
 				a.walkFunc(any(obj), d.Body)
@@ -884,7 +890,7 @@ func blockingIntrinsic(fn *types.Func) bool {
 		"Interfaces",
 		"ProcStart", "ProcWrite", "ProcCloseStdin", "ProcRead",
 		"ProcReadErr", "ProcWait", "SignalWait",
-		"ValueRecv", "ValueSend", "SelectValue",
+		"ValueRecv", "ValueSend", "SelectValue", "CallValue", "CallSliceValue",
 		"H2Fetch", "H2Read", "H2Next",
 		"FetchStart", "FetchRead",
 		"BubbleRun", "BubbleWait", "LockWait",

@@ -191,13 +191,14 @@ func typeParamsOf(list *types.TypeParamList) []*types.TypeParam {
 // value, thus each one needs a fresh copy. A type parameter reads its copy
 // from the dictionary, because the Dart type of the argument is unknown.
 func (e *emitter) copyOf(read string, t types.Type) string {
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return fmt.Sprintf("%s.copyOf(%s)", e.dictOf(tp), read)
+	}
 	switch {
 	case isStructType(t):
 		return read + ".$copy()"
 	case isArrayType(t):
 		return e.copyArray(read, t)
-	case typeset.HoldsParam(t) && typeset.Core(t) == nil:
-		return fmt.Sprintf("%s.copyOf(%s)", e.dictOf(t), read)
 	}
 	return read
 }
@@ -218,8 +219,9 @@ func (e *emitter) writeAssign(class string, st *types.Struct, fields []string) {
 	e.line("void $assign(%s $o) {", class)
 	for i, f := range fields {
 		t := st.Field(i).Type()
+		_, param := types.Unalias(t).(*types.TypeParam)
 		switch {
-		case typeset.HoldsParam(t) && typeset.Core(t) == nil:
+		case param:
 			e.line("%s = %s.assignOf(%s, $o.%s);", f, e.dictOf(t), f, f)
 		case isStructType(t):
 			e.line("%s.$assign($o.%s);", f, f)
@@ -239,6 +241,9 @@ func (e *emitter) writeAssign(class string, st *types.Struct, fields []string) {
 }
 
 func (e *emitter) assignElem(dst, src string, t types.Type) string {
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return fmt.Sprintf("%s.assignOf(%s, %s)", e.dictOf(tp), dst, src)
+	}
 	if isStructType(t) {
 		return dst + ".$assign(" + src + ")"
 	}

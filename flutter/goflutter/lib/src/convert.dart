@@ -29,8 +29,7 @@ import 'runtime.dart';
 Color? goColorOpt(int? argb) => argb == null ? null : Color(argb);
 
 /// goMillis gives the duration of an optional field.
-Duration? goMillis(int? ms) =>
-    ms == null ? null : Duration(milliseconds: ms);
+Duration? goMillis(int? ms) => ms == null ? null : Duration(milliseconds: ms);
 
 /// goIcon reads the name of an icon.
 ///
@@ -43,9 +42,11 @@ IconData? goIcon(String? name) {
   if (name == null || name.isEmpty) return null;
   final IconData? out = goIcons[name];
   if (out == null) {
-    throw StateError('the host holds no icon of the name $name. '
-        'Add it to goIcons, or name it with a string constant of the Go '
-        'source.');
+    throw StateError(
+      'the host holds no icon of the name $name. '
+      'Add it to goIcons, or name it with a string constant of the Go '
+      'source.',
+    );
   }
   return out;
 }
@@ -61,8 +62,12 @@ Widget? goChildOpt(Iface? node, GoRuntime rt) =>
     node == null ? null : goRender(node, rt);
 
 /// goChildren builds each child of a slice.
-List<Widget> goChildren(List<Iface?> nodes, GoRuntime rt) =>
-    <Widget>[for (final Iface? n in nodes) goRender(n, rt)];
+List<Widget> goChildren(List<Iface?> nodes, GoRuntime rt) => <Widget>[
+  for (final Iface? n in nodes) goRender(n, rt),
+];
+
+List<Widget>? goChildrenOpt(List<Iface?>? nodes, GoRuntime rt) =>
+    nodes == null ? null : goChildren(nodes, rt);
 
 /// goAction wraps a callback with no result. The Go function may block, thus
 /// the host runs it as a goroutine.
@@ -71,8 +76,8 @@ VoidCallback? goAction(void Function()? f, GoRuntime rt) =>
 
 void Function(String?)? goOnStr(void Function(GoString)? f, GoRuntime rt) =>
     f == null
-        ? null
-        : (String? v) => rt.run(() => f(GoString.fromString(v ?? '')));
+    ? null
+    : (String? v) => rt.run(() => f(GoString.fromString(v ?? '')));
 
 void Function(double?)? goOnF64(void Function(double)? f, GoRuntime rt) =>
     f == null ? null : (double? v) => rt.run(() => f(v ?? 0));
@@ -84,13 +89,14 @@ void Function(bool?)? goOnBool(void Function(bool)? f, GoRuntime rt) =>
     f == null ? null : (bool? v) => rt.run(() => f(v ?? false));
 
 void Function(Color?)? goOnColor(void Function(int)? f, GoRuntime rt) =>
-    f == null ? null : (Color? v) => rt.run(() => f(v == null ? 0 : v.toARGB32()));
-
-void Function(Duration?)? goOnDuration(
-        void Function(int)? f, GoRuntime rt) =>
     f == null
-        ? null
-        : (Duration? v) => rt.run(() => f(v == null ? 0 : v.inMilliseconds));
+    ? null
+    : (Color? v) => rt.run(() => f(v == null ? 0 : v.toARGB32()));
+
+void Function(Duration?)? goOnDuration(void Function(int)? f, GoRuntime rt) =>
+    f == null
+    ? null
+    : (Duration? v) => rt.run(() => f(v == null ? 0 : v.inMilliseconds));
 
 /// goOnEnum wraps a callback that takes 1 enum value. The Go side reads the
 /// name of the value, and name writes it.
@@ -98,11 +104,9 @@ void Function(T?)? goOnEnum<T>(
   void Function(GoString)? f,
   GoRuntime rt,
   String Function(T) name,
-) =>
-    f == null
-        ? null
-        : (T? v) => rt.run(
-            () => f(GoString.fromString(v == null ? '' : name(v))));
+) => f == null
+    ? null
+    : (T? v) => rt.run(() => f(GoString.fromString(v == null ? '' : name(v))));
 
 /// goBuild wraps a builder that takes no index. The compiler proves that the
 /// function never blocks, because its Go type carries //gart:sync.
@@ -111,15 +115,19 @@ Widget Function(BuildContext)? goBuild(Iface? Function()? f, GoRuntime rt) =>
 
 /// goItem wraps a builder of 1 row.
 Widget Function(BuildContext, int)? goItem(
-        Iface? Function(int)? f, GoRuntime rt) =>
-    f == null ? null : (BuildContext _, int i) => goRender(f(i), rt);
+  Iface? Function(int)? f,
+  GoRuntime rt,
+) => f == null ? null : (BuildContext _, int i) => goRender(f(i), rt);
 
 /// goInsets reads the Insets struct of the Go side.
 EdgeInsets? goInsets(GoNode? n) => n == null
     ? null
     : EdgeInsets.fromLTRB(
-        n.size('Left', 0), n.size('Top', 1), n.size('Right', 2),
-        n.size('Bottom', 3));
+        n.size('Left', 0),
+        n.size('Top', 1),
+        n.size('Right', 2),
+        n.size('Bottom', 3),
+      );
 
 /// goOffset reads the Offset struct of the Go side.
 Offset? goOffset(GoNode? n) =>
@@ -242,13 +250,14 @@ T? goCast<T>(Iface? node, GoRuntime rt, String field) {
   if (w is T) return w as T;
   if (T == PreferredSizeWidget) {
     return PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: w,
-        )
-        as T;
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: w,
+    ) as T;
   }
-  throw StateError('the field $field holds a ${w.runtimeType}, and the '
-      'parameter needs a $T');
+  throw StateError(
+    'the field $field holds a ${w.runtimeType}, and the '
+    'parameter needs a $T',
+  );
 }
 
 const Map<String, MouseCursor> _cursors = <String, MouseCursor>{
@@ -495,9 +504,9 @@ BoxDecoration? goDecoration(GoNode? n) {
 
 const Map<String, MaterialTapTargetSize> _tapTargets =
     <String, MaterialTapTargetSize>{
-  'padded': MaterialTapTargetSize.padded,
-  'shrinkWrap': MaterialTapTargetSize.shrinkWrap,
-};
+      'padded': MaterialTapTargetSize.padded,
+      'shrinkWrap': MaterialTapTargetSize.shrinkWrap,
+    };
 
 /// _all gives 1 value for each state of a Material widget.
 WidgetStateProperty<T>? _all<T>(T? v) =>
@@ -664,9 +673,7 @@ BottomNavigationBarItem? goBarItem(GoNode? n, GoRuntime rt) {
 
 /// goBarItems reads a slice of the BarItem struct.
 List<BottomNavigationBarItem> goBarItems(List<GoNode> list, GoRuntime rt) =>
-    <BottomNavigationBarItem>[
-      for (final GoNode n in list) goBarItem(n, rt)!,
-    ];
+    <BottomNavigationBarItem>[for (final GoNode n in list) goBarItem(n, rt)!];
 
 /// goRailItem reads the RailItem struct of the Go side.
 NavigationRailDestination? goRailItem(GoNode? n, GoRuntime rt) {
@@ -681,12 +688,10 @@ NavigationRailDestination? goRailItem(GoNode? n, GoRuntime rt) {
 }
 
 /// goRailItems reads a slice of the RailItem struct.
-List<NavigationRailDestination> goRailItems(
-  List<GoNode> list,
-  GoRuntime rt,
-) => <NavigationRailDestination>[
-  for (final GoNode n in list) goRailItem(n, rt)!,
-];
+List<NavigationRailDestination> goRailItems(List<GoNode> list, GoRuntime rt) =>
+    <NavigationRailDestination>[
+      for (final GoNode n in list) goRailItem(n, rt)!,
+    ];
 
 const Map<String, StepState> _stepStates = <String, StepState>{
   'indexed': StepState.indexed,
@@ -815,7 +820,9 @@ ThemeData? goThemeStyle(GoNode? n) {
     visualDensity: goDensity(n.nested('Density', 5)),
     iconTheme: goIconStyle(n.nested('IconStyle', 6)),
     textTheme: goTextTheme(n.nested('TextTheme', 8)),
-    inputDecorationTheme: goInputDecorationStyle(n.nested('InputDecoration', 9)),
+    inputDecorationTheme: goInputDecorationStyle(
+      n.nested('InputDecoration', 9),
+    ),
   );
 }
 
@@ -901,9 +908,7 @@ List<Widget> Function(BuildContext, bool)? goSliverBuilder(
     ? null
     : (BuildContext _, bool scrolled) {
         final Slice<Iface?> out = f(scrolled);
-        return <Widget>[
-          for (int i = 0; i < out.len; i++) goRender(out[i], rt),
-        ];
+        return <Widget>[for (int i = 0; i < out.len; i++) goRender(out[i], rt)];
       };
 
 /// goStateColorOn reads the StateColor struct for a parameter that demands 1
@@ -949,7 +954,8 @@ List<ContextMenuButtonItem> goMenuItems(List<GoNode> list, GoRuntime rt) =>
     <ContextMenuButtonItem>[for (final GoNode n in list) goMenuItem(n, rt)!];
 
 /// goMatrix reads a matrix of 16 numbers, in the order of the columns.
-Matrix4? goMatrix(List<double> v) => v.length == 16 ? Matrix4.fromList(v) : null;
+Matrix4? goMatrix(List<double> v) =>
+    v.length == 16 ? Matrix4.fromList(v) : null;
 
 /// goColumns reads a slice of the DataColumn struct of the Go side.
 List<DataColumn> goColumns(List<GoNode> list, GoRuntime rt) => <DataColumn>[
@@ -963,10 +969,8 @@ List<DataColumn> goColumns(List<GoNode> list, GoRuntime rt) => <DataColumn>[
 ];
 
 /// goOnSort wraps the callback of the header of a column.
-void Function(int, bool)? goOnSort(
-  void Function(int, bool)? f,
-  GoRuntime rt,
-) => f == null ? null : (int i, bool up) => rt.run(() => f(i, up));
+void Function(int, bool)? goOnSort(void Function(int, bool)? f, GoRuntime rt) =>
+    f == null ? null : (int i, bool up) => rt.run(() => f(i, up));
 
 /// goRows reads a slice of the DataRow struct of the Go side.
 List<DataRow> goRows(List<GoNode> list, GoRuntime rt) => <DataRow>[
@@ -1009,10 +1013,14 @@ ActionIconThemeData? goActionIconStyle(GoNode? n, GoRuntime rt) {
   return ActionIconThemeData(
     backButtonIconBuilder: goBuild(n.build0('BackButtonIconBuilder', 0), rt),
     closeButtonIconBuilder: goBuild(n.build0('CloseButtonIconBuilder', 1), rt),
-    drawerButtonIconBuilder:
-        goBuild(n.build0('DrawerButtonIconBuilder', 2), rt),
-    endDrawerButtonIconBuilder:
-        goBuild(n.build0('EndDrawerButtonIconBuilder', 3), rt),
+    drawerButtonIconBuilder: goBuild(
+      n.build0('DrawerButtonIconBuilder', 2),
+      rt,
+    ),
+    endDrawerButtonIconBuilder: goBuild(
+      n.build0('EndDrawerButtonIconBuilder', 3),
+      rt,
+    ),
   );
 }
 
@@ -1189,8 +1197,9 @@ ChipThemeData? goChipStyle(GoNode? n) {
     pressElevation: n.sizeOpt('PressElevation', 19),
     iconTheme: goIconStyle(n.nested('IconTheme', 20)),
     avatarBoxConstraints: goConstraints(n.nested('AvatarBoxConstraints', 21)),
-    deleteIconBoxConstraints:
-        goConstraints(n.nested('DeleteIconBoxConstraints', 22)),
+    deleteIconBoxConstraints: goConstraints(
+      n.nested('DeleteIconBoxConstraints', 22),
+    ),
   );
 }
 
@@ -1203,11 +1212,13 @@ CupertinoThemeData? goCupertinoStyle(GoNode? n) {
       n.text('Brightness', 0),
     ),
     primaryColor: goColorOpt(n.countOpt('PrimaryColor', 1)),
-    primaryContrastingColor:
-        goColorOpt(n.countOpt('PrimaryContrastingColor', 2)),
+    primaryContrastingColor: goColorOpt(
+      n.countOpt('PrimaryContrastingColor', 2),
+    ),
     barBackgroundColor: goColorOpt(n.countOpt('BarBackgroundColor', 3)),
-    scaffoldBackgroundColor:
-        goColorOpt(n.countOpt('ScaffoldBackgroundColor', 4)),
+    scaffoldBackgroundColor: goColorOpt(
+      n.countOpt('ScaffoldBackgroundColor', 4),
+    ),
     selectionHandleColor: goColorOpt(n.countOpt('SelectionHandleColor', 5)),
     applyThemeToAll: n.flagOpt('ApplyThemeToAll', 6),
   );
@@ -1229,8 +1240,9 @@ DataTableThemeData? goDataTableStyle(GoNode? n) {
     columnSpacing: n.sizeOpt('ColumnSpacing', 9),
     dividerThickness: n.sizeOpt('DividerThickness', 10),
     checkboxHorizontalMargin: n.sizeOpt('CheckboxHorizontalMargin', 11),
-    headingCellCursor:
-        _all<MouseCursor>(goCursor(n.text('HeadingCellCursor', 12))),
+    headingCellCursor: _all<MouseCursor>(
+      goCursor(n.text('HeadingCellCursor', 12)),
+    ),
     dataRowCursor: _all<MouseCursor>(goCursor(n.text('DataRowCursor', 13))),
     headingRowAlignment: goEnumValue<MainAxisAlignment>(
       MainAxisAlignment.values,
@@ -1266,33 +1278,43 @@ DatePickerThemeData? goDatePickerStyle(GoNode? n) {
     yearBackgroundColor: goStateColor(n.nested('YearBackgroundColor', 20)),
     yearOverlayColor: goStateColor(n.nested('YearOverlayColor', 21)),
     yearShape: _all<OutlinedBorder>(goShape(n.nested('YearShape', 22))),
-    rangePickerBackgroundColor:
-        goColorOpt(n.countOpt('RangePickerBackgroundColor', 23)),
+    rangePickerBackgroundColor: goColorOpt(
+      n.countOpt('RangePickerBackgroundColor', 23),
+    ),
     rangePickerElevation: n.sizeOpt('RangePickerElevation', 24),
-    rangePickerShadowColor:
-        goColorOpt(n.countOpt('RangePickerShadowColor', 25)),
-    rangePickerSurfaceTintColor:
-        goColorOpt(n.countOpt('RangePickerSurfaceTintColor', 26)),
+    rangePickerShadowColor: goColorOpt(
+      n.countOpt('RangePickerShadowColor', 25),
+    ),
+    rangePickerSurfaceTintColor: goColorOpt(
+      n.countOpt('RangePickerSurfaceTintColor', 26),
+    ),
     rangePickerShape: goShape(n.nested('RangePickerShape', 27)),
-    rangePickerHeaderBackgroundColor:
-        goColorOpt(n.countOpt('RangePickerHeaderBackgroundColor', 28)),
-    rangePickerHeaderForegroundColor:
-        goColorOpt(n.countOpt('RangePickerHeaderForegroundColor', 29)),
-    rangePickerHeaderHeadlineStyle:
-        goTextStyle(n.nested('RangePickerHeaderHeadlineStyle', 30)),
-    rangePickerHeaderHelpStyle:
-        goTextStyle(n.nested('RangePickerHeaderHelpStyle', 31)),
-    rangeSelectionBackgroundColor:
-        goColorOpt(n.countOpt('RangeSelectionBackgroundColor', 32)),
-    rangeSelectionOverlayColor:
-        goStateColor(n.nested('RangeSelectionOverlayColor', 33)),
+    rangePickerHeaderBackgroundColor: goColorOpt(
+      n.countOpt('RangePickerHeaderBackgroundColor', 28),
+    ),
+    rangePickerHeaderForegroundColor: goColorOpt(
+      n.countOpt('RangePickerHeaderForegroundColor', 29),
+    ),
+    rangePickerHeaderHeadlineStyle: goTextStyle(
+      n.nested('RangePickerHeaderHeadlineStyle', 30),
+    ),
+    rangePickerHeaderHelpStyle: goTextStyle(
+      n.nested('RangePickerHeaderHelpStyle', 31),
+    ),
+    rangeSelectionBackgroundColor: goColorOpt(
+      n.countOpt('RangeSelectionBackgroundColor', 32),
+    ),
+    rangeSelectionOverlayColor: goStateColor(
+      n.nested('RangeSelectionOverlayColor', 33),
+    ),
     dividerColor: goColorOpt(n.countOpt('DividerColor', 34)),
     cancelButtonStyle: goButtonStyle(n.nested('CancelButtonStyle', 35)),
     confirmButtonStyle: goButtonStyle(n.nested('ConfirmButtonStyle', 36)),
     locale: goLocale(n.text('Locale', 37)),
     toggleButtonTextStyle: goTextStyle(n.nested('ToggleButtonTextStyle', 38)),
-    subHeaderForegroundColor:
-        goColorOpt(n.countOpt('SubHeaderForegroundColor', 39)),
+    subHeaderForegroundColor: goColorOpt(
+      n.countOpt('SubHeaderForegroundColor', 39),
+    ),
   );
 }
 
@@ -1340,8 +1362,9 @@ ExpansionTileThemeData? goExpansionTileStyle(GoNode? n) {
   if (n == null) return null;
   return ExpansionTileThemeData(
     backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
-    collapsedBackgroundColor:
-        goColorOpt(n.countOpt('CollapsedBackgroundColor', 1)),
+    collapsedBackgroundColor: goColorOpt(
+      n.countOpt('CollapsedBackgroundColor', 1),
+    ),
     tilePadding: goInsets(n.nested('TilePadding', 2)),
     expandedAlignment: goAlignment(n.text('ExpandedAlignment', 3)),
     childrenPadding: goInsets(n.nested('ChildrenPadding', 4)),
@@ -1376,8 +1399,9 @@ FloatingActionButtonThemeData? goFloatingActionButtonStyle(GoNode? n) {
     sizeConstraints: goConstraints(n.nested('SizeConstraints', 13)),
     smallSizeConstraints: goConstraints(n.nested('SmallSizeConstraints', 14)),
     largeSizeConstraints: goConstraints(n.nested('LargeSizeConstraints', 15)),
-    extendedSizeConstraints:
-        goConstraints(n.nested('ExtendedSizeConstraints', 16)),
+    extendedSizeConstraints: goConstraints(
+      n.nested('ExtendedSizeConstraints', 16),
+    ),
     extendedIconLabelSpacing: n.sizeOpt('ExtendedIconLabelSpacing', 17),
     extendedPadding: goInsets(n.nested('ExtendedPadding', 18)),
     extendedTextStyle: goTextStyle(n.nested('ExtendedTextStyle', 19)),
@@ -1451,8 +1475,9 @@ NavigationRailThemeData? goNavigationRailStyle(GoNode? n) {
   return NavigationRailThemeData(
     backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
     elevation: n.sizeOpt('Elevation', 1),
-    unselectedLabelTextStyle:
-        goTextStyle(n.nested('UnselectedLabelTextStyle', 2)),
+    unselectedLabelTextStyle: goTextStyle(
+      n.nested('UnselectedLabelTextStyle', 2),
+    ),
     selectedLabelTextStyle: goTextStyle(n.nested('SelectedLabelTextStyle', 3)),
     unselectedIconTheme: goIconStyle(n.nested('UnselectedIconTheme', 4)),
     selectedIconTheme: goIconStyle(n.nested('SelectedIconTheme', 5)),
@@ -1612,34 +1637,43 @@ SliderThemeData? goSliderStyle(GoNode? n) {
     trackHeight: n.sizeOpt('TrackHeight', 0),
     activeTrackColor: goColorOpt(n.countOpt('ActiveTrackColor', 1)),
     inactiveTrackColor: goColorOpt(n.countOpt('InactiveTrackColor', 2)),
-    secondaryActiveTrackColor:
-        goColorOpt(n.countOpt('SecondaryActiveTrackColor', 3)),
-    disabledActiveTrackColor:
-        goColorOpt(n.countOpt('DisabledActiveTrackColor', 4)),
-    disabledInactiveTrackColor:
-        goColorOpt(n.countOpt('DisabledInactiveTrackColor', 5)),
-    disabledSecondaryActiveTrackColor:
-        goColorOpt(n.countOpt('DisabledSecondaryActiveTrackColor', 6)),
+    secondaryActiveTrackColor: goColorOpt(
+      n.countOpt('SecondaryActiveTrackColor', 3),
+    ),
+    disabledActiveTrackColor: goColorOpt(
+      n.countOpt('DisabledActiveTrackColor', 4),
+    ),
+    disabledInactiveTrackColor: goColorOpt(
+      n.countOpt('DisabledInactiveTrackColor', 5),
+    ),
+    disabledSecondaryActiveTrackColor: goColorOpt(
+      n.countOpt('DisabledSecondaryActiveTrackColor', 6),
+    ),
     activeTickMarkColor: goColorOpt(n.countOpt('ActiveTickMarkColor', 7)),
     inactiveTickMarkColor: goColorOpt(n.countOpt('InactiveTickMarkColor', 8)),
-    disabledActiveTickMarkColor:
-        goColorOpt(n.countOpt('DisabledActiveTickMarkColor', 9)),
-    disabledInactiveTickMarkColor:
-        goColorOpt(n.countOpt('DisabledInactiveTickMarkColor', 10)),
+    disabledActiveTickMarkColor: goColorOpt(
+      n.countOpt('DisabledActiveTickMarkColor', 9),
+    ),
+    disabledInactiveTickMarkColor: goColorOpt(
+      n.countOpt('DisabledInactiveTickMarkColor', 10),
+    ),
     thumbColor: goColorOpt(n.countOpt('ThumbColor', 11)),
-    overlappingShapeStrokeColor:
-        goColorOpt(n.countOpt('OverlappingShapeStrokeColor', 12)),
+    overlappingShapeStrokeColor: goColorOpt(
+      n.countOpt('OverlappingShapeStrokeColor', 12),
+    ),
     disabledThumbColor: goColorOpt(n.countOpt('DisabledThumbColor', 13)),
     overlayColor: goColorOpt(n.countOpt('OverlayColor', 14)),
     valueIndicatorColor: goColorOpt(n.countOpt('ValueIndicatorColor', 15)),
-    valueIndicatorStrokeColor:
-        goColorOpt(n.countOpt('ValueIndicatorStrokeColor', 16)),
+    valueIndicatorStrokeColor: goColorOpt(
+      n.countOpt('ValueIndicatorStrokeColor', 16),
+    ),
     showValueIndicator: goEnumValue<ShowValueIndicator>(
       ShowValueIndicator.values,
       n.text('ShowValueIndicator', 17),
     ),
-    valueIndicatorTextStyle:
-        goTextStyle(n.nested('ValueIndicatorTextStyle', 18)),
+    valueIndicatorTextStyle: goTextStyle(
+      n.nested('ValueIndicatorTextStyle', 18),
+    ),
     minThumbSeparation: n.sizeOpt('MinThumbSeparation', 19),
     mouseCursor: _all<MouseCursor>(goCursor(n.text('MouseCursor', 20))),
     allowedInteraction: goEnumValue<SliderInteraction>(
@@ -1658,8 +1692,9 @@ SnackBarThemeData? goSnackBarStyle(GoNode? n) {
   return SnackBarThemeData(
     backgroundColor: goColorOpt(n.countOpt('BackgroundColor', 0)),
     actionTextColor: goColorOpt(n.countOpt('ActionTextColor', 1)),
-    disabledActionTextColor:
-        goColorOpt(n.countOpt('DisabledActionTextColor', 2)),
+    disabledActionTextColor: goColorOpt(
+      n.countOpt('DisabledActionTextColor', 2),
+    ),
     contentTextStyle: goTextStyle(n.nested('ContentTextStyle', 3)),
     elevation: n.sizeOpt('Elevation', 4),
     shape: goShape(n.nested('Shape', 5)),
@@ -1673,8 +1708,9 @@ SnackBarThemeData? goSnackBarStyle(GoNode? n) {
     closeIconColor: goColorOpt(n.countOpt('CloseIconColor', 10)),
     actionOverflowThreshold: n.sizeOpt('ActionOverflowThreshold', 11),
     actionBackgroundColor: goColorOpt(n.countOpt('ActionBackgroundColor', 12)),
-    disabledActionBackgroundColor:
-        goColorOpt(n.countOpt('DisabledActionBackgroundColor', 13)),
+    disabledActionBackgroundColor: goColorOpt(
+      n.countOpt('DisabledActionBackgroundColor', 13),
+    ),
     dismissDirection: goEnumValue<DismissDirection>(
       DismissDirection.values,
       n.text('DismissDirection', 14),
@@ -1736,8 +1772,9 @@ TimePickerThemeData? goTimePickerStyle(GoNode? n) {
     hourMinuteTextStyle: goTextStyle(n.nested('HourMinuteTextStyle', 18)),
     padding: goInsets(n.nested('Padding', 19)),
     shape: goShape(n.nested('Shape', 20)),
-    timeSelectorSeparatorColor:
-        goStateColor(n.nested('TimeSelectorSeparatorColor', 21)),
+    timeSelectorSeparatorColor: goStateColor(
+      n.nested('TimeSelectorSeparatorColor', 21),
+    ),
     timeSelectorSeparatorTextStyle: _all<TextStyle>(
       goTextStyle(n.nested('TimeSelectorSeparatorTextStyle', 22)),
     ),
@@ -1789,7 +1826,6 @@ TooltipThemeData? goTooltipStyle(GoNode? n) {
     enableFeedback: n.flagOpt('EnableFeedback', 13),
   );
 }
-
 
 // A theme of 1 button family holds 1 ButtonStyle alone, thus each converter
 // below reads the ButtonStyle struct of the Go side.
@@ -1918,7 +1954,8 @@ InputDecorationThemeData? goInputDecorationStyle(GoNode? n) {
     hintMaxLines: n.countOpt('HintMaxLines', 6),
     errorStyle: goTextStyle(n.nested('ErrorStyle', 7)),
     errorMaxLines: n.countOpt('ErrorMaxLines', 8),
-    floatingLabelBehavior: goEnumValue<FloatingLabelBehavior>(
+    floatingLabelBehavior:
+        goEnumValue<FloatingLabelBehavior>(
           FloatingLabelBehavior.values,
           n.text('FloatingLabelBehavior', 9),
         ) ??
@@ -1929,14 +1966,10 @@ InputDecorationThemeData? goInputDecorationStyle(GoNode? n) {
     iconColor: goColorOpt(n.countOpt('IconColor', 13)),
     prefixStyle: goTextStyle(n.nested('PrefixStyle', 14)),
     prefixIconColor: goColorOpt(n.countOpt('PrefixIconColor', 15)),
-    prefixIconConstraints: goConstraints(
-      n.nested('PrefixIconConstraints', 16),
-    ),
+    prefixIconConstraints: goConstraints(n.nested('PrefixIconConstraints', 16)),
     suffixStyle: goTextStyle(n.nested('SuffixStyle', 17)),
     suffixIconColor: goColorOpt(n.countOpt('SuffixIconColor', 18)),
-    suffixIconConstraints: goConstraints(
-      n.nested('SuffixIconConstraints', 19),
-    ),
+    suffixIconConstraints: goConstraints(n.nested('SuffixIconConstraints', 19)),
     counterStyle: goTextStyle(n.nested('CounterStyle', 20)),
     filled: n.flagOpt('Filled', 21) ?? false,
     fillColor: goColorOpt(n.countOpt('FillColor', 22)),
@@ -1956,10 +1989,7 @@ ListTileThemeData? goListTileStyle(GoNode? n) {
   return ListTileThemeData(
     dense: n.flagOpt('Dense', 0),
     shape: goShape(n.nested('Shape', 1)),
-    style: goEnumValue<ListTileStyle>(
-      ListTileStyle.values,
-      n.text('Style', 2),
-    ),
+    style: goEnumValue<ListTileStyle>(ListTileStyle.values, n.text('Style', 2)),
     selectedColor: goColorOpt(n.countOpt('SelectedColor', 3)),
     iconColor: goColorOpt(n.countOpt('IconColor', 4)),
     textColor: goColorOpt(n.countOpt('TextColor', 5)),
@@ -2112,10 +2142,7 @@ SemanticsProperties? goSemanticsProps(GoNode? n, GoRuntime rt) {
       TextDirection.values,
       n.text('TextDirection', 37),
     ),
-    role: goEnumValue<SemanticsRole>(
-      SemanticsRole.values,
-      n.text('Role', 38),
-    ),
+    role: goEnumValue<SemanticsRole>(SemanticsRole.values, n.text('Role', 38)),
     validationResult:
         goEnumValue<SemanticsValidationResult>(
           SemanticsValidationResult.values,

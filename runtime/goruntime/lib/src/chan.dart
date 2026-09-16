@@ -388,10 +388,10 @@ void $gc() {
 /// The count of nanoseconds since the start of the Unix epoch.
 ///
 /// A goroutine of a bubble reads the fake clock of that bubble.
-int $nowNanos() {
+GoInt $nowNanos() {
   final Bubble? b = $current?.bubble;
   if (b != null) return b.now;
-  return DateTime.now().microsecondsSinceEpoch * 1000;
+  return $gi(DateTime.now().microsecondsSinceEpoch) * $gi(1000);
 }
 
 /// The local zone at an instant of the Unix epoch.
@@ -416,8 +416,12 @@ final Stopwatch $clock = Stopwatch()..start();
 /// does not move it. The clock of the Dart VM ticks each nanosecond, and the
 /// wall clock of DateTime holds only microseconds. A benchmark needs the finer
 /// value.
-int $monoNanos() {
+GoInt $monoNanos() {
+  final b = $current?.bubble;
+  if (b != null) return b.now - $bubbleBase;
   final int frequency = $clock.frequency;
-  if (frequency == 1000000000) return $clock.elapsedTicks;
-  return $clock.elapsedTicks * 1000000000 ~/ frequency;
+  final int ticks = $clock.elapsedTicks;
+  if (frequency == 1000000000) return $gi(ticks);
+  return $gi(ticks ~/ frequency) * $gi(1000000000) +
+      $div($gi(ticks % frequency) * $gi(1000000000), $gi(frequency));
 }

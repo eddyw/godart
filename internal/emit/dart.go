@@ -110,3 +110,12 @@ func isDartObject(obj *types.TypeName) bool {
 	return obj != nil && obj.Name() == dartObjectName &&
 		obj.Pkg() != nil && obj.Pkg().Path() == dartObjectPath
 }
+
+func isDartObjectPointer(t types.Type) bool {
+	p, ok := types.Unalias(t).(*types.Pointer)
+	if !ok {
+		return false
+	}
+	n, ok := types.Unalias(p.Elem()).(*types.Named)
+	return ok && isDartObject(n.Obj())
+}

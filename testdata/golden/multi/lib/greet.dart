@@ -109,7 +109,10 @@ final TypeDesc $descfe1f5563 = TypeDesc(
   params: <TypeDesc Function()>[],
   results: <TypeDesc Function()>[() => $typeString],
   bind: (List<Object?> Function(List<Object?>) $f) =>
-      () => $f(<Object?>[])[0] as GoString,
+      () => $resumeReflect<GoString>($f(<Object?>[]), (Object? $v) {
+        final $o = $v as List<Object?>;
+        return $o[0] as GoString;
+      }, GoString.empty),
   withType: <$R>($R Function<$T>() $f) => $f<GoString Function()?>(),
   comparable: false,
   zero: () => null,

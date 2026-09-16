@@ -52,18 +52,70 @@ func (m *Mutex) TryLock() bool {
 	return true
 }
 
-// A RWMutex is a lock for a reader and for a writer. The single isolate gives
-// no parallel read, thus a read lock is equal to a write lock.
+// A RWMutex admits shared readers or 1 writer. A pending writer blocks new readers.
 type RWMutex struct {
-	mu Mutex
+	writers       Mutex
+	writer        bool
+	readers       int
+	readerWaiters []int
+	writerWaiter  int
 }
 
-func (rw *RWMutex) Lock()          { rw.mu.Lock() }
-func (rw *RWMutex) Unlock()        { rw.mu.Unlock() }
-func (rw *RWMutex) RLock()         { rw.mu.Lock() }
-func (rw *RWMutex) RUnlock()       { rw.mu.Unlock() }
-func (rw *RWMutex) TryLock() bool  { return rw.mu.TryLock() }
-func (rw *RWMutex) TryRLock() bool { return rw.mu.TryLock() }
+func (rw *RWMutex) Lock() {
+	rw.writers.Lock()
+	rw.writer = true
+	if rw.readers != 0 {
+		rw.writerWaiter = dart.LockToken()
+		dart.LockWait(rw.writerWaiter)
+	}
+}
+
+func (rw *RWMutex) Unlock() {
+	if !rw.writer || rw.readers != 0 {
+		panic("sync: Unlock of unlocked RWMutex")
+	}
+	rw.writer = false
+	for _, waiter := range rw.readerWaiters {
+		dart.LockWake(waiter)
+	}
+	rw.readerWaiters = nil
+	rw.writers.Unlock()
+}
+
+func (rw *RWMutex) RLock() {
+	for rw.writer {
+		waiter := dart.LockToken()
+		rw.readerWaiters = append(rw.readerWaiters, waiter)
+		dart.LockWait(waiter)
+	}
+	rw.readers++
+}
+
+func (rw *RWMutex) RUnlock() {
+	if rw.readers == 0 {
+		panic("sync: RUnlock of unlocked RWMutex")
+	}
+	rw.readers--
+	if rw.readers == 0 && rw.writer {
+		dart.LockWake(rw.writerWaiter)
+	}
+}
+
+func (rw *RWMutex) TryLock() bool {
+	if rw.readers != 0 || !rw.writers.TryLock() {
+		return false
+	}
+	rw.writer = true
+	return true
+}
+
+func (rw *RWMutex) TryRLock() bool {
+	if rw.writer {
+		return false
+	}
+	rw.readers++
+	return true
+}
 
 // RLocker gives a Locker that takes the read lock.
 func (rw *RWMutex) RLocker() Locker { return rlocker{rw} }

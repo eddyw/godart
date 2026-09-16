@@ -334,26 +334,27 @@ func (e *emitter) bindPart(sig *types.Signature) string {
 		args[i] = fmt.Sprintf("$a%d", i)
 		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + args[i]
 	}
-	head := fmt.Sprintf(", bind: (List<Object?> Function(List<Object?>) $f) => (%s) =>",
-		strings.Join(params, ", "))
 	call := fmt.Sprintf("$f(<Object?>[%s])", strings.Join(args, ", "))
 	rs := sig.Results()
-	switch rs.Len() {
-	case 0:
-		// A Dart location of a void result accepts each other result type,
-		// thus the closure gives the list of the body.
-		return head + " " + call
-	case 1:
-		return fmt.Sprintf("%s %s[0] as %s", head, call, e.dartType(rs.At(0).Type()))
+	if rs.Len() == 0 {
+		return fmt.Sprintf(", bind: (List<Object?> Function(List<Object?>) $f) => (%s) => %s",
+			strings.Join(params, ", "), call)
 	}
-	// A function of more than 1 result gives a Dart record, and no runtime
-	// call builds a record of a list.
 	parts := make([]string, rs.Len())
+	zeros := make([]string, rs.Len())
 	for i := range parts {
 		parts[i] = fmt.Sprintf("$o[%d] as %s", i, e.dartType(rs.At(i).Type()))
+		zeros[i] = e.zero(rs.At(i).Type())
 	}
-	return fmt.Sprintf(", bind: (List<Object?> Function(List<Object?>) $f) => (%s) { final List<Object?> $o = %s; return (%s); }",
-		strings.Join(params, ", "), call, strings.Join(parts, ", "))
+	result, zero := parts[0], zeros[0]
+	resultType := e.dartType(rs.At(0).Type())
+	if rs.Len() > 1 {
+		result, zero = "("+strings.Join(parts, ", ")+")", "("+strings.Join(zeros, ", ")+")"
+		resultType = e.recordType(rs)
+	}
+	return fmt.Sprintf(", bind: (List<Object?> Function(List<Object?>) $f) => (%s) => $resumeReflect<%s>(%s, (Object? $v) { final $o = $v as List<Object?>; return %s; }, %s)",
+		strings.Join(params, ", "), resultType, call, result, zero)
+
 }
 
 // fieldDescs writes the description of each struct field. The reflect subset
@@ -1102,7 +1103,7 @@ func (e *emitter) box(x ir.Expr, from types.Type) string {
 	fresh := ir.Fresh(x)
 	switch {
 	case isStructType(from) && !fresh:
-		text = e.deref(x) + ".$copy()"
+		text = e.copyOf(e.deref(x), from)
 	case isArrayType(from) && !fresh:
 		text = e.copyArray(text, from)
 	}
@@ -1337,12 +1338,12 @@ func (e *emitter) typeNameText(t types.Type) string {
 		return e.dictOf(tp) + ".desc.name"
 	}
 	var text string
-	if !typeset.HoldsParam(t) {
+	if !typeset.HoldsParam(t) && !hasOuterType(t) {
 		text = "'" + dartText(e.typeName(t)) + "'"
 	} else {
 		var reads []string
-		sub := e.substParams(t, &reads)
-		text = interpolate(typeText(stripNames(sub)), reads)
+		sub := e.substParams(t, &reads, false)
+		text = interpolate(e.typeName(sub), reads)
 	}
 	return spliceOuter(text, e.outerReads(t, ".desc.name"))
 }
@@ -1355,7 +1356,7 @@ func (e *emitter) typeDisplayText(t types.Type) string {
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
 		return e.dictOf(tp) + ".desc.text"
 	}
-	if !typeset.HoldsParam(t) && len(e.outerReads(t, ".desc.text")) == 0 {
+	if !typeset.HoldsParam(t) && !hasOuterType(t) {
 		return "'" + dartText(reflectText(t)) + "'"
 	}
 	// A type that reads a type parameter keeps the identity name. Such a name
@@ -1380,6 +1381,67 @@ func (e *emitter) outerReads(t types.Type, field string) []string {
 		out[i] = "${" + e.dictOf(tp) + field + "}"
 	}
 	return out
+}
+
+func hasOuterType(t types.Type) bool {
+	switch u := types.Unalias(t).(type) {
+	case *types.Named:
+		if len(outerTypeParams(u)) > 0 {
+			return true
+		}
+		for i := range u.TypeArgs().Len() {
+			if hasOuterType(u.TypeArgs().At(i)) {
+				return true
+			}
+		}
+	case *types.Pointer:
+		return hasOuterType(u.Elem())
+	case *types.Slice:
+		return hasOuterType(u.Elem())
+	case *types.Array:
+		return hasOuterType(u.Elem())
+	case *types.Map:
+		return hasOuterType(u.Key()) || hasOuterType(u.Elem())
+	case *types.Chan:
+		return hasOuterType(u.Elem())
+	case *types.Struct:
+		for i := range u.NumFields() {
+			if hasOuterType(u.Field(i).Type()) {
+				return true
+			}
+		}
+	case *types.Signature:
+		for _, tuple := range []*types.Tuple{u.Params(), u.Results()} {
+			for i := range tuple.Len() {
+				if hasOuterType(tuple.At(i).Type()) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// Go retains the declaration number of a local type inside a type argument.
+func localTypeNumber(obj *types.TypeName) int {
+	count := 0
+	var walk func(*types.Scope)
+	walk = func(scope *types.Scope) {
+		for _, name := range scope.Names() {
+			tn, ok := scope.Lookup(name).(*types.TypeName)
+			if !ok || tn.IsAlias() || !isLocalType(tn) || tn.Pos() > obj.Pos() {
+				continue
+			}
+			if _, ok := tn.Type().(*types.Named); ok {
+				count++
+			}
+		}
+		for i := range scope.NumChildren() {
+			walk(scope.Child(i))
+		}
+	}
+	walk(obj.Pkg().Scope())
+	return count
 }
 
 // outerTypeParams gives the type parameters of the generic function that
@@ -1442,11 +1504,11 @@ func interpolate(text string, reads []string) string {
 // methodKeyText writes the Dart expression of the key of 1 method. A key that
 // reads a type parameter interpolates its name at run time.
 func (e *emitter) methodKeyText(name string, sig *types.Signature) string {
-	if sig == nil || !typeset.HoldsParam(sig) {
+	if sig == nil || (!typeset.HoldsParam(sig) && !hasOuterType(sig)) {
 		return "'" + dartText(methodKey(name, sig)) + "'"
 	}
 	var reads []string
-	sub, ok := e.substParams(sig, &reads).(*types.Signature)
+	sub, ok := e.substParams(sig, &reads, false).(*types.Signature)
 	if !ok {
 		return "'" + dartText(methodKey(name, sig)) + "'"
 	}
@@ -1474,14 +1536,11 @@ func (e *emitter) methodKeyListText(t types.Type) string {
 // A type parameter reads the text of its dictionary at run time.
 func (e *emitter) reflectTextExpr(t types.Type) string {
 	var text string
-	if !typeset.HoldsParam(t) {
+	if !typeset.HoldsParam(t) && !hasOuterType(t) {
 		text = "'" + dartText(reflectText(types.Unalias(t))) + "'"
 	} else {
 		var reads []string
-		sub := e.substParams(t, &reads)
-		for i := range reads {
-			reads[i] = strings.Replace(reads[i], ".desc.name", ".desc.display", 1)
-		}
+		sub := e.substParams(t, &reads, true)
 		text = interpolate(reflectText(types.Unalias(sub)), reads)
 	}
 	return spliceOuter(text, e.outerReads(t, ".desc.display"))
@@ -1490,31 +1549,35 @@ func (e *emitter) reflectTextExpr(t types.Type) string {
 // substParams replaces each type parameter with a marker type, thus the name
 // text splits at each parameter. The list holds the run time read of each
 // marker, in order.
-func (e *emitter) substParams(t types.Type, reads *[]string) types.Type {
+func (e *emitter) substParams(t types.Type, reads *[]string, display bool) types.Type {
 	switch u := types.Unalias(t).(type) {
 	case *types.TypeParam:
 		marker := fmt.Sprintf("\x01%d\x01", len(*reads))
-		*reads = append(*reads, e.dictOf(u)+".desc.name")
+		field := ".desc.name"
+		if display {
+			field = ".desc.display"
+		}
+		*reads = append(*reads, e.dictOf(u)+field)
 		obj := types.NewTypeName(token.NoPos, nil, marker, nil)
 		return types.NewNamed(obj, types.Typ[types.Int], nil)
 	case *types.Pointer:
-		return types.NewPointer(e.substParams(u.Elem(), reads))
+		return types.NewPointer(e.substParams(u.Elem(), reads, display))
 	case *types.Slice:
-		return types.NewSlice(e.substParams(u.Elem(), reads))
+		return types.NewSlice(e.substParams(u.Elem(), reads, display))
 	case *types.Array:
-		return types.NewArray(e.substParams(u.Elem(), reads), u.Len())
+		return types.NewArray(e.substParams(u.Elem(), reads, display), u.Len())
 	case *types.Map:
-		return types.NewMap(e.substParams(u.Key(), reads), e.substParams(u.Elem(), reads))
+		return types.NewMap(e.substParams(u.Key(), reads, display), e.substParams(u.Elem(), reads, display))
 	case *types.Chan:
-		return types.NewChan(u.Dir(), e.substParams(u.Elem(), reads))
+		return types.NewChan(u.Dir(), e.substParams(u.Elem(), reads, display))
 	case *types.Signature:
 		params := make([]*types.Var, u.Params().Len())
 		for i := range params {
-			params[i] = types.NewVar(token.NoPos, nil, "", e.substParams(u.Params().At(i).Type(), reads))
+			params[i] = types.NewVar(token.NoPos, nil, "", e.substParams(u.Params().At(i).Type(), reads, display))
 		}
 		results := make([]*types.Var, u.Results().Len())
 		for i := range results {
-			results[i] = types.NewVar(token.NoPos, nil, "", e.substParams(u.Results().At(i).Type(), reads))
+			results[i] = types.NewVar(token.NoPos, nil, "", e.substParams(u.Results().At(i).Type(), reads, display))
 		}
 		return types.NewSignatureType(nil, nil, nil,
 			types.NewTuple(params...), types.NewTuple(results...), u.Variadic())
@@ -1524,7 +1587,7 @@ func (e *emitter) substParams(t types.Type, reads *[]string) types.Type {
 		for i := range fields {
 			f := u.Field(i)
 			fields[i] = types.NewField(token.NoPos, f.Pkg(), f.Name(),
-				e.substParams(f.Type(), reads), f.Embedded())
+				e.substParams(f.Type(), reads, display), f.Embedded())
 			tags[i] = u.Tag(i)
 		}
 		return types.NewStruct(fields, tags)
@@ -1532,7 +1595,21 @@ func (e *emitter) substParams(t types.Type, reads *[]string) types.Type {
 		if u.TypeArgs().Len() > 0 {
 			args := make([]types.Type, u.TypeArgs().Len())
 			for i := range args {
-				args[i] = e.substParams(u.TypeArgs().At(i), reads)
+				arg := u.TypeArgs().At(i)
+				if hasOuterType(arg) {
+					marker := fmt.Sprintf("\x01%d\x01", len(*reads))
+					text := e.typeNameText(arg)
+					if display {
+						text = e.reflectTextExpr(arg)
+						if n, ok := types.Unalias(arg).(*types.Named); ok && isLocalType(n.Obj()) {
+							text += fmt.Sprintf(" + '·%d'", localTypeNumber(n.Obj()))
+						}
+					}
+					*reads = append(*reads, text)
+					args[i] = types.NewNamed(types.NewTypeName(token.NoPos, nil, marker, nil), types.Typ[types.Int], nil)
+				} else {
+					args[i] = e.substParams(arg, reads, display)
+				}
 			}
 			if inst, err := types.Instantiate(nil, u.Origin(), args, false); err == nil {
 				return inst

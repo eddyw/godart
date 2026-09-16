@@ -23,6 +23,9 @@ func needsCopy(t types.Type) bool {
 	if t == nil {
 		return false
 	}
+	if _, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return true
+	}
 	switch typeset.Core(t).(type) {
 	case *types.Struct, *types.Array:
 		return true
@@ -68,7 +71,7 @@ func (b *builder) lvalue(e ast.Expr) (pre []ir.Stmt, get ir.Expr, set func(ir.Ex
 		}
 		pre1, base := b.hoist(idx.X, e.X.Pos(), "b")
 		pre2, key := b.hoist(idx.Index, e.Index.Pos(), "k")
-		read := &ir.Index{X: base, Index: key, Type: idx.Type}
+		read := &ir.Index{Pos: idx.Pos, X: base, Index: key, Type: idx.Type}
 		return append(pre1, pre2...), read, func(v ir.Expr) ir.Stmt {
 			return &ir.Assign{Lhs: read, Rhs: v}
 		}
@@ -108,7 +111,7 @@ func (b *builder) lvalueStaged(e ast.Expr) (pre []ir.Stmt, set func(ir.Expr) ir.
 			}
 			pre1, base := hoistBase(x.X, e.X.Pos(), "b")
 			pre2, key := b.forceHoist(x.Index, e.Index.Pos(), "k")
-			read := &ir.Index{X: base, Index: key, Type: x.Type}
+			read := &ir.Index{Pos: x.Pos, X: base, Index: key, Type: x.Type}
 			return append(pre1, pre2...), func(v ir.Expr) ir.Stmt {
 				return &ir.Assign{Lhs: read, Rhs: v}
 			}
@@ -429,7 +432,11 @@ func (b *builder) selector(e *ast.SelectorExpr) ir.Expr {
 		if x == nil {
 			return nil
 		}
-		return b.fieldPath(x, sel)
+		out := b.fieldPath(x, sel)
+		for at, ok := out.(*ir.Field); ok; at, ok = at.X.(*ir.Field) {
+			at.Pos = e.Sel.Pos()
+		}
+		return out
 	case types.MethodVal:
 		x := b.expr(e.X)
 		if x == nil {
@@ -525,11 +532,11 @@ func (b *builder) index(e *ast.IndexExpr) ir.Expr {
 	} else {
 		key = b.convert(key, types.Typ[types.Int])
 	}
-	return &ir.Index{X: x, Index: key, Type: b.typeOf(e)}
+	return &ir.Index{Pos: e.Lbrack, X: x, Index: key, Type: b.typeOf(e)}
 }
 
 func (b *builder) slice(e *ast.SliceExpr) ir.Expr {
-	out := &ir.Slice{X: b.expr(e.X), Type: b.typeOf(e)}
+	out := &ir.Slice{Pos: e.Lbrack, X: b.expr(e.X), Type: b.typeOf(e)}
 	if e.Low != nil {
 		out.Low = b.convert(b.expr(e.Low), types.Typ[types.Int])
 	}

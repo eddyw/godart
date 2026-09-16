@@ -26,6 +26,7 @@ func (e *emitter) expr(x ir.Expr) string {
 	case *ir.Zero:
 		return e.zero(x.Type)
 	case *ir.Field:
+		e.mark(x.Pos)
 		return e.deref(x.X) + "." + fieldDartName(x.X.GoType(), x.Name)
 	case *ir.Index:
 		return e.index(x)
@@ -197,8 +198,9 @@ func (e *emitter) mixedConst(v constant.Value, t types.Type) (string, bool) {
 		return "", false
 	}
 	d := e.dictOf(tp)
-	return fmt.Sprintf("%s.mask((%s.zero() + %s) as %s)", d, d,
-		intConst(v, types.Typ[types.Int]), typeParamName(tp)), true
+	f, _ := constant.Float64Val(constant.ToFloat(v))
+	return fmt.Sprintf("%s.mask((%s.zero() is GoInt ? %s : %s) as %s)", d, d,
+		intConst(v, types.Typ[types.Int]), floatConst(f), typeParamName(tp)), true
 }
 
 // complexConst writes a complex constant. A constant of complex64 rounds each
@@ -344,6 +346,7 @@ func rangeTail(three, byLen bool, low, high, max ir.Expr) string {
 }
 
 func (e *emitter) index(x *ir.Index) string {
+	e.mark(x.Pos)
 	container := x.X.GoType()
 	if typeset.BytesOrText(container) {
 		return fmt.Sprintf("%s.at!(%s, %s)",
@@ -406,6 +409,7 @@ const erasedDartType = "Object?"
 // indexTarget gives the start and the end of a write into an array. head is
 // empty when the write uses the index operator of Dart.
 func (e *emitter) indexTarget(x *ir.Index) (head, tail string) {
+	e.mark(x.Pos)
 	container := x.X.GoType()
 	uns := unsArg(x.Index)
 	if isPointerType(container) {
@@ -431,6 +435,7 @@ func (e *emitter) assignArray(dst string, t types.Type, value string) string {
 }
 
 func (e *emitter) sliceExpr(x *ir.Slice) string {
+	e.mark(x.Pos)
 	low := "0"
 	if x.Low != nil {
 		low = "$ix(" + e.expr(x.Low) + ")"
@@ -490,6 +495,9 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 }
 
 func (e *emitter) copyExpr(x *ir.Copy) string {
+	if tp, ok := types.Unalias(x.Type).(*types.TypeParam); ok {
+		return fmt.Sprintf("%s.copyOf(%s)", e.dictOf(tp), e.expr(x.X))
+	}
 	if isArrayType(x.Type) {
 		return e.copyArray(e.expr(x.X), x.Type)
 	}
@@ -498,7 +506,7 @@ func (e *emitter) copyExpr(x *ir.Copy) string {
 
 func (e *emitter) funcLit(x *ir.FuncLit) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "(%s) {", e.params(x.Params))
+	fmt.Fprintf(&b, "(%s) {\n", e.params(x.Params))
 	e.buf.WriteString("")
 	// The inner emitter shares each package wide map. A class of an unnamed
 	// struct type and the name of a shadowed function must reach the library
@@ -518,9 +526,15 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		funcIds: e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
 		lits:    e.lits,
 		renames: e.withRenames(e.captureRenames(x.Captured))}
+	e.litSeq++
+	inner.curGoName = fmt.Sprintf("%s.func%d", e.curGoName, e.litSeq)
+	inner.funcFile = e.funcFile
+	inner.goMarkFile = e.funcFile
+	inner.line("%s%s|%s", fileMark, inner.funcFile, inner.curGoName)
 	inner.curFuncId = e.funcId(x)
 	inner.boxParams(x.Params)
 	inner.emitBody(x.Results, x.Defers, x.Body, x.End)
+	inner.line("%s%s|%s", fileMark, e.funcFile, e.curGoName)
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
 	e.dictReads = inner.dictReads
@@ -536,29 +550,33 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 
 // equal writes the Go comparison `a == b` for 2 values of the same type.
 func (e *emitter) equal(a, b ir.Expr) string {
-	if isArrayType(a.GoType()) {
-		return fmt.Sprintf("$equalArray(%s, %s)", e.expr(a), e.expr(b))
-	}
 	if text, ok := e.nilTest(a, b); ok {
 		return text
 	}
 	if text, ok := e.nilTest(b, a); ok {
 		return text
 	}
-	// A pointer to a struct is the Dart object of the struct, and the class
-	// compares the fields, thus 2 allocations with equal fields would compare
-	// equal. The comparison reads the identity. Each other pointer holds a
-	// cell, and the cell compares its location.
-	if p, ok := typeset.Core(a.GoType()).(*types.Pointer); ok && !needsBox(p.Elem()) {
+	if isDartObjectPointer(a.GoType()) {
 		return fmt.Sprintf("identical(%s, %s)", e.expr(a), e.expr(b))
 	}
-	// Go compares a value with an interface value through the interface form,
-	// thus the other side boxes at the comparison.
 	if ai, bi := isInterfaceType(a.GoType()), isInterfaceType(b.GoType()); ai != bi {
 		if ai {
 			return fmt.Sprintf("%s == %s", e.expr(a), e.box(b, b.GoType()))
 		}
 		return fmt.Sprintf("%s == %s", e.box(a, a.GoType()), e.expr(b))
+	}
+	if tp, ok := types.Unalias(a.GoType()).(*types.TypeParam); ok {
+		return fmt.Sprintf("%s.equal(%s, %s)", e.dictOf(tp), e.expr(a), e.expr(b))
+	}
+	if isArrayType(a.GoType()) {
+		return fmt.Sprintf("$goEqual(%s, %s, %s)", e.expr(a), e.expr(b), e.descriptorOf(a.GoType()))
+	}
+	// A pointer to a struct is the Dart object of the struct, and the class
+	// compares the fields, thus 2 allocations with equal fields would compare
+	// equal. The comparison reads the identity. Each other pointer holds a
+	// cell, and the cell compares its location.
+	if _, ok := typeset.Core(a.GoType()).(*types.Pointer); ok {
+		return fmt.Sprintf("$goEqual(%s, %s, %s)", e.expr(a), e.expr(b), e.descriptorOf(a.GoType()))
 	}
 	return fmt.Sprintf("%s == %s", e.expr(a), e.expr(b))
 }
@@ -588,19 +606,30 @@ func (e *emitter) nilTest(x, other ir.Expr) (string, bool) {
 func (e *emitter) binary(x *ir.Binary) string {
 	left, right := e.expr(x.X), e.expr(x.Y)
 	t := x.X.GoType()
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		if set, ok := typeset.Describe(tp); ok && set.Numeric && (set.MixedSign() || (!set.Integer && !set.Float)) {
+			method := map[token.Token]string{token.QUO: "quotient", token.REM: "remainder", token.SHR: "shiftRight"}[x.Op]
+			if method != "" {
+				if x.Op == token.SHR {
+					right = e.shiftCount(x.Y)
+				}
+				return fmt.Sprintf("%s.%s(%s, %s)", e.dictOf(tp), method, left, right)
+			}
+		}
+	}
 	switch x.Op {
 	case token.LAND:
-		return fmt.Sprintf("(%s && %s)", left, right)
+		return e.narrow(x.Type, fmt.Sprintf("(%s && %s)", left, right))
 	case token.LOR:
-		return fmt.Sprintf("(%s || %s)", left, right)
+		return e.narrow(x.Type, fmt.Sprintf("(%s || %s)", left, right))
 	case token.EQL, token.NEQ:
 		text := e.equal(x.X, x.Y)
 		if x.Op == token.NEQ {
-			return "(!(" + text + "))"
+			return e.narrow(x.Type, "(!("+text+"))")
 		}
-		return "(" + text + ")"
+		return e.narrow(x.Type, "("+text+")")
 	case token.LSS, token.LEQ, token.GTR, token.GEQ:
-		return e.compare(x.Op, x.X, x.Y)
+		return e.narrow(x.Type, e.compare(x.Op, x.X, x.Y))
 	case token.QUO:
 		if isInteger(t) {
 			if isUnsigned64(t) {
@@ -627,6 +656,9 @@ func (e *emitter) binary(x *ir.Binary) string {
 		if isString(t) {
 			return e.narrow(x.Type, fmt.Sprintf("$concat(%s, %s)", left, right))
 		}
+	}
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok && e.mixedForm(tp) {
+		left = "(" + left + " as dynamic)"
 	}
 	return e.narrow(t, fmt.Sprintf("(%s %s %s)", left, x.Op.String(), right))
 }
@@ -662,8 +694,18 @@ func (e *emitter) shiftCount(y ir.Expr) string {
 // unsigned value needs the unsigned helper.
 func (e *emitter) compare(op token.Token, a, b ir.Expr) string {
 	left, right := e.expr(a), e.expr(b)
-	if tp, ok := types.Unalias(a.GoType()).(*types.TypeParam); ok && e.mixedForm(tp) {
-		return fmt.Sprintf("(%s.order(%s, %s) %s 0)", e.dictOf(tp), left, right, op.String())
+	if tp, ok := types.Unalias(a.GoType()).(*types.TypeParam); ok {
+		set, described := typeset.Describe(tp)
+		if e.mixedForm(tp) || (described && set.MixedSign()) {
+			if op == token.GTR || op == token.GEQ {
+				left, right = right, left
+			}
+			method := "less"
+			if op == token.LEQ || op == token.GEQ {
+				method = "lessEqual"
+			}
+			return fmt.Sprintf("%s.%s(%s, %s)", e.dictOf(tp), method, left, right)
+		}
 	}
 	if isString(a.GoType()) {
 		return fmt.Sprintf("($compare(%s, %s) %s 0)", left, right, op.String())
@@ -689,6 +731,11 @@ func (e *emitter) compare(op token.Token, a, b ir.Expr) string {
 // A type parameter needs a cast. Go gives the operation the type of the
 // parameter, and Dart gives it the bound of the parameter.
 func (e *emitter) narrow(t types.Type, text string) string {
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		if core, ok := typeset.Core(tp).(*types.Basic); ok && core.Info()&types.IsBoolean != 0 {
+			return fmt.Sprintf("(%s as %s)", text, e.dartType(tp))
+		}
+	}
 	if m := mask(t); m != "" {
 		return m + "(" + text + ")"
 	}
@@ -696,8 +743,7 @@ func (e *emitter) narrow(t types.Type, text string) string {
 		// A set of integer types and a set of float types each hold 1 Dart
 		// type, thus the dictionary of the type argument carries the mask of
 		// its width. float32 rounds to 32 bits there, and float64 holds the
-		// identity. A set that mixes the 2 holds the bound num, and the mask
-		// takes the parameter, thus the value takes a cast first.
+		// identity. A mixed set needs a cast before its dictionary mask.
 		if set, ok := typeset.Describe(tp); ok && set.Numeric {
 			if set.Integer || set.Float {
 				return e.dictOf(tp) + ".mask(" + text + ")"
@@ -712,6 +758,9 @@ func (e *emitter) narrow(t types.Type, text string) string {
 func (e *emitter) unary(x *ir.Unary) string {
 	switch x.Op {
 	case token.AND:
+		if ptr, ok := x.X.(*ir.Unary); ok && ptr.Op == token.MUL {
+			return fmt.Sprintf("((%s $p) => $p == null ? $panicNil() : $p)(%s)", e.dartType(ptr.X.GoType()), e.expr(ptr.X))
+		}
 		// A box is the address of the variable that holds it. The read of a
 		// boxed variable adds the field, thus the address drops it.
 		if id, ok := x.X.(*ir.Ident); ok && id.Boxed {
@@ -724,9 +773,12 @@ func (e *emitter) unary(x *ir.Unary) string {
 	case token.MUL:
 		return e.deref(x.X)
 	case token.SUB:
+		if tp, ok := types.Unalias(x.Type).(*types.TypeParam); ok && e.mixedForm(tp) {
+			return e.narrow(x.Type, "(-("+e.expr(x.X)+" as dynamic))")
+		}
 		return e.narrow(x.Type, "(-"+e.expr(x.X)+")")
 	case token.NOT:
-		return "(!" + e.expr(x.X) + ")"
+		return e.narrow(x.Type, "(!"+e.expr(x.X)+")")
 	case token.XOR:
 		return e.narrow(x.Type, "(~"+e.expr(x.X)+")")
 	case token.ADD:
@@ -750,6 +802,17 @@ func (e *emitter) addressExpr(x ir.Expr) string {
 // the object and the index of the location.
 func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 	switch x := x.(type) {
+	case *ir.Unary:
+		if x.Op == token.MUL {
+			return fmt.Sprintf("((%s $p) => $p == null ? $panicNil() : $p)(%s)", e.dartType(x.X.GoType()), e.expr(x.X))
+		}
+	case *ir.Ident:
+		if obj, ok := x.Obj.(*types.Var); ok && obj.Exported() && obj.Parent() == obj.Pkg().Scope() {
+			owner := dartText(obj.Pkg().Path() + "." + obj.Name())
+			variable := e.identName(x)
+			return fmt.Sprintf("$Ref<String, %s>('%s', 0, ($r, $i) => %s, ($r, $i, $v) => %s = $v)",
+				e.dartType(elem), owner, variable, variable)
+		}
 	case *ir.Field:
 		owner := x.X.GoType()
 		if p, ok := typeset.Core(owner).(*types.Pointer); ok {
@@ -829,6 +892,9 @@ func (e *emitter) composite(x *ir.Composite) string {
 			if i < decl.NumFields() {
 				parts[i] = e.funcAdapt(parts[i], el.GoType(), decl.Field(i).Type())
 			}
+		}
+		if tp, ok := types.Unalias(x.Type).(*types.TypeParam); ok {
+			return fmt.Sprintf("$structLiteral(%s.desc, <Object?>[%s])", e.dictOf(tp), strings.Join(parts, ", "))
 		}
 		// Go evaluates the value of a blank field and then discards it, thus
 		// the field keeps its zero value.

@@ -20,9 +20,12 @@ error that Go reports under `GOOS=js`.
 make get                      # download the Go and the Dart dependencies
 make build                    # write build/gart
 cd path/to/go/module
-gart run -o dartout -runtime path/to/runtime/goruntime ./...
-gart test -o dartout -runtime path/to/runtime/goruntime ./...
+gart run -o dartout ./...
+gart test -o dartout ./...
 ```
+
+The compiler includes its matching Dart runtime. `-runtime <dir>` selects an explicit runtime override.
+Source paths are absolute by default. `-trimpath` uses portable module/package paths for reproducible output across checkouts.
 
 `gart build` writes the Dart package and stops. `gart run` compiles it and runs
 package main with the Dart VM. `gart test` compiles the `_test.go` files and

@@ -222,14 +222,13 @@ func seconds(d time.Duration) string {
 // the package configuration, and the configuration holds the path of the
 // runtime library.
 func pubGet(out, runtime string) error {
+	if runtime == "" {
+		runtime = filepath.Join(out, "goruntime")
+	}
 	config := filepath.Join(out, ".dart_tool", "package_config.json")
 	specs := []string{filepath.Join(out, "pubspec.yaml")}
-	if runtime != "" {
-		// The output package depends on the runtime by path, thus a new
-		// dependency of the runtime must reach the configuration of the
-		// output. The package file of the output does not change with it.
-		specs = append(specs, filepath.Join(runtime, "pubspec.yaml"))
-	}
+	// A runtime dependency can change without a change to the output manifest.
+	specs = append(specs, filepath.Join(runtime, "pubspec.yaml"))
 	if fresh(config, specs) {
 		return nil
 	}

@@ -440,6 +440,10 @@ func (b *builder) deferStmt(s *ast.DeferStmt) []ir.Stmt {
 			hoisted, recv := b.forceHoist(b.deferRecv(fun), s.Pos(), "dr")
 			pre = append(pre, hoisted...)
 			c.Fun = &ir.Method{Recv: recv, Obj: fun.Obj, Type: fun.Type, TypeArgs: fun.TypeArgs}
+		case *ir.FuncLit:
+			hoisted, value := b.forceHoist(fun, s.Pos(), "df")
+			pre = append(pre, hoisted...)
+			c.Fun = value
 		default:
 			if !directFunc(fun) {
 				hoisted, value := b.forceHoist(fun, s.Pos(), "df")

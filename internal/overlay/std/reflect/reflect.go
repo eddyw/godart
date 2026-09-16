@@ -977,10 +977,7 @@ func (v Value) Method(i int) Value {
 }
 
 // Call runs the function that v holds and gives each result.
-//
-// A function that gives up control is outside this call. The Dart form of such
-// a function gives a sentinel of the scheduler, and the call reads no
-// scheduler.
+// The scheduler retains the call while its function waits.
 func (v Value) Call(in []Value) []Value {
 	args := make([]any, len(in))
 	for i, a := range in {
@@ -1166,11 +1163,7 @@ func MakeChan(t Type, buffer int) Value {
 // The description of the function type carries a factory of its Dart type, thus
 // the value fits a location of that type. A function type that the program
 // never names holds no such factory, and MakeFunc of it panics with the cause.
-// FuncOf builds exactly such a type, thus FuncOf stays out. Read
-// docs/parity.md.
-//
-// A function that gives up control is outside this call, exactly as it is
-// outside Value.Call.
+// The scheduler retains the call while its body waits.
 func MakeFunc(typ Type, fn func(args []Value) (results []Value)) Value {
 	if typ == nil {
 		panic("reflect: MakeFunc with a nil type")

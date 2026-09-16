@@ -7,6 +7,8 @@
 // for the life of the program. docs/parity.md holds that gap.
 package unique
 
+import "syscall/dart"
+
 // A Handle names 1 value. 2 handles are equal when the 2 values are equal.
 type Handle[T comparable] struct {
 	value *T
@@ -15,14 +17,18 @@ type Handle[T comparable] struct {
 // Value gives a copy of the value that built the handle.
 func (h Handle[T]) Value() T { return *h.value }
 
-// handles holds 1 pointer for each value that Make read. The key is the value
-// inside an interface, thus 2 values of 2 types stay apart.
-var handles = map[any]any{}
+// The static type distinguishes Make[any](x) from Make[T](x).
+type handleKey struct {
+	typeID int
+	value  any
+}
+
+var handles = map[handleKey]any{}
 
 // Make gives the handle of the value. 2 calls with equal values give equal
 // handles.
 func Make[T comparable](value T) Handle[T] {
-	key := any(value)
+	key := handleKey{dart.DescOf((*T)(nil)), value}
 	if held, ok := handles[key]; ok {
 		return Handle[T]{value: held.(*T)}
 	}

@@ -453,6 +453,7 @@ type (
 
 	// Field selects a struct field. X holds a struct or a pointer to a struct.
 	Field struct {
+		Pos  token.Pos
 		X    Expr
 		Name string
 		Type types.Type
@@ -460,6 +461,7 @@ type (
 
 	// Index reads 1 element of a slice, an array, a string, or a map.
 	Index struct {
+		Pos      token.Pos
 		X, Index Expr
 		Type     types.Type
 	}
@@ -472,12 +474,14 @@ type (
 
 	// Slice builds a slice from a slice, an array, or a string.
 	Slice struct {
+		Pos               token.Pos
 		X, Low, High, Max Expr
 		Type              types.Type
 	}
 
 	// Call calls a function value, a method, or a builtin.
 	Call struct {
+		Pos      token.Pos
 		Fun      Expr
 		Args     []Expr
 		Type     types.Type

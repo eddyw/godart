@@ -176,5 +176,31 @@ void main() {
       expect(taken, 0);
       expect(one.result, (7, true));
     });
+
+    test('ready cases have equal chances across gaps and duplicates', () {
+      final ch = Chan<int>(0, () => 0)..close();
+      final idle = Chan<int>(0, () => 0);
+      final counts = List<int>.filled(7, 0);
+      for (var trial = 0; trial < 4000; trial++) {
+        final cases = <SelectCase>[
+          RecvCase<int>(ch),
+          RecvCase<int>(idle),
+          RecvCase<int>(idle),
+          RecvCase<int>(ch),
+          RecvCase<int>(ch),
+          RecvCase<int>(idle),
+          RecvCase<int>(ch),
+        ];
+        final taken = $select(cases, true);
+        counts[taken]++;
+        expect((cases[taken] as RecvCase<int>).result, (0, false));
+      }
+      for (final i in <int>[0, 3, 4, 6]) {
+        expect(counts[i], inInclusiveRange(500, 1500));
+      }
+      for (final i in <int>[1, 2, 5]) {
+        expect(counts[i], 0);
+      }
+    });
   });
 }

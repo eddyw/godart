@@ -24,6 +24,7 @@ import (
 // package. Package main is such a package, and no other package names a type
 // of it.
 func (e *emitter) anonClass(st *types.Struct) string {
+	st = untaggedShape(st).(*types.Struct)
 	if typeset.HoldsParam(st) {
 		return e.openClass(st)
 	}
@@ -103,6 +104,7 @@ func (e *emitter) anonDicts(st *types.Struct) []string {
 // for each Go parameter of the shape, thus the ground shape and the open shape
 // share the class.
 func (e *emitter) openClass(st *types.Struct) string {
+	st = untaggedShape(st).(*types.Struct)
 	key := e.anonName(st)
 	if _, ok := e.anonParams[key]; !ok {
 		e.anonParams[key] = shapeParams(st)
@@ -175,6 +177,7 @@ func (e *emitter) anonTwin(st *types.Struct) *anonTwin {
 
 // matchTwin compares the ground shape with each open shape of the package.
 func (e *emitter) matchTwin(st *types.Struct) *anonTwin {
+	st = untaggedShape(st).(*types.Struct)
 	keys := make([]string, 0, len(e.anonParams))
 	for key := range e.anonParams {
 		keys = append(keys, key)
@@ -293,16 +296,52 @@ func matchTuple(open, ground *types.Tuple, subs map[*types.TypeParam]types.Type)
 // reads a type parameter writes 1 marker for each parameter, thus the name
 // does not depend on the name of the parameter.
 func (e *emitter) anonName(st *types.Struct) string {
+	st = untaggedShape(st).(*types.Struct)
 	text := anonText(st)
 	if typeset.HoldsParam(st) {
 		var reads []string
-		text = anonText(e.substParams(st, &reads))
+		text = anonText(e.substParams(st, &reads, false))
 	}
 	for _, im := range e.anonImports(st) {
 		text += "\n" + im.URI
 	}
 	sum := sha256.Sum256([]byte(text))
 	return "$Anon" + hex.EncodeToString(sum[:4])
+}
+
+// Tags belong to Go descriptors, not Dart storage. A conversion can share a
+// pointer or slice whose unnamed element differs only in its tags.
+func untaggedShape(t types.Type) types.Type {
+	switch u := types.Unalias(t).(type) {
+	case *types.Struct:
+		fields := make([]*types.Var, u.NumFields())
+		for i := range fields {
+			f := u.Field(i)
+			fields[i] = types.NewField(f.Pos(), f.Pkg(), f.Name(), untaggedShape(f.Type()), f.Embedded())
+		}
+		return types.NewStruct(fields, nil)
+	case *types.Pointer:
+		return types.NewPointer(untaggedShape(u.Elem()))
+	case *types.Slice:
+		return types.NewSlice(untaggedShape(u.Elem()))
+	case *types.Array:
+		return types.NewArray(untaggedShape(u.Elem()), u.Len())
+	case *types.Map:
+		return types.NewMap(untaggedShape(u.Key()), untaggedShape(u.Elem()))
+	case *types.Chan:
+		return types.NewChan(u.Dir(), untaggedShape(u.Elem()))
+	case *types.Signature:
+		tuple := func(in *types.Tuple) *types.Tuple {
+			vars := make([]*types.Var, in.Len())
+			for i := range vars {
+				v := in.At(i)
+				vars[i] = types.NewVar(v.Pos(), v.Pkg(), v.Name(), untaggedShape(v.Type()))
+			}
+			return types.NewTuple(vars...)
+		}
+		return types.NewSignatureType(nil, nil, nil, tuple(u.Params()), tuple(u.Results()), u.Variadic())
+	}
+	return t
 }
 
 // anonShared reports whether the shape reaches a file of its own.
@@ -580,7 +619,7 @@ func (e *emitter) instDescVar(named *types.Named, pointer bool) string {
 	// A description that reads a type parameter reads the dictionary of the
 	// enclosing function, thus it cannot stand at package level. The name of a
 	// local type of a generic function reads the same dictionary.
-	if holdsTypeParam(t) || len(outerTypeParams(named)) > 0 {
+	if holdsTypeParam(t) || hasOuterType(t) {
 		return e.instanceDesc(named, pointer)
 	}
 	name := e.typeName(t)

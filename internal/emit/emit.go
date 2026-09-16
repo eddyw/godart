@@ -51,6 +51,8 @@ type Config struct {
 	// comment for each new source line, and stage 6 turns the markers into the
 	// source map of the output.
 	Fset *token.FileSet
+	// TrimPath replaces source directories with package paths.
+	TrimPath bool
 	// URIs gives the Dart URI of each Go package of the build. A shared file
 	// belongs to no package, thus it reads the URI of a field type here.
 	URIs map[string]string
@@ -381,10 +383,8 @@ func (e *emitter) markFunc(f *ir.Func) {
 	e.goMarkFile = e.funcFile
 }
 
-// goFile gives the map form of the file of a position. A file of the package
-// takes the package path and the base name, thus 2 checkouts of 1 tree give
-// equal output. The text of a line directive passes verbatim, exactly as the
-// Go runtime reports it.
+// goFile preserves line directives. TrimPath makes ordinary source paths
+// independent of the checkout directory.
 func (e *emitter) goFile(pos token.Pos) string {
 	adjusted := e.cfg.Fset.Position(pos)
 	raw := e.cfg.Fset.PositionFor(pos, false)
@@ -395,6 +395,15 @@ func (e *emitter) goFile(pos token.Pos) string {
 		if adjusted.Filename == "" {
 			return "??"
 		}
+		if e.cfg.TrimPath && e.pkg != nil {
+			prefix := filepath.Dir(raw.Filename) + string(filepath.Separator)
+			if relative, ok := strings.CutPrefix(adjusted.Filename, prefix); ok {
+				return e.pkg.Path() + "/" + filepath.ToSlash(relative)
+			}
+		}
+		return adjusted.Filename
+	}
+	if !e.cfg.TrimPath {
 		return adjusted.Filename
 	}
 	base := filepath.Base(adjusted.Filename)

@@ -28,10 +28,10 @@ func (v *verifier) checkTypeParamOp(n ast.Node) {
 	case *ast.UnaryExpr:
 		switch n.Op {
 		case token.SUB, token.XOR:
-			v.rejectArith(n.Pos(), v.typeOf(n.X), n.Op, "the operator "+n.Op.String())
+			v.rejectArith(n.Pos(), v.typeOf(n.X), "the operator "+n.Op.String())
 		}
 	case *ast.IncDecStmt:
-		v.rejectArith(n.Pos(), v.typeOf(n.X), token.ADD, "the operator "+n.Tok.String())
+		v.rejectArith(n.Pos(), v.typeOf(n.X), "the operator "+n.Tok.String())
 	case *ast.AssignStmt:
 		v.checkTypeParamAssign(n)
 	case *ast.CallExpr:
@@ -45,12 +45,6 @@ func (v *verifier) checkTypeParamBuiltin(e *ast.CallExpr, fn string) {
 	case "len", "cap":
 		if len(e.Args) == 1 {
 			v.rejectMixed(e.Pos(), v.typeOf(e.Args[0]), "the builtin "+fn)
-		}
-	case "print", "println":
-		// The text of an unsigned value of 64 bits differs from the text of
-		// the same bit pattern as a signed value.
-		for _, a := range e.Args {
-			v.rejectMixedSign(a.Pos(), v.typeOf(a), "the builtin "+fn)
 		}
 	}
 }
@@ -74,55 +68,31 @@ func (v *verifier) checkTypeParamArith(e *ast.BinaryExpr) {
 			t = v.typeOf(e.Y)
 		}
 	}
-	v.rejectArith(e.Pos(), t, e.Op, "the operator "+e.Op.String())
+	v.rejectArith(e.Pos(), t, "the operator "+e.Op.String())
 }
 
 func (v *verifier) checkTypeParamAssign(s *ast.AssignStmt) {
 	if s.Tok == token.ASSIGN || s.Tok == token.DEFINE || len(s.Lhs) != 1 {
 		return
 	}
-	op := s.Tok + (token.ADD - token.ADD_ASSIGN)
-	v.rejectArith(s.Pos(), v.typeOf(s.Lhs[0]), op, "the operator "+s.Tok.String())
+	v.rejectArith(s.Pos(), v.typeOf(s.Lhs[0]), "the operator "+s.Tok.String())
 }
 
-// rejectArith rejects an arithmetic operation that holds no single Dart form.
-//
-// A type set of integer types keeps each operator, because the dictionary holds
-// the mask of the width. A set of float types keeps the same rule: the
-// dictionary of float32 holds the round of 32 bits, and the dictionary of
-// float64 holds the identity. A set that mixes an integer type with a float
-// type holds the Dart bound `num`, and the emitter casts each result to the
-// parameter in front of the mask, thus the same rule holds. A division of such
-// a set falls outside the subset, because the Dart operator `/` always gives a
-// double.
-func (v *verifier) rejectArith(pos token.Pos, t types.Type, op token.Token, what string) {
+// rejectArith rejects arithmetic outside the numeric type sets.
+func (v *verifier) rejectArith(pos token.Pos, t types.Type, what string) {
 	set, ok := typeset.Describe(t)
 	if !ok || typeset.Core(t) != nil {
 		return
 	}
 	tp := types.Unalias(t).(*types.TypeParam)
-	switch {
-	case !set.Numeric:
+	if !set.Numeric {
 		v.reject(pos, "the compiler gives a type parameter 1 Dart type",
 			"%s reads the type parameter %s, and its constraint holds more than 1 Dart type",
 			what, tp.Obj().Name())
-	case op == token.QUO && !set.Integer && !set.Float:
-		v.reject(pos, "the Dart operator / always gives a double",
-			"%s reads the type parameter %s, and its constraint holds an integer type and a float type",
-			what, tp.Obj().Name())
-	}
-	switch op {
-	case token.QUO, token.REM, token.SHR:
-		v.rejectMixedSign(pos, t, what)
 	}
 }
 
-// checkTypeParamConv rejects a conversion that reads a type parameter with more
-// than 1 Dart form.
-//
-// A conversion to an interface stays inside the subset. A conversion of a type
-// set of mixed sign to a float type falls outside it. Dart holds the bit pattern of an unsigned value of 64 bits as a
-// negative number, thus the 2 sign forms give 2 Dart expressions.
+// checkTypeParamConv rejects conversions outside the supported type sets.
 func (v *verifier) checkTypeParamConv(e *ast.CallExpr) {
 	tv, ok := v.info.Types[e.Fun]
 	if !ok || !tv.IsType() || len(e.Args) != 1 {
@@ -137,9 +107,6 @@ func (v *verifier) checkTypeParamConv(e *ast.CallExpr) {
 	}
 	v.rejectMixed(e.Pos(), to, "a conversion")
 	v.rejectMixed(e.Pos(), from, "a conversion")
-	if isFloat(to) {
-		v.rejectMixedSign(e.Pos(), from, "a conversion to a float type")
-	}
 }
 
 func (v *verifier) rejectMixed(pos token.Pos, t types.Type, what string) {
@@ -149,24 +116,14 @@ func (v *verifier) rejectMixed(pos token.Pos, t types.Type, what string) {
 	}
 	// A type set of a byte slice and a string reads the length, the index, the
 	// slice, and the 2 conversions from its dictionary.
+	if set, ok := typeset.Describe(tp); ok && set.Numeric {
+		return
+	}
 	if typeset.BytesOrText(tp) {
 		return
 	}
 	v.reject(pos, "the compiler gives a type parameter 1 Dart type",
 		"%s reads the type parameter %s, and its constraint holds more than 1 Dart type",
-		what, tp.Obj().Name())
-}
-
-// rejectMixedSign rejects an operation that reads the sign of a type set that
-// holds an unsigned type of 64 bits and another integer type.
-func (v *verifier) rejectMixedSign(pos token.Pos, t types.Type, what string) {
-	if set, ok := typeset.Describe(t); !ok || !set.MixedSign() {
-		return
-	}
-	tp := types.Unalias(t).(*types.TypeParam)
-	v.reject(pos, "an unsigned type of 64 bits fills the width of a Dart int",
-		"%s reads the sign of the type parameter %s, and its constraint holds "+
-			"an unsigned type of 64 bits and another integer type",
 		what, tp.Obj().Name())
 }
 

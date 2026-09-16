@@ -430,9 +430,9 @@ read them.
 | Type set | Dart type | godart |
 |---|---|---|
 | A core type that is a composite | The Dart type of the core type | Each operation of the core type |
-| Each term is an integer type | `int` | Each operator. `Dict.mask` keeps the width. |
-| Each term is a float type | The type parameter | An arithmetic operation is rejected, because `float32` needs a mask. |
-| An integer term and a float term | The type parameter, with the bound `num` | Each operator, and `/` is rejected. |
+| Each term is an integer type | `GoInt` | Each operator. `Dict.mask` keeps the width. |
+| Each term is a float type | `double` | Each operator. The dictionary applies the width mask. |
+| An integer term and a float term | The type parameter | Dictionary operations preserve division, conversions, and width. |
 | Any other set of more than 1 Dart type | The type parameter | An assignment, an equality, an order, a call, and a conversion to an interface |
 
 The sign of an integer set:
@@ -441,9 +441,8 @@ The sign of an integer set:
   are 3 examples. Each operator applies.
 - Each term is an unsigned type of 64 bits. `uint`, `uint64`, and `uintptr` are
   the 3. The unsigned helpers apply.
-- The set holds a term of each form. `/`, `%`, `>>`, a conversion to a float,
-  and the builtin `print` each read the sign, thus stage 2 rejects those 5.
-  `math/rand/v2` holds such a set, and `N` reads none of the 5.
+- A mixed sign set uses dictionary operations for division, remainder, and right shift.
+  Descriptor conversions and text output preserve the unsigned interpretation.
 
 ## The test command
 

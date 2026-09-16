@@ -158,29 +158,33 @@ func TestJS(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)
 	}
-	source, err := filepath.Abs("../../testdata/programs/intwrap")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runtimeDir, err := filepath.Abs("../../runtime/goruntime")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := runProgram(t, source, "go", "run", ".")
-	out := t.TempDir()
-	if err := driver.Build(driver.Options{
-		Dir:      source,
-		Patterns: []string{"./..."},
-		Out:      out,
-		Runtime:  runtimeDir,
-		Format:   true,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	run(t, out, "dart", "pub", "get")
-	run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
-	if got := runProgram(t, out, "node", "main.js"); got != want {
-		t.Errorf("the output of the JS build differs\nGo:\n%s\nnode:\n%s", want, got)
+	for _, name := range []string{"intwrap", "reflectint64", "genmixed", "genops", "genericvalue", "nanoclock", "globalptr", "structconv", "reflectblock", "uniquecompat"} {
+		t.Run(name, func(t *testing.T) {
+			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			runtimeDir, err := filepath.Abs("../../runtime/goruntime")
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := runProgram(t, source, "go", "run", ".")
+			out := t.TempDir()
+			if err := driver.Build(driver.Options{
+				Dir:      source,
+				Patterns: []string{"./..."},
+				Out:      out,
+				Runtime:  runtimeDir,
+				Format:   true,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			run(t, out, "dart", "pub", "get")
+			run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
+			if got := runProgram(t, out, "node", "main.js"); got != want {
+				t.Errorf("the output of the JS build differs\nGo:\n%s\nnode:\n%s", want, got)
+			}
+		})
 	}
 }
 

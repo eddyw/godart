@@ -13,6 +13,8 @@ dart pub get
 dart compile wasm bin/main.dart -o /dev/null
 ```
 
+The witness still fails on 2026-09-16 with Dart 3.13.3. The web fixture retains the padding workaround.
+
 Read decision 395.
 
 ## The report
@@ -24,7 +26,7 @@ cast`
 **Dart SDK version**
 
 ```
-Dart SDK version: 3.13.2 (stable) (Tue Aug 25 01:01:12 2026 -0700) on "macos_arm64"
+Dart SDK version: 3.13.3 (stable) (Tue Sep 1 01:07:17 2026 -0700) on "macos_arm64"
 ```
 
 **The command**

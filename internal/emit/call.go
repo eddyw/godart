@@ -20,6 +20,7 @@ func (e *emitter) callText(x *ir.Call) string {
 		return e.spreadCall(x)
 	}
 	args := e.callArgs(x)
+	e.mark(x.Pos)
 	if text, ok := e.intrinsic(x, args); ok {
 		return text
 	}
@@ -39,6 +40,9 @@ func (e *emitter) callText(x *ir.Call) string {
 	// effect takes a parameter of its own, thus the operand runs 1 time.
 	recv := e.expr(x.Fun)
 	joined := strings.Join(args, ", ")
+	if _, ok := x.Fun.(*ir.FuncLit); ok {
+		return "(" + recv + ")(" + joined + ")"
+	}
 	// A function value whose type erases to Object?, for example a type that
 	// names itself, holds no Dart function type. Such a call goes through a
 	// dynamic call.
@@ -175,6 +179,10 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 // intrinsicRaw lists each interop function whose boundary the mapped text
 // handles itself.
 var intrinsicRaw = map[string]bool{
+	"AsInt":           true,
+	"WithInt":         true,
+	"NowNanos":        true,
+	"MonoNanos":       true,
 	"Float64Bits":     true,
 	"Float64FromBits": true,
 	"Float32Bits":     true,
@@ -439,7 +447,7 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "AsString":
 		return fmt.Sprintf("$asString(%s)", args[0]), true
 	case "WithInt":
-		return fmt.Sprintf("$withInt(%s, %s)", args[0], args[1]), true
+		return fmt.Sprintf("$withInt($ix(%s), %s)", args[0], args[1]), true
 	case "WithFloat":
 		return fmt.Sprintf("$withFloat(%s, %s)", args[0], args[1]), true
 	case "WithBool":
@@ -1166,7 +1174,7 @@ func (e *emitter) interfaceMethodValueOf(m *ir.Method, recv string) string {
 			call = fmt.Sprintf("(%s as %s)", call, result)
 		}
 	}
-	return fmt.Sprintf("((Iface? $recv) => (%s) => %s)(%s)",
+	return fmt.Sprintf("((Iface? $recv) { if ($recv == null) $panicNil(); return (%s) => %s; })(%s)",
 		strings.Join(params, ", "), call, recv)
 }
 
@@ -1461,6 +1469,13 @@ func (e *emitter) newCall(x *ir.Builtin) string {
 		e.fail("new gives a pointer")
 		return "null"
 	}
+	if tp, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
+		value := e.zero(tp)
+		if len(x.Args) == 1 {
+			value = e.expr(x.Args[0])
+		}
+		return fmt.Sprintf("$allocPtr(%s, %s)", value, e.dictOf(tp))
+	}
 	if needsBox(p.Elem()) {
 		if len(x.Args) == 1 {
 			return fmt.Sprintf("Box<%s>(%s)", e.dartType(p.Elem()), e.expr(x.Args[0]))
@@ -1511,6 +1526,11 @@ func (e *emitter) textList(args []ir.Expr) []string {
 
 func (e *emitter) textOf(x ir.Expr) string {
 	t := x.GoType()
+	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
+		if set, ok := typeset.Describe(tp); ok && set.Numeric {
+			return fmt.Sprintf("$numericText(%s, %s.desc)", e.expr(x), e.dictOf(tp))
+		}
+	}
 	switch {
 	case isString(t):
 		return e.expr(x) + ".toDartString()"
@@ -1532,6 +1552,15 @@ func (e *emitter) textOf(x ir.Expr) string {
 func (e *emitter) conv(x *ir.Conv) string {
 	from, to := x.From, x.Type
 	text := e.expr(x.X)
+	fs, fok := typeset.Describe(from)
+	ts, tok := typeset.Describe(to)
+	_, fp := types.Unalias(from).(*types.TypeParam)
+	_, tp := types.Unalias(to).(*types.TypeParam)
+	if (fp || tp) && (isInteger(from) || isFloat(from) || (fok && fs.Numeric)) &&
+		(isInteger(to) || isFloat(to) || (tok && ts.Numeric)) {
+		return fmt.Sprintf("$convert<%s>(%s, %s, %s)", e.dartType(to), text,
+			e.descriptorOf(from), e.descriptorOf(to))
+	}
 	// A type set that holds a byte slice and a string holds 2 Dart types, thus
 	// the dictionary carries the 2 conversions.
 	if typeset.BytesOrText(from) {
@@ -1608,11 +1637,11 @@ func (e *emitter) conv(x *ir.Conv) string {
 		}
 		return e.box(x.X, from)
 	}
+	if isStructType(from) && isStructType(to) && !e.sameClass(from, to) {
+		return fmt.Sprintf("$convert<%s>(%s, %s, %s)", e.dartType(to), text,
+			e.descriptorOf(from), e.descriptorOf(to))
+	}
 	if types.Identical(types.Unalias(from).Underlying(), types.Unalias(to).Underlying()) {
-		if isStructType(to) && !e.sameClass(from, to) {
-			e.fail("the 2 struct types %s and %s hold 2 Dart classes", from, to)
-			return "null"
-		}
 		return text
 	}
 	// A pointer converts to another pointer when the 2 base types share 1

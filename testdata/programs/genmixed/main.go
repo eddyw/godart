@@ -1,8 +1,4 @@
-// The program proves an arithmetic operator on a type parameter whose set
-// mixes a narrow integer type with a float type. The Dart bound of such a set
-// is num, and the dictionary of the type argument holds the mask of its width:
-// an integer term wraps, float32 rounds to 32 bits, and float64 keeps the
-// value. Each value below wraps or rounds, thus a missing mask changes a line.
+// This program exercises width masks for mixed numeric type sets.
 package main
 
 import (

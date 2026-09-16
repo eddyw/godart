@@ -35,7 +35,8 @@ The commands are:
 The build, run, test, and watch commands take these flags:
 
 	-o dir         write the Dart package into dir
-	-runtime dir   the path of the goruntime Dart package
+	-runtime dir   override the bundled goruntime Dart package
+	-trimpath      remove absolute source paths from the output
 	-format=false  do not run dart format on the output
 
 The run command passes each argument after -- to the program.
@@ -89,19 +90,21 @@ func run(args []string) error {
 
 // buildFlags holds the flags that each compile command shares.
 type buildFlags struct {
-	set     *flag.FlagSet
-	out     *string
-	runtime *string
-	format  *bool
+	set      *flag.FlagSet
+	out      *string
+	runtime  *string
+	trimpath *bool
+	format   *bool
 }
 
 func newBuildFlags(name string) *buildFlags {
 	set := flag.NewFlagSet(name, flag.ContinueOnError)
 	return &buildFlags{
-		set:     set,
-		out:     set.String("o", "dartout", "the output directory"),
-		runtime: set.String("runtime", "", "the path of the goruntime package"),
-		format:  set.Bool("format", true, "run dart format on the output"),
+		set:      set,
+		out:      set.String("o", "dartout", "the output directory"),
+		runtime:  set.String("runtime", "", "override the bundled goruntime package"),
+		trimpath: set.Bool("trimpath", false, "remove absolute source paths from the output"),
+		format:   set.Bool("format", true, "run dart format on the output"),
 	}
 }
 
@@ -123,6 +126,7 @@ func (f *buildFlags) options(args []string) (driver.Options, error) {
 		Patterns: patterns,
 		Out:      *f.out,
 		Runtime:  *f.runtime,
+		TrimPath: *f.trimpath,
 		Format:   *f.format,
 	}, nil
 }

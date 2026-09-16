@@ -40,16 +40,16 @@ func (f *flat) value(x ir.Expr) ir.Expr {
 	case *ir.Copy:
 		return &ir.Copy{X: f.value(x.X), Type: x.Type}
 	case *ir.Field:
-		return &ir.Field{X: f.value(x.X), Name: x.Name, Type: x.Type}
+		return &ir.Field{Pos: x.Pos, X: f.value(x.X), Name: x.Name, Type: x.Type}
 	case *ir.Index:
 		parts := f.operands([]ir.Expr{x.X, x.Index})
-		return &ir.Index{X: parts[0], Index: parts[1], Type: x.Type}
+		return &ir.Index{Pos: x.Pos, X: parts[0], Index: parts[1], Type: x.Type}
 	case *ir.MapRead:
 		parts := f.operands([]ir.Expr{x.X, x.Key})
 		return &ir.MapRead{X: parts[0], Key: parts[1], Type: x.Type}
 	case *ir.Slice:
 		parts := f.operands([]ir.Expr{x.X, x.Low, x.High, x.Max})
-		return &ir.Slice{X: parts[0], Low: parts[1], High: parts[2], Max: parts[3], Type: x.Type}
+		return &ir.Slice{Pos: x.Pos, X: parts[0], Low: parts[1], High: parts[2], Max: parts[3], Type: x.Type}
 	case *ir.Composite:
 		out := &ir.Composite{Keys: x.Keys, Elems: f.operands(x.Elems),
 			Type: x.Type, ResultsVar: x.ResultsVar}

@@ -1,6 +1,5 @@
 import 'array.dart';
 import 'dict.dart';
-import 'iface.dart';
 import 'panic.dart';
 import 'slice.dart';
 
@@ -87,10 +86,17 @@ void _listSet<T>(List<T> owner, int i, T value) {
   owner[i] = value;
 }
 
+Object? $allocPtr<T>(T value, Dict<T> dict) {
+  final T copy = dict.copyOf(value);
+  return dict.desc.kind == 'struct' || dict.desc.kind == 'array'
+      ? copy
+      : Box<T>(copy);
+}
+
 /// The value behind a pointer of a generic function.
 ///
 /// The Dart form of a pointer to a type parameter follows the type argument: a
-/// pointer to a struct is the object itself, and each other pointer holds a
+/// pointer to a struct or array is the object itself, and other pointers hold a
 /// cell. Thus the read holds both forms.
 T $deref<T>(Object? p) {
   if (p == null) $panicNil();
@@ -100,10 +106,8 @@ T $deref<T>(Object? p) {
 
 /// The concrete form of a pointer that a generic function gave.
 ///
-/// A generic function writes a cell for the address of a value, because it
-/// holds no type argument. A pointer to a struct or to an array is the object
-/// itself at the call site, thus the call site reads the cell out. A nil
-/// pointer stays nil.
+/// A generic local can use a cell. A pointer to a struct or array uses the
+/// object itself at a concrete call site. A nil pointer stays nil.
 T? $ptrTo<T>(Object? p) {
   if (p == null) return null;
   if (p is $Ptr<T>) return p.v;
@@ -115,10 +119,8 @@ T? $ptrTo<T>(Object? p) {
 void $setDeref<T>(Object? p, T value, Dict<T> d) {
   if (p == null) $panicNil();
   if (p is $Ptr<T>) {
-    p.v = value;
+    p.v = d.assignOf(p.v, value);
     return;
   }
-  for (final FieldDesc f in d.desc.fields) {
-    f.set(p, f.get(value));
-  }
+  d.assignOf(p as T, value);
 }

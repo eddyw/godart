@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'goint.dart';
 import 'panic.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'string.dart';
@@ -527,7 +528,7 @@ final class _FakeTimer {
   final Bubble bubble;
 
   /// The value of the fake clock at which the timer runs.
-  final int when;
+  final GoInt when;
 
   final void Function() run;
 
@@ -553,7 +554,11 @@ int $startTimer(int nanoseconds, void Function()? body) {
   final Bubble? b = $current?.bubble;
   if (b != null) {
     final int handle = _timerHandle(true);
-    _timers[handle] = _FakeTimer(b, b.now + nanoseconds, () => _spawn(run, b));
+    _timers[handle] = _FakeTimer(
+      b,
+      b.now + $gi(nanoseconds),
+      () => _spawn(run, b),
+    );
     return handle;
   }
   final int handle = _timerHandle(false);
@@ -592,7 +597,7 @@ bool _cancelTimer(int handle, String op) {
 
 /// The base of the fake clock of a bubble. Go starts each bubble at midnight
 /// UTC of 2000-01-01.
-const int _bubbleBase = 946684800000000000;
+final GoInt $bubbleBase = $gi(946684800) * $gi(1000000000);
 
 /// Each bubble that did not end. A goroutine outside a bubble can start a
 /// bubble of its own, thus the list holds more than 1 entry.
@@ -605,7 +610,7 @@ final List<Bubble> _bubbles = <Bubble>[];
 /// takes no real time.
 final class Bubble {
   /// The fake clock, in nanoseconds since the start of the Unix epoch.
-  int now = _bubbleBase;
+  GoInt now = $bubbleBase;
 
   /// Each goroutine of the bubble that did not end.
   final Set<Goroutine> members = <Goroutine>{};
@@ -645,8 +650,8 @@ final class Bubble {
   }
 
   /// The time of the first timer of the bubble, and null when it holds none.
-  int? _nextTime() {
-    int? out;
+  GoInt? _nextTime() {
+    GoInt? out;
     for (final Object t in _timers.values) {
       if (t is! _FakeTimer || !identical(t.bubble, this)) continue;
       if (out == null || t.when < out) out = t.when;
@@ -675,7 +680,7 @@ final class Bubble {
   /// call of synctest.Wait ends, and then the clock moves to the next timer.
   bool step() {
     if (!_idle) return false;
-    final int? next = _nextTime();
+    final GoInt? next = _nextTime();
     if (next != null && next <= now && _fire()) return true;
     final Goroutine? w = waiter;
     if (w != null) {
@@ -809,7 +814,7 @@ bool $bubbleWait() {
 /// nanoseconds. The sleep of the package time reads it inside a bubble.
 void $bubbleSleep(Bubble b, Goroutine g, int nanoseconds) {
   final int handle = _timerHandle(true);
-  _timers[handle] = _FakeTimer(b, b.now + nanoseconds, () => $ready(g));
+  _timers[handle] = _FakeTimer(b, b.now + $gi(nanoseconds), () => $ready(g));
   $block(const _BubbleSleep());
 }
 
