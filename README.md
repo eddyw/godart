@@ -159,3 +159,8 @@ byte equal output of 2 equal builds.
 The project targets Go 1.27.0 and Dart 3.13.0. A Flutter application needs
 Flutter 3.47, `material_ui` 1.1, and `cupertino_ui` 1.0. `glutter doctor`
 reports the version of the machine against the node set.
+
+## License
+
+This project uses the [BSD 3-Clause License](LICENSE).
+Third-party code and assets retain their respective licenses and copyright notices.
