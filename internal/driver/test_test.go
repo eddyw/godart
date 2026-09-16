@@ -2,6 +2,7 @@ package driver_test
 
 import (
 	"bytes"
+	"fmt"
 	"go/build"
 	"os"
 	"path/filepath"
@@ -32,6 +33,7 @@ func TestTests(t *testing.T) {
 		t.Run(entry.Name(), func(t *testing.T) {
 			t.Parallel()
 			dir := filepath.Join(root, entry.Name())
+			out := t.TempDir()
 			for _, verbose := range []bool{false, true} {
 				name := "plain"
 				if verbose {
@@ -39,7 +41,7 @@ func TestTests(t *testing.T) {
 				}
 				t.Run(name, func(t *testing.T) {
 					want := goTest(t, dir, verbose)
-					got := gartTest(t, dir, driver.TestOptions{Verbose: verbose})
+					got := gartTestIn(t, dir, out, driver.TestOptions{Verbose: verbose})
 					if got != want {
 						t.Errorf("the output differs\ngo test:\n%s\ngart test:\n%s", want, got)
 					}
@@ -133,6 +135,7 @@ func TestValue(t *testing.T) {
 `)
 	out := &bytes.Buffer{}
 	code, err := driver.Test(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      dir,
 		Patterns: []string{"./..."},
 		Out:      t.TempDir(),
@@ -188,12 +191,13 @@ func TestAllocs(t *testing.T) {
 // The test reads the Go installation of the machine. A new Go release can add a
 // test file that falls outside the subset, and the assertion then fails.
 func TestTestsOfGoroot(t *testing.T) {
-	cases := []struct {
+	type stdCase struct {
 		pkg string
 		// run holds the filter of -run. An empty filter runs each test.
 		run   string
 		wants []string
-	}{
+	}
+	cases := []stdCase{
 		{"path", "", []string{"--- PASS: TestClean ", "--- SKIP: TestCleanMallocs "}},
 		{"container/list", "", []string{"--- PASS: TestList ", "--- PASS: TestZeroList "}},
 		{"container/heap", "", []string{"--- PASS: TestInit0 ", "--- PASS: TestRemove2 "}},
@@ -280,11 +284,51 @@ func TestTestsOfGoroot(t *testing.T) {
 			"--- PASS: TestMarshal/Maps/CyclicMap ", "--- PASS: TestMarshal/Slices/NonCyclicSlice ",
 			"--- PASS: TestMarshal/Methods/Anonymous ", "--- PASS: Example_textMarshal "}},
 	}
+	type namedCase struct {
+		name string
+		stdCase
+	}
+	var runs []namedCase
 	for _, c := range cases {
-		if !inTestShard(c.pkg) {
+		if c.pkg != "compress/flate" {
+			runs = append(runs, namedCase{c.pkg, c})
 			continue
 		}
-		t.Run(c.pkg, func(t *testing.T) {
+		// Preserve all upstream cases. Only the independent reset subtests split.
+		listing := run(t, ".", "go", "test", "-list", ".", "compress/flate")
+		var others []string
+		for _, name := range strings.Fields(listing) {
+			if name != "TestWriter_Reset" && (strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Example") || strings.HasPrefix(name, "Fuzz")) {
+				others = append(others, regexp.QuoteMeta(name))
+			}
+		}
+		c.run = "^(" + strings.Join(others, "|") + ")$"
+		runs = append(runs, namedCase{c.pkg, c})
+		for i, levels := range []string{"[0157]", "[268]", "[349]"} {
+			wants := []string{"--- PASS: TestWriter_Reset "}
+			for _, level := range levels[1 : len(levels)-1] {
+				status := "PASS"
+				if level == '0' || level >= '7' {
+					status = "SKIP"
+				}
+				wants = append(wants, fmt.Sprintf("--- %s: TestWriter_Reset/level=%c ", status, level))
+			}
+			runs = append(runs, namedCase{fmt.Sprintf("compress/flate-reset-%d", i), stdCase{
+				pkg: c.pkg, run: "^TestWriter_Reset$/^level=" + levels + "$",
+				wants: wants,
+			}})
+		}
+	}
+	var names []string
+	for _, c := range runs {
+		names = append(names, c.name)
+	}
+	selected := testShard(t, names)
+	for _, c := range runs {
+		if !selected[c.name] {
+			continue
+		}
+		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			dir := filepath.Join(build.Default.GOROOT, "src", filepath.FromSlash(c.pkg))
 			if _, err := os.Stat(dir); err != nil {
@@ -292,16 +336,18 @@ func TestTestsOfGoroot(t *testing.T) {
 			}
 			out := &bytes.Buffer{}
 			code, err := driver.Test(driver.Options{
+				Trace:    traceBuild(t),
 				Dir:      dir,
 				Patterns: []string{"."},
 				Out:      t.TempDir(),
 				Runtime:  runtimeDir(t),
-				Format:   true,
+				Format:   false,
 			}, driver.TestOptions{Verbose: true, Run: c.run}, out)
 			if err != nil {
 				t.Fatalf("the test build failed:\n%v", err)
 			}
 			got := out.String()
+			t.Logf("upstream results:\n%s", got)
 			if c.pkg == "bytes" && build.Default.GOOS == "linux" {
 				for _, want := range []string{
 					"--- SKIP: TestEqualNearPageBoundary ",
@@ -394,11 +440,12 @@ func gartTestIn(t *testing.T, dir, out string, options driver.TestOptions) strin
 	t.Helper()
 	text := &bytes.Buffer{}
 	if _, err := driver.Test(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      dir,
 		Patterns: []string{"./..."},
 		Out:      out,
 		Runtime:  runtimeDir(t),
-		Format:   true,
+		Format:   false,
 	}, options, text); err != nil {
 		t.Fatalf("the test build failed:\n%v", err)
 	}
@@ -443,11 +490,12 @@ func TestRun(t *testing.T) {
 	}
 	out := &bytes.Buffer{}
 	code, err := driver.Run(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      dir,
 		Patterns: []string{"./..."},
 		Out:      t.TempDir(),
 		Runtime:  runtimeDir(t),
-		Format:   true,
+		Format:   false,
 	}, []string{"one", "two"}, out)
 	if err != nil {
 		t.Fatalf("the run failed:\n%v", err)
@@ -467,11 +515,12 @@ func TestRunReportsTheExitCode(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, err := driver.Run(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      dir,
 		Patterns: []string{"./..."},
 		Out:      t.TempDir(),
 		Runtime:  runtimeDir(t),
-		Format:   true,
+		Format:   false,
 	}, nil, &bytes.Buffer{})
 	if err != nil {
 		t.Fatalf("the run failed:\n%v", err)
@@ -490,11 +539,12 @@ func TestBench(t *testing.T) {
 	}
 	out := &bytes.Buffer{}
 	code, err := driver.Test(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      dir,
 		Patterns: []string{"./..."},
 		Out:      t.TempDir(),
 		Runtime:  runtimeDir(t),
-		Format:   true,
+		Format:   false,
 	}, driver.TestOptions{Benchmarks: true, BenchCount: 50}, out)
 	if err != nil {
 		t.Fatalf("the benchmark run failed:\n%v", err)
@@ -534,11 +584,12 @@ func TestBenchFilter(t *testing.T) {
 	}
 	out := &bytes.Buffer{}
 	if _, err := driver.Test(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      dir,
 		Patterns: []string{"./..."},
 		Out:      t.TempDir(),
 		Runtime:  runtimeDir(t),
-		Format:   true,
+		Format:   false,
 	}, driver.TestOptions{Benchmarks: true, Bench: "BenchmarkAdd", BenchCount: 10}, out); err != nil {
 		t.Fatal(err)
 	}

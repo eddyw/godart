@@ -4,6 +4,7 @@ import (
 	"context"
 	"os/exec"
 	"syscall"
+	"testing"
 	"time"
 )
 
@@ -51,4 +52,10 @@ func output(dir string, env []string, limit time.Duration, name string, args ...
 	cmd.WaitDelay = 10 * time.Second
 	text, err = cmd.CombinedOutput()
 	return text, err, ctx.Err() == nil
+}
+
+func traceBuild(t *testing.T) func(string, time.Duration) {
+	return func(phase string, elapsed time.Duration) {
+		t.Logf("phase=%s duration=%.3fs", phase, elapsed.Seconds())
+	}
 }

@@ -59,9 +59,13 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 	if _, err := os.Stat(filepath.Join(opt.Out, mainEntry)); err != nil {
 		return 1, fmt.Errorf("the module holds no package main")
 	}
+	phase := time.Now()
 	if err := pubGet(opt.Out, opt.Runtime); err != nil {
 		return 1, err
 	}
+	opt.trace("pub", phase)
+	phase = time.Now()
+	defer func() { opt.trace("execute", phase) }()
 	return dartRun(opt.Out, append([]string{mainEntry}, args...), out)
 }
 
@@ -81,9 +85,11 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 	if err != nil {
 		return 1, err
 	}
+	phase := time.Now()
 	if err := pubGet(opt.Out, opt.Runtime); err != nil {
 		return 1, err
 	}
+	opt.trace("pub", phase)
 	for _, path := range stats.NoTests {
 		fmt.Fprintf(out, "?   \t%s\t[no test files]\n", path)
 	}
@@ -94,6 +100,7 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 		}
 		start := time.Now()
 		text, code, err := runBinary(opt.Out, bin, testOpt)
+		opt.trace("execute", start)
 		if err != nil {
 			return 1, err
 		}

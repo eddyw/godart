@@ -18,99 +18,39 @@ env:
   GOFLAGS: '-p=2'
 
 jobs:
-  checks:
+  matrix:
     runs-on: ubuntu-24.04
-    timeout-minutes: 52
+    timeout-minutes: 5
+    outputs:
+      jobs: ${{ steps.matrix.outputs.jobs }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.27.0'
-      - uses: dart-lang/setup-dart@v1
-        with:
-          sdk: '3.13.3'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '26.8.2'
-      - run: make get
-      - name: Static validation, runtime tests, and compiler tests
-        timeout-minutes: 47
-        env:
-          GART_TEST_TIMEOUT: 47m
-        run: bash scripts/ci.sh checks 2>&1 | tee ci.log
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ci-checks
-          path: ci.log
-          retention-days: 7
+      - uses: actions/checkout@v7
+      - id: matrix
+        run: echo "jobs=$(python3 -c 'import json; print(json.dumps(json.load(open("scripts/ci-matrix.json"))))')" >> "$GITHUB_OUTPUT"
 
   suites:
     name: ${{ matrix.suite }} / ${{ matrix.shard }}
+    needs: matrix
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ matrix.job_timeout }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - suite: programs
-            shard: 0
-            timeout: 48
-            job_timeout: 53
-          - suite: programs
-            shard: 1
-            timeout: 31
-            job_timeout: 36
-          - suite: programs
-            shard: 2
-            timeout: 33
-            job_timeout: 38
-          - suite: programs
-            shard: 3
-            timeout: 43
-            job_timeout: 48
-          - suite: language
-            shard: 0
-            timeout: 38
-            job_timeout: 43
-          - suite: language
-            shard: 1
-            timeout: 30
-            job_timeout: 35
-          - suite: language
-            shard: 2
-            timeout: 29
-            job_timeout: 34
-          - suite: language
-            shard: 3
-            timeout: 24
-            job_timeout: 29
-          - suite: stdlib
-            shard: 0
-            timeout: 48
-            job_timeout: 53
-          - suite: stdlib
-            shard: 1
-            timeout: 5
-            job_timeout: 10
-          - suite: stdlib
-            shard: 2
-            timeout: 6
-            job_timeout: 11
-          - suite: stdlib
-            shard: 3
-            timeout: 6
-            job_timeout: 11
+      matrix: ${{ fromJSON(needs.matrix.outputs.jobs) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.27.0'
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: '3.13.3'
+      - uses: actions/setup-node@v7
+        if: matrix.suite == 'targets' || matrix.suite == 'web-io' || matrix.suite == 'web-fetch'
+        with:
+          node-version: '26.8.2'
       - run: make get
       - name: Compile driver tests
+        if: matrix.suite != 'checks'
         run: go test -c -o "$RUNNER_TEMP/driver.test" ./internal/driver
       - name: Keep expected rejections out of error annotations
         if: matrix.suite == 'language'
@@ -119,8 +59,8 @@ jobs:
         timeout-minutes: ${{ matrix.timeout }}
         env:
           GART_TEST_TIMEOUT: ${{ matrix.timeout }}m
-        run: bash scripts/ci.sh '${{ matrix.suite }}' '${{ matrix.shard }}' 4 2>&1 | tee ci.log
-      - uses: actions/upload-artifact@v4
+        run: bash scripts/ci.sh '${{ matrix.suite }}' '${{ matrix.shard }}' '${{ matrix.shards }}' 2>&1 | tee ci.log
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ci-${{ matrix.suite }}-${{ matrix.shard }}

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eddyw/godart/internal/driver"
 )
@@ -25,8 +26,15 @@ func TestPrograms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var names []string
 	for _, entry := range entries {
-		if !entry.IsDir() || !inTestShard(entry.Name()) {
+		if entry.IsDir() {
+			names = append(names, entry.Name())
+		}
+	}
+	selected := testShard(t, names)
+	for _, entry := range entries {
+		if !entry.IsDir() || !selected[entry.Name()] {
 			continue
 		}
 		t.Run(entry.Name(), func(t *testing.T) {
@@ -35,17 +43,18 @@ func TestPrograms(t *testing.T) {
 			want := runProgram(t, dir, "go", "run", ".")
 			out := t.TempDir()
 			err := driver.Build(driver.Options{
+				Trace:    traceBuild(t),
 				Dir:      dir,
 				Patterns: []string{"./..."},
 				Out:      out,
 				Runtime:  runtime,
-				Format:   true,
+				Format:   false,
 			})
 			if err != nil {
 				t.Fatalf("the build failed:\n%v", err)
 			}
-			run(t, out, "dart", "pub", "get")
-			got := runProgram(t, out, "dart", "run", "bin/main.dart")
+			prepareDart(t, out)
+			got := runProgram(t, out, "dart", "--packages=.dart_tool/package_config.json", "bin/main.dart")
 			if got != want {
 				t.Errorf("the output differs\nGo:\n%s\nDart:\n%s", want, got)
 			}
@@ -57,7 +66,9 @@ func TestPrograms(t *testing.T) {
 // runtimes write a different trace, thus the test cuts the trace away.
 func runProgram(t *testing.T, dir string, name string, args ...string) string {
 	t.Helper()
+	start := time.Now()
 	text, _, ok := output(dir, nil, runLimit, name, args...)
+	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
 	if !ok {
 		t.Fatalf("%s %v did not end inside %v in %s", name, args, runLimit, dir)
 	}
@@ -91,6 +102,7 @@ func TestAOT(t *testing.T) {
 	want := runProgram(t, source, "go", "run", ".")
 	out := t.TempDir()
 	if err := driver.Build(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      source,
 		Patterns: []string{"./..."},
 		Out:      out,
@@ -125,6 +137,7 @@ func TestWasm(t *testing.T) {
 	want := runProgram(t, source, "go", "run", ".")
 	out := t.TempDir()
 	if err := driver.Build(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      source,
 		Patterns: []string{"./..."},
 		Out:      out,
@@ -171,6 +184,7 @@ func TestJS(t *testing.T) {
 			want := runProgram(t, source, "go", "run", ".")
 			out := t.TempDir()
 			if err := driver.Build(driver.Options{
+				Trace:    traceBuild(t),
 				Dir:      source,
 				Patterns: []string{"./..."},
 				Out:      out,
@@ -209,6 +223,7 @@ func TestZoneinfoZip(t *testing.T) {
 	want := runProgramEnv(t, source, env, "go", "run", ".")
 	out := t.TempDir()
 	if err := driver.Build(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      source,
 		Patterns: []string{"./..."},
 		Out:      out,
@@ -227,7 +242,9 @@ func TestZoneinfoZip(t *testing.T) {
 // runProgramEnv runs a compiled program with an environment.
 func runProgramEnv(t *testing.T, dir string, env []string, name string, args ...string) string {
 	t.Helper()
+	start := time.Now()
 	text, _, ok := output(dir, env, runLimit, name, args...)
+	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
 	if !ok {
 		t.Fatalf("%s %v did not end inside %v in %s", name, args, runLimit, dir)
 	}
@@ -236,7 +253,9 @@ func runProgramEnv(t *testing.T, dir string, env []string, name string, args ...
 
 func run(t *testing.T, dir string, name string, args ...string) string {
 	t.Helper()
+	start := time.Now()
 	text, err, ok := output(dir, nil, runLimit, name, args...)
+	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
 	if !ok {
 		t.Fatalf("%s %v did not end inside %v in %s", name, args, runLimit, dir)
 	}
@@ -284,6 +303,7 @@ mkdir: mkdir /x: function not implemented
 get: an error`
 	out := t.TempDir()
 	if err := driver.Build(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      source,
 		Patterns: []string{"./..."},
 		Out:      out,

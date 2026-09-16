@@ -13,6 +13,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"golang.org/x/tools/go/gcexportdata"
 	"golang.org/x/tools/go/packages"
@@ -35,6 +36,8 @@ type Options struct {
 	Runtime  string
 	Format   bool
 	TrimPath bool
+	// Trace receives the elapsed duration of each build or execution phase.
+	Trace func(string, time.Duration)
 	// NoCache compiles each package again, also when the cache holds it.
 	NoCache bool
 	// Tests compiles the test variants of each package, and 1 entry point for
@@ -84,22 +87,29 @@ func Build(opt Options) error {
 
 // BuildWithStats compiles the packages and reports the state of each one.
 func BuildWithStats(opt Options) (*Stats, error) {
+	phase := time.Now()
 	result, err := loadModule(opt)
+	opt.trace("load", phase)
 	if err != nil {
 		return nil, err
 	}
 	roots := result.Packages
 	module := moduleOf(roots)
 	pkgs := order(roots, module)
+	phase = time.Now()
 	for _, p := range pkgs {
 		if err := verify.Package(p.Fset, p.Syntax, p.TypesInfo, result.Embeds); err != nil {
 			return nil, err
 		}
 	}
+	opt.trace("verify", phase)
+	phase = time.Now()
 	blocks := analyze.Module(pkgs)
+	opt.trace("analyze", phase)
 	if err := blocks.SyncErrors(); err != nil {
 		return nil, err
 	}
+	phase = time.Now()
 	dartPkg := dartPackageName(module)
 	store := meta.Open(filepath.Join(opt.Out, ".gart"))
 	stats := &Stats{}
@@ -177,6 +187,8 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		}
 		stats.Compiled = append(stats.Compiled, p.ID)
 	}
+	opt.trace("emit", phase)
+	phase = time.Now()
 	runtime, err := runtimePath(opt.Runtime, opt.Out)
 	if err != nil {
 		return nil, err
@@ -185,17 +197,28 @@ func BuildWithStats(opt Options) (*Stats, error) {
 	if err := writeFiles(opt.Out, files); err != nil {
 		return nil, err
 	}
+	opt.trace("write", phase)
+	phase = time.Now()
 	if opt.Format && len(stats.Compiled) > 0 {
 		if err := format(opt.Out, dartFiles(files)); err != nil {
 			return nil, err
 		}
 	}
+	opt.trace("format", phase)
+	phase = time.Now()
 	if err := writeSourceMaps(opt.Out, dartPkg, maps); err != nil {
 		return nil, err
 	}
+	opt.trace("source-maps", phase)
 	stats.Binaries = testBinaries(result, module)
 	stats.NoTests = withoutTests(result, module)
 	return stats, nil
+}
+
+func (opt Options) trace(phase string, start time.Time) {
+	if opt.Trace != nil {
+		opt.Trace(phase, time.Since(start))
+	}
 }
 
 func loadModule(opt Options) (*load.Result, error) {

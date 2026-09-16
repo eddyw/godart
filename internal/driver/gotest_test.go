@@ -61,7 +61,9 @@ var goTestSkips = map[string]string{
 // run ended inside the limit.
 func runWithin(t *testing.T, dir string, limit time.Duration, name string, args ...string) (string, bool, bool) {
 	t.Helper()
+	start := time.Now()
 	text, err, ok := output(dir, nil, limit, name, args...)
+	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
 	return cutTrace(string(text)), err != nil, ok
 }
 
@@ -95,6 +97,12 @@ func TestRunFilesOfGoTest(t *testing.T) {
 		t.Skipf("the machine holds no test directory of Go: %v", err)
 	}
 	runtime := runtimeDir(t)
+	type sourceCase struct {
+		name, file, dir string
+		source          []byte
+	}
+	var cases []sourceCase
+	var names []string
 	for _, dir := range []string{"", "typeparam", "fixedbugs"} {
 		entries, err := os.ReadDir(filepath.Join(root, dir))
 		if err != nil {
@@ -107,77 +115,84 @@ func TestRunFilesOfGoTest(t *testing.T) {
 				continue
 			}
 			name := path.Join(dir, base)
-			if !inTestShard(name) {
-				continue
-			}
 			source, err := os.ReadFile(filepath.Join(root, dir, entry.Name()))
 			if err != nil || !strings.HasPrefix(string(source), "// run\n") {
 				continue
 			}
-			t.Run(name, func(t *testing.T) {
-				t.Parallel()
-				ctx := build.Default
-				ctx.BuildTags = append(slices.Clone(ctx.BuildTags), "dart")
-				eligible, err := ctx.MatchFile(filepath.Join(root, dir), entry.Name())
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !eligible {
-					t.Skipf("upstream build constraints exclude %s/%s", ctx.GOOS, ctx.GOARCH)
-				}
-				if cause, ok := goTestSkips[name]; ok {
-					t.Skip(cause)
-				}
-				dir := t.TempDir()
-				writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/gotest\n\ngo 1.27\n")
-				writeFile(t, filepath.Join(dir, entry.Name()), string(source))
-				out := filepath.Join(dir, "out")
-				err = driver.Build(driver.Options{
-					Dir:      dir,
-					Patterns: []string{"./..."},
-					Out:      out,
-					Runtime:  runtime,
-					Format:   false,
-				})
-				if want, known := rejections[name]; known {
-					if err == nil {
-						t.Fatal("the build now passes: remove its expected rejection")
-					}
-					got := strings.Split(strings.ReplaceAll(err.Error(), dir, "$DIR"), "\n")
-					slices.Sort(got)
-					if !slices.Equal(got, want) {
-						t.Fatalf("the rejection changed\nwant:\n%s\ngot:\n%s", strings.Join(want, "\n"), strings.Join(got, "\n"))
-					}
-					t.Skipf("known rejection:\n%v", err)
-				}
-				if err != nil {
-					t.Fatalf("unexpected build failure:\n%v", err)
-				}
-				want, wantFail, ran := runWithin(t, dir, runLimit, "go", "run", entry.Name())
-				if !ran {
-					t.Errorf("go run did not end within %v", runLimit)
-					return
-				}
-				want = cutExitStatus(want)
-				run(t, out, "dart", "pub", "get")
-				limit := 2 * time.Minute
-				if name == "fixedbugs/issue13169" {
-					// This upstream stress case performs 1 million channel transfers.
-					limit = 5 * time.Minute
-				}
-				got, gotFail, ended := runWithin(t, out, limit, "dart", "run", "bin/main.dart")
-				if !ended {
-					t.Errorf("the run did not end within %v", limit)
-					return
-				}
-				if got != want {
-					t.Errorf("the output differs\nGo:\n%s\nDart:\n%s", want, got)
-				}
-				if gotFail != wantFail {
-					t.Errorf("the exit status differs: go failed %v, and dart failed %v",
-						wantFail, gotFail)
-				}
-			})
+			cases = append(cases, sourceCase{name, entry.Name(), dir, source})
+			names = append(names, name)
 		}
+	}
+	selected := testShard(t, names)
+	for _, c := range cases {
+		if !selected[c.name] {
+			continue
+		}
+		name, source := c.name, c.source
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ctx := build.Default
+			ctx.BuildTags = append(slices.Clone(ctx.BuildTags), "dart")
+			eligible, err := ctx.MatchFile(filepath.Join(root, c.dir), c.file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !eligible {
+				t.Skipf("upstream build constraints exclude %s/%s", ctx.GOOS, ctx.GOARCH)
+			}
+			if cause, ok := goTestSkips[name]; ok {
+				t.Skip(cause)
+			}
+			dir := t.TempDir()
+			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/gotest\n\ngo 1.27\n")
+			writeFile(t, filepath.Join(dir, c.file), string(source))
+			out := filepath.Join(dir, "out")
+			err = driver.Build(driver.Options{
+				Trace:    traceBuild(t),
+				Dir:      dir,
+				Patterns: []string{"./..."},
+				Out:      out,
+				Runtime:  runtime,
+				Format:   false,
+			})
+			if want, known := rejections[name]; known {
+				if err == nil {
+					t.Fatal("the build now passes: remove its expected rejection")
+				}
+				got := strings.Split(strings.ReplaceAll(err.Error(), dir, "$DIR"), "\n")
+				slices.Sort(got)
+				if !slices.Equal(got, want) {
+					t.Fatalf("the rejection changed\nwant:\n%s\ngot:\n%s", strings.Join(want, "\n"), strings.Join(got, "\n"))
+				}
+				t.Skipf("known rejection:\n%v", err)
+			}
+			if err != nil {
+				t.Fatalf("unexpected build failure:\n%v", err)
+			}
+			want, wantFail, ran := runWithin(t, dir, runLimit, "go", "run", c.file)
+			if !ran {
+				t.Errorf("go run did not end within %v", runLimit)
+				return
+			}
+			want = cutExitStatus(want)
+			prepareDart(t, out)
+			limit := 2 * time.Minute
+			if name == "fixedbugs/issue13169" {
+				// This upstream stress case performs 1 million channel transfers.
+				limit = 5 * time.Minute
+			}
+			got, gotFail, ended := runWithin(t, out, limit, "dart", "--packages=.dart_tool/package_config.json", "bin/main.dart")
+			if !ended {
+				t.Errorf("the run did not end within %v", limit)
+				return
+			}
+			if got != want {
+				t.Errorf("the output differs\nGo:\n%s\nDart:\n%s", want, got)
+			}
+			if gotFail != wantFail {
+				t.Errorf("the exit status differs: go failed %v, and dart failed %v",
+					wantFail, gotFail)
+			}
+		})
 	}
 }

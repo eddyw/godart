@@ -1,0 +1,137 @@
+{
+  "include": [
+    {
+      "suite": "checks",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 2,
+      "job_timeout": 7
+    },
+    {
+      "suite": "driver",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 13,
+      "job_timeout": 18
+    },
+    {
+      "suite": "integration",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 7,
+      "job_timeout": 12
+    },
+    {
+      "suite": "targets",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 4,
+      "job_timeout": 9
+    },
+    {
+      "suite": "web-io",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 6,
+      "job_timeout": 11
+    },
+    {
+      "suite": "web-fetch",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 6,
+      "job_timeout": 11
+    },
+    {
+      "suite": "programs",
+      "shard": 0,
+      "shards": 6,
+      "timeout": 17,
+      "job_timeout": 22
+    },
+    {
+      "suite": "programs",
+      "shard": 1,
+      "shards": 6,
+      "timeout": 17,
+      "job_timeout": 22
+    },
+    {
+      "suite": "programs",
+      "shard": 2,
+      "shards": 6,
+      "timeout": 17,
+      "job_timeout": 22
+    },
+    {
+      "suite": "programs",
+      "shard": 3,
+      "shards": 6,
+      "timeout": 17,
+      "job_timeout": 22
+    },
+    {
+      "suite": "programs",
+      "shard": 4,
+      "shards": 6,
+      "timeout": 17,
+      "job_timeout": 22
+    },
+    {
+      "suite": "programs",
+      "shard": 5,
+      "shards": 6,
+      "timeout": 17,
+      "job_timeout": 22
+    },
+    {
+      "suite": "language",
+      "shard": 0,
+      "shards": 4,
+      "timeout": 25,
+      "job_timeout": 30
+    },
+    {
+      "suite": "language",
+      "shard": 1,
+      "shards": 4,
+      "timeout": 26,
+      "job_timeout": 31
+    },
+    {
+      "suite": "language",
+      "shard": 2,
+      "shards": 4,
+      "timeout": 26,
+      "job_timeout": 31
+    },
+    {
+      "suite": "language",
+      "shard": 3,
+      "shards": 4,
+      "timeout": 21,
+      "job_timeout": 26
+    },
+    {
+      "suite": "stdlib",
+      "shard": 0,
+      "shards": 3,
+      "timeout": 12,
+      "job_timeout": 17
+    },
+    {
+      "suite": "stdlib",
+      "shard": 1,
+      "shards": 3,
+      "timeout": 13,
+      "job_timeout": 18
+    },
+    {
+      "suite": "stdlib",
+      "shard": 2,
+      "shards": 3,
+      "timeout": 13,
+      "job_timeout": 18
+    }
+  ]
+}

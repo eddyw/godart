@@ -50,6 +50,7 @@ func TestWebFetch(t *testing.T) {
 
 	out := t.TempDir()
 	if err := driver.Build(driver.Options{
+		Trace:    traceBuild(t),
 		Dir:      program,
 		Patterns: []string{"./..."},
 		Out:      out,

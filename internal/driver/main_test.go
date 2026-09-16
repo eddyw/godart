@@ -1,10 +1,13 @@
 package driver_test
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
-	"hash/fnv"
 	"os"
+	"slices"
+	"strings"
+	"sync"
 	"testing"
 )
 
@@ -12,10 +15,55 @@ var update = flag.Bool("update", false, "write the golden files again")
 var shardIndex = flag.Int("shard-index", 0, "zero-based shard of the program, Go language, and GOROOT suites")
 var shardCount = flag.Int("shard-count", 1, "number of shards of the program, Go language, and GOROOT suites")
 
-func inTestShard(name string) bool {
-	h := fnv.New64a()
-	h.Write([]byte(name))
-	return int(h.Sum64()%uint64(*shardCount)) == *shardIndex
+var caseDurations = sync.OnceValues(func() (map[string]float64, error) {
+	data, err := os.ReadFile("testdata/ci-durations.json")
+	if err != nil {
+		return nil, err
+	}
+	var durations map[string]float64
+	err = json.Unmarshal(data, &durations)
+	return durations, err
+})
+
+// Longest cases go first, into the shard with the least estimated work.
+// New cases receive a nonzero estimate and remain part of the selection.
+func testShard(t *testing.T, names []string) map[string]bool {
+	t.Helper()
+	durations, err := caseDurations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	weight := func(name string) float64 {
+		if d := durations[t.Name()+"/"+name]; d > 0 {
+			return d
+		}
+		return 1
+	}
+	names = slices.Clone(names)
+	slices.SortFunc(names, func(a, b string) int {
+		if weight(a) > weight(b) {
+			return -1
+		}
+		if weight(a) < weight(b) {
+			return 1
+		}
+		return strings.Compare(a, b)
+	})
+	loads := make([]float64, *shardCount)
+	selected := make(map[string]bool)
+	for _, name := range names {
+		shard := 0
+		for i := 1; i < len(loads); i++ {
+			if loads[i] < loads[shard] {
+				shard = i
+			}
+		}
+		loads[shard] += weight(name)
+		if shard == *shardIndex {
+			selected[name] = true
+		}
+	}
+	return selected
 }
 
 func TestMain(m *testing.M) {

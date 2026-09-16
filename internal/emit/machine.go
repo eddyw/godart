@@ -265,7 +265,13 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 		if skip[v] {
 			continue
 		}
-		e.line("%s %s = %s;", e.fieldType(v), v.Name, e.localZero(v))
+		// Array temporaries can receive an existing array before any read.
+		// A lazy zero avoids allocation but still permits frame saves before assignment.
+		if v.Dart == "" && !v.Boxed && isArrayType(v.Type) {
+			e.line("late %s %s = %s;", e.fieldType(v), v.Name, e.localZero(v))
+		} else {
+			e.line("%s %s = %s;", e.fieldType(v), v.Name, e.localZero(v))
+		}
 	}
 	e.line("int $s = 0;")
 	if m.Blocking {
