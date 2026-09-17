@@ -22,7 +22,7 @@ class Emitter {
   Emitter(this.component);
 
   DartType type(String name) => switch (name) {
-    'int' => core.intNonNullableRawType,
+    'int' || 'uint64' => core.intNonNullableRawType,
     'bool' => core.boolNonNullableRawType,
     'string' => core.stringNonNullableRawType,
     'void' => const VoidType(),
@@ -40,10 +40,51 @@ class Emitter {
     throw StateError('int operator $name');
   }
 
+  Expression runtimeCall(String name, List<Expression> args) {
+    final library = component.libraries.singleWhere(
+      (l) =>
+          l.importUri.toString() == 'package:goruntime/src/goint_native.dart',
+      orElse: () => throw UnsupportedError(
+        '64-bit operations require VM or Wasm runtime',
+      ),
+    );
+    final target = library.procedures.singleWhere((p) => p.name.text == name);
+    return StaticInvocation(target, Arguments(args));
+  }
+
+  Expression intCall(
+    String op,
+    Expression receiver,
+    List<Expression> args,
+    DartType result,
+  ) {
+    final target = operatorTarget(op);
+    return InstanceInvocation(
+      InstanceAccessKind.Instance,
+      receiver,
+      Name(op),
+      Arguments(args),
+      interfaceTarget: target,
+      functionType: target.function.computeFunctionType(
+        Nullability.nonNullable,
+      ),
+      resultType: result,
+    );
+  }
+
   Expression expression(Map<String, dynamic> n) {
     switch (n['op']) {
       case 'int':
-        return IntLiteral(int.parse(n['value']));
+        return IntLiteral(BigInt.parse(n['value']).toSigned(64).toInt());
+      case 'convert':
+        return expression(n['value']);
+      case 'unary':
+        return intCall(
+          n['operator'] == '^' ? '~' : 'unary-',
+          expression(n['value']),
+          [],
+          type(n['type']),
+        );
       case 'bool':
         return BoolLiteral(n['value']);
       case 'string':
@@ -61,7 +102,9 @@ class Emitter {
           Arguments([
             ListLiteral([
               for (final a in n['args'])
-                if (a['op'] == 'string')
+                if (a['type'] == 'uint64')
+                  runtimeCall(r'$ustring', [expression(a)])
+                else if (a['op'] == 'string')
                   expression(a)
                 else
                   StringConcatenation([expression(a)]),
@@ -70,18 +113,27 @@ class Emitter {
         );
       case 'binary':
         final op = n['operator'] == '!=' ? '==' : n['operator'];
-        final target = operatorTarget(op);
-        final call = InstanceInvocation(
-          InstanceAccessKind.Instance,
-          expression(n['left']),
-          Name(op),
-          Arguments([expression(n['right'])]),
-          interfaceTarget: target,
-          functionType: target.function.computeFunctionType(
-            Nullability.nonNullable,
-          ),
-          resultType: type(n['type']),
-        );
+        var left = expression(n['left']);
+        var right = expression(n['right']);
+        if (op == '<<' || op == '>>') {
+          if (n['unsignedCount'] == true)
+            right = runtimeCall(r'$ucount', [right]);
+          return runtimeCall(
+            op == '<<'
+                ? r'$shl'
+                : n['unsigned'] == true
+                ? r'$ushr'
+                : r'$shr',
+            [left, right],
+          );
+        }
+        if (n['unsigned'] == true && ['<', '>', '<=', '>='].contains(op)) {
+          return runtimeCall(
+            op == '<' || op == '>' ? r'$ult' : r'$ule',
+            op == '>' || op == '>=' ? [right, left] : [left, right],
+          );
+        }
+        final call = intCall(op, left, [right], type(n['type']));
         return n['operator'] == '!=' ? Not(call) : call;
       default:
         throw UnsupportedError('expression ${n['op']}');
@@ -154,52 +206,73 @@ class Emitter {
   }
 
   void emit(Map<String, dynamic> program) {
-    final uri = File(program['source']).absolute.uri;
-    final source = File.fromUri(uri).readAsBytesSync();
-    final lines = <int>[0];
-    for (var i = 0; i < source.length; i++) {
-      if (source[i] == 10) lines.add(i + 1);
+    final libraries = <String, Library>{};
+    for (final p in program['packages']) {
+      final uri = Uri.parse('gart-kernel:${p['path']}');
+      final library = Library(uri, fileUri: uri)
+        ..setLanguageVersion(Version(3, 13));
+      libraries[p['path']] = library;
+      component.libraries.add(library..parent = component);
+      for (final f in p['functions']) {
+        final uri = File(f['source']).absolute.uri;
+        if (!component.uriToSource.containsKey(uri)) {
+          final source = File.fromUri(uri).readAsBytesSync();
+          final lines = <int>[0];
+          for (var i = 0; i < source.length; i++) {
+            if (source[i] == 10) lines.add(i + 1);
+          }
+          component.uriToSource[uri] = Source(lines, source, uri, uri);
+        }
+        final params = <PositionalParameter>[
+          for (final param in f['params'])
+            PositionalParameter(
+              cosmeticName: param['name'],
+              type: type(param['type']),
+            ),
+        ];
+        final proc = Procedure(
+          Name(f['localName'], library),
+          ProcedureKind.Method,
+          FunctionNode(
+            null,
+            positionalParameters: params,
+            returnType: type(f['result']),
+          ),
+          isStatic: true,
+          fileUri: uri,
+        )..fileOffset = f['offset'];
+        functions[f['name']] = proc;
+        library.addProcedure(proc);
+      }
     }
-    component.uriToSource[uri] = Source(lines, source, uri, uri);
-    final library = Library(
-      uri,
-      fileUri: uri,
-      dependencies: [
-        LibraryDependency.import(core.coreLibrary),
-        LibraryDependency.import(println.enclosingLibrary),
-      ],
-    )..setLanguageVersion(Version(3, 13));
-    for (final f in program['functions']) {
-      final params = <PositionalParameter>[
-        for (final p in f['params'])
-          PositionalParameter(cosmeticName: p['name'], type: type(p['type'])),
-      ];
-      final proc = Procedure(
-        Name(f['name']),
-        ProcedureKind.Method,
-        FunctionNode(
-          null,
-          positionalParameters: params,
-          returnType: type(f['result']),
-        ),
-        isStatic: true,
-        fileUri: uri,
-      )..fileOffset = f['offset'];
-      functions[f['name']] = proc;
-      library.addProcedure(proc);
+    for (final p in program['packages']) {
+      final library = libraries[p['path']]!;
+      library.addDependency(LibraryDependency.import(core.coreLibrary));
+      library.addDependency(LibraryDependency.import(println.enclosingLibrary));
+      for (final runtime in component.libraries.where(
+        (l) =>
+            l.importUri.toString() == 'package:goruntime/src/goint_native.dart',
+      )) {
+        library.addDependency(LibraryDependency.import(runtime));
+      }
+      for (final dep in p['imports']) {
+        library.addDependency(LibraryDependency.import(libraries[dep]!));
+      }
+      for (final f in p['functions']) {
+        final fn = functions[f['name']]!.function;
+        variables = {
+          for (final param in fn.positionalParameters)
+            param.cosmeticName!: param,
+        };
+        context = VariableContext(
+          captureKind: CaptureKind.notCaptured,
+          variables: [...fn.positionalParameters],
+        );
+        fn.scope = Scope(contexts: [context]);
+        fn.body = statement(f['body'])..parent = fn;
+      }
     }
-    for (final f in program['functions']) {
-      final fn = functions[f['name']]!.function;
-      variables = {for (final p in fn.positionalParameters) p.cosmeticName!: p};
-      context = VariableContext(
-        captureKind: CaptureKind.notCaptured,
-        variables: [...fn.positionalParameters],
-      );
-      fn.scope = Scope(contexts: [context]);
-      fn.body = statement(f['body'])..parent = fn;
-    }
-    component.libraries.add(library..parent = component);
-    component.setMainMethodAndMode(functions['main']!.reference, true);
+    component.setMainMethodAndMode(functions[program['main']]!.reference, true);
   }
 }
 

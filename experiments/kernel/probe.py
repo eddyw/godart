@@ -24,7 +24,7 @@ def run(command, *, cwd=ROOT, expected=0):
     return result, elapsed
 
 
-def main():
+def prepare():
     OUT.mkdir(parents=True, exist_ok=True)
     dart = Path(shutil.which('dart')).resolve()
     sdk = dart.parent.parent
@@ -57,6 +57,15 @@ def main():
     _, setup['go_frontend'] = run(['go', 'build', '-o', frontend, HERE / 'frontend/main.go'])
     _, setup['kernel_emitter'] = run([dart, 'compile', 'exe', '-Dsdk_hash=' + REVISION[:10],
                                      '--packages=' + str(config), '-o', emitter, HERE / 'emit.dart'])
+    return dict(dart=dart, sdk=sdk, version=version, frontend=frontend, emitter=emitter,
+                runtime_config=runtime_config, setup=setup)
+
+
+def main():
+    tools = prepare()
+    dart, sdk = tools['dart'], tools['sdk']
+    frontend, emitter = tools['frontend'], tools['emitter']
+    runtime_config, setup, version = tools['runtime_config'], tools['setup'], tools['version']
     wasm = [sdk / 'bin/dartaotruntime', sdk / 'bin/snapshots/dart2wasm_product.snapshot',
             '--libraries-spec=' + str(sdk / 'lib/libraries.json')]
     seeds = {target: OUT / f'seed-{target}.dill' for target in ['vm', 'js', 'wasm']}
@@ -71,7 +80,7 @@ def main():
     for name in ['sum', 'recursion', 'integers']:
         fixture = HERE / f'fixtures/{name}.go'
         directory = OUT / f'fixture-{name}'
-        run([frontend, fixture, directory])
+        run([frontend, fixture, directory, 'both'])
         native = directory / 'native'
         run(['go', 'build', '-o', native, fixture])
         expected = run([native])[0]
@@ -105,7 +114,7 @@ def main():
         print('PASS', name, flush=True)
     unsupported = OUT / 'unsupported.go'
     unsupported.write_text('package main\nfunc main() { value := 1.5; println(value) }\n')
-    result, _ = run([frontend, unsupported, OUT / 'unsupported'], expected=1)
+    result, _ = run([frontend, unsupported, OUT / 'unsupported', 'both'], expected=1)
     assert 'unsupported type' in result.stderr
     bad = bytearray((OUT / 'fixture-sum/direct.dill').read_bytes())
     bad[8:18] = b'ffffffffff'
@@ -126,7 +135,7 @@ def main():
         calls = ''.join(f' total += f{i}(value)\n' for i in range(count))
         fixture.write_text('package main\n' + functions + 'func main() { value:=7; total:=0\n' + calls + 'println(total)\n}\n')
         directory = OUT / f'scale-{count}'
-        _, frontend_seconds = run([frontend, fixture, directory])
+        _, frontend_seconds = run([frontend, fixture, directory, 'both'])
         samples = []
         for trial in range(5):
             commands = {

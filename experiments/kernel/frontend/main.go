@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"go/ast"
 	"go/constant"
-	"go/parser"
 	"go/token"
 	"go/types"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/eddyw/godart/internal/analyze"
@@ -36,8 +38,10 @@ func kind(t types.Type) string {
 		panic(fmt.Sprintf("unsupported type %s", t))
 	}
 	switch b.Kind() {
-	case types.Int, types.UntypedInt:
+	case types.Int, types.Int64, types.UntypedInt:
 		return "int"
+	case types.Uint, types.Uint64:
+		return "uint64"
 	case types.Bool, types.UntypedBool:
 		return "bool"
 	case types.String, types.UntypedString:
@@ -54,7 +58,7 @@ func expr(e ir.Expr) node {
 	case *ir.Const:
 		switch x.Value.Kind() {
 		case constant.Int:
-			return node{"op": "int", "value": x.Value.ExactString()}
+			return node{"op": "int", "value": x.Value.ExactString(), "type": kind(x.Type)}
 		case constant.Bool:
 			return node{"op": "bool", "value": constant.BoolVal(x.Value)}
 		case constant.String:
@@ -65,8 +69,8 @@ func expr(e ir.Expr) node {
 			return node{"op": "string", "value": s}
 		}
 	case *ir.Zero:
-		if kind(x.Type) == "int" {
-			return node{"op": "int", "value": "0"}
+		if integer(kind(x.Type)) {
+			return node{"op": "int", "value": "0", "type": kind(x.Type)}
 		}
 		if kind(x.Type) == "bool" {
 			return node{"op": "bool", "value": false}
@@ -78,15 +82,19 @@ func expr(e ir.Expr) node {
 		return node{"op": "get", "name": x.Name, "type": kind(x.Type)}
 	case *ir.Binary:
 		switch x.Op {
-		case token.ADD, token.SUB, token.MUL, token.LSS, token.GTR, token.LEQ, token.GEQ, token.EQL, token.NEQ:
-			if kind(x.X.GoType()) != "int" || kind(x.Y.GoType()) != "int" {
-				panic("prototype binary operators require int")
+		case token.ADD, token.SUB, token.MUL, token.LSS, token.GTR, token.LEQ, token.GEQ, token.EQL, token.NEQ, token.AND, token.OR, token.XOR, token.SHL, token.SHR:
+			if !integer(kind(x.X.GoType())) || !integer(kind(x.Y.GoType())) {
+				panic("prototype binary operators require 64-bit integers")
 			}
-			return node{"op": "binary", "operator": x.Op.String(), "left": expr(x.X), "right": expr(x.Y), "type": kind(x.Type)}
+			return node{"op": "binary", "operator": x.Op.String(), "left": expr(x.X), "right": expr(x.Y), "type": kind(x.Type), "unsigned": kind(x.X.GoType()) == "uint64", "unsignedCount": kind(x.Y.GoType()) == "uint64"}
+		}
+	case *ir.Unary:
+		if integer(kind(x.Type)) && (x.Op == token.SUB || x.Op == token.XOR) {
+			return node{"op": "unary", "operator": x.Op.String(), "value": expr(x.X), "type": kind(x.Type)}
 		}
 	case *ir.Conv:
-		if kind(x.From) == kind(x.Type) {
-			return expr(x.X)
+		if kind(x.From) == kind(x.Type) || (integer(kind(x.From)) && integer(kind(x.Type))) {
+			return node{"op": "convert", "value": expr(x.X), "type": kind(x.Type)}
 		}
 	case *ir.Call:
 		f, ok := x.Fun.(*ir.Ident)
@@ -97,7 +105,7 @@ func expr(e ir.Expr) node {
 		for _, a := range x.Args {
 			args = append(args, expr(a))
 		}
-		return node{"op": "call", "name": f.Name, "args": args, "type": kind(x.Type)}
+		return node{"op": "call", "name": functionKey(f.Obj), "args": args, "type": kind(x.Type)}
 	case *ir.Builtin:
 		if x.Name != "println" || x.Spread || x.Results != nil {
 			panic("unsupported builtin")
@@ -109,7 +117,9 @@ func expr(e ir.Expr) node {
 					panic("only string literals are supported")
 				}
 			}
-			args = append(args, expr(a))
+			value := expr(a)
+			value["type"] = kind(a.GoType())
+			args = append(args, value)
 		}
 		return node{"op": "println", "args": args}
 	}
@@ -133,8 +143,8 @@ func stmt(s ir.Stmt) node {
 		}
 		v := x.Vars[0]
 		k := kind(v.Type)
-		if k != "int" && k != "bool" {
-			panic("prototype variables require int or bool")
+		if !integer(k) && k != "bool" {
+			panic("prototype variables require 64-bit integers or bool")
 		}
 		init := x.Init
 		if init == nil {
@@ -169,90 +179,205 @@ func stmt(s ir.Stmt) node {
 	panic(fmt.Sprintf("unsupported statement %T", s))
 }
 
+func integer(name string) bool { return name == "int" || name == "uint64" }
+
+func functionKey(obj types.Object) string { return obj.Pkg().Path() + "::" + obj.Name() }
+
+// Both backends receive the same original math/bits function bodies.
+func selectedFiles(p *packages.Package) ([]*ast.File, error) {
+	selected := map[string]bool{"OnesCount64": true, "Reverse64": true, "ReverseBytes64": true, "RotateLeft64": true}
+	var files []*ast.File
+	for _, original := range p.Syntax {
+		copy := *original
+		copy.Decls = nil
+		if p.PkgPath == "math/bits" {
+			copy.Imports = nil
+		}
+		for _, decl := range original.Decls {
+			if p.PkgPath == "math/bits" {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok || !selected[fn.Name.Name] {
+					continue
+				}
+			} else if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok != token.CONST && gen.Tok != token.IMPORT {
+				return nil, fmt.Errorf("prototype excludes package state and named types in %s", p.PkgPath)
+			}
+			copy.Decls = append(copy.Decls, decl)
+		}
+		files = append(files, &copy)
+	}
+	return files, nil
+}
+
 func run() error {
-	if len(os.Args) != 3 {
-		return fmt.Errorf("usage: frontend input.go output-directory")
+	if len(os.Args) != 4 {
+		return fmt.Errorf("usage: frontend input.go-or-module output-directory direct|source|both")
 	}
-	source, err := filepath.Abs(os.Args[1])
+	mode := os.Args[3]
+	if mode != "direct" && mode != "source" && mode != "both" {
+		return fmt.Errorf("unsupported output mode %q", mode)
+	}
+	start := time.Now()
+	timings := map[string]float64{}
+	input, err := filepath.Abs(os.Args[1])
 	if err != nil {
 		return err
 	}
-	fs := token.NewFileSet()
-	f, err := parser.ParseFile(fs, source, nil, parser.ParseComments)
+	output, err := filepath.Abs(os.Args[2])
 	if err != nil {
 		return err
 	}
-	if f.Name.Name != "main" || len(f.Imports) != 0 {
-		return fmt.Errorf("prototype requires package main with no imports")
+	dir, pattern := input, "."
+	if strings.HasSuffix(input, ".go") {
+		dir, pattern = filepath.Dir(input), input
 	}
-	info := &types.Info{Types: map[ast.Expr]types.TypeAndValue{}, Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{}, Selections: map[*ast.SelectorExpr]*types.Selection{}, Scopes: map[ast.Node]*types.Scope{}, Instances: map[*ast.Ident]types.Instance{}}
-	conf := types.Config{GoVersion: "go1.27"}
-	tp, err := conf.Check("example.com/kernelprobe", fs, []*ast.File{f}, info)
+	cfg := &packages.Config{Dir: dir, Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedTypesSizes | packages.NeedModule}
+	roots, err := packages.Load(cfg, pattern)
 	if err != nil {
 		return err
 	}
-	if err = verify.Package(fs, []*ast.File{f}, info, nil); err != nil {
-		return err
+	if packages.PrintErrors(roots) != 0 {
+		return fmt.Errorf("package load failed")
 	}
-	pkg := &packages.Package{Fset: fs, Syntax: []*ast.File{f}, Types: tp, TypesInfo: info}
-	blocks := analyze.Module([]*packages.Package{pkg})
-	tree, err := normalize.Package(fs, pkg.Syntax, info, tp, blocks)
-	if err != nil {
-		return err
+	if len(roots) != 1 || roots[0].Name != "main" {
+		return fmt.Errorf("prototype requires 1 main package")
 	}
-	funcs := []node{}
-	for _, file := range tree.Files {
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ir.Func)
-			if !ok || fn.Async || fn.Defers || fn.Machine != nil || fn.Recv != nil || len(fn.TypeParams) != 0 || fn.NoBody || fn.Name == "init" {
-				return fmt.Errorf("unsupported declaration %T", decl)
-			}
-			params := []node{}
-			for _, p := range fn.Params {
-				k := kind(p.Type)
-				if k != "int" && k != "bool" {
-					return fmt.Errorf("unsupported parameter")
-				}
-				params = append(params, node{"name": p.Name, "type": k})
-			}
-			result := "void"
-			if len(fn.Results) > 1 {
-				return fmt.Errorf("multiple results are outside the prototype")
-			}
-			if len(fn.Results) == 1 {
-				result = kind(fn.Results[0].Type)
-				if result != "int" && result != "bool" {
-					return fmt.Errorf("unsupported result")
-				}
-			}
-			funcs = append(funcs, node{"name": fn.Name, "params": params, "result": result, "body": stmt(fn.Body), "offset": fs.Position(fn.Pos).Offset})
+	if roots[0].TypesSizes.Sizeof(types.Typ[types.Int]) != 8 {
+		return fmt.Errorf("prototype requires 64-bit Go int")
+	}
+	var pkgs []*packages.Package
+	packages.Visit(roots, nil, func(p *packages.Package) {
+		if p.PkgPath != "unsafe" {
+			pkgs = append(pkgs, p)
+		}
+	})
+	for _, p := range pkgs {
+		if p != roots[0] && p.PkgPath != "math/bits" && p.Module == nil {
+			return fmt.Errorf("unsupported standard package %s", p.PkgPath)
+		}
+		files, err := selectedFiles(p)
+		if err != nil {
+			return err
+		}
+		p.Syntax = files
+		if err := verify.Package(p.Fset, p.Syntax, p.TypesInfo, nil); err != nil {
+			return err
 		}
 	}
-	output := os.Args[2]
+	timings["load_verify"] = time.Since(start).Seconds()
+	phase := time.Now()
+	blocks := analyze.Module(pkgs)
+	if err := blocks.SyncErrors(); err != nil {
+		return err
+	}
+	timings["analyze"] = time.Since(phase).Seconds()
+	bases := map[string]string{}
+	dirs := map[string]string{}
+	for i, p := range pkgs {
+		base := fmt.Sprintf("p%d", i)
+		out := filepath.Join(output, base)
+		if p == roots[0] {
+			base, out = "main", output
+		}
+		bases[p.PkgPath], dirs[p.PkgPath] = base, out
+	}
+	all := []node{}
+	selectedFunctions := []string{}
+	for _, p := range pkgs {
+		phase = time.Now()
+		tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks)
+		if err != nil {
+			return err
+		}
+		timings["normalize"] += time.Since(phase).Seconds()
+		funcs := []node{}
+		phase = time.Now()
+		for _, file := range tree.Files {
+			for _, decl := range file.Decls {
+				if _, ok := decl.(*ir.ConstDecl); ok {
+					continue
+				}
+				fn, ok := decl.(*ir.Func)
+				if !ok || fn.Async || fn.Defers || fn.Machine != nil || fn.Recv != nil || len(fn.TypeParams) != 0 || fn.NoBody || fn.Name == "init" {
+					return fmt.Errorf("unsupported declaration %T", decl)
+				}
+				selectedFunctions = append(selectedFunctions, functionKey(fn.Obj))
+				if mode == "source" {
+					continue
+				}
+				params := []node{}
+				for _, p := range fn.Params {
+					k := kind(p.Type)
+					if !integer(k) && k != "bool" {
+						return fmt.Errorf("unsupported parameter")
+					}
+					params = append(params, node{"name": p.Name, "type": k})
+				}
+				result := "void"
+				if len(fn.Results) > 1 {
+					return fmt.Errorf("multiple results are outside the prototype")
+				}
+				if len(fn.Results) == 1 {
+					result = kind(fn.Results[0].Type)
+					if !integer(result) && result != "bool" {
+						return fmt.Errorf("unsupported result")
+					}
+				}
+				pos := p.Fset.Position(fn.Pos)
+				funcs = append(funcs, node{"name": functionKey(fn.Obj), "localName": fn.Name, "params": params, "result": result, "body": stmt(fn.Body), "source": pos.Filename, "offset": pos.Offset})
+			}
+		}
+		deps := []string{}
+		var imports []emit.Import
+		for path, dep := range p.Imports {
+			if base, ok := bases[dep.PkgPath]; ok {
+				deps = append(deps, dep.PkgPath)
+				imports = append(imports, emit.Import{Path: path, URI: filepath.ToSlash(filepath.Join(dirs[dep.PkgPath], base+".dart"))})
+			}
+		}
+		sort.Strings(deps)
+		all = append(all, node{"path": p.PkgPath, "functions": funcs, "imports": deps})
+		timings["export_ir"] += time.Since(phase).Seconds()
+		if mode == "direct" {
+			continue
+		}
+		phase = time.Now()
+		sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
+		base := bases[p.PkgPath]
+		emitted, err := emit.Package(tree, p.Types, emit.Config{Base: base, Imports: imports})
+		if err != nil {
+			return err
+		}
+		for name, text := range emitted.Files {
+			path := filepath.Join(dirs[p.PkgPath], name)
+			if err = os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+				return err
+			}
+			if err = os.WriteFile(path, []byte(text), 0644); err != nil {
+				return err
+			}
+		}
+		text := "part of '" + base + ".dart';\nconst $srcmapData = <String>[];\n"
+		if err = os.WriteFile(filepath.Join(dirs[p.PkgPath], emitted.MapFile), []byte(text), 0644); err != nil {
+			return err
+		}
+		timings["source_write"] += time.Since(phase).Seconds()
+	}
 	if err = os.MkdirAll(output, 0755); err != nil {
 		return err
 	}
-	data, err := json.Marshal(node{"source": source, "functions": funcs})
-	if err != nil {
-		return err
-	}
-	if err = os.WriteFile(filepath.Join(output, "program.json"), data, 0644); err != nil {
-		return err
-	}
-	emitted, err := emit.Package(tree, tp, emit.Config{Base: "main"})
-	if err != nil {
-		return err
-	}
-	for name, text := range emitted.Files {
-		path := filepath.Join(output, name)
-		if err = os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if mode != "source" {
+		data, err := json.Marshal(node{"packages": all, "main": roots[0].PkgPath + "::main"})
+		if err != nil {
 			return err
 		}
-		if err = os.WriteFile(path, []byte(text), 0644); err != nil {
+		if err = os.WriteFile(filepath.Join(output, "program.json"), data, 0644); err != nil {
 			return err
 		}
 	}
-	return os.WriteFile(filepath.Join(output, emitted.MapFile), []byte("part of 'main.dart';\nconst $srcmapData = <String>[];\n"), 0644)
+	sort.Strings(selectedFunctions)
+	timings["total"] = time.Since(start).Seconds()
+	return json.NewEncoder(os.Stdout).Encode(node{"phases": timings, "functions": selectedFunctions})
 }
 
 func main() {
