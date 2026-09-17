@@ -1,0 +1,30 @@
+--- implementations.go
++++ implementations.go
+@@ -7,8 +7,7 @@
+ import (
+ 	"crypto/internal/boring"
+ 	"crypto/internal/impl"
+-	"internal/goarch"
+-	"internal/goos"
++	"runtime"
+ 	"internal/testenv"
+ 	"strings"
+ 	"testing"
+@@ -58,14 +57,14 @@
+ 	if builder == "" {
+ 		return false
+ 	}
+-	switch goarch.GOARCH {
++	switch runtime.GOARCH {
+ 	case "amd64":
+ 		return strings.Contains(builder, "_avx512")
+ 	case "arm64":
+ 		// Apple M chips support everything we use.
+-		return goos.GOOS == "darwin"
++		return runtime.GOOS == "darwin"
+ 	default:
+ 		// Presumably the Linux builders are the most capable.
+-		return goos.GOOS == "linux"
++		return runtime.GOOS == "linux"
+ 	}
+ }

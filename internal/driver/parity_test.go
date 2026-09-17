@@ -16,34 +16,88 @@ import (
 
 	harness "github.com/eddyw/godart/internal/overlay/std/testing"
 	"github.com/eddyw/godart/internal/parity"
+	"golang.org/x/mod/sumdb/dirhash"
 )
 
+type moduleFixture struct {
+	Path     string `json:"path"`
+	Version  string `json:"version"`
+	Sum      string `json:"sum"`
+	GoModSum string `json:"go_mod_sum"`
+}
+
+func externalFixtures(t *testing.T, output string) []moduleFixture {
+	t.Helper()
+	matches := regexp.MustCompile(`fetching ([A-Za-z0-9./_-]+)@([A-Za-z0-9.+_-]+)`).FindAllStringSubmatch(output, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	data, err := os.ReadFile("../parity/testdata/external-fixtures.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pinned []moduleFixture
+	if err := json.Unmarshal(data, &pinned); err != nil {
+		t.Fatal(err)
+	}
+	var used []moduleFixture
+	seen := map[string]bool{}
+	for _, match := range matches {
+		module := match[1] + "@" + match[2]
+		if seen[module] {
+			continue
+		}
+		seen[module] = true
+		index := slices.IndexFunc(pinned, func(f moduleFixture) bool { return f.Path == match[1] && f.Version == match[2] })
+		if index < 0 {
+			t.Fatalf("unrecorded external fixture: %s", module)
+		}
+		var actual struct{ Path, Version, Sum, GoModSum, Dir string }
+		text := runProgram(t, "", "go", "mod", "download", "-json", module)
+		if err := json.Unmarshal([]byte(text), &actual); err != nil {
+			t.Fatal(err)
+		}
+		want := pinned[index]
+		if actual.Path != want.Path || actual.Version != want.Version || actual.Sum != want.Sum || actual.GoModSum != want.GoModSum {
+			t.Fatalf("external fixture checksum changed: %s", module)
+		}
+		sum, err := dirhash.HashDir(actual.Dir, module, dirhash.Hash1)
+		if err != nil || sum != want.Sum {
+			t.Fatalf("external fixture contents changed: %s: %v", module, err)
+		}
+		used = append(used, want)
+	}
+	slices.SortFunc(used, func(a, b moduleFixture) int { return strings.Compare(a.Path, b.Path) })
+	return used
+}
+
 type upstreamEvidence struct {
-	NativeArgs     []string            `json:"native_args"`
-	NativeTrimPath bool                `json:"native_trimpath"`
-	Short          bool                `json:"short"`
-	Timeout        string              `json:"timeout"`
-	GoVersion      string              `json:"go_version"`
-	NodeVersion    string              `json:"node_version,omitempty"`
-	GartBuildTags  []string            `json:"gart_build_tags"`
-	TrimPath       bool                `json:"trimpath"`
-	Environment    map[string]string   `json:"environment"`
-	DartVersion    string              `json:"dart_version"`
-	GOOS           string              `json:"goos"`
-	GOARCH         string              `json:"goarch"`
-	BuildTags      []string            `json:"build_tags"`
-	ToolTags       []string            `json:"tool_tags"`
-	Cgo            bool                `json:"cgo"`
-	SourceSHA256   string              `json:"source_sha256"`
-	Fixtures       []parity.SourceFile `json:"fixtures"`
-	Expected       []string            `json:"expected"`
-	Skip           string              `json:"skip"`
-	Target         string              `json:"target"`
-	Package        string              `json:"package"`
-	Filter         string              `json:"filter"`
-	Native         parity.Result       `json:"native"`
-	Gart           parity.Result       `json:"gart"`
-	Comparison     parity.Comparison   `json:"comparison"`
+	ExternalFixtures []moduleFixture     `json:"external_fixtures,omitempty"`
+	NativeArgs       []string            `json:"native_args"`
+	NativeTrimPath   bool                `json:"native_trimpath"`
+	Short            bool                `json:"short"`
+	Timeout          string              `json:"timeout"`
+	GoVersion        string              `json:"go_version"`
+	NodeVersion      string              `json:"node_version,omitempty"`
+	GartBuildTags    []string            `json:"gart_build_tags"`
+	TrimPath         bool                `json:"trimpath"`
+	Environment      map[string]string   `json:"environment"`
+	DartVersion      string              `json:"dart_version"`
+	GOOS             string              `json:"goos"`
+	GOARCH           string              `json:"goarch"`
+	BuildTags        []string            `json:"build_tags"`
+	ToolTags         []string            `json:"tool_tags"`
+	Cgo              bool                `json:"cgo"`
+	SourceSHA256     string              `json:"source_sha256"`
+	Fixtures         []parity.SourceFile `json:"fixtures"`
+	Expected         []string            `json:"expected"`
+	Skip             string              `json:"skip"`
+	Target           string              `json:"target"`
+	Package          string              `json:"package"`
+	Filter           string              `json:"filter"`
+	Native           parity.Result       `json:"native"`
+	Gart             parity.Result       `json:"gart"`
+	Comparison       parity.Comparison   `json:"comparison"`
 }
 
 func upstreamOmissions(t *testing.T, pkg string) map[string]string {
@@ -81,7 +135,25 @@ func upstreamLimit() time.Duration {
 
 func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int) {
 	t.Helper()
+	nativeTags := slices.Clone(build.Default.BuildTags)
 	args := []string{"test", "-json", "-count=1", "-timeout=" + upstreamLimit().String()}
+	var suites []struct {
+		Package    string   `json:"package"`
+		NativeTags []string `json:"native_tags"`
+	}
+	suiteData, err := os.ReadFile("../parity/testdata/vm-suites.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(suiteData, &suites); err != nil {
+		t.Fatal(err)
+	}
+	for _, suite := range suites {
+		if suite.Package == pkg && len(suite.NativeTags) > 0 {
+			nativeTags = append(nativeTags, suite.NativeTags...)
+			args = append(args, "-tags="+strings.Join(nativeTags, ","))
+		}
+	}
 	if testing.Short() {
 		args = append(args, "-short")
 	}
@@ -171,7 +243,11 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 		t.Fatalf("package missing from inventory: %s", pkg)
 	}
 	var selectedRules []parity.Exception
-	for _, rule := range policies[name] {
+	rules := policies[pkg]
+	if name != pkg {
+		rules = append(slices.Clone(rules), policies[name]...)
+	}
+	for _, rule := range rules {
 		if harness.MatchName(rule.Test, filter, regexp.MatchString) {
 			selectedRules = append(selectedRules, rule)
 		}
@@ -191,6 +267,7 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 			t.Errorf("unused upstream exclusion: %s/%s", pkg, root)
 		}
 	}
+	external := externalFixtures(t, string(nativeText)+"\n"+dartText)
 	comparison := parity.Compare(native, gart, expected, selectedRules)
 	if base != "" {
 		dartVersion := strings.TrimSpace(runProgram(t, "", "dart", "--version"))
@@ -198,7 +275,7 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 		if target == "js" || target == "wasm" {
 			nodeVersion = strings.TrimSpace(runProgram(t, "", "node", "--version"))
 		}
-		data, err := json.MarshalIndent(upstreamEvidence{NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: map[string]string{"GODEBUG": os.Getenv("GODEBUG"), "GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: build.Default.BuildTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
+		data, err := json.MarshalIndent(upstreamEvidence{ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: map[string]string{"GODEBUG": os.Getenv("GODEBUG"), "GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}

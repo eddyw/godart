@@ -1,13 +1,11 @@
 [
   {
     "package": "archive/tar",
-    "status": "compile-blocked",
-    "diagnostic": "the package internal/obscuretestdata is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite"
   },
   {
     "package": "archive/zip",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.CPUIsSlow"
+    "status": "vm-suite"
   },
   {
     "package": "bufio",
@@ -24,8 +22,7 @@
   },
   {
     "package": "compress/bzip2",
-    "status": "compile-blocked",
-    "diagnostic": "the package internal/obscuretestdata is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite"
   },
   {
     "package": "compress/flate",
@@ -80,38 +77,52 @@
   },
   {
     "package": "crypto/aes",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/cipher",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/des",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/dsa",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/ecdh",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/ecdsa",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/ed25519",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/elliptic",
@@ -124,13 +135,17 @@
   },
   {
     "package": "crypto/hkdf",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/hmac",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/hpke",
@@ -150,6 +165,17 @@
   },
   {
     "package": "crypto/internal/constanttime",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/cryptotest",
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/internal/cryptotest/wycheproof",
     "status": "no-runnable-tests"
   },
   {
@@ -277,8 +303,10 @@
   },
   {
     "package": "crypto/internal/fips140only",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/internal/impl",
@@ -303,17 +331,21 @@
   {
     "package": "crypto/md5",
     "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   },
   {
     "package": "crypto/mldsa",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/mlkem",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/mlkem/mlkemtest",
@@ -321,8 +353,10 @@
   },
   {
     "package": "crypto/pbkdf2",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest/wycheproof is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/rand",
@@ -331,33 +365,45 @@
   },
   {
     "package": "crypto/rc4",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/rsa",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/sha1",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/sha256",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/sha3",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/sha512",
-    "status": "compile-blocked",
-    "diagnostic": "the package crypto/internal/cryptotest is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite",
+    "native_tags": [
+      "purego"
+    ]
   },
   {
     "package": "crypto/subtle",
@@ -404,8 +450,7 @@
   },
   {
     "package": "debug/macho",
-    "status": "compile-blocked",
-    "diagnostic": "the package internal/obscuretestdata is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite"
   },
   {
     "package": "debug/pe",
@@ -439,11 +484,21 @@
   },
   {
     "package": "encoding/base32",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "encoding/base64",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "encoding/binary",
@@ -555,13 +610,11 @@
   },
   {
     "package": "go/doc",
-    "status": "compile-blocked",
-    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite"
   },
   {
     "package": "go/doc/comment",
-    "status": "compile-blocked",
-    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite"
   },
   {
     "package": "go/format",
@@ -573,8 +626,7 @@
   },
   {
     "package": "go/printer",
-    "status": "compile-blocked",
-    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite"
   },
   {
     "package": "go/scanner",
@@ -608,11 +660,21 @@
   },
   {
     "package": "hash/crc32",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "hash/crc64",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "hash/fnv",
@@ -704,6 +766,10 @@
     "status": "vm-suite"
   },
   {
+    "package": "internal/diff",
+    "status": "vm-suite"
+  },
+  {
     "package": "internal/fmtsort",
     "status": "compile-blocked",
     "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
@@ -742,13 +808,16 @@
     "status": "no-runnable-tests"
   },
   {
+    "package": "internal/obscuretestdata",
+    "status": "no-runnable-tests"
+  },
+  {
     "package": "internal/oserror",
     "status": "no-runnable-tests"
   },
   {
     "package": "internal/platform",
-    "status": "compile-blocked",
-    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite"
   },
   {
     "package": "internal/race",
@@ -778,6 +847,10 @@
   },
   {
     "package": "internal/testlog",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/txtar",
     "status": "no-runnable-tests"
   },
   {
@@ -855,7 +928,12 @@
   },
   {
     "package": "math/cmplx",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "math/rand",
@@ -945,8 +1023,7 @@
   },
   {
     "package": "net/url",
-    "status": "compile-blocked",
-    "diagnostic": "the package internal/diff is outside the supported surface (the standard library surface is curated)"
+    "status": "vm-suite"
   },
   {
     "package": "os",
@@ -965,7 +1042,12 @@
   },
   {
     "package": "path",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "path/filepath",
@@ -1000,7 +1082,12 @@
   },
   {
     "package": "sort",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "strconv",
@@ -1098,7 +1185,12 @@
   },
   {
     "package": "unicode/utf16",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "unicode/utf8",

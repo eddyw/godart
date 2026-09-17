@@ -1,0 +1,13 @@
+--- writer.go
++++ writer.go
+@@ -250,6 +250,9 @@
+ func detectUTF8(s string) (valid, require bool) {
+ 	for i := 0; i < len(s); {
+-		r, size := utf8.DecodeRuneInString(s[i:])
++		r, size := rune(s[i]), 1
++		if r >= utf8.RuneSelf {
++			r, size = utf8.DecodeRuneInString(s[i:])
++		}
+ 		i += size
+ 		// Officially, ZIP uses CP-437, but many readers use the system's
+ 		// local character encoding. Most encoding are compatible with a large

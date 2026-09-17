@@ -319,7 +319,7 @@ func (f *flat) selectStmt(s *ir.Select, label string) {
 			Type:       types.Typ[types.Int],
 		},
 	})
-	f.pause(choice)
+	f.pause(choice).Select = true
 	end := f.state()
 	states := make([]int, len(cases))
 	for i := range cases {

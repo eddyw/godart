@@ -1,6 +1,49 @@
 {
+  "archive/tar": {
+    "TestDisableInsecurePathCheck": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestInsecurePaths": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract."
+  },
+  "archive/zip": {
+    "TestCVE202127919": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestCVE202141772": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestDisableInsecurePathCheck": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestInsecurePaths": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestOpenReaderInsecurePath": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract."
+  },
   "context": {
     "TestContextErrDoneRace": "The test requires preemption of a busy loop on another Go execution thread. Gart runs Go in 1 isolate."
+  },
+  "crypto/ecdsa": {
+    "TestKeyGenerationVectors": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract."
+  },
+  "crypto/hkdf": {
+    "TestFIPSServiceIndicator": "The test requires native FIPS service indicators. Gart does not provide the native FIPS module identity or certification mode."
+  },
+  "crypto/pbkdf2": {
+    "TestPBKDF2ServiceIndicator": "The test requires native FIPS service indicators. Gart does not provide the native FIPS module identity or certification mode."
+  },
+  "crypto/rsa": {
+    "Test3PrimeKeyGeneration": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "Test4PrimeKeyGeneration": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestDecryptPKCS1v15": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestEncryptPKCS1v15DecrypterSessionKey": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestEncryptPKCS1v15SessionKey": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestEqual": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestEverything": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestGnuTLSKey": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestImpossibleKeyGeneration": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestInvalidPSSSaltLength": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestKeyGeneration": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestKeyGenerationVectors": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestNPrimeKeyGeneration": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestOverlongMessagePKCS1v15": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestPSS513": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestPSSOpenSSL": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestPSmallerThanQ": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestSignPKCS1v15": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestTinyKeyGeneration": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestUnpaddedSignature": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestVerifyPKCS1v15": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract."
   },
   "debug/elf": {
     "TestNoSectionOverlaps": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image."
@@ -73,6 +116,10 @@
     "TestPathInfoDirRoot": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
     "TestPathInfoNoRoot": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source.",
     "TestRedirect": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source."
+  },
+  "net/url": {
+    "TestParseQueryLimits": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract.",
+    "TestParseStrictIpv6": "The original test changes GODEBUG compatibility settings, which remain outside the documented Dart runtime contract."
   },
   "testing/cryptotest": {
     "TestSetGlobalRandom/cryptocustomrand=1": "The GODEBUG runtime compatibility settings are outside the documented Dart surface."

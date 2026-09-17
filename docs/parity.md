@@ -223,8 +223,8 @@ never names, and it then asserts the value to the Go type. The 2 pass now, and
 
 ## The standard library surface
 
-The 2026-09-15 count is 257 import paths: 164 standard packages, 1 interop
-package, 80 internal packages, and 12 vendored packages.
+The 2026-09-17 count is 262 import paths: 164 standard packages, 1 interop
+package, 85 internal packages, and 12 vendored packages.
 
 The compiler reaches a standard library package 2 ways. An overlay replaces the
 real source with a small file that holds the same behavior. A native package
@@ -255,7 +255,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/sha1` | Overlay | The source of Go, with the generic block function and no FIPS mode. It registers SHA-1 with the package `crypto`. |
 | `crypto/sha256` | Overlay | The algorithm of `crypto/internal/fips140/sha256`, with the public names of `crypto/sha256`. It registers SHA-224 and SHA-256 with the package `crypto`. |
 | `crypto/sha512` | Overlay | The algorithm of `crypto/internal/fips140/sha512`, with the public names of `crypto/sha512`. It registers the 4 hashes with the package `crypto`. |
-| `crypto/hmac` | Overlay | `New` and `Equal`, from FIPS 198-1. |
+| `crypto/hmac` | Native | The original Go implementation, including hash clone support and rejection of a reused hash instance. |
 | `crypto/rand` | Overlay | `Read`, `Reader`, and `Text`, over `Random.secure` of Dart. `Int` and `Prime` read `math/big`, thus the 2 stay out. |
 | `crypto` | Native | The `Hash` table, `Signer`, `Decrypter`, and each other name. A hash registers itself, thus `Hash.New` gives the digest of the package that the program imports. |
 | `crypto/cipher` | Native | Each name of Go, with no patch. `cbc.go` converts a pointer to `cbc` into a pointer to `cbcEncrypter` and to `cbcDecrypter`, and the merge rule of 2026-09-04 gives the 3 names 1 Dart class. |
@@ -265,7 +265,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `crypto/elliptic` | Native | Each name of Go. The 4 NIST curves read `crypto/internal/fips140/nistec`. |
 | `crypto/ecdh`, `crypto/ed25519`, `crypto/ecdsa`, `crypto/rsa`, `crypto/dsa` | Native | Each name of Go. |
 | `crypto/fips140` | Native, with 1 patch | The patch replaces `enforcement.go`, which reads 3 functions of the runtime through a `go:linkname` directive. The GODEBUG setting `fips140` always holds its default, thus `Enabled` and `Enforced` each give false and no bypass is ever necessary. |
-| The 37 internal packages of the crypto stack | 35 native, with 48 patches, and 2 overlays | Each patch replaces 1 file that holds assembly, a `go:linkname` directive, or a read of the package `unsafe`, and the generic form of Go stands in its place. `crypto/internal/sysrand` is an overlay over `Random.secure` of Dart. `crypto/internal/fips140cache` is an overlay that holds no entry, thus each `Get` calls `new` again, which the document of Go allows. `crypto/internal/fips140/alias` reports no overlap: a slice of gart names no address. The document of Go says that the destination and the source of a cipher operation "must overlap entirely or not at all", thus a call that breaks that rule writes the bytes in order and gives no report where Go panics. The FIPS 140-3 mode never turns on, because each GODEBUG setting holds its default. Thus no self test runs, and the service indicator reaches no name of the surface. |
+| The internal crypto stack | Native packages with file adapters and runtime overlays | Each patch replaces 1 file that holds assembly, a `go:linkname` directive, or a read of the package `unsafe`, and the generic form of Go stands in its place. `crypto/internal/sysrand` is an overlay over `Random.secure` of Dart. `crypto/internal/fips140cache` is an overlay that holds no entry, thus each `Get` calls `new` again, which the document of Go allows. `crypto/internal/fips140/alias` uses slice storage identity and offsets to detect overlap. The original cipher tests verify the required panic for inexact overlap. The FIPS 140-3 mode never turns on, because each GODEBUG setting holds its default. Thus no self test runs, and the service indicator reaches no name of the surface. |
 | `mime`, `mime/quotedprintable`, `mime/multipart` | Native | A patch of `mime/multipart` replaces the `go:linkname` stub of `readMIMEHeader`. |
 | `net/textproto`, `net/http/cookiejar` | Native | |
 | `net/http` | Overlay | An HTTP/1.1 client and an HTTP/1.1 server. Read the section of the HTTP access. |
@@ -1874,3 +1874,23 @@ the text holds the digits that Go writes.
 - A goroutine with a busy loop and no block operation never yields. The other
   goroutines never run, exactly as GopherJS behaves.
 - `reflect.Value.Elem` of a pointer to an interface stays open.
+
+## Upstream coverage expansion: 2026-09-17
+
+Original Go tests now cover more HTTP content types, IP/MAC addresses, durations, condition variables, atomic operations, reflection iterators, and filesystem behavior.
+The adapters preserve each selected declaration and assertion body from the pinned Go source.
+
+The expanded assertions exposed these repairs:
+
+- `os.Setenv` rejects invalid names and NUL bytes.
+- `sync.Cond` detects a copy after its first use.
+- Reflection iterators preserve Go key/value semantics, named numeric types, array pointers, and function signature requirements.
+- Native HMAC supports clone operations and rejects a hash factory that reuses an instance.
+- Cipher overlap detection uses shared slice storage and offsets.
+- SHA3 registration preserves the original internal hash dependency.
+- A resumed `select` converts its Dart index to the Go integer representation on JavaScript.
+- Main completion cancels pending timers, which prevents a successful wasm program from reporting an exit error.
+- ZIP scans ASCII names directly without a temporary substring for each byte. Unicode decoding and validity rules remain unchanged.
+
+Native memory-page protection, allocation counts, native FIPS mode, and runtime `GODEBUG` reconfiguration remain explicit exclusions.
+The [upstream parity report](upstream-parity.md) records coverage and validation limits.

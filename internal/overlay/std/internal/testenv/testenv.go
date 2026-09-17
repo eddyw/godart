@@ -11,6 +11,7 @@ package testenv
 import (
 	"os"
 	"os/exec"
+	"runtime"
 	"testing"
 )
 
@@ -108,4 +109,30 @@ func CleanCmdEnv(cmd *exec.Cmd) *exec.Cmd { return cmd }
 func SkipFlaky(t testing.TB, issue int) {
 	t.Helper()
 	t.Skipf("skipping known flaky test; see golang.org/issue/%d", issue)
+}
+
+func CPUIsSlow() bool {
+	switch runtime.GOARCH {
+	case "arm", "mips", "mipsle", "mips64", "mips64le", "wasm":
+		return true
+	}
+	return false
+}
+
+func SkipIfShortAndSlow(t testing.TB) {
+	if testing.Short() && CPUIsSlow() {
+		t.Helper()
+		t.Skipf("skipping test in -short mode on %s", runtime.GOARCH)
+	}
+}
+
+func MustHaveExternalNetwork(t testing.TB) {
+	if runtime.GOOS == "js" || runtime.GOOS == "wasip1" {
+		t.Helper()
+		t.Skipf("skipping test: no external network on %s", runtime.GOOS)
+	}
+	if testing.Short() {
+		t.Helper()
+		t.Skip("skipping test: no external network in -short mode")
+	}
 }

@@ -22,8 +22,8 @@ The ratio counts names, and not use. `net` holds 346 names, because the typed
 connections and the interface list hold most of them. Read the gap column, and
 not the percent alone.
 
-The surface holds 257 import paths: 164 standard packages, the interop package
-`syscall/dart`, 80 internal packages, and 12 vendored packages of
+The surface holds 262 import paths: 164 standard packages, the interop package
+`syscall/dart`, 85 internal packages, and 12 vendored packages of
 `golang.org/x`. `make surface` measures 174 of them against the real API, and
 165 of those hold each exported name. The measure skips the interop package
 and each internal package, because no package of Go stands behind them.
@@ -57,9 +57,9 @@ of this document holds.
 
 | Form | Packages |
 |---|---|
-| Native, 76 | `archive/zip`, `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `crypto`, `crypto/aes`, `crypto/des`, `crypto/dsa`, `crypto/ecdh`, `crypto/ecdsa`, `crypto/ed25519`, `crypto/elliptic`, `crypto/hkdf`, `crypto/pbkdf2`, `crypto/rc4`, `crypto/rsa`, `crypto/sha3`, `crypto/x509/pkix`, `debug/dwarf`, `debug/macho`, `debug/plan9obj`, `encoding`, `encoding/ascii85`, `encoding/base32`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/pem`, `encoding/xml`, `go/ast`, `go/build/constraint`, `go/doc/comment`, `go/format`, `go/parser`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/crc64`, `hash/fnv`, `html`, `html/template`, `image`, `image/color`, `image/color/palette`, `image/draw`, `image/gif`, `image/jpeg`, `index/suffixarray`, `io`, `io/fs`, `io/ioutil`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/url`, `path`, `regexp`, `testing/fstest`, `testing/iotest`, `testing/slogtest`, `text/tabwriter`, `text/template`, `text/template/parse`, `unicode`, `unicode/utf16` |
-| Patch, 24 | `archive/tar`, `bytes`, `crypto/cipher`, `crypto/fips140`, `debug/elf`, `debug/pe`, `encoding/asn1`, `encoding/json`, `encoding/json/jsontext`, `encoding/json/v2`, `fmt`, `hash/crc32`, `log/slog`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `net/textproto`, `regexp/syntax`, `slices`, `sort` |
-| Overlay, 29 | `crypto/hmac`, `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `crypto/x509`, `embed`, `encoding/binary`, `encoding/gob`, `errors`, `flag`, `iter`, `log`, `maps`, `net/http/httptest`, `os/signal`, `path/filepath`, `runtime/debug`, `strconv`, `strings`, `sync`, `testing/quick`, `testing/synctest`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
+| Native, 76 | `bufio`, `cmp`, `compress/bzip2`, `compress/flate`, `compress/gzip`, `compress/lzw`, `compress/zlib`, `container/heap`, `container/list`, `container/ring`, `context`, `crypto`, `crypto/aes`, `crypto/des`, `crypto/dsa`, `crypto/ecdh`, `crypto/ecdsa`, `crypto/ed25519`, `crypto/elliptic`, `crypto/hkdf`, `crypto/hmac`, `crypto/pbkdf2`, `crypto/rc4`, `crypto/rsa`, `crypto/sha3`, `crypto/x509/pkix`, `debug/dwarf`, `debug/macho`, `debug/plan9obj`, `encoding`, `encoding/ascii85`, `encoding/base32`, `encoding/base64`, `encoding/csv`, `encoding/hex`, `encoding/pem`, `encoding/xml`, `go/ast`, `go/build/constraint`, `go/doc/comment`, `go/format`, `go/parser`, `go/printer`, `go/scanner`, `go/token`, `hash`, `hash/adler32`, `hash/crc64`, `hash/fnv`, `html`, `html/template`, `image`, `image/color`, `image/color/palette`, `image/draw`, `image/gif`, `image/jpeg`, `index/suffixarray`, `io`, `io/fs`, `io/ioutil`, `math/cmplx`, `mime`, `mime/quotedprintable`, `net/http/cookiejar`, `net/url`, `path`, `regexp`, `testing/fstest`, `testing/iotest`, `testing/slogtest`, `text/tabwriter`, `text/template`, `text/template/parse`, `unicode`, `unicode/utf16` |
+| Patch, 25 | `archive/tar`, `archive/zip`, `bytes`, `crypto/cipher`, `crypto/fips140`, `debug/elf`, `debug/pe`, `encoding/asn1`, `encoding/json`, `encoding/json/jsontext`, `encoding/json/v2`, `fmt`, `hash/crc32`, `log/slog`, `math`, `math/big`, `math/bits`, `math/rand`, `math/rand/v2`, `mime/multipart`, `net/netip`, `net/textproto`, `regexp/syntax`, `slices`, `sort` |
+| Overlay, 28 | `crypto/md5`, `crypto/rand`, `crypto/sha1`, `crypto/sha256`, `crypto/sha512`, `crypto/subtle`, `crypto/x509`, `embed`, `encoding/binary`, `encoding/gob`, `errors`, `flag`, `iter`, `log`, `maps`, `net/http/httptest`, `os/signal`, `path/filepath`, `runtime/debug`, `strconv`, `strings`, `sync`, `testing/quick`, `testing/synctest`, `time`, `time/tzdata`, `unicode/utf8`, `unique` |
 
 `time/tzdata` holds no exported name. The import gives the embedded zone
 database to `time`, and it works.

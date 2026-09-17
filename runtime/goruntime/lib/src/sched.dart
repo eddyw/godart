@@ -827,10 +827,16 @@ final List<void Function()> $releases = <void Function()>[];
 
 /// Ends the program when package main returns.
 ///
-/// Go ends the program at that point, and it does not wait for another
-/// goroutine. A pending timer keeps the Dart isolate alive, thus the program
-/// needs an explicit exit.
+/// Go does not wait for another goroutine. Cancel timers and release handles
+/// that can keep the Dart isolate alive.
 void _exitMain() {
+  for (final Object timer in _timers.values) {
+    if (timer is Timer) {
+      timer.cancel();
+      $freeEvent();
+    }
+  }
+  _timers.clear();
   for (final void Function() release in $releases) {
     release();
   }

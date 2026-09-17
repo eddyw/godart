@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -212,6 +213,50 @@ func TestTestsOfGoroot(t *testing.T) {
 	}
 	var runs []namedCase
 	for _, c := range cases {
+		if c.Package == "crypto/mldsa" && !testing.Short() {
+			listing := run(t, ".", "go", "test", "-list", ".", c.Package)
+			var others []string
+			for _, name := range strings.Fields(listing) {
+				if name != "TestAccumulated" && (strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Example") || strings.HasPrefix(name, "Fuzz")) {
+					others = append(others, regexp.QuoteMeta(name))
+				}
+			}
+			runs = append(runs, namedCase{c.Package, stdCase{Package: c.Package, Run: "^(" + strings.Join(others, "|") + ")$"}})
+			for _, parameter := range []int{44, 65, 87} {
+				runs = append(runs, namedCase{fmt.Sprintf("crypto/mldsa/accumulated-%d", parameter), stdCase{Package: c.Package, Run: fmt.Sprintf("^TestAccumulated$/^ML-DSA-%d$", parameter)}})
+			}
+			continue
+		}
+		if c.Package == "archive/zip" && !testing.Short() {
+			large := []string{"TestOver65kFiles", "TestZip64", "TestZip64EdgeCase", "TestZip64DirectoryOffset", "TestZip64ManyRecords"}
+			listing := run(t, ".", "go", "test", "-list", ".", c.Package)
+			var others []string
+			for _, name := range strings.Fields(listing) {
+				if name != "TestZip64WriterCDGoldens" && name != "TestZip64LargeDirectory" && !slices.Contains(large, name) && (strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Example") || strings.HasPrefix(name, "Fuzz")) {
+					others = append(others, regexp.QuoteMeta(name))
+				}
+			}
+			runs = append(runs, namedCase{c.Package, stdCase{Package: c.Package, Run: "^(" + strings.Join(others, "|") + ")$"}})
+			for _, name := range large {
+				runs = append(runs, namedCase{c.Package + "-" + name, stdCase{Package: c.Package, Run: "^" + name + "$"}})
+			}
+			for i, name := range []string{"uint32max-1_NoZip64", "uint32max_HasZip64"} {
+				runs = append(runs, namedCase{fmt.Sprintf("archive/zip-large-directory-%d", i), stdCase{Package: c.Package, Run: "^TestZip64LargeDirectory$/^" + name + "$"}})
+			}
+			fixtures, err := filepath.Glob(filepath.Join(build.Default.GOROOT, "src/archive/zip/testdata/zip64/*.zsparse"))
+			if err != nil || len(fixtures) == 0 {
+				t.Fatalf("upstream ZIP64 fixtures unavailable: %v", err)
+			}
+			groups := make([][]string, 3)
+			for i, fixture := range fixtures {
+				name := strings.TrimSuffix(filepath.Base(fixture), ".zsparse")
+				groups[i%len(groups)] = append(groups[i%len(groups)], regexp.QuoteMeta(name))
+			}
+			for i, names := range groups {
+				runs = append(runs, namedCase{fmt.Sprintf("archive/zip-goldens-%d", i), stdCase{Package: c.Package, Run: "^TestZip64WriterCDGoldens$/^(" + strings.Join(names, "|") + ")$"}})
+			}
+			continue
+		}
 		if c.Package != "compress/flate" || testing.Short() {
 			runs = append(runs, namedCase{c.Package, c})
 			continue

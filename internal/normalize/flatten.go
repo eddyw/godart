@@ -478,11 +478,13 @@ func (f *flat) readLocal(v *ir.Var) ir.Expr {
 
 // pause ends the state after a call that blocks. The next state re-enters the
 // call and leaves the machine when the call gave up control.
-func (f *flat) pause(v *ir.Var) {
+func (f *flat) pause(v *ir.Var) *ir.Resume {
 	n := f.state()
 	f.jump(n)
 	f.cur = n
-	f.emit(&ir.Resume{Var: v, State: n})
+	resume := &ir.Resume{Var: v, State: n}
+	f.emit(resume)
+	return resume
 }
 
 func (f *flat) ifStmt(s *ir.If) {

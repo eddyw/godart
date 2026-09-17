@@ -1,0 +1,30 @@
+--- fetchmodule.go
++++ fetchmodule.go
+@@ -18,12 +18,16 @@
+ // possible in this environment.
+ func FetchModule(t *testing.T, module, version string) string {
+ 	testenv.MustHaveExternalNetwork(t)
++	goTool, err := exec.LookPath("go")
++	if err != nil {
++		t.Fatal(err)
++	}
+ 
+ 	// If the default GOMODCACHE doesn't exist, use a temporary directory
+ 	// instead. (For example, run.bash sets GOPATH=/nonexist-gopath.)
+-	out, err := testenv.CleanCmdEnv(testenv.Command(t, testenv.GoToolPath(t), "env", "GOMODCACHE")).Output()
++	out, err := exec.Command(goTool, "env", "GOMODCACHE").Output()
+ 	if err != nil {
+-		t.Errorf("%s env GOMODCACHE: %v\n%s", testenv.GoToolPath(t), err, out)
++		t.Errorf("%s env GOMODCACHE: %v\n%s", goTool, err, out)
+ 		if ee, ok := err.(*exec.ExitError); ok {
+ 			t.Logf("%s", ee.Stderr)
+ 		}
+@@ -43,7 +47,7 @@
+ 
+ 	t.Logf("fetching %s@%s\n", module, version)
+ 
+-	cmd := testenv.Command(t, testenv.GoToolPath(t), "mod", "download", "-json", module+"@"+version)
++	cmd := exec.Command(goTool, "mod", "download", "-json", module+"@"+version)
+ 	var stderr bytes.Buffer
+ 	cmd.Stderr = &stderr
+ 	output, err := cmd.Output()

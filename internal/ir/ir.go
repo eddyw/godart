@@ -333,6 +333,8 @@ type (
 	Resume struct {
 		Var   *Var
 		State int
+		// Select frames return a Dart index, not a Go integer representation.
+		Select bool
 	}
 
 	// DeferNext runs the next deferred call of a machine. The chain reaches

@@ -1381,8 +1381,10 @@ func (t *rtype) CanSeq() bool {
 		Uint, Uint8, Uint16, Uint32, Uint64, Uintptr,
 		Array, Slice, Chan, String, Map:
 		return true
+	case Pointer:
+		return t.Elem().Kind() == Array
 	case Func:
-		return t.NumIn() == 1 && t.NumOut() == 0
+		return rangeFuncType(t, 1)
 	}
 	return false
 }
@@ -1392,8 +1394,10 @@ func (t *rtype) CanSeq2() bool {
 	switch t.Kind() {
 	case Array, Slice, String, Map:
 		return true
+	case Pointer:
+		return t.Elem().Kind() == Array
 	case Func:
-		return t.NumIn() == 1 && t.NumOut() == 0
+		return rangeFuncType(t, 2)
 	}
 	return false
 }
@@ -1615,70 +1619,6 @@ func (v Value) Recv() (Value, bool) {
 	out, ok := dart.ValueRecv(v.read())
 	return Value{value: out, ok: true}, ok
 }
-
-// Seq gives a sequence of 1 value for each element.
-func (v Value) Seq() iter.Seq[Value] {
-	return func(yield func(Value) bool) {
-		switch v.Kind() {
-		case Int, Int8, Int16, Int32, Int64,
-			Uint, Uint8, Uint16, Uint32, Uint64, Uintptr:
-			for i := int64(0); i < v.Int(); i++ {
-				if !yield(Value{value: dart.WithInt(v.descOf(), i), ok: true}) {
-					return
-				}
-			}
-		case Slice, Array, String:
-			for i := range v.Len() {
-				if !yield(v.Index(i)) {
-					return
-				}
-			}
-		case Map:
-			for _, k := range v.MapKeys() {
-				if !yield(k) {
-					return
-				}
-			}
-		case Chan:
-			for {
-				got, ok := v.Recv()
-				if !ok {
-					return
-				}
-				if !yield(got) {
-					return
-				}
-			}
-		default:
-			panic("reflect: Seq of " + v.Type().String())
-		}
-	}
-}
-
-// Seq2 gives a sequence of 2 values for each element.
-func (v Value) Seq2() iter.Seq2[Value, Value] {
-	return func(yield func(Value, Value) bool) {
-		switch v.Kind() {
-		case Slice, Array, String:
-			for i := range v.Len() {
-				if !yield(Value{value: dart.WithInt(intDesc(), int64(i)), ok: true}, v.Index(i)) {
-					return
-				}
-			}
-		case Map:
-			for _, k := range v.MapKeys() {
-				if !yield(k, v.MapIndex(k)) {
-					return
-				}
-			}
-		default:
-			panic("reflect: Seq2 of " + v.Type().String())
-		}
-	}
-}
-
-// intDesc gives the handle of the type int.
-func intDesc() int { return TypeOf(0).handle() }
 
 // Bits gives the count of bits of a sized arithmetic type. Each other type
 // panics, exactly as in Go.

@@ -12,8 +12,8 @@ import (
 )
 
 var update = flag.Bool("update", false, "write the golden files again")
-var shardIndex = flag.Int("shard-index", 0, "zero-based shard of the program, Go language, and GOROOT suites")
-var shardCount = flag.Int("shard-count", 1, "number of shards of the program, Go language, and GOROOT suites")
+var shardIndex = flag.Int("shard-index", 0, "zero-based shard of the large test suites")
+var shardCount = flag.Int("shard-count", 1, "number of shards of the large test suites")
 
 var caseDurations = sync.OnceValues(func() (map[string]float64, error) {
 	data, err := os.ReadFile("testdata/ci-durations.json")

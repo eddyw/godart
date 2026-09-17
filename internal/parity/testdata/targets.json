@@ -111,5 +111,69 @@
       "wasm"
     ],
     "run": "^FuzzCoder$"
+  },
+  {
+    "package": "encoding/base32",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "encoding/base64",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "hash/crc32",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "hash/crc64",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "unicode/utf16",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "math/cmplx",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "path",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "sort",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   }
 ]

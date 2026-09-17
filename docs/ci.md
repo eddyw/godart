@@ -15,7 +15,7 @@ The CI toolchain uses Go 1.27.0 and Dart 3.13.3.
 The JavaScript and WebAssembly tests use Node.js 26.8.2.
 GitHub Actions uses Ubuntu 24.04 on AMD64 and a macOS ARM64 priority job. Local Linux validation uses AMD64 containers under emulation.
 
-The workflow executes the current `make ci` test selection across 26 test jobs and 1 matrix-definition job:
+The workflow executes the current `make ci` test selection across 28 test jobs and 1 matrix-definition job:
 
 - 1 job runs format validation, vet, Flutter Go tests, Dart runtime tests, and native Go packages outside the driver.
 - 1 job runs the driver tests outside the larger integration and target groups.
@@ -23,10 +23,10 @@ The workflow executes the current `make ci` test selection across 26 test jobs a
 - 3 jobs run AOT/JS/wasm basics, web I/O, and web fetch.
 - 6 jobs run all 376 custom Go/Dart parity programs.
 - 4 jobs run all 931 discovered upstream Go language cases, with explicit exclusions.
-- 6 jobs run the 116 declared upstream package suites, with exact outcome comparisons and explicit exclusions.
-- 1 job runs original upstream assertions across AOT, JS, and wasm.
+- 6 jobs run the 146 declared upstream package suites, with exact outcome comparisons and explicit exclusions.
+- 3 jobs run original upstream assertions across AOT, JS, and wasm.
 - 2 jobs run priority upstream assertions on Linux and macOS, including independent native HTTP servers.
-- 1 job verifies the 77 known package compile blockers.
+- 1 job verifies the 49 known package compile blockers.
 
 `scripts/ci-matrix.json` defines the job selection and limits.
 The workflow uses Node24 versions of checkout, setup-go, setup-node, and upload-artifact.
@@ -36,7 +36,7 @@ The workflow enforces the declared [upstream parity contract](upstream-parity.md
 Native memory-page tests, allocator tests, and other documented exclusions do not count as parity passes.
 The 2 math fixtures also mark 15 host-dependent subnormal result comparisons. See [support limits](support.md).
 
-Routine standard library jobs pass upstream `-short` to both Go and Gart.
+Routine standard library and upstream target jobs pass upstream `-short` to both Go and Gart.
 The workflow input `upstream_mode=full` selects the original long suites.
 Both modes retain their exact exclusions and record their configuration in the evidence.
 Linux standard library jobs install `zstd` and `xxhash` for the original decompressor and hash tests.
@@ -74,8 +74,9 @@ The driver assigns the longest estimated cases to the shard with the least estim
 Source enumeration order does not change the assignments. Each case belongs to exactly 1 shard.
 The default Go test flags select all shards as 1 complete suite.
 
-The program, language, and full-mode estimates retain the earlier measured baseline.
-Short standard library estimates use the 2026-09-17 Linux package durations.
+Program and language estimates retain the earlier measured baseline.
+The new standard library and target estimates include the 2026-09-17 expansion probes.
+Short standard library estimates retain the existing Linux baseline and estimates for the new packages.
 These estimates select shards. They do not determine test timeout limits.
 
 All Go CI tests use `-count=1`. Go compilation and dependency caches can remain warm.
@@ -110,7 +111,19 @@ The full-mode standard library harness divides flate into 4 executions:
 The 10 level subtests retain their inputs, iteration counts, assertions, and upstream skips.
 The outer reset setup executes for each group. Each level subtest executes once.
 The remaining test filter comes from native Go test discovery, which includes new upstream test functions.
-Full mode uses 119 harness cases. Short mode uses 116 cases and preserves Go’s original reset levels 0 and 1.
+Full mode also separates the 5 independent large ZIP roots and the 2 large-directory subtests from the remaining ZIP roots.
+The 24 ZIP64 fixtures form 3 disjoint groups. Each original fixture executes once, with its original bytes and assertions.
+Full ML-DSA accumulation tests form 3 parameter groups, with all 10100 original iterations per group.
+The remaining ML-DSA roots execute together.
+Full mode uses 162 harness cases. Short mode uses 146 cases and preserves Go’s original reset levels 0 and 1.
+
+The 20 upstream target packages form 3 shards. Routine target runs preserve upstream short-mode behavior on both runtimes.
+Full target runs retain all iterations and use the full upstream process limit.
+
+The ZIP CPU profile identified substring allocations in its UTF-8 scan.
+The ASCII path now reads the original byte directly and preserves the Unicode decoder and validity rules.
+Both original 4 GB directory cases pass in 71.1 and 76.1 seconds on macOS.
+The complete 11-group ZIP replay takes 299.2 seconds with 2 concurrent groups.
 
 Program and language fixtures share 1 real Pub dependency resolution per test process.
 The helper relocates the generated package entry and preserves resolved dependency paths.
@@ -130,7 +143,10 @@ The host uses an Apple M4 Max with 16 cores. The Docker VM has 4 CPUs.
 Each Linux/AMD64 container has a 2-CPU limit and runs as UID/GID 65534.
 The 2026-09-17 acceptance replay uses at most 2 concurrent containers.
 All measurements use uncached test results and warm compilation/dependency caches.
+The new Linux shard durations include local container setup and dependency preparation.
 Each Linux job sets `GOMAXPROCS=2` and `GOFLAGS=-p=2`.
+Full fixture runs also require a writable `GOPATH` for Go’s checksum cache.
+The initial HKDF run exposed an unwritable container home. The acceptance replay uses a writable cache.
 
 The dated rows distinguish the earlier complete Linux regression baseline from the new upstream parity measurements.
 The macOS priority measurement uses the same 2-core Go settings.
@@ -155,26 +171,31 @@ No GitHub Actions run occurred during this stabilization batch.
 | language | Linux | 1 | 2026-09-16 | 755.0 | 26 | 31 |
 | language | Linux | 2 | 2026-09-16 | 756.0 | 26 | 31 |
 | language | Linux | 3 | 2026-09-16 | 612.0 | 21 | 26 |
-| upstream-targets | Linux | 0 | 2026-09-17 | 475.6 | 16 | 21 |
-| upstream-priority | Linux | 0 | 2026-09-17 | 125.8 | 5 | 10 |
 | upstream-blockers | Linux | 0 | 2026-09-17 | 78.1 | 3 | 8 |
-| upstream-priority | macOS | 0 | 2026-09-17 | 116.0 | 4 | 9 |
-| stdlib (short) | Linux | 0 | 2026-09-17 | 199.8 | 7 | 12 |
-| stdlib (full) | Linux | 0 | 2026-09-17 | 808.1 | 27 | 32 |
-| stdlib (short) | Linux | 1 | 2026-09-17 | 222.8 | 8 | 13 |
-| stdlib (full) | Linux | 1 | 2026-09-17 | 399.5 | 14 | 19 |
-| stdlib (short) | Linux | 2 | 2026-09-17 | 196.2 | 7 | 12 |
-| stdlib (full) | Linux | 2 | 2026-09-17 | 244.1 | 9 | 14 |
-| stdlib (short) | Linux | 3 | 2026-09-17 | 196.1 | 7 | 12 |
-| stdlib (full) | Linux | 3 | 2026-09-17 | 527.4 | 18 | 23 |
-| stdlib (short) | Linux | 4 | 2026-09-17 | 194.3 | 7 | 12 |
-| stdlib (full) | Linux | 4 | 2026-09-17 | 796.2 | 27 | 32 |
-| stdlib (short) | Linux | 5 | 2026-09-17 | 202.2 | 7 | 12 |
-| stdlib (full) | Linux | 5 | 2026-09-17 | 221.6 | 8 | 13 |
+| upstream-targets (short) | Linux | 0 | 2026-09-17 | 162.0 | 6 | 11 |
+| upstream-targets (short) | Linux | 1 | 2026-09-17 | 351.4 | 12 | 17 |
+| upstream-targets (short) | Linux | 2 | 2026-09-17 | 377.7 | 13 | 18 |
+| upstream-targets (full) | Linux | 0 | 2026-09-17 | 678.4 | 23 | 28 |
+| upstream-targets (full) | Linux | 1 | 2026-09-17 | 354.2 | 12 | 17 |
+| upstream-targets (full) | Linux | 2 | 2026-09-17 | 358.2 | 12 | 17 |
+| stdlib (short) | Linux | 0 | 2026-09-17 | 363.8 | 13 | 18 |
+| stdlib (short) | Linux | 1 | 2026-09-17 | 368.5 | 13 | 18 |
+| stdlib (short) | Linux | 2 | 2026-09-17 | 349.6 | 12 | 17 |
+| stdlib (short) | Linux | 3 | 2026-09-17 | 388.0 | 13 | 18 |
+| stdlib (short) | Linux | 4 | 2026-09-17 | 314.0 | 11 | 16 |
+| stdlib (short) | Linux | 5 | 2026-09-17 | 296.6 | 10 | 15 |
+| upstream-priority | Linux | 0 | 2026-09-17 | 180.6 | 7 | 12 |
+| upstream-priority | macOS | 0 | 2026-09-17 | 159.0 | 6 | 11 |
+| stdlib (full) | Linux | 0 | 2026-09-17 | 920.7 | 31 | 36 |
+| stdlib (full) | Linux | 1 | 2026-09-17 | 535.1 | 18 | 23 |
+| stdlib (full) | Linux | 2 | 2026-09-17 | 1117.0 | 38 | 43 |
+| stdlib (full) | Linux | 3 | 2026-09-17 | 1124.9 | 38 | 43 |
+| stdlib (full) | Linux | 4 | 2026-09-17 | 1087.4 | 37 | 42 |
+| stdlib (full) | Linux | 5 | 2026-09-17 | 1213.2 | 41 | 46 |
 
 Each test step uses twice its measured local duration, rounded up to whole minutes.
 Job limits allow 5 additional minutes for toolchain setup and log upload.
-The standard library jobs select separate short and full limits from the workflow input.
+The standard library and upstream target jobs select separate short and full limits from the workflow input.
 Suite jobs compile the driver test binary before the timed test step.
 `GART_TEST_TIMEOUT` controls the Go test timeout for a local wrapper run.
 

@@ -36,7 +36,15 @@ func TestUpstreamTargets(t *testing.T) {
 	if err := json.Unmarshal(data, &inventory); err != nil {
 		t.Fatal(err)
 	}
+	names := make([]string, 0, len(cases))
 	for _, c := range cases {
+		names = append(names, c.Package)
+	}
+	selected := testShard(t, names)
+	for _, c := range cases {
+		if !selected[c.Package] {
+			continue
+		}
 		pkg := c.Package
 		t.Run(pkg, func(t *testing.T) {
 			t.Parallel()
@@ -79,11 +87,11 @@ func TestUpstreamTargets(t *testing.T) {
 					case "aot":
 						exe := filepath.Join(out, "tests.exe")
 						run(t, out, "dart", "compile", "exe", "runner.dart", "-o", exe)
-						result = programOutcome(t, dir, exe)
+						result = programOutcomeWithLimit(t, dir, upstreamLimit(), exe)
 					case "js":
 						run(t, out, "dart", "compile", "js", "runner.dart", "-o", "main.js")
 						writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
-						result = programOutcome(t, dir, "node", filepath.Join(out, "run.js"))
+						result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", filepath.Join(out, "run.js"))
 					case "wasm":
 						run(t, out, "dart", "compile", "wasm", "runner.dart", "-o", "main.wasm")
 						writeFile(t, filepath.Join(out, "run.mjs"), `import {compile} from './main.mjs';
@@ -92,7 +100,7 @@ const app = await compile(await readFile(new URL('./main.wasm', import.meta.url)
 const instance = await app.instantiate({});
 instance.invokeMain();
 `)
-						result = programOutcome(t, dir, "node", filepath.Join(out, "run.mjs"))
+						result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", filepath.Join(out, "run.mjs"))
 					}
 					compareUpstream(t, pkg, pkg, filter, target, dir, result.Text, result.Exit)
 

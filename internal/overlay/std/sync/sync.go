@@ -138,6 +138,7 @@ type Cond struct {
 	L Locker
 
 	waiters []chan bool
+	self    *Cond
 }
 
 // NewCond gives a Cond with the lock l.
@@ -146,6 +147,7 @@ func NewCond(l Locker) *Cond { return &Cond{L: l} }
 // Wait gives up the lock and waits for a Signal or a Broadcast. It takes the
 // lock again before it gives control back.
 func (c *Cond) Wait() {
+	c.checkCopy()
 	w := make(chan bool)
 	c.waiters = append(c.waiters, w)
 	c.L.Unlock()
@@ -155,6 +157,7 @@ func (c *Cond) Wait() {
 
 // Signal wakes 1 goroutine of the queue.
 func (c *Cond) Signal() {
+	c.checkCopy()
 	if len(c.waiters) == 0 {
 		return
 	}
@@ -165,10 +168,19 @@ func (c *Cond) Signal() {
 
 // Broadcast wakes each goroutine of the queue.
 func (c *Cond) Broadcast() {
+	c.checkCopy()
 	for _, w := range c.waiters {
 		close(w)
 	}
 	c.waiters = nil
+}
+
+func (c *Cond) checkCopy() {
+	if c.self == nil {
+		c.self = c
+	} else if c.self != c {
+		panic("sync.Cond is copied")
+	}
 }
 
 // A WaitGroup waits for a group of goroutines.

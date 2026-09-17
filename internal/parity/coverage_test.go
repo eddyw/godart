@@ -2,7 +2,9 @@ package parity
 
 import (
 	"encoding/json"
+	"go/build"
 	"os"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -25,9 +27,13 @@ func TestCoverageManifest(t *testing.T) {
 	readManifest(t, runtime.GOOS+"-"+runtime.GOARCH+".json", &inventory)
 	var coverage []Coverage
 	readManifest(t, "coverage-manifest.json", &coverage)
-	var suites []struct{ Package, Run string }
+	var suites []struct {
+		Package, Run string
+		NativeTags   []string `json:"native_tags"`
+	}
 	readManifest(t, "vm-suites.json", &suites)
 	selected := map[string]bool{}
+	tags := map[string][]string{}
 	for _, s := range suites {
 		if selected[s.Package] {
 			t.Errorf("duplicate suite: %s", s.Package)
@@ -36,6 +42,7 @@ func TestCoverageManifest(t *testing.T) {
 			t.Errorf("unclassified suite filter: %s", s.Package)
 		}
 		selected[s.Package] = true
+		tags[s.Package] = s.NativeTags
 	}
 	byPackage := map[string]Package{}
 	for _, p := range inventory.Packages {
@@ -50,8 +57,21 @@ func TestCoverageManifest(t *testing.T) {
 		delete(byPackage, c.Package)
 		switch c.Status {
 		case "vm-suite":
+			if !slices.Equal(c.NativeTags, tags[c.Package]) {
+				t.Errorf("changed native build tags: %s", c.Package)
+			}
 			if !selected[c.Package] {
 				t.Errorf("lost suite: %s", c.Package)
+			}
+			if len(c.NativeTags) > 0 {
+				ctx := build.Default
+				ctx.BuildTags = append(slices.Clone(inventory.BuildTags), c.NativeTags...)
+				for _, test := range p.Tests {
+					eligible, err := ctx.MatchFile(filepath.Join(ctx.GOROOT, "src", p.Path), test.File)
+					if err != nil || eligible != test.Eligible {
+						t.Errorf("native tags change test eligibility: %s/%s: %v", p.Path, test.File, err)
+					}
+				}
 			}
 			delete(selected, c.Package)
 		case "compile-blocked":

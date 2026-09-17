@@ -14,7 +14,11 @@
 // Neither mode ever turns on under gart.
 package fips140hash
 
-import "hash"
+import (
+	// Preserve the registration side effect of the upstream dependency.
+	_ "crypto/sha3"
+	"hash"
+)
 
 // Unwrap gives h.
 func Unwrap(h hash.Hash) hash.Hash {

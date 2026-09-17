@@ -462,5 +462,155 @@
   {
     "package": "fmt",
     "run": ""
+  },
+  {
+    "package": "archive/tar"
+  },
+  {
+    "package": "archive/zip"
+  },
+  {
+    "package": "compress/bzip2"
+  },
+  {
+    "package": "crypto/aes",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/cipher",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/des",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/dsa",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/ecdh",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/ecdsa",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/ed25519",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/hkdf",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/hmac",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/internal/cryptotest",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/internal/fips140only",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/mldsa",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/mlkem",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/pbkdf2",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/rc4",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/rsa",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/sha1",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/sha256",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/sha3",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "crypto/sha512",
+    "native_tags": [
+      "purego"
+    ]
+  },
+  {
+    "package": "debug/macho"
+  },
+  {
+    "package": "go/doc"
+  },
+  {
+    "package": "go/doc/comment"
+  },
+  {
+    "package": "go/printer"
+  },
+  {
+    "package": "internal/diff"
+  },
+  {
+    "package": "internal/platform"
+  },
+  {
+    "package": "net/url"
   }
 ]

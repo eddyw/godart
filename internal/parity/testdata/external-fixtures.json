@@ -1,0 +1,14 @@
+[
+  {
+    "path": "github.com/c2sp/wycheproof",
+    "version": "v0.0.0-20260625212325-ee7b4f7e6119",
+    "sum": "h1:jOCu6erj86P93+eFn8Qxp6XLwftn1nW0C9RUx7xZwZg=",
+    "go_mod_sum": "h1:/5JsOpi3fKmnnig5BQ2mz49TNtnrD308VfTVHcbr5x4="
+  },
+  {
+    "path": "filippo.io/mostly-harmless/ed25519vectors",
+    "version": "v0.0.0-20210322192420-30a2d7243a94",
+    "sum": "h1:oHn3iEYQCHVcHLEqtzCSizBZcnOSFk61oo8tKsbNrqI=",
+    "go_mod_sum": "h1:UY6GqNmG+coCcFEiqRTkyhS4fiEGWFqGHweHUKcLWfU="
+  }
+]

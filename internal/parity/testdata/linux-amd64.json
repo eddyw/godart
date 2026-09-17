@@ -5994,6 +5994,91 @@
       "seeds": null
     },
     {
+      "path": "crypto/internal/cryptotest",
+      "tests": [
+        {
+          "name": "TestChaCha20Poly1305Wycheproof",
+          "file": "chacha20poly1305_wycheproof_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "aead.go",
+          "sha256": "b595a02245d634e3f8ba7058fb7bd1c1899cfac190db17d1e48cbea003371a01"
+        },
+        {
+          "path": "allocations.go",
+          "sha256": "3ed3172d8f3b9f91ee185aaa8451a0a48fdf276845d16b40e8e10e0f726707b3"
+        },
+        {
+          "path": "block.go",
+          "sha256": "2fe6a0823352a9f1a2abdd7e774d032bdf1286bdb0f2b53776d75ac648cf5e6d"
+        },
+        {
+          "path": "blockmode.go",
+          "sha256": "67df2850cd051e5b495a6b1f7c0d6ea74ea30a639d78053da53319c9c12df08c"
+        },
+        {
+          "path": "boundary.go",
+          "sha256": "bd1a1da5e2d8397fa28c6896f16f5a1d7240f270d3c99192277c31ae52ae61ec"
+        },
+        {
+          "path": "boundary_compat.go",
+          "sha256": "8d45ae6d669b68e465b7962a7ae85ff6ff5c93cdfc4390a4aeb268d7aa1b03a3"
+        },
+        {
+          "path": "chacha20poly1305_wycheproof_test.go",
+          "sha256": "00927d3ea46d7562b7bdccb374c24e8bc53366d1aafb0ccd8b98d1986d1637c4"
+        },
+        {
+          "path": "fetchmodule.go",
+          "sha256": "2d306a520ce99ca3c046cb66f60b99bcfec2e4b47617fe2e0cca93a213c8f6a2"
+        },
+        {
+          "path": "fips140.go",
+          "sha256": "64a530418534ba1009129a264ffe177da317afc2ef3bd202b48cac58adb59f3f"
+        },
+        {
+          "path": "hash.go",
+          "sha256": "6b4919f2cc0de5d21254efa85db1063b82a62c039ebb863c806ac2d9e8e8d063"
+        },
+        {
+          "path": "implementations.go",
+          "sha256": "8c33559256461e3e3877a727614aa7fb3015a6ab821e4147b57889c054a8c2e1"
+        },
+        {
+          "path": "methods.go",
+          "sha256": "401d76c59435ebb0e98be80f8d3f4dc6475e62d027c9f44930ddd18a135b9240"
+        },
+        {
+          "path": "stream.go",
+          "sha256": "93995fda5ca9ced92ca64b492011274e1eb0352f1311472cbff7c1af4b0d6288"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "crypto/internal/cryptotest/wycheproof",
+      "tests": null,
+      "files": [
+        {
+          "path": "schema.go",
+          "sha256": "f408a69229d31bab9d1fd44df159448cd382dbe629ff6351d7d145849dd6beed"
+        },
+        {
+          "path": "schemaversion.go",
+          "sha256": "d2755eacb0c8bb8d8556366c3ce71841fa7e91441275c9550f2e5ec9e9f07cc0"
+        },
+        {
+          "path": "wycheproof.go",
+          "sha256": "103ba8b08549d200b3f56d22c19d25db88fb39dfd78802f038c3d002f5317ec7"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "crypto/internal/fips140",
       "tests": [
         {
@@ -27205,6 +27290,28 @@
       "seeds": null
     },
     {
+      "path": "internal/diff",
+      "tests": [
+        {
+          "name": "Test",
+          "file": "diff_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "diff.go",
+          "sha256": "d38632645cabdc4197cbe11fb72397aa029d45020e4c3c8c834ae375ca8e9a1d"
+        },
+        {
+          "path": "diff_test.go",
+          "sha256": "9b95c1fe752f9ef00ee376ac973f51f4c3ee642540e5fb3460c36a67e7b67875"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "internal/fmtsort",
       "tests": [
         {
@@ -27578,6 +27685,17 @@
         {
           "path": "nettrace.go",
           "sha256": "0da7a09e33953e6e690b78b2eb30749bc433696dddc24d8b0e158c17274b6b96"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "internal/obscuretestdata",
+      "tests": null,
+      "files": [
+        {
+          "path": "obscuretestdata.go",
+          "sha256": "cf0f6c57690869cf85d280d633949e708ce0908ce35e643f1a6727c947ddde8a"
         }
       ],
       "seeds": null
@@ -27969,6 +28087,17 @@
         {
           "path": "log.go",
           "sha256": "116a76747970a636a8888c7419486a3466385145a229cc5db7ca0b9ac7272348"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "internal/txtar",
+      "tests": null,
+      "files": [
+        {
+          "path": "archive.go",
+          "sha256": "f0cfcb6a02bd8db471ff3ab1573fb9a25694997ed6e6cd38d3b95f3b120b7837"
         }
       ],
       "seeds": null

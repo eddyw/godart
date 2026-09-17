@@ -919,6 +919,16 @@ func Setenv(name, value string) error {
 	if name == "" {
 		return errors.New("setenv: invalid argument")
 	}
+	for i := range len(name) {
+		if name[i] == '=' || name[i] == 0 {
+			return errors.New("setenv: invalid argument")
+		}
+	}
+	for i := range len(value) {
+		if value[i] == 0 {
+			return errors.New("setenv: invalid argument")
+		}
+	}
 	loadEnv()
 	if _, held := env[name]; !held {
 		order = append(order, name)

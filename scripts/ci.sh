@@ -47,16 +47,18 @@ case "$suite" in
   web-fetch) test_name=TestWebFetch ;;
   programs) test_name=TestPrograms ;;
   language) test_name=TestRunFilesOfGoTest ;;
-  stdlib)
-    test_name=TestTestsOfGoroot
-    if [[ ${GART_UPSTREAM_MODE:-short} == short ]]; then
-      short_flag=-short=true
-    elif [[ ${GART_UPSTREAM_MODE} != full ]]; then
-      printf 'unknown upstream mode: %s\n' "$GART_UPSTREAM_MODE" >&2; exit 2
-    fi
-    ;;
+  stdlib) test_name=TestTestsOfGoroot ;;
   *) printf 'unknown CI suite: %s\n' "$suite" >&2; exit 2 ;;
 esac
+
+if [[ $suite == stdlib || $suite == upstream-targets ]]; then
+  if [[ ${GART_UPSTREAM_MODE:-short} == short ]]; then
+    short_flag=-short=true
+  elif [[ ${GART_UPSTREAM_MODE} != full ]]; then
+    printf 'unknown upstream mode: %s\n' "$GART_UPSTREAM_MODE" >&2
+    exit 2
+  fi
+fi
 
 if [[ $suite != checks && $suite != driver ]]; then
   go test -v -count=1 -timeout "$test_timeout" "$short_flag" ./internal/driver \
