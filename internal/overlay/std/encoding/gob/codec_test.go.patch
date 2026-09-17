@@ -1,0 +1,48 @@
+Use the target integer width for the upstream size predicate. Both supported native baselines and Dart use 64-bit uintptr values. Preserve all overflow assertions.
+--- codec_test.go
++++ codec_test.go
+@@ -14,7 +14,7 @@
+ 	"strings"
+ 	"testing"
+ 	"time"
+-	"unsafe"
++	"strconv"
+ )
+ 
+ var doFuzzTests = flag.Bool("gob.fuzz", false, "run the fuzz tests, which are large and very slow")
+@@ -1567,7 +1567,7 @@
+ 
+ func TestLargeSlice(t *testing.T) {
+ 	t.Run("byte", func(t *testing.T) {
+-		if unsafe.Sizeof(uintptr(0)) > 4 {
++		if (strconv.IntSize / 8) > 4 {
+ 			t.Parallel() // Only run in parallel in a large address space
+ 		}
+ 		s := make([]byte, 10<<21)
+@@ -1579,7 +1579,7 @@
+ 		testEncodeDecode(t, st, rt)
+ 	})
+ 	t.Run("int8", func(t *testing.T) {
+-		if unsafe.Sizeof(uintptr(0)) > 4 {
++		if (strconv.IntSize / 8) > 4 {
+ 			t.Parallel()
+ 		}
+ 		s := make([]int8, 10<<21)
+@@ -1591,7 +1591,7 @@
+ 		testEncodeDecode(t, st, rt)
+ 	})
+ 	t.Run("struct", func(t *testing.T) {
+-		if unsafe.Sizeof(uintptr(0)) > 4 {
++		if (strconv.IntSize / 8) > 4 {
+ 			t.Parallel()
+ 		}
+ 		s := make([]StringPair, 1<<21)
+@@ -1604,7 +1604,7 @@
+ 		testEncodeDecode(t, st, rt)
+ 	})
+ 	t.Run("string", func(t *testing.T) {
+-		if unsafe.Sizeof(uintptr(0)) > 4 {
++		if (strconv.IntSize / 8) > 4 {
+ 			t.Parallel()
+ 		}
+ 		s := make([]string, 1<<21)

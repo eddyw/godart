@@ -30,18 +30,19 @@ func TestSelectedUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	selections := map[string][]upstreamFile{
-		"sync":        {{Name: "once_test.go"}, {Name: "cond_test.go"}},
+		"os/exec":     {{Name: "env_test.go"}},
+		"sync":        {{Name: "once_test.go"}, {Name: "cond_test.go"}, {Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo"}}},
 		"sync/atomic": {{Name: "value_test.go"}, {Name: "atomic_test.go", Declarations: atomicDeclarations()}},
-		"reflect":     {{Name: "visiblefields_test.go"}, {Name: "iter_test.go"}, {Name: "all_test.go", Declarations: []string{"shouldPanic"}}},
-		"time": {{Name: "example_test.go"}, {Name: "time_test.go", Declarations: []string{
+		"reflect":     {{Name: "visiblefields_test.go"}, {Name: "iter_test.go"}, {Name: "set_test.go", Declarations: []string{"TestImplicitSetConversion", "TestImplicitSendConversion", "TestImplicitCallConversion", "TestImplicitAppendConversion"}}, {Name: "all_test.go", Declarations: []string{"shouldPanic"}}},
+		"time": {{Name: "format_test.go", Declarations: []string{"TimeFormatTest", "rfc3339Formats", "TestRFC3339Conversion", "FormatTest", "formatTests", "TestFormat", "goStringTests", "TestGoString", "TestFormatSingleDigits", "TestFormatShortYear", "TestNoonIs12PM", "TestMidnightIs12AM", "Test12PMIsNoon", "Test12AMIsMidnight"}}, {Name: "example_test.go"}, {Name: "time_test.go", Declarations: []string{
 			"durationTests", "TestDurationString", "parseDurationTests", "TestParseDuration", "parseDurationErrorTests", "TestParseDurationErrors", "TestParseDurationRoundTrip",
 			"nsDurationTests", "TestDurationNanoseconds", "usDurationTests", "TestDurationMicroseconds", "msDurationTests", "TestDurationMilliseconds",
 			"secDurationTests", "TestDurationSeconds", "minDurationTests", "TestDurationMinutes", "hourDurationTests", "TestDurationHours",
 			"durationTruncateTests", "TestDurationTruncate", "durationRoundTests", "TestDurationRound", "durationAbsTests", "TestDurationAbs", "minDuration", "maxDuration",
 		}}},
-		"os":       {{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "read_test.go", Declarations: []string{"checkNamedSize", "TestReadFile", "TestWriteFile"}}},
+		"os":       {{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "read_test.go", Declarations: []string{"checkNamedSize", "TestReadFile", "TestWriteFile", "TestReadOnlyWriteFile"}}},
 		"net":      {{Name: "ip_test.go"}, {Name: "mac_test.go"}},
-		"net/http": {{Name: "sniff_test.go", Declarations: []string{"sniffTests", "TestDetectContentType"}}},
+		"net/http": {{Name: "header_test.go", Declarations: []string{"headerWriteTests", "TestHeaderWrite", "parseTimeTests", "TestParseTime", "TestNilHeaderClone"}}, {Name: "sniff_test.go", Declarations: []string{"sniffTests", "TestDetectContentType"}}},
 	}
 	for pkg, files := range selections {
 		t.Run(pkg, func(t *testing.T) {
@@ -56,7 +57,15 @@ func TestSelectedUpstream(t *testing.T) {
 				if pkg == "net" {
 					source = strings.Replace(source, "package net", "package net_test\nimport . \"net\"", 1)
 				}
+				if pkg == "net/http" && file.Name == "header_test.go" {
+					source = strings.Replace(source, "package http", "package http_test\nimport . \"net/http\"", 1)
+				}
 				writeFile(t, filepath.Join(fixture, file.Name), source)
+			}
+
+			if pkg == "os/exec" {
+				source := selectedUpstreamSource(t, "../overlay/std/os/exec/exec.go", []string{"dedupEnvCase"})
+				writeFile(t, filepath.Join(fixture, "helper.go"), source)
 			}
 
 			if pkg == "time" {
@@ -78,7 +87,7 @@ func TestSelectedUpstream(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					writeFile(t, filepath.Join(fixture, "zone_test.go"), "package time_test\nimport \"time\"\nfunc init() { var err error; time.Local, err = time.LoadLocationFromTZData(\"Local\", []byte("+strconv.Quote(string(data))+")); if err != nil { panic(err) } }\n")
+					writeFile(t, filepath.Join(fixture, "000_zone_test.go"), "package time_test\nimport \"time\"\nvar _ = func() bool { loc, err := time.LoadLocationFromTZData(\"Local\", []byte("+strconv.Quote(string(data))+")); if err != nil { panic(err) }; *time.Local = *loc; return true }()\n")
 				}
 			}
 

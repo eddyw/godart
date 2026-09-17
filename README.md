@@ -25,6 +25,8 @@ gart test -o dartout ./...
 ```
 
 The compiler includes its matching Dart runtime. `-runtime <dir>` selects an explicit runtime override.
+Use `-timings` to report compiler and execution durations. [Compilation profiles](docs/compilation-time.md) explain the measured costs.
+
 Source paths are absolute by default. `-trimpath` uses portable module/package paths for reproducible output across checkouts.
 
 `gart build` writes the Dart package and stops. `gart run` compiles it and runs

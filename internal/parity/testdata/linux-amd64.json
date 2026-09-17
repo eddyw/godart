@@ -15222,7 +15222,13 @@
           "sha256": "235acbbf47fcbf702afe37600dae4535942ca7dc3f5a51721cd5b706d99a41dd"
         }
       ],
-      "seeds": null
+      "seeds": null,
+      "test_patches": [
+        {
+          "path": "binary_test.go.patch",
+          "sha256": "79e1e7471f8859ec98a4dd700bec36c8d0e4ad232d1d26a6839e5b291f98d2c4"
+        }
+      ]
     },
     {
       "path": "encoding/csv",
@@ -16162,7 +16168,13 @@
           "sha256": "572b6107e221cb11174eb2381cf0c3bd4c36704c4f3c2c6961745d0964dbbde2"
         }
       ],
-      "seeds": null
+      "seeds": null,
+      "test_patches": [
+        {
+          "path": "codec_test.go.patch",
+          "sha256": "032fdfd02200a7c4ee674b3779a272b7d62cfb14248272790a7473b6790ef1c5"
+        }
+      ]
     },
     {
       "path": "encoding/hex",

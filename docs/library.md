@@ -72,6 +72,13 @@ authority, because each build reads them.
   drags in. `overlay.Paths()` leaves a stub out, thus stage 2 still rejects an
   import of it. Read decision 19.
 
+## Upstream source reuse, 2026-09-17
+
+The compiler now reads the original flag, log, and encoding/binary implementations.
+Their former overlays no longer exist. The binary suite retains an explicit exclusion for its unsafe native-memory assertion.
+Gob retains its overlay, with original private helper shapes and slice-capacity reuse.
+The [upstream parity report](upstream-parity.md) gives current suite counts and exclusions.
+
 ## The network access
 
 A Go program reaches TCP through `syscall/dart`. The Dart side uses `Socket` of

@@ -1,0 +1,24 @@
+Exclude the native memory-view assertion. Dart has no unsafe pointer view. The inventory and exception policy retain this excluded root.
+--- binary_test.go
++++ binary_test.go
+@@ -14,7 +14,6 @@
+ 	"strings"
+ 	"sync"
+ 	"testing"
+-	"unsafe"
+ )
+ 
+ type Struct struct {
+@@ -1149,10 +1148,5 @@
+ }
+ 
+ func TestNativeEndian(t *testing.T) {
+-	const val = 0x12345678
+-	i := uint32(val)
+-	s := unsafe.Slice((*byte)(unsafe.Pointer(&i)), unsafe.Sizeof(i))
+-	if v := NativeEndian.Uint32(s); v != val {
+-		t.Errorf("NativeEndian.Uint32 returned %#x, expected %#x", v, val)
+-	}
+-}
++ t.Skip("Dart exposes no native memory representation for unsafe byte views")
++}

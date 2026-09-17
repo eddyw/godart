@@ -11,128 +11,119 @@
       "suite": "driver",
       "shard": 0,
       "shards": 1,
-      "timeout": 13,
-      "job_timeout": 18
+      "timeout": 14,
+      "job_timeout": 19
     },
     {
       "suite": "integration",
       "shard": 0,
       "shards": 1,
-      "timeout": 7,
-      "job_timeout": 12
+      "timeout": 6,
+      "job_timeout": 11
     },
     {
       "suite": "targets",
       "shard": 0,
       "shards": 1,
-      "timeout": 4,
-      "job_timeout": 9
+      "timeout": 6,
+      "job_timeout": 11
     },
     {
       "suite": "web-io",
       "shard": 0,
       "shards": 1,
-      "timeout": 6,
-      "job_timeout": 11
+      "timeout": 8,
+      "job_timeout": 13
     },
     {
       "suite": "web-fetch",
       "shard": 0,
       "shards": 1,
-      "timeout": 6,
-      "job_timeout": 11
+      "timeout": 8,
+      "job_timeout": 13
     },
     {
       "suite": "programs",
       "shard": 0,
       "shards": 6,
-      "timeout": 17,
-      "job_timeout": 22
+      "timeout": 13,
+      "job_timeout": 18
     },
     {
       "suite": "programs",
       "shard": 1,
       "shards": 6,
-      "timeout": 17,
-      "job_timeout": 22
+      "timeout": 14,
+      "job_timeout": 19
     },
     {
       "suite": "programs",
       "shard": 2,
       "shards": 6,
-      "timeout": 17,
-      "job_timeout": 22
+      "timeout": 13,
+      "job_timeout": 18
     },
     {
       "suite": "programs",
       "shard": 3,
       "shards": 6,
-      "timeout": 17,
-      "job_timeout": 22
+      "timeout": 13,
+      "job_timeout": 18
     },
     {
       "suite": "programs",
       "shard": 4,
       "shards": 6,
-      "timeout": 17,
-      "job_timeout": 22
+      "timeout": 14,
+      "job_timeout": 19
     },
     {
       "suite": "programs",
       "shard": 5,
       "shards": 6,
-      "timeout": 17,
-      "job_timeout": 22
+      "timeout": 14,
+      "job_timeout": 19
     },
     {
       "suite": "language",
       "shard": 0,
-      "shards": 4,
-      "timeout": 25,
-      "job_timeout": 30
-    },
-    {
-      "suite": "language",
-      "shard": 1,
-      "shards": 4,
-      "timeout": 26,
-      "job_timeout": 31
-    },
-    {
-      "suite": "language",
-      "shard": 2,
-      "shards": 4,
-      "timeout": 26,
-      "job_timeout": 31
-    },
-    {
-      "suite": "language",
-      "shard": 3,
       "shards": 4,
       "timeout": 21,
       "job_timeout": 26
     },
     {
+      "suite": "language",
+      "shard": 1,
+      "shards": 4,
+      "timeout": 21,
+      "job_timeout": 26
+    },
+    {
+      "suite": "language",
+      "shard": 2,
+      "shards": 4,
+      "timeout": 20,
+      "job_timeout": 25
+    },
+    {
+      "suite": "language",
+      "shard": 3,
+      "shards": 4,
+      "timeout": 20,
+      "job_timeout": 25
+    },
+    {
       "suite": "upstream-targets",
       "shard": 0,
       "shards": 3,
-      "timeout": 6,
-      "job_timeout": 11,
-      "full_timeout": 23,
-      "full_job_timeout": 28
+      "timeout": 8,
+      "job_timeout": 13,
+      "full_timeout": 21,
+      "full_job_timeout": 26
     },
     {
       "suite": "upstream-targets",
       "shard": 1,
-      "shards": 3,
-      "timeout": 12,
-      "job_timeout": 17,
-      "full_timeout": 12,
-      "full_job_timeout": 17
-    },
-    {
-      "suite": "upstream-targets",
-      "shard": 2,
       "shards": 3,
       "timeout": 13,
       "job_timeout": 18,
@@ -140,62 +131,71 @@
       "full_job_timeout": 17
     },
     {
-      "suite": "upstream-priority",
-      "shard": 0,
-      "shards": 1,
-      "timeout": 7,
-      "job_timeout": 12
-    },
-    {
-      "suite": "upstream-blockers",
-      "shard": 0,
-      "shards": 1,
-      "timeout": 3,
-      "job_timeout": 8
+      "suite": "upstream-targets",
+      "shard": 2,
+      "shards": 3,
+      "timeout": 12,
+      "job_timeout": 17,
+      "full_timeout": 11,
+      "full_job_timeout": 16
     },
     {
       "suite": "upstream-priority",
       "shard": 0,
       "shards": 1,
       "timeout": 6,
-      "job_timeout": 11,
+      "job_timeout": 11
+    },
+    {
+      "suite": "upstream-blockers",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 2,
+      "job_timeout": 7
+    },
+    {
+      "suite": "upstream-priority",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 3,
+      "job_timeout": 8,
       "runner": "macos-15"
     },
     {
       "suite": "stdlib",
       "shard": 0,
       "shards": 6,
-      "timeout": 13,
-      "job_timeout": 18,
-      "full_timeout": 31,
-      "full_job_timeout": 36
+      "timeout": 12,
+      "job_timeout": 17,
+      "full_timeout": 34,
+      "full_job_timeout": 39
     },
     {
       "suite": "stdlib",
       "shard": 1,
       "shards": 6,
-      "timeout": 13,
-      "job_timeout": 18,
-      "full_timeout": 18,
-      "full_job_timeout": 23
+      "timeout": 11,
+      "job_timeout": 16,
+      "full_timeout": 26,
+      "full_job_timeout": 31
     },
     {
       "suite": "stdlib",
       "shard": 2,
       "shards": 6,
-      "timeout": 12,
-      "job_timeout": 17,
-      "full_timeout": 38,
-      "full_job_timeout": 43
+      "timeout": 11,
+      "job_timeout": 16,
+      "full_timeout": 30,
+      "full_job_timeout": 35
     },
     {
       "suite": "stdlib",
       "shard": 3,
       "shards": 6,
-      "timeout": 13,
-      "job_timeout": 18,
-      "full_timeout": 38,
-      "full_job_timeout": 43
+      "timeout": 12,
+      "job_timeout": 17,
+      "full_timeout": 41,
+      "full_job_timeout": 46
     },
     {
       "suite": "stdlib",
@@ -203,17 +203,17 @@
       "shards": 6,
       "timeout": 11,
       "job_timeout": 16,
-      "full_timeout": 37,
-      "full_job_timeout": 42
+      "full_timeout": 48,
+      "full_job_timeout": 53
     },
     {
       "suite": "stdlib",
       "shard": 5,
       "shards": 6,
-      "timeout": 10,
-      "job_timeout": 15,
-      "full_timeout": 41,
-      "full_job_timeout": 46
+      "timeout": 11,
+      "job_timeout": 16,
+      "full_timeout": 30,
+      "full_job_timeout": 35
     }
   ]
 }

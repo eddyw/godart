@@ -11823,6 +11823,160 @@
       "test": "TestInternalLinkerDWARF"
     }
   ],
+  "encoding/binary": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAppendAllocs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no native memory representation for unsafe byte views.",
+      "test": "TestNativeEndian"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/*binary.Struct"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/[1]binary.Struct"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/[]binary.Struct"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/[]binary.Struct#01"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/binary.Struct"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/bool"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/complex128"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/complex64"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/float32"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/float64"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/int16"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/int32"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/int64"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/int8"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/uint16"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/uint32"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/uint64"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/uint8"
+    }
+  ],
+  "encoding/gob": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Short mode or native GOMAXPROCS excludes allocation counts. Gart exposes no allocation count.",
+      "test": "TestCountDecodeMallocs"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Short mode or native GOMAXPROCS excludes allocation counts. Gart exposes no allocation count.",
+      "test": "TestCountEncodeMallocs"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream test requires the opt-in gob.fuzz flag.",
+      "test": "TestFuzz"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream test requires the opt-in gob.fuzz flag.",
+      "test": "TestFuzzOneByte"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream test requires the opt-in gob.fuzz flag.",
+      "test": "TestFuzzRegressions"
+    }
+  ],
   "encoding/json": [
     {
       "gart": "skip",
@@ -12393,6 +12547,14 @@
       "test": "TestInline"
     }
   ],
+  "flag": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestExitCode"
+    }
+  ],
   "fmt": [
     {
       "gart": "skip",
@@ -12559,6 +12721,20 @@
       "native": "pass",
       "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
       "test": "TestPipeAllocations"
+    }
+  ],
+  "log": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestDiscard"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Short mode skips this case. Full mode requires the native test-executable launcher, which Gart does not implement.",
+      "test": "TestCallDepth"
     }
   ],
   "log/slog/internal/buffer": [

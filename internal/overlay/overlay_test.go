@@ -36,7 +36,7 @@ func TestPackages(t *testing.T) {
 // TestSurface proves that the curated surface holds each package that the
 // build needs, and that testdeps gives the harness the match function.
 func TestSurface(t *testing.T) {
-	paths := overlay.Paths()
+	paths := overlay.Surface()
 	for _, want := range []string{"os", "testing", "reflect", "flag",
 		"testing/internal/testdeps"} {
 		if !slices.Contains(paths, want) {

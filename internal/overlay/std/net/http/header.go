@@ -5,6 +5,7 @@ package http
 import (
 	"io"
 	"net/http/httptrace"
+	"net/textproto"
 	"sort"
 	"strings"
 )
@@ -75,20 +76,26 @@ func (h Header) WriteSubset(w io.Writer, exclude map[string]bool) error {
 func (h Header) writeSubset(w io.Writer, exclude map[string]bool, trace *httptrace.ClientTrace) error {
 	keys := make([]string, 0, len(h))
 	for k := range h {
-		if exclude[k] {
+		if exclude[k] || !validHeaderKey(k) {
 			continue
 		}
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
+		var formatted []string
 		for _, v := range h[k] {
+			v = strings.ReplaceAll(strings.ReplaceAll(v, "\r", " "), "\n", " ")
+			v = textproto.TrimString(v)
+			if trace != nil && trace.WroteHeaderField != nil {
+				formatted = append(formatted, v)
+			}
 			if _, err := io.WriteString(w, k+": "+v+"\r\n"); err != nil {
 				return err
 			}
 		}
 		if trace != nil && trace.WroteHeaderField != nil {
-			trace.WroteHeaderField(k, h[k])
+			trace.WroteHeaderField(k, formatted)
 		}
 	}
 	return nil

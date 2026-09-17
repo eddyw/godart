@@ -18,9 +18,9 @@ const uint64Size = 8
 type encoderState struct {
 	enc      *Encoder
 	b        *encBuffer
-	sendZero bool   // encoding an array element or map key/value pair; send zero values
-	fieldnum int    // the last field number written.
-	buf      []byte // buffer used by the encoder; 1 + uint64Size bytes.
+	sendZero bool // encoding an array element or map key/value pair; send zero values
+	fieldnum int  // the last field number written.
+	buf      [1 + uint64Size]byte
 	next     *encoderState
 }
 
@@ -60,7 +60,6 @@ func (enc *Encoder) newEncoderState(b *encBuffer) *encoderState {
 	if e == nil {
 		e = new(encoderState)
 		e.enc = enc
-		e.buf = make([]byte, 1+uint64Size)
 	} else {
 		enc.freeList = e.next
 	}
@@ -370,11 +369,12 @@ func (enc *Encoder) encodeInterface(b *encBuffer, iv reflect.Value) {
 	}
 
 	ut := userType(elem.Type())
-	name, ok := concreteTypeToName[ut.base]
+	registered, ok := concreteTypeToName.Load(ut.base)
 	if !ok {
 		errorf("type not registered for interface: %s", ut.base)
 	}
 
+	name := registered.(string)
 	// Send the name.
 	state.encodeUint(uint64(len(name)))
 	state.b.WriteString(name)

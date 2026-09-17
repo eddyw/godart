@@ -845,8 +845,8 @@ type GobDecoder interface {
 }
 
 var (
-	nameToConcreteType = map[string]reflect.Type{}
-	concreteTypeToName = map[reflect.Type]string{}
+	nameToConcreteType sync.Map
+	concreteTypeToName sync.Map
 )
 
 // RegisterName is like [Register] but uses the provided name rather than the
@@ -863,22 +863,22 @@ func RegisterName(name string, value any) {
 	// same user type, and vice versa.
 
 	// Store the name and type provided by the user....
-	if t, dup := nameToConcreteType[name]; dup {
+	if t, dup := nameToConcreteType.Load(name); dup {
 		if t != ut.user {
 			panic(fmt.Sprintf("gob: registering duplicate types for %q: %s != %s", name, t, ut.user))
 		}
 	} else {
-		nameToConcreteType[name] = reflect.TypeOf(value)
+		nameToConcreteType.Store(name, reflect.TypeOf(value))
 	}
 
 	// but the flattened type in the type table, since that's what decode needs.
-	if n, dup := concreteTypeToName[ut.base]; dup {
+	if n, dup := concreteTypeToName.Load(ut.base); dup {
 		if n != name {
-			delete(nameToConcreteType, name)
+			nameToConcreteType.Delete(name)
 			panic(fmt.Sprintf("gob: registering duplicate names for %s: %q != %q", ut.user, n, name))
 		}
 	} else {
-		concreteTypeToName[ut.base] = name
+		concreteTypeToName.Store(ut.base, name)
 	}
 }
 

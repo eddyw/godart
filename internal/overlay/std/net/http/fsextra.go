@@ -18,7 +18,7 @@ const TimeFormat = "Mon, 02 Jan 2006 15:04:05 GMT"
 // The 2 time formats that a client of an old server may write.
 var timeFormats = []string{
 	TimeFormat,
-	"Mon, 02-Jan-06 15:04:05 MST",
+	time.RFC850,
 	time.ANSIC,
 }
 

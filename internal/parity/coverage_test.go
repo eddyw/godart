@@ -75,6 +75,9 @@ func TestCoverageManifest(t *testing.T) {
 			}
 			delete(selected, c.Package)
 		case "compile-blocked":
+			if !slices.Contains([]string{"runtime-boundary", "private-test-dependency", "public-api-gap", "compiler-defect"}, c.BlockerCause) || strings.TrimSpace(c.BlockerReason) == "" {
+				t.Errorf("blocker lacks cause classification: %s", c.Package)
+			}
 			if c.Diagnostic == "" {
 				t.Errorf("blocker lacks diagnostic: %s", c.Package)
 			}

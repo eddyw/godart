@@ -1,6 +1,8 @@
 package parity
 
 type Coverage struct {
+	BlockerCause        string            `json:"blocker_cause,omitempty"`
+	BlockerReason       string            `json:"blocker_reason,omitempty"`
 	NativeTags          []string          `json:"native_tags,omitempty"`
 	Targets             []string          `json:"targets,omitempty"`
 	TargetRun           string            `json:"target_run,omitempty"`

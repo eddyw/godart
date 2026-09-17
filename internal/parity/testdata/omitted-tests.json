@@ -53,6 +53,9 @@
     "TestLineFromAline": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image.",
     "TestSymVersion": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image."
   },
+  "encoding/gob": {
+    "TestIgnoreDepthLimit": "The original case constructs deeply nested reflection arrays and structs. Dart exceeds its fixed stack during zero-value construction."
+  },
   "encoding/xml": {
     "TestCVE202228131": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion.",
     "TestCVE202230633": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion.",

@@ -247,8 +247,8 @@ reads the real Go source, because that source already stays inside the subset.
 | `embed` | Overlay | The source of Go, with a constructor and with `strings` in place of 2 internal packages. Read the note below. |
 | `math/cmplx` | Native | The real source needs no patch. It imports `math` and `math/bits` alone. |
 | `crypto/subtle` | Overlay | The 8 names of Go, each in its portable form. Read the note below. |
-| `encoding/binary` | Overlay | The source of Go, with no complex case and with a plain map in place of `sync.Map`. |
-| `encoding/gob` | Overlay | The source of Go. The wire bytes are the real ones, and the type ids of the bootstrap keep the numbers 1 to 23. The speed helpers, `internal/saferio`, `sync.Pool`, and `atomic.Pointer` each stay out, and the general path writes the same bytes. A decode into a pointer to a pointer whose element is not a struct panics. |
+| `encoding/binary` | Native | Original Go implementation, including complex values and the size cache. The upstream native-memory-view test remains an explicit exclusion. |
+| `encoding/gob` | Overlay | Original wire format and bootstrap type IDs 1 to 23. Destination slices retain their storage when capacity permits. Native speed helpers remain absent. The deep reflection construction test exceeds the Dart stack. |
 | `encoding/asn1` | Patch | The source of Go. `asn1.go` drops `internal/saferio`, which holds `unsafe.Sizeof`. `marshal.go` writes a composite literal in place of a conversion between 2 struct types. |
 | `encoding/pem`, `crypto/x509/pkix`, `unicode/utf16` | Native | Each name of Go. |
 | `crypto/md5` | Overlay | The source of Go, with the generic block function and no FIPS mode. It registers MD5 with the package `crypto`. |
@@ -275,7 +275,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/byteorder` | Native | `encoding/base64` reads it. |
 | `context` | Native | The real source needs no patch. |
 | `errors` | Overlay | Each name of Go. `As` takes no pointer to an interface type. |
-| `flag` | Overlay | Each name of Go. The real source reads `reflect` and `runtime.Caller`. |
+| `flag` | Native | Original Go implementation. Native test-executable relaunch remains an explicit upstream test exclusion. |
 | `reflect` | Overlay | 130 of the 188 names of Go. The section "The reflect subset" above holds each one. |
 | `internal/reflectlite` | Overlay | `TypeOf`, `Type.String`, and `Type.Comparable`. The package `context` reads it. |
 | `iter` | Overlay | `Seq`, `Seq2`, `Pull`, and `Pull2`. Read the section below. |
@@ -284,7 +284,7 @@ reads the real Go source, because that source already stays inside the subset.
 | `internal/bytealg` | Overlay | The search operations that `path` and `strings` reach. |
 | `io` | Native |
 | `io/fs` | Native | Each exported name, the `FS` interface family included. |
-| `log` | Overlay | Each function and each method, with no `Llongfile` and no `Lshortfile`. It also sets `DefaultOutput` of `log/internal`, thus the default handler of `log/slog` writes through the standard logger. Read below. |
+| `log` | Native | Original Go implementation, including file flags and the shared log/slog output hook. Native test-executable relaunch and allocation counts remain explicit test exclusions. |
 | `path/filepath` | Overlay | The separator is always `/`. Read below. | |
 | `net` | Overlay | TCP, UDP, a Unix socket, `IP`, `ParseIP`, and the `Lookup` family. No TLS. Read the 2 sections below. |
 | `os` | Overlay | The file access, the environment, the identity of the process, and the process state. `Root`, `DirFS`, `Chmod`, and the signals each read. `File.Fd`, `NewFile`, and `StartProcess` stay out, because `dart:io` hides the descriptor. Read the section below. |
@@ -838,11 +838,8 @@ the child in a table by its process id. Decision 212 holds the shape.
 
 ## The log package and the filepath package
 
-`log` holds each function and each method of Go. `Lshortfile` names the base
-name of the file and the line, exactly as Go does. `Llongfile` names the file
-the way the source map holds it: the package path and the base name. Go names
-the file the way the build machine holds it, thus the text before the base
-name differs.
+`log` uses the original Go implementation. `Lshortfile` reports the source basename and line.
+`Llongfile` uses absolute source paths by default. `-trimpath` selects portable module paths.
 
 `path/filepath` holds the path operations. The separator is always `/`. Go
 selects the separator with a build tag of the operating system, and the emitted

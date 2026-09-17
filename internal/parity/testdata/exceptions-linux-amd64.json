@@ -11630,6 +11630,160 @@
       "test": "TestInternalLinkerDWARF"
     }
   ],
+  "encoding/binary": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestAppendAllocs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no native memory representation for unsafe byte views.",
+      "test": "TestNativeEndian"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/*binary.Struct"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/[1]binary.Struct"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/[]binary.Struct"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/[]binary.Struct#01"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/binary.Struct"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/bool"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/complex128"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/complex64"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/float32"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/float64"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/int16"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/int32"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/int64"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/int8"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/uint16"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/uint32"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/uint64"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestSizeAllocs/uint8"
+    }
+  ],
+  "encoding/gob": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Short mode or native GOMAXPROCS excludes allocation counts. Gart exposes no allocation count.",
+      "test": "TestCountDecodeMallocs"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Short mode or native GOMAXPROCS excludes allocation counts. Gart exposes no allocation count.",
+      "test": "TestCountEncodeMallocs"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream test requires the opt-in gob.fuzz flag.",
+      "test": "TestFuzz"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream test requires the opt-in gob.fuzz flag.",
+      "test": "TestFuzzOneByte"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The upstream test requires the opt-in gob.fuzz flag.",
+      "test": "TestFuzzRegressions"
+    }
+  ],
   "encoding/json": [
     {
       "gart": "skip",
@@ -12188,6 +12342,14 @@
       "test": "TestInline"
     }
   ],
+  "flag": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestExitCode"
+    }
+  ],
   "fmt": [
     {
       "gart": "skip",
@@ -12320,6 +12482,98 @@
       "native": "pass",
       "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
       "test": "TestPipeAllocations"
+    }
+  ],
+  "log": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestDiscard"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Default.Fatal"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Default.Fatalf"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Default.Fatalln"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Default.Output"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Default.Panic"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Default.Panicf"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Default.Panicln"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Fatal"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Fatalf"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Fatalln"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Output"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Panic"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Panicf"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
+      "test": "TestCallDepth/Panicln"
     }
   ],
   "log/slog/internal/buffer": [

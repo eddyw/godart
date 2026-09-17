@@ -24,6 +24,7 @@ trap finish EXIT
 large_tests='TestPrograms|TestRunFilesOfGoTest|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
 case "$suite" in
   checks)
+    python3 -B -m unittest discover -s scripts -p test_ci_local.py
     make fmt-check vet flutter-go dart-analyze dart-test
     package_list=$(go list ./...)
     packages=()

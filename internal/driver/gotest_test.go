@@ -177,8 +177,9 @@ func TestRunFilesOfGoTest(t *testing.T) {
 			want = cutExitStatus(want)
 			prepareDart(t, out)
 			limit := 2 * time.Minute
-			if name == "fixedbugs/issue13169" {
-				// This upstream stress case performs 1 million channel transfers.
+			if name == "fixedbugs/issue13169" || name == "fixedbugs/issue78081" {
+				// These upstream stress cases perform 1 million channel transfers
+				// or 104 million recursive calls.
 				limit = 5 * time.Minute
 			}
 			got, gotFail, ended := runWithin(t, out, limit, "dart", "--packages=.dart_tool/package_config.json", "bin/main.dart")

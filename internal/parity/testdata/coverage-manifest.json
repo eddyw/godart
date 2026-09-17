@@ -18,7 +18,9 @@
   {
     "package": "cmp",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
   {
     "package": "compress/bzip2",
@@ -131,7 +133,9 @@
   {
     "package": "crypto/fips140",
     "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.SetGODEBUG"
+    "diagnostic": "undefined: testenv.SetGODEBUG",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The upstream helper configures native FIPS behavior through GODEBUG."
   },
   {
     "package": "crypto/hkdf",
@@ -197,7 +201,9 @@
   {
     "package": "crypto/internal/fips140/bigmod",
     "status": "compile-blocked",
-    "diagnostic": "undefined: addMulVVW1024"
+    "diagnostic": "undefined: addMulVVW1024",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite calls architecture assembly helpers such as addMulVVW1024. Dart has no native assembly entry points."
   },
   {
     "package": "crypto/internal/fips140/check",
@@ -246,7 +252,9 @@
   {
     "package": "crypto/internal/fips140/nistec",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.Getpagesize"
+    "diagnostic": "undefined: syscall.Getpagesize",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires native memory-page sizes and memory protection through syscall."
   },
   {
     "package": "crypto/internal/fips140/nistec/fiat",
@@ -279,7 +287,9 @@
   {
     "package": "crypto/internal/fips140cache",
     "status": "compile-blocked",
-    "diagnostic": "c.m undefined (type *Cache[key, value] has no field or method m)"
+    "diagnostic": "c.m undefined (type *Cache[key, value] has no field or method m)",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite inspects a private cache field that the overlay does not retain."
   },
   {
     "package": "crypto/internal/fips140deps/byteorder",
@@ -326,12 +336,16 @@
     "diagnostic": "undefined: testingOnlyFailRead",
     "platform_diagnostics": {
       "linux-amd64": "undefined: syscall.ENOSYS"
-    }
+    },
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite injects native random-source failures through private hooks and errno values."
   },
   {
     "package": "crypto/md5",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
   {
     "package": "crypto/mldsa",
@@ -361,7 +375,9 @@
   {
     "package": "crypto/rand",
     "status": "compile-blocked",
-    "diagnostic": "typ.Methods undefined (type reflect.Type has no field or method Methods)"
+    "diagnostic": "typ.Methods undefined (type reflect.Type has no field or method Methods)",
+    "blocker_cause": "public-api-gap",
+    "blocker_reason": "The suite calls reflect.Type.Methods, which the current reflection API does not expose."
   },
   {
     "package": "crypto/rc4",
@@ -408,17 +424,23 @@
   {
     "package": "crypto/subtle",
     "status": "compile-blocked",
-    "diagnostic": "the package internal/cpu is outside the supported surface (the standard library surface is curated)"
+    "diagnostic": "the package internal/cpu is outside the supported surface (the standard library surface is curated)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires native CPU feature detection through internal/cpu."
   },
   {
     "package": "crypto/tls",
     "status": "compile-blocked",
-    "diagnostic": "undefined: selectSignatureScheme"
+    "diagnostic": "undefined: selectSignatureScheme",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite calls private Go TLS implementation functions. Dart owns the TLS implementation."
   },
   {
     "package": "crypto/x509",
     "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.HasExternalNetwork"
+    "diagnostic": "undefined: testenv.HasExternalNetwork",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite requires the upstream external-network capability helper before further classification."
   },
   {
     "package": "crypto/x509/pkix",
@@ -480,7 +502,9 @@
   {
     "package": "encoding/asn1",
     "status": "compile-blocked",
-    "diagnostic": "undefined: runtime.MemStats"
+    "diagnostic": "undefined: runtime.MemStats",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
   },
   {
     "package": "encoding/base32",
@@ -502,8 +526,12 @@
   },
   {
     "package": "encoding/binary",
-    "status": "compile-blocked",
-    "diagnostic": "cannot use sync.Map{} (value of struct type sync.Map) as map[reflect.Type]int value in assignment"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "encoding/csv",
@@ -516,8 +544,7 @@
   },
   {
     "package": "encoding/gob",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: debugFunc"
+    "status": "vm-suite"
   },
   {
     "package": "encoding/hex",
@@ -585,8 +612,7 @@
   },
   {
     "package": "flag",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: commandLineUsage"
+    "status": "vm-suite"
   },
   {
     "package": "fmt",
@@ -639,7 +665,9 @@
   {
     "package": "go/types",
     "status": "compile-blocked",
-    "diagnostic": "cannot convert v.FieldByName(name).Addr().UnsafePointer() (value of type uintptr) to type *bool"
+    "diagnostic": "cannot convert v.FieldByName(name).Addr().UnsafePointer() (value of type uintptr) to type *bool",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite converts an unsafe address into a typed pointer. Dart has no native pointer conversion."
   },
   {
     "package": "go/version",
@@ -688,7 +716,9 @@
   {
     "package": "hash/maphash",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
   {
     "package": "html",
@@ -697,7 +727,9 @@
   {
     "package": "html/template",
     "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.SetGODEBUG"
+    "diagnostic": "undefined: testenv.SetGODEBUG",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite requires the upstream GODEBUG configuration helper."
   },
   {
     "package": "image",
@@ -718,7 +750,9 @@
   {
     "package": "image/gif",
     "status": "compile-blocked",
-    "diagnostic": "undefined: runtime.MemStats"
+    "diagnostic": "undefined: runtime.MemStats",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
   },
   {
     "package": "image/internal/imageutil",
@@ -739,7 +773,9 @@
   {
     "package": "internal/abi",
     "status": "compile-blocked",
-    "diagnostic": "undefined: abi.FuncPCABI0"
+    "diagnostic": "undefined: abi.FuncPCABI0",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires native function program counters through abi.FuncPCABI0."
   },
   {
     "package": "internal/asan",
@@ -772,12 +808,16 @@
   {
     "package": "internal/fmtsort",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
   {
     "package": "internal/godebug",
     "status": "compile-blocked",
-    "diagnostic": "the package runtime/metrics is outside the supported surface (the standard library surface is curated)"
+    "diagnostic": "the package runtime/metrics is outside the supported surface (the standard library surface is curated)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires native Go runtime metrics."
   },
   {
     "package": "internal/goexperiment",
@@ -826,7 +866,9 @@
   {
     "package": "internal/reflectlite",
     "status": "compile-blocked",
-    "diagnostic": "undefined: ValueOf"
+    "diagnostic": "undefined: ValueOf",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The overlay does not retain private reflectlite implementation names used by its tests."
   },
   {
     "package": "internal/saferio",
@@ -839,7 +881,9 @@
   {
     "package": "internal/testenv",
     "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.MustHaveExecPath"
+    "diagnostic": "undefined: testenv.MustHaveExecPath",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The complete native test infrastructure exceeds the selected testenv adapter."
   },
   {
     "package": "internal/testhash",
@@ -856,7 +900,9 @@
   {
     "package": "internal/types/errors",
     "status": "compile-blocked",
-    "diagnostic": "the package go/importer is outside the supported surface (the standard library surface is curated)"
+    "diagnostic": "the package go/importer is outside the supported surface (the standard library surface is curated)",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite depends on go/importer, which remains outside the surface."
   },
   {
     "package": "internal/zstd",
@@ -880,8 +926,7 @@
   },
   {
     "package": "log",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: itoa"
+    "status": "vm-suite"
   },
   {
     "package": "log/internal",
@@ -890,7 +935,9 @@
   {
     "package": "log/slog",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
   {
     "package": "log/slog/internal",
@@ -907,7 +954,9 @@
   {
     "package": "math",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
   {
     "package": "math/big",
@@ -915,7 +964,9 @@
     "diagnostic": "undefined: runtime.MemStats",
     "platform_diagnostics": {
       "linux-amd64": "invalid operation: cannot take address of hasADX (untyped bool constant false)"
-    }
+    },
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
   },
   {
     "package": "math/bits",
@@ -958,12 +1009,16 @@
   {
     "package": "net",
     "status": "compile-blocked",
-    "diagnostic": "undefined: sortByRFC6724withSrcs"
+    "diagnostic": "undefined: sortByRFC6724withSrcs",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite calls the private native RFC6724 source-address sorter."
   },
   {
     "package": "net/http",
     "status": "compile-blocked",
-    "diagnostic": "unknown field RootCAs in struct literal of type tls.Config"
+    "diagnostic": "unknown field RootCAs in struct literal of type tls.Config",
+    "blocker_cause": "public-api-gap",
+    "blocker_reason": "The complete suite requires TLS root-certificate configuration. TLS expansion has separate scope."
   },
   {
     "package": "net/http/cgi",
@@ -976,7 +1031,9 @@
   {
     "package": "net/http/httptest",
     "status": "compile-blocked",
-    "diagnostic": "unknown field Version in struct literal of type tls.ConnectionState"
+    "diagnostic": "unknown field Version in struct literal of type tls.ConnectionState",
+    "blocker_cause": "public-api-gap",
+    "blocker_reason": "The complete suite requires TLS connection-version metadata. TLS expansion has separate scope."
   },
   {
     "package": "net/http/httptrace",
@@ -985,7 +1042,9 @@
   {
     "package": "net/http/httputil",
     "status": "compile-blocked",
-    "diagnostic": "the package runtime/pprof is outside the supported surface (the standard library surface is curated)"
+    "diagnostic": "the package runtime/pprof is outside the supported surface (the standard library surface is curated)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires Go runtime profiling through runtime/pprof."
   },
   {
     "package": "net/http/internal",
@@ -1014,12 +1073,16 @@
   {
     "package": "net/smtp",
     "status": "compile-blocked",
-    "diagnostic": "cs.Version undefined (type tls.ConnectionState has no field or method Version)"
+    "diagnostic": "cs.Version undefined (type tls.ConnectionState has no field or method Version)",
+    "blocker_cause": "public-api-gap",
+    "blocker_reason": "The complete suite requires TLS connection-version metadata. TLS expansion has separate scope."
   },
   {
     "package": "net/textproto",
     "status": "compile-blocked",
-    "diagnostic": "undefined: runtime.MemStats"
+    "diagnostic": "undefined: runtime.MemStats",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
   },
   {
     "package": "net/url",
@@ -1028,17 +1091,26 @@
   {
     "package": "os",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.ENOTEMPTY"
+    "diagnostic": "undefined: syscall.ENOTEMPTY",
+    "blocker_cause": "public-api-gap",
+    "blocker_reason": "The complete suite requires native errno and file-descriptor behavior beyond the current surface."
   },
   {
     "package": "os/exec",
     "status": "compile-blocked",
-    "diagnostic": "undefined: dedupEnvCase"
+    "diagnostic": "undefined: syscall.SIGSTOP",
+    "blocker_cause": "public-api-gap",
+    "blocker_reason": "The environment helper now matches upstream. The complete suite next requires native process signals and process attributes.",
+    "platform_diagnostics": {
+      "linux-amd64": "undefined: syscall.NsecToTimespec"
+    }
   },
   {
     "package": "os/signal",
     "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.CommandContext"
+    "diagnostic": "undefined: testenv.CommandContext",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite requires native subprocess test infrastructure and signal behavior."
   },
   {
     "package": "path",
@@ -1056,7 +1128,9 @@
   {
     "package": "reflect",
     "status": "compile-blocked",
-    "diagnostic": "undefined: abi.IntArgRegs"
+    "diagnostic": "undefined: abi.IntArgRegs",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite inspects native register ABI constants such as abi.IntArgRegs."
   },
   {
     "package": "regexp",
@@ -1069,12 +1143,16 @@
   {
     "package": "runtime",
     "status": "compile-blocked",
-    "diagnostic": "undefined: runtime.SetFinalizer"
+    "diagnostic": "undefined: runtime.SetFinalizer",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires Go finalizer semantics through runtime.SetFinalizer."
   },
   {
     "package": "runtime/debug",
     "status": "compile-blocked",
-    "diagnostic": "undefined: runtime.MemStats"
+    "diagnostic": "undefined: runtime.MemStats",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
   },
   {
     "package": "slices",
@@ -1100,12 +1178,16 @@
   {
     "package": "sync",
     "status": "compile-blocked",
-    "diagnostic": "undefined: runtime_procPin"
+    "diagnostic": "undefined: runtime_procPin",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite pins goroutines to native Go execution threads through runtime_procPin."
   },
   {
     "package": "sync/atomic",
     "status": "compile-blocked",
-    "diagnostic": "undefined: CompareAndSwapPointer"
+    "diagnostic": "undefined: CompareAndSwapPointer",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires atomic operations on unsafe native pointers."
   },
   {
     "package": "syscall",
@@ -1113,12 +1195,16 @@
     "diagnostic": "undefined: syscall.Open",
     "platform_diagnostics": {
       "linux-amd64": "undefined: syscall.MSG_CMSG_CLOEXEC"
-    }
+    },
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires raw native file descriptors through syscall.Open."
   },
   {
     "package": "testing",
     "status": "compile-blocked",
-    "diagnostic": "invalid operation: cannot call testing.PrettyPrint (variable with invalid type): invalid type is not a function"
+    "diagnostic": "invalid operation: cannot call testing.PrettyPrint (variable with invalid type): invalid type is not a function",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The native harness tests depend on test-only exports and a different harness implementation."
   },
   {
     "package": "testing/cryptotest",
@@ -1159,7 +1245,9 @@
   {
     "package": "text/template",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
   {
     "package": "text/template/parse",
@@ -1168,7 +1256,9 @@
   {
     "package": "time",
     "status": "compile-blocked",
-    "diagnostic": "-: import cycle not allowed in test"
+    "diagnostic": "-: import cycle not allowed in test",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The complete native test graph creates an import cycle with the time overlay. Selected public assertions execute separately."
   },
   {
     "package": "time/tzdata",
@@ -1199,7 +1289,9 @@
   {
     "package": "unique",
     "status": "compile-blocked",
-    "diagnostic": "undefined: canonMap"
+    "diagnostic": "undefined: canonMap",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite inspects the private Go weak canonicalization table. The overlay uses a process-lifetime map."
   },
   {
     "package": "uuid",
@@ -1256,6 +1348,8 @@
   {
     "package": "weak",
     "status": "compile-blocked",
-    "diagnostic": "undefined: runtime.SetFinalizer"
+    "diagnostic": "undefined: runtime.SetFinalizer",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires Go finalizer semantics through runtime.SetFinalizer."
   }
 ]

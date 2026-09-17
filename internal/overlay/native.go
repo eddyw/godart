@@ -16,6 +16,9 @@ import (
 // lines of the real Go source. A diff is the better form for a small change,
 // because it names the lines that differ and it ages with no copy.
 var native = []string{
+	"flag",
+	"encoding/binary",
+	"log",
 	"internal/diff",
 	"internal/txtar",
 	"internal/obscuretestdata",

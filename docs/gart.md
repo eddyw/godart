@@ -22,7 +22,7 @@ collector, and each platform.
 
 ## Build gart and install it
 
-The project needs Go 1.27.0 and Dart 3.13.0. Start at the root of the
+The project needs Go 1.27.0 and Dart 3.13.3. Start at the root of the
 repository:
 
 ```sh
@@ -59,19 +59,17 @@ gart 0.1.0-dev
 `gart` with no command writes this list. `gart <command> -h` writes the flags of
 1 command.
 
-The commands `build`, `run`, `test`, and `watch` share 3 flags:
+The commands `build`, `run`, `test`, and `watch` share these flags:
 
 | Flag | Effect |
 |---|---|
 | `-o dir` | Write the Dart package into `dir`. The default is `dartout`. |
-| `-runtime dir` | The path of the `goruntime` Dart package. Each build needs it. |
+| `-runtime dir` | Override the bundled `goruntime` Dart package. |
 | `-format=false` | Do not run `dart format` on the output. |
+| `-trimpath` | Use portable module paths in source maps. |
+| `-timings` | Report compiler phases and execution durations on stderr. |
 
-A build with no `-runtime` flag stops at once:
-
-```
-gart: the build needs the path of the goruntime package
-```
+The bundled runtime is the default. [Compilation profiles](compilation-time.md) explain phase durations and current performance costs.
 
 Each example below runs in this repository. Give the root of the repository 1
 name first:

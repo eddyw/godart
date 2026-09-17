@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/tools/go/packages"
 
@@ -39,6 +40,8 @@ const findMode = packages.NeedName |
 
 // Result holds the packages of 1 load.
 type Result struct {
+	// Timings separates metadata discovery from syntax and type loading.
+	Timings []PhaseTiming
 	// Packages holds the root packages in the order of their identifier.
 	Packages []*packages.Package
 	// Sources gives the content of each file that the overlay replaced. A key
@@ -51,6 +54,11 @@ type Result struct {
 	// `//go:embed` directive. The loader rewrote each 1, thus stage 2 allows
 	// the constructor of the package embed there.
 	Embeds map[string]bool
+}
+
+type PhaseTiming struct {
+	Name     string
+	Duration time.Duration
 }
 
 // Binary reads the test binary of 1 package.
@@ -100,6 +108,8 @@ func LoadTestsCover(dir string, patterns ...string) (*Result, error) {
 }
 
 func load(dir string, tests, cover bool, filter Filter, patterns []string) (*Result, error) {
+	var timings []PhaseTiming
+	phase := time.Now()
 	found, err := packages.Load(&packages.Config{
 		Mode:       findMode,
 		Dir:        dir,
@@ -109,10 +119,14 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string) (*Res
 	if err != nil {
 		return nil, err
 	}
+	timings = append(timings, PhaseTiming{"load-discovery", time.Since(phase)})
+	phase = time.Now()
 	surface, err := surfacePackages(dir)
 	if err != nil {
 		return nil, err
 	}
+	timings = append(timings, PhaseTiming{"load-surface", time.Since(phase)})
+	phase = time.Now()
 	files, err := overlayFiles(found, surface)
 	if err != nil {
 		return nil, err
@@ -146,7 +160,10 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string) (*Res
 		Tests:      tests,
 		Overlay:    files,
 	}
+	timings = append(timings, PhaseTiming{"load-overlay", time.Since(phase)})
+	phase = time.Now()
 	pkgs, err := packages.Load(cfg, patterns...)
+	timings = append(timings, PhaseTiming{"load-types", time.Since(phase)})
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +174,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string) (*Res
 		return nil, err
 	}
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
-	return &Result{Packages: pkgs, Sources: files, Binaries: binaries, Embeds: embeds}, nil
+	return &Result{Timings: timings, Packages: pkgs, Sources: files, Binaries: binaries, Embeds: embeds}, nil
 }
 
 // overlayFiles maps each file of a standard library package to the file of the

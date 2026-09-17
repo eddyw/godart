@@ -175,5 +175,13 @@
       "js",
       "wasm"
     ]
+  },
+  {
+    "package": "encoding/binary",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   }
 ]

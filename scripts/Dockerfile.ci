@@ -1,0 +1,8 @@
+FROM golang:1.27.0@sha256:4013ae0f9e7994f8535c58c811f8f863fbed38b72e0d51e6592156f758d66146 AS go
+FROM node:26.8.2@sha256:fb192b8ad31841aadc4bb79c44ae0f59d193a798ffbc9fdce37ba6ecb20c2236 AS node
+FROM dart:3.13.3@sha256:7e57e61d97813dc57dd0801656ff4d5c5efafa47bae563a681571543ad30f199
+COPY --from=go /usr/local/go /usr/local/go
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+RUN apt-get update && apt-get install -y --no-install-recommends make python3 gcc libc6-dev libatomic1 zstd xxhash && rm -rf /var/lib/apt/lists/*
+ENV PATH="/usr/local/go/bin:${PATH}"
+WORKDIR /work

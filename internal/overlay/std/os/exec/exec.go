@@ -20,6 +20,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall/dart"
@@ -578,6 +579,10 @@ func (c *Cmd) environ() ([]string, error) {
 // dedupEnv drops each name that stands 2 times, and it keeps the last value of
 // such a name. An entry that holds a zero byte goes, and it gives an error.
 func dedupEnv(env []string) ([]string, error) {
+	return dedupEnvCase(runtime.GOOS == "windows", runtime.GOOS == "plan9", env)
+}
+
+func dedupEnvCase(caseInsensitive, nulOK bool, env []string) ([]string, error) {
 	var err error
 	out := make([]string, 0, len(env))
 	saw := make(map[string]bool, len(env))
@@ -585,7 +590,7 @@ func dedupEnv(env []string) ([]string, error) {
 	// that the walk meets.
 	for n := len(env); n > 0; n-- {
 		item := env[n-1]
-		if strings.IndexByte(item, 0) != -1 {
+		if !nulOK && strings.IndexByte(item, 0) != -1 {
 			err = errors.New("exec: environment variable contains NUL")
 			continue
 		}
@@ -600,6 +605,9 @@ func dedupEnv(env []string) ([]string, error) {
 			continue
 		}
 		name := item[:i]
+		if caseInsensitive {
+			name = strings.ToLower(name)
+		}
 		if saw[name] {
 			continue
 		}

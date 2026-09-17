@@ -93,6 +93,11 @@ func BuildWithStats(opt Options) (*Stats, error) {
 	if err != nil {
 		return nil, err
 	}
+	if opt.Trace != nil {
+		for _, timing := range result.Timings {
+			opt.Trace(timing.Name, timing.Duration)
+		}
+	}
 	roots := result.Packages
 	module := moduleOf(roots)
 	pkgs := order(roots, module)

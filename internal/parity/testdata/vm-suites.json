@@ -612,5 +612,21 @@
   },
   {
     "package": "net/url"
+  },
+  {
+    "package": "flag",
+    "run": ""
+  },
+  {
+    "package": "log",
+    "run": ""
+  },
+  {
+    "package": "encoding/binary",
+    "run": ""
+  },
+  {
+    "package": "encoding/gob",
+    "run": ""
   }
 ]

@@ -38,6 +38,7 @@ The build, run, test, and watch commands take these flags:
 	-runtime dir   override the bundled goruntime Dart package
 	-trimpath      remove absolute source paths from the output
 	-format=false  do not run dart format on the output
+	-timings       report phase durations on stderr
 
 The run command passes each argument after -- to the program.
 
@@ -95,6 +96,7 @@ type buildFlags struct {
 	runtime  *string
 	trimpath *bool
 	format   *bool
+	timings  *bool
 }
 
 func newBuildFlags(name string) *buildFlags {
@@ -105,6 +107,7 @@ func newBuildFlags(name string) *buildFlags {
 		runtime:  set.String("runtime", "", "override the bundled goruntime package"),
 		trimpath: set.Bool("trimpath", false, "remove absolute source paths from the output"),
 		format:   set.Bool("format", true, "run dart format on the output"),
+		timings:  set.Bool("timings", false, "report phase durations on stderr"),
 	}
 }
 
@@ -121,14 +124,20 @@ func (f *buildFlags) options(args []string) (driver.Options, error) {
 	if len(patterns) == 0 {
 		patterns = []string{"./..."}
 	}
-	return driver.Options{
+	options := driver.Options{
 		Dir:      dir,
 		Patterns: patterns,
 		Out:      *f.out,
 		Runtime:  *f.runtime,
 		TrimPath: *f.trimpath,
 		Format:   *f.format,
-	}, nil
+	}
+	if *f.timings {
+		options.Trace = func(phase string, elapsed time.Duration) {
+			fmt.Fprintf(os.Stderr, "gart: phase=%s duration=%.6fs\n", phase, elapsed.Seconds())
+		}
+	}
+	return options, nil
 }
 
 func runBuild(args []string, watch bool) error {

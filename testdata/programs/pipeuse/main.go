@@ -48,16 +48,21 @@ func rendezvous() {
 
 func pipe() {
 	r, w := io.Pipe()
-	done := make(chan int)
+	type result struct {
+		n   int
+		err error
+	}
+	done := make(chan result)
 	go func() {
 		n, err := w.Write([]byte("hello, world"))
-		fmt.Println("wrote", n, err)
-		done <- n
+		done <- result{n, err}
 	}()
 	buf := make([]byte, 64)
 	n, err := r.Read(buf)
 	fmt.Println("read", n, err, string(buf[:n]))
-	fmt.Println("done", <-done)
+	written := <-done
+	fmt.Println("wrote", written.n, written.err)
+	fmt.Println("done", written.n)
 	w.Close()
 	r.Close()
 }

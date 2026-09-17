@@ -232,3 +232,6 @@ func (dec *Decoder) DecodeValue(v reflect.Value) error {
 	}
 	return dec.err
 }
+
+// The optional upstream debug.go file assigns this hook. Ordinary builds leave it nil.
+var debugFunc func(io.Reader)

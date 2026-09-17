@@ -337,19 +337,8 @@ func decComplex128(i *decInstr, state *decoderState, value reflect.Value) {
 	value.SetComplex(complex(real, imag))
 }
 
-// byteSliceType names the type []uint8. A destination of that exact type takes
-// the decoded bytes with no walk of the elements.
-//
-// The spelling []uint8 stands here, and not []byte. Read the note of
-// bootstrapType.
-var byteSliceType = reflect.TypeFor[[]uint8]()
-
 // decUint8Slice decodes a byte slice and stores it in value.
 // uint8 slices are encoded as an unsigned count followed by the raw bytes.
-//
-// The real package reads into the storage that the destination already holds.
-// The overlay holds no such storage, thus it builds a slice of the length and
-// writes it.
 func decUint8Slice(i *decInstr, state *decoderState, value reflect.Value) {
 	n, ok := state.getLength()
 	if !ok {
@@ -359,18 +348,13 @@ func decUint8Slice(i *decInstr, state *decoderState, value reflect.Value) {
 	if len(data) < n {
 		errorf("invalid slice length %d: exceeds input size %d", n, len(data))
 	}
-	out := make([]byte, n)
-	copy(out, data[:n])
+	if value.Cap() < n {
+		value.Set(reflect.MakeSlice(value.Type(), n, n))
+	} else {
+		value.SetLen(n)
+	}
+	copy(value.Bytes(), data[:n])
 	state.b.Drop(n)
-	if value.Type() == byteSliceType {
-		value.Set(reflect.ValueOf(out))
-		return
-	}
-	held := reflect.MakeSlice(value.Type(), n, n)
-	for j := 0; j < n; j++ {
-		held.Index(j).SetUint(uint64(out[j]))
-	}
-	value.Set(held)
 }
 
 // decString decodes byte array and stores in value a string header
@@ -600,7 +584,11 @@ func (dec *Decoder) decodeSlice(state *decoderState, value reflect.Value, elemOp
 	if n < 0 || uint64(n) != u || nBytes > tooBig || (size > 0 && nBytes/size != u) {
 		errorf("%s slice too big: %d elements of %d bytes", typ.Elem(), u, size)
 	}
-	value.Set(reflect.MakeSlice(typ, n, n))
+	if value.Cap() < n {
+		value.Set(reflect.MakeSlice(typ, n, n))
+	} else {
+		value.SetLen(n)
+	}
 	dec.decodeArrayHelper(state, value, elemOp, n, ovfl)
 }
 
@@ -634,11 +622,12 @@ func (dec *Decoder) decodeInterface(ityp reflect.Type, state *decoderState, valu
 		errorf("name too long (%d bytes): %.20q...", len(name), name)
 	}
 	// The concrete type must be registered.
-	typ, ok := nameToConcreteType[name]
+	registered, ok := nameToConcreteType.Load(name)
 	if !ok {
 		errorf("name not registered for interface: %q", name)
 	}
 
+	typ := registered.(reflect.Type)
 	// Read the type id of the concrete value.
 	concreteId := dec.decodeTypeSequence(true)
 	if concreteId < 0 {
@@ -732,43 +721,25 @@ func (dec *Decoder) ignoreGobDecoder(state *decoderState) {
 	state.b.Drop(n)
 }
 
-// decOpTable gives the op of a basic kind, and it gives nil for each other
-// kind. The real package holds an array that the number of the kind reads.
-//
-// A Dart int holds 64 bits, thus an int, a uint, and a uintptr each take the
-// 64-bit op.
-func decOpTable(k reflect.Kind) decOp {
-	switch k {
-	case reflect.Bool:
-		return decBool
-	case reflect.Int8:
-		return decInt8
-	case reflect.Int16:
-		return decInt16
-	case reflect.Int32:
-		return decInt32
-	case reflect.Int, reflect.Int64:
-		return decInt64
-	case reflect.Uint8:
-		return decUint8
-	case reflect.Uint16:
-		return decUint16
-	case reflect.Uint32:
-		return decUint32
-	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
-		return decUint64
-	case reflect.Float32:
-		return decFloat32
-	case reflect.Float64:
-		return decFloat64
-	case reflect.Complex64:
-		return decComplex64
-	case reflect.Complex128:
-		return decComplex128
-	case reflect.String:
-		return decString
-	}
-	return nil
+// Go int, uint, and uintptr use 64-bit values on all Dart targets.
+var decOpTable = [...]decOp{
+	reflect.Bool:       decBool,
+	reflect.Int:        decInt64,
+	reflect.Int8:       decInt8,
+	reflect.Int16:      decInt16,
+	reflect.Int32:      decInt32,
+	reflect.Int64:      decInt64,
+	reflect.Uint:       decUint64,
+	reflect.Uint8:      decUint8,
+	reflect.Uint16:     decUint16,
+	reflect.Uint32:     decUint32,
+	reflect.Uint64:     decUint64,
+	reflect.Uintptr:    decUint64,
+	reflect.Float32:    decFloat32,
+	reflect.Float64:    decFloat64,
+	reflect.Complex64:  decComplex64,
+	reflect.Complex128: decComplex128,
+	reflect.String:     decString,
 }
 
 // decIgnoreOpMap holds the op of each basic wire type. init of type.go builds
@@ -790,7 +761,10 @@ func (dec *Decoder) decOpFor(wireId typeId, rt reflect.Type, name string, inProg
 		return opPtr
 	}
 	typ := ut.base
-	op := decOpTable(typ.Kind())
+	var op decOp
+	if k := typ.Kind(); int(k) < len(decOpTable) {
+		op = decOpTable[k]
+	}
 	if op == nil {
 		inProgress[rt] = &op
 		// Special cases
