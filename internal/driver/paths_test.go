@@ -1,11 +1,13 @@
 package driver_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eddyw/godart/internal/driver"
 )
@@ -72,5 +74,42 @@ func TestTrimPathAndRelocatedCache(t *testing.T) {
 	_, restored := build()
 	if !strings.Contains(restored, filepath.Join(first, "main.go")) {
 		t.Fatal("default paths did not return")
+	}
+}
+
+func TestRunKernelPaths(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/kernelpaths\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(dir, "main.go"), "package main\nfunc main() {\npanic(\"failure\")\n}\n")
+	compiles := 0
+	opt := driver.Options{Dir: dir, Patterns: []string{"."}, Out: t.TempDir(), Trace: func(phase string, _ time.Duration) {
+		if phase == "kernel-compile" {
+			compiles++
+		}
+	}}
+	for i, trim := range []bool{false, false, true} {
+		opt.TrimPath = trim
+		var output bytes.Buffer
+		code, err := driver.Run(opt, nil, &output)
+		if err != nil || code != 2 {
+			t.Fatalf("run %d: exit %d, error %v, output %s", i, code, err, output.String())
+		}
+		path := filepath.Join(dir, "main.go")
+		if trim {
+			path = "example.com/kernelpaths/main.go"
+		}
+		if !strings.Contains(output.String(), path+":3") {
+			t.Fatalf("missing source path %s: %s", path, output.String())
+		}
+		if trim && strings.Contains(output.String(), dir) {
+			t.Fatal("trimmed kernel retained an absolute Go path")
+		}
+		want := 1
+		if trim {
+			want = 2
+		}
+		if compiles != want {
+			t.Fatalf("run %d: compiled %d kernels, want %d", i, compiles, want)
+		}
 	}
 }

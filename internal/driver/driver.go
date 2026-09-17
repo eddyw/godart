@@ -234,20 +234,19 @@ func (opt Options) trace(phase string, start time.Time) {
 }
 
 func loadModule(opt Options) (*load.Result, error) {
-	if opt.Tests && opt.Cover {
-		return load.LoadTestsCover(opt.Dir, opt.Patterns...)
+	var filter load.Filter
+	if opt.Filter != nil && !opt.Tests {
+		var err error
+		filter, err = opt.Filter()
+		if err != nil {
+			return nil, err
+		}
 	}
-	if opt.Tests {
-		return load.LoadTests(opt.Dir, opt.Patterns...)
+	cacheDir := ""
+	if !opt.NoCache {
+		cacheDir = filepath.Join(opt.Out, ".gart", "load")
 	}
-	if opt.Filter == nil {
-		return load.Load(opt.Dir, opt.Patterns...)
-	}
-	filter, err := opt.Filter()
-	if err != nil {
-		return nil, err
-	}
-	return load.LoadFiltered(opt.Dir, filter, opt.Patterns...)
+	return load.LoadWithOptions(load.Options{Dir: opt.Dir, Patterns: opt.Patterns, CacheDir: cacheDir, Tests: opt.Tests, Cover: opt.Cover, Filter: filter})
 }
 
 // testBinaries names the Dart entry point of each test binary of the build.

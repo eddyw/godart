@@ -64,9 +64,13 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 		return 1, err
 	}
 	opt.trace("pub", phase)
+	kernel, err := opt.kernel(mainEntry)
+	if err != nil {
+		return 1, err
+	}
 	phase = time.Now()
 	defer func() { opt.trace("execute", phase) }()
-	return dartRun(opt.Out, append([]string{mainEntry}, args...), out)
+	return dartRun(opt.Out, append([]string{kernel}, args...), out)
 }
 
 // Test compiles the test binaries and runs each one. The result is the exit
@@ -99,8 +103,7 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 			writeBenchHeader(out, bin.Package)
 		}
 		start := time.Now()
-		text, code, err := runBinary(opt.Out, bin, testOpt)
-		opt.trace("execute", start)
+		text, code, err := runBinary(opt, bin, testOpt)
 		if err != nil {
 			return 1, err
 		}
@@ -137,23 +140,28 @@ func writeBenchHeader(out io.Writer, pkgPath string) {
 // The binary runs in the directory of the package under test, exactly as the
 // binary of go test does. Thus a test file reads a relative path such as
 // testdata/x.txt. The entry point takes an absolute path for that reason.
-func runBinary(out string, bin TestBinary, testOpt TestOptions) (string, int, error) {
+func runBinary(opt Options, bin TestBinary, testOpt TestOptions) (string, int, error) {
+	out := opt.Out
 	args := binaryArgs(testOpt)
 	dir := bin.Dir
 	if dir == "" {
 		dir = out
 	}
 	if !testOpt.Benchmarks {
-		entry, err := filepath.Abs(filepath.Join(out, bin.Entry))
+		entry, err := opt.kernel(bin.Entry)
 		if err != nil {
 			return "", 1, err
 		}
+		start := time.Now()
+		defer func() { opt.trace("execute", start) }()
 		return dartOutput(dir, append([]string{"run", entry}, args...))
 	}
 	exe, err := compileExe(out, bin.Entry)
 	if err != nil {
 		return "", 1, err
 	}
+	start := time.Now()
+	defer func() { opt.trace("execute", start) }()
 	return command(dir, exe, args)
 }
 

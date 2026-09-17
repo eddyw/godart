@@ -23,7 +23,9 @@ Each line gives the phase and elapsed seconds. The test harness also records the
 | `format` | External `dart format` command |
 | `source-maps` | Source maps |
 | `pub` | Dependency configuration, including `dart pub get` when required |
-| `execute` | Dart process startup, source compilation, and program execution |
+| `kernel-cache` | SDK identity and compiled-kernel cache validation |
+| `kernel-compile` | Dart source compilation on a kernel cache miss |
+| `execute` | Dart VM startup, JIT work, and program execution |
 
 The 4 detailed load phases are parts of `load`. Do not add them to `load` again.
 `load-types` does not separate parser CPU time from type analysis or the Go subprocess.
@@ -78,19 +80,58 @@ Cumulative parser samples total 0.03 seconds. Type analysis totals 0.09 seconds.
 Background GC has substantial samples. Cumulative rows overlap and cannot form an additive budget.
 The profile excludes child-process work and elapsed wait time.
 
-## Recommended order
+## Production cache, 2026-09-18
 
-1. Avoid Dart formatting during development runs when readable generated files are unnecessary. The existing `-format=false` flag already permits this.
-2. Investigate a generated-kernel cache for repeat runs. Key it by generated sources, runtime, package configuration, Dart SDK, and relevant flags.
-3. Profile HTTP generation and its cache metadata. The HTTP warm build still spends about 0.67 seconds in the combined emit phase.
-4. Reduce repeated Go package discovery where a complete invalidation contract permits reuse.
-5. Defer parser-specific optimization. The present evidence identifies larger costs elsewhere.
+`gart run` and ordinary test executions now compile generated Dart to a kernel and reuse that kernel when its inputs match.
+`kernel-compile` appears only on a cache miss. `kernel-cache` includes content hashes and SDK identity validation.
+The driver retains non-product constants and assertion support. Benchmark tests retain the existing AOT path.
 
-The kernel measurements show potential. They do not validate a persistent kernel cache or prove its invalidation behavior.
-This batch adds measurements and diagnosis. It does not change execution formats or introduce a compiled-artifact cache.
+The kernel receipt covers all compiler depfile inputs, the resolved package configuration, compiler options, SDK identity, and artifact contents.
+A missing, changed, or corrupt input causes recompilation. Content hashes detect edits that preserve file sizes and timestamps.
+The cache uses `.gart/kernel/` beneath the output directory.
 
-For a current development run:
+The loader reuses native overlay file metadata under `.gart/load/surface.json` and within each process.
+Its identity covers the Go environment and production Go files in the overlay package directories.
+Generated native inputs outside GOROOT have separate hashes.
+Application package discovery remains fresh because new imports and files can change the dependency graph.
+External Go overlays and custom package drivers bypass metadata reuse.
+
+The internal driver option `NoCache` bypasses cache reads. Separate concurrent builds need separate output directories.
+A source edit during compilation prevents receipt publication when its timestamp exceeds the compilation start.
+This guard does not provide an atomic filesystem snapshot across concurrent edits.
+
+For a development run without Dart formatting:
 
 ```sh
 gart run -timings -format=false -o ./output ./...
 ```
+
+## Production cache measurements
+
+The host uses an Apple M4 Max, Go 1.27.0, and Dart 3.13.3.
+These medians cover 3 alternating-order trials against commit `ceb3877`, with `GOMAXPROCS=4`, `GOFLAGS=-p=2`, and `-format=false`.
+No test suite overlapped these trials.
+Cold means a fresh output directory with warm Go and Pub caches.
+Each edit adds a real print statement to the Go entry point.
+All 54 executions matched native Go output for the corresponding source.
+
+| Fixture | Cold before | Cold after | Warm before | Warm after | Edit before | Edit after |
+|---|---:|---:|---:|---:|---:|---:|
+| `hello` | 1.304 s | 1.350 s | 1.025 s | 0.558 s | 0.988 s | 0.821 s |
+| `jsonv2use` | 4.155 s | 3.337 s | 3.019 s | 1.041 s | 3.058 s | 2.090 s |
+| `httpwire` | 10.944 s | 9.156 s | 6.632 s | 2.233 s | 6.377 s | 5.073 s |
+
+Warm total time fell by 45–66%. Edit total time fell by 17–32%.
+The cold `hello` median rose by 3.5%. Initial metadata validation adds work that larger fixtures offset through faster Dart compilation.
+Warm overlay discovery fell from 0.189 to 0.129 seconds for `hello`, 0.119 to 0.098 for JSON, and 0.146 to 0.102 for HTTP.
+Content validation still costs time. These results do not imply complete reuse of application package discovery.
+
+The focused regression tests cover source and transitive edits, preserved timestamps, package configuration, SDK identity, corrupt artifacts, and edits during compilation.
+Execution tests cover arguments, standard input/output, exit codes, working directories, assertions, non-product constants, and Go panic paths.
+The upstream cache regression compares cold and warm kernels with native Go for `path`, `io`, and selected `fmt` assertions.
+The `fmt` selection covers `TestErrorf`, `TestSprintf`, `TestScanf`, and `TestScan`.
+The existing exclusion for `fmt.TestScanInts` still applies because 800 nested scanners exceed the Dart stack limit.
+A manual generated-program probe also verifies debugger breakpoints, resume, SIGINT, and SIGTERM with source and kernel execution.
+
+The next performance targets are HTTP emission metadata and source edits that still invoke the full Dart kernel compiler.
+The experimental direct-kernel backend remains separate.

@@ -100,9 +100,9 @@ The output directory then holds 5 files:
 
 ### run
 
-`gart run` compiles the module, it runs `dart pub get`, and it then starts
-`bin/main.dart` on the Dart VM. Each argument after `--` reaches the program,
-and not the compiler.
+`gart run` compiles the module and resolves Dart dependencies when required.
+It compiles `bin/main.dart` to a cached kernel and starts that kernel on the Dart VM.
+Each argument after `--` reaches the program, and not the compiler.
 
 ```sh
 cd $GODART/testdata/programs/args
@@ -336,7 +336,7 @@ gart build -o /tmp/multi -runtime $GODART/runtime/goruntime ./...
 | `bin/<pkg>_test.dart` | The entry point of 1 test binary. |
 | `<name>.map.dart` | The source map of 1 library or of 1 entry point. |
 | `pubspec.yaml` | The Dart package, with `goruntime` as a path dependency. |
-| `.gart/` | The cache. It holds 1 JSON archive for each package. |
+| `.gart/` | Package archives, overlay metadata, and compiled kernels. |
 
 The driver writes the pubspec, thus the reader needs no hand edit. The `path`
 line holds the absolute form of the `-runtime` flag:
@@ -354,8 +354,8 @@ dependencies:
     path: /path/to/godart/runtime/goruntime
 ```
 
-`dart pub get` and `dart run bin/main.dart` then run the program. `gart run`
-does the 2 steps for the caller.
+`dart pub get` and `dart run bin/main.dart` can also run the emitted source.
+`gart run` resolves dependencies and uses the cached kernel automatically.
 
 The source map is a `part` file of the library that it belongs to. It holds the
 Go file and the Go line of each Dart line, thus `runtime.Caller` and a panic
@@ -402,6 +402,25 @@ and it read the cache.
 
 The driver writes a Dart file only when the content changed. An equal file keeps
 its time stamp, thus the incremental compiler of Dart keeps its own cache.
+
+`gart run` and ordinary `gart test` executions reuse source kernels under `.gart/kernel/`.
+Each receipt records the Dart SDK identity, compiler options, resolved package configuration, compiler dependency contents, and kernel hash.
+A source, runtime, dependency, SDK, or artifact change causes recompilation.
+The cache compares file contents, thus a preserved timestamp does not hide an edit.
+A benchmark still uses the existing AOT path.
+
+Kernel compilation preserves non-product constants and assertion support.
+The cached file also supports `dart run --enable-asserts` and `dart run --observe`.
+Generated Dart source remains available for direct execution and debugger source positions.
+
+`.gart/load/surface.json` holds the native file metadata for standard library overlays.
+Gart validates the Go environment and native source contents before reuse.
+It also retains 1 validated metadata snapshot within a process.
+Application discovery remains fresh, thus new imports and files remain visible.
+External Go overlays and custom package drivers bypass this metadata cache.
+
+To remove only these new caches, remove `.gart/kernel/` and `.gart/load/` beneath the selected output directory.
+Use separate output directories for concurrent builds.
 
 `gart watch` is a thin layer over these rules. It watches each directory of the
 module, and it skips the output directory. A change of a `.go` file or of a

@@ -85,29 +85,30 @@ type Filter map[string][]byte
 // The load runs 2 times. The first load finds the files of each standard
 // library package, and the second load replaces those files with the overlay.
 func Load(dir string, patterns ...string) (*Result, error) {
-	return load(dir, false, false, nil, patterns)
-}
-
-// LoadFiltered reads the packages, and the filter replaces a file of the build
-// first.
-func LoadFiltered(dir string, filter Filter, patterns ...string) (*Result, error) {
-	return load(dir, false, false, filter, patterns)
+	return load(dir, false, false, nil, patterns, "")
 }
 
 // LoadTests reads the packages and also each test variant of them. It replaces
 // the test entry point of the go command with the entry point of the compiler.
 func LoadTests(dir string, patterns ...string) (*Result, error) {
-	return load(dir, true, false, nil, patterns)
+	return load(dir, true, false, nil, patterns, "")
 }
 
-// LoadTestsCover reads the packages as LoadTests does, and it also writes a
-// counter into each statement of each package under test. The entry point of
-// the test binary then reports the coverage. Read testmain.go.
-func LoadTestsCover(dir string, patterns ...string) (*Result, error) {
-	return load(dir, true, true, nil, patterns)
+// Options configures package loading and an optional overlay-discovery cache.
+type Options struct {
+	Dir      string
+	Patterns []string
+	CacheDir string
+	Tests    bool
+	Cover    bool
+	Filter   Filter
 }
 
-func load(dir string, tests, cover bool, filter Filter, patterns []string) (*Result, error) {
+func LoadWithOptions(opt Options) (*Result, error) {
+	return load(opt.Dir, opt.Tests, opt.Cover, opt.Filter, opt.Patterns, opt.CacheDir)
+}
+
+func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string) (*Result, error) {
 	var timings []PhaseTiming
 	phase := time.Now()
 	found, err := packages.Load(&packages.Config{
@@ -121,7 +122,12 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string) (*Res
 	}
 	timings = append(timings, PhaseTiming{"load-discovery", time.Since(phase)})
 	phase = time.Now()
-	surface, err := surfacePackages(dir)
+	var surface []*packages.Package
+	if cacheDir != "" {
+		surface, err = cachedSurface(dir, cacheDir)
+	} else {
+		surface, err = surfacePackages(dir)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -320,18 +326,7 @@ func patchDiffs(out map[string][]byte, o overlay.Package, real *packages.Package
 // builds in 1 process.
 func surfacePackages(dir string) ([]*packages.Package, error) {
 	surfaceOnce.Do(func() {
-		var paths []string
-		for _, o := range overlay.Packages() {
-			if o.Path == overlay.IntrinsicPath {
-				continue
-			}
-			paths = append(paths, o.Path)
-		}
-		surfaceFound, surfaceErr = packages.Load(&packages.Config{
-			Mode:       findMode,
-			Dir:        dir,
-			BuildFlags: []string{"-tags=" + BuildTag},
-		}, paths...)
+		surfaceFound, surfaceErr = discoverSurface(dir)
 	})
 	return surfaceFound, surfaceErr
 }
