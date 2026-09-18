@@ -135,3 +135,23 @@ A manual generated-program probe also verifies debugger breakpoints, resume, SIG
 
 The next performance targets are HTTP emission metadata and source edits that still invoke the full Dart kernel compiler.
 The experimental direct-kernel backend remains separate.
+
+## Resident compiler comparison, 2026-09-18
+
+The resident compiler experiment compares complete requests with identical Go frontend work on a playground-derived fixture.
+It uses a local HTTP endpoint, a fixed clock, and a no-HTTP control.
+Each mode has 5 trials with a fresh output, an unchanged repeat, and a real source edit.
+
+| Workload after an edit | Dart source path | Current kernel cache | Resident compiler |
+|---|---:|---:|---:|
+| HTTP | 8.135 s | 5.810 s | 2.790 s |
+| No HTTP | 3.637 s | 2.326 s | 1.085 s |
+
+The resident compiler reduces the edit total by 52–53% against the current kernel cache in these fixtures.
+Cold and warm differences are smaller. The no-HTTP warm median is 8% slower with the resident compiler.
+Desktop background load remained active, and no test suite overlapped the measurements.
+All 90 measured outputs match native Go after pointer normalization. All 10 private resident compilers shut down successfully.
+
+The next step is a bounded integration prototype that preserves content-based invalidation and existing execution contracts.
+The current production driver still uses its source-kernel cache.
+The [experiment documentation](../experiments/resident/README.md) contains the complete table, reproduction command, limitations, and raw trial durations.
