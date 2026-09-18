@@ -111,9 +111,9 @@ The separate initial probe also passed 18 execution comparisons and 2 compiler s
 [The measurement data](results-2026-09-18.json) retains all trial durations and the environment identity.
 Raw logs and generated artifacts reside locally under `build/resident-comparison-20260918/`.
 
-## Recommendation
+## Initial measurement decision
 
-Proceed to a bounded resident integration prototype for source edits.
+The initial measurement supported a bounded resident integration prototype for source edits.
 Retain the current content-validated kernel cache as the unchanged-input path during that evaluation.
 Measure both paths through the production driver before a default execution change.
 Verify source, runtime, package configuration, SDK, and compiler-option invalidation first.
@@ -123,3 +123,128 @@ Do not rely only on resident timestamp detection when Gart already knows that so
 The resident process also retains compiler memory until shutdown.
 This experiment does not measure that memory cost or establish a production lifetime policy.
 No production code changed in this task. Direct-kernel generation remains a separate experiment.
+
+## Content-validated session prototype
+
+`session.py` evaluates resident compilation through the production Gart frontend.
+`integration_probe.py` compares that prototype with the production `gart run` command.
+The prototype adds no production CLI flag and changes no production default.
+It requires Dart 3.13.3 and Python 3.9 or later.
+
+The session owns 1 frontend compiler child and serves serial compile requests.
+The caller must own its output directory exclusively and close the session after use.
+Use `Session` as a context manager to terminate its child on success or failure.
+Each program execution uses a fresh `dart run <kernel>` process.
+The compiler retains frontend state across source edits. The application retains no runtime state.
+
+The protocol uses the installed `frontend_server_aot.dart.snapshot` directly.
+A cold request sends `compile`. Later edits send `recompile` with explicit changed file URIs.
+After success, `accept` and `reset` retain frontend state and reset the delta base.
+Thus each result is a complete kernel that a fresh Dart process can execute.
+This protocol is internal to the pinned SDK. It is not a stable Dart API.
+
+The content identity includes:
+
+- The SDK path and hashes for its VM, frontend snapshot, platform kernel, and metadata.
+- The entry point, package configuration bytes, compiler defines, fixed flags, and prototype source hash.
+- All Dart source files under the generated output and resolved package library roots.
+- The complete kernel hash.
+
+The source scan deduplicates resolved paths before hashes.
+A changed, added, or removed source produces an explicit invalidation URI.
+The prototype does not depend on source timestamps.
+A second input snapshot detects content changes during the compile request and prevents artifact publication.
+It does not provide an atomic filesystem snapshot or support concurrent edits during compilation.
+Compiler dependencies outside the source snapshot cause a failure.
+Hidden Dart sources, directory symlink layouts outside the snapshot, and arbitrary external source imports are outside this bounded prototype.
+The source scan can invalidate unused files. Production cache depfiles remain more selective.
+
+Validated kernels and receipts reside under `.gart/resident-prototype/`.
+An unchanged request validates the receipt and executes the kernel without a compiler request.
+A new session can reuse that disk kernel without a compiler child.
+The first changed request in a new session requires a cold compiler start.
+Incremental compilation requires the same live session across edits.
+Separate invocations of the Python script do not share a compiler.
+
+SDK, package configuration, entry point, or compiler-option changes restart the compiler.
+A corrupt artifact or receipt requires a new kernel.
+A compiler error terminates its child, reports failure, and preserves the last valid receipt.
+The prototype never executes that previous artifact as a fallback for a failed request.
+The next valid request can start a new compiler.
+Compiler requests have a 120-second timeout. Session close allows 3 seconds before forced termination.
+
+Run the regression suite and complete-request comparison from the repository root:
+
+```sh
+python3 -B -m unittest discover -s experiments/resident -p test_session.py -v
+python3 -B experiments/resident/integration_probe.py --output build/resident-integration
+```
+
+The comparison uses 5 trials with alternating mode order and separate output directories.
+It uses the same HTTP fixture and no-HTTP control as the earlier benchmark.
+It preserves the Go source timestamp during the same-size edit.
+Both modes include the production Go frontend, dependency setup, and fresh application execution.
+The prototype invokes `gart build`, then resolves dependencies when the production freshness rule requires it.
+Its source scan and pre/post content hashes remain inside the request duration.
+The production mode invokes the actual `gart run` command.
+All measured outputs must match native Go after the same pointer normalization.
+Cold requests use fresh output and compiler state. Go, Pub, and filesystem caches remain warm.
+Session shutdown remains outside request durations and appears separately in the report.
+
+The 11 regression tests cover:
+
+- Cold requests, unchanged requests, timestamp-preserved edits, and disk reuse after session close.
+- Transitive source additions, changes, removals, compiler errors, and repair.
+- Runtime source changes, package configuration changes, SDK identity, defines, and unsupported SDK rejection.
+- Artifact corruption, receipt corruption, worker termination, cleanup, and edits during compilation.
+- Arguments, stdin, stdout, stderr, current directory, exit codes, product constants, and assertions.
+- Generated Dart breakpoints and resume after an incremental source edit, with source execution as the reference.
+- SIGINT and SIGTERM through fresh source and kernel processes.
+- Go panic exit codes, absolute Go paths, and `-trimpath` paths through the production frontend.
+
+These are focused prototype tests. They do not establish complete upstream Go parity, Windows support, or production daemon behavior.
+
+## Integration results, 2026-09-18
+
+The host uses the same Apple M4 Max, macOS ARM64, Go 1.27.0, and Dart 3.13.3.
+The production baseline is `2463398`.
+The table shows complete-request medians from 5 trials, in seconds.
+Desktop background load remained active. No test suite overlapped these measurements.
+
+| Workload | Scenario | Production kernel cache | Content-validated session |
+|---|---|---:|---:|
+| HTTP | Cold | 10.392 | 10.128 |
+| HTTP | Warm | 2.389 | 2.501 |
+| HTTP | Edit | 5.506 | 2.817 |
+| No HTTP | Cold | 3.680 | 3.964 |
+| No HTTP | Warm | 1.033 | 1.039 |
+| No HTTP | Edit | 2.125 | 1.212 |
+
+The prototype reduces the median edit total by 49% with HTTP and 43% without HTTP.
+The Dart portion includes content validation, compilation when required, and program execution.
+That portion falls from 3.714 to 1.077 seconds with HTTP, and from 1.386 to 0.448 seconds without HTTP.
+The Go frontend still runs on each request.
+
+Cold differences vary by workload and do not establish a cold-start improvement.
+The HTTP unchanged request is 5% slower. The no-HTTP unchanged difference is less than 1%.
+The conservative source scan adds overhead relative to the production depfile cache.
+These results support a persistent development session for source edits.
+They do not support a claim that a resident compiler improves all requests.
+
+All 60 measured outputs match native Go after pointer normalization.
+The loopback server records the expected 32 requests, including 2 native references.
+All cold, unchanged, and edit requests use their expected compiler/cache state.
+All 10 session compilers terminate after their trials.
+[The integration data](integration-results-2026-09-18.json) retains all trial durations, phase durations, source hashes, and tool identities.
+Raw logs and generated artifacts reside locally under `build/resident-integration-20260918/`.
+
+The 11 regression tests pass on macOS ARM64 and local Linux AMD64.
+Linux uses the pinned CI image, 2 CPUs, `GOMAXPROCS=2`, and `GOFLAGS=-p=2`.
+The debugger and signal tests use a kernel after an actual Go source edit and incremental recompilation.
+No GitHub Actions run or full upstream Go suite forms part of this prototype validation.
+
+The next production task needs an explicit session lifecycle across CLI requests, output ownership, idle shutdown, and a memory budget.
+Measure retained compiler memory across repeated edits before that integration.
+Keep the exact SDK protocol dependency visible in that design.
+The current Python session ends when its caller closes it and does not provide a shared daemon or watch command.
+The production `gart run` command remains unchanged.
