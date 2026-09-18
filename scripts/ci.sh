@@ -21,6 +21,15 @@ finish() {
 }
 trap finish EXIT
 
+if [[ $suite == driver || $suite == stdlib || $suite == upstream-targets || $suite == upstream-priority ]]; then
+  if [[ ${GART_UPSTREAM_MODE:-short} == short ]]; then
+    short_flag=-short=true
+  elif [[ ${GART_UPSTREAM_MODE} != full ]]; then
+    printf 'unknown upstream mode: %s\n' "$GART_UPSTREAM_MODE" >&2
+    exit 2
+  fi
+fi
+
 large_tests='TestPrograms|TestRunFilesOfGoTest|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
 case "$suite" in
   checks)
@@ -34,7 +43,8 @@ case "$suite" in
     go test -v -p=1 -count=1 -timeout "$test_timeout" "${packages[@]}"
     ;;
   driver)
-    go test -v -count=1 -timeout "$test_timeout" ./internal/driver -skip "^(${large_tests})$"
+    go test -v -count=1 -timeout "$test_timeout" "$short_flag" ./internal/driver -skip "^(${large_tests})$"
+    python3 -B -m unittest discover -s scripts -p test_resident.py -v
     ;;
   integration) test_name=TestTests ;;
   targets) test_name='TestAOT|TestWasm|TestJS' ;;
@@ -51,15 +61,6 @@ case "$suite" in
   stdlib) test_name=TestTestsOfGoroot ;;
   *) printf 'unknown CI suite: %s\n' "$suite" >&2; exit 2 ;;
 esac
-
-if [[ $suite == stdlib || $suite == upstream-targets ]]; then
-  if [[ ${GART_UPSTREAM_MODE:-short} == short ]]; then
-    short_flag=-short=true
-  elif [[ ${GART_UPSTREAM_MODE} != full ]]; then
-    printf 'unknown upstream mode: %s\n' "$GART_UPSTREAM_MODE" >&2
-    exit 2
-  fi
-fi
 
 if [[ $suite != checks && $suite != driver ]]; then
   go test -v -count=1 -timeout "$test_timeout" "$short_flag" ./internal/driver \

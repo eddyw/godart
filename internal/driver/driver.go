@@ -30,12 +30,13 @@ import (
 
 // Options holds the input of a build.
 type Options struct {
-	Dir      string
-	Patterns []string
-	Out      string
-	Runtime  string
-	Format   bool
-	TrimPath bool
+	outputLocked bool
+	Dir          string
+	Patterns     []string
+	Out          string
+	Runtime      string
+	Format       bool
+	TrimPath     bool
 	// Trace receives the elapsed duration of each build or execution phase.
 	Trace func(string, time.Duration)
 	// NoCache compiles each package again, also when the cache holds it.
@@ -87,6 +88,11 @@ func Build(opt Options) error {
 
 // BuildWithStats compiles the packages and reports the state of each one.
 func BuildWithStats(opt Options) (*Stats, error) {
+	release, err := opt.lockOutput()
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	phase := time.Now()
 	result, err := loadModule(opt)
 	opt.trace("load", phase)

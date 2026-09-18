@@ -53,6 +53,11 @@ type TestOptions struct {
 // Run compiles the module and runs package main with the Dart VM. The result
 // is the exit code of the program.
 func Run(opt Options, args []string, out io.Writer) (int, error) {
+	release, err := opt.lockOutput()
+	if err != nil {
+		return 1, err
+	}
+	defer release()
 	if _, err := BuildWithStats(opt); err != nil {
 		return 1, err
 	}
@@ -80,6 +85,11 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 // of time first, because the VM starts a just in time compiler and its warm up
 // cost hides the result.
 func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
+	release, err := opt.lockOutput()
+	if err != nil {
+		return 1, err
+	}
+	defer release()
 	if testOpt.CountGiven && testOpt.Count < 0 {
 		return 1, fmt.Errorf("the flag -count takes a count of 0 or more")
 	}

@@ -1,0 +1,618 @@
+{
+  "date": "2026-09-18",
+  "host": "macOS ARM64, Apple M4 Max",
+  "sdk": "Dart 3.13.3",
+  "workload": "HTTP playground, fixed clock, local empty HTTP response",
+  "edits": 100,
+  "http_requests": 102,
+  "unit": "KiB",
+  "rows": [
+    {
+      "edit": 0,
+      "rss_kib": 610080,
+      "compile_seconds": 4.048042042006273,
+      "mode": "cold"
+    },
+    {
+      "edit": 1,
+      "rss_kib": 649952,
+      "compile_seconds": 0.4775063340202905,
+      "mode": "incremental"
+    },
+    {
+      "edit": 2,
+      "rss_kib": 688800,
+      "compile_seconds": 0.4453232499654405,
+      "mode": "incremental"
+    },
+    {
+      "edit": 3,
+      "rss_kib": 610384,
+      "compile_seconds": 0.47776954201981425,
+      "mode": "incremental"
+    },
+    {
+      "edit": 4,
+      "rss_kib": 649248,
+      "compile_seconds": 0.5156634169979952,
+      "mode": "incremental"
+    },
+    {
+      "edit": 5,
+      "rss_kib": 688080,
+      "compile_seconds": 0.46927170804701746,
+      "mode": "incremental"
+    },
+    {
+      "edit": 6,
+      "rss_kib": 610304,
+      "compile_seconds": 0.5286156249931082,
+      "mode": "incremental"
+    },
+    {
+      "edit": 7,
+      "rss_kib": 649168,
+      "compile_seconds": 0.5269750419538468,
+      "mode": "incremental"
+    },
+    {
+      "edit": 8,
+      "rss_kib": 688000,
+      "compile_seconds": 0.5348188749630935,
+      "mode": "incremental"
+    },
+    {
+      "edit": 9,
+      "rss_kib": 610304,
+      "compile_seconds": 0.5421183750149794,
+      "mode": "incremental"
+    },
+    {
+      "edit": 10,
+      "rss_kib": 649168,
+      "compile_seconds": 0.508689875015989,
+      "mode": "incremental"
+    },
+    {
+      "edit": 11,
+      "rss_kib": 688000,
+      "compile_seconds": 0.5470641659921966,
+      "mode": "incremental"
+    },
+    {
+      "edit": 12,
+      "rss_kib": 610304,
+      "compile_seconds": 0.5483292500139214,
+      "mode": "incremental"
+    },
+    {
+      "edit": 13,
+      "rss_kib": 649168,
+      "compile_seconds": 0.5443815420148894,
+      "mode": "incremental"
+    },
+    {
+      "edit": 14,
+      "rss_kib": 688000,
+      "compile_seconds": 0.4300469160079956,
+      "mode": "incremental"
+    },
+    {
+      "edit": 15,
+      "rss_kib": 610320,
+      "compile_seconds": 0.5171441659913398,
+      "mode": "incremental"
+    },
+    {
+      "edit": 16,
+      "rss_kib": 649184,
+      "compile_seconds": 0.5201784590026364,
+      "mode": "incremental"
+    },
+    {
+      "edit": 17,
+      "rss_kib": 688016,
+      "compile_seconds": 0.5102384169586003,
+      "mode": "incremental"
+    },
+    {
+      "edit": 18,
+      "rss_kib": 610320,
+      "compile_seconds": 0.530450334015768,
+      "mode": "incremental"
+    },
+    {
+      "edit": 19,
+      "rss_kib": 649184,
+      "compile_seconds": 0.521557166997809,
+      "mode": "incremental"
+    },
+    {
+      "edit": 20,
+      "rss_kib": 688016,
+      "compile_seconds": 0.5101159169571474,
+      "mode": "incremental"
+    },
+    {
+      "edit": 21,
+      "rss_kib": 610320,
+      "compile_seconds": 0.5049356669769622,
+      "mode": "incremental"
+    },
+    {
+      "edit": 22,
+      "rss_kib": 649184,
+      "compile_seconds": 0.49656716600293294,
+      "mode": "incremental"
+    },
+    {
+      "edit": 23,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4896159579511732,
+      "mode": "incremental"
+    },
+    {
+      "edit": 24,
+      "rss_kib": 610320,
+      "compile_seconds": 0.5025325419846922,
+      "mode": "incremental"
+    },
+    {
+      "edit": 25,
+      "rss_kib": 649184,
+      "compile_seconds": 0.5094910410116427,
+      "mode": "incremental"
+    },
+    {
+      "edit": 26,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4671956669772044,
+      "mode": "incremental"
+    },
+    {
+      "edit": 27,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4180895830504596,
+      "mode": "incremental"
+    },
+    {
+      "edit": 28,
+      "rss_kib": 649184,
+      "compile_seconds": 0.4107714170240797,
+      "mode": "incremental"
+    },
+    {
+      "edit": 29,
+      "rss_kib": 688016,
+      "compile_seconds": 0.41268783301347867,
+      "mode": "incremental"
+    },
+    {
+      "edit": 30,
+      "rss_kib": 610320,
+      "compile_seconds": 0.40489704097853974,
+      "mode": "incremental"
+    },
+    {
+      "edit": 31,
+      "rss_kib": 649184,
+      "compile_seconds": 0.4179905829951167,
+      "mode": "incremental"
+    },
+    {
+      "edit": 32,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4091429580003023,
+      "mode": "incremental"
+    },
+    {
+      "edit": 33,
+      "rss_kib": 610320,
+      "compile_seconds": 0.413222000002861,
+      "mode": "incremental"
+    },
+    {
+      "edit": 34,
+      "rss_kib": 649184,
+      "compile_seconds": 0.41780379199190065,
+      "mode": "incremental"
+    },
+    {
+      "edit": 35,
+      "rss_kib": 688016,
+      "compile_seconds": 0.40996995801106095,
+      "mode": "incremental"
+    },
+    {
+      "edit": 36,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4156434590113349,
+      "mode": "incremental"
+    },
+    {
+      "edit": 37,
+      "rss_kib": 649184,
+      "compile_seconds": 0.4121972499997355,
+      "mode": "incremental"
+    },
+    {
+      "edit": 38,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4095669169910252,
+      "mode": "incremental"
+    },
+    {
+      "edit": 39,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4337202089955099,
+      "mode": "incremental"
+    },
+    {
+      "edit": 40,
+      "rss_kib": 649184,
+      "compile_seconds": 0.43406587501522154,
+      "mode": "incremental"
+    },
+    {
+      "edit": 41,
+      "rss_kib": 688016,
+      "compile_seconds": 0.42771466600243,
+      "mode": "incremental"
+    },
+    {
+      "edit": 42,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4257700409507379,
+      "mode": "incremental"
+    },
+    {
+      "edit": 43,
+      "rss_kib": 649184,
+      "compile_seconds": 0.41693566704634577,
+      "mode": "incremental"
+    },
+    {
+      "edit": 44,
+      "rss_kib": 688016,
+      "compile_seconds": 0.41833175002830103,
+      "mode": "incremental"
+    },
+    {
+      "edit": 45,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4266240419819951,
+      "mode": "incremental"
+    },
+    {
+      "edit": 46,
+      "rss_kib": 649184,
+      "compile_seconds": 0.43400875001680106,
+      "mode": "incremental"
+    },
+    {
+      "edit": 47,
+      "rss_kib": 688016,
+      "compile_seconds": 0.41401387500809506,
+      "mode": "incremental"
+    },
+    {
+      "edit": 48,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4433002089499496,
+      "mode": "incremental"
+    },
+    {
+      "edit": 49,
+      "rss_kib": 649184,
+      "compile_seconds": 0.42241629102500156,
+      "mode": "incremental"
+    },
+    {
+      "edit": 50,
+      "rss_kib": 688016,
+      "compile_seconds": 0.43082962499465793,
+      "mode": "incremental"
+    },
+    {
+      "edit": 51,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4379449169500731,
+      "mode": "incremental"
+    },
+    {
+      "edit": 52,
+      "rss_kib": 649184,
+      "compile_seconds": 0.4251756670419127,
+      "mode": "incremental"
+    },
+    {
+      "edit": 53,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4242323330254294,
+      "mode": "incremental"
+    },
+    {
+      "edit": 54,
+      "rss_kib": 610320,
+      "compile_seconds": 0.44891533302143216,
+      "mode": "incremental"
+    },
+    {
+      "edit": 55,
+      "rss_kib": 649184,
+      "compile_seconds": 0.4186898340121843,
+      "mode": "incremental"
+    },
+    {
+      "edit": 56,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4413661250146106,
+      "mode": "incremental"
+    },
+    {
+      "edit": 57,
+      "rss_kib": 610320,
+      "compile_seconds": 0.46498724998673424,
+      "mode": "incremental"
+    },
+    {
+      "edit": 58,
+      "rss_kib": 649184,
+      "compile_seconds": 0.4183278750278987,
+      "mode": "incremental"
+    },
+    {
+      "edit": 59,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4124393750098534,
+      "mode": "incremental"
+    },
+    {
+      "edit": 60,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4256475829752162,
+      "mode": "incremental"
+    },
+    {
+      "edit": 61,
+      "rss_kib": 649184,
+      "compile_seconds": 0.41210908396169543,
+      "mode": "incremental"
+    },
+    {
+      "edit": 62,
+      "rss_kib": 688016,
+      "compile_seconds": 0.41202520800288767,
+      "mode": "incremental"
+    },
+    {
+      "edit": 63,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4261202500201762,
+      "mode": "incremental"
+    },
+    {
+      "edit": 64,
+      "rss_kib": 649184,
+      "compile_seconds": 0.4090046670171432,
+      "mode": "incremental"
+    },
+    {
+      "edit": 65,
+      "rss_kib": 688016,
+      "compile_seconds": 0.41003070800798014,
+      "mode": "incremental"
+    },
+    {
+      "edit": 66,
+      "rss_kib": 610320,
+      "compile_seconds": 0.41861691599478945,
+      "mode": "incremental"
+    },
+    {
+      "edit": 67,
+      "rss_kib": 649184,
+      "compile_seconds": 0.413349833979737,
+      "mode": "incremental"
+    },
+    {
+      "edit": 68,
+      "rss_kib": 688016,
+      "compile_seconds": 0.40963258303236216,
+      "mode": "incremental"
+    },
+    {
+      "edit": 69,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4240914999973029,
+      "mode": "incremental"
+    },
+    {
+      "edit": 70,
+      "rss_kib": 649184,
+      "compile_seconds": 0.40721633401699364,
+      "mode": "incremental"
+    },
+    {
+      "edit": 71,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4319450409966521,
+      "mode": "incremental"
+    },
+    {
+      "edit": 72,
+      "rss_kib": 610320,
+      "compile_seconds": 0.44197612500283867,
+      "mode": "incremental"
+    },
+    {
+      "edit": 73,
+      "rss_kib": 649184,
+      "compile_seconds": 0.4249854169902392,
+      "mode": "incremental"
+    },
+    {
+      "edit": 74,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4302656250074506,
+      "mode": "incremental"
+    },
+    {
+      "edit": 75,
+      "rss_kib": 610320,
+      "compile_seconds": 0.41931274998933077,
+      "mode": "incremental"
+    },
+    {
+      "edit": 76,
+      "rss_kib": 649184,
+      "compile_seconds": 0.4188620410277508,
+      "mode": "incremental"
+    },
+    {
+      "edit": 77,
+      "rss_kib": 688016,
+      "compile_seconds": 0.4131460409844294,
+      "mode": "incremental"
+    },
+    {
+      "edit": 78,
+      "rss_kib": 610320,
+      "compile_seconds": 0.4282992499647662,
+      "mode": "incremental"
+    },
+    {
+      "edit": 79,
+      "rss_kib": 649184,
+      "compile_seconds": 0.9092617920250632,
+      "mode": "incremental"
+    },
+    {
+      "edit": 80,
+      "rss_kib": 688016,
+      "compile_seconds": 0.8630598750314675,
+      "mode": "incremental"
+    },
+    {
+      "edit": 81,
+      "rss_kib": 610320,
+      "compile_seconds": 0.8734498329577036,
+      "mode": "incremental"
+    },
+    {
+      "edit": 82,
+      "rss_kib": 649184,
+      "compile_seconds": 0.881862459005788,
+      "mode": "incremental"
+    },
+    {
+      "edit": 83,
+      "rss_kib": 688016,
+      "compile_seconds": 0.8600302090053447,
+      "mode": "incremental"
+    },
+    {
+      "edit": 84,
+      "rss_kib": 610320,
+      "compile_seconds": 0.9050951249664649,
+      "mode": "incremental"
+    },
+    {
+      "edit": 85,
+      "rss_kib": 649152,
+      "compile_seconds": 0.903063292033039,
+      "mode": "incremental"
+    },
+    {
+      "edit": 86,
+      "rss_kib": 688016,
+      "compile_seconds": 0.8564761250163428,
+      "mode": "incremental"
+    },
+    {
+      "edit": 87,
+      "rss_kib": 610336,
+      "compile_seconds": 0.904842208023183,
+      "mode": "incremental"
+    },
+    {
+      "edit": 88,
+      "rss_kib": 649184,
+      "compile_seconds": 0.8493018749868497,
+      "mode": "incremental"
+    },
+    {
+      "edit": 89,
+      "rss_kib": 688016,
+      "compile_seconds": 0.8262272080173716,
+      "mode": "incremental"
+    },
+    {
+      "edit": 90,
+      "rss_kib": 610320,
+      "compile_seconds": 0.8513517919927835,
+      "mode": "incremental"
+    },
+    {
+      "edit": 91,
+      "rss_kib": 649184,
+      "compile_seconds": 0.8067535419831984,
+      "mode": "incremental"
+    },
+    {
+      "edit": 92,
+      "rss_kib": 688016,
+      "compile_seconds": 0.8728618750465102,
+      "mode": "incremental"
+    },
+    {
+      "edit": 93,
+      "rss_kib": 610320,
+      "compile_seconds": 0.9317624169634655,
+      "mode": "incremental"
+    },
+    {
+      "edit": 94,
+      "rss_kib": 649152,
+      "compile_seconds": 0.7807947089895606,
+      "mode": "incremental"
+    },
+    {
+      "edit": 95,
+      "rss_kib": 688016,
+      "compile_seconds": 1.0414828329812735,
+      "mode": "incremental"
+    },
+    {
+      "edit": 96,
+      "rss_kib": 610320,
+      "compile_seconds": 0.8696096249623224,
+      "mode": "incremental"
+    },
+    {
+      "edit": 97,
+      "rss_kib": 649184,
+      "compile_seconds": 0.8558162080007605,
+      "mode": "incremental"
+    },
+    {
+      "edit": 98,
+      "rss_kib": 688016,
+      "compile_seconds": 0.8344796249875799,
+      "mode": "incremental"
+    },
+    {
+      "edit": 99,
+      "rss_kib": 610320,
+      "compile_seconds": 0.8674578749923967,
+      "mode": "incremental"
+    },
+    {
+      "edit": 100,
+      "rss_kib": 649184,
+      "compile_seconds": 0.8372109159827232,
+      "mode": "incremental"
+    }
+  ],
+  "timing_limit": "Later memory samples overlapped development commands. Compile durations are not isolated performance evidence."
+}

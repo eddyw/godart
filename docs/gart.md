@@ -102,6 +102,13 @@ The output directory then holds 5 files:
 
 `gart run` compiles the module and resolves Dart dependencies when required.
 It compiles `bin/main.dart` to a cached kernel and starts that kernel on the Dart VM.
+A local compiler service retains Dart frontend state across separate commands after source edits.
+An unchanged request validates the disk kernel without a service request.
+The service expires 60-second idle compilers before the next compile request and exits after 60 idle seconds.
+The next edit after shutdown requires a cold compile.
+Each application uses a fresh process, with its own arguments, input, output, and exit status.
+The service requires Dart 3.13.3 on macOS or Linux. It uses a private Unix socket and needs no TCP listener.
+Concurrent commands require separate output directories. Gart rejects an output directory that another command owns.
 Each argument after `--` reaches the program, and not the compiler.
 
 ```sh

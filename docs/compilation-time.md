@@ -24,10 +24,13 @@ Each line gives the phase and elapsed seconds. The test harness also records the
 | `source-maps` | Source maps |
 | `pub` | Dependency configuration, including `dart pub get` when required |
 | `kernel-cache` | SDK identity and compiled-kernel cache validation |
-| `kernel-compile` | Dart source compilation on a kernel cache miss |
+| `kernel-compile` | Input snapshots, resident compilation, validation, and kernel publication on a cache miss |
+| `kernel-cold` | Cache-miss work through a fresh compiler response |
+| `kernel-incremental` | Cache-miss work through an incremental compiler response |
 | `execute` | Dart VM startup, JIT work, and program execution |
 
 The 4 detailed load phases are parts of `load`. Do not add them to `load` again.
+`kernel-cold` and `kernel-incremental` are details within `kernel-compile`. Do not add them to the total again.
 `load-types` does not separate parser CPU time from type analysis or the Go subprocess.
 `execute` does not identify application execution alone.
 
@@ -86,7 +89,7 @@ The profile excludes child-process work and elapsed wait time.
 `kernel-compile` appears only on a cache miss. `kernel-cache` includes content hashes and SDK identity validation.
 The driver retains non-product constants and assertion support. Benchmark tests retain the existing AOT path.
 
-The kernel receipt covers all compiler depfile inputs, the resolved package configuration, compiler options, SDK identity, and artifact contents.
+The kernel receipt covers compiler-reported source dependencies, package configuration, compiler options, SDK identity, and artifact contents.
 A missing, changed, or corrupt input causes recompilation. Content hashes detect edits that preserve file sizes and timestamps.
 The cache uses `.gart/kernel/` beneath the output directory.
 
@@ -97,7 +100,7 @@ Application package discovery remains fresh because new imports and files can ch
 External Go overlays and custom package drivers bypass metadata reuse.
 
 The internal driver option `NoCache` bypasses cache reads. Separate concurrent builds need separate output directories.
-A source edit during compilation prevents receipt publication when its timestamp exceeds the compilation start.
+Content hashes before and after compilation detect source edits during compilation, including edits with unchanged timestamps.
 This guard does not provide an atomic filesystem snapshot across concurrent edits.
 
 For a development run without Dart formatting:
@@ -133,7 +136,7 @@ The `fmt` selection covers `TestErrorf`, `TestSprintf`, `TestScanf`, and `TestSc
 The existing exclusion for `fmt.TestScanInts` still applies because 800 nested scanners exceed the Dart stack limit.
 A manual generated-program probe also verifies debugger breakpoints, resume, SIGINT, and SIGTERM with source and kernel execution.
 
-The next performance targets are HTTP emission metadata and source edits that still invoke the full Dart kernel compiler.
+The initial cache measurements identified HTTP emission metadata and full Dart compilation after source edits as the next performance targets.
 The experimental direct-kernel backend remains separate.
 
 ## Resident compiler comparison, 2026-09-18
@@ -152,6 +155,130 @@ Cold and warm differences are smaller. The no-HTTP warm median is 8% slower with
 Desktop background load remained active, and no test suite overlapped the measurements.
 All 90 measured outputs match native Go after pointer normalization. All 10 private resident compilers shut down successfully.
 
-The next step is a bounded integration prototype that preserves content-based invalidation and existing execution contracts.
-The current production driver still uses its source-kernel cache.
+These initial measurements led to a content-validated prototype and the production integration below.
 The [experiment documentation](../experiments/resident/README.md) contains the complete table, reproduction command, limitations, and raw trial durations.
+
+## Production resident compiler
+
+The driver now uses a persistent Dart compiler service on a kernel cache miss.
+Separate `gart run` and ordinary `gart test` commands can reuse frontend state.
+The service retains at most 2 compilers per SDK/service identity and serves requests serially.
+A third entry point replaces the least recently used compiler.
+Output locks prevent concurrent commands from changing the same generated package.
+
+The service uses a private directory under `/tmp`, with a namespace derived from the system temporary directory.
+This short path also supports long `TMPDIR` values within the Unix socket path limit.
+Directory ownership and permissions restrict access to the current user.
+A startup lock prevents duplicate service creation across CLI processes.
+The service starts a new process session, thus application signals do not terminate its retained compiler.
+Compiler or service death causes a cold restart on the next request.
+A compile error fails the command and preserves the previous valid receipt without executing it.
+
+The cache-hit path hashes exact dependencies and the artifact. It does not scan all package sources or contact the service.
+The receipt has a checksum that detects partial receipt corruption.
+On a cache miss, a source snapshot covers generated Dart and resolved package library roots.
+The snapshot retains URI paths and resolved paths, thus preserved timestamps and runtime symlink retargets cause invalidation.
+The service sends explicit changed URIs through the Dart frontend protocol.
+It resets the delta base after success and emits a complete kernel for a fresh application process.
+
+SDK binaries, platform data, package configuration, fixed compiler options, and service source contribute to cache identity.
+A changed SDK or package configuration requires a cold compiler.
+The driver requires Dart 3.13.3 because the frontend protocol is internal to that SDK.
+The current service supports macOS and Linux.
+Untracked source dependencies cause a clear error. Arbitrary external Dart imports and directory symlinks outside the source snapshot remain unsupported.
+
+Before each compile request, the service releases compilers with at least 60 idle seconds.
+It also releases a compiler after 100 incremental edits.
+It also releases a compiler when post-compile RSS exceeds 1 GiB or the memory measurement is unavailable.
+Linux reads RSS from `/proc`. macOS uses `ps`.
+These are retention limits. A compile can exceed 1 GiB before the service releases its compiler.
+The 2-compiler limit excludes application memory and the service process itself.
+The service also exits after 60 idle seconds. Monotonic clocks control both idle limits.
+
+The HTTP prototype completed 100 consecutive edits with a peak compiler RSS of 672.656 MiB.
+All 4 edit-quartile medians were 633.969 MiB. All 101 program executions matched native Go output.
+The fixture uses a fixed clock and a local empty HTTP response.
+Later samples overlapped development commands. Their compile durations do not establish isolated performance results.
+This measurement supports the retention policy for that fixture, not a universal compiler memory bound.
+[Memory evidence](../experiments/resident/memory-results-2026-09-18.json) retains all samples.
+
+Reproduce memory, production performance, and Go frontend profiles with:
+
+```sh
+python3 -B experiments/resident/memory_probe.py --output build/resident-memory
+python3 -B experiments/resident/production_probe.py --baseline /path/to/previous/gart --output build/resident-production
+python3 -B experiments/resident/profile_frontend.py --output build/resident-frontend
+```
+
+The production comparison uses actual CLI commands for both binaries and includes complete requests.
+It uses 5 alternating-order trials, fresh private services, local HTTP output, and native Go output comparisons.
+The frontend profile uses a fresh Go process for each request and retains CPU profiles separately from phase durations.
+Its CPU profiles exclude child Go and Dart processes.
+
+The resident parity regression compares native Go with cold, cached, and incremental kernels.
+It covers `path`, `io`, `math/bits`, `hash/crc32`, and the existing selected `fmt` assertions.
+Each state has 179 successful upstream outcomes and 5 explicit exclusions across those packages.
+Routine CI applies the same short-mode flag to native Go and Gart. The manual full mode remains available.
+The production contracts also cover structural Go edits, debugger breakpoints, application signals, concurrent output ownership, and compiler/service crash recovery.
+These results establish parity for the selected assertions. They do not establish complete Go compatibility.
+
+
+## Production resident results, 2026-09-18
+
+These medians cover 5 alternating-order trials against `4de8724` on the same Apple M4 Max.
+Both modes use actual `gart run` commands, `-format=false`, `GOMAXPROCS=4`, and `GOFLAGS=-p=2`.
+Cold requests use fresh outputs and services with warm Go, Pub, and filesystem caches.
+No test suite overlapped these measurements. Desktop background load remained active.
+
+| Workload | State | Previous kernel cache | Resident compiler |
+|---|---|---:|---:|
+| HTTP | Cold | 10.391 s | 10.762 s |
+| HTTP | Unchanged | 2.429 s | 2.361 s |
+| HTTP | Edit | 5.559 s | 2.740 s |
+| No HTTP | Cold | 3.858 s | 3.709 s |
+| No HTTP | Unchanged | 1.051 s | 0.981 s |
+| No HTTP | Edit | 2.115 s | 1.136 s |
+
+Edit totals fall by 51% with HTTP and 46% without HTTP.
+The edit Dart portion falls from 3.799 to 0.998 seconds with HTTP and from 1.391 to 0.412 seconds without HTTP.
+Unchanged medians improve by 3% and 7%. These small differences do not establish a general speed guarantee.
+The unchanged path now uses exact dependency receipts and avoids the prototype's full source scan.
+It also reads SDK metadata directly without a `dart --version` subprocess.
+
+Cold Dart work rises in both fixtures because a fresh request also starts the service.
+The HTTP cold total rises by 0.371 seconds. Frontend variation offsets that cost in the smaller fixture.
+These results support faster edit cycles while the compiler remains available. They do not establish a general cold-start improvement.
+
+All 60 measured outputs match native Go after pointer normalization.
+The local server records all 32 expected HTTP requests, including the native references.
+All 10 private services terminate after their trials.
+[The production evidence](../experiments/resident/production-results-2026-09-18.json) retains raw trial durations, phase durations, source hashes, and binary hashes.
+
+## Remaining Go frontend cost
+
+A separate profile uses fresh Go processes for 1 cold build, 3 unchanged builds, and 3 source edits of the HTTP fixture.
+The unchanged builds reuse all 128 packages. Each source edit recompiles 1 package and reuses 127 packages.
+The profile excludes application execution and dependency setup.
+
+| Median phase | Unchanged | Edit |
+|---|---:|---:|
+| Complete frontend request | 1.626 s | 1.793 s |
+| Load | 0.626 s | 0.616 s |
+| Type load, within load | 0.375 s | 0.380 s |
+| Emit phase | 0.734 s | 0.876 s |
+| Analyze | 0.093 s | 0.097 s |
+| Write | 0.002 s | 0.002 s |
+
+The warm emit phase includes cache validation and dependency classification.
+`driver.compiled` calls `overlay.Surface` during package order and dependency hash work.
+`Surface` calls `Paths`, which calls `Packages` twice. Each call scans and copies embedded overlay files.
+This work repeats even when all generated packages remain cached.
+`overlay.Packages` accounts for 16.1% cumulative CPU in the combined warm/edit profile.
+`runtime.gcDrain` accounts for 39.9% cumulative CPU. The profile shows substantial allocation and garbage-collection cost.
+Cumulative nodes overlap. Do not add their percentages.
+CPU samples exclude child Go and Dart processes, while phase durations include their waits.
+
+The next optimization should reuse the immutable overlay package paths for membership lookups, then measure the allocation cost again.
+Subsequent work can target cached metadata reads and the remaining type-load cost if the new profile supports it.
+[The frontend evidence](../experiments/resident/frontend-results-2026-09-18.json) contains all phase samples and flat, cumulative, and project CPU views.
+The raw profiles remain local under `build/resident-frontend-20260918/` because they contain checkout paths.

@@ -69,6 +69,7 @@ fmt: dart-fmt
 	gofmt -w $(GO_FILES)
 
 dart-fmt:
+	dart format internal/driver/resident.dart
 	cd $(RUNTIME) && dart format lib test
 
 fmt-check: dart-fmt-check
@@ -76,9 +77,11 @@ fmt-check: dart-fmt-check
 	if [ -n "$$out" ]; then echo "gofmt needs these files:"; echo "$$out"; exit 1; fi
 
 dart-fmt-check:
+	dart format --output=none --set-exit-if-changed internal/driver/resident.dart
 	cd $(RUNTIME) && dart format --output=none --set-exit-if-changed lib test
 
 dart-analyze:
+	dart analyze --fatal-infos internal/driver/resident.dart
 	cd $(RUNTIME) && dart analyze --fatal-infos
 
 dart-test:

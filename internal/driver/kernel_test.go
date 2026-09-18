@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -84,8 +83,27 @@ func TestKernelCacheInvalidation(t *testing.T) {
 		t.Fatal(err)
 	}
 	build("fourth\n", 8)
-	opt.NoCache = true
+	data, err := os.ReadFile(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var receipt kernelReceipt
+	if err := json.Unmarshal(data, &receipt); err != nil {
+		t.Fatal(err)
+	}
+	for path := range receipt.Dependencies {
+		if strings.HasSuffix(path, "next.dart") {
+			delete(receipt.Dependencies, path)
+		}
+	}
+	data, err = json.Marshal(receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	putKernelFile(t, manifest, string(data))
 	build("fourth\n", 9)
+	opt.NoCache = true
+	build("fourth\n", 10)
 	opt.NoCache = false
 	if err := os.Remove(filepath.Join(opt.Out, "next.dart")); err != nil {
 		t.Fatal(err)
@@ -155,55 +173,48 @@ void main(List<String> args) {
 
 func TestKernelSDKIdentity(t *testing.T) {
 	opt, count := kernelFixture(t)
-	real, err := exec.LookPath("dart")
+	sdk, err := dartSDK()
 	if err != nil {
 		t.Fatal(err)
 	}
-	bin := t.TempDir()
-	version := filepath.Join(bin, "version.txt")
-	putKernelFile(t, version, "first")
-	t.Setenv("KERNEL_TEST_DART", real)
-	t.Setenv("KERNEL_TEST_VERSION", version)
-	wrapper := "#!/bin/sh\nif [ \"$1\" = --version ]; then cat \"$KERNEL_TEST_VERSION\"; else exec \"$KERNEL_TEST_DART\" \"$@\"; fi\n"
-	putKernelFile(t, filepath.Join(bin, "dart"), wrapper)
+	fake := t.TempDir()
+	if err := os.Symlink(filepath.Join(sdk, "bin"), filepath.Join(fake, "bin")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(sdk, "lib"), filepath.Join(fake, "lib")); err != nil {
+		t.Fatal(err)
+	}
+	// A launcher at the copied SDK root preserves that root during path resolution.
+	bin := filepath.Join(fake, "launcher")
+	if err := os.Mkdir(bin, 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("KERNEL_TEST_DART", filepath.Join(sdk, "bin", "dart"))
+	putKernelFile(t, filepath.Join(bin, "dart"), "#!/bin/sh\nexec \"$KERNEL_TEST_DART\" \"$@\"\n")
 	if err := os.Chmod(filepath.Join(bin, "dart"), 0755); err != nil {
 		t.Fatal(err)
 	}
+	putKernelFile(t, filepath.Join(fake, "version"), "3.13.3")
+	putKernelFile(t, filepath.Join(fake, "revision"), "first")
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	if _, err := opt.kernel("main.dart"); err != nil {
-		t.Fatal(err)
+	for _, want := range []int{1, 1} {
+		if _, err := opt.kernel("main.dart"); err != nil {
+			t.Fatal(err)
+		}
+		if *count != want {
+			t.Fatalf("compiles %d, want %d", *count, want)
+		}
 	}
-	if _, err := opt.kernel("main.dart"); err != nil {
-		t.Fatal(err)
-	}
-	if *count != 1 {
-		t.Fatal("SDK identity missed an unchanged cache")
-	}
-	putKernelFile(t, version, "second")
+	putKernelFile(t, filepath.Join(fake, "revision"), "second")
 	if _, err := opt.kernel("main.dart"); err != nil {
 		t.Fatal(err)
 	}
 	if *count != 2 {
 		t.Fatal("SDK change reused a kernel")
 	}
-}
-
-func TestKernelDependencies(t *testing.T) {
-	cases := map[string][]string{
-		"out: /one /two\n": {"/one", "/two"},
-		"out\\ file: /one\\ two /hash\\# /cash$$ /slash\\\\end\n": {"/one two", "/hash#", "/cash$", "/slash\\end"},
-		"out: /one \\\n /two": {"/one", "/two"},
-	}
-	for input, want := range cases {
-		got, err := kernelDependencies(input)
-		if err != nil || !slices.Equal(got, want) {
-			t.Fatalf("%q: %v %v, want %v", input, got, err, want)
-		}
-	}
-	for _, input := range []string{"", "out:", "no separator"} {
-		if _, err := kernelDependencies(input); err == nil {
-			t.Errorf("accepted %q", input)
-		}
+	putKernelFile(t, filepath.Join(fake, "version"), "3.13.4")
+	if _, err := opt.kernel("main.dart"); err == nil || !strings.Contains(err.Error(), "requires Dart 3.13.3") {
+		t.Fatalf("SDK rejection: %v", err)
 	}
 }
 
@@ -222,41 +233,12 @@ func TestKernelReceiptIncludesImportedSources(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"main.dart", "dep.dart", ".dart_tool/package_config.json"} {
-		if receipt.Dependencies[filepath.Join(opt.Out, name)] == "" {
+		path, err := filepath.EvalSymlinks(filepath.Join(opt.Out, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if receipt.Dependencies[path] == "" {
 			t.Errorf("missing dependency %s", name)
 		}
-	}
-}
-
-func TestKernelEditDuringCompilation(t *testing.T) {
-	opt, count := kernelFixture(t)
-	real, err := exec.LookPath("dart")
-	if err != nil {
-		t.Fatal(err)
-	}
-	bin := t.TempDir()
-	t.Setenv("KERNEL_TEST_DART", real)
-	t.Setenv("KERNEL_TEST_DEP", filepath.Join(opt.Out, "dep.dart"))
-	wrapper := `#!/bin/sh
-"$KERNEL_TEST_DART" "$@" || exit $?
-if [ "$1" = compile ]; then
- printf "const value = 'other';" > "$KERNEL_TEST_DEP"
-fi
-`
-	putKernelFile(t, filepath.Join(bin, "dart"), wrapper)
-	if err := os.Chmod(filepath.Join(bin, "dart"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	if _, err := opt.kernel("main.dart"); err != nil {
-		t.Fatal(err)
-	}
-	kernel, err := opt.kernel("main.dart")
-	if err != nil {
-		t.Fatal(err)
-	}
-	output, code, err := dartOutput(opt.Out, []string{"run", kernel})
-	if err != nil || code != 0 || output != "other\n" || *count != 2 {
-		t.Fatalf("output %q, code %d, error %v, compiles %d", output, code, err, *count)
 	}
 }

@@ -1,0 +1,2043 @@
+{
+  "host": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "trials": 5,
+  "order": "alternating mode order",
+  "versions": {
+    "go": "go version go1.27.0 darwin/arm64",
+    "dart": "Dart SDK version: 3.13.3 (stable) (Tue Sep 1 01:07:17 2026 -0700) on \"macos_arm64\""
+  },
+  "working_tree_base": "4de8724673ee2bccbe3e54d69eed4a48065216c1",
+  "working_tree_dirty": true,
+  "binaries": {
+    "baseline": "94b5f7b3f41feb38c42fb463ada1a67c30c4b07365cd46fc6953bee8ea597136",
+    "resident": "5e75126806e1c3e60984aace26894242fe00c78a0e3c63cca7a2b0ca51657ece"
+  },
+  "files": {
+    "experiments/resident/production_probe.py": "46333c54008b2cd46098e62f78b0c044bec90ef4d87db67fec37d03c30baeb87",
+    "internal/driver/resident.dart": "96f98247eb9fd31fdb1d8add97fa1f393c95f782665049a176fc6cb966e4d5e3",
+    "internal/driver/resident.go": "f4832364bb4b4a604b9a09b10444c1db601521a9e3539bee93c76f9a0e318e7e",
+    "internal/driver/kernel.go": "5524934ce36d3ec7d6ef4728e43a2c51c68a64fa2ebdd35d5c7e5f27e39be395",
+    "internal/driver/output_lock.go": "a8880fbeec69008dc0cd3ec7d6565aa587d7218c3cbddbc8a4c31616bca98187",
+    "internal/driver/driver.go": "be60d92d195e09e027bcb06a5e42cd3bfed765ef54f22929e7d013dba8301646",
+    "internal/driver/run.go": "6ef0ab1f3926a254b09cdb16c49cdef101583c770d7abf6f1b561c0dc190994c",
+    "experiments/resident/playground/main.go": "6ab63ba615839308c2096e7f5724da474947196641a442103a6e7ebce9634a5d"
+  },
+  "environment": {
+    "GOMAXPROCS": "4",
+    "GOFLAGS": "-p=2"
+  },
+  "cold": "fresh output, service, and compiler, warm Go/Pub/filesystem caches",
+  "http_requests": 32,
+  "shutdowns": [
+    {
+      "workload": "http",
+      "trial": 0,
+      "seconds": 0.1285291250096634
+    },
+    {
+      "workload": "http",
+      "trial": 1,
+      "seconds": 0.12736795796081424
+    },
+    {
+      "workload": "http",
+      "trial": 2,
+      "seconds": 0.1315609169541858
+    },
+    {
+      "workload": "http",
+      "trial": 3,
+      "seconds": 0.12811866594711319
+    },
+    {
+      "workload": "http",
+      "trial": 4,
+      "seconds": 0.12345458299387246
+    },
+    {
+      "workload": "no-http",
+      "trial": 0,
+      "seconds": 0.12151716696098447
+    },
+    {
+      "workload": "no-http",
+      "trial": 1,
+      "seconds": 0.12887445802334696
+    },
+    {
+      "workload": "no-http",
+      "trial": 2,
+      "seconds": 0.12680704199010506
+    },
+    {
+      "workload": "no-http",
+      "trial": 3,
+      "seconds": 0.1270503340056166
+    },
+    {
+      "workload": "no-http",
+      "trial": 4,
+      "seconds": 0.12930595799116418
+    }
+  ],
+  "rows": [
+    {
+      "workload": "http",
+      "trial": 0,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 11.721774084027857,
+      "frontend_and_pub": 7.145854,
+      "dart": 3.9300800000000002,
+      "phases": {
+        "load": 1.121789,
+        "load-discovery": 0.190039,
+        "load-surface": 0.516767,
+        "load-overlay": 0.024937,
+        "load-types": 0.388858,
+        "verify": 0.030932,
+        "analyze": 0.09248,
+        "emit": 4.518765,
+        "write": 0.141348,
+        "format": 0.0,
+        "source-maps": 0.206126,
+        "pub": 1.034414,
+        "kernel-cache": 0.063891,
+        "kernel-compile": 3.201753,
+        "execute": 0.664436
+      },
+      "load_average": [
+        13.41162109375,
+        9.56201171875,
+        11.09716796875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 0,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 2.8661565000074916,
+      "frontend_and_pub": 1.935202,
+      "dart": 0.781751,
+      "phases": {
+        "load": 1.044537,
+        "load-discovery": 0.377678,
+        "load-surface": 0.285375,
+        "load-overlay": 0.026483,
+        "load-types": 0.353897,
+        "verify": 0.032014,
+        "analyze": 0.096132,
+        "emit": 0.76,
+        "write": 0.00251,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 9e-06,
+        "kernel-cache": 0.123281,
+        "execute": 0.65847
+      },
+      "load_average": [
+        14.49951171875,
+        9.85107421875,
+        11.18994140625
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 0,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 5.473063000012189,
+      "frontend_and_pub": 1.5626849999999999,
+      "dart": 3.755451,
+      "phases": {
+        "load": 0.591158,
+        "load-discovery": 0.114949,
+        "load-surface": 0.113119,
+        "load-overlay": 0.027609,
+        "load-types": 0.334281,
+        "verify": 0.032484,
+        "analyze": 0.096799,
+        "emit": 0.839783,
+        "write": 0.002205,
+        "format": 0.0,
+        "source-maps": 0.000248,
+        "pub": 8e-06,
+        "kernel-cache": 0.067374,
+        "kernel-compile": 3.033305,
+        "execute": 0.654772
+      },
+      "load_average": [
+        16.30126953125,
+        10.3017578125,
+        11.3408203125
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 0,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 11.27010516700102,
+      "frontend_and_pub": 6.576245,
+      "dart": 4.053908,
+      "phases": {
+        "load": 1.011798,
+        "load-discovery": 0.1243,
+        "load-surface": 0.38364,
+        "load-overlay": 0.041343,
+        "load-types": 0.461143,
+        "verify": 0.031542,
+        "analyze": 0.092997,
+        "emit": 4.330025,
+        "write": 0.112117,
+        "format": 0.0,
+        "source-maps": 0.101891,
+        "pub": 0.895875,
+        "kernel-cache": 0.051742,
+        "kernel-cold": 3.241279,
+        "kernel-compile": 3.356862,
+        "execute": 0.645304
+      },
+      "load_average": [
+        17.70849609375,
+        10.7880859375,
+        11.5
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 0,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 2.3568005840061232,
+      "frontend_and_pub": 1.450652,
+      "dart": 0.7601089999999999,
+      "phases": {
+        "load": 0.570361,
+        "load-discovery": 0.106765,
+        "load-surface": 0.097281,
+        "load-overlay": 0.025623,
+        "load-types": 0.339609,
+        "verify": 0.032387,
+        "analyze": 0.105353,
+        "emit": 0.740661,
+        "write": 0.001882,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 8e-06,
+        "kernel-cache": 0.105933,
+        "execute": 0.654176
+      },
+      "load_average": [
+        19.1728515625,
+        11.20654296875,
+        11.6435546875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 0,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 2.6893905829638243,
+      "frontend_and_pub": 1.5263499999999999,
+      "dart": 1.017047,
+      "phases": {
+        "load": 0.54364,
+        "load-discovery": 0.096714,
+        "load-surface": 0.09129,
+        "load-overlay": 0.023588,
+        "load-types": 0.330793,
+        "verify": 0.035167,
+        "analyze": 0.09234,
+        "emit": 0.852914,
+        "write": 0.002059,
+        "format": 0.0,
+        "source-maps": 0.000221,
+        "pub": 9e-06,
+        "kernel-cache": 0.087877,
+        "kernel-incremental": 0.164666,
+        "kernel-compile": 0.273282,
+        "execute": 0.655888
+      },
+      "load_average": [
+        19.1728515625,
+        11.20654296875,
+        11.6435546875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 1,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 10.433673041989096,
+      "frontend_and_pub": 6.276001999999999,
+      "dart": 4.001577,
+      "phases": {
+        "load": 0.851498,
+        "load-discovery": 0.105397,
+        "load-surface": 0.337161,
+        "load-overlay": 0.039153,
+        "load-types": 0.368605,
+        "verify": 0.033098,
+        "analyze": 0.095483,
+        "emit": 4.302972,
+        "write": 0.092457,
+        "format": 0.0,
+        "source-maps": 0.112753,
+        "pub": 0.787741,
+        "kernel-cache": 0.048312,
+        "kernel-cold": 3.197344,
+        "kernel-compile": 3.314186,
+        "execute": 0.639079
+      },
+      "load_average": [
+        21.72412109375,
+        12.00732421875,
+        11.92236328125
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 1,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 2.346071459003724,
+      "frontend_and_pub": 1.4430859999999999,
+      "dart": 0.758659,
+      "phases": {
+        "load": 0.582521,
+        "load-discovery": 0.121382,
+        "load-surface": 0.099375,
+        "load-overlay": 0.024119,
+        "load-types": 0.336753,
+        "verify": 0.031173,
+        "analyze": 0.091073,
+        "emit": 0.736586,
+        "write": 0.001726,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 7e-06,
+        "kernel-cache": 0.104174,
+        "execute": 0.654485
+      },
+      "load_average": [
+        22.947265625,
+        12.421875,
+        12.06884765625
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 1,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 2.7527289579738863,
+      "frontend_and_pub": 1.629521,
+      "dart": 0.965169,
+      "phases": {
+        "load": 0.628753,
+        "load-discovery": 0.112871,
+        "load-surface": 0.107268,
+        "load-overlay": 0.026766,
+        "load-types": 0.380631,
+        "verify": 0.032605,
+        "analyze": 0.092943,
+        "emit": 0.871542,
+        "write": 0.002919,
+        "format": 0.0,
+        "source-maps": 0.00075,
+        "pub": 9e-06,
+        "kernel-cache": 0.067238,
+        "kernel-incremental": 0.156393,
+        "kernel-compile": 0.260155,
+        "execute": 0.637776
+      },
+      "load_average": [
+        22.947265625,
+        12.421875,
+        12.06884765625
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 1,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 9.957653750025202,
+      "frontend_and_pub": 5.981076000000001,
+      "dart": 3.8133589999999997,
+      "phases": {
+        "load": 0.854989,
+        "load-discovery": 0.129921,
+        "load-surface": 0.336568,
+        "load-overlay": 0.025929,
+        "load-types": 0.361305,
+        "verify": 0.037199,
+        "analyze": 0.094963,
+        "emit": 4.359072,
+        "write": 0.088183,
+        "format": 0.0,
+        "source-maps": 0.105782,
+        "pub": 0.440888,
+        "kernel-cache": 0.047114,
+        "kernel-compile": 3.147947,
+        "execute": 0.618298
+      },
+      "load_average": [
+        23.45166015625,
+        12.85693359375,
+        12.22607421875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 1,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 2.431046417041216,
+      "frontend_and_pub": 1.506502,
+      "dart": 0.7758719999999999,
+      "phases": {
+        "load": 0.648028,
+        "load-discovery": 0.121546,
+        "load-surface": 0.114351,
+        "load-overlay": 0.02816,
+        "load-types": 0.383024,
+        "verify": 0.031139,
+        "analyze": 0.089047,
+        "emit": 0.735581,
+        "write": 0.002696,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 1.1e-05,
+        "kernel-cache": 0.133986,
+        "execute": 0.641886
+      },
+      "load_average": [
+        24.2158203125,
+        13.19091796875,
+        12.34765625
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 1,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 5.7338890000246465,
+      "frontend_and_pub": 1.73393,
+      "dart": 3.8515129999999997,
+      "phases": {
+        "load": 0.685909,
+        "load-discovery": 0.147662,
+        "load-surface": 0.115628,
+        "load-overlay": 0.033245,
+        "load-types": 0.388041,
+        "verify": 0.031899,
+        "analyze": 0.094369,
+        "emit": 0.919294,
+        "write": 0.00222,
+        "format": 0.0,
+        "source-maps": 0.000232,
+        "pub": 7e-06,
+        "kernel-cache": 0.092745,
+        "kernel-compile": 3.104723,
+        "execute": 0.654045
+      },
+      "load_average": [
+        24.9189453125,
+        13.51953125,
+        12.46826171875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 2,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 10.472888958000112,
+      "frontend_and_pub": 6.599756,
+      "dart": 3.7228689999999998,
+      "phases": {
+        "load": 0.907851,
+        "load-discovery": 0.104816,
+        "load-surface": 0.342948,
+        "load-overlay": 0.042547,
+        "load-types": 0.416706,
+        "verify": 0.080954,
+        "analyze": 0.130984,
+        "emit": 4.394277,
+        "write": 0.097621,
+        "format": 0.0,
+        "source-maps": 0.103744,
+        "pub": 0.884325,
+        "kernel-cache": 0.056612,
+        "kernel-compile": 3.039081,
+        "execute": 0.627176
+      },
+      "load_average": [
+        25.48193359375,
+        14.0,
+        12.64990234375
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 2,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 2.3759709580335766,
+      "frontend_and_pub": 1.455342,
+      "dart": 0.773271,
+      "phases": {
+        "load": 0.602367,
+        "load-discovery": 0.10809,
+        "load-surface": 0.115618,
+        "load-overlay": 0.026285,
+        "load-types": 0.351162,
+        "verify": 0.032426,
+        "analyze": 0.094969,
+        "emit": 0.721438,
+        "write": 0.004128,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 1.4e-05,
+        "kernel-cache": 0.124158,
+        "execute": 0.649113
+      },
+      "load_average": [
+        25.48193359375,
+        14.0,
+        12.64990234375
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 2,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 5.628989208023995,
+      "frontend_and_pub": 1.589146,
+      "dart": 3.881417,
+      "phases": {
+        "load": 0.594361,
+        "load-discovery": 0.108387,
+        "load-surface": 0.102762,
+        "load-overlay": 0.025904,
+        "load-types": 0.356048,
+        "verify": 0.033663,
+        "analyze": 0.096124,
+        "emit": 0.862503,
+        "write": 0.00226,
+        "format": 0.0,
+        "source-maps": 0.000228,
+        "pub": 7e-06,
+        "kernel-cache": 0.080292,
+        "kernel-compile": 3.155366,
+        "execute": 0.645759
+      },
+      "load_average": [
+        24.69287109375,
+        14.212890625,
+        12.7412109375
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 2,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 10.447880167048424,
+      "frontend_and_pub": 6.093221000000001,
+      "dart": 4.193688,
+      "phases": {
+        "load": 0.946145,
+        "load-discovery": 0.117957,
+        "load-surface": 0.364755,
+        "load-overlay": 0.031018,
+        "load-types": 0.431258,
+        "verify": 0.031967,
+        "analyze": 0.093468,
+        "emit": 4.386141,
+        "write": 0.101079,
+        "format": 0.0,
+        "source-maps": 0.110523,
+        "pub": 0.423898,
+        "kernel-cache": 0.041032,
+        "kernel-cold": 3.304152,
+        "kernel-compile": 3.422628,
+        "execute": 0.730028
+      },
+      "load_average": [
+        22.9619140625,
+        14.1884765625,
+        12.74951171875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 2,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 2.3789976660045795,
+      "frontend_and_pub": 1.453705,
+      "dart": 0.774964,
+      "phases": {
+        "load": 0.590609,
+        "load-discovery": 0.10775,
+        "load-surface": 0.099105,
+        "load-overlay": 0.024639,
+        "load-types": 0.357879,
+        "verify": 0.032965,
+        "analyze": 0.096094,
+        "emit": 0.732125,
+        "write": 0.001905,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 7e-06,
+        "kernel-cache": 0.112499,
+        "execute": 0.662465
+      },
+      "load_average": [
+        22.9619140625,
+        14.1884765625,
+        12.74951171875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 2,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 2.740479084022809,
+      "frontend_and_pub": 1.589018,
+      "dart": 0.999175,
+      "phases": {
+        "load": 0.612474,
+        "load-discovery": 0.109017,
+        "load-surface": 0.099545,
+        "load-overlay": 0.025895,
+        "load-types": 0.376883,
+        "verify": 0.032685,
+        "analyze": 0.097246,
+        "emit": 0.844032,
+        "write": 0.002245,
+        "format": 0.0,
+        "source-maps": 0.000324,
+        "pub": 1.2e-05,
+        "kernel-cache": 0.070722,
+        "kernel-incremental": 0.154927,
+        "kernel-compile": 0.263005,
+        "execute": 0.665448
+      },
+      "load_average": [
+        22.404296875,
+        14.21826171875,
+        12.7685546875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 3,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 10.762281083967537,
+      "frontend_and_pub": 6.601942,
+      "dart": 4.009212,
+      "phases": {
+        "load": 0.840852,
+        "load-discovery": 0.111295,
+        "load-surface": 0.340136,
+        "load-overlay": 0.026551,
+        "load-types": 0.361855,
+        "verify": 0.033204,
+        "analyze": 0.093574,
+        "emit": 4.520072,
+        "write": 0.096545,
+        "format": 0.0,
+        "source-maps": 0.105616,
+        "pub": 0.912079,
+        "kernel-cache": 0.050927,
+        "kernel-cold": 3.173825,
+        "kernel-compile": 3.297755,
+        "execute": 0.66053
+      },
+      "load_average": [
+        23.02685546875,
+        14.60888671875,
+        12.9228515625
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 3,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 2.390384084021207,
+      "frontend_and_pub": 1.4663069999999998,
+      "dart": 0.77701,
+      "phases": {
+        "load": 0.604864,
+        "load-discovery": 0.11047,
+        "load-surface": 0.104979,
+        "load-overlay": 0.027247,
+        "load-types": 0.360903,
+        "verify": 0.031594,
+        "analyze": 0.09258,
+        "emit": 0.735173,
+        "write": 0.002089,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 7e-06,
+        "kernel-cache": 0.10815,
+        "execute": 0.66886
+      },
+      "load_average": [
+        23.02685546875,
+        14.60888671875,
+        12.9228515625
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 3,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 2.830509791034274,
+      "frontend_and_pub": 1.673653,
+      "dart": 0.998367,
+      "phases": {
+        "load": 0.662356,
+        "load-discovery": 0.104265,
+        "load-surface": 0.108368,
+        "load-overlay": 0.028097,
+        "load-types": 0.420782,
+        "verify": 0.032518,
+        "analyze": 0.096475,
+        "emit": 0.879321,
+        "write": 0.002663,
+        "format": 0.0,
+        "source-maps": 0.000308,
+        "pub": 1.2e-05,
+        "kernel-cache": 0.075362,
+        "kernel-incremental": 0.181769,
+        "kernel-compile": 0.284208,
+        "execute": 0.638797
+      },
+      "load_average": [
+        24.1455078125,
+        14.98046875,
+        13.0634765625
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 3,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 10.390921957965475,
+      "frontend_and_pub": 6.394412,
+      "dart": 3.849803,
+      "phases": {
+        "load": 0.947016,
+        "load-discovery": 0.112039,
+        "load-surface": 0.389047,
+        "load-overlay": 0.029094,
+        "load-types": 0.415426,
+        "verify": 0.032862,
+        "analyze": 0.097185,
+        "emit": 4.272217,
+        "write": 0.084457,
+        "format": 0.0,
+        "source-maps": 0.108006,
+        "pub": 0.852669,
+        "kernel-cache": 0.058774,
+        "kernel-compile": 3.138447,
+        "execute": 0.652582
+      },
+      "load_average": [
+        24.70263671875,
+        15.39404296875,
+        13.23193359375
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 3,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 2.39915483398363,
+      "frontend_and_pub": 1.456402,
+      "dart": 0.790764,
+      "phases": {
+        "load": 0.59455,
+        "load-discovery": 0.107639,
+        "load-surface": 0.10074,
+        "load-overlay": 0.025178,
+        "load-types": 0.360102,
+        "verify": 0.033008,
+        "analyze": 0.094294,
+        "emit": 0.732707,
+        "write": 0.001835,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 8e-06,
+        "kernel-cache": 0.126744,
+        "execute": 0.66402
+      },
+      "load_average": [
+        24.70263671875,
+        15.39404296875,
+        13.23193359375
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 3,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 5.5585976670263335,
+      "frontend_and_pub": 1.602103,
+      "dart": 3.7988410000000004,
+      "phases": {
+        "load": 0.599499,
+        "load-discovery": 0.109216,
+        "load-surface": 0.103738,
+        "load-overlay": 0.025008,
+        "load-types": 0.360376,
+        "verify": 0.032013,
+        "analyze": 0.096811,
+        "emit": 0.871366,
+        "write": 0.002191,
+        "format": 0.0,
+        "source-maps": 0.000216,
+        "pub": 7e-06,
+        "kernel-cache": 0.04625,
+        "kernel-compile": 3.113818,
+        "execute": 0.638773
+      },
+      "load_average": [
+        23.84130859375,
+        15.52587890625,
+        13.3046875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 4,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 9.978845000034198,
+      "frontend_and_pub": 6.0557289999999995,
+      "dart": 3.7714339999999997,
+      "phases": {
+        "load": 0.940333,
+        "load-discovery": 0.154451,
+        "load-surface": 0.365926,
+        "load-overlay": 0.029954,
+        "load-types": 0.388707,
+        "verify": 0.032393,
+        "analyze": 0.097188,
+        "emit": 4.312567,
+        "write": 0.095073,
+        "format": 0.0,
+        "source-maps": 0.142307,
+        "pub": 0.435868,
+        "kernel-cache": 0.045756,
+        "kernel-compile": 3.083049,
+        "execute": 0.642629
+      },
+      "load_average": [
+        22.93359375,
+        15.59326171875,
+        13.353515625
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 4,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 2.4288166250335053,
+      "frontend_and_pub": 1.511845,
+      "dart": 0.7599549999999999,
+      "phases": {
+        "load": 0.632143,
+        "load-discovery": 0.146159,
+        "load-surface": 0.106593,
+        "load-overlay": 0.026441,
+        "load-types": 0.351858,
+        "verify": 0.031974,
+        "analyze": 0.100408,
+        "emit": 0.745442,
+        "write": 0.001871,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 7e-06,
+        "kernel-cache": 0.121979,
+        "execute": 0.637976
+      },
+      "load_average": [
+        22.93359375,
+        15.59326171875,
+        13.353515625
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 4,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 5.5242890829686075,
+      "frontend_and_pub": 1.615383,
+      "dart": 3.759606,
+      "phases": {
+        "load": 0.619675,
+        "load-discovery": 0.107541,
+        "load-surface": 0.104181,
+        "load-overlay": 0.026309,
+        "load-types": 0.380381,
+        "verify": 0.030568,
+        "analyze": 0.094962,
+        "emit": 0.866884,
+        "write": 0.003013,
+        "format": 0.0,
+        "source-maps": 0.000273,
+        "pub": 8e-06,
+        "kernel-cache": 0.08175,
+        "kernel-compile": 3.032952,
+        "execute": 0.644904
+      },
+      "load_average": [
+        23.0986328125,
+        15.7490234375,
+        13.42138671875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 4,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 10.797622166981455,
+      "frontend_and_pub": 6.455525,
+      "dart": 4.154877,
+      "phases": {
+        "load": 0.950146,
+        "load-discovery": 0.122632,
+        "load-surface": 0.406181,
+        "load-overlay": 0.028621,
+        "load-types": 0.391787,
+        "verify": 0.033765,
+        "analyze": 0.093072,
+        "emit": 4.292459,
+        "write": 0.090131,
+        "format": 0.0,
+        "source-maps": 0.104605,
+        "pub": 0.891347,
+        "kernel-cache": 0.054306,
+        "kernel-cold": 3.328078,
+        "kernel-compile": 3.45244,
+        "execute": 0.648131
+      },
+      "load_average": [
+        23.4609375,
+        16.05615234375,
+        13.55615234375
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 4,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 2.361434833961539,
+      "frontend_and_pub": 1.443188,
+      "dart": 0.764486,
+      "phases": {
+        "load": 0.600636,
+        "load-discovery": 0.113006,
+        "load-surface": 0.101387,
+        "load-overlay": 0.026348,
+        "load-types": 0.358849,
+        "verify": 0.032612,
+        "analyze": 0.094884,
+        "emit": 0.713432,
+        "write": 0.001617,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 7e-06,
+        "kernel-cache": 0.100685,
+        "execute": 0.663801
+      },
+      "load_average": [
+        24.625,
+        16.42041015625,
+        13.69921875
+      ]
+    },
+    {
+      "workload": "http",
+      "trial": 4,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 2.727184000017587,
+      "frontend_and_pub": 1.577554,
+      "dart": 0.98799,
+      "phases": {
+        "load": 0.579891,
+        "load-discovery": 0.105562,
+        "load-surface": 0.098283,
+        "load-overlay": 0.025414,
+        "load-types": 0.349734,
+        "verify": 0.032457,
+        "analyze": 0.090475,
+        "emit": 0.872207,
+        "write": 0.002262,
+        "format": 0.0,
+        "source-maps": 0.000254,
+        "pub": 8e-06,
+        "kernel-cache": 0.079637,
+        "kernel-incremental": 0.171881,
+        "kernel-compile": 0.281345,
+        "execute": 0.627008
+      },
+      "load_average": [
+        24.625,
+        16.42041015625,
+        13.69921875
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 0,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 4.219695999985561,
+      "frontend_and_pub": 2.560988,
+      "dart": 1.600865,
+      "phases": {
+        "load": 0.763086,
+        "load-discovery": 0.086864,
+        "load-surface": 0.403702,
+        "load-overlay": 0.012754,
+        "load-types": 0.258601,
+        "verify": 0.010035,
+        "analyze": 0.031831,
+        "emit": 0.836883,
+        "write": 0.06524,
+        "format": 0.0,
+        "source-maps": 0.080632,
+        "pub": 0.773281,
+        "kernel-cache": 0.063236,
+        "kernel-compile": 1.22068,
+        "execute": 0.316949
+      },
+      "load_average": [
+        23.77392578125,
+        16.3798828125,
+        13.70068359375
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 0,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 2.4135944159934297,
+      "frontend_and_pub": 1.7925980000000001,
+      "dart": 0.5699339999999999,
+      "phases": {
+        "load": 1.565133,
+        "load-discovery": 0.391726,
+        "load-surface": 0.440235,
+        "load-overlay": 0.021091,
+        "load-types": 0.711031,
+        "verify": 0.009692,
+        "analyze": 0.03032,
+        "emit": 0.176188,
+        "write": 0.011235,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 3e-05,
+        "kernel-cache": 0.205202,
+        "execute": 0.364732
+      },
+      "load_average": [
+        24.9130859375,
+        16.73876953125,
+        13.8427734375
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 0,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 2.715021333016921,
+      "frontend_and_pub": 1.1851829999999999,
+      "dart": 1.475142,
+      "phases": {
+        "load": 0.883554,
+        "load-discovery": 0.231611,
+        "load-surface": 0.329124,
+        "load-overlay": 0.016185,
+        "load-types": 0.305546,
+        "verify": 0.010207,
+        "analyze": 0.031066,
+        "emit": 0.255786,
+        "write": 0.004235,
+        "format": 0.0,
+        "source-maps": 0.000322,
+        "pub": 1.3e-05,
+        "kernel-cache": 0.048583,
+        "kernel-compile": 1.163759,
+        "execute": 0.2628
+      },
+      "load_average": [
+        23.3984375,
+        16.56005859375,
+        13.79638671875
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 0,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 3.972847416996956,
+      "frontend_and_pub": 2.267223,
+      "dart": 1.6140029999999999,
+      "phases": {
+        "load": 0.821497,
+        "load-discovery": 0.089981,
+        "load-surface": 0.457586,
+        "load-overlay": 0.015729,
+        "load-types": 0.257086,
+        "verify": 0.010329,
+        "analyze": 0.031891,
+        "emit": 0.894113,
+        "write": 0.037169,
+        "format": 0.0,
+        "source-maps": 0.037753,
+        "pub": 0.434471,
+        "kernel-cache": 0.044223,
+        "kernel-cold": 1.25198,
+        "kernel-compile": 1.314331,
+        "execute": 0.255449
+      },
+      "load_average": [
+        23.3984375,
+        16.56005859375,
+        13.79638671875
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 0,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 0.9810359999537468,
+      "frontend_and_pub": 0.62039,
+      "dart": 0.309657,
+      "phases": {
+        "load": 0.41626,
+        "load-discovery": 0.076645,
+        "load-surface": 0.100832,
+        "load-overlay": 0.012409,
+        "load-types": 0.224867,
+        "verify": 0.010306,
+        "analyze": 0.031378,
+        "emit": 0.160568,
+        "write": 0.001872,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 6e-06,
+        "kernel-cache": 0.060791,
+        "execute": 0.248866
+      },
+      "load_average": [
+        24.0068359375,
+        16.79931640625,
+        13.89697265625
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 0,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 1.1131921670166776,
+      "frontend_and_pub": 0.664103,
+      "dart": 0.39866,
+      "phases": {
+        "load": 0.420857,
+        "load-discovery": 0.071538,
+        "load-surface": 0.098818,
+        "load-overlay": 0.013467,
+        "load-types": 0.235954,
+        "verify": 0.010418,
+        "analyze": 0.030772,
+        "emit": 0.199794,
+        "write": 0.002027,
+        "format": 0.0,
+        "source-maps": 0.000228,
+        "pub": 7e-06,
+        "kernel-cache": 0.035182,
+        "kernel-incremental": 0.059776,
+        "kernel-compile": 0.114005,
+        "execute": 0.249473
+      },
+      "load_average": [
+        24.0068359375,
+        16.79931640625,
+        13.89697265625
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 1,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 3.638423917000182,
+      "frontend_and_pub": 2.103876,
+      "dart": 1.485435,
+      "phases": {
+        "load": 0.712085,
+        "load-discovery": 0.077578,
+        "load-surface": 0.333269,
+        "load-overlay": 0.01345,
+        "load-types": 0.286651,
+        "verify": 0.009845,
+        "analyze": 0.028255,
+        "emit": 0.806991,
+        "write": 0.032068,
+        "format": 0.0,
+        "source-maps": 0.033555,
+        "pub": 0.481077,
+        "kernel-cache": 0.038019,
+        "kernel-cold": 1.138166,
+        "kernel-compile": 1.20124,
+        "execute": 0.246176
+      },
+      "load_average": [
+        24.0068359375,
+        16.79931640625,
+        13.89697265625
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 1,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 0.9540777500369586,
+      "frontend_and_pub": 0.60157,
+      "dart": 0.306327,
+      "phases": {
+        "load": 0.398276,
+        "load-discovery": 0.072562,
+        "load-surface": 0.094987,
+        "load-overlay": 0.011786,
+        "load-types": 0.217817,
+        "verify": 0.009619,
+        "analyze": 0.032031,
+        "emit": 0.159663,
+        "write": 0.001974,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 7e-06,
+        "kernel-cache": 0.056951,
+        "execute": 0.249376
+      },
+      "load_average": [
+        26.087890625,
+        17.35009765625,
+        14.1083984375
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 1,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 1.1356661249883473,
+      "frontend_and_pub": 0.67612,
+      "dart": 0.411526,
+      "phases": {
+        "load": 0.422524,
+        "load-discovery": 0.08288,
+        "load-surface": 0.100721,
+        "load-overlay": 0.014913,
+        "load-types": 0.222978,
+        "verify": 0.010446,
+        "analyze": 0.03176,
+        "emit": 0.208751,
+        "write": 0.002263,
+        "format": 0.0,
+        "source-maps": 0.000347,
+        "pub": 2.9e-05,
+        "kernel-cache": 0.041886,
+        "kernel-incremental": 0.063783,
+        "kernel-compile": 0.121129,
+        "execute": 0.248511
+      },
+      "load_average": [
+        26.087890625,
+        17.35009765625,
+        14.1083984375
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 1,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 4.026860250043683,
+      "frontend_and_pub": 2.549471,
+      "dart": 1.428207,
+      "phases": {
+        "load": 0.690447,
+        "load-discovery": 0.075696,
+        "load-surface": 0.348622,
+        "load-overlay": 0.013913,
+        "load-types": 0.2512,
+        "verify": 0.010223,
+        "analyze": 0.029103,
+        "emit": 0.803094,
+        "write": 0.039739,
+        "format": 0.0,
+        "source-maps": 0.055195,
+        "pub": 0.92167,
+        "kernel-cache": 0.06031,
+        "kernel-compile": 1.105043,
+        "execute": 0.262854
+      },
+      "load_average": [
+        26.56103515625,
+        17.59326171875,
+        14.212890625
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 1,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 1.0858092500129715,
+      "frontend_and_pub": 0.690331,
+      "dart": 0.34435899999999997,
+      "phases": {
+        "load": 0.484907,
+        "load-discovery": 0.081895,
+        "load-surface": 0.129648,
+        "load-overlay": 0.014213,
+        "load-types": 0.257552,
+        "verify": 0.009858,
+        "analyze": 0.029241,
+        "emit": 0.164324,
+        "write": 0.001994,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 7e-06,
+        "kernel-cache": 0.072793,
+        "execute": 0.271566
+      },
+      "load_average": [
+        26.56103515625,
+        17.59326171875,
+        14.212890625
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 1,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 2.136413541971706,
+      "frontend_and_pub": 0.695196,
+      "dart": 1.390634,
+      "phases": {
+        "load": 0.427642,
+        "load-discovery": 0.077035,
+        "load-surface": 0.106017,
+        "load-overlay": 0.015029,
+        "load-types": 0.228309,
+        "verify": 0.009877,
+        "analyze": 0.031029,
+        "emit": 0.224333,
+        "write": 0.002065,
+        "format": 0.0,
+        "source-maps": 0.000242,
+        "pub": 8e-06,
+        "kernel-cache": 0.049585,
+        "kernel-compile": 1.070752,
+        "execute": 0.270297
+      },
+      "load_average": [
+        26.56103515625,
+        17.59326171875,
+        14.212890625
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 2,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 3.619926250015851,
+      "frontend_and_pub": 2.182068,
+      "dart": 1.389806,
+      "phases": {
+        "load": 0.784684,
+        "load-discovery": 0.092597,
+        "load-surface": 0.38643,
+        "load-overlay": 0.014986,
+        "load-types": 0.28654,
+        "verify": 0.009632,
+        "analyze": 0.031749,
+        "emit": 0.861521,
+        "write": 0.038094,
+        "format": 0.0,
+        "source-maps": 0.036907,
+        "pub": 0.419481,
+        "kernel-cache": 0.05222,
+        "kernel-compile": 1.078603,
+        "execute": 0.258983
+      },
+      "load_average": [
+        25.07421875,
+        17.43359375,
+        14.17626953125
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 2,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 1.0247126669855788,
+      "frontend_and_pub": 0.64833,
+      "dart": 0.32634199999999997,
+      "phases": {
+        "load": 0.435368,
+        "load-discovery": 0.072747,
+        "load-surface": 0.096162,
+        "load-overlay": 0.012919,
+        "load-types": 0.252598,
+        "verify": 0.010104,
+        "analyze": 0.029933,
+        "emit": 0.170839,
+        "write": 0.002077,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 9e-06,
+        "kernel-cache": 0.070845,
+        "execute": 0.255497
+      },
+      "load_average": [
+        25.07421875,
+        17.43359375,
+        14.17626953125
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 2,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 2.1001277079922147,
+      "frontend_and_pub": 0.650997,
+      "dart": 1.40059,
+      "phases": {
+        "load": 0.402689,
+        "load-discovery": 0.070481,
+        "load-surface": 0.096142,
+        "load-overlay": 0.012467,
+        "load-types": 0.222437,
+        "verify": 0.009686,
+        "analyze": 0.03127,
+        "emit": 0.20437,
+        "write": 0.002739,
+        "format": 0.0,
+        "source-maps": 0.000235,
+        "pub": 8e-06,
+        "kernel-cache": 0.05294,
+        "kernel-compile": 1.091397,
+        "execute": 0.256253
+      },
+      "load_average": [
+        25.78857421875,
+        17.70849609375,
+        14.2919921875
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 2,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 3.708937249961309,
+      "frontend_and_pub": 2.165042,
+      "dart": 1.495233,
+      "phases": {
+        "load": 0.822769,
+        "load-discovery": 0.082535,
+        "load-surface": 0.424446,
+        "load-overlay": 0.016063,
+        "load-types": 0.298664,
+        "verify": 0.009965,
+        "analyze": 0.029882,
+        "emit": 0.810026,
+        "write": 0.033519,
+        "format": 0.0,
+        "source-maps": 0.03298,
+        "pub": 0.425901,
+        "kernel-cache": 0.050724,
+        "kernel-cold": 1.13163,
+        "kernel-compile": 1.19271,
+        "execute": 0.251799
+      },
+      "load_average": [
+        26.36572265625,
+        17.9619140625,
+        14.4013671875
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 2,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 0.9655006669927388,
+      "frontend_and_pub": 0.614024,
+      "dart": 0.303764,
+      "phases": {
+        "load": 0.410426,
+        "load-discovery": 0.078938,
+        "load-surface": 0.099927,
+        "load-overlay": 0.012089,
+        "load-types": 0.218479,
+        "verify": 0.010124,
+        "analyze": 0.028526,
+        "emit": 0.162814,
+        "write": 0.002126,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 8e-06,
+        "kernel-cache": 0.060422,
+        "execute": 0.243342
+      },
+      "load_average": [
+        26.36572265625,
+        17.9619140625,
+        14.4013671875
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 2,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 1.1405052079935558,
+      "frontend_and_pub": 0.66347,
+      "dart": 0.42886,
+      "phases": {
+        "load": 0.414814,
+        "load-discovery": 0.070261,
+        "load-surface": 0.096546,
+        "load-overlay": 0.012521,
+        "load-types": 0.234452,
+        "verify": 0.010142,
+        "analyze": 0.028566,
+        "emit": 0.207157,
+        "write": 0.002532,
+        "format": 0.0,
+        "source-maps": 0.000252,
+        "pub": 7e-06,
+        "kernel-cache": 0.050335,
+        "kernel-incremental": 0.067779,
+        "kernel-compile": 0.130686,
+        "execute": 0.247839
+      },
+      "load_average": [
+        26.36572265625,
+        17.9619140625,
+        14.4013671875
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 3,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 4.1557378330035135,
+      "frontend_and_pub": 2.609055,
+      "dart": 1.498361,
+      "phases": {
+        "load": 0.769787,
+        "load-discovery": 0.082316,
+        "load-surface": 0.349261,
+        "load-overlay": 0.015041,
+        "load-types": 0.322173,
+        "verify": 0.008895,
+        "analyze": 0.028371,
+        "emit": 0.820347,
+        "write": 0.03438,
+        "format": 0.0,
+        "source-maps": 0.036373,
+        "pub": 0.910902,
+        "kernel-cache": 0.055614,
+        "kernel-cold": 1.134496,
+        "kernel-compile": 1.194841,
+        "execute": 0.247906
+      },
+      "load_average": [
+        26.97705078125,
+        18.22802734375,
+        14.51611328125
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 3,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 1.0126986249815673,
+      "frontend_and_pub": 0.645348,
+      "dart": 0.317902,
+      "phases": {
+        "load": 0.42663,
+        "load-discovery": 0.075902,
+        "load-surface": 0.109506,
+        "load-overlay": 0.013081,
+        "load-types": 0.227095,
+        "verify": 0.010915,
+        "analyze": 0.032929,
+        "emit": 0.171896,
+        "write": 0.002969,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 9e-06,
+        "kernel-cache": 0.065725,
+        "execute": 0.252177
+      },
+      "load_average": [
+        26.97705078125,
+        18.22802734375,
+        14.51611328125
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 3,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 1.1364389579975978,
+      "frontend_and_pub": 0.671683,
+      "dart": 0.41439800000000004,
+      "phases": {
+        "load": 0.42572,
+        "load-discovery": 0.079767,
+        "load-surface": 0.102434,
+        "load-overlay": 0.013796,
+        "load-types": 0.228346,
+        "verify": 0.010446,
+        "analyze": 0.031505,
+        "emit": 0.201223,
+        "write": 0.002553,
+        "format": 0.0,
+        "source-maps": 0.00023,
+        "pub": 6e-06,
+        "kernel-cache": 0.054448,
+        "kernel-incremental": 0.053102,
+        "kernel-compile": 0.109212,
+        "execute": 0.250738
+      },
+      "load_average": [
+        26.97705078125,
+        18.22802734375,
+        14.51611328125
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 3,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 3.8580573329818435,
+      "frontend_and_pub": 2.436403,
+      "dart": 1.37178,
+      "phases": {
+        "load": 0.711005,
+        "load-discovery": 0.078505,
+        "load-surface": 0.356801,
+        "load-overlay": 0.013808,
+        "load-types": 0.260875,
+        "verify": 0.010438,
+        "analyze": 0.02904,
+        "emit": 0.829484,
+        "write": 0.037011,
+        "format": 0.0,
+        "source-maps": 0.035862,
+        "pub": 0.783563,
+        "kernel-cache": 0.059991,
+        "kernel-compile": 1.051749,
+        "execute": 0.26004
+      },
+      "load_average": [
+        25.9375,
+        18.15771484375,
+        14.5126953125
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 3,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 1.0514784579863772,
+      "frontend_and_pub": 0.6431209999999999,
+      "dart": 0.363193,
+      "phases": {
+        "load": 0.435513,
+        "load-discovery": 0.077549,
+        "load-surface": 0.111137,
+        "load-overlay": 0.013231,
+        "load-types": 0.231104,
+        "verify": 0.009688,
+        "analyze": 0.030699,
+        "emit": 0.16524,
+        "write": 0.001974,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 7e-06,
+        "kernel-cache": 0.071118,
+        "execute": 0.292075
+      },
+      "load_average": [
+        25.9375,
+        18.15771484375,
+        14.5126953125
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 3,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 2.1039732089848258,
+      "frontend_and_pub": 0.673187,
+      "dart": 1.380855,
+      "phases": {
+        "load": 0.421468,
+        "load-discovery": 0.071709,
+        "load-surface": 0.101429,
+        "load-overlay": 0.014535,
+        "load-types": 0.2328,
+        "verify": 0.010424,
+        "analyze": 0.029857,
+        "emit": 0.208799,
+        "write": 0.002397,
+        "format": 0.0,
+        "source-maps": 0.000235,
+        "pub": 7e-06,
+        "kernel-cache": 0.046981,
+        "kernel-compile": 1.074749,
+        "execute": 0.259125
+      },
+      "load_average": [
+        24.3408203125,
+        17.95556640625,
+        14.46240234375
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 4,
+      "mode": "baseline",
+      "state": "cold",
+      "seconds": 3.5768636250286363,
+      "frontend_and_pub": 2.149791,
+      "dart": 1.378904,
+      "phases": {
+        "load": 0.773772,
+        "load-discovery": 0.086215,
+        "load-surface": 0.397367,
+        "load-overlay": 0.016021,
+        "load-types": 0.273027,
+        "verify": 0.009949,
+        "analyze": 0.030784,
+        "emit": 0.830302,
+        "write": 0.036728,
+        "format": 0.0,
+        "source-maps": 0.036192,
+        "pub": 0.432064,
+        "kernel-cache": 0.053437,
+        "kernel-compile": 1.070717,
+        "execute": 0.25475
+      },
+      "load_average": [
+        24.3408203125,
+        17.95556640625,
+        14.46240234375
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 4,
+      "mode": "baseline",
+      "state": "warm",
+      "seconds": 1.0441762079717591,
+      "frontend_and_pub": 0.658981,
+      "dart": 0.337293,
+      "phases": {
+        "load": 0.456089,
+        "load-discovery": 0.073025,
+        "load-surface": 0.098504,
+        "load-overlay": 0.013297,
+        "load-types": 0.269924,
+        "verify": 0.010067,
+        "analyze": 0.029644,
+        "emit": 0.161247,
+        "write": 0.001927,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 7e-06,
+        "kernel-cache": 0.072102,
+        "execute": 0.265191
+      },
+      "load_average": [
+        25.1142578125,
+        18.2216796875,
+        14.57666015625
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 4,
+      "mode": "baseline",
+      "state": "edit",
+      "seconds": 2.115417458990123,
+      "frontend_and_pub": 0.686989,
+      "dart": 1.383242,
+      "phases": {
+        "load": 0.424048,
+        "load-discovery": 0.071798,
+        "load-surface": 0.102667,
+        "load-overlay": 0.013453,
+        "load-types": 0.232916,
+        "verify": 0.009718,
+        "analyze": 0.0306,
+        "emit": 0.21829,
+        "write": 0.003901,
+        "format": 0.0,
+        "source-maps": 0.000423,
+        "pub": 9e-06,
+        "kernel-cache": 0.045314,
+        "kernel-compile": 1.075217,
+        "execute": 0.262711
+      },
+      "load_average": [
+        25.1142578125,
+        18.2216796875,
+        14.57666015625
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 4,
+      "mode": "resident",
+      "state": "cold",
+      "seconds": 3.7048896670457907,
+      "frontend_and_pub": 2.142297,
+      "dart": 1.513446,
+      "phases": {
+        "load": 0.754738,
+        "load-discovery": 0.074826,
+        "load-surface": 0.398756,
+        "load-overlay": 0.014945,
+        "load-types": 0.265113,
+        "verify": 0.009604,
+        "analyze": 0.030081,
+        "emit": 0.833121,
+        "write": 0.034,
+        "format": 0.0,
+        "source-maps": 0.03687,
+        "pub": 0.443883,
+        "kernel-cache": 0.038403,
+        "kernel-cold": 1.156024,
+        "kernel-compile": 1.217017,
+        "execute": 0.258026
+      },
+      "load_average": [
+        25.98583984375,
+        18.5166015625,
+        14.7021484375
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 4,
+      "mode": "resident",
+      "state": "warm",
+      "seconds": 0.9870087499730289,
+      "frontend_and_pub": 0.631686,
+      "dart": 0.30636199999999997,
+      "phases": {
+        "load": 0.424528,
+        "load-discovery": 0.077454,
+        "load-surface": 0.102399,
+        "load-overlay": 0.012695,
+        "load-types": 0.230936,
+        "verify": 0.00966,
+        "analyze": 0.02898,
+        "emit": 0.166484,
+        "write": 0.002028,
+        "format": 0.0,
+        "source-maps": 0.0,
+        "pub": 6e-06,
+        "kernel-cache": 0.058537,
+        "execute": 0.247825
+      },
+      "load_average": [
+        25.98583984375,
+        18.5166015625,
+        14.7021484375
+      ]
+    },
+    {
+      "workload": "no-http",
+      "trial": 4,
+      "mode": "resident",
+      "state": "edit",
+      "seconds": 1.1224534169887193,
+      "frontend_and_pub": 0.664032,
+      "dart": 0.404275,
+      "phases": {
+        "load": 0.421245,
+        "load-discovery": 0.073129,
+        "load-surface": 0.100916,
+        "load-overlay": 0.013884,
+        "load-types": 0.231255,
+        "verify": 0.010206,
+        "analyze": 0.029535,
+        "emit": 0.20083,
+        "write": 0.002015,
+        "format": 0.0,
+        "source-maps": 0.000195,
+        "pub": 6e-06,
+        "kernel-cache": 0.043212,
+        "kernel-incremental": 0.056566,
+        "kernel-compile": 0.11368,
+        "execute": 0.247383
+      },
+      "load_average": [
+        25.98583984375,
+        18.5166015625,
+        14.7021484375
+      ]
+    }
+  ],
+  "medians": [
+    {
+      "workload": "http",
+      "state": "cold",
+      "mode": "baseline",
+      "seconds": 10.390921957965475,
+      "frontend_and_pub": 6.394412,
+      "dart": 3.8133589999999997
+    },
+    {
+      "workload": "http",
+      "state": "cold",
+      "mode": "resident",
+      "seconds": 10.762281083967537,
+      "frontend_and_pub": 6.455525,
+      "dart": 4.053908
+    },
+    {
+      "workload": "http",
+      "state": "warm",
+      "mode": "baseline",
+      "seconds": 2.4288166250335053,
+      "frontend_and_pub": 1.506502,
+      "dart": 0.7758719999999999
+    },
+    {
+      "workload": "http",
+      "state": "warm",
+      "mode": "resident",
+      "seconds": 2.361434833961539,
+      "frontend_and_pub": 1.450652,
+      "dart": 0.764486
+    },
+    {
+      "workload": "http",
+      "state": "edit",
+      "mode": "baseline",
+      "seconds": 5.5585976670263335,
+      "frontend_and_pub": 1.602103,
+      "dart": 3.7988410000000004
+    },
+    {
+      "workload": "http",
+      "state": "edit",
+      "mode": "resident",
+      "seconds": 2.740479084022809,
+      "frontend_and_pub": 1.589018,
+      "dart": 0.998367
+    },
+    {
+      "workload": "no-http",
+      "state": "cold",
+      "mode": "baseline",
+      "seconds": 3.8580573329818435,
+      "frontend_and_pub": 2.436403,
+      "dart": 1.389806
+    },
+    {
+      "workload": "no-http",
+      "state": "cold",
+      "mode": "resident",
+      "seconds": 3.708937249961309,
+      "frontend_and_pub": 2.165042,
+      "dart": 1.498361
+    },
+    {
+      "workload": "no-http",
+      "state": "warm",
+      "mode": "baseline",
+      "seconds": 1.0514784579863772,
+      "frontend_and_pub": 0.658981,
+      "dart": 0.34435899999999997
+    },
+    {
+      "workload": "no-http",
+      "state": "warm",
+      "mode": "resident",
+      "seconds": 0.9810359999537468,
+      "frontend_and_pub": 0.62039,
+      "dart": 0.30636199999999997
+    },
+    {
+      "workload": "no-http",
+      "state": "edit",
+      "mode": "baseline",
+      "seconds": 2.115417458990123,
+      "frontend_and_pub": 0.686989,
+      "dart": 1.390634
+    },
+    {
+      "workload": "no-http",
+      "state": "edit",
+      "mode": "resident",
+      "seconds": 1.1356661249883473,
+      "frontend_and_pub": 0.664103,
+      "dart": 0.411526
+    }
+  ]
+}

@@ -1,5 +1,11 @@
 # Dart resident compiler comparison
 
+The production driver now uses a resident compiler on kernel cache misses.
+The historical experiments below retain their original baselines and results.
+Use `production_probe.py` for the current CLI comparison.
+[The production design](../../docs/compilation-time.md#production-resident-compiler) defines the lifecycle and limits.
+
+
 This benchmark compares 3 complete Go-to-execution paths:
 
 | Mode | Request |
@@ -157,7 +163,7 @@ A second input snapshot detects content changes during the compile request and p
 It does not provide an atomic filesystem snapshot or support concurrent edits during compilation.
 Compiler dependencies outside the source snapshot cause a failure.
 Hidden Dart sources, directory symlink layouts outside the snapshot, and arbitrary external source imports are outside this bounded prototype.
-The source scan can invalidate unused files. Production cache depfiles remain more selective.
+The source scan can invalidate unused files. The baseline cache uses more selective depfiles.
 
 Validated kernels and receipts reside under `.gart/resident-prototype/`.
 An unchanged request validates the receipt and executes the kernel without a compiler request.
@@ -243,8 +249,32 @@ Linux uses the pinned CI image, 2 CPUs, `GOMAXPROCS=2`, and `GOFLAGS=-p=2`.
 The debugger and signal tests use a kernel after an actual Go source edit and incremental recompilation.
 No GitHub Actions run or full upstream Go suite forms part of this prototype validation.
 
-The next production task needs an explicit session lifecycle across CLI requests, output ownership, idle shutdown, and a memory budget.
-Measure retained compiler memory across repeated edits before that integration.
-Keep the exact SDK protocol dependency visible in that design.
-The current Python session ends when its caller closes it and does not provide a shared daemon or watch command.
-The production `gart run` command remains unchanged.
+The production integration now supplies session ownership, idle shutdown, and memory retention limits.
+The Python session remains an isolated prototype. It ends when its caller closes it.
+The production service uses the same pinned frontend protocol across separate CLI processes.
+
+
+## Production measurements
+
+`production_probe.py` compares the current CLI with a specified earlier binary across separate processes.
+It covers cold outputs, exact cache hits, and timestamp-preserved edits with HTTP and a smaller control fixture.
+`memory_probe.py` records compiler RSS across 100 edits.
+`profile_frontend.py` records fresh-process frontend phases and CPU profiles for the HTTP fixture.
+
+```sh
+python3 -B experiments/resident/production_probe.py --baseline /path/to/previous/gart --output build/resident-production
+python3 -B experiments/resident/memory_probe.py --output build/resident-memory
+python3 -B experiments/resident/profile_frontend.py --output build/resident-frontend
+```
+
+The production comparison against `4de8724` reduces edit medians by 51% with HTTP and 46% without HTTP.
+All 60 outputs match native Go. All 10 private services terminate after their trials.
+Unchanged medians improve slightly. Cold service startup adds Dart work, and cold totals vary by workload.
+The Go frontend still spends substantial time on repeated overlay scans and cache validation.
+
+The local short acceptance matrix passes 27 jobs on each platform.
+Final focused tests cover the later lifecycle changes, and all 4 production CLI contracts pass on macOS and Linux.
+The benchmark and frontend profile ran after those matrices with no test-suite overlap.
+Read the [production results and limits](../../docs/compilation-time.md#production-resident-results-2026-09-18) for the complete tables and interpretation.
+The committed evidence includes [performance](production-results-2026-09-18.json), [memory](memory-results-2026-09-18.json),
+[frontend profiles](frontend-results-2026-09-18.json), and [acceptance](acceptance-results-2026-09-18.json).

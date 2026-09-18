@@ -19,6 +19,7 @@ The workflow executes the current `make ci` test selection across 28 test jobs a
 
 - 1 job runs format validation, vet, Flutter Go tests, Dart runtime tests, and native Go packages outside the driver.
 - 1 job runs the driver tests outside the larger integration and target groups.
+  It also runs the production resident contracts for structural edits, output ownership, debugger use, signals, and crash recovery.
 - 1 job runs the plain and verbose integration comparisons.
 - 3 jobs run AOT/JS/wasm basics, web I/O, and web fetch.
 - 6 jobs run all 376 custom Go/Dart parity programs.
@@ -36,7 +37,7 @@ The workflow enforces the declared [upstream parity contract](upstream-parity.md
 Native memory-page tests, allocator tests, and other documented exclusions do not count as parity passes.
 The 2 math fixtures also mark 15 host-dependent subnormal result comparisons. See [support limits](support.md).
 
-Routine standard library and upstream target jobs pass upstream `-short` to both Go and Gart.
+Routine standard library, upstream target, upstream priority, and driver kernel-parity jobs pass upstream `-short` to both Go and Gart.
 The workflow input `upstream_mode=full` selects the original long suites.
 Both modes retain their exact exclusions and record their configuration in the evidence.
 Linux standard library jobs install `zstd` and `xxhash` for the original decompressor and hash tests.
@@ -241,3 +242,15 @@ Python 3.9 or later, Git, and the selected toolchains are required.
 Docker runs retain their image identity. The Dockerfile pins base image digests and toolchain versions.
 The image build still resolves Debian support packages through its package repository.
 A cold dependency cache can increase setup time. The runner reserves the matrix setup allowance outside each test timeout.
+
+## Resident compiler acceptance, 2026-09-18
+
+The complete local short matrix passes all 27 jobs on macOS ARM64 and all 27 jobs on Linux AMD64.
+Linux uses the pinned CI image with 2 CPUs per job.
+The matrix snapshots preceded the final IPC namespace and monotonic idle-clock changes.
+Focused final runs cover those changes, SDK identity, input invalidation, output ownership, and the resident lifecycle.
+The 4 production CLI contracts pass on both platforms, including structural edits, debugger use, signals, and crash recovery.
+Short-mode native Go parity also passes on both platforms for cold, cached, and incremental kernels.
+Each state covers 179 successful upstream outcomes across 5 package selections, with 5 explicit exclusions.
+The manual full mode remains available. This acceptance used the routine short matrix and did not dispatch GitHub Actions.
+[The acceptance record](../experiments/resident/acceptance-results-2026-09-18.json) retains source identities, job durations, and focused evidence hashes.

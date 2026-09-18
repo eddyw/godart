@@ -1,0 +1,190 @@
+{
+  "rows": [
+    {
+      "state": "cold",
+      "cached": 0,
+      "compiled": 128,
+      "phases": {
+        "analyze": 0.096241833,
+        "emit": 4.5660675,
+        "format": 8.3e-08,
+        "load": 0.940934959,
+        "load-discovery": 0.1288505,
+        "load-overlay": 0.030299041,
+        "load-surface": 0.360860791,
+        "load-types": 0.419870708,
+        "source-maps": 0.181995917,
+        "verify": 0.030825375,
+        "write": 0.186056416
+      },
+      "seconds": 6.140747542
+    },
+    {
+      "state": "warm",
+      "cached": 128,
+      "compiled": 0,
+      "phases": {
+        "analyze": 0.09274925,
+        "emit": 0.757323208,
+        "format": 0,
+        "load": 1.233074583,
+        "load-discovery": 0.488469416,
+        "load-overlay": 0.026743792,
+        "load-surface": 0.318022709,
+        "load-types": 0.398599167,
+        "source-maps": 1.25e-07,
+        "verify": 0.032131,
+        "write": 0.003039167
+      },
+      "seconds": 2.260517167
+    },
+    {
+      "state": "warm",
+      "cached": 128,
+      "compiled": 0,
+      "phases": {
+        "analyze": 0.094561333,
+        "emit": 0.728574083,
+        "format": 8.3e-08,
+        "load": 0.595919292,
+        "load-discovery": 0.108986333,
+        "load-overlay": 0.024950417,
+        "load-surface": 0.097629875,
+        "load-types": 0.363351084,
+        "source-maps": 1.25e-07,
+        "verify": 0.032538459,
+        "write": 0.001800292
+      },
+      "seconds": 1.594921334
+    },
+    {
+      "state": "warm",
+      "cached": 128,
+      "compiled": 0,
+      "phases": {
+        "analyze": 0.093190709,
+        "emit": 0.734361208,
+        "format": 8.3e-08,
+        "load": 0.62563375,
+        "load-discovery": 0.11030675,
+        "load-overlay": 0.033208625,
+        "load-surface": 0.105421,
+        "load-types": 0.375442375,
+        "source-maps": 1.67e-07,
+        "verify": 0.033252583,
+        "write": 0.001935417
+      },
+      "seconds": 1.625967625
+    },
+    {
+      "state": "edit",
+      "cached": 127,
+      "compiled": 1,
+      "phases": {
+        "analyze": 0.093411417,
+        "emit": 0.88443625,
+        "format": 4.2e-08,
+        "load": 0.637454625,
+        "load-discovery": 0.110961292,
+        "load-overlay": 0.031114542,
+        "load-surface": 0.108332917,
+        "load-types": 0.386199,
+        "source-maps": 0.000276834,
+        "verify": 0.042582625,
+        "write": 0.001946167
+      },
+      "seconds": 1.793112833
+    },
+    {
+      "state": "edit",
+      "cached": 127,
+      "compiled": 1,
+      "phases": {
+        "analyze": 0.0968465,
+        "emit": 0.860762042,
+        "format": 4.2e-08,
+        "load": 0.581332875,
+        "load-discovery": 0.106977917,
+        "load-overlay": 0.024476541,
+        "load-surface": 0.095188209,
+        "load-types": 0.353474833,
+        "source-maps": 0.000261875,
+        "verify": 0.0330265,
+        "write": 0.002198584
+      },
+      "seconds": 1.722038583
+    },
+    {
+      "state": "edit",
+      "cached": 127,
+      "compiled": 1,
+      "phases": {
+        "analyze": 0.099361667,
+        "emit": 0.876453709,
+        "format": 4.2e-08,
+        "load": 0.616453709,
+        "load-discovery": 0.104161625,
+        "load-overlay": 0.029499208,
+        "load-surface": 0.10194325,
+        "load-types": 0.379611833,
+        "source-maps": 0.000323959,
+        "verify": 0.030950375,
+        "write": 0.003090042
+      },
+      "seconds": 1.803289417
+    }
+  ],
+  "date": "2026-09-18",
+  "host": "macOS ARM64, Apple M4 Max",
+  "go": "1.27.0",
+  "dart": "3.13.3",
+  "method": "Fresh process per build request, 1 cold, 3 warm, 3 edits. No application execution or test-suite overlap.",
+  "cpu_limit": "CPU samples cover the Go frontend process only. They exclude child Go and Dart processes. Cumulative nodes overlap and must not be added.",
+  "cpu_views": {
+    "top": "File: profile\nType: cpu\nTime: 2026-09-18 21:18:14 CST\nDuration: 11.68s, Total samples = 16.53s (141.48%)\nShowing nodes accounting for 13.90s, 84.09% of 16.53s total\nDropped 429 nodes (cum <= 0.08s)\nShowing top 20 nodes out of 204\n      flat  flat%   sum%        cum   cum%\n     3.02s 18.27% 18.27%      3.64s 22.02%  runtime.tryDeferToSpanScan\n     2.41s 14.58% 32.85%      2.41s 14.58%  syscall.rawsyscalln\n     1.63s  9.86% 42.71%      1.63s  9.86%  runtime.madvise\n     1.37s  8.29% 51.00%      3.38s 20.45%  runtime.scanObjectsSmall\n     0.80s  4.84% 55.84%      0.80s  4.84%  runtime.pthread_cond_wait\n     0.71s  4.30% 60.13%      2.94s 17.79%  runtime.scanObject\n     0.67s  4.05% 64.19%      0.67s  4.05%  runtime.memmove\n     0.61s  3.69% 67.88%      0.61s  3.69%  runtime.memclrNoHeapPointers\n     0.43s  2.60% 70.48%      0.43s  2.60%  runtime.pthread_cond_signal\n     0.42s  2.54% 73.02%      0.42s  2.54%  runtime.usleep\n     0.27s  1.63% 74.65%      0.27s  1.63%  runtime.kevent\n     0.24s  1.45% 76.10%      0.24s  1.45%  runtime.(*spanScanOwnership).or (inline)\n     0.24s  1.45% 77.56%      0.24s  1.45%  runtime.pthread_kill\n     0.24s  1.45% 79.01%      0.24s  1.45%  runtime.spanSetScans\n     0.20s  1.21% 80.22%      0.20s  1.21%  runtime.extractHeapBitsSmall\n     0.14s  0.85% 81.06%      0.17s  1.03%  runtime.(*mspan).typePointersOfUnchecked\n     0.14s  0.85% 81.91%      0.23s  1.39%  runtime.heapArenaOf (inline)\n     0.13s  0.79% 82.70%      0.13s  0.79%  cmpbody\n     0.12s  0.73% 83.42%      0.12s  0.73%  internal/bytealg.LastIndexByteString\n     0.11s  0.67% 84.09%      0.12s  0.73%  runtime.typePointers.next\n",
+    "cumulative": "File: profile\nType: cpu\nTime: 2026-09-18 21:18:14 CST\nDuration: 11.68s, Total samples = 16.53s (141.48%)\nShowing nodes accounting for 9.28s, 56.14% of 16.53s total\nDropped 429 nodes (cum <= 0.08s)\nShowing top 45 nodes out of 204\n      flat  flat%   sum%        cum   cum%\n         0     0%     0%      9.95s 60.19%  runtime.systemstack\n         0     0%     0%      6.60s 39.93%  runtime.gcBgMarkWorker.func2\n     0.04s  0.24%  0.24%      6.60s 39.93%  runtime.gcDrain\n         0     0%  0.24%      6.20s 37.51%  runtime.gcBgMarkWorker\n         0     0%  0.24%      5.61s 33.94%  github.com/eddyw/godart/internal/driver.BuildWithStats\n         0     0%  0.24%      5.61s 33.94%  main.main\n         0     0%  0.24%      5.61s 33.94%  runtime.main\n         0     0%  0.24%      4.06s 24.56%  runtime.gcDrainMarkWorkerIdle (inline)\n     0.06s  0.36%   0.6%      3.89s 23.53%  runtime.scanSpan\n     3.02s 18.27% 18.87%      3.64s 22.02%  runtime.tryDeferToSpanScan\n     1.37s  8.29% 27.16%      3.38s 20.45%  runtime.scanObjectsSmall\n     0.71s  4.30% 31.46%      2.94s 17.79%  runtime.scanObject\n         0     0% 31.46%      2.66s 16.09%  github.com/eddyw/godart/internal/overlay.Packages\n         0     0% 31.46%      2.64s 15.97%  github.com/eddyw/godart/internal/overlay.Paths\n         0     0% 31.46%      2.64s 15.97%  github.com/eddyw/godart/internal/overlay.Surface (inline)\n         0     0% 31.46%      2.63s 15.91%  github.com/eddyw/godart/internal/driver.compiled\n     0.01s  0.06% 31.52%      2.61s 15.79%  github.com/eddyw/godart/internal/overlay.walk\n         0     0% 31.52%      2.54s 15.37%  runtime.gcDrainMarkWorkerDedicated (inline)\n         0     0% 31.52%      2.50s 15.12%  io/fs.WalkDir\n         0     0% 31.52%      2.50s 15.12%  io/fs.walkDir\n     2.41s 14.58% 46.10%      2.41s 14.58%  syscall.rawsyscalln\n         0     0% 46.10%      2.41s 14.58%  syscall.syscalln\n         0     0% 46.10%      2.39s 14.46%  syscall.syscall\n         0     0% 46.10%      2.24s 13.55%  os.ignoringEINTR (inline)\n     0.01s  0.06% 46.16%      2.13s 12.89%  github.com/eddyw/godart/internal/overlay.walk.func1\n         0     0% 46.16%      1.92s 11.62%  os.OpenFile\n         0     0% 46.16%      1.92s 11.62%  os.open (inline)\n         0     0% 46.16%      1.92s 11.62%  os.openFileNolog\n         0     0% 46.16%      1.92s 11.62%  syscall.Open\n         0     0% 46.16%      1.90s 11.49%  embed.FS.ReadFile\n         0     0% 46.16%      1.90s 11.49%  os.openFileNolog.func1 (inline)\n         0     0% 46.16%      1.88s 11.37%  runtime.(*mheap).allocSpan\n         0     0% 46.16%      1.85s 11.19%  runtime.(*mheap).alloc.func1\n         0     0% 46.16%      1.81s 10.95%  github.com/eddyw/godart/internal/driver.dependencyHashes\n         0     0% 46.16%      1.78s 10.77%  os.ReadFile\n     0.02s  0.12% 46.28%      1.72s 10.41%  runtime.stringtoslicebyte\n         0     0% 46.28%      1.70s 10.28%  os.Open (inline)\n     1.63s  9.86% 56.14%      1.63s  9.86%  runtime.madvise\n         0     0% 56.14%      1.63s  9.86%  runtime.sysUsed (inline)\n         0     0% 56.14%      1.63s  9.86%  runtime.sysUsedOS (inline)\n         0     0% 56.14%      1.29s  7.80%  runtime.mallocgc\n         0     0% 56.14%      1.09s  6.59%  runtime.rawbyteslice\n         0     0% 56.14%      1.04s  6.29%  github.com/eddyw/godart/internal/meta.(*Store).Read\n         0     0% 56.14%      1.01s  6.11%  github.com/eddyw/godart/internal/driver.loadModule\n         0     0% 56.14%      1.01s  6.11%  github.com/eddyw/godart/internal/load.LoadWithOptions\n",
+    "project": "File: profile\nType: cpu\nTime: 2026-09-18 21:18:14 CST\nDuration: 11.68s, Total samples = 16.53s (141.48%)\nActive filters:\n   focus=github.com/eddyw/godart\nShowing nodes accounting for 2.88s, 17.42% of 16.53s total\nDropped 175 nodes (cum <= 0.08s)\nShowing top 35 nodes out of 193\n      flat  flat%   sum%        cum   cum%\n         0     0%     0%      5.61s 33.94%  github.com/eddyw/godart/internal/driver.BuildWithStats\n         0     0%     0%      5.61s 33.94%  main.main\n         0     0%     0%      5.61s 33.94%  runtime.main\n         0     0%     0%      2.66s 16.09%  github.com/eddyw/godart/internal/overlay.Packages\n         0     0%     0%      2.64s 15.97%  github.com/eddyw/godart/internal/overlay.Paths\n         0     0%     0%      2.64s 15.97%  github.com/eddyw/godart/internal/overlay.Surface (inline)\n         0     0%     0%      2.63s 15.91%  github.com/eddyw/godart/internal/driver.compiled\n     0.01s  0.06%  0.06%      2.61s 15.79%  github.com/eddyw/godart/internal/overlay.walk\n         0     0%  0.06%      2.50s 15.12%  io/fs.WalkDir\n         0     0%  0.06%      2.50s 15.12%  io/fs.walkDir\n     2.18s 13.19% 13.25%      2.18s 13.19%  syscall.rawsyscalln\n         0     0% 13.25%      2.18s 13.19%  syscall.syscalln\n         0     0% 13.25%      2.16s 13.07%  syscall.syscall\n     0.01s  0.06% 13.31%      2.13s 12.89%  github.com/eddyw/godart/internal/overlay.walk.func1\n         0     0% 13.31%      2.02s 12.22%  os.ignoringEINTR (inline)\n         0     0% 13.31%      1.90s 11.49%  embed.FS.ReadFile\n         0     0% 13.31%      1.81s 10.95%  github.com/eddyw/godart/internal/driver.dependencyHashes\n         0     0% 13.31%      1.77s 10.71%  os.OpenFile\n         0     0% 13.31%      1.77s 10.71%  os.open (inline)\n         0     0% 13.31%      1.77s 10.71%  os.openFileNolog\n         0     0% 13.31%      1.77s 10.71%  syscall.Open\n         0     0% 13.31%      1.75s 10.59%  os.openFileNolog.func1 (inline)\n     0.02s  0.12% 13.43%      1.72s 10.41%  runtime.stringtoslicebyte\n         0     0% 13.43%      1.62s  9.80%  os.ReadFile\n         0     0% 13.43%      1.55s  9.38%  os.Open (inline)\n         0     0% 13.43%      1.09s  6.59%  runtime.rawbyteslice\n         0     0% 13.43%      1.05s  6.35%  runtime.mallocgc\n         0     0% 13.43%      1.04s  6.29%  github.com/eddyw/godart/internal/meta.(*Store).Read\n         0     0% 13.43%      1.01s  6.11%  github.com/eddyw/godart/internal/driver.loadModule\n         0     0% 13.43%      1.01s  6.11%  github.com/eddyw/godart/internal/load.LoadWithOptions\n         0     0% 13.43%      1.01s  6.11%  github.com/eddyw/godart/internal/load.load\n         0     0% 13.43%      0.74s  4.48%  runtime.systemstack\n     0.66s  3.99% 17.42%      0.66s  3.99%  runtime.memmove\n         0     0% 17.42%      0.64s  3.87%  github.com/eddyw/godart/internal/driver.order\n         0     0% 17.42%      0.64s  3.87%  github.com/eddyw/godart/internal/driver.order.func1\n"
+  },
+  "medians": {
+    "warm": {
+      "seconds": 1.625967625,
+      "phases": {
+        "analyze": 0.093190709,
+        "emit": 0.734361208,
+        "format": 8.3e-08,
+        "load": 0.62563375,
+        "load-discovery": 0.11030675,
+        "load-overlay": 0.026743792,
+        "load-surface": 0.105421,
+        "load-types": 0.375442375,
+        "source-maps": 1.25e-07,
+        "verify": 0.032538459,
+        "write": 0.001935417
+      }
+    },
+    "edit": {
+      "seconds": 1.793112833,
+      "phases": {
+        "analyze": 0.0968465,
+        "emit": 0.876453709,
+        "format": 4.2e-08,
+        "load": 0.616453709,
+        "load-discovery": 0.106977917,
+        "load-overlay": 0.029499208,
+        "load-surface": 0.10194325,
+        "load-types": 0.379611833,
+        "source-maps": 0.000276834,
+        "verify": 0.0330265,
+        "write": 0.002198584
+      }
+    }
+  },
+  "production_sources": {
+    "internal/driver/resident.dart": "96f98247eb9fd31fdb1d8add97fa1f393c95f782665049a176fc6cb966e4d5e3",
+    "internal/driver/resident.go": "f4832364bb4b4a604b9a09b10444c1db601521a9e3539bee93c76f9a0e318e7e",
+    "internal/driver/kernel.go": "5524934ce36d3ec7d6ef4728e43a2c51c68a64fa2ebdd35d5c7e5f27e39be395",
+    "internal/driver/output_lock.go": "a8880fbeec69008dc0cd3ec7d6565aa587d7218c3cbddbc8a4c31616bca98187",
+    "internal/driver/driver.go": "be60d92d195e09e027bcb06a5e42cd3bfed765ef54f22929e7d013dba8301646",
+    "internal/driver/run.go": "6ef0ab1f3926a254b09cdb16c49cdef101583c770d7abf6f1b561c0dc190994c"
+  }
+}

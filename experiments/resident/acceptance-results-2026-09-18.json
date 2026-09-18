@@ -1,0 +1,626 @@
+{
+  "date": "2026-09-18",
+  "mode": "short",
+  "gha_dispatched": false,
+  "production_sources": {
+    "internal/driver/resident.dart": "96f98247eb9fd31fdb1d8add97fa1f393c95f782665049a176fc6cb966e4d5e3",
+    "internal/driver/resident.go": "f4832364bb4b4a604b9a09b10444c1db601521a9e3539bee93c76f9a0e318e7e",
+    "internal/driver/kernel.go": "5524934ce36d3ec7d6ef4728e43a2c51c68a64fa2ebdd35d5c7e5f27e39be395",
+    "internal/driver/output_lock.go": "a8880fbeec69008dc0cd3ec7d6565aa587d7218c3cbddbc8a4c31616bca98187",
+    "internal/driver/driver.go": "be60d92d195e09e027bcb06a5e42cd3bfed765ef54f22929e7d013dba8301646",
+    "internal/driver/run.go": "6ef0ab1f3926a254b09cdb16c49cdef101583c770d7abf6f1b561c0dc190994c"
+  },
+  "source_note": "Broad matrix snapshots preceded the final short IPC namespace and monotonic idle clocks. Focused final runs cover these changes, SDK identity, and final production contracts. Both platforms also pass short-mode kernel parity. Final upstream-priority short-mode runs also pass on both platforms.",
+  "matrices": [
+    {
+      "local_run": "build/resident-host-final-a",
+      "platform": "host",
+      "mode": "short",
+      "source": "c7c8d22a97a28321986950e2c3b40a1e00190a7ef34eb985ff1277f24a0a1ece",
+      "production_sources": {
+        "internal/driver/resident.dart": "4b2137f1482d5856d0bd20b88566f96811b3a3d6f11e74096dffbb5108b10079",
+        "internal/driver/resident.go": "f4832364bb4b4a604b9a09b10444c1db601521a9e3539bee93c76f9a0e318e7e",
+        "internal/driver/kernel.go": "5524934ce36d3ec7d6ef4728e43a2c51c68a64fa2ebdd35d5c7e5f27e39be395",
+        "internal/driver/output_lock.go": "a8880fbeec69008dc0cd3ec7d6565aa587d7218c3cbddbc8a4c31616bca98187",
+        "internal/driver/driver.go": "be60d92d195e09e027bcb06a5e42cd3bfed765ef54f22929e7d013dba8301646",
+        "internal/driver/run.go": "6ef0ab1f3926a254b09cdb16c49cdef101583c770d7abf6f1b561c0dc190994c"
+      },
+      "results": [
+        {
+          "suite": "checks",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 27.902,
+          "attempt": "checks-0/attempt-001"
+        },
+        {
+          "suite": "driver",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 351.363,
+          "attempt": "driver-0/attempt-001"
+        },
+        {
+          "suite": "integration",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 60.384,
+          "attempt": "integration-0/attempt-001"
+        },
+        {
+          "suite": "targets",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 104.962,
+          "attempt": "targets-0/attempt-001"
+        },
+        {
+          "suite": "web-io",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 105.568,
+          "attempt": "web-io-0/attempt-001"
+        },
+        {
+          "suite": "web-fetch",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 109.471,
+          "attempt": "web-fetch-0/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 0,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 173.082,
+          "attempt": "programs-0/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 1,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 219.896,
+          "attempt": "programs-1/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 2,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 206.834,
+          "attempt": "programs-2/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 3,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 167.651,
+          "attempt": "programs-3/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 4,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 184.244,
+          "attempt": "programs-4/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 5,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 185.571,
+          "attempt": "programs-5/attempt-001"
+        },
+        {
+          "suite": "upstream-targets",
+          "shard": 0,
+          "shards": 3,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 118.706,
+          "attempt": "upstream-targets-0/attempt-001"
+        },
+        {
+          "suite": "upstream-targets",
+          "shard": 1,
+          "shards": 3,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 163.122,
+          "attempt": "upstream-targets-1/attempt-001"
+        },
+        {
+          "suite": "upstream-targets",
+          "shard": 2,
+          "shards": 3,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 172.852,
+          "attempt": "upstream-targets-2/attempt-001"
+        },
+        {
+          "suite": "upstream-priority",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 86.696,
+          "attempt": "upstream-priority-0/attempt-001"
+        },
+        {
+          "suite": "upstream-blockers",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 19.987,
+          "attempt": "upstream-blockers-0/attempt-001"
+        }
+      ]
+    },
+    {
+      "local_run": "build/resident-host-final-b",
+      "platform": "host",
+      "mode": "short",
+      "source": "c7c8d22a97a28321986950e2c3b40a1e00190a7ef34eb985ff1277f24a0a1ece",
+      "production_sources": {
+        "internal/driver/resident.dart": "4b2137f1482d5856d0bd20b88566f96811b3a3d6f11e74096dffbb5108b10079",
+        "internal/driver/resident.go": "f4832364bb4b4a604b9a09b10444c1db601521a9e3539bee93c76f9a0e318e7e",
+        "internal/driver/kernel.go": "5524934ce36d3ec7d6ef4728e43a2c51c68a64fa2ebdd35d5c7e5f27e39be395",
+        "internal/driver/output_lock.go": "a8880fbeec69008dc0cd3ec7d6565aa587d7218c3cbddbc8a4c31616bca98187",
+        "internal/driver/driver.go": "be60d92d195e09e027bcb06a5e42cd3bfed765ef54f22929e7d013dba8301646",
+        "internal/driver/run.go": "6ef0ab1f3926a254b09cdb16c49cdef101583c770d7abf6f1b561c0dc190994c"
+      },
+      "results": [
+        {
+          "suite": "language",
+          "shard": 0,
+          "shards": 4,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 261.888,
+          "attempt": "language-0/attempt-001"
+        },
+        {
+          "suite": "language",
+          "shard": 1,
+          "shards": 4,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 249.701,
+          "attempt": "language-1/attempt-001"
+        },
+        {
+          "suite": "language",
+          "shard": 2,
+          "shards": 4,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 250.769,
+          "attempt": "language-2/attempt-001"
+        },
+        {
+          "suite": "language",
+          "shard": 3,
+          "shards": 4,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 248.445,
+          "attempt": "language-3/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 0,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 242.963,
+          "attempt": "stdlib-0/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 1,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 175.489,
+          "attempt": "stdlib-1/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 2,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 142.154,
+          "attempt": "stdlib-2/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 3,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 160.964,
+          "attempt": "stdlib-3/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 4,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 162.85,
+          "attempt": "stdlib-4/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 5,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 172.959,
+          "attempt": "stdlib-5/attempt-001"
+        }
+      ]
+    },
+    {
+      "local_run": "build/resident-release-linux",
+      "platform": "linux",
+      "mode": "short",
+      "source": "01b9639585e0e1c0ab4ee182e1c76a39c179db61b89994becbcf0f23cbc8b472",
+      "production_sources": {
+        "internal/driver/resident.dart": "4b2137f1482d5856d0bd20b88566f96811b3a3d6f11e74096dffbb5108b10079",
+        "internal/driver/resident.go": "f4318c4a316a51d4e0a310c3a6bf9162dc915e0afa83268fe2b06a43439b99b2",
+        "internal/driver/kernel.go": "5524934ce36d3ec7d6ef4728e43a2c51c68a64fa2ebdd35d5c7e5f27e39be395",
+        "internal/driver/output_lock.go": "a8880fbeec69008dc0cd3ec7d6565aa587d7218c3cbddbc8a4c31616bca98187",
+        "internal/driver/driver.go": "be60d92d195e09e027bcb06a5e42cd3bfed765ef54f22929e7d013dba8301646",
+        "internal/driver/run.go": "6ef0ab1f3926a254b09cdb16c49cdef101583c770d7abf6f1b561c0dc190994c"
+      },
+      "results": [
+        {
+          "suite": "checks",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 33.984,
+          "attempt": "checks-0/attempt-001"
+        },
+        {
+          "suite": "driver",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 532.351,
+          "attempt": "driver-0/attempt-001"
+        },
+        {
+          "suite": "integration",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 97.439,
+          "attempt": "integration-0/attempt-001"
+        },
+        {
+          "suite": "targets",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 147.636,
+          "attempt": "targets-0/attempt-001"
+        },
+        {
+          "suite": "web-io",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 170.295,
+          "attempt": "web-io-0/attempt-001"
+        },
+        {
+          "suite": "web-fetch",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 193.194,
+          "attempt": "web-fetch-0/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 0,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 474.2,
+          "attempt": "programs-0/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 1,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 523.718,
+          "attempt": "programs-1/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 2,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 591.631,
+          "attempt": "programs-2/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 3,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 573.499,
+          "attempt": "programs-3/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 4,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 465.246,
+          "attempt": "programs-4/attempt-001"
+        },
+        {
+          "suite": "programs",
+          "shard": 5,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 424.234,
+          "attempt": "programs-5/attempt-001"
+        },
+        {
+          "suite": "language",
+          "shard": 0,
+          "shards": 4,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 645.593,
+          "attempt": "language-0/attempt-001"
+        },
+        {
+          "suite": "language",
+          "shard": 1,
+          "shards": 4,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 674.772,
+          "attempt": "language-1/attempt-001"
+        },
+        {
+          "suite": "language",
+          "shard": 2,
+          "shards": 4,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 614.278,
+          "attempt": "language-2/attempt-001"
+        },
+        {
+          "suite": "language",
+          "shard": 3,
+          "shards": 4,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 611.25,
+          "attempt": "language-3/attempt-001"
+        },
+        {
+          "suite": "upstream-targets",
+          "shard": 0,
+          "shards": 3,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 211.271,
+          "attempt": "upstream-targets-0/attempt-001"
+        },
+        {
+          "suite": "upstream-targets",
+          "shard": 1,
+          "shards": 3,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 335.909,
+          "attempt": "upstream-targets-1/attempt-001"
+        },
+        {
+          "suite": "upstream-targets",
+          "shard": 2,
+          "shards": 3,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 334.49,
+          "attempt": "upstream-targets-2/attempt-001"
+        },
+        {
+          "suite": "upstream-priority",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 163.034,
+          "attempt": "upstream-priority-0/attempt-001"
+        },
+        {
+          "suite": "upstream-blockers",
+          "shard": 0,
+          "shards": 1,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 43.79,
+          "attempt": "upstream-blockers-0/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 0,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 326.136,
+          "attempt": "stdlib-0/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 1,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 294.759,
+          "attempt": "stdlib-1/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 2,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 286.121,
+          "attempt": "stdlib-2/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 3,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 315.194,
+          "attempt": "stdlib-3/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 4,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 304.02,
+          "attempt": "stdlib-4/attempt-001"
+        },
+        {
+          "suite": "stdlib",
+          "shard": 5,
+          "shards": 6,
+          "mode": "short",
+          "exit": 0,
+          "seconds": 286.442,
+          "attempt": "stdlib-5/attempt-001"
+        }
+      ]
+    }
+  ],
+  "focused": [
+    {
+      "log": "build/resident-acceptance-focused-macos.log",
+      "sha256": "fd84517de151f1c712e072f9baf06562c2d799d1069e6ba8679146531eab07ca"
+    },
+    {
+      "log": "build/resident-acceptance-focused-linux.log",
+      "sha256": "e905b8b55a9a1e368efd8e714164dbb86df01e5563c4acc7cdcc98285129dcec"
+    },
+    {
+      "log": "build/resident-short-macos.log",
+      "sha256": "015cea07f9393ff57e533318e003a61cf8ff421c5b4344834eb5614df7d6543f"
+    },
+    {
+      "log": "build/resident-short-linux.log",
+      "sha256": "a3f2e737380ac37945e57423a590b366c8668438de21365e940c0f7466d0f065"
+    },
+    {
+      "log": "build/resident-production-contract-final.log",
+      "sha256": "1154fc61e1b41ad6179269968f8d3f48c6cccea6402dfab2ae9bf44450e577fb"
+    },
+    {
+      "log": "build/resident-sdk-final-macos.log",
+      "sha256": "07ac497f87970420e904decf88e56443a41c144c2445b56d23ce6cb361739918"
+    },
+    {
+      "log": "build/resident-priority-short-macos.log",
+      "sha256": "871ddd90059dc5a26ef0e7e1cbbf6b0ccabb35c9decf3a81e753221dee6c4ec6"
+    },
+    {
+      "log": "build/resident-priority-short-linux/upstream-priority-0/attempt-001/ci.log",
+      "sha256": "ffc0be28fd1a6756fb81188ae6a8ff08d2d9622952a58a8b7d16fe90bd4960a2"
+    }
+  ],
+  "kernel_parity": {
+    "packages": [
+      "path",
+      "io",
+      "math/bits",
+      "hash/crc32",
+      "selected fmt"
+    ],
+    "states": [
+      "cold",
+      "cached",
+      "incremental"
+    ],
+    "passes_per_state": 179,
+    "explicit_exclusions_per_state": 5
+  },
+  "production_contracts": {
+    "macos": 4,
+    "linux": 4,
+    "cases": [
+      "structural Go edits",
+      "concurrent output ownership",
+      "incremental debugger and CLI signals",
+      "worker and service crash recovery"
+    ]
+  },
+  "priority_short_mode": {
+    "macos_exit": 0,
+    "linux_exit": 0,
+    "linux_seconds": 144.581,
+    "linux_parity_reports": [
+      "sync_atomic-selected.json",
+      "os_exec-selected.json",
+      "sync-selected.json",
+      "os-selected.json",
+      "reflect-selected.json",
+      "net-selected.json",
+      "net_http-selected.json",
+      "time-selected.json",
+      "net_http-content-type.json"
+    ]
+  }
+}

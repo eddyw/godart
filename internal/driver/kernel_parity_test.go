@@ -14,19 +14,27 @@ func TestKernelUpstreamParity(t *testing.T) {
 	for _, suite := range []struct{ pkg, run string }{
 		{"path", ""},
 		{"io", ""},
+		{"math/bits", ""},
+		{"hash/crc32", ""},
 		{"fmt", "^(TestErrorf|TestSprintf|TestScanf|TestScan)$"},
 	} {
 		pkg := suite.pkg
 		t.Run(pkg, func(t *testing.T) {
 			dir := filepath.Join(build.Default.GOROOT, "src", pkg)
-			compiles := 0
+			compiles, incremental := 0, 0
 			opt := driver.Options{Dir: dir, Patterns: []string{"."}, Out: t.TempDir(), Runtime: runtimeDir(t), TrimPath: true,
 				Trace: func(phase string, _ time.Duration) {
+					if phase == "kernel-incremental" {
+						incremental++
+					}
 					if phase == "kernel-compile" {
 						compiles++
 					}
 				}}
-			for range 2 {
+			for iteration := range 3 {
+				if iteration == 2 {
+					opt.TrimPath = false
+				}
 				var output bytes.Buffer
 				code, err := driver.Test(opt, driver.TestOptions{Verbose: true, Short: testing.Short(), Run: suite.run}, &output)
 				if err != nil {
@@ -37,8 +45,8 @@ func TestKernelUpstreamParity(t *testing.T) {
 				}
 				compareUpstream(t, "kernel/"+pkg, pkg, suite.run, "vm", dir, output.String(), code)
 			}
-			if compiles != 1 {
-				t.Fatalf("compiled %d kernels, want 1", compiles)
+			if compiles != 2 || incremental != 1 {
+				t.Fatalf("compiled %d kernels, %d incremental, want 2 and 1", compiles, incremental)
 			}
 		})
 	}
