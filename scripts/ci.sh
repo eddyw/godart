@@ -34,6 +34,7 @@ large_tests='TestPrograms|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTests
 case "$suite" in
   checks)
     python3 -B -m unittest discover -s scripts -p test_ci_local.py
+    python3 -B -m unittest discover -s scripts -p test_parity.py
     make fmt-check vet flutter-go dart-analyze dart-test
     package_list=$(go list ./...)
     packages=()

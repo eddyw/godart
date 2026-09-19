@@ -8,11 +8,13 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"go/types"
 	"os"
 	"os/exec"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -27,6 +29,7 @@ func main() {
 	only := flag.String("pkg", "", "measure 1 package only")
 	absent := flag.Bool("absent", false,
 		"name each standard package that the surface does not hold")
+	jsonOutput := flag.Bool("json", false, "write API contracts and absent packages as JSON")
 	flag.Parse()
 
 	paths := surfacePaths()
@@ -56,6 +59,20 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+	if *jsonOutput {
+		report := APIReport{GoVersion: runtime.Version(), GOOS: runtime.GOOS, GOARCH: runtime.GOARCH,
+			Absent: absentPaths()}
+		for _, path := range paths {
+			report.Packages = append(report.Packages, compareAPI(path, real[path], held[path]))
+		}
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(report); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	var partial, whole int
@@ -149,6 +166,15 @@ func loadReal(paths []string) (map[string]*types.Scope, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the real load failed: %w", err)
 	}
+	var diagnostics []string
+	packages.Visit(pkgs, nil, func(p *packages.Package) {
+		for _, err := range p.Errors {
+			diagnostics = append(diagnostics, err.Error())
+		}
+	})
+	if len(diagnostics) > 0 {
+		return nil, fmt.Errorf("the real load failed: %s", strings.Join(diagnostics, "\n"))
+	}
 	return scopes(pkgs), nil
 }
 
@@ -189,7 +215,11 @@ func names(scope *types.Scope) []string {
 		if !ok || !isTypeName(obj) {
 			continue
 		}
-		set := types.NewMethodSet(types.NewPointer(named))
+		methodType := types.Type(types.NewPointer(named))
+		if _, ok := named.Underlying().(*types.Interface); ok {
+			methodType = named
+		}
+		set := types.NewMethodSet(methodType)
 		for i := 0; i < set.Len(); i++ {
 			m := set.At(i).Obj()
 			if m.Exported() {

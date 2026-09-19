@@ -86,6 +86,39 @@ Direct `go test` runs use full mode unless the command includes `-short`.
 
 ## Evidence and local commands
 
+### Repeatable measurements
+
+`scripts/parity.py` produces JSON and Markdown reports for 3 separate measurements:
+
+- API declarations include interface methods, signatures, constants, public fields, and receiver availability.
+- Upstream results retain compiler snapshots, SDKs, platforms, targets, and short/full modes separately.
+- Application results distinguish compilation, equal execution output, and equal test outcomes.
+
+```sh
+python3 scripts/parity.py report --reports build/parity-results --output build/parity-summary
+python3 scripts/parity.py application --project /path/to/app --output build/app-compile
+python3 scripts/parity.py application --project /path/to/app --mode run --output build/app-run
+python3 scripts/parity.py application --project /path/to/app --mode test --output build/app-tests
+```
+
+Use a new output directory for each invocation. The application command defaults to compilation only.
+It compiles both a native Go executable and a Dart kernel. Run mode executes both programs with closed stdin.
+Run mode requires identical stdout, stderr, and successful exits. Use deterministic programs without external side effects.
+Test mode selects 1 package and compares short-mode test identities and outcomes. Skips remain partial results.
+The application command records command arguments, exits, durations, logs, SDKs, source identity, and the Gart binary hash.
+It does not prove a match for nondeterministic inputs or unexecuted behavior.
+
+Add `--applications build/app-results` to include application records in a report.
+Repeat `--reports` for separate evidence directories. The report never blends incompatible configurations or compiler snapshots.
+Reports without compiler provenance remain explicitly unattributed. Existing reports do not establish parity for the current checkout.
+Duplicate report bytes count once. Conflicting outcomes remain visible and cannot count as passes.
+
+API declaration differences require review. Equivalent aliases or generic parameter names can produce differences.
+An API match does not prove behavior, private layout compatibility, or complete type equivalence.
+The report retains absent standard packages as unassessed. It does not infer that they are unreachable.
+Blocked suites retain their unobserved test inventory. Individual portable tests can still need adapters.
+No report claims a percentage of all reachable Go parity before that scope receives review.
+
 Set `GART_PARITY_REPORT_DIR` to retain the structured comparison and both raw outputs.
 Each report records source and fixture hashes, toolchain versions, target, platform, build tags, filters, short/full mode, timeout, exclusions, and process exits.
 
