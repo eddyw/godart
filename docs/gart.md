@@ -101,7 +101,12 @@ The output directory then holds 5 files:
 ### run
 
 `gart run` compiles the module and resolves Dart dependencies when required.
-It compiles `bin/main.dart` to a cached kernel and starts that kernel on the Dart VM.
+On a verified resident SDK, it compiles `bin/main.dart` to a cached kernel.
+The Dart VM starts that kernel in a fresh process.
+`-frontend=source` uses `dart run` directly. The default `-frontend=auto` selects
+source execution with a warning when the SDK lacks verified resident support.
+`-frontend=resident` requires a verified resident SDK.
+The same option applies to `gart test`. See [SDK compatibility](sdk-upgrades.md).
 A local compiler service retains Dart frontend state across separate commands after source edits.
 An unchanged request validates the disk kernel without a service request.
 The service expires 60-second idle compilers before the next compile request and exits after 60 idle seconds.

@@ -37,6 +37,7 @@ type Options struct {
 	Runtime      string
 	Format       bool
 	TrimPath     bool
+	Frontend     string
 	// Trace receives the elapsed duration of each build or execution phase.
 	Trace func(string, time.Duration)
 	// NoCache compiles each package again, also when the cache holds it.

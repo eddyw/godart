@@ -158,10 +158,13 @@ func runBuild(args []string, watch bool) error {
 
 func runRun(args []string) error {
 	build, program := split(args)
-	options, err := newBuildFlags("run").options(build)
+	flags := newBuildFlags("run")
+	frontend := flags.set.String("frontend", "auto", "Dart frontend: auto, resident, or source")
+	options, err := flags.options(build)
 	if err != nil {
 		return err
 	}
+	options.Frontend = *frontend
 	code, err := driver.Run(options, program, os.Stdout)
 	if err != nil {
 		return err
@@ -174,6 +177,7 @@ func runRun(args []string) error {
 
 func runTest(args []string) error {
 	flags := newBuildFlags("test")
+	frontend := flags.set.String("frontend", "auto", "Dart frontend: auto, resident, or source")
 	verbose := flags.set.Bool("v", false, "write 1 line for each test")
 	pattern := flags.set.String("run", "", "run only a test whose name matches this expression")
 	short := flags.set.Bool("short", false, "ask each test for its short form")
@@ -201,6 +205,7 @@ func runTest(args []string) error {
 		BenchTime:  *benchTime,
 		BenchCount: *benchCount,
 	}
+	options.Frontend = *frontend
 	code, err := driver.Test(options, testOptions, os.Stdout)
 	if err != nil {
 		return err

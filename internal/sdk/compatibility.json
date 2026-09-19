@@ -5,6 +5,8 @@
   },
   "dart": {
     "baseline": "3.13.3",
+    "source_min": "3.13.0",
+    "source_max_exclusive": "4.0.0",
     "resident": ["3.13.3", "3.13.4"]
   },
   "flutter": {

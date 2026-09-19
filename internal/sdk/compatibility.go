@@ -14,8 +14,10 @@ type Versions struct {
 		Candidates []string `json:"candidates"`
 	} `json:"go"`
 	Dart struct {
-		Baseline string   `json:"baseline"`
-		Resident []string `json:"resident"`
+		Baseline           string   `json:"baseline"`
+		Resident           []string `json:"resident"`
+		SourceMin          string   `json:"source_min"`
+		SourceMaxExclusive string   `json:"source_max_exclusive"`
 	} `json:"dart"`
 	Flutter struct {
 		Development string `json:"development"`

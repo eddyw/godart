@@ -53,6 +53,9 @@ type TestOptions struct {
 // Run compiles the module and runs package main with the Dart VM. The result
 // is the exit code of the program.
 func Run(opt Options, args []string, out io.Writer) (int, error) {
+	if err := opt.selectExecutionFrontend(); err != nil {
+		return 1, err
+	}
 	release, err := opt.lockOutput()
 	if err != nil {
 		return 1, err
@@ -69,7 +72,7 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 		return 1, err
 	}
 	opt.trace("pub", phase)
-	kernel, err := opt.kernel(mainEntry)
+	kernel, err := opt.executionEntry(mainEntry)
 	if err != nil {
 		return 1, err
 	}
@@ -85,6 +88,9 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 // of time first, because the VM starts a just in time compiler and its warm up
 // cost hides the result.
 func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
+	if err := opt.selectExecutionFrontend(); err != nil {
+		return 1, err
+	}
 	release, err := opt.lockOutput()
 	if err != nil {
 		return 1, err
@@ -158,7 +164,7 @@ func runBinary(opt Options, bin TestBinary, testOpt TestOptions) (string, int, e
 		dir = out
 	}
 	if !testOpt.Benchmarks {
-		entry, err := opt.kernel(bin.Entry)
+		entry, err := opt.executionEntry(bin.Entry)
 		if err != nil {
 			return "", 1, err
 		}

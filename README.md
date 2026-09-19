@@ -25,7 +25,10 @@ gart test -o dartout ./...
 ```
 
 The compiler includes its matching Dart runtime. `-runtime <dir>` selects an explicit runtime override.
-Repeated `gart run` commands reuse a resident Dart compiler after source edits. Idle compilers exit automatically.
+Repeated `gart run` commands reuse a resident Dart compiler on verified SDKs.
+Other compatible Dart 3 SDKs use `dart run` with a warning.
+Use `-frontend=source` or `-frontend=resident` to select explicitly.
+See [SDK compatibility](docs/sdk-upgrades.md) for version bounds and validation.
 Use `-timings` to report compiler and execution durations. [Compilation profiles](docs/compilation-time.md) explain the measured costs.
 
 Source paths are absolute by default. `-trimpath` uses portable module/package paths for reproducible output across checkouts.

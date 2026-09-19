@@ -9,6 +9,24 @@ language version remains separate from the SDK that builds the compiler.
 An accepted resident version does not establish parity across all packages
 or platforms. Release evidence must identify the exact SDK and host.
 
+## Execution frontends
+
+`gart run` and `gart test` accept `-frontend=auto|resident|source`.
+The default, `auto`, selects the resident frontend for verified SDK versions.
+For another Dart 3 SDK within the source range, it issues 1 warning and uses
+`dart run`. This range follows the runtime package constraint. It permits a
+compatibility attempt, not a claim that all future SDK versions pass validation.
+
+`source` uses the public Dart command without the private resident protocol.
+`resident` requires a verified version and reports a mismatch otherwise.
+An execution or compilation error never triggers a second execution.
+Unsupported old SDKs and Dart 4 fail before Go compilation.
+
+Resident kernels retain their disk cache. The cache identity includes the SDK,
+compiler resources, flags, and source dependencies. Kernels do not transfer
+between SDK versions. Source mode bypasses the Gart kernel cache.
+Glutter uses Flutter's compiler and hot reload, separate from this selection.
+
 ## Go updates
 
 1. Add the proposed version to `go.candidates`.
