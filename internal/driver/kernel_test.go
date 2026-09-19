@@ -212,7 +212,7 @@ func TestKernelSDKIdentity(t *testing.T) {
 	if *count != 2 {
 		t.Fatal("SDK change reused a kernel")
 	}
-	putKernelFile(t, filepath.Join(fake, "version"), "3.13.4")
+	putKernelFile(t, filepath.Join(fake, "version"), "3.14.0")
 	if _, err := opt.kernel("main.dart"); err == nil || !strings.Contains(err.Error(), "requires Dart 3.13.3") {
 		t.Fatalf("SDK rejection: %v", err)
 	}

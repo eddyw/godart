@@ -71,8 +71,10 @@ func dartIdentity() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	if strings.TrimSpace(string(version)) != "3.13.3" {
-		return "", "", fmt.Errorf("resident compilation requires Dart 3.13.3, found %s", strings.TrimSpace(string(version)))
+	switch strings.TrimSpace(string(version)) {
+	case "3.13.3", "3.13.4":
+	default:
+		return "", "", fmt.Errorf("resident compilation requires Dart 3.13.3 or 3.13.4, found %s", strings.TrimSpace(string(version)))
 	}
 	paths := []string{}
 	for _, name := range []string{"version", "revision", "bin/dart", "bin/dartvm", "bin/dartaotruntime", "bin/snapshots/frontend_server_aot.dart.snapshot", "lib/_internal/vm_platform_strong.dill", "lib/libraries.json"} {

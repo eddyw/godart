@@ -43,3 +43,6 @@ go.work.sum
 # Editor/IDE
 .idea/
 .vscode/
+
+# FVM SDK cache
+.fvm/

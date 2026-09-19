@@ -45,7 +45,17 @@ func dartSDK() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Dir(filepath.Dir(executable)), nil
+	root := filepath.Dir(filepath.Dir(executable))
+	for _, sdk := range []string{root, filepath.Join(root, "bin", "cache", "dart-sdk")} {
+		info, err := os.Stat(filepath.Join(sdk, "version"))
+		if err == nil && !info.IsDir() {
+			return filepath.EvalSymlinks(sdk)
+		}
+		if err != nil && !os.IsNotExist(err) {
+			return "", err
+		}
+	}
+	return "", fmt.Errorf("cannot locate the Dart SDK for %s", executable)
 }
 
 func sourceURI(path string) *url.URL {

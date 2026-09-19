@@ -164,7 +164,16 @@ GitHub Actions requires manual dispatch.
 
 ## Versions
 
-The project targets Go 1.27.0 and Dart 3.13.3. A Flutter application needs
+The Go parity baseline uses Go 1.27.0. The resident compiler accepts Dart
+3.13.3 and 3.13.4. The FVM configuration selects Flutter 3.47.5 with Dart 3.13.4.
+Use `fvm exec` to select that SDK for Gart and Glutter commands:
+
+```sh
+fvm exec gart run ./...
+fvm exec glutter run
+```
+
+A Flutter application needs
 Flutter 3.47, `material_ui` 1.1, and `cupertino_ui` 1.0. `glutter doctor`
 reports the version of the machine against the node set.
 

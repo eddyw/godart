@@ -183,7 +183,7 @@ It resets the delta base after success and emits a complete kernel for a fresh a
 
 SDK binaries, platform data, package configuration, fixed compiler options, and service source contribute to cache identity.
 A changed SDK or package configuration requires a cold compiler.
-The driver requires Dart 3.13.3 because the frontend protocol is internal to that SDK.
+The driver accepts Dart 3.13.3 and 3.13.4. Other versions need validation because the frontend protocol is internal to the SDK.
 The current service supports macOS and Linux.
 Untracked source dependencies cause a clear error. Arbitrary external Dart imports and directory symlinks outside the source snapshot remain unsupported.
 
