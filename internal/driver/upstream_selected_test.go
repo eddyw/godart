@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/token"
 	"io"
@@ -22,7 +23,11 @@ import (
 
 func TestSelectedUpstream(t *testing.T) {
 	var inventory parity.Inventory
-	data, err := os.ReadFile("../parity/testdata/" + runtime.GOOS + "-" + runtime.GOARCH + ".json")
+	inventoryName, err := parity.InventoryName(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join("..", "parity", "testdata", inventoryName))
 	if err != nil {
 		t.Fatal(err)
 	}
