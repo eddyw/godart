@@ -32,6 +32,8 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/eddyw/godart/internal/notices"
 )
 
 const usage = `glutter runs a Flutter application whose widget tree comes from Go.
@@ -50,6 +52,7 @@ The commands are:
 	doctor     report the Flutter version against the node set
 	new        write a new application
 	version    print the version of the tool
+	licenses   print bundled license notices
 
 Each other argument goes to the flutter command with no change.
 `
@@ -62,6 +65,9 @@ func main() {
 	cmd, args := os.Args[1], os.Args[2:]
 	var err error
 	switch cmd {
+	case "licenses":
+		fmt.Print(notices.Compiler)
+		return
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return

@@ -193,6 +193,7 @@ class Skipped {
 }
 
 class Reading {
+  final noticeSources = <Pack, Set<String>>{};
   final widgets = <WidgetSpec>[];
   final skipped = <Skipped>[];
   final unmapped = <String, int>{};
@@ -263,7 +264,8 @@ Future<Reading> read(String root) async {
         if (!ctor.isPublic) continue;
         final goName = goStructName(name, ctor.name ?? '');
         if (!seen.add(goName)) continue;
-        readCtor(out, pack, name, ctor, goName, docsOf(element));
+        final sources = out.noticeSources.putIfAbsent(pack, () => <String>{});
+        readCtor(out, pack, name, ctor, goName, docsOf(element, sources));
       }
     }
   }
@@ -821,13 +823,15 @@ class ClassDocs {
 
 /// docsOf reads the dartdoc of a class and of each field of it, and of each
 /// class above it.
-ClassDocs docsOf(InterfaceElement element) {
+ClassDocs docsOf(InterfaceElement element, Set<String> sources) {
+  sources.add(element.firstFragment.libraryFragment.source.fullName);
   final fields = <String, String>{};
   void add(InterfaceElement c) {
     for (final f in c.fields) {
       final doc = f.documentationComment;
       final name = f.name;
       if (doc == null || name == null) continue;
+      sources.add(f.firstFragment.libraryFragment.source.fullName);
       fields.putIfAbsent(name, () => doc);
     }
   }

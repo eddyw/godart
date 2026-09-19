@@ -19,11 +19,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:nodegen/read.dart';
+import 'package:nodegen/notices.dart';
 import 'package:nodegen/report.dart';
 import 'package:nodegen/write_dart.dart';
 import 'package:nodegen/write_go.dart';
 
-const _usage = 'usage: nodegen go     <flutter package dir> <go module dir>\n'
+const _usage =
+    'usage: nodegen go     <flutter package dir> <go module dir>\n'
     '       nodegen host   <flutter package dir> <dart file> <name list>\n'
     '       nodegen report <flutter package dir> [-all]';
 
@@ -43,9 +45,11 @@ Future<void> main(List<String> args) async {
   for (final w in r.widgets) {
     fields += w.params.length;
   }
-  stdout.writeln('the read of the Flutter API took '
-      '${clock.elapsedMilliseconds} ms: ${r.widgets.length} node types, '
-      '$fields fields, ${r.enums.length} enums');
+  stdout.writeln(
+    'the read of the Flutter API took '
+    '${clock.elapsedMilliseconds} ms: ${r.widgets.length} node types, '
+    '$fields fields, ${r.enums.length} enums',
+  );
 
   switch (mode) {
     case 'go':
@@ -54,7 +58,14 @@ Future<void> main(List<String> args) async {
         final dir = Directory('${args[2]}$sub');
         dir.createSync(recursive: true);
         final path = '${dir.path}/widgets_gen.go';
-        File(path).writeAsStringSync(writeGo(r, pack, stampOf(args[1], pack)));
+        File(path).writeAsStringSync(
+          writeGo(
+            r,
+            pack,
+            stampOf(args[1], pack),
+            sourceNotices(args[1], r.noticeSources[pack] ?? <String>{}),
+          ),
+        );
         // The emitter writes 1 space between the name and the type of a
         // field, and gofmt aligns the block.
         final fmt = Process.runSync('gofmt', <String>['-w', path]);
@@ -80,17 +91,24 @@ Future<void> main(List<String> args) async {
       final only = await readNames(args[3]);
       final texts = only == null ? null : only.$1;
       File(args[2]).writeAsStringSync(
-        writeDart(r, only: only?.$2, texts: texts),
+        noticeHeader(
+              sourceNotices(args[1], r.noticeSources.values.expand((s) => s)),
+            ) +
+            writeDart(r, only: only?.$2, texts: texts),
       );
       if (only == null) {
-        stdout.writeln('${args[2]} holds a case for each of the '
-            '${r.widgets.length} node types');
+        stdout.writeln(
+          '${args[2]} holds a case for each of the '
+          '${r.widgets.length} node types',
+        );
         return;
       }
       final kept = r.widgets.where((w) => only.$2.contains(w.goName)).length;
       final icons = only.$1.where(r.icons.contains).length;
-      stdout.writeln('${args[2]} holds $kept cases of the '
-          '${only.$2.length} names that ${args[3]} gives, and $icons icons');
+      stdout.writeln(
+        '${args[2]} holds $kept cases of the '
+        '${only.$2.length} names that ${args[3]} gives, and $icons icons',
+      );
   }
 }
 

@@ -22,6 +22,9 @@ or platforms. Release evidence must identify the exact SDK and host.
 9. Promote the candidate only after acceptance.
 10. Update `go.mod`, source inventories, and the pinned container image together.
 
+Regenerate compiler notices with `go generate ./internal/notices` for the
+selected SDK and release target. Run `go test ./internal/notices` afterward.
+
 Do not replace source fingerprints merely to suppress an inventory failure.
 
 ## Dart and Flutter updates

@@ -61,6 +61,7 @@ reload later, because the host stands after the first reload.
 | `glutter doctor` | The Flutter of the machine against the node set. |
 | `glutter new <name>` | A new application. |
 | `glutter version` | The version of the tool. |
+| `glutter licenses` | The bundled compiler license notices. |
 
 Each other argument goes to the `flutter` command with no change, thus
 `glutter devices` and `glutter clean` work.

@@ -98,6 +98,7 @@ flutter-test: build
 	cd flutter/goflutter && $(FLUTTER) analyze
 	cd flutter/bench/flutter && $(FLUTTER) pub get && $(FLUTTER) analyze
 	cd flutter/nodegen && dart pub get && dart analyze
+	cd flutter/nodegen && dart run test/notices_test.dart
 	cd flutter/goflutter && $(FLUTTER) test
 	cd flutter/bench/flutter && $(FLUTTER) test
 

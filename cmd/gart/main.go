@@ -11,6 +11,7 @@ import (
 
 	"github.com/eddyw/godart/internal/driver"
 	"github.com/eddyw/godart/internal/load"
+	"github.com/eddyw/godart/internal/notices"
 )
 
 // version is the version of the tool chain. internal/driver holds the number,
@@ -31,6 +32,7 @@ The commands are:
 	watch      compile the packages again after each change
 	load       load the packages and list them
 	version    print the version of the compiler
+	licenses   print bundled license notices
 
 The build, run, test, and watch commands take these flags:
 
@@ -70,6 +72,9 @@ func run(args []string) error {
 		return errors.New("no command")
 	}
 	switch args[0] {
+	case "licenses":
+		fmt.Print(notices.Compiler)
+		return nil
 	case "version":
 		fmt.Println("gart", version)
 		return nil

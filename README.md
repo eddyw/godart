@@ -188,4 +188,5 @@ See [About Godart](ABOUT.md), [contributions](CONTRIBUTING.md), and
 ## License
 
 This project uses the [BSD 3-Clause License](LICENSE).
+See [license notices](docs/licenses.md) for upstream terms and distribution requirements.
 Third-party code and assets retain their respective licenses and copyright notices.

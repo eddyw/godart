@@ -209,6 +209,10 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		return nil, err
 	}
 	files["pubspec.yaml"] = pubspec(dartPkg, module, runtime)
+	files["LICENSE"], err = sourceNotices(pkgs)
+	if err != nil {
+		return nil, err
+	}
 	if err := writeFiles(opt.Out, files); err != nil {
 		return nil, err
 	}
