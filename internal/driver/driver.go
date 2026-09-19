@@ -33,6 +33,7 @@ type Options struct {
 	outputLocked bool
 	Dir          string
 	Patterns     []string
+	BuildTags    []string
 	Out          string
 	Runtime      string
 	Format       bool
@@ -257,7 +258,7 @@ func loadModule(opt Options) (*load.Result, error) {
 	if !opt.NoCache {
 		cacheDir = filepath.Join(opt.Out, ".gart", "load")
 	}
-	return load.LoadWithOptions(load.Options{Dir: opt.Dir, Patterns: opt.Patterns, CacheDir: cacheDir, Tests: opt.Tests, Cover: opt.Cover, Filter: filter})
+	return load.LoadWithOptions(load.Options{Dir: opt.Dir, Patterns: opt.Patterns, BuildTags: opt.BuildTags, CacheDir: cacheDir, Tests: opt.Tests, Cover: opt.Cover, Filter: filter})
 }
 
 // testBinaries names the Dart entry point of each test binary of the build.

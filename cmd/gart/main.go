@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -41,6 +42,7 @@ The build, run, test, and watch commands take these flags:
 	-trimpath      remove absolute source paths from the output
 	-format=false  do not run dart format on the output
 	-timings       report phase durations on stderr
+	-tags list     add comma-separated Go build tags
 
 The run and test commands also take this flag:
 
@@ -106,6 +108,7 @@ type buildFlags struct {
 	trimpath *bool
 	format   *bool
 	timings  *bool
+	tags     *string
 }
 
 func newBuildFlags(name string) *buildFlags {
@@ -117,6 +120,7 @@ func newBuildFlags(name string) *buildFlags {
 		trimpath: set.Bool("trimpath", false, "remove absolute source paths from the output"),
 		format:   set.Bool("format", true, "run dart format on the output"),
 		timings:  set.Bool("timings", false, "report phase durations on stderr"),
+		tags:     set.String("tags", "", "comma-separated Go build tags"),
 	}
 }
 
@@ -134,12 +138,13 @@ func (f *buildFlags) options(args []string) (driver.Options, error) {
 		patterns = []string{"./..."}
 	}
 	options := driver.Options{
-		Dir:      dir,
-		Patterns: patterns,
-		Out:      *f.out,
-		Runtime:  *f.runtime,
-		TrimPath: *f.trimpath,
-		Format:   *f.format,
+		Dir:       dir,
+		Patterns:  patterns,
+		Out:       *f.out,
+		Runtime:   *f.runtime,
+		TrimPath:  *f.trimpath,
+		Format:    *f.format,
+		BuildTags: strings.FieldsFunc(*f.tags, func(r rune) bool { return r == ',' || r == ' ' }),
 	}
 	if *f.timings {
 		options.Trace = func(phase string, elapsed time.Duration) {

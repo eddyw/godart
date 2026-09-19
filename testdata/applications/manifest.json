@@ -1,0 +1,23 @@
+[
+  {
+    "name": "fantasy-program",
+    "project": "testdata/applications/fantasy-json",
+    "pattern": ".",
+    "mode": "run",
+    "tags": ""
+  },
+  {
+    "name": "fantasy-jsonrepair",
+    "project": "testdata/applications/fantasy-json",
+    "pattern": "charm.land/fantasy/jsonrepair",
+    "mode": "test",
+    "tags": ""
+  },
+  {
+    "name": "fantasy-schema",
+    "project": "testdata/applications/fantasy-json",
+    "pattern": "charm.land/fantasy/schema",
+    "mode": "test",
+    "tags": "safe"
+  }
+]

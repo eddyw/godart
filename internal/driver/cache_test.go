@@ -10,6 +10,35 @@ import (
 	"github.com/eddyw/godart/internal/driver"
 )
 
+func TestBuildTagsCache(t *testing.T) {
+	source := t.TempDir()
+	writeFile(t, filepath.Join(source, "go.mod"), "module example.com/tags\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(source, "main.go"), "package main\nimport \"fmt\"\nfunc main() { fmt.Println(value) }\n")
+	writeFile(t, filepath.Join(source, "default.go"), "//go:build !safe\n\npackage main\nconst value = 1\n")
+	writeFile(t, filepath.Join(source, "safe.go"), "//go:build safe && dart\n\npackage main\nconst value = 2\n")
+	writeFile(t, filepath.Join(source, "safe_test.go"), "//go:build safe && dart\n\npackage main\nimport \"testing\"\nfunc TestSelected(t *testing.T) { if value != 2 { t.Fatal(value) } }\n")
+	out := t.TempDir()
+	for _, tags := range [][]string{nil, {"safe"}, nil} {
+		opt := driver.Options{Dir: source, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), BuildTags: tags}
+		if _, err := driver.BuildWithStats(opt); err != nil {
+			t.Fatal(err)
+		}
+		prepareDart(t, out)
+		want := "1\n"
+		if len(tags) > 0 {
+			want = "2\n"
+		}
+		if got := run(t, out, "dart", "bin/main.dart"); got != want {
+			t.Fatalf("tags %v: got %q, want %q", tags, got, want)
+		}
+	}
+	var output strings.Builder
+	code, err := driver.Test(driver.Options{Dir: source, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), BuildTags: []string{"safe"}}, driver.TestOptions{Verbose: true}, &output)
+	if err != nil || code != 0 || !strings.Contains(output.String(), "--- PASS: TestSelected") {
+		t.Fatalf("tagged test failed: exit=%d error=%v\n%s", code, err, output.String())
+	}
+}
+
 // TestCache proves the 2 hashes of stage 6. An equal source hash skips the
 // compile, and an equal export hash keeps the cache of the dependents.
 func TestCache(t *testing.T) {

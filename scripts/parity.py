@@ -228,7 +228,8 @@ def application(args):
     gart = str(args.gart.resolve())
     result = {"schema": 1, "project": identity(project), "compiler": identity(ROOT),
               "gart_sha256": digest(Path(gart)), "host": platform.platform(),
-              "mode": args.mode, "pattern": args.pattern, "status": "failed", "steps": []}
+              "mode": args.mode, "pattern": args.pattern, "tags": args.tags, "status": "failed", "steps": []}
+    tags = ["-tags=" + args.tags] if args.tags else []
     for tool, flags in [("go", ["version"]), ("dart", ["--version"])]:
         result[tool] = subprocess.check_output([tool] + flags, text=True, stderr=subprocess.STDOUT).strip()
 
@@ -240,16 +241,16 @@ def application(args):
 
     if args.mode == "test":
         # One package keeps test identities unambiguous across both runners.
-        native = execute("native", ["go", "test", "-json", "-count=1", "-short", args.pattern])
-        target = execute("gart", [gart, "test", "-v", "-short", "-frontend=source", "-o", str(out / "dart"), args.pattern])
+        native = execute("native", ["go", "test", "-json", "-count=1", "-short", *tags, args.pattern])
+        target = execute("gart", [gart, "test", "-v", "-short", "-frontend=source", "-o", str(out / "dart"), *tags, args.pattern])
         comparison = test_outcomes((out / "native.stdout").read_text(), (out / "gart.stdout").read_text())
         result["comparison"] = comparison
         result["status"] = "passed" if native and target and comparison["complete"] else "failed"
         if native and target and comparison["equal"] and comparison["native"] and not comparison["complete"]:
             result["status"] = "partial"
     else:
-        native = execute("native-build", ["go", "build", "-o", str(out / "native"), args.pattern])
-        target = execute("gart-build", [gart, "build", "-format=false", "-o", str(out / "dart"), args.pattern])
+        native = execute("native-build", ["go", "build", "-o", str(out / "native"), *tags, args.pattern])
+        target = execute("gart-build", [gart, "build", "-format=false", "-o", str(out / "dart"), *tags, args.pattern])
         if target:
             target = execute("pub", ["dart", "pub", "get"], out / "dart")
         if target:
@@ -268,6 +269,27 @@ def application(args):
     return 0 if result["status"] in {"compiled", "passed"} else 1
 
 
+def applications(args):
+    args.output.mkdir(parents=True, exist_ok=False)
+    binary = args.output / "gart"
+    build = command(["go", "build", "-o", str(binary), "./cmd/gart"], ROOT,
+                    args.output, "compiler", args.timeout)
+    result = {"compiler": identity(ROOT), "build": build, "applications": []}
+    if build["exit"]:
+        save(args.output / "suite.json", result)
+        return 1
+    status = 0
+    for case in read(ROOT / "testdata/applications/manifest.json"):
+        out = args.output / case["name"]
+        code = application(argparse.Namespace(
+            output=out, project=ROOT / case["project"], gart=binary,
+            pattern=case["pattern"], mode=case["mode"], tags=case["tags"], timeout=args.timeout))
+        result["applications"].append({"name": case["name"], "exit": code, "result": str(out / "application.json")})
+        status = max(status, code)
+        save(args.output / "suite.json", result)
+    return status
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="operation", required=True)
@@ -279,8 +301,10 @@ def main():
     app.add_argument("--project", type=Path, required=True)
     app.add_argument("--gart", type=Path, default=ROOT / "build/gart")
     app.add_argument("--pattern", default=".")
+    app.add_argument("--tags", default="", help="use identical Go build tags for both compilers")
     app.add_argument("--mode", choices=["compile", "run", "test"], default="compile")
-    for command_parser in (summary, app):
+    suite = sub.add_parser("applications", help="build Gart and compare all pinned application fixtures")
+    for command_parser in (summary, app, suite):
         command_parser.add_argument("--output", type=Path, required=True)
         command_parser.add_argument("--timeout", type=float, default=300)
     args = parser.parse_args()
@@ -290,7 +314,7 @@ def main():
     if args.operation == "application" and ("..." in args.pattern or args.pattern.startswith("-")):
         parser.error("select one application package or main.go file")
     try:
-        return report(args) if args.operation == "report" else application(args)
+        return {"report": report, "application": application, "applications": applications}[args.operation](args)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         print(str(error), file=sys.stderr)
         return 2

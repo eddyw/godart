@@ -88,36 +88,37 @@ type Filter map[string][]byte
 // The load runs 2 times. The first load finds the files of each standard
 // library package, and the second load replaces those files with the overlay.
 func Load(dir string, patterns ...string) (*Result, error) {
-	return load(dir, false, false, nil, patterns, "")
+	return load(dir, false, false, nil, patterns, "", nil)
 }
 
 // LoadTests reads the packages and also each test variant of them. It replaces
 // the test entry point of the go command with the entry point of the compiler.
 func LoadTests(dir string, patterns ...string) (*Result, error) {
-	return load(dir, true, false, nil, patterns, "")
+	return load(dir, true, false, nil, patterns, "", nil)
 }
 
 // Options configures package loading and an optional overlay-discovery cache.
 type Options struct {
-	Dir      string
-	Patterns []string
-	CacheDir string
-	Tests    bool
-	Cover    bool
-	Filter   Filter
+	Dir       string
+	Patterns  []string
+	BuildTags []string
+	CacheDir  string
+	Tests     bool
+	Cover     bool
+	Filter    Filter
 }
 
 func LoadWithOptions(opt Options) (*Result, error) {
-	return load(opt.Dir, opt.Tests, opt.Cover, opt.Filter, opt.Patterns, opt.CacheDir)
+	return load(opt.Dir, opt.Tests, opt.Cover, opt.Filter, opt.Patterns, opt.CacheDir, opt.BuildTags)
 }
 
-func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string) (*Result, error) {
+func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string, tags []string) (*Result, error) {
 	var timings []PhaseTiming
 	phase := time.Now()
 	found, err := packages.Load(&packages.Config{
 		Mode:       findMode,
 		Dir:        dir,
-		BuildFlags: []string{"-tags=" + BuildTag},
+		BuildFlags: []string{tagFlag(tags)},
 		Tests:      tests,
 	}, patterns...)
 	if err != nil {
@@ -127,9 +128,9 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	phase = time.Now()
 	var surface []*packages.Package
 	if cacheDir != "" {
-		surface, err = cachedSurface(dir, cacheDir)
+		surface, err = cachedSurface(dir, cacheDir, tags...)
 	} else {
-		surface, err = surfacePackages(dir)
+		surface, err = surfacePackages(dir, tags)
 	}
 	if err != nil {
 		return nil, err
@@ -173,7 +174,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	cfg := &packages.Config{
 		Mode:       mode,
 		Dir:        dir,
-		BuildFlags: []string{"-tags=" + BuildTag},
+		BuildFlags: []string{tagFlag(tags)},
 		Tests:      tests,
 		Overlay:    goFiles,
 		ParseFile: func(fset *token.FileSet, name string, src []byte) (*ast.File, error) {
@@ -338,21 +339,19 @@ func patchDiffs(out map[string][]byte, o overlay.Package, real *packages.Package
 // load then holds the overlay file of that package next to its real files. Thus
 // the load asks for each overlay package by its path.
 //
-// The list depends only on GOROOT and on the build tag, thus 1 load for each
-// process is enough. A watch build and the end to end test each run many
-// builds in 1 process.
-func surfacePackages(dir string) ([]*packages.Package, error) {
-	surfaceOnce.Do(func() {
-		surfaceFound, surfaceErr = discoverSurface(dir)
-	})
-	return surfaceFound, surfaceErr
+// Separate tag selections must not share a discovered file set.
+func surfacePackages(dir string, tags []string) ([]*packages.Package, error) {
+	value, _ := surfaces.LoadOrStore(tagFlag(tags), sync.OnceValues(func() ([]*packages.Package, error) {
+		return discoverSurface(dir, tags...)
+	}))
+	return value.(func() ([]*packages.Package, error))()
 }
 
-var (
-	surfaceOnce  sync.Once
-	surfaceFound []*packages.Package
-	surfaceErr   error
-)
+var surfaces sync.Map
+
+func tagFlag(tags []string) string {
+	return "-tags=" + strings.Join(append([]string{BuildTag}, tags...), ",")
+}
 
 // holdsTestFile reports whether the file list of a package holds a test file.
 // The variant of a package under test holds one, and each other variant holds

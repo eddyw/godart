@@ -28,6 +28,7 @@ the application. Commands default to `./...` when no pattern is present.
 | `-trimpath` | Use portable module/package source paths. |
 | `-format=false` | Omit the external Dart formatter. |
 | `-timings` | Report phase durations on stderr. |
+| `-tags list` | Add comma-separated Go build tags. The `dart` tag remains active. |
 
 Run and test also accept `-frontend=auto|resident|source`.
 `auto` uses a verified resident SDK or warns before source execution.

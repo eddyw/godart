@@ -107,6 +107,13 @@ func TestSurfaceIdentityTracksSourcesAndFiles(t *testing.T) {
 		return key
 	}
 	first := identity()
+	tagged, _, err := surfaceInputs(dir, "safe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tagged == first {
+		t.Fatal("build tags did not change discovery identity")
+	}
 	info, err := os.Stat(file)
 	if err != nil {
 		t.Fatal(err)

@@ -22,7 +22,7 @@ type surfaceReceipt struct {
 }
 
 // Only native standard-library roots enter this cache, independent of module layout.
-func surfaceInputs(dir string) (string, string, error) {
+func surfaceInputs(dir string, tags ...string) (string, string, error) {
 	cmd := exec.Command("go", "env", "-json", "GOROOT", "GOOS", "GOARCH", "GOAMD64", "GOARM", "GOARM64", "GO386", "GOMIPS", "GOMIPS64", "GOPPC64", "GORISCV64", "GOWASM", "GOEXPERIMENT", "CGO_ENABLED", "GOFLAGS", "GOVERSION", "GOTOOLCHAIN", "GOCACHE", "GOENV", "CC", "CXX", "CGO_CFLAGS", "CGO_CPPFLAGS", "CGO_CXXFLAGS", "CGO_LDFLAGS", "PKG_CONFIG")
 	cmd.Dir = dir
 	environment, err := cmd.Output()
@@ -69,9 +69,10 @@ func surfaceInputs(dir string) (string, string, error) {
 	}
 	data, err := json.Marshal(struct {
 		Version     string
+		Tags        string
 		Environment json.RawMessage
 		Sources     map[string]string
-	}{BuildTag + "-surface-2", environment, sources})
+	}{BuildTag + "-surface-3", tagFlag(tags), environment, sources})
 	if err != nil {
 		return "", "", err
 	}
@@ -105,13 +106,13 @@ func validSurface(receipt surfaceReceipt, identity string) bool {
 	return receipt.Hash == hex.EncodeToString(sum[:])
 }
 
-func cachedSurface(dir, cacheDir string) ([]*packages.Package, error) {
-	identity, goroot, err := surfaceInputs(dir)
+func cachedSurface(dir, cacheDir string, tags ...string) ([]*packages.Package, error) {
+	identity, goroot, err := surfaceInputs(dir, tags...)
 	if err != nil {
 		return nil, err
 	}
 	if identity == "" {
-		return discoverSurface(dir)
+		return discoverSurface(dir, tags...)
 	}
 	path := filepath.Join(cacheDir, "surface.json")
 	data, err := os.ReadFile(path)
@@ -128,11 +129,11 @@ func cachedSurface(dir, cacheDir string) ([]*packages.Package, error) {
 		}
 		return memory.Packages, nil
 	}
-	found, err := discoverSurface(dir)
+	found, err := discoverSurface(dir, tags...)
 	if err != nil {
 		return nil, err
 	}
-	after, _, err := surfaceInputs(dir)
+	after, _, err := surfaceInputs(dir, tags...)
 	if err != nil {
 		return nil, err
 	}
@@ -213,12 +214,12 @@ func writeSurface(cacheDir string, receipt surfaceReceipt) error {
 	return os.Rename(temporary.Name(), filepath.Join(cacheDir, "surface.json"))
 }
 
-func discoverSurface(dir string) ([]*packages.Package, error) {
+func discoverSurface(dir string, tags ...string) ([]*packages.Package, error) {
 	var paths []string
 	for _, o := range overlay.Packages() {
 		if o.Path != overlay.IntrinsicPath {
 			paths = append(paths, o.Path)
 		}
 	}
-	return packages.Load(&packages.Config{Mode: findMode, Dir: dir, BuildFlags: []string{"-tags=" + BuildTag}}, paths...)
+	return packages.Load(&packages.Config{Mode: findMode, Dir: dir, BuildFlags: []string{tagFlag(tags)}}, paths...)
 }

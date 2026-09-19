@@ -99,14 +99,21 @@ python3 scripts/parity.py report --reports build/parity-results --output build/p
 python3 scripts/parity.py application --project /path/to/app --output build/app-compile
 python3 scripts/parity.py application --project /path/to/app --mode run --output build/app-run
 python3 scripts/parity.py application --project /path/to/app --mode test --output build/app-tests
+python3 scripts/parity.py applications --output build/pinned-applications
 ```
 
 Use a new output directory for each invocation. The application command defaults to compilation only.
 It compiles both a native Go executable and a Dart kernel. Run mode executes both programs with closed stdin.
 Run mode requires identical stdout, stderr, and successful exits. Use deterministic programs without external side effects.
 Test mode selects 1 package and compares short-mode test identities and outcomes. Skips remain partial results.
+Use `--tags safe` when a dependency provides a portable implementation under that tag.
+The command applies identical tags to native Go and Gart and records them in the result.
 The application command records command arguments, exits, durations, logs, SDKs, source identity, and the Gart binary hash.
 It does not prove a match for nondeterministic inputs or unexecuted behavior.
+
+The `applications` command builds Gart and compares the repository's pinned
+[application fixtures](../testdata/applications/README.md). It returns a failure
+if any program or original dependency test fails the comparison.
 
 Add `--applications build/app-results` to include application records in a report.
 Repeat `--reports` for separate evidence directories. The report never blends incompatible configurations or compiler snapshots.
