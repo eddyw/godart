@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-suite=${1:?usage: scripts/ci.sh checks|driver|integration|targets|upstream-targets|upstream-priority|upstream-blockers|web-io|web-fetch|programs|language|stdlib [shard-index] [shard-count]}
+suite=${1:?usage: scripts/ci.sh checks|driver|applications|integration|targets|upstream-targets|upstream-priority|upstream-blockers|web-io|web-fetch|programs|language|stdlib [shard-index] [shard-count]}
 shard_index=${2:-0}
 shard_count=${3:-1}
 test_timeout=${GART_TEST_TIMEOUT:-30m}
@@ -48,6 +48,9 @@ case "$suite" in
     python3 -B -m unittest discover -s scripts -p test_resident.py -v
     ;;
   integration) test_name=TestTests ;;
+  applications)
+    python3 -B scripts/parity.py applications --output "${GART_PARITY_REPORT_DIR:-build/parity-results}/applications"
+    ;;
   targets) test_name='TestAOT|TestWasm|TestJS' ;;
   upstream-targets) test_name=TestUpstreamTargets ;;
   upstream-blockers) test_name=TestUpstreamCompileBlockers ;;
@@ -63,7 +66,7 @@ case "$suite" in
   *) printf 'unknown CI suite: %s\n' "$suite" >&2; exit 2 ;;
 esac
 
-if [[ $suite != checks && $suite != driver ]]; then
+if [[ $suite != checks && $suite != driver && $suite != applications ]]; then
   go test -v -count=1 -timeout "$test_timeout" "$short_flag" ./internal/driver \
     -run "^(${test_name})$" -shard-index "$shard_index" -shard-count "$shard_count"
 fi

@@ -121,6 +121,9 @@ It does not prove a match for nondeterministic inputs or unexecuted behavior.
 The `applications` command builds Gart and compares the repository's pinned
 [application fixtures](../testdata/applications/README.md). It returns a failure
 if any program or original dependency test fails the comparison.
+The local CI matrix and the manual GitHub workflow include this suite.
+Use `python3 scripts/ci-local.py --suite applications --output build/application-run`
+for an isolated source snapshot and retained command results.
 
 Add `--applications build/app-results` to include application records in a report.
 Repeat `--reports` for separate evidence directories. The report never blends incompatible configurations or compiler snapshots.
