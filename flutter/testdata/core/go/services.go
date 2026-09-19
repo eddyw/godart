@@ -3,9 +3,9 @@ package app
 import (
 	"fmt"
 
+	"example.dev/gocore/bindings/material"
 	"example.dev/gocore/bindings/services"
 	"gart.dev/ui"
-	"example.dev/gocore/bindings/material"
 )
 
 func ServiceTree() ui.Node {
