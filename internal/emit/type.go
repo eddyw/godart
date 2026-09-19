@@ -30,10 +30,10 @@ func (e *emitter) dartType(t types.Type) string {
 			return "Object?"
 		}
 		if st, ok := t.Underlying().(*types.Struct); ok {
-			if isLocalType(t.Obj()) {
+			ref := e.structRef(t)
+			if isLocalType(ref.Obj()) {
 				return e.anonType(st)
 			}
-			ref := e.structRef(t)
 			return e.className(ref.Obj()) + e.typeArgList(ref.TypeArgs())
 		}
 		// A type that names itself through a pointer, a slice, or a map has
@@ -203,10 +203,10 @@ func (e *emitter) zero(t types.Type) string {
 			return "null"
 		}
 		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
-			if isLocalType(named.Obj()) {
+			ref := e.structRef(named)
+			if isLocalType(ref.Obj()) {
 				return e.anonZero(st)
 			}
-			ref := e.structRef(named)
 			return e.className(ref.Obj()) + e.typeArgList(ref.TypeArgs()) +
 				".$zero(" + strings.Join(e.dictArgs(ref.TypeArgs()), ", ") + ")"
 		}
@@ -273,10 +273,10 @@ func (e *emitter) zeroFunc(t types.Type) string {
 	}
 	if named, ok := u.(*types.Named); ok {
 		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
-			if isLocalType(named.Obj()) {
+			ref := e.structRef(named)
+			if isLocalType(ref.Obj()) {
 				return e.anonZeroFunc(st)
 			}
-			ref := e.structRef(named)
 			if ref.TypeArgs().Len() == 0 {
 				return e.className(ref.Obj()) + ".$zero"
 			}
@@ -771,6 +771,11 @@ func valueMethod(obj *types.TypeName) bool {
 func (e *emitter) structOwner(obj *types.TypeName) *types.Named {
 	if inst := e.instanceRep(obj); inst != nil {
 		return inst
+	}
+	if isLocalType(obj) {
+		if owners := e.structNames(obj.Pkg())[structObject(obj)]; len(owners) > 0 {
+			return e.structRef(owners[0].Type().(*types.Named))
+		}
 	}
 	rep := e.foreignRep(obj)
 	if rep == nil {
