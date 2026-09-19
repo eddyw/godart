@@ -35,6 +35,9 @@ func TestSelectedUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	selections := map[string][]upstreamFile{
+		"cmp":           {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
+		"math":          {{Name: "const_test.go"}, {Name: "example_test.go"}},
+		"encoding/asn1": {{Name: "marshal_test.go"}},
 		"runtime/debug": {{Name: "mod_test.go"}},
 		"os/exec":       {{Name: "env_test.go"}},
 		"sync":          {{Name: "once_test.go"}, {Name: "cond_test.go"}, {Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo"}}},
@@ -65,6 +68,9 @@ func TestSelectedUpstream(t *testing.T) {
 				}
 				if pkg == "net/http" && file.Name == "header_test.go" {
 					source = strings.Replace(source, "package http", "package http_test\nimport . \"net/http\"", 1)
+				}
+				if pkg == "encoding/asn1" {
+					source = strings.Replace(source, "package asn1", "package asn1_test\nimport . \"encoding/asn1\"", 1)
 				}
 				writeFile(t, filepath.Join(fixture, file.Name), source)
 			}
