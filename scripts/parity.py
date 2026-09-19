@@ -164,6 +164,9 @@ def report(args):
     data = read(api)
     symbols = [x for p in data["packages"] for x in p["symbols"] or []]
     coverage = read(MANIFESTS / "coverage-manifest.json")
+    omissions = [dict(package=pkg, test=name, **entry)
+                 for pkg, tests in read(MANIFESTS / "omitted-tests.json").items()
+                 for name, entry in tests.items()]
     applications = []
     for directory in args.applications:
         for path in sorted(directory.rglob("application.json")):
@@ -178,6 +181,7 @@ def report(args):
         "api": {"input": str(api.resolve()), "measurement": "retained-input" if args.api else "current-checkout",
                 "sha256": digest(api), "counts": dict(Counter(x["status"] for x in symbols)), **data},
         "coverage": {"packages": len(coverage), "counts": dict(Counter(x["status"] for x in coverage)), "entries": coverage},
+        "omissions": {"counts": dict(Counter(x["classification"] for x in omissions)), "entries": omissions},
         "behavior": behavior(args.reports), "applications": applications,
     }
     save(args.output / "report.json", result)
@@ -185,6 +189,7 @@ def report(args):
              "API declarations: " + json.dumps(result["api"]["counts"], sort_keys=True),
              f"Unassessed standard packages: {len(data['unassessed_packages'])}",
              "Package classifications: " + json.dumps(result["coverage"]["counts"], sort_keys=True), ""]
+    lines.extend(["Omitted assertions: " + json.dumps(result["omissions"]["counts"], sort_keys=True), ""])
     for group in result["behavior"]:
         c = group["configuration"]
         lines.extend([f"## {c['go_version']} {c['goos']}/{c['goarch']} {c['target']} short={c['short']}", "",

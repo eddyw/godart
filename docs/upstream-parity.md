@@ -1,6 +1,6 @@
 # Upstream Go parity
 
-The parity gate compares original Go assertions with Gart results under a recorded configuration.
+The parity comparison uses original Go assertions and Gart results under a recorded configuration.
 A pass requires successful native Go and Gart processes and matching test identities.
 It does not establish behavior for inputs that the upstream tests do not exercise.
 
@@ -21,7 +21,7 @@ The platform manifests cover Darwin/ARM64 and Linux/AMD64.
 | `targets.json` | Required AOT, JS, and wasm executions and browser exclusions |
 | `exceptions-*.json` | Exact native/Gart outcomes per platform and short/full mode, with an explicit reason |
 | `external-fixtures.json` | Original external module versions and Go module checksums |
-| `omitted-tests.json` | Tests that require an unavailable runtime or native executable facility |
+| `omitted-tests.json` | Omitted assertions with an explicit classification and reason |
 
 The inventories retain eligible and ineligible declarations. Runtime outcomes
 also include subtests and corpus cases. These are different denominators.
@@ -31,6 +31,13 @@ Use the manifests and retained reports for current counts.
 A package suite can contain explicit exclusions or partial assertions.
 Thus a package count does not imply complete behavioral parity for that package.
 A compile blocker never removes declarations from the denominator.
+
+Omissions distinguish implementation gaps, test adapters, target limits, and
+unassessed cases. They do not all represent unreachable behavior.
+Portable GODEBUG settings remain implementation gaps. Deep recursion can require
+an iterative implementation before the same upstream input can pass.
+Native executable assumptions can require test adapters. Mixed `go/build`
+assumptions still need individual review. The report retains all these groups.
 
 ## Assertion integrity
 

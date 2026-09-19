@@ -100,13 +100,13 @@ type upstreamEvidence struct {
 	Comparison       parity.Comparison   `json:"comparison"`
 }
 
-func upstreamOmissions(t *testing.T, pkg string) map[string]string {
+func upstreamOmissions(t *testing.T, pkg string) map[string]parity.Omission {
 	t.Helper()
 	data, err := os.ReadFile("../parity/testdata/omitted-tests.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var omitted map[string]map[string]string
+	var omitted map[string]map[string]parity.Omission
 	if err := json.Unmarshal(data, &omitted); err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +256,7 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 			selectedRules = append(selectedRules, rule)
 		}
 	}
-	for root, reason := range upstreamOmissions(t, pkg) {
+	for root, omission := range upstreamOmissions(t, pkg) {
 		if !harness.MatchName(root, filter, regexp.MatchString) {
 			continue
 		}
@@ -264,7 +264,7 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 		for name, status := range native.Outcomes {
 			if name == root || strings.HasPrefix(name, root+"/") {
 				found = true
-				selectedRules = append(selectedRules, parity.Exception{Test: name, Native: status, Gart: "", Reason: reason})
+				selectedRules = append(selectedRules, parity.Exception{Test: name, Native: status, Gart: "", Reason: omission.Reason})
 			}
 		}
 		if !found {

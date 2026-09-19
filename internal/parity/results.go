@@ -10,6 +10,11 @@ import (
 	"strings"
 )
 
+type Omission struct {
+	Classification string `json:"classification"`
+	Reason         string `json:"reason"`
+}
+
 type Result struct {
 	Outcomes map[string]string `json:"outcomes"`
 	Exit     int               `json:"exit"`

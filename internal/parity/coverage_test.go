@@ -21,6 +21,35 @@ func readManifest(t *testing.T, name string, dst any) {
 	}
 }
 
+func TestOmissionClassifications(t *testing.T) {
+	var omitted map[string]map[string]Omission
+	readManifest(t, "omitted-tests.json", &omitted)
+	var inventory Inventory
+	name, err := InventoryName(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readManifest(t, name, &inventory)
+	known := map[string]map[string]bool{}
+	for _, pkg := range inventory.Packages {
+		known[pkg.Path] = map[string]bool{}
+		for _, test := range pkg.Tests {
+			known[pkg.Path][test.Name] = true
+		}
+	}
+	for pkg, tests := range omitted {
+		for name, omission := range tests {
+			root, _, _ := strings.Cut(name, "/")
+			if !known[pkg][root] {
+				t.Errorf("unknown omitted assertion: %s/%s", pkg, name)
+			}
+			if omission.Reason == "" || !slices.Contains([]string{"implementation-gap", "test-adapter", "target-limit", "unassessed"}, omission.Classification) {
+				t.Errorf("unclassified omitted assertion: %s/%s", pkg, name)
+			}
+		}
+	}
+}
+
 func TestCoverageManifest(t *testing.T) {
 	var inventory Inventory
 	name, err := InventoryName(build.Default)
