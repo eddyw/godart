@@ -5,7 +5,10 @@ package load
 import (
 	"errors"
 	"fmt"
+	"go/ast"
 	"go/build"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
@@ -159,12 +162,26 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 			}
 		}
 	}
+	// Go rejects overlays beneath GOMODCACHE. Embed rewrites preserve imports
+	// and file selection, thus only the compiler parser needs their content.
+	goFiles := make(map[string][]byte, len(files))
+	for name, content := range files {
+		if !embeds[name] {
+			goFiles[name] = content
+		}
+	}
 	cfg := &packages.Config{
 		Mode:       mode,
 		Dir:        dir,
 		BuildFlags: []string{"-tags=" + BuildTag},
 		Tests:      tests,
-		Overlay:    files,
+		Overlay:    goFiles,
+		ParseFile: func(fset *token.FileSet, name string, src []byte) (*ast.File, error) {
+			if embeds[name] {
+				src = files[name]
+			}
+			return parser.ParseFile(fset, name, src, parser.AllErrors|parser.ParseComments)
+		},
 	}
 	timings = append(timings, PhaseTiming{"load-overlay", time.Since(phase)})
 	phase = time.Now()

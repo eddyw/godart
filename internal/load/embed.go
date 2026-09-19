@@ -25,8 +25,8 @@ import (
 // order of Go then holds, and a package level variable that reads the value
 // sees it.
 //
-// The rewrite runs on the first load, and the second load reads its output
-// through the same overlay map that carries the standard library.
+// The second load parses the rewritten source without a Go command overlay.
+// This permits embedded files in downloaded modules beneath GOMODCACHE.
 
 // embedMark is the text that replaces the directive. The go command reads a
 // directive at the start of a comment alone, thus the space is enough.

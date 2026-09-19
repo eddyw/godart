@@ -1,6 +1,9 @@
 package driver_test
 
 import (
+	"archive/zip"
+	"bytes"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +11,134 @@ import (
 
 	"github.com/eddyw/godart/internal/driver"
 )
+
+func TestEmbedModuleCache(t *testing.T) {
+	const module = "example.com/assets"
+	const version = "v1.0.0"
+	proxy := t.TempDir()
+	cache := t.TempDir()
+	t.Cleanup(func() {
+		if err := filepath.WalkDir(cache, func(path string, entry os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return os.Chmod(path, 0o755)
+			}
+			return nil
+		}); err != nil {
+			t.Error(err)
+		}
+	})
+	endpoint := filepath.Join(proxy, "example.com", "assets", "@v")
+	if err := os.MkdirAll(endpoint, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{
+		"go.mod":  "module " + module + "\n\ngo 1.27\n",
+		"LICENSE": "Copyright 2026 Gart contributors. Regression fixture.\n",
+		"assets.go": `package assets
+
+import (
+	"embed"
+	"strings"
+)
+
+//go:embed version.txt
+var text string
+
+var Version = strings.TrimSpace(text)
+
+//go:embed data.bin
+var Bytes []byte
+
+//go:embed static
+var Files embed.FS
+`,
+		"version.txt":  "1.2.3\n",
+		"data.bin":     "\x00\xff\x80\x7f",
+		"static/a.txt": "alpha\n",
+		"static/b.txt": "beta\n",
+	}
+	var archive bytes.Buffer
+	zw := zip.NewWriter(&archive)
+	for name, content := range files {
+		w, err := zw.Create(module + "@" + version + "/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(endpoint, version+".zip"), archive.String())
+	writeFile(t, filepath.Join(endpoint, version+".mod"), files["go.mod"])
+	writeFile(t, filepath.Join(endpoint, version+".info"), `{"Version":"v1.0.0","Time":"2026-01-01T00:00:00Z"}`)
+	proxyURL := url.URL{Scheme: "file", Path: filepath.ToSlash(proxy)}
+	t.Setenv("GOPROXY", proxyURL.String())
+	t.Setenv("GOSUMDB", "off")
+	t.Setenv("GOMODCACHE", cache)
+	t.Setenv("GOWORK", "off")
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/embedtest\n\ngo 1.27\n\nrequire "+module+" "+version+"\n")
+	writeFile(t, filepath.Join(dir, "main.go"), `package main
+
+import (
+	"example.com/assets"
+	"fmt"
+)
+
+func report() string {
+	entries, err := assets.Files.ReadDir("static")
+	if err != nil { panic(err) }
+	result := fmt.Sprintf("%s %x\n", assets.Version, assets.Bytes)
+	for _, entry := range entries {
+		data, err := assets.Files.ReadFile("static/" + entry.Name())
+		if err != nil { panic(err) }
+		result += entry.Name() + ":" + string(data)
+	}
+	return result
+}
+
+func main() { fmt.Print(report()) }
+`)
+	writeFile(t, filepath.Join(dir, "main_test.go"), `package main
+
+import "testing"
+
+func TestAssets(t *testing.T) {
+	const want = "1.2.3 00ff807f\na.txt:alpha\nb.txt:beta\n"
+	if got := report(); got != want { t.Fatalf("got %q, want %q", got, want) }
+}
+`)
+	run(t, dir, "go", "mod", "download", module)
+	want := runProgram(t, dir, "go", "run", ".")
+	out := t.TempDir()
+	if err := driver.Build(driver.Options{
+		Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	prepareDart(t, out)
+	if got := runProgram(t, out, "dart", "--packages=.dart_tool/package_config.json", "bin/main.dart"); got != want {
+		t.Fatalf("Go: %q\nGart: %q", want, got)
+	}
+	if got, want := gartTestIn(t, dir, t.TempDir(), driver.TestOptions{}), goTest(t, dir, false); got != want {
+		t.Fatalf("Go tests: %q\nGart tests: %q", want, got)
+	}
+	for name, want := range files {
+		got, err := os.ReadFile(filepath.Join(cache, module+"@"+version, filepath.FromSlash(name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != want {
+			t.Errorf("cached dependency file %s changed", name)
+		}
+	}
+}
 
 // buildEmbed compiles a module of 1 file and gives the report of the build.
 func buildEmbed(t *testing.T, main string, files map[string]string) error {
