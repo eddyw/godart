@@ -1,137 +1,63 @@
-# nodegen
+# Widget and service bindings
 
-nodegen reads the public API of Flutter with `package:analyzer`, and it writes
-the node set of milestone 3. It needs no change of the compiler.
+Nodegen reads resolved Dart libraries through `package:analyzer`. It writes
+Go declarations and the Dart host adapters for an application.
+Application-owned generation is experimental. The shared core supplies Go
+nodes, signals, callbacks, controller identities, and supported value adapters.
 
-## The packs
+## Generate application bindings
 
-A pack holds the node types of 1 Dart package. Flutter moved Material and
-Cupertino out of the framework, thus each 1 stands as a package of pub.dev.
+Use `glutter bind` with an explicit manifest. The [manifest contract](#application-owned-bindings-experimental)
+defines selected libraries, constructors, and service functions.
+Use `glutter gen` afterward to compile Go and generate the host.
 
-| Pack | The Dart package | The Go package | Node types |
-|---|---|---|---|
-| The core | `package:flutter/widgets.dart` | `gart.dev/ui` | 274 |
-| Material | `package:material_ui/material_ui.dart` | `gart.dev/ui/material` | 217 |
-| Cupertino | `package:cupertino_ui/cupertino_ui.dart` | `gart.dev/ui/cupertino` | 72 |
-| SVG | `package:flutter_svg/flutter_svg.dart` | `gart.dev/ui/svg` | 4 |
+The generator resolves packages from the application. Two libraries can export
+widgets with the same name because each binding retains its package identity.
+Unsupported members appear in the surface receipt. A widget name does not
+establish complete support for all constructor parameters.
 
-`packs` of `lib/read.dart` holds the list. The core package declares the
-interface `ui.Node`, and each pack gives its structs the method `IsNode` that
-answers `ui.Mark`. A struct of another module joins the node set the same way,
-thus a package of pub.dev such as `macos_ui` needs no change of the reader.
+## Repository core and compatibility packages
 
-The host imports the Dart package of each case that it holds, and no other 1.
-An application that names no Material widget thus needs no `material_ui`.
+The repository maintains the shared core and legacy Material, Cupertino, and
+SVG packages. Existing applications can retain these packages during migration.
+New application libraries use manifests without an edit to the built-in pack list.
 
-## The 3 modes
+| Dart library | Repository Go package |
+|---|---|
+| `package:flutter/widgets.dart` | `gart.dev/ui` |
+| `package:material_ui/material_ui.dart` | `gart.dev/ui/material` |
+| `package:cupertino_ui/cupertino_ui.dart` | `gart.dev/ui/cupertino` |
+| `package:flutter_svg/flutter_svg.dart` | `gart.dev/ui/svg` |
 
-| Output | Scope | Command |
-|---|---|---|
-| `flutter/ui/**/widgets_gen.go` | The whole project. 1 Go struct for each Flutter widget constructor, in the package of its pack. | `nodegen go` |
-| `<app>/lib/widgets_gen.dart` | 1 application. 1 case for each node type that the application names. | `nodegen host` |
-| The yield of the reader | A report on the terminal. | `nodegen report` |
+These maintenance commands run from `flutter/nodegen`:
 
 ```sh
-cd flutter/nodegen
 dart pub get
-dart run bin/nodegen.dart go     ../goflutter ../ui   # 1 file for each pack, and it runs gofmt
+dart run bin/nodegen.dart go ../goflutter ../ui
 dart run bin/nodegen.dart report ../goflutter -all
-dart run bin/nodegen.dart host   ../goflutter /path/to/app/lib/widgets_gen.dart nodes.txt
-```
-
-The first argument names a directory that holds a Flutter application with a
-`.dart_tool/package_config.json`. `flutter/goflutter` is such a directory, thus
-the tool reads the Flutter SDK of that package. The read takes about 6 seconds.
-
-The last argument of the host mode names a file that holds 1 node type for each
-line. A single dash reads that list from the standard input, and `-all` writes
-a case for each node type of the set. `-all` gives the whole host, thus
-`flutter analyze` of `goflutter` then proves that each case of the set
-compiles:
-
-```sh
 dart run bin/nodegen.dart host ../goflutter ../goflutter/lib/all_gen_check.dart -all
 cd ../goflutter && flutter analyze && rm lib/all_gen_check.dart
 ```
 
-## Where the name list comes from
+The first argument names a project with resolved package metadata.
+`report` lists constructor coverage and unsupported Dart types.
+`host` accepts a file of node names, `-` for standard input, or `-all`.
+`-all` validates the complete host but is unsuitable for normal application output.
 
-`flutter/nodescan` is a Go command that reads the application module with
-`golang.org/x/tools/go/packages`, and it names each type of `gart.dev/ui` and
-of each pack under it that the module uses. The answer is exact, because it reads the type information of
-the Go tool chain.
+## Application host and node filter
 
-```sh
-cd <root of the repository>
-go run ./flutter/nodescan /path/to/app/go > nodes.txt
-```
+`flutter/nodescan` reads Go type information and emits the used node identities.
+Glutter passes that list to the Go declaration filter and the Dart host generator.
+The host contains cases for the application's node types. An unrestricted host
+would retain unused Flutter constructors through its dispatch table.
 
-`glutter gen` of an application runs `nodescan` and then the host mode.
+The Go filter uses an overlay and leaves installed declaration files unchanged.
+Value declarations marked `// nodefilter:values` remain when retained types need them.
+The next build discovers newly used node types before compilation.
 
-An earlier reader took each `ui.<Name>` of the Go source with a regular
-expression. Such a scan reads a name of a comment and a name of a string, and
-it misses each name that an import alias or a dot import carries. The 3
-examples gave the same host under the 2 sources on 2026-09-03, because each
-extra name of the regular expression named a function of the package and no
-node type carries such a name.
-
-## Why the host is per application
-
-A shared host would hold a case for each of the 566 node types, thus it would
-name each Flutter widget. The tree shaker of Dart then keeps the whole
-framework. The measurement of 2026-09-02 read a set of 411 nodes, on an ahead
-of time build for macOS:
-
-| The host | The snapshot |
-|---|---|
-| The hand written set of milestone 1, 28 nodes | 13,989,280 bytes |
-| The generated set, a shared host of 411 cases | 20,844,352 bytes |
-| The generated set, a host of the 18 cases that the counter uses | 13,628,480 bytes |
-
-The Go node set costs nothing that the application does not use. The shaker
-drops each Dart class and each type descriptor that no code reaches. The whole
-cost of 7.2 megabytes comes from the switch of the host.
-
-## Why the Go node set is per application too
-
-The Go file of a pack holds each node type, and the emitter writes a Dart class
-and a type descriptor for each 1. compass names 27 of the 491 types that its 2
-packs hold, thus 464 classes and 464 descriptors stood in its Dart output.
-
-`internal/nodefilter` of the compiler reads the file that this tool wrote, and
-it keeps the types that the application names. `glutter` gives that set from the
-same `nodescan` run that writes the host, and the filter reaches the load
-through `packages.Config.Overlay`. The file on disk never changes, thus 2
-applications of 1 checkout each hold their own set and no `glutter doctor`
-reports a stale file.
-
-The filter cut the Dart output of compass from 18,318,376 bytes to 16,089,390,
-and the tree of `gart.dev/ui` from 2,922,881 bytes to 693,895. Read the section
-"The node filter of the Go side" of `docs/flutter-design.md`.
-
-A node type that the application does not name today reaches the build the
-moment 1 line names it, because the driver runs the scan in front of each load.
-
-`flutter/ui/themes.go` and `flutter/ui/types.go` each carry the line
-`// nodefilter:values` on the first line, thus the filter reads the value types
-of the node set the same way. A type of such a file stays when a kept
-declaration names it. The Dart output of compass held 139,198 bytes of theme
-value types, and it holds 8,021 now.
-
-## The icons
-
-A Go `ui.Icon` node names its icon with a string, and `goIcons` of the host
-maps that name to the Material set. Material holds 8,825 icons, thus a map of
-each 1 would keep the whole table in each application.
-
-`nodescan` writes each string constant of the module after the node names, with
-a quotation mark in front. This tool keeps each 1 that names an icon of
-Material, and it writes `goAppIcons` and `goGenInstall` into the host of the
-application. The compass application names 61 such icons.
-
-`goIcon` reports an unknown name. A name that the Go source builds at run time
-reaches no string constant, and the application then adds it to `goIcons`
-itself.
+The scanner also reports string constants. The host retains matching Material
+icons and installs them through `goGenInstall`. Dynamic icon names require an
+explicit host registration because static discovery cannot infer their values.
 
 ## The mapping
 
@@ -277,27 +203,6 @@ and gives the bytes under the kind `memory`.
 
 A named constructor takes a Go struct of its own. `ListView.builder` gives
 `ui.ListViewBuilder`, and the host switches on the name of the type descriptor.
-
-## What the tool drops
-
-Run the report to read the numbers of the current Flutter SDK:
-
-```sh
-dart run bin/nodegen.dart report ../goflutter -all
-```
-
-It names each widget that the reader dropped, the cause of each drop, and each
-Dart type that no Go type carries.
-
-The largest groups that stay out on 2026-09-03, with 119 dropped constructors:
-
-| The group | Count | The cause |
-|---|---|---|
-| A generic widget, for example `Radio<T>` | 17 | A node holds no type argument, thus the host cannot name the instantiation. |
-| A delegate that a Dart subclass must implement | 12 | A Go type cannot implement a Dart interface. |
-| A live object of the host, for example `EditableTextState` or `ViewportOffset` | 12 | The object lives inside 1 build of Flutter, and a Go value cannot hold it. |
-| A builder that takes an `Animation<double>` | 9 | The animation belongs to 1 item of a list, and the key table holds 1 object for each name. |
-| A `BuildContext` | 5 | A Go value holds none. |
 
 ## Capability validation
 

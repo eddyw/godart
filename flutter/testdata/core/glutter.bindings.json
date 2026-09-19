@@ -22,7 +22,17 @@
       "go_import": "example.dev/gocore/bindings/material",
       "directory": "go/bindings/material",
       "symbols": [
-        "ElevatedButton"
+        "AppBar",
+        "Card",
+        "CircularProgressIndicator",
+        "Divider",
+        "ElevatedButton",
+        "FloatingActionButton",
+        "IconButton",
+        "Scaffold",
+        "Switch",
+        "TextButton",
+        "TextField"
       ]
     },
     {

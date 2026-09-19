@@ -39,6 +39,43 @@
   ],
   "constructors": [
     {
+      "kind": "example.dev/gocore/bindings/material.AppBar",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "Leading",
+        "AutomaticallyImplyLeading",
+        "Title",
+        "Actions",
+        "AutomaticallyImplyActions",
+        "FlexibleSpace",
+        "Bottom",
+        "Elevation",
+        "ScrolledUnderElevation",
+        "ShadowColor",
+        "SurfaceTintColor",
+        "Shape",
+        "BackgroundColor",
+        "ForegroundColor",
+        "IconTheme",
+        "ActionsIconTheme",
+        "Primary",
+        "CenterTitle",
+        "ExcludeHeaderSemantics",
+        "TitleSpacing",
+        "ToolbarOpacity",
+        "BottomOpacity",
+        "ToolbarHeight",
+        "LeadingWidth",
+        "ToolbarTextStyle",
+        "TitleTextStyle",
+        "ForceMaterialTransparency",
+        "UseDefaultSemanticsOrder",
+        "ClipBehavior",
+        "ActionsPadding",
+        "AnimateColor"
+      ]
+    },
+    {
       "kind": "example.dev/gocore/bindings/brand.Badge",
       "library": "package:core_fixture/brand.dart",
       "fields": [
@@ -52,6 +89,40 @@
       "library": "package:core_fixture/other_brand.dart",
       "fields": [
         "Label"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Card",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "Color",
+        "ShadowColor",
+        "SurfaceTintColor",
+        "Elevation",
+        "Shape",
+        "BorderOnForeground",
+        "Margin",
+        "ClipBehavior",
+        "Child",
+        "SemanticContainer"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.CircularProgressIndicator",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "Value",
+        "BackgroundColor",
+        "Color",
+        "StrokeWidth",
+        "StrokeAlign",
+        "SemanticsLabel",
+        "SemanticsValue",
+        "StrokeCap",
+        "Constraints",
+        "TrackGap",
+        "Year2023",
+        "Padding"
       ]
     },
     {
@@ -79,6 +150,18 @@
       ]
     },
     {
+      "kind": "example.dev/gocore/bindings/material.Divider",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "Height",
+        "Thickness",
+        "Indent",
+        "EndIndent",
+        "Color",
+        "Radius"
+      ]
+    },
+    {
       "kind": "example.dev/gocore/bindings/material.ElevatedButton",
       "library": "package:material_ui/material_ui.dart",
       "fields": [
@@ -93,7 +176,397 @@
         "StatesController",
         "Child"
       ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.FloatingActionButton",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "Child",
+        "Tooltip",
+        "ForegroundColor",
+        "BackgroundColor",
+        "FocusColor",
+        "HoverColor",
+        "SplashColor",
+        "HeroTag",
+        "Elevation",
+        "FocusElevation",
+        "HoverElevation",
+        "HighlightElevation",
+        "DisabledElevation",
+        "OnPressed",
+        "MouseCursor",
+        "Mini",
+        "Shape",
+        "ClipBehavior",
+        "FocusNode",
+        "Autofocus",
+        "MaterialTapTargetSize",
+        "IsExtended",
+        "EnableFeedback"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.IconButton",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "IconSize",
+        "VisualDensity",
+        "Padding",
+        "Alignment",
+        "SplashRadius",
+        "Color",
+        "FocusColor",
+        "HoverColor",
+        "HighlightColor",
+        "SplashColor",
+        "DisabledColor",
+        "OnPressed",
+        "OnHover",
+        "OnLongPress",
+        "MouseCursor",
+        "FocusNode",
+        "Autofocus",
+        "Tooltip",
+        "EnableFeedback",
+        "Constraints",
+        "Style",
+        "IsSelected",
+        "SelectedIcon",
+        "StatesController",
+        "Icon"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Scaffold",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "AppBar",
+        "Body",
+        "FloatingActionButton",
+        "PersistentFooterButtons",
+        "PersistentFooterDecoration",
+        "Drawer",
+        "OnDrawerChanged",
+        "EndDrawer",
+        "OnEndDrawerChanged",
+        "BottomNavigationBar",
+        "BottomSheet",
+        "BackgroundColor",
+        "ResizeToAvoidBottomInset",
+        "Primary",
+        "DrawerDragStartBehavior",
+        "ExtendBody",
+        "DrawerBarrierDismissible",
+        "ExtendBodyBehindAppBar",
+        "DrawerScrimColor",
+        "DrawerEdgeDragWidth",
+        "DrawerEnableOpenDragGesture",
+        "EndDrawerEnableOpenDragGesture",
+        "RestorationId"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Switch",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "Value",
+        "OnChanged",
+        "ActiveColor",
+        "ActiveThumbColor",
+        "ActiveTrackColor",
+        "InactiveThumbColor",
+        "InactiveTrackColor",
+        "ActiveThumbImage",
+        "InactiveThumbImage",
+        "ThumbColor",
+        "TrackColor",
+        "TrackOutlineColor",
+        "MaterialTapTargetSize",
+        "DragStartBehavior",
+        "MouseCursor",
+        "FocusColor",
+        "HoverColor",
+        "OverlayColor",
+        "SplashRadius",
+        "FocusNode",
+        "OnFocusChange",
+        "Autofocus",
+        "Padding"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextButton",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "OnPressed",
+        "OnLongPress",
+        "OnHover",
+        "OnFocusChange",
+        "Style",
+        "FocusNode",
+        "Autofocus",
+        "ClipBehavior",
+        "StatesController",
+        "IsSemanticButton",
+        "Child"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "GroupId",
+        "Controller",
+        "FocusNode",
+        "TextInputAction",
+        "TextCapitalization",
+        "Style",
+        "TextAlign",
+        "TextDirection",
+        "ReadOnly",
+        "ShowCursor",
+        "Autofocus",
+        "StatesController",
+        "ObscuringCharacter",
+        "ObscureText",
+        "Autocorrect",
+        "SmartDashesType",
+        "SmartQuotesType",
+        "EnableSuggestions",
+        "MaxLines",
+        "MinLines",
+        "Expands",
+        "MaxLength",
+        "MaxLengthEnforcement",
+        "OnChanged",
+        "OnEditingComplete",
+        "OnSubmitted",
+        "Enabled",
+        "IgnorePointers",
+        "CursorWidth",
+        "CursorHeight",
+        "CursorOpacityAnimates",
+        "CursorColor",
+        "CursorErrorColor",
+        "KeyboardAppearance",
+        "ScrollPadding",
+        "DragStartBehavior",
+        "EnableInteractiveSelection",
+        "SelectAllOnFocus",
+        "OnTap",
+        "OnTapAlwaysCalled",
+        "MouseCursor",
+        "ScrollController",
+        "ScrollPhysics",
+        "ClipBehavior",
+        "RestorationId",
+        "ScribbleEnabled",
+        "StylusHandwritingEnabled",
+        "EnableIMEPersonalizedLearning",
+        "EnableInlinePrediction",
+        "CanRequestFocus"
+      ]
     }
   ],
-  "unsupported_members": []
+  "unsupported_members": [
+    {
+      "kind": "example.dev/gocore/bindings/material.AppBar",
+      "member": "notificationPredicate",
+      "type": "bool Function(ScrollNotification)",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.AppBar",
+      "member": "systemOverlayStyle",
+      "type": "SystemUiOverlayStyle?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.CircularProgressIndicator",
+      "member": "valueColor",
+      "type": "Animation<Color?>?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.CircularProgressIndicator",
+      "member": "controller",
+      "type": "AnimationController?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Scaffold",
+      "member": "floatingActionButtonLocation",
+      "type": "FloatingActionButtonLocation?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Scaffold",
+      "member": "floatingActionButtonAnimator",
+      "type": "FloatingActionButtonAnimator?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Scaffold",
+      "member": "persistentFooterAlignment",
+      "type": "AlignmentDirectional",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Scaffold",
+      "member": "bottomSheetScrimBuilder",
+      "type": "Widget? Function(BuildContext, Animation<double>)",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Switch",
+      "member": "onActiveThumbImageError",
+      "type": "void Function(Object, StackTrace?)?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Switch",
+      "member": "onInactiveThumbImageError",
+      "type": "void Function(Object, StackTrace?)?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Switch",
+      "member": "trackOutlineWidth",
+      "type": "WidgetStateProperty<double?>?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.Switch",
+      "member": "thumbIcon",
+      "type": "WidgetStateProperty<Icon?>?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "undoController",
+      "type": "UndoHistoryController?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "decoration",
+      "type": "InputDecoration?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "keyboardType",
+      "type": "TextInputType?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "strutStyle",
+      "type": "StrutStyle?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "textAlignVertical",
+      "type": "TextAlignVertical?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "toolbarOptions",
+      "type": "ToolbarOptions?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "onAppPrivateCommand",
+      "type": "void Function(String, Map<String, dynamic>)?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "inputFormatters",
+      "type": "List<TextInputFormatter>?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "cursorRadius",
+      "type": "Radius?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "selectionHeightStyle",
+      "type": "BoxHeightStyle?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "selectionWidthStyle",
+      "type": "BoxWidthStyle?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "selectionControls",
+      "type": "TextSelectionControls?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "onTapOutside",
+      "type": "void Function(PointerDownEvent)?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "onTapUpOutside",
+      "type": "void Function(PointerUpEvent)?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "buildCounter",
+      "type": "Widget? Function(BuildContext, {required int currentLength, required bool isFocused, required int? maxLength})?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "autofillHints",
+      "type": "Iterable<String>?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "contentInsertionConfiguration",
+      "type": "ContentInsertionConfiguration?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "contextMenuBuilder",
+      "type": "Widget Function(BuildContext, EditableTextState)?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "spellCheckConfiguration",
+      "type": "SpellCheckConfiguration?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "magnifierConfiguration",
+      "type": "TextMagnifierConfiguration?",
+      "reason": "unsupported type"
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.TextField",
+      "member": "hintLocales",
+      "type": "List<Locale>?",
+      "reason": "unsupported type"
+    }
+  ]
 }

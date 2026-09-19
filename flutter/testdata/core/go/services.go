@@ -5,7 +5,7 @@ import (
 
 	"example.dev/gocore/bindings/services"
 	"gart.dev/ui"
-	"gart.dev/ui/material"
+	"example.dev/gocore/bindings/material"
 )
 
 func ServiceTree() ui.Node {

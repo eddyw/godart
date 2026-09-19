@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"gart.dev/ui"
-	"gart.dev/ui/material"
+	"example.dev/gocore/bindings/material"
 )
 
 // App holds the state of the screen. Each field is a signal, thus a write of 1
