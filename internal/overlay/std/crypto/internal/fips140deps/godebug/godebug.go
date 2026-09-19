@@ -24,10 +24,14 @@ func New(name string) *Setting {
 
 // Value gives the text of the setting.
 func (s *Setting) Value() string {
-	return s.inner.Value()
+	v := s.inner.Value()
+	if s.inner.Name() == "fips140" && v != "" && v != "off" {
+		panic("crypto/fips140: Dart does not support FIPS 140-3 mode")
+	}
+	return v
 }
 
 // Value gives the text of the setting of the name.
 func Value(name string) string {
-	return godebug.New(name).Value()
+	return New(name).Value()
 }

@@ -35,14 +35,15 @@ func TestSelectedUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	selections := map[string][]upstreamFile{
-		"cmp":           {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
-		"math":          {{Name: "const_test.go"}, {Name: "example_test.go"}},
-		"encoding/asn1": {{Name: "marshal_test.go"}},
-		"runtime/debug": {{Name: "mod_test.go"}},
-		"os/exec":       {{Name: "env_test.go"}},
-		"sync":          {{Name: "once_test.go"}, {Name: "cond_test.go"}, {Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo"}}},
-		"sync/atomic":   {{Name: "value_test.go"}, {Name: "atomic_test.go", Declarations: atomicDeclarations()}},
-		"reflect":       {{Name: "visiblefields_test.go"}, {Name: "iter_test.go"}, {Name: "example_test.go", Declarations: []string{"ExampleStructTag_Lookup"}}, {Name: "set_test.go", Declarations: []string{"TestImplicitSetConversion", "TestImplicitSendConversion", "TestImplicitCallConversion", "TestImplicitAppendConversion"}}, {Name: "all_test.go", Declarations: []string{"shouldPanic", "TestTypeOverflow", "TestInitFuncTypes"}}},
+		"internal/godebug": {{Name: "godebug_test.go", Declarations: []string{"TestGet", "TestImmutable"}}},
+		"cmp":              {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
+		"math":             {{Name: "const_test.go"}, {Name: "example_test.go"}},
+		"encoding/asn1":    {{Name: "marshal_test.go"}},
+		"runtime/debug":    {{Name: "mod_test.go"}},
+		"os/exec":          {{Name: "env_test.go"}},
+		"sync":             {{Name: "once_test.go"}, {Name: "cond_test.go"}, {Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo"}}},
+		"sync/atomic":      {{Name: "value_test.go"}, {Name: "atomic_test.go", Declarations: atomicDeclarations()}},
+		"reflect":          {{Name: "visiblefields_test.go"}, {Name: "iter_test.go"}, {Name: "example_test.go", Declarations: []string{"ExampleStructTag_Lookup"}}, {Name: "set_test.go", Declarations: []string{"TestImplicitSetConversion", "TestImplicitSendConversion", "TestImplicitCallConversion", "TestImplicitAppendConversion"}}, {Name: "all_test.go", Declarations: []string{"shouldPanic", "TestTypeOverflow", "TestInitFuncTypes"}}},
 		"time": {{Name: "format_test.go", Declarations: []string{"TimeFormatTest", "rfc3339Formats", "TestRFC3339Conversion", "FormatTest", "formatTests", "TestFormat", "goStringTests", "TestGoString", "TestFormatSingleDigits", "TestFormatShortYear", "TestNoonIs12PM", "TestMidnightIs12AM", "Test12PMIsNoon", "Test12AMIsMidnight"}}, {Name: "example_test.go"}, {Name: "time_test.go", Declarations: []string{
 			"durationTests", "TestDurationString", "parseDurationTests", "TestParseDuration", "parseDurationErrorTests", "TestParseDurationErrors", "TestParseDurationRoundTrip",
 			"nsDurationTests", "TestDurationNanoseconds", "usDurationTests", "TestDurationMicroseconds", "msDurationTests", "TestDurationMilliseconds",
@@ -72,12 +73,22 @@ func TestSelectedUpstream(t *testing.T) {
 				if pkg == "encoding/asn1" {
 					source = strings.Replace(source, "package asn1", "package asn1_test\nimport . \"encoding/asn1\"", 1)
 				}
+				if pkg == "internal/godebug" {
+					source = strings.ReplaceAll(source, `"internal/godebug"`, `"example.com/upstream"`)
+				}
 				writeFile(t, filepath.Join(fixture, file.Name), source)
 			}
 
 			if pkg == "os/exec" {
 				source := selectedUpstreamSource(t, "../overlay/std/os/exec/exec.go", []string{"dedupEnvCase"})
 				writeFile(t, filepath.Join(fixture, "helper.go"), source)
+			}
+			if pkg == "internal/godebug" {
+				data, err := os.ReadFile("../overlay/std/internal/godebug/godebug.go")
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeFile(t, filepath.Join(fixture, "godebug.go"), string(data))
 			}
 
 			if pkg == "time" {

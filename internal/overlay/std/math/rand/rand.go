@@ -4,24 +4,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This file patches the file of the same name of the package math/rand.
-//
-// The real file holds 4 parts that stay outside the subset:
-//
-//  1. It reads internal/godebug for the settings randautoseed and randseednop.
-//  2. It reads runtime.rand through a go:linkname directive.
-//  3. Read and Seed take the address of a field of Rand, and only a variable
-//     holds a box.
-//  4. lockedSource holds a mutex for the top-level functions. All Go code runs
-//     in 1 isolate, thus no top-level function needs a lock.
-//
-// The sequence of a seeded generator stays equal, because rng.go holds the
-// algorithm and this file changes no value. Go 1.24 made the top-level Seed a
-// no-op, thus the top-level functions give an unpredictable sequence in Go and
-// here.
-//
-// Each other line comes from the real file.
-
 // Package rand implements pseudo-random number generators suitable for tasks
 // such as simulation, but it should not be used for security-sensitive work.
 //
@@ -38,6 +20,7 @@
 package rand
 
 import (
+	"internal/godebug"
 	"syscall/dart"
 )
 
@@ -307,17 +290,22 @@ func (r *Rand) Read(p []byte) (n int, err error) {
  * Top-level convenience functions
  */
 
-// globalRandGenerator is the source of random numbers for the top-level
-// convenience functions. Go reads the generator of its runtime, and the
-// operating system seeds that generator. The seed here comes from the clock,
-// thus the values stay unpredictable in both.
+// Top-level operations never suspend in the single Dart isolate.
 var globalRandGenerator *Rand
+
+var randautoseed = godebug.New("randautoseed")
+var randseednop = godebug.New("randseednop")
 
 // globalRand returns the generator to use for the top-level convenience
 // functions.
 func globalRand() *Rand {
 	if globalRandGenerator == nil {
-		globalRandGenerator = New(NewSource(dart.NowNanos()))
+		seed := dart.NowNanos()
+		if randautoseed.Value() == "0" {
+			seed = 1
+			randautoseed.IncNonDefault()
+		}
+		globalRandGenerator = New(NewSource(seed))
 	}
 	return globalRandGenerator
 }
@@ -341,7 +329,13 @@ func globalRand() *Rand {
 //
 // As of Go 1.24 [Seed] is a no-op. To restore the previous behavior set
 // GODEBUG=randseednop=0.
-func Seed(seed int64) {}
+func Seed(seed int64) {
+	if randseednop.Value() != "0" {
+		return
+	}
+	randseednop.IncNonDefault()
+	globalRand().Seed(seed)
+}
 
 // Int63 returns a non-negative pseudo-random 63-bit integer as an int64
 // from the default [Source].

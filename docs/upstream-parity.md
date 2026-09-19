@@ -34,8 +34,9 @@ A compile blocker never removes declarations from the denominator.
 
 Omissions distinguish implementation gaps, test adapters, target limits, and
 unassessed cases. They do not all represent unreachable behavior.
-Portable GODEBUG settings remain implementation gaps. Deep recursion can require
-an iterative implementation before the same upstream input can pass.
+Deep recursion can require an iterative implementation before the same upstream
+input can pass. An environment-controlled library setting does not require
+native runtime control merely because Go names it through GODEBUG.
 Native executable assumptions can require test adapters. Mixed `go/build`
 assumptions still need individual review. The report retains all these groups.
 

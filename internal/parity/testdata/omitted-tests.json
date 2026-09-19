@@ -1,46 +1,8 @@
 {
-  "archive/tar": {
-    "TestDisableInsecurePathCheck": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestInsecurePaths": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    }
-  },
-  "archive/zip": {
-    "TestCVE202127919": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestCVE202141772": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestDisableInsecurePathCheck": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestInsecurePaths": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestOpenReaderInsecurePath": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    }
-  },
   "context": {
     "TestContextErrDoneRace": {
       "classification": "target-limit",
       "reason": "The test requires preemption of a busy loop on another Go execution thread. Gart runs Go in 1 isolate."
-    }
-  },
-  "crypto/ecdsa": {
-    "TestKeyGenerationVectors": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
     }
   },
   "crypto/hkdf": {
@@ -53,92 +15,6 @@
     "TestPBKDF2ServiceIndicator": {
       "classification": "target-limit",
       "reason": "The test requires native FIPS service indicators. Gart does not provide the native FIPS module identity or certification mode."
-    }
-  },
-  "crypto/rsa": {
-    "Test3PrimeKeyGeneration": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "Test4PrimeKeyGeneration": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestDecryptPKCS1v15": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestEncryptPKCS1v15DecrypterSessionKey": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestEncryptPKCS1v15SessionKey": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestEqual": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestEverything": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestGnuTLSKey": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestImpossibleKeyGeneration": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestInvalidPSSSaltLength": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestKeyGeneration": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestKeyGenerationVectors": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestNPrimeKeyGeneration": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestOverlongMessagePKCS1v15": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestPSS513": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestPSSOpenSSL": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestPSmallerThanQ": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestSignPKCS1v15": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestTinyKeyGeneration": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestUnpaddedSignature": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestVerifyPKCS1v15": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
     }
   },
   "debug/elf": {
@@ -247,38 +123,16 @@
       "reason": "The case validates the native parser nesting limit on a growing Go stack. Dart has a fixed stack. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
     }
   },
+  "html/template": {
+    "TestMaxExecDepth": {
+      "classification": "implementation-gap",
+      "reason": "The full upstream case exhausts the Dart stack before the Go template depth limit. An iterative evaluator or stack-safe execution adapter is still necessary. The original case skips short mode."
+    }
+  },
   "io/fs": {
     "TestCVE202230630": {
       "classification": "implementation-gap",
       "reason": "The case requires over 10000 recursive frames. Dart has a fixed stack, a documented runtime exclusion. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    }
-  },
-  "math/rand": {
-    "TestSeedNop/randseednop=0": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    }
-  },
-  "mime/multipart": {
-    "TestReadFormLimits/values=0/files=2/extraKeysPerFile=48/godebug=multipartmaxheaders=100": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestReadFormLimits/values=0/files=2/extraKeysPerFile=50/godebug=multipartmaxheaders=100": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestReadFormLimits/values=100/files=0/extraKeysPerFile=0/godebug=multipartmaxparts=100": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestReadFormLimits/values=101/files=0/extraKeysPerFile=0/godebug=multipartmaxparts=100": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestReadForm_ManyFiles_Distinct": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
     }
   },
   "net": {
@@ -367,22 +221,6 @@
     "TestRedirect": {
       "classification": "test-adapter",
       "reason": "The test reexecutes the native test executable as a CGI subprocess. The VM test entry point is Dart source."
-    }
-  },
-  "net/url": {
-    "TestParseQueryLimits": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    },
-    "TestParseStrictIpv6": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
-    }
-  },
-  "testing/cryptotest": {
-    "TestSetGlobalRandom/cryptocustomrand=1": {
-      "classification": "implementation-gap",
-      "reason": "The overlay does not apply this GODEBUG setting. This is an implementation gap, not an inherent Dart limit."
     }
   }
 }

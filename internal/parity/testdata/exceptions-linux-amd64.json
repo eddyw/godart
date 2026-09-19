@@ -13277,5 +13277,27 @@
       "gart": "skip",
       "reason": "The upstream parent reexecutes the native Go test executable. The current testenv adapter cannot reexecute a Dart test binary. Fatal reader behavior has separate subprocess coverage."
     }
+  ],
+  "crypto/fips140": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The original test restarts a native test executable with FIPS enforcement. The Dart test adapter cannot restart itself with that mode.",
+      "test": "TestWithoutEnforcement"
+    }
+  ],
+  "html/template": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test unconditionally skips this case.",
+      "test": "TestIssue31810"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test unconditionally skips this case.",
+      "test": "TestTemplateLookUp"
+    }
   ]
 }

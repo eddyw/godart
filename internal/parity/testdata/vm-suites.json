@@ -632,5 +632,13 @@
   {
     "package": "crypto/rand",
     "run": ""
+  },
+  {
+    "package": "crypto/fips140",
+    "run": ""
+  },
+  {
+    "package": "html/template",
+    "run": ""
   }
 ]

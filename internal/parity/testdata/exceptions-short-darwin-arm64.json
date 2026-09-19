@@ -11601,6 +11601,12 @@
       "native": "skip",
       "reason": "The original upstream short mode excludes external network access for these vectors.",
       "test": "TestRSAPSSSignaturesWycheproof"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original test omits 10000 toy-key generations in short mode.",
+      "test": "TestTinyKeyGeneration"
     }
   ],
   "crypto/sha1": [
@@ -13447,6 +13453,28 @@
       "native": "skip",
       "gart": "skip",
       "reason": "The unchanged upstream test skips this case in short mode."
+    }
+  ],
+  "crypto/fips140": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "The original test restarts a native test executable with FIPS enforcement. The Dart test adapter cannot restart itself with that mode.",
+      "test": "TestWithoutEnforcement"
+    }
+  ],
+  "html/template": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test unconditionally skips this case.",
+      "test": "TestIssue31810"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test unconditionally skips this case.",
+      "test": "TestTemplateLookUp"
     }
   ]
 }

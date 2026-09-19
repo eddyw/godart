@@ -8,7 +8,6 @@ The blocker manifest retains exact platform diagnostics in the coverage manifest
 | Package | Cause | Required work or boundary |
 |---|---|---|
 | `cmp` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `crypto/fips140` | private-test-dependency | The upstream helper configures native FIPS behavior through GODEBUG. |
 | `crypto/internal/fips140/bigmod` | runtime-boundary | The suite calls architecture assembly helpers such as addMulVVW1024. Dart has no native assembly entry points. |
 | `crypto/internal/fips140/nistec` | runtime-boundary | The suite requires native memory-page sizes and memory protection through syscall. |
 | `crypto/internal/fips140cache` | private-test-dependency | The suite inspects a private cache field that the overlay does not retain. |
@@ -20,7 +19,6 @@ The blocker manifest retains exact platform diagnostics in the coverage manifest
 | `encoding/asn1` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |
 | `go/types` | runtime-boundary | The suite converts an unsafe address into a typed pointer. Dart has no native pointer conversion. |
 | `hash/maphash` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `html/template` | private-test-dependency | The suite requires the upstream GODEBUG configuration helper. |
 | `image/gif` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |
 | `internal/abi` | runtime-boundary | The suite requires native function program counters through abi.FuncPCABI0. |
 | `internal/fmtsort` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |

@@ -1,11 +1,7 @@
 //go:build dart
 
-// This file patches the file cast.go of the package crypto/internal/fips140.
-//
-// The real file reads runtime.fatal through a go:linkname directive. The
-// GODEBUG setting fips140 always holds its default under gart, thus Enabled is
-// false, CAST and PCT each return at once, and no self test runs. A panic
-// stands in place of the call of fatal.
+// Crypto initialization rejects FIPS mode. These entry points retain the
+// upstream self-test API without access to runtime.fatal.
 package fips140
 
 import (

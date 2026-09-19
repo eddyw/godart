@@ -132,10 +132,7 @@
   },
   {
     "package": "crypto/fips140",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.SetGODEBUG",
-    "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The upstream helper configures native FIPS behavior through GODEBUG."
+    "status": "vm-suite"
   },
   {
     "package": "crypto/hkdf",
@@ -723,10 +720,7 @@
   },
   {
     "package": "html/template",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.SetGODEBUG",
-    "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The suite requires the upstream GODEBUG configuration helper."
+    "status": "vm-suite"
   },
   {
     "package": "image",
