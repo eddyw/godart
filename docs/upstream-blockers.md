@@ -14,7 +14,6 @@ The blocker manifest retains exact platform diagnostics in the coverage manifest
 | `crypto/internal/fips140cache` | private-test-dependency | The suite inspects a private cache field that the overlay does not retain. |
 | `crypto/internal/sysrand` | private-test-dependency | The suite injects native random-source failures through private hooks and errno values. |
 | `crypto/md5` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `crypto/rand` | public-api-gap | The suite calls reflect.Type.Methods, which the current reflection API does not expose. |
 | `crypto/subtle` | runtime-boundary | The suite requires native CPU feature detection through internal/cpu. |
 | `crypto/tls` | private-test-dependency | The suite calls private Go TLS implementation functions. Dart owns the TLS implementation. |
 | `crypto/x509` | private-test-dependency | The suite requires the upstream external-network capability helper before further classification. |

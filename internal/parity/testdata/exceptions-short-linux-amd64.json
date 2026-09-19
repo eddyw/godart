@@ -13446,5 +13446,31 @@
       "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
       "test": "TestRuneCountNonASCIIAllocation"
     }
+  ],
+  "crypto/rand": [
+    {
+      "test": "TestAllocations",
+      "native": "pass",
+      "gart": "skip",
+      "reason": "Dart does not expose Go allocation counts. This test remains excluded from behavioral parity."
+    },
+    {
+      "test": "TestConcurrentRead/Read",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The unchanged upstream test skips this case in short mode."
+    },
+    {
+      "test": "TestConcurrentRead/Reader.Read",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The unchanged upstream test skips this case in short mode."
+    },
+    {
+      "test": "TestReadError",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The unchanged upstream test skips this case in short mode."
+    }
   ]
 }

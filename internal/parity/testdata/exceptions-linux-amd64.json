@@ -13263,5 +13263,19 @@
       "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
       "test": "TestRuneCountNonASCIIAllocation"
     }
+  ],
+  "crypto/rand": [
+    {
+      "test": "TestAllocations",
+      "native": "pass",
+      "gart": "skip",
+      "reason": "Dart does not expose Go allocation counts. This test remains excluded from behavioral parity."
+    },
+    {
+      "test": "TestReadError",
+      "native": "pass",
+      "gart": "skip",
+      "reason": "The upstream parent reexecutes the native Go test executable. The current testenv adapter cannot reexecute a Dart test binary. Fatal reader behavior has separate subprocess coverage."
+    }
   ]
 }

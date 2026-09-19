@@ -374,10 +374,7 @@
   },
   {
     "package": "crypto/rand",
-    "status": "compile-blocked",
-    "diagnostic": "typ.Methods undefined (type reflect.Type has no field or method Methods)",
-    "blocker_cause": "public-api-gap",
-    "blocker_reason": "The suite calls reflect.Type.Methods, which the current reflection API does not expose."
+    "status": "vm-suite"
   },
   {
     "package": "crypto/rc4",

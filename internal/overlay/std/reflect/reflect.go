@@ -184,16 +184,21 @@ type Type interface {
 	Len() int
 	NumField() int
 	Field(i int) StructField
+	Fields() iter.Seq[StructField]
 	FieldByName(name string) (StructField, bool)
+	FieldByNameFunc(func(string) bool) (StructField, bool)
 	FieldByIndex(index []int) StructField
 	Bits() int
 	NumIn() int
 	In(i int) Type
+	Ins() iter.Seq[Type]
 	NumOut() int
 	Out(i int) Type
+	Outs() iter.Seq[Type]
 	IsVariadic() bool
 	NumMethod() int
 	Method(i int) Method
+	Methods() iter.Seq[Method]
 	MethodByName(name string) (Method, bool)
 	Size() uintptr
 	Align() int
@@ -204,6 +209,10 @@ type Type interface {
 	ChanDir() ChanDir
 	CanSeq() bool
 	CanSeq2() bool
+	OverflowComplex(complex128) bool
+	OverflowFloat(float64) bool
+	OverflowInt(int64) bool
+	OverflowUint(uint64) bool
 	handle() int
 	layout() (uintptr, int)
 	offsetOf(index int) uintptr
@@ -2129,30 +2138,11 @@ func (v Value) Methods() iter.Seq2[Method, Value] {
 // A name that stands at 2 fields of 1 depth gives the zero Value, exactly as in
 // Go.
 func (v Value) FieldByNameFunc(match func(string) bool) Value {
-	t := v.Type()
-	if t.Kind() != Struct {
-		panic("reflect: FieldByNameFunc of " + t.String())
-	}
-	fields := VisibleFields(t)
-	best := -1
-	depth := 0
-	count := 0
-	for i, f := range fields {
-		if !match(f.Name) {
-			continue
-		}
-		if best < 0 || len(f.Index) < depth {
-			best, depth, count = i, len(f.Index), 1
-			continue
-		}
-		if len(f.Index) == depth {
-			count++
-		}
-	}
-	if best < 0 || count > 1 {
+	f, ok := v.Type().FieldByNameFunc(match)
+	if !ok {
 		return Value{}
 	}
-	return v.FieldByIndex(fields[best].Index)
+	return v.FieldByIndex(f.Index)
 }
 
 // Swapper gives a function that exchanges 2 elements of the slice.

@@ -7,6 +7,7 @@
 package rand
 
 import (
+	internalrand "crypto/internal/rand"
 	"errors"
 	"io"
 	"math/big"
@@ -14,19 +15,16 @@ import (
 )
 
 // Reader is a global source of random bytes.
-var Reader io.Reader = reader{}
-
-type reader struct{}
-
-func (reader) Read(b []byte) (int, error) {
-	copy(b, dart.RandomBytes(len(b)))
-	return len(b), nil
-}
+var Reader io.Reader = internalrand.Reader
 
 // Read fills b with random bytes. It always fills b, and it never gives an
 // error.
 func Read(b []byte) (int, error) {
-	return io.ReadFull(Reader, b)
+	if _, err := io.ReadFull(Reader, b); err != nil {
+		dart.Stderr("fatal error: crypto/rand: failed to read random data (see https://go.dev/issue/66821): " + err.Error() + "\n")
+		dart.Exit(2)
+	}
+	return len(b), nil
 }
 
 const base32alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
@@ -46,12 +44,13 @@ func Text() string {
 // Prime gives a number of the named bit count that is prime with a high
 // probability.
 //
-// Go 1.26 and later read the secure source and ignore r, thus this function
-// ignores r too.
+// Prime uses the shared secure source unless the Go compatibility setting
+// selects the supplied reader.
 func Prime(r io.Reader, bits int) (*big.Int, error) {
 	if bits < 2 {
 		return nil, errors.New("crypto/rand: prime size must be at least 2-bit")
 	}
+	r = internalrand.CustomReader(r)
 
 	b := uint(bits % 8)
 	if b == 0 {
@@ -62,7 +61,7 @@ func Prime(r io.Reader, bits int) (*big.Int, error) {
 	p := new(big.Int)
 
 	for {
-		if _, err := io.ReadFull(Reader, bytes); err != nil {
+		if _, err := io.ReadFull(r, bytes); err != nil {
 			return nil, err
 		}
 
@@ -90,9 +89,6 @@ func Prime(r io.Reader, bits int) (*big.Int, error) {
 
 // Int gives a uniform random value in the range 0 to max, and it holds max
 // outside that range. It panics when max is 0 or less.
-//
-// Go 1.26 and later read the secure source and ignore rand, thus this function
-// ignores rand too.
 func Int(rand io.Reader, max *big.Int) (n *big.Int, err error) {
 	if max.Sign() <= 0 {
 		panic("crypto/rand: argument to Int is <= 0")
@@ -112,7 +108,7 @@ func Int(rand io.Reader, max *big.Int) (n *big.Int, err error) {
 	bytes := make([]byte, k)
 
 	for {
-		_, err = io.ReadFull(Reader, bytes)
+		_, err = io.ReadFull(rand, bytes)
 		if err != nil {
 			return nil, err
 		}

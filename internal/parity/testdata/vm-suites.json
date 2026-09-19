@@ -628,5 +628,9 @@
   {
     "package": "encoding/gob",
     "run": ""
+  },
+  {
+    "package": "crypto/rand",
+    "run": ""
   }
 ]
