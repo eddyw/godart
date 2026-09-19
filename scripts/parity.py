@@ -101,7 +101,8 @@ def behavior(paths, manifests=MANIFESTS):
                 "source_sha256", "build_tags", "gart_build_tags", "tool_tags", "cgo", "environment")}
             config.update(provenance(path))
             key = json.dumps(config, sort_keys=True)
-            group = groups.setdefault(key, {"configuration": config, "reports": [], "outcomes": defaultdict(set), "problems": []})
+            group = groups.setdefault(key, {"configuration": config, "reports": [], "outcomes": defaultdict(set),
+                                            "reasons": defaultdict(set), "problems": []})
             comparison = report["comparison"]
             problems = list(comparison.get("problems") or [])
             if report["native"]["exit"] != 0 or report["gart"]["exit"] != 0:
@@ -114,6 +115,8 @@ def behavior(paths, manifests=MANIFESTS):
                 for item in comparison.get(category) or []:
                     name = item["test"] if category == "excluded" else item
                     outcomes[pkg, name].add(category)
+                    if category == "excluded":
+                        group["reasons"][pkg, name].add(item["reason"])
             for name in report["expected"]:
                 if problems:
                     outcomes[pkg, name].add("failed")
@@ -126,10 +129,14 @@ def behavior(paths, manifests=MANIFESTS):
     coverage = {x["package"]: x for x in read(manifests / "coverage-manifest.json")}
     for group in groups.values():
         outcomes = group.pop("outcomes")
+        reasons = group.pop("reasons")
         records = []
         for (pkg, name), statuses in sorted(outcomes.items()):
             status = next(iter(statuses)) if len(statuses) == 1 else "conflicting"
-            records.append(dict(package=pkg, name=name, status=status))
+            record = dict(package=pkg, name=name, status=status)
+            if (pkg, name) in reasons:
+                record["exclusion_reasons"] = sorted(reasons[pkg, name])
+            records.append(record)
         group["top_level"] = dict(Counter(x["status"] for x in records if "/" not in x["name"]))
         group["subtests"] = dict(Counter(x["status"] for x in records if "/" in x["name"]))
         group["outcomes"] = records

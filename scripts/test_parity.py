@@ -25,7 +25,7 @@ class ParityTest(unittest.TestCase):
             record = dict(package="p", expected=["TestPass", "TestPartial"], go_version="go1", goos="os", goarch="arch",
                           source_sha256="sdk", target="vm", short=True, native=dict(exit=0), gart=dict(exit=0),
                           comparison=dict(passed=["TestPass"], partial=["TestPartial"],
-                                          excluded=[dict(test="TestPartial/skip")], problems=[]))
+                                          excluded=[dict(test="TestPartial/skip", reason="no native allocation counter")], problems=[]))
             parity.save(reports / "a.json", record)
             parity.save(reports / "duplicate.json", record)
             groups = parity.behavior([reports], manifests)
@@ -33,6 +33,8 @@ class ParityTest(unittest.TestCase):
             self.assertEqual(len(groups[0]["reports"]), 1)
             self.assertEqual(groups[0]["top_level"], {"passed": 1, "partial": 1})
             self.assertEqual(groups[0]["subtests"], {"excluded": 1})
+            excluded = next(x for x in groups[0]["outcomes"] if x["name"] == "TestPartial/skip")
+            self.assertEqual(excluded["exclusion_reasons"], ["no native allocation counter"])
             self.assertEqual(groups[0]["unobserved_counts"], {"untested": 1, "blocked": 1})
             record["gart"]["exit"] = 1
             parity.save(reports / "failure.json", record)
