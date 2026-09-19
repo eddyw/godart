@@ -128,37 +128,5 @@ type GCStats struct {
 // none of them, thus each field keeps the zero value.
 func ReadGCStats(stats *GCStats) {}
 
-// ParseBuildInfo reads the text of a build record.
-func ParseBuildInfo(data string) (*BuildInfo, error) {
-	return nil, errUnsupported
-}
-
-// ReadBuildInfo gives the build record of the program. The Dart output holds no
-// such record, thus the flag is false.
+// ReadBuildInfo gives no native Go build record for a Dart program.
 func ReadBuildInfo() (*BuildInfo, bool) { return nil, false }
-
-// BuildInfo holds the build record of a program.
-type BuildInfo struct {
-	GoVersion string
-	Path      string
-	Main      Module
-	Deps      []*Module
-	Settings  []BuildSetting
-}
-
-// String gives the text of the record.
-func (bi *BuildInfo) String() string { return "" }
-
-// Module names 1 module of a build record.
-type Module struct {
-	Path    string
-	Version string
-	Sum     string
-	Replace *Module
-}
-
-// BuildSetting holds 1 setting of a build record.
-type BuildSetting struct {
-	Key   string
-	Value string
-}

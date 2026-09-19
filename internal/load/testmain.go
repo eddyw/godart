@@ -90,7 +90,7 @@ func testBinaries(found []*packages.Package, cover bool, files map[string][]byte
 		bin := &Binary{
 			ID:    id,
 			Under: under,
-			Dir:   packageDir(byID[under+" ["+p.PkgPath+"]"], byID[under]),
+			Dir:   packageDir(byID[under+" ["+p.PkgPath+"]"], byID[under], byID[under+"_test ["+p.PkgPath+"]"]),
 			File:  p.CompiledGoFiles[0],
 		}
 		inside, err := functionsOf(byID[under+" ["+p.PkgPath+"]"])

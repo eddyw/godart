@@ -35,10 +35,11 @@ func TestSelectedUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	selections := map[string][]upstreamFile{
-		"os/exec":     {{Name: "env_test.go"}},
-		"sync":        {{Name: "once_test.go"}, {Name: "cond_test.go"}, {Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo"}}},
-		"sync/atomic": {{Name: "value_test.go"}, {Name: "atomic_test.go", Declarations: atomicDeclarations()}},
-		"reflect":     {{Name: "visiblefields_test.go"}, {Name: "iter_test.go"}, {Name: "example_test.go", Declarations: []string{"ExampleStructTag_Lookup"}}, {Name: "set_test.go", Declarations: []string{"TestImplicitSetConversion", "TestImplicitSendConversion", "TestImplicitCallConversion", "TestImplicitAppendConversion"}}, {Name: "all_test.go", Declarations: []string{"shouldPanic", "TestTypeOverflow", "TestInitFuncTypes"}}},
+		"runtime/debug": {{Name: "mod_test.go"}},
+		"os/exec":       {{Name: "env_test.go"}},
+		"sync":          {{Name: "once_test.go"}, {Name: "cond_test.go"}, {Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo"}}},
+		"sync/atomic":   {{Name: "value_test.go"}, {Name: "atomic_test.go", Declarations: atomicDeclarations()}},
+		"reflect":       {{Name: "visiblefields_test.go"}, {Name: "iter_test.go"}, {Name: "example_test.go", Declarations: []string{"ExampleStructTag_Lookup"}}, {Name: "set_test.go", Declarations: []string{"TestImplicitSetConversion", "TestImplicitSendConversion", "TestImplicitCallConversion", "TestImplicitAppendConversion"}}, {Name: "all_test.go", Declarations: []string{"shouldPanic", "TestTypeOverflow", "TestInitFuncTypes"}}},
 		"time": {{Name: "format_test.go", Declarations: []string{"TimeFormatTest", "rfc3339Formats", "TestRFC3339Conversion", "FormatTest", "formatTests", "TestFormat", "goStringTests", "TestGoString", "TestFormatSingleDigits", "TestFormatShortYear", "TestNoonIs12PM", "TestMidnightIs12AM", "Test12PMIsNoon", "Test12AMIsMidnight"}}, {Name: "example_test.go"}, {Name: "time_test.go", Declarations: []string{
 			"durationTests", "TestDurationString", "parseDurationTests", "TestParseDuration", "parseDurationErrorTests", "TestParseDurationErrors", "TestParseDurationRoundTrip",
 			"nsDurationTests", "TestDurationNanoseconds", "usDurationTests", "TestDurationMicroseconds", "msDurationTests", "TestDurationMilliseconds",
@@ -105,6 +106,16 @@ func TestSelectedUpstream(t *testing.T) {
 					file, ok := selectedFiles[test.File]
 					if ok && (len(file.Declarations) == 0 || slices.Contains(file.Declarations, test.Name)) && test.Eligible && test.Kind != "Benchmark" {
 						names = append(names, regexp.QuoteMeta(test.Name))
+						if test.Kind == "Fuzz" {
+							corpus := filepath.Join("testdata", "fuzz", test.Name)
+							if _, err := os.Stat(filepath.Join(dir, corpus)); err == nil {
+								if err := os.CopyFS(filepath.Join(fixture, corpus), os.DirFS(filepath.Join(dir, corpus))); err != nil {
+									t.Fatal(err)
+								}
+							} else if !os.IsNotExist(err) {
+								t.Fatal(err)
+							}
+						}
 					}
 				}
 			}

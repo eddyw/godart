@@ -1,12 +1,45 @@
 package load_test
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/eddyw/godart/internal/load"
 )
+
+func TestExternalOnlyFuzzCorpus(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"go.mod":                       "module example.com/external\n\ngo 1.27\n",
+		"external_test.go":             "package external_test\nimport \"testing\"\nfunc FuzzText(f *testing.F) { f.Fuzz(func(t *testing.T, s string) {}) }\n",
+		"testdata/fuzz/FuzzText/input": "go test fuzz v1\nstring(\"corpus\")\n",
+	}
+	for name, content := range files {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := load.LoadTests(dir, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Binaries) != 1 {
+		t.Fatalf("got %d binaries, want 1", len(result.Binaries))
+	}
+	bin := result.Binaries[0]
+	if bin.Dir != dir {
+		t.Errorf("directory = %q, want %q", bin.Dir, dir)
+	}
+	if !strings.Contains(string(bin.Source), `Name: "input", Data: "go test fuzz v1\nstring(\"corpus\")\n"`) {
+		t.Fatalf("missing corpus in entry point:\n%s", bin.Source)
+	}
+}
 
 func loadTests(t *testing.T) *load.Result {
 	t.Helper()
