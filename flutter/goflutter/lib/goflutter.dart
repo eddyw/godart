@@ -40,4 +40,7 @@ export 'src/identity.dart'
         goStorageBucket,
         goTextController;
 export 'src/node.dart' show GoNode;
-export 'src/runtime.dart' show GoCall, GoRuntime, goSetCall;
+export 'src/runtime.dart'
+    show GoCall, GoGeneratedCall, GoRuntime, goRegisterCalls, goSetCall;
+
+export 'src/paint.dart' show goPainter;

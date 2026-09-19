@@ -94,21 +94,26 @@ func (a *app) cacheDir() string {
 	return filepath.Join(a.dir, ".dart_tool", "glutter")
 }
 
-// writeHost writes the generated host when the set of node types changed. It
-// reports whether it wrote the file.
-//
-// nodegen reads the whole public API of Flutter, thus a run takes about 8
-// seconds. The set of node types changes only when the application names a new
-// widget, and the cache below holds the set of the run before.
+// writeHost refreshes the host after a node or dependency input changes.
 func (a *app) writeHost() (bool, error) {
+	if _, err := os.Stat(filepath.Join(a.dir, ".dart_tool", "package_config.json")); os.IsNotExist(err) {
+		if err := run1(a.dir, "flutter", "pub", "get"); err != nil {
+			return false, err
+		}
+	}
 	names, err := a.nodeNames()
 	if err != nil {
 		return false, err
 	}
+	inputs, err := a.hostInputs()
+	if err != nil {
+		return false, err
+	}
+	key := names + "\n" + inputs
 	cache := filepath.Join(a.cacheDir(), "nodes.txt")
 	old, _ := os.ReadFile(cache)
 	_, missing := os.Stat(a.hostPath())
-	if string(old) == names && missing == nil {
+	if string(old) == key && missing == nil {
 		return false, nil
 	}
 	if err := a.nodegen(names); err != nil {
@@ -117,7 +122,7 @@ func (a *app) writeHost() (bool, error) {
 	if err := os.MkdirAll(a.cacheDir(), 0o755); err != nil {
 		return false, err
 	}
-	return true, os.WriteFile(cache, []byte(names), 0o644)
+	return true, os.WriteFile(cache, []byte(key), 0o644)
 }
 
 // nodeNames gives the node types of the last build of this process. The filter
@@ -195,7 +200,7 @@ func (a *app) nodegen(names string) error {
 		return err
 	}
 	return run1(dir, "dart", "run", "bin/nodegen.dart", "host",
-		filepath.Join(a.root, "flutter", "goflutter"), a.hostPath(), f.Name())
+		a.dir, a.hostPath(), f.Name())
 }
 
 // after compiles the Go module and it then runs the flutter command.

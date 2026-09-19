@@ -4,13 +4,15 @@ import 'package:goflutter/goflutter.dart';
 import 'package:goruntime/goruntime.dart';
 
 final class CoreBridge implements GoBridge {
-  const CoreBridge();
+  const CoreBridge({this.root});
+
+  final Iface? Function()? root;
 
   @override
   void init() => app.$init();
 
   @override
-  Iface? build() => app.Tree();
+  Iface? build() => root == null ? app.Tree() : root!();
 
   @override
   int newWatch() => $ix(ui.NewWatch());

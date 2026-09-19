@@ -27,7 +27,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// nodegen: flutter=3.47.2
+// nodegen: flutter=3.47.5
 
 package ui
 
@@ -755,6 +755,12 @@ type Banner struct {
 
 	// The directionality of the layout.
 	LayoutDirection *string
+
+	// The color of the banner.
+	Color *Color
+
+	// The style of the text shown on the banner.
+	TextStyle *TextStyle
 }
 
 // Baseline maps Baseline of package:flutter/widgets.dart.
@@ -1040,6 +1046,12 @@ type Container struct {
 //
 // A widget that provides a canvas on which to draw during the paint phase.
 type CustomPaint struct {
+	// The painter that paints before the children.
+	Painter *Painter
+
+	// The painter that paints after the children.
+	ForegroundPainter *Painter
+
 	// The size that this CustomPaint should aim for, given the layout
 	// constraints, if there is no child.
 	Size *Size
@@ -1296,6 +1308,10 @@ type Dismissible struct {
 	// The amount of time the widget will spend contracting before onDismissed
 	// is called.
 	ResizeDuration *int
+
+	// Defines the duration for card to dismiss or to come back to original
+	// position if not dismissed.
+	MovementDuration *int
 
 	// Defines the end offset across the main axis after the card is dismissed.
 	CrossAxisEndOffset *float64
@@ -1562,7 +1578,11 @@ type EditableText struct {
 	RestorationId *string
 
 	// Whether iOS 14 Scribble features are enabled for this widget.
-	ScribbleEnabled               *bool
+	ScribbleEnabled *bool
+
+	// Whether this input supports stylus handwriting, where the user can write
+	// directly on top of a field.
+	StylusHandwritingEnabled      *bool
 	EnableIMEPersonalizedLearning *bool
 	EnableInlinePrediction        *bool
 }
@@ -1668,8 +1688,14 @@ type FadeInImage struct {
 	// A semantic description of the image.
 	ImageSemanticLabel *string
 
+	// The duration of the fade-out animation for the placeholder.
+	FadeOutDuration *int
+
 	// The curve of the fade-out animation for the placeholder.
 	FadeOutCurve *string
+
+	// The duration of the fade-in animation for the image.
+	FadeInDuration *int
 
 	// The curve of the fade-in animation for the image.
 	FadeInCurve *string
@@ -1750,8 +1776,14 @@ type FadeInImageAssetNetwork struct {
 	// A semantic description of the image.
 	ImageSemanticLabel *string
 
+	// The duration of the fade-out animation for the placeholder.
+	FadeOutDuration *int
+
 	// The curve of the fade-out animation for the placeholder.
 	FadeOutCurve *string
+
+	// The duration of the fade-in animation for the image.
+	FadeInDuration *int
 
 	// The curve of the fade-in animation for the image.
 	FadeInCurve *string
@@ -1836,8 +1868,14 @@ type FadeInImageMemoryNetwork struct {
 	// A semantic description of the image.
 	ImageSemanticLabel *string
 
+	// The duration of the fade-out animation for the placeholder.
+	FadeOutDuration *int
+
 	// The curve of the fade-out animation for the placeholder.
 	FadeOutCurve *string
+
+	// The duration of the fade-in animation for the image.
+	FadeInDuration *int
 
 	// The curve of the fade-in animation for the image.
 	FadeInCurve *string
@@ -2008,6 +2046,10 @@ type FlutterLogo struct {
 	// Whether and where to draw the "Flutter" text.
 	Style *string
 
+	// The length of time for the animation if the style or textColor
+	// properties are changed.
+	Duration *int
+
 	// The curve for the logo animation if the style or textColor change.
 	Curve *string
 }
@@ -2086,6 +2128,13 @@ type FocusScopeWithExternalFocusNode struct {
 	// Focus widget.
 	ParentNode *FocusKey
 
+	// True if this widget will be selected as the initial focus when no other
+	// node in its scope is currently focused.
+	Autofocus *bool
+
+	// Include semantics information in this widget.
+	IncludeSemantics *bool
+
 	// Handler called when the focus changes.
 	OnFocusChange func(bool)
 }
@@ -2120,8 +2169,15 @@ type FocusWithExternalFocusNode struct {
 	// Focus widget.
 	ParentNode *FocusKey
 
+	// True if this widget will be selected as the initial focus when no other
+	// node in its scope is currently focused.
+	Autofocus *bool
+
 	// Handler called when the focus changes.
 	OnFocusChange func(bool)
+
+	// Include semantics information in this widget.
+	IncludeSemantics *bool
 }
 
 // FocusableActionDetector maps FocusableActionDetector of package:flutter/widgets.dart.
@@ -3185,6 +3241,9 @@ type InteractiveViewer struct {
 	// The minimum allowed scale.
 	MinScale *float64
 
+	// Changes the deceleration behavior after a gesture.
+	InteractionEndFrictionCoefficient *float64
+
 	// If false, the user will be prevented from panning.
 	PanEnabled *bool
 
@@ -3289,6 +3348,14 @@ type LayoutId struct {
 //
 // A box that limits its size only when it's unconstrained.
 type LimitedBox struct {
+	// The maximum width limit to apply in the absence of a maxWidth
+	// constraint.
+	MaxWidth *float64
+
+	// The maximum height limit to apply in the absence of a maxHeight
+	// constraint.
+	MaxHeight *float64
+
 	// The widget below this widget in the tree.
 	Child Node
 }
@@ -3788,6 +3855,9 @@ type NavigationToolbar struct {
 	// Whether to align the middle widget to the center of this widget or next
 	// to the leading widget when false.
 	CenterMiddle *bool
+
+	// The spacing around the middle widget on horizontal axis.
+	MiddleSpacing *float64
 }
 
 // Navigator maps Navigator of package:flutter/widgets.dart.
@@ -4605,6 +4675,11 @@ type RawScrollbar struct {
 	// The color of the scrollbar thumb.
 	ThumbColor *Color
 
+	// The preferred smallest size the scrollbar thumb can shrink to when the
+	// total scrollable extent is large, the current visible viewport is small,
+	// and the viewport is not overscrolled.
+	MinThumbLength *float64
+
 	// The preferred smallest size the scrollbar thumb can shrink to when
 	// viewport is overscrolled.
 	MinOverscrollLength *float64
@@ -4617,6 +4692,16 @@ type RawScrollbar struct {
 
 	// The color of the scrollbar track's border.
 	TrackBorderColor *Color
+
+	// The Duration of the fade animation.
+	FadeDuration *int
+
+	// The Duration of time until the fade animation begins.
+	TimeToFade *int
+
+	// The Duration of time that a LongPress will trigger the drag gesture of
+	// the scrollbar thumb.
+	PressDuration *int
 
 	// Whether the Scrollbar should be interactive and respond to dragging on
 	// the thumb, or tapping in the track area.
@@ -5055,6 +5140,9 @@ type Semantics struct {
 type SemanticsDebugger struct {
 	// The widget below this widget in the tree.
 	Child Node
+
+	// The TextStyle to use when rendering semantics labels.
+	LabelStyle *TextStyle
 }
 
 // SemanticsFromProperties maps Semantics.fromProperties of package:flutter/widgets.dart.

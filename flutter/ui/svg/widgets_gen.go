@@ -50,7 +50,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// nodegen: flutter=3.47.2 flutter_svg=2.3.0
+// nodegen: flutter=3.47.5 flutter_svg=2.3.0
 
 package svg
 
@@ -73,6 +73,8 @@ import "gart.dev/ui"
 // Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
+//
+// ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 type SvgPictureAsset struct {
 	AssetName string
 
@@ -109,6 +111,7 @@ type SvgPictureAsset struct {
 	// The content will be clipped (or not) according to this option.
 	ClipBehavior     *string
 	Color            *ui.Color
+	ColorBlendMode   *string
 	CacheColorFilter *bool
 }
 
@@ -117,6 +120,8 @@ type SvgPictureAsset struct {
 // A widget that will parse SVG data for rendering on screen.
 //
 // Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type SvgPictureMemory struct {
@@ -145,6 +150,7 @@ type SvgPictureMemory struct {
 	// data.
 	PlaceholderBuilder ui.Builder
 	Color              *ui.Color
+	ColorBlendMode     *string
 
 	// The label for this picture.
 	SemanticsLabel *string
@@ -162,6 +168,8 @@ type SvgPictureMemory struct {
 // A widget that will parse SVG data for rendering on screen.
 //
 // Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type SvgPictureNetwork struct {
@@ -190,6 +198,7 @@ type SvgPictureNetwork struct {
 	// data.
 	PlaceholderBuilder ui.Builder
 	Color              *ui.Color
+	ColorBlendMode     *string
 
 	// The label for this picture.
 	SemanticsLabel *string
@@ -207,6 +216,8 @@ type SvgPictureNetwork struct {
 // A widget that will parse SVG data for rendering on screen.
 //
 // Fit takes "fill", "contain", "cover", "fitWidth", "fitHeight", "none", or "scaleDown".
+//
+// ColorBlendMode takes "clear", "src", "dst", "srcOver", "dstOver", "srcIn", "dstIn", "srcOut", "dstOut", "srcATop", "dstATop", "xor", "plus", "modulate", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion", "multiply", "hue", "saturation", "color", or "luminosity".
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type SvgPictureString struct {
@@ -235,6 +246,7 @@ type SvgPictureString struct {
 	// data.
 	PlaceholderBuilder ui.Builder
 	Color              *ui.Color
+	ColorBlendMode     *string
 
 	// The label for this picture.
 	SemanticsLabel *string

@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.1.1
+  cupertino_ui: ^1.0.2
   goflutter:
     path: ../../goflutter
   gocore:

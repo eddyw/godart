@@ -1,4 +1,5 @@
 import 'read.dart';
+import 'services.dart';
 
 /// writeDart gives the Dart source of the generated host. 1 case builds 1
 /// Flutter widget from 1 node of the Go tree.
@@ -15,7 +16,12 @@ String writeDart(Reading r, {Set<String>? only, Set<String>? texts}) {
   b.writeln('// ignore_for_file: unnecessary_import');
   b.writeln();
   final kept = r.widgets
-      .where((w) => only == null || only.contains(w.goName))
+      .where(
+        (w) =>
+            only == null ||
+            only.contains(w.kind) ||
+            (w.pack.prefix.isEmpty && only.contains(w.goName)),
+      )
       .toList();
   final usedEnums = <String>{};
   for (final w in kept) {
@@ -34,17 +40,27 @@ String writeDart(Reading r, {Set<String>? only, Set<String>? texts}) {
   // converter of an enum names its type, thus the library of each enum joins
   // the list.
   final imports = <String>{
+    if (r.functions.isNotEmpty) 'dart:convert',
     'package:flutter/widgets.dart',
     'package:goruntime/goruntime.dart',
     // goAppIcons names Icons, and the pack of Material exports it.
     'package:material_ui/material_ui.dart',
-    for (final w in kept) w.pack.uri,
+    for (final w in kept)
+      if (w.pack.prefix.isEmpty) w.pack.uri,
     for (final w in kept) ...w.needed,
     for (final name in usedEnums)
       if (r.visible[name] != null) r.visible[name]!,
   }.toList()..sort();
   for (final uri in imports) {
     b.writeln("import '$uri';");
+  }
+  final aliases = {
+    for (final f in r.functions) f.pack.prefix: f.pack.uri,
+    for (final w in kept)
+      if (w.pack.prefix.isNotEmpty) w.pack.prefix: w.pack.uri,
+  };
+  for (final entry in aliases.entries) {
+    b.writeln("import '${entry.value}' as ${entry.key};");
   }
   b.writeln();
   b.writeln("import 'package:goflutter/goflutter.dart';");
@@ -87,9 +103,13 @@ String writeDart(Reading r, {Set<String>? only, Set<String>? texts}) {
   b.writeln('void goGenInstall() {');
   b.writeln('  goSetWidgets(goGenWidget);');
   b.writeln('  goIcons.addAll(goAppIcons);');
+  b.writeln(
+    r.functions.isNotEmpty ? '  goGenServices();' : '  goRegisterCalls({});',
+  );
   b.writeln('}');
 
   writeEnums(b, r, usedEnums);
+  writeServicesDart(b, r);
   return b.toString();
 }
 
@@ -244,6 +264,8 @@ String readExpr(Param p, int at) {
       return 'goButtonStyle(n.nested($f))';
     case 'image':
       return 'goImage(n.nested($f))';
+    case 'painter':
+      return 'goPainter(n.nested($f))';
     case 'decoration':
       return 'goDecoration(n.nested($f))';
     case 'focusKey':

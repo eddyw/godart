@@ -308,7 +308,63 @@ constructor defaults, and widget reassembly. It needs no local example files.
 
 `nodegen report <project> -all` lists unsupported constructor members with their types.
 A widget name alone does not imply complete support for its fields.
-For example, `CustomPaint` does not yet expose `CustomPainter` callbacks.
+`CustomPaint` exposes synchronous Go painters for rectangles, circles, and lines.
+The canvas expires when the callback returns. Change `Painter.Revision` when
+the callback or its output changes. Paths, text, hit tests, and painter semantics
+remain outside this adapter.
+
+## Application-owned bindings (experimental)
+
+`glutter bind` reads `glutter.bindings.json` from the Flutter application.
+It uses that application's resolved dependencies and writes typed Go packages.
+The shared core supplies nodes, signals, callbacks, controllers, and value types.
+A Go design library can compose these primitives without a Dart widget class
+for each Go component. A Dart design library uses generated constructor bindings.
+
+After the application's first `glutter gen`, resolve dependencies with
+`flutter pub get`. Add a manifest before Go code imports the new binding package:
+
+```json
+{
+  "version": 1,
+  "libraries": [{
+    "uri": "package:my_app/brand.dart",
+    "go_import": "example.com/my_app/bindings/brand",
+    "directory": "go/bindings/brand",
+    "symbols": ["Badge"],
+    "functions": ["greeting"]
+  }]
+}
+```
+
+Run `glutter bind`, then import the generated package and run `glutter gen`.
+Repeat `glutter bind` after a dependency API or manifest change.
+Commit the manifest, generated Go declarations, and surface receipt together.
+The receipt lists generated files and unsupported members. The generator removes
+obsolete files from its previous receipt and refuses to replace handwritten files.
+Application code must not edit generated files.
+
+`symbols` selects Go constructor names, including named constructor variants.
+`functions` selects public Dart top-level functions. Both lists use explicit names.
+Equal widget names in different packages retain separate identities.
+An unsupported required constructor parameter stops generation.
+An unsupported optional parameter appears in the surface receipt and a warning.
+Custom object parameters, custom enums, and generic functions remain unsupported.
+
+The service adapter accepts required `String`, `int`, `double`, and `bool`
+parameters. Results can use those types directly, through `Future`, or through
+`Stream`. A generated Go function returns a value and an error. Call it from
+a goroutine. A stream exposes `Next` and `Cancel`. Runtime disposal cancels
+active streams. Dart exceptions become Go errors.
+
+Services currently use JSON. They do not preserve object identity, arbitrary
+Go string bytes, non-finite floats, or integers beyond the target's exact range.
+Widget callbacks retain the existing direct adapters. This prototype does not
+provide general Dart object interop or the full Canvas API.
+
+The maintained `flutter/testdata/core` fixture covers Material and Cupertino
+bindings, Go and Dart brand components, services, paint, and existing core behavior.
+The repository retains its existing design-library packages during migration.
 
 The host omits unset arguments with inaccessible defaults. Dart then supplies
 the original default. Explicit Go values still reach those parameters.

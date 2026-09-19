@@ -1,4 +1,9 @@
-import 'dart:async';
+import 'dart:ui' as dart_ui;
+
+import 'package:core_fixture/services.dart' as services;
+
+import 'package:core_fixture/brand.dart' as brand;
+import 'package:core_fixture/other_brand.dart' as other;
 
 import 'package:core_fixture/bridge.dart';
 import 'package:core_fixture/widgets_gen.dart';
@@ -6,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gocore/app.dart' as app;
 import 'package:goflutter/goflutter.dart';
+import 'package:goruntime/goruntime.dart';
 
 Widget harness() {
   return const MaterialApp(home: GoApp(bridge: CoreBridge()));
@@ -13,10 +19,107 @@ Widget harness() {
 
 void main() {
   setUp(() {
-    goSetWidgets(goGenWidget);
+    goGenInstall();
     goSetCall((String name, String arg) async => '$name: $arg');
     app.$init();
     app.Restart();
+  });
+
+  test('Go paint callbacks draw pixels and expire with the canvas', () async {
+    final rt = GoRuntime(const CoreBridge());
+    final widget = goGenWidget(GoNode(app.PaintTree()!), rt) as CustomPaint;
+    final painter = widget.painter!;
+    final unchanged =
+        goGenWidget(GoNode(app.PaintRevision($gi(0))!), rt) as CustomPaint;
+    final changed =
+        goGenWidget(GoNode(app.PaintRevision($gi(1))!), rt) as CustomPaint;
+    expect(unchanged.painter!.shouldRepaint(painter), false);
+    expect(changed.painter!.shouldRepaint(painter), true);
+    final recorder = dart_ui.PictureRecorder();
+    final canvas = dart_ui.Canvas(recorder);
+    painter.paint(canvas, const Size(40, 40));
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(40, 40);
+    final data = (await image.toByteData())!;
+    int pixel(int x, int y) => data.getUint32((y * 40 + x) * 4);
+    expect(pixel(1, 1), 0xff0000ff);
+    expect(pixel(20, 20), 0x00ff00ff);
+    expect(pixel(20, 35), 0x0000ffff);
+    expect(app.PaintCalls(), greaterThan(0));
+    expect(app.EscapedCanvas, throwsStateError);
+    image.dispose();
+    picture.dispose();
+    rt.stop();
+  });
+
+  for (final entry in {
+    'future': 'Hello Go',
+    'error': 'service failure',
+    'stream': '16',
+    'cancel': '3',
+    'stream error': 'stream failure',
+  }.entries) {
+    testWidgets('typed service: ${entry.key}', (tester) async {
+      final before = services.cancellations;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GoApp(bridge: CoreBridge(root: app.ServiceTree)),
+        ),
+      );
+      await tester.tap(find.text(entry.key));
+      await tester.pumpAndSettle();
+      for (
+        var frame = 0;
+        frame < 20 && find.textContaining(entry.value).evaluate().isEmpty;
+        frame++
+      ) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(find.textContaining(entry.value), findsOneWidget);
+      if (entry.key == 'stream' || entry.key == 'cancel') {
+        expect(services.cancellations, before + 1);
+      }
+    });
+  }
+
+  test('runtime disposal cancels a pending stream', () async {
+    var canceled = false;
+    final controller = StreamController<int>(
+      onCancel: () {
+        canceled = true;
+      },
+    );
+    final rt = GoRuntime(const CoreBridge());
+    final id = rt.openStream(controller.stream);
+    final next = rt.nextStream(id);
+    rt.stop();
+    expect((await next)['Done'], true);
+    expect(canceled, true);
+    await controller.close();
+  });
+
+  testWidgets('application bindings compose both widget directions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: brand.Badge(
+          label: 'Dart shell',
+          child: GoApp(bridge: CoreBridge(root: app.BrandTree)),
+        ),
+      ),
+    );
+    expect(find.text('Go brand'), findsOneWidget);
+    expect(find.byType(brand.Badge), findsNWidgets(2));
+    expect(find.byType(other.Badge), findsOneWidget);
+    await tester.tap(find.text('Dart brand'));
+    await tester.pump();
+    expect(find.text('count 1'), findsOneWidget);
+    await tester.tap(find.text('material binding'));
+    await tester.pump();
+    await tester.tap(find.text('cupertino binding'));
+    await tester.pump();
+    expect(find.text('count 3'), findsOneWidget);
   });
 
   test(

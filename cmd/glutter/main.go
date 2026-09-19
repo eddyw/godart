@@ -11,6 +11,7 @@
 //	build      compile the Go source, then run flutter build
 //	test       compile the Go source, then run flutter test
 //	gen        compile the Go source and write the host
+//	bind       generate application widget and service bindings
 //	create     write the platform runner of the application
 //	doctor     report the Flutter version against the node set
 //	new        write a new application
@@ -48,6 +49,7 @@ The commands are:
 	build      compile the Go source, then run flutter build
 	test       compile the Go source, then run flutter test
 	gen        compile the Go source and write the host
+	bind       generate widget and service bindings from glutter.bindings.json
 	create     write the platform runner of the application
 	doctor     report the Flutter version against the node set
 	new        write a new application
@@ -78,6 +80,10 @@ func main() {
 		err = newApp(args)
 	case "gen":
 		err = withApp(args, func(a *app, rest []string) error { return a.gen() })
+	case "bind":
+		err = withApp(args, func(a *app, rest []string) error {
+			return run1(a.nodegenPath(), "dart", "run", "bin/nodegen.dart", "bind", a.dir)
+		})
 	case "create":
 		err = withApp(args, (*app).create)
 	case "doctor":

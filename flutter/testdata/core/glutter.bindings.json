@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "libraries": [
+    {
+      "uri": "package:core_fixture/brand.dart",
+      "go_import": "example.dev/gocore/bindings/brand",
+      "directory": "go/bindings/brand",
+      "symbols": [
+        "Badge"
+      ]
+    },
+    {
+      "uri": "package:core_fixture/other_brand.dart",
+      "go_import": "example.dev/gocore/bindings/other",
+      "directory": "go/bindings/other",
+      "symbols": [
+        "Badge"
+      ]
+    },
+    {
+      "uri": "package:material_ui/material_ui.dart",
+      "go_import": "example.dev/gocore/bindings/material",
+      "directory": "go/bindings/material",
+      "symbols": [
+        "ElevatedButton"
+      ]
+    },
+    {
+      "uri": "package:cupertino_ui/cupertino_ui.dart",
+      "go_import": "example.dev/gocore/bindings/cupertino",
+      "directory": "go/bindings/cupertino",
+      "symbols": [
+        "CupertinoButton"
+      ]
+    },
+    {
+      "uri": "package:core_fixture/services.dart",
+      "go_import": "example.dev/gocore/bindings/services",
+      "directory": "go/bindings/services",
+      "symbols": [],
+      "functions": [
+        "greeting",
+        "failure",
+        "numbers",
+        "broken"
+      ]
+    }
+  ]
+}

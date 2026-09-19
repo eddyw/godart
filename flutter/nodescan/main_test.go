@@ -98,3 +98,33 @@ func TestScanReportsABadPackage(t *testing.T) {
 		t.Error("scan gave no error for a package that does not compile")
 	}
 }
+
+func TestScanKeepsApplicationLibraryIdentity(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"go.mod":        "module probe.dev/app\n\ngo 1.27.0\n",
+		"ui/ui.go":      `package ui; type Mark struct{}; type Node interface{ IsNode() Mark }`,
+		"one/widget.go": `package one; import "probe.dev/app/ui"; type Badge struct{}; func (Badge) IsNode() ui.Mark { return ui.Mark{} }`,
+		"two/widget.go": `package two; import "probe.dev/app/ui"; type Badge struct{}; func (Badge) IsNode() ui.Mark { return ui.Mark{} }`,
+		"main.go":       `package app; import ("probe.dev/app/one"; "probe.dev/app/two"); var A = one.Badge{}; var B = two.Badge{}`,
+	}
+	for name, body := range files {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	names, _, err := scan(dir, "probe.dev/app/ui")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(names, " ")
+	for _, name := range []string{"probe.dev/app/one.Badge", "probe.dev/app/two.Badge"} {
+		if !strings.Contains(got, name) {
+			t.Fatalf("missing %s in %s", name, got)
+		}
+	}
+}

@@ -19,18 +19,24 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:nodegen/read.dart';
+import 'package:nodegen/bindings.dart';
 import 'package:nodegen/notices.dart';
 import 'package:nodegen/report.dart';
 import 'package:nodegen/write_dart.dart';
 import 'package:nodegen/write_go.dart';
 
 const _usage =
-    'usage: nodegen go     <flutter package dir> <go module dir>\n'
+    'usage: nodegen bind   <flutter package dir>\n'
+    '       nodegen go     <flutter package dir> <go module dir>\n'
     '       nodegen host   <flutter package dir> <dart file> <name list>\n'
     '       nodegen report <flutter package dir> [-all]';
 
 Future<void> main(List<String> args) async {
   final mode = args.isEmpty ? '' : args.first;
+  if (mode == 'bind' && args.length == 2) {
+    await generateBindings(args[1]);
+    return;
+  }
   const counts = <String, int>{'go': 3, 'host': 4, 'report': 2};
   final want = counts[mode];
   if (want == null ||
@@ -40,7 +46,11 @@ Future<void> main(List<String> args) async {
     return;
   }
   final clock = Stopwatch()..start();
-  final r = await read(args[1]);
+  final custom = bindings(args[1]);
+  final r = await read(
+    args[1],
+    libraries: [...packs, ...custom.map((b) => b.pack)],
+  );
   var fields = 0;
   for (final w in r.widgets) {
     fields += w.params.length;
@@ -103,7 +113,13 @@ Future<void> main(List<String> args) async {
         );
         return;
       }
-      final kept = r.widgets.where((w) => only.$2.contains(w.goName)).length;
+      final kept = r.widgets
+          .where(
+            (w) =>
+                only.$2.contains(w.kind) ||
+                w.pack.prefix.isEmpty && only.$2.contains(w.goName),
+          )
+          .length;
       final icons = only.$1.where(r.icons.contains).length;
       stdout.writeln(
         '${args[2]} holds $kept cases of the '

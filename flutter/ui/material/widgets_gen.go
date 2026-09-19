@@ -57,7 +57,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// nodegen: flutter=3.47.2 material_ui=1.1.1
+// nodegen: flutter=3.47.5 material_ui=1.1.1
 
 package material
 
@@ -432,13 +432,20 @@ type AlertDialogAdaptive struct {
 
 	// The semantic label of the dialog used by accessibility frameworks to
 	// announce screen transitions when the dialog is opened and closed.
-	SemanticLabel          *string
-	ClipBehavior           *string
-	Shape                  *ui.Shape
-	Alignment              *string
-	Constraints            *ui.Constraints
+	SemanticLabel *string
+	InsetPadding  *ui.Insets
+	ClipBehavior  *string
+	Shape         *ui.Shape
+	Alignment     *string
+	Constraints   *ui.Constraints
+
+	// Determines whether the title and content widgets are wrapped in a
+	// scrollable.
+	Scrollable             *bool
 	ScrollController       *ui.ScrollKey
 	ActionScrollController *ui.ScrollKey
+	InsetAnimationDuration *int
+	InsetAnimationCurve    *string
 }
 
 // AnimatedTheme maps AnimatedTheme of package:material_ui/material_ui.dart.
@@ -2271,6 +2278,9 @@ type DatePickerDialog struct {
 	OnDatePickerModeChange        func(string)
 	SwitchToInputEntryModeIcon    ui.Node
 	SwitchToCalendarEntryModeIcon ui.Node
+
+	// The amount of padding added to viewInsets on the outside of the dialog.
+	InsetPadding *ui.Insets
 }
 
 // DatePickerTheme maps DatePickerTheme of package:material_ui/material_ui.dart.
@@ -2399,8 +2409,9 @@ type Dialog struct {
 
 	// The color used as a surface tint overlay on the dialog's background
 	// color, which reflects the dialog's elevation.
-	SurfaceTintColor    *ui.Color
-	InsetAnimationCurve *string
+	SurfaceTintColor       *ui.Color
+	InsetAnimationDuration *int
+	InsetAnimationCurve    *string
 
 	// The amount of padding added to viewInsets on the outside of the dialog.
 	InsetPadding *ui.Insets
@@ -2432,8 +2443,9 @@ type Dialog struct {
 // SemanticsRole takes "none", "tab", "tabBar", "tabPanel", "dialog", "alertDialog", "table", "cell", "row", "columnHeader", "dragHandle", "spinButton", "comboBox", "menuBar", "menu", "menuItem", "menuItemCheckbox", "menuItemRadio", "list", "listItem", "form", "tooltip", "loadingSpinner", "progressBar", "hotKey", "radioGroup", "status", "alert", "complementary", "contentInfo", "main", "navigation", or "region".
 type DialogFullscreen struct {
 	// The background color of the surface of this Dialog.
-	BackgroundColor     *ui.Color
-	InsetAnimationCurve *string
+	BackgroundColor        *ui.Color
+	InsetAnimationDuration *int
+	InsetAnimationCurve    *string
 
 	// The widget below this widget in the tree.
 	Child ui.Node
@@ -2616,6 +2628,9 @@ type DrawerHeader struct {
 
 	// The padding by which to inset child.
 	Padding *ui.Insets
+
+	// The duration for animations of the decoration.
+	Duration *int
 
 	// The curve for animations of the decoration.
 	Curve *string
@@ -2816,6 +2831,9 @@ type ExpansionPanelList struct {
 	// The duration of the expansion animation.
 	AnimationDuration *int
 
+	// The padding that surrounds the panel header when expanded.
+	ExpandedHeaderPadding *ui.Insets
+
 	// Defines color for the divider when isExpanded is false.
 	DividerColor *ui.Color
 
@@ -2838,6 +2856,9 @@ type ExpansionPanelListRadio struct {
 
 	// The value of the panel that initially begins open.
 	InitialOpenPanelValue *string
+
+	// The padding that surrounds the panel header when expanded.
+	ExpandedHeaderPadding *ui.Insets
 
 	// Defines color for the divider when isExpanded is false.
 	DividerColor *ui.Color
@@ -4541,6 +4562,9 @@ type Magnifier struct {
 	// place.
 	AdditionalFocalPointOffset *ui.Offset
 
+	// The border radius for this magnifier.
+	BorderRadius *ui.Radius
+
 	// The color to tint the image in this Magnifier.
 	FilmColor *ui.Color
 
@@ -5268,6 +5292,10 @@ type NavigationDrawer struct {
 	// The index into destinations for the current selected
 	// NavigationDrawerDestination or null if no destination is selected.
 	SelectedIndex *int
+
+	// Defines the padding for NavigationDrawerDestination widgets (Drawer
+	// items).
+	TilePadding *ui.Insets
 }
 
 // NavigationDrawerDestination maps NavigationDrawerDestination of package:material_ui/material_ui.dart.
@@ -5315,6 +5343,12 @@ type NavigationIndicator struct {
 
 	// The fill color of this indicator.
 	Color *ui.Color
+
+	// The width of this indicator.
+	Width *float64
+
+	// The height of this indicator.
+	Height *float64
 
 	// The border radius of the shape of the indicator.
 	BorderRadius *ui.Radius
@@ -5510,6 +5544,9 @@ type OutlinedButtonTheme struct {
 //
 // A horizontal divider in a Material Design popup menu.
 type PopupMenuDivider struct {
+	// The height of the divider entry.
+	Height *float64
+
 	// The thickness of the line drawn within the PopupMenuDivider.
 	Thickness *float64
 
@@ -5749,6 +5786,9 @@ type RawMaterialButton struct {
 
 	// Defines how compact the button's layout will be.
 	VisualDensity *ui.Density
+
+	// Defines the button's size.
+	Constraints *ui.Constraints
 
 	// The shape of the button's Material.
 	Shape *ui.Shape
@@ -6801,6 +6841,9 @@ type SliverAppBarLarge struct {
 	Shape *ui.Shape
 
 	// This property is used to configure an AppBar.
+	ToolbarHeight *float64
+
+	// This property is used to configure an AppBar.
 	LeadingWidth *float64
 
 	// This property is used to configure an AppBar.
@@ -6919,6 +6962,9 @@ type SliverAppBarMedium struct {
 	Shape *ui.Shape
 
 	// This property is used to configure an AppBar.
+	ToolbarHeight *float64
+
+	// This property is used to configure an AppBar.
 	LeadingWidth *float64
 
 	// This property is used to configure an AppBar.
@@ -6992,6 +7038,9 @@ type SnackBar struct {
 
 	// An optional color for the close icon, if showCloseIcon is true.
 	CloseIconColor *ui.Color
+
+	// The amount of time the snack bar should be displayed.
+	Duration *int
 
 	// Whether the snack bar will stay or auto-dismiss after timeout.
 	Persist *bool
@@ -7171,6 +7220,9 @@ type SubmenuButton struct {
 
 	// Defaults to false.
 	UseRootOverlay *bool
+
+	// The duration to wait before opening the menu when the button is hovered.
+	HoverOpenDelay *int
 
 	// Whether the menu should open and close with an animation.
 	Animated *bool

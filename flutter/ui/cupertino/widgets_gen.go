@@ -57,7 +57,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// nodegen: flutter=3.47.2 cupertino_ui=1.0.2
+// nodegen: flutter=3.47.5 cupertino_ui=1.0.2
 
 package cupertino
 
@@ -133,6 +133,9 @@ type CupertinoActivityIndicator struct {
 
 	// Whether the activity indicator is running its animation.
 	Animating *bool
+
+	// Radius of the spinner widget.
+	Radius *float64
 }
 
 // CupertinoActivityIndicatorPartiallyRevealed maps CupertinoActivityIndicator.partiallyRevealed of package:cupertino_ui/cupertino_ui.dart.
@@ -141,6 +144,9 @@ type CupertinoActivityIndicator struct {
 type CupertinoActivityIndicatorPartiallyRevealed struct {
 	// Color of the activity indicator.
 	Color *ui.Color
+
+	// Radius of the spinner widget.
+	Radius *float64
 
 	// Determines the percentage of spinner ticks that will be shown.
 	Progress *float64
@@ -228,6 +234,10 @@ type CupertinoAlertDialog struct {
 	// A scroll controller that can be used to control the scrolling of the
 	// actions in the dialog.
 	ActionScrollController *ui.ScrollKey
+
+	// The duration of the animation to show when the system keyboard intrudes
+	// into the space that the dialog is placed in.
+	InsetAnimationDuration *int
 
 	// The curve to use for the animation shown when the system keyboard
 	// intrudes into the space that the dialog is placed in.
@@ -615,6 +625,9 @@ type CupertinoDatePicker struct {
 	// time and datetime dateAndTime picker modes.
 	ShowTimeSeparator *bool
 
+	// Defaults to a value that matches the default iOS date picker wheel.
+	ItemExtent *float64
+
 	// The behavior of reporting the selected date.
 	ChangeReportingBehavior *string
 }
@@ -768,6 +781,9 @@ type CupertinoFormSectionInsetGrouped struct {
 	// Sets the form section footer.
 	Footer ui.Node
 
+	// Margin around the content area of the section encapsulating children.
+	Margin *ui.Insets
+
 	// Sets the background color behind the section.
 	BackgroundColor *ui.Color
 
@@ -819,6 +835,9 @@ type CupertinoListSection struct {
 	// Sets the form section footer.
 	Footer ui.Node
 
+	// Margin around the content area of the section encapsulating children.
+	Margin *ui.Insets
+
 	// Sets the background color behind the section.
 	BackgroundColor *ui.Color
 
@@ -827,6 +846,9 @@ type CupertinoListSection struct {
 
 	// Defaults to hardEdge.
 	ClipBehavior *string
+
+	// The starting offset of a margin between two list tiles.
+	DividerMargin *float64
 
 	// Additional starting inset of the divider used between rows.
 	AdditionalDividerMargin *float64
@@ -866,6 +888,9 @@ type CupertinoListSectionInsetGrouped struct {
 
 	// Defaults to hardEdge.
 	ClipBehavior *string
+
+	// The starting offset of a margin between two list tiles.
+	DividerMargin *float64
 
 	// Additional starting inset of the divider used between rows.
 	AdditionalDividerMargin *float64
@@ -908,6 +933,13 @@ type CupertinoListTile struct {
 
 	// Padding of the content inside CupertinoListTile.
 	Padding *ui.Insets
+
+	// The leadingSize is used to constrain the width and height of leading
+	// widget.
+	LeadingSize *float64
+
+	// The horizontal space between leading widget and title.
+	LeadingToTitle *float64
 }
 
 // CupertinoListTileChevron maps CupertinoListTileChevron of package:cupertino_ui/cupertino_ui.dart.
@@ -946,6 +978,13 @@ type CupertinoListTileNotched struct {
 
 	// Padding of the content inside CupertinoListTile.
 	Padding *ui.Insets
+
+	// The leadingSize is used to constrain the width and height of leading
+	// widget.
+	LeadingSize *float64
+
+	// The horizontal space between leading widget and title.
+	LeadingToTitle *float64
 }
 
 // CupertinoMagnifier maps CupertinoMagnifier of package:cupertino_ui/cupertino_ui.dart.
@@ -955,6 +994,9 @@ type CupertinoListTileNotched struct {
 //
 // ClipBehavior takes "none", "hardEdge", "antiAlias", or "antiAliasWithSaveLayer".
 type CupertinoMagnifier struct {
+	// The size of this magnifier.
+	Size *ui.Size
+
 	// The border radius of this magnifier.
 	BorderRadius *ui.Radius
 
@@ -964,6 +1006,9 @@ type CupertinoMagnifier struct {
 
 	// Whether and how to clip the shadows that render inside the loupe.
 	ClipBehavior *string
+
+	// The border, or "rim", of this magnifier.
+	BorderSide *ui.BorderSide
 
 	// This RawMagnifier's controller.
 	InOutAnimation *ui.AnimationKey
@@ -1030,6 +1075,8 @@ type CupertinoMenuAnchor struct {
 // A large horizontal divider that is used to separate CupertinoMenuItems in
 // a CupertinoMenuAnchor.
 type CupertinoMenuDivider struct {
+	// The color of the divider.
+	Color *ui.Color
 }
 
 // CupertinoMenuItem maps CupertinoMenuItem of package:cupertino_ui/cupertino_ui.dart.
@@ -1138,6 +1185,10 @@ type CupertinoNavigationBar struct {
 	// Whether to transition between navigation bars.
 	TransitionBetweenRoutes *bool
 
+	// Tag for the navigation bar's Hero widget if transitionBetweenRoutes is
+	// true.
+	HeroTag *string
+
 	// A widget to place at the bottom of the navigation bar.
 	Bottom ui.Node
 }
@@ -1197,6 +1248,10 @@ type CupertinoNavigationBarLarge struct {
 	// Whether to transition between navigation bars.
 	TransitionBetweenRoutes *bool
 
+	// Tag for the navigation bar's Hero widget if transitionBetweenRoutes is
+	// true.
+	HeroTag *string
+
 	// A widget to place at the bottom of the navigation bar.
 	Bottom ui.Node
 }
@@ -1249,11 +1304,18 @@ type CupertinoPageTransition struct {
 //
 // ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
 type CupertinoPicker struct {
+	// Relative ratio between this picker's height and the simulated cylinder's
+	// diameter.
+	DiameterRatio *float64
+
 	// Background color behind the children.
 	BackgroundColor *ui.Color
 	OffAxisFraction *float64
 	UseMagnifier    *bool
 	Magnification   *float64
+
+	// Defaults to 1.45 to visually mimic iOS.
+	Squeeze *float64
 
 	// The behavior of reporting the selected item index.
 	ChangeReportingBehavior *string
@@ -1277,11 +1339,18 @@ type CupertinoPicker struct {
 //
 // ChangeReportingBehavior takes "onScrollEnd", or "onScrollUpdate".
 type CupertinoPickerBuilder struct {
+	// Relative ratio between this picker's height and the simulated cylinder's
+	// diameter.
+	DiameterRatio *float64
+
 	// Background color behind the children.
 	BackgroundColor *ui.Color
 	OffAxisFraction *float64
 	UseMagnifier    *bool
 	Magnification   *float64
+
+	// Defaults to 1.45 to visually mimic iOS.
+	Squeeze *float64
 
 	// The behavior of reporting the selected item index.
 	ChangeReportingBehavior *string
@@ -1321,6 +1390,10 @@ type CupertinoPickerDefaultSelectionOverlay struct {
 // An iOS-style component for creating modal overlays like dialogs and
 // action sheets.
 type CupertinoPopupSurface struct {
+	// The strength of the gaussian blur applied to the area beneath this
+	// surface.
+	BlurSigma *float64
+
 	// Whether or not to paint a translucent white on top of this surface's
 	// blurred background.
 	IsSurfacePainted *bool
@@ -1343,8 +1416,18 @@ type CupertinoScrollbar struct {
 
 	// Indicates that the scrollbar thumb should be visible, even when a scroll
 	// is not underway.
-	ThumbVisibility      *bool
-	ScrollbarOrientation *string
+	ThumbVisibility *bool
+
+	// The thickness of the scrollbar in the cross axis of the scrollable.
+	Thickness *float64
+
+	// The thickness of the scrollbar when it's being dragged by the user.
+	ThicknessWhileDragging *float64
+	ScrollbarOrientation   *string
+
+	// Distance from the scrollbar thumb's start or end to the nearest edge of
+	// the viewport in logical pixels.
+	MainAxisMargin *float64
 }
 
 // CupertinoSearchTextField maps CupertinoSearchTextField of package:cupertino_ui/cupertino_ui.dart.
@@ -1453,6 +1536,10 @@ type CupertinoSheetTransition struct {
 
 	// Whether to perform the transition linearly.
 	LinearTransition bool
+
+	// The gap between the top of the screen and the top of the sheet as a
+	// ratio of the screen height.
+	TopGap *float64
 }
 
 // CupertinoSlider maps CupertinoSlider of package:cupertino_ui/cupertino_ui.dart.
@@ -1522,6 +1609,7 @@ type CupertinoSliverNavigationBar struct {
 	EnableBackgroundFilterBlur    *bool
 	Brightness                    *string
 	TransitionBetweenRoutes       *bool
+	HeroTag                       *string
 
 	// Whether the nav bar should stretch to fill the over-scroll area.
 	Stretch *bool
@@ -1573,6 +1661,7 @@ type CupertinoSliverNavigationBarSearch struct {
 	EnableBackgroundFilterBlur    *bool
 	Brightness                    *string
 	TransitionBetweenRoutes       *bool
+	HeroTag                       *string
 
 	// Whether the nav bar should stretch to fill the over-scroll area.
 	Stretch *bool
@@ -1591,6 +1680,14 @@ type CupertinoSliverNavigationBarSearch struct {
 // A sliver widget implementing the iOS-style pull to refresh content
 // control.
 type CupertinoSliverRefreshControl struct {
+	// The amount of overscroll the scrollable must be dragged to trigger a
+	// reload.
+	RefreshTriggerPullDistance *float64
+
+	// The amount of space the refresh indicator sliver will keep holding while
+	// onRefresh's Future is still running.
+	RefreshIndicatorExtent *float64
+
 	// Callback invoked when pulled by refreshTriggerPullDistance.
 	OnRefresh ui.Task
 }
@@ -1683,8 +1780,15 @@ type CupertinoTabBar struct {
 	// BottomNavigationBarItem of the selected tab.
 	ActiveColor *ui.Color
 
+	// The foreground color of the icon and title for the
+	// BottomNavigationBarItems in the unselected state.
+	InactiveColor *ui.Color
+
 	// The size of all of the BottomNavigationBarItem icons.
 	IconSize *float64
+
+	// The height of the CupertinoTabBar.
+	Height *float64
 }
 
 // CupertinoTabScaffold maps CupertinoTabScaffold of package:cupertino_ui/cupertino_ui.dart.
@@ -2165,6 +2269,9 @@ type CupertinoTimerPicker struct {
 	// The mode of the timer picker.
 	Mode *string
 
+	// The initial duration of the countdown timer.
+	InitialTimerDuration *int
+
 	// The granularity of the minute spinner.
 	MinuteInterval *int
 
@@ -2176,6 +2283,9 @@ type CupertinoTimerPicker struct {
 
 	// Background color of timer picker.
 	BackgroundColor *ui.Color
+
+	// Defaults to a value that matches the default iOS timer picker wheel.
+	ItemExtent *float64
 
 	// Callback called when the timer duration changes.
 	OnTimerDurationChanged func(int)

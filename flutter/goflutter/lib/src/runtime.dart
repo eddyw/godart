@@ -14,6 +14,9 @@ import 'identity.dart';
 final class GoRuntime {
   final GoBridge bridge;
   final Map<int, VoidCallback> _boundaries = <int, VoidCallback>{};
+  final Map<int, StreamIterator<Object?>> _streams = {};
+  int _nextStream = 0;
+  bool _stopped = false;
 
   /// identities holds each Flutter object that a Go key names, for example the
   /// FocusNode of a ui.FocusKey.
@@ -30,6 +33,7 @@ final class GoRuntime {
   /// The hook runs each time that the run queue of Go empties. A goroutine that
   /// wakes from a timer or from a future thus reaches the screen with no poll.
   void start() {
+    _stopped = false;
     bridge.init();
     $hosted = true;
     $onIdle = tick;
@@ -38,8 +42,40 @@ final class GoRuntime {
   /// stop takes the tick off the idle hook, and it releases each Flutter
   /// object that a key names. No sweep follows the last frame of the tree.
   void stop() {
+    _stopped = true;
+    for (final stream in _streams.values) {
+      unawaited(stream.cancel());
+    }
+    _streams.clear();
     if ($onIdle == tick) $onIdle = null;
     identities.dropAll();
+  }
+
+  int openStream(Stream<Object?> stream) {
+    final id = ++_nextStream;
+    _streams[id] = StreamIterator(stream);
+    return id;
+  }
+
+  Future<Map<String, Object?>> nextStream(int id) async {
+    final stream = _streams[id];
+    if (stream == null) throw StateError('Stream $id is closed');
+    final pending = stream.moveNext();
+    try {
+      if (await pending) {
+        return {'Value': stream.current, 'Done': false};
+      }
+      _streams.remove(id);
+      return {'Done': true};
+    } catch (_) {
+      _streams.remove(id);
+      rethrow;
+    }
+  }
+
+  Future<void> cancelStream(int id) async {
+    final stream = _streams.remove(id);
+    await stream?.cancel();
   }
 
   /// bind registers the rebuild of 1 boundary.
@@ -101,10 +137,14 @@ final class GoRuntime {
     String error = '';
     final GoCall handler = goCallHandler ?? goHostCall;
     try {
-      value = await handler(name, arg);
+      final generated = _generatedCalls[name];
+      value = generated == null
+          ? await handler(name, arg)
+          : await generated(this, arg);
     } catch (e) {
       error = e.toString();
     }
+    if (_stopped) return;
     bridge.answer(id, value, error);
     tick();
   }
@@ -126,6 +166,17 @@ final class GoRuntime {
 /// it must run, and the argument and the answer each hold a text of the
 /// application.
 typedef GoCall = Future<String> Function(String name, String arg);
+
+typedef GoGeneratedCall = Future<String> Function(
+  GoRuntime runtime,
+  String payload,
+);
+
+Map<String, GoGeneratedCall> _generatedCalls = {};
+
+void goRegisterCalls(Map<String, GoGeneratedCall> calls) {
+  _generatedCalls = Map.of(calls);
+}
 
 /// goCallHandler holds the handler that goSetCall installed.
 GoCall? goCallHandler;

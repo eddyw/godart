@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "files": [
+    "go/bindings/brand/widgets_gen.go",
+    "go/bindings/other/widgets_gen.go",
+    "go/bindings/material/widgets_gen.go",
+    "go/bindings/cupertino/widgets_gen.go",
+    "go/bindings/services/services_gen.go"
+  ],
+  "functions": [
+    {
+      "name": "example.dev/gocore/bindings/services.Greeting",
+      "library": "package:core_fixture/services.dart",
+      "result": "String",
+      "future": true,
+      "stream": false
+    },
+    {
+      "name": "example.dev/gocore/bindings/services.Failure",
+      "library": "package:core_fixture/services.dart",
+      "result": "String",
+      "future": true,
+      "stream": false
+    },
+    {
+      "name": "example.dev/gocore/bindings/services.Numbers",
+      "library": "package:core_fixture/services.dart",
+      "result": "int",
+      "future": false,
+      "stream": true
+    },
+    {
+      "name": "example.dev/gocore/bindings/services.Broken",
+      "library": "package:core_fixture/services.dart",
+      "result": "int",
+      "future": false,
+      "stream": true
+    }
+  ],
+  "constructors": [
+    {
+      "kind": "example.dev/gocore/bindings/brand.Badge",
+      "library": "package:core_fixture/brand.dart",
+      "fields": [
+        "Label",
+        "Child",
+        "OnPressed"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/other.Badge",
+      "library": "package:core_fixture/other_brand.dart",
+      "fields": [
+        "Label"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/cupertino.CupertinoButton",
+      "library": "package:cupertino_ui/cupertino_ui.dart",
+      "fields": [
+        "Child",
+        "SizeStyle",
+        "Padding",
+        "Color",
+        "ForegroundColor",
+        "DisabledColor",
+        "MinSize",
+        "MinimumSize",
+        "PressedOpacity",
+        "BorderRadius",
+        "Alignment",
+        "FocusColor",
+        "FocusNode",
+        "OnFocusChange",
+        "Autofocus",
+        "MouseCursor",
+        "OnLongPress",
+        "OnPressed"
+      ]
+    },
+    {
+      "kind": "example.dev/gocore/bindings/material.ElevatedButton",
+      "library": "package:material_ui/material_ui.dart",
+      "fields": [
+        "OnPressed",
+        "OnLongPress",
+        "OnHover",
+        "OnFocusChange",
+        "Style",
+        "FocusNode",
+        "Autofocus",
+        "ClipBehavior",
+        "StatesController",
+        "Child"
+      ]
+    }
+  ],
+  "unsupported_members": []
+}

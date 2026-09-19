@@ -30,21 +30,16 @@ Future<void> main() async {
       }
     }
   }
-  for (final member in ['painter', 'foregroundPainter']) {
-    if (!result.unsupportedMembers.any(
-      (m) =>
-          m.kind == 'gart.dev/ui.CustomPaint' &&
-          m.member == member &&
-          m.type.startsWith('CustomPainter'),
-    )) {
-      throw StateError(
-        'CustomPaint.$member needs an explicit support classification',
-      );
-    }
+  final paint = result.widgets.singleWhere(
+    (w) => w.kind == 'gart.dev/ui.CustomPaint',
+  );
+  for (final name in ['Painter', 'ForegroundPainter']) {
+    if (!paint.params.any((p) => p.goName == name && p.type.kind == 'painter'))
+      throw StateError('Missing CustomPaint.$name');
   }
   if (missing.isNotEmpty)
     throw StateError('Missing fields:\n${missing.join("\n")}');
   stdout.writeln(
-    'Preserved $fields generated fields. CustomPainter gaps remain explicit.',
+    'Preserved $fields generated fields. CustomPainter callbacks are mapped.',
   );
 }

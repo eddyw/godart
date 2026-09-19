@@ -119,10 +119,22 @@ func scan(dir, pkg string) ([]string, []string, error) {
 		}
 		for _, obj := range p.TypesInfo.Uses {
 			name, ok := obj.(*types.TypeName)
-			if !ok || name.Pkg() == nil || !inSet(name.Pkg().Path(), pkg) {
+			if !ok || name.Pkg() == nil {
 				continue
 			}
-			found[name.Name()] = true
+			if inSet(name.Pkg().Path(), pkg) {
+				found[name.Name()] = true
+				continue
+			}
+			method, _, _ := types.LookupFieldOrMethod(name.Type(), false, nil, "IsNode")
+			fn, ok := method.(*types.Func)
+			if !ok || fn.Signature().Params().Len() != 0 || fn.Signature().Results().Len() != 1 {
+				continue
+			}
+			mark, ok := types.Unalias(fn.Signature().Results().At(0).Type()).(*types.Named)
+			if ok && mark.Obj().Pkg() != nil && mark.Obj().Pkg().Path() == pkg && mark.Obj().Name() == "Mark" {
+				found[name.Pkg().Path()+"."+name.Name()] = true
+			}
 		}
 		for _, tv := range p.TypesInfo.Types {
 			if tv.Value == nil || tv.Value.Kind() != constant.String {

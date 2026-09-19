@@ -104,6 +104,8 @@ flutter-test: build
 	cd flutter/goflutter && $(FLUTTER) test
 	cd flutter/bench/flutter && $(FLUTTER) test
 	cd flutter/testdata/core && ../../../build/glutter gen
+	cd flutter/testdata/core && ../../../build/glutter bind
+	cd flutter/nodegen && dart run test/bindings_test.dart
 	cd flutter/testdata/core && $(FLUTTER) pub get && $(FLUTTER) test
 
 # surface measures how much of each package of the standard library the

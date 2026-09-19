@@ -15,7 +15,19 @@ import 'package:analyzer/dart/element/type.dart';
 /// the widgets of 1 package of pub.dev, thus a package that an application
 /// does not name costs it no Dart.
 class Pack {
-  const Pack(this.uri, this.short, this.goPath, this.goPackage);
+  const Pack(
+    this.uri,
+    this.short,
+    this.goPath,
+    this.goPackage, {
+    this.prefix = '',
+    this.symbols,
+    this.functions = const {},
+  });
+
+  final String prefix;
+  final Set<String>? symbols;
+  final Set<String> functions;
 
   /// The Dart library that the reader walks.
   final String uri;
@@ -175,7 +187,10 @@ class WidgetSpec {
   /// descriptor.
   String get kind => '${pack.goPath}.$goName';
 
-  String get dartCall => ctor.isEmpty ? dartClass : '$dartClass.$ctor';
+  String get dartCall {
+    final name = pack.prefix.isEmpty ? dartClass : '${pack.prefix}.$dartClass';
+    return ctor.isEmpty ? name : '$name.$ctor';
+  }
 }
 
 /// A widget that the reader dropped, and the cause.
@@ -196,6 +211,7 @@ class Skipped {
 }
 
 class Reading {
+  final functions = <FunctionSpec>[];
   final unsupportedMembers =
       <({String kind, String member, String type, String reason})>[];
   final noticeSources = <Pack, Set<String>>{};
@@ -224,14 +240,14 @@ class Reading {
 }
 
 /// read walks the library of each pack and maps each widget constructor.
-Future<Reading> read(String root) async {
+Future<Reading> read(String root, {List<Pack> libraries = packs}) async {
   final path = Directory(root).absolute.resolveSymbolicLinksSync();
   final collection = AnalysisContextCollection(includedPaths: <String>[path]);
   final session = collection.contextFor(path).currentSession;
   final out = Reading();
   final seen = <String>{};
 
-  for (final uri in candidates) {
+  for (final uri in {...candidates, ...libraries.map((p) => p.uri)}) {
     final result = await session.getLibraryByUri(uri);
     if (result is! LibraryElementResult) continue;
     for (final name in result.element.exportNamespace.definedNames2.keys) {
@@ -253,10 +269,23 @@ Future<Reading> read(String root) async {
     }
   }
 
-  for (final pack in packs) {
+  for (final pack in libraries) {
     final result = await session.getLibraryByUri(pack.uri);
     if (result is! LibraryElementResult) {
       throw StateError('${pack.uri} does not resolve: $result');
+    }
+    for (final name in pack.functions) {
+      final element = result.element.exportNamespace.definedNames2[name];
+      if (element is! TopLevelFunctionElement ||
+          element.typeParameters.isNotEmpty) {
+        throw StateError(
+          '${pack.uri}.$name: expected a non-generic public function',
+        );
+      }
+      out.functions.add(readFunction(pack, element));
+      out.noticeSources
+          .putIfAbsent(pack, () => {})
+          .add(element.firstFragment.libraryFragment.source.fullName);
     }
     for (final entry in result.element.exportNamespace.definedNames2.entries) {
       final element = entry.value;
@@ -268,7 +297,11 @@ Future<Reading> read(String root) async {
       for (final ctor in element.constructors) {
         if (!ctor.isPublic) continue;
         final goName = goStructName(name, ctor.name ?? '');
-        if (!seen.add(goName)) continue;
+        if (pack.symbols != null && !pack.symbols!.contains(goName)) continue;
+        final identity = pack.prefix.isEmpty
+            ? goName
+            : '${pack.goPath}.$goName';
+        if (!seen.add(identity)) continue;
         final sources = out.noticeSources.putIfAbsent(pack, () => <String>{});
         readCtor(out, pack, name, ctor, goName, docsOf(element, sources));
       }
@@ -276,6 +309,78 @@ Future<Reading> read(String root) async {
   }
   out.widgets.sort((a, b) => a.goName.compareTo(b.goName));
   return out;
+}
+
+class FunctionSpec {
+  FunctionSpec(
+    this.pack,
+    this.name,
+    this.params,
+    this.goResult,
+    this.dartResult,
+    this.future,
+    this.stream,
+  );
+  final Pack pack;
+  final String name;
+  final List<({String name, String goType, String dartType, bool named})>
+  params;
+  final String goResult;
+  final String dartResult;
+  final bool future;
+  final bool stream;
+  String get goName => goFieldName(name);
+  String get key => '${pack.goPath}.$goName';
+}
+
+const serviceTypes = {
+  'String': 'string',
+  'int': 'int',
+  'double': 'float64',
+  'bool': 'bool',
+};
+
+FunctionSpec readFunction(Pack pack, TopLevelFunctionElement function) {
+  final params =
+      <({String name, String goType, String dartType, bool named})>[];
+  for (final param in function.formalParameters) {
+    final type = param.type.getDisplayString();
+    final go = serviceTypes[type];
+    if (go == null || !param.isRequired) {
+      throw StateError(
+        '${pack.uri}.${function.name}.${param.name}: unsupported service parameter $type',
+      );
+    }
+    params.add((
+      name: param.name!,
+      goType: go,
+      dartType: type,
+      named: param.isNamed,
+    ));
+  }
+  var result = function.returnType;
+  final future = result.isDartAsyncFuture;
+  final stream =
+      result is InterfaceType &&
+      result.element.name == 'Stream' &&
+      result.element.library.uri.toString() == 'dart:async';
+  if (future || stream) result = (result as InterfaceType).typeArguments.single;
+  final dartResult = result.getDisplayString();
+  final goResult = serviceTypes[dartResult];
+  if (goResult == null) {
+    throw StateError(
+      '${pack.uri}.${function.name}: unsupported service result ${function.returnType}',
+    );
+  }
+  return FunctionSpec(
+    pack,
+    function.name!,
+    params,
+    goResult,
+    dartResult,
+    future,
+    stream,
+  );
 }
 
 void readCtor(
@@ -447,6 +552,7 @@ const _scalars = <String, GoType>{
   'Color': GoType('Color', 'color'),
   'IconData': GoType('string', 'icon'),
   'Duration': GoType('int', 'millis'),
+  'CustomPainter': GoType('Painter', 'painter'),
   'AlignmentGeometry': GoType('string', 'alignment'),
   'Alignment': GoType('string', 'alignmentXY'),
   'Curve': GoType('string', 'curve'),
@@ -629,8 +735,31 @@ const _cb1Args = <String>{
 
 /// mapType gives the Go type of a Dart type, or null when no form fits.
 GoType? mapType(Reading out, DartType t) {
+  if (!knownValueType(t)) return null;
   if (t is FunctionType) return mapFunction(out, t);
+  return mapKnownType(out, t);
+}
 
+bool knownValueType(DartType t) {
+  if (t is FunctionType) {
+    return knownValueType(t.returnType) &&
+        t.formalParameters.every((p) => knownValueType(p.type));
+  }
+  if (t is InterfaceType) {
+    final uri = t.element.library.uri.toString();
+    if (!uri.startsWith('dart:') &&
+        !uri.startsWith('package:flutter/') &&
+        !uri.startsWith('package:material_ui/') &&
+        !uri.startsWith('package:cupertino_ui/') &&
+        !uri.startsWith('package:vector_math/')) {
+      return false;
+    }
+    return t.typeArguments.every(knownValueType);
+  }
+  return true;
+}
+
+GoType? mapKnownType(Reading out, DartType t) {
   // The exact text of the type comes first, because the nullability of an
   // argument of a generic type changes the Dart type of the converter. A
   // WidgetStateProperty<Color?> takes no value of a WidgetStateProperty<Color>.
