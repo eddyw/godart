@@ -298,3 +298,17 @@ The largest groups that stay out on 2026-09-03, with 119 dropped constructors:
 | A live object of the host, for example `EditableTextState` or `ViewportOffset` | 12 | The object lives inside 1 build of Flutter, and a Go value cannot hold it. |
 | A builder that takes an `Animation<double>` | 9 | The animation belongs to 1 item of a list, and the key table holds 1 object for each name. |
 | A `BuildContext` | 5 | A Go value holds none. |
+
+## Capability validation
+
+`make flutter-test` verifies generated fields against the retained Go declarations.
+It also runs the maintained `flutter/testdata/core` fixture from Go through Flutter.
+The fixture covers signals, callbacks, lazy lists, focus, controllers, disposal,
+constructor defaults, and widget reassembly. It needs no local example files.
+
+`nodegen report <project> -all` lists unsupported constructor members with their types.
+A widget name alone does not imply complete support for its fields.
+For example, `CustomPaint` does not yet expose `CustomPainter` callbacks.
+
+The host omits unset arguments with inaccessible defaults. Dart then supplies
+the original default. Explicit Go values still reach those parameters.

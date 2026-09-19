@@ -91,6 +91,7 @@ dart-test:
 # own, thus the go targets of the root do not reach it. It needs no Flutter SDK.
 flutter-go:
 	cd flutter/ui && go vet ./... && go test -count=1 ./...
+	cd flutter/testdata/core/go && go vet ./... && go test -count=1 ./...
 
 # This target needs the Flutter SDK. CI runs the Go validation separately.
 flutter-test: build
@@ -99,8 +100,11 @@ flutter-test: build
 	cd flutter/bench/flutter && $(FLUTTER) pub get && $(FLUTTER) analyze
 	cd flutter/nodegen && dart pub get && dart analyze
 	cd flutter/nodegen && dart run test/notices_test.dart
+	cd flutter/nodegen && dart run test/capabilities_test.dart
 	cd flutter/goflutter && $(FLUTTER) test
 	cd flutter/bench/flutter && $(FLUTTER) test
+	cd flutter/testdata/core && ../../../build/glutter gen
+	cd flutter/testdata/core && $(FLUTTER) pub get && $(FLUTTER) test
 
 # surface measures how much of each package of the standard library the
 # compiler holds. Read docs/support.md.

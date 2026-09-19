@@ -98,6 +98,7 @@ class Param {
     required this.nullable,
     required this.defaultCode,
     required this.named,
+    this.omitDefault = false,
     this.doc = '',
   });
 
@@ -124,6 +125,8 @@ class Param {
 
   /// A named parameter. A positional parameter takes its place in the call.
   final bool named;
+
+  final bool omitDefault;
 
   /// A field that a call may leave unset takes a pointer, thus the host can
   /// tell "not set" from the zero value.
@@ -193,6 +196,8 @@ class Skipped {
 }
 
 class Reading {
+  final unsupportedMembers =
+      <({String kind, String member, String type, String reason})>[];
   final noticeSources = <Pack, Set<String>>{};
   final widgets = <WidgetSpec>[];
   final skipped = <Skipped>[];
@@ -303,6 +308,12 @@ void readCtor(
     final go = mapType(out, p.type);
     if (go == null) {
       final key = p.type.getDisplayString();
+      out.unsupportedMembers.add((
+        kind: '${pack.goPath}.$goName',
+        member: pname,
+        type: key,
+        reason: 'unsupported type',
+      ));
       out.unmapped[key] = (out.unmapped[key] ?? 0) + 1;
       if (p.isRequired) {
         out.skipped.add(Skipped(goName, pname, key));
@@ -316,10 +327,18 @@ void readCtor(
       out.skipped.add(Skipped(goName, pname, 'a positional place of its own'));
       return;
     }
-    if (!p.isRequired &&
+    final omitDefault =
+        !p.isRequired &&
         (!nullable ||
             p.defaultValueCode != null && p.defaultValueCode != 'null') &&
-        !usableDefault(out, needed, p.defaultValueCode)) {
+        !usableDefault(out, needed, p.defaultValueCode);
+    if (omitDefault && (!p.isNamed || !go.pointer)) {
+      out.unsupportedMembers.add((
+        kind: '${pack.goPath}.$goName',
+        member: pname,
+        type: p.type.getDisplayString(),
+        reason: 'inaccessible default',
+      ));
       // The host cannot write the call without the default of Flutter, and a
       // default that names a private symbol does not compile outside its
       // library.
@@ -334,6 +353,7 @@ void readCtor(
         nullable: nullable,
         defaultCode: p.defaultValueCode,
         named: p.isNamed,
+        omitDefault: omitDefault,
         doc: firstSentence(docs.fields[pname] ?? ''),
       ),
     );

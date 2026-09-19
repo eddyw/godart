@@ -59,13 +59,7 @@ String writeDart(Reading r, {Set<String>? only, Set<String>? texts}) {
 
   for (final w in kept) {
     b.writeln("    case '${w.kind}':");
-    b.writeln('      return ${w.dartCall}(');
-    for (var i = 0; i < w.params.length; i++) {
-      final p = w.params[i];
-      final arg = argExpr(w, p, i);
-      b.writeln('        ${p.named ? "${p.dartName}: " : ""}$arg,');
-    }
-    b.writeln('      );');
+    writeConstructor(b, w, '      ', 0, {});
   }
 
   b.writeln('  }');
@@ -97,6 +91,34 @@ String writeDart(Reading r, {Set<String>? only, Set<String>? texts}) {
 
   writeEnums(b, r, usedEnums);
   return b.toString();
+}
+
+void writeConstructor(
+  StringBuffer b,
+  WidgetSpec w,
+  String indent,
+  int from,
+  Set<int> omitted,
+) {
+  for (var i = from; i < w.params.length; i++) {
+    final p = w.params[i];
+    if (!p.omitDefault) continue;
+    b.writeln("${indent}if (n.raw('${p.goName}', $i) == null) {");
+    writeConstructor(b, w, '$indent  ', i + 1, {...omitted, i});
+    b.writeln('$indent}');
+    writeConstructor(b, w, indent, i + 1, omitted);
+    return;
+  }
+  b.writeln('${indent}return ${w.dartCall}(');
+  for (var i = 0; i < w.params.length; i++) {
+    if (omitted.contains(i)) continue;
+    final p = w.params[i];
+    final arg = p.omitDefault
+        ? '${readExpr(p, i)}${p.nullable ? "" : "!"}'
+        : argExpr(w, p, i);
+    b.writeln('$indent  ${p.named ? "${p.dartName}: " : ""}$arg,');
+  }
+  b.writeln('$indent);');
 }
 
 /// argExpr gives the Dart expression of 1 constructor argument. The position

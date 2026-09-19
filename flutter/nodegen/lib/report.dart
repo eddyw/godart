@@ -16,8 +16,10 @@ String report(Reading r, {bool all = false}) {
     fields += w.params.length;
   }
   b.writeln('${r.widgets.length} node types map, ${r.skipped.length} do not');
-  b.writeln('$fields fields, '
-      '${(fields / r.widgets.length).toStringAsFixed(1)} for each node');
+  b.writeln(
+    '$fields fields, '
+    '${(fields / r.widgets.length).toStringAsFixed(1)} for each node',
+  );
 
   final byLib = <String, int>{};
   for (final w in r.widgets) {
@@ -45,6 +47,19 @@ String report(Reading r, {bool all = false}) {
     b.writeln('  ... ${types.length - 25} more. Run the mode with -all.');
   }
 
+  b.writeln();
+  b.writeln('unsupported constructor members:');
+  for (final member
+      in all ? r.unsupportedMembers : r.unsupportedMembers.take(25)) {
+    b.writeln(
+      '  ${member.kind}.${member.member}: ${member.type} (${member.reason})',
+    );
+  }
+  if (!all && r.unsupportedMembers.length > 25) {
+    b.writeln(
+      '  ... ${r.unsupportedMembers.length - 25} more. Run the mode with -all.',
+    );
+  }
   b.writeln();
   b.writeln('each constructor that the reader dropped:');
   final drops = all ? r.skipped : r.skipped.take(25);
