@@ -54,8 +54,8 @@ reload later, because the host stands after the first reload.
 | Command | What it does |
 |---|---|
 | `glutter run [-d device]` | The build, the watch, `flutter run`, and a hot reload after each change. |
-| `glutter build <target>` | The build, the checks, and then `flutter build`. |
-| `glutter test` | The build, the checks, and then `flutter test`. |
+| `glutter build <target>` | Generate the application, then run `flutter build`. |
+| `glutter test` | Generate the application, then run `flutter test`. |
 | `glutter gen` | The build alone. It writes `gen/` and `lib/widgets_gen.dart`. |
 | `glutter create [platform]` | The platform runner, and the 2 permissions that a network call needs. |
 | `glutter doctor` | The Flutter of the machine against the node set. |
@@ -65,8 +65,11 @@ reload later, because the host stands after the first reload.
 Each other argument goes to the `flutter` command with no change, thus
 `glutter devices` and `glutter clean` work.
 
-`glutter run` runs `go vet` first. `glutter gen`, `glutter build`, and
-`glutter test` also run `go test`, thus a broken test stops a release build.
+Glutter compiles application code without an implicit `go vet` or `go test`.
+`glutter test` generates the application and passes its arguments to `flutter test`.
+Use `gart test` explicitly for Go tests on the Dart target.
+Use `go test` explicitly for native Go tests.
+Repository validation retains native tests and compiler parity comparisons.
 
 ## The layout
 

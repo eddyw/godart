@@ -25,7 +25,7 @@ func (a *app) run(args []string) error {
 			return err
 		}
 	}
-	if err := a.build(checks{vet: true}, false); err != nil {
+	if err := a.build(false); err != nil {
 		return err
 	}
 	if _, err := a.writeHost(); err != nil {

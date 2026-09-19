@@ -71,7 +71,7 @@ func main() {
 	case "new":
 		err = newApp(args)
 	case "gen":
-		err = withApp(args, func(a *app, rest []string) error { return a.gen(true) })
+		err = withApp(args, func(a *app, rest []string) error { return a.gen() })
 	case "create":
 		err = withApp(args, (*app).create)
 	case "doctor":

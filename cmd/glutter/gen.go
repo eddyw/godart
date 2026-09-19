@@ -12,14 +12,10 @@ import (
 	"github.com/eddyw/godart/internal/nodefilter"
 )
 
-// checks names the tests of the Go module that a command runs first.
-type checks struct{ vet, test bool }
-
 // gen compiles the Go module into Dart, and it writes the host when the set of
 // node types of the application changed.
-func (a *app) gen(full bool) error {
-	c := checks{vet: true, test: full}
-	if err := a.build(c, true); err != nil {
+func (a *app) gen() error {
+	if err := a.build(true); err != nil {
 		return err
 	}
 	changed, err := a.writeHost()
@@ -32,18 +28,7 @@ func (a *app) gen(full bool) error {
 	return nil
 }
 
-// build runs the checks and it compiles the module into the output directory.
-func (a *app) build(c checks, format bool) error {
-	if c.vet {
-		if err := run1(a.modulePath(), "go", "vet", "./..."); err != nil {
-			return err
-		}
-	}
-	if c.test {
-		if err := run1(a.modulePath(), "go", "test", "./..."); err != nil {
-			return err
-		}
-	}
+func (a *app) build(format bool) error {
 	stats, err := driver.BuildWithStats(a.options(format))
 	if err != nil {
 		return err
@@ -215,7 +200,7 @@ func (a *app) nodegen(names string) error {
 
 // after compiles the Go module and it then runs the flutter command.
 func (a *app) after(cmd string, args []string) error {
-	if err := a.gen(true); err != nil {
+	if err := a.gen(); err != nil {
 		return err
 	}
 	full := append([]string{cmd}, args...)
