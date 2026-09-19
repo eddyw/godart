@@ -1,5 +1,6 @@
 /build/
 /playground/
+/flutter/example/
 .dart_tool/
 
 # goruntime is a library package, thus the lock file stays out of the tree.

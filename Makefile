@@ -32,7 +32,7 @@ help:
 	@echo "  make dart-analyze     Run the Dart analyzer on the runtime library."
 	@echo "  make dart-test        Run the Dart tests of the runtime library."
 	@echo "  make flutter-go       Run the Go tests of the Flutter modules."
-	@echo "  make flutter-test     Build each example and run the Flutter tests."
+	@echo "  make flutter-test     Run the core Flutter validation."
 	@echo "  make flutter-nodes    Write the Go node set again from the Flutter API."
 	@echo "  make surface          Measure the standard library surface."
 	@echo "  make surface ARGS=-absent   Name each package that the surface holds not."
@@ -91,30 +91,14 @@ dart-test:
 # own, thus the go targets of the root do not reach it. It needs no Flutter SDK.
 flutter-go:
 	cd flutter/ui && go vet ./... && go test -count=1 ./...
-	cd flutter/example/counter/go && go vet ./... && go test -count=1 ./...
-	cd flutter/example/apilist/go && go vet ./... && go test -count=1 ./...
-	cd flutter/example/form/go && go vet ./... && go test -count=1 ./...
-	cd flutter/example/compass_v2/go && go vet ./... && go test -count=1 ./...
 
-# flutter-test builds the example and runs the widget tests. It needs the
-# Flutter SDK, thus ci does not run it.
+# This target needs the Flutter SDK. CI runs the Go validation separately.
 flutter-test: build
-	cd flutter/example/counter && $(CURDIR)/build/glutter gen
-	cd flutter/example/apilist && $(CURDIR)/build/glutter gen
-	cd flutter/example/form && $(CURDIR)/build/glutter gen
-	cd flutter/example/compass_v2 && $(CURDIR)/build/glutter gen
+	cd flutter/goflutter && $(FLUTTER) pub get
 	cd flutter/goflutter && $(FLUTTER) analyze
-	cd flutter/example/counter && $(FLUTTER) analyze
-	cd flutter/example/apilist && $(FLUTTER) analyze
-	cd flutter/example/form && $(FLUTTER) analyze
-	cd flutter/example/compass_v2 && $(FLUTTER) analyze
 	cd flutter/bench/flutter && $(FLUTTER) pub get && $(FLUTTER) analyze
 	cd flutter/nodegen && dart pub get && dart analyze
 	cd flutter/goflutter && $(FLUTTER) test
-	cd flutter/example/counter && $(FLUTTER) test
-	cd flutter/example/apilist && $(FLUTTER) test
-	cd flutter/example/form && $(FLUTTER) test
-	cd flutter/example/compass_v2 && $(FLUTTER) test
 	cd flutter/bench/flutter && $(FLUTTER) test
 
 # surface measures how much of each package of the standard library the

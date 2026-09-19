@@ -36,7 +36,7 @@ cd flutter/nodegen
 dart pub get
 dart run bin/nodegen.dart go     ../goflutter ../ui   # 1 file for each pack, and it runs gofmt
 dart run bin/nodegen.dart report ../goflutter -all
-dart run bin/nodegen.dart host   ../goflutter ../example/counter/lib/widgets_gen.dart nodes.txt
+dart run bin/nodegen.dart host   ../goflutter /path/to/app/lib/widgets_gen.dart nodes.txt
 ```
 
 The first argument names a directory that holds a Flutter application with a
@@ -63,7 +63,7 @@ the Go tool chain.
 
 ```sh
 cd <root of the repository>
-go run ./flutter/nodescan flutter/example/counter/go > nodes.txt
+go run ./flutter/nodescan /path/to/app/go > nodes.txt
 ```
 
 `glutter gen` of an application runs `nodescan` and then the host mode.
