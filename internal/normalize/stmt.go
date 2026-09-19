@@ -682,14 +682,13 @@ func (b *builder) ifStmt(s *ast.IfStmt) []ir.Stmt {
 // variable holds a reference, and the copy of Dart then shares 1 box, thus the
 // third clause takes a new box in front of it.
 func (b *builder) forStmt(s *ast.ForStmt, label string) []ir.Stmt {
-	// The first clause stands inside the header of the Dart loop, and Go 1.22
-	// gives each pass its own copy of the variable that it declares. Thus no
-	// temporary variable of the order pass can stand in front of it.
+	// Dart loop headers provide per-iteration variables for Go 1.22 and later.
+	// Earlier Go versions need a declaration outside the loop.
 	b.noOrder++
 	out := b.stmt(s.Init)
 	b.noOrder--
 	loop := &ir.For{Label: label}
-	if len(out) == 1 {
+	if len(out) == 1 && !b.sharedLoopVars {
 		if d, ok := out[0].(*ir.Declare); ok {
 			loop.Init = d
 			out = nil

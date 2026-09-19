@@ -134,7 +134,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		if err != nil {
 			return nil, err
 		}
-		flags := fmt.Sprintf("%s\x00trimpath=%t", dartPkg, opt.TrimPath)
+		flags := fmt.Sprintf("%s\x00trimpath=%t\x00go=%s", dartPkg, opt.TrimPath, p.Types.GoVersion())
 		if !opt.TrimPath {
 			var paths []string
 			for _, file := range p.Syntax {

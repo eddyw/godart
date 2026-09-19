@@ -30,7 +30,7 @@ if [[ $suite == driver || $suite == stdlib || $suite == upstream-targets || $sui
   fi
 fi
 
-large_tests='TestPrograms|TestRunFilesOfGoTest|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
+large_tests='TestPrograms|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
 case "$suite" in
   checks)
     python3 -B -m unittest discover -s scripts -p test_ci_local.py
@@ -57,7 +57,7 @@ case "$suite" in
   web-io) test_name=TestWebIO ;;
   web-fetch) test_name=TestWebFetch ;;
   programs) test_name=TestPrograms ;;
-  language) test_name=TestRunFilesOfGoTest ;;
+  language) test_name='TestRunFilesOfGoTest|TestVersionedGoFixtures' ;;
   stdlib) test_name=TestTestsOfGoroot ;;
   *) printf 'unknown CI suite: %s\n' "$suite" >&2; exit 2 ;;
 esac

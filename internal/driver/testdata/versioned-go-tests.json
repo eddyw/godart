@@ -1,0 +1,98 @@
+[
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/opt.go",
+    "sha256": "32ce3124e80f09c8069c4b6ef0948305367b326d580f2ab9f148b2986ecab9ef",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/opt-121.go",
+    "sha256": "accd47413d4eb5d401709838dfc0439ee238b8e9377013cdd7caf20f221eaefb",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/opt-122.go",
+    "sha256": "efa4f623137065869bee65312411bb24cf0c11d236fa2c3685a902c7407c318e",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/for_esc_address.go",
+    "sha256": "3c4c8e7e5ac34f91dffeea6a7806bcffcd68289d2b2d09028ffebf68bd6c7cbf",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/for_esc_closure.go",
+    "sha256": "a9eefeb46bb8b90572277bb4ee85461c506d30180d420f07eb5ed8c626f1767d",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/for_esc_method.go",
+    "sha256": "0aade0d9e6a0f0a495240a712aa52b1308ed198ec10917801eb17022e2a154b0",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/for_esc_minimal_closure.go",
+    "sha256": "7f4df43d0849d53da4c3e72d18af96c3202f69499146662e0dabe3de42704897",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/for_nested.go",
+    "sha256": "9683d24d3d0beabe37eaa806ef4b8be9977402affcbbb51b41964a5b0332d5b7",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/range_esc_address.go",
+    "sha256": "4d90ec8cbf3dd7cf4217f815b6694cc8cdd6b90d8e0c95d11f4383a8a5cb640f",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/range_esc_closure.go",
+    "sha256": "f7c7dde0fda65222185025b21724bff451a0e1268b2cbdcabe471ec55a215e84",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/range_esc_method.go",
+    "sha256": "daefbdfc44b211fd686f103a102d2c8a6585c47166c14e9083b8c280d7907094",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  },
+  {
+    "source": "src/cmd/compile/internal/loopvar/testdata/range_esc_minimal_closure.go",
+    "sha256": "06c3dd35bc1c513976838274f0985edc0b903f8eb77ace30d6708cb9fcf643fd",
+    "module_versions": [
+      "1.21",
+      "1.22"
+    ]
+  }
+]

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/eddyw/godart/internal/load"
+	"golang.org/x/tools/go/packages"
 )
 
 // TestLoadTestsReachesAVariantOfTheSurface proves that the overlay replaces the
@@ -164,5 +165,53 @@ func TestAnOverlayFileWithANewNameKeepsItsOwnPath(t *testing.T) {
 	real := filepath.Join(stringsDir, "builder.go")
 	if content, ok := found.Sources[real]; ok && strings.Contains(string(content), "func ") {
 		t.Errorf("%s holds a body, want the empty form or the real file", real)
+	}
+}
+
+func TestLoadPreservesModuleAndFileVersions(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"go.mod":     "module example.com/current\n\ngo 1.22\n\nrequire example.com/old v0.0.0\nreplace example.com/old => ./old\n",
+		"main.go":    "package main\nimport _ \"example.com/old\"\nfunc main() {}\n",
+		"legacy.go":  "//go:build go1.21\n\npackage main\n",
+		"old/go.mod": "module example.com/old\n\ngo 1.21\n",
+		"old/old.go": "package old\n",
+		"old/new.go": "//go:build go1.22\n\npackage old\n",
+	}
+	for name, text := range files {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := load.Load(dir, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := result.Packages[0]
+	for _, p := range []*packages.Package{root, root.Imports["example.com/old"]} {
+		want := "go1.22"
+		if p.PkgPath == "example.com/old" {
+			want = "go1.21"
+		}
+		if got := p.Types.GoVersion(); got != want {
+			t.Errorf("%s version = %s, want %s", p.PkgPath, got, want)
+		}
+		for _, file := range p.Syntax {
+			name := filepath.Base(p.Fset.Position(file.Pos()).Filename)
+			fileVersion := want
+			if name == "legacy.go" {
+				fileVersion = "go1.21"
+			}
+			if name == "new.go" {
+				fileVersion = "go1.22"
+			}
+			if got := p.TypesInfo.FileVersions[file]; got != fileVersion {
+				t.Errorf("%s/%s version = %s, want %s", p.PkgPath, name, got, fileVersion)
+			}
+		}
 	}
 }

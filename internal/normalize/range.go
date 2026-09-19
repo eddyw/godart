@@ -16,6 +16,21 @@ import (
 // when each term of its type set shares 1 underlying type, and a range loop
 // then reads that type.
 func (b *builder) rangeStmt(s *ast.RangeStmt, label string) []ir.Stmt {
+	var declarations []ir.Stmt
+	if b.sharedLoopVars && s.Tok == token.DEFINE {
+		for _, target := range []ast.Expr{s.Key, s.Value} {
+			if target == nil || isBlank(target) {
+				continue
+			}
+			obj := b.info.Defs[target.(*ast.Ident)].(*types.Var)
+			v := b.declareLocal(obj, obj.Name())
+			declarations = append(declarations, &ir.Declare{Vars: []*ir.Var{v}, Init: &ir.Zero{Type: obj.Type()}})
+		}
+	}
+	return append(declarations, b.rangeLoop(s, label)...)
+}
+
+func (b *builder) rangeLoop(s *ast.RangeStmt, label string) []ir.Stmt {
 	t := typeset.Core(b.typeOf(s.X))
 	if p, ok := t.(*types.Pointer); ok {
 		if _, isArray := typeset.Core(p.Elem()).(*types.Array); isArray {
@@ -74,13 +89,15 @@ func (b *builder) intVar(pos token.Pos, role string) (*ir.Var, *ir.Ident) {
 	return v, &ir.Ident{Name: v.Name, Type: types.Typ[types.Int]}
 }
 
-// bind writes the key or the value of a range loop into its variable. The
-// variable belongs to 1 iteration, thus the stage declares it in the body.
+// bind declares per-iteration variables or assigns the shared loop variables.
 func (b *builder) bind(s *ast.RangeStmt, target ast.Expr, value ir.Expr) []ir.Stmt {
 	if target == nil || isBlank(target) {
 		return nil
 	}
 	if s.Tok == token.DEFINE {
+		if b.sharedLoopVars {
+			return []ir.Stmt{&ir.Assign{Lhs: b.expr(target), Rhs: b.copyPoint(b.convert(value, b.typeOf(target)))}}
+		}
 		id, _ := target.(*ast.Ident)
 		obj, _ := b.info.Defs[id].(*types.Var)
 		if obj == nil {

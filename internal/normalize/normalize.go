@@ -12,6 +12,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"go/version"
 	"path/filepath"
 
 	"github.com/eddyw/godart/internal/name"
@@ -29,6 +30,11 @@ func Package(fset *token.FileSet, files []*ast.File, info *types.Info, pkg *type
 	}
 	out := &ir.Package{Path: pkg.Path(), Name: pkg.Name()}
 	for _, f := range files {
+		v := info.FileVersions[f]
+		if v == "" {
+			v = pkg.GoVersion()
+		}
+		b.sharedLoopVars = v != "" && version.Compare(v, "go1.22") < 0
 		file := &ir.File{Name: filepath.Base(fset.Position(f.Pos()).Filename)}
 		for _, d := range f.Decls {
 			file.Decls = append(file.Decls, b.decl(d)...)
@@ -65,13 +71,14 @@ func receiverName(e ast.Expr) string {
 }
 
 type builder struct {
-	fset  *token.FileSet
-	info  *types.Info
-	pkg   *types.Package
-	errs  []error
-	fn    *ir.Func
-	names map[types.Object]string
-	used  map[string]bool
+	sharedLoopVars bool
+	fset           *token.FileSet
+	info           *types.Info
+	pkg            *types.Package
+	errs           []error
+	fn             *ir.Func
+	names          map[types.Object]string
+	used           map[string]bool
 
 	// boxes holds each variable of the current function whose address the code
 	// takes. Such a variable holds a box.

@@ -186,3 +186,21 @@ The rebuilt CLI runs without an explicit runtime path and reports durations sepa
 
 The [CI measurements](ci.md#duration-baseline) define the doubled manual-workflow limits.
 GitHub Actions remains manual-only. This batch used no GitHub Actions minutes.
+
+## Declared language versions
+
+`TestVersionedGoFixtures` compares unchanged upstream loopvar sources under
+Go 1.21 and Go 1.22 module declarations. It includes per-file build constraints,
+address captures, closures, method captures, and nested loops.
+The adapter compares complete output and exact process exit codes.
+A nonzero native result remains the expected result for the corresponding
+Gart run. It does not mean that the adapter changed an upstream assertion.
+
+`internal/driver/testdata/versioned-go-tests.json` records source paths and
+SHA-256 hashes. Review source changes during an SDK update before the hash
+update. Native compiler diagnostics and inlining assertions remain outside
+this runtime comparison. The adapter does not claim full compiler-suite parity.
+
+Run `go test ./internal/driver -run '^TestVersionedGoFixtures$'` for this matrix.
+The language CI suite includes it. The same output directory across module
+versions also verifies cache invalidation when only the language version changes.
