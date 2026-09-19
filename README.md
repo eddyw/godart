@@ -180,6 +180,11 @@ reports the version of the machine against the node set.
 The [SDK upgrade procedure](docs/sdk-upgrades.md) defines candidate validation
 and baseline changes.
 
+## Project information
+
+See [About Godart](ABOUT.md), [contributions](CONTRIBUTING.md), and
+[security](SECURITY.md) for the project policy and alpha release limits.
+
 ## License
 
 This project uses the [BSD 3-Clause License](LICENSE).
