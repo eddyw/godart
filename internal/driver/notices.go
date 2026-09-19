@@ -9,6 +9,7 @@ import (
 	"golang.org/x/tools/go/packages"
 
 	"github.com/eddyw/godart/internal/notices"
+	"github.com/eddyw/godart/internal/overlay"
 )
 
 func sourceNotices(pkgs []*packages.Package) (string, error) {
@@ -36,6 +37,20 @@ func sourceNotices(pkgs []*packages.Package) (string, error) {
 			root, component := noticeRoot(pkg, dir)
 			if root == "" {
 				continue
+			}
+			if _, err := os.Stat(dir); pkg.Module == nil && os.IsNotExist(err) {
+				for _, replacement := range overlay.Packages() {
+					if replacement.Path != pkg.PkgPath {
+						continue
+					}
+					for dir != root {
+						if _, err := os.Stat(dir); !os.IsNotExist(err) {
+							break
+						}
+						dir = filepath.Dir(dir)
+					}
+					break
+				}
 			}
 			found, err := notices.Files(dir, root)
 			if err != nil {
