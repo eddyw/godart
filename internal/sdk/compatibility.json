@@ -1,0 +1,14 @@
+{
+  "go": {
+    "baseline": "1.27.0",
+    "candidates": ["1.27.1"]
+  },
+  "dart": {
+    "baseline": "3.13.3",
+    "resident": ["3.13.3", "3.13.4"]
+  },
+  "flutter": {
+    "development": "3.47.5",
+    "dart": "3.13.4"
+  }
+}

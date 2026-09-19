@@ -42,12 +42,22 @@ jobs:
       matrix: ${{ fromJSON(needs.matrix.outputs.jobs) }}
     steps:
       - uses: actions/checkout@v7
+      - id: sdk
+        name: Read SDK baseline
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          versions = json.loads(Path("internal/sdk/compatibility.json").read_text())
+          print(f"go={versions['go']['baseline']}")
+          print(f"dart={versions['dart']['baseline']}")
+          PY
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.27.0'
+          go-version: ${{ steps.sdk.outputs.go }}
       - uses: dart-lang/setup-dart@v1
         with:
-          sdk: '3.13.3'
+          sdk: ${{ steps.sdk.outputs.dart }}
       - uses: actions/setup-node@v7
         if: matrix.suite == 'targets' || matrix.suite == 'upstream-targets' || matrix.suite == 'web-io' || matrix.suite == 'web-fetch'
         with:

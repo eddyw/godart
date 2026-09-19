@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
+
+	compatibility "github.com/eddyw/godart/internal/sdk"
 )
 
 // Kernel compilation defaults to product mode. Source execution uses non-product constants.
@@ -71,10 +74,12 @@ func dartIdentity() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	switch strings.TrimSpace(string(version)) {
-	case "3.13.3", "3.13.4":
-	default:
-		return "", "", fmt.Errorf("resident compilation requires Dart 3.13.3 or 3.13.4, found %s", strings.TrimSpace(string(version)))
+	versions, err := compatibility.Read()
+	if err != nil {
+		return "", "", err
+	}
+	if !slices.Contains(versions.Dart.Resident, strings.TrimSpace(string(version))) {
+		return "", "", fmt.Errorf("resident compilation requires Dart %s, found %s", strings.Join(versions.Dart.Resident, " or "), strings.TrimSpace(string(version)))
 	}
 	paths := []string{}
 	for _, name := range []string{"version", "revision", "bin/dart", "bin/dartvm", "bin/dartaotruntime", "bin/snapshots/frontend_server_aot.dart.snapshot", "lib/_internal/vm_platform_strong.dill", "lib/libraries.json"} {

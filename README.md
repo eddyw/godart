@@ -177,6 +177,9 @@ A Flutter application needs
 Flutter 3.47, `material_ui` 1.1, and `cupertino_ui` 1.0. `glutter doctor`
 reports the version of the machine against the node set.
 
+The [SDK upgrade procedure](docs/sdk-upgrades.md) defines candidate validation
+and baseline changes.
+
 ## License
 
 This project uses the [BSD 3-Clause License](LICENSE).
