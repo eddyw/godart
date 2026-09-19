@@ -20,6 +20,8 @@ fvm exec ../build/glutter run -d macos
 The application contains a Go module, Dart bridge, Flutter package, and local
 resource references. `glutter run` creates an absent platform runner, compiles
 Go, generates the host, and invokes Flutter. Go edits trigger Flutter hot reload.
+Changed string literals take effect without a restart. Existing Go globals and
+Flutter state remain intact. Changes to package initializers need a hot restart.
 
 ## Commands
 

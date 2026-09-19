@@ -3,6 +3,7 @@
 package emit
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"go/token"
@@ -341,7 +342,9 @@ func (e *emitter) stringLit(text string) string {
 	if name, ok := e.lits.names[text]; ok {
 		return name
 	}
-	name := fmt.Sprintf("$gs%d_%d", e.lits.tag, e.lits.seq)
+	// Hot reload preserves final fields. New text must name a new field.
+	digest := sha256.Sum256([]byte(text))
+	name := fmt.Sprintf("$gs%d_%d_%x", e.lits.tag, e.lits.seq, digest[:8])
 	e.lits.seq++
 	e.lits.names[text] = name
 	e.lits.decls = append(e.lits.decls,

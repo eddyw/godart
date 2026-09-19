@@ -14,15 +14,15 @@
 part of '../main.dart';
 
 void _main() {
-  $greet.Greeter$? g = $greet.New($gs1_0);
+  $greet.Greeter$? g = $greet.New($gs1_0_486ea46224d1bb4f);
   $println(<String>[$greet.Greeter$Text(g).toDartString()]);
   $greet.Greeter$SetStyle(g, $gi(1));
   $println(<String>[$greet.Greeter$Text(g).toDartString()]);
-  $println(<String>[$greet.Twice($gs1_1).toDartString()]);
-  $println(<String>[$count.Runes($gs1_2).toString()]);
+  $println(<String>[$greet.Twice($gs1_1_4cd0e21a9a0795a1).toDartString()]);
+  $println(<String>[$count.Runes($gs1_2_3c48591d8d098a45).toString()]);
   $println(<String>[$gi(0).toString(), $gi(1).toString()]);
 }
 
-final GoString $gs1_0 = GoString.fromString('world');
-final GoString $gs1_1 = GoString.fromString('go');
-final GoString $gs1_2 = GoString.fromString('héllo');
+final GoString $gs1_0_486ea46224d1bb4f = GoString.fromString('world');
+final GoString $gs1_1_4cd0e21a9a0795a1 = GoString.fromString('go');
+final GoString $gs1_2_3c48591d8d098a45 = GoString.fromString('héllo');

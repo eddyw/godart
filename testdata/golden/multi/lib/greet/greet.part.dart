@@ -52,16 +52,22 @@ void Greeter$SetStyle(Greeter$? g, GoInt s) {
 
 GoString Greeter$Text(Greeter$? g) {
   if (((g == null ? $panicNil() : g!)._style == $gi(1))) {
-    return $concat($gs1_0, (g == null ? $panicNil() : g!).Name);
+    return $concat(
+      $gs1_0_47316da018fa584e,
+      (g == null ? $panicNil() : g!).Name,
+    );
   }
-  return $concat($gs1_1, (g == null ? $panicNil() : g!).Name);
+  return $concat($gs1_1_40a11d59c648b358, (g == null ? $panicNil() : g!).Name);
 }
 
 GoString Twice(GoString name) {
   Greeter$? g = New(name);
-  return $concat($concat(Greeter$Text(g), $gs1_2), Greeter$Text(g));
+  return $concat(
+    $concat(Greeter$Text(g), $gs1_2_36a9e7f1c95b82ff),
+    Greeter$Text(g),
+  );
 }
 
-final GoString $gs1_0 = GoString.fromString('HELLO, ');
-final GoString $gs1_1 = GoString.fromString('hello, ');
-final GoString $gs1_2 = GoString.fromString(' ');
+final GoString $gs1_0_47316da018fa584e = GoString.fromString('HELLO, ');
+final GoString $gs1_1_40a11d59c648b358 = GoString.fromString('hello, ');
+final GoString $gs1_2_36a9e7f1c95b82ff = GoString.fromString(' ');
