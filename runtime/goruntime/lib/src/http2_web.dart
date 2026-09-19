@@ -5,8 +5,7 @@
 /// each 1. A program that only builds a request would otherwise fail in the
 /// Dart compile.
 ///
-/// Each operation gives the cause "operation not supported". Read decision
-/// 251.
+/// Each operation gives the cause "operation not supported".
 library;
 
 import 'goint.dart';

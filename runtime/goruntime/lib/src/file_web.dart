@@ -7,8 +7,7 @@
 ///
 /// Each operation that the web cannot do gives the cause "function not
 /// implemented". The package os wraps that text in a PathError, thus the
-/// program reads the same error that Go gives under GOOS=js. Read decision
-/// 251.
+/// program reads the same error that Go gives under GOOS=js.
 library;
 
 import 'goint.dart';
