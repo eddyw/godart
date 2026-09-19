@@ -28,6 +28,9 @@ A Go design library can compose shared primitives. A Dart design library uses
 constructor bindings. Both can share Go signals and normal Flutter child slots.
 This architecture permits an independent design system. The current adapter
 surface does not yet guarantee all features of a complete Material replacement.
+The host still imports Material and Cupertino for theme, text input, navigation,
+and value adapters. A Go-authored design library does not remove those host
+dependencies. A fully independent host requires a separate adapter split.
 
 The [binding guide](../flutter/nodegen/README.md) defines manifest syntax,
 generation order, supported types, output ownership, and current omissions.
