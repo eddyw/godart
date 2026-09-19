@@ -42,6 +42,10 @@ The build, run, test, and watch commands take these flags:
 	-format=false  do not run dart format on the output
 	-timings       report phase durations on stderr
 
+The run and test commands also take this flag:
+
+	-frontend mode  select auto, resident, or source Dart execution
+
 The run command passes each argument after -- to the program.
 
 The test command takes these flags:

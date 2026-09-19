@@ -7,7 +7,7 @@
 ///
 /// Each operation gives the cause "operation not supported". The Go side
 /// wraps that text in a net.OpError, thus the program reads the same shape of
-/// error that Go gives under GOOS=js. Read decision 251.
+/// error that Go gives under GOOS=js.
 library;
 
 import 'goint.dart';

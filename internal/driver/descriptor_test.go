@@ -8,7 +8,7 @@ import (
 )
 
 // descVar matches the variable that holds the description of a type with no
-// name of its own. Read decision 352. The name of a shared shape file stands in
+// name of its own. The name of a shared shape file stands in
 // front, thus the pattern reads an optional prefix.
 var descVar = regexp.MustCompile(`[A-Za-z0-9_$]*\$desc[0-9a-f]{8}`)
 
@@ -19,7 +19,7 @@ var descVarDecl = regexp.MustCompile(`(?m)^final TypeDesc ([A-Za-z0-9_$]*\$desc[
 // method of a type.
 const methodTypesHead = "methodTypes: <String, TypeDesc Function()>{"
 
-// TestDescriptorVariable proves decision 352. The description of a type with no
+// TestDescriptorVariable verifies descriptor reuse. The description of a type with no
 // name of its own stands in 1 variable of the library, thus a method type table
 // names that variable and holds no description of its own.
 //

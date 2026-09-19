@@ -169,7 +169,7 @@ then takes the default of Flutter.
 | `Future<void> Function()` | `ui.Task` | The end of the goroutine ends the work. |
 | `Future<bool> Function()` | `ui.Ask` | The same, and the result gives the answer. |
 | `Future<bool?> Function(<enum>)` | `ui.AskText` | The same. The Go side reads the name of the value of that enum, for example the direction of a `Dismissible`. |
-| `Widget Function(BuildContext)` | `ui.Builder` | A synchronous position. Read decision 221. |
+| `Widget Function(BuildContext)` | `ui.Builder` | A synchronous callback position. |
 | `Widget Function(BuildContext, int)` | `ui.ItemBuilder` | A synchronous position. |
 | `Widget Function(BuildContext, Orientation)` | `ui.OrientBuilder` | The same. The argument takes `portrait` or `landscape`. |
 | `Widget Function(BuildContext, BoxConstraints)` | `ui.BoxBuilder` | The same. 4 numbers, and a maximum of 0 means no limit. |
@@ -269,7 +269,7 @@ The key types hold an identity, and not a value. A Go tree is data and it
 rebuilds on each change, thus a Go value cannot be the object itself: a new
 tree would give a new controller and the widget would lose its focus, its
 offset, or its pressed state. The Go program names the object with a key, and
-`GoIdentities` of `goflutter` keeps it across each rebuild. Read decision 247.
+`GoIdentities` of `goflutter` keeps it across each rebuild.
 
 A `FileImage` stands outside `ui.ImageSource`, because it reads a `File` of
 `dart:io`, and the host also builds for the web. A Go program reads the file

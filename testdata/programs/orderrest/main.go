@@ -3,9 +3,6 @@
 // a for loop, the third clause of a for loop, and the value of a case each run
 // more than 1 time. The initializer of a package variable stands outside each
 // statement. A conversion of a string reads its operand early under gc.
-//
-// Read decision 324 and the section "The order of the evaluation" of
-// docs/parity.md.
 package main
 
 import "fmt"

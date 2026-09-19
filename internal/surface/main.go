@@ -1,6 +1,5 @@
 // Command surface measures how much of each standard library package the
-// compiler surface holds. `make surface` runs it, and `docs/support.md` holds
-// the numbers of the last run.
+// compiler surface holds. `make surface` reports the current exported names.
 //
 // The measure loads each package 2 times: from the real Go source with no
 // build tag, and through the overlay of the compiler. It then compares the

@@ -315,7 +315,7 @@ require('./main.js');
 // TestWebIO proves that the whole io surface compiles for the web. The Go
 // package os names each function of the io shim, thus a program that only
 // reads an environment value once failed in the Dart compile. Each web form
-// now gives an honest cause, and the program runs. Read decision 251.
+// now gives an honest cause, and the program runs.
 func TestWebIO(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)

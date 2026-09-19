@@ -109,7 +109,7 @@ flutter-test: build
 	cd flutter/testdata/core && $(FLUTTER) pub get && $(FLUTTER) test
 
 # surface measures how much of each package of the standard library the
-# compiler holds. Read docs/support.md.
+# compiler holds.
 surface:
 	go run ./internal/surface $(ARGS)
 

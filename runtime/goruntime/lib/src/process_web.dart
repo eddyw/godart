@@ -6,7 +6,7 @@
 /// Dart compile.
 ///
 /// Each operation gives the cause "function not implemented", and the Go side
-/// wraps that text in an error. Read decision 251.
+/// wraps that text in an error.
 library;
 
 import 'goint.dart';

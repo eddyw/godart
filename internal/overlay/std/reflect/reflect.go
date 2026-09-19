@@ -543,7 +543,7 @@ type Method struct {
 	//
 	// Call of the value runs the method. The signature carries no factory of a
 	// Dart type, thus Interface of the value gives a func value that no type
-	// assertion reads. Read decision 325.
+	// assertion reads.
 	Func  Value
 	Index int
 }
@@ -1491,7 +1491,7 @@ func (v Value) UnsafePointer() uintptr { return v.Pointer() }
 // gives no address: Pointer reads the identity of an object instead. Addr
 // builds a new cell at each call for a field of a scalar type, thus 2 reads of
 // 1 field would give 2 numbers. A number that changes is a wrong answer, thus
-// the name holds no place here. Read docs/support.md.
+// the name holds no place here.
 
 // IsZero reports whether the value is the zero value of its type.
 func (v Value) IsZero() bool {

@@ -6,7 +6,7 @@ import '../test/skip_test.dart' as measurement;
 ///
 /// A widget test runs in debug mode: the Dart VM interprets the code, and each
 /// assert of the framework runs. A profile build drops both, thus only this
-/// run gives a number that a real application sees. Read decision 253.
+/// run gives a number that a real application sees.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   measurement.main();

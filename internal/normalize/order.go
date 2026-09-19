@@ -31,11 +31,6 @@ import (
 // The set of the operations follows gc and not the specification, because gc
 // writes a variable for more than the 4. `orderedBuiltin` holds the builtins,
 // and a slice expression takes 1 too.
-//
-// The pass leaves the 3 clauses of a for loop, the value of a case, and the
-// initializer of a package variable. No Dart statement can stand in front of
-// such a position. `docs/parity.md` holds a witness for each 1, and
-// decision 324 holds the whole rule.
 
 // orderer rewrites the expressions of 1 statement.
 type orderer struct {

@@ -15,8 +15,6 @@ dart compile wasm bin/main.dart -o /dev/null
 
 The witness still fails on 2026-09-16 with Dart 3.13.3. The web fixture retains the padding workaround.
 
-Read decision 395.
-
 ## The report
 
 **Title:** `dart compile wasm`: a record of exactly 20 fields crashes the type

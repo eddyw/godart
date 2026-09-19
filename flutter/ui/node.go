@@ -176,7 +176,7 @@ type Ask func() bool
 // argument holds the number of the item, and the 4 numbers after it hold the
 // fields of the Flutter SliverLayoutDimensions: the scroll offset, the
 // preceding scroll extent, the main axis extent of the viewport, and the cross
-// axis extent. Read decision 273.
+// axis extent.
 //
 // A result below 0 means "no item at that number", and Flutter then holds the
 // end of the list. A size of 0 is a valid size. The rule of Builder applies.

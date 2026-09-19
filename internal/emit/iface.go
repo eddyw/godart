@@ -323,7 +323,7 @@ func (e *emitter) signatureShape(sig *types.Signature) string {
 // the raw results. Only the emitted code names the Dart type of a parameter and
 // of a result, thus the package reflect cannot write such a closure of its own.
 // A closure of Object? parameters gives a dynamic result, and Dart rejects that
-// value at a location of a function type with a result. Read decision 228.
+// value at a location of a function type with a result.
 //
 // reflect.Value.Method, reflect.Value.MethodByName, and reflect.MakeFunc each
 // read the factory.
@@ -868,7 +868,7 @@ func (e *emitter) descriptorOf(t types.Type) string {
 		}
 	}
 	// The library holds 1 variable for the description of a type with no type
-	// parameter, thus 2 uses of 1 type write the text once. Read decision 352.
+	// parameter, thus 2 uses of 1 type write the text once.
 	if !holdsTypeParam(t) {
 		if key := e.groundDescVar(t); key != "" {
 			return key

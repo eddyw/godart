@@ -1,5 +1,5 @@
 name: skipbench
-description: The Flutter measurement of the work that an unchanged node skips. It answers the open condition of decision 249.
+description: The Flutter measurement of the work that an unchanged node skips.
 version: 0.1.0
 publish_to: none
 

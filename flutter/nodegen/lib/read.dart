@@ -890,7 +890,7 @@ GoType? mapFunction(Reading out, FunctionType t) {
   }
   // The size of 1 item of a list. The host gives the 4 fields of the
   // SliverLayoutDimensions as plain numbers, and a result below 0 stands for
-  // the null of Dart. Read decision 273.
+  // the null of Dart.
   if (ret == 'double' &&
       kinds.length == 2 &&
       kinds.first == 'int' &&

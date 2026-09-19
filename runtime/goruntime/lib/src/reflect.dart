@@ -1032,7 +1032,7 @@ int $descMethodType(int handle, int index) {
 /// The closure reads the adapter of the method table, and that adapter already
 /// takes the receiver first. The signature carries no factory of a Dart type,
 /// thus Call of the value works and an assertion of it to its function type
-/// fails. Read decision 325.
+/// fails.
 Iface? $descMethodFunc(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
   if (desc.kind == 'interface') return null;
@@ -1187,9 +1187,9 @@ Iface? $methodValue(Iface? value, int index) {
 /// _bindMethod gives a Dart closure of a method and its receiver.
 ///
 /// The closure carries the Dart type of each parameter and of the result,
-/// because the description of the signature holds the factory of decision 254.
+/// because the signature description holds a factory for the exact Dart type.
 /// A Go program that asserts the value to its function type then reads the
-/// result. Read decision 228 for the earlier limit.
+/// result.
 Function _bindMethod(TypeDesc sig, Function fn, Object? recv) => _typedFunc(
   sig,
   (List<Object?> args) => $resumeReflect<List<Object?>>(
@@ -1222,7 +1222,7 @@ Function _typedFunc(TypeDesc sig, List<Object?> Function(List<Object?>) body) {
 /// the function type of the closure and the function type of the location.
 ///
 /// The description of each result names its Dart type, thus the closure below
-/// carries the exact type. Decision 342 holds the same shape for a parameter.
+/// carries the exact type.
 Function _typedResultFunc(
   TypeDesc sig,
   List<Object?> Function(List<Object?>) body,

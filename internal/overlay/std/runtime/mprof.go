@@ -12,7 +12,7 @@ import (
 // The scheduler of gart lives in the Dart runtime library, and it holds the
 // stack of each goroutine. Thus the profile of the goroutines carries real
 // frames. The Dart VM counts no allocation, no block, and no contention of a
-// mutex, thus the 3 other profiles stay out. Read docs/support.md.
+// mutex, thus the 3 other profiles stay out.
 
 // A StackRecord holds the stack of 1 record of a profile.
 type StackRecord struct {

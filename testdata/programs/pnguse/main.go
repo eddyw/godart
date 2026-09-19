@@ -1,6 +1,5 @@
 // The program proves that image/png writes an image and reads it again. The
-// encoder converts a pointer to encoder to a pointer to EncoderBuffer and back,
-// and that conversion holds the shape of decision 341.
+// encoder converts a pointer to encoder to a pointer to EncoderBuffer and back.
 package main
 
 import (

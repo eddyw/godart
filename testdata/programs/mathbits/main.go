@@ -10,7 +10,7 @@
 // evaluates a polynomial, and the specification of Go lets an implementation
 // fuse a multiply and an addition into 1 operation. gc fuses on arm64 and the
 // Dart compiler does not, thus the 2 results differ by 1 unit of the last
-// place, and by 2 for Hypot. Read docs/support.md.
+// place, and by 2 for Hypot.
 package main
 
 import (

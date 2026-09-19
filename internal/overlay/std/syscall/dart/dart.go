@@ -1576,5 +1576,5 @@ func WeakTarget(r *Object) any {
 // only a Dart declaration reads 1.
 //
 // This file carries //go:build dart, thus a module that names this type also
-// needs a twin file and an alias of its own. Read docs/flutter-first.md.
+// needs a twin file and an alias of its own.
 type Object struct{ _ [0]func() }

@@ -1,7 +1,7 @@
 // The program proves text/scanner. The Scan method reads the whitespace set
 // with `1 << uint(ch)`, and ch holds -1 at the end of the input. Go gives 0 for
 // a shift count above the width, thus the read needs the unsigned form of the
-// count. Read decision 328.
+// count.
 package main
 
 import (

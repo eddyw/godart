@@ -3,8 +3,7 @@
 // Package exec runs a child process over Process of dart:io.
 //
 // The runtime holds the child in a table by its process id, and 7 interop
-// calls carry the start, the 3 pipes, the wait, and the kill. Decision 204
-// holds the survey, and decision 212 holds the shape.
+// calls carry the start, the 3 pipes, the wait, and the kill.
 //
 // The gaps against Go: no SysProcAttr, no ExtraFiles, no process group,
 // argv[0] cannot differ from the program, a pipe of StdinPipe or StdoutPipe

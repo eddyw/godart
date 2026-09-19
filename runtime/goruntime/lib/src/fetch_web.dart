@@ -2,7 +2,7 @@
 ///
 /// A browser holds no socket, thus net/http reaches the network through the
 /// fetch API of the host. The Go side picks this path when runtime.GOOS gives
-/// "js". Read decision 251 and fetch.dart.
+/// "js".
 ///
 /// The body of an answer rides a ReadableStream, thus a read takes 1 chunk at
 /// a time and the program holds no whole body in memory. A host that gives no

@@ -83,8 +83,7 @@ func (f *flat) value(x ir.Expr) ir.Expr {
 // An operand in front of that one takes a variable only when it holds a call
 // that stays in place. The machine runs the call that blocks in a state of its
 // own, thus such a call would else run second. Each other operand keeps its
-// place and reads its value after the state, exactly as gc does. Read
-// decision 324.
+// place and reads its value after the state, exactly as gc does.
 func (f *flat) operands(list []ir.Expr) []ir.Expr {
 	last := -1
 	for i, x := range list {

@@ -18,7 +18,7 @@ import (
 // TestWebFetch proves that the web target reaches a real server. A browser
 // holds no socket, thus net/http rides the fetch API of the host there. The
 // test runs the same program with the go command and with the 2 web builds,
-// and each output must match. Read decision 252.
+// and each output must match.
 func TestWebFetch(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)

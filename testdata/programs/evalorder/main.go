@@ -2,7 +2,7 @@
 // a call. The Go specification orders each call of an expression from left to
 // right, and it leaves the order of each other operand open. gc runs each call
 // of a statement first, thus each other operand reads its value after the
-// calls. Read decision 324.
+// calls.
 package main
 
 import "fmt"

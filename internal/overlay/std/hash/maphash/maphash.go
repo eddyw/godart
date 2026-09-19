@@ -6,7 +6,7 @@
 // calls the hash function of the map of the runtime through 2 linkname
 // directives. The subset holds no such access, thus this file holds a pure Go
 // hash and a walk of the type descriptor of the runtime. Each other line comes
-// from the real file. Read docs/library.md.
+// from the real file.
 
 // Copyright 2019 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style

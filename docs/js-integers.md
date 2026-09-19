@@ -84,7 +84,7 @@ no Dart constant.
 | VM, AOT, wasm | None. The extension type erases, and the output text stays equal. |
 | JS | Each 64-bit operation runs several JS operations, and a division rides BigInt. |
 
-The 2026-09-16 changes preserve `GoInt` across reflection integer access and
+The runtime preserves `GoInt` across reflection integer access and
 JSON paths. Mixed numeric generics use dictionaries without a `num` bound.
 Wall-clock and scheduler timestamps retain nanosecond precision.
 

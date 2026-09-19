@@ -3,8 +3,7 @@
 This inventory classifies the first known compile failure of each blocked package.
 A repaired first failure can expose another dependency. A blocked suite is not a parity pass.
 
-The previous baseline had 49 blockers. This batch moves flag, log, encoding/binary, and encoding/gob into executable suites.
-The remaining 45 blockers retain exact platform diagnostics in the coverage manifest.
+The blocker manifest retains exact platform diagnostics in the coverage manifest.
 
 | Package | Cause | Required work or boundary |
 |---|---|---|

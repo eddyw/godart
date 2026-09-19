@@ -8,8 +8,7 @@ import 'package:flutter/widgets.dart';
 ///
 /// Element.updateChild ends at the first test when the new widget is the
 /// object that the element already holds. The difference of the 2 cases is
-/// thus the Flutter work that 1 unchanged node costs. A reconciler of A10
-/// gives exactly that work back. Read decision 249.
+/// thus the Flutter work that reuse of 1 unchanged widget avoids.
 class SkipTree extends StatefulWidget {
   const SkipTree({super.key, required this.nodes, required this.reuse});
 

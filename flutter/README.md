@@ -13,8 +13,8 @@ Flutter widgets from those trees. Go signals control state updates.
 | `bench/` | Performance fixtures and measurements. |
 
 Prototype applications under `example/` are local and ignored by Git.
-A fresh checkout does not include them. Historical design documents can
-refer to those prototypes.
+A fresh checkout does not include them. The maintained core fixture lives
+in `testdata/core`.
 
 ## Create an application
 

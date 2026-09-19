@@ -5,7 +5,7 @@
 //
 // A transcendental function differs from gc by 1 unit of the last place on
 // some inputs, because gc fuses a multiply and an addition on arm64 and Dart
-// does not. Read docs/support.md. Thus the program writes such a function with
+// does not. Thus the program writes such a function with
 // 11 significant digits, and each exact function with the whole bit pattern.
 package main
 

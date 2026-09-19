@@ -1,6 +1,5 @@
 #!/bin/sh
-# Measures the Flutter work that 1 unchanged node skips, and answers the open
-# condition of decision 249.
+# Measures the Flutter work that reuse of 1 unchanged widget avoids.
 #
 # The run needs a profile build: a widget test runs in debug mode, where the
 # Dart VM interprets the code and each assert of the framework runs. A profile
