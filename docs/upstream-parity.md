@@ -15,7 +15,7 @@ The platform manifests cover Darwin/ARM64 and Linux/AMD64.
 
 | Manifest | Contract |
 |---|---|
-| `darwin-arm64.json`, `linux-amd64.json` | Source hashes, build configuration, declarations, file eligibility, corpus bytes, and test patches |
+| `go<version>/darwin-arm64.json`, `go<version>/linux-amd64.json` | Source hashes, build configuration, declarations, file eligibility, corpus bytes, and test patches |
 | `coverage-manifest.json` | All packages in the declared standard library surface |
 | `vm-suites.json` | Required package suites |
 | `targets.json` | Required AOT, JS, and wasm executions and browser exclusions |
@@ -56,6 +56,10 @@ The Gart side preserves the original assertions, expected values, and fixture by
 Adapters supply unavailable private test infrastructure without a duplicate assertion implementation.
 
 The inventory gate rejects changes to upstream source, fixtures, build tags, and test patches.
+Each SDK version has a separate inventory. A candidate inventory records reviewed
+inputs without promotion of the release baseline. Exact `_go.mod` duplicates
+from Go toolchain module distributions do not change the source fingerprint.
+Different duplicate contents still change the fingerprint.
 The coverage gate rejects missing package classifications and lost package suites.
 The compiler gate rejects a new diagnostic for a known blocker.
 The coverage gate also requires a cause and reason for each blocker. [Blocker classifications](upstream-blockers.md) distinguish public API gaps from private test dependencies and native runtime boundaries.

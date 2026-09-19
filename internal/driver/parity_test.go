@@ -219,7 +219,11 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 		t.Fatal(err)
 	}
 	var inventory parity.Inventory
-	manifest, err := os.ReadFile(filepath.Join("..", "parity", "testdata", runtime.GOOS+"-"+runtime.GOARCH+".json"))
+	nameOfInventory, err := parity.InventoryName(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := os.ReadFile(filepath.Join("..", "parity", "testdata", nameOfInventory))
 	if err != nil {
 		t.Fatal(err)
 	}

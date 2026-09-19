@@ -5,7 +5,6 @@ import (
 	"go/build"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -24,7 +23,11 @@ func readManifest(t *testing.T, name string, dst any) {
 
 func TestCoverageManifest(t *testing.T) {
 	var inventory Inventory
-	readManifest(t, runtime.GOOS+"-"+runtime.GOARCH+".json", &inventory)
+	name, err := InventoryName(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readManifest(t, name, &inventory)
 	var coverage []Coverage
 	readManifest(t, "coverage-manifest.json", &coverage)
 	var suites []struct {
@@ -126,7 +129,11 @@ func TestTargetCoverage(t *testing.T) {
 	}
 	readManifest(t, "targets.json", &targets)
 	var inventory Inventory
-	readManifest(t, runtime.GOOS+"-"+runtime.GOARCH+".json", &inventory)
+	name, err := InventoryName(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readManifest(t, name, &inventory)
 	byPackage := map[string]Coverage{}
 	for _, c := range coverage {
 		if len(c.Targets) > 0 {

@@ -6,12 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"testing"
 )
 
 func TestUpstreamInventory(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("testdata", runtime.GOOS+"-"+runtime.GOARCH+".json"))
+	name, err := InventoryName(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join("testdata", name))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +64,36 @@ func TestInventoryPreservesIneligibleTests(t *testing.T) {
 			t.Fatal("ineligible test accepted")
 		}
 	}
-	before := inv.SourceSHA256
+	module := filepath.Join(root, "src", "go.mod")
+	if err := os.WriteFile(module, []byte("module std\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	withModule, err := Discover(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	duplicate := filepath.Join(root, "src", "_go.mod")
+	if err := os.WriteFile(duplicate, []byte("module std\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	withDuplicate, err := Discover(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withModule.SourceSHA256 != withDuplicate.SourceSHA256 {
+		t.Fatal("identical toolchain module duplicate changed identity")
+	}
+	if err := os.WriteFile(duplicate, []byte("module changed\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	withChange, err := Discover(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withModule.SourceSHA256 == withChange.SourceSHA256 {
+		t.Fatal("different toolchain module duplicate escaped identity")
+	}
+	before := withChange.SourceSHA256
 	if err := os.WriteFile(filepath.Join(dir, "a_test.go"), []byte("package path\n"), 0644); err != nil {
 		t.Fatal(err)
 	}

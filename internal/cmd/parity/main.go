@@ -29,7 +29,7 @@ func run() error {
 	action := flag.String("action", "verify", "inventory, verify, or build")
 	pkg := flag.String("pkg", "", "upstream package for build")
 	out := flag.String("out", "", "output directory for build")
-	manifest := flag.String("manifest", "internal/parity/testdata/"+runtime.GOOS+"-"+runtime.GOARCH+".json", "source manifest")
+	manifest := flag.String("manifest", "", "source manifest (default: SDK and target inventory)")
 	goos := flag.String("goos", runtime.GOOS, "inventory operating system")
 	goarch := flag.String("goarch", runtime.GOARCH, "inventory architecture")
 	flag.Parse()
@@ -58,6 +58,13 @@ func run() error {
 	ctx := build.Default
 	ctx.GOOS = *goos
 	ctx.GOARCH = *goarch
+	if *manifest == "" {
+		name, err := parity.InventoryName(ctx)
+		if err != nil {
+			return err
+		}
+		*manifest = filepath.Join("internal/parity/testdata", name)
+	}
 	tags := exec.Command("go", "list", "-f", `{{join context.ToolTags ","}}`, "runtime")
 	tags.Env = append(os.Environ(), "GOOS="+*goos, "GOARCH="+*goarch)
 	tagText, err := tags.Output()

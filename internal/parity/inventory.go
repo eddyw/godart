@@ -1,6 +1,7 @@
 package parity
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -56,6 +57,16 @@ func digest(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// InventoryName separates source fingerprints by SDK version and target.
+func InventoryName(ctx build.Context) (string, error) {
+	data, err := os.ReadFile(filepath.Join(ctx.GOROOT, "VERSION"))
+	if err != nil {
+		return "", err
+	}
+	version := strings.Split(string(data), "\n")[0]
+	return filepath.Join(version, ctx.GOOS+"-"+ctx.GOARCH+".json"), nil
+}
+
 // Discover reads source before compilation, including tests in ineligible files.
 func Discover(ctx build.Context) (*Inventory, error) {
 	version, err := os.ReadFile(filepath.Join(ctx.GOROOT, "VERSION"))
@@ -75,6 +86,12 @@ func Discover(ctx build.Context) (*Inventory, error) {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
+		}
+		if d.Name() == "_go.mod" {
+			original, err := os.ReadFile(filepath.Join(filepath.Dir(path), "go.mod"))
+			if err == nil && bytes.Equal(data, original) {
+				return nil
+			}
 		}
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
