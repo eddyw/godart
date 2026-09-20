@@ -8,3 +8,5 @@ int $getppid() => 0;
 int $getpagesize() => 4096;
 
 (Slice<int>, int) $getgroups() => (Slice<int>.nil(), -1);
+
+int $sendSignal(int pid, int signal) => -1;

@@ -1607,3 +1607,5 @@ func Getppid() int     { panic("syscall/dart needs the gart compiler") }
 func Getpagesize() int { panic("syscall/dart needs the gart compiler") }
 
 func Getgroups() ([]int, int) { panic("syscall/dart needs the gart compiler") }
+
+func SendSignal(pid, signal int) int { panic("syscall/dart needs the gart compiler") }

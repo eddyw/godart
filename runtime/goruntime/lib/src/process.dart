@@ -212,6 +212,7 @@ GoString $procKill(int pid, int signal) {
     2 => ProcessSignal.sigint,
     9 => ProcessSignal.sigkill,
     15 => ProcessSignal.sigterm,
+    28 => ProcessSignal.sigwinch,
     _ => ProcessSignal.sigkill,
   };
   if (!proc.process.kill(sig)) {
@@ -288,6 +289,7 @@ ProcessSignal? _signalOf(int number) => switch (number) {
   6 => ProcessSignal.sigabrt,
   14 => ProcessSignal.sigalrm,
   15 => ProcessSignal.sigterm,
+  28 => ProcessSignal.sigwinch,
   _ => null,
 };
 

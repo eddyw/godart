@@ -10,7 +10,10 @@
 // docs/parity.md.
 package syscall
 
-import "strconv"
+import (
+	"strconv"
+	"syscall/dart"
+)
 
 // Signal names an operating system signal.
 type Signal int
@@ -27,18 +30,19 @@ func (s Signal) String() string {
 
 // The signals that macOS and Linux number the same way.
 const (
-	SIGHUP  Signal = 1
-	SIGINT  Signal = 2
-	SIGQUIT Signal = 3
-	SIGILL  Signal = 4
-	SIGTRAP Signal = 5
-	SIGABRT Signal = 6
-	SIGFPE  Signal = 8
-	SIGKILL Signal = 9
-	SIGSEGV Signal = 11
-	SIGPIPE Signal = 13
-	SIGALRM Signal = 14
-	SIGTERM Signal = 15
+	SIGHUP   Signal = 1
+	SIGINT   Signal = 2
+	SIGQUIT  Signal = 3
+	SIGILL   Signal = 4
+	SIGTRAP  Signal = 5
+	SIGABRT  Signal = 6
+	SIGFPE   Signal = 8
+	SIGKILL  Signal = 9
+	SIGSEGV  Signal = 11
+	SIGPIPE  Signal = 13
+	SIGALRM  Signal = 14
+	SIGTERM  Signal = 15
+	SIGWINCH Signal = 28
 )
 
 func signalName(s Signal) string {
@@ -65,6 +69,11 @@ func signalName(s Signal) string {
 		return "broken pipe"
 	case SIGALRM:
 		return "alarm clock"
+	case SIGWINCH:
+		if dart.OS() == "darwin" {
+			return "window size changes"
+		}
+		return "window changed"
 	case SIGTERM:
 		return "terminated"
 	}

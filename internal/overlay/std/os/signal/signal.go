@@ -6,9 +6,8 @@
 // access. Each watch below reads ProcessSignal.watch of dart:io through the
 // interop package, and 1 goroutine forwards each event to the channels.
 //
-// 4 signals reach a program: SIGHUP, SIGINT, SIGQUIT, SIGABRT, SIGALRM, and
-// SIGTERM. Dart catches no other signal. Notify with a signal that Dart cannot
-// catch keeps the channel, and no event ever reaches it. Read docs/parity.md.
+// Signal delivery uses the signal watches that the Dart runtime supports.
+
 package signal
 
 import (
@@ -35,10 +34,8 @@ var (
 var catchable = []syscall.Signal{
 	syscall.SIGHUP,
 	syscall.SIGINT,
-	syscall.SIGQUIT,
-	syscall.SIGABRT,
-	syscall.SIGALRM,
 	syscall.SIGTERM,
+	syscall.SIGWINCH,
 }
 
 func number(sig os.Signal) int {

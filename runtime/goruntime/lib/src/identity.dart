@@ -81,3 +81,11 @@ final _errno = _libc
     _free(buffer.cast());
   }
 }
+
+final _kill = _libc
+    .lookupFunction<Int Function(Int, Int), int Function(int, int)>('kill');
+
+int $sendSignal(int pid, int signal) {
+  if (!_posix) return -1;
+  return _kill(pid, signal) == 0 ? 0 : _errno().value;
+}

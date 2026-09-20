@@ -37,7 +37,7 @@ func TestSelectedUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	selections := map[string][]upstreamFile{
-		"os/signal": {{Name: "signal_test.go", Declarations: []string{"TestNotifyContextStop", "TestNotifyContextCancelParent", "TestNotifyContextPrematureCancelParent", "TestNotifyContextSimultaneousStop", "TestNotifyContextStringer"}}},
+		"os/signal": {{Name: "signal_test.go", Declarations: []string{"TestNotifyContextStop", "TestNotifyContextCancelParent", "TestNotifyContextPrematureCancelParent", "TestNotifyContextSimultaneousStop", "TestNotifyContextStringer", "TestIgnored"}}},
 		"fmt": {
 			{Name: "scan_test.go", Declarations: []string{"RecursiveInt", "RecursiveInt.Scan", "scanInts", "makeInts", "TestScanInts", "intCount", "testScanInts", "f"}},
 			{Name: "fmt_test.go", Declarations: []string{"TestComplexFormatting", "NaN", "posInf", "negInf"}},

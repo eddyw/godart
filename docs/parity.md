@@ -39,6 +39,11 @@ file metadata, TLS configuration, or runtime inspection APIs.
 `net/http/fcgi` supports supplied listeners. `Serve` with a nil listener
 returns an explicit error because inherited listener descriptors remain unsupported.
 
+Linux and macOS support `syscall.Kill` and `syscall.Getpid` through native APIs.
+Signal watches currently support SIGHUP, SIGINT, SIGTERM, and SIGWINCH.
+Other native signal watches remain unsupported. Browser builds cannot send
+or receive operating system signals.
+
 `log/syslog` supports TCP, UDP, and Unix streams. Unix datagrams and local
 daemons that require them remain unsupported.
 
