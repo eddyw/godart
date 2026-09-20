@@ -65,6 +65,23 @@ Add `--resume` with identical arguments to retry failed or absent jobs.
 Successful jobs remain intact. Changed source, SDKs, selection, image, or
 concurrency require a new output directory. Each attempt retains its own log.
 
+## Shard duration updates
+
+Refresh stdlib weights after a completed local run:
+
+```sh
+python3 scripts/ci-durations.py build/linux-short \
+  --output internal/driver/testdata/ci-durations.json \
+  --evidence build/ci-duration-evidence.json
+```
+
+The command retains separate short and full weights. It uses only completed,
+passing package cases from attempts with a final result. A failed shard can
+still supply durations for its passing cases. Repeated samples use the maximum.
+The evidence records source identities, log hashes, and the measured durations.
+Review the changed weights before a commit. Measure the revised shard allocation
+before a timeout change.
+
 ## Budgets and remote execution
 
 Use twice the largest relevant local duration, rounded up to whole minutes,
