@@ -1,6 +1,8 @@
 package driver_test
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -8,6 +10,36 @@ import (
 	"strings"
 	"testing"
 )
+
+type nativeImage struct {
+	Command []string `json:"command"`
+	SHA256  string   `json:"sha256"`
+}
+
+func prepareUpstreamNativeImage(t *testing.T, dir, out, entry string) nativeImage {
+	t.Helper()
+	name := filepath.Join(out, "native.test")
+	args := []string{"test", "-c", "-o", name, "."}
+	run(t, dir, "go", args...)
+	data, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := nativeImage{Command: append([]string{"go"}, args...), SHA256: fmt.Sprintf("%x", sha256.Sum256(data))}
+	entry = filepath.Join(out, entry)
+	source, err := os.ReadFile(entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const start = "$boot(() {"
+	if strings.Count(string(source), start) != 1 {
+		t.Fatal("expected 1 generated test entry point")
+	}
+	quoted := strings.ReplaceAll(strconv.Quote(name), "$", `\$`)
+	writeFile(t, entry, strings.Replace(string(source), start,
+		"$os.Args[0] = GoString.fromString("+quoted+");\n"+start, 1))
+	return result
+}
 
 func prepareUpstreamSelfExec(t *testing.T, out, entry string) {
 	t.Helper()

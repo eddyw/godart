@@ -72,6 +72,7 @@ func externalFixtures(t *testing.T, output string) []moduleFixture {
 }
 
 type upstreamEvidence struct {
+	NativeImages     []nativeImage       `json:"native_images,omitempty"`
 	ExternalFixtures []moduleFixture     `json:"external_fixtures,omitempty"`
 	NativeArgs       []string            `json:"native_args"`
 	NativeTrimPath   bool                `json:"native_trimpath"`
@@ -141,7 +142,7 @@ func upstreamExtraArgs(pkg string) []string {
 	return nil
 }
 
-func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int) {
+func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, images ...nativeImage) {
 	t.Helper()
 	nativeTags := slices.Clone(build.Default.BuildTags)
 	args := []string{"test", "-json", "-count=1", "-timeout=" + upstreamLimit().String()}
@@ -295,7 +296,7 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 		if pkg == "go/build" || pkg == "debug/buildinfo" {
 			env["GOROOT"] = build.Default.GOROOT
 		}
-		data, err := json.MarshalIndent(upstreamEvidence{ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
+		data, err := json.MarshalIndent(upstreamEvidence{NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}

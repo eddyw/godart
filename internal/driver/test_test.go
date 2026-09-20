@@ -362,6 +362,10 @@ func TestTestsOfGoroot(t *testing.T) {
 			if c.Package == "net/http/cgi" || (c.Package == "log" || c.Package == "log/slog") && !testing.Short() {
 				prepareUpstreamSelfExec(t, outDir, stats.Binaries[0].Entry)
 			}
+			var images []nativeImage
+			if c.Package == "debug/elf" || c.Package == "debug/gosym" {
+				images = append(images, prepareUpstreamNativeImage(t, dir, outDir, stats.Binaries[0].Entry))
+			}
 			var env []string
 			if c.Package == "go/build" || c.Package == "debug/buildinfo" {
 				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
@@ -370,7 +374,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			args = append(args, upstreamExtraArgs(c.Package)...)
 			text, execErr, finished := output(dir, env, upstreamLimit(), "dart", args...)
 			if !finished {
-				compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124)
+				compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124, images...)
 				return
 			}
 			code := 0
@@ -383,7 +387,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			}
 			got := string(text)
 			t.Logf("upstream results:\n%s", got)
-			compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, got, code)
+			compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, got, code, images...)
 
 		})
 	}

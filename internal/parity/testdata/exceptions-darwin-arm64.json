@@ -11559,14 +11559,38 @@
       "native": "skip",
       "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
       "test": "TestLargeNumberOfSegments"
+    },
+    {
+      "test": "TestNoSectionOverlaps",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original assertion skips Darwin because its linker does not emit ELF images."
     }
   ],
   "debug/gosym": [
+    {
+      "test": "TestLineAline",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original assertion skips Darwin because the test executable has no ELF image."
+    },
+    {
+      "test": "TestLineFromAline",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original assertion skips Darwin because the test executable has no ELF image."
+    },
     {
       "gart": "skip",
       "native": "skip",
       "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
       "test": "TestPCLine"
+    },
+    {
+      "test": "TestSymVersion",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original assertion skips Darwin because the test executable has no ELF image."
     }
   ],
   "debug/pe": [

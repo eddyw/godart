@@ -64,6 +64,8 @@ The full buildinfo suite uses its original `-all` option and selects the SDK pla
 Both Go and Gart read native artifacts from that SDK. This selection does not cover `c-shared` or cgo.
 Gart preserves its compiler and architecture identity during source selection.
 Its module lookup uses the SDK compiler identity because `go list` does not accept `gart` or `dart64`.
+The ELF and Go symbol adapters supply a native SDK test executable as `os.Args[0]`.
+Reports retain its build command and SHA-256. Original platform and absent-section skips remain explicit.
 
 The inventory gate rejects changes to upstream source, fixtures, build tags, and test patches.
 Each SDK version has a separate inventory. A candidate inventory records reviewed

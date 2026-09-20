@@ -17,26 +17,6 @@
       "reason": "The test requires native FIPS service indicators. Gart does not provide the native FIPS module identity or certification mode."
     }
   },
-  "debug/elf": {
-    "TestNoSectionOverlaps": {
-      "classification": "test-adapter",
-      "reason": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image."
-    }
-  },
-  "debug/gosym": {
-    "TestLineAline": {
-      "classification": "test-adapter",
-      "reason": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image."
-    },
-    "TestLineFromAline": {
-      "classification": "test-adapter",
-      "reason": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image."
-    },
-    "TestSymVersion": {
-      "classification": "test-adapter",
-      "reason": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image."
-    }
-  },
   "encoding/asn1": {
     "TestParsingMemoryConsumption": {
       "classification": "target-limit",

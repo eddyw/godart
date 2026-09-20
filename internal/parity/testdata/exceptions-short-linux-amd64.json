@@ -11797,10 +11797,28 @@
   ],
   "debug/gosym": [
     {
+      "test": "TestLineAline",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original assertion skips because the active Go SDK executable has no .gosymtab section."
+    },
+    {
+      "test": "TestLineFromAline",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original assertion skips because the active Go SDK executable has no .gosymtab section."
+    },
+    {
       "gart": "skip",
       "native": "skip",
-      "reason": "Upstream excludes this case on Darwin/ARM64 because it requires another binary format or architecture.",
+      "reason": "Native Go omits .gosymtab from its assembly fixture. Gart also excludes the native AMD64 instruction fixture on dart64.",
       "test": "TestPCLine"
+    },
+    {
+      "test": "TestSymVersion",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original assertion skips because the active Go SDK executable has no .gosymtab section."
     }
   ],
   "debug/pe": [
