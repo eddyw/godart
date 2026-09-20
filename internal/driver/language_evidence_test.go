@@ -23,6 +23,8 @@ type languageExecution struct {
 }
 
 type languageOutcome struct {
+	Generator         *languageExecution  `json:"generator,omitempty"`
+	GeneratedSource   string              `json:"generated_source,omitempty"`
 	NativeDiagnostics string              `json:"native_diagnostics,omitempty"`
 	GartDiagnostics   string              `json:"gart_diagnostics,omitempty"`
 	NativeMatch       languageExecution   `json:"native_match"`

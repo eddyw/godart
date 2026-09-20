@@ -563,7 +563,11 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	prev := b.fn
 	prevPending := b.pending
 	prevGoto := b.gotoLabels
+	prevLabelYields, prevYield, prevYieldGotos := b.labelYields, b.currentYield, b.yieldGotos
+	prevLoops, prevRetFlag, prevRetVars, prevBranchFlags := b.loops, b.retFlag, b.retVars, b.branchFlags
 	b.gotoLabels = gotoTargets(e.Body)
+	b.labelYields, b.currentYield, b.yieldGotos = b.rangeLabels(e.Body), nil, nil
+	b.loops, b.retFlag, b.retVars, b.branchFlags = nil, "", nil, nil
 	labels := b.gotoLabels
 	b.pending = nil
 	// The body of a literal is a function of its own, thus the order pass runs
@@ -575,11 +579,14 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	out.Params = inner.Params
 	out.Results = inner.Results
 	out.Body = b.block(e.Body)
+	out.Body.List = append(b.returnState(), out.Body.List...)
 	out.Defers = inner.Defers
 	out.Captured = b.litCaptures(e)
 	b.fn = prev
 	b.pending = prevPending
 	b.gotoLabels = prevGoto
+	b.labelYields, b.currentYield, b.yieldGotos = prevLabelYields, prevYield, prevYieldGotos
+	b.loops, b.retFlag, b.retVars, b.branchFlags = prevLoops, prevRetFlag, prevRetVars, prevBranchFlags
 	b.noOrder = prevNoOrder
 	if !out.Async && len(labels) == 0 {
 		return out

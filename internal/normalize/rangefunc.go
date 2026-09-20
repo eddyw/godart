@@ -33,6 +33,7 @@ const (
 type loop struct {
 	kind  loopKind
 	label string
+	yield *ast.RangeStmt
 
 	// flag names the variable that marks a branch that leaves the body of a
 	// range loop over a function and reaches this construct. It is empty when
@@ -153,7 +154,11 @@ func (b *builder) rangeFunc(s *ast.RangeStmt, label string, sig *types.Signature
 			&ir.Ident{Name: params[1].Name, Type: params[1].Type})...)
 	}
 	b.pushLoop(loopYield, label)
+	b.loops[len(b.loops)-1].yield = s
+	previousYield := b.currentYield
+	b.currentYield = s
 	body.List = append(body.List, b.block(s.Body).List...)
+	b.currentYield = previousYield
 	b.popLoop()
 	body.List = append(body.List, &ir.Return{Values: []ir.Expr{boolConst(true)}})
 
@@ -168,10 +173,12 @@ func (b *builder) rangeFunc(s *ast.RangeStmt, label string, sig *types.Signature
 	// function literal does. Before this rule, the body stayed a plain
 	// closure, and a park of a channel inside it was lost.
 	var arg ir.Expr = fn
-	if fn.Async {
-		fn.Machine = b.flatten(fn.Body, fn.Params, nil, true, false, false,
+	if fn.Async || len(gotoTargets(s.Body)) > 0 {
+		fn.Machine = b.flatten(fn.Body, fn.Params, nil, fn.Async, false, false,
 			fn.Results, b.frameClass(s.Pos()), s.Pos())
 		addResults(fn.Machine, fn.Results)
+	}
+	if fn.Async {
 		fn.Captured = b.rangeCaptures(s)
 		local := b.litName(s.Pos())
 		b.pending = append(b.pending, &ir.LocalFunc{Name: local, Lit: fn})
@@ -187,7 +194,85 @@ func (b *builder) rangeFunc(s *ast.RangeStmt, label string, sig *types.Signature
 	if check := b.returnCheck(); check != nil {
 		out = append(out, check)
 	}
-	return append(out, b.branchChecks()...)
+	out = append(out, b.branchChecks()...)
+	return append(out, b.gotoChecks()...)
+}
+
+type yieldGoto struct {
+	label  string
+	target *ast.RangeStmt
+	flag   *ir.Var
+}
+
+func (b *builder) rangeLabels(body *ast.BlockStmt) map[string]*ast.RangeStmt {
+	labels := map[string]*ast.RangeStmt{}
+	var visit func(ast.Node, *ast.RangeStmt)
+	visit = func(node ast.Node, owner *ast.RangeStmt) {
+		ast.Inspect(node, func(n ast.Node) bool {
+			switch n := n.(type) {
+			case *ast.FuncLit:
+				return false
+			case *ast.LabeledStmt:
+				labels[n.Label.Name] = owner
+			case *ast.RangeStmt:
+				if _, ok := typeset.Core(b.typeOf(n.X)).(*types.Signature); ok {
+					visit(n.Body, n)
+					return false
+				}
+			}
+			return true
+		})
+	}
+	visit(body, nil)
+	return labels
+}
+
+func (b *builder) gotoBranch(s *ast.BranchStmt, label string) []ir.Stmt {
+	target := b.labelYields[s.Label.Name]
+	if target == b.currentYield {
+		return []ir.Stmt{&ir.Goto{Label: label}}
+	}
+	var flag *ir.Var
+	for _, jump := range b.yieldGotos {
+		if jump.label == label {
+			flag = jump.flag
+			break
+		}
+	}
+	if flag == nil {
+		flag = b.tempVar(s.Pos(), "ygt", types.Typ[types.Int])
+		flag.Boxed = true
+		b.yieldGotos = append(b.yieldGotos, yieldGoto{label: label, target: target, flag: flag})
+		b.branchFlags = append(b.branchFlags, flag)
+	}
+	return []ir.Stmt{
+		&ir.Assign{Lhs: identOf(flag), Rhs: intConst(1)},
+		&ir.Return{Values: []ir.Expr{boolConst(false)}},
+	}
+}
+
+func (b *builder) gotoChecks() []ir.Stmt {
+	var out []ir.Stmt
+	for _, jump := range b.yieldGotos {
+		active := jump.target == nil
+		for _, loop := range b.loops {
+			if loop.yield == jump.target {
+				active = true
+			}
+		}
+		if !active {
+			continue
+		}
+		body := []ir.Stmt{&ir.Return{Values: []ir.Expr{boolConst(false)}}}
+		if jump.target == b.currentYield {
+			body = []ir.Stmt{&ir.Assign{Lhs: identOf(jump.flag), Rhs: intConst(0)}, &ir.Goto{Label: jump.label}}
+		}
+		out = append(out, &ir.If{
+			Cond: &ir.Binary{Op: token.NEQ, X: identOf(jump.flag), Y: intConst(0), Type: types.Typ[types.Bool]},
+			Then: &ir.Block{List: body},
+		})
+	}
+	return out
 }
 
 // yieldBranch writes a branch that leaves the body of a range loop over a
@@ -208,7 +293,7 @@ func (b *builder) yieldBranch(k int, isBreak bool) []ir.Stmt {
 	if target.flag == "" {
 		target.flag = "$ybr" + target.label
 		b.branchFlags = append(b.branchFlags,
-			&ir.Var{Name: target.flag, Type: types.Typ[types.Int]})
+			&ir.Var{Name: target.flag, Type: types.Typ[types.Int], Boxed: true})
 	}
 	mark := branchBreak
 	if !isBreak {
@@ -216,7 +301,7 @@ func (b *builder) yieldBranch(k int, isBreak bool) []ir.Stmt {
 	}
 	return []ir.Stmt{
 		&ir.Assign{
-			Lhs: &ir.Ident{Name: target.flag, Type: types.Typ[types.Int]},
+			Lhs: &ir.Ident{Name: target.flag, Type: types.Typ[types.Int], Boxed: true},
 			Rhs: intConst(int64(mark)),
 		},
 		&ir.Return{Values: []ir.Expr{boolConst(false)}},
@@ -244,7 +329,7 @@ func (b *builder) branchChecks() []ir.Stmt {
 		if l.flag == "" {
 			continue
 		}
-		read := &ir.Ident{Name: l.flag, Type: types.Typ[types.Int]}
+		read := &ir.Ident{Name: l.flag, Type: types.Typ[types.Int], Boxed: true}
 		if inner > i {
 			// Another closure stands between this point and the target, thus
 			// the flag travels out 1 more level.
@@ -272,12 +357,15 @@ func (b *builder) branchRun(l loop, read ir.Expr, mark int, isBreak bool) ir.Stm
 	if isBreak {
 		jump = &ir.Break{Label: l.label}
 	}
+	if l.kind == loopYield {
+		jump = &ir.Return{Values: []ir.Expr{boolConst(!isBreak)}}
+	}
 	return &ir.If{
 		Cond: &ir.Binary{Op: token.EQL, X: read, Y: intConst(int64(mark)),
 			Type: types.Typ[types.Bool]},
 		Then: &ir.Block{List: []ir.Stmt{
 			&ir.Assign{
-				Lhs: &ir.Ident{Name: l.flag, Type: types.Typ[types.Int]},
+				Lhs: &ir.Ident{Name: l.flag, Type: types.Typ[types.Int], Boxed: true},
 				Rhs: intConst(0),
 			},
 			jump,
@@ -307,14 +395,14 @@ func (b *builder) yieldReturn(s *ast.ReturnStmt) []ir.Stmt {
 	case len(s.Results) == 0 && hasNamedResult(f):
 		for i, r := range f.Results {
 			out = append(out, &ir.Assign{
-				Lhs: &ir.Ident{Name: b.retVars[i].Name, Type: b.retVars[i].Type},
+				Lhs: identOf(b.retVars[i]),
 				Rhs: &ir.Ident{Name: r.Name, Type: r.Type, Boxed: r.Boxed},
 			})
 		}
 	case len(s.Results) == 1 && len(f.Results) > 1:
 		lhs := make([]ir.Expr, len(b.retVars))
 		for i, v := range b.retVars {
-			lhs[i] = &ir.Ident{Name: v.Name, Type: v.Type}
+			lhs[i] = identOf(v)
 		}
 		out = append(out, &ir.AssignMulti{Lhs: lhs, Rhs: b.multiValue(s.Results[0])})
 	default:
@@ -323,13 +411,13 @@ func (b *builder) yieldReturn(s *ast.ReturnStmt) []ir.Stmt {
 				break
 			}
 			out = append(out, &ir.Assign{
-				Lhs: &ir.Ident{Name: b.retVars[i].Name, Type: b.retVars[i].Type},
+				Lhs: identOf(b.retVars[i]),
 				Rhs: b.copyPoint(b.exprAs(r, f.Results[i].Type)),
 			})
 		}
 	}
 	out = append(out, &ir.Assign{
-		Lhs: &ir.Ident{Name: b.retFlag, Type: types.Typ[types.Bool]},
+		Lhs: &ir.Ident{Name: b.retFlag, Type: types.Typ[types.Bool], Boxed: true},
 		Rhs: boolConst(true),
 	})
 	return append(out, &ir.Return{Values: []ir.Expr{boolConst(false)}})
@@ -344,7 +432,7 @@ func (b *builder) needReturnState(f *ir.Func) {
 	b.retFlag = b.temp(f.Pos, "yret")
 	b.retVars = make([]*ir.Var, len(f.Results))
 	for i, r := range f.Results {
-		b.retVars[i] = &ir.Var{Name: b.temp(f.Pos, "yr"+strconv.Itoa(i)), Type: r.Type}
+		b.retVars[i] = &ir.Var{Name: b.temp(f.Pos, "yr"+strconv.Itoa(i)), Type: r.Type, Boxed: true}
 	}
 }
 
@@ -358,7 +446,7 @@ func (b *builder) returnCheck() ir.Stmt {
 	if b.retFlag == "" {
 		return nil
 	}
-	read := &ir.Ident{Name: b.retFlag, Type: types.Typ[types.Bool]}
+	read := &ir.Ident{Name: b.retFlag, Type: types.Typ[types.Bool], Boxed: true}
 	if b.insideYield() {
 		return &ir.If{Cond: read, Then: &ir.Block{List: []ir.Stmt{
 			&ir.Return{Values: []ir.Expr{boolConst(false)}},
@@ -366,7 +454,7 @@ func (b *builder) returnCheck() ir.Stmt {
 	}
 	values := make([]ir.Expr, len(b.retVars))
 	for i, v := range b.retVars {
-		values[i] = &ir.Ident{Name: v.Name, Type: v.Type}
+		values[i] = identOf(v)
 	}
 	return &ir.If{Cond: read, Then: &ir.Block{List: []ir.Stmt{
 		&ir.Return{Values: values},
@@ -379,7 +467,7 @@ func (b *builder) returnState() []ir.Stmt {
 	var out []ir.Stmt
 	if b.retFlag != "" {
 		out = append(out, &ir.Declare{
-			Vars: []*ir.Var{{Name: b.retFlag, Type: types.Typ[types.Bool]}},
+			Vars: []*ir.Var{{Name: b.retFlag, Type: types.Typ[types.Bool], Boxed: true}},
 			Init: boolConst(false),
 		})
 		for _, v := range b.retVars {

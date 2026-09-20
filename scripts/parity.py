@@ -264,7 +264,14 @@ def language_behavior(paths):
                     else:
                         valid = expected and executed and all(case[k]["output_sha256"] == expected
                                                               for k in ("native", "gart"))
-                    valid = valid and config["contract"] in {"run", "compile", "reject"} and case.get("contract", "run") == config["contract"]
+                        if case.get("contract") == "runoutput":
+                            generator = case.get("generator") or {}
+                            source = case.get("generated_source")
+                            valid = (valid and case["fixture"]["recipe"] == "runoutput" and source
+                                     and generator.get("ran") and generator.get("exit") == 0
+                                     and not generator.get("timed_out") and not case.get("build_error")
+                                     and hashlib.sha256(source.encode()).hexdigest() == generator.get("output_sha256"))
+                    valid = valid and config["contract"] in {"run", "runoutput", "compile", "reject"} and case.get("contract", "run") == config["contract"]
                     if not valid:
                         status = "failed"
                         group["problems"].append(f"{path}: invalid pass for {name}")

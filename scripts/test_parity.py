@@ -11,6 +11,36 @@ spec.loader.exec_module(parity)
 
 
 class ParityTest(unittest.TestCase):
+    def test_generated_program_requires_original_recipe_and_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = "package main\r\nfunc main() {}\r\n"
+            generator = dict(ran=True, exit=0, timed_out=False,
+                             output_sha256=parity.hashlib.sha256(source.encode()).hexdigest())
+            execution = dict(ran=True, exit=0, timed_out=False, output_sha256="expected")
+            case = dict(fixture=dict(name="p", recipe="runoutput"), contract="runoutput", status="passed",
+                        generator=generator, generated_source=source, expected_sha256="expected",
+                        native=dict(execution), gart=dict(execution))
+            report = dict(kind="language", contract="runoutput", complete=True, outcomes=[case], shard=0, shards=1)
+            path = root / "language.json"
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"passed": 1})
+            mutations = [
+                lambda c: c.pop("generator"),
+                lambda c: c["generator"].update(ran=False),
+                lambda c: c["generator"].update(exit=1),
+                lambda c: c["generator"].update(timed_out=True),
+                lambda c: c.update(generated_source=source.replace("\r\n", "\n")),
+                lambda c: c["fixture"].update(recipe="runoutput extra.go"),
+                lambda c: c.update(build_error="invalid source"),
+                lambda c: c["gart"].update(output_sha256="different"),
+            ]
+            for mutate in mutations:
+                changed = copy.deepcopy(report)
+                mutate(changed["outcomes"][0])
+                parity.save(path, changed)
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+
     def test_certificate_inputs_preserve_setup_and_require_success(self):
         expressions = [f"generatePEMCertWithRepeatSAN(100, {i}, \"fake.dns\")" for i in range(4)]
         source = "\n".join(f"var x{i} = {expression}" for i, expression in enumerate(expressions))

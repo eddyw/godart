@@ -267,9 +267,6 @@
   "fixedbugs/issue75365": [
     "$DIR/issue75365.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
-  "fixedbugs/issue78408": [
-    "the label A of a goto statement is outside the function body"
-  ],
   "fixedbugs/issue79812": [
     "the conversion from complex128 to T is not supported yet"
   ],

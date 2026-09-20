@@ -3,6 +3,7 @@
 package emit
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -164,7 +165,7 @@ type emitter struct {
 	dartLibs  map[string]string
 	dartOrder []string
 	base      string
-	buf       strings.Builder
+	buf       bytes.Buffer
 	errs      []error
 
 	// methods groups each method by the name of its receiver type.

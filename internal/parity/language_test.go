@@ -27,6 +27,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/reject.go", "// errorcheck\npackage p\n")
 	write("test/rejectflags.go", "// errorcheck -0\npackage p\n")
 	write("test/compileflags.go", "// compile -N\npackage p\n")
+	write("test/generated.go", "// runoutput\npackage main\n")
+	write("test/generatedflags.go", "// runoutput extra.go\npackage main\n")
 	write("test/suffix_windows.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/constraints.go", "//go:build dart\n\n// run\npackage main\nfunc main() {}\n")
 	write("test/other/directory.go", "// rundir -G=3\npackage ignored\n")
@@ -38,8 +40,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 8 {
-		t.Fatalf("got %d cases, want 8", len(inv.Cases))
+	if len(inv.Cases) != 10 {
+		t.Fatalf("got %d cases, want 10", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -50,6 +52,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["compile"].Adapter != "compile-file" || cases["compileflags"].Adapter != "missing" {
 		t.Fatal("the compile adapter must not discard recipe flags")
+	}
+	if cases["generated"].Adapter != "generated-file" || cases["generatedflags"].Adapter != "missing" {
+		t.Fatal("the generator adapter must not discard recipe arguments")
 	}
 	if c := cases["suffix_windows"]; !c.NativeEligible || c.GartEligible {
 		t.Fatalf("runner suffix rules lost: %+v", c)

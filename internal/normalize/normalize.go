@@ -106,7 +106,10 @@ type builder struct {
 	loops []loop
 
 	// gotoLabels holds the label of each goto target of the current function.
-	gotoLabels map[string]bool
+	gotoLabels   map[string]bool
+	labelYields  map[string]*ast.RangeStmt
+	currentYield *ast.RangeStmt
+	yieldGotos   []yieldGoto
 
 	// blocks holds the result of stage 3.
 	blocks *analyze.Result
@@ -338,6 +341,9 @@ func (b *builder) startInit(e ast.Expr) {
 	b.names = map[types.Object]string{}
 	b.used = map[string]bool{}
 	b.gotoLabels = nil
+	b.labelYields = nil
+	b.currentYield = nil
+	b.yieldGotos = nil
 	b.boxes = b.addressed(e)
 	for v := range b.globalBoxes {
 		b.boxes[v] = true
@@ -391,6 +397,9 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	}
 	f.Async = b.blocks.Blocks(obj)
 	b.gotoLabels = gotoTargets(d.Body)
+	b.labelYields = b.rangeLabels(d.Body)
+	b.currentYield = nil
+	b.yieldGotos = nil
 	b.boxes = b.addressed(d.Body)
 	for v := range b.globalBoxes {
 		b.boxes[v] = true

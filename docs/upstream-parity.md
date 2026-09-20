@@ -201,6 +201,19 @@ GART_PARITY_REPORT_DIR="$PWD/build/rejection-audit" bash scripts/ci.sh language-
 This audit can fail on unresolved compiler differences. It is separate from the routine CI matrix.
 The driver suite includes focused original rejection regressions through `TestRejectionContracts`.
 
+The `language-generated` audit compares exact `runoutput` recipes. Native Go executes the unchanged generator.
+Both compilers then receive its exact output bytes. Reports retain the generator command, exit, source bytes, and source hash.
+Both programs must satisfy the original output assertion. This establishes parity for the generated program, not for generator execution.
+Generator arguments require a separate adapter. This audit remains separate from the routine CI matrix because unresolved cases can fail.
+
+```sh
+GART_PARITY_REPORT_DIR="$PWD/build/generated-audit" bash scripts/ci.sh language-generated
+```
+
+The original `slice3` fixture inspects native slice memory layout through `unsafe`.
+The `convinline` generator records host-specific results for out-of-range numeric conversions.
+The audit retains these failures without weaker assertions or new exclusions.
+
 The `language-targets` suite executes the selected original fixtures on all 4 Dart targets.
 Its 4 shards keep these comparisons separate from the existing target fixtures.
 

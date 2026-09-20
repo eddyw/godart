@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-suite=${1:?usage: scripts/ci.sh checks|driver|applications|integration|targets|fuzz-replay|upstream-targets|upstream-priority|upstream-blockers|web-io|web-fetch|programs|language|language-compile|language-reject|language-targets|stdlib [shard-index] [shard-count]}
+suite=${1:?usage: scripts/ci.sh checks|driver|applications|integration|targets|fuzz-replay|upstream-targets|upstream-priority|upstream-blockers|web-io|web-fetch|programs|language|language-compile|language-reject|language-generated|language-targets|stdlib [shard-index] [shard-count]}
 shard_index=${2:-0}
 shard_count=${3:-1}
 test_timeout=${GART_TEST_TIMEOUT:-30m}
@@ -30,7 +30,7 @@ if [[ $suite == fuzz-replay || $suite == driver || $suite == stdlib || $suite ==
   fi
 fi
 
-large_tests='TestRejectFilesOfGoTest|TestCompileFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
+large_tests='TestRunOutputFilesOfGoTest|TestRejectFilesOfGoTest|TestCompileFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
 case "$suite" in
   checks)
     python3 -B -m unittest discover -s scripts -p test_ci_local.py
@@ -55,6 +55,7 @@ case "$suite" in
   language-targets) test_name=TestLanguageTargets ;;
   language-compile) test_name=TestCompileFilesOfGoTest ;;
   language-reject) test_name=TestRejectFilesOfGoTest ;;
+  language-generated) test_name=TestRunOutputFilesOfGoTest ;;
   fuzz-replay) test_name=TestUpstreamFuzzReplay ;;
   upstream-targets) test_name=TestUpstreamTargets ;;
   upstream-blockers) test_name=TestUpstreamCompileBlockers ;;

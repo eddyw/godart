@@ -106,28 +106,26 @@ func (b *builder) stmtOf(s ast.Stmt) []ir.Stmt {
 
 func (b *builder) labeled(s *ast.LabeledStmt) []ir.Stmt {
 	label := name.Local(s.Label.Name)
-	if b.gotoLabels[s.Label.Name] {
-		// A goto reaches this label, thus the label marks the start of a block
-		// of the state machine that stage 4 builds.
-		return []ir.Stmt{&ir.Labeled{Label: label, Goto: true, Stmt: &ir.Block{List: b.stmt(s.Stmt)}}}
-	}
+	var body []ir.Stmt
 	switch inner := s.Stmt.(type) {
 	case *ast.ForStmt:
-		return b.forStmt(inner, label)
+		body = b.forStmt(inner, label)
 	case *ast.RangeStmt:
-		return b.rangeStmt(inner, label)
+		body = b.rangeStmt(inner, label)
 	case *ast.SwitchStmt:
-		return b.switchStmt(inner, label)
+		body = b.switchStmt(inner, label)
 	case *ast.TypeSwitchStmt:
-		return b.typeSwitch(inner, label)
+		body = b.typeSwitch(inner, label)
 	case *ast.SelectStmt:
-		return b.selectStmt(inner, label)
+		body = b.selectStmt(inner, label)
+	default:
+		body = b.stmt(s.Stmt)
+		return []ir.Stmt{&ir.Labeled{Label: label, Goto: b.gotoLabels[s.Label.Name], Stmt: &ir.Block{List: body}}}
 	}
-	body := b.stmt(s.Stmt)
-	if len(body) == 0 {
-		return []ir.Stmt{&ir.Labeled{Label: label, Stmt: &ir.Block{}}}
+	if b.gotoLabels[s.Label.Name] {
+		return []ir.Stmt{&ir.Labeled{Label: label, Goto: true, Stmt: &ir.Block{List: body}}}
 	}
-	return []ir.Stmt{&ir.Labeled{Label: label, Stmt: &ir.Block{List: body}}}
+	return body
 }
 
 func (b *builder) branch(s *ast.BranchStmt) []ir.Stmt {
@@ -139,7 +137,7 @@ func (b *builder) branch(s *ast.BranchStmt) []ir.Stmt {
 	case token.BREAK, token.CONTINUE:
 		return b.breakOrContinue(s, label)
 	case token.GOTO:
-		return []ir.Stmt{&ir.Goto{Label: label}}
+		return b.gotoBranch(s, label)
 	}
 	b.fail(s.Pos(), "fallthrough must be the last statement of a case")
 	return nil

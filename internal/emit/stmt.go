@@ -47,10 +47,8 @@ func (e *emitter) list(stmts []ir.Stmt) {
 // openCaptures puts the copy of each box in front of the text that starts at
 // the mark, and it leaves the block open.
 func (e *emitter) openCaptures(mark int) {
-	text := e.buf.String()
-	head, body := text[:mark], text[mark:]
-	e.buf.Reset()
-	e.buf.WriteString(head)
+	body := string(e.buf.Bytes()[mark:])
+	e.buf.Truncate(mark)
 	e.line("{")
 	for _, c := range e.captures {
 		e.line("final %s %s = %s;", c.typ, c.name, c.from)

@@ -17,9 +17,15 @@ import (
 
 func recordLanguage(t *testing.T, result *languageExecution, dir string, limit time.Duration, name string, args ...string) string {
 	t.Helper()
+	text := strings.ReplaceAll(recordLanguageRaw(t, result, dir, limit, name, args...), "\r\n", "\n")
+	result.OutputSHA256 = languageDigest([]byte(text))
+	return text
+}
+
+func recordLanguageRaw(t *testing.T, result *languageExecution, dir string, limit time.Duration, name string, args ...string) string {
+	t.Helper()
 	start := time.Now()
 	text, err, ended := output(dir, nil, limit, name, args...)
-	text = []byte(strings.ReplaceAll(string(text), "\r\n", "\n"))
 	*result = languageExecution{Command: append([]string{name}, args...), Ran: true, TimedOut: !ended, OutputSHA256: languageDigest(text), Seconds: time.Since(start).Seconds()}
 	if err != nil {
 		result.Exit = -1
@@ -66,6 +72,20 @@ func TestRunFilesOfGoTest(t *testing.T) {
 	runLanguageCases(t, "vm", inv, cases)
 }
 
+func TestRunOutputFilesOfGoTest(t *testing.T) {
+	inv, err := parity.DiscoverLanguage(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []parity.LanguageCase
+	for _, c := range inv.Cases {
+		if c.Adapter == "generated-file" {
+			cases = append(cases, c)
+		}
+	}
+	runLanguageCases(t, "vm", inv, cases)
+}
+
 func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory, cases []parity.LanguageCase) {
 	t.Helper()
 	root := filepath.Join(build.Default.GOROOT, "test")
@@ -78,7 +98,11 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 	var outcomes []*languageOutcome
 	for _, c := range cases {
 		if selected[c.Name] {
-			outcomes = append(outcomes, &languageOutcome{Fixture: c, Status: "unobserved"})
+			contract := "run"
+			if c.Adapter == "generated-file" {
+				contract = "runoutput"
+			}
+			outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: contract, Status: "unobserved"})
 		}
 	}
 	retainLanguageEvidence(t, target, inv, outcomes)
@@ -109,8 +133,30 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				t.Skip(c.Exclusion.Classification + ": " + c.Exclusion.Reason)
 			}
 			dir := t.TempDir()
+			if c.Adapter == "generated-file" {
+				outcome.Generator = &languageExecution{}
+				outcome.GeneratedSource = recordLanguageRaw(t, outcome.Generator, dir, runLimit, "go", "run", "-gcflags=all="+inv.GCFlags, filepath.Join(root, c.File))
+				if outcome.Generator.Exit != 0 {
+					t.Fatalf("native generator exited %d\n%s", outcome.Generator.Exit, outcome.GeneratedSource)
+				}
+				source = []byte(outcome.GeneratedSource)
+			}
 			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/gotest\n\ngo 1.27\n")
 			writeFile(t, filepath.Join(dir, file), string(source))
+			license, err := os.ReadFile(filepath.Join(build.Default.GOROOT, "LICENSE"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
+			want, err := os.ReadFile(filepath.Join(root, name+".out"))
+			if err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+			outcome.ExpectedSHA256 = languageDigest(want)
+			native := runLanguage(t, &outcome.Native, dir, runLimit, "go", "run", "-gcflags=all="+inv.GCFlags, file)
+			if native != string(want) {
+				t.Fatalf("native output differs from upstream fixture\nwant:\n%s\ngot:\n%s", want, native)
+			}
 			out := filepath.Join(dir, "out")
 			err = driver.Build(driver.Options{
 				Trace:    traceBuild(t),
@@ -120,6 +166,9 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				Runtime:  runtime,
 				Format:   false,
 			})
+			if err != nil {
+				outcome.BuildError = err.Error()
+			}
 			if want := c.Rejection; want != nil {
 				if err == nil {
 					t.Fatal("the build now passes: remove its expected rejection")
@@ -133,15 +182,6 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 			}
 			if err != nil {
 				t.Fatalf("unexpected build failure:\n%v", err)
-			}
-			want, err := os.ReadFile(filepath.Join(root, name+".out"))
-			if err != nil && !os.IsNotExist(err) {
-				t.Fatal(err)
-			}
-			outcome.ExpectedSHA256 = languageDigest(want)
-			native := runLanguage(t, &outcome.Native, dir, runLimit, "go", "run", file)
-			if native != string(want) {
-				t.Fatalf("native output differs from upstream fixture\nwant:\n%s\ngot:\n%s", want, native)
 			}
 			prepareDart(t, out)
 			limit := 2 * time.Minute
