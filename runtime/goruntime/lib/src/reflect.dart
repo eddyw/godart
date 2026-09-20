@@ -993,10 +993,6 @@ Object? _field(Object? record, int index, int count) {
 
 /// Interface reflection includes unexported methods.
 /// Concrete types expose only exported methods.
-///
-/// A key holds the name and the signature, and a parenthesis follows the name.
-/// The parenthesis stands below each letter and each digit, thus the order of
-/// the keys equals the order of the names.
 List<String> _reflectMethodKeys(TypeDesc desc) {
   final List<String> keys = <String>[];
   for (final String key in desc.methods.keys) {
@@ -1005,12 +1001,23 @@ List<String> _reflectMethodKeys(TypeDesc desc) {
     if (name.isEmpty) continue;
     final String first = name[0];
     if (desc.kind == 'interface' ||
-        first.toUpperCase() == first && first.toLowerCase() != first) {
+        !name.contains('.') &&
+            first.toUpperCase() == first &&
+            first.toLowerCase() != first) {
       keys.add(key);
     }
   }
-  keys.sort();
+  keys.sort((a, b) {
+    final int order = _methodName(a).compareTo(_methodName(b));
+    return order == 0 ? a.compareTo(b) : order;
+  });
   return keys;
+}
+
+String _methodName(String key) {
+  final int cut = key.indexOf('(');
+  final String name = cut < 0 ? key : key.substring(0, cut);
+  return name.substring(name.lastIndexOf('.') + 1);
 }
 
 /// The method count for reflection.
@@ -1157,9 +1164,7 @@ GoString $descMethodName(int handle, int index) {
       ),
     );
   }
-  final String key = keys[index];
-  final int cut = key.indexOf('(');
-  return GoString.fromString(cut < 0 ? key : key.substring(0, cut));
+  return GoString.fromString(_methodName(keys[index]));
 }
 
 /// Binds the method at index in the static type to the dynamic value.
@@ -2258,9 +2263,8 @@ bool _sameUnderlying(TypeDesc a, TypeDesc b) {
     case 'slice' || 'ptr':
       return _sameDesc(a.elem, b.elem);
     case 'chan':
-      // Go needs a two way channel on the left, because the assignment can
-      // narrow the direction and never widen it.
-      return a.dir == 3 && _sameDesc(a.elem, b.elem);
+      // An assignment preserves direction or narrows a bidirectional channel.
+      return (a.dir == b.dir || a.dir == 3) && _sameDesc(a.elem, b.elem);
     case 'array':
       return a.length == b.length && _sameDesc(a.elem, b.elem);
     case 'map':

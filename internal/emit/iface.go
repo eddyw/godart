@@ -204,7 +204,7 @@ func (e *emitter) methodTypeTable(t types.Type) string {
 			continue
 		}
 		entries = append(entries, fmt.Sprintf("%s: () => %s",
-			e.methodKeyText(fn.Name(), sig), e.descriptorOf(sig)))
+			e.methodKeyText(fn.Id(), sig), e.descriptorOf(sig)))
 	}
 	if len(entries) == 0 {
 		return ""
@@ -709,7 +709,7 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 		// An embedded interface field holds an interface pair. The call reads
 		// the method table of that pair.
 		call = fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
-			recv, e.methodKeyText(fn.Name(), selSig), strings.Join(args, ", "))
+			recv, e.methodKeyText(fn.Id(), selSig), strings.Join(args, ", "))
 		if cast := e.resultCast(selSig); cast != "" {
 			call = "(" + call + " as " + cast + ")"
 		}
@@ -728,7 +728,7 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 	if len(params) > 0 {
 		head += ", " + strings.Join(params, ", ")
 	}
-	return fmt.Sprintf("%s: (%s) => %s", e.methodKeyText(fn.Name(), selSig), head, call)
+	return fmt.Sprintf("%s: (%s) => %s", e.methodKeyText(fn.Id(), selSig), head, call)
 }
 
 // wrapPanic writes the panic of a method wrapper that a nil pointer receiver
@@ -1014,7 +1014,7 @@ func interfaceMethods(t types.Type) []string {
 	for i := range out {
 		m := iface.Method(i)
 		sig, _ := m.Type().(*types.Signature)
-		out[i] = methodKey(m.Name(), sig)
+		out[i] = methodKey(m.Id(), sig)
 	}
 	sort.Strings(out)
 	return out
@@ -1166,11 +1166,11 @@ func (e *emitter) interfaceCall(m *ir.Method, args []string) string {
 		}
 		all := append([]string{recv + "!.value"}, args...)
 		return fmt.Sprintf("($method(%s, %s) as %s Function(%s))(%s)",
-			recv, e.methodKeyText(m.Obj.Name(), sig), result,
+			recv, e.methodKeyText(m.Obj.Id(), sig), result,
 			strings.Join(params, ", "), strings.Join(all, ", "))
 	}
 	call := fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
-		e.expr(m.Recv), e.methodKeyText(m.Obj.Name(), sig), strings.Join(args, ", "))
+		e.expr(m.Recv), e.methodKeyText(m.Obj.Id(), sig), strings.Join(args, ", "))
 	if result == "void" {
 		return call
 	}
@@ -1534,7 +1534,7 @@ func (e *emitter) methodKeyListText(t types.Type) string {
 	for i := range parts {
 		m := iface.Method(i)
 		sig, _ := m.Type().(*types.Signature)
-		parts[i] = e.methodKeyText(m.Name(), sig)
+		parts[i] = e.methodKeyText(m.Id(), sig)
 	}
 	sort.Strings(parts)
 	return "<String>[" + strings.Join(parts, ", ") + "]"

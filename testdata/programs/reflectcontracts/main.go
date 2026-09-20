@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"Example.com/reflectcontracts/Upper"
 )
 
 type record struct {
@@ -30,6 +32,14 @@ func panicsWith(text string, f func()) (matched bool) {
 }
 
 func main() {
+	var sealed Upper.Sealed = Upper.Value{}
+	fmt.Println("private calls", Upper.Call(sealed))
+	fmt.Println("exported method count", reflect.TypeOf(Upper.Value{}).NumMethod())
+	sealedType := reflect.TypeFor[Upper.Sealed]()
+	for i := 0; i < sealedType.NumMethod(); i++ {
+		fmt.Println("interface method name", i, sealedType.Method(i).Name)
+	}
+	fmt.Println("exported method index", reflect.ValueOf(&sealed).Elem().Method(0).Call(nil)[0].Int())
 	var limited onlyB = methods{}
 	methodValue := reflect.ValueOf(&limited).Elem()
 	fmt.Println("interface methods", methodValue.NumMethod(), methodValue.Method(0).Call(nil)[0].Int())

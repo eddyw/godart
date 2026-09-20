@@ -211,7 +211,7 @@ func (a *analyzer) file(f *ast.File) {
 				continue
 			}
 			if sig, ok := obj.Type().(*types.Signature); ok && sig.Recv() != nil {
-				key := methodKey(obj.Name(), sig)
+				key := methodKey(obj.Id(), sig)
 				a.byMethod[key] = append(a.byMethod[key], any(obj))
 				// Reflection can extract an exported method without a Go selector.
 				if a.reflection && obj.Exported() {

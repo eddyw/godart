@@ -1,3 +1,3 @@
-module example.com/reflectcontracts
+module Example.com/reflectcontracts
 
 go 1.27

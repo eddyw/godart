@@ -46,7 +46,7 @@ func (a *analyzer) methodSource(x ast.Expr, recv types.Type, fn *types.Func) (so
 	if !ok {
 		return source{}, false
 	}
-	c := methodCell{key: methodKey(fn.Name(), msig)}
+	c := methodCell{key: methodKey(fn.Id(), msig)}
 	it := a.narrowed(x)
 	if it == nil {
 		it = callIface(recv, fn)

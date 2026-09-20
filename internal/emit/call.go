@@ -829,7 +829,7 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 	if recv, ok := e.typeParamRecv(m); ok {
 		sig, _ := m.Obj.Type().(*types.Signature)
 		call := fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
-			recv, e.methodKeyText(m.Obj.Name(), sig), strings.Join(args, ", "))
+			recv, e.methodKeyText(m.Obj.Id(), sig), strings.Join(args, ", "))
 		if result := e.resultType(sig); result != "void" {
 			return fmt.Sprintf("(%s as %s)", call, result)
 		}
@@ -998,7 +998,7 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 				recv = fmt.Sprintf("$boxDesc(%s.desc, %s)", e.dictOf(tp), recv)
 			}
 			call := fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
-				recv, e.methodKeyText(x.Obj.Name(), msig), strings.Join(names[1:], ", "))
+				recv, e.methodKeyText(x.Obj.Id(), msig), strings.Join(names[1:], ", "))
 			if cast := e.resultCast(msig); cast != "" {
 				call = "(" + call + " as " + cast + ")"
 			}
@@ -1009,7 +1009,7 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	// the receiver argument.
 	if isInterfaceType(x.Recv) {
 		call := fmt.Sprintf("$call(%s, %q, <Object?>[%s])",
-			names[0], methodKey(x.Obj.Name(), msig), strings.Join(names[1:], ", "))
+			names[0], methodKey(x.Obj.Id(), msig), strings.Join(names[1:], ", "))
 		if cast := e.resultCast(msig); cast != "" {
 			call = "(" + call + " as " + cast + ")"
 		}
@@ -1037,7 +1037,7 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	}
 	if isInterfaceType(current) {
 		call := fmt.Sprintf("$call(%s, %q, <Object?>[%s])",
-			recv, methodKey(x.Obj.Name(), msig), strings.Join(names[1:], ", "))
+			recv, methodKey(x.Obj.Id(), msig), strings.Join(names[1:], ", "))
 		if cast := e.resultCast(msig); cast != "" {
 			call = "(" + call + " as " + cast + ")"
 		}
@@ -1179,11 +1179,11 @@ func (e *emitter) interfaceMethodValueOf(m *ir.Method, recv string) string {
 		args[i+1] = name
 	}
 	call := fmt.Sprintf("($method($recv, %s) as %s Function(%s))(%s)",
-		e.methodKeyText(m.Obj.Name(), sig), e.resultType(sig),
+		e.methodKeyText(m.Obj.Id(), sig), e.resultType(sig),
 		strings.Join(types, ", "), strings.Join(args, ", "))
 	if paramsHoldParam(sig) {
 		call = fmt.Sprintf("$call($recv, %s, <Object?>[%s])",
-			e.methodKeyText(m.Obj.Name(), sig), strings.Join(args[1:], ", "))
+			e.methodKeyText(m.Obj.Id(), sig), strings.Join(args[1:], ", "))
 		if result := e.resultType(sig); result != "void" {
 			call = fmt.Sprintf("(%s as %s)", call, result)
 		}

@@ -161,7 +161,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "iter_test.go"},
 			{Name: "type_test.go", Declarations: []string{"TestTypeFor", "TestType_CanSeq", "TestType_CanSeq2"}},
 			{Name: "example_test.go", Declarations: []string{"ExampleStructTag_Lookup"}},
-			{Name: "set_test.go", Declarations: []string{"TestImplicitSetConversion", "TestImplicitSendConversion", "TestImplicitCallConversion", "TestImplicitAppendConversion"}},
+			{Name: "set_test.go", Declarations: []string{"TestImplicitSetConversion", "TestImplicitSendConversion", "TestImplicitCallConversion", "TestImplicitAppendConversion", "implementsTests", "notAnExpr", "notAnExpr.Pos", "notAnExpr.End", "notAnExpr.exprNode", "notASTExpr", "TestImplements", "assignableTests", "IntPtr", "IntPtr1", "Ch", "TestAssignableTo"}},
 			{Name: "all_test.go", Declarations: []string{
 				"shouldPanic", "TestTypeOverflow", "TestInitFuncTypes",
 				"TestBool", "TestCanIntUintFloatComplex", "TestCanSetField",
