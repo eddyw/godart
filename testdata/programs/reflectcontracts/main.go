@@ -42,6 +42,27 @@ func recursiveMetadata[T any]() {
 
 func main() {
 	recursiveMetadata[int]()
+	for _, input := range [][]int{nil, {}, {1, 2}} {
+		v := reflect.ValueOf(input)
+		a, b := v.Slice(0, 0), v.Slice3(0, 0, 0)
+		fmt.Println("empty slice", a.IsNil(), a.Len(), a.Cap(), b.IsNil(), b.Len(), b.Cap())
+	}
+	array := [3]int{1, 2, 3}
+	for _, v := range []reflect.Value{reflect.ValueOf(&array).Elem(), reflect.ValueOf(array[:]), reflect.ValueOf("abc")} {
+		message := "reflect.Value.Slice: slice index out of bounds"
+		if v.Kind() == reflect.String {
+			message = "reflect.Value.Slice: string slice index out of bounds"
+		}
+		for _, bounds := range [][2]int{{-1, 0}, {2, 1}, {0, 4}} {
+			fmt.Println("slice bounds", panicsWith(message, func() { v.Slice(bounds[0], bounds[1]) }))
+		}
+	}
+	for _, v := range []reflect.Value{reflect.ValueOf(&array).Elem(), reflect.ValueOf(array[:])} {
+		for _, bounds := range [][3]int{{-1, 0, 0}, {2, 1, 3}, {0, 2, 1}, {0, 1, 4}} {
+			fmt.Println("slice3 bounds", panicsWith("reflect.Value.Slice3: slice index out of bounds", func() { v.Slice3(bounds[0], bounds[1], bounds[2]) }))
+		}
+	}
+
 	var sealed Upper.Sealed = Upper.Value{}
 	fmt.Println("private calls", Upper.Call(sealed))
 	fmt.Println("exported method count", reflect.TypeOf(Upper.Value{}).NumMethod())

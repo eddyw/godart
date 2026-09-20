@@ -163,7 +163,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "example_test.go", Declarations: []string{"ExampleStructTag_Lookup"}},
 			{Name: "set_test.go", Declarations: []string{"TestImplicitSetConversion", "TestImplicitSendConversion", "TestImplicitCallConversion", "TestImplicitAppendConversion", "implementsTests", "notAnExpr", "notAnExpr.Pos", "notAnExpr.End", "notAnExpr.exprNode", "notASTExpr", "TestImplements", "assignableTests", "IntPtr", "IntPtr1", "Ch", "TestAssignableTo"}},
 			{Name: "all_test.go", Declarations: []string{
-				"shouldPanic", "TestBytes", "TestValuePanic", "TestTypeOverflow", "TestInitFuncTypes",
+				"TestTagGet", "tagGetTests", "TestFuncArg", "TestStructArg", "TestZeroSet", "TestInvalid", "TestLarge", "Impl", "Impl.F", "TestValueString", "TestSlice", "TestSlice3", "TestSetLenCap", "TestVariadic", "emptyStruct", "TestCallReturnsEmpty", "fieldIndexRecover", "TestFieldByIndexNil", "TestTypeFieldOutOfRangePanic", "TestTypeFieldReadOnly", "shouldPanic", "TestBytes", "TestValuePanic", "TestTypeOverflow", "TestInitFuncTypes",
 				"TestBool", "TestCanIntUintFloatComplex", "TestCanSetField",
 				"TestPtrSetNil", "TestMapSetNil", "appendTests", "TestAppend",
 				"TestCopy", "TestCopyString", "TestCopyArray", "TestBigUnnamedStruct",

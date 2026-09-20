@@ -34,5 +34,15 @@
       "classification": "target-limit",
       "reason": "The original assertion requires native Go heap allocation counters. Dart exposes no equivalent counter. The complete assertion remains excluded."
     }
+  },
+  "reflect": {
+    "TestTypeFieldReadOnly": {
+      "classification": "target-limit",
+      "reason": "The original assertion requires a native memory protection fault when a write modifies shared field metadata. Dart uses independent mutable metadata arrays."
+    },
+    "TestCallReturnsEmpty": {
+      "classification": "implementation-gap",
+      "reason": "The original assertion requires a cleanup after forced collection within 5 seconds. The current Dart collector adapter does not satisfy this contract. Retain the complete assertion for further runtime work."
+    }
   }
 }

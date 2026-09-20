@@ -1672,9 +1672,17 @@ func (v Value) Slice(i, j int) Value {
 	if v.Kind() == Array && !v.CanAddr() {
 		panic("reflect.Value.Slice: slice of unaddressable array")
 	}
-	max := v.Cap()
+	var max int
 	if v.Kind() == String {
 		max = v.Len()
+	} else {
+		max = v.Cap()
+	}
+	if i < 0 || j < i || j > max {
+		if v.Kind() == String {
+			panic("reflect.Value.Slice: string slice index out of bounds")
+		}
+		panic("reflect.Value.Slice: slice index out of bounds")
 	}
 	return Value{value: dart.ValueSlice(v.read(), i, j, max), ro: v.ro, ok: true}
 }
@@ -1684,6 +1692,9 @@ func (v Value) Slice3(i, j, k int) Value {
 	v.mustBe("Slice3", Array, Slice)
 	if v.Kind() == Array && !v.CanAddr() {
 		panic("reflect.Value.Slice3: slice of unaddressable array")
+	}
+	if i < 0 || j < i || k < j || k > v.Cap() {
+		panic("reflect.Value.Slice3: slice index out of bounds")
 	}
 	return Value{value: dart.ValueSlice(v.read(), i, j, k), ro: v.ro, ok: true}
 }
@@ -1777,6 +1788,9 @@ func (v Value) FieldByIndex(index []int) Value {
 	out := v
 	for i, x := range index {
 		if i > 0 && out.Kind() == Pointer {
+			if out.IsNil() {
+				panic("reflect: indirection through nil pointer to embedded struct")
+			}
 			out = out.Elem()
 		}
 		out = out.Field(x)

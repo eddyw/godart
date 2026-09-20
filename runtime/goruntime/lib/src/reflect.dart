@@ -2604,7 +2604,12 @@ Iface? $valueSlice(Iface? value, int low, int high, int max) {
     return Iface(value.desc, $substring(v, low, high));
   }
   if (v is Slice<Object?>) {
-    return Iface(value.desc, v.range(low, high, max));
+    if (v.isNil) return value;
+    // A zero-capacity result keeps the source pointer within its storage.
+    return Iface(
+      value.desc,
+      v.$view(v.off + (low < max ? low : 0), high - low, max - low),
+    );
   }
   final TypeDesc? elem = value.desc.elem?.call();
   if (value.desc.kind == 'array' && v is List<Object?> && elem != null) {
@@ -2616,7 +2621,8 @@ Iface? $valueSlice(Iface? value, int low, int high, int max) {
       desc,
       _withType<Slice<Object?>>(
         elem,
-        <T>() => Slice<T>(v as List<T>, low, high - low, max - low),
+        <T>() =>
+            Slice<T>(v as List<T>, low < max ? low : 0, high - low, max - low),
       ),
     );
   }
@@ -2637,11 +2643,14 @@ GoComplex $asComplex(Iface? value) {
 /// A complex value of the type of a handle.
 Iface? $withComplex(int handle, GoComplex x) => Iface(_typeAt(handle), x);
 
-/// A number that names the object of a value. Dart gives no machine address,
-/// thus the number is the identity hash of the object. Read docs/parity.md.
+/// A synthetic identity. A slice uses its storage and element offset.
+/// The result is not a machine address.
 int $valuePointer(Iface? value) {
   if ($valueIsNil(value)) return 0;
   final Object? v = value?.value;
+  if (v is Slice<Object?>) {
+    return Object.hash(identityHashCode(v.array), v.off);
+  }
   return identityHashCode(v);
 }
 
