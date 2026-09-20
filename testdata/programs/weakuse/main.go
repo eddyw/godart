@@ -4,6 +4,8 @@ package main
 
 import (
 	"fmt"
+	"reflect"
+	"runtime"
 	"weak"
 )
 
@@ -49,4 +51,14 @@ func main() {
 		}
 	}
 	fmt.Println("count of equal", same)
+
+	boxed := any(first)
+	fmt.Println("interface equal", boxed == any(second), boxed == any(other))
+	fmt.Println("assertion", boxed.(weak.Pointer[node]).Value() == live)
+	kind := reflect.TypeOf(boxed)
+	fmt.Println("type", kind.Kind(), kind.Comparable(), kind == reflect.TypeOf(second))
+	copy := reflect.New(kind).Elem()
+	copy.Set(reflect.ValueOf(first))
+	fmt.Println("reflect copy", copy.Interface().(weak.Pointer[node]).Value() == live)
+	runtime.KeepAlive(live)
 }

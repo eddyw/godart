@@ -823,6 +823,12 @@ func (e *emitter) descriptorOf(t types.Type) string {
 	if tp, ok := u.(*types.TypeParam); ok {
 		return e.dictOf(tp) + ".desc"
 	}
+	if isDartObjectPointer(u) {
+		return e.groundDescVar(t)
+	}
+	if named, ok := u.(*types.Named); ok && isDartObject(named.Obj()) {
+		return e.groundDescVar(t)
+	}
 	if p, ok := u.(*types.Pointer); ok {
 		// A generic function holds no variable for the description of a
 		// pointer to its type parameter. The runtime reads the description of

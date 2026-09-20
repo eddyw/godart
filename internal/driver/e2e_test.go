@@ -120,7 +120,7 @@ func cutTrace(text string) string {
 // TestAOT proves that the output also compiles ahead of time. The Dart VM and
 // AOT are the 2 targets of the project.
 func TestAOT(t *testing.T) {
-	for _, name := range []string{"yieldloops", "switchyield", "genericwait", "goexitwait", "bytesortext", "oslegacy", "osroot", "confflow", "rangegoto", "defers", "multi", "chancap", "reflectmake", "synccompat"} {
+	for _, name := range []string{"weakuse", "yieldloops", "switchyield", "genericwait", "goexitwait", "bytesortext", "oslegacy", "osroot", "confflow", "rangegoto", "defers", "multi", "chancap", "reflectmake", "synccompat"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {
@@ -159,7 +159,7 @@ func TestWasm(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)
 	}
-	for _, name := range []string{"yieldloops", "switchyield", "genericwait", "goexitwait", "bytesortext", "confflow", "rangegoto", "defers", "hello", "chancap", "reflectmake", "synccompat"} {
+	for _, name := range []string{"weakuse", "yieldloops", "switchyield", "genericwait", "goexitwait", "bytesortext", "confflow", "rangegoto", "defers", "hello", "chancap", "reflectmake", "synccompat"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {
@@ -201,7 +201,7 @@ func TestJS(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)
 	}
-	for _, name := range []string{"yieldloops", "switchyield", "genericwait", "goexitwait", "bytesortext", "confflow", "rangegoto", "defers", "reflectmake", "synccompat", "chancap", "intwrap", "reflectint64", "genmixed", "genops", "genericvalue", "nanoclock", "globalptr", "structconv", "reflectblock", "uniquecompat"} {
+	for _, name := range []string{"weakuse", "yieldloops", "switchyield", "genericwait", "goexitwait", "bytesortext", "confflow", "rangegoto", "defers", "reflectmake", "synccompat", "chancap", "intwrap", "reflectint64", "genmixed", "genops", "genericvalue", "nanoclock", "globalptr", "structconv", "reflectblock", "uniquecompat"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {
