@@ -96,3 +96,11 @@ void $arraySet<T>(List<T> a, int i, T v, [bool uns = false]) {
   if (i < 0 || i >= a.length) $panicIndex(i, a.length, uns);
   a[i] = v;
 }
+
+// A loop avoids a large assignment chain in the AOT optimizer.
+List<T> $arrayLiteral<T>(List<T> array, List<int> indices, List<T> values) {
+  for (var i = 0; i < indices.length; i++) {
+    array[indices[i]] = values[i];
+  }
+  return array;
+}

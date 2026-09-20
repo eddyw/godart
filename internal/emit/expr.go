@@ -883,7 +883,13 @@ func (e *emitter) composite(x *ir.Composite) string {
 		var allocation string
 		switch t := u.(type) {
 		case *types.Array:
-			allocation = e.makeArray(t)
+			indices := make([]string, len(x.Indices))
+			for i, index := range x.Indices {
+				indices[i] = strconv.Itoa(index)
+			}
+			return fmt.Sprintf("$arrayLiteral<%s>(%s, const <int>[%s], <%s>[%s])",
+				e.dartType(t.Elem()), e.makeArray(t), strings.Join(indices, ", "),
+				e.dartType(t.Elem()), strings.Join(parts, ", "))
 		case *types.Slice:
 			allocation = fmt.Sprintf("$makeSliceN<%s>(%d, %s)", e.dartType(t.Elem()), x.Length, e.alloc(t.Elem()))
 		}

@@ -1,10 +1,20 @@
 package main
 
+import "fmt"
+
 type item struct {
 	n int
 }
 
 func main() {
+	var calls []int
+	value := func(n int) int { calls = append(calls, n); return n }
+	keyed := [8]int{7: value(7), 1: value(1), value(2)}
+	fmt.Println("keyed", keyed, calls)
+	structs := [3]item{2: {n: 9}, 0: {n: 1}}
+	structs[0].n = 4
+	fmt.Println("structs", structs[0].n, structs[1].n, structs[2].n)
+
 	var a [3]int
 	a[0] = 1
 	a[2] = 3
