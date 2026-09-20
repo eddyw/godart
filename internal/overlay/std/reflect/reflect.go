@@ -1092,6 +1092,7 @@ func (v Value) Method(i int) Value {
 func (v Value) Call(in []Value) []Value {
 	v.mustBe("Call", Func)
 	v.mustAllowCall("Call")
+	v.mustAllowArguments("Call", in)
 	args := make([]any, len(in))
 	for i, a := range in {
 		args[i] = a.read()
@@ -1105,6 +1106,60 @@ func (v Value) Call(in []Value) []Value {
 		out[i] = Value{value: r, typ: t.Out(i), ok: true}
 	}
 	return out
+}
+
+func (v Value) mustAllowArguments(method string, in []Value) {
+	if v.IsNil() {
+		panic("reflect.Value.Call: call of nil function")
+	}
+	t := v.Type()
+	n := t.NumIn()
+	variadic := t.IsVariadic()
+	if method == "CallSlice" {
+		if !variadic {
+			panic("reflect: CallSlice of non-variadic function")
+		}
+	} else if variadic {
+		n--
+	}
+	if len(in) < n {
+		panic("reflect: " + method + " with too few input arguments")
+	}
+	if (method == "CallSlice" || !variadic) && len(in) > n {
+		panic("reflect: " + method + " with too many input arguments")
+	}
+	for _, arg := range in {
+		if !arg.IsValid() {
+			panic("reflect: " + method + " using zero Value argument")
+		}
+	}
+	for i := 0; i < n; i++ {
+		if !in[i].Type().AssignableTo(t.In(i)) {
+			panic("reflect: " + method + " using " + in[i].Type().String() + " as type " + t.In(i).String())
+		}
+	}
+	if method == "Call" && variadic {
+		elem := t.In(n).Elem()
+		for _, arg := range in[n:] {
+			if !arg.Type().AssignableTo(elem) {
+				panic("reflect: cannot use " + arg.Type().String() + " as type " + elem.String() + " in Call")
+			}
+			if arg.ro != 0 {
+				panic("reflect: reflect.Value.Set using value obtained using unexported field")
+			}
+			if arg.unexportedMethod {
+				panic("reflect: reflect.Set of unexported method")
+			}
+		}
+	}
+	for _, arg := range in[:n] {
+		if arg.ro != 0 {
+			panic("reflect: reflect.Value." + method + " using value obtained using unexported field")
+		}
+		if arg.unexportedMethod {
+			panic("reflect: reflect.Value.Call of unexported method")
+		}
+	}
 }
 
 func (v Value) mustAllowCall(method string) {
@@ -2367,16 +2422,8 @@ func (v Value) SetIterValue(it *MapIter) {
 func (v Value) CallSlice(in []Value) []Value {
 	v.mustBe("CallSlice", Func)
 	v.mustAllowCall("CallSlice")
+	v.mustAllowArguments("CallSlice", in)
 	t := v.Type()
-	if !t.IsVariadic() {
-		panic("reflect: CallSlice of non-variadic function")
-	}
-	if len(in) < t.NumIn() {
-		panic("reflect: CallSlice with too few input arguments")
-	}
-	if len(in) > t.NumIn() {
-		panic("reflect: CallSlice with too many input arguments")
-	}
 	args := make([]any, len(in))
 	for i, a := range in {
 		args[i] = a.read()
