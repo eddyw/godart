@@ -27,10 +27,6 @@
     "classification": "implementation-gap",
     "reason": "the test allocates a list of 4 billion elements, and the Dart VM runs out of memory"
   },
-  "fixedbugs/issue29735": {
-    "classification": "implementation-gap",
-    "reason": "runtime.FuncForPC walks the program counters, and the Dart VM gives none"
-  },
   "fixedbugs/issue4618": {
     "classification": "target-limit",
     "reason": "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one"

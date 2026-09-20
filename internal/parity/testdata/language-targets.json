@@ -17,5 +17,6 @@
   "fixedbugs/issue8347",
   "fixedbugs/issue19182",
   "fixedbugs/issue29312",
-  "fixedbugs/issue34395"
+  "fixedbugs/issue34395",
+  "fixedbugs/issue29735"
 ]

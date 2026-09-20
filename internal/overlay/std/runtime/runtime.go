@@ -137,7 +137,7 @@ func record(text string) uintptr {
 }
 
 func at(pc uintptr) (string, string, int) {
-	if pc == 0 || int(pc) > len(frames) {
+	if pc == 0 || pc > uintptr(len(frames)) {
 		return "", "", 0
 	}
 	name, rest, _ := strings.Cut(frames[pc-1], "|")
@@ -216,13 +216,16 @@ type Func struct {
 // FuncForPC gives the function of a program counter, and it gives nil for a
 // counter that no call gave.
 func FuncForPC(pc uintptr) *Func {
-	if pc == 0 || int(pc) > len(frames) {
+	if pc == 0 || pc > uintptr(len(frames)) {
 		return nil
 	}
 	return &Func{pc: pc}
 }
 
 func (f *Func) Name() string {
+	if f == nil {
+		return ""
+	}
 	name, _, _ := at(f.pc)
 	return name
 }

@@ -50,6 +50,7 @@ func TestSelectedUpstream(t *testing.T) {
 		},
 		"html/template": {{Name: "exec_test.go", Declarations: []string{"TestMaxExecDepth"}}},
 		"runtime": {
+			{Name: "symtab_test.go", Declarations: []string{"TestNilName"}},
 			{Name: "crash_test.go", Declarations: []string{"TestGoexitDefer"}},
 			{Name: "proc_test.go", Declarations: []string{"preempt", "TestPreemption", "TestTimerFairness"}},
 			{Name: "defer_test.go", Declarations: []string{
