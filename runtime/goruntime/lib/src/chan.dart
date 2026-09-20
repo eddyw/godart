@@ -352,11 +352,7 @@ void $sleep(int nanoseconds) {
     return;
   }
   final EventWait waiting = EventWait();
-  $holdEvent();
-  Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
-    $freeEvent();
-    $wake(g);
-  });
+  $wakeAfter(g, nanoseconds);
   $block(waiting);
 }
 
@@ -377,11 +373,7 @@ void $gc() {
   }
   final Goroutine g = $current!;
   final EventWait waiting = EventWait();
-  $holdEvent();
-  Timer(Duration.zero, () {
-    $freeEvent();
-    $wake(g);
-  });
+  $wakeAfter(g, 0);
   $block(waiting);
 }
 

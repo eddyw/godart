@@ -552,6 +552,16 @@ final class _FakeTimer {
 /// bubble and no body, thus the timer runs never.
 const Object _endedTimer = Object();
 
+void $wakeAfter(Goroutine g, int nanoseconds) {
+  final handle = _timerHandle(false);
+  $holdEvent();
+  _timers[handle] = Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
+    _timers.remove(handle);
+    $freeEvent();
+    $wake(g);
+  });
+}
+
 /// Starts a timer that runs a Go function after a time, and gives its handle.
 ///
 /// Go runs the function on a new goroutine, thus the function can block. The

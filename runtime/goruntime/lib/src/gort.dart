@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'panic.dart';
 import 'sched.dart';
 import 'slice.dart';
@@ -69,12 +67,7 @@ void $poll() {
 }
 
 void _yieldEvent(Goroutine g) {
-  $holdEvent();
-  Timer.run(() {
-    $freeEvent();
-    $ready(g);
-    $schedule();
-  });
+  $wakeAfter(g, 0);
   $block(const _Yield());
 }
 

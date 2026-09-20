@@ -187,7 +187,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "path_test.go", Declarations: []string{"TestMkdirAll", "TestMkdirAllAbsPath"}},
 			{Name: "root_test.go", Declarations: []string{"testMaybeRooted", "makefs", "hasLink", "rootTest", "rootTest.run", "rootTestCases", "errEndsTest", "TestRootMkdirAll", "TestRootMkdir", "TestRootOpen_File", "TestRootOpen_Directory", "TestRootCreate", "TestRootOpenRoot", "TestRootStat", "TestRootLstat", "TestRootReadlink", "TestRootRemoveFile", "TestRootRemoveDirectory", "TestRootNonPermissionMode", "TestRootUseAfterClose", "TestRootSymlinkToRoot", "TestOpenInRoot", "TestRootRemoveDot", "TestRootWriteReadFile", "TestRootName", "TestRootConcurrentClose"}},
 		},
-		"net":      {{Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept"}}},
+		"net":      {{Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "pipe_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept"}}},
 		"net/http": {{Name: "header_test.go", Declarations: []string{"headerWriteTests", "TestHeaderWrite", "parseTimeTests", "TestParseTime", "TestNilHeaderClone"}}, {Name: "sniff_test.go", Declarations: []string{"sniffTests", "TestDetectContentType"}}},
 	}
 	for pkg, files := range selections {
@@ -234,7 +234,7 @@ func TestSelectedUpstream(t *testing.T) {
 					source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/testenv"`)
 				}
 				if pkg == "net" {
-					source = strings.Replace(source, "package net", "package net_test\nimport . \"net\"", 1)
+					source = strings.Replace(source, "package net\n", "package net_test\nimport . \"net\"\n", 1)
 				}
 				if pkg == "net/http" && file.Name == "header_test.go" {
 					source = strings.Replace(source, "package http", "package http_test\nimport . \"net/http\"", 1)
@@ -292,8 +292,23 @@ func TestSelectedUpstream(t *testing.T) {
 			}
 
 			if pkg == "net" {
+				writeFile(t, filepath.Join(fixture, "go.mod"), "module example.com/upstream\n\ngo 1.27\n\nrequire golang.org/x/net/nettest v0.0.0\nreplace golang.org/x/net/nettest => ./nettest\n")
+				nettest := filepath.Join(runtime.GOROOT(), "src", "vendor", "golang.org", "x", "net", "nettest")
+				if err := os.Mkdir(filepath.Join(fixture, "nettest"), 0755); err != nil {
+					t.Fatal(err)
+				}
+				writeFile(t, filepath.Join(fixture, "nettest/go.mod"), "module golang.org/x/net/nettest\n\ngo 1.27\n")
+				writeFile(t, filepath.Join(fixture, "nettest/conntest.go"), selectedUpstreamSource(t, filepath.Join(nettest, "conntest.go"), nil))
+				writeFile(t, filepath.Join(fixture, "nettest/constants.go"), selectedUpstreamSource(t, filepath.Join(nettest, "nettest.go"), []string{"aLongTimeAgo", "neverTimeout"}))
+				for target, origin := range map[string]string{"LICENSE": filepath.Join(runtime.GOROOT(), "LICENSE"), "nettest/LICENSE": filepath.Join(nettest, "..", "LICENSE")} {
+					license, err := os.ReadFile(origin)
+					if err != nil {
+						t.Fatal(err)
+					}
+					writeFile(t, filepath.Join(fixture, target), string(license))
+				}
 				source := selectedUpstreamSource(t, "../overlay/std/net/addr.go", []string{"networkNumberAndMask"})
-				source = strings.Replace(source, "package net", "package net_test\nimport . \"net\"", 1)
+				source = strings.Replace(source, "package net\n", "package net_test\nimport . \"net\"\n", 1)
 				source = strings.TrimPrefix(source, "//go:build dart\n")
 				writeFile(t, filepath.Join(fixture, "helper_test.go"), source)
 			}
@@ -411,6 +426,17 @@ func TestSelectedUpstream(t *testing.T) {
 					result := runUpstreamTarget(t, "aot", out, stats.Binaries[0].Entry, dir, args)
 					compareUpstream(t, name, pkg, filter, "aot", dir, result.Text, result.Exit)
 				})
+			}
+			if pkg == "net" {
+				const pipeFilter = "^(TestPipe|TestPipeCloseError)$"
+				pipeArgs := slices.Clone(args)
+				pipeArgs[2] = "-test.run=" + pipeFilter
+				for _, target := range []string{"js", "wasm"} {
+					t.Run(target, func(t *testing.T) {
+						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, pipeArgs)
+						compareUpstream(t, "net-pipe", pkg, pipeFilter, target, dir, result.Text, result.Exit)
+					})
+				}
 			}
 			if pkg == "sync" || pkg == "internal/godebug" {
 				run(t, out, "dart", "compile", "exe", stats.Binaries[0].Entry, "-o", launcher)
