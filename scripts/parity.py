@@ -172,6 +172,20 @@ def scope_assessment(api, path):
             "counts": dict(Counter(entry["review_status"] for entry in packages)), "packages": packages}
 
 
+def language_assessment(data):
+    cases = data["cases"]
+    def status(case):
+        if not case["native_eligible"] or not case["gart_eligible"]:
+            return "ineligible"
+        if case.get("exclusion"):
+            return case["exclusion"]["classification"]
+        if case.get("rejection"):
+            return "known-rejection"
+        return "unmeasured" if case["adapter"] == "single-file" else "adapter-missing"
+    return {**data, "counts": dict(Counter(status(case) for case in cases)),
+            "actions": dict(Counter(case["action"] for case in cases))}
+
+
 def report(args):
     args.output.mkdir(parents=True, exist_ok=False)
     api = args.api
@@ -182,6 +196,14 @@ def report(args):
             return 1
         api = args.output / step["stdout"]
     data = read(api)
+    language = args.language
+    if language is None:
+        step = command(["go", "run", "./internal/cmd/parity", "-action", "language"],
+                       ROOT, args.output, "language", args.timeout)
+        if step["exit"]:
+            save(args.output / "failure.json", step)
+            return 1
+        language = args.output / step["stdout"]
     symbols = [x for p in data["packages"] for x in p["symbols"] or []]
     coverage = read(MANIFESTS / "coverage-manifest.json")
     omissions = [dict(package=pkg, test=name, **entry)
@@ -200,6 +222,9 @@ def report(args):
                    "Source scope reviews establish no API or behavioral passes. Test and subtest counts are separate."],
         "api": {"input": str(api.resolve()), "measurement": "retained-input" if args.api else "current-checkout",
                 "sha256": digest(api), "counts": dict(Counter(x["status"] for x in symbols)), **data},
+        "language": {"input": str(language.resolve()), "sha256": digest(language),
+                     "measurement": "retained-input" if args.language else "current-checkout",
+                     **language_assessment(read(language))},
         "coverage": {"packages": len(coverage), "counts": dict(Counter(x["status"] for x in coverage)), "entries": coverage},
         "scope": scope_assessment(data, MANIFESTS / "scope-assessment.json"),
         "omissions": {"counts": dict(Counter(x["classification"] for x in omissions)), "entries": omissions},
@@ -211,6 +236,7 @@ def report(args):
              f"Unassessed standard packages: {len(data['unassessed_packages'])}",
              "Source scope reviews: " + json.dumps(result["scope"]["counts"], sort_keys=True),
              "Package classifications: " + json.dumps(result["coverage"]["counts"], sort_keys=True), ""]
+    lines.extend(["Language recipes: " + json.dumps(result["language"]["counts"], sort_keys=True), ""])
     lines.extend(["Omitted assertions: " + json.dumps(result["omissions"]["counts"], sort_keys=True), ""])
     for group in result["behavior"]:
         c = group["configuration"]
@@ -322,6 +348,7 @@ def main():
     sub = parser.add_subparsers(dest="operation", required=True)
     summary = sub.add_parser("report")
     summary.add_argument("--api", type=Path)
+    summary.add_argument("--language", type=Path)
     summary.add_argument("--reports", type=Path, action="append", default=[])
     summary.add_argument("--applications", type=Path, action="append", default=[])
     app = sub.add_parser("application")

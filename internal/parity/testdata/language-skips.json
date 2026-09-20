@@ -1,0 +1,106 @@
+{
+  "fixedbugs/bug260": {
+    "classification": "target-limit",
+    "reason": "the test reads the machine address of a value, and Dart gives none"
+  },
+  "fixedbugs/bug352": {
+    "classification": "test-adapter",
+    "reason": "2 values with no size take 2 cells, and gc gives them 1 address"
+  },
+  "fixedbugs/issue10607": {
+    "classification": "test-adapter",
+    "reason": "the test exercises native Go linker flags and requires a companion source outside this single-file harness"
+  },
+  "fixedbugs/issue19182": {
+    "classification": "implementation-gap",
+    "reason": "a busy loop without a block operation never yields, and the other goroutine never runs"
+  },
+  "fixedbugs/issue21317": {
+    "classification": "test-adapter",
+    "reason": "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names"
+  },
+  "fixedbugs/issue27201": {
+    "classification": "target-limit",
+    "reason": "runtime.Stack omits native instruction offsets, but this test requires a space after the source line before that offset"
+  },
+  "fixedbugs/issue29190": {
+    "classification": "implementation-gap",
+    "reason": "the test allocates a list of 4 billion elements, and the Dart VM runs out of memory"
+  },
+  "fixedbugs/issue29312": {
+    "classification": "implementation-gap",
+    "reason": "the composite literal nests 253 levels, and the Dart front end rejects a file with that many nested expressions"
+  },
+  "fixedbugs/issue29735": {
+    "classification": "implementation-gap",
+    "reason": "runtime.FuncForPC walks the program counters, and the Dart VM gives none"
+  },
+  "fixedbugs/issue34395": {
+    "classification": "implementation-gap",
+    "reason": "a global array of 100 MB fills element by element, and the run needs more than the cap"
+  },
+  "fixedbugs/issue4618": {
+    "classification": "target-limit",
+    "reason": "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one"
+  },
+  "fixedbugs/issue4667": {
+    "classification": "target-limit",
+    "reason": "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one"
+  },
+  "fixedbugs/issue58300": {
+    "classification": "implementation-gap",
+    "reason": "reflect.Value.Pointer gives the identity of the object, and runtime.FuncForPC reads a program counter that the Dart VM gives not"
+  },
+  "fixedbugs/issue58300b": {
+    "classification": "implementation-gap",
+    "reason": "reflect.Value.Pointer gives the identity of the object, and runtime.FuncForPC reads a program counter that the Dart VM gives not"
+  },
+  "fixedbugs/issue5856": {
+    "classification": "implementation-gap",
+    "reason": "the panic path of Go holds a frame of gopanic, and the frame chain of the runtime holds none"
+  },
+  "fixedbugs/issue7550": {
+    "classification": "implementation-gap",
+    "reason": "the append of 2 slices of the maximum length must overflow the capacity, and the Dart build runs out of memory"
+  },
+  "fixedbugs/issue75764": {
+    "classification": "implementation-gap",
+    "reason": "the Dart VM holds a fixed stack, and the recursion overflows"
+  },
+  "inline_literal": {
+    "classification": "implementation-gap",
+    "reason": "reflect.Value.Pointer gives the identity of the object, thus runtime.FuncForPC gives nil for each value and the loop of the file never ends"
+  },
+  "linkmain_run": {
+    "classification": "test-adapter",
+    "reason": "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names"
+  },
+  "linkobj": {
+    "classification": "test-adapter",
+    "reason": "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names"
+  },
+  "linkx_run": {
+    "classification": "test-adapter",
+    "reason": "the file runs go run on a neighbor file that the run directory does not hold, and the go run wrapper of the comparison adds an exit line that dart run does not add"
+  },
+  "nosplit": {
+    "classification": "test-adapter",
+    "reason": "the file picks the frame size of the test from runtime.GOARCH, and gart reports dart64"
+  },
+  "peano": {
+    "classification": "implementation-gap",
+    "reason": "the file is a torture test of the segmented stack of Go, and the Dart VM holds a fixed stack"
+  },
+  "stack": {
+    "classification": "implementation-gap",
+    "reason": "the Dart VM holds a fixed stack, and the recursion overflows"
+  },
+  "stackobj2": {
+    "classification": "implementation-gap",
+    "reason": "the Dart VM holds a fixed stack, and the recursion overflows"
+  },
+  "winbatch": {
+    "classification": "test-adapter",
+    "reason": "the file reads a file of the tree of Go under runtime.GOROOT, and gart gives an empty text there"
+  }
+}

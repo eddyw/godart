@@ -10,6 +10,20 @@ spec.loader.exec_module(parity)
 
 
 class ParityTest(unittest.TestCase):
+    def test_language_inventory_never_implies_an_execution_pass(self):
+        cases = [dict(name="run", action="run", native_eligible=True, gart_eligible=True, adapter="single-file"),
+                 dict(name="compile", action="compile", native_eligible=True, gart_eligible=True, adapter="missing"),
+                 dict(name="blocked", action="run", native_eligible=True, gart_eligible=True,
+                      adapter="single-file", rejection=["unsupported"]),
+                 dict(name="deep", action="run", native_eligible=True, gart_eligible=True,
+                      adapter="single-file", exclusion=dict(classification="implementation-gap", reason="deep recursion")),
+                 dict(name="platform", action="run", native_eligible=False, gart_eligible=True, adapter="single-file")]
+        result = parity.language_assessment(dict(cases=cases))
+        self.assertEqual(result["counts"], {"unmeasured": 1, "adapter-missing": 1, "known-rejection": 1,
+                                           "implementation-gap": 1, "ineligible": 1})
+        self.assertEqual(result["actions"], {"run": 4, "compile": 1})
+
+
     def test_scope_review_does_not_hide_new_packages_or_sdk_changes(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "scope.json"

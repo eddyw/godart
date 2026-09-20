@@ -26,7 +26,7 @@ func main() {
 }
 
 func run() error {
-	action := flag.String("action", "verify", "inventory, verify, or build")
+	action := flag.String("action", "verify", "inventory, language, verify, or build")
 	pkg := flag.String("pkg", "", "upstream package for build")
 	out := flag.String("out", "", "output directory for build")
 	manifest := flag.String("manifest", "", "source manifest (default: SDK and target inventory)")
@@ -58,6 +58,7 @@ func run() error {
 	ctx := build.Default
 	ctx.GOOS = *goos
 	ctx.GOARCH = *goarch
+
 	if *manifest == "" {
 		name, err := parity.InventoryName(ctx)
 		if err != nil {
@@ -72,6 +73,15 @@ func run() error {
 		return err
 	}
 	ctx.ToolTags = strings.Split(strings.TrimSpace(string(tagText)), ",")
+	if *action == "language" {
+		inv, err := parity.DiscoverLanguage(ctx)
+		if err != nil {
+			return err
+		}
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		return encoder.Encode(inv)
+	}
 	inv, err := parity.Discover(ctx)
 	if err != nil {
 		return err

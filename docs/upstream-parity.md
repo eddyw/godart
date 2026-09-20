@@ -22,6 +22,8 @@ The platform manifests cover Darwin/ARM64 and Linux/AMD64.
 | `exceptions-*.json` | Exact native/Gart outcomes per platform and short/full mode, with an explicit reason |
 | `external-fixtures.json` | Original external module versions and Go module checksums |
 | `omitted-tests.json` | Omitted assertions with an explicit classification and reason |
+| `language-sources.json` | Reviewed recipe and companion-source fingerprints per Go SDK |
+| `language-skips.json`, `language-rejections.json` | Shared language fixture exclusions and exact compile diagnostics |
 | `scope-assessment.json` | Source review of absent packages, target boundaries, and next implementation steps |
 
 The inventories retain eligible and ineligible declarations. Runtime outcomes
@@ -131,6 +133,14 @@ if any program or original dependency test fails the comparison.
 The local CI matrix and the manual GitHub workflow include this suite.
 Use `python3 scripts/ci-local.py --suite applications --output build/application-run`
 for an isolated source snapshot and retained command results.
+
+The report also inventories all recipe directories from the active Go test runner.
+It retains actions, options, source hashes, companion files, build eligibility, and missing adapters.
+The source assertion rejects an SDK fingerprint change without review.
+Language inventory counts establish no execution passes. Known rejections and exclusions remain visible.
+The language runner and report use the same fixture selection and policy manifests.
+Use `go run ./internal/cmd/parity -action language` for the standalone inventory.
+Use `--language /path/to/inventory.json` to include a retained inventory.
 
 Add `--applications build/app-results` to include application records in a report.
 Repeat `--reports` for separate evidence directories. The report never blends incompatible configurations or compiler snapshots.
