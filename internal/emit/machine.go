@@ -511,11 +511,12 @@ func (e *emitter) writeNamedResults(s *ir.Return, results []*ir.Var) {
 	switch {
 	case len(s.Values) == 0:
 	case len(s.Values) == 1 && len(results) > 1:
-		parts := make([]string, len(results))
+		e.labelSeq++
+		tmp := fmt.Sprintf("$rv%d", e.labelSeq)
+		e.line("final %s = %s;", tmp, e.expr(s.Values[0]))
 		for i, r := range results {
-			parts[i] = varRead(r)
+			e.line("%s = %s.$%d;", varRead(r), tmp, i+1)
 		}
-		e.line("(%s) = %s;", strings.Join(parts, ", "), e.expr(s.Values[0]))
 	case len(s.Values) > 1:
 		// Go reads each operand first and it writes the result variables after
 		// that, thus an operand that panics leaves each variable with its old

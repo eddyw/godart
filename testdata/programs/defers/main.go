@@ -73,7 +73,17 @@ func gotoNested(n int) int {
 	return -1
 }
 
+func pair() (int, int) {
+	return 3, 4
+}
+
+func namedPair() (left, right int) {
+	defer func() { right += 10 }()
+	return pair()
+}
+
 func main() {
+	println(namedPair())
 	order()
 	println(named())
 	println(early(true), early(false))
