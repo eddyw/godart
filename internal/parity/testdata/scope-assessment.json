@@ -34,17 +34,6 @@
       "targets": "Byte-based import can work on all targets. SDK files and compiler subprocesses require VM/AOT."
     },
     {
-      "package": "log/syslog",
-      "assessment": "host-adapter",
-      "sources": [
-        "log/syslog/syslog.go",
-        "log/syslog/syslog_unix.go"
-      ],
-      "reason": "Message formatting is portable. Delivery requires TCP, UDP, or a local Unix socket and platform-specific daemon paths.",
-      "next_action": "Validate explicit network delivery and local daemon discovery separately.",
-      "targets": "VM/AOT adapters are feasible. Browsers do not expose raw sockets or a local syslog daemon."
-    },
-    {
       "package": "net/http/fcgi",
       "assessment": "host-adapter",
       "sources": [

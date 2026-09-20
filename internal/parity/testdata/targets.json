@@ -192,5 +192,11 @@
       "wasm"
     ],
     "run": "^TestIgnoreDepthLimit$"
+  },
+  {
+    "package": "log/syslog",
+    "targets": [
+      "aot"
+    ]
   }
 ]

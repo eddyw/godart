@@ -944,6 +944,13 @@
     "status": "vm-suite"
   },
   {
+    "package": "log/syslog",
+    "status": "vm-suite",
+    "targets": [
+      "aot"
+    ]
+  },
+  {
     "package": "maps",
     "status": "vm-suite"
   },

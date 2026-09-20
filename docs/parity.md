@@ -36,6 +36,9 @@ Dart VM and AOT programs use `dart:io` adapters for files, processes, sockets,
 and HTTP. These adapters do not provide all native descriptor, process-group,
 file metadata, TLS configuration, or runtime inspection APIs.
 
+`log/syslog` supports TCP, UDP, and Unix streams. Unix datagrams and local
+daemons that require them remain unsupported.
+
 On Linux and macOS, x64 and arm64 builds use native directory descriptors
 for recursive removal. Other native hosts retain Dart filesystem adapters.
 

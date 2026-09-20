@@ -663,5 +663,9 @@
   },
   {
     "package": "math"
+  },
+  {
+    "package": "log/syslog",
+    "run": ""
   }
 ]

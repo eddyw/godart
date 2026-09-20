@@ -30129,6 +30129,82 @@
       "seeds": null
     },
     {
+      "path": "log/syslog",
+      "tests": [
+        {
+          "name": "TestConcurrentReconnect",
+          "file": "syslog_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConcurrentWrite",
+          "file": "syslog_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestDial",
+          "file": "syslog_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestFlap",
+          "file": "syslog_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestNew",
+          "file": "syslog_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestNewLogger",
+          "file": "syslog_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWithSimulated",
+          "file": "syslog_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWrite",
+          "file": "syslog_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "doc.go",
+          "sha256": "ba71021c7dbb3c4ea982d2acf26906fc17b6d1a90142f8d07a841bfbfc69ec3f"
+        },
+        {
+          "path": "example_test.go",
+          "sha256": "8b40f4dd0924192a904c607ef304a45a730a7da1cb9643eb225a762e881abd22"
+        },
+        {
+          "path": "syslog.go",
+          "sha256": "b7d0870a96e9a88085c136212eac02324728af9e95ce2e8cc97ac9a4b37ac0d4"
+        },
+        {
+          "path": "syslog_test.go",
+          "sha256": "d7ec50fc36841e81a20057bd8a1486bd80596f504b4c52d1f382e4cc75bd2d35"
+        },
+        {
+          "path": "syslog_unix.go",
+          "sha256": "f0bf84686214e5ba255f2f09625d8d109ffb14a954b63a22e047591b3dd36258"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "maps",
       "tests": [
         {

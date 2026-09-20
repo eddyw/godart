@@ -84,7 +84,7 @@ func TestUpstreamTargets(t *testing.T) {
 							t.Logf("target exclusion %s: %s", name, reason)
 						}
 					}
-					args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+					args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter, "-test.skip=" + upstreamSkip(t, pkg)}
 					result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 					compareUpstream(t, pkg, pkg, filter, target, dir, result.Text, result.Exit)
 

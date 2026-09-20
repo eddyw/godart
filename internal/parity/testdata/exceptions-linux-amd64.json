@@ -13297,5 +13297,25 @@
       "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
       "test": "TestJSONAllocs/message"
     }
+  ],
+  "log/syslog": [
+    {
+      "test": "TestDial",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original test requires a local syslog daemon, which the validation container does not provide."
+    },
+    {
+      "test": "TestNew",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original test requires a local syslog daemon, which the validation container does not provide."
+    },
+    {
+      "test": "TestNewLogger",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original test requires a local syslog daemon, which the validation container does not provide."
+    }
   ]
 }

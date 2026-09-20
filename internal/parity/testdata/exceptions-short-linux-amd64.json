@@ -13626,5 +13626,25 @@
       "reason": "The original upstream test skips this case in short mode.",
       "test": "TestRemoveAllWithMoreErrorThanReqSize"
     }
+  ],
+  "log/syslog": [
+    {
+      "test": "TestDial",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original test skips local syslog daemon discovery in short mode."
+    },
+    {
+      "test": "TestNew",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original test skips local syslog daemon discovery in short mode."
+    },
+    {
+      "test": "TestNewLogger",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original test skips local syslog daemon discovery in short mode."
+    }
   ]
 }

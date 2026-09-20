@@ -19,6 +19,7 @@ var native = []string{
 	"flag",
 	"encoding/binary",
 	"log",
+	"log/syslog",
 	"internal/diff",
 	"internal/txtar",
 	"internal/obscuretestdata",
