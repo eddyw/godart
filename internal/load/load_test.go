@@ -215,3 +215,25 @@ func TestLoadPreservesModuleAndFileVersions(t *testing.T) {
 		}
 	}
 }
+
+func TestNamedInterfaceRecursion(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/recursive\n\ngo 1.27\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	const source = `package recursive
+ type Direct interface { Next() Direct }
+ type Indirect interface { Next() Other }
+ type Other interface { Previous() Indirect }
+ type Embedded interface { Direct }
+ type Generic[T any] interface { Next() Generic[T] }
+ type Alias = Direct
+ type Holder interface { Value() struct { Next Alias } }
+ `
+	if err := os.WriteFile(filepath.Join(dir, "recursive.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := load.Load(dir, "."); err != nil {
+		t.Fatal(err)
+	}
+}

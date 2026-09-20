@@ -6,6 +6,9 @@ license of its input code.
 
 Go-derived overlays and upstream test excerpts use the notice in
 [`internal/overlay/std/LICENSE`](../internal/overlay/std/LICENSE).
+The anonymous-interface cycle detector adapts Go compiler
+`src/cmd/compile/internal/noder/irgen.go`. Its BSD notice resides in
+[`internal/load/LICENSE-Go`](../internal/load/LICENSE-Go).
 Generated widget files retain notices for their Dart documentation sources.
 
 Before source reuse or asset additions, record the origin and verify the

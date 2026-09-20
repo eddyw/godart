@@ -473,6 +473,9 @@ func collectErrors(roots []*packages.Package) error {
 				errs = append(errs, fmt.Errorf("%s: invalid package name _", p.Fset.Position(file.Name.Pos())))
 			}
 		}
+		if !p.IllTyped {
+			errs = append(errs, interfaceCycles(p)...)
+		}
 		start := len(errs)
 		for _, e := range p.Errors {
 			if strings.HasPrefix(e.Msg, "\t") && len(errs) > start {
