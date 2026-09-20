@@ -77,6 +77,7 @@ var native = []string{
 	"text/template/parse",
 	"text/scanner",
 	"text/template",
+	"internal/bisect",
 	"internal/fmtsort",
 	"go/token",
 	"go/scanner",

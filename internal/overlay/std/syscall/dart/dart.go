@@ -1066,6 +1066,10 @@ func SetRuntimeGODEBUG(settings string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func RuntimeGODEBUGVersion() int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func DefaultGODEBUG() string {
 	panic("syscall/dart needs the gart compiler")
 }

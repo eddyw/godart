@@ -1,0 +1,47 @@
+Use source frame identities because Dart PCs depend on observation order.
+--- bisect.go
++++ bisect.go
+@@ -426,18 +426,24 @@
+ 	const maxStack = 16
+ 	var stk [maxStack]uintptr
+ 	n := runtime.Callers(2, stk[:])
+-	// caller #2 is not for printing; need it to normalize PCs if ASLR.
++	// Caller #2 identifies the call path but stays outside the report.
+ 	if n <= 1 {
+ 		return false
+ 	}
+ 
+-	base := stk[0]
+-	// normalize PCs
+-	for i := range stk[:n] {
+-		stk[i] -= base
+-	}
+-
+-	h := Hash(stk[:n])
++	// Dart PCs depend on observation order. Source frames give stable IDs.
++	h := offset64
++	frames := runtime.CallersFrames(stk[:n])
++	for {
++		frame, more := frames.Next()
++		h = fnvString(h, frame.Function)
++		h = fnv(h, 0)
++		h = fnvString(h, frame.File)
++		h = fnvUint64(h, uint64(frame.Line))
++		if !more {
++			break
++		}
++	}
+ 	if m.ShouldPrint(h) {
+ 		var d *dedup
+ 		for {
+@@ -457,10 +463,6 @@
+ 			}
+ 		} else {
+ 			if !d.seen(h) {
+-				// Restore PCs in stack for printing
+-				for i := range stk[:n] {
+-					stk[i] += base
+-				}
+ 				printStack(w, h, stk[1:n])
+ 			}
+ 		}

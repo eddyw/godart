@@ -295,6 +295,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$setPanicNil(%s)", args[0]), true
 	case "SetRuntimeGODEBUG":
 		return fmt.Sprintf("$setRuntimeGODEBUG(%s)", args[0]), true
+	case "RuntimeGODEBUGVersion":
+		return "$runtimeGODEBUGVersion", true
 	case "DefaultGODEBUG":
 		return "GoString.fromString($defaultGODEBUG)", true
 	case "TypeInfo":

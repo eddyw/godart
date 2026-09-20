@@ -3,6 +3,7 @@ import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'string.dart';
 
 String $defaultGODEBUG = '';
+int $runtimeGODEBUGVersion = 0;
 
 void $setDefaultGODEBUG(String settings) {
   $defaultGODEBUG = settings;
@@ -36,6 +37,7 @@ bool _legacyPanicNil(String settings, bool current, {bool startup = false}) {
 }
 
 void $setRuntimeGODEBUG(GoString settings) {
+  $runtimeGODEBUGVersion++;
   _panicNilLegacy = _legacyPanicNil(
     '${$defaultGODEBUG},${settings.toDartString()}',
     _panicNilLegacy,

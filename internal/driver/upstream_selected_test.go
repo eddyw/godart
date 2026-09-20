@@ -3,6 +3,7 @@ package driver_test
 import (
 	"archive/zip"
 	"encoding/json"
+	"fmt"
 	"go/ast"
 	"go/build"
 	"go/parser"
@@ -18,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
+	"github.com/eddyw/godart/internal/load"
 	"github.com/eddyw/godart/internal/parity"
 )
 
@@ -57,7 +59,7 @@ func TestSelectedUpstream(t *testing.T) {
 			}},
 		},
 		"syscall":          {{Name: "syscall_test.go", Declarations: []string{"testSetGetenv", "TestEnv"}}, {Name: "env_unix_test.go", Declarations: []string{"env", "genDummyEnv", "setDummyEnv", "setupEnvCleanup", "TestClearenv"}}},
-		"internal/godebug": {{Name: "godebug_test.go", Declarations: []string{"TestGet", "TestImmutable"}}},
+		"internal/godebug": {{Name: "godebug_test.go", Declarations: []string{"TestGet", "TestImmutable", "TestCmdBisect", "TestBisectTestCase"}}},
 		"cmp":              {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
 		"math":             {{Name: "const_test.go"}, {Name: "example_test.go"}},
 		"encoding/asn1": {
@@ -194,12 +196,15 @@ func TestSelectedUpstream(t *testing.T) {
 			dir := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(pkg))
 			fixture := t.TempDir()
 			writeFile(t, filepath.Join(fixture, "go.mod"), "module example.com/upstream\n\ngo 1.27\n")
-			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" {
+			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" || pkg == "internal/godebug" {
 				module := "example.com/upstream"
 				if pkg == "sync" {
 					module = "sync_test"
 				}
 				dependencies := "require example.com/testenv v0.0.0\nreplace example.com/testenv => ./testenv\n"
+				if pkg == "internal/godebug" {
+					dependencies += "\nrequire example.com/bisect v0.0.0\nreplace example.com/bisect => ./bisect\n"
+				}
 				if pkg == "crypto/x509" {
 					dependencies += "\nrequire example.com/cryptotest v0.0.0\nreplace example.com/cryptotest => ./cryptotest\n"
 				}
@@ -253,6 +258,7 @@ func TestSelectedUpstream(t *testing.T) {
 				}
 				if pkg == "internal/godebug" {
 					source = strings.ReplaceAll(source, `"internal/godebug"`, `"example.com/upstream"`)
+					source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/testenv"`)
 				}
 				if pkg == "go/parser" || pkg == "html/template" {
 					name := filepath.Base(pkg)
@@ -264,14 +270,20 @@ func TestSelectedUpstream(t *testing.T) {
 				}
 				writeFile(t, filepath.Join(fixture, file.Name), source)
 			}
-			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" {
+			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" || pkg == "internal/godebug" {
 				names := []string{"Executable", "MustHaveExec"}
+				if pkg == "internal/godebug" {
+					names = []string{"MustHaveGoRun", "MustHaveGoBuild", "GoToolPath", "GOROOT"}
+				}
 				if pkg == "crypto/x509" {
 					names = []string{"Builder", "SkipFlaky"}
 				} else if pkg == "os" {
 					names = []string{"MustHaveSymlink"}
 				}
 				source := selectedUpstreamSource(t, "../overlay/std/internal/testenv/testenv.go", names)
+				if pkg == "internal/godebug" {
+					source = strings.ReplaceAll(source, "runtime.GOROOT()", strconv.Quote(runtime.GOROOT()))
+				}
 				if err := os.MkdirAll(filepath.Join(fixture, "testenv"), 0755); err != nil {
 					t.Fatal(err)
 				}
@@ -295,7 +307,26 @@ func TestSelectedUpstream(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				writeFile(t, filepath.Join(fixture, "godebug.go"), string(data))
+				writeFile(t, filepath.Join(fixture, "godebug.go"), strings.ReplaceAll(string(data), `"internal/bisect"`, `"example.com/bisect"`))
+				if err := os.MkdirAll(filepath.Join(fixture, "bisect"), 0755); err != nil {
+					t.Fatal(err)
+				}
+				writeFile(t, filepath.Join(fixture, "bisect/go.mod"), "module example.com/bisect\n\ngo 1.27\n")
+				bisectDir := filepath.Join(runtime.GOROOT(), "src/internal/bisect")
+				loaded, err := load.Load(bisectDir, ".")
+				if err != nil {
+					t.Fatal(err)
+				}
+				data, ok := loaded.Sources[filepath.Join(bisectDir, "bisect.go")]
+				if !ok {
+					t.Fatal("missing adapted bisect source")
+				}
+				writeFile(t, filepath.Join(fixture, "bisect/bisect.go"), string(data))
+				license, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "LICENSE"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeFile(t, filepath.Join(fixture, "bisect/LICENSE"), string(license))
 			}
 
 			if pkg == "time" {
@@ -357,7 +388,7 @@ func TestSelectedUpstream(t *testing.T) {
 			}
 			prepareDart(t, out)
 			var launcher string
-			if pkg == "sync" {
+			if pkg == "sync" || pkg == "internal/godebug" {
 				launcher = prepareUpstreamSelfExec(t, out, stats.Binaries[0].Entry)
 			}
 			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter, "-test.skip=" + upstreamSkip(t, pkg)}
@@ -381,7 +412,7 @@ func TestSelectedUpstream(t *testing.T) {
 					compareUpstream(t, name, pkg, filter, "aot", dir, result.Text, result.Exit)
 				})
 			}
-			if pkg == "sync" {
+			if pkg == "sync" || pkg == "internal/godebug" {
 				run(t, out, "dart", "compile", "exe", stats.Binaries[0].Entry, "-o", launcher)
 				result := programOutcome(t, dir, launcher, args...)
 				compareUpstream(t, name, pkg, filter, "aot", dir, result.Text, result.Exit)
@@ -405,7 +436,7 @@ func atomicDeclarations() []string {
 	return names
 }
 
-// Keep original declaration bytes. Only imports and the package wrapper adapt.
+// Keep original declaration bytes and source positions. Adapt imports and the wrapper.
 func selectedUpstreamSource(t *testing.T, path string, names []string) string {
 	t.Helper()
 	source, err := os.ReadFile(path)
@@ -509,6 +540,7 @@ func selectedUpstreamSource(t *testing.T, path string, names []string) string {
 				start = d.Doc.Pos()
 			}
 		}
+		out.WriteString(fmt.Sprintf("//line %s:%d\n", filepath.Base(path), fs.Position(start).Line))
 		out.Write(source[fs.Position(start).Offset:fs.Position(decl.End()).Offset])
 		out.WriteString("\n\n")
 	}
