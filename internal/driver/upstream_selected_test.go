@@ -80,6 +80,13 @@ func TestSelectedUpstream(t *testing.T) {
 				writeFile(t, filepath.Join(fixture, file.Name), source)
 			}
 
+			if pkg == "net" {
+				source := selectedUpstreamSource(t, "../overlay/std/net/addr.go", []string{"networkNumberAndMask"})
+				source = strings.Replace(source, "package net", "package net_test\nimport . \"net\"", 1)
+				source = strings.TrimPrefix(source, "//go:build dart\n")
+				writeFile(t, filepath.Join(fixture, "helper_test.go"), source)
+			}
+
 			if pkg == "os/exec" {
 				source := selectedUpstreamSource(t, "../overlay/std/os/exec/exec.go", []string{"dedupEnvCase"})
 				writeFile(t, filepath.Join(fixture, "helper.go"), source)
@@ -194,7 +201,7 @@ func selectedUpstreamSource(t *testing.T, path string, names []string) string {
 		keep := len(names) == 0
 		switch d := decl.(type) {
 		case *ast.FuncDecl:
-			if strings.HasPrefix(d.Name.Name, "Benchmark") || d.Name.Name == "TestNetworkNumberAndMask" {
+			if strings.HasPrefix(d.Name.Name, "Benchmark") {
 				continue
 			}
 			if slices.Contains(names, d.Name.Name) {

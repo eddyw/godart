@@ -48,10 +48,6 @@
       "classification": "implementation-gap",
       "reason": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
     },
-    "TestCVE202230633": {
-      "classification": "implementation-gap",
-      "reason": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    },
     "TestDecodeElementDepthBypass": {
       "classification": "implementation-gap",
       "reason": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
@@ -127,12 +123,6 @@
     "TestMaxExecDepth": {
       "classification": "implementation-gap",
       "reason": "The full upstream case exhausts the Dart stack before the Go template depth limit. An iterative evaluator or stack-safe execution adapter is still necessary. The original case skips short mode."
-    }
-  },
-  "net": {
-    "TestNetworkNumberAndMask": {
-      "classification": "test-adapter",
-      "reason": "The test requires the native private networkNumberAndMask helper, which the net overlay does not contain."
     }
   }
 }
