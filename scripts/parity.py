@@ -215,6 +215,26 @@ def scope_assessment(api, path):
             "counts": dict(Counter(entry["review_status"] for entry in packages)), "packages": packages}
 
 
+def rejection_result(case, status):
+    if status != "failed":
+        return status
+    for key in ("native", "gart", "native_match", "gart_match"):
+        result = case.get(key, {})
+        if not result.get("ran") or result.get("timed_out"):
+            return "incomplete-evidence"
+    for key in ("native", "gart"):
+        diagnostics = case.get(key + "_diagnostics", "")
+        if hashlib.sha256(diagnostics.encode()).hexdigest() != case[key].get("output_sha256"):
+            return "incomplete-evidence"
+    if case["native"]["exit"] <= 0 or case["native_match"]["exit"] != 0:
+        return "native-baseline-mismatch"
+    if case["gart"]["exit"] == 0:
+        return "accepted-invalid-source"
+    if case["gart"]["exit"] > 0 and case["gart_match"]["exit"] != 0:
+        return "rejection-diagnostics-mismatch"
+    return "incomplete-evidence"
+
+
 def language_behavior(paths):
     groups = {}
     seen = set()
@@ -277,6 +297,8 @@ def language_behavior(paths):
                         group["problems"].append(f"{path}: invalid pass for {name}")
                 record = group["outcomes"].setdefault(name, dict(name=name, fixture=case["fixture"], statuses=set()))
                 record["statuses"].add(status)
+                if config["contract"] == "reject":
+                    record.setdefault("rejection_results", set()).add(rejection_result(case, status))
             group["reports"].append(dict(path=str(path), sha256=stamp, complete=report["complete"],
                                          shard=report["shard"], shards=report["shards"]))
     result = []
@@ -287,9 +309,16 @@ def language_behavior(paths):
             if len(statuses) > 1:
                 statuses.discard("unobserved")
             record["status"] = next(iter(statuses)) if len(statuses) == 1 else "conflicting"
+            if "rejection_results" in record:
+                causes = record.pop("rejection_results")
+                if len(causes) > 1:
+                    causes.discard("unobserved")
+                record["rejection_result"] = next(iter(causes)) if len(causes) == 1 else "conflicting"
             records.append(record)
         group["outcomes"] = records
         group["counts"] = dict(Counter(x["status"] for x in records))
+        if group["configuration"]["contract"] == "reject":
+            group["rejection_results"] = dict(Counter(x["rejection_result"] for x in records))
         result.append(group)
     return result
 
@@ -418,6 +447,8 @@ def report(args):
         lines.extend([f"Language {c['contract']} {c['go_version']} {c['goos']}/{c['goarch']} {c['target']}: "
                       + json.dumps(group["counts"], sort_keys=True),
                       f"Language evidence problems: {len(group['problems'])}", ""])
+        if "rejection_results" in group:
+            lines.extend(["Rejection results: " + json.dumps(group["rejection_results"], sort_keys=True), ""])
     for app in applications:
         lines.append(f"Application {app['project']['directory']}: {app['mode']} = {app['status']}")
     (args.output / "report.md").write_text("\n".join(lines) + "\n")

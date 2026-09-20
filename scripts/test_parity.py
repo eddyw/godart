@@ -224,6 +224,46 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
+    def test_rejection_results_preserve_failures(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            execution = dict(ran=True, exit=1, timed_out=False,
+                             output_sha256=parity.hashlib.sha256(b"invalid source").hexdigest())
+            matched = dict(ran=True, exit=0, timed_out=False)
+            case = dict(fixture=dict(name="p", recipe="errorcheck"), contract="reject", status="failed",
+                        native=dict(execution), gart=dict(execution),
+                        native_match=dict(matched), gart_match={**matched, "exit": 1},
+                        native_diagnostics="invalid source", gart_diagnostics="invalid source")
+            report = dict(kind="language", complete=True, outcomes=[case], shard=0, shards=1)
+            path = root / "language.json"
+
+            def assess(expected):
+                parity.save(path, report)
+                group = parity.language_behavior([root])[0]
+                self.assertEqual(group["counts"], {"failed": 1})
+                self.assertEqual(group["rejection_results"], {expected: 1})
+                self.assertEqual(group["outcomes"][0]["rejection_result"], expected)
+
+            assess("rejection-diagnostics-mismatch")
+            case["gart"]["exit"] = 0
+            assess("accepted-invalid-source")
+            case["native_match"]["exit"] = 1
+            assess("native-baseline-mismatch")
+            case["native_match"]["exit"] = 0
+            case["gart"]["timed_out"] = True
+            assess("incomplete-evidence")
+            case["gart"]["timed_out"] = False
+            case["gart_diagnostics"] = "changed bytes"
+            assess("incomplete-evidence")
+            case["gart_diagnostics"] = "invalid source"
+            case["gart"]["exit"] = 1
+            parity.save(path, report)
+            case["gart"]["exit"] = 0
+            parity.save(root / "other.json", report)
+            group = parity.language_behavior([root])[0]
+            self.assertEqual(group["counts"], {"failed": 1})
+            self.assertEqual(group["rejection_results"], {"conflicting": 1})
+
     def test_scope_review_does_not_hide_new_packages_or_sdk_changes(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "scope.json"
