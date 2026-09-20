@@ -164,8 +164,7 @@ int _floor(List<int> list, int value) {
 /// is the function that calls this one.
 Slice<GoString> $stack(int skip) {
   var frames = $goStack(StackTrace.current);
-  final panic = $chainPanic;
-  if (panic != null) {
+  for (var panic = $chainPanic; panic != null; panic = panic.link) {
     final origin = $goStack(panic.trace);
     var common = 0;
     while (common < frames.length && common < origin.length) {

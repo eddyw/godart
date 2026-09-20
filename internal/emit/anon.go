@@ -86,7 +86,9 @@ func structOfAnon(t types.Type) (*types.Struct, bool) {
 
 // anonDicts gives the dictionary argument of each parameter of the shape.
 func (e *emitter) anonDicts(st *types.Struct) []string {
-	if params, ok := e.anonParams[e.anonName(st)]; ok && typeset.HoldsParam(st) {
+	if typeset.HoldsParam(st) {
+		e.openClass(st)
+		params := e.anonParams[e.anonName(st)]
 		out := make([]string, len(params))
 		for i, tp := range params {
 			out[i] = e.dictOf(tp)

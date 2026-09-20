@@ -77,4 +77,32 @@ func main() {
 	locker.Unlock()
 	fmt.Println("free", rw.TryLock())
 	rw.Unlock()
+
+	onceStarted := make(chan struct{})
+	onceRelease := make(chan struct{})
+	onceResult := sync.OnceValue(func() int {
+		close(onceStarted)
+		<-onceRelease
+		return 42
+	})
+	first, second := make(chan int, 1), make(chan int, 1)
+	go func() { first <- onceResult() }()
+	<-onceStarted
+	secondStarted := make(chan struct{})
+	go func() {
+		close(secondStarted)
+		second <- onceResult()
+	}()
+	<-secondStarted
+	for i := 0; i < 10; i++ {
+		runtime.Gosched()
+	}
+	close(onceRelease)
+	fmt.Println("once results", <-first, <-second)
+	pair := sync.OnceValues(func() (string, int) { return "value", 7 })
+	fmt.Println(pair())
+	fmt.Println(pair())
+	panics := sync.OnceFunc(func() { panic(123) })
+	caught(panics)
+	caught(panics)
 }

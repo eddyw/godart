@@ -42,8 +42,18 @@ func TestSelectedUpstream(t *testing.T) {
 		"encoding/asn1":    {{Name: "marshal_test.go"}},
 		"runtime/debug":    {{Name: "mod_test.go"}},
 		"os/exec":          {{Name: "env_test.go"}},
-		"sync":             {{Name: "once_test.go"}, {Name: "cond_test.go"}, {Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo"}}},
-		"sync/atomic":      {{Name: "value_test.go"}, {Name: "atomic_test.go", Declarations: atomicDeclarations()}},
+		"sync": {
+			{Name: "once_test.go"}, {Name: "cond_test.go"},
+			{Name: "mutex_test.go", Declarations: []string{"TestMutexFairness"}},
+			{Name: "rwmutex_test.go"},
+			{Name: "oncefunc_test.go", Declarations: []string{
+				"testOncePanicX", "testOncePanicWith", "TestOnceFuncPanic", "TestOnceValuePanic",
+				"TestOnceValuesPanic", "TestOnceFuncPanicNil", "TestOnceFuncGoexit",
+				"TestOnceFuncPanicTraceback", "onceFuncPanic",
+			}},
+			{Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo"}},
+		},
+		"sync/atomic": {{Name: "value_test.go"}, {Name: "atomic_test.go", Declarations: atomicDeclarations()}},
 		"reflect": {
 			{Name: "visiblefields_test.go"},
 			{Name: "iter_test.go"},
@@ -76,10 +86,17 @@ func TestSelectedUpstream(t *testing.T) {
 			dir := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(pkg))
 			fixture := t.TempDir()
 			writeFile(t, filepath.Join(fixture, "go.mod"), "module example.com/upstream\n\ngo 1.27\n")
+			if pkg == "sync" {
+				writeFile(t, filepath.Join(fixture, "go.mod"), "module sync_test\n\ngo 1.27\n")
+			}
 			selectedFiles := map[string]upstreamFile{}
 			for _, file := range files {
 				selectedFiles[file.Name] = file
 				source := selectedUpstreamSource(t, filepath.Join(dir, file.Name), file.Declarations)
+				if pkg == "sync" {
+					// The original traceback assertion requires the sync_test import path.
+					source = strings.Replace(source, "package sync_test", "package sync", 1)
+				}
 				if pkg == "net" {
 					source = strings.Replace(source, "package net", "package net_test\nimport . \"net\"", 1)
 				}

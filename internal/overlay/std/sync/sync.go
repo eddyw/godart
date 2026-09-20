@@ -21,12 +21,13 @@ type Mutex struct {
 
 // Lock takes the lock. It waits while another goroutine holds it.
 func (m *Mutex) Lock() {
-	for m.held {
-		w := dart.LockToken()
-		m.waiters = append(m.waiters, w)
-		dart.LockWait(w)
+	if !m.held {
+		m.held = true
+		return
 	}
-	m.held = true
+	w := dart.LockToken()
+	m.waiters = append(m.waiters, w)
+	dart.LockWait(w)
 }
 
 // Unlock gives the lock back.
@@ -34,10 +35,11 @@ func (m *Mutex) Unlock() {
 	if !m.held {
 		panic("sync: unlock of unlocked mutex")
 	}
-	m.held = false
 	if len(m.waiters) == 0 {
+		m.held = false
 		return
 	}
+	// Transfer ownership before the next goroutine can attempt Lock.
 	w := m.waiters[0]
 	m.waiters = m.waiters[1:]
 	dart.LockWake(w)
@@ -232,6 +234,7 @@ func (wg *WaitGroup) Wait() {
 // A Once runs a function 1 time.
 type Once struct {
 	done bool
+	mu   Mutex
 }
 
 // Do runs f when no earlier call of Do ran a function.
@@ -239,37 +242,13 @@ func (o *Once) Do(f func()) {
 	if o.done {
 		return
 	}
-	o.done = true
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.done {
+		return
+	}
+	defer func() { o.done = true }()
 	f()
-}
-
-// OnceFunc gives a function that runs f 1 time. Each later call performs no
-// operation.
-func OnceFunc(f func()) func() {
-	var once Once
-	return func() { once.Do(f) }
-}
-
-// OnceValue gives a function that runs f 1 time and holds its result. Each
-// later call gives the held result again.
-func OnceValue[T any](f func() T) func() T {
-	var once Once
-	var out T
-	return func() T {
-		once.Do(func() { out = f() })
-		return out
-	}
-}
-
-// OnceValues gives a function that runs f 1 time and holds its 2 results.
-func OnceValues[T1, T2 any](f func() (T1, T2)) func() (T1, T2) {
-	var once Once
-	var a T1
-	var b T2
-	return func() (T1, T2) {
-		once.Do(func() { a, b = f() })
-		return a, b
-	}
 }
 
 // Pool holds a set of values that a caller reuses.
