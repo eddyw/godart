@@ -108,6 +108,13 @@ func readResponseLimit(r *bufio.Reader, req *Request, limit int) (*Response, err
 	}
 	res.Body = body
 	res.ContentLength = length
+	if strings.EqualFold(header.Get("Transfer-Encoding"), "chunked") {
+		res.TransferEncoding = []string{"chunked"}
+		header.Del("Transfer-Encoding")
+		if withBody {
+			header.Del("Content-Length")
+		}
+	}
 	if req != nil && req.Method == MethodHead {
 		res.ContentLength = -1
 		if text := header.Get("Content-Length"); text != "" {

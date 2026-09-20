@@ -785,8 +785,7 @@ func (b *continueBody) Close() error {
 	return b.body.Close()
 }
 
-// A response writes the answer of 1 request. It holds the body in memory, thus
-// the answer names its length.
+// A response buffers a small body before it selects the wire framing.
 type response struct {
 	conn net.Conn
 	// reader holds the buffer of the connection. A Hijack gives it to the
@@ -799,6 +798,7 @@ type response struct {
 	wroteHead  bool
 	closeAfter bool
 	flushed    bool
+	writeErr   error
 	// chunked marks an answer of the chunked form. Only HTTP/1.1 holds it.
 	chunked bool
 	// hijacked marks a connection that the handler took.
@@ -915,15 +915,27 @@ func (w *response) Write(p []byte) (int, error) {
 	if !w.wroteHead {
 		w.WriteHeader(StatusOK)
 	}
+	if w.writeErr != nil {
+		return 0, w.writeErr
+	}
 	if w.flushed {
 		return w.writeChunk(p)
+	}
+	if len(w.body)+len(p) > 2048 && (w.req == nil || w.req.Method != MethodHead) {
+		n := 2048 - len(w.body)
+		w.body = append(w.body, p[:n]...)
+		w.Flush()
+		if w.writeErr != nil {
+			return n, w.writeErr
+		}
+		written, err := w.writeChunk(p[n:])
+		return n + written, err
 	}
 	w.body = append(w.body, p...)
 	return len(p), nil
 }
 
-// Flush writes the head and the body that stands open, and it moves the answer
-// to the chunked form.
+// Flush sends buffered data and selects framing for subsequent writes.
 func (w *response) Flush() {
 	if w.hijacked {
 		return
@@ -935,20 +947,19 @@ func (w *response) Flush() {
 		// The chunked form belongs to HTTP/1.1. An answer of HTTP/1.0 that
 		// flushes writes the bytes raw, and the end of the connection then
 		// names the end of the body.
-		w.chunked = w.req == nil || w.req.ProtoAtLeast(1, 1)
 		head := w.wire()
+		w.chunked = head.Get("Content-Length") == "" && (w.req == nil || w.req.ProtoAtLeast(1, 1))
 		if w.chunked {
 			head.Set("Transfer-Encoding", "chunked")
-		} else {
+		} else if head.Get("Content-Length") == "" {
 			w.closeAfter = true
 		}
-		head.Del("Content-Length")
 		w.writeHead()
 		w.flushed = true
 		body := w.body
 		w.body = nil
 		if len(body) > 0 {
-			w.writeChunk(body)
+			_, w.writeErr = w.writeChunk(body)
 		}
 		return
 	}
@@ -980,10 +991,8 @@ func (w *response) writeHead() {
 	}
 	io.WriteString(w.conn, "HTTP/1.1 "+itoa(w.status)+" "+text+"\r\n")
 	head := w.wire()
-	// Go reads the first bytes of the body and names the type. The overlay
-	// names text only. Read docs/parity.md.
-	if head.Get("Content-Type") == "" && len(w.body) > 0 {
-		head.Set("Content-Type", "text/plain; charset=utf-8")
+	if _, exists := head["Content-Type"]; !exists && head.Get("Content-Encoding") == "" && len(w.body) > 0 {
+		head.Set("Content-Type", DetectContentType(w.body))
 	}
 	if w.closeAfter {
 		head.Set("Connection", "close")
@@ -1704,8 +1713,8 @@ func (w *h2Response) Flush() {
 
 func (w *h2Response) sendHead(endStream bool) {
 	w.headSent = true
-	if w.header.Get("Content-Type") == "" && len(w.body) > 0 {
-		w.header.Set("Content-Type", "text/plain; charset=utf-8")
+	if _, exists := w.header["Content-Type"]; !exists && w.header.Get("Content-Encoding") == "" && len(w.body) > 0 {
+		w.header.Set("Content-Type", DetectContentType(w.body))
 	}
 	var flat []string
 	for name, values := range w.header {
