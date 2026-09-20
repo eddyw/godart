@@ -13443,6 +13443,12 @@
       "native": "skip",
       "reason": "The original upstream test unconditionally skips this case.",
       "test": "TestTemplateLookUp"
+    },
+    {
+      "test": "TestMaxExecDepth",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original test skips in short mode. Full runs retain the original template depth and assertions."
     }
   ],
   "encoding/xml": [
@@ -13645,6 +13651,14 @@
       "native": "skip",
       "gart": "skip",
       "reason": "The original test skips local syslog daemon discovery in short mode."
+    }
+  ],
+  "go/parser": [
+    {
+      "test": "TestParseDepthLimit",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original test skips in short mode because it requires significant memory. Full runs retain the original depth and assertions."
     }
   ]
 }
