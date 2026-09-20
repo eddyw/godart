@@ -187,7 +187,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "path_test.go", Declarations: []string{"TestMkdirAll", "TestMkdirAllAbsPath"}},
 			{Name: "root_test.go", Declarations: []string{"testMaybeRooted", "makefs", "hasLink", "rootTest", "rootTest.run", "rootTestCases", "errEndsTest", "TestRootMkdirAll", "TestRootMkdir", "TestRootOpen_File", "TestRootOpen_Directory", "TestRootCreate", "TestRootOpenRoot", "TestRootStat", "TestRootLstat", "TestRootReadlink", "TestRootRemoveFile", "TestRootRemoveDirectory", "TestRootNonPermissionMode", "TestRootUseAfterClose", "TestRootSymlinkToRoot", "TestOpenInRoot", "TestRootRemoveDot", "TestRootWriteReadFile", "TestRootName", "TestRootConcurrentClose"}},
 		},
-		"net":      {{Name: "ip_test.go"}, {Name: "mac_test.go"}},
+		"net":      {{Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept"}}},
 		"net/http": {{Name: "header_test.go", Declarations: []string{"headerWriteTests", "TestHeaderWrite", "parseTimeTests", "TestParseTime", "TestNilHeaderClone"}}, {Name: "sniff_test.go", Declarations: []string{"sniffTests", "TestDetectContentType"}}},
 	}
 	for pkg, files := range selections {
@@ -406,7 +406,7 @@ func TestSelectedUpstream(t *testing.T) {
 					})
 				}
 			}
-			if pkg == "os" {
+			if pkg == "os" || pkg == "net" {
 				t.Run("aot", func(t *testing.T) {
 					result := runUpstreamTarget(t, "aot", out, stats.Binaries[0].Entry, dir, args)
 					compareUpstream(t, name, pkg, filter, "aot", dir, result.Text, result.Exit)

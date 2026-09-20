@@ -324,6 +324,7 @@ final List<_Conn?> _open = <_Conn?>[];
 /// thus the element type of the stream is Object and each accept casts it.
 final class _Listener {
   final StreamIterator<Object> incoming;
+  Future<void> ready = Future<void>.value();
 
   /// close ends the server socket. A plain listener and a TLS listener hold
   /// 2 server classes with no shared base, thus the class keeps a function.
@@ -340,6 +341,19 @@ final class _Listener {
     this.unixPath = '',
     this.tcpHost = '',
   ]) : incoming = StreamIterator<Object>(stream);
+
+  Future<Object?> next() {
+    final result = ready.then((_) async {
+      if (!await incoming.moveNext()) return null;
+      return incoming.current;
+    });
+    // A failed accept must release the next waiter.
+    ready = result.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stack) {},
+    );
+    return result;
+  }
 }
 
 /// The open listeners of the program, by handle. The handles of a listener, of
@@ -1172,9 +1186,9 @@ GoString $listenTCPHost(int handle) =>
   final _Listener? l = _listenerAt(handle);
   if (l == null) return (-1, _empty, _closed());
   $await(
-    l.incoming.moveNext().then((bool more) {
-      if (!more) return (-1, _empty, _closed());
-      final Socket s = l.incoming.current as Socket;
+    l.next().then((Object? socket) {
+      if (socket == null) return (-1, _empty, _closed());
+      final Socket s = socket as Socket;
       final String proto = s is SecureSocket ? s.selectedProtocol ?? '' : '';
       return (_slot(_StreamConn(s)), GoString.fromString(proto), _empty);
     }),
@@ -1204,9 +1218,9 @@ GoString $listenTCPHost(int handle) =>
   final _Listener? l = _listenerAt(handle);
   if (l == null) return (-1, _closed());
   $await(
-    l.incoming.moveNext().then((bool more) {
-      if (!more) return (-1, _closed());
-      return (_slot(_RawConn(l.incoming.current as RawSocket)), _empty);
+    l.next().then((Object? socket) {
+      if (socket == null) return (-1, _closed());
+      return (_slot(_RawConn(socket as RawSocket)), _empty);
     }),
     (Object cause) => (-1, _cause(cause)),
   );
