@@ -5,13 +5,13 @@
   "packages": [
     {
       "package": "debug/buildinfo",
-      "assessment": "portable-candidate",
+      "assessment": "portable-implementation",
       "sources": [
         "debug/buildinfo/buildinfo.go"
       ],
-      "reason": "Read parses a supplied Go executable. ReadFile also needs file access. The blank unsafe import only supports a private linkname declaration.",
-      "next_action": "Preserve Go executable parsing. Add the package and original malformed-input fixtures.",
-      "targets": "ReaderAt parsing can work on all targets. File access requires VM/AOT or caller-provided browser bytes."
+      "reason": "The package uses the Go implementation. Supplied executables and malformed inputs have original upstream coverage.",
+      "next_action": "Preserve native executable fixtures and parser coverage as SDK sources change.",
+      "targets": "ReaderAt accepts caller-supplied bytes. File access requires a native target."
     },
     {
       "package": "expvar",
@@ -162,9 +162,9 @@
       "sources": [
         "unsafe/unsafe.go"
       ],
-      "reason": "Native pointer dereference and pointer arithmetic are outside the subset. Constant layout queries need a separate compiler-defined Go layout contract.",
-      "next_action": "Keep raw memory access excluded. Assess compile-time Sizeof, Alignof, and Offsetof independently.",
-      "targets": "Native memory operations are excluded on all targets. Constant layout queries remain unassessed."
+      "reason": "Constant layout queries use compiler type information. Raw pointer access remains outside the subset.",
+      "next_action": "Validate generic layouts and preserve the raw memory exclusion.",
+      "targets": "Compile-time queries work across Dart targets. Native memory operations remain excluded."
     }
   ]
 }
