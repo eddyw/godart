@@ -13476,5 +13476,13 @@
       "reason": "The original upstream test unconditionally skips this case.",
       "test": "TestTemplateLookUp"
     }
+  ],
+  "encoding/xml": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this memory-intensive case in short mode.",
+      "test": "TestCVE202230633"
+    }
   ]
 }
