@@ -272,6 +272,34 @@
       "job_timeout": 7,
       "full_timeout": 2,
       "full_job_timeout": 7
+    },
+    {
+      "suite": "language-compile",
+      "shard": 0,
+      "shards": 4,
+      "timeout": 5,
+      "job_timeout": 10
+    },
+    {
+      "suite": "language-compile",
+      "shard": 1,
+      "shards": 4,
+      "timeout": 5,
+      "job_timeout": 10
+    },
+    {
+      "suite": "language-compile",
+      "shard": 2,
+      "shards": 4,
+      "timeout": 5,
+      "job_timeout": 10
+    },
+    {
+      "suite": "language-compile",
+      "shard": 3,
+      "shards": 4,
+      "timeout": 5,
+      "job_timeout": 10
     }
   ]
 }

@@ -1219,7 +1219,11 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 	case "min", "max":
 		return e.minMax(x)
 	case "delete":
-		return fmt.Sprintf("%s.remove(%s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
+		text := e.expr(x.Args[0])
+		if typeset.Core(x.Args[0].GoType()) == nil {
+			text = "(" + text + " as GoMap<Object?, Object?>)"
+		}
+		return fmt.Sprintf("%s.remove(%s)", text, e.expr(x.Args[1]))
 	case "clear":
 		if isMapType(x.Args[0].GoType()) {
 			return e.expr(x.Args[0]) + ".clear()"
@@ -1239,7 +1243,11 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 	case "iterval":
 		return e.expr(x.Args[0]) + ".value"
 	case "close":
-		return e.chanExpr(x.Args[0]) + ".close()"
+		text := e.chanExpr(x.Args[0])
+		if typeset.Core(x.Args[0].GoType()) == nil {
+			text = "(" + text + " as Chan<Object?>)"
+		}
+		return text + ".close()"
 	case "real":
 		return fmt.Sprintf("%s.re", e.expr(x.Args[0]))
 	case "imag":
@@ -1571,6 +1579,12 @@ func (e *emitter) conv(x *ir.Conv) string {
 	}
 	// A type set that holds a byte slice and a string holds 2 Dart types, thus
 	// the dictionary carries the 2 conversions.
+	if typeset.BytesOrRunes(from) && isString(to) {
+		return fmt.Sprintf("%s.text!(%s)", e.dictOf(from), text)
+	}
+	if typeset.BytesOrRunes(to) && isString(from) {
+		return fmt.Sprintf("%s.fromText!(%s)", e.dictOf(to), text)
+	}
 	if typeset.BytesOrText(from) {
 		switch {
 		case isString(to):
@@ -1634,7 +1648,7 @@ func (e *emitter) conv(x *ir.Conv) string {
 		return e.narrow(to, text)
 	case isInteger(to) && isInteger(from):
 		return e.narrow(to, text)
-	case isString(to) && isString(from):
+	case isString(to) && isString(from), isChanType(to) && isChanType(from):
 		return text
 	}
 	if isInterfaceType(to) {
@@ -1650,6 +1664,9 @@ func (e *emitter) conv(x *ir.Conv) string {
 			e.descriptorOf(from), e.descriptorOf(to))
 	}
 	if types.Identical(types.Unalias(from).Underlying(), types.Unalias(to).Underlying()) {
+		return text
+	}
+	if isSliceType(from) && isSliceType(to) && types.IdenticalIgnoreTags(from.Underlying(), to.Underlying()) {
 		return text
 	}
 	// A pointer converts to another pointer when the 2 base types share 1

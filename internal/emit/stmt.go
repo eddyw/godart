@@ -564,10 +564,9 @@ func (e *emitter) caseTest(s *ir.Switch, v ir.Expr) string {
 	return e.expr(v)
 }
 
-// flatCaseIndex writes the search of the matching case as 1 if-else chain.
+// flatCaseIndex stops case evaluation after the first match.
 func (e *emitter) flatCaseIndex(s *ir.Switch, index string) {
 	defaultCase := -1
-	first := true
 	for i, c := range s.Cases {
 		if len(c.Values) == 0 {
 			defaultCase = i
@@ -577,21 +576,11 @@ func (e *emitter) flatCaseIndex(s *ir.Switch, index string) {
 		for k, v := range c.Values {
 			parts[k] = e.caseTest(s, v)
 		}
-		keyword := "else if"
-		if first {
-			keyword = "if"
-			first = false
-		}
-		e.line("%s (%s) { %s = %d; }", keyword, strings.Join(parts, " || "), index, i)
+		e.line("if (%s == %d && (%s)) { %s = %d; }", index, len(s.Cases), strings.Join(parts, " || "), index, i)
 	}
-	if defaultCase < 0 {
-		return
+	if defaultCase >= 0 {
+		e.line("if (%s == %d) { %s = %d; }", index, len(s.Cases), index, defaultCase)
 	}
-	if first {
-		e.line("%s = %d;", index, defaultCase)
-		return
-	}
-	e.line("else { %s = %d; }", index, defaultCase)
 }
 
 // nestedCaseIndex writes the search of the matching case as a nested chain.

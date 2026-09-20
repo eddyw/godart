@@ -577,7 +577,10 @@ type (
 		ResultsVar string
 		Keys       []Expr
 		Elems      []Expr
-		Type       types.Type
+		// Indices holds explicit array and slice positions in source order.
+		Indices []int
+		Length  int
+		Type    types.Type
 	}
 
 	// FuncLit is a closure.

@@ -410,7 +410,7 @@ func (e *emitter) fieldAccess(owner types.Type, field *types.Var, i int,
 	class string, declType types.Type) string {
 	dart := structFieldName(field, i)
 	if field.Name() != "_" {
-		dart = fieldDartName(owner, field.Name())
+		dart = e.fieldDartName(owner, field.Name())
 	}
 	if !field.Exported() && field.Pkg() != nil && field.Pkg() != e.pkg {
 		if named, ok := types.Unalias(owner).(*types.Named); ok && named.TypeArgs().Len() > 0 {
@@ -687,7 +687,7 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 		}
 		field := st.Field(i)
 		parent, holder := recv, current
-		recv += "." + fieldDartName(current, field.Name())
+		recv += "." + e.fieldDartName(current, field.Name())
 		current = field.Type()
 		if n == len(path)-1 {
 			recv = e.fitReceiver(recv, parent, holder, field.Name(), current, sig)
@@ -773,7 +773,7 @@ func (e *emitter) fitReceiver(recv, parent string, holder types.Type,
 		if hp, ok := typeset.Core(owner).(*types.Pointer); ok {
 			owner = hp.Elem()
 		}
-		name := fieldDartName(holder, fieldName)
+		name := e.fieldDartName(holder, fieldName)
 		return fmt.Sprintf(
 			"$Ref<%s, %s>(%s, %d, ($r, $i) => $r.%s, ($r, $i, $v) => $r.%s = $v)",
 			e.dartType(owner), e.dartType(field), parent,

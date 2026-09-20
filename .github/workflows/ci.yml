@@ -59,7 +59,7 @@ jobs:
         with:
           sdk: ${{ steps.sdk.outputs.dart }}
       - uses: actions/setup-node@v7
-        if: matrix.suite == 'targets' || matrix.suite == 'upstream-targets' || matrix.suite == 'web-io' || matrix.suite == 'web-fetch'
+        if: matrix.suite == 'language-targets' || matrix.suite == 'targets' || matrix.suite == 'upstream-targets' || matrix.suite == 'web-io' || matrix.suite == 'web-fetch'
         with:
           node-version: '26.8.2'
       - name: Install upstream test tools
@@ -70,7 +70,7 @@ jobs:
         if: matrix.suite != 'checks'
         run: go test -c -o "$RUNNER_TEMP/driver.test" ./internal/driver
       - name: Keep expected rejections out of error annotations
-        if: matrix.suite == 'language'
+        if: matrix.suite == 'language' || matrix.suite == 'language-compile'
         run: echo '::remove-matcher owner=go::'
       - name: Run the complete suite shard
         timeout-minutes: ${{ inputs.upstream_mode == 'full' && matrix.full_timeout || matrix.timeout }}

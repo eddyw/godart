@@ -23,6 +23,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("src/cmd/internal/testdir/testdir_test.go", `package testdir_test; var dirs=[]string{".","other"}`)
 	write("test/run.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/run.out", "expected\n")
+	write("test/compile.go", "// compile\npackage p\n")
+	write("test/compileflags.go", "// compile -N\npackage p\n")
 	write("test/suffix_windows.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/constraints.go", "//go:build dart\n\n// run\npackage main\nfunc main() {}\n")
 	write("test/other/directory.go", "// rundir -G=3\npackage ignored\n")
@@ -34,12 +36,15 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 4 {
-		t.Fatalf("got %d cases, want 4", len(inv.Cases))
+	if len(inv.Cases) != 6 {
+		t.Fatalf("got %d cases, want 6", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
 		cases[c.Name] = c
+	}
+	if cases["compile"].Adapter != "compile-file" || cases["compileflags"].Adapter != "missing" {
+		t.Fatal("the compile adapter must not discard recipe flags")
 	}
 	if c := cases["suffix_windows"]; !c.NativeEligible || c.GartEligible {
 		t.Fatalf("runner suffix rules lost: %+v", c)
@@ -111,7 +116,7 @@ func TestLanguagePolicy(t *testing.T) {
 		}
 	}
 	for name, diagnostics := range policy.Rejections {
-		if cases[name].Adapter != "single-file" || len(diagnostics) == 0 {
+		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "compile-file") || len(diagnostics) == 0 {
 			t.Errorf("invalid language rejection: %s", name)
 		}
 	}

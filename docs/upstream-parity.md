@@ -175,6 +175,14 @@ An absent `.out` requires empty output. Only CRLF normalization follows the upst
 With `GART_PARITY_REPORT_DIR`, language reports retain command arguments, exits,
 output hashes, source hashes, exclusions, SDK versions, targets, and incomplete selections.
 The aggregate refuses a pass if an output hash differs or either execution fails.
+The `language-compile` suite compares exact `compile` recipes. Native Go compiles the original file to an object.
+Gart compiles the same source and an inert Dart entry point to kernel.
+The adapter uses a package URI for library imports to preserve Dart type identity.
+It never executes compile-only programs or their initializers. Compilation does not establish runtime parity.
+Compiler-option recipes remain unassessed until an adapter preserves their options.
+Known compiler rejections retain exact diagnostics and never count as passes.
+Compile evidence records the wrapper hash and remains separate from runtime evidence.
+
 The `language-targets` suite executes the selected original fixtures on all 4 Dart targets.
 Its 4 shards keep these comparisons separate from the existing target fixtures.
 

@@ -502,6 +502,9 @@ func (e *emitter) dictOf(t types.Type) string {
 // the dictionary.
 func dictText(t types.Type) string {
 	u := types.Unalias(t).Underlying()
+	if isRuneSlice(t) {
+		return ", text: (v) => $runesToString(v), fromText: (v) => $stringToRunes(v)"
+	}
 	if b, ok := u.(*types.Basic); ok && b.Kind() == types.String {
 		return ", length: (v) => $gi(v.length), at: (v, i) => v.$at(i)," +
 			" slice: (v, a, b) => $substring(v, $ix(a), $ix(b))," +
@@ -1365,7 +1368,42 @@ func (e *emitter) instanceRep(obj *types.TypeName) *types.Named {
 	if st == nil || obj.Pkg() == nil {
 		return nil
 	}
-	return e.packageInstances(obj.Pkg())[st]
+	inst := e.packageInstances(obj.Pkg())[st]
+	// A recursive type argument needs its class name to end expansion.
+	if inst != nil && instanceArgumentContains(inst, obj, map[types.Type]bool{}) {
+		return nil
+	}
+	return inst
+}
+
+func instanceArgumentContains(t types.Type, obj *types.TypeName, seen map[types.Type]bool) bool {
+	t = types.Unalias(t)
+	if seen[t] {
+		return false
+	}
+	seen[t] = true
+	switch t := t.(type) {
+	case *types.Named:
+		if t.Obj() == obj {
+			return true
+		}
+		for i := range t.TypeArgs().Len() {
+			if instanceArgumentContains(t.TypeArgs().At(i), obj, seen) {
+				return true
+			}
+		}
+	case *types.Pointer:
+		return instanceArgumentContains(t.Elem(), obj, seen)
+	case *types.Slice:
+		return instanceArgumentContains(t.Elem(), obj, seen)
+	case *types.Array:
+		return instanceArgumentContains(t.Elem(), obj, seen)
+	case *types.Chan:
+		return instanceArgumentContains(t.Elem(), obj, seen)
+	case *types.Map:
+		return instanceArgumentContains(t.Key(), obj, seen) || instanceArgumentContains(t.Elem(), obj, seen)
+	}
+	return false
 }
 
 // packageInstances gives the instance of a generic type that owns each struct

@@ -249,6 +249,9 @@ func (b *builder) builtin(e *ast.CallExpr, fn string) ir.Expr {
 		out := &ir.Builtin{Name: fn, Type: t, Spread: e.Ellipsis.IsValid()}
 		slice, _ := typeset.Core(t).(*types.Slice)
 		if b.spreadBuiltin(out, e) {
+			for i := 1; i < len(out.Args); i++ {
+				out.Args[i] = b.copyPoint(b.convert(out.Args[i], slice.Elem()))
+			}
 			return out
 		}
 		out.Args = append(out.Args, b.expr(e.Args[0]))
@@ -353,6 +356,12 @@ func (b *builder) listLit(e *ast.CompositeLit, elem types.Type, t types.Type) ir
 			size = next + 1
 		}
 		next++
+	}
+	if array, ok := typeset.Core(t).(*types.Array); ok {
+		size = int(array.Len())
+	}
+	if size > len(values) {
+		return &ir.Composite{Type: t, Elems: values, Indices: slots, Length: size}
 	}
 	out := &ir.Composite{Type: t}
 	// Go evaluates the values in the order of the source, and the slots take

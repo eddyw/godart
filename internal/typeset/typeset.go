@@ -239,3 +239,26 @@ func bytesOrTextTerm(u types.Type) bool {
 	b, ok := types.Unalias(s.Elem()).Underlying().(*types.Basic)
 	return ok && b.Kind() == types.Uint8
 }
+
+// BytesOrRunes reports whether all terms are byte slices or rune slices.
+func BytesOrRunes(t types.Type) bool {
+	tp, ok := types.Unalias(t).(*types.TypeParam)
+	if !ok {
+		return false
+	}
+	terms, ok := Terms(tp.Constraint())
+	if !ok || len(terms) == 0 {
+		return false
+	}
+	for _, term := range terms {
+		slice, ok := term.Underlying().(*types.Slice)
+		if !ok {
+			return false
+		}
+		basic, ok := slice.Elem().Underlying().(*types.Basic)
+		if !ok || basic.Kind() != types.Uint8 && basic.Kind() != types.Int32 {
+			return false
+		}
+	}
+	return true
+}

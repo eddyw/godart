@@ -26,7 +26,18 @@ func counted() (int, int) {
 	return calls, calls * 10
 }
 
+func appended() ([]any, *int) {
+	value := 42
+	return nil, &value
+}
+
 func main() {
+	values := append(appended())
+	fmt.Println(*values[0].(*int))
+	defer func(a, b int) { fmt.Println(a, b) }(counted())
+	result := make(chan int)
+	go func(a, b int) { result <- a + b }(counted())
+	fmt.Println(calls, <-result)
 	fmt.Println(two())
 	fmt.Println(three())
 	fmt.Println(add(two2()))

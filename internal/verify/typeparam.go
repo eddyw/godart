@@ -105,8 +105,14 @@ func (v *verifier) checkTypeParamConv(e *ast.CallExpr) {
 	if _, param := types.Unalias(to).(*types.TypeParam); !param && types.IsInterface(to) {
 		return
 	}
-	v.rejectMixed(e.Pos(), to, "a conversion")
-	v.rejectMixed(e.Pos(), from, "a conversion")
+	fromBasic, _ := typeset.Core(from).(*types.Basic)
+	toBasic, _ := typeset.Core(to).(*types.Basic)
+	if !(fromBasic != nil && fromBasic.Kind() == types.String && typeset.BytesOrRunes(to)) {
+		v.rejectMixed(e.Pos(), to, "a conversion")
+	}
+	if !(toBasic != nil && toBasic.Kind() == types.String && typeset.BytesOrRunes(from)) {
+		v.rejectMixed(e.Pos(), from, "a conversion")
+	}
 }
 
 func (v *verifier) rejectMixed(pos token.Pos, t types.Type, what string) {

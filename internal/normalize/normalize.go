@@ -433,6 +433,9 @@ func typeParams(list *types.TypeParamList) []*types.TypeParam {
 func gotoTargets(body *ast.BlockStmt) map[string]bool {
 	out := map[string]bool{}
 	ast.Inspect(body, func(n ast.Node) bool {
+		if _, nested := n.(*ast.FuncLit); nested {
+			return false
+		}
 		if br, ok := n.(*ast.BranchStmt); ok && br.Tok == token.GOTO && br.Label != nil {
 			out[br.Label.Name] = true
 		}

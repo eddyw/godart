@@ -189,6 +189,7 @@ def language_behavior(paths):
             config = {key: report.get(key) for key in (
                 "go_version", "dart_version", "node_version", "goos", "goarch", "target", "source_sha256", "tool_tags", "cgo", "environment")}
             config.update(provenance(path))
+            config["contract"] = report.get("contract") or next((c["contract"] for c in report["outcomes"] if c.get("contract")), "run")
             group = groups.setdefault(json.dumps(config, sort_keys=True),
                                       dict(configuration=config, reports=[], outcomes={}, problems=[]))
             local = set()
@@ -202,8 +203,15 @@ def language_behavior(paths):
                 local.add(name)
                 if status == "passed":
                     expected = case.get("expected_sha256")
-                    valid = expected and all(case[k]["ran"] and case[k]["exit"] == 0 and not case[k]["timed_out"]
-                                             and case[k]["output_sha256"] == expected for k in ("native", "gart"))
+                    executed = all(case[k]["ran"] and case[k]["exit"] == 0 and not case[k]["timed_out"]
+                                   for k in ("native", "gart"))
+                    if case.get("contract") == "compile":
+                        valid = (executed and case["fixture"]["recipe"] == "compile"
+                                 and case.get("wrapper_sha256") and not case.get("build_error"))
+                    else:
+                        valid = expected and executed and all(case[k]["output_sha256"] == expected
+                                                              for k in ("native", "gart"))
+                    valid = valid and config["contract"] in {"run", "compile"} and case.get("contract", "run") == config["contract"]
                     if not valid:
                         status = "failed"
                         group["problems"].append(f"{path}: invalid pass for {name}")
@@ -235,7 +243,7 @@ def language_assessment(data):
             return case["exclusion"]["classification"]
         if case.get("rejection"):
             return "known-rejection"
-        return "unmeasured" if case["adapter"] == "single-file" else "adapter-missing"
+        return "unmeasured" if case["adapter"] != "missing" else "adapter-missing"
     return {**data, "counts": dict(Counter(status(case) for case in cases)),
             "actions": dict(Counter(case["action"] for case in cases))}
 
@@ -347,7 +355,7 @@ def report(args):
                       f"SDK inventory: {group['inventory_status']}. Problems: {len(group['problems'])}", ""])
     for group in result["language_behavior"]:
         c = group["configuration"]
-        lines.extend([f"Language execution {c['go_version']} {c['goos']}/{c['goarch']} {c['target']}: "
+        lines.extend([f"Language {c['contract']} {c['go_version']} {c['goos']}/{c['goarch']} {c['target']}: "
                       + json.dumps(group["counts"], sort_keys=True),
                       f"Language evidence problems: {len(group['problems'])}", ""])
     for app in applications:

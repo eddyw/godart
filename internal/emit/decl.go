@@ -401,7 +401,7 @@ func (e *emitter) receiver(f *ir.Func) {
 		e.line("%s %s = this;", e.dartType(f.Recv.Type), f.Recv.Name)
 		return
 	}
-	e.line("%s %s = this.$copy();", e.dartType(f.Recv.Type), f.Recv.Name)
+	e.line("var %s = this.$copy();", f.Recv.Name)
 }
 
 func (e *emitter) funcDecl(f *ir.Func) {
@@ -499,7 +499,7 @@ func fieldBaseName(f *types.Var) string {
 // fieldDartName gives the Dart name of a field through its owner type. A
 // field whose name equals a type parameter of its own generic type takes a
 // suffix, because the Dart class holds the 2 names in 1 scope.
-func fieldDartName(owner types.Type, field string) string {
+func (e *emitter) fieldDartName(owner types.Type, field string) string {
 	out := name.Package(field)
 	u := types.Unalias(owner)
 	if p, ok := typeset.Core(u).(*types.Pointer); ok {
@@ -513,13 +513,18 @@ func fieldDartName(owner types.Type, field string) string {
 			}
 		}
 	}
-	named, ok := u.(*types.Named)
-	if !ok {
-		return out
+	var params []*types.TypeParam
+	if st, ok := structOfAnon(u); ok {
+		if typeset.HoldsParam(st) {
+			params = e.anonParams[e.openClass(st)]
+		} else if twin := e.anonTwin(st); twin != nil {
+			params = e.anonParams[twin.class]
+		}
+	} else if named, ok := u.(*types.Named); ok {
+		params = typeParamsOf(named.Origin().TypeParams())
 	}
-	tps := named.Origin().TypeParams()
-	for i := 0; i < tps.Len(); i++ {
-		if tps.At(i).Obj().Name() == field {
+	for _, tp := range params {
+		if tp.Obj().Name() == field {
 			return out + "$f"
 		}
 	}

@@ -23,6 +23,9 @@ type languageExecution struct {
 }
 
 type languageOutcome struct {
+	Contract       string              `json:"contract,omitempty"`
+	WrapperSHA256  string              `json:"wrapper_sha256,omitempty"`
+	BuildError     string              `json:"build_error,omitempty"`
 	Fixture        parity.LanguageCase `json:"fixture"`
 	Status         string              `json:"status"`
 	Native         languageExecution   `json:"native"`
@@ -31,6 +34,7 @@ type languageOutcome struct {
 }
 
 type languageEvidence struct {
+	Contract     string             `json:"contract"`
 	NodeVersion  string             `json:"node_version,omitempty"`
 	Kind         string             `json:"kind"`
 	GoVersion    string             `json:"go_version"`
@@ -60,6 +64,10 @@ func retainLanguageEvidence(t *testing.T, target string, inv *parity.LanguageInv
 	}
 	path := filepath.Join(directory, "language", fmt.Sprintf("%s-%d-%s.json", target, *shardIndex, strings.ReplaceAll(t.Name(), "/", "-")))
 	report := languageEvidence{Kind: "language", GoVersion: inv.GoVersion, DartVersion: strings.TrimSpace(runProgram(t, "", "dart", "--version")), GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, Target: target, SourceSHA256: inv.SourceSHA256, ToolTags: inv.ToolTags, Cgo: inv.Cgo, Environment: map[string]string{"GODEBUG": os.Getenv("GODEBUG"), "GOEXPERIMENT": os.Getenv("GOEXPERIMENT"), "GO_GCFLAGS": inv.GCFlags}, Shard: *shardIndex, Shards: *shardCount, Outcomes: outcomes}
+	report.Contract = "run"
+	if len(outcomes) > 0 && outcomes[0].Contract != "" {
+		report.Contract = outcomes[0].Contract
+	}
 	if target == "js" || target == "wasm" {
 		report.NodeVersion = strings.TrimSpace(runProgram(t, "", "node", "--version"))
 	}

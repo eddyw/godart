@@ -121,6 +121,8 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 			c := LanguageCase{Name: strings.TrimSuffix(file, ".go"), File: file, Recipe: recipe, Action: fields[0], NativeEligible: native, GartEligible: eligible, Adapter: "missing", Files: []SourceFile{{Path: file, SHA256: digest(data)}}}
 			if recipe == "run" {
 				c.Adapter = "single-file"
+			} else if recipe == "compile" {
+				c.Adapter = "compile-file"
 			}
 			for _, suffix := range []string{".dir", ".out"} {
 				companion := filepath.Join(root, c.Name+suffix)

@@ -268,6 +268,11 @@ func (b *builder) convert(x ir.Expr, want types.Type) ir.Expr {
 	if types.Identical(got, want) {
 		return x
 	}
+	if _, fromStruct := typeset.Core(got).(*types.Struct); fromStruct {
+		if _, toStruct := typeset.Core(want).(*types.Struct); toStruct {
+			return &ir.Conv{X: x, From: got, Type: want}
+		}
+	}
 	if isIfaceType(want) {
 		if !isIfaceType(got) {
 			return &ir.Conv{X: x, From: got, Type: want}
@@ -557,6 +562,9 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	out := &ir.FuncLit{Type: sig, Async: b.blocks.Blocks(e), End: e.Body.Rbrace}
 	prev := b.fn
 	prevPending := b.pending
+	prevGoto := b.gotoLabels
+	b.gotoLabels = gotoTargets(e.Body)
+	labels := b.gotoLabels
 	b.pending = nil
 	// The body of a literal is a function of its own, thus the order pass runs
 	// over it also inside the header of a loop.
@@ -571,13 +579,17 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	out.Captured = b.litCaptures(e)
 	b.fn = prev
 	b.pending = prevPending
+	b.gotoLabels = prevGoto
 	b.noOrder = prevNoOrder
+	if !out.Async && len(labels) == 0 {
+		return out
+	}
+	out.Machine = b.flatten(out.Body, out.Params, nil, out.Async, out.Defers,
+		inner.DeferBlocks, out.Results, b.frameClass(e.Pos()), e.Pos())
+	addResults(out.Machine, out.Results)
 	if !out.Async {
 		return out
 	}
-	out.Machine = b.flatten(out.Body, out.Params, nil, true, out.Defers,
-		inner.DeferBlocks, out.Results, b.frameClass(e.Pos()), e.Pos())
-	addResults(out.Machine, out.Results)
 	local := b.litName(e.Pos())
 	b.pending = append(b.pending, &ir.LocalFunc{Name: local, Lit: out})
 	return &ir.Ident{Name: local, Type: sig}

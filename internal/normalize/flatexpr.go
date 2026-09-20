@@ -52,7 +52,7 @@ func (f *flat) value(x ir.Expr) ir.Expr {
 		return &ir.Slice{Pos: x.Pos, X: parts[0], Low: parts[1], High: parts[2], Max: parts[3], Type: x.Type}
 	case *ir.Composite:
 		out := &ir.Composite{Keys: x.Keys, Elems: f.operands(x.Elems),
-			Type: x.Type, ResultsVar: x.ResultsVar}
+			Indices: x.Indices, Length: x.Length, Type: x.Type, ResultsVar: x.ResultsVar}
 		if x.Results != nil {
 			out.Results = f.value(x.Results)
 		}

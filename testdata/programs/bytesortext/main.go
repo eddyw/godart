@@ -35,7 +35,19 @@ func middle[T Bytes](v T, a, b int) T {
 type name string
 type blob []byte
 
+func units[T ~[]byte | ~[]rune](value string) T {
+	return T(value)
+}
+
+func unitsText[T ~[]byte | ~[]rune](value T) string {
+	return string(value)
+}
+
 func main() {
+	for _, value := range []string{"", "hello", "世🌍", "a\xffb"} {
+		fmt.Println(units[[]byte](value), units[[]rune](value))
+		fmt.Printf("%q %q\n", unitsText(units[[]byte](value)), unitsText(units[[]rune](value)))
+	}
 	s := "hello, world"
 	b := []byte(s)
 

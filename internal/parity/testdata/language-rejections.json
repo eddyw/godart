@@ -35,14 +35,29 @@
     "$DIR/finprofiled.go:48:23: undefined: runtime.MemProfile",
     "$DIR/finprofiled.go:52:26: undefined: runtime.MemProfileRecord"
   ],
+  "fixedbugs/bug089": [
+    "$DIR/fixture.go:20:7: the function e holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
+  "fixedbugs/bug150": [
+    "$DIR/fixture.go:17:9: the function g holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
   "fixedbugs/bug246": [
     "$DIR/bug246.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/bug319": [
+    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/bug328": [
     "$DIR/bug328.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
+  "fixedbugs/bug503": [
+    "$DIR/fixture.go:16:5: the variable V gives an unnamed struct type with an unexported field to another package. Declare a named type, or export each field. (Go gives an unexported field the identity of its package, and Dart holds such a name private to 1 library)"
+  ],
   "fixedbugs/bug514": [
     "$DIR/bug514.go:11:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
+  ],
+  "fixedbugs/issue10284": [
+    "$DIR/fixture.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue15002": [
     "$DIR/issue15002.go:18:17: undefined: syscall.Getpagesize",
@@ -68,8 +83,17 @@
   "fixedbugs/issue15528": [
     "$DIR/issue15528.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
+  "fixedbugs/issue16306": [
+    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue17270": [
+    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
   "fixedbugs/issue17381": [
     "$DIR/issue17381.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue17596": [
+    "$DIR/fixture.go:17:9: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "fixedbugs/issue19078": [
     "$DIR/issue19078.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
@@ -86,6 +110,12 @@
   "fixedbugs/issue24491b": [
     "$DIR/issue24491b.go:21:10: undefined: runtime.SetFinalizer"
   ],
+  "fixedbugs/issue24760": [
+    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue26120": [
+    "$DIR/fixture.go:12:6: the type T gives an unnamed struct type with an unexported field to another package. Declare a named type, or export each field. (Go gives an unexported field the identity of its package, and Dart holds such a name private to 1 library)"
+  ],
   "fixedbugs/issue27518b": [
     "$DIR/issue27518b.go:48:10: undefined: runtime.SetFinalizer"
   ],
@@ -94,6 +124,16 @@
   ],
   "fixedbugs/issue27695c": [
     "$DIR/issue27695c.go:17:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue28078": [
+    "$DIR/fixture.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue28079a": [
+    "$DIR/fixture.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue28430": [
+    "$DIR/fixture.go:16:2: the function g holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:16:4: the function h holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "fixedbugs/issue29362": [
     "$DIR/issue29362.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
@@ -104,11 +144,22 @@
   "fixedbugs/issue30041": [
     "$DIR/issue30041.go:15:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
+  "fixedbugs/issue30061": [
+    "$DIR/fixture.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "$DIR/fixture.go:19:2: the function memmove holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
   "fixedbugs/issue30476": [
     "$DIR/issue30476.go:15:10: undefined: runtime.SetFinalizer"
   ],
+  "fixedbugs/issue31010": [
+    "$DIR/fixture.go:17:9: the function a holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:23:9: the function c holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
   "fixedbugs/issue32477": [
     "$DIR/issue32477.go:47:10: undefined: runtime.SetFinalizer"
+  ],
+  "fixedbugs/issue32959": [
+    "$DIR/fixture.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue38093": [
     "no package matches [./...] in $DIR"
@@ -123,14 +174,29 @@
   "fixedbugs/issue42076": [
     "$DIR/issue42076.go:13:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
   ],
+  "fixedbugs/issue43677": [
+    "$DIR/fixture.go:14:22: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:16:34: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:18:21: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
   "fixedbugs/issue44830": [
     "$DIR/issue44830.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue45045": [
     "$DIR/issue45045.go:17:10: undefined: runtime.SetFinalizer"
   ],
+  "fixedbugs/issue45323": [
+    "$DIR/fixture.go:14:8: the function g holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:17:8: the function g holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
+  "fixedbugs/issue45344": [
+    "$DIR/fixture.go:17:2: the function G holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
   "fixedbugs/issue4585": [
     "$DIR/issue4585.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue4614": [
+    "$DIR/fixture.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue46725": [
     "$DIR/issue46725.go:21:10: undefined: runtime.SetFinalizer"
@@ -150,6 +216,12 @@
   ],
   "fixedbugs/issue53137": [
     "$DIR/issue53137.go:10:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue53439": [
+    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue53454": [
+    "$DIR/fixture.go:80:9: the function Test holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "fixedbugs/issue54343": [
     "$DIR/issue54343.go:25:10: undefined: runtime.SetFinalizer"
@@ -171,8 +243,17 @@
   "fixedbugs/issue60601": [
     "$DIR/issue60601.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
+  "fixedbugs/issue61187": [
+    "$DIR/fixture.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue62515": [
+    "$DIR/fixture.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
   "fixedbugs/issue65417": [
     "$DIR/issue65417.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue65893": [
+    "$DIR/fixture.go:14:6: the type I gives an unnamed struct type with an unexported field to another package. Declare a named type, or export each field. (Go gives an unexported field the identity of its package, and Dart holds such a name private to 1 library)"
   ],
   "fixedbugs/issue73748a": [
     "$DIR/issue73748a.go:12:2: the package runtime/trace is outside the supported surface (the standard library surface is curated)"
@@ -180,8 +261,14 @@
   "fixedbugs/issue73748b": [
     "$DIR/issue73748b.go:12:2: the package runtime/trace is outside the supported surface (the standard library surface is curated)"
   ],
+  "fixedbugs/issue74836": [
+    "$DIR/fixture.go:14:2: the function g holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
   "fixedbugs/issue75365": [
     "$DIR/issue75365.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "fixedbugs/issue78408": [
+    "the label A of a goto statement is outside the function body"
   ],
   "fixedbugs/issue79812": [
     "the conversion from complex128 to T is not supported yet"
@@ -242,6 +329,10 @@
     "$DIR/heapsampling.go:293:79: undefined: runtime.MemProfileRate",
     "$DIR/heapsampling.go:31:10: undefined: runtime.MemProfileRate"
   ],
+  "import": [
+    "$DIR/fixture.go:22:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:23:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
   "init1": [
     "$DIR/init1.go:28:26: undefined: runtime.MemStats",
     "$DIR/init1.go:29:10: undefined: runtime.ReadMemStats",
@@ -264,6 +355,13 @@
   ],
   "noinit": [
     "$DIR/noinit.go:16:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+  ],
+  "parentype": [
+    "$DIR/fixture.go:14:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:15:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:16:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:17:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/fixture.go:18:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "recover": [
     "$DIR/recover.go:71:10: undefined: runtime.Breakpoint"
@@ -346,6 +444,9 @@
   ],
   "typeparam/issue50690a": [
     "$DIR/issue50690a.go:25:3: the operator += reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
+  ],
+  "typeparam/issue53390": [
+    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "typeparam/orderedmap": [
     "$DIR/orderedmap.go:237:10: undefined: runtime.SetFinalizer"

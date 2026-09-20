@@ -85,6 +85,34 @@ class ParityTest(unittest.TestCase):
                                            "implementation-gap": 1, "ineligible": 1})
         self.assertEqual(result["actions"], {"run": 4, "compile": 1})
 
+    def test_compile_recipe_requires_both_compilers_and_wrapper_identity(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            execution = dict(ran=True, exit=0, timed_out=False, output_sha256="diagnostics")
+            outcome = dict(fixture=dict(name="p", recipe="compile"), contract="compile", status="passed",
+                           wrapper_sha256="wrapper", native=dict(execution), gart=dict(execution))
+            report = dict(kind="language", complete=True, outcomes=[outcome], shard=0, shards=1)
+            path = root / "language.json"
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"passed": 1})
+            self.assertEqual(parity.language_behavior([root])[0]["configuration"]["contract"], "compile")
+            for field, value in [("ran", False), ("exit", 1), ("timed_out", True)]:
+                outcome["gart"] = {**execution, field: value}
+                parity.save(path, report)
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+            outcome["gart"] = dict(execution)
+            outcome["wrapper_sha256"] = ""
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+            outcome["wrapper_sha256"] = "wrapper"
+            report["contract"] = "run"
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+            report["contract"] = "compile"
+            outcome["fixture"]["recipe"] = "run"
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+
 
     def test_scope_review_does_not_hide_new_packages_or_sdk_changes(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -524,7 +524,34 @@ func lookup(k string) (string, bool) {
 	return v, ok
 }
 
+func closureGoto() int {
+	f := func() int {
+		n := 0
+	again:
+		n++
+		if n < 3 {
+			goto again
+		}
+		return n
+	}
+	return f()
+}
+
+func labeledFallthrough(value int) int {
+	switch value {
+	case 0:
+		goto next
+	next:
+		fallthrough
+	case 1:
+		return 7
+	}
+	return 9
+}
+
 func main() {
+	println(closureGoto())
+	println(labeledFallthrough(0), labeledFallthrough(1), labeledFallthrough(2))
 	fmt.Println("== a label ==")
 	labels()
 	fmt.Println("== goto ==")

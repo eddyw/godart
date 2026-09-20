@@ -133,6 +133,14 @@ func (b *builder) orderValues(list []ir.Expr, pos token.Pos) []ir.Stmt {
 // defer statement and a go statement each read the 2 at the statement, thus
 // each call of the list runs in front of the receiver and of each argument.
 func (b *builder) orderCall(c *ir.Call, pos token.Pos) []ir.Stmt {
+	if c.Results != nil {
+		values := []ir.Expr{c.Fun, c.Results}
+		out := b.orderValues(values, pos)
+		c.Fun = values[0]
+		out = append(out, &ir.Declare{Vars: []*ir.Var{{Name: c.ResultsVar, Type: c.Results.GoType()}}, Init: values[1]})
+		c.Results = nil
+		return out
+	}
 	list := make([]ir.Expr, 0, len(c.Args)+1)
 	list = append(list, c.Fun)
 	list = append(list, c.Args...)

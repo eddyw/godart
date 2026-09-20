@@ -660,7 +660,7 @@ func shiftOperand(op token.Token, left, right types.Type) types.Type {
 }
 
 func isBlank(e ast.Expr) bool {
-	id, ok := e.(*ast.Ident)
+	id, ok := ast.Unparen(e).(*ast.Ident)
 	return ok && id.Name == "_"
 }
 
@@ -911,14 +911,28 @@ func (b *builder) switchStmt(s *ast.SwitchStmt, label string) []ir.Stmt {
 			cs.Pre = append(cs.Pre, pre)
 		}
 		body := c.Body
-		if n := len(body); n > 0 {
-			if br, ok := body[n-1].(*ast.BranchStmt); ok && br.Tok == token.FALLTHROUGH {
-				cs.Fallthrough = true
-				body = body[:n-1]
-			}
-		}
 		block := &ir.Block{}
-		for _, st := range body {
+		for i, st := range body {
+			if i == len(body)-1 {
+				var labels []*ast.LabeledStmt
+				for {
+					label, ok := st.(*ast.LabeledStmt)
+					if !ok {
+						break
+					}
+					labels = append(labels, label)
+					st = label.Stmt
+				}
+				if br, ok := st.(*ast.BranchStmt); ok && br.Tok == token.FALLTHROUGH {
+					cs.Fallthrough = true
+					st = &ast.EmptyStmt{Semicolon: br.Pos(), Implicit: true}
+				}
+				for j := len(labels) - 1; j >= 0; j-- {
+					copy := *labels[j]
+					copy.Stmt = st
+					st = &copy
+				}
+			}
 			block.List = append(block.List, b.stmt(st)...)
 		}
 		cs.Body = block

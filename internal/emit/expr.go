@@ -27,7 +27,7 @@ func (e *emitter) expr(x ir.Expr) string {
 		return e.zero(x.Type)
 	case *ir.Field:
 		e.mark(x.Pos)
-		return e.deref(x.X) + "." + fieldDartName(x.X.GoType(), x.Name)
+		return e.deref(x.X) + "." + e.fieldDartName(x.X.GoType(), x.Name)
 	case *ir.Index:
 		return e.index(x)
 	case *ir.TypeAssert:
@@ -533,7 +533,11 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	inner.line("%s%s|%s", fileMark, inner.funcFile, inner.curGoName)
 	inner.curFuncId = e.funcId(x)
 	inner.boxParams(x.Params)
-	inner.emitBody(x.Results, x.Defers, x.Body, x.End)
+	if x.Machine != nil {
+		inner.machineBody(&ir.Func{Params: x.Params, Results: x.Results, Body: x.Body, Machine: x.Machine, End: x.End}, "")
+	} else {
+		inner.emitBody(x.Results, x.Defers, x.Body, x.End)
+	}
 	inner.line("%s%s|%s", fileMark, e.funcFile, e.curGoName)
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
@@ -818,7 +822,7 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 		if p, ok := typeset.Core(owner).(*types.Pointer); ok {
 			owner = p.Elem()
 		}
-		field := fieldDartName(x.X.GoType(), x.Name)
+		field := e.fieldDartName(x.X.GoType(), x.Name)
 		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => $r.%s, ($r, $i, $v) => $r.%s = $v)",
 			e.dartType(owner), e.dartType(elem), e.deref(x.X), fieldIndex(owner, x.Name),
 			field, field)
@@ -874,6 +878,22 @@ func (e *emitter) composite(x *ir.Composite) string {
 	parts := make([]string, len(x.Elems))
 	for i, el := range x.Elems {
 		parts[i] = e.expr(el)
+	}
+	if x.Indices != nil {
+		var allocation string
+		switch t := u.(type) {
+		case *types.Array:
+			allocation = e.makeArray(t)
+		case *types.Slice:
+			allocation = fmt.Sprintf("$makeSliceN<%s>(%d, %s)", e.dartType(t.Elem()), x.Length, e.alloc(t.Elem()))
+		}
+		var text strings.Builder
+		text.WriteString("(" + allocation)
+		for i, index := range x.Indices {
+			fmt.Fprintf(&text, "..[%d] = %s", index, parts[i])
+		}
+		text.WriteString(")")
+		return text.String()
 	}
 	switch u := u.(type) {
 	case *types.Struct:
