@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -34,5 +36,13 @@ func main() {
 	// The last watch stays open, thus the release of the runtime must cancel
 	// its subscription. A live subscription keeps the Dart isolate alive.
 	signal.Stop(c)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT)
+	defer stop()
+	if err := self.Signal(syscall.SIGINT); err != nil {
+		panic(err)
+	}
+	<-ctx.Done()
+	fmt.Println(ctx.Err(), context.Cause(ctx), errors.Is(context.Cause(ctx), context.Canceled))
+
 	fmt.Println("done")
 }

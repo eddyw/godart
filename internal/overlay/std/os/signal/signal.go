@@ -12,7 +12,6 @@
 package signal
 
 import (
-	"context"
 	"os"
 	"syscall"
 	"syscall/dart"
@@ -177,22 +176,3 @@ func Ignore(sig ...os.Signal) {
 
 // Ignored reports whether Ignore turned the signal off.
 func Ignored(sig os.Signal) bool { return ignored[number(sig)] }
-
-// NotifyContext gives a context that the first named signal ends. The stop
-// function releases the watch.
-func NotifyContext(parent context.Context, signals ...os.Signal) (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithCancel(parent)
-	c := make(chan os.Signal, 1)
-	Notify(c, signals...)
-	go func() {
-		select {
-		case <-c:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
-	return ctx, func() {
-		Stop(c)
-		cancel()
-	}
-}

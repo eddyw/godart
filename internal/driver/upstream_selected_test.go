@@ -37,6 +37,7 @@ func TestSelectedUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	selections := map[string][]upstreamFile{
+		"os/signal": {{Name: "signal_test.go", Declarations: []string{"TestNotifyContextStop", "TestNotifyContextCancelParent", "TestNotifyContextPrematureCancelParent", "TestNotifyContextSimultaneousStop", "TestNotifyContextStringer"}}},
 		"fmt": {
 			{Name: "scan_test.go", Declarations: []string{"RecursiveInt", "RecursiveInt.Scan", "scanInts", "makeInts", "TestScanInts", "intCount", "testScanInts", "f"}},
 			{Name: "fmt_test.go", Declarations: []string{"TestComplexFormatting", "NaN", "posInf", "negInf"}},
@@ -267,6 +268,11 @@ func TestSelectedUpstream(t *testing.T) {
 				if pkg == "crypto/subtle" {
 					source = strings.Replace(source, "package subtle\n", "package subtle_test\nimport . \"crypto/subtle\"\n", 1)
 				}
+				if pkg == "os/signal" {
+					source = strings.Replace(source, "package signal\n", `package signal_test
+import . "os/signal"
+`, 1)
+				}
 				if pkg == "net" {
 					source = strings.Replace(source, "package net\n", "package net_test\nimport . \"net\"\n", 1)
 				}
@@ -450,7 +456,7 @@ func TestSelectedUpstream(t *testing.T) {
 				name = pkg + "-content-type"
 			}
 			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
-			if pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" {
+			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
