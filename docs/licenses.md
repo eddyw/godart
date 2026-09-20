@@ -10,6 +10,10 @@ The anonymous-interface cycle detector and compiler directive validation
 adapt `irgen.go`, `lex.go`, `noder.go`, and `writer.go` from Go compiler
 `src/cmd/compile/internal/noder/`. Their BSD notice resides in
 [`internal/load/LICENSE-Go`](../internal/load/LICENSE-Go).
+Syntax diagnostics use the unchanged Go compiler parser in
+`internal/gosyntax`. Its `ORIGIN.json` records the SDK and source hashes.
+Its `LICENSE` retains the Go BSD terms. The diagnostic adapter follows
+`src/cmd/compile/internal/base/print.go` and retains `internal/load/LICENSE-Go`.
 The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
 The runtime license includes their BSD terms.

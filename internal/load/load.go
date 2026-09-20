@@ -183,6 +183,11 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 				src = files[name]
 			}
 			file, err := parser.ParseFile(fset, name, src, parser.AllErrors|parser.ParseComments)
+			if err != nil {
+				if diagnostics := compilerSyntaxErrors(name, src); len(diagnostics) != 0 {
+					return file, diagnostics
+				}
+			}
 			if err == nil {
 				if directives := misplacedDirectives(fset, file, src); len(directives) != 0 {
 					return file, directives
@@ -477,8 +482,17 @@ func collectErrors(roots []*packages.Package) error {
 			errs = append(errs, interfaceCycles(p)...)
 			errs = append(errs, directiveContracts(p)...)
 		}
+		syntaxError := false
+		for _, e := range p.Errors {
+			if e.Kind == packages.ParseError && strings.HasPrefix(e.Msg, "syntax error") {
+				syntaxError = true
+			}
+		}
 		start := len(errs)
 		for _, e := range p.Errors {
+			if syntaxError && e.Kind != packages.ParseError {
+				continue
+			}
 			if strings.HasPrefix(e.Msg, "\t") && len(errs) > start {
 				errs[len(errs)-1] = fmt.Errorf("%w\n\t%s: %s", errs[len(errs)-1], e.Pos, strings.TrimPrefix(e.Msg, "\t"))
 			} else {

@@ -1,0 +1,23 @@
+{
+  "version": "go1.27.1",
+  "source": "src/cmd/compile/internal/syntax",
+  "files": {
+    "LICENSE": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "branches.go": "e94d78e61926b4df2731e3b9d66b37a97b9287560a18fc32b60b489ba8cb899d",
+    "dumper.go": "f4d27d4b834327604cb7a896cae4461d7abfb66825c5c22f0634da218754d236",
+    "nodes.go": "f73adbd3d4e37fb7c84edd61e5f481a9989f3f25e9d473170aa827f9b8634039",
+    "operator_string.go": "59946110d83da0391a61e6344865858a18054f76c547ae1fdf29c9c452e1547d",
+    "parser.go": "acbfca2f40fa2022739d35036831566dbcf3656ab2f835f91ef9e51718bdfbe9",
+    "pos.go": "8aef7e7e79da418db94351539889b421bc414b004820d4af7c044697d1839923",
+    "positions.go": "c23f2c9d9b418c7e8e66ca68870790f6991dc06e0bf513b9f7964eb5e2362fde",
+    "printer.go": "d8b6d8e4b51b39191dd623545b506809eff6558136521a7fcd61cb0c5f8abac1",
+    "scanner.go": "eb774e9a58f9d29c0296c29360338e19eb4040977a39ecc5753fd1762a18ee49",
+    "source.go": "d3696fb7dc2f63ebb9aeee224423426ce9f6cf47096029d36aed41763eea7349",
+    "syntax.go": "8aece6eed03aa7c6a20a2893d1bd4b999e1d235d336d44259787f0c12de8caf1",
+    "testing.go": "aaf13f38493405602a46062b41cc62ff49d349343aa1bd060fa80af971af3353",
+    "token_string.go": "a59da3b0e566bba8dd963f2148ab0c5acbb93d1819886db6ffe7d6e9371be06e",
+    "tokens.go": "d9667c96873a3e1ae84fce948ef80d269a009a787496f088ab643b14b8bec192",
+    "type.go": "cf198a9e3d8385e14d486aa420586a0584bde44da90a736567c9432a2c71f3bb",
+    "walk.go": "310a5d10ea526bc6db4e3f2dcf6c9d7d5e6c3092234c13eab9ae75c3ade3a80a"
+  }
+}

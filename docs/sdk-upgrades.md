@@ -45,6 +45,13 @@ selected SDK and release target. Run `go test ./internal/notices` afterward.
 
 Do not replace source fingerprints merely to suppress an inventory failure.
 
+`go test ./internal/gosyntax` compares the parser snapshot with the active SDK.
+If its source changes, review the upstream diff and run
+`python3 scripts/update-go-syntax.py /path/to/go-sdk`.
+Then run the original language rejection and compilation suites.
+The snapshot supplies syntax diagnostics only. Gart retains its normal AST
+and type analysis for valid source.
+
 ## Dart and Flutter updates
 
 1. Select the candidate Flutter SDK through FVM, or select a standalone Dart SDK.

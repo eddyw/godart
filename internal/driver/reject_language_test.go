@@ -38,11 +38,12 @@ func TestRejectionContracts(t *testing.T) {
 		case "cannotassign", "func1", "embedfunc", "blank1", "directive", "directive2",
 			"fixedbugs/bug398", "fixedbugs/issue16369", "fixedbugs/issue56103",
 			"fixedbugs/issue18459", "fixedbugs/issue18882", "linkname3",
-			"fixedbugs/issue20027", "fixedbugs/issue42058a", "fixedbugs/issue42058b", "fixedbugs/issue49767":
+			"fixedbugs/issue20027", "fixedbugs/issue42058a", "fixedbugs/issue42058b", "fixedbugs/issue49767",
+			"fixedbugs/bug121", "fixedbugs/issue11610", "fixedbugs/issue13266", "syntax/semi7":
 			cases = append(cases, c)
 		}
 	}
-	if len(cases) != 16 {
+	if len(cases) != 20 {
 		t.Fatal("the original rejection fixtures changed")
 	}
 	runRejectionCases(t, inv, cases)
