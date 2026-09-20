@@ -2,8 +2,10 @@ import copy
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location("parity", Path(__file__).with_name("parity.py"))
 parity = importlib.util.module_from_spec(spec)
@@ -11,6 +13,64 @@ spec.loader.exec_module(parity)
 
 
 class ParityTest(unittest.TestCase):
+    def test_supplied_binary_has_no_assumed_source_revision(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            binary = root / "gart"
+            binary.write_bytes(b"compiler fixture")
+            args = parity.argparse.Namespace(
+                output=root / "report", project=root, gart=binary,
+                mode="compile", pattern=".", tags="", timeout=1)
+            with mock.patch.object(parity, "identity", return_value={"head": "unrelated"}), \
+                 mock.patch.object(parity, "command", return_value={"exit": 0}), \
+                 mock.patch.object(parity.subprocess, "check_output", return_value="version"), \
+                 mock.patch.object(parity.platform, "platform", return_value="fixture"), \
+                 mock.patch("builtins.print"):
+                self.assertEqual(parity.application(args), 0)
+            result = parity.read(args.output / "application.json")
+            self.assertIsNone(result["compiler"])
+            self.assertEqual(result["gart_sha256"], parity.digest(binary))
+
+    def test_application_suite_uses_the_build_source_identity(self):
+        for changed in (False, True):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as temporary:
+                args = parity.argparse.Namespace(
+                    output=Path(temporary) / "report", shard_index=0, shard_count=1, timeout=1)
+                before = {"head": "base", "source_sha256": "source"}
+                after = {"head": "base", "source_sha256": "different" if changed else "source"}
+                cases = [{"name": "fixture", "project": "fixture", "pattern": ".", "mode": "test", "tags": ""}]
+                with mock.patch.object(parity, "read", return_value=cases), \
+                     mock.patch.object(parity, "identity", side_effect=[before, after]), \
+                     mock.patch.object(parity, "command", return_value={"exit": 0}), \
+                     mock.patch.object(parity, "application", return_value=0) as application:
+                    self.assertEqual(parity.applications(args), 0)
+                    self.assertEqual(application.call_args.args[1], None if changed else before)
+
+    def test_identity_does_not_attribute_ignored_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            subprocess.run(["git", "init", "-q", root], check=True)
+            (root / ".gitignore").write_text("ignored/\n")
+            ignored = root / "ignored"
+            ignored.mkdir()
+            (ignored / "main.go").write_text("package main\nfunc main() {}\n")
+            result = parity.identity(ignored)
+            self.assertIsNone(result["head"])
+            self.assertIsNone(result["source_sha256"])
+
+    def test_identity_preserves_nested_module_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            subprocess.run(["git", "init", "-q", root], check=True)
+            nested = root / "module"
+            nested.mkdir()
+            source = nested / "main.go"
+            source.write_text("package main\nfunc main() {}\n")
+            before = parity.identity(nested)["source_sha256"]
+            self.assertIsNotNone(before)
+            source.write_text('package main\nfunc main() { println("changed") }\n')
+            self.assertNotEqual(before, parity.identity(nested)["source_sha256"])
+
     def test_generated_program_requires_original_recipe_and_source(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

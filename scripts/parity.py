@@ -54,11 +54,13 @@ def identity(root):
     result["head"] = head.stdout.strip() if head.returncode == 0 else None
     names = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
                            cwd=root, capture_output=True)
-    if names.returncode != 0:
+    source_names = sorted(set(names.stdout.split(b"\0")) - {b""})
+    if names.returncode != 0 or not source_names:
+        result["head"] = None
         result["source_sha256"] = None
         return result
     h = hashlib.sha256()
-    for name in sorted(set(names.stdout.split(b"\0")) - {b""}):
+    for name in source_names:
         path = root / os.fsdecode(name)
         h.update(name + b"\0")
         if path.is_symlink():
@@ -477,12 +479,12 @@ def test_outcomes(native, gart):
             "complete": bool(left) and left == right and all(v == "pass" for v in left.values())}
 
 
-def application(args):
+def application(args, compiler=None):
     args.output.mkdir(parents=True, exist_ok=False)
     out = args.output.resolve()
     project = args.project.resolve()
     gart = str(args.gart.resolve())
-    result = {"schema": 1, "project": identity(project), "compiler": identity(ROOT),
+    result = {"schema": 1, "project": identity(project), "compiler": compiler,
               "gart_sha256": digest(Path(gart)), "host": platform.platform(),
               "mode": args.mode, "pattern": args.pattern, "tags": args.tags, "status": "failed", "steps": []}
     tags = ["-tags=" + args.tags] if args.tags else []
@@ -535,9 +537,13 @@ def applications(args):
     cases = application_shard(read(ROOT / "testdata/applications/manifest.json"), args.shard_index, args.shard_count)
     args.output.mkdir(parents=True, exist_ok=False)
     binary = args.output / "gart"
+    compiler = identity(ROOT)
     build = command(["go", "build", "-o", str(binary), "./cmd/gart"], ROOT,
                     args.output, "compiler", args.timeout)
-    result = {"compiler": identity(ROOT), "build": build, "applications": [],
+    after = identity(ROOT)
+    if not compiler["source_sha256"] or compiler["source_sha256"] != after["source_sha256"]:
+        compiler = None
+    result = {"compiler": compiler, "build": build, "applications": [],
               "shard": args.shard_index, "shards": args.shard_count}
     if build["exit"]:
         save(args.output / "suite.json", result)
@@ -547,7 +553,7 @@ def applications(args):
         out = args.output / case["name"]
         code = application(argparse.Namespace(
             output=out, project=ROOT / case["project"], gart=binary,
-            pattern=case["pattern"], mode=case["mode"], tags=case["tags"], timeout=args.timeout))
+            pattern=case["pattern"], mode=case["mode"], tags=case["tags"], timeout=args.timeout), compiler)
         result["applications"].append({"name": case["name"], "exit": code, "result": str(out / "application.json")})
         status = max(status, code)
         save(args.output / "suite.json", result)
