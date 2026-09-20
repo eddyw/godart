@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 // Package x509 reads an X.509 certificate.
@@ -8,9 +12,6 @@
 //
 // The overlay holds no trust store of the platform. The secure socket of Dart
 // owns that store, thus SystemCertPool always reports a failure of the load.
-//
-// A key of ML-DSA stays out, because crypto/mldsa stands outside the surface.
-// A certificate that carries such a key gives an error of the parse.
 package x509
 
 import (
@@ -27,6 +28,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -752,8 +754,10 @@ func signaturePublicKeyAlgoMismatchError(expectedPubKeyAlgo PublicKeyAlgorithm, 
 	return fmt.Errorf("x509: signature algorithm specifies an %s public key, but have public key of type %T", expectedPubKeyAlgo.String(), pubKey)
 }
 
-// checkSignature reports whether signature is a valid signature over signed of
-// publicKey.
+func signatureMLDSAParametersMismatchError(expectedSigAlgo SignatureAlgorithm, pubKey *mldsa.PublicKey) error {
+	return fmt.Errorf("x509: signature algorithm specifies an ML-DSA public key with %s parameters, but have a public key with %s parameters", expectedSigAlgo, pubKey.Parameters())
+}
+
 func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey crypto.PublicKey, allowSHA1 bool) (err error) {
 	var hashType crypto.Hash
 	var pubKeyAlgo PublicKeyAlgorithm
@@ -774,7 +778,7 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 	case crypto.MD5:
 		return InsecureAlgorithmError(algo)
 	case crypto.SHA1:
-		// A signature of SHA-1 stands for a CRL and for a CSR alone.
+		// SHA-1 signatures are only allowed for CRLs and CSRs.
 		if !allowSHA1 {
 			return InsecureAlgorithmError(algo)
 		}
@@ -812,6 +816,30 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 		}
 		if !ed25519.Verify(pub, signed, signature) {
 			return errors.New("x509: Ed25519 verification failure")
+		}
+		return
+	case *mldsa.PublicKey:
+		if pubKeyAlgo != MLDSA {
+			return signaturePublicKeyAlgoMismatchError(pubKeyAlgo, pub)
+		}
+		switch pub.Parameters() {
+		case mldsa.MLDSA44():
+			if algo != MLDSA44 {
+				return signatureMLDSAParametersMismatchError(algo, pub)
+			}
+		case mldsa.MLDSA65():
+			if algo != MLDSA65 {
+				return signatureMLDSAParametersMismatchError(algo, pub)
+			}
+		case mldsa.MLDSA87():
+			if algo != MLDSA87 {
+				return signatureMLDSAParametersMismatchError(algo, pub)
+			}
+		default:
+			return fmt.Errorf("x509: unknown ML-DSA parameters: %s", pub.Parameters())
+		}
+		if err := mldsa.Verify(pub, signed, signature, nil); err != nil {
+			return fmt.Errorf("x509: ML-DSA verification failure: %w", err)
 		}
 		return
 	}
@@ -1772,8 +1800,21 @@ func signingParamsForKey(key crypto.Signer, sigAlgo SignatureAlgorithm) (Signatu
 		pubType = Ed25519
 		defaultAlgo = PureEd25519
 
+	case *mldsa.PublicKey:
+		pubType = MLDSA
+		switch pub.Parameters() {
+		case mldsa.MLDSA44():
+			defaultAlgo = MLDSA44
+		case mldsa.MLDSA65():
+			defaultAlgo = MLDSA65
+		case mldsa.MLDSA87():
+			defaultAlgo = MLDSA87
+		default:
+			return 0, ai, fmt.Errorf("x509: unsupported ML-DSA parameters: %s", pub.Parameters())
+		}
+
 	default:
-		return 0, ai, errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
+		return 0, ai, errors.New("x509: only RSA, ECDSA, ML-DSA and Ed25519 keys supported")
 	}
 
 	if sigAlgo == 0 {
@@ -1784,6 +1825,9 @@ func signingParamsForKey(key crypto.Signer, sigAlgo SignatureAlgorithm) (Signatu
 		if details.algo == sigAlgo {
 			if details.pubKeyAlgo != pubType {
 				return 0, ai, errors.New("x509: requested SignatureAlgorithm does not match private key type")
+			}
+			if pubType == MLDSA && sigAlgo != defaultAlgo {
+				return 0, ai, errors.New("x509: requested SignatureAlgorithm does not match ML-DSA parameters")
 			}
 			if details.hash == crypto.MD5 {
 				return 0, ai, errors.New("x509: signing with MD5 is not supported")

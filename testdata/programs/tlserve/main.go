@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -58,4 +59,21 @@ func main() {
 	_, err = conn.Read(make([]byte, 1))
 	fmt.Println("eof:", err == io.EOF)
 	conn.Close()
+
+	pair := s.TLS.Certificates[0]
+	_, parsed := pair.PrivateKey.(crypto.Signer)
+	fmt.Println("parsed key:", parsed)
+	manual := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "certificate fields")
+	}))
+	manual.TLS = &tls.Config{Certificates: []tls.Certificate{{Certificate: pair.Certificate, PrivateKey: pair.PrivateKey}}}
+	manual.StartTLS()
+	defer manual.Close()
+	res, err = manual.Client().Get(manual.URL)
+	if err != nil {
+		panic(err)
+	}
+	body, err = io.ReadAll(res.Body)
+	res.Body.Close()
+	fmt.Println("manual:", string(body), err)
 }

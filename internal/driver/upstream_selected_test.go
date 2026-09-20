@@ -40,6 +40,10 @@ func TestSelectedUpstream(t *testing.T) {
 		"cmp":              {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
 		"math":             {{Name: "const_test.go"}, {Name: "example_test.go"}},
 		"encoding/asn1":    {{Name: "marshal_test.go"}},
+		"crypto/tls": {
+			{Name: "tls_test.go", Declarations: []string{"TestX509KeyPair", "TestX509KeyPairPopulateCertificate", "testingKey"}},
+			{Name: "certificates_test.go", Declarations: []string{"testMLDSA44CertPEM", "testMLDSA44KeyPEM", "testMLDSA65CertPEM", "testMLDSA65KeyPEM", "testMLDSA87CertPEM", "testMLDSA87KeyPEM"}},
+		},
 		"crypto/x509": {
 			{Name: "verify_test.go", Declarations: []string{
 				"TestGoVerify",
@@ -100,6 +104,11 @@ func TestSelectedUpstream(t *testing.T) {
 				"testParsePKIXPublicKey", "TestParsePKIXPublicKey", "pemPublicKey", "pemEd25519Key", "pemX25519Key",
 				"TestCertificateParse", "certBytes", "TestCertificateEqualOnNil",
 				"TestMismatchedSignatureAlgorithm", "rsaPSSSelfSignedPEM",
+				"TestMLDSA", "testMLDSA", "pemDecode",
+				"rfc9881ExamplePrivateKeyMLDSA44", "rfc9881ExamplePrivateKeyMLDSA44Expanded", "rfc9881ExamplePrivateKeyMLDSA44Both",
+				"rfc9881ExamplePrivateKeyMLDSA65", "rfc9881ExamplePrivateKeyMLDSA87",
+				"rfc9881ExamplePublicKeyMLDSA44", "rfc9881ExamplePublicKeyMLDSA65", "rfc9881ExamplePublicKeyMLDSA87",
+				"rfc9881ExampleCertificateMLDSA44", "rfc9881ExampleCertificateMLDSA65", "rfc9881ExampleCertificateMLDSA87",
 			}},
 		},
 		"runtime/debug": {{Name: "mod_test.go"}},
@@ -159,11 +168,22 @@ func TestSelectedUpstream(t *testing.T) {
 				if pkg == "sync" {
 					module = "sync_test"
 				}
-				writeFile(t, filepath.Join(fixture, "go.mod"), "module "+module+"\n\ngo 1.27\n\nrequire example.com/testenv v0.0.0\nreplace example.com/testenv => ./testenv\n")
+				dependencies := "require example.com/testenv v0.0.0\nreplace example.com/testenv => ./testenv\n"
+				if pkg == "crypto/x509" {
+					dependencies += "\nrequire example.com/cryptotest v0.0.0\nreplace example.com/cryptotest => ./cryptotest\n"
+				}
+				writeFile(t, filepath.Join(fixture, "go.mod"), "module "+module+"\n\ngo 1.27\n\n"+dependencies)
 			}
 			var certificates *certificateInputs
 			if pkg == "crypto/x509" {
 				certificates = prepareCertificateInputs(t, filepath.Join(dir, "verify_test.go"))
+				if err := os.MkdirAll(filepath.Join(fixture, "cryptotest"), 0755); err != nil {
+					t.Fatal(err)
+				}
+				source := selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/crypto/internal/cryptotest/fips140.go"), []string{"MustMinimumFIPS140ModuleVersion", "parseFIPS140MinorVersion"})
+				source = strings.ReplaceAll(source, `"crypto/internal/fips140"`, `"crypto/fips140"`)
+				writeFile(t, filepath.Join(fixture, "cryptotest/go.mod"), "module example.com/cryptotest\n\ngo 1.27\n")
+				writeFile(t, filepath.Join(fixture, "cryptotest/fips140.go"), source)
 			}
 			selectedFiles := map[string]upstreamFile{}
 			for _, file := range files {
@@ -183,7 +203,14 @@ func TestSelectedUpstream(t *testing.T) {
 				if pkg == "net/http" && file.Name == "header_test.go" {
 					source = strings.Replace(source, "package http", "package http_test\nimport . \"net/http\"", 1)
 				}
+				if pkg == "crypto/tls" {
+					source = strings.Replace(source, "package tls", "package tls_test", 1)
+					if file.Name == "tls_test.go" {
+						source = strings.Replace(source, "package tls_test", "package tls_test\nimport . \"crypto/tls\"", 1)
+					}
+				}
 				if pkg == "crypto/x509" {
+					source = strings.ReplaceAll(source, `"crypto/internal/cryptotest"`, `"example.com/cryptotest"`)
 					source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/testenv"`)
 					source = strings.Replace(source, "package x509", "package x509_test\nimport . \"crypto/x509\"", 1)
 				}
@@ -296,7 +323,7 @@ func TestSelectedUpstream(t *testing.T) {
 				name = pkg + "-content-type"
 			}
 			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
-			if pkg == "reflect" || pkg == "crypto/x509" {
+			if pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)

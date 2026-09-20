@@ -9,13 +9,13 @@
 // CipherSuites would reach no operation, thus a dial or a listen with such a
 // value stops the program.
 //
-// A Certificate keeps the 2 PEM blocks that X509KeyPair took, because Dart
-// reads PEM. It also holds the DER chain and the parsed leaf, thus a program
-// can read the fields of the certificate that it presents.
+// A Certificate holds the DER chain, parsed key, and leaf certificate.
+// The listener encodes the chain and key as PEM for Dart.
 package tls
 
 import (
 	"context"
+	"crypto"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -67,67 +67,12 @@ type Config struct {
 	PreferServerCipherSuites bool
 }
 
-// A Certificate holds a chain and a private key.
-//
-// Certificate holds the DER of each certificate of the chain, with the leaf
-// first, exactly as in Go. Leaf holds the parse of that leaf.
-//
-// The private key stays unexported, because the surface holds no crypto.Signer
-// and no crypto/rsa. A program builds a Certificate with X509KeyPair alone,
-// and the overlay keeps the 2 PEM blocks of that call, because Dart reads PEM.
+// A Certificate holds a DER chain and its private key.
 type Certificate struct {
-	// Certificate holds the DER of the leaf first, and then the DER of each
-	// certificate of the chain above it.
+	// Certificate holds the leaf first, followed by its intermediate certificates.
 	Certificate [][]byte
-	// Leaf holds the parse of Certificate[0]. Go 1.23 and later also fill it
-	// in X509KeyPair.
-	Leaf *x509.Certificate
-
-	pemChain []byte
-	pemKey   []byte
-}
-
-// X509KeyPair builds a Certificate of a PEM chain and a PEM key.
-//
-// The overlay parses no private key, thus it checks no match between the key
-// and the leaf. Dart reads the 2 blocks at the dial or at the listen, and it
-// reports a mismatch there.
-func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
-	cert := Certificate{pemChain: certPEMBlock, pemKey: keyPEMBlock}
-	var skipped []string
-	rest := certPEMBlock
-	for {
-		var block *pem.Block
-		block, rest = pem.Decode(rest)
-		if block == nil {
-			break
-		}
-		if block.Type == "CERTIFICATE" {
-			cert.Certificate = append(cert.Certificate, block.Bytes)
-			continue
-		}
-		skipped = append(skipped, block.Type)
-	}
-	if len(cert.Certificate) == 0 {
-		if len(skipped) == 0 {
-			return Certificate{}, errors.New("tls: failed to find any PEM data in certificate input")
-		}
-		return Certificate{}, errors.New("tls: failed to find \"CERTIFICATE\" PEM block in certificate input after skipping PEM blocks of the following types: " +
-			strings.Join(skipped, " "))
-	}
-	keyBlock, _ := pem.Decode(keyPEMBlock)
-	if keyBlock == nil {
-		return Certificate{}, errors.New("tls: failed to find any PEM data in key input")
-	}
-	if strings.HasSuffix(keyBlock.Type, "CERTIFICATE") {
-		return Certificate{}, errors.New("tls: found a certificate rather than a key in the PEM for the private key")
-	}
-	leaf, err := x509.ParseCertificate(cert.Certificate[0])
-	if err != nil {
-		return Certificate{}, err
-	}
-	cert.Leaf = leaf
-	return cert, nil
+	PrivateKey  crypto.PrivateKey
+	Leaf        *x509.Certificate
 }
 
 // Clone gives a copy of the config. A nil config gives nil.
@@ -273,10 +218,16 @@ func Listen(network, laddr string, config *Config) (net.Listener, error) {
 		return nil, err
 	}
 	cert := config.Certificates[0]
-	if len(cert.pemChain) == 0 || len(cert.pemKey) == 0 {
-		return nil, errors.New("tls: the certificate holds no PEM block, thus X509KeyPair must build it")
+	var chain []byte
+	for _, der := range cert.Certificate {
+		chain = append(chain, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})...)
 	}
-	handle, taken, cause := dart.ListenTLS(host, port, cert.pemChain, cert.pemKey,
+	keyDER, err := x509.MarshalPKCS8PrivateKey(cert.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	key := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER})
+	handle, taken, cause := dart.ListenTLS(host, port, chain, key,
 		config.NextProtos)
 	if cause != "" {
 		return nil, errors.New("tls: listen " + laddr + ": " + cause)

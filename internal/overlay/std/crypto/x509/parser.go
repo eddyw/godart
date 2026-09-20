@@ -1,11 +1,13 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Copyright 2021 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 // This file holds the parse and the write of a public key of the form PKIX.
 // Each line comes from the file parser.go and from the file x509.go of
 // crypto/x509 of Go.
-//
-// The branch of ML-DSA stays out, because crypto/mldsa stands outside the
-// surface. A key of that algorithm gives the error of an unknown algorithm.
 package x509
 
 import (
@@ -15,6 +17,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -161,6 +164,13 @@ func marshalPublicKey(pub any) (publicKeyBytes []byte, publicKeyAlgorithm pkix.A
 	case ed25519.PublicKey:
 		publicKeyBytes = pub
 		publicKeyAlgorithm.Algorithm = oidPublicKeyEd25519
+	case *mldsa.PublicKey:
+		oid, ok := oidFromMLDSAParameters(pub.Parameters())
+		if !ok {
+			return nil, pkix.AlgorithmIdentifier{}, errors.New("x509: unsupported ML-DSA parameters")
+		}
+		publicKeyBytes = pub.Bytes()
+		publicKeyAlgorithm.Algorithm = oid
 	case *ecdh.PublicKey:
 		publicKeyBytes = pub.Bytes()
 		if pub.Curve() == ecdh.X25519() {
@@ -243,9 +253,14 @@ func parsePublicKey(keyData *publicKeyInfo) (any, error) {
 		}
 		return ed25519.PublicKey(data), nil
 	case oid.Equal(oidPublicKeyMLDSA44), oid.Equal(oidPublicKeyMLDSA65), oid.Equal(oidPublicKeyMLDSA87):
-		// A key of ML-DSA needs crypto/mldsa, and that package stands outside
-		// the surface. The read reports the gap, and it gives no key.
-		return nil, errors.New("x509: ML-DSA public keys need crypto/mldsa, which stands outside the surface")
+		if len(params.FullBytes) != 0 {
+			return nil, errors.New("x509: ML-DSA key encoded with illegal parameters")
+		}
+		params, ok := mldsaParametersFromOID(oid)
+		if !ok {
+			return nil, errors.New("x509: unsupported ML-DSA parameters")
+		}
+		return mldsa.NewPublicKey(params, data)
 	case oid.Equal(oidPublicKeyX25519):
 		// RFC 8410, Section 3
 		// > For all of the OIDs, the parameters MUST be absent.
@@ -282,4 +297,28 @@ func parsePublicKey(keyData *publicKeyInfo) (any, error) {
 	default:
 		return nil, errors.New("x509: unknown public key algorithm")
 	}
+}
+
+func mldsaParametersFromOID(oid asn1.ObjectIdentifier) (mldsa.Parameters, bool) {
+	switch {
+	case oid.Equal(oidPublicKeyMLDSA44):
+		return mldsa.MLDSA44(), true
+	case oid.Equal(oidPublicKeyMLDSA65):
+		return mldsa.MLDSA65(), true
+	case oid.Equal(oidPublicKeyMLDSA87):
+		return mldsa.MLDSA87(), true
+	}
+	return mldsa.Parameters{}, false
+}
+
+func oidFromMLDSAParameters(params mldsa.Parameters) (asn1.ObjectIdentifier, bool) {
+	switch {
+	case params == mldsa.MLDSA44():
+		return oidPublicKeyMLDSA44, true
+	case params == mldsa.MLDSA65():
+		return oidPublicKeyMLDSA65, true
+	case params == mldsa.MLDSA87():
+		return oidPublicKeyMLDSA87, true
+	}
+	return nil, false
 }
