@@ -2,6 +2,17 @@ import 'iface.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'string.dart';
 
+String $defaultGODEBUG = '';
+
+void $setDefaultGODEBUG(String settings) {
+  $defaultGODEBUG = settings;
+  _panicNilLegacy = _legacyPanicNil(
+    '$settings,${$platformGODEBUG()}',
+    false,
+    startup: true,
+  );
+}
+
 bool _panicNilLegacy = _legacyPanicNil(
   $platformGODEBUG(),
   false,
@@ -25,7 +36,10 @@ bool _legacyPanicNil(String settings, bool current, {bool startup = false}) {
 }
 
 void $setRuntimeGODEBUG(GoString settings) {
-  _panicNilLegacy = _legacyPanicNil(settings.toDartString(), _panicNilLegacy);
+  _panicNilLegacy = _legacyPanicNil(
+    '${$defaultGODEBUG},${settings.toDartString()}',
+    _panicNilLegacy,
+  );
 }
 
 /// The value of a Go panic.
@@ -53,6 +67,7 @@ final class GoPanic implements Exception {
 /// Go calls Error on a value that implements error, and String on a value that
 /// implements Stringer. Read preprintpanics of runtime/panic.go.
 String $panicText(Object? v) {
+  if (v == null) return 'nil';
   if (v is Iface) {
     // The key of a method table holds the name and the signature.
     for (final String name in const <String>[

@@ -56,7 +56,8 @@ type Result struct {
 	// Embeds holds the path of each file of the module that carried a
 	// `//go:embed` directive. The loader rewrote each 1, thus stage 2 allows
 	// the constructor of the package embed there.
-	Embeds map[string]bool
+	Embeds         map[string]bool
+	DefaultGODEBUG map[string]string
 }
 
 type PhaseTiming struct {
@@ -198,7 +199,19 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 		return nil, err
 	}
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
-	return &Result{Timings: timings, Packages: pkgs, Sources: files, Binaries: binaries, Embeds: embeds}, nil
+	var defaults map[string]string
+	for _, pkg := range pkgs {
+		if pkg.Name == "main" {
+			phase = time.Now()
+			defaults, err = defaultGODEBUG(dir, patterns, tags, tests)
+			if err != nil {
+				return nil, err
+			}
+			timings = append(timings, PhaseTiming{"load-godebug", time.Since(phase)})
+			break
+		}
+	}
+	return &Result{Timings: timings, Packages: pkgs, Sources: files, Binaries: binaries, Embeds: embeds, DefaultGODEBUG: defaults}, nil
 }
 
 // overlayFiles maps each file of a standard library package to the file of the

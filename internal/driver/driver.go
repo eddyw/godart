@@ -137,6 +137,8 @@ func BuildWithStats(opt Options) (*Stats, error) {
 			return nil, err
 		}
 		flags := fmt.Sprintf("%s\x00trimpath=%t\x00go=%s", dartPkg, opt.TrimPath, p.Types.GoVersion())
+		defaults := result.DefaultGODEBUG[p.PkgPath]
+		flags += "\x00godebug=" + defaults
 		if !opt.TrimPath {
 			var paths []string
 			for _, file := range p.Syntax {
@@ -158,7 +160,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 				continue
 			}
 		}
-		out, err := compile(p, module, dartPkg, blocks, bin, opt.TrimPath)
+		out, err := compile(p, module, dartPkg, blocks, bin, opt.TrimPath, defaults)
 		if err != nil {
 			return nil, err
 		}
@@ -382,7 +384,7 @@ func outputExists(out string, files []string) bool {
 }
 
 func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result,
-	bin *load.Binary, trimpath bool) (*emit.Result, error) {
+	bin *load.Binary, trimpath bool, defaults string) (*emit.Result, error) {
 	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks)
 	if err != nil {
 		return nil, err
@@ -405,12 +407,13 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 	}
 	sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
 	return emit.Package(tree, p.Types, emit.Config{
-		Base:        baseName(p, module),
-		Imports:     imports,
-		DartPackage: dartPkg,
-		Fset:        p.Fset,
-		TrimPath:    trimpath,
-		URIs:        libraryURIs(p, module, dartPkg),
+		Base:           baseName(p, module),
+		Imports:        imports,
+		DartPackage:    dartPkg,
+		Fset:           p.Fset,
+		TrimPath:       trimpath,
+		DefaultGODEBUG: defaults,
+		URIs:           libraryURIs(p, module, dartPkg),
 	})
 }
 

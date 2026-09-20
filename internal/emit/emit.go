@@ -53,7 +53,8 @@ type Config struct {
 	// source map of the output.
 	Fset *token.FileSet
 	// TrimPath replaces source directories with package paths.
-	TrimPath bool
+	TrimPath       bool
+	DefaultGODEBUG string
 	// URIs gives the Dart URI of each Go package of the build. A shared file
 	// belongs to no package, thus it reads the URI of a field type here.
 	URIs map[string]string
@@ -889,6 +890,9 @@ func (e *emitter) writeMain() {
 	e.line("void main(List<String> $arguments) {")
 	e.line("$setArgs($arguments);")
 	e.line("$goPanic = $fatal;")
+	if e.cfg.DefaultGODEBUG != "" {
+		e.line("$setDefaultGODEBUG(%s);", dartString(e.cfg.DefaultGODEBUG))
+	}
 	e.line("$init();")
 	if e.mainFunc != nil {
 		e.line("try {")

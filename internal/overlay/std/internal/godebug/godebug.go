@@ -30,6 +30,7 @@ func (s *Setting) Value() string {
 	if name == "fips140" {
 		env = initialEnv
 	}
+	env = dart.DefaultGODEBUG() + "," + env
 	for env != "" {
 		i := strings.LastIndexByte(env, ',')
 		key, value, found := strings.Cut(env[i+1:], "=")
