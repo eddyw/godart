@@ -23,14 +23,20 @@ type languageExecution struct {
 }
 
 type languageOutcome struct {
-	Contract       string              `json:"contract,omitempty"`
-	WrapperSHA256  string              `json:"wrapper_sha256,omitempty"`
-	BuildError     string              `json:"build_error,omitempty"`
-	Fixture        parity.LanguageCase `json:"fixture"`
-	Status         string              `json:"status"`
-	Native         languageExecution   `json:"native"`
-	Gart           languageExecution   `json:"gart"`
-	ExpectedSHA256 string              `json:"expected_sha256,omitempty"`
+	NativeDiagnostics string              `json:"native_diagnostics,omitempty"`
+	GartDiagnostics   string              `json:"gart_diagnostics,omitempty"`
+	NativeMatch       languageExecution   `json:"native_match"`
+	GartMatch         languageExecution   `json:"gart_match"`
+	NativeMismatch    string              `json:"native_mismatch,omitempty"`
+	GartMismatch      string              `json:"gart_mismatch,omitempty"`
+	Contract          string              `json:"contract,omitempty"`
+	WrapperSHA256     string              `json:"wrapper_sha256,omitempty"`
+	BuildError        string              `json:"build_error,omitempty"`
+	Fixture           parity.LanguageCase `json:"fixture"`
+	Status            string              `json:"status"`
+	Native            languageExecution   `json:"native"`
+	Gart              languageExecution   `json:"gart"`
+	ExpectedSHA256    string              `json:"expected_sha256,omitempty"`
 }
 
 type languageEvidence struct {

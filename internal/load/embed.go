@@ -2,6 +2,7 @@ package load
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -105,6 +106,30 @@ func rewriteEmbed(name string, src []byte) ([]byte, error) {
 		text string
 	}
 	var edits []edit
+	var localErr error
+	ast.Inspect(file, func(n ast.Node) bool {
+		decl, ok := n.(*ast.DeclStmt)
+		if !ok {
+			return true
+		}
+		gen, ok := decl.Decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.VAR {
+			return true
+		}
+		groups := []*ast.CommentGroup{gen.Doc}
+		for _, spec := range gen.Specs {
+			groups = append(groups, spec.(*ast.ValueSpec).Doc)
+		}
+		for _, group := range groups {
+			for _, comment := range embedComments(group) {
+				localErr = errors.Join(localErr, fmt.Errorf("%s: go:embed cannot apply to var inside func", fset.Position(comment.Pos())))
+			}
+		}
+		return true
+	})
+	if localErr != nil {
+		return nil, localErr
+	}
 
 	for _, decl := range file.Decls {
 		gen, ok := decl.(*ast.GenDecl)

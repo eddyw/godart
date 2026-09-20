@@ -208,10 +208,20 @@ def language_behavior(paths):
                     if case.get("contract") == "compile":
                         valid = (executed and case["fixture"]["recipe"] == "compile"
                                  and case.get("wrapper_sha256") and not case.get("build_error"))
+                    elif case.get("contract") == "reject":
+                        rejected = all(case[k]["ran"] and case[k]["exit"] > 0 and not case[k]["timed_out"]
+                                       for k in ("native", "gart"))
+                        matched = all(case.get(k, {}).get("ran") and case[k]["exit"] == 0
+                                      and not case[k]["timed_out"] for k in ("native_match", "gart_match"))
+                        diagnostics = all(case.get(k + "_diagnostics") and
+                                          hashlib.sha256(case[k + "_diagnostics"].encode()).hexdigest() == case[k]["output_sha256"]
+                                          for k in ("native", "gart"))
+                        valid = (rejected and matched and diagnostics and case.get("build_error")
+                                 and case.get("wrapper_sha256") and case["fixture"]["recipe"] == "errorcheck")
                     else:
                         valid = expected and executed and all(case[k]["output_sha256"] == expected
                                                               for k in ("native", "gart"))
-                    valid = valid and config["contract"] in {"run", "compile"} and case.get("contract", "run") == config["contract"]
+                    valid = valid and config["contract"] in {"run", "compile", "reject"} and case.get("contract", "run") == config["contract"]
                     if not valid:
                         status = "failed"
                         group["problems"].append(f"{path}: invalid pass for {name}")

@@ -24,6 +24,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/run.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/run.out", "expected\n")
 	write("test/compile.go", "// compile\npackage p\n")
+	write("test/reject.go", "// errorcheck\npackage p\n")
+	write("test/rejectflags.go", "// errorcheck -0\npackage p\n")
 	write("test/compileflags.go", "// compile -N\npackage p\n")
 	write("test/suffix_windows.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/constraints.go", "//go:build dart\n\n// run\npackage main\nfunc main() {}\n")
@@ -36,12 +38,15 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 6 {
-		t.Fatalf("got %d cases, want 6", len(inv.Cases))
+	if len(inv.Cases) != 8 {
+		t.Fatalf("got %d cases, want 8", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
 		cases[c.Name] = c
+	}
+	if cases["reject"].Adapter != "reject-file" || cases["rejectflags"].Adapter != "missing" {
+		t.Fatal("the rejection adapter must not discard recipe flags")
 	}
 	if cases["compile"].Adapter != "compile-file" || cases["compileflags"].Adapter != "missing" {
 		t.Fatal("the compile adapter must not discard recipe flags")

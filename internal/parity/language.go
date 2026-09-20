@@ -123,6 +123,8 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				c.Adapter = "single-file"
 			} else if recipe == "compile" {
 				c.Adapter = "compile-file"
+			} else if recipe == "errorcheck" {
+				c.Adapter = "reject-file"
 			}
 			for _, suffix := range []string{".dir", ".out"} {
 				companion := filepath.Join(root, c.Name+suffix)

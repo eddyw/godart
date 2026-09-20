@@ -114,6 +114,39 @@ class ParityTest(unittest.TestCase):
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
 
+    def test_rejection_requires_original_assertions_and_diagnostics(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            execution = dict(ran=True, exit=1, timed_out=False,
+                             output_sha256=parity.hashlib.sha256(b"invalid source").hexdigest())
+            match = dict(ran=True, exit=0, timed_out=False)
+            outcome = dict(fixture=dict(name="p", recipe="errorcheck"), contract="reject", status="passed",
+                           wrapper_sha256="original matcher", build_error="invalid source",
+                           native=dict(execution), gart=dict(execution),
+                           native_match=dict(match), gart_match=dict(match),
+                           native_diagnostics="invalid source", gart_diagnostics="invalid source")
+            report = dict(kind="language", complete=True, outcomes=[outcome], shard=0, shards=1)
+            path = root / "language.json"
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"passed": 1})
+            for process in ("native", "gart", "native_match", "gart_match"):
+                saved = dict(outcome[process])
+                for field, value in [("ran", False), ("exit", 0 if process in ("native", "gart") else 1),
+                                     ("timed_out", True)]:
+                    outcome[process] = {**saved, field: value}
+                    parity.save(path, report)
+                    self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+                outcome[process] = saved
+            for key in ("wrapper_sha256", "build_error", "native_diagnostics", "gart_diagnostics"):
+                saved = outcome[key]
+                outcome[key] = ""
+                parity.save(path, report)
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+                outcome[key] = saved
+            outcome["gart_diagnostics"] = "changed diagnostic"
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+
     def test_scope_review_does_not_hide_new_packages_or_sdk_changes(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "scope.json"

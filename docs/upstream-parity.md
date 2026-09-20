@@ -183,6 +183,18 @@ Compiler-option recipes remain unassessed until an adapter preserves their optio
 Known compiler rejections retain exact diagnostics and never count as passes.
 Compile evidence records the wrapper hash and remains separate from runtime evidence.
 
+The `language-reject` audit compares exact `errorcheck` recipes. It preserves original source bytes and uses the installed SDK's annotation matcher.
+Both compilers must reject the source and satisfy all original diagnostic assertions. Reports retain diagnostics, matcher results, and source fingerprints.
+Diagnostic text and source-line mismatches count as failures, even when both compilers reject the file.
+Native assertion failures remain visible. Recipe options require separate adapters.
+
+```sh
+GART_PARITY_REPORT_DIR="$PWD/build/rejection-audit" bash scripts/ci.sh language-reject
+```
+
+This audit can fail on unresolved compiler differences. It is separate from the routine CI matrix.
+The driver suite includes focused original rejection regressions through `TestRejectionContracts`.
+
 The `language-targets` suite executes the selected original fixtures on all 4 Dart targets.
 Its 4 shards keep these comparisons separate from the existing target fixtures.
 

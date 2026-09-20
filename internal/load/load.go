@@ -462,8 +462,13 @@ func collectErrors(roots []*packages.Package) error {
 		if !root[p.ID] && overlay.Outside(p.PkgPath) {
 			return
 		}
+		start := len(errs)
 		for _, e := range p.Errors {
-			errs = append(errs, e)
+			if strings.HasPrefix(e.Msg, "\t") && len(errs) > start {
+				errs[len(errs)-1] = fmt.Errorf("%w\n\t%s: %s", errs[len(errs)-1], e.Pos, strings.TrimPrefix(e.Msg, "\t"))
+			} else {
+				errs = append(errs, e)
+			}
 		}
 	})
 	sort.Slice(errs, func(i, j int) bool { return errs[i].Error() < errs[j].Error() })

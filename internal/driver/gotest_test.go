@@ -15,7 +15,7 @@ import (
 	"github.com/eddyw/godart/internal/parity"
 )
 
-func runLanguage(t *testing.T, result *languageExecution, dir string, limit time.Duration, name string, args ...string) string {
+func recordLanguage(t *testing.T, result *languageExecution, dir string, limit time.Duration, name string, args ...string) string {
 	t.Helper()
 	start := time.Now()
 	text, err, ended := output(dir, nil, limit, name, args...)
@@ -32,10 +32,16 @@ func runLanguage(t *testing.T, result *languageExecution, dir string, limit time
 	if !ended {
 		t.Fatalf("%s exceeded %v\n%s", name, limit, text)
 	}
-	if err != nil {
-		t.Fatalf("%s failed: %v\n%s", name, err, text)
-	}
 	return string(text)
+}
+
+func runLanguage(t *testing.T, result *languageExecution, dir string, limit time.Duration, name string, args ...string) string {
+	t.Helper()
+	text := recordLanguage(t, result, dir, limit, name, args...)
+	if result.Exit != 0 {
+		t.Fatalf("%s exited %d\n%s", name, result.Exit, text)
+	}
+	return text
 }
 
 // TestRunFilesOfGoTest compiles each file of the test directory of the Go
