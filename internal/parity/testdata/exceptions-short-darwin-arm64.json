@@ -13439,6 +13439,12 @@
       "native": "skip",
       "reason": "The original upstream test skips this memory-intensive case in short mode.",
       "test": "TestCVE202230633"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original test skips in short mode because it requires significant memory. Full runs retain its recursion depth and assertions.",
+      "test": "TestDecodeElementRecursion"
     }
   ],
   "net/http": [
