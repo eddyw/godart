@@ -167,8 +167,8 @@
       "shards": 3,
       "timeout": 8,
       "job_timeout": 13,
-      "full_timeout": 21,
-      "full_job_timeout": 26
+      "full_timeout": 33,
+      "full_job_timeout": 38
     },
     {
       "suite": "upstream-targets",
@@ -176,8 +176,8 @@
       "shards": 3,
       "timeout": 13,
       "job_timeout": 18,
-      "full_timeout": 12,
-      "full_job_timeout": 17
+      "full_timeout": 28,
+      "full_job_timeout": 33
     },
     {
       "suite": "upstream-targets",
@@ -185,8 +185,8 @@
       "shards": 3,
       "timeout": 12,
       "job_timeout": 17,
-      "full_timeout": 11,
-      "full_job_timeout": 16
+      "full_timeout": 20,
+      "full_job_timeout": 25
     },
     {
       "suite": "upstream-priority",
@@ -216,8 +216,8 @@
       "shards": 6,
       "timeout": 12,
       "job_timeout": 17,
-      "full_timeout": 34,
-      "full_job_timeout": 39
+      "full_timeout": 31,
+      "full_job_timeout": 36
     },
     {
       "suite": "stdlib",
@@ -225,8 +225,8 @@
       "shards": 6,
       "timeout": 11,
       "job_timeout": 16,
-      "full_timeout": 26,
-      "full_job_timeout": 31
+      "full_timeout": 31,
+      "full_job_timeout": 36
     },
     {
       "suite": "stdlib",
@@ -234,8 +234,8 @@
       "shards": 6,
       "timeout": 11,
       "job_timeout": 16,
-      "full_timeout": 30,
-      "full_job_timeout": 35
+      "full_timeout": 29,
+      "full_job_timeout": 34
     },
     {
       "suite": "stdlib",
@@ -243,8 +243,8 @@
       "shards": 6,
       "timeout": 12,
       "job_timeout": 17,
-      "full_timeout": 41,
-      "full_job_timeout": 46
+      "full_timeout": 57,
+      "full_job_timeout": 62
     },
     {
       "suite": "stdlib",
@@ -252,8 +252,8 @@
       "shards": 6,
       "timeout": 11,
       "job_timeout": 16,
-      "full_timeout": 48,
-      "full_job_timeout": 53
+      "full_timeout": 32,
+      "full_job_timeout": 37
     },
     {
       "suite": "stdlib",
@@ -261,8 +261,8 @@
       "shards": 6,
       "timeout": 11,
       "job_timeout": 16,
-      "full_timeout": 30,
-      "full_job_timeout": 35
+      "full_timeout": 35,
+      "full_job_timeout": 40
     },
     {
       "suite": "fuzz-replay",
