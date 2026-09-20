@@ -790,15 +790,17 @@ type response struct {
 	conn net.Conn
 	// reader holds the buffer of the connection. A Hijack gives it to the
 	// handler, because it can already hold bytes of the next request.
-	reader     *bufio.Reader
-	header     Header
-	req        *Request
-	body       []byte
-	status     int
-	wroteHead  bool
-	closeAfter bool
-	flushed    bool
-	writeErr   error
+	reader        *bufio.Reader
+	header        Header
+	req           *Request
+	body          []byte
+	status        int
+	wroteHead     bool
+	closeAfter    bool
+	flushed       bool
+	writeErr      error
+	contentLength int64
+	written       int64
 	// chunked marks an answer of the chunked form. Only HTTP/1.1 holds it.
 	chunked bool
 	// hijacked marks a connection that the handler took.
@@ -832,6 +834,14 @@ func (w *response) WriteHeader(code int) {
 	}
 	w.wroteHead = true
 	w.status = code
+	w.contentLength = -1
+	if cl := w.header.Get("Content-Length"); cl != "" {
+		if n, err := strconv.ParseInt(cl, 10, 64); err == nil && n >= 0 {
+			w.contentLength = n
+		} else {
+			w.header.Del("Content-Length")
+		}
+	}
 	w.declareTrailers()
 }
 
@@ -914,6 +924,13 @@ func (w *response) Write(p []byte) (int, error) {
 	}
 	if !w.wroteHead {
 		w.WriteHeader(StatusOK)
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	w.written += int64(len(p))
+	if w.contentLength != -1 && w.written > w.contentLength {
+		return 0, ErrContentLength
 	}
 	if w.writeErr != nil {
 		return 0, w.writeErr
@@ -1021,6 +1038,9 @@ func (w *response) finish() {
 	}
 	if !w.wroteHead {
 		w.WriteHeader(StatusOK)
+	}
+	if (w.req == nil || w.req.Method != MethodHead) && w.contentLength != -1 && w.written != w.contentLength {
+		w.closeAfter = true
 	}
 	trailers := w.finalTrailers()
 	if w.flushed {

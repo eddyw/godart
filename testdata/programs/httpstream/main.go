@@ -40,4 +40,28 @@ func main() {
 			server.Close()
 		}
 	}
+	for _, flush := range []bool{false, true} {
+		result := make(chan string, 1)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Length", "3")
+			n1, e1 := w.Write([]byte("foo"))
+			if flush {
+				w.(http.Flusher).Flush()
+			}
+			n2, e2 := w.Write([]byte("extra"))
+			n3, e3 := w.Write(nil)
+			result <- fmt.Sprint(n1, e1 == nil, n2, e2 == http.ErrContentLength, n3, e3 == nil)
+		}))
+		res, err := http.Get(server.URL)
+		if err != nil {
+			panic(err)
+		}
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			panic(err)
+		}
+		res.Body.Close()
+		fmt.Println("length", flush, string(body), <-result)
+		server.Close()
+	}
 }

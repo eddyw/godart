@@ -32,6 +32,7 @@ func TestHTTPUpstream(t *testing.T) {
 		"TestServerContentTypeSniff": true, "testServerContentTypeSniff": true, "sniffTests": true,
 		"TestServerIssue5953": true, "testServerIssue5953": true,
 		"TestSniffWriteSize": true, "testSniffWriteSize": true,
+		"TestIdentityResponse": true, "testIdentityResponse": true,
 		"TestH12_ExplicitContentLength": true, "TestH12_FlushBeforeBody": true, "TestH12_FlushMidBody": true}
 	var tests []string
 	for name := range names {
@@ -41,7 +42,7 @@ func TestHTTPUpstream(t *testing.T) {
 	}
 	slices.Sort(tests)
 	var extracted strings.Builder
-	extracted.WriteString("// Copyright 2015 The Go Authors. All rights reserved.\n// Use of this source code is governed by a BSD-style\n// license that can be found in the LICENSE file.\n\npackage http_test\n\nimport (\"bytes\";\"compress/gzip\";\"compress/zlib\";\"log\";\"slices\";\"context\";\"errors\";\"time\";\"net/url\";\"crypto/rand\";\"fmt\";\"io\";\"reflect\";\"strconv\";\"strings\";\"testing\";. \"net/http\")\n\n")
+	extracted.WriteString("// Copyright 2015 The Go Authors. All rights reserved.\n// Use of this source code is governed by a BSD-style\n// license that can be found in the LICENSE file.\n\npackage http_test\n\nimport (\"net\";\"bytes\";\"compress/gzip\";\"compress/zlib\";\"log\";\"slices\";\"context\";\"errors\";\"time\";\"net/url\";\"crypto/rand\";\"fmt\";\"io\";\"reflect\";\"strconv\";\"strings\";\"testing\";. \"net/http\")\n\n")
 	for _, file := range []string{"clientserver_test.go", "transport_test.go", "client_test.go", "serve_test.go", "sniff_test.go"} {
 		source, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "src/net/http", file))
 		if err != nil {

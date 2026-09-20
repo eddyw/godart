@@ -13484,5 +13484,13 @@
       "reason": "The original upstream test skips this memory-intensive case in short mode.",
       "test": "TestCVE202230633"
     }
+  ],
+  "net/http": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips HTTP/2 for Go issue 56019.",
+      "test": "TestIdentityResponse/h2"
+    }
   ]
 }

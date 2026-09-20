@@ -13282,5 +13282,13 @@
       "reason": "The original upstream test unconditionally skips this case.",
       "test": "TestTemplateLookUp"
     }
+  ],
+  "net/http": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips HTTP/2 for Go issue 56019.",
+      "test": "TestIdentityResponse/h2"
+    }
   ]
 }
