@@ -1,16 +1,12 @@
 //go:build dart
 
-// Package testenv gives the part of the internal test helper of Go that the
-// tests of the surface read.
-//
-// The real package starts a process of the go command, and it reads the build
-// configuration of the machine. gart holds no such access, thus the overlay
-// gives the answer of a local run with each optimization on.
+// Package testenv adapts Go test facilities to the Dart runtime and an optional Go SDK.
 package testenv
 
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"testing"
 )
@@ -41,20 +37,28 @@ func MustHaveSymlink(t testing.TB) {
 	}
 }
 
-// MustHaveSource skips the test. The Dart output holds no source tree of Go.
+// MustHaveSource requires the source tree of the supplied Go SDK.
 func MustHaveSource(t testing.TB) {
-	t.Skip("testenv: the Dart output holds no source tree of Go")
+	t.Helper()
+	root := GOROOT(t)
+	info, err := os.Stat(filepath.Join(root, "src"))
+	if err != nil || !info.IsDir() {
+		t.Skipf("testenv: Go SDK source unavailable: %v", err)
+	}
 }
 
-// MustHaveGoBuild skips the test. The Dart output holds no go command.
 func MustHaveGoBuild(t testing.TB) {
-	t.Skip("testenv: the Dart output holds no go command")
+	t.Helper()
+	if os.Getenv("GO_GCFLAGS") != "" {
+		t.Skip("testenv: Go build does not support GO_GCFLAGS in this adapter")
+	}
+	tool := GoToolPath(t)
+	if out, err := exec.Command(tool, "tool", "-n", "compile").CombinedOutput(); err != nil {
+		t.Skipf("testenv: Go compiler unavailable: %v\n%s", err, out)
+	}
 }
 
-// MustHaveGoRun skips the test. The Dart output holds no go command.
-func MustHaveGoRun(t testing.TB) {
-	t.Skip("testenv: the Dart output holds no go command")
-}
+func MustHaveGoRun(t testing.TB) { MustHaveGoBuild(t) }
 
 // MustHaveCGO skips the test. Non-goal N2 of the project holds cgo out.
 func MustHaveCGO(t testing.TB) {
@@ -76,10 +80,18 @@ func GOROOT(t testing.TB) string {
 // Dart int holds 64 bits, thus the call marks each run.
 func ParallelOn64Bit(t *testing.T) { t.Parallel() }
 
-// GoToolPath skips the test. The Dart output holds no go command.
+// GoToolPath selects the executable from the supplied SDK.
 func GoToolPath(t testing.TB) string {
-	t.Skip("testenv: the Dart output holds no go command")
-	return ""
+	t.Helper()
+	name := "go"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	tool, err := exec.LookPath(filepath.Join(GOROOT(t), "bin", name))
+	if err != nil {
+		t.Skipf("testenv: Go command unavailable: %v", err)
+	}
+	return tool
 }
 
 // MustHaveExec marks a test that starts a process. gart starts a process, thus

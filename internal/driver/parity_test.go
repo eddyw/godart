@@ -133,6 +133,14 @@ func upstreamLimit() time.Duration {
 	return 30 * time.Minute
 }
 
+func upstreamExtraArgs(pkg string) []string {
+	if pkg == "debug/buildinfo" && !testing.Short() {
+		// The fixture parses native SDK output. Its run filter selects the SDK platform.
+		return []string{"-all"}
+	}
+	return nil
+}
+
 func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int) {
 	t.Helper()
 	nativeTags := slices.Clone(build.Default.BuildTags)
@@ -161,6 +169,10 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 		args = append(args, "-run", filter)
 	}
 	args = append(args, ".")
+	if extra := upstreamExtraArgs(pkg); len(extra) != 0 {
+		args = append(args, "-args")
+		args = append(args, extra...)
+	}
 	nativeText, err, ok := output(dir, nil, upstreamLimit(), "go", args...)
 	nativeExit := 0
 	if !ok {
@@ -280,7 +292,7 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 			nodeVersion = strings.TrimSpace(runProgram(t, "", "node", "--version"))
 		}
 		env := map[string]string{"GODEBUG": os.Getenv("GODEBUG"), "GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}
-		if pkg == "go/build" {
+		if pkg == "go/build" || pkg == "debug/buildinfo" {
 			env["GOROOT"] = build.Default.GOROOT
 		}
 		data, err := json.MarshalIndent(upstreamEvidence{ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")

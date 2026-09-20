@@ -161,6 +161,50 @@ func TestValue(t *testing.T) {
 	}
 }
 
+func TestTestsCustomFlags(t *testing.T) {
+	for _, mode := range []string{"default", "main", "parsed"} {
+		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/flags\n\ngo 1.27\n")
+			source := `package flags
+import (
+ "flag"
+ "testing"
+)
+var enabled = flag.Bool("enabled", false, "enable the fixture")
+var label = flag.String("label", "", "fixture label")
+func TestFlags(t *testing.T) {
+ if !flag.Parsed() || !*enabled || *label != "two words" {
+  t.Fatalf("parsed=%v enabled=%v label=%q", flag.Parsed(), *enabled, *label)
+ }
+}
+`
+			if mode != "default" {
+				parse := ""
+				if mode == "parsed" {
+					parse = "flag.Parse()"
+				}
+				source += "func TestMain(m *testing.M) { " + parse + "; m.Run() }\n"
+			}
+			writeFile(t, filepath.Join(dir, "flags_test.go"), source)
+			args := []string{"-test.run=^TestFlags$", "-enabled", "-label", "two words"}
+			nativeArgs := append([]string{"test", "-count=1", "-args"}, args...)
+			run(t, dir, "go", nativeArgs...)
+			out := t.TempDir()
+			stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			prepareDart(t, out)
+			got := run(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+			if got != "PASS\n" {
+				t.Fatalf("unexpected test output: %q", got)
+			}
+		})
+	}
+}
+
 // TestTestsSkipsAnAllocationTest proves that AllocsPerRun reports a skip with
 // the cause. The Dart VM gives no count of allocations for 1 operation, and a
 // result of 0 would make such a test pass.
@@ -213,6 +257,18 @@ func TestTestsOfGoroot(t *testing.T) {
 	}
 	var runs []namedCase
 	for _, c := range cases {
+		if c.Package == "debug/buildinfo" && !testing.Short() {
+			listing := run(t, ".", "go", "test", "-list", ".", c.Package)
+			var others []string
+			for _, name := range strings.Fields(listing) {
+				if name != "TestReadFile" && (strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Example") || strings.HasPrefix(name, "Fuzz")) {
+					others = append(others, regexp.QuoteMeta(name))
+				}
+			}
+			runs = append(runs, namedCase{c.Package, stdCase{Package: c.Package, Run: "^(" + strings.Join(others, "|") + ")$"}})
+			runs = append(runs, namedCase{c.Package + "-native-exe", stdCase{Package: c.Package, Run: "^TestReadFile$/^" + build.Default.GOOS + "_" + build.Default.GOARCH + "$/^(pie|exe)$"}})
+			continue
+		}
 		if c.Package == "crypto/mldsa" && !testing.Short() {
 			listing := run(t, ".", "go", "test", "-list", ".", c.Package)
 			var others []string
@@ -307,10 +363,12 @@ func TestTestsOfGoroot(t *testing.T) {
 				prepareUpstreamSelfExec(t, outDir, stats.Binaries[0].Entry)
 			}
 			var env []string
-			if c.Package == "go/build" {
+			if c.Package == "go/build" || c.Package == "debug/buildinfo" {
 				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
 			}
-			text, execErr, finished := output(dir, env, upstreamLimit(), "dart", filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run="+c.Run, "-test.skip="+upstreamSkip(t, c.Package))
+			args := []string{filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run=" + c.Run, "-test.skip=" + upstreamSkip(t, c.Package)}
+			args = append(args, upstreamExtraArgs(c.Package)...)
+			text, execErr, finished := output(dir, env, upstreamLimit(), "dart", args...)
 			if !finished {
 				compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124)
 				return

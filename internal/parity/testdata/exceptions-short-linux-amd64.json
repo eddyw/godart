@@ -12593,74 +12593,6 @@
       "test": "TestCountMallocs"
     }
   ],
-  "go/build": [
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestDependencies"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestImportDirNotExist"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestImportPackageOutsideModule"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestImportVendor"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestImportVendorFailure"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestImportVendorParentFailure"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestMissingImportErrorRepetition"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestStdlibLowercase"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestVendorPackages"
-    },
-    {
-      "gart": "",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestImportDirNotExist/GO111MODULE=off"
-    },
-    {
-      "gart": "",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestImportDirNotExist/GO111MODULE=on"
-    }
-  ],
   "go/doc/comment": [
     {
       "gart": "skip",
@@ -13653,6 +13585,14 @@
       "native": "skip",
       "reason": "The original case skips subprocess execution in short mode.",
       "test": "TestCallDepthConnection"
+    }
+  ],
+  "debug/buildinfo": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips native artifact compilation in short mode.",
+      "test": "TestReadFile"
     }
   ]
 }

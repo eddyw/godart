@@ -769,6 +769,7 @@ type M struct {
 // NewM builds the state of a test binary. The compiler writes the call into the
 // entry point.
 func NewM(tests []InternalTest, benchmarks []InternalBenchmark) *M {
+	Init()
 	testBinary = true
 	return &M{tests: tests, benchmarks: benchmarks}
 }
@@ -777,6 +778,9 @@ func NewM(tests []InternalTest, benchmarks []InternalBenchmark) *M {
 // of 0 means that each one passed.
 func (m *M) Run() int {
 	m.ran = true
+	if !flag.Parsed() {
+		flag.Parse()
+	}
 	flags := readFlags()
 	ran, ok := runList(m.tests, flags)
 	failed := !ok

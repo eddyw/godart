@@ -59,6 +59,12 @@ This configuration does not claim assembly implementation or native FIPS module 
 The Gart side preserves the original assertions, expected values, and fixture bytes.
 Adapters supply unavailable private test infrastructure without a duplicate assertion implementation.
 
+The `go/build` and `debug/buildinfo` adapters supply the active Go SDK through `GOROOT`.
+The full buildinfo suite uses its original `-all` option and selects the SDK platform's `pie` and `exe` fixtures.
+Both Go and Gart read native artifacts from that SDK. This selection does not cover `c-shared` or cgo.
+Gart preserves its compiler and architecture identity during source selection.
+Its module lookup uses the SDK compiler identity because `go list` does not accept `gart` or `dart64`.
+
 The inventory gate rejects changes to upstream source, fixtures, build tags, and test patches.
 Each SDK version has a separate inventory. A candidate inventory records reviewed
 inputs without promotion of the release baseline. Exact `_go.mod` duplicates

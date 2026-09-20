@@ -9,7 +9,34 @@
  	case "gccgo":
  		pkgtargetroot = "pkg/gccgo_" + ctxt.GOOS + "_" + ctxt.GOARCH + suffix
  	case "gc":
-@@ -2013,14 +2015,14 @@
+@@ -1230,8 +1232,16 @@
+ 		}
+ 	}
+ 
++	compiler, goarch := ctxt.Compiler, ctxt.GOARCH
++	if compiler == "gart" {
++		// The Go command resolves module paths. This context still selects source files.
++		compiler = "gc"
++		if goarch == "dart64" {
++			goarch = ""
++		}
++	}
+ 	goCmd := filepath.Join(ctxt.GOROOT, "bin", "go")
+-	cmd := exec.Command(goCmd, "list", "-e", "-compiler="+ctxt.Compiler, "-tags="+strings.Join(ctxt.BuildTags, ","), "-installsuffix="+ctxt.InstallSuffix, "-f={{.Dir}}\n{{.ImportPath}}\n{{.Root}}\n{{.Goroot}}\n{{if .Error}}{{.Error}}{{end}}\n", "--", path)
++	cmd := exec.Command(goCmd, "list", "-e", "-compiler="+compiler, "-tags="+strings.Join(ctxt.BuildTags, ","), "-installsuffix="+ctxt.InstallSuffix, "-f={{.Dir}}\n{{.ImportPath}}\n{{.Root}}\n{{.Goroot}}\n{{if .Error}}{{.Error}}{{end}}\n", "--", path)
+ 
+ 	if ctxt.Dir != "" {
+ 		cmd.Dir = ctxt.Dir
+@@ -1247,7 +1257,7 @@
+ 	}
+ 	cmd.Env = append(cmd.Environ(),
+ 		"GOOS="+ctxt.GOOS,
+-		"GOARCH="+ctxt.GOARCH,
++		"GOARCH="+goarch,
+ 		"GOROOT="+ctxt.GOROOT,
+ 		"GOPATH="+ctxt.GOPATH,
+ 		"CGO_ENABLED="+cgo,
+@@ -2013,14 +2023,14 @@
  		l = l[:n-1]
  	}
  	n := len(l)
