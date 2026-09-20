@@ -13199,6 +13199,73 @@
       "seeds": null
     },
     {
+      "path": "debug/buildinfo",
+      "tests": [
+        {
+          "name": "FuzzIssue57002",
+          "file": "buildinfo_test.go",
+          "kind": "Fuzz",
+          "eligible": true
+        },
+        {
+          "name": "FuzzRead",
+          "file": "buildinfo_test.go",
+          "kind": "Fuzz",
+          "eligible": true
+        },
+        {
+          "name": "Test117",
+          "file": "buildinfo_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue54968",
+          "file": "buildinfo_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestNotGo",
+          "file": "buildinfo_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReadFile",
+          "file": "buildinfo_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestSearchMagic",
+          "file": "search_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "buildinfo.go",
+          "sha256": "5e4064efa60e5fb768ffbf49f44bb6dd037fe35d3245ba9573881adef2f9c097"
+        },
+        {
+          "path": "buildinfo_test.go",
+          "sha256": "e8e0ac9d0114ff77a4e46ac3baa9a267f421af9a0d007940e49e56476294b098"
+        },
+        {
+          "path": "search_test.go",
+          "sha256": "e4ca0f01994cef7dac8aff23d769d64f0ee025779830b6b2437b7bc3b77b4292"
+        }
+      ],
+      "seeds": [
+        {
+          "path": "testdata/fuzz/FuzzRead/36aeb674e3454016",
+          "sha256": "36aeb674e345401692ddfa5428bae2b3e9cba2397f276488983947da022c867f"
+        }
+      ]
+    },
+    {
       "path": "debug/dwarf",
       "tests": [
         {
@@ -28145,6 +28212,52 @@
         {
           "path": "generrordocs.go",
           "sha256": "3d8c3d6d662040f047d89c0d723a0dd1f653b4ff307fbe32bdb251017cef685f"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "internal/xcoff",
+      "tests": [
+        {
+          "name": "TestOpenArchive",
+          "file": "ar_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestOpen",
+          "file": "file_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestOpenFailure",
+          "file": "file_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "ar.go",
+          "sha256": "5ca668155f882b5ebb53210b90552c43750f9d21bfc45a7812d1fa7cfe0b7b4a"
+        },
+        {
+          "path": "ar_test.go",
+          "sha256": "3a3e895bee08f3391a7d35b18f4812e2251dbeaf71ff532bc7b4123bac57f916"
+        },
+        {
+          "path": "file.go",
+          "sha256": "93b2d8a31b27367e4744b088133ec4cbcee8b50f798c4cf167804411b8bcff6a"
+        },
+        {
+          "path": "file_test.go",
+          "sha256": "35d98c96b0384c5067a6e6a3eaf29ca7f0cdd1b5857969d862d7674b110f21bb"
+        },
+        {
+          "path": "xcoff.go",
+          "sha256": "45566e681fc5f228d8f490de09dc11363bd20090c3f2a9194f9f790a397b9fd8"
         }
       ],
       "seeds": null

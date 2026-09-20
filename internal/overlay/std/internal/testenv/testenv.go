@@ -61,6 +61,8 @@ func MustHaveCGO(t testing.TB) {
 	t.Skip("testenv: the subset holds no cgo")
 }
 
+func HasCGO() bool { return false }
+
 // GOROOT gives the root of the Go installation. A test that reads it needs the
 // source tree of Go, thus this form skips the test. A caller that gives no
 // test reads the empty name.

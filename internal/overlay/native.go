@@ -139,6 +139,8 @@ var native = []string{
 	"log/slog/internal/buffer",
 	"log/slog",
 	"testing/slogtest",
+	"debug/buildinfo",
+	"internal/xcoff",
 	"debug/dwarf",
 	"internal/zstd",
 	"internal/saferio",

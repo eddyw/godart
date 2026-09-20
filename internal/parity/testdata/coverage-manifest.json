@@ -453,6 +453,10 @@
     "status": "no-runnable-tests"
   },
   {
+    "package": "debug/buildinfo",
+    "status": "vm-suite"
+  },
+  {
     "package": "debug/dwarf",
     "status": "vm-suite"
   },
@@ -894,6 +898,10 @@
     "diagnostic": "the package go/importer is outside the supported surface (the standard library surface is curated)",
     "blocker_cause": "private-test-dependency",
     "blocker_reason": "The suite depends on go/importer, which remains outside the surface."
+  },
+  {
+    "package": "internal/xcoff",
+    "status": "vm-suite"
   },
   {
     "package": "internal/zstd",

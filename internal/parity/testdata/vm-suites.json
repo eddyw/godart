@@ -640,5 +640,13 @@
   {
     "package": "html/template",
     "run": ""
+  },
+  {
+    "package": "debug/buildinfo",
+    "run": ""
+  },
+  {
+    "package": "internal/xcoff",
+    "run": ""
   }
 ]
