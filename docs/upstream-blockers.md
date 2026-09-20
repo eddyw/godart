@@ -16,10 +16,8 @@ The blocker manifest retains exact platform diagnostics in the coverage manifest
 | `crypto/subtle` | runtime-boundary | The suite requires native CPU feature detection through internal/cpu. |
 | `crypto/tls` | private-test-dependency | The suite calls private Go TLS implementation functions. Dart owns the TLS implementation. |
 | `crypto/x509` | private-test-dependency | The suite requires the upstream external-network capability helper before further classification. |
-| `encoding/asn1` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |
 | `go/types` | runtime-boundary | The suite converts an unsafe address into a typed pointer. Dart has no native pointer conversion. |
 | `hash/maphash` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `image/gif` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |
 | `internal/abi` | runtime-boundary | The suite requires native function program counters through abi.FuncPCABI0. |
 | `internal/fmtsort` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
 | `internal/godebug` | runtime-boundary | The suite requires native Go runtime metrics. |
@@ -34,7 +32,6 @@ The blocker manifest retains exact platform diagnostics in the coverage manifest
 | `net/http/httptest` | public-api-gap | The complete suite requires TLS connection-version metadata. TLS expansion has separate scope. |
 | `net/http/httputil` | runtime-boundary | The suite requires Go runtime profiling through runtime/pprof. |
 | `net/smtp` | public-api-gap | The complete suite requires TLS connection-version metadata. TLS expansion has separate scope. |
-| `net/textproto` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |
 | `os` | public-api-gap | The complete suite requires native errno and file-descriptor behavior beyond the current surface. |
 | `os/exec` | public-api-gap | The environment helper now matches upstream. The complete suite next requires native process signals and process attributes. |
 | `os/signal` | private-test-dependency | The suite requires native subprocess test infrastructure and signal behavior. |

@@ -648,5 +648,14 @@
   {
     "package": "internal/xcoff",
     "run": ""
+  },
+  {
+    "package": "encoding/asn1"
+  },
+  {
+    "package": "image/gif"
+  },
+  {
+    "package": "net/textproto"
   }
 ]

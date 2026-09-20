@@ -1,0 +1,42 @@
+The original TestReadMIMEHeaderAllocations assertion requires native Go heap counters.
+The adapter omits this complete assertion and retains the other source bytes.
+The omission manifest records this target limit.
+
+--- reader_test.go
++++ reader_test.go
+@@ -10,7 +10,6 @@
+ 	"io"
+ 	"net"
+ 	"reflect"
+-	"runtime"
+ 	"slices"
+ 	"strings"
+ 	"sync"
+@@ -322,27 +321,6 @@
+ 	}
+ }
+ 
+-// Test that reading a header doesn't overallocate. Issue 58975.
+-func TestReadMIMEHeaderAllocations(t *testing.T) {
+-	var totalAlloc uint64
+-	const count = 200
+-	for i := 0; i < count; i++ {
+-		r := reader("A: b\r\n\r\n" + strings.Repeat("\n", 4096))
+-		var m1, m2 runtime.MemStats
+-		runtime.ReadMemStats(&m1)
+-		_, err := r.ReadMIMEHeader()
+-		if err != nil {
+-			t.Fatalf("ReadMIMEHeader: %v", err)
+-		}
+-		runtime.ReadMemStats(&m2)
+-		totalAlloc += m2.TotalAlloc - m1.TotalAlloc
+-	}
+-	// 32k is large and we actually allocate substantially less,
+-	// but prior to the fix for #58975 we allocated ~400k in this case.
+-	if got, want := totalAlloc/count, uint64(32768); got > want {
+-		t.Fatalf("ReadMIMEHeader allocated %v bytes, want < %v", got, want)
+-	}
+-}
+ 
+ type readResponseTest struct {
+ 	in       string

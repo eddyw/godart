@@ -14403,7 +14403,13 @@
           "sha256": "6cb9b7e3187ee084995b2fd8fdc38dab3f6ab513764de18f13477db0bcfc7cf5"
         }
       ],
-      "seeds": null
+      "seeds": null,
+      "test_patches": [
+        {
+          "path": "asn1_test.go.patch",
+          "sha256": "169fee9f318d9e91cfd876287c6b081d612b88be10a64b28cc43749beb5e442b"
+        }
+      ]
     },
     {
       "path": "encoding/base32",
@@ -26474,7 +26480,13 @@
           "sha256": "33f0795efaa9eb108af062e68a246c186014d014caa5419882cdb1782f64d60f"
         }
       ],
-      "seeds": null
+      "seeds": null,
+      "test_patches": [
+        {
+          "path": "reader_test.go.patch",
+          "sha256": "d8d3591ffe6ff6922c092cfc4c750199b52fb9dd9baf5fb1203334d0f7207683"
+        }
+      ]
     },
     {
       "path": "image/internal/imageutil",
@@ -45643,7 +45655,13 @@
           "sha256": "048d135fcabb79e9caf037e8a004a9a1048d60b5900c013ffbe9a6cccb5583d3"
         }
       ],
-      "seeds": null
+      "seeds": null,
+      "test_patches": [
+        {
+          "path": "reader_test.go.patch",
+          "sha256": "222b2d44877ae401d7620e3e0530f408ee87b4d194741e17c2db4aaa7d27e0d3"
+        }
+      ]
     },
     {
       "path": "net/url",

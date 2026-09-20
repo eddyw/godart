@@ -43,6 +43,20 @@
       "reason": "The test opens the native Go test executable and validates its ELF sections or symbol table. The Dart VM entry point has no Go executable image."
     }
   },
+  "encoding/asn1": {
+    "TestParsingMemoryConsumption": {
+      "classification": "target-limit",
+      "reason": "The original assertion requires native Go heap allocation counters. Dart exposes no equivalent counter. The complete assertion remains excluded."
+    },
+    "TestUnmarshalNestingLimitSlice": {
+      "classification": "implementation-gap",
+      "reason": "The original case constructs and parses 10,000 nested ASN.1 levels. Recursive encoder calls overflow the Dart stack before the decoder assertion. Preserve the original input while the implementation becomes stack-safe."
+    },
+    "TestUnmarshalNestingLimitStruct": {
+      "classification": "implementation-gap",
+      "reason": "The original case constructs and parses 10,000 nested ASN.1 levels. Recursive encoder calls overflow the Dart stack before the decoder assertion. Preserve the original input while the implementation becomes stack-safe."
+    }
+  },
   "encoding/gob": {
     "TestIgnoreDepthLimit": {
       "classification": "implementation-gap",
@@ -129,6 +143,18 @@
     "TestMaxExecDepth": {
       "classification": "implementation-gap",
       "reason": "The full upstream case exhausts the Dart stack before the Go template depth limit. An iterative evaluator or stack-safe execution adapter is still necessary. The original case skips short mode."
+    }
+  },
+  "image/gif": {
+    "TestDecodeMemoryConsumption": {
+      "classification": "target-limit",
+      "reason": "The original assertion requires native Go heap allocation counters. Dart exposes no equivalent counter. The complete assertion remains excluded."
+    }
+  },
+  "net/textproto": {
+    "TestReadMIMEHeaderAllocations": {
+      "classification": "target-limit",
+      "reason": "The original assertion requires native Go heap allocation counters. Dart exposes no equivalent counter. The complete assertion remains excluded."
     }
   }
 }

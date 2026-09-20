@@ -499,10 +499,7 @@
   },
   {
     "package": "encoding/asn1",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: runtime.MemStats",
-    "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
+    "status": "vm-suite"
   },
   {
     "package": "encoding/base32",
@@ -744,10 +741,7 @@
   },
   {
     "package": "image/gif",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: runtime.MemStats",
-    "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
+    "status": "vm-suite"
   },
   {
     "package": "image/internal/imageutil",
@@ -1078,10 +1072,7 @@
   },
   {
     "package": "net/textproto",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: runtime.MemStats",
-    "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
+    "status": "vm-suite"
   },
   {
     "package": "net/url",

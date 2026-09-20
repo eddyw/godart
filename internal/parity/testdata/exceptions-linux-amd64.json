@@ -13307,5 +13307,13 @@
       "reason": "The original upstream test skips HTTP/2 for Go issue 56019.",
       "test": "TestIdentityResponse/h2"
     }
+  ],
+  "net/textproto": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
+      "test": "TestCommonHeaders"
+    }
   ]
 }
