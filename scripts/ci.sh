@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-suite=${1:?usage: scripts/ci.sh checks|driver|applications|integration|targets|upstream-targets|upstream-priority|upstream-blockers|web-io|web-fetch|programs|language|language-targets|stdlib [shard-index] [shard-count]}
+suite=${1:?usage: scripts/ci.sh checks|driver|applications|integration|targets|fuzz-replay|upstream-targets|upstream-priority|upstream-blockers|web-io|web-fetch|programs|language|language-targets|stdlib [shard-index] [shard-count]}
 shard_index=${2:-0}
 shard_count=${3:-1}
 test_timeout=${GART_TEST_TIMEOUT:-30m}
@@ -21,7 +21,7 @@ finish() {
 }
 trap finish EXIT
 
-if [[ $suite == driver || $suite == stdlib || $suite == upstream-targets || $suite == upstream-priority ]]; then
+if [[ $suite == fuzz-replay || $suite == driver || $suite == stdlib || $suite == upstream-targets || $suite == upstream-priority ]]; then
   if [[ ${GART_UPSTREAM_MODE:-short} == short ]]; then
     short_flag=-short=true
   elif [[ ${GART_UPSTREAM_MODE} != full ]]; then
@@ -30,7 +30,7 @@ if [[ $suite == driver || $suite == stdlib || $suite == upstream-targets || $sui
   fi
 fi
 
-large_tests='TestPrograms|TestLanguageTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
+large_tests='TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
 case "$suite" in
   checks)
     python3 -B -m unittest discover -s scripts -p test_ci_local.py
@@ -53,6 +53,7 @@ case "$suite" in
     ;;
   targets) test_name='TestAOT|TestWasm|TestJS' ;;
   language-targets) test_name=TestLanguageTargets ;;
+  fuzz-replay) test_name=TestUpstreamFuzzReplay ;;
   upstream-targets) test_name=TestUpstreamTargets ;;
   upstream-blockers) test_name=TestUpstreamCompileBlockers ;;
   upstream-priority)

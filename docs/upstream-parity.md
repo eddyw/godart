@@ -67,6 +67,24 @@ Its module lookup uses the SDK compiler identity because `go list` does not acce
 The ELF and Go symbol adapters supply a native SDK test executable as `os.Args[0]`.
 Reports retain its build command and SHA-256. Original platform and absent-section skips remain explicit.
 
+### Fuzz corpus replay
+
+The `fuzz-replay` suite uses unchanged upstream CSV, string replacement, and PEM fuzz assertions.
+Native Go generates inputs in an isolated module and a fresh fuzz cache.
+Both native Go and Gart then replay the same retained corpus.
+Short mode requests 1,000 native fuzz executions per target. Full mode requests 10,000.
+The native fuzzer retains coverage-relevant inputs, not all generated inputs.
+Thus this comparison covers the retained corpus, not all native fuzz executions.
+
+```sh
+python3 scripts/ci-local.py --platform linux --suite fuzz-replay --output build/fuzz-replay
+python3 scripts/parity.py report --reports build/fuzz-replay --output build/fuzz-report
+```
+
+Each attempt retains the source wrapper, upstream license, corpus bytes, SHA-256 values, commands, SDK versions, and process results.
+The report rejects a pass with missing inputs, changed files, unmatched test identities, or failed processes.
+Keep a failed attempt intact. Reduce a failing corpus input before a permanent regression addition.
+
 The inventory gate rejects changes to upstream source, fixtures, build tags, and test patches.
 Each SDK version has a separate inventory. A candidate inventory records reviewed
 inputs without promotion of the release baseline. Exact `_go.mod` duplicates

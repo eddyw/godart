@@ -263,6 +263,15 @@
       "job_timeout": 16,
       "full_timeout": 30,
       "full_job_timeout": 35
+    },
+    {
+      "suite": "fuzz-replay",
+      "shard": 0,
+      "shards": 1,
+      "timeout": 2,
+      "job_timeout": 7,
+      "full_timeout": 2,
+      "full_job_timeout": 7
     }
   ]
 }

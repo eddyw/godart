@@ -240,6 +240,47 @@ def language_assessment(data):
             "actions": dict(Counter(case["action"] for case in cases))}
 
 
+def fuzz_behavior(paths):
+    runs = []
+    for directory in paths:
+        for path in sorted(directory.rglob("fuzz.json")):
+            report = read(path)
+            if not isinstance(report, dict) or report.get("kind") != "fuzz-replay":
+                continue
+            problems = []
+            status = report.get("status", "incomplete")
+            if status == "passed":
+                if not all(report.get(key) for key in ("package", "function", "go_version", "dart_version",
+                                                       "goos", "goarch", "source_sha256", "fixture_sha256")):
+                    problems.append("missing source or SDK identity")
+                native = report.get("native", {})
+                gart = report.get("gart", {})
+                comparison = report.get("comparison", {})
+                outcomes = native.get("outcomes", {})
+                if (report.get("generation", {}).get("exit") != 0 or native.get("exit") != 0
+                        or gart.get("exit") != 0):
+                    problems.append("a process failed or lacks an exit result")
+                if (len(outcomes) < 2 or any(value != "pass" for value in outcomes.values())
+                        or outcomes != gart.get("outcomes")
+                        or set(outcomes) != set(comparison.get("passed") or [])
+                        or comparison.get("problems") or comparison.get("excluded") or comparison.get("partial")):
+                    problems.append("replay lacks matching successful input identities")
+                fixture_root = (path.parent / "fixture").resolve()
+                files = report.get("fixtures") or []
+                if not files:
+                    problems.append("no retained fixture identities")
+                for item in files:
+                    fixture = (fixture_root / item["path"]).resolve()
+                    if (not fixture.is_relative_to(fixture_root) or not fixture.is_file()
+                            or digest(fixture) != item["sha256"]):
+                        problems.append("missing or changed fixture: " + item["path"])
+                if problems:
+                    status = "failed"
+            runs.append({"path": str(path), "sha256": digest(path), "provenance": provenance(path), **report,
+                         "status": status, "evidence_problems": problems})
+    return runs
+
+
 def report(args):
     args.output.mkdir(parents=True, exist_ok=False)
     api = args.api
@@ -282,7 +323,8 @@ def report(args):
         "coverage": {"packages": len(coverage), "counts": dict(Counter(x["status"] for x in coverage)), "entries": coverage},
         "scope": scope_assessment(data, MANIFESTS / "scope-assessment.json"),
         "omissions": {"counts": dict(Counter(x["classification"] for x in omissions)), "entries": omissions},
-        "behavior": behavior(args.reports), "language_behavior": language_behavior(args.reports), "applications": applications,
+        "behavior": behavior(args.reports), "language_behavior": language_behavior(args.reports),
+        "fuzz_replay": fuzz_behavior(args.reports), "applications": applications,
     }
     save(args.output / "report.json", result)
     lines = ["# Go parity report", "", "This report does not claim a percentage of whole-Go parity.", "",
@@ -292,6 +334,9 @@ def report(args):
              "Package classifications: " + json.dumps(result["coverage"]["counts"], sort_keys=True), ""]
     lines.extend(["Language recipes: " + json.dumps(result["language"]["counts"], sort_keys=True), ""])
     lines.extend(["Omitted assertions: " + json.dumps(result["omissions"]["counts"], sort_keys=True), ""])
+    for replay in result["fuzz_replay"]:
+        lines.append(f"Fuzz replay {replay['package']}/{replay['function']}: {replay['status']}. "
+                     f"Retained new inputs: {replay.get('generated_corpus', 'unobserved')}.")
     for group in result["behavior"]:
         c = group["configuration"]
         lines.extend([f"## {c['go_version']} {c['goos']}/{c['goarch']} {c['target']} short={c['short']}", "",

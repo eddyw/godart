@@ -10,6 +10,37 @@ spec.loader.exec_module(parity)
 
 
 class ParityTest(unittest.TestCase):
+    def test_fuzz_replay_requires_success_and_retained_inputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = root / "fixture" / "input"
+            fixture.parent.mkdir()
+            fixture.write_text("upstream assertion and input")
+            outcomes = {"FuzzExample": "pass", "FuzzExample/input": "pass"}
+            process = dict(exit=0, outcomes=outcomes)
+            report = dict(kind="fuzz-replay", status="passed", generation=dict(exit=0),
+                          package="p", function="FuzzExample", go_version="go1", dart_version="dart1",
+                          goos="linux", goarch="amd64", source_sha256="source", fixture_sha256="fixture",
+                          native=process, gart=dict(process), comparison=dict(passed=list(outcomes)),
+                          fixtures=[dict(path="input", sha256=parity.digest(fixture))])
+            path = root / "fuzz.json"
+            parity.save(path, report)
+            self.assertEqual(parity.fuzz_behavior([root])[0]["status"], "passed")
+            report["gart"] = dict(exit=0, outcomes={"FuzzExample": "pass"})
+            parity.save(path, report)
+            self.assertEqual(parity.fuzz_behavior([root])[0]["status"], "failed")
+            report["gart"] = process
+            report["generation"]["exit"] = 1
+            parity.save(path, report)
+            self.assertEqual(parity.fuzz_behavior([root])[0]["status"], "failed")
+            report["generation"]["exit"] = 0
+            parity.save(path, report)
+            fixture.write_text("changed")
+            self.assertEqual(parity.fuzz_behavior([root])[0]["status"], "failed")
+            report["status"] = "incomplete"
+            parity.save(path, report)
+            self.assertEqual(parity.fuzz_behavior([root])[0]["status"], "incomplete")
+
     def test_application_shards_preserve_the_complete_corpus(self):
         cases = [dict(name=name) for name in ["c", "a", "b", "d", "e"]]
         for count in [1, 3, 8]:
