@@ -1,8 +1,10 @@
 package driver_test
 
 import (
+	"crypto/sha256"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -11,6 +13,88 @@ import (
 	"github.com/eddyw/godart/internal/driver"
 	"golang.org/x/tools/txtar"
 )
+
+func TestGODEBUGUpstreamDirectiveErrors(t *testing.T) {
+	for _, name := range []string{"godebug_unknown.txt", "godebug_default.txt", "godebug_removed.txt", "build_repeated_godebug_issue62346.txt"} {
+		t.Run(name, func(t *testing.T) {
+			source, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "src/cmd/go/testdata/script", name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			archive := txtar.Parse(source)
+			t.Logf("upstream=%s Go=%s SHA256=%x", name, runtime.Version(), sha256.Sum256(source))
+			dir := t.TempDir()
+			for _, file := range archive.Files {
+				if !filepath.IsLocal(file.Name) {
+					t.Fatalf("nonlocal upstream fixture: %s", file.Name)
+				}
+				path := filepath.Join(dir, file.Name)
+				if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+					t.Fatal(err)
+				}
+				writeFile(t, path, string(file.Data))
+			}
+			license, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "LICENSE"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
+			var tags []string
+			patterns := []string{"."}
+			if name == "build_repeated_godebug_issue62346.txt" {
+				patterns = []string{"file.go"}
+			}
+			if name == "godebug_default.txt" || name == "godebug_removed.txt" {
+				module := "go.mod.20"
+				if name == "godebug_default.txt" {
+					module = "go.mod.21"
+					tags = []string{"godebugbad"}
+				} else {
+					patterns = []string{"godebugold.go"}
+				}
+				data, err := os.ReadFile(filepath.Join(dir, module))
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeFile(t, filepath.Join(dir, "go.mod"), string(data))
+			}
+			var assertion string
+			for _, line := range strings.Split(string(archive.Comment), "\n") {
+				if strings.HasPrefix(line, "stderr '") && (strings.Contains(line, "//go:debug") || strings.Contains(line, "removed GODEBUG")) {
+					assertion = strings.TrimSuffix(strings.TrimPrefix(line, "stderr '"), "'")
+					break
+				}
+			}
+			if assertion == "" {
+				t.Fatal("missing original diagnostic assertion")
+			}
+			want := regexp.MustCompile(assertion)
+			args := []string{"build", "-o", filepath.Join(t.TempDir(), "native")}
+			if len(tags) != 0 {
+				args = append(args, "-tags="+strings.Join(tags, ","))
+			}
+			native := programOutcome(t, dir, "go", append(args, patterns...)...)
+			if native.Exit == 0 || !want.MatchString(native.Text) {
+				t.Fatalf("native result does not satisfy original assertion %q: %+v", assertion, native)
+			}
+			err = driver.Build(driver.Options{Dir: dir, Patterns: patterns, Out: t.TempDir(), Runtime: runtimeDir(t), BuildTags: tags})
+			if err == nil || !want.MatchString(err.Error()) {
+				t.Fatalf("Gart result does not satisfy original assertion %q: %v", assertion, err)
+			}
+			if name == "build_repeated_godebug_issue62346.txt" {
+				for _, line := range strings.Split(string(archive.Comment), "\n") {
+					if strings.HasPrefix(line, "! stderr '") {
+						pattern := strings.TrimSuffix(strings.TrimPrefix(line, "! stderr '"), "'")
+						if forbidden := regexp.MustCompile(pattern); forbidden.MatchString(native.Text) || forbidden.MatchString(err.Error()) {
+							t.Fatalf("a compiler violates original negative assertion %q", pattern)
+						}
+					}
+				}
+			}
+			t.Logf("both compilers satisfy %q", assertion)
+		})
+	}
+}
 
 func TestUnsupportedFIPSMode(t *testing.T) {
 	dir := t.TempDir()
