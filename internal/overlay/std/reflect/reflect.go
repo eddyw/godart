@@ -884,6 +884,7 @@ func (v Value) typeAt(got any) Type {
 // Elem of an interface value gives the value inside it, with the type of that
 // value. Go gives no location there, thus Set of the result reports an error.
 func (v Value) Elem() Value {
+	v.mustBe("Elem", Interface, Pointer)
 	p := v.read()
 	kind := v.kindAt(p)
 	if kind == Interface {
@@ -908,6 +909,7 @@ func (v Value) Elem() Value {
 
 // Len gives the length of a slice, an array, a string, or a map.
 func (v Value) Len() int {
+	v.mustBe("Len", Array, Chan, Map, Slice, String, Pointer)
 	if v.Kind() == Pointer {
 		if v.Type().Elem().Kind() != Array {
 			panic("reflect: call of reflect.Value.Len on ptr to non-array Value")
@@ -920,6 +922,7 @@ func (v Value) Len() int {
 // Index gives 1 element of a slice, an array, or a string.
 // Elements of slices and addressable arrays retain their location.
 func (v Value) Index(i int) Value {
+	v.mustBe("Index", Array, Slice, String)
 	owner := v.read()
 	out := Value{value: dart.ValueIndex(owner, i), ro: v.ro, ok: true}
 	if v.kindAt(owner) != String {
@@ -932,10 +935,14 @@ func (v Value) Index(i int) Value {
 }
 
 // NumField gives the count of the fields of a struct value.
-func (v Value) NumField() int { return v.Type().NumField() }
+func (v Value) NumField() int {
+	v.mustBe("NumField", Struct)
+	return v.Type().NumField()
+}
 
 // Field gives 1 field of a struct value. It retains the addressability of v.
 func (v Value) Field(i int) Value {
+	v.mustBe("Field", Struct)
 	owner := v.read()
 	f := v.typeAt(owner).Field(i)
 	// Only the sticky mark reaches a field. Thus a field of a struct that an
@@ -982,6 +989,16 @@ func (v Value) write(value any) {
 	}
 }
 
+func (v Value) mustBe(method string, kinds ...Kind) {
+	got := v.Kind()
+	for _, kind := range kinds {
+		if got == kind {
+			return
+		}
+	}
+	panic(&ValueError{Method: "reflect.Value." + method, Kind: got})
+}
+
 func (v Value) mustBeAssignable(method string) {
 	if !v.IsValid() {
 		panic(&ValueError{Method: method, Kind: Invalid})
@@ -995,16 +1012,28 @@ func (v Value) mustBeAssignable(method string) {
 }
 
 // Int gives the value of a signed integer kind.
-func (v Value) Int() int64 { return dart.AsInt(v.read()) }
+func (v Value) Int() int64 {
+	v.mustBe("Int", Int, Int8, Int16, Int32, Int64)
+	return dart.AsInt(v.read())
+}
 
 // Uint gives the value of an unsigned integer kind.
-func (v Value) Uint() uint64 { return uint64(dart.AsInt(v.read())) }
+func (v Value) Uint() uint64 {
+	v.mustBe("Uint", Uint, Uint8, Uint16, Uint32, Uint64, Uintptr)
+	return uint64(dart.AsInt(v.read()))
+}
 
 // Float gives the value of a float kind.
-func (v Value) Float() float64 { return dart.AsFloat(v.read()) }
+func (v Value) Float() float64 {
+	v.mustBe("Float", Float32, Float64)
+	return dart.AsFloat(v.read())
+}
 
 // Bool gives the value of the kind bool.
-func (v Value) Bool() bool { return dart.AsBool(v.read()) }
+func (v Value) Bool() bool {
+	v.mustBe("Bool", Bool)
+	return dart.AsBool(v.read())
+}
 
 // String gives the text of a value of the kind string. Each other kind gives a
 // description of the value, exactly as in Go.
@@ -1020,16 +1049,25 @@ func (v Value) String() string {
 }
 
 // NumMethod gives the method count. Interface values include unexported methods.
-func (v Value) NumMethod() int { return v.Type().NumMethod() }
+func (v Value) NumMethod() int {
+	if !v.IsValid() {
+		panic(&ValueError{Method: "reflect.Value.NumMethod", Kind: Invalid})
+	}
+	return v.Type().NumMethod()
+}
 
 // Method binds method i from the static type of v.
 func (v Value) Method(i int) Value {
+	if !v.IsValid() {
+		panic(&ValueError{Method: "reflect.Value.Method", Kind: Invalid})
+	}
 	return Value{value: dart.MethodValue(v.read(), v.Type().handle(), i), ro: v.ro, ok: true}
 }
 
 // Call runs the function that v holds and gives each result.
 // The scheduler retains the call while its function waits.
 func (v Value) Call(in []Value) []Value {
+	v.mustBe("Call", Func)
 	args := make([]any, len(in))
 	for i, a := range in {
 		args[i] = a.read()
@@ -1085,11 +1123,12 @@ func (v Value) IsNil() bool {
 		}
 		return dart.ValueIsNil(got)
 	}
-	panic("reflect: IsNil of " + kind.String())
+	panic(&ValueError{Method: "reflect.Value.IsNil", Kind: kind})
 }
 
 // MapKeys gives the keys of a map value. The order follows the insertion.
 func (v Value) MapKeys() []Value {
+	v.mustBe("MapKeys", Map)
 	raw := dart.MapKeys(v.read())
 	out := make([]Value, len(raw))
 	for i, k := range raw {
@@ -1104,6 +1143,7 @@ func (v Value) MapKeys() []Value {
 // An entry that holds a nil interface reads as nil, exactly as a key that the
 // map does not hold. The test of the key thus stands in front of the read.
 func (v Value) MapIndex(key Value) Value {
+	v.mustBe("MapIndex", Map)
 	m := v.read()
 	k := key.read()
 	if !dart.MapHas(m, k) {
@@ -1116,19 +1156,39 @@ func (v Value) MapIndex(key Value) Value {
 func (v Value) SetZero() { v.Set(Zero(v.Type())) }
 
 // SetInt writes a whole number into the location that v names.
-func (v Value) SetInt(x int64) { v.Set(Value{value: dart.WithInt(v.descOf(), x), ok: true}) }
+func (v Value) SetInt(x int64) {
+	v.mustBeAssignable("reflect.Value.SetInt")
+	v.mustBe("SetInt", Int, Int8, Int16, Int32, Int64)
+	v.write(dart.WithInt(v.descOf(), x))
+}
 
 // SetUint writes a whole number into the location that v names.
-func (v Value) SetUint(x uint64) { v.Set(Value{value: dart.WithInt(v.descOf(), int64(x)), ok: true}) }
+func (v Value) SetUint(x uint64) {
+	v.mustBeAssignable("reflect.Value.SetUint")
+	v.mustBe("SetUint", Uint, Uint8, Uint16, Uint32, Uint64, Uintptr)
+	v.write(dart.WithInt(v.descOf(), int64(x)))
+}
 
 // SetFloat writes a float into the location that v names.
-func (v Value) SetFloat(x float64) { v.Set(Value{value: dart.WithFloat(v.descOf(), x), ok: true}) }
+func (v Value) SetFloat(x float64) {
+	v.mustBeAssignable("reflect.Value.SetFloat")
+	v.mustBe("SetFloat", Float32, Float64)
+	v.write(dart.WithFloat(v.descOf(), x))
+}
 
 // SetBool writes a flag into the location that v names.
-func (v Value) SetBool(x bool) { v.Set(Value{value: dart.WithBool(v.descOf(), x), ok: true}) }
+func (v Value) SetBool(x bool) {
+	v.mustBeAssignable("reflect.Value.SetBool")
+	v.mustBe("SetBool", Bool)
+	v.write(dart.WithBool(v.descOf(), x))
+}
 
 // SetString writes text into the location that v names.
-func (v Value) SetString(x string) { v.Set(Value{value: dart.WithString(v.descOf(), x), ok: true}) }
+func (v Value) SetString(x string) {
+	v.mustBeAssignable("reflect.Value.SetString")
+	v.mustBe("SetString", String)
+	v.write(dart.WithString(v.descOf(), x))
+}
 
 func (v Value) descOf() int { return dart.DescOf(v.read()) }
 
@@ -1493,7 +1553,7 @@ func (v Value) CanAddr() bool { return v.loc != locNone }
 // Addr gives a pointer to the value. The value must hold a location.
 func (v Value) Addr() Value {
 	if v.loc == locNone {
-		panic("reflect: Addr of a value that holds no address")
+		panic("reflect.Value.Addr of unaddressable value")
 	}
 	return Value{value: dart.ValueAddr(v.read(), v.owner, v.index, v.loc), ro: v.ro, ok: true}
 }
@@ -1575,6 +1635,7 @@ func (v Value) CanConvert(t Type) bool {
 
 // Slice gives the slice v[i:j].
 func (v Value) Slice(i, j int) Value {
+	v.mustBe("Slice", Array, Slice, String)
 	max := v.Cap()
 	if v.Kind() == String {
 		max = v.Len()
@@ -1584,15 +1645,21 @@ func (v Value) Slice(i, j int) Value {
 
 // Slice3 gives the slice v[i:j:k].
 func (v Value) Slice3(i, j, k int) Value {
+	v.mustBe("Slice3", Array, Slice)
 	return Value{value: dart.ValueSlice(v.read(), i, j, k), ok: true}
 }
 
 // Complex gives the complex value.
-func (v Value) Complex() complex128 { return dart.AsComplex(v.read()) }
+func (v Value) Complex() complex128 {
+	v.mustBe("Complex", Complex64, Complex128)
+	return dart.AsComplex(v.read())
+}
 
 // SetComplex writes a complex value through the location.
 func (v Value) SetComplex(x complex128) {
-	v.Set(Value{value: dart.WithComplex(v.descOf(), x), ok: true})
+	v.mustBeAssignable("reflect.Value.SetComplex")
+	v.mustBe("SetComplex", Complex64, Complex128)
+	v.write(dart.WithComplex(v.descOf(), x))
 }
 
 // Pointer gives a number that names the object of the value.
@@ -1766,6 +1833,7 @@ func (f StructField) IsExported() bool { return f.PkgPath == "" }
 
 // Recv reads 1 value of a channel. The flag is false when the channel closed.
 func (v Value) Recv() (Value, bool) {
+	v.mustBe("Recv", Chan)
 	out, ok := dart.ValueRecv(v.read())
 	return Value{value: out, ok: true}, ok
 }
@@ -1848,7 +1916,7 @@ func (v Value) Bytes() []byte {
 		// list, and the slice of that list holds the same list.
 		return v.Slice(0, v.Len()).Bytes()
 	}
-	panic("reflect.Value.Bytes of " + v.Type().String())
+	panic(&ValueError{Method: "reflect.Value.Bytes", Kind: v.Kind()})
 }
 
 // SetBytes writes a byte slice into the location that v names.
@@ -1863,9 +1931,8 @@ func (v Value) SetBytes(x []byte) {
 // SetLen writes the length of the slice that v names. The capacity holds, and
 // the elements between the 2 lengths keep their values.
 func (v Value) SetLen(n int) {
-	if v.Kind() != Slice {
-		panic("reflect: SetLen of " + v.Type().String())
-	}
+	v.mustBeAssignable("reflect.Value.SetLen")
+	v.mustBe("SetLen", Slice)
 	if n < 0 || n > v.Cap() {
 		panic("reflect: SetLen: slice length out of range")
 	}
