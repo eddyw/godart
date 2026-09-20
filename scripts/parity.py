@@ -172,6 +172,60 @@ def scope_assessment(api, path):
             "counts": dict(Counter(entry["review_status"] for entry in packages)), "packages": packages}
 
 
+def language_behavior(paths):
+    groups = {}
+    seen = set()
+    for directory in paths:
+        for path in sorted(directory.rglob("*.json")):
+            if "work" in path.relative_to(directory).parts:
+                continue
+            report = read(path)
+            if not isinstance(report, dict) or report.get("kind") != "language":
+                continue
+            stamp = digest(path)
+            if stamp in seen:
+                continue
+            seen.add(stamp)
+            config = {key: report.get(key) for key in (
+                "go_version", "dart_version", "node_version", "goos", "goarch", "target", "source_sha256", "tool_tags", "cgo", "environment")}
+            config.update(provenance(path))
+            group = groups.setdefault(json.dumps(config, sort_keys=True),
+                                      dict(configuration=config, reports=[], outcomes={}, problems=[]))
+            local = set()
+            for case in report["outcomes"]:
+                name = case["fixture"]["name"]
+                if name in local:
+                    group["problems"].append(f"{path}: duplicate fixture {name}")
+                    status = "failed"
+                else:
+                    status = case["status"] if report["complete"] else "unobserved"
+                local.add(name)
+                if status == "passed":
+                    expected = case.get("expected_sha256")
+                    valid = expected and all(case[k]["ran"] and case[k]["exit"] == 0 and not case[k]["timed_out"]
+                                             and case[k]["output_sha256"] == expected for k in ("native", "gart"))
+                    if not valid:
+                        status = "failed"
+                        group["problems"].append(f"{path}: invalid pass for {name}")
+                record = group["outcomes"].setdefault(name, dict(name=name, fixture=case["fixture"], statuses=set()))
+                record["statuses"].add(status)
+            group["reports"].append(dict(path=str(path), sha256=stamp, complete=report["complete"],
+                                         shard=report["shard"], shards=report["shards"]))
+    result = []
+    for group in groups.values():
+        records = []
+        for name, record in sorted(group["outcomes"].items()):
+            statuses = record.pop("statuses")
+            if len(statuses) > 1:
+                statuses.discard("unobserved")
+            record["status"] = next(iter(statuses)) if len(statuses) == 1 else "conflicting"
+            records.append(record)
+        group["outcomes"] = records
+        group["counts"] = dict(Counter(x["status"] for x in records))
+        result.append(group)
+    return result
+
+
 def language_assessment(data):
     cases = data["cases"]
     def status(case):
@@ -228,7 +282,7 @@ def report(args):
         "coverage": {"packages": len(coverage), "counts": dict(Counter(x["status"] for x in coverage)), "entries": coverage},
         "scope": scope_assessment(data, MANIFESTS / "scope-assessment.json"),
         "omissions": {"counts": dict(Counter(x["classification"] for x in omissions)), "entries": omissions},
-        "behavior": behavior(args.reports), "applications": applications,
+        "behavior": behavior(args.reports), "language_behavior": language_behavior(args.reports), "applications": applications,
     }
     save(args.output / "report.json", result)
     lines = ["# Go parity report", "", "This report does not claim a percentage of whole-Go parity.", "",
@@ -246,6 +300,11 @@ def report(args):
                       "Subtest outcomes: " + json.dumps(group["subtests"], sort_keys=True),
                       "Unobserved inventory: " + json.dumps(group.get("unobserved_counts", {}), sort_keys=True),
                       f"SDK inventory: {group['inventory_status']}. Problems: {len(group['problems'])}", ""])
+    for group in result["language_behavior"]:
+        c = group["configuration"]
+        lines.extend([f"Language execution {c['go_version']} {c['goos']}/{c['goarch']} {c['target']}: "
+                      + json.dumps(group["counts"], sort_keys=True),
+                      f"Language evidence problems: {len(group['problems'])}", ""])
     for app in applications:
         lines.append(f"Application {app['project']['directory']}: {app['mode']} = {app['status']}")
     (args.output / "report.md").write_text("\n".join(lines) + "\n")

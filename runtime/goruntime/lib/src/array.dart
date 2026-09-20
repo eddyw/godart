@@ -3,15 +3,18 @@ import 'dart:collection';
 import 'panic.dart';
 import 'slice.dart';
 
+final List<Never> _zeroArray = List<Never>.empty(growable: false);
+
 /// A Go array is a fixed length list with value semantics. The compiler emits
 /// a plain Dart list, and it inserts a copy at each copy point.
 List<T> $makeArray<T>(int n, T Function() zero) =>
-    List<T>.generate(n, (_) => zero(), growable: false);
+    n == 0 ? _zeroArray : List<T>.generate(n, (_) => zero(), growable: false);
 
 /// Builds an array of the first n elements of a slice. Go panics when the
 /// slice holds fewer than n elements.
 List<T> $sliceToArray<T>(Slice<T> s, int n) {
   if (s.len < n) $panicConvert(s.len, n);
+  if (n == 0) return _zeroArray;
   return List<T>.generate(n, (i) => s[i], growable: false);
 }
 
@@ -58,6 +61,7 @@ final class $ArrayView<T> extends ListBase<T> {
 /// Copies an array. The element copy function is not null for a struct
 /// element and for an array element.
 List<T> $copyArray<T>(List<T> a, [T Function(T)? copy]) {
+  if (a.isEmpty) return _zeroArray;
   if (copy == null) return List<T>.of(a, growable: false);
   return List<T>.generate(a.length, (i) => copy(a[i]), growable: false);
 }

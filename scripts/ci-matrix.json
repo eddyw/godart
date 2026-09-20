@@ -120,6 +120,34 @@
       "job_timeout": 25
     },
     {
+      "suite": "language-targets",
+      "shard": 0,
+      "shards": 4,
+      "timeout": 4,
+      "job_timeout": 9
+    },
+    {
+      "suite": "language-targets",
+      "shard": 1,
+      "shards": 4,
+      "timeout": 12,
+      "job_timeout": 17
+    },
+    {
+      "suite": "language-targets",
+      "shard": 2,
+      "shards": 4,
+      "timeout": 5,
+      "job_timeout": 10
+    },
+    {
+      "suite": "language-targets",
+      "shard": 3,
+      "shards": 4,
+      "timeout": 2,
+      "job_timeout": 7
+    },
+    {
       "suite": "upstream-targets",
       "shard": 0,
       "shards": 3,

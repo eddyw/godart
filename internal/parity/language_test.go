@@ -44,7 +44,7 @@ func TestLanguageInventory(t *testing.T) {
 	if c := cases["suffix_windows"]; !c.NativeEligible || c.GartEligible {
 		t.Fatalf("runner suffix rules lost: %+v", c)
 	}
-	if c := cases["constraints"]; c.NativeEligible || !c.GartEligible || c.Adapter != "missing" {
+	if c := cases["constraints"]; c.NativeEligible || !c.GartEligible || c.Adapter != "single-file" {
 		t.Fatalf("constraint distinction lost: %+v", c)
 	}
 	if c := cases["other/directory"]; c.Action != "rundir" || c.Recipe != "rundir -G=3" || len(c.Files) != 2 || c.Adapter != "missing" {
@@ -86,6 +86,17 @@ func TestLanguagePolicy(t *testing.T) {
 	for _, c := range inv.Cases {
 		cases[c.Name] = c
 	}
+	var targets []string
+	readManifest(t, "language-targets.json", &targets)
+	seen := map[string]bool{}
+	for _, name := range targets {
+		fixture, ok := cases[name]
+		if !ok || seen[name] || fixture.Adapter != "single-file" || fixture.Exclusion != nil || fixture.Rejection != nil {
+			t.Errorf("invalid target fixture: %s", name)
+		}
+		seen[name] = true
+	}
+
 	for name, skip := range policy.Skips {
 		if cases[name].Adapter != "single-file" || skip.Reason == "" {
 			t.Errorf("invalid language omission: %s", name)

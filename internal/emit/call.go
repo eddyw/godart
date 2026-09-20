@@ -1011,6 +1011,7 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	// adapter of a method table does.
 	recv := names[0]
 	current := x.Recv
+	var receiver ir.Expr = &ir.Ident{Name: recv, Type: current}
 	if pkg := x.Obj.Pkg(); pkg != nil {
 		_, index, _ := types.LookupFieldOrMethod(x.Recv, true, pkg, x.Obj.Name())
 		if len(index) > 1 {
@@ -1019,11 +1020,9 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 				if st == nil {
 					break
 				}
-				if isPointerType(current) {
-					recv += "!"
-				}
 				field := st.Field(fi)
-				recv += "." + fieldDartName(current, field.Name())
+				receiver = &ir.Field{X: receiver, Name: field.Name(), Type: field.Type()}
+				recv = e.expr(receiver)
 				current = field.Type()
 			}
 		}
@@ -1041,6 +1040,9 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 		// The body stands in a top level function. A value method through a
 		// pointer receiver argument reads the value behind the pointer.
 		arg0 := recv
+		if pointerMethod(x.Obj) && !isPointerType(current) && needsBox(current) {
+			arg0 = e.addressExpr(receiver)
+		}
 		if !pointerMethod(x.Obj) && isPointerType(current) {
 			if p, ok := typeset.Core(current).(*types.Pointer); ok && needsBox(p.Elem()) {
 				arg0 += "!.v"
@@ -1531,15 +1533,17 @@ func (e *emitter) textList(args []ir.Expr) []string {
 func (e *emitter) textOf(x ir.Expr) string {
 	t := x.GoType()
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
-		if set, ok := typeset.Describe(tp); ok && set.Numeric {
-			return fmt.Sprintf("$numericText(%s, %s.desc)", e.expr(x), e.dictOf(tp))
-		}
+		return fmt.Sprintf("$genericPrintText(%s, %s.desc)", e.expr(x), e.dictOf(tp))
 	}
 	switch {
 	case isString(t):
 		return e.expr(x) + ".toDartString()"
-	case isFloat(t):
-		return fmt.Sprintf("$fstring(%s)", e.expr(x))
+	case isFloat(t), isComplexType(t):
+		return fmt.Sprintf("$goFormat(%s, GoString.ascii('g')).toDartString()", e.box(x, t))
+	case isPointerType(t), isMapType(t), isChanType(t), isSliceType(t), signatureOf(t) != nil:
+		return fmt.Sprintf("$referenceText(%s)", e.box(x, t))
+	case isInterfaceType(t):
+		return fmt.Sprintf("$interfaceText(%s)", e.expr(x))
 	case isUnsigned64(t):
 		return fmt.Sprintf("$ustring(%s)", e.expr(x))
 	case isInteger(t):

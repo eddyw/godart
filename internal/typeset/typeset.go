@@ -187,6 +187,10 @@ func HoldsParam(t types.Type) bool {
 			for i := 0; i < t.NumFields(); i++ {
 				walk(t.Field(i).Type())
 			}
+		case *types.Interface:
+			for i := 0; i < t.NumMethods(); i++ {
+				walk(t.Method(i).Type())
+			}
 		case *types.Signature:
 			for i := 0; i < t.Params().Len(); i++ {
 				walk(t.Params().At(i).Type())

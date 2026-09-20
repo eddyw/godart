@@ -119,7 +119,7 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				return nil, fmt.Errorf("%s: %w", file, err)
 			}
 			c := LanguageCase{Name: strings.TrimSuffix(file, ".go"), File: file, Recipe: recipe, Action: fields[0], NativeEligible: native, GartEligible: eligible, Adapter: "missing", Files: []SourceFile{{Path: file, SHA256: digest(data)}}}
-			if slices.Contains([]string{".", "fixedbugs", "typeparam"}, dir) && strings.HasPrefix(string(data), "// run\n") {
+			if recipe == "run" {
 				c.Adapter = "single-file"
 			}
 			for _, suffix := range []string{".dir", ".out"} {

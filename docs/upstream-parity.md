@@ -22,6 +22,7 @@ The platform manifests cover Darwin/ARM64 and Linux/AMD64.
 | `exceptions-*.json` | Exact native/Gart outcomes per platform and short/full mode, with an explicit reason |
 | `external-fixtures.json` | Original external module versions and Go module checksums |
 | `omitted-tests.json` | Omitted assertions with an explicit classification and reason |
+| `language-targets.json` | Original language fixtures required on VM, AOT, JavaScript, and Wasm |
 | `language-sources.json` | Reviewed recipe and companion-source fingerprints per Go SDK |
 | `language-skips.json`, `language-rejections.json` | Shared language fixture exclusions and exact compile diagnostics |
 | `scope-assessment.json` | Source review of absent packages, target boundaries, and next implementation steps |
@@ -142,6 +143,15 @@ The language runner and report use the same fixture selection and policy manifes
 Use `go run ./internal/cmd/parity -action language` for the standalone inventory.
 Use `--language /path/to/inventory.json` to include a retained inventory.
 
+The language adapter runs plain `run` recipes from all upstream recipe directories.
+Both executions must exit successfully and match the original `.out` bytes.
+An absent `.out` requires empty output. Only CRLF normalization follows the upstream runner.
+With `GART_PARITY_REPORT_DIR`, language reports retain command arguments, exits,
+output hashes, source hashes, exclusions, SDK versions, targets, and incomplete selections.
+The aggregate refuses a pass if an output hash differs or either execution fails.
+The `language-targets` suite executes the selected original fixtures on all 4 Dart targets.
+Its 4 shards keep these comparisons separate from the existing target fixtures.
+
 Add `--applications build/app-results` to include application records in a report.
 Repeat `--reports` for separate evidence directories. The report never blends incompatible configurations or compiler snapshots.
 Reports without compiler provenance remain explicitly unattributed. Existing reports do not establish parity for the current checkout.
@@ -155,7 +165,7 @@ The report retains absent standard packages as unassessed. It does not infer tha
 Blocked suites retain their unobserved test inventory. Individual portable tests can still need adapters.
 No report claims a percentage of all reachable Go parity before that scope receives review.
 
-Set `GART_PARITY_REPORT_DIR` to retain the structured comparison and both raw outputs.
+Set `GART_PARITY_REPORT_DIR` to retain standard library comparisons and both raw outputs.
 Each report records source and fixture hashes, toolchain versions, target, platform, build tags, filters, short/full mode, timeout, exclusions, and process exits.
 
 ```sh

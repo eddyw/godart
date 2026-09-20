@@ -130,7 +130,7 @@ type builder struct {
 // comes from the file and the position, thus 2 packages give no collision and
 // the name never depends on a counter.
 func (b *builder) frameClass(pos token.Pos) string {
-	p := b.fset.Position(pos)
+	p := b.fset.PositionFor(pos, false)
 	var out []byte
 	out = append(out, '_')
 	for _, r := range filepath.Base(p.Filename) {
@@ -145,7 +145,7 @@ func (b *builder) frameClass(pos token.Pos) string {
 
 // litName builds the name of the local function of a literal that can block.
 func (b *builder) litName(pos token.Pos) string {
-	p := b.fset.Position(pos)
+	p := b.fset.PositionFor(pos, false)
 	return fmt.Sprintf("$lit%d_%d", p.Line, p.Column)
 }
 
@@ -197,7 +197,7 @@ func (b *builder) fail(pos token.Pos, format string, args ...any) {
 // temp builds a deterministic name for a generated variable. The name comes
 // from the source position, thus it never depends on a global counter.
 func (b *builder) temp(pos token.Pos, role string) string {
-	p := b.fset.Position(pos)
+	p := b.fset.PositionFor(pos, false)
 	return fmt.Sprintf("$%s%d_%d", role, p.Line, p.Column)
 }
 
@@ -298,7 +298,7 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 			b.fail(spec.Pos(), "a package variable with multiple results needs a call")
 			break
 		}
-		p := b.fset.Position(spec.Pos())
+		p := b.fset.PositionFor(spec.Pos(), false)
 		hidden := &ir.Var{
 			Name: fmt.Sprintf("InitVars$%d_%d", p.Line, p.Column),
 			Type: tuple,

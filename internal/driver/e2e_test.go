@@ -183,15 +183,8 @@ func TestWasm(t *testing.T) {
 			}
 			run(t, out, "dart", "pub", "get")
 			run(t, out, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
-			runner := `import { compile } from './main.mjs';
-import { readFile } from 'node:fs/promises';
 
-const bytes = await readFile(new URL('./main.wasm', import.meta.url));
-const app = await compile(bytes);
-const instance = await app.instantiate({});
-instance.invokeMain();
-`
-			if err := os.WriteFile(filepath.Join(out, "run.mjs"), []byte(runner), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(out, "run.mjs"), []byte(wasmRunner), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			if got := runProgram(t, out, "node", "run.mjs"); got != want {
@@ -360,7 +353,16 @@ get: an error`
 	}
 
 	run(t, out, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
-	runner := `import { compile } from './main.mjs';
+
+	if err := os.WriteFile(filepath.Join(out, "run.mjs"), []byte(wasmRunner), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := runProgram(t, out, "node", "run.mjs"); got != want {
+		t.Errorf("the output of the wasm build differs\nwant:\n%s\ngot:\n%s", want, got)
+	}
+}
+
+const wasmRunner = `import { compile } from './main.mjs';
 import { readFile } from 'node:fs/promises';
 
 const bytes = await readFile(new URL('./main.wasm', import.meta.url));
@@ -368,10 +370,3 @@ const app = await compile(bytes);
 const instance = await app.instantiate({});
 instance.invokeMain();
 `
-	if err := os.WriteFile(filepath.Join(out, "run.mjs"), []byte(runner), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if got := runProgram(t, out, "node", "run.mjs"); got != want {
-		t.Errorf("the output of the wasm build differs\nwant:\n%s\ngot:\n%s", want, got)
-	}
-}

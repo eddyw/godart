@@ -593,16 +593,16 @@ T $dictValue<T>(Iface? x, Dict<T> d) {
 
 /// The value of a type assertion to a type parameter with no second result. A
 /// value of another type stops the program.
-T $assertDict<T>(Iface? x, Dict<T> d) {
+T $assertDict<T>(Iface? x, Dict<T> d, String static) {
   if (!$isDictType(x, d.desc)) {
     $panic(
       Iface(
         $typeGoError,
         GoError(
           x == null
-              ? 'interface conversion: interface {} is nil, '
+              ? 'interface conversion: $static is nil, '
                     'not ${d.desc.display}'
-              : _assertText('interface {}', x.desc.display, d.desc.display),
+              : _assertText(static, x.desc.display, d.desc.display),
           plain: true,
         ),
       ),

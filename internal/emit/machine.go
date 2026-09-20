@@ -634,7 +634,15 @@ func (e *emitter) selectBind(s *ir.SelectBind) {
 		if i >= len(fields) {
 			continue
 		}
-		e.line("%s = %s;", e.expr(lhs), fields[i])
+		from := s.Clause.Elem
+		if i == 1 {
+			from = types.Typ[types.Bool]
+		}
+		var value ir.Expr = &ir.Ident{Name: fields[i], Type: from}
+		if to := lhs.GoType(); to != nil && !types.Identical(from, to) {
+			value = &ir.Conv{X: value, From: from, Type: to}
+		}
+		e.assign(lhs, value)
 	}
 }
 

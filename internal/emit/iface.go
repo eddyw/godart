@@ -1593,6 +1593,18 @@ func (e *emitter) substParams(t types.Type, reads *[]string, display bool) types
 			tags[i] = u.Tag(i)
 		}
 		return types.NewStruct(fields, tags)
+	case *types.Interface:
+		methods := make([]*types.Func, u.NumExplicitMethods())
+		for i := range methods {
+			method := u.ExplicitMethod(i)
+			sig := e.substParams(method.Type(), reads, display).(*types.Signature)
+			methods[i] = types.NewFunc(token.NoPos, method.Pkg(), method.Name(), sig)
+		}
+		embedded := make([]types.Type, u.NumEmbeddeds())
+		for i := range embedded {
+			embedded[i] = e.substParams(u.EmbeddedType(i), reads, display)
+		}
+		return types.NewInterfaceType(methods, embedded).Complete()
 	case *types.Named:
 		if u.TypeArgs().Len() > 0 {
 			args := make([]types.Type, u.TypeArgs().Len())
@@ -1631,7 +1643,7 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 				e.typeDisplayText(x.Assert))
 		}
 		if isParam {
-			return fmt.Sprintf("$assertDict(%s, %s)", e.expr(x.X), e.dictOf(tp))
+			return fmt.Sprintf("$assertDict(%s, %s, %s)", e.expr(x.X), e.dictOf(tp), e.reflectTextExpr(x.X.GoType()))
 		}
 		// $assertType gives Object?, thus a target of that Dart type needs no
 		// cast. A pointer to a type parameter is such a target.

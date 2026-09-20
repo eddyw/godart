@@ -1,7 +1,10 @@
+import 'format.dart';
 import 'goint.dart';
 import 'iface.dart';
 import 'panic.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
+import 'reflect.dart';
+import 'slice.dart';
 import 'srcmap.dart';
 import 'string.dart';
 
@@ -45,12 +48,46 @@ void $print(List<String> parts) => $platformStderrText(parts.join());
 void $println(List<String> parts) =>
     $platformStderrText('${parts.join(' ')}\n');
 
-String $numericText(Object? value, TypeDesc desc) {
-  if (value is double) return $fstring(value);
-  if (desc.kind == 'uint' || desc.kind == 'uint64' || desc.kind == 'uintptr') {
-    return $ustring(value as GoInt);
+String $referenceText(Iface? value) {
+  final String pointer = '0x${$valuePointer(value).toRadixString(16)}';
+  final Object? data = value?.value;
+  return data is Slice<Object?> ? '[${data.len}/${data.cap}]$pointer' : pointer;
+}
+
+String $interfaceText(Iface? value) {
+  if (value == null) return '(0x0,0x0)';
+  return '(0x${identityHashCode(value.desc).toRadixString(16)},'
+      '0x${$valuePointer(value).toRadixString(16)})';
+}
+
+String $genericPrintText(Object? value, TypeDesc desc) {
+  switch (desc.kind) {
+    case 'string':
+      return (value as GoString).toDartString();
+    case 'float32':
+    case 'float64':
+    case 'complex64':
+    case 'complex128':
+      return $goFormat(Iface(desc, value), GoString.ascii('g')).toDartString();
+    case 'uint':
+    case 'uint64':
+    case 'uintptr':
+      return $ustring(value as GoInt);
+    case 'bool':
+    case 'int':
+    case 'int8':
+    case 'int16':
+    case 'int32':
+    case 'int64':
+    case 'uint8':
+    case 'uint16':
+    case 'uint32':
+      return value.toString();
+    case 'interface':
+      return $interfaceText(value as Iface?);
+    default:
+      return $referenceText(Iface(desc, value));
   }
-  return value.toString();
 }
 
 /// The text of a float, in the format that the Go builtin print uses.

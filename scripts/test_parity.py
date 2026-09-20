@@ -10,6 +10,25 @@ spec.loader.exec_module(parity)
 
 
 class ParityTest(unittest.TestCase):
+    def test_language_execution_requires_original_output_and_success(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = dict(name="p", file="p.go")
+            execution = dict(ran=True, exit=0, timed_out=False, output_sha256="original")
+            outcome = dict(fixture=fixture, status="passed", native=execution, gart=dict(execution), expected_sha256="original")
+            report = dict(kind="language", go_version="go1", complete=True, outcomes=[outcome], shard=0, shards=1)
+            path = root / "language.json"
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"passed": 1})
+            outcome["gart"]["output_sha256"] = "different"
+            parity.save(path, report)
+            result = parity.language_behavior([root])[0]
+            self.assertEqual(result["counts"], {"failed": 1})
+            self.assertTrue(result["problems"])
+            report["complete"] = False
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"unobserved": 1})
+
     def test_language_inventory_never_implies_an_execution_pass(self):
         cases = [dict(name="run", action="run", native_eligible=True, gart_eligible=True, adapter="single-file"),
                  dict(name="compile", action="compile", native_eligible=True, gart_eligible=True, adapter="missing"),

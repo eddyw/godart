@@ -1,0 +1,14 @@
+[
+  "int_lit",
+  "float_lit",
+  "floatcmp",
+  "stringrange",
+  "copy",
+  "map",
+  "typeparam/mdempsky/16",
+  "typeparam/mdempsky/18",
+  "abi/method_wrapper",
+  "dwarf/linedirectives",
+  "print",
+  "zerosize"
+]

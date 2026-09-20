@@ -1,8 +1,10 @@
 package driver_test
 
 import (
+	"errors"
 	"go/build"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -13,53 +15,38 @@ import (
 	"github.com/eddyw/godart/internal/parity"
 )
 
-// runWithin runs a program with a time limit. A file of the test directory
-// can hold a loop that never ends under the block model, and the limit keeps
-// the suite alive. WaitDelay closes the pipes when a child keeps them open.
-//
-// The 3 results are the output, whether the program failed, and whether the
-// run ended inside the limit.
-func runWithin(t *testing.T, dir string, limit time.Duration, name string, args ...string) (string, bool, bool) {
+func runLanguage(t *testing.T, result *languageExecution, dir string, limit time.Duration, name string, args ...string) string {
 	t.Helper()
 	start := time.Now()
-	text, err, ok := output(dir, nil, limit, name, args...)
-	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
-	return cutTrace(string(text)), err != nil, ok
-}
-
-// cutExitStatus drops the line that `go run` writes when the program ends with
-// a value that is not 0. `dart run` writes no such line, thus the comparison
-// reads the exit status of the 2 runs on its own.
-func cutExitStatus(text string) string {
-	lines := strings.Split(text, "\n")
-	n := len(lines)
-	if n > 0 && strings.HasPrefix(lines[n-1], "exit status ") {
-		return strings.TrimRight(strings.Join(lines[:n-1], "\n"), "\n")
+	text, err, ended := output(dir, nil, limit, name, args...)
+	text = []byte(strings.ReplaceAll(string(text), "\r\n", "\n"))
+	*result = languageExecution{Command: append([]string{name}, args...), Ran: true, TimedOut: !ended, OutputSHA256: languageDigest(text), Seconds: time.Since(start).Seconds()}
+	if err != nil {
+		result.Exit = -1
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
+			result.Exit = exit.ExitCode()
+		}
 	}
-	return text
+	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
+	if !ended {
+		t.Fatalf("%s exceeded %v\n%s", name, limit, text)
+	}
+	if err != nil {
+		t.Fatalf("%s failed: %v\n%s", name, err, text)
+	}
+	return string(text)
 }
 
 // TestRunFilesOfGoTest compiles each file of the test directory of the Go
-// repository whose header is `// run`, runs the Dart output, and compares it
-// with the output of go run. The directory proves the language, thus a file
-// outside the subset skips.
+// repository whose recipe is `run`. Both executions must satisfy the
+// original expected output and exit successfully.
 func TestRunFilesOfGoTest(t *testing.T) {
-	policy, err := parity.ReadLanguagePolicy()
-	if err != nil {
-		t.Fatal(err)
-	}
-	rejections := policy.Rejections
 	root := filepath.Join(build.Default.GOROOT, "test")
 	if _, err := os.Stat(root); err != nil {
 		t.Skipf("the machine holds no test directory of Go: %v", err)
 	}
-	runtime := runtimeDir(t)
-	type sourceCase struct {
-		name, file, dir string
-		source          []byte
-	}
-	var cases []sourceCase
-	var names []string
+	var cases []parity.LanguageCase
 	inv, err := parity.DiscoverLanguage(build.Default)
 	if err != nil {
 		t.Fatal(err)
@@ -68,36 +55,56 @@ func TestRunFilesOfGoTest(t *testing.T) {
 		if c.Adapter != "single-file" {
 			continue
 		}
-		source, err := os.ReadFile(filepath.Join(root, c.File))
-		if err != nil {
-			t.Fatal(err)
-		}
-		cases = append(cases, sourceCase{c.Name, filepath.Base(c.File), filepath.Dir(c.File), source})
+		cases = append(cases, c)
+	}
+	runLanguageCases(t, "vm", inv, cases)
+}
+
+func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory, cases []parity.LanguageCase) {
+	t.Helper()
+	root := filepath.Join(build.Default.GOROOT, "test")
+	runtime := runtimeDir(t)
+	var names []string
+	for _, c := range cases {
 		names = append(names, c.Name)
 	}
 	selected := testShard(t, names)
+	var outcomes []*languageOutcome
 	for _, c := range cases {
-		if !selected[c.name] {
-			continue
+		if selected[c.Name] {
+			outcomes = append(outcomes, &languageOutcome{Fixture: c, Status: "unobserved"})
 		}
-		name, source := c.name, c.source
+	}
+	retainLanguageEvidence(t, target, inv, outcomes)
+	for _, outcome := range outcomes {
+		c := outcome.Fixture
+		name := c.Name
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			ctx := build.Default
-			ctx.BuildTags = append(slices.Clone(ctx.BuildTags), "dart")
-			eligible, err := ctx.MatchFile(filepath.Join(root, c.dir), c.file)
+			t.Cleanup(func() {
+				switch {
+				case t.Failed():
+					outcome.Status = "failed"
+				case t.Skipped():
+					outcome.Status = "excluded"
+				default:
+					outcome.Status = "passed"
+				}
+			})
+			if !c.NativeEligible || !c.GartEligible {
+				t.Skipf("upstream build constraints exclude native=%t Gart=%t", !c.NativeEligible, !c.GartEligible)
+			}
+			source, err := os.ReadFile(filepath.Join(root, c.File))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !eligible {
-				t.Skipf("upstream build constraints exclude %s/%s", ctx.GOOS, ctx.GOARCH)
-			}
-			if omission, ok := policy.Skips[name]; ok {
-				t.Skip(omission.Classification + ": " + omission.Reason)
+			file := filepath.Base(c.File)
+			if c.Exclusion != nil {
+				t.Skip(c.Exclusion.Classification + ": " + c.Exclusion.Reason)
 			}
 			dir := t.TempDir()
 			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/gotest\n\ngo 1.27\n")
-			writeFile(t, filepath.Join(dir, c.file), string(source))
+			writeFile(t, filepath.Join(dir, file), string(source))
 			out := filepath.Join(dir, "out")
 			err = driver.Build(driver.Options{
 				Trace:    traceBuild(t),
@@ -107,7 +114,7 @@ func TestRunFilesOfGoTest(t *testing.T) {
 				Runtime:  runtime,
 				Format:   false,
 			})
-			if want, known := rejections[name]; known {
+			if want := c.Rejection; want != nil {
 				if err == nil {
 					t.Fatal("the build now passes: remove its expected rejection")
 				}
@@ -121,31 +128,44 @@ func TestRunFilesOfGoTest(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected build failure:\n%v", err)
 			}
-			want, wantFail, ran := runWithin(t, dir, runLimit, "go", "run", c.file)
-			if !ran {
-				t.Errorf("go run did not end within %v", runLimit)
-				return
+			want, err := os.ReadFile(filepath.Join(root, name+".out"))
+			if err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
 			}
-			want = cutExitStatus(want)
+			outcome.ExpectedSHA256 = languageDigest(want)
+			native := runLanguage(t, &outcome.Native, dir, runLimit, "go", "run", file)
+			if native != string(want) {
+				t.Fatalf("native output differs from upstream fixture\nwant:\n%s\ngot:\n%s", want, native)
+			}
 			prepareDart(t, out)
 			limit := 2 * time.Minute
-			if name == "fixedbugs/issue13169" || name == "fixedbugs/issue78081" {
+			if name == "fixedbugs/issue13169" || name == "fixedbugs/issue78081" || target == "js" && name == "copy" {
 				// These upstream stress cases perform 1 million channel transfers
-				// or 104 million recursive calls.
+				// or 104 million recursive calls. Copy covers 43,560 slice combinations.
 				limit = 5 * time.Minute
 			}
-			got, gotFail, ended := runWithin(t, out, limit, "dart", "--packages=.dart_tool/package_config.json", "bin/main.dart")
-			if !ended {
-				t.Errorf("the run did not end within %v", limit)
-				return
+			command := "dart"
+			args := []string{"--packages=.dart_tool/package_config.json", "bin/main.dart"}
+			switch target {
+			case "aot":
+				run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", "app")
+				command = filepath.Join(out, "app")
+				args = nil
+			case "js":
+				run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
+				command = "node"
+				args = []string{"main.js"}
+			case "wasm":
+				run(t, out, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
+				writeFile(t, filepath.Join(out, "run.mjs"), wasmRunner)
+				command = "node"
+				args = []string{"run.mjs"}
 			}
-			if got != want {
-				t.Errorf("the output differs\nGo:\n%s\nDart:\n%s", want, got)
+			got := runLanguage(t, &outcome.Gart, out, limit, command, args...)
+			if got != string(want) {
+				t.Errorf("Gart output differs from upstream fixture\nwant:\n%s\ngot:\n%s", want, got)
 			}
-			if gotFail != wantFail {
-				t.Errorf("the exit status differs: go failed %v, and dart failed %v",
-					wantFail, gotFail)
-			}
+
 		})
 	}
 }

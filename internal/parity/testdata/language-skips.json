@@ -7,6 +7,10 @@
     "classification": "test-adapter",
     "reason": "2 values with no size take 2 cells, and gc gives them 1 address"
   },
+  "fixedbugs/bug369": {
+    "classification": "target-limit",
+    "reason": "the assertions compare native Go compiler optimization and object files through go tool compile and link"
+  },
   "fixedbugs/issue10607": {
     "classification": "test-adapter",
     "reason": "the test exercises native Go linker flags and requires a companion source outside this single-file harness"
@@ -66,6 +70,14 @@
   "fixedbugs/issue75764": {
     "classification": "implementation-gap",
     "reason": "the Dart VM holds a fixed stack, and the recursion overflows"
+  },
+  "fixedbugs/issue9355": {
+    "classification": "target-limit",
+    "reason": "the assertions inspect native Go object relocation records from go tool compile -S"
+  },
+  "fixedbugs/issue9862_run": {
+    "classification": "target-limit",
+    "reason": "the assertion requires the native Go linker diagnostic for a symbol larger than its object-format limit"
   },
   "inline_literal": {
     "classification": "implementation-gap",
