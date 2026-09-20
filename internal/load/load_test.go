@@ -237,3 +237,24 @@ func TestNamedInterfaceRecursion(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestValidLinknameDirectives(t *testing.T) {
+	for _, goVersion := range []string{"1.17", "1.27"} {
+		t.Run(goVersion, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/directives\n\ngo "+goVersion+"\n"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			source := "package directives\nimport _ " + "`unsafe`" + "\n//go:linkname f\nfunc f() {}\n//go:linkname x target.x\nvar x int\n"
+			if goVersion == "1.17" {
+				source += "//go:linkname missing target.missing\n"
+			}
+			if err := os.WriteFile(filepath.Join(dir, "directives.go"), []byte(source), 0644); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := load.Load(dir, "."); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}

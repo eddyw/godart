@@ -36,11 +36,12 @@ func TestRejectionContracts(t *testing.T) {
 	for _, c := range inv.Cases {
 		switch c.Name {
 		case "cannotassign", "func1", "embedfunc", "blank1", "directive", "directive2",
-			"fixedbugs/bug398", "fixedbugs/issue16369", "fixedbugs/issue56103":
+			"fixedbugs/bug398", "fixedbugs/issue16369", "fixedbugs/issue56103",
+			"fixedbugs/issue18459", "fixedbugs/issue18882", "linkname3":
 			cases = append(cases, c)
 		}
 	}
-	if len(cases) != 9 {
+	if len(cases) != 12 {
 		t.Fatal("the original rejection fixtures changed")
 	}
 	runRejectionCases(t, inv, cases)

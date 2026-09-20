@@ -475,6 +475,7 @@ func collectErrors(roots []*packages.Package) error {
 		}
 		if !p.IllTyped {
 			errs = append(errs, interfaceCycles(p)...)
+			errs = append(errs, directiveContracts(p)...)
 		}
 		start := len(errs)
 		for _, e := range p.Errors {
