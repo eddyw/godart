@@ -1023,7 +1023,7 @@ String _methodName(String key) {
 /// The method count for reflection.
 int $descNumMethod(int handle) => _reflectMethodKeys(_typeAt(handle)).length;
 
-/// A handle of the function type of 1 exported method of a type. A method that
+/// A handle of the function type of 1 reflected method of a type. A method that
 /// carries no type gives 0.
 ///
 /// Go puts the receiver in front of each parameter of the type of a method of a
@@ -1165,6 +1165,14 @@ GoString $descMethodName(int handle, int index) {
     );
   }
   return GoString.fromString(_methodName(keys[index]));
+}
+
+GoString $descMethodPkgPath(int handle, int index) {
+  final String key = _reflectMethodKeys(_typeAt(handle))[index];
+  final int cut = key.indexOf('(');
+  final String name = cut < 0 ? key : key.substring(0, cut);
+  final int dot = name.lastIndexOf('.');
+  return GoString.fromString(dot < 0 ? '' : name.substring(0, dot));
 }
 
 /// Binds the method at index in the static type to the dynamic value.

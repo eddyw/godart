@@ -183,16 +183,13 @@ func (e *emitter) freshPointer(t types.Type) string {
 	return fmt.Sprintf("Box<%s>(%s)", e.dartType(t), e.zero(t))
 }
 
-// methodTypeTable writes the function type of each exported method of the
-// method set of a type. The package reflect reads it: Value.Method gives a
-// func value, and Value.Call of it needs the parameter types and the result
-// types.
+// Interface method metadata includes unexported signatures for reflection.
 func (e *emitter) methodTypeTable(t types.Type) string {
 	set := types.NewMethodSet(t)
 	entries := make([]string, 0, set.Len())
 	for i := 0; i < set.Len(); i++ {
 		fn, ok := set.At(i).Obj().(*types.Func)
-		if !ok || !fn.Exported() {
+		if !ok || !fn.Exported() && !isInterfaceType(t) {
 			continue
 		}
 		if o, ok := fn.Type().(*types.Signature); ok &&
@@ -922,9 +919,10 @@ func (e *emitter) groundDescVar(t types.Type) string {
 func (e *emitter) inlineDescriptor(t types.Type) string {
 	u := types.Unalias(t)
 	self := ""
-	if _, ok := u.(*types.Struct); ok && holdsTypeParam(t) &&
-		types.NewMethodSet(types.NewPointer(t)).Len() > types.NewMethodSet(t).Len() {
-		// A generic descriptor needs a local reference for the pointer's element.
+	_, structure := u.(*types.Struct)
+	if holdsTypeParam(t) && (isInterfaceType(t) || structure &&
+		types.NewMethodSet(types.NewPointer(t)).Len() > types.NewMethodSet(t).Len()) {
+		// A recursive generic descriptor needs a local reference.
 		self = fmt.Sprintf("$inlineDesc%d", len(e.inlineDescTypes))
 		e.inlineDescTypes = append(e.inlineDescTypes, t)
 		defer func() { e.inlineDescTypes = e.inlineDescTypes[:len(e.inlineDescTypes)-1] }()
@@ -945,10 +943,14 @@ func (e *emitter) inlineDescriptor(t types.Type) string {
 			methodTypes = e.methodTypeTable(t)
 		}
 	case isInterfaceType(t):
-		if keys := interfaceMethods(t); len(keys) > 0 {
-			parts := make([]string, len(keys))
-			for i, k := range keys {
-				parts[i] = fmt.Sprintf("%q: $ifaceMethod", k)
+		methodTypes = e.methodTypeTable(t)
+		iface := types.Unalias(t).Underlying().(*types.Interface)
+		if iface.NumMethods() > 0 {
+			parts := make([]string, iface.NumMethods())
+			for i := range parts {
+				method := iface.Method(i)
+				sig := method.Type().(*types.Signature)
+				parts[i] = e.methodKeyText(method.Id(), sig) + ": $ifaceMethod"
 			}
 			table = "<String, Function>{" + strings.Join(parts, ", ") + "}"
 		}
@@ -1002,22 +1004,6 @@ func basicDesc(b *types.Basic) string {
 		return "$typeComplex128"
 	}
 	return ""
-}
-
-// interfaceMethods lists the method names of an interface type, in order.
-func interfaceMethods(t types.Type) []string {
-	iface, ok := types.Unalias(t).Underlying().(*types.Interface)
-	if !ok {
-		return nil
-	}
-	out := make([]string, iface.NumMethods())
-	for i := range out {
-		m := iface.Method(i)
-		sig, _ := m.Type().(*types.Signature)
-		out[i] = methodKey(m.Id(), sig)
-	}
-	sort.Strings(out)
-	return out
 }
 
 // methodKey names 1 entry of a method table.

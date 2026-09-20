@@ -574,9 +574,10 @@ func (t *rtype) NumMethod() int { return dart.DescNumMethod(t.handle()) }
 func (t *rtype) Method(i int) Method {
 	typ := typeOf(dart.DescMethodType(t.handle(), i))
 	m := Method{
-		Name:  dart.DescMethodName(t.handle(), i),
-		Type:  typ,
-		Index: i,
+		Name:    dart.DescMethodName(t.handle(), i),
+		PkgPath: dart.DescMethodPkgPath(t.handle(), i),
+		Type:    typ,
+		Index:   i,
 	}
 	if fn := dart.DescMethodFunc(t.handle(), i); fn != nil {
 		m.Func = Value{value: fn, typ: typ, ok: true}

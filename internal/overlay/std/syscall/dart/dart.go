@@ -265,6 +265,11 @@ func DescMethodName(handle, index int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// DescMethodPkgPath gives the package path of an unexported method.
+func DescMethodPkgPath(handle, index int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // MethodValue binds the method at index in the static type to the value.
 func MethodValue(value any, handle, index int) any {
 	panic("syscall/dart needs the gart compiler")
@@ -473,7 +478,7 @@ func ValueClear(value any) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// DescMethodType gives a handle of the function type of 1 exported method of a
+// DescMethodType gives a handle of the function type of 1 reflected method of a
 // type. The order follows the name, and the type holds no receiver.
 func DescMethodType(handle, index int) int {
 	panic("syscall/dart needs the gart compiler")

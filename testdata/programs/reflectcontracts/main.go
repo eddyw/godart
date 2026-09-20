@@ -31,13 +31,24 @@ func panicsWith(text string, f func()) (matched bool) {
 	return false
 }
 
+type recursive[T any] interface {
+	Next() recursive[T]
+}
+
+func recursiveMetadata[T any]() {
+	t := reflect.TypeFor[recursive[T]]()
+	fmt.Println("recursive method type", t.Method(0).Type.Out(0) == t)
+}
+
 func main() {
+	recursiveMetadata[int]()
 	var sealed Upper.Sealed = Upper.Value{}
 	fmt.Println("private calls", Upper.Call(sealed))
 	fmt.Println("exported method count", reflect.TypeOf(Upper.Value{}).NumMethod())
 	sealedType := reflect.TypeFor[Upper.Sealed]()
 	for i := 0; i < sealedType.NumMethod(); i++ {
-		fmt.Println("interface method name", i, sealedType.Method(i).Name)
+		method := sealedType.Method(i)
+		fmt.Println("interface method metadata", i, method.Name, method.PkgPath, method.IsExported(), method.Type, method.Func.IsValid())
 	}
 	fmt.Println("exported method index", reflect.ValueOf(&sealed).Elem().Method(0).Call(nil)[0].Int())
 	var limited onlyB = methods{}

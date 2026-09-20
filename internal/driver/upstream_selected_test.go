@@ -182,7 +182,7 @@ func TestSelectedUpstream(t *testing.T) {
 				"DirectIfaceT", "DirectIfaceT.M", "TestDirectIfaceMethod",
 				"Tinter", "Tsmallv", "Tsmallv.M", "Tsmallp", "Tsmallp.M", "Twordv", "Twordv.M", "Twordp", "Twordp.M",
 				"Tbigv", "Tbigv.M", "Tbigp", "Tbigp.M", "Tm1", "Tm2", "Tm3", "Tm4", "Tm4.M", "TestMethod5",
-				"unexp", "unexp.f", "unexp.g", "unexpI", "TestUnexportedMethods", "TestVariadicType",
+				"unexp", "unexp.f", "unexp.g", "unexpI", "TestUnexportedMethods", "TestMethodPkgPath", "TestVariadicType",
 				"FuncDDD", "FuncDDD.M", "TestNumMethodOnDDD", "TestConvertSlice2Array",
 			}},
 		},
@@ -216,7 +216,13 @@ func TestSelectedUpstream(t *testing.T) {
 			t.Parallel()
 			dir := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(pkg))
 			fixture := t.TempDir()
-			writeFile(t, filepath.Join(fixture, "go.mod"), "module example.com/upstream\n\ngo 1.27\n")
+			module := "example.com/upstream"
+			if pkg == "reflect" {
+				module = "reflect_test"
+				// Keep the original package name and import path for reflection.
+				writeFile(t, filepath.Join(fixture, "000_package.go"), "package reflect_test\n")
+			}
+			writeFile(t, filepath.Join(fixture, "go.mod"), "module "+module+"\n\ngo 1.27\n")
 			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" || pkg == "internal/godebug" {
 				module := "example.com/upstream"
 				if pkg == "sync" {
