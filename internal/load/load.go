@@ -182,7 +182,13 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 			if embeds[name] {
 				src = files[name]
 			}
-			return parser.ParseFile(fset, name, src, parser.AllErrors|parser.ParseComments)
+			file, err := parser.ParseFile(fset, name, src, parser.AllErrors|parser.ParseComments)
+			if err == nil {
+				if directives := misplacedDirectives(fset, file, src); len(directives) != 0 {
+					return file, directives
+				}
+			}
+			return file, err
 		},
 	}
 	timings = append(timings, PhaseTiming{"load-overlay", time.Since(phase)})
