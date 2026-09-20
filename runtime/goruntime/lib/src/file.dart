@@ -419,9 +419,16 @@ GoString $chtimes(
 GoString $remove(GoString path) {
   final String name = path.toDartString();
   try {
-    final FileSystemEntityType t = FileSystemEntity.typeSync(name);
+    final FileSystemEntityType t = FileSystemEntity.typeSync(
+      name,
+      followLinks: false,
+    );
     if (t == FileSystemEntityType.notFound) {
       return GoString.fromString('$name: no such file or directory');
+    }
+    if (t == FileSystemEntityType.link) {
+      Link(name).deleteSync();
+      return _empty;
     }
     if (t == FileSystemEntityType.directory) {
       Directory(name).deleteSync();

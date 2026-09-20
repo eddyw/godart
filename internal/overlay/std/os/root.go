@@ -5,30 +5,22 @@ package os
 import (
 	"errors"
 	"io/fs"
+	"strings"
+	"syscall"
 	"syscall/dart"
 	"time"
 )
 
-// Root holds a directory, and each operation of it stays inside that
-// directory.
-//
-// Go opens the directory 1 time and reaches each name under it with openat,
-// thus no path can leave the tree. dart:io holds no such call, and the check
-// below resolves each symbolic link of the path and compares the result with
-// the root.
-//
-// The 2 forms differ in 1 point: the check of this package is not atomic. A
-// rename of a directory of the path, between the check and the operation, can
-// still reach a name outside the root. Read docs/parity.md.
-
 // errPathEscapes names a path that leaves the root.
 var errPathEscapes = errors.New("path escapes from parent")
 
-// A Root holds an open directory.
+// Root provides path operations below a directory. It retains an absolute
+// path, which does not track directory renames. Validation and filesystem
+// access are separate operations. Concurrent path changes can cause access
+// outside the root.
 type Root struct {
 	name string
-	// real holds the name after each symbolic link resolved. The check of each
-	// operation compares against it.
+	// real anchors operations to the absolute path after symlink resolution.
 	real   string
 	closed bool
 }
@@ -77,17 +69,20 @@ func (r *Root) Open(name string) (*File, error) {
 		return nil, err
 	}
 	f, cause := Open(full)
-	return openIn(f, cause, name)
+	return r.openIn(f, cause, name)
 }
 
 // OpenFile opens a file of the root with the flag and the permission.
 func (r *Root) OpenFile(name string, flag int, perm FileMode) (*File, error) {
+	if perm&0o777 != perm {
+		return nil, &PathError{Op: "openat", Path: name, Err: errors.New("unsupported file mode")}
+	}
 	full, err := r.resolve("open", name)
 	if err != nil {
 		return nil, err
 	}
 	f, cause := OpenFile(full, flag, perm)
-	return openIn(f, cause, name)
+	return r.openIn(f, cause, name)
 }
 
 // Create makes a file of the root, or it truncates the file that stands there.
@@ -97,7 +92,7 @@ func (r *Root) Create(name string) (*File, error) {
 		return nil, err
 	}
 	f, cause := Create(full)
-	return openIn(f, cause, name)
+	return r.openIn(f, cause, name)
 }
 
 // OpenRoot opens a directory of the root and gives the Root of it.
@@ -110,6 +105,7 @@ func (r *Root) OpenRoot(name string) (*Root, error) {
 	if cause != nil {
 		return nil, rename(cause, name)
 	}
+	out.name = joinPath(r.name, name)
 	return out, nil
 }
 
@@ -129,7 +125,7 @@ func (r *Root) Stat(name string) (FileInfo, error) {
 // Lstat reads the metadata of a name of the root, and it follows no symbolic
 // link of the last element.
 func (r *Root) Lstat(name string) (FileInfo, error) {
-	full, err := r.resolve("lstat", name)
+	full, err := r.resolveNoFollow("lstat", name)
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +160,9 @@ func (r *Root) WriteFile(name string, data []byte, perm FileMode) error {
 
 // Mkdir makes 1 directory of the root.
 func (r *Root) Mkdir(name string, perm FileMode) error {
+	if perm&0o777 != perm {
+		return &PathError{Op: "mkdirat", Path: name, Err: errors.New("unsupported file mode")}
+	}
 	full, err := r.resolve("mkdir", name)
 	if err != nil {
 		return err
@@ -173,16 +172,28 @@ func (r *Root) Mkdir(name string, perm FileMode) error {
 
 // MkdirAll makes a directory of the root and each parent of it.
 func (r *Root) MkdirAll(name string, perm FileMode) error {
-	full, err := r.resolve("mkdirall", name)
+	if perm&0o777 != perm {
+		return &PathError{Op: "mkdirat", Path: name, Err: errors.New("unsupported file mode")}
+	}
+	full, err := r.resolve("mkdirat", name)
 	if err != nil {
+		if underlyingError(err) != syscall.ENOTDIR {
+			return err
+		}
+		full = joinPath(r.real, name)
+	}
+	if err := MkdirAll(full, perm); err != nil {
+		if pe, ok := err.(*PathError); ok {
+			pe.Path = strings.TrimPrefix(pe.Path, r.real+string(PathSeparator))
+		}
 		return err
 	}
-	return rename(MkdirAll(full, perm), name)
+	return nil
 }
 
 // Remove removes 1 name of the root.
 func (r *Root) Remove(name string) error {
-	full, err := r.resolve("remove", name)
+	full, err := r.resolveNoFollow("remove", name)
 	if err != nil {
 		return err
 	}
@@ -191,7 +202,13 @@ func (r *Root) Remove(name string) error {
 
 // RemoveAll removes a name of the root and each name under it.
 func (r *Root) RemoveAll(name string) error {
-	full, err := r.resolve("removeall", name)
+	for len(name) > 0 && IsPathSeparator(name[len(name)-1]) {
+		name = name[:len(name)-1]
+	}
+	if endsWithDot(name) {
+		return &PathError{Op: "RemoveAll", Path: name, Err: syscall.EINVAL}
+	}
+	full, err := r.resolveNoFollow("removeall", name)
 	if err != nil {
 		return err
 	}
@@ -335,11 +352,12 @@ func (f rootFS) ReadFile(name string) ([]byte, error) {
 	return f.root.ReadFile(name)
 }
 
-// openIn writes the name of the caller into the error of an open.
-func openIn(f *File, err error, name string) (*File, error) {
+// openIn preserves the caller's names for File.Name and PathError.
+func (r *Root) openIn(f *File, err error, name string) (*File, error) {
 	if err != nil {
 		return nil, rename(err, name)
 	}
+	f.name = joinPath(r.name, name)
 	return f, nil
 }
 
@@ -356,53 +374,11 @@ func (r *Root) resolveNoFollow(op, name string) (string, error) {
 }
 
 func (r *Root) check(op, name string, follow bool) (string, error) {
-	if r.closed {
-		return "", &PathError{Op: op, Path: name, Err: ErrClosed}
+	if strings.ContainsRune(name, 0) {
+		return "", &PathError{Op: op, Path: name, Err: ErrInvalid}
 	}
-	if name == "." {
-		return r.name, nil
-	}
-	local, err := localize(name)
-	if err != nil {
+	if err := checkPathEscapesInternal(r, name, !follow); err != nil {
 		return "", &PathError{Op: op, Path: name, Err: err}
 	}
-	full := r.name + string(PathSeparator) + local
-	probe := full
-	if !follow {
-		probe = parentOf(full)
-	}
-	real, cause := dart.ResolveSymlinks(probe)
-	if cause != "" {
-		// The name does not exist yet. The parent of it must stand inside the
-		// root, thus a write through a link that leaves the root fails.
-		real, cause = dart.ResolveSymlinks(parentOf(probe))
-		if cause != "" {
-			return "", &PathError{Op: op, Path: name, Err: ErrNotExist}
-		}
-	}
-	if !inside(r.real, real) {
-		return "", &PathError{Op: op, Path: name, Err: errPathEscapes}
-	}
-	return full, nil
-}
-
-// parentOf gives the path of the directory that holds the path.
-func parentOf(p string) string {
-	for i := len(p) - 1; i > 0; i-- {
-		if IsPathSeparator(p[i]) {
-			return p[:i]
-		}
-	}
-	return string(PathSeparator)
-}
-
-// inside reports whether the path stands under the root.
-func inside(root, p string) bool {
-	if p == root {
-		return true
-	}
-	if len(p) <= len(root) || !IsPathSeparator(p[len(root)]) {
-		return false
-	}
-	return p[:len(root)] == root
+	return joinPath(r.real, name), nil
 }

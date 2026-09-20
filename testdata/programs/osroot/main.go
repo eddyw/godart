@@ -90,6 +90,30 @@ func main() {
 	_, err = os.OpenInRoot(dir, "../secret.txt")
 	fmt.Println("openinroot:", err != nil)
 
+	fmt.Println("mkdir dots:", r.MkdirAll("missing/./child", 0o755) == nil)
+	fmt.Println("mkdir parent:", r.MkdirAll("fresh/../sibling", 0o755) == nil)
+	fmt.Println("broken internal link:", r.Symlink("new.txt", "broken") == nil)
+	f, err = r.OpenFile("broken", os.O_CREATE|os.O_RDWR, 0o600)
+	fmt.Println("create through internal link:", err == nil)
+	if f != nil {
+		f.Close()
+	}
+	fmt.Println("broken escape link:", r.Symlink("../outside/new.txt", "broken-out") == nil)
+	f, err = r.OpenFile("broken-out", os.O_CREATE|os.O_RDWR, 0o600)
+	fmt.Println("create through escape:", err != nil)
+	if f != nil {
+		f.Close()
+	}
+	fmt.Println("directory escape link:", r.Symlink("../outside", "outside-link") == nil)
+	fmt.Println("mkdir after missing parent:", r.MkdirAll("absent/../outside-link/child", 0o755) != nil)
+	_, err = os.Stat(filepath.Join(base, "outside"))
+	fmt.Println("outside remains absent:", os.IsNotExist(err))
+	fmt.Println("remove broken escape:", r.Remove("broken-out") == nil)
+
+	fmt.Println("remove root dot:", r.RemoveAll(".") != nil)
+	b, err = r.ReadFile("out.txt")
+	fmt.Println("root content remains:", string(b), err)
+
 	// A closed root rejects each operation.
 	fmt.Println(r.Close())
 	_, err = r.ReadFile("in.txt")

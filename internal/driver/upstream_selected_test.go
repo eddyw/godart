@@ -157,6 +157,8 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "error_test.go"},
 			{Name: "read_test.go", Declarations: []string{"checkNamedSize", "TestReadFile", "TestWriteFile", "TestReadOnlyWriteFile"}},
 			{Name: "tempfile_test.go", Declarations: []string{"TestCreateTemp", "TestCreateTempPattern", "TestMkdirTemp", "TestMkdirTempBadDir"}},
+			{Name: "path_test.go", Declarations: []string{"TestMkdirAll", "TestMkdirAllAbsPath"}},
+			{Name: "root_test.go", Declarations: []string{"testMaybeRooted", "makefs", "hasLink", "rootTest", "rootTest.run", "rootTestCases", "errEndsTest", "TestRootMkdirAll", "TestRootMkdir", "TestRootOpen_File", "TestRootOpen_Directory", "TestRootCreate", "TestRootOpenRoot", "TestRootStat", "TestRootLstat", "TestRootReadlink", "TestRootRemoveFile", "TestRootRemoveDirectory", "TestRootNonPermissionMode", "TestRootUseAfterClose", "TestRootSymlinkToRoot", "TestOpenInRoot", "TestRootRemoveDot", "TestRootWriteReadFile", "TestRootName"}},
 		},
 		"net":      {{Name: "ip_test.go"}, {Name: "mac_test.go"}},
 		"net/http": {{Name: "header_test.go", Declarations: []string{"headerWriteTests", "TestHeaderWrite", "parseTimeTests", "TestParseTime", "TestNilHeaderClone"}}, {Name: "sniff_test.go", Declarations: []string{"sniffTests", "TestDetectContentType"}}},
@@ -167,7 +169,7 @@ func TestSelectedUpstream(t *testing.T) {
 			dir := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(pkg))
 			fixture := t.TempDir()
 			writeFile(t, filepath.Join(fixture, "go.mod"), "module example.com/upstream\n\ngo 1.27\n")
-			if pkg == "sync" || pkg == "crypto/x509" {
+			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" {
 				module := "example.com/upstream"
 				if pkg == "sync" {
 					module = "sync_test"
@@ -218,6 +220,9 @@ func TestSelectedUpstream(t *testing.T) {
 					source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/testenv"`)
 					source = strings.Replace(source, "package x509", "package x509_test\nimport . \"crypto/x509\"", 1)
 				}
+				if pkg == "os" {
+					source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/testenv"`)
+				}
 				if pkg == "encoding/asn1" {
 					source = strings.Replace(source, "package asn1", "package asn1_test\nimport . \"encoding/asn1\"", 1)
 				}
@@ -226,10 +231,12 @@ func TestSelectedUpstream(t *testing.T) {
 				}
 				writeFile(t, filepath.Join(fixture, file.Name), source)
 			}
-			if pkg == "sync" || pkg == "crypto/x509" {
+			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" {
 				names := []string{"Executable", "MustHaveExec"}
 				if pkg == "crypto/x509" {
 					names = []string{"Builder", "SkipFlaky"}
+				} else if pkg == "os" {
+					names = []string{"MustHaveSymlink"}
 				}
 				source := selectedUpstreamSource(t, "../overlay/std/internal/testenv/testenv.go", names)
 				if err := os.MkdirAll(filepath.Join(fixture, "testenv"), 0755); err != nil {
@@ -381,9 +388,21 @@ func selectedUpstreamSource(t *testing.T, path string, names []string) string {
 			if strings.HasPrefix(d.Name.Name, "Benchmark") {
 				continue
 			}
-			if slices.Contains(names, d.Name.Name) {
-				keep = true
-				found[d.Name.Name] = true
+			candidates := []string{d.Name.Name}
+			if d.Recv != nil {
+				receiver := d.Recv.List[0].Type
+				if pointer, ok := receiver.(*ast.StarExpr); ok {
+					receiver = pointer.X
+				}
+				if name, ok := receiver.(*ast.Ident); ok {
+					candidates = append(candidates, name.Name+"."+d.Name.Name)
+				}
+			}
+			for _, name := range candidates {
+				if slices.Contains(names, name) {
+					keep = true
+					found[name] = true
+				}
 			}
 		case *ast.GenDecl:
 			if d.Tok == token.IMPORT {
