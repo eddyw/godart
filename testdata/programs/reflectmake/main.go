@@ -63,4 +63,8 @@ func main() {
 	grown := reflect.AppendSlice(reflect.ValueOf(more), reflect.ValueOf([]point{{7, 8}, {9, 10}})).Interface().([]point)
 	grown[0].X = 77
 	fmt.Println(*old, grown[0])
+	left, right := &point{1, 2}, &point{1, 2}
+	fmt.Println(reflect.ValueOf(left).Equal(reflect.ValueOf(right)), reflect.ValueOf(left).Equal(reflect.ValueOf(left)))
+	fmt.Println(reflect.ValueOf(*left).Field(0).CanAddr(), reflect.ValueOf(left).Elem().Field(0).CanAddr())
+	fmt.Println(reflect.ValueOf([1]int{1}).Index(0).CanAddr(), reflect.ValueOf([]int{1}).Index(0).CanAddr())
 }

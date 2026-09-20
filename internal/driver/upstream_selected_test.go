@@ -68,6 +68,12 @@ func TestSelectedUpstream(t *testing.T) {
 				"iterateToString", "TestMapIterNonEmptyMap", "TestMapIterNilMap",
 				"TestMapIterSafety", "TestMapIterNext", "TestMapIterDelete0", "TestMapIterDelete1",
 				"TestValue_Cap", "TestValue_Len",
+				"assert", "TestInterfaceGet", "TestInterfaceValue", "TestFunctionValue",
+				"two", "dummy", "TestFunc", "TestCallConvert", "TestMakeFunc",
+				"TestMakeFuncInterface", "TestMakeFuncVariadic", "TestSetIter",
+				"NonComparableStruct", "TestValue_Comparable", "TestValue_EqualNonComparable",
+				"ValueEqualTest", "equalI", "nilInterface", "valueEqualTests", "TestValue_Equal",
+				"TestSetPanic", "TestSetBytes",
 			}},
 		},
 		"time": {{Name: "format_test.go", Declarations: []string{"TimeFormatTest", "rfc3339Formats", "TestRFC3339Conversion", "FormatTest", "formatTests", "TestFormat", "goStringTests", "TestGoString", "TestFormatSingleDigits", "TestFormatShortYear", "TestNoonIs12PM", "TestMidnightIs12AM", "Test12PMIsNoon", "Test12AMIsMidnight"}}, {Name: "example_test.go"}, {Name: "time_test.go", Declarations: []string{
@@ -209,6 +215,14 @@ func TestSelectedUpstream(t *testing.T) {
 				name = pkg + "-content-type"
 			}
 			compareUpstream(t, name, pkg, filter, "vm", dir, result.Text, result.Exit)
+			if pkg == "reflect" {
+				for _, target := range []string{"aot", "js", "wasm"} {
+					t.Run(target, func(t *testing.T) {
+						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
+						compareUpstream(t, name, pkg, filter, target, dir, result.Text, result.Exit)
+					})
+				}
+			}
 			if pkg == "sync" {
 				run(t, out, "dart", "compile", "exe", stats.Binaries[0].Entry, "-o", launcher)
 				result := programOutcome(t, dir, launcher, args...)

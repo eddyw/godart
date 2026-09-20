@@ -8,7 +8,6 @@ library;
 import 'box.dart';
 import 'chan.dart';
 import 'complex.dart';
-import 'format.dart';
 import 'goint.dart';
 import 'iface.dart';
 import 'int.dart';
@@ -2447,7 +2446,7 @@ Iface? $methodByName(Iface? value, GoString name) {
 bool $valueEqual(Iface? a, Iface? b) {
   if (a == null || b == null) return a == null && b == null;
   if (a.desc.name != b.desc.name) return false;
-  return $deepEqual(a, b);
+  return $goEqual(a.value, b.value, a.desc);
 }
 
 /// The value of a type conversion.

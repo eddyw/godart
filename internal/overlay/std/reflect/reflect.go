@@ -1,5 +1,10 @@
 //go:build dart
 
+// This file includes code derived from the Go reflect package.
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of the Go-derived portions is governed by the BSD-style
+// license in ../LICENSE.
+
 // Package reflect gives the part of the standard reflect package that the
 // surface holds.
 //
@@ -912,13 +917,15 @@ func (v Value) Len() int {
 	return dart.ValueLen(v.read())
 }
 
-// Index gives 1 element of a slice, an array, or a string. The result of a
-// slice and of an array holds its location, thus Set writes through it.
+// Index gives 1 element of a slice, an array, or a string.
+// Elements of slices and addressable arrays retain their location.
 func (v Value) Index(i int) Value {
 	owner := v.read()
 	out := Value{value: dart.ValueIndex(owner, i), ro: v.ro, ok: true}
 	if v.kindAt(owner) != String {
-		out.owner, out.index, out.loc = owner, i, locIndex
+		if v.kindAt(owner) == Slice || v.CanAddr() {
+			out.owner, out.index, out.loc = owner, i, locIndex
+		}
 		out.typ = v.typeAt(owner).Elem()
 	}
 	return out
@@ -927,8 +934,7 @@ func (v Value) Index(i int) Value {
 // NumField gives the count of the fields of a struct value.
 func (v Value) NumField() int { return v.Type().NumField() }
 
-// Field gives 1 field of a struct value. The result holds its location, thus
-// Set writes through it.
+// Field gives 1 field of a struct value. It retains the addressability of v.
 func (v Value) Field(i int) Value {
 	owner := v.read()
 	f := v.typeAt(owner).Field(i)
@@ -942,8 +948,11 @@ func (v Value) Field(i int) Value {
 			ro |= roSticky
 		}
 	}
-	return Value{value: dart.FieldRead(owner, i), owner: owner,
-		index: i, loc: locField, ro: ro, typ: f.Type, ok: true}
+	out := Value{value: dart.FieldRead(owner, i), ro: ro, typ: f.Type, ok: true}
+	if v.CanAddr() {
+		out.owner, out.index, out.loc = owner, i, locField
+	}
+	return out
 }
 
 // CanSet reports whether Set writes through v.
@@ -952,18 +961,36 @@ func (v Value) CanSet() bool { return v.loc != locNone && v.ro == 0 }
 // Set writes x into the location that v names. A Value that holds no location
 // panics.
 func (v Value) Set(x Value) {
-	if v.ro != 0 {
+	v.mustBeAssignable("reflect.Value.Set")
+	if x.ro != 0 {
 		panic("reflect: reflect.Value.Set using value obtained using unexported field")
 	}
+	if !x.Type().AssignableTo(v.Type()) {
+		panic("reflect.Set: value of type " + x.Type().String() + " is not assignable to type " + v.Type().String())
+	}
+	v.write(x.read())
+}
+
+func (v Value) write(value any) {
 	switch v.loc {
 	case locPointer:
-		dart.PointerSet(v.owner, x.read())
+		dart.PointerSet(v.owner, value)
 	case locField:
-		dart.FieldWrite(v.owner, v.index, x.read())
+		dart.FieldWrite(v.owner, v.index, value)
 	case locIndex:
-		dart.ValueSetIndex(v.owner, v.index, x.read())
-	default:
-		panic("reflect: Set of a value that holds no address")
+		dart.ValueSetIndex(v.owner, v.index, value)
+	}
+}
+
+func (v Value) mustBeAssignable(method string) {
+	if !v.IsValid() {
+		panic(&ValueError{Method: method, Kind: Invalid})
+	}
+	if v.ro != 0 {
+		panic("reflect: " + method + " using value obtained using unexported field")
+	}
+	if v.loc == locNone {
+		panic("reflect: " + method + " using unaddressable value")
 	}
 }
 
@@ -1473,7 +1500,43 @@ func (v Value) MethodByName(name string) Value {
 }
 
 // Equal reports whether the 2 values hold the same type and the same value.
-func (v Value) Equal(u Value) bool { return dart.ValueEqual(v.read(), u.read()) }
+func (v Value) Equal(u Value) bool {
+	if v.Kind() == Interface {
+		v = v.Elem()
+	}
+	if u.Kind() == Interface {
+		u = u.Elem()
+	}
+	if !v.IsValid() || !u.IsValid() {
+		return v.IsValid() == u.IsValid()
+	}
+	if v.Type() != u.Type() {
+		return false
+	}
+	switch v.Kind() {
+	case Array:
+		if v.Len() == 0 && !v.Type().Elem().Comparable() {
+			break
+		}
+		for i := 0; i < v.Len(); i++ {
+			if !v.Index(i).Equal(u.Index(i)) {
+				return false
+			}
+		}
+		return true
+	case Struct:
+		for i := 0; i < v.NumField(); i++ {
+			if !v.Field(i).Equal(u.Field(i)) {
+				return false
+			}
+		}
+		return true
+	case Func, Map, Slice:
+	default:
+		return dart.ValueEqual(v.read(), u.read())
+	}
+	panic("reflect.Value.Equal: values of type " + v.Type().String() + " are not comparable")
+}
 
 // Convert gives the value converted to the type t.
 func (v Value) Convert(t Type) Value {
@@ -1778,10 +1841,11 @@ func (v Value) Bytes() []byte {
 
 // SetBytes writes a byte slice into the location that v names.
 func (v Value) SetBytes(x []byte) {
+	v.mustBeAssignable("reflect.Value.SetBytes")
 	if v.Kind() != Slice || v.Type().Elem().Kind() != Uint8 {
 		panic("reflect.Value.SetBytes of " + v.Type().String())
 	}
-	v.Set(ValueOf(x))
+	v.write(x)
 }
 
 // SetLen writes the length of the slice that v names. The capacity holds, and
@@ -2131,11 +2195,29 @@ func (v Value) SetCap(n int) {
 
 // SetIterKey writes the key of the pair that the iterator names into the
 // location that v names.
-func (v Value) SetIterKey(it *MapIter) { v.Set(it.Key()) }
+func (v Value) SetIterKey(it *MapIter) {
+	if it.it == nil {
+		panic("reflect: Value.SetIterKey called before Next")
+	}
+	if it.done {
+		panic("reflect: Value.SetIterKey called on exhausted iterator")
+	}
+	v.mustBeAssignable("reflect.Value.SetIterKey")
+	v.Set(it.Key())
+}
 
 // SetIterValue writes the value of the pair that the iterator names into the
 // location that v names.
-func (v Value) SetIterValue(it *MapIter) { v.Set(it.Value()) }
+func (v Value) SetIterValue(it *MapIter) {
+	if it.it == nil {
+		panic("reflect: Value.SetIterValue called before Next")
+	}
+	if it.done {
+		panic("reflect: Value.SetIterValue called on exhausted iterator")
+	}
+	v.mustBeAssignable("reflect.Value.SetIterValue")
+	v.Set(it.Value())
+}
 
 // CallSlice runs a variadic function and assigns the last argument to the
 // variadic parameter.

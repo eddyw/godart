@@ -84,33 +84,40 @@ func TestUpstreamTargets(t *testing.T) {
 							t.Logf("target exclusion %s: %s", name, reason)
 						}
 					}
-					args, _ := json.Marshal([]string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter})
-					writeFile(t, filepath.Join(out, "runner.dart"), "import '"+filepath.ToSlash(stats.Binaries[0].Entry)+"' as tests;\nvoid main() { tests.main("+strings.ReplaceAll(string(args), "$", `\$`)+"); }\n")
-
-					var result programResult
-					switch target {
-					case "aot":
-						exe := filepath.Join(out, "tests.exe")
-						run(t, out, "dart", "compile", "exe", "runner.dart", "-o", exe)
-						result = programOutcomeWithLimit(t, dir, upstreamLimit(), exe)
-					case "js":
-						run(t, out, "dart", "compile", "js", "runner.dart", "-o", "main.js")
-						writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
-						result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", filepath.Join(out, "run.js"))
-					case "wasm":
-						run(t, out, "dart", "compile", "wasm", "runner.dart", "-o", "main.wasm")
-						writeFile(t, filepath.Join(out, "run.mjs"), `import {compile} from './main.mjs';
-import {readFile} from 'node:fs/promises';
-const app = await compile(await readFile(new URL('./main.wasm', import.meta.url)));
-const instance = await app.instantiate({});
-instance.invokeMain();
-`)
-						result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", filepath.Join(out, "run.mjs"))
-					}
+					args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+					result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 					compareUpstream(t, pkg, pkg, filter, target, dir, result.Text, result.Exit)
 
 				})
 			}
 		})
 	}
+}
+
+func runUpstreamTarget(t *testing.T, target, out, entry, dir string, args []string) programResult {
+	t.Helper()
+	encoded, _ := json.Marshal(args)
+	writeFile(t, filepath.Join(out, "runner.dart"), "import '"+filepath.ToSlash(entry)+"' as tests;\nvoid main() { tests.main("+strings.ReplaceAll(string(encoded), "$", `\$`)+"); }\n")
+
+	var result programResult
+	switch target {
+	case "aot":
+		exe := filepath.Join(out, "tests.exe")
+		run(t, out, "dart", "compile", "exe", "runner.dart", "-o", exe)
+		result = programOutcomeWithLimit(t, dir, upstreamLimit(), exe)
+	case "js":
+		run(t, out, "dart", "compile", "js", "runner.dart", "-o", "main.js")
+		writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
+		result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", filepath.Join(out, "run.js"))
+	case "wasm":
+		run(t, out, "dart", "compile", "wasm", "runner.dart", "-o", "main.wasm")
+		writeFile(t, filepath.Join(out, "run.mjs"), `import {compile} from './main.mjs';
+import {readFile} from 'node:fs/promises';
+const app = await compile(await readFile(new URL('./main.wasm', import.meta.url)));
+const instance = await app.instantiate({});
+instance.invokeMain();
+`)
+		result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", filepath.Join(out, "run.mjs"))
+	}
+	return result
 }
