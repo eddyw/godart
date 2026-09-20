@@ -1,14 +1,16 @@
+// Copyright 2018 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 // Package os gives the file access and the process state of the standard
 // library.
 //
-// The compiler cannot read the real source. That source reaches the kernel
-// through the package syscall, and the Dart VM gives no such access. Each
-// operation below calls the interop package, and the Dart side uses dart:io.
+// The standard Go source depends on OS-specific syscall code. This overlay
+// uses the runtime adapters.
 //
-// Each operation is synchronous. Go blocks the goroutine at the same point, and
-// a synchronous call keeps the block analysis of stage 3 simple.
+// File operations are synchronous and can delay other goroutines.
 package os
 
 import (
@@ -811,7 +813,17 @@ func Remove(name string) error {
 // RemoveAll removes a path and each path inside it. It gives no error when the
 // path does not exist.
 func RemoveAll(name string) error {
-	return pathError("removeall", name, dart.RemoveAll(name))
+	if name == "" {
+		return nil
+	}
+	for len(name) > 1 && IsPathSeparator(name[len(name)-1]) {
+		name = name[:len(name)-1]
+	}
+	if endsWithDot(name) || contains(name, "\x00") {
+		return &PathError{Op: "RemoveAll", Path: name, Err: syscall.EINVAL}
+	}
+	op, path, cause := dart.RemoveAll(name)
+	return pathError(op, path, cause)
 }
 
 // Mkdir makes 1 directory. The permission argument reaches no operation of the

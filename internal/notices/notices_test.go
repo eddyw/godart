@@ -47,7 +47,7 @@ func TestCompilerNotices(t *testing.T) {
 			t.Errorf("missing current dependency notice: %s; run go generate ./internal/notices", line)
 		}
 	}
-	for _, name := range []string{"LICENSE", "runtime/goruntime/LICENSE", "flutter/goflutter/LICENSE", "flutter/ui/LICENSE"} {
+	for _, name := range []string{"LICENSE", "flutter/goflutter/LICENSE", "flutter/ui/LICENSE"} {
 		data, err := os.ReadFile(filepath.Join("../..", name))
 		if err != nil {
 			t.Fatal(err)
@@ -55,6 +55,17 @@ func TestCompilerNotices(t *testing.T) {
 		if string(data) != Project {
 			t.Errorf("project license differs: %s", name)
 		}
+	}
+	runtimeLicense, err := os.ReadFile("../../runtime/goruntime/LICENSE")
+	if err != nil {
+		t.Fatal(err)
+	}
+	goLicense, err := os.ReadFile("../overlay/std/LICENSE")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(runtimeLicense) != Project+"\nGo source adaptations\n\n"+string(goLicense) {
+		t.Fatal("runtime omits project or Go source license terms")
 	}
 	if !strings.Contains(Compiler, Project) || !strings.Contains(Compiler, "Go SDK / LICENSE\n") {
 		t.Fatal("compiler bundle omits project or Go notices")

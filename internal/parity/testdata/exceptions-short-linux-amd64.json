@@ -13612,5 +13612,19 @@
       "reason": "The original upstream test skips native artifact compilation in short mode.",
       "test": "TestReadFile"
     }
+  ],
+  "os": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestRemoveAllLarge"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestRemoveAllWithMoreErrorThanReqSize"
+    }
   ]
 }

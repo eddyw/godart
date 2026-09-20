@@ -157,6 +157,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "error_test.go"},
 			{Name: "read_test.go", Declarations: []string{"checkNamedSize", "TestReadFile", "TestWriteFile", "TestReadOnlyWriteFile"}},
 			{Name: "tempfile_test.go", Declarations: []string{"TestCreateTemp", "TestCreateTempPattern", "TestMkdirTemp", "TestMkdirTempBadDir"}},
+			{Name: "removeall_test.go", Declarations: []string{"testRequiresPermissions", "TestRemoveAll", "TestRemoveAllLarge", "TestRemoveAllLongPath", "TestRemoveAllDot", "TestRemoveAllDotDot", "TestRemoveReadOnlyDir", "TestRemoveAllButReadOnlyAndPathError", "TestRemoveUnreadableDir", "TestRemoveAllWithMoreErrorThanReqSize", "TestRemoveAllTrailingSlash", "TestRemoveAllSymlinkRemovalFailure"}},
 			{Name: "path_test.go", Declarations: []string{"TestMkdirAll", "TestMkdirAllAbsPath"}},
 			{Name: "root_test.go", Declarations: []string{"testMaybeRooted", "makefs", "hasLink", "rootTest", "rootTest.run", "rootTestCases", "errEndsTest", "TestRootMkdirAll", "TestRootMkdir", "TestRootOpen_File", "TestRootOpen_Directory", "TestRootCreate", "TestRootOpenRoot", "TestRootStat", "TestRootLstat", "TestRootReadlink", "TestRootRemoveFile", "TestRootRemoveDirectory", "TestRootNonPermissionMode", "TestRootUseAfterClose", "TestRootSymlinkToRoot", "TestOpenInRoot", "TestRootRemoveDot", "TestRootWriteReadFile", "TestRootName"}},
 		},
@@ -341,6 +342,12 @@ func TestSelectedUpstream(t *testing.T) {
 						compareUpstreamCertificates(t, name, pkg, filter, target, dir, result.Text, result.Exit, certificates)
 					})
 				}
+			}
+			if pkg == "os" {
+				t.Run("aot", func(t *testing.T) {
+					result := runUpstreamTarget(t, "aot", out, stats.Binaries[0].Entry, dir, args)
+					compareUpstream(t, name, pkg, filter, "aot", dir, result.Text, result.Exit)
+				})
 			}
 			if pkg == "sync" {
 				run(t, out, "dart", "compile", "exe", stats.Binaries[0].Entry, "-o", launcher)

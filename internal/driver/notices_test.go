@@ -55,6 +55,9 @@ func TestSourceNotices(t *testing.T) {
 			if !strings.Contains(read("goruntime/LICENSE"), "Copyright (c) 2026, Eddy Wilson") {
 				t.Fatal("embedded runtime omits its license")
 			}
+			if !strings.Contains(read("goruntime/LICENSE"), "Copyright 2009 The Go Authors.") {
+				t.Fatal("embedded runtime omits its Go source license")
+			}
 			writeFile(t, licensePath, "Dependency license version 2\n")
 			stats, err := driver.BuildWithStats(opt)
 			if err != nil {

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'removeall.dart';
 import 'slice.dart';
 import 'string.dart';
 
@@ -441,20 +442,33 @@ GoString $remove(GoString path) {
   }
 }
 
-/// Removes a path and each path inside it.
-GoString $removeAll(GoString path) {
-  final String name = path.toDartString();
+(GoString, GoString, GoString) $removeAll(GoString path) {
+  if (hasDescriptorRemoval) return removeAllDescriptors(path);
+  final name = path.toDartString();
+  (GoString, GoString, GoString)? first;
   try {
-    final FileSystemEntityType t = FileSystemEntity.typeSync(name);
-    if (t == FileSystemEntityType.notFound) return _empty;
-    if (t == FileSystemEntityType.directory) {
-      Directory(name).deleteSync(recursive: true);
-      return _empty;
+    final type = FileSystemEntity.typeSync(name, followLinks: false);
+    if (type == FileSystemEntityType.notFound) {
+      return (_empty, _empty, _empty);
     }
-    File(name).deleteSync();
-    return _empty;
+    if (type == FileSystemEntityType.directory) {
+      try {
+        for (final child in Directory(name).listSync(followLinks: false)) {
+          final result = $removeAll(GoString.fromString(child.path));
+          if (result.$3.length != 0) first ??= result;
+        }
+      } catch (e) {
+        first = (GoString.fromString('readdirnames'), path, _cause(e));
+      }
+      Directory(name).deleteSync();
+    } else if (type == FileSystemEntityType.link) {
+      Link(name).deleteSync();
+    } else {
+      File(name).deleteSync();
+    }
+    return (_empty, _empty, _empty);
   } catch (e) {
-    return _cause(e);
+    return first ?? (GoString.fromString('removeall'), path, _cause(e));
   }
 }
 

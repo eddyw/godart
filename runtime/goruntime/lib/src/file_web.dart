@@ -73,7 +73,8 @@ GoString $chtimes(
 
 GoString $remove(GoString path) => _noSys;
 
-GoString $removeAll(GoString path) => _noSys;
+(GoString, GoString, GoString) $removeAll(GoString path) =>
+    (GoString.fromString('removeall'), path, _noSys);
 
 GoString $mkdir(GoString path, bool deep) => _noSys;
 

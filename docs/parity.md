@@ -35,6 +35,9 @@ Dart VM and AOT programs use `dart:io` adapters for files, processes, sockets,
 and HTTP. These adapters do not provide all native descriptor, process-group,
 file metadata, TLS configuration, or runtime inspection APIs.
 
+On Linux and macOS, x64 and arm64 builds use native directory descriptors
+for recursive removal. Other native hosts retain Dart filesystem adapters.
+
 Browser builds use browser APIs. HTTP clients use fetch. Browser restrictions
 on headers, credentials, network access, and cross-origin requests still apply.
 Native filesystem operations, raw sockets, and HTTP servers do not become

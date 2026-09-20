@@ -1041,7 +1041,7 @@ func Remove(path string) string {
 }
 
 // RemoveAll removes a path and each path inside it.
-func RemoveAll(path string) string {
+func RemoveAll(path string) (string, string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
