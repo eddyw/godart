@@ -87,48 +87,6 @@
       "reason": "The unchanged case builds 800 nested scanners and exceeds the fixed Dart stack. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
     }
   },
-  "go/build": {
-    "TestAllTags": {
-      "classification": "implementation-gap",
-      "reason": "The original source-directory import fails because go/build inherits runtime.Compiler=gart but accepts only gc or gccgo. Source parsing needs a coherent compiler context. SDK-root lookup also remains incomplete."
-    },
-    "TestAllTagsNonSourceFile": {
-      "classification": "implementation-gap",
-      "reason": "The original source-directory import fails because go/build inherits runtime.Compiler=gart but accepts only gc or gccgo. Source parsing needs a coherent compiler context. SDK-root lookup also remains incomplete."
-    },
-    "TestCgoImportsIgnored": {
-      "classification": "implementation-gap",
-      "reason": "The original source-directory import fails because go/build inherits runtime.Compiler=gart but accepts only gc or gccgo. Source parsing needs a coherent compiler context. SDK-root lookup also remains incomplete."
-    },
-    "TestDirectives": {
-      "classification": "implementation-gap",
-      "reason": "The original source-directory import fails because go/build inherits runtime.Compiler=gart but accepts only gc or gccgo. Source parsing needs a coherent compiler context. SDK-root lookup also remains incomplete."
-    },
-    "TestDotSlashImport": {
-      "classification": "implementation-gap",
-      "reason": "The original source-directory import fails because go/build inherits runtime.Compiler=gart but accepts only gc or gccgo. Source parsing needs a coherent compiler context. SDK-root lookup also remains incomplete."
-    },
-    "TestFindImports": {
-      "classification": "test-adapter",
-      "reason": "The original case reads packages from the Go SDK source tree. Gart returns an empty runtime.GOROOT, and the upstream adapter supplies no SDK root. A host source adapter remains necessary."
-    },
-    "TestGoodOSArch": {
-      "classification": "implementation-gap",
-      "reason": "The original filename-selection case combines runtime.GOARCH=dart64 with the native buildcfg architecture. The two architecture identities disagree. The go/build target identity contract needs correction before this case can establish parity."
-    },
-    "TestImportCmd": {
-      "classification": "test-adapter",
-      "reason": "The original case reads packages from the Go SDK source tree. Gart returns an empty runtime.GOROOT, and the upstream adapter supplies no SDK root. A host source adapter remains necessary."
-    },
-    "TestIssue23594": {
-      "classification": "implementation-gap",
-      "reason": "The original source-directory import fails because go/build inherits runtime.Compiler=gart but accepts only gc or gccgo. Source parsing needs a coherent compiler context. SDK-root lookup also remains incomplete."
-    },
-    "TestLocalDirectory": {
-      "classification": "implementation-gap",
-      "reason": "The original source-directory import fails because go/build inherits runtime.Compiler=gart but accepts only gc or gccgo. Source parsing needs a coherent compiler context. SDK-root lookup also remains incomplete."
-    }
-  },
   "go/parser": {
     "TestParseDepthLimit": {
       "classification": "implementation-gap",

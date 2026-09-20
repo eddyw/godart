@@ -279,7 +279,11 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 		if target == "js" || target == "wasm" {
 			nodeVersion = strings.TrimSpace(runProgram(t, "", "node", "--version"))
 		}
-		data, err := json.MarshalIndent(upstreamEvidence{ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: map[string]string{"GODEBUG": os.Getenv("GODEBUG"), "GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
+		env := map[string]string{"GODEBUG": os.Getenv("GODEBUG"), "GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}
+		if pkg == "go/build" {
+			env["GOROOT"] = build.Default.GOROOT
+		}
+		data, err := json.MarshalIndent(upstreamEvidence{ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}

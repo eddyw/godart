@@ -33,18 +33,19 @@ func NumCPU() int { return 1 }
 // scheduler holds each one, and the count holds the goroutine that calls.
 func NumGoroutine() int { return len(dart.Parked()) + 1 }
 
-// GOROOT gives the root of the Go tree. The Dart output holds no such tree,
-// thus the text is empty. Go marks the function as deprecated.
-func GOROOT() string { return "" }
+// GOROOT gives the process-start GOROOT environment value.
+// The Dart output contains no fallback Go SDK path.
+func GOROOT() string {
+	root, _ := dart.Getenv("GOROOT")
+	return root
+}
 
 // GOOS names the operating system that runs the program. The value comes from
 // Dart at the start of the program, because the output of 1 build runs on each
 // system that the Dart VM holds.
 var GOOS = dart.OS()
 
-// GOARCH names the architecture. A Dart int holds 64 bits on the VM and with
-// AOT, and the compiler rejects the web target. Thus 1 value serves each
-// machine.
+// GOARCH names the virtual 64-bit layout of Go values on all Dart targets.
 const GOARCH = "dart64"
 
 // Compiler names the tool chain that built the program. Go gives "gc" for its

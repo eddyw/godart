@@ -306,7 +306,11 @@ func TestTestsOfGoroot(t *testing.T) {
 			if c.Package == "net/http/cgi" || (c.Package == "log" || c.Package == "log/slog") && !testing.Short() {
 				prepareUpstreamSelfExec(t, outDir, stats.Binaries[0].Entry)
 			}
-			text, execErr, finished := output(dir, nil, upstreamLimit(), "dart", filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run="+c.Run, "-test.skip="+upstreamSkip(t, c.Package))
+			var env []string
+			if c.Package == "go/build" {
+				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
+			}
+			text, execErr, finished := output(dir, env, upstreamLimit(), "dart", filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run="+c.Run, "-test.skip="+upstreamSkip(t, c.Package))
 			if !finished {
 				compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124)
 				return

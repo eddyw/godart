@@ -1,0 +1,28 @@
+--- a/build.go
++++ b/build.go
+@@ -589,6 +589,8 @@
+ 		suffix = "_" + ctxt.InstallSuffix
+ 	}
+ 	switch ctxt.Compiler {
++	case "gart":
++		// Gart has source packages but no native package archive.
+ 	case "gccgo":
+ 		pkgtargetroot = "pkg/gccgo_" + ctxt.GOOS + "_" + ctxt.GOARCH + suffix
+ 	case "gc":
+@@ -2013,14 +2015,14 @@
+ 		l = l[:n-1]
+ 	}
+ 	n := len(l)
+-	if n >= 2 && syslist.KnownOS[l[n-2]] && syslist.KnownArch[l[n-1]] {
++	if n >= 2 && syslist.KnownOS[l[n-2]] && (syslist.KnownArch[l[n-1]] || l[n-1] == "dart64") {
+ 		if allTags != nil {
+ 			// In case we short-circuit on l[n-1].
+ 			allTags[l[n-2]] = true
+ 		}
+ 		return ctxt.matchTag(l[n-1], allTags) && ctxt.matchTag(l[n-2], allTags)
+ 	}
+-	if n >= 1 && (syslist.KnownOS[l[n-1]] || syslist.KnownArch[l[n-1]]) {
++	if n >= 1 && (syslist.KnownOS[l[n-1]] || (syslist.KnownArch[l[n-1]] || l[n-1] == "dart64")) {
+ 		return ctxt.matchTag(l[n-1], allTags)
+ 	}
+ 	return true

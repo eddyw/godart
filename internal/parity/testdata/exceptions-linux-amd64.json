@@ -12369,12 +12369,6 @@
       "gart": "skip",
       "native": "pass",
       "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
-      "test": "TestEmptyImport"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The case requires the native Go command or source-tree facility through internal/testenv.",
       "test": "TestImportDirNotExist"
     },
     {

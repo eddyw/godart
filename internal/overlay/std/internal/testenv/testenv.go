@@ -63,14 +63,13 @@ func MustHaveCGO(t testing.TB) {
 
 func HasCGO() bool { return false }
 
-// GOROOT gives the root of the Go installation. A test that reads it needs the
-// source tree of Go, thus this form skips the test. A caller that gives no
-// test reads the empty name.
+// GOROOT gives the SDK root from the process-start environment.
 func GOROOT(t testing.TB) string {
-	if t != nil {
-		t.Skip("testenv: the Dart output holds no source tree of Go")
+	root := runtime.GOROOT()
+	if root == "" && t != nil {
+		t.Skip("testenv: no Go SDK root in the process environment")
 	}
-	return ""
+	return root
 }
 
 // ParallelOn64Bit marks a test that runs in parallel on a 64-bit platform. A
