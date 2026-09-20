@@ -104,6 +104,18 @@ func (e *emitter) dartType(t types.Type) string {
 		}
 		return elem + "?"
 	case *types.Slice:
+		depth := 0
+		for nested := types.Type(t); ; {
+			sl, ok := nested.Underlying().(*types.Slice)
+			if !ok {
+				break
+			}
+			depth++
+			if depth > deepSliceLevels {
+				return "Slice"
+			}
+			nested = sl.Elem()
+		}
 		return "Slice<" + e.dartType(t.Elem()) + ">"
 	case *types.Array:
 		return "List<" + e.dartType(t.Elem()) + ">"

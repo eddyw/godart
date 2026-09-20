@@ -347,6 +347,9 @@ func rangeTail(three, byLen bool, low, high, max ir.Expr) string {
 
 func (e *emitter) index(x *ir.Index) string {
 	e.mark(x.Pos)
+	if text := e.deepIndex(x); text != "" {
+		return text
+	}
 	container := x.X.GoType()
 	if typeset.BytesOrText(container) {
 		return fmt.Sprintf("%s.at!(%s, %s)",
@@ -864,6 +867,9 @@ func fieldIndex(t types.Type, field string) int {
 }
 
 func (e *emitter) composite(x *ir.Composite) string {
+	if text := e.deepSlice(x); text != "" {
+		return text
+	}
 	if x.Results != nil {
 		inner := x.Results
 		x.Results = nil
