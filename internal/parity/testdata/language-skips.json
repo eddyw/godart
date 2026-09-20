@@ -31,10 +31,6 @@
     "classification": "implementation-gap",
     "reason": "runtime.FuncForPC walks the program counters, and the Dart VM gives none"
   },
-  "fixedbugs/issue34395": {
-    "classification": "implementation-gap",
-    "reason": "a global array of 100 MB fills element by element, and the run needs more than the cap"
-  },
   "fixedbugs/issue4618": {
     "classification": "target-limit",
     "reason": "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one"
