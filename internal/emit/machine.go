@@ -547,12 +547,12 @@ func (e *emitter) writeNamedResults(s *ir.Return, results []*ir.Var) {
 // resume writes the re-entry of the call of the state before it.
 func (e *emitter) resume(s *ir.Resume) {
 	if s.Select {
-		e.line("if ($c) { $c = false; %s = $gi($r!.resume() as int); }", s.Var.Name)
+		e.line("if ($c) { $c = false; %s = $gi($resumeFrame($r!) as int); }", s.Var.Name)
 	} else if s.Var != nil {
-		e.line("if ($c) { $c = false; %s = $r!.resume() as %s; }",
+		e.line("if ($c) { $c = false; %s = $resumeFrame($r!) as %s; }",
 			s.Var.Name, e.fieldType(s.Var))
 	} else {
-		e.line("if ($c) { $c = false; $r!.resume(); }")
+		e.line("if ($c) { $c = false; $resumeFrame($r!); }")
 	}
 	e.line("if ($blocked != null) break $m;")
 }

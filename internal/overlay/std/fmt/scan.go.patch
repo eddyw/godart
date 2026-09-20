@@ -1,0 +1,92 @@
+This patch adapts Go 1.27.1 src/fmt/scan.go under the retained Go BSD license.
+The source header and package license remain in the patched output.
+
+Nested scanners traverse their wrapper chain without recursive Dart calls.
+A custom scanner yields before recursion to preserve the fixed Dart stack.
+
+--- a/scan.go
++++ b/scan.go
+@@ -10,6 +10,7 @@
+ 	"math"
+ 	"os"
+ 	"reflect"
++	"runtime"
+ 	"strconv"
+ 	"sync"
+ 	"unicode/utf8"
+@@ -181,19 +182,31 @@
+ }
+ 
+ func (s *ss) ReadRune() (r rune, size int, err error) {
+-	if s.atEOF || s.count >= s.argLimit {
+-		err = io.EOF
+-		return
+-	}
+-
+-	r, size, err = s.rs.ReadRune()
+-	if err == nil {
+-		s.count++
+-		if s.nlIsEnd && r == '\n' {
++	// Preserve nested limits without recursive scanner wrapper calls.
++	var parents []*ss
++	for {
++		if s.atEOF || s.count >= s.argLimit {
++			err = io.EOF
++			break
++		}
++		parents = append(parents, s)
++		if parent, ok := s.rs.(*ss); ok {
++			s = parent
++			continue
++		}
++		r, size, err = s.rs.ReadRune()
++		break
++	}
++	for i := len(parents) - 1; i >= 0; i-- {
++		s = parents[i]
++		if err == nil {
++			s.count++
++			if s.nlIsEnd && r == '\n' {
++				s.atEOF = true
++			}
++		} else if err == io.EOF {
+ 			s.atEOF = true
+ 		}
+-	} else if err == io.EOF {
+-		s.atEOF = true
+ 	}
+ 	return
+ }
+@@ -230,9 +243,20 @@
+ }
+ 
+ func (s *ss) UnreadRune() error {
+-	s.rs.UnreadRune()
+-	s.atEOF = false
+-	s.count--
++	var parents []*ss
++	for {
++		parents = append(parents, s)
++		if parent, ok := s.rs.(*ss); ok {
++			s = parent
++			continue
++		}
++		s.rs.UnreadRune()
++		break
++	}
++	for i := len(parents) - 1; i >= 0; i-- {
++		parents[i].atEOF = false
++		parents[i].count--
++	}
+ 	return nil
+ }
+ 
+@@ -955,6 +979,8 @@
+ 	var err error
+ 	// If the parameter has its own Scan method, use that.
+ 	if v, ok := arg.(Scanner); ok {
++		// A recursive Scanner must release the fixed Dart stack before its next call.
++		runtime.Gosched()
+ 		err = v.Scan(s, verb)
+ 		if err != nil {
+ 			if err == io.EOF {

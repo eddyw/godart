@@ -927,7 +927,7 @@ final class _ReflectResume implements WaitFrame, DurableWait, NestedFrame {
 
   @override
   Object? resume() {
-    final Object? out = inner.resume();
+    final Object? out = $resumeFrame(inner);
     final Frame? again = $blocked;
     if (again != null) {
       $block(_ReflectResume(again, convert));
@@ -2049,7 +2049,7 @@ final class _SelectResume implements WaitFrame, DurableWait, NestedFrame {
 
   @override
   Object? resume() {
-    final Object? out = inner.resume();
+    final Object? out = $resumeFrame(inner);
     final Frame? again = $blocked;
     if (again != null) {
       $block(_SelectResume(again, cases, order, descs));
@@ -2651,7 +2651,7 @@ final class _RecvResume implements WaitFrame, DurableWait, NestedFrame {
 
   @override
   Object? resume() {
-    final Object? out = inner.resume();
+    final Object? out = $resumeFrame(inner);
     final Frame? again = $blocked;
     if (again != null) {
       $block(_RecvResume(again, desc));

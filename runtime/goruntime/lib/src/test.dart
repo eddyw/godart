@@ -50,7 +50,7 @@ final class _CatchWait implements WaitFrame, DurableWait, NestedFrame {
   @override
   Object? resume() {
     try {
-      inner.resume();
+      $resumeFrame(inner);
     } on GoStop {
       return false;
     }

@@ -492,6 +492,7 @@ type (
 		Args     []Expr
 		Type     types.Type
 		Async    bool
+		NoPoll   bool
 		Spread   bool
 		Variadic bool
 

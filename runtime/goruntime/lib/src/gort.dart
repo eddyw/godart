@@ -43,8 +43,20 @@ void $gosched() {
 }
 
 int _pollBudget = 1024;
+int _pollHolds = 0;
+
+/// A statically synchronous call must not suspend at an inserted loop poll.
+T $withoutPoll<T>(T Function() call) {
+  _pollHolds++;
+  try {
+    return call();
+  } finally {
+    _pollHolds--;
+  }
+}
 
 void $poll() {
+  if (_pollHolds != 0) return;
   if (--_pollBudget > 0) return;
   _pollBudget = 1024;
   final g = $current;

@@ -12,7 +12,11 @@ import (
 )
 
 func (e *emitter) call(x *ir.Call) string {
-	return e.callText(x)
+	text := e.callText(x)
+	if x.NoPoll {
+		return "$withoutPoll(() => " + text + ")"
+	}
+	return text
 }
 
 func (e *emitter) callText(x *ir.Call) string {

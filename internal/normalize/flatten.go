@@ -577,7 +577,7 @@ func (f *flat) switchStmt(s *ir.Switch, label string) {
 		}
 		if !caseNeedsPre(c) {
 			f.emit(&ir.If{
-				Cond: f.caseCond(tag, c.Values),
+				Cond: f.value(f.caseCond(tag, c.Values)),
 				Then: &ir.Block{List: []ir.Stmt{&ir.Jump{State: states[i]}}},
 			})
 			continue
@@ -589,7 +589,7 @@ func (f *flat) switchStmt(s *ir.Switch, label string) {
 				f.block(c.Pre[k])
 			}
 			f.emit(&ir.If{
-				Cond: f.caseCond(tag, []ir.Expr{v}),
+				Cond: f.value(f.caseCond(tag, []ir.Expr{v})),
 				Then: &ir.Block{List: []ir.Stmt{&ir.Jump{State: states[i]}}},
 			})
 		}

@@ -18,6 +18,7 @@ SDK versions, modes, and exclusions.
 | Map iteration | The runtime can expose insertion order. Programs must not depend on Go's unspecified iteration order. |
 | Reflection | Descriptors cover a substantial subset. Dynamically created function types need an emitted callable factory. |
 | Garbage collection | Dart controls collection and cleanup timing. Native Go heap and collector controls do not transfer directly. |
+| Deep calls | Saved frame chains resume iteratively. Initial synchronous recursion still uses the fixed Dart stack. |
 | Stack traces | Go source positions, without native instruction offsets. `-trimpath` selects portable paths. |
 | Numbers | Target representations differ. JavaScript conversion boundaries need particular care. |
 | Time | Monotonic values support elapsed-time operations. Time-zone behavior can differ from Go's own database. |

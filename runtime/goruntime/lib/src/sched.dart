@@ -333,7 +333,7 @@ void $schedule() {
       final Frame? f = g.frame;
       if (f != null) {
         g.frame = null;
-        value = f.resume();
+        value = _resumeGraph(f);
       } else {
         final Object? Function()? body = g.start;
         g.start = null;
@@ -885,3 +885,51 @@ void _deadlock() {
 void Function(GoPanic, StackTrace) $goPanic = (GoPanic p, StackTrace trace) {
   throw p;
 };
+
+final _frameResults = Map<Frame, _FrameResult>.identity();
+
+final class _FrameResult {
+  final Object? value;
+  final Object? error;
+  final StackTrace? trace;
+  _FrameResult(this.value) : error = null, trace = null;
+  _FrameResult.error(this.error, this.trace) : value = null;
+  Object? deliver() {
+    if (error != null) Error.throwWithStackTrace(error!, trace!);
+    return value;
+  }
+}
+
+/// Consumes a child result without another recursive resume.
+Object? $resumeFrame(Frame frame) {
+  final result = _frameResults.remove(frame);
+  return result == null ? frame.resume() : result.deliver();
+}
+
+// Parent frames must receive child exceptions through their own handlers.
+Object? _resumeGraph(Frame root) {
+  final frames = <Frame>[];
+  Frame? at = root;
+  while (at != null) {
+    frames.add(at);
+    at = switch (at) {
+      final TraceFrame f => f.$next,
+      final NestedFrame f => f.$inner,
+      _ => null,
+    };
+  }
+  late _FrameResult result;
+  try {
+    for (final frame in frames.reversed) {
+      try {
+        result = _FrameResult(frame.resume());
+      } catch (e, trace) {
+        result = _FrameResult.error(e, trace);
+      }
+      _frameResults[frame] = result;
+    }
+    return result.deliver();
+  } finally {
+    _frameResults.clear();
+  }
+}

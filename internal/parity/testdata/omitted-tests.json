@@ -31,30 +31,6 @@
       "reason": "The original case constructs and parses 10,000 nested ASN.1 levels. Recursive encoder calls overflow the Dart stack before the decoder assertion. Preserve the original input while the implementation becomes stack-safe."
     }
   },
-  "encoding/xml": {
-    "TestCVE202228131": {
-      "classification": "implementation-gap",
-      "reason": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    },
-    "TestDecodeElementDepthBypass": {
-      "classification": "implementation-gap",
-      "reason": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    },
-    "TestDecodeElementRecursion": {
-      "classification": "implementation-gap",
-      "reason": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    },
-    "TestRecursiveUnmarshalInterfaceDepth": {
-      "classification": "implementation-gap",
-      "reason": "The case requires thousands of recursive frames. Dart has a fixed stack, a documented runtime exclusion. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    }
-  },
-  "fmt": {
-    "TestScanInts": {
-      "classification": "implementation-gap",
-      "reason": "The unchanged case builds 800 nested scanners and exceeds the fixed Dart stack. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    }
-  },
   "go/parser": {
     "TestParseDepthLimit": {
       "classification": "implementation-gap",
