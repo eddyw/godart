@@ -49,10 +49,16 @@ native runtime control merely because Go names it through GODEBUG.
 Native executable assumptions can require test adapters. Mixed `go/build`
 assumptions still need individual review. The report retains all these groups.
 
+The selected X.509 suite uses the original certificate factory through native Go.
+Both compilers receive the same generated certificates through source adapters.
+The adapter preserves the original 4096-bit keys, SAN counts, and verification assertions.
+Reports retain the generator source, original source, exact substitutions, output hashes, and process results.
+This evidence covers certificate verification. It does not establish Dart key-generation performance.
+
 ## Assertion integrity
 
-The native baseline runs the clean installed Go source.
-It does not use Gart overlays or test patches.
+The native baseline runs the installed Go source without Gart implementation overlays or assertion patches.
+The X.509 adapter substitutes only the shared certificate inputs described above.
 The 20 declared crypto suites use native Go `-tags=purego` to select portable implementations.
 Their manifest entries and reports record that choice. A gate rejects any change to upstream test-file eligibility from those tags.
 This configuration does not claim assembly implementation or native FIPS module parity.

@@ -432,9 +432,9 @@
   {
     "package": "crypto/x509",
     "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.HasExternalNetwork",
-    "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The suite requires the upstream external-network capability helper before further classification."
+    "diagnostic": "c.ConnectionState().PeerCertificates undefined (type tls.ConnectionState has no field or method PeerCertificates)",
+    "blocker_cause": "public-api-gap",
+    "blocker_reason": "The complete suite requires the peer certificate chain from a TLS connection."
   },
   {
     "package": "crypto/x509/pkix",

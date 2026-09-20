@@ -1,3 +1,4 @@
+import copy
 import importlib.util
 import json
 from pathlib import Path
@@ -10,6 +11,52 @@ spec.loader.exec_module(parity)
 
 
 class ParityTest(unittest.TestCase):
+    def test_certificate_inputs_preserve_setup_and_require_success(self):
+        expressions = [f"generatePEMCertWithRepeatSAN(100, {i}, \"fake.dns\")" for i in range(4)]
+        source = "\n".join(f"var x{i} = {expression}" for i, expression in enumerate(expressions))
+        pem = "-----BEGIN CERTIFICATE-----\nAA==\n-----END CERTIFICATE-----\n"
+        digest = lambda text: parity.hashlib.sha256(text.encode()).hexdigest()
+        inputs = [dict(start=source.index(expression), end=source.index(expression) + len(expression),
+                       expression=expression, pem=pem) for expression in expressions]
+        adapted = source
+        for item in reversed(inputs):
+            adapted = adapted[:item["start"]] + json.dumps(pem) + adapted[item["end"]:]
+        output = json.dumps([pem] * 4)
+        fixture = dict(source=source, source_sha256=digest(source), generator_source="original helper",
+                       generator_sha256=digest("original helper"), output=output, inputs=inputs,
+                       adapted_sha256=digest(adapted),
+                       generator=dict(ran=True, exit=0, timed_out=False, output_sha256=digest(output)))
+        report = dict(native_args=["test", "-overlay=fixture.json"], certificate_inputs=fixture)
+        self.assertIsNone(parity.certificate_input_problem(report))
+        mutations = [
+            lambda r: r.update(native_args=["test"]),
+            lambda r: r.pop("certificate_inputs"),
+            lambda r: r["certificate_inputs"]["generator"].update(exit=1),
+            lambda r: r["certificate_inputs"]["generator"].update(ran=False),
+            lambda r: r["certificate_inputs"]["generator"].update(timed_out=True),
+            lambda r: r["certificate_inputs"].update(source="changed source"),
+            lambda r: r["certificate_inputs"].update(generator_source="changed helper"),
+            lambda r: r["certificate_inputs"].update(adapted_sha256="changed assertions"),
+            lambda r: r["certificate_inputs"]["inputs"][0].update(pem="another certificate"),
+            lambda r: r["certificate_inputs"]["inputs"][0].update(start=1),
+        ]
+        for mutate in mutations:
+            changed = copy.deepcopy(report)
+            mutate(changed)
+            self.assertIsNotNone(parity.certificate_input_problem(changed))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifests = root / "manifests"
+            manifests.mkdir()
+            parity.save(manifests / "coverage-manifest.json", [])
+            report.update(package="crypto/x509", native=dict(exit=0), gart=dict(exit=0),
+                          expected=["TestGoVerify"], comparison=dict(passed=["TestGoVerify"]))
+            parity.save(root / "report.json", report)
+            self.assertEqual(parity.behavior([root], manifests)[0]["top_level"], {"passed": 1})
+            report["certificate_inputs"]["generator"]["exit"] = 1
+            parity.save(root / "report.json", report)
+            self.assertNotIn("passed", parity.behavior([root], manifests)[0]["top_level"])
+
     def test_fuzz_replay_requires_success_and_retained_inputs(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

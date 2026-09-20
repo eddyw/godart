@@ -1,5 +1,9 @@
 //go:build dart
 
+// Copyright 2015 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // Package testenv adapts Go test facilities to the Dart runtime and an optional Go SDK.
 package testenv
 
@@ -133,6 +137,10 @@ func SkipIfShortAndSlow(t testing.TB) {
 		t.Helper()
 		t.Skipf("skipping test in -short mode on %s", runtime.GOARCH)
 	}
+}
+
+func HasExternalNetwork() bool {
+	return !testing.Short() && runtime.GOOS != "js" && runtime.GOOS != "wasip1"
 }
 
 func MustHaveExternalNetwork(t testing.TB) {

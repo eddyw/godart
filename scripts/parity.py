@@ -80,6 +80,46 @@ def provenance(path):
     return {"manifest": None, "compiler_snapshot": None, "unattributed_directory": str(path.parent)}
 
 
+def certificate_input_problem(report):
+    fixture = report.get("certificate_inputs")
+    overlay = any(arg.startswith("-overlay=") for arg in report.get("native_args", []))
+    if fixture is None:
+        return "missing certificate input evidence" if overlay else None
+    if not overlay:
+        return "native compiler did not receive the certificate inputs"
+    generator = fixture["generator"]
+    if not generator["ran"] or generator["exit"] != 0 or generator["timed_out"]:
+        return "certificate input generator failed"
+    digest_text = lambda text: hashlib.sha256(text.encode()).hexdigest()
+    if (digest_text(fixture["source"]) != fixture["source_sha256"] or
+            digest_text(fixture["generator_source"]) != fixture.get("generator_sha256") or
+            digest_text(fixture["output"]) != generator["output_sha256"]):
+        return "certificate source or generator identity differs"
+    try:
+        values = json.loads(fixture["output"])
+    except ValueError:
+        return "invalid certificate input output"
+    inputs = fixture["inputs"]
+    if len(inputs) != 4 or values != [x["pem"] for x in inputs]:
+        return "certificate inputs differ from generator output"
+    source = fixture["source"].encode()
+    end = len(source)
+    for item in reversed(inputs):
+        start, stop = item["start"], item["end"]
+        if not 0 <= start < stop <= end or source[start:stop].decode() != item["expression"]:
+            return "certificate setup positions differ"
+        if not item["expression"].startswith("generatePEMCertWithRepeatSAN("):
+            return "certificate adapter changed another expression"
+        value = item["pem"]
+        if not value.startswith("-----BEGIN CERTIFICATE-----\n") or not value.endswith("-----END CERTIFICATE-----\n"):
+            return "certificate input has no PEM certificate"
+        source = source[:start] + json.dumps(value).encode() + source[stop:]
+        end = start
+    if hashlib.sha256(source).hexdigest() != fixture["adapted_sha256"]:
+        return "adapted certificate source differs"
+    return None
+
+
 def behavior(paths, manifests=MANIFESTS):
     groups = {}
     seen = set()
@@ -105,6 +145,9 @@ def behavior(paths, manifests=MANIFESTS):
                                             "reasons": defaultdict(set), "problems": []})
             comparison = report["comparison"]
             problems = list(comparison.get("problems") or [])
+            input_problem = certificate_input_problem(report)
+            if input_problem:
+                problems.append(input_problem)
             if report["native"]["exit"] != 0 or report["gart"]["exit"] != 0:
                 problems.append("a process failed")
             if not report["expected"]:

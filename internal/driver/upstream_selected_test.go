@@ -40,8 +40,70 @@ func TestSelectedUpstream(t *testing.T) {
 		"cmp":              {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
 		"math":             {{Name: "const_test.go"}, {Name: "example_test.go"}},
 		"encoding/asn1":    {{Name: "marshal_test.go"}},
-		"runtime/debug":    {{Name: "mod_test.go"}},
-		"os/exec":          {{Name: "env_test.go"}},
+		"crypto/x509": {
+			{Name: "verify_test.go", Declarations: []string{
+				"TestGoVerify",
+				"certificateFromPEM",
+				"chainToDebugString",
+				"criticalExtIntermediate",
+				"criticalExtIntermediateWithExt",
+				"criticalExtLeaf",
+				"criticalExtLeafWithExt",
+				"criticalExtRoot",
+				"digicertRoot",
+				"excludedNamesIntermediate",
+				"excludedNamesLeaf",
+				"excludedNamesRoot",
+				"expectAuthorityUnknown",
+				"expectExpired",
+				"expectHashError",
+				"expectHostnameError",
+				"expectNameConstraintsError",
+				"expectNotAuthorizedError",
+				"expectUnhandledCriticalExtension",
+				"expectUsageError",
+				"generatePEMCertWithRepeatSAN",
+				"globalSignRoot",
+				"googleLeaf",
+				"googleLeafWithInvalidHash",
+				"gtsIntermediate",
+				"gtsRoot",
+				"ignoreCNWithSANLeaf",
+				"ignoreCNWithSANRoot",
+				"invalidCNRoot",
+				"leafMatchingAKIDMatchingIssuer",
+				"leafWithAKID",
+				"nameConstraintsIntermediate1",
+				"nameConstraintsIntermediate2",
+				"nameConstraintsLeaf",
+				"nameToKey",
+				"rootMatchingSKIDMismatchingSubject",
+				"rootMismatchingSKIDMatchingSubject",
+				"rootWithoutSKID",
+				"selfSigned",
+				"smimeIntermediate",
+				"smimeLeaf",
+				"smimeRoot",
+				"testVerify",
+				"trustAsiaLeaf",
+				"trustAsiaSHA384Intermediate",
+				"validCNWithoutSAN",
+				"verifyTest",
+				"verifyTests",
+				"x509v1TestIntermediate",
+				"x509v1TestLeaf",
+				"x509v1TestRoot",
+			}},
+			{Name: "pkcs8_test.go"}, {Name: "sec1_test.go"}, {Name: "pem_decrypt_test.go"},
+			{Name: "x509_test.go", Declarations: []string{
+				"TestPKCS1MismatchPublicKeyFormat", "TestMarshalInvalidPublicKey", "TestPKIXMismatchPublicKeyFormat",
+				"testParsePKIXPublicKey", "TestParsePKIXPublicKey", "pemPublicKey", "pemEd25519Key", "pemX25519Key",
+				"TestCertificateParse", "certBytes", "TestCertificateEqualOnNil",
+				"TestMismatchedSignatureAlgorithm", "rsaPSSSelfSignedPEM",
+			}},
+		},
+		"runtime/debug": {{Name: "mod_test.go"}},
+		"os/exec":       {{Name: "env_test.go"}},
 		"sync": {
 			{Name: "once_test.go"}, {Name: "cond_test.go"},
 			{Name: "mutex_test.go", Declarations: []string{"misuseTests", "init", "TestMutexMisuse", "TestMutexFairness"}},
@@ -92,13 +154,24 @@ func TestSelectedUpstream(t *testing.T) {
 			dir := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(pkg))
 			fixture := t.TempDir()
 			writeFile(t, filepath.Join(fixture, "go.mod"), "module example.com/upstream\n\ngo 1.27\n")
-			if pkg == "sync" {
-				writeFile(t, filepath.Join(fixture, "go.mod"), "module sync_test\n\ngo 1.27\n\nrequire example.com/testenv v0.0.0\nreplace example.com/testenv => ./testenv\n")
+			if pkg == "sync" || pkg == "crypto/x509" {
+				module := "example.com/upstream"
+				if pkg == "sync" {
+					module = "sync_test"
+				}
+				writeFile(t, filepath.Join(fixture, "go.mod"), "module "+module+"\n\ngo 1.27\n\nrequire example.com/testenv v0.0.0\nreplace example.com/testenv => ./testenv\n")
+			}
+			var certificates *certificateInputs
+			if pkg == "crypto/x509" {
+				certificates = prepareCertificateInputs(t, filepath.Join(dir, "verify_test.go"))
 			}
 			selectedFiles := map[string]upstreamFile{}
 			for _, file := range files {
 				selectedFiles[file.Name] = file
 				source := selectedUpstreamSource(t, filepath.Join(dir, file.Name), file.Declarations)
+				if certificates != nil && file.Name == "verify_test.go" {
+					source = applyCertificateInputs(t, source, certificates.Inputs)
+				}
 				if pkg == "sync" {
 					// The original traceback assertion requires the sync_test import path.
 					source = strings.Replace(source, "package sync_test", "package sync", 1)
@@ -110,6 +183,10 @@ func TestSelectedUpstream(t *testing.T) {
 				if pkg == "net/http" && file.Name == "header_test.go" {
 					source = strings.Replace(source, "package http", "package http_test\nimport . \"net/http\"", 1)
 				}
+				if pkg == "crypto/x509" {
+					source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/testenv"`)
+					source = strings.Replace(source, "package x509", "package x509_test\nimport . \"crypto/x509\"", 1)
+				}
 				if pkg == "encoding/asn1" {
 					source = strings.Replace(source, "package asn1", "package asn1_test\nimport . \"encoding/asn1\"", 1)
 				}
@@ -118,8 +195,12 @@ func TestSelectedUpstream(t *testing.T) {
 				}
 				writeFile(t, filepath.Join(fixture, file.Name), source)
 			}
-			if pkg == "sync" {
-				source := selectedUpstreamSource(t, "../overlay/std/internal/testenv/testenv.go", []string{"Executable", "MustHaveExec"})
+			if pkg == "sync" || pkg == "crypto/x509" {
+				names := []string{"Executable", "MustHaveExec"}
+				if pkg == "crypto/x509" {
+					names = []string{"Builder", "SkipFlaky"}
+				}
+				source := selectedUpstreamSource(t, "../overlay/std/internal/testenv/testenv.go", names)
 				if err := os.MkdirAll(filepath.Join(fixture, "testenv"), 0755); err != nil {
 					t.Fatal(err)
 				}
@@ -214,12 +295,12 @@ func TestSelectedUpstream(t *testing.T) {
 			if pkg == "net/http" {
 				name = pkg + "-content-type"
 			}
-			compareUpstream(t, name, pkg, filter, "vm", dir, result.Text, result.Exit)
-			if pkg == "reflect" {
+			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
+			if pkg == "reflect" || pkg == "crypto/x509" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
-						compareUpstream(t, name, pkg, filter, target, dir, result.Text, result.Exit)
+						compareUpstreamCertificates(t, name, pkg, filter, target, dir, result.Text, result.Exit, certificates)
 					})
 				}
 			}
