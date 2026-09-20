@@ -10,6 +10,22 @@ spec.loader.exec_module(module)
 
 
 class DurationTest(unittest.TestCase):
+    def test_selected_packages_exclude_target_children(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "run.json").write_text(json.dumps(dict(mode="short", source="snapshot")))
+            attempt = root / "upstream-priority-1/attempt-001"
+            attempt.mkdir(parents=True)
+            (attempt / "result.json").write_text(json.dumps(dict(exit=1, mode="short")))
+            (attempt / "ci.log").write_text(
+                "    --- PASS: TestSelectedUpstream/crypto/subtle (94.00s)\n"
+                "        --- PASS: TestSelectedUpstream/crypto/subtle/js (30.00s)\n"
+                "    --- FAIL: TestSelectedUpstream/go/parser (50.00s)\n"
+                "=== RUN   TestSelectedUpstream/reflect\n")
+            weights, evidence = module.measurements(root)
+            self.assertEqual(weights, {"TestSelectedUpstream/short/crypto/subtle": 94.0})
+            self.assertEqual(evidence["logs"][0]["exit"], 1)
+
     def test_partial_run_keeps_only_completed_cases(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

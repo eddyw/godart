@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -8,6 +9,40 @@ import unittest
 
 
 class LocalRunnerTest(unittest.TestCase):
+    def test_priority_shards_run_shared_helpers_once(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "scripts").mkdir()
+            shutil.copy(Path(__file__).with_name("ci.sh"), root / "scripts/ci.sh")
+            binary = root / "bin"
+            binary.mkdir()
+            go = binary / "go"
+            go.write_text('''#!/usr/bin/env python3
+import json, sys
+with open("calls.jsonl", "a") as output:
+    output.write(json.dumps(sys.argv[1:]) + "\\n")
+''')
+            go.chmod(0o755)
+            env = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ["PATH"],
+                       GART_UPSTREAM_MODE="short")
+            env.pop("GITHUB_STEP_SUMMARY", None)
+            for index in range(4):
+                subprocess.run(["bash", "scripts/ci.sh", "upstream-priority", str(index), "4"],
+                               cwd=root, env=env, check=True, capture_output=True)
+            calls = [json.loads(line) for line in (root / "calls.jsonl").read_text().splitlines()]
+            policy = [args for args in calls if "./internal/parity" in args]
+            driver = [args for args in calls if "./internal/driver" in args]
+            self.assertEqual(len(policy), 1)
+            self.assertEqual(len(driver), 4)
+            for index, args in enumerate(driver):
+                self.assertIn("-short=true", args)
+                self.assertEqual(args[args.index("-shard-index") + 1], str(index))
+                self.assertEqual(args[args.index("-shard-count") + 1], "4")
+                selection = args[args.index("-run") + 1]
+                self.assertIn("TestSelectedUpstream", selection)
+                for helper in ("TestHTTPUpstream", "TestHTTPNativeServer", "TestParityHarness"):
+                    self.assertEqual(helper in selection, index == 0)
+
     def test_retry_preserves_attempts_and_rejects_source_drift(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

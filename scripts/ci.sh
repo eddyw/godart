@@ -61,8 +61,11 @@ case "$suite" in
   upstream-targets) test_name=TestUpstreamTargets ;;
   upstream-blockers) test_name=TestUpstreamCompileBlockers ;;
   upstream-priority)
-    go test -count=1 ./internal/parity
-    test_name='TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
+    test_name=TestSelectedUpstream
+    if [[ $shard_index == 0 ]]; then
+      go test -count=1 ./internal/parity
+      test_name+='|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
+    fi
     ;;
   web-io) test_name=TestWebIO ;;
   web-fetch) test_name=TestWebFetch ;;

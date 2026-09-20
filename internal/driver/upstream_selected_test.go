@@ -203,7 +203,15 @@ func TestSelectedUpstream(t *testing.T) {
 		"net":      {{Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "pipe_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept"}}},
 		"net/http": {{Name: "header_test.go", Declarations: []string{"headerWriteTests", "TestHeaderWrite", "parseTimeTests", "TestParseTime", "TestNilHeaderClone"}}, {Name: "sniff_test.go", Declarations: []string{"sniffTests", "TestDetectContentType"}}},
 	}
+	names := make([]string, 0, len(selections))
+	for pkg := range selections {
+		names = append(names, pkg)
+	}
+	selected := testShard(t, names)
 	for pkg, files := range selections {
+		if !selected[pkg] {
+			continue
+		}
 		t.Run(pkg, func(t *testing.T) {
 			t.Parallel()
 			dir := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(pkg))

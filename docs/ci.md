@@ -33,6 +33,8 @@ GOMAXPROCS=2 GOFLAGS=-p=2 bash scripts/ci.sh programs 0 6
 Use [ci-matrix.json](../scripts/ci-matrix.json) for suite names and shard counts.
 Shard indexes start at 0.
 Without shard arguments, `ci.sh` executes the complete named suite.
+The priority suite distributes selected packages across shards.
+Only shard 0 also executes the shared HTTP and parity-harness tests.
 
 Run filesystem tests as an unprivileged user. Root bypasses permission failures
 that the upstream assertions require.
@@ -67,7 +69,7 @@ concurrency require a new output directory. Each attempt retains its own log.
 
 ## Shard duration updates
 
-Refresh stdlib weights after a completed local run:
+Refresh stdlib and selected upstream weights after a completed local run:
 
 ```sh
 python3 scripts/ci-durations.py build/linux-short \
