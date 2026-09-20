@@ -531,6 +531,10 @@ func (f *flat) forStmt(s *ir.For, label string) {
 	end := f.state()
 	f.jump(top)
 	f.cur = top
+	if f.m.Blocking {
+		f.emit(&ir.Poll{})
+		f.pause(nil)
+	}
 	if s.Cond != nil {
 		// The declaration of each temporary of the condition runs at the top
 		// of each pass, in front of the check.
@@ -677,6 +681,10 @@ func (f *flat) gotoStmt(s *ir.Goto) {
 	if !ok {
 		f.b.fail(f.pos, "the label %s of a goto statement has no block", s.Label)
 		return
+	}
+	if f.m.Blocking {
+		f.emit(&ir.Poll{})
+		f.pause(nil)
 	}
 	f.jump(n)
 }

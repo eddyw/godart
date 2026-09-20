@@ -35,16 +35,34 @@ void $gosched() {
   final Goroutine? g = $current;
   if (g == null) return;
   if ($runqEmpty && $eventWaits > 0) {
-    $holdEvent();
-    Timer.run(() {
-      $freeEvent();
-      $ready(g);
-      $schedule();
-    });
-    $block(const _Yield());
+    _yieldEvent(g);
     return;
   }
   $ready(g);
+  $block(const _Yield());
+}
+
+int _pollBudget = 1024;
+
+void $poll() {
+  if (--_pollBudget > 0) return;
+  _pollBudget = 1024;
+  final g = $current;
+  if (g == null) return;
+  if ($eventWaits > 0 || $hosted) {
+    _yieldEvent(g);
+    return;
+  }
+  $gosched();
+}
+
+void _yieldEvent(Goroutine g) {
+  $holdEvent();
+  Timer.run(() {
+    $freeEvent();
+    $ready(g);
+    $schedule();
+  });
   $block(const _Yield());
 }
 

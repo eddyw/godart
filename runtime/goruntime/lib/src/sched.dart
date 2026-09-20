@@ -142,6 +142,8 @@ final class Goroutine {
   /// a bubble starts joins that bubble.
   Bubble? bubble;
 
+  ChainState _chain = const ChainState(null, false);
+
   bool _ended = false;
   Object? _result;
   void Function()? _hook;
@@ -325,6 +327,8 @@ void $schedule() {
     $current = g;
     $blocked = null;
     Object? value;
+    final outerChain = ChainState($chainPanic, $recovered);
+    $chainClose(g._chain);
     try {
       final Frame? f = g.frame;
       if (f != null) {
@@ -354,6 +358,9 @@ void $schedule() {
       if (g.isMain) _mainExited = true;
       g._end(null);
       continue;
+    } finally {
+      g._chain = ChainState($chainPanic, $recovered);
+      $chainClose(outerChain);
     }
     if ($blocked != null) {
       g.frame = $blocked;

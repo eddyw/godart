@@ -367,6 +367,9 @@ func (f *flat) selectStmt(s *ir.Select, label string) {
 
 // split reports whether a statement must become states of its own.
 func (f *flat) split(s ir.Stmt) bool {
+	if f.m.Blocking && holdsLoop(s) {
+		return true
+	}
 	switch s.(type) {
 	case *ir.Goto, *ir.Break, *ir.Continue, *ir.Return:
 		return true
@@ -386,6 +389,9 @@ func (f *flat) splitBlock(b *ir.Block) bool {
 		return false
 	}
 	for _, s := range b.List {
+		if f.m.Blocking && holdsLoop(s) {
+			return true
+		}
 		if blocksStmt(s) || holdsGoto(s) {
 			return true
 		}
@@ -394,6 +400,36 @@ func (f *flat) splitBlock(b *ir.Block) bool {
 		}
 		if len(f.loops) > 0 && escapes(s) {
 			return true
+		}
+	}
+	return false
+}
+
+func holdsLoop(s ir.Stmt) bool {
+	switch s := s.(type) {
+	case *ir.For:
+		return true
+	case *ir.Labeled:
+		return holdsLoop(s.Stmt)
+	case *ir.Block:
+		for _, child := range s.List {
+			if holdsLoop(child) {
+				return true
+			}
+		}
+	case *ir.If:
+		return holdsLoop(s.Then) || holdsLoop(s.Else)
+	case *ir.Switch:
+		for _, c := range s.Cases {
+			if holdsLoop(c.Body) {
+				return true
+			}
+		}
+	case *ir.Select:
+		for _, c := range s.Cases {
+			if holdsLoop(c.Body) {
+				return true
+			}
 		}
 	}
 	return false

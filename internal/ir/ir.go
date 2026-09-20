@@ -325,6 +325,9 @@ type (
 	// Jump writes the number of the next state and starts the machine again.
 	Jump struct{ State int }
 
+	// Poll permits another goroutine to run after a bounded number of loops.
+	Poll struct{}
+
 	// Resume re-enters the call of the state before it, and it leaves the
 	// machine when that call gave up control.
 	//
@@ -417,6 +420,7 @@ func (*Go) isStmt()          {}
 func (*Defer) isStmt()       {}
 func (*Select) isStmt()      {}
 func (*Jump) isStmt()        {}
+func (*Poll) isStmt()        {}
 func (*Resume) isStmt()      {}
 func (*DeferNext) isStmt()   {}
 func (*DeferEnd) isStmt()    {}

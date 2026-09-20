@@ -124,6 +124,8 @@ func (e *emitter) stmtOne(s ir.Stmt) {
 	case *ir.Jump:
 		e.line("$s = %d;", s.State)
 		e.line("continue $m;")
+	case *ir.Poll:
+		e.line("$poll();")
 	case *ir.Resume:
 		e.resume(s)
 	case *ir.DeferNext:

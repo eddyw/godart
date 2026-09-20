@@ -10,7 +10,7 @@ SDK versions, modes, and exclusions.
 | Area | Contract or limit |
 |---|---|
 | Language versions | Package and file versions govern language semantics. The installed SDK still supplies standard library code. |
-| Goroutines | Cooperative execution in 1 Dart isolate. A busy loop without a yield can block other work. |
+| Goroutines | Cooperative execution in 1 Dart isolate. Loops in state machines yield periodically. Busy synchronous functions can block other work. |
 | Parallelism | No shared-memory Go execution across native threads. `GOMAXPROCS` and `NumCPU` report 1. |
 | Type layout | Constant `unsafe.Sizeof`, `unsafe.Alignof`, and `unsafe.Offsetof` use source type metadata. They do not describe Dart object storage. |
 | Native access | No cgo, native pointer arithmetic, or general `unsafe` operations. |
