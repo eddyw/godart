@@ -227,7 +227,9 @@ type rtype struct {
 	//
 	// The package interns 1 rtype for each handle, thus the cache holds for
 	// the whole program.
-	kindPlus1 Kind
+	kindPlus1   Kind
+	layoutSize  uintptr
+	layoutAlign int
 }
 
 // types interns 1 Type for each handle, thus 2 reads of the same type give 2
@@ -646,6 +648,9 @@ func (t *rtype) FieldAlign() int { return t.Align() }
 // size up to the alignment of the struct. A struct whose last field holds 0
 // bytes takes 1 more byte, thus a pointer to the end stays inside the value.
 func (t *rtype) layout() (uintptr, int) {
+	if t.layoutAlign != 0 {
+		return t.layoutSize, t.layoutAlign
+	}
 	count := dart.FieldCount(t.handle())
 	offset := uintptr(0)
 	align := 1
@@ -664,7 +669,9 @@ func (t *rtype) layout() (uintptr, int) {
 	if count > 0 && last == 0 && offset > 0 {
 		offset++
 	}
-	return roundUp(offset, uintptr(align)), align
+	t.layoutSize = roundUp(offset, uintptr(align))
+	t.layoutAlign = align
+	return t.layoutSize, t.layoutAlign
 }
 
 // roundUp gives the first multiple of the alignment that is not below n.

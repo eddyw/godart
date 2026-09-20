@@ -183,5 +183,14 @@
       "js",
       "wasm"
     ]
+  },
+  {
+    "package": "encoding/gob",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ],
+    "run": "^TestIgnoreDepthLimit$"
   }
 ]

@@ -1770,17 +1770,19 @@ int $arrayOf(int length, int elem) {
   final TypeDesc e = _typeAt(elem);
   final String name = '[$length]${e.name}';
   return _syntheticHandle(
-    () => TypeDesc(
-      name,
-      'array',
-      const <String, Function>{},
-      text: '[$length]${e.display}',
-      elem: () => e,
-      length: length,
-      comparable: e.comparable,
-      zero: () => _withType<Object?>(e, <T>() => _zeros<T>(e, length)),
-      withType: <R>(R Function<T>() f) =>
-          _withType<R>(e, <T>() => f<List<T>>()),
+    () => _withType<TypeDesc>(
+      e,
+      <T>() => TypeDesc(
+        name,
+        'array',
+        const <String, Function>{},
+        text: '[$length]${e.display}',
+        elem: () => e,
+        length: length,
+        comparable: e.comparable,
+        zero: () => _zeros<T>(e, length),
+        withType: <R>(R Function<U>() f) => f<List<T>>(),
+      ),
     ),
   );
 }
