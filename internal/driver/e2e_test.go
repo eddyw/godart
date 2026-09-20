@@ -120,7 +120,7 @@ func cutTrace(text string) string {
 // TestAOT proves that the output also compiles ahead of time. The Dart VM and
 // AOT are the 2 targets of the project.
 func TestAOT(t *testing.T) {
-	for _, name := range []string{"multi", "chancap"} {
+	for _, name := range []string{"multi", "chancap", "reflectmake"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {
@@ -159,7 +159,7 @@ func TestWasm(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)
 	}
-	for _, name := range []string{"hello", "chancap"} {
+	for _, name := range []string{"hello", "chancap", "reflectmake"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {
@@ -201,7 +201,7 @@ func TestJS(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)
 	}
-	for _, name := range []string{"chancap", "intwrap", "reflectint64", "genmixed", "genops", "genericvalue", "nanoclock", "globalptr", "structconv", "reflectblock", "uniquecompat"} {
+	for _, name := range []string{"reflectmake", "chancap", "intwrap", "reflectint64", "genmixed", "genops", "genericvalue", "nanoclock", "globalptr", "structconv", "reflectblock", "uniquecompat"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {

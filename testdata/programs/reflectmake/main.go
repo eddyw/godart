@@ -48,4 +48,19 @@ func main() {
 	buf := make([]byte, 4)
 	n = reflect.Copy(reflect.ValueOf(buf), reflect.ValueOf("hello"))
 	fmt.Println(n, string(buf))
+
+	var nilPoints []point
+	fmt.Println(reflect.Append(reflect.ValueOf(nilPoints)).IsNil())
+	points := make([]point, 2, 4)
+	second := &points[1]
+	added := reflect.Append(reflect.ValueOf(points[:1]), reflect.ValueOf(point{3, 4})).Interface().([]point)
+	fmt.Println(second == &added[1], *second, len(points), len(added))
+	source := []point{{5, 6}}
+	more := reflect.AppendSlice(reflect.ValueOf(added), reflect.ValueOf(source)).Interface().([]point)
+	source[0].X = 99
+	fmt.Println(more[2], source[0])
+	old := &more[0]
+	grown := reflect.AppendSlice(reflect.ValueOf(more), reflect.ValueOf([]point{{7, 8}, {9, 10}})).Interface().([]point)
+	grown[0].X = 77
+	fmt.Println(*old, grown[0])
 }

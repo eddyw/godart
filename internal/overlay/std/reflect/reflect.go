@@ -902,7 +902,15 @@ func (v Value) Elem() Value {
 }
 
 // Len gives the length of a slice, an array, a string, or a map.
-func (v Value) Len() int { return dart.ValueLen(v.read()) }
+func (v Value) Len() int {
+	if v.Kind() == Pointer {
+		if v.Type().Elem().Kind() != Array {
+			panic("reflect: call of reflect.Value.Len on ptr to non-array Value")
+		}
+		return v.Type().Elem().Len()
+	}
+	return dart.ValueLen(v.read())
+}
 
 // Index gives 1 element of a slice, an array, or a string. The result of a
 // slice and of an array holds its location, thus Set writes through it.
@@ -1263,15 +1271,32 @@ func TypeFor[T any]() Type {
 }
 
 // Cap gives the capacity of a slice, of an array, or of a channel.
-func (v Value) Cap() int { return dart.ValueCap(v.read()) }
+func (v Value) Cap() int {
+	if v.Kind() == Pointer {
+		if v.Type().Elem().Kind() != Array {
+			panic("reflect: call of reflect.Value.Cap on ptr to non-array Value")
+		}
+		return v.Type().Elem().Len()
+	}
+	return dart.ValueCap(v.read())
+}
 
 // Append gives a slice that holds each element of s and each value of x.
 func Append(s Value, x ...Value) Value {
 	if s.Kind() != Slice {
 		panic("reflect: Append of " + s.Type().String())
 	}
+	if s.ro != 0 {
+		panic("reflect: reflect.Append using value obtained using unexported field")
+	}
 	items := make([]any, len(x))
 	for i, v := range x {
+		if v.ro != 0 {
+			panic("reflect: reflect.Value.Set using value obtained using unexported field")
+		}
+		if !v.IsValid() || !v.Type().AssignableTo(s.Type().Elem()) {
+			panic("reflect: reflect.Value.Set with incompatible value")
+		}
 		items[i] = v.read()
 	}
 	return Value{value: dart.AppendValue(s.read(), items), ok: true}
@@ -1281,6 +1306,12 @@ func Append(s Value, x ...Value) Value {
 func AppendSlice(s, t Value) Value {
 	if s.Kind() != Slice {
 		panic("reflect: AppendSlice of " + s.Type().String())
+	}
+	if t.Kind() != Slice || s.Type().Elem() != t.Type().Elem() {
+		panic("reflect: AppendSlice of incompatible slices")
+	}
+	if s.ro != 0 || t.ro != 0 {
+		panic("reflect: reflect.AppendSlice using value obtained using unexported field")
 	}
 	return Value{value: dart.AppendSliceValue(s.read(), t.read()), ok: true}
 }
@@ -1428,11 +1459,7 @@ func (v Value) Addr() Value {
 	if v.loc == locNone {
 		panic("reflect: Addr of a value that holds no address")
 	}
-	ro := uint8(0)
-	if v.ro != 0 {
-		ro = roSticky
-	}
-	return Value{value: dart.ValueAddr(v.read(), v.owner, v.index, v.loc), ro: ro, ok: true}
+	return Value{value: dart.ValueAddr(v.read(), v.owner, v.index, v.loc), ro: v.ro, ok: true}
 }
 
 // MethodByName gives the method of the name, bound to the value. A name that
@@ -1599,32 +1626,64 @@ func (e errorText) Error() string { return string(e) }
 // snapshot of the keys would walk each entry that the loop body dropped, and a
 // NaN key gives no second read.
 type MapIter struct {
-	m  Value
-	it any
+	m    Value
+	it   any
+	done bool
 }
 
 // MapRange gives an iterator of the pairs of a map.
 func (v Value) MapRange() *MapIter {
-	return &MapIter{m: v, it: dart.MapIterOf(v.read())}
+	if v.Kind() != Map {
+		panic(&ValueError{"reflect.Value.MapRange", v.Kind()})
+	}
+	return &MapIter{m: v}
 }
 
 // Next steps to the next pair, and it reports whether a pair stands there.
-func (it *MapIter) Next() bool { return dart.MapIterNext(it.it) }
+func (it *MapIter) Next() bool {
+	if !it.m.IsValid() {
+		panic("reflect: MapIter.Next called without an associated map")
+	}
+	if it.done {
+		panic("reflect: MapIter.Next called on exhausted iterator")
+	}
+	if it.it == nil {
+		it.it = dart.MapIterOf(it.m.read())
+	}
+	it.done = !dart.MapIterNext(it.it)
+	return !it.done
+}
 
 // Key gives the key of the pair.
 func (it *MapIter) Key() Value {
-	return Value{value: dart.MapIterKey(it.m.read(), it.it), typ: it.m.Type().Key(), ok: true}
+	if it.it == nil {
+		panic("reflect: MapIter.Key called before Next")
+	}
+	if it.done {
+		panic("reflect: MapIter.Key called on exhausted iterator")
+	}
+	return Value{value: dart.MapIterKey(it.m.read(), it.it), typ: it.m.Type().Key(), ro: it.m.ro, ok: true}
 }
 
 // Value gives the value of the pair.
 func (it *MapIter) Value() Value {
-	return Value{value: dart.MapIterValue(it.m.read(), it.it), typ: it.m.Type().Elem(), ok: true}
+	if it.it == nil {
+		panic("reflect: MapIter.Value called before Next")
+	}
+	if it.done {
+		panic("reflect: MapIter.Value called on exhausted iterator")
+	}
+	return Value{value: dart.MapIterValue(it.m.read(), it.it), typ: it.m.Type().Elem(), ro: it.m.ro, ok: true}
 }
 
 // Reset points the iterator at another map.
 func (it *MapIter) Reset(m Value) {
+	if m.IsValid() && m.Kind() != Map {
+		panic(&ValueError{"reflect.Value.MapIter.Reset", m.Kind()})
+	}
 	it.m = m
-	it.it = dart.MapIterOf(m.read())
+	it.it = nil
+	it.done = false
 }
 
 // IsExported reports whether the field is exported.

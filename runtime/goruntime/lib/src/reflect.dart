@@ -2086,12 +2086,6 @@ int $valueCap(Iface? value) {
   return $valueLen(value);
 }
 
-/// _sliceParts gives the header of a slice value, or null.
-Slice<Object?>? _sliceOfValue(Iface? value) {
-  final Object? v = value?.value;
-  return v is Slice<Object?> ? v : null;
-}
-
 /// _freshSlice builds a slice of the type with the length, through the make of
 /// the descriptor. A type that the program never holds gives a panic.
 Slice<Object?> _freshSlice(TypeDesc desc, int length) {
@@ -2110,17 +2104,23 @@ Iface? $appendValue(Iface? slice, Slice<Iface?> items) {
   if (elem == null) {
     $panic(Iface($typeGoError, GoError('reflect: Append of ${desc.display}')));
   }
-  final Slice<Object?>? held = _sliceOfValue(slice);
-  final int n = held == null ? 0 : held.len;
-  final Slice<Object?> out = _freshSlice(desc, n + items.len);
-  for (int i = 0; i < n; i++) {
-    out[i] = held![i];
-  }
-  for (int i = 0; i < items.len; i++) {
-    final Iface? x = items[i];
-    out[n + i] = elem.kind == 'interface' ? x : x?.value;
-  }
-  return Iface(desc, out);
+  return _withType<Iface>(elem, <T>() {
+    final Slice<T> held = slice.value as Slice<T>;
+    final List<T> add = <T>[
+      for (int i = 0; i < items.len; i++)
+        _copyOf(elem.kind == 'interface' ? items[i] : items[i]?.value, elem)
+            as T,
+    ];
+    return Iface(
+      desc,
+      $append<T>(
+        held,
+        add,
+        (int n) => (_freshSlice(desc, n) as Slice<T>).array,
+        _holdsValue(elem) ? (T a, T b) => _assignInto(a, b, elem) : null,
+      ),
+    );
+  });
 }
 
 /// Appends each element of the second slice to the first one.
@@ -2132,18 +2132,19 @@ Iface? $appendSliceValue(Iface? slice, Iface? add) {
       Iface($typeGoError, GoError('reflect: AppendSlice of ${desc.display}')),
     );
   }
-  final Slice<Object?>? held = _sliceOfValue(slice);
-  final Slice<Object?>? more = _sliceOfValue(add);
-  final int n = held == null ? 0 : held.len;
-  final int m = more == null ? 0 : more.len;
-  final Slice<Object?> out = _freshSlice(desc, n + m);
-  for (int i = 0; i < n; i++) {
-    out[i] = held![i];
-  }
-  for (int i = 0; i < m; i++) {
-    out[n + i] = more![i];
-  }
-  return Iface(desc, out);
+  final TypeDesc elem = desc.elem!();
+  return _withType<Iface>(
+    elem,
+    <T>() => Iface(
+      desc,
+      $appendSlice<T>(
+        slice.value as Slice<T>,
+        add!.value as Slice<T>,
+        (int n) => (_freshSlice(desc, n) as Slice<T>).array,
+        _holdsValue(elem) ? (T a, T b) => _assignInto(a, b, elem) : null,
+      ),
+    ),
+  );
 }
 
 /// Copies each element of the source into the destination, and gives the count

@@ -288,7 +288,13 @@ Slice<T> $appendRange<T>(
   void Function(T, T)? assign,
 ]) {
   final int need = s.len + n;
-  if (need <= s.cap) return s.$grow(src, off, n);
+  if (need <= s.cap) {
+    if (assign == null) return s.$grow(src, off, n);
+    for (int i = 0; i < n; i++) {
+      assign(s.array[s.off + s.len + i], src[off + i]);
+    }
+    return Slice<T>(s.array, s.off, need, s.cap);
+  }
   int cap = s.cap == 0 ? need : s.cap;
   while (cap < need) {
     cap += cap < 256 ? cap : cap ~/ 4;
