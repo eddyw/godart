@@ -158,6 +158,15 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	if err != nil {
 		return
 	}
+	var object types.Object
+	if spec.Name == nil {
+		object = v.info.Implicits[spec]
+	} else {
+		object = v.info.Defs[spec.Name]
+	}
+	if pkg, ok := object.(*types.PkgName); ok {
+		path = pkg.Imported().Path()
+	}
 	switch {
 	case path == "unsafe":
 		if v.unsafeConstants {

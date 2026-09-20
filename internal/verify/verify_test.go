@@ -2,6 +2,7 @@ package verify_test
 
 import (
 	"go/ast"
+	"go/constant"
 	"go/importer"
 	"go/parser"
 	"go/token"
@@ -23,9 +24,10 @@ func run(t *testing.T, src string) error {
 		t.Fatalf("the source does not parse: %v", err)
 	}
 	info := &types.Info{
-		Types: map[ast.Expr]types.TypeAndValue{},
-		Defs:  map[*ast.Ident]types.Object{},
-		Uses:  map[*ast.Ident]types.Object{},
+		Types:     map[ast.Expr]types.TypeAndValue{},
+		Defs:      map[*ast.Ident]types.Object{},
+		Uses:      map[*ast.Ident]types.Object{},
+		Implicits: map[ast.Node]types.Object{},
 	}
 	conf := types.Config{Importer: importer.Default()}
 	if _, err := conf.Check("example.com/a", fset, []*ast.File{file}, info); err != nil {
@@ -527,4 +529,38 @@ func TestMapElementSize(t *testing.T) {
 	accept(t, "generic element", "type M[T any] map[int]T")
 	reject(t, "element boundary", "map element type too large", "type T [1<<31]byte; var m map[int]T")
 	reject(t, "key boundary", "map key type too large", "type T [1<<31]byte; var m map[T]int")
+}
+
+type resolvedImporter struct{ pkg *types.Package }
+
+func (i resolvedImporter) Import(string) (*types.Package, error) { return i.pkg, nil }
+
+func TestResolvedImportPaths(t *testing.T) {
+	for _, path := range []string{"vendor/example.com/dep", "example.com/dep", "vendor/golang.org/x/net/http/httpguts"} {
+		for _, form := range []struct{ name, value string }{{"", "dep.Value"}, {"named", "named.Value"}, {".", "Value"}, {"_", "1"}} {
+			t.Run(path+"/"+form.name, func(t *testing.T) {
+				fset := token.NewFileSet()
+				file, err := parser.ParseFile(fset, "import.go", "package a\nimport "+form.name+" \"example.com/dep\"\nvar _ = "+form.value, 0)
+				if err != nil {
+					t.Fatal(err)
+				}
+				pkg := types.NewPackage(path, "dep")
+				pkg.Scope().Insert(types.NewConst(token.NoPos, pkg, "Value", types.Typ[types.Int], constant.MakeInt64(1)))
+				pkg.MarkComplete()
+				info := &types.Info{Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{}, Implicits: map[ast.Node]types.Object{}}
+				config := types.Config{Importer: resolvedImporter{pkg}}
+				if _, err := config.Check("example.com/a", fset, []*ast.File{file}, info); err != nil {
+					t.Fatal(err)
+				}
+				err = verify.Package(fset, []*ast.File{file}, info, nil)
+				if path == "vendor/example.com/dep" {
+					if err == nil || !strings.Contains(err.Error(), "import.go:2:") || !strings.Contains(err.Error(), path) {
+						t.Fatalf("expected resolved import rejection, got %v", err)
+					}
+				} else if err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	}
 }
