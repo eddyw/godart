@@ -137,7 +137,9 @@ Repeat `--reports` for separate evidence directories. The report never blends in
 Reports without compiler provenance remain explicitly unattributed. Existing reports do not establish parity for the current checkout.
 Duplicate report bytes count once. Conflicting outcomes remain visible and cannot count as passes.
 
-API declaration differences require review. Equivalent aliases or generic parameter names can produce differences.
+API declaration differences require review. Equivalent aliases can produce differences.
+Signature comparison ignores parameter names, including nested callbacks and generic parameters.
+Generic constraints and references to distinct type parameters remain part of the contract.
 An API match does not prove behavior, private layout compatibility, or complete type equivalence.
 The report retains absent standard packages as unassessed. It does not infer that they are unreachable.
 Blocked suites retain their unobserved test inventory. Individual portable tests can still need adapters.

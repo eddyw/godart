@@ -3,6 +3,7 @@ package main
 import (
 	"go/types"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -47,25 +48,101 @@ func compareAPI(path string, native, gart *types.Scope) PackageAPI {
 }
 
 func contractType(t types.Type) string {
-	if signature, ok := t.(*types.Signature); ok {
-		anonymous := func(tuple *types.Tuple) *types.Tuple {
-			vars := make([]*types.Var, tuple.Len())
-			for i := range vars {
-				vars[i] = types.NewVar(0, nil, "", tuple.At(i).Type())
+	return contractTypeParams(t, map[*types.TypeParam]string{})
+}
+
+func contractTypeParams(t types.Type, params map[*types.TypeParam]string) string {
+	render := func(t types.Type) string { return contractTypeParams(t, params) }
+	switch t := t.(type) {
+	case *types.TypeParam:
+		if name, ok := params[t]; ok {
+			return name
+		}
+	case *types.Signature:
+		local := make(map[*types.TypeParam]string, len(params)+t.TypeParams().Len())
+		for param, name := range params {
+			local[param] = name
+		}
+		for i := 0; i < t.TypeParams().Len(); i++ {
+			local[t.TypeParams().At(i)] = "$T" + strconv.Itoa(len(params)+i)
+		}
+		render = func(t types.Type) string { return contractTypeParams(t, local) }
+		var declarations []string
+		for i := 0; i < t.TypeParams().Len(); i++ {
+			p := t.TypeParams().At(i)
+			declarations = append(declarations, local[p]+" "+render(p.Constraint()))
+		}
+		tuple := func(tuple *types.Tuple, variadic bool) string {
+			parts := make([]string, tuple.Len())
+			for i := range parts {
+				typ := tuple.At(i).Type()
+				if variadic && i == len(parts)-1 {
+					parts[i] = "..." + render(typ.(*types.Slice).Elem())
+				} else {
+					parts[i] = render(typ)
+				}
 			}
-			return types.NewTuple(vars...)
+			return strings.Join(parts, ", ")
 		}
-		var params []string
-		for i := 0; i < signature.TypeParams().Len(); i++ {
-			param := signature.TypeParams().At(i)
-			params = append(params, param.Obj().Name()+" "+contractType(param.Constraint()))
+		text := "func"
+		if len(declarations) > 0 {
+			text += "[" + strings.Join(declarations, ", ") + "]"
 		}
-		t = types.NewSignatureType(nil, nil, nil, anonymous(signature.Params()), anonymous(signature.Results()), signature.Variadic())
-		text := types.TypeString(t, func(pkg *types.Package) string { return pkg.Path() })
-		if len(params) > 0 {
-			text = "func[" + strings.Join(params, ", ") + "]" + strings.TrimPrefix(text, "func")
+		text += "(" + tuple(t.Params(), t.Variadic()) + ")"
+		switch t.Results().Len() {
+		case 0:
+		case 1:
+			text += " " + tuple(t.Results(), false)
+		default:
+			text += " (" + tuple(t.Results(), false) + ")"
 		}
 		return text
+	case *types.Pointer:
+		return "*" + render(t.Elem())
+	case *types.Slice:
+		return "[]" + render(t.Elem())
+	case *types.Array:
+		return "[" + strconv.FormatInt(t.Len(), 10) + "]" + render(t.Elem())
+	case *types.Map:
+		return "map[" + render(t.Key()) + "]" + render(t.Elem())
+	case *types.Chan:
+		prefix := "chan "
+		if t.Dir() == types.SendOnly {
+			prefix = "chan<- "
+		} else if t.Dir() == types.RecvOnly {
+			prefix = "<-chan "
+		}
+		return prefix + render(t.Elem())
+	case *types.Union:
+		parts := make([]string, t.Len())
+		for i := range parts {
+			term := t.Term(i)
+			parts[i] = render(term.Type())
+			if term.Tilde() {
+				parts[i] = "~" + parts[i]
+			}
+		}
+		slices.Sort(parts)
+		return strings.Join(parts, " | ")
+	case *types.Interface:
+		var parts []string
+		for i := 0; i < t.NumExplicitMethods(); i++ {
+			method := t.ExplicitMethod(i)
+			parts = append(parts, method.Name()+strings.TrimPrefix(render(method.Type()), "func"))
+		}
+		for i := 0; i < t.NumEmbeddeds(); i++ {
+			parts = append(parts, render(t.EmbeddedType(i)))
+		}
+		slices.Sort(parts)
+		return "interface{" + strings.Join(parts, "; ") + "}"
+	case *types.Named:
+		if t.TypeArgs().Len() > 0 {
+			args := make([]string, t.TypeArgs().Len())
+			for i := range args {
+				args[i] = render(t.TypeArgs().At(i))
+			}
+			return t.Obj().Pkg().Path() + "." + t.Obj().Name() + "[" + strings.Join(args, ", ") + "]"
+		}
 	}
 	return types.TypeString(t, func(pkg *types.Package) string { return pkg.Path() })
 }

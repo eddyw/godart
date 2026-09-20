@@ -57,3 +57,29 @@ const Limit = 4
 		}
 	}
 }
+
+func TestSignatureParameterNames(t *testing.T) {
+	native := apiScope(t, `
+func All[Map ~map[K]V, K comparable, V any](m Map) func(yield func(key K, value V) bool) { return nil }
+func Callback(f func(value int) (result string)) {}
+func Variadic(f ...func(value int)) {}
+func Changed[T ~int | ~string](value T) {}
+func Distinct[A, B any](a A, b B) A { return a }
+`)
+	gart := apiScope(t, `
+func All[M ~map[A]B, A comparable, B any](m M) func(func(A, B) bool) { return nil }
+func Callback(f func(int) string) {}
+func Variadic(f ...func(int)) {}
+func Changed[T ~int | ~float64](value T) {}
+func Distinct[A, B any](a A, b B) B { return b }
+`)
+	for _, symbol := range compareAPI("api", native, gart).Symbols {
+		want := "match"
+		if symbol.Name == "Changed" || symbol.Name == "Distinct" {
+			want = "different"
+		}
+		if symbol.Status != want {
+			t.Errorf("%s: got %s, want %s\nnative: %s\ngart: %s", symbol.Name, symbol.Status, want, symbol.Native, symbol.Gart)
+		}
+	}
+}
