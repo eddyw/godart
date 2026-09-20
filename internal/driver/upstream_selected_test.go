@@ -66,6 +66,10 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "marshal_test.go"},
 			{Name: "asn1_test.go", Declarations: []string{"TestUnmarshalNestingLimitSlice", "TestUnmarshalNestingLimitStruct"}},
 		},
+		"crypto/subtle": {
+			{Name: "constant_time_test.go"},
+			{Name: "xor_test.go", Declarations: []string{"TestXORBytes", "TestXorBytesPanic", "mustPanic"}},
+		},
 		"crypto/tls": {
 			{Name: "tls_test.go", Declarations: []string{"TestX509KeyPair", "TestX509KeyPairPopulateCertificate", "testingKey"}},
 			{Name: "certificates_test.go", Declarations: []string{"testMLDSA44CertPEM", "testMLDSA44KeyPEM", "testMLDSA65CertPEM", "testMLDSA65KeyPEM", "testMLDSA87CertPEM", "testMLDSA87KeyPEM"}},
@@ -232,6 +236,9 @@ func TestSelectedUpstream(t *testing.T) {
 					// The original traceback assertion requires the sync_test import path.
 					source = strings.Replace(source, "package sync_test", "package sync", 1)
 					source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/testenv"`)
+				}
+				if pkg == "crypto/subtle" {
+					source = strings.Replace(source, "package subtle\n", "package subtle_test\nimport . \"crypto/subtle\"\n", 1)
 				}
 				if pkg == "net" {
 					source = strings.Replace(source, "package net\n", "package net_test\nimport . \"net\"\n", 1)
@@ -413,7 +420,7 @@ func TestSelectedUpstream(t *testing.T) {
 				name = pkg + "-content-type"
 			}
 			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
-			if pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" {
+			if pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)

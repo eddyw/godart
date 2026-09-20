@@ -1,14 +1,9 @@
 //go:build dart
 
-// Package subtle gives the operations of cryptographic code that need a
-// constant time.
-//
-// The real source of Go reads `crypto/internal/constanttime`,
-// `crypto/internal/fips140/subtle`, and `internal/runtime/sys`, and each one
-// stands outside the surface. `boolToUint8` of the first package panics,
-// because the compiler of Go replaces it with an instruction of the machine.
-// The overlay holds the same 8 names, and each body is the portable form.
+// Package subtle provides primitives for cryptographic code.
 package subtle
+
+import "crypto/internal/fips140/subtle"
 
 // ConstantTimeCompare gives 1 when the 2 slices hold the same bytes, and 0
 // otherwise. The time of the call follows the length of the slices, and not
@@ -65,25 +60,10 @@ func ConstantTimeLessOrEq(x, y int) int {
 	return int(((x32 - y32 - 1) >> 31) & 1)
 }
 
-// XORBytes writes the exclusive or of x and y into dst, and it gives the count
-// of the bytes that it wrote. That count is the length of the shorter of x and
-// y. A dst that holds fewer bytes gives a panic, and dst keeps each byte.
-//
-// Go also panics for a dst that overlaps x or y in part. The check of Go reads
-// the package unsafe, thus the overlay holds no such check, and the
-// documentation of Go says "may panic". `docs/parity.md` names the difference.
+// XORBytes writes the exclusive or of x and y into dst and returns the byte count.
+// It panics for a short destination or an inexact overlap.
 func XORBytes(dst, x, y []byte) int {
-	n := min(len(x), len(y))
-	if n == 0 {
-		return 0
-	}
-	if n > len(dst) {
-		panic("subtle.XORBytes: dst too short")
-	}
-	for i := 0; i < n; i++ {
-		dst[i] = x[i] ^ y[i]
-	}
-	return n
+	return subtle.XORBytes(dst, x, y)
 }
 
 // WithDataIndependentTiming runs f. The mode of the processor that holds the
