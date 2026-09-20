@@ -100,6 +100,14 @@ func (v *verifier) visit(n ast.Node) bool {
 	v.checkTypeParamOp(n)
 	v.checkBodyless(n)
 	switch n := n.(type) {
+	case *ast.ChanType:
+		elem := v.info.TypeOf(n).(*types.Chan).Elem()
+		if knownLayout(elem) {
+			size := types.SizesFor("gc", "amd64").Sizeof(elem)
+			if size < 0 || size >= 1<<16 {
+				v.reject(n.Pos(), "", "channel element type too large (>64kB)")
+			}
+		}
 	case *ast.ImportSpec:
 		v.checkImport(n)
 	case *ast.UnaryExpr:
@@ -329,4 +337,21 @@ func unparen(e ast.Expr) ast.Expr {
 		}
 		e = p.X
 	}
+}
+
+func knownLayout(t types.Type) bool {
+	if _, ok := types.Unalias(t).(*types.TypeParam); ok {
+		return false
+	}
+	switch t := t.Underlying().(type) {
+	case *types.Array:
+		return knownLayout(t.Elem())
+	case *types.Struct:
+		for i := 0; i < t.NumFields(); i++ {
+			if !knownLayout(t.Field(i).Type()) {
+				return false
+			}
+		}
+	}
+	return true
 }

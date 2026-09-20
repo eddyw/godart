@@ -503,3 +503,12 @@ const Size = unsafe.Sizeof(1)
 var Pointer unsafe.Pointer
 `)
 }
+
+func TestChannelElementSize(t *testing.T) {
+	accept(t, "largest element", "var c chan [65535]byte")
+	accept(t, "slice element", "var c chan []byte")
+	accept(t, "generic slice element", "func f[T any]() { var c chan []T; _ = c }")
+	accept(t, "generic local element", "func f[T any]() { type elem struct{ value T }; var c chan elem; _ = c }")
+	reject(t, "element boundary", "channel element type too large", "var c chan [65536]byte")
+	reject(t, "padded element", "channel element type too large", "var c chan struct { x [65529]byte; y uint64 }")
+}
