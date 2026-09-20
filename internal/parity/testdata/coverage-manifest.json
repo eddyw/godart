@@ -782,6 +782,10 @@
     "status": "no-runnable-tests"
   },
   {
+    "package": "internal/bisect",
+    "status": "no-runnable-tests"
+  },
+  {
     "package": "internal/buildcfg",
     "status": "vm-suite"
   },
