@@ -10,5 +10,8 @@
   "abi/method_wrapper",
   "dwarf/linedirectives",
   "print",
-  "zerosize"
+  "zerosize",
+  "fixedbugs/bug225",
+  "fixedbugs/issue16870",
+  "fixedbugs/issue8347"
 ]

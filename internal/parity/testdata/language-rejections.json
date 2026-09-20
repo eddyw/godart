@@ -35,10 +35,6 @@
     "$DIR/finprofiled.go:48:23: undefined: runtime.MemProfile",
     "$DIR/finprofiled.go:52:26: undefined: runtime.MemProfileRecord"
   ],
-  "fixedbugs/bug225": [
-    "$DIR/bug225.go:12:7: the identifier _ has no object",
-    "$DIR/bug225.go:18:7: the identifier _ has no object"
-  ],
   "fixedbugs/bug246": [
     "$DIR/bug246.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
@@ -71,11 +67,6 @@
   ],
   "fixedbugs/issue15528": [
     "$DIR/issue15528.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue16870": [
-    "$DIR/issue16870.go:47:7: the identifier _ has no object",
-    "$DIR/issue16870.go:62:7: the identifier _ has no object",
-    "$DIR/issue16870.go:79:7: the identifier _ has no object"
   ],
   "fixedbugs/issue17381": [
     "$DIR/issue17381.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
@@ -210,9 +201,6 @@
   ],
   "fixedbugs/issue8004": [
     "$DIR/issue8004.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue8347": [
-    "$DIR/issue8347.go:14:8: the identifier _ has no object"
   ],
   "fixedbugs/issue8606b": [
     "$DIR/issue8606b.go:43:15: undefined: syscall.Getpagesize",

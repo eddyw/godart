@@ -535,7 +535,7 @@ func (b *builder) selectStmt(s *ast.SelectStmt, label string) []ir.Stmt {
 			out.Kind = ir.SelectRecv
 			out.Chan = b.expr(recv.X)
 			out.Elem = chanElem(b.typeOf(recv.X))
-			for _, lhs := range comm.Lhs {
+			for i, lhs := range comm.Lhs {
 				if comm.Tok == token.DEFINE {
 					id, _ := lhs.(*ast.Ident)
 					obj, _ := b.info.Defs[id].(*types.Var)
@@ -544,6 +544,14 @@ func (b *builder) selectStmt(s *ast.SelectStmt, label string) []ir.Stmt {
 						continue
 					}
 					out.Vars = append(out.Vars, b.declareLocal(obj, obj.Name()))
+					continue
+				}
+				if isBlank(lhs) {
+					typ := out.Elem
+					if i == 1 {
+						typ = types.Typ[types.Bool]
+					}
+					out.Lhs = append(out.Lhs, &ir.Ident{Name: "_", Type: typ})
 					continue
 				}
 				out.Lhs = append(out.Lhs, b.expr(lhs))
