@@ -4,6 +4,8 @@ library;
 
 import 'dart:io';
 
+String $platformGODEBUG() => Platform.environment['GODEBUG'] ?? '';
+
 /// Writes bytes to standard output.
 void $platformStdout(List<int> bytes) => stdout.add(bytes);
 

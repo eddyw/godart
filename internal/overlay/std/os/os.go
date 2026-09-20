@@ -15,6 +15,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"syscall"
 	"syscall/dart"
 	"time"
 )
@@ -872,89 +873,20 @@ func ReadNames(name string) ([]string, error) {
 	return names, pathError("open", name, cause)
 }
 
-// env holds the environment of the program. The Dart VM gives no write to the
-// environment of the process, thus Setenv writes this map and each read below
-// takes it. The subset starts no other process, thus no reader stays outside.
-var env map[string]string
-
-// order keeps the names in the order that dart.Environ gave, and then in the
-// order of each new name. Environ writes that order.
-var order []string
-
-func loadEnv() {
-	if env != nil {
-		return
-	}
-	env = map[string]string{}
-	for _, entry := range dart.Environ() {
-		for i := 0; i < len(entry); i++ {
-			if entry[i] != '=' {
-				continue
-			}
-			name := entry[:i]
-			if _, held := env[name]; !held {
-				order = append(order, name)
-			}
-			env[name] = entry[i+1:]
-			break
-		}
-	}
-}
-
 func Getenv(name string) string {
-	loadEnv()
-	return env[name]
+	value, _ := syscall.Getenv(name)
+	return value
 }
 
-// LookupEnv reads 1 variable of the environment. The flag is false when the
-// environment holds no such name.
-func LookupEnv(name string) (string, bool) {
-	loadEnv()
-	value, found := env[name]
-	return value, found
-}
+func LookupEnv(name string) (string, bool) { return syscall.Getenv(name) }
 
-// Setenv writes 1 variable of the environment.
 func Setenv(name, value string) error {
-	if name == "" {
-		return errors.New("setenv: invalid argument")
-	}
-	for i := range len(name) {
-		if name[i] == '=' || name[i] == 0 {
-			return errors.New("setenv: invalid argument")
-		}
-	}
-	for i := range len(value) {
-		if value[i] == 0 {
-			return errors.New("setenv: invalid argument")
-		}
-	}
-	loadEnv()
-	if _, held := env[name]; !held {
-		order = append(order, name)
-	}
-	env[name] = value
-	return nil
+	return NewSyscallError("setenv", syscall.Setenv(name, value))
 }
 
-// Unsetenv removes 1 variable of the environment.
-func Unsetenv(name string) error {
-	loadEnv()
-	delete(env, name)
-	return nil
-}
+func Unsetenv(name string) error { return syscall.Unsetenv(name) }
 
-// Environ reads each variable of the environment, in the form name=value.
-func Environ() []string {
-	loadEnv()
-	out := make([]string, 0, len(env))
-	for _, name := range order {
-		if value, held := env[name]; held {
-			out = append(out, name+"="+value)
-		}
-	}
-	return out
-}
+func Environ() []string { return syscall.Environ() }
 
 func Getwd() (string, error) {
 	path, cause := dart.Getwd()

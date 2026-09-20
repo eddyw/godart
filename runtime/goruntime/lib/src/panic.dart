@@ -1,5 +1,32 @@
 import 'iface.dart';
+import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'string.dart';
+
+bool _panicNilLegacy = _legacyPanicNil(
+  $platformGODEBUG(),
+  false,
+  startup: true,
+);
+
+bool _legacyPanicNil(String settings, bool current, {bool startup = false}) {
+  final entries = settings.split(',');
+  for (final entry in startup ? entries : entries.reversed) {
+    if (!entry.startsWith('panicnil=')) continue;
+    final text = entry.substring('panicnil='.length);
+    final value = RegExp(r'^[+-]?[0-9]+$').hasMatch(text)
+        ? int.tryParse(text, radix: 10)
+        : null;
+    if (value != null && value >= -2147483648 && value <= 2147483647) {
+      current = value == 1;
+    }
+    if (!startup) return current;
+  }
+  return startup ? current : false;
+}
+
+void $setRuntimeGODEBUG(GoString settings) {
+  _panicNilLegacy = _legacyPanicNil(settings.toDartString(), _panicNilLegacy);
+}
 
 /// The value of a Go panic.
 final class GoPanic implements Exception {
@@ -117,10 +144,10 @@ final TypeDesc $typePanicNil = TypeDesc(
 
 /// Raises a Go panic.
 ///
-/// Go 1.21 and each later version report `*runtime.PanicNilError` for a panic
-/// of a nil value, thus recover gives a value that is not nil.
+/// The default nil panic reports `*runtime.PanicNilError`.
+/// `GODEBUG=panicnil=1` restores a nil value for recover.
 Never $panic(Object? value) {
-  if (value == null) {
+  if (value == null && !_panicNilLegacy) {
     final Object? Function()? build = $panicNilValue;
     throw GoPanic(
       build != null ? build() : Iface($typePanicNil, const PanicNil()),

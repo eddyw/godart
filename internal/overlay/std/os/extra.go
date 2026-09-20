@@ -76,16 +76,7 @@ const (
 const O_SYNC = 1 << 12
 
 // Clearenv drops each variable of the environment of the process.
-func Clearenv() {
-	for _, item := range Environ() {
-		for i := 0; i < len(item); i++ {
-			if item[i] == '=' {
-				Unsetenv(item[:i])
-				break
-			}
-		}
-	}
-}
+func Clearenv() { syscall.Clearenv() }
 
 // Expand replaces each `${name}` and each `$name` of s with the value that
 // mapping gives.

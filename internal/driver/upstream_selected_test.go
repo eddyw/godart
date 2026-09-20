@@ -35,6 +35,7 @@ func TestSelectedUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	selections := map[string][]upstreamFile{
+		"syscall":          {{Name: "syscall_test.go", Declarations: []string{"testSetGetenv", "TestEnv"}}, {Name: "env_unix_test.go", Declarations: []string{"env", "genDummyEnv", "setDummyEnv", "setupEnvCleanup", "TestClearenv"}}},
 		"internal/godebug": {{Name: "godebug_test.go", Declarations: []string{"TestGet", "TestImmutable"}}},
 		"cmp":              {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
 		"math":             {{Name: "const_test.go"}, {Name: "example_test.go"}},

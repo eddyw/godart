@@ -8,6 +8,8 @@ library;
 
 import 'dart:convert';
 
+String $platformGODEBUG() => '';
+
 String _outBuffer = '';
 String _errBuffer = '';
 

@@ -1056,8 +1056,12 @@ func ReadDir(path string) ([]string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// Getenv reads 1 variable of the environment. The flag is false when the
-// environment holds no such name.
+// SetRuntimeGODEBUG updates the runtime controls that Go implements.
+func SetRuntimeGODEBUG(settings string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// Getenv reads 1 variable of the process-start environment.
 func Getenv(name string) (string, bool) {
 	panic("syscall/dart needs the gart compiler")
 }

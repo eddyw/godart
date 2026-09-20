@@ -20,7 +20,8 @@ SDK versions, modes, and exclusions.
 | Stack traces | Go source positions, without native instruction offsets. `-trimpath` selects portable paths. |
 | Numbers | Target representations differ. JavaScript conversion boundaries need particular care. |
 | Time | Monotonic values support elapsed-time operations. Time-zone behavior can differ from Go's own database. |
-| GODEBUG | Library readers use environment values. Native runtime controls, bisect patterns, and module-specific defaults remain incomplete. The FIPS module rejects non-default modes. |
+| Environment | `os` and `syscall` share environment values. Child processes receive this state through `os/exec`. |
+| GODEBUG | Library readers and `panicnil` use environment values. Other runtime controls, bisect patterns, and module-specific defaults remain incomplete. The FIPS module rejects non-default modes. |
 
 The verifier reports unsupported source constructs with source positions.
 The verifier tests define precise rejection cases. Runtime and target limits
