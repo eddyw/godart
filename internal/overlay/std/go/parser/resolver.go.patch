@@ -1,0 +1,26 @@
+This patch adapts Go 1.27.1 src/go/parser/resolver.go under the retained
+Go BSD license. The original source header remains in the patched output.
+
+Scope descent yields after 64 levels and preserves the original depth limit.
+
+--- resolver.go
++++ resolver.go
+@@ -8,6 +8,7 @@
+ 	"fmt"
+ 	"go/ast"
+ 	"go/token"
++	"runtime"
+ 	"strings"
+ )
+ 
+@@ -87,6 +88,10 @@
+ }
+ 
+ func (r *resolver) openScope(pos token.Pos) {
++	// Release the fixed Dart stack before another 64 recursive scopes.
++	if r.depth%64 == 0 {
++		runtime.Gosched()
++	}
+ 	r.depth++
+ 	if r.depth > maxScopeDepth {
+ 		panic(bailout{pos: pos, msg: "exceeded max scope depth during object resolution"})

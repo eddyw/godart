@@ -27,6 +27,10 @@ final class _Link implements NestedFrame {
 
   @override
   Frame get $inner => inner;
+  @override
+  set $inner(Frame frame) {
+    inner = frame;
+  }
 
   @override
   Object? resume() {
@@ -50,6 +54,10 @@ final class _Catch implements NestedFrame {
 
   @override
   Frame get $inner => inner;
+  @override
+  set $inner(Frame frame) {
+    inner = frame;
+  }
 
   @override
   Object? resume() {

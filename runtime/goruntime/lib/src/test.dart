@@ -39,6 +39,10 @@ final class _CatchWait implements WaitFrame, DurableWait, NestedFrame {
 
   @override
   Frame get $inner => inner;
+  @override
+  set $inner(Frame frame) {
+    inner = frame;
+  }
 
   @override
   String get $reason => $waitReason(inner);

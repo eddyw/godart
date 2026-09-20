@@ -1,0 +1,26 @@
+This patch adapts Go 1.27.1 src/go/parser/parser.go under the retained
+Go BSD license. The original source header remains in the patched output.
+
+Parser descent yields after 64 levels and preserves the original depth limit.
+
+--- parser.go
++++ parser.go
+@@ -30,6 +30,7 @@
+ 	"go/build/constraint"
+ 	"go/scanner"
+ 	"go/token"
++	"runtime"
+ 	"strings"
+ )
+ 
+@@ -124,6 +125,10 @@
+ const maxNestLev int = 1e5
+ 
+ func incNestLev(p *parser) *parser {
++	// Release the fixed Dart stack before another 64 recursive levels.
++	if p.nestLev%64 == 0 {
++		runtime.Gosched()
++	}
+ 	p.nestLev++
+ 	if p.nestLev > maxNestLev {
+ 		p.error(p.pos, "exceeded max nesting depth")

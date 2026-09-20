@@ -35,6 +35,7 @@ abstract interface class TraceFrame implements Frame {
 
   /// The frame under this one.
   Frame? get $next;
+  set $next(Frame? frame);
 }
 
 /// A frame of the runtime that holds a goroutine while it waits. The reason
@@ -50,6 +51,7 @@ abstract interface class WaitFrame implements Frame {
 /// durable mark. Each walk of the runtime thus reads through the wrapper.
 abstract interface class NestedFrame implements Frame {
   Frame get $inner;
+  set $inner(Frame frame);
 }
 
 /// A wait that only a goroutine of 1 bubble can end.
@@ -143,6 +145,7 @@ final class Goroutine {
   Bubble? bubble;
 
   ChainState _chain = const ChainState(null, false);
+  final _resumeFrames = <Frame>[];
 
   bool _ended = false;
   Object? _result;
@@ -175,6 +178,7 @@ final class Goroutine {
   void _end(Object? value) {
     if (_ended) return;
     _ended = true;
+    _resumeFrames.clear();
     _result = value;
     final void Function()? hook = _hook;
     if (hook == null) return;
@@ -906,29 +910,46 @@ Object? $resumeFrame(Frame frame) {
   return result == null ? frame.resume() : result.deliver();
 }
 
-// Parent frames must receive child exceptions through their own handlers.
-Object? _resumeGraph(Frame root) {
-  final frames = <Frame>[];
-  Frame? at = root;
-  while (at != null) {
-    frames.add(at);
-    at = switch (at) {
+void _appendFrames(List<Frame> frames, Frame? frame) {
+  while (frame != null) {
+    frames.add(frame);
+    frame = switch (frame) {
       final TraceFrame f => f.$next,
       final NestedFrame f => f.$inner,
       _ => null,
     };
   }
-  late _FrameResult result;
+}
+
+Object? _resumeGraph(Frame root) {
+  final frames = $current!._resumeFrames;
+  if (frames.isEmpty) _appendFrames(frames, root);
   try {
-    for (final frame in frames.reversed) {
+    while (true) {
+      final frame = frames.removeLast();
+      late _FrameResult result;
       try {
         result = _FrameResult(frame.resume());
-      } catch (e, trace) {
-        result = _FrameResult.error(e, trace);
+      } catch (error, trace) {
+        result = _FrameResult.error(error, trace);
       }
+      if ($blocked != null) {
+        final blocked = $blocked!;
+        if (frames.isNotEmpty) {
+          switch (frames.last) {
+            case final TraceFrame parent:
+              parent.$next = blocked;
+            case final NestedFrame parent:
+              parent.$inner = blocked;
+          }
+        }
+        _appendFrames(frames, blocked);
+        $blocked = frames.first;
+        return null;
+      }
+      if (frames.isEmpty) return result.deliver();
       _frameResults[frame] = result;
     }
-    return result.deliver();
   } finally {
     _frameResults.clear();
   }

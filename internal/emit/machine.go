@@ -162,11 +162,15 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	w("int get $goLine => $s >= 0 && $s < $lines.length ? $lines[$s] : 0;")
 	w("@override")
 	w("Frame? get $next => $r;")
+	w("@override")
+	w("set $next(Frame? frame) { $r = frame; }")
 	if m.Defer {
 		w("late DeferStack $defer;")
 	}
 	if m.DeferBlocks {
 		w("ChainState? $chain;")
+		w("Object? $abort;")
+		w("StackTrace? $abortTrace;")
 	}
 
 	if fnType != "" {
@@ -288,6 +292,8 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	// The state of the chain thus rides the frame, and not a local.
 	if m.DeferBlocks {
 		e.line("ChainState? $chain;")
+		e.line("Object? $abort;")
+		e.line("StackTrace? $abortTrace;")
 	}
 
 	if m.Blocking {
@@ -300,6 +306,8 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 		}
 		if m.DeferBlocks {
 			e.line("$chain = $f.$chain;")
+			e.line("$abort = $f.$abort;")
+			e.line("$abortTrace = $f.$abortTrace;")
 		}
 
 		for _, v := range m.Locals {
@@ -324,8 +332,9 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 	}
 	e.line("}")
 	if m.DeferBlocks {
-		e.line("} catch ($e) {")
+		e.line("} catch ($e, $trace) {")
 		e.line("if ($defer.isEmpty) rethrow;")
+		e.line("if ($e is! GoPanic) { $abort = $e; $abortTrace = $trace; }")
 		// A value that reaches the catch while the chain already stands open
 		// must not save the state again. The chain of the caller stands in the
 		// value that the first open gave.
@@ -388,6 +397,7 @@ func (e *emitter) deferEnd() {
 	e.line("throw $pv;")
 	e.line("}")
 	e.line("$chainClose($chainOuter);")
+	e.line("if ($abort != null) Error.throwWithStackTrace($abort!, $abortTrace!);")
 }
 
 // machineSave writes the frame of a call that gave up control.
@@ -403,6 +413,8 @@ func (e *emitter) machineSave(f *ir.Func, fn string) {
 	}
 	if m.DeferBlocks {
 		e.line("..$chain = $chain")
+		e.line("..$abort = $abort")
+		e.line("..$abortTrace = $abortTrace")
 	}
 
 	if fn != "" {

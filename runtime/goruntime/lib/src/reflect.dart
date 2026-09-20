@@ -914,12 +914,17 @@ T $resumeReflect<T>(Object? out, T Function(Object?) convert, T zero) {
 }
 
 final class _ReflectResume implements WaitFrame, DurableWait, NestedFrame {
-  final Frame inner;
+  Frame inner;
   final Object? Function(Object?) convert;
   _ReflectResume(this.inner, this.convert);
 
   @override
   Frame get $inner => inner;
+  @override
+  set $inner(Frame frame) {
+    inner = frame;
+  }
+
   @override
   String get $reason => $waitReason(inner);
   @override
@@ -2030,7 +2035,7 @@ bool $valueTrySend(Iface? value, Iface? x) {
 /// reflect needs the value of a receive as well. The conversion stands here,
 /// because the caller reads the result of the resume.
 final class _SelectResume implements WaitFrame, DurableWait, NestedFrame {
-  final Frame inner;
+  Frame inner;
   final List<SelectCase> cases;
   final List<int> order;
   final List<TypeDesc?> descs;
@@ -2039,6 +2044,10 @@ final class _SelectResume implements WaitFrame, DurableWait, NestedFrame {
 
   @override
   Frame get $inner => inner;
+  @override
+  set $inner(Frame frame) {
+    inner = frame;
+  }
 
   @override
   String get $reason => $waitReason(inner);
@@ -2634,13 +2643,17 @@ int $valuePointer(Iface? value) {
 
 /// The frame of a goroutine that waits inside reflect.Value.Recv.
 final class _RecvResume implements WaitFrame, DurableWait, NestedFrame {
-  final Frame inner;
+  Frame inner;
   final TypeDesc desc;
 
   _RecvResume(this.inner, this.desc);
 
   @override
   Frame get $inner => inner;
+  @override
+  set $inner(Frame frame) {
+    inner = frame;
+  }
 
   @override
   String get $reason => $waitReason(inner);

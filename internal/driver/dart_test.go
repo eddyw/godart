@@ -114,3 +114,26 @@ func mustReject(t *testing.T, err error, want string) {
 		t.Errorf("the report holds no %q:\n%v", want, err)
 	}
 }
+
+func TestDartErrorSurvivesDeferredWait(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module darterror\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(dir, "main.go"), `package main
+import ("fmt"; "runtime")
+//gart:dart dart:core int.parse
+func parse(s string) int
+func main() {
+ defer func() { runtime.Gosched(); fmt.Println("defer", recover()) }()
+ fmt.Println(parse("invalid"))
+}
+`)
+	out := t.TempDir()
+	if err := driver.Build(driver.Options{Dir: dir, Patterns: []string{"./..."}, Out: out, Runtime: runtimeDir(t)}); err != nil {
+		t.Fatal(err)
+	}
+	prepareDart(t, out)
+	result := programOutcome(t, out, "dart", "bin/main.dart")
+	if result.Exit == 0 || !strings.Contains(result.Text, "FormatException") || strings.Count(result.Text, "defer <nil>") != 1 {
+		t.Fatalf("the deferred wait lost the Dart error or its finalizer: %+v", result)
+	}
+}

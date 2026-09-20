@@ -39,7 +39,14 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "scan_test.go", Declarations: []string{"RecursiveInt", "RecursiveInt.Scan", "scanInts", "makeInts", "TestScanInts", "intCount", "testScanInts", "f"}},
 			{Name: "fmt_test.go", Declarations: []string{"TestComplexFormatting", "NaN", "posInf", "negInf"}},
 		},
+		"go/parser": {
+			{Name: "parser.go", Declarations: []string{"maxNestLev"}},
+			{Name: "resolver.go", Declarations: []string{"maxScopeDepth"}},
+			{Name: "parser_test.go", Declarations: []string{"parseDepthTests", "split", "TestParseDepthLimit", "TestScopeDepthLimit"}},
+		},
+		"html/template": {{Name: "exec_test.go", Declarations: []string{"TestMaxExecDepth"}}},
 		"runtime": {
+			{Name: "crash_test.go", Declarations: []string{"TestGoexitDefer"}},
 			{Name: "proc_test.go", Declarations: []string{"preempt", "TestPreemption", "TestTimerFairness"}},
 			{Name: "defer_test.go", Declarations: []string{
 				"TestUnconditionalPanic", "glob", "TestOpenAndNonOpenDefers", "testOpen", "TestNonOpenAndOpenDefers",
@@ -246,6 +253,14 @@ func TestSelectedUpstream(t *testing.T) {
 				if pkg == "internal/godebug" {
 					source = strings.ReplaceAll(source, `"internal/godebug"`, `"example.com/upstream"`)
 				}
+				if pkg == "go/parser" || pkg == "html/template" {
+					name := filepath.Base(pkg)
+					wrapper := "package " + name + "_test\n"
+					if strings.HasSuffix(file.Name, "_test.go") {
+						wrapper += "import . " + strconv.Quote(pkg) + "\n"
+					}
+					source = strings.Replace(source, "package "+name+"\n", wrapper, 1)
+				}
 				writeFile(t, filepath.Join(fixture, file.Name), source)
 			}
 			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" {
@@ -351,7 +366,7 @@ func TestSelectedUpstream(t *testing.T) {
 				name = pkg + "-content-type"
 			}
 			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
-			if pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" {
+			if pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "go/parser" || pkg == "html/template" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)

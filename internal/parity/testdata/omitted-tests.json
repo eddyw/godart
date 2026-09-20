@@ -23,22 +23,6 @@
       "reason": "The original assertion requires native Go heap allocation counters. Dart exposes no equivalent counter. The complete assertion remains excluded."
     }
   },
-  "go/parser": {
-    "TestParseDepthLimit": {
-      "classification": "implementation-gap",
-      "reason": "The case validates the native parser nesting limit on a growing Go stack. Dart has a fixed stack. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    },
-    "TestScopeDepthLimit": {
-      "classification": "implementation-gap",
-      "reason": "The case validates the native parser nesting limit on a growing Go stack. Dart has a fixed stack. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    }
-  },
-  "html/template": {
-    "TestMaxExecDepth": {
-      "classification": "implementation-gap",
-      "reason": "The full upstream case exhausts the Dart stack before the Go template depth limit. An iterative evaluator or stack-safe execution adapter is still necessary. The original case skips short mode."
-    }
-  },
   "image/gif": {
     "TestDecodeMemoryConsumption": {
       "classification": "target-limit",
