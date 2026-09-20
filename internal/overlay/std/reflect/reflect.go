@@ -572,6 +572,9 @@ func (t *rtype) NumMethod() int { return dart.DescNumMethod(t.handle()) }
 
 // Method gives method i in name order.
 func (t *rtype) Method(i int) Method {
+	if i < 0 || i >= t.NumMethod() {
+		panic("reflect: Method index out of range")
+	}
 	typ := typeOf(dart.DescMethodType(t.handle(), i))
 	m := Method{
 		Name:    dart.DescMethodName(t.handle(), i),
@@ -725,6 +728,8 @@ type Value struct {
 	// of a map that holds a nil interface, and false for a key that the map
 	// does not hold.
 	ok bool
+
+	unexportedMethod bool
 }
 
 // ValueOf gives the value inside an interface. A nil interface gives the zero
@@ -818,7 +823,18 @@ func readValue(v any) (any, bool) {
 }
 
 // Interface gives the value of v inside an interface.
-func (v Value) Interface() any { return v.read() }
+func (v Value) Interface() any {
+	if !v.IsValid() {
+		panic(&ValueError{Method: "reflect.Value.Interface", Kind: Invalid})
+	}
+	if v.ro != 0 {
+		panic("reflect.Value.Interface: cannot return value obtained from unexported field or method")
+	}
+	if v.unexportedMethod {
+		panic("reflect: Interface of unexported method")
+	}
+	return v.read()
+}
 
 // Type gives the type of the value.
 func (v Value) Type() Type {
@@ -1061,13 +1077,21 @@ func (v Value) Method(i int) Value {
 	if !v.IsValid() {
 		panic(&ValueError{Method: "reflect.Value.Method", Kind: Invalid})
 	}
-	return Value{value: dart.MethodValue(v.read(), v.Type().handle(), i), ro: v.ro, ok: true}
+	t := v.Type()
+	if i < 0 || i >= t.NumMethod() {
+		panic("reflect: Method index out of range")
+	}
+	return Value{
+		value: dart.MethodValue(v.read(), t.handle(), i), ro: v.ro, ok: true,
+		unexportedMethod: dart.DescMethodPkgPath(t.handle(), i) != "",
+	}
 }
 
 // Call runs the function that v holds and gives each result.
 // The scheduler retains the call while its function waits.
 func (v Value) Call(in []Value) []Value {
 	v.mustBe("Call", Func)
+	v.mustAllowCall("Call")
 	args := make([]any, len(in))
 	for i, a := range in {
 		args[i] = a.read()
@@ -1081,6 +1105,15 @@ func (v Value) Call(in []Value) []Value {
 		out[i] = Value{value: r, typ: t.Out(i), ok: true}
 	}
 	return out
+}
+
+func (v Value) mustAllowCall(method string) {
+	if v.ro != 0 {
+		panic("reflect: reflect.Value." + method + " using value obtained using unexported field")
+	}
+	if v.unexportedMethod {
+		panic("reflect: " + method + " of unexported method")
+	}
 }
 
 // SetMapIndex writes 1 entry of a map. A key with no value drops the entry.
@@ -1636,17 +1669,23 @@ func (v Value) CanConvert(t Type) bool {
 // Slice gives the slice v[i:j].
 func (v Value) Slice(i, j int) Value {
 	v.mustBe("Slice", Array, Slice, String)
+	if v.Kind() == Array && !v.CanAddr() {
+		panic("reflect.Value.Slice: slice of unaddressable array")
+	}
 	max := v.Cap()
 	if v.Kind() == String {
 		max = v.Len()
 	}
-	return Value{value: dart.ValueSlice(v.read(), i, j, max), ok: true}
+	return Value{value: dart.ValueSlice(v.read(), i, j, max), ro: v.ro, ok: true}
 }
 
 // Slice3 gives the slice v[i:j:k].
 func (v Value) Slice3(i, j, k int) Value {
 	v.mustBe("Slice3", Array, Slice)
-	return Value{value: dart.ValueSlice(v.read(), i, j, k), ok: true}
+	if v.Kind() == Array && !v.CanAddr() {
+		panic("reflect.Value.Slice3: slice of unaddressable array")
+	}
+	return Value{value: dart.ValueSlice(v.read(), i, j, k), ro: v.ro, ok: true}
 }
 
 // Complex gives the complex value.
@@ -1714,9 +1753,14 @@ func (v Value) IsZero() bool {
 	return dart.ValueEqual(v.read(), dart.DescZero(t.handle()))
 }
 
-// CanInterface reports whether Interface gives the value. Each value of the
-// overlay reads, thus the answer is always true.
-func (v Value) CanInterface() bool { return v.IsValid() && v.ro == 0 }
+// CanInterface reports whether the value has no field access restriction.
+// Unexported interface methods retain true and fail in Interface or Call.
+func (v Value) CanInterface() bool {
+	if !v.IsValid() {
+		panic(&ValueError{Method: "reflect.Value.CanInterface", Kind: Invalid})
+	}
+	return v.ro == 0
+}
 
 // FieldByName gives the field of the name. A name that no field holds gives
 // the zero Value.
@@ -1725,7 +1769,7 @@ func (v Value) FieldByName(name string) Value {
 	if !ok {
 		return Value{}
 	}
-	return v.Field(f.Index[0])
+	return v.FieldByIndex(f.Index)
 }
 
 // FieldByIndex gives the field that each index of the path names.
@@ -1889,7 +1933,7 @@ func (v Value) Bytes() []byte {
 	case Slice:
 		elem := v.Type().Elem()
 		if elem.Kind() != Uint8 {
-			panic("reflect.Value.Bytes of " + v.Type().String())
+			panic("reflect.Value.Bytes of non-byte slice")
 		}
 		if elem.PkgPath() == "" {
 			// A defined slice type of bytes, for example `type Raw []byte`,
@@ -1897,7 +1941,7 @@ func (v Value) Bytes() []byte {
 			// []byte fails, and the value takes the conversion first. The
 			// conversion keeps the same Dart list, thus a write through the
 			// result still reaches the value, exactly as in Go.
-			return v.Convert(TypeOf([]byte(nil))).Interface().([]byte)
+			return v.Convert(TypeOf([]byte(nil))).read().([]byte)
 		}
 		// A defined element type, for example `type raw byte`, gives a slice
 		// that no conversion of Go reaches. Go reads the memory of such a
@@ -1909,7 +1953,10 @@ func (v Value) Bytes() []byte {
 		return out
 	case Array:
 		if v.Type().Elem().Kind() != Uint8 {
-			panic("reflect.Value.Bytes of " + v.Type().String())
+			panic("reflect.Value.Bytes of non-byte array")
+		}
+		if !v.CanAddr() {
+			panic("reflect.Value.Bytes of unaddressable byte array")
 		}
 		// Go gives a slice that shares the storage of the array, thus a write
 		// through the result reaches the array. The Dart form of an array is 1
@@ -2304,10 +2351,9 @@ func (v Value) SetIterValue(it *MapIter) {
 // Go assigns the slice itself, thus the function reads the same backing array
 // as the caller.
 func (v Value) CallSlice(in []Value) []Value {
+	v.mustBe("CallSlice", Func)
+	v.mustAllowCall("CallSlice")
 	t := v.Type()
-	if t.Kind() != Func {
-		panic(&ValueError{Method: "reflect.Value.CallSlice", Kind: v.Kind()})
-	}
 	if !t.IsVariadic() {
 		panic("reflect: CallSlice of non-variadic function")
 	}

@@ -163,7 +163,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "example_test.go", Declarations: []string{"ExampleStructTag_Lookup"}},
 			{Name: "set_test.go", Declarations: []string{"TestImplicitSetConversion", "TestImplicitSendConversion", "TestImplicitCallConversion", "TestImplicitAppendConversion", "implementsTests", "notAnExpr", "notAnExpr.Pos", "notAnExpr.End", "notAnExpr.exprNode", "notASTExpr", "TestImplements", "assignableTests", "IntPtr", "IntPtr1", "Ch", "TestAssignableTo"}},
 			{Name: "all_test.go", Declarations: []string{
-				"shouldPanic", "TestValuePanic", "TestTypeOverflow", "TestInitFuncTypes",
+				"shouldPanic", "TestBytes", "TestValuePanic", "TestTypeOverflow", "TestInitFuncTypes",
 				"TestBool", "TestCanIntUintFloatComplex", "TestCanSetField",
 				"TestPtrSetNil", "TestMapSetNil", "appendTests", "TestAppend",
 				"TestCopy", "TestCopyString", "TestCopyArray", "TestBigUnnamedStruct",
@@ -182,7 +182,7 @@ func TestSelectedUpstream(t *testing.T) {
 				"DirectIfaceT", "DirectIfaceT.M", "TestDirectIfaceMethod",
 				"Tinter", "Tsmallv", "Tsmallv.M", "Tsmallp", "Tsmallp.M", "Twordv", "Twordv.M", "Twordp", "Twordp.M",
 				"Tbigv", "Tbigv.M", "Tbigp", "Tbigp.M", "Tm1", "Tm2", "Tm3", "Tm4", "Tm4.M", "TestMethod5",
-				"unexp", "unexp.f", "unexp.g", "unexpI", "TestUnexportedMethods", "TestMethodPkgPath", "TestVariadicType",
+				"unexp", "unexp.f", "unexp.g", "unexpI", "TestUnexportedMethods", "TestUnexported", "Private", "Private.m", "private", "private.P", "Public", "Public.M", "isNonNil", "isValid", "timp", "timp.W", "timp.Y", "timp.w", "timp.y", "TestCallPanic", "UnExportedFirst", "UnExportedFirst.ΦExported", "UnExportedFirst.unexported", "TestMethodByNameUnExportedFirst", "TestMethodPkgPath", "TestVariadicType",
 				"FuncDDD", "FuncDDD.M", "TestNumMethodOnDDD", "TestConvertSlice2Array",
 			}},
 		},

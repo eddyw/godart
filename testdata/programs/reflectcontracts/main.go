@@ -50,7 +50,22 @@ func main() {
 		method := sealedType.Method(i)
 		fmt.Println("interface method metadata", i, method.Name, method.PkgPath, method.IsExported(), method.Type, method.Func.IsValid())
 	}
+	privateMethod := reflect.ValueOf(&sealed).Elem().Method(1)
+	fmt.Println("private method value", privateMethod.Kind(), privateMethod.Type(), privateMethod.CanInterface(), privateMethod.IsNil())
+	fmt.Println("private method interface", panicsWith("unexported method", func() { privateMethod.Interface() }))
+	fmt.Println("private method call", panicsWith("unexported method", func() { privateMethod.Call(nil) }))
 	fmt.Println("exported method index", reflect.ValueOf(&sealed).Elem().Method(0).Call(nil)[0].Int())
+	bytesOwner := struct{ data []byte }{[]byte{1, 2, 3}}
+	bytesValue := reflect.ValueOf(&bytesOwner).Elem().Field(0)
+	fmt.Println("private bytes", bytesValue.CanInterface(), bytesValue.Slice(0, 2).CanInterface(), bytesValue.Slice3(0, 2, 3).CanInterface())
+	bytesValue.Bytes()[0] = 9
+	fmt.Println("private byte alias", bytesOwner.data[0])
+	for _, makeSlice := range []func(){
+		func() { reflect.ValueOf([2]int{}).Slice(0, 1) },
+		func() { reflect.ValueOf([2]int{}).Slice3(0, 1, 2) },
+	} {
+		fmt.Println("array address required", panicsWith("unaddressable array", makeSlice))
+	}
 	var limited onlyB = methods{}
 	methodValue := reflect.ValueOf(&limited).Elem()
 	fmt.Println("interface methods", methodValue.NumMethod(), methodValue.Method(0).Call(nil)[0].Int())

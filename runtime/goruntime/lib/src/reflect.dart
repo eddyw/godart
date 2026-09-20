@@ -1197,7 +1197,9 @@ Iface? $methodValue(Iface? value, int handle, int index) {
   }
   final String key = keys[index];
   final Function? fn = value.desc.methods[key];
-  final TypeDesc Function()? type = value.desc.methodTypes[key];
+  final TypeDesc Function()? type = desc.kind == 'interface'
+      ? desc.methodTypes[key]
+      : value.desc.methodTypes[key];
   if (fn == null || type == null) {
     $panic(
       Iface(
