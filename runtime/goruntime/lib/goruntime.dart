@@ -20,6 +20,7 @@ export 'src/goint.dart';
 export 'src/gort.dart';
 export 'src/http2.dart' if (dart.library.js_interop) 'src/http2_web.dart';
 export 'src/iface.dart';
+export 'src/identity.dart' if (dart.library.js_interop) 'src/identity_web.dart';
 export 'src/int.dart';
 export 'src/json.dart';
 export 'src/map.dart';

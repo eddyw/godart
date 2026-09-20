@@ -42,6 +42,10 @@ daemons that require them remain unsupported.
 On Linux and macOS, x64 and arm64 builds use native directory descriptors
 for recursive removal. Other native hosts retain Dart filesystem adapters.
 
+Linux and macOS programs read native user IDs, group IDs, supplementary
+groups, parent process IDs, and memory page sizes. Other targets retain
+placeholder numeric values and report supplementary groups as unsupported.
+
 Browser builds use browser APIs. HTTP clients use fetch. Browser restrictions
 on headers, credentials, network access, and cross-origin requests still apply.
 Native filesystem operations, raw sockets, and HTTP servers do not become

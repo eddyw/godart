@@ -149,23 +149,35 @@ func isNameByte(c uint8) bool {
 // Getpid gives the process id of the program.
 func Getpid() int { return dart.Getpid() }
 
-// Getppid gives the process id of the parent. The Dart side names no parent,
-// thus the result is 0. docs/parity.md holds that gap.
-func Getppid() int { return 0 }
+// Getppid gives the parent process ID.
+func Getppid() int { return dart.Getppid() }
 
-// The 5 identity functions below give -1. The Dart side names no user and no
-// group of the process, and Go also gives -1 on a system that holds none.
-func Getuid() int  { return -1 }
-func Geteuid() int { return -1 }
-func Getgid() int  { return -1 }
-func Getegid() int { return -1 }
+// Getuid gives the real user ID.
+func Getuid() int { return dart.Getuid() }
 
-// Getgroups gives each group of the process. The Dart side names none.
-func Getgroups() ([]int, error) { return nil, nil }
+// Geteuid gives the effective user ID.
+func Geteuid() int { return dart.Geteuid() }
 
-// Getpagesize gives the count of bytes of 1 page of memory. The Dart side names
-// no page, thus the result is the common value of 4096.
-func Getpagesize() int { return 4096 }
+// Getgid gives the real group ID.
+func Getgid() int { return dart.Getgid() }
+
+// Getegid gives the effective group ID.
+func Getegid() int { return dart.Getegid() }
+
+// Getgroups gives the supplementary group IDs.
+func Getgroups() ([]int, error) {
+	groups, code := dart.Getgroups()
+	if code == -1 {
+		return nil, NewSyscallError("getgroups", errors.ErrUnsupported)
+	}
+	if code != 0 {
+		return nil, NewSyscallError("getgroups", syscall.Errno(code))
+	}
+	return groups, nil
+}
+
+// Getpagesize gives the system memory page size.
+func Getpagesize() int { return dart.Getpagesize() }
 
 // Hostname gives the name of the host of the program.
 func Hostname() (string, error) {

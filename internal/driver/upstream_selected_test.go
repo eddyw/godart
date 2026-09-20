@@ -193,6 +193,7 @@ func TestSelectedUpstream(t *testing.T) {
 			"durationTruncateTests", "TestDurationTruncate", "durationRoundTests", "TestDurationRound", "durationAbsTests", "TestDurationAbs", "minDuration", "maxDuration",
 		}}},
 		"os": {
+			{Name: "os_test.go", Declarations: []string{"TestGetppid"}},
 			{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "error_test.go"},
 			{Name: "read_test.go", Declarations: []string{"checkNamedSize", "TestReadFile", "TestWriteFile", "TestReadOnlyWriteFile"}},
 			{Name: "tempfile_test.go", Declarations: []string{"TestCreateTemp", "TestCreateTempPattern", "TestMkdirTemp", "TestMkdirTempBadDir"}},
@@ -311,7 +312,7 @@ func TestSelectedUpstream(t *testing.T) {
 				if pkg == "crypto/x509" {
 					names = []string{"Builder", "SkipFlaky"}
 				} else if pkg == "os" {
-					names = []string{"MustHaveSymlink"}
+					names = []string{"MustHaveSymlink", "MustHaveExec", "Executable"}
 				}
 				source := selectedUpstreamSource(t, "../overlay/std/internal/testenv/testenv.go", names)
 				if pkg == "internal/godebug" {
@@ -322,6 +323,9 @@ func TestSelectedUpstream(t *testing.T) {
 				}
 				writeFile(t, filepath.Join(fixture, "testenv/go.mod"), "module example.com/testenv\n\ngo 1.27\n")
 				writeFile(t, filepath.Join(fixture, "testenv/testenv.go"), strings.TrimPrefix(source, "//go:build dart\n"))
+				if pkg == "os" {
+					writeFile(t, filepath.Join(fixture, "testenv/exec.go"), selectedUpstreamSource(t, "../overlay/std/internal/testenv/exec.go", nil))
+				}
 			}
 
 			if pkg == "net" {
@@ -436,7 +440,7 @@ func TestSelectedUpstream(t *testing.T) {
 			}
 			prepareDart(t, out)
 			var launcher string
-			if pkg == "sync" || pkg == "internal/godebug" {
+			if pkg == "sync" || pkg == "internal/godebug" || pkg == "os" {
 				launcher = prepareUpstreamSelfExec(t, out, stats.Binaries[0].Entry)
 			}
 			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter, "-test.skip=" + upstreamSkip(t, pkg)}

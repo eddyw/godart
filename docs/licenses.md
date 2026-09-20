@@ -10,6 +10,9 @@ The anonymous-interface cycle detector and compiler directive validation
 adapt `irgen.go`, `lex.go`, `noder.go`, and `writer.go` from Go compiler
 `src/cmd/compile/internal/noder/`. Their BSD notice resides in
 [`internal/load/LICENSE-Go`](../internal/load/LICENSE-Go).
+The process identity adapter adapts group-count validation from Go
+`src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
+The runtime license includes their BSD terms.
 Generated widget files retain notices for their Dart documentation sources.
 
 Before source reuse or asset additions, record the origin and verify the

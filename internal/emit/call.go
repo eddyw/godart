@@ -588,8 +588,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return "$environ()", true
 	case "Getwd":
 		return "$getwd()", true
-	case "Getpid":
-		return "$getpid()", true
+	case "Getpid", "Getuid", "Geteuid", "Getgid", "Getegid", "Getppid", "Getpagesize", "Getgroups":
+		return "$" + strings.ToLower(name) + "()", true
 	case "Hostname":
 		return "$hostname()", true
 	case "Executable":

@@ -1598,3 +1598,12 @@ func WeakTarget(r *Object) any {
 // This file carries //go:build dart, thus a module that names this type also
 // needs a twin file and an alias of its own.
 type Object struct{ _ [0]func() }
+
+func Getuid() int      { panic("syscall/dart needs the gart compiler") }
+func Geteuid() int     { panic("syscall/dart needs the gart compiler") }
+func Getgid() int      { panic("syscall/dart needs the gart compiler") }
+func Getegid() int     { panic("syscall/dart needs the gart compiler") }
+func Getppid() int     { panic("syscall/dart needs the gart compiler") }
+func Getpagesize() int { panic("syscall/dart needs the gart compiler") }
+
+func Getgroups() ([]int, int) { panic("syscall/dart needs the gart compiler") }
