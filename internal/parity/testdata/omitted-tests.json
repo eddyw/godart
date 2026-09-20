@@ -129,12 +129,6 @@
       "reason": "The full upstream case exhausts the Dart stack before the Go template depth limit. An iterative evaluator or stack-safe execution adapter is still necessary. The original case skips short mode."
     }
   },
-  "io/fs": {
-    "TestCVE202230630": {
-      "classification": "implementation-gap",
-      "reason": "The case requires over 10000 recursive frames. Dart has a fixed stack, a documented runtime exclusion. An iterative implementation or another execution adapter needs evaluation before exclusion from reachable parity."
-    }
-  },
   "net": {
     "TestNetworkNumberAndMask": {
       "classification": "test-adapter",
