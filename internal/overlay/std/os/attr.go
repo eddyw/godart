@@ -4,6 +4,7 @@ package os
 
 import (
 	"errors"
+	"syscall"
 	"syscall/dart"
 	"time"
 )
@@ -70,6 +71,9 @@ func underlyingError(err error) error {
 // Chmod writes the mode of the named file. It reads the 9 permission bits, and
 // the 3 bits of setuid, of setgid, and of the sticky flag.
 func Chmod(name string, mode FileMode) error {
+	if contains(name, "\x00") {
+		return &PathError{Op: "chmod", Path: name, Err: syscall.EINVAL}
+	}
 	return pathError("chmod", name, dart.Chmod(name, syscallMode(mode)))
 }
 
@@ -87,12 +91,18 @@ func (f *File) Chmod(mode FileMode) error {
 // Chown writes the owner and the group of the named file. A number of -1 leaves
 // that 1 of the 2 alone. It reads the target of a symbolic link.
 func Chown(name string, uid, gid int) error {
+	if contains(name, "\x00") {
+		return &PathError{Op: "chown", Path: name, Err: syscall.EINVAL}
+	}
 	return pathError("chown", name, dart.Chown(name, uid, gid, true))
 }
 
 // Lchown writes the owner and the group of the named file, and it takes a
 // symbolic link itself.
 func Lchown(name string, uid, gid int) error {
+	if contains(name, "\x00") {
+		return &PathError{Op: "lchown", Path: name, Err: syscall.EINVAL}
+	}
 	return pathError("lchown", name, dart.Chown(name, uid, gid, false))
 }
 
@@ -110,6 +120,9 @@ func (f *File) Chown(uid, gid int) error {
 // dart:io writes the millisecond, thus a finer part of the time does not reach
 // the file system.
 func Chtimes(name string, atime time.Time, mtime time.Time) error {
+	if contains(name, "\x00") {
+		return &PathError{Op: "chtimes", Path: name, Err: syscall.EINVAL}
+	}
 	cause := dart.Chtimes(name, atime.UnixNano(), !atime.IsZero(),
 		mtime.UnixNano(), !mtime.IsZero())
 	return pathError("chtimes", name, cause)
@@ -151,6 +164,9 @@ func (f *File) Chdir() error {
 
 // Link makes newname as a hard link of the file oldname.
 func Link(oldname, newname string) error {
+	if contains(oldname, "\x00") || contains(newname, "\x00") {
+		return &LinkError{Op: "link", Old: oldname, New: newname, Err: syscall.EINVAL}
+	}
 	cause := dart.Link(oldname, newname)
 	if cause == "" {
 		return nil

@@ -558,6 +558,9 @@ func openMode(name string, mode int, op string) (*File, error) {
 
 // ReadFile reads a whole file.
 func ReadFile(name string) ([]byte, error) {
+	if contains(name, "\x00") {
+		return nil, &PathError{Op: "open", Path: name, Err: syscall.EINVAL}
+	}
 	data, cause := dart.ReadFile(name)
 	return data, pathError("open", name, cause)
 }
@@ -566,6 +569,9 @@ func ReadFile(name string) ([]byte, error) {
 // and it gives a fresh file the permission bits of perm without the bits of
 // the mask of the process.
 func WriteFile(name string, data []byte, perm FileMode) error {
+	if contains(name, "\x00") {
+		return &PathError{Op: "open", Path: name, Err: syscall.EINVAL}
+	}
 	fresh := false
 	if _, err := Lstat(name); err != nil {
 		fresh = true
@@ -623,6 +629,9 @@ func (i *fileStat) ModNanos() int64 { return i.nanos }
 
 // Stat reads the metadata of a path.
 func Stat(name string) (FileInfo, error) {
+	if contains(name, "\x00") {
+		return nil, &PathError{Op: "stat", Path: name, Err: syscall.EINVAL}
+	}
 	size, dir, nanos, cause := dart.Stat(name)
 	if cause != "" {
 		return nil, pathError("stat", name, cause)
@@ -634,6 +643,9 @@ func Stat(name string) (FileInfo, error) {
 // size of a link is the length of its target, and the time of a link is 0,
 // because dart:io gives no metadata of a link itself.
 func Lstat(name string) (FileInfo, error) {
+	if contains(name, "\x00") {
+		return nil, &PathError{Op: "lstat", Path: name, Err: syscall.EINVAL}
+	}
 	size, dir, link, nanos, cause := dart.Lstat(name)
 	if cause != "" {
 		return nil, pathError("lstat", name, cause)
@@ -658,6 +670,9 @@ func (e *LinkError) Unwrap() error { return e.Err }
 
 // Symlink makes a symbolic link at newname, and the link points at oldname.
 func Symlink(oldname, newname string) error {
+	if contains(oldname, "\x00") || contains(newname, "\x00") {
+		return &LinkError{Op: "symlink", Old: oldname, New: newname, Err: syscall.EINVAL}
+	}
 	cause := dart.Symlink(oldname, newname)
 	if cause == "" {
 		return nil
@@ -807,6 +822,9 @@ func base(path string) string {
 }
 
 func Remove(name string) error {
+	if contains(name, "\x00") {
+		return &PathError{Op: "remove", Path: name, Err: syscall.EINVAL}
+	}
 	return pathError("remove", name, dart.Remove(name))
 }
 
@@ -830,6 +848,9 @@ func RemoveAll(name string) error {
 // Dart side. A path that exists gives ErrExist, because the Dart side accepts
 // such a path with no report.
 func Mkdir(name string, perm FileMode) error {
+	if contains(name, "\x00") {
+		return &PathError{Op: "mkdir", Path: name, Err: syscall.EINVAL}
+	}
 	if _, err := Lstat(name); err == nil {
 		return &PathError{Op: "mkdir", Path: name, Err: errExist}
 	}
@@ -873,6 +894,9 @@ func MkdirAll(name string, perm FileMode) error {
 // Rename moves a path. A failure gives a LinkError that names the 2 paths,
 // exactly as Go does.
 func Rename(from, to string) error {
+	if contains(from, "\x00") || contains(to, "\x00") {
+		return &LinkError{Op: "rename", Old: from, New: to, Err: syscall.EINVAL}
+	}
 	cause := dart.Rename(from, to)
 	if cause == "" {
 		return nil
@@ -887,6 +911,9 @@ func Rename(from, to string) error {
 // of them reads the metadata again. This function replaces it, thus a source
 // that calls it does not compile with the go command.
 func ReadNames(name string) ([]string, error) {
+	if contains(name, "\x00") {
+		return nil, &PathError{Op: "open", Path: name, Err: syscall.EINVAL}
+	}
 	names, cause := dart.ReadDir(name)
 	return names, pathError("open", name, cause)
 }
@@ -915,6 +942,9 @@ func Getwd() (string, error) {
 }
 
 func Chdir(path string) error {
+	if contains(path, "\x00") {
+		return &PathError{Op: "chdir", Path: path, Err: syscall.EINVAL}
+	}
 	return pathError("chdir", path, dart.Chdir(path))
 }
 

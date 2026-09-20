@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"syscall"
 	"syscall/dart"
 )
 
@@ -75,6 +76,9 @@ func CopyFS(dir string, fsys fs.FS) error {
 
 // Readlink gives the target of a symbolic link.
 func Readlink(name string) (string, error) {
+	if contains(name, "\x00") {
+		return "", &PathError{Op: "readlink", Path: name, Err: syscall.EINVAL}
+	}
 	target, cause := dart.ReadLink(name)
 	if cause != "" {
 		return "", &PathError{Op: "readlink", Path: name, Err: errors.New(cause)}
