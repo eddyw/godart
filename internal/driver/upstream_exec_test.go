@@ -36,8 +36,10 @@ func prepareUpstreamSelfExec(t *testing.T, out, entry string) {
 	// Adapt executable identity in the generated harness, outside upstream assertions.
 	code := strings.Replace(string(source), start, "$os.Args[0] = GoString.fromString("+name+");\n"+start, 1)
 	writeFile(t, entry, code)
+	kernel := filepath.Join(out, "test.dill")
+	run(t, out, dart, "compile", "kernel", "-o", kernel, entry)
 	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'" }
-	script := "#!/bin/sh\nexec " + quote(dart) + " " + quote("--packages="+filepath.Join(out, ".dart_tool", "package_config.json")) + " " + quote(entry) + " \"$@\"\n"
+	script := "#!/bin/sh\nexec " + quote(dart) + " " + quote(kernel) + " \"$@\"\n"
 	if err := os.WriteFile(launcher, []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
