@@ -299,6 +299,22 @@ func (a *analyzer) walkFunc(key any, body ast.Node) {
 		case *ast.SendStmt:
 			s.blocksAt(n.Pos(), "a channel send")
 			a.escape(n.Value)
+		case *ast.ForStmt:
+			if n.Cond == nil {
+				exits := false
+				ast.Inspect(n.Body, func(node ast.Node) bool {
+					switch node.(type) {
+					case *ast.FuncLit:
+						return false
+					case *ast.BranchStmt, *ast.ReturnStmt:
+						exits = true
+					}
+					return true
+				})
+				if !exits {
+					s.blocksAt(n.Pos(), "a loop without an exit")
+				}
+			}
 		case *ast.SelectStmt:
 			s.blocksAt(n.Pos(), "a select statement")
 		case *ast.UnaryExpr:

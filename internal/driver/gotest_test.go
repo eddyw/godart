@@ -199,8 +199,9 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				args = nil
 			case "js":
 				run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
+				writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
 				command = "node"
-				args = []string{"main.js"}
+				args = []string{"run.js"}
 			case "wasm":
 				run(t, out, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
 				writeFile(t, filepath.Join(out, "run.mjs"), wasmRunner)

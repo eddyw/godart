@@ -15,10 +15,6 @@
     "classification": "test-adapter",
     "reason": "the test exercises native Go linker flags and requires a companion source outside this single-file harness"
   },
-  "fixedbugs/issue19182": {
-    "classification": "implementation-gap",
-    "reason": "a busy loop without a block operation never yields, and the other goroutine never runs"
-  },
   "fixedbugs/issue21317": {
     "classification": "test-adapter",
     "reason": "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names"

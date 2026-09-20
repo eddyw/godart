@@ -14,5 +14,6 @@
   "zerosize",
   "fixedbugs/bug225",
   "fixedbugs/issue16870",
-  "fixedbugs/issue8347"
+  "fixedbugs/issue8347",
+  "fixedbugs/issue19182"
 ]
