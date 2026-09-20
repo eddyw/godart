@@ -15,9 +15,6 @@
   "blank": [
     "$DIR/blank.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
-  "chancap": [
-    "$DIR/chancap.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
   "closure": [
     "$DIR/closure.go:108:10: undefined: runtime.ReadMemStats",
     "$DIR/closure.go:98:26: undefined: runtime.MemStats",
@@ -60,15 +57,6 @@
   "fixedbugs/bug262": [
     "print does not accept the type error yet"
   ],
-  "fixedbugs/bug273": [
-    "$DIR/bug273.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/bug279": [
-    "$DIR/bug279.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/bug292": [
-    "$DIR/bug292.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
   "fixedbugs/bug312": [
     "print does not accept the type interface{} yet"
   ],
@@ -82,9 +70,6 @@
   "fixedbugs/bug331": [
     "print does not accept the type error yet"
   ],
-  "fixedbugs/bug339": [
-    "$DIR/bug339.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
   "fixedbugs/bug343": [
     "print does not accept the type map[string]string yet"
   ],
@@ -94,9 +79,6 @@
   ],
   "fixedbugs/bug514": [
     "$DIR/bug514.go:11:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
-  ],
-  "fixedbugs/bug517": [
-    "$DIR/bug517.go:13:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue15002": [
     "$DIR/issue15002.go:18:17: undefined: syscall.Getpagesize",
@@ -121,9 +103,6 @@
   ],
   "fixedbugs/issue15528": [
     "$DIR/issue15528.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue15550": [
-    "$DIR/issue15550.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue16870": [
     "$DIR/issue16870.go:47:7: the identifier _ has no object",
@@ -169,9 +148,6 @@
   "fixedbugs/issue30476": [
     "$DIR/issue30476.go:15:10: undefined: runtime.SetFinalizer"
   ],
-  "fixedbugs/issue30709": [
-    "$DIR/issue30709.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
   "fixedbugs/issue31419": [
     "print does not accept the type *example.com/gotest.T yet",
     "print does not accept the type example.com/gotest.I yet"
@@ -181,9 +157,6 @@
   ],
   "fixedbugs/issue38093": [
     "no package matches [./...] in $DIR"
-  ],
-  "fixedbugs/issue4085b": [
-    "$DIR/issue4085b.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue40954": [
     "$DIR/issue40954.go:12:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)",
@@ -222,9 +195,6 @@
   ],
   "fixedbugs/issue53137": [
     "$DIR/issue53137.go:10:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue54220": [
-    "$DIR/issue54220.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue54343": [
     "$DIR/issue54343.go:25:10: undefined: runtime.SetFinalizer"
@@ -341,9 +311,6 @@
     "$DIR/init1.go:29:10: undefined: runtime.ReadMemStats",
     "$DIR/init1.go:39:10: undefined: runtime.ReadMemStats"
   ],
-  "makeslice": [
-    "$DIR/makeslice.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
   "mallocfin": [
     "$DIR/mallocfin.go:60:11: undefined: runtime.SetFinalizer",
     "$DIR/mallocfin.go:61:11: undefined: runtime.SetFinalizer",
@@ -431,9 +398,6 @@
     "$DIR/sigchld.go:16:23: undefined: syscall.Getpid",
     "$DIR/sigchld.go:16:41: undefined: syscall.SIGCHLD"
   ],
-  "sizeof": [
-    "$DIR/sizeof.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
   "slicecap": [
     "$DIR/slicecap.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
@@ -494,9 +458,6 @@
   ],
   "typeparam/orderedmap": [
     "$DIR/orderedmap.go:237:10: undefined: runtime.SetFinalizer"
-  ],
-  "typeparam/pair": [
-    "$DIR/pair.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "typeparam/settable": [
     "the conversion from *T to PT is not supported yet",

@@ -76,7 +76,7 @@ func TestImports(t *testing.T) {
 
 import "unsafe"
 
-var _ = unsafe.Sizeof(0)
+var _ unsafe.Pointer
 `)
 	rejectFile(t, "curated surface", "outside the supported surface", `package a
 
@@ -145,7 +145,7 @@ func TestReportsEachRejection(t *testing.T) {
 	err := run(t, `package main
 import "unsafe"
 import "plugin"
-func main() { _ = unsafe.Sizeof(0); _ = plugin.Open }`)
+func main() { var _ unsafe.Pointer; _ = plugin.Open }`)
 	if err == nil {
 		t.Fatal("got no rejection, want 2")
 	}
@@ -473,5 +473,33 @@ type point struct{ x, y int }
 
 //gart:dart `+runtime+` $shift
 func (p point) shift() int
+`)
+}
+
+func TestUnsafeConstants(t *testing.T) {
+	acceptFile(t, "metadata", `package a
+import "unsafe"
+var x struct { A byte; B int64 }
+const Size = unsafe.Sizeof(x)
+const Align = unsafe.Alignof(x)
+const Offset = unsafe.Offsetof(x.B)
+const PointerSize = unsafe.Sizeof(unsafe.Pointer(nil))
+`)
+	acceptFile(t, "alias", `package a
+import u "unsafe"
+const Size = u.Sizeof(1)
+`)
+	acceptFile(t, "dot", `package a
+import . "unsafe"
+const Size = Sizeof(1)
+`)
+	rejectFile(t, "dynamic metadata", "rejects the package unsafe", `package a
+import "unsafe"
+func f[T any](x T) uintptr { return unsafe.Sizeof(x) }
+`)
+	rejectFile(t, "mixed operations", "rejects the package unsafe", `package a
+import "unsafe"
+const Size = unsafe.Sizeof(1)
+var Pointer unsafe.Pointer
 `)
 }

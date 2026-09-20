@@ -425,3 +425,66 @@ GoInt $monoNanos() {
   return $gi(ticks ~/ frequency) * $gi(1000000000) +
       $div($gi(ticks % frequency) * $gi(1000000000), $gi(frequency));
 }
+
+// This limit describes the Go buffer, not the lazy Dart queue storage.
+const int _maxChanBytes = 281474976710655;
+
+int $chanCapacity(int capacity, TypeDesc elem) {
+  final int size = capacity > 0 ? _chanLayout(elem).$1 : 0;
+  if (capacity < 0 || (size > 0 && capacity > _maxChanBytes ~/ size)) {
+    $panic(
+      Iface(
+        $typeGoError,
+        const GoError('makechan: size out of range', plain: true),
+      ),
+    );
+  }
+  return capacity;
+}
+
+(int, int) _chanLayout(TypeDesc type) {
+  switch (type.kind) {
+    case 'bool':
+    case 'int8':
+    case 'uint8':
+      return (1, 1);
+    case 'int16':
+    case 'uint16':
+      return (2, 2);
+    case 'int32':
+    case 'uint32':
+    case 'float32':
+      return (4, 4);
+    case 'complex64':
+      return (8, 4);
+    case 'complex128':
+    case 'interface':
+    case 'string':
+      return (16, 8);
+    case 'slice':
+      return (24, 8);
+    case 'array':
+      final (int size, int align) = _chanLayout(type.elem!());
+      return (
+        size > 0 && type.length > _maxChanBytes ~/ size
+            ? _maxChanBytes + 1
+            : type.length * size,
+        align,
+      );
+    case 'struct':
+      int offset = 0;
+      int align = 1;
+      int last = 0;
+      for (final FieldDesc field in type.fields) {
+        final (int size, int fieldAlign) = _chanLayout(field.type());
+        if (fieldAlign > align) align = fieldAlign;
+        offset = (offset + fieldAlign - 1) ~/ fieldAlign * fieldAlign + size;
+        last = size;
+        if (offset > _maxChanBytes) return (_maxChanBytes + 1, align);
+      }
+      if (offset > 0 && last == 0) offset++;
+      return ((offset + align - 1) ~/ align * align, align);
+    default:
+      return (8, 8);
+  }
+}

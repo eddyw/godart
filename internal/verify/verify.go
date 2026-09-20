@@ -41,6 +41,7 @@ func Package(fset *token.FileSet, files []*ast.File, info *types.Info, embeds ma
 		v.checkDartDecls(f)
 	}
 	for _, f := range files {
+		v.unsafeConstants = v.onlyUnsafeConstants(f)
 		ast.Inspect(f, v.visit)
 	}
 	return errors.Join(v.errs...)
@@ -79,7 +80,8 @@ type verifier struct {
 	bodyless map[types.Object]bool
 	// embeds holds the path of each file that the loader rewrote for a
 	// `//go:embed` directive.
-	embeds map[string]bool
+	embeds          map[string]bool
+	unsafeConstants bool
 }
 
 func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any) {
@@ -91,6 +93,9 @@ func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any
 }
 
 func (v *verifier) visit(n ast.Node) bool {
+	if call, ok := n.(*ast.CallExpr); ok && v.unsafeConstant(call) {
+		return false
+	}
 	v.checkExported(n)
 	v.checkTypeParamOp(n)
 	v.checkBodyless(n)
@@ -138,6 +143,9 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	}
 	switch {
 	case path == "unsafe":
+		if v.unsafeConstants {
+			return
+		}
 		// A blank import performs no operation. The standard library writes it
 		// before a go:linkname directive, and such a directive needs no Dart
 		// form when it only exports a name.
@@ -153,6 +161,39 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 		v.reject(spec.Pos(), "the standard library surface is curated",
 			"the package %s is outside the supported surface", path)
 	}
+}
+
+func (v *verifier) unsafeConstant(call *ast.CallExpr) bool {
+	if v.info.Types[call].Value == nil {
+		return false
+	}
+	var id *ast.Ident
+	switch fun := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		id = fun.Sel
+	case *ast.Ident:
+		id = fun
+	default:
+		return false
+	}
+	obj, ok := v.info.Uses[id].(*types.Builtin)
+	return ok && obj.Pkg() == types.Unsafe && (obj.Name() == "Sizeof" || obj.Name() == "Alignof" || obj.Name() == "Offsetof")
+}
+
+func (v *verifier) onlyUnsafeConstants(file *ast.File) bool {
+	allowed := true
+	ast.Inspect(file, func(n ast.Node) bool {
+		if call, ok := n.(*ast.CallExpr); ok && v.unsafeConstant(call) {
+			return false
+		}
+		if id, ok := n.(*ast.Ident); ok {
+			if obj := v.info.Uses[id]; obj != nil && obj.Pkg() == types.Unsafe {
+				allowed = false
+			}
+		}
+		return true
+	})
+	return allowed
 }
 
 // checkAddress rejects the address of a value that holds no reference and that

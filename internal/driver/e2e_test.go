@@ -120,30 +120,34 @@ func cutTrace(text string) string {
 // TestAOT proves that the output also compiles ahead of time. The Dart VM and
 // AOT are the 2 targets of the project.
 func TestAOT(t *testing.T) {
-	source, err := filepath.Abs("../../testdata/programs/multi")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runtime, err := filepath.Abs("../../runtime/goruntime")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := runProgram(t, source, "go", "run", ".")
-	out := t.TempDir()
-	if err := driver.Build(driver.Options{
-		Trace:    traceBuild(t),
-		Dir:      source,
-		Patterns: []string{"./..."},
-		Out:      out,
-		Runtime:  runtime,
-		Format:   true,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	run(t, out, "dart", "pub", "get")
-	run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", "app")
-	if got := runProgram(t, out, filepath.Join(out, "app")); got != want {
-		t.Errorf("the output of the AOT build differs\nGo:\n%s\nDart:\n%s", want, got)
+	for _, name := range []string{"multi", "chancap"} {
+		t.Run(name, func(t *testing.T) {
+			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			runtime, err := filepath.Abs("../../runtime/goruntime")
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := runProgram(t, source, "go", "run", ".")
+			out := t.TempDir()
+			if err := driver.Build(driver.Options{
+				Trace:    traceBuild(t),
+				Dir:      source,
+				Patterns: []string{"./..."},
+				Out:      out,
+				Runtime:  runtime,
+				Format:   true,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			run(t, out, "dart", "pub", "get")
+			run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", "app")
+			if got := runProgram(t, out, filepath.Join(out, "app")); got != want {
+				t.Errorf("the output of the AOT build differs\nGo:\n%s\nDart:\n%s", want, got)
+			}
+		})
 	}
 }
 
@@ -155,29 +159,31 @@ func TestWasm(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)
 	}
-	source, err := filepath.Abs("../../testdata/programs/hello")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runtimeDir, err := filepath.Abs("../../runtime/goruntime")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := runProgram(t, source, "go", "run", ".")
-	out := t.TempDir()
-	if err := driver.Build(driver.Options{
-		Trace:    traceBuild(t),
-		Dir:      source,
-		Patterns: []string{"./..."},
-		Out:      out,
-		Runtime:  runtimeDir,
-		Format:   true,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	run(t, out, "dart", "pub", "get")
-	run(t, out, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
-	runner := `import { compile } from './main.mjs';
+	for _, name := range []string{"hello", "chancap"} {
+		t.Run(name, func(t *testing.T) {
+			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			runtimeDir, err := filepath.Abs("../../runtime/goruntime")
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := runProgram(t, source, "go", "run", ".")
+			out := t.TempDir()
+			if err := driver.Build(driver.Options{
+				Trace:    traceBuild(t),
+				Dir:      source,
+				Patterns: []string{"./..."},
+				Out:      out,
+				Runtime:  runtimeDir,
+				Format:   true,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			run(t, out, "dart", "pub", "get")
+			run(t, out, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
+			runner := `import { compile } from './main.mjs';
 import { readFile } from 'node:fs/promises';
 
 const bytes = await readFile(new URL('./main.wasm', import.meta.url));
@@ -185,11 +191,13 @@ const app = await compile(bytes);
 const instance = await app.instantiate({});
 instance.invokeMain();
 `
-	if err := os.WriteFile(filepath.Join(out, "run.mjs"), []byte(runner), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if got := runProgram(t, out, "node", "run.mjs"); got != want {
-		t.Errorf("the output of the wasm build differs\nGo:\n%s\nnode:\n%s", want, got)
+			if err := os.WriteFile(filepath.Join(out, "run.mjs"), []byte(runner), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if got := runProgram(t, out, "node", "run.mjs"); got != want {
+				t.Errorf("the output of the wasm build differs\nGo:\n%s\nnode:\n%s", want, got)
+			}
+		})
 	}
 }
 
@@ -200,7 +208,7 @@ func TestJS(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)
 	}
-	for _, name := range []string{"intwrap", "reflectint64", "genmixed", "genops", "genericvalue", "nanoclock", "globalptr", "structconv", "reflectblock", "uniquecompat"} {
+	for _, name := range []string{"chancap", "intwrap", "reflectint64", "genmixed", "genops", "genericvalue", "nanoclock", "globalptr", "structconv", "reflectblock", "uniquecompat"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {

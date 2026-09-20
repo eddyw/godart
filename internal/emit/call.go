@@ -1460,8 +1460,8 @@ func (e *emitter) makeCall(x *ir.Builtin) string {
 		if len(x.Args) > 0 {
 			capacity = "$ix(" + e.expr(x.Args[0]) + ")"
 		}
-		return fmt.Sprintf("Chan<%s>(%s, %s)",
-			e.dartType(u.Elem()), capacity, e.zeroFunc(u.Elem()))
+		return fmt.Sprintf("Chan<%s>($chanCapacity(%s, %s), %s)",
+			e.dartType(u.Elem()), capacity, e.descriptorOf(u.Elem()), e.zeroFunc(u.Elem()))
 	}
 	e.fail("make does not apply to the type %s yet", x.Type)
 	return "null"

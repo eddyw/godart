@@ -1894,7 +1894,7 @@ Iface? $makeChan(int handle, int buffer) {
     desc,
     _withType<Object?>(
       elem,
-      <T>() => Chan<T>(buffer, () => _zeroOf(elem) as T),
+      <T>() => Chan<T>($chanCapacity(buffer, elem), () => _zeroOf(elem) as T),
     ),
   );
 }
