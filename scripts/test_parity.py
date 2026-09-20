@@ -10,6 +10,18 @@ spec.loader.exec_module(parity)
 
 
 class ParityTest(unittest.TestCase):
+    def test_scope_review_does_not_hide_new_packages_or_sdk_changes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "scope.json"
+            parity.save(path, dict(go_version="go1", basis="Source review only", packages=[
+                dict(package="p", assessment="mixed", reason="Portable APIs and native limits")]))
+            api = dict(go_version="go1", unassessed_packages=["p", "new"])
+            result = parity.scope_assessment(api, path)
+            self.assertEqual(result["counts"], {"current": 1, "unassessed": 1})
+            self.assertEqual(result["packages"][0]["assessment"], "mixed")
+            api["go_version"] = "go2"
+            self.assertEqual(parity.scope_assessment(api, path)["counts"], {"needs-review": 1, "unassessed": 1})
+
     def test_behavior_retains_gaps_duplicates_and_failures(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

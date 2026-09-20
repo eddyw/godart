@@ -22,11 +22,17 @@ The platform manifests cover Darwin/ARM64 and Linux/AMD64.
 | `exceptions-*.json` | Exact native/Gart outcomes per platform and short/full mode, with an explicit reason |
 | `external-fixtures.json` | Original external module versions and Go module checksums |
 | `omitted-tests.json` | Omitted assertions with an explicit classification and reason |
+| `scope-assessment.json` | Source review of absent packages, target boundaries, and next implementation steps |
 
 The inventories retain eligible and ineligible declarations. Runtime outcomes
 also include subtests and corpus cases. These are different denominators.
 Benchmarks remain visible but do not count as assertion coverage.
 Use the manifests and retained reports for current counts.
+
+The scope assessment does not establish API or behavioral parity.
+It separates portable candidates, host adapters, instrumentation, mixed contracts,
+and explicit native limits. The report retains absent packages in the denominator.
+A new SDK marks old assessments for review. A new package remains unassessed.
 
 A package suite can contain explicit exclusions or partial assertions.
 Thus a package count does not imply complete behavioral parity for that package.

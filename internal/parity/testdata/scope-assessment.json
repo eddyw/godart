@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "go_version": "go1.27.1",
+  "basis": "Source review only. These assessments establish no API or behavioral passes. Package-level labels do not exclude portable assertions.",
+  "packages": [
+    {
+      "package": "debug/buildinfo",
+      "assessment": "portable-candidate",
+      "sources": [
+        "debug/buildinfo/buildinfo.go"
+      ],
+      "reason": "Read parses a supplied Go executable. ReadFile also needs file access. The blank unsafe import only supports a private linkname declaration.",
+      "next_action": "Preserve Go executable parsing. Add the package and original malformed-input fixtures.",
+      "targets": "ReaderAt parsing can work on all targets. File access requires VM/AOT or caller-provided browser bytes."
+    },
+    {
+      "package": "expvar",
+      "assessment": "mixed",
+      "sources": [
+        "expvar/expvar.go"
+      ],
+      "reason": "Public variables, JSON, and handler logic are portable. The default memstats variable depends on native Go heap counters.",
+      "next_action": "Separate portable variables from runtime memory semantics. Do not invent native heap measurements.",
+      "targets": "Variables can work on all targets. HTTP serving requires VM/AOT."
+    },
+    {
+      "package": "go/importer",
+      "assessment": "mixed",
+      "sources": [
+        "go/importer/importer.go"
+      ],
+      "reason": "Explicit gc export-data lookup can be portable. Default compiler identity, source discovery, and gccgo process lookup need separate adapters.",
+      "next_action": "Audit gcimporter, gccgoimporter, and srcimporter dependencies. Preserve caller-supplied lookup behavior.",
+      "targets": "Byte-based import can work on all targets. SDK files and compiler subprocesses require VM/AOT."
+    },
+    {
+      "package": "log/syslog",
+      "assessment": "host-adapter",
+      "sources": [
+        "log/syslog/syslog.go",
+        "log/syslog/syslog_unix.go"
+      ],
+      "reason": "Message formatting is portable. Delivery requires TCP, UDP, or a local Unix socket and platform-specific daemon paths.",
+      "next_action": "Validate explicit network delivery and local daemon discovery separately.",
+      "targets": "VM/AOT adapters are feasible. Browsers do not expose raw sockets or a local syslog daemon."
+    },
+    {
+      "package": "net/http/fcgi",
+      "assessment": "host-adapter",
+      "sources": [
+        "net/http/fcgi/child.go",
+        "net/http/fcgi/fcgi.go"
+      ],
+      "reason": "FastCGI records and request conversion are portable. Serve with a supplied listener differs from nil-listener descriptor discovery.",
+      "next_action": "Implement supplied-listener support and assess inherited descriptor handling separately.",
+      "targets": "VM/AOT can host listeners. Browser HTTP servers remain outside the target contract."
+    },
+    {
+      "package": "net/http/pprof",
+      "assessment": "mixed",
+      "sources": [
+        "net/http/pprof/pprof.go"
+      ],
+      "reason": "HTTP handler logic is portable. Profile data and trace endpoints depend on runtime/pprof and runtime/trace.",
+      "next_action": "Resolve runtime profile contracts before exposing successful profile endpoints.",
+      "targets": "VM/AOT can host HTTP. Browser server endpoints are unavailable."
+    },
+    {
+      "package": "os/user",
+      "assessment": "host-adapter",
+      "sources": [
+        "os/user/user.go",
+        "os/user/lookup.go",
+        "os/user/lookup_unix.go",
+        "os/user/listgroups_unix.go"
+      ],
+      "reason": "Pure-Go lookup can parse passwd/group files. Native account services and current-user identity need platform adapters.",
+      "next_action": "Use original osusergo parser assertions, then validate host account lookup separately.",
+      "targets": "VM/AOT host adapters are feasible. Browsers have no equivalent host account database."
+    },
+    {
+      "package": "plugin",
+      "assessment": "outside-contract",
+      "sources": [
+        "plugin/plugin.go",
+        "plugin/plugin_dlopen.go"
+      ],
+      "reason": "Open loads native Go shared objects with the native Go runtime and ABI. Dart cannot execute these objects as Go plugins.",
+      "next_action": "Keep native Go shared-object loading outside the declared subset.",
+      "targets": "Native Go plugin loading is outside all current targets."
+    },
+    {
+      "package": "runtime/cgo",
+      "assessment": "outside-contract",
+      "sources": [
+        "runtime/cgo/cgo.go",
+        "runtime/cgo/handle.go"
+      ],
+      "reason": "This package supports native Go/C calls and the native Go runtime. The declared subset excludes cgo.",
+      "next_action": "Retain the explicit cgo exclusion. A standalone handle table would not establish cgo compatibility.",
+      "targets": "cgo is outside all current targets."
+    },
+    {
+      "package": "runtime/coverage",
+      "assessment": "instrumentation",
+      "sources": [
+        "runtime/coverage/coverage.go"
+      ],
+      "reason": "The API writes compiler coverage metadata and counter files. Existing Gart test coverage does not establish this binary format or counter contract.",
+      "next_action": "Assess compiler instrumentation and original Go coverage format readers before implementation.",
+      "targets": "Byte writers could work on all targets. Directory operations require file access."
+    },
+    {
+      "package": "runtime/metrics",
+      "assessment": "mixed",
+      "sources": [
+        "runtime/metrics/sample.go",
+        "runtime/metrics/value.go",
+        "runtime/metrics/description.go"
+      ],
+      "reason": "Value access and histograms are portable. Many named measurements describe the native Go scheduler, heap, or collector.",
+      "next_action": "Classify named metrics separately. Implement only measurements with a truthful runtime definition.",
+      "targets": "Value APIs can work on all targets. Native Go runtime measurements have no direct Dart equivalent."
+    },
+    {
+      "package": "runtime/pprof",
+      "assessment": "mixed",
+      "sources": [
+        "runtime/pprof/pprof.go",
+        "runtime/pprof/label.go",
+        "runtime/pprof/runtime.go"
+      ],
+      "reason": "Labels and profile serialization can be portable. Native CPU sampling, heap profiles, and stack collection require different runtime support.",
+      "next_action": "Separate labels, user profiles, serialization, and native profile capture.",
+      "targets": "Portable metadata can work on all targets. Native Go profile capture does not transfer directly."
+    },
+    {
+      "package": "runtime/race",
+      "assessment": "outside-contract",
+      "sources": [
+        "runtime/race/doc.go",
+        "runtime/race/race.go"
+      ],
+      "reason": "This package links native race instrumentation and platform runtime objects. It is not a portable public assertion library.",
+      "next_action": "Keep the native race runtime outside the current cooperative-isolate contract.",
+      "targets": "Native Go race instrumentation is outside all current targets."
+    },
+    {
+      "package": "runtime/trace",
+      "assessment": "mixed",
+      "sources": [
+        "runtime/trace/trace.go",
+        "runtime/trace/annotation.go",
+        "runtime/trace/flightrecorder.go"
+      ],
+      "reason": "Task metadata and user events can be portable. Scheduler events and flight-recorder bytes require runtime instrumentation and Go trace-format support.",
+      "next_action": "Separate context/task semantics from event capture and native scheduler semantics.",
+      "targets": "Metadata can work on all targets. Event capture needs target-specific instrumentation."
+    },
+    {
+      "package": "structs",
+      "assessment": "outside-contract",
+      "sources": [
+        "structs/hostlayout.go"
+      ],
+      "reason": "HostLayout promises host C ABI layout. Dart object layout does not satisfy this promise.",
+      "next_action": "Reject the native layout contract. Do not accept the marker as evidence of layout compatibility.",
+      "targets": "Host C ABI layout is outside all current targets."
+    },
+    {
+      "package": "unsafe",
+      "assessment": "mixed",
+      "sources": [
+        "unsafe/unsafe.go"
+      ],
+      "reason": "Native pointer dereference and pointer arithmetic are outside the subset. Constant layout queries need a separate compiler-defined Go layout contract.",
+      "next_action": "Keep raw memory access excluded. Assess compile-time Sizeof, Alignof, and Offsetof independently.",
+      "targets": "Native memory operations are excluded on all targets. Constant layout queries remain unassessed."
+    }
+  ]
+}

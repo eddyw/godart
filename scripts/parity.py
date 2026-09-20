@@ -159,6 +159,19 @@ def behavior(paths, manifests=MANIFESTS):
     return result
 
 
+def scope_assessment(api, path):
+    review = read(path)
+    entries = {entry["package"]: entry for entry in review["packages"]}
+    current = review["go_version"] == api["go_version"]
+    packages = []
+    for name in api["unassessed_packages"]:
+        entry = entries.get(name)
+        status = "unassessed" if entry is None else "current" if current else "needs-review"
+        packages.append({**(entry or {"package": name}), "review_status": status})
+    return {"basis": review["basis"], "reviewed_go_version": review["go_version"],
+            "counts": dict(Counter(entry["review_status"] for entry in packages)), "packages": packages}
+
+
 def report(args):
     args.output.mkdir(parents=True, exist_ok=False)
     api = args.api
@@ -184,10 +197,11 @@ def report(args):
                    "API matches compare declarations, not behavior. Differences need review.",
                    "Retained reports prove only their recorded source and configuration.",
                    "A blocked package does not exclude its portable tests.",
-                   "Absent packages remain unassessed. Test and subtest counts are separate."],
+                   "Source scope reviews establish no API or behavioral passes. Test and subtest counts are separate."],
         "api": {"input": str(api.resolve()), "measurement": "retained-input" if args.api else "current-checkout",
                 "sha256": digest(api), "counts": dict(Counter(x["status"] for x in symbols)), **data},
         "coverage": {"packages": len(coverage), "counts": dict(Counter(x["status"] for x in coverage)), "entries": coverage},
+        "scope": scope_assessment(data, MANIFESTS / "scope-assessment.json"),
         "omissions": {"counts": dict(Counter(x["classification"] for x in omissions)), "entries": omissions},
         "behavior": behavior(args.reports), "applications": applications,
     }
@@ -195,6 +209,7 @@ def report(args):
     lines = ["# Go parity report", "", "This report does not claim a percentage of whole-Go parity.", "",
              "API declarations: " + json.dumps(result["api"]["counts"], sort_keys=True),
              f"Unassessed standard packages: {len(data['unassessed_packages'])}",
+             "Source scope reviews: " + json.dumps(result["scope"]["counts"], sort_keys=True),
              "Package classifications: " + json.dumps(result["coverage"]["counts"], sort_keys=True), ""]
     lines.extend(["Omitted assertions: " + json.dumps(result["omissions"]["counts"], sort_keys=True), ""])
     for group in result["behavior"]:
