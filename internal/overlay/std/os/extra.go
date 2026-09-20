@@ -29,24 +29,16 @@ var (
 )
 
 // IsExist reports whether the error names a path that already exists.
-func IsExist(err error) bool { return errors.Is(err, ErrExist) }
+func IsExist(err error) bool { return underlyingErrorIs(err, ErrExist) }
 
 // IsPermission reports whether the error names a permission that stops the
 // operation.
-func IsPermission(err error) bool { return errors.Is(err, ErrPermission) }
+func IsPermission(err error) bool { return underlyingErrorIs(err, ErrPermission) }
 
 // IsTimeout reports whether the error names an operation that ran out of time.
-//
-// Go reads the chain with errors.As and a pointer to an interface type. The
-// subset holds no such call, thus the walk reads the chain itself.
 func IsTimeout(err error) bool {
-	for err != nil {
-		if t, ok := err.(interface{ Timeout() bool }); ok {
-			return t.Timeout()
-		}
-		err = errors.Unwrap(err)
-	}
-	return false
+	t, ok := underlyingError(err).(interface{ Timeout() bool })
+	return ok && t.Timeout()
 }
 
 // PathSeparator and PathListSeparator name the 2 separators of the platform.

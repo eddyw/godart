@@ -3,7 +3,6 @@
 package syscall
 
 import (
-	"errors"
 	"internal/oserror"
 	"strconv"
 )
@@ -38,9 +37,7 @@ func (e Errno) Is(target error) bool {
 	case oserror.ErrExist:
 		return e == EEXIST
 	case oserror.ErrNotExist:
-		return e == ENOENT || e == ENOTDIR
-	case errors.ErrUnsupported:
-		return e == EPERM
+		return e == ENOENT
 	}
 	return false
 }

@@ -115,7 +115,7 @@ func causeError(cause string) error {
 		}
 	case contains(cause, "Not a directory") ||
 		contains(cause, "not a directory"):
-		return &sysError{text: "not a directory", kind: ErrNotExist}
+		return syscall.ENOTDIR
 	case contains(cause, "Is a directory") || contains(cause, "is a directory"):
 		return &sysError{text: "is a directory"}
 	case contains(cause, "Directory not empty") ||
@@ -156,7 +156,7 @@ func contains(text, part string) bool {
 }
 
 // IsNotExist reports whether the error names a path that does not exist.
-func IsNotExist(err error) bool { return errors.Is(err, ErrNotExist) }
+func IsNotExist(err error) bool { return underlyingErrorIs(err, ErrNotExist) }
 
 // File is an open file. The zero value is not usable.
 type File struct {
@@ -490,6 +490,9 @@ var errExist error = existsError{}
 // operation of the system. A file that another program makes between them thus
 // still passes.
 func OpenFile(name string, flag int, perm FileMode) (*File, error) {
+	if contains(name, "\x00") {
+		return nil, &PathError{Op: "open", Path: name, Err: syscall.EINVAL}
+	}
 	if flag&O_CREATE != 0 && flag&O_EXCL != 0 {
 		if _, err := Lstat(name); err == nil {
 			return nil, &PathError{Op: "open", Path: name, Err: errExist}
@@ -536,6 +539,9 @@ func applyPerm(name string, perm FileMode) {
 }
 
 func openMode(name string, mode int, op string) (*File, error) {
+	if contains(name, "\x00") {
+		return nil, &PathError{Op: op, Path: name, Err: syscall.EINVAL}
+	}
 	if mode == dart.OpenRead {
 		if info, err := Stat(name); err == nil && info.IsDir() {
 			return &File{handle: -1, name: name, dir: true}, nil

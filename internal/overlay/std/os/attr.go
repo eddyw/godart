@@ -54,12 +54,14 @@ func (f *File) stdError(op string) error {
 	return &PathError{Op: op, Path: f.name, Err: errors.New("bad file descriptor")}
 }
 
-// underlyingError gives the cause inside a path error or a link error.
+// underlyingError unwraps only the error types that the os predicates accept.
 func underlyingError(err error) error {
 	switch e := err.(type) {
 	case *PathError:
 		return e.Err
 	case *LinkError:
+		return e.Err
+	case *SyscallError:
 		return e.Err
 	}
 	return err

@@ -120,7 +120,7 @@ func cutTrace(text string) string {
 // TestAOT proves that the output also compiles ahead of time. The Dart VM and
 // AOT are the 2 targets of the project.
 func TestAOT(t *testing.T) {
-	for _, name := range []string{"bytesortext", "confflow", "rangegoto", "defers", "multi", "chancap", "reflectmake", "synccompat"} {
+	for _, name := range []string{"bytesortext", "oslegacy", "confflow", "rangegoto", "defers", "multi", "chancap", "reflectmake", "synccompat"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {
