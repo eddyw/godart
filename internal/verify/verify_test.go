@@ -512,3 +512,19 @@ func TestChannelElementSize(t *testing.T) {
 	reject(t, "element boundary", "channel element type too large", "var c chan [65536]byte")
 	reject(t, "padded element", "channel element type too large", "var c chan struct { x [65529]byte; y uint64 }")
 }
+
+func TestArrayAddressSpace(t *testing.T) {
+	accept(t, "below boundary", "type T [(1<<50)-1]byte")
+	accept(t, "zero size", "type T [1<<50]struct{}")
+	accept(t, "generic element", "type T[P any] [1<<50]P")
+	reject(t, "boundary", "larger than address space", "type T [1<<50]byte")
+	reject(t, "nested array", "larger than address space", "type T [2][1<<49]byte")
+	reject(t, "overflow", "larger than address space", "type T [1<<62]uint64")
+}
+
+func TestMapElementSize(t *testing.T) {
+	accept(t, "below boundary", "type T [(1<<31)-1]byte; var m map[int]T")
+	accept(t, "generic element", "type M[T any] map[int]T")
+	reject(t, "element boundary", "map element type too large", "type T [1<<31]byte; var m map[int]T")
+	reject(t, "key boundary", "map key type too large", "type T [1<<31]byte; var m map[T]int")
+}

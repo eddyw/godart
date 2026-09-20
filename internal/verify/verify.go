@@ -100,13 +100,22 @@ func (v *verifier) visit(n ast.Node) bool {
 	v.checkTypeParamOp(n)
 	v.checkBodyless(n)
 	switch n := n.(type) {
+	case *ast.ArrayType:
+		if array, ok := v.info.TypeOf(n).(*types.Array); ok && oversized(array, 1<<50) {
+			v.reject(n.Pos(), "", "type %s larger than address space", array)
+		}
+	case *ast.MapType:
+		m := v.info.TypeOf(n).(*types.Map)
+		if oversized(m.Elem(), 1<<31) {
+			v.reject(n.Pos(), "", "map element type too large")
+		}
+		if oversized(m.Key(), 1<<31) {
+			v.reject(n.Pos(), "", "map key type too large")
+		}
 	case *ast.ChanType:
 		elem := v.info.TypeOf(n).(*types.Chan).Elem()
-		if knownLayout(elem) {
-			size := types.SizesFor("gc", "amd64").Sizeof(elem)
-			if size < 0 || size >= 1<<16 {
-				v.reject(n.Pos(), "", "channel element type too large (>64kB)")
-			}
+		if oversized(elem, 1<<16) {
+			v.reject(n.Pos(), "", "channel element type too large (>64kB)")
 		}
 	case *ast.ImportSpec:
 		v.checkImport(n)
@@ -337,6 +346,14 @@ func unparen(e ast.Expr) ast.Expr {
 		}
 		e = p.X
 	}
+}
+
+func oversized(t types.Type, limit int64) bool {
+	if !knownLayout(t) {
+		return false
+	}
+	size := types.SizesFor("gc", "amd64").Sizeof(t)
+	return size < 0 || size >= limit
 }
 
 func knownLayout(t types.Type) bool {
