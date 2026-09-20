@@ -179,33 +179,29 @@ func deadlineNanos(t time.Time) int64 {
 type conn struct {
 	handle  int
 	network string
+	local   Addr
+	remote  Addr
 	read    int64
 	write   int64
 }
 
 // LocalAddr gives the address of this side of the connection.
-func (c *conn) LocalAddr() Addr { return c.addrOf(true) }
+func (c *conn) LocalAddr() Addr { return c.local }
 
 // RemoteAddr gives the address of the peer.
-func (c *conn) RemoteAddr() Addr { return c.addrOf(false) }
+func (c *conn) RemoteAddr() Addr { return c.remote }
 
-// addrOf reads the 2 addresses of the socket. A closed connection gives an
-// address with no IP and a port of 0.
-func (c *conn) addrOf(local bool) Addr {
-	lHost, lPort, rHost, rPort, cause := dart.ConnAddrs(c.handle)
-	if cause != "" {
-		lHost, lPort, rHost, rPort = "", 0, "", 0
+func newConn(handle int, network string) conn {
+	lHost, lPort, rHost, rPort, _ := dart.ConnAddrs(handle)
+	c := conn{handle: handle, network: network}
+	if network == "unix" {
+		c.local = &UnixAddr{Name: lHost, Net: "unix"}
+		c.remote = &UnixAddr{Name: rHost, Net: "unix"}
+	} else {
+		c.local = tcpAddrOf(lHost, lPort)
+		c.remote = tcpAddrOf(rHost, rPort)
 	}
-	if c.network == "unix" {
-		if local {
-			return &UnixAddr{Name: lHost, Net: "unix"}
-		}
-		return &UnixAddr{Name: rHost, Net: "unix"}
-	}
-	if local {
-		return tcpAddrOf(lHost, lPort)
-	}
-	return tcpAddrOf(rHost, rPort)
+	return c
 }
 
 func (c *conn) Read(b []byte) (int, error) {
@@ -245,7 +241,9 @@ func flagValue(on bool) int {
 }
 
 func (c *conn) Close() error {
-	if cause := dart.ConnClose(c.handle); cause != "" {
+	handle := c.handle
+	c.handle = -1
+	if cause := dart.ConnClose(handle); cause != "" {
 		return netError("close "+c.network, cause)
 	}
 	return nil

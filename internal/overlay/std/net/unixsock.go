@@ -53,7 +53,7 @@ func (c *UnixConn) SetWriteBuffer(bytes int) error {
 
 // newUnixConn wraps the handle of an open Unix socket.
 func newUnixConn(handle int) *UnixConn {
-	return &UnixConn{c: conn{handle: handle, network: "unix"}}
+	return &UnixConn{c: newConn(handle, "unix")}
 }
 
 // Read reads bytes of the connection into the slice.

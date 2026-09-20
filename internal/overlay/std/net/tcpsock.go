@@ -57,7 +57,7 @@ func (c *TCPConn) SetWriteBuffer(bytes int) error {
 
 // newTCPConn wraps the handle of an open TCP socket.
 func newTCPConn(handle int, idle time.Duration, config KeepAliveConfig) *TCPConn {
-	c := &TCPConn{c: conn{handle: handle, network: "tcp"}}
+	c := &TCPConn{c: newConn(handle, "tcp")}
 	if !config.Enable && idle >= 0 {
 		config = KeepAliveConfig{Enable: true, Idle: idle}
 	}

@@ -42,10 +42,13 @@ abstract class _Conn {
 
   /// The local address, the local port, the address of the peer, and the port
   /// of the peer.
-  InternetAddress get local;
-  int get localPort;
-  InternetAddress get remote;
-  int get remotePort;
+  /// Dart can discard these values after close. Go retains them.
+  final InternetAddress local;
+  final int localPort;
+  final InternetAddress remote;
+  final int remotePort;
+
+  _Conn(this.local, this.localPort, this.remote, this.remotePort);
 
   /// fill reads the next bytes into the rest. It gives 0 for bytes and 1 for
   /// the end of the receive direction.
@@ -80,16 +83,14 @@ final class _StreamConn extends _Conn {
   final Socket socket;
   final StreamIterator<Uint8List> packets;
 
-  _StreamConn(this.socket) : packets = StreamIterator<Uint8List>(socket);
-
-  @override
-  InternetAddress get local => socket.address;
-  @override
-  int get localPort => socket.port;
-  @override
-  InternetAddress get remote => socket.remoteAddress;
-  @override
-  int get remotePort => socket.remotePort;
+  _StreamConn(this.socket)
+    : packets = StreamIterator<Uint8List>(socket),
+      super(
+        socket.address,
+        socket.port,
+        socket.remoteAddress,
+        socket.remotePort,
+      );
 
   @override
   Future<int> fill() => packets.moveNext().then((bool more) {
@@ -149,7 +150,13 @@ final class _RawConn extends _Conn {
   /// and the loop of send would never end.
   bool gone = false;
 
-  _RawConn(this.socket) {
+  _RawConn(this.socket)
+    : super(
+        socket.address,
+        socket.port,
+        socket.remoteAddress,
+        socket.remotePort,
+      ) {
     socket.readEventsEnabled = false;
     socket.writeEventsEnabled = false;
     events = socket.listen(
@@ -225,15 +232,6 @@ final class _RawConn extends _Conn {
       p.completeError(cause);
     }
   }
-
-  @override
-  InternetAddress get local => socket.address;
-  @override
-  int get localPort => socket.port;
-  @override
-  InternetAddress get remote => socket.remoteAddress;
-  @override
-  int get remotePort => socket.remotePort;
 
   @override
   Future<int> fill() {
