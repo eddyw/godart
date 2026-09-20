@@ -3,6 +3,7 @@ package analyze
 import (
 	"go/ast"
 	"go/types"
+	"strings"
 )
 
 // The value flow of stage 3.
@@ -314,9 +315,17 @@ func (a *analyzer) instanceSource(x ast.Expr) source {
 // edges, thus the 2 parts repeat together until no set grows.
 func (a *analyzer) solve() {
 	for c, it := range a.methodCells {
-		for _, member := range a.byMethod[c.key] {
-			if it == nil || reachesIface(member, it) {
-				a.addTarget(c, member)
+		name, signature, _ := strings.Cut(c.key, keySep)
+		keys := a.byGroup[a.find(signature)]
+		if len(keys) == 0 {
+			keys = []string{signature}
+		}
+		generic := strings.Contains(c.iface, wildcard)
+		for _, key := range keys {
+			for _, member := range a.byMethod[name+keySep+key] {
+				if it == nil || generic || reachesIface(member, it) {
+					a.addTarget(c, member)
+				}
 			}
 		}
 	}

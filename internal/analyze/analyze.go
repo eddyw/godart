@@ -744,7 +744,11 @@ func (a *analyzer) linkUse(n *ast.Ident) {
 		return
 	}
 	if obj, ok := a.pkg.TypesInfo.Uses[n].(*types.Func); ok {
-		a.linkInstance(obj.Origin().Type(), inst.Type)
+		sig := obj.Origin().Type().(*types.Signature)
+		a.linkInstance(sig, inst.Type)
+		for i := 0; i < sig.TypeParams().Len(); i++ {
+			a.linkInstance(sig.TypeParams().At(i), inst.TypeArgs.At(i))
+		}
 	}
 }
 
@@ -770,6 +774,15 @@ func (a *analyzer) linkInstance(generic, concrete types.Type) {
 			}
 		}
 		switch gt := gu.(type) {
+		case *types.TypeParam:
+			constraint := gt.Constraint().Underlying().(*types.Interface)
+			for i := 0; i < constraint.NumMethods(); i++ {
+				method := constraint.Method(i)
+				concrete, _, _ := types.LookupFieldOrMethod(cu, false, method.Pkg(), method.Name())
+				if fn, ok := concrete.(*types.Func); ok {
+					walk(method.Type(), fn.Type())
+				}
+			}
 		case *types.Signature:
 			ct, ok := cu.(*types.Signature)
 			if !ok || gt.Params().Len() != ct.Params().Len() ||

@@ -1,11 +1,12 @@
-The file patches the real Go source of encoding/asn1/asn1.go.
+This patch adapts Go 1.27.1 src/encoding/asn1/asn1.go under the retained
+Go BSD license. The original source header remains in the patched output.
 
-1 part of the real file stays outside the subset. It reads internal/saferio for
-the cap of the slice of a SEQUENCE OF. That package holds unsafe.Sizeof, thus
-it stays outside the surface. The function sliceCapWithSize at the end of this
-file holds the body of saferio.SliceCapWithSize.
+Recursive fields yield after 64 levels without a change to the depth limit.
+The existing saferio slice-cap adaptation remains unchanged.
 
-@@ -22,7 +34,6 @@
+--- asn1.go
++++ asn1.go
+@@ -22,7 +22,6 @@
  import (
  	"errors"
  	"fmt"
@@ -13,7 +14,7 @@ file holds the body of saferio.SliceCapWithSize.
  	"math"
  	"math/big"
  	"reflect"
-@@ -669,7 +680,7 @@
+@@ -669,7 +668,7 @@
  		numElements++
  	}
  	elemSize := uint64(elemType.Size())
@@ -22,7 +23,18 @@ file holds the body of saferio.SliceCapWithSize.
  	if safeCap < 0 {
  		err = SyntaxError{fmt.Sprintf("%s slice too big: %d elements of %d bytes", elemType.Kind(), numElements, elemSize)}
  		return
-@@ -1180,3 +1191,26 @@
+@@ -708,6 +707,10 @@
+ // into the array, it will try to parse a suitable ASN.1 value out and store it
+ // in the given Value.
+ func parseField(v reflect.Value, bytes []byte, initOffset int, params fieldParameters, depth int) (offset int, err error) {
++	// Release the fixed Dart stack before another 64 recursive levels.
++	if depth%64 == 0 {
++		runtime.Gosched()
++	}
+ 	depth++
+ 	const (
+ 		maxDecodeDepth     = 10000
+@@ -1180,3 +1183,26 @@
  	}
  	return b[offset:], nil
  }

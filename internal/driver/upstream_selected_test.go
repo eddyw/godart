@@ -52,7 +52,10 @@ func TestSelectedUpstream(t *testing.T) {
 		"internal/godebug": {{Name: "godebug_test.go", Declarations: []string{"TestGet", "TestImmutable"}}},
 		"cmp":              {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
 		"math":             {{Name: "const_test.go"}, {Name: "example_test.go"}},
-		"encoding/asn1":    {{Name: "marshal_test.go"}},
+		"encoding/asn1": {
+			{Name: "marshal_test.go"},
+			{Name: "asn1_test.go", Declarations: []string{"TestUnmarshalNestingLimitSlice", "TestUnmarshalNestingLimitStruct"}},
+		},
 		"crypto/tls": {
 			{Name: "tls_test.go", Declarations: []string{"TestX509KeyPair", "TestX509KeyPairPopulateCertificate", "testingKey"}},
 			{Name: "certificates_test.go", Declarations: []string{"testMLDSA44CertPEM", "testMLDSA44KeyPEM", "testMLDSA65CertPEM", "testMLDSA65KeyPEM", "testMLDSA87CertPEM", "testMLDSA87KeyPEM"}},
@@ -348,7 +351,7 @@ func TestSelectedUpstream(t *testing.T) {
 				name = pkg + "-content-type"
 			}
 			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
-			if pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" {
+			if pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
