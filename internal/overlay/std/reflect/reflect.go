@@ -567,10 +567,10 @@ type Method struct {
 // IsExported reports whether the method is exported.
 func (m Method) IsExported() bool { return m.PkgPath == "" }
 
-// NumMethod gives the count of the exported methods of the type.
+// NumMethod gives the method count. Interface types include unexported methods.
 func (t *rtype) NumMethod() int { return dart.DescNumMethod(t.handle()) }
 
-// Method gives 1 exported method of the type, in the order of the name.
+// Method gives method i in name order.
 func (t *rtype) Method(i int) Method {
 	typ := typeOf(dart.DescMethodType(t.handle(), i))
 	m := Method{
@@ -584,8 +584,7 @@ func (t *rtype) Method(i int) Method {
 	return m
 }
 
-// MethodByName gives the exported method of the name. A name that no method
-// holds gives the zero Method and false.
+// MethodByName gives the method with this name, or the zero Method and false.
 func (t *rtype) MethodByName(name string) (Method, bool) {
 	for i := range t.NumMethod() {
 		if m := t.Method(i); m.Name == name {
@@ -1019,12 +1018,12 @@ func (v Value) String() string {
 	return "<" + v.typeAt(got).String() + " Value>"
 }
 
-// NumMethod gives the count of the exported methods of the type of v.
+// NumMethod gives the method count. Interface values include unexported methods.
 func (v Value) NumMethod() int { return v.Type().NumMethod() }
 
-// Method gives a func value that binds 1 exported method of the type to v.
+// Method binds method i from the static type of v.
 func (v Value) Method(i int) Value {
-	return Value{value: dart.MethodValue(v.read(), i), ok: true}
+	return Value{value: dart.MethodValue(v.read(), v.Type().handle(), i), ro: v.ro, ok: true}
 }
 
 // Call runs the function that v holds and gives each result.
@@ -1228,12 +1227,21 @@ func MakeFunc(typ Type, fn func(args []Value) (results []Value)) Value {
 			in[i] = Value{value: a, typ: typ.In(i), ok: true}
 		}
 		out := fn(in)
+		if len(out) != typ.NumOut() {
+			panic("reflect: wrong return count from function created by MakeFunc")
+		}
 		res := make([]any, len(out))
 		for i, o := range out {
 			// Go rejects a result that holds the zero Value. Such a Value
 			// carries no mark, and reflect.Zero of an interface type does.
 			if !o.ok {
 				panic("reflect: function created by MakeFunc using closure returned zero Value")
+			}
+			if o.ro != 0 {
+				panic("reflect: function created by MakeFunc using closure returned value obtained from unexported field")
+			}
+			if !o.Type().AssignableTo(typ.Out(i)) {
+				panic("reflect.MakeFunc: value of type " + o.Type().String() + " is not assignable to type " + typ.Out(i).String())
 			}
 			res[i] = o.read()
 		}
@@ -1492,11 +1500,11 @@ func (v Value) Addr() Value {
 // MethodByName gives the method of the name, bound to the value. A name that
 // no method holds gives the zero Value.
 func (v Value) MethodByName(name string) Value {
-	out := dart.MethodByName(v.read(), name)
-	if out == nil {
+	m, ok := v.Type().MethodByName(name)
+	if !ok {
 		return Value{}
 	}
-	return Value{value: out, ok: true}
+	return v.Method(m.Index)
 }
 
 // Equal reports whether the 2 values hold the same type and the same value.
@@ -1556,6 +1564,9 @@ func (v Value) Convert(t Type) Value {
 // CanConvert reports whether a conversion of the value to t holds.
 func (v Value) CanConvert(t Type) bool {
 	if t == nil {
+		return false
+	}
+	if v.Kind() == Slice && t.Kind() == Array && v.Len() < t.Len() {
 		return false
 	}
 	return v.Type().ConvertibleTo(t)

@@ -991,19 +991,21 @@ Object? _field(Object? record, int index, int count) {
   );
 }
 
-/// The keys of the exported methods of a type, in the order of the name.
+/// Interface reflection includes unexported methods.
+/// Concrete types expose only exported methods.
 ///
 /// A key holds the name and the signature, and a parenthesis follows the name.
 /// The parenthesis stands below each letter and each digit, thus the order of
 /// the keys equals the order of the names.
-List<String> _exportedMethodKeys(TypeDesc desc) {
+List<String> _reflectMethodKeys(TypeDesc desc) {
   final List<String> keys = <String>[];
   for (final String key in desc.methods.keys) {
     final int cut = key.indexOf('(');
     final String name = cut < 0 ? key : key.substring(0, cut);
     if (name.isEmpty) continue;
     final String first = name[0];
-    if (first.toUpperCase() == first && first.toLowerCase() != first) {
+    if (desc.kind == 'interface' ||
+        first.toUpperCase() == first && first.toLowerCase() != first) {
       keys.add(key);
     }
   }
@@ -1011,8 +1013,8 @@ List<String> _exportedMethodKeys(TypeDesc desc) {
   return keys;
 }
 
-/// The count of the exported methods of a type.
-int $descNumMethod(int handle) => _exportedMethodKeys(_typeAt(handle)).length;
+/// The method count for reflection.
+int $descNumMethod(int handle) => _reflectMethodKeys(_typeAt(handle)).length;
 
 /// A handle of the function type of 1 exported method of a type. A method that
 /// carries no type gives 0.
@@ -1021,7 +1023,7 @@ int $descNumMethod(int handle) => _exportedMethodKeys(_typeAt(handle)).length;
 /// concrete type, and it writes no receiver for a method of an interface type.
 int $descMethodType(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
-  final List<String> keys = _exportedMethodKeys(desc);
+  final List<String> keys = _reflectMethodKeys(desc);
   if (index < 0 || index >= keys.length) return 0;
   final TypeDesc Function()? type = desc.methodTypes[keys[index]];
   if (type == null) return 0;
@@ -1040,7 +1042,7 @@ int $descMethodType(int handle, int index) {
 Iface? $descMethodFunc(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
   if (desc.kind == 'interface') return null;
-  final List<String> keys = _exportedMethodKeys(desc);
+  final List<String> keys = _reflectMethodKeys(desc);
   if (index < 0 || index >= keys.length) {
     $panic(
       Iface(
@@ -1143,10 +1145,10 @@ void $valueClear(Iface? value) {
   );
 }
 
-/// The name of 1 exported method of a type.
+/// The method name at index in reflection order.
 GoString $descMethodName(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
-  final List<String> keys = _exportedMethodKeys(desc);
+  final List<String> keys = _reflectMethodKeys(desc);
   if (index < 0 || index >= keys.length) {
     $panic(
       Iface(
@@ -1160,11 +1162,10 @@ GoString $descMethodName(int handle, int index) {
   return GoString.fromString(cut < 0 ? key : key.substring(0, cut));
 }
 
-/// A func value that binds 1 exported method of the type to the value.
-Iface? $methodValue(Iface? value, int index) {
-  if (value == null) $panicNil();
-  final TypeDesc desc = value.desc;
-  final List<String> keys = _exportedMethodKeys(desc);
+/// Binds the method at index in the static type to the dynamic value.
+Iface? $methodValue(Iface? value, int handle, int index) {
+  final TypeDesc desc = _typeAt(handle);
+  final List<String> keys = _reflectMethodKeys(desc);
   if (index < 0 || index >= keys.length) {
     $panic(
       Iface(
@@ -1173,9 +1174,17 @@ Iface? $methodValue(Iface? value, int index) {
       ),
     );
   }
+  if (value == null) {
+    $panic(
+      Iface(
+        $typeString,
+        GoString.fromString('reflect: Method on nil interface value'),
+      ),
+    );
+  }
   final String key = keys[index];
-  final Function? fn = desc.methods[key];
-  final TypeDesc Function()? type = desc.methodTypes[key];
+  final Function? fn = value.desc.methods[key];
+  final TypeDesc Function()? type = value.desc.methodTypes[key];
   if (fn == null || type == null) {
     $panic(
       Iface(
@@ -1416,17 +1425,6 @@ Iface? $makeFunc(int handle, Object? body) {
       ) {
         final Slice<Iface?> out = value as Slice<Iface?>;
         final int n = desc.results.length;
-        if (out.len != n) {
-          $panic(
-            Iface(
-              $typeGoError,
-              GoError(
-                'reflect: MakeFunc of ${desc.display} gave ${out.len} '
-                'results, and the type holds $n',
-              ),
-            ),
-          );
-        }
         final List<Object?> raw = <Object?>[];
         for (int i = 0; i < n; i++) {
           final Iface? o = out[i];
@@ -2292,6 +2290,9 @@ bool $descConvertible(int handle, int other) {
   if ($descAssignable(handle, other)) return true;
   final TypeDesc a = _typeAt(handle);
   final TypeDesc b = _typeAt(other);
+  if (a.kind == 'slice' && b.kind == 'array') {
+    return _sameDesc(a.elem, b.elem);
+  }
   if (_numberKinds.contains(a.kind) && _numberKinds.contains(b.kind)) {
     return true;
   }
@@ -2436,21 +2437,6 @@ Iface? $valueAddr(Iface? value, Iface? owner, int index, int loc) {
   );
 }
 
-/// A bound method of a value, by name. A name that no method holds gives null.
-Iface? $methodByName(Iface? value, GoString name) {
-  if (value == null) return null;
-  final String want = name.toDartString();
-  for (final String key in value.desc.methods.keys) {
-    final int cut = key.indexOf('(');
-    if ((cut < 0 ? key : key.substring(0, cut)) != want) continue;
-    final TypeDesc Function()? type = value.desc.methodTypes[key];
-    if (type == null) return null;
-    final TypeDesc sig = type();
-    return Iface(sig, _bindMethod(sig, value.desc.methods[key]!, value.value));
-  }
-  return null;
-}
-
 /// Reports whether 2 values hold the same type and the same value.
 bool $valueEqual(Iface? a, Iface? b) {
   if (a == null || b == null) return a == null && b == null;
@@ -2519,6 +2505,24 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
     return out;
   }
   if (to.kind == 'array') {
+    if (from.kind == 'slice') {
+      final Slice<Object?> src = v as Slice<Object?>;
+      if (src.len < to.length) {
+        $panic(
+          Iface(
+            $typeString,
+            GoString.fromString(
+              'reflect: cannot convert slice with length ${src.len} to array with length ${to.length}',
+            ),
+          ),
+        );
+      }
+      final List<Object?> out = to.zero!() as List<Object?>;
+      for (int i = 0; i < out.length; i++) {
+        out[i] = _converted(from.elem!(), to.elem!(), src[i]);
+      }
+      return out;
+    }
     final List<Object?> out = to.zero!() as List<Object?>;
     final List<Object?> src = v as List<Object?>;
     for (int i = 0; i < out.length; i++) {

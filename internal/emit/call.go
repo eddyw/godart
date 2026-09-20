@@ -333,7 +333,7 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "DescMethodName":
 		return fmt.Sprintf("$descMethodName(%s, %s)", args[0], args[1]), true
 	case "MethodValue":
-		return fmt.Sprintf("$methodValue(%s, %s)", args[0], args[1]), true
+		return fmt.Sprintf("$methodValue(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "ValueIsNil":
 		return fmt.Sprintf("$valueIsNil(%s)", args[0]), true
 	case "MapKeys":
@@ -357,8 +357,6 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "ValueAddr":
 		return fmt.Sprintf("$valueAddr(%s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3]), true
-	case "MethodByName":
-		return fmt.Sprintf("$methodByName(%s, %s)", args[0], args[1]), true
 	case "ValueEqual":
 		return fmt.Sprintf("$valueEqual(%s, %s)", args[0], args[1]), true
 	case "ValueConvert":

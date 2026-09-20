@@ -1,0 +1,88 @@
+package main
+
+import (
+	"fmt"
+	"reflect"
+	"strings"
+)
+
+type record struct {
+	Number int
+	Array  [2]int
+	Ref    *int
+}
+
+type methods struct{}
+
+func (methods) A() int { return 1 }
+func (methods) B() int { return 2 }
+
+type onlyB interface{ B() int }
+
+func panicsWith(text string, f func()) (matched bool) {
+	defer func() {
+		if value := recover(); value != nil {
+			matched = strings.Contains(fmt.Sprint(value), text)
+		}
+	}()
+	f()
+	return false
+}
+
+func main() {
+	var limited onlyB = methods{}
+	methodValue := reflect.ValueOf(&limited).Elem()
+	fmt.Println("interface methods", methodValue.NumMethod(), methodValue.Method(0).Call(nil)[0].Int())
+	fmt.Println("interface lookup", methodValue.MethodByName("A").IsValid(), methodValue.MethodByName("B").Call(nil)[0].Int())
+	integerResult := reflect.TypeOf(func() int { return 0 })
+	for _, result := range [][]reflect.Value{
+		nil,
+		{reflect.ValueOf(1), reflect.ValueOf(2)},
+	} {
+		fmt.Println("result count", panicsWith("wrong return count", func() {
+			reflect.MakeFunc(integerResult, func([]reflect.Value) []reflect.Value {
+				return result
+			}).Interface().(func() int)()
+		}))
+	}
+	for _, result := range []struct {
+		value reflect.Value
+		text  string
+	}{
+		{reflect.Value{}, "returned zero Value"},
+		{reflect.ValueOf(struct{ hidden int }{3}).Field(0), "returned value obtained from unexported field"},
+	} {
+		fmt.Println("invalid result", panicsWith(result.text, func() {
+			reflect.MakeFunc(integerResult, func([]reflect.Value) []reflect.Value {
+				return []reflect.Value{result.value}
+			}).Interface().(func() int)()
+		}))
+	}
+	interfaceResult := reflect.TypeOf(func() any { return nil })
+	nilResult := reflect.MakeFunc(interfaceResult, func([]reflect.Value) []reflect.Value {
+		return []reflect.Value{reflect.Zero(reflect.TypeFor[any]())}
+	}).Interface().(func() any)()
+	fmt.Println("nil interface result", nilResult == nil)
+
+	for _, source := range [][]int{nil, {}, {4}, {4, 5}} {
+		value := reflect.ValueOf(source)
+		for size := 0; size <= 3; size++ {
+			target := reflect.ArrayOf(size, reflect.TypeFor[int]())
+			fmt.Println("array conversion", len(source), size, value.Type().ConvertibleTo(target), value.CanConvert(target))
+			if len(source) >= size {
+				converted := value.Convert(target)
+				fmt.Println(converted.CanAddr(), converted.Len(), converted.Interface())
+			} else {
+				fmt.Println("short slice", panicsWith("cannot convert slice with length", func() { value.Convert(target) }))
+			}
+		}
+	}
+	fmt.Println("different element", reflect.ValueOf([]int{1}).CanConvert(reflect.TypeFor[[1]int64]()))
+	shared := 7
+	source := []record{{Number: 1, Array: [2]int{2, 3}, Ref: &shared}}
+	converted := reflect.ValueOf(source).Convert(reflect.TypeFor[[1]record]()).Interface().([1]record)
+	source[0].Number = 99
+	source[0].Array[0] = 88
+	shared = 8
+	fmt.Println("value copy", converted[0].Number, converted[0].Array, *converted[0].Ref)
+}

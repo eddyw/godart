@@ -255,19 +255,18 @@ func CallValue(fn any, args []any) []any {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// DescNumMethod gives the count of the exported methods of a type.
+// DescNumMethod gives the method count for reflection.
 func DescNumMethod(handle int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// DescMethodName gives the name of 1 exported method of a type. The order is
-// the order of the name.
+// DescMethodName gives the method name at index in reflection order.
 func DescMethodName(handle, index int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// MethodValue gives a func value that binds 1 exported method to the value.
-func MethodValue(value any, index int) any {
+// MethodValue binds the method at index in the static type to the value.
+func MethodValue(value any, handle, index int) any {
 	panic("syscall/dart needs the gart compiler")
 }
 
@@ -326,12 +325,6 @@ func ValueRecv(value any) (any, bool) {
 // the kind of the location: 1 for a pointer, 2 for a field of a struct, and 3
 // for an element of a slice or of an array.
 func ValueAddr(value, owner any, index, loc int) any {
-	panic("syscall/dart needs the gart compiler")
-}
-
-// MethodByName gives a bound method of a value, by name. A name that no method
-// holds gives nil.
-func MethodByName(value any, name string) any {
 	panic("syscall/dart needs the gart compiler")
 }
 
