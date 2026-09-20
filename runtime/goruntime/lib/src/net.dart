@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'chan.dart';
+import 'datagram_posix.dart';
 import 'goint.dart';
 import 'sched.dart';
 import 'slice.dart';
@@ -402,9 +403,10 @@ final class _Packet {
   final RawDatagramSocket socket;
   final List<Datagram> held = <Datagram>[];
 
-  /// The remote address of a socket of a dial. Such a socket drops a datagram
-  /// of another source, exactly as a connected socket of the system does. The
-  /// host is empty for a socket of a listen.
+  // The Dart socket owns this descriptor.
+  int nativeFD = -1;
+
+  /// The host is empty for a socket of a listen.
   String remoteHost = '';
   int remotePort = 0;
 
@@ -1393,6 +1395,14 @@ Future<_Packet> _connectUDP(String host, int port) async {
     0,
   );
   final _Packet s = _Packet(socket);
+  if (Platform.isLinux || Platform.isMacOS) {
+    try {
+      s.nativeFD = connectDatagram(socket, target, port);
+    } catch (_) {
+      socket.close();
+      rethrow;
+    }
+  }
   s.remoteHost = target.address;
   s.remotePort = port;
   return s;
@@ -1407,9 +1417,8 @@ Future<int> _fillPacket(_Packet s) {
   if (open != null) return open;
   final Completer<int> done = Completer<int>();
   s.waiter = done;
-  final Future<int> next = done.future.then((int code) {
+  final Future<int> next = done.future.whenComplete(() {
     s.pending = null;
-    return code;
   });
   s.pending = next;
   return next;
@@ -1423,15 +1432,38 @@ Future<int> _fillPacket(_Packet s) {
 (int, GoString, int, GoString) $packetRead(int handle, Slice<int> p) {
   final _Packet? s = _packetAt(handle);
   if (s == null) return (0, _empty, 0, _closed());
+  Timer? errors;
+  if (s.nativeFD >= 0) {
+    // Dart omits remote UDP errors from its datagram event stream.
+    errors = Timer.periodic(const Duration(milliseconds: 10), (_) {
+      final waiter = s.waiter;
+      if (waiter == null) return;
+      try {
+        final code = datagramPendingError(s.socket);
+        if (code != 0) {
+          s.waiter = null;
+          waiter.completeError(datagramError(code));
+        }
+      } catch (error, stack) {
+        s.waiter = null;
+        waiter.completeError(error, stack);
+      }
+    });
+  }
   $await(
-    s.readDeadline.limit<int>(_fillPacket(s), 2).then((int code) {
-      if (code == 2) return (0, _empty, 0, _timeout());
-      if (code == 1 && s.held.isEmpty) return (0, _empty, 0, _closed());
-      final Datagram d = s.held.removeAt(0);
-      final int n = d.data.length < p.len ? d.data.length : p.len;
-      if (n != 0) p.$fill(p.off, p.off + n, d.data, 0);
-      return (n, GoString.fromString(d.address.address), d.port, _empty);
-    }),
+    s.readDeadline
+        .limit<int>(_fillPacket(s), 2)
+        .whenComplete(() {
+          errors?.cancel();
+        })
+        .then((int code) {
+          if (code == 2) return (0, _empty, 0, _timeout());
+          if (code == 1 && s.held.isEmpty) return (0, _empty, 0, _closed());
+          final Datagram d = s.held.removeAt(0);
+          final int n = d.data.length < p.len ? d.data.length : p.len;
+          if (n != 0) p.$fill(p.off, p.off + n, d.data, 0);
+          return (n, GoString.fromString(d.address.address), d.port, _empty);
+        }),
     (Object cause) => (0, _empty, 0, _cause(cause)),
   );
   return (0, _empty, 0, _empty);
@@ -1462,7 +1494,9 @@ Future<(int, GoString)> _sendTo(
   String host,
   int port,
 ) async {
-  final int n = s.socket.send(bytes, await _address(host), port);
+  final int n = s.nativeFD >= 0
+      ? sendDatagram(s.nativeFD, bytes)
+      : s.socket.send(bytes, await _address(host), port);
   if (n == 0 && bytes.isNotEmpty) {
     return (0, GoString.fromString('the send buffer of the socket is full'));
   }
