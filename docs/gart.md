@@ -16,7 +16,8 @@ See [SDK compatibility](sdk-upgrades.md) for supported SDK selection.
 | `gart version` | Show the compiler version. |
 | `gart licenses` | Show bundled license notices. |
 
-Put compiler flags before package patterns. Arguments after `--` belong to
+Put compiler flags before package patterns. The test command also accepts
+flags after package patterns. For `gart run`, arguments after `--` belong to
 the application. Commands default to `./...` when no pattern is present.
 
 ## Build flags
@@ -50,6 +51,10 @@ output directories. Gart rejects an output directory that another command owns.
 | `-bench expression` | Select benchmarks. |
 | `-benchtime duration` | Target benchmark duration. |
 | `-benchcount n` | Use a fixed benchmark iteration count. |
+| `-args ...` | Pass all remaining arguments to each test binary. |
+
+Custom test flags also pass directly to the test binary. `--` passes itself
+and the remaining arguments, which ends the test binary's flag parser.
 
 Benchmarks use AOT output. Their measurements describe Gart output, without
 native Go allocation counters. Fuzz tests execute their seed corpora only.

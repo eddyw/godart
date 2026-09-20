@@ -192,13 +192,8 @@ func TestFlags(t *testing.T) {
 			nativeArgs := append([]string{"test", "-count=1", "-args"}, args...)
 			run(t, dir, "go", nativeArgs...)
 			out := t.TempDir()
-			stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
-			if err != nil {
-				t.Fatal(err)
-			}
-			prepareDart(t, out)
-			got := run(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
-			if got != "PASS\n" {
+			got := gartTestIn(t, dir, out, driver.TestOptions{Args: args})
+			if !strings.HasPrefix(got, "ok  ") {
 				t.Fatalf("unexpected test output: %q", got)
 			}
 		})

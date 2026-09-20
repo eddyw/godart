@@ -24,6 +24,8 @@ const Version = "0.1.0-dev"
 
 // TestOptions holds the flags of the test command.
 type TestOptions struct {
+	// Args pass additional arguments to each test binary.
+	Args []string
 	// Verbose writes 1 line for each test.
 	Verbose bool
 	// Run keeps only a test whose name matches this regular expression.
@@ -207,7 +209,7 @@ func binaryArgs(testOpt TestOptions) []string {
 				strconv.FormatInt(testOpt.BenchTime.Nanoseconds(), 10))
 		}
 	}
-	return args
+	return append(args, testOpt.Args...)
 }
 
 // compileExe builds an ahead of time binary of an entry point and gives its

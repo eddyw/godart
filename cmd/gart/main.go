@@ -60,6 +60,9 @@ The test command takes these flags:
 	-bench expr      run each benchmark whose name matches the expression
 	-benchtime d     the length that 1 benchmark targets, for example 2s
 	-benchcount n    the fixed count of iterations of 1 benchmark
+	-args ...        pass all remaining arguments to each test binary
+
+Test flags can appear before or after package names.
 
 A benchmark runs on an ahead of time build, because the warm up cost of the
 Dart VM hides the result. The number measures the Dart output, and not Go.
@@ -198,11 +201,16 @@ func runTest(args []string) error {
 		"the length that 1 benchmark targets")
 	benchCount := flags.set.Int("benchcount", 0,
 		"the fixed count of iterations of 1 benchmark")
-	options, err := flags.options(args)
+	compilerArgs, programArgs, err := testArgs(flags.set, args)
+	if err != nil {
+		return err
+	}
+	options, err := flags.options(compilerArgs)
 	if err != nil {
 		return err
 	}
 	testOptions := driver.TestOptions{
+		Args:       programArgs,
 		Verbose:    *verbose,
 		Run:        *pattern,
 		Short:      *short,
@@ -223,6 +231,63 @@ func runTest(args []string) error {
 		os.Exit(code)
 	}
 	return nil
+}
+
+func testArgs(set *flag.FlagSet, args []string) ([]string, []string, error) {
+	var options, packages, program []string
+	packagesDone, afterUnknown := false, false
+	for len(args) > 0 {
+		arg := args[0]
+		args = args[1:]
+		valueOfUnknown := afterUnknown
+		afterUnknown = false
+		if arg == "-args" || arg == "--args" {
+			program = append(program, args...)
+			break
+		}
+		if arg == "--" {
+			program = append(append(program, arg), args...)
+			break
+		}
+		if arg == "-" || !strings.HasPrefix(arg, "-") {
+			if !packagesDone {
+				packages = append(packages, arg)
+			} else if valueOfUnknown {
+				program = append(program, arg)
+			} else {
+				program = append(append(program, arg), args...)
+				break
+			}
+			continue
+		}
+		if len(packages) > 0 {
+			packagesDone = true
+		}
+		name, _, inline := strings.Cut(strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-"), "=")
+		if name == "h" || name == "help" {
+			return append(options, arg), nil, nil
+		}
+		f := set.Lookup(name)
+		if f == nil {
+			packagesDone = true
+			program = append(program, arg)
+			afterUnknown = !inline
+			continue
+		}
+		options = append(options, arg)
+		if inline {
+			continue
+		}
+		if b, ok := f.Value.(interface{ IsBoolFlag() bool }); ok && b.IsBoolFlag() {
+			continue
+		}
+		if len(args) == 0 {
+			return nil, nil, fmt.Errorf("flag needs an argument: %s", arg)
+		}
+		options = append(options, args[0])
+		args = args[1:]
+	}
+	return append(options, packages...), program, nil
 }
 
 // given reports whether the command line held a flag. The presence of -bench
