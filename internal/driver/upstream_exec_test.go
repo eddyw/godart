@@ -41,7 +41,7 @@ func prepareUpstreamNativeImage(t *testing.T, dir, out, entry string) nativeImag
 	return result
 }
 
-func prepareUpstreamSelfExec(t *testing.T, out, entry string) {
+func prepareUpstreamSelfExec(t *testing.T, out, entry string) string {
 	t.Helper()
 	dart, err := exec.LookPath("dart")
 	if err != nil {
@@ -86,4 +86,5 @@ func prepareUpstreamSelfExec(t *testing.T, out, entry string) {
 	if err := os.WriteFile(launcher, []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
+	return launcher
 }

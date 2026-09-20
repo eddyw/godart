@@ -82,6 +82,11 @@ func Goexit() {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// Fatal ends the process without a recoverable panic or deferred calls.
+func Fatal(message string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // SetPanicNil installs the builder of the value that `panic(nil)` gives. The
 // initializer of the package runtime calls it, because only the emitted Go
 // type holds the class of that value.

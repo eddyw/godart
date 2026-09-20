@@ -44,14 +44,14 @@ func TestSelectedUpstream(t *testing.T) {
 		"os/exec":          {{Name: "env_test.go"}},
 		"sync": {
 			{Name: "once_test.go"}, {Name: "cond_test.go"},
-			{Name: "mutex_test.go", Declarations: []string{"TestMutexFairness"}},
+			{Name: "mutex_test.go", Declarations: []string{"misuseTests", "init", "TestMutexMisuse", "TestMutexFairness"}},
 			{Name: "rwmutex_test.go"},
 			{Name: "oncefunc_test.go", Declarations: []string{
 				"testOncePanicX", "testOncePanicWith", "TestOnceFuncPanic", "TestOnceValuePanic",
 				"TestOnceValuesPanic", "TestOnceFuncPanicNil", "TestOnceFuncGoexit",
 				"TestOnceFuncPanicTraceback", "onceFuncPanic",
 			}},
-			{Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo"}},
+			{Name: "waitgroup_test.go", Declarations: []string{"testWaitGroup", "TestWaitGroup", "TestWaitGroupMisuse", "TestWaitGroupRace", "TestWaitGroupAlign", "TestWaitGroupGo", "TestIssue76126"}},
 		},
 		"sync/atomic": {{Name: "value_test.go"}, {Name: "atomic_test.go", Declarations: atomicDeclarations()}},
 		"reflect": {
@@ -87,7 +87,7 @@ func TestSelectedUpstream(t *testing.T) {
 			fixture := t.TempDir()
 			writeFile(t, filepath.Join(fixture, "go.mod"), "module example.com/upstream\n\ngo 1.27\n")
 			if pkg == "sync" {
-				writeFile(t, filepath.Join(fixture, "go.mod"), "module sync_test\n\ngo 1.27\n")
+				writeFile(t, filepath.Join(fixture, "go.mod"), "module sync_test\n\ngo 1.27\n\nrequire example.com/testenv v0.0.0\nreplace example.com/testenv => ./testenv\n")
 			}
 			selectedFiles := map[string]upstreamFile{}
 			for _, file := range files {
@@ -96,6 +96,7 @@ func TestSelectedUpstream(t *testing.T) {
 				if pkg == "sync" {
 					// The original traceback assertion requires the sync_test import path.
 					source = strings.Replace(source, "package sync_test", "package sync", 1)
+					source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/testenv"`)
 				}
 				if pkg == "net" {
 					source = strings.Replace(source, "package net", "package net_test\nimport . \"net\"", 1)
@@ -110,6 +111,14 @@ func TestSelectedUpstream(t *testing.T) {
 					source = strings.ReplaceAll(source, `"internal/godebug"`, `"example.com/upstream"`)
 				}
 				writeFile(t, filepath.Join(fixture, file.Name), source)
+			}
+			if pkg == "sync" {
+				source := selectedUpstreamSource(t, "../overlay/std/internal/testenv/testenv.go", []string{"Executable", "MustHaveExec"})
+				if err := os.MkdirAll(filepath.Join(fixture, "testenv"), 0755); err != nil {
+					t.Fatal(err)
+				}
+				writeFile(t, filepath.Join(fixture, "testenv/go.mod"), "module example.com/testenv\n\ngo 1.27\n")
+				writeFile(t, filepath.Join(fixture, "testenv/testenv.go"), strings.TrimPrefix(source, "//go:build dart\n"))
 			}
 
 			if pkg == "net" {
@@ -189,12 +198,22 @@ func TestSelectedUpstream(t *testing.T) {
 				t.Fatalf("got %d binaries", len(stats.Binaries))
 			}
 			prepareDart(t, out)
-			result := programOutcome(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run="+filter, "-test.skip="+upstreamSkip(t, pkg))
+			var launcher string
+			if pkg == "sync" {
+				launcher = prepareUpstreamSelfExec(t, out, stats.Binaries[0].Entry)
+			}
+			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter, "-test.skip=" + upstreamSkip(t, pkg)}
+			result := programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			name := pkg + "-selected"
 			if pkg == "net/http" {
 				name = pkg + "-content-type"
 			}
 			compareUpstream(t, name, pkg, filter, "vm", dir, result.Text, result.Exit)
+			if pkg == "sync" {
+				run(t, out, "dart", "compile", "exe", stats.Binaries[0].Entry, "-o", launcher)
+				result := programOutcome(t, dir, launcher, args...)
+				compareUpstream(t, name, pkg, filter, "aot", dir, result.Text, result.Exit)
+			}
 		})
 	}
 }

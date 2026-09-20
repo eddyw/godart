@@ -33,7 +33,7 @@ func (m *Mutex) Lock() {
 // Unlock gives the lock back.
 func (m *Mutex) Unlock() {
 	if !m.held {
-		panic("sync: unlock of unlocked mutex")
+		dart.Fatal("sync: unlock of unlocked mutex")
 	}
 	if len(m.waiters) == 0 {
 		m.held = false
@@ -74,7 +74,7 @@ func (rw *RWMutex) Lock() {
 
 func (rw *RWMutex) Unlock() {
 	if !rw.writer || rw.readers != 0 {
-		panic("sync: Unlock of unlocked RWMutex")
+		dart.Fatal("sync: Unlock of unlocked RWMutex")
 	}
 	rw.writer = false
 	for _, waiter := range rw.readerWaiters {
@@ -95,7 +95,7 @@ func (rw *RWMutex) RLock() {
 
 func (rw *RWMutex) RUnlock() {
 	if rw.readers == 0 {
-		panic("sync: RUnlock of unlocked RWMutex")
+		dart.Fatal("sync: RUnlock of unlocked RWMutex")
 	}
 	rw.readers--
 	if rw.readers == 0 && rw.writer {

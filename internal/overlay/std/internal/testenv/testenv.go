@@ -98,11 +98,14 @@ func GoToolPath(t testing.TB) string {
 // the call skips no test.
 func MustHaveExec(t testing.TB) {}
 
-// Executable skips the test. The Dart output is no test binary that starts
-// itself again.
+// Executable requires a launcher that the test harness can start again.
 func Executable(t testing.TB) string {
-	t.Skip("testenv: the Dart output does not start itself again")
-	return ""
+	t.Helper()
+	path, err := os.Executable()
+	if err != nil || path != os.Args[0] {
+		t.Skip("testenv: no self-executable test launcher")
+	}
+	return path
 }
 
 // CleanCmdEnv gives the command back with no change. The real form drops each

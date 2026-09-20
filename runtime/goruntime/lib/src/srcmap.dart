@@ -194,14 +194,15 @@ List<GoPos> $goStack(StackTrace trace) {
     final close = line.lastIndexOf(')');
     if (open < 0 || close < open) continue;
     final inside = line.substring(open + 1, close);
-    final col = inside.lastIndexOf(':');
-    if (col < 0) continue;
-    final row = inside.lastIndexOf(':', col - 1);
-    if (row < 0) continue;
-    final at = int.tryParse(inside.substring(row + 1, col));
+    final location = _traceLocation.firstMatch(inside);
+    if (location == null) continue;
+    final at = int.tryParse(location[2]!);
     if (at == null) continue;
-    final pos = $goPos(inside.substring(0, row), at);
+    final pos = $goPos(location[1]!, at);
     if (pos != null) out.add(pos);
   }
   return out;
 }
+
+// AOT stack traces omit the column number.
+final RegExp _traceLocation = RegExp(r'^(.*?):(\d+)(?::\d+)?$');
