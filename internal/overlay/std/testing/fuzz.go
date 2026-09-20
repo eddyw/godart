@@ -434,7 +434,7 @@ func runFuzzTargets(targets []InternalFuzzTarget, flags options) (ran, ok bool) 
 			fn := target.Fn
 			// F holds no Parallel, thus the target never parks and the group
 			// needs no second pass.
-			g.run(t, func() {
+			g.run(t, func(_ *T) {
 				fn(f)
 				if !f.fuzzed && !t.skipped && !t.failed {
 					t.Error("returned without calling F.Fuzz, F.Fail, or F.Skip")

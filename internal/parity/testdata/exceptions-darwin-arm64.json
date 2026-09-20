@@ -12473,90 +12473,6 @@
       "native": "pass",
       "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
       "test": "TestDiscard"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Default.Fatal"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Default.Fatalf"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Default.Fatalln"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Default.Output"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Default.Panic"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Default.Panicf"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Default.Panicln"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Fatal"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Fatalf"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Fatalln"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Output"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Panic"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Panicf"
-    },
-    {
-      "gart": "skip",
-      "native": "pass",
-      "reason": "The upstream case relaunches its native test executable. Gart has no equivalent test-executable launcher.",
-      "test": "TestCallDepth/Panicln"
     }
   ],
   "log/slog/internal/buffer": [
@@ -13297,6 +13213,128 @@
       "native": "pass",
       "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
       "test": "TestCommonHeaders"
+    }
+  ],
+  "log/slog": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAnyLevelAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAttrNoAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestTextHandlerAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestValueNoAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/2_pairs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/2_pairs_disabled"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/2_pairs_disabled_inline"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/9_kvs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/Error"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/Info"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs1"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs3"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs3_disabled"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs9"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/logger.Info"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/logger.Log"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/pairs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestJSONAllocs/attrs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestJSONAllocs/message"
     }
   ]
 }

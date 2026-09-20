@@ -303,7 +303,7 @@ func TestTestsOfGoroot(t *testing.T) {
 				t.Fatalf("got %d upstream test binaries", len(stats.Binaries))
 			}
 			prepareDart(t, outDir)
-			if c.Package == "net/http/cgi" {
+			if c.Package == "net/http/cgi" || (c.Package == "log" || c.Package == "log/slog") && !testing.Short() {
 				prepareUpstreamSelfExec(t, outDir, stats.Binaries[0].Entry)
 			}
 			text, execErr, finished := output(dir, nil, upstreamLimit(), "dart", filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run="+c.Run, "-test.skip="+upstreamSkip(t, c.Package))

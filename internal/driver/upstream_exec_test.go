@@ -36,6 +36,17 @@ func prepareUpstreamSelfExec(t *testing.T, out, entry string) {
 	// Adapt executable identity in the generated harness, outside upstream assertions.
 	code := strings.Replace(string(source), start, "$os.Args[0] = GoString.fromString("+name+");\n"+start, 1)
 	writeFile(t, entry, code)
+	executableSource := filepath.Join(out, "lib", "std", "os", "extra.part.dart")
+	source, err = os.ReadFile(executableSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const executable = "$executable()"
+	if strings.Count(string(source), executable) != 1 {
+		t.Fatal("expected 1 generated executable query")
+	}
+	writeFile(t, executableSource, strings.Replace(string(source), executable,
+		"(GoString.fromString("+name+"), GoString.empty)", 1))
 	kernel := filepath.Join(out, "test.dill")
 	run(t, out, dart, "compile", "kernel", "-o", kernel, entry)
 	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'" }

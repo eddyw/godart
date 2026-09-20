@@ -13532,5 +13532,133 @@
       "reason": "The original fuzz target skips in short mode.",
       "test": "FuzzDecode"
     }
+  ],
+  "log/slog": [
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAnyLevelAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAttrNoAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestTextHandlerAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestValueNoAlloc"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/2_pairs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/2_pairs_disabled"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/2_pairs_disabled_inline"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/9_kvs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/Error"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/Info"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs1"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs3"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs3_disabled"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs6"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/attrs9"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/logger.Info"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/logger.Log"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestAlloc/pairs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestJSONAllocs/attrs"
+    },
+    {
+      "gart": "skip",
+      "native": "pass",
+      "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete assertion.",
+      "test": "TestJSONAllocs/message"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original case skips subprocess execution in short mode.",
+      "test": "TestCallDepthConnection"
+    }
   ]
 }

@@ -24,8 +24,6 @@ The blocker manifest retains exact platform diagnostics in the coverage manifest
 | `internal/reflectlite` | private-test-dependency | The overlay does not retain private reflectlite implementation names used by its tests. |
 | `internal/testenv` | private-test-dependency | The complete native test infrastructure exceeds the selected testenv adapter. |
 | `internal/types/errors` | private-test-dependency | The suite depends on go/importer, which remains outside the surface. |
-| `log/slog` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `math` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
 | `math/big` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |
 | `net` | private-test-dependency | The suite calls the private native RFC6724 source-address sorter. |
 | `net/http` | public-api-gap | The complete suite requires TLS root-certificate configuration. TLS expansion has separate scope. |
@@ -34,7 +32,7 @@ The blocker manifest retains exact platform diagnostics in the coverage manifest
 | `net/smtp` | public-api-gap | The complete suite requires TLS connection-version metadata. TLS expansion has separate scope. |
 | `os` | public-api-gap | The complete suite requires native errno and file-descriptor behavior beyond the current surface. |
 | `os/exec` | public-api-gap | The environment helper now matches upstream. The complete suite next requires native process signals and process attributes. |
-| `os/signal` | private-test-dependency | The suite requires native subprocess test infrastructure and signal behavior. |
+| `os/signal` | public-api-gap | The suite requires inherited file descriptors through exec.Cmd.ExtraFiles. |
 | `reflect` | runtime-boundary | The suite inspects native register ABI constants such as abi.IntArgRegs. |
 | `runtime` | runtime-boundary | The suite requires Go finalizer semantics through runtime.SetFinalizer. |
 | `runtime/debug` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |

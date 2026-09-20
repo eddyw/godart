@@ -927,10 +927,7 @@
   },
   {
     "package": "log/slog",
-    "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
-    "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
+    "status": "vm-suite"
   },
   {
     "package": "log/slog/internal",
@@ -946,10 +943,7 @@
   },
   {
     "package": "math",
-    "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
-    "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
+    "status": "vm-suite"
   },
   {
     "package": "math/big",
@@ -1098,9 +1092,9 @@
   {
     "package": "os/signal",
     "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.CommandContext",
-    "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The suite requires native subprocess test infrastructure and signal behavior."
+    "diagnostic": "cmd.ExtraFiles undefined (type *exec.Cmd has no field or method ExtraFiles)",
+    "blocker_cause": "public-api-gap",
+    "blocker_reason": "The suite requires inherited file descriptors through exec.Cmd.ExtraFiles."
   },
   {
     "package": "path",

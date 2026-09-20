@@ -404,13 +404,13 @@ type group struct {
 
 // run starts 1 test on a goroutine of its own and waits for the pause or for
 // the end of it.
-func (g *group) run(t *T, call func()) {
+func (g *group) run(t *T, call func(*T)) {
 	if g.done == nil {
 		g.done = make(chan *T)
 	}
 	t.gate = make(chan int)
 	go func() {
-		runOne(t, call)
+		tRunner(t, call)
 		if t.parallel {
 			g.done <- t
 			return
@@ -681,7 +681,7 @@ func (t *T) runSub(name string, f func(*T)) bool {
 	if t.group == nil {
 		t.group = &group{}
 	}
-	t.group.run(sub, func() { f(sub) })
+	t.group.run(sub, f)
 	if sub.parallel {
 		// Go reports true for a subtest that stands in the parallel pass,
 		// because the body of it did not fail yet.
@@ -836,7 +836,7 @@ func runList(tests []InternalTest, flags options) (ran, ok bool) {
 			ran = true
 			t := &T{name: tc.Name}
 			f := tc.F
-			g.run(t, func() { f(t) })
+			g.run(t, f)
 			if t.parallel {
 				continue
 			}
@@ -1036,9 +1036,9 @@ func matches(name, pattern string) bool {
 	return MatchName(name, pattern, MatchString)
 }
 
-// runOne runs 1 test body. It puts the result line of the test in front of the
+// tRunner runs 1 test body. It puts the result line of the test in front of the
 // result lines of the subtests, exactly as go test does.
-func runOne(t *T, call func()) {
+func tRunner(t *T, call func(*T)) {
 	if verbose {
 		emit("=== RUN   " + t.name)
 	}
@@ -1046,7 +1046,7 @@ func runOne(t *T, call func()) {
 	id := dart.GoID()
 	parent := current[id]
 	current[id] = t
-	dart.Catch(call)
+	dart.Catch(func() { call(t) })
 	t.stopping = false
 	// The parallel subtests of this test run now. Go runs them after the body
 	// and in front of the cleanups.

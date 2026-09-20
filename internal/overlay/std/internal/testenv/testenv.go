@@ -83,13 +83,6 @@ func GoToolPath(t testing.TB) string {
 	return ""
 }
 
-// Command skips the test. The Dart output holds no go command, thus a test
-// that runs one has no meaning.
-func Command(t testing.TB, name string, args ...string) *exec.Cmd {
-	t.Skip("testenv: the Dart output runs no command of the go tool chain")
-	return nil
-}
-
 // MustHaveExec marks a test that starts a process. gart starts a process, thus
 // the call skips no test.
 func MustHaveExec(t testing.TB) {}
