@@ -43984,6 +43984,74 @@
       "seeds": null
     },
     {
+      "path": "net/http/fcgi",
+      "tests": [
+        {
+          "name": "TestChildServeCleansUp",
+          "file": "fcgi_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestChildServeReadsEnvVars",
+          "file": "fcgi_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestGetValues",
+          "file": "fcgi_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestMalformedParams",
+          "file": "fcgi_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestResponseWriterSniffsContentType",
+          "file": "fcgi_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestSize",
+          "file": "fcgi_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestSlowRequest",
+          "file": "fcgi_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestStreams",
+          "file": "fcgi_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "child.go",
+          "sha256": "c152608303bd3a74aae8d3d529747aa0105953666e98167f5f9aad8d52f5d2e2"
+        },
+        {
+          "path": "fcgi.go",
+          "sha256": "3d8d776664a3f5f9b7a109a8a27433b6f288f9c794102f249e9aca18345d7aa6"
+        },
+        {
+          "path": "fcgi_test.go",
+          "sha256": "4c01c08edd05816b017e0168344c8db6e787be413c0f61b3e1c49101233b7825"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "net/http/httptest",
       "tests": [
         {

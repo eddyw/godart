@@ -667,5 +667,9 @@
   {
     "package": "log/syslog",
     "run": ""
+  },
+  {
+    "package": "net/http/fcgi",
+    "run": ""
   }
 ]

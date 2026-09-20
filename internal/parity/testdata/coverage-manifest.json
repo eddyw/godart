@@ -1038,6 +1038,15 @@
     "status": "vm-suite"
   },
   {
+    "package": "net/http/fcgi",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
     "package": "net/http/httptest",
     "status": "compile-blocked",
     "diagnostic": "unknown field Version in struct literal of type tls.ConnectionState",

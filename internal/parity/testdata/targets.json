@@ -206,5 +206,14 @@
       "js",
       "wasm"
     ]
+  },
+  {
+    "package": "net/http/fcgi",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ],
+    "run": ""
   }
 ]

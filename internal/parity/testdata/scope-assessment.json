@@ -40,8 +40,8 @@
         "net/http/fcgi/child.go",
         "net/http/fcgi/fcgi.go"
       ],
-      "reason": "FastCGI records and request conversion are portable. Serve with a supplied listener differs from nil-listener descriptor discovery.",
-      "next_action": "Implement supplied-listener support and assess inherited descriptor handling separately.",
+      "reason": "FastCGI records, request conversion, and supplied listeners use the original Go implementation. Inherited listener descriptors remain unsupported.",
+      "next_action": "Validate inherited descriptor adapters without changes to the supplied-listener protocol or original assertions.",
       "targets": "VM/AOT can host listeners. Browser HTTP servers remain outside the target contract."
     },
     {

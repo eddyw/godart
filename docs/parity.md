@@ -36,6 +36,9 @@ Dart VM and AOT programs use `dart:io` adapters for files, processes, sockets,
 and HTTP. These adapters do not provide all native descriptor, process-group,
 file metadata, TLS configuration, or runtime inspection APIs.
 
+`net/http/fcgi` supports supplied listeners. `Serve` with a nil listener
+returns an explicit error because inherited listener descriptors remain unsupported.
+
 `log/syslog` supports TCP, UDP, and Unix streams. Unix datagrams and local
 daemons that require them remain unsupported.
 

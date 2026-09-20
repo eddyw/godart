@@ -1,0 +1,29 @@
+--- child.go
++++ child.go
+@@ -14,7 +14,6 @@
+ 	"net"
+ 	"net/http"
+ 	"net/http/cgi"
+-	"os"
+ 	"strings"
+ 	"time"
+ )
+@@ -334,16 +333,11 @@
+ // Serve accepts incoming FastCGI connections on the listener l, creating a new
+ // goroutine for each. The goroutine reads requests and then calls handler
+ // to reply to them.
+-// If l is nil, Serve accepts connections from os.Stdin.
++// Serve requires a non-nil listener. Inherited descriptors are unsupported.
+ // If handler is nil, [http.DefaultServeMux] is used.
+ func Serve(l net.Listener, handler http.Handler) error {
+ 	if l == nil {
+-		var err error
+-		l, err = net.FileListener(os.Stdin)
+-		if err != nil {
+-			return err
+-		}
+-		defer l.Close()
++		return errors.New("fcgi: inherited listener descriptors are unsupported")
+ 	}
+ 	if handler == nil {
+ 		handler = http.DefaultServeMux
