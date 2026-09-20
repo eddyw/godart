@@ -43,6 +43,7 @@ func (b *builder) flatten(body *ir.Block, params []*ir.Var, recv *ir.Var,
 	}
 	f.close()
 	placeLocalFuncs(m)
+	releaseTemporaries(m)
 	return m
 }
 
