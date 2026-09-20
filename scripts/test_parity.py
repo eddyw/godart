@@ -10,6 +10,18 @@ spec.loader.exec_module(parity)
 
 
 class ParityTest(unittest.TestCase):
+    def test_application_shards_preserve_the_complete_corpus(self):
+        cases = [dict(name=name) for name in ["c", "a", "b", "d", "e"]]
+        for count in [1, 3, 8]:
+            shards = [parity.application_shard(cases, index, count) for index in range(count)]
+            actual = [case["name"] for shard in shards for case in shard]
+            self.assertEqual(sorted(actual), ["a", "b", "c", "d", "e"])
+            for index, shard in enumerate(shards):
+                self.assertEqual(shard, parity.application_shard(list(reversed(cases)), index, count))
+        for index, count in [(-1, 1), (1, 1), (0, 0)]:
+            with self.assertRaises(ValueError):
+                parity.application_shard(cases, index, count)
+
     def test_language_execution_requires_original_output_and_success(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

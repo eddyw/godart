@@ -381,17 +381,25 @@ def application(args):
     return 0 if result["status"] in {"compiled", "passed"} else 1
 
 
+def application_shard(cases, index, count):
+    if count < 1 or index < 0 or index >= count:
+        raise ValueError("invalid application shard")
+    return sorted(cases, key=lambda case: case["name"])[index::count]
+
+
 def applications(args):
+    cases = application_shard(read(ROOT / "testdata/applications/manifest.json"), args.shard_index, args.shard_count)
     args.output.mkdir(parents=True, exist_ok=False)
     binary = args.output / "gart"
     build = command(["go", "build", "-o", str(binary), "./cmd/gart"], ROOT,
                     args.output, "compiler", args.timeout)
-    result = {"compiler": identity(ROOT), "build": build, "applications": []}
+    result = {"compiler": identity(ROOT), "build": build, "applications": [],
+              "shard": args.shard_index, "shards": args.shard_count}
     if build["exit"]:
         save(args.output / "suite.json", result)
         return 1
     status = 0
-    for case in read(ROOT / "testdata/applications/manifest.json"):
+    for case in cases:
         out = args.output / case["name"]
         code = application(argparse.Namespace(
             output=out, project=ROOT / case["project"], gart=binary,
@@ -417,6 +425,8 @@ def main():
     app.add_argument("--tags", default="", help="use identical Go build tags for both compilers")
     app.add_argument("--mode", choices=["compile", "run", "test"], default="compile")
     suite = sub.add_parser("applications", help="build Gart and compare all pinned application fixtures")
+    suite.add_argument("--shard-index", type=int, default=0)
+    suite.add_argument("--shard-count", type=int, default=1)
     for command_parser in (summary, app, suite):
         command_parser.add_argument("--output", type=Path, required=True)
         command_parser.add_argument("--timeout", type=float, default=300)

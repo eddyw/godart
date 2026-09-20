@@ -49,7 +49,7 @@ case "$suite" in
     ;;
   integration) test_name=TestTests ;;
   applications)
-    python3 -B scripts/parity.py applications --output "${GART_PARITY_REPORT_DIR:-build/parity-results}/applications"
+    python3 -B scripts/parity.py applications --shard-index "$shard_index" --shard-count "$shard_count" --output "${GART_PARITY_REPORT_DIR:-build/parity-results}/applications"
     ;;
   targets) test_name='TestAOT|TestWasm|TestJS' ;;
   language-targets) test_name=TestLanguageTargets ;;

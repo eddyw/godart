@@ -19,5 +19,47 @@
     "pattern": "charm.land/fantasy/schema",
     "mode": "test",
     "tags": "safe"
+  },
+  {
+    "name": "configuration-worker",
+    "project": "testdata/applications/fantasy-json",
+    "pattern": "./cmd/config-worker",
+    "mode": "run",
+    "tags": ""
+  },
+  {
+    "name": "yaml-ast",
+    "project": "testdata/applications/fantasy-json",
+    "pattern": "github.com/goccy/go-yaml/ast",
+    "mode": "test",
+    "tags": ""
+  },
+  {
+    "name": "yaml-lexer",
+    "project": "testdata/applications/fantasy-json",
+    "pattern": "github.com/goccy/go-yaml/lexer",
+    "mode": "test",
+    "tags": ""
+  },
+  {
+    "name": "yaml-parser",
+    "project": "testdata/applications/fantasy-json",
+    "pattern": "github.com/goccy/go-yaml/parser",
+    "mode": "test",
+    "tags": ""
+  },
+  {
+    "name": "yaml-printer",
+    "project": "testdata/applications/fantasy-json",
+    "pattern": "github.com/goccy/go-yaml/printer",
+    "mode": "test",
+    "tags": ""
+  },
+  {
+    "name": "yaml-token",
+    "project": "testdata/applications/fantasy-json",
+    "pattern": "github.com/goccy/go-yaml/token",
+    "mode": "test",
+    "tags": ""
   }
 ]

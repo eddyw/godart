@@ -24,9 +24,23 @@
     {
       "suite": "applications",
       "shard": 0,
-      "shards": 1,
+      "shards": 3,
+      "timeout": 6,
+      "job_timeout": 11
+    },
+    {
+      "suite": "applications",
+      "shard": 1,
+      "shards": 3,
       "timeout": 3,
       "job_timeout": 8
+    },
+    {
+      "suite": "applications",
+      "shard": 2,
+      "shards": 3,
+      "timeout": 4,
+      "job_timeout": 9
     },
     {
       "suite": "targets",

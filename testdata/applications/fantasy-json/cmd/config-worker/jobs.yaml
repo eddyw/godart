@@ -1,0 +1,7 @@
+jobs:
+  - name: unicode
+    value: naïve 世界
+  - name: symbols
+    value: "a+b & c/d"
+  - name: plain
+    value: alpha beta

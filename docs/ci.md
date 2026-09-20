@@ -30,9 +30,8 @@ python3 scripts/ci-local.py --suite checks --suite driver --output build/core-va
 GOMAXPROCS=2 GOFLAGS=-p=2 bash scripts/ci.sh programs 0 6
 ```
 
-Suite names are `checks`, `driver`, `integration`, `targets`, `web-io`,
-`web-fetch`, `programs`, `language`, `stdlib`, `upstream-priority`,
-`upstream-targets`, and `upstream-blockers`. Shard indexes start at 0.
+Use [ci-matrix.json](../scripts/ci-matrix.json) for suite names and shard counts.
+Shard indexes start at 0.
 Without shard arguments, `ci.sh` executes the complete named suite.
 
 Run filesystem tests as an unprivileged user. Root bypasses permission failures
