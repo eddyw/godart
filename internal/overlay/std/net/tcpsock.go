@@ -5,6 +5,7 @@ package net
 import (
 	"errors"
 	"io"
+	"syscall"
 	"time"
 )
 
@@ -13,7 +14,7 @@ import (
 // program that names the type in an assertion reads it.
 //
 // `dart:io` owns the socket. It gives no file descriptor. The methods
-// `SetLinger`, `SetKeepAlivePeriod`, `SetKeepAliveConfig`, `MultipathTCP`,
+// `SetLinger`, `MultipathTCP`,
 // `SyscallConn`, and `File` each need it, thus the overlay holds none of them.
 // `CloseWrite` and `CloseRead` each ride `RawSocket.shutdown`, which ends 1
 // direction of the socket, exactly as the same call of Go does.
@@ -40,6 +41,9 @@ func (c *TCPConn) SetNoDelay(noDelay bool) error {
 
 // SetKeepAlive writes the option SO_KEEPALIVE of the socket.
 func (c *TCPConn) SetKeepAlive(keepalive bool) error {
+	if c.c.network == "" {
+		return syscall.EINVAL
+	}
 	return c.c.setOption("keepalive", flagValue(keepalive))
 }
 
@@ -54,8 +58,15 @@ func (c *TCPConn) SetWriteBuffer(bytes int) error {
 }
 
 // newTCPConn wraps the handle of an open TCP socket.
-func newTCPConn(handle int) *TCPConn {
-	return &TCPConn{c: conn{handle: handle, network: "tcp"}}
+func newTCPConn(handle int, idle time.Duration, config KeepAliveConfig) *TCPConn {
+	c := &TCPConn{c: conn{handle: handle, network: "tcp"}}
+	if !config.Enable && idle >= 0 {
+		config = KeepAliveConfig{Enable: true, Idle: idle}
+	}
+	if config.Enable {
+		c.SetKeepAliveConfig(config)
+	}
+	return c
 }
 
 // Read reads bytes of the connection into the slice.

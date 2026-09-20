@@ -2,18 +2,20 @@
 
 package net
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // A ListenConfig opens a listener or a datagram socket with a context. The
 // context ends the wait for the bind.
 //
-// Go holds 3 more items on the type. `Control` takes a `syscall.RawConn`, and
-// the surface holds no `syscall` package, because `dart:io` gives no file
-// descriptor. `KeepAlive` and `KeepAliveConfig` each write a socket option
-// that no intrinsic of `syscall/dart` reaches. `MultipathTCP` and
-// `SetMultipathTCP` name a transport of Linux that Dart never opens. The
-// overlay holds none of the 5, because a field that reads no value lies.
-type ListenConfig struct{}
+// Control requires a native descriptor. MultipathTCP and SetMultipathTCP
+// require a transport that Dart does not expose.
+type ListenConfig struct {
+	KeepAlive       time.Duration
+	KeepAliveConfig KeepAliveConfig
+}
 
 // listenResult holds the 2 results of a bind that runs on a goroutine.
 type listenResult struct {
@@ -34,6 +36,10 @@ func (lc *ListenConfig) Listen(ctx context.Context, network, address string) (Li
 	done := make(chan listenResult, 1)
 	go func() {
 		l, cause := Listen(network, address)
+		if tcp, ok := l.(*TCPListener); ok {
+			tcp.l.keepAlive = lc.KeepAlive
+			tcp.l.keepAliveConfig = lc.KeepAliveConfig
+		}
 		done <- listenResult{listener: l, cause: cause}
 	}()
 	select {

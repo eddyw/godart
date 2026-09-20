@@ -975,12 +975,41 @@ int? _sockOptionNumber(String name) {
   return null;
 }
 
+int? _tcpOptionNumber(String name) {
+  if (Platform.isLinux || Platform.isAndroid) {
+    return switch (name) {
+      'keepidle' => 4,
+      'keepinterval' => 5,
+      'keepcount' => 6,
+      _ => null,
+    };
+  }
+  if (Platform.isMacOS || Platform.isIOS) {
+    return switch (name) {
+      'keepidle' => 0x10,
+      'keepinterval' => 0x101,
+      'keepcount' => 0x102,
+      _ => null,
+    };
+  }
+  if (Platform.isWindows) {
+    return switch (name) {
+      'keepidle' => 3,
+      'keepinterval' => 17,
+      'keepcount' => 16,
+      _ => null,
+    };
+  }
+  return null;
+}
+
 GoString _optionCause(String name) => GoString.fromString(
   'setsockopt: the option $name holds no number on ${Platform.operatingSystem}',
 );
 
 /// Writes a socket option of a connection. The name holds `nodelay`,
-/// `keepalive`, `rcvbuf`, or `sndbuf`. A flag reads the value 0 or 1.
+/// `keepalive`, `keepidle`, `keepinterval`, `keepcount`, `rcvbuf`, or
+/// `sndbuf`. A flag reads the value 0 or 1.
 GoString $connOption(int handle, GoString name, int value) {
   final _Conn? c = _at(handle);
   if (c == null) return _closed();
@@ -990,10 +1019,17 @@ GoString $connOption(int handle, GoString name, int value) {
       c.setFlag(SocketOption.tcpNoDelay, value != 0);
       return _empty;
     }
-    final int? option = _sockOptionNumber(key);
+    final int? tcpOption = _tcpOptionNumber(key);
+    final int? option = tcpOption ?? _sockOptionNumber(key);
     if (option == null) return _optionCause(key);
     c.setRaw(
-      RawSocketOption.fromInt(RawSocketOption.levelSocket, option, value),
+      RawSocketOption.fromInt(
+        tcpOption == null
+            ? RawSocketOption.levelSocket
+            : RawSocketOption.levelTcp,
+        option,
+        value,
+      ),
     );
     return _empty;
   } on Object catch (cause) {

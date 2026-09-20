@@ -372,9 +372,11 @@ func (p *packet) apply() error {
 }
 
 type listener struct {
-	handle  int
-	addr    Addr
-	network string
+	handle          int
+	addr            Addr
+	network         string
+	keepAlive       time.Duration
+	keepAliveConfig KeepAliveConfig
 }
 
 func (l *listener) Accept() (Conn, error) {
@@ -383,7 +385,7 @@ func (l *listener) Accept() (Conn, error) {
 		return nil, netError("accept "+l.network, cause)
 	}
 	if l.network == "tcp" {
-		return newTCPConn(handle), nil
+		return newTCPConn(handle, l.keepAlive, l.keepAliveConfig), nil
 	}
 	return newUnixConn(handle), nil
 }
@@ -408,7 +410,7 @@ func Dial(network, address string) (Conn, error) {
 
 // dialOne opens 1 connection to 1 address. The host of the address holds a
 // numeric form, or the name of a socket of the Unix domain.
-func dialOne(network, address string) (Conn, error) {
+func (d *Dialer) dialOne(network, address string) (Conn, error) {
 	switch network {
 	case "tcp":
 		host, port, err := hostPort(address)
@@ -422,7 +424,7 @@ func dialOne(network, address string) (Conn, error) {
 		if cause != "" {
 			return nil, errors.New("dial tcp " + address + ": " + cause)
 		}
-		return newTCPConn(handle), nil
+		return newTCPConn(handle, d.KeepAlive, d.KeepAliveConfig), nil
 	case "unix":
 		handle, cause := dart.DialUnix(address)
 		if cause != "" {
@@ -504,10 +506,9 @@ func ListenPacket(network, address string) (PacketConn, error) {
 // A Dialer opens a connection with a timeout, with a deadline, or with a
 // context.
 //
-// Go holds 8 more items. `LocalAddr` binds the near side of a dial, and Dart
+// Go holds more items. `LocalAddr` binds the near side of a dial, and Dart
 // binds none. `Control` and `ControlContext` each take a `syscall.RawConn`,
-// and `dart:io` gives no file descriptor. `KeepAlive` and `KeepAliveConfig`
-// each write a socket option that no intrinsic of `syscall/dart` reaches.
+// and `dart:io` gives no file descriptor.
 // `FallbackDelay` and `DualStack` each tune the 2 dials of Happy Eyeballs.
 // 1 dial of Dart resolves the name and opens the socket. `MultipathTCP`
 // and `SetMultipathTCP` name a transport of Linux that Dart never opens. The
@@ -516,6 +517,8 @@ func ListenPacket(network, address string) (PacketConn, error) {
 // `DialIP` stays out too. It gives an `*IPConn`, and `dart:io` opens no raw
 // socket.
 type Dialer struct {
+	KeepAlive       time.Duration
+	KeepAliveConfig KeepAliveConfig
 	// Timeout ends the wait of a dial after the duration. A value of 0 holds
 	// no limit.
 	Timeout time.Duration
@@ -675,11 +678,11 @@ func (d *Dialer) resolver() *Resolver {
 // second goroutine, thus a plain dial costs 1 call.
 func (d *Dialer) dialOneAddr(ctx context.Context, network, address string) (Conn, error) {
 	if ctx.Done() == nil && d.Cancel == nil {
-		return dialOne(network, address)
+		return d.dialOne(network, address)
 	}
 	done := make(chan dialResult, 1)
 	go func() {
-		c, cause := dialOne(network, address)
+		c, cause := d.dialOne(network, address)
 		done <- dialResult{conn: c, cause: cause}
 	}()
 	select {
