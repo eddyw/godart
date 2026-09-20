@@ -539,7 +539,13 @@
   },
   {
     "package": "encoding/gob",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ],
+    "target_run": "^TestIgnoreDepthLimit$"
   },
   {
     "package": "encoding/hex",
