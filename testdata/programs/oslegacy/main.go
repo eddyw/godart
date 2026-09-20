@@ -53,6 +53,8 @@ func main() {
 	for _, name := range []string{dir + "\x00", path + "\x00", filepath.Join(dir, "absent") + "\x00", dir + "/."} {
 		fmt.Println(errors.Is(os.RemoveAll(name), syscall.EINVAL))
 	}
+	err = os.Remove(dir)
+	fmt.Println("nonempty", os.IsExist(err), errors.Is(err, os.ErrExist), os.IsNotExist(err))
 	data, err := os.ReadFile(path)
 	fmt.Println(string(data), err)
 }

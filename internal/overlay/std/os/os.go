@@ -122,7 +122,7 @@ func causeError(cause string) error {
 		return &sysError{text: "is a directory"}
 	case contains(cause, "Directory not empty") ||
 		contains(cause, "directory not empty"):
-		return &sysError{text: "directory not empty"}
+		return &sysError{text: "directory not empty", kind: ErrExist}
 	case contains(cause, "Invalid argument") ||
 		contains(cause, "invalid argument"):
 		return &sysError{text: "invalid argument", kind: ErrInvalid}
