@@ -128,7 +128,12 @@
   },
   {
     "package": "crypto/elliptic",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "crypto/fips140",

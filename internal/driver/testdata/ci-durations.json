@@ -1454,6 +1454,7 @@
   "TestUpstreamTargets/container/heap": 61.88,
   "TestUpstreamTargets/container/list": 38.87,
   "TestUpstreamTargets/container/ring": 62.38,
+  "TestUpstreamTargets/crypto/elliptic": 938.18,
   "TestUpstreamTargets/encoding/ascii85": 62.37,
   "TestUpstreamTargets/encoding/base32": 70.1,
   "TestUpstreamTargets/encoding/base64": 71.71,

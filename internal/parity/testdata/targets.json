@@ -198,5 +198,13 @@
     "targets": [
       "aot"
     ]
+  },
+  {
+    "package": "crypto/elliptic",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   }
 ]
