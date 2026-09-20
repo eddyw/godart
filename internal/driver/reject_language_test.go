@@ -35,11 +35,11 @@ func TestRejectionContracts(t *testing.T) {
 	var cases []parity.LanguageCase
 	for _, c := range inv.Cases {
 		switch c.Name {
-		case "cannotassign", "func1", "embedfunc":
+		case "cannotassign", "func1", "embedfunc", "blank1":
 			cases = append(cases, c)
 		}
 	}
-	if len(cases) != 3 {
+	if len(cases) != 4 {
 		t.Fatal("the original rejection fixtures changed")
 	}
 	runRejectionCases(t, inv, cases)

@@ -462,6 +462,11 @@ func collectErrors(roots []*packages.Package) error {
 		if !root[p.ID] && overlay.Outside(p.PkgPath) {
 			return
 		}
+		for _, file := range p.Syntax {
+			if file.Name.Name == "_" {
+				errs = append(errs, fmt.Errorf("%s: invalid package name _", p.Fset.Position(file.Name.Pos())))
+			}
+		}
 		start := len(errs)
 		for _, e := range p.Errors {
 			if strings.HasPrefix(e.Msg, "\t") && len(errs) > start {
