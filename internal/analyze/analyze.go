@@ -248,6 +248,15 @@ func (a *analyzer) file(f *ast.File) {
 		if id, ok := n.(*ast.Ident); ok {
 			a.linkUse(id)
 		}
+		if expr, ok := n.(*ast.SelectorExpr); ok {
+			if sel := a.pkg.TypesInfo.Selections[expr]; sel != nil {
+				if fn, ok := sel.Obj().(*types.Func); ok && fn.Signature().RecvTypeParams().Len() != 0 {
+					origin := fn.Origin().Type().(*types.Signature)
+					instance := fn.Type().(*types.Signature)
+					a.linkInstance(origin.Recv().Type(), instance.Recv().Type())
+				}
+			}
+		}
 		return true
 	})
 }
@@ -416,7 +425,7 @@ func (a *analyzer) rangeVars(n *ast.RangeStmt) {
 		if e == nil {
 			continue
 		}
-		sig := funcSig(a.typeOf(e))
+		sig := funcSig(a.pkg.TypesInfo.TypeOf(e))
 		if sig == nil {
 			continue
 		}
@@ -743,11 +752,20 @@ func (a *analyzer) linkUse(n *ast.Ident) {
 	if !ok || inst.Type == nil {
 		return
 	}
-	if obj, ok := a.pkg.TypesInfo.Uses[n].(*types.Func); ok {
+	switch obj := a.pkg.TypesInfo.Uses[n].(type) {
+	case *types.Func:
 		sig := obj.Origin().Type().(*types.Signature)
 		a.linkInstance(sig, inst.Type)
 		for i := 0; i < sig.TypeParams().Len(); i++ {
 			a.linkInstance(sig.TypeParams().At(i), inst.TypeArgs.At(i))
+		}
+	case *types.TypeName:
+		// A generic type can enter an interface without a concrete method selection.
+		if named, ok := types.Unalias(inst.Type).(*types.Named); ok {
+			for i := 0; i < named.NumMethods(); i++ {
+				fn := named.Method(i)
+				a.linkInstance(fn.Origin().Signature().Recv().Type(), fn.Signature().Recv().Type())
+			}
 		}
 	}
 }
@@ -769,6 +787,9 @@ func (a *analyzer) linkInstance(generic, concrete types.Type) {
 		gu, cu := types.Unalias(g), types.Unalias(c)
 		if gn, ok := gu.(*types.Named); ok {
 			if cn, ok := cu.(*types.Named); ok {
+				for i := 0; i < gn.TypeArgs().Len(); i++ {
+					walk(gn.TypeArgs().At(i), cn.TypeArgs().At(i))
+				}
 				walk(gn.Underlying(), cn.Underlying())
 				return
 			}

@@ -32,7 +32,7 @@ func (a *analyzer) methodSource(x ast.Expr, recv types.Type, fn *types.Func) (so
 				continue
 			}
 			method, _, _ := types.LookupFieldOrMethod(candidate, false, fn.Pkg(), fn.Name())
-			if method, ok := method.(*types.Func); ok {
+			if method, ok := method.(*types.Func); ok && !abstractMethod(method) {
 				keys = append(keys, method.Origin())
 			} else {
 				complete = false
