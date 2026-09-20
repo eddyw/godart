@@ -40,11 +40,14 @@ func TestRejectionContracts(t *testing.T) {
 			"fixedbugs/issue18459", "fixedbugs/issue18882", "linkname3",
 			"fixedbugs/issue20027", "fixedbugs/issue42058a", "fixedbugs/issue42058b", "fixedbugs/issue49767",
 			"fixedbugs/bug121", "fixedbugs/issue11610", "fixedbugs/issue13266", "syntax/semi7",
-			"fixedbugs/issue49814", "fixedbugs/issue78355":
+			"fixedbugs/issue49814", "fixedbugs/issue78355",
+			"bombad", "fixedbugs/bug014", "fixedbugs/bug068", "fixedbugs/bug163",
+			"fixedbugs/issue11359", "fixedbugs/issue15611", "fixedbugs/issue30722",
+			"fixedbugs/issue4405", "fixedbugs/issue4468":
 			cases = append(cases, c)
 		}
 	}
-	if len(cases) != 22 {
+	if len(cases) != 31 {
 		t.Fatal("the original rejection fixtures changed")
 	}
 	runRejectionCases(t, inv, cases)

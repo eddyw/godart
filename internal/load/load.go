@@ -184,7 +184,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 			}
 			file, err := parser.ParseFile(fset, name, src, parser.AllErrors|parser.ParseComments)
 			if err != nil {
-				if diagnostics := compilerSyntaxErrors(name, src); len(diagnostics) != 0 {
+				if diagnostics := compilerSyntaxErrors(fset, name, src, file); len(diagnostics) != 0 {
 					return file, diagnostics
 				}
 			}
