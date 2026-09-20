@@ -325,6 +325,9 @@ final List<_Conn?> _open = <_Conn?>[];
 final class _Listener {
   final StreamIterator<Object> incoming;
   Future<void> ready = Future<void>.value();
+  Future<Object?>? pending;
+  final deadline = _Deadline();
+  bool closed = false;
 
   /// close ends the server socket. A plain listener and a TLS listener hold
   /// 2 server classes with no shared base, thus the class keeps a function.
@@ -344,8 +347,21 @@ final class _Listener {
 
   Future<Object?> next() {
     final result = ready.then((_) async {
-      if (!await incoming.moveNext()) return null;
-      return incoming.current;
+      if (closed) return null;
+      pending ??= incoming.moveNext().then(
+        (available) => available ? incoming.current : null,
+      );
+      Object? socket;
+      try {
+        socket = await deadline.limit(pending!, _acceptExpired);
+      } catch (_) {
+        pending = null;
+        rethrow;
+      }
+      // A timeout retains the source accept for the next caller.
+      if (identical(socket, _acceptExpired)) return socket;
+      pending = null;
+      return closed ? null : socket;
     });
     // A failed accept must release the next waiter.
     ready = result.then<void>(
@@ -354,7 +370,24 @@ final class _Listener {
     );
     return result;
   }
+
+  void stop() {
+    closed = true;
+    final source = pending;
+    if (source != null) {
+      unawaited(
+        source.then<void>((socket) {
+          if (socket is RawSocket) socket.close();
+          if (socket is Socket) socket.destroy();
+        }, onError: (Object error, StackTrace stack) {}),
+      );
+    }
+    unawaited(incoming.cancel());
+    unawaited(close());
+  }
 }
+
+final Object _acceptExpired = Object();
 
 /// The open listeners of the program, by handle. The handles of a listener, of
 /// a connection, and of a datagram socket belong to 3 separate lists.
@@ -453,8 +486,7 @@ void _closeAll() {
     final _Listener? l = _listeners[i];
     if (l == null) continue;
     _listeners[i] = null;
-    unawaited(l.incoming.cancel());
-    unawaited(l.close());
+    l.stop();
   }
   for (int i = 0; i < _packets.length; i++) {
     final _Packet? s = _packets[i];
@@ -1188,6 +1220,7 @@ GoString $listenTCPHost(int handle) =>
   $await(
     l.next().then((Object? socket) {
       if (socket == null) return (-1, _empty, _closed());
+      if (identical(socket, _acceptExpired)) return (-1, _empty, _timeout());
       final Socket s = socket as Socket;
       final String proto = s is SecureSocket ? s.selectedProtocol ?? '' : '';
       return (_slot(_StreamConn(s)), GoString.fromString(proto), _empty);
@@ -1220,11 +1253,19 @@ GoString $listenTCPHost(int handle) =>
   $await(
     l.next().then((Object? socket) {
       if (socket == null) return (-1, _closed());
+      if (identical(socket, _acceptExpired)) return (-1, _timeout());
       return (_slot(_RawConn(socket as RawSocket)), _empty);
     }),
     (Object cause) => (-1, _cause(cause)),
   );
   return (-1, _empty);
+}
+
+GoString $listenDeadline(int handle, int nanos) {
+  final listener = _listenerAt(handle);
+  if (listener == null) return _closed();
+  listener.deadline.set(nanos);
+  return _empty;
 }
 
 /// Closes a listener. Each connection of it stays open, exactly as in Go.
@@ -1238,8 +1279,7 @@ GoString $listenClose(int handle) {
   // The iterator of a stream subscribes at the first accept. A listener that
   // accepted nothing holds no subscription, thus the cancel closes no server
   // socket and the isolate stays alive.
-  unawaited(l.incoming.cancel());
-  unawaited(l.close());
+  l.stop();
   if (l.unixPath.isNotEmpty) {
     try {
       File(l.unixPath).deleteSync();

@@ -1204,6 +1204,11 @@ func Accept(handle int) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ListenDeadline sets the accept deadline in Unix nanoseconds. Zero removes it.
+func ListenDeadline(handle int, nanos int64) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ListenClose closes a listener. Each connection of it stays open. A listener
 // of a Unix socket also removes the file of the socket.
 func ListenClose(handle int) string {

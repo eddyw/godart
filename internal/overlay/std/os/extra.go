@@ -19,7 +19,7 @@ var (
 	// ErrExist names a path that already exists.
 	ErrExist = fs.ErrExist
 	// ErrDeadlineExceeded names a read or a write that ran out of time.
-	ErrDeadlineExceeded = errors.New("i/o timeout")
+	ErrDeadlineExceeded error = &deadlineExceededError{}
 	// ErrNoDeadline names a file that takes no deadline.
 	ErrNoDeadline = errors.New("file type does not support deadline")
 	// ErrProcessDone names a process that already ended.
@@ -27,6 +27,12 @@ var (
 	// ErrNoHandle names a Process that holds no handle of the system.
 	ErrNoHandle = errors.New("os: process has no handle")
 )
+
+type deadlineExceededError struct{}
+
+func (*deadlineExceededError) Error() string   { return "i/o timeout" }
+func (*deadlineExceededError) Timeout() bool   { return true }
+func (*deadlineExceededError) Temporary() bool { return true }
 
 // IsExist reports whether the error names a path that already exists.
 func IsExist(err error) bool { return underlyingErrorIs(err, ErrExist) }

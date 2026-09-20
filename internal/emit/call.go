@@ -677,6 +677,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$acceptTLS(%s)", args[0]), true
 	case "Accept":
 		return fmt.Sprintf("$accept(%s)", args[0]), true
+	case "ListenDeadline":
+		return fmt.Sprintf("$listenDeadline(%s, %s)", args[0], args[1]), true
 	case "ListenClose":
 		return fmt.Sprintf("$listenClose(%s)", args[0]), true
 	case "DialUnix":

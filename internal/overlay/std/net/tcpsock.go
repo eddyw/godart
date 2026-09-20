@@ -19,9 +19,7 @@ import (
 // `CloseWrite` and `CloseRead` each ride `RawSocket.shutdown`, which ends 1
 // direction of the socket, exactly as the same call of Go does.
 //
-// A listener of the network tcp holds the same 2 limits. `File` and
-// `SyscallConn` each need the descriptor, and `SetDeadline` needs an accept
-// with a deadline that the runtime does not give.
+// A TCP listener has no `File` or `SyscallConn` method because Dart owns the descriptor.
 //
 // Go embeds the unexported type `conn` in `TCPConn`. The overlay names each
 // method of the connection again, because a promoted method of an unexported
@@ -190,6 +188,14 @@ func (l *TCPListener) Addr() Addr { return l.l.Addr() }
 // Close ends the listener. Each connection of it stays open, exactly as in
 // Go.
 func (l *TCPListener) Close() error { return l.l.Close() }
+
+// SetDeadline sets the accept deadline. Zero removes the deadline.
+func (l *TCPListener) SetDeadline(t time.Time) error {
+	if l == nil || l.l.network == "" {
+		return syscall.EINVAL
+	}
+	return l.l.SetDeadline(t)
+}
 
 // ListenTCP opens a listener on a TCP address. The network is tcp, tcp4, or
 // tcp6.

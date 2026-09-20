@@ -13,6 +13,7 @@ import (
 	"errors"
 	"io"
 	"net/netip"
+	"os"
 	"strconv"
 	"strings"
 	"syscall/dart"
@@ -382,7 +383,13 @@ type listener struct {
 func (l *listener) Accept() (Conn, error) {
 	handle, cause := dart.Accept(l.handle)
 	if cause != "" {
-		return nil, netError("accept "+l.network, cause)
+		err := error(errors.New(cause))
+		if cause == "i/o timeout" {
+			err = os.ErrDeadlineExceeded
+		} else if cause == errClosed.Error() {
+			err = ErrClosed
+		}
+		return nil, &OpError{Op: "accept", Net: l.network, Addr: l.addr, Err: err}
 	}
 	if l.network == "tcp" {
 		return newTCPConn(handle, l.keepAlive, l.keepAliveConfig), nil
@@ -394,10 +401,21 @@ func (l *listener) Close() error {
 	if cause := dart.ListenClose(l.handle); cause != "" {
 		return netError("close "+l.network, cause)
 	}
+	l.handle = -1
 	return nil
 }
 
 func (l *listener) Addr() Addr { return l.addr }
+
+func (l *listener) SetDeadline(t time.Time) error {
+	if cause := dart.ListenDeadline(l.handle, deadlineNanos(t)); cause != "" {
+		if cause == errClosed.Error() {
+			return ErrClosed
+		}
+		return errors.New(cause)
+	}
+	return nil
+}
 
 // Dial opens a connection to an address. The network is tcp, udp, or unix.
 //

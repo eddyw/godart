@@ -5,6 +5,7 @@ package net
 import (
 	"errors"
 	"runtime"
+	"syscall"
 	"time"
 )
 
@@ -27,10 +28,8 @@ import (
 // then differs: macOS writes the bytes and Linux gives EOPNOTSUPP. Dart holds
 // no sendto, thus the overlay can match neither.
 //
-// A listener of the domain holds the same 2 limits. `File` and `SyscallConn`
-// each need the descriptor, and `SetDeadline` needs an accept with a deadline
-// that the runtime does not give. `SetUnlinkOnClose` stays out because the
-// runtime always removes the file of the socket at the close.
+// A Unix listener has no `File` or `SyscallConn` method because Dart owns the descriptor.
+// `SetUnlinkOnClose` stays out because the runtime always removes the socket file at close.
 //
 // Go embeds the unexported type `conn` in `UnixConn`. The overlay names each
 // method again. A promoted method of an unexported type reaches no other
@@ -183,6 +182,14 @@ func (l *UnixListener) Addr() Addr { return l.l.Addr() }
 // Close ends the listener, and it removes the file of the socket. Each
 // connection of the listener stays open, exactly as in Go.
 func (l *UnixListener) Close() error { return l.l.Close() }
+
+// SetDeadline sets the accept deadline. Zero removes the deadline.
+func (l *UnixListener) SetDeadline(t time.Time) error {
+	if l == nil || l.l.network == "" {
+		return syscall.EINVAL
+	}
+	return l.l.SetDeadline(t)
+}
 
 // ListenUnix opens a listener on a Unix domain socket. The network is unix.
 //
