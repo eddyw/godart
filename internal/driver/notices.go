@@ -65,6 +65,16 @@ func sourceNotices(pkgs []*packages.Package) (string, error) {
 }
 
 func noticeRoot(pkg *packages.Package, dir string) (string, string) {
+	if pkg.PkgPath == "command-line-arguments" {
+		for root := dir; ; root = filepath.Dir(root) {
+			if _, err := os.Stat(filepath.Join(root, "go.mod")); err == nil {
+				return root, pkg.PkgPath
+			}
+			if root == filepath.Dir(root) {
+				return dir, pkg.PkgPath
+			}
+		}
+	}
 	if module := pkg.Module; module != nil {
 		importPath := module.Path
 		if module.Replace != nil {

@@ -506,11 +506,13 @@ func order(roots []*packages.Package, module string) []*packages.Package {
 
 // moduleOf gives the module path of the roots.
 //
-// The go command reports no module for a package of GOROOT, and the file
-// GOROOT/src/go.mod names that module std. Thus a build of such a package takes
-// stdModule.
+// Explicit file lists have a synthetic import path and no module.
+// GOROOT packages have no module and use stdModule.
 func moduleOf(roots []*packages.Package) string {
 	for _, p := range roots {
+		if p.PkgPath == "command-line-arguments" {
+			return p.PkgPath
+		}
 		if p.Module != nil {
 			return p.Module.Path
 		}
