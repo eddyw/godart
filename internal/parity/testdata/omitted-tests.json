@@ -1,10 +1,4 @@
 {
-  "context": {
-    "TestContextErrDoneRace": {
-      "classification": "target-limit",
-      "reason": "The test requires preemption of a busy loop on another Go execution thread. Gart runs Go in 1 isolate."
-    }
-  },
   "crypto/hkdf": {
     "TestFIPSServiceIndicator": {
       "classification": "target-limit",
