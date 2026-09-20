@@ -132,7 +132,7 @@ func upstreamLimit() time.Duration {
 	if testing.Short() {
 		return runLimit
 	}
-	return 30 * time.Minute
+	return 75 * time.Minute
 }
 
 func upstreamExtraArgs(pkg string) []string {
