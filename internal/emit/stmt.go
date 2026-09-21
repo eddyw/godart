@@ -493,6 +493,9 @@ func (e *emitter) forClause(s ir.Stmt) (string, bool) {
 		if s.Define {
 			return "", false
 		}
+		if _, ok := s.Lhs.(*ir.Index); ok {
+			return "", false
+		}
 		if isStructType(s.Lhs.GoType()) {
 			return e.assignElem(e.expr(s.Lhs), e.expr(s.Rhs), s.Lhs.GoType()), true
 		}
