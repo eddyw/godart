@@ -201,8 +201,7 @@ func interfaceIPNet(text string) (*IPNet, error) {
 		return nil, errors.New("route ip+net: the address " + text + " holds no prefix")
 	}
 	bits := 8 * IPv6len
-	if v4 := ip.To4(); v4 != nil {
-		ip = v4
+	if ip.To4() != nil {
 		bits = 8 * IPv4len
 	}
 	mask := CIDRMask(ones, bits)
