@@ -1248,9 +1248,9 @@
   {
     "package": "testing",
     "status": "compile-blocked",
-    "diagnostic": "invalid operation: cannot call testing.PrettyPrint (variable with invalid type): invalid type is not a function",
+    "diagnostic": "undefined: highPrecisionTimeNow",
     "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The native harness tests depend on test-only exports and a different harness implementation."
+    "blocker_reason": "The native harness tests require private clock and harness dependencies beyond the portable benchmark result API."
   },
   {
     "package": "testing/cryptotest",

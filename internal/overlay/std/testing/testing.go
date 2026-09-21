@@ -1374,72 +1374,6 @@ func runBenchmark(name string, f func(*B), flags options) bool {
 	return true
 }
 
-// BenchmarkResult holds the outcome of 1 run of Benchmark.
-type BenchmarkResult struct {
-	// N is the count of iterations.
-	N int
-	// T is the measured time of the run, in nanoseconds. Go holds a
-	// time.Duration, and docs/parity.md names the difference.
-	T int64
-	// Bytes is the count of bytes that 1 iteration reads or writes.
-	Bytes int64
-	// MemAllocs is the count of allocations of the run. The Dart VM gives no
-	// count of allocations, thus a run of the harness holds 0.
-	MemAllocs uint64
-	// MemBytes is the count of allocated bytes of the run. The Dart VM gives
-	// no count of allocations, thus a run of the harness holds 0.
-	MemBytes uint64
-	// Extra holds each value that ReportMetric gave, by unit. A value here
-	// replaces the built-in value of the same unit.
-	Extra map[string]float64
-}
-
-// NsPerOp gives the time of 1 iteration, in nanoseconds.
-func (r BenchmarkResult) NsPerOp() int64 {
-	if v, held := r.Extra["ns/op"]; held {
-		return int64(v)
-	}
-	if r.N <= 0 {
-		return 0
-	}
-	return r.T / int64(r.N)
-}
-
-// AllocsPerOp gives the count of allocations of 1 iteration. The Dart VM gives
-// no count of allocations, thus a run of the harness gives 0.
-func (r BenchmarkResult) AllocsPerOp() int64 {
-	if v, held := r.Extra["allocs/op"]; held {
-		return int64(v)
-	}
-	if r.N <= 0 {
-		return 0
-	}
-	return int64(r.MemAllocs) / int64(r.N)
-}
-
-// AllocedBytesPerOp gives the count of allocated bytes of 1 iteration. The Dart
-// VM gives no count of allocations, thus a run of the harness gives 0.
-func (r BenchmarkResult) AllocedBytesPerOp() int64 {
-	if v, held := r.Extra["B/op"]; held {
-		return int64(v)
-	}
-	if r.N <= 0 {
-		return 0
-	}
-	return int64(r.MemBytes) / int64(r.N)
-}
-
-// MemString gives the memory numbers in the format of go test.
-func (r BenchmarkResult) MemString() string {
-	return fmt.Sprintf("%8d B/op\t%8d allocs/op",
-		r.AllocedBytesPerOp(), r.AllocsPerOp())
-}
-
-// String gives the line of the result, in the format of go test.
-func (r BenchmarkResult) String() string {
-	return strconv.Itoa(r.N) + "\t" + strconv.FormatInt(r.NsPerOp(), 10) + " ns/op"
-}
-
 // Benchmark runs 1 benchmark function and gives its result. It writes no line,
 // thus a caller reads the numbers itself.
 func Benchmark(f func(*B)) BenchmarkResult {
@@ -1458,7 +1392,7 @@ func Benchmark(f func(*B)) BenchmarkResult {
 	if last.common.failed {
 		return BenchmarkResult{}
 	}
-	return BenchmarkResult{N: last.N, T: last.elapsed, Bytes: last.bytes,
+	return BenchmarkResult{N: last.N, T: time.Duration(last.elapsed), Bytes: last.bytes,
 		Extra: last.extra}
 }
 

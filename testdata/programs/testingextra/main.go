@@ -140,14 +140,16 @@ func resultRun() {
 	r := testing.BenchmarkResult{
 		N:         50,
 		T:         5000,
+		Bytes:     2048,
 		MemAllocs: 400,
 		MemBytes:  3200,
-		Extra:     map[string]float64{"items/op": 2.5},
+		Extra:     map[string]float64{"items/op": 2.5, "zunits/op": 0.0065, "aunits/op": 9.9994},
 	}
 	fmt.Println("result memory:", r.MemAllocs, r.MemBytes)
 	fmt.Println("result per operation:", r.NsPerOp(), r.AllocsPerOp(), r.AllocedBytesPerOp())
 	fmt.Printf("result memory line: %q\n", r.MemString())
 	fmt.Println("result extra:", r.Extra["items/op"])
+	fmt.Printf("result line: %q\n", r.String())
 
 	over := testing.BenchmarkResult{
 		N: 10, T: 1000, MemAllocs: 40, MemBytes: 800,
@@ -155,10 +157,12 @@ func resultRun() {
 	}
 	fmt.Println("extra beats the count:", over.NsPerOp(), over.AllocsPerOp(),
 		over.AllocedBytesPerOp())
+	fmt.Printf("override line: %q\n", over.String())
 
 	empty := testing.BenchmarkResult{}
 	fmt.Println("empty result:", empty.NsPerOp(), empty.AllocsPerOp(),
 		empty.AllocedBytesPerOp())
+	fmt.Printf("empty line: %q\n", empty.String())
 }
 
 // coverRun proves the coverage names. gart writes no counter into a package,

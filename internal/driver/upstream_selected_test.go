@@ -43,6 +43,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "fmt_test.go", Declarations: []string{"TestComplexFormatting", "NaN", "posInf", "negInf"}},
 		},
 		"context": {{Name: "x_test.go", Declarations: []string{"TestContextErrDoneRace"}}},
+		"testing": {{Name: "benchmark_test.go", Declarations: []string{"TestResultString"}}},
 		"go/parser": {
 			{Name: "parser.go", Declarations: []string{"maxNestLev"}},
 			{Name: "resolver.go", Declarations: []string{"maxScopeDepth"}},
@@ -457,7 +458,7 @@ import . "os/signal"
 				name = pkg + "-content-type"
 			}
 			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
-			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" {
+			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" || pkg == "testing" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
