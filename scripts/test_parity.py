@@ -227,10 +227,17 @@ class ParityTest(unittest.TestCase):
                 self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
 
             assess("passed")
+            for recipe in ["runindir -gomodversion 1.14", 'runindir -gomodversion "1.14"',
+                           "runindir -gomodversion '1.14'", 'runindir -gomodversion ""']:
+                fixture["recipe"] = recipe
+                assess("passed")
+            fixture["recipe"] = "runindir"
             for object_, key, value in [(case, "module_source", "module other\ngo 1.14\n"),
                                         (case, "module_sha256", "different"),
                                         (fixture, "module_go_version", "1.27"),
                                         (fixture, "recipe", "runindir -gomodversion 1.27"),
+                                        (fixture, "recipe", 'runindir -gomodversion "1.14'),
+                                        (fixture, "recipe", 'runindir -gomodversion 1.14 -goexperiment fieldtrack'),
                                         (fixture, "adapter", "missing"),
                                         (fixture, "files", []),
                                         (case["native"], "command", ["go", "run", "main.go"]),

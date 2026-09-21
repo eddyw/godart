@@ -23,6 +23,7 @@ func TestLanguageInventory(t *testing.T) {
 	write("src/cmd/internal/testdir/testdir_test.go", `package testdir_test; var dirs=[]string{".","other"}; var types2Failures=setOf("reject.go"); var types2Failures32Bit=setOf("compile.go"); func recipe() { switch "" { case "runindir": if modVersion == "" { modVersion = "1.14" } } }`)
 	write("test/module.go", "// runindir\npackage ignored\n")
 	write("test/moduleflags.go", "// runindir -gomodversion 1.27\npackage ignored\n")
+	write("test/moduleextra.go", "// runindir -gomodversion 1.27 -goexperiment fieldtrack\npackage ignored\n")
 	write("test/module.dir/main.go", "package main\nfunc main() {}\n")
 	write("test/run.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/run.out", "expected\n")
@@ -45,8 +46,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 14 {
-		t.Fatalf("got %d cases, want 14", len(inv.Cases))
+	if len(inv.Cases) != 15 {
+		t.Fatalf("got %d cases, want 15", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -55,7 +56,10 @@ func TestLanguageInventory(t *testing.T) {
 	if c := cases["module"]; c.Adapter != "directory-module" || c.ModuleGoVersion != "1.14" || len(c.Files) != 2 {
 		t.Fatalf("directory module inputs lost: %+v", c)
 	}
-	if cases["moduleflags"].Adapter != "missing" {
+	if c := cases["moduleflags"]; c.Adapter != "directory-module" || c.ModuleGoVersion != "1.27" {
+		t.Fatalf("explicit module version lost: %+v", c)
+	}
+	if cases["moduleextra"].Adapter != "missing" {
 		t.Fatal("the directory adapter must not discard recipe options")
 	}
 	if !cases["reject"].ExpectedFailure {
@@ -208,6 +212,32 @@ func TestLanguageDirectoryAssembly(t *testing.T) {
 		}
 		if !found {
 			t.Fatal("upstream assembly fixture disappeared")
+		}
+	}
+}
+
+func TestLanguageModuleRecipe(t *testing.T) {
+	for recipe, want := range map[string]string{
+		"runindir":                      "",
+		"runindir -gomodversion 1.23":   "1.23",
+		`runindir -gomodversion "1.23"`: "1.23",
+		"runindir -gomodversion '1.23'": "1.23",
+		"runindir\t-gomodversion\t1.14": "1.14",
+		`runindir -gomodversion ""`:     "",
+	} {
+		got, ok := languageModuleRecipe(recipe)
+		if !ok || got != want {
+			t.Fatalf("%q: %q, %t", recipe, got, ok)
+		}
+	}
+	for _, recipe := range []string{
+		"runindir -gomodversion", "runindir -gomodversion invalid",
+		`runindir -gomodversion "1.23`, "runindir -gomodversion '1.23\"",
+		"runindir -gomodversion 1.23 -goexperiment fieldtrack",
+		"runindir -goexperiment fieldtrack", "runindir -gomodversion=1.23",
+	} {
+		if _, ok := languageModuleRecipe(recipe); ok {
+			t.Fatalf("accepted unsupported recipe %q", recipe)
 		}
 	}
 }

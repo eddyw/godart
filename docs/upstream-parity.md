@@ -216,13 +216,14 @@ Both compilers then receive its exact output bytes. Reports retain the generator
 Both programs must satisfy the original output assertion. This establishes parity for the generated program, not for generator execution.
 Generator arguments require a separate adapter. This audit remains separate from the routine CI matrix because unresolved cases can fail.
 
-The `language-directories` suite executes exact `runindir` recipes on VM, AOT,
+The `language-directories` suite executes `runindir` recipes on VM, AOT,
 JS, and Wasm. It copies original companion sources without import changes.
 The adapter reads the default module version from the active upstream runner.
+The `-gomodversion` recipe option overrides that default, including quoted versions.
 Both programs use the same source directory and private `GOPATH` at runtime.
 Reports retain the generated module bytes, hash, and original source fingerprints.
 Native assembly, cgo, and hardware-fault fixtures retain explicit target exclusions.
-Compiler-option recipes remain unassessed.
+Other recipe options remain unassessed.
 
 ```sh
 GART_PARITY_REPORT_DIR="$PWD/build/directory-audit" bash scripts/ci.sh language-directories

@@ -17,6 +17,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -153,11 +154,14 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				c.Adapter = "reject-file"
 			} else if recipe == "runoutput" {
 				c.Adapter = "generated-file"
-			} else if recipe == "runindir" {
+			} else if moduleVersion, ok := languageModuleRecipe(recipe); ok {
 				c.Adapter = "directory-module"
-				c.ModuleGoVersion, err = languageModuleVersion(source)
-				if err != nil {
-					return nil, err
+				c.ModuleGoVersion = moduleVersion
+				if moduleVersion == "" {
+					c.ModuleGoVersion, err = languageModuleVersion(source)
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 			for _, suffix := range []string{".dir", ".out"} {
@@ -207,6 +211,21 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 	}
 	inv.SourceSHA256 = digest([]byte(identity))
 	return inv, nil
+}
+
+var directoryRecipe = regexp.MustCompile(`^runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?$`)
+
+func languageModuleRecipe(recipe string) (string, bool) {
+	parts := directoryRecipe.FindStringSubmatch(recipe)
+	if parts == nil {
+		return "", false
+	}
+	for _, part := range parts[1:] {
+		if part != "" {
+			return part, version.IsValid("go" + part)
+		}
+	}
+	return "", true
 }
 
 func languageModuleVersion(source []byte) (string, error) {

@@ -302,10 +302,13 @@ def language_behavior(paths):
                                      and hashlib.sha256(source.encode()).hexdigest() == generator.get("output_sha256"))
                         elif case.get("contract") == "runindir":
                             fixture = case["fixture"]
+                            recipe = re.fullmatch(r'''runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?''', fixture.get("recipe", ""))
+                            explicit_version = next((v for v in recipe.groups() if v), "") if recipe else ""
                             module = (f'module {Path(fixture["name"]).name}.dir\n'
                                       f'go {fixture.get("module_go_version", "")}\n')
                             prefix = fixture["name"] + ".dir/"
-                            valid = (valid and fixture.get("recipe") == "runindir"
+                            valid = (valid and recipe is not None
+                                     and (not explicit_version or explicit_version == fixture.get("module_go_version"))
                                      and fixture.get("adapter") == "directory-module"
                                      and fixture.get("module_go_version")
                                      and case.get("module_source") == module
