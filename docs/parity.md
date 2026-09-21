@@ -19,6 +19,7 @@ SDK versions, modes, and exclusions.
 | Reflection | Descriptors cover a substantial subset. Dynamically created function types need an emitted callable factory. |
 | Garbage collection | Dart controls collection and cleanup timing. Native Go heap and collector controls do not transfer directly. |
 | Deep calls | Saved frame chains resume iteratively and retain suspended ancestors. Initial synchronous recursion still uses the fixed Dart stack. |
+| Variable linkname | Module aliases share storage with variables of the same type in imported packages. Alias initializers and aliases to other aliases remain unsupported. Function aliases remain unsupported. |
 | Stack traces | Go source positions, without native instruction offsets. `-trimpath` selects portable paths. Runtime initialization and panic frames use their Dart source locations. |
 | Numbers | Target representations differ. JavaScript conversion boundaries need particular care. |
 | Time | Monotonic values support elapsed-time operations. Time-zone behavior can differ from Go's own database. |

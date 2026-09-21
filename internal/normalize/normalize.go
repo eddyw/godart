@@ -22,9 +22,14 @@ import (
 )
 
 // Package builds the intermediate tree of 1 package.
-func Package(fset *token.FileSet, files []*ast.File, info *types.Info, pkg *types.Package, blocks *analyze.Result) (*ir.Package, error) {
+func Package(fset *token.FileSet, files []*ast.File, info *types.Info, pkg *types.Package, blocks *analyze.Result, linked map[types.Object]bool) (*ir.Package, error) {
 	b := &builder{fset: fset, info: info, pkg: pkg, blocks: blocks}
 	b.globalBoxes = map[*types.Var]bool{}
+	for obj := range linked {
+		if v, ok := obj.(*types.Var); ok && needsBox(v.Type()) {
+			b.globalBoxes[v] = true
+		}
+	}
 	for _, f := range files {
 		b.markAddressed(f, b.globalBoxes, true)
 	}

@@ -20,6 +20,7 @@ import (
 
 	"github.com/eddyw/godart/internal/analyze"
 	"github.com/eddyw/godart/internal/emit"
+	"github.com/eddyw/godart/internal/linker"
 	"github.com/eddyw/godart/internal/load"
 	"github.com/eddyw/godart/internal/meta"
 	"github.com/eddyw/godart/internal/normalize"
@@ -111,6 +112,10 @@ func BuildWithStats(opt Options) (*Stats, error) {
 	roots := result.Packages
 	module := moduleOf(roots)
 	pkgs := order(roots, module)
+	links, err := linker.Resolve(roots)
+	if err != nil {
+		return nil, err
+	}
 	phase = time.Now()
 	localPackages := map[string]bool{}
 	for _, p := range pkgs {
@@ -146,7 +151,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 		}
 		flags := fmt.Sprintf("%s\x00trimpath=%t\x00go=%s", dartPkg, opt.TrimPath, p.Types.GoVersion())
 		defaults := result.DefaultGODEBUG[p.PkgPath]
-		flags += "\x00godebug=" + defaults
+		flags += "\x00godebug=" + defaults + "\x00links=" + links.Digest
 		if !opt.TrimPath {
 			var paths []string
 			for _, file := range p.Syntax {
@@ -168,7 +173,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 				continue
 			}
 		}
-		out, err := compile(p, module, dartPkg, blocks, bin, opt.TrimPath, defaults)
+		out, err := compile(p, module, dartPkg, blocks, bin, opt.TrimPath, defaults, links)
 		if err != nil {
 			return nil, err
 		}
@@ -394,8 +399,8 @@ func outputExists(out string, files []string) bool {
 }
 
 func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result,
-	bin *load.Binary, trimpath bool, defaults string) (*emit.Result, error) {
-	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks)
+	bin *load.Binary, trimpath bool, defaults string, links *linker.Variables) (*emit.Result, error) {
+	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks, links.Targets)
 	if err != nil {
 		return nil, err
 	}
@@ -405,7 +410,14 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 		}
 	}
 	var imports []emit.Import
+	deps := map[string]*packages.Package{}
 	for path, dep := range p.Imports {
+		deps[path] = dep
+	}
+	for _, dep := range links.Imports[p.Types] {
+		deps[dep.PkgPath] = dep
+	}
+	for path, dep := range deps {
 		if !compiled(dep, module) {
 			continue
 		}
@@ -417,6 +429,7 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 	}
 	sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
 	return emit.Package(tree, p.Types, emit.Config{
+		LinkedVars:     links.Targets,
 		Base:           baseName(p, module),
 		Imports:        imports,
 		DartPackage:    dartPkg,

@@ -285,7 +285,7 @@ func run() error {
 	selectedFunctions := []string{}
 	for _, p := range pkgs {
 		phase = time.Now()
-		tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks)
+		tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks, nil)
 		if err != nil {
 			return err
 		}
