@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'dart:ffi';
 import 'dart:io';
 
@@ -20,6 +24,15 @@ final _open = _libc
       Int Function(Pointer<Uint8>, Int),
       int Function(Pointer<Uint8>, int)
     >('open');
+final _mkdir = Platform.isMacOS
+    ? _libc.lookupFunction<
+        Int Function(Pointer<Uint8>, Uint16),
+        int Function(Pointer<Uint8>, int)
+      >('mkdir')
+    : _libc.lookupFunction<
+        Int Function(Pointer<Uint8>, Uint32),
+        int Function(Pointer<Uint8>, int)
+      >('mkdir');
 final _close = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   'close',
 );
@@ -64,3 +77,22 @@ int $directoryClose(int fd) {
 }
 
 int $directoryChdir(int fd) => _fchdir(fd) == 0 ? 0 : _errno().value;
+
+int $directoryCreate(GoString path, int mode) {
+  final bytes = path.bytes;
+  if (bytes.contains(0)) return 22;
+  final name = _malloc(bytes.length + 1);
+  if (name == nullptr) return 12;
+  try {
+    name.asTypedList(bytes.length + 1)
+      ..setRange(0, bytes.length, bytes)
+      ..[bytes.length] = 0;
+    int error;
+    do {
+      error = _mkdir(name, mode) == 0 ? 0 : _errno().value;
+    } while (error == 4);
+    return error;
+  } finally {
+    _free(name);
+  }
+}

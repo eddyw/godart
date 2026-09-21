@@ -41,6 +41,8 @@ file metadata, TLS configuration, or runtime inspection APIs.
 Linux and macOS support `os.File.Fd` for regular files, directories, and
 standard streams. The file owns the descriptor. Call `Close` explicitly.
 Automatic file closure through Go finalizers remains unsupported.
+Directory creation on Linux and macOS applies permission bits and the process umask at creation.
+Temporary directories request mode `0700`.
 Directory descriptors retain their identity after a rename or removal.
 `File.Chdir` uses the open descriptor and preserves directory identity after a rename.
 On Unix platforms, `Getwd` preserves an absolute `PWD` alias only when it names the current directory.

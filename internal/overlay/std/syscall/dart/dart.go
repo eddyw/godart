@@ -1105,9 +1105,11 @@ func RemoveAll(path string) (string, string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// Mkdir makes a directory. It also makes each parent directory when deep is
-// true.
-func Mkdir(path string, deep bool) string {
+// DirectoryCreate creates a directory with native permission bits and returns errno.
+func DirectoryCreate(path string, mode int) int { panic("syscall/dart needs the gart compiler") }
+
+// Mkdir creates a directory through the host file API.
+func Mkdir(path string) string {
 	panic("syscall/dart needs the gart compiler")
 }
 

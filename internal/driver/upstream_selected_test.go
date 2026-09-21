@@ -204,7 +204,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "read_test.go", Declarations: []string{"checkNamedSize", "TestReadFile", "TestWriteFile", "TestReadOnlyWriteFile"}},
 			{Name: "tempfile_test.go", Declarations: []string{"TestCreateTemp", "TestCreateTempPattern", "TestMkdirTemp", "TestMkdirTempBadDir"}},
 			{Name: "removeall_test.go", Declarations: []string{"testRequiresPermissions", "TestRemoveAll", "TestRemoveAllLarge", "TestRemoveAllLongPath", "TestRemoveAllDot", "TestRemoveAllDotDot", "TestRemoveReadOnlyDir", "TestRemoveAllButReadOnlyAndPathError", "TestRemoveUnreadableDir", "TestRemoveAllWithMoreErrorThanReqSize", "TestRemoveAllTrailingSlash", "TestRemoveAllSymlinkRemovalFailure"}},
-			{Name: "path_test.go", Declarations: []string{"TestMkdirAll", "TestMkdirAllAbsPath"}},
+			{Name: "path_test.go", Declarations: []string{"TestMkdirAll", "TestMkdirAllAbsPath", "TestMkdirAllWithSymlink"}},
 			{Name: "root_test.go", Declarations: []string{"testMaybeRooted", "makefs", "hasLink", "rootTest", "rootTest.run", "rootTestCases", "errEndsTest", "TestRootMkdirAll", "TestRootMkdir", "TestRootOpen_File", "TestRootOpen_Directory", "TestRootCreate", "TestRootOpenRoot", "TestRootStat", "TestRootLstat", "TestRootReadlink", "TestRootRemoveFile", "TestRootRemoveDirectory", "TestRootNonPermissionMode", "TestRootUseAfterClose", "TestRootSymlinkToRoot", "TestOpenInRoot", "TestRootRemoveDot", "TestRootWriteReadFile", "TestRootName", "TestRootConcurrentClose"}},
 		},
 		"net":      {{Name: "interface_test.go", Declarations: []string{"TestInterfaces"}}, {Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "pipe_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept"}}},

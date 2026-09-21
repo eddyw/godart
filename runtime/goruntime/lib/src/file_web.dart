@@ -37,6 +37,8 @@ int $directoryClose(int fd) => 38;
 
 int $directoryChdir(int fd) => 38;
 
+int $directoryCreate(GoString path, int mode) => 38;
+
 (int, GoString) $fileRead(int handle, Slice<GoInt> p) => (0, _noSys);
 
 (int, GoString) $fileWrite(int handle, Slice<GoInt> p) => (0, _noSys);
@@ -95,7 +97,7 @@ GoString $remove(GoString path) => _noSys;
 (GoString, GoString, GoString) $removeAll(GoString path) =>
     (GoString.fromString('removeall'), path, _noSys);
 
-GoString $mkdir(GoString path, bool deep) => _noSys;
+GoString $mkdir(GoString path) => _noSys;
 
 GoString $rename(GoString from, GoString to) => _noSys;
 

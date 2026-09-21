@@ -871,17 +871,32 @@ func RemoveAll(name string) error {
 	return pathError(op, path, cause)
 }
 
-// Mkdir makes 1 directory. The permission argument reaches no operation of the
-// Dart side. A path that exists gives ErrExist, because the Dart side accepts
-// such a path with no report.
+// Mkdir creates a directory with the requested permission bits before umask.
 func Mkdir(name string, perm FileMode) error {
 	if contains(name, "\x00") {
 		return &PathError{Op: "mkdir", Path: name, Err: syscall.EINVAL}
 	}
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if errno := dart.DirectoryCreate(name, syscallMode(perm)); errno != 0 {
+			return &PathError{Op: "mkdir", Path: name, Err: syscall.Errno(errno)}
+		}
+		// Darwin requires a separate sticky-bit operation.
+		if system == "darwin" && perm&ModeSticky != 0 {
+			info, err := Stat(name)
+			if err == nil {
+				err = Chmod(name, info.Mode()|ModeSticky)
+			}
+			if err != nil {
+				Remove(name)
+				return err
+			}
+		}
+		return nil
+	}
 	if _, err := Lstat(name); err == nil {
 		return &PathError{Op: "mkdir", Path: name, Err: errExist}
 	}
-	return pathError("mkdir", name, dart.Mkdir(name, false))
+	return pathError("mkdir", name, dart.Mkdir(name))
 }
 
 // MkdirAll makes a directory and each parent directory of it. The logic comes

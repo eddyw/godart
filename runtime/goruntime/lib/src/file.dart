@@ -494,10 +494,9 @@ GoString $remove(GoString path) {
   }
 }
 
-/// Makes a directory. It also makes each parent directory when deep is true.
-GoString $mkdir(GoString path, bool deep) {
+GoString $mkdir(GoString path) {
   try {
-    Directory(path.toDartString()).createSync(recursive: deep);
+    Directory(path.toDartString()).createSync();
     return _empty;
   } catch (e) {
     return _cause(e);

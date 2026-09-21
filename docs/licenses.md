@@ -41,6 +41,7 @@ The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
 The runtime license includes their BSD terms.
 The time value representation and its clock helpers adapt Go `src/time/time.go`.
+Directory creation and sticky-bit behavior follow Go `src/os/file.go` with its BSD notice.
 Descriptor-based directory changes follow Go `src/os/file_posix.go` with its BSD notice.
 Native file metadata adapts Go `src/os/stat_linux.go`, `stat_darwin.go`,
 `types.go`, and `types_unix.go` with their BSD notice.

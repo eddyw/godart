@@ -641,8 +641,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$remove(%s)", args[0]), true
 	case "RemoveAll":
 		return fmt.Sprintf("$removeAll(%s)", args[0]), true
+	case "DirectoryCreate":
+		return fmt.Sprintf("$directoryCreate(%s, %s)", args[0], args[1]), true
 	case "Mkdir":
-		return fmt.Sprintf("$mkdir(%s, %s)", args[0], args[1]), true
+		return fmt.Sprintf("$mkdir(%s)", args[0]), true
 	case "Rename":
 		return fmt.Sprintf("$rename(%s, %s)", args[0], args[1]), true
 	case "FileIdentical":
