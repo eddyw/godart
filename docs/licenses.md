@@ -25,6 +25,7 @@ The runtime license includes their BSD terms.
 The certificate trust adapter adapts Go 1.27.1 `crypto/x509/root.go`,
 `root_linux.go`, `root_darwin.go`, and `internal/macos` wrappers.
 The trust fixture retains certificate constants from Go `crypto/x509/verify_test.go`.
+The CIDR parser adapts Go `src/net/ip.go` and retains its BSD notice.
 Source headers and the runtime license preserve their BSD terms.
 Generated widget files retain notices for their Dart documentation sources.
 

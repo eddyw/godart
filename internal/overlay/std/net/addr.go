@@ -1,8 +1,13 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 package net
 
 import (
+	"net/netip"
 	"strconv"
 	"strings"
 )
@@ -204,21 +209,18 @@ func ParseCIDR(s string) (IP, *IPNet, error) {
 		return nil, nil, &ParseError{Type: "CIDR address", Text: s}
 	}
 	addr, mask := s[:i], s[i+1:]
-	bits := 8 * IPv4len
-	ip := ParseIP(addr)
-	if ip == nil {
+	ipAddr, err := netip.ParseAddr(addr)
+	if err != nil || ipAddr.Zone() != "" {
 		return nil, nil, &ParseError{Type: "CIDR address", Text: s}
 	}
-	if ip.To4() != nil {
-		ip = ip.To4()
-	} else {
-		bits = 8 * IPv6len
-	}
+	bits := ipAddr.BitLen()
 	ones, err := strconv.Atoi(mask)
 	if err != nil || mask == "" || ones < 0 || ones > bits || mask[0] < '0' || mask[0] > '9' {
 		return nil, nil, &ParseError{Type: "CIDR address", Text: s}
 	}
 	m := CIDRMask(ones, bits)
+	addr16 := ipAddr.As16()
+	ip := IP(addr16[:])
 	return ip, &IPNet{IP: ip.Mask(m), Mask: m}, nil
 }
 
