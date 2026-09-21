@@ -552,13 +552,6 @@ Object? $invoke(Function m, Object? recv, List<Object?> args) {
   return Function.apply(m, <Object?>[recv, ...args]);
 }
 
-/// $noMethod stands in place of an unexported method of a type of another
-/// package. A Dart library holds each name that starts with an underscore, thus
-/// another library reaches no such method.
-Never $noMethod(String name) => $panic(
-  Iface($typeGoError, GoError('the method $name belongs to another package')),
-);
-
 /// $boxDesc puts a value into an interface value with the given description.
 /// A type argument can name an interface type, and a value of such a type
 /// parameter already holds an interface value. That value passes through.

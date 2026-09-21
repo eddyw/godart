@@ -521,18 +521,13 @@ func (e *emitter) fieldDartName(owner types.Type, field string) string {
 	return out
 }
 
-// methodFuncName builds the name of a method that becomes a top level
-// function. The name stays private when Go does not export the method.
-//
-// The name of the type does not decide the privacy. An exported type can
-// embed an unexported type, and the method of the embedded type then reaches
-// another package. A private Dart name of another library gives a compile
-// error at that call.
+// Go permits calls to promoted private methods from their declaring package.
+// Public Dart names preserve those calls across generated libraries.
 func methodFuncName(typeName, methodName string) string {
 	n := strings.TrimPrefix(name.Package(typeName), "_") + "$" +
 		strings.TrimPrefix(name.Package(methodName), "_")
 	if !isExported(methodName) {
-		return "_" + n
+		return "$method$" + n
 	}
 	return n
 }

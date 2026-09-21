@@ -834,6 +834,9 @@ func (e *emitter) mergeRep(obj *types.TypeName) *types.TypeName {
 // method name need 2 names.
 func (e *emitter) memberName(fn *types.Func) string {
 	base := name.Package(fn.Name())
+	if !fn.Exported() {
+		base = "$method$" + name.Public(fn.Name())
+	}
 	sig, _ := fn.Type().(*types.Signature)
 	if sig == nil || sig.Recv() == nil {
 		return base
