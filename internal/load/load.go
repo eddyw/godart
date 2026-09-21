@@ -493,6 +493,7 @@ func collectErrors(roots []*packages.Package) error {
 			if syntaxError && e.Kind != packages.ParseError {
 				continue
 			}
+			e = compilerImportDiagnostic(p, e)
 			if strings.HasPrefix(e.Msg, "\t") && len(errs) > start {
 				errs[len(errs)-1] = fmt.Errorf("%w\n\t%s: %s", errs[len(errs)-1], e.Pos, strings.TrimPrefix(e.Msg, "\t"))
 			} else {
