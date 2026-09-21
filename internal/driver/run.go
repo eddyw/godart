@@ -80,7 +80,7 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 	}
 	phase = time.Now()
 	defer func() { opt.trace("execute", phase) }()
-	return dartRun(opt.Out, append([]string{kernel}, args...), out)
+	return dartRun(opt.Dir, append([]string{kernel}, args...), out)
 }
 
 // Test compiles the test binaries and runs each one. The result is the exit
