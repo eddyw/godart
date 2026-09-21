@@ -4,18 +4,16 @@
 
 //go:build dart
 
-package os
+package syscall
 
-import "syscall"
-
-func nativeFileSys(data []int64) any {
-	return &syscall.Stat_t{
+func statFromData(data []int64) Stat_t {
+	return Stat_t{
 		Size: data[0], Mode: uint32(data[1]),
-		Mtim: syscall.Timespec{Sec: data[2], Nsec: data[3]},
+		Mtim: Timespec{Sec: data[2], Nsec: data[3]},
 		Dev:  uint64(data[4]), Ino: uint64(data[5]),
 		Nlink: uint64(data[6]), Uid: uint32(data[7]), Gid: uint32(data[8]),
 		Rdev: uint64(data[9]), Blksize: data[10], Blocks: data[11],
-		Atim: syscall.Timespec{Sec: data[12], Nsec: data[13]},
-		Ctim: syscall.Timespec{Sec: data[14], Nsec: data[15]},
+		Atim: Timespec{Sec: data[12], Nsec: data[13]},
+		Ctim: Timespec{Sec: data[14], Nsec: data[15]},
 	}
 }

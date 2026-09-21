@@ -34,7 +34,7 @@ func TestNativeStatTypes(t *testing.T) {
 			}
 			got := result.Packages[0].Imports["syscall"].Types.Scope()
 			want := native[0].Types.Scope()
-			for _, name := range []string{"Stat_t", "Timespec"} {
+			for _, name := range []string{"Stat_t", "Timespec", "Stat", "Lstat", "Fstat"} {
 				a, b := got.Lookup(name), want.Lookup(name)
 				if a == nil || b == nil {
 					t.Fatalf("missing %s: Gart %v, Go %v", name, a, b)

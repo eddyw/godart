@@ -13,3 +13,32 @@ func nativeSameFile(first, second *fileStat) bool {
 	b := second.sys.(*syscall.Stat_t)
 	return a.Dev == b.Dev && a.Ino == b.Ino
 }
+
+func nativeStat(name string, follow bool) (FileInfo, error) {
+	stat := new(syscall.Stat_t)
+	var err error
+	op := "stat"
+	if follow {
+		err = syscall.Stat(name, stat)
+	} else {
+		op = "lstat"
+		err = syscall.Lstat(name, stat)
+	}
+	if err != nil {
+		return nil, &PathError{Op: op, Path: name, Err: err}
+	}
+	return nativeFileInfo(name, stat), nil
+}
+
+func nativeFstat(name string, fd int) (FileInfo, error) {
+	stat := new(syscall.Stat_t)
+	if err := syscall.Fstat(fd, stat); err != nil {
+		return nil, &PathError{Op: "stat", Path: name, Err: err}
+	}
+	return nativeFileInfo(name, stat), nil
+}
+
+func nativeFileInfo(name string, stat *syscall.Stat_t) FileInfo {
+	seconds, nanos := nativeModTime(stat)
+	return &fileStat{name: base(name), size: stat.Size, mode: nativeFileMode(uint32(stat.Mode)), seconds: seconds, nanos: nanos, device: uint64(stat.Dev), inode: uint64(stat.Ino), sys: stat}
+}

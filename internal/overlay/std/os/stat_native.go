@@ -7,15 +7,10 @@
 package os
 
 import (
-	"syscall"
 	"syscall/dart"
 )
 
-func nativeFileInfo(name, op string, data []int64, errno int) (FileInfo, error) {
-	if errno != 0 {
-		return nil, &PathError{Op: op, Path: name, Err: syscall.Errno(errno)}
-	}
-	mode := uint32(data[1])
+func nativeFileMode(mode uint32) FileMode {
 	m := FileMode(mode & 0777)
 	switch mode & 0170000 {
 	case 0060000, 0160000:
@@ -40,7 +35,7 @@ func nativeFileInfo(name, op string, data []int64, errno int) (FileInfo, error) 
 	if mode&sISVTX != 0 {
 		m |= ModeSticky
 	}
-	return &fileStat{name: base(name), size: data[0], mode: m, seconds: data[2], nanos: data[3], device: uint64(data[4]), inode: uint64(data[5]), sys: nativeFileSys(data)}, nil
+	return m
 }
 
 // SameFile compares descriptions from this package. Supported POSIX hosts

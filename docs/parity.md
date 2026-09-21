@@ -48,6 +48,8 @@ Directory descriptors retain their identity after a rename or removal.
 `File.Chdir` uses the open descriptor and preserves directory identity after a rename.
 On Unix platforms, `Getwd` preserves an absolute `PWD` alias only when it names the current directory.
 Linux and macOS on x64 and arm64 use native `Stat`, `Lstat`, and descriptor-based `File.Stat`.
+The same hosts support `syscall.Stat`, `Lstat`, and `Fstat` with `syscall.Stat_t` output and native errors.
+Read the output structure only after a successful call.
 These APIs preserve device/inode identity, permission bits, file types, and nanosecond modification times.
 `SameFile` compares native identity on these targets and rejects external `FileInfo` implementations.
 `FileInfo.Sys` returns the native SDK `*syscall.Stat_t` on these targets.

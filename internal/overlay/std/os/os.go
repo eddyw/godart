@@ -480,8 +480,7 @@ func (f *File) Stat() (FileInfo, error) {
 		return nil, err
 	}
 	if dart.HasNativeStat() {
-		data, errno := dart.NativeFstat(int(f.Fd()))
-		return nativeFileInfo(f.name, "stat", data, errno)
+		return nativeFstat(f.name, int(f.Fd()))
 	}
 	return Stat(f.name)
 }
@@ -644,8 +643,7 @@ func Stat(name string) (FileInfo, error) {
 		return nil, &PathError{Op: "stat", Path: name, Err: syscall.EINVAL}
 	}
 	if dart.HasNativeStat() {
-		data, errno := dart.NativeStat(name, true)
-		return nativeFileInfo(name, "stat", data, errno)
+		return nativeStat(name, true)
 	}
 	size, dir, nanos, cause := dart.Stat(name)
 	if cause != "" {
@@ -664,8 +662,7 @@ func Lstat(name string) (FileInfo, error) {
 		return nil, &PathError{Op: "lstat", Path: name, Err: syscall.EINVAL}
 	}
 	if dart.HasNativeStat() {
-		data, errno := dart.NativeStat(name, false)
-		return nativeFileInfo(name, "lstat", data, errno)
+		return nativeStat(name, false)
 	}
 	size, dir, link, nanos, cause := dart.Lstat(name)
 	if cause != "" {

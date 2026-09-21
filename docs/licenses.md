@@ -47,6 +47,7 @@ Descriptor-based directory and file attribute changes follow Go `src/os/file_pos
 Native file metadata adapts Go `src/os/stat_linux.go`, `stat_darwin.go`,
 `types.go`, and `types_unix.go` with their BSD notice.
 The native adapter uses `src/syscall/ztypes_{linux,darwin}_{amd64,arm64}.go` layouts.
+Public stat adapters preserve the contracts of Go `src/syscall` stat wrappers and their BSD notices.
 The ownership adapter preserves original `src/os/os_unix_test.go` assertions
 and the `internal/testenv` unsupported-syscall predicates with their BSD notices.
 Unix `PWD` validation follows Go `src/os/getwd.go` with its BSD notice.
