@@ -416,7 +416,8 @@ String $missingMethod(Iface? x, List<String> methods) {
 /// results, for example `String()string`.
 String _methodName(String key) {
   final int i = key.indexOf('(');
-  return i < 0 ? key : key.substring(0, i);
+  final String name = i < 0 ? key : key.substring(0, i);
+  return name.substring(name.lastIndexOf('.') + 1);
 }
 
 /// True when the type holds each method of an interface.
