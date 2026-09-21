@@ -209,6 +209,29 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"unobserved": 1})
 
+    def test_language_host_tools_require_identical_sdk_inputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            env = dict(GOROOT="sdk", STDLIB_IMPORTCFG="importcfg")
+            execution = dict(ran=True, exit=0, timed_out=False,
+                             output_sha256="expected", environment=env)
+            case = dict(fixture=dict(name="tool", host_tools=True), status="passed",
+                        native=dict(execution), gart=dict(execution),
+                        expected_sha256="expected", importcfg_sha256="input")
+            report = dict(kind="language", complete=True, outcomes=[case], shard=0, shards=1)
+            path = root / "language.json"
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"passed": 1})
+            for changed in ({}, dict(GOROOT="other", STDLIB_IMPORTCFG="importcfg"),
+                            dict(GOROOT="sdk", STDLIB_IMPORTCFG="other")):
+                case["gart"]["environment"] = changed
+                parity.save(path, report)
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+            case["gart"]["environment"] = env
+            del case["importcfg_sha256"]
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
+
     def test_language_inventory_never_implies_an_execution_pass(self):
         cases = [dict(name="run", action="run", native_eligible=True, gart_eligible=True, adapter="single-file"),
                  dict(name="compile", action="compile", native_eligible=True, gart_eligible=True, adapter="missing"),

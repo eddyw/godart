@@ -294,6 +294,13 @@ def language_behavior(paths):
                                      and not generator.get("timed_out") and not case.get("build_error")
                                      and hashlib.sha256(source.encode()).hexdigest() == generator.get("output_sha256"))
                     valid = valid and config["contract"] in {"run", "runoutput", "compile", "reject"} and case.get("contract", "run") == config["contract"]
+
+                    if case["fixture"].get("host_tools"):
+                        native_env = case["native"].get("environment") or {}
+                        gart_env = case["gart"].get("environment") or {}
+                        valid = (valid and case.get("importcfg_sha256")
+                                 and all(native_env.get(key) and native_env[key] == gart_env.get(key)
+                                         for key in ("GOROOT", "STDLIB_IMPORTCFG")))
                     if not valid:
                         status = "failed"
                         group["problems"].append(f"{path}: invalid pass for {name}")

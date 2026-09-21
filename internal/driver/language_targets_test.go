@@ -36,3 +36,22 @@ func TestLanguageTargets(t *testing.T) {
 		t.Run(target, func(t *testing.T) { runLanguageCases(t, target, inv, cases) })
 	}
 }
+
+func TestLanguageHostTargets(t *testing.T) {
+	inv, err := parity.DiscoverLanguage(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []parity.LanguageCase
+	for _, c := range inv.Cases {
+		if c.HostTools {
+			if c.Adapter != "single-file" {
+				t.Fatalf("host tool recipe changed: %s: %s", c.Name, c.Recipe)
+			}
+			cases = append(cases, c)
+		}
+	}
+	for _, target := range []string{"vm", "aot"} {
+		t.Run(target, func(t *testing.T) { runLanguageCases(t, target, inv, cases) })
+	}
+}

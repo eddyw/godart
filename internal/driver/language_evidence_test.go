@@ -14,31 +14,33 @@ import (
 )
 
 type languageExecution struct {
-	Command      []string `json:"command,omitempty"`
-	Ran          bool     `json:"ran"`
-	Exit         int      `json:"exit"`
-	TimedOut     bool     `json:"timed_out"`
-	OutputSHA256 string   `json:"output_sha256,omitempty"`
-	Seconds      float64  `json:"seconds"`
+	Environment  map[string]string `json:"environment,omitempty"`
+	Command      []string          `json:"command,omitempty"`
+	Ran          bool              `json:"ran"`
+	Exit         int               `json:"exit"`
+	TimedOut     bool              `json:"timed_out"`
+	OutputSHA256 string            `json:"output_sha256,omitempty"`
+	Seconds      float64           `json:"seconds"`
 }
 
 type languageOutcome struct {
-	Generator         *languageExecution  `json:"generator,omitempty"`
-	GeneratedSource   string              `json:"generated_source,omitempty"`
-	NativeDiagnostics string              `json:"native_diagnostics,omitempty"`
-	GartDiagnostics   string              `json:"gart_diagnostics,omitempty"`
-	NativeMatch       languageExecution   `json:"native_match"`
-	GartMatch         languageExecution   `json:"gart_match"`
-	NativeMismatch    string              `json:"native_mismatch,omitempty"`
-	GartMismatch      string              `json:"gart_mismatch,omitempty"`
-	Contract          string              `json:"contract,omitempty"`
-	WrapperSHA256     string              `json:"wrapper_sha256,omitempty"`
-	BuildError        string              `json:"build_error,omitempty"`
-	Fixture           parity.LanguageCase `json:"fixture"`
-	Status            string              `json:"status"`
-	Native            languageExecution   `json:"native"`
-	Gart              languageExecution   `json:"gart"`
-	ExpectedSHA256    string              `json:"expected_sha256,omitempty"`
+	ImportConfigSHA256 string              `json:"importcfg_sha256,omitempty"`
+	Generator          *languageExecution  `json:"generator,omitempty"`
+	GeneratedSource    string              `json:"generated_source,omitempty"`
+	NativeDiagnostics  string              `json:"native_diagnostics,omitempty"`
+	GartDiagnostics    string              `json:"gart_diagnostics,omitempty"`
+	NativeMatch        languageExecution   `json:"native_match"`
+	GartMatch          languageExecution   `json:"gart_match"`
+	NativeMismatch     string              `json:"native_mismatch,omitempty"`
+	GartMismatch       string              `json:"gart_mismatch,omitempty"`
+	Contract           string              `json:"contract,omitempty"`
+	WrapperSHA256      string              `json:"wrapper_sha256,omitempty"`
+	BuildError         string              `json:"build_error,omitempty"`
+	Fixture            parity.LanguageCase `json:"fixture"`
+	Status             string              `json:"status"`
+	Native             languageExecution   `json:"native"`
+	Gart               languageExecution   `json:"gart"`
+	ExpectedSHA256     string              `json:"expected_sha256,omitempty"`
 }
 
 type languageEvidence struct {

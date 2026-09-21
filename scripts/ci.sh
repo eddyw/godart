@@ -30,7 +30,7 @@ if [[ $suite == fuzz-replay || $suite == driver || $suite == stdlib || $suite ==
   fi
 fi
 
-large_tests='TestRunOutputFilesOfGoTest|TestRejectFilesOfGoTest|TestCompileFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
+large_tests='TestRunOutputFilesOfGoTest|TestRejectFilesOfGoTest|TestCompileFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestLanguageHostTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
 case "$suite" in
   checks)
     python3 -B -m unittest discover -s scripts -p test_ci_local.py
@@ -53,7 +53,7 @@ case "$suite" in
     python3 -B scripts/parity.py applications --shard-index "$shard_index" --shard-count "$shard_count" --output "${GART_PARITY_REPORT_DIR:-build/parity-results}/applications"
     ;;
   targets) test_name='TestAOT|TestWasm|TestJS' ;;
-  language-targets) test_name=TestLanguageTargets ;;
+  language-targets) test_name='TestLanguageTargets|TestLanguageHostTargets' ;;
   language-compile) test_name=TestCompileFilesOfGoTest ;;
   language-reject) test_name=TestRejectFilesOfGoTest ;;
   language-generated) test_name=TestRunOutputFilesOfGoTest ;;

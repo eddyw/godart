@@ -44,6 +44,8 @@ func ReadLanguagePolicy() (*LanguagePolicy, error) {
 }
 
 type LanguageCase struct {
+	HostTools      bool         `json:"host_tools,omitempty"`
+	Companions     []string     `json:"companions,omitempty"`
 	Exclusion      *Omission    `json:"exclusion,omitempty"`
 	Rejection      []string     `json:"rejection,omitempty"`
 	Name           string       `json:"name"`
@@ -119,6 +121,23 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				return nil, fmt.Errorf("%s: %w", file, err)
 			}
 			c := LanguageCase{Name: strings.TrimSuffix(file, ".go"), File: file, Recipe: recipe, Action: fields[0], NativeEligible: native, GartEligible: eligible, Adapter: "missing", Files: []SourceFile{{Path: file, SHA256: digest(data)}}}
+			switch c.Name {
+			case "fixedbugs/issue21317", "linkobj", "winbatch":
+				c.HostTools = true
+			case "linkmain_run":
+				c.HostTools = true
+				c.Companions = []string{"helloworld.go", "linkmain.go"}
+			case "linkx_run":
+				c.HostTools = true
+				c.Companions = []string{"linkx.go"}
+			}
+			for _, companion := range c.Companions {
+				data, err := os.ReadFile(filepath.Join(root, companion))
+				if err != nil {
+					return nil, err
+				}
+				c.Files = append(c.Files, SourceFile{Path: companion, SHA256: digest(data)})
+			}
 			if recipe == "run" {
 				c.Adapter = "single-file"
 			} else if recipe == "compile" {

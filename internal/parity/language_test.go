@@ -33,6 +33,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/constraints.go", "//go:build dart\n\n// run\npackage main\nfunc main() {}\n")
 	write("test/other/directory.go", "// rundir -G=3\npackage ignored\n")
 	write("test/other/directory.dir/main.go", "package main\nfunc main() {}\n")
+	write("test/linkx_run.go", "// run\npackage main\nfunc main() {}\n")
+	write("test/linkx.go", "// skip\npackage main\nfunc main() {}\n")
 	ctx := build.Default
 	ctx.GOROOT = root
 	ctx.GOOS = "linux"
@@ -40,8 +42,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 10 {
-		t.Fatalf("got %d cases, want 10", len(inv.Cases))
+	if len(inv.Cases) != 12 {
+		t.Fatalf("got %d cases, want 12", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -67,6 +69,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if c := cases["run"]; c.Adapter != "single-file" || len(c.Files) != 2 {
 		t.Fatalf("run adapter or expected output lost: %+v", c)
+	}
+	if c := cases["linkx_run"]; !c.HostTools || len(c.Companions) != 1 || c.Companions[0] != "linkx.go" || len(c.Files) != 2 || c.Files[1].Path != "linkx.go" {
+		t.Fatalf("host tool inputs lost: %+v", c)
 	}
 	write("test/other/directory.dir/main.go", "package main\nfunc main() { println(1) }\n")
 	changed, err := DiscoverLanguage(ctx)

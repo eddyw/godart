@@ -24,9 +24,17 @@ func recordLanguage(t *testing.T, result *languageExecution, dir string, limit t
 
 func recordLanguageRaw(t *testing.T, result *languageExecution, dir string, limit time.Duration, name string, args ...string) string {
 	t.Helper()
+	settings := result.Environment
+	var env []string
+	if len(settings) > 0 {
+		env = os.Environ()
+		for key, value := range settings {
+			env = append(env, key+"="+value)
+		}
+	}
 	start := time.Now()
-	text, err, ended := output(dir, nil, limit, name, args...)
-	*result = languageExecution{Command: append([]string{name}, args...), Ran: true, TimedOut: !ended, OutputSHA256: languageDigest(text), Seconds: time.Since(start).Seconds()}
+	text, err, ended := output(dir, env, limit, name, args...)
+	*result = languageExecution{Environment: settings, Command: append([]string{name}, args...), Ran: true, TimedOut: !ended, OutputSHA256: languageDigest(text), Seconds: time.Since(start).Seconds()}
 	if err != nil {
 		result.Exit = -1
 		var exit *exec.ExitError
@@ -88,6 +96,16 @@ func TestRunOutputFilesOfGoTest(t *testing.T) {
 
 func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory, cases []parity.LanguageCase) {
 	t.Helper()
+	var importcfg, importcfgHash string
+	for _, c := range cases {
+		if c.HostTools {
+			importcfg = filepath.Join(t.TempDir(), "importcfg")
+			config := run(t, "", "go", "list", "-export", "-f", "{{if .Export}}packagefile {{.ImportPath}}={{.Export}}{{end}}", "std")
+			writeFile(t, importcfg, config)
+			importcfgHash = languageDigest([]byte(config))
+			break
+		}
+	}
 	root := filepath.Join(build.Default.GOROOT, "test")
 	runtime := runtimeDir(t)
 	var names []string
@@ -143,6 +161,15 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 			}
 			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/gotest\n\ngo 1.27\n")
 			writeFile(t, filepath.Join(dir, file), string(source))
+			companions := map[string]string{}
+			for _, companion := range c.Companions {
+				data, err := os.ReadFile(filepath.Join(root, companion))
+				if err != nil {
+					t.Fatal(err)
+				}
+				companions[companion] = string(data)
+				writeFile(t, filepath.Join(dir, companion), string(data))
+			}
 			license, err := os.ReadFile(filepath.Join(build.Default.GOROOT, "LICENSE"))
 			if err != nil {
 				t.Fatal(err)
@@ -153,15 +180,25 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				t.Fatal(err)
 			}
 			outcome.ExpectedSHA256 = languageDigest(want)
+			if c.HostTools {
+				settings := map[string]string{"GOROOT": build.Default.GOROOT, "STDLIB_IMPORTCFG": importcfg}
+				outcome.Native.Environment = settings
+				outcome.Gart.Environment = settings
+				outcome.ImportConfigSHA256 = importcfgHash
+			}
 			native := runLanguage(t, &outcome.Native, dir, runLimit, "go", "run", "-gcflags=all="+inv.GCFlags, file)
 			if native != string(want) {
 				t.Fatalf("native output differs from upstream fixture\nwant:\n%s\ngot:\n%s", want, native)
 			}
 			out := filepath.Join(dir, "out")
+			patterns := []string{"./..."}
+			if len(c.Companions) > 0 {
+				patterns = []string{file}
+			}
 			err = driver.Build(driver.Options{
 				Trace:    traceBuild(t),
 				Dir:      dir,
-				Patterns: []string{"./..."},
+				Patterns: patterns,
 				Out:      out,
 				Runtime:  runtime,
 				Format:   false,
@@ -184,6 +221,9 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				t.Fatalf("unexpected build failure:\n%v", err)
 			}
 			prepareDart(t, out)
+			for companion, data := range companions {
+				writeFile(t, filepath.Join(out, companion), data)
+			}
 			limit := 2 * time.Minute
 			if name == "fixedbugs/issue13169" || name == "fixedbugs/issue78081" || target == "js" && name == "copy" {
 				// These upstream stress cases perform 1 million channel transfers

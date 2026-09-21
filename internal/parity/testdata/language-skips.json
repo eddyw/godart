@@ -27,10 +27,6 @@
     "classification": "target-limit",
     "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
   },
-  "fixedbugs/issue21317": {
-    "classification": "test-adapter",
-    "reason": "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names"
-  },
   "fixedbugs/issue22200": {
     "classification": "target-limit",
     "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
@@ -79,18 +75,6 @@
     "classification": "target-limit",
     "reason": "the assertion requires the native Go linker diagnostic for a symbol larger than its object-format limit"
   },
-  "linkmain_run": {
-    "classification": "test-adapter",
-    "reason": "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names"
-  },
-  "linkobj": {
-    "classification": "test-adapter",
-    "reason": "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names"
-  },
-  "linkx_run": {
-    "classification": "test-adapter",
-    "reason": "the file runs go run on a neighbor file that the run directory does not hold, and the go run wrapper of the comparison adds an exit line that dart run does not add"
-  },
   "nosplit": {
     "classification": "test-adapter",
     "reason": "the file picks the frame size of the test from runtime.GOARCH, and gart reports dart64"
@@ -110,9 +94,5 @@
   "typeparam/issue54765": {
     "classification": "target-limit",
     "reason": "The assertions require runtime/cgo.Incomplete and native not-in-heap type arguments. The declared subset excludes cgo. The adapter retains the original native diagnostic result."
-  },
-  "winbatch": {
-    "classification": "test-adapter",
-    "reason": "the file reads a file of the tree of Go under runtime.GOROOT, and gart gives an empty text there"
   }
 }
