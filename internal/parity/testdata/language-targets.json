@@ -37,5 +37,6 @@
   "typeparam/issue49659b",
   "typeparam/settable",
   "typeparam/issue47716",
-  "fixedbugs/issue79812"
+  "fixedbugs/issue79812",
+  "fixedbugs/issue56990"
 ]

@@ -223,10 +223,6 @@
   "fixedbugs/issue5493": [
     "$DIR/issue5493.go:27:10: undefined: runtime.SetFinalizer"
   ],
-  "fixedbugs/issue56990": [
-    "$DIR/issue56990.go:118:15: cannot use matchString (value of type func(a string, b string) (bool, error)) as []testing.InternalTest value in argument to testing.Main",
-    "$DIR/issue56990.go:118:28: cannot use testSuite (variable of type []testing.InternalTest) as []testing.InternalBenchmark value in argument to testing.Main"
-  ],
   "fixedbugs/issue57823": [
     "$DIR/issue57823.go:40:10: undefined: runtime.SetFinalizer",
     "$DIR/issue57823.go:63:10: undefined: runtime.SetFinalizer"

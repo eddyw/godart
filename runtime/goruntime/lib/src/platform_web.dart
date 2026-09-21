@@ -7,6 +7,14 @@
 library;
 
 import 'dart:convert';
+import 'dart:js_interop';
+
+@JS('globalThis.process')
+external _Process? get _process;
+
+extension type _Process._(JSObject _) implements JSObject {
+  external void exit(int code);
+}
 
 String $platformGODEBUG() => '';
 
@@ -39,13 +47,13 @@ String _flush(String text) {
   return text;
 }
 
-/// Ends the program. The web target holds no process control, thus the held
-/// lines leave the buffers, and a status outside 0 becomes an error of the
-/// host.
+/// Ends a Node process with the requested status. A browser has no process
+/// control, thus it reports an exception after the output buffers flush.
 Never $platformExit(int code) {
   if (_outBuffer.isNotEmpty) print(_outBuffer);
   if (_errBuffer.isNotEmpty) print(_errBuffer);
   _outBuffer = '';
   _errBuffer = '';
+  _process?.exit(code);
   throw StateError('exit $code');
 }

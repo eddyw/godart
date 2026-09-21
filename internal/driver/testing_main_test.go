@@ -35,7 +35,7 @@ func main() {
 		t.Run(filter, func(t *testing.T) {
 			args := []string{"-test.run=" + filter}
 			want := programOutcome(t, dir, native, args...)
-			for _, target := range []string{"vm", "aot"} {
+			for _, target := range []string{"vm", "aot", "js", "wasm"} {
 				t.Run(target, func(t *testing.T) {
 					var got programResult
 					if target == "vm" {
