@@ -13724,5 +13724,19 @@
       "reason": "The original upstream test unconditionally skips pending address-error semantics.",
       "test": "TestPacketConnWriteAddressErrors"
     }
+  ],
+  "os-selected": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips case-only rename assertions on a case-sensitive filesystem.",
+      "test": "TestRenameCaseDifference/dir"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips case-only rename assertions on a case-sensitive filesystem.",
+      "test": "TestRenameCaseDifference/file"
+    }
   ]
 }

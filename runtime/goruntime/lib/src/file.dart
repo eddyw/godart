@@ -505,10 +505,33 @@ GoString $mkdir(GoString path, bool deep) {
 
 GoString $rename(GoString from, GoString to) {
   try {
-    File(from.toDartString()).renameSync(to.toDartString());
+    final source = from.toDartString();
+    final target = to.toDartString();
+    switch (FileSystemEntity.typeSync(source, followLinks: false)) {
+      case FileSystemEntityType.directory:
+        Directory(source).renameSync(target);
+      case FileSystemEntityType.link:
+        Link(source).renameSync(target);
+      default:
+        File(source).renameSync(target);
+    }
     return _empty;
   } catch (e) {
     return _cause(e);
+  }
+}
+
+(bool, GoString) $fileIdentical(GoString first, GoString second) {
+  try {
+    return (
+      FileSystemEntity.identicalSync(
+        first.toDartString(),
+        second.toDartString(),
+      ),
+      _empty,
+    );
+  } catch (e) {
+    return (false, _cause(e));
   }
 }
 

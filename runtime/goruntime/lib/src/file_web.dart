@@ -90,6 +90,9 @@ GoString $mkdir(GoString path, bool deep) => _noSys;
 
 GoString $rename(GoString from, GoString to) => _noSys;
 
+(bool, GoString) $fileIdentical(GoString first, GoString second) =>
+    (false, _noSys);
+
 (Slice<GoString>, GoString) $readDir(GoString path) =>
     (Slice<GoString>.nil(), _noSys);
 

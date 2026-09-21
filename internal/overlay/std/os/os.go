@@ -921,6 +921,18 @@ func Rename(from, to string) error {
 	if contains(from, "\x00") || contains(to, "\x00") {
 		return &LinkError{Op: "rename", Old: from, New: to, Err: syscall.EINVAL}
 	}
+	if info, err := Lstat(to); err == nil && info.IsDir() {
+		if _, err := Lstat(from); err != nil {
+			return &LinkError{Op: "rename", Old: from, New: to, Err: underlyingError(err)}
+		}
+		same, cause := dart.FileIdentical(from, to)
+		if cause != "" {
+			return &LinkError{Op: "rename", Old: from, New: to, Err: causeError(cause)}
+		}
+		if from == to || !same {
+			return &LinkError{Op: "rename", Old: from, New: to, Err: syscall.EEXIST}
+		}
+	}
 	cause := dart.Rename(from, to)
 	if cause == "" {
 		return nil

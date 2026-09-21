@@ -1096,6 +1096,10 @@ func Rename(from, to string) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func FileIdentical(first, second string) (bool, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ReadDir reads the names inside a directory. Each name holds no directory
 // part, and the list is in the order of the name.
 func ReadDir(path string) ([]string, string) {
