@@ -82,6 +82,13 @@ final class Dict<T> {
 
   bool lessEqual(T a, T b) => equal(a, b) || less(a, b);
 
+  T add(T a, T b) {
+    if (a is GoString) return $concat(a, b as GoString) as T;
+    if (a is double) return mask((a + (b as double)) as T);
+    if (a is GoComplex) return mask((a + (b as GoComplex)) as T);
+    return mask(((a as GoInt) + (b as GoInt)) as T);
+  }
+
   T quotient(T a, T b) {
     if (a is double) return mask((a / (b as double)) as T);
     if (a is GoComplex) return mask((a / (b as GoComplex)) as T);

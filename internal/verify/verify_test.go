@@ -323,9 +323,6 @@ func f() int {
 `)
 }
 
-// TestTypeParamForm proves that an operation on a type parameter with more than
-// 1 Dart form reaches a rejection, and that a type set of integer types stays
-// inside the subset.
 func TestTypeParamForm(t *testing.T) {
 	const head = `package a
 
@@ -344,8 +341,10 @@ type wideType interface{ ~int | ~float64 }
 type narrowMix interface{ ~int | ~float32 }
 
 `
-	rejectFile(t, "the operator + on 2 Dart types", "more than 1 Dart type",
+	acceptFile(t, "the operator + on numbers and strings",
 		head+"func f[T mixType](a, b T) T { return a + b }\n")
+	acceptFile(t, "the operator += on numbers and strings",
+		head+"func f[T mixType](a, b T) T { a += b; return a }\n")
 	// A type set of float types gives the Dart type double, and the
 	// dictionary of the type argument holds the mask of the width: float32
 	// rounds to 32 bits, and float64 holds the identity. Thus each operator

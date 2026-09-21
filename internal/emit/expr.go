@@ -701,6 +701,9 @@ func (e *emitter) binary(x *ir.Binary) string {
 		if isString(t) {
 			return e.narrow(x.Type, fmt.Sprintf("$concat(%s, %s)", left, right))
 		}
+		if set, ok := typeset.Describe(t); ok && set.Addable && !set.Numeric {
+			return fmt.Sprintf("%s.add(%s, %s)", e.dictOf(t), left, right)
+		}
 	}
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok && e.mixedForm(tp) {
 		left = "(" + left + " as dynamic)"

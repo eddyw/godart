@@ -391,9 +391,6 @@
   "tinyfin": [
     "$DIR/tinyfin.go:28:11: undefined: runtime.SetFinalizer"
   ],
-  "typeparam/adder": [
-    "$DIR/adder.go:19:9: the operator + reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
-  ],
   "typeparam/chans": [
     "$DIR/chans.go:190:10: undefined: runtime.SetFinalizer"
   ],

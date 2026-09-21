@@ -28,10 +28,10 @@ func (v *verifier) checkTypeParamOp(n ast.Node) {
 	case *ast.UnaryExpr:
 		switch n.Op {
 		case token.SUB, token.XOR:
-			v.rejectArith(n.Pos(), v.typeOf(n.X), "the operator "+n.Op.String())
+			v.rejectArith(n.Pos(), v.typeOf(n.X), n.Op)
 		}
 	case *ast.IncDecStmt:
-		v.rejectArith(n.Pos(), v.typeOf(n.X), "the operator "+n.Tok.String())
+		v.rejectArith(n.Pos(), v.typeOf(n.X), n.Tok)
 	case *ast.AssignStmt:
 		v.checkTypeParamAssign(n)
 	case *ast.CallExpr:
@@ -68,27 +68,26 @@ func (v *verifier) checkTypeParamArith(e *ast.BinaryExpr) {
 			t = v.typeOf(e.Y)
 		}
 	}
-	v.rejectArith(e.Pos(), t, "the operator "+e.Op.String())
+	v.rejectArith(e.Pos(), t, e.Op)
 }
 
 func (v *verifier) checkTypeParamAssign(s *ast.AssignStmt) {
 	if s.Tok == token.ASSIGN || s.Tok == token.DEFINE || len(s.Lhs) != 1 {
 		return
 	}
-	v.rejectArith(s.Pos(), v.typeOf(s.Lhs[0]), "the operator "+s.Tok.String())
+	v.rejectArith(s.Pos(), v.typeOf(s.Lhs[0]), s.Tok)
 }
 
-// rejectArith rejects arithmetic outside the numeric type sets.
-func (v *verifier) rejectArith(pos token.Pos, t types.Type, what string) {
+func (v *verifier) rejectArith(pos token.Pos, t types.Type, op token.Token) {
 	set, ok := typeset.Describe(t)
 	if !ok || typeset.Core(t) != nil {
 		return
 	}
 	tp := types.Unalias(t).(*types.TypeParam)
-	if !set.Numeric {
+	if !set.Numeric && !(set.Addable && (op == token.ADD || op == token.ADD_ASSIGN)) {
 		v.reject(pos, "the compiler gives a type parameter 1 Dart type",
-			"%s reads the type parameter %s, and its constraint holds more than 1 Dart type",
-			what, tp.Obj().Name())
+			"the operator %s reads the type parameter %s, and its constraint holds more than 1 Dart type",
+			op, tp.Obj().Name())
 	}
 }
 
