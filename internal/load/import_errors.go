@@ -7,6 +7,7 @@ package load
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -44,4 +45,24 @@ func compilerImportDiagnostic(pkg *packages.Package, diagnostic packages.Error) 
 		}
 	}
 	return diagnostic
+}
+
+// The compiler already reports malformed import literals. Discovery and type
+// analysis repeat that diagnostic at the literal start.
+func redundantImportError(pkg *packages.Package, diagnostic packages.Error) bool {
+	if diagnostic.Kind != packages.ListError && diagnostic.Kind != packages.TypeError {
+		return false
+	}
+	for _, file := range pkg.Syntax {
+		for _, spec := range file.Imports {
+			if _, err := strconv.Unquote(spec.Path.Value); err == nil {
+				continue
+			}
+			pos := pkg.Fset.Position(spec.Path.Pos()).String()
+			if diagnostic.Pos == pos || diagnostic.Pos == filepath.Base(pos) {
+				return true
+			}
+		}
+	}
+	return false
 }

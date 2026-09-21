@@ -12,7 +12,7 @@ import (
 	syntax "github.com/eddyw/godart/internal/gosyntax"
 )
 
-func compilerBranchErrors(pkg *packages.Package, sources map[string][]byte) (scanner.ErrorList, error) {
+func compilerParseErrors(pkg *packages.Package, sources map[string][]byte) (scanner.ErrorList, error) {
 	if !pkg.IllTyped {
 		return nil, nil
 	}
@@ -23,15 +23,15 @@ func compilerBranchErrors(pkg *packages.Package, sources map[string][]byte) (sca
 	}
 	var diagnostics scanner.ErrorList
 	for _, file := range pkg.Syntax {
-		hasBranch := false
+		needsParse := false
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch n.(type) {
-			case *ast.BranchStmt, *ast.LabeledStmt:
-				hasBranch = true
+			case *ast.BranchStmt, *ast.LabeledStmt, *ast.TypeSwitchStmt:
+				needsParse = true
 			}
-			return !hasBranch
+			return !needsParse
 		})
-		if !hasBranch {
+		if !needsParse {
 			continue
 		}
 		name := pkg.Fset.PositionFor(file.Pos(), false).Filename

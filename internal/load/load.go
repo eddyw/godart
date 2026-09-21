@@ -473,14 +473,14 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte) error {
 		if !root[p.ID] && overlay.Outside(p.PkgPath) {
 			return
 		}
-		branches, err := compilerBranchErrors(p, sources)
+		parsed, err := compilerParseErrors(p, sources)
 		if err != nil {
 			errs = append(errs, err)
 			return
 		}
-		if len(branches) != 0 {
-			// The compiler reports branch errors before type analysis.
-			for _, err := range branches {
+		if len(parsed) != 0 {
+			// The compiler reports parse errors before type analysis.
+			for _, err := range parsed {
 				errs = append(errs, err)
 			}
 			return
@@ -496,13 +496,17 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte) error {
 		}
 		syntaxError := false
 		for _, e := range p.Errors {
-			if e.Kind == packages.ParseError && strings.HasPrefix(e.Msg, "syntax error") {
+			if e.Kind == packages.ParseError && (strings.HasPrefix(e.Msg, "syntax error") ||
+				e.Msg == "expression in defer must be function call" || e.Msg == "expression in go must be function call") {
 				syntaxError = true
 			}
 		}
 		start := len(errs)
 		for _, e := range p.Errors {
 			if syntaxError && e.Kind != packages.ParseError {
+				continue
+			}
+			if redundantImportError(p, e) {
 				continue
 			}
 			e = compilerImportDiagnostic(p, e)
