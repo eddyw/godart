@@ -33,3 +33,8 @@ func storeStat(data []int64, errno int, stat *Stat_t) error {
 	*stat = statFromData(data)
 	return nil
 }
+
+// Unix returns the time stored in ts as seconds plus nanoseconds.
+func (ts *Timespec) Unix() (sec int64, nsec int64) {
+	return int64(ts.Sec), int64(ts.Nsec)
+}

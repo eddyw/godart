@@ -52,6 +52,8 @@ Linux and macOS on x64 and arm64 use native `Stat`, `Lstat`, and descriptor-base
 The same hosts support `syscall.Stat`, `Lstat`, and `Fstat` with `syscall.Stat_t` output and native errors.
 Read the output structure only after a successful call.
 These APIs preserve device/inode identity, permission bits, file types, and nanosecond modification times.
+`os.Chtimes` preserves nanoseconds and omitted timestamps through native APIs on these hosts.
+Filesystem timestamp limits still apply.
 `SameFile` compares native identity on these targets and rejects external `FileInfo` implementations.
 `FileInfo.Sys` returns the native SDK `*syscall.Stat_t` on these targets.
 Other native hosts retain approximate metadata and a nil `FileInfo.Sys`.

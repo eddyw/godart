@@ -6,6 +6,8 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'string.dart';
+
 final _libc = DynamicLibrary.process();
 final _fchmod = Platform.isMacOS
     ? _libc.lookupFunction<Int Function(Int, Uint16), int Function(int, int)>(
@@ -38,4 +40,66 @@ int $fileChown(int fd, int uid, int gid) {
     error = _fchown(fd, uid, gid) == 0 ? 0 : _errno().value;
   } while (error == 4);
   return error;
+}
+
+final _utimensat = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Pointer<Int64>, Int),
+      int Function(int, Pointer<Uint8>, Pointer<Int64>, int)
+    >('utimensat');
+final _malloc = _libc
+    .lookupFunction<
+      Pointer<Uint8> Function(Size),
+      Pointer<Uint8> Function(int)
+    >('malloc');
+final _free = _libc
+    .lookupFunction<
+      Void Function(Pointer<Uint8>),
+      void Function(Pointer<Uint8>)
+    >('free');
+
+int $nativeChtimes(
+  GoString path,
+  int atime,
+  bool setAtime,
+  int mtime,
+  bool setMtime,
+) {
+  final bytes = path.bytes;
+  if (bytes.contains(0)) return 22;
+  final buffer = _malloc(32 + bytes.length + 1);
+  if (buffer == nullptr) return 12;
+  try {
+    final times = buffer.cast<Int64>();
+    final omitted = Platform.isMacOS ? -2 : 1073741822;
+    void store(int index, int value, bool set) {
+      if (!set) {
+        times[index] = omitted;
+        times[index + 1] = omitted;
+        return;
+      }
+      final nsec = value % 1000000000;
+      var sec = value ~/ 1000000000;
+      if (value < 0 && nsec != 0) sec--;
+      times[index] = sec;
+      times[index + 1] = nsec;
+    }
+
+    store(0, atime, setAtime);
+    store(2, mtime, setMtime);
+    final name = buffer + 32;
+    name.asTypedList(bytes.length + 1)
+      ..setRange(0, bytes.length, bytes)
+      ..[bytes.length] = 0;
+    final errno = _errno();
+    int error;
+    do {
+      error = _utimensat(Platform.isMacOS ? -2 : -100, name, times, 0) == 0
+          ? 0
+          : errno.value;
+    } while (error == 4);
+    return error;
+  } finally {
+    _free(buffer);
+  }
 }

@@ -197,7 +197,7 @@ func TestSelectedUpstream(t *testing.T) {
 			"durationTruncateTests", "TestDurationTruncate", "durationRoundTests", "TestDurationRound", "durationAbsTests", "TestDurationAbs", "minDuration", "maxDuration",
 		}}},
 		"os": {
-			{Name: "os_test.go", Declarations: []string{"checkMode", "TestChmod", "TestSameFile", "testDevNullFileInfo", "testDevNullFile", "TestDevNullFile", "TestStatDirModeExec", "TestFileChdir", "TestChdirAndGetwd", "TestProgWideChdir", "equal", "TestGetppid", "TestAppend", "writeFile", "TestSeek", "newFile", "TestRename", "TestRenameOverwriteDest", "TestRenameFailed", "TestRenameNotExisting", "TestRenameToDirFailed", "TestRenameCaseDifference"}},
+			{Name: "os_test.go", Declarations: []string{"TestChtimes", "TestChtimesOmit", "testChtimesOmit", "TestChtimesDir", "testChtimes", "TestChtimesToUnixZero", "hasNoatime", "checkMode", "TestChmod", "TestSameFile", "testDevNullFileInfo", "testDevNullFile", "TestDevNullFile", "TestStatDirModeExec", "TestFileChdir", "TestChdirAndGetwd", "TestProgWideChdir", "equal", "TestGetppid", "TestAppend", "writeFile", "TestSeek", "newFile", "TestRename", "TestRenameOverwriteDest", "TestRenameFailed", "TestRenameNotExisting", "TestRenameToDirFailed", "TestRenameCaseDifference"}},
 			{Name: "os_unix_test.go", Declarations: []string{"checkUidGid", "TestChown", "TestFileChown", "TestLchown"}},
 			{Name: "stat_test.go", Declarations: []string{"testStatAndLstatParams", "testStatAndLstat", "testIsDir", "testIsSymlink", "testIsFile", "testDirStats", "testFileStats", "testSymlinkStats", "testSymlinkSameFile", "testSymlinkSameFileOpen", "TestDirAndSymlinkStats", "TestFileAndSymlinkStats", "TestSymlinkWithTrailingSlash", "TestClosedStat", "TestStatNotExist"}},
 			{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "error_test.go"},
@@ -363,6 +363,11 @@ import . "os/signal"
 				writeFile(t, filepath.Join(fixture, "helper_test.go"), source)
 			}
 
+			if pkg == "os" {
+				source := selectedUpstreamSource(t, filepath.Join(dir, "stat_"+runtime.GOOS+".go"), []string{"atime"})
+				source = strings.Replace(source, "package os\n", "package os_test\nimport . \"os\"\n", 1)
+				writeFile(t, filepath.Join(fixture, "atime_test.go"), source+"\nvar Atime = atime\n")
+			}
 			if pkg == "os/exec" {
 				source := selectedUpstreamSource(t, "../overlay/std/os/exec/exec.go", []string{"dedupEnvCase"})
 				writeFile(t, filepath.Join(fixture, "helper.go"), source)
@@ -587,7 +592,7 @@ func selectedUpstreamSource(t *testing.T, path string, names []string) string {
 		declarations = append(declarations, decl)
 		ast.Inspect(decl, func(n ast.Node) bool {
 			if sel, ok := n.(*ast.SelectorExpr); ok {
-				if id, ok := sel.X.(*ast.Ident); ok {
+				if id, ok := sel.X.(*ast.Ident); ok && id.Obj == nil {
 					used[id.Name] = true
 				}
 			}

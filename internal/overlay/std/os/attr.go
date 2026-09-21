@@ -128,12 +128,16 @@ func (f *File) Chown(uid, gid int) error {
 
 // Chtimes writes the time of the last read and the time of the last change of
 // the named file. A zero time leaves that 1 of the 2 alone.
-//
-// dart:io writes the millisecond, thus a finer part of the time does not reach
-// the file system.
 func Chtimes(name string, atime time.Time, mtime time.Time) error {
 	if contains(name, "\x00") {
 		return &PathError{Op: "chtimes", Path: name, Err: syscall.EINVAL}
+	}
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		errno := dart.NativeChtimes(name, atime.UnixNano(), !atime.IsZero(), mtime.UnixNano(), !mtime.IsZero())
+		if errno != 0 {
+			return &PathError{Op: "chtimes", Path: name, Err: syscall.Errno(errno)}
+		}
+		return nil
 	}
 	cause := dart.Chtimes(name, atime.UnixNano(), !atime.IsZero(),
 		mtime.UnixNano(), !mtime.IsZero())

@@ -144,3 +144,11 @@ void $stderr(GoString text) => $platformStderrText(text.toDartString());
 /// Each program that reads the package fmt names this function, because the
 /// scan family of that package reads standard input.
 (int, GoString) $stdinRead(Slice<GoInt> p) => (0, GoString.empty);
+
+int $nativeChtimes(
+  GoString path,
+  int atime,
+  bool setAtime,
+  int mtime,
+  bool setMtime,
+) => 38;

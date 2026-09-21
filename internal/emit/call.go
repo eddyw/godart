@@ -648,6 +648,9 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "Chown":
 		return fmt.Sprintf("$chown(%s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3]), true
+	case "NativeChtimes":
+		return fmt.Sprintf("$nativeChtimes(%s, %s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3], args[4]), true
 	case "Chtimes":
 		return fmt.Sprintf("$chtimes(%s, %s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3], args[4]), true

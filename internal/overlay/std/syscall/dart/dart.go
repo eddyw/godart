@@ -1090,6 +1090,11 @@ func Chtimes(path string, atime int64, setAtime bool, mtime int64, setMtime bool
 	panic("syscall/dart needs the gart compiler")
 }
 
+// NativeChtimes updates native timestamps and returns errno.
+func NativeChtimes(path string, atime int64, setAtime bool, mtime int64, setMtime bool) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ReadLink gives the target of 1 symbolic link. A path that holds no link
 // gives a cause.
 func ReadLink(path string) (string, string) {
