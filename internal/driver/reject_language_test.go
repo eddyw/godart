@@ -104,6 +104,8 @@ func TestDiagnostics(t *testing.T) {
 					result.Status = "failed"
 				case t.Skipped():
 					result.Status = "excluded"
+				case result.Fixture.ExpectedFailure:
+					result.Status = "upstream-expected-failure"
 				default:
 					result.Status = "passed"
 				}
@@ -149,7 +151,11 @@ func TestDiagnostics(t *testing.T) {
 				path := filepath.Join(dir, match.name+".txt")
 				writeFile(t, path, match.diagnostics)
 				*match.mismatch = recordLanguage(t, match.execution, dir, runLimit, "env", "GART_ERRORCHECK_SOURCE="+sourcePath, "GART_ERRORCHECK_DIAGNOSTICS="+path, executable, "-test.run=^TestDiagnostics$")
-				if match.execution.Exit != 0 {
+				if c.ExpectedFailure {
+					if match.execution.Exit != 1 {
+						t.Errorf("%s: upstream expects a diagnostic mismatch, got exit %d", match.name, match.execution.Exit)
+					}
+				} else if match.execution.Exit != 0 {
 					t.Errorf("%s assertions:\n%s", match.name, *match.mismatch)
 				}
 			}

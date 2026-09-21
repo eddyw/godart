@@ -266,7 +266,7 @@ def language_behavior(paths):
                 else:
                     status = case["status"] if report["complete"] else "unobserved"
                 local.add(name)
-                if status == "passed":
+                if status in {"passed", "upstream-expected-failure"}:
                     expected = case.get("expected_sha256")
                     executed = all(case[k]["ran"] and case[k]["exit"] == 0 and not case[k]["timed_out"]
                                    for k in ("native", "gart"))
@@ -276,13 +276,20 @@ def language_behavior(paths):
                     elif case.get("contract") == "reject":
                         rejected = all(case[k]["ran"] and case[k]["exit"] > 0 and not case[k]["timed_out"]
                                        for k in ("native", "gart"))
-                        matched = all(case.get(k, {}).get("ran") and case[k]["exit"] == 0
+                        upstream_failure = bool(case["fixture"].get("upstream_expected_failure"))
+                        matcher_exit = 1 if upstream_failure else 0
+                        matched = all(case.get(k, {}).get("ran") and case[k]["exit"] == matcher_exit
                                       and not case[k]["timed_out"] for k in ("native_match", "gart_match"))
+                        if upstream_failure:
+                            matched = matched and all(case.get(k + "_mismatch") and
+                                hashlib.sha256(case[k + "_mismatch"].encode()).hexdigest() == case[k + "_match"].get("output_sha256")
+                                for k in ("native", "gart"))
                         diagnostics = all(case.get(k + "_diagnostics") and
                                           hashlib.sha256(case[k + "_diagnostics"].encode()).hexdigest() == case[k]["output_sha256"]
                                           for k in ("native", "gart"))
                         valid = (rejected and matched and diagnostics and case.get("build_error")
-                                 and case.get("wrapper_sha256") and case["fixture"]["recipe"] == "errorcheck")
+                                 and case.get("wrapper_sha256") and case["fixture"]["recipe"] == "errorcheck"
+                                 and (status == "upstream-expected-failure") == upstream_failure)
                     else:
                         valid = expected and executed and all(case[k]["output_sha256"] == expected
                                                               for k in ("native", "gart"))
@@ -293,6 +300,7 @@ def language_behavior(paths):
                                      and generator.get("ran") and generator.get("exit") == 0
                                      and not generator.get("timed_out") and not case.get("build_error")
                                      and hashlib.sha256(source.encode()).hexdigest() == generator.get("output_sha256"))
+                    valid = valid and (status == "passed" or case.get("contract") == "reject")
                     valid = valid and config["contract"] in {"run", "runoutput", "compile", "reject"} and case.get("contract", "run") == config["contract"]
 
                     if case["fixture"].get("host_tools"):

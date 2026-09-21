@@ -20,7 +20,7 @@ func TestLanguageInventory(t *testing.T) {
 		}
 	}
 	write("VERSION", "go1.27.1\n")
-	write("src/cmd/internal/testdir/testdir_test.go", `package testdir_test; var dirs=[]string{".","other"}`)
+	write("src/cmd/internal/testdir/testdir_test.go", `package testdir_test; var dirs=[]string{".","other"}; var types2Failures=setOf("reject.go"); var types2Failures32Bit=setOf("compile.go")`)
 	write("test/run.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/run.out", "expected\n")
 	write("test/compile.go", "// compile\npackage p\n")
@@ -48,6 +48,9 @@ func TestLanguageInventory(t *testing.T) {
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
 		cases[c.Name] = c
+	}
+	if !cases["reject"].ExpectedFailure {
+		t.Fatal("upstream expected failure lost")
 	}
 	if cases["reject"].Adapter != "reject-file" || cases["rejectflags"].Adapter != "missing" {
 		t.Fatal("the rejection adapter must not discard recipe flags")
@@ -133,6 +136,25 @@ func TestLanguagePolicy(t *testing.T) {
 	for name, diagnostics := range policy.Rejections {
 		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "compile-file") || len(diagnostics) == 0 {
 			t.Errorf("invalid language rejection: %s", name)
+		}
+	}
+}
+
+func TestLanguageExpectedFailures(t *testing.T) {
+	source := []byte(`package testdir; var types2Failures=setOf("one.go"); var types2Failures32Bit=setOf("two.go")`)
+	for _, arch := range []string{"amd64", "arm64", "386", "arm", "mips", "mipsle"} {
+		got, err := languageExpectedFailures(source, arch)
+		if err != nil {
+			t.Fatal(err)
+		}
+		narrow := arch != "amd64" && arch != "arm64"
+		if !got["one.go"] || got["two.go"] != narrow {
+			t.Fatalf("%s: %v", arch, got)
+		}
+	}
+	for _, invalid := range []string{`package p`, `package p; var types2Failures=[]string{"one.go"}`, `package p; var types2Failures=setOf(name)`} {
+		if _, err := languageExpectedFailures([]byte(invalid), "amd64"); err == nil {
+			t.Fatal("accepted an unrecognized upstream failure list")
 		}
 	}
 }

@@ -196,8 +196,12 @@ Known compiler rejections retain exact diagnostics and never count as passes.
 Compile evidence records the wrapper hash and remains separate from runtime evidence.
 
 The `language-reject` audit compares exact `errorcheck` recipes. It preserves original source bytes and uses the installed SDK's annotation matcher.
-Both compilers must reject the source and satisfy all original diagnostic assertions. Reports retain diagnostics, matcher results, and source fingerprints.
-Diagnostic text and source-line mismatches count as failures, even when both compilers reject the file.
+Both compilers must reject the source and satisfy the active upstream policy.
+Reports retain diagnostics, matcher results, and source fingerprints.
+A successful diagnostic result requires all original assertions to pass.
+The adapter reads expected failures from the upstream runner and requires both original matchers to fail for those fixtures.
+Reports retain those results as `upstream-expected-failure`, separate from passed assertions.
+Other diagnostic text and source-line mismatches count as failures.
 Native assertion failures remain visible. Recipe options require separate adapters.
 
 ```sh

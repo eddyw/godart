@@ -307,6 +307,44 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
+    def test_upstream_expected_failure_requires_observed_mismatches(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            text, mismatch = "invalid source", "original matcher mismatch"
+            execution = dict(ran=True, exit=1, timed_out=False,
+                             output_sha256=parity.hashlib.sha256(text.encode()).hexdigest())
+            match = {**execution, "output_sha256": parity.hashlib.sha256(mismatch.encode()).hexdigest()}
+            case = dict(fixture=dict(name="p", recipe="errorcheck", upstream_expected_failure=True),
+                        contract="reject", status="upstream-expected-failure", wrapper_sha256="matcher",
+                        build_error=text, native=dict(execution), gart=dict(execution),
+                        native_match=dict(match), gart_match=dict(match),
+                        native_diagnostics=text, gart_diagnostics=text,
+                        native_mismatch=mismatch, gart_mismatch=mismatch)
+            report = dict(kind="language", complete=True, outcomes=[case], shard=0, shards=1)
+            path = root / "language.json"
+
+            def assess(status):
+                parity.save(path, report)
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            assess("upstream-expected-failure")
+            for key in ("native", "gart", "native_match", "gart_match"):
+                saved = dict(case[key])
+                for field, value in (("ran", False), ("exit", 0), ("timed_out", True)):
+                    case[key] = {**saved, field: value}
+                    assess("failed")
+                case[key] = saved
+            for key in ("native_mismatch", "gart_mismatch"):
+                case[key] = "different mismatch"
+                assess("failed")
+                case[key] = mismatch
+            case["fixture"]["upstream_expected_failure"] = False
+            assess("failed")
+            case["fixture"]["upstream_expected_failure"] = True
+            case["status"] = "passed"
+            case["native_match"]["exit"] = case["gart_match"]["exit"] = 0
+            assess("failed")
+
     def test_rejection_results_preserve_failures(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

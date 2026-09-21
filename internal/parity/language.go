@@ -44,18 +44,19 @@ func ReadLanguagePolicy() (*LanguagePolicy, error) {
 }
 
 type LanguageCase struct {
-	HostTools      bool         `json:"host_tools,omitempty"`
-	Companions     []string     `json:"companions,omitempty"`
-	Exclusion      *Omission    `json:"exclusion,omitempty"`
-	Rejection      []string     `json:"rejection,omitempty"`
-	Name           string       `json:"name"`
-	File           string       `json:"file"`
-	Recipe         string       `json:"recipe"`
-	Action         string       `json:"action"`
-	NativeEligible bool         `json:"native_eligible"`
-	GartEligible   bool         `json:"gart_eligible"`
-	Adapter        string       `json:"adapter"`
-	Files          []SourceFile `json:"files"`
+	ExpectedFailure bool         `json:"upstream_expected_failure,omitempty"`
+	HostTools       bool         `json:"host_tools,omitempty"`
+	Companions      []string     `json:"companions,omitempty"`
+	Exclusion       *Omission    `json:"exclusion,omitempty"`
+	Rejection       []string     `json:"rejection,omitempty"`
+	Name            string       `json:"name"`
+	File            string       `json:"file"`
+	Recipe          string       `json:"recipe"`
+	Action          string       `json:"action"`
+	NativeEligible  bool         `json:"native_eligible"`
+	GartEligible    bool         `json:"gart_eligible"`
+	Adapter         string       `json:"adapter"`
+	Files           []SourceFile `json:"files"`
 }
 
 type LanguageInventory struct {
@@ -84,6 +85,10 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 		return nil, err
 	}
 	dirs, err := languageDirectories(source)
+	if err != nil {
+		return nil, err
+	}
+	failures, err := languageExpectedFailures(source, ctx.GOARCH)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +125,7 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", file, err)
 			}
-			c := LanguageCase{Name: strings.TrimSuffix(file, ".go"), File: file, Recipe: recipe, Action: fields[0], NativeEligible: native, GartEligible: eligible, Adapter: "missing", Files: []SourceFile{{Path: file, SHA256: digest(data)}}}
+			c := LanguageCase{ExpectedFailure: failures[file], Name: strings.TrimSuffix(file, ".go"), File: file, Recipe: recipe, Action: fields[0], NativeEligible: native, GartEligible: eligible, Adapter: "missing", Files: []SourceFile{{Path: file, SHA256: digest(data)}}}
 			switch c.Name {
 			case "fixedbugs/issue21317", "linkobj", "winbatch":
 				c.HostTools = true
@@ -260,4 +265,56 @@ func languageEligible(source string, ctx build.Context, gcflags string) bool {
 		}
 	}
 	return true
+}
+
+func languageExpectedFailures(source []byte, arch string) (map[string]bool, error) {
+	tree, err := parser.ParseFile(token.NewFileSet(), "testdir_test.go", source, 0)
+	if err != nil {
+		return nil, err
+	}
+	names := []string{"types2Failures"}
+	switch arch {
+	case "386", "arm", "mips", "mipsle":
+		names = append(names, "types2Failures32Bit")
+	}
+	failures := map[string]bool{}
+	for _, name := range names {
+		found := false
+		for _, declaration := range tree.Decls {
+			group, ok := declaration.(*ast.GenDecl)
+			if !ok || group.Tok != token.VAR {
+				continue
+			}
+			for _, item := range group.Specs {
+				value, ok := item.(*ast.ValueSpec)
+				if !ok || len(value.Names) != 1 || value.Names[0].Name != name || len(value.Values) != 1 {
+					continue
+				}
+				call, ok := value.Values[0].(*ast.CallExpr)
+				if !ok {
+					return nil, fmt.Errorf("upstream failure list %s changed shape", name)
+				}
+				fn, ok := call.Fun.(*ast.Ident)
+				if !ok || fn.Name != "setOf" {
+					return nil, fmt.Errorf("upstream failure list %s no longer uses setOf", name)
+				}
+				for _, argument := range call.Args {
+					literal, ok := argument.(*ast.BasicLit)
+					if !ok || literal.Kind != token.STRING {
+						return nil, fmt.Errorf("nonliteral upstream failure in %s", name)
+					}
+					path, err := strconv.Unquote(literal.Value)
+					if err != nil {
+						return nil, err
+					}
+					failures[path] = true
+				}
+				found = true
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("upstream language runner has no %s list", name)
+		}
+	}
+	return failures, nil
 }

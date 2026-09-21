@@ -87,6 +87,11 @@ A blocked package remains in the coverage denominator.
 A skip, compile failure, or unsupported target does not count as a parity pass.
 The source fingerprint must match before an SDK change receives acceptance.
 
+The language adapter reads expected failures from the active Go test runner.
+Reports retain these as `upstream-expected-failure`, separate from successful
+diagnostic assertions. Both compilers must reject the original source, and
+both original diagnostic matchers must fail as upstream expects.
+
 ## Flutter
 
 Glutter uses shared Go nodes, signals, and generated Dart host adapters.
