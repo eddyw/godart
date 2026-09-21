@@ -25,7 +25,8 @@ Type assertion diagnostics adapt Go `src/runtime/error.go`, `type.go`, and
 `src/cmd/compile/internal/reflectdata/reflect.go`. The emitter retains
 `internal/emit/LICENSE-Go`. The runtime license includes the Go BSD terms.
 Syscall constants and names use the active SDK `src/syscall/zerrors_*.go`
-file. Error methods adapt `src/syscall/syscall_unix.go` with its BSD notice.
+file. Native syscall data types use its selected `ztypes_*.go` file.
+Error methods adapt `src/syscall/syscall_unix.go` with its BSD notice.
 The test-environment command adapter follows `src/internal/testenv/testenv.go`
 and `exec.go` with the Go BSD notice.
 Test temporary directories and directory restoration adapt Go `src/testing/testing.go` with its BSD notice.
@@ -44,6 +45,8 @@ Descriptor-based directory changes follow Go `src/os/file_posix.go` with its BSD
 Native file metadata adapts Go `src/os/stat_linux.go`, `stat_darwin.go`,
 `types.go`, and `types_unix.go` with their BSD notice.
 The native adapter uses `src/syscall/ztypes_{linux,darwin}_{amd64,arm64}.go` layouts.
+The ownership adapter preserves original `src/os/os_unix_test.go` assertions
+and the `internal/testenv` unsupported-syscall predicates with their BSD notices.
 Unix `PWD` validation follows Go `src/os/getwd.go` with its BSD notice.
 The shared file state and rename rules follow Go `src/os/file_unix.go`
 with its BSD notice.

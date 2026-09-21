@@ -1017,14 +1017,16 @@ func WriteFile(path string, data []byte) string {
 
 func HasNativeStat() bool { panic("syscall/dart needs the gart compiler") }
 
-// NativeStat returns size, POSIX mode, modification seconds and nanoseconds,
-// device, inode, and errno. It follows the final link only when follow is true.
-func NativeStat(path string, follow bool) (int64, uint32, int64, int64, uint64, uint64, int) {
+// NativeStat returns metadata and errno. The metadata contains size, mode,
+// mtime seconds/nanoseconds, device, inode, link count, uid, gid, rdev,
+// block size/count, atime seconds/nanoseconds, ctime seconds/nanoseconds,
+// birthtime seconds/nanoseconds, flags, and generation.
+func NativeStat(path string, follow bool) ([]int64, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
 // NativeFstat returns the NativeStat fields for an open descriptor.
-func NativeFstat(fd int) (int64, uint32, int64, int64, uint64, uint64, int) {
+func NativeFstat(fd int) ([]int64, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

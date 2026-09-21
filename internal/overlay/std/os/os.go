@@ -480,8 +480,8 @@ func (f *File) Stat() (FileInfo, error) {
 		return nil, err
 	}
 	if dart.HasNativeStat() {
-		size, mode, seconds, nanos, device, inode, errno := dart.NativeFstat(int(f.Fd()))
-		return nativeFileInfo(f.name, "stat", size, mode, seconds, nanos, device, inode, errno)
+		data, errno := dart.NativeFstat(int(f.Fd()))
+		return nativeFileInfo(f.name, "stat", data, errno)
 	}
 	return Stat(f.name)
 }
@@ -628,12 +628,13 @@ type fileStat struct {
 	nanos   int64
 	device  uint64
 	inode   uint64
+	sys     any
 }
 
 func (i *fileStat) Name() string       { return i.name }
 func (i *fileStat) Size() int64        { return i.size }
 func (i *fileStat) IsDir() bool        { return i.mode.IsDir() }
-func (i *fileStat) Sys() any           { return nil }
+func (i *fileStat) Sys() any           { return i.sys }
 func (i *fileStat) Mode() FileMode     { return i.mode }
 func (i *fileStat) ModTime() time.Time { return time.Unix(i.seconds, i.nanos) }
 
@@ -643,8 +644,8 @@ func Stat(name string) (FileInfo, error) {
 		return nil, &PathError{Op: "stat", Path: name, Err: syscall.EINVAL}
 	}
 	if dart.HasNativeStat() {
-		size, mode, seconds, nanos, device, inode, errno := dart.NativeStat(name, true)
-		return nativeFileInfo(name, "stat", size, mode, seconds, nanos, device, inode, errno)
+		data, errno := dart.NativeStat(name, true)
+		return nativeFileInfo(name, "stat", data, errno)
 	}
 	size, dir, nanos, cause := dart.Stat(name)
 	if cause != "" {
@@ -663,8 +664,8 @@ func Lstat(name string) (FileInfo, error) {
 		return nil, &PathError{Op: "lstat", Path: name, Err: syscall.EINVAL}
 	}
 	if dart.HasNativeStat() {
-		size, mode, seconds, nanos, device, inode, errno := dart.NativeStat(name, false)
-		return nativeFileInfo(name, "lstat", size, mode, seconds, nanos, device, inode, errno)
+		data, errno := dart.NativeStat(name, false)
+		return nativeFileInfo(name, "lstat", data, errno)
 	}
 	size, dir, link, nanos, cause := dart.Lstat(name)
 	if cause != "" {

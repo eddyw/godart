@@ -47,7 +47,8 @@ On Unix platforms, `Getwd` preserves an absolute `PWD` alias only when it names 
 Linux and macOS on x64 and arm64 use native `Stat`, `Lstat`, and descriptor-based `File.Stat`.
 These APIs preserve device/inode identity, permission bits, file types, and nanosecond modification times.
 `SameFile` compares native identity on these targets and rejects external `FileInfo` implementations.
-`FileInfo.Sys` remains nil. Other native hosts retain approximate metadata.
+`FileInfo.Sys` returns the native SDK `*syscall.Stat_t` on these targets.
+Other native hosts retain approximate metadata and a nil `FileInfo.Sys`.
 Directory enumeration still uses paths.
 Other native hosts and browsers do not support `os.File.Fd`.
 

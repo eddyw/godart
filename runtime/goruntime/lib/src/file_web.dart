@@ -55,11 +55,10 @@ GoString $writeFile(GoString path, Slice<GoInt> data) => _noSys;
 
 const bool $hasNativeStat = false;
 
-(int, int, int, int, int, int, int) $nativeStat(GoString path, bool follow) =>
-    (0, 0, 0, 0, 0, 0, 38);
+(Slice<int>, int) $nativeStat(GoString path, bool follow) =>
+    (Slice<int>.nil(), 38);
 
-(int, int, int, int, int, int, int) $nativeFstat(int fd) =>
-    (0, 0, 0, 0, 0, 0, 38);
+(Slice<int>, int) $nativeFstat(int fd) => (Slice<int>.nil(), 38);
 
 (int, bool, int, GoString) $stat(GoString path) => (0, false, 0, _noSys);
 

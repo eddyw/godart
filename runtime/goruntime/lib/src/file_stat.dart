@@ -6,6 +6,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'slice.dart';
 import 'string.dart';
 
 final bool $hasNativeStat = switch (Abi.current()) {
@@ -44,36 +45,67 @@ final _errno = _libc
       Platform.isMacOS ? '__error' : '__errno_location',
     );
 
-(int, int, int, int, int, int, int) _readStat(
-  int Function(Pointer<Uint8>) read,
-) {
+(Slice<int>, int) _readStat(int Function(Pointer<Uint8>) read) {
   final buffer = _malloc(144);
-  if (buffer == nullptr) return (0, 0, 0, 0, 0, 0, 12);
+  if (buffer == nullptr) return (Slice<int>.nil(), 12);
   try {
     int error;
     do {
       error = read(buffer) == 0 ? 0 : _errno().value;
     } while (error == 4);
-    if (error != 0) return (0, 0, 0, 0, 0, 0, error);
+    if (error != 0) return (Slice<int>.nil(), error);
     final data = ByteData.sublistView(buffer.asTypedList(144));
     if (Platform.isMacOS) {
       return (
-        data.getInt64(96, Endian.host),
-        data.getUint16(4, Endian.host),
-        data.getInt64(48, Endian.host),
-        data.getInt64(56, Endian.host),
-        data.getUint32(0, Endian.host),
-        data.getUint64(8, Endian.host),
+        Slice.of([
+          data.getInt64(96, Endian.host),
+          data.getUint16(4, Endian.host),
+          data.getInt64(48, Endian.host),
+          data.getInt64(56, Endian.host),
+          data.getInt32(0, Endian.host),
+          data.getUint64(8, Endian.host),
+          data.getUint16(6, Endian.host),
+          data.getUint32(16, Endian.host),
+          data.getUint32(20, Endian.host),
+          data.getInt32(24, Endian.host),
+          data.getInt32(112, Endian.host),
+          data.getInt64(104, Endian.host),
+          data.getInt64(32, Endian.host),
+          data.getInt64(40, Endian.host),
+          data.getInt64(64, Endian.host),
+          data.getInt64(72, Endian.host),
+          data.getInt64(80, Endian.host),
+          data.getInt64(88, Endian.host),
+          data.getUint32(116, Endian.host),
+          data.getUint32(120, Endian.host),
+        ]),
         0,
       );
     }
+    final x64 = Abi.current() == Abi.linuxX64;
     return (
-      data.getInt64(48, Endian.host),
-      data.getUint32(Abi.current() == Abi.linuxX64 ? 24 : 16, Endian.host),
-      data.getInt64(88, Endian.host),
-      data.getInt64(96, Endian.host),
-      data.getUint64(0, Endian.host),
-      data.getUint64(8, Endian.host),
+      Slice.of([
+        data.getInt64(48, Endian.host),
+        data.getUint32(x64 ? 24 : 16, Endian.host),
+        data.getInt64(88, Endian.host),
+        data.getInt64(96, Endian.host),
+        data.getUint64(0, Endian.host),
+        data.getUint64(8, Endian.host),
+        x64 ? data.getUint64(16, Endian.host) : data.getUint32(20, Endian.host),
+        data.getUint32(x64 ? 28 : 24, Endian.host),
+        data.getUint32(x64 ? 32 : 28, Endian.host),
+        data.getUint64(x64 ? 40 : 32, Endian.host),
+        x64 ? data.getInt64(56, Endian.host) : data.getInt32(56, Endian.host),
+        data.getInt64(64, Endian.host),
+        data.getInt64(72, Endian.host),
+        data.getInt64(80, Endian.host),
+        data.getInt64(104, Endian.host),
+        data.getInt64(112, Endian.host),
+        0,
+        0,
+        0,
+        0,
+      ]),
       0,
     );
   } finally {
@@ -81,11 +113,11 @@ final _errno = _libc
   }
 }
 
-(int, int, int, int, int, int, int) $nativeStat(GoString path, bool follow) {
+(Slice<int>, int) $nativeStat(GoString path, bool follow) {
   final bytes = path.bytes;
-  if (bytes.contains(0)) return (0, 0, 0, 0, 0, 0, 22);
+  if (bytes.contains(0)) return (Slice<int>.nil(), 22);
   final name = _malloc(bytes.length + 1);
-  if (name == nullptr) return (0, 0, 0, 0, 0, 0, 12);
+  if (name == nullptr) return (Slice<int>.nil(), 12);
   try {
     name.asTypedList(bytes.length + 1)
       ..setRange(0, bytes.length, bytes)
@@ -98,5 +130,5 @@ final _errno = _libc
   }
 }
 
-(int, int, int, int, int, int, int) $nativeFstat(int fd) =>
+(Slice<int>, int) $nativeFstat(int fd) =>
     _readStat((buffer) => _fstat(fd, buffer));

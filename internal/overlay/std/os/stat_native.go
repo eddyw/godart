@@ -11,10 +11,11 @@ import (
 	"syscall/dart"
 )
 
-func nativeFileInfo(name, op string, size int64, mode uint32, seconds, nanos int64, device, inode uint64, errno int) (FileInfo, error) {
+func nativeFileInfo(name, op string, data []int64, errno int) (FileInfo, error) {
 	if errno != 0 {
 		return nil, &PathError{Op: op, Path: name, Err: syscall.Errno(errno)}
 	}
+	mode := uint32(data[1])
 	m := FileMode(mode & 0777)
 	switch mode & 0170000 {
 	case 0060000, 0160000:
@@ -39,7 +40,7 @@ func nativeFileInfo(name, op string, size int64, mode uint32, seconds, nanos int
 	if mode&sISVTX != 0 {
 		m |= ModeSticky
 	}
-	return &fileStat{name: base(name), size: size, mode: m, seconds: seconds, nanos: nanos, device: device, inode: inode}, nil
+	return &fileStat{name: base(name), size: data[0], mode: m, seconds: data[2], nanos: data[3], device: uint64(data[4]), inode: uint64(data[5]), sys: nativeFileSys(data)}, nil
 }
 
 // SameFile compares descriptions from this package. Supported POSIX hosts
@@ -51,7 +52,7 @@ func SameFile(fi1, fi2 FileInfo) bool {
 		return false
 	}
 	if dart.HasNativeStat() {
-		return fs1.device == fs2.device && fs1.inode == fs2.inode
+		return nativeSameFile(fs1, fs2)
 	}
 	return fs1.size == fs2.size && fs1.mode == fs2.mode &&
 		fs1.ModTime().Equal(fs2.ModTime())

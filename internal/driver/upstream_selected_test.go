@@ -198,6 +198,7 @@ func TestSelectedUpstream(t *testing.T) {
 		}}},
 		"os": {
 			{Name: "os_test.go", Declarations: []string{"TestSameFile", "testDevNullFileInfo", "testDevNullFile", "TestDevNullFile", "TestStatDirModeExec", "TestFileChdir", "TestChdirAndGetwd", "TestProgWideChdir", "equal", "TestGetppid", "TestAppend", "writeFile", "TestSeek", "newFile", "TestRename", "TestRenameOverwriteDest", "TestRenameFailed", "TestRenameNotExisting", "TestRenameToDirFailed", "TestRenameCaseDifference"}},
+			{Name: "os_unix_test.go", Declarations: []string{"checkUidGid", "TestChown", "TestFileChown", "TestLchown"}},
 			{Name: "stat_test.go", Declarations: []string{"testStatAndLstatParams", "testStatAndLstat", "testIsDir", "testIsSymlink", "testIsFile", "testDirStats", "testFileStats", "testSymlinkStats", "testSymlinkSameFile", "testSymlinkSameFileOpen", "TestDirAndSymlinkStats", "TestFileAndSymlinkStats", "TestSymlinkWithTrailingSlash", "TestClosedStat", "TestStatNotExist"}},
 			{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "error_test.go"},
 			{Name: "read_test.go", Declarations: []string{"checkNamedSize", "TestReadFile", "TestWriteFile", "TestReadOnlyWriteFile"}},
@@ -335,6 +336,8 @@ import . "os/signal"
 				writeFile(t, filepath.Join(fixture, "testenv/testenv.go"), strings.TrimPrefix(source, "//go:build dart\n"))
 				if pkg == "os" {
 					writeFile(t, filepath.Join(fixture, "testenv/exec.go"), selectedUpstreamSource(t, "../overlay/std/internal/testenv/exec.go", nil))
+					writeFile(t, filepath.Join(fixture, "testenv/syscall.go"), selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/internal/testenv/testenv.go"), []string{"SyscallIsNotSupported"}))
+					writeFile(t, filepath.Join(fixture, "testenv/syscall_unix.go"), selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/internal/testenv/testenv_unix.go"), []string{"syscallIsNotSupported"}))
 				}
 			}
 
