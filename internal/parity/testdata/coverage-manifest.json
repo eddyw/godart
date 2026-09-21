@@ -18,7 +18,7 @@
   {
     "package": "cmp",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "diagnostic": "the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
@@ -258,9 +258,9 @@
   {
     "package": "crypto/internal/fips140/nistec",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.Getpagesize",
+    "diagnostic": "undefined: syscall.Mmap",
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires native memory-page sizes and memory protection through syscall."
+    "blocker_reason": "The suite requires native memory mapping and memory protection through syscall."
   },
   {
     "package": "crypto/internal/fips140/nistec/fiat",
@@ -354,7 +354,7 @@
   {
     "package": "crypto/md5",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "diagnostic": "the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
@@ -822,7 +822,7 @@
   {
     "package": "internal/fmtsort",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "diagnostic": "the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
@@ -1288,7 +1288,7 @@
   {
     "package": "text/template",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "diagnostic": "the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
@@ -1299,9 +1299,9 @@
   {
     "package": "time",
     "status": "compile-blocked",
-    "diagnostic": "-: import cycle not allowed in test",
+    "diagnostic": "undefined: absDays",
     "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The complete native test graph creates an import cycle with the time overlay. Selected public assertions execute separately."
+    "blocker_reason": "The original suite references private native time types, including absDays, that the Dart time overlay does not implement. Selected public assertions execute separately."
   },
   {
     "package": "time/tzdata",
