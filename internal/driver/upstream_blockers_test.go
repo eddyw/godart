@@ -24,7 +24,7 @@ func TestUpstreamCompileBlockers(t *testing.T) {
 	}
 	var names []string
 	for _, c := range coverage {
-		if c.Status == "compile-blocked" {
+		if c.Status == "compile-blocked" || c.Status == "runtime-blocked" {
 			names = append(names, c.Package)
 		}
 	}
@@ -37,6 +37,12 @@ func TestUpstreamCompileBlockers(t *testing.T) {
 		t.Run(c.Package, func(t *testing.T) {
 			t.Parallel()
 			_, err := driver.BuildWithStats(driver.Options{Dir: filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(c.Package)), Patterns: []string{"."}, Out: t.TempDir(), Runtime: runtimeDir(t), Tests: true, TrimPath: true})
+			if c.Status == "runtime-blocked" {
+				if err != nil {
+					t.Fatalf("runtime-blocked package no longer compiles: %v", err)
+				}
+				return
+			}
 			if err == nil {
 				t.Fatal("package now compiles: classify and execute its upstream tests")
 			}

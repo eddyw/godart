@@ -39,7 +39,9 @@ A new SDK marks old assessments for review. A new package remains unassessed.
 
 A package suite can contain explicit exclusions or partial assertions.
 Thus a package count does not imply complete behavioral parity for that package.
-A compile blocker never removes declarations from the denominator.
+A compile or runtime blocker never removes declarations from the denominator.
+`runtime-blocked` identifies a suite that compiles but lacks a complete successful execution.
+Its diagnostic records the observed failure. A successful build does not count as a behavior pass.
 
 Omissions distinguish implementation gaps, test adapters, target limits, and
 unassessed cases. They do not all represent unreachable behavior.

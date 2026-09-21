@@ -21,6 +21,8 @@ Its `LICENSE` retains the Go BSD terms. The diagnostic adapter follows
 Malformed literals retain the behavior of `src/cmd/compile/internal/types2/expr.go`.
 Range diagnostics follow `src/cmd/compile/internal/types2/range.go` and
 retain `internal/load/LICENSE-Go`.
+Syscall constants and names use the active SDK `src/syscall/zerrors_*.go`
+file. Error methods adapt `src/syscall/syscall_unix.go` with its BSD notice.
 The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
 The runtime license includes their BSD terms.

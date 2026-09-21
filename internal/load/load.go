@@ -445,6 +445,10 @@ func replaceFiles(out map[string][]byte, o overlay.Package, p *packages.Package,
 	}
 	empty := []byte("package " + p.Name + "\n")
 	for _, name := range p.CompiledGoFiles {
+		// The selected SDK file defines this platform's constants and names.
+		if o.Path == "syscall" && strings.HasPrefix(filepath.Base(name), "zerrors_") {
+			continue
+		}
 		if !taken[name] {
 			out[name] = empty
 		}

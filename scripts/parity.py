@@ -196,7 +196,7 @@ def behavior(paths, manifests=MANIFESTS):
                 for test in pkg["tests"] or []:
                     if test["eligible"] and test["kind"] != "Benchmark" and (pkg["path"], test["name"]) not in outcomes:
                         classification = coverage.get(pkg["path"], {}).get("status")
-                        status = "blocked" if classification == "compile-blocked" else "untested"
+                        status = "blocked" if classification in ("compile-blocked", "runtime-blocked") else "untested"
                         missing.append(dict(package=pkg["path"], name=test["name"], status=status))
             group["unobserved_inventory"] = missing
             group["unobserved_counts"] = dict(Counter(x["status"] for x in missing))

@@ -344,10 +344,11 @@ class ParityTest(unittest.TestCase):
             reports = root / "reports"
             reports.mkdir()
             parity.save(manifests / "coverage-manifest.json", [
-                dict(package="p", status="vm-suite"), dict(package="q", status="compile-blocked")])
+                dict(package="p", status="vm-suite"), dict(package="q", status="compile-blocked"),
+                dict(package="r", status="runtime-blocked")])
             parity.save(manifests / "go1/os-arch.json", dict(source_sha256="sdk", packages=[
                 dict(path=pkg, tests=[dict(name=name, eligible=True, kind="Test") for name in names])
-                for pkg, names in [("p", ["TestPass", "TestPartial", "TestMissing"]), ("q", ["TestBlocked"])]]))
+                for pkg, names in [("p", ["TestPass", "TestPartial", "TestMissing"]), ("q", ["TestBlocked"]), ("r", ["TestRuntimeBlocked"])]]))
             record = dict(package="p", expected=["TestPass", "TestPartial"], go_version="go1", goos="os", goarch="arch",
                           source_sha256="sdk", target="vm", short=True, native=dict(exit=0), gart=dict(exit=0),
                           comparison=dict(passed=["TestPass"], partial=["TestPartial"],
@@ -361,7 +362,7 @@ class ParityTest(unittest.TestCase):
             self.assertEqual(groups[0]["subtests"], {"excluded": 1})
             excluded = next(x for x in groups[0]["outcomes"] if x["name"] == "TestPartial/skip")
             self.assertEqual(excluded["exclusion_reasons"], ["no native allocation counter"])
-            self.assertEqual(groups[0]["unobserved_counts"], {"untested": 1, "blocked": 1})
+            self.assertEqual(groups[0]["unobserved_counts"], {"untested": 1, "blocked": 2})
             record["gart"]["exit"] = 1
             parity.save(reports / "failure.json", record)
             failed = parity.behavior([reports], manifests)[0]

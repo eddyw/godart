@@ -348,9 +348,6 @@
     "package": "crypto/internal/sysrand",
     "status": "compile-blocked",
     "diagnostic": "undefined: testingOnlyFailRead",
-    "platform_diagnostics": {
-      "linux-amd64": "undefined: syscall.ENOSYS"
-    },
     "blocker_cause": "private-test-dependency",
     "blocker_reason": "The suite injects native random-source failures through private hooks and errno values."
   },
@@ -441,10 +438,10 @@
   },
   {
     "package": "crypto/tls",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.SIGSTOP",
-    "blocker_cause": "public-api-gap",
-    "blocker_reason": "The complete suite requires native process signals and errno contracts beyond the current syscall surface."
+    "status": "runtime-blocked",
+    "diagnostic": "TestWeakCertCache: timed out waiting for expected ref count",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite compiles. runtime.GC cannot reliably force Dart collection, and the original weak-certificate cleanup assertion times out. Complete short and full execution remain unverified."
   },
   {
     "package": "crypto/tls/internal/fips140tls",
@@ -1140,16 +1137,16 @@
   {
     "package": "os",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.ENOTEMPTY",
+    "diagnostic": "undefined: os.StartProcess",
     "blocker_cause": "public-api-gap",
-    "blocker_reason": "The complete suite requires native errno and file-descriptor behavior beyond the current surface."
+    "blocker_reason": "The complete suite requires native process creation and file-descriptor behavior beyond the current surface."
   },
   {
     "package": "os/exec",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.SIGSTOP",
+    "diagnostic": "undefined: syscall.SysProcAttr",
     "blocker_cause": "public-api-gap",
-    "blocker_reason": "The environment helper now matches upstream. The complete suite next requires native process signals and process attributes.",
+    "blocker_reason": "The complete suite requires native process attributes. Linux also requires syscall.NsecToTimespec.",
     "platform_diagnostics": {
       "linux-amd64": "undefined: syscall.NsecToTimespec"
     }
@@ -1243,7 +1240,7 @@
     "status": "compile-blocked",
     "diagnostic": "undefined: syscall.Open",
     "platform_diagnostics": {
-      "linux-amd64": "undefined: syscall.MSG_CMSG_CLOEXEC"
+      "linux-amd64": "undefined: syscall.ParseSocketControlMessage"
     },
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite requires raw native file descriptors through syscall.Open."
