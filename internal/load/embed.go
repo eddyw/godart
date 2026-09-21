@@ -149,6 +149,9 @@ func rewriteEmbed(name string, src []byte) ([]byte, error) {
 			if len(lines) == 0 {
 				continue
 			}
+			if pkgName == "" {
+				return nil, fmt.Errorf("%s: go:embed only allowed in Go files that import \"embed\"", fset.Position(lines[0].Pos()))
+			}
 			for _, c := range lines {
 				edits = append(edits, edit{off: int(c.Pos()) - base, drop: 2, text: embedMark})
 			}
@@ -200,7 +203,7 @@ func embedImportName(file *ast.File) string {
 		}
 		return "embed"
 	}
-	return "embed"
+	return ""
 }
 
 // embedComments gives each `//go:embed` line of a doc comment.
