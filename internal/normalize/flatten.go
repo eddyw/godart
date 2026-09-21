@@ -36,6 +36,11 @@ func (b *builder) flatten(body *ir.Block, params []*ir.Var, recv *ir.Var,
 	if deferBlocks {
 		f.openDeferChain(results)
 	}
+	if blocking {
+		// A recursive call can exhaust the host stack before its first wait.
+		f.emit(&ir.Poll{})
+		f.pause(nil)
+	}
 	f.markLabels(body.List)
 	f.block(body.List)
 	if deferBlocks {
