@@ -399,7 +399,7 @@ func outputExists(out string, files []string) bool {
 }
 
 func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result,
-	bin *load.Binary, trimpath bool, defaults string, links *linker.Variables) (*emit.Result, error) {
+	bin *load.Binary, trimpath bool, defaults string, links *linker.Symbols) (*emit.Result, error) {
 	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks, links.Targets)
 	if err != nil {
 		return nil, err
@@ -429,7 +429,7 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 	}
 	sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
 	return emit.Package(tree, p.Types, emit.Config{
-		LinkedVars:     links.Targets,
+		LinkedSymbols:  links.Targets,
 		Base:           baseName(p, module),
 		Imports:        imports,
 		DartPackage:    dartPkg,

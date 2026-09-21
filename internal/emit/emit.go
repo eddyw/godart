@@ -43,7 +43,7 @@ type Result struct {
 
 // Config holds what the emitter needs beyond the tree of the package.
 type Config struct {
-	LinkedVars map[types.Object]bool
+	LinkedSymbols map[types.Object]bool
 	// Base names the library file of the package.
 	Base string
 	// Imports lists the Dart library of each Go dependency.
@@ -498,7 +498,7 @@ func (e *emitter) flushFrames() {
 // suffix. A type name always takes a suffix, thus a type never collides.
 func (e *emitter) topName(pkg *types.Package, goName string) string {
 	out := name.Package(goName)
-	if pkg != nil && e.cfg.LinkedVars[pkg.Scope().Lookup(goName)] {
+	if pkg != nil && e.cfg.LinkedSymbols[pkg.Scope().Lookup(goName)] {
 		return "$link" + out
 	}
 	if e.shadowSet(pkg)[out] {
