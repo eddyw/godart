@@ -28,7 +28,7 @@ Syscall constants and names use the active SDK `src/syscall/zerrors_*.go`
 file. Error methods adapt `src/syscall/syscall_unix.go` with its BSD notice.
 The test-environment command adapter follows `src/internal/testenv/testenv.go`
 and `exec.go` with the Go BSD notice.
-Test temporary directories adapt Go `src/testing/testing.go` with its BSD notice.
+Test temporary directories and directory restoration adapt Go `src/testing/testing.go` with its BSD notice.
 Harness regressions retain original `testing_test.go` and `sub_test.go` assertions.
 Benchmark result types and format methods adapt `src/testing/benchmark.go`
 and retain its BSD notice.
@@ -40,6 +40,8 @@ The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
 The runtime license includes their BSD terms.
 The time value representation and its clock helpers adapt Go `src/time/time.go`.
+Descriptor-based directory changes follow Go `src/os/file_posix.go` with its BSD notice.
+Unix `PWD` validation follows Go `src/os/getwd.go` with its BSD notice.
 The shared file state and rename rules follow Go `src/os/file_unix.go`
 with its BSD notice.
 Shared type layout calculations adapt the Go-derived reflection overlay.

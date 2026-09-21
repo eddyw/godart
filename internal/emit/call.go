@@ -589,6 +589,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$directoryOpen(%s)", args[0]), true
 	case "DirectoryFd":
 		return fmt.Sprintf("$directoryFd(%s)", args[0]), true
+	case "DirectoryChdir":
+		return fmt.Sprintf("$directoryChdir(%s)", args[0]), true
 	case "DirectoryClose":
 		return fmt.Sprintf("$directoryClose(%s)", args[0]), true
 	case "FileRead":

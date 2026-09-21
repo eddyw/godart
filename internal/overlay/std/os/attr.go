@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 package os
@@ -156,8 +160,14 @@ func (f *File) Truncate(size int64) error {
 // Chdir writes the working directory of the program to the file, and the file
 // must be a directory.
 func (f *File) Chdir() error {
-	if err := f.stdError("chdir"); err != nil {
+	if err := f.checkValid("chdir"); err != nil {
 		return err
+	}
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if errno := dart.DirectoryChdir(int(f.Fd())); errno != 0 {
+			return &PathError{Op: "chdir", Path: f.name, Err: syscall.Errno(errno)}
+		}
+		return nil
 	}
 	return pathError("chdir", f.name, dart.Chdir(f.name))
 }

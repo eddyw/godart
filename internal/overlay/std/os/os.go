@@ -1,4 +1,5 @@
 // Copyright 2018 The Go Authors. All rights reserved.
+// Copyright 2009 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -970,6 +971,17 @@ func Unsetenv(name string) error { return syscall.Unsetenv(name) }
 func Environ() []string { return syscall.Environ() }
 
 func Getwd() (string, error) {
+	system := dart.OS()
+	if system != "windows" && system != "plan9" {
+		pwd := Getenv("PWD")
+		if len(pwd) > 0 && pwd[0] == '/' {
+			// The suffix follows a final symlink before the identity comparison.
+			same, cause := dart.FileIdentical(".", pwd+"/.")
+			if cause == "" && same {
+				return pwd, nil
+			}
+		}
+	}
 	path, cause := dart.Getwd()
 	if cause != "" {
 		return "", errors.New(cause)

@@ -35,6 +35,8 @@ int $directoryFd(int fd) =>
 
 int $directoryClose(int fd) => 38;
 
+int $directoryChdir(int fd) => 38;
+
 (int, GoString) $fileRead(int handle, Slice<GoInt> p) => (0, _noSys);
 
 (int, GoString) $fileWrite(int handle, Slice<GoInt> p) => (0, _noSys);

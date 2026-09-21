@@ -23,6 +23,9 @@ final _open = _libc
 final _close = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   'close',
 );
+final _fchdir = _libc.lookupFunction<Int Function(Int), int Function(int)>(
+  'fchdir',
+);
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
@@ -59,3 +62,5 @@ int $directoryClose(int fd) {
   if (!_supported) return 0;
   return _close(fd) == 0 ? 0 : _errno().value;
 }
+
+int $directoryChdir(int fd) => _fchdir(fd) == 0 ? 0 : _errno().value;

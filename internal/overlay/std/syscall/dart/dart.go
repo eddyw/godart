@@ -966,6 +966,10 @@ func DirectoryFd(fd int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func DirectoryChdir(fd int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func DirectoryClose(fd int) int {
 	panic("syscall/dart needs the gart compiler")
 }

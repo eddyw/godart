@@ -12,6 +12,11 @@ import (
 
 func TestTestingHostContracts(t *testing.T) {
 	dir, out := t.TempDir(), t.TempDir()
+	// TestChdir requires a current directory without a symlink alias.
+	dir, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/testinghost\n\ngo 1.27\n")
 	source := selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/testing/testing_test.go"), []string{
 		"TestTempDirInCleanup", "TestTempDirInBenchmark", "TestTempDir", "testTempDir", "TestTempDirGOTMPDIR", "TestSetenv", "TestChdir", "TestContext",

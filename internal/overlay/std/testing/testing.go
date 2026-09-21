@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 // Package testing gives the subset of the standard testing package that the
@@ -503,15 +507,22 @@ func (t *T) ArtifactDir() string {
 // Chdir moves the process into a directory for the test, and the cleanup of the
 // test moves it back. The call also writes PWD, exactly as Go does on a system
 // of the POSIX form.
-//
-// Go holds the old directory as an open descriptor, and gart holds the path,
-// because the Dart VM gives no descriptor of a directory.
 func (t *T) Chdir(dir string) {
 	t.checkParallel()
-	old, cause := os.Getwd()
+	oldPath, cause := os.Getwd()
 	if cause != nil {
 		t.Fatal(cause)
 	}
+	old, cause := os.Open(oldPath)
+	if cause != nil {
+		t.Fatal(cause)
+	}
+	t.Cleanup(func() {
+		defer old.Close()
+		if cause := old.Chdir(); cause != nil {
+			panic("testing.Chdir: " + cause.Error())
+		}
+	})
 	if cause := os.Chdir(dir); cause != nil {
 		t.Fatal(cause)
 	}
@@ -524,11 +535,6 @@ func (t *T) Chdir(dir string) {
 		full = now
 	}
 	t.Setenv("PWD", full)
-	t.Cleanup(func() {
-		if cause := os.Chdir(old); cause != nil {
-			panic("testing.Chdir: " + cause.Error())
-		}
-	})
 }
 
 // Deadline gives the time at which the binary passes the timeout of the run.
