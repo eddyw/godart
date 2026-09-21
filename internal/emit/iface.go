@@ -118,7 +118,7 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 	return fmt.Sprintf("TypeDesc(%s, '%s', <String, Function>{%s}, text: %s%s, zero: () => %s)",
 		e.typeNameText(t), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
 		e.reflectTextExpr(t),
-		e.methodTypeTable(t)+e.descParts(t)+e.pointerPart(named, pointer),
+		e.methodTypeTable(t)+e.methodForwardTable(t)+e.descParts(t)+e.pointerPart(named, pointer),
 		e.zero(t))
 }
 
@@ -150,7 +150,7 @@ func (e *emitter) descriptor(named *types.Named, pointer bool) {
 	e.line("final TypeDesc %s = TypeDesc('%s', '%s', <String, Function>{%s}, text: '%s'%s, zero: () => %s);",
 		variable, dartText(e.typeName(t)), kindOf(t),
 		strings.Join(e.methodTable(named, t), ", "), dartText(reflectText(t)),
-		e.methodTypeTable(t)+e.descParts(t)+e.pointerPart(named, pointer),
+		e.methodTypeTable(t)+e.methodForwardTable(t)+e.descParts(t)+e.pointerPart(named, pointer),
 		e.zero(t))
 }
 
@@ -648,51 +648,9 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 			args[i] = e.funcAdapt(name, from, orig.Params().At(i).Type())
 		}
 	}
-	recv := fmt.Sprintf("($r as %s)", e.dartType(elem))
-	_, wantPtr := types.Unalias(sig.Recv().Type()).(*types.Pointer)
-	if pointer && !needsBox(elem) {
-		// Go stops when a value method runs with a nil pointer receiver, and
-		// the Dart cast of null gives a cast error.
-		recv = fmt.Sprintf("($r == null ? %s : ($r as %s))",
-			e.wrapPanic(elem, fn), e.dartType(elem))
-	}
-	if pointer && needsBox(elem) {
-		ptr := e.dartType(types.NewPointer(elem))
-		if wantPtr {
-			recv = fmt.Sprintf("($r as %s)", ptr)
-		} else {
-			recv = fmt.Sprintf("($r == null ? %s : ($r as %s)!.v)",
-				e.wrapPanic(elem, fn), ptr)
-		}
-	}
-	// The Dart form of a pointer to a struct accepts null, thus the cast must
-	// accept it too. Go runs a method with a nil pointer receiver.
-	if pointer && !needsBox(elem) && len(sel.Index()) == 1 && topLevelMethod(elem, fn) {
-		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(elem)))
-	}
-	index := sel.Index()
-	current := elem
-	// The last field of the path holds the receiver, and each field before it
-	// only carries the walk. A pointer to a struct in the middle of the walk
-	// needs the object behind it.
-	path := index[:len(index)-1]
-	for n, i := range path {
-		st := structOf(current)
-		if st == nil {
-			e.fail("the method path of %s leaves a struct type", elem)
-			return ""
-		}
-		field := st.Field(i)
-		parent, holder := recv, current
-		recv += "." + e.fieldDartName(current, field.Name())
-		current = field.Type()
-		if n == len(path)-1 {
-			recv = e.fitReceiver(recv, parent, holder, field.Name(), current, sig)
-			break
-		}
-		if isPointerType(current) && structOf(current) != nil {
-			recv = nilRead(recv, false)
-		}
+	recv, current := e.adapterReceiver(elem, sel, pointer)
+	if current == nil {
+		return ""
 	}
 	call := fmt.Sprintf("%s.%s(%s)", recv, e.memberName(fn), strings.Join(args, ", "))
 	switch {
@@ -726,6 +684,89 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 		head += ", " + strings.Join(params, ", ")
 	}
 	return fmt.Sprintf("%s: (%s) => %s", e.methodKeyText(fn.Id(), selSig), head, call)
+}
+
+func (e *emitter) adapterReceiver(elem types.Type, sel *types.Selection, pointer bool) (string, types.Type) {
+	fn := sel.Obj().(*types.Func)
+	sig := fn.Type().(*types.Signature)
+	recv := fmt.Sprintf("($r as %s)", e.dartType(elem))
+	_, wantPtr := types.Unalias(sig.Recv().Type()).(*types.Pointer)
+	if pointer && !needsBox(elem) {
+		// Go stops when a value method runs with a nil pointer receiver, and
+		// the Dart cast of null gives a cast error.
+		recv = fmt.Sprintf("($r == null ? %s : ($r as %s))",
+			e.wrapPanic(elem, fn), e.dartType(elem))
+	}
+	if pointer && needsBox(elem) {
+		ptr := e.dartType(types.NewPointer(elem))
+		if wantPtr {
+			recv = fmt.Sprintf("($r as %s)", ptr)
+		} else {
+			recv = fmt.Sprintf("($r == null ? %s : ($r as %s)!.v)",
+				e.wrapPanic(elem, fn), ptr)
+		}
+	}
+	// The Dart form of a pointer to a struct accepts null, thus the cast must
+	// accept it too. Go runs a method with a nil pointer receiver.
+	if pointer && !needsBox(elem) && len(sel.Index()) == 1 && topLevelMethod(elem, fn) {
+		recv = fmt.Sprintf("($r as %s)", e.dartType(types.NewPointer(elem)))
+	}
+	index := sel.Index()
+	current := elem
+	// The last field of the path holds the receiver, and each field before it
+	// only carries the walk. A pointer to a struct in the middle of the walk
+	// needs the object behind it.
+	path := index[:len(index)-1]
+	for n, i := range path {
+		st := structOf(current)
+		if st == nil {
+			e.fail("the method path of %s leaves a struct type", elem)
+			return "", nil
+		}
+		field := st.Field(i)
+		parent, holder := recv, current
+		recv += "." + e.fieldDartName(current, field.Name())
+		current = field.Type()
+		if n == len(path)-1 {
+			recv = e.fitReceiver(recv, parent, holder, field.Name(), current, sig)
+			break
+		}
+		if isPointerType(current) && structOf(current) != nil {
+			recv = nilRead(recv, false)
+		}
+	}
+	return recv, current
+}
+
+func (e *emitter) methodForwardTable(t types.Type) string {
+	elem := t
+	p, pointer := types.Unalias(t).(*types.Pointer)
+	if pointer {
+		elem = p.Elem()
+	}
+	set := types.NewMethodSet(t)
+	var entries []string
+	for i := range set.Len() {
+		sel := set.At(i)
+		if len(sel.Index()) < 2 {
+			continue
+		}
+		fn := sel.Obj().(*types.Func)
+		if fn.Pkg() != nil && fn.Pkg() != e.pkg && !fn.Exported() {
+			continue
+		}
+		recv, current := e.adapterReceiver(elem, sel, pointer)
+		if current == nil || !isInterfaceType(current) {
+			continue
+		}
+		sig := sel.Type().(*types.Signature)
+		entries = append(entries, fmt.Sprintf("%s: (Object? $r) => %s", e.methodKeyText(fn.Id(), sig), recv))
+	}
+	if len(entries) == 0 {
+		return ""
+	}
+	sort.Strings(entries)
+	return ", forwardMethods: <String, Iface? Function(Object?)>{" + strings.Join(entries, ", ") + "}"
 }
 
 // wrapPanic writes the panic of a method wrapper that a nil pointer receiver
@@ -940,7 +981,7 @@ func (e *emitter) inlineDescriptor(t types.Type) string {
 		pointerParts = e.pointerPart(owner, pointer)
 		if entries := e.methodTable(owner, t); len(entries) > 0 {
 			table = "<String, Function>{" + strings.Join(entries, ", ") + "}"
-			methodTypes = e.methodTypeTable(t)
+			methodTypes = e.methodTypeTable(t) + e.methodForwardTable(t)
 		}
 	case isInterfaceType(t):
 		methodTypes = e.methodTypeTable(t)

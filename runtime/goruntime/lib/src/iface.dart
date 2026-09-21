@@ -64,6 +64,9 @@ final class TypeDesc {
   final String kind;
   final Map<String, Function> methods;
 
+  /// Receiver access for promoted methods of embedded interfaces.
+  final Map<String, Iface? Function(Object?)> forwardMethods;
+
   /// The function type of each exported method, under the key of the method.
   /// The package reflect reads it, and each other path reads only [methods].
   final Map<String, TypeDesc Function()> methodTypes;
@@ -144,6 +147,7 @@ final class TypeDesc {
     this.methods, {
     this.text = '',
     this.methodTypes = const <String, TypeDesc Function()>{},
+    this.forwardMethods = const <String, Iface? Function(Object?)>{},
     this.fields = const <FieldDesc>[],
     this.elem,
     this.key,
@@ -517,21 +521,23 @@ Function $method(Iface? x, String name) {
 /// Calls a method of an interface value when the receiver is not a simple
 /// name. The call reads the receiver 1 time, thus a side effect runs 1 time.
 Object? $call(Iface? x, String name, List<Object?> args) {
-  // A type argument can name an interface type. A value of such a type
-  // parameter is an interface value inside another one, and the dispatch
-  // reads the inner value.
-  if (x != null &&
-      x.value is Iface &&
-      identical($method(x, name), $ifaceMethod)) {
-    return $call(x.value as Iface, name, args);
+  while (true) {
+    if (x == null) $panicNil();
+    final forward = x.desc.forwardMethods[name];
+    if (forward != null) {
+      x = forward(x.value);
+      continue;
+    }
+    final Function m = $method(x, name);
+    if (identical(m, $ifaceMethod)) {
+      if (x.value is Iface) {
+        x = x.value as Iface;
+        continue;
+      }
+      $panicNil();
+    }
+    return $invoke(m, x.value, args);
   }
-  final Function m = $method(x, name);
-  if (identical(m, $ifaceMethod)) {
-    // The description belongs to an interface type, and the value is nil.
-    // Go panics with a nil dereference.
-    $panicNil();
-  }
-  return $invoke(m, x!.value, args);
 }
 
 /// Calls a method with a receiver and a list of arguments.

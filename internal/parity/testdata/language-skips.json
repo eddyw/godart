@@ -43,10 +43,6 @@
     "classification": "implementation-gap",
     "reason": "the append of 2 slices of the maximum length must overflow the capacity, and the Dart build runs out of memory"
   },
-  "fixedbugs/issue75764": {
-    "classification": "implementation-gap",
-    "reason": "the Dart VM holds a fixed stack, and the recursion overflows"
-  },
   "fixedbugs/issue9355": {
     "classification": "target-limit",
     "reason": "the assertions inspect native Go object relocation records from go tool compile -S"

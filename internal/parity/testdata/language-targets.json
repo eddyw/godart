@@ -21,5 +21,6 @@
   "fixedbugs/issue29735",
   "fixedbugs/issue58300",
   "fixedbugs/issue58300b",
-  "inline_literal"
+  "inline_literal",
+  "fixedbugs/issue75764"
 ]
