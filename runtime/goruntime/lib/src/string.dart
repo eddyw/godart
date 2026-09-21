@@ -88,7 +88,11 @@ final class GoString {
   }
 
   /// The byte at a Go index, as a Go integer. The emitted code reads it.
-  GoInt $at(GoInt i) => $gi(this[$ix(i)]);
+  GoInt $at(GoInt i, [bool uns = false]) {
+    final int n = $ix(i);
+    if (n < 0 || n >= bytes.length) $panicIndex(n, bytes.length, uns);
+    return $gi(bytes[n]);
+  }
 
   /// Decodes the bytes as UTF-8.
   ///
@@ -162,15 +166,6 @@ int $compare(GoString a, GoString b) {
   }
   if (a.length == b.length) return 0;
   return a.length < b.length ? -1 : 1;
-}
-
-/// The byte at a Go index of an unsigned type, which reads as a negative Dart
-/// int above 2^63. Go writes the unsigned value of such an index in a panic
-/// report.
-GoInt $atUns(GoString s, GoInt i) {
-  final int n = $ix(i);
-  if (n < 0 || n >= s.bytes.length) $panicIndex(n, s.bytes.length, true);
-  return $gi(s.bytes[n]);
 }
 
 /// The Go expression `s[low:high]`. The result shares the storage, because a

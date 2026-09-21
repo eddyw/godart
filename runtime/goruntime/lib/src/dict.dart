@@ -46,8 +46,8 @@ final class Dict<T> {
   /// slice and a string. Such a set holds 2 Dart types, thus no Dart member
   /// fits both. Each other type set holds null.
   final GoInt Function(T)? length;
-  final GoInt Function(T, GoInt)? at;
-  final T Function(T, GoInt, GoInt)? slice;
+  final GoInt Function(T, GoInt, [bool])? at;
+  final T Function(T, GoInt, GoInt, [bool, bool])? slice;
   final Slice<GoInt> Function(T)? bytes;
   final GoString Function(T)? text;
   final T Function(Slice<GoInt>)? fromBytes;
@@ -251,6 +251,11 @@ const Dict<GoString> $dictString = Dict<GoString>(
 );
 
 GoInt _lengthString(GoString v) => $gi(v.length);
-GoInt _atString(GoString v, GoInt i) => v.$at(i);
-GoString _sliceString(GoString v, GoInt a, GoInt b) =>
-    $substring(v, $ix(a), $ix(b));
+GoInt _atString(GoString v, GoInt i, [bool uns = false]) => v.$at(i, uns);
+GoString _sliceString(
+  GoString v,
+  GoInt a,
+  GoInt b, [
+  bool au = false,
+  bool bu = false,
+]) => $substring(v, $ix(a), $ix(b), au, bu);

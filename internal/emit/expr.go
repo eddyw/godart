@@ -344,25 +344,24 @@ func validUTF8(s string) bool {
 	return true
 }
 
-// index reads 1 element. A Go array keeps a plain Dart list, thus the read
-// needs the bounds check of the runtime.
-// unsBound reports whether a bound holds an unsigned type of 64 bits. Go
-// writes the unsigned value of such a bound in a panic report, and a value
-// above 2^63 reads as a negative Dart int. A narrower unsigned type needs no
-// flag, because such a value fits in a Dart int with no sign change.
-func unsBound(x ir.Expr) bool {
-	return x != nil && isUnsigned64(x.GoType())
-}
-
-// unsArg gives the last argument of an index helper. The helper holds the
-// flag in an optional parameter of position. dart2wasm holds a defect on a
-// named argument of such a call, thus each flag takes a position.
-func (e *emitter) unsArg(x ir.Expr) string {
-	if unsBound(x) {
-		return ", true"
+// unsignedBound selects the decimal form of a 64-bit bound in a panic.
+// Narrower unsigned values fit in a signed Dart int.
+func (e *emitter) unsignedBound(x ir.Expr) string {
+	if x == nil {
+		return "false"
+	}
+	if isUnsigned64(x.GoType()) {
+		return "true"
 	}
 	if set, ok := typeset.Describe(x.GoType()); ok && set.MixedSign() {
-		return ", " + e.dictOf(x.GoType()) + ".unsigned64"
+		return e.dictOf(x.GoType()) + ".unsigned64"
+	}
+	return "false"
+}
+
+func (e *emitter) unsArg(x ir.Expr) string {
+	if flag := e.unsignedBound(x); flag != "false" {
+		return ", " + flag
 	}
 	return ""
 }
@@ -371,9 +370,9 @@ func (e *emitter) unsArg(x ir.Expr) string {
 // expression of 3 bounds, and byLen names a report that writes "with length".
 // The flag of each bound follows them, and each 1 stands only when a bound
 // holds an unsigned type.
-func rangeTail(three, byLen bool, low, high, max ir.Expr) string {
-	l, h, m := unsBound(low), unsBound(high), unsBound(max)
-	if !l && !h && !m {
+func (e *emitter) rangeTail(three, byLen bool, low, high, max ir.Expr) string {
+	l, h, m := e.unsignedBound(low), e.unsignedBound(high), e.unsignedBound(max)
+	if l == "false" && h == "false" && m == "false" {
 		if !three && !byLen {
 			return ""
 		}
@@ -392,18 +391,15 @@ func (e *emitter) index(x *ir.Index) string {
 		return fmt.Sprintf("$sequenceIndex<%s>(%s, $ix(%s)%s)", e.dartType(x.Type), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
 	}
 	if typeset.Core(container) == nil && typeset.BytesOrText(container) {
-		return fmt.Sprintf("%s.at!(%s, %s)",
-			e.dictOf(container), e.expr(x.X), e.expr(x.Index))
+		return fmt.Sprintf("%s.at!(%s, %s%s)",
+			e.dictOf(container), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
 	}
 	if isMapType(container) {
 		return fmt.Sprintf("%s.get(%s)", e.container(x.X), e.expr(x.Index))
 	}
 	uns := e.unsArg(x.Index)
 	if isString(container) {
-		if unsBound(x.Index) {
-			return fmt.Sprintf("$atUns(%s, %s)", e.expr(x.X), e.expr(x.Index))
-		}
-		return fmt.Sprintf("%s.$at(%s)", e.expr(x.X), e.expr(x.Index))
+		return fmt.Sprintf("%s.$at(%s%s)", e.expr(x.X), e.expr(x.Index), uns)
 	}
 	// The type argument stands in the text. Dart reads the context of the
 	// expression for it, and an operand of `-` gives `num`.
@@ -492,8 +488,8 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		if x.High != nil {
 			high = e.expr(x.High)
 		}
-		return fmt.Sprintf("%s.slice!(%s, %s, %s)",
-			e.dictOf(source), e.expr(x.X), lowOrZero(x.Low, e), high)
+		return fmt.Sprintf("%s.slice!(%s, %s, %s, %s, %s)",
+			e.dictOf(source), e.expr(x.X), lowOrZero(x.Low, e), high, e.unsignedBound(x.Low), e.unsignedBound(x.High))
 	}
 	if isString(source) {
 		high := fmt.Sprintf("%s.length", e.expr(x.X))
@@ -501,8 +497,8 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 			high = "$ix(" + e.expr(x.High) + ")"
 		}
 		tail := ""
-		if unsBound(x.Low) || unsBound(x.High) {
-			tail = fmt.Sprintf(", %v, %v", unsBound(x.Low), unsBound(x.High))
+		if e.unsignedBound(x.Low) != "false" || e.unsignedBound(x.High) != "false" {
+			tail = fmt.Sprintf(", %s, %s", e.unsignedBound(x.Low), e.unsignedBound(x.High))
 		}
 		return fmt.Sprintf("$substring(%s, %s, %s%s)",
 			e.expr(x.X), low, high, tail)
@@ -525,7 +521,7 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		// bound panic, and a slice reports "with capacity".
 		return fmt.Sprintf("Slice(%s, 0, %s, %s).range(%s, %s, %s%s)",
 			text, size, size, low, high, max,
-			rangeTail(x.Max != nil, true, x.Low, x.High, x.Max))
+			e.rangeTail(x.Max != nil, true, x.Low, x.High, x.Max))
 	}
 	x0 := e.expr(x.X)
 	high := fmt.Sprintf("%s.len", x0)
@@ -537,7 +533,7 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		max = "$ix(" + e.expr(x.Max) + ")"
 	}
 	return fmt.Sprintf("%s.range(%s, %s, %s%s)", x0, low, high, max,
-		rangeTail(x.Max != nil, false, x.Low, x.High, x.Max))
+		e.rangeTail(x.Max != nil, false, x.Low, x.High, x.Max))
 }
 
 func (e *emitter) copyExpr(x *ir.Copy) string {
@@ -886,12 +882,12 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 			return fmt.Sprintf("$sequencePtr<%s>(%s, $ix(%s)%s)", e.dartType(elem), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
 		}
 		if isPointerType(container) {
-			return fmt.Sprintf("$indexPtr(%s, $ix(%s))", e.deref(x.X), e.expr(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, $ix(%s)%s)", e.deref(x.X), e.expr(x.Index), e.unsArg(x.Index))
 		}
 		if isArrayType(container) {
-			return fmt.Sprintf("$indexPtr(%s, $ix(%s))", e.expr(x.X), e.expr(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, $ix(%s)%s)", e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
 		}
-		return fmt.Sprintf("$elemPtr(%s, $ix(%s))", e.expr(x.X), e.expr(x.Index))
+		return fmt.Sprintf("$elemPtr(%s, $ix(%s)%s)", e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
 	}
 	if id, ok := x.(*ir.Ident); ok {
 		e.fail("the address of the name %s has no Dart form", id.Name)

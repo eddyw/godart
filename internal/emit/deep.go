@@ -70,7 +70,7 @@ func (e *emitter) deepIndex(x *ir.Index) string {
 		if _, ok := next.X.GoType().Underlying().(*types.Slice); !ok {
 			break
 		}
-		if _, ok := next.Index.(*ir.Const); !ok || unsBound(next.Index) {
+		if _, ok := next.Index.(*ir.Const); !ok || e.unsignedBound(next.Index) != "false" {
 			break
 		}
 		chain = append(chain, next)

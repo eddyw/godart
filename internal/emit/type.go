@@ -525,8 +525,8 @@ func dictText(t types.Type) string {
 		return ", text: (v) => $runesToString(v), fromText: (v) => $stringToRunes(v)"
 	}
 	if b, ok := u.(*types.Basic); ok && b.Kind() == types.String {
-		return ", length: (v) => $gi(v.length), at: (v, i) => v.$at(i)," +
-			" slice: (v, a, b) => $substring(v, $ix(a), $ix(b))," +
+		return ", length: (v) => $gi(v.length), at: (v, i, [uns = false]) => v.$at(i, uns)," +
+			" slice: (v, a, b, [au = false, bu = false]) => $substring(v, $ix(a), $ix(b), au, bu)," +
 			" bytes: (v) => $stringToBytes(v), text: (v) => v," +
 			" fromBytes: (v) => $bytesToString(v), fromText: (v) => v"
 	}
@@ -538,8 +538,8 @@ func dictText(t types.Type) string {
 		b.Kind() != types.Uint8 {
 		return ""
 	}
-	return ", length: (v) => $gi(v.len), at: (v, i) => v[$ix(i)]," +
-		" slice: (v, a, b) => v.range($ix(a), $ix(b), v.cap)," +
+	return ", length: (v) => $gi(v.len), at: (v, i, [uns = false]) => v.$at($ix(i), uns)," +
+		" slice: (v, a, b, [au = false, bu = false]) => v.range($ix(a), $ix(b), v.cap, false, false, au, bu)," +
 		" bytes: (v) => v, text: (v) => $bytesToString(v)," +
 		" fromBytes: (v) => v, fromText: (v) => $stringToBytes(v)"
 }
