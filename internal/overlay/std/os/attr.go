@@ -75,10 +75,16 @@ func Chmod(name string, mode FileMode) error {
 }
 
 // Chmod writes the mode of the file.
-//
-// Go names the file by its descriptor, and this call names it by its path. A
-// rename between the open and the call thus reaches another file.
 func (f *File) Chmod(mode FileMode) error {
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if err := f.checkValid("chmod"); err != nil {
+			return err
+		}
+		if errno := dart.FileChmod(int(f.Fd()), syscallMode(mode)); errno != 0 {
+			return &PathError{Op: "chmod", Path: f.name, Err: syscall.Errno(errno)}
+		}
+		return nil
+	}
 	if err := f.stdError("chmod"); err != nil {
 		return err
 	}
@@ -105,6 +111,15 @@ func Lchown(name string, uid, gid int) error {
 
 // Chown writes the owner and the group of the file.
 func (f *File) Chown(uid, gid int) error {
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if err := f.checkValid("chown"); err != nil {
+			return err
+		}
+		if errno := dart.FileChown(int(f.Fd()), uid, gid); errno != 0 {
+			return &PathError{Op: "chown", Path: f.name, Err: syscall.Errno(errno)}
+		}
+		return nil
+	}
 	if err := f.stdError("chown"); err != nil {
 		return err
 	}

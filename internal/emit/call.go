@@ -625,6 +625,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$link(%s, %s)", args[0], args[1]), true
 	case "Umask":
 		return "$umask()", true
+	case "FileChmod":
+		return fmt.Sprintf("$fileChmod(%s, %s)", args[0], args[1]), true
+	case "FileChown":
+		return fmt.Sprintf("$fileChown(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "Chmod":
 		return fmt.Sprintf("$chmod(%s, %s)", args[0], args[1]), true
 	case "Chown":

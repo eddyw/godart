@@ -1060,6 +1060,12 @@ func Link(oldname, newname string) string {
 // each bit of the mask from the mode of the call.
 func Umask() int
 
+// FileChmod changes the mode through an open descriptor and returns errno.
+func FileChmod(fd, mode int) int { panic("syscall/dart needs the gart compiler") }
+
+// FileChown changes ownership through an open descriptor and returns errno.
+func FileChown(fd, uid, gid int) int { panic("syscall/dart needs the gart compiler") }
+
 // Chmod writes the permission bits of a path. The mode holds the 12 bits of a
 // POSIX mode. dart:io holds no such call, thus the Dart side runs the command
 // chmod of the platform.

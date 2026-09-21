@@ -6,6 +6,7 @@ import 'slice.dart';
 import 'string.dart';
 
 export 'directory_descriptor.dart';
+export 'file_attributes.dart';
 export 'file_stat.dart';
 
 /// The name of the operating system, in the words of the Go constant GOOS.

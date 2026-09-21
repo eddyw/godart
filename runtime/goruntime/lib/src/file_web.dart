@@ -71,6 +71,10 @@ GoString $symlink(GoString target, GoString link) => _noSys;
 
 GoString $link(GoString target, GoString link) => _noSys;
 
+int $fileChmod(int fd, int mode) => 38;
+
+int $fileChown(int fd, int uid, int gid) => 38;
+
 GoString $chmod(GoString path, int mode) => _noSys;
 
 /// The file mode creation mask of the process. A browser holds no such mask,
