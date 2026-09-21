@@ -275,10 +275,9 @@ func testMainSource(inside, outside *functions, bin *Binary) []byte {
 		fmt.Fprintf(&b, "\tgartXtest %q\n", outside.pkgPath)
 	}
 	b.WriteString(")\n\n")
-	call := "testing.Main("
-	tail := "\t)\n"
+	call := "testing.MainWith("
+	tail := "\t\tfunc(m *testing.M) { m.Run() },\n\t)\n"
 	if prefix := testMainPrefix(inside, outside); prefix != "" {
-		call = "testing.MainWith("
 		tail = fmt.Sprintf("\t\t%s.TestMain,\n\t)\n", prefix)
 	}
 	b.WriteString("func main() {\n")

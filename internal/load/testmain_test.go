@@ -88,7 +88,8 @@ func TestLoadTestsWritesTheEntryPoint(t *testing.T) {
 		`{Name: "TestAdd", F: gartTest.TestAdd}`,
 		`{Name: "TestJoin", F: gartXtest.TestJoin}`,
 		`{Name: "BenchmarkAdd", F: gartTest.BenchmarkAdd}`,
-		"testing.Main(",
+		"testing.MainWith(",
+		"func(m *testing.M) { m.Run() }",
 	} {
 		if !strings.Contains(source, want) {
 			t.Errorf("the entry point holds no %q:\n%s", want, source)

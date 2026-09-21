@@ -4,7 +4,7 @@
 // gart compiler supports.
 //
 // The compiler writes the entry point of a test binary, and that entry point
-// calls Main. The output holds the format of `go test`, without the source
+// calls MainWith. The output holds the format of `go test`, without the source
 // position of a log line. Read docs/parity.md for each gap.
 package testing
 
@@ -889,20 +889,13 @@ func writeCoverage() {
 		"% of statements")
 }
 
-// Main runs each test and each benchmark of a test binary. The compiler writes
-// the call into the entry point of a binary with no TestMain function.
-//
-// The flags come from the arguments of the program. gart test writes -test.v
-// for a line for each test, -test.run=<pattern> for a filter of the tests,
-// -test.bench=<pattern> for a filter of the benchmarks, and one of
-// -test.benchtime=<nanoseconds> or -test.benchcount=<count> for the length of
-// a benchmark.
-func Main(tests []InternalTest, benchmarks []InternalBenchmark,
-	fuzzTargets []InternalFuzzTarget, examples []InternalExample) {
+// Main runs a legacy custom test binary and exits with its result.
+func Main(matchString func(pat, str string) (bool, error), tests []InternalTest,
+	benchmarks []InternalBenchmark, examples []InternalExample) {
+	MatchString = matchString
 	m := NewM(tests, benchmarks)
-	m.fuzzTargets = fuzzTargets
 	m.examples = examples
-	Finish(m, m.Run())
+	os.Exit(m.Run())
 }
 
 // Finish stops the binary with the status of a run. The compiler writes the call
