@@ -255,6 +255,31 @@ class ParityTest(unittest.TestCase):
             case["gart"]["output_sha256"] = "wrong"
             assess("failed")
 
+    def test_package_directory_unicode_paths_require_explicit_mapping(self):
+        import hashlib
+        module = "module test\n\ngo 1.27.1\n"
+        wrapper = 'import "package:test/p0.dart";\nimport "bin/main.dart";\nvoid main() {}\n'
+        execution = dict(ran=True, exit=0, timed_out=False)
+        packages = [dict(name="Þfoo", path="test/Þfoo", module_path="test/p0", files=["Þfoo.go"]),
+                    dict(name="main", path="test/p0", module_path="test/p1", files=["p0.go"])]
+        case = dict(fixture=dict(name="unicode", recipe="compiledir", adapter="directory-packages",
+                                 files=[dict(path="unicode.dir/" + p["files"][0]) for p in packages]),
+                    contract="compiledir", directory_packages=packages,
+                    native_compile=[dict(execution, command=["go", "tool", "compile", "-e", p["files"][0]]) for p in packages],
+                    adapted_sources={"p0/Þfoo.go": "package Þfoo\n", "p1/p0.go": "package main\n"},
+                    module_source=module, module_sha256=hashlib.sha256(module.encode()).hexdigest(),
+                    importcfg_sha256="config", wrapper_source=wrapper,
+                    wrapper_sha256=hashlib.sha256(wrapper.encode()).hexdigest())
+        self.assertTrue(parity.directory_language_valid(case, "go1.27.1"))
+        for package in packages:
+            original = package.pop("module_path")
+            self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
+            package["module_path"] = "test/wrong"
+            self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
+            package["module_path"] = original
+        packages[1]["module_path"] = "test/p0"
+        self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
+
     def test_directory_recipe_requires_original_module_and_sources(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

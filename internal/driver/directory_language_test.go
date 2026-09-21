@@ -5,6 +5,7 @@
 package driver_test
 
 import (
+	"fmt"
 	"go/build"
 	"go/parser"
 	"go/token"
@@ -19,9 +20,58 @@ import (
 )
 
 type languageDirectoryPackage struct {
-	Name  string   `json:"name"`
-	Path  string   `json:"path"`
-	Files []string `json:"files"`
+	Name       string   `json:"name"`
+	Path       string   `json:"path"`
+	ModulePath string   `json:"module_path,omitempty"`
+	Files      []string `json:"files"`
+}
+
+func directoryModulePaths(packages []languageDirectoryPackage) map[string]string {
+	remap := false
+	for _, pkg := range packages {
+		if strings.IndexFunc(pkg.Path, func(r rune) bool { return r > 127 }) >= 0 {
+			remap = true
+		}
+	}
+	paths := map[string]string{}
+	for i := range packages {
+		pkg := &packages[i]
+		path := pkg.Path
+		if remap {
+			path = fmt.Sprintf("test/p%d", i)
+			pkg.ModulePath = path
+		}
+		paths[pkg.Path] = path
+	}
+	return paths
+}
+
+func TestDirectoryModulePaths(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		paths []string
+		want  []string
+	}{
+		{"ASCII", []string{"test/a", "test/b"}, []string{"test/a", "test/b"}},
+		{"Unicode", []string{"test/Þfoo", "test/Þmain"}, []string{"test/p0", "test/p1"}},
+		{"collision", []string{"test/Þfoo", "test/p0"}, []string{"test/p0", "test/p1"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			packages := make([]languageDirectoryPackage, len(test.paths))
+			for i, path := range test.paths {
+				packages[i].Path = path
+			}
+			paths := directoryModulePaths(packages)
+			for i, pkg := range packages {
+				if pkg.Path != test.paths[i] || paths[pkg.Path] != test.want[i] {
+					t.Fatalf("package %d: original=%q mapped=%q", i, pkg.Path, paths[pkg.Path])
+				}
+				if test.name != "ASCII" && pkg.ModulePath != test.want[i] {
+					t.Fatalf("package %d: missing module path evidence", i)
+				}
+			}
+		})
+	}
 }
 
 func TestDirectoryPackagesOfGoTest(t *testing.T) {
@@ -144,9 +194,10 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 					}
 					writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 					result.AdaptedSources = map[string]string{}
+					modulePaths := directoryModulePaths(result.DirectoryPackages)
 					var patterns, imports []string
 					for _, pkg := range result.DirectoryPackages {
-						subdir := strings.TrimPrefix(pkg.Path, "test/")
+						subdir := strings.TrimPrefix(modulePaths[pkg.Path], "test/")
 						patterns = append(patterns, "./"+subdir)
 						library := "package:test/" + subdir + ".dart"
 						if pkg.Name == "main" {
@@ -171,7 +222,11 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 									t.Fatal(err)
 								}
 								if strings.HasPrefix(value, "./") {
-									replacement := strconv.Quote("test/" + strings.TrimPrefix(value, "./"))
+									path := "test/" + strings.TrimPrefix(value, "./")
+									if mapped, ok := modulePaths[path]; ok {
+										path = mapped
+									}
+									replacement := strconv.Quote(path)
 									start, end := fset.Position(lit.Pos()).Offset, fset.Position(lit.End()).Offset
 									data = append(append(append([]byte{}, data[:start]...), replacement...), data[end:]...)
 								}

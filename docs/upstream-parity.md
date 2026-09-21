@@ -234,6 +234,9 @@ The `language-targets` suite also includes these directory fixtures.
 The `language-packages` audit compares plain `compiledir` and `rundir` recipes on VM.
 Native Go compiles the original files in the upstream package order.
 Gart places each package in a module subdirectory and changes only relative import paths within source files.
+Go module paths reject Unicode characters that the native compiler accepts in relative imports.
+For these fixtures, Gart uses indexed ASCII module paths and retains the original package names and source filenames.
+Reports retain both path sets. Native compilation still uses the original paths.
 It appends `.gart.go` to `_test.go` filenames because these recipes compile them as ordinary source files.
 Reports retain original source hashes, adapted source bytes, package groups, compiler commands, and module and wrapper identities.
 Both programs must satisfy the original expected output for `rundir`.

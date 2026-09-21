@@ -255,20 +255,24 @@ def directory_language_valid(case, go_version):
     names = set()
     consumed = set()
     imports = []
-    for package, execution in zip(packages, compiled):
+    remap = any(not p.get("path", "").isascii() for p in packages)
+    for index, (package, execution) in enumerate(zip(packages, compiled)):
         files = package.get("files") or []
         path = package.get("path", "")
         if (not files or not package.get("name") or package.get("name") in names or path != "test/" + files[0][:-3]
                 or not execution.get("ran") or execution.get("exit") != 0 or execution.get("timed_out")):
             return False
         names.add(package.get("name"))
+        module_path = package.get("module_path", path)
+        if module_path != ("test/p" + str(index) if remap else path):
+            return False
         for name in files:
             if not name.endswith(".go") or "/" in name or fixture["name"] + ".dir/" + name not in original:
                 return False
             target_name = name + ".gart.go" if name.endswith("_test.go") else name
-            expected.add(path.removeprefix("test/") + "/" + target_name)
+            expected.add(module_path.removeprefix("test/") + "/" + target_name)
             consumed.add(fixture["name"] + ".dir/" + name)
-        library = "bin/main.dart" if package["name"] == "main" else "package:test/" + path.removeprefix("test/") + ".dart"
+        library = "bin/main.dart" if package["name"] == "main" else "package:test/" + module_path.removeprefix("test/") + ".dart"
         imports.append("import " + json.dumps(library, ensure_ascii=False) + ";")
         command = execution.get("command", [])
         if command[:4] != ["go", "tool", "compile", "-e"] or [Path(p).name for p in command[-len(files):]] != files:
