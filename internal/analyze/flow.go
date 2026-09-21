@@ -86,6 +86,8 @@ type callSite struct {
 	// argEsc holds the escape key of each such argument. An argument flows
 	// there when the target holds no cell at its position.
 	argEsc map[int]string
+	// resultEsc gives the escape group of each function-typed result.
+	resultEsc map[int]string
 	// done marks the targets that the wire already covered.
 	done map[any]bool
 
@@ -386,6 +388,11 @@ func (a *analyzer) wire(site *callSite, key any) {
 		shift = 1
 	}
 	params, results := a.targetShape(key)
+	if _, ok := key.(reflectedFunction); ok {
+		for i, group := range site.resultEsc {
+			a.addEdge(sigCell{group}, outCell{site.call, i})
+		}
+	}
 	for i, src := range site.args {
 		j := i - shift
 		if j < 0 {

@@ -168,6 +168,8 @@ func keyPos(key any) token.Pos {
 		return key.Pos()
 	case *ast.RangeStmt:
 		return key.Pos()
+	case reflectedFunction:
+		return key.call.Pos()
 	}
 	return token.NoPos
 }

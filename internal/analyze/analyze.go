@@ -28,7 +28,8 @@ import (
 type Result struct {
 	// blocking marks a function that can block. A key is a *types.Func, a
 	// *ast.FuncLit, an initializer, or the *ast.RangeStmt of a range loop,
-	// whose body is a function of its own.
+	// whose body is a function of its own. A reflectedFunction names a
+	// synthetic callback that reflection can expose.
 	blocking map[any]bool
 	// callAsync marks a call that waits for a result.
 	callAsync  map[*ast.CallExpr]bool
@@ -156,6 +157,7 @@ func Module(pkgs []*packages.Package) *Result {
 			a.file(f)
 		}
 	}
+	a.reflectEscapes()
 	a.components()
 	a.solve()
 	a.resolveSites()
@@ -171,6 +173,7 @@ type analyzer struct {
 	interfaceReturns map[retCell][]interfaceOrigin
 	originMutable    map[*types.Var]bool
 	reflection       bool
+	reflected        []reflectedFunction
 	pkg              *packages.Package
 	fset             *token.FileSet
 	result           *Result
@@ -659,6 +662,16 @@ func (a *analyzer) callExpr(s *summary, call *ast.CallExpr) {
 		site.args[i] = a.flowExpr(arg)
 		site.argEsc[i] = signatureKey(sig)
 	}
+	if sig := funcSig(a.typeOf(fun)); sig != nil {
+		for i := 0; i < sig.Results().Len(); i++ {
+			if result := funcSig(sig.Results().At(i).Type()); result != nil {
+				if site.resultEsc == nil {
+					site.resultEsc = map[int]string{}
+				}
+				site.resultEsc[i] = signatureKey(result)
+			}
+		}
+	}
 	a.sites = append(a.sites, site)
 	s.sites = append(s.sites, site)
 }
@@ -741,6 +754,10 @@ func (a *analyzer) calleeSource(s *summary, call *ast.CallExpr, fun ast.Expr) (s
 // function drops its function arguments into the escape group, because the
 // runtime library calls them outside the net.
 func (a *analyzer) funcCallee(s *summary, call *ast.CallExpr, fn *types.Func) (source, bool) {
+	if fn.Pkg() != nil && fn.Pkg().Path() == "syscall/dart" && fn.Name() == "MakeFunc" {
+		a.reflectFactory(call)
+	}
+
 	if blockingIntrinsic(fn) {
 		s.blocksAt(call.Pos(), "a call of "+fn.Pkg().Path()+"."+fn.Name())
 		s.intrinsics = append(s.intrinsics, call)
@@ -1122,6 +1139,9 @@ func (a *analyzer) spread() bool {
 // markCalls marks each call that must wait for a result.
 func (a *analyzer) markCalls() {
 	for _, key := range a.order {
+		if _, ok := key.(reflectedFunction); ok {
+			continue
+		}
 		s := a.summaries[key]
 		for _, call := range s.intrinsics {
 			a.result.callAsync[call] = true
