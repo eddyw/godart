@@ -514,3 +514,29 @@ func main() { println(build()) }
 		})
 	}
 }
+
+func TestSyncFormatRejectsMutableOrigins(t *testing.T) {
+	for name, setup := range map[string]string{
+		"assignment":   "var value error; func init() { value = slow{} }",
+		"address":      "var value error; func init() { change(&value) }; func change(p *error) { *p = slow{} }",
+		"named-result": "var value error = factory(); func factory() (e error) { defer func() { e = slow{} }(); return nil }",
+		"parameter":    "var value error = identity(slow{}); func identity(e error) error { return e }",
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := buildSync(t, `package main
+import "fmt"
+//gart:sync
+type Builder func() string
+type slow struct{}
+func (slow) Error() string { <-make(chan int); return "" }
+`+setup+`
+func text() string { return fmt.Sprintf("%s", value) }
+var build Builder = text
+func main() { println(build()) }
+`)
+			if err == nil {
+				t.Fatal("accepted a mutable format operand that can block")
+			}
+		})
+	}
+}

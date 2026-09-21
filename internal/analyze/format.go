@@ -33,7 +33,11 @@ func (a *analyzer) formatTargets(call *ast.CallExpr, callee source) (source, boo
 	var out source
 	for _, arg := range call.Args[first:] {
 		t := a.typeOf(arg)
-		if targets, ok := formatTypeTargets([]types.Type{t}); ok {
+		candidates, known := a.concreteInterfaces(arg, a.pkg.TypesInfo, map[types.Object]bool{})
+		if !known {
+			candidates = []types.Type{t}
+		}
+		if targets, ok := formatTypeTargets(candidates); ok {
 			out.keys = append(out.keys, targets...)
 			continue
 		}

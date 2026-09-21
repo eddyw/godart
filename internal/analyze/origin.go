@@ -10,6 +10,7 @@ type interfaceOrigin struct {
 	expr  ast.Expr
 	info  *types.Info
 	index int
+	zero  bool
 }
 
 // An immutable interface keeps the concrete type of its initializer.
@@ -17,7 +18,7 @@ type interfaceOrigin struct {
 func (a *analyzer) collectOrigins(f *ast.File) {
 	info := a.pkg.TypesInfo
 	keep := func(id *ast.Ident, values []ast.Expr, count, index int) {
-		origin := interfaceOrigin{info: info}
+		origin := interfaceOrigin{info: info, zero: len(values) == 0}
 		if len(values) == count {
 			origin.expr = values[index]
 		} else if len(values) == 1 {
@@ -107,7 +108,7 @@ func (a *analyzer) concreteInterfaces(x ast.Expr, info *types.Info, seen map[typ
 func (a *analyzer) concreteOrigin(origin interfaceOrigin, seen map[types.Object]bool) ([]types.Type, bool) {
 	x, info := origin.expr, origin.info
 	if x == nil {
-		return nil, false
+		return nil, origin.zero
 	}
 	t := info.TypeOf(x)
 	if tuple, ok := t.(*types.Tuple); ok {
