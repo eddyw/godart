@@ -17,10 +17,15 @@ func TestProcessIdentity(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/processidentity\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
-import ("encoding/json"; "os")
+import ("encoding/json"; "os"; "slices"; "syscall")
 func main() {
  groups, err := os.Getgroups()
  if err != nil { panic(err) }
+ rawGroups, err := syscall.Getgroups()
+ if err != nil { panic(err) }
+ if !slices.Equal(groups, rawGroups) || (groups == nil) != (rawGroups == nil) { panic("group identity differs") }
+ if syscall.Getpid() != os.Getpid() { panic("process identity differs") }
+ if syscall.Getuid() != os.Getuid() || syscall.Geteuid() != os.Geteuid() || syscall.Getgid() != os.Getgid() || syscall.Getegid() != os.Getegid() || syscall.Getppid() != os.Getppid() || syscall.Getpagesize() != os.Getpagesize() { panic("syscall identity differs") }
  json.NewEncoder(os.Stdout).Encode(append([]int{os.Getuid(), os.Geteuid(), os.Getgid(), os.Getegid(), os.Getppid(), os.Getpagesize()}, groups...))
 }
 `)
