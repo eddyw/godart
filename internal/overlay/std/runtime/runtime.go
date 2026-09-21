@@ -128,9 +128,6 @@ func at(pc uintptr) (string, string, int) {
 
 // Caller gives the position of the call, and the count of skip names the frame.
 // The value 0 names the caller of Caller.
-//
-// The file holds the base name only, because the source map of the output holds
-// no directory.
 func Caller(skip int) (pc uintptr, file string, line int, ok bool) {
 	stack := dart.Stack(skip + 1)
 	if len(stack) == 0 {
@@ -185,7 +182,7 @@ func (f *Frames) Next() (Frame, bool) {
 	f.list = f.list[1:]
 	name, file, line := at(pc)
 	return Frame{PC: pc, Func: FuncForPC(pc), Function: name, File: file,
-		Line: line, Entry: pc}, len(f.list) > 0
+		Line: line, Entry: dart.PCEntry(pc)}, len(f.list) > 0
 }
 
 // Func names a function of the program.
@@ -197,6 +194,7 @@ var functions = map[uintptr]*Func{}
 
 // FuncForPC gives the function of a known synthetic program counter.
 func FuncForPC(pc uintptr) *Func {
+	pc = dart.PCEntry(pc)
 	if f := functions[pc]; f != nil {
 		return f
 	}

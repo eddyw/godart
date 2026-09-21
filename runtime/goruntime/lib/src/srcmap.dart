@@ -5,6 +5,7 @@
 /// it, and the value holds the functions and the lines of that file.
 library;
 
+import 'funcpc.dart';
 import 'panic.dart';
 import 'slice.dart';
 import 'string.dart';
@@ -28,7 +29,16 @@ final Map<String, _MappedFile> _parsed = <String, _MappedFile>{};
 /// that key, in pairs.
 void $srcmap(List<String> data) {
   for (var i = 0; i + 1 < data.length; i += 2) {
-    _data[data[i]] = data[i + 1];
+    final text = data[i + 1];
+    _data[data[i]] = text;
+    final head = text.substring(0, text.indexOf('\n'));
+    if (head.isEmpty) continue;
+    for (final item in head.split(';')) {
+      final parts = item.split('|');
+      $registerFunction(
+        GoString.fromString('${parts[2]}|${parts[1]}|${parts[3]}'),
+      );
+    }
   }
 }
 
@@ -92,10 +102,11 @@ final class _MappedFile {
       for (final item in head.split(';')) {
         final first = item.indexOf('|');
         final second = item.indexOf('|', first + 1);
+        final third = item.indexOf('|', second + 1);
         at += int.parse(item.substring(0, first), radix: 36);
         funcAt.add(at);
         funcFile.add(item.substring(first + 1, second));
-        funcName.add(item.substring(second + 1));
+        funcName.add(item.substring(second + 1, third));
       }
     }
     final lineAt = <int>[];

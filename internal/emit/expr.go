@@ -549,8 +549,12 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	e.litSeq++
 	inner.curGoName = fmt.Sprintf("%s.func%d", e.curGoName, e.litSeq)
 	inner.funcFile = e.funcFile
-	inner.goMarkFile = e.funcFile
-	inner.line("%s%s|%s", fileMark, inner.funcFile, inner.curGoName)
+	if e.cfg.Fset != nil {
+		inner.funcFile = e.goFile(x.Pos)
+		inner.funcLine = e.cfg.Fset.Position(x.Pos).Line
+	}
+	inner.goMarkFile = inner.funcFile
+	inner.line("%s%s|%s|%d", fileMark, inner.funcFile, inner.curGoName, inner.funcLine)
 	inner.curFuncId = e.funcId(x)
 	inner.boxParams(x.Params)
 	if x.Machine != nil {
@@ -558,7 +562,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	} else {
 		inner.emitBody(x.Results, x.Defers, x.Body, x.End)
 	}
-	inner.line("%s%s|%s", fileMark, e.funcFile, e.curGoName)
+	inner.line("%s%s|%s|%d", fileMark, e.funcFile, e.curGoName, e.funcLine)
 	e.errs = append(e.errs, inner.errs...)
 	e.labelSeq = inner.labelSeq
 	e.dictReads = inner.dictReads

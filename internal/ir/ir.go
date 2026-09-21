@@ -590,6 +590,7 @@ type (
 
 	// FuncLit is a closure.
 	FuncLit struct {
+		Pos     token.Pos
 		Params  []*Var
 		Results []*Var
 		Body    *Block

@@ -56,6 +56,11 @@ func PCInfo(pc uintptr) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// PCEntry gives the function entry counter for a known source position.
+func PCEntry(pc uintptr) uintptr {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // CaptureOut starts a hold of the text of standard output, or it ends the hold
 // and gives the text. The harness of an example of the package testing reads
 // it.

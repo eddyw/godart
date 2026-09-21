@@ -163,6 +163,7 @@ func (b *builder) rangeFunc(s *ast.RangeStmt, label string, sig *types.Signature
 	body.List = append(body.List, &ir.Return{Values: []ir.Expr{boolConst(true)}})
 
 	fn := &ir.FuncLit{
+		Pos:     s.Pos(),
 		Params:  params,
 		Results: []*ir.Var{{Name: "$ok", Type: yield.Results().At(0).Type()}},
 		Body:    body,

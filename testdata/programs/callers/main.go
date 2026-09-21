@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"runtime"
 )
 
@@ -34,4 +35,23 @@ func walk() {
 func main() {
 	outer()
 	walk()
+	identity()
+}
+
+//go:noinline
+func identity() {
+	first, file, line, _ := runtime.Caller(0)
+	second, _, next, _ := runtime.Caller(0)
+	f := runtime.FuncForPC(first)
+	g := runtime.FuncForPC(second)
+	entry := reflect.ValueOf(identity).Pointer()
+	entryFile, entryLine := f.FileLine(f.Entry())
+	_, firstLine := f.FileLine(first)
+	_, secondLine := f.FileLine(second)
+	fmt.Println("identity", f == g, f == runtime.FuncForPC(entry), f.Entry() == entry)
+	fmt.Println("positions", entryFile == file, entryLine < line, firstLine == line, secondLine == next, firstLine != secondLine)
+	frames := runtime.CallersFrames([]uintptr{first, second})
+	a, more := frames.Next()
+	b, last := frames.Next()
+	fmt.Println("entries", a.Entry == entry, b.Entry == entry, a.Func == b.Func, more, last)
 }

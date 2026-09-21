@@ -4,7 +4,7 @@ import "testing"
 
 func TestStripRemovesTheMarkers(t *testing.T) {
 	in := "void f() {\n" +
-		"  //#fmain.go|main.f\n" +
+		"  //#fmain.go|main.f|10\n" +
 		"  //#g12\n" +
 		"  a();\n" +
 		"  //#g13\n" +
@@ -16,7 +16,7 @@ func TestStripRemovesTheMarkers(t *testing.T) {
 		t.Errorf("got the text %q, want %q", text, want)
 	}
 	// The function starts at line 2, and the 2 lines follow it.
-	if wantData := "2|main.go|main.f\n2+c,1+1"; data != wantData {
+	if wantData := "2|main.go|main.f|10\n2+c,1+1"; data != wantData {
 		t.Errorf("got the map %q, want %q", data, wantData)
 	}
 }
@@ -34,11 +34,11 @@ func TestStripKeepsAFileWithNoMarker(t *testing.T) {
 
 func TestStripJoinsAnEmptyBody(t *testing.T) {
 	in := "void f() {\n" +
-		"  //#fmain.go|main.f\n" +
+		"  //#fmain.go|main.f|10\n" +
 		"}\n" +
 		"\n" +
 		"void g() {\n" +
-		"  //#fmain.go|main.g\n" +
+		"  //#fmain.go|main.g|5\n" +
 		"  //#g7\n" +
 		"  a();\n" +
 		"}\n"
@@ -48,14 +48,14 @@ func TestStripJoinsAnEmptyBody(t *testing.T) {
 		t.Errorf("got the text %q, want %q", text, want)
 	}
 	// f stands on the line 1, and the body of g starts on the line 4.
-	if wantData := "1|main.go|main.f;3|main.go|main.g\n4+7"; data != wantData {
+	if wantData := "1|main.go|main.f|10;3|main.go|main.g|5\n4+7"; data != wantData {
 		t.Errorf("got the map %q, want %q", data, wantData)
 	}
 }
 
 func TestStripKeepsAnElseBlock(t *testing.T) {
 	in := "void f() {\n" +
-		"  //#fmain.go|main.f\n" +
+		"  //#fmain.go|main.f|10\n" +
 		"  //#g7\n" +
 		"  if (c) {\n" +
 		"    //#g8\n" +

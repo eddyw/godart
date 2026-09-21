@@ -283,6 +283,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$recordPC(%s)", args[0]), true
 	case "PCInfo":
 		return fmt.Sprintf("$pcInfo(%s)", args[0]), true
+	case "PCEntry":
+		return fmt.Sprintf("$pcEntry(%s)", args[0]), true
 	case "Stack":
 		return fmt.Sprintf("$stack(%s)", args[0]), true
 	case "GoID":

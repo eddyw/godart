@@ -295,6 +295,7 @@ type emitter struct {
 	// funcFile holds the map form of the file of the current function. A line
 	// marker names its file only when a line directive changed it.
 	funcFile string
+	funcLine int
 	// curGoName holds the Go name of the current function. The frame class of
 	// a local function reads it.
 	curGoName string
@@ -384,8 +385,9 @@ func (e *emitter) markFunc(f *ir.Func) {
 	}
 	e.curGoName = e.goFuncName(f)
 	e.funcFile = e.goFile(f.Pos)
+	e.funcLine = e.cfg.Fset.Position(f.Pos).Line
 	e.litSeq = 0
-	e.line("%s%s|%s", fileMark, e.funcFile, e.curGoName)
+	e.line("%s%s|%s|%d", fileMark, e.funcFile, e.curGoName, e.funcLine)
 	e.goLine = 0
 	e.goMarkFile = e.funcFile
 }
