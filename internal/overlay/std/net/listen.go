@@ -24,8 +24,8 @@ type listenResult struct {
 	cause    error
 }
 
-// Listen opens a listener on an address. The network is tcp or unix, exactly
-// as in Listen of this package.
+// Listen opens a listener on an address. The networks are tcp, tcp4, tcp6,
+// and unix.
 //
 // The bind runs on a goroutine, thus the select takes the first of the 2. A
 // bind that ends after the context closes its own listener.

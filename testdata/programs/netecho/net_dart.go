@@ -8,7 +8,7 @@ import "syscall/dart"
 // carries a handle of the runtime, and the Go build holds the same shape.
 
 func listen() (int, int, string) {
-	return dart.ListenTCP("127.0.0.1", 0)
+	return dart.ListenTCP("127.0.0.1", 0, false)
 }
 
 func accept(listener int) (int, string) {

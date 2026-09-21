@@ -64,7 +64,8 @@ GoString $connOption(int handle, GoString name, int value) => _noNet;
 
 GoString $packetOption(int handle, GoString name, int value) => _noNet;
 
-(int, int, GoString) $listenTCP(GoString host, int port) => (0, 0, _noNet);
+(int, int, GoString) $listenTCP(GoString host, int port, bool ipv6Only) =>
+    (0, 0, _noNet);
 
 GoString $listenTCPHost(int handle) => GoString.empty;
 

@@ -1161,9 +1161,9 @@ GoString $connDeadline(int handle, int read, int write) {
 /// Gives the listener handle, bound port, and failure cause.
 /// A port of 0 asks the system for a free port.
 /// The call yields control. The synchronous return value is unused.
-(int, int, GoString) $listenTCP(GoString host, int port) {
+(int, int, GoString) $listenTCP(GoString host, int port, bool ipv6Only) {
   $await(
-    RawServerSocket.bind(host.toDartString(), port).then(
+    _bindTCP(host.toDartString(), port, ipv6Only).then(
       (RawServerSocket s) => (
         _listenSlot(_Listener(s, () => s.close(), '', s.address.address)),
         s.port,
@@ -1173,6 +1173,22 @@ GoString $connDeadline(int handle, int read, int write) {
     (Object cause) => (-1, 0, _cause(cause)),
   );
   return (-1, 0, _empty);
+}
+
+Future<RawServerSocket> _bindTCP(String host, int port, bool ipv6Only) async {
+  if (host.isNotEmpty) {
+    return RawServerSocket.bind(host, port, v6Only: ipv6Only);
+  }
+  try {
+    return await RawServerSocket.bind(InternetAddress.anyIPv6, port);
+  } on SocketException catch (error) {
+    final code = error.osError?.errorCode;
+    final unavailable = Platform.isMacOS
+        ? code == 47 || code == 49
+        : code == 97 || code == 99;
+    if (!unavailable) rethrow;
+    return RawServerSocket.bind(InternetAddress.anyIPv4, port);
+  }
 }
 
 GoString $listenTCPHost(int handle) =>

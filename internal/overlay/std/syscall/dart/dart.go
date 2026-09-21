@@ -1167,7 +1167,7 @@ func ConnClose(handle int) string {
 // A port of 0 asks the system for a free port.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func ListenTCP(host string, port int) (int, int, string) {
+func ListenTCP(host string, port int, ipv6Only bool) (int, int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 

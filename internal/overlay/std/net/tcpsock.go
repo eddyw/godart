@@ -1,11 +1,20 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 package net
 
 import (
+	"context"
 	"errors"
 	"io"
+	"net/netip"
+	"os"
+	"strings"
 	"syscall"
+	"syscall/dart"
 	"time"
 )
 
@@ -207,20 +216,102 @@ func ListenTCP(network string, laddr *TCPAddr) (*TCPListener, error) {
 	switch network {
 	case "tcp", "tcp4", "tcp6":
 	default:
-		return nil, UnknownNetworkError(network)
+		return nil, &OpError{Op: "listen", Net: network, Addr: laddr, Err: UnknownNetworkError(network)}
 	}
-	address := ":0"
-	if laddr != nil {
-		address = laddr.String()
+	if laddr == nil {
+		laddr = &TCPAddr{}
 	}
-	l, err := Listen("tcp", address)
+	fail := func(err error) (*TCPListener, error) {
+		return nil, &OpError{Op: "listen", Net: network, Addr: laddr, Err: err}
+	}
+	if laddr.Port < 0 || laddr.Port > 65535 {
+		return fail(&os.SyscallError{Syscall: "bind", Err: syscall.EINVAL})
+	}
+	ip := laddr.IP
+	host := ""
+	if network == "tcp4" {
+		if len(ip) == 0 {
+			ip = IPv4zero
+		}
+		if ip.To4() == nil {
+			return fail(&AddrError{Err: "non-IPv4 address", Addr: ip.String()})
+		}
+		host = ip.String()
+	} else if network == "tcp6" {
+		if len(ip) == 0 || ip.Equal(IPv4zero) {
+			ip = IPv6zero
+		}
+		addr, ok := netip.AddrFromSlice(ip.To16())
+		if !ok {
+			return fail(&AddrError{Err: "non-IPv6 address", Addr: ip.String()})
+		}
+		host = addr.String()
+	} else if len(ip) != 0 && !(ip.To4() != nil && ip.IsUnspecified()) {
+		if ip.To16() == nil {
+			return fail(&AddrError{Err: "non-IPv6 address", Addr: ip.String()})
+		}
+		host = ip.String()
+	}
+	if laddr.Zone != "" && strings.Contains(host, ":") {
+		host += "%" + laddr.Zone
+	}
+	handle, port, cause := dart.ListenTCP(host, laddr.Port, network == "tcp6")
+	if cause != "" {
+		return fail(errors.New(cause))
+	}
+	bound := dart.ListenTCPHost(handle)
+	zone := ""
+	if i := strings.LastIndexByte(bound, '%'); i >= 0 {
+		bound, zone = bound[:i], bound[i+1:]
+	}
+	return newTCPListener(handle, &TCPAddr{IP: ParseIP(bound), Port: port, Zone: zone}), nil
+}
+
+func resolveListenTCP(network, address string) (*TCPAddr, error) {
+	if address == "" {
+		return &TCPAddr{}, nil
+	}
+	host, service, err := SplitHostPort(address)
 	if err != nil {
 		return nil, err
 	}
-	tl, ok := l.(*TCPListener)
-	if !ok {
-		l.Close()
-		return nil, errors.New("listen " + network + ": the listen gave no TCP listener")
+	port, err := LookupPort(network, service)
+	if err != nil {
+		return nil, err
 	}
-	return tl, nil
+	zone := ""
+	if i := strings.LastIndexByte(host, '%'); i >= 0 {
+		host, zone = host[:i], host[i+1:]
+	}
+	if host == "" {
+		return &TCPAddr{Port: port, Zone: zone}, nil
+	}
+	family := "ip"
+	if network != "tcp" {
+		family += network[3:]
+	}
+	ip := ParseIP(host)
+	if ip != nil {
+		if !keepIP(family, ip) {
+			return nil, &AddrError{Err: "no suitable address found", Addr: host}
+		}
+	} else {
+		ips, err := DefaultResolver.LookupIP(context.Background(), family, host)
+		if err != nil {
+			return nil, err
+		}
+		if len(ips) == 0 {
+			return nil, &AddrError{Err: "no suitable address found", Addr: host}
+		}
+		ip = ips[0]
+		if network == "tcp" {
+			for _, candidate := range ips {
+				if candidate.To4() != nil {
+					ip = candidate
+					break
+				}
+			}
+		}
+	}
+	return &TCPAddr{IP: ip, Port: port, Zone: zone}, nil
 }

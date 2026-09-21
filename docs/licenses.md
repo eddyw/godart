@@ -30,6 +30,8 @@ The upstream Limbo schema uses C2SP/x509-limbo data under Apache 2.0
 and go-jsonschema generator templates under MIT. Generated packages that
 include this schema receive both notices from the embedded overlay license.
 The CIDR parser adapts Go `src/net/ip.go` and retains its BSD notice.
+TCP listener address conversion adapts Go `src/net/ipsock_posix.go`.
+Its overlay source retains the Go BSD notice.
 UTC values preserve the location representation from Go `src/time/time.go`
 and `zoneinfo.go`. Their source headers retain the BSD notice.
 Source headers and the runtime license preserve their BSD terms.

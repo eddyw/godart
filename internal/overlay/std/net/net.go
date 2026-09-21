@@ -473,23 +473,20 @@ func (d *Dialer) dialOne(network, address string) (Conn, error) {
 // Listen opens a listener on an address. A port of 0 asks the system for a
 // free port, and Addr then gives the port that the system took.
 //
-// The network tcp gives a *TCPListener, and the network unix gives a
-// *UnixListener, exactly as in Go.
+// The networks tcp, tcp4, and tcp6 give a *TCPListener.
+// The network unix gives a *UnixListener.
 func Listen(network, address string) (Listener, error) {
 	switch network {
-	case "tcp":
-		host, port, err := hostPort(address)
+	case "tcp", "tcp4", "tcp6":
+		addr, err := resolveListenTCP(network, address)
+		if err != nil {
+			return nil, &OpError{Op: "listen", Net: network, Err: err}
+		}
+		l, err := ListenTCP(network, addr)
 		if err != nil {
 			return nil, err
 		}
-		if host == "" {
-			host = "0.0.0.0"
-		}
-		handle, taken, cause := dart.ListenTCP(host, port)
-		if cause != "" {
-			return nil, errors.New("listen tcp " + address + ": " + cause)
-		}
-		return newTCPListener(handle, tcpAddrOf(dart.ListenTCPHost(handle), taken)), nil
+		return l, nil
 	case "unix":
 		handle, cause := dart.ListenUnix(address)
 		if cause != "" {
