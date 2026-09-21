@@ -170,7 +170,7 @@ func TestSelectedUpstream(t *testing.T) {
 				"TestTagGet", "tagGetTests", "TestFuncArg", "TestStructArg", "TestZeroSet", "TestInvalid", "TestLarge", "Impl", "Impl.F", "TestValueString", "TestSlice", "TestSlice3", "TestSetLenCap", "TestVariadic", "emptyStruct", "TestCallReturnsEmpty", "fieldIndexRecover", "TestFieldByIndexNil", "TestTypeFieldOutOfRangePanic", "TestTypeFieldReadOnly", "shouldPanic", "TestBytes", "TestValuePanic", "TestTypeOverflow", "TestInitFuncTypes",
 				"TestBool", "TestCanIntUintFloatComplex", "TestCanSetField", "Nil", "NotNil", "TestIsNil", "TestPtrTo",
 				"T", "pair", "integer", "valueTests", "TestClear", "TestGrow", "TestSwapper", "TestPtrSetNil", "TestMapSetNil", "appendTests", "TestAppend",
-				"TestAddr", "TestCopy", "TestCopyString", "TestCopyArray", "TestBigUnnamedStruct",
+				"TestAddr", "TestIndex", "TestCopy", "TestCopyString", "TestCopyArray", "TestBigUnnamedStruct",
 				"iterateToString", "TestMapIterNonEmptyMap", "TestMapIterNilMap",
 				"TestMapIterSafety", "TestMapIterNext", "TestMapIterDelete0", "TestMapIterDelete1",
 				"TestValue_Cap", "TestValue_Len",

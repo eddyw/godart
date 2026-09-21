@@ -418,7 +418,7 @@ Iface? $valueIndex(Iface? value, GoInt exactIndex) {
   final TypeDesc desc = value.desc;
   final Object? v = value.value;
   if (v is GoString) {
-    return Iface(_byteDesc, v[index]);
+    return Iface(_byteDesc, $gi(v[index]));
   }
   final TypeDesc? elem = desc.elem?.call();
   if (elem == null) {
