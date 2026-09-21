@@ -12,6 +12,7 @@ import 'funcpc.dart';
 import 'goint.dart';
 import 'iface.dart';
 import 'int.dart';
+import 'layout.dart';
 import 'map.dart';
 import 'panic.dart';
 import 'sched.dart';
@@ -322,6 +323,13 @@ int $descLength(int handle) {
   if (desc == null) return 0;
   return desc.length;
 }
+
+GoInt $descSize(GoInt handle) => $typeSize(_descAt($ix(handle))!);
+
+int $descAlign(int handle) => $typeAlign(_descAt(handle)!);
+
+GoInt $descOffset(GoInt handle, GoInt index) =>
+    $fieldOffset(_descAt($ix(handle))!, $ix(index));
 
 /// The count of the fields of a struct type.
 int $fieldCount(int handle) {

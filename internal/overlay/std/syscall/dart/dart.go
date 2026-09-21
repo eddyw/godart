@@ -558,6 +558,18 @@ func DescLength(handle int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func DescSize(handle int) uintptr {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func DescAlign(handle int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func DescOffset(handle, index int) uintptr {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // FieldCount gives the count of the fields of a struct type.
 func FieldCount(handle int) int {
 	panic("syscall/dart needs the gart compiler")

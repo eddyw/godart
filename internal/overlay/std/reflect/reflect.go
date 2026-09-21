@@ -219,7 +219,6 @@ type Type interface {
 	OverflowInt(int64) bool
 	OverflowUint(uint64) bool
 	handle() int
-	layout() (uintptr, int)
 	offsetOf(index int) uintptr
 }
 
@@ -232,9 +231,7 @@ type rtype struct {
 	//
 	// The package interns 1 rtype for each handle, thus the cache holds for
 	// the whole program.
-	kindPlus1   Kind
-	layoutSize  uintptr
-	layoutAlign int
+	kindPlus1 Kind
 }
 
 // types interns 1 Type for each handle, thus 2 reads of the same type give 2
@@ -476,20 +473,8 @@ func (t *rtype) Field(i int) StructField {
 	}
 }
 
-// offsetOf gives the count of bytes from the start of the struct to the field.
-// Read Type.Size.
 func (t *rtype) offsetOf(index int) uintptr {
-	offset := uintptr(0)
-	for i := 0; i <= index; i++ {
-		_, _, _, desc := dart.FieldInfo(t.handle(), i)
-		field := typeOf(desc)
-		offset = roundUp(offset, uintptr(field.Align()))
-		if i == index {
-			return offset
-		}
-		offset += field.Size()
-	}
-	return offset
+	return dart.DescOffset(t.handle(), index)
 }
 
 // Key gives the key type of a map type. Each other type panics, exactly as in
@@ -602,90 +587,13 @@ func (t *rtype) MethodByName(name string) (Method, bool) {
 //
 // The Dart output holds no memory layout. The result follows the rules of a
 // 64-bit machine, exactly as the compiler of Go computes them.
-func (t *rtype) Size() uintptr {
-	switch t.Kind() {
-	case Bool, Int8, Uint8:
-		return 1
-	case Int16, Uint16:
-		return 2
-	case Int32, Uint32, Float32:
-		return 4
-	case Int, Int64, Uint, Uint64, Uintptr, Float64, Complex64,
-		Pointer, UnsafePointer, Map, Chan, Func:
-		return 8
-	case Complex128, Interface, String:
-		return 16
-	case Slice:
-		return 24
-	case Array:
-		return uintptr(t.Len()) * t.Elem().Size()
-	case Struct:
-		size, _ := t.layout()
-		return size
-	}
-	panic("reflect: Size of " + t.String())
-}
+func (t *rtype) Size() uintptr { return dart.DescSize(t.handle()) }
 
 // Align gives the count of bytes of the alignment of a value of the type.
-func (t *rtype) Align() int {
-	switch t.Kind() {
-	case Bool, Int8, Uint8:
-		return 1
-	case Int16, Uint16:
-		return 2
-	case Int32, Uint32, Float32, Complex64:
-		return 4
-	case Int, Int64, Uint, Uint64, Uintptr, Float64, Complex128,
-		Pointer, UnsafePointer, Map, Chan, Func, Interface, String, Slice:
-		return 8
-	case Array:
-		return t.Elem().Align()
-	case Struct:
-		_, align := t.layout()
-		return align
-	}
-	panic("reflect: Align of " + t.String())
-}
+func (t *rtype) Align() int { return dart.DescAlign(t.handle()) }
 
 // FieldAlign gives the alignment of the type inside a struct.
 func (t *rtype) FieldAlign() int { return t.Align() }
-
-// layout gives the size and the alignment of a struct type.
-//
-// Go puts each field at an offset that its alignment allows, and it rounds the
-// size up to the alignment of the struct. A struct whose last field holds 0
-// bytes takes 1 more byte, thus a pointer to the end stays inside the value.
-func (t *rtype) layout() (uintptr, int) {
-	if t.layoutAlign != 0 {
-		return t.layoutSize, t.layoutAlign
-	}
-	count := dart.FieldCount(t.handle())
-	offset := uintptr(0)
-	align := 1
-	last := uintptr(0)
-	for i := 0; i < count; i++ {
-		_, _, _, desc := dart.FieldInfo(t.handle(), i)
-		field := typeOf(desc)
-		a := field.Align()
-		if a > align {
-			align = a
-		}
-		offset = roundUp(offset, uintptr(a))
-		last = field.Size()
-		offset += last
-	}
-	if count > 0 && last == 0 && offset > 0 {
-		offset++
-	}
-	t.layoutSize = roundUp(offset, uintptr(align))
-	t.layoutAlign = align
-	return t.layoutSize, t.layoutAlign
-}
-
-// roundUp gives the first multiple of the alignment that is not below n.
-func roundUp(n, align uintptr) uintptr {
-	return (n + align - 1) / align * align
-}
 
 // The 4 forms of the location that a Value names. A Value of the form locNone
 // holds no location, thus Set panics.

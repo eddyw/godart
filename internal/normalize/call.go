@@ -32,6 +32,11 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		}
 		return &ir.Conv{X: x, From: from, Type: tv.Type}
 	}
+	if id := funcIdent(e.Fun); id != nil {
+		if bi, ok := b.info.Uses[id].(*types.Builtin); ok && bi.Pkg() == types.Unsafe {
+			return b.unsafeLayout(e, bi.Name())
+		}
+	}
 	if id := calleeIdent(e.Fun); id != nil {
 		if bi, ok := b.info.Uses[id].(*types.Builtin); ok {
 			return b.builtin(e, bi.Name())
@@ -69,6 +74,32 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		out.Args = b.args(e, sig)
 	}
 	return out
+}
+
+func (b *builder) unsafeLayout(e *ast.CallExpr, name string) ir.Expr {
+	if name != "Offsetof" {
+		return &ir.Builtin{Name: "unsafe." + name, Args: []ir.Expr{&ir.Zero{Type: b.typeOf(e.Args[0])}}, Type: b.typeOf(e)}
+	}
+	field := unparenExpr(e.Args[0]).(*ast.SelectorExpr)
+	selection := b.info.Selections[field]
+	current := selection.Recv()
+	if p, ok := typeset.Core(current).(*types.Pointer); ok {
+		current = p.Elem()
+	}
+	var result ir.Expr
+	for _, index := range selection.Index() {
+		part := &ir.Builtin{Name: "unsafe.Offsetof", Args: []ir.Expr{
+			&ir.Zero{Type: current},
+			&ir.Const{Value: constant.MakeInt64(int64(index)), Type: types.Typ[types.Int]},
+		}, Type: b.typeOf(e)}
+		if result == nil {
+			result = part
+		} else {
+			result = &ir.Binary{Op: token.ADD, X: result, Y: part, Type: b.typeOf(e)}
+		}
+		current = typeset.Core(current).(*types.Struct).Field(index).Type()
+	}
+	return result
 }
 
 // logMethods lists each method of the testing package that writes a log line.

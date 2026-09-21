@@ -29,6 +29,9 @@ func (a *analyzer) collectOrigins(f *ast.File) {
 		}
 	}
 	ast.Inspect(f, func(n ast.Node) bool {
+		if a.unevaluated(n) {
+			return false
+		}
 		switch n := n.(type) {
 		case *ast.ValueSpec:
 			for i, id := range n.Names {

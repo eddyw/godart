@@ -171,6 +171,9 @@ func plainRecv(t types.Type) bool {
 // pass first.
 func (a *analyzer) collectAsserts(f *ast.File) {
 	ast.Inspect(f, func(n ast.Node) bool {
+		if a.unevaluated(n) {
+			return false
+		}
 		switch n := n.(type) {
 		case *ast.UnaryExpr:
 			if n.Op == token.AND {

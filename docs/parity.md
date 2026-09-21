@@ -12,7 +12,7 @@ SDK versions, modes, and exclusions.
 | Language versions | Package and file versions govern language semantics. The installed SDK still supplies standard library code. |
 | Goroutines | Cooperative execution in 1 Dart isolate. Loops in state machines yield periodically. Busy synchronous functions can block other work. |
 | Parallelism | No shared-memory Go execution across native threads. `GOMAXPROCS` and `NumCPU` report 1. |
-| Type layout | Constant `unsafe.Sizeof`, `unsafe.Alignof`, and `unsafe.Offsetof` use source type metadata. They do not describe Dart object storage. |
+| Type layout | `unsafe.Sizeof`, `unsafe.Alignof`, and `unsafe.Offsetof` use 64-bit Go type metadata, including generic types. They do not describe Dart object storage. |
 | Native access | No cgo, native pointer arithmetic, or general `unsafe` operations. |
 | Pointer output | Process-local identities can represent pointers. They are not native memory addresses. |
 | Map iteration | The runtime can expose insertion order. Programs must not depend on Go's unspecified iteration order. |

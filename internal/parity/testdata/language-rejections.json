@@ -394,14 +394,8 @@
   "typeparam/chans": [
     "$DIR/chans.go:190:10: undefined: runtime.SetFinalizer"
   ],
-  "typeparam/issue47716": [
-    "$DIR/issue47716.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
   "typeparam/issue48013": [
     "$DIR/issue48013.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "typeparam/issue53390": [
-    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "typeparam/orderedmap": [
     "$DIR/orderedmap.go:237:10: undefined: runtime.SetFinalizer"

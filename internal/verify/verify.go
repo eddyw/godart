@@ -41,7 +41,7 @@ func Package(fset *token.FileSet, files []*ast.File, info *types.Info, embeds, l
 		v.checkDartDecls(f)
 	}
 	for _, f := range files {
-		v.unsafeConstants = v.onlyUnsafeConstants(f)
+		v.unsafeLayout = v.onlyUnsafeLayout(f)
 		ast.Inspect(f, v.visit)
 	}
 	return errors.Join(v.errs...)
@@ -81,8 +81,8 @@ type verifier struct {
 	localPackages map[string]bool
 	// embeds holds the path of each file that the loader rewrote for a
 	// `//go:embed` directive.
-	embeds          map[string]bool
-	unsafeConstants bool
+	embeds       map[string]bool
+	unsafeLayout bool
 }
 
 func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any) {
@@ -94,7 +94,7 @@ func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any
 }
 
 func (v *verifier) visit(n ast.Node) bool {
-	if call, ok := n.(*ast.CallExpr); ok && v.unsafeConstant(call) {
+	if call, ok := n.(*ast.CallExpr); ok && v.unsafeLayoutCall(call) {
 		return false
 	}
 	v.checkTypeParamOp(n)
@@ -169,7 +169,7 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	}
 	switch {
 	case path == "unsafe":
-		if v.unsafeConstants {
+		if v.unsafeLayout {
 			return
 		}
 		// A blank import performs no operation. The standard library writes it
@@ -189,10 +189,7 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	}
 }
 
-func (v *verifier) unsafeConstant(call *ast.CallExpr) bool {
-	if v.info.Types[call].Value == nil {
-		return false
-	}
+func (v *verifier) unsafeLayoutCall(call *ast.CallExpr) bool {
 	var id *ast.Ident
 	switch fun := call.Fun.(type) {
 	case *ast.SelectorExpr:
@@ -206,10 +203,10 @@ func (v *verifier) unsafeConstant(call *ast.CallExpr) bool {
 	return ok && obj.Pkg() == types.Unsafe && (obj.Name() == "Sizeof" || obj.Name() == "Alignof" || obj.Name() == "Offsetof")
 }
 
-func (v *verifier) onlyUnsafeConstants(file *ast.File) bool {
+func (v *verifier) onlyUnsafeLayout(file *ast.File) bool {
 	allowed := true
 	ast.Inspect(file, func(n ast.Node) bool {
-		if call, ok := n.(*ast.CallExpr); ok && v.unsafeConstant(call) {
+		if call, ok := n.(*ast.CallExpr); ok && v.unsafeLayoutCall(call) {
 			return false
 		}
 		if id, ok := n.(*ast.Ident); ok {

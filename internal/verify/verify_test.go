@@ -472,7 +472,7 @@ func (p point) shift() int
 `)
 }
 
-func TestUnsafeConstants(t *testing.T) {
+func TestUnsafeLayout(t *testing.T) {
 	acceptFile(t, "metadata", `package a
 import "unsafe"
 var x struct { A byte; B int64 }
@@ -489,7 +489,7 @@ const Size = u.Sizeof(1)
 import . "unsafe"
 const Size = Sizeof(1)
 `)
-	rejectFile(t, "dynamic metadata", "rejects the package unsafe", `package a
+	acceptFile(t, "dynamic metadata", `package a
 import "unsafe"
 func f[T any](x T) uintptr { return unsafe.Sizeof(x) }
 `)

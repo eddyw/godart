@@ -208,6 +208,8 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 // intrinsicRaw lists each interop function whose boundary the mapped text
 // handles itself.
 var intrinsicRaw = map[string]bool{
+	"DescSize":        true,
+	"DescOffset":      true,
 	"AsInt":           true,
 	"WithInt":         true,
 	"NowNanos":        true,
@@ -465,6 +467,12 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 			args[0], args[1], args[2], args[3]), true
 	case "DescLength":
 		return fmt.Sprintf("$descLength(%s)", args[0]), true
+	case "DescSize":
+		return fmt.Sprintf("$descSize(%s)", args[0]), true
+	case "DescAlign":
+		return fmt.Sprintf("$descAlign(%s)", args[0]), true
+	case "DescOffset":
+		return fmt.Sprintf("$descOffset(%s, %s)", args[0], args[1]), true
 	case "FieldCount":
 		return fmt.Sprintf("$fieldCount(%s)", args[0]), true
 	case "FieldPkgPath":
@@ -1224,6 +1232,12 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 			e.dartType(inner.GoType()), x.ResultsVar, body, e.expr(inner))
 	}
 	switch x.Name {
+	case "unsafe.Sizeof":
+		return fmt.Sprintf("$typeSize(%s)", e.descriptorOf(x.Args[0].GoType()))
+	case "unsafe.Alignof":
+		return fmt.Sprintf("$gi($typeAlign(%s))", e.descriptorOf(x.Args[0].GoType()))
+	case "unsafe.Offsetof":
+		return fmt.Sprintf("$fieldOffset(%s, $ix(%s))", e.descriptorOf(x.Args[0].GoType()), e.expr(x.Args[1]))
 	case "len":
 		return e.length(x.Args[0])
 	case "cap":

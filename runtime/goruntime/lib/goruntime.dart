@@ -24,6 +24,7 @@ export 'src/identity.dart' if (dart.library.js_interop) 'src/identity_web.dart';
 export 'src/iface.dart';
 export 'src/int.dart';
 export 'src/json.dart';
+export 'src/layout.dart';
 export 'src/map.dart';
 export 'src/mathfn.dart';
 export 'src/net.dart' if (dart.library.js_interop) 'src/net_web.dart';

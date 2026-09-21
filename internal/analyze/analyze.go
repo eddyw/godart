@@ -245,6 +245,9 @@ func (a *analyzer) file(f *ast.File) {
 	// The links of the generic instances. An escaped value of a generic
 	// signature and a read at an instance of it share 1 group.
 	ast.Inspect(f, func(n ast.Node) bool {
+		if a.unevaluated(n) {
+			return false
+		}
 		if id, ok := n.(*ast.Ident); ok {
 			a.linkUse(id)
 		}
@@ -265,6 +268,9 @@ func (a *analyzer) file(f *ast.File) {
 // inside it needs a summary of its own.
 func (a *analyzer) walkTopExpr(e ast.Expr) {
 	ast.Inspect(e, func(n ast.Node) bool {
+		if a.unevaluated(n) {
+			return false
+		}
 		switch n := n.(type) {
 		case *ast.FuncLit:
 			a.registerLit(n)
@@ -292,6 +298,9 @@ func (a *analyzer) walkFunc(key any, body ast.Node) {
 	a.namedResults(key)
 	var visit func(n ast.Node) bool
 	visit = func(n ast.Node) bool {
+		if a.unevaluated(n) {
+			return false
+		}
 		switch n := n.(type) {
 		case *ast.FuncLit:
 			a.registerLit(n)
@@ -345,6 +354,25 @@ func (a *analyzer) walkFunc(key any, body ast.Node) {
 		}
 		return visit(n)
 	})
+}
+
+func (a *analyzer) unevaluated(n ast.Node) bool {
+	call, ok := n.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	var id *ast.Ident
+	switch fun := unparen(call.Fun).(type) {
+	case *ast.Ident:
+		id = fun
+	case *ast.SelectorExpr:
+		id = fun.Sel
+	default:
+		return false
+	}
+	builtin, ok := a.pkg.TypesInfo.Uses[id].(*types.Builtin)
+	return ok && builtin.Pkg() == types.Unsafe &&
+		(builtin.Name() == "Sizeof" || builtin.Name() == "Alignof" || builtin.Name() == "Offsetof")
 }
 
 // namedResults joins the cell of each named result with the result of the
