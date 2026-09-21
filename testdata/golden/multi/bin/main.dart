@@ -24,17 +24,23 @@ void $init() {
   if ($initDone) return;
   $initDone = true;
   $srcmap($srcmapData);
-  $count.$init();
-  $greet.$init();
+  $initSequence(<void Function()>[$count.$init, $greet.$init]);
 }
 
 void main(List<String> $arguments) {
   $setArgs($arguments);
   $goPanic = $fatal;
-  $init();
   try {
     $boot(() {
-      _main();
+      $initValue<Object?>(
+        () {
+          $init();
+          return null;
+        },
+        (_) {
+          _main();
+        },
+      );
     });
   } on GoPanic catch ($p, $s) {
     $fatal($p, $s);

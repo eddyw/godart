@@ -55,6 +55,7 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		Fun:      fun,
 		Type:     b.typeOf(e),
 		Async:    b.blocks.CallAsync(e),
+		NoPoll:   b.blocks.CallNoPoll(e),
 		Spread:   e.Ellipsis.IsValid(),
 		Variadic: sig != nil && sig.Variadic(),
 		TypeArgs: b.typeArgs(e.Fun),
@@ -62,9 +63,9 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 	if !out.Async {
 		switch fun := fun.(type) {
 		case *ir.Ident:
-			out.NoPoll = b.blocks.Blocks(fun.Obj)
+			out.NoPoll = out.NoPoll || b.blocks.Blocks(fun.Obj)
 		case *ir.Method:
-			out.NoPoll = b.blocks.Blocks(fun.Obj)
+			out.NoPoll = out.NoPoll || b.blocks.Blocks(fun.Obj)
 		}
 	}
 	if selector, ok := unparenExpr(e.Fun).(*ast.SelectorExpr); ok {

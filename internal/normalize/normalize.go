@@ -281,8 +281,10 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 			pending := b.pending
 			b.pending = nil
 			pre := b.orderRun(spec.Pos(), func(o *orderer) { init = o.expr(init) })
-			out = append(out, &ir.Global{Var: v, Init: init,
-				Pending: append(pending, pre...)})
+			g := &ir.Global{Var: v, Init: init, Pos: spec.Values[i].Pos(),
+				Pending: append(pending, pre...)}
+			b.initFunction(g, spec.Values[i])
+			out = append(out, g)
 		}
 	case len(spec.Values) == 1:
 		// The call runs 1 time. A hidden variable holds the record of the
@@ -319,7 +321,9 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 			// places the call.
 			hidden.Obj = vars[0].Obj
 		}
-		out = append(out, &ir.Global{Var: hidden, Init: call, Pending: pending})
+		g := &ir.Global{Var: hidden, Init: call, Pos: spec.Values[0].Pos(), Pending: pending}
+		b.initFunction(g, spec.Values[0])
+		out = append(out, g)
 		for i, v := range vars {
 			field := &ir.RecordField{
 				X:     &ir.Ident{Name: hidden.Name, Type: tuple},
@@ -332,6 +336,24 @@ func (b *builder) valueSpec(spec *ast.ValueSpec, tok token.Token) []ir.Decl {
 		b.fail(spec.Pos(), "a package variable with multiple results is not supported yet")
 	}
 	return out
+}
+
+func (b *builder) initFunction(g *ir.Global, source ast.Expr) {
+	if !b.blocks.InitializerBlocks(source) {
+		return
+	}
+	f := &ir.Func{Name: "init", Pos: source.Pos(), End: source.End(), Async: true}
+	if tuple, ok := g.Var.Type.(*types.Tuple); ok {
+		for i := range tuple.Len() {
+			f.Results = append(f.Results, &ir.Var{Type: tuple.At(i).Type()})
+		}
+	} else {
+		f.Results = []*ir.Var{{Type: g.Var.Type}}
+	}
+	f.Body = &ir.Block{List: append(append([]ir.Stmt{}, g.Pending...), &ir.Return{Node: ir.Node{Pos: source.Pos()}, Values: []ir.Expr{g.Init}})}
+	f.Machine = b.flatten(f.Body, nil, nil, true, false, false, f.Results,
+		b.frameClass(source.Pos())+"$init", source.Pos())
+	g.AsyncInit = f
 }
 
 // startInit gives the builder a fresh set of local names for the initializer of

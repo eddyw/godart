@@ -162,6 +162,9 @@ func (a *analyzer) formatMethodAsync(key any, seen map[any]bool) bool {
 	}
 	for _, site := range s.sites {
 		targets := site.targets
+		if site.onceOperands {
+			targets = site.onceTargets
+		}
 		if site.formatOperands {
 			targets = site.formatMethods
 		}

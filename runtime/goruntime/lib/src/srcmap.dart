@@ -10,7 +10,7 @@ import 'panic.dart';
 import 'slice.dart';
 import 'string.dart';
 
-/// GoPos is a position of the Go source.
+/// A source position and its Go function identity.
 final class GoPos {
   final String function;
   final String file;
@@ -196,8 +196,7 @@ Slice<GoString> $stack(int skip) {
   return Slice.of(out);
 }
 
-/// Gives the Go position of each frame of a Dart stack trace. A frame that the
-/// map does not hold stays out, thus the list holds the Go frames only.
+/// Maps generated Go frames and the runtime initialization driver.
 List<GoPos> $goStack(StackTrace trace) {
   final out = <GoPos>[];
   for (final line in trace.toString().split('\n')) {
@@ -210,7 +209,12 @@ List<GoPos> $goStack(StackTrace trace) {
     final at = int.tryParse(location[2]!);
     if (at == null) continue;
     final pos = $goPos(location[1]!, at);
-    if (pos != null) out.add(pos);
+    if (pos != null) {
+      out.add(pos);
+    } else if (location[1] == 'package:goruntime/src/init.dart' &&
+        line.substring(0, open).trimRight().endsWith('_InitSequence.resume')) {
+      out.add(GoPos('runtime.doInit', location[1]!, at));
+    }
   }
   return out;
 }

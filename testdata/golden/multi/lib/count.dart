@@ -22,4 +22,5 @@ void $init() {
   if ($initDone) return;
   $initDone = true;
   $srcmap($srcmapData);
+  $initSequence(<void Function()>[]);
 }

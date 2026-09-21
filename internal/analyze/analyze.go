@@ -27,11 +27,12 @@ import (
 // Result holds the block state of each function and of each call.
 type Result struct {
 	// blocking marks a function that can block. A key is a *types.Func, a
-	// *ast.FuncLit, or the *ast.RangeStmt of a range loop over a function,
+	// *ast.FuncLit, an initializer, or the *ast.RangeStmt of a range loop,
 	// whose body is a function of its own.
 	blocking map[any]bool
 	// callAsync marks a call that waits for a result.
-	callAsync map[*ast.CallExpr]bool
+	callAsync  map[*ast.CallExpr]bool
+	callNoPoll map[*ast.CallExpr]bool
 	// rangeAsync marks a range loop over a function whose call of the
 	// sequence waits for a result.
 	rangeAsync map[*ast.RangeStmt]bool
@@ -46,6 +47,14 @@ type Result struct {
 func (r *Result) Blocks(key any) bool { return r.blocking[key] }
 
 func (r *Result) CallAsync(call *ast.CallExpr) bool { return r.callAsync[call] }
+
+func (r *Result) CallNoPoll(call *ast.CallExpr) bool { return r.callNoPoll[call] }
+
+type initializer struct{ ast.Expr }
+
+func (r *Result) InitializerBlocks(expr ast.Expr) bool {
+	return r.blocking[initializer{expr}]
+}
 
 // RangeAsync reports whether the call of the sequence of a range loop over a
 // function waits for a result.
@@ -67,7 +76,7 @@ func (r *Result) Digest(p *packages.Package) string {
 			case *ast.FuncLit:
 				fmt.Fprintf(h, "l%t\x00", r.blocking[any(n)])
 			case *ast.CallExpr:
-				fmt.Fprintf(h, "c%t\x00", r.callAsync[n])
+				fmt.Fprintf(h, "c%t%t\x00", r.callAsync[n], r.callNoPoll[n])
 			case *ast.RangeStmt:
 				fmt.Fprintf(h, "r%t%t\x00", r.blocking[any(n)], r.rangeAsync[n])
 			}
@@ -109,11 +118,13 @@ func Module(pkgs []*packages.Package) *Result {
 		result: &Result{
 			blocking:   map[any]bool{},
 			callAsync:  map[*ast.CallExpr]bool{},
+			callNoPoll: map[*ast.CallExpr]bool{},
 			rangeAsync: map[*ast.RangeStmt]bool{},
 			sigAsync:   map[string]bool{},
 		},
 		summaries:        map[any]*summary{},
 		interfaceOrigins: map[*types.Var]interfaceOrigin{},
+		onceSources:      map[*types.Var]source{},
 		interfaceReturns: map[retCell][]interfaceOrigin{},
 		originMutable:    map[*types.Var]bool{},
 		byMethod:         map[string][]any{},
@@ -155,6 +166,7 @@ func Module(pkgs []*packages.Package) *Result {
 }
 
 type analyzer struct {
+	onceSources      map[*types.Var]source
 	interfaceOrigins map[*types.Var]interfaceOrigin
 	interfaceReturns map[retCell][]interfaceOrigin
 	originMutable    map[*types.Var]bool
@@ -264,22 +276,9 @@ func (a *analyzer) file(f *ast.File) {
 	})
 }
 
-// walkTopExpr reads an expression of a package variable. A function literal
-// inside it needs a summary of its own.
+// Package initializers need the same call and suspension analysis as functions.
 func (a *analyzer) walkTopExpr(e ast.Expr) {
-	ast.Inspect(e, func(n ast.Node) bool {
-		if a.unevaluated(n) {
-			return false
-		}
-		switch n := n.(type) {
-		case *ast.FuncLit:
-			a.registerLit(n)
-			return false
-		case *ast.CompositeLit:
-			a.compositeLit(n)
-		}
-		return true
-	})
+	a.walkFunc(initializer{e}, &ast.ExprStmt{X: e})
 }
 
 func (a *analyzer) registerLit(lit *ast.FuncLit) {
@@ -546,6 +545,7 @@ func (a *analyzer) valueSpec(n *ast.ValueSpec) {
 		if i >= len(n.Values) {
 			break
 		}
+		a.recordOnce(name, n.Values[i])
 		a.assign(name, a.flowExpr(n.Values[i]), a.typeOf(n.Values[i]))
 	}
 }
@@ -639,12 +639,13 @@ func (a *analyzer) callExpr(s *summary, call *ast.CallExpr) {
 		return
 	}
 	site := &callSite{
-		summary: s,
-		call:    call,
-		callee:  callee,
-		args:    map[int]source{},
-		argEsc:  map[int]string{},
-		done:    map[any]bool{},
+		summary:      s,
+		call:         call,
+		onceVariable: calledVariable(fun, a.pkg.TypesInfo),
+		callee:       callee,
+		args:         map[int]source{},
+		argEsc:       map[int]string{},
+		done:         map[any]bool{},
 	}
 	if targets, ok := a.formatTargets(call, callee); ok {
 		site.formatOperands = true
@@ -951,6 +952,13 @@ func (a *analyzer) resolveSites() {
 			site.targets = append(site.targets, blockTarget(t))
 		}
 		site.fallbacks = sigFallbacks(site.callee)
+		if callback, ok := a.onceSources[site.onceVariable]; ok && !a.originMutable[site.onceVariable] {
+			site.onceOperands = true
+			for _, target := range a.targets(callback) {
+				site.onceTargets = append(site.onceTargets, blockTarget(target))
+			}
+			site.onceFallbacks = sigFallbacks(callback)
+		}
 		for _, t := range a.targets(site.formatSource) {
 			site.formatMethods = append(site.formatMethods, blockTarget(t))
 		}
@@ -1045,6 +1053,19 @@ func (a *analyzer) blocksNow(s *summary) bool {
 // siteAsync reports whether a call site must wait. A target that blocks or an
 // escape group that holds a function that blocks each give true.
 func (a *analyzer) siteAsync(site *callSite) bool {
+	if site.onceOperands {
+		for _, target := range site.onceTargets {
+			if a.result.blocking[target] {
+				return true
+			}
+		}
+		for _, key := range site.onceFallbacks {
+			if a.result.sigAsync[key] {
+				return true
+			}
+		}
+		return false
+	}
 	if site.formatOperands {
 		seen := map[any]bool{}
 		for _, fn := range site.formatMethods {
@@ -1107,6 +1128,9 @@ func (a *analyzer) markCalls() {
 		}
 		for _, site := range s.sites {
 			if !a.siteAsync(site) {
+				if site.onceOperands {
+					a.result.callNoPoll[site.call] = true
+				}
 				continue
 			}
 			if site.rng != nil {

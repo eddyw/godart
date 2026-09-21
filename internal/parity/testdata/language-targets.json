@@ -38,5 +38,7 @@
   "typeparam/settable",
   "typeparam/issue47716",
   "fixedbugs/issue79812",
-  "fixedbugs/issue56990"
+  "fixedbugs/issue56990",
+  "initialize",
+  "initcomma"
 ]

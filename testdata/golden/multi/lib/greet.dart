@@ -89,6 +89,7 @@ void $init() {
   if ($initDone) return;
   $initDone = true;
   $srcmap($srcmapData);
+  $initSequence(<void Function()>[]);
 }
 
 final TypeDesc $descce6992f7 = TypeDesc(

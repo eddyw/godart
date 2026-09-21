@@ -31,7 +31,7 @@ func prepareUpstreamNativeImage(t *testing.T, dir, out, entry string) nativeImag
 	if err != nil {
 		t.Fatal(err)
 	}
-	const start = "$boot(() {"
+	const start = "_main();"
 	if strings.Count(string(source), start) != 1 {
 		t.Fatal("expected 1 generated test entry point")
 	}
@@ -60,7 +60,7 @@ func prepareUpstreamSelfExec(t *testing.T, out, entry string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const start = "$boot(() {"
+	const start = "_main();"
 	if strings.Count(string(source), start) != 1 {
 		t.Fatal("expected 1 generated test entry point")
 	}

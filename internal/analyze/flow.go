@@ -68,6 +68,10 @@ func (s source) empty() bool { return len(s.keys) == 0 && len(s.cells) == 0 }
 // each argument into the parameters of a target, and each result of the
 // target into the results of the call.
 type callSite struct {
+	onceVariable   *types.Var
+	onceOperands   bool
+	onceTargets    []any
+	onceFallbacks  []string
 	formatSource   source
 	formatOperands bool
 	formatMethods  []any

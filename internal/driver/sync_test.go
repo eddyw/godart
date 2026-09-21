@@ -555,3 +555,31 @@ func main() { println(build()) }
 		})
 	}
 }
+
+func TestSyncOnceCallbacks(t *testing.T) {
+	for _, test := range []struct {
+		name, declaration, body string
+		rejected                bool
+	}{
+		{"function", "var cached = sync.OnceFunc(func() {})", "cached(); return 1", false},
+		{"value", "var cached = sync.OnceValue(func() int { return 7 })", "return cached()", false},
+		{"values", "var cached = sync.OnceValues(func() (int, bool) { return 7, true })", "value, _ := cached(); return value", false},
+		{"independent", "var cached = sync.OnceValue(func() int { return 7 }); var slow = sync.OnceValue(func() int { <-make(chan int); return 0 })", "return cached()", false},
+		{"blocking function", "var cached = sync.OnceFunc(func() { <-make(chan int) })", "cached(); return 1", true},
+		{"blocking value", "var cached = sync.OnceValue(func() int { <-make(chan int); return 7 })", "return cached()", true},
+		{"blocking values", "var cached = sync.OnceValues(func() (int, bool) { <-make(chan int); return 7, true })", "value, _ := cached(); return value", true},
+		{"mutable result", "var cached = sync.OnceValue(func() int { return 7 }); func init() { cached = sync.OnceValue(func() int { <-make(chan int); return 0 }) }", "return cached()", true},
+		{"mutable callback", "var callback = func() int { return 7 }; var cached = sync.OnceValue(func() int { return callback() }); func init() { callback = func() int { <-make(chan int); return 0 } }", "return cached()", true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := buildSync(t, "package main\nimport \"sync\"\n//gart:sync\ntype Builder func() int\n"+test.declaration+"\nvar build Builder = func() int { "+test.body+" }\nfunc main() { println(build()) }\n")
+			if test.rejected {
+				if err == nil || !strings.Contains(err.Error(), "this function can block") {
+					t.Fatalf("expected callback rejection, got %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}

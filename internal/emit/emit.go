@@ -842,11 +842,7 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	return e.buf.String()
 }
 
-// writeInit writes the function that gives each package variable its value.
-// Dart holds a top level variable as late, thus the order stays explicit.
-//
-// Go gives a package its values after each package that it imports, thus the
-// function starts with the imports. The flag stops a second run.
+// Package initialization follows dependency order and can suspend between steps.
 func (e *emitter) writeInit(imports []Import) {
 	e.line("bool $initDone = false;")
 	e.line("")
@@ -854,44 +850,58 @@ func (e *emitter) writeInit(imports []Import) {
 	e.line("if ($initDone) return;")
 	e.line("$initDone = true;")
 	e.line("$srcmap($srcmapData);")
+	e.line("$initSequence(<void Function()>[")
 	for _, im := range imports {
-		e.line("%s.$init();", e.prefixes[im.Path])
+		e.line("%s.$init,", e.prefixes[im.Path])
 	}
-	blanks := 0
-	for _, g := range e.globals {
-		if g.Var.Name == "_" {
-			// Go runs the initializer of a blank variable for its effect, in
-			// the order of the init. Only the value falls away.
+	for i, g := range e.globals {
+		if e.lazyGlobals[g] || g.Var.Name == "_" && g.Init == nil {
+			continue
+		}
+		e.line("() {")
+		if g.AsyncInit != nil {
+			e.initNames[g.AsyncInit] = fmt.Sprintf("$initVar%d", i)
+			e.markDrop()
+			e.line("$initValue<%s>(%s, ($value) {", e.dartType(g.Var.Type), e.initNames[g.AsyncInit])
+			e.initAssign(g, "$value")
+			e.line("});")
+		} else {
+			e.markFunc(&ir.Func{Name: "init", Pos: g.Pos})
+			e.mark(g.Pos)
+			e.list(g.Pending)
+			value := e.zero(g.Var.Type)
 			if g.Init != nil {
-				e.list(g.Pending)
-				e.line("final $blank%d = %s;", blanks, e.expr(g.Init))
-				blanks++
+				value = e.expr(g.Init)
 			}
-			continue
+			e.initAssign(g, value)
 		}
-		// A lazy variable holds its value in its own declaration, thus the
-		// routine writes nothing for it.
-		if e.lazyGlobals[g] {
-			continue
-		}
-		// A function literal of the initializer that can block becomes a local
-		// function of the init routine.
-		e.list(g.Pending)
-		value := e.zero(g.Var.Type)
-		if g.Init != nil {
-			value = e.expr(g.Init)
-		}
-		if g.Var.Boxed {
-			e.line("%s = Box(%s);", e.topName(e.pkg, g.Var.Name), value)
-			continue
-		}
-		e.line("%s = %s;", e.topName(e.pkg, g.Var.Name), value)
+		e.markDrop()
+		e.line("},")
 	}
 	for _, f := range e.inits {
-		e.line("%s();", e.initNames[f])
+		e.line("%s,", e.initNames[f])
 	}
+	e.line("]);")
 	e.line("}")
 	e.line("")
+	for _, g := range e.globals {
+		if g.AsyncInit != nil {
+			e.funcDecl(g.AsyncInit)
+		}
+	}
+	if e.goLine != 0 {
+		e.markDrop()
+	}
+}
+
+func (e *emitter) initAssign(g *ir.Global, value string) {
+	if g.Var.Name == "_" {
+		e.line("%s;", value)
+	} else if g.Var.Boxed {
+		e.line("%s = Box(%s);", e.topName(e.pkg, g.Var.Name), value)
+	} else {
+		e.line("%s = %s;", e.topName(e.pkg, g.Var.Name), value)
+	}
 }
 
 // writeMain writes the entry point. Package main runs as the first goroutine,
@@ -903,10 +913,9 @@ func (e *emitter) writeMain() {
 	if e.cfg.DefaultGODEBUG != "" {
 		e.line("$setDefaultGODEBUG(%s);", dartString(e.cfg.DefaultGODEBUG))
 	}
-	e.line("$init();")
 	if e.mainFunc != nil {
 		e.line("try {")
-		e.line("$boot(() { _main(); });")
+		e.line("$boot(() { $initValue<Object?>(() { $init(); return null; }, (_) { _main(); }); });")
 		e.line("} on GoPanic catch ($p, $s) {")
 		e.line("$fatal($p, $s);")
 		e.line("}")

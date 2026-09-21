@@ -120,8 +120,10 @@ type Machine struct {
 
 // Global is a package level variable.
 type Global struct {
-	Var  *Var
-	Init Expr
+	Var       *Var
+	Init      Expr
+	Pos       token.Pos
+	AsyncInit *Func
 	// Pending holds the declaration of each function literal of Init that can
 	// block. Such a literal becomes a local function, and the init routine
 	// writes it in front of the assignment.

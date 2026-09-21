@@ -2,6 +2,20 @@ import 'package:goruntime/goruntime.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('initialization frames retain the actual runtime source location', () {
+    const uri = 'package:goruntime/src/init.dart';
+    final frames = $goStack(
+      StackTrace.fromString(
+        '#0 _InitSequence.resume ($uri:37:9)\n'
+        '#1 _InitValue.resume ($uri:70:9)\n'
+        '#2 _InitSequence.resume (package:other/init.dart:37:9)',
+      ),
+    );
+    expect(frames, hasLength(1));
+    expect(frames.single.function, 'runtime.doInit');
+    expect(frames.single.file, uri);
+    expect(frames.single.line, 37);
+  });
   for (final uri in <String>[
     'file:///tmp/trace.dart',
     r'C:\project\trace.dart',
