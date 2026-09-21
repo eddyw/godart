@@ -1418,10 +1418,27 @@ func AppendSlice(s, t Value) Value {
 // Copy writes each element of src into dst, and it gives the count that it
 // wrote. src may hold a string when dst holds a byte slice.
 func Copy(dst, src Value) int {
-	switch dst.Kind() {
-	case Slice, Array:
-	default:
-		panic("reflect: Copy of " + dst.Type().String())
+	dk := dst.Kind()
+	if dk != Array && dk != Slice {
+		panic(&ValueError{Method: "reflect.Copy", Kind: dk})
+	}
+	// Copy is a package function, thus Go names no Value method.
+	if dk == Array {
+		dst.mustBeAssignable("unknown method")
+	}
+	if dst.ro != 0 {
+		panic("reflect: unknown method using value obtained using unexported field")
+	}
+	sk := src.Kind()
+	stringCopy := sk == String && dst.Type().Elem().Kind() == Uint8
+	if sk != Array && sk != Slice && !stringCopy {
+		panic(&ValueError{Method: "reflect.Copy", Kind: sk})
+	}
+	if src.ro != 0 {
+		panic("reflect: unknown method using value obtained using unexported field")
+	}
+	if !stringCopy && dst.Type().Elem() != src.Type().Elem() {
+		panic("reflect.Copy: " + dst.Type().Elem().String() + " != " + src.Type().Elem().String())
 	}
 	return dart.CopyValue(dst.read(), src.read())
 }

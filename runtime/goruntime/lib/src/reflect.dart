@@ -1160,10 +1160,12 @@ void $valueClear(Iface? value) {
   }
   if (v is $ZeroSlice<Object?>) return;
   if (v is Slice<Object?>) {
-    final TypeDesc? elem = value.desc.elem?.call();
-    for (int i = 0; i < v.len; i++) {
-      v[i] = elem == null ? null : _zeroOf(elem);
-    }
+    final elem = value.desc.elem!();
+    $clearSlice<Object?>(
+      v,
+      () => _zeroOf(elem),
+      _holdsValue(elem) ? (a, b) => _assignInto(a, b, elem) : null,
+    );
     return;
   }
   $panic(
@@ -2195,31 +2197,27 @@ Iface? $appendSliceValue(Iface? slice, Iface? add) {
 /// that it wrote. The source may be a string, and the destination is then a
 /// byte slice.
 GoInt $copyValue(Iface? dst, Iface? src) {
-  if (dst == null) $panicNil();
-  final Object? to = dst.value;
-  if (to is! Slice<Object?> && to is! List<Object?>) return GoInt.zero;
-  final Object? from = src?.value;
-  if (to is Slice<Object?> &&
-      from is Slice<Object?> &&
-      (to is $ZeroSlice<Object?> || from is $ZeroSlice<Object?>)) {
-    return to.$length < from.$length ? to.$length : from.$length;
-  }
-  final int room = to is Slice<Object?> ? to.len : (to as List<Object?>).length;
+  final to = dst!.value;
+  final from = src!.value;
+  final target = to is Slice<Object?>
+      ? to
+      : Slice<Object?>.of(to as List<Object?>);
   if (from is GoString) {
-    final int n = room < from.length ? room : from.length;
-    for (int i = 0; i < n; i++) {
-      _writeElem(to, i, $gi(from[i]));
+    final count = target.len < from.length ? target.len : from.length;
+    for (var i = 0; i < count; i++) {
+      target[i] = $gi(from[i]);
     }
-    return $gi(n);
+    return $gi(count);
   }
-  final int have = from is Slice<Object?>
-      ? from.len
-      : (from is List<Object?> ? from.length : 0);
-  final int n = room < have ? room : have;
-  for (int i = 0; i < n; i++) {
-    _writeElem(to, i, _readElem(from, i));
-  }
-  return $gi(n);
+  final source = from is Slice<Object?>
+      ? from
+      : Slice<Object?>.of(from as List<Object?>);
+  final elem = dst.desc.elem!();
+  return $copySlice<Object?>(
+    target,
+    source,
+    _holdsValue(elem) ? (a, b) => _assignInto(a, b, elem) : null,
+  );
 }
 
 Object? _readElem(Object? v, int i) {

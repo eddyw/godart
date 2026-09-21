@@ -1321,8 +1321,8 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 			return e.expr(x.Args[0]) + ".clear()"
 		}
 		if slice, ok := typeset.Core(x.Args[0].GoType()).(*types.Slice); ok {
-			return fmt.Sprintf("$clearSlice(%s, () => %s)",
-				e.expr(x.Args[0]), e.zero(slice.Elem()))
+			return fmt.Sprintf("$clearSlice(%s, () => %s%s)",
+				e.expr(x.Args[0]), e.zero(slice.Elem()), e.elemAssign(slice.Elem()))
 		}
 		e.fail("clear does not apply to the type %s", x.Args[0].GoType())
 		return "null"
@@ -1504,6 +1504,9 @@ func (e *emitter) appendCall(x *ir.Builtin) string {
 // grows. Each other element type gives an empty text, thus the call takes the
 // reference write.
 func (e *emitter) elemAssign(elem types.Type) string {
+	if _, ok := types.Unalias(elem).(*types.TypeParam); ok {
+		return ", " + e.dictOf(elem) + ".assign"
+	}
 	if !needsElementCopy(elem) {
 		return ""
 	}
@@ -1533,11 +1536,8 @@ func (e *emitter) copyCall(x *ir.Builtin) string {
 		source = fmt.Sprintf("$stringBytes(%s)", source)
 	}
 	slice, _ := typeset.Core(dst.GoType()).(*types.Slice)
-	if slice != nil && needsElementCopy(slice.Elem()) {
-		return fmt.Sprintf("$copySlice(%s, %s, (a, b) => %s)",
-			e.expr(dst), source, e.assignElem("a", "b", slice.Elem()))
-	}
-	return fmt.Sprintf("$copySlice(%s, %s)", e.expr(dst), source)
+	return fmt.Sprintf("$copySlice(%s, %s%s)",
+		e.expr(dst), source, e.elemAssign(slice.Elem()))
 }
 
 func (e *emitter) makeCall(x *ir.Builtin) string {

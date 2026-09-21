@@ -79,6 +79,10 @@ func swapAliases() {
 }
 
 func main() {
+	copyAliases()
+	copyArrayViews()
+	genericAliases()
+	nestedArrayAliases()
 	swapAliases()
 	recursiveMetadata[int]()
 	for _, input := range [][]int{nil, {}, {1, 2}} {
@@ -181,4 +185,119 @@ func main() {
 	source[0].Array[0] = 88
 	shared = 8
 	fmt.Println("value copy", converted[0].Number, converted[0].Array, *converted[0].Ref)
+}
+
+type V struct {
+	A int
+	B [2]int
+}
+
+func copyAliases() {
+	for _, reflective := range []bool{false, true} {
+		s := []V{{1, [2]int{10, 11}}, {2, [2]int{20, 21}}, {3, [2]int{30, 31}}}
+		p, q := &s[1], &s[1].B[1]
+		if reflective {
+			reflect.Copy(reflect.ValueOf(s[1:]), reflect.ValueOf(s[:2]))
+		} else {
+			copy(s[1:], s[:2])
+		}
+		fmt.Println("copy", reflective, s, p.A, *q)
+	}
+	for _, reflective := range []bool{false, true} {
+		s := []V{{1, [2]int{10, 11}}, {2, [2]int{20, 21}}}
+		p, q := &s[0], &s[0].B[1]
+		if reflective {
+			reflect.ValueOf(s).Clear()
+		} else {
+			clear(s)
+		}
+		fmt.Println("clear", reflective, s, p.A, *q)
+	}
+}
+
+func copyArrayViews() {
+	for _, reflective := range []bool{false, true} {
+		values := []V{{A: 1}, {A: 2}, {A: 3}, {A: 4}}
+		dst, src := (*[3]V)(values[1:]), (*[3]V)(values[:3])
+		held := &values[2]
+		if reflective {
+			reflect.Copy(reflect.ValueOf(dst).Elem(), reflect.ValueOf(src).Elem())
+		} else {
+			copy(dst[:], src[:])
+		}
+		fmt.Println("array view copy", reflective, values, held.A)
+	}
+	for _, reflective := range []bool{false, true} {
+		values := []int{1, 2, 3, 4}
+		dst, src := (*[3]int)(values[1:]), (*[3]int)(values[:3])
+		if reflective {
+			reflect.Copy(reflect.ValueOf(dst).Elem(), reflect.ValueOf(src).Elem())
+		} else {
+			copy(dst[:], src[:])
+		}
+		fmt.Println("scalar view copy", reflective, values)
+	}
+	values := []V{{A: 1}, {A: 2}, {A: 3}}
+	copy(values[:2], values[1:])
+	fmt.Println("forward overlap", values)
+	held := &values[0]
+	clearGeneric(values)
+	fmt.Println("generic clear", held.A)
+	for _, pair := range [][2]reflect.Value{
+		{reflect.Value{}, reflect.ValueOf([]int{1})},
+		{reflect.ValueOf([1]int{}), reflect.ValueOf([]int{1})},
+		{reflect.ValueOf([]int{}), reflect.Value{}},
+		{reflect.ValueOf([]int{}), reflect.ValueOf([]int64{})},
+		{reflect.ValueOf(struct{ a []int }{[]int{1}}).Field(0), reflect.ValueOf([]int{1})},
+		{reflect.ValueOf([]int{1}), reflect.ValueOf(struct{ a []int }{[]int{1}}).Field(0)},
+	} {
+		func() { defer func() { fmt.Println("copy error", recover()) }(); reflect.Copy(pair[0], pair[1]) }()
+	}
+}
+func clearGeneric[T any](values []T) { clear(values) }
+
+func copyGeneric[T any](dst, src []T)     { copy(dst, src) }
+func appendGeneric[T any](s []T, x T) []T { return append(s, x) }
+func genericAliases() {
+	values := []V{{A: 1}, {A: 2}, {A: 3}}
+	held := &values[1]
+	copyGeneric(values[1:], values[:2])
+	fmt.Println("generic copy", values, held.A)
+	ints := []int{1, 2, 3}
+	copyGeneric(ints[1:], ints[:2])
+	clearGeneric(ints)
+	fmt.Println("generic scalar", ints)
+	original := []V{{A: 1}}
+	old := &original[0]
+	grown := appendGeneric(original, V{A: 2})
+	grown[0].A = 3
+	fmt.Println("generic grow", old.A, grown[0].A)
+	available := make([]V, 1, 2)
+	cell := &available[:2][1]
+	available = appendGeneric(available, V{A: 4})
+	fmt.Println("generic room", cell.A)
+}
+
+type Holder[T any] struct{ Values [2]T }
+
+func cloneArray[T any](v [2]T) [2]T { return v }
+func nestedArrayAliases() {
+	scalars := []Holder[int]{{Values: [2]int{7, 8}}}
+	sp := &scalars[0].Values[0]
+	clearGeneric(scalars)
+	fmt.Println("generic scalar array clear", *sp)
+	values := [][2]V{{{A: 1}, {A: 2}}, {{A: 3}, {A: 4}}, {{A: 5}, {A: 6}}}
+	held := &values[1][0]
+	copy(values[1:], values[:2])
+	fmt.Println("nested array copy", values, held.A)
+	clear(values)
+	fmt.Println("nested array clear", held.A)
+	holders := []Holder[V]{{Values: [2]V{{A: 7}, {A: 8}}}}
+	inner := &holders[0].Values[0]
+	clearGeneric(holders)
+	fmt.Println("generic array clear", inner.A)
+	original := [2]V{{A: 1}, {A: 2}}
+	cloned := cloneArray(original)
+	cloned[0].A = 9
+	fmt.Println("generic array copy", original[0].A, cloned[0].A)
 }

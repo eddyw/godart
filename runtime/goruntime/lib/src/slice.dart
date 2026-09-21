@@ -5,6 +5,7 @@
 import 'dart:collection';
 import 'dart:typed_data';
 
+import 'array.dart' show $ArrayView;
 import 'goint.dart';
 
 import 'iface.dart';
@@ -350,6 +351,28 @@ GoInt $copySlice<T>(Slice<T> dst, Slice<T> src, [void Function(T, T)? assign]) {
   if (dst is $ZeroSlice<T> || src is $ZeroSlice<T>) return count;
   final n = $ix(count);
   if (n == 0) return GoInt.zero;
+  if (assign == null &&
+      dst.array is! $ArrayView<T> &&
+      src.array is! $ArrayView<T>) {
+    dst.$fill(dst.off, dst.off + n, src.array, src.off);
+    return count;
+  }
+  final (destination, destinationOffset) = _sliceStorage(dst.array, dst.off);
+  final (source, sourceOffset) = _sliceStorage(src.array, src.off);
+  if (identical(destination, source) &&
+      destinationOffset > sourceOffset &&
+      destinationOffset < sourceOffset + n) {
+    if (assign != null) {
+      for (var i = n - 1; i >= 0; i--) {
+        assign(dst.array[dst.off + i], src.array[src.off + i]);
+      }
+    } else {
+      for (var i = n - 1; i >= 0; i--) {
+        dst[i] = src[i];
+      }
+    }
+    return count;
+  }
   if (assign != null) {
     for (var i = 0; i < n; i++) {
       assign(dst.array[dst.off + i], src.array[src.off + i]);
@@ -360,6 +383,15 @@ GoInt $copySlice<T>(Slice<T> dst, Slice<T> src, [void Function(T, T)? assign]) {
   // ranges overlap.
   dst.$fill(dst.off, dst.off + n, src.array, src.off);
   return count;
+}
+
+// Slice-to-array pointer views can hide shared storage.
+(List<T>, int) _sliceStorage<T>(List<T> array, int offset) {
+  while (array is $ArrayView<T>) {
+    offset += array.off;
+    array = array.array;
+  }
+  return (array, offset);
 }
 
 /// The Go expression `append(s, other...)`.
@@ -393,10 +425,18 @@ Slice<T> $appendSlice<T>(
 
 /// Writes the zero value into each element of a slice. The Go builtin clear
 /// does that for a slice.
-void $clearSlice<T>(Slice<T> s, T Function() zero) {
+void $clearSlice<T>(
+  Slice<T> s,
+  T Function() zero, [
+  void Function(T, T)? assign,
+]) {
   if (s is $ZeroSlice<T>) return;
   for (var i = 0; i < s.len; i++) {
-    s[i] = zero();
+    if (assign == null) {
+      s[i] = zero();
+    } else {
+      assign(s[i], zero());
+    }
   }
 }
 

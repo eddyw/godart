@@ -212,7 +212,8 @@ func (e *emitter) copyArray(read string, t types.Type) string {
 }
 
 func needsElementCopy(t types.Type) bool {
-	return isStructType(t) || isArrayType(t)
+	_, parameter := types.Unalias(t).(*types.TypeParam)
+	return parameter || isStructType(t) || isArrayType(t)
 }
 
 func (e *emitter) writeAssign(class string, st *types.Struct, fields []string) {
@@ -226,12 +227,7 @@ func (e *emitter) writeAssign(class string, st *types.Struct, fields []string) {
 		case isStructType(t):
 			e.line("%s.$assign($o.%s);", f, f)
 		case isArrayType(t):
-			a, _ := types.Unalias(t).Underlying().(*types.Array)
-			if a != nil && needsElementCopy(a.Elem()) {
-				e.line("$assignArray(%s, $o.%s, (a, b) => %s);", f, f, e.assignElem("a", "b", a.Elem()))
-				continue
-			}
-			e.line("$assignArray(%s, $o.%s);", f, f)
+			e.line("%s;", e.assignElem(f, "$o."+f, t))
 		default:
 			e.line("%s = $o.%s;", f, f)
 		}
@@ -247,7 +243,8 @@ func (e *emitter) assignElem(dst, src string, t types.Type) string {
 	if isStructType(t) {
 		return dst + ".$assign(" + src + ")"
 	}
-	return fmt.Sprintf("$assignArray(%s, %s)", dst, src)
+	a := typeset.Core(t).(*types.Array)
+	return fmt.Sprintf("$assignArray(%s, %s%s)", dst, src, e.elemAssign(a.Elem()))
 }
 
 func (e *emitter) writeEqual(class string, st *types.Struct, fields []string) {
