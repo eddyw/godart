@@ -258,9 +258,6 @@
   "fixedbugs/issue75365": [
     "$DIR/issue75365.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
-  "fixedbugs/issue79812": [
-    "the conversion from complex128 to T is not supported yet"
-  ],
   "fixedbugs/issue79874": [
     "$DIR/issue79874.go:32:22: undefined: syscall.Getpagesize",
     "$DIR/issue79874.go:37:20: undefined: syscall.Mmap",
