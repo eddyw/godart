@@ -13,6 +13,7 @@ import (
 	"go/build/constraint"
 	"go/parser"
 	"go/token"
+	"go/version"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -44,6 +45,7 @@ func ReadLanguagePolicy() (*LanguagePolicy, error) {
 }
 
 type LanguageCase struct {
+	ModuleGoVersion string       `json:"module_go_version,omitempty"`
 	ExpectedFailure bool         `json:"upstream_expected_failure,omitempty"`
 	HostTools       bool         `json:"host_tools,omitempty"`
 	Companions      []string     `json:"companions,omitempty"`
@@ -151,6 +153,12 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				c.Adapter = "reject-file"
 			} else if recipe == "runoutput" {
 				c.Adapter = "generated-file"
+			} else if recipe == "runindir" {
+				c.Adapter = "directory-module"
+				c.ModuleGoVersion, err = languageModuleVersion(source)
+				if err != nil {
+					return nil, err
+				}
 			}
 			for _, suffix := range []string{".dir", ".out"} {
 				companion := filepath.Join(root, c.Name+suffix)
@@ -184,6 +192,9 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 			if skip, ok := policy.Skips[c.Name]; ok {
 				c.Exclusion = &skip
 			}
+			if c.Name == "fixedbugs/issue15609" && (ctx.GOARCH == "amd64" || ctx.GOARCH == "386") {
+				c.Exclusion = &Omission{Classification: "target-limit", Reason: "The selected jump function requires native x86 assembly. Other architectures select an original Go body."}
+			}
 			c.Rejection = policy.Rejections[c.Name]
 			inv.Cases = append(inv.Cases, c)
 		}
@@ -196,6 +207,59 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 	}
 	inv.SourceSHA256 = digest([]byte(identity))
 	return inv, nil
+}
+
+func languageModuleVersion(source []byte) (string, error) {
+	tree, err := parser.ParseFile(token.NewFileSet(), "testdir_test.go", source, 0)
+	if err != nil {
+		return "", err
+	}
+	var moduleVersion string
+	ast.Inspect(tree, func(n ast.Node) bool {
+		clause, ok := n.(*ast.CaseClause)
+		if !ok || len(clause.List) != 1 {
+			return true
+		}
+		label, ok := clause.List[0].(*ast.BasicLit)
+		if !ok || label.Value != `"runindir"` {
+			return true
+		}
+		for _, statement := range clause.Body {
+			fallback, ok := statement.(*ast.IfStmt)
+			if !ok || len(fallback.Body.List) != 1 {
+				continue
+			}
+			condition, ok := fallback.Cond.(*ast.BinaryExpr)
+			if !ok || condition.Op != token.EQL {
+				continue
+			}
+			name, ok := condition.X.(*ast.Ident)
+			if !ok || name.Name != "modVersion" {
+				continue
+			}
+			empty, ok := condition.Y.(*ast.BasicLit)
+			if !ok || empty.Value != `""` {
+				continue
+			}
+			assignment, ok := fallback.Body.List[0].(*ast.AssignStmt)
+			if !ok || len(assignment.Lhs) != 1 || len(assignment.Rhs) != 1 {
+				continue
+			}
+			name, ok = assignment.Lhs[0].(*ast.Ident)
+			if !ok || name.Name != "modVersion" {
+				continue
+			}
+			literal, ok := assignment.Rhs[0].(*ast.BasicLit)
+			if ok && literal.Kind == token.STRING {
+				moduleVersion, _ = strconv.Unquote(literal.Value)
+			}
+		}
+		return false
+	})
+	if !version.IsValid("go" + moduleVersion) {
+		return "", fmt.Errorf("upstream runindir recipe has no literal module version")
+	}
+	return moduleVersion, nil
 }
 
 func languageRecipe(source string) string {

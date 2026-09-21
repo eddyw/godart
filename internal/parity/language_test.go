@@ -20,7 +20,10 @@ func TestLanguageInventory(t *testing.T) {
 		}
 	}
 	write("VERSION", "go1.27.1\n")
-	write("src/cmd/internal/testdir/testdir_test.go", `package testdir_test; var dirs=[]string{".","other"}; var types2Failures=setOf("reject.go"); var types2Failures32Bit=setOf("compile.go")`)
+	write("src/cmd/internal/testdir/testdir_test.go", `package testdir_test; var dirs=[]string{".","other"}; var types2Failures=setOf("reject.go"); var types2Failures32Bit=setOf("compile.go"); func recipe() { switch "" { case "runindir": if modVersion == "" { modVersion = "1.14" } } }`)
+	write("test/module.go", "// runindir\npackage ignored\n")
+	write("test/moduleflags.go", "// runindir -gomodversion 1.27\npackage ignored\n")
+	write("test/module.dir/main.go", "package main\nfunc main() {}\n")
 	write("test/run.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/run.out", "expected\n")
 	write("test/compile.go", "// compile\npackage p\n")
@@ -42,12 +45,18 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 12 {
-		t.Fatalf("got %d cases, want 12", len(inv.Cases))
+	if len(inv.Cases) != 14 {
+		t.Fatalf("got %d cases, want 14", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
 		cases[c.Name] = c
+	}
+	if c := cases["module"]; c.Adapter != "directory-module" || c.ModuleGoVersion != "1.14" || len(c.Files) != 2 {
+		t.Fatalf("directory module inputs lost: %+v", c)
+	}
+	if cases["moduleflags"].Adapter != "missing" {
+		t.Fatal("the directory adapter must not discard recipe options")
 	}
 	if !cases["reject"].ExpectedFailure {
 		t.Fatal("upstream expected failure lost")
@@ -121,7 +130,7 @@ func TestLanguagePolicy(t *testing.T) {
 	}
 
 	for name, skip := range policy.Skips {
-		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "reject-file") || skip.Reason == "" {
+		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "reject-file" && cases[name].Adapter != "directory-module") || skip.Reason == "" {
 			t.Errorf("invalid language omission: %s", name)
 		}
 		switch skip.Classification {
@@ -155,6 +164,50 @@ func TestLanguageExpectedFailures(t *testing.T) {
 	for _, invalid := range []string{`package p`, `package p; var types2Failures=[]string{"one.go"}`, `package p; var types2Failures=setOf(name)`} {
 		if _, err := languageExpectedFailures([]byte(invalid), "amd64"); err == nil {
 			t.Fatal("accepted an unrecognized upstream failure list")
+		}
+	}
+}
+
+func TestLanguageModuleVersion(t *testing.T) {
+	for _, text := range []string{"1.14", "1.27"} {
+		source := []byte(`package p; func f() { switch "" { case "runindir": if modVersion == "" { modVersion = "` + text + `" } } }`)
+		got, err := languageModuleVersion(source)
+		if err != nil || got != text {
+			t.Fatalf("got %q, %v", got, err)
+		}
+	}
+	for _, source := range []string{
+		`package p`,
+		`package p; func f() { switch "" { case "runindir": modVersion = "1.14" } }`,
+		`package p; func f() { switch "" { case "runindir": if modVersion == "" { modVersion = other } } }`,
+		`package p; func f() { switch "" { case "runindir": if modVersion == "" { modVersion = "invalid" } } }`,
+	} {
+		if _, err := languageModuleVersion([]byte(source)); err == nil {
+			t.Fatal("accepted an unrecognized upstream module default")
+		}
+	}
+}
+
+func TestLanguageDirectoryAssembly(t *testing.T) {
+	for _, arch := range []string{"amd64", "386", "arm64"} {
+		ctx := build.Default
+		ctx.GOARCH = arch
+		inventory, err := DiscoverLanguage(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, fixture := range inventory.Cases {
+			if fixture.Name != "fixedbugs/issue15609" {
+				continue
+			}
+			found = true
+			if (fixture.Exclusion != nil) != (arch != "arm64") {
+				t.Fatalf("%s: %+v", arch, fixture)
+			}
+		}
+		if !found {
+			t.Fatal("upstream assembly fixture disappeared")
 		}
 	}
 }

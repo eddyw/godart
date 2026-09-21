@@ -19,6 +19,10 @@
     "classification": "test-adapter",
     "reason": "the test exercises native Go linker flags and requires a companion source outside this single-file harness"
   },
+  "fixedbugs/issue11656": {
+    "classification": "target-limit",
+    "reason": "The fixture executes native instructions from an unsafe data pointer and inspects a hardware-fault stack."
+  },
   "fixedbugs/issue20529": {
     "classification": "target-limit",
     "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
@@ -55,6 +59,10 @@
     "classification": "target-limit",
     "reason": "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one"
   },
+  "fixedbugs/issue47185": {
+    "classification": "target-limit",
+    "reason": "The fixture imports C and calls C.malloc to force native external linkage."
+  },
   "fixedbugs/issue52697": {
     "classification": "target-limit",
     "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
@@ -62,6 +70,10 @@
   "fixedbugs/issue5856": {
     "classification": "implementation-gap",
     "reason": "the panic path of Go holds a frame of gopanic, and the frame chain of the runtime holds none"
+  },
+  "fixedbugs/issue74648": {
+    "classification": "target-limit",
+    "reason": "The fixture validates native x86 PCALIGN jump targets in an assembly function."
   },
   "fixedbugs/issue7550": {
     "classification": "implementation-gap",
@@ -94,5 +106,9 @@
   "typeparam/issue54765": {
     "classification": "target-limit",
     "reason": "The assertions require runtime/cgo.Incomplete and native not-in-heap type arguments. The declared subset excludes cgo. The adapter retains the original native diagnostic result."
+  },
+  "wasmmemsize": {
+    "classification": "target-limit",
+    "reason": "Wasm assembly measures the native Go allocator memory size. Dart uses a different allocator and module layout."
   }
 }

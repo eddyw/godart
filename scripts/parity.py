@@ -300,8 +300,23 @@ def language_behavior(paths):
                                      and generator.get("ran") and generator.get("exit") == 0
                                      and not generator.get("timed_out") and not case.get("build_error")
                                      and hashlib.sha256(source.encode()).hexdigest() == generator.get("output_sha256"))
+                        elif case.get("contract") == "runindir":
+                            fixture = case["fixture"]
+                            module = (f'module {Path(fixture["name"]).name}.dir\n'
+                                      f'go {fixture.get("module_go_version", "")}\n')
+                            prefix = fixture["name"] + ".dir/"
+                            valid = (valid and fixture.get("recipe") == "runindir"
+                                     and fixture.get("adapter") == "directory-module"
+                                     and fixture.get("module_go_version")
+                                     and case.get("module_source") == module
+                                     and case.get("module_sha256") == hashlib.sha256(module.encode()).hexdigest()
+                                     and any(f["path"].startswith(prefix) for f in fixture.get("files", []))
+                                     and case["native"].get("command", [])[-1:] == ["."]
+                                     and case["native"].get("environment", {}).get("GOPATH")
+                                     and case["native"]["environment"] == case["gart"].get("environment")
+                                     and not case.get("build_error"))
                     valid = valid and (status == "passed" or case.get("contract") == "reject")
-                    valid = valid and config["contract"] in {"run", "runoutput", "compile", "reject"} and case.get("contract", "run") == config["contract"]
+                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compile", "reject"} and case.get("contract", "run") == config["contract"]
 
                     if case["fixture"].get("host_tools"):
                         native_env = case["native"].get("environment") or {}

@@ -209,6 +209,39 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"unobserved": 1})
 
+    def test_directory_recipe_requires_original_module_and_sources(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = dict(name="fixedbugs/p", recipe="runindir", adapter="directory-module",
+                           module_go_version="1.14", files=[dict(path="fixedbugs/p.dir/main.go")])
+            module = "module p.dir\ngo 1.14\n"
+            execution = dict(ran=True, exit=0, timed_out=False, output_sha256="original",
+                             command=["go", "run", "."], environment=dict(GOPATH="/fixture"))
+            case = dict(fixture=fixture, contract="runindir", status="passed", native=dict(execution),
+                        gart=dict(execution), expected_sha256="original", module_source=module,
+                        module_sha256=parity.hashlib.sha256(module.encode()).hexdigest())
+            report = dict(kind="language", complete=True, outcomes=[case], shard=0, shards=1)
+
+            def assess(status):
+                parity.save(root / "language.json", report)
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            assess("passed")
+            for object_, key, value in [(case, "module_source", "module other\ngo 1.14\n"),
+                                        (case, "module_sha256", "different"),
+                                        (fixture, "module_go_version", "1.27"),
+                                        (fixture, "recipe", "runindir -gomodversion 1.27"),
+                                        (fixture, "adapter", "missing"),
+                                        (fixture, "files", []),
+                                        (case["native"], "command", ["go", "run", "main.go"]),
+                                        (case["gart"], "environment", dict(GOPATH="/other")),
+                                        (case["gart"], "exit", 1),
+                                        (case["gart"], "timed_out", True)]:
+                saved = object_[key]
+                object_[key] = value
+                assess("failed")
+                object_[key] = saved
+
     def test_language_host_tools_require_identical_sdk_inputs(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

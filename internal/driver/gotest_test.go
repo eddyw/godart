@@ -2,6 +2,7 @@ package driver_test
 
 import (
 	"errors"
+	"fmt"
 	"go/build"
 	"os"
 	"os/exec"
@@ -94,6 +95,22 @@ func TestRunOutputFilesOfGoTest(t *testing.T) {
 	runLanguageCases(t, "vm", inv, cases)
 }
 
+func TestRunDirectoryFilesOfGoTest(t *testing.T) {
+	inv, err := parity.DiscoverLanguage(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []parity.LanguageCase
+	for _, c := range inv.Cases {
+		if c.Adapter == "directory-module" {
+			cases = append(cases, c)
+		}
+	}
+	for _, target := range []string{"vm", "aot", "js", "wasm"} {
+		t.Run(target, func(t *testing.T) { runLanguageCases(t, target, inv, cases) })
+	}
+}
+
 func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory, cases []parity.LanguageCase) {
 	t.Helper()
 	var importcfg, importcfgHash string
@@ -119,6 +136,8 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 			contract := "run"
 			if c.Adapter == "generated-file" {
 				contract = "runoutput"
+			} else if c.Adapter == "directory-module" {
+				contract = "runindir"
 			}
 			outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: contract, Status: "unobserved"})
 		}
@@ -151,6 +170,15 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				t.Skip(c.Exclusion.Classification + ": " + c.Exclusion.Reason)
 			}
 			dir := t.TempDir()
+			if c.Adapter == "directory-module" {
+				settings := map[string]string{"GOPATH": dir}
+				outcome.Native.Environment = settings
+				outcome.Gart.Environment = settings
+				dir = filepath.Join(dir, "src", filepath.Base(c.Name)+".dir")
+				if err := os.MkdirAll(dir, 0755); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if c.Adapter == "generated-file" {
 				outcome.Generator = &languageExecution{}
 				outcome.GeneratedSource = recordLanguageRaw(t, outcome.Generator, dir, runLimit, "go", "run", "-gcflags=all="+inv.GCFlags, filepath.Join(root, c.File))
@@ -159,8 +187,30 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				}
 				source = []byte(outcome.GeneratedSource)
 			}
-			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/gotest\n\ngo 1.27\n")
-			writeFile(t, filepath.Join(dir, file), string(source))
+			if c.Adapter == "directory-module" {
+				prefix := c.Name + ".dir/"
+				for _, entry := range c.Files {
+					if !strings.HasPrefix(entry.Path, prefix) {
+						continue
+					}
+					data, err := os.ReadFile(filepath.Join(root, entry.Path))
+					if err != nil {
+						t.Fatal(err)
+					}
+					path := filepath.Join(dir, strings.TrimPrefix(entry.Path, prefix))
+					if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+						t.Fatal(err)
+					}
+					writeFile(t, path, string(data))
+				}
+				outcome.ModuleSource = fmt.Sprintf("module %s.dir\ngo %s\n", filepath.Base(c.Name), c.ModuleGoVersion)
+				outcome.ModuleSHA256 = languageDigest([]byte(outcome.ModuleSource))
+				writeFile(t, filepath.Join(dir, "go.mod"), outcome.ModuleSource)
+				file = "."
+			} else {
+				writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/gotest\n\ngo 1.27\n")
+				writeFile(t, filepath.Join(dir, file), string(source))
+			}
 			companions := map[string]string{}
 			for _, companion := range c.Companions {
 				data, err := os.ReadFile(filepath.Join(root, companion))
@@ -192,7 +242,7 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 			}
 			out := filepath.Join(dir, "out")
 			patterns := []string{"./..."}
-			if len(c.Companions) > 0 {
+			if len(c.Companions) > 0 || c.Adapter == "directory-module" {
 				patterns = []string{file}
 			}
 			err = driver.Build(driver.Options{
@@ -248,7 +298,16 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				command = "node"
 				args = []string{"run.mjs"}
 			}
-			got := runLanguage(t, &outcome.Gart, out, limit, command, args...)
+			runDir := out
+			if c.Adapter == "directory-module" {
+				runDir = dir
+				if target == "vm" {
+					args = []string{"--packages=" + filepath.Join(out, ".dart_tool/package_config.json"), filepath.Join(out, "bin/main.dart")}
+				} else if target == "js" || target == "wasm" {
+					args = []string{filepath.Join(out, args[0])}
+				}
+			}
+			got := runLanguage(t, &outcome.Gart, runDir, limit, command, args...)
 			if got != string(want) {
 				t.Errorf("Gart output differs from upstream fixture\nwant:\n%s\ngot:\n%s", want, got)
 			}

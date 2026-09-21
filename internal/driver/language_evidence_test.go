@@ -24,6 +24,8 @@ type languageExecution struct {
 }
 
 type languageOutcome struct {
+	ModuleSource       string              `json:"module_source,omitempty"`
+	ModuleSHA256       string              `json:"module_sha256,omitempty"`
 	ImportConfigSHA256 string              `json:"importcfg_sha256,omitempty"`
 	Generator          *languageExecution  `json:"generator,omitempty"`
 	GeneratedSource    string              `json:"generated_source,omitempty"`
