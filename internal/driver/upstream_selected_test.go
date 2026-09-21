@@ -195,7 +195,7 @@ func TestSelectedUpstream(t *testing.T) {
 			"durationTruncateTests", "TestDurationTruncate", "durationRoundTests", "TestDurationRound", "durationAbsTests", "TestDurationAbs", "minDuration", "maxDuration",
 		}}},
 		"os": {
-			{Name: "os_test.go", Declarations: []string{"TestGetppid"}},
+			{Name: "os_test.go", Declarations: []string{"TestGetppid", "TestAppend", "writeFile", "TestSeek", "newFile"}},
 			{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "error_test.go"},
 			{Name: "read_test.go", Declarations: []string{"checkNamedSize", "TestReadFile", "TestWriteFile", "TestReadOnlyWriteFile"}},
 			{Name: "tempfile_test.go", Declarations: []string{"TestCreateTemp", "TestCreateTempPattern", "TestMkdirTemp", "TestMkdirTempBadDir"}},

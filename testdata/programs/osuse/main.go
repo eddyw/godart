@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"syscall"
 )
 
 func main() {
@@ -63,7 +64,7 @@ func main() {
 	fmt.Println(string(b) == "one\ntwo\n")
 
 	// A write at the end keeps the content.
-	a, err := os.OpenFile(tmp+"/b.txt", os.O_WRONLY|os.O_APPEND, 0o644)
+	a, err := os.OpenFile(tmp+"/b.txt", syscall.O_WRONLY|syscall.O_APPEND, 0o644)
 	fmt.Println(err == nil)
 	a.WriteString("three\n")
 	a.Close()

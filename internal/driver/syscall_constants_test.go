@@ -15,10 +15,11 @@ func TestSyscallPlatformDeclarations(t *testing.T) {
 	dir, out := t.TempDir(), t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/syscallconstants\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
-import ("errors"; "fmt"; "io/fs"; "syscall")
+import ("errors"; "fmt"; "io/fs"; "os"; "syscall")
 var stop [syscall.SIGSTOP]byte
 var refused [syscall.ECONNREFUSED]byte
 func main() {
+ fmt.Println(os.O_RDONLY,os.O_WRONLY,os.O_RDWR,os.O_APPEND,os.O_CREATE,os.O_EXCL,os.O_TRUNC,os.O_SYNC,os.SEEK_SET,os.SEEK_CUR,os.SEEK_END)
  fmt.Println(len(stop),len(refused),syscall.SIGCONT,syscall.AF_INET,syscall.AF_INET6)
  for i:=0;i<256;i++ {
   e:=syscall.Errno(i)

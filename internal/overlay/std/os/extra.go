@@ -64,14 +64,14 @@ const DevNull = "/dev/null"
 // The 3 modes of Seek. Go marks each one as deprecated, and io holds the same
 // values under another name.
 const (
-	SEEK_SET = 0
-	SEEK_CUR = 1
-	SEEK_END = 2
+	SEEK_SET int = 0
+	SEEK_CUR int = 1
+	SEEK_END int = 2
 )
 
 // O_SYNC asks for a write that reaches the storage before it gives control
 // back. The Dart side holds no such flag, thus a write drops it.
-const O_SYNC = 1 << 12
+const O_SYNC int = syscall.O_SYNC
 
 // Clearenv drops each variable of the environment of the process.
 func Clearenv() { syscall.Clearenv() }

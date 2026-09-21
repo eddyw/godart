@@ -59,13 +59,13 @@ const (
 
 // The flag set of OpenFile.
 const (
-	O_RDONLY = 0
-	O_WRONLY = 1
-	O_RDWR   = 2
-	O_APPEND = 1 << 10
-	O_CREATE = 1 << 6
-	O_EXCL   = 1 << 7
-	O_TRUNC  = 1 << 9
+	O_RDONLY int = syscall.O_RDONLY
+	O_WRONLY int = syscall.O_WRONLY
+	O_RDWR   int = syscall.O_RDWR
+	O_APPEND int = syscall.O_APPEND
+	O_CREATE int = syscall.O_CREAT
+	O_EXCL   int = syscall.O_EXCL
+	O_TRUNC  int = syscall.O_TRUNC
 )
 
 // ErrNotExist is the error of a path that does not exist. Go compares an error
