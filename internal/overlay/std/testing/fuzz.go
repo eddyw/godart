@@ -425,6 +425,9 @@ func runFuzzTargets(targets []InternalFuzzTarget, flags options) (ran, ok bool) 
 	for round := 0; round < flags.rounds; round++ {
 		g := &group{}
 		for _, target := range targets {
+			if shouldFailFast() {
+				break
+			}
 			if !matches(target.Name, flags.run) || skips(target.Name) {
 				continue
 			}

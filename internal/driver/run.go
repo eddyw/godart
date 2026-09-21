@@ -42,6 +42,8 @@ type TestOptions struct {
 	BenchCount int
 	// Short asks each test for its short form. testing.Short then gives true.
 	Short bool
+	// FailFast stops new tests after the first test failure.
+	FailFast bool
 	// Count is the count of runs of the whole list of the tests. CountGiven
 	// must hold true for the value to reach the run: go test runs no test for
 	// a count of 0, and 0 is also the zero value of this field.
@@ -132,6 +134,9 @@ func Test(opt Options, testOpt TestOptions, out io.Writer) (int, error) {
 		if code != 0 {
 			failed = true
 			fmt.Fprintf(out, "FAIL\t%s\t%ss\n", bin.Package, elapsed)
+			if testOpt.FailFast {
+				break
+			}
 			continue
 		}
 		// go test writes the coverage in front of the mark of an empty run.
@@ -191,6 +196,9 @@ func binaryArgs(testOpt TestOptions) []string {
 	}
 	if testOpt.Run != "" {
 		args = append(args, "-test.run="+testOpt.Run)
+	}
+	if testOpt.FailFast {
+		args = append(args, "-test.failfast")
 	}
 	if testOpt.Short {
 		args = append(args, "-test.short")

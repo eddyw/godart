@@ -86,6 +86,7 @@ func Init() {
 	flagsReady = true
 	flag.BoolVar(&verbose, "test.v", verbose, "verbose: print additional output")
 	flag.BoolVar(&short, "test.short", short, "run smaller test suite to save time")
+	flag.BoolVar(&failFast, "test.failfast", false, "do not start new tests after the first test failure")
 	flag.StringVar(&runFilter, "test.run", runFilter,
 		"run only tests and examples matching `regexp`")
 	flag.StringVar(&skipFilter, "test.skip", skipFilter, "exclude tests and examples matching `regexp`")
@@ -671,6 +672,9 @@ func (t *T) Run(name string, f func(*T)) bool {
 // an underscore first, and the seed corpus of a fuzz target keeps the name of
 // its file, exactly as go test keeps it.
 func (t *T) runSub(name string, f func(*T)) bool {
+	if shouldFailFast() {
+		return true
+	}
 	if t.names == nil {
 		t.names = &subtestNames{subNames: make(map[string]int32)}
 	}
@@ -832,8 +836,14 @@ func (m *M) Run() int {
 func runList(tests []InternalTest, flags options) (ran, ok bool) {
 	ok = true
 	for round := 0; round < flags.rounds; round++ {
+		if shouldFailFast() {
+			break
+		}
 		g := &group{}
 		for _, tc := range tests {
+			if shouldFailFast() {
+				break
+			}
 			if !matches(tc.Name, flags.run) || skips(tc.Name) {
 				continue
 			}
@@ -961,6 +971,8 @@ func readFlags() options {
 			verbose = boolValue(value, hasValue)
 		case "test.short":
 			short = boolValue(value, hasValue)
+		case "test.failfast":
+			failFast = boolValue(value, hasValue)
 		case "test.count", "test.run", "test.skip", "test.bench", "test.benchtime", "test.benchcount":
 			if !hasValue {
 				if i+1 >= len(args) {
@@ -1071,6 +1083,9 @@ func tRunner(t *T, call func(*T)) {
 		dart.Catch(t.cleanups[i])
 	}
 	current[id] = parent
+	if t.failed {
+		failedTests = true
+	}
 	head := fmt.Sprintf("%s--- %s: %s (%ss)", indent(t.level), state(t), t.name,
 		seconds(dart.MonoNanos()-t.start))
 	if verbose {
@@ -1631,3 +1646,8 @@ var testBinary bool
 // entry point builds the state of the run. Thus a package initializer of a
 // test binary reads false here, and it reads true in Go.
 func Testing() bool { return testBinary }
+
+var failFast bool
+var failedTests bool
+
+func shouldFailFast() bool { return failFast && failedTests }
