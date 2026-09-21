@@ -902,10 +902,7 @@
   },
   {
     "package": "internal/testenv",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.GoTool",
-    "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The complete native test infrastructure exceeds the selected testenv adapter."
+    "status": "vm-suite"
   },
   {
     "package": "internal/testhash",

@@ -368,7 +368,7 @@ func TestTestsOfGoroot(t *testing.T) {
 				images = append(images, prepareUpstreamNativeImage(t, dir, outDir, stats.Binaries[0].Entry))
 			}
 			var env []string
-			if c.Package == "go/build" || c.Package == "debug/buildinfo" || c.Package == "crypto/x509" {
+			if c.Package == "go/build" || c.Package == "debug/buildinfo" || c.Package == "crypto/x509" || c.Package == "internal/testenv" {
 				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
 			}
 			args := []string{filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run=" + c.Run, "-test.skip=" + upstreamSkip(t, c.Package)}

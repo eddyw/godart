@@ -691,5 +691,9 @@
   {
     "package": "crypto/x509",
     "run": ""
+  },
+  {
+    "package": "internal/testenv",
+    "run": ""
   }
 ]

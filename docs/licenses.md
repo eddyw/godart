@@ -23,6 +23,8 @@ Range diagnostics follow `src/cmd/compile/internal/types2/range.go` and
 retain `internal/load/LICENSE-Go`.
 Syscall constants and names use the active SDK `src/syscall/zerrors_*.go`
 file. Error methods adapt `src/syscall/syscall_unix.go` with its BSD notice.
+The test-environment command adapter follows `src/internal/testenv/testenv.go`
+and `exec.go` with the Go BSD notice.
 Benchmark result types and format methods adapt `src/testing/benchmark.go`
 and retain its BSD notice.
 The process identity adapter adapts group-count validation from Go

@@ -302,7 +302,7 @@ func compareUpstreamCertificates(t *testing.T, name, pkg, filter, target, dir, d
 			nodeVersion = strings.TrimSpace(runProgram(t, "", "node", "--version"))
 		}
 		env := map[string]string{"GODEBUG": os.Getenv("GODEBUG"), "GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}
-		if pkg == "go/build" || pkg == "debug/buildinfo" {
+		if pkg == "go/build" || pkg == "debug/buildinfo" || pkg == "internal/testenv" {
 			env["GOROOT"] = build.Default.GOROOT
 		}
 		data, err := json.MarshalIndent(upstreamEvidence{CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")

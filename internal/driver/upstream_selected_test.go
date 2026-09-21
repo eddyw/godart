@@ -315,7 +315,7 @@ import . "os/signal"
 			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" || pkg == "internal/godebug" {
 				names := []string{"Executable", "MustHaveExec"}
 				if pkg == "internal/godebug" {
-					names = []string{"MustHaveGoRun", "MustHaveGoBuild", "GoToolPath", "GOROOT"}
+					names = []string{"MustHaveGoRun", "MustHaveGoBuild", "goBuildError", "GoToolPath", "GoTool", "goToolPath", "GOROOT"}
 				}
 				if pkg == "crypto/x509" {
 					names = []string{"Builder", "SkipFlaky"}

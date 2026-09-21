@@ -8,10 +8,14 @@
 package testenv
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -54,13 +58,31 @@ func MustHaveSource(t testing.TB) {
 
 func MustHaveGoBuild(t testing.TB) {
 	t.Helper()
+	if err := goBuildError(); err != nil {
+		t.Skipf("testenv: Go build unavailable: %v", err)
+	}
+}
+
+func HasGoBuild() bool { return goBuildError() == nil }
+
+func goBuildError() error {
 	if os.Getenv("GO_GCFLAGS") != "" {
-		t.Skip("testenv: Go build does not support GO_GCFLAGS in this adapter")
+		return errors.New("Go build does not support GO_GCFLAGS in this adapter")
 	}
-	tool := GoToolPath(t)
-	if out, err := exec.Command(tool, "tool", "-n", "compile").CombinedOutput(); err != nil {
-		t.Skipf("testenv: Go compiler unavailable: %v\n%s", err, out)
+	tool, err := goToolPath()
+	if err != nil {
+		return err
 	}
+	out, err := exec.Command(tool, "tool", "-n", "compile").Output()
+	if err != nil {
+		return err
+	}
+	compiler := string(bytes.TrimSpace(out))
+	if compiler == "" {
+		return fmt.Errorf("%s: no compiler reported", tool)
+	}
+	_, err = exec.LookPath(compiler)
+	return err
 }
 
 func MustHaveGoRun(t testing.TB) { MustHaveGoBuild(t) }
@@ -85,14 +107,30 @@ func GOROOT(t testing.TB) string {
 // Dart int holds 64 bits, thus the call marks each run.
 func ParallelOn64Bit(t *testing.T) { t.Parallel() }
 
-// GoToolPath selects the executable from the supplied SDK.
-func GoToolPath(t testing.TB) string {
-	t.Helper()
+// GoTool selects the executable from the supplied SDK.
+func GoTool() (string, error) {
+	if err := goBuildError(); err != nil {
+		return "", err
+	}
+	return goToolPath()
+}
+
+func goToolPath() (string, error) {
+	root := runtime.GOROOT()
+	if root == "" {
+		return "", errors.New("no Go SDK root in the process environment")
+	}
 	name := "go"
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}
-	tool, err := exec.LookPath(filepath.Join(GOROOT(t), "bin", name))
+	return exec.LookPath(filepath.Join(root, "bin", name))
+}
+
+// GoToolPath skips the test when the supplied SDK cannot compile Go code.
+func GoToolPath(t testing.TB) string {
+	t.Helper()
+	tool, err := GoTool()
 	if err != nil {
 		t.Skipf("testenv: Go command unavailable: %v", err)
 	}
@@ -113,9 +151,20 @@ func Executable(t testing.TB) string {
 	return path
 }
 
-// CleanCmdEnv gives the command back with no change. The real form drops each
-// variable of the test environment.
-func CleanCmdEnv(cmd *exec.Cmd) *exec.Cmd { return cmd }
+// CleanCmdEnv excludes Go diagnostic variables from the command environment.
+// Set cmd.Dir first to preserve the command's PWD.
+func CleanCmdEnv(cmd *exec.Cmd) *exec.Cmd {
+	if cmd.Env != nil {
+		panic("environment already set")
+	}
+	for _, env := range cmd.Environ() {
+		if strings.HasPrefix(env, "GODEBUG=") || strings.HasPrefix(env, "GOTRACEBACK=") {
+			continue
+		}
+		cmd.Env = append(cmd.Env, env)
+	}
+	return cmd
+}
 
 // SkipFlaky skips a test that the Go project marks as flaky. The real form
 // runs the test with the flag -flaky, and the test binary of gart holds no
