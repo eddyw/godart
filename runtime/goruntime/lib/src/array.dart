@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'goint.dart';
 import 'panic.dart';
 import 'slice.dart';
 
@@ -47,13 +48,13 @@ final class $ArrayView<T> extends ListBase<T> {
 
   @override
   T operator [](int i) {
-    if (i < 0 || i >= count) $panicIndex(i, count);
+    if (i < 0 || i >= count) $panicIndex($gi(i), count);
     return array[off + i];
   }
 
   @override
   void operator []=(int i, T value) {
-    if (i < 0 || i >= count) $panicIndex(i, count);
+    if (i < 0 || i >= count) $panicIndex($gi(i), count);
     array[off + i] = value;
   }
 }
@@ -87,22 +88,24 @@ bool $equalArray<T>(List<T> a, List<T> b, [bool Function(T, T)? equal]) {
 
 /// The element at index i of an array. uns names an index of an unsigned
 /// type, which reads as a negative Dart int above 2^63.
-T $arrayIndex<T>(List<T> a, int i, [bool uns = false]) {
-  if (i < 0 || i >= a.length) $panicIndex(i, a.length, uns);
+T $arrayIndex<T>(List<T> a, GoInt index, [bool uns = false]) {
+  final i = $ix(index);
+  if (i < 0 || i >= a.length) $panicIndex(index, a.length, uns);
   return a[i];
 }
 
-void $arraySet<T>(List<T> a, int i, T v, [bool uns = false]) {
-  if (i < 0 || i >= a.length) $panicIndex(i, a.length, uns);
+void $arraySet<T>(List<T> a, GoInt index, T v, [bool uns = false]) {
+  final i = $ix(index);
+  if (i < 0 || i >= a.length) $panicIndex(index, a.length, uns);
   a[i] = v;
 }
 
-T $sequenceIndex<T>(Object? value, int i, [bool uns = false]) {
+T $sequenceIndex<T>(Object? value, GoInt i, [bool uns = false]) {
   if (value is Slice<T>) return value.$at(i, uns);
   return $arrayIndex<T>(value as List<T>, i, uns);
 }
 
-void $sequenceSet<T>(Object? value, int i, T element, [bool uns = false]) {
+void $sequenceSet<T>(Object? value, GoInt i, T element, [bool uns = false]) {
   if (value is Slice<T>) {
     value.$set(i, element, uns);
     return;

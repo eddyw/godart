@@ -439,7 +439,7 @@ void $valueSetIndex(Iface? value, int index, Iface? x) {
   final Object? stored = elem.kind == 'interface' ? x : x?.value;
   final Object? v = value.value;
   if (v is Slice<Object?>) {
-    if (index < 0 || index >= v.len) $panicIndex(index, v.len);
+    if (index < 0 || index >= v.len) $panicIndex($gi(index), v.len);
     final Object? held = v.array[v.off + index];
     if (_holdsValue(elem) && held != null) {
       _assignInto(held, stored, elem);
@@ -449,7 +449,7 @@ void $valueSetIndex(Iface? value, int index, Iface? x) {
     return;
   }
   if (v is List<Object?>) {
-    if (index < 0 || index >= v.length) $panicIndex(index, v.length);
+    if (index < 0 || index >= v.length) $panicIndex($gi(index), v.length);
     final Object? held = v[index];
     if (_holdsValue(elem) && held != null) {
       _assignInto(held, stored, elem);
@@ -468,11 +468,11 @@ void $valueSetIndex(Iface? value, int index, Iface? x) {
 
 Object? _elemAt(Object? v, int index, TypeDesc desc) {
   if (v is Slice<Object?>) {
-    if (index < 0 || index >= v.len) $panicIndex(index, v.len);
+    if (index < 0 || index >= v.len) $panicIndex($gi(index), v.len);
     return v.array[v.off + index];
   }
   if (v is List<Object?>) {
-    if (index < 0 || index >= v.length) $panicIndex(index, v.length);
+    if (index < 0 || index >= v.length) $panicIndex($gi(index), v.length);
     return v[index];
   }
   $panic(Iface($typeGoError, GoError('reflect: Index of ${desc.display}')));
@@ -676,7 +676,7 @@ Iface? $makeValue(int handle, int length, int capacity) {
   }
   final Object? out = make(capacity);
   if (out is Slice<Object?> && capacity != length) {
-    return Iface(desc, out.range(0, length, capacity));
+    return Iface(desc, out.range($gi(0), $gi(length), $gi(capacity)));
   }
   return Iface(desc, out);
 }
@@ -2615,7 +2615,7 @@ Iface? $valueSlice(Iface? value, int low, int high, int max) {
   if (value == null) $panicNil();
   final Object? v = value.value;
   if (v is GoString) {
-    return Iface(value.desc, $substring(v, low, high));
+    return Iface(value.desc, $substring(v, $gi(low), $gi(high)));
   }
   if (v is Slice<Object?>) {
     if (v.isNil) return value;

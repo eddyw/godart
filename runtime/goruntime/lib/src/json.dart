@@ -828,7 +828,7 @@ final class _Build {
         for (int i = 0; i < items.length; i++) {
           array[i] = items[i];
         }
-        return out.range(0, items.length, cap);
+        return out.range($gi(0), $gi(items.length), $gi(cap));
       case 'array':
         final List<Object?> out = t.zero!() as List<Object?>;
         final List<Object?> items = f.items!;

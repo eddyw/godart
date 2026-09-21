@@ -83,14 +83,14 @@ final class GoString {
 
   /// The byte at index [i], with the bounds check of Go.
   int operator [](int i) {
-    if (i < 0 || i >= bytes.length) $panicIndex(i, bytes.length);
+    if (i < 0 || i >= bytes.length) $panicIndex($gi(i), bytes.length);
     return bytes[i];
   }
 
   /// The byte at a Go index, as a Go integer. The emitted code reads it.
   GoInt $at(GoInt i, [bool uns = false]) {
     final int n = $ix(i);
-    if (n < 0 || n >= bytes.length) $panicIndex(n, bytes.length, uns);
+    if (n < 0 || n >= bytes.length) $panicIndex(i, bytes.length, uns);
     return $gi(bytes[n]);
   }
 
@@ -173,16 +173,18 @@ int $compare(GoString a, GoString b) {
 /// the string itself. Read the field bytes.
 GoString $substring(
   GoString s,
-  int low,
-  int high, [
+  GoInt lowIndex,
+  GoInt highIndex, [
   bool lowUns = false,
   bool highUns = false,
 ]) {
+  final low = $ix(lowIndex);
+  final high = $ix(highIndex);
   if (high < 0 || high > s.length) {
-    $panicBound(SliceBound.aLen, high, s.length, highUns);
+    $panicBound(SliceBound.aLen, highIndex, s.length, highUns);
   }
   if (low < 0 || low > high) {
-    $panicBound(SliceBound.b, low, high, lowUns);
+    $panicBound(SliceBound.b, lowIndex, high, lowUns);
   }
   if (low == 0 && high == s.length) return s;
   return GoString._(

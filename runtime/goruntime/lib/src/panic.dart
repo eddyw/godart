@@ -1,3 +1,4 @@
+import 'goint.dart';
 import 'iface.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'string.dart';
@@ -176,16 +177,15 @@ Never $panic(Object? value) {
 /// The text of an index or of a slice bound. Go writes the unsigned value of
 /// a bound of an unsigned type, thus a value above 2^63 reads as itself and
 /// not as a negative number. Read boundsError of runtime/error.go.
-String _boundText(int v, bool uns) =>
-    uns && v < 0 ? BigInt.from(v).toUnsigned(64).toString() : '$v';
+String _boundText(GoInt v, bool uns) => uns ? $ustring(v) : '$v';
 
 /// Raises the panic of an index. uns names an index of an unsigned type.
 ///
 /// Go writes no length behind a negative index, because the index alone names
 /// the fault. An index of an unsigned type is never negative in Go, thus it
 /// always takes the form with the length.
-Never $panicIndex(int index, int length, [bool uns = false]) {
-  final String text = !uns && index < 0
+Never $panicIndex(GoInt index, int length, [bool uns = false]) {
+  final String text = !uns && $ix(index) < 0
       ? 'index out of range [$index]'
       : 'index out of range [${_boundText(index, uns)}] with length $length';
   throw GoPanic(Iface($typeGoError, GoError(text)));
@@ -200,9 +200,9 @@ enum SliceBound { aLen, aCap, b, threeALen, threeACap, threeB, threeC }
 
 /// Raises the panic of a slice bound. x is the bound that failed, and y is the
 /// limit that it broke.
-Never $panicBound(SliceBound code, int x, int y, [bool uns = false]) {
+Never $panicBound(SliceBound code, GoInt x, int y, [bool uns = false]) {
   const String head = 'slice bounds out of range ';
-  final bool neg = !uns && x < 0;
+  final bool neg = !uns && $ix(x) < 0;
   final String v = _boundText(x, uns);
   String text;
   switch (code) {

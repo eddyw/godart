@@ -81,17 +81,17 @@ func (e *emitter) deepIndex(x *ir.Index) string {
 	}
 	if e.lits.sliceRead == "" {
 		e.lits.sliceRead = fmt.Sprintf("$sliceRead%d", e.lits.tag)
-		e.lits.decls = append(e.lits.decls, fmt.Sprintf(`T %s<T>(Slice source, List<int> indexes) {
+		e.lits.decls = append(e.lits.decls, fmt.Sprintf(`T %s<T>(Slice source, List<GoInt> indexes) {
     Object? value = source;
     for (final index in indexes) {
-      value = (value as Slice)[index];
+      value = (value as Slice).$at(index);
     }
     return value as T;
   }`, e.lits.sliceRead))
 	}
 	indexes := make([]string, len(chain))
 	for i, node := range chain {
-		indexes[len(chain)-1-i] = "$ix(" + e.expr(node.Index) + ")"
+		indexes[len(chain)-1-i] = e.expr(node.Index)
 	}
-	return fmt.Sprintf("%s<%s>(%s, <int>[%s])", e.lits.sliceRead, e.dartType(x.Type), e.expr(base), strings.Join(indexes, ", "))
+	return fmt.Sprintf("%s<%s>(%s, <GoInt>[%s])", e.lits.sliceRead, e.dartType(x.Type), e.expr(base), strings.Join(indexes, ", "))
 }

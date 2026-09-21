@@ -258,4 +258,4 @@ GoString _sliceString(
   GoInt b, [
   bool au = false,
   bool bu = false,
-]) => $substring(v, $ix(a), $ix(b), au, bu);
+]) => $substring(v, a, b, au, bu);

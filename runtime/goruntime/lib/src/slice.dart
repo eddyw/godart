@@ -50,24 +50,26 @@ final class Slice<T> {
   // The 2 operators hold the body of $at and of $set. A call of a helper
   // would stand in each read of a byte, and a scanner reads 2 megabytes.
   T operator [](int i) {
-    if (i < 0 || i >= len) $panicIndex(i, len);
+    if (i < 0 || i >= len) $panicIndex($gi(i), len);
     return array[off + i];
   }
 
   void operator []=(int i, T value) {
-    if (i < 0 || i >= len) $panicIndex(i, len);
+    if (i < 0 || i >= len) $panicIndex($gi(i), len);
     array[off + i] = value;
   }
 
   /// The element at index i. uns names an index of an unsigned type, which
   /// reads as a negative Dart int above 2^63.
-  T $at(int i, [bool uns = false]) {
-    if (i < 0 || i >= len) $panicIndex(i, len, uns);
+  T $at(GoInt index, [bool uns = false]) {
+    final i = $ix(index);
+    if (i < 0 || i >= len) $panicIndex(index, len, uns);
     return array[off + i];
   }
 
-  void $set(int i, T value, [bool uns = false]) {
-    if (i < 0 || i >= len) $panicIndex(i, len, uns);
+  void $set(GoInt index, T value, [bool uns = false]) {
+    final i = $ix(index);
+    if (i < 0 || i >= len) $panicIndex(index, len, uns);
     array[off + i] = value;
   }
 
@@ -110,40 +112,45 @@ final class Slice<T> {
   /// The order of the tests is the order of Go, thus a bound that breaks 2
   /// limits names the same 1 that Go names.
   Slice<T> range(
-    int low,
-    int high,
-    int max, [
+    GoInt lowIndex,
+    GoInt highIndex,
+    GoInt maxIndex, [
     bool three = false,
     bool byLen = false,
     bool lowUns = false,
     bool highUns = false,
     bool maxUns = false,
   ]) {
+    final low = $ix(lowIndex);
+    final high = $ix(highIndex);
+    final max = $ix(maxIndex);
     if (three) {
       if (max < 0 || max > cap) {
         $panicBound(
           byLen ? SliceBound.threeALen : SliceBound.threeACap,
-          max,
+          maxIndex,
           cap,
           maxUns,
         );
       }
       if (high < 0 || high > max) {
-        $panicBound(SliceBound.threeB, high, max, highUns);
+        $panicBound(SliceBound.threeB, highIndex, max, highUns);
       }
       if (low < 0 || low > high) {
-        $panicBound(SliceBound.threeC, low, high, lowUns);
+        $panicBound(SliceBound.threeC, lowIndex, high, lowUns);
       }
     } else {
       if (high < 0 || high > cap) {
         $panicBound(
           byLen ? SliceBound.aLen : SliceBound.aCap,
-          high,
+          highIndex,
           cap,
           highUns,
         );
       }
-      if (low < 0 || low > high) $panicBound(SliceBound.b, low, high, lowUns);
+      if (low < 0 || low > high) {
+        $panicBound(SliceBound.b, lowIndex, high, lowUns);
+      }
     }
     // Go gives a nil slice for each valid slice expression of a nil slice.
     // Such a slice holds a capacity of 0, thus each bound is 0 here.
@@ -175,25 +182,27 @@ final class $ByteSlice extends Slice<GoInt> {
 
   @override
   GoInt operator [](int i) {
-    if (i < 0 || i >= len) $panicIndex(i, len);
+    if (i < 0 || i >= len) $panicIndex($gi(i), len);
     return $gi(bytes[off + i]);
   }
 
   @override
   void operator []=(int i, GoInt value) {
-    if (i < 0 || i >= len) $panicIndex(i, len);
+    if (i < 0 || i >= len) $panicIndex($gi(i), len);
     bytes[off + i] = $ix(value);
   }
 
   @override
-  GoInt $at(int i, [bool uns = false]) {
-    if (i < 0 || i >= len) $panicIndex(i, len, uns);
+  GoInt $at(GoInt index, [bool uns = false]) {
+    final i = $ix(index);
+    if (i < 0 || i >= len) $panicIndex(index, len, uns);
     return $gi(bytes[off + i]);
   }
 
   @override
-  void $set(int i, GoInt value, [bool uns = false]) {
-    if (i < 0 || i >= len) $panicIndex(i, len, uns);
+  void $set(GoInt index, GoInt value, [bool uns = false]) {
+    final i = $ix(index);
+    if (i < 0 || i >= len) $panicIndex(index, len, uns);
     bytes[off + i] = $ix(value);
   }
 
@@ -326,8 +335,8 @@ void $swap(Object? value, int i, int j) {
     );
   }
   final Slice<Object?> slice = unwrapped;
-  if (i < 0 || i >= slice.len) $panicIndex(i, slice.len);
-  if (j < 0 || j >= slice.len) $panicIndex(j, slice.len);
+  if (i < 0 || i >= slice.len) $panicIndex($gi(i), slice.len);
+  if (j < 0 || j >= slice.len) $panicIndex($gi(j), slice.len);
   final Object? a = slice.array[slice.off + i];
   slice.array[slice.off + i] = slice.array[slice.off + j];
   slice.array[slice.off + j] = a;

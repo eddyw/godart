@@ -388,7 +388,7 @@ func (e *emitter) index(x *ir.Index) string {
 	}
 	container := x.X.GoType()
 	if typeset.Core(container) == nil && typeset.ArrayOrSlice(container) {
-		return fmt.Sprintf("$sequenceIndex<%s>(%s, $ix(%s)%s)", e.dartType(x.Type), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
+		return fmt.Sprintf("$sequenceIndex<%s>(%s, %s%s)", e.dartType(x.Type), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
 	}
 	if typeset.Core(container) == nil && typeset.BytesOrText(container) {
 		return fmt.Sprintf("%s.at!(%s, %s%s)",
@@ -404,17 +404,17 @@ func (e *emitter) index(x *ir.Index) string {
 	// The type argument stands in the text. Dart reads the context of the
 	// expression for it, and an operand of `-` gives `num`.
 	if isPointerType(container) {
-		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s)%s)",
+		return fmt.Sprintf("$arrayIndex<%s>(%s, %s%s)",
 			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index), uns)
 	}
 	if isArrayType(container) {
-		return fmt.Sprintf("$arrayIndex<%s>(%s, $ix(%s)%s)",
+		return fmt.Sprintf("$arrayIndex<%s>(%s, %s%s)",
 			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index), uns)
 	}
 	if uns != "" {
-		return fmt.Sprintf("%s.$at($ix(%s)%s)", e.container(x.X), e.expr(x.Index), uns)
+		return fmt.Sprintf("%s.$at(%s%s)", e.container(x.X), e.expr(x.Index), uns)
 	}
-	return fmt.Sprintf("%s[$ix(%s)]", e.container(x.X), e.expr(x.Index))
+	return fmt.Sprintf("%s.$at(%s)", e.container(x.X), e.expr(x.Index))
 }
 
 // container gives the Dart text of the container of an index expression, with
@@ -452,18 +452,18 @@ func (e *emitter) indexTarget(x *ir.Index) (head, tail string) {
 	container := x.X.GoType()
 	uns := e.unsArg(x.Index)
 	if typeset.Core(container) == nil && typeset.ArrayOrSlice(container) {
-		return fmt.Sprintf("$sequenceSet<%s>(%s, $ix(%s)", e.dartType(x.Type), e.expr(x.X), e.expr(x.Index)), uns
+		return fmt.Sprintf("$sequenceSet<%s>(%s, %s", e.dartType(x.Type), e.expr(x.X), e.expr(x.Index)), uns
 	}
 	if isPointerType(container) {
-		return fmt.Sprintf("$arraySet<%s>(%s, $ix(%s)",
+		return fmt.Sprintf("$arraySet<%s>(%s, %s",
 			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index)), uns
 	}
 	if isArrayType(container) {
-		return fmt.Sprintf("$arraySet<%s>(%s, $ix(%s)",
+		return fmt.Sprintf("$arraySet<%s>(%s, %s",
 			e.dartType(x.Type), e.expr(x.X), e.expr(x.Index)), uns
 	}
-	if uns != "" {
-		return fmt.Sprintf("%s.$set($ix(%s)", e.container(x.X), e.expr(x.Index)), uns
+	if isSliceType(container) {
+		return fmt.Sprintf("%s.$set(%s", e.container(x.X), e.expr(x.Index)), uns
 	}
 	return "", ""
 }
@@ -478,9 +478,9 @@ func (e *emitter) assignArray(dst string, t types.Type, value string) string {
 
 func (e *emitter) sliceExpr(x *ir.Slice) string {
 	e.mark(x.Pos)
-	low := "0"
+	low := "$gi(0)"
 	if x.Low != nil {
-		low = "$ix(" + e.expr(x.Low) + ")"
+		low = e.expr(x.Low)
 	}
 	source := x.X.GoType()
 	if typeset.BytesOrText(source) {
@@ -492,9 +492,9 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 			e.dictOf(source), e.expr(x.X), lowOrZero(x.Low, e), high, e.unsignedBound(x.Low), e.unsignedBound(x.High))
 	}
 	if isString(source) {
-		high := fmt.Sprintf("%s.length", e.expr(x.X))
+		high := fmt.Sprintf("$gi(%s.length)", e.expr(x.X))
 		if x.High != nil {
-			high = "$ix(" + e.expr(x.High) + ")"
+			high = e.expr(x.High)
 		}
 		tail := ""
 		if e.unsignedBound(x.Low) != "false" || e.unsignedBound(x.High) != "false" {
@@ -508,14 +508,14 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		if isPointerType(source) {
 			text = e.deref(x.X)
 		}
-		high := fmt.Sprintf("%s.length", text)
+		high := fmt.Sprintf("$gi(%s.length)", text)
 		if x.High != nil {
-			high = "$ix(" + e.expr(x.High) + ")"
+			high = e.expr(x.High)
 		}
 		size := fmt.Sprintf("%s.length", text)
-		max := size
+		max := "$gi(" + size + ")"
 		if x.Max != nil {
-			max = "$ix(" + e.expr(x.Max) + ")"
+			max = e.expr(x.Max)
 		}
 		// An array and a pointer to an array each report "with length" in a
 		// bound panic, and a slice reports "with capacity".
@@ -524,13 +524,13 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 			e.rangeTail(x.Max != nil, true, x.Low, x.High, x.Max))
 	}
 	x0 := e.expr(x.X)
-	high := fmt.Sprintf("%s.len", x0)
+	high := fmt.Sprintf("$gi(%s.len)", x0)
 	if x.High != nil {
-		high = "$ix(" + e.expr(x.High) + ")"
+		high = e.expr(x.High)
 	}
-	max := fmt.Sprintf("%s.cap", x0)
+	max := fmt.Sprintf("$gi(%s.cap)", x0)
 	if x.Max != nil {
-		max = "$ix(" + e.expr(x.Max) + ")"
+		max = e.expr(x.Max)
 	}
 	return fmt.Sprintf("%s.range(%s, %s, %s%s)", x0, low, high, max,
 		e.rangeTail(x.Max != nil, false, x.Low, x.High, x.Max))
@@ -879,15 +879,15 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 	case *ir.Index:
 		container := x.X.GoType()
 		if typeset.Core(container) == nil && typeset.ArrayOrSlice(container) {
-			return fmt.Sprintf("$sequencePtr<%s>(%s, $ix(%s)%s)", e.dartType(elem), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
+			return fmt.Sprintf("$sequencePtr<%s>(%s, %s%s)", e.dartType(elem), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
 		}
 		if isPointerType(container) {
-			return fmt.Sprintf("$indexPtr(%s, $ix(%s)%s)", e.deref(x.X), e.expr(x.Index), e.unsArg(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, %s%s)", e.deref(x.X), e.expr(x.Index), e.unsArg(x.Index))
 		}
 		if isArrayType(container) {
-			return fmt.Sprintf("$indexPtr(%s, $ix(%s)%s)", e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, %s%s)", e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
 		}
-		return fmt.Sprintf("$elemPtr(%s, $ix(%s)%s)", e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
+		return fmt.Sprintf("$elemPtr(%s, %s%s)", e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
 	}
 	if id, ok := x.(*ir.Ident); ok {
 		e.fail("the address of the name %s has no Dart form", id.Name)

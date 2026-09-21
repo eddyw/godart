@@ -1,5 +1,6 @@
 import 'array.dart';
 import 'dict.dart';
+import 'goint.dart';
 import 'panic.dart';
 import 'slice.dart';
 
@@ -69,18 +70,20 @@ $Ref<List<T>, T> _cellPtr<T>(List<T> a, int i) {
 }
 
 /// A pointer to 1 element of a slice.
-$Ref<List<T>, T> $elemPtr<T>(Slice<T> s, int i, [bool uns = false]) {
-  if (i < 0 || i >= s.len) $panicIndex(i, s.len, uns);
+$Ref<List<T>, T> $elemPtr<T>(Slice<T> s, GoInt index, [bool uns = false]) {
+  final i = $ix(index);
+  if (i < 0 || i >= s.len) $panicIndex(index, s.len, uns);
   return _cellPtr<T>(s.array, s.off + i);
 }
 
 /// A pointer to 1 element of an array.
-$Ref<List<T>, T> $indexPtr<T>(List<T> a, int i, [bool uns = false]) {
-  if (i < 0 || i >= a.length) $panicIndex(i, a.length, uns);
+$Ref<List<T>, T> $indexPtr<T>(List<T> a, GoInt index, [bool uns = false]) {
+  final i = $ix(index);
+  if (i < 0 || i >= a.length) $panicIndex(index, a.length, uns);
   return _cellPtr<T>(a, i);
 }
 
-$Ref<List<T>, T> $sequencePtr<T>(Object? value, int i, [bool uns = false]) {
+$Ref<List<T>, T> $sequencePtr<T>(Object? value, GoInt i, [bool uns = false]) {
   if (value is Slice<T>) return $elemPtr<T>(value, i, uns);
   return $indexPtr<T>(value as List<T>, i, uns);
 }

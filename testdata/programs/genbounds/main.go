@@ -13,12 +13,23 @@ func mixed[C ~string | ~[]byte, I index](v C, i I) {
 	report("mixed low", func() { _ = v[i:1] })
 	report("mixed high", func() { _ = v[:i] })
 }
+func sequence[C ~[2]byte | ~[]byte, I index](v C, i I) {
+	report("sequence read", func() { _ = v[i] })
+	report("sequence write", func() { v[i] = 3 })
+	report("sequence address", func() { _ = &v[i] })
+}
 func indexes[I index](i I) {
 	a := [2]byte{1, 2}
 	s := a[:]
 	p := &a
 	text := "ab"
 	report("string", func() { _ = text[i] })
+	report("array read", func() { _ = a[i] })
+	report("array write", func() { a[i] = 3 })
+	report("slice read", func() { _ = s[i] })
+	report("slice write", func() { s[i] = 3 })
+	report("pointer read", func() { _ = p[i] })
+	report("pointer write", func() { p[i] = 3 })
 	report("array ptr", func() { _ = &a[i] })
 	report("slice ptr", func() { _ = &s[i] })
 	report("pointer ptr", func() { _ = &p[i] })
@@ -29,12 +40,20 @@ func indexes[I index](i I) {
 	report("slice low", func() { _ = s[i:1] })
 	report("slice high", func() { _ = s[:i] })
 	report("slice max", func() { _ = s[:1:i] })
+	report("slice high/max", func() { _ = s[:i:i] })
+	report("slice all", func() { _ = s[i:i:i] })
 	mixed(text, i)
 	mixed(s, i)
+	sequence(a, i)
+	sequence(s, i)
 }
 func main() {
 	indexes(int64(-1))
 	indexes(^uint64(0))
+	indexes(int64(1<<53 + 1))
+	indexes(int64(-1<<53 - 1))
+	indexes(uint64(1<<63 + 1))
+	indexes(^uint64(0) - 1024)
 	indexes(int64(1))
 	indexes(uint64(1))
 	var i uint64 = ^uint64(0)

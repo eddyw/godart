@@ -35,7 +35,7 @@ void main() {
 
   test('a range shares the backing array', () {
     final s = makeInts(4, 4);
-    final t = s.range(1, 3, 4);
+    final t = s.range($gi(1), $gi(3), $gi(4));
     t[0] = 9;
     expect(s[1], 9);
     expect(t.len, 2);
