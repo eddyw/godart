@@ -3,11 +3,68 @@ package driver_test
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
 )
+
+func TestRuntimePanicGoroutine(t *testing.T) {
+	source, out := t.TempDir(), t.TempDir()
+	writeFile(t, filepath.Join(source, "go.mod"), "module example.com/panicgoroutine\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(source, "main.go"), `package main
+import ("os"; "runtime"; "strings"; "time")
+func fail() {
+ buf := make([]byte, 1024)
+ n := runtime.Stack(buf, false)
+ println("origin:", strings.Fields(string(buf[:n]))[1])
+ panic("worker failure")
+}
+func worker() {
+ if os.Args[1] == "resumed" { time.Sleep(time.Millisecond) }
+ if os.Args[1] == "nested" {
+  defer fail()
+  panic("first failure")
+ }
+ fail()
+}
+func main() {
+ if os.Args[1] == "main" { worker(); return }
+ go worker()
+ select {}
+}
+`)
+	run(t, source, "go", "build", "-o", "native", ".")
+	if err := driver.Build(driver.Options{Dir: source, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t)}); err != nil {
+		t.Fatal(err)
+	}
+	prepareDart(t, out)
+	run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", "app")
+	origin := regexp.MustCompile(`(?m)^origin: ([0-9]+)$`)
+	header := regexp.MustCompile(`(?m)^goroutine ([0-9]+) \[running\]:$`)
+	for _, scenario := range []string{"main", "worker", "resumed", "nested"} {
+		for _, target := range []string{"native", "vm", "aot"} {
+			t.Run(scenario+"/"+target, func(t *testing.T) {
+				command, args := filepath.Join(source, "native"), []string{scenario}
+				if target == "vm" {
+					command, args = "dart", []string{filepath.Join(out, "bin/main.dart"), scenario}
+				} else if target == "aot" {
+					command = filepath.Join(out, "app")
+				}
+				var result languageExecution
+				text := recordLanguage(t, &result, source, runLimit, command, args...)
+				want, got := origin.FindStringSubmatch(text), header.FindStringSubmatch(text)
+				if result.Exit != 2 || result.TimedOut || len(want) != 2 || len(got) != 2 || got[1] != want[1] {
+					t.Fatalf("exit=%d: panic header must match runtime.Stack identity\n%s", result.Exit, text)
+				}
+				if (scenario == "main") != (got[1] == "1") {
+					t.Fatalf("unexpected %s goroutine identity %s", scenario, got[1])
+				}
+			})
+		}
+	}
+}
 
 func TestRuntimePanicTraceback(t *testing.T) {
 	source := filepath.Join(runtime.GOROOT(), "src/runtime/testdata/testprog/deadlock.go")

@@ -1,7 +1,7 @@
 import 'goint.dart';
 import 'iface.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
-import 'sched.dart' show $activeCallerFrames;
+import 'sched.dart' show $activeCallerFrames, $current;
 import 'string.dart';
 
 String $defaultGODEBUG = '';
@@ -52,6 +52,7 @@ final class GoPanic implements Exception {
 
   final StackTrace trace;
   final List<(String, String, int)> callers;
+  final int goroutineID;
 
   final GoPanic? traceParent;
   // A recovered panic remains visible until its deferred call returns.
@@ -66,7 +67,8 @@ final class GoPanic implements Exception {
   bool recovered = false;
 
   GoPanic(this.value)
-    : trace = StackTrace.current,
+    : goroutineID = $current?.id ?? 1,
+      trace = StackTrace.current,
       callers = [
         for (final frame in $activeCallerFrames)
           (frame.$name, frame.$goFile, frame.$goLine),

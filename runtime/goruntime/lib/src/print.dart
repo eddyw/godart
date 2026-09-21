@@ -126,7 +126,9 @@ String $fstring(double v) {
 /// Reports a panic that no function stops, and ends the program. Go writes the
 /// value to stderr and exits with the status 2.
 Never $fatal(GoPanic panic, StackTrace trace) {
-  $platformStderrText('${$panicChain(panic)}\ngoroutine 1 [running]:\n');
+  $platformStderrText(
+    '${$panicChain(panic)}\ngoroutine ${panic.goroutineID} [running]:\n',
+  );
   for (final GoPos pos in $panicStack(panic)) {
     $platformStderrText(
       '${pos.function == 'runtime.gopanic' ? 'panic' : pos.function}()\n\t${pos.file}:${pos.line}\n',
