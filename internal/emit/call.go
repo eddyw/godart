@@ -1709,8 +1709,13 @@ func (e *emitter) conv(x *ir.Conv) string {
 	// A pointer to a struct holds the class of the struct. `type outer inner`
 	// gives the 2 names 1 class, thus the conversion performs no operation
 	// there too. Read mergeGroup.
-	if pf, ok := types.Unalias(from).Underlying().(*types.Pointer); ok {
-		if pt, ok := types.Unalias(to).Underlying().(*types.Pointer); ok {
+	if pf, ok := typeset.Core(from).(*types.Pointer); ok {
+		if pt, ok := typeset.Core(to).(*types.Pointer); ok {
+			if tp {
+				if elem, ok := types.Unalias(pt.Elem()).(*types.TypeParam); ok {
+					return fmt.Sprintf("($ptrValue(%s.desc, %s) as %s)", e.dictOf(elem), text, e.dartType(to))
+				}
+			}
 			if isStructType(pt.Elem()) {
 				if e.sameClass(pf.Elem(), pt.Elem()) {
 					return text

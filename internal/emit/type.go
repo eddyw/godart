@@ -44,12 +44,18 @@ func (e *emitter) dartType(t types.Type) string {
 		}
 		return e.dartType(t.Underlying())
 	case *types.TypeParam:
-		// A type parameter whose core type is a composite holds 1 Dart type.
-		// `S ~[]E` gives `Slice<E>`, thus the parameter S adds nothing.
+		// A composite core can supply the Dart representation directly.
+		// `S ~[]E` gives `Slice<E>`.
 		//
 		// A basic core type keeps the parameter. `~int` and `~string` give 2
 		// Dart types, and the bound of the parameter holds what they share.
 		if core := typeset.Core(t); core != nil && !isBasicType(core) {
+			if p, ok := core.(*types.Pointer); ok {
+				if _, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
+					// Containers must retain the substituted pointer type.
+					return typeParamName(t)
+				}
+			}
 			// The core struct of a constraint is a shape of the compiler, and
 			// the class of a type argument of the shape is not the class of
 			// the shape. Each operation on such a parameter reads its
@@ -383,9 +389,10 @@ func coreDispatch(core types.Type) bool {
 	if core == nil {
 		return true
 	}
-	switch types.Unalias(core).(type) {
+	switch core := types.Unalias(core).(type) {
 	case *types.Pointer:
-		return false
+		_, param := types.Unalias(core.Elem()).(*types.TypeParam)
+		return param
 	}
 
 	return true

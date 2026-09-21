@@ -406,10 +406,6 @@
   "typeparam/orderedmap": [
     "$DIR/orderedmap.go:237:10: undefined: runtime.SetFinalizer"
   ],
-  "typeparam/settable": [
-    "the conversion from *T to PT is not supported yet",
-    "the conversion from *T to PT is not supported yet"
-  ],
   "uintptrescapes3": [
     "$DIR/uintptrescapes3.go:51:11: undefined: runtime.SetFinalizer"
   ],

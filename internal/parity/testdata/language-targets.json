@@ -34,5 +34,6 @@
   "typeparam/issue48225",
   "typeparam/issue48042",
   "typeparam/index2",
-  "typeparam/issue49659b"
+  "typeparam/issue49659b",
+  "typeparam/settable"
 ]
