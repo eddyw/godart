@@ -121,3 +121,6 @@ GoString $packetDeadline(int handle, int read, int write) => _noNet;
   Slice<GoString>.of(<GoString>[]),
   _empty,
 );
+
+(Slice<GoString>, GoString) $interfaceTable() =>
+    (Slice<GoString>.nil(), _empty);

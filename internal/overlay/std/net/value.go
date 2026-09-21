@@ -219,11 +219,6 @@ func hexValue(c byte) (byte, bool) {
 }
 
 // Flags holds the state of a network interface.
-//
-// The Interface type of this overlay holds no Flags field. The
-// NetworkInterface class of dart:io reports 3 of the 6 flags at most. Read
-// the doc comment of interface.go. The type and its 6 constants stay, because
-// a program reads them as plain values.
 type Flags uint
 
 // The 6 flags of a network interface.

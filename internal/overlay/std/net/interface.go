@@ -1,28 +1,18 @@
+// Copyright 2011 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 package net
 
 import (
+	"encoding/hex"
 	"errors"
 	"strconv"
 	"strings"
 	"syscall/dart"
 )
-
-// This file holds the network interface table.
-//
-// `NetworkInterface.list` of `dart:io` gives 3 items of each interface: the
-// name, the index, and each address with its prefix length. It gives nothing
-// else.
-//
-// Thus the Interface type of this overlay holds Index and Name alone. Go also
-// holds MTU, HardwareAddr, and Flags, and Dart reports none of the 3. A field
-// that always reads 0 lies about the host, thus the overlay holds no such
-// field. `MulticastAddrs` stays out for the same cause: Dart lists no joined
-// multicast group.
-//
-// A web target holds no interface table. Go under GOOS=js gives an empty
-// table and no error, and the web form of the runtime does the same.
 
 // The 4 errors of the interface table. Go wraps each 1 in an OpError. That
 // error holds the operation "route" and the network "ip+net", thus each text
@@ -34,33 +24,27 @@ var (
 	errNoSuchInterface       = errors.New("route ip+net: no such network interface")
 )
 
-// An Interface names 1 network interface of the host.
-//
-// Go also holds MTU, HardwareAddr, and Flags. `dart:io` reports none of the
-// 3, thus this overlay holds no such field. The comment at the top of the
-// file holds the cause.
+// Interface describes a network interface of the host.
 type Interface struct {
-	// Index is a positive integer that starts at 1. The value 0 names no
-	// interface.
-	Index int
-	// Name is the name of the interface, for example "en0" or "lo0".
-	Name string
+	Index        int
+	MTU          int
+	Name         string
+	HardwareAddr HardwareAddr
+	Flags        Flags
 }
 
 // Interfaces gives each network interface of the host.
 func Interfaces() ([]Interface, error) {
-	table, _, err := interfaceTable()
+	table, err := interfaceTable()
 	return table, err
 }
 
-// InterfaceByIndex gives the interface of an index. Go reports the first
-// interface of the index on a system that holds an alias. Dart lists 1 entry
-// for each index.
+// InterfaceByIndex gives the interface with the requested index.
 func InterfaceByIndex(index int) (*Interface, error) {
 	if index <= 0 {
 		return nil, errInvalidInterfaceIndex
 	}
-	table, _, err := interfaceTable()
+	table, err := interfaceTable()
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +62,7 @@ func InterfaceByName(name string) (*Interface, error) {
 	if name == "" {
 		return nil, errInvalidInterfaceName
 	}
-	table, _, err := interfaceTable()
+	table, err := interfaceTable()
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +82,7 @@ func (ifi *Interface) Addrs() ([]Addr, error) {
 	if ifi == nil {
 		return nil, errInvalidInterface
 	}
-	_, addrs, err := interfaceTable()
+	addrs, err := interfaceAddresses()
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +99,7 @@ func (ifi *Interface) Addrs() ([]Addr, error) {
 // The list names no interface, thus a program that needs the pair reads
 // Interfaces and Interface.Addrs.
 func InterfaceAddrs() ([]Addr, error) {
-	_, addrs, err := interfaceTable()
+	addrs, err := interfaceAddresses()
 	if err != nil {
 		return nil, err
 	}
@@ -133,34 +117,54 @@ type interfaceAddr struct {
 	addr  Addr
 }
 
-// interfaceTable reads the table of the host 1 time. It gives each interface
-// and each address.
-func interfaceTable() ([]Interface, []interfaceAddr, error) {
-	names, addrs, cause := dart.Interfaces()
+func interfaceTable() ([]Interface, error) {
+	names, cause := dart.InterfaceTable()
 	if cause != "" {
-		return nil, nil, errors.New("route ip+net: " + cause)
+		return nil, errors.New("route ip+net: " + cause)
 	}
-	table := make([]Interface, 0, len(names))
+	var table []Interface
 	for _, item := range names {
-		index, name, ok := splitIndex(item)
-		if !ok {
-			return nil, nil, errors.New("route ip+net: the host gave the interface " + item)
+		fields := strings.SplitN(item, "|", 5)
+		if len(fields) != 5 {
+			return nil, errors.New("route ip+net: invalid interface metadata")
 		}
-		table = append(table, Interface{Index: index, Name: name})
+		index, indexErr := strconv.Atoi(fields[0])
+		mtu, mtuErr := strconv.Atoi(fields[1])
+		flags, flagsErr := strconv.ParseUint(fields[2], 10, 32)
+		if indexErr != nil || mtuErr != nil || flagsErr != nil || index <= 0 || mtu < 0 {
+			return nil, errors.New("route ip+net: invalid interface metadata")
+		}
+		var hardware HardwareAddr
+		if fields[3] != "" {
+			var err error
+			hardware, err = hex.DecodeString(fields[3])
+			if err != nil {
+				return nil, err
+			}
+		}
+		table = append(table, Interface{Index: index, MTU: mtu, Name: fields[4], HardwareAddr: hardware, Flags: Flags(flags)})
+	}
+	return table, nil
+}
+
+func interfaceAddresses() ([]interfaceAddr, error) {
+	_, addrs, cause := dart.Interfaces()
+	if cause != "" {
+		return nil, errors.New("route ip+net: " + cause)
 	}
 	list := make([]interfaceAddr, 0, len(addrs))
 	for _, item := range addrs {
 		index, text, ok := splitIndex(item)
 		if !ok {
-			return nil, nil, errors.New("route ip+net: the host gave the address " + item)
+			return nil, errors.New("route ip+net: the host gave the address " + item)
 		}
 		network, err := interfaceIPNet(text)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		list = append(list, interfaceAddr{index: index, addr: network})
 	}
-	return table, list, nil
+	return list, nil
 }
 
 // splitIndex reads an item of the interop, in the form "<index>|<rest>".

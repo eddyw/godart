@@ -758,6 +758,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$packetClose(%s)", args[0]), true
 	case "PacketDeadline":
 		return fmt.Sprintf("$packetDeadline(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "InterfaceTable":
+		return "$interfaceTable()", true
 	case "Interfaces":
 		return "$interfaces()", true
 	case "StartTimer":

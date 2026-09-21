@@ -10,6 +10,8 @@ import 'sched.dart';
 import 'slice.dart';
 import 'string.dart';
 
+export 'interface_native.dart';
+
 /// One open connection.
 ///
 /// The rest holds the bytes that a read did not take, because a Go read gives

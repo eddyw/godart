@@ -1343,6 +1343,10 @@ func PacketDeadline(handle int, read, write int64) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func InterfaceTable() ([]string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Interfaces gives the network interfaces of the host.
 //
 // The first result holds 1 item for each interface, in the form

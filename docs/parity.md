@@ -61,6 +61,11 @@ Linux and macOS programs read native user IDs, group IDs, supplementary
 groups, parent process IDs, and memory page sizes. Other targets retain
 placeholder numeric values and report supplementary groups as unsupported.
 
+Linux and macOS expose network interface indexes, names, MTU values,
+hardware addresses, and flags. The table includes interfaces without IP addresses.
+Other native hosts report interface metadata as unsupported.
+Address enumeration remains separate. Browsers return an empty interface table.
+
 Browser builds use browser APIs. HTTP clients use fetch. Browser restrictions
 on headers, credentials, network access, and cross-origin requests still apply.
 Native filesystem operations, raw sockets, and HTTP servers do not become
