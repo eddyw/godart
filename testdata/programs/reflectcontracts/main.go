@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"Example.com/reflectcontracts/Upper"
@@ -40,7 +41,45 @@ func recursiveMetadata[T any]() {
 	fmt.Println("recursive method type", t.Method(0).Type.Out(0) == t)
 }
 
+func swapAliases() {
+	shared := 7
+	values := []record{{Number: 2, Array: [2]int{20, 21}, Ref: &shared}, {Number: 1, Array: [2]int{10, 11}, Ref: &shared}}
+	first, second := &values[0], &values[1]
+	field, nested := &values[0].Number, &values[0].Array[1]
+	swap := reflect.Swapper(values)
+	swap(0, 1)
+	fmt.Println("swap aliases", first.Number, second.Number, *field, *nested, first.Ref == &shared)
+	swap(0, 0)
+	fmt.Println("same cell", first.Number, *nested)
+	sort.Slice(values, func(i, j int) bool { return values[i].Number > values[j].Number })
+	fmt.Println("sort aliases", first.Number, second.Number, *nested)
+	sort.SliceStable(values, func(i, j int) bool { return values[i].Number < values[j].Number })
+	fmt.Println("stable aliases", first.Number, second.Number, *nested)
+	arrays := [][2]record{{{Number: 1}, {Number: 2}}, {{Number: 3}, {Number: 4}}}
+	ap, inner := &arrays[0], &arrays[0][1]
+	reflect.Swapper(arrays)(0, 1)
+	fmt.Println("array aliases", ap[0].Number, inner.Number, arrays[1][1].Number)
+	ints := []int{1, 2}
+	ip := &ints[0]
+	reflect.Swapper(ints)(0, 1)
+	fmt.Println("scalar alias", *ip)
+	dynamicType := reflect.StructOf([]reflect.StructField{{Name: "Nested", Type: reflect.ArrayOf(2, reflect.TypeFor[int]())}})
+	dynamic := reflect.MakeSlice(reflect.SliceOf(dynamicType), 2, 2)
+	dynamic.Index(0).Field(0).Index(1).SetInt(11)
+	dynamic.Index(1).Field(0).Index(1).SetInt(22)
+	dynamicPointer := dynamic.Index(0).Field(0).Index(1).Addr()
+	reflect.Swapper(dynamic.Interface())(0, 1)
+	fmt.Println("dynamic swap", dynamicPointer.Elem().Int(), dynamic.Index(1).Field(0).Index(1).Int())
+	dynamicArray := reflect.MakeSlice(reflect.SliceOf(reflect.ArrayOf(2, dynamicType)), 2, 2)
+	dynamicArray.Index(0).Index(1).Set(dynamic.Index(0))
+	dynamicArray.Index(1).Index(1).Set(dynamic.Index(1))
+	arrayPointer := dynamicArray.Index(0).Index(1).Field(0).Index(1).Addr()
+	reflect.Swapper(dynamicArray.Interface())(0, 1)
+	fmt.Println("dynamic array swap", arrayPointer.Elem().Int(), dynamicArray.Index(1).Index(1).Field(0).Index(1).Int())
+}
+
 func main() {
+	swapAliases()
 	recursiveMetadata[int]()
 	for _, input := range [][]int{nil, {}, {1, 2}} {
 		v := reflect.ValueOf(input)

@@ -2813,3 +2813,36 @@ Iface $growValue(Iface value, GoInt count) {
     return Iface(desc, fresh.$view(0, held.len, capacity));
   });
 }
+
+/// Exchanges 2 elements of a slice. The package sort uses it, because a Go
+/// sort works on a slice of an unknown element type.
+void $swap(Iface? value, GoInt first, GoInt second) {
+  final Object? unwrapped = value?.value;
+  if (unwrapped is! Slice<Object?>) {
+    $panic(
+      Iface($typeGoError, const GoError('sort: the value is not a slice')),
+    );
+  }
+  final Slice<Object?> slice = unwrapped;
+  if (first < GoInt.zero || first >= slice.$length) {
+    $panicIndex(first, slice.$length);
+  }
+  if (second < GoInt.zero || second >= slice.$length) {
+    $panicIndex(second, slice.$length);
+  }
+  if (slice is $ZeroSlice<Object?>) return;
+  final i = $ix(first);
+  final j = $ix(second);
+  final elem = value!.desc.elem!();
+  if (_holdsValue(elem)) {
+    final a = slice.array[slice.off + i];
+    final b = slice.array[slice.off + j];
+    final temporary = _copyOf(a, elem);
+    _assignInto(a, b, elem);
+    _assignInto(b, temporary, elem);
+    return;
+  }
+  final Object? a = slice.array[slice.off + i];
+  slice.array[slice.off + i] = slice.array[slice.off + j];
+  slice.array[slice.off + j] = a;
+}

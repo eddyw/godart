@@ -332,30 +332,6 @@ Slice<T> $appendRange<T>(
   return out;
 }
 
-/// Exchanges 2 elements of a slice. The package sort uses it, because a Go
-/// sort works on a slice of an unknown element type.
-void $swap(Object? value, GoInt first, GoInt second) {
-  final Object? unwrapped = value is Iface ? value.value : value;
-  if (unwrapped is! Slice<Object?>) {
-    $panic(
-      Iface($typeGoError, const GoError('sort: the value is not a slice')),
-    );
-  }
-  final Slice<Object?> slice = unwrapped;
-  if (first < GoInt.zero || first >= slice.$length) {
-    $panicIndex(first, slice.$length);
-  }
-  if (second < GoInt.zero || second >= slice.$length) {
-    $panicIndex(second, slice.$length);
-  }
-  if (slice is $ZeroSlice<Object?>) return;
-  final i = $ix(first);
-  final j = $ix(second);
-  final Object? a = slice.array[slice.off + i];
-  slice.array[slice.off + i] = slice.array[slice.off + j];
-  slice.array[slice.off + j] = a;
-}
-
 /// The length of a slice of an unknown element type.
 GoInt $sliceLen(Object? value) {
   final Object? unwrapped = value is Iface ? value.value : value;
