@@ -32,6 +32,7 @@ The runtime caller adapter retains original declarations from
 The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
 The runtime license includes their BSD terms.
+The time value representation and its clock helpers adapt Go `src/time/time.go`.
 Shared type layout calculations adapt the Go-derived reflection overlay.
 The runtime layout source and license preserve the Go BSD notice.
 The certificate trust adapter adapts Go 1.27.1 `crypto/x509/root.go`,

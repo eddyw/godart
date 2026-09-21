@@ -33,7 +33,7 @@ func (t Time) AppendBinary(b []byte) ([]byte, error) {
 		}
 		offsetMin = int16(offset)
 	}
-	sec := t.sec
+	sec := t.sec()
 	nsec := t.nanosecond()
 	b = append(b,
 		version,
@@ -104,7 +104,7 @@ func (t *Time) UnmarshalBinary(data []byte) error {
 			loc = FixedZone("", offset)
 		}
 	}
-	*t = Time{sec: sec, nsec: nsec}.In(loc)
+	*t = Time{ext: sec, wall: uint64(nsec)}.In(loc)
 	return nil
 }
 

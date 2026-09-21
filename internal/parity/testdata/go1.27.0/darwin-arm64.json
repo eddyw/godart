@@ -73800,13 +73800,7 @@
           "sha256": "76614838921113e434cd46a60d7cedd93410e6c170bf466433302e1bd3f3d3c5"
         }
       ],
-      "seeds": null,
-      "test_patches": [
-        {
-          "path": "monotonic_test.go",
-          "sha256": "b23149cdeccb8f1ef25acf4eea8c4500c11ab9b463de9cc0efabdf4b7d9bdd5a"
-        }
-      ]
+      "seeds": null
     },
     {
       "path": "time/tzdata",

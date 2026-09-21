@@ -78,8 +78,8 @@ func (t Time) Round(d Duration) Time {
 // the general case builds a 128 bit value from 2 words.
 func div(t Time, d Duration) (int, Duration) {
 	neg := false
-	sec := t.sec
-	nsec := int64(t.nsec)
+	sec := t.sec()
+	nsec := int64(t.nsec())
 	if sec < 0 {
 		// The 2 counts take their magnitude, and the parity and the remainder
 		// read the sign again at the end.

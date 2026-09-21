@@ -114,23 +114,98 @@ func Sleep(d Duration) {
 // Go holds the same origin. The zero value of the 2 runtimes is thus midnight
 // UTC of January 1 of the year 1. Values from Now also hold a monotonic clock.
 type Time struct {
-	sec     int64
-	nsec    int32
-	loc     *Location
-	mono    int64
-	hasMono bool
+	// wall holds nanoseconds in bits 0–29. Bit 63 selects monotonic time.
+	// With that bit set, bits 30–62 hold seconds after 1885, and ext holds
+	// monotonic nanoseconds. Otherwise, ext holds seconds since year 1.
+	wall uint64
+	ext  int64
+	loc  *Location
 }
 
-const minMonoWall = (1884*365 + 1884/4 - 1884/100 + 1884/400) * 86400
-const maxMonoWall = minMonoWall + (1 << 33) - 1
+const wallToInternal int64 = (1884*365 + 1884/4 - 1884/100 + 1884/400) * 86400
+const (
+	hasMonotonic = 1 << 63
+	minWall      = wallToInternal
+	maxWall      = wallToInternal + (1 << 33) - 1
+	nsecMask     = 1<<30 - 1
+	nsecShift    = 30
+)
+
+func (t *Time) nsec() int32 {
+	return int32(t.wall & nsecMask)
+}
+
+func (t *Time) sec() int64 {
+	if t.wall&hasMonotonic != 0 {
+		return wallToInternal + int64(t.wall<<1>>(nsecShift+1))
+	}
+	return t.ext
+}
+
+func (t *Time) addSec(d int64) {
+	if t.wall&hasMonotonic != 0 {
+		sec := int64(t.wall << 1 >> (nsecShift + 1))
+		dsec := sec + d
+		if 0 <= dsec && dsec <= 1<<33-1 {
+			t.wall = t.wall&nsecMask | uint64(dsec)<<nsecShift | hasMonotonic
+			return
+		}
+		// Wall second now out of range for packed field.
+		// Move to ext.
+		t.stripMono()
+	}
+
+	// Check if the sum of t.ext and d overflows and handle it properly.
+	sum := t.ext + d
+	if (sum > t.ext) == (d > 0) {
+		t.ext = sum
+	} else if d > 0 {
+		t.ext = 1<<63 - 1
+	} else {
+		t.ext = -(1<<63 - 1)
+	}
+}
+
+func (t *Time) setLoc(loc *Location) {
+	if loc == &utcLoc {
+		loc = nil
+	}
+	t.stripMono()
+	t.loc = loc
+}
+
+func (t *Time) stripMono() {
+	if t.wall&hasMonotonic != 0 {
+		t.ext = t.sec()
+		t.wall &= nsecMask
+	}
+}
+
+func (t *Time) setMono(m int64) {
+	if t.wall&hasMonotonic == 0 {
+		sec := t.ext
+		if sec < minWall || maxWall < sec {
+			return
+		}
+		t.wall |= hasMonotonic | uint64(sec-minWall)<<nsecShift
+	}
+	t.ext = m
+}
+
+func (t *Time) mono() int64 {
+	if t.wall&hasMonotonic == 0 {
+		return 0
+	}
+	return t.ext
+}
 
 // unixSec gives the count of seconds of t since the start of the Unix epoch.
-func (t Time) unixSec() int64 { return t.sec - unixToInternal }
+func (t Time) unixSec() int64 { return t.sec() - unixToInternal }
 
 // unixTime builds a Time of 2 counts. The first 1 holds seconds since the
 // start of the Unix epoch, and the second 1 nanoseconds inside that second.
 func unixTime(sec int64, nsec int32) Time {
-	return Time{sec: sec + unixToInternal, nsec: nsec, loc: Local}
+	return Time{ext: sec + unixToInternal, wall: uint64(nsec), loc: Local}
 }
 
 // Now gives the time of the clock.
@@ -138,10 +213,7 @@ func Now() Time {
 	nanos := dart.NowNanos()
 	t := unixTime(floorDiv(nanos, 1000000000),
 		int32(floorMod(nanos, 1000000000)))
-	if t.sec >= minMonoWall && t.sec <= maxMonoWall {
-		t.mono = dart.MonoNanos() + 1
-		t.hasMono = true
-	}
+	t.setMono(dart.MonoNanos() + 1)
 	return t
 }
 
@@ -162,7 +234,7 @@ func Unix(sec, nsec int64) Time {
 // The result is undefined outside the year range 1678 to 2262. The count does
 // not fit an int64 there, and Go names the same bound.
 func (t Time) UnixNano() int64 {
-	return t.unixSec()*1000000000 + int64(t.nsec)
+	return t.unixSec()*1000000000 + int64(t.nsec())
 }
 
 // Unix gives the count of seconds since the start of the Unix epoch.
@@ -171,19 +243,19 @@ func (t Time) Unix() int64 { return t.unixSec() }
 // Sub gives the duration between t and u. A result outside the range of a
 // Duration gives the largest or the smallest Duration, exactly as in Go.
 func (t Time) Sub(u Time) Duration {
-	if t.hasMono && u.hasMono {
-		d := Duration(t.mono - u.mono)
-		if t.mono < u.mono && d > 0 {
+	if t.wall&u.wall&hasMonotonic != 0 {
+		d := Duration(t.ext - u.ext)
+		if t.ext < u.ext && d > 0 {
 			return minDuration
 		}
-		if t.mono > u.mono && d < 0 {
+		if t.ext > u.ext && d < 0 {
 			return maxDuration
 		}
 		return d
 	}
 	t.stripMono()
 	u.stripMono()
-	d := Duration(t.sec-u.sec)*Second + Duration(t.nsec-u.nsec)
+	d := Duration(t.sec()-u.sec())*Second + Duration(t.nsec()-u.nsec())
 	switch {
 	case u.Add(d).Equal(t):
 		return d
@@ -196,24 +268,24 @@ func (t Time) Sub(u Time) Duration {
 
 // Add gives the time after the duration.
 func (t Time) Add(d Duration) Time {
-	dsec := int64(d / 1000000000)
-	nsec := t.nsec + int32(d%1000000000)
-	if nsec >= 1000000000 {
+	dsec := int64(d / 1e9)
+	nsec := t.nsec() + int32(d%1e9)
+	if nsec >= 1e9 {
 		dsec++
-		nsec -= 1000000000
+		nsec -= 1e9
 	} else if nsec < 0 {
 		dsec--
-		nsec += 1000000000
+		nsec += 1e9
 	}
-	t.sec += dsec
-	t.nsec = nsec
-	if t.hasMono {
-		mono := t.mono + int64(d)
-		if t.sec < minMonoWall || t.sec > maxMonoWall ||
-			d < 0 && mono > t.mono || d > 0 && mono < t.mono {
+	t.wall = t.wall&^nsecMask | uint64(nsec) // update nsec
+	t.addSec(dsec)
+	if t.wall&hasMonotonic != 0 {
+		te := t.ext + int64(d)
+		if d < 0 && te > t.ext || d > 0 && te < t.ext {
+			// Monotonic clock reading now out of range; degrade to wall-only.
 			t.stripMono()
 		} else {
-			t.mono = mono
+			t.ext = te
 		}
 	}
 	return t
@@ -221,41 +293,41 @@ func (t Time) Add(d Duration) Time {
 
 // Before reports whether t comes before u.
 func (t Time) Before(u Time) bool {
-	if t.hasMono && u.hasMono {
-		return t.mono < u.mono
+	if t.wall&u.wall&hasMonotonic != 0 {
+		return t.ext < u.ext
 	}
-	return t.sec < u.sec || t.sec == u.sec && t.nsec < u.nsec
+	return t.sec() < u.sec() || t.sec() == u.sec() && t.nsec() < u.nsec()
 }
 
 // After reports whether t comes after u.
 func (t Time) After(u Time) bool {
-	if t.hasMono && u.hasMono {
-		return t.mono > u.mono
+	if t.wall&u.wall&hasMonotonic != 0 {
+		return t.ext > u.ext
 	}
-	return t.sec > u.sec || t.sec == u.sec && t.nsec > u.nsec
+	return t.sec() > u.sec() || t.sec() == u.sec() && t.nsec() > u.nsec()
 }
 
 // Compare gives -1 when t comes before u, 0 when the 2 name the same instant,
 // and 1 when t comes after u.
 func (t Time) Compare(u Time) int {
-	if t.hasMono && u.hasMono {
+	if t.wall&u.wall&hasMonotonic != 0 {
 		switch {
-		case t.mono < u.mono:
+		case t.ext < u.ext:
 			return -1
-		case t.mono > u.mono:
+		case t.ext > u.ext:
 			return 1
 		default:
 			return 0
 		}
 	}
 	switch {
-	case t.sec < u.sec:
+	case t.sec() < u.sec():
 		return -1
-	case t.sec > u.sec:
+	case t.sec() > u.sec():
 		return 1
-	case t.nsec < u.nsec:
+	case t.nsec() < u.nsec():
 		return -1
-	case t.nsec > u.nsec:
+	case t.nsec() > u.nsec():
 		return 1
 	}
 	return 0
@@ -263,17 +335,17 @@ func (t Time) Compare(u Time) int {
 
 // IsZero reports whether t holds the zero time, which is midnight UTC of
 // January 1 of the year 1.
-func (t Time) IsZero() bool { return t.sec == 0 && t.nsec == 0 }
+func (t Time) IsZero() bool { return t.sec() == 0 && t.nsec() == 0 }
 
 // String gives the text of the time, in the format of Go.
 func (t Time) String() string {
 	out := t.Format("2006-01-02 15:04:05.999999999 -0700 MST")
-	if !t.hasMono {
+	if t.wall&hasMonotonic == 0 {
 		return out
 	}
 	sign := "+"
-	u := uint64(t.mono)
-	if t.mono < 0 {
+	u := uint64(t.ext)
+	if t.ext < 0 {
 		sign = "-"
 		u = -u
 	}
@@ -282,11 +354,6 @@ func (t Time) String() string {
 		frac = "0" + frac
 	}
 	return out + " m=" + sign + uitoa(u/1000000000) + "." + frac
-}
-
-func (t *Time) stripMono() {
-	t.mono = 0
-	t.hasMono = false
 }
 
 // Location gives the location of the wall clock of t. A Time with no location
@@ -304,10 +371,8 @@ func (t Time) In(loc *Location) Time {
 	if loc == nil {
 		panic("time: missing Location in call to Time.In")
 	}
-	if loc == &utcLoc {
-		loc = nil
-	}
-	return Time{sec: t.sec, nsec: t.nsec, loc: loc}
+	t.setLoc(loc)
+	return t
 }
 
 // UTC gives t with the location UTC.
@@ -319,10 +384,10 @@ func (t Time) Local() Time { return t.In(Local) }
 // Equal reports whether t and u name the same instant. The location of each
 // one changes nothing.
 func (t Time) Equal(u Time) bool {
-	if t.hasMono && u.hasMono {
-		return t.mono == u.mono
+	if t.wall&u.wall&hasMonotonic != 0 {
+		return t.ext == u.ext
 	}
-	return t.sec == u.sec && t.nsec == u.nsec
+	return t.sec() == u.sec() && t.nsec() == u.nsec()
 }
 
 // locWall gives the name of the zone, the offset in seconds east of UTC, and
@@ -335,7 +400,7 @@ func (t Time) locWall() (string, int, int64) {
 
 // nanosecond gives the count of nanoseconds inside the second of t. A zone
 // offset holds a whole count of seconds, thus the location changes nothing.
-func (t Time) nanosecond() int { return int(t.nsec) }
+func (t Time) nanosecond() int { return int(t.nsec()) }
 
 // Date gives the Time of a date and a clock in a location. A value outside its
 // range moves into the next unit, exactly as in Go.
@@ -353,8 +418,8 @@ func Date(year int, month Month, day, hour, min, sec, nsec int, loc *Location) T
 
 	wall := daysFromCivil(int64(year), int(month), day)*86400 +
 		int64(hour)*3600 + int64(min)*60 + int64(sec)
-	return Time{sec: wall - int64(loc.offsetOf(wall)) + unixToInternal,
-		nsec: int32(nsec)}.In(loc)
+	return Time{ext: wall - int64(loc.offsetOf(wall)) + unixToInternal,
+		wall: uint64(nsec)}.In(loc)
 }
 
 // norm moves a value that stands outside its base into the next unit.

@@ -30,12 +30,12 @@ func (d Duration) Abs() Duration {
 
 // UnixMilli gives the count of milliseconds since the start of the Unix epoch.
 func (t Time) UnixMilli() int64 {
-	return t.unixSec()*1000 + int64(t.nsec)/1000000
+	return t.unixSec()*1000 + int64(t.nsec())/1000000
 }
 
 // UnixMicro gives the count of microseconds since the start of the Unix epoch.
 func (t Time) UnixMicro() int64 {
-	return t.unixSec()*1000000 + int64(t.nsec)/1000
+	return t.unixSec()*1000000 + int64(t.nsec())/1000
 }
 
 // UnixMilli gives the Time of a count of milliseconds since the start of the
@@ -78,10 +78,10 @@ func (t Time) ZoneBounds() (Time, Time) {
 	_, _, start, end, _ := loc.lookupSec(t.unixSec())
 	var from, to Time
 	if start != alpha {
-		from = Time{sec: start + unixToInternal, loc: t.loc}
+		from = Time{ext: start + unixToInternal, loc: t.loc}
 	}
 	if end != omega {
-		to = Time{sec: end + unixToInternal, loc: t.loc}
+		to = Time{ext: end + unixToInternal, loc: t.loc}
 	}
 	return from, to
 }

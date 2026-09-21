@@ -629,7 +629,7 @@ func parse(layout, value string, defaultLocation, local *Location) (Time, error)
 
 	if zoneOffset != -1 {
 		t := Date(year, Month(month), day, hour, min, sec, nsec, UTC)
-		t.sec -= int64(zoneOffset)
+		t.addSec(-int64(zoneOffset))
 		// The local zone takes the time when it holds that offset at the
 		// instant.
 		offset, name := local.lookup(t.unixSec())
@@ -642,7 +642,7 @@ func parse(layout, value string, defaultLocation, local *Location) (Time, error)
 	if zoneName != "" {
 		t := Date(year, Month(month), day, hour, min, sec, nsec, UTC)
 		if offset, ok := local.lookupName(zoneName, t.unixSec()); ok {
-			t.sec -= int64(offset)
+			t.addSec(-int64(offset))
 			return t.In(local), nil
 		}
 		// A name that the local zone does not hold gives a zone of a fixed
