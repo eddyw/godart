@@ -2,7 +2,7 @@ import 'package:goruntime/goruntime.dart';
 import 'package:test/test.dart';
 
 Slice<int> makeInts(int len, int cap) =>
-    $makeSlice<int>(len, cap, (n) => List<int>.filled(n, 0));
+    $makeSlice<int>($gi(len), $gi(cap), (n) => List<int>.filled(n, 0));
 
 void main() {
   test('make gives the length and the capacity', () {

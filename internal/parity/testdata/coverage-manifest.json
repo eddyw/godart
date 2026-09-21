@@ -1207,7 +1207,12 @@
   },
   {
     "package": "slices",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "sort",

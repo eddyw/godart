@@ -54,8 +54,9 @@ The 2 forms hold 1 surface, and the emitted code uses only it:
 - `$gi(int)` builds a Go integer of a value inside 53 bits, and `$gi2(high,
   low)` builds one of 2 halves. The emitter writes `$gi` for a small literal
   and `$gi2` for a large one.
-- `$ix(GoInt)` gives the plain Dart int back, for an index, a length, or a
-  handle. `$fromF64(double)` truncates, as a Go conversion does.
+- `$ix(GoInt)` gives a plain Dart int for a physical storage index or a handle.
+  Logical slice lengths, capacities, and bounds retain `GoInt`.
+  `$fromF64(double)` truncates, as a Go conversion does.
 - The helpers of the old int.dart moved in: the masks `$i8` to `$u32`, the
   division forms, the shifts, the unsigned order, the unsigned text, and the
   float bit reads. Each takes and gives GoInt.
@@ -71,8 +72,9 @@ The interop boundary is 1 uniform rule of stage 5, in `intrinsic` of
 `$ix`, and each integer result comes back through `$gi`, `$gils`, or a small
 typed closure over the result record. Thus the runtime library keeps the
 plain int inside, and no wrapper of `net.dart` or `file.dart` changed for
-the cutover. Float-bit operations, reflection integers, and clock timestamps use raw
+the cutover. Float-bit operations, reflection integers, slice bounds, and clock timestamps use raw
 `GoInt` boundaries because their values can exceed the exact JS integer range.
+Zero-size slices use virtual storage and retain exact logical counts.
 
 A Go constant of an integer type emits as a lazy `final`, because `$gi` is
 no Dart constant.

@@ -270,7 +270,8 @@ bool _deepValue(Object? x, Object? y, TypeDesc desc) {
     case 'slice':
       if (x is! Slice || y is! Slice) return x == y;
       if (x.isNil != y.isNil) return false;
-      if (x.len != y.len) return false;
+      if (x.$length != y.$length) return false;
+      if (x is $ZeroSlice || y is $ZeroSlice) return true;
       final TypeDesc elem = desc.elem!();
       for (var i = 0; i < x.len; i++) {
         if (!_deepValue(x[i], y[i], elem)) return false;

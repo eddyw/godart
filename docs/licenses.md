@@ -53,6 +53,9 @@ and the `internal/testenv` unsupported-syscall predicates with their BSD notices
 Unix `PWD` validation follows Go `src/os/getwd.go` with its BSD notice.
 The shared file state and rename rules follow Go `src/os/file_unix.go`
 with its BSD notice.
+Zero-size slice allocation and reflection growth follow Go `src/runtime/slice.go`
+and `src/reflect/value.go`. Slice exchange follows `src/reflect/swapper.go`.
+The runtime and reflection overlay preserve their Go BSD notices.
 Shared type layout calculations adapt the Go-derived reflection overlay.
 The runtime layout source and license preserve the Go BSD notice.
 The certificate trust adapter adapts Go 1.27.1 `crypto/x509/root.go`,

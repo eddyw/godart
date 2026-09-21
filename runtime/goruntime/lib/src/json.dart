@@ -1348,8 +1348,11 @@ final TypeDesc _anySliceDesc = TypeDesc(
   const <String, Function>{},
   text: '[]interface {}',
   elem: _anyDescOf,
-  make: (int n) =>
-      $makeSlice<Iface?>(n, n, (int k) => List<Iface?>.filled(k, null)),
+  make: (int n) => $makeSlice<Iface?>(
+    $gi(n),
+    $gi(n),
+    (int k) => List<Iface?>.filled(k, null),
+  ),
   withType: <R>(R Function<T>() f) => f<Slice<Iface?>>(),
   comparable: false,
   zero: Slice<Iface?>.nil,

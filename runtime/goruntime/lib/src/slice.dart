@@ -1,3 +1,8 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'goint.dart';
@@ -21,6 +26,10 @@ final class Slice<T> {
   final int len;
   final int cap;
 
+  /// A zero-size slice can exceed the exact JS integer range.
+  GoInt get $length => $gi(len);
+  GoInt get $capacity => $gi(cap);
+
   /// True for the zero value of a slice type. Go compares such a slice with
   /// nil, but it allows len, cap, and append on it.
   final bool isNil;
@@ -30,6 +39,9 @@ final class Slice<T> {
   /// The JS target holds a pair for each Go integer, thus no byte slice holds
   /// a Uint8List there and the constant `$isJS` removes the test.
   factory Slice(List<T> array, int off, int len, int cap) {
+    if (array is $ZeroList<T>) {
+      return $ZeroSlice<T>(array, $gi(len), $gi(cap));
+    }
     if (!$isJS && array is Uint8List) {
       return $ByteSlice(array as Uint8List, off, len, cap) as Slice<T>;
     }
@@ -121,45 +133,48 @@ final class Slice<T> {
     bool highUns = false,
     bool maxUns = false,
   ]) {
-    final low = $ix(lowIndex);
-    final high = $ix(highIndex);
-    final max = $ix(maxIndex);
+    final low = lowIndex;
+    final high = highIndex;
+    final max = maxIndex;
     if (three) {
-      if (max < 0 || max > cap) {
+      if (max < GoInt.zero || max > $capacity) {
         $panicBound(
           byLen ? SliceBound.threeALen : SliceBound.threeACap,
           maxIndex,
-          cap,
+          $capacity,
           maxUns,
         );
       }
-      if (high < 0 || high > max) {
+      if (high < GoInt.zero || high > max) {
         $panicBound(SliceBound.threeB, highIndex, max, highUns);
       }
-      if (low < 0 || low > high) {
+      if (low < GoInt.zero || low > high) {
         $panicBound(SliceBound.threeC, lowIndex, high, lowUns);
       }
     } else {
-      if (high < 0 || high > cap) {
+      if (high < GoInt.zero || high > $capacity) {
         $panicBound(
           byLen ? SliceBound.aLen : SliceBound.aCap,
           highIndex,
-          cap,
+          $capacity,
           highUns,
         );
       }
-      if (low < 0 || low > high) {
+      if (low < GoInt.zero || low > high) {
         $panicBound(SliceBound.b, lowIndex, high, lowUns);
       }
     }
     // Go gives a nil slice for each valid slice expression of a nil slice.
     // Such a slice holds a capacity of 0, thus each bound is 0 here.
     if (isNil) return this;
-    return $view(off + low, high - low, max - low);
+    return $viewExact(low, high - low, max - low);
   }
 
-  /// A header on the same storage, with an absolute offset. The class of the
-  /// result is the class of this header.
+  /// A header on the same storage, with a relative offset.
+  Slice<T> $viewExact(GoInt low, GoInt n, GoInt room) =>
+      $view(off + $ix(low), $ix(n), $ix(room));
+
+  /// A header on the same storage, with an absolute offset.
   Slice<T> $view(int start, int n, int room) =>
       Slice<T>._(array, start, n, room, false);
 }
@@ -234,36 +249,24 @@ final class $ByteSlice extends Slice<GoInt> {
   }
 }
 
-/// The Go expression `make([]T, len, cap)`. The allocator returns a list of
-/// the given length that holds a fresh zero value in each slot.
-/// The largest count of elements that make accepts.
-///
-/// Go compares the length against maxAlloc divided by the size of the
-/// element. maxAlloc holds 2 to the power 48 on a 64-bit machine, thus a
-/// slice of an element of 8 bytes reaches this count. The allocator of Dart
-/// takes no element size, thus 1 bound stands for each element type. A count
-/// between this bound and the bound of Go needs at least 32 terabytes, which
-/// no machine holds, and Go reports "out of memory" there.
-///
-/// The value stands as a decimal literal, because the operator << of the JS
-/// target holds 32 bits. `1 << 45` gives 8,192 there, and each slice above
-/// that length would panic.
+/// The maximum element count for a slice with nonzero element size.
+/// The decimal literal avoids 32-bit shift truncation on JS.
 const int $maxSliceLen = 35184372088832;
 
-Slice<T> $makeSlice<T>(int len, int cap, List<T> Function(int) alloc) {
-  if (len < 0 || len > $maxSliceLen) {
+Slice<T> $makeSlice<T>(GoInt len, GoInt cap, List<T> Function(int) alloc) {
+  final empty = alloc(0);
+  final zeroSize = empty is $ZeroList<T>;
+  if (len < GoInt.zero || (!zeroSize && len > $gi($maxSliceLen))) {
     $panic(Iface($typeGoError, const GoError('makeslice: len out of range')));
   }
-  if (cap < len || cap > $maxSliceLen) {
+  if (cap < len || (!zeroSize && cap > $gi($maxSliceLen))) {
     $panic(Iface($typeGoError, const GoError('makeslice: cap out of range')));
   }
-  return Slice(alloc(cap), 0, len, cap);
+  if (empty is $ZeroList<T>) return $ZeroSlice<T>(empty, len, cap);
+  return Slice(alloc($ix(cap)), 0, $ix(len), $ix(cap));
 }
 
-/// The Go builtin `make` of a slice type with no capacity. The length comes
-/// from 1 read of its expression, because the expression can hold a side
-/// effect.
-Slice<T> $makeSliceN<T>(int len, List<T> Function(int) alloc) =>
+Slice<T> $makeSliceN<T>(GoInt len, List<T> Function(int) alloc) =>
     $makeSlice(len, len, alloc);
 
 /// The Go builtin `append`. The result shares the backing array when the
@@ -296,7 +299,12 @@ Slice<T> $appendRange<T>(
   List<T> Function(int) alloc, [
   void Function(T, T)? assign,
 ]) {
-  final int need = s.len + n;
+  final count = s.$length + $gi(n);
+  if (count < s.$length) {
+    $panic(Iface($typeGoError, const GoError('growslice: len out of range')));
+  }
+  if (s is $ZeroSlice<T>) return s.appendCount($gi(n));
+  final int need = $ix(count);
   if (need <= s.cap) {
     if (assign == null) return s.$grow(src, off, n);
     for (int i = 0; i < n; i++) {
@@ -304,10 +312,9 @@ Slice<T> $appendRange<T>(
     }
     return Slice<T>(s.array, s.off, need, s.cap);
   }
-  int cap = s.cap == 0 ? need : s.cap;
-  while (cap < need) {
-    cap += cap < 256 ? cap : cap ~/ 4;
-  }
+  final empty = alloc(0);
+  if (empty is $ZeroList<T>) return $ZeroSlice<T>(empty, count, count);
+  final cap = $nextSliceCapacity(s.cap, need);
   final List<T> array = alloc(cap);
   final Slice<T> out = Slice<T>(array, 0, need, cap);
   if (assign != null) {
@@ -327,7 +334,7 @@ Slice<T> $appendRange<T>(
 
 /// Exchanges 2 elements of a slice. The package sort uses it, because a Go
 /// sort works on a slice of an unknown element type.
-void $swap(Object? value, int i, int j) {
+void $swap(Object? value, GoInt first, GoInt second) {
   final Object? unwrapped = value is Iface ? value.value : value;
   if (unwrapped is! Slice<Object?>) {
     $panic(
@@ -335,39 +342,48 @@ void $swap(Object? value, int i, int j) {
     );
   }
   final Slice<Object?> slice = unwrapped;
-  if (i < 0 || i >= slice.len) $panicIndex($gi(i), slice.len);
-  if (j < 0 || j >= slice.len) $panicIndex($gi(j), slice.len);
+  if (first < GoInt.zero || first >= slice.$length) {
+    $panicIndex(first, slice.$length);
+  }
+  if (second < GoInt.zero || second >= slice.$length) {
+    $panicIndex(second, slice.$length);
+  }
+  if (slice is $ZeroSlice<Object?>) return;
+  final i = $ix(first);
+  final j = $ix(second);
   final Object? a = slice.array[slice.off + i];
   slice.array[slice.off + i] = slice.array[slice.off + j];
   slice.array[slice.off + j] = a;
 }
 
 /// The length of a slice of an unknown element type.
-int $sliceLen(Object? value) {
+GoInt $sliceLen(Object? value) {
   final Object? unwrapped = value is Iface ? value.value : value;
   if (unwrapped is! Slice<Object?>) {
     $panic(
       Iface($typeGoError, const GoError('sort: the value is not a slice')),
     );
   }
-  return unwrapped.len;
+  return unwrapped.$length;
 }
 
 /// The Go builtin `copy`. The assign function writes 1 element. A struct
 /// element needs a field copy, and not a reference write.
-int $copySlice<T>(Slice<T> dst, Slice<T> src, [void Function(T, T)? assign]) {
-  final int n = dst.len < src.len ? dst.len : src.len;
-  if (n == 0) return 0;
+GoInt $copySlice<T>(Slice<T> dst, Slice<T> src, [void Function(T, T)? assign]) {
+  final count = dst.$length < src.$length ? dst.$length : src.$length;
+  if (dst is $ZeroSlice<T> || src is $ZeroSlice<T>) return count;
+  final n = $ix(count);
+  if (n == 0) return GoInt.zero;
   if (assign != null) {
     for (var i = 0; i < n; i++) {
       assign(dst.array[dst.off + i], src.array[src.off + i]);
     }
-    return n;
+    return count;
   }
   // $fill moves a whole range, and it holds the result of Go when the 2
   // ranges overlap.
   dst.$fill(dst.off, dst.off + n, src.array, src.off);
-  return n;
+  return count;
 }
 
 /// The Go expression `append(s, other...)`.
@@ -377,7 +393,15 @@ Slice<T> $appendSlice<T>(
   List<T> Function(int) alloc, [
   void Function(T, T)? assign,
 ]) {
-  if (other.len == 0) return s;
+  if (other.$length == GoInt.zero) return s;
+  if (s is $ZeroSlice<T>) return s.appendCount(other.$length);
+  if (other is $ZeroSlice<T>) {
+    return $ZeroSlice<T>(
+      other.array as $ZeroList<T>,
+      s.$length,
+      s.$capacity,
+    ).appendCount(other.$length);
+  }
   if (assign != null) {
     // Go copies each element of the source. A plain append copies its argument
     // at the call site, and a spread has no such point, thus the copy stands
@@ -394,6 +418,7 @@ Slice<T> $appendSlice<T>(
 /// Writes the zero value into each element of a slice. The Go builtin clear
 /// does that for a slice.
 void $clearSlice<T>(Slice<T> s, T Function() zero) {
+  if (s is $ZeroSlice<T>) return;
   for (var i = 0; i < s.len; i++) {
     s[i] = zero();
   }
@@ -423,4 +448,87 @@ bool $sliceOverlap(Iface? a, Iface? b) {
   if (x.len == 0 || y.len == 0) return false;
   if (!identical(x.array, y.array)) return false;
   return x.off <= y.off + y.len - 1 && y.off <= x.off + x.len - 1;
+}
+
+final class $ZeroList<T> extends ListBase<T> {
+  final int _length;
+  final T Function() zero;
+  late final T value = zero();
+
+  $ZeroList(this._length, this.zero);
+
+  @override
+  int get length => _length;
+  @override
+  set length(int value) => throw UnsupportedError('fixed length');
+  @override
+  T operator [](int index) {
+    if (index < 0 || index >= length) throw RangeError.index(index, this);
+    return value;
+  }
+
+  @override
+  void operator []=(int index, T value) {
+    if (index < 0 || index >= length) throw RangeError.index(index, this);
+  }
+}
+
+final class $ZeroSlice<T> extends Slice<T> {
+  @override
+  final GoInt $length;
+  @override
+  final GoInt $capacity;
+
+  factory $ZeroSlice($ZeroList<T> array, GoInt length, GoInt capacity) {
+    final storage = array.length < $ix(capacity)
+        ? $ZeroList<T>($ix(capacity), array.zero)
+        : array;
+    return $ZeroSlice<T>._(storage, length, capacity);
+  }
+
+  $ZeroSlice._($ZeroList<T> array, this.$length, this.$capacity)
+    : super._(array, 0, $ix($length), $ix($capacity), false);
+
+  @override
+  T operator [](int i) => $at($gi(i));
+
+  @override
+  void operator []=(int i, T value) => $set($gi(i), value);
+
+  @override
+  T $at(GoInt index, [bool uns = false]) {
+    if (index < GoInt.zero || index >= $length) {
+      $panicIndex(index, $length, uns);
+    }
+    return array[0];
+  }
+
+  @override
+  void $set(GoInt index, T value, [bool uns = false]) {
+    $at(index, uns);
+  }
+
+  @override
+  Slice<T> $viewExact(GoInt low, GoInt n, GoInt room) =>
+      $ZeroSlice<T>(array as $ZeroList<T>, n, room);
+
+  $ZeroSlice<T> appendCount(GoInt count) {
+    final need = $length + count;
+    if (need < $length) {
+      $panic(Iface($typeGoError, const GoError('growslice: len out of range')));
+    }
+    return $ZeroSlice<T>(
+      array as $ZeroList<T>,
+      need,
+      need > $capacity ? need : $capacity,
+    );
+  }
+}
+
+int $nextSliceCapacity(int current, int need) {
+  var capacity = current == 0 ? need : current;
+  while (capacity < need) {
+    capacity += capacity < 256 ? capacity : capacity ~/ 4;
+  }
+  return capacity;
 }

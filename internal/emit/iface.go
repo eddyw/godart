@@ -265,7 +265,7 @@ func (e *emitter) descShape(t types.Type) string {
 	case *types.Struct:
 		return e.fieldDescs(t, u)
 	case *types.Slice:
-		return fmt.Sprintf(", elem: () => %s, make: ($n) => $makeSlice<%s>($n, $n, %s)",
+		return fmt.Sprintf(", elem: () => %s, make: ($n) => $makeSlice<%s>($gi($n), $gi($n), %s)",
 			e.descriptorOf(u.Elem()), e.dartType(u.Elem()), e.alloc(u.Elem()))
 	case *types.Array:
 		return fmt.Sprintf(", elem: () => %s, length: %d", e.descriptorOf(u.Elem()), u.Len())

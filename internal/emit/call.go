@@ -209,6 +209,18 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 // intrinsicRaw lists each interop function whose boundary the mapped text
 // handles itself.
 var intrinsicRaw = map[string]bool{
+	"SliceSwap":     true,
+	"SliceLen":      true,
+	"GrowValue":     true,
+	"ValueLen":      true,
+	"ValueCap":      true,
+	"ValueIndex":    true,
+	"ValueSetIndex": true,
+	"ValueSlice":    true,
+	"ValueAddr":     true,
+	"MakeValue":     true,
+	"CopyValue":     true,
+
 	"GODEBUGCount":    true,
 	"DescSize":        true,
 	"DescOffset":      true,
@@ -400,7 +412,7 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "ValueRecv":
 		return fmt.Sprintf("$valueRecv(%s)", args[0]), true
 	case "ValueAddr":
-		return fmt.Sprintf("$valueAddr(%s, %s, %s, %s)",
+		return fmt.Sprintf("$valueAddr(%s, %s, %s, $ix(%s))",
 			args[0], args[1], args[2], args[3]), true
 	case "ValueEqual":
 		return fmt.Sprintf("$valueEqual(%s, %s)", args[0], args[1]), true
@@ -460,6 +472,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$makeFunc(%s, %s)", args[0], args[1]), true
 	case "CallSliceValue":
 		return fmt.Sprintf("$callSliceValue(%s, %s)", args[0], args[1]), true
+	case "GrowValue":
+		return fmt.Sprintf("$growValue(%s!, %s)", args[0], args[1]), true
 	case "ValueCap":
 		return fmt.Sprintf("$valueCap(%s)", args[0]), true
 	case "AppendValue":
@@ -516,7 +530,7 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "NewValue":
 		return fmt.Sprintf("$newValue(%s)", args[0]), true
 	case "MakeValue":
-		return fmt.Sprintf("$makeValue(%s, %s, %s)", args[0], args[1], args[2]), true
+		return fmt.Sprintf("$makeValue($ix(%s), %s, %s)", args[0], args[1], args[2]), true
 	case "DescElem":
 		return fmt.Sprintf("$descElem(%s)", args[0]), true
 	case "DescZero":
@@ -1279,7 +1293,7 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 	case "append":
 		return e.appendCall(x)
 	case "copy":
-		return "$gi(" + e.copyCall(x) + ")"
+		return e.copyCall(x)
 	case "make":
 		return e.makeCall(x)
 	case "new":
@@ -1348,7 +1362,7 @@ func (e *emitter) length(x ir.Expr) string {
 	case isString(t):
 		return "$gi(" + e.expr(x) + ".length)"
 	case isSliceType(t):
-		return "$gi(" + e.expr(x) + ".len)"
+		return e.expr(x) + ".$length"
 	case isArrayType(t):
 		return "$gi(" + e.expr(x) + ".length)"
 	case isMapType(t):
@@ -1375,7 +1389,7 @@ func (e *emitter) capacity(x ir.Expr) string {
 	t := x.GoType()
 	switch {
 	case isSliceType(t):
-		return "$gi(" + e.expr(x) + ".cap)"
+		return e.expr(x) + ".$capacity"
 	case isArrayType(t):
 		return "$gi(" + e.expr(x) + ".length)"
 	case isChanType(t):
@@ -1529,9 +1543,9 @@ func (e *emitter) copyCall(x *ir.Builtin) string {
 func (e *emitter) makeCall(x *ir.Builtin) string {
 	switch u := typeset.Core(x.Type).(type) {
 	case *types.Slice:
-		length := "0"
+		length := "$gi(0)"
 		if len(x.Args) > 0 {
-			length = "$ix(" + e.expr(x.Args[0]) + ")"
+			length = e.expr(x.Args[0])
 		}
 		// A make with no capacity reads its length expression 1 time, because
 		// the expression can hold a side effect.
@@ -1539,7 +1553,7 @@ func (e *emitter) makeCall(x *ir.Builtin) string {
 			return fmt.Sprintf("$makeSliceN<%s>(%s, %s)",
 				e.dartType(u.Elem()), length, e.alloc(u.Elem()))
 		}
-		return fmt.Sprintf("$makeSlice<%s>(%s, $ix(%s), %s)",
+		return fmt.Sprintf("$makeSlice<%s>(%s, %s, %s)",
 			e.dartType(u.Elem()), length, e.expr(x.Args[1]), e.alloc(u.Elem()))
 	case *types.Map:
 		return e.mapNew(u)

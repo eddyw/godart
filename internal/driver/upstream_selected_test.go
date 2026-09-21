@@ -169,7 +169,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "all_test.go", Declarations: []string{
 				"TestTagGet", "tagGetTests", "TestFuncArg", "TestStructArg", "TestZeroSet", "TestInvalid", "TestLarge", "Impl", "Impl.F", "TestValueString", "TestSlice", "TestSlice3", "TestSetLenCap", "TestVariadic", "emptyStruct", "TestCallReturnsEmpty", "fieldIndexRecover", "TestFieldByIndexNil", "TestTypeFieldOutOfRangePanic", "TestTypeFieldReadOnly", "shouldPanic", "TestBytes", "TestValuePanic", "TestTypeOverflow", "TestInitFuncTypes",
 				"TestBool", "TestCanIntUintFloatComplex", "TestCanSetField", "Nil", "NotNil", "TestIsNil", "TestPtrTo",
-				"TestPtrSetNil", "TestMapSetNil", "appendTests", "TestAppend",
+				"T", "TestGrow", "TestSwapper", "TestPtrSetNil", "TestMapSetNil", "appendTests", "TestAppend",
 				"TestCopy", "TestCopyString", "TestCopyArray", "TestBigUnnamedStruct",
 				"iterateToString", "TestMapIterNonEmptyMap", "TestMapIterNilMap",
 				"TestMapIterSafety", "TestMapIterNext", "TestMapIterDelete0", "TestMapIterDelete1",

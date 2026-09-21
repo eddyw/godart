@@ -623,6 +623,13 @@ func (e *emitter) alloc(elem types.Type) string {
 	if tp, ok := types.Unalias(elem).(*types.TypeParam); ok {
 		return e.dictOf(tp) + ".alloc"
 	}
+	zero, known := zeroSized(elem)
+	if zero {
+		return fmt.Sprintf("(n) => $ZeroList<%s>(n, () => %s)", e.dartType(elem), e.zero(elem))
+	}
+	if !known {
+		return fmt.Sprintf("(n) => $typeSize(%s) == GoInt.zero ? $ZeroList<%s>(n, () => %s) : List<%s>.generate(n, (_) => %s)", e.descriptorOf(elem), e.dartType(elem), e.zero(elem), e.dartType(elem), e.zero(elem))
+	}
 	if fn := goList(elem); fn != "" {
 		return fn
 	}
@@ -1536,4 +1543,29 @@ func (e *emitter) structRef(named *types.Named) *types.Named {
 		return rep
 	}
 	return named
+}
+
+func zeroSized(t types.Type) (bool, bool) {
+	t = types.Unalias(t)
+	if _, ok := t.(*types.TypeParam); ok {
+		return false, false
+	}
+	switch u := t.Underlying().(type) {
+	case *types.Array:
+		if u.Len() == 0 {
+			return true, true
+		}
+		return zeroSized(u.Elem())
+	case *types.Struct:
+		known := true
+		for i := 0; i < u.NumFields(); i++ {
+			zero, held := zeroSized(u.Field(i).Type())
+			if held && !zero {
+				return false, true
+			}
+			known = known && held
+		}
+		return known, known
+	}
+	return false, true
 }

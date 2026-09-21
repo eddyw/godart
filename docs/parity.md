@@ -22,6 +22,7 @@ SDK versions, modes, and exclusions.
 | Deep calls | Saved frame chains resume iteratively and retain suspended ancestors. Initial synchronous recursion still uses the fixed Dart stack. |
 | Linkname | Module variable aliases share storage with variables of the same type in imported packages. Module function aliases resolve to functions of the same type in the program import graph. Alias initializers, function alias bodies, and aliases to other aliases remain unsupported. |
 | Stack traces | Go source positions, without native instruction offsets. `-trimpath` selects portable paths. Runtime initialization and panic frames use their Dart source locations. |
+| Zero-size slices | Logical lengths and capacities retain all 64 bits on VM, AOT, JS, and Wasm. Zero-size elements use virtual storage. Large arrays remain separate. |
 | Numbers | Target representations differ. JavaScript conversion boundaries need particular care. |
 | Time | Monotonic values support elapsed-time operations. Time-zone behavior can differ from Go's own database. |
 | Environment | `os` and `syscall` share environment values. Child processes receive this state through `os/exec`. |

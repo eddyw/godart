@@ -524,11 +524,11 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 			e.rangeTail(x.Max != nil, true, x.Low, x.High, x.Max))
 	}
 	x0 := e.expr(x.X)
-	high := fmt.Sprintf("$gi(%s.len)", x0)
+	high := fmt.Sprintf("%s.$length", x0)
 	if x.High != nil {
 		high = e.expr(x.High)
 	}
-	max := fmt.Sprintf("$gi(%s.cap)", x0)
+	max := fmt.Sprintf("%s.$capacity", x0)
 	if x.Max != nil {
 		max = e.expr(x.Max)
 	}
@@ -953,7 +953,7 @@ func (e *emitter) composite(x *ir.Composite) string {
 				e.dartType(t.Elem()), e.makeArray(t), strings.Join(indices, ", "),
 				e.dartType(t.Elem()), strings.Join(parts, ", "))
 		case *types.Slice:
-			allocation = fmt.Sprintf("$makeSliceN<%s>(%d, %s)", e.dartType(t.Elem()), x.Length, e.alloc(t.Elem()))
+			allocation = fmt.Sprintf("$makeSliceN<%s>($gi(%d), %s)", e.dartType(t.Elem()), x.Length, e.alloc(t.Elem()))
 		}
 		var text strings.Builder
 		text.WriteString("(" + allocation)

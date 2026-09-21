@@ -64930,7 +64930,7 @@
       "test_patches": [
         {
           "path": "slices_test.go.patch",
-          "sha256": "72d23c9268470f866fe3aa2f913b64a9c01cf665566035ff0f0fe41cbd73f3e5"
+          "sha256": "bdb6197bc5349fcf0789f659c70e8e4d50939d9897c6c78f160aa7fc3afe524b"
         }
       ]
     },

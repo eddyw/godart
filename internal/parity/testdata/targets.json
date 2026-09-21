@@ -215,5 +215,13 @@
       "wasm"
     ],
     "run": ""
+  },
+  {
+    "package": "slices",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   }
 ]

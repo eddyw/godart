@@ -71,6 +71,10 @@ $Ref<List<T>, T> _cellPtr<T>(List<T> a, int i) {
 
 /// A pointer to 1 element of a slice.
 $Ref<List<T>, T> $elemPtr<T>(Slice<T> s, GoInt index, [bool uns = false]) {
+  if (s is $ZeroSlice<T>) {
+    s.$at(index, uns);
+    return _cellPtr<T>(s.array, 0);
+  }
   final i = $ix(index);
   if (i < 0 || i >= s.len) $panicIndex(index, s.len, uns);
   return _cellPtr<T>(s.array, s.off + i);

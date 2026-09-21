@@ -2,6 +2,7 @@
 
 // This file includes code derived from the Go reflect package.
 // Copyright 2009 The Go Authors. All rights reserved.
+// Copyright 2016 The Go Authors. All rights reserved.
 // Use of the Go-derived portions is governed by the BSD-style
 // license in ../LICENSE.
 
@@ -1381,6 +1382,9 @@ func Append(s Value, x ...Value) Value {
 	if s.ro != 0 {
 		panic("reflect: reflect.Append using value obtained using unexported field")
 	}
+	if s.Len()+len(x) < 0 {
+		panic("reflect.Value.Grow: slice overflow")
+	}
 	items := make([]any, len(x))
 	for i, v := range x {
 		if v.ro != 0 {
@@ -1404,6 +1408,9 @@ func AppendSlice(s, t Value) Value {
 	}
 	if s.ro != 0 || t.ro != 0 {
 		panic("reflect: reflect.AppendSlice using value obtained using unexported field")
+	}
+	if s.Len()+t.Len() < 0 {
+		panic("reflect.Value.Grow: slice overflow")
 	}
 	return Value{value: dart.AppendSliceValue(s.read(), t.read()), ok: true}
 }
@@ -1966,25 +1973,19 @@ func (v Value) SetLen(n int) {
 // Grow raises the capacity of the slice that v names, thus n more elements fit
 // with no further allocation. The length holds.
 func (v Value) Grow(n int) {
-	if v.Kind() != Slice {
-		panic("reflect: Grow of " + v.Type().String())
-	}
+	v.mustBeAssignable("reflect.Value.Grow")
+	v.mustBe("Grow", Slice)
 	if n < 0 {
 		panic("reflect.Value.Grow: negative len")
 	}
-	length := v.Len()
-	if length+n <= v.Cap() {
+	need := v.Len() + n
+	if need < 0 {
+		panic("reflect.Value.Grow: slice overflow")
+	}
+	if need <= v.Cap() {
 		return
 	}
-	// Go raises the capacity by more than the request, thus a loop of single
-	// steps stays linear.
-	capacity := v.Cap()*2 + n
-	if capacity < length+n {
-		capacity = length + n
-	}
-	grown := MakeSlice(v.Type(), length, capacity)
-	Copy(grown, v)
-	v.Set(grown)
+	v.write(dart.GrowValue(v.read(), n))
 }
 
 // The channel operations of a Value. The runtime holds real channels, thus a
@@ -2399,6 +2400,14 @@ func Swapper(slice any) func(i, j int) {
 	case 1:
 		return func(i, j int) {
 			if i != 0 || j != 0 {
+				panic("reflect: slice index out of range")
+			}
+		}
+	}
+	if v.Type().Elem().Size() == 0 {
+		length := v.Len()
+		return func(i, j int) {
+			if uint(i) >= uint(length) || uint(j) >= uint(length) {
 				panic("reflect: slice index out of range")
 			}
 		}

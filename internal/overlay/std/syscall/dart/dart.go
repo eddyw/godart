@@ -1705,3 +1705,6 @@ func SendSignal(pid, signal int) int { panic("syscall/dart needs the gart compil
 func VerifySystemCertificates(certs []string, name string, date float64, hasDate bool) ([]string, int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// GrowValue increases slice capacity after the caller validates its length.
+func GrowValue(value any, count int) any { panic("syscall/dart needs the gart compiler") }

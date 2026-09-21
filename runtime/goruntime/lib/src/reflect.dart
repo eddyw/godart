@@ -399,20 +399,21 @@ FieldDesc _fieldOf(Iface? value, int index) {
 }
 
 /// The length of a slice, an array, a string, or a map.
-int $valueLen(Iface? value) {
+GoInt $valueLen(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
-  if (v is Slice<Object?>) return v.len;
-  if (v is List<Object?>) return v.length;
-  if (v is GoString) return v.length;
-  if (v is GoMap<Object?, Object?>) return v.length;
+  if (v is Slice<Object?>) return v.$length;
+  if (v is List<Object?>) return $gi(v.length);
+  if (v is GoString) return $gi(v.length);
+  if (v is GoMap<Object?, Object?>) return $gi(v.length);
   // The length of a channel is the count of the values that the buffer holds.
-  if (v is Chan<Object?>) return v.length;
+  if (v is Chan<Object?>) return $gi(v.length);
   $panic(Iface($typeGoError, GoError('reflect: Len of ${value.desc.display}')));
 }
 
 /// 1 element of a slice, an array, or a string.
-Iface? $valueIndex(Iface? value, int index) {
+Iface? $valueIndex(Iface? value, GoInt exactIndex) {
+  final index = $ix(exactIndex);
   if (value == null) $panicNil();
   final TypeDesc desc = value.desc;
   final Object? v = value.value;
@@ -423,13 +424,16 @@ Iface? $valueIndex(Iface? value, int index) {
   if (elem == null) {
     $panic(Iface($typeGoError, GoError('reflect: Index of ${desc.display}')));
   }
-  final Object? out = _elemAt(v, index, desc);
+  final Object? out = v is Slice<Object?>
+      ? v.$at(exactIndex)
+      : _elemAt(v, index, desc);
   if (elem.kind == 'interface') return out as Iface?;
   return Iface(elem, out);
 }
 
 /// Writes 1 element of a slice or an array.
-void $valueSetIndex(Iface? value, int index, Iface? x) {
+void $valueSetIndex(Iface? value, GoInt exactIndex, Iface? x) {
+  final index = $ix(exactIndex);
   if (value == null) $panicNil();
   final TypeDesc desc = value.desc;
   final TypeDesc? elem = desc.elem?.call();
@@ -439,13 +443,12 @@ void $valueSetIndex(Iface? value, int index, Iface? x) {
   final Object? stored = elem.kind == 'interface' ? x : x?.value;
   final Object? v = value.value;
   if (v is Slice<Object?>) {
-    if (index < 0 || index >= v.len) $panicIndex($gi(index), v.len);
-    final Object? held = v.array[v.off + index];
+    final Object? held = v.$at(exactIndex);
     if (_holdsValue(elem) && held != null) {
       _assignInto(held, stored, elem);
       return;
     }
-    v.array[v.off + index] = stored;
+    v.$set(exactIndex, stored);
     return;
   }
   if (v is List<Object?>) {
@@ -668,15 +671,19 @@ $Ptr<Object?> _typedCell(
 );
 
 /// A slice of the type, with the length and the capacity.
-Iface? $makeValue(int handle, int length, int capacity) {
+Iface? $makeValue(int handle, GoInt length, GoInt capacity) {
   final TypeDesc desc = _typeAt(handle);
   final Object? Function(int)? make = desc.make;
   if (make == null) {
     $panic(Iface($typeGoError, GoError('reflect: Make of ${desc.display}')));
   }
-  final Object? out = make(capacity);
+  final empty = make(0);
+  if (empty is $ZeroSlice<Object?>) {
+    return Iface(desc, empty.$viewExact(GoInt.zero, length, capacity));
+  }
+  final Object? out = make($ix(capacity));
   if (out is Slice<Object?> && capacity != length) {
-    return Iface(desc, out.range($gi(0), $gi(length), $gi(capacity)));
+    return Iface(desc, out.range(GoInt.zero, length, capacity));
   }
   return Iface(desc, out);
 }
@@ -1151,6 +1158,7 @@ void $valueClear(Iface? value) {
     v.clear();
     return;
   }
+  if (v is $ZeroSlice<Object?>) return;
   if (v is Slice<Object?>) {
     final TypeDesc? elem = value.desc.elem?.call();
     for (int i = 0; i < v.len; i++) {
@@ -2104,17 +2112,21 @@ Object? _zeroOf(TypeDesc desc) {
 /// The caller names the Dart type of the element through _withType, thus a
 /// type assertion of the value reads. Each slot takes a fresh zero, because Go
 /// gives 1 struct of its own to each element of an array.
-List<T> _zeros<T>(TypeDesc elem, int n) =>
-    List<T>.generate(n, (int _) => _zeroOf(elem) as T, growable: true);
+List<T> _zeros<T>(TypeDesc elem, int n) {
+  if ($typeSize(elem) == GoInt.zero) {
+    return $ZeroList<T>(n, () => _zeroOf(elem) as T);
+  }
+  return List<T>.generate(n, (int _) => _zeroOf(elem) as T, growable: true);
+}
 
 /// The capacity of a slice, of an array, or of a channel.
-int $valueCap(Iface? value) {
-  if (value == null) return 0;
+GoInt $valueCap(Iface? value) {
+  if (value == null) return GoInt.zero;
   final Object? v = value.value;
-  if (v is Slice<Object?>) return v.cap;
-  if (v is List<Object?>) return v.length;
+  if (v is Slice<Object?>) return v.$capacity;
+  if (v is List<Object?>) return $gi(v.length);
   // The capacity of a channel is the size of its buffer.
-  if (v is Chan<Object?>) return v.capacity;
+  if (v is Chan<Object?>) return $gi(v.capacity);
   return $valueLen(value);
 }
 
@@ -2182,18 +2194,23 @@ Iface? $appendSliceValue(Iface? slice, Iface? add) {
 /// Copies each element of the source into the destination, and gives the count
 /// that it wrote. The source may be a string, and the destination is then a
 /// byte slice.
-int $copyValue(Iface? dst, Iface? src) {
+GoInt $copyValue(Iface? dst, Iface? src) {
   if (dst == null) $panicNil();
   final Object? to = dst.value;
-  if (to is! Slice<Object?> && to is! List<Object?>) return 0;
+  if (to is! Slice<Object?> && to is! List<Object?>) return GoInt.zero;
   final Object? from = src?.value;
+  if (to is Slice<Object?> &&
+      from is Slice<Object?> &&
+      (to is $ZeroSlice<Object?> || from is $ZeroSlice<Object?>)) {
+    return to.$length < from.$length ? to.$length : from.$length;
+  }
   final int room = to is Slice<Object?> ? to.len : (to as List<Object?>).length;
   if (from is GoString) {
     final int n = room < from.length ? room : from.length;
     for (int i = 0; i < n; i++) {
       _writeElem(to, i, $gi(from[i]));
     }
-    return n;
+    return $gi(n);
   }
   final int have = from is Slice<Object?>
       ? from.len
@@ -2202,7 +2219,7 @@ int $copyValue(Iface? dst, Iface? src) {
   for (int i = 0; i < n; i++) {
     _writeElem(to, i, _readElem(from, i));
   }
-  return n;
+  return $gi(n);
 }
 
 Object? _readElem(Object? v, int i) {
@@ -2424,7 +2441,8 @@ int $descChanDir(int handle) {
 ///
 /// The loc names the kind of the location: 1 for a pointer, 2 for a field of a
 /// struct, and 3 for an element of a slice or of an array.
-Iface? $valueAddr(Iface? value, Iface? owner, int index, int loc) {
+Iface? $valueAddr(Iface? value, Iface? owner, GoInt exactIndex, int loc) {
+  final index = $ix(exactIndex);
   if (loc == 1) return owner;
   if (owner == null) $panicNil();
   final TypeDesc ownerDesc = owner.desc;
@@ -2457,6 +2475,9 @@ Iface? $valueAddr(Iface? value, Iface? owner, int index, int loc) {
     $panic(Iface($typeGoError, GoError('reflect: Addr of an element')));
   }
   final Object? v = owner.value;
+  if (v is $ZeroSlice<Object?>) {
+    return Iface($ptrDesc(elem), v.$at(exactIndex));
+  }
   if (_isObjectPointer(elem)) {
     return Iface($ptrDesc(elem), _readElem(v, index));
   }
@@ -2613,18 +2634,18 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
 }
 
 /// The slice of a value, with the low, the high, and the maximum.
-Iface? $valueSlice(Iface? value, int low, int high, int max) {
+Iface? $valueSlice(Iface? value, GoInt low, GoInt high, GoInt max) {
   if (value == null) $panicNil();
   final Object? v = value.value;
   if (v is GoString) {
-    return Iface(value.desc, $substring(v, $gi(low), $gi(high)));
+    return Iface(value.desc, $substring(v, low, high));
   }
   if (v is Slice<Object?>) {
     if (v.isNil) return value;
     // A zero-capacity result keeps the source pointer within its storage.
     return Iface(
       value.desc,
-      v.$view(v.off + (low < max ? low : 0), high - low, max - low),
+      v.$viewExact(low < max ? low : GoInt.zero, high - low, max - low),
     );
   }
   final TypeDesc? elem = value.desc.elem?.call();
@@ -2637,8 +2658,12 @@ Iface? $valueSlice(Iface? value, int low, int high, int max) {
       desc,
       _withType<Slice<Object?>>(
         elem,
-        <T>() =>
-            Slice<T>(v as List<T>, low < max ? low : 0, high - low, max - low),
+        <T>() => Slice<T>(
+          v as List<T>,
+          low < max ? $ix(low) : 0,
+          $ix(high - low),
+          $ix(max - low),
+        ),
       ),
     );
   }
@@ -2764,4 +2789,27 @@ bool $fieldEmbedded(int handle, int index) {
   final TypeDesc? desc = _descAt(handle);
   if (desc == null || index < 0 || index >= desc.fields.length) return false;
   return desc.fields[index].embedded;
+}
+
+Iface $growValue(Iface value, GoInt count) {
+  final desc = value.desc;
+  final elem = desc.elem!();
+  return _withType<Iface>(elem, <T>() {
+    final held = value.value as Slice<T>;
+    final need = held.$length + count;
+    if (held is $ZeroSlice<T>) {
+      return Iface(
+        desc,
+        $ZeroSlice<T>(held.array as $ZeroList<T>, held.$length, need),
+      );
+    }
+    final capacity = $nextSliceCapacity(held.cap, $ix(need));
+    final fresh = _freshSlice(desc, capacity) as Slice<T>;
+    $copySlice<T>(
+      fresh,
+      held.$view(held.off, held.cap, held.cap),
+      _holdsValue(elem) ? (T a, T b) => _assignInto(a, b, elem) : null,
+    );
+    return Iface(desc, fresh.$view(0, held.len, capacity));
+  });
 }

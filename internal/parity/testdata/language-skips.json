@@ -47,10 +47,6 @@
     "classification": "target-limit",
     "reason": "runtime.Stack omits native instruction offsets, but this test requires a space after the source line before that offset"
   },
-  "fixedbugs/issue29190": {
-    "classification": "implementation-gap",
-    "reason": "the test allocates a list of 4 billion elements, and the Dart VM runs out of memory"
-  },
   "fixedbugs/issue4618": {
     "classification": "target-limit",
     "reason": "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one"
@@ -70,10 +66,6 @@
   "fixedbugs/issue74648": {
     "classification": "target-limit",
     "reason": "The fixture validates native x86 PCALIGN jump targets in an assembly function."
-  },
-  "fixedbugs/issue7550": {
-    "classification": "implementation-gap",
-    "reason": "the append of 2 slices of the maximum length must overflow the capacity, and the Dart build runs out of memory"
   },
   "fixedbugs/issue9355": {
     "classification": "target-limit",

@@ -1,6 +1,6 @@
 The file patches the real Go source of slices/slices.go.
 
-@@ -1,14 +1,17 @@
+@@ -1,14 +1,18 @@
 -// Copyright 2021 The Go Authors. All rights reserved.
 -// Use of this source code is governed by a BSD-style
 -// license that can be found in the LICENSE file.
@@ -19,19 +19,19 @@ The file patches the real Go source of slices/slices.go.
  import (
  	"cmp"
  	"math/bits"
--	"unsafe"
 +	"syscall/dart"
+ 	"unsafe"
  )
  
  // Equal reports whether two slices are equal: the same length and all
-@@ -456,14 +459,7 @@
+@@ -456,14 +460,11 @@
  	if len(a) == 0 || len(b) == 0 {
  		return false
  	}
--	elemSize := unsafe.Sizeof(a[0])
--	if elemSize == 0 {
--		return false
--	}
+ 	elemSize := unsafe.Sizeof(a[0])
+ 	if elemSize == 0 {
+ 		return false
+ 	}
 -	// TODO: use a runtime/unsafe facility once one becomes available. See issue 12445.
 -	// Also see crypto/internal/fips140/alias/alias.go:AnyOverlap
 -	return uintptr(unsafe.Pointer(&a[0])) <= uintptr(unsafe.Pointer(&b[len(b)-1]))+(elemSize-1) &&

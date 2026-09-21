@@ -12908,12 +12908,6 @@
       "test": "TestConcat"
     },
     {
-      "gart": "",
-      "native": "pass",
-      "reason": "Upstream tests zero-size slices near MaxInt. Dart stores a list cell per element. The test patch omits this test.",
-      "test": "TestConcat_too_large"
-    },
-    {
       "gart": "skip",
       "native": "pass",
       "reason": "Dart exposes no allocation count. AllocsPerRun skips the complete test.",
@@ -12930,12 +12924,6 @@
       "native": "pass",
       "reason": "Upstream asserts native backing-storage liveness through unsafe.SliceData. The test patch omits this test.",
       "test": "TestIssue68488"
-    },
-    {
-      "gart": "pass",
-      "native": "pass",
-      "reason": "The patch removes the near-MaxInt zero-size cases. This is partial assertion coverage.",
-      "test": "TestRepeat"
     }
   ],
   "sort": [
