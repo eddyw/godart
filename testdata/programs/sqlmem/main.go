@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -335,6 +336,8 @@ func check(what string, err error) {
 }
 
 func main() {
+	scanType := reflect.TypeOf(driver.ScanContext{})
+	fmt.Println("scan context:", scanType.Name(), scanType.PkgPath())
 	sql.Register("mem", memDriver{})
 	fmt.Println("drivers:", sql.Drivers())
 
