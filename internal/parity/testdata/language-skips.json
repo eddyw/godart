@@ -35,14 +35,6 @@
     "classification": "target-limit",
     "reason": "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one"
   },
-  "fixedbugs/issue58300": {
-    "classification": "implementation-gap",
-    "reason": "reflect.Value.Pointer gives the identity of the object, and runtime.FuncForPC reads a program counter that the Dart VM gives not"
-  },
-  "fixedbugs/issue58300b": {
-    "classification": "implementation-gap",
-    "reason": "reflect.Value.Pointer gives the identity of the object, and runtime.FuncForPC reads a program counter that the Dart VM gives not"
-  },
   "fixedbugs/issue5856": {
     "classification": "implementation-gap",
     "reason": "the panic path of Go holds a frame of gopanic, and the frame chain of the runtime holds none"
@@ -62,10 +54,6 @@
   "fixedbugs/issue9862_run": {
     "classification": "target-limit",
     "reason": "the assertion requires the native Go linker diagnostic for a symbol larger than its object-format limit"
-  },
-  "inline_literal": {
-    "classification": "implementation-gap",
-    "reason": "reflect.Value.Pointer gives the identity of the object, thus runtime.FuncForPC gives nil for each value and the loop of the file never ends"
   },
   "linkmain_run": {
     "classification": "test-adapter",

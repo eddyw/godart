@@ -279,6 +279,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$sliceOverlap(%s, %s)", args[0], args[1]), true
 	case "IntVerb":
 		return fmt.Sprintf("$goIntVerb(%s)", args[0]), true
+	case "RecordPC":
+		return fmt.Sprintf("$recordPC(%s)", args[0]), true
+	case "PCInfo":
+		return fmt.Sprintf("$pcInfo(%s)", args[0]), true
 	case "Stack":
 		return fmt.Sprintf("$stack(%s)", args[0]), true
 	case "GoID":

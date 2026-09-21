@@ -117,30 +117,10 @@ func (*PanicNilError) RuntimeError() {}
 // holds no class of an emitted Go type, thus it reads this builder.
 func init() { dart.SetPanicNil(func() any { return &PanicNilError{} }) }
 
-// frames holds the position of each program counter, and index holds the
-// counter of each position. A Dart stack trace holds no address, thus a program
-// counter is an index of the table. The table holds 1 entry for each call site
-// that a program reads.
-var (
-	frames []string
-	index  = map[string]uintptr{}
-)
-
-func record(text string) uintptr {
-	if pc, ok := index[text]; ok {
-		return pc
-	}
-	frames = append(frames, text)
-	pc := uintptr(len(frames))
-	index[text] = pc
-	return pc
-}
+func record(text string) uintptr { return dart.RecordPC(text) }
 
 func at(pc uintptr) (string, string, int) {
-	if pc == 0 || pc > uintptr(len(frames)) {
-		return "", "", 0
-	}
-	name, rest, _ := strings.Cut(frames[pc-1], "|")
+	name, rest, _ := strings.Cut(dart.PCInfo(pc), "|")
 	file, text, _ := strings.Cut(rest, "|")
 	line, _ := strconv.Atoi(text)
 	return name, file, line
@@ -213,13 +193,19 @@ type Func struct {
 	pc uintptr
 }
 
-// FuncForPC gives the function of a program counter, and it gives nil for a
-// counter that no call gave.
+var functions = map[uintptr]*Func{}
+
+// FuncForPC gives the function of a known synthetic program counter.
 func FuncForPC(pc uintptr) *Func {
-	if pc == 0 || pc > uintptr(len(frames)) {
+	if f := functions[pc]; f != nil {
+		return f
+	}
+	if dart.PCInfo(pc) == "" {
 		return nil
 	}
-	return &Func{pc: pc}
+	f := &Func{pc: pc}
+	functions[pc] = f
+	return f
 }
 
 func (f *Func) Name() string {

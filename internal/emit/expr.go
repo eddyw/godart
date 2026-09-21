@@ -20,7 +20,11 @@ func (e *emitter) expr(x ir.Expr) string {
 	case *ir.Const:
 		return e.constant(x.Value, x.Type)
 	case *ir.Ident:
-		return e.identExpr(x)
+		text := e.identExpr(x)
+		if fn, ok := x.Obj.(*types.Func); ok {
+			return e.functionValue(fn, text)
+		}
+		return text
 	case *ir.Blank:
 		return "_"
 	case *ir.Zero:
@@ -80,6 +84,19 @@ func (e *emitter) expr(x ir.Expr) string {
 	}
 	e.fail("the expression %T has no Dart form", x)
 	return "null"
+}
+
+func (e *emitter) functionValue(fn *types.Func, text string) string {
+	if e.cfg.Fset == nil || !fn.Pos().IsValid() {
+		return text
+	}
+	pkg := fn.Pkg()
+	path := pkg.Path()
+	if pkg.Name() == "main" {
+		path = "main"
+	}
+	info := fmt.Sprintf("%s.%s|%s|%d", path, fn.Name(), e.goFileInPackage(fn.Pos(), pkg), e.cfg.Fset.Position(fn.Pos()).Line)
+	return fmt.Sprintf("$functionValue(%s, %s)", text, e.stringLit(info))
 }
 
 func (e *emitter) identExpr(x *ir.Ident) string {

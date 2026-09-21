@@ -46,6 +46,16 @@ func Stack(skip int) []string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// RecordPC gives the stable synthetic program counter of a source position.
+func RecordPC(info string) uintptr {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// PCInfo gives function|file|line for a known synthetic program counter.
+func PCInfo(pc uintptr) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // CaptureOut starts a hold of the text of standard output, or it ends the hold
 // and gives the text. The harness of an example of the package testing reads
 // it.

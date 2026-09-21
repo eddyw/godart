@@ -8,6 +8,7 @@ library;
 import 'box.dart';
 import 'chan.dart';
 import 'complex.dart';
+import 'funcpc.dart';
 import 'goint.dart';
 import 'iface.dart';
 import 'int.dart';
@@ -2648,6 +2649,10 @@ Iface? $withComplex(int handle, GoComplex x) => Iface(_typeAt(handle), x);
 int $valuePointer(Iface? value) {
   if ($valueIsNil(value)) return 0;
   final Object? v = value?.value;
+  if (v is Function) {
+    final pc = $functionPC(v);
+    if (pc != null) return pc;
+  }
   if (v is Slice<Object?>) {
     return Object.hash(identityHashCode(v.array), v.off);
   }

@@ -393,6 +393,10 @@ func (e *emitter) markFunc(f *ir.Func) {
 // goFile preserves line directives. TrimPath makes ordinary source paths
 // independent of the checkout directory.
 func (e *emitter) goFile(pos token.Pos) string {
+	return e.goFileInPackage(pos, e.pkg)
+}
+
+func (e *emitter) goFileInPackage(pos token.Pos, pkg *types.Package) string {
 	adjusted := e.cfg.Fset.Position(pos)
 	raw := e.cfg.Fset.PositionFor(pos, false)
 	if adjusted.Filename != raw.Filename {
@@ -402,10 +406,10 @@ func (e *emitter) goFile(pos token.Pos) string {
 		if adjusted.Filename == "" {
 			return "??"
 		}
-		if e.cfg.TrimPath && e.pkg != nil {
+		if e.cfg.TrimPath && pkg != nil {
 			prefix := filepath.Dir(raw.Filename) + string(filepath.Separator)
 			if relative, ok := strings.CutPrefix(adjusted.Filename, prefix); ok {
-				return e.pkg.Path() + "/" + filepath.ToSlash(relative)
+				return pkg.Path() + "/" + filepath.ToSlash(relative)
 			}
 		}
 		return adjusted.Filename
@@ -414,8 +418,8 @@ func (e *emitter) goFile(pos token.Pos) string {
 		return adjusted.Filename
 	}
 	base := filepath.Base(adjusted.Filename)
-	if e.pkg != nil {
-		return e.pkg.Path() + "/" + base
+	if pkg != nil {
+		return pkg.Path() + "/" + base
 	}
 	return base
 }

@@ -16,6 +16,7 @@ export 'src/dict.dart';
 export 'src/fetch.dart' if (dart.library.js_interop) 'src/fetch_web.dart';
 export 'src/file.dart' if (dart.library.js_interop) 'src/file_web.dart';
 export 'src/format.dart';
+export 'src/funcpc.dart';
 export 'src/goint.dart';
 export 'src/gort.dart';
 export 'src/http2.dart' if (dart.library.js_interop) 'src/http2_web.dart';
