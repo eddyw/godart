@@ -29,5 +29,8 @@
   "typeparam/issue47258",
   "typeparam/issue50193",
   "typeparam/issue50690a",
-  "typeparam/adder"
+  "typeparam/adder",
+  "typeparam/issue54537",
+  "typeparam/issue48225",
+  "typeparam/issue48042"
 ]

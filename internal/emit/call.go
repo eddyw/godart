@@ -79,20 +79,45 @@ func (e *emitter) eraseCast(obj types.Object, x *ir.Call, text string) string {
 		return text
 	}
 	origin, ok := fn.Origin().Type().(*types.Signature)
-	if !ok || origin.Results().Len() != 1 {
+	if !ok {
 		return text
 	}
-	if e.dartType(origin.Results().At(0).Type()) != "Object?" {
-		return text
-	}
-	result := x.GoType()
+	return e.eraseResults(origin.Results(), x.GoType(), text)
+}
+
+func (e *emitter) eraseResults(origin *types.Tuple, result types.Type, text string) string {
 	if tuple, ok := result.(*types.Tuple); ok {
-		if tuple.Len() != 1 {
+		if tuple.Len() == 0 {
 			return text
 		}
-		result = tuple.At(0).Type()
+		if tuple.Len() > 1 {
+			parts := make([]string, tuple.Len())
+			params := make([]string, tuple.Len())
+			changed := false
+			for i := range parts {
+				part := fmt.Sprintf("$r.$%d", i+1)
+				parts[i] = e.eraseResult(origin.At(i).Type(), tuple.At(i).Type(), part)
+				params[i] = e.dartType(tuple.At(i).Type())
+				if parts[i] != part {
+					changed = true
+					params[i] = "Object?"
+				}
+			}
+			if !changed {
+				return text
+			}
+			return fmt.Sprintf("(((%s) $r) => (%s))(%s)", strings.Join(params, ", "), strings.Join(parts, ", "), text)
+		}
+		return e.eraseResult(origin.At(0).Type(), tuple.At(0).Type(), text)
 	}
 	if result == nil {
+		return text
+	}
+	return e.eraseResult(origin.At(0).Type(), result, text)
+}
+
+func (e *emitter) eraseResult(origin, result types.Type, text string) string {
+	if e.dartType(origin) != "Object?" {
 		return text
 	}
 	dart := e.dartType(result)
@@ -891,7 +916,7 @@ func (e *emitter) methodValue(m *ir.Method) string {
 	if obj != nil && (!isStructType(obj.Type()) || pointerMethod(m.Obj)) {
 		return e.methodFuncValue(m, obj)
 	}
-	if len(m.TypeArgs) > 0 || e.methodValueCast(m) != "" {
+	if len(m.TypeArgs) > 0 || e.methodValueCast(m, "$value") != "$value" {
 		return e.genericMethodValue(m)
 	}
 	sig, _ := m.Obj.Type().(*types.Signature)
@@ -928,34 +953,15 @@ func (e *emitter) genericMethodValue(m *ir.Method) string {
 	}
 	all := append(append([]string{}, dicts...), names...)
 	call := "$recv." + e.memberName(m.Obj) + targs + "(" + strings.Join(all, ", ") + ")"
-	if cast := e.methodValueCast(m); cast != "" {
-		call = "(" + call + " as " + cast + ")"
-	}
+	call = e.methodValueCast(m, call)
 	return fmt.Sprintf("((%s $recv) => (%s) => %s)(%s)",
 		e.dartType(rt), strings.Join(params, ", "), call, recv)
 }
 
-// methodValueCast gives the cast of a method value whose declaration erases
-// the Dart type of its result. A pointer to a type parameter takes Object?,
-// and the value site holds the type argument, exactly as eraseCast does for
-// a call.
-func (e *emitter) methodValueCast(m *ir.Method) string {
-	origin, ok := m.Obj.Origin().Type().(*types.Signature)
-	if !ok || origin.Results().Len() != 1 {
-		return ""
-	}
-	if e.dartType(origin.Results().At(0).Type()) != "Object?" {
-		return ""
-	}
-	inst, ok := m.Type.(*types.Signature)
-	if !ok || inst.Results().Len() != 1 {
-		return ""
-	}
-	text := e.dartType(inst.Results().At(0).Type())
-	if text == "Object?" {
-		return ""
-	}
-	return text
+func (e *emitter) methodValueCast(m *ir.Method, text string) string {
+	origin := m.Obj.Origin().Type().(*types.Signature)
+	inst := m.Type.(*types.Signature)
+	return e.eraseResults(origin.Results(), inst.Results(), text)
 }
 
 // methodExpr writes a method expression, for example `(*T).M`. The value is a
@@ -978,6 +984,8 @@ func (e *emitter) funcInst(x *ir.FuncInst) string {
 	}
 	all := append(append([]string{}, dicts...), names...)
 	call := e.identExpr(x.Fun) + targs + "(" + strings.Join(all, ", ") + ")"
+	origin := x.Fun.Obj.(*types.Func).Origin().Type().(*types.Signature)
+	call = e.eraseResults(origin.Results(), sig.Results(), call)
 	return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
 }
 
@@ -996,6 +1004,8 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	msig, _ := x.Obj.Type().(*types.Signature)
 	mtargs, mdicts := e.typeArguments(x.TypeArgs)
 	closure := func(call string) string {
+		origin := x.Obj.Origin().Type().(*types.Signature)
+		call = e.eraseResults(origin.Results(), sig.Results(), call)
 		return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
 	}
 	// The method of a type parameter with no single Dart class dispatches
