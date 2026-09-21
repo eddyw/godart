@@ -184,27 +184,44 @@ Slice<GoString> $stack(int skip) {
     panic != null && panic.traceActive;
     panic = panic.traceParent
   ) {
-    final origin = $goStack(panic.trace, panicFrames: true);
-    for (final (name, file, line) in panic.callers) {
-      origin.add(GoPos(name, file, line));
-    }
-    var common = 0;
-    while (common < frames.length && common < origin.length) {
-      final current = frames[frames.length - common - 1];
-      final saved = origin[origin.length - common - 1];
-      if (current.function != saved.function || current.file != saved.file) {
-        break;
-      }
-      common++;
-    }
-    frames = <GoPos>[...frames.take(frames.length - common), ...origin];
+    frames = _mergePanicOrigin(frames, panic);
   }
+
   final out = <GoString>[];
   for (var i = skip; i < frames.length; i++) {
     final f = frames[i];
     out.add(GoString.fromString('${f.function}|${f.file}|${f.line}'));
   }
   return Slice.of(out);
+}
+
+List<GoPos> _panicOrigin(GoPanic panic, {bool panicFrames = true}) {
+  final origin = $goStack(panic.trace, panicFrames: panicFrames);
+  for (final (name, file, line) in panic.callers) {
+    origin.add(GoPos(name, file, line));
+  }
+  return origin;
+}
+
+List<GoPos> _mergePanicOrigin(List<GoPos> frames, GoPanic panic) {
+  final origin = _panicOrigin(panic);
+  var common = 0;
+  while (common < frames.length && common < origin.length) {
+    final current = frames[frames.length - common - 1];
+    final saved = origin[origin.length - common - 1];
+    if (current.function != saved.function || current.file != saved.file) break;
+    common++;
+  }
+  return [...frames.take(frames.length - common), ...origin];
+}
+
+/// Includes the origins of earlier panics from deferred calls.
+List<GoPos> $panicStack(GoPanic panic) {
+  var frames = _panicOrigin(panic, panicFrames: false);
+  for (var prior = panic.link; prior != null; prior = prior.link) {
+    frames = _mergePanicOrigin(frames, prior);
+  }
+  return frames;
 }
 
 /// Maps generated Go frames and the runtime initialization driver.
