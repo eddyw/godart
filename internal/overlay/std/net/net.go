@@ -339,7 +339,9 @@ func (p *packet) WriteTo(b []byte, addr Addr) (int, error) {
 }
 
 func (p *packet) Close() error {
-	if cause := dart.PacketClose(p.handle); cause != "" {
+	handle := p.handle
+	p.handle = -1
+	if cause := dart.PacketClose(handle); cause != "" {
 		return netError("close udp", cause)
 	}
 	return nil
