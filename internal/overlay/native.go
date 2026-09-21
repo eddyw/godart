@@ -28,6 +28,7 @@ var native = []string{
 	"net/http/internal/httpsfv",
 	"internal/nettest",
 	"internal/gate",
+	"internal/godebugs",
 	"vendor/golang.org/x/net/http2/hpack",
 	"vendor/golang.org/x/net/http/httpproxy",
 
@@ -132,7 +133,7 @@ var native = []string{
 	"vendor/golang.org/x/net/idna",
 	"vendor/golang.org/x/net/http/httpguts",
 	"net/http/cgi",
- "net/http/fcgi",
+	"net/http/fcgi",
 	"net/rpc/jsonrpc",
 	"net/http/cookiejar",
 	"net/http/internal/ascii",

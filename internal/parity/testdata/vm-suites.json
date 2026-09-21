@@ -695,5 +695,13 @@
   {
     "package": "internal/testenv",
     "run": ""
+  },
+  {
+    "package": "internal/godebug",
+    "run": ""
+  },
+  {
+    "package": "internal/godebugs",
+    "run": ""
   }
 ]

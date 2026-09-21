@@ -27594,6 +27594,34 @@
       "seeds": null
     },
     {
+      "path": "internal/godebugs",
+      "tests": [
+        {
+          "name": "TestAll",
+          "file": "godebugs_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestRemoved",
+          "file": "godebugs_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "godebugs_test.go",
+          "sha256": "79f39fd603d4ff5498eaf930fc1e5e62f16b2accaf982a29658e39c3ade10f61"
+        },
+        {
+          "path": "table.go",
+          "sha256": "1c592088b6cc41f6024bd2f67d0928847d30daf28c744eb7645dcba2232170cc"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "internal/goexperiment",
       "tests": null,
       "files": [
@@ -64083,6 +64111,60 @@
           "sha256": "c73dce23c1f2494c3d378cbc0090438b1faa06e2774af7eaf06d76eff77cedb9"
         }
       ]
+    },
+    {
+      "path": "runtime/metrics",
+      "tests": [
+        {
+          "name": "TestDocs",
+          "file": "description_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestNames",
+          "file": "description_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReadEmptySlice",
+          "file": "description_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "description.go",
+          "sha256": "e69545a7ac2fd82190bebcb09fe0a72111d045ae163e902895957dc49863f1c0"
+        },
+        {
+          "path": "description_test.go",
+          "sha256": "46e27860d29396c8847d3c6d70972efadea6d8825a7a517f545d39e80e02f071"
+        },
+        {
+          "path": "doc.go",
+          "sha256": "abf4e56e3df78e6691776278793699ad285394ad01af40969b344a3d9db1952a"
+        },
+        {
+          "path": "example_test.go",
+          "sha256": "05a37728fb5d995b3abae51cbf65bf3639273199751e4e6c875f6ebc9042032e"
+        },
+        {
+          "path": "histogram.go",
+          "sha256": "1bd00aa442b577266e511722eda47a9cbc9734e6e58131d4d6400e130804de4d"
+        },
+        {
+          "path": "sample.go",
+          "sha256": "72c8ff72ab17ecb9029c459af82ec023a452c3d87471a976fdbc4d8e289febeb"
+        },
+        {
+          "path": "value.go",
+          "sha256": "2e03fec304b022bc8c2668c1d8626722c2550b6b02fd86077ad7fd742b1b053f"
+        }
+      ],
+      "seeds": null
     },
     {
       "path": "slices",

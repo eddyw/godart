@@ -13533,5 +13533,13 @@
       "reason": "The original upstream test skips case-only rename assertions on a case-sensitive filesystem.",
       "test": "TestRenameCaseDifference/file"
     }
+  ],
+  "internal/godebug": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original test requires the Go race detector. Both ordinary runs retain its upstream skip.",
+      "test": "TestPanicNilRace"
+    }
   ]
 }

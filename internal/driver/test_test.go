@@ -360,7 +360,7 @@ func TestTestsOfGoroot(t *testing.T) {
 				t.Fatalf("got %d upstream test binaries", len(stats.Binaries))
 			}
 			prepareDart(t, outDir)
-			if c.Package == "crypto/x509" && build.Default.GOOS == "linux" && !testing.Short() || c.Package == "net/http/cgi" || c.Package == "net/http/httptest" || (c.Package == "log" || c.Package == "log/slog") && !testing.Short() {
+			if c.Package == "internal/godebug" || c.Package == "crypto/x509" && build.Default.GOOS == "linux" && !testing.Short() || c.Package == "net/http/cgi" || c.Package == "net/http/httptest" || (c.Package == "log" || c.Package == "log/slog") && !testing.Short() {
 				prepareUpstreamSelfExec(t, outDir, stats.Binaries[0].Entry)
 			}
 			var images []nativeImage
@@ -368,7 +368,7 @@ func TestTestsOfGoroot(t *testing.T) {
 				images = append(images, prepareUpstreamNativeImage(t, dir, outDir, stats.Binaries[0].Entry))
 			}
 			var env []string
-			if c.Package == "go/build" || c.Package == "debug/buildinfo" || c.Package == "crypto/x509" || c.Package == "internal/testenv" {
+			if c.Package == "go/build" || c.Package == "debug/buildinfo" || c.Package == "crypto/x509" || c.Package == "internal/testenv" || c.Package == "internal/godebug" || c.Package == "internal/godebugs" {
 				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
 			}
 			args := []string{filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run=" + c.Run, "-test.skip=" + upstreamSkip(t, c.Package)}

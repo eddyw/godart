@@ -209,6 +209,7 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 // intrinsicRaw lists each interop function whose boundary the mapped text
 // handles itself.
 var intrinsicRaw = map[string]bool{
+	"GODEBUGCount":    true,
 	"DescSize":        true,
 	"DescOffset":      true,
 	"AsInt":           true,
@@ -335,6 +336,12 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return "$runtimeGODEBUGVersion", true
 	case "DefaultGODEBUG":
 		return "GoString.fromString($defaultGODEBUG)", true
+	case "RegisterGODEBUG":
+		return "$registerGODEBUG()", true
+	case "IncGODEBUG":
+		return fmt.Sprintf("$incGODEBUG(%s)", args[0]), true
+	case "GODEBUGCount":
+		return fmt.Sprintf("$godebugCount(%s)", args[0]), true
 	case "TypeInfo":
 		return fmt.Sprintf("$typeInfo(%s)", args[0]), true
 	case "DeepEqual":

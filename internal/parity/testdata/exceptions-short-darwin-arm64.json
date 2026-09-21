@@ -13706,5 +13706,13 @@
       "reason": "The original upstream test unconditionally skips pending address-error semantics.",
       "test": "TestPacketConnWriteAddressErrors"
     }
+  ],
+  "internal/godebug": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original test requires the Go race detector. Both ordinary runs retain its upstream skip.",
+      "test": "TestPanicNilRace"
+    }
   ]
 }

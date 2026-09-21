@@ -1119,6 +1119,18 @@ func DefaultGODEBUG() string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func RegisterGODEBUG() {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func IncGODEBUG(name string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func GODEBUGCount(name string) uint64 {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Getenv reads 1 variable of the process-start environment.
 func Getenv(name string) (string, bool) {
 	panic("syscall/dart needs the gart compiler")

@@ -1,3 +1,7 @@
+// Copyright 2021 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 // Package godebug reads library settings from the GODEBUG variable.
@@ -5,10 +9,13 @@ package godebug
 
 import (
 	"internal/bisect"
+	"internal/godebugs"
 	"os"
 	"strings"
 	"syscall/dart"
 )
+
+func init() { dart.RegisterGODEBUG() }
 
 var initialEnv, _ = dart.Getenv("GODEBUG")
 
@@ -66,5 +73,10 @@ func (s *Setting) Value() string {
 	return ""
 }
 
-// IncNonDefault has no native runtime counter in Dart.
-func (s *Setting) IncNonDefault() {}
+func (s *Setting) IncNonDefault() {
+	info := godebugs.Lookup(s.Name())
+	if info == nil || info.Opaque {
+		panic("godebug: unexpected IncNonDefault of " + s.name)
+	}
+	dart.IncGODEBUG(s.Name())
+}

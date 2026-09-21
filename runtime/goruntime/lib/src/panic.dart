@@ -1,4 +1,5 @@
 import 'goint.dart';
+import 'godebug.dart';
 import 'iface.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'sched.dart' show $activeCallerFrames, $current;
@@ -179,6 +180,9 @@ final TypeDesc $typePanicNil = TypeDesc(
 /// The default nil panic reports `*runtime.PanicNilError`.
 /// `GODEBUG=panicnil=1` restores a nil value for recover.
 Never $panic(Object? value) {
+  if (value == null && _panicNilLegacy && $godebugRegistered) {
+    $incGODEBUG(GoString.fromString('panicnil'));
+  }
   if (value == null && !_panicNilLegacy) {
     final Object? Function()? build = $panicNilValue;
     throw GoPanic(

@@ -832,10 +832,11 @@
   },
   {
     "package": "internal/godebug",
-    "status": "compile-blocked",
-    "diagnostic": "the package runtime/metrics is outside the supported surface (the standard library surface is curated)",
-    "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires native Go runtime metrics."
+    "status": "vm-suite"
+  },
+  {
+    "package": "internal/godebugs",
+    "status": "vm-suite"
   },
   {
     "package": "internal/goexperiment",
@@ -1196,6 +1197,13 @@
     "diagnostic": "undefined: runtime.MemStats",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
+  },
+  {
+    "package": "runtime/metrics",
+    "status": "compile-blocked",
+    "diagnostic": "the function runtime_readMetricNames holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The original names test requires a private native metric registry hook. The documentation test describes the native Go metric set. Portable empty-read assertions execute separately."
   },
   {
     "package": "slices",

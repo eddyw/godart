@@ -107,8 +107,8 @@
         "runtime/metrics/value.go",
         "runtime/metrics/description.go"
       ],
-      "reason": "Value access and histograms are portable. Many named measurements describe the native Go scheduler, heap, or collector.",
-      "next_action": "Classify named metrics separately. Implement only measurements with a truthful runtime definition.",
+      "reason": "Value access and GODEBUG event counters have a portable implementation. Native Go heap, scheduler, and collector measurements have no direct Dart equivalent.",
+      "next_action": "Retain original portable assertions and the private metric-registry blocker. Add only measurements with a truthful runtime definition.",
       "targets": "Value APIs can work on all targets. Native Go runtime measurements have no direct Dart equivalent."
     },
     {

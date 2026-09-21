@@ -57,6 +57,10 @@ Network interface types, flags, and native address filters adapt Go
 The overlay, native adapter, and runtime license retain the Go BSD notice.
 UDP local-address tests retain assertions from Go `src/net/udpsock_test.go`
 and its BSD notice.
+The metrics overlay adapts Go `src/runtime/metrics/value.go`, `sample.go`,
+`histogram.go`, and `description.go`. Its source retains the Go BSD notice.
+GODEBUG counter validation follows `src/internal/godebug/godebug.go`.
+The runtime reads `src/internal/godebugs/table.go` from the active SDK.
 UTC values preserve the location representation from Go `src/time/time.go`
 and `zoneinfo.go`. Their source headers retain the BSD notice.
 Source headers and the runtime license preserve their BSD terms.

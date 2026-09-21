@@ -62,7 +62,7 @@ func TestSelectedUpstream(t *testing.T) {
 			}},
 		},
 		"syscall":          {{Name: "syscall_test.go", Declarations: []string{"testSetGetenv", "TestEnv"}}, {Name: "env_unix_test.go", Declarations: []string{"env", "genDummyEnv", "setDummyEnv", "setupEnvCleanup", "TestClearenv"}}},
-		"internal/godebug": {{Name: "godebug_test.go", Declarations: []string{"TestGet", "TestImmutable", "TestCmdBisect", "TestBisectTestCase"}}},
+		"internal/godebug": {{Name: "godebug_test.go", Declarations: []string{"TestGet", "TestMetrics", "TestImmutable", "TestCmdBisect", "TestBisectTestCase"}}},
 		"cmp":              {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
 		"math":             {{Name: "const_test.go"}, {Name: "example_test.go"}},
 		"encoding/asn1": {
@@ -145,8 +145,9 @@ func TestSelectedUpstream(t *testing.T) {
 				"rfc9881ExampleCertificateMLDSA44", "rfc9881ExampleCertificateMLDSA65", "rfc9881ExampleCertificateMLDSA87",
 			}},
 		},
-		"runtime/debug": {{Name: "mod_test.go"}},
-		"os/exec":       {{Name: "env_test.go"}},
+		"runtime/debug":   {{Name: "mod_test.go"}},
+		"runtime/metrics": {{Name: "description_test.go", Declarations: []string{"TestReadEmptySlice"}}},
+		"os/exec":         {{Name: "env_test.go"}},
 		"sync": {
 			{Name: "once_test.go"}, {Name: "cond_test.go"},
 			{Name: "mutex_test.go", Declarations: []string{"misuseTests", "init", "TestMutexMisuse", "TestMutexFairness"}},
@@ -367,7 +368,17 @@ import . "os/signal"
 				if err != nil {
 					t.Fatal(err)
 				}
-				writeFile(t, filepath.Join(fixture, "godebug.go"), strings.ReplaceAll(string(data), `"internal/bisect"`, `"example.com/bisect"`))
+				text := strings.ReplaceAll(string(data), `"internal/bisect"`, `"example.com/bisect"`)
+				text = strings.ReplaceAll(text, `"internal/godebugs"`, `"example.com/upstream/internal/godebugs"`)
+				writeFile(t, filepath.Join(fixture, "godebug.go"), text)
+				if err := os.MkdirAll(filepath.Join(fixture, "internal/godebugs"), 0755); err != nil {
+					t.Fatal(err)
+				}
+				table, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "src/internal/godebugs/table.go"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeFile(t, filepath.Join(fixture, "internal/godebugs/table.go"), string(table))
 				if err := os.MkdirAll(filepath.Join(fixture, "bisect"), 0755); err != nil {
 					t.Fatal(err)
 				}
@@ -458,7 +469,7 @@ import . "os/signal"
 				name = pkg + "-content-type"
 			}
 			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
-			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" || pkg == "testing" {
+			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "runtime/metrics" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" || pkg == "testing" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
