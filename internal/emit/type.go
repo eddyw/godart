@@ -518,9 +518,38 @@ func (e *emitter) dictOf(t types.Type) string {
 		}
 	}
 	dart := e.dartType(t)
-	return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s, %s%s)",
+	body := fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s, %s%s)",
 		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t),
 		e.orderText(t), e.maskText(t), e.descriptorOf(t), e.dictCopy(t)+dictText(t))
+	if e.lits == nil {
+		return body
+	}
+	if e.lits.dicts == nil {
+		e.lits.dicts = map[string]string{}
+	}
+	params := dictionaryParams(t)
+	declaration := e.typeParamDecl(params)
+	key := declaration + body
+	if value, ok := e.lits.dicts[key]; ok {
+		return value
+	}
+	// Local dictionary closures can retain unrelated Go closure captures.
+	name := fmt.Sprintf("$dict%d_%d", e.lits.tag, e.lits.seq)
+	e.lits.seq++
+	value := name
+	if len(params) == 0 {
+		e.lits.decls = append(e.lits.decls, fmt.Sprintf("final %s = %s;", name, body))
+	} else {
+		arguments := make([]string, len(params))
+		for i, param := range params {
+			arguments[i] = e.dictOf(param)
+		}
+		value += e.typeArgsOfParams(params) + "(" + strings.Join(arguments, ", ") + ")"
+		e.lits.decls = append(e.lits.decls, fmt.Sprintf("Dict<%s> %s%s(%s) => %s;",
+			dart, name, declaration, strings.Join(e.dictParams(params), ", "), body))
+	}
+	e.lits.dicts[key] = value
+	return value
 }
 
 // dictText gives the byte operations of a dictionary. A type set that holds a

@@ -319,6 +319,7 @@ type emitter struct {
 // text as UTF-8. A literal inside a loop would pay that cost at each pass,
 // thus the emitter writes 1 top level constant and reads it by name.
 type litPool struct {
+	dicts      map[string]string
 	sliceWraps map[int]string
 	sliceRead  string
 	// names gives the Dart name of each text that the file holds already.
