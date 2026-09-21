@@ -21,6 +21,9 @@ Its `LICENSE` retains the Go BSD terms. The diagnostic adapter follows
 Malformed literals retain the behavior of `src/cmd/compile/internal/types2/expr.go`.
 Range diagnostics follow `src/cmd/compile/internal/types2/range.go` and
 retain `internal/load/LICENSE-Go`.
+Type assertion diagnostics adapt Go `src/runtime/error.go`, `type.go`, and
+`src/cmd/compile/internal/reflectdata/reflect.go`. The emitter retains
+`internal/emit/LICENSE-Go`. The runtime license includes the Go BSD terms.
 Syscall constants and names use the active SDK `src/syscall/zerrors_*.go`
 file. Error methods adapt `src/syscall/syscall_unix.go` with its BSD notice.
 The test-environment command adapter follows `src/internal/testenv/testenv.go`

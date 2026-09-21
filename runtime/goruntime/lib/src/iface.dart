@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'box.dart';
 import 'complex.dart';
 import 'dict.dart';
@@ -49,6 +53,9 @@ final class TypeDesc {
 
   /// The name that Go writes, with the package name and not the import path.
   final String text;
+
+  /// Package identity for assertion errors, including unnamed private fields.
+  final String assertionPkg;
 
   /// The kind, in the words of the Go package reflect: `struct`, `int`,
   /// `string`, `slice`, `map`, `ptr`, and the other kinds.
@@ -137,6 +144,7 @@ final class TypeDesc {
     this.kind,
     this.methods, {
     this.text = '',
+    this.assertionPkg = '',
     this.methodTypes = const <String, TypeDesc Function()>{},
     this.forwardMethods = const <String, Iface? Function(Object?)>{},
     this.fields = const <FieldDesc>[],
@@ -440,6 +448,7 @@ Object? $assertType(
   String name, [
   String static = 'interface',
   String want = '',
+  String wantPkg = '',
 ]) {
   // name holds the identity of the type, and the report needs the text that
   // reflect.Type.String gives. The 2 differ for a type of package main.
@@ -459,19 +468,20 @@ Object? $assertType(
     $panic(
       Iface(
         $typeGoError,
-        GoError(_assertText(static, x.desc.display, target), plain: true),
+        GoError(_assertText(static, x.desc, target, wantPkg), plain: true),
       ),
     );
   }
   return x.value;
 }
 
-/// The text of a failed type assertion. Go adds a mark when the 2 types carry
-/// 1 name and hold a different identity. A local type of 2 functions takes
-/// that shape. Read assertE2I of runtime/iface.go.
-String _assertText(String static, String got, String want) {
-  final String tail = got == want ? ' (types from different scopes)' : '';
-  return 'interface conversion: $static is $got, not $want$tail';
+String _assertText(String static, TypeDesc got, String want, String wantPkg) {
+  final String tail = got.display == want
+      ? (got.assertionPkg == wantPkg
+            ? ' (types from different scopes)'
+            : ' (types from different packages)')
+      : '';
+  return 'interface conversion: $static is ${got.display}, not $want$tail';
 }
 
 /// The value of an assertion to an interface type.
@@ -593,7 +603,12 @@ T $assertDict<T>(Iface? x, Dict<T> d, String static) {
           x == null
               ? 'interface conversion: $static is nil, '
                     'not ${d.desc.display}'
-              : _assertText(static, x.desc.display, d.desc.display),
+              : _assertText(
+                  static,
+                  x.desc,
+                  d.desc.display,
+                  d.desc.assertionPkg,
+                ),
           plain: true,
         ),
       ),

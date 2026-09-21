@@ -110,8 +110,8 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 		e.descBusy = map[string]bool{}
 	}
 	if e.descBusy[key] {
-		return fmt.Sprintf("TypeDesc('%s', '%s', const <String, Function>{}, text: '%s', zero: () => %s)",
-			dartText(key), kindOf(t), dartText(reflectText(types.Unalias(t))), e.zero(t))
+		return fmt.Sprintf("TypeDesc('%s', '%s', const <String, Function>{}, text: '%s'%s, zero: () => %s)",
+			dartText(key), kindOf(t), dartText(reflectText(types.Unalias(t))), assertionPackagePart(t), e.zero(t))
 	}
 	e.descBusy[key] = true
 	defer delete(e.descBusy, key)
@@ -214,7 +214,7 @@ func (e *emitter) methodTypeTable(t types.Type) string {
 // descParts writes the fields of a struct type, and the element type and the
 // key type of a container type.
 func (e *emitter) descParts(t types.Type) string {
-	out := e.descShape(t) + withTypePart(e, t)
+	out := e.descShape(t) + withTypePart(e, t) + assertionPackagePart(t)
 	if _, ok := types.Unalias(t).Underlying().(*types.Struct); ok {
 		class := e.dartType(t)
 		if class != "Object?" {
@@ -1680,13 +1680,17 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 		// The report of a failed assertion names the static type of the
 		// operand, exactly as Go does: "interface {} is int, not string".
 		static := dartString(reflectText(x.X.GoType()))
-		want := dartString(reflectText(x.Assert))
-		if dart := e.dartType(x.Assert); dart != "Object?" {
-			return fmt.Sprintf("($assertType(%s, %s, %s, %s) as %s)",
-				e.expr(x.X), e.typeNameText(x.Assert), static, want, dart)
+		want := e.reflectTextExpr(x.Assert)
+		pkg := dartString(assertionPackage(x.Assert))
+		if holdsTypeParam(x.Assert) {
+			pkg = e.descriptorOf(x.Assert) + ".assertionPkg"
 		}
-		return fmt.Sprintf("$assertType(%s, %s, %s, %s)",
-			e.expr(x.X), e.typeNameText(x.Assert), static, want)
+		if dart := e.dartType(x.Assert); dart != "Object?" {
+			return fmt.Sprintf("($assertType(%s, %s, %s, %s, %s) as %s)",
+				e.expr(x.X), e.typeNameText(x.Assert), static, want, pkg, dart)
+		}
+		return fmt.Sprintf("$assertType(%s, %s, %s, %s, %s)",
+			e.expr(x.X), e.typeNameText(x.Assert), static, want, pkg)
 	}
 	if isInterfaceType(x.Assert) {
 		return fmt.Sprintf("(() { final $x = %s; if ($implements($x, %s)) return ($x, true); return (null, false); })()",

@@ -41,6 +41,7 @@ final TypeDesc $desc$Greeter = TypeDesc(
     ),
   ],
   withType: <$R>($R Function<$T>() $f) => $f<Greeter$>(),
+  assertionPkg: 'example.com/multi/greet',
   assign: ($d, $s) => ($d as Greeter$).$assign($s as Greeter$),
   ptr: () => $descP$Greeter,
   zero: () => Greeter$.$zero(),
@@ -60,6 +61,7 @@ final TypeDesc $descP$Greeter = TypeDesc(
   },
   elem: () => $desc$Greeter,
   withType: <$R>($R Function<$T>() $f) => $f<Greeter$?>(),
+  assertionPkg: 'example.com/multi/greet',
   newPtr: () => Greeter$.$zero(),
   zero: () => null,
 );
@@ -68,6 +70,7 @@ final TypeDesc $desc$Style = TypeDesc(
   'int',
   <String, Function>{},
   text: 'greet.Style',
+  assertionPkg: 'example.com/multi/greet',
   zero: () => GoInt.zero,
 );
 final TypeDesc $descP$Style = TypeDesc(

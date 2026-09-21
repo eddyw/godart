@@ -696,11 +696,13 @@ TypeDesc $ptrDesc(TypeDesc elem) {
   if (held != null) return held;
   final TypeDesc? found = _pointers[elem.name];
   if (found != null) return found;
+  final methods = _pointerMethods(elem);
   final TypeDesc out = TypeDesc(
     '*${elem.name}',
     'ptr',
-    _pointerMethods(elem),
+    methods,
     text: '*${elem.display}',
+    assertionPkg: methods.isEmpty ? '' : elem.assertionPkg,
     elem: () => elem,
     methodTypes: elem.kind == 'ptr' || elem.kind == 'interface'
         ? const <String, TypeDesc Function()>{}
