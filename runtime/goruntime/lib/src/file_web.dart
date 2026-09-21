@@ -25,6 +25,16 @@ GoString $goos() => GoString.fromString('js');
 
 (int, GoString) $fileOpen(GoString path, int mode) => (0, _noSys);
 
+int $fileFd(int handle, int std) =>
+    throw UnsupportedError('native file descriptors');
+
+(int, int) $directoryOpen(GoString path) => (-1, 38);
+
+int $directoryFd(int fd) =>
+    throw UnsupportedError('native directory descriptors');
+
+int $directoryClose(int fd) => 38;
+
 (int, GoString) $fileRead(int handle, Slice<GoInt> p) => (0, _noSys);
 
 (int, GoString) $fileWrite(int handle, Slice<GoInt> p) => (0, _noSys);

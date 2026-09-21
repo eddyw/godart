@@ -4,6 +4,13 @@ import 'package:goruntime/goruntime.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('Native descriptors retain file identity and ownership', () {
+    final result = Process.runSync(Platform.resolvedExecutable, [
+      'test/fixtures/file_descriptors.dart',
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+  }, skip: !(Platform.isLinux || Platform.isMacOS));
+
   test('RemoveAll rejects a NUL path without removal', () {
     final root = Directory.systemTemp.createTempSync('gart-removeall-');
     addTearDown(() {

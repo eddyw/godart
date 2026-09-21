@@ -954,6 +954,22 @@ func FileOpen(path string, mode int) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func FileFd(handle, std int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func DirectoryOpen(path string) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func DirectoryFd(fd int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func DirectoryClose(fd int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // FileRead reads bytes into the slice and gives the count. A count of 0 with no
 // cause means the end of the file.
 func FileRead(handle int, p []byte) (int, string) {

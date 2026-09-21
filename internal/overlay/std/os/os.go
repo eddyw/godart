@@ -162,15 +162,19 @@ func IsNotExist(err error) bool { return underlyingErrorIs(err, ErrNotExist) }
 
 // File is an open file. The zero value is not usable.
 type File struct {
+	*file
+}
+
+type file struct {
 	handle int
 	name   string
 	// std marks standard output or standard error. Such a file holds no handle.
 	std int
 	// closed marks a file after Close, thus a later call reports ErrClosed.
 	closed bool
-	// dir marks an open directory. dart:io gives no handle of a directory,
-	// thus such a file reads the directory by its name.
-	dir bool
+	// Directory enumeration still uses the path. dirFD owns the native descriptor.
+	dir   bool
+	dirFD int
 	// dirPos counts the entries that ReadDir gave.
 	dirPos int
 }
@@ -185,9 +189,9 @@ const (
 
 // Stdin, Stdout, and Stderr are the 3 files that the process holds at its start.
 var (
-	Stdin  = &File{std: stdInFile, name: "/dev/stdin"}
-	Stdout = &File{std: stdOut, name: "/dev/stdout"}
-	Stderr = &File{std: stdErr, name: "/dev/stderr"}
+	Stdin  = &File{&file{std: stdInFile, name: "/dev/stdin"}}
+	Stdout = &File{&file{std: stdOut, name: "/dev/stdout"}}
+	Stderr = &File{&file{std: stdErr, name: "/dev/stderr"}}
 )
 
 // Pipe gives a connected pair of files. The Dart platform holds no pipe, thus
@@ -199,6 +203,17 @@ func Pipe() (*File, *File, error) {
 // Name gives the name that the caller of Open gave. Go reads the field with no
 // test of the receiver, thus a nil pointer panics here too.
 func (f *File) Name() string { return f.name }
+
+// Fd returns the native descriptor. The caller must not close it.
+func (f *File) Fd() uintptr {
+	if f == nil || f.closed {
+		return ^uintptr(0)
+	}
+	if f.dir {
+		return uintptr(dart.DirectoryFd(f.dirFD))
+	}
+	return uintptr(dart.FileFd(f.handle, f.std))
+}
 
 // checkValid gives ErrInvalid for a nil receiver. Go tests the receiver of
 // each method of a File, thus a call on a nil pointer gives an error and no
@@ -428,6 +443,9 @@ func (f *File) Close() error {
 	if f == nil {
 		return ErrInvalid
 	}
+	if f.file == nil {
+		return syscall.EINVAL
+	}
 	if f.std != stdNone {
 		return nil
 	}
@@ -436,6 +454,9 @@ func (f *File) Close() error {
 	}
 	f.closed = true
 	if f.dir {
+		if errno := dart.DirectoryClose(f.dirFD); errno != 0 {
+			return &PathError{Op: "close", Path: f.name, Err: syscall.Errno(errno)}
+		}
 		return nil
 	}
 	return pathError("close", f.name, dart.FileClose(f.handle))
@@ -460,8 +481,7 @@ func (f *File) Stat() (FileInfo, error) {
 	return Stat(f.name)
 }
 
-// Open opens a file for a read. A directory gives a File that reads the
-// directory by its name, because dart:io gives no handle of a directory.
+// Open opens a file or directory for a read.
 func Open(name string) (*File, error) {
 	return openMode(name, dart.OpenRead, "open")
 }
@@ -546,14 +566,18 @@ func openMode(name string, mode int, op string) (*File, error) {
 	}
 	if mode == dart.OpenRead {
 		if info, err := Stat(name); err == nil && info.IsDir() {
-			return &File{handle: -1, name: name, dir: true}, nil
+			fd, errno := dart.DirectoryOpen(name)
+			if errno != 0 {
+				return nil, &PathError{Op: op, Path: name, Err: syscall.Errno(errno)}
+			}
+			return &File{&file{handle: -1, name: name, dir: true, dirFD: fd}}, nil
 		}
 	}
 	handle, cause := dart.FileOpen(name, mode)
 	if cause != "" {
 		return nil, pathError(op, name, cause)
 	}
-	return &File{handle: handle, name: name}, nil
+	return &File{&file{handle: handle, name: name}}, nil
 }
 
 // ReadFile reads a whole file.

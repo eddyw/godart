@@ -575,6 +575,14 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$f32FromBits(%s)", args[0]), true
 	case "FileOpen":
 		return fmt.Sprintf("$fileOpen(%s, %s)", args[0], args[1]), true
+	case "FileFd":
+		return fmt.Sprintf("$fileFd(%s, %s)", args[0], args[1]), true
+	case "DirectoryOpen":
+		return fmt.Sprintf("$directoryOpen(%s)", args[0]), true
+	case "DirectoryFd":
+		return fmt.Sprintf("$directoryFd(%s)", args[0]), true
+	case "DirectoryClose":
+		return fmt.Sprintf("$directoryClose(%s)", args[0]), true
 	case "FileRead":
 		return fmt.Sprintf("$fileRead(%s, %s)", args[0], args[1]), true
 	case "FileWrite":

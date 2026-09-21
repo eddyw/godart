@@ -36,6 +36,13 @@ Dart VM and AOT programs use `dart:io` adapters for files, processes, sockets,
 and HTTP. These adapters do not provide all native descriptor, process-group,
 file metadata, TLS configuration, or runtime inspection APIs.
 
+Linux and macOS support `os.File.Fd` for regular files, directories, and
+standard streams. The file owns the descriptor. Call `Close` explicitly.
+Automatic file closure through Go finalizers remains unsupported.
+Directory descriptors retain their identity after a rename or removal.
+Directory enumeration and file metadata still use paths.
+Other native hosts and browsers do not support `os.File.Fd`.
+
 `net/http/fcgi` supports supplied listeners. `Serve` with a nil listener
 returns an explicit error because inherited listener descriptors remain unsupported.
 

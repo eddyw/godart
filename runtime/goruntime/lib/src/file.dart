@@ -5,6 +5,8 @@ import 'removeall.dart';
 import 'slice.dart';
 import 'string.dart';
 
+export 'directory_descriptor.dart';
+
 /// The name of the operating system, in the words of the Go constant GOOS.
 GoString $goos() {
   if (Platform.isMacOS) return GoString.fromString('darwin');
@@ -55,6 +57,25 @@ int _slot(RandomAccessFile f) {
   }
   _open.add(f);
   return _open.length - 1;
+}
+
+int $fileFd(int handle, int std) {
+  final ResourceHandle resource;
+  switch (std) {
+    case 1:
+      resource = ResourceHandle.fromStdout(stdout);
+    case 2:
+      resource = ResourceHandle.fromStdout(stderr);
+    case 3:
+      resource = ResourceHandle.fromStdin(stdin);
+    default:
+      final file = _at(handle);
+      if (file == null) return -1;
+      resource = ResourceHandle.fromFile(file);
+  }
+  // SCM_RIGHTS data borrows the descriptor. Only the file owns its lifetime.
+  final control = SocketControlMessage.fromHandles([resource]);
+  return ByteData.sublistView(control.data).getInt32(0, Endian.host);
 }
 
 /// Opens a file and gives its handle. The second result holds the cause of a
