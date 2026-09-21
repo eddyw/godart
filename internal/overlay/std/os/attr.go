@@ -13,13 +13,6 @@ import (
 	"time"
 )
 
-// The mode of a path.
-//
-// dart:io names no permission bit, no owner, and no hard link. The interop
-// reaches the 3 through the command of the platform, thus each call below costs
-// a child process. Stat still reads no permission bit, thus a change of the
-// mode reaches the file system and not the metadata that this package reports.
-
 // The 3 bits of a POSIX mode that stand above the 9 permission bits.
 const (
 	sISUID = 0o4000

@@ -44,7 +44,11 @@ Automatic file closure through Go finalizers remains unsupported.
 Directory descriptors retain their identity after a rename or removal.
 `File.Chdir` uses the open descriptor and preserves directory identity after a rename.
 On Unix platforms, `Getwd` preserves an absolute `PWD` alias only when it names the current directory.
-Directory enumeration and file metadata still use paths.
+Linux and macOS on x64 and arm64 use native `Stat`, `Lstat`, and descriptor-based `File.Stat`.
+These APIs preserve device/inode identity, permission bits, file types, and nanosecond modification times.
+`SameFile` compares native identity on these targets and rejects external `FileInfo` implementations.
+`FileInfo.Sys` remains nil. Other native hosts retain approximate metadata.
+Directory enumeration still uses paths.
 Other native hosts and browsers do not support `os.File.Fd`.
 
 `net/http/fcgi` supports supplied listeners. `Serve` with a nil listener

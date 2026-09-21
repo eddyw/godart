@@ -479,6 +479,10 @@ func (f *File) Stat() (FileInfo, error) {
 	if err := f.checkValid("stat"); err != nil {
 		return nil, err
 	}
+	if dart.HasNativeStat() {
+		size, mode, seconds, nanos, device, inode, errno := dart.NativeFstat(int(f.Fd()))
+		return nativeFileInfo(f.name, "stat", size, mode, seconds, nanos, device, inode, errno)
+	}
 	return Stat(f.name)
 }
 
@@ -616,66 +620,63 @@ type FileInfo = fs.FileInfo
 // DirEntry holds 1 member of a directory.
 type DirEntry = fs.DirEntry
 
-// fileStat holds the metadata that the Dart runtime gives.
-//
-// The permission bits reach no operation. Dart names no such bit, thus each
-// file reads 0644 and each directory reads 0755.
 type fileStat struct {
-	name  string
-	size  int64
-	dir   bool
-	link  bool
-	nanos int64
+	name    string
+	size    int64
+	mode    FileMode
+	seconds int64
+	nanos   int64
+	device  uint64
+	inode   uint64
 }
 
-func (i *fileStat) Name() string { return i.name }
-
-func (i *fileStat) Size() int64 { return i.size }
-
-func (i *fileStat) IsDir() bool { return i.dir }
-
-func (i *fileStat) Sys() any { return nil }
-
-func (i *fileStat) Mode() FileMode {
-	if i.dir {
-		return ModeDir | 0o755
-	}
-	if i.link {
-		return ModeSymlink | 0o755
-	}
-	return 0o644
-}
-
-func (i *fileStat) ModTime() time.Time { return time.Unix(0, i.nanos) }
-
-// ModNanos gives the time of the last change, in nanoseconds since the start of
-// the Unix epoch. Go holds no such method, and ModTime gives the same instant.
-func (i *fileStat) ModNanos() int64 { return i.nanos }
+func (i *fileStat) Name() string       { return i.name }
+func (i *fileStat) Size() int64        { return i.size }
+func (i *fileStat) IsDir() bool        { return i.mode.IsDir() }
+func (i *fileStat) Sys() any           { return nil }
+func (i *fileStat) Mode() FileMode     { return i.mode }
+func (i *fileStat) ModTime() time.Time { return time.Unix(i.seconds, i.nanos) }
 
 // Stat reads the metadata of a path.
 func Stat(name string) (FileInfo, error) {
 	if contains(name, "\x00") {
 		return nil, &PathError{Op: "stat", Path: name, Err: syscall.EINVAL}
 	}
+	if dart.HasNativeStat() {
+		size, mode, seconds, nanos, device, inode, errno := dart.NativeStat(name, true)
+		return nativeFileInfo(name, "stat", size, mode, seconds, nanos, device, inode, errno)
+	}
 	size, dir, nanos, cause := dart.Stat(name)
 	if cause != "" {
 		return nil, pathError("stat", name, cause)
 	}
-	return &fileStat{name: base(name), size: size, dir: dir, nanos: nanos}, nil
+	mode := FileMode(0644)
+	if dir {
+		mode = ModeDir | 0755
+	}
+	return &fileStat{name: base(name), size: size, mode: mode, nanos: nanos}, nil
 }
 
-// Lstat reads the metadata of a path, and it follows no symbolic link. The
-// size of a link is the length of its target, and the time of a link is 0,
-// because dart:io gives no metadata of a link itself.
+// Lstat reads path metadata without a final symbolic link traversal.
 func Lstat(name string) (FileInfo, error) {
 	if contains(name, "\x00") {
 		return nil, &PathError{Op: "lstat", Path: name, Err: syscall.EINVAL}
+	}
+	if dart.HasNativeStat() {
+		size, mode, seconds, nanos, device, inode, errno := dart.NativeStat(name, false)
+		return nativeFileInfo(name, "lstat", size, mode, seconds, nanos, device, inode, errno)
 	}
 	size, dir, link, nanos, cause := dart.Lstat(name)
 	if cause != "" {
 		return nil, pathError("lstat", name, cause)
 	}
-	return &fileStat{name: base(name), size: size, dir: dir, link: link, nanos: nanos}, nil
+	mode := FileMode(0644)
+	if dir {
+		mode = ModeDir | 0755
+	} else if link {
+		mode = ModeSymlink | 0755
+	}
+	return &fileStat{name: base(name), size: size, mode: mode, nanos: nanos}, nil
 }
 
 // LinkError names the operation, the 2 paths, and the cause of a failure of a

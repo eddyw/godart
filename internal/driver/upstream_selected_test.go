@@ -197,7 +197,8 @@ func TestSelectedUpstream(t *testing.T) {
 			"durationTruncateTests", "TestDurationTruncate", "durationRoundTests", "TestDurationRound", "durationAbsTests", "TestDurationAbs", "minDuration", "maxDuration",
 		}}},
 		"os": {
-			{Name: "os_test.go", Declarations: []string{"TestFileChdir", "TestChdirAndGetwd", "TestProgWideChdir", "equal", "TestGetppid", "TestAppend", "writeFile", "TestSeek", "newFile", "TestRename", "TestRenameOverwriteDest", "TestRenameFailed", "TestRenameNotExisting", "TestRenameToDirFailed", "TestRenameCaseDifference"}},
+			{Name: "os_test.go", Declarations: []string{"TestSameFile", "testDevNullFileInfo", "testDevNullFile", "TestDevNullFile", "TestStatDirModeExec", "TestFileChdir", "TestChdirAndGetwd", "TestProgWideChdir", "equal", "TestGetppid", "TestAppend", "writeFile", "TestSeek", "newFile", "TestRename", "TestRenameOverwriteDest", "TestRenameFailed", "TestRenameNotExisting", "TestRenameToDirFailed", "TestRenameCaseDifference"}},
+			{Name: "stat_test.go", Declarations: []string{"testStatAndLstatParams", "testStatAndLstat", "testIsDir", "testIsSymlink", "testIsFile", "testDirStats", "testFileStats", "testSymlinkStats", "testSymlinkSameFile", "testSymlinkSameFileOpen", "TestDirAndSymlinkStats", "TestFileAndSymlinkStats", "TestSymlinkWithTrailingSlash", "TestClosedStat", "TestStatNotExist"}},
 			{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "error_test.go"},
 			{Name: "read_test.go", Declarations: []string{"checkNamedSize", "TestReadFile", "TestWriteFile", "TestReadOnlyWriteFile"}},
 			{Name: "tempfile_test.go", Declarations: []string{"TestCreateTemp", "TestCreateTempPattern", "TestMkdirTemp", "TestMkdirTempBadDir"}},

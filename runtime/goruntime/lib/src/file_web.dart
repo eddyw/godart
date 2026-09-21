@@ -53,6 +53,14 @@ GoString $fileSync(int handle) => _noSys;
 
 GoString $writeFile(GoString path, Slice<GoInt> data) => _noSys;
 
+const bool $hasNativeStat = false;
+
+(int, int, int, int, int, int, int) $nativeStat(GoString path, bool follow) =>
+    (0, 0, 0, 0, 0, 0, 38);
+
+(int, int, int, int, int, int, int) $nativeFstat(int fd) =>
+    (0, 0, 0, 0, 0, 0, 38);
+
 (int, bool, int, GoString) $stat(GoString path) => (0, false, 0, _noSys);
 
 (int, bool, bool, int, GoString) $lstat(GoString path) =>

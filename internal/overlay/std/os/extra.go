@@ -256,17 +256,6 @@ func NewSyscallError(syscall string, err error) error {
 	return &SyscallError{Syscall: syscall, Err: err}
 }
 
-// SameFile reports whether 2 descriptions name 1 file. The Dart side names no
-// inode, thus the test reads the size, the mode, and the time of the last
-// change. docs/parity.md holds that gap.
-func SameFile(fi1, fi2 FileInfo) bool {
-	if fi1 == nil || fi2 == nil {
-		return false
-	}
-	return fi1.Size() == fi2.Size() && fi1.Mode() == fi2.Mode() &&
-		fi1.ModTime().Equal(fi2.ModTime())
-}
-
 // Signal names an operating system signal. The concrete type is
 // syscall.Signal, as it is in Go.
 type Signal interface {
