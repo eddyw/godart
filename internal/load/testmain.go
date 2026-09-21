@@ -68,7 +68,7 @@ type coverVar struct {
 //
 // A load that asked for coverage also writes a counter into each statement of
 // each package under test. Read coverPackage.
-func testBinaries(found []*packages.Package, cover bool, files map[string][]byte) ([]*Binary, error) {
+func testBinaries(found []*packages.Package, cover bool, files map[string][]byte, environment []string) ([]*Binary, error) {
 	byID := map[string]*packages.Package{}
 	packages.Visit(found, nil, func(p *packages.Package) { byID[p.ID] = p })
 	ids := make([]string, 0, len(byID))
@@ -110,7 +110,7 @@ func testBinaries(found []*packages.Package, cover bool, files map[string][]byte
 		}
 		if cover {
 			bin.CoverMode = "set"
-			if err := coverPackage(bin, files, byID[under+" ["+p.PkgPath+"]"], byID[under]); err != nil {
+			if err := coverPackage(bin, files, environment, byID[under+" ["+p.PkgPath+"]"], byID[under]); err != nil {
 				return nil, err
 			}
 		}

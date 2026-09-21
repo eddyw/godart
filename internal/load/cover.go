@@ -20,7 +20,7 @@ import (
 //
 // The rewrite touches the files of the package alone. A test file keeps its
 // source, exactly as `go test -cover` does.
-func coverPackage(bin *Binary, files map[string][]byte, variant, plain *packages.Package) error {
+func coverPackage(bin *Binary, files map[string][]byte, environment []string, variant, plain *packages.Package) error {
 	names := coverFiles(variant, plain)
 	if len(names) == 0 {
 		return nil
@@ -45,6 +45,8 @@ func coverPackage(bin *Binary, files map[string][]byte, variant, plain *packages
 		out := filepath.Join(dir, fmt.Sprintf("%d.go", i))
 		cmd := exec.Command("go", "tool", "cover", "-mode=set",
 			"-var="+variable, "-o", out, name)
+		cmd.Env = environment
+		cmd.Dir = bin.Dir
 		if text, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("go tool cover %s: %v\n%s", name, err, text)
 		}

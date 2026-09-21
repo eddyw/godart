@@ -22,9 +22,10 @@ type surfaceReceipt struct {
 }
 
 // Only native standard-library roots enter this cache, independent of module layout.
-func surfaceInputs(dir string, tags ...string) (string, string, error) {
+func surfaceInputs(dir string, environmentVars []string, tags ...string) (string, string, error) {
 	cmd := exec.Command("go", "env", "-json", "GOROOT", "GOOS", "GOARCH", "GOAMD64", "GOARM", "GOARM64", "GO386", "GOMIPS", "GOMIPS64", "GOPPC64", "GORISCV64", "GOWASM", "GOEXPERIMENT", "CGO_ENABLED", "GOFLAGS", "GOVERSION", "GOTOOLCHAIN", "GOCACHE", "GOENV", "CC", "CXX", "CGO_CFLAGS", "CGO_CPPFLAGS", "CGO_CXXFLAGS", "CGO_LDFLAGS", "PKG_CONFIG")
 	cmd.Dir = dir
+	cmd.Env = environmentVars
 	environment, err := cmd.Output()
 	if err != nil {
 		return "", "", err
@@ -106,13 +107,13 @@ func validSurface(receipt surfaceReceipt, identity string) bool {
 	return receipt.Hash == hex.EncodeToString(sum[:])
 }
 
-func cachedSurface(dir, cacheDir string, tags ...string) ([]*packages.Package, error) {
-	identity, goroot, err := surfaceInputs(dir, tags...)
+func cachedSurface(dir, cacheDir string, environment []string, tags ...string) ([]*packages.Package, error) {
+	identity, goroot, err := surfaceInputs(dir, environment, tags...)
 	if err != nil {
 		return nil, err
 	}
 	if identity == "" {
-		return discoverSurface(dir, tags...)
+		return discoverSurface(dir, environment, tags...)
 	}
 	path := filepath.Join(cacheDir, "surface.json")
 	data, err := os.ReadFile(path)
@@ -129,11 +130,11 @@ func cachedSurface(dir, cacheDir string, tags ...string) ([]*packages.Package, e
 		}
 		return memory.Packages, nil
 	}
-	found, err := discoverSurface(dir, tags...)
+	found, err := discoverSurface(dir, environment, tags...)
 	if err != nil {
 		return nil, err
 	}
-	after, _, err := surfaceInputs(dir, tags...)
+	after, _, err := surfaceInputs(dir, environment, tags...)
 	if err != nil {
 		return nil, err
 	}
@@ -214,12 +215,12 @@ func writeSurface(cacheDir string, receipt surfaceReceipt) error {
 	return os.Rename(temporary.Name(), filepath.Join(cacheDir, "surface.json"))
 }
 
-func discoverSurface(dir string, tags ...string) ([]*packages.Package, error) {
+func discoverSurface(dir string, environment []string, tags ...string) ([]*packages.Package, error) {
 	var paths []string
 	for _, o := range overlay.Packages() {
 		if o.Path != overlay.IntrinsicPath {
 			paths = append(paths, o.Path)
 		}
 	}
-	return packages.Load(&packages.Config{Mode: findMode, Dir: dir, BuildFlags: []string{tagFlag(tags)}}, paths...)
+	return packages.Load(&packages.Config{Env: environment, Mode: findMode, Dir: dir, BuildFlags: []string{tagFlag(tags)}}, paths...)
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/parser"
 	"go/token"
 	"os"
@@ -116,7 +115,12 @@ func LoadWithOptions(opt Options) (*Result, error) {
 func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string, tags []string) (*Result, error) {
 	var timings []PhaseTiming
 	phase := time.Now()
+	sdk, err := prepareGoSDK(dir)
+	if err != nil {
+		return nil, err
+	}
 	found, err := packages.Load(&packages.Config{
+		Env:        sdk.env,
 		Mode:       findMode,
 		Dir:        dir,
 		BuildFlags: []string{tagFlag(tags)},
@@ -129,16 +133,16 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	phase = time.Now()
 	var surface []*packages.Package
 	if cacheDir != "" {
-		surface, err = cachedSurface(dir, cacheDir, tags...)
+		surface, err = cachedSurface(dir, cacheDir, sdk.env, tags...)
 	} else {
-		surface, err = surfacePackages(dir, tags)
+		surface, err = surfacePackages(dir, sdk.env, tags)
 	}
 	if err != nil {
 		return nil, err
 	}
 	timings = append(timings, PhaseTiming{"load-surface", time.Since(phase)})
 	phase = time.Now()
-	files, err := overlayFiles(found, surface)
+	files, err := overlayFiles(found, surface, sdk.root)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +157,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	}
 	var binaries []*Binary
 	if tests {
-		binaries, err = testBinaries(found, cover, files)
+		binaries, err = testBinaries(found, cover, files, sdk.env)
 		if err != nil {
 			return nil, err
 		}
@@ -173,6 +177,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 		}
 	}
 	cfg := &packages.Config{
+		Env:        sdk.env,
 		Mode:       mode,
 		Dir:        dir,
 		BuildFlags: []string{tagFlag(tags)},
@@ -214,7 +219,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	for _, pkg := range pkgs {
 		if pkg.Name == "main" {
 			phase = time.Now()
-			defaults, err = defaultGODEBUG(dir, patterns, tags, tests)
+			defaults, err = defaultGODEBUG(dir, patterns, tags, tests, sdk.env)
 			if err != nil {
 				return nil, err
 			}
@@ -233,7 +238,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 // because the package under test imports it. Such a variant reads the files of
 // the real package, thus the overlay replaces them. The variant of the package
 // under test stays out, because its file list also holds each test file.
-func overlayFiles(found, surface []*packages.Package) (map[string][]byte, error) {
+func overlayFiles(found, surface []*packages.Package, goroot string) (map[string][]byte, error) {
 	existing := map[string]*packages.Package{}
 	packages.Visit(append(found, surface...), nil, func(p *packages.Package) {
 		if p.ID == p.PkgPath {
@@ -249,7 +254,7 @@ func overlayFiles(found, surface []*packages.Package) (map[string][]byte, error)
 		p, ok := existing[o.Path]
 		if !ok || len(p.CompiledGoFiles) == 0 {
 			for _, f := range o.Files {
-				name := filepath.Join(build.Default.GOROOT, "src", filepath.FromSlash(o.Path), f.Name)
+				name := filepath.Join(goroot, "src", filepath.FromSlash(o.Path), f.Name)
 				out[name] = f.Content
 			}
 			continue
@@ -258,7 +263,7 @@ func overlayFiles(found, surface []*packages.Package) (map[string][]byte, error)
 			patchFiles(out, o, p)
 			continue
 		}
-		replaceFiles(out, o, p)
+		replaceFiles(out, o, p, goroot)
 	}
 	roots := append(found, surface...)
 	for _, o := range overlay.Packages() {
@@ -363,10 +368,17 @@ func patchDiffs(out map[string][]byte, o overlay.Package, real *packages.Package
 // load then holds the overlay file of that package next to its real files. Thus
 // the load asks for each overlay package by its path.
 //
-// Separate tag selections must not share a discovered file set.
-func surfacePackages(dir string, tags []string) ([]*packages.Package, error) {
-	value, _ := surfaces.LoadOrStore(tagFlag(tags), sync.OnceValues(func() ([]*packages.Package, error) {
-		return discoverSurface(dir, tags...)
+// SDK sources, tags, and environment inputs identify a discovered file set.
+func surfacePackages(dir string, env, tags []string) ([]*packages.Package, error) {
+	identity, _, err := surfaceInputs(dir, env, tags...)
+	if err != nil {
+		return nil, err
+	}
+	if identity == "" {
+		return discoverSurface(dir, env, tags...)
+	}
+	value, _ := surfaces.LoadOrStore(identity, sync.OnceValues(func() ([]*packages.Package, error) {
+		return discoverSurface(dir, env, tags...)
 	}))
 	return value.(func() ([]*packages.Package, error))()
 }
@@ -405,12 +417,12 @@ func holdsTestFile(p *packages.Package) bool {
 //
 // A diff of the same directory names a real file, and that file keeps its own
 // content. Read patchDiffs.
-func replaceFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
+func replaceFiles(out map[string][]byte, o overlay.Package, p *packages.Package, goroot string) {
 	byBase := map[string]string{}
 	for _, name := range p.CompiledGoFiles {
 		byBase[filepath.Base(name)] = name
 	}
-	dir := filepath.Join(build.Default.GOROOT, "src", filepath.FromSlash(o.Path))
+	dir := filepath.Join(goroot, "src", filepath.FromSlash(o.Path))
 	if len(p.CompiledGoFiles) > 0 {
 		dir = filepath.Dir(p.CompiledGoFiles[0])
 	}

@@ -8,7 +8,7 @@ import (
 	"os/exec"
 )
 
-func defaultGODEBUG(dir string, patterns, tags []string, tests bool) (map[string]string, error) {
+func defaultGODEBUG(dir string, patterns, tags []string, tests bool, environment []string) (map[string]string, error) {
 	args := []string{"list", "-e", "-json=ImportPath,Name,DefaultGODEBUG", tagFlag(tags)}
 	if tests {
 		args = append(args, "-test")
@@ -16,6 +16,7 @@ func defaultGODEBUG(dir string, patterns, tags []string, tests bool) (map[string
 	args = append(args, patterns...)
 	cmd := exec.Command("go", args...)
 	cmd.Dir = dir
+	cmd.Env = environment
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	data, err := cmd.Output()

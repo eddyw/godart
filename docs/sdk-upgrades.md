@@ -27,6 +27,21 @@ compiler resources, flags, and source dependencies. Kernels do not transfer
 between SDK versions. Source mode bypasses the Gart kernel cache.
 Glutter uses Flutter's compiler and hot reload, separate from this selection.
 
+## Go SDK selection
+
+Gart uses the SDK that `go env` selects for the application directory.
+This selection respects module requirements and `GOTOOLCHAIN`.
+
+Go forbids source overlays inside `GOMODCACHE`. When Go downloads the SDK
+there, Gart keeps a complete SDK copy under the user cache directory at
+`gart/go-sdk`. The copy retains the SDK license and source files.
+Gart uses that SDK for discovery, overlays, GODEBUG defaults, and coverage.
+It does not modify the original SDK or the process environment.
+
+The cache separates SDK source paths and versions. You can remove
+`gart/go-sdk` from the user cache directory when no Gart command runs.
+Gart recreates the required copy on its next use.
+
 ## Go updates
 
 1. Add the proposed version to `go.candidates`.

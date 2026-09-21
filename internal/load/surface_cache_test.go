@@ -23,7 +23,7 @@ func TestSurfaceCacheReuseAndCorruption(t *testing.T) {
 	dir := t.TempDir()
 	surfaceFile(t, filepath.Join(dir, "go.mod"), "module example.com/surface\n\ngo 1.27\n")
 	cache := t.TempDir()
-	first, err := cachedSurface(dir, cache)
+	first, err := cachedSurface(dir, cache, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func TestSurfaceCacheReuseAndCorruption(t *testing.T) {
 	if err := os.Chtimes(path, old, old); err != nil {
 		t.Fatal(err)
 	}
-	second, err := cachedSurface(dir, cache)
+	second, err := cachedSurface(dir, cache, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func TestSurfaceCacheReuseAndCorruption(t *testing.T) {
 		t.Fatal(err)
 	}
 	surfaceFile(t, path, string(data))
-	if _, err := cachedSurface(dir, cache); err != nil {
+	if _, err := cachedSurface(dir, cache, nil); err != nil {
 		t.Fatal(err)
 	}
 	data, err = os.ReadFile(path)
@@ -75,7 +75,7 @@ func TestSurfaceCacheReuseAndCorruption(t *testing.T) {
 	}
 	t.Setenv("GOFLAGS", "-trimpath")
 	before := saved.Identity
-	if _, err := cachedSurface(dir, cache); err != nil {
+	if _, err := cachedSurface(dir, cache, nil); err != nil {
 		t.Fatal(err)
 	}
 	data, err = os.ReadFile(path)
@@ -100,14 +100,14 @@ func TestSurfaceIdentityTracksSourcesAndFiles(t *testing.T) {
 	surfaceFile(t, file, "package fmt\nconst X=1\n")
 	identity := func() string {
 		t.Helper()
-		key, _, err := surfaceInputs(dir)
+		key, _, err := surfaceInputs(dir, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return key
 	}
 	first := identity()
-	tagged, _, err := surfaceInputs(dir, "safe")
+	tagged, _, err := surfaceInputs(dir, nil, "safe")
 	if err != nil {
 		t.Fatal(err)
 	}
