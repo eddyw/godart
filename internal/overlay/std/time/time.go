@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 // Package time gives the clock and the sleep of Go.
@@ -300,11 +304,14 @@ func (t Time) In(loc *Location) Time {
 	if loc == nil {
 		panic("time: missing Location in call to Time.In")
 	}
+	if loc == &utcLoc {
+		loc = nil
+	}
 	return Time{sec: t.sec, nsec: t.nsec, loc: loc}
 }
 
 // UTC gives t with the location UTC.
-func (t Time) UTC() Time { return t.In(UTC) }
+func (t Time) UTC() Time { return t.In(&utcLoc) }
 
 // Local gives t with the location of the system.
 func (t Time) Local() Time { return t.In(Local) }
@@ -347,7 +354,7 @@ func Date(year int, month Month, day, hour, min, sec, nsec int, loc *Location) T
 	wall := daysFromCivil(int64(year), int(month), day)*86400 +
 		int64(hour)*3600 + int64(min)*60 + int64(sec)
 	return Time{sec: wall - int64(loc.offsetOf(wall)) + unixToInternal,
-		nsec: int32(nsec), loc: loc}
+		nsec: int32(nsec)}.In(loc)
 }
 
 // norm moves a value that stands outside its base into the next unit.

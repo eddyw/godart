@@ -104,7 +104,7 @@ func (t *Time) UnmarshalBinary(data []byte) error {
 			loc = FixedZone("", offset)
 		}
 	}
-	*t = Time{sec: sec, nsec: nsec, loc: loc}
+	*t = Time{sec: sec, nsec: nsec}.In(loc)
 	return nil
 }
 

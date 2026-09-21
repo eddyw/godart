@@ -634,19 +634,16 @@ func parse(layout, value string, defaultLocation, local *Location) (Time, error)
 		// instant.
 		offset, name := local.lookup(t.unixSec())
 		if offset == zoneOffset && (zoneName == "" || name == zoneName) {
-			t.loc = local
-			return t, nil
+			return t.In(local), nil
 		}
-		t.loc = FixedZone(zoneName, zoneOffset)
-		return t, nil
+		return t.In(FixedZone(zoneName, zoneOffset)), nil
 	}
 
 	if zoneName != "" {
 		t := Date(year, Month(month), day, hour, min, sec, nsec, UTC)
 		if offset, ok := local.lookupName(zoneName, t.unixSec()); ok {
 			t.sec -= int64(offset)
-			t.loc = local
-			return t, nil
+			return t.In(local), nil
 		}
 		// A name that the local zone does not hold gives a zone of a fixed
 		// offset. GMT names its own offset, and each other name gives 0.
@@ -655,8 +652,7 @@ func parse(layout, value string, defaultLocation, local *Location) (Time, error)
 			offset, _ = atoi(zoneName[3:])
 			offset *= 3600
 		}
-		t.loc = FixedZone(zoneName, offset)
-		return t, nil
+		return t.In(FixedZone(zoneName, offset)), nil
 	}
 
 	return Date(year, Month(month), day, hour, min, sec, nsec, defaultLocation), nil
