@@ -88,6 +88,9 @@ iOS and Android need device validation.
 
 ## Tests and coverage
 
+`testing.T.TempDir` uses `GOTMPDIR` when set and removes its directories after the test.
+Cleanup callbacks can register further cleanup callbacks. They execute in reverse registration order.
+
 `gart test` supports tests, examples, fuzz seeds, filters, coverage, and AOT
 benchmarks. It does not provide a fuzz-input generator or native allocation
 measurements. Native `go test` remains a separate comparison baseline.

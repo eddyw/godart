@@ -28,6 +28,8 @@ Syscall constants and names use the active SDK `src/syscall/zerrors_*.go`
 file. Error methods adapt `src/syscall/syscall_unix.go` with its BSD notice.
 The test-environment command adapter follows `src/internal/testenv/testenv.go`
 and `exec.go` with the Go BSD notice.
+Test temporary directories adapt Go `src/testing/testing.go` with its BSD notice.
+Harness regressions retain original `testing_test.go` and `sub_test.go` assertions.
 Benchmark result types and format methods adapt `src/testing/benchmark.go`
 and retain its BSD notice.
 The runtime caller adapter retains original declarations from

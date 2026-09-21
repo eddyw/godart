@@ -34,9 +34,7 @@ func runSynctest(t *T, f func(any)) bool {
 	if sub.cancel != nil {
 		sub.cancel()
 	}
-	for i := len(sub.cleanups) - 1; i >= 0; i-- {
-		dart.Catch(sub.cleanups[i])
-	}
+	sub.runCleanups()
 	current[id] = outer
 	// Go writes no result line for the T of a bubble, and a skip of it leaves
 	// the outer test in the state PASS. The log lines and the failure pass up.

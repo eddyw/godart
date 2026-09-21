@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall/dart"
 	"time"
 	"unicode"
@@ -286,15 +287,18 @@ func AllocsPerRun(runs int, f func()) float64 {
 
 // T holds the state of 1 test.
 type T struct {
-	names    *subtestNames
-	name     string
-	level    int
-	failed   bool
-	skipped  bool
-	logs     []string
-	cleanups []func()
-	ctx      context.Context
-	cancel   context.CancelFunc
+	names      *subtestNames
+	name       string
+	level      int
+	failed     bool
+	skipped    bool
+	logs       []string
+	cleanups   []func()
+	tempDirMu  sync.Mutex
+	tempDir    string
+	tempDirSeq int
+	ctx        context.Context
+	cancel     context.CancelFunc
 	// artifactDir holds the directory of ArtifactDir. Each call of 1 test
 	// gives the same directory, thus the name stands here.
 	artifactDir string
@@ -440,6 +444,16 @@ func (g *group) wait() []*T {
 
 func (t *T) Cleanup(f func()) { t.cleanups = append(t.cleanups, f) }
 
+func (t *T) runCleanups() {
+	for len(t.cleanups) != 0 {
+		i := len(t.cleanups) - 1
+		cleanup := t.cleanups[i]
+		t.cleanups[i] = nil
+		t.cleanups = t.cleanups[:i]
+		dart.Catch(cleanup)
+	}
+}
+
 // Context gives a context that the harness cancels in front of the cleanups of
 // the test.
 func (t *T) Context() context.Context {
@@ -467,22 +481,6 @@ func (t *T) Setenv(name, value string) {
 		}
 		os.Unsetenv(name)
 	})
-}
-
-// tempSeq numbers each temporary directory of the binary.
-var tempSeq int
-
-// newTempDir builds a new directory under the temporary directory of the
-// system, and it holds a cleanup that removes the directory.
-func (t *T) newTempDir(who string) string {
-	tempSeq++
-	dir := dart.TempDir() + dart.PathSeparator() +
-		"gart" + strconv.Itoa(tempSeq) + "_" + strconv.FormatInt(dart.NowNanos(), 10)
-	if cause := dart.Mkdir(dir, true); cause != "" {
-		t.Fatal(who + ": " + cause)
-	}
-	t.Cleanup(func() { dart.RemoveAll(dir) })
-	return dir
 }
 
 // TempDir gives a new directory for the test. The cleanup of the test removes
@@ -1072,9 +1070,7 @@ func tRunner(t *T, call func(*T)) {
 	if t.cancel != nil {
 		t.cancel()
 	}
-	for i := len(t.cleanups) - 1; i >= 0; i-- {
-		dart.Catch(t.cleanups[i])
-	}
+	t.runCleanups()
 	current[id] = parent
 	if t.failed {
 		failedTests = true
@@ -1403,9 +1399,7 @@ func runIterations(name string, f func(*B), n int) *B {
 	if t.cancel != nil {
 		t.cancel()
 	}
-	for i := len(t.cleanups) - 1; i >= 0; i-- {
-		dart.Catch(t.cleanups[i])
-	}
+	t.runCleanups()
 	current[id] = parent
 	if t.failed || t.skipped {
 		head := indent(t.level) + "--- " + state(t) + ": " + name + " (" +
