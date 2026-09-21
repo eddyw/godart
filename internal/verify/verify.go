@@ -36,7 +36,7 @@ func (e *Error) Error() string {
 // `//go:embed` directive. The constructor of the package embed stands in such
 // a file alone. localPackages identifies module packages and synthetic file lists.
 func Package(fset *token.FileSet, files []*ast.File, info *types.Info, embeds, localPackages map[string]bool) error {
-	v := &verifier{fset: fset, info: info, bodyless: bodyless(files, info), embeds: embeds, localPackages: localPackages}
+	v := &verifier{fset: fset, info: info, bodyless: bodyless(files, info), deadReads: deadBodylessReads(files, info), embeds: embeds, localPackages: localPackages}
 	for _, f := range files {
 		v.checkDartDecls(f)
 	}
@@ -78,6 +78,7 @@ type verifier struct {
 	// bodyless holds each function of the package that holds no body. A call of
 	// one reaches a rejection, and the declaration alone stays in the subset.
 	bodyless      map[types.Object]bool
+	deadReads     map[*ast.Ident]bool
 	localPackages map[string]bool
 	// embeds holds the path of each file that the loader rewrote for a
 	// `//go:embed` directive.
@@ -292,7 +293,7 @@ func (v *verifier) isVariable(e ast.Expr) bool {
 // Such a function reaches no Dart code, thus a call of it would panic.
 func (v *verifier) checkBodyless(n ast.Node) {
 	id, ok := n.(*ast.Ident)
-	if !ok {
+	if !ok || v.deadReads[id] {
 		return
 	}
 	obj := v.info.Uses[id]

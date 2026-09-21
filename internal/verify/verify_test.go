@@ -99,6 +99,37 @@ func TestRecover(t *testing.T) {
 	accept(t, "panic", `func f() { panic("stop") }`)
 }
 
+func TestBodylessConstantBranches(t *testing.T) {
+	const prefix = "package a\nfunc external()\n"
+	for name, body := range map[string]string{
+		"false if":       "if false { external() }",
+		"true else":      "if true {} else { external() }",
+		"false loop":     "for ; false; external() { external() }",
+		"switch number":  "switch 1 { case 2: external(); case 1: }",
+		"switch string":  "switch `a` { case `b`: external() }",
+		"switch complex": "switch 1i { case -1i: external() }",
+		"switch default": "switch 1 { case 2: external(); default: }",
+		"dead default":   "switch 1 { default: external(); case 1: }",
+		"fallthrough":    "switch 1 { case 1: fallthrough; case 2:; case 3: external() }",
+	} {
+		acceptFile(t, name, prefix+"func f() { "+body+" }")
+	}
+	for name, body := range map[string]string{
+		"true if":             "if true { external() }",
+		"false else":          "if false {} else { external() }",
+		"if initializer":      "if external(); false {}",
+		"loop initializer":    "for external(); false; {}",
+		"live default":        "switch 1 { default: external(); case 2: }",
+		"live fallthrough":    "switch 1 { case 1: fallthrough; case 2: external() }",
+		"labeled fallthrough": "switch 1 { case 1: goto L; L: fallthrough; case 2: external() }",
+		"trailing empty":      "switch 1 { case 1: fallthrough; ; case 2: external() }",
+		"unknown tag":         "switch x { case 1: external() }",
+		"unknown case":        "switch 1 { case x: external() }",
+	} {
+		rejectFile(t, name, "holds no body", prefix+"func f(x int) { "+body+" }")
+	}
+}
+
 func TestAddress(t *testing.T) {
 	accept(t, "struct variable", `func f() { var p point; _ = &p }`)
 	accept(t, "struct literal", `func f() { _ = &point{} }`)
