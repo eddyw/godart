@@ -2231,14 +2231,6 @@ Object? _readElem(Object? v, int i) {
   return (v as List<Object?>)[i];
 }
 
-void _writeElem(Object? v, int i, Object? x) {
-  if (v is Slice<Object?>) {
-    v[i] = x;
-    return;
-  }
-  (v as List<Object?>)[i] = x;
-}
-
 // The type relations that the package reflect reads.
 
 /// Reports whether a type holds each method of an interface type.
@@ -2487,7 +2479,7 @@ Iface? $valueAddr(Iface? value, Iface? owner, GoInt exactIndex, int loc) {
   }
   return Iface(
     $ptrDesc(elem),
-    _typedCell(elem, v, index, _readElem, _writeElem),
+    _withType<$Ptr<Object?>>(elem, <T>() => $sequencePtr<T>(v, exactIndex)),
   );
 }
 
@@ -2697,6 +2689,7 @@ int $valuePointer(Iface? value) {
     final pc = $functionPC(v);
     if (pc != null) return pc;
   }
+  if (v is $Ref) return v.hashCode;
   if (v is Slice<Object?>) {
     return Object.hash(identityHashCode(v.array), v.off);
   }
