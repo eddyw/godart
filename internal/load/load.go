@@ -206,7 +206,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	if len(pkgs) == 0 {
 		return nil, fmt.Errorf("no package matches %v in %s", patterns, dir)
 	}
-	if err := collectErrors(pkgs); err != nil {
+	if err := collectErrors(pkgs, files); err != nil {
 		return nil, err
 	}
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
@@ -463,7 +463,7 @@ func patchFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
 // overlay of another package gives such an error, and the verifier reports the
 // real cause with a source position: a compiled package imports a package
 // outside the surface.
-func collectErrors(roots []*packages.Package) error {
+func collectErrors(roots []*packages.Package, sources map[string][]byte) error {
 	root := map[string]bool{}
 	for _, p := range roots {
 		root[p.ID] = true
@@ -471,6 +471,18 @@ func collectErrors(roots []*packages.Package) error {
 	var errs []error
 	packages.Visit(roots, nil, func(p *packages.Package) {
 		if !root[p.ID] && overlay.Outside(p.PkgPath) {
+			return
+		}
+		branches, err := compilerBranchErrors(p, sources)
+		if err != nil {
+			errs = append(errs, err)
+			return
+		}
+		if len(branches) != 0 {
+			// The compiler reports branch errors before type analysis.
+			for _, err := range branches {
+				errs = append(errs, err)
+			}
 			return
 		}
 		for _, file := range p.Syntax {
