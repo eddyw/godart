@@ -11,13 +11,37 @@
     "classification": "target-limit",
     "reason": "the assertions compare native Go compiler optimization and object files through go tool compile and link"
   },
+  "fixedbugs/bug385_64": {
+    "classification": "target-limit",
+    "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
+  },
   "fixedbugs/issue10607": {
     "classification": "test-adapter",
     "reason": "the test exercises native Go linker flags and requires a companion source outside this single-file harness"
   },
+  "fixedbugs/issue20529": {
+    "classification": "target-limit",
+    "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
+  },
+  "fixedbugs/issue20780": {
+    "classification": "target-limit",
+    "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
+  },
   "fixedbugs/issue21317": {
     "classification": "test-adapter",
     "reason": "the file writes the name of a temporary directory of the system, and the 2 runs take 2 names"
+  },
+  "fixedbugs/issue22200": {
+    "classification": "target-limit",
+    "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
+  },
+  "fixedbugs/issue22200b": {
+    "classification": "target-limit",
+    "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
+  },
+  "fixedbugs/issue25507": {
+    "classification": "target-limit",
+    "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
   },
   "fixedbugs/issue27201": {
     "classification": "target-limit",
@@ -34,6 +58,10 @@
   "fixedbugs/issue4667": {
     "classification": "target-limit",
     "reason": "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one"
+  },
+  "fixedbugs/issue52697": {
+    "classification": "target-limit",
+    "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
   },
   "fixedbugs/issue5856": {
     "classification": "implementation-gap",
@@ -78,6 +106,10 @@
   "stackobj2": {
     "classification": "implementation-gap",
     "reason": "the Dart VM holds a fixed stack, and the recursion overflows"
+  },
+  "typeparam/issue54765": {
+    "classification": "target-limit",
+    "reason": "The assertions require runtime/cgo.Incomplete and native not-in-heap type arguments. The declared subset excludes cgo. The adapter retains the original native diagnostic result."
   },
   "winbatch": {
     "classification": "test-adapter",

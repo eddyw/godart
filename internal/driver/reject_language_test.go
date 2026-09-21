@@ -124,15 +124,17 @@ func TestDiagnostics(t *testing.T) {
 			copyPath := filepath.Join(dir, filepath.Base(c.File))
 			writeFile(t, copyPath, string(source))
 			writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
-			start := time.Now()
-			err = driver.Build(driver.Options{Dir: dir, Patterns: []string{copyPath}, Out: t.TempDir(), Runtime: runtimeDir(t)})
-			result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
-			if err != nil {
-				result.Gart.Exit = 1
-				result.BuildError = err.Error()
-				result.GartDiagnostics = column.ReplaceAllString(strings.ReplaceAll(err.Error(), copyPath, sourcePath), "$1:")
+			if c.Exclusion == nil {
+				start := time.Now()
+				err = driver.Build(driver.Options{Dir: dir, Patterns: []string{copyPath}, Out: t.TempDir(), Runtime: runtimeDir(t)})
+				result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
+				if err != nil {
+					result.Gart.Exit = 1
+					result.BuildError = err.Error()
+					result.GartDiagnostics = column.ReplaceAllString(strings.ReplaceAll(err.Error(), copyPath, sourcePath), "$1:")
+				}
+				result.Gart.OutputSHA256 = languageDigest([]byte(result.GartDiagnostics))
 			}
-			result.Gart.OutputSHA256 = languageDigest([]byte(result.GartDiagnostics))
 			for _, match := range []struct {
 				name, diagnostics string
 				execution         *languageExecution
@@ -141,6 +143,9 @@ func TestDiagnostics(t *testing.T) {
 				{"native", result.NativeDiagnostics, &result.NativeMatch, &result.NativeMismatch},
 				{"gart", result.GartDiagnostics, &result.GartMatch, &result.GartMismatch},
 			} {
+				if match.name == "gart" && c.Exclusion != nil {
+					continue
+				}
 				path := filepath.Join(dir, match.name+".txt")
 				writeFile(t, path, match.diagnostics)
 				*match.mismatch = recordLanguage(t, match.execution, dir, runLimit, "env", "GART_ERRORCHECK_SOURCE="+sourcePath, "GART_ERRORCHECK_DIAGNOSTICS="+path, executable, "-test.run=^TestDiagnostics$")
@@ -148,8 +153,11 @@ func TestDiagnostics(t *testing.T) {
 					t.Errorf("%s assertions:\n%s", match.name, *match.mismatch)
 				}
 			}
-			if result.Native.Exit <= 0 || result.Gart.Exit != 1 {
+			if result.Native.Exit <= 0 || c.Exclusion == nil && result.Gart.Exit != 1 {
 				t.Errorf("expected compiler rejection: native=%d Gart=%d", result.Native.Exit, result.Gart.Exit)
+			}
+			if c.Exclusion != nil {
+				t.Skip(c.Exclusion.Classification + ": " + c.Exclusion.Reason)
 			}
 		})
 	}

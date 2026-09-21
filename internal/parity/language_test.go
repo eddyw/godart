@@ -113,7 +113,7 @@ func TestLanguagePolicy(t *testing.T) {
 	}
 
 	for name, skip := range policy.Skips {
-		if cases[name].Adapter != "single-file" || skip.Reason == "" {
+		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "reject-file") || skip.Reason == "" {
 			t.Errorf("invalid language omission: %s", name)
 		}
 		switch skip.Classification {
