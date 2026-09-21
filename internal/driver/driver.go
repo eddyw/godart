@@ -110,8 +110,14 @@ func BuildWithStats(opt Options) (*Stats, error) {
 	module := moduleOf(roots)
 	pkgs := order(roots, module)
 	phase = time.Now()
+	localPackages := map[string]bool{}
 	for _, p := range pkgs {
-		if err := verify.Package(p.Fset, p.Syntax, p.TypesInfo, result.Embeds); err != nil {
+		if p.Module != nil || p.PkgPath == "command-line-arguments" {
+			localPackages[p.PkgPath] = true
+		}
+	}
+	for _, p := range pkgs {
+		if err := verify.Package(p.Fset, p.Syntax, p.TypesInfo, result.Embeds, localPackages); err != nil {
 			return nil, err
 		}
 	}
@@ -287,7 +293,7 @@ func withoutTests(result *load.Result, module string) []string {
 	}
 	var out []string
 	for _, p := range result.Packages {
-		if p.ID != p.PkgPath || !strings.HasPrefix(p.PkgPath, module) {
+		if p.ID != p.PkgPath || !inModule(p.PkgPath, module) {
 			continue
 		}
 		if tested[p.PkgPath] || strings.HasSuffix(p.PkgPath, ".test") {
@@ -328,7 +334,7 @@ func readSources(p *packages.Package, sources map[string][]byte, bin *load.Binar
 func dependencyHashes(p *packages.Package, module string, exports map[string]string) []string {
 	var out []string
 	for _, dep := range p.Imports {
-		if !compiled(dep.PkgPath, module) {
+		if !compiled(dep, module) {
 			continue
 		}
 		out = append(out, dep.ID+"="+exports[dep.ID])
@@ -396,7 +402,7 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 	}
 	var imports []emit.Import
 	for path, dep := range p.Imports {
-		if !compiled(dep.PkgPath, module) {
+		if !compiled(dep, module) {
 			continue
 		}
 		uri := libraryURI(dep, module, dartPkg)
@@ -423,7 +429,7 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 func libraryURIs(p *packages.Package, module, dartPkg string) map[string]string {
 	out := map[string]string{}
 	packages.Visit([]*packages.Package{p}, nil, func(d *packages.Package) {
-		if !compiled(d.PkgPath, module) {
+		if !compiled(d, module) {
 			return
 		}
 		if uri := libraryURI(d, module, dartPkg); uri != "" {
@@ -436,11 +442,12 @@ func libraryURIs(p *packages.Package, module, dartPkg string) map[string]string 
 // compiled reports whether the build writes Dart code for a package. The
 // module belongs to the build, and so does each package of the curated
 // standard library surface and each package of a dependency module.
-func compiled(pkgPath, module string) bool {
+func compiled(p *packages.Package, module string) bool {
+	pkgPath := p.PkgPath
 	if overlay.Intrinsic(pkgPath) {
 		return false
 	}
-	if strings.HasPrefix(pkgPath, module) {
+	if p.Module != nil || inModule(pkgPath, module) {
 		return true
 	}
 	if module == stdModule && testVariant(pkgPath) {
@@ -452,11 +459,12 @@ func compiled(pkgPath, module string) bool {
 	return external(pkgPath)
 }
 
-// external reports whether a path names a package of a dependency module. The
-// first element of a module path holds a dot, and no path of the standard
-// library holds one. The verifier reads the same rule at
-// internal/overlay/native.go, thus stage 2 accepts the import that this
-// function accepts.
+func inModule(pkgPath, module string) bool {
+	return pkgPath == module || strings.HasPrefix(pkgPath, module+"/") ||
+		pkgPath == module+"_test" || pkgPath == module+".test"
+}
+
+// A domain-qualified import can also name a GOPATH package without module metadata.
 func external(pkgPath string) bool {
 	first, _, _ := strings.Cut(pkgPath, "/")
 	return strings.Contains(first, ".")
@@ -484,7 +492,7 @@ func order(roots []*packages.Package, module string) []*packages.Package {
 	var out []*packages.Package
 	var visit func(p *packages.Package)
 	visit = func(p *packages.Package) {
-		if seen[p.ID] || !compiled(p.PkgPath, module) {
+		if seen[p.ID] || !compiled(p, module) {
 			return
 		}
 		seen[p.ID] = true
@@ -528,8 +536,8 @@ func libPath(p *packages.Package, module string) string {
 	if under := underTest(p.ID); under != "" {
 		return "gart_test/" + testDir(under, module) + "/" + modulePath(p, module)
 	}
-	if !strings.HasPrefix(p.PkgPath, module) {
-		if external(p.PkgPath) {
+	if !inModule(p.PkgPath, module) {
+		if p.Module != nil || external(p.PkgPath) {
 			return "dep/" + p.PkgPath
 		}
 		return "std/" + p.PkgPath

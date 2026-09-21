@@ -33,7 +33,7 @@ func run(t *testing.T, src string) error {
 	if _, err := conf.Check("example.com/a", fset, []*ast.File{file}, info); err != nil {
 		t.Fatalf("the source does not type check: %v", err)
 	}
-	return verify.Package(fset, []*ast.File{file}, info, nil)
+	return verify.Package(fset, []*ast.File{file}, info, nil, nil)
 }
 
 const head = "package a\n\ntype point struct{ x, y int }\n\n"
@@ -552,7 +552,7 @@ func TestResolvedImportPaths(t *testing.T) {
 				if _, err := config.Check("example.com/a", fset, []*ast.File{file}, info); err != nil {
 					t.Fatal(err)
 				}
-				err = verify.Package(fset, []*ast.File{file}, info, nil)
+				err = verify.Package(fset, []*ast.File{file}, info, nil, nil)
 				if path == "vendor/example.com/dep" {
 					if err == nil || !strings.Contains(err.Error(), "import.go:2:") || !strings.Contains(err.Error(), path) {
 						t.Fatalf("expected resolved import rejection, got %v", err)

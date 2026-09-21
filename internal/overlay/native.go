@@ -262,9 +262,8 @@ func Surface() []string {
 // curated surface does not hold. The compiler writes no Dart code for such a
 // package, and the verifier rejects an import of it.
 //
-// The first element of a module path always holds a dot, and a standard path
-// never does. A path with the suffix _test names an external test package. The
-// go command reserves that suffix, thus such a package belongs to the build.
+// Callers must first recognize local modules and synthetic file-list packages.
+// Domain-qualified paths and external test packages remain outside this table.
 func Outside(pkgPath string) bool {
 	if strings.HasSuffix(pkgPath, "_test") {
 		return false

@@ -470,7 +470,7 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte) error {
 	}
 	var errs []error
 	packages.Visit(roots, nil, func(p *packages.Package) {
-		if !root[p.ID] && overlay.Outside(p.PkgPath) {
+		if !root[p.ID] && p.Module == nil && p.PkgPath != "command-line-arguments" && overlay.Outside(p.PkgPath) {
 			return
 		}
 		parsed, err := compilerParseErrors(p, sources)

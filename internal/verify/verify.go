@@ -34,9 +34,9 @@ func (e *Error) Error() string {
 //
 // embeds holds the path of each file that the loader rewrote for a
 // `//go:embed` directive. The constructor of the package embed stands in such
-// a file alone.
-func Package(fset *token.FileSet, files []*ast.File, info *types.Info, embeds map[string]bool) error {
-	v := &verifier{fset: fset, info: info, bodyless: bodyless(files, info), embeds: embeds}
+// a file alone. localPackages identifies module packages and synthetic file lists.
+func Package(fset *token.FileSet, files []*ast.File, info *types.Info, embeds, localPackages map[string]bool) error {
+	v := &verifier{fset: fset, info: info, bodyless: bodyless(files, info), embeds: embeds, localPackages: localPackages}
 	for _, f := range files {
 		v.checkDartDecls(f)
 	}
@@ -77,7 +77,8 @@ type verifier struct {
 	errs []error
 	// bodyless holds each function of the package that holds no body. A call of
 	// one reaches a rejection, and the declaration alone stays in the subset.
-	bodyless map[types.Object]bool
+	bodyless      map[types.Object]bool
+	localPackages map[string]bool
 	// embeds holds the path of each file that the loader rewrote for a
 	// `//go:embed` directive.
 	embeds          map[string]bool
@@ -183,7 +184,7 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	case path == "C":
 		v.reject(spec.Pos(), "Dart cannot link a C object file",
 			"the compiler rejects cgo")
-	case overlay.Outside(path):
+	case !v.localPackages[path] && overlay.Outside(path):
 		v.reject(spec.Pos(), "the standard library surface is curated",
 			"the package %s is outside the supported surface", path)
 	}
