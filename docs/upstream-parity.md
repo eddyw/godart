@@ -231,6 +231,19 @@ GART_PARITY_REPORT_DIR="$PWD/build/directory-audit" bash scripts/ci.sh language-
 
 The `language-targets` suite also includes these directory fixtures.
 
+The `language-packages` audit compares plain `compiledir` and `rundir` recipes on VM.
+Native Go compiles the original files in the upstream package order.
+Gart places each package in a module subdirectory and changes only relative import paths within source files.
+It appends `.gart.go` to `_test.go` filenames because these recipes compile them as ordinary source files.
+Reports retain original source hashes, adapted source bytes, package groups, compiler commands, and module and wrapper identities.
+Both programs must satisfy the original expected output for `rundir`.
+A `compiledir` pass requires native object compilation and Dart kernel compilation of all package imports.
+Other recipe options remain unassessed. Audit failures remain visible until their underlying requirements pass.
+
+```sh
+GART_PARITY_REPORT_DIR="$PWD/build/package-audit" bash scripts/ci.sh language-packages
+```
+
 ```sh
 GART_PARITY_REPORT_DIR="$PWD/build/generated-audit" bash scripts/ci.sh language-generated
 ```

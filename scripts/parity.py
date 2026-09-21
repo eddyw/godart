@@ -237,6 +237,58 @@ def rejection_result(case, status):
     return "incomplete-evidence"
 
 
+def directory_language_valid(case, go_version):
+    fixture = case["fixture"]
+    contract = case["contract"]
+    packages = case.get("directory_packages") or []
+    adapted = case.get("adapted_sources") or {}
+    compiled = case.get("native_compile") or []
+    module = case.get("module_source", "")
+    if (fixture.get("recipe") != contract or fixture.get("adapter") != "directory-packages"
+            or not packages or len(compiled) != len(packages) or case.get("build_error")
+            or not case.get("importcfg_sha256") or not go_version
+            or module != "module test\n\ngo " + go_version.removeprefix("go") + "\n"
+            or hashlib.sha256(module.encode()).hexdigest() != case.get("module_sha256")):
+        return False
+    original = {f["path"] for f in fixture.get("files", [])}
+    expected = set()
+    names = set()
+    consumed = set()
+    imports = []
+    for package, execution in zip(packages, compiled):
+        files = package.get("files") or []
+        path = package.get("path", "")
+        if (not files or not package.get("name") or package.get("name") in names or path != "test/" + files[0][:-3]
+                or not execution.get("ran") or execution.get("exit") != 0 or execution.get("timed_out")):
+            return False
+        names.add(package.get("name"))
+        for name in files:
+            if not name.endswith(".go") or "/" in name or fixture["name"] + ".dir/" + name not in original:
+                return False
+            target_name = name + ".gart.go" if name.endswith("_test.go") else name
+            expected.add(path.removeprefix("test/") + "/" + target_name)
+            consumed.add(fixture["name"] + ".dir/" + name)
+        library = "bin/main.dart" if package["name"] == "main" else "package:test/" + path.removeprefix("test/") + ".dart"
+        imports.append("import " + json.dumps(library, ensure_ascii=False) + ";")
+        command = execution.get("command", [])
+        if command[:4] != ["go", "tool", "compile", "-e"] or [Path(p).name for p in command[-len(files):]] != files:
+            return False
+    prefix = fixture["name"] + ".dir/"
+    source_files = {p for p in original if p.startswith(prefix) and "/" not in p[len(prefix):] and p.endswith(".go")}
+    if consumed != source_files or set(adapted) != expected or any(not isinstance(s, str) or not s for s in adapted.values()):
+        return False
+    if contract == "compiledir":
+        wrapper = "\n".join(imports) + "\nvoid main() {}\n"
+        return (case.get("wrapper_source") == wrapper
+                and case.get("wrapper_sha256") == hashlib.sha256(wrapper.encode()).hexdigest())
+    link = case.get("native_link") or {}
+    expected = case.get("expected_sha256")
+    return (link.get("ran") and link.get("exit") == 0 and not link.get("timed_out")
+            and link.get("command", [])[:3] == ["go", "tool", "link"]
+            and packages[-1]["name"] == "main" and expected
+            and all(case[k].get("output_sha256") == expected for k in ("native", "gart")))
+
+
 def language_behavior(paths):
     groups = {}
     seen = set()
@@ -270,7 +322,9 @@ def language_behavior(paths):
                     expected = case.get("expected_sha256")
                     executed = all(case[k]["ran"] and case[k]["exit"] == 0 and not case[k]["timed_out"]
                                    for k in ("native", "gart"))
-                    if case.get("contract") == "compile":
+                    if case.get("contract") in {"compiledir", "rundir"}:
+                        valid = executed and directory_language_valid(case, report.get("go_version"))
+                    elif case.get("contract") == "compile":
                         valid = (executed and case["fixture"]["recipe"] == "compile"
                                  and case.get("wrapper_sha256") and not case.get("build_error"))
                     elif case.get("contract") == "reject":
@@ -319,7 +373,7 @@ def language_behavior(paths):
                                      and case["native"]["environment"] == case["gart"].get("environment")
                                      and not case.get("build_error"))
                     valid = valid and (status == "passed" or case.get("contract") == "reject")
-                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compile", "reject"} and case.get("contract", "run") == config["contract"]
+                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "reject"} and case.get("contract", "run") == config["contract"]
 
                     if case["fixture"].get("host_tools"):
                         native_env = case["native"].get("environment") or {}

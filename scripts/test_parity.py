@@ -209,6 +209,52 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"unobserved": 1})
 
+    def test_package_directories_require_compile_and_source_evidence(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module = "module test\n\ngo 1.27.1\n"
+            execution = dict(ran=True, exit=0, timed_out=False, output_sha256="expected")
+            fixture = dict(name="p", recipe="compiledir", adapter="directory-packages",
+                           files=[dict(path="p.dir/a.go", sha256="source")])
+            compiled = dict(execution, command=["go", "tool", "compile", "-e", "sdk/p.dir/a.go"])
+            case = dict(fixture=fixture, contract="compiledir", status="passed",
+                        native=dict(execution), gart=dict(execution),
+                        wrapper_source='import "bin/main.dart";\nvoid main() {}\n',
+                        wrapper_sha256=hashlib.sha256(b'import "bin/main.dart";\nvoid main() {}\n').hexdigest(),
+                        module_source=module, module_sha256=hashlib.sha256(module.encode()).hexdigest(),
+                        directory_packages=[dict(name="main", path="test/a", files=["a.go"])],
+                        adapted_sources={"a/a.go": "package main\n"}, native_compile=[compiled],
+                        importcfg_sha256="config", expected_sha256="expected")
+            report = dict(kind="language", go_version="go1.27.1", contract="compiledir", complete=True, outcomes=[case], shard=0, shards=1)
+            path = root / "language.json"
+
+            def assess(status):
+                parity.save(path, report)
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            assess("passed")
+            for obj, key, value in [(case, "directory_packages", []), (case, "native_compile", []),
+                                    (case, "adapted_sources", {}), (case, "module_sha256", "other"),
+                                    (case, "wrapper_source", "void main() {}"),
+                                    (compiled, "exit", 1), (compiled, "timed_out", True),
+                                    (compiled, "command", ["go", "build", "."]),
+                                    (fixture, "files", []), (fixture, "recipe", "compiledir -N"),
+                                    (case, "build_error", "error")]:
+                present, saved = key in obj, obj.get(key)
+                obj[key] = value
+                assess("failed")
+                if present:
+                    obj[key] = saved
+                else:
+                    del obj[key]
+            report["contract"] = case["contract"] = fixture["recipe"] = "rundir"
+            assess("failed")
+            case["native_link"] = dict(execution, command=["go", "tool", "link"])
+            assess("passed")
+            case["gart"]["output_sha256"] = "wrong"
+            assess("failed")
+
     def test_directory_recipe_requires_original_module_and_sources(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

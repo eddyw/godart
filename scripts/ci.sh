@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-suite=${1:?usage: scripts/ci.sh checks|driver|applications|integration|targets|fuzz-replay|upstream-targets|upstream-priority|upstream-blockers|web-io|web-fetch|programs|language|language-compile|language-reject|language-generated|language-targets|language-directories|stdlib [shard-index] [shard-count]}
+suite=${1:?usage: scripts/ci.sh checks|driver|applications|integration|targets|fuzz-replay|upstream-targets|upstream-priority|upstream-blockers|web-io|web-fetch|programs|language|language-compile|language-reject|language-generated|language-targets|language-directories|language-packages|stdlib [shard-index] [shard-count]}
 shard_index=${2:-0}
 shard_count=${3:-1}
 test_timeout=${GART_TEST_TIMEOUT:-30m}
@@ -30,7 +30,7 @@ if [[ $suite == fuzz-replay || $suite == driver || $suite == stdlib || $suite ==
   fi
 fi
 
-large_tests='TestRunDirectoryFilesOfGoTest|TestRunOutputFilesOfGoTest|TestRejectFilesOfGoTest|TestCompileFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestLanguageHostTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
+large_tests='TestDirectoryPackagesOfGoTest|TestRunDirectoryFilesOfGoTest|TestRunOutputFilesOfGoTest|TestRejectFilesOfGoTest|TestCompileFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestLanguageHostTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
 case "$suite" in
   checks)
     python3 -B -m unittest discover -s scripts -p test_ci_local.py
@@ -58,6 +58,7 @@ case "$suite" in
   language-reject) test_name=TestRejectFilesOfGoTest ;;
   language-generated) test_name=TestRunOutputFilesOfGoTest ;;
   language-directories) test_name=TestRunDirectoryFilesOfGoTest ;;
+  language-packages) test_name=TestDirectoryPackagesOfGoTest ;;
   fuzz-replay) test_name=TestUpstreamFuzzReplay ;;
   upstream-targets) test_name=TestUpstreamTargets ;;
   upstream-blockers) test_name=TestUpstreamCompileBlockers ;;

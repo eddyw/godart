@@ -1,0 +1,215 @@
+// Copyright 2012 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in internal/overlay/std/LICENSE.
+
+package driver_test
+
+import (
+	"go/build"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/eddyw/godart/internal/driver"
+	"github.com/eddyw/godart/internal/parity"
+)
+
+type languageDirectoryPackage struct {
+	Name  string   `json:"name"`
+	Path  string   `json:"path"`
+	Files []string `json:"files"`
+}
+
+func TestDirectoryPackagesOfGoTest(t *testing.T) {
+	inv, err := parity.DiscoverLanguage(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []parity.LanguageCase
+	var names []string
+	for _, c := range inv.Cases {
+		if c.Adapter == "directory-packages" {
+			cases = append(cases, c)
+			names = append(names, c.Name)
+		}
+	}
+	selected := testShard(t, names)
+	standard := run(t, "", "go", "list", "-export", "-f", "{{if .Export}}packagefile {{.ImportPath}}={{.Export}}{{end}}", "std")
+	for _, action := range []string{"compiledir", "rundir"} {
+		t.Run(action, func(t *testing.T) {
+			var outcomes []*languageOutcome
+			for _, c := range cases {
+				if c.Action == action && selected[c.Name] {
+					outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: action, Status: "unobserved"})
+				}
+			}
+			retainLanguageEvidence(t, "vm", inv, outcomes)
+			for _, result := range outcomes {
+				t.Run(result.Fixture.Name, func(t *testing.T) {
+					t.Parallel()
+					t.Cleanup(func() {
+						switch {
+						case t.Failed():
+							result.Status = "failed"
+						case t.Skipped():
+							result.Status = "excluded"
+						default:
+							result.Status = "passed"
+						}
+					})
+					c := result.Fixture
+					if !c.NativeEligible || !c.GartEligible {
+						t.Skipf("upstream build constraints: native=%t Gart=%t", c.NativeEligible, c.GartEligible)
+					}
+					root := filepath.Join(build.Default.GOROOT, "test")
+					sourceDir := filepath.Join(root, c.Name+".dir")
+					entries, err := os.ReadDir(sourceDir)
+					if err != nil {
+						t.Fatal(err)
+					}
+					grouped := map[string]int{}
+					for _, entry := range entries {
+						if filepath.Ext(entry.Name()) != ".go" {
+							continue
+						}
+						f, err := parser.ParseFile(token.NewFileSet(), filepath.Join(sourceDir, entry.Name()), nil, parser.PackageClauseOnly)
+						if err != nil {
+							t.Fatal(err)
+						}
+						index, ok := grouped[f.Name.Name]
+						if !ok {
+							index = len(result.DirectoryPackages)
+							grouped[f.Name.Name] = index
+							result.DirectoryPackages = append(result.DirectoryPackages, languageDirectoryPackage{Name: f.Name.Name, Path: "test/" + strings.TrimSuffix(entry.Name(), ".go")})
+						}
+						result.DirectoryPackages[index].Files = append(result.DirectoryPackages[index].Files, entry.Name())
+					}
+					if len(result.DirectoryPackages) == 0 {
+						t.Fatal("upstream directory has no Go packages")
+					}
+					nativeDir, dir, out := t.TempDir(), t.TempDir(), t.TempDir()
+					if err := os.Mkdir(filepath.Join(nativeDir, "test"), 0755); err != nil {
+						t.Fatal(err)
+					}
+					config := standard
+					for _, pkg := range result.DirectoryPackages {
+						config += "\npackagefile " + pkg.Path + "=" + filepath.Join(nativeDir, pkg.Path+".a")
+					}
+					cfg := filepath.Join(nativeDir, "importcfg")
+					writeFile(t, cfg, config)
+					result.ImportConfigSHA256 = languageDigest([]byte(config))
+					for _, pkg := range result.DirectoryPackages {
+						args := []string{"tool", "compile", "-e", "-D", "test", "-importcfg=" + cfg}
+						if pkg.Name == "main" {
+							args = append(args, "-p=main")
+						} else {
+							args = append(args, "-o", pkg.Path+".a", "-p", pkg.Path)
+						}
+						args = append(args, strings.Fields(inv.GCFlags)...)
+						for _, name := range pkg.Files {
+							args = append(args, filepath.Join(sourceDir, name))
+						}
+						result.NativeCompile = append(result.NativeCompile, languageExecution{})
+						runLanguage(t, &result.NativeCompile[len(result.NativeCompile)-1], nativeDir, runLimit, "go", args...)
+					}
+					if action == "rundir" {
+						last := result.DirectoryPackages[len(result.DirectoryPackages)-1]
+						runLanguage(t, &result.NativeLink, nativeDir, runLimit, "go", "tool", "link", "-s", "-w", "-buildid=test", "-o", "native", "-importcfg="+cfg, strings.TrimSuffix(last.Files[0], ".go")+".o")
+						want, err := os.ReadFile(filepath.Join(root, c.Name+".out"))
+						if err != nil && !os.IsNotExist(err) {
+							t.Fatal(err)
+						}
+						result.ExpectedSHA256 = languageDigest(want)
+						got := runLanguage(t, &result.Native, nativeDir, runLimit, filepath.Join(nativeDir, "native"))
+						if got != string(want) {
+							t.Fatalf("native output differs from upstream fixture\nwant: %s\ngot: %s", want, got)
+						}
+					} else {
+						result.Native = result.NativeCompile[len(result.NativeCompile)-1]
+					}
+					if c.Exclusion != nil {
+						t.Skip(c.Exclusion.Classification + ": " + c.Exclusion.Reason)
+					}
+
+					result.ModuleSource = "module test\n\ngo " + strings.TrimPrefix(inv.GoVersion, "go") + "\n"
+					result.ModuleSHA256 = languageDigest([]byte(result.ModuleSource))
+					writeFile(t, filepath.Join(dir, "go.mod"), result.ModuleSource)
+					license, err := os.ReadFile(filepath.Join(build.Default.GOROOT, "LICENSE"))
+					if err != nil {
+						t.Fatal(err)
+					}
+					writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
+					result.AdaptedSources = map[string]string{}
+					var patterns, imports []string
+					for _, pkg := range result.DirectoryPackages {
+						subdir := strings.TrimPrefix(pkg.Path, "test/")
+						patterns = append(patterns, "./"+subdir)
+						library := "package:test/" + subdir + ".dart"
+						if pkg.Name == "main" {
+							library = "bin/main.dart"
+						}
+						imports = append(imports, "import "+strconv.Quote(library)+";")
+						for _, name := range pkg.Files {
+							path := filepath.Join(sourceDir, name)
+							data, err := os.ReadFile(path)
+							if err != nil {
+								t.Fatal(err)
+							}
+							fset := token.NewFileSet()
+							f, err := parser.ParseFile(fset, path, data, parser.ImportsOnly)
+							if err != nil {
+								t.Fatal(err)
+							}
+							for i := len(f.Imports) - 1; i >= 0; i-- {
+								lit := f.Imports[i].Path
+								value, err := strconv.Unquote(lit.Value)
+								if err != nil {
+									t.Fatal(err)
+								}
+								if strings.HasPrefix(value, "./") {
+									replacement := strconv.Quote("test/" + strings.TrimPrefix(value, "./"))
+									start, end := fset.Position(lit.Pos()).Offset, fset.Position(lit.End()).Offset
+									data = append(append(append([]byte{}, data[:start]...), replacement...), data[end:]...)
+								}
+							}
+							targetName := name
+							if strings.HasSuffix(name, "_test.go") {
+								targetName += ".gart.go"
+							}
+							relative := filepath.Join(subdir, targetName)
+							result.AdaptedSources[filepath.ToSlash(relative)] = string(data)
+							target := filepath.Join(dir, relative)
+							if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+								t.Fatal(err)
+							}
+							writeFile(t, target, string(data))
+						}
+					}
+					err = driver.Build(driver.Options{Dir: dir, Patterns: patterns, Out: out, Runtime: runtimeDir(t), Format: false})
+					if err != nil {
+						result.BuildError = err.Error()
+						t.Fatal(err)
+					}
+					prepareDart(t, out)
+					if action == "compiledir" {
+						wrapper := strings.Join(imports, "\n") + "\nvoid main() {}\n"
+						result.WrapperSource = wrapper
+						result.WrapperSHA256 = languageDigest([]byte(wrapper))
+						writeFile(t, filepath.Join(out, "compile.dart"), wrapper)
+						runLanguage(t, &result.Gart, out, runLimit, "dart", "compile", "kernel", "compile.dart", "-o", "compile.dill")
+					} else {
+						entry := filepath.Join(out, "bin", "main.dart")
+						got := runLanguage(t, &result.Gart, nativeDir, runLimit, "dart", "--packages="+filepath.Join(out, ".dart_tool/package_config.json"), entry)
+						if languageDigest([]byte(got)) != result.ExpectedSHA256 {
+							t.Fatalf("Gart output differs from upstream fixture: %s", got)
+						}
+					}
+				})
+			}
+		})
+	}
+}

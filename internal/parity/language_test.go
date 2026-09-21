@@ -30,6 +30,10 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/compile.go", "// compile\npackage p\n")
 	write("test/reject.go", "// errorcheck\npackage p\n")
 	write("test/rejectflags.go", "// errorcheck -0\npackage p\n")
+	write("test/groups.go", "// compiledir\npackage ignored\n")
+	write("test/groups.dir/a.go", "package a\n")
+	write("test/groupsrun.go", "// rundir\npackage ignored\n")
+	write("test/groupsrun.dir/a.go", "package a\n")
 	write("test/compileflags.go", "// compile -N\npackage p\n")
 	write("test/generated.go", "// runoutput\npackage main\n")
 	write("test/generatedflags.go", "// runoutput extra.go\npackage main\n")
@@ -46,12 +50,15 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 15 {
-		t.Fatalf("got %d cases, want 15", len(inv.Cases))
+	if len(inv.Cases) != 17 {
+		t.Fatalf("got %d cases, want 17", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
 		cases[c.Name] = c
+	}
+	if cases["groups"].Adapter != "directory-packages" || cases["groupsrun"].Adapter != "directory-packages" {
+		t.Fatal("plain package directory recipes have no adapter")
 	}
 	if c := cases["module"]; c.Adapter != "directory-module" || c.ModuleGoVersion != "1.14" || len(c.Files) != 2 {
 		t.Fatalf("directory module inputs lost: %+v", c)
