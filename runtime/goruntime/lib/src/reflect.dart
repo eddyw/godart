@@ -2311,6 +2311,10 @@ bool $descConvertible(int handle, int other) {
   if (_numberKinds.contains(a.kind) && _numberKinds.contains(b.kind)) {
     return true;
   }
+  if ((a.kind == 'complex64' || a.kind == 'complex128') &&
+      (b.kind == 'complex64' || b.kind == 'complex128')) {
+    return true;
+  }
   if (a.kind == 'string' && b.kind == 'slice') {
     final String elem = b.elem?.call().kind ?? '';
     return elem == 'uint8' || elem == 'int32';
@@ -2576,6 +2580,7 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
     }
     return Slice<Object?>.of(out);
   }
+  if (to.kind == 'complex64') return $c64(v as GoComplex);
   if (_numberKinds.contains(to.kind)) {
     if (to.kind == 'float32' || to.kind == 'float64') {
       final double x = v is GoInt

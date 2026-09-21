@@ -22,5 +22,11 @@
   "fixedbugs/issue58300",
   "fixedbugs/issue58300b",
   "inline_literal",
-  "fixedbugs/issue75764"
+  "fixedbugs/issue75764",
+  "typeparam/absdiff",
+  "typeparam/absdiff2",
+  "typeparam/absdiff3",
+  "typeparam/issue47258",
+  "typeparam/issue50193",
+  "typeparam/issue50690a"
 ]

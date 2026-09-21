@@ -84,6 +84,7 @@ final class Dict<T> {
 
   T quotient(T a, T b) {
     if (a is double) return mask((a / (b as double)) as T);
+    if (a is GoComplex) return mask((a / (b as GoComplex)) as T);
     final GoInt x = a as GoInt, y = b as GoInt;
     return mask((_unsigned ? $udiv(x, y) : $div(x, y)) as T);
   }

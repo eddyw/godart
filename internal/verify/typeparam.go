@@ -135,16 +135,10 @@ func (v *verifier) rejectMixed(pos token.Pos, t types.Type, what string) {
 
 // mixedDartForm reports whether the type set of a type parameter holds more
 // than 1 Dart form.
-//
-// A type parameter with a core type gives 1 Dart type, thus each operation of
-// the core type applies. A type set of integer types also gives 1 Dart type,
-// and the dictionary holds the mask of the width. A type set of float types
-// gives the Dart type double, and the dictionary of float32 holds the round of
-// 32 bits. Each other parameter with no core type holds more than 1 Dart type.
 func mixedDartForm(tp *types.TypeParam) bool {
 	if typeset.Core(tp) != nil {
 		return false
 	}
 	set, ok := typeset.Describe(tp)
-	return !ok || (!set.Integer && !set.Float)
+	return !ok || (!set.Integer && !set.Float && !set.Complex)
 }

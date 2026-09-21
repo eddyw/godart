@@ -391,17 +391,6 @@
   "tinyfin": [
     "$DIR/tinyfin.go:28:11: undefined: runtime.SetFinalizer"
   ],
-  "typeparam/absdiff": [
-    "$DIR/absdiff.go:25:7: the operator - reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
-  ],
-  "typeparam/absdiff2": [
-    "$DIR/absdiff2.go:34:7: the operator - reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
-    "$DIR/absdiff2.go:99:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
-  ],
-  "typeparam/absdiff3": [
-    "$DIR/absdiff3.go:24:13: the operator - reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
-    "$DIR/absdiff3.go:66:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
-  ],
   "typeparam/adder": [
     "$DIR/adder.go:19:9: the operator + reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
   ],
@@ -412,9 +401,6 @@
     "$DIR/index2.go:15:2: an index reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
     "$DIR/index2.go:16:9: an index reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
   ],
-  "typeparam/issue47258": [
-    "$DIR/issue47258.go:19:2: the operator ++ reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
-  ],
   "typeparam/issue47716": [
     "$DIR/issue47716.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
@@ -424,14 +410,6 @@
   "typeparam/issue49659b": [
     "$DIR/issue49659b.go:17:6: the compiler rejects the address of int (a value of such a type needs a cell, and only a variable or a location holds one)",
     "$DIR/issue49659b.go:17:7: an index reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
-  ],
-  "typeparam/issue50193": [
-    "$DIR/issue50193.go:18:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
-    "$DIR/issue50193.go:21:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
-    "$DIR/issue50193.go:24:9: a conversion reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
-  ],
-  "typeparam/issue50690a": [
-    "$DIR/issue50690a.go:25:3: the operator += reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
   ],
   "typeparam/issue53390": [
     "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"

@@ -1592,8 +1592,11 @@ func (e *emitter) conv(x *ir.Conv) string {
 	ts, tok := typeset.Describe(to)
 	_, fp := types.Unalias(from).(*types.TypeParam)
 	_, tp := types.Unalias(to).(*types.TypeParam)
-	if (fp || tp) && (isInteger(from) || isFloat(from) || (fok && fs.Numeric)) &&
-		(isInteger(to) || isFloat(to) || (tok && ts.Numeric)) {
+	if c, ok := x.X.(*ir.Const); ok && tp && tok && ts.Numeric {
+		return e.constant(c.Value, to)
+	}
+	if (fp || tp) && (isInteger(from) || isFloat(from) || isComplexType(from) || (fok && fs.Numeric)) &&
+		(isInteger(to) || isFloat(to) || isComplexType(to) || (tok && ts.Numeric)) {
 		return fmt.Sprintf("$convert<%s>(%s, %s, %s)", e.dartType(to), text,
 			e.descriptorOf(from), e.descriptorOf(to))
 	}

@@ -199,25 +199,42 @@ func (e *emitter) constant(v constant.Value, t types.Type) string {
 	return "null"
 }
 
-// mixedConst writes a constant of a type parameter whose set mixes an integer
-// type with a float type. The Dart form of such a value is an int or a double,
-// and only the type argument tells which, thus the zero value of the
-// dictionary carries the form and the sum with the Dart int takes it. Go
-// accepts only a constant that each type of the set holds, thus the value is a
-// whole number.
+// A type argument selects the constant representation and precision.
 func (e *emitter) mixedConst(v constant.Value, t types.Type) (string, bool) {
 	tp, ok := types.Unalias(t).(*types.TypeParam)
 	if !ok {
 		return "", false
 	}
 	set, ok := typeset.Describe(tp)
-	if !ok || !set.Numeric || set.Integer || set.Float {
+	if !ok || !set.Numeric || set.Integer {
 		return "", false
 	}
 	d := e.dictOf(tp)
-	f, _ := constant.Float64Val(constant.ToFloat(v))
-	return fmt.Sprintf("%s.mask((%s.zero() is GoInt ? %s : %s) as %s)", d, d,
-		intConst(v, types.Typ[types.Int]), floatConst(f), typeParamName(tp)), true
+	terms, _ := typeset.Terms(tp.Constraint())
+	forms := map[types.BasicInfo]bool{}
+	for _, term := range terms {
+		b := types.Unalias(term).Underlying().(*types.Basic)
+		forms[b.Info()&(types.IsInteger|types.IsFloat|types.IsComplex)] = true
+	}
+	var values, kinds []string
+	if forms[types.IsInteger] {
+		values = append(values, intConst(v, types.Typ[types.Int]))
+		kinds = append(kinds, "GoInt")
+	}
+	if forms[types.IsFloat] {
+		f, _ := constant.Float64Val(constant.ToFloat(v))
+		values = append(values, floatConst(f))
+		kinds = append(kinds, "double")
+	}
+	if forms[types.IsComplex] {
+		values = append(values, complexConst(v, types.Typ[types.Complex128]))
+		kinds = append(kinds, "GoComplex")
+	}
+	text := values[len(values)-1]
+	for i := len(values) - 2; i >= 0; i-- {
+		text = fmt.Sprintf("(%s.zero() is %s ? %s : %s)", d, kinds[i], values[i], text)
+	}
+	return e.narrow(tp, text), true
 }
 
 // complexConst writes a complex constant. A constant of complex64 rounds each
@@ -768,12 +785,9 @@ func (e *emitter) narrow(t types.Type, text string) string {
 		return m + "(" + text + ")"
 	}
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
-		// A set of integer types and a set of float types each hold 1 Dart
-		// type, thus the dictionary of the type argument carries the mask of
-		// its width. float32 rounds to 32 bits there, and float64 holds the
-		// identity. A mixed set needs a cast before its dictionary mask.
+		// Apply concrete precision after arithmetic, including complex components.
 		if set, ok := typeset.Describe(tp); ok && set.Numeric {
-			if set.Integer || set.Float {
+			if set.Integer || set.Float || set.Complex {
 				return e.dictOf(tp) + ".mask(" + text + ")"
 			}
 			return e.dictOf(tp) + ".mask(" + text + " as " + typeParamName(tp) + ")"

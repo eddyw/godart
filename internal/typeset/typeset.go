@@ -89,8 +89,7 @@ func Core(t types.Type) types.Type {
 // Set describes the type set of a type parameter. The compiler reads it to
 // choose the Dart type of the parameter and the Dart form of each operation.
 type Set struct {
-	// Numeric reports that each term is an integer type or a float type. Such
-	// a set holds 1 Dart bound, thus a Dart operator applies to it.
+	// Numeric reports that each term is an integer, float, or complex type.
 	Numeric bool
 
 	// Integer reports that each term is an integer type. Each such term gives
@@ -99,6 +98,9 @@ type Set struct {
 
 	// Float reports that each term is a float type.
 	Float bool
+
+	// Complex reports that each term is a complex type.
+	Complex bool
 
 	// Wide reports that a term is an unsigned integer type of 64 bits. Go
 	// reads the bit pattern of such a type as unsigned, and Dart reads the
@@ -129,7 +131,7 @@ func Describe(t types.Type) (Set, bool) {
 	if !ok || len(terms) == 0 {
 		return Set{}, false
 	}
-	out := Set{Numeric: true, Integer: true, Float: true}
+	out := Set{Numeric: true, Integer: true, Float: true, Complex: true}
 	for _, term := range terms {
 		b, ok := types.Unalias(term).Underlying().(*types.Basic)
 		if !ok {
@@ -138,15 +140,20 @@ func Describe(t types.Type) (Set, bool) {
 		switch {
 		case b.Info()&types.IsInteger != 0:
 			out.Float = false
+			out.Complex = false
 		case b.Info()&types.IsFloat != 0:
 			out.Integer = false
+			out.Complex = false
+		case b.Info()&types.IsComplex != 0:
+			out.Integer = false
+			out.Float = false
 		default:
 			return Set{}, true
 		}
 		switch b.Kind() {
 		case types.Uint, types.Uint64, types.Uintptr:
 			out.Wide = true
-		case types.Float32, types.Float64:
+		case types.Float32, types.Float64, types.Complex64, types.Complex128:
 		default:
 			out.Plain = true
 		}

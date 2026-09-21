@@ -66,16 +66,16 @@ func (e *emitter) dartType(t types.Type) string {
 			}
 			return e.dartType(core)
 		}
-		// A type set of integer types gives 1 Dart type. The dictionary holds
-		// the mask of the width and the order of the sign. A set of float
-		// types holds the same rule: each term reads the Dart type double,
-		// and the dictionary of float32 rounds to 32 bits.
+		// The dictionary preserves concrete precision within each representation.
 		if set, ok := typeset.Describe(t); ok {
 			if set.Integer {
 				return "GoInt"
 			}
 			if set.Float {
 				return "double"
+			}
+			if set.Complex {
+				return "GoComplex"
 			}
 		}
 		return typeParamName(t)
@@ -457,7 +457,7 @@ func (e *emitter) mixedForm(tp *types.TypeParam) bool {
 		return false
 	}
 	set, ok := typeset.Describe(tp)
-	return !ok || (!set.Integer && !set.Float)
+	return !ok || (!set.Integer && !set.Float && !set.Complex)
 }
 
 // typeArgList writes the type arguments of an instance of a generic type.
@@ -987,6 +987,9 @@ func isInteger(t types.Type) bool {
 }
 
 func isComplexType(t types.Type) bool {
+	if set, ok := typeset.Describe(t); ok && set.Complex {
+		return true
+	}
 	b := basicOf(t)
 	return b != nil && b.Info()&types.IsComplex != 0
 }
