@@ -120,7 +120,7 @@ func cutTrace(text string) string {
 // TestAOT proves that the output also compiles ahead of time. The Dart VM and
 // AOT are the 2 targets of the project.
 func TestAOT(t *testing.T) {
-	for _, name := range []string{"genptrresult", "genptr", "genptrparam", "structptrconv", "typecheck", "unsafenil", "initsuspend", "onceinit", "inittrace", "initorder", "confinit", "assertscope", "privateassert", "deadexternal", "genfuncfield", "genreceiver", "privateforward", "forpost", "osrename", "osfilefd", "timelayout", "genbounds", "syncformat", "genlayout", "genindex", "genresults", "genadd", "gencomplex", "privateanon", "callers", "utcequality", "netcidr", "udpclose", "systemroots", "httpgzip", "httpstream", "n2httptls", "tlsdial", "tlserve", "netcloseaddr", "udpconnect", "funcpc", "syscallsignals", "signals", "deepslices", "fcgiuse", "reflectcall", "cgiuse", "arrays", "reflectcontracts", "mainpending", "listendeadline", "netaccept", "ospathnul", "weakuse", "yieldloops", "switchyield", "genericwait", "genericrecv", "rangecallbacks", "embeddedwait", "goexitwait", "bytesortext", "oslegacy", "osroot", "confflow", "rangegoto", "defers", "multi", "chancap", "reflectmake", "synccompat"} {
+	for _, name := range []string{"paniccallers", "deferpos", "deferblock", "panics", "panictext", "panicvalue", "genptrresult", "genptr", "genptrparam", "structptrconv", "typecheck", "unsafenil", "initsuspend", "onceinit", "inittrace", "initorder", "confinit", "assertscope", "privateassert", "deadexternal", "genfuncfield", "genreceiver", "privateforward", "forpost", "osrename", "osfilefd", "timelayout", "genbounds", "syncformat", "genlayout", "genindex", "genresults", "genadd", "gencomplex", "privateanon", "callers", "utcequality", "netcidr", "udpclose", "systemroots", "httpgzip", "httpstream", "n2httptls", "tlsdial", "tlserve", "netcloseaddr", "udpconnect", "funcpc", "syscallsignals", "signals", "deepslices", "fcgiuse", "reflectcall", "cgiuse", "arrays", "reflectcontracts", "mainpending", "listendeadline", "netaccept", "ospathnul", "weakuse", "yieldloops", "switchyield", "genericwait", "genericrecv", "rangecallbacks", "embeddedwait", "goexitwait", "bytesortext", "oslegacy", "osroot", "confflow", "rangegoto", "defers", "multi", "chancap", "reflectmake", "synccompat"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {
@@ -130,7 +130,9 @@ func TestAOT(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := runProgram(t, source, "go", "run", ".")
+			native := filepath.Join(t.TempDir(), "program")
+			run(t, source, "go", "build", "-o", native, ".")
+			want := programOutcome(t, source, native)
 			out := t.TempDir()
 			if err := driver.Build(driver.Options{
 				Trace:    traceBuild(t),
@@ -144,8 +146,8 @@ func TestAOT(t *testing.T) {
 			}
 			run(t, out, "dart", "pub", "get")
 			run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", "app")
-			if got := runProgram(t, out, filepath.Join(out, "app")); got != want {
-				t.Errorf("the output of the AOT build differs\nGo:\n%s\nDart:\n%s", want, got)
+			if got := programOutcome(t, out, filepath.Join(out, "app")); got != want {
+				t.Errorf("the output or exit status of the AOT build differs\nGo:\n%+v\nDart:\n%+v", want, got)
 			}
 		})
 	}
@@ -159,7 +161,7 @@ func TestWasm(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)
 	}
-	for _, name := range []string{"genptrresult", "genptr", "genptrparam", "structptrconv", "typecheck", "unsafenil", "initsuspend", "onceinit", "initorder", "confinit", "assertscope", "privateassert", "deadexternal", "genfuncfield", "genreceiver", "privateforward", "forpost", "timelayout", "genbounds", "syncformat", "genlayout", "genindex", "genresults", "genadd", "gencomplex", "privateanon", "utcequality", "netcidr", "funcpc", "deepslices", "reflectcall", "arrays", "reflectcontracts", "mainpending", "weakuse", "yieldloops", "switchyield", "genericwait", "genericrecv", "rangecallbacks", "embeddedwait", "goexitwait", "bytesortext", "confflow", "rangegoto", "defers", "hello", "chancap", "reflectmake", "synccompat"} {
+	for _, name := range []string{"deferblock", "panics", "panictext", "panicvalue", "genptrresult", "genptr", "genptrparam", "structptrconv", "typecheck", "unsafenil", "initsuspend", "onceinit", "initorder", "confinit", "assertscope", "privateassert", "deadexternal", "genfuncfield", "genreceiver", "privateforward", "forpost", "timelayout", "genbounds", "syncformat", "genlayout", "genindex", "genresults", "genadd", "gencomplex", "privateanon", "utcequality", "netcidr", "funcpc", "deepslices", "reflectcall", "arrays", "reflectcontracts", "mainpending", "weakuse", "yieldloops", "switchyield", "genericwait", "genericrecv", "rangecallbacks", "embeddedwait", "goexitwait", "bytesortext", "confflow", "rangegoto", "defers", "hello", "chancap", "reflectmake", "synccompat"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {
@@ -169,7 +171,9 @@ func TestWasm(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := runProgram(t, source, "go", "run", ".")
+			native := filepath.Join(t.TempDir(), "program")
+			run(t, source, "go", "build", "-o", native, ".")
+			want := programOutcome(t, source, native)
 			out := t.TempDir()
 			if err := driver.Build(driver.Options{
 				Trace:    traceBuild(t),
@@ -187,8 +191,8 @@ func TestWasm(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(out, "run.mjs"), []byte(wasmRunner), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			if got := runProgram(t, out, "node", "run.mjs"); got != want {
-				t.Errorf("the output of the wasm build differs\nGo:\n%s\nnode:\n%s", want, got)
+			if got := programOutcome(t, out, "node", "run.mjs"); got != want {
+				t.Errorf("the output or exit status of the wasm build differs\nGo:\n%+v\nnode:\n%+v", want, got)
 			}
 		})
 	}
@@ -201,7 +205,7 @@ func TestJS(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skipf("the machine holds no node: %v", err)
 	}
-	for _, name := range []string{"genptrresult", "genptr", "genptrparam", "structptrconv", "typecheck", "unsafenil", "initsuspend", "onceinit", "initorder", "confinit", "assertscope", "privateassert", "deadexternal", "genfuncfield", "genreceiver", "privateforward", "forpost", "timelayout", "genbounds", "syncformat", "genlayout", "genindex", "genresults", "genadd", "gencomplex", "privateanon", "utcequality", "netcidr", "funcpc", "deepslices", "reflectcall", "arrays", "reflectcontracts", "mainpending", "weakuse", "yieldloops", "switchyield", "genericwait", "genericrecv", "rangecallbacks", "embeddedwait", "goexitwait", "bytesortext", "confflow", "rangegoto", "defers", "reflectmake", "synccompat", "chancap", "intwrap", "reflectint64", "genmixed", "genops", "genericvalue", "nanoclock", "globalptr", "structconv", "reflectblock", "uniquecompat"} {
+	for _, name := range []string{"deferblock", "panics", "panictext", "panicvalue", "genptrresult", "genptr", "genptrparam", "structptrconv", "typecheck", "unsafenil", "initsuspend", "onceinit", "initorder", "confinit", "assertscope", "privateassert", "deadexternal", "genfuncfield", "genreceiver", "privateforward", "forpost", "timelayout", "genbounds", "syncformat", "genlayout", "genindex", "genresults", "genadd", "gencomplex", "privateanon", "utcequality", "netcidr", "funcpc", "deepslices", "reflectcall", "arrays", "reflectcontracts", "mainpending", "weakuse", "yieldloops", "switchyield", "genericwait", "genericrecv", "rangecallbacks", "embeddedwait", "goexitwait", "bytesortext", "confflow", "rangegoto", "defers", "reflectmake", "synccompat", "chancap", "intwrap", "reflectint64", "genmixed", "genops", "genericvalue", "nanoclock", "globalptr", "structconv", "reflectblock", "uniquecompat"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := filepath.Abs(filepath.Join("../../testdata/programs", name))
 			if err != nil {
@@ -211,7 +215,9 @@ func TestJS(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := runProgram(t, source, "go", "run", ".")
+			native := filepath.Join(t.TempDir(), "program")
+			run(t, source, "go", "build", "-o", native, ".")
+			want := programOutcome(t, source, native)
 			out := t.TempDir()
 			if err := driver.Build(driver.Options{
 				Trace:    traceBuild(t),
@@ -226,8 +232,8 @@ func TestJS(t *testing.T) {
 			run(t, out, "dart", "pub", "get")
 			run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
 			writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
-			if got := runProgram(t, out, "node", "run.js"); got != want {
-				t.Errorf("the output of the JS build differs\nGo:\n%s\nnode:\n%s", want, got)
+			if got := programOutcome(t, out, "node", "run.js"); got != want {
+				t.Errorf("the output or exit status of the JS build differs\nGo:\n%+v\nnode:\n%+v", want, got)
 			}
 		})
 	}

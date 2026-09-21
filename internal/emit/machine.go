@@ -396,7 +396,7 @@ func (e *emitter) deferEnd() {
 	e.line("$chainClose($chainOuter);")
 	e.line("throw $pv;")
 	e.line("}")
-	e.line("$chainClose($chainOuter);")
+	e.line("$chainEnd($chainOuter);")
 	e.line("if ($abort != null) Error.throwWithStackTrace($abort!, $abortTrace!);")
 }
 
@@ -574,6 +574,22 @@ func (e *emitter) resume(s *ir.Resume) {
 func (e *emitter) localFunc(s *ir.LocalFunc) {
 	lit := s.Lit
 	m := lit.Machine
+	outerName, outerFile, outerLine := e.curGoName, e.funcFile, e.funcLine
+	outerLiteral := e.inLiteral
+	e.curGoName = e.literalName(lit)
+	e.inLiteral = !lit.Range
+	if e.cfg.Fset != nil {
+		e.funcFile = e.goFile(lit.Pos)
+		e.funcLine = e.cfg.Fset.Position(lit.Pos).Line
+	}
+	e.line("%s%s|%s|%d", fileMark, e.funcFile, e.curGoName, e.funcLine)
+	e.goLine = 0
+	defer func() {
+		e.curGoName, e.funcFile, e.funcLine = outerName, outerFile, outerLine
+		e.inLiteral = outerLiteral
+		e.line("%s%s|%s|%d", fileMark, e.funcFile, e.curGoName, e.funcLine)
+		e.goLine = 0
+	}()
 	prevNames := e.renames
 	e.renames = e.withRenames(e.captureRenames(lit.Captured))
 	defer func() { e.renames = prevNames }()
@@ -614,13 +630,8 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 		fnType = fmt.Sprintf("%s Function([%s?])", result, frame)
 	}
 	invoke := fmt.Sprintf("$fn(%s)", strings.Join(e.frameArgs(nil, lit.Params), ", "))
-	// A second declaration of 1 literal takes no number of its own, because
-	// writeFrameClass drops its class. Go numbers each literal 1 time.
-	if !e.frameSeen[m.Class] {
-		e.litSeq++
-	}
 	e.writeFrameClass(m, tps, fnType, invoke, len(lit.Results) > 0,
-		fmt.Sprintf("%s.func%d", e.curGoName, e.litSeq), e.funcFile)
+		e.curGoName, e.funcFile)
 }
 
 // selectBind writes the value and the flag of a receive case of a select

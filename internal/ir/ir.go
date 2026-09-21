@@ -336,6 +336,7 @@ type (
 	// Var holds the result of the call, and it is nil for a call with no
 	// result. State names the state that holds this statement.
 	Resume struct {
+		Node
 		Var   *Var
 		State int
 		// Select frames return a Dart index, not a Go integer representation.
@@ -593,6 +594,8 @@ type (
 	// FuncLit is a closure.
 	FuncLit struct {
 		Pos     token.Pos
+		Ordinal int
+		Range   bool
 		Params  []*Var
 		Results []*Var
 		Body    *Block

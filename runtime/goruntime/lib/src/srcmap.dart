@@ -7,6 +7,7 @@ library;
 
 import 'funcpc.dart';
 import 'panic.dart';
+import 'sched.dart';
 import 'slice.dart';
 import 'string.dart';
 
@@ -175,8 +176,18 @@ int _floor(List<int> list, int value) {
 /// is the function that calls this one.
 Slice<GoString> $stack(int skip) {
   var frames = $goStack(StackTrace.current);
-  for (var panic = $chainPanic; panic != null; panic = panic.link) {
-    final origin = $goStack(panic.trace);
+  for (final frame in $activeCallerFrames) {
+    frames.add(GoPos(frame.$name, frame.$goFile, frame.$goLine));
+  }
+  for (
+    var panic = $chainPanic;
+    panic != null && panic.traceActive;
+    panic = panic.traceParent
+  ) {
+    final origin = $goStack(panic.trace, panicFrames: true);
+    for (final (name, file, line) in panic.callers) {
+      origin.add(GoPos(name, file, line));
+    }
     var common = 0;
     while (common < frames.length && common < origin.length) {
       final current = frames[frames.length - common - 1];
@@ -197,7 +208,7 @@ Slice<GoString> $stack(int skip) {
 }
 
 /// Maps generated Go frames and the runtime initialization driver.
-List<GoPos> $goStack(StackTrace trace) {
+List<GoPos> $goStack(StackTrace trace, {bool panicFrames = false}) {
   final out = <GoPos>[];
   for (final line in trace.toString().split('\n')) {
     final open = line.lastIndexOf('(');
@@ -214,6 +225,10 @@ List<GoPos> $goStack(StackTrace trace) {
     } else if (location[1] == 'package:goruntime/src/init.dart' &&
         line.substring(0, open).trimRight().endsWith('_InitSequence.resume')) {
       out.add(GoPos('runtime.doInit', location[1]!, at));
+    } else if (panicFrames &&
+        location[1] == 'package:goruntime/src/panic.dart' &&
+        line.substring(0, open).trimRight().endsWith('new GoPanic')) {
+      out.add(GoPos('runtime.gopanic', location[1]!, at));
     }
   }
   return out;

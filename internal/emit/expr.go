@@ -568,8 +568,8 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		funcIds: e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
 		lits:    e.lits,
 		renames: e.withRenames(e.captureRenames(x.Captured))}
-	e.litSeq++
-	inner.curGoName = fmt.Sprintf("%s.func%d", e.curGoName, e.litSeq)
+	inner.curGoName = e.literalName(x)
+	inner.inLiteral = !x.Range
 	inner.funcFile = e.funcFile
 	if e.cfg.Fset != nil {
 		inner.funcFile = e.goFile(x.Pos)
@@ -596,6 +596,16 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	b.WriteString(inner.buf.String())
 	b.WriteString("}")
 	return b.String()
+}
+
+func (e *emitter) literalName(literal *ir.FuncLit) string {
+	if literal.Range {
+		return fmt.Sprintf("%s-range%d", e.curGoName, literal.Ordinal)
+	}
+	if e.inLiteral {
+		return fmt.Sprintf("%s.%d", e.curGoName, literal.Ordinal)
+	}
+	return fmt.Sprintf("%s.func%d", e.curGoName, literal.Ordinal)
 }
 
 // equal writes the Go comparison `a == b` for 2 values of the same type.

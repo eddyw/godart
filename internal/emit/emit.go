@@ -300,9 +300,7 @@ type emitter struct {
 	// curGoName holds the Go name of the current function. The frame class of
 	// a local function reads it.
 	curGoName string
-	// litSeq numbers the literals of the current function, in the order of
-	// the output. Go numbers them in the order of the source.
-	litSeq int
+	inLiteral bool
 	// extra holds each import that the emitter added. Read addImport.
 	extra []Import
 	// lits holds the string constants of the file that the emitter writes.
@@ -387,7 +385,7 @@ func (e *emitter) markFunc(f *ir.Func) {
 	e.curGoName = e.goFuncName(f)
 	e.funcFile = e.goFile(f.Pos)
 	e.funcLine = e.cfg.Fset.Position(f.Pos).Line
-	e.litSeq = 0
+	e.inLiteral = false
 	e.line("%s%s|%s|%d", fileMark, e.funcFile, e.curGoName, e.funcLine)
 	e.goLine = 0
 	e.goMarkFile = e.funcFile
@@ -482,6 +480,9 @@ func (e *emitter) goFuncName(f *ir.Func) string {
 
 // flushFrames writes the class of each frame that a declaration made.
 func (e *emitter) flushFrames() {
+	if len(e.frames) != 0 {
+		e.markDrop()
+	}
 	for _, text := range e.frames {
 		e.line("%s", text)
 	}

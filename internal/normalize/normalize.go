@@ -71,14 +71,15 @@ func receiverName(e ast.Expr) string {
 }
 
 type builder struct {
-	sharedLoopVars bool
-	fset           *token.FileSet
-	info           *types.Info
-	pkg            *types.Package
-	errs           []error
-	fn             *ir.Func
-	names          map[types.Object]string
-	used           map[string]bool
+	sharedLoopVars  bool
+	fset            *token.FileSet
+	info            *types.Info
+	pkg             *types.Package
+	errs            []error
+	fn              *ir.Func
+	names           map[types.Object]string
+	used            map[string]bool
+	literalOrdinals map[ast.Node]int
 
 	// boxes holds each variable of the current function whose address the code
 	// takes. Such a variable holds a box.
@@ -360,6 +361,7 @@ func (b *builder) initFunction(g *ir.Global, source ast.Expr) {
 // a package variable. A function literal inside such an initializer declares
 // locals, and each declaration reads those maps.
 func (b *builder) startInit(e ast.Expr) {
+	b.literalOrdinals = literalOrdinals(e, b.info)
 	b.names = map[types.Object]string{}
 	b.used = map[string]bool{}
 	b.gotoLabels = nil
@@ -417,6 +419,7 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 		f.Results = b.results(sig)
 		return f
 	}
+	b.literalOrdinals = literalOrdinals(d.Body, b.info)
 	f.Async = b.blocks.Blocks(obj)
 	b.gotoLabels = gotoTargets(d.Body)
 	b.labelYields = b.rangeLabels(d.Body)

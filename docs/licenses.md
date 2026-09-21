@@ -31,7 +31,7 @@ and `exec.go` with the Go BSD notice.
 Benchmark result types and format methods adapt `src/testing/benchmark.go`
 and retain its BSD notice.
 The runtime caller adapter retains original declarations from
-`src/runtime/symtab_test.go` and their Go BSD notice.
+`src/runtime/symtab_test.go` and `callers_test.go` with their Go BSD notices.
 The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
 The runtime license includes their BSD terms.

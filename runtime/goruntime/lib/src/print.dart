@@ -127,7 +127,11 @@ String $fstring(double v) {
 /// value to stderr and exits with the status 2.
 Never $fatal(GoPanic panic, StackTrace trace) {
   $platformStderrText('${$panicChain(panic)}\ngoroutine 1 [running]:\n');
-  for (final GoPos pos in $goStack(trace)) {
+  final frames = $goStack(trace);
+  for (final (name, file, line) in panic.callers) {
+    frames.add(GoPos(name, file, line));
+  }
+  for (final GoPos pos in frames) {
     $platformStderrText('${pos.function}()\n\t${pos.file}:${pos.line}\n');
   }
   $platformExit(2);

@@ -164,6 +164,8 @@ func (b *builder) rangeFunc(s *ast.RangeStmt, label string, sig *types.Signature
 
 	fn := &ir.FuncLit{
 		Pos:     s.Pos(),
+		Ordinal: b.literalOrdinals[s],
+		Range:   true,
 		Params:  params,
 		Results: []*ir.Var{{Name: "$ok", Type: yield.Results().At(0).Type()}},
 		Body:    body,

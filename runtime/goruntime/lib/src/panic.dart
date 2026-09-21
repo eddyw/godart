@@ -1,6 +1,7 @@
 import 'goint.dart';
 import 'iface.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
+import 'sched.dart' show $activeCallerFrames;
 import 'string.dart';
 
 String $defaultGODEBUG = '';
@@ -50,6 +51,11 @@ final class GoPanic implements Exception {
   final Object? value;
 
   final StackTrace trace;
+  final List<(String, String, int)> callers;
+
+  final GoPanic? traceParent;
+  // A recovered panic remains visible until its deferred call returns.
+  bool traceActive = true;
 
   /// The panic that stood when this one started. A deferred call that panics
   /// again holds such a link, and Go writes the whole chain.
@@ -59,7 +65,13 @@ final class GoPanic implements Exception {
   /// [recovered] behind such a panic.
   bool recovered = false;
 
-  GoPanic(this.value) : trace = StackTrace.current;
+  GoPanic(this.value)
+    : trace = StackTrace.current,
+      callers = [
+        for (final frame in $activeCallerFrames)
+          (frame.$name, frame.$goFile, frame.$goLine),
+      ],
+      traceParent = $chainPanic;
 
   @override
   String toString() => 'panic: ${$panicText(value)}';
@@ -316,6 +328,7 @@ final class DeferStack {
   /// null.
   void runNext() {
     if (_calls.isEmpty) return;
+    if ($recovered) $chainPanic?.traceActive = false;
     try {
       _calls.removeLast()();
     } catch (e) {
@@ -347,6 +360,7 @@ final class DeferStack {
     // empty stack and does nothing. The return path and the exit path of 1
     // function can both reach the chain.
     while (_calls.isNotEmpty) {
+      if ($recovered) $chainPanic?.traceActive = false;
       try {
         _calls.removeLast()();
       } catch (e) {
@@ -363,6 +377,7 @@ final class DeferStack {
       }
     }
     final rec = $recovered;
+    if (rec) $chainPanic?.traceActive = false;
     $chainPanic = outer;
     $recovered = outerRec;
     if (!rec && thrown != null) throw thrown;
@@ -423,6 +438,11 @@ void $chainReset(Object? e) {
 void $chainClose(ChainState saved) {
   $chainPanic = saved.panic;
   $recovered = saved.recovered;
+}
+
+void $chainEnd(ChainState saved) {
+  if ($recovered) $chainPanic?.traceActive = false;
+  $chainClose(saved);
 }
 
 /// The token of the function that the chain of the deferred calls runs now.

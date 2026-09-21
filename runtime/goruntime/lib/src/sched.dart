@@ -199,6 +199,11 @@ Iterable<Goroutine> get $goroutines => _liveSet;
 /// The goroutine that runs now.
 Goroutine? $current;
 
+/// Saved callers that the iterative resume has not entered yet.
+Iterable<TraceFrame> get $activeCallerFrames =>
+    $current?._resumeFrames.reversed.whereType<TraceFrame>() ??
+    const <TraceFrame>[];
+
 final ListQueue<Goroutine> _runq = ListQueue<Goroutine>();
 bool _running = false;
 bool _mainDone = false;

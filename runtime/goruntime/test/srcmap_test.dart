@@ -2,6 +2,19 @@ import 'package:goruntime/goruntime.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('caller traces retain panic frames without changing fatal traces', () {
+    const uri = 'package:goruntime/src/panic.dart';
+    final trace = StackTrace.fromString(
+      '#0 new GoPanic ($uri:62:9)\n'
+      '#1 new GoPanic (package:other/panic.dart:62:9)',
+    );
+    expect($goStack(trace), isEmpty);
+    final frames = $goStack(trace, panicFrames: true);
+    expect(frames, hasLength(1));
+    expect(frames.single.function, 'runtime.gopanic');
+    expect(frames.single.file, uri);
+    expect(frames.single.line, 62);
+  });
   test('initialization frames retain the actual runtime source location', () {
     const uri = 'package:goruntime/src/init.dart';
     final frames = $goStack(
