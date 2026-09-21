@@ -1230,7 +1230,13 @@ Iface? $methodValue(Iface? value, int handle, int index) {
     );
   }
   final TypeDesc sig = type();
-  return Iface(sig, _bindMethod(sig, fn, value.value));
+  return Iface(
+    sig,
+    $functionValue(
+      _bindMethod(sig, fn, value.value),
+      GoString.fromString('reflect.methodValueCall||0'),
+    ),
+  );
 }
 
 /// _bindMethod gives a Dart closure of a method and its receiver.

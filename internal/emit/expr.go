@@ -595,7 +595,11 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	e.extra = append(e.extra, inner.extra...)
 	b.WriteString(inner.buf.String())
 	b.WriteString("}")
-	return b.String()
+	if e.cfg.Fset == nil || !x.Pos.IsValid() {
+		return b.String()
+	}
+	info := fmt.Sprintf("%s|%s|%d", inner.curGoName, inner.funcFile, inner.funcLine)
+	return fmt.Sprintf("$functionValue(%s, %s)", b.String(), e.stringLit(info))
 }
 
 func (e *emitter) literalName(literal *ir.FuncLit) string {

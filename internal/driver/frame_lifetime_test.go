@@ -44,7 +44,7 @@ func main() {
 	}
 	for _, target := range []string{"aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
-			got := runUpstreamTarget(t, target, out, "bin/main.dart", dir, []string{})
+			got := runLifetimeTarget(t, target, out, "bin/main.dart")
 			if got.Exit != 0 || got.Text != want {
 				t.Fatalf("%s: exit %d\nGo:\n%s\nGart:\n%s", target, got.Exit, want, got.Text)
 			}

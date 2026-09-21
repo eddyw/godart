@@ -2,7 +2,14 @@ import 'string.dart';
 
 final _positions = <GoString>[];
 final _counters = <GoString, int>{};
-final _functions = Map<Function, int>.identity();
+final _functions = Expando<_FunctionPC>('function');
+
+// Wasm Expando values need object references, not unboxed integer values.
+final class _FunctionPC {
+  final int pc;
+  const _FunctionPC(this.pc);
+}
+
 final _entries = <String, int>{};
 
 /// These counters identify source positions, not native instructions.
@@ -30,11 +37,9 @@ int $pcEntry(int pc) {
   return _entries[text.substring(0, text.indexOf('|'))] ?? pc;
 }
 
-/// A strong map supports Wasm function references.
-/// Register only named functions without captured values.
 F $functionValue<F extends Function>(F value, GoString info) {
-  _functions[value] ??= $registerFunction(info);
+  _functions[value] ??= _FunctionPC($registerFunction(info));
   return value;
 }
 
-int? $functionPC(Function value) => _functions[value];
+int? $functionPC(Function value) => _functions[value]?.pc;

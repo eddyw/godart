@@ -182,7 +182,7 @@ func TestSelectedUpstream(t *testing.T) {
 				"TestSetPanic", "TestSetBytes",
 				"WC", "WC.Write", "WC.Close", "TestMakeFuncValidReturnAssignments", "TestMakeFuncInvalidReturnAssignments",
 				"Point", "Point.AnotherMethod", "Point.Dist", "Point.GCMethod", "Point.NoArgs", "Point.TotalDist", "Point.Int64Method", "Point.Int32Method",
-				"TestMethod", "TestVariadicMethodValue", "TestInterfaceSet",
+				"TestMethod", "TestMethodValue", "TestVariadicMethodValue", "TestInterfaceSet",
 				"DirectIfaceT", "DirectIfaceT.M", "TestDirectIfaceMethod",
 				"Tinter", "Tsmallv", "Tsmallv.M", "Tsmallp", "Tsmallp.M", "Twordv", "Twordv.M", "Twordp", "Twordp.M",
 				"Tbigv", "Tbigv.M", "Tbigp", "Tbigp.M", "Tm1", "Tm2", "Tm3", "Tm4", "Tm4.M", "TestMethod5",

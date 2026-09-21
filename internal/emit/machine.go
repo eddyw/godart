@@ -619,6 +619,10 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 	}
 	e.machineBody(inner, s.Name)
 	e.line("}")
+	if e.cfg.Fset != nil && lit.Pos.IsValid() {
+		info := fmt.Sprintf("%s|%s|%d", e.curGoName, e.funcFile, e.funcLine)
+		e.line("$functionValue(%s, %s);", s.Name, e.stringLit(info))
+	}
 	types := make([]string, len(lit.Params))
 	for i, p := range lit.Params {
 		types[i] = e.dartType(p.Type)
