@@ -454,6 +454,21 @@ func main() { println(build()) }
 	}
 }
 
+func TestSyncGenericZeroRejectsBlockingMethods(t *testing.T) {
+	err := buildSync(t, `package main
+//gart:sync
+type Builder func() string
+type slow int
+func (slow) Error() string { <-make(chan int); return "" }
+func text[T error]() string { var value T; return value.Error() }
+var build Builder = text[slow]
+func main() { println(build()) }
+`)
+	if err == nil || !strings.Contains(err.Error(), "this function can block") {
+		t.Fatalf("expected a synchronous callback rejection, got %v", err)
+	}
+}
+
 func TestSyncFormatRejectsBlockingPanicValue(t *testing.T) {
 	err := buildSync(t, `package main
 import "fmt"

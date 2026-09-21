@@ -26,6 +26,10 @@ func (a *analyzer) collectOrigins(f *ast.File) {
 		}
 		v, _ := info.Defs[id].(*types.Var)
 		if v != nil && isInterface(v.Type()) {
+			if _, parameter := types.Unalias(v.Type()).(*types.TypeParam); parameter {
+				// A type parameter can have a non-interface zero value.
+				origin.zero = false
+			}
 			a.interfaceOrigins[v] = origin
 		}
 	}
