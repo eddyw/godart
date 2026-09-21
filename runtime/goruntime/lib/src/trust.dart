@@ -157,7 +157,7 @@ final class _TrustFailure implements Exception {
   }
 
   void status(int code, String operation) {
-    if (code != 0) throw _TrustFailure(code, '$operation error: $code');
+    if (code != 0) throw _TrustFailure(-1, '$operation error: $code');
   }
 
   final result = _malloc(sizeOf<_Ref>()).cast<_Ref>();
@@ -174,10 +174,16 @@ final class _TrustFailure implements Exception {
       'CFArrayCreateMutable',
     );
     for (var i = 0; i < certificates.len; i++) {
-      final cert = own(
-        _certificateCreate(nullptr, data(certificates[i])),
-        'SecCertificateCreateWithData',
-      );
+      final cert = _certificateCreate(nullptr, data(certificates[i]));
+      if (cert == nullptr) {
+        throw _TrustFailure(
+          -1,
+          i == 0
+              ? 'invalid leaf certificate'
+              : 'SecCertificateCreateWithData: invalid certificate',
+        );
+      }
+      owned.add(cert);
       _arrayAppend(certs, cert);
     }
     final hostname = name.length == 0 ? nullptr : data(name, string: true);

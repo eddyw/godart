@@ -48,6 +48,8 @@ func (c *Certificate) systemVerify(opts *VerifyOptions) ([][]*Certificate, error
 	der, code, message := dart.VerifySystemCertificates(certs, opts.DNSName, date, !opts.CurrentTime.IsZero())
 	if message != "" {
 		switch code {
+		case -1:
+			return nil, errors.New(message)
 		case -67818:
 			return nil, CertificateInvalidError{c, Expired, message}
 		case -67602:
