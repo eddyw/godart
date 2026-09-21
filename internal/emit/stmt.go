@@ -329,14 +329,11 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 		}
 	}
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
-		e.line("%s = %s.assignOf(%s, %s);", e.expr(lhs), e.dictOf(tp), e.expr(lhs), value)
-		return
-	}
-	if isStructType(t) {
+		value = fmt.Sprintf("%s.assignOf(%s, %s)", e.dictOf(tp), e.expr(lhs), value)
+	} else if isStructType(t) {
 		e.line("%s.$assign(%s);", e.expr(lhs), value)
 		return
-	}
-	if isArrayType(t) {
+	} else if isArrayType(t) {
 		e.line("%s;", e.assignArray(e.expr(lhs), t, value))
 		return
 	}

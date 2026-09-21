@@ -18,7 +18,9 @@ import (
 func (v *verifier) checkTypeParamOp(n ast.Node) {
 	switch n := n.(type) {
 	case *ast.IndexExpr:
-		v.rejectMixed(n.Pos(), v.typeOf(n.X), "an index")
+		if !typeset.ArrayOrSlice(v.typeOf(n.X)) {
+			v.rejectMixed(n.Pos(), v.typeOf(n.X), "an index")
+		}
 	case *ast.SliceExpr:
 		v.rejectMixed(n.Pos(), v.typeOf(n.X), "a slice expression")
 	case *ast.RangeStmt:

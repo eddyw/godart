@@ -69,15 +69,20 @@ $Ref<List<T>, T> _cellPtr<T>(List<T> a, int i) {
 }
 
 /// A pointer to 1 element of a slice.
-$Ref<List<T>, T> $elemPtr<T>(Slice<T> s, int i) {
-  if (i < 0 || i >= s.len) $panicIndex(i, s.len);
+$Ref<List<T>, T> $elemPtr<T>(Slice<T> s, int i, [bool uns = false]) {
+  if (i < 0 || i >= s.len) $panicIndex(i, s.len, uns);
   return _cellPtr<T>(s.array, s.off + i);
 }
 
 /// A pointer to 1 element of an array.
-$Ref<List<T>, T> $indexPtr<T>(List<T> a, int i) {
-  if (i < 0 || i >= a.length) $panicIndex(i, a.length);
+$Ref<List<T>, T> $indexPtr<T>(List<T> a, int i, [bool uns = false]) {
+  if (i < 0 || i >= a.length) $panicIndex(i, a.length, uns);
   return _cellPtr<T>(a, i);
+}
+
+$Ref<List<T>, T> $sequencePtr<T>(Object? value, int i, [bool uns = false]) {
+  if (value is Slice<T>) return $elemPtr<T>(value, i, uns);
+  return $indexPtr<T>(value as List<T>, i, uns);
 }
 
 T _listGet<T>(List<T> owner, int i) => owner[i];

@@ -97,6 +97,19 @@ void $arraySet<T>(List<T> a, int i, T v, [bool uns = false]) {
   a[i] = v;
 }
 
+T $sequenceIndex<T>(Object? value, int i, [bool uns = false]) {
+  if (value is Slice<T>) return value.$at(i, uns);
+  return $arrayIndex<T>(value as List<T>, i, uns);
+}
+
+void $sequenceSet<T>(Object? value, int i, T element, [bool uns = false]) {
+  if (value is Slice<T>) {
+    value.$set(i, element, uns);
+    return;
+  }
+  $arraySet<T>(value as List<T>, i, element, uns);
+}
+
 // A loop avoids a large assignment chain in the AOT optimizer.
 List<T> $arrayLiteral<T>(List<T> array, List<int> indices, List<T> values) {
   for (var i = 0; i < indices.length; i++) {

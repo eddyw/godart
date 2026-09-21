@@ -783,6 +783,12 @@ func (f *flat) indexBase(x ir.Expr) ir.Expr {
 	if isArrayType(x.GoType()) {
 		return f.lvalueBase(x)
 	}
+	if typeset.ArrayOrSlice(x.GoType()) && typeset.Core(x.GoType()) == nil {
+		// Preserve the original storage without a generic array copy.
+		v := f.local(x.GoType())
+		f.emit(&ir.Assign{Lhs: identOf(v), Rhs: f.value(x), Define: true})
+		return identOf(v)
+	}
 	return f.temp(f.value(x))
 }
 

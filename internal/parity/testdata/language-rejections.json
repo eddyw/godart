@@ -394,19 +394,11 @@
   "typeparam/chans": [
     "$DIR/chans.go:190:10: undefined: runtime.SetFinalizer"
   ],
-  "typeparam/index2": [
-    "$DIR/index2.go:15:2: an index reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)",
-    "$DIR/index2.go:16:9: an index reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
-  ],
   "typeparam/issue47716": [
     "$DIR/issue47716.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "typeparam/issue48013": [
     "$DIR/issue48013.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "typeparam/issue49659b": [
-    "$DIR/issue49659b.go:17:6: the compiler rejects the address of int (a value of such a type needs a cell, and only a variable or a location holds one)",
-    "$DIR/issue49659b.go:17:7: an index reads the type parameter T, and its constraint holds more than 1 Dart type (the compiler gives a type parameter 1 Dart type)"
   ],
   "typeparam/issue53390": [
     "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"

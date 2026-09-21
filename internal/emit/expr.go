@@ -357,9 +357,12 @@ func unsBound(x ir.Expr) bool {
 // unsArg gives the last argument of an index helper. The helper holds the
 // flag in an optional parameter of position. dart2wasm holds a defect on a
 // named argument of such a call, thus each flag takes a position.
-func unsArg(x ir.Expr) string {
+func (e *emitter) unsArg(x ir.Expr) string {
 	if unsBound(x) {
 		return ", true"
+	}
+	if set, ok := typeset.Describe(x.GoType()); ok && set.MixedSign() {
+		return ", " + e.dictOf(x.GoType()) + ".unsigned64"
 	}
 	return ""
 }
@@ -385,14 +388,17 @@ func (e *emitter) index(x *ir.Index) string {
 		return text
 	}
 	container := x.X.GoType()
-	if typeset.BytesOrText(container) {
+	if typeset.Core(container) == nil && typeset.ArrayOrSlice(container) {
+		return fmt.Sprintf("$sequenceIndex<%s>(%s, $ix(%s)%s)", e.dartType(x.Type), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
+	}
+	if typeset.Core(container) == nil && typeset.BytesOrText(container) {
 		return fmt.Sprintf("%s.at!(%s, %s)",
 			e.dictOf(container), e.expr(x.X), e.expr(x.Index))
 	}
 	if isMapType(container) {
 		return fmt.Sprintf("%s.get(%s)", e.container(x.X), e.expr(x.Index))
 	}
-	uns := unsArg(x.Index)
+	uns := e.unsArg(x.Index)
 	if isString(container) {
 		if unsBound(x.Index) {
 			return fmt.Sprintf("$atUns(%s, %s)", e.expr(x.X), e.expr(x.Index))
@@ -448,7 +454,10 @@ const erasedDartType = "Object?"
 func (e *emitter) indexTarget(x *ir.Index) (head, tail string) {
 	e.mark(x.Pos)
 	container := x.X.GoType()
-	uns := unsArg(x.Index)
+	uns := e.unsArg(x.Index)
+	if typeset.Core(container) == nil && typeset.ArrayOrSlice(container) {
+		return fmt.Sprintf("$sequenceSet<%s>(%s, $ix(%s)", e.dartType(x.Type), e.expr(x.X), e.expr(x.Index)), uns
+	}
 	if isPointerType(container) {
 		return fmt.Sprintf("$arraySet<%s>(%s, $ix(%s)",
 			e.dartType(x.Type), e.deref(x.X), e.expr(x.Index)), uns
@@ -873,6 +882,9 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 		return fmt.Sprintf("Box<%s>(%s)", e.dartType(elem), e.expr(x))
 	case *ir.Index:
 		container := x.X.GoType()
+		if typeset.Core(container) == nil && typeset.ArrayOrSlice(container) {
+			return fmt.Sprintf("$sequencePtr<%s>(%s, $ix(%s)%s)", e.dartType(elem), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
+		}
 		if isPointerType(container) {
 			return fmt.Sprintf("$indexPtr(%s, $ix(%s))", e.deref(x.X), e.expr(x.Index))
 		}

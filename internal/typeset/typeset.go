@@ -86,6 +86,26 @@ func Core(t types.Type) types.Type {
 	return first
 }
 
+// ArrayOrSlice reports whether all terms are arrays or slices.
+func ArrayOrSlice(t types.Type) bool {
+	tp, ok := types.Unalias(t).(*types.TypeParam)
+	if !ok {
+		return false
+	}
+	terms, ok := Terms(tp.Constraint())
+	if !ok || len(terms) == 0 {
+		return false
+	}
+	for _, term := range terms {
+		switch types.Unalias(term).Underlying().(type) {
+		case *types.Array, *types.Slice:
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 // Set describes the type set of a type parameter. The compiler reads it to
 // choose the Dart type of the parameter and the Dart form of each operation.
 type Set struct {

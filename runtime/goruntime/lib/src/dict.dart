@@ -72,7 +72,7 @@ final class Dict<T> {
     this.fromText,
   });
 
-  bool get _unsigned =>
+  bool get unsigned64 =>
       desc.kind == 'uint' || desc.kind == 'uint64' || desc.kind == 'uintptr';
 
   bool less(T a, T b) {
@@ -93,16 +93,16 @@ final class Dict<T> {
     if (a is double) return mask((a / (b as double)) as T);
     if (a is GoComplex) return mask((a / (b as GoComplex)) as T);
     final GoInt x = a as GoInt, y = b as GoInt;
-    return mask((_unsigned ? $udiv(x, y) : $div(x, y)) as T);
+    return mask((unsigned64 ? $udiv(x, y) : $div(x, y)) as T);
   }
 
   T remainder(T a, T b) => mask(
-    (_unsigned ? $umod(a as GoInt, b as GoInt) : $mod(a as GoInt, b as GoInt))
+    (unsigned64 ? $umod(a as GoInt, b as GoInt) : $mod(a as GoInt, b as GoInt))
         as T,
   );
 
   T shiftRight(T a, GoInt count) => mask(
-    (_unsigned ? $ushr(a as GoInt, count) : $shr(a as GoInt, count)) as T,
+    (unsigned64 ? $ushr(a as GoInt, count) : $shr(a as GoInt, count)) as T,
   );
 
   T copyOf(T v) => copy == null ? v : copy!(v);

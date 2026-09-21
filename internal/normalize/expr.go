@@ -106,7 +106,7 @@ func (b *builder) lvalueStaged(e ast.Expr) (pre []ir.Stmt, set func(ir.Expr) ir.
 			// write of the variable in the same statement misses it. An
 			// array writes through the variable, and the name stays.
 			hoistBase := b.hoist
-			if _, ok := typeset.Core(x.X.GoType()).(*types.Slice); ok {
+			if _, ok := typeset.Core(x.X.GoType()).(*types.Slice); ok || typeset.ArrayOrSlice(x.X.GoType()) {
 				hoistBase = b.forceHoist
 			}
 			pre1, base := hoistBase(x.X, e.X.Pos(), "b")

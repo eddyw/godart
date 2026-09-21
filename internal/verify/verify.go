@@ -12,6 +12,7 @@ import (
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/overlay"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 // Error reports 1 rejected construct.
@@ -260,6 +261,9 @@ func (v *verifier) isLocation(e ast.Expr) bool {
 		t := v.typeOf(e.X)
 		if t == nil {
 			return false
+		}
+		if typeset.ArrayOrSlice(t) {
+			return true
 		}
 		u := types.Unalias(t).Underlying()
 		if p, ok := u.(*types.Pointer); ok {
