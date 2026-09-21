@@ -50,9 +50,6 @@
   "fixedbugs/bug328": [
     "$DIR/bug328.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
-  "fixedbugs/bug503": [
-    "$DIR/fixture.go:16:5: the variable V gives an unnamed struct type with an unexported field to another package. Declare a named type, or export each field. (Go gives an unexported field the identity of its package, and Dart holds such a name private to 1 library)"
-  ],
   "fixedbugs/bug514": [
     "$DIR/bug514.go:11:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
   ],
@@ -112,9 +109,6 @@
   ],
   "fixedbugs/issue24760": [
     "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue26120": [
-    "$DIR/fixture.go:12:6: the type T gives an unnamed struct type with an unexported field to another package. Declare a named type, or export each field. (Go gives an unexported field the identity of its package, and Dart holds such a name private to 1 library)"
   ],
   "fixedbugs/issue27518b": [
     "$DIR/issue27518b.go:48:10: undefined: runtime.SetFinalizer"
@@ -251,9 +245,6 @@
   ],
   "fixedbugs/issue65417": [
     "$DIR/issue65417.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue65893": [
-    "$DIR/fixture.go:14:6: the type I gives an unnamed struct type with an unexported field to another package. Declare a named type, or export each field. (Go gives an unexported field the identity of its package, and Dart holds such a name private to 1 library)"
   ],
   "fixedbugs/issue73748a": [
     "$DIR/issue73748a.go:12:2: the package runtime/trace is outside the supported surface (the standard library surface is curated)"

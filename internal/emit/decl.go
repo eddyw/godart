@@ -119,16 +119,6 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 	full := class + e.typeArgsOfParams(params)
 	e.writeCopy(full, st, fields, dicts)
 	e.writeAssign(full, st, fields)
-	// Generic reflection descriptors in another library need public access
-	// to Go private fields without a change to their Dart storage names.
-	if len(params) > 0 {
-		for i, field := range fields {
-			if !st.Field(i).Exported() {
-				e.line("%s get $field%d => %s;", e.dartType(st.Field(i).Type()), i, field)
-				e.line("set $field%d(%s v) { %s = v; }", i, e.dartType(st.Field(i).Type()), field)
-			}
-		}
-	}
 	if comparable {
 		e.writeEqual(full, st, fields)
 	}
@@ -477,13 +467,13 @@ func structFieldName(f *types.Var, i int) string {
 	return fieldBaseName(f)
 }
 
-// fieldBaseName gives the Dart name of 1 struct field. An embedded field takes
-// a public name even when Go does not export it. Go promotes each member of an
-// embedded type across a package boundary, thus a reader of another Dart
-// library names the field, and a private Dart name gives a compile error
-// there.
+// Shared anonymous classes need public Dart fields. Go type checking and
+// field descriptors preserve the access rules and package identity.
 func fieldBaseName(f *types.Var) string {
 	if !f.Embedded() {
+		if !f.Exported() {
+			return "$field$" + name.Public(f.Name())
+		}
 		return name.Package(f.Name())
 	}
 	out := name.Public(f.Name())

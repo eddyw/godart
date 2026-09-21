@@ -18,24 +18,25 @@ final GoInt Loud = $gi(1);
 
 final class Greeter$ {
   GoString Name;
-  GoInt _style;
+  GoInt $field$style;
 
-  Greeter$(this.Name, this._style);
-  Greeter$.$zero() : Name = GoString.empty, _style = GoInt.zero;
+  Greeter$(this.Name, this.$field$style);
+  Greeter$.$zero() : Name = GoString.empty, $field$style = GoInt.zero;
 
-  Greeter$ $copy() => Greeter$(Name, _style);
+  Greeter$ $copy() => Greeter$(Name, $field$style);
 
   void $assign(Greeter$ $o) {
     Name = $o.Name;
-    _style = $o._style;
+    $field$style = $o.$field$style;
   }
 
   @override
   bool operator ==(Object $o) =>
-      $o is Greeter$ && Name == $o.Name && _style == $o._style;
+      $o is Greeter$ && Name == $o.Name && $field$style == $o.$field$style;
 
   @override
-  int get hashCode => Object.hashAll(<Object?>[Name.hashCode, _style.hashCode]);
+  int get hashCode =>
+      Object.hashAll(<Object?>[Name.hashCode, $field$style.hashCode]);
 
   void SetStyle(GoInt s) => Greeter$SetStyle(this, s);
 
@@ -47,11 +48,11 @@ Greeter$? New(GoString name) {
 }
 
 void Greeter$SetStyle(Greeter$? g, GoInt s) {
-  (g == null ? $panicNil() : g!)._style = s;
+  (g == null ? $panicNil() : g!).$field$style = s;
 }
 
 GoString Greeter$Text(Greeter$? g) {
-  if (((g == null ? $panicNil() : g!)._style == $gi(1))) {
+  if (((g == null ? $panicNil() : g!).$field$style == $gi(1))) {
     return $concat(
       $gs1_0_47316da018fa584e,
       (g == null ? $panicNil() : g!).Name,

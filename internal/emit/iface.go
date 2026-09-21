@@ -400,21 +400,15 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 }
 
 // fieldAccess writes the getter and the setter of 1 field.
-//
-// Generic instance descriptors can stand outside the declaring package.
-// Generated accessors expose their private Dart fields to those descriptors.
 func (e *emitter) fieldAccess(owner types.Type, field *types.Var, i int,
 	class string, declType types.Type) string {
+	if named, ok := types.Unalias(owner).(*types.Named); ok && isDartObject(named.Obj()) {
+		// The opaque interop type has a zero-sized marker but no Go storage.
+		return "($r) => " + e.zero(field.Type()) + ", ($r, $v) {}"
+	}
 	dart := structFieldName(field, i)
 	if field.Name() != "_" {
 		dart = e.fieldDartName(owner, field.Name())
-	}
-	if !field.Exported() && field.Pkg() != nil && field.Pkg() != e.pkg {
-		if named, ok := types.Unalias(owner).(*types.Named); ok && named.TypeArgs().Len() > 0 {
-			dart = fmt.Sprintf("$field%d", i)
-		} else {
-			return "$noRead, $noWrite"
-		}
 	}
 	read := fmt.Sprintf("($r as %s).%s", class, dart)
 	write := fmt.Sprintf("$v as %s", e.dartType(field.Type()))

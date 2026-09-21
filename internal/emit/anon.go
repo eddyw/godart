@@ -349,13 +349,8 @@ func untaggedShape(t types.Type) types.Type {
 // anonShared reports whether the shape reaches a file of its own.
 //
 // A library must hold each field type of such a shape, thus the file can import
-// them. Each field must also carry an exported name: Go gives an unexported
-// field the identity of the package that declares it, and Dart holds a name
-// with a leading underscore private to 1 library.
+// them. The shape name preserves the package identity of unexported fields.
 func (e *emitter) anonShared(st *types.Struct) bool {
-	if anonPrivate(st, map[types.Type]bool{}) {
-		return false
-	}
 	paths := map[string]bool{}
 	for i := 0; i < st.NumFields(); i++ {
 		typePackages(st.Field(i).Type(), paths, map[types.Type]bool{})
@@ -382,53 +377,6 @@ func anonComparable(st *types.Struct) bool {
 		}
 	}
 	return true
-}
-
-// anonPrivate reports whether an unnamed struct type inside the type holds an
-// unexported field. The walk stops at a named type of a package scope, because
-// such a type holds a class of its own.
-//
-// A named struct type of a function body holds no class of its own. It reads
-// the class of its shape, thus the walk reads the fields of that shape. A test
-// file of encoding/json declares `type S1 struct{ x, X int }` inside a
-// function, and it embeds S1 in an unnamed struct type.
-func anonPrivate(t types.Type, seen map[types.Type]bool) bool {
-	if t == nil || seen[t] {
-		return false
-	}
-	seen[t] = true
-	switch t := types.Unalias(t).(type) {
-	case *types.Named:
-		if isLocalType(t.Obj()) {
-			return anonPrivate(t.Underlying(), seen)
-		}
-	case *types.Struct:
-		for i := 0; i < t.NumFields(); i++ {
-			f := t.Field(i)
-			if !f.Exported() || anonPrivate(f.Type(), seen) {
-				return true
-			}
-		}
-	case *types.Pointer:
-		return anonPrivate(t.Elem(), seen)
-	case *types.Slice:
-		return anonPrivate(t.Elem(), seen)
-	case *types.Array:
-		return anonPrivate(t.Elem(), seen)
-	case *types.Chan:
-		return anonPrivate(t.Elem(), seen)
-	case *types.Map:
-		return anonPrivate(t.Key(), seen) || anonPrivate(t.Elem(), seen)
-	case *types.Signature:
-		return anonPrivate(t.Params(), seen) || anonPrivate(t.Results(), seen)
-	case *types.Tuple:
-		for i := 0; i < t.Len(); i++ {
-			if anonPrivate(t.At(i).Type(), seen) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // anonText writes the Go text of a type. A named type takes its import path,

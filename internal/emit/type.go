@@ -735,11 +735,6 @@ func structObject(obj *types.TypeName) *types.Struct {
 // the 2 types need 1 Dart form. X takes the form of q.Y, and it declares no
 // class of its own.
 //
-// The class must stand in the library of q. Go gives an unexported field of
-// the object the identity of q, and a Dart library holds each name that starts
-// with an underscore, thus a class of the library of X could never read such a
-// field.
-//
 // A method with a value receiver stands in the Dart class of its type, and the
 // class of q.Y cannot hold a method of the package of X. Such a type thus
 // keeps its own class, and a conversion keeps its rejection. The test reads

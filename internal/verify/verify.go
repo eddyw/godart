@@ -9,7 +9,6 @@ import (
 	"go/token"
 	"go/types"
 	"strconv"
-	"strings"
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/overlay"
@@ -97,7 +96,6 @@ func (v *verifier) visit(n ast.Node) bool {
 	if call, ok := n.(*ast.CallExpr); ok && v.unsafeConstant(call) {
 		return false
 	}
-	v.checkExported(n)
 	v.checkTypeParamOp(n)
 	v.checkBodyless(n)
 	switch n := n.(type) {
@@ -245,13 +243,6 @@ func (v *verifier) checkAddress(e *ast.UnaryExpr) {
 		return
 	}
 
-}
-
-// importable reports whether an import of another package can name the
-// package. No import names a main package or an external test package, thus a
-// box of an exported variable of one stays inside the package.
-func importable(pkg *types.Package) bool {
-	return pkg != nil && pkg.Name() != "main" && !strings.HasSuffix(pkg.Name(), "_test")
 }
 
 // isLocation reports whether the expression names a field of a struct, an

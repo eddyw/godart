@@ -193,12 +193,7 @@ func Ref() *int { return &Sink }
 `)
 }
 
-// TestAnonStructCrossesAPackage proves that stage 2 rejects an unnamed struct
-// type with an unexported field in an exported declaration. Go gives such a
-// field the identity of its package, and Dart holds a name with a leading
-// underscore private to 1 library, thus 2 packages give 2 classes.
 func TestAnonStructCrossesAPackage(t *testing.T) {
-	const want = "unnamed struct type with an unexported field"
 	acceptFile(t, "an exported table of an external test package", `package a_test
 
 var Cases = []struct{ in, out string }{{"a", "b"}}
@@ -209,35 +204,35 @@ var Value struct{ n int }
 
 func main() {}
 `)
-	rejectFile(t, "an exported result", want, `package a
+	acceptFile(t, "an exported result", `package a
 
 func Make() struct{ n int } { return struct{ n int }{n: 1} }
 `)
-	rejectFile(t, "an exported parameter", want, `package a
+	acceptFile(t, "an exported parameter", `package a
 
 func Take(v struct{ n int }) int { return v.n }
 `)
-	rejectFile(t, "an exported variable", want, `package a
+	acceptFile(t, "an exported variable", `package a
 
 var Value struct{ n int }
 `)
-	rejectFile(t, "an exported field", want, `package a
+	acceptFile(t, "an exported field", `package a
 
 type Box struct {
 	Inner struct{ n int }
 }
 `)
-	rejectFile(t, "a slice of an unnamed struct", want, `package a
+	acceptFile(t, "a slice of an unnamed struct", `package a
 
 func List() []struct{ n int } { return nil }
 `)
-	rejectFile(t, "an exported method", want, `package a
+	acceptFile(t, "an exported method", `package a
 
 type Box struct{ n int }
 
 func (b Box) Get() struct{ n int } { return struct{ n int }{n: b.n} }
 `)
-	rejectFile(t, "a nested unnamed struct", want, `package a
+	acceptFile(t, "a nested unnamed struct", `package a
 
 func Make() struct{ Inner struct{ n int } } {
 	return struct{ Inner struct{ n int } }{}
