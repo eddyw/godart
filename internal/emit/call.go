@@ -1744,9 +1744,10 @@ func (e *emitter) conv(x *ir.Conv) string {
 	if pf, ok := typeset.Core(from).(*types.Pointer); ok {
 		if pt, ok := typeset.Core(to).(*types.Pointer); ok {
 			if tp {
-				if elem, ok := types.Unalias(pt.Elem()).(*types.TypeParam); ok {
-					return fmt.Sprintf("($ptrValue(%s.desc, %s) as %s)", e.dictOf(elem), text, e.dartType(to))
-				}
+				return fmt.Sprintf("($ptrValue(%s, %s) as %s)", e.descriptorOf(pt.Elem()), text, e.dartType(to))
+			}
+			if fp {
+				return fmt.Sprintf("(%s as %s)", text, e.dartType(to))
 			}
 			if isStructType(pt.Elem()) {
 				if e.sameClass(pf.Elem(), pt.Elem()) {

@@ -273,6 +273,13 @@ func (b *builder) convert(x ir.Expr, want types.Type) ir.Expr {
 			return &ir.Conv{X: x, From: got, Type: want}
 		}
 	}
+	for _, typ := range []types.Type{got, want} {
+		if _, parameter := types.Unalias(typ).(*types.TypeParam); parameter {
+			if _, pointer := typeset.Core(typ).(*types.Pointer); pointer {
+				return &ir.Conv{X: x, From: got, Type: want}
+			}
+		}
+	}
 	if isIfaceType(want) {
 		if !isIfaceType(got) {
 			return &ir.Conv{X: x, From: got, Type: want}
