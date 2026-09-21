@@ -356,24 +356,30 @@ void $sleep(int nanoseconds) {
   $block(waiting);
 }
 
-/// Provokes a collection and gives up control, thus each cleanup of a value
-/// that no code reaches runs.
+/// Requests collection after resumed Dart frames release obsolete locals.
 ///
 /// Dart holds no call that forces a collection. The function allocates a block
-/// of garbage, and the collector of the Dart VM runs for it. A cleanup runs on
-/// a later turn of the event loop, thus the goroutine waits for 1 timer. The
-/// collector follows no rule of Go, thus a cleanup can stay for a later call.
+/// of garbage after the Dart stack unwinds. A later event-loop turn permits
+/// cleanup callbacks. The Dart collector can still defer collection.
 void $gc() {
-  for (var round = 0; round < 2; round++) {
-    final List<Object> garbage = <Object>[];
-    for (var i = 0; i < 20000; i++) {
-      garbage.add(List<int>.filled(64, i));
-    }
-    garbage.clear();
-  }
   final Goroutine g = $current!;
   final EventWait waiting = EventWait();
-  $wakeAfter(g, 0);
+  $holdEvent();
+  // Resumed Dart frames can still hold locals that the Go caller cleared.
+  // Unwind those frames before allocation can trigger collection.
+  Timer.run(() {
+    for (var round = 0; round < 2; round++) {
+      final List<Object> garbage = <Object>[];
+      for (var i = 0; i < 20000; i++) {
+        garbage.add(List<int>.filled(64, i));
+      }
+      garbage.clear();
+    }
+    Timer.run(() {
+      $freeEvent();
+      $wake(g);
+    });
+  });
   $block(waiting);
 }
 

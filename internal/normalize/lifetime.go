@@ -61,7 +61,7 @@ func releaseTemporaries(m *ir.Machine) {
 				continue
 			}
 			switch v.Type.Underlying().(type) {
-			case *types.Slice, *types.Map, *types.Pointer, *types.Interface, *types.Signature:
+			case *types.Slice, *types.Map, *types.Pointer, *types.Interface, *types.Signature, *types.Tuple:
 				clear = append(clear, &ir.Assign{Lhs: identOf(v), Rhs: &ir.Zero{Type: v.Type}})
 			}
 		}
