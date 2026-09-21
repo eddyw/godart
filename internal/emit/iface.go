@@ -406,6 +406,17 @@ func (e *emitter) fieldAccess(owner types.Type, field *types.Var, i int,
 		// The opaque interop type has a zero-sized marker but no Go storage.
 		return "($r) => " + e.zero(field.Type()) + ", ($r, $v) {}"
 	}
+	if named, ok := types.Unalias(owner).(*types.Named); ok {
+		ref := e.structRef(named)
+		if ref.TypeArgs().Len() > 0 {
+			previous := e.fieldTypeArgs
+			e.fieldTypeArgs = make(map[*types.TypeParam]types.Type)
+			for n := 0; n < ref.TypeArgs().Len(); n++ {
+				e.fieldTypeArgs[ref.Origin().TypeParams().At(n)] = ref.TypeArgs().At(n)
+			}
+			defer func() { e.fieldTypeArgs = previous }()
+		}
+	}
 	dart := structFieldName(field, i)
 	if field.Name() != "_" {
 		dart = e.fieldDartName(owner, field.Name())

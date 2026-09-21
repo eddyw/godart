@@ -44,6 +44,13 @@ func (e *emitter) dartType(t types.Type) string {
 		}
 		return e.dartType(t.Underlying())
 	case *types.TypeParam:
+		if arg := e.fieldTypeArgs[t]; arg != nil {
+			// Type arguments already belong to the instance scope.
+			previous := e.fieldTypeArgs
+			e.fieldTypeArgs = nil
+			defer func() { e.fieldTypeArgs = previous }()
+			return e.dartType(arg)
+		}
 		// A composite core can supply the Dart representation directly.
 		// `S ~[]E` gives `Slice<E>`.
 		//
