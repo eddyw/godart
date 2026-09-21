@@ -391,7 +391,7 @@ func (e *emitter) receiver(f *ir.Func) {
 		e.line("%s %s = this;", e.dartType(f.Recv.Type), f.Recv.Name)
 		return
 	}
-	e.line("var %s = this.$copy();", f.Recv.Name)
+	e.line("%s %s = this.$copy();", e.dartType(f.Recv.Type), f.Recv.Name)
 }
 
 func (e *emitter) funcDecl(f *ir.Func) {
