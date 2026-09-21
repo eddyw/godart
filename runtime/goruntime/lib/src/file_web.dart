@@ -75,6 +75,10 @@ int $fileChmod(int fd, int mode) => 38;
 
 int $fileChown(int fd, int uid, int gid) => 38;
 
+int $nativeChmod(GoString path, int mode) => 38;
+
+int $nativeChown(GoString path, int uid, int gid, bool follow) => 38;
+
 GoString $chmod(GoString path, int mode) => _noSys;
 
 /// The file mode creation mask of the process. A browser holds no such mask,

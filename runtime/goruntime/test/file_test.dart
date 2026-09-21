@@ -36,6 +36,33 @@ void main() {
     expect(updated.$1[3], 789);
   }, skip: !Platform.isLinux);
 
+  test('Native path attributes preserve raw bytes and file identity', () {
+    final root = Directory.systemTemp.createTempSync('gart-pathattrs-');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final raw = Uint8List.fromList([
+      ...GoString.fromString('${root.path}/raw-').bytes,
+      0xff,
+    ]);
+    File.fromRawPath(raw).writeAsStringSync('raw');
+    final path = GoString.fromBytes(raw);
+    final decoded = File('${root.path}/raw-\uFFFD')
+      ..writeAsStringSync('decoded');
+    final decodedPath = GoString.fromString(decoded.path);
+    final before = $nativeStat(decodedPath, true);
+    expect(before.$2, 0);
+    expect($nativeChmod(path, 0x100), 0);
+    final stat = $nativeStat(path, true);
+    expect(stat.$2, 0);
+    expect(stat.$1[1] & 0x1ff, 0x100);
+    expect($nativeChown(path, stat.$1[7], stat.$1[8], true), 0);
+    expect($nativeChown(path, -1, -1, false), 0);
+    final after = $nativeStat(decodedPath, true);
+    expect(after.$2, 0);
+    expect(after.$1[1], before.$1[1]);
+    expect(after.$1[7], before.$1[7]);
+    expect(after.$1[8], before.$1[8]);
+  }, skip: !Platform.isLinux);
+
   test('RemoveAll rejects a NUL path without removal', () {
     final root = Directory.systemTemp.createTempSync('gart-removeall-');
     addTearDown(() {

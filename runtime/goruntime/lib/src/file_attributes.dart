@@ -58,6 +58,55 @@ final _free = _libc
       void Function(Pointer<Uint8>)
     >('free');
 
+final _chmod = Platform.isMacOS
+    ? _libc.lookupFunction<
+        Int Function(Pointer<Uint8>, Uint16),
+        int Function(Pointer<Uint8>, int)
+      >('chmod')
+    : _libc.lookupFunction<
+        Int Function(Pointer<Uint8>, Uint32),
+        int Function(Pointer<Uint8>, int)
+      >('chmod');
+final _chown = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Uint32, Uint32),
+      int Function(Pointer<Uint8>, int, int)
+    >('chown');
+final _lchown = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Uint32, Uint32),
+      int Function(Pointer<Uint8>, int, int)
+    >('lchown');
+
+int _pathAttribute(GoString path, int Function(Pointer<Uint8>) apply) {
+  final bytes = path.bytes;
+  if (bytes.contains(0)) return 22;
+  final name = _malloc(bytes.length + 1);
+  if (name == nullptr) return 12;
+  try {
+    name.asTypedList(bytes.length + 1)
+      ..setRange(0, bytes.length, bytes)
+      ..[bytes.length] = 0;
+    final errno = _errno();
+    int error;
+    do {
+      error = apply(name) == 0 ? 0 : errno.value;
+    } while (error == 4);
+    return error;
+  } finally {
+    _free(name);
+  }
+}
+
+int $nativeChmod(GoString path, int mode) =>
+    _pathAttribute(path, (name) => _chmod(name, mode));
+
+int $nativeChown(GoString path, int uid, int gid, bool follow) =>
+    _pathAttribute(
+      path,
+      (name) => follow ? _chown(name, uid, gid) : _lchown(name, uid, gid),
+    );
+
 int $nativeChtimes(
   GoString path,
   int atime,

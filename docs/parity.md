@@ -46,6 +46,7 @@ Directory creation on Linux and macOS applies permission bits and the process um
 Temporary directories request mode `0700`.
 Directory descriptors retain their identity after a rename or removal.
 `File.Chmod` and `File.Chown` use native descriptors on Linux and macOS.
+`os.Chmod`, `Chown`, and `Lchown` preserve native errors and raw path bytes on these hosts.
 `File.Chdir` uses the open descriptor and preserves directory identity after a rename.
 On Unix platforms, `Getwd` preserves an absolute `PWD` alias only when it names the current directory.
 Linux and macOS on x64 and arm64 use native `Stat`, `Lstat`, and descriptor-based `File.Stat`.

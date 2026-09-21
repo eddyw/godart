@@ -643,6 +643,11 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileChmod(%s, %s)", args[0], args[1]), true
 	case "FileChown":
 		return fmt.Sprintf("$fileChown(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "NativeChmod":
+		return fmt.Sprintf("$nativeChmod(%s, %s)", args[0], args[1]), true
+	case "NativeChown":
+		return fmt.Sprintf("$nativeChown(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
 	case "Chmod":
 		return fmt.Sprintf("$chmod(%s, %s)", args[0], args[1]), true
 	case "Chown":

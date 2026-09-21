@@ -71,6 +71,12 @@ func Chmod(name string, mode FileMode) error {
 	if contains(name, "\x00") {
 		return &PathError{Op: "chmod", Path: name, Err: syscall.EINVAL}
 	}
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if errno := dart.NativeChmod(name, syscallMode(mode)); errno != 0 {
+			return &PathError{Op: "chmod", Path: name, Err: syscall.Errno(errno)}
+		}
+		return nil
+	}
 	return pathError("chmod", name, dart.Chmod(name, syscallMode(mode)))
 }
 
@@ -97,6 +103,12 @@ func Chown(name string, uid, gid int) error {
 	if contains(name, "\x00") {
 		return &PathError{Op: "chown", Path: name, Err: syscall.EINVAL}
 	}
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if errno := dart.NativeChown(name, uid, gid, true); errno != 0 {
+			return &PathError{Op: "chown", Path: name, Err: syscall.Errno(errno)}
+		}
+		return nil
+	}
 	return pathError("chown", name, dart.Chown(name, uid, gid, true))
 }
 
@@ -105,6 +117,12 @@ func Chown(name string, uid, gid int) error {
 func Lchown(name string, uid, gid int) error {
 	if contains(name, "\x00") {
 		return &PathError{Op: "lchown", Path: name, Err: syscall.EINVAL}
+	}
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if errno := dart.NativeChown(name, uid, gid, false); errno != 0 {
+			return &PathError{Op: "lchown", Path: name, Err: syscall.Errno(errno)}
+		}
+		return nil
 	}
 	return pathError("lchown", name, dart.Chown(name, uid, gid, false))
 }

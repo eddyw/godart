@@ -1066,6 +1066,16 @@ func FileChmod(fd, mode int) int { panic("syscall/dart needs the gart compiler")
 // FileChown changes ownership through an open descriptor and returns errno.
 func FileChown(fd, uid, gid int) int { panic("syscall/dart needs the gart compiler") }
 
+// NativeChmod changes a native path's mode and returns errno.
+func NativeChmod(path string, mode int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// NativeChown changes native ownership and returns errno. Follow selects the symlink target.
+func NativeChown(path string, uid, gid int, follow bool) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Chmod writes the permission bits of a path. The mode holds the 12 bits of a
 // POSIX mode. dart:io holds no such call, thus the Dart side runs the command
 // chmod of the platform.

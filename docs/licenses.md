@@ -44,6 +44,7 @@ The time value representation and its clock helpers adapt Go `src/time/time.go`.
 Directory creation and sticky-bit behavior follow Go `src/os/file.go` with its BSD notice.
 Descriptor-based directory and file attribute changes follow Go `src/os/file_posix.go`,
 `src/internal/poll/fd_posix.go`, and `fd_unix.go` with their BSD notices.
+Path permission and ownership changes follow Go `src/os/file_posix.go` with its BSD notice.
 Timestamp updates follow Go `src/os/file_posix.go` and `src/syscall/syscall_{bsd,linux}.go`.
 The native adapter and Timespec method preserve their Go BSD notices.
 Native file metadata adapts Go `src/os/stat_linux.go`, `stat_darwin.go`,
