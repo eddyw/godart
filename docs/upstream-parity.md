@@ -97,17 +97,17 @@ Each attempt retains the source wrapper, upstream license, corpus bytes, SHA-256
 The report rejects a pass with missing inputs, changed files, unmatched test identities, or failed processes.
 Keep a failed attempt intact. Reduce a failing corpus input before a permanent regression addition.
 
-The inventory gate rejects changes to upstream source, fixtures, build tags, and test patches.
+The inventory test rejects changes to upstream source, fixtures, build tags, and test patches.
 Each SDK version has a separate inventory. A candidate inventory records reviewed
 inputs without promotion of the release baseline. Exact `_go.mod` duplicates
 from Go toolchain module distributions do not change the source fingerprint.
 Different duplicate contents still change the fingerprint.
-The coverage gate rejects missing package classifications and lost package suites.
-The compiler gate rejects a new diagnostic for a known blocker.
-The coverage gate also requires a cause and reason for each blocker. [Blocker classifications](upstream-blockers.md) distinguish public API gaps from private test dependencies and native runtime boundaries.
+The coverage test rejects missing package classifications and lost package suites.
+The compiler test rejects a new diagnostic for a known blocker.
+The coverage test also requires a cause and reason for each blocker. [Blocker classifications](upstream-blockers.md) distinguish public API gaps from private test dependencies and native runtime boundaries.
 It also requires promotion when a blocked package compiles successfully.
 
-The result gate rejects these conditions:
+The result comparison rejects these conditions:
 
 - A failed process, including matching failures on both runtimes.
 - An empty selection or an absent expected test.

@@ -1,51 +1,37 @@
-# Upstream compile blockers
+# Upstream suite blockers
 
-This inventory classifies the first known compile failure of each blocked package.
-A repaired first failure can expose another dependency. A blocked suite is not a parity pass.
+The [coverage manifest](../internal/parity/testdata/coverage-manifest.json)
+records current package status, exact diagnostics, platform differences,
+blocker causes, and reasons. Use that manifest for the package inventory.
+This document defines the classification rules without a second inventory.
 
-The blocker manifest retains exact platform diagnostics in the coverage manifest.
+A first diagnostic can hide further dependencies. A blocked package stays
+in the coverage denominator. Portable assertions can execute separately.
+A successful compile does not establish a behavioral pass.
 
-| Package | Cause | Required work or boundary |
-|---|---|---|
-| `cmp` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `crypto/internal/fips140/bigmod` | runtime-boundary | The suite calls architecture assembly helpers such as addMulVVW1024. Dart has no native assembly entry points. |
-| `crypto/internal/fips140/nistec` | runtime-boundary | The suite requires native memory-page sizes and memory protection through syscall. |
-| `crypto/internal/fips140cache` | private-test-dependency | The suite inspects a private cache field that the overlay does not retain. |
-| `crypto/internal/sysrand` | private-test-dependency | The suite injects native random-source failures through private hooks and errno values. |
-| `crypto/md5` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `crypto/subtle` | runtime-boundary | The suite requires native CPU feature detection through internal/cpu. |
-| `crypto/tls` | public-api-gap | The complete suite requires native process signals and errno contracts. |
-| `go/types` | runtime-boundary | The suite converts an unsafe address into a typed pointer. Dart has no native pointer conversion. |
-| `hash/maphash` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `internal/abi` | runtime-boundary | The suite requires native function program counters through abi.FuncPCABI0. |
-| `internal/fmtsort` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `internal/godebug` | runtime-boundary | The suite requires native Go runtime metrics. |
-| `internal/reflectlite` | private-test-dependency | The overlay does not retain private reflectlite implementation names used by its tests. |
-| `internal/testenv` | private-test-dependency | The complete native test infrastructure exceeds the selected testenv adapter. |
-| `internal/types/errors` | private-test-dependency | The suite depends on go/importer, which remains outside the surface. |
-| `math/big` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |
-| `net` | private-test-dependency | The suite calls the private native RFC6724 source-address sorter. |
-| `net/http` | public-api-gap | The complete suite requires native listener file descriptors. |
-| `net/http/internal/http2` | private-test-dependency | The suite extracts private HTTP transport state through a cross-package go:linkname bridge. |
-| `net/http/httputil` | runtime-boundary | The suite requires Go runtime profiling through runtime/pprof. |
-| `os` | public-api-gap | The complete suite requires native errno and file-descriptor behavior beyond the current surface. |
-| `os/exec` | public-api-gap | The environment helper now matches upstream. The complete suite next requires native process signals and process attributes. |
-| `os/signal` | public-api-gap | The suite requires inherited file descriptors through exec.Cmd.ExtraFiles. |
-| `reflect` | runtime-boundary | The suite inspects native register ABI constants such as abi.IntArgRegs. |
-| `runtime` | runtime-boundary | The suite requires Go finalizer semantics through runtime.SetFinalizer. |
-| `runtime/debug` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |
-| `sync` | runtime-boundary | The suite pins goroutines to native Go execution threads through runtime_procPin. |
-| `sync/atomic` | runtime-boundary | The suite requires atomic operations on unsafe native pointers. |
-| `syscall` | runtime-boundary | The suite requires raw native file descriptors through syscall.Open. |
-| `testing` | private-test-dependency | The native harness tests depend on test-only exports and a different harness implementation. |
-| `text/template` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
-| `time` | private-test-dependency | The complete native test graph creates an import cycle with the time overlay. Selected public assertions execute separately. |
-| `unique` | private-test-dependency | The suite inspects the private Go weak canonicalization table. The overlay uses a process-lifetime map. |
-| `weak` | runtime-boundary | The suite requires Go finalizer semantics through runtime.SetFinalizer. |
+## Causes
 
-The classification identifies no independent compiler defect from these first diagnostics.
-This does not establish the absence of compiler defects behind the first failure.
+- `public-api-gap`: an exported API or its behavior is absent.
+- `private-test-dependency`: an upstream test needs private implementation
+  state or a test-only export that the adapter does not provide.
+- `runtime-boundary`: an assertion depends on native runtime or host behavior.
+  This cause does not exclude all tests in the package or prove that a fix is impossible.
 
-Prioritize missing public behavior that the Dart APIs can support. Preserve the native runtime boundaries.
-Do not add empty private helpers, remove assertions, or treat excluded tests as passes.
-GC, unsafe memory, and native thread facilities retain explicit target limits.
+Keep implementation gaps separate from agreed target exclusions.
+Do not add empty private helpers or remove original assertions to obtain a pass.
+
+## Validation
+
+Run the diagnostic comparison against the installed Go SDK:
+
+```sh
+go test ./internal/driver -run '^TestUpstreamCompileBlockers$' -count=1
+```
+
+This test compares the first compile diagnostic for each compile-blocked package.
+It also requires runtime-blocked packages to compile. It does not execute their tests.
+A new diagnostic or a newly successful compile requires classification review.
+
+Run the original tests before a status change to a behavioral pass.
+Preserve source identities, platform details, SDK versions, and explicit exclusions.
+Read [Upstream parity](upstream-parity.md) for the result requirements.
