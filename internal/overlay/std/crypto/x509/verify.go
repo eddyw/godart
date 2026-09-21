@@ -1,11 +1,9 @@
 //go:build dart
 
-// This file comes from the file verify.go of crypto/x509 of Go. It builds each
-// chain of a certificate to a root, and it checks each signature of the chain.
-//
-// The block of the platform verifier stays out. That verifier stands on
-// Windows, on macOS, and on iOS, and the Dart target reaches none of the 3.
-// Verify always runs the verifier of Go itself.
+// Copyright 2011 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package x509
 
 import (
@@ -18,6 +16,7 @@ import (
 	"maps"
 	"net"
 	"net/netip"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -564,9 +563,24 @@ func (c *Certificate) Verify(opts VerifyOptions) ([][]*Certificate, error) {
 		}
 	}
 
-	// The platform verifier of Go stands on Windows, on macOS, and on iOS. The
-	// Dart target reaches none of the 3, thus the check below always runs the
-	// verifier of Go itself.
+	// Use platform verifiers, where available, if Roots is from SystemCertPool.
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" || runtime.GOOS == "ios" {
+		// Don't use the system verifier if the system pool was replaced with a non-system pool,
+		// i.e. if SetFallbackRoots was called with x509usefallbackroots=1.
+		systemPool := systemRootsPool()
+		if opts.Roots == nil && (systemPool == nil || systemPool.systemPool) {
+			return c.systemVerify(&opts)
+		}
+		if opts.Roots != nil && opts.Roots.systemPool {
+			platformChains, err := c.systemVerify(&opts)
+			// If the platform verifier succeeded, or there are no additional
+			// roots, return the platform verifier result. Otherwise, continue
+			// with the Go verifier.
+			if err == nil || opts.Roots.len() == 0 {
+				return platformChains, err
+			}
+		}
+	}
 
 	if opts.Roots == nil {
 		opts.Roots = systemRootsPool()

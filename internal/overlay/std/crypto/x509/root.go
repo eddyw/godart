@@ -1,16 +1,18 @@
+// Copyright 2012 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
-// This file holds the trust store of the package. Each line of the fallback
-// comes from the file root.go of crypto/x509 of Go.
-//
-// The secure socket of Dart owns the trust decision of a handshake, and it
-// exports no root certificate. Thus loadSystemRoots always reports a failure of
-// the load, exactly as Go does on a platform that holds no store.
-// SetFallbackRoots then gives the pool that Verify reads.
 package x509
 
 import (
 	"internal/godebug"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 )
 
@@ -59,14 +61,19 @@ func initSystemRoots() {
 
 var x509usefallbackroots = godebug.New("x509usefallbackroots")
 
-// SetFallbackRoots names the roots that the check of a certificate reads, when
-// the caller names no root of its own and the platform holds no store. It
-// panics for a nil pool.
+// SetFallbackRoots sets the roots to use during certificate verification, if no
+// custom roots are specified and a platform verifier or a system certificate
+// pool is not available (for instance in a container which does not have a root
+// certificate bundle). SetFallbackRoots will panic if roots is nil.
 //
-// The Dart target holds no store of the platform, thus this call always names
-// the roots that Verify reads.
+// SetFallbackRoots may only be called once, if called multiple times it will
+// panic.
 //
-// SetFallbackRoots runs 1 time. A second call panics.
+// The fallback behavior can be forced on all platforms, even when there is a
+// system certificate pool, by setting GODEBUG=x509usefallbackroots=1 (note that
+// on Windows and macOS this will disable usage of the platform verification
+// APIs and cause the pure Go verifier to be used). Setting
+// x509usefallbackroots=1 without calling SetFallbackRoots has no effect.
 func SetFallbackRoots(roots *CertPool) {
 	if roots == nil {
 		panic("roots must be non-nil")
@@ -80,15 +87,17 @@ func SetFallbackRoots(roots *CertPool) {
 	}
 	fallbacksSet = true
 
-	// initSystemRoots may not have run yet. The call handles that case here,
-	// because a program calls SetFallbackRoots at its start most of the time.
+	// Handle case when initSystemRoots was not yet executed.
+	// We handle that specially instead of calling loadSystemRoots, to avoid
+	// spending excessive amount of cpu here, since the SetFallbackRoots in most cases
+	// is going to be called at program startup.
 	if systemRoots == nil && systemRootsErr == nil {
 		systemRoots = roots
 		useFallbackRoots = x509usefallbackroots.Value() == "1"
 		return
 	}
 
-	once.Do(func() { panic("unreachable") }) // the roots of the system stand already.
+	once.Do(func() { panic("unreachable") }) // asserts that system roots were indeed loaded before.
 
 	forceFallbackRoots := x509usefallbackroots.Value() == "1"
 	systemCertsAvail := systemRoots != nil && (systemRoots.len() > 0 || systemRoots.systemPool)
@@ -104,17 +113,110 @@ func SetFallbackRoots(roots *CertPool) {
 	systemRoots, systemRootsErr = roots, nil
 }
 
-// errNoTrustStore names the cause that Dart gives.
-var errNoTrustStore = errorText("the secure socket of Dart owns the trust " +
-	"store, and it exports no root certificate")
+const (
+	// certFileEnv is the environment variable which identifies where to locate
+	// the SSL certificate file. If set this overrides the system default.
+	certFileEnv = "SSL_CERT_FILE"
 
-// errorText builds an error of a text.
-type errorText string
+	// certDirEnv is the environment variable which identifies which directory
+	// to check for SSL certificate files. If set this overrides the system default.
+	// See https://docs.openssl.org/4.0/man1/openssl-rehash/#environment.
+	certDirEnv = "SSL_CERT_DIR"
+)
 
-func (e errorText) Error() string { return string(e) }
+var x509sslcertoverrideplatform = godebug.New("x509sslcertoverrideplatform")
 
-// loadSystemRoots always reports the failure of the load. Dart holds the store
-// inside its secure socket, and it exports no certificate of it.
 func loadSystemRoots() (*CertPool, error) {
-	return nil, SystemRootsError{Err: errNoTrustStore}
+	certFilePath, certDirPath := os.Getenv(certFileEnv), os.Getenv(certDirEnv)
+
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" || runtime.GOOS == "ios" {
+		if certFilePath == "" && certDirPath == "" {
+			return &CertPool{systemPool: true}, nil
+		}
+		if x509sslcertoverrideplatform.Value() == "0" {
+			x509sslcertoverrideplatform.IncNonDefault()
+			return &CertPool{systemPool: true}, nil
+		}
+	}
+
+	return loadOnDiskRoots(certFilePath, certDirPath)
+}
+
+func loadOnDiskRoots(certFilePath, certDirPath string) (*CertPool, error) {
+	roots := NewCertPool()
+
+	files := certFiles
+	if certFilePath != "" {
+		files = []string{certFilePath}
+	}
+
+	var firstErr error
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err == nil {
+			roots.AppendCertsFromPEM(data)
+			break
+		}
+		if firstErr == nil && !os.IsNotExist(err) {
+			firstErr = err
+		}
+	}
+
+	dirs := certDirectories
+	if certDirPath != "" {
+		// OpenSSL and BoringSSL both use ":" as the SSL_CERT_DIR separator on
+		// Unix-like systems, and ";" on Windows.
+		// See:
+		//  * https://golang.org/issue/35325
+		//  * https://docs.openssl.org/4.0/man1/openssl-rehash/#environment
+		dirs = filepath.SplitList(certDirPath)
+	}
+
+	for _, directory := range dirs {
+		fis, err := readUniqueDirectoryEntries(directory)
+		if err != nil {
+			if firstErr == nil && !os.IsNotExist(err) {
+				firstErr = err
+			}
+			continue
+		}
+		for _, fi := range fis {
+			data, err := os.ReadFile(filepath.Join(directory, fi.Name()))
+			if err == nil {
+				roots.AppendCertsFromPEM(data)
+			}
+		}
+	}
+
+	if roots.len() > 0 || firstErr == nil {
+		return roots, nil
+	}
+
+	return nil, firstErr
+}
+
+// readUniqueDirectoryEntries is like os.ReadDir but omits
+// symlinks that point within the directory.
+func readUniqueDirectoryEntries(dir string) ([]fs.DirEntry, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	uniq := files[:0]
+	for _, f := range files {
+		if !isSameDirSymlink(f, dir) {
+			uniq = append(uniq, f)
+		}
+	}
+	return uniq, nil
+}
+
+// isSameDirSymlink reports whether f in dir is a symlink with a
+// target not containing a slash.
+func isSameDirSymlink(f fs.DirEntry, dir string) bool {
+	if f.Type()&fs.ModeSymlink == 0 {
+		return false
+	}
+	target, err := os.Readlink(filepath.Join(dir, f.Name()))
+	return err == nil && !strings.ContainsRune(target, filepath.Separator)
 }

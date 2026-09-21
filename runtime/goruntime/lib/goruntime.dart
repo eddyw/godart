@@ -37,5 +37,6 @@ export 'src/slice.dart';
 export 'src/srcmap.dart';
 export 'src/string.dart';
 export 'src/test.dart';
+export 'src/trust.dart' if (dart.library.js_interop) 'src/trust_web.dart';
 export 'src/weak.dart';
 export 'src/zero.dart';

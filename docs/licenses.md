@@ -21,6 +21,10 @@ Malformed literals retain the behavior of `src/cmd/compile/internal/types2/expr.
 The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
 The runtime license includes their BSD terms.
+The certificate trust adapter adapts Go 1.27.1 `crypto/x509/root.go`,
+`root_linux.go`, `root_darwin.go`, and `internal/macos` wrappers.
+The trust fixture retains certificate constants from Go `crypto/x509/verify_test.go`.
+Source headers and the runtime license preserve their BSD terms.
 Generated widget files retain notices for their Dart documentation sources.
 
 Before source reuse or asset additions, record the origin and verify the

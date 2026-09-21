@@ -1,9 +1,9 @@
 //go:build dart
 
-// This file comes from the file cert_pool.go of crypto/x509 of Go. It holds
-// the set of certificates that Verify reads.
-//
-// SystemCertPool alone differs. Read the file root.go of the overlay.
+// Copyright 2011 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package x509
 
 import (
@@ -105,12 +105,10 @@ func (s *CertPool) Clone() *CertPool {
 	return p
 }
 
-// SystemCertPool always gives a SystemRootsError.
-//
-// Go reads the root certificates of the platform. Dart holds the store inside
-// its secure socket, and it exports no certificate of it. A pool with no root
-// would report an empty trust store, thus the overlay reports the failure of
-// the load.
+// SystemCertPool returns a copy of the system certificate pool.
+// SSL_CERT_FILE and SSL_CERT_DIR select certificate files and directories.
+// x509sslcertoverrideplatform=0 preserves the platform verifier despite those variables.
+// Changes to this pool do not change the system store or another pool.
 func SystemCertPool() (*CertPool, error) {
 	if sysRoots := systemRootsPool(); sysRoots != nil {
 		return sysRoots.Clone(), nil

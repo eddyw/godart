@@ -63,6 +63,11 @@ TLS uses Dart's secure socket implementation. A Go API name does not imply
 control over all native Go TLS internals. The project has no security audit.
 Read [SECURITY.md](../SECURITY.md) before a security-sensitive deployment.
 
+`crypto/x509` reads Linux certificate files and uses the macOS trust policy.
+Root overrides and fallback roots follow Go. Native trust evaluation can
+block the current Dart isolate. Windows system trust remains unavailable.
+iOS and Android need device validation.
+
 ## Tests and coverage
 
 `gart test` supports tests, examples, fuzz seeds, filters, coverage, and AOT

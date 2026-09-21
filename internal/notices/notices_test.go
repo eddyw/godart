@@ -64,7 +64,7 @@ func TestCompilerNotices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(runtimeLicense) != Project+"\nGo source adaptations\n\n"+string(goLicense) {
+	if string(runtimeLicense) != Project+"\nGo source adaptations\n\nCopyright 2020 The Go Authors.\n\n"+string(goLicense) {
 		t.Fatal("runtime omits project or Go source license terms")
 	}
 	if !strings.Contains(Compiler, Project) || !strings.Contains(Compiler, "Go SDK / LICENSE\n") {

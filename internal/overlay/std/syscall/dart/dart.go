@@ -1609,3 +1609,9 @@ func Getpagesize() int { panic("syscall/dart needs the gart compiler") }
 func Getgroups() ([]int, int) { panic("syscall/dart needs the gart compiler") }
 
 func SendSignal(pid, signal int) int { panic("syscall/dart needs the gart compiler") }
+
+// VerifySystemCertificates uses the platform trust policy for DER certificates.
+// The date uses seconds from 2001-01-01 when hasDate is true.
+func VerifySystemCertificates(certs []string, name string, date float64, hasDate bool) ([]string, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}

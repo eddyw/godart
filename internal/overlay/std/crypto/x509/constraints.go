@@ -28,10 +28,6 @@ import (
 // surface. The parse below reads the same bytes with encoding/asn1, and it
 // gives the same values and the same errors.
 //
-// The overlay runs no chain check, thus a constraint below rejects no
-// certificate here. Certificate.Verify owns that work in Go, and the secure
-// socket of Dart owns it in this project.
-//
 //	NameConstraints ::= SEQUENCE {
 //	     permittedSubtrees       [0]     GeneralSubtrees OPTIONAL,
 //	     excludedSubtrees        [1]     GeneralSubtrees OPTIONAL }
