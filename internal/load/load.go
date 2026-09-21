@@ -176,6 +176,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 			goFiles[name] = content
 		}
 	}
+	var rangeExtras sync.Map
 	cfg := &packages.Config{
 		Env:        sdk.env,
 		Mode:       mode,
@@ -192,6 +193,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 				if diagnostics := compilerSyntaxErrors(fset, name, src, file); len(diagnostics) != 0 {
 					return file, diagnostics
 				}
+				file, err = repairRangeClauses(fset, name, src, file, err, &rangeExtras)
 			}
 			if err == nil {
 				if directives := misplacedDirectives(fset, file, src); len(directives) != 0 {
@@ -211,7 +213,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	if len(pkgs) == 0 {
 		return nil, fmt.Errorf("no package matches %v in %s", patterns, dir)
 	}
-	if err := collectErrors(pkgs, files); err != nil {
+	if err := collectErrors(pkgs, files, &rangeExtras); err != nil {
 		return nil, err
 	}
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
@@ -475,7 +477,7 @@ func patchFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
 // overlay of another package gives such an error, and the verifier reports the
 // real cause with a source position: a compiled package imports a package
 // outside the surface.
-func collectErrors(roots []*packages.Package, sources map[string][]byte) error {
+func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeExtras *sync.Map) error {
 	root := map[string]bool{}
 	for _, p := range roots {
 		root[p.ID] = true
@@ -496,6 +498,9 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte) error {
 				errs = append(errs, err)
 			}
 			return
+		}
+		for _, err := range rangeClauseErrors(p, rangeExtras) {
+			errs = append(errs, err)
 		}
 		for _, file := range p.Syntax {
 			if file.Name.Name == "_" {

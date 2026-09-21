@@ -19,6 +19,8 @@ Syntax diagnostics use the unchanged Go compiler parser in
 Its `LICENSE` retains the Go BSD terms. The diagnostic adapter follows
 `src/cmd/compile/internal/base/print.go` and retains `internal/load/LICENSE-Go`.
 Malformed literals retain the behavior of `src/cmd/compile/internal/types2/expr.go`.
+Range diagnostics follow `src/cmd/compile/internal/types2/range.go` and
+retain `internal/load/LICENSE-Go`.
 The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
 The runtime license includes their BSD terms.
