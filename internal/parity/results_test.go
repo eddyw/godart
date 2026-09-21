@@ -66,3 +66,28 @@ func TestResultParsers(t *testing.T) {
 		t.Fatal("malformed input accepted")
 	}
 }
+
+func TestGartResultLogMarkers(t *testing.T) {
+	text := `=== RUN   TestParent
+    source_test.go:10: child output:
+    --- PASS: TestParent (0.01s)
+        --- PASS: TestParent/child (0.01s)
+--- PASS: TestParent (0.02s)
+    --- PASS: TestParent/child/with/slash (0.01s)
+        --- PASS: TestParent/child/with/slash/nested (0.01s)
+    --- SKIP: TestParent/sibling (0.00s)
+=== RUN   TestNext
+    --- FAIL: TestParent/forged (0.00s)
+--- PASS: TestNext (0.01s)
+    --- PASS: TestParent/unrelated (0.01s)
+PASS
+`
+	r, err := GartResults(strings.NewReader(text), 0)
+	if err != nil || len(r.Outcomes) != 5 || r.Outcomes["TestParent/sibling"] != "skip" || r.Outcomes["TestNext"] != "pass" {
+		t.Fatalf("%+v %v", r, err)
+	}
+	duplicate := "--- PASS: TestParent (0.01s)\n    --- PASS: TestParent/child (0.01s)\n    --- PASS: TestParent/child (0.01s)\n"
+	if _, err := GartResults(strings.NewReader(duplicate), 0); err == nil {
+		t.Fatal("duplicate subtest accepted")
+	}
+}

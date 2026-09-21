@@ -15,6 +15,7 @@ func TestParityHarness(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "parity_test.go"), `package parityharness
 import "testing"
 func TestPass(t *testing.T) {
+ t.Logf("child output:\n--- PASS: TestPass (0.01s)\n    --- PASS: TestPass/kept (0.01s)")
  t.Run("kept", func(t *testing.T) {})
  t.Run("excluded", func(t *testing.T) {})
 }

@@ -57,22 +57,33 @@ func NativeResults(r io.Reader, exit int) (Result, error) {
 	return out, nil
 }
 
-var resultLine = regexp.MustCompile(`^\s*--- (PASS|SKIP|FAIL): (\S+) \([0-9.]+s\)$`)
+var resultLine = regexp.MustCompile(`^((?:    )*)--- (PASS|SKIP|FAIL): (\S+) \([0-9.]+s\)$`)
 
 // GartResults reads terminal test records, not log lines that contain markers.
 func GartResults(r io.Reader, exit int) (Result, error) {
 	out := Result{Outcomes: map[string]string{}, Exit: exit}
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 4096), 16<<20)
+	var parents []string
 	for scanner.Scan() {
-		m := resultLine.FindStringSubmatch(scanner.Text())
+		line := scanner.Text()
+		if strings.HasPrefix(line, "=== ") || line == "PASS" || line == "FAIL" {
+			parents = nil
+		}
+		m := resultLine.FindStringSubmatch(line)
 		if m == nil {
 			continue
 		}
-		if _, ok := out.Outcomes[m[2]]; ok {
-			return out, fmt.Errorf("duplicate Gart outcome: %s", m[2])
+		level, name := len(m[1])/4, m[3]
+		// Subtest records follow their parent. Deeper markers belong to logs.
+		if level > len(parents) || level > 0 && !strings.HasPrefix(name, parents[level-1]+"/") {
+			continue
 		}
-		out.Outcomes[m[2]] = strings.ToLower(m[1])
+		if _, ok := out.Outcomes[name]; ok {
+			return out, fmt.Errorf("duplicate Gart outcome: %s", name)
+		}
+		parents = append(parents[:level], name)
+		out.Outcomes[name] = strings.ToLower(m[2])
 	}
 	return out, scanner.Err()
 }
