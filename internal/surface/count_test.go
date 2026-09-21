@@ -28,7 +28,7 @@ func TestSurfaceCount(t *testing.T) {
 		}
 	}
 	got := [5]int{len(seen), std, interop, internal, vendored}
-	want := [5]int{265, 166, 1, 86, 12}
+	want := [5]int{281, 168, 1, 98, 14}
 	if got != want {
 		t.Errorf("the surface holds %v, expected %v.\n"+
 			"The order is the whole count, the standard packages, the interop "+
