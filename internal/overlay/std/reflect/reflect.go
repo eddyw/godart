@@ -1113,7 +1113,7 @@ func (v Value) IsNil() bool {
 		// An interface that holds a nil pointer is not nil, thus the value
 		// inside decides nothing here.
 		return got == nil
-	case Chan, Func, Map, Pointer, Slice:
+	case Chan, Func, Map, Pointer, Slice, UnsafePointer:
 		if got == nil {
 			return true
 		}

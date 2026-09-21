@@ -2,6 +2,7 @@ package emit
 
 import (
 	"fmt"
+	"go/constant"
 	"go/types"
 	"strings"
 
@@ -1624,6 +1625,11 @@ func (e *emitter) textOf(x ir.Expr) string {
 func (e *emitter) conv(x *ir.Conv) string {
 	from, to := x.From, x.Type
 	text := e.expr(x.X)
+	if basic := basicOf(to); basic != nil && basic.Kind() == types.UnsafePointer {
+		if value, ok := x.X.(*ir.Const); ok && value.Value.Kind() == constant.Int && constant.Sign(value.Value) == 0 {
+			return "null"
+		}
+	}
 	fs, fok := typeset.Describe(from)
 	ts, tok := typeset.Describe(to)
 	_, fp := types.Unalias(from).(*types.TypeParam)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/constant"
 	"go/token"
 	"go/types"
 	"strconv"
@@ -41,7 +42,7 @@ func Package(fset *token.FileSet, files []*ast.File, info *types.Info, embeds, l
 		v.checkDartDecls(f)
 	}
 	for _, f := range files {
-		v.unsafeLayout = v.onlyUnsafeLayout(f)
+		v.unsafeValues = v.onlySafeUnsafeValues(f)
 		ast.Inspect(f, v.visit)
 	}
 	return errors.Join(v.errs...)
@@ -83,7 +84,7 @@ type verifier struct {
 	// embeds holds the path of each file that the loader rewrote for a
 	// `//go:embed` directive.
 	embeds       map[string]bool
-	unsafeLayout bool
+	unsafeValues bool
 }
 
 func (v *verifier) reject(pos token.Pos, hint string, format string, args ...any) {
@@ -125,6 +126,9 @@ func (v *verifier) visit(n ast.Node) bool {
 			v.checkAddress(n)
 		}
 	case *ast.CallExpr:
+		if !v.safeUnsafeConversion(n) {
+			v.reject(n.Pos(), "only nil pointer values are supported", "the compiler rejects the package unsafe conversion")
+		}
 		v.checkCall(n)
 	case *ast.SelectorExpr:
 		v.checkEmbedNew(n)
@@ -170,7 +174,7 @@ func (v *verifier) checkImport(spec *ast.ImportSpec) {
 	}
 	switch {
 	case path == "unsafe":
-		if v.unsafeLayout {
+		if v.unsafeValues {
 			return
 		}
 		// A blank import performs no operation. The standard library writes it
@@ -204,20 +208,57 @@ func (v *verifier) unsafeLayoutCall(call *ast.CallExpr) bool {
 	return ok && obj.Pkg() == types.Unsafe && (obj.Name() == "Sizeof" || obj.Name() == "Alignof" || obj.Name() == "Offsetof")
 }
 
-func (v *verifier) onlyUnsafeLayout(file *ast.File) bool {
+func (v *verifier) onlySafeUnsafeValues(file *ast.File) bool {
 	allowed := true
 	ast.Inspect(file, func(n ast.Node) bool {
-		if call, ok := n.(*ast.CallExpr); ok && v.unsafeLayoutCall(call) {
-			return false
+		if call, ok := n.(*ast.CallExpr); ok {
+			if v.unsafeLayoutCall(call) {
+				return false
+			}
+
 		}
 		if id, ok := n.(*ast.Ident); ok {
-			if obj := v.info.Uses[id]; obj != nil && obj.Pkg() == types.Unsafe {
+			if obj := v.info.Uses[id]; obj != nil && obj.Pkg() == types.Unsafe && obj.Name() != "Pointer" {
 				allowed = false
 			}
 		}
 		return true
 	})
 	return allowed
+}
+
+func (v *verifier) safeUnsafeConversion(call *ast.CallExpr) bool {
+	if !v.info.Types[call.Fun].IsType() || len(call.Args) != 1 {
+		return true
+	}
+	from, to := v.info.TypeOf(call.Args[0]), v.info.TypeOf(call)
+	for _, typ := range []types.Type{from, to} {
+		if parameter, ok := types.Unalias(typ).(*types.TypeParam); ok && typeset.Core(parameter) == nil {
+			terms, _ := typeset.Terms(parameter)
+			for _, term := range terms {
+				if unsafePointerType(term) {
+					return false
+				}
+			}
+		}
+	}
+	if unsafePointerType(to) && !unsafePointerType(from) && from != types.Typ[types.UntypedNil] {
+		value := v.info.Types[call.Args[0]].Value
+		if value == nil || value.Kind() != constant.Int || constant.Sign(value) != 0 {
+			return false
+		}
+	}
+	if unsafePointerType(from) && !unsafePointerType(to) {
+		if _, boxing := to.Underlying().(*types.Interface); !boxing {
+			return false
+		}
+	}
+	return true
+}
+
+func unsafePointerType(t types.Type) bool {
+	basic, ok := typeset.Core(t).(*types.Basic)
+	return ok && basic.Kind() == types.UnsafePointer
 }
 
 // checkAddress rejects the address of a value that holds no reference and that

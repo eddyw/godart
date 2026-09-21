@@ -16,12 +16,21 @@ import (
 // run type checks src and returns the result of the verifier.
 func run(t *testing.T, src string) error {
 	t.Helper()
+	return runFiles(t, map[string]string{"a.go": src})
+}
+
+func runFiles(t *testing.T, sources map[string]string) error {
+	t.Helper()
 	fset := token.NewFileSet()
 	// The comments reach the tree, because a directive of gart stands in a
 	// comment. The loader of stage 1 reads them the same way.
-	file, err := parser.ParseFile(fset, "a.go", src, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("the source does not parse: %v", err)
+	var files []*ast.File
+	for name, src := range sources {
+		file, err := parser.ParseFile(fset, name, src, parser.ParseComments)
+		if err != nil {
+			t.Fatalf("the source does not parse: %v", err)
+		}
+		files = append(files, file)
 	}
 	info := &types.Info{
 		Types:     map[ast.Expr]types.TypeAndValue{},
@@ -30,10 +39,10 @@ func run(t *testing.T, src string) error {
 		Implicits: map[ast.Node]types.Object{},
 	}
 	conf := types.Config{Importer: importer.Default()}
-	if _, err := conf.Check("example.com/a", fset, []*ast.File{file}, info); err != nil {
+	if _, err := conf.Check("example.com/a", fset, files, info); err != nil {
 		t.Fatalf("the source does not type check: %v", err)
 	}
-	return verify.Package(fset, []*ast.File{file}, info, nil, nil)
+	return verify.Package(fset, files, info, nil, nil)
 }
 
 const head = "package a\n\ntype point struct{ x, y int }\n\n"
@@ -78,7 +87,7 @@ func TestImports(t *testing.T) {
 
 import "unsafe"
 
-var _ unsafe.Pointer
+var _ = unsafe.Pointer(uintptr(1))
 `)
 	rejectFile(t, "curated surface", "outside the supported surface", `package a
 
@@ -178,7 +187,7 @@ func TestReportsEachRejection(t *testing.T) {
 	err := run(t, `package main
 import "unsafe"
 import "plugin"
-func main() { var _ unsafe.Pointer; _ = plugin.Open }`)
+func main() { _ = unsafe.Pointer(uintptr(1)); _ = plugin.Open }`)
 	if err == nil {
 		t.Fatal("got no rejection, want 2")
 	}
@@ -527,8 +536,50 @@ func f[T any](x T) uintptr { return unsafe.Sizeof(x) }
 	rejectFile(t, "mixed operations", "rejects the package unsafe", `package a
 import "unsafe"
 const Size = unsafe.Sizeof(1)
-var Pointer unsafe.Pointer
+var Pointer = unsafe.Pointer(uintptr(1))
 `)
+}
+
+func TestNilUnsafePointer(t *testing.T) {
+	const prefix = "package a\nimport \"unsafe\"\n"
+	for name, body := range map[string]string{
+		"declaration": "var p unsafe.Pointer",
+		"nil":         "var p = unsafe.Pointer(nil)",
+		"zero":        "func f() unsafe.Pointer { return unsafe.Pointer(uintptr(0)) }",
+		"named":       "type P unsafe.Pointer; var p P; var q = unsafe.Pointer(p); var _ = any(q)",
+	} {
+		acceptFile(t, name, prefix+body)
+	}
+	for name, body := range map[string]string{
+		"nonzero":               "var p = unsafe.Pointer(uintptr(1))",
+		"variable":              "func f(n uintptr) unsafe.Pointer { return unsafe.Pointer(n) }",
+		"address":               "var n int; var p = unsafe.Pointer(&n)",
+		"integer":               "func f(p unsafe.Pointer) uintptr { return uintptr(p) }",
+		"typed pointer":         "func f(p unsafe.Pointer) *int { return (*int)(p) }",
+		"arithmetic":            "func f(p unsafe.Pointer) unsafe.Pointer { return unsafe.Add(p, 1) }",
+		"generic address":       "func f[T ~unsafe.Pointer](n uintptr) T { return T(n) }",
+		"mixed generic address": "func f[T ~unsafe.Pointer | ~uintptr](n uintptr) T { return T(n) }",
+	} {
+		rejectFile(t, name, "rejects the package unsafe", prefix+body)
+	}
+}
+
+func TestUnsafePointerAcrossFiles(t *testing.T) {
+	for name, body := range map[string]string{
+		"address":       "func f(n uintptr) P { return P(n) }",
+		"integer":       "func f(p P) uintptr { return uintptr(p) }",
+		"typed pointer": "func f(p P) *int { return (*int)(p) }",
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := runFiles(t, map[string]string{
+				"a.go": "package a\nimport \"unsafe\"\ntype P unsafe.Pointer",
+				"b.go": "package a\n" + body,
+			})
+			if err == nil || !strings.Contains(err.Error(), "b.go:") || !strings.Contains(err.Error(), "unsafe conversion") {
+				t.Fatalf("expected conversion rejection in b.go, got %v", err)
+			}
+		})
+	}
 }
 
 func TestChannelElementSize(t *testing.T) {

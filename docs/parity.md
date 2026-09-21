@@ -13,7 +13,7 @@ SDK versions, modes, and exclusions.
 | Goroutines | Cooperative execution in 1 Dart isolate. Loops in state machines yield periodically. Busy synchronous functions can block other work. |
 | Parallelism | No shared-memory Go execution across native threads. `GOMAXPROCS` and `NumCPU` report 1. |
 | Type layout | `unsafe.Sizeof`, `unsafe.Alignof`, and `unsafe.Offsetof` use 64-bit Go type metadata, including generic types. They do not describe Dart object storage. |
-| Native access | No cgo, native pointer arithmetic, or general `unsafe` operations. |
+| Native access | Nil `unsafe.Pointer` values and constant-zero conversions are supported. No cgo, native pointer arithmetic, or pointer reinterpretation. |
 | Pointer output | Process-local identities can represent pointers. They are not native memory addresses. |
 | Map iteration | The runtime can expose insertion order. Programs must not depend on Go's unspecified iteration order. |
 | Reflection | Descriptors cover a substantial subset. Dynamically created function types need an emitted callable factory. |
