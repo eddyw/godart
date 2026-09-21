@@ -59,8 +59,8 @@ on headers, credentials, network access, and cross-origin requests still apply.
 Native filesystem operations, raw sockets, and HTTP servers do not become
 available in a browser merely because a program compiles.
 
-TLS uses Dart's secure socket implementation. A Go API name does not imply
-control over all native Go TLS internals. The project has no security audit.
+Native HTTP and TLS use the active Go SDK sources over Dart socket adapters.
+Browser HTTP retains fetch. The project has no security audit.
 Read [SECURITY.md](../SECURITY.md) before a security-sensitive deployment.
 
 `crypto/x509` reads Linux certificate files and uses the macOS trust policy.

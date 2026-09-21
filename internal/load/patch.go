@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-// applyPatch applies a unified diff to the text of a file. Each hunk must match
+// ApplyPatch applies a unified diff to the text of a file. Each hunk must match
 // the text at the line that its header names, and a mismatch stops the build
 // with the line. A test file of Go changes with each release, thus a diff that
 // applies at another place could change a test in silence.
 //
 // The text before the first hunk header is free, thus a diff can carry the
 // cause of each change there.
-func applyPatch(src, patch []byte, name string) ([]byte, error) {
+func ApplyPatch(src, patch []byte, name string) ([]byte, error) {
 	lines := splitLines(src)
 	var out bytes.Buffer
 	next := 0

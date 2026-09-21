@@ -49,23 +49,27 @@ native runtime control merely because Go names it through GODEBUG.
 Native executable assumptions can require test adapters. Mixed `go/build`
 assumptions still need individual review. The report retains all these groups.
 
-The selected X.509 suite uses the original certificate factory through native Go.
+The X.509 suites use the original certificate factory through native Go.
 Both compilers receive the same generated certificates through source adapters.
 The adapter preserves the original 4096-bit keys, SAN counts, and verification assertions.
 Reports retain the generator source, original source, exact substitutions, output hashes, and process results.
 This evidence covers certificate verification. It does not establish Dart key-generation performance.
 
+The Linux fallback-root adapter replaces namespace mounts with private directories and certificate environment paths.
+Both compilers receive the same fixture patch. The original assertions and separate child processes remain unchanged.
+Reports retain the original source hash, patch, adapted source, and adapted source hash.
+
 ## Assertion integrity
 
 The native baseline runs the installed Go source without Gart implementation overlays or assertion patches.
-The X.509 adapter substitutes only the shared certificate inputs described above.
+The X.509 adapters substitute the shared certificate inputs and Linux filesystem setup described above.
 The 20 declared crypto suites use native Go `-tags=purego` to select portable implementations.
 Their manifest entries and reports record that choice. A gate rejects any change to upstream test-file eligibility from those tags.
 This configuration does not claim assembly implementation or native FIPS module parity.
 The Gart side preserves the original assertions, expected values, and fixture bytes.
 Adapters supply unavailable private test infrastructure without a duplicate assertion implementation.
 
-The `go/build` and `debug/buildinfo` adapters supply the active Go SDK through `GOROOT`.
+The `go/build`, `debug/buildinfo`, and X.509 adapters supply the active Go SDK through `GOROOT`.
 The full buildinfo suite uses its original `-all` option and selects the SDK platform's `pie` and `exe` fixtures.
 Both Go and Gart read native artifacts from that SDK. This selection does not cover `c-shared` or cgo.
 Gart preserves its compiler and architecture identity during source selection.
@@ -115,7 +119,7 @@ The negative integration tests exercise deliberate failures, skips, and missing 
 Original fuzz corpus bytes enter the generated test binary at compilation.
 The cache key includes changed and removed corpus files.
 Explicit upstream seeds remain unchanged.
-Full crypto suites retain the original pinned Wycheproof and Ed25519 vector modules.
+Full crypto suites retain the original pinned Wycheproof, Ed25519 vector, and X.509 Limbo modules.
 The report records their versions and checksums. The gate also hashes the extracted module files and rejects an unknown version or changed content.
 Short mode retains the original external-network skip.
 Tests that choose a time-based random seed retain that upstream behavior.

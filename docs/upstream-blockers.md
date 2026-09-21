@@ -14,8 +14,7 @@ The blocker manifest retains exact platform diagnostics in the coverage manifest
 | `crypto/internal/sysrand` | private-test-dependency | The suite injects native random-source failures through private hooks and errno values. |
 | `crypto/md5` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
 | `crypto/subtle` | runtime-boundary | The suite requires native CPU feature detection through internal/cpu. |
-| `crypto/tls` | private-test-dependency | The suite calls private Go TLS implementation functions. Dart owns the TLS implementation. |
-| `crypto/x509` | private-test-dependency | The suite requires the upstream external-network capability helper before further classification. |
+| `crypto/tls` | public-api-gap | The complete suite requires native process signals and errno contracts. |
 | `go/types` | runtime-boundary | The suite converts an unsafe address into a typed pointer. Dart has no native pointer conversion. |
 | `hash/maphash` | runtime-boundary | The suite imports unsafe and requires native memory operations outside the Dart contract. |
 | `internal/abi` | runtime-boundary | The suite requires native function program counters through abi.FuncPCABI0. |
@@ -26,10 +25,9 @@ The blocker manifest retains exact platform diagnostics in the coverage manifest
 | `internal/types/errors` | private-test-dependency | The suite depends on go/importer, which remains outside the surface. |
 | `math/big` | runtime-boundary | The suite requires Go allocation and heap statistics through runtime.MemStats. |
 | `net` | private-test-dependency | The suite calls the private native RFC6724 source-address sorter. |
-| `net/http` | public-api-gap | The complete suite requires TLS root-certificate configuration. TLS expansion has separate scope. |
-| `net/http/httptest` | public-api-gap | The complete suite requires TLS connection-version metadata. TLS expansion has separate scope. |
+| `net/http` | public-api-gap | The complete suite requires native listener file descriptors. |
+| `net/http/internal/http2` | private-test-dependency | The suite extracts private HTTP transport state through a cross-package go:linkname bridge. |
 | `net/http/httputil` | runtime-boundary | The suite requires Go runtime profiling through runtime/pprof. |
-| `net/smtp` | public-api-gap | The complete suite requires TLS connection-version metadata. TLS expansion has separate scope. |
 | `os` | public-api-gap | The complete suite requires native errno and file-descriptor behavior beyond the current surface. |
 | `os/exec` | public-api-gap | The environment helper now matches upstream. The complete suite next requires native process signals and process attributes. |
 | `os/signal` | public-api-gap | The suite requires inherited file descriptors through exec.Cmd.ExtraFiles. |
@@ -50,4 +48,4 @@ This does not establish the absence of compiler defects behind the first failure
 
 Prioritize missing public behavior that the Dart APIs can support. Preserve the native runtime boundaries.
 Do not add empty private helpers, remove assertions, or treat excluded tests as passes.
-TLS, GC, unsafe memory, and native thread facilities require separate scope.
+GC, unsafe memory, and native thread facilities retain explicit target limits.

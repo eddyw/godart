@@ -13317,5 +13317,207 @@
       "gart": "skip",
       "reason": "The original test requires a local syslog daemon, which the validation container does not provide."
     }
+  ],
+  "crypto/x509": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream hybrid pool test requires a platform verifier.",
+      "test": "TestHybridPool"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream certificate error test only runs on macOS.",
+      "test": "TestIssue51759"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test requires the Windows or macOS platform verifier.",
+      "test": "TestPlatformVerifier"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream system verification test only runs on Windows.",
+      "test": "TestSystemVerify"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support CRL revocation tests.",
+      "test": "TestX509Limbo/crl::certificate-not-on-crl"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support CRL revocation tests.",
+      "test": "TestX509Limbo/crl::certificate-serial-on-crl-different-issuer"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support CRL revocation tests.",
+      "test": "TestX509Limbo/crl::crlnumber-critical"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support CRL revocation tests.",
+      "test": "TestX509Limbo/crl::crlnumber-missing"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support CRL revocation tests.",
+      "test": "TestX509Limbo/crl::issuer-missing-crlsign"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support CRL revocation tests.",
+      "test": "TestX509Limbo/crl::issuer-no-keyusage-extension"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support CRL revocation tests.",
+      "test": "TestX509Limbo/crl::issuer-valid-crlsign-and-keycertsign"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support CRL revocation tests.",
+      "test": "TestX509Limbo/crl::revoked-certificate-with-crl"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support a custom maximum chain depth.",
+      "test": "TestX509Limbo/pathlen::max-chain-depth-0"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support a custom maximum chain depth.",
+      "test": "TestX509Limbo/pathlen::max-chain-depth-0-exhausted"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support a custom maximum chain depth.",
+      "test": "TestX509Limbo/pathlen::max-chain-depth-1"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support a custom maximum chain depth.",
+      "test": "TestX509Limbo/pathlen::max-chain-depth-1-exhausted"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support a custom maximum chain depth.",
+      "test": "TestX509Limbo/pathlen::max-chain-depth-1-self-issued"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support DirectoryName constraints.",
+      "test": "TestX509Limbo/rfc5280::nc::excluded-dn-match"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support DirectoryName constraints.",
+      "test": "TestX509Limbo/rfc5280::nc::excluded-dn-match-sub-mismatch"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::invalid-email-address"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::nc-permits-email-domain"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::nc-permits-email-exact"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::nc-permits-email-literal-asterisk-exact-match"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::nc-permits-email-literal-asterisk-rejects-subdomain"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::nc-permits-email-literal-asterisk-rejects-user"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::nc-permits-email-literal-double-asterisk"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::nc-permits-email-literal-double-asterisk-rejects-single"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::nc-permits-email-literal-mid-asterisk"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go Limbo adapter does not support RFC822 peer names.",
+      "test": "TestX509Limbo/rfc5280::nc::nc-permits-invalid-email-san"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support DirectoryName constraints.",
+      "test": "TestX509Limbo/rfc5280::nc::permitted-dn-match"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support DirectoryName constraints.",
+      "test": "TestX509Limbo/rfc5280::nc::permitted-dn-match-subject-san-mismatch"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go verifier does not support DirectoryName constraints.",
+      "test": "TestX509Limbo/rfc5280::nc::permitted-dn-mismatch"
+    }
+  ],
+  "internal/nettest": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test unconditionally skips pending address-error semantics.",
+      "test": "TestPacketConnWriteAddressErrors"
+    }
   ]
 }

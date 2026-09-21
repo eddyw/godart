@@ -16,6 +16,14 @@ func sourceNotices(pkgs []*packages.Package) (string, error) {
 	entries := map[string]string{"Godart compiler output support": notices.Project}
 	visited := map[string]bool{}
 	for _, pkg := range pkgs {
+		license, err := overlay.License(pkg.PkgPath)
+		if err != nil {
+			return "", err
+		}
+		if len(license) != 0 {
+			entries["Overlay source / "+pkg.PkgPath] = string(license)
+		}
+
 		for _, file := range pkg.Syntax {
 			for index, group := range file.Comments {
 				if group.Pos() >= file.Package {

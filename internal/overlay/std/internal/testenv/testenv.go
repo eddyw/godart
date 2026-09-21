@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 )
 
@@ -151,5 +152,24 @@ func MustHaveExternalNetwork(t testing.TB) {
 	if testing.Short() {
 		t.Helper()
 		t.Skip("skipping test: no external network in -short mode")
+	}
+}
+
+var execPaths sync.Map // path -> error
+
+// MustHaveExecPath checks that the current system can start the named executable
+// using os.StartProcess or (more commonly) exec.Command.
+// If not, MustHaveExecPath calls t.Skip with an explanation.
+func MustHaveExecPath(t testing.TB, path string) {
+	MustHaveExec(t)
+
+	err, found := execPaths.Load(path)
+	if !found {
+		_, err = exec.LookPath(path)
+		err, _ = execPaths.LoadOrStore(path, err)
+	}
+	if err != nil {
+		t.Helper()
+		t.Skipf("skipping test: %s: %s", path, err)
 	}
 }

@@ -41,7 +41,7 @@ func TestApplyPatchChangesTheNamedLines(t *testing.T) {
 +	_ = a
  }
 `
-	got, err := applyPatch([]byte(patchSource), []byte(patch), "a_test.go.patch")
+	got, err := ApplyPatch([]byte(patchSource), []byte(patch), "a_test.go.patch")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestApplyPatchRejectsADrift(t *testing.T) {
  	a := "y"
 -	if unsafe.StringData(a) == nil {
 `
-	_, err := applyPatch([]byte(patchSource), []byte(patch), "a_test.go.patch")
+	_, err := ApplyPatch([]byte(patchSource), []byte(patch), "a_test.go.patch")
 	if err == nil || !strings.Contains(err.Error(), "line 9 of the file differs") {
 		t.Fatalf("got %v, want a report of line 9", err)
 	}
@@ -79,7 +79,7 @@ func TestApplyPatchRejectsADrift(t *testing.T) {
 func TestApplyPatchKeepsALastLineWithNoNewline(t *testing.T) {
 	src := "a\nb\nc"
 	patch := "@@ -1,1 +1,1 @@\n-a\n+A\n"
-	got, err := applyPatch([]byte(src), []byte(patch), "x.patch")
+	got, err := ApplyPatch([]byte(src), []byte(patch), "x.patch")
 	if err != nil {
 		t.Fatal(err)
 	}

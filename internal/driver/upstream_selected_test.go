@@ -74,7 +74,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "xor_test.go", Declarations: []string{"TestXORBytes", "TestXorBytesPanic", "mustPanic"}},
 		},
 		"crypto/tls": {
-			{Name: "tls_test.go", Declarations: []string{"TestX509KeyPair", "TestX509KeyPairPopulateCertificate", "testingKey"}},
+			{Name: "tls_test.go", Declarations: []string{"TestX509KeyPair", "TestX509KeyPairPopulateCertificate", "testingKey", "TestCloneFuncFields", "TestCloneNilConfig", "TestVersionName"}},
 			{Name: "certificates_test.go", Declarations: []string{"testMLDSA44CertPEM", "testMLDSA44KeyPEM", "testMLDSA65CertPEM", "testMLDSA65KeyPEM", "testMLDSA87CertPEM", "testMLDSA87KeyPEM"}},
 		},
 		"crypto/x509": {

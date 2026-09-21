@@ -1,0 +1,94 @@
+--- root_linux_test.go
++++ root_linux_test.go
+@@ -11,7 +11,6 @@
+ 	"fmt"
+ 	"internal/testenv"
+ 	"os"
+-	"syscall"
+ 	"testing"
+ )
+ 
+@@ -20,21 +19,14 @@
+ 		t.Skip("skipping test in short mode")
+ 	}
+ 
++	var root string
+ 	test := func(t *testing.T, name string, f func(t *testing.T)) {
+ 		t.Run(name, func(t *testing.T) {
+ 			if os.Getenv("CRYPTO_X509_SETFALLBACKROOTS_TEST") != "1" {
+ 				// Execute test in a separate process with CRYPTO_X509_SETFALBACKROOTS_TEST env.
+ 				cmd := testenv.Command(t, testenv.Executable(t), fmt.Sprintf("-test.run=^%v$", t.Name()), "-test.v")
+ 				cmd.Env = append(os.Environ(), "CRYPTO_X509_SETFALLBACKROOTS_TEST=1")
+-				cmd.SysProcAttr = &syscall.SysProcAttr{
+-					Cloneflags:  syscall.CLONE_NEWNS | syscall.CLONE_NEWUSER,
+-					UidMappings: []syscall.SysProcIDMap{{ContainerID: 0, HostID: os.Getuid(), Size: 1}},
+-					GidMappings: []syscall.SysProcIDMap{{ContainerID: 0, HostID: os.Getgid(), Size: 1}},
+-				}
+ 				out, err := cmd.CombinedOutput()
+-				if testenv.SyscallIsNotSupported(err) {
+-					t.Skipf("skipping: could not start process with CLONE_NEWNS and CLONE_NEWUSER: %v", err)
+-				}
+ 				t.Logf("running with CRYPTO_X509_SETFALLBACKROOTS_TEST=1:\n%s", out)
+ 				if err != nil {
+ 					t.Errorf("CRYPTO_X509_SETFALLBACKROOTS_TEST=1 subprocess failed: %v", err)
+@@ -42,22 +34,9 @@
+ 				return
+ 			}
+ 
+-			// This test is executed in a separate user and mount namespace, thus
+-			// we can mount a separate "/etc" empty bind mount, without the need for root access.
+-			// On linux all certs reside in /etc, so as we bind an empty dir, we
+-			// get a full control over the system CAs, required for this test.
+-			if err := syscall.Mount(t.TempDir(), "/etc", "", syscall.MS_BIND, ""); err != nil {
+-				if testenv.SyscallIsNotSupported(err) {
+-					t.Skipf("Failed to mount /etc: %v", err)
+-				}
+-				t.Fatalf("Failed to mount /etc: %v", err)
+-			}
+-
+-			t.Cleanup(func() {
+-				if err := syscall.Unmount("/etc", 0); err != nil {
+-					t.Errorf("failed to unmount /etc: %v", err)
+-				}
+-			})
++			root = t.TempDir()
++			t.Setenv("SSL_CERT_FILE", root+"/ssl/certs/ca-certificates.crt")
++			t.Setenv("SSL_CERT_DIR", root+"/ssl/certs")
+ 
+ 			f(t)
+ 		})
+@@ -126,11 +105,11 @@
+ emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=
+ -----END CERTIFICATE-----
+ `
+-		if err := os.MkdirAll("/etc/ssl/certs", 06660); err != nil {
+-			t.Fatal(err)
+-		}
+-
+-		if err := os.WriteFile("/etc/ssl/certs/ca-certificates.crt", []byte(systemCAs), 0666); err != nil {
++		if err := os.MkdirAll(root+"/ssl/certs", 0700); err != nil {
++			t.Fatal(err)
++		}
++
++		if err := os.WriteFile(root+"/ssl/certs/ca-certificates.crt", []byte(systemCAs), 0666); err != nil {
+ 			t.Fatal(err)
+ 		}
+ 	}
+@@ -151,7 +130,7 @@
+ 	test(t, "after_first_load_system_CA_read_error", func(t *testing.T) {
+ 		// This will fail to load in SystemCertPool since this is a directory,
+ 		// rather than a file with certificates.
+-		if err := os.MkdirAll("/etc/ssl/certs/ca-certificates.crt", 0666); err != nil {
++		if err := os.MkdirAll(root+"/ssl/certs/ca-certificates.crt", 0700); err != nil {
+ 			t.Fatal(err)
+ 		}
+ 
+@@ -202,7 +181,7 @@
+ 	test(t, "before_first_load_system_CA_read_error", func(t *testing.T) {
+ 		// This will fail to load in SystemCertPool since this is a directory,
+ 		// rather than a file with certificates.
+-		if err := os.MkdirAll("/etc/ssl/certs/ca-certificates.crt", 0666); err != nil {
++		if err := os.MkdirAll(root+"/ssl/certs/ca-certificates.crt", 0700); err != nil {
+ 			t.Fatal(err)
+ 		}
+ 

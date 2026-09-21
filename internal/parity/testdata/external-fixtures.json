@@ -10,5 +10,11 @@
     "version": "v0.0.0-20210322192420-30a2d7243a94",
     "sum": "h1:oHn3iEYQCHVcHLEqtzCSizBZcnOSFk61oo8tKsbNrqI=",
     "go_mod_sum": "h1:UY6GqNmG+coCcFEiqRTkyhS4fiEGWFqGHweHUKcLWfU="
+  },
+  {
+    "path": "github.com/C2SP/x509-limbo",
+    "version": "v0.0.0-20260522003327-feb7caccc1af",
+    "sum": "h1:sfTTfb879EDat/K+arYzIBsUgyVnLKYgXCcs0PC34rM=",
+    "go_mod_sum": "h1:SlBvWAEOPc2Z3LJJ7q2QhlRZQ3dWCkr1VqjqU1Q4+eQ="
   }
 ]

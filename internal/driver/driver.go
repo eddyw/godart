@@ -46,6 +46,8 @@ type Options struct {
 	// Tests compiles the test variants of each package, and 1 entry point for
 	// each test binary.
 	Tests bool
+	// TestSources replaces source files only for a test build.
+	TestSources load.Filter
 	// Cover writes a counter into each statement of each package under test.
 	// It needs Tests.
 	Cover bool
@@ -255,7 +257,9 @@ func (opt Options) trace(phase string, start time.Time) {
 
 func loadModule(opt Options) (*load.Result, error) {
 	var filter load.Filter
-	if opt.Filter != nil && !opt.Tests {
+	if opt.Tests {
+		filter = opt.TestSources
+	} else if opt.Filter != nil {
 		var err error
 		filter, err = opt.Filter()
 		if err != nil {

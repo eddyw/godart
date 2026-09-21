@@ -1,39 +1,37 @@
+// Copyright 2023 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 package x509
 
 import (
 	"bytes"
+	"encoding/asn1"
 	"errors"
 	"math"
 	"math/big"
 	"math/bits"
 	"strconv"
 	"strings"
-
-	"encoding/asn1"
 )
 
-var errInvalidOID = errors.New("invalid oid")
+var (
+	errInvalidOID = errors.New("invalid oid")
+)
 
-// An OID holds an ASN.1 OBJECT IDENTIFIER.
+// An OID represents an ASN.1 OBJECT IDENTIFIER.
 type OID struct {
 	der []byte
 }
 
-// ParseOID reads an Object Identifier from a text of ASCII numbers. A dot
-// stands between each 2 numbers.
+// ParseOID parses a Object Identifier string, represented by ASCII numbers separated by dots.
 func ParseOID(oid string) (OID, error) {
 	var o OID
-	// Go writes `return o, o.unmarshalOIDText(oid)`. That form reads o and it
-	// calls the method in an order that the specification leaves open, thus
-	// the 2 statements below hold the order that the result needs.
-	err := o.unmarshalOIDText(oid)
-	return o, err
+	return o, o.unmarshalOIDText(oid)
 }
 
-// newOIDFromDER builds an OID from the DER content of an OBJECT IDENTIFIER.
-// It reports whether the content holds a valid form.
 func newOIDFromDER(der []byte) (OID, bool) {
 	if len(der) == 0 || der[len(der)-1]&0x80 != 0 {
 		return OID{}, false
@@ -42,8 +40,8 @@ func newOIDFromDER(der []byte) (OID, bool) {
 	start := 0
 	for i, v := range der {
 		// ITU-T X.690, section 8.19.2:
-		// A subidentifier takes the fewest possible octets. Thus the first
-		// octet of a subidentifier never holds the value 0x80.
+		// The subidentifier shall be encoded in the fewest possible octets,
+		// that is, the leading octet of the subidentifier shall not have the value 0x80.
 		if i == start && v == 0x80 {
 			return OID{}, false
 		}
@@ -55,8 +53,7 @@ func newOIDFromDER(der []byte) (OID, bool) {
 	return OID{der}, true
 }
 
-// OIDFromInts builds an OID from a list of integers. Each integer gives 1
-// component.
+// OIDFromInts creates a new OID using ints, each integer is a separate component.
 func OIDFromInts(oid []uint64) (OID, error) {
 	if len(oid) < 2 || oid[0] > 2 || (oid[0] < 2 && oid[1] >= 40) {
 		return OID{}, errInvalidOID
@@ -75,8 +72,6 @@ func OIDFromInts(oid []uint64) (OID, error) {
 	return OID{der}, nil
 }
 
-// base128IntLength gives the count of octets that the base 128 form of n
-// takes.
 func base128IntLength(n uint64) int {
 	if n == 0 {
 		return 1
@@ -84,7 +79,6 @@ func base128IntLength(n uint64) int {
 	return (bits.Len64(n) + 6) / 7
 }
 
-// appendBase128Int adds the base 128 form of n to dst.
 func appendBase128Int(dst []byte, n uint64) []byte {
 	for i := base128IntLength(n) - 1; i >= 0; i-- {
 		o := byte(n >> uint(i*7))
@@ -97,8 +91,6 @@ func appendBase128Int(dst []byte, n uint64) []byte {
 	return dst
 }
 
-// base128BigIntLength gives the count of octets that the base 128 form of n
-// takes.
 func base128BigIntLength(n *big.Int) int {
 	if n.Cmp(big.NewInt(0)) == 0 {
 		return 1
@@ -106,7 +98,6 @@ func base128BigIntLength(n *big.Int) int {
 	return (n.BitLen() + 6) / 7
 }
 
-// appendBase128BigInt adds the base 128 form of n to dst.
 func appendBase128BigInt(dst []byte, n *big.Int) []byte {
 	if n.Cmp(big.NewInt(0)) == 0 {
 		return append(dst, 0)
@@ -123,28 +114,25 @@ func appendBase128BigInt(dst []byte, n *big.Int) []byte {
 	return dst
 }
 
-// AppendText adds the text form of the Object Identifier to b. It gives the
-// method of [encoding.TextAppender].
+// AppendText implements [encoding.TextAppender]
 func (o OID) AppendText(b []byte) ([]byte, error) {
 	return append(b, o.String()...), nil
 }
 
-// MarshalText gives the text form of the Object Identifier. It gives the
-// method of [encoding.TextMarshaler].
+// MarshalText implements [encoding.TextMarshaler]
 func (o OID) MarshalText() ([]byte, error) {
 	return o.AppendText(nil)
 }
 
-// UnmarshalText reads the text form of an Object Identifier. It gives the
-// method of [encoding.TextUnmarshaler].
+// UnmarshalText implements [encoding.TextUnmarshaler]
 func (o *OID) UnmarshalText(text []byte) error {
 	return o.unmarshalOIDText(string(text))
 }
 
-// unmarshalOIDText reads a text of ASCII numbers into the receiver.
 func (o *OID) unmarshalOIDText(oid string) error {
-	// (*big.Int).SetString accepts a + sign and a - sign. The text form of an
-	// Object Identifier holds no sign, thus this loop rejects each such text.
+	// (*big.Int).SetString allows +/- signs, but we don't want
+	// to allow them in the string representation of Object Identifier, so
+	// reject such encodings.
 	for _, c := range oid {
 		isDigit := c >= '0' && c <= '9'
 		if !isDigit && c != '.' {
@@ -199,20 +187,17 @@ func (o *OID) unmarshalOIDText(oid string) error {
 	return nil
 }
 
-// AppendBinary adds the DER form of the Object Identifier to b. It gives the
-// method of [encoding.BinaryAppender].
+// AppendBinary implements [encoding.BinaryAppender]
 func (o OID) AppendBinary(b []byte) ([]byte, error) {
 	return append(b, o.der...), nil
 }
 
-// MarshalBinary gives the DER form of the Object Identifier. It gives the
-// method of [encoding.BinaryMarshaler].
+// MarshalBinary implements [encoding.BinaryMarshaler]
 func (o OID) MarshalBinary() ([]byte, error) {
 	return o.AppendBinary(nil)
 }
 
-// UnmarshalBinary reads the DER form of an Object Identifier. It gives the
-// method of [encoding.BinaryUnmarshaler].
+// UnmarshalBinary implements [encoding.BinaryUnmarshaler]
 func (o *OID) UnmarshalBinary(b []byte) error {
 	oid, ok := newOIDFromDER(bytes.Clone(b))
 	if !ok {
@@ -222,28 +207,27 @@ func (o *OID) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// Equal reports whether the 2 values hold the same Object Identifier.
+// Equal returns true when oid and other represents the same Object Identifier.
 func (oid OID) Equal(other OID) bool {
-	// Each unique Object Identifier holds 1 DER form alone.
+	// There is only one possible DER encoding of
+	// each unique Object Identifier.
 	return bytes.Equal(oid.der, other.der)
 }
 
-// parseBase128Int reads 1 base 128 integer of bytes at initOffset. It gives
-// the value, the offset after the integer, and a report of a failure.
 func parseBase128Int(bytes []byte, initOffset int) (ret, offset int, failed bool) {
 	offset = initOffset
 	var ret64 int64
 	for shifted := 0; offset < len(bytes); shifted++ {
-		// 5 octets hold 35 bits of data. Thus the form is not minimal, or the
-		// value is too large for an int32.
+		// 5 * 7 bits per byte == 35 bits of data
+		// Thus the representation is either non-minimal or too large for an int32
 		if shifted == 5 {
 			failed = true
 			return
 		}
 		ret64 <<= 7
 		b := bytes[offset]
-		// An integer takes the fewest possible octets. Thus the first octet
-		// never holds the value 0x80.
+		// integers should be minimally encoded, so the leading octet should
+		// never be 0x80
 		if shifted == 0 && b == 0x80 {
 			failed = true
 			return
@@ -252,7 +236,7 @@ func parseBase128Int(bytes []byte, initOffset int) (ret, offset int, failed bool
 		offset++
 		if b&0x80 == 0 {
 			ret = int(ret64)
-			// The value must fit an int on each platform.
+			// Ensure that the returned value fits in an int on all platforms
 			if ret64 > math.MaxInt32 {
 				failed = true
 			}
@@ -263,17 +247,17 @@ func parseBase128Int(bytes []byte, initOffset int) (ret, offset int, failed bool
 	return
 }
 
-// EqualASN1OID reports whether the OID equals an asn1.ObjectIdentifier. An
-// asn1.ObjectIdentifier holds a component of 31 bits at most. The method
-// gives false when a component of the OID needs more bits.
+// EqualASN1OID returns whether an OID equals an asn1.ObjectIdentifier. If
+// asn1.ObjectIdentifier cannot represent the OID specified by oid, because
+// a component of OID requires more than 31 bits, it returns false.
 func (oid OID) EqualASN1OID(other asn1.ObjectIdentifier) bool {
 	if len(other) < 2 {
 		return false
 	}
 	v, offset, failed := parseBase128Int(oid.der, 0)
 	if failed {
-		// The parse of the OID came first, thus this branch never runs. The
-		// guard stays for safety.
+		// This should never happen, since we've already parsed the OID,
+		// but just in case.
 		return false
 	}
 	if v < 80 {
@@ -292,7 +276,8 @@ func (oid OID) EqualASN1OID(other asn1.ObjectIdentifier) bool {
 	for ; offset < len(oid.der); i++ {
 		v, offset, failed = parseBase128Int(oid.der, offset)
 		if failed {
-			// This branch never runs, for the same cause as above.
+			// Again, shouldn't happen, since we've already parsed
+			// the OID, but better safe than sorry.
 			return false
 		}
 		if i >= len(other) || v != other[i] {
@@ -303,12 +288,12 @@ func (oid OID) EqualASN1OID(other asn1.ObjectIdentifier) bool {
 	return i == len(other)
 }
 
-// String gives the text form of the Object Identifier.
+// String returns the string representation of the Object Identifier.
 func (oid OID) String() string {
 	var b strings.Builder
 	b.Grow(32)
 	const (
-		valSize         = 64 // The count of bits of val.
+		valSize         = 64 // size in bits of val.
 		bitsPerByte     = 7
 		maxValSafeShift = (1 << (valSize - bitsPerByte)) - 1
 	)
@@ -372,13 +357,11 @@ func (oid OID) String() string {
 	return b.String()
 }
 
-// toASN1OID gives the asn1.ObjectIdentifier form of the OID. It reports
-// whether each component fits 31 bits.
 func (oid OID) toASN1OID() (asn1.ObjectIdentifier, bool) {
 	out := make([]int, 0, len(oid.der)+1)
 
 	const (
-		valSize         = 31 // The count of usable bits of val for an OID.
+		valSize         = 31 // amount of usable bits of val for OIDs.
 		bitsPerByte     = 7
 		maxValSafeShift = (1 << (valSize - bitsPerByte)) - 1
 	)
@@ -413,7 +396,7 @@ func (oid OID) toASN1OID() (asn1.ObjectIdentifier, bool) {
 	return out, true
 }
 
-// OIDFromASN1OID builds an OID from an asn1.ObjectIdentifier.
+// OIDFromASN1OID creates a new OID using asn1OID.
 func OIDFromASN1OID(asn1OID asn1.ObjectIdentifier) (OID, error) {
 	uint64OID := make([]uint64, 0, len(asn1OID))
 	for _, component := range asn1OID {

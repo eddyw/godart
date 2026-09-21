@@ -13666,5 +13666,63 @@
       "gart": "skip",
       "reason": "The original test skips in short mode because it requires significant memory. Full runs retain the original depth and assertions."
     }
+  ],
+  "crypto/x509": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original test requires an Apple or Windows platform verifier.",
+      "test": "TestHybridPool"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips its Go tool invocation in short mode.",
+      "test": "TestImports"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test applies only to Darwin.",
+      "test": "TestIssue51759"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips long certificate-chain generation in short mode.",
+      "test": "TestPathologicalChains"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original test applies only to Windows and Darwin.",
+      "test": "TestPlatformVerifier"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips its process-isolation cases in short mode.",
+      "test": "TestSetFallbackRoots"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test applies only to Windows.",
+      "test": "TestSystemVerify"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips external corpus access in short mode.",
+      "test": "TestX509Limbo"
+    }
+  ],
+  "internal/nettest": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test unconditionally skips pending address-error semantics.",
+      "test": "TestPacketConnWriteAddressErrors"
+    }
   ]
 }

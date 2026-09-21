@@ -344,17 +344,23 @@ func TestTestsOfGoroot(t *testing.T) {
 				t.Fatalf("the machine holds no source of the package %s: %v", c.Package, err)
 			}
 			outDir := t.TempDir()
-			stats, err := driver.BuildWithStats(driver.Options{Trace: traceBuild(t), Dir: dir, Patterns: []string{"."}, Out: outDir, Runtime: runtimeDir(t), Tests: true, TrimPath: true})
+			var inputs *certificateInputs
+			options := driver.Options{Trace: traceBuild(t), Dir: dir, Patterns: []string{"."}, Out: outDir, Runtime: runtimeDir(t), Tests: true, TrimPath: true}
+			if c.Package == "crypto/x509" {
+				inputs = prepareX509SuiteInputs(t, dir)
+				options.TestSources = inputs.TestSources
+			}
+			stats, err := driver.BuildWithStats(options)
 			if err != nil {
 				t.Logf("upstream test build failed: %v", err)
-				compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, "the test build failed: "+err.Error(), 1)
+				compareUpstreamCertificates(t, c.name, c.Package, c.Run, "vm", dir, "the test build failed: "+err.Error(), 1, inputs)
 				return
 			}
 			if len(stats.Binaries) != 1 {
 				t.Fatalf("got %d upstream test binaries", len(stats.Binaries))
 			}
 			prepareDart(t, outDir)
-			if c.Package == "net/http/cgi" || (c.Package == "log" || c.Package == "log/slog") && !testing.Short() {
+			if c.Package == "crypto/x509" && build.Default.GOOS == "linux" && !testing.Short() || c.Package == "net/http/cgi" || c.Package == "net/http/httptest" || (c.Package == "log" || c.Package == "log/slog") && !testing.Short() {
 				prepareUpstreamSelfExec(t, outDir, stats.Binaries[0].Entry)
 			}
 			var images []nativeImage
@@ -362,14 +368,14 @@ func TestTestsOfGoroot(t *testing.T) {
 				images = append(images, prepareUpstreamNativeImage(t, dir, outDir, stats.Binaries[0].Entry))
 			}
 			var env []string
-			if c.Package == "go/build" || c.Package == "debug/buildinfo" {
+			if c.Package == "go/build" || c.Package == "debug/buildinfo" || c.Package == "crypto/x509" {
 				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
 			}
 			args := []string{filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run=" + c.Run, "-test.skip=" + upstreamSkip(t, c.Package)}
 			args = append(args, upstreamExtraArgs(c.Package)...)
 			text, execErr, finished := output(dir, env, upstreamLimit(), "dart", args...)
 			if !finished {
-				compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124, images...)
+				compareUpstreamCertificates(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124, inputs, images...)
 				return
 			}
 			code := 0
@@ -382,7 +388,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			}
 			got := string(text)
 			t.Logf("upstream results:\n%s", got)
-			compareUpstream(t, c.name, c.Package, c.Run, "vm", dir, got, code, images...)
+			compareUpstreamCertificates(t, c.name, c.Package, c.Run, "vm", dir, got, code, inputs, images...)
 
 		})
 	}

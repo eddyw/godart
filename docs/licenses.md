@@ -25,6 +25,10 @@ The runtime license includes their BSD terms.
 The certificate trust adapter adapts Go 1.27.1 `crypto/x509/root.go`,
 `root_linux.go`, `root_darwin.go`, and `internal/macos` wrappers.
 The trust fixture retains certificate constants from Go `crypto/x509/verify_test.go`.
+The x509 overlay preserves Go 1.27.1 certificate source and its BSD notices.
+The upstream Limbo schema uses C2SP/x509-limbo data under Apache 2.0
+and go-jsonschema generator templates under MIT. Generated packages that
+include this schema receive both notices from the embedded overlay license.
 The CIDR parser adapts Go `src/net/ip.go` and retains its BSD notice.
 UTC values preserve the location representation from Go `src/time/time.go`
 and `zoneinfo.go`. Their source headers retain the BSD notice.

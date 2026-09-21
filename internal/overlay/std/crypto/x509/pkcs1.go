@@ -1,7 +1,9 @@
+// Copyright 2011 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
-// This file comes from the file pkcs1.go of crypto/x509 of Go. It reads and
-// writes an RSA key in the form PKCS 1.
 package x509
 
 import (

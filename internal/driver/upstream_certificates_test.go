@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/eddyw/godart/internal/load"
 )
 
 type certificateInput struct {
@@ -20,16 +22,25 @@ type certificateInput struct {
 	PEM        string `json:"pem"`
 }
 
+type certificateFixture struct {
+	SourceSHA256  string `json:"source_sha256"`
+	Patch         string `json:"patch"`
+	AdaptedSource string `json:"adapted_source"`
+	AdaptedSHA256 string `json:"adapted_sha256"`
+}
+
 type certificateInputs struct {
-	Source          string             `json:"source"`
-	SourceSHA256    string             `json:"source_sha256"`
-	GeneratorSHA256 string             `json:"generator_sha256"`
-	GeneratorSource string             `json:"generator_source"`
-	Generator       languageExecution  `json:"generator"`
-	Output          string             `json:"output"`
-	AdaptedSHA256   string             `json:"adapted_sha256"`
-	Inputs          []certificateInput `json:"inputs"`
-	Overlay         string             `json:"-"`
+	TestSources     load.Filter         `json:"-"`
+	RootFixture     *certificateFixture `json:"root_fixture,omitempty"`
+	Source          string              `json:"source"`
+	SourceSHA256    string              `json:"source_sha256"`
+	GeneratorSHA256 string              `json:"generator_sha256"`
+	GeneratorSource string              `json:"generator_source"`
+	Generator       languageExecution   `json:"generator"`
+	Output          string              `json:"output"`
+	AdaptedSHA256   string              `json:"adapted_sha256"`
+	Inputs          []certificateInput  `json:"inputs"`
+	Overlay         string              `json:"-"`
 }
 
 func certificateCalls(t *testing.T, source string) []certificateInput {
@@ -112,6 +123,7 @@ func prepareCertificateInputs(t *testing.T, sourcePath string) *certificateInput
 		fixture.Inputs[i].PEM = value
 	}
 	adapted := applyCertificateInputs(t, fixture.Source, fixture.Inputs)
+	fixture.TestSources = load.Filter{sourcePath: []byte(adapted)}
 	fixture.AdaptedSHA256 = languageDigest([]byte(adapted))
 	path := filepath.Join(dir, "verify_test.go")
 	writeFile(t, path, adapted)
@@ -122,4 +134,44 @@ func prepareCertificateInputs(t *testing.T, sourcePath string) *certificateInput
 	fixture.Overlay = filepath.Join(dir, "overlay.json")
 	writeFile(t, fixture.Overlay, string(overlay))
 	return fixture
+}
+
+func prepareX509SuiteInputs(t *testing.T, dir string) *certificateInputs {
+	t.Helper()
+	inputs := prepareCertificateInputs(t, filepath.Join(dir, "verify_test.go"))
+	if build.Default.GOOS != "linux" {
+		return inputs
+	}
+	name := filepath.Join(dir, "root_linux_test.go")
+	source, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch, err := os.ReadFile("testdata/x509-root-linux.patch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	adapted, err := load.ApplyPatch(source, patch, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputs.RootFixture = &certificateFixture{SourceSHA256: languageDigest(source), Patch: string(patch), AdaptedSource: string(adapted), AdaptedSHA256: languageDigest(adapted)}
+	inputs.TestSources[name] = adapted
+	path := filepath.Join(filepath.Dir(inputs.Overlay), "root_linux_test.go")
+	writeFile(t, path, string(adapted))
+	data, err := os.ReadFile(inputs.Overlay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var overlay struct{ Replace map[string]string }
+	if err := json.Unmarshal(data, &overlay); err != nil {
+		t.Fatal(err)
+	}
+	overlay.Replace[name] = path
+	data, err = json.Marshal(overlay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, inputs.Overlay, string(data))
+	return inputs
 }

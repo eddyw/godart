@@ -6078,6 +6078,21 @@
       "seeds": null
     },
     {
+      "path": "crypto/internal/cryptotest/x509limbo",
+      "tests": null,
+      "files": [
+        {
+          "path": "schema.go",
+          "sha256": "845de972282f7e7534ff0a88a01028f06efe2ebc9571ab1af6f25ee48b9263bf"
+        },
+        {
+          "path": "schemaversion.go",
+          "sha256": "fc7947757465f1d4c122cc852a8896adba1e160baaeeb6da592882d5a121ecaf"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "crypto/internal/fips140",
       "tests": [
         {
@@ -7729,6 +7744,36 @@
         {
           "path": "xor_riscv64.go",
           "sha256": "50fd04513313a7ba58e77f08d8673dfe59b34c4c6df77a89fc74437aea64a5a4"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "crypto/internal/fips140/tls12",
+      "tests": null,
+      "files": [
+        {
+          "path": "cast.go",
+          "sha256": "55f9a78268d7dc14e9fc19a9606ccd7c52ab6a5baa2cf79f0051ccce1db24531"
+        },
+        {
+          "path": "tls12.go",
+          "sha256": "5fa5cac46973f0cd34652ab1535213adc1c8e7cb51041e52a0926eec96d601ad"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "crypto/internal/fips140/tls13",
+      "tests": null,
+      "files": [
+        {
+          "path": "cast.go",
+          "sha256": "162c9914d09f41d0f5bf4ee99c1bd5ec89ccb4c0bec1ecb3c6ffa90109ca302f"
+        },
+        {
+          "path": "tls13.go",
+          "sha256": "c04b704715d4fab230ed7257eb46f4414c9eb30d99944947b1fe68fa6dded433"
         }
       ],
       "seeds": null
@@ -11226,6 +11271,17 @@
         {
           "path": "tls_test.go",
           "sha256": "a591d938bff72de07eb5ec671f56ca5027dc5b07950bb3e26802d1de8a86d696"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "crypto/tls/internal/fips140tls",
+      "tests": null,
+      "files": [
+        {
+          "path": "fipstls.go",
+          "sha256": "19ab648f8b24078cc220612bb02adb8617b0a2ea327636707ca71343b2cc423e"
         }
       ],
       "seeds": null
@@ -27457,6 +27513,40 @@
       "seeds": null
     },
     {
+      "path": "internal/gate",
+      "tests": [
+        {
+          "name": "TestGateLockAndUnlock",
+          "file": "gate_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestGateLockIfSet",
+          "file": "gate_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestGateWaitAndLock",
+          "file": "gate_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "gate.go",
+          "sha256": "be5d278fe407e7e9414c7d21ded92833eb34555f7c0a9b68d72d8522404b18b5"
+        },
+        {
+          "path": "gate_test.go",
+          "sha256": "a2fe91f57d62f0f2066c97a6787d661bcb862b9fd052895809448961c93d0a56"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "internal/godebug",
       "tests": [
         {
@@ -27781,6 +27871,208 @@
         {
           "path": "nomsan.go",
           "sha256": "a93262f02003de244b1490022bd6e8765c0efad5a25372450bf87f9fbedb8470"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "internal/nettest",
+      "tests": [
+        {
+          "name": "TestConnCanRead",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnCloseReadWriteError",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnIsClosed",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnPartialWrite",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnReadDeadline",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnReadWrite",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnSetCloseError",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnSetReadError",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnSetWriteError",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnWriteDeadline",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConnZeroBuffer",
+          "file": "conn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestListenerAddresses",
+          "file": "listener_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestListenerInterruptAccept",
+          "file": "listener_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestListenerNewConn",
+          "file": "listener_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestListenerSetAcceptError",
+          "file": "listener_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestListenerSetCloseError",
+          "file": "listener_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnCanRead",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnClose",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnIsClosed",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnListenConflict",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnReadDeadline",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnReadWrite",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnSetCloseError",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnSetReadError",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnSetWriteError",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnWriteAddressErrors",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPacketConnWriteDeadline",
+          "file": "packetconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "conn.go",
+          "sha256": "56a0dd3c0c0808de3ea017bdee2ce8b80f15e46568dc7d22bca916e0231a6472"
+        },
+        {
+          "path": "conn_test.go",
+          "sha256": "02c79d41de573c874e7f94fb324f4434514f519538c3a830e67a2eba3bfd7996"
+        },
+        {
+          "path": "listener.go",
+          "sha256": "15119143098fc0d1fb7a1f03924aec2f2cd0963c63ae917a59202fc72b24e34b"
+        },
+        {
+          "path": "listener_test.go",
+          "sha256": "6b1860a1ec11ecda89cafa353bb88e606f8427d11bb0e7596105b5705baa8da5"
+        },
+        {
+          "path": "nettest_test.go",
+          "sha256": "66770b32d1bf3f3aa4ae4ce7a0e066402dc5553de085f1c7c6dc29da7e7052c8"
+        },
+        {
+          "path": "packetconn.go",
+          "sha256": "d7f12247ffec0c62a3db5e501eb0551cd393a0b17a2c48857465f46922b96e86"
+        },
+        {
+          "path": "packetconn_test.go",
+          "sha256": "6efb324c7682195e89a66d2569a9156adf4f58664942874f068c0ebf7dfa9b85"
+        },
+        {
+          "path": "queue.go",
+          "sha256": "c2d1c6e8b692e7fdbbd7918843ed21bd05f7ffed9609f6714b3573373b239009"
         }
       ],
       "seeds": null
@@ -44695,6 +44987,2657 @@
         {
           "path": "print_test.go",
           "sha256": "3ae0de98eaa5f0019349945fe560938f75b0aae108f80e42edfc7914e0458ca0"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "net/http/internal/http2",
+      "tests": [
+        {
+          "name": "TestASCIIEqualFold",
+          "file": "ascii_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIsASCIIPrint",
+          "file": "ascii_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIsBadCipherBad",
+          "file": "ciphers_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIsBadCipherGood",
+          "file": "ciphers_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTestClientConn",
+          "file": "clientconn_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConfigPingTimeoutServer",
+          "file": "config_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConfigPingTimeoutTransport",
+          "file": "config_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConfigServerSettings",
+          "file": "config_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConfigTransportSettings",
+          "file": "config_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestDataBufferAllocation",
+          "file": "databuffer_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestDataBufferAllocationWithExpected",
+          "file": "databuffer_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestDataBufferWriteAfterPartialRead",
+          "file": "databuffer_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestErrCodeString",
+          "file": "errors_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestInFlowTake",
+          "file": "flow_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestInflowAdd",
+          "file": "flow_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestInflowAddSmall",
+          "file": "flow_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestOutFlow",
+          "file": "flow_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestOutFlowAdd",
+          "file": "flow_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestOutFlowAddOverflow",
+          "file": "flow_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTakeInflows",
+          "file": "flow_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestFrameSizes",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestFrameTypeString",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestMetaFrameHeader",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestNoSetReuseFrames",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestParseRFC9218Priority",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReadFrameForHeaderUnexpectedEOF",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReadFrameHeader",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReadFrameHeaderAndBody",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReadFrameHeaderBadFrameOrder",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReadFrameHeaderFrameTooLarge",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReadFrameOrder",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReadWriteFrameHeader",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestSetReuseFrames",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestSetReuseFramesMoreThanOnce",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestSettingsDuplicates",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTypeFrameParser",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTypeFrameParserHolePanic",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteContinuation",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteData",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteDataPadded",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteGoAway",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteHeaders",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteInvalidStreamDep",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWritePing",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWritePingAck",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWritePriority",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWritePriorityUpdate",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWritePushPromise",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteRST",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteSettings",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteSettingsAck",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteTooLargeFrame",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestWriteWindowUpdate",
+          "file": "frame_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestGoroutineLock",
+          "file": "gotrack_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestNoUnicodeStrings",
+          "file": "http2_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestSettingString",
+          "file": "http2_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestSorterPoolAllocs",
+          "file": "http2_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPipeBreakWithError",
+          "file": "pipe_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPipeClose",
+          "file": "pipe_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPipeCloseWithError",
+          "file": "pipe_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPipeDoneChan",
+          "file": "pipe_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPipeDoneChan_Break",
+          "file": "pipe_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPipeDoneChan_Break_ErrFirst",
+          "file": "pipe_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPipeDoneChan_ErrFirst",
+          "file": "pipe_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestCanonicalHeaderCacheGrowth",
+          "file": "server_internal_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestCheckValidHTTP2Request",
+          "file": "server_internal_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_RejectAfterGoAway",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_RejectForbiddenHeader",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_RejectForbiddenMethod",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_RejectIfDisabled",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_RejectMissingHost",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_RejectRecursivePush",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_RejectRelativePath",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_RejectWhenNoConcurrentStreams",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_RejectWrongScheme",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_StateTransitions",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_Success",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_SuccessNoRace",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Push_Underflow",
+          "file": "server_push_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestCompressionErrorOnClose",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestCompressionErrorOnWrite",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestConsistentConstants",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestContentEncodingNoSniffing",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestExpect100ContinueAfterHandlerWrites",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue20704Race",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue53",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestNoErrorLoggedOnPostAfterGOAWAY",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestProtocolErrorAfterGoAway",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestRejectFrameOnIdle_Data",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestRejectFrameOnIdle_RSTStream",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestRejectFrameOnIdle_WindowUpdate",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestRequestBodyReadCloseRace",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerContentLengthCanBeDisabled",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerContentLengthDuplicates",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerContinuationAfterInvalidHeader",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerContinuationFlood",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerDoS_MaxHeaderListSize",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerDoesntWriteInvalidHeaders",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerGracefulShutdown",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerHandlerConnectionClose",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerIdleTimeout",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerIdleTimeout_AfterRequest",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerIgnoresContentLengthSignWhenWritingChunks",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerInitialFlowControlWindow",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerInvalidPathHeader",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerMaxHandlerGoroutines",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerNoAutoContentLengthOnHead",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerNoDuplicateContentType",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerPathInitialSlashes",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerPingResponded",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerPingSent",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerRFC9218Priority",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerRFC9218PriorityAware",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerRFC9218PriorityIgnoredWhenProxied",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerRFC9218PrioritySmallPayload",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerReadsTrailers",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerRejectsContentLengthWithSignNewRequests",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerRequestCancelOnError",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerReturnsStreamAndConnFlowControlOnBodyClose",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerSendDataAfterRequestBodyClose",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerSendsEarlyHints",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerSendsProcessing",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerServeNoBannedCiphers",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerSetReadWriteDeadlineRace",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerSettingNoRFC7540Priorities",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerSettingNoRFC7540PrioritiesInvalid",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerSettingsFlowControlUpdateBeyondLimit",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerSettingsFlowControlUpdateWithinLimit",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerWindowUpdateOnBodyClose",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerWriteByteTimeout",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerWriteDoesNotRetainBufferAfterReturn",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerWriteDoesNotRetainBufferAfterServerClose",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerWritesTrailers_WithFlush",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerWritesTrailers_WithoutFlush",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServerWritesUndeclaredTrailers",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Advertises_Common_Cipher",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_CloseNotify_After_ConnClose",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_CloseNotify_After_RSTStream",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_CloseNotify_After_StreamError",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_DeadConn_Unblocks_Read",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_HandlerWriteErrorOnDisconnect",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Handler_Sends_WindowUpdate",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Handler_Sends_WindowUpdate_Padding",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Headers_HalfCloseRemote",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_MaxDecoderHeaderTableSize",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_MaxEncoderHeaderTableSize",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_MaxQueuedControlFrames",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_NoCrash_HandlerClose_Then_ClientClose",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Ping",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_RSTStream_Unblocks_Header_Write",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_RSTStream_Unblocks_Read",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_RejectsLargeFrames",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_ConnHeaders",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_Continuation0",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_Headers0",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_HeadersEnd_Then_Continuation",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_HeadersNoEnd_Then_ContinuationWrongStream",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_HeadersNoEnd_Then_Headers",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_HeadersNoEnd_Then_Ping",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_HeadersSelfDependence",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_Priority0",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_PrioritySelfDependence",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_PriorityUpdate0",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_PriorityUpdateUnparsable",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_PushPromise",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_TLS10",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_TLS11",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_TLSBadCipher",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_TooSmall",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Rejects_Too_Many_Streams",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Connect",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Connect_InvalidPath",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Connect_InvalidScheme",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_CookieConcat",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Get",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Get_Authority",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Get_Host",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Get_PathSlashes",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Post_Body_ContentLength_Correct",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Post_Body_ContentLength_EndStream",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Post_Body_ContentLength_TooLarge",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Post_Body_ContentLength_TooSmall",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Post_Body_ImmediateEOF",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Post_Body_OneData",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Post_Body_TwoData",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Post_NoContentLength_EndStream",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_Authority_Userinfo",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_CapitalHeader",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_HeaderFieldNameColon",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_HeaderFieldNameEmpty",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_HeaderFieldNameNULL",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_HeaderFieldValueCR",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_HeaderFieldValueDEL",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_HeaderFieldValueNewline",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_Pseudo_AfterRegular",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_Pseudo_ExactlyOne",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_Pseudo_Missing_method",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_Pseudo_Missing_path",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_Pseudo_Missing_scheme",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_Pseudo_Unknown",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_Reject_Pseudo_scheme_invalid",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Request_WithContinuation",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_Automatic100Continue",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_Data_IgnoreHeaderAfterWrite_After",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_Data_IgnoreHeaderAfterWrite_Overwrite",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_Data_SniffLenType",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_Data_Sniff_DoesntOverride",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_Empty_Data_Not_FlowControlled",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_Header_Flush_MidWrite",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_LargeWrite",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_LargeWrite_FlowControlled",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_ManyHeaders_With_Continuation",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_NoData",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_NoData_Header_FooBar",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_RST_Unblocks_LargeWrite",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_Stream_With_Missing_Trailer",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Response_TransferEncoding_chunked",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Send_GoAway_After_Bogus_WindowUpdate",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_Send_RstStream_After_Bogus_WindowUpdate",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestServer_StateTransitions",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestUnreadFlowControlReturned_Server",
+          "file": "server_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestActualContentLength",
+          "file": "transport_internal_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestAuthorityAddr",
+          "file": "transport_internal_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestClientConnTooIdle",
+          "file": "transport_internal_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestGzipReader_DoubleReadCrash",
+          "file": "transport_internal_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestGzipReader_ReadAfterClose",
+          "file": "transport_internal_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportUsesGetBodyWhenPresent",
+          "file": "transport_internal_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkClientGzip",
+          "file": "transport_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkClientRequestHeaders",
+          "file": "transport_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkClientResponseHeaders",
+          "file": "transport_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkDownloadFrameSize",
+          "file": "transport_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "TestClientConnCloseAtBody",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestClientConnCloseAtHeaders",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestClientConnReservations",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestClientConnShutdown",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestClientConnShutdownCancel",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestDialRaceResumesDial",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestExtendedConnectClientWithServerSupport",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestExtendedConnectClientWithoutServerSupport",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestExtendedConnectReadFrameError",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIdleConnTimeout",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue66763Race",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue67671",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPadHeaders",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestRoundTripDoesntConsumeRequestBodyEarly",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransport",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransport1xxLimits",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransport300ResponseBody",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportAbortClosesPipes",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportAdjustsFlowControl",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportAllocationsAfterResponseBodyClose",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBlockingRequestWrite",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBody",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBodyDoubleEndStream",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBodyEagerEndStream",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBodyLargerThanSpecifiedContentLength_len2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBodyLargerThanSpecifiedContentLength_len3",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBodyReadErrorType",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBodyReadError_Immediately",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBodyReadError_Some",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportBodyRewindRace",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportCancelDataResponseRace",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportChecksRequestHeaderListSize",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportChecksResponseHeaderListSize",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportCloseAfterLostPing",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportCloseRequestBody",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportCloseResponseBodyWhileRequestBodyHangs",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportClosesConnAfterGoAwayLastStream",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportClosesConnAfterGoAwayNoStreams",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportConnBecomesUnresponsive",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportConnectRequest",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportContentLengthWithoutBody",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportCookieHeaderSplit",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportDataAfter1xxHeader",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportDialTLSContext",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportDisableCompression",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportDisableKeepAlives",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportDisableKeepAlives_Concurrency",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportDoNotHangOnZeroMaxFrameSize",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportDoubleCloseOnWriteError",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportExpectContinue",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportExternal",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportFailsOnInvalidHeadersAndTrailers",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportFailureErrorForHTTP1Response",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportFlowControl",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportFrameBufferReuse",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportFullDuplex",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportGetGotConnHooks_Client",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportGetGotConnHooks_HTTP2Transport",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportGoAwayWithNoConns",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportH2c",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportHandlesInvalidStatuslessResponse",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportInvalidTrailer_BinaryFieldValue",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportInvalidTrailer_Capital1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportInvalidTrailer_Capital2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportInvalidTrailer_EmptyFieldName",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportInvalidTrailer_Pseudo1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportInvalidTrailer_Pseudo2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportMaxDecoderHeaderTableSize",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportMaxEncoderHeaderTableSize",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportMaxFrameReadSize",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportNewClientConnCloseOnWriteError",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportNoBodyMeansNoDATA",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportNoPingAfterResetWithFrames",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportNoRaceOnRequestObjectAfterRequestComplete",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportNoRetryOnStreamProtocolError",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportPath",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportPingWhenReadingMultiplePings",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportPingWhenReadingPingDisabled",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportPingWriteBlocks",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReadHeadResponse",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReadHeadResponseWithBody",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReceiveUndeclaredTrailer",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRejectsConnHeaders",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRejectsContentLengthWithSign",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReqBodyAfterResponse_200",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReqBodyAfterResponse_403",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRequestPathPseudo",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRequestsLowServerLimit",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRequestsStallAtServerLimit",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h1d0t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h1d0t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h1d0t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h1d1t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h1d1t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h1d1t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h2d0t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h2d0t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h2d0t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h2d1t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h2d1t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c0h2d1t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h1d0t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h1d0t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h1d0t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h1d1t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h1d1t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h1d1t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h2d0t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h2d0t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h2d0t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h2d1t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h2d1t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c1h2d1t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h1d0t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h1d0t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h1d0t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h1d1t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h1d1t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h1d1t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h2d0t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h2d0t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h2d0t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h2d1t0",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h2d1t1",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResPattern_c2h2d1t2",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResponseAndResetWithoutConsumingBodyRace",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResponseDataBeforeHeaders",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResponseHeaderTimeout_Body",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportResponseHeaderTimeout_NoBody",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRetryAfterGOAWAYNoRetry",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRetryAfterGOAWAYRetry",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRetryAfterGOAWAYSecondRequest",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRetryAfterRefusedStream",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRetryHasLimit",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReturnsDataPaddingFlowControl",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReturnsErrorOnBadResponseHeaders",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReturnsUnusedFlowControlMultipleWrites",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReturnsUnusedFlowControlSingleWrite",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportReusesConns",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportRoundtripCloseOnWriteError",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportSendNoMoreThanOnePingWithReset",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportSendPingWithReset",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportServerResetStreamAtHeaders",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportSettingsFlowControlUpdateBeyondLimit",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportSettingsFlowControlUpdateWithinLimit",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportSlowClose",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportSlowWrites",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportStreamEndsWhileBodyIsBeingWritten",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportTLSNextProtoConnImmediateFailureUnused",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportTimeoutServerHangs",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportUnknown1xx",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportUnusedConnIdleTimoutBeforeUse",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportUnusedConnImmediateFailureUsed",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportUnusedConnOK",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportUsesGoAwayDebugError_Body",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportUsesGoAwayDebugError_RoundTrip",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportWindowUpdateBeyondLimit",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTransportWriteByteTimeout",
+          "file": "transport_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkWriteQueue",
+          "file": "writesched_benchmarks_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkWriteSchedulerLifetimePriorityRFC9218Incremental",
+          "file": "writesched_benchmarks_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkWriteSchedulerLifetimePriorityRFC9218NonIncremental",
+          "file": "writesched_benchmarks_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkWriteSchedulerLifetimeRoundRobin",
+          "file": "writesched_benchmarks_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkWriteSchedulerThroughputPriorityRFC9218Incremental",
+          "file": "writesched_benchmarks_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkWriteSchedulerThroughputPriorityRFC9218NonIncremental",
+          "file": "writesched_benchmarks_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "BenchmarkWriteSchedulerThroughputRoundRobin",
+          "file": "writesched_benchmarks_test.go",
+          "kind": "Benchmark",
+          "eligible": true
+        },
+        {
+          "name": "TestPrioritySchedulerBuffersPriorityUpdate",
+          "file": "writesched_priority_rfc9218_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPrioritySchedulerIdempotentUpdate",
+          "file": "writesched_priority_rfc9218_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPrioritySchedulerIncremental",
+          "file": "writesched_priority_rfc9218_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPrioritySchedulerUrgency",
+          "file": "writesched_priority_rfc9218_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestPrioritySchedulerUrgencyAndIncremental",
+          "file": "writesched_priority_rfc9218_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestRoundRobinScheduler",
+          "file": "writesched_roundrobin_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestFrameWriteRequestData",
+          "file": "writesched_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestFrameWriteRequestNonData",
+          "file": "writesched_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestFrameWriteRequestWithData",
+          "file": "writesched_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestFrameWriteRequest_StreamID",
+          "file": "writesched_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "api.go",
+          "sha256": "37118d08b835bc4324cb0963a4135c7af0af17fd6e526c687ea2b138d4863d06"
+        },
+        {
+          "path": "ascii.go",
+          "sha256": "d8ee0e0a6b2c41a17a18e263b7f9b5701174dbe10e59496daadc9db6a647f708"
+        },
+        {
+          "path": "ascii_test.go",
+          "sha256": "173d0b6efabef296973a370a3d9d8b827f3fc8b7d01bb486dcc1f763fcb2a0e1"
+        },
+        {
+          "path": "ciphers.go",
+          "sha256": "623262af28491cd81b3570936cd06757f629d2ae4fb6ef087af6762f30d7a5eb"
+        },
+        {
+          "path": "ciphers_test.go",
+          "sha256": "2faeece82713cc2f456482c48af6937a57aea63c9fbc9e5bf45f4afe238e3831"
+        },
+        {
+          "path": "client_conn_pool.go",
+          "sha256": "79937eb312fb6cf57d507c1913f183cc6c5d135f86f6cdd2f05ebebce8b3417c"
+        },
+        {
+          "path": "clientconn_test.go",
+          "sha256": "79703d27f9af0f407d2ec8283ba6442747500b733534db003f6fc9b2ec3af9ea"
+        },
+        {
+          "path": "config.go",
+          "sha256": "b94f003c337459a06408b30c77b52861133c4f6cbf88da2ca1aa32415b4242cf"
+        },
+        {
+          "path": "config_test.go",
+          "sha256": "9f09869a4c0983a44d7ebea0ef862441add48ab6b9813d5b39efcc72ec75bb78"
+        },
+        {
+          "path": "connframes_test.go",
+          "sha256": "1830452172a44bb81d777feb5e0a71a19a4a32c0e146cdb778cb0508155ac9a0"
+        },
+        {
+          "path": "databuffer.go",
+          "sha256": "ea04623f1b6e444d91a11faaed9e91a207f057d4108d52fdcef602c5effa039d"
+        },
+        {
+          "path": "databuffer_test.go",
+          "sha256": "6eaad282763b9df79a45612a2251ec64ab25d11217170d7c31645cb56f4539fa"
+        },
+        {
+          "path": "errors.go",
+          "sha256": "2652c558a999e8104cb1f64ec32b3eec00c4ccda76c29708c54908840fd90aa6"
+        },
+        {
+          "path": "errors_test.go",
+          "sha256": "0b1da045d5c0874d3987e9bb07b92ba0834355ab2c6ccbbfc8fd0f5213a6b9c3"
+        },
+        {
+          "path": "export_test.go",
+          "sha256": "c64b057a7e19ea094e3ed058a20e485e9fa5469d34b2de850c9a4314f47177d0"
+        },
+        {
+          "path": "flow.go",
+          "sha256": "cdf7ad077c182118d3967a63d33f0731717b060b43bded46796d226c8fcb11f2"
+        },
+        {
+          "path": "flow_test.go",
+          "sha256": "2b797839e7bde65c24c6d035375dd16ded63e09ec7c8e0316900ac630a02fd9c"
+        },
+        {
+          "path": "frame.go",
+          "sha256": "725d65d0420a1a3fa683b44e7643fdcde835fc91ef4182538edecf3caaa0847f"
+        },
+        {
+          "path": "frame_test.go",
+          "sha256": "cf15972b884f7a5c572eebd5db1cede360820c92c524ae2e01a3d23c12dc1f27"
+        },
+        {
+          "path": "gotrack.go",
+          "sha256": "239e8ae03982809675189ab7755003bbcc1fe29c7b5e66b577593919b998fb14"
+        },
+        {
+          "path": "gotrack_test.go",
+          "sha256": "e9a90b0b314e9ac7a755b186a0eb894521b8853400cad69baa6dc73dbded0b3e"
+        },
+        {
+          "path": "http2.go",
+          "sha256": "b5fbef76881003cb941b30a85bc45b3535ea4cbb78dcc57de274d3a17398a0ff"
+        },
+        {
+          "path": "http2_test.go",
+          "sha256": "d4dd28c1959752fbc02f2fbda8dac3074a4f2b6a237eb372d992b8345613b83f"
+        },
+        {
+          "path": "netconn_test.go",
+          "sha256": "1a578610526cbdf00c9ece0f0792aa383dd862f6fcb1ec6c585bcc2fb40eb7e1"
+        },
+        {
+          "path": "pipe.go",
+          "sha256": "3fbe00025d441802c154549f5bd7562b9937ff43f1ce64c987bda75fcaf7f518"
+        },
+        {
+          "path": "pipe_test.go",
+          "sha256": "25bd987f53749b8557e79bee34b3e6f548d1bc006726c14a5cc04ae5fb4b97e4"
+        },
+        {
+          "path": "server.go",
+          "sha256": "e497753da92d55c194dc0627061b7a3a106ca62d2ec58e1b655f47324c80d9df"
+        },
+        {
+          "path": "server_internal_test.go",
+          "sha256": "16ffa5b8bda2994a24738d6ec20248d5c01e2bbfa82fd99013841b9586457062"
+        },
+        {
+          "path": "server_push_test.go",
+          "sha256": "9d5046b91313b09da64f8e19c3bf77317e9c398b9090efc9c17eba62eff9e8d0"
+        },
+        {
+          "path": "server_test.go",
+          "sha256": "c96f12cf4f8a896cfa29785c2aeb21d5c88059deb1d27a4547cbcf7b2ca5eed2"
+        },
+        {
+          "path": "synctest_test.go",
+          "sha256": "0115d3cebfbe08b0d1bc7b0e5a9ae73ab6312186759659e6722a94a3fd26f9d7"
+        },
+        {
+          "path": "transport.go",
+          "sha256": "fdc011e4b8c763e580070b6082560769967e8bf681024bc3dd64ceed75b8879b"
+        },
+        {
+          "path": "transport_internal_test.go",
+          "sha256": "aa47b7730210e7352a7c9fd775b2d6d030a9ad44509000162dea5ae185860606"
+        },
+        {
+          "path": "transport_test.go",
+          "sha256": "52e3d98f312cc5625038d65e884b914463788bf1b5588a645e5deef96db222e5"
+        },
+        {
+          "path": "write.go",
+          "sha256": "810ece152a598a451ddda5557769221e1d1069a037db2fefbcaf452bf2cd88ff"
+        },
+        {
+          "path": "writesched.go",
+          "sha256": "12ad05d3b6b8d98dd7d4636bf6f886076e6b9d7d9e0287a338af365895b8aaf6"
+        },
+        {
+          "path": "writesched_benchmarks_test.go",
+          "sha256": "0f0a0ccfc5f336c30aecf31ced818d0b7deb97d5bec8051e10997272e3675d6d"
+        },
+        {
+          "path": "writesched_priority_rfc9218.go",
+          "sha256": "2f9b42f46fbbed54c4fd8e060d34f0526ab055453468432d0beea37cea761213"
+        },
+        {
+          "path": "writesched_priority_rfc9218_test.go",
+          "sha256": "027fffafad63fb4c856bc7a86760ccb31c9e43e9057d1fac0737bd6d0982e3f0"
+        },
+        {
+          "path": "writesched_roundrobin.go",
+          "sha256": "15f3db4cefc4b3179b59a2df67c79407cdc573b6008612d8a58d1ffc0c15d758"
+        },
+        {
+          "path": "writesched_roundrobin_test.go",
+          "sha256": "903fbd4cfc422969a76f362479d5df91b7e1120d90f33d9e6f9aad25ddb6e119"
+        },
+        {
+          "path": "writesched_test.go",
+          "sha256": "0ce0bc6041993f4229fade438bf3778d3525f14d6f14195813e0ae80b8c8c8fb"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "net/http/internal/httpcommon",
+      "tests": null,
+      "files": [
+        {
+          "path": "httpcommon.go",
+          "sha256": "875db0f0226dd2405d7d3e03242d272cda42a6687196d1c6bf5c85caeeecf1ea"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "net/http/internal/httpsfv",
+      "tests": null,
+      "files": [
+        {
+          "path": "httpsfv.go",
+          "sha256": "1826dc95ab20909265c03ec7ef1c05251c4fb56351c9016038210b629dd8bd5c"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "net/http/internal/testcert",
+      "tests": null,
+      "files": [
+        {
+          "path": "testcert.go",
+          "sha256": "812c69f79fc71384de1d93fb1058ab20e5b58ab2860dea72167681048d14a12e"
         }
       ],
       "seeds": null
@@ -72091,6 +75034,44 @@
         {
           "path": "httplex.go",
           "sha256": "8cfd5819dc821d45f82fde10afff4b2e652535b0091e0559fc8ad7766051a2c2"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "vendor/golang.org/x/net/http/httpproxy",
+      "tests": null,
+      "files": [
+        {
+          "path": "proxy.go",
+          "sha256": "ce887b0b89d3c008b2c6082c62cf07ad29734cdd19d7b58ce8030bd35cb0a907"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "vendor/golang.org/x/net/http2/hpack",
+      "tests": null,
+      "files": [
+        {
+          "path": "encode.go",
+          "sha256": "a9c57bec32cdd84c8372aa9622c6d6c99a25d47133952b88a3f391f3e411bd4c"
+        },
+        {
+          "path": "hpack.go",
+          "sha256": "468bb8569beb1271228967ef4873307b86824754b6e69aaa7e9ed4849307a519"
+        },
+        {
+          "path": "huffman.go",
+          "sha256": "3d41693bd77da34093c1d334842d8cbeffb3a2f3e0fa5cf0af5e6e9e65b19be1"
+        },
+        {
+          "path": "static_table.go",
+          "sha256": "c3d863a43ea29e6f03db930eb2556664eeeda22a4ac0b8bcbd9e31bde499eed1"
+        },
+        {
+          "path": "tables.go",
+          "sha256": "6e8ce01dfb4d5e9e02a982581988621d2bc84b5e90708e1ffd3ef988cf8b2d5c"
         }
       ],
       "seeds": null

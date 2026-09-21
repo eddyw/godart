@@ -7,6 +7,7 @@ package overlay
 
 import (
 	"embed"
+	"errors"
 	"io/fs"
 	"path"
 	"sort"
@@ -128,4 +129,13 @@ func Paths() []string {
 		out = append(out, p.Path)
 	}
 	return out
+}
+
+// License returns supplemental terms for source adapted by this package.
+func License(pkgPath string) ([]byte, error) {
+	data, err := tree.ReadFile(path.Join("std", pkgPath, "LICENSE"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	return data, err
 }

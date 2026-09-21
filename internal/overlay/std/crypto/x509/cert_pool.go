@@ -1,8 +1,8 @@
-//go:build dart
-
 // Copyright 2011 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+//go:build dart
 
 package x509
 
@@ -105,14 +105,26 @@ func (s *CertPool) Clone() *CertPool {
 	return p
 }
 
-// SystemCertPool returns a copy of the system certificate pool.
-// SSL_CERT_FILE and SSL_CERT_DIR select certificate files and directories.
-// x509sslcertoverrideplatform=0 preserves the platform verifier despite those variables.
-// Changes to this pool do not change the system store or another pool.
+// SystemCertPool returns a copy of the system cert pool.
+//
+// The environment variables SSL_CERT_FILE and SSL_CERT_DIR can be used to
+// override the system default locations for the SSL certificate file and SSL
+// certificate files directory, respectively. The latter can be a
+// colon-separated list, or a semicolon-separated list on Windows. On platforms
+// which have system APIs for certificate verification (macOS and Windows),
+// setting SSL_CERT_FILE or SSL_CERT_DIR will prevent those APIs from being
+// used, unless the x509sslcertoverrideplatform=0 GODEBUG setting is used. (This
+// changed in Go 1.27.)
+//
+// Any mutations to the returned pool are not written to disk and do not affect
+// any other pool returned by SystemCertPool.
+//
+// New changes in the system cert pool might not be reflected in subsequent calls.
 func SystemCertPool() (*CertPool, error) {
 	if sysRoots := systemRootsPool(); sysRoots != nil {
 		return sysRoots.Clone(), nil
 	}
+
 	return loadSystemRoots()
 }
 

@@ -671,5 +671,25 @@
   {
     "package": "net/http/fcgi",
     "run": ""
+  },
+  {
+    "package": "net/http/httptest",
+    "run": ""
+  },
+  {
+    "package": "net/smtp",
+    "run": ""
+  },
+  {
+    "package": "internal/gate",
+    "run": ""
+  },
+  {
+    "package": "internal/nettest",
+    "run": ""
+  },
+  {
+    "package": "crypto/x509",
+    "run": ""
   }
 ]

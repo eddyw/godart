@@ -185,6 +185,10 @@
     "status": "no-runnable-tests"
   },
   {
+    "package": "crypto/internal/cryptotest/x509limbo",
+    "status": "no-runnable-tests"
+  },
+  {
     "package": "crypto/internal/fips140",
     "status": "vm-suite"
   },
@@ -285,6 +289,14 @@
   {
     "package": "crypto/internal/fips140/subtle",
     "status": "vm-suite"
+  },
+  {
+    "package": "crypto/internal/fips140/tls12",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "crypto/internal/fips140/tls13",
+    "status": "no-runnable-tests"
   },
   {
     "package": "crypto/internal/fips140cache",
@@ -430,16 +442,17 @@
   {
     "package": "crypto/tls",
     "status": "compile-blocked",
-    "diagnostic": "undefined: selectSignatureScheme",
-    "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The suite calls private Go TLS implementation functions. Dart owns the TLS implementation."
+    "diagnostic": "undefined: syscall.SIGSTOP",
+    "blocker_cause": "public-api-gap",
+    "blocker_reason": "The complete suite requires native process signals and errno contracts beyond the current syscall surface."
+  },
+  {
+    "package": "crypto/tls/internal/fips140tls",
+    "status": "no-runnable-tests"
   },
   {
     "package": "crypto/x509",
-    "status": "compile-blocked",
-    "diagnostic": "c.ConnectionState().PeerCertificates undefined (type tls.ConnectionState has no field or method PeerCertificates)",
-    "blocker_cause": "public-api-gap",
-    "blocker_reason": "The complete suite requires the peer certificate chain from a TLS connection."
+    "status": "vm-suite"
   },
   {
     "package": "crypto/x509/pkix",
@@ -817,6 +830,10 @@
     "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
   {
+    "package": "internal/gate",
+    "status": "vm-suite"
+  },
+  {
     "package": "internal/godebug",
     "status": "compile-blocked",
     "diagnostic": "the package runtime/metrics is outside the supported surface (the standard library surface is curated)",
@@ -846,6 +863,10 @@
   {
     "package": "internal/msan",
     "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/nettest",
+    "status": "vm-suite"
   },
   {
     "package": "internal/nettrace",
@@ -885,7 +906,7 @@
   {
     "package": "internal/testenv",
     "status": "compile-blocked",
-    "diagnostic": "undefined: testenv.MustHaveExecPath",
+    "diagnostic": "undefined: testenv.GoTool",
     "blocker_cause": "private-test-dependency",
     "blocker_reason": "The complete native test infrastructure exceeds the selected testenv adapter."
   },
@@ -1025,9 +1046,9 @@
   {
     "package": "net/http",
     "status": "compile-blocked",
-    "diagnostic": "unknown field RootCAs in struct literal of type tls.Config",
+    "diagnostic": "ln.(*net.TCPListener).File undefined (type *net.TCPListener has no field or method File)",
     "blocker_cause": "public-api-gap",
-    "blocker_reason": "The complete suite requires TLS root-certificate configuration. TLS expansion has separate scope."
+    "blocker_reason": "The complete suite requires native listener file descriptors."
   },
   {
     "package": "net/http/cgi",
@@ -1048,10 +1069,7 @@
   },
   {
     "package": "net/http/httptest",
-    "status": "compile-blocked",
-    "diagnostic": "unknown field Version in struct literal of type tls.ConnectionState",
-    "blocker_cause": "public-api-gap",
-    "blocker_reason": "The complete suite requires TLS connection-version metadata. TLS expansion has separate scope."
+    "status": "vm-suite"
   },
   {
     "package": "net/http/httptrace",
@@ -1073,6 +1091,25 @@
     "status": "vm-suite"
   },
   {
+    "package": "net/http/internal/http2",
+    "status": "compile-blocked",
+    "diagnostic": "the function transportFromH1Transport holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "blocker_cause": "private-test-dependency",
+    "blocker_reason": "The suite extracts private HTTP transport state through a cross-package go:linkname bridge."
+  },
+  {
+    "package": "net/http/internal/httpcommon",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "net/http/internal/httpsfv",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "net/http/internal/testcert",
+    "status": "no-runnable-tests"
+  },
+  {
     "package": "net/mail",
     "status": "vm-suite"
   },
@@ -1090,10 +1127,7 @@
   },
   {
     "package": "net/smtp",
-    "status": "compile-blocked",
-    "diagnostic": "cs.Version undefined (type tls.ConnectionState has no field or method Version)",
-    "blocker_cause": "public-api-gap",
-    "blocker_reason": "The complete suite requires TLS connection-version metadata. TLS expansion has separate scope."
+    "status": "vm-suite"
   },
   {
     "package": "net/textproto",
@@ -1338,6 +1372,14 @@
   },
   {
     "package": "vendor/golang.org/x/net/http/httpguts",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/net/http/httpproxy",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/net/http2/hpack",
     "status": "no-runnable-tests"
   },
   {

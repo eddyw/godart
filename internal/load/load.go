@@ -347,7 +347,7 @@ func patchDiffs(out map[string][]byte, o overlay.Package, real *packages.Package
 			}
 			src = read
 		}
-		patched, err := applyPatch(src, f.Content, f.Name)
+		patched, err := ApplyPatch(src, f.Content, f.Name)
 		if err != nil {
 			return err
 		}
