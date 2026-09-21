@@ -405,6 +405,8 @@ final class _Packet {
 
   // The Dart socket owns this descriptor.
   int nativeFD = -1;
+  String localHost;
+  final closed = Completer<void>();
 
   /// The host is empty for a socket of a listen.
   String remoteHost = '';
@@ -416,8 +418,15 @@ final class _Packet {
   final _Deadline readDeadline = _Deadline();
   final _Deadline writeDeadline = _Deadline();
 
-  _Packet(this.socket) {
-    socket.listen(_event, onDone: _end, onError: (Object cause) => _end());
+  _Packet(this.socket) : localHost = socket.address.address {
+    socket.listen(
+      _event,
+      onDone: () {
+        _end();
+        closed.complete();
+      },
+      onError: (Object cause) => _end(),
+    );
   }
 
   void _event(RawSocketEvent event) {
@@ -1391,29 +1400,53 @@ Future<_Packet> _bindShared(String host, int port) async {
 ///
 /// The socket drops a datagram of another source, exactly as a connected
 /// socket of the system does.
-(int, int, GoString) $dialUDP(GoString host, int port) {
+(int, GoString, int, GoString) $dialUDP(
+  GoString host,
+  int port,
+  GoString localHost,
+  int localPort,
+) {
   $await(
     _connectUDP(
       host.toDartString(),
       port,
-    ).then((_Packet s) => (_packetSlot(s), s.socket.port, _empty)),
-    (Object cause) => (-1, 0, _cause(cause)),
+      localHost.toDartString(),
+      localPort,
+    ).then(
+      (_Packet s) => (
+        _packetSlot(s),
+        GoString.fromString(s.localHost),
+        s.socket.port,
+        _empty,
+      ),
+    ),
+    (Object cause) => (-1, _empty, 0, _cause(cause)),
   );
-  return (-1, 0, _empty);
+  return (-1, _empty, 0, _empty);
 }
 
-Future<_Packet> _connectUDP(String host, int port) async {
+Future<_Packet> _connectUDP(
+  String host,
+  int port,
+  String localHost,
+  int localPort,
+) async {
   final InternetAddress target = await _address(host);
   final RawDatagramSocket socket = await RawDatagramSocket.bind(
-    target.type == InternetAddressType.IPv6
+    localHost.isNotEmpty
+        ? await _address(localHost)
+        : target.type == InternetAddressType.IPv6
         ? InternetAddress.anyIPv6
         : InternetAddress.anyIPv4,
-    0,
+    localPort,
+    reuseAddress: false,
   );
   final _Packet s = _Packet(socket);
   if (Platform.isLinux || Platform.isMacOS) {
     try {
-      s.nativeFD = connectDatagram(socket, target, port);
+      final local = connectDatagram(socket, target, port);
+      s.nativeFD = local.$1;
+      s.localHost = local.$2;
     } catch (_) {
       socket.close();
       rethrow;
@@ -1525,6 +1558,7 @@ GoString $packetClose(int handle) {
   if (s == null) return _closed();
   _packets[handle] = null;
   s.socket.close();
+  $await(s.closed.future.then((_) => _empty), (Object cause) => _cause(cause));
   return _empty;
 }
 

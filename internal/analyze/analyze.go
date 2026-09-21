@@ -994,7 +994,7 @@ func blockingIntrinsic(fn *types.Func) bool {
 		"ListenTLS", "AcceptTLS",
 		"DialUnix", "ListenUnix",
 		"DialUDP", "ListenUDP", "ListenMulticastUDP", "JoinMulticast",
-		"PacketRead", "PacketWrite",
+		"PacketRead", "PacketWrite", "PacketClose",
 		"Interfaces",
 		"ProcStart", "ProcWrite", "ProcCloseStdin", "ProcRead",
 		"ProcReadErr", "ProcWait", "SignalWait",

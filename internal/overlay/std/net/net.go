@@ -457,12 +457,12 @@ func (d *Dialer) dialOne(network, address string) (Conn, error) {
 		if host == "" {
 			host = "127.0.0.1"
 		}
-		handle, local, cause := dart.DialUDP(host, port)
+		handle, localIP, local, cause := dart.DialUDP(host, port, "", 0)
 		if cause != "" {
 			return nil, errors.New("dial udp " + address + ": " + cause)
 		}
 		return newDialedUDPConn(
-			&packet{handle: handle, local: &UDPAddr{Port: local}},
+			&packet{handle: handle, local: udpAddrOf(localIP, local)},
 			host,
 			port,
 		), nil

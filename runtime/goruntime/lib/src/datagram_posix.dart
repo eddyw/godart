@@ -22,6 +22,11 @@ final _send = _libc
       IntPtr Function(Int, Pointer<Void>, Size, Int),
       int Function(int, Pointer<Void>, int, int)
     >('send');
+final _getsockname = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Void>, Pointer<Uint32>),
+      int Function(int, Pointer<Void>, Pointer<Uint32>)
+    >('getsockname');
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
@@ -48,7 +53,7 @@ SocketException datagramError(int code) {
   );
 }
 
-int connectDatagram(
+(int, String) connectDatagram(
   RawDatagramSocket socket,
   InternetAddress remote,
   int port,
@@ -60,7 +65,7 @@ int connectDatagram(
   final fd = ByteData.sublistView(control.data).getInt32(0, Endian.host);
   final ipv6 = remote.type == InternetAddressType.IPv6;
   final length = ipv6 ? 28 : 16;
-  final memory = _allocate(length);
+  final memory = _allocate(length + 4);
   if (memory == nullptr) throw datagramError(12);
   try {
     final bytes = memory.cast<Uint8>().asTypedList(length)
@@ -98,7 +103,15 @@ int connectDatagram(
       data.setUint32(24, index, Endian.host);
     }
     if (_connect(fd, memory, length) != 0) throw datagramError(_errno().value);
-    return fd;
+    final size = (memory.cast<Uint8>() + length).cast<Uint32>()..value = length;
+    if (_getsockname(fd, memory, size) != 0) {
+      throw datagramError(_errno().value);
+    }
+    final local = InternetAddress.fromRawAddress(
+      Uint8List.fromList(bytes.sublist(ipv6 ? 8 : 4, ipv6 ? 24 : 8)),
+    );
+    final scope = ipv6 ? data.getUint32(24, Endian.host) : 0;
+    return (fd, scope == 0 ? local.address : '${local.address}%$scope');
   } finally {
     _release(memory);
   }

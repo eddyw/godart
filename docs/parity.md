@@ -67,6 +67,10 @@ hardware addresses, and flags. The table includes interfaces without IP addresse
 Other native hosts report interface metadata as unsupported.
 Address enumeration remains separate. Browsers return an empty interface table.
 
+On Linux and macOS, `net.DialUDP` supports an explicit local address and port.
+Connected UDP sockets report the local address that the operating system selects.
+UDP network-family selection and the context-based UDP dialer still have gaps.
+
 Browser builds use browser APIs. HTTP clients use fetch. Browser restrictions
 on headers, credentials, network access, and cross-origin requests still apply.
 Native filesystem operations, raw sockets, and HTTP servers do not become

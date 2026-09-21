@@ -1309,10 +1309,10 @@ func JoinMulticast(handle int, group, iface string) string {
 
 // DialUDP opens a datagram socket that holds a remote address. Such a socket
 // drops a datagram of another source. The results are the handle, the local
-// port that the system took, and the cause of a failure.
+// address and port that the system took, and the cause of a failure.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func DialUDP(host string, port int) (int, int, string) {
+func DialUDP(host string, port int, localHost string, localPort int) (int, string, int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
@@ -1333,7 +1333,7 @@ func PacketWrite(handle int, p []byte, host string, port int) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// PacketClose closes a datagram socket.
+// PacketClose waits until the host releases the datagram socket.
 func PacketClose(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }

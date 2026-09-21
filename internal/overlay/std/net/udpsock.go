@@ -165,18 +165,11 @@ func (c *UDPConn) SetWriteDeadline(t time.Time) error { return c.p.SetWriteDeadl
 
 // DialUDP opens a datagram socket that holds a peer. The network is udp,
 // udp4, or udp6.
-//
-// Dart binds no local address of a dial, thus a laddr that is not nil gives
-// an error.
 func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 	switch network {
 	case "udp", "udp4", "udp6":
 	default:
 		return nil, UnknownNetworkError(network)
-	}
-	if laddr != nil {
-		return nil, errors.New("dial " + network +
-			": a local address of a dial stays outside the subset")
 	}
 	if raddr == nil {
 		return nil, errors.New("dial " + network + ": the address is missing")
@@ -185,12 +178,25 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 	if len(raddr.IP) == 0 {
 		host = "127.0.0.1"
 	}
-	handle, local, cause := dart.DialUDP(host, raddr.Port)
+	if raddr.Zone != "" {
+		host += "%" + raddr.Zone
+	}
+	localHost, localPort := "", 0
+	if laddr != nil {
+		if len(laddr.IP) != 0 {
+			localHost = laddr.IP.String()
+			if laddr.Zone != "" {
+				localHost += "%" + laddr.Zone
+			}
+		}
+		localPort = laddr.Port
+	}
+	handle, localIP, local, cause := dart.DialUDP(host, raddr.Port, localHost, localPort)
 	if cause != "" {
 		return nil, errors.New("dial " + network + " " + raddr.String() + ": " + cause)
 	}
 	return newDialedUDPConn(
-		&packet{handle: handle, local: &UDPAddr{Port: local}},
+		&packet{handle: handle, local: udpAddrOf(localIP, local)},
 		host,
 		raddr.Port,
 	), nil
