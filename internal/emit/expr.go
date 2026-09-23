@@ -691,7 +691,7 @@ func (e *emitter) binary(x *ir.Binary) string {
 	left, right := e.expr(x.X), e.expr(x.Y)
 	t := x.X.GoType()
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
-		if set, ok := typeset.Describe(tp); ok && set.Numeric && (set.MixedSign() || (!set.Integer && !set.Float)) {
+		if set, ok := typeset.Describe(tp); ok && set.Numeric && (set.MixedSign() || (!set.Integer && !set.Float) || (set.Float && e.mixedForm(tp))) {
 			method := map[token.Token]string{token.QUO: "quotient", token.REM: "remainder", token.SHR: "shiftRight"}[x.Op]
 			if method != "" {
 				if x.Op == token.SHR {
