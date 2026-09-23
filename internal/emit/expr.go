@@ -139,6 +139,11 @@ func (e *emitter) deref(x ir.Expr) string {
 	}
 	form := e.dartType(p)
 	simple := exprIsSimple(x)
+	if named, ok := types.Unalias(p.Elem()).(*types.Named); ok && recursiveLocalStruct(named) {
+		form = e.dartType(p.Elem()) + "?"
+		text = "(" + text + " as " + form + ")"
+		simple = false
+	}
 	if form == "Object?" && needsBox(p.Elem()) {
 		// A pointer to a type that names itself erases to Object?, thus the
 		// read needs the real cell type back.

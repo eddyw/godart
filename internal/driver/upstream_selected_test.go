@@ -42,9 +42,10 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "scan_test.go", Declarations: []string{"RecursiveInt", "RecursiveInt.Scan", "scanInts", "makeInts", "TestScanInts", "intCount", "testScanInts", "f"}},
 			{Name: "fmt_test.go", Declarations: []string{"TestComplexFormatting", "NaN", "posInf", "negInf", "PanicS", "PanicGo", "PanicF", "panictests", "TestPanics"}},
 		},
+		"encoding/gob": {{Name: "codec_test.go", Declarations: []string{"TestNesting"}}},
 		"encoding/json": {
-			{Name: "encode_test.go", Declarations: []string{"TestMarshalFloat", "badFloatREs", "re"}},
-			{Name: "v2_encode_test.go", Declarations: []string{"TestMarshalFloat", "badFloatREs", "re"}},
+			{Name: "encode_test.go", Declarations: []string{"TestMarshalFloat", "badFloatREs", "re", "TestMarshalErrorAndReuseEncodeState"}},
+			{Name: "v2_encode_test.go", Declarations: []string{"TestMarshalFloat", "badFloatREs", "re", "TestMarshalErrorAndReuseEncodeState"}},
 		},
 		"context": {{Name: "x_test.go", Declarations: []string{"TestContextErrDoneRace"}}},
 		"testing": {{Name: "benchmark_test.go", Declarations: []string{"TestResultString"}}},
@@ -278,6 +279,9 @@ func TestSelectedUpstream(t *testing.T) {
 					source = strings.Replace(source, "package sync_test", "package sync", 1)
 					source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/testenv"`)
 				}
+				if pkg == "encoding/gob" {
+					source = strings.Replace(source, "package gob\n", "package gob_test\nimport . \"encoding/gob\"\n", 1)
+				}
 				if pkg == "encoding/json" {
 					source = strings.Replace(source, "package json\n", "package json_test\nimport . \"encoding/json\"\n", 1)
 				}
@@ -492,7 +496,7 @@ import . "os/signal"
 				name = pkg + "-content-type"
 			}
 			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
-			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "runtime/metrics" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "encoding/json" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" || pkg == "testing" {
+			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "runtime/metrics" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "encoding/json" || pkg == "encoding/gob" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" || pkg == "testing" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)

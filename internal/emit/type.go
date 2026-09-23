@@ -103,10 +103,9 @@ func (e *emitter) dartType(t types.Type) string {
 		if _, ok := types.Unalias(t.Elem()).(*types.TypeParam); ok {
 			return "Object?"
 		}
-		// A pointer to a type that names itself takes the form of that type.
-		// `type Number *Number` names 1 Go type, thus the 2 spellings must
-		// give 1 Dart form or an assignment of the 2 fails.
-		if named, ok := types.Unalias(t.Elem()).(*types.Named); ok && e.cyclic(named.Obj()) {
+		// Recursive local structs have no nominal Dart class to end expansion.
+		// Their pointers need the same finite representation at all depths.
+		if named, ok := types.Unalias(t.Elem()).(*types.Named); ok && (e.cyclic(named.Obj()) || recursiveLocalStruct(named)) {
 			return "Object?"
 		}
 		if needsBox(t.Elem()) {
@@ -1274,6 +1273,63 @@ func (e *emitter) mentionsCyclic(t types.Type, seen map[*types.TypeName]bool) bo
 		}
 	}
 	return false
+}
+
+func recursiveLocalStruct(named *types.Named) bool {
+	if !isLocalType(named.Obj()) {
+		return false
+	}
+	if _, ok := named.Underlying().(*types.Struct); !ok {
+		return false
+	}
+	seen := map[types.Type]bool{}
+	var walk func(types.Type) bool
+	walk = func(t types.Type) bool {
+		t = types.Unalias(t)
+		if seen[t] {
+			return false
+		}
+		seen[t] = true
+		switch t := t.(type) {
+		case *types.Named:
+			if t.Obj() == named.Obj() {
+				return true
+			}
+			if !isLocalType(t.Obj()) {
+				return false
+			}
+			return walk(t.Underlying())
+		case *types.Struct:
+			for i := range t.NumFields() {
+				if walk(t.Field(i).Type()) {
+					return true
+				}
+			}
+		case *types.Pointer:
+			return walk(t.Elem())
+		case *types.Slice:
+			return walk(t.Elem())
+		case *types.Array:
+			return walk(t.Elem())
+		case *types.Chan:
+			return walk(t.Elem())
+		case *types.Map:
+			return walk(t.Key()) || walk(t.Elem())
+		case *types.Signature:
+			for i := range t.Params().Len() {
+				if walk(t.Params().At(i).Type()) {
+					return true
+				}
+			}
+			for i := range t.Results().Len() {
+				if walk(t.Results().At(i).Type()) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	return walk(named.Underlying())
 }
 
 // isLocalType reports whether a function declares the type.
