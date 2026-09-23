@@ -693,6 +693,15 @@ func MakeMap(t Type) Value {
 // TypeAssert reads the value inside v as the type T. The flag is false when the
 // value holds another type.
 func TypeAssert[T any](v Value) (T, bool) {
+	if !v.IsValid() {
+		panic(&ValueError{Method: "reflect.TypeAssert", Kind: Invalid})
+	}
+	if v.ro != 0 {
+		panic("reflect.TypeAssert: cannot return value obtained from unexported field or method")
+	}
+	if v.unexportedMethod {
+		panic("reflect: TypeAssert of unexported method")
+	}
 	out, ok := v.read().(T)
 	return out, ok
 }
