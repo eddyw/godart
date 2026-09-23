@@ -98,21 +98,44 @@ func isInstance(named *types.Named) bool {
 	return named.TypeArgs() != nil && named.TypeArgs().Len() > 0
 }
 
-// instanceDesc writes the description of 1 instance of a generic named type.
-//
-// The package holds a variable for the description of each other named type. An
-// instance reaches the output only through its use, thus the description stands
-// at that point. The name holds each type argument, and a type assertion
-// compares that name.
+// instanceDesc returns the descriptor expression of a named type instance.
+// A factory retains complete metadata when a generic type refers to itself.
 func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 	t := types.Type(named)
 	if pointer {
 		t = types.NewPointer(named)
 	}
-	// The description of an instance with a free type parameter can reach
-	// itself through a field or a method, and no variable can hold it. The
-	// second visit gives a shallow description, thus the text ends.
+	body := func() string {
+		return fmt.Sprintf("TypeDesc(%s, '%s', <String, Function>{%s}, text: %s%s, zero: () => %s)",
+			e.typeNameText(t), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
+			e.reflectTextExpr(t),
+			e.methodTypeTable(t)+e.methodForwardTable(t)+e.descParts(t)+e.pointerPart(named, pointer),
+			e.zero(t))
+	}
 	key := e.typeName(t)
+	if params := dictionaryParams(t); len(params) > 0 && e.lits != nil {
+		if e.lits.instanceFactories == nil {
+			e.lits.instanceFactories = map[string]string{}
+		}
+		declaration := e.typeParamDecl(params)
+		key = declaration + key
+		arguments := make([]string, len(params))
+		for i, param := range params {
+			arguments[i] = e.dictOf(param)
+		}
+		args := e.typeArgsOfParams(params) + "(" + strings.Join(arguments, ", ") + ")"
+		if name, ok := e.lits.instanceFactories[key]; ok {
+			return name + args
+		}
+		name := fmt.Sprintf("$instance%d_%d", e.lits.tag, e.lits.seq)
+		e.lits.seq++
+		// Reserve the factory before its fields refer back to this type.
+		// Only type dictionaries enter these metadata closures.
+		e.lits.instanceFactories[key] = name
+		text := body()
+		e.lits.decls = append(e.lits.decls, fmt.Sprintf("TypeDesc %s%s(%s) => %s;", name, declaration, strings.Join(e.dictParams(params), ", "), text))
+		return name + args
+	}
 	if e.descBusy == nil {
 		e.descBusy = map[string]bool{}
 	}
@@ -122,11 +145,7 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 	}
 	e.descBusy[key] = true
 	defer delete(e.descBusy, key)
-	return fmt.Sprintf("TypeDesc(%s, '%s', <String, Function>{%s}, text: %s%s, zero: () => %s)",
-		e.typeNameText(t), kindOf(t), strings.Join(e.methodTable(named, t), ", "),
-		e.reflectTextExpr(t),
-		e.methodTypeTable(t)+e.methodForwardTable(t)+e.descParts(t)+e.pointerPart(named, pointer),
-		e.zero(t))
+	return body()
 }
 
 // methodTable writes the adapter of each method of the type, in the order of
@@ -992,7 +1011,7 @@ func (e *emitter) descriptorOf(t types.Type) string {
 	}
 	// The library holds 1 variable for the description of a type with no type
 	// parameter, thus 2 uses of 1 type write the text once.
-	if !holdsTypeParam(t) {
+	if !holdsTypeParam(t) && !hasOuterType(t) {
 		if key := e.groundDescVar(t); key != "" {
 			return key
 		}

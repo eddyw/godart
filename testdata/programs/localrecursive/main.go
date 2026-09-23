@@ -18,6 +18,11 @@ func nodes[T comparable](value T) {
 	pointer.Elem().Set(reflect.ValueOf(first))
 	other := pointer.Interface().(*node)
 	fmt.Println(other.Value == value, other.Next == &first)
+	fmt.Println(pointer.Elem().FieldByName("Next").Elem().FieldByName("Value").Interface() == value)
+	fmt.Println(pointer.Elem().FieldByName("Next").Elem().FieldByName("Next").Elem().Type() == reflect.TypeFor[node]())
+	typ := reflect.TypeFor[node]()
+	next := typ.Field(1).Type.Elem()
+	fmt.Println(next == typ, next.NumField(), next.Field(0).Type == reflect.TypeFor[T]())
 	var holder any = first
 	asserted := holder.(node)
 	fmt.Println(asserted.Value == value, asserted.Next == &first)
