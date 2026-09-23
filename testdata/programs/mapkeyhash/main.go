@@ -2,10 +2,10 @@ package main
 
 import "fmt"
 
-func panics(call func()) (out bool) {
-	defer func() { out = recover() != nil }()
+func panicText(call func()) (out string) {
+	defer func() { out = fmt.Sprint(recover()) }()
 	call()
-	return false
+	return ""
 }
 
 type record struct{ Value any }
@@ -31,27 +31,27 @@ func main() {
 		entry := record{value}
 		pointer := &target{value}
 		fmt.Println("interface", allocated,
-			panics(func() { _ = interfaces[value] }),
-			panics(func() { _, _ = interfaces[value] }),
-			panics(func() { delete(interfaces, value) }))
+			panicText(func() { _ = interfaces[value] }),
+			panicText(func() { _, _ = interfaces[value] }),
+			panicText(func() { delete(interfaces, value) }), panicText(func() { interfaces[value] = 1 }))
 		fmt.Println("array", allocated,
-			panics(func() { _ = arrays[array] }),
-			panics(func() { _, _ = arrays[array] }),
-			panics(func() { delete(arrays, array) }))
+			panicText(func() { _ = arrays[array] }),
+			panicText(func() { _, _ = arrays[array] }),
+			panicText(func() { delete(arrays, array) }), panicText(func() { arrays[array] = 1 }))
 		fmt.Println("record", allocated,
-			panics(func() { _ = records[entry] }),
-			panics(func() { _, _ = records[entry] }),
-			panics(func() { delete(records, entry) }))
+			panicText(func() { _ = records[entry] }),
+			panicText(func() { _, _ = records[entry] }),
+			panicText(func() { delete(records, entry) }), panicText(func() { records[entry] = 1 }))
 		fmt.Println("pointer", allocated,
-			panics(func() { _ = pointers[pointer] }),
-			panics(func() { _, _ = pointers[pointer] }),
-			panics(func() { delete(pointers, pointer) }))
+			panicText(func() { _ = pointers[pointer] }),
+			panicText(func() { _, _ = pointers[pointer] }),
+			panicText(func() { delete(pointers, pointer) }), panicText(func() { pointers[pointer] = 1 }))
 	}
 }
 
 func generic[K comparable](key K) {
 	var nilMap map[K]int
 	for _, m := range []map[K]int{nilMap, make(map[K]int)} {
-		fmt.Println("generic", panics(func() { _ = m[key] }), panics(func() { _, _ = m[key] }), panics(func() { delete(m, key) }))
+		fmt.Println("generic", panicText(func() { _ = m[key] }), panicText(func() { _, _ = m[key] }), panicText(func() { delete(m, key) }), panicText(func() { m[key] = 1 }))
 	}
 }

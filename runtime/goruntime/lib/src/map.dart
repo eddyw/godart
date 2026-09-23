@@ -101,7 +101,6 @@ final class GoMap<K, V> {
   /// the hash of a key that holds no identity in a write, thus the flag of
   /// the hash stands over the read.
   _Entry<K, V>? _readForWrite(K key) {
-    if (key is! Iface) return _read(key);
     $hashInWrite = true;
     try {
       return _read(key);
