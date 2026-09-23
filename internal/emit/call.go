@@ -1098,8 +1098,8 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	// The method of an interface type dispatches through the method table of
 	// the receiver argument.
 	if isInterfaceType(x.Recv) {
-		call := fmt.Sprintf("$call(%s, %q, <Object?>[%s])",
-			names[0], methodKey(x.Obj.Id(), msig), strings.Join(names[1:], ", "))
+		call := fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
+			names[0], e.methodKeyText(x.Obj.Id(), msig), strings.Join(names[1:], ", "))
 		if cast := e.resultCast(msig); cast != "" {
 			call = "(" + call + " as " + cast + ")"
 		}
@@ -1126,8 +1126,8 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 		}
 	}
 	if isInterfaceType(current) {
-		call := fmt.Sprintf("$call(%s, %q, <Object?>[%s])",
-			recv, methodKey(x.Obj.Id(), msig), strings.Join(names[1:], ", "))
+		call := fmt.Sprintf("$call(%s, %s, <Object?>[%s])",
+			recv, e.methodKeyText(x.Obj.Id(), msig), strings.Join(names[1:], ", "))
 		if cast := e.resultCast(msig); cast != "" {
 			call = "(" + call + " as " + cast + ")"
 		}

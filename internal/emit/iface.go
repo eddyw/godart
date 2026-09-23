@@ -1083,56 +1083,20 @@ func methodKey(name string, sig *types.Signature) string {
 		if sig.Variadic() && i == sig.Params().Len()-1 {
 			b.WriteString("...")
 			if s, ok := types.Unalias(sig.Params().At(i).Type()).(*types.Slice); ok {
-				b.WriteString(keyType(s.Elem()))
+				b.WriteString(typeText(s.Elem()))
 				continue
 			}
 		}
-		b.WriteString(keyType(sig.Params().At(i).Type()))
+		b.WriteString(typeText(sig.Params().At(i).Type()))
 	}
 	b.WriteByte(')')
 	for i := 0; i < sig.Results().Len(); i++ {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(keyType(sig.Results().At(i).Type()))
+		b.WriteString(typeText(sig.Results().At(i).Type()))
 	}
 	return b.String()
-}
-
-// keyType names a type inside a method key.
-//
-// An alias gives the name of the type behind it. 2 packages can hold 2 alias
-// names of 1 type, and Go holds the 2 methods equal, thus the 2 keys must stay
-// equal.
-func keyType(t types.Type) string {
-	return types.TypeString(unaliasDeep(t), nil)
-}
-
-// unaliasDeep replaces each alias of a type, and of the element of a container
-// of it, with the type behind it.
-//
-// An alias inside a struct, inside a signature, or inside a type argument
-// stays. docs/parity.md holds that gap.
-func unaliasDeep(t types.Type) types.Type {
-	switch u := types.Unalias(t).(type) {
-	case *types.Basic:
-		// byte and uint8 name 1 type, and so do rune and int32. go/types holds
-		// 2 objects with 2 texts, thus the key comes from the kind. A method
-		// that spells uint8 must satisfy an interface that spells byte.
-		return types.Typ[u.Kind()]
-	case *types.Pointer:
-		return types.NewPointer(unaliasDeep(u.Elem()))
-	case *types.Slice:
-		return types.NewSlice(unaliasDeep(u.Elem()))
-	case *types.Array:
-		return types.NewArray(unaliasDeep(u.Elem()), u.Len())
-	case *types.Map:
-		return types.NewMap(unaliasDeep(u.Key()), unaliasDeep(u.Elem()))
-	case *types.Chan:
-		return types.NewChan(u.Dir(), unaliasDeep(u.Elem()))
-	default:
-		return u
-	}
 }
 
 func methodNameList(names []string) string {
@@ -1236,11 +1200,7 @@ func isPure(x ir.Expr) bool {
 // The local marker belongs to its named type. Runtime constructors compose
 // derived identities from those names.
 func (e *emitter) typeName(t types.Type) string {
-	identity := e.identityType(t)
-	if mentionsStruct(t, map[types.Type]bool{}) {
-		return typeText(identity)
-	}
-	return types.TypeString(identity, nil)
+	return typeText(e.identityType(t))
 }
 
 func (e *emitter) identityType(t types.Type) types.Type {
@@ -1268,6 +1228,14 @@ func (e *emitter) identityType(t types.Type) types.Type {
 		return types.NewMap(e.identityType(u.Key()), e.identityType(u.Elem()))
 	case *types.Chan:
 		return types.NewChan(u.Dir(), e.identityType(u.Elem()))
+	case *types.Interface:
+		methods := make([]*types.Func, u.NumMethods())
+		for i := range methods {
+			method := u.Method(i)
+			sig := e.identityType(method.Type()).(*types.Signature)
+			methods[i] = types.NewFunc(token.NoPos, method.Pkg(), method.Name(), sig)
+		}
+		return types.NewInterfaceType(methods, nil).Complete()
 	case *types.Struct:
 		fields := make([]*types.Var, u.NumFields())
 		tags := make([]string, u.NumFields())
@@ -1395,6 +1363,12 @@ func hasOuterType(t types.Type) bool {
 				return true
 			}
 		}
+	case *types.Interface:
+		for i := range u.NumMethods() {
+			if hasOuterType(u.Method(i).Type()) {
+				return true
+			}
+		}
 	case *types.Signature:
 		for _, tuple := range []*types.Tuple{u.Params(), u.Results()} {
 			for i := range tuple.Len() {
@@ -1489,15 +1463,18 @@ func interpolate(text string, reads []string) string {
 // methodKeyText writes the Dart expression of the key of 1 method. A key that
 // reads a type parameter interpolates its name at run time.
 func (e *emitter) methodKeyText(name string, sig *types.Signature) string {
-	if sig == nil || (!typeset.HoldsParam(sig) && !hasOuterType(sig)) {
-		return "'" + dartText(methodKey(name, sig)) + "'"
+	if sig == nil {
+		return "'" + dartText(name) + "'"
+	}
+	if !typeset.HoldsParam(sig) && !hasOuterType(sig) {
+		return "'" + dartText(methodKey(name, e.identityType(sig).(*types.Signature))) + "'"
 	}
 	var reads []string
 	sub, ok := e.substParams(sig, &reads, false).(*types.Signature)
 	if !ok {
-		return "'" + dartText(methodKey(name, sig)) + "'"
+		return "'" + dartText(methodKey(name, e.identityType(sig).(*types.Signature))) + "'"
 	}
-	return interpolate(methodKey(name, sub), reads)
+	return interpolate(methodKey(name, e.identityType(sub).(*types.Signature)), reads)
 }
 
 // methodKeyListText writes the Dart list of the key of each method of an
@@ -1531,6 +1508,19 @@ func (e *emitter) reflectTextExpr(t types.Type) string {
 	return spliceOuter(text, e.outerReads(t, ".desc.display"))
 }
 
+func (e *emitter) substNestedParams(t types.Type, reads *[]string, display bool) types.Type {
+	if named, ok := types.Unalias(t).(*types.Named); ok && len(outerTypeParams(named)) > 0 {
+		text := e.typeNameText(named)
+		if display {
+			text = e.reflectTextExpr(named)
+		}
+		marker := fmt.Sprintf("\x01%d\x01", len(*reads))
+		*reads = append(*reads, text)
+		return types.NewNamed(types.NewTypeName(token.NoPos, nil, marker, nil), types.Typ[types.Int], nil)
+	}
+	return e.substParams(t, reads, display)
+}
+
 // substParams replaces each type parameter with a marker type, thus the name
 // text splits at each parameter. The list holds the run time read of each
 // marker, in order.
@@ -1546,23 +1536,23 @@ func (e *emitter) substParams(t types.Type, reads *[]string, display bool) types
 		obj := types.NewTypeName(token.NoPos, nil, marker, nil)
 		return types.NewNamed(obj, types.Typ[types.Int], nil)
 	case *types.Pointer:
-		return types.NewPointer(e.substParams(u.Elem(), reads, display))
+		return types.NewPointer(e.substNestedParams(u.Elem(), reads, display))
 	case *types.Slice:
-		return types.NewSlice(e.substParams(u.Elem(), reads, display))
+		return types.NewSlice(e.substNestedParams(u.Elem(), reads, display))
 	case *types.Array:
-		return types.NewArray(e.substParams(u.Elem(), reads, display), u.Len())
+		return types.NewArray(e.substNestedParams(u.Elem(), reads, display), u.Len())
 	case *types.Map:
-		return types.NewMap(e.substParams(u.Key(), reads, display), e.substParams(u.Elem(), reads, display))
+		return types.NewMap(e.substNestedParams(u.Key(), reads, display), e.substNestedParams(u.Elem(), reads, display))
 	case *types.Chan:
-		return types.NewChan(u.Dir(), e.substParams(u.Elem(), reads, display))
+		return types.NewChan(u.Dir(), e.substNestedParams(u.Elem(), reads, display))
 	case *types.Signature:
 		params := make([]*types.Var, u.Params().Len())
 		for i := range params {
-			params[i] = types.NewVar(token.NoPos, nil, "", e.substParams(u.Params().At(i).Type(), reads, display))
+			params[i] = types.NewVar(token.NoPos, nil, "", e.substNestedParams(u.Params().At(i).Type(), reads, display))
 		}
 		results := make([]*types.Var, u.Results().Len())
 		for i := range results {
-			results[i] = types.NewVar(token.NoPos, nil, "", e.substParams(u.Results().At(i).Type(), reads, display))
+			results[i] = types.NewVar(token.NoPos, nil, "", e.substNestedParams(u.Results().At(i).Type(), reads, display))
 		}
 		return types.NewSignatureType(nil, nil, nil,
 			types.NewTuple(params...), types.NewTuple(results...), u.Variadic())
@@ -1572,22 +1562,18 @@ func (e *emitter) substParams(t types.Type, reads *[]string, display bool) types
 		for i := range fields {
 			f := u.Field(i)
 			fields[i] = types.NewField(token.NoPos, f.Pkg(), f.Name(),
-				e.substParams(f.Type(), reads, display), f.Embedded())
+				e.substNestedParams(f.Type(), reads, display), f.Embedded())
 			tags[i] = u.Tag(i)
 		}
 		return types.NewStruct(fields, tags)
 	case *types.Interface:
-		methods := make([]*types.Func, u.NumExplicitMethods())
+		methods := make([]*types.Func, u.NumMethods())
 		for i := range methods {
-			method := u.ExplicitMethod(i)
-			sig := e.substParams(method.Type(), reads, display).(*types.Signature)
+			method := u.Method(i)
+			sig := e.substNestedParams(method.Type(), reads, display).(*types.Signature)
 			methods[i] = types.NewFunc(token.NoPos, method.Pkg(), method.Name(), sig)
 		}
-		embedded := make([]types.Type, u.NumEmbeddeds())
-		for i := range embedded {
-			embedded[i] = e.substParams(u.EmbeddedType(i), reads, display)
-		}
-		return types.NewInterfaceType(methods, embedded).Complete()
+		return types.NewInterfaceType(methods, nil).Complete()
 	case *types.Named:
 		if u.TypeArgs().Len() > 0 {
 			args := make([]types.Type, u.TypeArgs().Len())
@@ -1605,7 +1591,7 @@ func (e *emitter) substParams(t types.Type, reads *[]string, display bool) types
 					*reads = append(*reads, text)
 					args[i] = types.NewNamed(types.NewTypeName(token.NoPos, nil, marker, nil), types.Typ[types.Int], nil)
 				} else {
-					args[i] = e.substParams(arg, reads, display)
+					args[i] = e.substNestedParams(arg, reads, display)
 				}
 			}
 			if inst, err := types.Instantiate(nil, u.Origin(), args, false); err == nil {

@@ -40,5 +40,9 @@
   "fixedbugs/issue79812",
   "fixedbugs/issue56990",
   "initialize",
-  "initcomma"
+  "initcomma",
+  "interface/embed",
+  "interface/convert",
+  "typeparam/interfacearg",
+  "typeparam/boundmethod"
 ]

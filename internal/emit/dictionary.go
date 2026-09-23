@@ -24,6 +24,9 @@ func dictionaryParams(t types.Type) []*types.TypeParam {
 				walk(term)
 			}
 		case *types.Named:
+			for _, param := range outerTypeParams(t) {
+				walk(param)
+			}
 			for i := 0; i < t.TypeArgs().Len(); i++ {
 				walk(t.TypeArgs().At(i))
 			}

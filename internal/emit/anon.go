@@ -396,39 +396,6 @@ func typeText(t types.Type) string {
 	return b.String()
 }
 
-// mentionsStruct reports whether an unnamed struct type stands inside the type.
-// types.TypeString gives no exact text for such a type, thus the name of the
-// descriptor reads typeText for it.
-func mentionsStruct(t types.Type, seen map[types.Type]bool) bool {
-	if t == nil || seen[t] {
-		return false
-	}
-	seen[t] = true
-	switch u := types.Unalias(t).(type) {
-	case *types.Struct:
-		return true
-	case *types.Pointer:
-		return mentionsStruct(u.Elem(), seen)
-	case *types.Slice:
-		return mentionsStruct(u.Elem(), seen)
-	case *types.Array:
-		return mentionsStruct(u.Elem(), seen)
-	case *types.Chan:
-		return mentionsStruct(u.Elem(), seen)
-	case *types.Map:
-		return mentionsStruct(u.Key(), seen) || mentionsStruct(u.Elem(), seen)
-	case *types.Signature:
-		return mentionsStruct(u.Params(), seen) || mentionsStruct(u.Results(), seen)
-	case *types.Tuple:
-		for i := 0; i < u.Len(); i++ {
-			if mentionsStruct(u.At(i).Type(), seen) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // writeType writes the text of a type that names the same text for 2 types
 // that Go holds identical, and another text for each other pair.
 //
@@ -448,7 +415,7 @@ func writeType(b *strings.Builder, t types.Type, qual types.Qualifier, seen map[
 	}
 	switch u := types.Unalias(t).(type) {
 	case *types.Basic:
-		b.WriteString(u.Name())
+		b.WriteString(types.Typ[u.Kind()].Name())
 	case *types.Named:
 		b.WriteString(types.TypeString(u, qual))
 	case *types.TypeParam:
