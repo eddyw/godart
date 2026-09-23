@@ -556,11 +556,18 @@ func selectedUpstreamSource(t *testing.T, path string, names []string) string {
 			}
 			candidates := []string{d.Name.Name}
 			if d.Recv != nil {
-				receiver := d.Recv.List[0].Type
+				receiver := ast.Unparen(d.Recv.List[0].Type)
 				if pointer, ok := receiver.(*ast.StarExpr); ok {
-					receiver = pointer.X
+					receiver = ast.Unparen(pointer.X)
+				}
+				switch instance := receiver.(type) {
+				case *ast.IndexExpr:
+					receiver = instance.X
+				case *ast.IndexListExpr:
+					receiver = instance.X
 				}
 				if name, ok := receiver.(*ast.Ident); ok {
+					keep = keep || slices.Contains(names, name.Name)
 					candidates = append(candidates, name.Name+"."+d.Name.Name)
 				}
 			}
