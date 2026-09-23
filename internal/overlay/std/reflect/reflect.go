@@ -2165,6 +2165,9 @@ type SelectCase struct {
 // ready case at random, and this call takes the first one. A Go program must
 // not depend on the choice.
 func Select(cases []SelectCase) (chosen int, recv Value, recvOK bool) {
+	if len(cases) > 65536 {
+		panic("reflect.Select: too many cases (max 65536)")
+	}
 	dirs := make([]int, len(cases))
 	chans := make([]any, len(cases))
 	sends := make([]any, len(cases))
