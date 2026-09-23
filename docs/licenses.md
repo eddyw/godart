@@ -59,7 +59,7 @@ with its BSD notice.
 Zero-size slice allocation and reflection growth follow Go `src/runtime/slice.go`
 and `src/reflect/value.go`. Slice exchange follows `src/reflect/swapper.go`.
 The runtime and reflection overlay preserve their Go BSD notices.
-Struct field validation, size limits, and embedded methods follow
+Reflection constructor validation and embedded methods follow
 Go `src/reflect/type.go`.
 Direct interface values follow `src/cmd/compile/internal/types/type.go`.
 Method package metadata follows `src/cmd/compile/internal/reflectdata/reflect.go`.

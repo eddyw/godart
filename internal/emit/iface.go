@@ -317,7 +317,18 @@ func (e *emitter) signatureShape(sig *types.Signature) string {
 	}
 	return fmt.Sprintf(", params: <TypeDesc Function()>[%s], results: <TypeDesc Function()>[%s]%s%s",
 		strings.Join(params, ", "), strings.Join(results, ", "), variadic,
-		e.bindPart(sig))
+		e.bindPart(sig)+unpackPart(sig))
+}
+
+func unpackPart(sig *types.Signature) string {
+	if sig.Results().Len() < 2 {
+		return ""
+	}
+	fields := make([]string, sig.Results().Len())
+	for i := range fields {
+		fields[i] = fmt.Sprintf("$r.$%d", i+1)
+	}
+	return ", unpack: (dynamic $r) => <Object?>[" + strings.Join(fields, ", ") + "]"
 }
 
 // bindPart writes the factory that builds a closure of the Dart type of a

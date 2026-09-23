@@ -152,6 +152,9 @@ final class TypeDesc {
   /// carries the field.
   final Function Function(List<Object?> Function(List<Object?>))? bind;
 
+  /// Source metadata names result fields that Dart cannot index at runtime.
+  final List<Object?> Function(Object?)? unpack;
+
   const TypeDesc(
     this.name,
     this.kind,
@@ -178,6 +181,7 @@ final class TypeDesc {
     this.newPtr,
     this.withType,
     this.bind,
+    this.unpack,
   });
 
   /// The name for a message. Go writes the package name, and not the path.

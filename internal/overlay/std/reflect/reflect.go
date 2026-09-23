@@ -1219,6 +1219,9 @@ func FuncOf(in, out []Type, variadic bool) Type {
 	if variadic && (len(in) == 0 || in[len(in)-1].Kind() != Slice) {
 		panic("reflect.FuncOf: last arg of variadic func must be slice")
 	}
+	if len(in)+len(out) > 128 {
+		panic("reflect.FuncOf: too many arguments")
+	}
 	params := make([]int, len(in))
 	for i, t := range in {
 		params[i] = t.handle()
@@ -1276,9 +1279,6 @@ func MakeChan(t Type, buffer int) Value {
 // runs fn with the arguments, and the results of fn become the results of the
 // call.
 //
-// The description of the function type carries a factory of its Dart type, thus
-// the value fits a location of that type. A function type that the program
-// never names holds no such factory, and MakeFunc of it panics with the cause.
 // The scheduler retains the call while its body waits.
 func MakeFunc(typ Type, fn func(args []Value) (results []Value)) Value {
 	if typ == nil {

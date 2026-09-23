@@ -32,6 +32,14 @@ func embeddedCapture() (func() int, weak.Pointer[item]) {
  f := v.MethodByName("Value").Interface().(func() int)
  return f, weak.Make(p)
 }
+func dynamicCapture() (func() int, weak.Pointer[item]) {
+ p := &item{value: 7}
+ args := make([]reflect.Value, 10)
+ params := make([]reflect.Type, 10)
+ for i := range args { args[i] = reflect.ValueOf(0); params[i] = reflect.TypeFor[int]() }
+ f := reflect.MakeFunc(reflect.FuncOf(params, []reflect.Type{reflect.TypeFor[int]()}, false), func([]reflect.Value) []reflect.Value { return []reflect.Value{reflect.ValueOf(p.value)} })
+ return func() int { return int(f.Call(args)[0].Int()) }, weak.Make(p)
+}
 type genericItem[T ~int] struct { value T; data [256]byte }
 func genericCapture[T ~int](value T) (func() int, weak.Pointer[genericItem[T]]) {
  p := &genericItem[T]{value: value}
@@ -74,6 +82,7 @@ func main() {
  exercise(closureCapture)
  exercise(methodCapture)
  exercise(embeddedCapture)
+ exercise(dynamicCapture)
  exercise(genericBind)
  exercise(sliceBind)
  exercise(aliasBind)

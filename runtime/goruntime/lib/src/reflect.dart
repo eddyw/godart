@@ -888,11 +888,7 @@ Slice<Iface?> _callValue(Iface? fn, Slice<Iface?> args, bool spread) {
       final Iface? a = args[i];
       raw.add(desc.params[i]().kind == 'interface' ? a : a?.value);
     }
-    return $resumeReflect<Slice<Iface?>>(
-      Function.apply(fn.value as Function, raw),
-      (Object? out) => _resultSlice(desc, out),
-      Slice<Iface?>.nil(),
-    );
+    return _invokeReflect(fn, raw);
   }
   final int fixed = desc.variadic ? desc.params.length - 1 : desc.params.length;
   final bool wrong = desc.variadic
@@ -930,9 +926,22 @@ Slice<Iface?> _callValue(Iface? fn, Slice<Iface?> args, bool spread) {
     }
     raw.add(tail);
   }
+  return _invokeReflect(fn, raw);
+}
+
+// Weak keys let an unreachable function release its captured Go values.
+final Expando<List<Object?> Function(List<Object?>)> _reflectFunctions =
+    Expando<List<Object?> Function(List<Object?>)>();
+
+Slice<Iface?> _invokeReflect(Iface fn, List<Object?> args) {
+  final function = fn.value as Function;
+  final body = _reflectFunctions[function];
   return $resumeReflect<Slice<Iface?>>(
-    Function.apply(fn.value as Function, raw),
-    (Object? out) => _resultSlice(desc, out),
+    body == null ? Function.apply(function, args) : body(args),
+    (Object? out) => _resultValues(
+      fn.desc,
+      body == null ? _resultList(fn.desc, out) : out as List<Object?>,
+    ),
     Slice<Iface?>.nil(),
   );
 }
@@ -974,19 +983,11 @@ final class _ReflectResume implements WaitFrame, DurableWait, NestedFrame {
   }
 }
 
-/// _resultSlice gives the results of a call as a slice of interface values.
-Slice<Iface?> _resultSlice(TypeDesc desc, Object? out) {
-  final int n = desc.results.length;
-  final List<Iface?> results = <Iface?>[];
-  if (n == 1) {
-    results.add(_result(desc.results[0](), out));
-  } else if (n > 1) {
-    for (int i = 0; i < n; i++) {
-      results.add(_result(desc.results[i](), _field(out, i, n)));
-    }
-  }
-  return Slice.of(results);
-}
+Slice<Iface?> _resultValues(TypeDesc desc, List<Object?> values) =>
+    Slice.of(<Iface?>[
+      for (int i = 0; i < desc.results.length; i++)
+        _result(desc.results[i](), values[i]),
+    ]);
 
 Iface? _result(TypeDesc desc, Object? value) {
   if (desc.kind == 'interface') return value as Iface?;
@@ -1138,6 +1139,7 @@ TypeDesc _withReceiver(TypeDesc recv, TypeDesc sig) => TypeDesc(
   text: _funcText(recv.display, sig, (TypeDesc d) => d.display),
   params: <TypeDesc Function()>[() => recv, ...sig.params],
   results: sig.results,
+  unpack: sig.unpack,
   variadic: sig.variadic,
   comparable: false,
   zero: () => null,
@@ -1278,14 +1280,16 @@ Function _bindMethod(TypeDesc sig, ReflectedMethod method, Iface value) =>
       ),
     );
 
-/// _typedFunc builds a closure of the Dart type of a function type.
-///
-/// The body receives raw arguments and returns raw results. Without an emitted
-/// bind factory, result descriptors supply the Dart result types.
+/// Adapts raw reflection arguments and results to a callable function.
 Function _typedFunc(TypeDesc sig, List<Object?> Function(List<Object?>) body) {
   final Function Function(List<Object?> Function(List<Object?>))? bind =
-      sig.bind;
+      sig.bind ?? _typeFactories[sig.name]?.call().bind;
   if (bind != null) return bind(body);
+  if (sig.params.length > 6 || sig.results.length > 4) {
+    List<Object?> function(List<Object?> args) => body(args);
+    _reflectFunctions[function] = body;
+    return function;
+  }
   return _typedResultFunc(sig, body, sig.params.length);
 }
 
@@ -1361,7 +1365,7 @@ Function _typedResultFunc(
           ),
         ),
       );
-    case 4:
+    default:
       return _withType<Function>(
         rs[0](),
         <A>() => _withType<Function>(
@@ -1391,8 +1395,6 @@ Function _typedResultFunc(
         ),
       );
   }
-  // A method of more than 4 results stands in no package of the surface.
-  return _looseFunc(body, arity);
 }
 
 /// _arityFunc gives a closure of the count of the parameters, and of the result
@@ -1414,7 +1416,7 @@ Function _arityFunc<R>(R Function(List<Object?>) make, int arity) {
     case 5:
       return (Object? a, Object? b, Object? c, Object? d, Object? e) =>
           make(<Object?>[a, b, c, d, e]);
-    case 6:
+    default:
       return (
         Object? a,
         Object? b,
@@ -1424,17 +1426,12 @@ Function _arityFunc<R>(R Function(List<Object?>) make, int arity) {
         Object? f,
       ) => make(<Object?>[a, b, c, d, e, f]);
   }
-  $panic(
-    Iface(
-      $typeGoError,
-      GoError('reflect: a function of $arity parameters is outside the subset'),
-    ),
-  );
 }
 
 /// _resultList gives the raw results of a call as a list. A call of more than 1
 /// result gives a Dart record, thus the list reads each member of it.
 List<Object?> _resultList(TypeDesc sig, Object? out) {
+  if (sig.unpack != null) return sig.unpack!(out);
   final int n = sig.results.length;
   if (n == 0) return const <Object?>[];
   if (n == 1) return <Object?>[out];
@@ -1461,7 +1458,7 @@ Function _looseFunc(List<Object?> Function(List<Object?>) body, int arity) {
     case 5:
       return (Object? a, Object? b, Object? c, Object? d, Object? e) =>
           _onlyResult(body(<Object?>[a, b, c, d, e]));
-    case 6:
+    default:
       return (
         Object? a,
         Object? b,
@@ -1471,12 +1468,6 @@ Function _looseFunc(List<Object?> Function(List<Object?>) body, int arity) {
         Object? f,
       ) => _onlyResult(body(<Object?>[a, b, c, d, e, f]));
   }
-  $panic(
-    Iface(
-      $typeGoError,
-      GoError('reflect: a function of $arity parameters is outside the subset'),
-    ),
-  );
 }
 
 /// _onlyResult gives the single result of a call, or the whole list.
