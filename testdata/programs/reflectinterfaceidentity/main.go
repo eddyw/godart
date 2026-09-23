@@ -58,6 +58,10 @@ func interfaceNames[T any]() {
 		Exported(T) T
 	}]()
 	fmt.Println(typ, reflect.SliceOf(typ), reflect.FuncOf([]reflect.Type{typ}, []reflect.Type{typ}, false))
+	for i := 0; i < typ.NumMethod(); i++ {
+		method := typ.Method(i)
+		fmt.Println(method.Name, method.PkgPath, method.Type.In(0) == reflect.TypeFor[T](), method.Type.Out(0) == reflect.TypeFor[T]())
+	}
 }
 
 func main() {
@@ -82,6 +86,16 @@ func main() {
 		foreign.Mixed
 		hidden()
 	}]())
+	combined := reflect.TypeFor[interface {
+		foreign.Mixed
+		hidden()
+	}]()
+	for i := 0; i < combined.NumMethod(); i++ {
+		method := combined.Method(i)
+		fmt.Println(method.Name, method.PkgPath)
+	}
+	method, found := combined.MethodByName("hidden")
+	fmt.Println(found, method.PkgPath, method.Index)
 	interfaceNames[int]()
 	interfaceNames[string]()
 	fmt.Println(a[0] == a[1], a[0] == first()[0])

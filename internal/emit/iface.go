@@ -214,8 +214,27 @@ func (e *emitter) methodTypeTable(t types.Type) string {
 		return ""
 	}
 	sort.Strings(entries)
-	return ", methodTypes: <String, TypeDesc Function()>{" +
+	out := ", methodTypes: <String, TypeDesc Function()>{" +
 		strings.Join(entries, ", ") + "}"
+	if iface, ok := types.Unalias(t).Underlying().(*types.Interface); ok {
+		methods := reflectMethods(iface)
+		reflected := make([]string, len(methods))
+		for i, method := range methods {
+			sig := method.Type().(*types.Signature)
+			key := e.methodKeyText(method.Id(), sig)
+			pkg := ""
+			if !method.Exported() {
+				pkg = method.Pkg().Path()
+				if method.Pkg().Name() == "main" {
+					pkg = "main"
+				}
+			}
+			reflected[i] = fmt.Sprintf("ReflectedMethod(%s, %s, () => %s, ($v, $args) => $call($v, %s, $args))",
+				key, dartString(pkg), e.descriptorOf(sig), key)
+		}
+		out += ", reflectionMethods: <ReflectedMethod>[" + strings.Join(reflected, ", ") + "]"
+	}
+	return out
 }
 
 // descParts writes the fields of a struct type, and the element type and the
@@ -505,26 +524,7 @@ func reflectText(t types.Type) string {
 		if t.NumMethods() == 0 {
 			return "interface {}"
 		}
-		methods := make([]*types.Func, t.NumMethods())
-		for i := range methods {
-			methods[i] = t.Method(i)
-		}
-		packagePath := func(m *types.Func) string {
-			if m.Pkg().Name() == "main" {
-				return "main"
-			}
-			return m.Pkg().Path()
-		}
-		sort.Slice(methods, func(i, j int) bool {
-			a, b := methods[i], methods[j]
-			if a.Exported() != b.Exported() {
-				return a.Exported()
-			}
-			if a.Name() != b.Name() {
-				return a.Name() < b.Name()
-			}
-			return !a.Exported() && packagePath(a) < packagePath(b)
-		})
+		methods := reflectMethods(t)
 		parts := make([]string, len(methods))
 		for i, m := range methods {
 			name := m.Name()
@@ -574,6 +574,30 @@ func reflectText(t types.Type) string {
 		}
 	}
 	return types.TypeString(t, shortQualifier)
+}
+
+func reflectMethods(t *types.Interface) []*types.Func {
+	methods := make([]*types.Func, t.NumMethods())
+	for i := range methods {
+		methods[i] = t.Method(i)
+	}
+	packagePath := func(m *types.Func) string {
+		if m.Pkg().Name() == "main" {
+			return "main"
+		}
+		return m.Pkg().Path()
+	}
+	sort.Slice(methods, func(i, j int) bool {
+		a, b := methods[i], methods[j]
+		if a.Exported() != b.Exported() {
+			return a.Exported()
+		}
+		if a.Name() != b.Name() {
+			return a.Name() < b.Name()
+		}
+		return !a.Exported() && packagePath(a) < packagePath(b)
+	})
+	return methods
 }
 
 // basicText names a predeclared type in the form that reflect gives.
