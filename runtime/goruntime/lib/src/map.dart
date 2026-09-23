@@ -10,10 +10,11 @@ import 'slice.dart';
 final class _Entry<K, V> {
   K key;
   V value;
+  final int order;
   bool dead = false;
   _Entry<K, V>? prev;
   _Entry<K, V>? next;
-  _Entry(this.key, this.value);
+  _Entry(this.key, this.value, this.order);
 }
 
 /// A Go map.
@@ -28,6 +29,7 @@ final class GoMap<K, V> {
   final int Function(K) _hash;
   _Entry<K, V>? _head;
   _Entry<K, V>? _tail;
+  int _nextOrder = 0;
 
   /// True for the zero value of a map type. A read gives the zero value, and a
   /// write panics.
@@ -84,7 +86,7 @@ final class GoMap<K, V> {
       e.value = value;
       return;
     }
-    final entry = _Entry(key, value);
+    final entry = _Entry(key, value, _nextOrder++);
     entry.prev = _tail;
     if (_tail == null) {
       _head = entry;
@@ -175,26 +177,25 @@ final class GoMap<K, V> {
   }
 }
 
-/// The iterator of a range loop over a map. Go does not give a key that the
-/// body removes, and the iterator jumps over each dead entry. A key that the
-/// body adds joins the tail, and Go allows the loop to give it. The value
-/// reads the entry at the visit, thus a NaN key needs no snapshot.
+/// An iterator omits entries added after its creation. It observes updates
+/// and deletions of the original entries.
 final class GoMapIter<K, V> {
   _Entry<K, V>? _at;
   _Entry<K, V>? _cur;
+  final int _limit;
 
-  GoMapIter(GoMap<K, V> m) : _at = m._head;
+  GoMapIter(GoMap<K, V> m) : _at = m._head, _limit = m._nextOrder;
 
   /// The first value of a frame local. The machine writes the true iterator
   /// before the loop starts.
-  GoMapIter.empty() : _at = null;
+  GoMapIter.empty() : _at = null, _limit = 0;
 
   bool next() {
     var e = _at;
-    while (e != null && e.dead) {
+    while (e != null && e.order < _limit && e.dead) {
       e = e.next;
     }
-    if (e == null) {
+    if (e == null || e.order >= _limit) {
       _at = null;
       return false;
     }
