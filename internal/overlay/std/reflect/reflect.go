@@ -1082,6 +1082,10 @@ func (v Value) mustAllowCall(method string) {
 
 // SetMapIndex writes 1 entry of a map. A key with no value drops the entry.
 func (v Value) SetMapIndex(key, value Value) {
+	v.mustBe("SetMapIndex", Map)
+	if !key.Type().AssignableTo(v.Type().Key()) {
+		panic("reflect.Value.SetMapIndex: value of type " + key.Type().String() + " is not assignable to type " + v.Type().Key().String())
+	}
 	got := value.read()
 	// Go removes the entry only for the zero Value. A valid value that holds a
 	// nil interface writes the entry, and the key stays. The read of such a
@@ -1141,6 +1145,9 @@ func (v Value) MapKeys() []Value {
 // map does not hold. The test of the key thus stands in front of the read.
 func (v Value) MapIndex(key Value) Value {
 	v.mustBe("MapIndex", Map)
+	if !key.Type().AssignableTo(v.Type().Key()) {
+		panic("reflect.Value.MapIndex: value of type " + key.Type().String() + " is not assignable to type " + v.Type().Key().String())
+	}
 	m := v.read()
 	k := key.read()
 	if !dart.MapHas(m, k) {
