@@ -1376,7 +1376,7 @@ func (e *emitter) length(x ir.Expr) string {
 	case isString(t):
 		return "$gi(" + e.expr(x) + ".length)"
 	case isSliceType(t):
-		return e.expr(x) + ".$length"
+		return e.sliceText(x) + ".$length"
 	case isArrayType(t):
 		return "$gi(" + e.expr(x) + ".length)"
 	case isMapType(t):
@@ -1403,7 +1403,7 @@ func (e *emitter) capacity(x ir.Expr) string {
 	t := x.GoType()
 	switch {
 	case isSliceType(t):
-		return e.expr(x) + ".$capacity"
+		return e.sliceText(x) + ".$capacity"
 	case isArrayType(t):
 		return "$gi(" + e.expr(x) + ".length)"
 	case isChanType(t):

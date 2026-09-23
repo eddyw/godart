@@ -81,7 +81,7 @@ func (e *emitter) deepIndex(x *ir.Index) string {
 	}
 	if e.lits.sliceRead == "" {
 		e.lits.sliceRead = fmt.Sprintf("$sliceRead%d", e.lits.tag)
-		e.lits.decls = append(e.lits.decls, fmt.Sprintf(`T %s<T>(Slice source, List<GoInt> indexes) {
+		e.lits.decls = append(e.lits.decls, fmt.Sprintf(`T %s<T>(Object? source, List<GoInt> indexes) {
     Object? value = source;
     for (final index in indexes) {
       value = (value as Slice).$at(index);
