@@ -821,12 +821,13 @@ Map<String, Function> _pointerMethods(TypeDesc elem) {
     final TypeDesc sig = type();
     out[e.key] = _typedResultFunc(
       sig,
-      (List<Object?> args) => _resultList(
-        sig,
+      (List<Object?> args) => $resumeReflect<List<Object?>>(
         Function.apply(fn, <Object?>[
           args.isEmpty ? null : _cellValue(args[0]),
           ...args.skip(1),
         ]),
+        (Object? out) => _resultList(sig, out),
+        <Object?>[],
       ),
       sig.params.length + 1,
     );
