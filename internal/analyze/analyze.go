@@ -827,6 +827,7 @@ func (a *analyzer) linkUse(n *ast.Ident) {
 			for i := 0; i < named.NumMethods(); i++ {
 				fn := named.Method(i)
 				a.linkInstance(fn.Origin().Signature().Recv().Type(), fn.Signature().Recv().Type())
+				a.linkInstance(fn.Origin().Type(), fn.Type())
 			}
 		}
 	}

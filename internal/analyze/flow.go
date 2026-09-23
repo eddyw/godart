@@ -350,6 +350,7 @@ func (a *analyzer) solve() {
 		c := a.work[len(a.work)-1]
 		a.work = a.work[:len(a.work)-1]
 		a.inWork[c] = false
+		a.reflectArguments(c)
 		for dst := range a.edges[c] {
 			grew := false
 			set := a.pts[dst]

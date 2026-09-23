@@ -12,7 +12,32 @@ func create[F any](callback func([]reflect.Value) []reflect.Value) F {
 	return reflect.MakeFunc(reflect.TypeFor[F](), callback).Interface().(F)
 }
 
+type Runner struct{}
+
+func (Runner) Run(callback func(int) bool) {
+	for i := 0; i < 4; i++ {
+		if !callback(i) {
+			return
+		}
+	}
+}
+func run(callback func(int) bool) {
+	for i := 0; i < 4; i++ {
+		if !callback(i) {
+			return
+		}
+	}
+}
 func main() {
+	for _, function := range []reflect.Value{reflect.ValueOf(Runner{}).MethodByName("Run"), reflect.ValueOf(run)} {
+		count := 0
+		callback := func(i int) bool { runtime.Gosched(); count++; return true }
+		function.Call([]reflect.Value{reflect.ValueOf(callback)})
+		if count != 4 {
+			panic(fmt.Sprintf("callback count: %d", count))
+		}
+	}
+
 	factories := []func(reflect.Type, func([]reflect.Value) []reflect.Value) reflect.Value{reflect.MakeFunc}
 	makeFunction := factories[0]
 	f := initial

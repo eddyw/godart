@@ -49,3 +49,38 @@ func (a *analyzer) reflectEscapes() {
 		}
 	}
 }
+
+func (a *analyzer) reflectArguments(c cell) {
+	if !a.reflection {
+		return
+	}
+	if _, ok := c.(sigCell); !ok {
+		return
+	}
+	// A reflection call has no Go call site that can supply its arguments.
+	for key := range a.pts[c] {
+		sig := a.sigOf(blockTarget(key))
+		if sig == nil {
+			continue
+		}
+		for i := 0; i < sig.Params().Len(); i++ {
+			param := sig.Params().At(i)
+			callback := funcSig(param.Type())
+			if callback == nil {
+				continue
+			}
+			key := signatureKey(callback)
+			groups := a.byGroup[a.find(key)]
+			if len(groups) == 0 {
+				groups = []string{key}
+			}
+			for _, name := range groups {
+				group := sigCell{name}
+				for _, factory := range a.reflected {
+					a.addTarget(group, factory)
+				}
+				a.addEdge(group, funcCell(param))
+			}
+		}
+	}
+}
