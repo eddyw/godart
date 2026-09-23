@@ -6,6 +6,7 @@ import 'chan.dart';
 import 'complex.dart';
 import 'goint.dart';
 import 'iface.dart';
+import 'int.dart';
 import 'map.dart';
 import 'panic.dart';
 import 'print.dart';
@@ -731,7 +732,12 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
     case 'float64':
       return _leaf(
         _sign(
-          _float(v as double, letter, verb.prec, type.kind == 'float32'),
+          _float(
+            v is GoFloat32 ? v.toDouble() : v as double,
+            letter,
+            verb.prec,
+            type.kind == 'float32',
+          ),
           verb,
           letter,
         ),
@@ -1031,11 +1037,11 @@ String $f32string(double v) {
 /// holds no float.
 ///
 /// The result carries the single rounding of Go. Read _f32round.
-(double, bool) $parseFloat32(GoString text) {
+(GoFloat32, bool) $parseFloat32(GoString text) {
   final String s = text.toDartString().trim();
   final double? v = double.tryParse(s);
-  if (v == null) return (0.0, false);
-  return (_f32round(s, v), true);
+  if (v == null) return (GoFloat32.zero, false);
+  return ($f32(_f32round(s, v)), true);
 }
 
 /// The bits of a float, in 2 halves of 32 bits. Read the note of _tieBits.
@@ -1110,7 +1116,7 @@ double _f32round(String text, double v) {
 }
 
 /// The value of float32 of a double, with the rounding of IEEE 754.
-double _f32narrow(double v) => $f32FromBits($f32ToBits(v));
+double _f32narrow(double v) => $f32(v).toDouble();
 
 /// Compares the exact value of a decimal text with sig times 2 to the power
 /// exp2, and it gives -1, 0, or 1. The comparison reads the magnitude alone,
@@ -1545,6 +1551,8 @@ int _compareKeys(
         return a < b ? -1 : 1;
       }
     case 'float32' || 'float64':
+      if (a is GoFloat32) a = a.toDouble();
+      if (b is GoFloat32) b = b.toDouble();
       if (a is double && b is double) {
         // Go puts each value that is not a number first.
         if (a.isNaN) return b.isNaN ? 0 : -1;

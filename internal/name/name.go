@@ -33,6 +33,7 @@ var keywords = map[string]bool{
 var reserved = map[string]bool{
 	// The runtime library.
 	"Slice": true, "GoString": true, "GoMap": true, "Chan": true,
+	"GoFloat32": true, "GoComplex32": true,
 	"Iface": true, "TypeDesc": true, "FieldDesc": true, "Dict": true,
 	"DeferStack": true, "GoPanic": true, "GoError": true,
 	// The frame class of a function that can block holds this member.

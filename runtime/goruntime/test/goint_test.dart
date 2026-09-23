@@ -1,5 +1,6 @@
 import 'package:goruntime/src/goint_js.dart' as js;
 import 'package:goruntime/src/goint_native.dart' as nat;
+import 'package:goruntime/src/int.dart';
 import 'package:test/test.dart';
 
 // The conformance test of the 2 forms of the Go integer. The native form on
@@ -148,7 +149,11 @@ void main() {
     for (final f in floats) {
       expect(back(js.$f64ToBits(f)), nat.$f64ToBits(f).$v, reason: 'bits $f');
       expect(js.$f64FromBits(js2(nat.$f64ToBits(f).$v)), f, reason: 'back $f');
-      expect(back(js.$f32ToBits(f)), nat.$f32ToBits(f).$v, reason: 'bits32 $f');
+      expect(
+        back(js.$f32ToBits($f32(f))),
+        nat.$f32ToBits($f32(f)).$v,
+        reason: 'bits32 $f',
+      );
     }
     expect(back(js.$f64ToBits(0.0 / 0.0)), nat.$f64ToBits(0.0 / 0.0).$v);
     expect(js.$f64FromBits(js2(-1)).isNaN, true);

@@ -562,6 +562,7 @@ GoInt $asInt(Iface? value) {
 double $asFloat(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
+  if (v is GoFloat32) return v.toDouble();
   if (v is double) return v;
   if (v is GoInt) return v.toDouble();
   $panic(
@@ -615,7 +616,10 @@ GoInt _integerValue(GoInt x, String kind) => switch (kind) {
 };
 
 /// A value of the type, with the float inside it.
-Iface? $withFloat(int handle, double x) => Iface(_typeAt(handle), x);
+Iface? $withFloat(int handle, double x) {
+  final type = _typeAt(handle);
+  return Iface(type, type.kind == 'float32' ? $f32(x) : x);
+}
 
 /// A value of the type, with the flag inside it.
 Iface? $withBool(int handle, bool x) => Iface(_typeAt(handle), x);
@@ -676,7 +680,9 @@ R _byKind<R>(String kind, R Function<T>() f) {
       return f<bool>();
     case 'string':
       return f<GoString>();
-    case 'float32' || 'float64':
+    case 'float32':
+      return f<GoFloat32>();
+    case 'float64':
       return f<double>();
     case 'complex64' || 'complex128':
       return f<GoComplex>();
@@ -2863,22 +2869,26 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
     return to.elem!().kind == 'int32' ? $stringToRunes(s) : $stringToBytes(s);
   }
   if (to.kind == 'complex64') return $c64(v as GoComplex);
+  if (to.kind == 'complex128') return $c128(v as GoComplex);
   if (_numberKinds.contains(to.kind)) {
     if (to.kind == 'float32' || to.kind == 'float64') {
+      if (from.kind == 'float32' && to.kind == 'float32') return v;
       final double x = v is GoInt
           ? (from.kind == 'uint64' ||
                     from.kind == 'uint' ||
                     from.kind == 'uintptr'
                 ? $utodouble(v)
                 : $todouble(v))
+          : v is GoFloat32
+          ? v.toDouble()
           : v as double;
       return to.kind == 'float32' ? $f32(x) : x;
     }
     final x = v is GoInt
         ? v
         : (to.kind == 'uint64' || to.kind == 'uint' || to.kind == 'uintptr'
-              ? $fromF64U(v as double)
-              : $fromF64(v as double));
+              ? $fromF64U(v is GoFloat32 ? v.toDouble() : v as double)
+              : $fromF64(v is GoFloat32 ? v.toDouble() : v as double));
     return _integerValue(x, to.kind);
   }
   return v;
@@ -2926,14 +2936,17 @@ Iface? $valueSlice(Iface? value, GoInt low, GoInt high, GoInt max) {
 /// The complex value inside an interface value.
 GoComplex $asComplex(Iface? value) {
   final Object? v = value?.value;
-  if (v is GoComplex) return v;
+  if (v is GoComplex) return $c128(v);
   if (v is double) return GoComplex(v, 0);
   if (v is GoInt) return GoComplex($ix(v).toDouble(), 0);
   return GoComplex.zero;
 }
 
 /// A complex value of the type of a handle.
-Iface? $withComplex(int handle, GoComplex x) => Iface(_typeAt(handle), x);
+Iface? $withComplex(int handle, GoComplex x) {
+  final type = _typeAt(handle);
+  return Iface(type, type.kind == 'complex64' ? $c64(x) : x);
+}
 
 /// A synthetic identity. A slice uses its storage and element offset.
 /// The result is not a machine address.

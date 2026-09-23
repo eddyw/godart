@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'goint.dart';
+import 'int.dart';
 import 'panic.dart';
 import 'slice.dart';
 
@@ -466,6 +467,12 @@ Uint8List _encode(String s) {
 /// The smaller of 2 values, in the order of Go. A NaN passes through, and a
 /// string compares by bytes.
 Object? $minOf(Object? a, Object? b) {
+  if (a is GoFloat32 && b is GoFloat32) {
+    if ((a.bits & 0x7fffffff) == 0 && (b.bits & 0x7fffffff) == 0) {
+      return GoFloat32.fromBits(a.bits | b.bits);
+    }
+    return a.isNaN || (!b.isNaN && a <= b) ? a : b;
+  }
   if (a is GoString) return $compare(a, b as GoString) <= 0 ? a : b;
   if (a is GoInt) return a <= (b as GoInt) ? a : b;
   if (a is double && a.isNaN) return a;
@@ -475,6 +482,12 @@ Object? $minOf(Object? a, Object? b) {
 
 /// The larger of 2 values, in the order of Go.
 Object? $maxOf(Object? a, Object? b) {
+  if (a is GoFloat32 && b is GoFloat32) {
+    if ((a.bits & 0x7fffffff) == 0 && (b.bits & 0x7fffffff) == 0) {
+      return GoFloat32.fromBits(a.bits & b.bits);
+    }
+    return a.isNaN || (!b.isNaN && a >= b) ? a : b;
+  }
   if (a is GoString) return $compare(a, b as GoString) >= 0 ? a : b;
   if (a is GoInt) return a >= (b as GoInt) ? a : b;
   if (a is double && a.isNaN) return a;

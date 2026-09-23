@@ -17,6 +17,7 @@ import 'dart:typed_data';
 import 'box.dart';
 import 'goint.dart';
 import 'iface.dart';
+import 'int.dart';
 import 'map.dart';
 import 'reflect.dart';
 import 'slice.dart';
@@ -1839,7 +1840,9 @@ bool _legacyEmpty(Object? v, TypeDesc t) {
       return v == false;
     case 'string':
       return (v as GoString).bytes.isEmpty;
-    case 'float64' || 'float32':
+    case 'float32':
+      return v == GoFloat32.zero;
+    case 'float64':
       return v == 0.0;
     case 'ptr' || 'interface':
       return v == null;

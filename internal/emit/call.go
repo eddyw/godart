@@ -1355,12 +1355,19 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 		}
 		return text + ".close()"
 	case "real":
+		if b := basicOf(x.Type); b != nil && b.Kind() == types.Float32 {
+			return fmt.Sprintf("(%s as GoComplex32).real32", e.expr(x.Args[0]))
+		}
 		return fmt.Sprintf("%s.re", e.expr(x.Args[0]))
 	case "imag":
+		if b := basicOf(x.Type); b != nil && b.Kind() == types.Float32 {
+			return fmt.Sprintf("(%s as GoComplex32).imag32", e.expr(x.Args[0]))
+		}
 		return fmt.Sprintf("%s.im", e.expr(x.Args[0]))
 	case "complex":
-		// The 2 parts of a complex64 value hold 32 bits already, thus the
-		// construction needs no second rounding.
+		if b := basicOf(x.Type); b != nil && b.Kind() == types.Complex64 {
+			return fmt.Sprintf("GoComplex32(%s, %s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
+		}
 		return fmt.Sprintf("GoComplex(%s, %s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
 	}
 	e.fail("the builtin %s has no Dart form yet", x.Name)
@@ -1753,10 +1760,18 @@ func (e *emitter) conv(x *ir.Conv) string {
 		return fmt.Sprintf("$stringToBytes(%s)", text)
 	case isFloat(to) && isInteger(from):
 		if isUnsigned64(from) {
-			return e.narrow(to, fmt.Sprintf("$utodouble(%s)", text))
+			text = fmt.Sprintf("$utodouble(%s)", text)
+		} else {
+			text = fmt.Sprintf("$todouble(%s)", text)
 		}
-		return e.narrow(to, fmt.Sprintf("$todouble(%s)", text))
+		if basicOf(to).Kind() == types.Float32 {
+			return "$f32(" + text + ")"
+		}
+		return text
 	case isInteger(to) && isFloat(from):
+		if basicOf(from).Kind() == types.Float32 {
+			text = "(" + text + ").toDouble()"
+		}
 		// truncate of Dart stops at the largest signed value, thus a target of
 		// an unsigned 64-bit type needs the wrap of the unsigned range.
 		if isUnsigned64(to) {
@@ -1764,8 +1779,20 @@ func (e *emitter) conv(x *ir.Conv) string {
 		}
 		return e.narrow(to, fmt.Sprintf("$fromF64(%s)", text))
 	case isFloat(to) && isFloat(from):
-		return e.narrow(to, text)
+		if basicOf(from).Kind() == types.Float32 {
+			if basicOf(to).Kind() == types.Float32 {
+				return text
+			}
+			return "(" + text + ").toDouble()"
+		}
+		if basicOf(to).Kind() == types.Float32 {
+			return "$f32(" + text + ")"
+		}
+		return text
 	case isComplexType(to) && isComplexType(from):
+		if basicOf(from).Kind() == types.Complex64 && basicOf(to).Kind() != types.Complex64 {
+			return "$c128(" + text + ")"
+		}
 		return e.narrow(to, text)
 	case isInteger(to) && isInteger(from):
 		return e.narrow(to, text)

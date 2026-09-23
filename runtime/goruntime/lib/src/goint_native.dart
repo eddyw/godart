@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'int.dart';
 import 'panic.dart';
 
 // The native form of the Go integer. The extension type erases at the
@@ -135,16 +136,10 @@ double $f64FromBits(GoInt b) {
 
 /// The IEEE 754 bit pattern of a 32-bit value. The result holds 32 bits, thus
 /// it stays positive.
-GoInt $f32ToBits(double v) {
-  _bits.setFloat32(0, v);
-  return GoInt(_bits.getUint32(0));
-}
+GoInt $f32ToBits(GoFloat32 v) => GoInt(v.bits);
 
 /// The 32-bit value of an IEEE 754 bit pattern.
-double $f32FromBits(GoInt b) {
-  _bits.setUint32(0, b.$v & 0xFFFFFFFF);
-  return _bits.getFloat32(0);
-}
+GoFloat32 $f32FromBits(GoInt b) => GoFloat32.fromBits(b.$v);
 
 /// The plain Dart int of a Go integer, for an index, a length, or another
 /// value that a Dart API takes. The module form spares the caller a

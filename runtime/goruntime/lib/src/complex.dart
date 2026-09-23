@@ -1,8 +1,7 @@
 import 'int.dart';
 
-/// A Go complex number. The class holds the 2 parts of complex128, and a
-/// complex64 value rounds each part with [$f32] after each operation.
-final class GoComplex {
+/// A complex128 value. GoComplex32 retains the raw bits of complex64 parts.
+base class GoComplex {
   final double re;
   final double im;
 
@@ -77,4 +76,18 @@ double _copySign(double magnitude, double sign) {
 }
 
 /// Rounds the 2 parts of a complex64 value.
-GoComplex $c64(GoComplex c) => GoComplex($f32(c.re), $f32(c.im));
+GoComplex $c64(GoComplex c) =>
+    c is GoComplex32 ? c : GoComplex32($f32(c.re), $f32(c.im));
+
+GoComplex $c128(GoComplex c) => GoComplex(c.re, c.im);
+GoComplex $complex32Zero() => GoComplex32.zero;
+
+final class GoComplex32 extends GoComplex {
+  final GoFloat32 real32;
+  final GoFloat32 imag32;
+  GoComplex32(this.real32, this.imag32)
+    : super(real32.toDouble(), imag32.toDouble());
+  static final zero = GoComplex32(GoFloat32.zero, GoFloat32.zero);
+  @override
+  GoComplex operator -() => GoComplex32(-real32, -imag32);
+}

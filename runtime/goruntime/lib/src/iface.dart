@@ -6,6 +6,7 @@ import 'box.dart';
 import 'complex.dart';
 import 'dict.dart';
 import 'goint.dart';
+import 'int.dart';
 import 'panic.dart';
 import 'string.dart';
 
@@ -406,7 +407,7 @@ const TypeDesc $typeFloat32 = TypeDesc(
   'float32',
   'float32',
   <String, Function>{},
-  zero: $zeroFloat,
+  zero: $float32Zero,
 );
 const TypeDesc $typeFloat64 = TypeDesc(
   'float64',
@@ -418,7 +419,7 @@ const TypeDesc $typeComplex64 = TypeDesc(
   'complex64',
   'complex64',
   <String, Function>{},
-  zero: $zeroComplex,
+  zero: $complex32Zero,
 );
 const TypeDesc $typeComplex128 = TypeDesc(
   'complex128',

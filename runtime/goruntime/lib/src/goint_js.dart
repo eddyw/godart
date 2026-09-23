@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'int.dart';
 import 'panic.dart';
 
 // The JS form of the Go integer, in the pair model of GopherJS. A JS number
@@ -282,16 +283,10 @@ double $f64FromBits(GoInt b) {
 }
 
 /// The IEEE 754 bit pattern of a 32-bit value.
-GoInt $f32ToBits(double v) {
-  _bits.setFloat32(0, v);
-  return GoInt._(0, _bits.getUint32(0));
-}
+GoInt $f32ToBits(GoFloat32 v) => GoInt._(0, v.bits);
 
 /// The 32-bit value of an IEEE 754 bit pattern.
-double $f32FromBits(GoInt b) {
-  _bits.setUint32(0, b.$l);
-  return _bits.getFloat32(0);
-}
+GoFloat32 $f32FromBits(GoInt b) => GoFloat32.fromBits(b.$l);
 
 /// The plain Dart int of a Go integer, for an index, a length, or another
 /// value that a Dart API takes. A value outside 53 bits loses its low bits.

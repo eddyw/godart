@@ -85,7 +85,10 @@ func (e *emitter) dartType(t types.Type) string {
 				return "GoInt"
 			}
 			if set.Float {
-				return "double"
+				if b := basicOf(t); b != nil {
+					return basicType(b)
+				}
+				return e.typeParamName(t)
 			}
 			if set.Complex {
 				return "GoComplex"
@@ -174,7 +177,9 @@ func basicType(t *types.Basic) string {
 		return "bool"
 	case types.String, types.UntypedString:
 		return "GoString"
-	case types.Float32, types.Float64, types.UntypedFloat:
+	case types.Float32:
+		return "GoFloat32"
+	case types.Float64, types.UntypedFloat:
 		return "double"
 	case types.UnsafePointer:
 		return "Object?"
@@ -258,8 +263,12 @@ func (e *emitter) zero(t types.Type) string {
 			return "false"
 		case u.Kind() == types.String || u.Kind() == types.UntypedString:
 			return "GoString.empty"
+		case u.Kind() == types.Float32:
+			return "GoFloat32.zero"
 		case u.Info()&types.IsFloat != 0:
 			return "0.0"
+		case u.Kind() == types.Complex64:
+			return "GoComplex32.zero"
 		case u.Info()&types.IsComplex != 0:
 			return "GoComplex.zero"
 		case u.Info()&types.IsInteger != 0:
@@ -320,8 +329,12 @@ func (e *emitter) zeroFunc(t types.Type) string {
 			return "$boolZero"
 		case u.Kind() == types.String || u.Kind() == types.UntypedString:
 			return "$stringZero"
+		case u.Kind() == types.Float32:
+			return "$float32Zero"
 		case u.Info()&types.IsFloat != 0:
 			return "$doubleZero"
+		case u.Kind() == types.Complex64:
+			return "$complex32Zero"
 		case u.Info()&types.IsComplex != 0:
 			return "$complexZero"
 		case u.Info()&types.IsInteger != 0:
@@ -471,7 +484,7 @@ func (e *emitter) mixedForm(tp *types.TypeParam) bool {
 		return false
 	}
 	set, ok := typeset.Describe(tp)
-	return !ok || (!set.Integer && !set.Float && !set.Complex)
+	return !ok || (!set.Integer && !set.Complex)
 }
 
 // typeArgList writes the type arguments of an instance of a generic type.
@@ -705,7 +718,7 @@ func typedList(t types.Type) string {
 	}
 	switch b.Kind() {
 	case types.Float32:
-		return "Float32List"
+		return "$Float32List"
 	case types.Float64:
 		return "Float64List"
 	}
@@ -1334,8 +1347,6 @@ func mask(t types.Type) string {
 		return "$u16"
 	case types.Uint32:
 		return "$u32"
-	case types.Float32:
-		return "$f32"
 	case types.Complex64:
 		return "$c64"
 	}

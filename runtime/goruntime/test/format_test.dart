@@ -23,9 +23,9 @@ int toBits(double v) {
 
 /// The value that the text names, in 32 bits.
 double parse32(String text) {
-  final (double v, bool ok) = $parseFloat32(GoString.fromString(text));
+  final (GoFloat32 v, bool ok) = $parseFloat32(GoString.fromString(text));
   expect(ok, isTrue, reason: text);
-  return v;
+  return v.toDouble();
 }
 
 void main() {

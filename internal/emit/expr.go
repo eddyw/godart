@@ -186,6 +186,9 @@ func (e *emitter) constant(v constant.Value, t types.Type) string {
 		return e.stringLit(constant.StringVal(v))
 	case isFloat(t):
 		f, _ := constant.Float64Val(constant.ToFloat(v))
+		if basicOf(t).Kind() == types.Float32 {
+			return "$f32(" + floatConst(f) + ")"
+		}
 		return floatConst(f)
 	case isComplexType(t):
 		return complexConst(v, t)
@@ -217,6 +220,14 @@ func (e *emitter) mixedConst(v constant.Value, t types.Type) (string, bool) {
 		forms[b.Info()&(types.IsInteger|types.IsFloat|types.IsComplex)] = true
 	}
 	var values, kinds []string
+	for _, term := range terms {
+		if basicOf(term).Kind() == types.Float32 {
+			f, _ := constant.Float64Val(constant.ToFloat(v))
+			values = append(values, "$f32("+floatConst(f)+")")
+			kinds = append(kinds, "GoFloat32")
+			break
+		}
+	}
 	if forms[types.IsInteger] {
 		values = append(values, intConst(v, types.Typ[types.Int]))
 		kinds = append(kinds, "GoInt")
@@ -246,6 +257,7 @@ func complexConst(v constant.Value, t types.Type) string {
 	if b := basicOf(t); b != nil && b.Kind() == types.Complex64 {
 		re = float64(float32(re))
 		im = float64(float32(im))
+		return fmt.Sprintf("GoComplex32($f32(%s), $f32(%s))", floatConst(re), floatConst(im))
 	}
 	return fmt.Sprintf("GoComplex(%s, %s)", floatConst(re), floatConst(im))
 }
@@ -808,7 +820,7 @@ func (e *emitter) narrow(t types.Type, text string) string {
 	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
 		// Apply concrete precision after arithmetic, including complex components.
 		if set, ok := typeset.Describe(tp); ok && set.Numeric {
-			if set.Integer || set.Float || set.Complex {
+			if !e.mixedForm(tp) {
 				return e.dictOf(tp) + ".mask(" + text + ")"
 			}
 			return e.dictOf(tp) + ".mask(" + text + " as " + e.typeParamName(tp) + ")"

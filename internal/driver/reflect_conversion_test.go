@@ -14,7 +14,7 @@ import (
 
 func TestReflectConversions(t *testing.T) {
 	dir := filepath.Join(runtime.GOROOT(), "src/reflect")
-	declarations := []string{"TestFieldPkgPath", "TestUnaddressableField", "V", "integer", "EmptyInterfaceV", "ReaderV", "ReadWriterV", "Empty", "MyStruct", "MyStruct1", "MyStruct2", "MyString", "MyBytes", "MyBytesArrayPtr0", "MyBytesArrayPtr", "MyBytesArray0", "MyBytesArray", "MyRunes", "MyFunc", "MyByte", "MyRune", "MyBytes2", "MyRunes2", "IntChan", "IntChanRecv", "IntChanSend", "BytesChan", "BytesChanRecv", "BytesChanSend", "convertTests", "TestConvert", "TestConvertPanic", "TestIssue80332", "issue80332ZeroLen", "issue80332ZeroLen.Len", "shouldPanic", "TestConvertibleTo", "TestIssue80332Others", "issue80332FakeChan", "issue80332FakeChan.Kind", "issue80332FakeChan.ChanDir", "issue80332FakeMap", "issue80332FakeMap.Kind"}
+	declarations := []string{"TestConvertNaNs", "gFloat32", "snan", "TestFieldPkgPath", "TestUnaddressableField", "V", "integer", "EmptyInterfaceV", "ReaderV", "ReadWriterV", "Empty", "MyStruct", "MyStruct1", "MyStruct2", "MyString", "MyBytes", "MyBytesArrayPtr0", "MyBytesArrayPtr", "MyBytesArray0", "MyBytesArray", "MyRunes", "MyFunc", "MyByte", "MyRune", "MyBytes2", "MyRunes2", "IntChan", "IntChanRecv", "IntChanSend", "BytesChan", "BytesChanRecv", "BytesChanSend", "convertTests", "TestConvert", "TestConvertPanic", "TestIssue80332", "issue80332ZeroLen", "issue80332ZeroLen.Len", "shouldPanic", "TestConvertibleTo", "TestIssue80332Others", "issue80332FakeChan", "issue80332FakeChan.Kind", "issue80332FakeChan.ChanDir", "issue80332FakeMap", "issue80332FakeMap.Kind"}
 	files, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
 	if err != nil {
 		t.Fatal(err)
@@ -24,6 +24,8 @@ func TestReflectConversions(t *testing.T) {
 		switch filepath.Base(path) {
 		case "all_test.go":
 			sources[path] = []byte(selectedUpstreamSource(t, path, declarations))
+		case "abi_test.go":
+			sources[path] = []byte(selectedUpstreamSource(t, path, []string{"TestSignalingNaNArgument", "TestSignalingNaNReturn"}))
 		case "export_test.go":
 			source := selectedUpstreamSource(t, path, []string{"MakeRO", "IsRO", "OtherPkgFields", "Buffer"})
 			if strings.Count(source, "v.flag") != 2 || strings.Count(source, "flagStickyRO") != 2 {
@@ -49,7 +51,7 @@ func TestReflectConversions(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestConvert|TestConvertPanic|TestIssue80332|TestConvertibleTo|TestIssue80332Others|TestFieldPkgPath|TestUnaddressableField)$"
+	const filter = "^(TestConvert|TestConvertPanic|TestIssue80332|TestConvertibleTo|TestIssue80332Others|TestFieldPkgPath|TestUnaddressableField|TestConvertNaNs|TestSignalingNaNArgument|TestSignalingNaNReturn)$"
 	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {

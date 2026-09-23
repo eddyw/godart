@@ -76,6 +76,9 @@ final class Dict<T> {
       desc.kind == 'uint' || desc.kind == 'uint64' || desc.kind == 'uintptr';
 
   bool less(T a, T b) {
+    if ((a is GoFloat32 && a.isNaN) || (b is GoFloat32 && b.isNaN)) {
+      return false;
+    }
     if ((a is double && a.isNaN) || (b is double && b.isNaN)) return false;
     return order(a, b) < 0;
   }
@@ -83,6 +86,7 @@ final class Dict<T> {
   bool lessEqual(T a, T b) => equal(a, b) || less(a, b);
 
   T add(T a, T b) {
+    if (a is GoFloat32) return (a + (b as GoFloat32)) as T;
     if (a is GoString) return $concat(a, b as GoString) as T;
     if (a is double) return mask((a + (b as double)) as T);
     if (a is GoComplex) return mask((a + (b as GoComplex)) as T);
@@ -90,6 +94,7 @@ final class Dict<T> {
   }
 
   T quotient(T a, T b) {
+    if (a is GoFloat32) return (a / (b as GoFloat32)) as T;
     if (a is double) return mask((a / (b as double)) as T);
     if (a is GoComplex) return mask((a / (b as GoComplex)) as T);
     final GoInt x = a as GoInt, y = b as GoInt;
@@ -193,13 +198,13 @@ const Dict<double> $dictFloat64 = Dict<double>(
   $typeFloat64,
 );
 
-const Dict<double> $dictFloat32 = Dict<double>(
-  _zeroDouble,
-  _equalDouble,
-  _hashDouble,
-  _allocDouble,
-  _orderDouble,
-  $f32,
+const Dict<GoFloat32> $dictFloat32 = Dict<GoFloat32>(
+  $float32Zero,
+  _equalFloat32,
+  _hashFloat32,
+  _allocFloat32,
+  _orderFloat32,
+  $identity<GoFloat32>,
   $typeFloat32,
 );
 
@@ -214,10 +219,10 @@ const Dict<bool> $dictBool = Dict<bool>(
 );
 
 const Dict<GoComplex> $dictComplex64 = Dict<GoComplex>(
-  _zeroComplex,
+  $complex32Zero,
   _equalComplex,
   _hashComplex,
-  _allocComplex,
+  _allocComplex32,
   $unordered<GoComplex>,
   $c64,
   $typeComplex64,
@@ -259,3 +264,11 @@ GoString _sliceString(
   bool au = false,
   bool bu = false,
 ]) => $substring(v, a, b, au, bu);
+
+bool _equalFloat32(GoFloat32 a, GoFloat32 b) => a == b;
+int _hashFloat32(GoFloat32 v) => v.hashCode;
+List<GoFloat32> _allocFloat32(int n) => $Float32List(n);
+int _orderFloat32(GoFloat32 a, GoFloat32 b) => a < b ? -1 : (a == b ? 0 : 1);
+
+List<GoComplex> _allocComplex32(int n) =>
+    List<GoComplex>.filled(n, GoComplex32.zero);
