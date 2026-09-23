@@ -67,9 +67,7 @@ func structComparable(named *types.Named, st *types.Struct) bool {
 
 // structClass writes the Dart class of a Go struct type.
 //
-// An unnamed struct type reaches this function with no type parameter and no
-// method. Go gives such a type a structural identity, thus the name comes from
-// the shape of the struct.
+// An unnamed struct has 1 storage parameter per field and no methods.
 func (e *emitter) structClass(class string, params []*types.TypeParam,
 	st *types.Struct, comparable bool, methods []*ir.Func) {
 	head := class + e.typeParamDecl(params)
@@ -506,14 +504,11 @@ func (e *emitter) fieldDartName(owner types.Type, field string) string {
 		}
 	}
 	var params []*types.TypeParam
-	if st, ok := structOfAnon(u); ok {
-		if typeset.HoldsParam(st) {
-			params = e.anonParams[e.openClass(st)]
-		} else if twin := e.anonTwin(st); twin != nil {
-			params = e.anonParams[twin.class]
+	if named, ok := u.(*types.Named); ok {
+		ref := e.structRef(named)
+		if !isLocalType(ref.Obj()) {
+			params = typeParamsOf(ref.Origin().TypeParams())
 		}
-	} else if named, ok := u.(*types.Named); ok {
-		params = typeParamsOf(named.Origin().TypeParams())
 	}
 	for _, tp := range params {
 		if tp.Obj().Name() == field {

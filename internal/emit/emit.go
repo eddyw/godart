@@ -57,8 +57,7 @@ type Config struct {
 	// TrimPath replaces source directories with package paths.
 	TrimPath       bool
 	DefaultGODEBUG string
-	// URIs gives the Dart URI of each Go package of the build. A shared file
-	// belongs to no package, thus it reads the URI of a field type here.
+	// URIs maps Go import paths to generated Dart libraries.
 	URIs map[string]string
 }
 
@@ -73,10 +72,6 @@ const partSuffix = ".part.dart"
 
 func Package(p *ir.Package, tpkg *types.Package, cfg Config) (*Result, error) {
 	e := newEmitter(p, tpkg, cfg)
-	// A shape can name its twin in a function that the emitter writes after
-	// the twin. The first pass discovers every shape, channel, and
-	// description in any order, and the second pass writes the output with
-	// the full maps.
 	e.generate(p, cfg)
 	e.resetDiscovery()
 	out := e.generate(p, cfg)
@@ -88,18 +83,16 @@ func Package(p *ir.Package, tpkg *types.Package, cfg Config) (*Result, error) {
 
 func newEmitter(p *ir.Package, tpkg *types.Package, cfg Config) *emitter {
 	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: cfg.Base,
-		initNames: map[*ir.Func]string{},
-		anon:      map[string]*types.Struct{}, localAnon: map[string]*types.Struct{},
+		initNames:    map[*ir.Func]string{},
+		anon:         map[string]*types.Struct{},
 		merges:       map[*types.Package]map[*types.Struct][]*types.TypeName{},
 		instByStruct: map[*types.Package]map[*types.Struct]*types.Named{},
 		shadowed:     map[string]map[string]bool{},
 		nilChans:     map[string]types.Type{}, instDescs: map[string]types.Type{},
 		descTexts: map[string]string{}, cfg: cfg,
-		anonParams:  map[string][]*types.TypeParam{},
-		groundTwins: map[string]*anonTwin{},
-		funcIds:     map[any]int{},
-		funcByObj:   map[types.Object]*ir.Func{},
-		varLitId:    map[string]int{}}
+		funcIds:   map[any]int{},
+		funcByObj: map[types.Object]*ir.Func{},
+		varLitId:  map[string]int{}}
 	e.setPrefixes(cfg.Imports)
 	e.groupMethods(p)
 	return e
@@ -120,9 +113,6 @@ func (e *emitter) resetDiscovery() {
 	e.dartLibs = map[string]string{}
 	e.setPrefixes(e.cfg.Imports)
 	e.anon = map[string]*types.Struct{}
-	e.localAnon = map[string]*types.Struct{}
-	e.anonParams = map[string][]*types.TypeParam{}
-	e.groundTwins = map[string]*anonTwin{}
 	e.nilChans = map[string]types.Type{}
 	e.nilChansDone = nil
 	e.instDescs = map[string]types.Type{}
@@ -132,7 +122,6 @@ func (e *emitter) resetDiscovery() {
 	// The emitter runs 2 passes, and the second one writes the output. A frame
 	// class that the first pass counted must reach the file of the second pass.
 	e.frameSeen = nil
-	e.anonDone = nil
 	e.extra = nil
 	e.errs = nil
 	e.labelSeq = 0
@@ -206,9 +195,6 @@ type emitter struct {
 	// and no state machine. A return statement then runs the deferred calls
 	// itself, thus the frame of a deferred call names the line of the return.
 	deferPlain bool
-	// localAnon holds each unnamed struct type whose class stays inside the
-	// library of the package. Read anonShared.
-	localAnon map[string]*types.Struct
 	// anon holds each unnamed struct type that the package uses, by the name of
 	// its Dart class. The library file writes 1 class for each entry.
 	anon map[string]*types.Struct
@@ -242,14 +228,6 @@ type emitter struct {
 	// descBusy keeps each instance description that the emitter writes now.
 	descBusy        map[string]bool
 	inlineDescTypes []types.Type
-	// anonDone keeps each local shape class that writeAnonClasses wrote.
-	anonDone map[string]bool
-	// anonParams holds the type parameters of each shape class that reads a
-	// parameter, by the name of the class.
-	anonParams map[string][]*types.TypeParam
-	// groundTwins holds the open twin of each ground shape that has one, by the
-	// name of the class of the ground shape. A nil entry names no twin.
-	groundTwins map[string]*anonTwin
 	// typeCycle keeps each named type that reaches itself, and typeAcyclic
 	// keeps each one that does not. Read cyclic. typeDepth caps a cycle
 	// through a function type.
@@ -804,7 +782,6 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	// The library file holds a pool of its own. Each part file wrote its own
 	// pool already, thus the tag 0 stays free for this file.
 	e.lits = &litPool{names: map[string]string{}}
-	e.writeAnonClasses()
 	e.writeNilChans()
 	e.writeInstDescs()
 	e.writeDescriptors()
@@ -813,7 +790,6 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	e.flushFrames()
 	e.writeNilChans()
 	e.writeInstDescs()
-	e.writeAnonClasses()
 	e.writeTypeFactories(sorted)
 	if p.Name == "main" {
 		e.writeMain()

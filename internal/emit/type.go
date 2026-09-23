@@ -372,8 +372,7 @@ func (e *emitter) zeroHoist(t types.Type) string {
 	return name
 }
 
-// anonZero gives the zero value of an unnamed struct shape. A shape that
-// reads a type parameter takes 1 dictionary for each parameter.
+// Anonymous storage takes 1 dictionary per field.
 func (e *emitter) anonZero(st *types.Struct) string {
 	return fmt.Sprintf("%s.$zero(%s)", e.anonType(st),
 		strings.Join(e.anonDicts(st), ", "))

@@ -559,13 +559,12 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		instByStruct: e.instByStruct,
 		methods:      e.methods, inClass: e.inClass, initNames: e.initNames,
 		breakables: e.breakables, labelSeq: e.labelSeq,
-		anon: e.anon, localAnon: e.localAnon, shadowed: e.shadowed,
+		anon: e.anon, shadowed: e.shadowed,
 		nilChans: e.nilChans, instDescs: e.instDescs, descTexts: e.descTexts,
 		inlineDescTypes: e.inlineDescTypes,
 		cfg:             e.cfg, nilPrefix: e.nilPrefix,
 		typeParams: e.typeParams,
-		anonParams: e.anonParams, groundTwins: e.groundTwins,
-		funcIds: e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
+		funcIds:    e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
 		lits:    e.lits,
 		renames: e.withRenames(e.captureRenames(x.Captured))}
 	inner.curGoName = e.literalName(x)
@@ -996,14 +995,10 @@ func (e *emitter) composite(x *ir.Composite) string {
 					e.zero(u.Field(i).Type()), parts[i])
 			}
 		}
-		if named, ok := types.Unalias(x.Type).(*types.Named); ok && !isLocalType(named.Obj()) {
-			// The class of a local type is the class of its shape, and such
-			// a class holds no dictionary.
-			parts = append(e.dictArgs(named.TypeArgs()), parts...)
-		} else if st, ok := structOfAnon(x.Type); ok {
-			// The class of a shape that reads a type parameter, and the class
-			// of its ground twin, each take 1 dictionary per parameter.
-			parts = append(e.anonDicts(st), parts...)
+		if named, ok := types.Unalias(x.Type).(*types.Named); ok && !isLocalType(e.structRef(named).Obj()) {
+			parts = append(e.dictArgs(e.structRef(named).TypeArgs()), parts...)
+		} else {
+			parts = append(e.anonDicts(u), parts...)
 		}
 		return e.dartType(x.Type) + "(" + strings.Join(parts, ", ") + ")"
 	case *types.Array:
