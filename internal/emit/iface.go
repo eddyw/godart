@@ -505,10 +505,33 @@ func reflectText(t types.Type) string {
 		if t.NumMethods() == 0 {
 			return "interface {}"
 		}
-		parts := make([]string, t.NumMethods())
-		for i := range parts {
-			m := t.Method(i)
-			parts[i] = m.Name() + strings.TrimPrefix(reflectText(m.Type()), "func")
+		methods := make([]*types.Func, t.NumMethods())
+		for i := range methods {
+			methods[i] = t.Method(i)
+		}
+		packagePath := func(m *types.Func) string {
+			if m.Pkg().Name() == "main" {
+				return "main"
+			}
+			return m.Pkg().Path()
+		}
+		sort.Slice(methods, func(i, j int) bool {
+			a, b := methods[i], methods[j]
+			if a.Exported() != b.Exported() {
+				return a.Exported()
+			}
+			if a.Name() != b.Name() {
+				return a.Name() < b.Name()
+			}
+			return !a.Exported() && packagePath(a) < packagePath(b)
+		})
+		parts := make([]string, len(methods))
+		for i, m := range methods {
+			name := m.Name()
+			if !m.Exported() {
+				name = shortQualifier(m.Pkg()) + "." + name
+			}
+			parts[i] = name + strings.TrimPrefix(reflectText(m.Type()), "func")
 		}
 		return "interface { " + strings.Join(parts, "; ") + " }"
 	case *types.Pointer:

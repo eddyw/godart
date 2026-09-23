@@ -52,6 +52,14 @@ func genericLocal[T any]() []reflect.Type {
 		reflect.TypeFor[func(interface{ F(Local) Local }) interface{ F(Local) Local }](),
 	}
 }
+func interfaceNames[T any]() {
+	typ := reflect.TypeFor[interface {
+		hidden(T) T
+		Exported(T) T
+	}]()
+	fmt.Println(typ, reflect.SliceOf(typ), reflect.FuncOf([]reflect.Type{typ}, []reflect.Type{typ}, false))
+}
+
 func main() {
 	var value any = Worker{}
 	x, ok := value.(Transformer)
@@ -69,6 +77,13 @@ func main() {
 	a, b := first(), second()
 	local, other := reflect.TypeFor[interface{ hidden() }](), foreign.Type()
 	fmt.Println(local == other, local.AssignableTo(other), local.Implements(other))
+	fmt.Println(local, other, reflect.TypeFor[interface{ foreign.Mixed }]())
+	fmt.Println(reflect.TypeFor[interface {
+		foreign.Mixed
+		hidden()
+	}]())
+	interfaceNames[int]()
+	interfaceNames[string]()
 	fmt.Println(a[0] == a[1], a[0] == first()[0])
 	for i := range a {
 		fmt.Println(a[i] == b[i], a[i].AssignableTo(b[i]), a[i].ConvertibleTo(b[i]))
