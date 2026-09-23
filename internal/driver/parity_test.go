@@ -72,6 +72,7 @@ func externalFixtures(t *testing.T, output string) []moduleFixture {
 }
 
 type upstreamEvidence struct {
+	InputLimits       map[string]string   `json:"input_limits,omitempty"`
 	CertificateInputs *certificateInputs  `json:"certificate_inputs,omitempty"`
 	NativeImages      []nativeImage       `json:"native_images,omitempty"`
 	ExternalFixtures  []moduleFixture     `json:"external_fixtures,omitempty"`
@@ -295,6 +296,7 @@ func compareUpstreamCertificates(t *testing.T, name, pkg, filter, target, dir, d
 	}
 	external := externalFixtures(t, string(nativeText)+"\n"+dartText)
 	comparison := parity.Compare(native, gart, expected, selectedRules)
+	inputLimits := selectedInputLimits(name, &comparison)
 	if base != "" {
 		dartVersion := strings.TrimSpace(runProgram(t, "", "dart", "--version"))
 		nodeVersion := ""
@@ -305,7 +307,7 @@ func compareUpstreamCertificates(t *testing.T, name, pkg, filter, target, dir, d
 		if pkg == "go/build" || pkg == "debug/buildinfo" || pkg == "internal/testenv" {
 			env["GOROOT"] = build.Default.GOROOT
 		}
-		data, err := json.MarshalIndent(upstreamEvidence{CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
+		data, err := json.MarshalIndent(upstreamEvidence{InputLimits: inputLimits, CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -313,7 +315,7 @@ func compareUpstreamCertificates(t *testing.T, name, pkg, filter, target, dir, d
 			t.Fatal(err)
 		}
 	}
-	t.Logf("upstream parity: %d passes, %d explicit exclusions", len(comparison.Passed), len(comparison.Excluded))
+	t.Logf("upstream parity: %d passes, %d partial, %d explicit exclusions", len(comparison.Passed), len(comparison.Partial), len(comparison.Excluded))
 	if len(comparison.Problems) > 0 {
 		t.Error(fmt.Sprintf("upstream parity failed:\n%s", strings.Join(comparison.Problems, "\n")))
 	}

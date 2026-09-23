@@ -77,6 +77,8 @@ include this schema receive both notices from the embedded overlay license.
 The CIDR parser adapts Go `src/net/ip.go` and retains its BSD notice.
 TCP listener address conversion adapts Go `src/net/ipsock_posix.go`.
 Its overlay source retains the Go BSD notice.
+IP protocol validation adapts Go `src/net/dial.go`, `parse.go`,
+`lookup.go`, and `lookup_unix.go` with their BSD notice.
 Network interface types, flags, and native address filters adapt Go
 `src/net/interface.go`, `interface_linux.go`, and `interface_bsd.go`.
 The overlay, native adapter, and runtime license retain the Go BSD notice.

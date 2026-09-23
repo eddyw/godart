@@ -275,7 +275,10 @@ func (a *IPAddr) String() string {
 	if a == nil {
 		return "<nil>"
 	}
-	out := a.IP.String()
+	out := ""
+	if len(a.IP) != 0 {
+		out = a.IP.String()
+	}
 	if a.Zone != "" {
 		return out + "%" + a.Zone
 	}
@@ -346,28 +349,32 @@ func ResolveUDPAddr(network, address string) (*UDPAddr, error) {
 	return &UDPAddr{IP: ip, Port: port, Zone: zone}, nil
 }
 
-// ResolveIPAddr reads the text of an address that holds no port. The network
-// is ip, ip4, or ip6, and an empty network names ip.
-//
-// The 3 Resolve functions of this overlay each read a numeric address alone.
-// A host name gives an error, because a name lookup gives up control and a
-// Resolve function of Go holds no context. `Resolver.LookupIP` reads a name.
+// ResolveIPAddr resolves a numeric address without a port. The network can
+// include an IP protocol name or number. Host names are not supported.
 func ResolveIPAddr(network, address string) (*IPAddr, error) {
-	switch network {
-	case "", "ip", "ip4", "ip6":
-	default:
-		return nil, UnknownNetworkError(network)
+	if network == "" {
+		network = "ip"
+	}
+	family, err := resolveIPNetwork(network)
+	if err != nil {
+		return nil, err
 	}
 	if address == "" {
 		return &IPAddr{}, nil
 	}
 	host, zone := address, ""
-	if i := strings.LastIndexByte(host, '%'); i >= 0 {
+	if i := strings.LastIndexByte(host, '%'); i > 0 {
 		host, zone = host[:i], host[i+1:]
 	}
 	ip := ParseIP(host)
 	if ip == nil {
 		return nil, &ParseError{Type: "IP address", Text: host}
+	}
+	if ip.Equal(IPv6unspecified) && (family == "ip4" || family == "ip" && network != "ip") {
+		ip, zone = IPv4zero, ""
+	}
+	if family == "ip4" && ip.To4() == nil || family == "ip6" && ip.To4() != nil {
+		return nil, &AddrError{Err: "no suitable address found", Addr: address}
 	}
 	return &IPAddr{IP: ip, Zone: zone}, nil
 }
