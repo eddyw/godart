@@ -261,6 +261,7 @@ func TestSelectedUpstream(t *testing.T) {
 				writeFile(t, filepath.Join(fixture, "go.mod"), "module "+module+"\n\ngo 1.27\n\n"+dependencies)
 			}
 			var certificates *certificateInputs
+			var resolver *resolverInputs
 			if pkg == "crypto/x509" {
 				certificates = prepareCertificateInputs(t, filepath.Join(dir, "verify_test.go"))
 				if err := os.MkdirAll(filepath.Join(fixture, "cryptotest"), 0755); err != nil {
@@ -407,6 +408,8 @@ import . "os/signal"
 				source = strings.Replace(source, "package net\n", "package net_test\nimport . \"net\"\n", 1)
 				source = strings.TrimPrefix(source, "//go:build dart\n")
 				writeFile(t, filepath.Join(fixture, "helper_test.go"), source)
+				resolver = prepareResolverInputs(t, filepath.Join(dir, "main_test.go"))
+				writeFile(t, filepath.Join(fixture, "resolver_inputs_test.go"), resolver.FixtureSource)
 			}
 
 			if pkg == "os" {
@@ -523,19 +526,19 @@ import . "os/signal"
 			if pkg == "net/http" {
 				name = pkg + "-content-type"
 			}
-			compareUpstreamCertificates(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates)
+			compareUpstreamInputs(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates, resolver)
 			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "runtime/metrics" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "encoding/json" || pkg == "encoding/gob" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" || pkg == "testing" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
-						compareUpstreamCertificates(t, name, pkg, filter, target, dir, result.Text, result.Exit, certificates)
+						compareUpstreamInputs(t, name, pkg, filter, target, dir, result.Text, result.Exit, certificates, resolver)
 					})
 				}
 			}
 			if pkg == "os" || pkg == "net" {
 				t.Run("aot", func(t *testing.T) {
 					result := runUpstreamTarget(t, "aot", out, stats.Binaries[0].Entry, dir, args)
-					compareUpstream(t, name, pkg, filter, "aot", dir, result.Text, result.Exit)
+					compareUpstreamInputs(t, name, pkg, filter, "aot", dir, result.Text, result.Exit, certificates, resolver)
 				})
 			}
 			if pkg == "net" {
@@ -552,7 +555,7 @@ import . "os/signal"
 			if pkg == "sync" || pkg == "internal/godebug" {
 				run(t, out, "dart", "compile", "exe", stats.Binaries[0].Entry, "-o", launcher)
 				result := programOutcome(t, dir, launcher, args...)
-				compareUpstream(t, name, pkg, filter, "aot", dir, result.Text, result.Exit)
+				compareUpstreamInputs(t, name, pkg, filter, "aot", dir, result.Text, result.Exit, certificates, resolver)
 			}
 		})
 	}

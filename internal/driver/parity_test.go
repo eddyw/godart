@@ -72,7 +72,8 @@ func externalFixtures(t *testing.T, output string) []moduleFixture {
 }
 
 type upstreamEvidence struct {
-	InputLimits       map[string]string   `json:"input_limits,omitempty"`
+	Selection         string              `json:"selection"`
+	ResolverInputs    *resolverInputs     `json:"resolver_inputs,omitempty"`
 	CertificateInputs *certificateInputs  `json:"certificate_inputs,omitempty"`
 	NativeImages      []nativeImage       `json:"native_images,omitempty"`
 	ExternalFixtures  []moduleFixture     `json:"external_fixtures,omitempty"`
@@ -146,10 +147,10 @@ func upstreamExtraArgs(pkg string) []string {
 
 func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, images ...nativeImage) {
 	t.Helper()
-	compareUpstreamCertificates(t, name, pkg, filter, target, dir, dartText, dartExit, nil, images...)
+	compareUpstreamInputs(t, name, pkg, filter, target, dir, dartText, dartExit, nil, nil, images...)
 }
 
-func compareUpstreamCertificates(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inputs *certificateInputs, images ...nativeImage) {
+func compareUpstreamInputs(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inputs *certificateInputs, resolver *resolverInputs, images ...nativeImage) {
 	t.Helper()
 	nativeTags := slices.Clone(build.Default.BuildTags)
 	args := []string{"test", "-json", "-count=1", "-timeout=" + upstreamLimit().String()}
@@ -260,6 +261,12 @@ func compareUpstreamCertificates(t *testing.T, name, pkg, filter, target, dir, d
 			continue
 		}
 		found = true
+		if resolver != nil {
+			index := slices.IndexFunc(p.Files, func(f parity.SourceFile) bool { return f.Path == "main_test.go" })
+			if index < 0 || p.Files[index].SHA256 != resolver.SourceSHA256 {
+				t.Fatal("resolver setup differs from the SDK inventory")
+			}
+		}
 		for _, test := range p.Tests {
 			if test.Eligible && test.Kind != "Benchmark" && harness.MatchName(test.Name, filter, regexp.MatchString) {
 				expected = append(expected, test.Name)
@@ -296,7 +303,6 @@ func compareUpstreamCertificates(t *testing.T, name, pkg, filter, target, dir, d
 	}
 	external := externalFixtures(t, string(nativeText)+"\n"+dartText)
 	comparison := parity.Compare(native, gart, expected, selectedRules)
-	inputLimits := selectedInputLimits(name, &comparison)
 	if base != "" {
 		dartVersion := strings.TrimSpace(runProgram(t, "", "dart", "--version"))
 		nodeVersion := ""
@@ -307,7 +313,7 @@ func compareUpstreamCertificates(t *testing.T, name, pkg, filter, target, dir, d
 		if pkg == "go/build" || pkg == "debug/buildinfo" || pkg == "internal/testenv" {
 			env["GOROOT"] = build.Default.GOROOT
 		}
-		data, err := json.MarshalIndent(upstreamEvidence{InputLimits: inputLimits, CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
+		data, err := json.MarshalIndent(upstreamEvidence{Selection: name, ResolverInputs: resolver, CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}

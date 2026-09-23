@@ -28,6 +28,9 @@ type record struct {
 
 // table gives the records of each name and type of the server.
 var table = map[string][]record{
+	"v4.example.com.|1":              {{typeA, ipv4(192, 0, 2, 1)}},
+	"v6.example.com.|28":             {{typeAAAA, ipv6()}},
+	"zero.example.com.|28":           {{typeAAAA, make([]byte, 16)}},
 	"example.com.|1":                 {{typeA, ipv4(93, 184, 216, 34)}},
 	"example.com.|28":                {{typeAAAA, ipv6()}},
 	"www.example.com.|5":             {{typeCNAME, name("example.com.")}},

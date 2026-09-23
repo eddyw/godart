@@ -101,6 +101,41 @@ class ParityTest(unittest.TestCase):
                 parity.save(path, changed)
                 self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
+    def test_resolver_inputs_preserve_native_setup(self):
+        import copy
+        import hashlib
+        digest = lambda text: hashlib.sha256(text.encode()).hexdigest()
+        source = "package net\nfunc setupTestData() {}\n"
+        generator = 'package net\nimport gartjson "encoding/json"\n\nfunc setupTestData() {}\nprobe'
+        inputs = dict(TCP=[], UDP=[], IP=[])
+        output = "GART_RESOLVER_INPUTS " + json.dumps(inputs) + "\n"
+        fixture = dict(source=source, source_sha256=digest(source), generator_source=generator,
+                       generator_sha256=digest(generator), fixture_source="fixture", fixture_sha256=digest("fixture"),
+                       output=output, inputs=inputs,
+                       generator=dict(ran=True, exit=0, timed_out=False, output_sha256=digest(output),
+                                      command=["go", "test", "-overlay=inputs.json", "-run=^TestGartResolverInputs$"]))
+        report = dict(resolver_inputs=fixture, comparison=dict(passed=["TestResolveTCPAddr"]))
+        self.assertIsNone(parity.resolver_input_problem(report, "net-selected"))
+        for mutate in [
+            lambda r: r.pop("resolver_inputs"),
+            lambda r: r["resolver_inputs"]["generator"].update(exit=1),
+            lambda r: r["resolver_inputs"]["generator"].update(ran=False),
+            lambda r: r["resolver_inputs"]["generator"].update(command=["echo", "fake"]),
+            lambda r: r["resolver_inputs"].update(source="changed"),
+            lambda r: r["resolver_inputs"].update(fixture_source="changed"),
+            lambda r: r["resolver_inputs"].update(output="changed"),
+            lambda r: r["resolver_inputs"]["inputs"].update(IP=[dict(Address="changed")]),
+        ]:
+            changed = copy.deepcopy(report)
+            mutate(changed)
+            self.assertIsNotNone(parity.resolver_input_problem(changed, "net-selected"))
+        changed = copy.deepcopy(report)
+        changed["resolver_inputs"]["generator_source"] = "different setup"
+        changed["resolver_inputs"]["generator_sha256"] = digest("different setup")
+        self.assertIsNotNone(parity.resolver_input_problem(changed, "net-selected"))
+        partial = dict(comparison=dict(passed=[], partial=["TestResolveTCPAddr"]))
+        self.assertIsNone(parity.resolver_input_problem(partial, "net-selected"))
+
     def test_certificate_inputs_preserve_setup_and_require_success(self):
         expressions = [f"generatePEMCertWithRepeatSAN(100, {i}, \"fake.dns\")" for i in range(4)]
         source = "\n".join(f"var x{i} = {expression}" for i, expression in enumerate(expressions))

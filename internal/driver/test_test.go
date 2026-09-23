@@ -353,7 +353,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			stats, err := driver.BuildWithStats(options)
 			if err != nil {
 				t.Logf("upstream test build failed: %v", err)
-				compareUpstreamCertificates(t, c.name, c.Package, c.Run, "vm", dir, "the test build failed: "+err.Error(), 1, inputs)
+				compareUpstreamInputs(t, c.name, c.Package, c.Run, "vm", dir, "the test build failed: "+err.Error(), 1, inputs, nil)
 				return
 			}
 			if len(stats.Binaries) != 1 {
@@ -375,7 +375,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			args = append(args, upstreamExtraArgs(c.Package)...)
 			text, execErr, finished := output(dir, env, upstreamLimit(), "dart", args...)
 			if !finished {
-				compareUpstreamCertificates(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124, inputs, images...)
+				compareUpstreamInputs(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124, inputs, nil, images...)
 				return
 			}
 			code := 0
@@ -388,7 +388,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			}
 			got := string(text)
 			t.Logf("upstream results:\n%s", got)
-			compareUpstreamCertificates(t, c.name, c.Package, c.Run, "vm", dir, got, code, inputs, images...)
+			compareUpstreamInputs(t, c.name, c.Package, c.Run, "vm", dir, got, code, inputs, nil, images...)
 
 		})
 	}

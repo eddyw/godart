@@ -1,0 +1,32 @@
+
+var gartDeclaredTCP = len(resolveTCPAddrTests)
+var gartDeclaredUDP = len(resolveUDPAddrTests)
+var gartDeclaredIP = len(resolveIPAddrTests)
+
+type gartResolverInput struct {
+ Network, Address string
+ IP []byte
+ Port int
+ Zone string
+}
+
+func TestGartResolverInputs(t *testing.T) {
+ var inputs struct {
+  TCP, UDP, IP []gartResolverInput
+ }
+ for _, tt := range resolveTCPAddrTests[gartDeclaredTCP:] {
+  if tt.err != nil || tt.addr == nil { t.Fatal("TCP setup no longer contains only successful addresses") }
+  inputs.TCP = append(inputs.TCP, gartResolverInput{tt.network, tt.litAddrOrName, []byte(tt.addr.IP), tt.addr.Port, tt.addr.Zone})
+ }
+ for _, tt := range resolveUDPAddrTests[gartDeclaredUDP:] {
+  if tt.err != nil || tt.addr == nil { t.Fatal("UDP setup no longer contains only successful addresses") }
+  inputs.UDP = append(inputs.UDP, gartResolverInput{tt.network, tt.litAddrOrName, []byte(tt.addr.IP), tt.addr.Port, tt.addr.Zone})
+ }
+ for _, tt := range resolveIPAddrTests[gartDeclaredIP:] {
+  if tt.err != nil || tt.addr == nil { t.Fatal("IP setup no longer contains only successful addresses") }
+  inputs.IP = append(inputs.IP, gartResolverInput{tt.network, tt.litAddrOrName, []byte(tt.addr.IP), 0, tt.addr.Zone})
+ }
+ data, err := gartjson.Marshal(inputs)
+ if err != nil { t.Fatal(err) }
+ fmt.Printf("GART_RESOLVER_INPUTS %s\n", data)
+}

@@ -6,12 +6,9 @@ import (
 	"go/parser"
 	"go/token"
 	"net"
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/eddyw/godart/internal/parity"
 )
 
 // Literal addresses do not call the upstream DNS hook. Reject a changed
@@ -185,38 +182,5 @@ func verify() {
 		if _, err := literalResolveSource(changed, "resolveIPAddrTests"); err == nil {
 			t.Fatal("the adapter accepted a changed IP resolver contract")
 		}
-	}
-}
-
-func selectedInputLimits(name string, comparison *parity.Comparison) map[string]string {
-	if name != "net-selected" {
-		return nil
-	}
-	limits := map[string]string{}
-	for _, test := range []string{"TestResolveIPAddr", "TestResolveTCPAddr", "TestResolveUDPAddr"} {
-		limits[test] = "The selected source retains the declared table. It omits resolver cases that setupTestData appends in net/main_test.go."
-		if i := slices.Index(comparison.Passed, test); i >= 0 {
-			comparison.Passed = slices.Delete(comparison.Passed, i, i+1)
-			comparison.Partial = append(comparison.Partial, test)
-		}
-	}
-	slices.Sort(comparison.Partial)
-	return limits
-}
-
-func TestSelectedInputLimits(t *testing.T) {
-	comparison := parity.Comparison{
-		Passed:   []string{"TestParseIP", "TestResolveIPAddr", "TestResolveTCPAddr"},
-		Problems: []string{"TestResolveUDPAddr failed"},
-	}
-	limits := selectedInputLimits("net-selected", &comparison)
-	if len(limits) != 3 || !slices.Equal(comparison.Passed, []string{"TestParseIP"}) ||
-		!slices.Equal(comparison.Partial, []string{"TestResolveIPAddr", "TestResolveTCPAddr"}) ||
-		!slices.Equal(comparison.Problems, []string{"TestResolveUDPAddr failed"}) {
-		t.Fatalf("incorrect partial coverage: %+v, %v", comparison, limits)
-	}
-	comparison = parity.Comparison{Passed: []string{"TestResolveIPAddr"}}
-	if limits := selectedInputLimits("another-selection", &comparison); limits != nil || len(comparison.Partial) != 0 || len(comparison.Passed) != 1 {
-		t.Fatalf("unrelated selection changed: %+v, %v", comparison, limits)
 	}
 }

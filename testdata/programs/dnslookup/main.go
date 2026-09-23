@@ -46,6 +46,40 @@ func main() {
 	}
 	ctx := context.Background()
 
+	net.DefaultResolver = r
+	for _, network := range []string{"", "tcp", "tcp4", "tcp6"} {
+		for _, host := range []string{"example.com.", "[example.com.]", "v4.example.com.", "v6.example.com.", "zero.example.com."} {
+			a, err := net.ResolveTCPAddr(network, host+":http")
+			fmt.Println("resolve TCP:", network, host, a, resolveError(err))
+		}
+	}
+	for _, network := range []string{"", "udp", "udp4", "udp6"} {
+		for _, host := range []string{"example.com.", "v4.example.com.", "v6.example.com.", "zero.example.com."} {
+			a, err := net.ResolveUDPAddr(network, host+":domain")
+			fmt.Println("resolve UDP:", network, host, a, resolveError(err))
+		}
+	}
+	for _, network := range []string{"", "ip", "ip4", "ip6", "ip:icmp", "ip6:ipv6-icmp"} {
+		for _, host := range []string{"example.com.", "v4.example.com.", "v6.example.com.", "zero.example.com."} {
+			a, err := net.ResolveIPAddr(network, host)
+			fmt.Println("resolve IP:", network, host, a, resolveError(err))
+		}
+	}
+	for _, resolve := range []func() error{
+		func() error { _, err := net.ResolveTCPAddr("tcp", "missing.example.com.:80"); return err },
+		func() error { _, err := net.ResolveUDPAddr("udp", "missing.example.com.:53"); return err },
+		func() error { _, err := net.ResolveIPAddr("ip", "missing.example.com."); return err },
+		func() error { _, err := net.ResolveIPAddr("ip", "127.0.0.1%en0"); return err },
+		func() error { _, err := net.ResolveIPAddr("ip6", "::1%"); return err },
+	} {
+		err := resolve()
+		if e, ok := err.(*net.DNSError); ok {
+			fmt.Println("resolve missing:", e.Name, e.IsNotFound, e.IsTimeout)
+		} else {
+			fmt.Printf("resolve missing: %T %v\n", err, err)
+		}
+	}
+
 	hosts, err := r.LookupHost(ctx, "example.com.")
 	sort.Strings(hosts)
 	fmt.Println("host:", hosts, err)
@@ -229,3 +263,10 @@ func readFull(c net.Conn, b []byte) bool {
 
 // unused keeps the import of strings for the record table of dns.go.
 var _ = strings.TrimSuffix
+
+func resolveError(err error) string {
+	if e, ok := err.(*net.DNSError); ok {
+		return fmt.Sprintf("DNS %q %q missing=%v timeout=%v", e.Name, e.Err, e.IsNotFound, e.IsTimeout)
+	}
+	return fmt.Sprintf("%T %v", err, err)
+}

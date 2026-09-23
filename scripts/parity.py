@@ -122,6 +122,41 @@ def certificate_input_problem(report):
     return None
 
 
+def resolver_input_problem(report, selection):
+    fixture = report.get("resolver_inputs")
+    names = {"TestResolveTCPAddr", "TestResolveUDPAddr", "TestResolveIPAddr"}
+    complete = names.intersection(report.get("comparison", {}).get("passed") or [])
+    if fixture is None:
+        return "missing resolver input evidence" if selection == "net-selected" and complete else None
+    generator = fixture["generator"]
+    if not generator["ran"] or generator["exit"] != 0 or generator["timed_out"]:
+        return "resolver input capture failed"
+    args = generator.get("command", [])
+    if args[:2] != ["go", "test"] or "-run=^TestGartResolverInputs$" not in args or not any(arg.startswith("-overlay=") for arg in args):
+        return "resolver input capture did not run the SDK test package"
+    digest_text = lambda text: hashlib.sha256(text.encode()).hexdigest()
+    for text, stamp in [("source", "source_sha256"), ("generator_source", "generator_sha256"), ("fixture_source", "fixture_sha256")]:
+        if digest_text(fixture[text]) != fixture[stamp]:
+            return "resolver source or fixture identity differs"
+    if digest_text(fixture["output"]) != generator["output_sha256"]:
+        return "resolver capture output identity differs"
+    insertion = '\nimport gartjson "encoding/json"\n'
+    generated = fixture["generator_source"]
+    if generated.count(insertion) != 1 or not generated.replace(insertion, "", 1).startswith(fixture["source"]):
+        return "resolver capture changed original SDK setup"
+    records = [line.removeprefix("GART_RESOLVER_INPUTS ") for line in fixture["output"].splitlines()
+               if line.startswith("GART_RESOLVER_INPUTS ")]
+    if len(records) != 1:
+        return "resolver capture has no unique input record"
+    try:
+        values = json.loads(records[0])
+    except ValueError:
+        return "invalid resolver capture output"
+    if set(values) != {"TCP", "UDP", "IP"} or values != fixture["inputs"]:
+        return "resolver inputs differ from native setup"
+    return None
+
+
 def behavior(paths, manifests=MANIFESTS):
     groups = {}
     seen = set()
@@ -148,6 +183,9 @@ def behavior(paths, manifests=MANIFESTS):
             comparison = report["comparison"]
             problems = list(comparison.get("problems") or [])
             input_problem = certificate_input_problem(report)
+            if input_problem:
+                problems.append(input_problem)
+            input_problem = resolver_input_problem(report, report.get("selection") or path.name.split(".")[0])
             if input_problem:
                 problems.append(input_problem)
             if report["native"]["exit"] != 0 or report["gart"]["exit"] != 0:

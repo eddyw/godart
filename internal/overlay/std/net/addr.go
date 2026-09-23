@@ -7,6 +7,7 @@
 package net
 
 import (
+	"context"
 	"net/netip"
 	"strconv"
 	"strings"
@@ -316,8 +317,7 @@ func addrText(ip IP, port int, zone string) string {
 	return JoinHostPort(host, strconv.Itoa(port))
 }
 
-// ResolveTCPAddr reads the text of a TCP address. The surface holds no name
-// resolver, thus a host that is not an IP address gives an error.
+// ResolveTCPAddr resolves a TCP address through DefaultResolver.
 func ResolveTCPAddr(network, address string) (*TCPAddr, error) {
 	switch network {
 	case "":
@@ -349,8 +349,8 @@ func ResolveUDPAddr(network, address string) (*UDPAddr, error) {
 	return &UDPAddr{IP: ip, Port: port, Zone: zone}, nil
 }
 
-// ResolveIPAddr resolves a numeric address without a port. The network can
-// include an IP protocol name or number. Host names are not supported.
+// ResolveIPAddr resolves an address without a port through DefaultResolver.
+// The network can include an IP protocol name or number.
 func ResolveIPAddr(network, address string) (*IPAddr, error) {
 	if network == "" {
 		network = "ip"
@@ -359,24 +359,7 @@ func ResolveIPAddr(network, address string) (*IPAddr, error) {
 	if err != nil {
 		return nil, err
 	}
-	if address == "" {
-		return &IPAddr{}, nil
-	}
-	host, zone := address, ""
-	if i := strings.LastIndexByte(host, '%'); i > 0 {
-		host, zone = host[:i], host[i+1:]
-	}
-	ip := ParseIP(host)
-	if ip == nil {
-		return nil, &ParseError{Type: "IP address", Text: host}
-	}
-	if ip.Equal(IPv6unspecified) && (family == "ip4" || family == "ip" && network != "ip") {
-		ip, zone = IPv4zero, ""
-	}
-	if family == "ip4" && ip.To4() == nil || family == "ip6" && ip.To4() != nil {
-		return nil, &AddrError{Err: "no suitable address found", Addr: address}
-	}
-	return &IPAddr{IP: ip, Zone: zone}, nil
+	return resolveInternetIP(family, address, network == "ip" && strings.Contains(address, ":"))
 }
 
 // ResolveUnixAddr reads the text of a Unix socket address.
@@ -449,25 +432,53 @@ func parseAddr(network, address string) (IP, int, string, error) {
 	if err != nil {
 		return nil, 0, "", err
 	}
-	originalHost := host
-	zone := ""
-	if i := strings.LastIndexByte(host, '%'); i >= 0 {
-		host, zone = host[:i], host[i+1:]
+	addr, err := resolveInternetIP(network, host, (network == "tcp" || network == "udp") && strings.Contains(address, "["))
+	if err != nil {
+		return nil, 0, "", err
 	}
-	var ip IP
-	if host != "" {
-		ip = ParseIP(host)
-		if ip == nil {
-			return nil, 0, "", &ParseError{Type: "IP address", Text: host}
+	return addr.IP, port, addr.Zone, nil
+}
+
+func resolveInternetIP(network, host string, prefer6 bool) (*IPAddr, error) {
+	if host == "" {
+		return &IPAddr{}, nil
+	}
+	family := "ip"
+	if last := network[len(network)-1]; last == '4' || last == '6' {
+		family += string(last)
+	}
+	var addresses []IPAddr
+	if ip, err := netip.ParseAddr(host); err == nil {
+		addresses = []IPAddr{{IP: IP(ip.AsSlice()).To16(), Zone: ip.Zone()}}
+	} else {
+		ips, err := DefaultResolver.LookupIP(context.Background(), family, host)
+		if err != nil {
+			return nil, err
 		}
-		if network[len(network)-1] == '4' && ip.Equal(IPv6unspecified) {
-			ip, zone = IPv4zero, ""
-		}
-		if network[len(network)-1] == '4' && ip.To4() == nil || network[len(network)-1] == '6' && ip.To4() != nil {
-			return nil, 0, "", &AddrError{Err: "no suitable address found", Addr: originalHost}
+		for _, ip := range ips {
+			addresses = append(addresses, IPAddr{IP: ip})
 		}
 	}
-	return ip, port, zone, nil
+	if len(addresses) == 1 && addresses[0].IP.Equal(IPv6unspecified) {
+		addresses = append(addresses, IPAddr{IP: IPv4zero})
+	}
+	var first *IPAddr
+	for i := range addresses {
+		addr := &addresses[i]
+		if !keepIP(family, addr.IP) {
+			continue
+		}
+		if first == nil {
+			first = addr
+		}
+		if (addr.IP.To4() == nil) == prefer6 {
+			return addr, nil
+		}
+	}
+	if first != nil {
+		return first, nil
+	}
+	return nil, &AddrError{Err: "no suitable address found", Addr: host}
 }
 
 // tcpAddrOf builds a TCPAddr from a host text and a port. A host that is not
