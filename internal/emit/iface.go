@@ -1212,132 +1212,66 @@ func isPure(x ir.Expr) bool {
 	return false
 }
 
-// typeName gives the name that a descriptor holds and that a type test reads.
-// An alias carries the name of its own declaration, thus the name comes from
-// the type behind it.
+// The local marker belongs to its named type. Runtime constructors compose
+// derived identities from those names.
 func (e *emitter) typeName(t types.Type) string {
-	// A type that mentions an unnamed struct type needs the exact text:
-	// types.TypeString writes an embedded field as its type alone, and it
-	// writes an alias by its name, thus 2 shapes that Go holds apart can give
-	// 1 text. The name of a descriptor is the identity of the type at run
-	// time, and a pointer to a shape must agree with the shape itself.
+	identity := e.identityType(t)
 	if mentionsStruct(t, map[types.Type]bool{}) {
-		return typeText(stripNames(types.Unalias(t))) + e.localMarks(t)
+		return typeText(identity)
 	}
-	return types.TypeString(stripNames(types.Unalias(t)), nil) + e.localMarks(t)
+	return types.TypeString(identity, nil)
 }
 
-// localMarks names the position of each local type that t mentions.
-//
-// 2 local types of 2 functions can share 1 printed name, and the identity of a
-// type reads the name. A derived type of such a type holds the same printed
-// name as the derived type of a package level type of that name, thus the walk
-// reaches every level. The package encoding/json_test holds `type Animal int`
-// at the top and `type Animal struct{...}` inside an example, and `[]Animal`
-// of the example took the descriptor of `[]Animal` of the integer.
-//
-// The walk of a named type reads its type arguments alone. Go reads the name of
-// such a type as its identity, thus the fields of the type behind it stay out.
-func (e *emitter) localMarks(t types.Type) string {
-	if e.cfg.Fset == nil {
-		return ""
-	}
-	var out strings.Builder
-	seen := map[types.Type]bool{}
-	var walk func(types.Type)
-	walk = func(t types.Type) {
-		if t == nil || seen[t] {
-			return
-		}
-		seen[t] = true
-		switch u := types.Unalias(t).(type) {
-		case *types.Named:
-			if isLocalType(u.Obj()) {
-				p := e.cfg.Fset.Position(u.Obj().Pos())
-				fmt.Fprintf(&out, "·%d_%d", p.Line, p.Column)
-			}
-			if args := u.TypeArgs(); args != nil {
-				for i := range args.Len() {
-					walk(args.At(i))
-				}
-			}
-		case *types.Pointer:
-			walk(u.Elem())
-		case *types.Slice:
-			walk(u.Elem())
-		case *types.Array:
-			walk(u.Elem())
-		case *types.Chan:
-			walk(u.Elem())
-		case *types.Map:
-			walk(u.Key())
-			walk(u.Elem())
-		case *types.Signature:
-			walk(u.Params())
-			walk(u.Results())
-		case *types.Tuple:
-			for i := range u.Len() {
-				walk(u.At(i).Type())
-			}
-		case *types.Struct:
-			for i := range u.NumFields() {
-				walk(u.Field(i).Type())
-			}
-		}
-	}
-	walk(t)
-	return out.String()
-}
-
-// stripNames gives the type with no parameter name inside a function type.
-//
-// A type assertion compares the name of a descriptor, and 2 texts of 1
-// function type must stay equal. The text of a declared signature holds the
-// parameter names, and the text of an assertion target holds none.
-func stripNames(t types.Type) types.Type {
+func (e *emitter) identityType(t types.Type) types.Type {
 	switch u := types.Unalias(t).(type) {
 	case *types.Basic:
-		// byte and uint8 name 1 type, and so do rune and int32. The test of
-		// a type compares the name, thus the name comes from the kind.
 		return types.Typ[u.Kind()]
 	case *types.Signature:
 		params := make([]*types.Var, u.Params().Len())
 		for i := range params {
-			params[i] = types.NewVar(token.NoPos, nil, "", stripNames(u.Params().At(i).Type()))
+			params[i] = types.NewVar(token.NoPos, nil, "", e.identityType(u.Params().At(i).Type()))
 		}
 		results := make([]*types.Var, u.Results().Len())
 		for i := range results {
-			results[i] = types.NewVar(token.NoPos, nil, "", stripNames(u.Results().At(i).Type()))
+			results[i] = types.NewVar(token.NoPos, nil, "", e.identityType(u.Results().At(i).Type()))
 		}
 		return types.NewSignatureType(nil, nil, nil,
 			types.NewTuple(params...), types.NewTuple(results...), u.Variadic())
 	case *types.Pointer:
-		return types.NewPointer(stripNames(u.Elem()))
+		return types.NewPointer(e.identityType(u.Elem()))
 	case *types.Slice:
-		return types.NewSlice(stripNames(u.Elem()))
+		return types.NewSlice(e.identityType(u.Elem()))
 	case *types.Array:
-		return types.NewArray(stripNames(u.Elem()), u.Len())
+		return types.NewArray(e.identityType(u.Elem()), u.Len())
 	case *types.Map:
-		return types.NewMap(stripNames(u.Key()), stripNames(u.Elem()))
+		return types.NewMap(e.identityType(u.Key()), e.identityType(u.Elem()))
 	case *types.Chan:
-		return types.NewChan(u.Dir(), stripNames(u.Elem()))
-	case *types.Named:
-		// An alias inside a type argument also names its target. `List[any]`
-		// and `List[interface{}]` name 1 Go type, thus the 2 texts must agree.
-		if args := u.TypeArgs(); args != nil && args.Len() > 0 {
-			list := make([]types.Type, args.Len())
-			same := true
-			for i := range list {
-				list[i] = stripNames(args.At(i))
-				same = same && list[i] == args.At(i)
-			}
-			if !same {
-				if inst, err := types.Instantiate(nil, u.Origin(), list, false); err == nil {
-					return inst
-				}
-			}
+		return types.NewChan(u.Dir(), e.identityType(u.Elem()))
+	case *types.Struct:
+		fields := make([]*types.Var, u.NumFields())
+		tags := make([]string, u.NumFields())
+		for i := range fields {
+			f := u.Field(i)
+			fields[i] = types.NewField(token.NoPos, f.Pkg(), f.Name(), e.identityType(f.Type()), f.Embedded())
+			tags[i] = u.Tag(i)
 		}
-		return u
+		return types.NewStruct(fields, tags)
+	case *types.Named:
+		name := u.Obj().Name()
+		if args := u.TypeArgs(); args.Len() > 0 {
+			list := make([]string, args.Len())
+			for i := range list {
+				list[i] = e.typeName(args.At(i))
+			}
+			name += "[" + strings.Join(list, ", ") + "]"
+		}
+		if e.cfg.Fset != nil && isLocalType(u.Obj()) {
+			p := e.cfg.Fset.Position(u.Obj().Pos())
+			name += fmt.Sprintf("·%d_%d", p.Line, p.Column)
+		}
+		// Identity text reads the name, never the placeholder underlying type.
+		obj := types.NewTypeName(token.NoPos, u.Obj().Pkg(), name, nil)
+		return types.NewNamed(obj, types.Typ[types.Int], nil)
 	}
 	return types.Unalias(t)
 }
