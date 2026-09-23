@@ -17,7 +17,7 @@ func TestTrimPathAndRelocatedCache(t *testing.T) {
 	second := t.TempDir()
 	for _, dir := range []string{first, second} {
 		writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/paths\n\ngo 1.27\n")
-		writeFile(t, filepath.Join(dir, "main.go"), "package main\nfunc main() { println(1) }\n//line virtual.go:70\nfunc other() { println(2) }\n")
+		writeFile(t, filepath.Join(dir, "main.go"), "package main\nfunc main() { type Local int; var value any = Local(1); println(value) }\n//line virtual.go:70\nfunc other() { println(2) }\n")
 	}
 	opt := driver.Options{Dir: first, Patterns: []string{"./..."}, Out: t.TempDir()}
 	build := func() (*driver.Stats, string) {
@@ -50,6 +50,10 @@ func TestTrimPathAndRelocatedCache(t *testing.T) {
 	if len(trimmed.Compiled) == 0 || strings.Contains(short, second) || !strings.Contains(short, "example.com/paths/main.go") {
 		t.Fatalf("trimpath retained absolute paths: %s", short)
 	}
+	trimmedCode, err := os.ReadFile(filepath.Join(opt.Out, "bin", "main.dart"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	opt.Dir = first
 	cached, same := build()
 	if len(cached.Compiled) != 0 || same != short {
@@ -59,6 +63,13 @@ func TestTrimPathAndRelocatedCache(t *testing.T) {
 	_, rebuilt := build()
 	if rebuilt != short {
 		t.Fatal("trimmed source maps differ across checkouts")
+	}
+	rebuiltCode, err := os.ReadFile(filepath.Join(opt.Out, "bin", "main.dart"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(trimmedCode, rebuiltCode) {
+		t.Fatal("trimmed code differs across checkouts")
 	}
 	manifest, err := os.ReadFile(filepath.Join(opt.Out, "pubspec.yaml"))
 	if err != nil {

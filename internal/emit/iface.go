@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/token"
 	"go/types"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -82,8 +83,13 @@ func (e *emitter) descName(obj *types.TypeName, pointer bool) string {
 	if obj.Parent() == nil || obj.Parent() == obj.Pkg().Scope() || e.cfg.Fset == nil {
 		return out
 	}
-	p := e.cfg.Fset.Position(obj.Pos())
-	return fmt.Sprintf("%s$%d_%d", out, p.Line, p.Column)
+	return out + "$" + e.localPosition(obj.Pos())
+}
+
+func (e *emitter) localPosition(pos token.Pos) string {
+	// Line directives can reuse a position. Identity uses the physical file.
+	p := e.cfg.Fset.PositionFor(pos, false)
+	return fmt.Sprintf("%s_%d_%d", hex.EncodeToString([]byte(filepath.Base(p.Filename))), p.Line, p.Column)
 }
 
 // isInstance reports whether the named type is an instance of a generic type.
@@ -1266,8 +1272,7 @@ func (e *emitter) identityType(t types.Type) types.Type {
 			name += "[" + strings.Join(list, ", ") + "]"
 		}
 		if e.cfg.Fset != nil && isLocalType(u.Obj()) {
-			p := e.cfg.Fset.Position(u.Obj().Pos())
-			name += fmt.Sprintf("·%d_%d", p.Line, p.Column)
+			name += "·" + e.localPosition(u.Obj().Pos())
 		}
 		// Identity text reads the name, never the placeholder underlying type.
 		obj := types.NewTypeName(token.NoPos, u.Obj().Pkg(), name, nil)
