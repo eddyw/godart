@@ -1256,10 +1256,8 @@ Function _bindMethod(TypeDesc sig, Function fn, Object? recv) => _typedFunc(
 
 /// _typedFunc builds a closure of the Dart type of a function type.
 ///
-/// The body reads a list of the raw arguments and gives a list of the raw
-/// results. A signature that carries no factory gives a closure of Object?
-/// parameters, and an assertion of that value to a function type with a result
-/// fails.
+/// The body receives raw arguments and returns raw results. Without an emitted
+/// bind factory, result descriptors supply the Dart result types.
 Function _typedFunc(TypeDesc sig, List<Object?> Function(List<Object?>) body) {
   final Function Function(List<Object?> Function(List<Object?>))? bind =
       sig.bind;
@@ -1291,17 +1289,27 @@ Function _typedResultFunc(
     case 1:
       return _withType<Function>(
         rs[0](),
-        <A>() => _arityFunc<A>((List<Object?> a) => body(a)[0] as A, arity),
+        <A>() => _arityFunc<A>(
+          (List<Object?> a) => $resumeReflect<A>(
+            body(a),
+            (Object? out) => (out as List<Object?>)[0] as A,
+            _zeroOf(rs[0]()) as A,
+          ),
+          arity,
+        ),
       );
     case 2:
       return _withType<Function>(
         rs[0](),
         <A>() => _withType<Function>(
           rs[1](),
-          <B>() => _arityFunc<(A, B)>((List<Object?> a) {
-            final List<Object?> o = body(a);
-            return (o[0] as A, o[1] as B);
-          }, arity),
+          <B>() => _arityFunc<(A, B)>(
+            (List<Object?> a) => $resumeReflect<(A, B)>(body(a), (Object? out) {
+              final List<Object?> o = out as List<Object?>;
+              return (o[0] as A, o[1] as B);
+            }, (_zeroOf(rs[0]()) as A, _zeroOf(rs[1]()) as B)),
+            arity,
+          ),
         ),
       );
     case 3:
@@ -1311,10 +1319,21 @@ Function _typedResultFunc(
           rs[1](),
           <B>() => _withType<Function>(
             rs[2](),
-            <C>() => _arityFunc<(A, B, C)>((List<Object?> a) {
-              final List<Object?> o = body(a);
-              return (o[0] as A, o[1] as B, o[2] as C);
-            }, arity),
+            <C>() => _arityFunc<(A, B, C)>(
+              (List<Object?> a) => $resumeReflect<(A, B, C)>(
+                body(a),
+                (Object? out) {
+                  final List<Object?> o = out as List<Object?>;
+                  return (o[0] as A, o[1] as B, o[2] as C);
+                },
+                (
+                  _zeroOf(rs[0]()) as A,
+                  _zeroOf(rs[1]()) as B,
+                  _zeroOf(rs[2]()) as C,
+                ),
+              ),
+              arity,
+            ),
           ),
         ),
       );
@@ -1327,10 +1346,22 @@ Function _typedResultFunc(
             rs[2](),
             <C>() => _withType<Function>(
               rs[3](),
-              <D>() => _arityFunc<(A, B, C, D)>((List<Object?> a) {
-                final List<Object?> o = body(a);
-                return (o[0] as A, o[1] as B, o[2] as C, o[3] as D);
-              }, arity),
+              <D>() => _arityFunc<(A, B, C, D)>(
+                (List<Object?> a) => $resumeReflect<(A, B, C, D)>(
+                  body(a),
+                  (Object? out) {
+                    final List<Object?> o = out as List<Object?>;
+                    return (o[0] as A, o[1] as B, o[2] as C, o[3] as D);
+                  },
+                  (
+                    _zeroOf(rs[0]()) as A,
+                    _zeroOf(rs[1]()) as B,
+                    _zeroOf(rs[2]()) as C,
+                    _zeroOf(rs[3]()) as D,
+                  ),
+                ),
+                arity,
+              ),
             ),
           ),
         ),
@@ -1430,25 +1461,13 @@ Object? _onlyResult(List<Object?> out) => out.length == 1 ? out[0] : out;
 /// A func value of a function type. Each call of it runs the body with the
 /// arguments, and the results of the body become the results of the call.
 ///
-/// The description of the signature carries the factory of the Dart type, thus
-/// the value fits a location of its Go function type. A function type that the
-/// program never names holds no such factory, and MakeFunc of it panics.
+/// The signature supplies a typed bind factory when the compiler emits one.
+/// Runtime-created signatures use their result descriptors.
 Iface? $makeFunc(int handle, Object? body) {
   final TypeDesc desc = _typeAt(handle);
   if (desc.kind != 'func') {
     $panic(
       Iface($typeGoError, GoError('reflect: MakeFunc of ${desc.display}')),
-    );
-  }
-  if (desc.bind == null) {
-    $panic(
-      Iface(
-        $typeGoError,
-        GoError(
-          'reflect: MakeFunc of ${desc.display}, a type that the '
-          'program never names',
-        ),
-      ),
     );
   }
   final Function run = body! as Function;
@@ -1768,11 +1787,7 @@ int $sliceOf(int elem) {
 
 /// A handle of the function type of a parameter list and a result list.
 ///
-/// The Dart type of a function holds the type of each parameter, and that
-/// type lives only in the emitted code. A signature that the program already
-/// names thus gives its own descriptor, with its bind factory. A signature
-/// that no code names gives a descriptor with no bind, and reflect.MakeFunc
-/// of it panics with the cause.
+/// An existing signature retains its descriptor and typed bind factory.
 int $funcOf(Slice<GoInt> params, Slice<GoInt> results, bool variadic) {
   final List<TypeDesc Function()> input = <TypeDesc Function()>[];
   for (int i = 0; i < params.len; i++) {
