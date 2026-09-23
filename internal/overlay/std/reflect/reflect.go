@@ -1323,7 +1323,6 @@ func validFieldName(name string) bool {
 }
 
 // StructOf returns the struct type with the supplied fields.
-// StructOf rejects embedded fields with methods.
 func StructOf(fields []StructField) Type {
 	names := make([]string, len(fields))
 	packages := make([]string, len(fields))
@@ -1355,8 +1354,10 @@ func StructOf(fields []StructField) Type {
 		} else if packagePath != f.PkgPath {
 			panic("reflect.StructOf: fields with different PkgPath " + packagePath + " and " + f.PkgPath)
 		}
-		if f.Anonymous && f.Type.NumMethod() > 0 {
-			panic("reflect.StructOf: the embedded field " + f.Name + " holds a method")
+		if f.Anonymous {
+			if err := dart.EmbeddedFieldError(f.Type.handle(), i, len(fields)); err != "" {
+				panic(err)
+			}
 		}
 		if f.Name != "_" && seen[f.Name] {
 			panic("reflect.StructOf: duplicate field " + f.Name)

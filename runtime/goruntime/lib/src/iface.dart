@@ -41,6 +41,15 @@ final class FieldDesc {
   });
 }
 
+final class ReflectedMethod {
+  final String key;
+  final String pkg;
+  final TypeDesc Function()? type;
+  final Object? Function(Iface, List<Object?>) invoke;
+
+  const ReflectedMethod(this.key, this.pkg, this.type, this.invoke);
+}
+
 /// The run time description of a Go type.
 ///
 /// The name holds the full Go name of the type, for example
@@ -65,10 +74,14 @@ final class TypeDesc {
   /// Receiver access for promoted methods of embedded interfaces.
   final Map<String, Iface? Function(Object?)> forwardMethods;
 
-  /// The function type of each exported method, under the key of the method.
+  /// The function type of each method, under its method key.
   /// The package reflect reads it, and each other path reads only [methods].
   final Map<String, TypeDesc Function()> methodTypes;
+  final String methodPkg;
   final List<FieldDesc> fields;
+
+  /// Runtime-created structs can expose duplicate method entries.
+  final List<ReflectedMethod>? reflectionMethods;
 
   /// The element type of a slice, an array, a pointer, a channel, or a map.
   final TypeDesc Function()? elem;
@@ -146,8 +159,10 @@ final class TypeDesc {
     this.text = '',
     this.assertionPkg = '',
     this.methodTypes = const <String, TypeDesc Function()>{},
+    this.methodPkg = '',
     this.forwardMethods = const <String, Iface? Function(Object?)>{},
     this.fields = const <FieldDesc>[],
+    this.reflectionMethods,
     this.elem,
     this.key,
     this.length = 0,

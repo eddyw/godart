@@ -505,6 +505,11 @@ func DescMethodFunc(handle, index int) any {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// EmbeddedFieldError gives the error for an invalid reflected embedded field.
+func EmbeddedFieldError(handle, index, count int) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // StructOf gives a handle of the struct type that a list of fields builds. The
 // lists hold each field name, package path, tag, type handle, and embedded mark.
 func StructOf(names, packages, tags []string, types []int, anon []bool) int {

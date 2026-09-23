@@ -189,13 +189,13 @@ func (e *emitter) freshPointer(t types.Type) string {
 	return fmt.Sprintf("Box<%s>(%s)", e.dartType(t), e.zero(t))
 }
 
-// Interface method metadata includes unexported signatures for reflection.
+// Runtime-created structs can expose unexported method signatures.
 func (e *emitter) methodTypeTable(t types.Type) string {
 	set := types.NewMethodSet(t)
 	entries := make([]string, 0, set.Len())
 	for i := 0; i < set.Len(); i++ {
 		fn, ok := set.At(i).Obj().(*types.Func)
-		if !ok || !fn.Exported() && !isInterfaceType(t) {
+		if !ok {
 			continue
 		}
 		if o, ok := fn.Type().(*types.Signature); ok &&
@@ -220,7 +220,7 @@ func (e *emitter) methodTypeTable(t types.Type) string {
 // descParts writes the fields of a struct type, and the element type and the
 // key type of a container type.
 func (e *emitter) descParts(t types.Type) string {
-	out := e.descShape(t) + withTypePart(e, t) + assertionPackagePart(t)
+	out := e.descShape(t) + withTypePart(e, t) + assertionPackagePart(t) + methodPackagePart(t)
 	if _, ok := types.Unalias(t).Underlying().(*types.Struct); ok {
 		class := e.dartType(t)
 		if class != "Object?" {

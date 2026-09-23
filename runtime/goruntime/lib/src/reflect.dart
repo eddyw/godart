@@ -1,3 +1,8 @@
+// This file includes code derived from the Go reflect package.
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of the Go-derived portions is governed by the BSD-style
+// license in ../../LICENSE.
+
 /// The intrinsics of the package reflect.
 ///
 /// A Go value of an interface type is an Iface: a type descriptor and the value
@@ -718,6 +723,7 @@ TypeDesc $ptrDesc(TypeDesc elem) {
     methods,
     text: '*${elem.display}',
     assertionPkg: methods.isEmpty ? '' : elem.assertionPkg,
+    methodPkg: _unnamedType(elem.display) ? '' : elem.methodPkg,
     elem: () => elem,
     methodTypes: elem.kind == 'ptr' || elem.kind == 'interface'
         ? const <String, TypeDesc Function()>{}
@@ -1017,27 +1023,48 @@ Object? _field(Object? record, int index, int count) {
   );
 }
 
-/// Interface reflection includes unexported methods.
-/// Concrete types expose only exported methods.
-List<String> _reflectMethodKeys(TypeDesc desc) {
-  final List<String> keys = <String>[];
-  for (final String key in desc.methods.keys) {
-    final int cut = key.indexOf('(');
-    final String name = cut < 0 ? key : key.substring(0, cut);
-    if (name.isEmpty) continue;
-    final String first = name[0];
-    if (desc.kind == 'interface' ||
-        !name.contains('.') &&
-            first.toUpperCase() == first &&
-            first.toLowerCase() != first) {
-      keys.add(key);
-    }
-  }
+List<ReflectedMethod> _reflectedMethods(
+  TypeDesc desc, {
+  bool includePrivate = false,
+}) {
+  if (desc.reflectionMethods != null) return desc.reflectionMethods!;
+  final keys = desc.methods.keys
+      .where(
+        (key) =>
+            includePrivate ||
+            desc.kind == 'interface' ||
+            _methodPackage(key).isEmpty,
+      )
+      .toList();
   keys.sort((a, b) {
-    final int order = _methodName(a).compareTo(_methodName(b));
-    return order == 0 ? a.compareTo(b) : order;
+    final ap = _methodPackage(a), bp = _methodPackage(b);
+    if (ap.isEmpty != bp.isEmpty) return ap.isEmpty ? -1 : 1;
+    final order = $compare(
+      GoString.fromString(_methodName(a)),
+      GoString.fromString(_methodName(b)),
+    );
+    return order == 0
+        ? $compare(GoString.fromString(ap), GoString.fromString(bp))
+        : order;
   });
-  return keys;
+  return <ReflectedMethod>[
+    for (final key in keys)
+      ReflectedMethod(
+        key,
+        desc.assertionPkg == 'main' && _methodPackage(key) == desc.methodPkg
+            ? 'main'
+            : _methodPackage(key),
+        desc.methodTypes[key],
+        (Iface value, List<Object?> args) => $call(value, key, args),
+      ),
+  ];
+}
+
+String _methodPackage(String key) {
+  final int cut = key.indexOf('(');
+  final String name = cut < 0 ? key : key.substring(0, cut);
+  final int dot = name.lastIndexOf('.');
+  return dot < 0 ? '' : name.substring(0, dot);
 }
 
 String _methodName(String key) {
@@ -1047,7 +1074,7 @@ String _methodName(String key) {
 }
 
 /// The method count for reflection.
-int $descNumMethod(int handle) => _reflectMethodKeys(_typeAt(handle)).length;
+int $descNumMethod(int handle) => _reflectedMethods(_typeAt(handle)).length;
 
 /// A handle of the function type of 1 reflected method of a type. A method that
 /// carries no type gives 0.
@@ -1056,9 +1083,9 @@ int $descNumMethod(int handle) => _reflectMethodKeys(_typeAt(handle)).length;
 /// concrete type, and it writes no receiver for a method of an interface type.
 int $descMethodType(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
-  final List<String> keys = _reflectMethodKeys(desc);
-  if (index < 0 || index >= keys.length) return 0;
-  final TypeDesc Function()? type = desc.methodTypes[keys[index]];
+  final methods = _reflectedMethods(desc);
+  if (index < 0 || index >= methods.length) return 0;
+  final TypeDesc Function()? type = methods[index].type;
   if (type == null) return 0;
   final TypeDesc sig = type();
   if (desc.kind == 'interface') return _descHandle(sig);
@@ -1067,16 +1094,11 @@ int $descMethodType(int handle, int index) {
 
 /// The func value of 1 exported method of a type, with the receiver in front of
 /// each parameter. A type of an interface holds no such value, exactly as in Go.
-///
-/// The closure reads the adapter of the method table, and that adapter already
-/// takes the receiver first. The signature carries no factory of a Dart type,
-/// thus Call of the value works and an assertion of it to its function type
-/// fails.
 Iface? $descMethodFunc(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
   if (desc.kind == 'interface') return null;
-  final List<String> keys = _reflectMethodKeys(desc);
-  if (index < 0 || index >= keys.length) {
+  final methods = _reflectedMethods(desc);
+  if (index < 0 || index >= methods.length) {
     $panic(
       Iface(
         $typeGoError,
@@ -1084,10 +1106,10 @@ Iface? $descMethodFunc(int handle, int index) {
       ),
     );
   }
-  final String key = keys[index];
-  final Function? fn = desc.methods[key];
-  final TypeDesc Function()? type = desc.methodTypes[key];
-  if (fn == null || type == null) {
+  final method = methods[index];
+  final String key = method.key;
+  final TypeDesc Function()? type = method.type;
+  if (type == null) {
     $panic(
       Iface(
         $typeGoError,
@@ -1100,15 +1122,15 @@ Iface? $descMethodFunc(int handle, int index) {
     full,
     _typedFunc(
       full,
-      (List<Object?> args) => _resultList(full, Function.apply(fn, args)),
+      (List<Object?> args) => $resumeReflect<List<Object?>>(
+        method.invoke(Iface(desc, args[0]), args.sublist(1)),
+        (Object? out) => _resultList(full, out),
+        <Object?>[],
+      ),
     ),
   );
 }
 
-/// _withReceiver gives the function type of a method of a concrete type.
-///
-/// The type carries no factory of its Dart type, because no call reads it. Go
-/// holds such a call under Method.Func, and that name stays out.
 TypeDesc _withReceiver(TypeDesc recv, TypeDesc sig) => TypeDesc(
   _funcText(recv.name, sig, (TypeDesc d) => d.name),
   'func',
@@ -1184,8 +1206,8 @@ void $valueClear(Iface? value) {
 /// The method name at index in reflection order.
 GoString $descMethodName(int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
-  final List<String> keys = _reflectMethodKeys(desc);
-  if (index < 0 || index >= keys.length) {
+  final methods = _reflectedMethods(desc);
+  if (index < 0 || index >= methods.length) {
     $panic(
       Iface(
         $typeGoError,
@@ -1193,22 +1215,17 @@ GoString $descMethodName(int handle, int index) {
       ),
     );
   }
-  return GoString.fromString(_methodName(keys[index]));
+  return GoString.fromString(_methodName(methods[index].key));
 }
 
-GoString $descMethodPkgPath(int handle, int index) {
-  final String key = _reflectMethodKeys(_typeAt(handle))[index];
-  final int cut = key.indexOf('(');
-  final String name = cut < 0 ? key : key.substring(0, cut);
-  final int dot = name.lastIndexOf('.');
-  return GoString.fromString(dot < 0 ? '' : name.substring(0, dot));
-}
+GoString $descMethodPkgPath(int handle, int index) =>
+    GoString.fromString(_reflectedMethods(_typeAt(handle))[index].pkg);
 
 /// Binds the method at index in the static type to the dynamic value.
 Iface? $methodValue(Iface? value, int handle, int index) {
   final TypeDesc desc = _typeAt(handle);
-  final List<String> keys = _reflectMethodKeys(desc);
-  if (index < 0 || index >= keys.length) {
+  final methods = _reflectedMethods(desc);
+  if (index < 0 || index >= methods.length) {
     $panic(
       Iface(
         $typeGoError,
@@ -1224,12 +1241,10 @@ Iface? $methodValue(Iface? value, int handle, int index) {
       ),
     );
   }
-  final String key = keys[index];
-  final Function? fn = value.desc.methods[key];
-  final TypeDesc Function()? type = desc.kind == 'interface'
-      ? desc.methodTypes[key]
-      : value.desc.methodTypes[key];
-  if (fn == null || type == null) {
+  final method = methods[index];
+  final String key = method.key;
+  final TypeDesc Function()? type = method.type;
+  if (type == null) {
     $panic(
       Iface(
         $typeGoError,
@@ -1241,7 +1256,7 @@ Iface? $methodValue(Iface? value, int handle, int index) {
   return Iface(
     sig,
     $functionValue(
-      _bindMethod(sig, fn, value.value),
+      _bindMethod(sig, method, value),
       GoString.fromString('reflect.methodValueCall||0'),
     ),
   );
@@ -1253,14 +1268,15 @@ Iface? $methodValue(Iface? value, int handle, int index) {
 /// because the signature description holds a factory for the exact Dart type.
 /// A Go program that asserts the value to its function type then reads the
 /// result.
-Function _bindMethod(TypeDesc sig, Function fn, Object? recv) => _typedFunc(
-  sig,
-  (List<Object?> args) => $resumeReflect<List<Object?>>(
-    Function.apply(fn, <Object?>[recv, ...args]),
-    (Object? out) => _resultList(sig, out),
-    <Object?>[],
-  ),
-);
+Function _bindMethod(TypeDesc sig, ReflectedMethod method, Iface value) =>
+    _typedFunc(
+      sig,
+      (List<Object?> args) => $resumeReflect<List<Object?>>(
+        method.invoke(value, args),
+        (Object? out) => _resultList(sig, out),
+        <Object?>[],
+      ),
+    );
 
 /// _typedFunc builds a closure of the Dart type of a function type.
 ///
@@ -1675,6 +1691,49 @@ void $mapSet(Iface? target, Iface? key, Iface? value, bool drop) {
   m.set(k, elem?.kind == 'interface' ? value : value?.value);
 }
 
+GoString $embeddedFieldError(int handle, int index, int count) {
+  final TypeDesc type = _typeAt(handle);
+  String error = '';
+  final bool named = !_unnamedType(type.display) && type.methodPkg.isNotEmpty;
+  if (type.kind == 'ptr' &&
+      (type.elem!().kind == 'ptr' || type.elem!().kind == 'interface')) {
+    error = 'reflect.StructOf: illegal embedded field type ${type.display}';
+  } else if (type.kind != 'interface') {
+    if (index > 0 && type.methods.isNotEmpty) {
+      error = 'reflect: embedded type with methods not implemented if type is not first field';
+    } else if (count > 1 && (named || type.methods.isNotEmpty)) {
+      if (type.kind == 'ptr') {
+        error = 'reflect: embedded type with methods not implemented if there is more than one field';
+      } else if (_directInterface(type)) {
+        error = 'reflect: embedded type with methods not implemented for non-pointer type';
+      }
+    }
+  }
+  if (error.isEmpty &&
+      type.methods.keys.any(
+        (key) =>
+            _methodPackage(key).isNotEmpty &&
+            _methodPackage(key) != type.methodPkg,
+      )) {
+    error =
+        'reflect: embedded interface with unexported method(s) not implemented';
+  }
+  return GoString.fromString(error);
+}
+
+bool _directInterface(TypeDesc type) {
+  switch (type.kind) {
+    case 'ptr' || 'unsafe.Pointer' || 'map' || 'chan' || 'func':
+      return true;
+    case 'array':
+      return type.length == 1 && _directInterface(type.elem!());
+    case 'struct':
+      return $typeSize(type) == $gi(8) &&
+          type.fields.any((field) => _directInterface(field.type()));
+  }
+  return false;
+}
+
 /// A handle of a struct type that a list of fields builds.
 ///
 /// A program that already names the shape gives its own description, with the
@@ -1721,11 +1780,96 @@ int $structOf(
   }
   key.write('}');
   if (n > 0) show.write(' }');
-  return _syntheticHandle(
-    () => TypeDesc(
+  return _syntheticHandle(() {
+    final methods = <String, Function>{};
+    final methodTypes = <String, TypeDesc Function()>{};
+    final forwards = <String, Iface? Function(Object?)>{};
+    final reflected = <ReflectedMethod>[];
+    for (int i = 0; i < n; i++) {
+      if (!anon[i]) continue;
+      final elem = types[i];
+      Object? invoke(Iface value, ReflectedMethod method, List<Object?> args) {
+        if (elem.kind == 'interface') {
+          $panic(
+            Iface(
+              $typeString,
+              GoString.fromString(
+                'reflect: StructOf does not support methods of embedded interfaces',
+              ),
+            ),
+          );
+        }
+        return method.invoke(
+          Iface(elem, (value.value as List<Object?>)[i]),
+          args,
+        );
+      }
+
+      for (final method in _reflectedMethods(elem, includePrivate: true)) {
+        reflected.add(
+          ReflectedMethod(
+            method.key,
+            '',
+            method.type,
+            (Iface value, List<Object?> args) => invoke(value, method, args),
+          ),
+        );
+        if (_methodPackage(method.key).isNotEmpty) continue;
+        methods.putIfAbsent(method.key, () => $ifaceMethod);
+        methodTypes.putIfAbsent(method.key, () => method.type!);
+        forwards.putIfAbsent(
+          method.key,
+          () => (Object? value) {
+            if (elem.kind == 'interface') {
+              $panic(
+                Iface(
+                  $typeString,
+                  GoString.fromString(
+                    'reflect: StructOf does not support methods of embedded interfaces',
+                  ),
+                ),
+              );
+            }
+            return Iface(elem, (value as List<Object?>)[i]);
+          },
+        );
+      }
+      if (elem.kind == 'ptr') {
+        for (final method in _reflectedMethods(
+          elem.elem!(),
+          includePrivate: true,
+        )) {
+          reflected.add(
+            ReflectedMethod(
+              method.key,
+              '',
+              method.type,
+              (Iface value, List<Object?> args) => $call(
+                Iface(elem, (value.value as List<Object?>)[i]),
+                method.key,
+                args,
+              ),
+            ),
+          );
+        }
+      }
+    }
+    late final TypeDesc desc;
+    desc = TypeDesc(
       key.toString(),
       'struct',
-      const <String, Function>{},
+      methods,
+      methodTypes: methodTypes,
+      forwardMethods: forwards,
+      reflectionMethods: reflected,
+      ptr: () => TypeDesc(
+        '*${key.toString()}',
+        'ptr',
+        const <String, Function>{},
+        text: '*${show.toString()}',
+        elem: () => desc,
+        zero: () => null,
+      ),
       text: show.toString(),
       fields: <FieldDesc>[
         for (int i = 0; i < n; i++)
@@ -1742,8 +1886,9 @@ int $structOf(
       ],
       comparable: types.every((TypeDesc t) => t.comparable),
       zero: () => <Object?>[for (int i = 0; i < n; i++) types[i].zero?.call()],
-    ),
-  );
+    );
+    return desc;
+  });
 }
 
 /// _quoteTag writes a struct tag in the form that go/types and reflect each
