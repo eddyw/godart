@@ -190,6 +190,7 @@ func TestSelectedUpstream(t *testing.T) {
 				"Tbigv", "Tbigv.M", "Tbigp", "Tbigp.M", "Tm1", "Tm2", "Tm3", "Tm4", "Tm4.M", "TestMethod5",
 				"unexp", "unexp.f", "unexp.g", "unexpI", "TestUnexportedMethods", "TestUnexported", "Private", "Private.m", "private", "private.P", "Public", "Public.M", "isNonNil", "isValid", "timp", "timp.W", "timp.Y", "timp.w", "timp.y", "TestCallPanic", "UnExportedFirst", "UnExportedFirst.ΦExported", "UnExportedFirst.unexported", "TestMethodByNameUnExportedFirst", "TestMethodPkgPath", "TestVariadicType",
 				"FuncDDD", "FuncDDD.M", "TestNumMethodOnDDD", "TestConvertSlice2Array",
+				"Recursive", "TestDeepEqualRecursiveStruct", "_Complex", "TestDeepEqualComplexStruct", "TestDeepEqualComplexStructInequality", "UnexpT", "TestDeepEqualUnexportedMap", "Basic", "NotBasic", "DeepEqualTest", "fn1", "fn2", "fn3", "self", "Loop", "Loopy", "loop1", "loop2", "loopy1", "loopy2", "cycleMap1", "cycleMap2", "cycleMap3", "structWithSelfPtr", "init", "deepEqualTests", "TestDeepEqual", "MyByte", "MyBytes", "Tscalar", "Tint64", "Tptr", "Tscalarptr", "Tptrscalar", "Tbigptrscalar",
 			}},
 		},
 		"time": {{Name: "format_test.go", Declarations: []string{"TimeFormatTest", "rfc3339Formats", "TestRFC3339Conversion", "FormatTest", "formatTests", "TestFormat", "goStringTests", "TestGoString", "TestFormatSingleDigits", "TestFormatShortYear", "TestNoonIs12PM", "TestMidnightIs12AM", "Test12PMIsNoon", "Test12AMIsMidnight"}}, {Name: "example_test.go"}, {Name: "time_test.go", Declarations: []string{

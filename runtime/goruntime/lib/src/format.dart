@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'box.dart';
@@ -259,64 +260,85 @@ const String _formatKey = 'Format(fmt.State,int32)';
 /// 2 values of 2 types are never equal. A slice, a map, a struct, an array, a
 /// pointer, and an interface each compare their parts, and each other kind
 /// compares with the equality of Go.
-bool $deepEqual(Iface? a, Iface? b) {
-  if (a == null || b == null) return a == null && b == null;
-  if (a.desc.name != b.desc.name) return false;
-  return _deepValue(a.value, b.value, a.desc);
-}
+bool $deepEqual(Iface? a, Iface? b) => _DeepComparison().interfaces(a, b);
 
-bool _deepValue(Object? x, Object? y, TypeDesc desc) {
-  switch (desc.kind) {
-    case 'slice':
-      if (x is! Slice || y is! Slice) return x == y;
-      if (x.isNil != y.isNil) return false;
-      if (x.$length != y.$length) return false;
-      if (x is $ZeroSlice || y is $ZeroSlice) return true;
-      final TypeDesc elem = desc.elem!();
-      for (var i = 0; i < x.len; i++) {
-        if (!_deepValue(x[i], y[i], elem)) return false;
-      }
-      return true;
-    case 'array':
-      if (x is! List || y is! List) return x == y;
-      if (x.length != y.length) return false;
-      final TypeDesc elem = desc.elem!();
-      for (var i = 0; i < x.length; i++) {
-        if (!_deepValue(x[i], y[i], elem)) return false;
-      }
-      return true;
-    case 'map':
-      if (x is! GoMap || y is! GoMap) return x == y;
-      if (x.isNil != y.isNil) return false;
-      if (x.length != y.length) return false;
-      final TypeDesc elem = desc.elem!();
-      final Slice<Object?> keys = x.keys() as Slice<Object?>;
-      for (var i = 0; i < keys.len; i++) {
-        final Object? key = keys[i];
-        if (!y.has(key)) return false;
-        if (!_deepValue(x.get(key), y.get(key), elem)) return false;
-      }
-      return true;
-    case 'struct':
-      if (x == null || y == null) return x == y;
-      for (final FieldDesc field in desc.fields) {
-        if (!_deepValue(field.get(x), field.get(y), field.type())) return false;
-      }
-      return true;
-    case 'ptr':
-      if (identical(x, y)) return true;
-      if (x == null || y == null) return false;
-      if (x is $Ptr<Object?> && y is $Ptr<Object?>) {
-        return _deepValue(x.v, y.v, desc.elem!());
-      }
-      return _deepValue(x, y, desc.elem!());
-    case 'interface':
-      return $deepEqual(x as Iface?, y as Iface?);
-    case 'func':
-      return x == null && y == null;
+final class _DeepComparison {
+  // Use identity because a struct key can contain a cycle.
+  final seen = HashMap<Object, Map<Object, Set<String>>>.identity();
+  bool interfaces(Iface? a, Iface? b) {
+    if (a == null || b == null) return a == null && b == null;
+    if (a.desc.name != b.desc.name) return false;
+    return values(a.value, b.value, a.desc);
   }
-  if (x is Iface || y is Iface) return $deepEqual(x as Iface?, y as Iface?);
-  return x == y;
+
+  bool values(Object? x, Object? y, TypeDesc desc) {
+    if (x != null &&
+        y != null &&
+        (desc.kind == 'ptr' || desc.kind == 'map' || desc.kind == 'slice')) {
+      final right = seen.putIfAbsent(
+        x,
+        () => HashMap<Object, Set<String>>.identity(),
+      );
+      if (!right.putIfAbsent(y, () => <String>{}).add(desc.name)) return true;
+    }
+    switch (desc.kind) {
+      case 'slice':
+        if (x is! Slice || y is! Slice) return x == y;
+        if (x.isNil != y.isNil) return false;
+        if (x.$length != y.$length) return false;
+        if (identical(x.array, y.array) && x.off == y.off) return true;
+        if (x is $ZeroSlice || y is $ZeroSlice) return true;
+        final TypeDesc elem = desc.elem!();
+        for (var i = 0; i < x.len; i++) {
+          if (!values(x[i], y[i], elem)) return false;
+        }
+        return true;
+      case 'array':
+        if (x is! List || y is! List) return x == y;
+        if (x.length != y.length) return false;
+        final TypeDesc elem = desc.elem!();
+        for (var i = 0; i < x.length; i++) {
+          if (!values(x[i], y[i], elem)) return false;
+        }
+        return true;
+      case 'map':
+        if (x is! GoMap || y is! GoMap) return x == y;
+        if (x.isNil != y.isNil) return false;
+        if (x.length != y.length) return false;
+        if (identical(x, y)) return true;
+        final TypeDesc elem = desc.elem!();
+        final Slice<Object?> keys = x.keys() as Slice<Object?>;
+        for (var i = 0; i < keys.len; i++) {
+          final Object? key = keys[i];
+          if (!y.has(key)) return false;
+          if (!values(x.get(key), y.get(key), elem)) return false;
+        }
+        return true;
+      case 'struct':
+        if (x == null || y == null) return x == y;
+        for (final FieldDesc field in desc.fields) {
+          if (!values(field.get(x), field.get(y), field.type())) return false;
+        }
+        return true;
+      case 'ptr':
+        if (identical($pointerOwner(x), $pointerOwner(y))) return true;
+        if (x is $Ref<Object?, Object?> &&
+            y is $Ref<Object?, Object?> &&
+            x == y)
+          return true;
+        if (x == null || y == null) return false;
+        if (x is $Ptr<Object?> && y is $Ptr<Object?>) {
+          return values(x.v, y.v, desc.elem!());
+        }
+        return values(x, y, desc.elem!());
+      case 'interface':
+        return interfaces(x as Iface?, y as Iface?);
+      case 'func':
+        return x == null && y == null;
+    }
+    if (x is Iface || y is Iface) return interfaces(x as Iface?, y as Iface?);
+    return x == y;
+  }
 }
 
 /// The text of the String method of the zero value of the type of a value. The

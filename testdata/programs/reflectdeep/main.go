@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 )
 
@@ -74,6 +75,35 @@ func main() {
 		D func()
 	}).A
 	fmt.Println(c1 == c2, c1 == nil, c2 == nil)
+
+	{
+		type taggedA struct {
+			X float64 `a:"x"`
+		}
+		type taggedB struct {
+			X float64 `b:"x"`
+		}
+		x := taggedA{math.NaN()}
+		fmt.Println(reflect.DeepEqual(&x.X, &x.X))
+		y := taggedA{math.NaN()}
+		fmt.Println(reflect.DeepEqual(&x.X, &y.X))
+		b := (*taggedB)(&x)
+		fmt.Println(reflect.DeepEqual(&x.X, &b.X))
+		fmt.Println(reflect.DeepEqual(b, (*taggedB)(&x)))
+		a := [2]float64{math.NaN(), 1}
+		s := a[:]
+		fmt.Println(reflect.DeepEqual(&a[0], &s[0]))
+		fmt.Println(reflect.DeepEqual(s[:1], s[:1]))
+		fmt.Println(reflect.DeepEqual(s[:1], s[1:]))
+		cycle := make([]any, 1)
+		cycle[0] = cycle
+		other := make([]any, 1)
+		other[0] = other
+		fmt.Println(reflect.DeepEqual(cycle, other))
+		other[0] = nil
+		fmt.Println(reflect.DeepEqual(cycle, other))
+		fmt.Println("complete")
+	}
 }
 
 var table = []struct {
