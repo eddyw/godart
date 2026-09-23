@@ -388,7 +388,12 @@ func (e *emitter) receiver(f *ir.Func) {
 		e.line("%s %s = this;", e.dartType(f.Recv.Type), f.Recv.Name)
 		return
 	}
-	e.line("%s %s = this.$copy();", e.dartType(f.Recv.Type), f.Recv.Name)
+	receiver := e.dartType(f.Recv.Type)
+	// The Dart class uses the declaration's parameter names.
+	if named := namedOf(f.Recv.Type); named.TypeParams().Len() > 0 {
+		receiver = e.className(named.Obj()) + e.typeParamArgs(typeParamsOf(named.TypeParams()))
+	}
+	e.line("%s %s = this.$copy();", receiver, f.Recv.Name)
 }
 
 func (e *emitter) funcDecl(f *ir.Func) {
