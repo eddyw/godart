@@ -33,7 +33,33 @@ func second() reflect.Type {
 	return reflect.TypeOf((func(Local))(nil))
 }
 
+func localGeneric[A, B any](a A, b B) {
+	type Local struct {
+		A A
+		B B
+	}
+	value := Local{a, b}
+	typ := reflect.TypeOf(value)
+	same("generic local pointer", reflect.PointerTo(typ), (*Local)(nil))
+	same("generic local slice", reflect.SliceOf(typ), []Local(nil))
+	same("generic local channel", reflect.ChanOf(reflect.BothDir, typ), chan Local(nil))
+	same("generic local function", reflect.FuncOf([]reflect.Type{typ}, []reflect.Type{typ}, false), (func(Local) Local)(nil))
+	pointer := reflect.New(typ).Interface().(*Local)
+	*pointer = value
+	fmt.Println("generic local value", pointer.A, pointer.B)
+	var ch chan Local
+	fmt.Println("generic local nil channel", ch == nil)
+	ch = make(chan Local, 1)
+	ch <- value
+	fmt.Println("generic local channel value", <-ch)
+	close(ch)
+	zero, ok := <-ch
+	fmt.Println("generic local channel zero", zero, ok)
+}
+
 func main() {
+	localGeneric(7, "text")
+	localGeneric("value", false)
 	type Local int
 	t := reflect.TypeOf(Local(0))
 	same("direct function", reflect.FuncOf([]reflect.Type{t}, nil, false), (func(Local))(nil))

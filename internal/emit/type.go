@@ -283,6 +283,9 @@ func (e *emitter) zero(t types.Type) string {
 		return fmt.Sprintf("GoMap<%s, %s>.nil(%s%s)",
 			e.dartType(u.Key()), e.dartType(u.Elem()), e.cycleZeroFunc(u.Elem()), e.mapKeyOptions(u))
 	case *types.Chan:
+		if hasOuterType(u.Elem()) {
+			return fmt.Sprintf("Chan<%s>.nil(%s.zero)", e.dartType(u.Elem()), e.dictOf(u.Elem()))
+		}
 		if !holdsTypeParam(u.Elem()) {
 			return e.nilChan(u.Elem())
 		}

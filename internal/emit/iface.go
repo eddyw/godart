@@ -1375,7 +1375,8 @@ func (e *emitter) typeNameText(t types.Type) string {
 // local type with no parameter of its own gives `main.S[A]`. 1 Dart function
 // serves each instance of F, thus the name reads the dictionary.
 func (e *emitter) outerReads(t types.Type, field string) []string {
-	params := outerTypeParams(namedOf(t))
+	named, _ := types.Unalias(t).(*types.Named)
+	params := outerTypeParams(named)
 	if len(params) == 0 {
 		return nil
 	}
