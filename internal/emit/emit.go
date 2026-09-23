@@ -834,6 +834,14 @@ func (e *emitter) writeTypeFactories(imports []Import) {
 	for _, im := range imports {
 		e.line("%s.$registerTypes();", e.prefixes[im.Path])
 	}
+	classes := make([]string, 0, len(e.anon))
+	for class := range e.anon {
+		classes = append(classes, class)
+	}
+	sort.Strings(classes)
+	for _, class := range classes {
+		e.line("$registerStructStorage(%s, %s$storage);", dartString(e.typeName(e.anon[class])), class)
+	}
 	names := make([]string, 0, len(e.instDescs))
 	for key := range e.instDescs {
 		names = append(names, key)

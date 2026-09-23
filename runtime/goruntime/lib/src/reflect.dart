@@ -13,6 +13,7 @@ library;
 import 'box.dart';
 import 'chan.dart';
 import 'complex.dart';
+import 'dict.dart';
 import 'funcpc.dart';
 import 'goint.dart';
 import 'iface.dart';
@@ -45,6 +46,39 @@ final Map<String, TypeDesc Function()> _typeFactories = {};
 void $registerTypeFactory(String name, TypeDesc Function() factory) {
   _typeFactories.putIfAbsent(name, () => factory);
 }
+
+final Map<String, TypeDesc Function(List<TypeDesc>)> _structStorage = {};
+
+/// A factory depends only on type metadata and registers before Go initializers.
+void $registerStructStorage(
+  String shape,
+  TypeDesc Function(List<TypeDesc>) factory,
+) {
+  _structStorage.putIfAbsent(shape, () => factory);
+}
+
+/// Storage uses only the zero, equality, hash, copy, and assignment operations.
+R $withStorageType<R>(TypeDesc desc, R Function<T>(Dict<T>) f) => _withType<R>(
+  desc,
+  <T>() => f<T>(
+    Dict<T>(
+      () => _zeroOf(desc) as T,
+      (a, b) => $goEqual(a, b, desc),
+      (v) => $goHash(v, desc),
+      (n) => _zeros<T>(desc, n),
+      $unordered<T>,
+      $identity<T>,
+      desc,
+      copy: _holdsValue(desc) ? (v) => _copyOf(v, desc) as T : null,
+      assign: _holdsValue(desc)
+          ? (dst, src) {
+              _assignInto(dst, src, desc);
+              return dst;
+            }
+          : null,
+    ),
+  ),
+);
 
 int _descHandle(TypeDesc desc) {
   final int? found = _descHandles[desc.name];
@@ -1732,13 +1766,8 @@ bool _directInterface(TypeDesc type) {
 
 /// A handle of a struct type that a list of fields builds.
 ///
-/// A program that already names the shape gives its own description, with the
-/// class that stage 5 wrote. Each value of such a type thus reaches every path
-/// of the program.
-///
-/// A shape that no code names holds its value in a list of the fields, and only
-/// the package reflect reads such a value. Dart writes no class at run time,
-/// thus no other path can name the type.
+/// The generated code registers storage templates before Go initializers.
+/// A shape with no source template uses a list of its fields.
 int $structOf(
   Slice<GoString> names,
   Slice<GoString> packages,
@@ -1757,13 +1786,24 @@ int $structOf(
     for (int i = 0; i < n; i++) tags[i].toDartString(),
   ];
   final StringBuffer key = StringBuffer('struct{');
+  final StringBuffer storageKey = StringBuffer('struct{');
   final StringBuffer show = StringBuffer(n == 0 ? 'struct {}' : 'struct { ');
   for (int i = 0; i < n; i++) {
     if (i > 0) {
       key.write('; ');
+      storageKey.write('; ');
       show.write('; ');
     }
+    if (anon[i]) {
+      key.write('~');
+      storageKey.write('~');
+    }
     key.write(field[i]);
+    storageKey.write(field[i]);
+    if (packages[i].length != 0) {
+      storageKey.write('@${packages[i].toDartString()}');
+    }
+    storageKey.write(' \$F$i');
     if (packages[i].length != 0) key.write('@${packages[i].toDartString()}');
     key.write(' ');
     if (!anon[i]) show.write('${field[i]} ');
@@ -1775,6 +1815,19 @@ int $structOf(
     }
   }
   key.write('}');
+  storageKey.write('}');
+  final storage = _structStorage[storageKey.toString()]?.call(types);
+  Object? getField(Object? value, int i) => storage == null
+      ? (value as List<Object?>)[i]
+      : storage.fields[i].get(value);
+  void setField(Object? value, int i, Object? fieldValue) {
+    if (storage == null) {
+      (value as List<Object?>)[i] = fieldValue;
+    } else {
+      storage.fields[i].set(value, fieldValue);
+    }
+  }
+
   if (n > 0) show.write(' }');
   return _syntheticHandle(() {
     final methods = <String, Function>{};
@@ -1795,10 +1848,7 @@ int $structOf(
             ),
           );
         }
-        return method.invoke(
-          Iface(elem, (value.value as List<Object?>)[i]),
-          args,
-        );
+        return method.invoke(Iface(elem, getField(value.value, i)), args);
       }
 
       for (final method in _reflectedMethods(elem, includePrivate: true)) {
@@ -1826,7 +1876,7 @@ int $structOf(
                 ),
               );
             }
-            return Iface(elem, (value as List<Object?>)[i]);
+            return Iface(elem, getField(value, i));
           },
         );
       }
@@ -1841,7 +1891,7 @@ int $structOf(
               '',
               method.type,
               (Iface value, List<Object?> args) => $call(
-                Iface(elem, (value.value as List<Object?>)[i]),
+                Iface(elem, getField(value.value, i)),
                 method.key,
                 args,
               ),
@@ -1874,14 +1924,18 @@ int $structOf(
             tag[i],
             packages[i].length == 0,
             () => types[i],
-            (Object? r) => (r as List<Object?>)[i],
-            (Object? r, Object? v) => (r as List<Object?>)[i] = v,
+            (Object? r) => getField(r, i),
+            (Object? r, Object? v) => setField(r, i, v),
             embedded: anon[i],
             pkg: packages[i].toDartString(),
           ),
       ],
       comparable: types.every((TypeDesc t) => t.comparable),
-      zero: () => <Object?>[for (int i = 0; i < n; i++) types[i].zero?.call()],
+      zero:
+          storage?.zero ??
+          () => <Object?>[for (int i = 0; i < n; i++) types[i].zero?.call()],
+      assign: storage?.assign,
+      withType: storage?.withType,
     );
     return desc;
   });

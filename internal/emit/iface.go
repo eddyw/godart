@@ -1241,7 +1241,11 @@ func (e *emitter) identityType(t types.Type) types.Type {
 		tags := make([]string, u.NumFields())
 		for i := range fields {
 			f := u.Field(i)
-			fields[i] = types.NewField(token.NoPos, f.Pkg(), f.Name(), e.identityType(f.Type()), f.Embedded())
+			pkg := f.Pkg()
+			if !f.Exported() && pkg != nil && pkg.Name() == "main" {
+				pkg = types.NewPackage("main", "main")
+			}
+			fields[i] = types.NewField(token.NoPos, pkg, f.Name(), e.identityType(f.Type()), f.Embedded())
 			tags[i] = u.Tag(i)
 		}
 		return types.NewStruct(fields, tags)
@@ -1299,22 +1303,6 @@ func (e *emitter) typeNameText(t types.Type) string {
 		text = interpolate(e.typeName(sub), reads)
 	}
 	return spliceOuter(text, e.outerReads(t, ".desc.name"))
-}
-
-// typeDisplayText writes the text that a report of a failed assertion names.
-// Go names a type with the name of its package, and not with the import path
-// of it, thus the text follows reflect. typeNameText holds the identity name,
-// which a type test compares.
-func (e *emitter) typeDisplayText(t types.Type) string {
-	if tp, ok := types.Unalias(t).(*types.TypeParam); ok {
-		return e.dictOf(tp) + ".desc.text"
-	}
-	if !typeset.HoldsParam(t) && !hasOuterType(t) {
-		return "'" + dartText(reflectText(t)) + "'"
-	}
-	// A type that reads a type parameter keeps the identity name. Such a name
-	// holds the import path, and no program of the suite reaches it.
-	return e.typeNameText(t)
 }
 
 // outerReads gives the run time read of the description of each type argument
@@ -1613,7 +1601,7 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 		if isInterfaceType(x.Assert) {
 			return fmt.Sprintf("$assertIface(%s, %s, %s)",
 				e.expr(x.X), e.methodKeyListText(x.Assert),
-				e.typeDisplayText(x.Assert))
+				e.reflectTextExpr(x.Assert))
 		}
 		if isParam {
 			return fmt.Sprintf("$assertDict(%s, %s, %s)", e.expr(x.X), e.dictOf(tp), e.reflectTextExpr(x.X.GoType()))

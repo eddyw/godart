@@ -186,6 +186,9 @@ func writeType(b *strings.Builder, t types.Type, qual types.Qualifier, seen map[
 			if i > 0 {
 				b.WriteString("; ")
 			}
+			if f.Embedded() {
+				b.WriteString("~")
+			}
 			b.WriteString(f.Name())
 			if !f.Exported() && f.Pkg() != nil {
 				b.WriteString("@" + f.Pkg().Path())
@@ -420,5 +423,28 @@ func anonFile(class string, st *types.Struct) string {
 		params[i] = st.Field(i).Type().(*types.TypeParam)
 	}
 	inner.structClass(class, params, st, true, nil)
+	inner.line("TypeDesc %s$storage(List<TypeDesc> types) {", class)
+	for i, tp := range params {
+		inner.line("return $withStorageType<TypeDesc>(types[%d], <%s>(Dict<%s> $d%s) {", i, inner.dartType(tp), inner.dartType(tp), typeParamName(tp))
+	}
+	full := class + inner.typeArgsOfParams(params)
+	dicts := make([]string, len(params))
+	for i, tp := range params {
+		dicts[i] = "$d" + typeParamName(tp)
+	}
+	inner.line("return TypeDesc('', 'struct', const <String, Function>{},")
+	inner.line("zero: () => %s.$zero(%s),", full, strings.Join(dicts, ", "))
+	inner.line("assign: (a, b) => (a as %s).$assign(b as %s),", full, full)
+	inner.line("withType: <R>(R Function<T>() f) => f<%s>(),", full)
+	inner.line("fields: <FieldDesc>[")
+	for i := 0; i < st.NumFields(); i++ {
+		field := structFieldName(st.Field(i), i)
+		inner.line("FieldDesc('', '', true, () => types[%d], (r) => (r as %s).%s, (r, v) => (r as %s).%s = v as %s),", i, full, field, full, field, inner.dartType(st.Field(i).Type()))
+	}
+	inner.line("]);")
+	for range params {
+		inner.line("});")
+	}
+	inner.line("}")
 	return inner.buf.String()
 }
