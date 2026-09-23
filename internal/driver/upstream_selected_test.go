@@ -40,7 +40,7 @@ func TestSelectedUpstream(t *testing.T) {
 		"os/signal": {{Name: "signal_test.go", Declarations: []string{"TestNotifyContextStop", "TestNotifyContextCancelParent", "TestNotifyContextPrematureCancelParent", "TestNotifyContextSimultaneousStop", "TestNotifyContextStringer", "TestIgnored"}}},
 		"fmt": {
 			{Name: "scan_test.go", Declarations: []string{"RecursiveInt", "RecursiveInt.Scan", "scanInts", "makeInts", "TestScanInts", "intCount", "testScanInts", "f"}},
-			{Name: "fmt_test.go", Declarations: []string{"TestComplexFormatting", "NaN", "posInf", "negInf"}},
+			{Name: "fmt_test.go", Declarations: []string{"TestComplexFormatting", "NaN", "posInf", "negInf", "PanicS", "PanicGo", "PanicF", "panictests", "TestPanics"}},
 		},
 		"encoding/json": {
 			{Name: "encode_test.go", Declarations: []string{"TestMarshalFloat", "badFloatREs", "re"}},

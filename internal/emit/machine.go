@@ -136,10 +136,6 @@ func (e *emitter) localZero(v *ir.Var) string {
 // another class.
 func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	fnType, invoke string, hasResult bool, goName, goFile string) {
-	// A frame of a local function resumes under the token of the function,
-	// because the call gave up control inside the chain of a defer
-	// statement, and a recover after the yield still reads the chain panic.
-	tok := e.curFuncId
 	var b strings.Builder
 	w := func(format string, args ...any) {
 		if len(args) == 0 {
@@ -151,6 +147,7 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	}
 	w("final class %s%s implements TraceFrame {", m.Class, e.typeParamDecl(tps))
 	w("int $s = 0;")
+	w("late int $deferTok;")
 	w("bool $c = false;")
 	w("Frame? $r;")
 	w("static const List<int> $lines = <int>[%s];", e.stateLines(m))
@@ -189,10 +186,10 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	}
 	w("@override")
 	if hasResult {
-		w("Object? resume() => $dcall<Object?>(%d, () => %s);", tok, invoke)
+		w("Object? resume() => $dcall<Object?>($deferTok, () => %s);", invoke)
 	} else {
 		w("Object? resume() {")
-		w("$dcall<Object?>(%d, () => %s);", tok, invoke)
+		w("$dcall<Object?>($deferTok, () => %s);", invoke)
 		w("return null;")
 		w("}")
 	}
@@ -405,6 +402,8 @@ func (e *emitter) machineSave(f *ir.Func, fn string) {
 	m := f.Machine
 	tps := f.TypeParams
 	e.line("$blocked = %s()", e.frameType(m, tps))
+	// An indirect call must retain the active defer token, not gain its own.
+	e.line("..$deferTok = $pendingTok")
 	e.line("..$s = $s")
 	e.line("..$c = true")
 	e.line("..$r = $blocked")
