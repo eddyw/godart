@@ -510,9 +510,17 @@ func writeType(b *strings.Builder, t types.Type, qual types.Qualifier, seen map[
 	case *types.Signature:
 		b.WriteString("func(")
 		writeTuple(b, u.Params(), u.Variadic(), qual, seen)
-		b.WriteString(")(")
-		writeTuple(b, u.Results(), false, qual, seen)
 		b.WriteString(")")
+		switch u.Results().Len() {
+		case 0:
+		case 1:
+			b.WriteString(" ")
+			writeType(b, u.Results().At(0).Type(), qual, seen)
+		default:
+			b.WriteString(" (")
+			writeTuple(b, u.Results(), false, qual, seen)
+			b.WriteString(")")
+		}
 	case *types.Interface:
 		seen[t] = true
 		b.WriteString("interface{")
@@ -540,10 +548,12 @@ func writeTuple(b *strings.Builder, tuple *types.Tuple, variadic bool, qual type
 		if i > 0 {
 			b.WriteString(", ")
 		}
+		elem := tuple.At(i).Type()
 		if variadic && i == tuple.Len()-1 {
 			b.WriteString("...")
+			elem = types.Unalias(elem).(*types.Slice).Elem()
 		}
-		writeType(b, tuple.At(i).Type(), qual, seen)
+		writeType(b, elem, qual, seen)
 	}
 }
 
