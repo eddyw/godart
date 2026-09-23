@@ -29,7 +29,7 @@ Object? $weakRef(Iface? v) {
   final Object? target = v.value;
   if (target == null) return null;
   if (target is $Ref) {
-    final Object owner = target.owner as Object;
+    final Object owner = $pointerOwner(target.owner)!;
     final locations = owner is String
         ? _weakGlobals.putIfAbsent(owner, () => {})
         : _weakLocations[owner] ??= {};

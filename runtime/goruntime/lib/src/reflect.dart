@@ -10,6 +10,9 @@
 /// reflect holds no memory layout.
 library;
 
+import 'dart:collection';
+
+import 'array.dart';
 import 'box.dart';
 import 'chan.dart';
 import 'complex.dart';
@@ -230,6 +233,7 @@ void _assignInto(Object? dst, Object? src, TypeDesc desc) {
     final List<Object?> b = src is List<Object?> ? src : const <Object?>[];
     final TypeDesc t = desc.elem!();
     final int n = a.length < b.length ? a.length : b.length;
+    if (n == 0) return;
     if (!_holdsValue(t)) {
       a.setRange(0, n, b);
       return;
@@ -1935,6 +1939,7 @@ int $structOf(
           storage?.zero ??
           () => <Object?>[for (int i = 0; i < n; i++) types[i].zero?.call()],
       assign: storage?.assign,
+      view: storage?.view,
       withType: storage?.withType,
     );
     return desc;
@@ -2468,6 +2473,12 @@ bool $descAssignable(int handle, int other) {
   // the 2 underlying types are identical and at least 1 of the 2 holds no name
   // of its own. `[]byte` fits a location of `type Raw []byte` for that reason.
   if (_unnamedType(a.text) || _unnamedType(b.text)) {
+    if (a.kind == 'chan' &&
+        b.kind == 'chan' &&
+        a.dir == 3 &&
+        _sameDesc(a.elem, b.elem)) {
+      return true;
+    }
     return _sameUnderlying(a, b);
   }
   return false;
@@ -2481,6 +2492,7 @@ const List<String> _unnamedHeads = <String>[
   '*',
   'map[',
   'chan ',
+  'chan<- ',
   '<-chan ',
   'func(',
   'struct{',
@@ -2496,28 +2508,43 @@ bool _unnamedType(String text) {
   return false;
 }
 
-/// Reports whether the 2 types hold the same underlying type.
-///
-/// The test covers the 5 kinds whose Dart form is 1 object for the type and
-/// for each type that names it. A struct type and a function type each need
-/// the identity of every field or of every parameter with its tag, thus the
-/// test leaves the 2 out and gives false there.
-bool _sameUnderlying(TypeDesc a, TypeDesc b) {
+bool _sameUnderlying(TypeDesc a, TypeDesc b, [bool ignoreTags = false]) {
   if (a.kind != b.kind) return false;
   switch (a.kind) {
     case 'struct':
-      return _sameStruct(a, b, false);
+      return _sameStruct(a, b, ignoreTags);
     case 'slice' || 'ptr':
-      return _sameDesc(a.elem, b.elem);
+      return _sameFieldType(a.elem!(), b.elem!(), ignoreTags);
     case 'chan':
-      // An assignment preserves direction or narrows a bidirectional channel.
-      return (a.dir == b.dir || a.dir == 3) && _sameDesc(a.elem, b.elem);
+      return a.dir == b.dir && _sameFieldType(a.elem!(), b.elem!(), ignoreTags);
     case 'array':
-      return a.length == b.length && _sameDesc(a.elem, b.elem);
+      return a.length == b.length &&
+          _sameFieldType(a.elem!(), b.elem!(), ignoreTags);
     case 'map':
-      return _sameDesc(a.key, b.key) && _sameDesc(a.elem, b.elem);
+      return _sameFieldType(a.key!(), b.key!(), ignoreTags) &&
+          _sameFieldType(a.elem!(), b.elem!(), ignoreTags);
+    case 'func':
+      if (a.variadic != b.variadic ||
+          a.params.length != b.params.length ||
+          a.results.length != b.results.length) {
+        return false;
+      }
+      for (int i = 0; i < a.params.length; i++) {
+        if (!_sameFieldType(a.params[i](), b.params[i](), ignoreTags)) {
+          return false;
+        }
+      }
+      for (int i = 0; i < a.results.length; i++) {
+        if (!_sameFieldType(a.results[i](), b.results[i](), ignoreTags)) {
+          return false;
+        }
+      }
+      return true;
+    case 'interface':
+      return a.methods.isEmpty && b.methods.isEmpty;
+    default:
+      return true;
   }
-  return false;
 }
 
 const Set<String> _numberKinds = <String>{
@@ -2541,8 +2568,11 @@ bool $descConvertible(int handle, int other) {
   if ($descAssignable(handle, other)) return true;
   final TypeDesc a = _typeAt(handle);
   final TypeDesc b = _typeAt(other);
-  if (a.kind == 'slice' && b.kind == 'array') {
-    return _sameDesc(a.elem, b.elem);
+  if (a.kind == 'slice') {
+    if (b.kind == 'array') return _sameDesc(a.elem, b.elem);
+    if (b.kind == 'ptr' && b.elem!().kind == 'array') {
+      return _sameDesc(a.elem, b.elem!().elem);
+    }
   }
   if (_numberKinds.contains(a.kind) && _numberKinds.contains(b.kind)) {
     return true;
@@ -2556,38 +2586,22 @@ bool $descConvertible(int handle, int other) {
     return elem == 'uint8' || elem == 'int32';
   }
   if (b.kind == 'string') {
-    if (_numberKinds.contains(a.kind)) return true;
+    if (_numberKinds.contains(a.kind) &&
+        a.kind != 'float32' &&
+        a.kind != 'float64') {
+      return true;
+    }
     if (a.kind == 'slice') {
       final String elem = a.elem?.call().kind ?? '';
       return elem == 'uint8' || elem == 'int32';
     }
   }
-  if (a.kind == b.kind && a.kind == 'struct') {
-    return _sameStruct(a, b, true);
-  }
-  // Go converts between 2 types whose underlying types are identical. A
-  // defined slice type and the slice itself hold 1 Dart list, thus the
-  // conversion performs no operation. `type Raw []byte` holds that shape.
-  if (a.kind == b.kind) {
-    switch (a.kind) {
-      case 'bool' || 'string':
-        // 2 defined types of 1 basic kind hold 1 underlying type. A number
-        // already stands above, because Go also converts between 2 kinds.
-        return true;
-      case 'slice':
-        return _sameDesc(a.elem, b.elem);
-      case 'chan':
-        // The underlying type of a channel holds its direction, thus a
-        // conversion needs the same direction. $descAssignable above already
-        // gave true for a two way channel that narrows.
-        return a.dir == b.dir && _sameDesc(a.elem, b.elem);
-      case 'array':
-        return a.length == b.length && _sameDesc(a.elem, b.elem);
-      case 'map':
-        return _sameDesc(a.key, b.key) && _sameDesc(a.elem, b.elem);
-    }
-  }
-  return false;
+  if (_sameUnderlying(a, b, true)) return true;
+  return a.kind == 'ptr' &&
+      b.kind == 'ptr' &&
+      _unnamedType(a.text) &&
+      _unnamedType(b.text) &&
+      _sameUnderlying(a.elem!(), b.elem!(), true);
 }
 
 bool _sameStruct(TypeDesc a, TypeDesc b, bool ignoreTags) {
@@ -2613,20 +2627,7 @@ bool _sameFieldType(TypeDesc a, TypeDesc b, bool ignoreTags) {
       a.kind != b.kind) {
     return false;
   }
-  switch (a.kind) {
-    case 'struct':
-      return _sameStruct(a, b, true);
-    case 'array':
-      return a.length == b.length && _sameFieldType(a.elem!(), b.elem!(), true);
-    case 'slice' || 'ptr':
-      return _sameFieldType(a.elem!(), b.elem!(), true);
-    case 'chan':
-      return a.dir == b.dir && _sameFieldType(a.elem!(), b.elem!(), true);
-    case 'map':
-      return _sameFieldType(a.key!(), b.key!(), true) &&
-          _sameFieldType(a.elem!(), b.elem!(), true);
-  }
-  return false;
+  return _sameUnderlying(a, b, true);
 }
 
 /// Reports whether 2 lazy descriptions name 1 type.
@@ -2723,11 +2724,11 @@ Iface? $valueConvert(Iface? value, int handle) {
         ),
       );
     }
-    return value;
+    return $copyInterface(value);
   }
   if (value == null) return Iface(to, to.zero?.call());
   final TypeDesc from = value.desc;
-  if (from.name == to.name) return Iface(to, value.value);
+  if (from.name == to.name) return $copyInterface(value);
   if (!$descConvertible(_descHandle(from), handle)) {
     $panic(
       Iface(
@@ -2751,7 +2752,45 @@ Object? $structLiteral(TypeDesc desc, List<Object?> fields) {
   return out;
 }
 
+// The source owns its converted views. The global table must not retain it.
+final Expando<(TypeDesc, Map<String, Object>)> _structViews = Expando(
+  'struct views',
+);
+
+Object? _structPointer(TypeDesc from, TypeDesc to, Object? value) {
+  if (value == null) return null;
+  final Object origin = $pointerOwner(value)!;
+  final entry = _structViews[origin] ??= (
+    from,
+    <String, Object>{from.name: origin},
+  );
+  return entry.$2.putIfAbsent(
+    to.name,
+    () => to.view?.call(entry.$1, origin) ?? _StructListView(entry.$1, origin),
+  );
+}
+
+final class _StructListView extends ListBase<Object?> implements $StructView {
+  final TypeDesc type;
+  @override
+  final Object $origin;
+  _StructListView(this.type, this.$origin);
+  @override
+  int get length => type.fields.length;
+  @override
+  set length(int value) => throw UnsupportedError('fixed struct fields');
+  @override
+  Object? operator [](int index) => type.fields[index].get($origin);
+  @override
+  void operator []=(int index, Object? value) =>
+      type.fields[index].set($origin, value);
+}
+
 Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
+  if (from.kind == 'ptr' && to.kind == 'ptr' && to.elem!().kind == 'struct') {
+    return _structPointer(from.elem!(), to.elem!(), v);
+  }
+
   if (to.kind == 'struct') {
     final Object? out = to.zero!();
     for (int i = 0; i < to.fields.length; i++) {
@@ -2762,6 +2801,24 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
       }
     }
     return out;
+  }
+  if (from.kind == 'slice' && to.kind == 'ptr') {
+    final TypeDesc array = to.elem!();
+    final Slice<Object?> src = v as Slice<Object?>;
+    if ($gi(src.len) < array.length) {
+      $panic(
+        Iface(
+          $typeString,
+          GoString.fromString(
+            'reflect: cannot convert slice with length ${src.len} to pointer to array with length ${array.length}',
+          ),
+        ),
+      );
+    }
+    return _withType<Object?>(
+      from.elem!(),
+      <T>() => $sliceToArrayPtr<T>(v as Slice<T>, $ix(array.length)),
+    );
   }
   if (to.kind == 'array') {
     if (from.kind == 'slice') {
@@ -2791,34 +2848,18 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
   }
   if (to.kind == 'string') {
     if (_numberKinds.contains(from.kind)) {
-      return GoString.fromString(String.fromCharCode(($ix(v as GoInt))));
+      return $runeToString(v as GoInt);
     }
-    if (v is Slice<Object?>) {
-      final List<int> bytes = <int>[
-        for (int i = 0; i < v.len; i++) $ix(v[i] as GoInt),
-      ];
-      final String elem = from.elem?.call().kind ?? '';
-      if (elem == 'int32') {
-        return GoString.fromString(String.fromCharCodes(bytes));
-      }
-      return GoString.fromBytes(bytes);
+    if (v is Slice<GoInt>) {
+      return from.elem!().kind == 'int32'
+          ? $runesToString(v)
+          : $bytesToString(v);
     }
     return v;
   }
   if (from.kind == 'string' && to.kind == 'slice') {
     final GoString s = v as GoString;
-    final String elem = to.elem?.call().kind ?? '';
-    final List<Object?> out = <Object?>[];
-    if (elem == 'int32') {
-      for (final int r in s.toDartString().runes) {
-        out.add($gi(r));
-      }
-    } else {
-      for (int i = 0; i < s.length; i++) {
-        out.add($gi(s[i]));
-      }
-    }
-    return Slice<Object?>.of(out);
+    return to.elem!().kind == 'int32' ? $stringToRunes(s) : $stringToBytes(s);
   }
   if (to.kind == 'complex64') return $c64(v as GoComplex);
   if (_numberKinds.contains(to.kind)) {
@@ -2906,7 +2947,7 @@ int $valuePointer(Iface? value) {
   if (v is Slice<Object?>) {
     return Object.hash(identityHashCode(v.array), v.off);
   }
-  return identityHashCode(v);
+  return identityHashCode($pointerOwner(v));
 }
 
 /// A receive on a channel that a Value holds. The call blocks the goroutine,

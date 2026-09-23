@@ -40,6 +40,8 @@ final TypeDesc $desc$Greeter = TypeDesc(
       pkg: 'example.com/multi/greet',
     ),
   ],
+  view: ($from, $value) =>
+      $value is Greeter$ ? $value : Greeter$.$viewFrom($from, $value),
   withType: <$R>($R Function<$T>() $f) => $f<Greeter$>(),
   assertionPkg: 'example.com/multi/greet',
   methodPkg: 'example.com/multi/greet',

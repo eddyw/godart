@@ -4,6 +4,13 @@ import 'goint.dart';
 import 'panic.dart';
 import 'slice.dart';
 
+abstract interface class $StructView {
+  Object get $origin;
+}
+
+Object? $pointerOwner(Object? value) =>
+    value is $StructView ? value.$origin : value;
+
 /// A pointer to a value that is not a struct.
 ///
 /// The Dart form of a pointer to a struct is the object of the struct. Another
@@ -46,10 +53,13 @@ final class $Ref<O, T> implements $Ptr<T> {
 
   @override
   bool operator ==(Object other) =>
-      other is $Ref && identical(owner, other.owner) && index == other.index;
+      other is $Ref &&
+      identical($pointerOwner(owner), $pointerOwner(other.owner)) &&
+      index == other.index;
 
   @override
-  int get hashCode => Object.hash(identityHashCode(owner), index);
+  int get hashCode =>
+      Object.hash(identityHashCode($pointerOwner(owner)), index);
 }
 
 /// A pointer to the cell at index i of a list.

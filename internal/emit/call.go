@@ -1809,6 +1809,7 @@ func (e *emitter) conv(x *ir.Conv) string {
 				if e.sameClass(pf.Elem(), pt.Elem()) {
 					return text
 				}
+				return fmt.Sprintf("$convert<%s>(%s, %s, %s)", e.dartType(to), text, e.descriptorOf(from), e.descriptorOf(to))
 			} else if types.Identical(types.Unalias(pf.Elem()).Underlying(),
 				types.Unalias(pt.Elem()).Underlying()) {
 				return text

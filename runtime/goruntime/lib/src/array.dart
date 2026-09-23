@@ -6,6 +6,8 @@ import 'slice.dart';
 
 final List<Never> _zeroArray = List<Never>.empty(growable: false);
 
+final Expando<Map<(int, int), Object>> _arrayViews = Expando('array views');
+
 /// A Go array is a fixed length list with value semantics. The compiler emits
 /// a plain Dart list, and it inserts a copy at each copy point.
 List<T> $makeArray<T>(int n, T Function() zero) =>
@@ -27,8 +29,16 @@ List<T>? $sliceToArrayPtr<T>(Slice<T> s, int n) {
   // A nil slice gives a nil pointer, and an empty slice that is not nil gives
   // a pointer that is not nil. Only a length of 0 reaches both.
   if (s.isNil) return null;
-  if (s.off == 0 && s.array.length == n) return s.array;
-  return $ArrayView<T>(s.array, s.off, n);
+  List<T> array = s.array;
+  int offset = s.off;
+  while (array is $ArrayView<T>) {
+    offset += array.off;
+    array = array.array;
+  }
+  if (offset == 0 && array.length == n) return array;
+  final views = _arrayViews[array] ??= <(int, int), Object>{};
+  return views.putIfAbsent((offset, n), () => $ArrayView<T>(array, offset, n))
+      as List<T>;
 }
 
 /// A window of n elements of a backing list, from an offset. It holds the
@@ -70,6 +80,7 @@ List<T> $copyArray<T>(List<T> a, [T Function(T)? copy]) {
 /// Assigns an array in place. Go writes through the destination, thus a
 /// pointer to an element observes the new value.
 void $assignArray<T>(List<T> dst, List<T> src, [void Function(T, T)? assign]) {
+  if (dst.isEmpty) return;
   if (assign == null) {
     dst.setRange(0, dst.length, src);
     return;

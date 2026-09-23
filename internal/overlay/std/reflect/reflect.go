@@ -385,7 +385,7 @@ func (t *rtype) Name() string {
 // a name.
 func composite(text string) bool {
 	for _, prefix := range []string{
-		"[", "*", "map[", "chan ", "<-chan ", "func(",
+		"[", "*", "map[", "chan ", "chan<- ", "<-chan ", "func(",
 		"struct{", "struct {", "interface{", "interface {",
 	} {
 		if len(text) >= len(prefix) && text[:len(prefix)] == prefix {
@@ -1689,14 +1689,22 @@ func (v Value) Convert(t Type) Value {
 	if t == nil {
 		panic("reflect: nil type passed to Value.Convert")
 	}
+	t = typeOf(t.handle())
+	if !v.Type().ConvertibleTo(t) {
+		panic("reflect.Value.Convert: value of type " + v.Type().String() + " cannot be converted to type " + t.String())
+	}
+	ro := v.ro
+	if ro != 0 {
+		ro = roSticky
+	}
 	got := dart.ValueConvert(v.read(), t.handle())
 	if t.Kind() == Interface {
 		// The result holds the dynamic value with its own type, and the
 		// interface is the static type of the location. Interface of the
 		// result thus gives the concrete value, exactly as Go gives it.
-		return Value{value: got, typ: t, ok: true}
+		return Value{value: got, typ: t, ro: ro, ok: true}
 	}
-	return Value{value: got, ok: true}
+	return Value{value: got, ro: ro, ok: true}
 }
 
 // CanConvert reports whether a conversion of the value to t holds.
@@ -1704,8 +1712,15 @@ func (v Value) CanConvert(t Type) bool {
 	if t == nil {
 		return false
 	}
-	if v.Kind() == Slice && t.Kind() == Array && v.Len() < t.Len() {
-		return false
+	t = typeOf(t.handle())
+	if v.Kind() == Slice {
+		array := t
+		if t.Kind() == Pointer {
+			array = t.Elem()
+		}
+		if array.Kind() == Array && v.Len() < array.Len() {
+			return false
+		}
 	}
 	return v.Type().ConvertibleTo(t)
 }

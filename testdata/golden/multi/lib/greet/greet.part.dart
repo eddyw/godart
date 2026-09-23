@@ -17,11 +17,14 @@ final GoInt Plain = $gi(0);
 final GoInt Loud = $gi(1);
 
 final class Greeter$ {
-  GoString Name;
-  GoInt $field$style;
+  late GoString Name;
+  late GoInt $field$style;
 
   Greeter$(this.Name, this.$field$style);
   Greeter$.$zero() : Name = GoString.empty, $field$style = GoInt.zero;
+  Greeter$.$viewBase();
+  factory Greeter$.$viewFrom(TypeDesc from, Object origin) =>
+      Greeter$$View(from, origin);
 
   Greeter$ $copy() => Greeter$(Name, $field$style);
 
@@ -41,6 +44,21 @@ final class Greeter$ {
   void SetStyle(GoInt s) => Greeter$SetStyle(this, s);
 
   GoString Text() => Greeter$Text(this);
+}
+
+final class Greeter$$View extends Greeter$ implements $StructView {
+  final TypeDesc $from;
+  @override
+  final Object $origin;
+  Greeter$$View(this.$from, this.$origin) : super.$viewBase();
+  @override
+  GoString get Name => $from.fields[0].get($origin) as GoString;
+  @override
+  set Name(GoString value) => $from.fields[0].set($origin, value);
+  @override
+  GoInt get $field$style => $from.fields[1].get($origin) as GoInt;
+  @override
+  set $field$style(GoInt value) => $from.fields[1].set($origin, value);
 }
 
 Greeter$? New(GoString name) {

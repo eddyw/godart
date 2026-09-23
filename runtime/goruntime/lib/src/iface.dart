@@ -155,6 +155,9 @@ final class TypeDesc {
   /// Source metadata names result fields that Dart cannot index at runtime.
   final List<Object?> Function(Object?)? unpack;
 
+  /// Builds a pointer view over the original storage.
+  final Object Function(TypeDesc, Object)? view;
+
   const TypeDesc(
     this.name,
     this.kind,
@@ -182,6 +185,7 @@ final class TypeDesc {
     this.withType,
     this.bind,
     this.unpack,
+    this.view,
   });
 
   /// The name for a message. Go writes the package name, and not the path.

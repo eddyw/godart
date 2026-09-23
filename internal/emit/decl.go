@@ -89,7 +89,7 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 		e.line("final Dict<%s> %s;", e.dartType(tp), dicts[i])
 	}
 	for i, f := range fields {
-		e.line("%s %s;", e.dartType(st.Field(i).Type()), f)
+		e.line("late %s %s;", e.dartType(st.Field(i).Type()), f)
 	}
 	e.line("")
 	all := append(append([]string{}, dicts...), fields...)
@@ -113,6 +113,14 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 			e.line("%s : %s;", head, strings.Join(zeros, ", "))
 		}
 	}
+	baseArgs := ""
+	if len(dicts) > 0 {
+		baseArgs = "this." + strings.Join(dicts, ", this.")
+	}
+	e.line("%s.$viewBase(%s);", class, baseArgs)
+	viewParams := append(e.dictParams(params), "TypeDesc from", "Object origin")
+	viewArgs := append(append([]string{}, dicts...), "from", "origin")
+	e.line("factory %s.$viewFrom(%s) => %s$View%s(%s);", class, strings.Join(viewParams, ", "), class, e.typeArgsOfParams(params), strings.Join(viewArgs, ", "))
 	e.line("")
 	full := class + e.typeArgsOfParams(params)
 	e.writeCopy(full, st, fields, dicts)
@@ -123,6 +131,17 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 	for _, m := range methods {
 		e.line("")
 		e.method(m)
+	}
+	e.line("}")
+	e.line("final class %s$View%s extends %s implements $StructView {", class, e.typeParamDecl(params), full)
+	e.line("final TypeDesc $from;")
+	e.line("@override final Object $origin;")
+	viewParams = append(e.dictParams(params), "this.$from", "this.$origin")
+	e.line("%s$View(%s) : super.$viewBase(%s);", class, strings.Join(viewParams, ", "), strings.Join(dicts, ", "))
+	for i, f := range fields {
+		typ := e.dartType(st.Field(i).Type())
+		e.line("@override %s get %s => $from.fields[%d].get($origin) as %s;", typ, f, i, typ)
+		e.line("@override set %s(%s value) => $from.fields[%d].set($origin, value);", f, typ, i)
 	}
 	e.line("}")
 	e.line("")

@@ -270,7 +270,7 @@ func (e *emitter) descShape(t types.Type) string {
 	}
 	switch u := u.(type) {
 	case *types.Struct:
-		return e.fieldDescs(t, u)
+		return e.fieldDescs(t, u) + e.structView(t, u)
 	case *types.Slice:
 		return fmt.Sprintf(", elem: () => %s, make: ($n) => $makeSlice<%s>($gi($n), $gi($n), %s)",
 			e.descriptorOf(u.Elem()), e.dartType(u.Elem()), e.alloc(u.Elem()))
@@ -286,6 +286,21 @@ func (e *emitter) descShape(t types.Type) string {
 		return e.signatureShape(u)
 	}
 	return ""
+}
+
+func (e *emitter) structView(t types.Type, st *types.Struct) string {
+	var dicts []string
+	if named, ok := types.Unalias(t).(*types.Named); ok && !isLocalType(e.structRef(named).Obj()) {
+		if isDartObject(named.Obj()) {
+			return ""
+		}
+		dicts = e.dictArgs(e.structRef(named).TypeArgs())
+	} else {
+		dicts = e.anonDicts(st)
+	}
+	dart := e.dartType(t)
+	args := append(dicts, "$from", "$value")
+	return fmt.Sprintf(", view: ($from, $value) => $value is %s ? $value : %s.$viewFrom(%s)", dart, dart, strings.Join(args, ", "))
 }
 
 // chanDir names the direction of a channel type in the numbers of the package

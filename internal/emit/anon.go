@@ -436,6 +436,7 @@ func anonFile(class string, st *types.Struct) string {
 	inner.line("zero: () => %s.$zero(%s),", full, strings.Join(dicts, ", "))
 	inner.line("assign: (a, b) => (a as %s).$assign(b as %s),", full, full)
 	inner.line("withType: <R>(R Function<T>() f) => f<%s>(),", full)
+	inner.line("view: (from, value) => value is %s ? value : %s.$viewFrom(%s),", full, full, strings.Join(append(dicts, "from", "value"), ", "))
 	inner.line("fields: <FieldDesc>[")
 	for i := 0; i < st.NumFields(); i++ {
 		field := structFieldName(st.Field(i), i)

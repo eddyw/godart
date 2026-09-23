@@ -562,7 +562,7 @@ String? _pointerText(Object? v, String kind) {
     case 'func':
     case 'unsafe.Pointer':
       if (v == null) return '0x0';
-      return '0x${identityHashCode(v).toRadixString(16)}';
+      return '0x${identityHashCode($pointerOwner(v)).toRadixString(16)}';
   }
   return null;
 }

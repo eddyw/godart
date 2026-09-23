@@ -27,6 +27,19 @@ func field() weak.Pointer[int] {
  runtime.KeepAlive(p)
  return w
 }
+type view struct { A int; B int; data [256]byte }
+func convertedField() weak.Pointer[int] {
+ p := &item{A: 7, B: 9}
+ v := (*view)(p)
+ w := weak.Make(&v.A)
+ if w != weak.Make(&p.A) { panic("converted field identity") }
+ runtime.GC()
+ if w.Value() == nil || *w.Value() != 7 { panic("lost converted field") }
+ *w.Value() = 11
+ if p.A != 11 || v.A != 11 { panic("converted field write") }
+ runtime.KeepAlive(p)
+ return w
+}
 func element() weak.Pointer[int] {
  p := make([]int, 32)
  p[4] = 7
@@ -42,7 +55,32 @@ func element() weak.Pointer[int] {
  runtime.KeepAlive(p)
  return w
 }
-func exercise(makePointer func() weak.Pointer[int]) {
+func convertedPointer() weak.Pointer[view] {
+ p := &item{A: 7, B: 9}
+ v := (*view)(p)
+ w := weak.Make(v)
+ if w != weak.Make((*view)(p)) { panic("converted pointer identity") }
+ runtime.GC()
+ if w.Value() == nil || w.Value().A != 7 { panic("lost converted pointer") }
+ w.Value().A = 11
+ if p.A != 11 { panic("converted pointer write") }
+ runtime.KeepAlive(p)
+ return w
+}
+func convertedArray() weak.Pointer[[8]int] {
+ p := make([]int, 32)
+ p[2] = 7
+ a := (*[8]int)(p[2:])
+ w := weak.Make(a)
+ if w != weak.Make((*[8]int)(p[2:])) { panic("converted array identity") }
+ runtime.GC()
+ if w.Value() == nil || w.Value()[0] != 7 { panic("lost converted array") }
+ w.Value()[0] = 11
+ if p[2] != 11 { panic("converted array write") }
+ runtime.KeepAlive(p)
+ return w
+}
+func exercise[T any](makePointer func() weak.Pointer[T]) {
  w := makePointer()
  deadline := time.Now().Add(4*time.Second)
  for w.Value() != nil {
@@ -50,7 +88,7 @@ func exercise(makePointer func() weak.Pointer[int]) {
   runtime.GC()
   time.Sleep(10*time.Millisecond)
  }
- if w == (weak.Pointer[int]{}) { panic("lost dead identity") }
+ if w == (weak.Pointer[T]{}) { panic("lost dead identity") }
  fmt.Println("released weak location")
 }
 func main() {
@@ -59,6 +97,9 @@ func main() {
  runtime.GC()
  if w.Value() != &Global { panic("lost global") }
  exercise(field)
+ exercise(convertedField)
+ exercise(convertedPointer)
+ exercise(convertedArray)
  exercise(element)
  if w != weak.Make(&Global) || w.Value() != &Global { panic("lost global identity") }
 }
