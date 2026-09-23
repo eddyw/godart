@@ -44,5 +44,6 @@
   "interface/embed",
   "interface/convert",
   "typeparam/interfacearg",
-  "typeparam/boundmethod"
+  "typeparam/boundmethod",
+  "fixedbugs/issue4313"
 ]

@@ -300,9 +300,9 @@ func (f *flat) selectStmt(s *ir.Select, label string) {
 			cases[i] = &clause
 			continue
 		}
-		parts := f.operands([]ir.Expr{c.Chan, c.Value})
-		clause.Chan = parts[0]
-		clause.Value = parts[1]
+		// A later case can change an earlier channel or send value.
+		clause.Chan = f.temp(f.value(c.Chan))
+		clause.Value = f.temp(f.value(c.Value))
 		cases[i] = &clause
 	}
 	list := f.local(nil)
