@@ -60,7 +60,7 @@ func (e *emitter) dartType(t types.Type) string {
 			if p, ok := core.(*types.Pointer); ok {
 				if _, ok := types.Unalias(p.Elem()).(*types.TypeParam); ok {
 					// Containers must retain the substituted pointer type.
-					return typeParamName(t)
+					return e.typeParamName(t)
 				}
 			}
 			// The core struct of a constraint is a shape of the compiler, and
@@ -91,7 +91,7 @@ func (e *emitter) dartType(t types.Type) string {
 				return "GoComplex"
 			}
 		}
-		return typeParamName(t)
+		return e.typeParamName(t)
 	case *types.Pointer:
 		// The Dart form of a pointer to a type parameter follows the type
 		// argument: a pointer to a struct is the object itself, and each other
@@ -157,14 +157,15 @@ func (e *emitter) dartType(t types.Type) string {
 	return "Object?"
 }
 
-// typeParamName gives the Dart name of a type parameter. A blank parameter
-// takes its position, because Dart holds no wildcard type parameter, and a
-// method can name the parameter of its receiver type with a blank.
-func typeParamName(tp *types.TypeParam) string {
+// Type parameter names stay outside the Go identifier namespace.
+func (e *emitter) typeParamName(tp *types.TypeParam) string {
+	if alias, ok := e.receiverParams[tp]; ok {
+		return alias
+	}
 	if tp.Obj().Name() == "_" {
 		return fmt.Sprintf("$T%d", tp.Index())
 	}
-	return name.Local(tp.Obj().Name())
+	return "$tp$" + name.Local(tp.Obj().Name())
 }
 
 func basicType(t *types.Basic) string {
@@ -505,7 +506,7 @@ func (e *emitter) dictOf(t types.Type) string {
 		// The name stands for a local of the enclosing function, thus a
 		// description that holds it stands in no variable of the library.
 		e.dictReads++
-		return "$d" + typeParamName(tp)
+		return "$d" + e.typeParamName(tp)
 	}
 	if b, ok := u.Underlying().(*types.Basic); ok {
 		// A named type takes the dictionary of its underlying type only when

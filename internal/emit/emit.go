@@ -252,8 +252,9 @@ type emitter struct {
 	// typeParams holds the type parameters of the function that the emitter
 	// writes. The frame class of a literal of that function names them, because
 	// the class stands at package level.
-	typeParams    []*types.TypeParam
-	fieldTypeArgs map[*types.TypeParam]types.Type
+	typeParams     []*types.TypeParam
+	fieldTypeArgs  map[*types.TypeParam]types.Type
+	receiverParams map[*types.TypeParam]string
 	// funcIds holds a token for each function and each literal of the
 	// package. The chain of the deferred calls gives the token of 1 function
 	// to the runtime, and recover reads it, so a recover in a function that

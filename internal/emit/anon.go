@@ -425,12 +425,12 @@ func anonFile(class string, st *types.Struct) string {
 	inner.structClass(class, params, st, true, nil)
 	inner.line("TypeDesc %s$storage(List<TypeDesc> types) {", class)
 	for i, tp := range params {
-		inner.line("return $withStorageType<TypeDesc>(types[%d], <%s>(Dict<%s> $d%s) {", i, inner.dartType(tp), inner.dartType(tp), typeParamName(tp))
+		inner.line("return $withStorageType<TypeDesc>(types[%d], <%s>(Dict<%s> $d%s) {", i, inner.dartType(tp), inner.dartType(tp), inner.typeParamName(tp))
 	}
 	full := class + inner.typeArgsOfParams(params)
 	dicts := make([]string, len(params))
 	for i, tp := range params {
-		dicts[i] = "$d" + typeParamName(tp)
+		dicts[i] = "$d" + inner.typeParamName(tp)
 	}
 	inner.line("return TypeDesc('', 'struct', const <String, Function>{},")
 	inner.line("zero: () => %s.$zero(%s),", full, strings.Join(dicts, ", "))

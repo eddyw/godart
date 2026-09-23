@@ -95,7 +95,7 @@ func (e *emitter) frameType(m *ir.Machine, tps []*types.TypeParam) string {
 	}
 	parts := make([]string, len(tps))
 	for i, tp := range tps {
-		parts[i] = typeParamName(tp)
+		parts[i] = e.typeParamName(tp)
 	}
 	return m.Class + "<" + strings.Join(parts, ", ") + ">"
 }
@@ -181,7 +181,7 @@ func (e *emitter) writeFrameClass(m *ir.Machine, tps []*types.TypeParam,
 	// such a frame.
 	if fnType == "" {
 		for _, tp := range tps {
-			w("late Dict<%s> $d%s;", e.dartType(tp), typeParamName(tp))
+			w("late Dict<%s> $d%s;", e.dartType(tp), e.typeParamName(tp))
 		}
 	}
 	for _, v := range m.Locals {
@@ -237,7 +237,7 @@ func (e *emitter) stateLines(m *ir.Machine) string {
 func (e *emitter) frameArgs(tps []*types.TypeParam, params []*ir.Var) []string {
 	out := make([]string, 0, len(tps)+len(params)+1)
 	for _, tp := range tps {
-		n := typeParamName(tp)
+		n := e.typeParamName(tp)
 		out = append(out, "$d"+n)
 	}
 	for _, p := range params {
@@ -423,7 +423,7 @@ func (e *emitter) machineSave(f *ir.Func, fn string) {
 	// The frame of a local function holds no dictionary. Read writeFrameClass.
 	if fn == "" {
 		for _, tp := range tps {
-			n := typeParamName(tp)
+			n := e.typeParamName(tp)
 			e.line("..$d%s = $d%s", n, n)
 		}
 	}

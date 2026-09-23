@@ -82,7 +82,7 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 	}
 	dicts := make([]string, len(params))
 	for i, tp := range params {
-		dicts[i] = "$d" + typeParamName(tp)
+		dicts[i] = "$d" + e.typeParamName(tp)
 	}
 	e.line("final class %s {", head)
 	for i, tp := range params {
@@ -145,7 +145,7 @@ func (e *emitter) typeParamDecl(params []*types.TypeParam) string {
 	}
 	parts := make([]string, len(params))
 	for i, tp := range params {
-		parts[i] = typeParamName(tp)
+		parts[i] = e.typeParamName(tp)
 		if bound := e.typeParamBound(tp); bound != "" {
 			parts[i] += " extends " + bound
 		}
@@ -160,7 +160,7 @@ func (e *emitter) typeArgsOfParams(params []*types.TypeParam) string {
 	}
 	parts := make([]string, len(params))
 	for i, tp := range params {
-		parts[i] = typeParamName(tp)
+		parts[i] = e.typeParamName(tp)
 	}
 	return "<" + strings.Join(parts, ", ") + ">"
 }
@@ -169,7 +169,7 @@ func (e *emitter) typeArgsOfParams(params []*types.TypeParam) string {
 func (e *emitter) dictParams(params []*types.TypeParam) []string {
 	out := make([]string, len(params))
 	for i, tp := range params {
-		out[i] = fmt.Sprintf("Dict<%s> $d%s", e.dartType(tp), typeParamName(tp))
+		out[i] = fmt.Sprintf("Dict<%s> $d%s", e.dartType(tp), e.typeParamName(tp))
 	}
 	return out
 }
@@ -275,6 +275,15 @@ func (e *emitter) writeEqual(class string, st *types.Struct, fields []string) {
 // the class holds a call of that function. Go runs such a method with a nil
 // receiver, and Dart calls no member of null.
 func (e *emitter) method(f *ir.Func) {
+	// Receiver parameters can differ from the class declaration names.
+	previous := e.receiverParams
+	defer func() { e.receiverParams = previous }()
+	named := namedOf(f.Recv.Type)
+	e.receiverParams = make(map[*types.TypeParam]string, named.TypeArgs().Len())
+	for i := 0; i < named.TypeArgs().Len(); i++ {
+		parameter := named.TypeArgs().At(i).(*types.TypeParam)
+		e.receiverParams[parameter] = e.typeParamName(named.TypeParams().At(i))
+	}
 	if !e.inClass[f] {
 		e.methodForward(f)
 		return
@@ -301,7 +310,7 @@ func (e *emitter) method(f *ir.Func) {
 	f.TypeParams = own
 	e.line("}")
 	e.frameOfWith(f, all, fmt.Sprintf("%s.%s%s(%s)", frameRecv(f.Recv), e.methodMember(f),
-		typeArgNames(own),
+		e.typeArgsOfParams(own),
 		strings.Join(e.frameArgs(own, f.Params), ", ")))
 }
 
@@ -318,7 +327,7 @@ func (e *emitter) methodForward(f *ir.Func) {
 	recv := recvTypeParams(obj)
 	args := []string{"this"}
 	for _, tp := range append(append([]*types.TypeParam{}, recv...), f.TypeParams...) {
-		args = append(args, "$d"+typeParamName(tp))
+		args = append(args, "$d"+e.typeParamName(tp))
 	}
 	// A boxed parameter takes a second name, thus the argument reads the same
 	// name that the parameter list of this member declares.
@@ -328,7 +337,7 @@ func (e *emitter) methodForward(f *ir.Func) {
 	e.line("%s %s%s(%s) => %s%s(%s);", e.results(f), e.methodMember(f),
 		e.typeParamDecl(f.TypeParams), strings.Join(params, ", "),
 		methodFuncName(obj.Name(), f.Name),
-		typeArgNames(append(append([]*types.TypeParam{}, recv...), f.TypeParams...)),
+		e.typeArgsOfParams(append(append([]*types.TypeParam{}, recv...), f.TypeParams...)),
 		strings.Join(args, ", "))
 }
 
@@ -360,18 +369,6 @@ func (e *emitter) frameOfWith(f *ir.Func, tps []*types.TypeParam, invoke string)
 	}
 	e.writeFrameClass(f.Machine, tps, "", invoke, len(f.Results) > 0,
 		e.goFuncName(f), goFile)
-}
-
-// typeArgNames writes the type arguments of a call to a generic function.
-func typeArgNames(params []*types.TypeParam) string {
-	if len(params) == 0 {
-		return ""
-	}
-	parts := make([]string, len(params))
-	for i, tp := range params {
-		parts[i] = typeParamName(tp)
-	}
-	return "<" + strings.Join(parts, ", ") + ">"
 }
 
 // receiver binds the receiver name. Go gives a value receiver a copy of the
@@ -408,7 +405,7 @@ func (e *emitter) funcDecl(f *ir.Func) {
 	e.body(f)
 	e.line("}")
 	e.line("")
-	e.frameOf(f, fmt.Sprintf("%s%s(%s)", e.funcName(f), typeArgNames(f.TypeParams),
+	e.frameOf(f, fmt.Sprintf("%s%s(%s)", e.funcName(f), e.typeArgsOfParams(f.TypeParams),
 		strings.Join(e.frameArgs(f.TypeParams, f.Params), ", ")))
 }
 
@@ -454,7 +451,7 @@ func (e *emitter) methodFunc(f *ir.Func) {
 	e.typeParams = prev
 	args := append([]string{varRead(f.Recv)}, e.frameArgs(all, f.Params)...)
 	e.frameOfWith(f, all, fmt.Sprintf("%s%s(%s)", methodFuncName(obj.Name(), f.Name),
-		typeArgNames(all), strings.Join(args, ", ")))
+		e.typeArgsOfParams(all), strings.Join(args, ", ")))
 }
 
 // structFieldName gives the Dart name of a struct field. Each blank field

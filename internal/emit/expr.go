@@ -811,9 +811,9 @@ func (e *emitter) narrow(t types.Type, text string) string {
 			if set.Integer || set.Float || set.Complex {
 				return e.dictOf(tp) + ".mask(" + text + ")"
 			}
-			return e.dictOf(tp) + ".mask(" + text + " as " + typeParamName(tp) + ")"
+			return e.dictOf(tp) + ".mask(" + text + " as " + e.typeParamName(tp) + ")"
 		}
-		return "(" + text + " as " + typeParamName(tp) + ")"
+		return "(" + text + " as " + e.typeParamName(tp) + ")"
 	}
 	return text
 }
