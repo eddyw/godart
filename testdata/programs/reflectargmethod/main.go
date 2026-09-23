@@ -15,7 +15,15 @@ func (Runner[T]) Run(callback func(T) bool) {
 		}
 	}
 }
+func (Runner[T]) Factory() func() T { return func() T { runtime.Gosched(); return T(47) } }
+
 func main() {
+	callback := reflect.ValueOf(Runner[int]{}).MethodByName("Factory").Call(nil)[0].Interface().(func() int)
+	value := callback()
+	if value != 47 {
+		panic(fmt.Sprintf("returned callback value: %d", value))
+	}
+
 	for _, function := range []reflect.Value{reflect.ValueOf(Runner[int]{}).MethodByName("Run")} {
 		count := 0
 		callback := func(i int) bool { runtime.Gosched(); count++; return true }

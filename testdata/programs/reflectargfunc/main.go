@@ -13,7 +13,17 @@ func run[T ~int](callback func(T) bool) {
 		}
 	}
 }
+func factory[T ~int]() (string, func() T) {
+	return "factory", func() T { runtime.Gosched(); return T(47) }
+}
+
 func main() {
+	callback := reflect.ValueOf(factory[int]).Call(nil)[1].Interface().(func() int)
+	value := callback()
+	if value != 47 {
+		panic(fmt.Sprintf("returned callback value: %d", value))
+	}
+
 	for _, function := range []reflect.Value{reflect.ValueOf(run[int])} {
 		count := 0
 		callback := func(i int) bool { runtime.Gosched(); count++; return true }
