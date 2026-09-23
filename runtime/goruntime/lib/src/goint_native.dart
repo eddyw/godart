@@ -138,12 +138,17 @@ GoFloat32 $f32FromBits(GoInt b) => GoFloat32.fromBits(b.$v);
 int $ix(GoInt v) => v.$v;
 
 /// The Go integer of a double, with the truncation of Go.
-GoInt $fromF64(double v) => GoInt(v.truncate());
+GoInt $fromF64(double v) {
+  // Go permits any integer result for NaN or infinity, but no exception.
+  if (!v.isFinite) return GoInt.zero;
+  return GoInt(v.truncate());
+}
 
 /// The value of a float64 as an unsigned 64-bit integer. truncate of Dart
 /// stops at the largest signed value, thus a value of at least 2 to the power
 /// 63 needs the wrap of the unsigned range.
 GoInt $fromF64U(double v) {
+  if (!v.isFinite) return GoInt.zero;
   final double t = v.truncateToDouble();
   if (t < 9223372036854775808.0) return GoInt(t.toInt());
   return GoInt(BigInt.from(t).toUnsigned(64).toSigned(64).toInt());

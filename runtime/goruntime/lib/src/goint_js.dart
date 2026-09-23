@@ -282,6 +282,8 @@ int $ix(GoInt v) => v.$v;
 /// The Go integer of a double, with the truncation of Go. A double outside
 /// 53 bits is a multiple of a power of 2, thus the 2 halves stay exact.
 GoInt $fromF64(double v) {
+  // Go permits any integer result for NaN or infinity, but no exception.
+  if (!v.isFinite) return GoInt.zero;
   final double t = v.truncateToDouble();
   final double low = t % 4294967296;
   return GoInt._(_s32(((t - low) / 4294967296).toInt()), low.toInt());
