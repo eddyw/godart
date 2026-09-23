@@ -223,7 +223,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "path_test.go", Declarations: []string{"TestMkdirAll", "TestMkdirAllAbsPath", "TestMkdirAllWithSymlink"}},
 			{Name: "root_test.go", Declarations: []string{"testMaybeRooted", "makefs", "hasLink", "rootTest", "rootTest.run", "rootTestCases", "errEndsTest", "TestRootMkdirAll", "TestRootMkdir", "TestRootOpen_File", "TestRootOpen_Directory", "TestRootCreate", "TestRootOpenRoot", "TestRootStat", "TestRootLstat", "TestRootReadlink", "TestRootRemoveFile", "TestRootRemoveDirectory", "TestRootNonPermissionMode", "TestRootUseAfterClose", "TestRootSymlinkToRoot", "TestOpenInRoot", "TestRootRemoveDot", "TestRootWriteReadFile", "TestRootName", "TestRootConcurrentClose"}},
 		},
-		"net":      {{Name: "interface_test.go", Declarations: []string{"TestInterfaces"}}, {Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "pipe_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept"}}},
+		"net":      {{Name: "interface_test.go", Declarations: []string{"TestInterfaces"}}, {Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "pipe_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept", "resolveTCPAddrTest", "resolveTCPAddrTests", "TestResolveTCPAddr"}}, {Name: "udpsock_test.go", Declarations: []string{"resolveUDPAddrTest", "resolveUDPAddrTests", "TestResolveUDPAddr"}}, {Name: "net.go", Declarations: []string{"errNoSuitableAddress"}}},
 		"net/http": {{Name: "header_test.go", Declarations: []string{"headerWriteTests", "TestHeaderWrite", "parseTimeTests", "TestParseTime", "TestNilHeaderClone"}}, {Name: "sniff_test.go", Declarations: []string{"sniffTests", "TestDetectContentType"}}},
 	}
 	names := make([]string, 0, len(selections))
@@ -301,7 +301,19 @@ import . "os/signal"
 `, 1)
 				}
 				if pkg == "net" {
-					source = strings.Replace(source, "package net\n", "package net_test\nimport . \"net\"\n", 1)
+					if file.Name == "tcpsock_test.go" || file.Name == "udpsock_test.go" {
+						protocol := strings.ToUpper(file.Name[:3])
+						adapted, cause := literalResolveSource(source, "resolve"+protocol+"AddrTests")
+						if cause != nil {
+							t.Fatal(cause)
+						}
+						source = adapted
+					}
+					wrapper := "package net_test\n"
+					if strings.HasSuffix(file.Name, "_test.go") {
+						wrapper += "import . \"net\"\n"
+					}
+					source = strings.Replace(source, "package net\n", wrapper, 1)
 				}
 				if pkg == "net/http" && file.Name == "header_test.go" {
 					source = strings.Replace(source, "package http", "package http_test\nimport . \"net/http\"", 1)
@@ -335,7 +347,16 @@ import . "os/signal"
 					}
 					source = strings.Replace(source, "package "+name+"\n", wrapper, 1)
 				}
-				writeFile(t, filepath.Join(fixture, file.Name), source)
+				outputName := file.Name
+				if pkg == "net" && file.Name == "net.go" {
+					var cause error
+					source, cause = resolveErrorSource(source)
+					if cause != nil {
+						t.Fatal(cause)
+					}
+					outputName = "resolve_error_test.go"
+				}
+				writeFile(t, filepath.Join(fixture, outputName), source)
 			}
 			if pkg == "sync" || pkg == "crypto/x509" || pkg == "os" || pkg == "internal/godebug" {
 				names := []string{"Executable", "MustHaveExec"}

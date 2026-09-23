@@ -316,6 +316,13 @@ func addrText(ip IP, port int, zone string) string {
 // ResolveTCPAddr reads the text of a TCP address. The surface holds no name
 // resolver, thus a host that is not an IP address gives an error.
 func ResolveTCPAddr(network, address string) (*TCPAddr, error) {
+	switch network {
+	case "":
+		network = "tcp"
+	case "tcp", "tcp4", "tcp6":
+	default:
+		return nil, UnknownNetworkError(network)
+	}
 	ip, port, zone, err := parseAddr(network, address)
 	if err != nil {
 		return nil, err
@@ -325,6 +332,13 @@ func ResolveTCPAddr(network, address string) (*TCPAddr, error) {
 
 // ResolveUDPAddr reads the text of a UDP address.
 func ResolveUDPAddr(network, address string) (*UDPAddr, error) {
+	switch network {
+	case "":
+		network = "udp"
+	case "udp", "udp4", "udp6":
+	default:
+		return nil, UnknownNetworkError(network)
+	}
 	ip, port, zone, err := parseAddr(network, address)
 	if err != nil {
 		return nil, err
@@ -417,11 +431,6 @@ func (e UnknownNetworkError) Temporary() bool { return false }
 
 // parseAddr reads a host and a port, and it gives the address of the host.
 func parseAddr(network, address string) (IP, int, string, error) {
-	switch network {
-	case "", "tcp", "tcp4", "tcp6", "udp", "udp4", "udp6":
-	default:
-		return nil, 0, "", UnknownNetworkError(network)
-	}
 	if address == "" {
 		return nil, 0, "", nil
 	}
@@ -429,10 +438,11 @@ func parseAddr(network, address string) (IP, int, string, error) {
 	if err != nil {
 		return nil, 0, "", err
 	}
-	port, err := strconv.Atoi(portText)
+	port, err := LookupPort(network, portText)
 	if err != nil {
-		return nil, 0, "", &ParseError{Type: "port", Text: portText}
+		return nil, 0, "", err
 	}
+	originalHost := host
 	zone := ""
 	if i := strings.LastIndexByte(host, '%'); i >= 0 {
 		host, zone = host[:i], host[i+1:]
@@ -442,6 +452,12 @@ func parseAddr(network, address string) (IP, int, string, error) {
 		ip = ParseIP(host)
 		if ip == nil {
 			return nil, 0, "", &ParseError{Type: "IP address", Text: host}
+		}
+		if network[len(network)-1] == '4' && ip.Equal(IPv6unspecified) {
+			ip, zone = IPv4zero, ""
+		}
+		if network[len(network)-1] == '4' && ip.To4() == nil || network[len(network)-1] == '6' && ip.To4() != nil {
+			return nil, 0, "", &AddrError{Err: "no suitable address found", Addr: originalHost}
 		}
 	}
 	return ip, port, zone, nil
