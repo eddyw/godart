@@ -97,8 +97,11 @@ func main() {
 	if err := absent.Chdir(); !errors.Is(err, os.ErrInvalid) {
 		panic(fmt.Sprint("nil file: ", err))
 	}
-	if err := os.Stdout.Chdir(); !errors.Is(err, syscall.ENOTDIR) {
+	err = os.Stdout.Chdir()
+	var errno syscall.Errno
+	if !errors.As(err, &errno) {
 		panic(fmt.Sprint("standard stream: ", err))
 	}
+	fmt.Println("standard stream errno:", int(errno))
 	fmt.Println("directory identity and errors match")
 }

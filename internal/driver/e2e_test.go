@@ -42,7 +42,7 @@ func TestPrograms(t *testing.T) {
 			dir := filepath.Join(root, entry.Name())
 			native := filepath.Join(t.TempDir(), "program")
 			run(t, dir, "go", "build", "-o", native, ".")
-			want := programOutcome(t, dir, native)
+			want := programReference(t, dir, native)
 			out := t.TempDir()
 			err := driver.Build(driver.Options{
 				Trace:    traceBuild(t),
@@ -62,6 +62,27 @@ func TestPrograms(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Equal panic reports must not hide unexecuted fixture assertions.
+func programReference(t *testing.T, dir, native string) programResult {
+	t.Helper()
+	result := programOutcome(t, dir, native)
+	expectedFailure := map[string]string{
+		"deadlock":         "fatal error: all goroutines are asleep - deadlock!",
+		"deferblock":       "panic: the reason",
+		"panics":           "panic: runtime error: index out of range [5] with length 3",
+		"panicvalue":       "panic: shown(3) [recovered]\n\tpanic: boom",
+		"synctesttimerout": "fatal error: stop of synctest timer from outside bubble",
+	}[filepath.Base(dir)]
+	expectedExit := 0
+	if expectedFailure != "" {
+		expectedExit = 2
+	}
+	if result.Exit != expectedExit || !strings.HasSuffix(result.Text, expectedFailure) {
+		t.Fatalf("native fixture exited %d, want %d with final report %q\n%s", result.Exit, expectedExit, expectedFailure, result.Text)
+	}
+	return result
 }
 
 // runProgram runs a compiled program. A panic writes a stack trace, and the 2
@@ -132,7 +153,7 @@ func TestAOT(t *testing.T) {
 			}
 			native := filepath.Join(t.TempDir(), "program")
 			run(t, source, "go", "build", "-o", native, ".")
-			want := programOutcome(t, source, native)
+			want := programReference(t, source, native)
 			out := t.TempDir()
 			if err := driver.Build(driver.Options{
 				Trace:    traceBuild(t),
@@ -173,7 +194,7 @@ func TestWasm(t *testing.T) {
 			}
 			native := filepath.Join(t.TempDir(), "program")
 			run(t, source, "go", "build", "-o", native, ".")
-			want := programOutcome(t, source, native)
+			want := programReference(t, source, native)
 			out := t.TempDir()
 			if err := driver.Build(driver.Options{
 				Trace:    traceBuild(t),
@@ -217,7 +238,7 @@ func TestJS(t *testing.T) {
 			}
 			native := filepath.Join(t.TempDir(), "program")
 			run(t, source, "go", "build", "-o", native, ".")
-			want := programOutcome(t, source, native)
+			want := programReference(t, source, native)
 			out := t.TempDir()
 			if err := driver.Build(driver.Options{
 				Trace:    traceBuild(t),
