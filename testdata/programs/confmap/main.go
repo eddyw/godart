@@ -258,6 +258,14 @@ func dump2(label string, m map[int]int) {
 }
 
 func clears() {
+	during := map[int]int{1: 1, 2: 2, 3: 3}
+	steps := 0
+	for range during {
+		steps++
+		clear(during)
+	}
+	row("clear during range", steps)
+
 	m := map[string]int{"a": 1, "b": 2}
 	clear(m)
 	row("len after clear", len(m))

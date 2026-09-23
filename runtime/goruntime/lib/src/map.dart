@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:math' show Random;
 
 import 'iface.dart';
 import 'panic.dart';
@@ -20,9 +21,8 @@ final class _Entry<K, V> {
 /// A Go map.
 ///
 /// The map keeps the zero value of the element type, because a read of a key
-/// that the map does not hold gives that value. The order of the keys follows
-/// the order of the writes. Go gives no order, thus a Go program must not
-/// depend on it.
+/// that the map does not hold gives that value. Each iterator chooses its
+/// start entry at random. Go programs must not depend on the key order.
 final class GoMap<K, V> {
   final HashMap<K, _Entry<K, V>> _entries;
   final V Function() _zero;
@@ -176,31 +176,52 @@ final class GoMap<K, V> {
   }
 }
 
+final Random _iterationRandom = Random();
+
 /// An iterator omits entries added after its creation. It observes updates
 /// and deletions of the original entries.
 final class GoMapIter<K, V> {
   _Entry<K, V>? _at;
   _Entry<K, V>? _cur;
+  final _Entry<K, V>? _head;
   final int _limit;
+  int _startOrder = 0;
+  bool _wrapped = false;
 
-  GoMapIter(GoMap<K, V> m) : _at = m._head, _limit = m._nextOrder;
+  GoMapIter(GoMap<K, V> m)
+    : _at = m._head,
+      _head = m._head,
+      _limit = m._nextOrder {
+    if (_at != null) {
+      for (int n = _iterationRandom.nextInt(m.length); n > 0; n--) {
+        _at = _at!.next;
+      }
+      _startOrder = _at!.order;
+    }
+  }
 
   /// The first value of a frame local. The machine writes the true iterator
   /// before the loop starts.
-  GoMapIter.empty() : _at = null, _limit = 0;
+  GoMapIter.empty() : _head = null, _limit = 0;
 
   bool next() {
-    var e = _at;
-    while (e != null && e.order < _limit && e.dead) {
-      e = e.next;
+    while (true) {
+      final e = _at;
+      if (e == null || e.order >= _limit) {
+        if (_wrapped) return false;
+        _at = _head;
+        _wrapped = true;
+        continue;
+      }
+      if (_wrapped && e.order >= _startOrder) {
+        _at = null;
+        return false;
+      }
+      _at = e.next;
+      if (e.dead) continue;
+      _cur = e;
+      return true;
     }
-    if (e == null || e.order >= _limit) {
-      _at = null;
-      return false;
-    }
-    _cur = e;
-    _at = e.next;
-    return true;
   }
 
   K get key => _cur!.key;

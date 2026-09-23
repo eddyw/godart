@@ -6,6 +6,7 @@
   "copy",
   "complit",
   "map",
+  "mapclear",
   "typeparam/mdempsky/16",
   "typeparam/mdempsky/18",
   "abi/method_wrapper",
