@@ -230,7 +230,13 @@ final class %[2]sBridge implements GoBridge {
     required double textSize,
   }) {
     ui.SetTheme(
-      ui.ThemeData$(dark, $gi(primary), $gi(surface), $gi(onSurface), $f64(textSize)),
+      ui.HostTheme$(
+        dark,
+        $gi(primary),
+        $gi(surface),
+        $gi(onSurface),
+        $f64(textSize),
+      ),
     );
   }
 

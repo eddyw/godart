@@ -95,6 +95,7 @@ flutter-go:
 
 # This target needs the Flutter SDK. CI runs the Go validation separately.
 flutter-test: build
+	go test ./cmd/glutter -run '^TestNewApp$$' -count=1
 	cd flutter/goflutter && $(FLUTTER) pub get
 	cd flutter/goflutter && $(FLUTTER) analyze
 	cd flutter/bench/flutter && $(FLUTTER) pub get && $(FLUTTER) analyze
