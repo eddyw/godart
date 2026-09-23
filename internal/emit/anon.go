@@ -15,7 +15,7 @@ import (
 func (e *emitter) anonClass(st *types.Struct) string {
 	storage := storageShape(st)
 	sum := sha256.Sum256([]byte(anonText(storage)))
-	key := "$Anon" + hex.EncodeToString(sum[:4])
+	key := "$Anon" + hex.EncodeToString(sum[:])
 	e.anon[key] = storage
 	return key
 }
@@ -262,7 +262,7 @@ func qualifyPath(p *types.Package) string { return p.Path() }
 func (e *emitter) nilChan(elem types.Type) string {
 	text := e.dartType(elem)
 	sum := sha256.Sum256([]byte(text))
-	key := e.nilPrefix + "$nilChan" + hex.EncodeToString(sum[:4])
+	key := e.nilPrefix + "$nilChan" + hex.EncodeToString(sum[:])
 	if _, ok := e.nilChans[key]; !ok {
 		e.nilChans[key] = elem
 	}
