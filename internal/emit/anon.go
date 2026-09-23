@@ -36,7 +36,7 @@ func (e *emitter) anonType(st *types.Struct) string {
 	}
 	args := make([]string, st.NumFields())
 	for i := range args {
-		args[i] = e.dartType(st.Field(i).Type())
+		args[i] = e.fieldStorageType(st.Field(i).Type())
 	}
 	return class + "<" + strings.Join(args, ", ") + ">"
 }

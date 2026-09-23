@@ -343,6 +343,11 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 			return
 		}
 	}
+	if field, ok := lhs.(*ir.Field); ok {
+		e.mark(field.Pos)
+		e.line("%s.%s = %s;", e.deref(field.X), e.fieldDartName(field.X.GoType(), field.Name), value)
+		return
+	}
 	e.line("%s = %s;", e.expr(lhs), value)
 }
 

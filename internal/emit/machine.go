@@ -680,10 +680,10 @@ func (e *emitter) selectList(x *ir.SelectList) string {
 		switch c.Kind {
 		case ir.SelectRecv:
 			parts = append(parts, fmt.Sprintf("RecvCase<%s>(%s)",
-				e.dartType(c.Elem), e.expr(c.Chan)))
+				e.dartType(c.Elem), e.chanExpr(c.Chan)))
 		case ir.SelectSend:
 			parts = append(parts, fmt.Sprintf("SendCase<%s>(%s, %s)",
-				e.dartType(c.Elem), e.expr(c.Chan), e.expr(c.Value)))
+				e.dartType(c.Elem), e.chanExpr(c.Chan), e.expr(c.Value)))
 		}
 	}
 	return "<SelectCase>[" + strings.Join(parts, ", ") + "]"

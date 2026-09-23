@@ -141,6 +141,9 @@ final class TypeDesc {
   /// thus only these 5 carry the field.
   final R Function<R>(R Function<T>())? withType;
 
+  /// Names a finite field representation for recursive local structs.
+  final R Function<R>(R Function<T>())? withStorageType;
+
   /// Builds a closure that carries the Dart type of each parameter and of the
   /// result of a function type.
   ///
@@ -184,6 +187,7 @@ final class TypeDesc {
     this.ptr,
     this.newPtr,
     this.withType,
+    this.withStorageType,
     this.bind,
     this.unpack,
     this.view,

@@ -42,7 +42,10 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "scan_test.go", Declarations: []string{"RecursiveInt", "RecursiveInt.Scan", "scanInts", "makeInts", "TestScanInts", "intCount", "testScanInts", "f"}},
 			{Name: "fmt_test.go", Declarations: []string{"TestComplexFormatting", "NaN", "posInf", "negInf", "PanicS", "PanicGo", "PanicF", "panictests", "TestPanics"}},
 		},
-		"encoding/gob": {{Name: "codec_test.go", Declarations: []string{"TestNesting"}}},
+		"encoding/gob": {
+			{Name: "codec_test.go", Declarations: []string{"TestNesting"}},
+			{Name: "encoder_test.go", Declarations: []string{"TestRecursiveMapType", "TestRecursiveSliceType", "encAndDec"}},
+		},
 		"encoding/json": {
 			{Name: "encode_test.go", Declarations: []string{"TestMarshalFloat", "badFloatREs", "re", "TestMarshalErrorAndReuseEncodeState"}},
 			{Name: "v2_encode_test.go", Declarations: []string{"TestMarshalFloat", "badFloatREs", "re", "TestMarshalErrorAndReuseEncodeState"}},

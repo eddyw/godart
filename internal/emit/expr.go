@@ -31,7 +31,11 @@ func (e *emitter) expr(x ir.Expr) string {
 		return e.zero(x.Type)
 	case *ir.Field:
 		e.mark(x.Pos)
-		return e.deref(x.X) + "." + e.fieldDartName(x.X.GoType(), x.Name)
+		text := e.deref(x.X) + "." + e.fieldDartName(x.X.GoType(), x.Name)
+		if e.fieldStorageType(x.GoType()) != e.dartType(x.GoType()) {
+			return "(" + text + " as " + e.dartType(x.GoType()) + ")"
+		}
+		return text
 	case *ir.Index:
 		return e.index(x)
 	case *ir.TypeAssert:
@@ -39,7 +43,7 @@ func (e *emitter) expr(x ir.Expr) string {
 	case *ir.TypeTest:
 		return e.typeTest(x.X, x.Assert)
 	case *ir.MapRead:
-		return fmt.Sprintf("%s.get2(%s)", e.expr(x.X), e.expr(x.Key))
+		return fmt.Sprintf("%s.get2(%s)", e.container(x.X), e.expr(x.Key))
 	case *ir.Slice:
 		return e.sliceExpr(x)
 	case *ir.Call:
@@ -540,7 +544,7 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 			text, size, size, low, high, max,
 			e.rangeTail(x.Max != nil, true, x.Low, x.High, x.Max))
 	}
-	x0 := e.expr(x.X)
+	x0 := e.sliceText(x.X)
 	high := fmt.Sprintf("%s.$length", x0)
 	if x.High != nil {
 		high = e.expr(x.High)
@@ -899,9 +903,13 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 			owner = p.Elem()
 		}
 		field := e.fieldDartName(x.X.GoType(), x.Name)
-		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => $r.%s, ($r, $i, $v) => $r.%s = $v)",
+		read := "$r." + field
+		if e.fieldStorageType(elem) != e.dartType(elem) {
+			read = "(" + read + " as " + e.dartType(elem) + ")"
+		}
+		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => %s, ($r, $i, $v) => $r.%s = $v)",
 			e.dartType(owner), e.dartType(elem), e.deref(x.X), fieldIndex(owner, x.Name),
-			field, field)
+			read, field)
 	case *ir.Composite:
 		// A composite literal holds no name, thus its address takes a box of
 		// its own. Each read of that pointer reaches the same value.

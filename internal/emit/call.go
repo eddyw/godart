@@ -894,6 +894,9 @@ func (e *emitter) callArgs(x *ir.Call) []string {
 }
 
 func (e *emitter) sliceLiteral(elem types.Type, parts []string) string {
+	if localStorageCycle(types.NewSlice(elem)) {
+		return fmt.Sprintf("Slice<%s>.of(<%s>[%s])", e.dartType(elem), e.dartType(elem), strings.Join(parts, ", "))
+	}
 	if list := typedList(elem); list != "" {
 		return fmt.Sprintf("Slice.of(%s.fromList(<%s>[%s]))",
 			list, e.dartType(elem), strings.Join(parts, ", "))
@@ -1325,23 +1328,23 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 	case "min", "max":
 		return e.minMax(x)
 	case "delete":
-		text := e.expr(x.Args[0])
+		text := e.container(x.Args[0])
 		if typeset.Core(x.Args[0].GoType()) == nil {
 			text = "(" + text + " as GoMap<Object?, Object?>)"
 		}
 		return fmt.Sprintf("%s.remove(%s)", text, e.expr(x.Args[1]))
 	case "clear":
 		if isMapType(x.Args[0].GoType()) {
-			return e.expr(x.Args[0]) + ".clear()"
+			return e.container(x.Args[0]) + ".clear()"
 		}
 		if slice, ok := typeset.Core(x.Args[0].GoType()).(*types.Slice); ok {
 			return fmt.Sprintf("$clearSlice(%s, () => %s%s)",
-				e.expr(x.Args[0]), e.zero(slice.Elem()), e.elemAssign(slice.Elem()))
+				e.sliceText(x.Args[0]), e.zero(slice.Elem()), e.elemAssign(slice.Elem()))
 		}
 		e.fail("clear does not apply to the type %s", x.Args[0].GoType())
 		return "null"
 	case "mapiter":
-		return fmt.Sprintf("GoMapIter(%s)", e.expr(x.Args[0]))
+		return fmt.Sprintf("GoMapIter(%s)", e.container(x.Args[0]))
 	case "iternext":
 		return e.expr(x.Args[0]) + ".next()"
 	case "iterkey":
@@ -1387,9 +1390,9 @@ func (e *emitter) length(x ir.Expr) string {
 	case isArrayType(t):
 		return "$gi(" + e.expr(x) + ".length)"
 	case isMapType(t):
-		return "$gi(" + e.expr(x) + ".length)"
+		return "$gi(" + e.container(x) + ".length)"
 	case isChanType(t):
-		return "$gi(" + e.expr(x) + ".length)"
+		return "$gi(" + e.chanExpr(x) + ".length)"
 	case isPointerType(t):
 		// The length of a pointer to an array comes from the type, and Go
 		// evaluates the operand for a constant length in no case, thus a nil
@@ -1414,7 +1417,7 @@ func (e *emitter) capacity(x ir.Expr) string {
 	case isArrayType(t):
 		return "$gi(" + e.expr(x) + ".length)"
 	case isChanType(t):
-		return "$gi(" + e.expr(x) + ".capacity)"
+		return "$gi(" + e.chanExpr(x) + ".capacity)"
 	case isPointerType(t):
 		// Read the note of length: the value comes from the type.
 		if p, ok := typeset.Core(t).(*types.Pointer); ok {
@@ -1501,8 +1504,12 @@ func (e *emitter) appendCall(x *ir.Builtin) string {
 		e.fail("append needs a slice")
 		return "null"
 	}
+	args := ""
+	if localStorageCycle(slice) {
+		args = "<" + e.dartType(slice.Elem()) + ">"
+	}
 	if x.Spread {
-		source := e.expr(x.Args[1])
+		source := e.sliceText(x.Args[1])
 		if isString(x.Args[1].GoType()) {
 			// Go allows append of a string to a byte slice. append reads the
 			// source and holds it not, thus the bytes need no copy and no
@@ -1514,16 +1521,16 @@ func (e *emitter) appendCall(x *ir.Builtin) string {
 			// A union of a string and a byte slice branches at run time.
 			source = fmt.Sprintf("$spreadBytes(%s)", source)
 		}
-		return fmt.Sprintf("$appendSlice(%s, %s, %s%s)",
-			e.expr(x.Args[0]), source, e.alloc(slice.Elem()),
+		return fmt.Sprintf("$appendSlice%s(%s, %s, %s%s)",
+			args, e.sliceText(x.Args[0]), source, e.alloc(slice.Elem()),
 			e.elemAssign(slice.Elem()))
 	}
 	parts := make([]string, 0, len(x.Args)-1)
 	for _, a := range x.Args[1:] {
 		parts = append(parts, e.expr(a))
 	}
-	return fmt.Sprintf("$append(%s, <%s>[%s], %s%s)",
-		e.sliceText(x.Args[0]), e.dartType(slice.Elem()), strings.Join(parts, ", "),
+	return fmt.Sprintf("$append%s(%s, <%s>[%s], %s%s)",
+		args, e.sliceText(x.Args[0]), e.dartType(slice.Elem()), strings.Join(parts, ", "),
 		e.alloc(slice.Elem()), e.elemAssign(slice.Elem()))
 }
 
@@ -1557,7 +1564,7 @@ func (e *emitter) sliceText(x ir.Expr) string {
 
 func (e *emitter) copyCall(x *ir.Builtin) string {
 	dst, src := x.Args[0], x.Args[1]
-	source := e.expr(src)
+	source := e.sliceText(src)
 	if isString(src.GoType()) {
 		// copy reads the source and holds it not, thus the slice shares the
 		// bytes of the string.
@@ -1565,7 +1572,7 @@ func (e *emitter) copyCall(x *ir.Builtin) string {
 	}
 	slice, _ := typeset.Core(dst.GoType()).(*types.Slice)
 	return fmt.Sprintf("$copySlice(%s, %s%s)",
-		e.expr(dst), source, e.elemAssign(slice.Elem()))
+		e.sliceText(dst), source, e.elemAssign(slice.Elem()))
 }
 
 func (e *emitter) makeCall(x *ir.Builtin) string {

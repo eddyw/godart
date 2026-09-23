@@ -294,8 +294,12 @@ func withTypePart(e *emitter, t types.Type) string {
 		if dart == "Object?" {
 			return ""
 		}
-		return fmt.Sprintf(
+		out := fmt.Sprintf(
 			", withType: <$R>($R Function<$T>() $f) => $f<%s>()", dart)
+		if storage := e.fieldStorageType(t); storage != dart {
+			out += fmt.Sprintf(", withStorageType: <$R>($R Function<$T>() $f) => $f<%s>()", storage)
+		}
+		return out
 	}
 	return ""
 }

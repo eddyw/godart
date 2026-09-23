@@ -394,12 +394,10 @@ func (e *emitter) anonZero(st *types.Struct) string {
 		strings.Join(e.anonDicts(st), ", "))
 }
 
-// cycleZeroFunc gives the zero function of an element type of a zero value.
-// The Dart type of a type that names itself erases to Object?, thus null is
-// its zero, and the text of the true zero has no end.
+// The dictionary reserves its zero factory before recursive elements refer to it.
 func (e *emitter) cycleZeroFunc(t types.Type) string {
 	if n, ok := types.Unalias(t).(*types.Named); ok && e.cyclic(n.Obj()) {
-		return "$nullZero"
+		return e.dictOf(t) + ".zero"
 	}
 	return e.zeroFunc(t)
 }
@@ -533,37 +531,44 @@ func (e *emitter) dictOf(t types.Type) string {
 		}
 	}
 	dart := e.dartType(t)
-	body := fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s, %s%s)",
-		dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t),
-		e.orderText(t), e.maskText(t), e.descriptorOf(t), e.dictCopy(t)+dictText(t))
+	bodyOf := func() string {
+		return fmt.Sprintf("Dict<%s>(() => %s, (a, b) => %s, (v) => %s, %s, %s, %s, %s%s)",
+			dart, e.zero(t), e.equalText("a", "b", t), e.hashText("v", t), e.alloc(t),
+			e.orderText(t), e.maskText(t), e.descriptorOf(t), e.dictCopy(t)+dictText(t))
+	}
 	if e.lits == nil {
-		return body
+		return bodyOf()
 	}
 	if e.lits.dicts == nil {
 		e.lits.dicts = map[string]string{}
 	}
+	// Dictionary factories accept only type metadata.
 	params := dictionaryParams(t)
 	declaration := e.typeParamDecl(params)
-	key := declaration + body
-	if value, ok := e.lits.dicts[key]; ok {
-		return value
-	}
-	// Local dictionary closures can retain unrelated Go closure captures.
-	name := fmt.Sprintf("$dict%d_%d", e.lits.tag, e.lits.seq)
-	e.lits.seq++
-	value := name
-	if len(params) == 0 {
-		e.lits.decls = append(e.lits.decls, fmt.Sprintf("final %s = %s;", name, body))
-	} else {
+	key := declaration + e.typeName(t)
+	args := ""
+	if len(params) > 0 {
 		arguments := make([]string, len(params))
 		for i, param := range params {
 			arguments[i] = e.dictOf(param)
 		}
-		value += e.typeArgsOfParams(params) + "(" + strings.Join(arguments, ", ") + ")"
+		args = e.typeArgsOfParams(params) + "(" + strings.Join(arguments, ", ") + ")"
+	}
+	if name, ok := e.lits.dicts[key]; ok {
+		return name + args
+	}
+	name := fmt.Sprintf("$dict%d_%d", e.lits.tag, e.lits.seq)
+	e.lits.seq++
+	value := name + args
+	// Reserve the dictionary before its zero value reaches the same type.
+	e.lits.dicts[key] = name
+	body := bodyOf()
+	if len(params) == 0 {
+		e.lits.decls = append(e.lits.decls, fmt.Sprintf("final Dict<%s> %s = %s;", dart, name, body))
+	} else {
 		e.lits.decls = append(e.lits.decls, fmt.Sprintf("Dict<%s> %s%s(%s) => %s;",
 			dart, name, declaration, strings.Join(e.dictParams(params), ", "), body))
 	}
-	e.lits.dicts[key] = value
 	return value
 }
 
@@ -1273,6 +1278,75 @@ func (e *emitter) mentionsCyclic(t types.Type, seen map[*types.TypeName]bool) bo
 		}
 	}
 	return false
+}
+
+func localStorageCycle(root types.Type) bool {
+	seen := map[types.Type]bool{}
+	var walk func(types.Type, bool) bool
+	walk = func(t types.Type, first bool) bool {
+		t = types.Unalias(t)
+		if !first && types.Identical(t, root) {
+			return true
+		}
+		if seen[t] {
+			return false
+		}
+		seen[t] = true
+		switch t := t.(type) {
+		case *types.Named:
+			if !isLocalType(t.Obj()) {
+				return false
+			}
+			return walk(t.Underlying(), false)
+		case *types.Struct:
+			for i := range t.NumFields() {
+				if walk(t.Field(i).Type(), false) {
+					return true
+				}
+			}
+		case *types.Slice:
+			return walk(t.Elem(), false)
+		case *types.Array:
+			return walk(t.Elem(), false)
+		case *types.Chan:
+			return walk(t.Elem(), false)
+		case *types.Map:
+			return walk(t.Key(), false) || walk(t.Elem(), false)
+		case *types.Signature:
+			for _, tuple := range []*types.Tuple{t.Params(), t.Results()} {
+				for i := range tuple.Len() {
+					if walk(tuple.At(i).Type(), false) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
+	return walk(root, true)
+}
+
+// Recursive local fields erase a container boundary. Values retain their
+// concrete type for generic calls.
+func (e *emitter) fieldStorageType(t types.Type) string {
+	if named, ok := types.Unalias(t).(*types.Named); ok && e.cyclic(named.Obj()) {
+		return e.dartType(t)
+	}
+	if localStorageCycle(t) {
+		switch types.Unalias(t).Underlying().(type) {
+		case *types.Slice:
+			return "Slice"
+		case *types.Array:
+			return "List"
+		case *types.Map:
+			return "GoMap"
+		case *types.Chan:
+			return "Chan"
+		case *types.Signature:
+			return "Object?"
+		}
+	}
+	return e.dartType(t)
 }
 
 func recursiveLocalStruct(named *types.Named) bool {

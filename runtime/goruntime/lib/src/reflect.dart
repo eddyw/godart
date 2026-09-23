@@ -61,9 +61,8 @@ void $registerStructStorage(
 }
 
 /// Storage uses only the zero, equality, hash, copy, and assignment operations.
-R $withStorageType<R>(TypeDesc desc, R Function<T>(Dict<T>) f) => _withType<R>(
-  desc,
-  <T>() => f<T>(
+R $withStorageType<R>(TypeDesc desc, R Function<T>(Dict<T>) f) {
+  R apply<T>() => f<T>(
     Dict<T>(
       () => _zeroOf(desc) as T,
       (a, b) => $goEqual(a, b, desc),
@@ -80,8 +79,12 @@ R $withStorageType<R>(TypeDesc desc, R Function<T>(Dict<T>) f) => _withType<R>(
             }
           : null,
     ),
-  ),
-);
+  );
+  final X Function<X>(X Function<Y>())? make =
+      desc.withStorageType ?? desc.withType;
+  if (make != null) return make<R>(apply);
+  return _byKind<R>(desc.kind, apply);
+}
 
 int _descHandle(TypeDesc desc) {
   final int? found = _descHandles[desc.name];
