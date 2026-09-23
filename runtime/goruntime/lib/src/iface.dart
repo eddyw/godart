@@ -330,7 +330,7 @@ int $goHash(Object? v, TypeDesc d, [TypeDesc? root]) {
 /// The zero value of a predeclared type. A tear-off of a top level function is
 /// a constant expression of Dart, thus each descriptor below stays const.
 Object? $zeroInt() => GoInt.zero;
-Object? $zeroFloat() => 0.0;
+Object? $zeroFloat() => GoFloat64.zero;
 Object? $zeroBool() => false;
 Object? $zeroString() => GoString.empty;
 Object? $zeroComplex() => GoComplex.zero;

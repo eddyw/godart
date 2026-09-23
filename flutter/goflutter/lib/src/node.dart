@@ -111,7 +111,7 @@ final class GoNode {
   /// sizeOpt gives an optional float64 field.
   double? sizeOpt(String name, [int at = noAt]) {
     final Object? v = raw(name, at);
-    return v is $Ptr<double> ? v.v : null;
+    return v is $Ptr<GoFloat64> ? v.v.toDouble() : null;
   }
 
   /// countOpt gives an optional integer field.
@@ -158,7 +158,7 @@ final class GoNode {
     final List<double> out = <double>[];
     for (int i = 0; i < v.len; i++) {
       final Object? e = v[i];
-      if (e is double) out.add(e);
+      if (e is GoFloat64) out.add(e.toDouble());
     }
     return out;
   }
@@ -173,7 +173,9 @@ final class GoNode {
   /// onSize gives a `func(float64)` field.
   void Function(double)? onSize(String name, [int at = noAt]) {
     final Object? v = raw(name, at);
-    return v is void Function(double) ? v : null;
+    return v is void Function(GoFloat64)
+        ? (double value) => v($f64(value))
+        : null;
   }
 
   /// onCount gives a `func(int)` field.
@@ -197,7 +199,7 @@ final class GoNode {
   /// size gives a float64 field.
   double size(String name, [int at = noAt]) {
     final Object? v = raw(name, at);
-    return v is double ? v : 0;
+    return v is GoFloat64 ? v.toDouble() : 0;
   }
 
   /// count gives an integer field.
@@ -276,7 +278,9 @@ final class GoNode {
   /// onPair gives a `func(float64, float64)` field.
   void Function(double, double)? onPair(String name, [int at = noAt]) {
     final Object? v = raw(name, at);
-    return v is void Function(double, double) ? v : null;
+    return v is void Function(GoFloat64, GoFloat64)
+        ? (double a, double b) => v($f64(a), $f64(b))
+        : null;
   }
 
   /// onSort gives a `func(int, bool)` field.
@@ -317,7 +321,10 @@ final class GoNode {
     int at = noAt,
   ]) {
     final Object? v = raw(name, at);
-    return v is Iface? Function(double, double, double, double) ? v : null;
+    return v is Iface? Function(GoFloat64, GoFloat64, GoFloat64, GoFloat64)
+        ? (double a, double b, double c, double d) =>
+              v($f64(a), $f64(b), $f64(c), $f64(d))
+        : null;
   }
 
   /// buildSlivers gives a `func(bool) []Node` field.
@@ -333,6 +340,16 @@ final class GoNode {
     int at = noAt,
   ]) {
     final Object? v = raw(name, at);
-    return v is double Function(int, double, double, double, double) ? v : null;
+    return v
+            is GoFloat64 Function(
+              int,
+              GoFloat64,
+              GoFloat64,
+              GoFloat64,
+              GoFloat64,
+            )
+        ? (int i, double a, double b, double c, double d) =>
+              v(i, $f64(a), $f64(b), $f64(c), $f64(d)).toDouble()
+        : null;
   }
 }

@@ -11,8 +11,6 @@ import 'string.dart';
 /// the place of a closure, thus the value costs no object of its own.
 GoInt $intZero() => GoInt.zero;
 
-double $doubleZero() => 0.0;
-
 bool $boolZero() => false;
 
 GoComplex $complexZero() => GoComplex.zero;

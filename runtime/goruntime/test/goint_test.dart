@@ -147,18 +147,32 @@ void main() {
       double.negativeInfinity,
     ];
     for (final f in floats) {
-      expect(back(js.$f64ToBits(f)), nat.$f64ToBits(f).$v, reason: 'bits $f');
-      expect(js.$f64FromBits(js2(nat.$f64ToBits(f).$v)), f, reason: 'back $f');
+      expect(
+        back(js.$f64ToBits($f64(f))),
+        nat.$f64ToBits($f64(f)).$v,
+        reason: 'bits $f',
+      );
+      expect(
+        js.$f64FromBits(js2(nat.$f64ToBits($f64(f)).$v)).toDouble(),
+        f,
+        reason: 'back $f',
+      );
       expect(
         back(js.$f32ToBits($f32(f))),
         nat.$f32ToBits($f32(f)).$v,
         reason: 'bits32 $f',
       );
     }
-    expect(back(js.$f64ToBits(0.0 / 0.0)), nat.$f64ToBits(0.0 / 0.0).$v);
+    expect(
+      back(js.$f64ToBits($f64(0.0 / 0.0))),
+      nat.$f64ToBits($f64(0.0 / 0.0)).$v,
+    );
     expect(js.$f64FromBits(js2(-1)).isNaN, true);
     final double negZero = -0.0;
-    expect(back(js.$f64ToBits(negZero)), nat.$f64ToBits(negZero).$v);
+    expect(
+      back(js.$f64ToBits($f64(negZero))),
+      nat.$f64ToBits($f64(negZero)).$v,
+    );
   });
 
   test('the division of the smallest value by -1 wraps', () {

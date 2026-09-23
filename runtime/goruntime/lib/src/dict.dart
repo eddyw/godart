@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'complex.dart';
 import 'goint.dart';
 import 'iface.dart';
@@ -79,7 +77,9 @@ final class Dict<T> {
     if ((a is GoFloat32 && a.isNaN) || (b is GoFloat32 && b.isNaN)) {
       return false;
     }
-    if ((a is double && a.isNaN) || (b is double && b.isNaN)) return false;
+    if ((a is GoFloat64 && a.isNaN) || (b is GoFloat64 && b.isNaN)) {
+      return false;
+    }
     return order(a, b) < 0;
   }
 
@@ -88,14 +88,14 @@ final class Dict<T> {
   T add(T a, T b) {
     if (a is GoFloat32) return (a + (b as GoFloat32)) as T;
     if (a is GoString) return $concat(a, b as GoString) as T;
-    if (a is double) return mask((a + (b as double)) as T);
+    if (a is GoFloat64) return mask((a + (b as GoFloat64)) as T);
     if (a is GoComplex) return mask((a + (b as GoComplex)) as T);
     return mask(((a as GoInt) + (b as GoInt)) as T);
   }
 
   T quotient(T a, T b) {
     if (a is GoFloat32) return (a / (b as GoFloat32)) as T;
-    if (a is double) return mask((a / (b as double)) as T);
+    if (a is GoFloat64) return mask((a / (b as GoFloat64)) as T);
     if (a is GoComplex) return mask((a / (b as GoComplex)) as T);
     final GoInt x = a as GoInt, y = b as GoInt;
     return mask((unsigned64 ? $udiv(x, y) : $div(x, y)) as T);
@@ -131,11 +131,11 @@ List<GoInt> _allocInt(int n) => List<GoInt>.filled(n, GoInt.zero);
 int _orderInt(GoInt a, GoInt b) => a < b ? -1 : (a == b ? 0 : 1);
 int _orderUint(GoInt a, GoInt b) => $ult(a, b) ? -1 : (a == b ? 0 : 1);
 
-double _zeroDouble() => 0.0;
-bool _equalDouble(double a, double b) => a == b;
-int _hashDouble(double v) => v.hashCode;
-List<double> _allocDouble(int n) => Float64List(n);
-int _orderDouble(double a, double b) => a < b ? -1 : (a == b ? 0 : 1);
+GoFloat64 _zeroDouble() => GoFloat64.zero;
+bool _equalDouble(GoFloat64 a, GoFloat64 b) => a == b;
+int _hashDouble(GoFloat64 v) => v.hashCode;
+List<GoFloat64> _allocDouble(int n) => $Float64List(n);
+int _orderDouble(GoFloat64 a, GoFloat64 b) => a < b ? -1 : (a == b ? 0 : 1);
 
 bool _zeroBool() => false;
 bool _equalBool(bool a, bool b) => a == b;
@@ -188,13 +188,13 @@ final Dict<GoInt> $dictUint = _unsigned($typeUint);
 final Dict<GoInt> $dictUint64 = _unsigned($typeUint64);
 final Dict<GoInt> $dictUintptr = _unsigned($typeUintptr);
 
-const Dict<double> $dictFloat64 = Dict<double>(
+const Dict<GoFloat64> $dictFloat64 = Dict<GoFloat64>(
   _zeroDouble,
   _equalDouble,
   _hashDouble,
   _allocDouble,
   _orderDouble,
-  $identity<double>,
+  $identity<GoFloat64>,
   $typeFloat64,
 );
 

@@ -16,7 +16,7 @@ import 'panic.dart';
 /// The header is a value, thus each field is final. An operation that changes
 /// the header, for example append, returns a new header.
 ///
-/// The real class of `array` varies: Uint8List, Int32List, Float64List, a
+/// The real class of `array` varies: Uint8List, Int32List, $Float64List, a
 /// growable list, and more. Dart thus cannot resolve `array[i]` to 1 target,
 /// and each read of a byte takes a megamorphic dispatch. `$ByteSlice` holds
 /// the storage of a byte slice in a field of the type Uint8List, thus a call

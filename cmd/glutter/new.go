@@ -230,7 +230,7 @@ final class %[2]sBridge implements GoBridge {
     required double textSize,
   }) {
     ui.SetTheme(
-      ui.ThemeData$(dark, $gi(primary), $gi(surface), $gi(onSurface), textSize),
+      ui.ThemeData$(dark, $gi(primary), $gi(surface), $gi(onSurface), $f64(textSize)),
     );
   }
 
@@ -243,7 +243,7 @@ final class %[2]sBridge implements GoBridge {
     required double bottomInset,
   }) {
     ui.SetMedia(
-      ui.MediaData$(width, height, textScale, topInset, bottomInset),
+      ui.MediaData$($f64(width), $f64(height), $f64(textScale), $f64(topInset), $f64(bottomInset)),
     );
   }
 

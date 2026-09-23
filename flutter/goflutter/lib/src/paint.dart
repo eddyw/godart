@@ -28,31 +28,46 @@ class _GoPainter extends CustomPainter {
 
     final callbacks = <String, Function>{
       'rectangle':
-          (double left, double top, double right, double bottom, GoInt color) =>
-              draw(
-                (paint) => canvas.drawRect(
-                  Rect.fromLTRB(left, top, right, bottom),
-                  paint,
-                ),
-                color,
+          (
+            GoFloat64 left,
+            GoFloat64 top,
+            GoFloat64 right,
+            GoFloat64 bottom,
+            GoInt color,
+          ) => draw(
+            (paint) => canvas.drawRect(
+              Rect.fromLTRB(
+                left.toDouble(),
+                top.toDouble(),
+                right.toDouble(),
+                bottom.toDouble(),
               ),
-      'circle': (double x, double y, double radius, GoInt color) => draw(
-        (paint) => canvas.drawCircle(Offset(x, y), radius, paint),
-        color,
-      ),
+              paint,
+            ),
+            color,
+          ),
+      'circle': (GoFloat64 x, GoFloat64 y, GoFloat64 radius, GoInt color) =>
+          draw(
+            (paint) => canvas.drawCircle(
+              Offset(x.toDouble(), y.toDouble()),
+              radius.toDouble(),
+              paint,
+            ),
+            color,
+          ),
       'line':
           (
-            double x1,
-            double y1,
-            double x2,
-            double y2,
-            double width,
+            GoFloat64 x1,
+            GoFloat64 y1,
+            GoFloat64 x2,
+            GoFloat64 y2,
+            GoFloat64 width,
             GoInt color,
           ) => draw(
             (paint) => canvas.drawLine(
-              Offset(x1, y1),
-              Offset(x2, y2),
-              paint..strokeWidth = width,
+              Offset(x1.toDouble(), y1.toDouble()),
+              Offset(x2.toDouble(), y2.toDouble()),
+              paint..strokeWidth = width.toDouble(),
             ),
             color,
           ),
@@ -61,7 +76,7 @@ class _GoPainter extends CustomPainter {
       field.set(value, callbacks[field.name]);
     }
     try {
-      Function.apply(callback, [value, size.width, size.height]);
+      Function.apply(callback, [value, $f64(size.width), $f64(size.height)]);
     } finally {
       valid = false;
     }

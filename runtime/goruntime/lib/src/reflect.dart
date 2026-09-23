@@ -562,12 +562,12 @@ GoInt $asInt(Iface? value) {
 }
 
 /// The float inside a value of a float kind.
-double $asFloat(Iface? value) {
+GoFloat64 $asFloat(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
-  if (v is GoFloat32) return v.toDouble();
-  if (v is double) return v;
-  if (v is GoInt) return v.toDouble();
+  if (v is GoFloat32) return $f64(v.toDouble());
+  if (v is GoFloat64) return v;
+  if (v is GoInt) return $f64(v.toDouble());
   $panic(
     Iface(
       $typeGoError,
@@ -619,9 +619,9 @@ GoInt _integerValue(GoInt x, String kind) => switch (kind) {
 };
 
 /// A value of the type, with the float inside it.
-Iface? $withFloat(int handle, double x) {
+Iface? $withFloat(int handle, GoFloat64 x) {
   final type = _typeAt(handle);
-  return Iface(type, type.kind == 'float32' ? $f32(x) : x);
+  return Iface(type, type.kind == 'float32' ? $f32(x.toDouble()) : x);
 }
 
 /// A value of the type, with the flag inside it.
@@ -686,7 +686,7 @@ R _byKind<R>(String kind, R Function<T>() f) {
     case 'float32':
       return f<GoFloat32>();
     case 'float64':
-      return f<double>();
+      return f<GoFloat64>();
     case 'complex64' || 'complex128':
       return f<GoComplex>();
     case 'interface':
@@ -711,7 +711,7 @@ R _byKind<R>(String kind, R Function<T>() f) {
 /// element.
 ///
 /// A cell of Object? fits no typed location: the setter of a field of the type
-/// `*float64` casts to `$Ptr<double>?`, and Dart rejects a `Box<Object?>` there.
+/// `*float64` casts to `$Ptr<GoFloat64>?`, and Dart rejects a `Box<Object?>` there.
 /// The description of the element names the Dart type, thus the cell fits. The
 /// decoder of encoding/json reads this function for a pointer field.
 $Ptr<Object?> $typedBox(TypeDesc elem, Object? value) =>
@@ -2875,7 +2875,7 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
   if (to.kind == 'complex128') return $c128(v as GoComplex);
   if (_numberKinds.contains(to.kind)) {
     if (to.kind == 'float32' || to.kind == 'float64') {
-      if (from.kind == 'float32' && to.kind == 'float32') return v;
+      if (from.kind == to.kind) return v;
       final double x = v is GoInt
           ? (from.kind == 'uint64' ||
                     from.kind == 'uint' ||
@@ -2884,14 +2884,18 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
                 : $todouble(v))
           : v is GoFloat32
           ? v.toDouble()
-          : v as double;
-      return to.kind == 'float32' ? $f32(x) : x;
+          : (v as GoFloat64).toDouble();
+      return to.kind == 'float32' ? $f32(x) : $f64(x);
     }
     final x = v is GoInt
         ? v
         : (to.kind == 'uint64' || to.kind == 'uint' || to.kind == 'uintptr'
-              ? $fromF64U(v is GoFloat32 ? v.toDouble() : v as double)
-              : $fromF64(v is GoFloat32 ? v.toDouble() : v as double));
+              ? $fromF64U(
+                  v is GoFloat32 ? v.toDouble() : (v as GoFloat64).toDouble(),
+                )
+              : $fromF64(
+                  v is GoFloat32 ? v.toDouble() : (v as GoFloat64).toDouble(),
+                ));
     return _integerValue(x, to.kind);
   }
   return v;
@@ -2940,7 +2944,7 @@ Iface? $valueSlice(Iface? value, GoInt low, GoInt high, GoInt max) {
 GoComplex $asComplex(Iface? value) {
   final Object? v = value?.value;
   if (v is GoComplex) return $c128(v);
-  if (v is double) return GoComplex(v, 0);
+  if (v is GoFloat64) return GoComplex.fromParts(v, GoFloat64.zero);
   if (v is GoInt) return GoComplex($ix(v).toDouble(), 0);
   return GoComplex.zero;
 }

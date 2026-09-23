@@ -2,18 +2,24 @@ import 'int.dart';
 
 /// A complex128 value. GoComplex32 retains the raw bits of complex64 parts.
 base class GoComplex {
-  final double re;
-  final double im;
+  final GoFloat64 real64;
+  final GoFloat64 imag64;
+  double get re => real64.toDouble();
+  double get im => imag64.toDouble();
 
-  const GoComplex(this.re, this.im);
+  GoComplex(double re, double im) : this.fromParts($f64(re), $f64(im));
+  const GoComplex.fromParts(this.real64, this.imag64);
 
-  static const GoComplex zero = GoComplex(0, 0);
+  static const GoComplex zero = GoComplex.fromParts(
+    GoFloat64.zero,
+    GoFloat64.zero,
+  );
 
   GoComplex operator +(GoComplex o) => GoComplex(re + o.re, im + o.im);
 
   GoComplex operator -(GoComplex o) => GoComplex(re - o.re, im - o.im);
 
-  GoComplex operator -() => GoComplex(-re, -im);
+  GoComplex operator -() => GoComplex.fromParts(-real64, -imag64);
 
   GoComplex operator *(GoComplex o) =>
       GoComplex(re * o.re - im * o.im, re * o.im + im * o.re);
@@ -79,7 +85,7 @@ double _copySign(double magnitude, double sign) {
 GoComplex $c64(GoComplex c) =>
     c is GoComplex32 ? c : GoComplex32($f32(c.re), $f32(c.im));
 
-GoComplex $c128(GoComplex c) => GoComplex(c.re, c.im);
+GoComplex $c128(GoComplex c) => c is GoComplex32 ? GoComplex(c.re, c.im) : c;
 GoComplex $complex32Zero() => GoComplex32.zero;
 
 final class GoComplex32 extends GoComplex {

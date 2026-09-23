@@ -295,7 +295,7 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$goFormatVerb(%s, %s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3], args[4]), true
 	case "VerifySystemCertificates":
-		return fmt.Sprintf("$verifySystemCertificates(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+		return fmt.Sprintf("$verifySystemCertificates(%s, %s, (%s).toDouble(), %s)", args[0], args[1], args[2], args[3]), true
 	case "DialTLS":
 		return fmt.Sprintf("$dialTLS(%s, %s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3], args[4]), true
@@ -1361,17 +1361,17 @@ func (e *emitter) builtin(x *ir.Builtin) string {
 		if b := basicOf(x.Type); b != nil && b.Kind() == types.Float32 {
 			return fmt.Sprintf("(%s as GoComplex32).real32", e.expr(x.Args[0]))
 		}
-		return fmt.Sprintf("%s.re", e.expr(x.Args[0]))
+		return fmt.Sprintf("%s.real64", e.expr(x.Args[0]))
 	case "imag":
 		if b := basicOf(x.Type); b != nil && b.Kind() == types.Float32 {
 			return fmt.Sprintf("(%s as GoComplex32).imag32", e.expr(x.Args[0]))
 		}
-		return fmt.Sprintf("%s.im", e.expr(x.Args[0]))
+		return fmt.Sprintf("%s.imag64", e.expr(x.Args[0]))
 	case "complex":
 		if b := basicOf(x.Type); b != nil && b.Kind() == types.Complex64 {
 			return fmt.Sprintf("GoComplex32(%s, %s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
 		}
-		return fmt.Sprintf("GoComplex(%s, %s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
+		return fmt.Sprintf("GoComplex.fromParts(%s, %s)", e.expr(x.Args[0]), e.expr(x.Args[1]))
 	}
 	e.fail("the builtin %s has no Dart form yet", x.Name)
 	return "null"
@@ -1774,11 +1774,9 @@ func (e *emitter) conv(x *ir.Conv) string {
 		if basicOf(to).Kind() == types.Float32 {
 			return "$f32(" + text + ")"
 		}
-		return text
+		return "$f64(" + text + ")"
 	case isInteger(to) && isFloat(from):
-		if basicOf(from).Kind() == types.Float32 {
-			text = "(" + text + ").toDouble()"
-		}
+		text = "(" + text + ").toDouble()"
 		// truncate of Dart stops at the largest signed value, thus a target of
 		// an unsigned 64-bit type needs the wrap of the unsigned range.
 		if isUnsigned64(to) {
@@ -1790,10 +1788,10 @@ func (e *emitter) conv(x *ir.Conv) string {
 			if basicOf(to).Kind() == types.Float32 {
 				return text
 			}
-			return "(" + text + ").toDouble()"
+			return "$f64((" + text + ").toDouble())"
 		}
 		if basicOf(to).Kind() == types.Float32 {
-			return "$f32(" + text + ")"
+			return "$f32((" + text + ").toDouble())"
 		}
 		return text
 	case isComplexType(to) && isComplexType(from):

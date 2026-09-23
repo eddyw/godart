@@ -42,7 +42,13 @@ final class CoreBridge implements GoBridge {
     required double textSize,
   }) {
     ui.SetTheme(
-      ui.HostTheme$(dark, $gi(primary), $gi(surface), $gi(onSurface), textSize),
+      ui.HostTheme$(
+        dark,
+        $gi(primary),
+        $gi(surface),
+        $gi(onSurface),
+        $f64(textSize),
+      ),
     );
   }
 
@@ -54,7 +60,15 @@ final class CoreBridge implements GoBridge {
     required double topInset,
     required double bottomInset,
   }) {
-    ui.SetMedia(ui.MediaData$(width, height, textScale, topInset, bottomInset));
+    ui.SetMedia(
+      ui.MediaData$(
+        $f64(width),
+        $f64(height),
+        $f64(textScale),
+        $f64(topInset),
+        $f64(bottomInset),
+      ),
+    );
   }
 
   @override

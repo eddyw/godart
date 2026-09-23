@@ -179,7 +179,7 @@ func basicType(t *types.Basic) string {
 	case types.Float32:
 		return "GoFloat32"
 	case types.Float64, types.UntypedFloat:
-		return "double"
+		return "GoFloat64"
 	case types.UnsafePointer:
 		return "Object?"
 	}
@@ -265,7 +265,7 @@ func (e *emitter) zero(t types.Type) string {
 		case u.Kind() == types.Float32:
 			return "GoFloat32.zero"
 		case u.Info()&types.IsFloat != 0:
-			return "0.0"
+			return "GoFloat64.zero"
 		case u.Kind() == types.Complex64:
 			return "GoComplex32.zero"
 		case u.Info()&types.IsComplex != 0:
@@ -334,7 +334,7 @@ func (e *emitter) zeroFunc(t types.Type) string {
 		case u.Kind() == types.Float32:
 			return "$float32Zero"
 		case u.Info()&types.IsFloat != 0:
-			return "$doubleZero"
+			return "$float64Zero"
 		case u.Kind() == types.Complex64:
 			return "$complex32Zero"
 		case u.Info()&types.IsComplex != 0:
@@ -727,7 +727,7 @@ func typedList(t types.Type) string {
 	case types.Float32:
 		return "$Float32List"
 	case types.Float64:
-		return "Float64List"
+		return "$Float64List"
 	}
 	return ""
 }

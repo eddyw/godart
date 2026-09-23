@@ -175,10 +175,10 @@ _Verb _parseVerb(String verb) {
 
 /// Reads a float from text. The second value is false when the text holds no
 /// float.
-(double, bool) $parseFloat(GoString text) {
+(GoFloat64, bool) $parseFloat(GoString text) {
   final double? v = double.tryParse(text.toDartString().trim());
-  if (v == null) return (0.0, false);
-  return (v, true);
+  if (v == null) return (GoFloat64.zero, false);
+  return ($f64(v), true);
 }
 
 /// The kind of the value of an interface, in the words of the package reflect.
@@ -733,7 +733,7 @@ String _value(Object? v, TypeDesc type, _Verb verb, [int depth = 0]) {
       return _leaf(
         _sign(
           _float(
-            v is GoFloat32 ? v.toDouble() : v as double,
+            v is GoFloat32 ? v.toDouble() : (v as GoFloat64).toDouble(),
             letter,
             verb.prec,
             type.kind == 'float32',
@@ -1552,7 +1552,9 @@ int _compareKeys(
       }
     case 'float32' || 'float64':
       if (a is GoFloat32) a = a.toDouble();
+      if (a is GoFloat64) a = a.toDouble();
       if (b is GoFloat32) b = b.toDouble();
+      if (b is GoFloat64) b = b.toDouble();
       if (a is double && b is double) {
         // Go puts each value that is not a number first.
         if (a.isNaN) return b.isNaN ? 0 : -1;

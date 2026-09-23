@@ -62,29 +62,30 @@ func (e *emitter) dartCall(f *ir.Func) {
 
 // dartArg gives the Dart expression of 1 argument of an external call.
 //
-// A bool and a float64 hold the Dart form already. A Go int needs the plain
-// Dart int: the native form of GoInt is an extension type over it, and the JS
-// form is a class of 2 halves, because a JS number holds 53 bits.
+// A numeric value unwraps to the type that the Dart API accepts.
 func dartArg(t types.Type, name string) string {
 	switch {
 	case isDartString(t):
 		return name + ".toDartString()"
 	case isDartInt(t):
 		return "$ix(" + name + ")"
+	case isFloat(t):
+		return name + ".toDouble()"
 	}
 	return name
 }
 
 // dartResult gives the Dart expression of the result of an external call.
 //
-// A Dart String and a Dart int each need the Go form, because GoString holds
-// bytes and GoInt is a type of its own.
+// The boundary converts Dart values to Go values.
 func dartResult(t types.Type, call string) string {
 	switch {
 	case isDartString(t):
 		return "GoString.fromString(" + call + ")"
 	case isDartInt(t):
 		return "$gi(" + call + ")"
+	case isFloat(t):
+		return "$f64(" + call + ")"
 	}
 	return call
 }

@@ -475,12 +475,15 @@ Object? $minOf(Object? a, Object? b) {
   }
   if (a is GoString) return $compare(a, b as GoString) <= 0 ? a : b;
   if (a is GoInt) return a <= (b as GoInt) ? a : b;
-  if (a is double && b is double && a == 0 && b == 0) {
+  if (a is GoFloat64 &&
+      b is GoFloat64 &&
+      a == GoFloat64.zero &&
+      b == GoFloat64.zero) {
     return a.isNegative ? a : b;
   }
-  if (a is double && a.isNaN) return a;
-  if (b is double && b.isNaN) return b;
-  return (a as num) <= (b as num) ? a : b;
+  if (a is GoFloat64 && a.isNaN) return a;
+  if (b is GoFloat64 && b.isNaN) return b;
+  return (a as GoFloat64) <= (b as GoFloat64) ? a : b;
 }
 
 /// The larger of 2 values, in the order of Go.
@@ -493,12 +496,15 @@ Object? $maxOf(Object? a, Object? b) {
   }
   if (a is GoString) return $compare(a, b as GoString) >= 0 ? a : b;
   if (a is GoInt) return a >= (b as GoInt) ? a : b;
-  if (a is double && b is double && a == 0 && b == 0) {
+  if (a is GoFloat64 &&
+      b is GoFloat64 &&
+      a == GoFloat64.zero &&
+      b == GoFloat64.zero) {
     return a.isNegative ? b : a;
   }
-  if (a is double && a.isNaN) return a;
-  if (b is double && b.isNaN) return b;
-  return (a as num) >= (b as num) ? a : b;
+  if (a is GoFloat64 && a.isNaN) return a;
+  if (b is GoFloat64 && b.isNaN) return b;
+  return (a as GoFloat64) >= (b as GoFloat64) ? a : b;
 }
 
 /// The smaller of 2 values of an unsigned 64-bit type. A Go uint64 above 2 to

@@ -118,21 +118,12 @@ double $utodouble(GoInt v) {
   return ((v.$v >>> 1) + 0.0) * 2.0 + ((v.$v & 1) + 0.0);
 }
 
-/// _bits reads the same 8 bytes as a double and as an integer. The 2 views
-/// share 1 buffer, thus a write through 1 view reads back through the other.
-final ByteData _bits = ByteData(8);
-
 /// The IEEE 754 bit pattern of a 64-bit value.
-GoInt $f64ToBits(double v) {
-  _bits.setFloat64(0, v);
-  return GoInt(_bits.getInt64(0));
-}
+GoInt $f64ToBits(GoFloat64 v) => GoInt((v.high << 32) | v.low);
 
 /// The 64-bit value of an IEEE 754 bit pattern.
-double $f64FromBits(GoInt b) {
-  _bits.setInt64(0, b.$v);
-  return _bits.getFloat64(0);
-}
+GoFloat64 $f64FromBits(GoInt b) =>
+    GoFloat64.fromBits((b.$v >>> 32) & 0xffffffff, b.$v & 0xffffffff);
 
 /// The IEEE 754 bit pattern of a 32-bit value. The result holds 32 bits, thus
 /// it stays positive.

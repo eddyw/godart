@@ -918,7 +918,7 @@ final class _Build {
     if (_isAny(t)) return _anyNumber(b, start, end);
     switch (t.kind) {
       case 'float64':
-        return _parseDouble(b, start, end);
+        return $f64(_parseDouble(b, start, end));
       case 'int' || 'int64':
         return _parseInt(b, start, end, 64, true);
       case 'int32':
@@ -940,7 +940,7 @@ final class _Build {
   }
 
   Iface _anyNumber(Uint8List b, int start, int end) =>
-      Iface($typeFloat64, _parseDouble(b, start, end));
+      Iface($typeFloat64, $f64(_parseDouble(b, start, end)));
 
   TypeDesc _slotType(_Frame? top) => top == null ? rootType! : top.childType!;
 
@@ -1075,7 +1075,7 @@ bool _isZero(Object? v, TypeDesc t) {
     case 'string':
       return (v as GoString).length == 0;
     case 'float64':
-      return v is double && v == 0.0 && !v.isNegative;
+      return v is GoFloat64 && v == GoFloat64.zero && !v.isNegative;
     case 'ptr' || 'interface':
       return v == null;
     case 'slice':
@@ -1465,7 +1465,7 @@ final class _Enc {
         text($ustring(v as GoInt));
         return;
       case 'float64':
-        number(v as double);
+        number((v as GoFloat64).toDouble());
         return;
       case 'interface':
         final Iface? held = v as Iface?;
@@ -1843,7 +1843,7 @@ bool _legacyEmpty(Object? v, TypeDesc t) {
     case 'float32':
       return v == GoFloat32.zero;
     case 'float64':
-      return v == 0.0;
+      return v == GoFloat64.zero;
     case 'ptr' || 'interface':
       return v == null;
     case 'slice':

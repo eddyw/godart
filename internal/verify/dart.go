@@ -89,9 +89,7 @@ func (v *verifier) checkDartDecls(f *ast.File) {
 // dartBoundary reports whether a type crosses the boundary of an external Dart
 // call with no conversion table.
 //
-// Each type below holds 1 Dart form. A bool and a float64 pass as they are, a
-// Go int is an extension type over the Dart int, and a GoString holds 2
-// methods that give the Dart String and read it back.
+// The emitter converts each accepted scalar to its Dart representation.
 //
 // A declaration of the runtime library of gart reads no rule here. Read
 // ir.DartRuntimeLib.

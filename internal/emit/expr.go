@@ -198,7 +198,7 @@ func (e *emitter) constant(v constant.Value, t types.Type) string {
 		if basicOf(t).Kind() == types.Float32 {
 			return "$f32(" + floatConst(f) + ")"
 		}
-		return floatConst(f)
+		return float64Const(f)
 	case isComplexType(t):
 		return complexConst(v, t)
 	case isInteger(t):
@@ -243,8 +243,8 @@ func (e *emitter) mixedConst(v constant.Value, t types.Type) (string, bool) {
 	}
 	if forms[types.IsFloat] {
 		f, _ := constant.Float64Val(constant.ToFloat(v))
-		values = append(values, floatConst(f))
-		kinds = append(kinds, "double")
+		values = append(values, float64Const(f))
+		kinds = append(kinds, "GoFloat64")
 	}
 	if forms[types.IsComplex] {
 		values = append(values, complexConst(v, types.Typ[types.Complex128]))
@@ -288,6 +288,11 @@ func intConst(v constant.Value, t types.Type) string {
 		return "$gi(" + strconv.FormatInt(n, 10) + ")"
 	}
 	return fmt.Sprintf("$gi2(%d, %d)", int32(n>>32), int64(uint32(n)))
+}
+
+func float64Const(f float64) string {
+	bits := math.Float64bits(f)
+	return fmt.Sprintf("const GoFloat64.fromBits(%d, %d)", uint32(bits>>32), uint32(bits))
 }
 
 func floatConst(f float64) string {

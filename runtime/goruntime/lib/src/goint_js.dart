@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'int.dart';
 import 'panic.dart';
 
@@ -265,22 +263,11 @@ double $todouble(GoInt v) => v.toDouble();
 
 double $utodouble(GoInt v) => _u32(v.$h) * 4294967296.0 + v.$l.toDouble();
 
-/// _bits reads the same 8 bytes as a double and as 2 32-bit halves. The JS
-/// target holds no 64-bit read, thus the pattern reads as the 2 halves.
-final ByteData _bits = ByteData(8);
-
 /// The IEEE 754 bit pattern of a 64-bit value.
-GoInt $f64ToBits(double v) {
-  _bits.setFloat64(0, v);
-  return GoInt._(_s32(_bits.getUint32(0)), _bits.getUint32(4));
-}
+GoInt $f64ToBits(GoFloat64 v) => GoInt._(_s32(v.high), v.low);
 
 /// The 64-bit value of an IEEE 754 bit pattern.
-double $f64FromBits(GoInt b) {
-  _bits.setUint32(0, _u32(b.$h));
-  _bits.setUint32(4, b.$l);
-  return _bits.getFloat64(0);
-}
+GoFloat64 $f64FromBits(GoInt b) => GoFloat64.fromBits(_u32(b.$h), b.$l);
 
 /// The IEEE 754 bit pattern of a 32-bit value.
 GoInt $f32ToBits(GoFloat32 v) => GoInt._(0, v.bits);

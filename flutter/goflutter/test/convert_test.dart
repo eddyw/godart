@@ -41,12 +41,8 @@ TypeDesc desc(String name, List<String> names, [Map<String, TypeDesc>? kinds]) {
 GoNode node(TypeDesc d, List<Object?> values) => GoNode.struct(values, d);
 
 /// slice gives a Go slice of structs, and the descriptor of the field.
-TypeDesc sliceOf(TypeDesc elem) => TypeDesc(
-  'slice',
-  'slice',
-  const <String, Function>{},
-  elem: () => elem,
-);
+TypeDesc sliceOf(TypeDesc elem) =>
+    TypeDesc('slice', 'slice', const <String, Function>{}, elem: () => elem);
 
 /// _ch is the channel that the Go side of a Task and of an Ask waits for. A
 /// package variable of Go holds the same place.
@@ -148,6 +144,43 @@ void main() {
   setUpAll(() => $hosted = true);
   tearDownAll(() => $hosted = false);
 
+  test('float values and callbacks cross the Dart boundary', () {
+    final seen = <double>[];
+    final d = desc('FloatFields', [
+      'Value',
+      'Pointer',
+      'Slice',
+      'One',
+      'Pair',
+      'Box',
+      'Extent',
+    ]);
+    final n = node(d, <Object?>[
+      $f64(1.25),
+      Box<GoFloat64>($f64(-2.5)),
+      Slice<GoFloat64>.of($Float64List.fromList([$f64(3.5), $f64(4.5)])),
+      (GoFloat64 value) => seen.add(value.toDouble()),
+      (GoFloat64 a, GoFloat64 b) {
+        seen.add(a.toDouble());
+        seen.add(b.toDouble());
+      },
+      (GoFloat64 a, GoFloat64 b, GoFloat64 c, GoFloat64 d) {
+        seen.addAll([a.toDouble(), b.toDouble(), c.toDouble(), d.toDouble()]);
+        return null as Iface?;
+      },
+      (int i, GoFloat64 a, GoFloat64 b, GoFloat64 c, GoFloat64 d) =>
+          $f64(i.toDouble()) + a + b + c + d,
+    ]);
+    expect(n.size('Value'), 1.25);
+    expect(n.sizeOpt('Pointer'), -2.5);
+    expect(n.sizes('Slice'), [3.5, 4.5]);
+    n.onSize('One')!(5);
+    n.onPair('Pair')!(6, 7);
+    expect(n.buildBox('Box')!(8, 9, 10, 11), isNull);
+    expect(n.buildExtent('Extent')!(1, 2, 3, 4, 5), 15);
+    expect(seen, [5, 6, 7, 8, 9, 10, 11]);
+  });
+
   test('a date and a time of the day cross as a number', () {
     expect(goDate(0), isNull, reason: '0 means no date');
     expect(goDate(null), isNull);
@@ -166,7 +199,7 @@ void main() {
       'Right',
       'Bottom',
     ]);
-    final GoNode n = node(d, <Object?>[1.0, 2.0, 3.0, 4.0]);
+    final GoNode n = node(d, <Object?>[$f64(1), $f64(2), $f64(3), $f64(4)]);
     expect(goRect(n), const Rect.fromLTRB(1, 2, 3, 4));
     expect(goRelRect(n), const RelativeRect.fromLTRB(1, 2, 3, 4));
     expect(goRect(null), isNull);
@@ -241,10 +274,10 @@ void main() {
     final GoNode count = node(d, <Object?>[
       GoString.fromString('count'),
       3,
-      0.0,
-      4.0,
-      5.0,
-      0.0,
+      $f64(0.0),
+      $f64(4.0),
+      $f64(5.0),
+      $f64(0.0),
       null,
     ]);
     final SliverGridDelegate? a = goGridSpec(count);
@@ -258,10 +291,10 @@ void main() {
     final GoNode extent = node(d, <Object?>[
       GoString.fromString('extent'),
       0,
-      120.0,
-      0.0,
-      0.0,
-      2.0,
+      $f64(120.0),
+      $f64(0.0),
+      $f64(0.0),
+      $f64(2.0),
       null,
     ]);
     final SliverGridDelegate? b = goGridSpec(extent);
@@ -360,7 +393,7 @@ void main() {
     final GoNode key = node(d, <Object?>[
       GoString.fromString('card'),
       100,
-      1.0,
+      $f64(1.0),
       GoString.fromString('linear'),
       false,
       false,
@@ -400,10 +433,7 @@ void main() {
     final TypeDesc d = desc('gart.dev/ui.LinkKey', <String>['Name']);
     final GoNode a = node(d, <Object?>[GoString.fromString('menu')]);
     final GoNode b = node(d, <Object?>[GoString.fromString('other')]);
-    expect(
-      identical(goLayerLink(a, host), goLayerLink(a, host)),
-      isTrue,
-    );
+    expect(identical(goLayerLink(a, host), goLayerLink(a, host)), isTrue);
     expect(identical(goLayerLink(a, host), goLayerLink(b, host)), isFalse);
     expect(
       identical(goOverlapHandle(a, host), goOverlapHandle(a, host)),
