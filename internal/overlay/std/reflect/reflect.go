@@ -22,6 +22,7 @@ import (
 	"iter"
 	"strconv"
 	"syscall/dart"
+	"unicode"
 )
 
 // DeepEqual reports whether 2 values are deeply equal.
@@ -1209,27 +1210,11 @@ func (v Value) SetString(x string) {
 
 func (v Value) descOf() int { return dart.DescOf(v.read()) }
 
-// The type constructors.
-//
-// A constructor gives a Type that no value of the program carries. The name of
-// the type goes through the table of the runtime first, thus a type that the
-// program already holds keeps its own descriptor and MakeSlice, MakeMap, New,
-// and Zero of it each work. A type that the program never holds gives a Type
-// for the inspection alone, and each of those 4 calls then panics with a clear
-// text. Read docs/parity.md.
-
 // SliceOf gives the slice type of an element type.
 func SliceOf(t Type) Type { return typeOf(dart.SliceOf(t.handle())) }
 
 // FuncOf gives the function type of a parameter list, a result list, and the
 // variadic flag.
-//
-// A signature that the program already names gives the type of that
-// signature, thus FuncOf of it equals TypeOf of a value of it and MakeFunc of
-// it works. A signature that no code names gives a type with the right shape
-// and the right text, and MakeFunc of it panics with the cause. The Dart type
-// of a function holds the type of each parameter, and no run time call builds
-// such a type.
 func FuncOf(in, out []Type, variadic bool) Type {
 	if variadic && (len(in) == 0 || in[len(in)-1].Kind() != Slice) {
 		panic("reflect.FuncOf: last arg of variadic func must be slice")
@@ -1248,7 +1233,7 @@ func FuncOf(in, out []Type, variadic bool) Type {
 // ArrayOf gives the array type of a length and an element type.
 func ArrayOf(length int, t Type) Type {
 	if length < 0 {
-		panic("reflect: ArrayOf with a negative length")
+		panic("reflect: negative length passed to ArrayOf")
 	}
 	return typeOf(dart.ArrayOf(length, t.handle()))
 }
@@ -1327,36 +1312,41 @@ func MakeFunc(typ Type, fn func(args []Value) (results []Value)) Value {
 	}), ok: true}
 }
 
-// StructOf gives the struct type of a list of fields.
-//
-// A program that already names the shape reads its own type, with the class
-// that the compiler wrote. Each path of the program thus reaches a value of
-// such a type.
-//
-// A shape that no code names holds its value in a list of the fields, and only
-// this package reads such a value. Dart writes no class at run time, thus no
-// other path can name the type. Read docs/parity.md.
-//
-// Go panics for a field with no name and for a field with no type, and this
-// function follows the 2. Go also promotes the method set of an embedded field
-// into the struct, and a synthetic type of this package holds no method table,
-// thus such a field stays out. A field that the struct does not embed promotes
-// no method, and Go accepts it.
+func validFieldName(name string) bool {
+	for i, r := range name {
+		if r == '_' || unicode.IsLetter(r) || i > 0 && unicode.IsDigit(r) {
+			continue
+		}
+		return false
+	}
+	return name != ""
+}
+
+// StructOf returns the struct type with the supplied fields.
+// StructOf rejects embedded fields with methods.
 func StructOf(fields []StructField) Type {
 	names := make([]string, len(fields))
 	tags := make([]string, len(fields))
 	handles := make([]int, len(fields))
 	anon := make([]bool, len(fields))
+	seen := make(map[string]bool, len(fields))
 	for i, f := range fields {
 		if f.Name == "" {
 			panic("reflect.StructOf: field " + itoa(i) + " has no name")
 		}
+		if !validFieldName(f.Name) {
+			panic("reflect.StructOf: field " + itoa(i) + " has invalid name")
+		}
 		if f.Type == nil {
-			panic("reflect.StructOf: field " + f.Name + " has no type")
+			panic("reflect.StructOf: field " + itoa(i) + " has no type")
 		}
 		if f.Anonymous && f.Type.NumMethod() > 0 {
 			panic("reflect.StructOf: the embedded field " + f.Name + " holds a method")
 		}
+		if f.Name != "_" && seen[f.Name] {
+			panic("reflect.StructOf: duplicate field " + f.Name)
+		}
+		seen[f.Name] = true
 		names[i] = f.Name
 		tags[i] = string(f.Tag)
 		handles[i] = f.Type.handle()

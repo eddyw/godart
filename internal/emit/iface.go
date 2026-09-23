@@ -499,6 +499,9 @@ func reflectText(t types.Type) string {
 		case types.RecvOnly:
 			return "<-chan " + reflectText(t.Elem())
 		}
+		if elem, ok := types.Unalias(t.Elem()).(*types.Chan); ok && elem.Dir() == types.RecvOnly {
+			return "chan (" + reflectText(t.Elem()) + ")"
+		}
 		return "chan " + reflectText(t.Elem())
 	case *types.Signature:
 		return signatureText(t)

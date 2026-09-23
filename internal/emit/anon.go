@@ -478,7 +478,15 @@ func writeType(b *strings.Builder, t types.Type, qual types.Qualifier, seen map[
 		default:
 			b.WriteString("chan ")
 		}
+		elem, ok := types.Unalias(u.Elem()).(*types.Chan)
+		parenthesize := u.Dir() == types.SendRecv && ok && elem.Dir() == types.RecvOnly
+		if parenthesize {
+			b.WriteString("(")
+		}
 		writeType(b, u.Elem(), qual, seen)
+		if parenthesize {
+			b.WriteString(")")
+		}
 	case *types.Struct:
 		seen[t] = true
 		b.WriteString("struct{")

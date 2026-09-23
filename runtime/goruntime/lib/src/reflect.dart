@@ -1891,11 +1891,12 @@ int $mapOf(int key, int elem) {
 /// _keyEquals gives the equality of a map key, or null for the equality of
 /// Dart.
 ///
-/// A key of an array type compares by value in Go, and a Dart list compares by
-/// identity. A key of a pointer to a struct compares by identity in Go, and the
-/// Dart class of a struct compares each field.
+/// Arrays and runtime-created structs use Dart lists, which compare by identity.
+/// Go compares their fields. Pointers to structs and arrays retain identity.
 bool Function(K, K)? _keyEquals<K>(TypeDesc k) {
-  if (k.kind == 'array') return (K a, K b) => $goEqual(a, b, k);
+  if (k.kind == 'array' || k.kind == 'struct') {
+    return (K a, K b) => $goEqual(a, b, k);
+  }
   if (k.kind == 'ptr' && _isObjectPointer(k.elem!())) {
     return (K a, K b) => identical(a, b);
   }
@@ -1904,7 +1905,9 @@ bool Function(K, K)? _keyEquals<K>(TypeDesc k) {
 
 /// _keyHash gives the hash of a map key, and it pairs with _keyEquals.
 int Function(K)? _keyHash<K>(TypeDesc k) {
-  if (k.kind == 'array') return (K a) => $goHash(a, k);
+  if (k.kind == 'array' || k.kind == 'struct') {
+    return (K a) => $goHash(a, k);
+  }
   if (k.kind == 'ptr' && _isObjectPointer(k.elem!())) {
     return (K a) => identityHashCode(a);
   }
@@ -1922,12 +1925,13 @@ int $pointerTo(int elem) {
 int $chanOf(int dir, int elem) {
   final TypeDesc e = _typeAt(elem);
   final String head = dir == 1 ? '<-chan ' : (dir == 2 ? 'chan<- ' : 'chan ');
+  final bool parenthesize = dir == 3 && e.name.startsWith('<-chan ');
   return _syntheticHandle(
     () => TypeDesc(
-      '$head${e.name}',
+      parenthesize ? '$head(${e.name})' : '$head${e.name}',
       'chan',
       const <String, Function>{},
-      text: '$head${e.display}',
+      text: parenthesize ? '$head(${e.display})' : '$head${e.display}',
       elem: () => e,
       dir: dir,
       zero: () =>
