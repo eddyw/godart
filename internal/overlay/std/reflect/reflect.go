@@ -1981,10 +1981,10 @@ func (t *rtype) Bits() int {
 // FieldByIndex gives the nested field that each index of the list names. An
 // index that names a pointer to a struct reads the type behind the pointer.
 func (t *rtype) FieldByIndex(index []int) StructField {
-	if len(index) == 0 {
-		panic("reflect: FieldByIndex of an empty index")
+	if t.Kind() != Struct {
+		panic("reflect: FieldByIndex of non-struct type " + t.String())
 	}
-	var f StructField
+	f := StructField{Type: t}
 	typ := Type(t)
 	for i, x := range index {
 		if i > 0 {
@@ -1995,7 +1995,6 @@ func (t *rtype) FieldByIndex(index []int) StructField {
 		f = typ.Field(x)
 		typ = f.Type
 	}
-	f.Index = index
 	return f
 }
 
