@@ -505,6 +505,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fieldPkgPath(%s, %s)", args[0], args[1]), true
 	case "FieldInfo":
 		return fmt.Sprintf("$fieldInfo(%s, %s)", args[0], args[1]), true
+	case "CopyInterface":
+		return fmt.Sprintf("$copyInterface(%s)", args[0]), true
 	case "FieldRead":
 		return fmt.Sprintf("$fieldRead(%s, %s)", args[0], args[1]), true
 	case "FieldWrite":

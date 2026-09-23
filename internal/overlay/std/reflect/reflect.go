@@ -752,7 +752,7 @@ func (v Value) Interface() any {
 	if v.unexportedMethod {
 		panic("reflect: Interface of unexported method")
 	}
-	return v.read()
+	return dart.CopyInterface(v.read())
 }
 
 // Type gives the type of the value.

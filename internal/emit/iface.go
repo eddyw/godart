@@ -1641,9 +1641,11 @@ func (e *emitter) typeAssert(x *ir.TypeAssert) string {
 			e.expr(x.X), e.methodKeyListText(x.Assert))
 	}
 	if isParam {
-		return fmt.Sprintf("(() { final $x = %s; if ($isDictType($x, %s.desc)) return ($dictValue<%s>($x, %s), true); return (%s.zero(), false); })()",
-			e.expr(x.X), e.dictOf(tp), e.dartType(tp), e.dictOf(tp), e.dictOf(tp))
+		value := fmt.Sprintf("$dictValue<%s>($x, %s)", e.dartType(tp), e.dictOf(tp))
+		return fmt.Sprintf("(() { final $x = %s; if ($isDictType($x, %s.desc)) return (%s, true); return (%s.zero(), false); })()",
+			e.expr(x.X), e.dictOf(tp), e.copyOf(value, tp), e.dictOf(tp))
 	}
-	return fmt.Sprintf("(() { final $x = %s; if ($isType($x, %s)) return ($x!.value as %s, true); return (%s, false); })()",
-		e.expr(x.X), e.typeNameText(x.Assert), e.dartType(x.Assert), e.zero(x.Assert))
+	value := fmt.Sprintf("($x!.value as %s)", e.dartType(x.Assert))
+	return fmt.Sprintf("(() { final $x = %s; if ($isType($x, %s)) return (%s, true); return (%s, false); })()",
+		e.expr(x.X), e.typeNameText(x.Assert), e.copyOf(value, x.Assert), e.zero(x.Assert))
 }

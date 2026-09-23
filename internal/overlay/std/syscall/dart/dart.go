@@ -594,6 +594,11 @@ func FieldInfo(handle, index int) (string, string, bool, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// CopyInterface detaches a struct or array from a reflected location.
+func CopyInterface(value any) any {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // FieldRead gives the value of 1 field of a struct value.
 func FieldRead(value any, index int) any {
 	panic("syscall/dart needs the gart compiler")

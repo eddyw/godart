@@ -314,6 +314,11 @@ Object? _copyOf(Object? v, TypeDesc desc) {
   return out;
 }
 
+Iface? $copyInterface(Iface? value) {
+  if (value == null || !_holdsValue(value.desc)) return value;
+  return Iface(value.desc, _copyOf(value.value, value.desc));
+}
+
 TypeDesc _pointerElemDesc(Iface? pointer) {
   if (pointer == null) {
     $panic(
