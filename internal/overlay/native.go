@@ -16,6 +16,8 @@ import (
 // lines of the real Go source. A diff is the better form for a small change,
 // because it names the lines that differ and it ages with no copy.
 var native = []string{
+	"reflect/internal/example1",
+	"reflect/internal/example2",
 	"crypto/tls",
 	"crypto/internal/fips140/tls12",
 	"crypto/internal/fips140/tls13",

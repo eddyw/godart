@@ -1177,6 +1177,14 @@
     "blocker_reason": "The suite inspects native register ABI constants such as abi.IntArgRegs."
   },
   {
+    "package": "reflect/internal/example1",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "reflect/internal/example2",
+    "status": "no-runnable-tests"
+  },
+  {
     "package": "regexp",
     "status": "vm-suite"
   },

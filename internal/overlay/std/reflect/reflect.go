@@ -685,8 +685,9 @@ func MakeSlice(t Type, length, capacity int) Value {
 
 // MakeMap gives an empty map of the type.
 func MakeMap(t Type) Value {
+	t = typeOf(t.handle())
 	if t.Kind() != Map {
-		panic("reflect: MakeMap of " + t.String())
+		panic("reflect.MakeMapWithSize of non-map type")
 	}
 	return Value{value: dart.MakeMap(t.handle()), ok: true}
 }
@@ -1263,8 +1264,9 @@ func ChanOf(dir ChanDir, t Type) Type {
 
 // MakeChan gives a channel of the type, with the size of the buffer.
 func MakeChan(t Type, buffer int) Value {
+	t = typeOf(t.handle())
 	if t.Kind() != Chan {
-		panic("reflect: MakeChan of " + t.String())
+		panic("reflect.MakeChan of non-chan type")
 	}
 	if t.ChanDir() != BothDir {
 		panic("reflect: MakeChan of a channel of 1 direction")

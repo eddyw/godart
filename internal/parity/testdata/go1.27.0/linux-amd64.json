@@ -54948,6 +54948,28 @@
       "seeds": null
     },
     {
+      "path": "reflect/internal/example1",
+      "tests": null,
+      "files": [
+        {
+          "path": "example.go",
+          "sha256": "2ed1357a5f82d145690372c0554a71103dc9a5335781ae9adb59364b407317aa"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "reflect/internal/example2",
+      "tests": null,
+      "files": [
+        {
+          "path": "example.go",
+          "sha256": "ac98f8d25da39ceefa4e25b1dae2424d135bf84e348d7a4e3b20dd81364c0b89"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "regexp",
       "tests": [
         {
