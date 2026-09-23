@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"go/constant"
 	"go/token"
 	"go/types"
 	"path/filepath"
@@ -274,7 +275,7 @@ func (e *emitter) descShape(t types.Type) string {
 		return fmt.Sprintf(", elem: () => %s, make: ($n) => $makeSlice<%s>($gi($n), $gi($n), %s)",
 			e.descriptorOf(u.Elem()), e.dartType(u.Elem()), e.alloc(u.Elem()))
 	case *types.Array:
-		return fmt.Sprintf(", elem: () => %s, length: %d", e.descriptorOf(u.Elem()), u.Len())
+		return fmt.Sprintf(", elem: () => %s, length: %s", e.descriptorOf(u.Elem()), intConst(constant.MakeInt64(u.Len()), types.Typ[types.Int]))
 	case *types.Chan:
 		return fmt.Sprintf(", elem: () => %s, dir: %d",
 			e.descriptorOf(u.Elem()), chanDir(u))

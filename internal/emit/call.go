@@ -223,6 +223,8 @@ var intrinsicRaw = map[string]bool{
 
 	"GODEBUGCount":    true,
 	"DescSize":        true,
+	"DescLength":      true,
+	"ArrayOf":         true,
 	"DescOffset":      true,
 	"AsInt":           true,
 	"WithInt":         true,

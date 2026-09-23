@@ -90,7 +90,7 @@ final class TypeDesc {
   final TypeDesc Function()? key;
 
   /// The count of the elements of an array type. Each other kind holds 0.
-  final int length;
+  final GoInt length;
 
   /// The direction of a channel type: 3 for both, 2 for send, and 1 for
   /// receive. Each other kind holds 0, and so does a channel description that
@@ -165,7 +165,7 @@ final class TypeDesc {
     this.reflectionMethods,
     this.elem,
     this.key,
-    this.length = 0,
+    this.length = GoInt.zero,
     this.dir = 0,
     this.params = const <TypeDesc Function()>[],
     this.results = const <TypeDesc Function()>[],

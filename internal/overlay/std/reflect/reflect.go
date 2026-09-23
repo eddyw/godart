@@ -1235,6 +1235,9 @@ func ArrayOf(length int, t Type) Type {
 	if length < 0 {
 		panic("reflect: negative length passed to ArrayOf")
 	}
+	if size := t.Size(); size > 0 && uintptr(length) > ^uintptr(0)/size {
+		panic("reflect.ArrayOf: array size would exceed virtual address space")
+	}
 	return typeOf(dart.ArrayOf(length, t.handle()))
 }
 
@@ -1331,6 +1334,8 @@ func StructOf(fields []StructField) Type {
 	handles := make([]int, len(fields))
 	anon := make([]bool, len(fields))
 	seen := make(map[string]bool, len(fields))
+	var size, lastZero uintptr
+	align := uintptr(1)
 	for i, f := range fields {
 		if f.Name == "" {
 			panic("reflect.StructOf: field " + itoa(i) + " has no name")
@@ -1363,11 +1368,36 @@ func StructOf(fields []StructField) Type {
 			panic("reflect.StructOf: duplicate field " + f.Name)
 		}
 		seen[f.Name] = true
+		fieldAlign := uintptr(f.Type.Align())
+		offset := (size + fieldAlign - 1) &^ (fieldAlign - 1)
+		if offset < size {
+			panic("reflect.StructOf: struct size would exceed virtual address space")
+		}
+		if fieldAlign > align {
+			align = fieldAlign
+		}
+		fieldSize := f.Type.Size()
+		size = offset + fieldSize
+		if size < offset {
+			panic("reflect.StructOf: struct size would exceed virtual address space")
+		}
+		if fieldSize == 0 {
+			lastZero = size
+		}
 		names[i] = f.Name
 		packages[i] = f.PkgPath
 		tags[i] = string(f.Tag)
 		handles[i] = f.Type.handle()
 		anon[i] = f.Anonymous
+	}
+	if size > 0 && lastZero == size {
+		size++
+		if size == 0 {
+			panic("reflect.StructOf: struct size would exceed virtual address space")
+		}
+	}
+	if (size+align-1)&^(align-1) < size {
+		panic("reflect.StructOf: struct size would exceed virtual address space")
 	}
 	return typeOf(dart.StructOf(names, packages, tags, handles, anon))
 }

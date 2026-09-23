@@ -464,9 +464,9 @@ int $chanCapacity(int capacity, TypeDesc elem) {
     case 'array':
       final (int size, int align) = _chanLayout(type.elem!());
       return (
-        size > 0 && type.length > _maxChanBytes ~/ size
+        size > 0 && type.length > $gi(_maxChanBytes ~/ size)
             ? _maxChanBytes + 1
-            : type.length * size,
+            : $ix(type.length) * size,
         align,
       );
     case 'struct':

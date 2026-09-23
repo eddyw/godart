@@ -331,9 +331,9 @@ TypeDesc _pointerElemDesc(Iface? pointer) {
 }
 
 /// The count of the elements of an array type.
-int $descLength(int handle) {
-  final TypeDesc? desc = _descAt(handle);
-  if (desc == null) return 0;
+GoInt $descLength(GoInt handle) {
+  final TypeDesc? desc = _descAt($ix(handle));
+  if (desc == null) return GoInt.zero;
   return desc.length;
 }
 
@@ -1726,7 +1726,7 @@ bool _directInterface(TypeDesc type) {
     case 'ptr' || 'unsafe.Pointer' || 'map' || 'chan' || 'func':
       return true;
     case 'array':
-      return type.length == 1 && _directInterface(type.elem!());
+      return type.length == $gi(1) && _directInterface(type.elem!());
     case 'struct':
       return $typeSize(type) == $gi(8) &&
           type.fields.any((field) => _directInterface(field.type()));
@@ -1963,22 +1963,24 @@ int $funcOf(Slice<GoInt> params, Slice<GoInt> results, bool variadic) {
 }
 
 /// A handle of the array type of a length and an element type.
-int $arrayOf(int length, int elem) {
-  final TypeDesc e = _typeAt(elem);
+GoInt $arrayOf(GoInt length, GoInt elem) {
+  final TypeDesc e = _typeAt($ix(elem));
   final String name = '[$length]${e.name}';
-  return _syntheticHandle(
-    () => _withType<TypeDesc>(
-      e,
-      <T>() => TypeDesc(
-        name,
-        'array',
-        const <String, Function>{},
-        text: '[$length]${e.display}',
-        elem: () => e,
-        length: length,
-        comparable: e.comparable,
-        zero: () => _zeros<T>(e, length),
-        withType: <R>(R Function<U>() f) => f<List<T>>(),
+  return $gi(
+    _syntheticHandle(
+      () => _withType<TypeDesc>(
+        e,
+        <T>() => TypeDesc(
+          name,
+          'array',
+          const <String, Function>{},
+          text: '[$length]${e.display}',
+          elem: () => e,
+          length: length,
+          comparable: e.comparable,
+          zero: () => _zeros<T>(e, $ix(length)),
+          withType: <R>(R Function<U>() f) => f<List<T>>(),
+        ),
       ),
     ),
   );
@@ -2714,7 +2716,7 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
   if (to.kind == 'array') {
     if (from.kind == 'slice') {
       final Slice<Object?> src = v as Slice<Object?>;
-      if (src.len < to.length) {
+      if ($gi(src.len) < to.length) {
         $panic(
           Iface(
             $typeString,

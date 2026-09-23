@@ -35,7 +35,7 @@ GoInt $typeSize(TypeDesc type) {
     case 'slice':
       return $gi(24);
     case 'array':
-      return $gi(type.length) * $typeSize(type.elem!());
+      return type.length * $typeSize(type.elem!());
   }
   return _layout(type).$1;
 }
@@ -96,7 +96,7 @@ GoInt $fieldOffset(TypeDesc type, int index) {
     offset += last;
   }
   // A trailing zero-sized field must not point beyond a nonempty struct.
-  if (type.fields.isNotEmpty && last == GoInt.zero && offset > GoInt.zero) {
+  if (type.fields.isNotEmpty && last == GoInt.zero && offset != GoInt.zero) {
     offset += $gi(1);
   }
   final (GoInt, int) result = (_roundUp(offset, align), align);
