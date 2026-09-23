@@ -475,6 +475,9 @@ Object? $minOf(Object? a, Object? b) {
   }
   if (a is GoString) return $compare(a, b as GoString) <= 0 ? a : b;
   if (a is GoInt) return a <= (b as GoInt) ? a : b;
+  if (a is double && b is double && a == 0 && b == 0) {
+    return a.isNegative ? a : b;
+  }
   if (a is double && a.isNaN) return a;
   if (b is double && b.isNaN) return b;
   return (a as num) <= (b as num) ? a : b;
@@ -490,6 +493,9 @@ Object? $maxOf(Object? a, Object? b) {
   }
   if (a is GoString) return $compare(a, b as GoString) >= 0 ? a : b;
   if (a is GoInt) return a >= (b as GoInt) ? a : b;
+  if (a is double && b is double && a == 0 && b == 0) {
+    return a.isNegative ? b : a;
+  }
   if (a is double && a.isNaN) return a;
   if (b is double && b.isNaN) return b;
   return (a as num) >= (b as num) ? a : b;

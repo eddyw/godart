@@ -59,6 +59,7 @@ func TestSelectedUpstream(t *testing.T) {
 		},
 		"html/template": {{Name: "exec_test.go", Declarations: []string{"TestMaxExecDepth"}}},
 		"runtime": {
+			{Name: "minmax_test.go", Declarations: []string{"zero", "negZero", "inf", "negInf", "nan", "tests", "all", "eq", "TestMinFloat", "TestMaxFloat", "testMinMax", "TestMinMaxInt", "TestMinMaxUint8", "TestMinMaxString"}},
 			{Name: "map_test.go", Declarations: []string{"TestMapIterDeleteReplace", "TestMapIterDuplicate", "TestGrowWithNaN", "TestEmptyMapWithInterfaceKey", "panicStructKey", "panicStructKey.String", "structKey", "structKey.String", "FloatInt", "TestGrowWithNegativeZero", "TestIterGrowAndDelete", "TestNegativeZero", "testMapNan", "TestMapAssignmentNan", "TestMapOperatorAssignmentNan", "TestMapOperatorAssignment"}},
 			{Name: "symtab_test.go", Declarations: []string{"TestNilName"}},
 			{Name: "crash_test.go", Declarations: []string{"TestGoexitDefer"}},
