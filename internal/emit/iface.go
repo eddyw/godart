@@ -1606,6 +1606,10 @@ func (e *emitter) substParams(t types.Type, reads *[]string, display bool) types
 }
 
 func (e *emitter) typeAssert(x *ir.TypeAssert) string {
+	// Reflection must allocate the Dart representation that this assertion uses.
+	if !isInterfaceType(x.Assert) && !holdsTypeParam(x.Assert) {
+		e.descriptorOf(x.Assert)
+	}
 	tp, isParam := types.Unalias(x.Assert).(*types.TypeParam)
 	if !x.Comma {
 		if isInterfaceType(x.Assert) {

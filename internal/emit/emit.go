@@ -814,6 +814,7 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	e.writeNilChans()
 	e.writeInstDescs()
 	e.writeAnonClasses()
+	e.writeTypeFactories(sorted)
 	if p.Name == "main" {
 		e.writeMain()
 	}
@@ -848,6 +849,26 @@ func (e *emitter) libraryFile(p *ir.Package, parts []string, imports []Import) s
 	return e.buf.String()
 }
 
+// All package factories must exist before any Go initializer constructs a type.
+func (e *emitter) writeTypeFactories(imports []Import) {
+	e.line("bool $typesRegistered = false;")
+	e.line("void $registerTypes() {")
+	e.line("if ($typesRegistered) return;")
+	e.line("$typesRegistered = true;")
+	for _, im := range imports {
+		e.line("%s.$registerTypes();", e.prefixes[im.Path])
+	}
+	names := make([]string, 0, len(e.instDescs))
+	for key := range e.instDescs {
+		names = append(names, key)
+	}
+	sort.Strings(names)
+	for _, key := range names {
+		e.line("$registerTypeFactory(%s, () => %s);", dartString(e.typeName(e.instDescs[key])), key)
+	}
+	e.line("}")
+}
+
 // Package initialization follows dependency order and can suspend between steps.
 func (e *emitter) writeInit(imports []Import) {
 	e.line("bool $initDone = false;")
@@ -855,6 +876,7 @@ func (e *emitter) writeInit(imports []Import) {
 	e.line("void $init() {")
 	e.line("if ($initDone) return;")
 	e.line("$initDone = true;")
+	e.line("$registerTypes();")
 	e.line("$srcmap($srcmapData);")
 	e.line("$initSequence(<void Function()>[")
 	for _, im := range imports {

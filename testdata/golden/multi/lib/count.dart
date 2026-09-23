@@ -21,6 +21,13 @@ bool $initDone = false;
 void $init() {
   if ($initDone) return;
   $initDone = true;
+  $registerTypes();
   $srcmap($srcmapData);
   $initSequence(<void Function()>[]);
+}
+
+bool $typesRegistered = false;
+void $registerTypes() {
+  if ($typesRegistered) return;
+  $typesRegistered = true;
 }

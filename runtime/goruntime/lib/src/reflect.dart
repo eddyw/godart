@@ -34,6 +34,12 @@ final Map<String, int> _descHandles = <String, int>{};
 /// replaces it when a value of the same type reaches the package. Read
 /// $sliceOf.
 final Set<int> _synthetic = <int>{};
+final Map<String, TypeDesc Function()> _typeFactories = {};
+
+/// A factory must depend only on type metadata, never on Go values.
+void $registerTypeFactory(String name, TypeDesc Function() factory) {
+  _typeFactories.putIfAbsent(name, () => factory);
+}
 
 int _descHandle(TypeDesc desc) {
   final int? found = _descHandles[desc.name];
@@ -58,6 +64,8 @@ int _syntheticHandle(TypeDesc Function() build) {
   final TypeDesc desc = build();
   final int? found = _descHandles[desc.name];
   if (found != null) return found;
+  final factory = _typeFactories[desc.name];
+  if (factory != null) return _descHandle(factory());
   _descTable.add(desc);
   _descHandles[desc.name] = _descTable.length;
   _synthetic.add(_descTable.length);

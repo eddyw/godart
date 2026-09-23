@@ -23,8 +23,17 @@ bool $initDone = false;
 void $init() {
   if ($initDone) return;
   $initDone = true;
+  $registerTypes();
   $srcmap($srcmapData);
   $initSequence(<void Function()>[$count.$init, $greet.$init]);
+}
+
+bool $typesRegistered = false;
+void $registerTypes() {
+  if ($typesRegistered) return;
+  $typesRegistered = true;
+  $count.$registerTypes();
+  $greet.$registerTypes();
 }
 
 void main(List<String> $arguments) {

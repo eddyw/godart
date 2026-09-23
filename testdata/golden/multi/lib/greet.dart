@@ -88,6 +88,7 @@ bool $initDone = false;
 void $init() {
   if ($initDone) return;
   $initDone = true;
+  $registerTypes();
   $srcmap($srcmapData);
   $initSequence(<void Function()>[]);
 }
@@ -121,3 +122,14 @@ final TypeDesc $descfe1f5563 = TypeDesc(
   comparable: false,
   zero: () => null,
 );
+
+bool $typesRegistered = false;
+void $registerTypes() {
+  if ($typesRegistered) return;
+  $typesRegistered = true;
+  $registerTypeFactory(
+    'func(example.com/multi/greet.Style)',
+    () => $descce6992f7,
+  );
+  $registerTypeFactory('func() string', () => $descfe1f5563);
+}
