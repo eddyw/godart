@@ -47,3 +47,24 @@ func main() {
 		t.Fatalf("the build rejected the unmodified function value: %v", err)
 	}
 }
+
+func TestSyncRejectsGenericReflectedFunction(t *testing.T) {
+	err := buildSync(t, `package main
+import ("reflect"; "runtime")
+//gart:sync
+type Callback func() int
+func create[F any](callback func([]reflect.Value) []reflect.Value) F {
+ return reflect.MakeFunc(reflect.TypeFor[F](), callback).Interface().(F)
+}
+func main() {
+ callback := create[Callback](func([]reflect.Value) []reflect.Value {
+  runtime.Gosched()
+  return []reflect.Value{reflect.ValueOf(47)}
+ })
+ callback()
+}
+`)
+	if err == nil || !strings.Contains(err.Error(), "Callback is a synchronous position") {
+		t.Fatalf("the build must reject the generic reflected callback: %v", err)
+	}
+}

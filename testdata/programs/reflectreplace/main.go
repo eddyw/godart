@@ -7,6 +7,11 @@ import (
 )
 
 func initial(int16, string) (int16, string) { return 0, "" }
+
+func create[F any](callback func([]reflect.Value) []reflect.Value) F {
+	return reflect.MakeFunc(reflect.TypeFor[F](), callback).Interface().(F)
+}
+
 func main() {
 	factories := []func(reflect.Type, func([]reflect.Value) []reflect.Value) reflect.Value{reflect.MakeFunc}
 	makeFunction := factories[0]
@@ -38,6 +43,13 @@ func main() {
 	}).Interface().(func(func() int) int)
 	if accept(func() int { runtime.Gosched(); return 41 }) != 41 {
 		panic("lost function argument result")
+	}
+	generic := create[func() int](func([]reflect.Value) []reflect.Value {
+		runtime.Gosched()
+		return []reflect.Value{reflect.ValueOf(47)}
+	})
+	if generic() != 47 {
+		panic("lost generic callback result")
 	}
 	fmt.Println(a, b)
 }

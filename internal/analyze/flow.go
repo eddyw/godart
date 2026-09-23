@@ -388,8 +388,8 @@ func (a *analyzer) wire(site *callSite, key any) {
 		shift = 1
 	}
 	params, results := a.targetShape(key)
-	if _, ok := key.(reflectedFunction); ok {
-		for i, group := range site.resultEsc {
+	for i, group := range site.resultEsc {
+		if i >= len(results) || results[i] == nil {
 			a.addEdge(sigCell{group}, outCell{site.call, i})
 		}
 	}
