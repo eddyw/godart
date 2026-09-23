@@ -1,8 +1,8 @@
 package main
 
 import (
-	"example.com/reflectstructassert/z_consumer"
 	"example.com/reflectstructassert/a_producer"
+	"example.com/reflectstructassert/z_consumer"
 	"fmt"
 	"reflect"
 )

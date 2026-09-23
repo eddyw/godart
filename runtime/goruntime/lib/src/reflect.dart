@@ -1675,15 +1675,6 @@ void $mapSet(Iface? target, Iface? key, Iface? value, bool drop) {
   m.set(k, elem?.kind == 'interface' ? value : value?.value);
 }
 
-// The type constructors and the slice operations of the package reflect.
-//
-// A constructor gives a descriptor that no value of the program carries. Each
-// name goes through the handle table first, thus a type that the program
-// already holds keeps its own descriptor, with its zero and its make. A type
-// that the program never holds gives a descriptor for the inspection alone,
-// and MakeSlice, MakeMap, New, and Zero of it each panic with a clear text.
-// Read docs/parity.md.
-
 /// A handle of a struct type that a list of fields builds.
 ///
 /// A program that already names the shape gives its own description, with the
@@ -1695,6 +1686,7 @@ void $mapSet(Iface? target, Iface? key, Iface? value, bool drop) {
 /// thus no other path can name the type.
 int $structOf(
   Slice<GoString> names,
+  Slice<GoString> packages,
   Slice<GoString> tags,
   Slice<GoInt> handles,
   Slice<bool> anon,
@@ -1716,10 +1708,10 @@ int $structOf(
       key.write('; ');
       show.write('; ');
     }
-    if (!anon[i]) {
-      key.write('${field[i]} ');
-      show.write('${field[i]} ');
-    }
+    key.write(field[i]);
+    if (packages[i].length != 0) key.write('@${packages[i].toDartString()}');
+    key.write(' ');
+    if (!anon[i]) show.write('${field[i]} ');
     key.write(types[i].name);
     show.write(types[i].display);
     if (tag[i].isNotEmpty) {
@@ -1740,11 +1732,12 @@ int $structOf(
           FieldDesc(
             field[i],
             tag[i],
-            _exportedName(field[i]),
+            packages[i].length == 0,
             () => types[i],
             (Object? r) => (r as List<Object?>)[i],
             (Object? r, Object? v) => (r as List<Object?>)[i] = v,
             embedded: anon[i],
+            pkg: packages[i].toDartString(),
           ),
       ],
       comparable: types.every((TypeDesc t) => t.comparable),
@@ -1763,14 +1756,6 @@ String _quoteTag(String tag) {
   }
   b.write('"');
   return b.toString();
-}
-
-/// _exportedName reports whether a name of Go is exported. Go reads the first
-/// letter, and a letter of an upper case marks an exported name.
-bool _exportedName(String name) {
-  if (name.isEmpty) return false;
-  final int c = name.codeUnitAt(0);
-  return c >= 0x41 && c <= 0x5A;
 }
 
 /// A handle of the slice type of an element type.

@@ -1326,6 +1326,8 @@ func validFieldName(name string) bool {
 // StructOf rejects embedded fields with methods.
 func StructOf(fields []StructField) Type {
 	names := make([]string, len(fields))
+	packages := make([]string, len(fields))
+	packagePath := ""
 	tags := make([]string, len(fields))
 	handles := make([]int, len(fields))
 	anon := make([]bool, len(fields))
@@ -1340,6 +1342,19 @@ func StructOf(fields []StructField) Type {
 		if f.Type == nil {
 			panic("reflect.StructOf: field " + itoa(i) + " has no type")
 		}
+		if f.Anonymous && f.PkgPath != "" {
+			panic("reflect.StructOf: field \"" + f.Name + "\" is anonymous but has PkgPath set")
+		}
+		if f.PkgPath == "" {
+			c := f.Name[0]
+			if 'a' <= c && c <= 'z' || c == '_' {
+				panic("reflect.StructOf: field \"" + f.Name + "\" is unexported but missing PkgPath")
+			}
+		} else if packagePath == "" {
+			packagePath = f.PkgPath
+		} else if packagePath != f.PkgPath {
+			panic("reflect.StructOf: fields with different PkgPath " + packagePath + " and " + f.PkgPath)
+		}
 		if f.Anonymous && f.Type.NumMethod() > 0 {
 			panic("reflect.StructOf: the embedded field " + f.Name + " holds a method")
 		}
@@ -1348,11 +1363,12 @@ func StructOf(fields []StructField) Type {
 		}
 		seen[f.Name] = true
 		names[i] = f.Name
+		packages[i] = f.PkgPath
 		tags[i] = string(f.Tag)
 		handles[i] = f.Type.handle()
 		anon[i] = f.Anonymous
 	}
-	return typeOf(dart.StructOf(names, tags, handles, anon))
+	return typeOf(dart.StructOf(names, packages, tags, handles, anon))
 }
 
 // PointerTo gives the pointer type of an element type.
