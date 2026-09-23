@@ -1419,13 +1419,20 @@ func (e *emitter) capacity(x ir.Expr) string {
 // value in Go, and a Dart list compares by identity, thus such a map takes
 // its own equality and its own hash.
 func (e *emitter) mapNew(m *types.Map) string {
-	base := fmt.Sprintf("GoMap<%s, %s>(%s",
-		e.dartType(m.Key()), e.dartType(m.Elem()), e.zeroFunc(m.Elem()))
+	return fmt.Sprintf("GoMap<%s, %s>(%s%s)",
+		e.dartType(m.Key()), e.dartType(m.Elem()), e.zeroFunc(m.Elem()), e.mapKeyOptions(m))
+}
+
+func (e *emitter) mapKeyOptions(m *types.Map) string {
+	if tp, ok := types.Unalias(m.Key()).(*types.TypeParam); ok {
+		dict := e.dictOf(tp)
+		return fmt.Sprintf(", equals: %s.equal, hashCode: %s.hash", dict, dict)
+	}
 	// A pointer compares by identity in Go. A pointer to a struct is the Dart
 	// object of the struct, and the class compares the fields, thus such a
 	// key needs the identity of Dart.
 	if p, ok := typeset.Core(m.Key()).(*types.Pointer); ok && isStructType(p.Elem()) {
-		return base + ", equals: identical, hashCode: identityHashCode)"
+		return ", equals: identical, hashCode: identityHashCode"
 	}
 	// A NaN key never compares equal, thus each write of one adds an entry,
 	// and a read of one finds nothing. The map of Dart takes 2 identical
@@ -1433,14 +1440,14 @@ func (e *emitter) mapNew(m *types.Map) string {
 	// equality. Each NaN takes a fresh hash, and GoMap.nanHash tells the
 	// cause.
 	if isFloat(m.Key()) || isComplexType(m.Key()) {
-		return base + ", equals: ($ka, $kb) => $ka == $kb, " +
-			"hashCode: ($k) => $k == $k ? $k.hashCode : GoMap.nanHash())"
+		return ", equals: ($ka, $kb) => $ka == $kb, " +
+			"hashCode: ($k) => $k == $k ? $k.hashCode : GoMap.nanHash()"
 	}
 	if _, ok := typeset.Core(m.Key()).(*types.Array); !ok {
-		return base + ")"
+		return ""
 	}
-	return fmt.Sprintf("%s, equals: ($ka, $kb) => %s, hashCode: ($k) => %s)",
-		base, e.arrayKeyEqual(m.Key(), "$ka", "$kb", 0),
+	return fmt.Sprintf(", equals: ($ka, $kb) => %s, hashCode: ($k) => %s",
+		e.arrayKeyEqual(m.Key(), "$ka", "$kb", 0),
 		e.arrayKeyHash(m.Key(), "$k", 0))
 }
 

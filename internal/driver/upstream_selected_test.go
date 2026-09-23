@@ -51,6 +51,7 @@ func TestSelectedUpstream(t *testing.T) {
 		},
 		"html/template": {{Name: "exec_test.go", Declarations: []string{"TestMaxExecDepth"}}},
 		"runtime": {
+			{Name: "map_test.go", Declarations: []string{"TestEmptyMapWithInterfaceKey", "panicStructKey", "panicStructKey.String", "structKey", "structKey.String", "FloatInt", "TestGrowWithNegativeZero", "TestIterGrowAndDelete", "TestNegativeZero", "testMapNan", "TestMapAssignmentNan", "TestMapOperatorAssignmentNan", "TestMapOperatorAssignment"}},
 			{Name: "symtab_test.go", Declarations: []string{"TestNilName"}},
 			{Name: "crash_test.go", Declarations: []string{"TestGoexitDefer"}},
 			{Name: "proc_test.go", Declarations: []string{"preempt", "TestPreemption", "TestTimerFairness"}},
@@ -171,7 +172,7 @@ func TestSelectedUpstream(t *testing.T) {
 				"TestTagGet", "tagGetTests", "TestFuncArg", "TestStructArg", "TestZeroSet", "TestInvalid", "TestLarge", "Impl", "Impl.F", "TestValueString", "TestSlice", "TestSlice3", "TestSetLenCap", "TestVariadic", "emptyStruct", "TestCallReturnsEmpty", "fieldIndexRecover", "TestFieldByIndexNil", "TestTypeFieldOutOfRangePanic", "TestTypeFieldReadOnly", "shouldPanic", "TestBytes", "TestValuePanic", "TestTypeOverflow", "TestInitFuncTypes",
 				"TestBool", "TestCanIntUintFloatComplex", "TestCanSetField", "Nil", "NotNil", "TestIsNil", "TestPtrTo",
 				"T", "pair", "integer", "valueTests", "TestClear", "TestGrow", "TestSwapper", "TestPtrSetNil", "TestMapSetNil", "appendTests", "TestAppend",
-				"TestTypeAssert", "testTypeAssert", "testTypeWithMethod", "testTypeWithMethod.String", "testTypeWithMethod.M", "TestTypeAssertMethod", "TestTypeAssertPanic", "TestSmallNegativeInt", "TestNilMap", "TestChan", "TestMap", "TestSelectNop", "TestArrayElemSet", "TestPtrPointTo", "TestSetValue", "TestValueOverflow", "V", "TestAddr", "TestIndex", "TestCopy", "TestCopyString", "TestCopyArray", "TestBigUnnamedStruct",
+				"TestInterfaceExtraction", "TestNilPtrValueSub", "TestBigZero", "TestTypeOfTypeOf", "TestPtrToMethods", "XM", "XM.String", "TestAliasNames", "Tint", "Tint2", "Talias1", "Talias2", "TestNegativeKindString", "TestMapOfKeyUpdate", "TestMapOfKeyPanic", "TestIssue22031", "TestIssue22073", "NonExportedFirst", "NonExportedFirst.ΦExported", "NonExportedFirst.nonexported", "TestTypeAssert", "testTypeAssert", "testTypeWithMethod", "testTypeWithMethod.String", "testTypeWithMethod.M", "TestTypeAssertMethod", "TestTypeAssertPanic", "TestSmallNegativeInt", "TestNilMap", "TestChan", "TestMap", "TestSelectNop", "TestArrayElemSet", "TestPtrPointTo", "TestSetValue", "TestValueOverflow", "V", "TestAddr", "TestIndex", "TestCopy", "TestCopyString", "TestCopyArray", "TestBigUnnamedStruct",
 				"iterateToString", "TestMapIterNonEmptyMap", "TestMapIterNilMap",
 				"TestMapIterSafety", "TestMapIterNext", "TestMapIterDelete0", "TestMapIterDelete1",
 				"TestValue_Cap", "TestValue_Len",

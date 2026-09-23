@@ -107,7 +107,7 @@ var kindNames = []string{
 
 // String gives the name of the kind.
 func (k Kind) String() string {
-	if int(k) < len(kindNames) {
+	if k < Kind(len(kindNames)) {
 		return kindNames[k]
 	}
 	return "kind" + itoa(int(k))
@@ -858,7 +858,11 @@ func (v Value) Len() int {
 func (v Value) Index(i int) Value {
 	v.mustBe("Index", Array, Slice, String)
 	owner := v.read()
-	out := Value{value: dart.ValueIndex(owner, i), ro: v.ro, ok: true}
+	ro := v.ro
+	if ro != 0 {
+		ro = roSticky
+	}
+	out := Value{value: dart.ValueIndex(owner, i), ro: ro, ok: true}
 	if v.kindAt(owner) != String {
 		if v.kindAt(owner) == Slice || v.CanAddr() {
 			out.owner, out.index, out.loc = owner, i, locIndex

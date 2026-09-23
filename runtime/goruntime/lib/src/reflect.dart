@@ -1849,7 +1849,11 @@ int $mapOf(int key, int elem) {
         k,
         <K>() => _withType<Object?>(
           e,
-          <V>() => GoMap<K, V>.nil(() => _zeroOf(e) as V),
+          <V>() => GoMap<K, V>.nil(
+            () => _zeroOf(e) as V,
+            equals: _keyEquals<K>(k),
+            hashCode: _keyHash<K>(k),
+          ),
         ),
       ),
       make: (int _) => _withType<Object?>(

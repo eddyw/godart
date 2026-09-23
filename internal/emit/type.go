@@ -270,8 +270,8 @@ func (e *emitter) zero(t types.Type) string {
 	case *types.Array:
 		return e.makeArray(u)
 	case *types.Map:
-		return fmt.Sprintf("GoMap<%s, %s>.nil(%s)",
-			e.dartType(u.Key()), e.dartType(u.Elem()), e.cycleZeroFunc(u.Elem()))
+		return fmt.Sprintf("GoMap<%s, %s>.nil(%s%s)",
+			e.dartType(u.Key()), e.dartType(u.Elem()), e.cycleZeroFunc(u.Elem()), e.mapKeyOptions(u))
 	case *types.Chan:
 		if !holdsTypeParam(u.Elem()) {
 			return e.nilChan(u.Elem())

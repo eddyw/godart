@@ -8,7 +8,7 @@ import 'slice.dart';
 /// and a range loop walks that list. A removed entry keeps its [next] link,
 /// thus an iterator that stands on it still reaches the rest of the list.
 final class _Entry<K, V> {
-  final K key;
+  K key;
   V value;
   bool dead = false;
   _Entry<K, V>? prev;
@@ -25,6 +25,7 @@ final class _Entry<K, V> {
 final class GoMap<K, V> {
   final HashMap<K, _Entry<K, V>> _entries;
   final V Function() _zero;
+  final int Function(K) _hash;
   _Entry<K, V>? _head;
   _Entry<K, V>? _tail;
 
@@ -35,24 +36,33 @@ final class GoMap<K, V> {
   /// A key of an array type compares by value in Go, and a Dart list compares
   /// by identity, thus such a map takes its own equality and its own hash.
   GoMap(this._zero, {bool Function(K, K)? equals, int Function(K)? hashCode})
-    : _entries = equals == null
+    : _hash = hashCode ?? ((K key) => key.hashCode),
+      _entries = equals == null
           ? HashMap<K, _Entry<K, V>>()
           : HashMap<K, _Entry<K, V>>(equals: equals, hashCode: hashCode),
       isNil = false;
 
-  GoMap.nil(this._zero) : _entries = HashMap<K, _Entry<K, V>>(), isNil = true;
+  GoMap.nil(
+    this._zero, {
+    bool Function(K, K)? equals,
+    int Function(K)? hashCode,
+  }) : _hash = hashCode ?? ((K key) => key.hashCode),
+       _entries = equals == null
+           ? HashMap<K, _Entry<K, V>>()
+           : HashMap<K, _Entry<K, V>>(equals: equals, hashCode: hashCode),
+       isNil = true;
 
   int get length => _entries.length;
 
   V get(K key) {
-    final _Entry<K, V>? e = _entries[key];
+    final _Entry<K, V>? e = _read(key);
     if (e == null) return _zero();
     return e.value;
   }
 
   /// The Go form `v, ok := m[k]`.
   (V, bool) get2(K key) {
-    final _Entry<K, V>? e = _entries[key];
+    final _Entry<K, V>? e = _read(key);
     if (e == null) return (_zero(), false);
     return (e.value, true);
   }
@@ -68,6 +78,9 @@ final class GoMap<K, V> {
     }
     final _Entry<K, V>? e = _readForWrite(key);
     if (e != null) {
+      _entries.remove(key);
+      e.key = key;
+      _entries[key] = e;
       e.value = value;
       return;
     }
@@ -86,18 +99,25 @@ final class GoMap<K, V> {
   /// the hash of a key that holds no identity in a write, thus the flag of
   /// the hash stands over the read.
   _Entry<K, V>? _readForWrite(K key) {
-    if (key is! Iface) return _entries[key];
+    if (key is! Iface) return _read(key);
     $hashInWrite = true;
     try {
-      return _entries[key];
+      return _read(key);
     } finally {
       $hashInWrite = false;
     }
   }
 
+  _Entry<K, V>? _read(K key) {
+    // Dart can omit the key hash when the map is empty.
+    if (_entries.isEmpty) _hash(key);
+    return _entries[key];
+  }
+
   void remove(K key) {
-    final _Entry<K, V>? e = _entries.remove(key);
+    final _Entry<K, V>? e = _read(key);
     if (e == null) return;
+    _entries.remove(key);
     _unlink(e);
   }
 
@@ -116,7 +136,7 @@ final class GoMap<K, V> {
     e.prev = null;
   }
 
-  bool has(K key) => _entries.containsKey(key);
+  bool has(K key) => _read(key) != null;
 
   void clear() {
     var e = _head;
