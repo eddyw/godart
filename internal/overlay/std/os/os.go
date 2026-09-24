@@ -175,11 +175,13 @@ type file struct {
 	std int
 	// closed marks a file after Close, thus a later call reports ErrClosed.
 	closed bool
-	// Directory enumeration still uses the path. dirFD owns the native descriptor.
+	// dirFD owns the native descriptor.
 	dir   bool
 	dirFD int
 	// dirPos counts the entries that ReadDir gave.
-	dirPos int
+	dirPos    int
+	dirBuf    []byte
+	dirBufPos int
 }
 
 // The value of the field std.
@@ -446,6 +448,16 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	if f.std != stdNone {
 		return 0, &PathError{Op: "seek", Path: f.name, Err: errors.New("bad file descriptor")}
 	}
+	if f.dir && f.dirFD >= 0 {
+		f.dirBuf = nil
+		f.dirBufPos = 0
+		f.dirPos = 0
+		pos, code := dart.SyscallSeek(f.dirFD, offset, whence)
+		if code != 0 {
+			return 0, &PathError{Op: "seek", Path: f.name, Err: syscall.Errno(code)}
+		}
+		return pos, nil
+	}
 	pos, cause := dart.FileSeek(f.handle, offset, whence)
 	return pos, pathError("seek", f.name, cause)
 }
@@ -464,6 +476,7 @@ func (f *File) Close() error {
 		return &PathError{Op: "close", Path: f.name, Err: ErrClosed}
 	}
 	f.closed = true
+	f.dirBuf = nil
 	if f.dir {
 		if errno := dart.DirectoryClose(f.dirFD); errno != 0 {
 			return &PathError{Op: "close", Path: f.name, Err: syscall.Errno(errno)}
@@ -780,26 +793,12 @@ func (f *File) ReadDir(n int) ([]DirEntry, error) {
 	if err := f.checkValid("readdir"); err != nil {
 		return nil, err
 	}
-	all, err := ReadDir(f.name)
-	if err != nil {
-		return nil, err
+	names, err := f.readDirNames(n)
+	entries := make([]DirEntry, len(names))
+	for i, name := range names {
+		entries[i] = &dirEntry{dir: f.name, name: name}
 	}
-	if f.dirPos > len(all) {
-		f.dirPos = len(all)
-	}
-	rest := all[f.dirPos:]
-	if n <= 0 {
-		f.dirPos = len(all)
-		return rest, nil
-	}
-	if len(rest) == 0 {
-		return nil, io.EOF
-	}
-	if n < len(rest) {
-		rest = rest[:n]
-	}
-	f.dirPos += len(rest)
-	return rest, nil
+	return entries, err
 }
 
 // Readdir reads the directory and gives the metadata of each entry. A count of
@@ -811,7 +810,7 @@ func (f *File) Readdir(n int) ([]FileInfo, error) {
 	}
 	entries, err := f.ReadDir(n)
 	if err != nil {
-		return nil, err
+		return []FileInfo{}, err
 	}
 	out := make([]FileInfo, 0, len(entries))
 	for _, e := range entries {
@@ -829,15 +828,7 @@ func (f *File) Readdirnames(n int) ([]string, error) {
 	if err := f.checkValid("readdirnames"); err != nil {
 		return nil, err
 	}
-	entries, err := f.ReadDir(n)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]string, 0, len(entries))
-	for _, e := range entries {
-		out = append(out, e.Name())
-	}
-	return out, nil
+	return f.readDirNames(n)
 }
 
 // base gives the last part of a path. A trailing separator does not count,
