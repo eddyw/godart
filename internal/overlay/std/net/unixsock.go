@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 package net
@@ -181,7 +185,12 @@ func (l *UnixListener) Addr() Addr { return l.l.Addr() }
 
 // Close ends the listener, and it removes the file of the socket. Each
 // connection of the listener stays open, exactly as in Go.
-func (l *UnixListener) Close() error { return l.l.Close() }
+func (l *UnixListener) Close() error {
+	if l == nil {
+		return syscall.EINVAL
+	}
+	return l.l.Close()
+}
 
 // SetDeadline sets the accept deadline. Zero removes the deadline.
 func (l *UnixListener) SetDeadline(t time.Time) error {

@@ -65,8 +65,8 @@ func (c *TCPConn) SetWriteBuffer(bytes int) error {
 }
 
 // newTCPConn wraps the handle of an open TCP socket.
-func newTCPConn(handle int, idle time.Duration, config KeepAliveConfig) *TCPConn {
-	c := &TCPConn{c: newConn(handle, "tcp")}
+func newTCPConn(handle int, network string, idle time.Duration, config KeepAliveConfig) *TCPConn {
+	c := &TCPConn{c: newConn(handle, network)}
 	if !config.Enable && idle >= 0 {
 		config = KeepAliveConfig{Enable: true, Idle: idle}
 	}
@@ -159,6 +159,7 @@ func DialTCP(network string, laddr, raddr *TCPAddr) (*TCPConn, error) {
 		c.Close()
 		return nil, errors.New("dial " + network + ": the dial gave no TCP connection")
 	}
+	tc.c.network = network
 	return tc, nil
 }
 
@@ -170,8 +171,8 @@ type TCPListener struct {
 }
 
 // newTCPListener wraps the handle of an open listener of the network tcp.
-func newTCPListener(handle int, addr Addr) *TCPListener {
-	return &TCPListener{l: listener{handle: handle, addr: addr, network: "tcp"}}
+func newTCPListener(handle int, network string, addr Addr) *TCPListener {
+	return &TCPListener{l: listener{handle: handle, addr: addr, network: network}}
 }
 
 // Accept waits for 1 connection and gives it.
@@ -196,7 +197,12 @@ func (l *TCPListener) Addr() Addr { return l.l.Addr() }
 
 // Close ends the listener. Each connection of it stays open, exactly as in
 // Go.
-func (l *TCPListener) Close() error { return l.l.Close() }
+func (l *TCPListener) Close() error {
+	if l == nil {
+		return syscall.EINVAL
+	}
+	return l.l.Close()
+}
 
 // SetDeadline sets the accept deadline. Zero removes the deadline.
 func (l *TCPListener) SetDeadline(t time.Time) error {
@@ -264,7 +270,7 @@ func ListenTCP(network string, laddr *TCPAddr) (*TCPListener, error) {
 	if i := strings.LastIndexByte(bound, '%'); i >= 0 {
 		bound, zone = bound[:i], bound[i+1:]
 	}
-	return newTCPListener(handle, &TCPAddr{IP: ParseIP(bound), Port: port, Zone: zone}), nil
+	return newTCPListener(handle, network, &TCPAddr{IP: ParseIP(bound), Port: port, Zone: zone}), nil
 }
 
 func resolveListenTCP(network, address string) (*TCPAddr, error) {

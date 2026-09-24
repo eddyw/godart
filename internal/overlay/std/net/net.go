@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 // Package net gives a TCP client, a TCP server, a UDP socket, and a Unix
@@ -16,6 +20,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"syscall/dart"
 	"time"
 )
@@ -241,12 +246,26 @@ func flagValue(on bool) int {
 }
 
 func (c *conn) Close() error {
+	if c.network == "" {
+		return syscall.EINVAL
+	}
 	handle := c.handle
 	c.handle = -1
 	if cause := dart.ConnClose(handle); cause != "" {
-		return netError("close "+c.network, cause)
+		return c.closeError(cause)
 	}
 	return nil
+}
+
+func closeCause(cause string) error {
+	if cause == ErrClosed.Error() {
+		return ErrClosed
+	}
+	return errors.New(cause)
+}
+
+func (c *conn) closeError(cause string) error {
+	return &OpError{Op: "close", Net: c.network, Source: c.local, Addr: c.remote, Err: closeCause(cause)}
 }
 
 // connCloseWrite ends the write side of a connection. The result is empty on
@@ -268,8 +287,11 @@ func connCloseRead(handle int) string
 // A plain connection rides a RawSocket of dart:io, thus the runtime writes the
 // shutdown of the send direction. Go writes the same call of the system.
 func (c *conn) closeWrite() error {
+	if c.network == "" {
+		return syscall.EINVAL
+	}
 	if cause := connCloseWrite(c.handle); cause != "" {
-		return netError("close "+c.network, cause)
+		return c.closeError(cause)
 	}
 	return nil
 }
@@ -281,8 +303,11 @@ func (c *conn) closeWrite() error {
 // exactly as CloseRead of Go does. A peer of a BSD system reads a reset for
 // the bytes that it wrote after the call, because the system holds that rule.
 func (c *conn) closeRead() error {
+	if c.network == "" {
+		return syscall.EINVAL
+	}
 	if cause := connCloseRead(c.handle); cause != "" {
-		return netError("close "+c.network, cause)
+		return c.closeError(cause)
 	}
 	return nil
 }
@@ -312,10 +337,12 @@ func (c *conn) apply() error {
 
 // packet holds a datagram socket.
 type packet struct {
-	handle int
-	local  *UDPAddr
-	read   int64
-	write  int64
+	network string
+	remote  Addr
+	handle  int
+	local   *UDPAddr
+	read    int64
+	write   int64
 }
 
 func (p *packet) ReadFrom(b []byte) (int, Addr, error) {
@@ -342,7 +369,7 @@ func (p *packet) Close() error {
 	handle := p.handle
 	p.handle = -1
 	if cause := dart.PacketClose(handle); cause != "" {
-		return netError("close udp", cause)
+		return &OpError{Op: "close", Net: p.network, Source: p.local, Addr: p.remote, Err: closeCause(cause)}
 	}
 	return nil
 }
@@ -391,15 +418,18 @@ func (l *listener) Accept() (Conn, error) {
 		}
 		return nil, &OpError{Op: "accept", Net: l.network, Addr: l.addr, Err: err}
 	}
-	if l.network == "tcp" {
-		return newTCPConn(handle, l.keepAlive, l.keepAliveConfig), nil
+	if strings.HasPrefix(l.network, "tcp") {
+		return newTCPConn(handle, l.network, l.keepAlive, l.keepAliveConfig), nil
 	}
 	return newUnixConn(handle), nil
 }
 
 func (l *listener) Close() error {
+	if l.network == "" {
+		return syscall.EINVAL
+	}
 	if cause := dart.ListenClose(l.handle); cause != "" {
-		return netError("close "+l.network, cause)
+		return &OpError{Op: "close", Net: l.network, Addr: l.addr, Err: closeCause(cause)}
 	}
 	l.handle = -1
 	return nil
@@ -442,7 +472,7 @@ func (d *Dialer) dialOne(network, address string) (Conn, error) {
 		if cause != "" {
 			return nil, errors.New("dial tcp " + address + ": " + cause)
 		}
-		return newTCPConn(handle, d.KeepAlive, d.KeepAliveConfig), nil
+		return newTCPConn(handle, network, d.KeepAlive, d.KeepAliveConfig), nil
 	case "unix":
 		handle, cause := dart.DialUnix(address)
 		if cause != "" {
@@ -462,7 +492,7 @@ func (d *Dialer) dialOne(network, address string) (Conn, error) {
 			return nil, errors.New("dial udp " + address + ": " + cause)
 		}
 		return newDialedUDPConn(
-			&packet{handle: handle, local: udpAddrOf(localIP, local)},
+			&packet{handle: handle, network: network, local: udpAddrOf(localIP, local)},
 			host,
 			port,
 		), nil
@@ -515,7 +545,7 @@ func ListenPacket(network, address string) (PacketConn, error) {
 	if cause != "" {
 		return nil, errors.New("listen udp " + address + ": " + cause)
 	}
-	return newUDPConn(&packet{handle: handle, local: udpAddrOf(host, taken)}), nil
+	return newUDPConn(&packet{handle: handle, network: network, local: udpAddrOf(host, taken)}), nil
 }
 
 // A Dialer opens a connection with a timeout, with a deadline, or with a
@@ -739,6 +769,7 @@ func (d *Dialer) DialTCP(ctx context.Context, network string, laddr, raddr netip
 		c.Close()
 		return nil, errors.New("dial " + network + ": the dial gave no TCP connection")
 	}
+	tc.c.network = network
 	return tc, nil
 }
 
@@ -769,6 +800,7 @@ func (d *Dialer) DialUDP(ctx context.Context, network string, laddr, raddr netip
 		c.Close()
 		return nil, errors.New("dial " + network + ": the dial gave no UDP socket")
 	}
+	uc.p.network = network
 	return uc, nil
 }
 

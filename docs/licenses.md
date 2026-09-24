@@ -116,6 +116,11 @@ Network interface types, flags, and native address filters adapt Go
 The overlay, native adapter, and runtime license retain the Go BSD notice.
 UDP local-address tests retain assertions from Go `src/net/udpsock_test.go`
 and its BSD notice.
+Socket close errors and zero-value validation follow Go `src/net/net.go`,
+`tcpsock.go`, and `unixsock.go`. The overlays retain their BSD notices.
+The close test adapter retains assertions and helpers from Go
+`error_test.go`, `error_unix_test.go`, `pipe.go`, `file.go`, and
+`mockserver_test.go` with their BSD notices.
 Unix listener close tests retain assertions from Go `src/net/unixsock_test.go`
 and the address helper from `src/net/mockserver_test.go` with their BSD notices.
 The metrics overlay adapts Go `src/runtime/metrics/value.go`, `sample.go`,

@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 package net
@@ -5,6 +9,7 @@ package net
 import (
 	"errors"
 	"net/netip"
+	"syscall"
 	"syscall/dart"
 	"time"
 )
@@ -58,6 +63,7 @@ func (c *UDPConn) SetWriteBuffer(bytes int) error {
 
 // newDialedUDPConn wraps a socket that a dial connected to a peer.
 func newDialedUDPConn(p *packet, host string, port int) *UDPConn {
+	p.remote = udpAddrOf(host, port)
 	return &UDPConn{p: p, host: host, port: port}
 }
 
@@ -140,7 +146,12 @@ func (c *UDPConn) WriteToUDPAddrPort(b []byte, addr netip.AddrPort) (int, error)
 }
 
 // Close ends the socket.
-func (c *UDPConn) Close() error { return c.p.Close() }
+func (c *UDPConn) Close() error {
+	if c.p == nil {
+		return syscall.EINVAL
+	}
+	return c.p.Close()
+}
 
 // LocalAddr gives the address of the socket.
 func (c *UDPConn) LocalAddr() Addr { return c.p.LocalAddr() }
@@ -196,7 +207,7 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 		return nil, errors.New("dial " + network + " " + raddr.String() + ": " + cause)
 	}
 	return newDialedUDPConn(
-		&packet{handle: handle, local: udpAddrOf(localIP, local)},
+		&packet{handle: handle, network: network, local: udpAddrOf(localIP, local)},
 		host,
 		raddr.Port,
 	), nil
@@ -221,7 +232,7 @@ func ListenUDP(network string, laddr *UDPAddr) (*UDPConn, error) {
 	if cause != "" {
 		return nil, errors.New("listen " + network + ": " + cause)
 	}
-	return newUDPConn(&packet{handle: handle, local: udpAddrOf(host, taken)}), nil
+	return newUDPConn(&packet{handle: handle, network: network, local: udpAddrOf(host, taken)}), nil
 }
 
 // ListenMulticastUDP opens a datagram socket that reads the datagrams of a
@@ -254,8 +265,9 @@ func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPCon
 		return nil, errors.New("listen " + network + ": " + cause)
 	}
 	return newUDPConn(&packet{
-		handle: handle,
-		local:  udpAddrOf("0.0.0.0", taken),
+		network: network,
+		handle:  handle,
+		local:   udpAddrOf("0.0.0.0", taken),
 	}), nil
 }
 
