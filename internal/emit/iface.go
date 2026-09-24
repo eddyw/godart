@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE-Go file.
+
 package emit
 
 import (
@@ -532,7 +536,9 @@ func dartText(s string) string {
 // `go/types` writes an unnamed struct type and an unnamed interface type with
 // no space after the keyword, and `reflect` writes 1 space. Each other form is
 // equal, thus the function falls back to `types.TypeString`.
-func reflectText(t types.Type) string {
+func reflectText(t types.Type) string { return qualifiedTypeText(t, shortQualifier, false) }
+
+func qualifiedTypeText(t types.Type, qualifier types.Qualifier, symbol bool) string {
 	switch t := types.Unalias(t).(type) {
 	case *types.Struct:
 		if t.NumFields() == 0 {
@@ -541,9 +547,26 @@ func reflectText(t types.Type) string {
 		parts := make([]string, t.NumFields())
 		for i := range parts {
 			field := t.Field(i)
-			text := reflectText(field.Type())
+			text := qualifiedTypeText(field.Type(), qualifier, symbol)
+			name := field.Name()
+			if symbol && !field.Exported() && field.Pkg() != nil {
+				name = qualifier(field.Pkg()) + "." + name
+			}
 			if !field.Embedded() {
-				text = field.Name() + " " + text
+				text = name + " " + text
+			} else if symbol {
+				base := types.Unalias(field.Type())
+				if pointer, ok := base.(*types.Pointer); ok {
+					base = types.Unalias(pointer.Elem())
+				}
+				alias := true
+				switch base := base.(type) {
+				case *types.Named:
+					alias = field.Name() != base.Obj().Name() || !field.Exported() && field.Pkg() != base.Obj().Pkg()
+				}
+				if alias {
+					text = name + " = " + text
+				}
 			}
 			if tag := t.Tag(i); tag != "" {
 				text += " " + strconv.Quote(tag)
@@ -560,32 +583,32 @@ func reflectText(t types.Type) string {
 		for i, m := range methods {
 			name := m.Name()
 			if !m.Exported() {
-				name = shortQualifier(m.Pkg()) + "." + name
+				name = qualifier(m.Pkg()) + "." + name
 			}
-			parts[i] = name + strings.TrimPrefix(reflectText(m.Type()), "func")
+			parts[i] = name + strings.TrimPrefix(qualifiedTypeText(m.Type(), qualifier, symbol), "func")
 		}
 		return "interface { " + strings.Join(parts, "; ") + " }"
 	case *types.Pointer:
-		return "*" + reflectText(t.Elem())
+		return "*" + qualifiedTypeText(t.Elem(), qualifier, symbol)
 	case *types.Slice:
-		return "[]" + reflectText(t.Elem())
+		return "[]" + qualifiedTypeText(t.Elem(), qualifier, symbol)
 	case *types.Array:
-		return "[" + strconv.FormatInt(t.Len(), 10) + "]" + reflectText(t.Elem())
+		return "[" + strconv.FormatInt(t.Len(), 10) + "]" + qualifiedTypeText(t.Elem(), qualifier, symbol)
 	case *types.Map:
-		return "map[" + reflectText(t.Key()) + "]" + reflectText(t.Elem())
+		return "map[" + qualifiedTypeText(t.Key(), qualifier, symbol) + "]" + qualifiedTypeText(t.Elem(), qualifier, symbol)
 	case *types.Chan:
 		switch t.Dir() {
 		case types.SendOnly:
-			return "chan<- " + reflectText(t.Elem())
+			return "chan<- " + qualifiedTypeText(t.Elem(), qualifier, symbol)
 		case types.RecvOnly:
-			return "<-chan " + reflectText(t.Elem())
+			return "<-chan " + qualifiedTypeText(t.Elem(), qualifier, symbol)
 		}
 		if elem, ok := types.Unalias(t.Elem()).(*types.Chan); ok && elem.Dir() == types.RecvOnly {
-			return "chan (" + reflectText(t.Elem()) + ")"
+			return "chan (" + qualifiedTypeText(t.Elem(), qualifier, symbol) + ")"
 		}
-		return "chan " + reflectText(t.Elem())
+		return "chan " + qualifiedTypeText(t.Elem(), qualifier, symbol)
 	case *types.Signature:
-		return signatureText(t)
+		return signatureText(t, qualifier, symbol)
 	case *types.Basic:
 		return basicText(t)
 	case *types.Named:
@@ -595,16 +618,16 @@ func reflectText(t types.Type) string {
 		if args := t.TypeArgs(); args != nil && args.Len() > 0 {
 			parts := make([]string, args.Len())
 			for i := range parts {
-				parts[i] = reflectText(args.At(i))
+				parts[i] = qualifiedTypeText(args.At(i), qualifier, symbol)
 			}
 			name := t.Obj().Name()
 			if pkg := t.Obj().Pkg(); pkg != nil {
-				name = shortQualifier(pkg) + "." + name
+				name = qualifier(pkg) + "." + name
 			}
 			return name + "[" + strings.Join(parts, ",") + "]"
 		}
 	}
-	return types.TypeString(t, shortQualifier)
+	return types.TypeString(t, qualifier)
 }
 
 func reflectMethods(t *types.Interface) []*types.Func {
@@ -644,10 +667,10 @@ func basicText(b *types.Basic) string {
 }
 
 // signatureText writes a function type in the form of reflect.
-func signatureText(sig *types.Signature) string {
+func signatureText(sig *types.Signature, qualifier types.Qualifier, symbol bool) string {
 	params := make([]string, sig.Params().Len())
 	for i := range params {
-		params[i] = reflectText(sig.Params().At(i).Type())
+		params[i] = qualifiedTypeText(sig.Params().At(i).Type(), qualifier, symbol)
 	}
 	if sig.Variadic() && len(params) > 0 {
 		last := params[len(params)-1]
@@ -656,7 +679,7 @@ func signatureText(sig *types.Signature) string {
 	out := "func(" + strings.Join(params, ", ") + ")"
 	results := make([]string, sig.Results().Len())
 	for i := range results {
-		results[i] = reflectText(sig.Results().At(i).Type())
+		results[i] = qualifiedTypeText(sig.Results().At(i).Type(), qualifier, symbol)
 	}
 	switch len(results) {
 	case 0:

@@ -28,6 +28,8 @@ Range diagnostics follow `src/cmd/compile/internal/types2/range.go` and
 retain `internal/load/LICENSE-Go`.
 Runtime error values and bounds metadata adapt Go `src/runtime/error.go` and
 `src/internal/abi/bounds.go`. The runtime source retains their BSD notice.
+Interface method symbols adapt Go `src/cmd/compile/internal/types/fmt.go`.
+The emitter source and `internal/emit/LICENSE-Go` preserve its BSD notice.
 The compiler assertion adapter executes unchanged Go
 `src/cmd/compile/internal/test/testdata/assert_test.go` and preserves its BSD notice.
 Type assertion diagnostics adapt Go `src/runtime/error.go`, `type.go`, and
