@@ -53,9 +53,14 @@ final TypeDesc $descP$Greeter = TypeDesc(
   '*example.com/multi/greet.Greeter',
   'ptr',
   <String, Function>{
-    'SetStyle(example.com/multi/greet.Style)': (Object? $r, GoInt $a0) =>
-        Greeter$SetStyle(($r as Greeter$?), $a0),
-    'Text()string': (Object? $r) => Greeter$Text(($r as Greeter$?)),
+    'SetStyle(example.com/multi/greet.Style)': $functionValue(
+      (Object? $r, GoInt $a0) => Greeter$SetStyle(($r as Greeter$?), $a0),
+      $gs0_0_b65ddf2d3f4e0303,
+    ),
+    'Text()string': $functionValue(
+      (Object? $r) => Greeter$Text(($r as Greeter$?)),
+      $gs0_1_965340d208604c6e,
+    ),
   },
   text: '*greet.Greeter',
   methodTypes: <String, TypeDesc Function()>{
@@ -139,3 +144,10 @@ void $registerTypes() {
   );
   $registerTypeFactory('func() string', () => $descfe1f5563);
 }
+
+final GoString $gs0_0_b65ddf2d3f4e0303 = GoString.fromString(
+  'example.com/multi/greet.(*Greeter).SetStyle|example.com/multi/greet/greet.go|21',
+);
+final GoString $gs0_1_965340d208604c6e = GoString.fromString(
+  'example.com/multi/greet.(*Greeter).Text|example.com/multi/greet/greet.go|25',
+);

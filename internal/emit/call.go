@@ -1082,7 +1082,7 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	closure := func(call string) string {
 		origin := x.Obj.Origin().Type().(*types.Signature)
 		call = e.eraseResults(origin.Results(), sig.Results(), call)
-		return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
+		return e.methodFunctionValue(x.Recv, x.Obj, fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call))
 	}
 	// The method of a type parameter with no single Dart class dispatches
 	// through the method table, exactly as an interface receiver does. A

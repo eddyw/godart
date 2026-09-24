@@ -793,7 +793,7 @@ func (e *emitter) adapter(elem types.Type, sel *types.Selection, pointer bool) s
 	if len(params) > 0 {
 		head += ", " + strings.Join(params, ", ")
 	}
-	return fmt.Sprintf("%s: (%s) => %s", e.methodKeyText(fn.Id(), selSig), head, call)
+	return fmt.Sprintf("%s: %s", e.methodKeyText(fn.Id(), selSig), e.methodFunctionValue(sel.Recv(), fn, fmt.Sprintf("(%s) => %s", head, call)))
 }
 
 func (e *emitter) adapterReceiver(elem types.Type, sel *types.Selection, pointer bool) (string, types.Type) {
