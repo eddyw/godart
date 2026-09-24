@@ -4,6 +4,7 @@ package net
 
 import (
 	"errors"
+	"internal/poll"
 	"io"
 )
 
@@ -261,7 +262,7 @@ func (f Flags) String() string {
 
 // errClosed carries the message of a closed connection. The runtime gives the
 // same text. Socket errors wrap this value for errors.Is.
-var errClosed = errors.New("use of closed network connection")
+var errClosed = poll.ErrNetClosing
 
 // ErrClosed is the error of an operation on a socket that a close already
 // ended. A connection, a listener, and a datagram socket each give it. A test

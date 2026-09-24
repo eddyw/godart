@@ -131,6 +131,8 @@ Socket I/O errors and zero-value socket operations follow Go `src/net/net.go`,
 Native socket error wrappers follow
 `src/net/fd_posix.go`, `fd_unix.go`, and `fd_windows.go`.
 The overlays retain their BSD notices.
+The closed-socket error retains Go `src/internal/poll/fd.go` declarations
+and their BSD notice.
 The close test adapter retains assertions and helpers from Go
 `error_test.go`, `error_unix_test.go`, `pipe.go`, `file.go`, and
 `mockserver_test.go` with their BSD notices.
