@@ -38,9 +38,11 @@ int $nativeRename(GoString from, GoString to) {
       newName.asTypedList(to.length + 1)
         ..setRange(0, to.length, to.bytes)
         ..[to.length] = 0;
+      // Resolve the symbol before rename because lookup can change errno.
+      final errno = _errno;
       int error;
       do {
-        error = _rename(oldName, newName) == 0 ? 0 : _errno().value;
+        error = _rename(oldName, newName) == 0 ? 0 : errno().value;
       } while (error == 4);
       return error;
     } finally {
