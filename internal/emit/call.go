@@ -640,8 +640,6 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileTruncate(%s, %s)", args[0], args[1]), true
 	case "ReadFile":
 		return fmt.Sprintf("$readFile(%s)", args[0]), true
-	case "WriteFile":
-		return fmt.Sprintf("$writeFile(%s, %s)", args[0], args[1]), true
 	case "HasNativeStat":
 		return "$hasNativeStat", true
 	case "NativeStat":

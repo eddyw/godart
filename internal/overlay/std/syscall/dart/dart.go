@@ -1028,11 +1028,6 @@ func ReadFile(path string) ([]byte, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// WriteFile writes a whole file. It replaces the content of an existing file.
-func WriteFile(path string, data []byte) string {
-	panic("syscall/dart needs the gart compiler")
-}
-
 func HasNativeStat() bool { panic("syscall/dart needs the gart compiler") }
 
 // NativeStat returns metadata and errno. The metadata contains size, mode,

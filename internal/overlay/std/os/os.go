@@ -612,20 +612,15 @@ func ReadFile(name string) ([]byte, error) {
 // and it gives a fresh file the permission bits of perm without the bits of
 // the mask of the process.
 func WriteFile(name string, data []byte, perm FileMode) error {
-	if contains(name, "\x00") {
-		return &PathError{Op: "open", Path: name, Err: syscall.EINVAL}
+	f, err := OpenFile(name, O_WRONLY|O_CREATE|O_TRUNC, perm)
+	if err != nil {
+		return err
 	}
-	fresh := false
-	if _, err := Lstat(name); err != nil {
-		fresh = true
+	_, err = f.Write(data)
+	if err1 := f.Close(); err1 != nil && err == nil {
+		err = err1
 	}
-	if cause := dart.WriteFile(name, data); cause != "" {
-		return pathError("open", name, cause)
-	}
-	if fresh {
-		applyPerm(name, perm)
-	}
-	return nil
+	return err
 }
 
 // FileInfo holds the metadata of a path.

@@ -18,6 +18,7 @@ func TestWriteFilePermissions(t *testing.T) {
 	osDir := filepath.Join(runtime.GOROOT(), "src/os")
 	for _, item := range []upstreamFile{
 		{Name: "os_test.go", Declarations: []string{"TestFilePermissions", "TestAppendDoesntOverwrite"}},
+		{Name: "read_test.go", Declarations: []string{"TestWriteFile", "TestReadOnlyWriteFile"}},
 		{Name: "root_test.go", Declarations: []string{"testMaybeRooted"}},
 	} {
 		writeFile(t, filepath.Join(dir, item.Name), selectedUpstreamSource(t, filepath.Join(osDir, item.Name), item.Declarations))
@@ -27,7 +28,7 @@ func TestWriteFilePermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
-	const filter = "^(TestFilePermissions|TestAppendDoesntOverwrite)$"
+	const filter = "^(TestFilePermissions|TestAppendDoesntOverwrite|TestWriteFile|TestReadOnlyWriteFile)$"
 	t.Log(run(t, dir, "go", "test", "-v", "-run", filter, "."))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
 	if err != nil {

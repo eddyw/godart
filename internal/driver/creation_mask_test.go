@@ -43,6 +43,13 @@ func main() {
   info, err = os.Stat(path)
   if err != nil { panic(err) }
   fmt.Printf("write %o\n", info.Mode().Perm())
+  link := path + "-link"
+  target := path + "-target"
+  if err := os.Symlink(target, link); err != nil { panic(err) }
+  if err := os.WriteFile(link, []byte("target"), perm); err != nil { panic(err) }
+  info, err = os.Stat(target)
+  if err != nil { panic(err) }
+  fmt.Printf("write-link %o\n", info.Mode().Perm())
  }
  f, err := os.CreateTemp(dir, "temp")
  if err != nil { panic(err) }

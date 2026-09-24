@@ -57,8 +57,6 @@ GoString $fileSync(int handle) => _noSys;
 
 (Slice<int>, GoString) $readFile(GoString path) => (Slice<int>.nil(), _noSys);
 
-GoString $writeFile(GoString path, Slice<GoInt> data) => _noSys;
-
 const bool $hasNativeStat = false;
 
 int $nativeRename(GoString from, GoString to) => 38;

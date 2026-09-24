@@ -199,35 +199,12 @@ FileHandle? _at(int handle) {
   return _open[handle];
 }
 
-/// The bytes of a slice, as a list of Dart.
-///
-/// A byte slice holds its storage in a Uint8List, thus setRange moves the whole
-/// range in 1 call. A loop over the bytes reads and writes 1 element at a time,
-/// and a write of 1 megabyte then costs a million bounds checks. A store into a
-/// Uint8List holds the low 8 bits, exactly as the mask of the loop did.
-Uint8List _bytes(Slice<int> p) {
-  final Uint8List out = Uint8List(p.len);
-  if (p.len != 0) out.setRange(0, p.len, p.array, p.off);
-  return out;
-}
-
 /// Reads a whole file.
 (Slice<int>, GoString) $readFile(GoString path) {
   try {
     return (Slice.of(File.fromRawPath(path.bytes).readAsBytesSync()), _empty);
   } catch (e) {
     return (Slice<int>.nil(), _cause(e));
-  }
-}
-
-/// Writes a whole file. It replaces the content of an existing file.
-GoString $writeFile(GoString path, Slice<int> data) {
-  try {
-    File.fromRawPath(path.bytes)
-        .writeAsBytesSync(_bytes(data), mode: FileMode.writeOnly);
-    return _empty;
-  } catch (e) {
-    return _cause(e);
   }
 }
 
