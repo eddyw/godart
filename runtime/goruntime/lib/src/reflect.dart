@@ -2659,8 +2659,11 @@ final class _StructListView extends ListBase<Object?> implements $StructView {
 }
 
 Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
-  if (from.kind == 'ptr' && to.kind == 'ptr' && to.elem!().kind == 'struct') {
-    return _structPointer(from.elem!(), to.elem!(), v);
+  if (from.kind == 'ptr' && to.kind == 'ptr') {
+    v = $ptrValue(from.elem!(), v);
+    if (to.elem!().kind == 'struct') {
+      return _structPointer(from.elem!(), to.elem!(), v);
+    }
   }
 
   if (to.kind == 'struct') {

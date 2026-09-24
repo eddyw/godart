@@ -86,6 +86,23 @@ func Core(t types.Type) types.Type {
 	return first
 }
 
+// Pointers reports whether all types in the set are pointers.
+func Pointers(t types.Type) bool {
+	if _, ok := Core(t).(*types.Pointer); ok {
+		return true
+	}
+	terms, ok := Terms(t)
+	if !ok || len(terms) == 0 {
+		return false
+	}
+	for _, term := range terms {
+		if _, ok := types.Unalias(term).Underlying().(*types.Pointer); !ok {
+			return false
+		}
+	}
+	return true
+}
+
 // ArrayOrSlice reports whether all terms are arrays or slices.
 func ArrayOrSlice(t types.Type) bool {
 	tp, ok := types.Unalias(t).(*types.TypeParam)

@@ -1712,6 +1712,10 @@ func (e *emitter) conv(x *ir.Conv) string {
 		return fmt.Sprintf("$convert<%s>(%s, %s, %s)", e.dartType(to), text,
 			e.descriptorOf(from), e.descriptorOf(to))
 	}
+	if (fp || tp) && typeset.Pointers(from) && typeset.Pointers(to) {
+		return fmt.Sprintf("$convert<%s>(%s, %s, %s)", e.dartType(to), text,
+			e.descriptorOf(from), e.descriptorOf(to))
+	}
 	// A type set that holds a byte slice and a string holds 2 Dart types, thus
 	// the dictionary carries the 2 conversions.
 	if typeset.BytesOrRunes(from) && isString(to) {
@@ -1822,27 +1826,16 @@ func (e *emitter) conv(x *ir.Conv) string {
 	if isSliceType(from) && isSliceType(to) && types.IdenticalIgnoreTags(from.Underlying(), to.Underlying()) {
 		return text
 	}
-	// A pointer converts to another pointer when the 2 base types share 1
-	// underlying type. The Dart form of such a pointer is a box or a list, and
-	// the 2 forms are equal, thus the conversion performs no operation.
-	//
-	// A pointer to a struct holds the class of the struct. `type outer inner`
-	// gives the 2 names 1 class, thus the conversion performs no operation
-	// there too. Read mergeGroup.
+	// Distinct Dart classes need a view that retains the source fields.
 	if pf, ok := typeset.Core(from).(*types.Pointer); ok {
 		if pt, ok := typeset.Core(to).(*types.Pointer); ok {
-			if tp {
-				return fmt.Sprintf("($ptrValue(%s, %s) as %s)", e.descriptorOf(pt.Elem()), text, e.dartType(to))
-			}
-			if fp {
-				return fmt.Sprintf("(%s as %s)", text, e.dartType(to))
-			}
 			if isStructType(pt.Elem()) {
 				if e.sameClass(pf.Elem(), pt.Elem()) {
 					return text
 				}
-				return fmt.Sprintf("$convert<%s>(%s, %s, %s)", e.dartType(to), text, e.descriptorOf(from), e.descriptorOf(to))
-			} else if types.Identical(types.Unalias(pf.Elem()).Underlying(),
+				return fmt.Sprintf("$convert<%s>(%s, %s, %s)", e.dartType(to), text,
+					e.descriptorOf(from), e.descriptorOf(to))
+			} else if types.IdenticalIgnoreTags(types.Unalias(pf.Elem()).Underlying(),
 				types.Unalias(pt.Elem()).Underlying()) {
 				return text
 			}

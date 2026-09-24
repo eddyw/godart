@@ -106,6 +106,9 @@ func (v *verifier) checkTypeParamConv(e *ast.CallExpr) {
 	if _, param := types.Unalias(to).(*types.TypeParam); !param && types.IsInterface(to) {
 		return
 	}
+	if typeset.Pointers(from) && typeset.Pointers(to) {
+		return
+	}
 	fromBasic, _ := typeset.Core(from).(*types.Basic)
 	toBasic, _ := typeset.Core(to).(*types.Basic)
 	if !(fromBasic != nil && fromBasic.Kind() == types.String && typeset.BytesOrRunes(to)) {
