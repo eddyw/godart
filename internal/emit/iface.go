@@ -137,7 +137,11 @@ func (e *emitter) instanceDesc(named *types.Named, pointer bool) string {
 		// Reserve the factory before its fields refer back to this type.
 		// Only type dictionaries enter these metadata closures.
 		e.lits.instanceFactories[key] = name
+		// A factory cannot capture descriptor locals from its caller.
+		inline := e.inlineDescTypes
+		e.inlineDescTypes = nil
 		text := body()
+		e.inlineDescTypes = inline
 		e.lits.decls = append(e.lits.decls, fmt.Sprintf("TypeDesc %s%s(%s) => %s;", name, declaration, strings.Join(e.dictParams(params), ", "), text))
 		return name + args
 	}

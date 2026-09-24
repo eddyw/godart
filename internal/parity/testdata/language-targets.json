@@ -49,5 +49,6 @@
   "fixedbugs/issue4313",
   "fixedbugs/bug352",
   "fixedbugs/issue44830",
-  "iota"
+  "iota",
+  "typeparam/cons"
 ]
