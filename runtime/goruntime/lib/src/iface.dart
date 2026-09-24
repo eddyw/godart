@@ -232,12 +232,7 @@ bool $goEqual(Object? a, Object? b, TypeDesc d, [TypeDesc? root]) {
   final TypeDesc top = root ?? d;
   switch (d.kind) {
     case 'slice' || 'map' || 'func':
-      $panic(
-        Iface(
-          $typeGoError,
-          GoError('comparing uncomparable type ${top.display}'),
-        ),
-      );
+      $panic($runtimeError('comparing uncomparable type ${top.display}'));
     case 'array':
       final List<Object?> ea = a! as List<Object?>;
       final List<Object?> eb = b! as List<Object?>;
@@ -483,21 +478,15 @@ Object? $assertType(
   final String target = want.isEmpty ? name : want;
   if (x == null) {
     $panic(
-      Iface(
-        $typeGoError,
-        GoError(
-          'interface conversion: $static is nil, not $target',
-          plain: true,
-        ),
+      $runtimeError(
+        'interface conversion: $static is nil, not $target',
+        plain: true,
       ),
     );
   }
   if (x.desc.name != name) {
     $panic(
-      Iface(
-        $typeGoError,
-        GoError(_assertText(static, x.desc, target, wantPkg), plain: true),
-      ),
+      $runtimeError(_assertText(static, x.desc, target, wantPkg), plain: true),
     );
   }
   return x.value;
@@ -517,23 +506,17 @@ Iface $assertIface(Iface? x, List<String> methods, String name) {
   if (!$implements(x, methods)) {
     if (x == null) {
       $panic(
-        Iface(
-          $typeGoError,
-          GoError(
-            'interface conversion: interface is nil, not $name',
-            plain: true,
-          ),
+        $runtimeError(
+          'interface conversion: interface is nil, not $name',
+          plain: true,
         ),
       );
     }
     $panic(
-      Iface(
-        $typeGoError,
-        GoError(
-          'interface conversion: ${x.desc.display} is not $name: '
-          'missing method ${$missingMethod(x, methods)}',
-          plain: true,
-        ),
+      $runtimeError(
+        'interface conversion: ${x.desc.display} is not $name: '
+        'missing method ${$missingMethod(x, methods)}',
+        plain: true,
       ),
     );
   }
@@ -602,9 +585,8 @@ Iface? $boxDesc(TypeDesc d, Object? v) {
 /// $ifaceMethod stands in the method table of the description of an interface
 /// type. Such a table holds the key of each method that the interface needs,
 /// and no call reaches the value.
-Never $ifaceMethod() => $panic(
-  Iface($typeGoError, const GoError('the method belongs to an interface type')),
-);
+Never $ifaceMethod() =>
+    $panic($runtimeError('the method belongs to an interface type'));
 
 /// Reports whether the value holds the type of a dictionary. An interface type
 /// argument reads the method set, and each other type argument reads the name.
@@ -625,20 +607,12 @@ T $dictValue<T>(Iface? x, Dict<T> d) {
 T $assertDict<T>(Iface? x, Dict<T> d, String static) {
   if (!$isDictType(x, d.desc)) {
     $panic(
-      Iface(
-        $typeGoError,
-        GoError(
-          x == null
-              ? 'interface conversion: $static is nil, '
-                    'not ${d.desc.display}'
-              : _assertText(
-                  static,
-                  x.desc,
-                  d.desc.display,
-                  d.desc.assertionPkg,
-                ),
-          plain: true,
-        ),
+      $runtimeError(
+        x == null
+            ? 'interface conversion: $static is nil, '
+                  'not ${d.desc.display}'
+            : _assertText(static, x.desc, d.desc.display, d.desc.assertionPkg),
+        plain: true,
       ),
     );
   }

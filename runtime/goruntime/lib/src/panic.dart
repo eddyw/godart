@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'goint.dart';
 import 'godebug.dart';
 import 'iface.dart';
@@ -128,22 +132,10 @@ void _linkPanic(GoPanic e) {
   e.link = prev;
 }
 
-/// A run time error of the Go runtime, for example an index out of range.
-///
-/// Go holds 2 such types. errorString writes the prefix "runtime error: " in
-/// front of the message, and plainError writes the message alone. A write to a
-/// nil map and each fault of a channel take the plain form.
-final class GoError {
-  final String message;
-
-  /// True for the plain form, which writes no prefix.
-  final bool plain;
-
-  const GoError(this.message, {this.plain = false});
-
-  @override
-  String toString() => plain ? message : 'runtime error: $message';
-}
+Iface $runtimeError(String message, {bool plain = false}) => Iface(
+  plain ? _typePlainError : _typeErrorString,
+  GoString.fromString(message),
+);
 
 /// Builds the value of `panic(nil)`. The package runtime writes it, because
 /// only the emitted Go type holds the class of the value.
@@ -202,12 +194,8 @@ String _boundText(GoInt v, bool uns) => uns ? $ustring(v) : '$v';
 /// Go writes no length behind a negative index, because the index alone names
 /// the fault. An index of an unsigned type is never negative in Go, thus it
 /// always takes the form with the length.
-Never $panicIndex(GoInt index, Object length, [bool uns = false]) {
-  final String text = !uns && $ix(index) < 0
-      ? 'index out of range [$index]'
-      : 'index out of range [${_boundText(index, uns)}] with length $length';
-  throw GoPanic(Iface($typeGoError, GoError(text)));
-}
+Never $panicIndex(GoInt index, Object length, [bool uns = false]) =>
+    throw GoPanic(_boundsPanic(index, length, !uns, 0));
 
 /// The bound of a slice expression that failed. Go holds 1 message for each 1,
 /// and a second message for a bound below 0.
@@ -218,29 +206,8 @@ enum SliceBound { aLen, aCap, b, threeALen, threeACap, threeB, threeC }
 
 /// Raises the panic of a slice bound. x is the bound that failed, and y is the
 /// limit that it broke.
-Never $panicBound(SliceBound code, GoInt x, Object y, [bool uns = false]) {
-  const String head = 'slice bounds out of range ';
-  final bool neg = !uns && $ix(x) < 0;
-  final String v = _boundText(x, uns);
-  String text;
-  switch (code) {
-    case SliceBound.aLen:
-      text = neg ? '$head[:$v]' : '$head[:$v] with length $y';
-    case SliceBound.aCap:
-      text = neg ? '$head[:$v]' : '$head[:$v] with capacity $y';
-    case SliceBound.b:
-      text = neg ? '$head[$v:]' : '$head[$v:$y]';
-    case SliceBound.threeALen:
-      text = neg ? '$head[::$v]' : '$head[::$v] with length $y';
-    case SliceBound.threeACap:
-      text = neg ? '$head[::$v]' : '$head[::$v] with capacity $y';
-    case SliceBound.threeB:
-      text = neg ? '$head[:$v:]' : '$head[:$v:$y]';
-    case SliceBound.threeC:
-      text = neg ? '$head[$v::]' : '$head[$v:$y:]';
-  }
-  throw GoPanic(Iface($typeGoError, GoError(text)));
-}
+Never $panicBound(SliceBound code, GoInt x, Object y, [bool uns = false]) =>
+    throw GoPanic(_boundsPanic(x, y, !uns, code.index + 1));
 
 /// Raises the panic of a hash of a key whose type holds no identity.
 ///
@@ -248,51 +215,33 @@ Never $panicBound(SliceBound code, GoInt x, Object y, [bool uns = false]) {
 /// and a write takes the prefix "runtime error: " with no colon. Read
 /// nilinterhash of runtime/alg.go and typehash of runtime/alg.go.
 Never $panicHash(String type, bool write) => throw GoPanic(
-  Iface(
-    $typeGoError,
-    write
-        ? GoError('hash of unhashable type $type')
-        : GoError('hash of unhashable type: $type', plain: true),
-  ),
+  write
+      ? $runtimeError('hash of unhashable type $type')
+      : $runtimeError('hash of unhashable type: $type', plain: true),
 );
 
 /// Raises the panic of a conversion of a slice to an array or to a pointer to
 /// an array. Go gives a runtime.Error, thus the value carries the prefix.
-Never $panicConvert(int len, int n) => throw GoPanic(
-  Iface(
-    $typeGoError,
-    GoError(
-      'cannot convert slice with length $len '
-      'to array or pointer to array with length $n',
-    ),
-  ),
-);
+Never $panicConvert(int len, int n) =>
+    throw GoPanic(_boundsPanic($gi(n), len, true, 8));
 
 /// Raises the panic of a method wrapper that a nil pointer receiver reached.
 /// A value method needs the value behind the pointer, thus Go stops. name
 /// holds the type with its package, and short holds the type alone. Read
 /// panicwrap of runtime/error.go.
 Never $panicWrap(String name, String method, String short) => throw GoPanic(
-  Iface(
-    $typeGoError,
-    GoError(
-      'value method $name.$method called using nil *$short pointer',
-      plain: true,
-    ),
+  $runtimeError(
+    'value method $name.$method called using nil *$short pointer',
+    plain: true,
   ),
 );
 
-Never $panicDivide() =>
-    throw GoPanic(Iface($typeGoError, const GoError('integer divide by zero')));
+Never $panicDivide() => throw GoPanic($runtimeError('integer divide by zero'));
 
-Never $panicShift() =>
-    throw GoPanic(Iface($typeGoError, const GoError('negative shift amount')));
+Never $panicShift() => throw GoPanic($runtimeError('negative shift amount'));
 
 Never $panicNil() => throw GoPanic(
-  Iface(
-    $typeGoError,
-    const GoError('invalid memory address or nil pointer dereference'),
-  ),
+  $runtimeError('invalid memory address or nil pointer dereference'),
 );
 
 /// The signal that ends 1 goroutine and runs each deferred call of its chain.
@@ -481,22 +430,153 @@ T $dcall<T>(int tok, T Function() f) {
   }
 }
 
-/// The description of a run time error. Go holds such an error in the
-/// unexported type errorString of the runtime package.
-final TypeDesc $typeGoError = TypeDesc(
-  'runtime.errorString',
+final class _BoundsError {
+  GoInt x;
+  GoInt y;
+  bool signed;
+  GoInt code;
+
+  _BoundsError(this.x, this.y, this.signed, this.code);
+  _BoundsError.zero()
+    : x = GoInt.zero,
+      y = GoInt.zero,
+      signed = false,
+      code = GoInt.zero;
+}
+
+Iface _boundsPanic(GoInt x, Object y, bool signed, int code) => Iface(
+  _typeBoundsError,
+  _BoundsError(x, y is int ? $gi(y) : y as GoInt, signed, $gi(code)),
+);
+
+const _boundsFormats = <String>[
+  'index out of range [%x] with length %y',
+  'slice bounds out of range [:%x] with length %y',
+  'slice bounds out of range [:%x] with capacity %y',
+  'slice bounds out of range [%x:%y]',
+  'slice bounds out of range [::%x] with length %y',
+  'slice bounds out of range [::%x] with capacity %y',
+  'slice bounds out of range [:%x:%y]',
+  'slice bounds out of range [%x:%y:]',
+  'cannot convert slice with length %y to array or pointer to array with length %x',
+];
+const _negativeBoundsFormats = <String>[
+  'index out of range [%x]',
+  'slice bounds out of range [:%x]',
+  'slice bounds out of range [:%x]',
+  'slice bounds out of range [%x:]',
+  'slice bounds out of range [::%x]',
+  'slice bounds out of range [::%x]',
+  'slice bounds out of range [:%x:]',
+  'slice bounds out of range [%x::]',
+];
+
+GoString _boundsErrorText(Object? value) {
+  final e = value as _BoundsError;
+  final formats = e.signed && e.x < GoInt.zero
+      ? _negativeBoundsFormats
+      : _boundsFormats;
+  final text = formats[$ix(e.code)]
+      .replaceAll('%x', _boundText(e.x, !e.signed))
+      .replaceAll('%y', e.y.toString());
+  return GoString.fromString('runtime error: $text');
+}
+
+final TypeDesc _typeBoundsError = TypeDesc(
+  'runtime.boundsError',
   'struct',
   <String, Function>{
-    'Error()string': (Object? e) =>
-        GoString.fromString((e as GoError).toString()),
-    // The interface runtime.Error holds this method, and a recover of a run
-    // time panic asserts that interface.
+    'Error()string': _boundsErrorText,
     'RuntimeError()': (Object? e) {},
   },
-  text: 'errorString',
+  text: 'runtime.boundsError',
+  methodTypes: _runtimeErrorMethods,
+  zero: _BoundsError.zero,
+  withType: <R>(R Function<T>() f) => f<_BoundsError>(),
+  fields: <FieldDesc>[
+    FieldDesc(
+      'x',
+      '',
+      false,
+      () => $typeInt64,
+      (v) => (v as _BoundsError).x,
+      (v, x) => (v as _BoundsError).x = x as GoInt,
+      pkg: 'runtime',
+    ),
+    FieldDesc(
+      'y',
+      '',
+      false,
+      () => $typeInt,
+      (v) => (v as _BoundsError).y,
+      (v, y) => (v as _BoundsError).y = y as GoInt,
+      pkg: 'runtime',
+    ),
+    FieldDesc(
+      'signed',
+      '',
+      false,
+      () => $typeBool,
+      (v) => (v as _BoundsError).signed,
+      (v, x) => (v as _BoundsError).signed = x as bool,
+      pkg: 'runtime',
+    ),
+    FieldDesc(
+      'code',
+      '',
+      false,
+      () => _typeBoundsCode,
+      (v) => (v as _BoundsError).code,
+      (v, x) => (v as _BoundsError).code = x as GoInt,
+      pkg: 'runtime',
+    ),
+  ],
 );
+const TypeDesc _typeBoundsCode = TypeDesc(
+  'internal/abi.BoundsErrorCode',
+  'uint8',
+  <String, Function>{},
+  text: 'abi.BoundsErrorCode',
+  zero: $zeroInt,
+);
+
+final TypeDesc _typeErrorString = TypeDesc(
+  'runtime.errorString',
+  'string',
+  <String, Function>{
+    'Error()string': (Object? e) =>
+        GoString.fromString('runtime error: ${(e as GoString).toDartString()}'),
+    'RuntimeError()': (Object? e) {},
+  },
+  text: 'runtime.errorString',
+  methodTypes: _runtimeErrorMethods,
+  zero: $zeroString,
+);
+
+final TypeDesc _typePlainError = TypeDesc(
+  'runtime.plainError',
+  'string',
+  <String, Function>{
+    'Error()string': (Object? e) => e as GoString,
+    'RuntimeError()': (Object? e) {},
+  },
+  text: 'runtime.plainError',
+  methodTypes: _runtimeErrorMethods,
+  zero: $zeroString,
+);
+
+final Map<String, TypeDesc Function()> _runtimeErrorMethods = {
+  'Error()string': () => TypeDesc(
+    'func() string',
+    'func',
+    const <String, Function>{},
+    results: <TypeDesc Function()>[() => $typeString],
+  ),
+  'RuntimeError()': () =>
+      const TypeDesc('func()', 'func', <String, Function>{}),
+};
 
 /// The end of a function that Go proves unreachable. Dart cannot prove it,
 /// thus the function needs a statement that gives no value.
 Never $unreachable() =>
-    throw GoPanic(const GoError('the function reached its end'));
+    throw GoPanic($runtimeError('the function reached its end'));

@@ -21,6 +21,8 @@ Its `LICENSE` retains the Go BSD terms. The diagnostic adapter follows
 Malformed literals retain the behavior of `src/cmd/compile/internal/types2/expr.go`.
 Range diagnostics follow `src/cmd/compile/internal/types2/range.go` and
 retain `internal/load/LICENSE-Go`.
+Runtime error values and bounds metadata adapt Go `src/runtime/error.go` and
+`src/internal/abi/bounds.go`. The runtime source retains their BSD notice.
 Type assertion diagnostics adapt Go `src/runtime/error.go`, `type.go`, and
 `src/cmd/compile/internal/reflectdata/reflect.go`. The emitter retains
 `internal/emit/LICENSE-Go`. The runtime license includes the Go BSD terms.

@@ -73,12 +73,7 @@ final class GoMap<K, V> {
 
   void set(K key, V value) {
     if (isNil) {
-      $panic(
-        Iface(
-          $typeGoError,
-          const GoError('assignment to entry in nil map', plain: true),
-        ),
-      );
+      $panic($runtimeError('assignment to entry in nil map', plain: true));
     }
     final _Entry<K, V>? e = _readForWrite(key);
     if (e != null) {

@@ -258,10 +258,10 @@ Slice<T> $makeSlice<T>(GoInt len, GoInt cap, List<T> Function(int) alloc) {
   final empty = alloc(0);
   final zeroSize = empty is $ZeroList<T>;
   if (len < GoInt.zero || (!zeroSize && len > $gi($maxSliceLen))) {
-    $panic(Iface($typeGoError, const GoError('makeslice: len out of range')));
+    $panic($runtimeError('makeslice: len out of range'));
   }
   if (cap < len || (!zeroSize && cap > $gi($maxSliceLen))) {
-    $panic(Iface($typeGoError, const GoError('makeslice: cap out of range')));
+    $panic($runtimeError('makeslice: cap out of range'));
   }
   if (empty is $ZeroList<T>) return $ZeroSlice<T>(empty, len, cap);
   return Slice(alloc($ix(cap)), 0, $ix(len), $ix(cap));
@@ -302,7 +302,7 @@ Slice<T> $appendRange<T>(
 ]) {
   final count = s.$length + $gi(n);
   if (count < s.$length) {
-    $panic(Iface($typeGoError, const GoError('growslice: len out of range')));
+    $panic($runtimeError('growslice: len out of range'));
   }
   if (s is $ZeroSlice<T>) return s.appendCount($gi(n));
   final int need = $ix(count);
@@ -337,9 +337,7 @@ Slice<T> $appendRange<T>(
 GoInt $sliceLen(Object? value) {
   final Object? unwrapped = value is Iface ? value.value : value;
   if (unwrapped is! Slice<Object?>) {
-    $panic(
-      Iface($typeGoError, const GoError('sort: the value is not a slice')),
-    );
+    $panic($runtimeError('sort: the value is not a slice'));
   }
   return unwrapped.$length;
 }
@@ -531,7 +529,7 @@ final class $ZeroSlice<T> extends Slice<T> {
   $ZeroSlice<T> appendCount(GoInt count) {
     final need = $length + count;
     if (need < $length) {
-      $panic(Iface($typeGoError, const GoError('growslice: len out of range')));
+      $panic($runtimeError('growslice: len out of range'));
     }
     return $ZeroSlice<T>(
       array as $ZeroList<T>,

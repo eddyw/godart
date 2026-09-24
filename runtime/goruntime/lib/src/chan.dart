@@ -38,12 +38,7 @@ final class Chan<T> {
   Chan(this.capacity, this._zero) : isNil = false, bubble = $current?.bubble {
     // Go reports a capacity below 0 with a plain text and no prefix.
     if (capacity < 0) {
-      $panic(
-        Iface(
-          $typeGoError,
-          const GoError('makechan: size out of range', plain: true),
-        ),
-      );
+      $panic($runtimeError('makechan: size out of range', plain: true));
     }
   }
 
@@ -186,12 +181,7 @@ final class Chan<T> {
   /// Sends with no wait. The caller reads readyToSend first.
   void sendNow(T value) {
     if (_closed) {
-      $panic(
-        Iface(
-          $typeGoError,
-          const GoError('send on closed channel', plain: true),
-        ),
-      );
+      $panic($runtimeError('send on closed channel', plain: true));
     }
     final _RecvWait<T>? waiting = _takeReceiver();
     if (waiting != null) {
@@ -210,17 +200,10 @@ final class Chan<T> {
   void close() {
     if (bubble != null) _outside('close of');
     if (isNil) {
-      $panic(
-        Iface($typeGoError, const GoError('close of nil channel', plain: true)),
-      );
+      $panic($runtimeError('close of nil channel', plain: true));
     }
     if (_closed) {
-      $panic(
-        Iface(
-          $typeGoError,
-          const GoError('close of closed channel', plain: true),
-        ),
-      );
+      $panic($runtimeError('close of closed channel', plain: true));
     }
     _closed = true;
     while (true) {
@@ -430,12 +413,7 @@ const int _maxChanBytes = 281474976710655;
 int $chanCapacity(int capacity, TypeDesc elem) {
   final int size = capacity > 0 ? _chanLayout(elem).$1 : 0;
   if (capacity < 0 || (size > 0 && capacity > _maxChanBytes ~/ size)) {
-    $panic(
-      Iface(
-        $typeGoError,
-        const GoError('makechan: size out of range', plain: true),
-      ),
-    );
+    $panic($runtimeError('makechan: size out of range', plain: true));
   }
   return capacity;
 }
