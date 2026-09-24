@@ -822,6 +822,14 @@ func (d *Dialer) addrList(ctx context.Context, network, address string) ([]strin
 	if err != nil {
 		return nil, err
 	}
+	if network == "tcp" || network == "tcp4" || network == "tcp6" {
+		number, err := d.resolver().LookupPort(ctx, network, port)
+		if err != nil {
+			return nil, err
+		}
+		port = strconv.Itoa(number)
+		address = JoinHostPort(host, port)
+	}
 	family := "ip"
 	if network == "tcp4" || network == "tcp6" {
 		family += network[3:]

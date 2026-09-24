@@ -173,6 +173,12 @@ func dialTCPAddr(ctx context.Context, d Dialer, network string, local, remote *T
 			return fail(err)
 		}
 	}
+	if local != nil && (local.Port < 0 || local.Port > 65535) {
+		return fail(&os.SyscallError{Syscall: "bind", Err: syscall.EINVAL})
+	}
+	if remote.Port < 0 || remote.Port > 65535 {
+		return fail(&os.SyscallError{Syscall: "connect", Err: syscall.EINVAL})
+	}
 	d.LocalAddr = local
 	c, err := d.DialContext(ctx, network, remote.String())
 	if err != nil {

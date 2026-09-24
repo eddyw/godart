@@ -54,7 +54,7 @@ func TestTCPDialFamilyUpstream(t *testing.T) {
 		writeFile(t, filepath.Join(dir, name), source)
 	}
 	writeFile(t, filepath.Join(dir, "listener_test.go"), `package net_test
-import (. "net"; "context"; "errors"; "net/netip"; "os"; "sync"; "syscall"; "testing"; "time")
+import (. "net"; "context"; "errors"; "net/netip"; "os"; "strconv"; "sync"; "syscall"; "testing"; "time")
 func newLocalListener(t testing.TB, network string) Listener {
  t.Helper()
  listener, err := Listen(network, "127.0.0.1:0")
@@ -99,6 +99,77 @@ func supportsIPv4map() bool {
  return true
 }
 func isEADDRINUSE(err error) bool { return errors.Is(err, syscall.EADDRINUSE) }
+func TestTCPDialPorts(t *testing.T) {
+ for _, family := range []struct{network, host string}{{"tcp", "127.0.0.1"}, {"tcp4", "127.0.0.1"}, {"tcp6", "::1"}} {
+  t.Run(family.network, func(t *testing.T) {
+   for _, service := range []string{"-1", "65536", "123456789", "--badport--"} {
+    for _, api := range []string{"dial", "context"} {
+     t.Run(service+"/"+api, func(t *testing.T) {
+      address := JoinHostPort(family.host, service)
+      var c Conn
+      var err error
+      if api == "dial" { c, err = Dial(family.network, address) } else {
+       d := Dialer{Timeout: 5*time.Second}
+       c, err = d.DialContext(context.Background(), family.network, address)
+      }
+      if err == nil { c.Close(); t.Fatal("invalid port succeeded") }
+      var op *OpError
+      if !errors.As(err, &op) || op.Op != "dial" || op.Net != family.network || op.Source != nil || op.Addr != nil { t.Fatalf("error metadata = %T %v", err, err) }
+      if service == "--badport--" {
+       var dns *DNSError
+       if !errors.As(err, &dns) || dns.Name != family.network+"/"+service || !dns.IsNotFound { t.Fatalf("error = %T %v, want unknown service", err, err) }
+      } else {
+       var addr *AddrError
+       if !errors.As(err, &addr) || addr.Err != "invalid port" || addr.Addr != service { t.Fatalf("error = %T %v, want invalid port %s", err, err, service) }
+      }
+     })
+    }
+   }
+   for _, port := range []int{-1, 65536} {
+    for _, invalidLocal := range []bool{false, true} {
+     t.Run("typed/"+strconv.Itoa(port)+"/"+strconv.FormatBool(invalidLocal), func(t *testing.T) {
+      var local *TCPAddr
+      operation := "connect"
+      if invalidLocal { local = &TCPAddr{IP: ParseIP(family.host), Port: -1}; operation = "bind" }
+      remote := &TCPAddr{IP: ParseIP(family.host), Port: port}
+      c, err := DialTCP(family.network, local, remote)
+      if err == nil { c.Close(); t.Fatal("invalid port succeeded") }
+      var op *OpError
+      var call *os.SyscallError
+      if !errors.Is(err, syscall.EINVAL) || !errors.As(err, &op) || !errors.As(err, &call) || call.Syscall != operation { t.Fatalf("error = %T %v, want %s EINVAL", err, err, operation) }
+      if op.Op != "dial" || op.Net != family.network || op.Addr == nil || op.Addr.String() != remote.String() || (op.Source == nil) != (local == nil) { t.Fatalf("error metadata = %+v", op) }
+      if local != nil && op.Source.String() != local.String() { t.Fatalf("source = %v, want %v", op.Source, local) }
+     })
+    }
+   }
+   t.Run("service", func(t *testing.T) {
+    port, err := LookupPort(family.network, "svn")
+    if err != nil { t.Fatal(err) }
+    listener, err := Listen(family.network, JoinHostPort(family.host, strconv.Itoa(port)))
+    if errors.Is(err, syscall.EACCES) || errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EADDRINUSE) { t.Skipf("local service port unavailable: %v", err) }
+    if err != nil { t.Fatal(err) }
+    defer listener.Close()
+    for _, api := range []string{"dial", "context"} {
+     t.Run(api, func(t *testing.T) {
+      address := JoinHostPort(family.host, "svn")
+      var c Conn
+      var err error
+      if api == "dial" { c, err = Dial(family.network, address) } else {
+       d := Dialer{Timeout: 5*time.Second}
+       c, err = d.DialContext(context.Background(), family.network, address)
+      }
+      if err != nil { t.Fatal(err) }
+      defer c.Close()
+      peer, err := listener.Accept()
+      if err != nil { t.Fatal(err) }
+      defer peer.Close()
+      if c.RemoteAddr().String() != listener.Addr().String() { t.Fatalf("remote address = %v, want %v", c.RemoteAddr(), listener.Addr()) }
+     })
+    }
+   })
+  })
+ }
+}
 func TestTCPDialLocalBinding(t *testing.T) {
  for _, family := range []struct{network, address string}{{"tcp4", "127.0.0.1:0"}, {"tcp6", "[::1]:0"}} {
   t.Run(family.network, func(t *testing.T) {
@@ -301,7 +372,7 @@ func TestTCPDialFamilies(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 	writeFile(t, filepath.Join(dir, "netpoll/LICENSE"), string(license))
-	t.Log(run(t, dir, "go", "test", "-run", "^TestTCPDial(Families|Refused|LocalBinding)$", "-v", "."))
+	t.Log(run(t, dir, "go", "test", "-run", "^TestTCPDial(Families|Refused|LocalBinding|Ports)$", "-v", "."))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TrimPath: true})
 	if err != nil {
 		t.Fatal(err)
@@ -312,7 +383,7 @@ func TestTCPDialFamilies(t *testing.T) {
 	prepareDart(t, out)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run("families/"+target, func(t *testing.T) {
-			args := []string{"-test.v", "-test.run=^TestTCPDial(Families|Refused|LocalBinding)$"}
+			args := []string{"-test.v", "-test.run=^TestTCPDial(Families|Refused|LocalBinding|Ports)$"}
 			var result programResult
 			if target == "vm" {
 				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
