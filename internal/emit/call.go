@@ -1390,7 +1390,7 @@ func (e *emitter) length(x ir.Expr) string {
 	case isSliceType(t):
 		return e.sliceText(x) + ".$length"
 	case isArrayType(t):
-		return "$gi(" + e.expr(x) + ".length)"
+		return "$arrayLength(" + e.expr(x) + ")"
 	case isMapType(t):
 		return "$gi(" + e.container(x) + ".length)"
 	case isChanType(t):
@@ -1402,7 +1402,7 @@ func (e *emitter) length(x ir.Expr) string {
 		// the operand.
 		if p, ok := typeset.Core(t).(*types.Pointer); ok {
 			if arr, ok := types.Unalias(p.Elem()).Underlying().(*types.Array); ok {
-				return fmt.Sprintf("((Object? $p) => $gi(%d))(%s)", arr.Len(), e.expr(x))
+				return fmt.Sprintf("((Object? $p) => %s)(%s)", intConst(constant.MakeInt64(arr.Len()), types.Typ[types.Int]), e.expr(x))
 			}
 		}
 		return "$gi(" + e.deref(x) + ".length)"
@@ -1417,14 +1417,14 @@ func (e *emitter) capacity(x ir.Expr) string {
 	case isSliceType(t):
 		return e.sliceText(x) + ".$capacity"
 	case isArrayType(t):
-		return "$gi(" + e.expr(x) + ".length)"
+		return "$arrayLength(" + e.expr(x) + ")"
 	case isChanType(t):
 		return "$gi(" + e.chanExpr(x) + ".capacity)"
 	case isPointerType(t):
 		// Read the note of length: the value comes from the type.
 		if p, ok := typeset.Core(t).(*types.Pointer); ok {
 			if arr, ok := types.Unalias(p.Elem()).Underlying().(*types.Array); ok {
-				return fmt.Sprintf("((Object? $p) => $gi(%d))(%s)", arr.Len(), e.expr(x))
+				return fmt.Sprintf("((Object? $p) => %s)(%s)", intConst(constant.MakeInt64(arr.Len()), types.Typ[types.Int]), e.expr(x))
 			}
 		}
 		return "$gi(" + e.deref(x) + ".length)"
@@ -1488,6 +1488,13 @@ func (e *emitter) arrayKeyHash(t types.Type, v string, depth int) string {
 	arr, ok := typeset.Core(t).(*types.Array)
 	if !ok {
 		return e.hashText(v, t)
+	}
+	zero, known := zeroSized(arr)
+	if zero {
+		return "0"
+	}
+	if !known {
+		return fmt.Sprintf("$goHash(%s, %s)", v, e.descriptorOf(t))
 	}
 	x := fmt.Sprintf("$e%d", depth)
 	return fmt.Sprintf("Object.hashAll(%s.map((%s) => %s))",
@@ -1754,8 +1761,8 @@ func (e *emitter) conv(x *ir.Conv) string {
 		// Go 1.20 converts a slice to an array. It panics when the slice holds
 		// fewer elements than the array.
 		a, _ := typeset.Core(to).(*types.Array)
-		return fmt.Sprintf("$sliceToArray<%s>(%s, %d)",
-			e.dartType(a.Elem()), text, a.Len())
+		return fmt.Sprintf("$sliceToArray<%s>(%s, %s)",
+			e.dartType(a.Elem()), text, intConst(constant.MakeInt64(a.Len()), types.Typ[types.Int]))
 	case isPointerType(to) && isSliceType(from):
 		// Go 1.17 converts a slice to a pointer to an array. The array shares
 		// the elements of the slice, thus a write through the pointer reaches
@@ -1763,8 +1770,8 @@ func (e *emitter) conv(x *ir.Conv) string {
 		p, _ := typeset.Core(to).(*types.Pointer)
 		a, _ := typeset.Core(p.Elem()).(*types.Array)
 		if a != nil {
-			return fmt.Sprintf("$sliceToArrayPtr<%s>(%s, %d)",
-				e.dartType(a.Elem()), text, a.Len())
+			return fmt.Sprintf("$sliceToArrayPtr<%s>(%s, %s)",
+				e.dartType(a.Elem()), text, intConst(constant.MakeInt64(a.Len()), types.Typ[types.Int]))
 		}
 	case isSliceType(to) && isString(from):
 		if isRuneSlice(to) {

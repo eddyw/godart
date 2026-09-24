@@ -67,7 +67,7 @@ R $withStorageType<R>(TypeDesc desc, R Function<T>(Dict<T>) f) {
       () => _zeroOf(desc) as T,
       (a, b) => $goEqual(a, b, desc),
       (v) => $goHash(v, desc),
-      (n) => _zeros<T>(desc, n),
+      (n) => _zeros<T>(desc, $gi(n)),
       $unordered<T>,
       $identity<T>,
       desc,
@@ -225,6 +225,7 @@ void _assignInto(Object? dst, Object? src, TypeDesc desc) {
     return;
   }
   if (desc.kind == 'array') {
+    if (dst is $ZeroList<Object?>) return;
     final List<Object?> a = dst as List<Object?>;
     final List<Object?> b = src is List<Object?> ? src : const <Object?>[];
     final TypeDesc t = desc.elem!();
@@ -1876,7 +1877,7 @@ int $sliceOf(int elem) {
       comparable: false,
       zero: () => _withType<Object?>(e, <T>() => Slice<T>.nil()),
       make: (int n) =>
-          _withType<Object?>(e, <T>() => Slice<T>.of(_zeros<T>(e, n))),
+          _withType<Object?>(e, <T>() => Slice<T>.of(_zeros<T>(e, $gi(n)))),
       withType: <R>(R Function<T>() f) =>
           _withType<R>(e, <T>() => f<Slice<T>>()),
     ),
@@ -1938,7 +1939,7 @@ GoInt $arrayOf(GoInt length, GoInt elem) {
           elem: () => e,
           length: length,
           comparable: e.comparable,
-          zero: () => _zeros<T>(e, $ix(length)),
+          zero: () => _zeros<T>(e, length),
           withType: <R>(R Function<U>() f) => f<List<T>>(),
         ),
       ),
@@ -2229,11 +2230,15 @@ Object? _zeroOf(TypeDesc desc) {
 /// The caller names the Dart type of the element through _withType, thus a
 /// type assertion of the value reads. Each slot takes a fresh zero, because Go
 /// gives 1 struct of its own to each element of an array.
-List<T> _zeros<T>(TypeDesc elem, int n) {
+List<T> _zeros<T>(TypeDesc elem, GoInt n) {
   if ($typeSize(elem) == GoInt.zero) {
     return $ZeroList<T>(n, () => _zeroOf(elem) as T);
   }
-  return List<T>.generate(n, (int _) => _zeroOf(elem) as T, growable: true);
+  return List<T>.generate(
+    $ix(n),
+    (int _) => _zeroOf(elem) as T,
+    growable: true,
+  );
 }
 
 /// The capacity of a slice, of an array, or of a channel.
@@ -2694,41 +2699,43 @@ Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
   if (from.kind == 'slice' && to.kind == 'ptr') {
     final TypeDesc array = to.elem!();
     final Slice<Object?> src = v as Slice<Object?>;
-    if ($gi(src.len) < array.length) {
+    if (src.$length < array.length) {
       $panic(
         Iface(
           $typeString,
           GoString.fromString(
-            'reflect: cannot convert slice with length ${src.len} to pointer to array with length ${array.length}',
+            'reflect: cannot convert slice with length ${src.$length} to pointer to array with length ${array.length}',
           ),
         ),
       );
     }
     return _withType<Object?>(
       from.elem!(),
-      <T>() => $sliceToArrayPtr<T>(v as Slice<T>, $ix(array.length)),
+      <T>() => $sliceToArrayPtr<T>(v as Slice<T>, array.length),
     );
   }
   if (to.kind == 'array') {
     if (from.kind == 'slice') {
       final Slice<Object?> src = v as Slice<Object?>;
-      if ($gi(src.len) < to.length) {
+      if (src.$length < to.length) {
         $panic(
           Iface(
             $typeString,
             GoString.fromString(
-              'reflect: cannot convert slice with length ${src.len} to array with length ${to.length}',
+              'reflect: cannot convert slice with length ${src.$length} to array with length ${to.length}',
             ),
           ),
         );
       }
       final List<Object?> out = to.zero!() as List<Object?>;
+      if (out is $ZeroList<Object?>) return out;
       for (int i = 0; i < out.length; i++) {
         out[i] = _converted(from.elem!(), to.elem!(), src[i]);
       }
       return out;
     }
     final List<Object?> out = to.zero!() as List<Object?>;
+    if (out is $ZeroList<Object?>) return out;
     final List<Object?> src = v as List<Object?>;
     for (int i = 0; i < out.length; i++) {
       out[i] = _converted(from.elem!(), to.elem!(), src[i]);
@@ -2805,12 +2812,8 @@ Iface? $valueSlice(Iface? value, GoInt low, GoInt high, GoInt max) {
       desc,
       _withType<Slice<Object?>>(
         elem,
-        <T>() => Slice<T>(
-          v as List<T>,
-          low < max ? $ix(low) : 0,
-          $ix(high - low),
-          $ix(max - low),
-        ),
+        <T>() => Slice<T>.of(v as List<T>)
+            .$viewExact(low < max ? low : GoInt.zero, high - low, max - low),
       ),
     );
   }

@@ -243,8 +243,8 @@ Never $panicHash(String type, bool write) => throw GoPanic(
 
 /// Raises the panic of a conversion of a slice to an array or to a pointer to
 /// an array. Go gives a runtime.Error, thus the value carries the prefix.
-Never $panicConvert(int len, int n) =>
-    throw GoPanic(_boundsPanic($gi(n), len, true, 8));
+Never $panicConvert(GoInt len, GoInt n) =>
+    throw GoPanic(_boundsPanic(n, len, true, 8));
 
 /// Raises the panic of a method wrapper that a nil pointer receiver reached.
 /// A value method needs the value behind the pointer, thus Go stops. name

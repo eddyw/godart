@@ -57,8 +57,9 @@ final class Slice<T> {
   factory Slice.nil() => Slice<T>._(const <Never>[], 0, 0, 0, true);
 
   /// Wraps a full backing array.
-  factory Slice.of(List<T> array) =>
-      Slice<T>(array, 0, array.length, array.length);
+  factory Slice.of(List<T> array) => array is $ZeroList<T>
+      ? $ZeroSlice<T>(array, array.$length, array.$length)
+      : Slice<T>(array, 0, array.length, array.length);
 
   // The 2 operators hold the body of $at and of $set. A call of a helper
   // would stand in each read of a byte, and a scanner reads 2 megabytes.
@@ -465,14 +466,14 @@ bool $sliceOverlap(Iface? a, Iface? b) {
 }
 
 final class $ZeroList<T> extends ListBase<T> {
-  final int _length;
+  final GoInt $length;
   final T Function() zero;
   late final T value = zero();
 
-  $ZeroList(this._length, this.zero);
+  $ZeroList(this.$length, this.zero);
 
   @override
-  int get length => _length;
+  int get length => $ix($length);
   @override
   set length(int value) => throw UnsupportedError('fixed length');
   @override
@@ -494,8 +495,8 @@ final class $ZeroSlice<T> extends Slice<T> {
   final GoInt $capacity;
 
   factory $ZeroSlice($ZeroList<T> array, GoInt length, GoInt capacity) {
-    final storage = array.length < $ix(capacity)
-        ? $ZeroList<T>($ix(capacity), array.zero)
+    final storage = array.$length < capacity
+        ? $ZeroList<T>(capacity, array.zero)
         : array;
     return $ZeroSlice<T>._(storage, length, capacity);
   }

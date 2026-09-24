@@ -534,19 +534,18 @@ func (e *emitter) sliceExpr(x *ir.Slice) string {
 		if isPointerType(source) {
 			text = e.deref(x.X)
 		}
-		high := fmt.Sprintf("$gi(%s.length)", text)
+		high := fmt.Sprintf("$arrayLength(%s)", text)
 		if x.High != nil {
 			high = e.expr(x.High)
 		}
-		size := fmt.Sprintf("%s.length", text)
-		max := "$gi(" + size + ")"
+		max := fmt.Sprintf("$arrayLength(%s)", text)
 		if x.Max != nil {
 			max = e.expr(x.Max)
 		}
 		// An array and a pointer to an array each report "with length" in a
 		// bound panic, and a slice reports "with capacity".
-		return fmt.Sprintf("Slice(%s, 0, %s, %s).range(%s, %s, %s%s)",
-			text, size, size, low, high, max,
+		return fmt.Sprintf("Slice.of(%s).range(%s, %s, %s%s)",
+			text, low, high, max,
 			e.rangeTail(x.Max != nil, true, x.Low, x.High, x.Max))
 	}
 	x0 := e.sliceText(x.X)
@@ -980,9 +979,9 @@ func (e *emitter) composite(x *ir.Composite) string {
 		case *types.Array:
 			indices := make([]string, len(x.Indices))
 			for i, index := range x.Indices {
-				indices[i] = strconv.Itoa(index)
+				indices[i] = intConst(constant.MakeInt64(int64(index)), types.Typ[types.Int])
 			}
-			return fmt.Sprintf("$arrayLiteral<%s>(%s, const <int>[%s], <%s>[%s])",
+			return fmt.Sprintf("$arrayLiteral<%s>(%s, <GoInt>[%s], <%s>[%s])",
 				e.dartType(t.Elem()), e.makeArray(t), strings.Join(indices, ", "),
 				e.dartType(t.Elem()), strings.Join(parts, ", "))
 		case *types.Slice:

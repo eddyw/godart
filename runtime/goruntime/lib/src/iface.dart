@@ -7,6 +7,7 @@ import 'complex.dart';
 import 'dict.dart';
 import 'goint.dart';
 import 'int.dart';
+import 'layout.dart';
 import 'panic.dart';
 import 'string.dart';
 
@@ -235,6 +236,7 @@ bool $goEqual(Object? a, Object? b, TypeDesc d, [TypeDesc? root]) {
   }
   switch (d.kind) {
     case 'array':
+      if ($typeSize(d) == GoInt.zero) return true;
       final List<Object?> ea = a! as List<Object?>;
       final List<Object?> eb = b! as List<Object?>;
       final TypeDesc? elem = d.elem?.call();
@@ -291,6 +293,7 @@ int $goHash(Object? v, TypeDesc d, [TypeDesc? root]) {
   if (!d.comparable) $panicHash(top.display, $hashInWrite);
   switch (d.kind) {
     case 'array':
+      if ($typeSize(d) == GoInt.zero) return 0;
       final List<Object?> e = v! as List<Object?>;
       final TypeDesc? elem = d.elem?.call();
       if (elem == null) return e.length;

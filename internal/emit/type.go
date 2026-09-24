@@ -2,6 +2,7 @@ package emit
 
 import (
 	"fmt"
+	"go/constant"
 	"go/types"
 	"strings"
 
@@ -434,8 +435,17 @@ func (e *emitter) chanExpr(x ir.Expr) string {
 }
 
 func (e *emitter) makeArray(a *types.Array) string {
-	return fmt.Sprintf("$makeArray<%s>(%d, %s)",
-		e.dartType(a.Elem()), a.Len(), e.zeroFunc(a.Elem()))
+	zero, known := zeroSized(a.Elem())
+	n := intConst(constant.MakeInt64(a.Len()), types.Typ[types.Int])
+	virtual := fmt.Sprintf("$ZeroList<%s>(%s, %s)", e.dartType(a.Elem()), n, e.zeroFunc(a.Elem()))
+	if zero {
+		return virtual
+	}
+	allocation := fmt.Sprintf("$makeArray<%s>($ix(%s), %s)", e.dartType(a.Elem()), n, e.zeroFunc(a.Elem()))
+	if !known {
+		return fmt.Sprintf("($typeSize(%s) == GoInt.zero ? %s : %s)", e.descriptorOf(a.Elem()), virtual, allocation)
+	}
+	return allocation
 }
 
 // typeParamBound gives the Dart bound of a type parameter.
@@ -674,10 +684,10 @@ func (e *emitter) alloc(elem types.Type) string {
 	}
 	zero, known := zeroSized(elem)
 	if zero {
-		return fmt.Sprintf("(n) => $ZeroList<%s>(n, () => %s)", e.dartType(elem), e.zero(elem))
+		return fmt.Sprintf("(n) => $ZeroList<%s>($gi(n), () => %s)", e.dartType(elem), e.zero(elem))
 	}
 	if !known {
-		return fmt.Sprintf("(n) => $typeSize(%s) == GoInt.zero ? $ZeroList<%s>(n, () => %s) : List<%s>.generate(n, (_) => %s)", e.descriptorOf(elem), e.dartType(elem), e.zero(elem), e.dartType(elem), e.zero(elem))
+		return fmt.Sprintf("(n) => $typeSize(%s) == GoInt.zero ? $ZeroList<%s>($gi(n), () => %s) : List<%s>.generate(n, (_) => %s)", e.descriptorOf(elem), e.dartType(elem), e.zero(elem), e.dartType(elem), e.zero(elem))
 	}
 	if fn := goList(elem); fn != "" {
 		return fn
