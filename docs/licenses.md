@@ -42,6 +42,7 @@ Syscall string helpers retain Go `src/syscall/syscall.go` and `exec_unix.go` bod
 Their overlay source retains the Go BSD notice.
 Syscall time helpers retain Go `timestruct.go`, `syscall.go`, and Linux/macOS constructors.
 Their source headers preserve the Go BSD notice.
+Directory record parsing retains Go `src/syscall/dirent.go` and its Linux/macOS helpers with their BSD notices.
 The test-environment command adapter follows `src/internal/testenv/testenv.go`
 and `exec.go` with the Go BSD notice.
 Test temporary directories and directory restoration adapt Go `src/testing/testing.go` with its BSD notice.
