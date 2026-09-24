@@ -36,7 +36,7 @@ func (f *flat) value(x ir.Expr) ir.Expr {
 	case *ir.Unary:
 		return &ir.Unary{Op: x.Op, X: f.value(x.X), Type: x.Type}
 	case *ir.Conv:
-		return &ir.Conv{X: f.value(x.X), From: x.From, Type: x.Type}
+		return &ir.Conv{X: f.value(x.X), From: x.From, Type: x.Type, Sync: x.Sync}
 	case *ir.Copy:
 		return &ir.Copy{X: f.value(x.X), Type: x.Type}
 	case *ir.Field:

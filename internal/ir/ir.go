@@ -15,9 +15,10 @@ import (
 
 // Package is 1 Go package. It becomes 1 Dart library.
 type Package struct {
-	Path  string
-	Name  string
-	Files []*File
+	SyncTypes map[*types.TypeName]bool
+	Path      string
+	Name      string
+	Files     []*File
 
 	// InitOrder lists each package variable that holds an initializer, in the
 	// order that Go gives it a value. A variable comes after each variable that
@@ -495,7 +496,7 @@ type (
 		Args     []Expr
 		Type     types.Type
 		Async    bool
-		NoPoll   bool
+		Sync     bool
 		Spread   bool
 		Variadic bool
 
@@ -575,6 +576,7 @@ type (
 
 	// Conv converts a value between 2 Go types.
 	Conv struct {
+		Sync bool
 		X    Expr
 		From types.Type
 		Type types.Type

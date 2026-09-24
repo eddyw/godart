@@ -14,8 +14,8 @@ import (
 
 func (e *emitter) call(x *ir.Call) string {
 	text := e.callText(x)
-	if x.NoPoll {
-		return "$withoutPoll(() => " + text + ")"
+	if x.Sync {
+		return "$syncCall(() => " + text + ")"
 	}
 	return text
 }
@@ -1708,8 +1708,22 @@ func (e *emitter) textOf(x ir.Expr) string {
 	return "''"
 }
 
+func (e *emitter) syncCallback(t types.Type, value string) string {
+	sig := signatureOf(t)
+	params := make([]string, sig.Params().Len())
+	args := make([]string, len(params))
+	for i := range params {
+		args[i] = fmt.Sprintf("$a%d", i)
+		params[i] = e.dartType(sig.Params().At(i).Type()) + " " + args[i]
+	}
+	return fmt.Sprintf("((%s $f) => $f == null ? null : $copyFunctionPC((%s) => $syncCall(() => $f(%s)), $f))(%s)", e.dartType(t), strings.Join(params, ", "), strings.Join(args, ", "), value)
+}
+
 // conv makes a Go conversion explicit in Dart.
 func (e *emitter) conv(x *ir.Conv) string {
+	if x.Sync {
+		return e.syncCallback(x.Type, e.expr(x.X))
+	}
 	from, to := x.From, x.Type
 	text := e.expr(x.X)
 	if basic := basicOf(to); basic != nil && basic.Kind() == types.UnsafePointer {

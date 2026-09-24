@@ -261,6 +261,9 @@ func (e *emitter) methodTypeTable(t types.Type) string {
 // key type of a container type.
 func (e *emitter) descParts(t types.Type) string {
 	out := e.descShape(t) + withTypePart(e, t) + assertionPackagePart(t) + methodPackagePart(t)
+	if named, ok := types.Unalias(t).(*types.Named); ok && e.syncTypes[named.Origin().Obj()] {
+		out += ", syncFunc: ($v) => " + e.syncCallback(t, "($v as "+e.dartType(t)+")")
+	}
 	if _, ok := types.Unalias(t).Underlying().(*types.Struct); ok {
 		class := e.dartType(t)
 		if class != "Object?" {

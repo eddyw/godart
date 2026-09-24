@@ -160,6 +160,9 @@ final class TypeDesc {
   /// Source metadata names result fields that Dart cannot index at runtime.
   final List<Object?> Function(Object?)? unpack;
 
+  /// Preserves a named synchronous callback at reflective value boundaries.
+  final Object? Function(Object?)? syncFunc;
+
   /// Builds a pointer view over the original storage.
   final Object Function(TypeDesc, Object)? view;
 
@@ -191,6 +194,7 @@ final class TypeDesc {
     this.withStorageType,
     this.bind,
     this.unpack,
+    this.syncFunc,
     this.view,
   });
 

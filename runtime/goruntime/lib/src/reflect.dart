@@ -191,7 +191,7 @@ Iface? $pointerElem(Iface? pointer) {
 void $pointerSet(Iface? pointer, Iface? value) {
   final TypeDesc elem = _pointerElemDesc(pointer);
   final Object? target = pointer!.value;
-  final Object? stored = elem.kind == 'interface' ? value : value?.value;
+  final Object? stored = _assignedValue(elem, value);
   if (target is $Ptr<Object?>) {
     target.v = stored;
     return;
@@ -201,6 +201,11 @@ void $pointerSet(Iface? pointer, Iface? value) {
     return;
   }
   $panic($runtimeError('reflect: Set on a pointer to ${elem.display}'));
+}
+
+Object? _assignedValue(TypeDesc type, Iface? value) {
+  if (type.kind == 'interface') return value;
+  return type.syncFunc?.call(value?.value) ?? value?.value;
 }
 
 /// True for a kind whose Dart form is an object and whose Go form is a value. A
@@ -415,7 +420,7 @@ Iface? $fieldRead(Iface? value, int index) {
 void $fieldWrite(Iface? value, int index, Iface? x) {
   final FieldDesc field = _fieldOf(value, index);
   final TypeDesc type = field.type();
-  final Object? stored = type.kind == 'interface' ? x : x?.value;
+  final Object? stored = _assignedValue(type, x);
   if (_holdsValue(type)) {
     // Go copies a struct and an array into the field, and the address of the
     // field stays. Read _assignInto.
@@ -479,7 +484,7 @@ void $valueSetIndex(Iface? value, GoInt exactIndex, Iface? x) {
   if (elem == null) {
     $panic($runtimeError('reflect: Index of ${desc.display}'));
   }
-  final Object? stored = elem.kind == 'interface' ? x : x?.value;
+  final Object? stored = _assignedValue(elem, x);
   final Object? v = value.value;
   if (v is Slice<Object?>) {
     final Object? held = v.$at(exactIndex);
@@ -925,7 +930,7 @@ Slice<Iface?> _callValue(Iface? fn, Slice<Iface?> args, bool spread) {
     final List<Object?> raw = <Object?>[];
     for (int i = 0; i < args.len; i++) {
       final Iface? a = args[i];
-      raw.add(desc.params[i]().kind == 'interface' ? a : a?.value);
+      raw.add(_assignedValue(desc.params[i](), a));
     }
     return _invokeReflect(fn, raw);
   }
@@ -944,7 +949,7 @@ Slice<Iface?> _callValue(Iface? fn, Slice<Iface?> args, bool spread) {
   final List<Object?> raw = <Object?>[];
   for (int i = 0; i < fixed; i++) {
     final Iface? a = args[i];
-    raw.add(desc.params[i]().kind == 'interface' ? a : a?.value);
+    raw.add(_assignedValue(desc.params[i](), a));
   }
   if (desc.variadic) {
     // The Dart form of a variadic parameter is a slice, thus the call packs
@@ -958,7 +963,7 @@ Slice<Iface?> _callValue(Iface? fn, Slice<Iface?> args, bool spread) {
     final Slice<Object?> tail = make(args.len - fixed) as Slice<Object?>;
     for (int i = fixed; i < args.len; i++) {
       final Iface? a = args[i];
-      tail[i - fixed] = elem != null && elem.kind == 'interface' ? a : a?.value;
+      tail[i - fixed] = elem == null ? a?.value : _assignedValue(elem, a);
     }
     raw.add(tail);
   }
@@ -1296,7 +1301,10 @@ Function _bindMethod(TypeDesc sig, ReflectedMethod method, Iface value) =>
 Function _typedFunc(TypeDesc sig, List<Object?> Function(List<Object?>) body) {
   final Function Function(List<Object?> Function(List<Object?>))? bind =
       sig.bind ?? _typeFactories[sig.name]?.call().bind;
-  if (bind != null) return bind(body);
+  if (bind != null) {
+    final function = bind(body);
+    return (sig.syncFunc?.call(function) ?? function) as Function;
+  }
   if (sig.params.length > 6 || sig.results.length > 4) {
     List<Object?> function(List<Object?> args) => body(args);
     _reflectFunctions[function] = body;
@@ -1514,7 +1522,7 @@ Iface? $makeFunc(int handle, Object? body) {
         final List<Object?> raw = <Object?>[];
         for (int i = 0; i < n; i++) {
           final Iface? o = out[i];
-          raw.add(desc.results[i]().kind == 'interface' ? o : o?.value);
+          raw.add(_assignedValue(desc.results[i](), o));
         }
         return raw;
       }, <Object?>[]);
@@ -1670,7 +1678,7 @@ void $mapSet(Iface? target, Iface? key, Iface? value, bool drop) {
     m.remove(k);
     return;
   }
-  m.set(k, elem?.kind == 'interface' ? value : value?.value);
+  m.set(k, elem == null ? value?.value : _assignedValue(elem, value));
 }
 
 GoString $embeddedFieldError(int handle, int index, int count) {
@@ -2108,7 +2116,7 @@ Chan<Object?> _chanOf(Iface? value, String call) {
 /// holds. A channel of an interface type keeps the pair itself.
 Object? _rawElem(TypeDesc chan, Iface? x) {
   final TypeDesc? elem = chan.elem?.call();
-  return elem == null || elem.kind == 'interface' ? x : x?.value;
+  return elem == null ? x : _assignedValue(elem, x);
 }
 
 /// _wrapElem puts the raw Dart form of an element back into an interface value.
@@ -2306,7 +2314,7 @@ Iface? $appendValue(Iface? slice, Slice<Iface?> items) {
     final Slice<T> held = slice.value as Slice<T>;
     final List<T> add = <T>[
       for (int i = 0; i < items.len; i++)
-        _copyOf(elem.kind == 'interface' ? items[i] : items[i]?.value, elem)
+        _copyOf(_assignedValue(elem, items[i]), elem)
             as T,
     ];
     return Iface(
@@ -2710,6 +2718,7 @@ final class _StructListView extends ListBase<Object?> implements $StructView {
 }
 
 Object? _converted(TypeDesc from, TypeDesc to, Object? v) {
+  if (to.syncFunc != null) return to.syncFunc!(v);
   if (from.kind == 'ptr' && to.kind == 'ptr') {
     v = $ptrValue(from.elem!(), v);
     if (to.elem!().kind == 'struct') {

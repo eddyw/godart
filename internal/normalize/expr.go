@@ -265,6 +265,9 @@ func (b *builder) convert(x ir.Expr, want types.Type) ir.Expr {
 			return &ir.Conv{X: x, From: got, Type: want}
 		}
 	}
+	if b.blocks.SyncType(want) && !b.blocks.SyncType(got) {
+		return &ir.Conv{X: x, From: got, Type: want, Sync: true}
+	}
 	if types.Identical(got, want) {
 		return x
 	}

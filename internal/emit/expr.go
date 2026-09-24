@@ -671,7 +671,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	// The inner emitter shares each package wide map. A class of an unnamed
 	// struct type and the name of a shadowed function must reach the library
 	// file of the package.
-	inner := &emitter{pkg: e.pkg, prefixes: e.prefixes, base: e.base,
+	inner := &emitter{syncTypes: e.syncTypes, pkg: e.pkg, prefixes: e.prefixes, base: e.base,
 		dictReads:    e.dictReads,
 		merges:       e.merges,
 		instByStruct: e.instByStruct,

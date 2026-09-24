@@ -30,7 +30,7 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		if needsCopy(tv.Type) && types.Identical(from, tv.Type) {
 			return &ir.Copy{X: x, Type: tv.Type}
 		}
-		return &ir.Conv{X: x, From: from, Type: tv.Type}
+		return &ir.Conv{X: x, From: from, Type: tv.Type, Sync: b.blocks.SyncType(tv.Type) && !b.blocks.SyncType(from)}
 	}
 	if id := funcIdent(e.Fun); id != nil {
 		if bi, ok := b.info.Uses[id].(*types.Builtin); ok && bi.Pkg() == types.Unsafe {
@@ -55,7 +55,7 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 		Fun:      fun,
 		Type:     b.typeOf(e),
 		Async:    b.blocks.CallAsync(e),
-		NoPoll:   b.blocks.CallNoPoll(e),
+		Sync:     b.blocks.CallSync(e),
 		Spread:   e.Ellipsis.IsValid(),
 		Variadic: sig != nil && sig.Variadic(),
 		TypeArgs: b.typeArgs(e.Fun),
@@ -63,9 +63,9 @@ func (b *builder) call(e *ast.CallExpr) ir.Expr {
 	if !out.Async {
 		switch fun := fun.(type) {
 		case *ir.Ident:
-			out.NoPoll = out.NoPoll || b.blocks.Blocks(fun.Obj)
+			out.Sync = out.Sync || b.blocks.Blocks(fun.Obj)
 		case *ir.Method:
-			out.NoPoll = out.NoPoll || b.blocks.Blocks(fun.Obj)
+			out.Sync = out.Sync || b.blocks.Blocks(fun.Obj)
 		}
 	}
 	if selector, ok := unparenExpr(e.Fun).(*ast.SelectorExpr); ok {

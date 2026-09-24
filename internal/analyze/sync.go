@@ -10,23 +10,9 @@ import (
 	"strings"
 )
 
-// The synchronous guarantee of milestone 2 of docs/flutter-design.md.
-//
-// A host outside Go calls some Go function values directly and reads the
-// result. A function that can block writes its frame, sets $blocked, and
-// returns the zero value. Only a Go caller reads that field, thus such a call
-// gives a wrong answer and no report reaches the program.
-//
-// A named function type whose declaration carries //gart:sync names a
-// synchronous position. The check rejects each function that can block and
-// that reaches a value of such a type. A named type is the only shape that
-// holds both a struct field and a function parameter, thus 1 marker covers the
-// whole boundary.
-//
-// The flow of flow.go already answers the question. A value that the flow
-// cannot name falls into the escape group of its signature, and the group
-// flows into the cell of the position, thus an unresolved value gives a
-// rejection and never a silent pass.
+// A synchronous function type must return its final result to a Dart caller.
+// Reject actual waits before recursive calls receive resumable frames.
+// Value-flow analysis includes indirect callbacks and reflective assignments.
 
 const syncDirective = "//gart:sync"
 
@@ -104,8 +90,7 @@ func (a *analyzer) syncError(pos token.Pos, msg, hint string) {
 }
 
 // checkSync rejects each function that can block in a synchronous position.
-// It runs after the fixed point, because the block state of a function is
-// final only then.
+// It follows the wait analysis and precedes recursive frame propagation.
 func (a *analyzer) checkSync() {
 	if len(a.syncTypes) > 0 {
 		for c, set := range a.pts {
@@ -227,3 +212,10 @@ func sitePos(site *callSite) token.Pos {
 	}
 	return token.NoPos
 }
+
+func (r *Result) SyncType(t types.Type) bool {
+	named, ok := types.Unalias(t).(*types.Named)
+	return ok && r.syncTypes[named.Origin().Obj()]
+}
+
+func (r *Result) SyncTypes() map[*types.TypeName]bool { return r.syncTypes }

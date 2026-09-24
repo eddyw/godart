@@ -33,7 +33,7 @@ func Package(fset *token.FileSet, files []*ast.File, info *types.Info, pkg *type
 	for _, f := range files {
 		b.markAddressed(f, b.globalBoxes, true)
 	}
-	out := &ir.Package{Path: pkg.Path(), Name: pkg.Name()}
+	out := &ir.Package{Path: pkg.Path(), Name: pkg.Name(), SyncTypes: blocks.SyncTypes()}
 	for _, f := range files {
 		v := info.FileVersions[f]
 		if v == "" {

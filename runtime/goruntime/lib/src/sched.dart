@@ -199,10 +199,50 @@ Iterable<Goroutine> get $goroutines => _liveSet;
 /// The goroutine that runs now.
 Goroutine? $current;
 
+final _syncFrames = <List<Frame>>[];
+int _syncDepth = 0;
+bool get $syncActive => _syncDepth != 0;
+
 /// Saved callers that the iterative resume has not entered yet.
-Iterable<TraceFrame> get $activeCallerFrames =>
-    $current?._resumeFrames.reversed.whereType<TraceFrame>() ??
-    const <TraceFrame>[];
+Iterable<TraceFrame> get $activeCallerFrames sync* {
+  for (final frames in _syncFrames.reversed) {
+    yield* frames.reversed.whereType<TraceFrame>();
+  }
+  yield* $current?._resumeFrames.reversed.whereType<TraceFrame>() ??
+      const <TraceFrame>[];
+}
+
+/// Drains recursive frames at a statically synchronous call boundary.
+/// The compiler rejects channel and I/O waits at this boundary.
+T $syncCall<T>(T Function() call) {
+  final outerBlocked = $blocked;
+  $blocked = null;
+  _syncDepth++;
+  try {
+    final immediate = call();
+    Frame? frame = $blocked;
+    if (frame == null) return immediate;
+    final outerResults = _frameResults;
+    _frameResults = Map<Frame, _FrameResult>.identity();
+    final frames = <Frame>[];
+    _syncFrames.add(frames);
+    try {
+      Object? result;
+      while (frame != null) {
+        $blocked = null;
+        result = _resumeGraph(frame, frames);
+        frame = $blocked;
+      }
+      return result as T;
+    } finally {
+      _syncFrames.removeLast();
+      _frameResults = outerResults;
+    }
+  } finally {
+    _syncDepth--;
+    $blocked = outerBlocked;
+  }
+}
 
 final ListQueue<Goroutine> _runq = ListQueue<Goroutine>();
 bool _running = false;
@@ -905,7 +945,7 @@ void Function(GoPanic, StackTrace) $goPanic = (GoPanic p, StackTrace trace) {
   throw p;
 };
 
-final _frameResults = Map<Frame, _FrameResult>.identity();
+var _frameResults = Map<Frame, _FrameResult>.identity();
 
 final class _FrameResult {
   final Object? value;
@@ -936,8 +976,8 @@ void _appendFrames(List<Frame> frames, Frame? frame) {
   }
 }
 
-Object? _resumeGraph(Frame root) {
-  final frames = $current!._resumeFrames;
+Object? _resumeGraph(Frame root, [List<Frame>? localFrames]) {
+  final frames = localFrames ?? $current!._resumeFrames;
   if (frames.isEmpty) _appendFrames(frames, root);
   try {
     while (true) {

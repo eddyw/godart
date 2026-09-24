@@ -41,22 +41,20 @@ void $gosched() {
 }
 
 int _pollBudget = 1024;
-int _pollHolds = 0;
 
-/// A statically synchronous call must not suspend at an inserted loop poll.
-T $withoutPoll<T>(T Function() call) {
-  _pollHolds++;
-  try {
-    return call();
-  } finally {
-    _pollHolds--;
-  }
+final class _SyncYield implements Frame {
+  const _SyncYield();
+  @override
+  Object? resume() => null;
 }
 
 void $poll() {
-  if (_pollHolds != 0) return;
   if (--_pollBudget > 0) return;
   _pollBudget = 1024;
+  if ($syncActive) {
+    $block(const _SyncYield());
+    return;
+  }
   final g = $current;
   if (g == null) return;
   if ($eventWaits > 0 || $hosted) {

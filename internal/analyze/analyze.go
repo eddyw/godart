@@ -16,6 +16,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -26,14 +27,15 @@ import (
 
 // Result holds the block state of each function and of each call.
 type Result struct {
+	syncTypes map[*types.TypeName]bool
 	// blocking marks a function that can block. A key is a *types.Func, a
 	// *ast.FuncLit, an initializer, or the *ast.RangeStmt of a range loop,
 	// whose body is a function of its own. A reflectedFunction names a
 	// synthetic callback that reflection can expose.
 	blocking map[any]bool
 	// callAsync marks a call that waits for a result.
-	callAsync  map[*ast.CallExpr]bool
-	callNoPoll map[*ast.CallExpr]bool
+	callAsync map[*ast.CallExpr]bool
+	callSync  map[*ast.CallExpr]bool
 	// rangeAsync marks a range loop over a function whose call of the
 	// sequence waits for a result.
 	rangeAsync map[*ast.RangeStmt]bool
@@ -49,7 +51,7 @@ func (r *Result) Blocks(key any) bool { return r.blocking[key] }
 
 func (r *Result) CallAsync(call *ast.CallExpr) bool { return r.callAsync[call] }
 
-func (r *Result) CallNoPoll(call *ast.CallExpr) bool { return r.callNoPoll[call] }
+func (r *Result) CallSync(call *ast.CallExpr) bool { return r.callSync[call] }
 
 type initializer struct{ ast.Expr }
 
@@ -69,6 +71,14 @@ func (r *Result) RangeAsync(s *ast.RangeStmt) bool { return r.rangeAsync[s] }
 // can change the form of a call through a function value.
 func (r *Result) Digest(p *packages.Package) string {
 	h := sha256.New()
+	var syncNames []string
+	for name := range r.syncTypes {
+		syncNames = append(syncNames, types.TypeString(name.Type(), nil))
+	}
+	slices.Sort(syncNames)
+	for _, name := range syncNames {
+		fmt.Fprintf(h, "s%s\x00", name)
+	}
 	for _, f := range p.Syntax {
 		ast.Inspect(f, func(n ast.Node) bool {
 			switch n := n.(type) {
@@ -77,7 +87,7 @@ func (r *Result) Digest(p *packages.Package) string {
 			case *ast.FuncLit:
 				fmt.Fprintf(h, "l%t\x00", r.blocking[any(n)])
 			case *ast.CallExpr:
-				fmt.Fprintf(h, "c%t%t\x00", r.callAsync[n], r.callNoPoll[n])
+				fmt.Fprintf(h, "c%t%t\x00", r.callAsync[n], r.callSync[n])
 			case *ast.RangeStmt:
 				fmt.Fprintf(h, "r%t%t\x00", r.blocking[any(n)], r.rangeAsync[n])
 			}
@@ -119,7 +129,7 @@ func Module(pkgs []*packages.Package) *Result {
 		result: &Result{
 			blocking:   map[any]bool{},
 			callAsync:  map[*ast.CallExpr]bool{},
-			callNoPoll: map[*ast.CallExpr]bool{},
+			callSync:   map[*ast.CallExpr]bool{},
 			rangeAsync: map[*ast.RangeStmt]bool{},
 			sigAsync:   map[string]bool{},
 		},
@@ -162,8 +172,11 @@ func Module(pkgs []*packages.Package) *Result {
 	a.solve()
 	a.resolveSites()
 	a.fixedPoint()
-	a.markCalls()
 	a.checkSync()
+	a.result.syncTypes = a.syncTypes
+	a.recursive()
+	a.fixedPoint()
+	a.markCalls()
 	return a.result
 }
 
@@ -1150,7 +1163,7 @@ func (a *analyzer) markCalls() {
 		for _, site := range s.sites {
 			if !a.siteAsync(site) {
 				if site.onceOperands {
-					a.result.callNoPoll[site.call] = true
+					a.result.callSync[site.call] = true
 				}
 				continue
 			}

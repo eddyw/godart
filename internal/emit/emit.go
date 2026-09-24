@@ -82,7 +82,7 @@ func Package(p *ir.Package, tpkg *types.Package, cfg Config) (*Result, error) {
 }
 
 func newEmitter(p *ir.Package, tpkg *types.Package, cfg Config) *emitter {
-	e := &emitter{pkg: tpkg, prefixes: map[string]string{}, base: cfg.Base,
+	e := &emitter{syncTypes: p.SyncTypes, pkg: tpkg, prefixes: map[string]string{}, base: cfg.Base,
 		initNames:    map[*ir.Func]string{},
 		anon:         map[string]*types.Struct{},
 		merges:       map[*types.Package]map[*types.Struct][]*types.TypeName{},
@@ -146,8 +146,9 @@ func (e *emitter) generate(p *ir.Package, cfg Config) *Result {
 }
 
 type emitter struct {
-	pkg      *types.Package
-	prefixes map[string]string
+	syncTypes map[*types.TypeName]bool
+	pkg       *types.Package
+	prefixes  map[string]string
 
 	// dartLibs gives the import prefix of each Dart library that an external
 	// declaration names, and dartOrder holds the order of the first read. The

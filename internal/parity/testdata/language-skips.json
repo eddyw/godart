@@ -79,10 +79,6 @@
     "classification": "test-adapter",
     "reason": "the file picks the frame size of the test from runtime.GOARCH, and gart reports dart64"
   },
-  "peano": {
-    "classification": "implementation-gap",
-    "reason": "the file is a torture test of the segmented stack of Go, and the Dart VM holds a fixed stack"
-  },
   "typeparam/issue54765": {
     "classification": "target-limit",
     "reason": "The assertions require runtime/cgo.Incomplete and native not-in-heap type arguments. The declared subset excludes cgo. The adapter retains the original native diagnostic result."
