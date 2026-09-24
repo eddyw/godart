@@ -378,6 +378,42 @@ def generator_recipe_valid(case, action="runoutput"):
             and all(re.fullmatch(r"[0-9a-f]{64}", recorded.get(f, "")) for f in [primary] + files))
 
 
+def run_recipe_valid(case, target):
+    fixture = case["fixture"]
+    parts = fixture.get("recipe", "").split()
+    if len(parts) < 2 or parts[0] != "run":
+        return False
+    files, arguments = [], []
+    for value in parts[1:]:
+        if value.startswith("-") or any(c in value for c in "\\\"'"):
+            return False
+        if not arguments and value.endswith(".go"):
+            path = Path(value)
+            if path.is_absolute() or ".." in path.parts:
+                return False
+            files.append(path.as_posix())
+        else:
+            arguments.append(value)
+    if files != fixture.get("run_files", []) or arguments != fixture.get("arguments", []):
+        return False
+    recorded = {f["path"]: f["sha256"] for f in fixture.get("files", [])}
+    if not all(re.fullmatch(r"[0-9a-f]{64}", recorded.get(f, "")) for f in [fixture.get("file", "")] + files):
+        return False
+    native = case["native"].get("command", [])
+    if (native[:2] != ["go", "run"] or len(native) < 4 or not native[2].startswith("-gcflags=all=")
+            or native[3:] != [Path(fixture["file"]).name] + files + arguments or case.get("build_error")):
+        return False
+    command = case["gart"].get("command", [])
+    if arguments and command[-len(arguments):] != arguments:
+        return False
+    if arguments and target in {"js", "wasm"}:
+        encoded = json.dumps(arguments, ensure_ascii=False, separators=(",", ":")).replace("$", r"\$")
+        wrapper = "import 'bin/main.dart' as program;\nvoid main() { program.main(" + encoded + "); }\n"
+        if case.get("wrapper_source") != wrapper or case.get("wrapper_sha256") != hashlib.sha256(wrapper.encode()).hexdigest():
+            return False
+    return fixture.get("adapter") == "run-recipe"
+
+
 def language_behavior(paths):
     groups = {}
     seen = set()
@@ -478,7 +514,9 @@ def language_behavior(paths):
                     else:
                         valid = expected and executed and all(case[k]["output_sha256"] == expected
                                                               for k in ("native", "gart"))
-                        if case.get("contract") == "runoutput":
+                        if case.get("contract") == "run" and case["fixture"].get("recipe", "run") != "run":
+                            valid = valid and run_recipe_valid(case, report.get("target"))
+                        elif case.get("contract") == "runoutput":
                             generator = case.get("generator") or {}
                             source = case.get("generated_source")
                             valid = (valid and generator_recipe_valid(case) and source

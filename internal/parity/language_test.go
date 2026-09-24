@@ -26,6 +26,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/moduleflags.go", "// runindir -gomodversion 1.27\npackage ignored\n")
 	write("test/moduleextra.go", "// runindir -gomodversion 1.27 -goexperiment fieldtrack\npackage ignored\n")
 	write("test/module.dir/main.go", "package main\nfunc main() {}\n")
+	write("test/runarguments.go", "// run arg1 arg2\npackage main\nfunc main() {}\n")
+	write("test/runfiles.go", "// run ./extra.go\npackage main\nfunc main() {}\n")
 	write("test/run.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/run.out", "expected\n")
 	write("test/compile.go", "// compile\npackage p\n")
@@ -65,8 +67,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 29 {
-		t.Fatalf("got %d cases, want 29", len(inv.Cases))
+	if len(inv.Cases) != 31 {
+		t.Fatalf("got %d cases, want 31", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -119,6 +121,12 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if c := cases["other/directory"]; c.Action != "rundir" || c.Recipe != "rundir -G=3" || len(c.Files) != 2 || c.Adapter != "missing" {
 		t.Fatalf("companion or recipe lost: %+v", c)
+	}
+	if c := cases["runarguments"]; c.Adapter != "run-recipe" || !slices.Equal(c.Arguments, []string{"arg1", "arg2"}) {
+		t.Fatalf("program arguments lost: %+v", c)
+	}
+	if c := cases["runfiles"]; c.Adapter != "run-recipe" || !slices.Equal(c.RunFiles, []string{"extra.go"}) || len(c.Files) != 2 || c.Files[1].Path != "extra.go" {
+		t.Fatalf("run companion source lost: %+v", c)
 	}
 	if c := cases["run"]; c.Adapter != "single-file" || len(c.Files) != 2 {
 		t.Fatalf("run adapter or expected output lost: %+v", c)
@@ -191,7 +199,7 @@ func TestLanguagePolicy(t *testing.T) {
 	}
 
 	for name, skip := range policy.Skips {
-		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "reject-file" && cases[name].Adapter != "directory-module" && cases[name].Adapter != "build-file") || skip.Reason == "" {
+		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "run-recipe" && cases[name].Adapter != "reject-file" && cases[name].Adapter != "directory-module" && cases[name].Adapter != "build-file") || skip.Reason == "" {
 			t.Errorf("invalid language omission: %s", name)
 		}
 		switch skip.Classification {
@@ -295,6 +303,26 @@ func TestLanguageModuleRecipe(t *testing.T) {
 	} {
 		if _, ok := languageModuleRecipe(recipe); ok {
 			t.Fatalf("accepted unsupported recipe %q", recipe)
+		}
+	}
+}
+
+func TestRunRecipeInputs(t *testing.T) {
+	for _, test := range []struct {
+		recipe      string
+		files, args []string
+		valid       bool
+	}{
+		{"run arg1 arg2", nil, []string{"arg1", "arg2"}, true},
+		{"run ./extra.go arg1 data.go", []string{"extra.go"}, []string{"arg1", "data.go"}, true},
+		{"run -race", nil, nil, false},
+		{"run ../outside.go", nil, nil, false},
+		{"run /outside.go", nil, nil, false},
+		{`run "quoted argument"`, nil, nil, false},
+	} {
+		files, args, valid := languageRunRecipe(test.recipe)
+		if !slices.Equal(files, test.files) || !slices.Equal(args, test.args) || valid != test.valid {
+			t.Errorf("%q: files=%v args=%v valid=%t", test.recipe, files, args, valid)
 		}
 	}
 }

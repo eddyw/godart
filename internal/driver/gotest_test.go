@@ -1,6 +1,7 @@
 package driver_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go/build"
@@ -73,7 +74,7 @@ func TestRunFilesOfGoTest(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, c := range inv.Cases {
-		if c.Adapter != "single-file" {
+		if c.Adapter != "single-file" && c.Adapter != "run-recipe" {
 			continue
 		}
 		cases = append(cases, c)
@@ -215,6 +216,13 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/gotest\n\ngo 1.27\n")
 				writeFile(t, filepath.Join(dir, file), string(source))
 			}
+			for _, companion := range c.RunFiles {
+				data, err := os.ReadFile(filepath.Join(root, companion))
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeFile(t, filepath.Join(dir, companion), string(data))
+			}
 			companions := map[string]string{}
 			for _, companion := range c.Companions {
 				data, err := os.ReadFile(filepath.Join(root, companion))
@@ -240,12 +248,17 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				outcome.Gart.Environment = settings
 				outcome.ImportConfigSHA256 = importcfgHash
 			}
-			native := runLanguage(t, &outcome.Native, dir, runLimit, "go", "run", "-gcflags=all="+inv.GCFlags, file)
+			nativeArgs := append([]string{"run", "-gcflags=all=" + inv.GCFlags, file}, c.RunFiles...)
+			nativeArgs = append(nativeArgs, c.Arguments...)
+			native := runLanguage(t, &outcome.Native, dir, runLimit, "go", nativeArgs...)
 			if native != string(want) {
 				t.Fatalf("native output differs from upstream fixture\nwant:\n%s\ngot:\n%s", want, native)
 			}
 			out := filepath.Join(dir, "out")
 			patterns := []string{"./..."}
+			if len(c.RunFiles) > 0 {
+				patterns = append([]string{file}, c.RunFiles...)
+			}
 			if len(c.Companions) > 0 || c.Adapter == "directory-module" {
 				patterns = []string{file}
 			}
@@ -284,6 +297,17 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				// or 104 million recursive calls. Copy covers 43,560 slice combinations.
 				limit = 5 * time.Minute
 			}
+			entry := "bin/main.dart"
+			if len(c.Arguments) > 0 && (target == "js" || target == "wasm") {
+				encoded, err := json.Marshal(c.Arguments)
+				if err != nil {
+					t.Fatal(err)
+				}
+				outcome.WrapperSource = "import 'bin/main.dart' as program;\nvoid main() { program.main(" + strings.ReplaceAll(string(encoded), "$", `\$`) + "); }\n"
+				outcome.WrapperSHA256 = languageDigest([]byte(outcome.WrapperSource))
+				entry = "arguments.dart"
+				writeFile(t, filepath.Join(out, entry), outcome.WrapperSource)
+			}
 			command := "dart"
 			args := []string{"--packages=.dart_tool/package_config.json", "bin/main.dart"}
 			switch target {
@@ -292,12 +316,12 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				command = filepath.Join(out, "app")
 				args = nil
 			case "js":
-				run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
+				run(t, out, "dart", "compile", "js", entry, "-o", "main.js")
 				writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
 				command = "node"
 				args = []string{"run.js"}
 			case "wasm":
-				compiled := programOutcomeWithLimit(t, out, 9*time.Minute, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
+				compiled := programOutcomeWithLimit(t, out, 9*time.Minute, "dart", "compile", "wasm", entry, "-o", "main.wasm")
 				if compiled.Exit != 0 {
 					t.Fatalf("Wasm compilation failed:\n%s", compiled.Text)
 				}
@@ -314,6 +338,7 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 					args = []string{filepath.Join(out, args[0])}
 				}
 			}
+			args = append(args, c.Arguments...)
 			got := runLanguage(t, &outcome.Gart, runDir, limit, command, args...)
 			if got != string(want) {
 				t.Errorf("Gart output differs from upstream fixture\nwant:\n%s\ngot:\n%s", want, got)

@@ -456,6 +456,42 @@ class ParityTest(unittest.TestCase):
                                            "implementation-gap": 1, "ineligible": 1})
         self.assertEqual(result["actions"], {"run": 4, "compile": 1})
 
+    def test_run_recipe_preserves_companion_sources_and_arguments(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            execution = dict(ran=True, exit=0, timed_out=False, output_sha256="expected")
+            wrapper = "import 'bin/main.dart' as program;\nvoid main() { program.main([\"arg1\",\"arg2\"]); }\n"
+            case = dict(fixture=dict(name="main", file="main.go", recipe="run ./extra.go arg1 arg2",
+                                     adapter="run-recipe", run_files=["extra.go"], arguments=["arg1", "arg2"],
+                                     files=[dict(path="main.go", sha256="a" * 64), dict(path="extra.go", sha256="b" * 64)]),
+                        contract="run", status="passed", expected_sha256="expected",
+                        native=dict(execution, command=["go", "run", "-gcflags=all=", "main.go", "extra.go", "arg1", "arg2"]),
+                        gart=dict(execution, command=["node", "run.js", "arg1", "arg2"]),
+                        wrapper_source=wrapper, wrapper_sha256=parity.hashlib.sha256(wrapper.encode()).hexdigest())
+            path = root / "language.json"
+
+            def assess(value, status, target="js"):
+                parity.save(path, dict(kind="language", target=target, complete=True, outcomes=[value], shard=0, shards=1))
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            for target in ("vm", "aot", "js", "wasm"):
+                assess(case, "passed", target)
+            for mutate in [
+                lambda c: c["fixture"].update(run_files=[]),
+                lambda c: c["fixture"].update(arguments=[]),
+                lambda c: c["fixture"].update(recipe="run -race"),
+                lambda c: c["fixture"].update(recipe="run ../extra.go arg1 arg2"),
+                lambda c: c["fixture"]["files"].pop(),
+                lambda c: c["native"]["command"].remove("extra.go"),
+                lambda c: c["gart"]["command"].pop(),
+                lambda c: c.update(wrapper_source="void main() {}"),
+                lambda c: c.pop("wrapper_sha256"),
+                lambda c: c.update(build_error="compiler error"),
+            ]:
+                changed = copy.deepcopy(case)
+                mutate(changed)
+                assess(changed, "failed")
+
     def test_compile_recipe_requires_both_compilers_and_wrapper_identity(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

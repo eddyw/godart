@@ -46,6 +46,8 @@ func ReadLanguagePolicy() (*LanguagePolicy, error) {
 }
 
 type LanguageCase struct {
+	RunFiles        []string     `json:"run_files,omitempty"`
+	Arguments       []string     `json:"arguments,omitempty"`
 	GeneratorFiles  []string     `json:"generator_files,omitempty"`
 	ModuleGoVersion string       `json:"module_go_version,omitempty"`
 	ExpectedFailure bool         `json:"upstream_expected_failure,omitempty"`
@@ -149,6 +151,16 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 			}
 			if recipe == "run" {
 				c.Adapter = "single-file"
+			} else if files, args, ok := languageRunRecipe(recipe); ok {
+				c.Adapter = "run-recipe"
+				c.RunFiles, c.Arguments = files, args
+				for _, name := range files {
+					data, err := os.ReadFile(filepath.Join(root, name))
+					if err != nil {
+						return nil, err
+					}
+					c.Files = append(c.Files, SourceFile{Path: name, SHA256: digest(data)})
+				}
 			} else if recipe == "rundir" || recipe == "compiledir" || recipe == "errorcheckdir" {
 				c.Adapter = "directory-packages"
 			} else if recipe == "compile" {
@@ -238,6 +250,28 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 var errorcheckVersionRecipe = regexp.MustCompile(`^errorcheck(\s+-0)?\s+-lang=(go[0-9]+\.[0-9]+)$`)
 
 var directoryRecipe = regexp.MustCompile(`^runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?$`)
+
+func languageRunRecipe(recipe string) ([]string, []string, bool) {
+	fields := strings.Fields(recipe)
+	if len(fields) < 2 || fields[0] != "run" {
+		return nil, nil, false
+	}
+	var files, args []string
+	for _, value := range fields[1:] {
+		if strings.HasPrefix(value, "-") || strings.ContainsAny(value, "\\\"'") {
+			return nil, nil, false
+		}
+		if len(args) == 0 && strings.HasSuffix(value, ".go") {
+			if !filepath.IsLocal(value) || slices.Contains(strings.Split(value, "/"), "..") {
+				return nil, nil, false
+			}
+			files = append(files, filepath.ToSlash(filepath.Clean(value)))
+		} else {
+			args = append(args, value)
+		}
+	}
+	return files, args, true
+}
 
 func languageGeneratorFiles(recipe string) ([]string, bool) {
 	fields := strings.Fields(recipe)

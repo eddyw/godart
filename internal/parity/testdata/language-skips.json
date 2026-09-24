@@ -43,6 +43,10 @@
     "classification": "target-limit",
     "reason": "runtime.Stack omits native instruction offsets, but this test requires a space after the source line before that offset"
   },
+  "fixedbugs/issue36705": {
+    "classification": "target-limit",
+    "reason": "The fixture calls C functions through cgo, which Gart does not support."
+  },
   "fixedbugs/issue4618": {
     "classification": "target-limit",
     "reason": "the Dart VM gives no allocation count, and testing.AllocsPerRun reads one"
@@ -54,6 +58,10 @@
   "fixedbugs/issue47185": {
     "classification": "target-limit",
     "reason": "The fixture imports C and calls C.malloc to force native external linkage."
+  },
+  "fixedbugs/issue47227": {
+    "classification": "target-limit",
+    "reason": "The fixture calls C functions through cgo, which Gart does not support."
   },
   "fixedbugs/issue52697": {
     "classification": "target-limit",
