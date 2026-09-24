@@ -59,7 +59,7 @@ jobs:
         with:
           sdk: ${{ steps.sdk.outputs.dart }}
       - uses: actions/setup-node@v7
-        if: matrix.suite == 'language-targets' || matrix.suite == 'targets' || matrix.suite == 'upstream-targets' || matrix.suite == 'upstream-priority' || matrix.suite == 'web-io' || matrix.suite == 'web-fetch'
+        if: matrix.suite == 'driver' || matrix.suite == 'language-targets' || matrix.suite == 'targets' || matrix.suite == 'upstream-targets' || matrix.suite == 'upstream-priority' || matrix.suite == 'web-io' || matrix.suite == 'web-fetch'
         with:
           node-version: '26.8.2'
       - name: Install upstream test tools
