@@ -225,7 +225,8 @@ Uint8List _bytes(Slice<int> p) {
 /// Writes a whole file. It replaces the content of an existing file.
 GoString $writeFile(GoString path, Slice<int> data) {
   try {
-    File.fromRawPath(path.bytes).writeAsBytesSync(_bytes(data));
+    File.fromRawPath(path.bytes)
+        .writeAsBytesSync(_bytes(data), mode: FileMode.writeOnly);
     return _empty;
   } catch (e) {
     return _cause(e);
