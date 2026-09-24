@@ -47,5 +47,6 @@
   "typeparam/interfacearg",
   "typeparam/boundmethod",
   "fixedbugs/issue4313",
-  "fixedbugs/bug352"
+  "fixedbugs/bug352",
+  "fixedbugs/issue44830"
 ]

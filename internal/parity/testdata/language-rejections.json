@@ -3,13 +3,22 @@
     "$DIR/map.go:28:10: undefined: runtime.SetFinalizer"
   ],
   "abi/part_live": [
-    "$DIR/part_live.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/part_live.go:34:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/part_live.go:34:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "abi/part_live_2": [
-    "$DIR/part_live_2.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/part_live_2.go:39:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/part_live_2.go:39:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "blank": [
-    "$DIR/blank.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/blank.go:117:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/blank.go:117:15: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/blank.go:118:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/blank.go:118:15: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/blank.go:124:14: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/blank.go:124:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/blank.go:125:14: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/blank.go:125:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "chan/select2": [
     "$DIR/select2.go:31:10: undefined: runtime.MemProfileRate",
@@ -23,7 +32,8 @@
     "$DIR/closure.go:99:10: undefined: runtime.ReadMemStats"
   ],
   "cmp": [
-    "$DIR/cmp.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/cmp.go:20:44: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/cmp.go:20:55: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "deferfin": [
     "$DIR/deferfin.go:43:12: undefined: runtime.SetFinalizer"
@@ -42,19 +52,30 @@
     "$DIR/fixture.go:17:9: the function g holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "fixedbugs/bug246": [
-    "$DIR/bug246.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/bug246.go:14:15: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/bug246.go:14:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/bug246.go:17:15: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/bug246.go:17:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/bug319": [
-    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/fixture.go:14:14: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:14:22: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:15:14: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:15:22: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:16:14: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:16:22: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:17:13: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:17:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:18:13: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:18:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:19:13: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:19:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/bug328": [
-    "$DIR/bug328.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "print does not accept the type unsafe.Pointer yet"
   ],
   "fixedbugs/bug514": [
     "$DIR/bug514.go:11:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
-  ],
-  "fixedbugs/issue10284": [
-    "$DIR/fixture.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue15002": [
     "$DIR/issue15002.go:18:17: undefined: syscall.Getpagesize",
@@ -75,28 +96,35 @@
     "$DIR/issue15281.go:63:10: undefined: runtime.ReadMemStats"
   ],
   "fixedbugs/issue15329": [
-    "$DIR/issue15329.go:37:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue15528": [
-    "$DIR/issue15528.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue16306": [
-    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue15329.go:44:47: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue15329.go:44:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue15329.go:47:60: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue15329.go:47:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue15329.go:50:48: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue15329.go:50:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue15329.go:53:39: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue15329.go:53:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue15329.go:57:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue15329.go:57:23: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue17270": [
     "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue17381": [
-    "$DIR/issue17381.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue17381.go:38:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue17381.go:38:23: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue17381.go:38:38: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue17381.go:38:46: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue17596": [
     "$DIR/fixture.go:17:9: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "fixedbugs/issue19078": [
-    "$DIR/issue19078.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue19078.go:20:15: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue19078.go:20:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue21221": [
-    "$DIR/issue21221.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue21221.go:15:5: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue24187": [
     "no package matches [./...] in $DIR"
@@ -108,39 +136,46 @@
     "$DIR/issue24491b.go:21:10: undefined: runtime.SetFinalizer"
   ],
   "fixedbugs/issue24760": [
-    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/fixture.go:12:17: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:12:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue27518b": [
     "$DIR/issue27518b.go:48:10: undefined: runtime.SetFinalizer"
   ],
   "fixedbugs/issue27695b": [
-    "$DIR/issue27695b.go:16:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue27695b.go:28:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue27695b.go:28:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue27695c": [
-    "$DIR/issue27695c.go:17:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue27695c.go:29:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue27695c.go:29:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue28078": [
-    "$DIR/fixture.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/fixture.go:17:3: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:22:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue28079a": [
-    "$DIR/fixture.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/fixture.go:15:4: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:19:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue28430": [
     "$DIR/fixture.go:16:2: the function g holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
     "$DIR/fixture.go:16:4: the function h holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "fixedbugs/issue29362": [
-    "$DIR/issue29362.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue29362.go:25:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue29362.go:25:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue29362b": [
-    "$DIR/issue29362b.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue29362b.go:25:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue29362b.go:25:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue30041": [
-    "$DIR/issue30041.go:15:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue30041.go:27:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue30041.go:27:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue30061": [
-    "$DIR/fixture.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
-    "$DIR/fixture.go:19:2: the function memmove holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+    "$DIR/fixture.go:13:1: linked function memmove requires an imported target package runtime"
   ],
   "fixedbugs/issue30476": [
     "$DIR/issue30476.go:15:10: undefined: runtime.SetFinalizer"
@@ -153,14 +188,22 @@
     "$DIR/issue32477.go:47:10: undefined: runtime.SetFinalizer"
   ],
   "fixedbugs/issue32959": [
-    "$DIR/fixture.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/fixture.go:16:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:16:6: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue38093": [
     "no package matches [./...] in $DIR"
   ],
   "fixedbugs/issue40954": [
     "$DIR/issue40954.go:12:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)",
-    "$DIR/issue40954.go:13:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue40954.go:23:12: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40954.go:23:27: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40954.go:23:35: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40954.go:23:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40954.go:24:15: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40954.go:24:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40954.go:39:13: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40954.go:39:5: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue42032": [
     "$DIR/issue42032.go:11:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
@@ -173,9 +216,6 @@
     "$DIR/fixture.go:16:34: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
     "$DIR/fixture.go:18:21: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
-  "fixedbugs/issue44830": [
-    "$DIR/issue44830.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
   "fixedbugs/issue45045": [
     "$DIR/issue45045.go:17:10: undefined: runtime.SetFinalizer"
   ],
@@ -187,10 +227,19 @@
     "$DIR/fixture.go:17:2: the function G holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "fixedbugs/issue4585": [
-    "$DIR/issue4585.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue4585.go:105:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue4585.go:105:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue4585.go:127:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue4585.go:127:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue4585.go:52:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue4585.go:52:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue4585.go:73:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue4585.go:73:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue4585.go:93:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue4585.go:93:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue4614": [
-    "$DIR/fixture.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/fixture.go:19:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue46725": [
     "$DIR/issue46725.go:21:10: undefined: runtime.SetFinalizer"
@@ -199,20 +248,23 @@
     "$DIR/issue46903.go:10:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
   ],
   "fixedbugs/issue48536": [
+    "$DIR/issue48536.go:15:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue48536.go:16:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "$DIR/issue48536.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue51733": [
     "$DIR/issue51733.go:13:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)",
-    "$DIR/issue51733.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue51733.go:20:12: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue51733.go:20:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue51733.go:24:26: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue51733.go:24:45: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue51733.go:28:42: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue51733.go:28:61: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue52612": [
-    "$DIR/issue52612.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue53137": [
-    "$DIR/issue53137.go:10:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue53439": [
-    "$DIR/fixture.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue52612.go:30:17: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue52612.go:30:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue52612.go:31:6: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue53454": [
     "$DIR/fixture.go:80:9: the function Test holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
@@ -230,17 +282,11 @@
   "fixedbugs/issue59293": [
     "$DIR/issue59293.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
-  "fixedbugs/issue60601": [
-    "$DIR/issue60601.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
   "fixedbugs/issue61187": [
-    "$DIR/fixture.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue62515": [
-    "$DIR/fixture.go:12:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
-  ],
-  "fixedbugs/issue65417": [
-    "$DIR/issue65417.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/fixture.go:18:17: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:18:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:19:12: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:19:35: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue73748a": [
     "$DIR/issue73748a.go:12:2: the package runtime/trace is outside the supported surface (the standard library surface is curated)"
@@ -252,7 +298,8 @@
     "$DIR/fixture.go:14:2: the function g holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "fixedbugs/issue75365": [
-    "$DIR/issue75365.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue75365.go:28:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue75365.go:28:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue79874": [
     "$DIR/issue79874.go:32:22: undefined: syscall.Getpagesize",
@@ -265,10 +312,14 @@
     "$DIR/issue79874.go:43:86: undefined: syscall.PROT_WRITE"
   ],
   "fixedbugs/issue80004": [
-    "$DIR/issue80004.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue80004.go:51:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue80004.go:51:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue8004": [
-    "$DIR/issue8004.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/issue8004.go:25:31: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue8004.go:25:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue8004.go:48:31: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue8004.go:48:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue8606b": [
     "$DIR/issue8606b.go:43:15: undefined: syscall.Getpagesize",
@@ -320,7 +371,8 @@
     "$DIR/init1.go:39:10: undefined: runtime.ReadMemStats"
   ],
   "ken/cplx3": [
-    "$DIR/cplx3.go:11:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/cplx3.go:42:22: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/cplx3.go:42:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "mallocfin": [
     "$DIR/mallocfin.go:60:11: undefined: runtime.SetFinalizer",
@@ -329,7 +381,10 @@
     "$DIR/mallocfin.go:63:11: undefined: runtime.SetFinalizer"
   ],
   "nilptr": [
-    "$DIR/nilptr.go:15:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/nilptr.go:30:13: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/nilptr.go:30:5: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/nilptr.go:74:12: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/nilptr.go:74:20: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "nilptr4": [
     "$DIR/fixture.go:20:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
@@ -341,7 +396,7 @@
     "no package matches [./...] in $DIR"
   ],
   "noinit": [
-    "$DIR/noinit.go:16:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/noinit.go:335:1: linked variable main_inittask requires an imported target package main."
   ],
   "parentype": [
     "$DIR/fixture.go:14:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
@@ -375,7 +430,18 @@
     "$DIR/sigchld.go:16:41: undefined: syscall.SIGCHLD"
   ],
   "slicecap": [
-    "$DIR/slicecap.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/slicecap.go:29:20: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:29:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:30:20: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:30:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:38:20: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:38:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:39:20: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:39:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:46:20: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:46:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:47:20: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/slicecap.go:47:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "stackobj": [
     "$DIR/stackobj.go:45:10: undefined: runtime.SetFinalizer"
@@ -385,16 +451,16 @@
     "$DIR/stackobj3.go:80:10: undefined: runtime.SetFinalizer"
   ],
   "strcopy": [
-    "$DIR/strcopy.go:14:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/strcopy.go:23:15: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/strcopy.go:23:39: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/strcopy.go:24:15: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/strcopy.go:24:39: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "tinyfin": [
     "$DIR/tinyfin.go:28:11: undefined: runtime.SetFinalizer"
   ],
   "typeparam/chans": [
     "$DIR/chans.go:190:10: undefined: runtime.SetFinalizer"
-  ],
-  "typeparam/issue48013": [
-    "$DIR/issue48013.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "typeparam/orderedmap": [
     "$DIR/orderedmap.go:237:10: undefined: runtime.SetFinalizer"
@@ -403,15 +469,32 @@
     "$DIR/uintptrescapes3.go:51:11: undefined: runtime.SetFinalizer"
   ],
   "unsafe_slice_data": [
-    "$DIR/unsafe_slice_data.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/unsafe_slice_data.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "$DIR/unsafe_slice_data.go:17:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafe_slice_data.go:17:33: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafe_slice_data.go:18:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafe_slice_data.go:19:13: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafe_slice_data.go:20:55: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "unsafe_string": [
     "$DIR/unsafe_string.go:10:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "unsafe_string_data": [
-    "$DIR/unsafe_string_data.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/unsafe_string_data.go:12:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "$DIR/unsafe_string_data.go:17:33: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafe_string_data.go:17:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafe_string_data.go:18:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafe_string_data.go:19:13: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafe_string_data.go:20:60: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "unsafebuiltins": [
-    "$DIR/unsafebuiltins.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
+    "$DIR/unsafebuiltins.go:11:2: the compiler rejects the package unsafe (the subset has no pointer arithmetic)",
+    "$DIR/unsafebuiltins.go:21:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafebuiltins.go:22:31: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafebuiltins.go:23:32: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafebuiltins.go:52:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafebuiltins.go:52:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafebuiltins.go:78:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/unsafebuiltins.go:78:19: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ]
 }

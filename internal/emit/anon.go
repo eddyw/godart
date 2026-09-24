@@ -139,7 +139,7 @@ func writeType(b *strings.Builder, t types.Type, qual types.Qualifier, seen map[
 	}
 	switch u := types.Unalias(t).(type) {
 	case *types.Basic:
-		b.WriteString(types.Typ[u.Kind()].Name())
+		b.WriteString(basicText(u))
 	case *types.Named:
 		b.WriteString(types.TypeString(u, qual))
 	case *types.TypeParam:
