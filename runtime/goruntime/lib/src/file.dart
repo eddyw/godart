@@ -13,6 +13,7 @@ export 'file_links.dart';
 export 'file_readlink.dart';
 export 'file_rename.dart';
 export 'file_stat.dart';
+export 'syscall_directory.dart';
 
 /// The name of the operating system, in the words of the Go constant GOOS.
 GoString $goos() {

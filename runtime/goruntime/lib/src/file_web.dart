@@ -163,3 +163,7 @@ int $nativeChtimes(
 
 int $nativeLink(GoString from, GoString to) => 38;
 int $nativeSymlink(GoString from, GoString to) => 38;
+
+(int, int) $syscallOpen(GoString path, int flags, int mode) => (-1, 38);
+int $syscallClose(int fd) => 38;
+(int, int) $syscallReadDirent(int fd, Slice<GoInt> data) => (0, 38);

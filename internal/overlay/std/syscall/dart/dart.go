@@ -1755,3 +1755,15 @@ func NativeLink(from, to string) int {
 func NativeSymlink(from, to string) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallOpen(path string, flags int, mode uint32) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallClose(fd int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallReadDirent(fd int, data []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
