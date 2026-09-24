@@ -101,6 +101,26 @@ class ParityTest(unittest.TestCase):
                 parity.save(path, changed)
                 self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
+    def test_generator_companions_require_source_and_command_evidence(self):
+        fixture = dict(file="rotate0.go", recipe="runoutput ./rotate.go", generator_files=["rotate.go"],
+                       files=[dict(path=name, sha256="a" * 64) for name in ["rotate0.go", "rotate.go"]])
+        case = dict(fixture=fixture, generator=dict(command=["go", "run", "-gcflags=all=",
+                    "/sdk/test/rotate0.go", "/sdk/test/rotate.go"]))
+        self.assertTrue(parity.generator_recipe_valid(case))
+        for mutate in [
+            lambda c: c["fixture"].pop("generator_files"),
+            lambda c: c["fixture"].update(recipe="runoutput ../rotate.go"),
+            lambda c: c["fixture"].update(recipe="runoutput -gcflags=-N"),
+            lambda c: c["fixture"]["files"].pop(),
+            lambda c: c["fixture"]["files"][1].update(sha256=""),
+            lambda c: c["generator"]["command"].pop(),
+            lambda c: c["generator"]["command"].__setitem__(4, "/other/rotate.go"),
+            lambda c: c["generator"]["command"].__setitem__(0, "echo"),
+        ]:
+            changed = copy.deepcopy(case)
+            mutate(changed)
+            self.assertFalse(parity.generator_recipe_valid(changed))
+
     def test_resolver_inputs_preserve_native_setup(self):
         import copy
         import hashlib

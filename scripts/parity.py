@@ -339,6 +339,33 @@ def directory_language_valid(case, go_version):
             and all(case[k].get("output_sha256") == expected for k in ("native", "gart")))
 
 
+def generator_recipe_valid(case):
+    fixture = case["fixture"]
+    parts = fixture.get("recipe", "").split()
+    if not parts or parts[0] != "runoutput":
+        return False
+    files = []
+    for name in parts[1:]:
+        path = Path(name)
+        if (path.is_absolute() or ".." in path.parts or name.startswith("-")
+                or any(c in name for c in "\\\"'") or not name.endswith(".go")):
+            return False
+        files.append(path.as_posix())
+    if files != fixture.get("generator_files", []):
+        return False
+    if not files:
+        return True
+    recorded = {f["path"]: f["sha256"] for f in fixture.get("files", [])}
+    command = case.get("generator", {}).get("command", [])
+    primary = fixture.get("file", "")
+    if (not primary or len(command) != 4 + len(files) or command[:2] != ["go", "run"]
+            or not command[2].startswith("-gcflags=all=") or not command[3].endswith("/" + primary)):
+        return False
+    root = command[3][:-len(primary)]
+    return (command[4:] == [root + f for f in files]
+            and all(re.fullmatch(r"[0-9a-f]{64}", recorded.get(f, "")) for f in [primary] + files))
+
+
 def language_behavior(paths):
     groups = {}
     seen = set()
@@ -403,7 +430,7 @@ def language_behavior(paths):
                         if case.get("contract") == "runoutput":
                             generator = case.get("generator") or {}
                             source = case.get("generated_source")
-                            valid = (valid and case["fixture"]["recipe"] == "runoutput" and source
+                            valid = (valid and generator_recipe_valid(case) and source
                                      and generator.get("ran") and generator.get("exit") == 0
                                      and not generator.get("timed_out") and not case.get("build_error")
                                      and hashlib.sha256(source.encode()).hexdigest() == generator.get("output_sha256"))

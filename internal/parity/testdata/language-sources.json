@@ -1,11 +1,11 @@
 {
   "go1.27.0": {
-    "source_sha256": "2d3005df222729110b9db2d7ca196028e6f39fd16b4168917ef419aabf5102a6",
+    "source_sha256": "97e92b53a35c0e70c1be0d5dad4775a565a7f1c72989c696f716b2b161cd5697",
     "runner_sha256": "54900709a1fae5f469aa7bf59b22660f6fb9eb169e84f9c0d9760f0fe38444f4",
     "recipes": 2726
   },
   "go1.27.1": {
-    "source_sha256": "2afd7b13589bc5e3df1f485821515fd3b216df8d704beabcf290f0a4a5c558da",
+    "source_sha256": "13a27d328d96c0ecb72e32f435a3bba45a909f60af3920e9cd78287951612687",
     "runner_sha256": "54900709a1fae5f469aa7bf59b22660f6fb9eb169e84f9c0d9760f0fe38444f4",
     "recipes": 2728
   }

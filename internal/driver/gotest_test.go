@@ -181,7 +181,11 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 			}
 			if c.Adapter == "generated-file" {
 				outcome.Generator = &languageExecution{}
-				outcome.GeneratedSource = recordLanguageRaw(t, outcome.Generator, dir, runLimit, "go", "run", "-gcflags=all="+inv.GCFlags, filepath.Join(root, c.File))
+				args := []string{"run", "-gcflags=all=" + inv.GCFlags, filepath.Join(root, c.File)}
+				for _, file := range c.GeneratorFiles {
+					args = append(args, filepath.Join(root, file))
+				}
+				outcome.GeneratedSource = recordLanguageRaw(t, outcome.Generator, dir, runLimit, "go", args...)
 				if outcome.Generator.Exit != 0 {
 					t.Fatalf("native generator exited %d\n%s", outcome.Generator.Exit, outcome.GeneratedSource)
 				}
@@ -293,7 +297,10 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				command = "node"
 				args = []string{"run.js"}
 			case "wasm":
-				run(t, out, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
+				compiled := programOutcomeWithLimit(t, out, 9*time.Minute, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
+				if compiled.Exit != 0 {
+					t.Fatalf("Wasm compilation failed:\n%s", compiled.Text)
+				}
 				writeFile(t, filepath.Join(out, "run.mjs"), wasmRunner)
 				command = "node"
 				args = []string{"run.mjs"}

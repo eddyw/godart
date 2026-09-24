@@ -55,3 +55,19 @@ func TestLanguageHostTargets(t *testing.T) {
 		t.Run(target, func(t *testing.T) { runLanguageCases(t, target, inv, cases) })
 	}
 }
+
+func TestGeneratorCompanionTargets(t *testing.T) {
+	inv, err := parity.DiscoverLanguage(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []parity.LanguageCase
+	for _, c := range inv.Cases {
+		if c.Adapter == "generated-file" && len(c.GeneratorFiles) > 0 {
+			cases = append(cases, c)
+		}
+	}
+	for _, target := range []string{"aot", "js", "wasm"} {
+		t.Run(target, func(t *testing.T) { runLanguageCases(t, target, inv, cases) })
+	}
+}

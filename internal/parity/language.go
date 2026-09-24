@@ -46,6 +46,7 @@ func ReadLanguagePolicy() (*LanguagePolicy, error) {
 }
 
 type LanguageCase struct {
+	GeneratorFiles  []string     `json:"generator_files,omitempty"`
 	ModuleGoVersion string       `json:"module_go_version,omitempty"`
 	ExpectedFailure bool         `json:"upstream_expected_failure,omitempty"`
 	HostTools       bool         `json:"host_tools,omitempty"`
@@ -154,8 +155,16 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				c.Adapter = "compile-file"
 			} else if recipe == "errorcheck" {
 				c.Adapter = "reject-file"
-			} else if recipe == "runoutput" {
+			} else if files, ok := languageGeneratorFiles(recipe); ok {
 				c.Adapter = "generated-file"
+				c.GeneratorFiles = files
+				for _, name := range files {
+					data, err := os.ReadFile(filepath.Join(root, name))
+					if err != nil {
+						return nil, err
+					}
+					c.Files = append(c.Files, SourceFile{Path: name, SHA256: digest(data)})
+				}
 			} else if moduleVersion, ok := languageModuleRecipe(recipe); ok {
 				c.Adapter = "directory-module"
 				c.ModuleGoVersion = moduleVersion
@@ -216,6 +225,21 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 }
 
 var directoryRecipe = regexp.MustCompile(`^runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?$`)
+
+func languageGeneratorFiles(recipe string) ([]string, bool) {
+	fields := strings.Fields(recipe)
+	if len(fields) == 0 || fields[0] != "runoutput" {
+		return nil, false
+	}
+	var files []string
+	for _, name := range fields[1:] {
+		if !filepath.IsLocal(name) || slices.Contains(strings.Split(name, "/"), "..") || strings.ContainsAny(name, "\\\"'") || strings.HasPrefix(name, "-") || !strings.HasSuffix(name, ".go") {
+			return nil, false
+		}
+		files = append(files, filepath.ToSlash(filepath.Clean(name)))
+	}
+	return files, true
+}
 
 func languageModuleRecipe(recipe string) (string, bool) {
 	parts := directoryRecipe.FindStringSubmatch(recipe)

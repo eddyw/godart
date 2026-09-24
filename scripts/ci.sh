@@ -30,7 +30,7 @@ if [[ $suite == fuzz-replay || $suite == driver || $suite == stdlib || $suite ==
   fi
 fi
 
-large_tests='TestDirectoryPackagesOfGoTest|TestRunDirectoryFilesOfGoTest|TestRunOutputFilesOfGoTest|TestRejectFilesOfGoTest|TestCompileFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestLanguageHostTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
+large_tests='TestDirectoryPackagesOfGoTest|TestRunDirectoryFilesOfGoTest|TestRunOutputFilesOfGoTest|TestRejectFilesOfGoTest|TestCompileFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestGeneratorCompanionTargets|TestLanguageHostTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
 case "$suite" in
   checks)
     python3 -B -m unittest discover -s scripts -p test_ci_local.py
@@ -56,7 +56,7 @@ case "$suite" in
   language-targets) test_name='TestLanguageTargets|TestLanguageHostTargets|TestRunDirectoryFilesOfGoTest' ;;
   language-compile) test_name=TestCompileFilesOfGoTest ;;
   language-reject) test_name=TestRejectFilesOfGoTest ;;
-  language-generated) test_name=TestRunOutputFilesOfGoTest ;;
+  language-generated) test_name='TestRunOutputFilesOfGoTest|TestGeneratorCompanionTargets' ;;
   language-directories) test_name=TestRunDirectoryFilesOfGoTest ;;
   language-packages) test_name=TestDirectoryPackagesOfGoTest ;;
   fuzz-replay) test_name=TestUpstreamFuzzReplay ;;
