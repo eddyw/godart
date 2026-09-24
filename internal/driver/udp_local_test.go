@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -76,7 +77,7 @@ func TestCloseRebind(t *testing.T) {
  }
 }
 `)
-	run(t, dir, "go", "test", "-v", ".")
+	run(t, dir, "go", "test", "-short="+strconv.FormatBool(testing.Short()), "-v", ".")
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
 	if err != nil {
 		t.Fatal(err)
@@ -85,7 +86,7 @@ func TestCloseRebind(t *testing.T) {
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
 			var result programResult
-			args := []string{"-test.v", "-test.run=^TestUDPConnLocalAndRemoteNames$"}
+			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^TestUDPConnLocalAndRemoteNames$"}
 			if target == "vm" {
 				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {
@@ -93,9 +94,9 @@ func TestCloseRebind(t *testing.T) {
 			}
 			compareUpstream(t, "udp-local", "net", "^TestUDPConnLocalAndRemoteNames$", target, filepath.Join(runtime.GOROOT(), "src/net"), result.Text, result.Exit)
 			if target == "vm" {
-				run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.run=^Test(LocalBind|CloseRebind)$")
+				run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind)$")
 			} else {
-				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.run=^Test(LocalBind|CloseRebind)$"})
+				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind)$"})
 				if result.Exit != 0 {
 					t.Fatal(result.Text)
 				}

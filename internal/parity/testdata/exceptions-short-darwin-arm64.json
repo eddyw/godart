@@ -13600,6 +13600,12 @@
       "gart": "skip",
       "native": "skip",
       "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestReaddirNValues"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
       "test": "TestRemoveAllLarge"
     },
     {

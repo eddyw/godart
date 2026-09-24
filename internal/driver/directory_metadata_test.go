@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -26,7 +27,7 @@ func TestDirectoryMetadata(t *testing.T) {
 	const filter = "^(TestFileReaddirnames|TestFileReaddir|TestFileReadDir|TestDirSeek)$"
 	native := filepath.Join(t.TempDir(), "native")
 	run(t, dir, "go", "test", "-c", "-o", native, ".")
-	t.Log(run(t, osDir, native, "-test.v", "-test.run="+filter))
+	t.Log(run(t, osDir, native, "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run="+filter))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +35,7 @@ func TestDirectoryMetadata(t *testing.T) {
 	prepareDart(t, out)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
-			args := []string{"-test.v", "-test.run=" + filter}
+			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 			var result programResult
 			if target == "vm" {
 				result = programOutcome(t, osDir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)

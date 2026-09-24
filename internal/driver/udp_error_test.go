@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -116,7 +117,7 @@ func TestUDPBlockedReads(t *testing.T){
 	}
 	writeFile(t, filepath.Join(dir, "testenv/testenv.go"), selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/internal/testenv/testenv.go"), []string{"flaky", "SkipFlaky"}))
 	writeFile(t, filepath.Join(dir, "testenv/LICENSE"), string(license))
-	t.Log(run(t, dir, "go", "test", "-v", "."))
+	t.Log(run(t, dir, "go", "test", "-short="+strconv.FormatBool(testing.Short()), "-v", "."))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +126,7 @@ func TestUDPBlockedReads(t *testing.T){
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
 			const filter = "^(TestUDPZeroBytePayload|TestUDPZeroByteBuffer|TestUDPReadSizeError|TestUDPReadTimeout)$"
-			args := []string{"-test.v", "-test.run=" + filter}
+			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 			var r programResult
 			if target == "vm" {
 				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
@@ -133,7 +134,7 @@ func TestUDPBlockedReads(t *testing.T){
 				r = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
 			compareUpstream(t, "udp-datagram-errors", "net", filter, target, filepath.Join(runtime.GOROOT(), "src/net"), r.Text, r.Exit)
-			args = []string{"-test.v", "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads)$"}
+			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads)$"}
 			if target == "vm" {
 				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {
