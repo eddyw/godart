@@ -90,6 +90,15 @@ void main() {
       final (fd, error) = $directoryOpen(GoString.fromString(root.path));
       require(error == 0, 'repeat open');
       require($directoryClose(fd) == 0 && flags(fd, 1) == -1, 'repeat close');
+      final listing = $readDir(GoString.fromString(root.path));
+      require(listing.$2.length == 0 && listing.$1.len == 2, 'directory names');
+      require($readDir(name).$2.length != 0, 'regular file listing fails');
+      final (next, nextError) = $directoryOpen(GoString.fromString(root.path));
+      require(
+        nextError == 0 && next == fd,
+        'directory listing closes its descriptor',
+      );
+      require($directoryClose(next) == 0, 'listing probe close');
     }
     print('file descriptor contracts pass');
   } finally {

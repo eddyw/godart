@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'directory_descriptor.dart';
+import 'file_stat.dart';
 import 'removeall.dart';
 import 'slice.dart';
 import 'string.dart';
@@ -539,6 +541,11 @@ GoString $rename(GoString from, GoString to) {
 /// Reads the names inside a directory. Each name holds no directory part.
 (Slice<GoString>, GoString) $readDir(GoString path) {
   try {
+    if ($hasNativeStat) {
+      final names = readDirectoryNames(path);
+      names.sort((GoString a, GoString b) => $compare(a, b));
+      return (Slice.of(names), _empty);
+    }
     final List<FileSystemEntity> list = Directory(path.toDartString())
         .listSync(followLinks: false);
     final List<GoString> names = <GoString>[];

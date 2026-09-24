@@ -43,6 +43,77 @@ final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
     );
+final _fdopendir = _libc
+    .lookupFunction<Pointer<Void> Function(Int), Pointer<Void> Function(int)>(
+      Abi.current() == Abi.macosX64 ? r'fdopendir$INODE64' : 'fdopendir',
+    );
+final _closedir = _libc
+    .lookupFunction<Int Function(Pointer<Void>), int Function(Pointer<Void>)>(
+      'closedir',
+    );
+final _readdir = _libc
+    .lookupFunction<
+      Pointer<Uint8> Function(Pointer<Void>),
+      Pointer<Uint8> Function(Pointer<Void>)
+    >(Abi.current() == Abi.macosX64 ? r'readdir$INODE64' : 'readdir');
+final _strerror = _libc
+    .lookupFunction<Pointer<Uint8> Function(Int), Pointer<Uint8> Function(int)>(
+      'strerror',
+    );
+
+Never _readError(GoString path, int error) {
+  final message = _strerror(error);
+  final bytes = <int>[];
+  for (var i = 0; message[i] != 0; i++) {
+    bytes.add(message[i]);
+  }
+  throw FileSystemException(
+    'Directory listing failed',
+    path.toDartString(),
+    OSError(GoString.fromBytes(bytes).toDartString(), error),
+  );
+}
+
+List<GoString> readDirectoryNames(GoString path) {
+  final (fd, error) = $directoryOpen(path);
+  if (error != 0) _readError(path, error);
+  final directory = _fdopendir(fd);
+  if (directory == nullptr) {
+    final error = _errno().value;
+    _close(fd);
+    _readError(path, error);
+  }
+  final names = <GoString>[];
+  try {
+    while (true) {
+      _errno().value = 0;
+      final entry = _readdir(directory);
+      if (entry == nullptr) {
+        final error = _errno().value;
+        if (error == 4) continue;
+        if (error != 0) _readError(path, error);
+        return names;
+      }
+      // Darwin can retain a deleted entry with a zero inode.
+      if (Platform.isMacOS && entry.cast<Uint64>().value == 0) continue;
+      final recordLength = (entry + 16).cast<Uint16>().value;
+      final nameOffset = Platform.isMacOS ? 21 : 19;
+      if (recordLength <= nameOffset) _readError(path, 5);
+      final bytes = (entry + nameOffset).asTypedList(recordLength - nameOffset);
+      final end = bytes.indexOf(0);
+      if (end < 0) _readError(path, 5);
+      if (end == 0 ||
+          end == 1 && bytes[0] == 46 ||
+          end == 2 && bytes[0] == 46 && bytes[1] == 46) {
+        continue;
+      }
+      names.add(GoString.fromBytes(bytes.sublist(0, end)));
+    }
+  } finally {
+    // fdopendir transfers descriptor ownership to closedir.
+    _closedir(directory);
+  }
+}
 
 (int, int) $directoryOpen(GoString path) {
   // Other hosts retain path-based directory access without a native descriptor.
