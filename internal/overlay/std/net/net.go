@@ -242,7 +242,10 @@ func (c *conn) setOption(name string, value int) error {
 		return syscall.EINVAL
 	}
 	if cause := dart.ConnOption(c.handle, name, value); cause != "" {
-		return netError("set "+c.network, cause)
+		if name == "rcvbuf" || name == "sndbuf" {
+			return &OpError{Op: "set", Net: c.network, Addr: c.local, Err: socketCause(cause)}
+		}
+		return c.opError("set", socketCause(cause))
 	}
 	return nil
 }
@@ -364,7 +367,7 @@ func (c *conn) apply() error {
 		return syscall.EINVAL
 	}
 	if cause := dart.ConnDeadline(c.handle, c.read, c.write); cause != "" {
-		return netError("set deadline "+c.network, cause)
+		return &OpError{Op: "set", Net: c.network, Addr: c.local, Err: socketCause(cause)}
 	}
 	return nil
 }
@@ -452,7 +455,7 @@ func (p *packet) SetWriteDeadline(t time.Time) error {
 
 func (p *packet) apply() error {
 	if cause := dart.PacketDeadline(p.handle, p.read, p.write); cause != "" {
-		return netError("set deadline udp", cause)
+		return &OpError{Op: "set", Net: p.network, Addr: p.local, Err: socketCause(cause)}
 	}
 	return nil
 }
