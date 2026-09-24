@@ -212,7 +212,7 @@ func TestLanguagePolicy(t *testing.T) {
 		}
 	}
 	for name, diagnostics := range policy.Rejections {
-		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "compile-file" && cases[name].Adapter != "build-file") || len(diagnostics) == 0 {
+		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "compile-file" && cases[name].Adapter != "build-file" && (cases[name].Adapter != "directory-packages" || cases[name].Action == "errorcheckdir")) || len(diagnostics) == 0 {
 			t.Errorf("invalid language rejection: %s", name)
 		}
 	}

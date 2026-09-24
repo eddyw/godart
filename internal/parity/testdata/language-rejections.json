@@ -120,6 +120,9 @@
   "fixedbugs/issue21221": [
     "$DIR/issue21221.go:15:5: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
+  "fixedbugs/issue23311": [
+    "$DIR/main/main.go:9:1: linked function f requires an imported target package runtime"
+  ],
   "fixedbugs/issue24187": [
     "no package matches [./...] in $DIR"
   ],
@@ -185,6 +188,9 @@
     "$DIR/fixture.go:16:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "$DIR/fixture.go:16:6: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
+  "fixedbugs/issue34503": [
+    "$DIR/a/a.go:14:4: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
+  ],
   "fixedbugs/issue38093": [
     "no package matches [./...] in $DIR"
   ],
@@ -204,6 +210,11 @@
   ],
   "fixedbugs/issue42076": [
     "$DIR/issue42076.go:13:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
+  ],
+  "fixedbugs/issue43479": [
+    "$DIR/a/a.go:22:14: the function Dir holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/a/a.go:23:11: the function Dir holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/a/a.go:24:11: the function Dir holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
   "fixedbugs/issue43677": [
     "$DIR/fixture.go:14:22: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
@@ -246,6 +257,11 @@
     "$DIR/issue48536.go:16:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "$DIR/issue48536.go:9:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
+  "fixedbugs/issue4879": [
+    "$DIR/a/a.go:19:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/a/a.go:25:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/a/a.go:30:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
+  ],
   "fixedbugs/issue51733": [
     "$DIR/issue51733.go:13:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)",
     "$DIR/issue51733.go:20:12: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
@@ -254,6 +270,9 @@
     "$DIR/issue51733.go:24:45: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "$DIR/issue51733.go:28:42: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "$DIR/issue51733.go:28:61: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
+  ],
+  "fixedbugs/issue52590": [
+    "$DIR/a/a.go:7:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
   "fixedbugs/issue52612": [
     "$DIR/issue52612.go:30:17: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
@@ -347,6 +366,10 @@
     "$DIR/fixture.go:22:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
     "$DIR/fixture.go:23:2: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
+  "import2": [
+    "$DIR/import3/import3.go:17:2: the function f3 holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
+    "$DIR/import3/import3.go:18:2: the function f3 holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
   "init1": [
     "$DIR/init1.go:28:26: undefined: runtime.MemStats",
     "$DIR/init1.go:29:10: undefined: runtime.ReadMemStats",
@@ -433,8 +456,24 @@
   "typeparam/chans": [
     "$DIR/chans.go:190:10: undefined: runtime.SetFinalizer"
   ],
+  "typeparam/chansimp": [
+    "$DIR/a/a.go:183:10: undefined: runtime.SetFinalizer"
+  ],
   "typeparam/orderedmap": [
     "$DIR/orderedmap.go:237:10: undefined: runtime.SetFinalizer"
+  ],
+  "typeparam/orderedmapsimp": [
+    "$DIR/a/a.go:177:10: undefined: runtime.SetFinalizer"
+  ],
+  "uintptrescapes": [
+    "$DIR/a/a.go:26:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/a/a.go:26:3: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/a/a.go:33:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/a/a.go:33:3: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/a/a.go:46:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/a/a.go:46:3: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/a/a.go:53:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/a/a.go:53:3: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "uintptrescapes3": [
     "$DIR/uintptrescapes3.go:51:11: undefined: runtime.SetFinalizer"

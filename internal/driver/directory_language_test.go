@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -293,6 +294,19 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 					}
 					if err != nil {
 						result.BuildError = err.Error()
+					}
+					if want := c.Rejection; want != nil {
+						if err == nil {
+							t.Fatal("the build now passes: remove its expected rejection")
+						}
+						got := strings.Split(strings.ReplaceAll(err.Error(), dir, "$DIR"), "\n")
+						slices.Sort(got)
+						if !slices.Equal(got, want) {
+							t.Fatalf("the rejection changed\nwant:\n%s\ngot:\n%s", strings.Join(want, "\n"), strings.Join(got, "\n"))
+						}
+						t.Skipf("known rejection:\n%v", err)
+					}
+					if err != nil {
 						t.Fatal(err)
 					}
 					prepareDart(t, out)
