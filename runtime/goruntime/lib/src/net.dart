@@ -40,6 +40,7 @@ abstract class _Conn {
   /// The read that stands open. A deadline ends the wait of the caller, and
   /// the read of the socket stays, thus the next read takes the same future.
   Future<int>? pending;
+  Future<void> reads = Future<void>.value();
 
   /// The 2 deadlines, in nanoseconds after the start of the Unix epoch. A
   /// value of 0 holds no limit.
@@ -80,6 +81,12 @@ abstract class _Conn {
   /// option writes 1 socket option.
   void setFlag(SocketOption option, bool on);
   void setRaw(RawSocketOption option);
+}
+
+final class _WriteFailure implements Exception {
+  final int count;
+  final Object cause;
+  const _WriteFailure(this.count, this.cause);
 }
 
 /// A connection over a Socket of dart:io. The TLS connections take this form.
@@ -150,6 +157,7 @@ final class _RawConn extends _Conn {
 
   /// The write that waits for room in the buffer of the socket.
   Completer<void>? writer;
+  Future<void> writes = Future<void>.value();
 
   /// True after a close or a failure took the socket. A write then reports the
   /// cause, because a write of a socket that no longer stands takes no byte
@@ -256,21 +264,42 @@ final class _RawConn extends _Conn {
   }
 
   @override
-  Future<int> send(Uint8List bytes) async {
+  Future<int> send(Uint8List bytes) {
+    final next = writes.then((_) => _send(bytes));
+    // A failed write must release the next writer.
+    writes = next.then<void>((_) {}, onError: (Object _) {});
+    return next;
+  }
+
+  Future<int> _send(Uint8List bytes) async {
     int off = 0;
-    while (off < bytes.length) {
-      if (gone) {
-        throw const SocketException('use of closed network connection');
+    try {
+      while (true) {
+        if (gone) {
+          throw const SocketException('use of closed network connection');
+        }
+        if (writeDeadline.expired) throw const SocketException('i/o timeout');
+        if (off == bytes.length) return off;
+        final int n = socket.write(bytes, off, bytes.length - off);
+        off += n;
+        if (off >= bytes.length) break;
+        final Completer<void> room = Completer<void>();
+        writer = room;
+        socket.writeEventsEnabled = true;
+        final ready = await writeDeadline.limit<bool>(
+          room.future.then((_) => true),
+          false,
+        );
+        if (!ready) {
+          writer = null;
+          socket.writeEventsEnabled = false;
+          throw const SocketException('i/o timeout');
+        }
       }
-      final int n = socket.write(bytes, off, bytes.length - off);
-      off += n;
-      if (off >= bytes.length) break;
-      final Completer<void> room = Completer<void>();
-      writer = room;
-      socket.writeEventsEnabled = true;
-      await room.future;
+      return off;
+    } catch (cause) {
+      throw _WriteFailure(off, cause);
     }
-    return off;
   }
 
   @override
@@ -982,19 +1011,24 @@ String _statusLine(Uint8List b) {
 (int, GoString, int) $connRead(int handle, Slice<int> p) {
   final _Conn? c = _at(handle);
   if (c == null) return (0, _closed(), 0);
-  if (p.len == 0) return (0, _empty, 0);
-  if (c.readDeadline.expired) return (0, _timeout(), 0);
-  if (c.rest.isNotEmpty) return (_take(c, p), _empty, 0);
-  if (c.ended) return (0, _empty, 0);
-  $await(
-    c.readDeadline.limit<int>(_fill(c), 2).then((int code) {
-      if (code == 2) return (0, _timeout(), 0);
-      if (code == 1) return (0, _at(handle) == null ? _closed() : _empty, 0);
-      return (_take(c, p), _empty, 0);
-    }),
-    (Object cause) => (0, _cause(cause), _socketErrno(cause)),
-  );
+  final next = c.reads.then((_) => _readConn(handle, c, p));
+  // A failed read must release the next reader.
+  c.reads = next.then<void>((_) {}, onError: (Object _) {});
+  $await(next, (Object cause) => (0, _cause(cause), _socketErrno(cause)));
   return (0, _empty, 0);
+}
+
+Future<(int, GoString, int)> _readConn(int handle, _Conn c, Slice<int> p) {
+  if (_at(handle) != c) return Future.value((0, _closed(), 0));
+  if (p.len == 0) return Future.value((0, _empty, 0));
+  if (c.readDeadline.expired) return Future.value((0, _timeout(), 0));
+  if (c.rest.isNotEmpty) return Future.value((_take(c, p), _empty, 0));
+  if (c.ended) return Future.value((0, _empty, 0));
+  return c.readDeadline.limit<int>(_fill(c), 2).then((int code) {
+    if (code == 2) return (0, _timeout(), 0);
+    if (code == 1) return (0, _at(handle) != c ? _closed() : _empty, 0);
+    return (_take(c, p), _empty, 0);
+  });
 }
 
 /// Writes the bytes of the slice and gives the count.
@@ -1006,13 +1040,16 @@ String _statusLine(Uint8List b) {
   if (c == null) return (0, _closed(), 0);
   if (c.writeDeadline.expired) return (0, _timeout(), 0);
   if (c.writeEnded) return (0, GoString.fromString('broken pipe'), 0);
-  if (p.len == 0) return (0, _empty, 0);
+  if (p.len == 0 && c is! _RawConn) return (0, _empty, 0);
+  final next = c.send(_bytes(p)).then((int n) => (n, _empty, 0));
   $await(
-    c.writeDeadline.limit<(int, GoString, int)>(
-      c.send(_bytes(p)).then((int n) => (n, _empty, 0)),
-      (0, _timeout(), 0),
-    ),
-    (Object cause) => (0, _cause(cause), _socketErrno(cause)),
+    c is _RawConn ? next : c.writeDeadline.limit(next, (0, _timeout(), 0)),
+    (Object cause) {
+      if (cause is _WriteFailure) {
+        return (cause.count, _cause(cause.cause), _socketErrno(cause.cause));
+      }
+      return (0, _cause(cause), _socketErrno(cause));
+    },
   );
   return (0, _empty, 0);
 }

@@ -125,6 +125,9 @@ The overlays retain their BSD notices.
 The close test adapter retains assertions and helpers from Go
 `error_test.go`, `error_unix_test.go`, `pipe.go`, `file.go`, and
 `mockserver_test.go` with their BSD notices.
+The stream contract adapter copies Go-vendored `golang.org/x/net/nettest`
+`conntest.go` and its deadline constants without assertion changes.
+The generated fixture includes the exact x/net BSD license.
 The timeout adapter also retains Go `src/net/timeout_test.go` and
 `src/internal/poll/fd.go` declarations with their BSD notices.
 Socket deadline precedence follows Go `src/internal/poll/fd_unix.go`.
