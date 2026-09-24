@@ -1124,6 +1124,11 @@ func NativeChtimes(path string, atime int64, setAtime bool, mtime int64, setMtim
 	panic("syscall/dart needs the gart compiler")
 }
 
+// NativeReadlink returns the raw link target and errno.
+func NativeReadlink(path string) (string, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ReadLink gives the target of 1 symbolic link. A path that holds no link
 // gives a cause.
 func ReadLink(path string) (string, string) {

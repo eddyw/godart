@@ -61,6 +61,7 @@ Directory creation and sticky-bit behavior follow Go `src/os/file.go` with its B
 Directory enumeration follows Go `src/os/dir_unix.go` and `dir_darwin.go` with their BSD notices.
 Native directory records use Go `src/syscall/ztypes_*.go` layouts.
 Path removal and rename preserve the error selection from Go `src/os/file_unix.go` with its BSD notice.
+Symbolic link reads adapt its buffer growth and EINTR retry with the Go BSD notice.
 Temporary file creation flags and permissions follow Go `src/os/tempfile.go` with its BSD notice.
 Descriptor-based directory and file attribute changes follow Go `src/os/file_posix.go`,
 `src/internal/poll/fd_posix.go`, and `fd_unix.go` with their BSD notices.

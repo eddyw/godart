@@ -670,6 +670,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "Chtimes":
 		return fmt.Sprintf("$chtimes(%s, %s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3], args[4]), true
+	case "NativeReadlink":
+		return fmt.Sprintf("$nativeReadlink(%s)", args[0]), true
 	case "ReadLink":
 		return fmt.Sprintf("$readLink(%s)", args[0]), true
 	case "ResolveSymlinks":

@@ -79,6 +79,13 @@ func Readlink(name string) (string, error) {
 	if contains(name, "\x00") {
 		return "", &PathError{Op: "readlink", Path: name, Err: syscall.EINVAL}
 	}
+	if dart.HasNativeStat() {
+		target, errno := dart.NativeReadlink(name)
+		if errno != 0 {
+			return "", &PathError{Op: "readlink", Path: name, Err: syscall.Errno(errno)}
+		}
+		return target, nil
+	}
 	target, cause := dart.ReadLink(name)
 	if cause != "" {
 		return "", &PathError{Op: "readlink", Path: name, Err: errors.New(cause)}

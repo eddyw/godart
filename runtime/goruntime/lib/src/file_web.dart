@@ -158,3 +158,5 @@ int $nativeChtimes(
   int mtime,
   bool setMtime,
 ) => 38;
+
+(GoString, int) $nativeReadlink(GoString path) => (GoString.empty, 38);
