@@ -48,5 +48,6 @@
   "typeparam/boundmethod",
   "fixedbugs/issue4313",
   "fixedbugs/bug352",
-  "fixedbugs/issue44830"
+  "fixedbugs/issue44830",
+  "iota"
 ]
