@@ -209,6 +209,7 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 // intrinsicRaw lists each interop function whose boundary the mapped text
 // handles itself.
 var intrinsicRaw = map[string]bool{
+	"SelectValue":   true,
 	"SliceSwap":     true,
 	"SliceLen":      true,
 	"GrowValue":     true,

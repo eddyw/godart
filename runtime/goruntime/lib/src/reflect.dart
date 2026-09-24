@@ -2129,7 +2129,7 @@ bool $valueTrySend(Iface? value, Iface? x) {
 /// send, 2 for a receive, and 3 for the default. A case with a nil Chan is
 /// ignored, exactly as in Go. The 3 results are the number of the case, the
 /// value of a receive, and the flag of that receive.
-(int, Iface?, bool) $selectValue(
+(GoInt, Iface?, bool) $selectValue(
   Slice<GoInt> dirs,
   Slice<Iface?> chans,
   Slice<Iface?> sends,
@@ -2162,26 +2162,26 @@ bool $valueTrySend(Iface? value, Iface? x) {
   final int taken = $select(cases, fallback >= 0);
   if ($blocked != null) {
     $block(_SelectResume($blocked!, cases, order, descs));
-    return (0, null, false);
+    return (GoInt.zero, null, false);
   }
-  if (taken < 0) return (fallback, null, false);
+  if (taken < 0) return ($gi(fallback), null, false);
   return _selectResult(cases, order, descs, taken);
 }
 
 /// _selectResult reads the value of the case that a select statement took.
-(int, Iface?, bool) _selectResult(
+(GoInt, Iface?, bool) _selectResult(
   List<SelectCase> cases,
   List<int> order,
   List<TypeDesc?> descs,
   int taken,
 ) {
-  if (taken < 0 || taken >= cases.length) return (0, null, false);
+  if (taken < 0 || taken >= cases.length) return (GoInt.zero, null, false);
   final SelectCase c = cases[taken];
-  if (c is! RecvCase<Object?>) return (order[taken], null, false);
+  if (c is! RecvCase<Object?>) return ($gi(order[taken]), null, false);
   final (Object?, bool) got = c.result ?? (null, false);
   final TypeDesc? desc = descs[taken];
   final Iface? out = desc == null ? got.$1 as Iface? : _wrapElem(desc, got.$1);
-  return (order[taken], out, got.$2);
+  return ($gi(order[taken]), out, got.$2);
 }
 
 /// The frame of a goroutine that waits inside reflect.Select.
@@ -2217,7 +2217,7 @@ final class _SelectResume implements WaitFrame, DurableWait, NestedFrame {
     final Frame? again = $blocked;
     if (again != null) {
       $block(_SelectResume(again, cases, order, descs));
-      return (0, null, false);
+      return (GoInt.zero, null, false);
     }
     return _selectResult(cases, order, descs, out is int ? out : -1);
   }
