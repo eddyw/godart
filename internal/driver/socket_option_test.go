@@ -21,6 +21,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -71,6 +72,33 @@ func TestSocketSet(t *testing.T) {
 				}
 			}
 			local, remote := c.LocalAddr(), c.RemoteAddr()
+			if tcp, ok := c.(*net.TCPConn); ok {
+				for _, option := range []struct {
+					name string
+					call func() error
+				}{
+					{"idle", func() error { return tcp.SetKeepAlivePeriod(365 * 24 * time.Hour) }},
+					{"interval", func() error { return tcp.SetKeepAliveConfig(net.KeepAliveConfig{Enable: true, Idle: -1, Interval: 365 * 24 * time.Hour, Count: -1}) }},
+				} {
+					t.Run("open-"+option.name, func(t *testing.T) {
+						err := option.call()
+						var op *net.OpError
+						var call *os.SyscallError
+						if !errors.Is(err, syscall.EINVAL) || !errors.As(err, &op) || !errors.As(err, &call) {
+							t.Fatalf("error = %T %v, want OpError and SyscallError with EINVAL", err, err)
+						}
+						if op.Op != "set" || op.Net != "tcp" || call.Syscall != "setsockopt" {
+							t.Fatalf("operation = %s %s %s", op.Op, op.Net, call.Syscall)
+						}
+						if op.Source == nil || op.Addr == nil || op.Source.String() != local.String() || op.Addr.String() != remote.String() {
+							t.Fatalf("addresses = %v %v, want %v %v", op.Source, op.Addr, local, remote)
+						}
+					})
+				}
+				if err := tcp.SetKeepAliveConfig(net.KeepAliveConfig{Enable: true}); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if e := c.Close(); e != nil {
 				t.Fatal(e)
 			}

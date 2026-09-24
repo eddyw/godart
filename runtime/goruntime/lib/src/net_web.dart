@@ -60,9 +60,11 @@ String $connCloseRead(int handle) => 'operation not supported';
 
 GoString $connDeadline(int handle, int read, int write) => _noNet;
 
-GoString $connOption(int handle, GoString name, int value) => _noNet;
+(GoString, int) $connOption(int handle, GoString name, int value) =>
+    (_noNet, 0);
 
-GoString $packetOption(int handle, GoString name, int value) => _noNet;
+(GoString, int) $packetOption(int handle, GoString name, int value) =>
+    (_noNet, 0);
 
 (int, int, GoString) $listenTCP(GoString host, int port, bool ipv6Only) =>
     (0, 0, _noNet);

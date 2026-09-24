@@ -137,18 +137,18 @@ func DialTLSProxy(host string, port int, head string, insecure bool, name string
 
 // ConnOption writes a socket option of a connection. The name holds
 // `nodelay`, `keepalive`, `rcvbuf`, or `sndbuf`. A flag reads the value 0 or 1.
-// The result is empty on success, and it names the cause on a failure.
+// The results retain the error text and an available native error code.
 //
 // The number of an option differs between the platforms, thus a platform that
 // the table of the runtime holds not gives an error. A wrong number would
 // write another option with no report.
-func ConnOption(handle int, name string, value int) string {
+func ConnOption(handle int, name string, value int) (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
 // PacketOption writes a socket option of a datagram socket. The name holds
-// `rcvbuf` or `sndbuf`. The result follows ConnOption.
-func PacketOption(handle int, name string, value int) string {
+// `rcvbuf` or `sndbuf`. The results follow ConnOption.
+func PacketOption(handle int, name string, value int) (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

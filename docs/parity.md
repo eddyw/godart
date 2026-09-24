@@ -90,6 +90,8 @@ Address enumeration remains separate. Browsers return an empty interface table.
 On Linux and macOS, `net.DialUDP` supports an explicit local address and port.
 Connected UDP sockets report the local address that the operating system selects.
 UDP network-family selection and the context-based UDP dialer still have gaps.
+On Linux and macOS, socket-option failures retain available native error codes through `net.OpError` and `os.SyscallError`.
+Closed sockets retain `net.ErrClosed`.
 
 Browser builds use browser APIs. HTTP clients use fetch. Browser restrictions
 on headers, credentials, network access, and cross-origin requests still apply.

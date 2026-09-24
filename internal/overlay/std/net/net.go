@@ -241,11 +241,11 @@ func (c *conn) setOption(name string, value int) error {
 	if c.network == "" {
 		return syscall.EINVAL
 	}
-	if cause := dart.ConnOption(c.handle, name, value); cause != "" {
+	if cause, code := dart.ConnOption(c.handle, name, value); cause != "" {
 		if name == "rcvbuf" || name == "sndbuf" {
-			return &OpError{Op: "set", Net: c.network, Addr: c.local, Err: socketCause(cause)}
+			return &OpError{Op: "set", Net: c.network, Addr: c.local, Err: socketSyscallCause("setsockopt", cause, code)}
 		}
-		return c.opError("set", socketCause(cause))
+		return c.opError("set", socketSyscallCause("setsockopt", cause, code))
 	}
 	return nil
 }
@@ -281,7 +281,7 @@ func socketSyscallCause(op, cause string, code int) error {
 			op = "wsarecvfrom"
 		} else if op == "sendto" {
 			op = "wsasendto"
-		} else {
+		} else if op == "write" {
 			op = "wsasend"
 		}
 	}

@@ -514,6 +514,7 @@ final List<_Packet?> _packets = <_Packet?>[];
 final GoString _empty = GoString.empty;
 
 int _socketErrno(Object cause) {
+  if (cause is OSError) return cause.errorCode > 0 ? cause.errorCode : 0;
   if (cause is! SocketException) return 0;
   final code = cause.osError?.errorCode ?? 0;
   return code > 0 ? code : 0;
@@ -1133,18 +1134,18 @@ GoString _optionCause(String name) => GoString.fromString(
 /// Writes a socket option of a connection. The name holds `nodelay`,
 /// `keepalive`, `keepidle`, `keepinterval`, `keepcount`, `rcvbuf`, or
 /// `sndbuf`. A flag reads the value 0 or 1.
-GoString $connOption(int handle, GoString name, int value) {
+(GoString, int) $connOption(int handle, GoString name, int value) {
   final _Conn? c = _at(handle);
-  if (c == null) return _closed();
+  if (c == null) return (_closed(), 0);
   final String key = name.toDartString();
   try {
     if (key == 'nodelay') {
       c.setFlag(SocketOption.tcpNoDelay, value != 0);
-      return _empty;
+      return (_empty, 0);
     }
     final int? tcpOption = _tcpOptionNumber(key);
     final int? option = tcpOption ?? _sockOptionNumber(key);
-    if (option == null) return _optionCause(key);
+    if (option == null) return (_optionCause(key), 0);
     c.setRaw(
       RawSocketOption.fromInt(
         tcpOption == null
@@ -1154,27 +1155,27 @@ GoString $connOption(int handle, GoString name, int value) {
         value,
       ),
     );
-    return _empty;
+    return (_empty, 0);
   } on Object catch (cause) {
-    return GoString.fromString('setsockopt: $cause');
+    return (GoString.fromString('setsockopt: $cause'), _socketErrno(cause));
   }
 }
 
 /// Writes a socket option of a datagram socket. The name holds `rcvbuf` or
 /// `sndbuf`.
-GoString $packetOption(int handle, GoString name, int value) {
+(GoString, int) $packetOption(int handle, GoString name, int value) {
   final _Packet? p = _packetAt(handle);
-  if (p == null) return _closed();
+  if (p == null) return (_closed(), 0);
   final String key = name.toDartString();
   final int? option = _sockOptionNumber(key);
-  if (option == null) return _optionCause(key);
+  if (option == null) return (_optionCause(key), 0);
   try {
     p.socket.setRawOption(
       RawSocketOption.fromInt(RawSocketOption.levelSocket, option, value),
     );
-    return _empty;
+    return (_empty, 0);
   } on Object catch (cause) {
-    return GoString.fromString('setsockopt: $cause');
+    return (GoString.fromString('setsockopt: $cause'), _socketErrno(cause));
   }
 }
 

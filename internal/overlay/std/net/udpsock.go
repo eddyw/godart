@@ -40,8 +40,8 @@ func (c *UDPConn) setOption(name string, value int) error {
 	if c.p == nil {
 		return syscall.EINVAL
 	}
-	if cause := dart.PacketOption(c.p.handle, name, value); cause != "" {
-		return &OpError{Op: "set", Net: c.p.network, Addr: c.p.local, Err: socketCause(cause)}
+	if cause, code := dart.PacketOption(c.p.handle, name, value); cause != "" {
+		return &OpError{Op: "set", Net: c.p.network, Addr: c.p.local, Err: socketSyscallCause("setsockopt", cause, code)}
 	}
 	return nil
 }
