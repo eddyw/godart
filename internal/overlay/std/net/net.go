@@ -134,44 +134,6 @@ func (e *OpError) Temporary() bool {
 	return ok && t.Temporary()
 }
 
-// timeoutError reports a deadline that passed. Go gives an error that holds a
-// Timeout method, and a caller reads that method.
-type timeoutError struct {
-	op string
-}
-
-func (e *timeoutError) Error() string { return e.op + ": i/o timeout" }
-
-func (e *timeoutError) Timeout() bool { return true }
-
-func (e *timeoutError) Temporary() bool { return true }
-
-// closedError reports an operation on a socket that a close already ended.
-// The error wraps ErrClosed, thus errors.Is(err, net.ErrClosed) gives true,
-// exactly as in Go.
-type closedError struct {
-	op string
-}
-
-func (e *closedError) Error() string { return e.op + ": " + errClosed.Error() }
-
-func (e *closedError) Unwrap() error { return errClosed }
-
-func (e *closedError) Timeout() bool { return false }
-
-func (e *closedError) Temporary() bool { return false }
-
-// netError builds the error of a failed operation.
-func netError(op, cause string) error {
-	if cause == "i/o timeout" {
-		return &timeoutError{op: op}
-	}
-	if cause == errClosed.Error() {
-		return &closedError{op: op}
-	}
-	return errors.New(op + ": " + cause)
-}
-
 // deadlineNanos gives the count of nanoseconds of a deadline. The zero Time
 // holds no deadline, exactly as in Go.
 func deadlineNanos(t time.Time) int64 {
@@ -689,22 +651,20 @@ func (canceledError) Error() string { return "operation was canceled" }
 
 func (canceledError) Is(err error) bool { return err == context.Canceled }
 
-// deadlineError reports a deadline that passed. Go gives
-// os.ErrDeadlineExceeded, and the text and the 2 methods below match it. That
-// value holds no Is method, thus errors.Is(err, context.DeadlineExceeded)
-// gives false in Go and here.
-type deadlineError struct{}
+type timeoutError struct{}
 
-func (deadlineError) Error() string { return "i/o timeout" }
+func (*timeoutError) Error() string { return "i/o timeout" }
 
-func (deadlineError) Timeout() bool { return true }
+func (*timeoutError) Timeout() bool { return true }
 
-func (deadlineError) Temporary() bool { return true }
+func (*timeoutError) Temporary() bool { return true }
+
+func (*timeoutError) Is(err error) bool { return err == context.DeadlineExceeded }
 
 // The 2 errors of a context that ended.
 var (
 	errCanceled error = canceledError{}
-	errTimeout  error = deadlineError{}
+	errTimeout  error = &timeoutError{}
 )
 
 // mapErr gives the error of this package for an error of a context, exactly
@@ -742,7 +702,7 @@ func DialTimeout(network, address string, timeout time.Duration) (Conn, error) {
 // events: the dial, the end of the context, and the close of the Cancel
 // channel. A dial that ends after the wait closes its own connection.
 func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn, error) {
-	if d.Timeout > 0 {
+	if d.Timeout != 0 {
 		inner, cancel := context.WithTimeout(ctx, d.Timeout)
 		defer cancel()
 		ctx = inner
@@ -871,6 +831,20 @@ func (d *Dialer) resolver() *Resolver {
 // A context that holds no end and a dialer that holds no Cancel need no
 // second goroutine, thus a plain dial costs 1 call.
 func (d *Dialer) dialOneAddr(ctx context.Context, network, address string) (Conn, error) {
+	fail := func(err error) (Conn, error) {
+		if network == "tcp" || network == "tcp4" || network == "tcp6" {
+			host, port, _ := hostPort(address)
+			return nil, &OpError{Op: "dial", Net: network, Source: d.LocalAddr, Addr: tcpAddrOf(host, port), Err: err}
+		}
+		return nil, err
+	}
+	select {
+	case <-ctx.Done():
+		return fail(mapErr(ctx.Err()))
+	case <-d.Cancel:
+		return fail(errCanceled)
+	default:
+	}
 	if ctx.Done() == nil && d.Cancel == nil {
 		return d.dialOne(network, address)
 	}
@@ -884,10 +858,10 @@ func (d *Dialer) dialOneAddr(ctx context.Context, network, address string) (Conn
 		return r.conn, r.cause
 	case <-ctx.Done():
 		go closeLate(done)
-		return nil, mapErr(ctx.Err())
+		return fail(mapErr(ctx.Err()))
 	case <-d.Cancel:
 		go closeLate(done)
-		return nil, errCanceled
+		return fail(errCanceled)
 	}
 }
 

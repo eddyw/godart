@@ -260,7 +260,7 @@ func (f Flags) String() string {
 }
 
 // errClosed carries the message of a closed connection. The runtime gives the
-// same text, thus netError wraps this value and errors.Is finds ErrClosed.
+// same text. Socket errors wrap this value for errors.Is.
 var errClosed = errors.New("use of closed network connection")
 
 // ErrClosed is the error of an operation on a socket that a close already

@@ -19,7 +19,7 @@ func TestTCPDialFamilyUpstream(t *testing.T) {
 	netDir := filepath.Join(runtime.GOROOT(), "src", "net")
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/dialfamily\n\ngo 1.27\n\nrequire example.com/netpoll v0.0.0\nreplace example.com/netpoll => ./netpoll\n")
 	for _, item := range []upstreamFile{
-		{Name: "dial_test.go", Declarations: []string{"TestDialLocal", "TestDialerLocalAddr"}},
+		{Name: "dial_test.go", Declarations: []string{"TestDialLocal", "TestDialerLocalAddr", "TestCancelAfterDial", "TestDialWithNonZeroDeadline", "contextWithNonZeroDeadline", "contextWithNonZeroDeadline.Deadline"}},
 		{Name: "error_test.go", Declarations: []string{"OpError.isValid", "parseDialError", "TestDialAddrError"}},
 		{Name: "error_unix_test.go", Declarations: []string{"isPlatformError"}},
 		{Name: "net.go", Declarations: []string{"noDeadline", "errTimeout", "timeoutError", "timeoutError.Error", "timeoutError.Timeout", "timeoutError.Temporary", "timeoutError.Is", "errMissingAddress", "errNoSuitableAddress", "errCanceled", "canceledError"}},
@@ -54,7 +54,7 @@ func TestTCPDialFamilyUpstream(t *testing.T) {
 		writeFile(t, filepath.Join(dir, name), source)
 	}
 	writeFile(t, filepath.Join(dir, "listener_test.go"), `package net_test
-import (. "net"; "context"; "errors"; "net/netip"; "os"; "strconv"; "sync"; "syscall"; "testing"; "time")
+import (. "net"; "context"; "errors"; "fmt"; "net/netip"; "os"; "strconv"; "sync"; "syscall"; "testing"; "time")
 func newLocalListener(t testing.TB, network string) Listener {
  t.Helper()
  listener, err := Listen(network, "127.0.0.1:0")
@@ -99,6 +99,55 @@ func supportsIPv4map() bool {
  return true
 }
 func isEADDRINUSE(err error) bool { return errors.Is(err, syscall.EADDRINUSE) }
+func TestTCPDialCanceled(t *testing.T) {
+ for _, family := range []struct{network, address string}{{"tcp", "127.0.0.1:0"}, {"tcp4", "127.0.0.1:0"}, {"tcp6", "[::1]:0"}} {
+  for _, mode := range []string{"context", "cancel", "deadline", "negative-timeout"} {
+   for _, api := range []string{"context", "typed"} {
+    t.Run(family.network+"/"+mode+"/"+api, func(t *testing.T) {
+     listener, err := Listen(family.network, family.address)
+     if err != nil { t.Fatal(err) }
+     defer listener.Close()
+     remote := listener.Addr().(*TCPAddr)
+     local := &TCPAddr{IP: remote.IP}
+     d := Dialer{LocalAddr: local}
+     ctx := context.Background()
+     var want error = context.Canceled
+     switch mode {
+     case "context":
+      var cancel context.CancelFunc
+      ctx, cancel = context.WithCancel(ctx)
+      cancel()
+     case "cancel":
+      cancel := make(chan struct{})
+      close(cancel)
+      d.Cancel = cancel
+     case "deadline": d.Deadline = time.Now().Add(-time.Second); want = context.DeadlineExceeded
+     case "negative-timeout": d.Timeout = -time.Second; want = context.DeadlineExceeded
+     }
+     var c Conn
+     if api == "context" { c, err = d.DialContext(ctx, family.network, remote.String()) } else {
+      c, err = d.DialTCP(ctx, family.network, local.AddrPort(), remote.AddrPort())
+     }
+     if err == nil { c.Close(); if mode == "cancel" { return }; t.Fatal("canceled dial succeeded") }
+     var op *OpError
+     if !errors.Is(err, want) || !errors.As(err, &op) { t.Fatalf("error = %T %v, want OpError and %v", err, err, want) }
+     if op.Op != "dial" || op.Net != family.network || op.Source == nil || op.Source.String() != local.String() || op.Addr == nil || op.Addr.String() != remote.String() { t.Fatalf("error metadata = %+v", op) }
+     errorType := "net.canceledError"
+     if want == context.DeadlineExceeded { errorType = "*net.timeoutError" }
+     if got := fmt.Sprintf("%T", op.Err); got != errorType { t.Fatalf("error type = %s, want %s", got, errorType) }
+     if op.Timeout() != (want == context.DeadlineExceeded) { t.Fatalf("timeout = %v for %v", op.Timeout(), want) }
+     if api == "context" && mode != "cancel" {
+      listener.(*TCPListener).SetDeadline(time.Now().Add(20*time.Millisecond))
+      peer, err := listener.Accept()
+      if err == nil { peer.Close(); t.Fatal("canceled dial opened a connection") }
+      var nerr Error
+      if !errors.As(err, &nerr) || !nerr.Timeout() { t.Fatalf("accept = %v, want timeout", err) }
+     }
+    })
+   }
+  }
+ }
+}
 func TestTCPDialPorts(t *testing.T) {
  for _, family := range []struct{network, host string}{{"tcp", "127.0.0.1"}, {"tcp4", "127.0.0.1"}, {"tcp6", "::1"}} {
   t.Run(family.network, func(t *testing.T) {
@@ -372,7 +421,7 @@ func TestTCPDialFamilies(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 	writeFile(t, filepath.Join(dir, "netpoll/LICENSE"), string(license))
-	t.Log(run(t, dir, "go", "test", "-run", "^TestTCPDial(Families|Refused|LocalBinding|Ports)$", "-v", "."))
+	t.Log(run(t, dir, "go", "test", "-run", "^TestTCPDial(Families|Refused|LocalBinding|Ports|Canceled)$", "-v", "."))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TrimPath: true})
 	if err != nil {
 		t.Fatal(err)
@@ -383,7 +432,7 @@ func TestTCPDialFamilies(t *testing.T) {
 	prepareDart(t, out)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run("families/"+target, func(t *testing.T) {
-			args := []string{"-test.v", "-test.run=^TestTCPDial(Families|Refused|LocalBinding|Ports)$"}
+			args := []string{"-test.v", "-test.run=^TestTCPDial(Families|Refused|LocalBinding|Ports|Canceled)$"}
 			var result programResult
 			if target == "vm" {
 				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
@@ -396,7 +445,7 @@ func TestTCPDialFamilies(t *testing.T) {
 			}
 		})
 	}
-	const filter = "^(TestDialLocal|TestDialAddrError|TestDialerLocalAddr)$"
+	const filter = "^(TestDialLocal|TestDialAddrError|TestDialerLocalAddr|TestCancelAfterDial|TestDialWithNonZeroDeadline)$"
 	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	result := programOutcome(t, netDir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "net-tcp-dial-family", "net", filter, "vm", netDir, result.Text, result.Exit)

@@ -83,7 +83,7 @@ func (c *UDPConn) Write(b []byte) (int, error) {
 		return 0, syscall.EINVAL
 	}
 	if !c.connected() {
-		return 0, netError("write udp", "destination address required")
+		return 0, errors.New("write udp: destination address required")
 	}
 	n, cause, code := dart.PacketWrite(c.p.handle, b, c.host, c.port)
 	if cause != "" {

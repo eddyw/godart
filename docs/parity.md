@@ -93,6 +93,7 @@ Typed TCP dials reject malformed IP values and IPv6 addresses with `tcp4`.
 `LocalAddr` for other networks returns an explicit unsupported error.
 Both `DialTCP` forms accept explicit local addresses and ports.
 TCP dials resolve service names and validate remote ports before socket creation.
+They preserve cancellation metadata and expired-deadline errors.
 Typed `tcp6` dials with mapped IPv4 addresses remain incomplete.
 System service resolver selection and some resolver error details still differ.
 
