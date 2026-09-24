@@ -478,16 +478,11 @@ Object? $assertType(
   final String target = want.isEmpty ? name : want;
   if (x == null) {
     $panic(
-      $runtimeError(
-        'interface conversion: $static is nil, not $target',
-        plain: true,
-      ),
+      $typeAssertionError('interface conversion: $static is nil, not $target'),
     );
   }
   if (x.desc.name != name) {
-    $panic(
-      $runtimeError(_assertText(static, x.desc, target, wantPkg), plain: true),
-    );
+    $panic($typeAssertionError(_assertText(static, x.desc, target, wantPkg)));
   }
   return x.value;
 }
@@ -506,17 +501,15 @@ Iface $assertIface(Iface? x, List<String> methods, String name) {
   if (!$implements(x, methods)) {
     if (x == null) {
       $panic(
-        $runtimeError(
+        $typeAssertionError(
           'interface conversion: interface is nil, not $name',
-          plain: true,
         ),
       );
     }
     $panic(
-      $runtimeError(
+      $typeAssertionError(
         'interface conversion: ${x.desc.display} is not $name: '
         'missing method ${$missingMethod(x, methods)}',
-        plain: true,
       ),
     );
   }
@@ -605,14 +598,16 @@ T $dictValue<T>(Iface? x, Dict<T> d) {
 /// The value of a type assertion to a type parameter with no second result. A
 /// value of another type stops the program.
 T $assertDict<T>(Iface? x, Dict<T> d, String static) {
+  if (d.desc.kind == 'interface') {
+    return $assertIface(x, d.desc.methods.keys.toList(), d.desc.display) as T;
+  }
   if (!$isDictType(x, d.desc)) {
     $panic(
-      $runtimeError(
+      $typeAssertionError(
         x == null
             ? 'interface conversion: $static is nil, '
                   'not ${d.desc.display}'
             : _assertText(static, x.desc, d.desc.display, d.desc.assertionPkg),
-        plain: true,
       ),
     );
   }

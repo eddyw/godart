@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+import 'box.dart';
 import 'goint.dart';
 import 'godebug.dart';
 import 'iface.dart';
@@ -136,6 +137,26 @@ Iface $runtimeError(String message, {bool plain = false}) => Iface(
   plain ? _typePlainError : _typeErrorString,
   GoString.fromString(message),
 );
+
+final TypeDesc _typeTypeAssertionError = TypeDesc(
+  '*runtime.TypeAssertionError',
+  'ptr',
+  <String, Function>{
+    'Error()string': (Object? e) => (e as Box<GoString>).v,
+    'RuntimeError()': (Object? e) {},
+  },
+  text: '*runtime.TypeAssertionError',
+);
+
+// A program without the Go runtime package still needs the public error methods.
+Object? Function(GoString) _buildTypeAssertionError = (text) =>
+    Iface(_typeTypeAssertionError, Box(text));
+
+void $setTypeAssertionError(Object? Function(GoString) build) =>
+    _buildTypeAssertionError = build;
+
+Object? $typeAssertionError(String text) =>
+    _buildTypeAssertionError(GoString.fromString(text));
 
 /// Builds the value of `panic(nil)`. The package runtime writes it, because
 /// only the emitted Go type holds the class of the value.

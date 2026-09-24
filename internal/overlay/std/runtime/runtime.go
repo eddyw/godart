@@ -115,7 +115,10 @@ func (*PanicNilError) RuntimeError() {}
 
 // init installs the builder of the value of `panic(nil)`. The runtime library
 // holds no class of an emitted Go type, thus it reads this builder.
-func init() { dart.SetPanicNil(func() any { return &PanicNilError{} }) }
+func init() {
+	dart.SetPanicNil(func() any { return &PanicNilError{} })
+	dart.SetTypeAssertionError(func(text string) any { return &TypeAssertionError{text: text} })
+}
 
 func record(text string) uintptr { return dart.RecordPC(text) }
 

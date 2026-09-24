@@ -342,6 +342,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return "$goexit()", true
 	case "Fatal":
 		return fmt.Sprintf("$fatalError(%s.toString())", args[0]), true
+	case "SetTypeAssertionError":
+		return fmt.Sprintf("$setTypeAssertionError(%s)", args[0]), true
 	case "SetPanicNil":
 		return fmt.Sprintf("$setPanicNil(%s)", args[0]), true
 	case "SetRuntimeGODEBUG":

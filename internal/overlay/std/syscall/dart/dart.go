@@ -109,6 +109,11 @@ func SetPanicNil(build func() any) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SetTypeAssertionError supplies the emitted runtime type for assertion panics.
+func SetTypeAssertionError(build func(string) any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // DialTLS opens a TLS connection to a host and a port, and gives its handle.
 // The handle joins the table of the connections, thus ConnRead, ConnWrite,
 // ConnDeadline, and ConnClose each work on it.

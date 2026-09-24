@@ -152,6 +152,23 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 
 func compareUpstreamInputs(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inputs *certificateInputs, resolver *resolverInputs, images ...nativeImage) {
 	t.Helper()
+	var inventory parity.Inventory
+	nameOfInventory, err := parity.InventoryName(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := os.ReadFile(filepath.Join("..", "parity", "testdata", nameOfInventory))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(manifest, &inventory); err != nil {
+		t.Fatal(err)
+	}
+	compareUpstreamInventory(t, name, pkg, filter, target, dir, dartText, dartExit, inventory, inputs, resolver, images...)
+}
+
+func compareUpstreamInventory(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inventory parity.Inventory, inputs *certificateInputs, resolver *resolverInputs, images ...nativeImage) {
+	t.Helper()
 	nativeTags := slices.Clone(build.Default.BuildTags)
 	args := []string{"test", "-json", "-count=1", "-timeout=" + upstreamLimit().String()}
 	if inputs != nil {
@@ -240,18 +257,6 @@ func compareUpstreamInputs(t *testing.T, name, pkg, filter, target, dir, dartTex
 			t.Fatal(err)
 		}
 	} else if !os.IsNotExist(err) {
-		t.Fatal(err)
-	}
-	var inventory parity.Inventory
-	nameOfInventory, err := parity.InventoryName(build.Default)
-	if err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := os.ReadFile(filepath.Join("..", "parity", "testdata", nameOfInventory))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal(manifest, &inventory); err != nil {
 		t.Fatal(err)
 	}
 	var expected []string
