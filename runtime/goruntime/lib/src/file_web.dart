@@ -173,3 +173,6 @@ int $nativeSymlink(GoString from, GoString to) => 38;
 
 int $syscallClose(int fd) => 38;
 (int, int) $syscallReadDirent(int fd, Slice<GoInt> data) => (0, 38);
+
+(int, int, int) $fileOpenFlags(GoString path, int flags, int mode) =>
+    (-1, -1, 38);

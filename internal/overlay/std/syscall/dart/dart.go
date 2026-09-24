@@ -968,6 +968,10 @@ func FileOpen(path string, mode int) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func FileOpenFlags(path string, flags, mode int) (int, int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func FileFd(handle, std int) int {
 	panic("syscall/dart needs the gart compiler")
 }

@@ -604,6 +604,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$f32ToBits(%s)", args[0]), true
 	case "Float32FromBits":
 		return fmt.Sprintf("$f32FromBits(%s)", args[0]), true
+	case "FileOpenFlags":
+		return fmt.Sprintf("$fileOpenFlags(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "FileOpen":
 		return fmt.Sprintf("$fileOpen(%s, %s)", args[0], args[1]), true
 	case "FileFd":

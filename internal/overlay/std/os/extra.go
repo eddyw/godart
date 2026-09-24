@@ -69,8 +69,7 @@ const (
 	SEEK_END int = 2
 )
 
-// O_SYNC asks for a write that reaches the storage before it gives control
-// back. The Dart side holds no such flag, thus a write drops it.
+// O_SYNC requests synchronous writes.
 const O_SYNC int = syscall.O_SYNC
 
 // Clearenv drops each variable of the environment of the process.

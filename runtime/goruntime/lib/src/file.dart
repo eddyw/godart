@@ -2,10 +2,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'directory_descriptor.dart';
+import 'file_handle.dart';
 import 'file_stat.dart';
 import 'removeall.dart';
 import 'slice.dart';
 import 'string.dart';
+import 'syscall_directory.dart';
 
 export 'directory_descriptor.dart';
 export 'file_attributes.dart';
@@ -31,7 +33,7 @@ GoString $goos() {
 ///
 /// A handle is an index into this list. A closed slot holds null, and a new
 /// open call takes the first free slot.
-final List<RandomAccessFile?> _open = <RandomAccessFile?>[];
+final List<FileHandle?> _open = <FileHandle?>[];
 
 /// The mode of an open call.
 const int $openRead = 0;
@@ -57,7 +59,7 @@ GoString _cause(Object e) {
   return GoString.fromString(e.toString());
 }
 
-int _slot(RandomAccessFile f) {
+int _slot(FileHandle f) {
   for (int i = 0; i < _open.length; i++) {
     if (_open[i] == null) {
       _open[i] = f;
@@ -80,7 +82,7 @@ int $fileFd(int handle, int std) {
     default:
       final file = _at(handle);
       if (file == null) return -1;
-      resource = ResourceHandle.fromFile(file);
+      return file.descriptor;
   }
   // SCM_RIGHTS data borrows the descriptor. Only the file owns its lifetime.
   final control = SocketControlMessage.fromHandles([resource]);
@@ -97,7 +99,7 @@ int $fileFd(int handle, int std) {
     // start. FileMode.append keeps the content and stands at the end, thus the
     // open moves the position back.
     if (mode == $openReadWrite) f.setPositionSync(0);
-    return (_slot(f), _empty);
+    return (_slot(DartFileHandle(f)), _empty);
   } catch (e) {
     return (-1, _cause(e));
   }
@@ -118,12 +120,10 @@ FileMode _mode(int mode) {
 /// Reads bytes into the slice and gives the count. A count of 0 with no cause
 /// means the end of the file.
 (int, GoString) $fileRead(int handle, Slice<int> p) {
-  final RandomAccessFile? f = _at(handle);
+  final FileHandle? f = _at(handle);
   if (f == null) return (0, GoString.fromString('file already closed'));
   if (p.len == 0) return (0, _empty);
   try {
-    // readIntoSync writes into the storage of the slice itself, thus the
-    // read needs no buffer of its own and no loop over the bytes.
     final int n = f.readIntoSync(p.array, p.off, p.off + p.len);
     return (n, _empty);
   } catch (e) {
@@ -133,21 +133,19 @@ FileMode _mode(int mode) {
 
 /// Writes the bytes of the slice and gives the count.
 (int, GoString) $fileWrite(int handle, Slice<int> p) {
-  final RandomAccessFile? f = _at(handle);
+  final FileHandle? f = _at(handle);
   if (f == null) return (0, GoString.fromString('file already closed'));
   try {
-    // writeFromSync reads the range of the storage itself, thus the write
-    // needs no copy.
-    f.writeFromSync(p.array, p.off, p.off + p.len);
-    return (p.len, _empty);
+    final count = f.writeFromSync(p.array, p.off, p.off + p.len);
+    return (count, _empty);
   } catch (e) {
-    return (0, _cause(e));
+    return (e is PartialFileWrite ? e.count : 0, _cause(e));
   }
 }
 
 /// Moves the read position and gives the new offset from the start.
 (int, GoString) $fileSeek(int handle, int offset, int whence) {
-  final RandomAccessFile? f = _at(handle);
+  final FileHandle? f = _at(handle);
   if (f == null) return (0, GoString.fromString('file already closed'));
   try {
     int target = offset;
@@ -161,7 +159,7 @@ FileMode _mode(int mode) {
 }
 
 GoString $fileClose(int handle) {
-  final RandomAccessFile? f = _at(handle);
+  final FileHandle? f = _at(handle);
   if (f == null) return GoString.fromString('file already closed');
   _open[handle] = null;
   try {
@@ -175,7 +173,7 @@ GoString $fileClose(int handle) {
 /// Cuts the file of the handle to the size, or it grows the file with zero
 /// bytes. A file that no write mode opened gives a cause.
 GoString $fileTruncate(int handle, int size) {
-  final RandomAccessFile? f = _at(handle);
+  final FileHandle? f = _at(handle);
   if (f == null) return GoString.fromString('file already closed');
   try {
     f.truncateSync(size);
@@ -186,7 +184,7 @@ GoString $fileTruncate(int handle, int size) {
 }
 
 GoString $fileSync(int handle) {
-  final RandomAccessFile? f = _at(handle);
+  final FileHandle? f = _at(handle);
   if (f == null) return GoString.fromString('file already closed');
   try {
     f.flushSync();
@@ -196,7 +194,7 @@ GoString $fileSync(int handle) {
   }
 }
 
-RandomAccessFile? _at(int handle) {
+FileHandle? _at(int handle) {
   if (handle < 0 || handle >= _open.length) return null;
   return _open[handle];
 }
@@ -654,4 +652,19 @@ void $stderr(GoString text) => stderr.add(text.bytes);
   } catch (e) {
     return (0, _cause(e));
   }
+}
+
+(int, int, int) $fileOpenFlags(GoString path, int flags, int mode) {
+  final (file, code) = NativeFileHandle.open(path, flags, mode);
+  if (code != 0) return (-1, -1, code);
+  final opened = file!;
+  final (metadata, statCode) = $nativeFstat(opened.descriptor);
+  if (statCode != 0) {
+    $syscallClose(opened.descriptor);
+    return (-1, -1, statCode);
+  }
+  if (metadata.array[metadata.off + 1] & 0xf000 == 0x4000) {
+    return (-1, opened.descriptor, 0);
+  }
+  return (_slot(opened), -1, 0);
 }

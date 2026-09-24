@@ -168,8 +168,9 @@ type File struct {
 }
 
 type file struct {
-	handle int
-	name   string
+	appendMode bool
+	handle     int
+	name       string
 	// std marks standard output or standard error. Such a file holds no handle.
 	std int
 	// closed marks a file after Close, thus a later call reports ErrClosed.
@@ -333,11 +334,16 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 	return read, err
 }
 
+var errWriteAtInAppendMode = errors.New("os: invalid use of WriteAt on file opened with O_APPEND")
+
 // WriteAt writes at the offset. It does not move the write position of the
 // file, thus the call reads the position first and writes it again.
 func (f *File) WriteAt(p []byte, off int64) (int, error) {
 	if err := f.checkValid("writeat"); err != nil {
 		return 0, err
+	}
+	if f.appendMode {
+		return 0, errWriteAtInAppendMode
 	}
 	if f.std != stdNone {
 		return 0, &PathError{Op: "write", Path: f.name, Err: errors.New("bad file descriptor")}
@@ -347,6 +353,9 @@ func (f *File) WriteAt(p []byte, off int64) (int, error) {
 	}
 	if off < 0 {
 		return 0, &PathError{Op: "writeat", Path: f.name, Err: errors.New("negative offset")}
+	}
+	if len(p) == 0 {
+		return 0, nil
 	}
 	pos, cause := dart.FileSeek(f.handle, 0, dart.SeekCurrent)
 	if cause != "" {
@@ -488,12 +497,12 @@ func (f *File) Stat() (FileInfo, error) {
 
 // Open opens a file or directory for a read.
 func Open(name string) (*File, error) {
-	return openMode(name, dart.OpenRead, "open")
+	return OpenFile(name, O_RDONLY, 0)
 }
 
 // Create makes a file, or it replaces the content of an existing file.
 func Create(name string) (*File, error) {
-	return openMode(name, dart.OpenWrite, "open")
+	return OpenFile(name, O_RDWR|O_CREATE|O_TRUNC, 0666)
 }
 
 // existsError names a path that already exists. Go writes the text of the
@@ -506,17 +515,19 @@ func (existsError) Is(target error) bool { return target == ErrExist }
 
 var errExist error = existsError{}
 
-// OpenFile opens a file with a flag set. The permission argument reaches no
-// operation of the Dart side.
-//
-// The flag set selects 1 of the 4 modes of the Dart side: a read, a write that
-// replaces the content, a write at the end, or a read and a write that keeps
-// the content. Only O_TRUNC replaces the content, exactly as in Go.
-//
-// O_EXCL takes a read of the path before the open. The 2 steps are not 1
-// operation of the system. A file that another program makes between them thus
-// still passes.
+// OpenFile opens a file with flags and creation permissions.
 func OpenFile(name string, flag int, perm FileMode) (*File, error) {
+	if dart.OS() == "darwin" || dart.OS() == "linux" {
+		if contains(name, "\x00") {
+			return nil, &PathError{Op: "open", Path: name, Err: syscall.EINVAL}
+		}
+		handle, dirFD, code := dart.FileOpenFlags(name, flag, int(syscallMode(perm)))
+		if code != 0 {
+			return nil, &PathError{Op: "open", Path: name, Err: syscall.Errno(code)}
+		}
+		return &File{&file{handle: handle, name: name, dir: dirFD >= 0, dirFD: dirFD, appendMode: flag&O_APPEND != 0}}, nil
+	}
+
 	if contains(name, "\x00") {
 		return nil, &PathError{Op: "open", Path: name, Err: syscall.EINVAL}
 	}
@@ -547,8 +558,12 @@ func OpenFile(name string, flag int, perm FileMode) (*File, error) {
 		mode = dart.OpenReadWrite
 	}
 	f, err := openMode(name, mode, "open")
-	if err != nil || !fresh {
-		return f, err
+	if err != nil {
+		return nil, err
+	}
+	f.appendMode = flag&O_APPEND != 0
+	if !fresh {
+		return f, nil
 	}
 	applyPerm(name, perm)
 	return f, nil
