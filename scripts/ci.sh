@@ -30,7 +30,7 @@ if [[ $suite == fuzz-replay || $suite == driver || $suite == stdlib || $suite ==
   fi
 fi
 
-large_tests='TestDirectoryPackagesOfGoTest|TestRunDirectoryFilesOfGoTest|TestRunOutputFilesOfGoTest|TestGeneratedRejectFilesOfGoTest|TestRejectFilesOfGoTest|TestCompileFilesOfGoTest|TestBuildFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestGeneratorCompanionTargets|TestLanguageHostTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
+large_tests='TestDirectoryPackagesOfGoTest|TestRunDirectoryFilesOfGoTest|TestRunOutputFilesOfGoTest|TestGeneratedRejectFilesOfGoTest|TestRejectFilesOfGoTest|TestSuccessfulDiagnosticsOfGoTest|TestCompileFilesOfGoTest|TestBuildFilesOfGoTest|TestUpstreamFuzzReplay|TestPrograms|TestLanguageTargets|TestGeneratorCompanionTargets|TestLanguageHostTargets|TestRunFilesOfGoTest|TestVersionedGoFixtures|TestTestsOfGoroot|TestTests|TestAOT|TestWasm|TestJS|TestWebIO|TestWebFetch|TestUpstreamTargets|TestUpstreamCompileBlockers|TestSelectedUpstream|TestHTTPUpstream|TestHTTPNativeServer|TestParityHarness'
 case "$suite" in
   checks)
     python3 -B -m unittest discover -s scripts -p test_ci_local.py
@@ -55,7 +55,7 @@ case "$suite" in
   targets) test_name='TestAOT|TestWasm|TestJS' ;;
   language-targets) test_name='TestLanguageTargets|TestLanguageHostTargets|TestRunDirectoryFilesOfGoTest' ;;
   language-compile) test_name='TestCompileFilesOfGoTest|TestBuildFilesOfGoTest' ;;
-  language-reject) test_name=TestRejectFilesOfGoTest ;;
+  language-reject) test_name='TestRejectFilesOfGoTest|TestSuccessfulDiagnosticsOfGoTest' ;;
   language-generated) test_name='TestRunOutputFilesOfGoTest|TestGeneratorCompanionTargets|TestGeneratedRejectFilesOfGoTest' ;;
   language-directories) test_name=TestRunDirectoryFilesOfGoTest ;;
   language-packages) test_name=TestDirectoryPackagesOfGoTest ;;

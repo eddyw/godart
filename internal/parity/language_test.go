@@ -86,7 +86,7 @@ func TestLanguageInventory(t *testing.T) {
 	if cases["reject"].Adapter != "reject-file" || cases["rejectpanic"].Adapter != "reject-file" || cases["rejectflags"].Adapter != "missing" {
 		t.Fatal("the rejection adapter must not discard recipe flags")
 	}
-	if cases["rejectversion"].Adapter != "reject-file" || cases["rejectversion"].ModuleGoVersion != "1.17" || cases["rejectversionsuccess"].Adapter != "missing" {
+	if cases["rejectversion"].Adapter != "reject-file" || cases["rejectversion"].ModuleGoVersion != "1.17" || cases["rejectversionsuccess"].Adapter != "diagnostic-file" || cases["rejectversionsuccess"].ModuleGoVersion != "1.17" {
 		t.Fatal("the rejection adapter must preserve the language version and expected exit")
 	}
 	if cases["build"].Adapter != "build-file" || cases["buildflags"].Adapter != "missing" {

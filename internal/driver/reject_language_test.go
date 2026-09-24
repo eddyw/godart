@@ -24,7 +24,24 @@ func TestRejectFilesOfGoTest(t *testing.T) {
 			cases = append(cases, c)
 		}
 	}
-	runRejectionCases(t, inv, cases)
+	runDiagnosticCases(t, inv, cases)
+}
+
+func TestSuccessfulDiagnosticsOfGoTest(t *testing.T) {
+	inv, err := parity.DiscoverLanguage(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []parity.LanguageCase
+	for _, c := range inv.Cases {
+		if c.Adapter == "diagnostic-file" {
+			cases = append(cases, c)
+		}
+	}
+	if len(cases) != 1 {
+		t.Fatal("the original successful diagnostic fixtures changed")
+	}
+	runDiagnosticCases(t, inv, cases)
 }
 
 func TestGeneratedRejectFilesOfGoTest(t *testing.T) {
@@ -41,7 +58,7 @@ func TestGeneratedRejectFilesOfGoTest(t *testing.T) {
 	if len(cases) != 4 {
 		t.Fatal("the original generated rejection fixtures changed")
 	}
-	runRejectionCases(t, inv, cases)
+	runDiagnosticCases(t, inv, cases)
 }
 
 func TestRejectionContracts(t *testing.T) {
@@ -69,10 +86,10 @@ func TestRejectionContracts(t *testing.T) {
 	if len(cases) != 44 {
 		t.Fatal("the original rejection fixtures changed")
 	}
-	runRejectionCases(t, inv, cases)
+	runDiagnosticCases(t, inv, cases)
 }
 
-func runRejectionCases(t *testing.T, inv *parity.LanguageInventory, cases []parity.LanguageCase) {
+func runDiagnosticCases(t *testing.T, inv *parity.LanguageInventory, cases []parity.LanguageCase) {
 	t.Helper()
 	var names []string
 	for _, c := range cases {
@@ -85,6 +102,8 @@ func runRejectionCases(t *testing.T, inv *parity.LanguageInventory, cases []pari
 			contract := "reject"
 			if c.Adapter == "generated-rejection" {
 				contract = "errorcheckoutput"
+			} else if c.Adapter == "diagnostic-file" {
+				contract = "diagnostics"
 			}
 			outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: contract, Status: "unobserved"})
 		}
@@ -207,7 +226,11 @@ func TestDiagnostics(t *testing.T) {
 					t.Errorf("%s assertions:\n%s", match.name, *match.mismatch)
 				}
 			}
-			if result.Native.Exit <= 0 || c.Exclusion == nil && result.Gart.Exit != 1 {
+			if c.Adapter == "diagnostic-file" {
+				if result.Native.Exit != 0 || result.Gart.Exit != 0 {
+					t.Errorf("expected successful compilation: native=%d Gart=%d", result.Native.Exit, result.Gart.Exit)
+				}
+			} else if result.Native.Exit <= 0 || c.Exclusion == nil && result.Gart.Exit != 1 {
 				t.Errorf("expected compiler rejection: native=%d Gart=%d", result.Native.Exit, result.Gart.Exit)
 			}
 			if c.Exclusion != nil {

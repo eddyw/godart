@@ -420,7 +420,7 @@ def language_behavior(paths):
                                      and native[5].endswith("/" + case["fixture"].get("file", ""))
                                      and gart[:3] == ["dart", "compile", "kernel"]
                                      and gart[3:] in [["bin/main.dart", "-o", "compile.dill"], ["compile.dart", "-o", "compile.dill"]])
-                    elif case.get("contract") in {"reject", "errorcheckoutput"}:
+                    elif case.get("contract") in {"reject", "errorcheckoutput", "diagnostics"}:
                         rejected = all(case[k]["ran"] and case[k]["exit"] > 0 and not case[k]["timed_out"]
                                        for k in ("native", "gart"))
                         upstream_failure = bool(case["fixture"].get("upstream_expected_failure"))
@@ -431,10 +431,12 @@ def language_behavior(paths):
                             matched = matched and all(case.get(k + "_mismatch") and
                                 hashlib.sha256(case[k + "_mismatch"].encode()).hexdigest() == case[k + "_match"].get("output_sha256")
                                 for k in ("native", "gart"))
-                        diagnostics = all(case.get(k + "_diagnostics") and
-                                          hashlib.sha256(case[k + "_diagnostics"].encode()).hexdigest() == case[k]["output_sha256"]
+                        successful = case.get("contract") == "diagnostics"
+                        diagnostics = all((successful or case.get(k + "_diagnostics")) and
+                                          hashlib.sha256(case.get(k + "_diagnostics", "").encode()).hexdigest() == case[k]["output_sha256"]
                                           for k in ("native", "gart"))
-                        valid = (rejected and matched and diagnostics and case.get("build_error")
+                        outcome = (executed and not case.get("build_error")) if successful else (rejected and case.get("build_error"))
+                        valid = (outcome and matched and diagnostics
                                  and case.get("wrapper_sha256")
                                  and (status == "upstream-expected-failure") == upstream_failure)
                         if case.get("contract") == "errorcheckoutput":
@@ -449,16 +451,17 @@ def language_behavior(paths):
                                      and hashlib.sha256(source).hexdigest() == generator.get("output_sha256"))
                         else:
                             recipe = case["fixture"]["recipe"]
-                            version = re.fullmatch(r"errorcheck\s+-lang=(go[0-9]+\.[0-9]+)", recipe)
+                            version = re.fullmatch(r"errorcheck(\s+-0)?\s+-lang=(go[0-9]+\.[0-9]+)", recipe)
                             if version:
-                                language = version.group(1)
+                                language = version.group(2)
                                 module = f"module example.com/rejectfixture\n\ngo {language[2:]}\n"
-                                valid = (valid and case["fixture"].get("module_go_version") == language[2:]
+                                valid = (valid and successful == bool(version.group(1))
+                                         and case["fixture"].get("module_go_version") == language[2:]
                                          and "-lang="+language in case["native"].get("command", [])
                                          and case.get("module_source") == module
                                          and case.get("module_sha256") == hashlib.sha256(module.encode()).hexdigest())
                             else:
-                                valid = valid and (recipe == "errorcheck" or recipe == "errorcheck -d=panic"
+                                valid = valid and not successful and (recipe == "errorcheck" or recipe == "errorcheck -d=panic"
                                                    and "-d=panic" in case["native"].get("command", []))
                     else:
                         valid = expected and executed and all(case[k]["output_sha256"] == expected
@@ -489,7 +492,7 @@ def language_behavior(paths):
                                      and case["native"]["environment"] == case["gart"].get("environment")
                                      and not case.get("build_error"))
                     valid = valid and (status == "passed" or case.get("contract") in {"reject", "errorcheckoutput"})
-                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "build", "reject", "errorcheckoutput"} and case.get("contract", "run") == config["contract"]
+                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "build", "reject", "errorcheckoutput", "diagnostics"} and case.get("contract", "run") == config["contract"]
 
                     if case["fixture"].get("host_tools"):
                         native_env = case["native"].get("environment") or {}
