@@ -194,6 +194,8 @@ Gart compiles the same source and an inert Dart entry point to kernel.
 The adapter uses a package URI for library imports to preserve Dart type identity.
 It never executes compile-only programs or their initializers. Compilation does not establish runtime parity.
 Compiler-option recipes remain unassessed until an adapter preserves their options.
+The `asmcheck` action requires native Go assembly patterns and has an explicit target limit.
+These fixtures retain their recipe and source hashes. The report does not count them as passes or missing adapters.
 Known compiler rejections retain exact diagnostics and never count as passes.
 Compile evidence records the wrapper hash and remains separate from runtime evidence.
 

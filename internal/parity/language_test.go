@@ -31,6 +31,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/run.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/run.out", "expected\n")
 	write("test/compile.go", "// compile\npackage p\n")
+	write("test/assembly.go", "// asmcheck\npackage p\n")
+	write("test/assemblyflags.go", "// asmcheck -gcflags=-d=ssa/check/on\npackage p\n")
 	write("test/reject.go", "// errorcheck\npackage p\n")
 	write("test/rejectversion.go", "// errorcheck -lang=go1.17\npackage p\n")
 	write("test/rejectversionsuccess.go", "// errorcheck -0 -lang=go1.17\npackage p\n")
@@ -73,12 +75,18 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 35 {
-		t.Fatalf("got %d cases, want 35", len(inv.Cases))
+	if len(inv.Cases) != 37 {
+		t.Fatalf("got %d cases, want 37", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
 		cases[c.Name] = c
+	}
+	for _, name := range []string{"assembly", "assemblyflags"} {
+		c := cases[name]
+		if c.Adapter != "missing" || c.Exclusion == nil || c.Exclusion.Classification != "target-limit" || c.Exclusion.Reason == "" || len(c.Files) != 1 {
+			t.Fatalf("native assembly contract lost: %+v", c)
+		}
 	}
 	if cases["groups"].Adapter != "directory-packages" || cases["groupsrun"].Adapter != "directory-packages" {
 		t.Fatal("plain package directory recipes have no adapter")

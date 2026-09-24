@@ -227,6 +227,9 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 					return nil, err
 				}
 			}
+			if c.Action == "asmcheck" {
+				c.Exclusion = &Omission{Classification: "target-limit", Reason: "The assertions match native Go assembly instructions. Gart delegates machine code generation to Dart and does not preserve Go compiler instruction selection."}
+			}
 			if skip, ok := policy.Skips[c.Name]; ok {
 				c.Exclusion = &skip
 			}
