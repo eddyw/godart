@@ -47,7 +47,8 @@ int $directoryCreate(GoString path, int mode) => 38;
 
 (int, GoString, int) $fileWrite(int handle, Slice<GoInt> p) => (0, _noSys, 0);
 
-(int, GoString) $fileSeek(int handle, int offset, int whence) => (0, _noSys);
+(int, GoString, int) $fileSeek(int handle, int offset, int whence) =>
+    (0, _noSys, 0);
 
 GoString $fileClose(int handle) => _noSys;
 

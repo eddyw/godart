@@ -322,12 +322,12 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 	if f.dir {
 		return 0, &PathError{Op: "read", Path: f.name, Err: syscall.EISDIR}
 	}
-	pos, cause := dart.FileSeek(f.handle, 0, dart.SeekCurrent)
-	if cause != "" {
-		return 0, pathError("read", f.name, cause)
+	pos, cause, code := dart.FileSeek(f.handle, 0, dart.SeekCurrent)
+	if cause != "" || code != 0 {
+		return 0, fileIOError("read", f.name, cause, code)
 	}
-	if _, cause := dart.FileSeek(f.handle, off, dart.SeekStart); cause != "" {
-		return 0, pathError("read", f.name, cause)
+	if _, cause, code := dart.FileSeek(f.handle, off, dart.SeekStart); cause != "" || code != 0 {
+		return 0, fileIOError("read", f.name, cause, code)
 	}
 	read := 0
 	var err error
@@ -342,8 +342,8 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 		}
 		read += n
 	}
-	if _, cause := dart.FileSeek(f.handle, pos, dart.SeekStart); cause != "" && err == nil {
-		err = pathError("read", f.name, cause)
+	if _, cause, code := dart.FileSeek(f.handle, pos, dart.SeekStart); (cause != "" || code != 0) && err == nil {
+		err = fileIOError("read", f.name, cause, code)
 	}
 	return read, err
 }
@@ -374,17 +374,17 @@ func (f *File) WriteAt(p []byte, off int64) (int, error) {
 	if f.dir {
 		return 0, &PathError{Op: "write", Path: f.name, Err: syscall.EBADF}
 	}
-	pos, cause := dart.FileSeek(f.handle, 0, dart.SeekCurrent)
-	if cause != "" {
-		return 0, pathError("write", f.name, cause)
+	pos, cause, code := dart.FileSeek(f.handle, 0, dart.SeekCurrent)
+	if cause != "" || code != 0 {
+		return 0, fileIOError("write", f.name, cause, code)
 	}
-	if _, cause := dart.FileSeek(f.handle, off, dart.SeekStart); cause != "" {
-		return 0, pathError("write", f.name, cause)
+	if _, cause, code := dart.FileSeek(f.handle, off, dart.SeekStart); cause != "" || code != 0 {
+		return 0, fileIOError("write", f.name, cause, code)
 	}
 	written, cause, code := dart.FileWrite(f.handle, p)
 	err := fileIOError("write", f.name, cause, code)
-	if _, cause := dart.FileSeek(f.handle, pos, dart.SeekStart); cause != "" && err == nil {
-		err = pathError("write", f.name, cause)
+	if _, cause, code := dart.FileSeek(f.handle, pos, dart.SeekStart); (cause != "" || code != 0) && err == nil {
+		err = fileIOError("write", f.name, cause, code)
 	}
 	return written, err
 }
@@ -470,8 +470,8 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 		}
 		return pos, nil
 	}
-	pos, cause := dart.FileSeek(f.handle, offset, whence)
-	return pos, pathError("seek", f.name, cause)
+	pos, cause, code := dart.FileSeek(f.handle, offset, whence)
+	return pos, fileIOError("seek", f.name, cause, code)
 }
 
 func (f *File) Close() error {

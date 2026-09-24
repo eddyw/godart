@@ -14,6 +14,7 @@ func main() {
 		panic(err)
 	}
 	defer os.RemoveAll(root)
+	seekErrors(root)
 	path := filepath.Join(root, "file")
 	if err := os.WriteFile(path, []byte("abc"), 0600); err != nil {
 		panic(err)
@@ -74,6 +75,49 @@ func main() {
 						f.Close()
 					}
 				}
+			}
+		}
+	}
+}
+
+func seekErrors(root string) {
+	path := filepath.Join(root, "seek")
+	if err := os.WriteFile(path, []byte("abc"), 0600); err != nil {
+		panic(err)
+	}
+	for _, kind := range []string{"regular", "device", "closed", "nil"} {
+		for _, c := range []struct {
+			offset int64
+			whence int
+		}{{0, 0}, {2, 0}, {-1, 0}, {1, 1}, {-6, 2}, {-1, 2}, {0, -1}, {0, 9}, {1 << 33, 0}} {
+			target := path
+			if kind == "device" {
+				target = os.DevNull
+			}
+			var f *os.File
+			var err error
+			if kind != "nil" {
+				f, err = os.Open(target)
+				if err != nil {
+					panic(err)
+				}
+			}
+			if kind == "closed" {
+				f.Close()
+			}
+			pos, err := f.Seek(c.offset, c.whence)
+			op, cause, matches := "", fmt.Sprintf("%T:%v", err, err), true
+			var pe *os.PathError
+			var code syscall.Errno
+			if errors.As(err, &pe) {
+				op = pe.Op
+				cause = fmt.Sprintf("%T:%v", pe.Err, pe.Err)
+				matches = pe.Path == target
+			}
+			numeric := errors.As(err, &code)
+			fmt.Println(kind, "Seek", c.offset, c.whence, pos, err == nil, op, cause, numeric, int(code), matches)
+			if f != nil && kind != "closed" {
+				f.Close()
 			}
 		}
 	}

@@ -156,17 +156,21 @@ FileMode _mode(int mode) {
 }
 
 /// Moves the read position and gives the new offset from the start.
-(int, GoString) $fileSeek(int handle, int offset, int whence) {
+(int, GoString, int) $fileSeek(int handle, int offset, int whence) {
   final FileHandle? f = _at(handle);
-  if (f == null) return (0, GoString.fromString('file already closed'));
+  if (f == null) return (0, GoString.fromString('file already closed'), 0);
+  if (f is NativeFileHandle) {
+    final (position, code) = $syscallSeek(f.descriptor, offset, whence);
+    return (code == 0 ? position : 0, _empty, code);
+  }
   try {
     int target = offset;
     if (whence == $seekCurrent) target = f.positionSync() + offset;
     if (whence == $seekEnd) target = f.lengthSync() + offset;
     f.setPositionSync(target);
-    return (target, _empty);
+    return (target, _empty, 0);
   } catch (e) {
-    return (0, _cause(e));
+    return (0, _cause(e), 0);
   }
 }
 

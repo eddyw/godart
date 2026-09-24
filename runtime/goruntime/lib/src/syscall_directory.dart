@@ -151,6 +151,9 @@ final _readdir = _libc
 }
 
 (int, int) $syscallSeek(int fd, int offset, int whence) {
-  final position = _seek(fd, offset, whence);
-  return (position, position < 0 ? _errno().value : 0);
+  final seek = _seek;
+  final errno = _errno;
+  // Darwin device files can return a negative offset without an error.
+  final position = seek(fd, offset, whence);
+  return (position, position == -1 ? errno().value : 0);
 }

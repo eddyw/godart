@@ -1004,7 +1004,7 @@ func FileWrite(handle int, p []byte) (int, string, int) {
 }
 
 // FileSeek moves the read position and gives the new offset from the start.
-func FileSeek(handle int, offset int64, whence int) (int64, string) {
+func FileSeek(handle int, offset int64, whence int) (int64, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
