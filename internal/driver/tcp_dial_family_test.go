@@ -106,7 +106,7 @@ func TestTCPDialLocalBinding(t *testing.T) {
    if err != nil { t.Fatal(err) }
    defer listener.Close()
    remote := listener.Addr().(*TCPAddr)
-   for _, api := range []string{"dial", "context"} {
+   for _, api := range []string{"dial", "context", "typed", "typed-context"} {
     for _, mode := range []string{"ephemeral", "fixed", "empty"} {
      t.Run(api+"/"+mode, func(t *testing.T) {
       local := &TCPAddr{IP: remote.IP}
@@ -129,7 +129,16 @@ func TestTCPDialLocalBinding(t *testing.T) {
        if e != nil { t.Fatal(e) }
        network, address = "tcp", JoinHostPort("", port)
       }
-      if api == "dial" { c, err = d.Dial(network, address) } else { c, err = d.DialContext(context.Background(), network, address) }
+      typedRemote := remote
+      if mode == "empty" { typedRemote = &TCPAddr{Port: remote.Port} }
+      switch api {
+      case "dial": c, err = d.Dial(network, address)
+      case "context": c, err = d.DialContext(context.Background(), network, address)
+      case "typed": c, err = DialTCP(network, local, typedRemote)
+      case "typed-context":
+       d.LocalAddr = &TCPAddr{Port: -1}
+       c, err = d.DialTCP(context.Background(), network, local.AddrPort(), typedRemote.AddrPort())
+      }
       if err != nil { t.Fatal(err) }
       defer c.Close()
       peer, err := listener.Accept()
@@ -142,16 +151,28 @@ func TestTCPDialLocalBinding(t *testing.T) {
     }
    }
    for _, invalid := range []struct{name string; port int; errno syscall.Errno}{{"negative", -1, syscall.EINVAL}, {"large", 65536, syscall.EINVAL}, {"occupied", remote.Port, syscall.EADDRINUSE}} {
-    t.Run(invalid.name, func(t *testing.T) {
+    apis := []string{"dial", "typed"}
+    if invalid.name == "occupied" { apis = append(apis, "typed-context") }
+    for _, api := range apis {
+    t.Run(invalid.name+"/"+api, func(t *testing.T) {
      local := &TCPAddr{IP: remote.IP, Port: invalid.port}
      d := Dialer{LocalAddr: local, Timeout: 5*time.Second}
-     c, err := d.Dial(family.network, remote.String())
+     var c Conn
+     var err error
+     switch api {
+     case "dial": c, err = d.Dial(family.network, remote.String())
+     case "typed": c, err = DialTCP(family.network, local, remote)
+     case "typed-context":
+      d.LocalAddr = &TCPAddr{Port: -1}
+      c, err = d.DialTCP(context.Background(), family.network, local.AddrPort(), remote.AddrPort())
+     }
      if err == nil { c.Close(); t.Fatal("invalid local port succeeded") }
      var op *OpError
      var call *os.SyscallError
      if !errors.Is(err, invalid.errno) || !errors.As(err, &op) || !errors.As(err, &call) { t.Fatalf("error = %T %v, want %v with OpError and SyscallError", err, err, invalid.errno) }
      if op.Op != "dial" || op.Net != family.network || op.Source == nil || op.Source.String() != local.String() || op.Addr == nil || op.Addr.String() != remote.String() || call.Syscall != "bind" { t.Fatalf("error metadata = %+v, syscall = %s", op, call.Syscall) }
     })
+    }
    }
   })
  }

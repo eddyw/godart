@@ -138,38 +138,47 @@ func (t *TCPConn) WriteTo(w io.Writer) (int64, error) {
 	return io.Copy(w, onlyReader{Reader: t})
 }
 
-// DialTCP opens a connection to a TCP address. The network is tcp, tcp4, or
-// tcp6.
-//
-// Dart binds no local address of a dial, thus a laddr that is not nil gives an
-// error.
+// DialTCP opens a connection to a TCP address. The network is tcp, tcp4, or tcp6.
 func DialTCP(network string, laddr, raddr *TCPAddr) (*TCPConn, error) {
+	return dialTCPAddr(context.Background(), Dialer{}, network, laddr, raddr)
+}
+
+func dialTCPAddr(ctx context.Context, d Dialer, network string, local, remote *TCPAddr) (*TCPConn, error) {
+	fail := func(err error) (*TCPConn, error) {
+		if op, ok := err.(*OpError); ok {
+			err = op.Err
+		}
+		op := &OpError{Op: "dial", Net: network, Err: err}
+		if local != nil {
+			op.Source = local
+		}
+		if remote != nil {
+			op.Addr = remote
+		}
+		return nil, op
+	}
 	switch network {
 	case "tcp", "tcp4", "tcp6":
 	default:
-		return nil, UnknownNetworkError(network)
+		return fail(UnknownNetworkError(network))
 	}
-	if laddr != nil {
-		return nil, errors.New("dial " + network +
-			": a local address of a dial stays outside the subset")
+	if remote == nil {
+		return fail(errMissingAddress)
 	}
-	if raddr == nil {
-		return nil, errors.New("dial " + network + ": the address is missing")
+	if err := tcpAddrFamilyError(network, remote); err != nil {
+		return fail(err)
 	}
-	if err := tcpAddrFamilyError(network, raddr); err != nil {
-		return nil, &OpError{Op: "dial", Net: network, Addr: raddr, Err: err}
+	if local != nil {
+		if err := tcpAddrFamilyError(network, local); err != nil {
+			return fail(err)
+		}
 	}
-	c, err := Dial("tcp", raddr.String())
+	d.LocalAddr = local
+	c, err := d.DialContext(ctx, network, remote.String())
 	if err != nil {
-		return nil, err
+		return fail(err)
 	}
-	tc, ok := c.(*TCPConn)
-	if !ok {
-		c.Close()
-		return nil, errors.New("dial " + network + ": the dial gave no TCP connection")
-	}
-	tc.c.network = network
-	return tc, nil
+	return c.(*TCPConn), nil
 }
 
 func tcpAddrFamilyError(network string, addr *TCPAddr) error {

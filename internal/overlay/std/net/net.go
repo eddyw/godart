@@ -883,41 +883,9 @@ func (d *Dialer) dialOneAddr(ctx context.Context, network, address string) (Conn
 	}
 }
 
-// DialTCP opens a connection of the network tcp with the context. The network
-// is tcp, tcp4, or tcp6.
-//
-// Dart binds no local address of a dial, thus a laddr that holds a value
-// gives an error. The zero AddrPort names no local address.
+// DialTCP opens a TCP connection with the context and explicit local address.
 func (d *Dialer) DialTCP(ctx context.Context, network string, laddr, raddr netip.AddrPort) (*TCPConn, error) {
-	switch network {
-	case "tcp", "tcp4", "tcp6":
-	default:
-		return nil, UnknownNetworkError(network)
-	}
-	if laddr.IsValid() {
-		return nil, errors.New("dial " + network +
-			": a local address of a dial stays outside the subset")
-	}
-	if !raddr.IsValid() {
-		return nil, errors.New("dial " + network + ": the address is missing")
-	}
-	remote := TCPAddrFromAddrPort(raddr)
-	if err := tcpAddrFamilyError(network, remote); err != nil {
-		return nil, &OpError{Op: "dial", Net: network, Addr: remote, Err: err}
-	}
-	dialer := *d
-	dialer.LocalAddr = nil
-	c, err := dialer.DialContext(ctx, "tcp", remote.String())
-	if err != nil {
-		return nil, err
-	}
-	tc, ok := c.(*TCPConn)
-	if !ok {
-		c.Close()
-		return nil, errors.New("dial " + network + ": the dial gave no TCP connection")
-	}
-	tc.c.network = network
-	return tc, nil
+	return dialTCPAddr(ctx, *d, network, TCPAddrFromAddrPort(laddr), TCPAddrFromAddrPort(raddr))
 }
 
 // DialUDP opens a datagram socket of the network udp with the context. The
