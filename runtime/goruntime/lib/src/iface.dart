@@ -230,9 +230,10 @@ final class Iface {
 /// that the code compares, and not the field that holds no identity.
 bool $goEqual(Object? a, Object? b, TypeDesc d, [TypeDesc? root]) {
   final TypeDesc top = root ?? d;
+  if (!d.comparable) {
+    $panic($runtimeError('comparing uncomparable type ${top.display}'));
+  }
   switch (d.kind) {
-    case 'slice' || 'map' || 'func':
-      $panic($runtimeError('comparing uncomparable type ${top.display}'));
     case 'array':
       final List<Object?> ea = a! as List<Object?>;
       final List<Object?> eb = b! as List<Object?>;
@@ -287,9 +288,8 @@ bool $hashInWrite = false;
 /// that type, and not the field that holds no identity.
 int $goHash(Object? v, TypeDesc d, [TypeDesc? root]) {
   final TypeDesc top = root ?? d;
+  if (!d.comparable) $panicHash(top.display, $hashInWrite);
   switch (d.kind) {
-    case 'slice' || 'map' || 'func':
-      $panicHash(top.display, $hashInWrite);
     case 'array':
       final List<Object?> e = v! as List<Object?>;
       final TypeDesc? elem = d.elem?.call();
