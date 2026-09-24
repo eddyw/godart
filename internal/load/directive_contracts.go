@@ -7,6 +7,7 @@ package load
 
 import (
 	"fmt"
+	"go/ast"
 	"go/token"
 	"go/types"
 	"go/version"
@@ -19,6 +20,7 @@ import (
 func directiveContracts(p *packages.Package) []error {
 	var errs []error
 	seen := make(map[types.Object]bool)
+	noescape := make(map[*ast.FuncDecl]bool)
 	reject := func(pos token.Pos, message string) {
 		errs = append(errs, fmt.Errorf("%s: %s", p.Fset.Position(pos), message))
 	}
@@ -33,6 +35,21 @@ func directiveContracts(p *packages.Package) []error {
 			for _, comment := range group.List {
 				verb, args, hasArgs := strings.Cut(comment.Text, " ")
 				switch verb {
+				case "//go:noescape":
+					for _, decl := range file.Decls {
+						if comment.Pos() >= decl.End() {
+							continue
+						}
+						if fn, ok := decl.(*ast.FuncDecl); ok && comment.End() < fn.Pos() && fn.Body != nil && !noescape[fn] {
+							pos := fn.Name.Pos()
+							if fn.Recv != nil {
+								pos = fn.Recv.Pos()
+							}
+							reject(pos, "can only use //go:noescape with external func implementations")
+							noescape[fn] = true
+						}
+						break
+					}
 				case "//go:systemstack", "//go:nowritebarrier", "//go:nowritebarrierrec", "//go:yeswritebarrierrec":
 					if p.PkgPath != "runtime" {
 						reject(comment.Pos()+2, verb+" only allowed in runtime")
