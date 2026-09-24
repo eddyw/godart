@@ -37,6 +37,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/rejectversion.go", "// errorcheck -lang=go1.17\npackage p\n")
 	write("test/rejectversionsuccess.go", "// errorcheck -0 -lang=go1.17\npackage p\n")
 	write("test/rejectpanic.go", "// errorcheck -d=panic\npackage p\n")
+	write("test/rejectall.go", "// errorcheck -e\npackage p\n")
+	write("test/rejectlimited.go", "// errorcheck -e=0\npackage p\n")
 	write("test/build.go", "// build\npackage main\n")
 	write("test/buildflags.go", "// build -race\npackage main\n")
 	write("test/rejectflags.go", "// errorcheck -0\npackage p\n")
@@ -75,8 +77,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 37 {
-		t.Fatalf("got %d cases, want 37", len(inv.Cases))
+	if len(inv.Cases) != 39 {
+		t.Fatalf("got %d cases, want 39", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -107,6 +109,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if !cases["reject"].ExpectedFailure {
 		t.Fatal("upstream expected failure lost")
+	}
+	if cases["rejectall"].Adapter != "reject-file" || cases["rejectlimited"].Adapter != "missing" {
+		t.Fatal("the rejection adapter must preserve the diagnostic limit")
 	}
 	if cases["reject"].Adapter != "reject-file" || cases["rejectpanic"].Adapter != "reject-file" || cases["rejectflags"].Adapter != "missing" {
 		t.Fatal("the rejection adapter must not discard recipe flags")

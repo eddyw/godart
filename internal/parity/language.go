@@ -173,7 +173,7 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				}
 			} else if recipe == "build" {
 				c.Adapter = "build-file"
-			} else if recipe == "errorcheck" || recipe == "errorcheck -d=panic" {
+			} else if recipe == "errorcheck" || recipe == "errorcheck -d=panic" || recipe == "errorcheck -e" {
 				c.Adapter = "reject-file"
 			} else if files, ok := languageGeneratorFiles(recipe); ok {
 				c.Adapter = "generated-file"

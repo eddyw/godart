@@ -201,6 +201,8 @@ Compile evidence records the wrapper hash and remains separate from runtime evid
 
 The `language-reject` audit compares exact `errorcheck` recipes. It preserves original source bytes and uses the installed SDK's annotation matcher.
 Both compilers must reject the source and satisfy the active upstream policy.
+The exact `errorcheck -e` recipe retains the native compiler option for all diagnostics.
+Recipes that limit diagnostics, such as `-e=0`, remain unassessed.
 Reports retain diagnostics, matcher results, and source fingerprints.
 A successful diagnostic result requires all original assertions to pass.
 The adapter reads expected failures from the upstream runner and requires both original matchers to fail for those fixtures.

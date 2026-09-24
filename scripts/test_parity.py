@@ -652,11 +652,22 @@ class ParityTest(unittest.TestCase):
             path = root / "language.json"
             for recipe, flag, status in [("errorcheck -d=panic", "-d=panic", "passed"),
                                           ("errorcheck -d=panic", "-e", "failed"),
-                                          ("errorcheck -0 -d=panic", "-d=panic", "failed")]:
+                                          ("errorcheck -0 -d=panic", "-d=panic", "failed"),
+                                          ("errorcheck -e", "-e", "passed"),
+                                          ("errorcheck -e", "-d=panic", "failed"),
+                                          ("errorcheck -e", "-e=0", "failed"),
+                                          ("errorcheck -e", "-e=false", "failed"),
+                                          ("errorcheck -e=0", "-e", "failed"),
+                                          ("errorcheck -0 -e", "-e", "failed")]:
                 outcome["fixture"]["recipe"] = recipe
                 outcome["native"]["command"][3] = flag
                 parity.save(path, report)
                 self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            outcome["fixture"]["recipe"] = "errorcheck -e"
+            outcome["native"]["command"] = ["go", "tool", "compile", "-e", "-e=0", "p.go"]
+            parity.save(path, report)
+            self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
     def test_rejection_recipe_preserves_language_version(self):
         with tempfile.TemporaryDirectory() as temporary:

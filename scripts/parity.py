@@ -518,8 +518,11 @@ def language_behavior(paths):
                                          and case.get("module_source") == module
                                          and case.get("module_sha256") == hashlib.sha256(module.encode()).hexdigest())
                             else:
+                                command = case["native"].get("command", [])
+                                error_flags = [arg for arg in command if arg == "-e" or arg.startswith("-e=")]
                                 valid = valid and not successful and (recipe == "errorcheck" or recipe == "errorcheck -d=panic"
-                                                   and "-d=panic" in case["native"].get("command", []))
+                                                   and "-d=panic" in command
+                                                   or recipe == "errorcheck -e" and error_flags == ["-e"])
                     else:
                         valid = expected and executed and all(case[k]["output_sha256"] == expected
                                                               for k in ("native", "gart"))
