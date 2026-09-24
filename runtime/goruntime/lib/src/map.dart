@@ -12,10 +12,11 @@ final class _Entry<K, V> {
   K key;
   V value;
   final int order;
+  int slot;
   bool dead = false;
   _Entry<K, V>? prev;
   _Entry<K, V>? next;
-  _Entry(this.key, this.value, this.order);
+  _Entry(this.key, this.value, this.order, this.slot);
 }
 
 /// A Go map.
@@ -25,6 +26,7 @@ final class _Entry<K, V> {
 /// start entry at random. Go programs must not depend on the key order.
 final class GoMap<K, V> {
   final HashMap<K, _Entry<K, V>> _entries;
+  final List<_Entry<K, V>> _iterationEntries = [];
   final V Function() _zero;
   final int Function(K) _hash;
   _Entry<K, V>? _head;
@@ -86,7 +88,8 @@ final class GoMap<K, V> {
       e.value = value;
       return;
     }
-    final entry = _Entry(key, value, _nextOrder++);
+    final entry = _Entry(key, value, _nextOrder++, _iterationEntries.length);
+    _iterationEntries.add(entry);
     entry.prev = _tail;
     if (_tail == null) {
       _head = entry;
@@ -123,6 +126,11 @@ final class GoMap<K, V> {
   }
 
   void _unlink(_Entry<K, V> e) {
+    final last = _iterationEntries.removeLast();
+    if (!identical(last, e)) {
+      _iterationEntries[e.slot] = last;
+      last.slot = e.slot;
+    }
     e.dead = true;
     if (e.prev == null) {
       _head = e.next;
@@ -149,6 +157,7 @@ final class GoMap<K, V> {
     _head = null;
     _tail = null;
     _entries.clear();
+    _iterationEntries.clear();
   }
 
   /// A fresh hash for a NaN key. Each NaN entry stands alone, thus 1 shared
@@ -193,9 +202,7 @@ final class GoMapIter<K, V> {
       _head = m._head,
       _limit = m._nextOrder {
     if (_at != null) {
-      for (int n = _iterationRandom.nextInt(m.length); n > 0; n--) {
-        _at = _at!.next;
-      }
+      _at = m._iterationEntries[_iterationRandom.nextInt(m.length)];
       _startOrder = _at!.order;
     }
   }
