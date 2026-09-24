@@ -446,6 +446,7 @@ class ParityTest(unittest.TestCase):
     def test_language_inventory_never_implies_an_execution_pass(self):
         cases = [dict(name="run", action="run", native_eligible=True, gart_eligible=True, adapter="single-file"),
                  dict(name="compile", action="compile", native_eligible=True, gart_eligible=True, adapter="missing"),
+                 dict(name="disabled", action="skip", native_eligible=True, gart_eligible=True, adapter="missing"),
                  dict(name="blocked", action="run", native_eligible=True, gart_eligible=True,
                       adapter="single-file", rejection=["unsupported"]),
                  dict(name="deep", action="run", native_eligible=True, gart_eligible=True,
@@ -453,8 +454,8 @@ class ParityTest(unittest.TestCase):
                  dict(name="platform", action="run", native_eligible=False, gart_eligible=True, adapter="single-file")]
         result = parity.language_assessment(dict(cases=cases))
         self.assertEqual(result["counts"], {"unmeasured": 1, "adapter-missing": 1, "known-rejection": 1,
-                                           "implementation-gap": 1, "ineligible": 1})
-        self.assertEqual(result["actions"], {"run": 4, "compile": 1})
+                                           "implementation-gap": 1, "ineligible": 1, "upstream-skip": 1})
+        self.assertEqual(result["actions"], {"run": 4, "compile": 1, "skip": 1})
 
     def test_run_recipe_preserves_companion_sources_and_arguments(self):
         with tempfile.TemporaryDirectory() as temporary:

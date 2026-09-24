@@ -587,6 +587,8 @@ def language_assessment(data):
     def status(case):
         if not case["native_eligible"] or not case["gart_eligible"]:
             return "ineligible"
+        if case["action"] == "skip":
+            return "upstream-skip"
         if case.get("exclusion"):
             return case["exclusion"]["classification"]
         if case.get("rejection"):
