@@ -116,6 +116,8 @@ Network interface types, flags, and native address filters adapt Go
 The overlay, native adapter, and runtime license retain the Go BSD notice.
 UDP local-address tests retain assertions from Go `src/net/udpsock_test.go`
 and its BSD notice.
+Unix listener close tests retain assertions from Go `src/net/unixsock_test.go`
+and the address helper from `src/net/mockserver_test.go` with their BSD notices.
 The metrics overlay adapts Go `src/runtime/metrics/value.go`, `sample.go`,
 `histogram.go`, and `description.go`. Its source retains the Go BSD notice.
 GODEBUG counter validation follows `src/internal/godebug/godebug.go`.

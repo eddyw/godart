@@ -334,17 +334,10 @@ final class _Listener {
   /// 2 server classes with no shared base, thus the class keeps a function.
   final Future<void> Function() close;
 
-  /// The path of a Unix socket. A close removes the file, exactly as Go does.
-  /// The value is empty for a TCP listener.
-  final String unixPath;
   final String tcpHost;
 
-  _Listener(
-    Stream<Object> stream,
-    this.close, [
-    this.unixPath = '',
-    this.tcpHost = '',
-  ]) : incoming = StreamIterator<Object>(stream);
+  _Listener(Stream<Object> stream, this.close, [this.tcpHost = ''])
+    : incoming = StreamIterator<Object>(stream);
 
   Future<Object?> next() {
     final result = ready.then((_) async {
@@ -372,7 +365,7 @@ final class _Listener {
     return result;
   }
 
-  void stop() {
+  Future<void> stop() {
     closed = true;
     final source = pending;
     if (source != null) {
@@ -384,7 +377,7 @@ final class _Listener {
       );
     }
     unawaited(incoming.cancel());
-    unawaited(close());
+    return close();
   }
 }
 
@@ -497,7 +490,7 @@ void _closeAll() {
     final _Listener? l = _listeners[i];
     if (l == null) continue;
     _listeners[i] = null;
-    l.stop();
+    unawaited(l.stop());
   }
   for (int i = 0; i < _packets.length; i++) {
     final _Packet? s = _packets[i];
@@ -1176,7 +1169,7 @@ GoString $connDeadline(int handle, int read, int write) {
   $await(
     _bindTCP(host.toDartString(), port, ipv6Only).then(
       (RawServerSocket s) => (
-        _listenSlot(_Listener(s, () => s.close(), '', s.address.address)),
+        _listenSlot(_Listener(s, () => s.close(), s.address.address)),
         s.port,
         _empty,
       ),
@@ -1266,7 +1259,7 @@ GoString $listenTCPHost(int handle) =>
       0,
     ).then(
       (RawServerSocket s) =>
-          (_listenSlot(_Listener(s, () => s.close(), name)), _empty),
+          (_listenSlot(_Listener(s, () => s.close())), _empty),
     ),
     (Object cause) => (-1, _cause(cause)),
   );
@@ -1306,14 +1299,9 @@ GoString $listenClose(int handle) {
   // The iterator of a stream subscribes at the first accept. A listener that
   // accepted nothing holds no subscription, thus the cancel closes no server
   // socket and the isolate stays alive.
-  l.stop();
-  if (l.unixPath.isNotEmpty) {
-    try {
-      File(l.unixPath).deleteSync();
-    } on FileSystemException {
-      // Go also leaves the file when the remove fails.
-    }
-  }
+  // Dart removes a Unix socket path before the close future completes.
+  // Return after that removal to preserve a subsequent path replacement.
+  $await(l.stop().then((_) => _empty), (Object cause) => _cause(cause));
   return _empty;
 }
 

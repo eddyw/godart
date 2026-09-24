@@ -176,7 +176,7 @@ func TestInvalidAndClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, netPath, string(data)+"\nGoInt $testSocketDescriptor(TCPConn$ c) => c._c._handle;\n")
+	writeFile(t, netPath, string(data)+"\nGoInt $testSocketDescriptor(TCPConn$ c) => c.$field$c.$field$handle;\n")
 	runtimePath := filepath.Join(out, "goruntime", "lib", "src", "net.dart")
 	data, err = os.ReadFile(runtimePath)
 	if err != nil {

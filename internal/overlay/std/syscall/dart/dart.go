@@ -1342,6 +1342,7 @@ func ListenDeadline(handle int, nanos int64) string {
 
 // ListenClose closes a listener. Each connection of it stays open. A listener
 // of a Unix socket also removes the file of the socket.
+// The call blocks the goroutine until the close completes.
 func ListenClose(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
