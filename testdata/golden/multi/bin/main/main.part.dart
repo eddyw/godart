@@ -14,12 +14,12 @@
 part of '../main.dart';
 
 void _main() {
-  $greet.Greeter$? g = $greet.New($gs1_0_486ea46224d1bb4f);
-  $println(<String>[$greet.Greeter$Text(g).toDartString()]);
-  $greet.Greeter$SetStyle(g, $gi(1));
-  $println(<String>[$greet.Greeter$Text(g).toDartString()]);
-  $println(<String>[$greet.Twice($gs1_1_4cd0e21a9a0795a1).toDartString()]);
-  $println(<String>[$count.Runes($gs1_2_3c48591d8d098a45).toString()]);
+  $pkg$greet.Greeter$? g = $pkg$greet.New($gs1_0_486ea46224d1bb4f);
+  $println(<String>[$pkg$greet.Greeter$Text(g).toDartString()]);
+  $pkg$greet.Greeter$SetStyle(g, $gi(1));
+  $println(<String>[$pkg$greet.Greeter$Text(g).toDartString()]);
+  $println(<String>[$pkg$greet.Twice($gs1_1_4cd0e21a9a0795a1).toDartString()]);
+  $println(<String>[$pkg$count.Runes($gs1_2_3c48591d8d098a45).toString()]);
   $println(<String>[$gi(0).toString(), $gi(1).toString()]);
 }
 

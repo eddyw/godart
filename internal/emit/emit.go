@@ -554,7 +554,8 @@ func (e *emitter) setPrefixes(imports []Import) {
 		if k := strings.LastIndex(base, "/"); k >= 0 {
 			base = base[k+1:]
 		}
-		prefix := "$" + sanitize(base)
+		// Separate Go package prefixes from runtime helpers and Dart imports.
+		prefix := "$pkg$" + sanitize(base)
 		if used[prefix] {
 			prefix = fmt.Sprintf("%s$%d", prefix, i)
 		}

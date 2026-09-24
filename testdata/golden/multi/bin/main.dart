@@ -12,8 +12,8 @@
 // ignore_for_file: library_prefixes, unnecessary_getters_setters
 
 import 'package:goruntime/goruntime.dart';
-import 'package:multi/count.dart' as $count;
-import 'package:multi/greet.dart' as $greet;
+import 'package:multi/count.dart' as $pkg$count;
+import 'package:multi/greet.dart' as $pkg$greet;
 
 part 'main/main.part.dart';
 part 'main.map.dart';
@@ -25,15 +25,15 @@ void $init() {
   $initDone = true;
   $registerTypes();
   $srcmap($srcmapData);
-  $initSequence(<void Function()>[$count.$init, $greet.$init]);
+  $initSequence(<void Function()>[$pkg$count.$init, $pkg$greet.$init]);
 }
 
 bool $typesRegistered = false;
 void $registerTypes() {
   if ($typesRegistered) return;
   $typesRegistered = true;
-  $count.$registerTypes();
-  $greet.$registerTypes();
+  $pkg$count.$registerTypes();
+  $pkg$greet.$registerTypes();
 }
 
 void main(List<String> $arguments) {
