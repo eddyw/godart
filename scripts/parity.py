@@ -288,12 +288,13 @@ def rejection_result(case, status):
 def directory_language_valid(case, go_version):
     fixture = case["fixture"]
     contract = case["contract"]
+    reject = contract == "errorcheckdir"
     packages = case.get("directory_packages") or []
     adapted = case.get("adapted_sources") or {}
     compiled = case.get("native_compile") or []
     module = case.get("module_source", "")
     if (fixture.get("recipe") != contract or fixture.get("adapter") != "directory-packages"
-            or not packages or len(compiled) != len(packages) or case.get("build_error")
+            or not packages or len(compiled) != len(packages) or (not reject and case.get("build_error"))
             or not case.get("importcfg_sha256") or not go_version
             or module != "module test\n\ngo " + go_version.removeprefix("go") + "\n"
             or hashlib.sha256(module.encode()).hexdigest() != case.get("module_sha256")):
@@ -308,7 +309,12 @@ def directory_language_valid(case, go_version):
         files = package.get("files") or []
         path = package.get("path", "")
         if (not files or not package.get("name") or package.get("name") in names or path != "test/" + files[0][:-3]
-                or not execution.get("ran") or execution.get("exit") != 0 or execution.get("timed_out")):
+                or not execution.get("ran") or execution.get("timed_out")):
+            return False
+        if reject and index == len(packages) - 1:
+            if execution.get("exit", 0) <= 0:
+                return False
+        elif execution.get("exit") != 0:
             return False
         names.add(package.get("name"))
         module_path = package.get("module_path", path)
@@ -325,10 +331,14 @@ def directory_language_valid(case, go_version):
         command = execution.get("command", [])
         if command[:4] != ["go", "tool", "compile", "-e"] or [Path(p).name for p in command[-len(files):]] != files:
             return False
+        if reject and "-d=panic" not in command:
+            return False
     prefix = fixture["name"] + ".dir/"
     source_files = {p for p in original if p.startswith(prefix) and "/" not in p[len(prefix):] and p.endswith(".go")}
     if consumed != source_files or set(adapted) != expected or any(not isinstance(s, str) or not s for s in adapted.values()):
         return False
+    if reject:
+        return case.get("native") == compiled[-1]
     if contract == "compiledir":
         wrapper = "\n".join(imports) + "\nvoid main() {}\n"
         return (case.get("wrapper_source") == wrapper
@@ -420,7 +430,7 @@ def language_behavior(paths):
                                      and native[5].endswith("/" + case["fixture"].get("file", ""))
                                      and gart[:3] == ["dart", "compile", "kernel"]
                                      and gart[3:] in [["bin/main.dart", "-o", "compile.dill"], ["compile.dart", "-o", "compile.dill"]])
-                    elif case.get("contract") in {"reject", "errorcheckoutput", "diagnostics"}:
+                    elif case.get("contract") in {"reject", "errorcheckoutput", "diagnostics", "errorcheckdir"}:
                         rejected = all(case[k]["ran"] and case[k]["exit"] > 0 and not case[k]["timed_out"]
                                        for k in ("native", "gart"))
                         upstream_failure = bool(case["fixture"].get("upstream_expected_failure"))
@@ -449,6 +459,8 @@ def language_behavior(paths):
                                      and generator.get("ran") and generator.get("exit") == 0
                                      and not generator.get("timed_out")
                                      and hashlib.sha256(source).hexdigest() == generator.get("output_sha256"))
+                        elif case.get("contract") == "errorcheckdir":
+                            valid = valid and directory_language_valid(case, report.get("go_version"))
                         else:
                             recipe = case["fixture"]["recipe"]
                             version = re.fullmatch(r"errorcheck(\s+-0)?\s+-lang=(go[0-9]+\.[0-9]+)", recipe)
@@ -491,8 +503,8 @@ def language_behavior(paths):
                                      and case["native"].get("environment", {}).get("GOPATH")
                                      and case["native"]["environment"] == case["gart"].get("environment")
                                      and not case.get("build_error"))
-                    valid = valid and (status == "passed" or case.get("contract") in {"reject", "errorcheckoutput"})
-                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "build", "reject", "errorcheckoutput", "diagnostics"} and case.get("contract", "run") == config["contract"]
+                    valid = valid and (status == "passed" or case.get("contract") in {"reject", "errorcheckoutput", "errorcheckdir"})
+                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "build", "reject", "errorcheckoutput", "diagnostics", "errorcheckdir"} and case.get("contract", "run") == config["contract"]
 
                     if case["fixture"].get("host_tools"):
                         native_env = case["native"].get("environment") or {}
@@ -505,7 +517,7 @@ def language_behavior(paths):
                         group["problems"].append(f"{path}: invalid pass for {name}")
                 record = group["outcomes"].setdefault(name, dict(name=name, fixture=case["fixture"], statuses=set()))
                 record["statuses"].add(status)
-                if config["contract"] in {"reject", "errorcheckoutput"}:
+                if config["contract"] in {"reject", "errorcheckoutput", "errorcheckdir"}:
                     record.setdefault("rejection_results", set()).add(rejection_result(case, status))
             group["reports"].append(dict(path=str(path), manifest=origin["manifest"], sha256=stamp, complete=report["complete"],
                                          shard=report["shard"], shards=report["shards"]))
@@ -525,7 +537,7 @@ def language_behavior(paths):
             records.append(record)
         group["outcomes"] = records
         group["counts"] = dict(Counter(x["status"] for x in records))
-        if group["configuration"]["contract"] in {"reject", "errorcheckoutput"}:
+        if group["configuration"]["contract"] in {"reject", "errorcheckoutput", "errorcheckdir"}:
             group["rejection_results"] = dict(Counter(x["rejection_result"] for x in records))
         result.append(group)
     return result

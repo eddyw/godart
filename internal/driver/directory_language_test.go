@@ -11,9 +11,11 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eddyw/godart/internal/driver"
 	"github.com/eddyw/godart/internal/parity"
@@ -89,8 +91,12 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 	}
 	selected := testShard(t, names)
 	standard := run(t, "", "go", "list", "-export", "-f", "{{if .Export}}packagefile {{.ImportPath}}={{.Export}}{{end}}", "std")
-	for _, action := range []string{"compiledir", "rundir"} {
+	for _, action := range []string{"compiledir", "rundir", "errorcheckdir"} {
 		t.Run(action, func(t *testing.T) {
+			var matcher, matcherSource string
+			if action == "errorcheckdir" {
+				matcher, matcherSource = directoryDiagnosticMatcher(t)
+			}
 			var outcomes []*languageOutcome
 			for _, c := range cases {
 				if c.Action == action && selected[c.Name] {
@@ -107,6 +113,8 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 							result.Status = "failed"
 						case t.Skipped():
 							result.Status = "excluded"
+						case action == "errorcheckdir" && result.Fixture.ExpectedFailure:
+							result.Status = "upstream-expected-failure"
 						default:
 							result.Status = "passed"
 						}
@@ -152,7 +160,7 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 					cfg := filepath.Join(nativeDir, "importcfg")
 					writeFile(t, cfg, config)
 					result.ImportConfigSHA256 = languageDigest([]byte(config))
-					for _, pkg := range result.DirectoryPackages {
+					for index, pkg := range result.DirectoryPackages {
 						args := []string{"tool", "compile", "-e", "-D", "test", "-importcfg=" + cfg}
 						if pkg.Name == "main" {
 							args = append(args, "-p=main")
@@ -160,11 +168,23 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 							args = append(args, "-o", pkg.Path+".a", "-p", pkg.Path)
 						}
 						args = append(args, strings.Fields(inv.GCFlags)...)
+						if action == "errorcheckdir" {
+							args = append(args, "-d=panic")
+						}
 						for _, name := range pkg.Files {
 							args = append(args, filepath.Join(sourceDir, name))
 						}
 						result.NativeCompile = append(result.NativeCompile, languageExecution{})
-						runLanguage(t, &result.NativeCompile[len(result.NativeCompile)-1], nativeDir, runLimit, "go", args...)
+						execution := &result.NativeCompile[len(result.NativeCompile)-1]
+						if action == "errorcheckdir" {
+							result.NativeDiagnostics += recordLanguage(t, execution, nativeDir, runLimit, "go", args...)
+							last := index == len(result.DirectoryPackages)-1
+							if execution.TimedOut || last && execution.Exit <= 0 || !last && execution.Exit != 0 {
+								t.Fatalf("package %s: native exit %d, final rejection=%t, timeout=%t", pkg.Path, execution.Exit, last, execution.TimedOut)
+							}
+						} else {
+							runLanguage(t, execution, nativeDir, runLimit, "go", args...)
+						}
 					}
 					if action == "rundir" {
 						last := result.DirectoryPackages[len(result.DirectoryPackages)-1]
@@ -244,7 +264,33 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 							writeFile(t, target, string(data))
 						}
 					}
+					start := time.Now()
 					err = driver.Build(driver.Options{Dir: dir, Patterns: patterns, Out: out, Runtime: runtimeDir(t), Format: false})
+					if action == "errorcheckdir" {
+						result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
+						if err != nil {
+							result.Gart.Exit = 1
+							result.BuildError = err.Error()
+							text := err.Error()
+							for _, pkg := range result.DirectoryPackages {
+								subdir := strings.TrimPrefix(modulePaths[pkg.Path], "test/")
+								for _, name := range pkg.Files {
+									targetName := name
+									if strings.HasSuffix(name, "_test.go") {
+										targetName += ".gart.go"
+									}
+									text = strings.ReplaceAll(text, filepath.Join(dir, subdir, targetName), filepath.Join(sourceDir, name))
+								}
+							}
+							result.GartDiagnostics = regexp.MustCompile(`(?m)^(.*?\.go:[0-9]+):[0-9]+:`).ReplaceAllString(text, "$1:")
+						} else {
+							t.Error("Gart accepted the invalid final package")
+						}
+						result.Gart.OutputSHA256 = languageDigest([]byte(result.GartDiagnostics))
+						result.WrapperSHA256 = languageDigest([]byte(matcherSource))
+						matchDirectoryDiagnostics(t, result, matcher, sourceDir, dir)
+						return
+					}
 					if err != nil {
 						result.BuildError = err.Error()
 						t.Fatal(err)

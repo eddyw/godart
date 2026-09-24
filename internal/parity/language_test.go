@@ -36,6 +36,10 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/build.go", "// build\npackage main\n")
 	write("test/buildflags.go", "// build -race\npackage main\n")
 	write("test/rejectflags.go", "// errorcheck -0\npackage p\n")
+	write("test/rejectdirectory.go", "// errorcheckdir\npackage ignored\n")
+	write("test/rejectdirectory.dir/a.go", "package a\n")
+	write("test/rejectdirectoryflags.go", "// errorcheckdir -0\npackage ignored\n")
+	write("test/rejectdirectoryflags.dir/a.go", "package a\n")
 	write("test/groups.go", "// compiledir\npackage ignored\n")
 	write("test/groups.dir/a.go", "package a\n")
 	write("test/groupsrun.go", "// rundir\npackage ignored\n")
@@ -61,8 +65,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 27 {
-		t.Fatalf("got %d cases, want 27", len(inv.Cases))
+	if len(inv.Cases) != 29 {
+		t.Fatalf("got %d cases, want 29", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -91,6 +95,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["build"].Adapter != "build-file" || cases["buildflags"].Adapter != "missing" {
 		t.Fatal("the build adapter must preserve recipe flags")
+	}
+	if cases["rejectdirectory"].Adapter != "directory-packages" || cases["rejectdirectoryflags"].Adapter != "missing" {
+		t.Fatal("directory diagnostic recipes must preserve their flags")
 	}
 	if cases["compile"].Adapter != "compile-file" || cases["compileflags"].Adapter != "missing" {
 		t.Fatal("the compile adapter must not discard recipe flags")

@@ -149,7 +149,7 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 			}
 			if recipe == "run" {
 				c.Adapter = "single-file"
-			} else if recipe == "rundir" || recipe == "compiledir" {
+			} else if recipe == "rundir" || recipe == "compiledir" || recipe == "errorcheckdir" {
 				c.Adapter = "directory-packages"
 			} else if recipe == "compile" {
 				c.Adapter = "compile-file"

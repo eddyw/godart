@@ -264,6 +264,51 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"unobserved": 1})
 
+    def test_directory_diagnostics_require_ordered_compilation_and_matchers(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module = "module test\n\ngo 1.27.1\n"
+            diagnostic = "b.go:3: undefined: Missing"
+            execution = dict(ran=True, exit=0, timed_out=False,
+                             output_sha256=parity.hashlib.sha256(b"").hexdigest())
+            first = dict(execution, command=["go", "tool", "compile", "-e", "-d=panic", "sdk/p.dir/a.go"])
+            last = dict(execution, exit=2, output_sha256=parity.hashlib.sha256(diagnostic.encode()).hexdigest(),
+                        command=["go", "tool", "compile", "-e", "-d=panic", "sdk/p.dir/b.go"])
+            case = dict(fixture=dict(name="p", recipe="errorcheckdir", adapter="directory-packages",
+                                     files=[dict(path="p.dir/a.go", sha256="a"), dict(path="p.dir/b.go", sha256="b")]),
+                        contract="errorcheckdir", status="passed", build_error=diagnostic,
+                        native=dict(last), gart=dict(last), native_match=dict(execution), gart_match=dict(execution),
+                        native_diagnostics=diagnostic, gart_diagnostics=diagnostic, wrapper_sha256="original matcher",
+                        module_source=module, module_sha256=parity.hashlib.sha256(module.encode()).hexdigest(),
+                        directory_packages=[dict(name="a", path="test/a", files=["a.go"]),
+                                            dict(name="b", path="test/b", files=["b.go"])],
+                        adapted_sources={"a/a.go": "package a\n", "b/b.go": "package b\n"},
+                        native_compile=[first, last], importcfg_sha256="config")
+            path = root / "language.json"
+
+            def assess(value, status):
+                parity.save(path, dict(kind="language", go_version="go1.27.1", contract="errorcheckdir",
+                                       complete=True, outcomes=[value], shard=0, shards=1))
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            assess(case, "passed")
+            for mutate in [
+                lambda c: c["native_compile"][0].update(exit=1),
+                lambda c: c["native_compile"][1].update(exit=0),
+                lambda c: c["native_compile"][0]["command"].remove("-d=panic"),
+                lambda c: c["native_compile"][0].update(timed_out=True),
+                lambda c: c["native"].update(exit=1),
+                lambda c: c["gart"].update(exit=0),
+                lambda c: c["gart_match"].update(exit=1),
+                lambda c: c.update(adapted_sources={}),
+                lambda c: c.update(module_sha256="changed"),
+                lambda c: c["fixture"].update(recipe="errorcheckdir -0"),
+                lambda c: c.update(gart_diagnostics="changed"),
+            ]:
+                changed = copy.deepcopy(case)
+                mutate(changed)
+                assess(changed, "failed")
+
     def test_package_directories_require_compile_and_source_evidence(self):
         import hashlib
         with tempfile.TemporaryDirectory() as temporary:
