@@ -26,3 +26,11 @@ func ReadDirent(fd int, buf []byte) (int, error) {
 	}
 	return n, nil
 }
+
+func Seek(fd int, offset int64, whence int) (int64, error) {
+	position, errno := dart.SyscallSeek(fd, offset, whence)
+	if errno != 0 {
+		return position, Errno(errno)
+	}
+	return position, nil
+}

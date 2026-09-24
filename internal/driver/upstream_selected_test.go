@@ -71,7 +71,7 @@ func TestSelectedUpstream(t *testing.T) {
 				"TestDeferWithRepeatedRepanics", "interpreter", "recurseFnPanicRec", "saveInt", "recurseFn",
 			}},
 		},
-		"syscall":          {{Name: "syscall_test.go", Declarations: []string{"testSetGetenv", "TestEnv"}}, {Name: "env_unix_test.go", Declarations: []string{"env", "genDummyEnv", "setDummyEnv", "setupEnvCleanup", "TestClearenv"}}, {Name: "dirent_test.go"}},
+		"syscall":          {{Name: "syscall_test.go", Declarations: []string{"testSetGetenv", "TestEnv"}}, {Name: "env_unix_test.go", Declarations: []string{"env", "genDummyEnv", "setDummyEnv", "setupEnvCleanup", "TestClearenv"}}, {Name: "dirent_test.go"}, {Name: "syscall_unix_test.go", Declarations: []string{"TestSeekFailure"}}},
 		"internal/godebug": {{Name: "godebug_test.go", Declarations: []string{"TestGet", "TestMetrics", "TestImmutable", "TestCmdBisect", "TestBisectTestCase"}}},
 		"cmp":              {{Name: "cmp_test.go", Declarations: []string{"negzero", "TestSort", "TestOr", "ExampleOr", "ExampleOr_sort", "ExampleLess", "ExampleCompare"}}},
 		"math":             {{Name: "const_test.go"}, {Name: "example_test.go"}},

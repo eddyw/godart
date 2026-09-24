@@ -149,3 +149,8 @@ final _readdir = _libc
     _closedir(directory);
   }
 }
+
+(int, int) $syscallSeek(int fd, int offset, int whence) {
+  final position = _seek(fd, offset, whence);
+  return (position, position < 0 ? _errno().value : 0);
+}
