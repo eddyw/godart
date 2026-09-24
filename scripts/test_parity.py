@@ -523,6 +523,36 @@ class ParityTest(unittest.TestCase):
                 parity.save(path, report)
                 self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
 
+    def test_rejection_recipe_preserves_language_version(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            diagnostic = "type parameter requires go1.18 or later"
+            module = "module example.com/rejectfixture\n\ngo 1.17\n"
+            execution = dict(ran=True, exit=1, timed_out=False,
+                             output_sha256=parity.hashlib.sha256(diagnostic.encode()).hexdigest())
+            match = dict(ran=True, exit=0, timed_out=False)
+            outcome = dict(fixture=dict(name="p", recipe="errorcheck -lang=go1.17", module_go_version="1.17"),
+                           contract="reject", status="passed", wrapper_sha256="original matcher", build_error=diagnostic,
+                           module_source=module, module_sha256=parity.hashlib.sha256(module.encode()).hexdigest(),
+                           native={**execution, "command": ["go", "tool", "compile", "-lang=go1.17", "p.go"]},
+                           gart=dict(execution), native_match=dict(match), gart_match=dict(match),
+                           native_diagnostics=diagnostic, gart_diagnostics=diagnostic)
+            path = root / "language.json"
+            def assess(case, status):
+                parity.save(path, dict(kind="language", complete=True, outcomes=[case], shard=0, shards=1))
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+            assess(outcome, "passed")
+            for mutate in [
+                lambda c: c["native"]["command"].__setitem__(3, "-lang=go1.18"),
+                lambda c: c["fixture"].update(module_go_version="1.18"),
+                lambda c: c.update(module_source=module.replace("1.17", "1.18")),
+                lambda c: c.pop("module_sha256"),
+                lambda c: c["fixture"].update(recipe="errorcheck -0 -lang=go1.17"),
+            ]:
+                changed = copy.deepcopy(outcome)
+                mutate(changed)
+                assess(changed, "failed")
+
     def test_generated_rejection_retains_exact_source_bytes(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -157,14 +157,26 @@ func TestDiagnostics(t *testing.T) {
 				sourcePath = filepath.Join(dir, "generated.go")
 				writeFile(t, sourcePath, string(source))
 			}
-			result.NativeDiagnostics = recordLanguage(t, &result.Native, dir, runLimit, "go", "tool", "compile", "-p=p", "-d=panic", "-C", "-e", "-importcfg="+config, "-o", "native.o", sourcePath)
-			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/rejectfixture\n\ngo 1.27\n")
+			args := []string{"tool", "compile", "-p=p", "-d=panic", "-C", "-e", "-importcfg=" + config, "-o", "native.o"}
+			language := "1.27"
+			if c.ModuleGoVersion != "" {
+				language = c.ModuleGoVersion
+				args = append(args, "-lang=go"+language)
+				result.ModuleSource = "module example.com/rejectfixture\n\ngo " + language + "\n"
+				result.ModuleSHA256 = languageDigest([]byte(result.ModuleSource))
+			}
+			result.NativeDiagnostics = recordLanguage(t, &result.Native, dir, runLimit, "go", append(args, sourcePath)...)
+			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/rejectfixture\n\ngo "+language+"\n")
 			copyPath := filepath.Join(dir, filepath.Base(c.File))
 			writeFile(t, copyPath, string(source))
 			writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 			if c.Exclusion == nil {
 				start := time.Now()
-				err = driver.Build(driver.Options{Dir: dir, Patterns: []string{copyPath}, Out: t.TempDir(), Runtime: runtimeDir(t)})
+				pattern := copyPath
+				if c.ModuleGoVersion != "" {
+					pattern = "."
+				}
+				err = driver.Build(driver.Options{Dir: dir, Patterns: []string{pattern}, Out: t.TempDir(), Runtime: runtimeDir(t)})
 				result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
 				if err != nil {
 					result.Gart.Exit = 1

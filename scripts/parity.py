@@ -449,8 +449,17 @@ def language_behavior(paths):
                                      and hashlib.sha256(source).hexdigest() == generator.get("output_sha256"))
                         else:
                             recipe = case["fixture"]["recipe"]
-                            valid = valid and (recipe == "errorcheck" or recipe == "errorcheck -d=panic"
-                                               and "-d=panic" in case["native"].get("command", []))
+                            version = re.fullmatch(r"errorcheck\s+-lang=(go[0-9]+\.[0-9]+)", recipe)
+                            if version:
+                                language = version.group(1)
+                                module = f"module example.com/rejectfixture\n\ngo {language[2:]}\n"
+                                valid = (valid and case["fixture"].get("module_go_version") == language[2:]
+                                         and "-lang="+language in case["native"].get("command", [])
+                                         and case.get("module_source") == module
+                                         and case.get("module_sha256") == hashlib.sha256(module.encode()).hexdigest())
+                            else:
+                                valid = valid and (recipe == "errorcheck" or recipe == "errorcheck -d=panic"
+                                                   and "-d=panic" in case["native"].get("command", []))
                     else:
                         valid = expected and executed and all(case[k]["output_sha256"] == expected
                                                               for k in ("native", "gart"))

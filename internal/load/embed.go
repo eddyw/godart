@@ -1,3 +1,7 @@
+// Copyright 2016 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE-Go file.
+
 package load
 
 import (
@@ -7,6 +11,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"go/version"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -62,7 +67,11 @@ func embedRewrites(found []*packages.Package, files map[string][]byte) (map[stri
 			if !bytes.Contains(src, []byte("//go:embed")) {
 				continue
 			}
-			text, err := rewriteEmbed(name, src)
+			language := ""
+			if p.Module != nil && p.Module.GoVersion != "" {
+				language = "go" + p.Module.GoVersion
+			}
+			text, err := rewriteEmbed(name, src, language)
 			if err != nil {
 				return nil, err
 			}
@@ -88,7 +97,7 @@ const (
 
 // rewriteEmbed gives the source of 1 file with each directive replaced by the
 // value of its files. It gives nil when the file holds no directive.
-func rewriteEmbed(name string, src []byte) ([]byte, error) {
+func rewriteEmbed(name string, src []byte, language string) ([]byte, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, name, src, parser.ParseComments)
 	if err != nil {
@@ -159,14 +168,17 @@ func rewriteEmbed(name string, src []byte) ([]byte, error) {
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", fset.Position(vs.Pos()), err)
 			}
+			if len(vs.Names) != 1 || len(vs.Values) != 0 {
+				return nil, fmt.Errorf("%s: a go:embed variable takes 1 name and no value",
+					fset.Position(vs.Pos()))
+			}
+			if language != "" && version.Compare(language, "go1.16") < 0 {
+				return nil, fmt.Errorf("%s: go:embed requires go1.16 or later (-lang was set to %s; check go.mod)", fset.Position(lines[0].Pos()), version.Lang(language))
+			}
 			kind := embedTypeOf(vs.Type, pkgName)
 			if kind == embedNone {
 				return nil, fmt.Errorf("%s: a go:embed variable holds the type string, []byte, or %s.FS",
 					fset.Position(vs.Pos()), pkgName)
-			}
-			if len(vs.Names) != 1 || len(vs.Values) != 0 {
-				return nil, fmt.Errorf("%s: a go:embed variable takes 1 name and no value",
-					fset.Position(vs.Pos()))
 			}
 			held, err := resolveEmbed(dir, patterns)
 			if err != nil {

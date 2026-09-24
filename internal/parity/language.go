@@ -153,6 +153,9 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				c.Adapter = "directory-packages"
 			} else if recipe == "compile" {
 				c.Adapter = "compile-file"
+			} else if match := errorcheckVersionRecipe.FindStringSubmatch(recipe); match != nil {
+				c.Adapter = "reject-file"
+				c.ModuleGoVersion = strings.TrimPrefix(match[1], "go")
 			} else if recipe == "build" {
 				c.Adapter = "build-file"
 			} else if recipe == "errorcheck" || recipe == "errorcheck -d=panic" {
@@ -228,6 +231,8 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 	inv.SourceSHA256 = digest([]byte(identity))
 	return inv, nil
 }
+
+var errorcheckVersionRecipe = regexp.MustCompile(`^errorcheck\s+-lang=(go[0-9]+\.[0-9]+)$`)
 
 var directoryRecipe = regexp.MustCompile(`^runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?$`)
 

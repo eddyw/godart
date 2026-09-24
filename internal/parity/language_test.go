@@ -30,6 +30,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/run.out", "expected\n")
 	write("test/compile.go", "// compile\npackage p\n")
 	write("test/reject.go", "// errorcheck\npackage p\n")
+	write("test/rejectversion.go", "// errorcheck -lang=go1.17\npackage p\n")
+	write("test/rejectversionsuccess.go", "// errorcheck -0 -lang=go1.17\npackage p\n")
 	write("test/rejectpanic.go", "// errorcheck -d=panic\npackage p\n")
 	write("test/build.go", "// build\npackage main\n")
 	write("test/buildflags.go", "// build -race\npackage main\n")
@@ -59,8 +61,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 25 {
-		t.Fatalf("got %d cases, want 25", len(inv.Cases))
+	if len(inv.Cases) != 27 {
+		t.Fatalf("got %d cases, want 27", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -83,6 +85,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["reject"].Adapter != "reject-file" || cases["rejectpanic"].Adapter != "reject-file" || cases["rejectflags"].Adapter != "missing" {
 		t.Fatal("the rejection adapter must not discard recipe flags")
+	}
+	if cases["rejectversion"].Adapter != "reject-file" || cases["rejectversion"].ModuleGoVersion != "1.17" || cases["rejectversionsuccess"].Adapter != "missing" {
+		t.Fatal("the rejection adapter must preserve the language version and expected exit")
 	}
 	if cases["build"].Adapter != "build-file" || cases["buildflags"].Adapter != "missing" {
 		t.Fatal("the build adapter must preserve recipe flags")

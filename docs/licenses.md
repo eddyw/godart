@@ -18,6 +18,8 @@ The anonymous-interface cycle detector and compiler directive validation
 adapt `irgen.go`, `lex.go`, `noder.go`, and `writer.go` from Go compiler
 `src/cmd/compile/internal/noder/`. Their BSD notice resides in
 [`internal/load/LICENSE-Go`](../internal/load/LICENSE-Go).
+Language-version diagnostics and embed validation follow Go `noder/irgen.go`
+and `noder/noder.go` with `internal/load/LICENSE-Go`.
 Import diagnostics preserve path rules from Go `cmd/compile/internal/noder/import.go`.
 Syntax diagnostics use the unchanged Go compiler parser in
 `internal/gosyntax`. Its `ORIGIN.json` records the SDK and source hashes.
