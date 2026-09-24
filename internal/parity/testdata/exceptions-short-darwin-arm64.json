@@ -13435,6 +13435,14 @@
       "test": "TestDecodeElementRecursion"
     }
   ],
+  "net": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestCancelAfterDial"
+    }
+  ],
   "net/http": [
     {
       "gart": "skip",
