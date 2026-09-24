@@ -223,5 +223,17 @@
       "js",
       "wasm"
     ]
+  },
+  {
+    "package": "encoding/xml",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ],
+    "run": "^(TestCVE202228131|TestCVE202230633|TestDecodeElementRecursion|TestDecodeElementDepthBypass|TestRecursiveUnmarshalInterfaceDepth)$",
+    "full_node_args": [
+      "--max-old-space-size=8192"
+    ]
   }
 ]

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -17,10 +18,11 @@ import (
 
 func TestUpstreamTargets(t *testing.T) {
 	var cases []struct {
-		Package string                       `json:"package"`
-		Targets []string                     `json:"targets"`
-		Run     string                       `json:"run"`
-		Exclude map[string]map[string]string `json:"exclude"`
+		Package      string                       `json:"package"`
+		Targets      []string                     `json:"targets"`
+		Run          string                       `json:"run"`
+		Exclude      map[string]map[string]string `json:"exclude"`
+		FullNodeArgs []string                     `json:"full_node_args"`
 	}
 	data, err := os.ReadFile("../parity/testdata/targets.json")
 	if err != nil {
@@ -85,7 +87,11 @@ func TestUpstreamTargets(t *testing.T) {
 						}
 					}
 					args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter, "-test.skip=" + upstreamSkip(t, pkg)}
-					result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
+					var nodeArgs []string
+					if !testing.Short() {
+						nodeArgs = c.FullNodeArgs
+					}
+					result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args, nodeArgs...)
 					compareUpstream(t, pkg, pkg, filter, target, dir, result.Text, result.Exit)
 
 				})
@@ -94,7 +100,7 @@ func TestUpstreamTargets(t *testing.T) {
 	}
 }
 
-func runUpstreamTarget(t *testing.T, target, out, entry, dir string, args []string) programResult {
+func runUpstreamTarget(t *testing.T, target, out, entry, dir string, args []string, nodeArgs ...string) programResult {
 	t.Helper()
 	encoded, _ := json.Marshal(args)
 	writeFile(t, filepath.Join(out, "runner.dart"), "import '"+filepath.ToSlash(entry)+"' as tests;\nvoid main() { tests.main("+strings.ReplaceAll(string(encoded), "$", `\$`)+"); }\n")
@@ -108,7 +114,7 @@ func runUpstreamTarget(t *testing.T, target, out, entry, dir string, args []stri
 	case "js":
 		run(t, out, "dart", "compile", "js", "runner.dart", "-o", "main.js")
 		writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
-		result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", filepath.Join(out, "run.js"))
+		result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.js"))...)
 	case "wasm":
 		run(t, out, "dart", "compile", "wasm", "runner.dart", "-o", "main.wasm")
 		writeFile(t, filepath.Join(out, "run.mjs"), `import {compile} from './main.mjs';
@@ -117,7 +123,7 @@ const app = await compile(await readFile(new URL('./main.wasm', import.meta.url)
 const instance = await app.instantiate({});
 instance.invokeMain();
 `)
-		result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", filepath.Join(out, "run.mjs"))
+		result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.mjs"))...)
 	}
 	return result
 }

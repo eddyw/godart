@@ -615,7 +615,13 @@
   },
   {
     "package": "encoding/xml",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ],
+    "target_run": "^(TestCVE202228131|TestCVE202230633|TestDecodeElementRecursion|TestDecodeElementDepthBypass|TestRecursiveUnmarshalInterfaceDepth)$"
   },
   {
     "package": "errors",

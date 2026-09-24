@@ -50,6 +50,9 @@ python3 scripts/ci-local.py --mode full --suite stdlib --suite upstream-targets 
 ```
 
 Full suites can take substantially longer. They remain a separate manual task.
+The target manifest supplies extra Node arguments for full upstream runs.
+These arguments permit the heap space that original upstream stress tests need.
+Short runs retain the upstream skips and the normal Node heap limit.
 See [upstream parity](upstream-parity.md) for evidence and assertion rules.
 
 ## Linux validation
