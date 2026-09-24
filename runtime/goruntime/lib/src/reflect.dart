@@ -441,7 +441,7 @@ GoInt $valueLen(Iface? value) {
   if (value == null) $panicNil();
   final Object? v = value.value;
   if (v is Slice<Object?>) return v.$length;
-  if (v is List<Object?>) return $gi(v.length);
+  if (v is List<Object?>) return value.desc.length;
   if (v is GoString) return $gi(v.length);
   if (v is GoMap<Object?, Object?>) return $gi(v.length);
   // The length of a channel is the count of the values that the buffer holds.
@@ -464,7 +464,7 @@ Iface? $valueIndex(Iface? value, GoInt exactIndex) {
   }
   final Object? out = v is Slice<Object?>
       ? v.$at(exactIndex)
-      : _elemAt(v, index, desc);
+      : _elemAt(v, exactIndex, desc);
   if (elem.kind == 'interface') return out as Iface?;
   return Iface(elem, out);
 }
@@ -489,6 +489,10 @@ void $valueSetIndex(Iface? value, GoInt exactIndex, Iface? x) {
     v.$set(exactIndex, stored);
     return;
   }
+  if (v is $ZeroList<Object?>) {
+    _elemAt(v, exactIndex, desc);
+    return;
+  }
   if (v is List<Object?>) {
     if (index < 0 || index >= v.length) $panicIndex($gi(index), v.length);
     final Object? held = v[index];
@@ -502,7 +506,14 @@ void $valueSetIndex(Iface? value, GoInt exactIndex, Iface? x) {
   $panic($runtimeError('reflect: Set of an element of ${desc.display}'));
 }
 
-Object? _elemAt(Object? v, int index, TypeDesc desc) {
+Object? _elemAt(Object? v, GoInt exactIndex, TypeDesc desc) {
+  if (v is $ZeroList<Object?>) {
+    if (exactIndex < GoInt.zero || exactIndex >= desc.length) {
+      $panicIndex(exactIndex, desc.length);
+    }
+    return v.value;
+  }
+  final index = $ix(exactIndex);
   if (v is Slice<Object?>) {
     if (index < 0 || index >= v.len) $panicIndex($gi(index), v.len);
     return v.array[v.off + index];
@@ -2230,7 +2241,7 @@ GoInt $valueCap(Iface? value) {
   if (value == null) return GoInt.zero;
   final Object? v = value.value;
   if (v is Slice<Object?>) return v.$capacity;
-  if (v is List<Object?>) return $gi(v.length);
+  if (v is List<Object?>) return value.desc.length;
   // The capacity of a channel is the size of its buffer.
   if (v is Chan<Object?>) return $gi(v.capacity);
   return $valueLen(value);
@@ -2565,6 +2576,9 @@ Iface? $valueAddr(Iface? value, Iface? owner, GoInt exactIndex, int loc) {
   final Object? v = owner.value;
   if (v is $ZeroSlice<Object?>) {
     return Iface($ptrDesc(elem), v.$at(exactIndex));
+  }
+  if (v is $ZeroList<Object?>) {
+    return Iface($ptrDesc(elem), _elemAt(v, exactIndex, ownerDesc));
   }
   if (_isObjectPointer(elem)) {
     return Iface($ptrDesc(elem), _readElem(v, index));

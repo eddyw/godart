@@ -859,6 +859,9 @@ func (v Value) Len() int {
 // Elements of slices and addressable arrays retain their location.
 func (v Value) Index(i int) Value {
 	v.mustBe("Index", Array, Slice, String)
+	if i < 0 || i >= v.Len() {
+		panic("reflect: " + v.Kind().String() + " index out of range")
+	}
 	owner := v.read()
 	ro := v.ro
 	if ro != 0 {
