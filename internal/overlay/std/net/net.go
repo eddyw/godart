@@ -215,7 +215,7 @@ func (c *conn) Read(b []byte) (int, error) {
 	}
 	n, cause := dart.ConnRead(c.handle, b)
 	if cause != "" {
-		return n, netError("read "+c.network, cause)
+		return n, c.opError("read", cause)
 	}
 	if n == 0 && len(b) > 0 {
 		return 0, io.EOF
@@ -229,7 +229,7 @@ func (c *conn) Write(b []byte) (int, error) {
 	}
 	n, cause := dart.ConnWrite(c.handle, b)
 	if cause != "" {
-		return n, netError("write "+c.network, cause)
+		return n, c.opError("write", cause)
 	}
 	return n, nil
 }
@@ -261,20 +261,23 @@ func (c *conn) Close() error {
 	handle := c.handle
 	c.handle = -1
 	if cause := dart.ConnClose(handle); cause != "" {
-		return c.closeError(cause)
+		return c.opError("close", cause)
 	}
 	return nil
 }
 
-func closeCause(cause string) error {
+func socketCause(cause string) error {
+	if cause == "i/o timeout" {
+		return os.ErrDeadlineExceeded
+	}
 	if cause == ErrClosed.Error() {
 		return ErrClosed
 	}
 	return errors.New(cause)
 }
 
-func (c *conn) closeError(cause string) error {
-	return &OpError{Op: "close", Net: c.network, Source: c.local, Addr: c.remote, Err: closeCause(cause)}
+func (c *conn) opError(op, cause string) error {
+	return &OpError{Op: op, Net: c.network, Source: c.local, Addr: c.remote, Err: socketCause(cause)}
 }
 
 // connCloseWrite ends the write side of a connection. The result is empty on
@@ -300,7 +303,7 @@ func (c *conn) closeWrite() error {
 		return syscall.EINVAL
 	}
 	if cause := connCloseWrite(c.handle); cause != "" {
-		return c.closeError(cause)
+		return c.opError("close", cause)
 	}
 	return nil
 }
@@ -316,7 +319,7 @@ func (c *conn) closeRead() error {
 		return syscall.EINVAL
 	}
 	if cause := connCloseRead(c.handle); cause != "" {
-		return c.closeError(cause)
+		return c.opError("close", cause)
 	}
 	return nil
 }
@@ -363,7 +366,7 @@ func (p *packet) ReadFrom(b []byte) (int, Addr, error) {
 	}
 	n, host, port, cause := dart.PacketRead(p.handle, b)
 	if cause != "" {
-		return n, nil, netError("read udp", cause)
+		return n, nil, &OpError{Op: "read", Net: p.network, Source: p.local, Addr: p.remote, Err: socketCause(cause)}
 	}
 	return n, udpAddrOf(host, port), nil
 }
@@ -378,7 +381,7 @@ func (p *packet) WriteTo(b []byte, addr Addr) (int, error) {
 	}
 	n, cause := dart.PacketWrite(p.handle, b, host, port)
 	if cause != "" {
-		return n, netError("write udp", cause)
+		return n, &OpError{Op: "write", Net: p.network, Source: p.local, Addr: addr, Err: socketCause(cause)}
 	}
 	return n, nil
 }
@@ -387,7 +390,7 @@ func (p *packet) Close() error {
 	handle := p.handle
 	p.handle = -1
 	if cause := dart.PacketClose(handle); cause != "" {
-		return &OpError{Op: "close", Net: p.network, Source: p.local, Addr: p.remote, Err: closeCause(cause)}
+		return &OpError{Op: "close", Net: p.network, Source: p.local, Addr: p.remote, Err: socketCause(cause)}
 	}
 	return nil
 }
@@ -464,7 +467,7 @@ func (l *listener) Close() error {
 		return syscall.EINVAL
 	}
 	if cause := dart.ListenClose(l.handle); cause != "" {
-		return &OpError{Op: "close", Net: l.network, Addr: l.addr, Err: closeCause(cause)}
+		return &OpError{Op: "close", Net: l.network, Addr: l.addr, Err: socketCause(cause)}
 	}
 	l.handle = -1
 	return nil

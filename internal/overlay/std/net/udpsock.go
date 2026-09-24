@@ -75,7 +75,11 @@ func (c *UDPConn) connected() bool { return c.host != "" }
 
 // Read reads 1 datagram into the slice and gives the count. A datagram that
 // holds more bytes than the slice loses the rest, exactly as in Go.
+// An empty slice leaves the datagram unread.
 func (c *UDPConn) Read(b []byte) (int, error) {
+	if len(b) == 0 && c.p != nil && c.p.handle >= 0 {
+		return 0, nil
+	}
 	n, _, err := c.p.ReadFrom(b)
 	return n, err
 }
@@ -91,7 +95,7 @@ func (c *UDPConn) Write(b []byte) (int, error) {
 	}
 	n, cause := dart.PacketWrite(c.p.handle, b, c.host, c.port)
 	if cause != "" {
-		return n, netError("write udp", cause)
+		return n, &OpError{Op: "write", Net: c.p.network, Source: c.p.local, Addr: c.p.remote, Err: socketCause(cause)}
 	}
 	return n, nil
 }
@@ -129,7 +133,7 @@ func (c *UDPConn) readFrom(b []byte) (int, string, int, error) {
 	}
 	n, host, port, cause := dart.PacketRead(c.p.handle, b)
 	if cause != "" {
-		return n, "", 0, netError("read udp", cause)
+		return n, "", 0, &OpError{Op: "read", Net: c.p.network, Source: c.p.local, Addr: c.p.remote, Err: socketCause(cause)}
 	}
 	return n, host, port, nil
 }

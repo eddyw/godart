@@ -1,3 +1,7 @@
+// Copyright 2017 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -572,6 +576,8 @@ GoString _timeout() => GoString.fromString('i/o timeout');
 // SetDeadline must also change operations that already await the socket.
 final class _Deadline {
   int nanos = 0;
+  bool get expired => nanos != 0 && nanos <= $ix($nowNanos());
+
   final Set<void Function()> waits = <void Function()>{};
 
   void set(int value) {
@@ -591,9 +597,7 @@ final class _Deadline {
       if (left <= 0) {
         done.complete(expired);
       } else {
-        timer = Timer(Duration(microseconds: (left + 999) ~/ 1000), () {
-          if (!done.isCompleted) done.complete(expired);
-        });
+        timer = Timer(Duration(microseconds: (left + 999) ~/ 1000), reset);
       }
     }
 
@@ -949,12 +953,13 @@ String _statusLine(Uint8List b) {
   final _Conn? c = _at(handle);
   if (c == null) return (0, _closed());
   if (p.len == 0) return (0, _empty);
+  if (c.readDeadline.expired) return (0, _timeout());
   if (c.rest.isNotEmpty) return (_take(c, p), _empty);
   if (c.ended) return (0, _empty);
   $await(
     c.readDeadline.limit<int>(_fill(c), 2).then((int code) {
       if (code == 2) return (0, _timeout());
-      if (code == 1) return (0, _empty);
+      if (code == 1) return (0, _at(handle) == null ? _closed() : _empty);
       return (_take(c, p), _empty);
     }),
     (Object cause) => (0, _cause(cause)),
@@ -969,6 +974,7 @@ String _statusLine(Uint8List b) {
 (int, GoString) $connWrite(int handle, Slice<int> p) {
   final _Conn? c = _at(handle);
   if (c == null) return (0, _closed());
+  if (c.writeDeadline.expired) return (0, _timeout());
   if (c.writeEnded) return (0, GoString.fromString('broken pipe'));
   if (p.len == 0) return (0, _empty);
   $await(
@@ -1475,6 +1481,7 @@ Future<int> _fillPacket(_Packet s) {
 (int, GoString, int, GoString) $packetRead(int handle, Slice<int> p) {
   final _Packet? s = _packetAt(handle);
   if (s == null) return (0, _empty, 0, _closed());
+  if (s.readDeadline.expired) return (0, _empty, 0, _timeout());
   Timer? errors;
   if (s.nativeFD >= 0) {
     // Dart omits remote UDP errors from its datagram event stream.
@@ -1521,6 +1528,7 @@ Future<int> _fillPacket(_Packet s) {
 ) {
   final _Packet? s = _packetAt(handle);
   if (s == null) return (0, _closed());
+  if (s.writeDeadline.expired) return (0, _timeout());
   $await(
     s.writeDeadline.limit<(int, GoString)>(
       _sendTo(s, _bytes(p), host.toDartString(), port),
