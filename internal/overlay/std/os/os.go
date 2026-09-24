@@ -557,8 +557,9 @@ func OpenFile(name string, flag int, perm FileMode) (*File, error) {
 // the mask of the process, exactly as a create of Go does. A default mode
 // needs no command, thus the common path runs no process.
 func applyPerm(name string, perm FileMode) {
-	bits := syscallMode(perm) &^ dart.Umask()
-	if bits == 0o644 {
+	mask := dart.Umask()
+	bits := syscallMode(perm) &^ mask
+	if bits == 0o666&^mask {
 		return
 	}
 	dart.Chmod(name, bits)
