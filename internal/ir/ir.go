@@ -537,9 +537,11 @@ type (
 	}
 
 	Method struct {
-		Recv Expr
-		Obj  *types.Func
-		Type types.Type
+		Pos     token.Pos
+		Ordinal int
+		Recv    Expr
+		Obj     *types.Func
+		Type    types.Type
 
 		// TypeArgs holds the type arguments of an instance of a generic
 		// method.

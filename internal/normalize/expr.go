@@ -455,7 +455,7 @@ func (b *builder) selector(e *ast.SelectorExpr) ir.Expr {
 			return nil
 		}
 		fn, _ := sel.Obj().(*types.Func)
-		return &ir.Method{Recv: b.embeddedPath(x, sel), Obj: fn, Type: sel.Type()}
+		return &ir.Method{Recv: b.embeddedPath(x, sel), Obj: fn, Type: sel.Type(), Pos: e.Sel.Pos(), Ordinal: b.literalOrdinals[e]}
 	}
 	if sel.Kind() == types.MethodExpr {
 		fn, _ := sel.Obj().(*types.Func)

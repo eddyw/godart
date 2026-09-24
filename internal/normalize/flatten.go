@@ -356,7 +356,7 @@ func (f *flat) spawn(s ir.Stmt, target ir.Expr) {
 	switch call := target.(type) {
 	case *ir.Call:
 		if m, ok := call.Fun.(*ir.Method); ok {
-			call.Fun = &ir.Method{Recv: snap(m.Recv), Obj: m.Obj, Type: m.Type,
+			call.Fun = &ir.Method{Recv: snap(m.Recv), Obj: m.Obj, Type: m.Type, Pos: m.Pos, Ordinal: m.Ordinal,
 				TypeArgs: m.TypeArgs}
 		} else {
 			call.Fun = snap(call.Fun)

@@ -1087,13 +1087,7 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 			return fmt.Sprintf("$copyFunctionPC(%s, %s.desc.methods[%s])", text, e.dictOf(tp), e.methodKeyText(x.Obj.Id(), msig))
 		}
 		if x.Ordinal > 0 && e.cfg.Fset != nil {
-			name := fmt.Sprintf("%s.func%d", e.curGoName, x.Ordinal)
-			info := fmt.Sprintf("%s|%s|%d", name, e.goFile(x.Pos), e.cfg.Fset.Position(x.Pos).Line)
-			key := dartString(name)
-			for _, param := range e.typeParams {
-				key += " + ':' + " + e.dictOf(param) + ".desc.name"
-			}
-			return fmt.Sprintf("$functionValue(%s, %s, %s)", text, e.stringLit(info), key)
+			return e.genericWrapperValue(x.Pos, x.Ordinal, text)
 		}
 		return e.methodFunctionValue(x.Recv, x.Obj, text)
 	}
