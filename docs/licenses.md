@@ -72,6 +72,7 @@ Temporary file creation flags and permissions follow Go `src/os/tempfile.go` wit
 The WriteFile overlay preserves Go `src/os/file.go` behavior and its BSD notice.
 Descriptor-based directory and file attribute changes follow Go `src/os/file_posix.go`,
 `src/internal/poll/fd_posix.go`, and `fd_unix.go` with their BSD notices.
+Path-based truncation follows Go `src/os/file_unix.go` with its BSD notice.
 File synchronization follows Go `src/internal/poll/fd_fsync_darwin.go` and
 `fd_fsync_posix.go` with their BSD notices.
 Path permission and ownership changes follow Go `src/os/file_posix.go` with its BSD notice.

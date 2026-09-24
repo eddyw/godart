@@ -16,6 +16,7 @@ func main() {
 	defer os.RemoveAll(root)
 	seekErrors(root)
 	syncTruncateErrors(root)
+	pathTruncateErrors(root)
 	path := filepath.Join(root, "file")
 	if err := os.WriteFile(path, []byte("abc"), 0600); err != nil {
 		panic(err)
@@ -177,6 +178,38 @@ func syncTruncateErrors(root string) {
 					f.Close()
 				}
 			}
+		}
+	}
+}
+
+func pathTruncateErrors(root string) {
+	file := filepath.Join(root, "path-truncate")
+	if err := os.WriteFile(file, []byte("abc"), 0200); err != nil {
+		panic(err)
+	}
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(file, link); err != nil {
+		panic(err)
+	}
+	dangling := filepath.Join(root, "dangling")
+	if err := os.Symlink(filepath.Join(root, "missing"), dangling); err != nil {
+		panic(err)
+	}
+	raw := filepath.Join(root, "raw-"+string([]byte{255}))
+	paths := []string{file, root, os.DevNull, link, dangling, filepath.Join(root, "missing"), "", file + "/", file + "/child", file + "\x00", raw}
+	for i, path := range paths {
+		for _, size := range []int64{-1, 0, 7} {
+			err := os.Truncate(path, size)
+			var pe *os.PathError
+			var code syscall.Errno
+			op, cause, matches := "", fmt.Sprintf("%T:%v", err, err), true
+			if errors.As(err, &pe) {
+				op = pe.Op
+				cause = fmt.Sprintf("%T:%v", pe.Err, pe.Err)
+				matches = pe.Path == path
+			}
+			numeric := errors.As(err, &code)
+			fmt.Println(i, size, err == nil, op, cause, numeric, int(code), matches)
 		}
 	}
 }

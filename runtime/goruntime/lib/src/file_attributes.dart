@@ -43,6 +43,17 @@ int $fileChown(int fd, int uid, int gid) {
   return error;
 }
 
+final _truncate = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Int64),
+      int Function(Pointer<Uint8>, int)
+    >('truncate');
+
+int $nativeTruncate(GoString path, int size) {
+  final truncate = _truncate;
+  return _pathAttribute(path, (name) => truncate(name, size));
+}
+
 final _ftruncate = _libc
     .lookupFunction<Int Function(Int, Int64), int Function(int, int)>(
       'ftruncate',

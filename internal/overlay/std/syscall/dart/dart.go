@@ -1012,6 +1012,10 @@ func FileClose(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func NativeTruncate(name string, size int64) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func NativeFtruncate(fd int, size int64) int {
 	panic("syscall/dart needs the gart compiler")
 }

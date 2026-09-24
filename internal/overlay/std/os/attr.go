@@ -165,6 +165,12 @@ func Chtimes(name string, atime time.Time, mtime time.Time) error {
 // Truncate writes the size of the named file. It does not move the read
 // position of an open file.
 func Truncate(name string, size int64) error {
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if code := dart.NativeTruncate(name, size); code != 0 {
+			return &PathError{Op: "truncate", Path: name, Err: syscall.Errno(code)}
+		}
+		return nil
+	}
 	// The write mode of the Dart side makes a file that does not exist yet, and
 	// Go reports such a path instead.
 	if _, err := Stat(name); err != nil {
