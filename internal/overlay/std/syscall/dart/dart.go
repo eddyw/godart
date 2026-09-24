@@ -994,12 +994,12 @@ func DirectoryClose(fd int) int {
 
 // FileRead reads bytes into the slice and gives the count. A count of 0 with no
 // cause means the end of the file.
-func FileRead(handle int, p []byte) (int, string) {
+func FileRead(handle int, p []byte) (int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
 // FileWrite writes the bytes of the slice and gives the count.
-func FileWrite(handle int, p []byte) (int, string) {
+func FileWrite(handle int, p []byte) (int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

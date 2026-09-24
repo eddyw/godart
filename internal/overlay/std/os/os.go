@@ -250,15 +250,18 @@ func (f *File) Write(p []byte) (int, error) {
 		return 0, &PathError{Op: "write", Path: f.name, Err: errors.New("bad file descriptor")}
 	}
 	if f.dir {
-		return 0, &PathError{Op: "write", Path: f.name, Err: errBadDescriptor}
+		return 0, &PathError{Op: "write", Path: f.name, Err: syscall.EBADF}
 	}
-	n, cause := dart.FileWrite(f.handle, p)
-	return n, pathError("write", f.name, cause)
+	n, cause, code := dart.FileWrite(f.handle, p)
+	return n, fileIOError("write", f.name, cause, code)
 }
 
-var errBadDescriptor = &sysError{text: "bad file descriptor"}
-
-var errIsDir = &sysError{text: "is a directory"}
+func fileIOError(op, name, cause string, code int) error {
+	if code != 0 {
+		return &PathError{Op: op, Path: name, Err: syscall.Errno(code)}
+	}
+	return pathError(op, name, cause)
+}
 
 // WriteString writes the text and gives the count of bytes.
 func (f *File) WriteString(s string) (int, error) { return f.Write([]byte(s)) }
@@ -268,6 +271,9 @@ func (f *File) WriteString(s string) (int, error) { return f.Write([]byte(s)) }
 func (f *File) Read(p []byte) (int, error) {
 	if err := f.checkValid("read"); err != nil {
 		return 0, err
+	}
+	if len(p) == 0 {
+		return 0, nil
 	}
 	if f.std == stdInFile {
 		n, cause := dart.StdinRead(p)
@@ -283,11 +289,11 @@ func (f *File) Read(p []byte) (int, error) {
 		return 0, &PathError{Op: "read", Path: f.name, Err: errors.New("bad file descriptor")}
 	}
 	if f.dir {
-		return 0, &PathError{Op: "read", Path: f.name, Err: errIsDir}
+		return 0, &PathError{Op: "read", Path: f.name, Err: syscall.EISDIR}
 	}
-	n, cause := dart.FileRead(f.handle, p)
-	if cause != "" {
-		return n, pathError("read", f.name, cause)
+	n, cause, code := dart.FileRead(f.handle, p)
+	if err := fileIOError("read", f.name, cause, code); err != nil {
+		return n, err
 	}
 	if n == 0 && len(p) > 0 {
 		return 0, io.EOF
@@ -298,31 +304,36 @@ func (f *File) Read(p []byte) (int, error) {
 // ReadAt reads at the offset. It does not move the read position of the file,
 // thus the call reads the position first and writes it again.
 func (f *File) ReadAt(p []byte, off int64) (int, error) {
-	if err := f.checkValid("readat"); err != nil {
+	if f == nil {
+		return 0, ErrInvalid
+	}
+	if off < 0 {
+		return 0, &PathError{Op: "readat", Path: f.name, Err: errors.New("negative offset")}
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if err := f.checkValid("read"); err != nil {
 		return 0, err
 	}
 	if f.std != stdNone {
 		return 0, &PathError{Op: "read", Path: f.name, Err: errors.New("bad file descriptor")}
 	}
 	if f.dir {
-		return 0, &PathError{Op: "read", Path: f.name, Err: errIsDir}
-	}
-	if off < 0 {
-		return 0, &PathError{Op: "readat", Path: f.name, Err: errors.New("negative offset")}
+		return 0, &PathError{Op: "read", Path: f.name, Err: syscall.EISDIR}
 	}
 	pos, cause := dart.FileSeek(f.handle, 0, dart.SeekCurrent)
 	if cause != "" {
-		return 0, pathError("readat", f.name, cause)
+		return 0, pathError("read", f.name, cause)
 	}
 	if _, cause := dart.FileSeek(f.handle, off, dart.SeekStart); cause != "" {
-		return 0, pathError("readat", f.name, cause)
+		return 0, pathError("read", f.name, cause)
 	}
 	read := 0
 	var err error
 	for read < len(p) {
-		n, cause := dart.FileRead(f.handle, p[read:])
-		if cause != "" {
-			err = pathError("readat", f.name, cause)
+		n, cause, code := dart.FileRead(f.handle, p[read:])
+		if err = fileIOError("read", f.name, cause, code); err != nil {
 			break
 		}
 		if n == 0 {
@@ -332,7 +343,7 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 		read += n
 	}
 	if _, cause := dart.FileSeek(f.handle, pos, dart.SeekStart); cause != "" && err == nil {
-		err = pathError("readat", f.name, cause)
+		err = pathError("read", f.name, cause)
 	}
 	return read, err
 }
@@ -342,17 +353,11 @@ var errWriteAtInAppendMode = errors.New("os: invalid use of WriteAt on file open
 // WriteAt writes at the offset. It does not move the write position of the
 // file, thus the call reads the position first and writes it again.
 func (f *File) WriteAt(p []byte, off int64) (int, error) {
-	if err := f.checkValid("writeat"); err != nil {
-		return 0, err
+	if f == nil {
+		return 0, ErrInvalid
 	}
 	if f.appendMode {
 		return 0, errWriteAtInAppendMode
-	}
-	if f.std != stdNone {
-		return 0, &PathError{Op: "write", Path: f.name, Err: errors.New("bad file descriptor")}
-	}
-	if f.dir {
-		return 0, &PathError{Op: "write", Path: f.name, Err: errBadDescriptor}
 	}
 	if off < 0 {
 		return 0, &PathError{Op: "writeat", Path: f.name, Err: errors.New("negative offset")}
@@ -360,20 +365,26 @@ func (f *File) WriteAt(p []byte, off int64) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
+	if err := f.checkValid("write"); err != nil {
+		return 0, err
+	}
+	if f.std != stdNone {
+		return 0, &PathError{Op: "write", Path: f.name, Err: errors.New("bad file descriptor")}
+	}
+	if f.dir {
+		return 0, &PathError{Op: "write", Path: f.name, Err: syscall.EBADF}
+	}
 	pos, cause := dart.FileSeek(f.handle, 0, dart.SeekCurrent)
 	if cause != "" {
-		return 0, pathError("writeat", f.name, cause)
+		return 0, pathError("write", f.name, cause)
 	}
 	if _, cause := dart.FileSeek(f.handle, off, dart.SeekStart); cause != "" {
-		return 0, pathError("writeat", f.name, cause)
+		return 0, pathError("write", f.name, cause)
 	}
-	written, cause := dart.FileWrite(f.handle, p)
-	var err error
-	if cause != "" {
-		err = pathError("writeat", f.name, cause)
-	}
+	written, cause, code := dart.FileWrite(f.handle, p)
+	err := fileIOError("write", f.name, cause, code)
 	if _, cause := dart.FileSeek(f.handle, pos, dart.SeekStart); cause != "" && err == nil {
-		err = pathError("writeat", f.name, cause)
+		err = pathError("write", f.name, cause)
 	}
 	return written, err
 }

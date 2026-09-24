@@ -43,9 +43,9 @@ int $nativeChdir(GoString path) => 38;
 
 int $directoryCreate(GoString path, int mode) => 38;
 
-(int, GoString) $fileRead(int handle, Slice<GoInt> p) => (0, _noSys);
+(int, GoString, int) $fileRead(int handle, Slice<GoInt> p) => (0, _noSys, 0);
 
-(int, GoString) $fileWrite(int handle, Slice<GoInt> p) => (0, _noSys);
+(int, GoString, int) $fileWrite(int handle, Slice<GoInt> p) => (0, _noSys, 0);
 
 (int, GoString) $fileSeek(int handle, int offset, int whence) => (0, _noSys);
 

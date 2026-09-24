@@ -119,27 +119,39 @@ FileMode _mode(int mode) {
 
 /// Reads bytes into the slice and gives the count. A count of 0 with no cause
 /// means the end of the file.
-(int, GoString) $fileRead(int handle, Slice<int> p) {
+(int, GoString, int) $fileRead(int handle, Slice<int> p) {
   final FileHandle? f = _at(handle);
-  if (f == null) return (0, GoString.fromString('file already closed'));
-  if (p.len == 0) return (0, _empty);
+  if (f == null) return (0, GoString.fromString('file already closed'), 0);
+  if (p.len == 0) return (0, _empty, 0);
   try {
     final int n = f.readIntoSync(p.array, p.off, p.off + p.len);
-    return (n, _empty);
+    return (n, _empty, 0);
   } catch (e) {
-    return (0, _cause(e));
+    return (
+      0,
+      _cause(e),
+      f is NativeFileHandle && e is FileSystemException
+          ? e.osError?.errorCode ?? 0
+          : 0,
+    );
   }
 }
 
 /// Writes the bytes of the slice and gives the count.
-(int, GoString) $fileWrite(int handle, Slice<int> p) {
+(int, GoString, int) $fileWrite(int handle, Slice<int> p) {
   final FileHandle? f = _at(handle);
-  if (f == null) return (0, GoString.fromString('file already closed'));
+  if (f == null) return (0, GoString.fromString('file already closed'), 0);
   try {
     final count = f.writeFromSync(p.array, p.off, p.off + p.len);
-    return (count, _empty);
+    return (count, _empty, 0);
   } catch (e) {
-    return (e is PartialFileWrite ? e.count : 0, _cause(e));
+    return (
+      e is PartialFileWrite ? e.count : 0,
+      _cause(e),
+      f is NativeFileHandle && e is FileSystemException
+          ? e.osError?.errorCode ?? 0
+          : 0,
+    );
   }
 }
 
