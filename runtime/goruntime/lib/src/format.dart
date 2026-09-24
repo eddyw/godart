@@ -261,84 +261,128 @@ const String _formatKey = 'Format(fmt.State,int32)';
 /// 2 values of 2 types are never equal. A slice, a map, a struct, an array, a
 /// pointer, and an interface each compare their parts, and each other kind
 /// compares with the equality of Go.
-bool $deepEqual(Iface? a, Iface? b) => _DeepComparison().interfaces(a, b);
+bool $deepEqual(Iface? a, Iface? b) => _DeepComparison().equal(a, b);
 
 final class _DeepComparison {
   // Use identity because a struct key can contain a cycle.
   final seen = HashMap<Object, Map<Object, Set<String>>>.identity();
-  bool interfaces(Iface? a, Iface? b) {
+  // A child iterator runs before its parent advances to the next value.
+  final pending = <Iterator<bool>>[];
+
+  bool equal(Iface? a, Iface? b) {
     if (a == null || b == null) return a == null && b == null;
     if (a.desc.name != b.desc.name) return false;
-    return values(a.value, b.value, a.desc);
+    if (!values(a.value, b.value, a.desc)) return false;
+    while (pending.isNotEmpty) {
+      final part = pending.last;
+      if (!part.moveNext()) {
+        pending.removeLast();
+      } else if (!part.current) {
+        return false;
+      }
+    }
+    return true;
   }
 
   bool values(Object? x, Object? y, TypeDesc desc) {
-    if (x != null &&
-        y != null &&
-        (desc.kind == 'ptr' || desc.kind == 'map' || desc.kind == 'slice')) {
-      final right = seen.putIfAbsent(
-        x,
-        () => HashMap<Object, Set<String>>.identity(),
-      );
-      if (!right.putIfAbsent(y, () => <String>{}).add(desc.name)) return true;
-    }
-    switch (desc.kind) {
-      case 'slice':
-        if (x is! Slice || y is! Slice) return x == y;
-        if (x.isNil != y.isNil) return false;
-        if (x.$length != y.$length) return false;
-        if (identical(x.array, y.array) && x.off == y.off) return true;
-        if (x is $ZeroSlice || y is $ZeroSlice) return true;
-        final TypeDesc elem = desc.elem!();
-        for (var i = 0; i < x.len; i++) {
-          if (!values(x[i], y[i], elem)) return false;
-        }
-        return true;
-      case 'array':
-        if (x is! List || y is! List) return x == y;
-        if (x.length != y.length) return false;
-        final TypeDesc elem = desc.elem!();
-        for (var i = 0; i < x.length; i++) {
-          if (!values(x[i], y[i], elem)) return false;
-        }
-        return true;
-      case 'map':
-        if (x is! GoMap || y is! GoMap) return x == y;
-        if (x.isNil != y.isNil) return false;
-        if (x.length != y.length) return false;
-        if (identical(x, y)) return true;
-        final TypeDesc elem = desc.elem!();
-        final Slice<Object?> keys = x.keys() as Slice<Object?>;
-        for (var i = 0; i < keys.len; i++) {
-          final Object? key = keys[i];
-          if (!y.has(key)) return false;
-          if (!values(x.get(key), y.get(key), elem)) return false;
-        }
-        return true;
-      case 'struct':
-        if (x == null || y == null) return x == y;
-        for (final FieldDesc field in desc.fields) {
-          if (!values(field.get(x), field.get(y), field.type())) return false;
-        }
-        return true;
-      case 'ptr':
-        if (identical($pointerOwner(x), $pointerOwner(y))) return true;
-        if (x is $Ref<Object?, Object?> &&
-            y is $Ref<Object?, Object?> &&
-            x == y)
+    while (true) {
+      if (x != null &&
+          y != null &&
+          (desc.kind == 'ptr' || desc.kind == 'map' || desc.kind == 'slice')) {
+        final right = seen.putIfAbsent(
+          x,
+          () => HashMap<Object, Set<String>>.identity(),
+        );
+        if (!right.putIfAbsent(y, () => <String>{}).add(desc.name)) return true;
+      }
+      switch (desc.kind) {
+        case 'slice':
+          if (x is! Slice || y is! Slice) return x == y;
+          if (x.isNil != y.isNil) return false;
+          if (x.$length != y.$length) return false;
+          if (identical(x.array, y.array) && x.off == y.off) return true;
+          if (x is $ZeroSlice || y is $ZeroSlice) return true;
+          pending.add(slice(x, y, desc.elem!()).iterator);
           return true;
-        if (x == null || y == null) return false;
-        if (x is $Ptr<Object?> && y is $Ptr<Object?>) {
-          return values(x.v, y.v, desc.elem!());
-        }
-        return values(x, y, desc.elem!());
-      case 'interface':
-        return interfaces(x as Iface?, y as Iface?);
-      case 'func':
-        return x == null && y == null;
+        case 'array':
+          if (x is! List || y is! List) return x == y;
+          if (x.length != y.length) return false;
+          pending.add(array(x, y, desc.elem!()).iterator);
+          return true;
+        case 'map':
+          if (x is! GoMap || y is! GoMap) return x == y;
+          if (x.isNil != y.isNil) return false;
+          if (x.length != y.length) return false;
+          if (identical(x, y)) return true;
+          pending.add(map(x, y, desc.elem!()).iterator);
+          return true;
+        case 'struct':
+          if (x == null || y == null) return x == y;
+          pending.add(fields(x, y, desc).iterator);
+          return true;
+        case 'ptr':
+          if (identical($pointerOwner(x), $pointerOwner(y))) return true;
+          if (x is $Ref<Object?, Object?> &&
+              y is $Ref<Object?, Object?> &&
+              x == y) {
+            return true;
+          }
+          if (x == null || y == null) return false;
+          if (x is $Ptr<Object?> && y is $Ptr<Object?>) {
+            x = x.v;
+            y = y.v;
+          }
+          desc = desc.elem!();
+          continue;
+        case 'func':
+          return x == null && y == null;
+      }
+      if (desc.kind == 'interface' || x is Iface || y is Iface) {
+        final a = x as Iface?;
+        final b = y as Iface?;
+        if (a == null || b == null) return a == null && b == null;
+        if (a.desc.name != b.desc.name) return false;
+        x = a.value;
+        y = b.value;
+        desc = a.desc;
+        continue;
+      }
+      return x == y;
     }
-    if (x is Iface || y is Iface) return interfaces(x as Iface?, y as Iface?);
-    return x == y;
+  }
+
+  Iterable<bool> slice(
+    Slice<Object?> x,
+    Slice<Object?> y,
+    TypeDesc elem,
+  ) sync* {
+    for (var i = 0; i < x.len; i++) {
+      yield values(x[i], y[i], elem);
+    }
+  }
+
+  Iterable<bool> array(List<Object?> x, List<Object?> y, TypeDesc elem) sync* {
+    for (var i = 0; i < x.length; i++) {
+      yield values(x[i], y[i], elem);
+    }
+  }
+
+  Iterable<bool> map(
+    GoMap<Object?, Object?> x,
+    GoMap<Object?, Object?> y,
+    TypeDesc elem,
+  ) sync* {
+    final keys = x.keys();
+    for (var i = 0; i < keys.len; i++) {
+      final key = keys[i];
+      yield y.has(key) && values(x.get(key), y.get(key), elem);
+    }
+  }
+
+  Iterable<bool> fields(Object x, Object y, TypeDesc desc) sync* {
+    for (final field in desc.fields) {
+      yield values(field.get(x), field.get(y), field.type());
+    }
   }
 }
 
