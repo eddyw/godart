@@ -704,6 +704,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$getenv(%s)", args[0]), true
 	case "Environ":
 		return "$environ()", true
+	case "NativeGetwd":
+		return "$nativeGetwd()", true
+	case "NativeChdir":
+		return fmt.Sprintf("$nativeChdir(%s)", args[0]), true
 	case "Getwd":
 		return "$getwd()", true
 	case "Getpid", "Getuid", "Geteuid", "Getgid", "Getegid", "Getppid", "Getpagesize", "Getgroups":

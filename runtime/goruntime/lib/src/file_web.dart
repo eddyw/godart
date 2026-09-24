@@ -37,6 +37,10 @@ int $directoryClose(int fd) => 38;
 
 int $directoryChdir(int fd) => 38;
 
+int $nativeChdir(GoString path) => 38;
+
+(GoString, int) $nativeGetwd() => (GoString.empty, 38);
+
 int $directoryCreate(GoString path, int mode) => 38;
 
 (int, GoString) $fileRead(int handle, Slice<GoInt> p) => (0, _noSys);

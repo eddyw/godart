@@ -1224,6 +1224,14 @@ func Executable() (string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func NativeGetwd() (string, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func NativeChdir(path string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func Getwd() (string, string) {
 	panic("syscall/dart needs the gart compiler")
 }

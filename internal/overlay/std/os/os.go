@@ -1008,12 +1008,30 @@ func Getwd() (string, error) {
 	if system != "windows" && system != "plan9" {
 		pwd := Getenv("PWD")
 		if len(pwd) > 0 && pwd[0] == '/' {
-			// The suffix follows a final symlink before the identity comparison.
-			same, cause := dart.FileIdentical(".", pwd+"/.")
-			if cause == "" && same {
-				return pwd, nil
+			if dart.HasNativeStat() {
+				dot, err := Stat(".")
+				if err != nil {
+					return "", err
+				}
+				info, err := Stat(pwd)
+				if err == nil && SameFile(dot, info) {
+					return pwd, nil
+				}
+			} else {
+				// The suffix follows a final symlink before the identity comparison.
+				same, cause := dart.FileIdentical(".", pwd+"/.")
+				if cause == "" && same {
+					return pwd, nil
+				}
 			}
 		}
+	}
+	if dart.HasNativeStat() {
+		path, errno := dart.NativeGetwd()
+		if errno != 0 {
+			return "", NewSyscallError("getwd", syscall.Errno(errno))
+		}
+		return path, nil
 	}
 	path, cause := dart.Getwd()
 	if cause != "" {
@@ -1025,6 +1043,12 @@ func Getwd() (string, error) {
 func Chdir(path string) error {
 	if contains(path, "\x00") {
 		return &PathError{Op: "chdir", Path: path, Err: syscall.EINVAL}
+	}
+	if dart.HasNativeStat() {
+		if errno := dart.NativeChdir(path); errno != 0 {
+			return &PathError{Op: "chdir", Path: path, Err: syscall.Errno(errno)}
+		}
+		return nil
 	}
 	return pathError("chdir", path, dart.Chdir(path))
 }
