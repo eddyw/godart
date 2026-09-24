@@ -95,6 +95,31 @@ func TestUDPBlockedReads(t *testing.T){
  })}
 }
 
+func TestConnectedWriteDestination(t *testing.T) {
+ listener, err := net.ListenPacket("udp", "127.0.0.1:0")
+ if err != nil { t.Fatal(err) }
+ defer listener.Close()
+ remote := listener.LocalAddr().(*net.UDPAddr)
+ connection, err := net.DialUDP("udp", nil, remote)
+ if err != nil { t.Fatal(err) }
+ defer connection.Close()
+ for _, test := range []struct{name string; write func([]byte)(int,error)}{
+  {"WriteTo",func(b []byte)(int,error){return connection.WriteTo(b,remote)}},
+  {"WriteToUDP",func(b []byte)(int,error){return connection.WriteToUDP(b,remote)}},
+  {"WriteToUDPAddrPort",func(b []byte)(int,error){return connection.WriteToUDPAddrPort(b,remote.AddrPort())}},
+ } {
+  t.Run(test.name,func(t *testing.T){
+   n, err := test.write([]byte("payload"))
+   if n != 0 || !errors.Is(err,net.ErrWriteToConnected) { t.Fatalf("write = %d %v",n,err) }
+   var op *net.OpError
+   if !errors.As(err,&op) { t.Fatalf("error type = %T, want *net.OpError",err) }
+   if op.Op != "write" || op.Net != "udp" || op.Source == nil || op.Addr == nil { t.Fatalf("operation = %#v",op) }
+   if op.Source.String()!=connection.LocalAddr().String() || op.Addr.String()!=remote.String() { t.Fatalf("addresses = %#v",op) }
+   if op.Err != net.ErrWriteToConnected { t.Fatalf("cause = %T %v",op.Err,op.Err) }
+  })
+ }
+}
+
 `)
 	source := selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/net/udpsock_test.go"), []string{"TestUDPZeroBytePayload", "TestUDPZeroByteBuffer", "TestUDPReadSizeError", "TestUDPReadTimeout"})
 	source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/udperrors/testenv"`)
@@ -134,7 +159,7 @@ func TestUDPBlockedReads(t *testing.T){
 				r = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
 			compareUpstream(t, "udp-datagram-errors", "net", filter, target, filepath.Join(runtime.GOROOT(), "src/net"), r.Text, r.Exit)
-			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads)$"}
+			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads|TestConnectedWriteDestination)$"}
 			if target == "vm" {
 				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {

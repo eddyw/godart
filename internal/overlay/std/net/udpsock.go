@@ -134,7 +134,7 @@ func (c *UDPConn) readFrom(b []byte) (int, string, int, error) {
 // connected gives ErrWriteToConnected, exactly as in Go.
 func (c *UDPConn) WriteTo(b []byte, addr Addr) (int, error) {
 	if c.connected() {
-		return 0, ErrWriteToConnected
+		return 0, &OpError{Op: "write", Net: c.p.network, Source: c.p.local, Addr: addr, Err: ErrWriteToConnected}
 	}
 	return c.p.WriteTo(b, addr)
 }
