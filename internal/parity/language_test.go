@@ -71,6 +71,21 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/other/directory.dir/main.go", "package main\nfunc main() {}\n")
 	write("test/linkx_run.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/linkx.go", "// skip\npackage main\nfunc main() {}\n")
+	optimizationRecipes := map[string]string{
+		"optimizationml":    "errorcheck -0 -m -l",
+		"optimizationm":     "errorcheck -0 -m",
+		"optimizationm2":    "errorcheck -0 -m=2",
+		"optimizationnml":   "errorcheck -0 -N -m -l",
+		"optimizationlm":    "errorcheck -0 -l -m",
+		"optimizationmm":    "errorcheck -0 -m -m",
+		"optimizationsmall": "errorcheck -0 -m -l -smallframes",
+		"optimizationlm2":   "errorcheck -0 -l -m=2",
+	}
+	for name, recipe := range optimizationRecipes {
+		write("test/"+name+".go", "// "+recipe+"\npackage p\n")
+	}
+	write("test/optimizationreject.go", "// errorcheck -m\npackage p\n")
+	write("test/optimizationversion.go", "// errorcheck -0 -m -lang=go1.24\npackage p\n")
 	ctx := build.Default
 	ctx.GOROOT = root
 	ctx.GOOS = "linux"
@@ -78,8 +93,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 40 {
-		t.Fatalf("got %d cases, want 40", len(inv.Cases))
+	if len(inv.Cases) != 50 {
+		t.Fatalf("got %d cases, want 50", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -89,6 +104,17 @@ func TestLanguageInventory(t *testing.T) {
 		c := cases[name]
 		if c.Adapter != "missing" || c.Exclusion == nil || c.Exclusion.Classification != "target-limit" || c.Exclusion.Reason == "" || len(c.Files) != 1 {
 			t.Fatalf("native assembly contract lost: %+v", c)
+		}
+	}
+	for name, recipe := range optimizationRecipes {
+		c := cases[name]
+		if c.Adapter != "missing" || c.Exclusion == nil || c.Exclusion.Classification != "target-limit" || c.Exclusion.Reason == "" || c.Recipe != recipe || len(c.Files) != 1 || c.Files[0].SHA256 == "" {
+			t.Fatalf("native optimization contract lost: %+v", c)
+		}
+	}
+	for _, name := range []string{"optimizationreject", "optimizationversion", "reject", "rejectversionsuccess"} {
+		if c := cases[name]; c.Exclusion != nil {
+			t.Fatalf("an unclassified diagnostic contract became a limit: %+v", c)
 		}
 	}
 	if cases["groups"].Adapter != "directory-packages" || cases["groupsrun"].Adapter != "directory-packages" {
