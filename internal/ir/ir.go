@@ -517,9 +517,11 @@ type (
 	// MethodExpr is a method expression, for example `(*T).M`. The value is a
 	// function whose first parameter is the receiver.
 	MethodExpr struct {
-		Obj  *types.Func
-		Recv types.Type
-		Type types.Type
+		Pos     token.Pos
+		Ordinal int
+		Obj     *types.Func
+		Recv    types.Type
+		Type    types.Type
 
 		// TypeArgs holds the type arguments of an instance of a generic
 		// method.

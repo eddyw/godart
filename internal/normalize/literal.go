@@ -14,6 +14,14 @@ func literalOrdinals(node ast.Node, info *types.Info) map[ast.Node]int {
 		next, rangeNext := 0, 0
 		var visit func(ast.Node) bool
 		visit = func(node ast.Node) bool {
+			if selector, ok := node.(*ast.SelectorExpr); ok {
+				if selection := info.Selections[selector]; selection != nil && selection.Kind() == types.MethodExpr && typeset.HoldsParam(selection.Recv()) {
+					if _, parameter := types.Unalias(selection.Recv()).(*types.TypeParam); !parameter {
+						next++
+						out[selector] = next
+					}
+				}
+			}
 			if literal, ok := node.(*ast.FuncLit); ok {
 				next++
 				out[literal] = next

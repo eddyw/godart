@@ -448,11 +448,18 @@ func (e *emitter) goFuncName(f *ir.Func) string {
 		}
 	}
 	if f.Recv == nil {
-		return path + "." + f.Name
+		name := f.Name
+		if len(f.TypeParams) > 0 {
+			name += "[...]"
+		}
+		return path + "." + name
 	}
 	recv := "?"
 	if obj := receiverTypeName(f.Recv.Type); obj != nil {
 		recv = obj.Name()
+		if len(f.TypeParams) > 0 {
+			recv += "[...]"
+		}
 		if isPointerType(f.Recv.Type) {
 			recv = "(*" + recv + ")"
 		}

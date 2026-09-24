@@ -459,7 +459,7 @@ func (b *builder) selector(e *ast.SelectorExpr) ir.Expr {
 	}
 	if sel.Kind() == types.MethodExpr {
 		fn, _ := sel.Obj().(*types.Func)
-		return &ir.MethodExpr{Obj: fn, Recv: sel.Recv(), Type: sel.Type()}
+		return &ir.MethodExpr{Obj: fn, Recv: sel.Recv(), Type: sel.Type(), Pos: e.Sel.Pos(), Ordinal: b.literalOrdinals[e]}
 	}
 	b.fail(e.Pos(), "the selector %s has no Dart form", e.Sel.Name)
 	return nil

@@ -82,4 +82,22 @@ void main() {
     expect(sameLine, isNot($pcEntry(sameLine)));
     expect($pcInfo(sameLine), $pcInfo($pcEntry(sameLine)));
   });
+  test('generic function entries retain distinct identities and aliases', () {
+    final info = GoString.fromString('fixture.G[...].M|generic.go|12');
+    final first = $functionValue(() => 1, info, 'fixture.G[int].M');
+    final again = $functionValue(() => 2, info, 'fixture.G[int].M');
+    final other = $functionValue(() => 3, info, 'fixture.G[string].M');
+    final firstPC = $functionPC(first)!;
+    final otherPC = $functionPC(other)!;
+    expect($functionPC(again), firstPC);
+    expect(otherPC, isNot(firstPC));
+    expect($pcEntry(firstPC), firstPC);
+    expect($pcEntry(otherPC), otherPC);
+    expect($pcInfo(firstPC), info);
+    expect($pcInfo(otherPC), info);
+    final alias = $copyFunctionPC(() => 4, first);
+    expect($functionPC(alias), firstPC);
+    expect(alias(), 4);
+  });
+
 }

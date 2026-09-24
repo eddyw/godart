@@ -109,7 +109,7 @@ func (e *emitter) methodFunctionValue(recv types.Type, fn *types.Func, text stri
 		base = p.Elem()
 	}
 	named, ok := types.Unalias(base).(*types.Named)
-	if !ok || named.TypeParams().Len() > 0 || named.TypeArgs().Len() > 0 {
+	if !ok {
 		return text
 	}
 	obj := named.Obj()
@@ -122,6 +122,10 @@ func (e *emitter) methodFunctionValue(recv types.Type, fn *types.Func, text stri
 		}
 	}
 	name := obj.Name()
+	generic := named.TypeParams().Len() > 0 || named.TypeArgs().Len() > 0
+	if generic {
+		name += "[...]"
+	}
 	if isPointerType(recv) {
 		name = "(*" + name + ")"
 	}
@@ -131,6 +135,9 @@ func (e *emitter) methodFunctionValue(recv types.Type, fn *types.Func, text stri
 		file, line = e.goFileInPackage(fn.Pos(), fn.Pkg()), e.cfg.Fset.Position(fn.Pos()).Line
 	}
 	info := fmt.Sprintf("%s.%s.%s|%s|%d", path, name, fn.Name(), file, line)
+	if generic {
+		return fmt.Sprintf("$functionValue(%s, %s, %s + %s)", text, e.stringLit(info), e.typeNameText(recv), dartString("."+fn.Name()))
+	}
 	return fmt.Sprintf("$functionValue(%s, %s)", text, e.stringLit(info))
 }
 

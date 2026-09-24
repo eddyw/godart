@@ -1082,7 +1082,20 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	closure := func(call string) string {
 		origin := x.Obj.Origin().Type().(*types.Signature)
 		call = e.eraseResults(origin.Results(), sig.Results(), call)
-		return e.methodFunctionValue(x.Recv, x.Obj, fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call))
+		text := fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
+		if tp, ok := types.Unalias(x.Recv).(*types.TypeParam); ok {
+			return fmt.Sprintf("$copyFunctionPC(%s, %s.desc.methods[%s])", text, e.dictOf(tp), e.methodKeyText(x.Obj.Id(), msig))
+		}
+		if x.Ordinal > 0 && e.cfg.Fset != nil {
+			name := fmt.Sprintf("%s.func%d", e.curGoName, x.Ordinal)
+			info := fmt.Sprintf("%s|%s|%d", name, e.goFile(x.Pos), e.cfg.Fset.Position(x.Pos).Line)
+			key := dartString(name)
+			for _, param := range e.typeParams {
+				key += " + ':' + " + e.dictOf(param) + ".desc.name"
+			}
+			return fmt.Sprintf("$functionValue(%s, %s, %s)", text, e.stringLit(info), key)
+		}
+		return e.methodFunctionValue(x.Recv, x.Obj, text)
 	}
 	// The method of a type parameter with no single Dart class dispatches
 	// through the method table, exactly as an interface receiver does. A
