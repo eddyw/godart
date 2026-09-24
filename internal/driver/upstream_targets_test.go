@@ -93,7 +93,7 @@ func TestUpstreamTargets(t *testing.T) {
 						nodeArgs = c.FullNodeArgs
 					}
 					result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args, nodeArgs...)
-					compareUpstream(t, pkg, pkg, filter, target, dir, result.Text, result.Exit)
+					compareUpstreamInventory(t, pkg, pkg, filter, target, dir, result.Text, result.Exit, inventory, nil, nil, c.Exclude[target])
 
 				})
 			}

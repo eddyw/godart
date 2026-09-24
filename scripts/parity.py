@@ -200,6 +200,11 @@ def behavior(paths, manifests=MANIFESTS):
                     outcomes[pkg, name].add(category)
                     if category == "excluded":
                         group["reasons"][pkg, name].add(item["reason"])
+            for name, reason in (report.get("target_exclusions") or {}).items():
+                if not name or not isinstance(reason, str) or not reason.strip():
+                    raise ValueError("invalid target exclusion: " + str(path))
+                outcomes[pkg, name].add("excluded")
+                group["reasons"][pkg, name].add(reason)
             for name in report["expected"]:
                 if problems:
                     outcomes[pkg, name].add("failed")

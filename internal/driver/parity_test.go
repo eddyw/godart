@@ -72,6 +72,7 @@ func externalFixtures(t *testing.T, output string) []moduleFixture {
 }
 
 type upstreamEvidence struct {
+	TargetExclusions  map[string]string   `json:"target_exclusions,omitempty"`
 	Selection         string              `json:"selection"`
 	ResolverInputs    *resolverInputs     `json:"resolver_inputs,omitempty"`
 	CertificateInputs *certificateInputs  `json:"certificate_inputs,omitempty"`
@@ -164,10 +165,10 @@ func compareUpstreamInputs(t *testing.T, name, pkg, filter, target, dir, dartTex
 	if err := json.Unmarshal(manifest, &inventory); err != nil {
 		t.Fatal(err)
 	}
-	compareUpstreamInventory(t, name, pkg, filter, target, dir, dartText, dartExit, inventory, inputs, resolver, images...)
+	compareUpstreamInventory(t, name, pkg, filter, target, dir, dartText, dartExit, inventory, inputs, resolver, nil, images...)
 }
 
-func compareUpstreamInventory(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inventory parity.Inventory, inputs *certificateInputs, resolver *resolverInputs, images ...nativeImage) {
+func compareUpstreamInventory(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inventory parity.Inventory, inputs *certificateInputs, resolver *resolverInputs, targetExclusions map[string]string, images ...nativeImage) {
 	t.Helper()
 	nativeTags := slices.Clone(build.Default.BuildTags)
 	args := []string{"test", "-json", "-count=1", "-timeout=" + upstreamLimit().String()}
@@ -318,7 +319,7 @@ func compareUpstreamInventory(t *testing.T, name, pkg, filter, target, dir, dart
 		if pkg == "go/build" || pkg == "debug/buildinfo" || pkg == "internal/testenv" {
 			env["GOROOT"] = build.Default.GOROOT
 		}
-		data, err := json.MarshalIndent(upstreamEvidence{Selection: name, ResolverInputs: resolver, CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
+		data, err := json.MarshalIndent(upstreamEvidence{TargetExclusions: targetExclusions, Selection: name, ResolverInputs: resolver, CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -326,7 +327,7 @@ func compareUpstreamInventory(t *testing.T, name, pkg, filter, target, dir, dart
 			t.Fatal(err)
 		}
 	}
-	t.Logf("upstream parity: %d passes, %d partial, %d explicit exclusions", len(comparison.Passed), len(comparison.Partial), len(comparison.Excluded))
+	t.Logf("upstream parity: %d passes, %d partial, %d explicit exclusions, %d target exclusions", len(comparison.Passed), len(comparison.Partial), len(comparison.Excluded), len(targetExclusions))
 	if len(comparison.Problems) > 0 {
 		t.Error(fmt.Sprintf("upstream parity failed:\n%s", strings.Join(comparison.Problems, "\n")))
 	}

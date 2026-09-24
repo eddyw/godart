@@ -579,6 +579,31 @@ class ParityTest(unittest.TestCase):
             parity.save(reports / "full.json", record)
             self.assertEqual(len(parity.behavior([reports], manifests)), 2)
 
+    def test_behavior_preserves_target_exclusions_without_assumed_passes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifests = root / "manifests"
+            reports = root / "reports"
+            reports.mkdir()
+            parity.save(manifests / "coverage-manifest.json", [dict(package="p", status="vm-suite")])
+            parity.save(manifests / "go1/os-arch.json", dict(source_sha256="sdk", packages=[
+                dict(path="p", tests=[dict(name=name, eligible=True, kind="Test")
+                                     for name in ["TestPass", "TestHost", "TestMissing"]])]))
+            record = dict(package="p", expected=["TestPass"], go_version="go1", goos="os", goarch="arch",
+                          source_sha256="sdk", target="js", short=True, native=dict(exit=0), gart=dict(exit=0),
+                          target_exclusions={"TestHost": "The browser has no local filesystem."},
+                          comparison=dict(passed=["TestPass"], partial=[], excluded=[], problems=[]))
+            parity.save(reports / "result.json", record)
+            group = parity.behavior([reports], manifests)[0]
+            self.assertEqual(group["top_level"], {"passed": 1, "excluded": 1})
+            self.assertEqual(group["unobserved_counts"], {"untested": 1})
+            excluded = next(x for x in group["outcomes"] if x["name"] == "TestHost")
+            self.assertEqual(excluded["exclusion_reasons"], ["The browser has no local filesystem."])
+            record["target_exclusions"]["TestHost"] = ""
+            parity.save(reports / "result.json", record)
+            with self.assertRaisesRegex(ValueError, "invalid target exclusion"):
+                parity.behavior([reports], manifests)
+
     def test_application_tests_do_not_count_skips_or_empty_runs_as_passes(self):
         def native(action):
             return json.dumps(dict(Action=action, Test="TestA"))
