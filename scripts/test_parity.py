@@ -355,6 +355,33 @@ class ParityTest(unittest.TestCase):
             case["gart"]["output_sha256"] = "wrong"
             assess("failed")
 
+    def test_separate_directory_packages_preserve_file_identity(self):
+        module = "module test\n\ngo 1.27.1\n"
+        wrapper = 'import "package:test/a.dart";\nimport "package:test/b.dart";\nvoid main() {}\n'
+        for contract in ("compiledir", "errorcheckdir"):
+            with self.subTest(contract=contract):
+                packages = [dict(name="a", path="test/" + name, files=[name + ".go"])
+                            for name in ("a", "b")]
+                compiled = [dict(ran=True, exit=0, timed_out=False,
+                                 command=["go", "tool", "compile", "-e", "-d=panic", p["files"][0]])
+                            for p in packages]
+                if contract == "errorcheckdir":
+                    compiled[-1]["exit"] = 2
+                case = dict(fixture=dict(name="p", recipe=contract + " -s", adapter="directory-packages",
+                                         files=[dict(path="p.dir/" + p["files"][0]) for p in packages]),
+                            contract=contract, directory_packages=packages, native_compile=compiled,
+                            native=dict(compiled[-1]),
+                            adapted_sources={"a/a.go": "package a\n", "b/b.go": "package a\n"},
+                            module_source=module, module_sha256=parity.hashlib.sha256(module.encode()).hexdigest(),
+                            importcfg_sha256="config", wrapper_source=wrapper,
+                            wrapper_sha256=parity.hashlib.sha256(wrapper.encode()).hexdigest())
+                self.assertTrue(parity.directory_language_valid(case, "go1.27.1"))
+                case["fixture"]["recipe"] = contract
+                self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
+                case["fixture"]["recipe"] = contract + " -s"
+                packages[0]["files"].append("b.go")
+                self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
+
     def test_package_directory_unicode_paths_require_explicit_mapping(self):
         import hashlib
         module = "module test\n\ngo 1.27.1\n"

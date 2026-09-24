@@ -140,7 +140,7 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 							t.Fatal(err)
 						}
 						index, ok := grouped[f.Name.Name]
-						if !ok {
+						if c.Recipe == c.Action+" -s" || !ok {
 							index = len(result.DirectoryPackages)
 							grouped[f.Name.Name] = index
 							result.DirectoryPackages = append(result.DirectoryPackages, languageDirectoryPackage{Name: f.Name.Name, Path: "test/" + strings.TrimSuffix(entry.Name(), ".go")})

@@ -161,7 +161,7 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 					}
 					c.Files = append(c.Files, SourceFile{Path: name, SHA256: digest(data)})
 				}
-			} else if recipe == "rundir" || recipe == "compiledir" || recipe == "errorcheckdir" {
+			} else if recipe == "rundir" || recipe == "compiledir" || recipe == "errorcheckdir" || recipe == "compiledir -s" || recipe == "errorcheckdir -s" {
 				c.Adapter = "directory-packages"
 			} else if recipe == "compile" {
 				c.Adapter = "compile-file"

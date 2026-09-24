@@ -42,8 +42,12 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/rejectdirectory.dir/a.go", "package a\n")
 	write("test/rejectdirectoryflags.go", "// errorcheckdir -0\npackage ignored\n")
 	write("test/rejectdirectoryflags.dir/a.go", "package a\n")
+	write("test/rejectsingle.go", "// errorcheckdir -s\npackage ignored\n")
+	write("test/rejectsingle.dir/a.go", "package a\n")
 	write("test/groups.go", "// compiledir\npackage ignored\n")
 	write("test/groups.dir/a.go", "package a\n")
+	write("test/groupssingle.go", "// compiledir -s\npackage ignored\n")
+	write("test/groupssingle.dir/a.go", "package a\n")
 	write("test/groupsrun.go", "// rundir\npackage ignored\n")
 	write("test/groupsrun.dir/a.go", "package a\n")
 	write("test/compileflags.go", "// compile -N\npackage p\n")
@@ -67,8 +71,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 31 {
-		t.Fatalf("got %d cases, want 31", len(inv.Cases))
+	if len(inv.Cases) != 33 {
+		t.Fatalf("got %d cases, want 33", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -76,6 +80,11 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["groups"].Adapter != "directory-packages" || cases["groupsrun"].Adapter != "directory-packages" {
 		t.Fatal("plain package directory recipes have no adapter")
+	}
+	for _, name := range []string{"groupssingle", "rejectsingle"} {
+		if c := cases[name]; c.Adapter != "directory-packages" || c.Recipe != c.Action+" -s" || len(c.Files) != 2 {
+			t.Fatalf("separate package recipe lost: %+v", c)
+		}
 	}
 	if c := cases["module"]; c.Adapter != "directory-module" || c.ModuleGoVersion != "1.14" || len(c.Files) != 2 {
 		t.Fatalf("directory module inputs lost: %+v", c)

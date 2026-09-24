@@ -289,11 +289,12 @@ def directory_language_valid(case, go_version):
     fixture = case["fixture"]
     contract = case["contract"]
     reject = contract == "errorcheckdir"
+    separate = contract in ("compiledir", "errorcheckdir") and fixture.get("recipe") == contract + " -s"
     packages = case.get("directory_packages") or []
     adapted = case.get("adapted_sources") or {}
     compiled = case.get("native_compile") or []
     module = case.get("module_source", "")
-    if (fixture.get("recipe") != contract or fixture.get("adapter") != "directory-packages"
+    if ((fixture.get("recipe") != contract and not separate) or fixture.get("adapter") != "directory-packages"
             or not packages or len(compiled) != len(packages) or (not reject and case.get("build_error"))
             or not case.get("importcfg_sha256") or not go_version
             or module != "module test\n\ngo " + go_version.removeprefix("go") + "\n"
@@ -308,7 +309,8 @@ def directory_language_valid(case, go_version):
     for index, (package, execution) in enumerate(zip(packages, compiled)):
         files = package.get("files") or []
         path = package.get("path", "")
-        if (not files or not package.get("name") or package.get("name") in names or path != "test/" + files[0][:-3]
+        if (not files or not package.get("name") or (not separate and package.get("name") in names)
+                or (separate and len(files) != 1) or path != "test/" + files[0][:-3]
                 or not execution.get("ran") or execution.get("timed_out")):
             return False
         if reject and index == len(packages) - 1:
