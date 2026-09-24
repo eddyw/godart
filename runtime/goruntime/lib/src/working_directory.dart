@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'dart:ffi';
 import 'dart:io';
 
@@ -44,21 +48,72 @@ int $nativeChdir(GoString path) {
 
 (GoString, int) $nativeGetwd() {
   for (var size = 256; ; size *= 2) {
-    final buffer = _malloc(size);
-    if (buffer == nullptr) return (GoString.empty, 12);
-    try {
-      Pointer<Uint8> result;
-      int error;
-      do {
-        result = _getcwd(buffer, size);
-        error = result == nullptr ? _errno().value : 0;
-      } while (error == 4);
-      if (error == 34) continue;
-      if (error != 0) return (GoString.empty, error);
-      final bytes = buffer.asTypedList(size);
-      return (GoString.fromBytes(bytes.sublist(0, bytes.indexOf(0))), 0);
-    } finally {
-      _free(buffer);
+    final result = _getwd(size);
+    if (result.$2 != 34) return result;
+  }
+}
+
+(GoString, int) $syscallGetwd() {
+  if (!Platform.isMacOS) return _linuxGetwd();
+  final buffer = _malloc(1024);
+  if (buffer == nullptr) return (GoString.empty, 12);
+  try {
+    final bytes = buffer.asTypedList(1024)..fillRange(0, 1024, 0);
+    // Go's Darwin wrapper inspects the buffer even when getcwd returns null.
+    _getcwd(buffer, 1024);
+    final end = bytes.indexOf(0);
+    final size = end < 0 ? bytes.length : end;
+    if (size == 0) return (GoString.empty, 22);
+    return (GoString.fromBytes(bytes.sublist(0, size)), 0);
+  } finally {
+    _free(buffer);
+  }
+}
+
+(GoString, int) _getwd(int size) {
+  final buffer = _malloc(size);
+  if (buffer == nullptr) return (GoString.empty, 12);
+  try {
+    final errno = _errno;
+    Pointer<Uint8> result;
+    int error;
+    do {
+      result = _getcwd(buffer, size);
+      error = result == nullptr ? errno().value : 0;
+    } while (error == 4);
+    if (error != 0) return (GoString.empty, error);
+    final bytes = buffer.asTypedList(size);
+    return (GoString.fromBytes(bytes.sublist(0, bytes.indexOf(0))), 0);
+  } finally {
+    _free(buffer);
+  }
+}
+
+final _syscallGetcwd = _libc
+    .lookupFunction<
+      IntPtr Function(IntPtr, VarArgs<(Pointer<Uint8>, Size)>),
+      int Function(int, Pointer<Uint8>, int)
+    >('syscall');
+
+(GoString, int) _linuxGetwd() {
+  final buffer = _malloc(4096);
+  if (buffer == nullptr) return (GoString.empty, 12);
+  try {
+    final errno = _errno;
+    final number = Abi.current() == Abi.linuxArm64 ? 17 : 79;
+    int count;
+    int error;
+    do {
+      count = _syscallGetcwd(number, buffer, 4096);
+      error = count < 0 ? errno().value : 0;
+    } while (error == 4);
+    if (error != 0) return (GoString.empty, error);
+    if (count < 1 || count > 4096 || buffer[count - 1] != 0) {
+      return (GoString.empty, 22);
     }
+    if (buffer[0] != 47) return (GoString.empty, 2);
+    return (GoString.fromBytes(buffer.asTypedList(count - 1)), 0);
+  } finally {
+    _free(buffer);
   }
 }

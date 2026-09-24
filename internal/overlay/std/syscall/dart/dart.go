@@ -1223,6 +1223,10 @@ func Executable() (string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallGetwd() (string, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func NativeGetwd() (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }

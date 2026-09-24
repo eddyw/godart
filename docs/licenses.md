@@ -81,6 +81,7 @@ Public stat adapters preserve the contracts of Go `src/syscall` stat wrappers an
 The ownership adapter preserves original `src/os/os_unix_test.go` assertions
 and the `internal/testenv` unsupported-syscall predicates with their BSD notices.
 Unix `PWD` validation follows Go `src/os/getwd.go` with its BSD notice.
+The syscall.Getwd adapter preserves Go `src/syscall/syscall_bsd.go` and `syscall_linux.go` behavior with their BSD notice.
 The shared file state and rename rules follow Go `src/os/file_unix.go`
 with its BSD notice.
 Zero-size slice allocation and reflection growth follow Go `src/runtime/slice.go`

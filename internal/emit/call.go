@@ -706,6 +706,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$getenv(%s)", args[0]), true
 	case "Environ":
 		return "$environ()", true
+	case "SyscallGetwd":
+		return "$syscallGetwd()", true
 	case "NativeGetwd":
 		return "$nativeGetwd()", true
 	case "NativeChdir":

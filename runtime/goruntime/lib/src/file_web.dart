@@ -174,3 +174,5 @@ int $syscallClose(int fd) => 38;
 
 (int, int, int) $fileOpenFlags(GoString path, int flags, int mode) =>
     (-1, -1, 38);
+
+(GoString, int) $syscallGetwd() => (GoString.empty, 38);
