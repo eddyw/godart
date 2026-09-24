@@ -671,14 +671,20 @@ func Zero(t Type) Value {
 // New gives a Value that holds a pointer to a fresh zero value of the type.
 func New(t Type) Value { return Value{value: dart.NewValue(t.handle()), ok: true} }
 
-// MakeSlice gives a slice of the type, with the length and the capacity. The
-// overlay gives each slice a capacity that is equal to its length.
+// MakeSlice gives a slice of the type, with the length and the capacity.
 func MakeSlice(t Type, length, capacity int) Value {
+	t = typeOf(t.handle())
 	if t.Kind() != Slice {
-		panic("reflect: MakeSlice of " + t.String())
+		panic("reflect.MakeSlice of non-slice type")
 	}
-	if length < 0 || capacity < length {
-		panic("reflect: MakeSlice with a wrong length")
+	if length < 0 {
+		panic("reflect.MakeSlice: negative len")
+	}
+	if capacity < 0 {
+		panic("reflect.MakeSlice: negative cap")
+	}
+	if length > capacity {
+		panic("reflect.MakeSlice: len > cap")
 	}
 	return Value{value: dart.MakeValue(t.handle(), length, capacity), ok: true}
 }

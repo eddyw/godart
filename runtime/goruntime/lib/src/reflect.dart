@@ -718,6 +718,11 @@ Iface? $makeValue(int handle, GoInt length, GoInt capacity) {
   if (empty is $ZeroSlice<Object?>) {
     return Iface(desc, empty.$viewExact(GoInt.zero, length, capacity));
   }
+  final size = $typeSize(desc.elem!());
+  // The logical Go heap uses 48 address bits. Divide before multiplication.
+  if (capacity > $udiv($gi(281474976710656), size)) {
+    $panic($runtimeError('runtime: allocation size out of range', plain: true));
+  }
   final Object? out = make($ix(capacity));
   if (out is Slice<Object?> && capacity != length) {
     return Iface(desc, out.range(GoInt.zero, length, capacity));

@@ -74,6 +74,8 @@ Direct interface values follow `src/cmd/compile/internal/types/type.go`.
 Method package metadata follows `src/cmd/compile/internal/reflectdata/reflect.go`.
 Method order follows `src/cmd/compile/internal/types/sym.go`.
 The runtime and overlay preserve their Go BSD notices.
+Reflection slice allocation validation adapts Go `src/reflect/value.go` and
+`src/runtime/malloc.go`. The runtime and overlay preserve their BSD notices.
 Shared type layout calculations adapt the Go-derived reflection overlay.
 The runtime layout source and license preserve the Go BSD notice.
 The certificate trust adapter adapts Go 1.27.1 `crypto/x509/root.go`,
