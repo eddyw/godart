@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eddyw/godart/internal/driver"
 	"github.com/eddyw/godart/internal/parity"
@@ -116,7 +117,10 @@ func runUpstreamTarget(t *testing.T, target, out, entry, dir string, args []stri
 		writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
 		result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.js"))...)
 	case "wasm":
-		run(t, out, "dart", "compile", "wasm", "runner.dart", "-o", "main.wasm")
+		compiled := programOutcomeWithLimit(t, out, 16*time.Minute, "dart", "compile", "wasm", "runner.dart", "-o", "main.wasm")
+		if compiled.Exit != 0 {
+			t.Fatalf("Wasm compilation failed:\n%s", compiled.Text)
+		}
 		writeFile(t, filepath.Join(out, "run.mjs"), `import {compile} from './main.mjs';
 import {readFile} from 'node:fs/promises';
 const app = await compile(await readFile(new URL('./main.wasm', import.meta.url)));
