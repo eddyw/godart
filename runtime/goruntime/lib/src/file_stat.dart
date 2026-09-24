@@ -132,3 +132,26 @@ final _errno = _libc
 
 (Slice<int>, int) $nativeFstat(int fd) =>
     _readStat((buffer) => _fstat(fd, buffer));
+
+final _fstatat = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Int),
+      int Function(int, Pointer<Uint8>, Pointer<Uint8>, int)
+    >(Abi.current() == Abi.macosX64 ? 'fstatat64' : 'fstatat');
+
+(Slice<int>, int) $nativeLstatat(int fd, GoString path) {
+  final bytes = path.bytes;
+  if (bytes.contains(0)) return (Slice<int>.nil(), 22);
+  final name = _malloc(bytes.length + 1);
+  if (name == nullptr) return (Slice<int>.nil(), 12);
+  try {
+    name.asTypedList(bytes.length + 1)
+      ..setRange(0, bytes.length, bytes)
+      ..[bytes.length] = 0;
+    return _readStat(
+      (buffer) => _fstatat(fd, name, buffer, Platform.isMacOS ? 0x20 : 0x100),
+    );
+  } finally {
+    _free(name);
+  }
+}

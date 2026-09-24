@@ -62,6 +62,7 @@ The runtime license includes their BSD terms.
 The time value representation and its clock helpers adapt Go `src/time/time.go`.
 Directory creation and sticky-bit behavior follow Go `src/os/file.go` with its BSD notice.
 Directory enumeration follows Go `src/os/dir_unix.go` and `dir_darwin.go` with their BSD notices.
+Descriptor-relative directory metadata follows Go `src/os/statat_unix.go` with its BSD notice.
 Native directory records use Go `src/syscall/ztypes_*.go` layouts.
 Native directory syscalls adapt Darwin `Getdirentries` cursor behavior from
 `src/syscall/syscall_darwin.go` with its Go BSD notice.

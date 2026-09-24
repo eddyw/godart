@@ -4,25 +4,29 @@ package os
 
 import "io"
 
-func (f *File) readDirNames(n int) ([]string, error) {
+func (f *File) readDirNames(n int) ([]string, []FileMode, error) {
 	all, err := ReadNames(f.name)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if f.dirPos > len(all) {
 		f.dirPos = len(all)
 	}
 	rest := all[f.dirPos:]
-	if n <= 0 {
-		f.dirPos = len(all)
-		return rest, nil
+	if n > 0 && len(rest) == 0 {
+		return []string{}, nil, io.EOF
 	}
-	if len(rest) == 0 {
-		return nil, io.EOF
-	}
-	if n < len(rest) {
+	if n > 0 && n < len(rest) {
 		rest = rest[:n]
 	}
 	f.dirPos += len(rest)
-	return rest, nil
+	types := make([]FileMode, len(rest))
+	for i := range types {
+		types[i] = ^FileMode(0)
+	}
+	return rest, types, nil
 }
+
+func (f *File) directoryInfo(name string) (FileInfo, error) { return Lstat(f.name + "/" + name) }
+
+func openDirectory(name string) (*File, error) { return Open(name) }

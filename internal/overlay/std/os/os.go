@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"slices"
 	"syscall"
 	"syscall/dart"
 	"time"
@@ -733,28 +734,19 @@ func Symlink(oldname, newname string) error {
 	return &LinkError{Op: "symlink", Old: oldname, New: newname, Err: causeError(cause)}
 }
 
-// dirEntry holds 1 member of a directory. It reads the metadata only when a
-// caller asks for it.
 type dirEntry struct {
 	dir  string
 	name string
+	// Unknown native types retain metadata from the directory read.
 	stat *fileStat
+	typ  FileMode
 }
 
 func (d *dirEntry) Name() string { return d.name }
 
-func (d *dirEntry) IsDir() bool {
-	info, err := d.Info()
-	return err == nil && info.IsDir()
-}
+func (d *dirEntry) IsDir() bool { return d.Type().IsDir() }
 
-func (d *dirEntry) Type() FileMode {
-	info, err := d.Info()
-	if err != nil {
-		return 0
-	}
-	return info.Mode().Type()
-}
+func (d *dirEntry) Type() FileMode { return d.typ }
 
 func (d *dirEntry) Info() (FileInfo, error) {
 	if d.stat != nil {
@@ -769,21 +761,27 @@ func (d *dirEntry) Info() (FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	d.stat = info.(*fileStat)
-	return d.stat, nil
+	return info, nil
 }
 
 // ReadDir gives each member of the directory, ordered by name.
 func ReadDir(name string) ([]DirEntry, error) {
-	names, err := ReadNames(name)
+	f, err := openDirectory(name)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]DirEntry, len(names))
-	for i, n := range names {
-		out[i] = &dirEntry{dir: name, name: n}
-	}
-	return out, nil
+	defer f.Close()
+	entries, err := f.ReadDir(-1)
+	slices.SortFunc(entries, func(a, b DirEntry) int {
+		if a.Name() < b.Name() {
+			return -1
+		}
+		if a.Name() > b.Name() {
+			return 1
+		}
+		return 0
+	})
+	return entries, err
 }
 
 // ReadDir gives the next members of the directory of the file. A count that
@@ -793,10 +791,25 @@ func (f *File) ReadDir(n int) ([]DirEntry, error) {
 	if err := f.checkValid("readdir"); err != nil {
 		return nil, err
 	}
-	names, err := f.readDirNames(n)
-	entries := make([]DirEntry, len(names))
+	names, types, err := f.readDirNames(n)
+	entries := make([]DirEntry, 0, len(names))
 	for i, name := range names {
-		entries[i] = &dirEntry{dir: f.name, name: name}
+		entry := &dirEntry{dir: f.name, name: name, typ: types[i]}
+		if entry.typ == ^FileMode(0) {
+			info, statErr := f.directoryInfo(name)
+			if IsNotExist(statErr) {
+				continue
+			}
+			if dart.OS() == "darwin" && errors.Is(statErr, syscall.EBADF) {
+				continue
+			}
+			if statErr != nil {
+				return entries, statErr
+			}
+			entry.stat = info.(*fileStat)
+			entry.typ = info.Mode().Type()
+		}
+		entries = append(entries, entry)
 	}
 	return entries, err
 }
@@ -814,7 +827,10 @@ func (f *File) Readdir(n int) ([]FileInfo, error) {
 	}
 	out := make([]FileInfo, 0, len(entries))
 	for _, e := range entries {
-		info, err := e.Info()
+		info, err := f.directoryInfo(e.Name())
+		if IsNotExist(err) {
+			continue
+		}
 		if err != nil {
 			return out, err
 		}
@@ -828,7 +844,8 @@ func (f *File) Readdirnames(n int) ([]string, error) {
 	if err := f.checkValid("readdirnames"); err != nil {
 		return nil, err
 	}
-	return f.readDirNames(n)
+	names, _, err := f.readDirNames(n)
+	return names, err
 }
 
 // base gives the last part of a path. A trailing separator does not count,

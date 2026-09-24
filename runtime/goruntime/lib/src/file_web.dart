@@ -175,4 +175,7 @@ int $syscallClose(int fd) => 38;
 (int, int, int) $fileOpenFlags(GoString path, int flags, int mode) =>
     (-1, -1, 38);
 
+(Slice<int>, int) $nativeLstatat(int fd, GoString path) =>
+    (Slice<int>.nil(), 38);
+
 (GoString, int) $syscallGetwd() => (GoString.empty, 38);
