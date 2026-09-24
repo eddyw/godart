@@ -164,10 +164,18 @@ func newUnixListener(handle int, addr Addr) *UnixListener {
 }
 
 // Accept waits for 1 connection and gives it.
-func (l *UnixListener) Accept() (Conn, error) { return l.l.Accept() }
+func (l *UnixListener) Accept() (Conn, error) {
+	if l == nil {
+		return nil, syscall.EINVAL
+	}
+	return l.l.Accept()
+}
 
 // AcceptUnix waits for 1 connection and gives its Unix form.
 func (l *UnixListener) AcceptUnix() (*UnixConn, error) {
+	if l == nil {
+		return nil, syscall.EINVAL
+	}
 	c, err := l.l.Accept()
 	if err != nil {
 		return nil, err

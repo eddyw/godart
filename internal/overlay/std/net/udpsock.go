@@ -45,6 +45,9 @@ func newUDPConn(p *packet) *UDPConn { return &UDPConn{p: p} }
 
 // setOption writes 1 socket option of the datagram socket.
 func (c *UDPConn) setOption(name string, value int) error {
+	if c.p == nil {
+		return syscall.EINVAL
+	}
 	if cause := dart.PacketOption(c.p.handle, name, value); cause != "" {
 		return netError("set udp", cause)
 	}
@@ -80,6 +83,9 @@ func (c *UDPConn) Read(b []byte) (int, error) {
 // Write sends the bytes of the slice to the peer of the socket. A socket that
 // no dial connected gives an error, exactly as in Go.
 func (c *UDPConn) Write(b []byte) (int, error) {
+	if c.p == nil {
+		return 0, syscall.EINVAL
+	}
 	if !c.connected() {
 		return 0, netError("write udp", "destination address required")
 	}
@@ -118,6 +124,9 @@ func (c *UDPConn) ReadFromUDPAddrPort(b []byte) (int, netip.AddrPort, error) {
 
 // readFrom reads 1 datagram and gives the host and the port of its source.
 func (c *UDPConn) readFrom(b []byte) (int, string, int, error) {
+	if c.p == nil {
+		return 0, "", 0, syscall.EINVAL
+	}
 	n, host, port, cause := dart.PacketRead(c.p.handle, b)
 	if cause != "" {
 		return n, "", 0, netError("read udp", cause)

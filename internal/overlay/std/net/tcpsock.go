@@ -123,12 +123,18 @@ type onlyWriter struct {
 // count. Go reads sendfile or splice for a source that the kernel holds, and
 // the overlay always copies through a buffer.
 func (t *TCPConn) ReadFrom(r io.Reader) (int64, error) {
+	if t.c.network == "" {
+		return 0, syscall.EINVAL
+	}
 	return io.Copy(onlyWriter{Writer: t}, r)
 }
 
 // WriteTo reads the connection up to its end and writes each byte to the
 // writer.
 func (t *TCPConn) WriteTo(w io.Writer) (int64, error) {
+	if t.c.network == "" {
+		return 0, syscall.EINVAL
+	}
 	return io.Copy(w, onlyReader{Reader: t})
 }
 
@@ -176,10 +182,18 @@ func newTCPListener(handle int, network string, addr Addr) *TCPListener {
 }
 
 // Accept waits for 1 connection and gives it.
-func (l *TCPListener) Accept() (Conn, error) { return l.l.Accept() }
+func (l *TCPListener) Accept() (Conn, error) {
+	if l == nil {
+		return nil, syscall.EINVAL
+	}
+	return l.l.Accept()
+}
 
 // AcceptTCP waits for 1 connection and gives its TCP form.
 func (l *TCPListener) AcceptTCP() (*TCPConn, error) {
+	if l == nil {
+		return nil, syscall.EINVAL
+	}
 	c, err := l.l.Accept()
 	if err != nil {
 		return nil, err

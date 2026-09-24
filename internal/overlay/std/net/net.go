@@ -210,6 +210,9 @@ func newConn(handle int, network string) conn {
 }
 
 func (c *conn) Read(b []byte) (int, error) {
+	if c.network == "" {
+		return 0, syscall.EINVAL
+	}
 	n, cause := dart.ConnRead(c.handle, b)
 	if cause != "" {
 		return n, netError("read "+c.network, cause)
@@ -221,6 +224,9 @@ func (c *conn) Read(b []byte) (int, error) {
 }
 
 func (c *conn) Write(b []byte) (int, error) {
+	if c.network == "" {
+		return 0, syscall.EINVAL
+	}
 	n, cause := dart.ConnWrite(c.handle, b)
 	if cause != "" {
 		return n, netError("write "+c.network, cause)
@@ -231,6 +237,9 @@ func (c *conn) Write(b []byte) (int, error) {
 // setOption writes 1 socket option of the connection. A flag takes the value
 // 0 or 1.
 func (c *conn) setOption(name string, value int) error {
+	if c.network == "" {
+		return syscall.EINVAL
+	}
 	if cause := dart.ConnOption(c.handle, name, value); cause != "" {
 		return netError("set "+c.network, cause)
 	}
@@ -329,6 +338,9 @@ func (c *conn) SetWriteDeadline(t time.Time) error {
 }
 
 func (c *conn) apply() error {
+	if c.network == "" {
+		return syscall.EINVAL
+	}
 	if cause := dart.ConnDeadline(c.handle, c.read, c.write); cause != "" {
 		return netError("set deadline "+c.network, cause)
 	}
@@ -346,6 +358,9 @@ type packet struct {
 }
 
 func (p *packet) ReadFrom(b []byte) (int, Addr, error) {
+	if p == nil {
+		return 0, nil, syscall.EINVAL
+	}
 	n, host, port, cause := dart.PacketRead(p.handle, b)
 	if cause != "" {
 		return n, nil, netError("read udp", cause)
@@ -354,6 +369,9 @@ func (p *packet) ReadFrom(b []byte) (int, Addr, error) {
 }
 
 func (p *packet) WriteTo(b []byte, addr Addr) (int, error) {
+	if p == nil {
+		return 0, syscall.EINVAL
+	}
 	host, port, err := targetOf(addr)
 	if err != nil {
 		return 0, err
@@ -374,20 +392,34 @@ func (p *packet) Close() error {
 	return nil
 }
 
-func (p *packet) LocalAddr() Addr { return p.local }
+func (p *packet) LocalAddr() Addr {
+	if p == nil {
+		return nil
+	}
+	return p.local
+}
 
 func (p *packet) SetDeadline(t time.Time) error {
+	if p == nil {
+		return syscall.EINVAL
+	}
 	p.read = deadlineNanos(t)
 	p.write = p.read
 	return p.apply()
 }
 
 func (p *packet) SetReadDeadline(t time.Time) error {
+	if p == nil {
+		return syscall.EINVAL
+	}
 	p.read = deadlineNanos(t)
 	return p.apply()
 }
 
 func (p *packet) SetWriteDeadline(t time.Time) error {
+	if p == nil {
+		return syscall.EINVAL
+	}
 	p.write = deadlineNanos(t)
 	return p.apply()
 }
@@ -408,6 +440,9 @@ type listener struct {
 }
 
 func (l *listener) Accept() (Conn, error) {
+	if l.network == "" {
+		return nil, syscall.EINVAL
+	}
 	handle, cause := dart.Accept(l.handle)
 	if cause != "" {
 		err := error(errors.New(cause))
