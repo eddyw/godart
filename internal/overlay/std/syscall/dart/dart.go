@@ -1085,6 +1085,11 @@ func NativeChmod(path string, mode int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// NativeRename moves a native path and returns errno.
+func NativeRename(from, to string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // NativeChown changes native ownership and returns errno. Follow selects the symlink target.
 func NativeChown(path string, uid, gid int, follow bool) int {
 	panic("syscall/dart needs the gart compiler")

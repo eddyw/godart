@@ -22,6 +22,8 @@ func TestRawFilePaths(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
 
 import (
+ "errors"
+ "syscall"
  "fmt"
  "io"
  "os"
@@ -32,6 +34,9 @@ func main() {
  for _, name := range []string{"ascii", "unicode-世界", "raw-\xff"} {
   path := filepath.Join(os.Args[1], name)
   switch os.Args[2] {
+  case "rename":
+   err := os.Rename(path, path+"-renamed")
+   fmt.Printf("rename %x %t %t %t\n", name, err != nil, errors.Is(err, syscall.EILSEQ), errors.Is(err, syscall.ENOENT))
   case "remove":
    err := os.Remove(path)
    fmt.Printf("remove %x %t\n", name, err != nil)
@@ -72,13 +77,13 @@ func main() {
 	prepareDart(t, out)
 	exe := filepath.Join(out, "program")
 	run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", exe)
-	for _, operation := range []string{"readfile", "open", "writefile", "create", "openfile", "remove"} {
+	for _, operation := range []string{"readfile", "open", "writefile", "create", "openfile", "remove", "rename"} {
 		t.Run(operation, func(t *testing.T) {
 			execute := func(command string, args ...string) string {
 				t.Helper()
 				files := t.TempDir()
 				writeFile(t, filepath.Join(files, "raw-\ufffd"), "decoy")
-				if operation == "readfile" || operation == "open" || operation == "remove" {
+				if operation == "readfile" || operation == "open" || operation == "remove" || operation == "rename" {
 					for _, name := range []string{"ascii", "unicode-世界", "raw-\xff"} {
 						err := os.WriteFile(filepath.Join(files, name), []byte("seed"), 0600)
 						if err != nil && !(runtime.GOOS == "darwin" && name == "raw-\xff" && errors.Is(err, syscall.EILSEQ)) {
