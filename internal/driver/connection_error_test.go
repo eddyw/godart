@@ -22,8 +22,8 @@ func TestConnectionErrorsUpstream(t *testing.T) {
 	netDir := filepath.Join(runtime.GOROOT(), "src", "net")
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/connectionerrors\n\ngo 1.27\n\nrequire example.com/netpoll v0.0.0\nreplace example.com/netpoll => ./netpoll\n")
 	for _, item := range []upstreamFile{
-		{Name: "timeout_test.go", Declarations: []string{"TestReadTimeout", "readTimeoutTests", "TestReadFromTimeout", "readFromTimeoutTests", "TestReadTimeoutMustNotReturn", "TestWriteTimeout", "TestWriteTimeoutMustNotReturn", "TestWriteToTimeout", "writeTimeoutTests", "isDeadlineExceeded", "TestReadTimeoutFluctuation", "TestReadFromTimeoutFluctuation", "TestWriteTimeoutFluctuation", "minDynamicTimeout", "maxDynamicTimeout", "timeoutUpperBound", "nextTimeout"}},
-		{Name: "error_test.go", Declarations: []string{"OpError.isValid", "parseReadError", "parseWriteError"}},
+		{Name: "timeout_test.go", Declarations: []string{"TestReadTimeout", "readTimeoutTests", "TestReadFromTimeout", "readFromTimeoutTests", "TestReadTimeoutMustNotReturn", "TestWriteTimeout", "TestWriteTimeoutMustNotReturn", "TestWriteToTimeout", "writeTimeoutTests", "isDeadlineExceeded", "TestReadTimeoutFluctuation", "TestReadFromTimeoutFluctuation", "TestWriteTimeoutFluctuation", "minDynamicTimeout", "maxDynamicTimeout", "timeoutUpperBound", "nextTimeout", "TestReadWriteProlongedTimeout", "TestReadWriteDeadlineRace", "TestConcurrentSetDeadline"}},
+		{Name: "error_test.go", Declarations: []string{"OpError.isValid", "parseReadError", "parseWriteError", "parseCommonError"}},
 		{Name: "error_unix_test.go", Declarations: []string{"isPlatformError", "isENOBUFS"}},
 		{Name: "net.go", Declarations: []string{"noDeadline", "errTimeout", "timeoutError", "timeoutError.Error", "timeoutError.Timeout", "timeoutError.Temporary", "timeoutError.Is", "errMissingAddress", "errCanceled", "canceledError"}},
 		{Name: "pipe.go", Declarations: []string{"pipeAddr", "pipeAddr.Network", "pipeAddr.String"}},
@@ -108,7 +108,7 @@ func newLocalPacketListener(t testing.TB, network string) PacketConn {
 		t.Fatalf("got %d test binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestReadTimeout|TestReadFromTimeout|TestReadTimeoutMustNotReturn|TestWriteTimeout|TestWriteTimeoutMustNotReturn|TestWriteToTimeout|TestReadTimeoutFluctuation|TestReadFromTimeoutFluctuation|TestWriteTimeoutFluctuation)$"
+	const filter = "^(TestReadTimeout|TestReadFromTimeout|TestReadTimeoutMustNotReturn|TestWriteTimeout|TestWriteTimeoutMustNotReturn|TestWriteToTimeout|TestReadTimeoutFluctuation|TestReadFromTimeoutFluctuation|TestWriteTimeoutFluctuation|TestReadWriteProlongedTimeout|TestReadWriteDeadlineRace|TestConcurrentSetDeadline)$"
 	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	result := programOutcome(t, netDir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "net-connection-errors", "net", filter, "vm", netDir, result.Text, result.Exit)

@@ -45,9 +45,9 @@ String $lookupAddrs(String host, int family) => 'operation not supported';
 
 (int, GoString) $dialUnix(GoString path) => (0, _noNet);
 
-(int, GoString) $connRead(int handle, Slice<GoInt> p) => (0, _noNet);
+(int, GoString, int) $connRead(int handle, Slice<GoInt> p) => (0, _noNet, 0);
 
-(int, GoString) $connWrite(int handle, Slice<GoInt> p) => (0, _noNet);
+(int, GoString, int) $connWrite(int handle, Slice<GoInt> p) => (0, _noNet, 0);
 
 (GoString, int, GoString, int, GoString) $connAddrs(int handle) =>
     (_empty, 0, _empty, 0, _noNet);

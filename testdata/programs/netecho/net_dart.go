@@ -24,11 +24,13 @@ func dial(port int) (int, string) {
 }
 
 func write(c int, p []byte) (int, string) {
-	return dart.ConnWrite(c, p)
+	n, cause, _ := dart.ConnWrite(c, p)
+	return n, cause
 }
 
 func read(c int, p []byte) (int, string) {
-	return dart.ConnRead(c, p)
+	n, cause, _ := dart.ConnRead(c, p)
+	return n, cause
 }
 
 func closeConn(c int) string {

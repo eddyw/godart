@@ -1276,18 +1276,20 @@ func ConnAddrs(handle int) (string, int, string, int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// ConnRead reads bytes of a connection into the slice and gives the count. A
-// count of 0 with no cause means the end of the stream.
+// ConnRead reads bytes of a connection into the slice and gives the count.
+// A non-empty read with no bytes and no error means the end of the stream.
+// The last result preserves an available native error code.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func ConnRead(handle int, p []byte) (int, string) {
+func ConnRead(handle int, p []byte) (int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
 // ConnWrite writes the bytes of the slice to a connection and gives the count.
+// The last result preserves an available native error code.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func ConnWrite(handle int, p []byte) (int, string) {
+func ConnWrite(handle int, p []byte) (int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

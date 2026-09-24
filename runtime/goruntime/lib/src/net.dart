@@ -460,6 +460,12 @@ final List<_Packet?> _packets = <_Packet?>[];
 
 final GoString _empty = GoString.empty;
 
+int _socketErrno(Object cause) {
+  if (cause is! SocketException) return 0;
+  final code = cause.osError?.errorCode ?? 0;
+  return code > 0 ? code : 0;
+}
+
 /// _cause writes the message of a failure. Go reads such a text as the message
 /// of an error value.
 GoString _cause(Object e) {
@@ -947,44 +953,44 @@ String _statusLine(Uint8List b) {
   return (-1, _empty);
 }
 
-/// Reads bytes into the slice and gives the count. A count of 0 with no cause
-/// means the end of the stream.
-(int, GoString) $connRead(int handle, Slice<int> p) {
+/// Reads bytes into the slice and gives the count, error text, and native error code.
+/// A non-empty read with no bytes and no error means the end of the stream.
+(int, GoString, int) $connRead(int handle, Slice<int> p) {
   final _Conn? c = _at(handle);
-  if (c == null) return (0, _closed());
-  if (p.len == 0) return (0, _empty);
-  if (c.readDeadline.expired) return (0, _timeout());
-  if (c.rest.isNotEmpty) return (_take(c, p), _empty);
-  if (c.ended) return (0, _empty);
+  if (c == null) return (0, _closed(), 0);
+  if (p.len == 0) return (0, _empty, 0);
+  if (c.readDeadline.expired) return (0, _timeout(), 0);
+  if (c.rest.isNotEmpty) return (_take(c, p), _empty, 0);
+  if (c.ended) return (0, _empty, 0);
   $await(
     c.readDeadline.limit<int>(_fill(c), 2).then((int code) {
-      if (code == 2) return (0, _timeout());
-      if (code == 1) return (0, _at(handle) == null ? _closed() : _empty);
-      return (_take(c, p), _empty);
+      if (code == 2) return (0, _timeout(), 0);
+      if (code == 1) return (0, _at(handle) == null ? _closed() : _empty, 0);
+      return (_take(c, p), _empty, 0);
     }),
-    (Object cause) => (0, _cause(cause)),
+    (Object cause) => (0, _cause(cause), _socketErrno(cause)),
   );
-  return (0, _empty);
+  return (0, _empty, 0);
 }
 
 /// Writes the bytes of the slice and gives the count.
 ///
 /// The call waits for the flush of the socket, exactly as a Go write waits for
 /// the operating system.
-(int, GoString) $connWrite(int handle, Slice<int> p) {
+(int, GoString, int) $connWrite(int handle, Slice<int> p) {
   final _Conn? c = _at(handle);
-  if (c == null) return (0, _closed());
-  if (c.writeDeadline.expired) return (0, _timeout());
-  if (c.writeEnded) return (0, GoString.fromString('broken pipe'));
-  if (p.len == 0) return (0, _empty);
+  if (c == null) return (0, _closed(), 0);
+  if (c.writeDeadline.expired) return (0, _timeout(), 0);
+  if (c.writeEnded) return (0, GoString.fromString('broken pipe'), 0);
+  if (p.len == 0) return (0, _empty, 0);
   $await(
-    c.writeDeadline.limit<(int, GoString)>(
-      c.send(_bytes(p)).then((int n) => (n, _empty)),
-      (0, _timeout()),
+    c.writeDeadline.limit<(int, GoString, int)>(
+      c.send(_bytes(p)).then((int n) => (n, _empty, 0)),
+      (0, _timeout(), 0),
     ),
-    (Object cause) => (0, _cause(cause)),
+    (Object cause) => (0, _cause(cause), _socketErrno(cause)),
   );
-  return (0, _empty);
+  return (0, _empty, 0);
 }
 
 /// Closes a connection in both directions.

@@ -59,7 +59,7 @@ void _echo(int port, List<String> log, Completer<void> done, [_EchoFrame? f]) {
         }
         if ($blocked != null) break machine;
         log.add('dial cause=${cause.toDartString()}');
-        (n, cause) = $connWrite(
+        (n, cause, _) = $connWrite(
           handle,
           $stringToBytes(GoString.fromString('ping')),
         );
@@ -68,17 +68,17 @@ void _echo(int port, List<String> log, Completer<void> done, [_EchoFrame? f]) {
       case 2:
         if (c) {
           c = false;
-          (n, cause) = r!.resume() as (int, GoString);
+          (n, cause, _) = r!.resume() as (int, GoString, int);
         }
         if ($blocked != null) break machine;
         log.add('write n=$n cause=${cause.toDartString()}');
-        (n, cause) = $connRead(handle, buf);
+        (n, cause, _) = $connRead(handle, buf);
         s = 3;
         continue machine;
       case 3:
         if (c) {
           c = false;
-          (n, cause) = r!.resume() as (int, GoString);
+          (n, cause, _) = r!.resume() as (int, GoString, int);
         }
         if ($blocked != null) break machine;
         final String text = String.fromCharCodes(buf.array.take(n));

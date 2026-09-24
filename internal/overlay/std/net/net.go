@@ -18,6 +18,7 @@ import (
 	"io"
 	"net/netip"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -213,9 +214,9 @@ func (c *conn) Read(b []byte) (int, error) {
 	if c.network == "" {
 		return 0, syscall.EINVAL
 	}
-	n, cause := dart.ConnRead(c.handle, b)
+	n, cause, code := dart.ConnRead(c.handle, b)
 	if cause != "" {
-		return n, c.opError("read", cause)
+		return n, c.opError("read", streamSocketCause("read", cause, code))
 	}
 	if n == 0 && len(b) > 0 {
 		return 0, io.EOF
@@ -227,9 +228,9 @@ func (c *conn) Write(b []byte) (int, error) {
 	if c.network == "" {
 		return 0, syscall.EINVAL
 	}
-	n, cause := dart.ConnWrite(c.handle, b)
+	n, cause, code := dart.ConnWrite(c.handle, b)
 	if cause != "" {
-		return n, c.opError("write", cause)
+		return n, c.opError("write", streamSocketCause("write", cause, code))
 	}
 	return n, nil
 }
@@ -261,9 +262,23 @@ func (c *conn) Close() error {
 	handle := c.handle
 	c.handle = -1
 	if cause := dart.ConnClose(handle); cause != "" {
-		return c.opError("close", cause)
+		return c.opError("close", socketCause(cause))
 	}
 	return nil
+}
+
+func streamSocketCause(op, cause string, code int) error {
+	if code == 0 {
+		return socketCause(cause)
+	}
+	if runtime.GOOS == "windows" {
+		if op == "read" {
+			op = "wsarecv"
+		} else {
+			op = "wsasend"
+		}
+	}
+	return &os.SyscallError{Syscall: op, Err: syscall.Errno(code)}
 }
 
 func socketCause(cause string) error {
@@ -276,8 +291,8 @@ func socketCause(cause string) error {
 	return errors.New(cause)
 }
 
-func (c *conn) opError(op, cause string) error {
-	return &OpError{Op: op, Net: c.network, Source: c.local, Addr: c.remote, Err: socketCause(cause)}
+func (c *conn) opError(op string, cause error) error {
+	return &OpError{Op: op, Net: c.network, Source: c.local, Addr: c.remote, Err: cause}
 }
 
 // connCloseWrite ends the write side of a connection. The result is empty on
@@ -303,7 +318,7 @@ func (c *conn) closeWrite() error {
 		return syscall.EINVAL
 	}
 	if cause := connCloseWrite(c.handle); cause != "" {
-		return c.opError("close", cause)
+		return c.opError("close", socketCause(cause))
 	}
 	return nil
 }
@@ -319,7 +334,7 @@ func (c *conn) closeRead() error {
 		return syscall.EINVAL
 	}
 	if cause := connCloseRead(c.handle); cause != "" {
-		return c.opError("close", cause)
+		return c.opError("close", socketCause(cause))
 	}
 	return nil
 }
