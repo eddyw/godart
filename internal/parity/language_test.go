@@ -30,6 +30,9 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/run.out", "expected\n")
 	write("test/compile.go", "// compile\npackage p\n")
 	write("test/reject.go", "// errorcheck\npackage p\n")
+	write("test/rejectpanic.go", "// errorcheck -d=panic\npackage p\n")
+	write("test/build.go", "// build\npackage main\n")
+	write("test/buildflags.go", "// build -race\npackage main\n")
 	write("test/rejectflags.go", "// errorcheck -0\npackage p\n")
 	write("test/groups.go", "// compiledir\npackage ignored\n")
 	write("test/groups.dir/a.go", "package a\n")
@@ -56,8 +59,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 22 {
-		t.Fatalf("got %d cases, want 22", len(inv.Cases))
+	if len(inv.Cases) != 25 {
+		t.Fatalf("got %d cases, want 25", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -78,8 +81,11 @@ func TestLanguageInventory(t *testing.T) {
 	if !cases["reject"].ExpectedFailure {
 		t.Fatal("upstream expected failure lost")
 	}
-	if cases["reject"].Adapter != "reject-file" || cases["rejectflags"].Adapter != "missing" {
+	if cases["reject"].Adapter != "reject-file" || cases["rejectpanic"].Adapter != "reject-file" || cases["rejectflags"].Adapter != "missing" {
 		t.Fatal("the rejection adapter must not discard recipe flags")
+	}
+	if cases["build"].Adapter != "build-file" || cases["buildflags"].Adapter != "missing" {
+		t.Fatal("the build adapter must preserve recipe flags")
 	}
 	if cases["compile"].Adapter != "compile-file" || cases["compileflags"].Adapter != "missing" {
 		t.Fatal("the compile adapter must not discard recipe flags")
@@ -173,7 +179,7 @@ func TestLanguagePolicy(t *testing.T) {
 	}
 
 	for name, skip := range policy.Skips {
-		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "reject-file" && cases[name].Adapter != "directory-module") || skip.Reason == "" {
+		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "reject-file" && cases[name].Adapter != "directory-module" && cases[name].Adapter != "build-file") || skip.Reason == "" {
 			t.Errorf("invalid language omission: %s", name)
 		}
 		switch skip.Classification {
@@ -186,7 +192,7 @@ func TestLanguagePolicy(t *testing.T) {
 		}
 	}
 	for name, diagnostics := range policy.Rejections {
-		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "compile-file") || len(diagnostics) == 0 {
+		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "compile-file" && cases[name].Adapter != "build-file") || len(diagnostics) == 0 {
 			t.Errorf("invalid language rejection: %s", name)
 		}
 	}

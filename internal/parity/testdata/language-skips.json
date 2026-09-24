@@ -59,6 +59,14 @@
     "classification": "target-limit",
     "reason": "The GC_ERROR assertions require the native Go compiler 1GB stack-frame limit. Dart frames have a different allocation model. The adapter retains the original native diagnostic result."
   },
+  "fixedbugs/issue71225": {
+    "classification": "target-limit",
+    "reason": "The original fixture imports C and requires cgo callbacks. Gart does not support cgo. The adapter retains the native build result."
+  },
+  "fixedbugs/issue71226": {
+    "classification": "target-limit",
+    "reason": "The original fixture imports C and requires cgo callbacks. Gart does not support cgo. The adapter retains the native build result."
+  },
   "fixedbugs/issue74648": {
     "classification": "target-limit",
     "reason": "The fixture validates native x86 PCALIGN jump targets in an assembly function."

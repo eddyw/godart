@@ -473,6 +473,56 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
+    def test_build_recipe_requires_original_build_and_entry_point(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wrapper = "void main() {}\n"
+            execution = dict(ran=True, exit=0, timed_out=False)
+            outcome = dict(fixture=dict(name="p", file="p.go", recipe="build"), contract="build", status="passed",
+                           wrapper_sha256=parity.hashlib.sha256(wrapper.encode()).hexdigest(), wrapper_source=wrapper,
+                           native={**execution, "command": ["go", "build", "-gcflags=all=", "-o", "native.o", "/sdk/test/p.go"]},
+                           gart={**execution, "command": ["dart", "compile", "kernel", "bin/main.dart", "-o", "compile.dill"]})
+            path = root / "language.json"
+            def assess(case, status):
+                parity.save(path, dict(kind="language", contract="build", complete=True,
+                                       outcomes=[case], shard=0, shards=1))
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+            assess(outcome, "passed")
+            for mutate in [
+                lambda c: c.update(wrapper_source="different entry"),
+                lambda c: c["native"].update(exit=1),
+                lambda c: c["gart"].update(timed_out=True),
+                lambda c: c["native"]["command"].__setitem__(1, "run"),
+                lambda c: c["native"]["command"].__setitem__(5, "/sdk/test/other.go"),
+                lambda c: c["gart"]["command"].__setitem__(3, "unrelated.dart"),
+                lambda c: c["fixture"].update(recipe="build -race"),
+            ]:
+                changed = copy.deepcopy(outcome)
+                mutate(changed)
+                assess(changed, "failed")
+
+    def test_rejection_recipe_preserves_panic_flag(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            diagnostic = "invalid source"
+            execution = dict(ran=True, exit=1, timed_out=False,
+                             output_sha256=parity.hashlib.sha256(diagnostic.encode()).hexdigest())
+            match = dict(ran=True, exit=0, timed_out=False)
+            outcome = dict(fixture=dict(name="p", recipe="errorcheck -d=panic"), contract="reject", status="passed",
+                           wrapper_sha256="original matcher", build_error=diagnostic,
+                           native={**execution, "command": ["go", "tool", "compile", "-d=panic", "p.go"]},
+                           gart=dict(execution), native_match=dict(match), gart_match=dict(match),
+                           native_diagnostics=diagnostic, gart_diagnostics=diagnostic)
+            report = dict(kind="language", complete=True, outcomes=[outcome], shard=0, shards=1)
+            path = root / "language.json"
+            for recipe, flag, status in [("errorcheck -d=panic", "-d=panic", "passed"),
+                                          ("errorcheck -d=panic", "-e", "failed"),
+                                          ("errorcheck -0 -d=panic", "-d=panic", "failed")]:
+                outcome["fixture"]["recipe"] = recipe
+                outcome["native"]["command"][3] = flag
+                parity.save(path, report)
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
     def test_generated_rejection_retains_exact_source_bytes(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

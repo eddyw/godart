@@ -15,21 +15,30 @@ import (
 )
 
 func TestCompileFilesOfGoTest(t *testing.T) {
+	runCompilationCases(t, "compile-file")
+}
+
+func TestBuildFilesOfGoTest(t *testing.T) {
+	runCompilationCases(t, "build-file")
+}
+
+func runCompilationCases(t *testing.T, adapter string) {
+	t.Helper()
 	inv, err := parity.DiscoverLanguage(build.Default)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var names []string
 	for _, c := range inv.Cases {
-		if c.Adapter == "compile-file" {
+		if c.Adapter == adapter {
 			names = append(names, c.Name)
 		}
 	}
 	selected := testShard(t, names)
 	var outcomes []*languageOutcome
 	for _, c := range inv.Cases {
-		if c.Adapter == "compile-file" && selected[c.Name] {
-			outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: "compile", Status: "unobserved"})
+		if c.Adapter == adapter && selected[c.Name] {
+			outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: c.Action, Status: "unobserved"})
 		}
 	}
 	retainLanguageEvidence(t, "vm", inv, outcomes)
@@ -59,7 +68,14 @@ func TestCompileFilesOfGoTest(t *testing.T) {
 				t.Fatal(err)
 			}
 			dir := t.TempDir()
-			runLanguage(t, &result.Native, dir, runLimit, "go", "tool", "compile", "-e", "-p=p", "-importcfg="+config, "-o", "native.o", sourcePath)
+			if c.Action == "build" {
+				runLanguage(t, &result.Native, dir, runLimit, "go", "build", "-gcflags=all="+inv.GCFlags, "-o", "native.o", sourcePath)
+			} else {
+				runLanguage(t, &result.Native, dir, runLimit, "go", "tool", "compile", "-e", "-p=p", "-importcfg="+config, "-o", "native.o", sourcePath)
+			}
+			if c.Exclusion != nil {
+				t.Skip(c.Exclusion.Classification + ": " + c.Exclusion.Reason)
+			}
 			fset := token.NewFileSet()
 			file, err := parser.ParseFile(fset, c.File, source, parser.PackageClauseOnly)
 			if err != nil {
@@ -100,7 +116,19 @@ func TestCompileFilesOfGoTest(t *testing.T) {
 			wrapper := "import '" + library + "';\nvoid main() {}\n"
 			result.WrapperSHA256 = languageDigest([]byte(wrapper))
 			writeFile(t, filepath.Join(out, "compile.dart"), wrapper)
-			runLanguage(t, &result.Gart, out, runLimit, "dart", "compile", "kernel", "compile.dart", "-o", "compile.dill")
+			entry := "compile.dart"
+			if c.Action == "build" {
+				if pkg == "main" {
+					entry = "bin/main.dart"
+				}
+				data, err := os.ReadFile(filepath.Join(out, entry))
+				if err != nil {
+					t.Fatal(err)
+				}
+				result.WrapperSource = string(data)
+				result.WrapperSHA256 = languageDigest(data)
+			}
+			runLanguage(t, &result.Gart, out, runLimit, "dart", "compile", "kernel", entry, "-o", "compile.dill")
 		})
 	}
 }

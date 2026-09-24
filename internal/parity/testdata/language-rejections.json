@@ -331,6 +331,12 @@
   "nilptr": [
     "$DIR/nilptr.go:15:8: the compiler rejects the package unsafe (the subset has no pointer arithmetic)"
   ],
+  "nilptr4": [
+    "$DIR/fixture.go:20:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:20:18: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:21:12: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:21:20: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
+  ],
   "nilptr_aix": [
     "no package matches [./...] in $DIR"
   ],
