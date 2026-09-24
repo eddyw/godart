@@ -510,9 +510,9 @@ func EmbeddedFieldError(handle, index, count int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// StructOf gives a handle of the struct type that a list of fields builds. The
-// lists hold each field name, package path, tag, type handle, and embedded mark.
-func StructOf(names, packages, tags []string, types []int, anon []bool) int {
+// StructOf gives a handle of the struct type that a list of fields builds.
+// quotedTags holds a quoted Go literal for each nonempty tag.
+func StructOf(names, packages, tags, quotedTags []string, types []int, anon []bool) int {
 	panic("syscall/dart needs the gart compiler")
 }
 

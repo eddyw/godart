@@ -1680,6 +1680,7 @@ int $structOf(
   Slice<GoString> names,
   Slice<GoString> packages,
   Slice<GoString> tags,
+  Slice<GoString> quotedTags,
   Slice<GoInt> handles,
   Slice<bool> anon,
 ) {
@@ -1718,8 +1719,9 @@ int $structOf(
     key.write(types[i].name);
     show.write(types[i].display);
     if (tag[i].isNotEmpty) {
-      key.write(' ${_quoteTag(tag[i])}');
-      show.write(' ${_quoteTag(tag[i])}');
+      final quoted = quotedTags[i].toDartString();
+      key.write(' $quoted');
+      show.write(' $quoted');
     }
   }
   key.write('}');
@@ -1848,18 +1850,6 @@ int $structOf(
     );
     return desc;
   });
-}
-
-/// _quoteTag writes a struct tag in the form that go/types and reflect each
-/// write, with a double quotation mark and an escape of a backslash.
-String _quoteTag(String tag) {
-  final StringBuffer b = StringBuffer('"');
-  for (final int c in tag.codeUnits) {
-    if (c == 0x22 || c == 0x5C) b.write(r'\');
-    b.writeCharCode(c);
-  }
-  b.write('"');
-  return b.toString();
 }
 
 /// A handle of the slice type of an element type.

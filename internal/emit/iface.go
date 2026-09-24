@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/name"
@@ -466,8 +467,12 @@ func (e *emitter) fieldDescs(t types.Type, st *types.Struct) string {
 		if i < decl.NumFields() {
 			declType = decl.Field(i).Type()
 		}
+		tag := dartString(st.Tag(i))
+		if !utf8.ValidString(st.Tag(i)) {
+			tag = stringConst(st.Tag(i)) + ".toDartString()"
+		}
 		parts[i] = fmt.Sprintf("FieldDesc('%s', %s, %t, () => %s, %s%s)",
-			field.Name(), dartString(st.Tag(i)), field.Exported(),
+			field.Name(), tag, field.Exported(),
 			e.descriptorOf(field.Type()),
 			e.fieldAccess(t, field, i, class, declType), embedded)
 	}

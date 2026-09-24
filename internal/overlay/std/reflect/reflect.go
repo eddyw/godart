@@ -1333,6 +1333,7 @@ func StructOf(fields []StructField) Type {
 	packages := make([]string, len(fields))
 	packagePath := ""
 	tags := make([]string, len(fields))
+	quotedTags := make([]string, len(fields))
 	handles := make([]int, len(fields))
 	anon := make([]bool, len(fields))
 	seen := make(map[string]bool, len(fields))
@@ -1389,6 +1390,9 @@ func StructOf(fields []StructField) Type {
 		names[i] = f.Name
 		packages[i] = f.PkgPath
 		tags[i] = string(f.Tag)
+		if f.Tag != "" {
+			quotedTags[i] = strconv.Quote(string(f.Tag))
+		}
 		handles[i] = f.Type.handle()
 		anon[i] = f.Anonymous
 	}
@@ -1401,7 +1405,7 @@ func StructOf(fields []StructField) Type {
 	if (size+align-1)&^(align-1) < size {
 		panic("reflect.StructOf: struct size would exceed virtual address space")
 	}
-	return typeOf(dart.StructOf(names, packages, tags, handles, anon))
+	return typeOf(dart.StructOf(names, packages, tags, quotedTags, handles, anon))
 }
 
 // PointerTo gives the pointer type of an element type.
