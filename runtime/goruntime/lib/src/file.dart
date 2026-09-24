@@ -443,6 +443,7 @@ GoString $chtimes(
 }
 
 GoString $remove(GoString path) {
+  if (hasDescriptorRemoval) return removeDescriptors(path);
   final String name = path.toDartString();
   try {
     final FileSystemEntityType t = FileSystemEntity.typeSync(

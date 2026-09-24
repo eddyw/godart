@@ -32,6 +32,9 @@ func main() {
  for _, name := range []string{"ascii", "unicode-世界", "raw-\xff"} {
   path := filepath.Join(os.Args[1], name)
   switch os.Args[2] {
+  case "remove":
+   err := os.Remove(path)
+   fmt.Printf("remove %x %t\n", name, err != nil)
   case "readfile":
    data, err := os.ReadFile(path)
    fmt.Printf("readfile %x %t %x\n", name, err != nil, data)
@@ -69,13 +72,13 @@ func main() {
 	prepareDart(t, out)
 	exe := filepath.Join(out, "program")
 	run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", exe)
-	for _, operation := range []string{"readfile", "open", "writefile", "create", "openfile"} {
+	for _, operation := range []string{"readfile", "open", "writefile", "create", "openfile", "remove"} {
 		t.Run(operation, func(t *testing.T) {
 			execute := func(command string, args ...string) string {
 				t.Helper()
 				files := t.TempDir()
 				writeFile(t, filepath.Join(files, "raw-\ufffd"), "decoy")
-				if operation == "readfile" || operation == "open" {
+				if operation == "readfile" || operation == "open" || operation == "remove" {
 					for _, name := range []string{"ascii", "unicode-世界", "raw-\xff"} {
 						err := os.WriteFile(filepath.Join(files, name), []byte("seed"), 0600)
 						if err != nil && !(runtime.GOOS == "darwin" && name == "raw-\xff" && errors.Is(err, syscall.EILSEQ)) {

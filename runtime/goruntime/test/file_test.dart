@@ -4,6 +4,38 @@ import 'package:goruntime/goruntime.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('Remove preserves raw names and symbolic link targets', () {
+    final root = Directory.systemTemp.createTempSync('gart-remove-');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final raw = Uint8List.fromList([
+      ...GoString.fromString('${root.path}/raw-').bytes,
+      0xff,
+    ]);
+    final path = GoString.fromBytes(raw);
+    final decoy = File('${root.path}/raw-\uFFFD')..writeAsStringSync('keep');
+    File.fromRawPath(raw).writeAsStringSync('remove');
+    expect($remove(path).length, 0);
+    expect(File.fromRawPath(raw).existsSync(), isFalse);
+    expect(decoy.readAsStringSync(), 'keep');
+    Directory.fromRawPath(raw).createSync();
+    expect($remove(path).length, 0);
+    expect(Directory.fromRawPath(raw).existsSync(), isFalse);
+    Link.fromRawPath(raw).createSync(decoy.path);
+    expect($remove(path).length, 0);
+    expect(Link.fromRawPath(raw).existsSync(), isFalse);
+    expect(decoy.readAsStringSync(), 'keep');
+    Directory.fromRawPath(raw).createSync();
+    File.fromRawPath(Uint8List.fromList([...raw, 47, 120]))
+        .writeAsStringSync('keep');
+    expect($remove(path).length, greaterThan(0));
+    expect(Directory.fromRawPath(raw).existsSync(), isTrue);
+    expect(
+      $remove(GoString.fromString('${decoy.path}\x00suffix')).length,
+      greaterThan(0),
+    );
+    expect(decoy.readAsStringSync(), 'keep');
+  }, skip: !Platform.isLinux);
+
   test('Native descriptors retain file identity and ownership', () {
     final result = Process.runSync(Platform.resolvedExecutable, [
       'test/fixtures/file_descriptors.dart',

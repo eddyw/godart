@@ -1,4 +1,5 @@
 // Copyright 2018 The Go Authors. All rights reserved.
+// Copyright 2009 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -93,6 +94,25 @@ int _unlink(int parent, Uint8List name, int flags) {
     return _unlinkat(parent, p, flags) == 0 ? 0 : _errnoLocation().value;
   } finally {
     _free(p);
+  }
+}
+
+GoString removeDescriptors(GoString path) {
+  try {
+    int fileError;
+    do {
+      fileError = _unlink(_cwd, path.bytes, 0);
+    } while (fileError == 4);
+    if (fileError == 0) return GoString.empty;
+    int directoryError;
+    do {
+      directoryError = _unlink(_cwd, path.bytes, _removeDirectory);
+    } while (directoryError == 4);
+    if (directoryError == 0) return GoString.empty;
+    // ENOTDIR identifies the file error on both Linux and macOS.
+    return _errorMessage(directoryError == 20 ? fileError : directoryError);
+  } on _RemovalError catch (error) {
+    return _errorMessage(error.errno);
   }
 }
 
@@ -236,14 +256,18 @@ _RemovalError? _removeFrom(int parent, Uint8List base) {
     error = e;
   }
   if (error == null) return (GoString.empty, GoString.empty, GoString.empty);
-  final message = _strerror(error.errno);
+  return (
+    GoString.fromString(error.op),
+    GoString.fromBytes(error.path),
+    _errorMessage(error.errno),
+  );
+}
+
+GoString _errorMessage(int errno) {
+  final message = _strerror(errno);
   final bytes = <int>[];
   for (var i = 0; message[i] != 0; i++) {
     bytes.add(message[i]);
   }
-  return (
-    GoString.fromString(error.op),
-    GoString.fromBytes(error.path),
-    GoString.fromBytes(bytes),
-  );
+  return GoString.fromBytes(bytes);
 }
