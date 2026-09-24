@@ -17,13 +17,13 @@ SDK versions, modes, and exclusions.
 | Pointer output | Process-local identities can represent pointers. They are not native memory addresses. |
 | Map iteration | The runtime can expose insertion order. Programs must not depend on Go's unspecified iteration order. |
 | Reflection | Descriptors cover a substantial subset. Dynamically created function types need an emitted callable factory. |
-| Function metadata | Named functions and closures expose synthetic source PCs. Reflection method values share a dispatch PC with no Go source location. Direct method values and generic function instances remain incomplete. |
+| Function metadata | Function values expose synthetic PCs and Go source metadata. Reflection method wrappers can have no Go source location. PCs do not identify native instructions. |
 | Garbage collection | Dart controls collection and cleanup timing. Native Go heap and collector controls do not transfer directly. |
 | Runtime metrics | `runtime/metrics` exposes GODEBUG event counters and value accessors. Unknown metrics return `KindBad`. Native Go heap, scheduler, and collector measurements remain unavailable. |
-| Deep calls | Saved frame chains resume iteratively and retain suspended ancestors. Initial synchronous recursion still uses the fixed Dart stack. |
+| Deep calls | Recursive call cycles use resumable frames. Synchronous callbacks execute those frames without scheduler waits. Actual channel and I/O waits remain invalid in synchronous callbacks. |
 | Linkname | Module variable aliases share storage with variables of the same type in imported packages. Module function aliases resolve to functions of the same type in the program import graph. Alias initializers, function alias bodies, and aliases to other aliases remain unsupported. |
 | Stack traces | Go source positions, without native instruction offsets. `-trimpath` selects portable paths. Runtime initialization and panic frames use their Dart source locations. |
-| Zero-size slices | Logical lengths and capacities retain all 64 bits on VM, AOT, JS, and Wasm. Zero-size elements use virtual storage. Large arrays remain separate. |
+| Zero-size arrays and slices | Zero-size elements use virtual storage. Logical lengths remain 64-bit values on VM, AOT, JS, and Wasm. |
 | Numbers | Target representations differ. JavaScript conversion boundaries need particular care. |
 | Time | Monotonic values support elapsed-time operations. Time-zone behavior can differ from Go's own database. |
 | Environment | `os` and `syscall` share environment values. Child processes receive this state through `os/exec`. |
