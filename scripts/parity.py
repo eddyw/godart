@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Measure API contracts, retained upstream evidence, and application parity."""
+import base64
+import binascii
 import argparse
 from collections import Counter, defaultdict
 import hashlib
@@ -339,10 +341,10 @@ def directory_language_valid(case, go_version):
             and all(case[k].get("output_sha256") == expected for k in ("native", "gart")))
 
 
-def generator_recipe_valid(case):
+def generator_recipe_valid(case, action="runoutput"):
     fixture = case["fixture"]
     parts = fixture.get("recipe", "").split()
-    if not parts or parts[0] != "runoutput":
+    if not parts or parts[0] != action:
         return False
     files = []
     for name in parts[1:]:
@@ -353,7 +355,7 @@ def generator_recipe_valid(case):
         files.append(path.as_posix())
     if files != fixture.get("generator_files", []):
         return False
-    if not files:
+    if not files and action == "runoutput":
         return True
     recorded = {f["path"]: f["sha256"] for f in fixture.get("files", [])}
     command = case.get("generator", {}).get("command", [])
@@ -407,7 +409,7 @@ def language_behavior(paths):
                     elif case.get("contract") == "compile":
                         valid = (executed and case["fixture"]["recipe"] == "compile"
                                  and case.get("wrapper_sha256") and not case.get("build_error"))
-                    elif case.get("contract") == "reject":
+                    elif case.get("contract") in {"reject", "errorcheckoutput"}:
                         rejected = all(case[k]["ran"] and case[k]["exit"] > 0 and not case[k]["timed_out"]
                                        for k in ("native", "gart"))
                         upstream_failure = bool(case["fixture"].get("upstream_expected_failure"))
@@ -422,8 +424,20 @@ def language_behavior(paths):
                                           hashlib.sha256(case[k + "_diagnostics"].encode()).hexdigest() == case[k]["output_sha256"]
                                           for k in ("native", "gart"))
                         valid = (rejected and matched and diagnostics and case.get("build_error")
-                                 and case.get("wrapper_sha256") and case["fixture"]["recipe"] == "errorcheck"
+                                 and case.get("wrapper_sha256")
                                  and (status == "upstream-expected-failure") == upstream_failure)
+                        if case.get("contract") == "errorcheckoutput":
+                            generator = case.get("generator") or {}
+                            try:
+                                source = base64.b64decode(case.get("generated_bytes", ""), validate=True)
+                            except (ValueError, binascii.Error):
+                                source = b""
+                            valid = (valid and generator_recipe_valid(case, "errorcheckoutput") and source
+                                     and generator.get("ran") and generator.get("exit") == 0
+                                     and not generator.get("timed_out")
+                                     and hashlib.sha256(source).hexdigest() == generator.get("output_sha256"))
+                        else:
+                            valid = valid and case["fixture"]["recipe"] == "errorcheck"
                     else:
                         valid = expected and executed and all(case[k]["output_sha256"] == expected
                                                               for k in ("native", "gart"))
@@ -452,8 +466,8 @@ def language_behavior(paths):
                                      and case["native"].get("environment", {}).get("GOPATH")
                                      and case["native"]["environment"] == case["gart"].get("environment")
                                      and not case.get("build_error"))
-                    valid = valid and (status == "passed" or case.get("contract") == "reject")
-                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "reject"} and case.get("contract", "run") == config["contract"]
+                    valid = valid and (status == "passed" or case.get("contract") in {"reject", "errorcheckoutput"})
+                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "reject", "errorcheckoutput"} and case.get("contract", "run") == config["contract"]
 
                     if case["fixture"].get("host_tools"):
                         native_env = case["native"].get("environment") or {}
@@ -466,7 +480,7 @@ def language_behavior(paths):
                         group["problems"].append(f"{path}: invalid pass for {name}")
                 record = group["outcomes"].setdefault(name, dict(name=name, fixture=case["fixture"], statuses=set()))
                 record["statuses"].add(status)
-                if config["contract"] == "reject":
+                if config["contract"] in {"reject", "errorcheckoutput"}:
                     record.setdefault("rejection_results", set()).add(rejection_result(case, status))
             group["reports"].append(dict(path=str(path), manifest=origin["manifest"], sha256=stamp, complete=report["complete"],
                                          shard=report["shard"], shards=report["shards"]))
@@ -486,7 +500,7 @@ def language_behavior(paths):
             records.append(record)
         group["outcomes"] = records
         group["counts"] = dict(Counter(x["status"] for x in records))
-        if group["configuration"]["contract"] == "reject":
+        if group["configuration"]["contract"] in {"reject", "errorcheckoutput"}:
             group["rejection_results"] = dict(Counter(x["rejection_result"] for x in records))
         result.append(group)
     return result

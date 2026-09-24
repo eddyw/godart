@@ -7,11 +7,16 @@ package load
 import (
 	"bytes"
 	"go/ast"
+	"go/parser"
 	"go/scanner"
 	"go/token"
+	"path/filepath"
+	"reflect"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/tools/go/ast/astutil"
+	"golang.org/x/tools/go/packages"
 
 	syntax "github.com/eddyw/godart/internal/gosyntax"
 )
@@ -57,6 +62,7 @@ func compilerSyntaxErrors(fset *token.FileSet, name string, src []byte, file *as
 		}
 	}
 	if !hasSyntaxError && parsed != nil && file != nil {
+		repairEncodingAST(fset, name, src, file)
 		bad := make(map[token.Position]bool)
 		syntax.Inspect(parsed, func(n syntax.Node) bool {
 			if literal, ok := n.(*syntax.BasicLit); ok && literal.Bad {
@@ -78,4 +84,63 @@ func compilerSyntaxErrors(fset *token.FileSet, name string, src []byte, file *as
 		}, nil)
 	}
 	return diagnostics
+}
+
+// The compiler skips malformed bytes between tokens but retains them inside
+// token text. The public parser needs clean bytes to recover the same tree.
+func repairEncodingAST(fset *token.FileSet, name string, src []byte, file *ast.File) {
+	if bytes.IndexByte(src, 0) < 0 && utf8.Valid(src) {
+		return
+	}
+	var cleaned []byte
+	var offsets []int
+	for off := 0; off < len(src); {
+		r, size := utf8.DecodeRune(src[off:])
+		if r != 0 && (r != utf8.RuneError || size != 1) {
+			cleaned = append(cleaned, src[off:off+size]...)
+			for i := 0; i < size; i++ {
+				offsets = append(offsets, off+i)
+			}
+		}
+		off += size
+	}
+	offsets = append(offsets, len(src))
+	parsedSet := token.NewFileSet()
+	reparsed, _ := parser.ParseFile(parsedSet, name, cleaned, parser.AllErrors|parser.ParseComments)
+	original := fset.File(file.Pos())
+	temporary := parsedSet.File(reparsed.Pos())
+	positionType := reflect.TypeOf(token.NoPos)
+	ast.Inspect(reparsed, func(node ast.Node) bool {
+		if node == nil {
+			return true
+		}
+		switch n := node.(type) {
+		case *ast.Ident:
+			n.Name = string(src[offsets[temporary.Offset(n.Pos())]:offsets[temporary.Offset(n.End())]])
+		case *ast.BasicLit:
+			n.Value = string(src[offsets[temporary.Offset(n.Pos())]:offsets[temporary.Offset(n.End())]])
+		}
+		value := reflect.ValueOf(node).Elem()
+		for i := 0; i < value.NumField(); i++ {
+			field := value.Field(i)
+			if field.Type() == positionType && field.Int() != 0 {
+				field.SetInt(int64(original.Pos(offsets[temporary.Offset(token.Pos(field.Int()))])))
+			}
+		}
+		return true
+	})
+	*file = *reparsed
+}
+
+func redundantEncodingError(pkg *packages.Package, diagnostic packages.Error) bool {
+	if diagnostic.Kind != packages.ListError || diagnostic.Msg != "illegal UTF-8 encoding" {
+		return false
+	}
+	for _, err := range pkg.Errors {
+		if err.Kind == packages.ParseError && err.Msg == "invalid UTF-8 encoding" &&
+			(diagnostic.Pos == err.Pos || diagnostic.Pos == filepath.Base(err.Pos)) {
+			return true
+		}
+	}
+	return false
 }

@@ -24,6 +24,7 @@ Syntax diagnostics use the unchanged Go compiler parser in
 Its `LICENSE` retains the Go BSD terms. The diagnostic adapter follows
 `src/cmd/compile/internal/base/print.go` and retains `internal/load/LICENSE-Go`.
 Malformed literals retain the behavior of `src/cmd/compile/internal/types2/expr.go`.
+Malformed-byte recovery follows `src/cmd/compile/internal/syntax/source.go` and retains `internal/load/LICENSE-Go`.
 Range diagnostics follow `src/cmd/compile/internal/types2/range.go` and
 retain `internal/load/LICENSE-Go`.
 Runtime error values and bounds metadata adapt Go `src/runtime/error.go` and

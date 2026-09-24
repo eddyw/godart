@@ -38,6 +38,9 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/compileflags.go", "// compile -N\npackage p\n")
 	write("test/generated.go", "// runoutput\npackage main\n")
 	write("test/generatedflags.go", "// runoutput -gcflags=-N\npackage main\n")
+	write("test/generatedreject.go", "// errorcheckoutput\npackage main\n")
+	write("test/generatedrejectfiles.go", "// errorcheckoutput ./extra.go\npackage main\n")
+	write("test/generatedrejectflags.go", "// errorcheckoutput -0\npackage main\n")
 	write("test/generatedfiles.go", "// runoutput ./extra.go\npackage main\n")
 	write("test/extra.go", "// skip\npackage main\n")
 	write("test/suffix_windows.go", "// run\npackage main\nfunc main() {}\n")
@@ -53,8 +56,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 19 {
-		t.Fatalf("got %d cases, want 19", len(inv.Cases))
+	if len(inv.Cases) != 22 {
+		t.Fatalf("got %d cases, want 22", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -80,6 +83,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["compile"].Adapter != "compile-file" || cases["compileflags"].Adapter != "missing" {
 		t.Fatal("the compile adapter must not discard recipe flags")
+	}
+	if cases["generatedreject"].Adapter != "generated-rejection" || cases["generatedrejectfiles"].Adapter != "generated-rejection" || cases["generatedrejectflags"].Adapter != "missing" {
+		t.Fatal("generated rejection recipes must preserve their arguments")
 	}
 	if cases["generated"].Adapter != "generated-file" || cases["generatedflags"].Adapter != "missing" {
 		t.Fatal("the generator adapter must not discard recipe arguments")
@@ -114,16 +120,18 @@ func TestLanguageInventory(t *testing.T) {
 
 func TestLanguageGeneratorFiles(t *testing.T) {
 	for recipe, want := range map[string][]string{
-		"runoutput":             nil,
-		"runoutput ./rotate.go": {"rotate.go"},
-		"runoutput a.go b.go":   {"a.go", "b.go"},
+		"runoutput":                   nil,
+		"errorcheckoutput":            nil,
+		"errorcheckoutput ./index.go": {"index.go"},
+		"runoutput ./rotate.go":       {"rotate.go"},
+		"runoutput a.go b.go":         {"a.go", "b.go"},
 	} {
 		got, ok := languageGeneratorFiles(recipe)
 		if !ok || !slices.Equal(got, want) {
 			t.Fatalf("%q: %q, %t", recipe, got, ok)
 		}
 	}
-	for _, recipe := range []string{"", "run", "runoutput -gcflags=-N", "runoutput argument", "runoutput ../other.go", "runoutput /tmp/other.go", `runoutput "a.go"`, `runoutput a\b.go`} {
+	for _, recipe := range []string{"", "run", "errorcheckoutput -0", "errorcheckoutput ../other.go", "runoutput -gcflags=-N", "runoutput argument", "runoutput ../other.go", "runoutput /tmp/other.go", `runoutput "a.go"`, `runoutput a\b.go`} {
 		if _, ok := languageGeneratorFiles(recipe); ok {
 			t.Fatalf("accepted unsupported generator recipe %q", recipe)
 		}

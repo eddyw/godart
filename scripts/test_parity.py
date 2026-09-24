@@ -473,6 +473,46 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
+    def test_generated_rejection_retains_exact_source_bytes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = b"package p\nvar \xc2A int\n"
+            diagnostics = "invalid UTF-8 encoding"
+            execution = dict(ran=True, exit=1, timed_out=False,
+                             output_sha256=parity.hashlib.sha256(diagnostics.encode()).hexdigest())
+            match = dict(ran=True, exit=0, timed_out=False)
+            outcome = dict(fixture=dict(name="nul1", file="nul1.go", recipe="errorcheckoutput",
+                                        files=[dict(path="nul1.go", sha256="a" * 64)]),
+                           contract="errorcheckoutput", status="passed", wrapper_sha256="original matcher",
+                           build_error=diagnostics, native=dict(execution), gart=dict(execution),
+                           native_match=dict(match), gart_match=dict(match),
+                           native_diagnostics=diagnostics, gart_diagnostics=diagnostics,
+                           generator=dict(ran=True, exit=0, timed_out=False,
+                                          command=["go", "run", "-gcflags=all=", "/sdk/test/nul1.go"],
+                                          output_sha256=parity.hashlib.sha256(source).hexdigest()),
+                           generated_bytes=parity.base64.b64encode(source).decode())
+            path = root / "language.json"
+            def assess(case, status):
+                parity.save(path, dict(kind="language", contract="errorcheckoutput", complete=True,
+                                       outcomes=[case], shard=0, shards=1))
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+            assess(outcome, "passed")
+            for mutate in [
+                lambda c: c.pop("generated_bytes"),
+                lambda c: c.update(generated_bytes="malformed!"),
+                lambda c: c.update(generated_bytes=parity.base64.b64encode(source.decode(errors="replace").encode()).decode()),
+                lambda c: c["generator"].update(ran=False),
+                lambda c: c["generator"].update(exit=1),
+                lambda c: c["generator"].update(timed_out=True),
+                lambda c: c["generator"].update(command=["echo", "fake"]),
+                lambda c: c["fixture"].update(recipe="runoutput"),
+                lambda c: c["fixture"].update(recipe="errorcheckoutput -0"),
+                lambda c: c["gart_match"].update(exit=1),
+            ]:
+                changed = copy.deepcopy(outcome)
+                mutate(changed)
+                assess(changed, "failed")
+
     def test_upstream_expected_failure_requires_observed_mismatches(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

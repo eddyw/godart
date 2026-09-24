@@ -157,6 +157,9 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				c.Adapter = "reject-file"
 			} else if files, ok := languageGeneratorFiles(recipe); ok {
 				c.Adapter = "generated-file"
+				if c.Action == "errorcheckoutput" {
+					c.Adapter = "generated-rejection"
+				}
 				c.GeneratorFiles = files
 				for _, name := range files {
 					data, err := os.ReadFile(filepath.Join(root, name))
@@ -228,7 +231,7 @@ var directoryRecipe = regexp.MustCompile(`^runindir(?:\s+-gomodversion\s+(?:"([^
 
 func languageGeneratorFiles(recipe string) ([]string, bool) {
 	fields := strings.Fields(recipe)
-	if len(fields) == 0 || fields[0] != "runoutput" {
+	if len(fields) == 0 || (fields[0] != "runoutput" && fields[0] != "errorcheckoutput") {
 		return nil, false
 	}
 	var files []string

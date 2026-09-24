@@ -527,7 +527,7 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeEx
 			if syntaxError && e.Kind != packages.ParseError {
 				continue
 			}
-			if redundantImportError(p, e) {
+			if redundantImportError(p, e) || redundantEncodingError(p, e) {
 				continue
 			}
 			e = compilerImportDiagnostic(p, e)

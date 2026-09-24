@@ -27,6 +27,23 @@ func TestRejectFilesOfGoTest(t *testing.T) {
 	runRejectionCases(t, inv, cases)
 }
 
+func TestGeneratedRejectFilesOfGoTest(t *testing.T) {
+	inv, err := parity.DiscoverLanguage(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []parity.LanguageCase
+	for _, c := range inv.Cases {
+		if c.Adapter == "generated-rejection" {
+			cases = append(cases, c)
+		}
+	}
+	if len(cases) != 4 {
+		t.Fatal("the original generated rejection fixtures changed")
+	}
+	runRejectionCases(t, inv, cases)
+}
+
 func TestRejectionContracts(t *testing.T) {
 	inv, err := parity.DiscoverLanguage(build.Default)
 	if err != nil {
@@ -65,7 +82,11 @@ func runRejectionCases(t *testing.T, inv *parity.LanguageInventory, cases []pari
 	var outcomes []*languageOutcome
 	for _, c := range cases {
 		if selected[c.Name] {
-			outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: "reject", Status: "unobserved"})
+			contract := "reject"
+			if c.Adapter == "generated-rejection" {
+				contract = "errorcheckoutput"
+			}
+			outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: contract, Status: "unobserved"})
 		}
 	}
 	retainLanguageEvidence(t, "vm", inv, outcomes)
@@ -121,6 +142,21 @@ func TestDiagnostics(t *testing.T) {
 				t.Fatal(err)
 			}
 			dir := t.TempDir()
+			if c.Adapter == "generated-rejection" {
+				result.Generator = &languageExecution{}
+				root := filepath.Join(build.Default.GOROOT, "test")
+				args := []string{"run", "-gcflags=all=" + inv.GCFlags, sourcePath}
+				for _, file := range c.GeneratorFiles {
+					args = append(args, filepath.Join(root, file))
+				}
+				result.GeneratedBytes = []byte(recordLanguageRaw(t, result.Generator, dir, runLimit, "go", args...))
+				if result.Generator.Exit != 0 {
+					t.Fatalf("native generator exited %d\n%s", result.Generator.Exit, result.GeneratedBytes)
+				}
+				source = result.GeneratedBytes
+				sourcePath = filepath.Join(dir, "generated.go")
+				writeFile(t, sourcePath, string(source))
+			}
 			result.NativeDiagnostics = recordLanguage(t, &result.Native, dir, runLimit, "go", "tool", "compile", "-p=p", "-d=panic", "-C", "-e", "-importcfg="+config, "-o", "native.o", sourcePath)
 			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/rejectfixture\n\ngo 1.27\n")
 			copyPath := filepath.Join(dir, filepath.Base(c.File))

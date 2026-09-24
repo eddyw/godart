@@ -33,6 +33,7 @@ type languageOutcome struct {
 	ModuleSHA256       string                     `json:"module_sha256,omitempty"`
 	ImportConfigSHA256 string                     `json:"importcfg_sha256,omitempty"`
 	Generator          *languageExecution         `json:"generator,omitempty"`
+	GeneratedBytes     []byte                     `json:"generated_bytes,omitempty"`
 	GeneratedSource    string                     `json:"generated_source,omitempty"`
 	NativeDiagnostics  string                     `json:"native_diagnostics,omitempty"`
 	GartDiagnostics    string                     `json:"gart_diagnostics,omitempty"`
