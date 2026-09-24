@@ -70,7 +70,7 @@ func TestCompilerNotices(t *testing.T) {
 	if !strings.Contains(Compiler, Project) || !strings.Contains(Compiler, "Go SDK / LICENSE\n") {
 		t.Fatal("compiler bundle omits project or Go notices")
 	}
-	for _, name := range []string{"internal/emit/LICENSE-Go", "internal/gosyntax/LICENSE", "internal/load/LICENSE-Go", "internal/overlay/std/LICENSE"} {
+	for _, name := range []string{"internal/driver/LICENSE-Dart", "internal/emit/LICENSE-Go", "internal/gosyntax/LICENSE", "internal/load/LICENSE-Go", "internal/overlay/std/LICENSE"} {
 		data, err := os.ReadFile(filepath.Join("../..", name))
 		if err != nil {
 			t.Fatal(err)

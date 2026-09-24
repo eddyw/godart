@@ -7,6 +7,11 @@ license of its input code.
 The signal context adapter preserves the NotifyContext declarations from
 Go 1.27.1 `src/os/signal/signal.go`. Its source retains the Go BSD header.
 
+Generated Pub package names use the reserved-word list from Dart Pub
+`lib/src/utils.dart` at commit `a9ed06f7fb180b39b950aec878d4aa0911b7675e`.
+`internal/driver/LICENSE-Dart` and `AUTHORS-Dart` preserve its BSD terms and attribution.
+The compiler notice bundle includes these terms.
+
 Go-derived overlays and upstream test excerpts use the notice in
 [`internal/overlay/std/LICENSE`](../internal/overlay/std/LICENSE).
 The anonymous-interface cycle detector and compiler directive validation
