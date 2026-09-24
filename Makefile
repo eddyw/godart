@@ -1,7 +1,7 @@
 # Common commands of the godart repository. Run "make" for the list.
 
 RUNTIME := runtime/goruntime
-GO_FILES := $(shell find . -name '*.go' -not -path './build/*')
+GO_FILES := $(shell find . -path './build' -prune -o -name '*.go' -print)
 
 PROG ?= hello
 # DEMO holds the output of run and of compare. The identifier of the process
