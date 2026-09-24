@@ -1747,3 +1747,11 @@ func VerifySystemCertificates(certs []string, name string, date float64, hasDate
 
 // GrowValue increases slice capacity after the caller validates its length.
 func GrowValue(value any, count int) any { panic("syscall/dart needs the gart compiler") }
+
+func NativeLink(from, to string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func NativeSymlink(from, to string) int {
+	panic("syscall/dart needs the gart compiler")
+}

@@ -9,6 +9,7 @@ import 'string.dart';
 
 export 'directory_descriptor.dart';
 export 'file_attributes.dart';
+export 'file_links.dart';
 export 'file_readlink.dart';
 export 'file_rename.dart';
 export 'file_stat.dart';

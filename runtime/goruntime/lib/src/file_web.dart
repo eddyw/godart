@@ -160,3 +160,6 @@ int $nativeChtimes(
 ) => 38;
 
 (GoString, int) $nativeReadlink(GoString path) => (GoString.empty, 38);
+
+int $nativeLink(GoString from, GoString to) => 38;
+int $nativeSymlink(GoString from, GoString to) => 38;

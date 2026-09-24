@@ -213,7 +213,7 @@ func TestSelectedUpstream(t *testing.T) {
 			"durationTruncateTests", "TestDurationTruncate", "durationRoundTests", "TestDurationRound", "durationAbsTests", "TestDurationAbs", "minDuration", "maxDuration",
 		}}},
 		"os": {
-			{Name: "os_test.go", Declarations: []string{"TestChtimes", "TestChtimesOmit", "testChtimesOmit", "TestChtimesDir", "testChtimes", "TestChtimesToUnixZero", "hasNoatime", "checkMode", "TestChmod", "TestSameFile", "testDevNullFileInfo", "testDevNullFile", "TestDevNullFile", "TestStatDirModeExec", "TestFileChdir", "TestChdirAndGetwd", "TestProgWideChdir", "equal", "TestGetppid", "TestAppend", "TestOpenFileKeepsPermissions", "testOpenFileKeepsPermissions", "writeFile", "TestSeek", "newFile", "TestRename", "TestRenameOverwriteDest", "TestRenameFailed", "TestRenameNotExisting", "TestRenameToDirFailed", "TestRenameCaseDifference", "TestReaddirOfFile", "TestRemoveReadOnlyFile", "TestSymlink", "testSymlink", "TestLongSymlink"}},
+			{Name: "os_test.go", Declarations: []string{"TestChtimes", "TestChtimesOmit", "testChtimesOmit", "TestChtimesDir", "testChtimes", "TestChtimesToUnixZero", "hasNoatime", "checkMode", "TestChmod", "TestSameFile", "testDevNullFileInfo", "testDevNullFile", "TestDevNullFile", "TestStatDirModeExec", "TestFileChdir", "TestChdirAndGetwd", "TestProgWideChdir", "equal", "TestGetppid", "TestAppend", "TestOpenFileKeepsPermissions", "testOpenFileKeepsPermissions", "writeFile", "TestSeek", "newFile", "TestRename", "TestRenameOverwriteDest", "TestRenameFailed", "TestRenameNotExisting", "TestRenameToDirFailed", "TestRenameCaseDifference", "TestReaddirOfFile", "TestRemoveReadOnlyFile", "TestSymlink", "testSymlink", "TestLongSymlink", "TestHardLink", "testHardLink"}},
 			{Name: "os_unix_test.go", Declarations: []string{"checkUidGid", "TestChown", "TestFileChown", "TestLchown"}},
 			{Name: "stat_test.go", Declarations: []string{"testStatAndLstatParams", "testStatAndLstat", "testIsDir", "testIsSymlink", "testIsFile", "testDirStats", "testFileStats", "testSymlinkStats", "testSymlinkSameFile", "testSymlinkSameFileOpen", "TestDirAndSymlinkStats", "TestFileAndSymlinkStats", "TestSymlinkWithTrailingSlash", "TestClosedStat", "TestStatNotExist"}},
 			{Name: "env_test.go"}, {Name: "env_unix_test.go"}, {Name: "error_test.go"},
@@ -370,7 +370,7 @@ import . "os/signal"
 				if pkg == "crypto/x509" {
 					names = []string{"Builder", "SkipFlaky"}
 				} else if pkg == "os" {
-					names = []string{"MustHaveSymlink", "MustHaveExec", "Executable"}
+					names = []string{"MustHaveSymlink", "MustHaveLink", "HasLink", "MustHaveExec", "Executable"}
 				}
 				source := selectedUpstreamSource(t, "../overlay/std/internal/testenv/testenv.go", names)
 				if pkg == "internal/godebug" {

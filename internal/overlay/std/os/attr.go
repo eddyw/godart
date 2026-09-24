@@ -207,6 +207,12 @@ func Link(oldname, newname string) error {
 	if contains(oldname, "\x00") || contains(newname, "\x00") {
 		return &LinkError{Op: "link", Old: oldname, New: newname, Err: syscall.EINVAL}
 	}
+	if dart.HasNativeStat() {
+		if errno := dart.NativeLink(oldname, newname); errno != 0 {
+			return &LinkError{Op: "link", Old: oldname, New: newname, Err: syscall.Errno(errno)}
+		}
+		return nil
+	}
 	cause := dart.Link(oldname, newname)
 	if cause == "" {
 		return nil

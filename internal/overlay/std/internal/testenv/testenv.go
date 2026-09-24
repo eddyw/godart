@@ -222,3 +222,14 @@ func MustHaveExecPath(t testing.TB, path string) {
 		t.Skipf("skipping test: %s: %s", path, err)
 	}
 }
+
+func HasLink() bool {
+	return runtime.GOOS != "plan9" && runtime.GOOS != "android"
+}
+
+func MustHaveLink(t testing.TB) {
+	if !HasLink() {
+		t.Helper()
+		t.Skipf("skipping test: hardlinks are not supported on %s/%s", runtime.GOOS, runtime.GOARCH)
+	}
+}

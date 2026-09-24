@@ -697,6 +697,12 @@ func Symlink(oldname, newname string) error {
 	if contains(oldname, "\x00") || contains(newname, "\x00") {
 		return &LinkError{Op: "symlink", Old: oldname, New: newname, Err: syscall.EINVAL}
 	}
+	if dart.HasNativeStat() {
+		if errno := dart.NativeSymlink(oldname, newname); errno != 0 {
+			return &LinkError{Op: "symlink", Old: oldname, New: newname, Err: syscall.Errno(errno)}
+		}
+		return nil
+	}
 	cause := dart.Symlink(oldname, newname)
 	if cause == "" {
 		return nil
