@@ -78,14 +78,8 @@
     "$DIR/bug514.go:11:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
   ],
   "fixedbugs/issue15002": [
-    "$DIR/issue15002.go:18:17: undefined: syscall.Getpagesize",
-    "$DIR/issue15002.go:24:100: undefined: syscall.MAP_PRIVATE",
     "$DIR/issue15002.go:24:20: undefined: syscall.Mmap",
-    "$DIR/issue15002.go:24:45: undefined: syscall.PROT_READ",
-    "$DIR/issue15002.go:24:63: undefined: syscall.PROT_WRITE",
-    "$DIR/issue15002.go:24:83: undefined: syscall.MAP_ANON",
-    "$DIR/issue15002.go:29:16: undefined: syscall.Mprotect",
-    "$DIR/issue15002.go:29:40: undefined: syscall.PROT_NONE"
+    "$DIR/issue15002.go:29:16: undefined: syscall.Mprotect"
   ],
   "fixedbugs/issue15277": [
     "$DIR/issue15277.go:38:17: undefined: runtime.MemStats",
@@ -302,14 +296,8 @@
     "$DIR/issue75365.go:28:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue79874": [
-    "$DIR/issue79874.go:32:22: undefined: syscall.Getpagesize",
     "$DIR/issue79874.go:37:20: undefined: syscall.Mmap",
-    "$DIR/issue79874.go:37:52: undefined: syscall.PROT_READ",
-    "$DIR/issue79874.go:37:71: undefined: syscall.MAP_ANON",
-    "$DIR/issue79874.go:37:88: undefined: syscall.MAP_PRIVATE",
-    "$DIR/issue79874.go:43:20: undefined: syscall.Mprotect",
-    "$DIR/issue79874.go:43:68: undefined: syscall.PROT_READ",
-    "$DIR/issue79874.go:43:86: undefined: syscall.PROT_WRITE"
+    "$DIR/issue79874.go:43:20: undefined: syscall.Mprotect"
   ],
   "fixedbugs/issue80004": [
     "$DIR/issue80004.go:51:11: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
@@ -322,14 +310,8 @@
     "$DIR/issue8004.go:48:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue8606b": [
-    "$DIR/issue8606b.go:43:15: undefined: syscall.Getpagesize",
     "$DIR/issue8606b.go:44:20: undefined: syscall.Mmap",
-    "$DIR/issue8606b.go:44:43: undefined: syscall.PROT_READ",
-    "$DIR/issue8606b.go:44:61: undefined: syscall.PROT_WRITE",
-    "$DIR/issue8606b.go:44:81: undefined: syscall.MAP_ANON",
-    "$DIR/issue8606b.go:44:98: undefined: syscall.MAP_PRIVATE",
-    "$DIR/issue8606b.go:48:16: undefined: syscall.Mprotect",
-    "$DIR/issue8606b.go:48:36: undefined: syscall.PROT_NONE"
+    "$DIR/issue8606b.go:48:16: undefined: syscall.Mprotect"
   ],
   "fixedbugs/issue9110": [
     "$DIR/issue9110.go:23:36: undefined: runtime.MemStats",
@@ -412,22 +394,11 @@
     "$DIR/recover1.go:25:10: undefined: runtime.Breakpoint"
   ],
   "recover4": [
-    "$DIR/recover4.go:49:18: undefined: syscall.Getpagesize",
-    "$DIR/recover4.go:52:107: undefined: syscall.MAP_PRIVATE",
     "$DIR/recover4.go:52:23: undefined: syscall.Mmap",
-    "$DIR/recover4.go:52:52: undefined: syscall.PROT_READ",
-    "$DIR/recover4.go:52:70: undefined: syscall.PROT_WRITE",
-    "$DIR/recover4.go:52:90: undefined: syscall.MAP_ANON",
-    "$DIR/recover4.go:62:20: undefined: syscall.Mprotect",
-    "$DIR/recover4.go:62:43: undefined: syscall.PROT_NONE"
+    "$DIR/recover4.go:62:20: undefined: syscall.Mprotect"
   ],
   "rename": [
     "$DIR/rename.go:58:11: undefined: runtime.Breakpoint"
-  ],
-  "sigchld": [
-    "$DIR/sigchld.go:16:10: undefined: syscall.Kill",
-    "$DIR/sigchld.go:16:23: undefined: syscall.Getpid",
-    "$DIR/sigchld.go:16:41: undefined: syscall.SIGCHLD"
   ],
   "slicecap": [
     "$DIR/slicecap.go:29:20: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
