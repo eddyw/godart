@@ -530,15 +530,47 @@ func (d *Dialer) dialOne(network, address string) (Conn, error) {
 			return nil, err
 		}
 		remote := tcpAddrOf(host, port)
+		var local *TCPAddr
+		if d.LocalAddr != nil {
+			local = d.LocalAddr.(*TCPAddr)
+		}
+		fail := func(err error) (Conn, error) {
+			op := &OpError{Op: "dial", Net: network, Addr: remote, Err: err}
+			if local != nil {
+				op.Source = local
+			}
+			return nil, op
+		}
 		if host == "" {
 			host = "127.0.0.1"
-			if network == "tcp6" {
+			if network == "tcp6" || local != nil && local.IP.To4() == nil && len(local.IP) != 0 {
 				host = "::1"
 			}
 		}
-		handle, cause, code := dart.DialTCP(host, port)
+		localHost, localPort := "", 0
+		if local != nil {
+			if err := tcpAddrFamilyError(network, local); err != nil {
+				return fail(err)
+			}
+			if local.Port < 0 || local.Port > 65535 {
+				return fail(&os.SyscallError{Syscall: "bind", Err: syscall.EINVAL})
+			}
+			localPort = local.Port
+			ip := local.IP
+			if len(ip) == 0 || ip.IsUnspecified() {
+				ip = IPv4zero
+				if network == "tcp6" || strings.Contains(host, ":") {
+					ip = IPv6zero
+				}
+			}
+			localHost = ip.String()
+			if local.Zone != "" && ip.To4() == nil {
+				localHost += "%" + local.Zone
+			}
+		}
+		handle, cause, code, call := dart.DialTCP(host, port, localHost, localPort)
 		if cause != "" {
-			return nil, &OpError{Op: "dial", Net: network, Addr: remote, Err: socketSyscallCause("connect", cause, code)}
+			return fail(socketSyscallCause(call, cause, code))
 		}
 		return newTCPConn(handle, network, d.KeepAlive, d.KeepAliveConfig), nil
 	case "unix":
@@ -619,17 +651,18 @@ func ListenPacket(network, address string) (PacketConn, error) {
 // A Dialer opens a connection with a timeout, with a deadline, or with a
 // context.
 //
-// Go holds more items. `LocalAddr` binds the near side of a dial, and Dart
-// binds none. `Control` and `ControlContext` each take a `syscall.RawConn`,
+// `Control` and `ControlContext` each take a `syscall.RawConn`,
 // and `dart:io` gives no file descriptor.
 // `FallbackDelay` and `DualStack` each tune the 2 dials of Happy Eyeballs.
 // 1 dial of Dart resolves the name and opens the socket. `MultipathTCP`
 // and `SetMultipathTCP` name a transport of Linux that Dart never opens. The
-// overlay holds none of the 8, because a field that reads no value lies.
+// overlay omits these controls.
 //
 // `DialIP` stays out too. It gives an `*IPConn`, and `dart:io` opens no raw
 // socket.
 type Dialer struct {
+	// LocalAddr selects the local TCP address. Other networks return an error.
+	LocalAddr       Addr
 	KeepAlive       time.Duration
 	KeepAliveConfig KeepAliveConfig
 	// Timeout ends the wait of a dial after the duration. A value of 0 holds
@@ -725,6 +758,29 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 			return nil, &OpError{Op: "dial", Net: network, Err: err}
 		}
 		return nil, err
+	}
+	if d.LocalAddr != nil {
+		if network != "tcp" && network != "tcp4" && network != "tcp6" {
+			return nil, &OpError{Op: "dial", Net: network, Err: errors.New("local addresses for this network are not supported")}
+		}
+		local, ok := d.LocalAddr.(*TCPAddr)
+		if !ok {
+			return nil, &OpError{Op: "dial", Net: network, Err: &AddrError{Err: "mismatched local address type", Addr: d.LocalAddr.String()}}
+		}
+		if local != nil && len(local.IP) != 0 && !local.IP.IsUnspecified() {
+			filtered := list[:0]
+			for _, address := range list {
+				host, _, _ := SplitHostPort(address)
+				remote := tcpAddrOf(host, 0)
+				if len(remote.IP) == 0 || remote.IP.IsUnspecified() || (remote.IP.To4() == nil) == (local.IP.To4() == nil) {
+					filtered = append(filtered, address)
+				}
+			}
+			list = filtered
+			if len(list) == 0 {
+				return nil, &OpError{Op: "dial", Net: network, Err: &AddrError{Err: "no suitable address found", Addr: local.String()}}
+			}
+		}
 	}
 	trace := traceOf(ctx)
 	var first error
@@ -849,7 +905,9 @@ func (d *Dialer) DialTCP(ctx context.Context, network string, laddr, raddr netip
 	if err := tcpAddrFamilyError(network, remote); err != nil {
 		return nil, &OpError{Op: "dial", Net: network, Addr: remote, Err: err}
 	}
-	c, err := d.DialContext(ctx, "tcp", remote.String())
+	dialer := *d
+	dialer.LocalAddr = nil
+	c, err := dialer.DialContext(ctx, "tcp", remote.String())
 	if err != nil {
 		return nil, err
 	}
@@ -880,7 +938,9 @@ func (d *Dialer) DialUDP(ctx context.Context, network string, laddr, raddr netip
 	if !raddr.IsValid() {
 		return nil, errors.New("dial " + network + ": the address is missing")
 	}
-	c, err := d.DialContext(ctx, "udp", UDPAddrFromAddrPort(raddr).String())
+	dialer := *d
+	dialer.LocalAddr = nil
+	c, err := dialer.DialContext(ctx, "udp", UDPAddrFromAddrPort(raddr).String())
 	if err != nil {
 		return nil, err
 	}
@@ -915,7 +975,9 @@ func (d *Dialer) DialUnix(ctx context.Context, network string, laddr, raddr *Uni
 	if raddr == nil {
 		return nil, errors.New("dial " + network + ": the address is missing")
 	}
-	c, err := d.DialContext(ctx, "unix", raddr.Name)
+	dialer := *d
+	dialer.LocalAddr = nil
+	c, err := dialer.DialContext(ctx, "unix", raddr.Name)
 	if err != nil {
 		return nil, err
 	}

@@ -49,13 +49,18 @@ void _echo(int port, List<String> log, Completer<void> done, [_EchoFrame? f]) {
   while (true) {
     switch (s) {
       case 0:
-        (handle, cause, _) = $dialTCP(GoString.fromString('127.0.0.1'), port);
+        (handle, cause, _, _) = $dialTCP(
+          GoString.fromString('127.0.0.1'),
+          port,
+          GoString.empty,
+          0,
+        );
         s = 1;
         continue machine;
       case 1:
         if (c) {
           c = false;
-          (handle, cause, _) = r!.resume() as (int, GoString, int);
+          (handle, cause, _, _) = r!.resume() as (int, GoString, int, GoString);
         }
         if ($blocked != null) break machine;
         log.add('dial cause=${cause.toDartString()}');

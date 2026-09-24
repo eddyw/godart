@@ -92,7 +92,7 @@ func TestCloseMetadata(t *testing.T) {
   peer,err:=l.AcceptTCP();if err!=nil {t.Fatal(err)}
   closeMetadata(t,c,"tcp4",c.LocalAddr(),c.RemoteAddr())
   closeMetadata(t,peer,"tcp4",peer.LocalAddr(),peer.RemoteAddr())
-  var d net.Dialer
+  d:=net.Dialer{LocalAddr:&net.TCPAddr{Port:-1}}
   c,err=d.DialTCP(context.Background(),"tcp4",netip.AddrPort{},l.Addr().(*net.TCPAddr).AddrPort())
   if err!=nil {t.Fatal(err)}
   peer,err=l.AcceptTCP();if err!=nil {t.Fatal(err)}
@@ -107,7 +107,7 @@ func TestCloseMetadata(t *testing.T) {
   c,err:=net.DialUDP("udp4",nil,l.LocalAddr().(*net.UDPAddr))
   if err!=nil {t.Fatal(err)}
   closeMetadata(t,c,"udp4",c.LocalAddr(),c.RemoteAddr())
-  var d net.Dialer
+  d:=net.Dialer{LocalAddr:&net.TCPAddr{Port:-1}}
   c,err=d.DialUDP(context.Background(),"udp4",netip.AddrPort{},l.LocalAddr().(*net.UDPAddr).AddrPort())
   if err!=nil {t.Fatal(err)}
   closeMetadata(t,c,"udp4",c.LocalAddr(),c.RemoteAddr())
@@ -121,6 +121,11 @@ func TestCloseMetadata(t *testing.T) {
   peer,err:=l.AcceptUnix();if err!=nil {t.Fatal(err)}
   closeMetadata(t,c,"unix",c.LocalAddr(),c.RemoteAddr())
   closeMetadata(t,peer,"unix",peer.LocalAddr(),peer.RemoteAddr())
+  d:=net.Dialer{LocalAddr:&net.TCPAddr{Port:-1}}
+  c,err=d.DialUnix(context.Background(),"unix",nil,l.Addr().(*net.UnixAddr));if err!=nil {t.Fatal(err)}
+  peer,err=l.AcceptUnix();if err!=nil {t.Fatal(err)}
+  closeMetadata(t,c,"unix",c.LocalAddr(),c.RemoteAddr())
+  peer.Close()
   closeMetadata(t,l,"unix",nil,l.Addr())
  })
 }

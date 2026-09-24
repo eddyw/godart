@@ -834,15 +834,31 @@ Future<int> _fill(_Conn c) {
 ///
 /// The call gives up control, thus the result of the call itself is dead. The
 /// frame of the wait gives the value to the caller.
-(int, GoString, int) $dialTCP(GoString host, int port) {
+(int, GoString, int, GoString) $dialTCP(
+  GoString host,
+  int port,
+  GoString localHost,
+  int localPort,
+) {
   $await(
     RawSocket.connect(
       host.toDartString(),
       port,
-    ).then((RawSocket s) => (_slot(_RawConn(s)), _empty, 0)),
-    (Object cause) => (-1, _connectCause(cause), _socketErrno(cause)),
+      sourceAddress: localHost.length == 0 ? null : localHost.toDartString(),
+      sourcePort: localPort,
+    ).then((RawSocket s) => (_slot(_RawConn(s)), _empty, 0, _empty)),
+    (Object cause) => (
+      -1,
+      _connectCause(cause),
+      _socketErrno(cause),
+      GoString.fromString(
+        cause is SocketException && cause.message == 'Bind failed'
+            ? 'bind'
+            : 'connect',
+      ),
+    ),
   );
-  return (-1, _empty, 0);
+  return (-1, _empty, 0, _empty);
 }
 
 /// Opens a TLS connection to a host and a port, and gives its handle.

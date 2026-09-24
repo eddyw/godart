@@ -743,7 +743,7 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "StdinRead":
 		return fmt.Sprintf("$stdinRead(%s)", args[0]), true
 	case "DialTCP":
-		return fmt.Sprintf("$dialTCP(%s, %s)", args[0], args[1]), true
+		return fmt.Sprintf("$dialTCP(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "ProcStart":
 		return fmt.Sprintf("$procStart(%s, %s, %s, %s)",
 			args[0], args[1], args[2], args[3]), true

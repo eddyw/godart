@@ -484,7 +484,11 @@ func resolveInternetIP(network, host string, prefer6 bool) (*IPAddr, error) {
 // tcpAddrOf builds a TCPAddr from a host text and a port. A host that is not
 // an IP address leaves the IP empty, and String then writes the host again.
 func tcpAddrOf(host string, port int) *TCPAddr {
-	return &TCPAddr{IP: ParseIP(host), Port: port}
+	zone := ""
+	if i := strings.LastIndexByte(host, '%'); i >= 0 {
+		host, zone = host[:i], host[i+1:]
+	}
+	return &TCPAddr{IP: ParseIP(host), Port: port, Zone: zone}
 }
 
 // udpAddrOf builds a UDPAddr from a host text and a port.

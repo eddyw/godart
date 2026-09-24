@@ -89,7 +89,9 @@ Address enumeration remains separate. Browsers return an empty interface table.
 
 TCP dials accept `tcp4` and `tcp6` and restrict numeric addresses and DNS results to the requested family.
 Typed TCP dials reject malformed IP values and IPv6 addresses with `tcp4`.
-Typed `tcp6` dials with mapped IPv4 addresses and local TCP address selection remain incomplete.
+`Dialer.LocalAddr` supports TCP source addresses and ports, including native bind errors.
+`LocalAddr` for other networks returns an explicit unsupported error.
+Explicit local arguments to `DialTCP` and typed `tcp6` dials with mapped IPv4 addresses remain incomplete.
 
 On Linux and macOS, `net.DialUDP` supports an explicit local address and port.
 Connected UDP sockets report the local address that the operating system selects.

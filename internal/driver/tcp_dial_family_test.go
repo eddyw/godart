@@ -19,7 +19,7 @@ func TestTCPDialFamilyUpstream(t *testing.T) {
 	netDir := filepath.Join(runtime.GOROOT(), "src", "net")
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/dialfamily\n\ngo 1.27\n\nrequire example.com/netpoll v0.0.0\nreplace example.com/netpoll => ./netpoll\n")
 	for _, item := range []upstreamFile{
-		{Name: "dial_test.go", Declarations: []string{"TestDialLocal"}},
+		{Name: "dial_test.go", Declarations: []string{"TestDialLocal", "TestDialerLocalAddr"}},
 		{Name: "error_test.go", Declarations: []string{"OpError.isValid", "parseDialError", "TestDialAddrError"}},
 		{Name: "error_unix_test.go", Declarations: []string{"isPlatformError"}},
 		{Name: "net.go", Declarations: []string{"noDeadline", "errTimeout", "timeoutError", "timeoutError.Error", "timeoutError.Timeout", "timeoutError.Temporary", "timeoutError.Is", "errMissingAddress", "errNoSuitableAddress", "errCanceled", "canceledError"}},
@@ -32,6 +32,19 @@ func TestTCPDialFamilyUpstream(t *testing.T) {
 			declaration += "import . \"net\"\n"
 		}
 		source = strings.Replace(source, "package net\n", declaration, 1)
+		if item.Name == "dial_test.go" {
+			for _, line := range []string{
+				"\torigTestHookLookupIP := testHookLookupIP\n",
+				"\tdefer func() { testHookLookupIP = origTestHookLookupIP }()\n",
+				"\ttestHookLookupIP = lookupLocalhost\n",
+			} {
+				if strings.Count(source, line) != 1 {
+					t.Fatalf("the original local-address resolver setup changed: %q", line)
+				}
+				source = strings.Replace(source, line, "", 1)
+			}
+		}
+
 		// An external test package cannot define a method on net.OpError.
 		source = strings.Replace(source, "func (e *OpError) isValid() error", "func validOpError(e *OpError) error", 1)
 		source = strings.ReplaceAll(source, "err.isValid()", "validOpError(err)")
@@ -41,7 +54,7 @@ func TestTCPDialFamilyUpstream(t *testing.T) {
 		writeFile(t, filepath.Join(dir, name), source)
 	}
 	writeFile(t, filepath.Join(dir, "listener_test.go"), `package net_test
-import (. "net"; "context"; "errors"; "net/netip"; "os"; "syscall"; "testing"; "time")
+import (. "net"; "context"; "errors"; "net/netip"; "os"; "sync"; "syscall"; "testing"; "time")
 func newLocalListener(t testing.TB, network string) Listener {
  t.Helper()
  listener, err := Listen(network, "127.0.0.1:0")
@@ -55,6 +68,93 @@ func supportsTCP(network, address string) bool {
  if err != nil { return false }
  listener.Close()
  return true
+}
+type localServer struct { Listener; done sync.WaitGroup }
+func newLocalServer(t testing.TB, network string) *localServer {
+ t.Helper()
+ address := "127.0.0.1:0"
+ if network == "tcp6" { address = "[::1]:0" }
+ listener, err := Listen(network, address)
+ if err != nil { t.Fatal(err) }
+ return &localServer{Listener: listener}
+}
+func (s *localServer) buildup(handler func(*localServer, Listener)) error {
+ s.done.Add(1)
+ go func() { defer s.done.Done(); handler(s, s.Listener) }()
+ return nil
+}
+func (s *localServer) teardown() { s.Close(); s.done.Wait() }
+func supportsIPv4map() bool {
+ listener, err := Listen("tcp", "[::]:0")
+ if err != nil { return false }
+ defer listener.Close()
+ _, port, err := SplitHostPort(listener.Addr().String())
+ if err != nil { return false }
+ c, err := DialTimeout("tcp4", JoinHostPort("127.0.0.1", port), 5*time.Second)
+ if err != nil { return false }
+ defer c.Close()
+ peer, err := listener.Accept()
+ if err != nil { return false }
+ peer.Close()
+ return true
+}
+func isEADDRINUSE(err error) bool { return errors.Is(err, syscall.EADDRINUSE) }
+func TestTCPDialLocalBinding(t *testing.T) {
+ for _, family := range []struct{network, address string}{{"tcp4", "127.0.0.1:0"}, {"tcp6", "[::1]:0"}} {
+  t.Run(family.network, func(t *testing.T) {
+   listener, err := Listen(family.network, family.address)
+   if err != nil { t.Fatal(err) }
+   defer listener.Close()
+   remote := listener.Addr().(*TCPAddr)
+   for _, api := range []string{"dial", "context"} {
+    for _, mode := range []string{"ephemeral", "fixed", "empty"} {
+     t.Run(api+"/"+mode, func(t *testing.T) {
+      local := &TCPAddr{IP: remote.IP}
+      if mode == "empty" {
+       local.IP = IPv4zero
+       if family.network == "tcp6" { local.IP = IPv6zero }
+      }
+      if mode == "fixed" {
+       reserve, err := Listen(family.network, family.address)
+       if err != nil { t.Fatal(err) }
+       local.Port = reserve.Addr().(*TCPAddr).Port
+       if err := reserve.Close(); err != nil { t.Fatal(err) }
+      }
+      d := Dialer{LocalAddr: local, Timeout: 5*time.Second}
+      var c Conn
+      var err error
+      network, address := family.network, remote.String()
+      if mode == "empty" {
+       _, port, e := SplitHostPort(address)
+       if e != nil { t.Fatal(e) }
+       network, address = "tcp", JoinHostPort("", port)
+      }
+      if api == "dial" { c, err = d.Dial(network, address) } else { c, err = d.DialContext(context.Background(), network, address) }
+      if err != nil { t.Fatal(err) }
+      defer c.Close()
+      peer, err := listener.Accept()
+      if err != nil { t.Fatal(err) }
+      defer peer.Close()
+      bound := c.LocalAddr().(*TCPAddr)
+      if !bound.IP.Equal(remote.IP) || bound.Port == 0 || local.Port != 0 && bound.Port != local.Port { t.Fatalf("local = %v, want %v", bound, local) }
+      if peer.RemoteAddr().String() != bound.String() { t.Fatalf("peer address = %v, want %v", peer.RemoteAddr(), bound) }
+     })
+    }
+   }
+   for _, invalid := range []struct{name string; port int; errno syscall.Errno}{{"negative", -1, syscall.EINVAL}, {"large", 65536, syscall.EINVAL}, {"occupied", remote.Port, syscall.EADDRINUSE}} {
+    t.Run(invalid.name, func(t *testing.T) {
+     local := &TCPAddr{IP: remote.IP, Port: invalid.port}
+     d := Dialer{LocalAddr: local, Timeout: 5*time.Second}
+     c, err := d.Dial(family.network, remote.String())
+     if err == nil { c.Close(); t.Fatal("invalid local port succeeded") }
+     var op *OpError
+     var call *os.SyscallError
+     if !errors.Is(err, invalid.errno) || !errors.As(err, &op) || !errors.As(err, &call) { t.Fatalf("error = %T %v, want %v with OpError and SyscallError", err, err, invalid.errno) }
+     if op.Op != "dial" || op.Net != family.network || op.Source == nil || op.Source.String() != local.String() || op.Addr == nil || op.Addr.String() != remote.String() || call.Syscall != "bind" { t.Fatalf("error metadata = %+v, syscall = %s", op, call.Syscall) }
+    })
+   }
+  })
+ }
 }
 func TestTCPDialRefused(t *testing.T) {
  for _, family := range []struct{network, address string}{{"tcp", "127.0.0.1:0"}, {"tcp4", "127.0.0.1:0"}, {"tcp6", "[::1]:0"}} {
@@ -180,7 +280,7 @@ func TestTCPDialFamilies(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 	writeFile(t, filepath.Join(dir, "netpoll/LICENSE"), string(license))
-	t.Log(run(t, dir, "go", "test", "-run", "^TestTCPDial(Families|Refused)$", "-v", "."))
+	t.Log(run(t, dir, "go", "test", "-run", "^TestTCPDial(Families|Refused|LocalBinding)$", "-v", "."))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TrimPath: true})
 	if err != nil {
 		t.Fatal(err)
@@ -191,7 +291,7 @@ func TestTCPDialFamilies(t *testing.T) {
 	prepareDart(t, out)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run("families/"+target, func(t *testing.T) {
-			args := []string{"-test.v", "-test.run=^TestTCPDial(Families|Refused)$"}
+			args := []string{"-test.v", "-test.run=^TestTCPDial(Families|Refused|LocalBinding)$"}
 			var result programResult
 			if target == "vm" {
 				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
@@ -204,7 +304,7 @@ func TestTCPDialFamilies(t *testing.T) {
 			}
 		})
 	}
-	const filter = "^(TestDialLocal|TestDialAddrError)$"
+	const filter = "^(TestDialLocal|TestDialAddrError|TestDialerLocalAddr)$"
 	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	result := programOutcome(t, netDir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "net-tcp-dial-family", "net", filter, "vm", netDir, result.Text, result.Exit)
