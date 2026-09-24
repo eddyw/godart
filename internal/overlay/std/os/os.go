@@ -788,8 +788,8 @@ func ReadDir(name string) ([]DirEntry, error) {
 // is not positive gives each member that stays, and a later call gives none. A
 // positive count gives at most that many, and io.EOF at the end.
 func (f *File) ReadDir(n int) ([]DirEntry, error) {
-	if err := f.checkValid("readdir"); err != nil {
-		return nil, err
+	if f == nil {
+		return nil, ErrInvalid
 	}
 	names, types, err := f.readDirNames(n)
 	entries := make([]DirEntry, 0, len(names))
@@ -818,8 +818,8 @@ func (f *File) ReadDir(n int) ([]DirEntry, error) {
 // 0 or less gives each entry. Go marks the method as older than ReadDir, and
 // http.File reads it.
 func (f *File) Readdir(n int) ([]FileInfo, error) {
-	if err := f.checkValid("readdir"); err != nil {
-		return nil, err
+	if f == nil {
+		return nil, ErrInvalid
 	}
 	entries, err := f.ReadDir(n)
 	if err != nil {
@@ -841,8 +841,8 @@ func (f *File) Readdir(n int) ([]FileInfo, error) {
 
 // Readdirnames reads the directory and gives the name of each entry.
 func (f *File) Readdirnames(n int) ([]string, error) {
-	if err := f.checkValid("readdirnames"); err != nil {
-		return nil, err
+	if f == nil {
+		return nil, ErrInvalid
 	}
 	names, _, err := f.readDirNames(n)
 	return names, err

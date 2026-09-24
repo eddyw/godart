@@ -5,6 +5,9 @@ package os
 import "io"
 
 func (f *File) readDirNames(n int) ([]string, []FileMode, error) {
+	if err := f.checkValid("readdir"); err != nil {
+		return []string{}, nil, err
+	}
 	all, err := ReadNames(f.name)
 	if err != nil {
 		return nil, nil, err

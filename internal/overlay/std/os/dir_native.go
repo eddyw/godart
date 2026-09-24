@@ -8,6 +8,7 @@
 package os
 
 import (
+	"errors"
 	"internal/byteorder"
 	"io"
 	"syscall"
@@ -15,9 +16,18 @@ import (
 	"unsafe"
 )
 
+var errDirectoryClosed = errors.New("use of closed file")
+
 func (f *File) readDirNames(n int) ([]string, []FileMode, error) {
 	names := make([]string, 0)
 	types := make([]FileMode, 0)
+	if f.closed {
+		op := "readdirent"
+		if dart.OS() == "darwin" {
+			op = ""
+		}
+		return names, types, &PathError{Op: op, Path: f.name, Err: errDirectoryClosed}
+	}
 	remaining := n
 	if remaining <= 0 {
 		remaining = -1
@@ -32,7 +42,11 @@ func (f *File) readDirNames(n int) ([]string, []FileMode, error) {
 			}
 			if err != nil {
 				f.dirBuf = nil
-				return names, types, &PathError{Op: "readdirent", Path: f.name, Err: err}
+				op := "readdirent"
+				if dart.OS() == "darwin" && err == syscall.ENOTDIR {
+					op = "fdopendir"
+				}
+				return names, types, &PathError{Op: op, Path: f.name, Err: err}
 			}
 			f.dirBuf = f.dirBuf[:count]
 			if count == 0 {
