@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 
 
-CASE = re.compile(r"^    --- PASS: (TestTestsOfGoroot|TestSelectedUpstream)/(\S+) \(([0-9]+(?:\.[0-9]+)?)s\)$", re.MULTILINE)
+CASE = re.compile(r"^    --- PASS: (TestTestsOfGoroot|TestSelectedUpstream|TestUpstreamTargets)/(\S+) \(([0-9]+(?:\.[0-9]+)?)s\)$", re.MULTILINE)
 
 
 def measurements(directory):
@@ -17,6 +17,7 @@ def measurements(directory):
         raise ValueError(f"unknown mode: {mode}")
     logs = sorted(directory.glob("stdlib-*/attempt-*/ci.log"))
     logs.extend(sorted(directory.glob("upstream-priority-*/attempt-*/ci.log")))
+    logs.extend(sorted(directory.glob("upstream-targets-*/attempt-*/ci.log")))
     if (directory / "ci.log").is_file():
         logs.append(directory / "ci.log")
     weights = {}

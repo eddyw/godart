@@ -10,6 +10,22 @@ spec.loader.exec_module(module)
 
 
 class DurationTest(unittest.TestCase):
+    def test_target_packages_exclude_incomplete_packages_and_children(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "run.json").write_text(json.dumps(dict(mode="full", source="snapshot")))
+            attempt = root / "upstream-targets-2/attempt-001"
+            attempt.mkdir(parents=True)
+            (attempt / "result.json").write_text(json.dumps(dict(exit=1, mode="full")))
+            (attempt / "ci.log").write_text(
+                "    --- PASS: TestUpstreamTargets/encoding/xml (1298.89s)\n"
+                "        --- PASS: TestUpstreamTargets/encoding/xml/js (899.07s)\n"
+                "    --- FAIL: TestUpstreamTargets/net/http/fcgi (642.78s)\n"
+                "        --- PASS: TestUpstreamTargets/net/http/fcgi/js (197.94s)\n")
+            weights, evidence = module.measurements(root)
+            self.assertEqual(weights, {"TestUpstreamTargets/encoding/xml": 1298.89})
+            self.assertEqual(evidence["logs"][0]["exit"], 1)
+
     def test_selected_packages_exclude_target_children(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
