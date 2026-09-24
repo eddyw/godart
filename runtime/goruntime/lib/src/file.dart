@@ -83,9 +83,9 @@ int $fileFd(int handle, int std) {
 /// Opens a file and gives its handle. The second result holds the cause of a
 /// failure, and it is empty after a success.
 (int, GoString) $fileOpen(GoString path, int mode) {
-  final String name = path.toDartString();
   try {
-    final RandomAccessFile f = File(name).openSync(mode: _mode(mode));
+    final RandomAccessFile f = File.fromRawPath(path.bytes)
+        .openSync(mode: _mode(mode));
     // Dart holds no mode that reads and writes and keeps the position at the
     // start. FileMode.append keeps the content and stands at the end, thus the
     // open moves the position back.
@@ -209,7 +209,7 @@ Uint8List _bytes(Slice<int> p) {
 /// Reads a whole file.
 (Slice<int>, GoString) $readFile(GoString path) {
   try {
-    return (Slice.of(File(path.toDartString()).readAsBytesSync()), _empty);
+    return (Slice.of(File.fromRawPath(path.bytes).readAsBytesSync()), _empty);
   } catch (e) {
     return (Slice<int>.nil(), _cause(e));
   }
@@ -218,7 +218,7 @@ Uint8List _bytes(Slice<int> p) {
 /// Writes a whole file. It replaces the content of an existing file.
 GoString $writeFile(GoString path, Slice<int> data) {
   try {
-    File(path.toDartString()).writeAsBytesSync(_bytes(data));
+    File.fromRawPath(path.bytes).writeAsBytesSync(_bytes(data));
     return _empty;
   } catch (e) {
     return _cause(e);

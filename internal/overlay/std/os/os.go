@@ -553,16 +553,14 @@ func OpenFile(name string, flag int, perm FileMode) (*File, error) {
 	return f, nil
 }
 
-// applyPerm writes the permission bits of a fresh file. It drops each bit of
-// the mask of the process, exactly as a create of Go does. A default mode
-// needs no command, thus the common path runs no process.
+// applyPerm applies the process mask to a new file's permissions.
 func applyPerm(name string, perm FileMode) {
 	mask := dart.Umask()
 	bits := syscallMode(perm) &^ mask
 	if bits == 0o666&^mask {
 		return
 	}
-	dart.Chmod(name, bits)
+	Chmod(name, perm&^FileMode(mask))
 }
 
 func openMode(name string, mode int, op string) (*File, error) {
