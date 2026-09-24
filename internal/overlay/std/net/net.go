@@ -216,7 +216,7 @@ func (c *conn) Read(b []byte) (int, error) {
 	}
 	n, cause, code := dart.ConnRead(c.handle, b)
 	if cause != "" {
-		return n, c.opError("read", streamSocketCause("read", cause, code))
+		return n, c.opError("read", socketSyscallCause("read", cause, code))
 	}
 	if n == 0 && len(b) > 0 {
 		return 0, io.EOF
@@ -230,7 +230,7 @@ func (c *conn) Write(b []byte) (int, error) {
 	}
 	n, cause, code := dart.ConnWrite(c.handle, b)
 	if cause != "" {
-		return n, c.opError("write", streamSocketCause("write", cause, code))
+		return n, c.opError("write", socketSyscallCause("write", cause, code))
 	}
 	return n, nil
 }
@@ -267,13 +267,15 @@ func (c *conn) Close() error {
 	return nil
 }
 
-func streamSocketCause(op, cause string, code int) error {
+func socketSyscallCause(op, cause string, code int) error {
 	if code == 0 {
 		return socketCause(cause)
 	}
 	if runtime.GOOS == "windows" {
 		if op == "read" {
 			op = "wsarecv"
+		} else if op == "sendto" {
+			op = "wsasendto"
 		} else {
 			op = "wsasend"
 		}
@@ -394,9 +396,9 @@ func (p *packet) WriteTo(b []byte, addr Addr) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	n, cause := dart.PacketWrite(p.handle, b, host, port)
+	n, cause, code := dart.PacketWrite(p.handle, b, host, port)
 	if cause != "" {
-		return n, &OpError{Op: "write", Net: p.network, Source: p.local, Addr: addr, Err: socketCause(cause)}
+		return n, &OpError{Op: "write", Net: p.network, Source: p.local, Addr: addr, Err: socketSyscallCause("sendto", cause, code)}
 	}
 	return n, nil
 }

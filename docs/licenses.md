@@ -114,7 +114,7 @@ IP protocol validation adapts Go `src/net/dial.go`, `parse.go`,
 Network interface types, flags, and native address filters adapt Go
 `src/net/interface.go`, `interface_linux.go`, and `interface_bsd.go`.
 The overlay, native adapter, and runtime license retain the Go BSD notice.
-UDP local-address tests retain assertions from Go `src/net/udpsock_test.go`
+UDP local-address and datagram tests retain assertions from Go `src/net/udpsock_test.go`
 and its BSD notice.
 Socket I/O errors and zero-value socket operations follow Go `src/net/net.go`,
 `tcpsock.go`, and `unixsock.go`. Native socket error wrappers follow

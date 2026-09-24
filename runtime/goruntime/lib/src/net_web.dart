@@ -104,12 +104,12 @@ GoString $joinMulticast(int handle, GoString group, GoString iface) => _noNet;
 (int, GoString, int, GoString) $packetRead(int handle, Slice<GoInt> p) =>
     (0, _empty, 0, _noNet);
 
-(int, GoString) $packetWrite(
+(int, GoString, int) $packetWrite(
   int handle,
   Slice<GoInt> p,
   GoString host,
   int port,
-) => (0, _noNet);
+) => (0, _noNet, 0);
 
 GoString $packetClose(int handle) => _noNet;
 

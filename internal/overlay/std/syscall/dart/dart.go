@@ -1415,10 +1415,10 @@ func PacketRead(handle int, p []byte) (int, string, int, string) {
 }
 
 // PacketWrite writes the bytes of the slice to a host and a port, and gives
-// the count.
+// the count. The last result preserves an available native error code.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func PacketWrite(handle int, p []byte, host string, port int) (int, string) {
+func PacketWrite(handle int, p []byte, host string, port int) (int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

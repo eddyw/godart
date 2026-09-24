@@ -1526,26 +1526,26 @@ Future<int> _fillPacket(_Packet s) {
 }
 
 /// Writes the bytes of the slice to a host and a port, and gives the count.
-(int, GoString) $packetWrite(
+(int, GoString, int) $packetWrite(
   int handle,
   Slice<int> p,
   GoString host,
   int port,
 ) {
   final _Packet? s = _packetAt(handle);
-  if (s == null) return (0, _closed());
-  if (s.writeDeadline.expired) return (0, _timeout());
+  if (s == null) return (0, _closed(), 0);
+  if (s.writeDeadline.expired) return (0, _timeout(), 0);
   $await(
-    s.writeDeadline.limit<(int, GoString)>(
+    s.writeDeadline.limit<(int, GoString, int)>(
       _sendTo(s, _bytes(p), host.toDartString(), port),
-      (0, _timeout()),
+      (0, _timeout(), 0),
     ),
-    (Object cause) => (0, _cause(cause)),
+    (Object cause) => (0, _cause(cause), _socketErrno(cause)),
   );
-  return (0, _empty);
+  return (0, _empty, 0);
 }
 
-Future<(int, GoString)> _sendTo(
+Future<(int, GoString, int)> _sendTo(
   _Packet s,
   Uint8List bytes,
   String host,
@@ -1553,11 +1553,13 @@ Future<(int, GoString)> _sendTo(
 ) async {
   final int n = s.nativeFD >= 0
       ? sendDatagram(s.nativeFD, bytes)
+      : Platform.isLinux || Platform.isMacOS
+      ? sendDatagramTo(s.socket, bytes, await _address(host), port)
       : s.socket.send(bytes, await _address(host), port);
   if (n == 0 && bytes.isNotEmpty) {
-    return (0, GoString.fromString('the send buffer of the socket is full'));
+    return (0, GoString.fromString('the send buffer of the socket is full'), 0);
   }
-  return (n, _empty);
+  return (n, _empty, 0);
 }
 
 /// Closes a datagram socket.
