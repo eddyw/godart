@@ -410,6 +410,8 @@ final class _Packet {
   int remotePort = 0;
 
   bool ended = false;
+  Object? failure;
+  Future<void> reads = Future<void>.value();
   Completer<int>? waiter;
   Future<int>? pending;
   final _Deadline readDeadline = _Deadline();
@@ -422,7 +424,7 @@ final class _Packet {
         _end();
         closed.complete();
       },
-      onError: (Object cause) => _end(),
+      onError: _fail,
     );
   }
 
@@ -432,14 +434,36 @@ final class _Packet {
       return;
     }
     if (event != RawSocketEvent.read) return;
-    for (Datagram? d = socket.receive(); d != null; d = socket.receive()) {
-      if (remoteHost.isNotEmpty &&
-          (d.address.address != remoteHost || d.port != remotePort)) {
-        continue;
+    try {
+      for (Datagram? d = _receive(); d != null; d = _receive()) {
+        if (remoteHost.isNotEmpty &&
+            (d.address.address != remoteHost || d.port != remotePort)) {
+          continue;
+        }
+        held.add(d);
       }
-      held.add(d);
+    } catch (cause) {
+      _fail(cause);
     }
     if (held.isNotEmpty) _wake(0);
+  }
+
+  Datagram? _receive() {
+    if (Platform.isLinux || Platform.isMacOS) {
+      final empty = receiveEmptyDatagram(socket);
+      if (empty != null) return empty;
+    }
+    return socket.receive();
+  }
+
+  void _fail(Object cause) {
+    final waiting = waiter;
+    if (waiting == null) {
+      failure = cause;
+    } else {
+      waiter = null;
+      waiting.completeError(cause);
+    }
   }
 
   void _end() {
@@ -1467,6 +1491,11 @@ Future<_Packet> _connectUDP(
 /// end of the socket.
 Future<int> _fillPacket(_Packet s) {
   if (s.held.isNotEmpty) return Future<int>.value(0);
+  final failure = s.failure;
+  if (failure != null) {
+    s.failure = null;
+    return Future<int>.error(failure);
+  }
   if (s.ended) return Future<int>.value(1);
   final Future<int>? open = s.pending;
   if (open != null) return open;
@@ -1481,20 +1510,45 @@ Future<int> _fillPacket(_Packet s) {
 
 /// Reads 1 datagram into the slice. The results are the count, the host of the
 /// source, the port of the source, and the cause of a failure.
+/// The last result preserves an available native error code.
 ///
 /// A datagram that holds more bytes than the slice loses the rest, exactly as
 /// a Go read of a datagram does.
-(int, GoString, int, GoString) $packetRead(int handle, Slice<int> p) {
+(int, GoString, int, GoString, int) $packetRead(int handle, Slice<int> p) {
   final _Packet? s = _packetAt(handle);
-  if (s == null) return (0, _empty, 0, _closed());
-  if (s.readDeadline.expired) return (0, _empty, 0, _timeout());
+  if (s == null) return (0, _empty, 0, _closed(), 0);
+  final next = s.reads.then((_) => _readPacket(s, p));
+  // A failed read must release the next reader.
+  s.reads = next.then<void>((_) {}, onError: (Object _) {});
+  $await(
+    next,
+    (Object cause) => (0, _empty, 0, _cause(cause), _socketErrno(cause)),
+  );
+  return (0, _empty, 0, _empty, 0);
+}
+
+Future<(int, GoString, int, GoString, int)> _readPacket(
+  _Packet s,
+  Slice<int> p,
+) {
+  if (s.ended) return Future.value((0, _empty, 0, _closed(), 0));
+  if (s.readDeadline.expired) {
+    return Future.value((0, _empty, 0, _timeout(), 0));
+  }
   Timer? errors;
-  if (s.nativeFD >= 0) {
-    // Dart omits remote UDP errors from its datagram event stream.
+  if (Platform.isLinux || Platform.isMacOS) {
+    // Dart omits empty datagrams and remote UDP errors from its event stream.
     errors = Timer.periodic(const Duration(milliseconds: 10), (_) {
       final waiter = s.waiter;
       if (waiter == null) return;
       try {
+        final empty = receiveEmptyDatagram(s.socket);
+        if (empty != null) {
+          s.held.add(empty);
+          s._wake(0);
+          return;
+        }
+        if (s.nativeFD < 0) return;
         final code = datagramPendingError(s.socket);
         if (code != 0) {
           s.waiter = null;
@@ -1506,23 +1560,19 @@ Future<int> _fillPacket(_Packet s) {
       }
     });
   }
-  $await(
-    s.readDeadline
-        .limit<int>(_fillPacket(s), 2)
-        .whenComplete(() {
-          errors?.cancel();
-        })
-        .then((int code) {
-          if (code == 2) return (0, _empty, 0, _timeout());
-          if (code == 1 && s.held.isEmpty) return (0, _empty, 0, _closed());
-          final Datagram d = s.held.removeAt(0);
-          final int n = d.data.length < p.len ? d.data.length : p.len;
-          if (n != 0) p.$fill(p.off, p.off + n, d.data, 0);
-          return (n, GoString.fromString(d.address.address), d.port, _empty);
-        }),
-    (Object cause) => (0, _empty, 0, _cause(cause)),
-  );
-  return (0, _empty, 0, _empty);
+  return s.readDeadline
+      .limit<int>(_fillPacket(s), 2)
+      .whenComplete(() {
+        errors?.cancel();
+      })
+      .then((int code) {
+        if (code == 2) return (0, _empty, 0, _timeout(), 0);
+        if (code == 1 && s.held.isEmpty) return (0, _empty, 0, _closed(), 0);
+        final Datagram d = s.held.removeAt(0);
+        final int n = d.data.length < p.len ? d.data.length : p.len;
+        if (n != 0) p.$fill(p.off, p.off + n, d.data, 0);
+        return (n, GoString.fromString(d.address.address), d.port, _empty, 0);
+      });
 }
 
 /// Writes the bytes of the slice to a host and a port, and gives the count.
@@ -1567,6 +1617,7 @@ GoString $packetClose(int handle) {
   final _Packet? s = _packetAt(handle);
   if (s == null) return _closed();
   _packets[handle] = null;
+  s._end();
   s.socket.close();
   $await(s.closed.future.then((_) => _empty), (Object cause) => _cause(cause));
   return _empty;

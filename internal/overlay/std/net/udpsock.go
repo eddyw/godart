@@ -14,14 +14,6 @@ import (
 	"time"
 )
 
-// This file holds the datagram socket of the network udp.
-//
-// `RawDatagramSocket` of `dart:io` owns the socket. It gives no file
-// descriptor and no socket option, thus `File`, `SyscallConn`,
-// `SetReadBuffer`, and `SetWriteBuffer` stay out. It reads no control
-// message, thus `ReadMsgUDP`, `WriteMsgUDP`, `ReadMsgUDPAddrPort`, and
-// `WriteMsgUDPAddrPort` stay out too.
-//
 // Go embeds the unexported type `conn` in `UDPConn`. The overlay names each
 // method again. A promoted method of an unexported type reaches no other
 // package in the Dart output.
@@ -80,7 +72,7 @@ func (c *UDPConn) Read(b []byte) (int, error) {
 	if len(b) == 0 && c.p != nil && c.p.handle >= 0 {
 		return 0, nil
 	}
-	n, _, err := c.p.ReadFrom(b)
+	n, _, err := c.p.readFrom(b, "read")
 	return n, err
 }
 
@@ -131,9 +123,9 @@ func (c *UDPConn) readFrom(b []byte) (int, string, int, error) {
 	if c.p == nil {
 		return 0, "", 0, syscall.EINVAL
 	}
-	n, host, port, cause := dart.PacketRead(c.p.handle, b)
+	n, host, port, cause, code := dart.PacketRead(c.p.handle, b)
 	if cause != "" {
-		return n, "", 0, &OpError{Op: "read", Net: c.p.network, Source: c.p.local, Addr: c.p.remote, Err: socketCause(cause)}
+		return n, "", 0, &OpError{Op: "read", Net: c.p.network, Source: c.p.local, Addr: c.p.remote, Err: socketSyscallCause("recvfrom", cause, code)}
 	}
 	return n, host, port, nil
 }

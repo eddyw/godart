@@ -101,8 +101,8 @@ GoString $listenDeadline(int handle, int nanos) => _noNet;
 
 GoString $joinMulticast(int handle, GoString group, GoString iface) => _noNet;
 
-(int, GoString, int, GoString) $packetRead(int handle, Slice<GoInt> p) =>
-    (0, _empty, 0, _noNet);
+(int, GoString, int, GoString, int) $packetRead(int handle, Slice<GoInt> p) =>
+    (0, _empty, 0, _noNet, 0);
 
 (int, GoString, int) $packetWrite(
   int handle,

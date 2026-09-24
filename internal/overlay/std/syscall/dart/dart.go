@@ -1408,9 +1408,10 @@ func DialUDP(host string, port int, localHost string, localPort int) (int, strin
 // PacketRead reads 1 datagram into the slice. The results are the count, the
 // host of the source, the port of the source, and the cause of a failure. A
 // datagram that holds more bytes than the slice loses the rest.
+// The last result preserves an available native error code.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func PacketRead(handle int, p []byte) (int, string, int, string) {
+func PacketRead(handle int, p []byte) (int, string, int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

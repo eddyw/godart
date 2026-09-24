@@ -27,6 +27,18 @@ final _sendto = _libc
       IntPtr Function(Int, Pointer<Void>, Size, Int, Pointer<Void>, Uint32),
       int Function(int, Pointer<Void>, int, int, Pointer<Void>, int)
     >('sendto');
+final _recvfrom = _libc
+    .lookupFunction<
+      IntPtr Function(
+        Int,
+        Pointer<Void>,
+        Size,
+        Int,
+        Pointer<Void>,
+        Pointer<Uint32>,
+      ),
+      int Function(int, Pointer<Void>, int, int, Pointer<Void>, Pointer<Uint32>)
+    >('recvfrom');
 final _getsockname = _libc
     .lookupFunction<
       Int Function(Int, Pointer<Void>, Pointer<Uint32>),
@@ -174,6 +186,37 @@ int sendDatagramTo(
     final count = _sendto(fd, payload.cast(), bytes.length, 0, memory, length);
     if (count < 0) throw datagramError(_errno().value);
     return count;
+  } finally {
+    _release(memory);
+  }
+}
+
+Datagram? receiveEmptyDatagram(RawDatagramSocket socket) {
+  final fd = _datagramFD(socket);
+  final memory = _allocate(33);
+  if (memory == nullptr) throw datagramError(12);
+  try {
+    final bytes = memory.cast<Uint8>();
+    final size = (bytes + 28).cast<Uint32>()..value = 28;
+    final count = _recvfrom(fd, (bytes + 32).cast(), 1, 2, memory, size);
+    if (count > 0) return null;
+    if (count < 0) {
+      final code = _errno().value;
+      if (code == (Platform.isMacOS ? 35 : 11)) return null;
+      throw datagramError(code);
+    }
+    final data = ByteData.sublistView(bytes.asTypedList(28));
+    final family = Platform.isMacOS ? bytes[1] : data.getUint16(0, Endian.host);
+    final ipv6 = family == (Platform.isMacOS ? 30 : 10);
+    final address = InternetAddress.fromRawAddress(
+      Uint8List.fromList(
+        bytes.asTypedList(28).sublist(ipv6 ? 8 : 4, ipv6 ? 24 : 8),
+      ),
+    );
+    final port = data.getUint16(2, Endian.big);
+    // Dart discards empty datagrams. Its receive call also refreshes read readiness.
+    socket.receive();
+    return Datagram(Uint8List(0), address, port);
   } finally {
     _release(memory);
   }

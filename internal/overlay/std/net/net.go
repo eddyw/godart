@@ -274,6 +274,8 @@ func socketSyscallCause(op, cause string, code int) error {
 	if runtime.GOOS == "windows" {
 		if op == "read" {
 			op = "wsarecv"
+		} else if op == "recvfrom" {
+			op = "wsarecvfrom"
 		} else if op == "sendto" {
 			op = "wsasendto"
 		} else {
@@ -378,12 +380,16 @@ type packet struct {
 }
 
 func (p *packet) ReadFrom(b []byte) (int, Addr, error) {
+	return p.readFrom(b, "recvfrom")
+}
+
+func (p *packet) readFrom(b []byte, call string) (int, Addr, error) {
 	if p == nil {
 		return 0, nil, syscall.EINVAL
 	}
-	n, host, port, cause := dart.PacketRead(p.handle, b)
+	n, host, port, cause, code := dart.PacketRead(p.handle, b)
 	if cause != "" {
-		return n, nil, &OpError{Op: "read", Net: p.network, Source: p.local, Addr: p.remote, Err: socketCause(cause)}
+		return n, nil, &OpError{Op: "read", Net: p.network, Source: p.local, Addr: p.remote, Err: socketSyscallCause(call, cause, code)}
 	}
 	return n, udpAddrOf(host, port), nil
 }

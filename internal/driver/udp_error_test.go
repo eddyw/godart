@@ -39,9 +39,64 @@ func TestUDPErrorCodes(t *testing.T){
  })}
  })}
 }
+func TestUDPReadError(t *testing.T){
+ for _,tc:=range []struct{name,call string}{ {"read","read"},{"readfrom","recvfrom"} }{t.Run(tc.name,func(t *testing.T){
+  p,e:=net.ListenPacket("udp","127.0.0.1:0");if e!=nil{t.Fatal(e)}
+  c,e:=net.Dial("udp",p.LocalAddr().String());if e!=nil{p.Close();t.Fatal(e)};defer c.Close()
+  if e:=p.Close();e!=nil{t.Fatal(e)}
+  c.SetReadDeadline(time.Now().Add(2*time.Second))
+  if _,e:=c.Write([]byte("probe"));e!=nil{t.Fatal(e)}
+  b:=make([]byte,16);var n int
+  if tc.name=="read"{n,e=c.Read(b)}else{n,_,e=c.(*net.UDPConn).ReadFromUDP(b)}
+  if n!=0||!errors.Is(e,syscall.ECONNREFUSED){t.Fatalf("read = %d %T %v, want 0 and ECONNREFUSED",n,e,e)}
+  var call *os.SyscallError;if !errors.As(e,&call)||call.Syscall!=tc.call{t.Fatalf("system call error %#v, want %s",call,tc.call)}
+ })}
+}
+
+func TestUDPQueuedDatagrams(t *testing.T){
+ for _,address:=range []string{"127.0.0.1:0","[::1]:0"}{t.Run(address,func(t *testing.T){
+  p,e:=net.ListenPacket("udp",address);if e!=nil{t.Fatal(e)};defer p.Close()
+  c,e:=net.Dial("udp",p.LocalAddr().String());if e!=nil{t.Fatal(e)};defer c.Close()
+  payloads:=[][]byte{nil,[]byte("a"),nil,[]byte("b"),nil}
+  for _,b:=range payloads{if n,e:=c.Write(b);n!=len(b)||e!=nil{t.Fatalf("write %d %v",n,e)}}
+  p.SetReadDeadline(time.Now().Add(time.Second))
+  for _,want:=range payloads{b:=make([]byte,16);n,_,e:=p.ReadFrom(b);if e!=nil||string(b[:n])!=string(want){t.Fatalf("read %q %v, want %q",b[:n],e,want)}}
+ })}
+}
+func TestUDPConcurrentReads(t *testing.T){
+ p,e:=net.ListenPacket("udp","127.0.0.1:0");if e!=nil{t.Fatal(e)};defer p.Close()
+ c,e:=net.Dial("udp",p.LocalAddr().String());if e!=nil{t.Fatal(e)};defer c.Close()
+ p.SetReadDeadline(time.Now().Add(2*time.Second))
+ type result struct{data string;err error};done:=make(chan result,2);ready:=make(chan bool)
+ for i:=0;i<2;i++{go func(){ready<-true;b:=make([]byte,16);n,_,e:=p.ReadFrom(b);done<-result{string(b[:n]),e}}()}
+ <-ready;<-ready;time.Sleep(10*time.Millisecond)
+ for _,message:=range []string{"a","b"}{
+  if _,e:=c.Write([]byte(message));e!=nil{t.Fatal(e)}
+  r:=<-done;if r.data!=message||r.err!=nil{t.Fatalf("read = %q %v, want %q",r.data,r.err,message)}
+ }
+}
+
+func TestUDPBlockedReads(t *testing.T){
+ for _,action:=range []string{"close","deadline"}{t.Run(action,func(t *testing.T){
+  p,e:=net.ListenPacket("udp","127.0.0.1:0");if e!=nil{t.Fatal(e)};defer p.Close()
+  ready:=make(chan bool);done:=make(chan error,3)
+  for i:=0;i<3;i++{go func(){ready<-true;_,_,e:=p.ReadFrom(make([]byte,16));done<-e}()}
+  <-ready;<-ready;<-ready;time.Sleep(10*time.Millisecond)
+  want:=net.ErrClosed
+  if action=="close"{if e:=p.Close();e!=nil{t.Fatal(e)}}else{want=os.ErrDeadlineExceeded;p.SetReadDeadline(time.Unix(1,0))}
+  for i:=0;i<3;i++{if e:=<-done;!errors.Is(e,want){t.Fatalf("read %v, want %v",e,want)}}
+  if action=="deadline"{
+   p.SetReadDeadline(time.Now().Add(time.Second))
+   c,e:=net.Dial("udp",p.LocalAddr().String());if e!=nil{t.Fatal(e)};defer c.Close()
+   if _,e:=c.Write([]byte("ok"));e!=nil{t.Fatal(e)}
+   b:=make([]byte,16);n,_,e:=p.ReadFrom(b);if e!=nil||string(b[:n])!="ok"{t.Fatalf("read after deadline %q %v",b[:n],e)}
+  }
+ })}
+}
 
 `)
-	source := selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/net/udpsock_test.go"), []string{"TestUDPZeroByteBuffer", "TestUDPReadSizeError"})
+	source := selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/net/udpsock_test.go"), []string{"TestUDPZeroBytePayload", "TestUDPZeroByteBuffer", "TestUDPReadSizeError", "TestUDPReadTimeout"})
+	source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/udperrors/testenv"`)
 	source = strings.Replace(source, "package net\n", "package udperrors\nimport . \"net\"\n", 1)
 	writeFile(t, filepath.Join(dir, "upstream_test.go"), source)
 	license, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "LICENSE"))
@@ -51,11 +106,16 @@ func TestUDPErrorCodes(t *testing.T){
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 	writeFile(t, filepath.Join(dir, "helpers_test.go"), `package udperrors
  import("net";"testing")
- func testableNetwork(network string)bool{return network=="udp"}
+ func testableNetwork(network string)bool{return network=="udp"||network=="udp4"}
  func newLocalPacketListener(t testing.TB, network string)net.PacketConn{
   t.Helper();p,e:=net.ListenPacket(network,"127.0.0.1:0");if e!=nil{t.Fatal(e)};return p
  }
  `)
+	if err := os.Mkdir(filepath.Join(dir, "testenv"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(dir, "testenv/testenv.go"), selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/internal/testenv/testenv.go"), []string{"flaky", "SkipFlaky"}))
+	writeFile(t, filepath.Join(dir, "testenv/LICENSE"), string(license))
 	t.Log(run(t, dir, "go", "test", "-v", "."))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
 	if err != nil {
@@ -64,7 +124,7 @@ func TestUDPErrorCodes(t *testing.T){
 	prepareDart(t, out)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
-			const filter = "^(TestUDPZeroByteBuffer|TestUDPReadSizeError)$"
+			const filter = "^(TestUDPZeroBytePayload|TestUDPZeroByteBuffer|TestUDPReadSizeError|TestUDPReadTimeout)$"
 			args := []string{"-test.v", "-test.run=" + filter}
 			var r programResult
 			if target == "vm" {
@@ -73,7 +133,7 @@ func TestUDPErrorCodes(t *testing.T){
 				r = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
 			compareUpstream(t, "udp-datagram-errors", "net", filter, target, filepath.Join(runtime.GOROOT(), "src/net"), r.Text, r.Exit)
-			args = []string{"-test.v", "-test.run=^TestUDPErrorCodes$"}
+			args = []string{"-test.v", "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads)$"}
 			if target == "vm" {
 				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {
