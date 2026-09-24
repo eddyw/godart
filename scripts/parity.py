@@ -172,9 +172,6 @@ def behavior(paths, manifests=MANIFESTS):
             if not isinstance(report, dict) or not {"comparison", "native", "gart", "expected", "package"} <= report.keys():
                 continue
             stamp = digest(path)
-            if stamp in seen:
-                continue
-            seen.add(stamp)
             config = {key: report.get(key) for key in (
                 "go_version", "dart_version", "node_version", "goos", "goarch", "target", "short",
                 "source_sha256", "build_tags", "gart_build_tags", "tool_tags", "cgo", "environment")}
@@ -183,6 +180,9 @@ def behavior(paths, manifests=MANIFESTS):
             if config.get("compiler_snapshot"):
                 config.pop("manifest")
             key = json.dumps(config, sort_keys=True)
+            if (key, stamp) in seen:
+                continue
+            seen.add((key, stamp))
             group = groups.setdefault(key, {"configuration": config, "reports": [], "outcomes": defaultdict(set),
                                             "reasons": defaultdict(set), "problems": []})
             comparison = report["comparison"]
@@ -425,9 +425,6 @@ def language_behavior(paths):
             if not isinstance(report, dict) or report.get("kind") != "language":
                 continue
             stamp = digest(path)
-            if stamp in seen:
-                continue
-            seen.add(stamp)
             config = {key: report.get(key) for key in (
                 "go_version", "dart_version", "node_version", "goos", "goarch", "target", "source_sha256", "tool_tags", "cgo", "environment")}
             origin = provenance(path)
@@ -435,7 +432,11 @@ def language_behavior(paths):
             if config.get("compiler_snapshot"):
                 config.pop("manifest")
             config["contract"] = report.get("contract") or next((c["contract"] for c in report["outcomes"] if c.get("contract")), "run")
-            group = groups.setdefault(json.dumps(config, sort_keys=True),
+            key = json.dumps(config, sort_keys=True)
+            if (key, stamp) in seen:
+                continue
+            seen.add((key, stamp))
+            group = groups.setdefault(key,
                                       dict(configuration=config, reports=[], outcomes={}, problems=[]))
             local = set()
             for case in report["outcomes"]:

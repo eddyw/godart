@@ -883,6 +883,15 @@ class ParityTest(unittest.TestCase):
             for path in paths:
                 parity.save(path / "run.json", {})
             self.assertEqual(len(parity.behavior(paths, manifests)), 2)
+            parity.save(paths[1] / "reports/result.json", parity.read(paths[0] / "reports/result.json"))
+            self.assertEqual(len(parity.behavior(paths, manifests)), 2)
+            for path in paths:
+                parity.save(path / "run.json", dict(source="same"))
+            groups = parity.behavior(paths, manifests)
+            self.assertEqual(len(groups), 1)
+            self.assertEqual(len(groups[0]["reports"]), 1)
+            parity.save(paths[1] / "run.json", dict(source="different"))
+            self.assertEqual(len(parity.behavior(paths, manifests)), 2)
 
     def test_language_combines_shards_only_with_matching_compiler_source(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -904,6 +913,15 @@ class ParityTest(unittest.TestCase):
             self.assertEqual(len(parity.language_behavior(paths)), 2)
             for path in paths:
                 parity.save(path / "run.json", {})
+            self.assertEqual(len(parity.language_behavior(paths)), 2)
+            parity.save(paths[1] / "reports/result.json", parity.read(paths[0] / "reports/result.json"))
+            self.assertEqual(len(parity.language_behavior(paths)), 2)
+            for path in paths:
+                parity.save(path / "run.json", dict(source="same"))
+            groups = parity.language_behavior(paths)
+            self.assertEqual(len(groups), 1)
+            self.assertEqual(len(groups[0]["reports"]), 1)
+            parity.save(paths[1] / "run.json", dict(source="different"))
             self.assertEqual(len(parity.language_behavior(paths)), 2)
 
     def test_application_tests_do_not_count_skips_or_empty_runs_as_passes(self):
