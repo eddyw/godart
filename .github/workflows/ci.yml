@@ -70,7 +70,7 @@ jobs:
         if: matrix.suite != 'checks'
         run: go test -c -o "$RUNNER_TEMP/driver.test" ./internal/driver
       - name: Keep expected rejections out of error annotations
-        if: matrix.suite == 'language' || matrix.suite == 'language-compile'
+        if: matrix.suite == 'language' || matrix.suite == 'language-compile' || matrix.suite == 'language-packages'
         run: echo '::remove-matcher owner=go::'
       - name: Run the complete suite shard
         timeout-minutes: ${{ inputs.upstream_mode == 'full' && matrix.full_timeout || matrix.timeout }}

@@ -331,6 +331,34 @@
       "shards": 4,
       "timeout": 5,
       "job_timeout": 10
+    },
+    {
+      "suite": "language-packages",
+      "shard": 0,
+      "shards": 4,
+      "timeout": 8,
+      "job_timeout": 13
+    },
+    {
+      "suite": "language-packages",
+      "shard": 1,
+      "shards": 4,
+      "timeout": 7,
+      "job_timeout": 12
+    },
+    {
+      "suite": "language-packages",
+      "shard": 2,
+      "shards": 4,
+      "timeout": 6,
+      "job_timeout": 11
+    },
+    {
+      "suite": "language-packages",
+      "shard": 3,
+      "shards": 4,
+      "timeout": 6,
+      "job_timeout": 11
     }
   ]
 }

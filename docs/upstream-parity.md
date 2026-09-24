@@ -245,7 +245,8 @@ Both programs must satisfy the original expected output for `rundir`.
 A `compiledir` pass requires native object compilation and Dart kernel compilation of all package imports.
 An `errorcheckdir` pass requires both compilers to satisfy the original diagnostic assertions.
 Expected upstream failures and exact known compiler rejections remain separate from passes.
-Other recipe options remain unassessed. Audit failures remain visible until their underlying requirements pass.
+Other recipe options remain unassessed.
+The local CI matrix and manual GitHub workflow include all package-directory shards.
 
 ```sh
 GART_PARITY_REPORT_DIR="$PWD/build/package-audit" bash scripts/ci.sh language-packages

@@ -27,6 +27,7 @@ Use repeated `--suite` arguments and `--shard` for a smaller selection:
 
 ```sh
 python3 scripts/ci-local.py --suite checks --suite driver --output build/core-validation
+python3 scripts/ci-local.py --suite language-packages --output build/package-validation
 GOMAXPROCS=2 GOFLAGS=-p=2 bash scripts/ci.sh programs 0 6
 ```
 
