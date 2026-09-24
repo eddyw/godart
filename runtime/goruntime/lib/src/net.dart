@@ -1368,7 +1368,13 @@ Future<void> _joinGroup(_Packet p, String group, String name) async {
 }
 
 Future<_Packet> _bindUDP(String host, int port) async {
-  return _Packet(await RawDatagramSocket.bind(await _address(host), port));
+  return _Packet(
+    await RawDatagramSocket.bind(
+      await _address(host),
+      port,
+      reuseAddress: false,
+    ),
+  );
 }
 
 /// Opens a datagram socket that shares its port with another socket of the
