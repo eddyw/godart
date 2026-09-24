@@ -683,8 +683,9 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		cfg:             e.cfg, nilPrefix: e.nilPrefix,
 		typeParams: e.typeParams,
 		funcIds:    e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
-		lits:    e.lits,
-		renames: e.withRenames(e.captureRenames(x.Captured))}
+		frameSeen: e.frameSeen,
+		lits:      e.lits,
+		renames:   e.withRenames(e.captureRenames(x.Captured))}
 	inner.curGoName = e.literalName(x)
 	inner.inLiteral = !x.Range
 	inner.funcFile = e.funcFile
@@ -706,6 +707,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	e.labelSeq = inner.labelSeq
 	e.dictReads = inner.dictReads
 	e.frames = append(e.frames, inner.frames...)
+	e.frameSeen = inner.frameSeen
 	// The 2 emitters share the map of the prefixes and hold a list of the
 	// added imports of their own. An import that the body of the literal
 	// added must reach the library file, thus the outer list takes it.
