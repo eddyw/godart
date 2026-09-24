@@ -127,7 +127,8 @@ UDP local-address and datagram tests retain assertions from Go
 and its BSD notice. The datagram adapter also retains `flaky` and
 `SkipFlaky` from `src/internal/testenv/testenv.go` with its BSD notice.
 Socket I/O errors and zero-value socket operations follow Go `src/net/net.go`,
-`tcpsock.go`, and `unixsock.go`. Native socket error wrappers follow
+`tcpsock.go`, `udpsock.go`, `udpsock_posix.go`, and `unixsock.go`.
+Native socket error wrappers follow
 `src/net/fd_posix.go`, `fd_unix.go`, and `fd_windows.go`.
 The overlays retain their BSD notices.
 The close test adapter retains assertions and helpers from Go

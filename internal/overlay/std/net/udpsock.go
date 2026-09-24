@@ -130,24 +130,76 @@ func (c *UDPConn) readFrom(b []byte) (int, string, int, error) {
 	return n, host, port, nil
 }
 
-// WriteTo sends the bytes of the slice to an address. A socket that a dial
-// connected gives ErrWriteToConnected, exactly as in Go.
-func (c *UDPConn) WriteTo(b []byte, addr Addr) (int, error) {
+func (c *UDPConn) writeTo(b []byte, addr *UDPAddr) (int, error) {
 	if c.connected() {
-		return 0, &OpError{Op: "write", Net: c.p.network, Source: c.p.local, Addr: addr, Err: ErrWriteToConnected}
+		return 0, ErrWriteToConnected
 	}
-	return c.p.WriteTo(b, addr)
+	if addr == nil {
+		return 0, errMissingAddress
+	}
+	host := addr.IP.String()
+	if len(addr.IP) == 0 {
+		host = "127.0.0.1"
+	}
+	n, cause, code := dart.PacketWrite(c.p.handle, b, host, addr.Port)
+	if cause != "" {
+		return n, socketSyscallCause("sendto", cause, code)
+	}
+	return n, nil
 }
 
-// WriteToUDP sends the bytes of the slice to a UDP address.
+func (a *UDPAddr) opAddr() Addr {
+	if a == nil {
+		return nil
+	}
+	return a
+}
+
+type addrPortUDPAddr struct {
+	netip.AddrPort
+}
+
+func (addrPortUDPAddr) Network() string { return "udp" }
+
+func (c *UDPConn) WriteTo(b []byte, addr Addr) (int, error) {
+	if c.p == nil {
+		return 0, syscall.EINVAL
+	}
+	a, ok := addr.(*UDPAddr)
+	if !ok {
+		return 0, &OpError{Op: "write", Net: c.p.network, Source: c.p.local, Addr: addr, Err: syscall.EINVAL}
+	}
+	n, err := c.writeTo(b, a)
+	if err != nil {
+		err = &OpError{Op: "write", Net: c.p.network, Source: c.p.local, Addr: a.opAddr(), Err: err}
+	}
+	return n, err
+}
+
 func (c *UDPConn) WriteToUDP(b []byte, addr *UDPAddr) (int, error) {
-	return c.WriteTo(b, addr)
+	if c.p == nil {
+		return 0, syscall.EINVAL
+	}
+	n, err := c.writeTo(b, addr)
+	if err != nil {
+		err = &OpError{Op: "write", Net: c.p.network, Source: c.p.local, Addr: addr.opAddr(), Err: err}
+	}
+	return n, err
 }
 
-// WriteToUDPAddrPort sends the bytes of the slice to an address in the form
-// of net/netip.
 func (c *UDPConn) WriteToUDPAddrPort(b []byte, addr netip.AddrPort) (int, error) {
-	return c.WriteTo(b, UDPAddrFromAddrPort(addr))
+	if c.p == nil {
+		return 0, syscall.EINVAL
+	}
+	var target *UDPAddr
+	if addr.IsValid() {
+		target = UDPAddrFromAddrPort(addr)
+	}
+	n, err := c.writeTo(b, target)
+	if err != nil {
+		err = &OpError{Op: "write", Net: c.p.network, Source: c.p.local, Addr: addrPortUDPAddr{addr}, Err: err}
+	}
+	return n, err
 }
 
 // Close ends the socket.

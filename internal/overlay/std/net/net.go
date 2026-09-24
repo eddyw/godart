@@ -359,21 +359,6 @@ func (p *packet) readFrom(b []byte, call string) (int, Addr, error) {
 	return n, udpAddrOf(host, port), nil
 }
 
-func (p *packet) WriteTo(b []byte, addr Addr) (int, error) {
-	if p == nil {
-		return 0, syscall.EINVAL
-	}
-	host, port, err := targetOf(addr)
-	if err != nil {
-		return 0, err
-	}
-	n, cause, code := dart.PacketWrite(p.handle, b, host, port)
-	if cause != "" {
-		return n, &OpError{Op: "write", Net: p.network, Source: p.local, Addr: addr, Err: socketSyscallCause("sendto", cause, code)}
-	}
-	return n, nil
-}
-
 func (p *packet) Close() error {
 	handle := p.handle
 	p.handle = -1
@@ -1004,22 +989,6 @@ func JoinHostPort(host, port string) string {
 		return "[" + host + "]:" + port
 	}
 	return host + ":" + port
-}
-
-// targetOf reads the host and the port of the target of a datagram. A UDP
-// address gives the 2 values directly. Thus an IPv6 target needs no split of
-// the text of the address.
-func targetOf(addr Addr) (string, int, error) {
-	if addr == nil {
-		return "", 0, errors.New("write udp: the address is missing")
-	}
-	if u, ok := addr.(*UDPAddr); ok {
-		if len(u.IP) == 0 {
-			return "127.0.0.1", u.Port, nil
-		}
-		return u.IP.String(), u.Port, nil
-	}
-	return hostPort(addr.String())
 }
 
 func hostPort(address string) (string, int, error) {

@@ -18,7 +18,7 @@ func TestUDPErrorCodes(t *testing.T) {
 	dir, out := t.TempDir(), t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/udperrors\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "fixture_test.go"), `package udperrors
-import("errors";"net";"os";"syscall";"testing";"time")
+import("errors";"fmt";"net";"net/netip";"os";"syscall";"testing";"time")
 func TestUDPErrorCodes(t *testing.T){
  for _,address:=range []string{"127.0.0.1:0","[::1]:0"}{t.Run(address,func(t *testing.T){
  p,e:=net.ListenPacket("udp",address);if e!=nil{t.Fatal(e)};defer p.Close()
@@ -120,6 +120,76 @@ func TestConnectedWriteDestination(t *testing.T) {
  }
 }
 
+func TestUDPDestinationErrors(t *testing.T) {
+ server,err:=net.ListenUDP("udp",&net.UDPAddr{IP:net.IPv4(127,0,0,1)})
+ if err!=nil{t.Fatal(err)};defer server.Close()
+ remote:=server.LocalAddr().(*net.UDPAddr)
+ if len(remote.IP)!=net.IPv4len{t.Fatalf("socket IPv4 length = %d, want %d",len(remote.IP),net.IPv4len)}
+ for _,state:=range []string{"connected","bound","closed-connected","closed-bound","zero","nil"}{
+  t.Run(state,func(t *testing.T){
+   var c *net.UDPConn
+   connected:=state=="connected"||state=="closed-connected"
+   switch state{
+   case "connected","closed-connected":c,err=net.DialUDP("udp",nil,remote)
+   case "bound","closed-bound":c,err=net.ListenUDP("udp",&net.UDPAddr{IP:net.IPv4(127,0,0,1)})
+   case "zero":c=new(net.UDPConn)
+   }
+   if err!=nil{t.Fatal(err)}
+   empty:=state=="zero"||state=="nil"
+   local:=""
+   if !empty{local=c.LocalAddr().String();defer c.Close()}
+   if state=="closed-connected"||state=="closed-bound"{c.Close()}
+   missing:=errors.New("missing address")
+   for _,method:=range []string{"WriteTo/nil","WriteTo/typed-nil","WriteTo/wrong-type","WriteToUDP/nil","WriteToUDPAddrPort/invalid","WriteToUDPAddrPort/valid"}{
+    t.Run(method,func(t *testing.T){
+     defer func(){
+      p:=recover()
+      if state=="nil"{if p==nil{t.Error("nil receiver did not panic")};return}
+      if p!=nil{t.Errorf("panic: %v",p)}
+     }()
+     var n int;var err error
+     switch method{
+     case "WriteTo/nil":n,err=c.WriteTo(nil,nil)
+     case "WriteTo/typed-nil":n,err=c.WriteTo(nil,(*net.UDPAddr)(nil))
+     case "WriteTo/wrong-type":n,err=c.WriteTo(nil,&net.TCPAddr{IP:remote.IP,Port:remote.Port})
+     case "WriteToUDP/nil":n,err=c.WriteToUDP(nil,nil)
+     case "WriteToUDPAddrPort/invalid":n,err=c.WriteToUDPAddrPort(nil,netip.AddrPort{})
+     case "WriteToUDPAddrPort/valid":n,err=c.WriteToUDPAddrPort(nil,remote.AddrPort())
+     }
+     if n!=0{t.Fatalf("count = %d, want 0",n)}
+     if empty{if err!=syscall.EINVAL{t.Fatalf("error = %T %v, want EINVAL",err,err)};return}
+     var want error
+     switch{
+     case method=="WriteTo/nil"||method=="WriteTo/wrong-type":want=syscall.EINVAL
+     case connected:want=net.ErrWriteToConnected
+     case method!="WriteToUDPAddrPort/valid":want=missing
+     case state=="closed-bound":want=net.ErrClosed
+     }
+     if want==nil{if err!=nil{t.Fatal(err)};return}
+     op,ok:=err.(*net.OpError)
+     if !ok{t.Fatalf("error = %T %v, want OpError",err,err)}
+     if op.Op!="write"||op.Net!="udp"||op.Source==nil||op.Source.String()!=local{t.Fatalf("operation = %#v",op)}
+     if want==missing{
+      if op.Err.Error()!=want.Error(){t.Fatalf("cause = %v, want %v",op.Err,want)}
+     }else if op.Err!=want||!errors.Is(err,want){t.Fatalf("cause = %v, want %v",op.Err,want)}
+     addrType,addr:="<nil>",""
+     switch method{
+     case "WriteTo/wrong-type":addrType,addr="*net.TCPAddr",remote.String()
+     case "WriteToUDPAddrPort/invalid":addrType,addr="net.addrPortUDPAddr","invalid AddrPort"
+     case "WriteToUDPAddrPort/valid":addrType,addr="net.addrPortUDPAddr",remote.String()
+     }
+     if got:=fmt.Sprintf("%T",op.Addr);got!=addrType{t.Fatalf("destination type = %s, want %s",got,addrType)}
+     if op.Addr!=nil&&op.Addr.String()!=addr{t.Fatalf("destination = %v, want %s",op.Addr,addr)}
+     text:="write udp "+local
+     if addr!=""{text+="->"+addr}
+     text+=": "+want.Error()
+     if err.Error()!=text{t.Fatalf("error = %q, want %q",err.Error(),text)}
+    })
+   }
+  })
+ }
+}
+
 `)
 	source := selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/net/udpsock_test.go"), []string{"TestUDPZeroBytePayload", "TestUDPZeroByteBuffer", "TestUDPReadSizeError", "TestUDPReadTimeout"})
 	source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/udperrors/testenv"`)
@@ -159,7 +229,7 @@ func TestConnectedWriteDestination(t *testing.T) {
 				r = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
 			compareUpstream(t, "udp-datagram-errors", "net", filter, target, filepath.Join(runtime.GOROOT(), "src/net"), r.Text, r.Exit)
-			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads|TestConnectedWriteDestination)$"}
+			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads|TestConnectedWriteDestination|TestUDPDestinationErrors)$"}
 			if target == "vm" {
 				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {
