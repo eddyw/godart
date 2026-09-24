@@ -768,6 +768,12 @@ func (r *Resolver) LookupPort(ctx context.Context, network, service string) (int
 		var ok bool
 		port, ok = servicePort(network, service)
 		if !ok {
+			if r != nil && r.PreferGo {
+				switch network {
+				case "tcp4", "tcp6", "udp4", "udp6":
+					network = network[:3]
+				}
+			}
 			name := network + "/" + service
 			return 0, &DNSError{Err: "unknown port", Name: name, IsNotFound: true}
 		}
