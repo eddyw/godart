@@ -10,6 +10,43 @@ spec.loader.exec_module(module)
 
 
 class DurationTest(unittest.TestCase):
+    def test_driver_costs_include_parallel_children_without_double_count(self):
+        log = ("=== PAUSE TestParallel/paused\n"
+               "=== PAUSE TestParallel/paused/nested\n"
+               "=== PAUSE TestParallel/plain/nested\n"
+               "=== PAUSE TestParallel/fixedbugs/case\n"
+               "--- PASS: TestParallel (13.00s)\n"
+               "    --- PASS: TestParallel/paused (5.00s)\n"
+               "        --- PASS: TestParallel/paused/nested (4.00s)\n"
+               "    --- PASS: TestParallel/plain (3.00s)\n"
+               "        --- PASS: TestParallel/plain/nested (7.00s)\n"
+               "    --- SKIP: TestParallel/fixedbugs/case (2.00s)\n")
+        self.assertEqual(module.driver_costs(log), {"TestParallel": 24.0})
+
+    def test_driver_weights_preserve_mode_and_exclude_incomplete_tests(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "run.json").write_text(json.dumps(dict(mode="short", source="snapshot")))
+            attempt = root / "driver-2/attempt-001"
+            attempt.mkdir(parents=True)
+            (attempt / "result.json").write_text(json.dumps(dict(exit=1, mode="short", suite="driver")))
+            (attempt / "ci.log").write_text(
+                "--- PASS: TestSlow (120.00s)\n"
+                "    --- PASS: TestSlow/aot (90.00s)\n"
+                "--- PASS: TestInstant (0.00s)\n"
+                "--- PASS: Example (0.01s)\n"
+                "--- FAIL: TestFailure (60.00s)\n"
+                "=== RUN   TestActive\n")
+            active = root / "driver-3/attempt-001"
+            active.mkdir(parents=True)
+            (active / "ci.log").write_text("--- PASS: TestUnfinishedShard (12.00s)\n")
+            weights, evidence = module.measurements(root)
+            self.assertEqual(weights, {"driver/short/TestSlow": 120.0,
+                                       "driver/short/TestInstant": 0.0,
+                                       "driver/short/Example": 0.01})
+            self.assertEqual(len(evidence["logs"]), 1)
+            self.assertEqual(evidence["logs"][0]["exit"], 1)
+
     def test_target_packages_exclude_incomplete_packages_and_children(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

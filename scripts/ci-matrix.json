@@ -10,9 +10,110 @@
     {
       "suite": "driver",
       "shard": 0,
-      "shards": 1,
+      "shards": 12,
+      "timeout": 13,
+      "job_timeout": 18,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 1,
+      "shards": 12,
+      "timeout": 12,
+      "job_timeout": 17,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 2,
+      "shards": 12,
+      "timeout": 11,
+      "job_timeout": 16,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 3,
+      "shards": 12,
+      "timeout": 11,
+      "job_timeout": 16,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 4,
+      "shards": 12,
+      "timeout": 9,
+      "job_timeout": 14,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 5,
+      "shards": 12,
+      "timeout": 11,
+      "job_timeout": 16,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 6,
+      "shards": 12,
+      "timeout": 12,
+      "job_timeout": 17,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 7,
+      "shards": 12,
+      "timeout": 11,
+      "job_timeout": 16,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 8,
+      "shards": 12,
       "timeout": 14,
-      "job_timeout": 19
+      "job_timeout": 19,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 9,
+      "shards": 12,
+      "timeout": 15,
+      "job_timeout": 20,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 10,
+      "shards": 12,
+      "timeout": 15,
+      "job_timeout": 20,
+      "full_timeout": 14,
+      "full_job_timeout": 19
+    },
+    {
+      "suite": "driver",
+      "shard": 11,
+      "shards": 12,
+      "timeout": 15,
+      "job_timeout": 20,
+      "full_timeout": 14,
+      "full_job_timeout": 19
     },
     {
       "suite": "integration",

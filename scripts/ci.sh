@@ -35,6 +35,7 @@ case "$suite" in
   checks)
     python3 -B -m unittest discover -s scripts -p test_ci_local.py
     python3 -B -m unittest discover -s scripts -p test_ci_durations.py
+    python3 -B -m unittest discover -s scripts -p test_ci_driver.py
     python3 -B -m unittest discover -s scripts -p test_parity.py
     make fmt-check vet flutter-go dart-analyze dart-test
     package_list=$(go list ./...)
@@ -45,8 +46,13 @@ case "$suite" in
     go test -v -p=1 -count=1 -timeout "$test_timeout" "${packages[@]}"
     ;;
   driver)
-    go test -v -count=1 -timeout "$test_timeout" "$short_flag" ./internal/driver -skip "^(${large_tests})$"
-    python3 -B -m unittest discover -s scripts -p test_resident.py -v
+    driver_tests=$(go test ./internal/driver -list .)
+    selection=$(python3 -B scripts/ci-driver.py --shard-index "$shard_index" --shard-count "$shard_count" \
+      --mode "${GART_UPSTREAM_MODE:-short}" --exclude "${large_tests}" <<< "$driver_tests")
+    go test -v -count=1 -timeout "$test_timeout" "$short_flag" ./internal/driver -run "$selection"
+    if [[ $shard_index == 0 ]]; then
+      python3 -B -m unittest discover -s scripts -p test_resident.py -v
+    fi
     ;;
   integration) test_name=TestTests ;;
   applications)

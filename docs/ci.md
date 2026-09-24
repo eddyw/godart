@@ -36,6 +36,9 @@ Shard indexes start at 0.
 Without shard arguments, `ci.sh` executes the complete named suite.
 The priority suite distributes selected packages across shards.
 Only shard 0 also executes the shared HTTP and parity-harness tests.
+The driver suite distributes complete top-level tests across shards.
+Only driver shard 0 also executes the resident compiler tests.
+The selector discovers new tests and retains the selection in each report directory.
 
 Run filesystem tests as an unprivileged user. Root bypasses permission failures
 that the upstream assertions require.
@@ -73,7 +76,7 @@ concurrency require a new output directory. Each attempt retains its own log.
 
 ## Shard duration updates
 
-Refresh stdlib and selected upstream weights after a completed local run:
+Refresh driver, stdlib, and selected upstream weights after a completed local run:
 
 ```sh
 python3 scripts/ci-durations.py build/linux-short \
@@ -82,9 +85,13 @@ python3 scripts/ci-durations.py build/linux-short \
 ```
 
 The command retains separate short and full weights. It uses only completed,
-passing package cases from attempts with a final result. A failed shard can
+passing cases from attempts with a final result. A failed shard can
 still supply durations for its passing cases. Repeated samples use the maximum.
 The evidence records source identities, log hashes, and the measured durations.
+Driver weights include parallel child costs because Go excludes that time from parent durations.
+These weights estimate work. Command durations determine timeouts.
+New tests receive a nonzero estimate.
+Full runs use short estimates when no full measurement exists.
 Review the changed weights before a commit. Measure the revised shard allocation
 before a timeout change.
 
