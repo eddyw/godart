@@ -2,6 +2,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'file_attributes.dart';
 import 'file_stat.dart';
 import 'string.dart';
 import 'syscall_directory.dart';
@@ -74,13 +75,6 @@ final _write = _libc
       IntPtr Function(Int, Pointer<Uint8>, Size),
       int Function(int, Pointer<Uint8>, int)
     >('write');
-final _truncate = _libc
-    .lookupFunction<Int Function(Int, Int64), int Function(int, int)>(
-      'ftruncate',
-    );
-final _sync = _libc.lookupFunction<Int Function(Int), int Function(int)>(
-  'fsync',
-);
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
@@ -189,21 +183,13 @@ final class NativeFileHandle implements FileHandle {
 
   @override
   void truncateSync(int size) {
-    final errno = _errno;
-    int code;
-    do {
-      code = _truncate(descriptor, size) == 0 ? 0 : errno().value;
-    } while (code == 4);
+    final code = $nativeFtruncate(descriptor, size);
     if (code != 0) throw _failure(code);
   }
 
   @override
   void flushSync() {
-    final errno = _errno;
-    int code;
-    do {
-      code = _sync(descriptor) == 0 ? 0 : errno().value;
-    } while (code == 4);
+    final code = $nativeFsync(descriptor);
     if (code != 0) throw _failure(code);
   }
 

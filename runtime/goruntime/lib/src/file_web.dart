@@ -76,6 +76,10 @@ GoString $symlink(GoString target, GoString link) => _noSys;
 
 GoString $link(GoString target, GoString link) => _noSys;
 
+int $nativeFtruncate(int fd, int size) => 38;
+
+int $nativeFsync(int fd) => 38;
+
 int $fileChmod(int fd, int mode) => 38;
 
 int $fileChown(int fd, int uid, int gid) => 38;

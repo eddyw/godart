@@ -15,6 +15,7 @@ func main() {
 	}
 	defer os.RemoveAll(root)
 	seekErrors(root)
+	syncTruncateErrors(root)
 	path := filepath.Join(root, "file")
 	if err := os.WriteFile(path, []byte("abc"), 0600); err != nil {
 		panic(err)
@@ -118,6 +119,63 @@ func seekErrors(root string) {
 			fmt.Println(kind, "Seek", c.offset, c.whence, pos, err == nil, op, cause, numeric, int(code), matches)
 			if f != nil && kind != "closed" {
 				f.Close()
+			}
+		}
+	}
+}
+
+func syncTruncateErrors(root string) {
+	path := filepath.Join(root, "attributes")
+	if err := os.WriteFile(path, []byte("abc"), 0600); err != nil {
+		panic(err)
+	}
+	for _, kind := range []string{"read-only", "write-only", "read-write", "directory", "device", "closed", "nil"} {
+		for _, method := range []string{"Sync", "Truncate"} {
+			sizes := []int64{0}
+			if method == "Truncate" {
+				sizes = []int64{-1, 0, 7}
+			}
+			for _, size := range sizes {
+				target, flags := path, os.O_RDONLY
+				switch kind {
+				case "write-only":
+					flags = os.O_WRONLY
+				case "read-write":
+					flags = os.O_RDWR
+				case "directory":
+					target = root
+				case "device":
+					target = os.DevNull
+				}
+				var f *os.File
+				var err error
+				if kind != "nil" {
+					f, err = os.OpenFile(target, flags, 0)
+					if err != nil {
+						panic(err)
+					}
+				}
+				if kind == "closed" {
+					f.Close()
+				}
+				if method == "Sync" {
+					err = f.Sync()
+				} else {
+					err = f.Truncate(size)
+				}
+				op, cause, matches := "", fmt.Sprintf("%T:%v", err, err), true
+				var pe *os.PathError
+				var code syscall.Errno
+				if errors.As(err, &pe) {
+					op = pe.Op
+					cause = fmt.Sprintf("%T:%v", pe.Err, pe.Err)
+					matches = pe.Path == target
+				}
+				numeric := errors.As(err, &code)
+				fmt.Println(kind, method, size, err == nil, op, cause, numeric, int(code), matches)
+				if f != nil && kind != "closed" {
+					f.Close()
+				}
 			}
 		}
 	}

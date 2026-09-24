@@ -181,6 +181,15 @@ func Truncate(name string, size int64) error {
 
 // Truncate writes the size of the file. It does not move the read position.
 func (f *File) Truncate(size int64) error {
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if err := f.checkValid("truncate"); err != nil {
+			return err
+		}
+		if code := dart.NativeFtruncate(int(f.Fd()), size); code != 0 {
+			return &PathError{Op: "truncate", Path: f.name, Err: syscall.Errno(code)}
+		}
+		return nil
+	}
 	if err := f.stdError("truncate"); err != nil {
 		return err
 	}

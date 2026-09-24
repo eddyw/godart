@@ -1012,6 +1012,14 @@ func FileClose(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func NativeFtruncate(fd int, size int64) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func NativeFsync(fd int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // FileSync writes each held byte of a file to the storage.
 func FileSync(handle int) string {
 	panic("syscall/dart needs the gart compiler")

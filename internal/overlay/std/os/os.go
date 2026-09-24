@@ -503,6 +503,12 @@ func (f *File) Sync() error {
 	if err := f.checkValid("sync"); err != nil {
 		return err
 	}
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		if code := dart.NativeFsync(int(f.Fd())); code != 0 {
+			return &PathError{Op: "sync", Path: f.name, Err: syscall.Errno(code)}
+		}
+		return nil
+	}
 	if f.std != stdNone {
 		return nil
 	}

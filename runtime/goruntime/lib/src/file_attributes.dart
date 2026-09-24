@@ -1,5 +1,6 @@
 // Copyright 2009 The Go Authors. All rights reserved.
 // Copyright 2017 The Go Authors. All rights reserved.
+// Copyright 2018 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -40,6 +41,49 @@ int $fileChown(int fd, int uid, int gid) {
     error = _fchown(fd, uid, gid) == 0 ? 0 : _errno().value;
   } while (error == 4);
   return error;
+}
+
+final _ftruncate = _libc
+    .lookupFunction<Int Function(Int, Int64), int Function(int, int)>(
+      'ftruncate',
+    );
+final _fsync = _libc.lookupFunction<Int Function(Int), int Function(int)>(
+  'fsync',
+);
+final _fcntl = _libc
+    .lookupFunction<
+      Int Function(Int, Int, VarArgs<(Int,)>),
+      int Function(int, int, int)
+    >('fcntl');
+
+int $nativeFtruncate(int fd, int size) {
+  final truncate = _ftruncate;
+  final errno = _errno;
+  int code;
+  do {
+    code = truncate(fd, size) == 0 ? 0 : errno().value;
+  } while (code == 4);
+  return code;
+}
+
+int $nativeFsync(int fd) {
+  final sync = _fsync;
+  final errno = _errno;
+  if (Platform.isMacOS) {
+    // Darwin uses F_FULLFSYNC to flush the device cache.
+    final fullSync = _fcntl;
+    int code;
+    do {
+      code = fullSync(fd, 0x33, 0) == 0 ? 0 : errno().value;
+      if (code == 45) code = sync(fd) == 0 ? 0 : errno().value;
+    } while (code == 4);
+    return code;
+  }
+  int code;
+  do {
+    code = sync(fd) == 0 ? 0 : errno().value;
+  } while (code == 4);
+  return code;
 }
 
 final _utimensat = _libc
