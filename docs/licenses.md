@@ -38,6 +38,8 @@ Type assertion diagnostics adapt Go `src/runtime/error.go`, `type.go`, and
 Syscall constants and names use the active SDK `src/syscall/zerrors_*.go`
 file. Native syscall data types use its selected `ztypes_*.go` file.
 Error methods adapt `src/syscall/syscall_unix.go` with its BSD notice.
+Syscall string helpers retain Go `src/syscall/syscall.go` and `exec_unix.go` bodies.
+Their overlay source retains the Go BSD notice.
 The test-environment command adapter follows `src/internal/testenv/testenv.go`
 and `exec.go` with the Go BSD notice.
 Test temporary directories and directory restoration adapt Go `src/testing/testing.go` with its BSD notice.
