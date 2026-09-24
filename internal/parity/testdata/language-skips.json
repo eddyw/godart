@@ -3,10 +3,6 @@
     "classification": "target-limit",
     "reason": "the test reads the machine address of a value, and Dart gives none"
   },
-  "fixedbugs/bug352": {
-    "classification": "test-adapter",
-    "reason": "2 values with no size take 2 cells, and gc gives them 1 address"
-  },
   "fixedbugs/bug369": {
     "classification": "target-limit",
     "reason": "the assertions compare native Go compiler optimization and object files through go tool compile and link"

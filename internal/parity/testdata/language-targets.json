@@ -46,5 +46,6 @@
   "interface/convert",
   "typeparam/interfacearg",
   "typeparam/boundmethod",
-  "fixedbugs/issue4313"
+  "fixedbugs/issue4313",
+  "fixedbugs/bug352"
 ]
