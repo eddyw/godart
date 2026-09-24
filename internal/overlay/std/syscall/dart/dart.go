@@ -1289,12 +1289,10 @@ func StdinRead(p []byte) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// DialTCP opens a TCP connection to a host and a port, and gives its handle.
-// The second result holds the cause of a failure, and it is empty after a
-// success.
+// DialTCP returns a connection handle, error text, and an available native error code.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func DialTCP(host string, port int) (int, string) {
+func DialTCP(host string, port int) (int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

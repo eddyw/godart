@@ -41,7 +41,7 @@ func TestTCPDialFamilyUpstream(t *testing.T) {
 		writeFile(t, filepath.Join(dir, name), source)
 	}
 	writeFile(t, filepath.Join(dir, "listener_test.go"), `package net_test
-import (. "net"; "context"; "errors"; "net/netip"; "testing"; "time")
+import (. "net"; "context"; "errors"; "net/netip"; "os"; "syscall"; "testing"; "time")
 func newLocalListener(t testing.TB, network string) Listener {
  t.Helper()
  listener, err := Listen(network, "127.0.0.1:0")
@@ -55,6 +55,47 @@ func supportsTCP(network, address string) bool {
  if err != nil { return false }
  listener.Close()
  return true
+}
+func TestTCPDialRefused(t *testing.T) {
+ for _, family := range []struct{network, address string}{{"tcp", "127.0.0.1:0"}, {"tcp4", "127.0.0.1:0"}, {"tcp6", "[::1]:0"}} {
+  t.Run(family.network, func(t *testing.T) {
+   listener, err := Listen(family.network, family.address)
+   if err != nil { t.Fatal(err) }
+   defer listener.Close()
+   address := listener.Addr()
+   c, err := Dial(family.network, address.String())
+   if err != nil { t.Fatal(err) }
+   defer c.Close()
+   peer, err := listener.Accept()
+   if err != nil { t.Fatal(err) }
+   defer peer.Close()
+   if err := listener.Close(); err != nil { t.Fatal(err) }
+   for _, api := range []string{"dial", "context", "timeout"} {
+    t.Run(api, func(t *testing.T) {
+     var c Conn
+     var err error
+     switch api {
+     case "dial": c, err = Dial(family.network, address.String())
+     case "context":
+      ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+      defer cancel()
+      var d Dialer
+      c, err = d.DialContext(ctx, family.network, address.String())
+     case "timeout": c, err = DialTimeout(family.network, address.String(), 5*time.Second)
+     }
+     if err == nil { c.Close(); t.Fatal("dial to a closed listener succeeded") }
+     var op *OpError
+     var call *os.SyscallError
+     if !errors.Is(err, syscall.ECONNREFUSED) || !errors.As(err, &op) || !errors.As(err, &call) {
+      t.Fatalf("error = %T %v, want OpError and SyscallError with ECONNREFUSED", err, err)
+     }
+     if op.Op != "dial" || op.Net != family.network || op.Source != nil || op.Addr == nil || op.Addr.String() != address.String() || call.Syscall != "connect" {
+      t.Fatalf("error metadata = %+v, syscall = %s", op, call.Syscall)
+     }
+    })
+   }
+  })
+ }
 }
 func TestTCPDialFamilies(t *testing.T) {
  for _, family := range []struct{ network, address string }{{"tcp4", "127.0.0.1:0"}, {"tcp6", "[::1]:0"}} {
@@ -139,7 +180,7 @@ func TestTCPDialFamilies(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 	writeFile(t, filepath.Join(dir, "netpoll/LICENSE"), string(license))
-	t.Log(run(t, dir, "go", "test", "-run", "^TestTCPDialFamilies$", "-v", "."))
+	t.Log(run(t, dir, "go", "test", "-run", "^TestTCPDial(Families|Refused)$", "-v", "."))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TrimPath: true})
 	if err != nil {
 		t.Fatal(err)
@@ -150,7 +191,7 @@ func TestTCPDialFamilies(t *testing.T) {
 	prepareDart(t, out)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run("families/"+target, func(t *testing.T) {
-			args := []string{"-test.v", "-test.run=^TestTCPDialFamilies$"}
+			args := []string{"-test.v", "-test.run=^TestTCPDial(Families|Refused)$"}
 			var result programResult
 			if target == "vm" {
 				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)

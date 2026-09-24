@@ -529,15 +529,16 @@ func (d *Dialer) dialOne(network, address string) (Conn, error) {
 		if err != nil {
 			return nil, err
 		}
+		remote := tcpAddrOf(host, port)
 		if host == "" {
 			host = "127.0.0.1"
 			if network == "tcp6" {
 				host = "::1"
 			}
 		}
-		handle, cause := dart.DialTCP(host, port)
+		handle, cause, code := dart.DialTCP(host, port)
 		if cause != "" {
-			return nil, errors.New("dial tcp " + address + ": " + cause)
+			return nil, &OpError{Op: "dial", Net: network, Addr: remote, Err: socketSyscallCause("connect", cause, code)}
 		}
 		return newTCPConn(handle, network, d.KeepAlive, d.KeepAliveConfig), nil
 	case "unix":

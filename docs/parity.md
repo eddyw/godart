@@ -94,7 +94,7 @@ Typed `tcp6` dials with mapped IPv4 addresses and local TCP address selection re
 On Linux and macOS, `net.DialUDP` supports an explicit local address and port.
 Connected UDP sockets report the local address that the operating system selects.
 UDP network-family selection and the context-based UDP dialer still have gaps.
-On Linux and macOS, socket-option failures retain available native error codes through `net.OpError` and `os.SyscallError`.
+On Linux and macOS, TCP connection failures and socket-option failures retain available native error codes through `net.OpError` and `os.SyscallError`.
 Closed sockets retain `net.ErrClosed`.
 
 Browser builds use browser APIs. HTTP clients use fetch. Browser restrictions
