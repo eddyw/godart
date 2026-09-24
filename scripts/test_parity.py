@@ -549,6 +549,30 @@ class ParityTest(unittest.TestCase):
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
 
+    def test_compile_package_option_requires_the_original_command(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            execution = dict(ran=True, exit=0, timed_out=False)
+            command = ["go", "tool", "compile", "-e", "-p=p", "-importcfg=config", "-o", "native.o", "sdk/p.go"]
+            outcome = dict(fixture=dict(name="p", file="p.go", recipe="compile -p=p"),
+                           contract="compile", status="passed", wrapper_sha256="wrapper",
+                           native=dict(execution, command=command), gart=dict(execution))
+            report = dict(kind="language", complete=True, outcomes=[outcome], shard=0, shards=1)
+            path = root / "language.json"
+
+            def assess(status):
+                parity.save(path, report)
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            assess("passed")
+            for changed in [command[:4] + command[5:], command[:4] + ["-p=other"] + command[5:],
+                            command + ["-p=other"], command[:-1] + ["other.go"]]:
+                outcome["native"]["command"] = changed
+                assess("failed")
+            outcome["native"]["command"] = command
+            outcome["fixture"]["recipe"] = "compile -p=other"
+            assess("failed")
+
     def test_rejection_requires_original_assertions_and_diagnostics(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

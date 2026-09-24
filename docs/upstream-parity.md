@@ -188,6 +188,8 @@ With `GART_PARITY_REPORT_DIR`, language reports retain command arguments, exits,
 output hashes, source hashes, exclusions, SDK versions, targets, and incomplete selections.
 The aggregate refuses a pass if an output hash differs or either execution fails.
 The `language-compile` suite compares exact `compile` recipes. Native Go compiles the original file to an object.
+It also accepts `compile -p=p`, which uses the adapter's native compiler package option.
+The aggregate requires that exact option in the native command.
 Gart compiles the same source and an inert Dart entry point to kernel.
 The adapter uses a package URI for library imports to preserve Dart type identity.
 It never executes compile-only programs or their initializers. Compilation does not establish runtime parity.
