@@ -457,9 +457,9 @@ def language_behavior(paths):
                         valid = executed and directory_language_valid(case, report.get("go_version"))
                     elif case.get("contract") in {"compile", "build"}:
                         recipe = case["fixture"]["recipe"] == case["contract"]
-                        if case["contract"] == "compile" and case["fixture"]["recipe"] == "compile -p=p":
+                        if case["contract"] == "compile" and case["fixture"]["recipe"] in {"compile -p=p", "compile -p=main"}:
                             native = case["native"].get("command", [])
-                            recipe = (len(native) == 9 and native[:5] == ["go", "tool", "compile", "-e", "-p=p"]
+                            recipe = (len(native) == 9 and native[:5] == ["go", "tool", "compile", "-e", case["fixture"]["recipe"].split()[1]]
                                       and native[5].startswith("-importcfg=") and native[6:8] == ["-o", "native.o"]
                                       and native[8].endswith("/" + case["fixture"].get("file", "")))
                         valid = (executed and recipe

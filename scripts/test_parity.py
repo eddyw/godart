@@ -572,6 +572,16 @@ class ParityTest(unittest.TestCase):
                 outcome["native"]["command"] = changed
                 assess("failed")
             outcome["native"]["command"] = command
+            outcome["fixture"]["recipe"] = "compile -p=main"
+            assess("failed")
+            command = command[:4] + ["-p=main"] + command[5:]
+            outcome["native"]["command"] = command
+            assess("passed")
+            for changed in [command[:4] + command[5:], command[:4] + ["-p=p"] + command[5:],
+                            command + ["-p=p"], command[:-1] + ["other.go"]]:
+                outcome["native"]["command"] = changed
+                assess("failed")
+            outcome["native"]["command"] = command
             outcome["fixture"]["recipe"] = "compile -p=other"
             assess("failed")
 

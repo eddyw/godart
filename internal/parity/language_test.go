@@ -56,6 +56,7 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/groupsrun.dir/a.go", "package a\n")
 	write("test/compileflags.go", "// compile -N\npackage p\n")
 	write("test/compilepackage.go", "// compile -p=p\npackage v4\n")
+	write("test/compilemain.go", "// compile -p=main\npackage main\n")
 	write("test/compileotherpackage.go", "// compile -p=other\npackage v4\n")
 	write("test/generated.go", "// runoutput\npackage main\n")
 	write("test/generatedflags.go", "// runoutput -gcflags=-N\npackage main\n")
@@ -77,8 +78,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 39 {
-		t.Fatalf("got %d cases, want 39", len(inv.Cases))
+	if len(inv.Cases) != 40 {
+		t.Fatalf("got %d cases, want 40", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -130,6 +131,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if c := cases["compilepackage"]; c.Adapter != "compile-file" || c.Recipe != "compile -p=p" || cases["compileotherpackage"].Adapter != "missing" {
 		t.Fatal("the compile adapter must preserve its package option")
+	}
+	if c := cases["compilemain"]; c.Adapter != "compile-file" || c.Recipe != "compile -p=main" {
+		t.Fatal("the compile adapter must preserve the main package option")
 	}
 	if cases["generatedreject"].Adapter != "generated-rejection" || cases["generatedrejectfiles"].Adapter != "generated-rejection" || cases["generatedrejectflags"].Adapter != "missing" {
 		t.Fatal("generated rejection recipes must preserve their arguments")
