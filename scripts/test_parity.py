@@ -604,6 +604,49 @@ class ParityTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "invalid target exclusion"):
                 parity.behavior([reports], manifests)
 
+    def test_behavior_combines_shards_only_with_matching_compiler_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifests = root / "manifests"
+            parity.save(manifests / "coverage-manifest.json", [])
+            paths = [root / str(i) for i in range(2)]
+            for i, path in enumerate(paths):
+                parity.save(path / "run.json", dict(source="same"))
+                parity.save(path / "reports/result.json", dict(package="p", expected=[f"Test{i}"],
+                    native=dict(exit=0), gart=dict(exit=0), comparison=dict(passed=[f"Test{i}"], problems=[])))
+            groups = parity.behavior(paths, manifests)
+            self.assertEqual(len(groups), 1)
+            self.assertEqual(groups[0]["top_level"], {"passed": 2})
+            self.assertEqual({r["manifest"] for r in groups[0]["reports"]},
+                             {str(path / "run.json") for path in paths})
+            parity.save(paths[1] / "run.json", dict(source="different"))
+            self.assertEqual(len(parity.behavior(paths, manifests)), 2)
+            for path in paths:
+                parity.save(path / "run.json", {})
+            self.assertEqual(len(parity.behavior(paths, manifests)), 2)
+
+    def test_language_combines_shards_only_with_matching_compiler_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = [root / str(i) for i in range(2)]
+            for i, path in enumerate(paths):
+                execution = dict(ran=True, exit=0, timed_out=False, output_sha256="original")
+                outcome = dict(fixture=dict(name=f"p{i}", file=f"p{i}.go"), status="passed",
+                               native=execution, gart=dict(execution), expected_sha256="original")
+                parity.save(path / "run.json", dict(source="same"))
+                parity.save(path / "reports/result.json", dict(kind="language", complete=True,
+                            outcomes=[outcome], shard=i, shards=2))
+            groups = parity.language_behavior(paths)
+            self.assertEqual(len(groups), 1)
+            self.assertEqual(groups[0]["counts"], {"passed": 2})
+            self.assertEqual({r["manifest"] for r in groups[0]["reports"]},
+                             {str(path / "run.json") for path in paths})
+            parity.save(paths[1] / "run.json", dict(source="different"))
+            self.assertEqual(len(parity.language_behavior(paths)), 2)
+            for path in paths:
+                parity.save(path / "run.json", {})
+            self.assertEqual(len(parity.language_behavior(paths)), 2)
+
     def test_application_tests_do_not_count_skips_or_empty_runs_as_passes(self):
         def native(action):
             return json.dumps(dict(Action=action, Test="TestA"))

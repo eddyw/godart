@@ -176,7 +176,10 @@ def behavior(paths, manifests=MANIFESTS):
             config = {key: report.get(key) for key in (
                 "go_version", "dart_version", "node_version", "goos", "goarch", "target", "short",
                 "source_sha256", "build_tags", "gart_build_tags", "tool_tags", "cgo", "environment")}
-            config.update(provenance(path))
+            origin = provenance(path)
+            config.update(origin)
+            if config.get("compiler_snapshot"):
+                config.pop("manifest")
             key = json.dumps(config, sort_keys=True)
             group = groups.setdefault(key, {"configuration": config, "reports": [], "outcomes": defaultdict(set),
                                             "reasons": defaultdict(set), "problems": []})
@@ -211,7 +214,7 @@ def behavior(paths, manifests=MANIFESTS):
                 elif (pkg, name) not in outcomes:
                     outcomes[pkg, name].add("unobserved")
             group["problems"].extend(f"{path}: {problem}" for problem in problems)
-            group["reports"].append({"path": str(path), "sha256": stamp, "package": pkg,
+            group["reports"].append({"path": str(path), "manifest": origin["manifest"], "sha256": stamp, "package": pkg,
                                      "filter": report.get("filter"), "problems": problems})
     result = []
     coverage = {x["package"]: x for x in read(manifests / "coverage-manifest.json")}
@@ -352,7 +355,10 @@ def language_behavior(paths):
             seen.add(stamp)
             config = {key: report.get(key) for key in (
                 "go_version", "dart_version", "node_version", "goos", "goarch", "target", "source_sha256", "tool_tags", "cgo", "environment")}
-            config.update(provenance(path))
+            origin = provenance(path)
+            config.update(origin)
+            if config.get("compiler_snapshot"):
+                config.pop("manifest")
             config["contract"] = report.get("contract") or next((c["contract"] for c in report["outcomes"] if c.get("contract")), "run")
             group = groups.setdefault(json.dumps(config, sort_keys=True),
                                       dict(configuration=config, reports=[], outcomes={}, problems=[]))
@@ -435,7 +441,7 @@ def language_behavior(paths):
                 record["statuses"].add(status)
                 if config["contract"] == "reject":
                     record.setdefault("rejection_results", set()).add(rejection_result(case, status))
-            group["reports"].append(dict(path=str(path), sha256=stamp, complete=report["complete"],
+            group["reports"].append(dict(path=str(path), manifest=origin["manifest"], sha256=stamp, complete=report["complete"],
                                          shard=report["shard"], shards=report["shards"]))
     result = []
     for group in groups.values():
