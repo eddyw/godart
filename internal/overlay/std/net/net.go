@@ -524,13 +524,16 @@ func Dial(network, address string) (Conn, error) {
 // numeric form, or the name of a socket of the Unix domain.
 func (d *Dialer) dialOne(network, address string) (Conn, error) {
 	switch network {
-	case "tcp":
+	case "tcp", "tcp4", "tcp6":
 		host, port, err := hostPort(address)
 		if err != nil {
 			return nil, err
 		}
 		if host == "" {
 			host = "127.0.0.1"
+			if network == "tcp6" {
+				host = "::1"
+			}
 		}
 		handle, cause := dart.DialTCP(host, port)
 		if cause != "" {
@@ -717,6 +720,9 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 	}
 	list, err := d.addrList(ctx, network, address)
 	if err != nil {
+		if network == "tcp" || network == "tcp4" || network == "tcp6" {
+			return nil, &OpError{Op: "dial", Net: network, Err: err}
+		}
 		return nil, err
 	}
 	trace := traceOf(ctx)
@@ -759,10 +765,24 @@ func (d *Dialer) addrList(ctx context.Context, network, address string) ([]strin
 	if err != nil {
 		return nil, err
 	}
-	if host == "" || ParseIP(host) != nil {
+	family := "ip"
+	if network == "tcp4" || network == "tcp6" {
+		family += network[3:]
+	}
+	if host == "" {
 		return []string{address}, nil
 	}
-	ips, err := d.resolver().LookupIP(ctx, "ip", host)
+	if addr, err := netip.ParseAddr(host); err == nil {
+		ip := IP(addr.AsSlice())
+		if network == "tcp4" && ip.Equal(IPv6unspecified) {
+			return []string{JoinHostPort(IPv4zero.String(), port)}, nil
+		}
+		if !keepIP(family, ip) {
+			return nil, &AddrError{Err: "no suitable address found", Addr: host}
+		}
+		return []string{address}, nil
+	}
+	ips, err := d.resolver().LookupIP(ctx, family, host)
 	if err != nil {
 		return nil, err
 	}
@@ -824,7 +844,11 @@ func (d *Dialer) DialTCP(ctx context.Context, network string, laddr, raddr netip
 	if !raddr.IsValid() {
 		return nil, errors.New("dial " + network + ": the address is missing")
 	}
-	c, err := d.DialContext(ctx, "tcp", TCPAddrFromAddrPort(raddr).String())
+	remote := TCPAddrFromAddrPort(raddr)
+	if err := tcpAddrFamilyError(network, remote); err != nil {
+		return nil, &OpError{Op: "dial", Net: network, Addr: remote, Err: err}
+	}
+	c, err := d.DialContext(ctx, "tcp", remote.String())
 	if err != nil {
 		return nil, err
 	}

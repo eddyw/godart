@@ -156,6 +156,9 @@ func DialTCP(network string, laddr, raddr *TCPAddr) (*TCPConn, error) {
 	if raddr == nil {
 		return nil, errors.New("dial " + network + ": the address is missing")
 	}
+	if err := tcpAddrFamilyError(network, raddr); err != nil {
+		return nil, &OpError{Op: "dial", Net: network, Addr: raddr, Err: err}
+	}
 	c, err := Dial("tcp", raddr.String())
 	if err != nil {
 		return nil, err
@@ -167,6 +170,19 @@ func DialTCP(network string, laddr, raddr *TCPAddr) (*TCPConn, error) {
 	}
 	tc.c.network = network
 	return tc, nil
+}
+
+func tcpAddrFamilyError(network string, addr *TCPAddr) error {
+	if len(addr.IP) == 0 {
+		return nil
+	}
+	if network == "tcp4" && addr.IP.To4() == nil {
+		return &AddrError{Err: "non-IPv4 address", Addr: addr.IP.String()}
+	}
+	if addr.IP.To16() == nil {
+		return &AddrError{Err: "non-IPv6 address", Addr: addr.IP.String()}
+	}
+	return nil
 }
 
 // A TCPListener waits for a connection of the network tcp. `Listen` and
