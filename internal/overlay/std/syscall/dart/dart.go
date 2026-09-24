@@ -1016,6 +1016,14 @@ func NativeTruncate(name string, size int64) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func NativePread(fd int, p []byte, off int64) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func NativePwrite(fd int, p []byte, off int64) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func NativeFtruncate(fd int, size int64) int {
 	panic("syscall/dart needs the gart compiler")
 }

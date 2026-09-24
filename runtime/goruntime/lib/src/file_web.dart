@@ -78,6 +78,10 @@ GoString $link(GoString target, GoString link) => _noSys;
 
 int $nativeTruncate(GoString path, int size) => 38;
 
+(int, int) $nativePread(int fd, Slice<GoInt> bytes, int offset) => (0, 38);
+
+(int, int) $nativePwrite(int fd, Slice<GoInt> bytes, int offset) => (0, 38);
+
 int $nativeFtruncate(int fd, int size) => 38;
 
 int $nativeFsync(int fd) => 38;

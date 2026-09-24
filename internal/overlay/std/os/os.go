@@ -301,8 +301,7 @@ func (f *File) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-// ReadAt reads at the offset. It does not move the read position of the file,
-// thus the call reads the position first and writes it again.
+// ReadAt reads at the offset without a change to the file position.
 func (f *File) ReadAt(p []byte, off int64) (int, error) {
 	if f == nil {
 		return 0, ErrInvalid
@@ -315,6 +314,20 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 	}
 	if err := f.checkValid("read"); err != nil {
 		return 0, err
+	}
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		read := 0
+		for read < len(p) {
+			n, code := dart.NativePread(int(f.Fd()), p[read:], off+int64(read))
+			if code != 0 {
+				return read, &PathError{Op: "read", Path: f.name, Err: syscall.Errno(code)}
+			}
+			if n == 0 {
+				return read, io.EOF
+			}
+			read += n
+		}
+		return read, nil
 	}
 	if f.std != stdNone {
 		return 0, &PathError{Op: "read", Path: f.name, Err: errors.New("bad file descriptor")}
@@ -350,8 +363,7 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 
 var errWriteAtInAppendMode = errors.New("os: invalid use of WriteAt on file opened with O_APPEND")
 
-// WriteAt writes at the offset. It does not move the write position of the
-// file, thus the call reads the position first and writes it again.
+// WriteAt writes at the offset without a change to the file position.
 func (f *File) WriteAt(p []byte, off int64) (int, error) {
 	if f == nil {
 		return 0, ErrInvalid
@@ -367,6 +379,20 @@ func (f *File) WriteAt(p []byte, off int64) (int, error) {
 	}
 	if err := f.checkValid("write"); err != nil {
 		return 0, err
+	}
+	if system := dart.OS(); system == "linux" || system == "darwin" {
+		written := 0
+		for written < len(p) {
+			n, code := dart.NativePwrite(int(f.Fd()), p[written:], off+int64(written))
+			if code != 0 {
+				return 0, &PathError{Op: "write", Path: f.name, Err: syscall.Errno(code)}
+			}
+			if n == 0 {
+				return 0, &PathError{Op: "write", Path: f.name, Err: io.ErrUnexpectedEOF}
+			}
+			written += n
+		}
+		return written, nil
 	}
 	if f.std != stdNone {
 		return 0, &PathError{Op: "write", Path: f.name, Err: errors.New("bad file descriptor")}

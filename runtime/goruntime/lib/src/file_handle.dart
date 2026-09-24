@@ -1,9 +1,14 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'file_attributes.dart';
 import 'file_stat.dart';
+import 'slice.dart';
 import 'string.dart';
 import 'syscall_directory.dart';
 
@@ -75,6 +80,16 @@ final _write = _libc
       IntPtr Function(Int, Pointer<Uint8>, Size),
       int Function(int, Pointer<Uint8>, int)
     >('write');
+final _pread = _libc
+    .lookupFunction<
+      IntPtr Function(Int, Pointer<Uint8>, Size, Int64),
+      int Function(int, Pointer<Uint8>, int, int)
+    >('pread');
+final _pwrite = _libc
+    .lookupFunction<
+      IntPtr Function(Int, Pointer<Uint8>, Size, Int64),
+      int Function(int, Pointer<Uint8>, int, int)
+    >('pwrite');
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
@@ -95,6 +110,51 @@ String _message(int code) {
 
 FileSystemException _failure(int code) =>
     FileSystemException('', '', OSError(_message(code), code));
+
+(int, int) $nativePread(int fd, Slice<int> bytes, int offset) {
+  final read = _pread;
+  final errno = _errno;
+  final buffer = _malloc(bytes.len);
+  if (buffer == nullptr) return (0, 12);
+  try {
+    int count;
+    int code;
+    do {
+      count = read(fd, buffer, bytes.len, offset);
+      code = count < 0 ? errno().value : 0;
+    } while (code == 4);
+    if (code != 0) return (0, code);
+    bytes.array.setRange(
+      bytes.off,
+      bytes.off + count,
+      buffer.asTypedList(count),
+    );
+    return (count, 0);
+  } finally {
+    _free(buffer);
+  }
+}
+
+(int, int) $nativePwrite(int fd, Slice<int> bytes, int offset) {
+  final write = _pwrite;
+  final errno = _errno;
+  final buffer = _malloc(bytes.len);
+  if (buffer == nullptr) return (0, 12);
+  try {
+    buffer
+        .asTypedList(bytes.len)
+        .setRange(0, bytes.len, bytes.array, bytes.off);
+    int count;
+    int code;
+    do {
+      count = write(fd, buffer, bytes.len, offset);
+      code = count < 0 ? errno().value : 0;
+    } while (code == 4);
+    return (code == 0 ? count : 0, code);
+  } finally {
+    _free(buffer);
+  }
+}
 
 final class PartialFileWrite extends FileSystemException {
   final int count;
