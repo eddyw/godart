@@ -57,6 +57,7 @@ The process identity adapter adapts group-count validation from Go
 The runtime license includes their BSD terms.
 The time value representation and its clock helpers adapt Go `src/time/time.go`.
 Directory creation and sticky-bit behavior follow Go `src/os/file.go` with its BSD notice.
+Temporary file creation flags and permissions follow Go `src/os/tempfile.go` with its BSD notice.
 Descriptor-based directory and file attribute changes follow Go `src/os/file_posix.go`,
 `src/internal/poll/fd_posix.go`, and `fd_unix.go` with their BSD notices.
 Path permission and ownership changes follow Go `src/os/file_posix.go` with its BSD notice.

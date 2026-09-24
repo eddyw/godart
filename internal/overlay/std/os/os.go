@@ -1,5 +1,6 @@
 // Copyright 2018 The Go Authors. All rights reserved.
 // Copyright 2009 The Go Authors. All rights reserved.
+// Copyright 2010 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -1047,6 +1048,7 @@ func itoa(v int64) string {
 // CreateTemp makes a new file in the directory. An empty directory reads the
 // directory of the system. The last star of the pattern holds the place of the
 // random part, and a pattern with no star takes the part at the end.
+// The new file uses mode 0600 before the process mask.
 func CreateTemp(dir, pattern string) (*File, error) {
 	for i := 0; i < len(pattern); i++ {
 		if IsPathSeparator(pattern[i]) {
@@ -1055,10 +1057,11 @@ func CreateTemp(dir, pattern string) (*File, error) {
 	}
 	for i := 0; i < 100; i++ {
 		name := tempName(dir, pattern)
-		if _, err := Stat(name); err == nil {
+		f, err := OpenFile(name, O_RDWR|O_CREATE|O_EXCL, 0600)
+		if IsExist(err) {
 			continue
 		}
-		return Create(name)
+		return f, err
 	}
 	return nil, pathError("createtemp", dir, "no free name")
 }

@@ -44,6 +44,12 @@ func main() {
   if err != nil { panic(err) }
   fmt.Printf("write %o\n", info.Mode().Perm())
  }
+ f, err := os.CreateTemp(dir, "temp")
+ if err != nil { panic(err) }
+ if err = f.Close(); err != nil { panic(err) }
+ info, err := os.Stat(f.Name())
+ if err != nil { panic(err) }
+ fmt.Printf("temp %o\n", info.Mode().Perm())
 }
 `)
 	native := filepath.Join(t.TempDir(), "native")
