@@ -251,7 +251,12 @@ type TCPAddr struct {
 
 func (a *TCPAddr) Network() string { return "tcp" }
 
-func (a *TCPAddr) String() string { return addrText(a.IP, a.Port, a.Zone) }
+func (a *TCPAddr) String() string {
+	if a == nil {
+		return "<nil>"
+	}
+	return addrText(a.IP, a.Port, a.Zone)
+}
 
 // A UDPAddr is the address of a datagram socket.
 type UDPAddr struct {
@@ -262,7 +267,12 @@ type UDPAddr struct {
 
 func (a *UDPAddr) Network() string { return "udp" }
 
-func (a *UDPAddr) String() string { return addrText(a.IP, a.Port, a.Zone) }
+func (a *UDPAddr) String() string {
+	if a == nil {
+		return "<nil>"
+	}
+	return addrText(a.IP, a.Port, a.Zone)
+}
 
 // An IPAddr is an address that holds no port.
 type IPAddr struct {
