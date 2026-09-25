@@ -31,7 +31,7 @@ func TestBuiltinPrintBytes(t *testing.T) {
 		t.Fatal(err)
 	}
 	prepareDart(t, out)
-	for _, target := range []string{"vm", "aot"} {
+	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			var got programResult
 			if target == "vm" {

@@ -1,19 +1,21 @@
-/// The process access of the scheduler and of the print helpers, on a web
-/// target. The target holds no dart:io, thus each write goes through the
-/// print function of Dart, which reaches the console of the host.
-///
-/// The print function writes 1 line for each call, thus the writes gather in
-/// a buffer, and each full line leaves the buffer at once.
+/// Node exposes byte streams. Browsers receive complete console lines.
 library;
 
 import 'dart:convert';
 import 'dart:js_interop';
+import 'dart:typed_data';
 
 @JS('globalThis.process')
 external _Process? get _process;
 
 extension type _Process._(JSObject _) implements JSObject {
   external void exit(int code);
+  external _Output get stdout;
+  external _Output get stderr;
+}
+
+extension type _Output._(JSObject _) implements JSObject {
+  external bool write(JSAny value);
 }
 
 String $platformGODEBUG() => '';
@@ -23,16 +25,31 @@ String _errBuffer = '';
 
 /// Writes bytes to standard output.
 void $platformStdout(List<int> bytes) {
+  final process = _process;
+  if (process != null) {
+    process.stdout.write(Uint8List.fromList(bytes).toJS);
+    return;
+  }
   _outBuffer = _flush(_outBuffer + utf8.decode(bytes, allowMalformed: true));
 }
 
 /// Writes bytes to standard error.
 void $platformStderr(List<int> bytes) {
+  final process = _process;
+  if (process != null) {
+    process.stderr.write(Uint8List.fromList(bytes).toJS);
+    return;
+  }
   _errBuffer = _flush(_errBuffer + utf8.decode(bytes, allowMalformed: true));
 }
 
 /// Writes text to standard error.
 void $platformStderrText(String text) {
+  final process = _process;
+  if (process != null) {
+    process.stderr.write(text.toJS);
+    return;
+  }
   _errBuffer = _flush(_errBuffer + text);
 }
 

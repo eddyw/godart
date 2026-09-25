@@ -153,9 +153,7 @@ GoString $tempDir() => GoString.fromString('/tmp');
 
 GoString $pathSeparator() => GoString.fromString('/');
 
-/// Writes text to standard error. The web target holds no such stream, thus
-/// the text reaches the console of the host.
-void $stderr(GoString text) => $platformStderrText(text.toDartString());
+void $stderr(GoString text) => $platformStderr(text.bytes);
 
 /// Reads bytes of standard input. A web target holds no standard input, thus
 /// the read reports the end of the input at once.
