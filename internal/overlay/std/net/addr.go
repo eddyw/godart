@@ -501,6 +501,14 @@ func tcpAddrOf(host string, port int) *TCPAddr {
 	return &TCPAddr{IP: ParseIP(host), Port: port, Zone: zone}
 }
 
+func tcpSocketAddrOf(host string, port int) *TCPAddr {
+	addr := tcpAddrOf(host, port)
+	if !strings.Contains(host, ":") {
+		addr.IP = addr.IP.To4()
+	}
+	return addr
+}
+
 // udpAddrOf builds a UDPAddr from a host text and a port.
 func udpAddrOf(host string, port int) *UDPAddr {
 	ip := ParseIP(host)

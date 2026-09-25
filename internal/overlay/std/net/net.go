@@ -166,8 +166,8 @@ func newConn(handle int, network string) conn {
 		c.local = &UnixAddr{Name: lHost, Net: "unix"}
 		c.remote = &UnixAddr{Name: rHost, Net: "unix"}
 	} else {
-		c.local = tcpAddrOf(lHost, lPort)
-		c.remote = tcpAddrOf(rHost, rPort)
+		c.local = tcpSocketAddrOf(lHost, lPort)
+		c.remote = tcpSocketAddrOf(rHost, rPort)
 	}
 	return c
 }

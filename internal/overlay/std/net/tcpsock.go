@@ -311,11 +311,7 @@ func ListenTCP(network string, laddr *TCPAddr) (*TCPListener, error) {
 		return fail(errors.New(cause))
 	}
 	bound := dart.ListenTCPHost(handle)
-	zone := ""
-	if i := strings.LastIndexByte(bound, '%'); i >= 0 {
-		bound, zone = bound[:i], bound[i+1:]
-	}
-	return newTCPListener(handle, network, &TCPAddr{IP: ParseIP(bound), Port: port, Zone: zone}), nil
+	return newTCPListener(handle, network, tcpSocketAddrOf(bound, port)), nil
 }
 
 func resolveListenTCP(network, address string) (*TCPAddr, error) {
