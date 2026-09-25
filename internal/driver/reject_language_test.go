@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -69,7 +70,7 @@ func TestRejectionContracts(t *testing.T) {
 	var cases []parity.LanguageCase
 	for _, c := range inv.Cases {
 		switch c.Name {
-		case "cannotassign", "func1", "embedfunc", "blank1", "directive", "directive2",
+		case "cannotassign", "func1", "embedfunc", "blank1", "directive", "directive2", "initexp",
 			"fixedbugs/bug398", "fixedbugs/issue16369", "fixedbugs/issue56103",
 			"fixedbugs/issue18459", "fixedbugs/issue18882", "linkname3",
 			"fixedbugs/issue20027", "fixedbugs/issue42058a", "fixedbugs/issue42058b", "fixedbugs/issue49767",
@@ -83,7 +84,7 @@ func TestRejectionContracts(t *testing.T) {
 			cases = append(cases, c)
 		}
 	}
-	if len(cases) != 44 {
+	if len(cases) != 45 {
 		t.Fatal("the original rejection fixtures changed")
 	}
 	runDiagnosticCases(t, inv, cases)
@@ -134,6 +135,24 @@ func TestDiagnostics(t *testing.T) {
 	run(t, matcherDir, "go", "test", "-c", "-o", executable)
 	config := filepath.Join(matcherDir, "importcfg")
 	writeFile(t, config, run(t, "", "go", "list", "-export", "-f", "{{if .Export}}packagefile {{.ImportPath}}={{.Export}}{{end}}", "std"))
+	var timedCompiler string
+	timedLimit := 10 * time.Second
+	for _, result := range outcomes {
+		if result.Fixture.Recipe == "errorcheck -t 10" {
+			scale := 1
+			if value := os.Getenv("GO_TEST_TIMEOUT_SCALE"); value != "" {
+				var err error
+				scale, err = strconv.Atoi(value)
+				if err != nil || scale <= 0 {
+					t.Fatalf("invalid GO_TEST_TIMEOUT_SCALE: %q", value)
+				}
+			}
+			timedLimit *= time.Duration(scale)
+			timedCompiler = filepath.Join(matcherDir, "gart.exe")
+			run(t, "", "go", "build", "-o", timedCompiler, "../../cmd/gart")
+			break
+		}
+	}
 	column := regexp.MustCompile(`(?m)^(.*?\.go:[0-9]+):[0-9]+:`)
 	for _, result := range outcomes {
 		t.Run(result.Fixture.Name, func(t *testing.T) {
@@ -184,7 +203,14 @@ func TestDiagnostics(t *testing.T) {
 				result.ModuleSource = "module example.com/rejectfixture\n\ngo " + language + "\n"
 				result.ModuleSHA256 = languageDigest([]byte(result.ModuleSource))
 			}
-			result.NativeDiagnostics = recordLanguage(t, &result.Native, dir, runLimit, "go", append(args, sourcePath)...)
+			limit := runLimit
+			if c.Recipe == "errorcheck -t 10" {
+				limit = timedLimit
+				scale := strconv.FormatInt(int64(timedLimit/(10*time.Second)), 10)
+				result.Native.Environment = map[string]string{"GO_TEST_TIMEOUT_SCALE": scale}
+				result.Gart.Environment = map[string]string{"GO_TEST_TIMEOUT_SCALE": scale}
+			}
+			result.NativeDiagnostics = recordLanguage(t, &result.Native, dir, limit, "go", append(args, sourcePath)...)
 			writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/rejectfixture\n\ngo "+language+"\n")
 			copyPath := filepath.Join(dir, filepath.Base(c.File))
 			writeFile(t, copyPath, string(source))
@@ -195,12 +221,18 @@ func TestDiagnostics(t *testing.T) {
 				if c.ModuleGoVersion != "" {
 					pattern = "."
 				}
-				err = driver.Build(driver.Options{Dir: dir, Patterns: []string{pattern}, Out: t.TempDir(), Runtime: runtimeDir(t)})
-				result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
-				if err != nil {
-					result.Gart.Exit = 1
-					result.BuildError = err.Error()
-					result.GartDiagnostics = column.ReplaceAllString(strings.ReplaceAll(err.Error(), copyPath, sourcePath), "$1:")
+				if c.Recipe == "errorcheck -t 10" {
+					text := recordLanguage(t, &result.Gart, dir, limit, timedCompiler, "build", "-format=false", "-runtime", runtimeDir(t), "-o", t.TempDir(), pattern)
+					result.BuildError = strings.TrimSpace(strings.TrimPrefix(text, "gart: "))
+					result.GartDiagnostics = column.ReplaceAllString(strings.ReplaceAll(result.BuildError, copyPath, sourcePath), "$1:")
+				} else {
+					err = driver.Build(driver.Options{Dir: dir, Patterns: []string{pattern}, Out: t.TempDir(), Runtime: runtimeDir(t)})
+					result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
+					if err != nil {
+						result.Gart.Exit = 1
+						result.BuildError = err.Error()
+						result.GartDiagnostics = column.ReplaceAllString(strings.ReplaceAll(err.Error(), copyPath, sourcePath), "$1:")
+					}
 				}
 				result.Gart.OutputSHA256 = languageDigest([]byte(result.GartDiagnostics))
 			}
