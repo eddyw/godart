@@ -41,12 +41,13 @@ void $stdout(GoString text) {
 }
 
 /// The Go builtin `print`. It writes to stderr with no separator.
-void $print(List<String> parts) => $platformStderrText(parts.join());
+void $print(List<String> parts) =>
+    $platformStderr(GoString.fromString(parts.join()).bytes);
 
 /// The Go builtin `println`. It writes to stderr, and it puts 1 space between
 /// 2 values.
 void $println(List<String> parts) =>
-    $platformStderrText('${parts.join(' ')}\n');
+    $platformStderr(GoString.fromString('${parts.join(' ')}\n').bytes);
 
 String $referenceText(Iface? value) {
   final String pointer = '0x${$valuePointer(value).toRadixString(16)}';

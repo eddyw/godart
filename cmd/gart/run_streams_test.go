@@ -17,11 +17,18 @@ func TestRunStreams(t *testing.T) {
 		"go.mod": "module example.com/runstreams\n\ngo 1.27\n",
 		"main.go": `package main
 import ("fmt"; "os")
+type text string
+func show[T ~string](s T) { print(s); println(s) }
 func main() {
  fmt.Println("stdout")
  fmt.Fprintln(os.Stderr,"stderr")
  print("builtin print")
  println(" line")
+ raw := make([]byte,256)
+ for i := range raw { raw[i]=byte(i) }
+ s := string(raw)+"€𐀀"
+ print(s); println(text(s))
+ show(s); show(text(s))
  os.Stdout.Write([]byte{0xff,0,10})
  os.Stderr.Write([]byte{0xfe,0,10})
  if len(os.Args)>1 { os.Exit(7) }
