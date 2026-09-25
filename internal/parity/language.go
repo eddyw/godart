@@ -241,6 +241,9 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 			if c.Action == "asmcheck" {
 				c.Exclusion = &Omission{Classification: "target-limit", Reason: "The assertions match native Go assembly instructions. Gart delegates machine code generation to Dart and does not preserve Go compiler instruction selection."}
 			}
+			if (c.Action == "builddir" || c.Action == "buildrundir") && slices.ContainsFunc(c.Files, func(file SourceFile) bool { return strings.HasSuffix(file.Path, ".s") }) {
+				c.Exclusion = &Omission{Classification: "target-limit", Reason: "The recipe assembles and links native Go assembly files. Gart does not compile Go assembly or preserve the native linker ABI."}
+			}
 			switch c.Recipe {
 			case "run -gcflags=-d=converthash=qy":
 				c.Exclusion = &Omission{Classification: "target-limit", Reason: "The recipe selects experimental Go backend behavior for floating-point overflow conversions. The Go specification leaves these values implementation-dependent. Gart does not reproduce native compiler debug modes."}
