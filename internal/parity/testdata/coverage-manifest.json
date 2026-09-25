@@ -889,6 +889,13 @@
     "status": "vm-suite"
   },
   {
+    "package": "internal/poll",
+    "status": "compile-blocked",
+    "diagnostic": "undefined: FD",
+    "blocker_cause": "runtime-boundary",
+    "blocker_reason": "The suite requires Go's native file descriptors, fdMutex, and runtime poller. The overlay retains only the closed-network error."
+  },
+  {
     "package": "internal/race",
     "status": "no-runnable-tests"
   },
