@@ -629,8 +629,9 @@ class ParityTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             execution = dict(ran=True, exit=0, timed_out=False)
-            for option in ["-N", "-B", "-c=2", "-c=4", "-l", "-d=ssa/check/on"]:
-                command = ["go", "tool", "compile", "-e", "-p=p", "-importcfg=config", option, "-o", "native.o", "sdk/p.go"]
+            for option in ["-N", "-B", "-c=2", "-c=4", "-l", "-d=ssa/check/on", "-N -d=softfloat",
+                           "-d=checkptr", "-d=libfuzzer", "-d=ssa/check/seed", "-d=ssa/check/seed=1", "-dynlink"]:
+                command = ["go", "tool", "compile", "-e", "-p=p", "-importcfg=config"] + option.split() + ["-o", "native.o", "sdk/p.go"]
                 outcome = dict(fixture=dict(name="p", file="p.go", recipe="compile " + option),
                                contract="compile", status="passed", wrapper_sha256="wrapper",
                                native=dict(execution, command=command),

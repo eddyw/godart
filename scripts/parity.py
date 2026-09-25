@@ -500,12 +500,15 @@ def language_behavior(paths):
                                       and native[5].startswith("-importcfg=") and native[6:8] == ["-o", "native.o"]
                                       and native[8].endswith("/" + case["fixture"].get("file", "")))
                         elif case["contract"] == "compile" and case["fixture"]["recipe"] in {
-                                "compile -N", "compile -B", "compile -c=2", "compile -c=4", "compile -l", "compile -d=ssa/check/on"}:
+                                "compile -N", "compile -B", "compile -c=2", "compile -c=4", "compile -l", "compile -d=ssa/check/on",
+                                "compile -N -d=softfloat", "compile -d=checkptr", "compile -d=libfuzzer",
+                                "compile -d=ssa/check/seed", "compile -d=ssa/check/seed=1", "compile -dynlink"}:
                             native = case["native"].get("command", [])
-                            recipe = (len(native) == 10 and native[:5] == ["go", "tool", "compile", "-e", "-p=p"]
+                            flags = case["fixture"]["recipe"].split()[1:]
+                            recipe = (len(native) == 9 + len(flags) and native[:5] == ["go", "tool", "compile", "-e", "-p=p"]
                                       and native[5].startswith("-importcfg=")
-                                      and native[6:9] == [case["fixture"]["recipe"].split()[1], "-o", "native.o"]
-                                      and native[9].endswith("/" + case["fixture"].get("file", ""))
+                                      and native[6:-3] == flags and native[-3:-1] == ["-o", "native.o"]
+                                      and native[-1].endswith("/" + case["fixture"].get("file", ""))
                                       and case["gart"].get("command") == ["dart", "compile", "kernel", "compile.dart", "-o", "compile.dill"])
                         valid = (executed and recipe
                                  and case.get("wrapper_sha256") and not case.get("build_error"))

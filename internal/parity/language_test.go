@@ -74,12 +74,18 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/groupsrun.go", "// rundir\npackage ignored\n")
 	write("test/groupsrun.dir/a.go", "package a\n")
 	compileRecipes := map[string]string{
-		"compileflags":    "compile -N",
-		"compilebounds":   "compile -B",
-		"compileworkers2": "compile -c=2",
-		"compileworkers4": "compile -c=4",
-		"compileinline":   "compile -l",
-		"compilessa":      "compile -d=ssa/check/on",
+		"compileflags":     "compile -N",
+		"compilebounds":    "compile -B",
+		"compileworkers2":  "compile -c=2",
+		"compileworkers4":  "compile -c=4",
+		"compileinline":    "compile -l",
+		"compilessa":       "compile -d=ssa/check/on",
+		"compilesoftfloat": "compile -N -d=softfloat",
+		"compilecheckptr":  "compile -d=checkptr",
+		"compilefuzzer":    "compile -d=libfuzzer",
+		"compileseed":      "compile -d=ssa/check/seed",
+		"compileseed1":     "compile -d=ssa/check/seed=1",
+		"compiledynlink":   "compile -dynlink",
 	}
 	for name, recipe := range compileRecipes {
 		write("test/"+name+".go", "// "+recipe+"\npackage p\n")
@@ -124,8 +130,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 68 {
-		t.Fatalf("got %d cases, want 68", len(inv.Cases))
+	if len(inv.Cases) != 74 {
+		t.Fatalf("got %d cases, want 74", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {

@@ -191,9 +191,8 @@ With `GART_PARITY_REPORT_DIR`, language reports retain command arguments, exits,
 output hashes, source hashes, exclusions, SDK versions, targets, and incomplete selections.
 The aggregate refuses a pass if an output hash differs or either execution fails.
 The `language-compile` suite compares exact `compile` recipes. Native Go compiles the original file to an object.
-It accepts the exact single-option recipes `-p=p`, `-p=main`, `-N`, `-B`,
-`-c=2`, `-c=4`, `-l`, and `-d=ssa/check/on`.
-The native command retains the recipe option. The aggregate verifies this option.
+The recipe inventory defines supported options, including exact multi-option recipes.
+The native command retains their original order and values. The aggregate verifies these options.
 Gart compiles the same source and an inert Dart entry point to kernel.
 These results compare source acceptance. Gart does not reproduce Go backend options or native optimization behavior.
 The adapter uses a package URI for library imports to preserve Dart type identity.
