@@ -1735,8 +1735,13 @@ func (e *emitter) textOf(x ir.Expr) string {
 	case isInteger(t):
 		return e.expr(x) + ".toString()"
 	}
-	if b, ok := types.Unalias(t).Underlying().(*types.Basic); ok && b.Kind() == types.Bool {
-		return e.expr(x) + ".toString()"
+	if b, ok := types.Unalias(t).Underlying().(*types.Basic); ok {
+		switch b.Kind() {
+		case types.Bool:
+			return e.expr(x) + ".toString()"
+		case types.UnsafePointer:
+			return fmt.Sprintf("$referenceText(%s)", e.box(x, t))
+		}
 	}
 	e.fail("print does not accept the type %s yet", t)
 	return "''"

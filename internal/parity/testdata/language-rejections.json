@@ -71,9 +71,6 @@
     "$DIR/fixture.go:19:13: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "$DIR/fixture.go:19:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
-  "fixedbugs/bug328": [
-    "print does not accept the type unsafe.Pointer yet"
-  ],
   "fixedbugs/bug514": [
     "$DIR/bug514.go:11:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
   ],

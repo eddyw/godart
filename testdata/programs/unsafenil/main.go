@@ -10,6 +10,8 @@ type Pointer unsafe.Pointer
 
 func zero[T ~unsafe.Pointer]() T { var value T; return value }
 
+func show[T ~unsafe.Pointer](value T) { print(value); println(value) }
+
 func main() {
 	var p unsafe.Pointer
 	q := unsafe.Pointer(uintptr(0))
@@ -33,6 +35,10 @@ func main() {
 	if reflect.Zero(r.Type()).Interface().(unsafe.Pointer) != nil {
 		panic("reflected zero")
 	}
+	print(p, n, named)
+	println(p, n, named)
+	show(p)
+	show(named)
 	fmt.Printf("%v %p %T %v\n", p, p, p, named)
 	fmt.Println("ok")
 }
