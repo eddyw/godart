@@ -46,6 +46,14 @@ func main() {
 	}
 	ctx := context.Background()
 
+	ordered, orderedErr := r.LookupIP(ctx, "ip", "ordered.example.com.")
+	fmt.Println("ordered IP:", ordered, orderedErr)
+	orderedAddr, orderedAddrErr := r.LookupIPAddr(ctx, "ordered.example.com.")
+	fmt.Println("ordered IPAddr:", orderedAddr, orderedAddrErr)
+	orderedHost, orderedHostErr := r.LookupHost(ctx, "ordered.example.com.")
+	fmt.Println("ordered host:", orderedHost, orderedHostErr)
+	orderedNet, orderedNetErr := r.LookupNetIP(ctx, "ip", "ordered.example.com.")
+	fmt.Println("ordered netip:", orderedNet, orderedNetErr)
 	net.DefaultResolver = r
 	for _, network := range []string{"", "tcp", "tcp4", "tcp6"} {
 		for _, host := range []string{"example.com.", "[example.com.]", "v4.example.com.", "v6.example.com.", "zero.example.com."} {

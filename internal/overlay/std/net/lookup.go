@@ -470,6 +470,16 @@ func (r *Resolver) LookupIP(ctx context.Context, network, host string) ([]IP, er
 	trace := traceOf(ctx)
 	traceDNSStart(trace, host)
 	out, err := r.lookupIP(ctx, types, network, host)
+	if !r.readsSystem() && len(out) > 1 {
+		addrs := make([]IPAddr, len(out))
+		for i, ip := range out {
+			addrs[i] = IPAddr{IP: ip}
+		}
+		sortByRFC6724(addrs)
+		for i, addr := range addrs {
+			out[i] = addr.IP
+		}
+	}
 	traceDNSDone(trace, out, err)
 	return out, err
 }
@@ -490,13 +500,6 @@ func lookupAddrs(host string, family int) string
 // Go reads it on darwin, on ios, on android, and on windows, and it reads the
 // resolver of Go on each other platform. A Resolver that names PreferGo or its
 // own Dial always reads the resolver of Go, exactly as in Go.
-//
-// The order of the addresses holds the difference. Go sorts the list with RFC
-// 6724, and rule 1, rule 2, and rule 5 of that algorithm each read the source
-// address that the system would take for a destination. Go reads that address
-// with a connected datagram socket, and dart:io opens no such socket and
-// exports no route, thus the resolver of the overlay cannot sort the list. The
-// resolver of the platform gives the list in that order already.
 func (r *Resolver) readsSystem() bool {
 	if r != nil && (r.PreferGo || r.Dial != nil) {
 		return false

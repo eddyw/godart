@@ -116,6 +116,7 @@ Its overlay source retains the Go BSD notice.
 Resolver fixtures retain Go `src/net/main_test.go` setup inputs from a native SDK execution.
 The generated fixture preserves its BSD notice.
 Internet address selection adapts Go `src/net/ipsock.go` and `lookup.go`.
+RFC 6724 address order retains Go `src/net/addrselect.go` with its BSD notice.
 The address overlay retains their BSD notice.
 IP protocol validation adapts Go `src/net/dial.go`, `parse.go`,
 `lookup.go`, and `lookup_unix.go` with their BSD notice.

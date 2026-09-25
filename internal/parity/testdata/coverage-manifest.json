@@ -1047,9 +1047,9 @@
   {
     "package": "net",
     "status": "compile-blocked",
-    "diagnostic": "undefined: sortByRFC6724withSrcs",
+    "diagnostic": "undefined: conf",
     "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The suite calls the private native RFC6724 source-address sorter."
+    "blocker_reason": "The complete suite requires private resolver configuration and native DNS hooks."
   },
   {
     "package": "net/http",
