@@ -28,6 +28,23 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/module.dir/main.go", "package main\nfunc main() {}\n")
 	write("test/runarguments.go", "// run arg1 arg2\npackage main\nfunc main() {}\n")
 	write("test/runfiles.go", "// run ./extra.go\npackage main\nfunc main() {}\n")
+	runCompilerRecipes := map[string]struct {
+		recipe string
+		flags  []string
+	}{
+		"runcallersplit": {"run -gcflags -l=4", []string{"-gcflags", "-l=4"}},
+		"runnoinline":    {`run -gcflags="-l"`, []string{"-gcflags=-l"}},
+		"runnoopt":       {"run -gcflags='all=-N -l'", []string{"-gcflags=all=-N -l"}},
+		"runconvert":     {"run -gcflags=-d=converthash=qy", []string{"-gcflags=-d=converthash=qy"}},
+		"runsoftfloat":   {"run -gcflags=-d=softfloat", []string{"-gcflags=-d=softfloat"}},
+		"runssa":         {"run -gcflags=-d=ssa/check/on", []string{"-gcflags=-d=ssa/check/on"}},
+		"runcaller":      {"run -gcflags=-l=4", []string{"-gcflags=-l=4"}},
+	}
+	for name, recipe := range runCompilerRecipes {
+		write("test/"+name+".go", "// "+recipe.recipe+"\npackage main\nfunc main() {}\n")
+	}
+	write("test/runoptionextra.go", "// run -gcflags=-l=4 -race\npackage main\n")
+	write("test/runoptionunknown.go", "// run -gcflags=-unknown\npackage main\n")
 	write("test/run.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/run.out", "expected\n")
 	write("test/compile.go", "// compile\npackage p\n")
@@ -107,8 +124,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 59 {
-		t.Fatalf("got %d cases, want 59", len(inv.Cases))
+	if len(inv.Cases) != 68 {
+		t.Fatalf("got %d cases, want 68", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -203,6 +220,17 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if c := cases["runarguments"]; c.Adapter != "run-recipe" || !slices.Equal(c.Arguments, []string{"arg1", "arg2"}) {
 		t.Fatalf("program arguments lost: %+v", c)
+	}
+	for name, recipe := range runCompilerRecipes {
+		if c := cases[name]; c.Adapter != "run-recipe" || c.Recipe != recipe.recipe || !slices.Equal(c.NativeFlags, recipe.flags) || len(c.Arguments) != 0 || len(c.RunFiles) != 0 {
+			t.Fatalf("the run adapter lost its compiler options: %+v", c)
+		}
+	}
+	if cases["runoptionextra"].Adapter != "missing" || cases["runoptionunknown"].Adapter != "missing" {
+		t.Fatal("the run adapter must preserve extra or unknown options")
+	}
+	if c := cases["runconvert"]; c.Exclusion == nil || c.Exclusion.Classification != "target-limit" || c.Exclusion.Reason == "" {
+		t.Fatal("experimental native conversion behavior must retain its target limit")
 	}
 	if c := cases["runfiles"]; c.Adapter != "run-recipe" || !slices.Equal(c.RunFiles, []string{"extra.go"}) || len(c.Files) != 2 || c.Files[1].Path != "extra.go" {
 		t.Fatalf("run companion source lost: %+v", c)

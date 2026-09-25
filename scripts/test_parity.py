@@ -522,6 +522,46 @@ class ParityTest(unittest.TestCase):
                 mutate(changed)
                 assess(changed, "failed")
 
+    def test_run_recipe_preserves_compiler_options(self):
+        recipes = {
+            "run -gcflags -l=4": ["-gcflags", "-l=4"],
+            'run -gcflags="-l"': ["-gcflags=-l"],
+            "run -gcflags='all=-N -l'": ["-gcflags=all=-N -l"],
+            "run -gcflags=-d=converthash=qy": ["-gcflags=-d=converthash=qy"],
+            "run -gcflags=-d=softfloat": ["-gcflags=-d=softfloat"],
+            "run -gcflags=-d=ssa/check/on": ["-gcflags=-d=ssa/check/on"],
+            "run -gcflags=-l=4": ["-gcflags=-l=4"],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            execution = dict(ran=True, exit=0, timed_out=False, output_sha256="expected")
+            for recipe, flags in recipes.items():
+                case = dict(fixture=dict(name="main", file="main.go", recipe=recipe, adapter="run-recipe",
+                                         native_flags=flags, files=[dict(path="main.go", sha256="a" * 64)]),
+                            contract="run", status="passed", expected_sha256="expected",
+                            native=dict(execution, command=["go", "run", "-gcflags=all="] + flags + ["main.go"]),
+                            gart=dict(execution, command=["dart", "run", "main.dart"]))
+                path = root / "language.json"
+
+                def assess(value, status, target):
+                    parity.save(path, dict(kind="language", target=target, complete=True, outcomes=[value], shard=0, shards=1))
+                    self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+                for target in ["vm", "aot", "js", "wasm"]:
+                    assess(case, "passed", target)
+                    for mutate in [
+                        lambda c: c["fixture"].update(native_flags=[]),
+                        lambda c: c["fixture"].update(recipe=recipe + " -race"),
+                        lambda c: c["fixture"].update(recipe="run -gcflags=-unknown"),
+                        lambda c: c["native"]["command"].pop(3),
+                        lambda c: c["native"]["command"].insert(3, "-race"),
+                        lambda c: c["fixture"].update(arguments=["unexpected"]),
+                        lambda c: c["gart"].update(output_sha256="different"),
+                    ]:
+                        changed = copy.deepcopy(case)
+                        mutate(changed)
+                        assess(changed, "failed", target)
+
     def test_compile_recipe_requires_both_compilers_and_wrapper_identity(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

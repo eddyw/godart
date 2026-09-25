@@ -248,7 +248,9 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				outcome.Gart.Environment = settings
 				outcome.ImportConfigSHA256 = importcfgHash
 			}
-			nativeArgs := append([]string{"run", "-gcflags=all=" + inv.GCFlags, file}, c.RunFiles...)
+			nativeArgs := append([]string{"run", "-gcflags=all=" + inv.GCFlags}, c.NativeFlags...)
+			nativeArgs = append(nativeArgs, file)
+			nativeArgs = append(nativeArgs, c.RunFiles...)
 			nativeArgs = append(nativeArgs, c.Arguments...)
 			native := runLanguage(t, &outcome.Native, dir, runLimit, "go", nativeArgs...)
 			if native != string(want) {

@@ -18,11 +18,16 @@ int $recordPC(GoString info) => _counters.putIfAbsent(info, () => _newPC(info));
 
 int _newPC(GoString info) {
   _positions.add(info);
-  return _positions.length;
+  // The adjacent odd value is the return PC for this source position.
+  return _positions.length * 2;
 }
 
-GoString $pcInfo(int pc) =>
-    pc > 0 && pc <= _positions.length ? _positions[pc - 1] : GoString.empty;
+GoString $pcInfo(int pc) {
+  final index = (pc >> 1) - 1;
+  return index >= 0 && index < _positions.length
+      ? _positions[index]
+      : GoString.empty;
+}
 
 /// Generic instances can share a displayed name but have distinct entries.
 int $registerFunction(GoString info, [String? identity]) {
@@ -38,6 +43,7 @@ int $registerFunction(GoString info, [String? identity]) {
 }
 
 int $pcEntry(int pc) {
+  pc &= ~1;
   if (_entryPCs.contains(pc)) return pc;
   final text = $pcInfo(pc).toDartString();
   if (text.isEmpty) return 0;

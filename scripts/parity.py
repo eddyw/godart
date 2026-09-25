@@ -382,11 +382,21 @@ def generator_recipe_valid(case, action="runoutput"):
 
 def run_recipe_valid(case, target):
     fixture = case["fixture"]
-    parts = fixture.get("recipe", "").split()
+    recipe = fixture.get("recipe", "")
+    flags = {
+        "run -gcflags -l=4": ["-gcflags", "-l=4"],
+        'run -gcflags="-l"': ["-gcflags=-l"],
+        "run -gcflags='all=-N -l'": ["-gcflags=all=-N -l"],
+        "run -gcflags=-d=converthash=qy": ["-gcflags=-d=converthash=qy"],
+        "run -gcflags=-d=softfloat": ["-gcflags=-d=softfloat"],
+        "run -gcflags=-d=ssa/check/on": ["-gcflags=-d=ssa/check/on"],
+        "run -gcflags=-l=4": ["-gcflags=-l=4"],
+    }.get(recipe, [])
+    parts = recipe.split()
     if len(parts) < 2 or parts[0] != "run":
         return False
     files, arguments = [], []
-    for value in parts[1:]:
+    for value in ([] if flags else parts[1:]):
         if value.startswith("-") or any(c in value for c in "\\\"'"):
             return False
         if not arguments and value.endswith(".go"):
@@ -396,14 +406,15 @@ def run_recipe_valid(case, target):
             files.append(path.as_posix())
         else:
             arguments.append(value)
-    if files != fixture.get("run_files", []) or arguments != fixture.get("arguments", []):
+    if (files != fixture.get("run_files", []) or arguments != fixture.get("arguments", [])
+            or flags != fixture.get("native_flags", [])):
         return False
     recorded = {f["path"]: f["sha256"] for f in fixture.get("files", [])}
     if not all(re.fullmatch(r"[0-9a-f]{64}", recorded.get(f, "")) for f in [fixture.get("file", "")] + files):
         return False
     native = case["native"].get("command", [])
     if (native[:2] != ["go", "run"] or len(native) < 4 or not native[2].startswith("-gcflags=all=")
-            or native[3:] != [Path(fixture["file"]).name] + files + arguments or case.get("build_error")):
+            or native[3:] != flags + [Path(fixture["file"]).name] + files + arguments or case.get("build_error")):
         return False
     command = case["gart"].get("command", [])
     if arguments and command[-len(arguments):] != arguments:

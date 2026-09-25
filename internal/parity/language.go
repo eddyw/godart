@@ -46,6 +46,7 @@ func ReadLanguagePolicy() (*LanguagePolicy, error) {
 }
 
 type LanguageCase struct {
+	NativeFlags     []string     `json:"native_flags,omitempty"`
 	RunFiles        []string     `json:"run_files,omitempty"`
 	Arguments       []string     `json:"arguments,omitempty"`
 	GeneratorFiles  []string     `json:"generator_files,omitempty"`
@@ -151,6 +152,9 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 			}
 			if recipe == "run" {
 				c.Adapter = "single-file"
+			} else if flags := languageRunCompilerFlags[recipe]; flags != nil {
+				c.Adapter = "run-recipe"
+				c.NativeFlags = slices.Clone(flags)
 			} else if files, args, ok := languageRunRecipe(recipe); ok {
 				c.Adapter = "run-recipe"
 				c.RunFiles, c.Arguments = files, args
@@ -231,6 +235,8 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				c.Exclusion = &Omission{Classification: "target-limit", Reason: "The assertions match native Go assembly instructions. Gart delegates machine code generation to Dart and does not preserve Go compiler instruction selection."}
 			}
 			switch c.Recipe {
+			case "run -gcflags=-d=converthash=qy":
+				c.Exclusion = &Omission{Classification: "target-limit", Reason: "The recipe selects experimental Go backend behavior for floating-point overflow conversions. The Go specification leaves these values implementation-dependent. Gart does not reproduce native compiler debug modes."}
 			case "errorcheck -0 -m -l",
 				"errorcheck -0 -m",
 				"errorcheck -0 -m=2",
@@ -264,6 +270,16 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 var errorcheckVersionRecipe = regexp.MustCompile(`^errorcheck(\s+-0)?\s+-lang=(go[0-9]+\.[0-9]+)$`)
 
 var directoryRecipe = regexp.MustCompile(`^runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?$`)
+
+var languageRunCompilerFlags = map[string][]string{
+	"run -gcflags -l=4":              {"-gcflags", "-l=4"},
+	`run -gcflags="-l"`:              {"-gcflags=-l"},
+	"run -gcflags='all=-N -l'":       {"-gcflags=all=-N -l"},
+	"run -gcflags=-d=converthash=qy": {"-gcflags=-d=converthash=qy"},
+	"run -gcflags=-d=softfloat":      {"-gcflags=-d=softfloat"},
+	"run -gcflags=-d=ssa/check/on":   {"-gcflags=-d=ssa/check/on"},
+	"run -gcflags=-l=4":              {"-gcflags=-l=4"},
+}
 
 func languageRunRecipe(recipe string) ([]string, []string, bool) {
 	fields := strings.Fields(recipe)

@@ -187,6 +187,18 @@ Slice<GoString> $stack(int skip) {
     frames = _mergePanicOrigin(frames, panic);
   }
 
+  final current = $current;
+  if (current != null) {
+    if (current.isMain) {
+      frames.add(
+        const GoPos('runtime.main', 'package:goruntime/src/sched.dart', 0),
+      );
+    }
+    frames.add(
+      const GoPos('runtime.goexit', 'package:goruntime/src/sched.dart', 0),
+    );
+  }
+
   final out = <GoString>[];
   for (var i = skip; i < frames.length; i++) {
     final f = frames[i];

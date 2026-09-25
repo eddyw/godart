@@ -70,12 +70,17 @@ void main() {
     expect($pcEntry(second), isNot($pcEntry(first)));
     expect($pcInfo(first).toDartString(), 'fixture.first|entries.go|5');
     expect($pcInfo(next).toDartString(), 'fixture.first|entries.go|8');
+    expect($pcInfo(first + 1), $pcInfo(first));
+    expect($pcInfo(next + 1), $pcInfo(next));
+    expect($pcEntry(first + 1), $pcEntry(first));
+    expect($pcEntry(second + 1), $pcEntry(second));
     expect(
       $pcInfo($pcEntry(first)).toDartString(),
       'fixture.first|entries.go|3',
     );
     expect($pcEntry(0), 0);
     expect($pcEntry(-1), 0);
+    expect($pcInfo(1), GoString.empty);
     final sameLine = $recordPC(
       GoString.fromString('fixture.first|entries.go|3'),
     );
@@ -95,6 +100,7 @@ void main() {
     expect($pcEntry(otherPC), otherPC);
     expect($pcInfo(firstPC), info);
     expect($pcInfo(otherPC), info);
+    expect($pcEntry(otherPC + 1), otherPC);
     final alias = $copyFunctionPC(() => 4, first);
     expect($functionPC(alias), firstPC);
     expect(alias(), 4);

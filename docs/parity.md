@@ -18,7 +18,7 @@ SDK versions, modes, and exclusions.
 | Pointer output | Process-local identities can represent pointers. They are not native memory addresses. |
 | Map iteration | The runtime can expose insertion order. Programs must not depend on Go's unspecified iteration order. |
 | Reflection | Descriptors cover a substantial subset. Dynamically created function types need an emitted callable factory. |
-| Function metadata | Function values expose synthetic PCs and Go source metadata. Reflection method wrappers can have no Go source location. PCs do not identify native instructions. |
+| Function metadata | Function values expose synthetic PCs and Go source metadata. Return PCs and their preceding call PCs resolve to the same source position. Reflection method wrappers can have no Go source location. PCs do not identify native instructions. |
 | Garbage collection | Dart controls collection and cleanup timing. Native Go heap and collector controls do not transfer directly. |
 | Runtime metrics | `runtime/metrics` exposes GODEBUG event counters and value accessors. Unknown metrics return `KindBad`. Native Go heap, scheduler, and collector measurements remain unavailable. |
 | Deep calls | Recursive call cycles use resumable frames. Synchronous callbacks execute those frames without scheduler waits. Actual channel and I/O waits remain invalid in synchronous callbacks. |
@@ -32,6 +32,8 @@ SDK versions, modes, and exclusions.
 | GODEBUG | Executables use the Go toolchain's module, workspace, and source defaults. Environment values override these defaults for library readers and `panicnil`. Other runtime controls and bisect patterns remain incomplete. The FIPS module rejects non-default modes. |
 
 The verifier reports unsupported source constructs with source positions.
+`runtime.Caller` and `runtime.Callers` retain Go source frames on VM and AOT.
+JavaScript and Wasm still lack source positions for these frames.
 The verifier tests define precise rejection cases. Runtime and target limits
 can still produce errors after compilation.
 

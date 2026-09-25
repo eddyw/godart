@@ -183,6 +183,9 @@ Use `--language /path/to/inventory.json` to include a retained inventory.
 
 The language adapter runs plain `run` recipes from all upstream recipe directories.
 Both executions must exit successfully and match the original `.out` bytes.
+Selected runtime recipes retain explicit native compiler options, including quoted option values.
+Their results compare original assertions and output, without claims about equivalent compiler optimizations.
+The experimental `converthash` recipe has a target limit because it selects native behavior for implementation-dependent overflow conversions.
 An absent `.out` requires empty output. Only CRLF normalization follows the upstream runner.
 With `GART_PARITY_REPORT_DIR`, language reports retain command arguments, exits,
 output hashes, source hashes, exclusions, SDK versions, targets, and incomplete selections.

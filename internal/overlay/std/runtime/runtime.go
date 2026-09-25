@@ -143,7 +143,7 @@ func Caller(skip int) (pc uintptr, file string, line int, ok bool) {
 
 // Callers writes the program counter of each frame into pc, and it gives the
 // count. The count of skip names the first frame, and the value 0 names Callers
-// itself.
+// itself. Each synthetic return PC follows its even call PC.
 func Callers(skip int, pc []uintptr) int {
 	stack := dart.Stack(skip)
 	n := 0
@@ -151,7 +151,7 @@ func Callers(skip int, pc []uintptr) int {
 		if n == len(pc) {
 			break
 		}
-		pc[n] = record(frame)
+		pc[n] = record(frame) + 1
 		n++
 	}
 	return n
@@ -181,7 +181,7 @@ func (f *Frames) Next() (Frame, bool) {
 	if len(f.list) == 0 {
 		return Frame{}, false
 	}
-	pc := f.list[0]
+	pc := f.list[0] &^ 1
 	f.list = f.list[1:]
 	name, file, line := at(pc)
 	return Frame{PC: pc, Func: FuncForPC(pc), Function: name, File: file,
