@@ -585,6 +585,38 @@ class ParityTest(unittest.TestCase):
             outcome["fixture"]["recipe"] = "compile -p=other"
             assess("failed")
 
+    def test_compile_options_require_the_original_command(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            execution = dict(ran=True, exit=0, timed_out=False)
+            for option in ["-N", "-B", "-c=2", "-c=4", "-l", "-d=ssa/check/on"]:
+                command = ["go", "tool", "compile", "-e", "-p=p", "-importcfg=config", option, "-o", "native.o", "sdk/p.go"]
+                outcome = dict(fixture=dict(name="p", file="p.go", recipe="compile " + option),
+                               contract="compile", status="passed", wrapper_sha256="wrapper",
+                               native=dict(execution, command=command),
+                               gart=dict(execution, command=["dart", "compile", "kernel", "compile.dart", "-o", "compile.dill"]))
+                report = dict(kind="language", complete=True, outcomes=[outcome], shard=0, shards=1)
+                path = root / "language.json"
+
+                def assess(status):
+                    parity.save(path, report)
+                    self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+                assess("passed")
+                for changed in [command[:6] + command[7:], command[:6] + ["-other"] + command[7:],
+                                command + ["-l"], command[:-1] + ["other.go"],
+                                command[:4] + ["-p=main"] + command[5:]]:
+                    outcome["native"]["command"] = changed
+                    assess("failed")
+                outcome["native"]["command"] = command
+                outcome["fixture"]["recipe"] += " -l"
+                assess("failed")
+                outcome["fixture"]["recipe"] = "compile -c=8"
+                assess("failed")
+                outcome["fixture"]["recipe"] = "compile " + option
+                outcome["gart"]["command"] = ["dart", "analyze", "compile.dart"]
+                assess("failed")
+
     def test_rejection_requires_original_assertions_and_diagnostics(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

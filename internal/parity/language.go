@@ -163,7 +163,7 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				}
 			} else if recipe == "rundir" || recipe == "compiledir" || recipe == "errorcheckdir" || recipe == "compiledir -s" || recipe == "errorcheckdir -s" {
 				c.Adapter = "directory-packages"
-			} else if recipe == "compile" || recipe == "compile -p=p" || recipe == "compile -p=main" {
+			} else if slices.Contains([]string{"compile", "compile -p=p", "compile -p=main", "compile -N", "compile -B", "compile -c=2", "compile -c=4", "compile -l", "compile -d=ssa/check/on"}, recipe) {
 				c.Adapter = "compile-file"
 			} else if match := errorcheckVersionRecipe.FindStringSubmatch(recipe); match != nil {
 				c.Adapter = "reject-file"

@@ -56,7 +56,19 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/groupssingle.dir/a.go", "package a\n")
 	write("test/groupsrun.go", "// rundir\npackage ignored\n")
 	write("test/groupsrun.dir/a.go", "package a\n")
-	write("test/compileflags.go", "// compile -N\npackage p\n")
+	compileRecipes := map[string]string{
+		"compileflags":    "compile -N",
+		"compilebounds":   "compile -B",
+		"compileworkers2": "compile -c=2",
+		"compileworkers4": "compile -c=4",
+		"compileinline":   "compile -l",
+		"compilessa":      "compile -d=ssa/check/on",
+	}
+	for name, recipe := range compileRecipes {
+		write("test/"+name+".go", "// "+recipe+"\npackage p\n")
+	}
+	write("test/compileextra.go", "// compile -N -l\npackage p\n")
+	write("test/compileunknown.go", "// compile -c=8\npackage p\n")
 	write("test/compilepackage.go", "// compile -p=p\npackage v4\n")
 	write("test/compilemain.go", "// compile -p=main\npackage main\n")
 	write("test/compileotherpackage.go", "// compile -p=other\npackage v4\n")
@@ -95,8 +107,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 52 {
-		t.Fatalf("got %d cases, want 52", len(inv.Cases))
+	if len(inv.Cases) != 59 {
+		t.Fatalf("got %d cases, want 59", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -157,8 +169,13 @@ func TestLanguageInventory(t *testing.T) {
 	if cases["rejectdirectory"].Adapter != "directory-packages" || cases["rejectdirectoryflags"].Adapter != "missing" {
 		t.Fatal("directory diagnostic recipes must preserve their flags")
 	}
-	if cases["compile"].Adapter != "compile-file" || cases["compileflags"].Adapter != "missing" {
+	if cases["compile"].Adapter != "compile-file" || cases["compileextra"].Adapter != "missing" || cases["compileunknown"].Adapter != "missing" {
 		t.Fatal("the compile adapter must not discard recipe flags")
+	}
+	for name, recipe := range compileRecipes {
+		if c := cases[name]; c.Adapter != "compile-file" || c.Recipe != recipe {
+			t.Fatalf("the compile adapter lost its recipe: %+v", c)
+		}
 	}
 	if c := cases["compilepackage"]; c.Adapter != "compile-file" || c.Recipe != "compile -p=p" || cases["compileotherpackage"].Adapter != "missing" {
 		t.Fatal("the compile adapter must preserve its package option")

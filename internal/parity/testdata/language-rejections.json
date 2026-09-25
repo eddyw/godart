@@ -178,6 +178,9 @@
     "$DIR/fixture.go:17:9: the function a holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)",
     "$DIR/fixture.go:23:9: the function c holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
   ],
+  "fixedbugs/issue31915": [
+    "$DIR/fixture.go:17:4: the function f holds no body, thus the compiler writes no Dart code for it (an assembly file or a go:linkname directive holds the code)"
+  ],
   "fixedbugs/issue32477": [
     "$DIR/issue32477.go:47:10: undefined: runtime.SetFinalizer"
   ],
@@ -187,6 +190,12 @@
   ],
   "fixedbugs/issue34503": [
     "$DIR/a/a.go:14:4: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
+  ],
+  "fixedbugs/issue36723": [
+    "$DIR/fixture.go:21:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:21:23: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:25:24: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/fixture.go:25:9: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue38093": [
     "no package matches [./...] in $DIR"

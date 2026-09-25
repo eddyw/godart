@@ -75,7 +75,12 @@ func runCompilationCases(t *testing.T, adapter string) {
 				if c.Recipe == "compile -p=main" {
 					packageOption = "-p=main"
 				}
-				runLanguage(t, &result.Native, dir, runLimit, "go", "tool", "compile", "-e", packageOption, "-importcfg="+config, "-o", "native.o", sourcePath)
+				command := []string{"go", "tool", "compile", "-e", packageOption, "-importcfg=" + config}
+				if c.Recipe != "compile -p=p" && c.Recipe != "compile -p=main" {
+					command = append(command, strings.Fields(c.Recipe)[1:]...)
+				}
+				command = append(command, "-o", "native.o", sourcePath)
+				runLanguage(t, &result.Native, dir, runLimit, command[0], command[1:]...)
 			}
 			if c.Exclusion != nil {
 				t.Skip(c.Exclusion.Classification + ": " + c.Exclusion.Reason)
