@@ -679,6 +679,56 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
+    def test_timed_rejection_requires_commands_scale_and_duration(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            diagnostic = "initialization cycle"
+            execution = dict(ran=True, exit=1, timed_out=False, seconds=1,
+                             environment={"GO_TEST_TIMEOUT_SCALE": "1"},
+                             output_sha256=parity.hashlib.sha256(diagnostic.encode()).hexdigest())
+            match = dict(ran=True, exit=0, timed_out=False)
+            outcome = dict(fixture=dict(name="initexp", file="initexp.go", recipe="errorcheck -t 10"),
+                           contract="reject", status="passed", wrapper_sha256="original matcher",
+                           build_error=diagnostic, native_diagnostics=diagnostic, gart_diagnostics=diagnostic,
+                           native_match=dict(match), gart_match=dict(match),
+                           native={**copy.deepcopy(execution), "exit": 2, "command": [
+                               "go", "tool", "compile", "-p=p", "-d=panic", "-C", "-e",
+                               "-importcfg=/tmp/importcfg", "-o", "native.o", "/sdk/test/initexp.go"]},
+                           gart={**copy.deepcopy(execution), "command": [
+                               "/tmp/gart.exe", "build", "-format=false", "-runtime", "/runtime",
+                               "-o", "/output", "/fixture/initexp.go"]})
+
+            def assess(case, status):
+                parity.save(root / "language.json", dict(kind="language", complete=True,
+                            outcomes=[case], shard=0, shards=1))
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            assess(outcome, "passed")
+            scaled = copy.deepcopy(outcome)
+            for who in ("native", "gart"):
+                scaled[who]["environment"]["GO_TEST_TIMEOUT_SCALE"] = "2"
+                scaled[who]["seconds"] = 15
+            assess(scaled, "passed")
+            for mutate in [
+                lambda c: c["native"]["command"].__setitem__(6, "-e=0"),
+                lambda c: c["native"]["command"].__setitem__(10, "/sdk/test/other.go"),
+                lambda c: c["gart"]["command"].__setitem__(1, "run"),
+                lambda c: c["gart"]["command"].__setitem__(7, "/fixture/other.go"),
+                lambda c: c["native"].pop("environment"),
+                lambda c: c["gart"]["environment"].update(GO_TEST_TIMEOUT_SCALE="2"),
+                lambda c: c["native"]["environment"].update(GO_TEST_TIMEOUT_SCALE="0"),
+                lambda c: c["native"]["environment"].update(GO_TEST_TIMEOUT_SCALE="invalid"),
+                lambda c: c["native"].update(seconds=10),
+                lambda c: c["gart"].update(seconds=-1),
+                lambda c: c["gart"].pop("seconds"),
+                lambda c: c["gart"].update(seconds="1"),
+                lambda c: c["gart"].update(timed_out=True),
+                lambda c: c["fixture"].update(recipe="errorcheck -t 10 -e=0"),
+            ]:
+                changed = copy.deepcopy(outcome)
+                mutate(changed)
+                assess(changed, "failed")
+
     def test_rejection_recipe_preserves_language_version(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

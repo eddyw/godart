@@ -416,6 +416,32 @@ def run_recipe_valid(case, target):
     return fixture.get("adapter") == "run-recipe"
 
 
+def timed_rejection_valid(case):
+    native, gart = case["native"], case["gart"]
+    scale = (native.get("environment") or {}).get("GO_TEST_TIMEOUT_SCALE", "")
+    if not isinstance(scale, str) or not re.fullmatch(r"[1-9][0-9]*", scale):
+        return False
+    if (gart.get("environment") or {}).get("GO_TEST_TIMEOUT_SCALE") != scale:
+        return False
+    limit = 10 * int(scale)
+    for execution in (native, gart):
+        seconds = execution.get("seconds")
+        if type(seconds) not in (int, float) or not 0 <= seconds < limit:
+            return False
+    source = case["fixture"].get("file", "")
+    command = native.get("command", [])
+    target = gart.get("command", [])
+    return (source and len(command) == 11
+            and command[:7] == ["go", "tool", "compile", "-p=p", "-d=panic", "-C", "-e"]
+            and command[7].startswith("-importcfg=")
+            and command[8:10] == ["-o", "native.o"]
+            and command[10].endswith("/" + source)
+            and len(target) == 8 and Path(target[0]).name == "gart.exe"
+            and target[1:4] == ["build", "-format=false", "-runtime"]
+            and target[4] and target[5] == "-o" and target[6]
+            and target[7].endswith("/" + Path(source).name))
+
+
 def language_behavior(paths):
     groups = {}
     seen = set()
@@ -517,6 +543,8 @@ def language_behavior(paths):
                                          and "-lang="+language in case["native"].get("command", [])
                                          and case.get("module_source") == module
                                          and case.get("module_sha256") == hashlib.sha256(module.encode()).hexdigest())
+                            elif recipe == "errorcheck -t 10":
+                                valid = valid and not successful and timed_rejection_valid(case)
                             else:
                                 command = case["native"].get("command", [])
                                 error_flags = [arg for arg in command if arg == "-e" or arg.startswith("-e=")]
