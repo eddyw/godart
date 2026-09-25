@@ -33,7 +33,7 @@ func main() {
 				t.Fatal(err)
 			}
 			var output bytes.Buffer
-			code, err := driver.Run(driver.Options{Dir: dir, Patterns: []string{"./cmd/app"}, Out: t.TempDir(), Runtime: runtimeDir(t), Frontend: frontend}, nil, &output)
+			code, err := driver.Run(driver.Options{Dir: dir, Patterns: []string{"./cmd/app"}, Out: t.TempDir(), Runtime: runtimeDir(t), Frontend: frontend}, nil, &output, &output)
 			if err != nil || code != 0 || output.String() != want {
 				t.Fatalf("run differs: exit %d, error %v, output %q; Go %q", code, err, output.String(), want)
 			}

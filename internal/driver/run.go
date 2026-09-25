@@ -56,7 +56,7 @@ type TestOptions struct {
 
 // Run compiles the module and runs package main with the Dart VM. The result
 // is the exit code of the program.
-func Run(opt Options, args []string, out io.Writer) (int, error) {
+func Run(opt Options, args []string, out, stderr io.Writer) (int, error) {
 	if err := opt.selectExecutionFrontend(); err != nil {
 		return 1, err
 	}
@@ -82,7 +82,7 @@ func Run(opt Options, args []string, out io.Writer) (int, error) {
 	}
 	phase = time.Now()
 	defer func() { opt.trace("execute", phase) }()
-	return dartRun(opt.Dir, append([]string{kernel}, args...), out)
+	return dartRun(opt.Dir, append([]string{kernel}, args...), out, stderr)
 }
 
 // Test compiles the test binaries and runs each one. The result is the exit
@@ -300,11 +300,11 @@ func fresh(config string, specs []string) bool {
 }
 
 // dartRun runs the Dart VM and gives the exit code of the program.
-func dartRun(dir string, args []string, out io.Writer) (int, error) {
+func dartRun(dir string, args []string, out, stderr io.Writer) (int, error) {
 	cmd := exec.Command("dart", append([]string{"run"}, args...)...)
 	cmd.Dir = dir
 	cmd.Stdout = out
-	cmd.Stderr = out
+	cmd.Stderr = stderr
 	cmd.Stdin = os.Stdin
 	if err := cmd.Run(); err != nil {
 		if code := exitCode(err); code >= 0 {

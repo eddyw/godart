@@ -101,7 +101,7 @@ func TestRunKernelPaths(t *testing.T) {
 	for i, trim := range []bool{false, false, true} {
 		opt.TrimPath = trim
 		var output bytes.Buffer
-		code, err := driver.Run(opt, nil, &output)
+		code, err := driver.Run(opt, nil, &output, &output)
 		if err != nil || code != 2 {
 			t.Fatalf("run %d: exit %d, error %v, output %s", i, code, err, output.String())
 		}

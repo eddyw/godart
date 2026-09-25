@@ -15,16 +15,16 @@ func TestSourceFrontendExecution(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/frontend\n\ngo 1.27.0\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
 import ("fmt"; "os")
-func main() { fmt.Println(os.Args[1]); os.Exit(7) }
+func main() { fmt.Println(os.Args[1]); println("builtin stderr"); fmt.Fprintln(os.Stderr,"file stderr"); os.Exit(7) }
 `)
 	opt := driver.Options{Dir: dir, Patterns: []string{"."}, Out: t.TempDir(), Runtime: runtimeDir(t)}
 	for _, frontend := range []string{"source", "resident"} {
 		t.Run(frontend, func(t *testing.T) {
 			opt.Frontend = frontend
-			var output bytes.Buffer
-			code, err := driver.Run(opt, []string{"two words"}, &output)
-			if err != nil || code != 7 || output.String() != "two words\n" {
-				t.Fatalf("code %d, error %v, output %q", code, err, output.String())
+			var output, stderr bytes.Buffer
+			code, err := driver.Run(opt, []string{"two words"}, &output, &stderr)
+			if err != nil || code != 7 || output.String() != "two words\n" || stderr.String() != "builtin stderr\nfile stderr\n" {
+				t.Fatalf("code %d, error %v, stdout %q, stderr %q", code, err, output.String(), stderr.String())
 			}
 		})
 	}

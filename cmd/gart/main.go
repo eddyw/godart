@@ -178,7 +178,7 @@ func runRun(args []string) error {
 		return err
 	}
 	options.Frontend = *frontend
-	code, err := driver.Run(options, program, os.Stdout)
+	code, err := driver.Run(options, program, os.Stdout, os.Stderr)
 	if err != nil {
 		return err
 	}

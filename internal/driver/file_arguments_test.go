@@ -47,7 +47,7 @@ func TestGoFileArguments(t *testing.T) {
 			}
 			opt := driver.Options{Dir: dir, Patterns: patterns, Out: t.TempDir(), Runtime: runtimeDir(t)}
 			var output bytes.Buffer
-			code, err := driver.Run(opt, nil, &output)
+			code, err := driver.Run(opt, nil, &output, &output)
 			if err != nil || code != want.Exit || cutTrace(output.String()) != want.Text {
 				t.Fatalf("file arguments: Go=%+v Gart exit=%d error=%v output=%s", want, code, err, output.String())
 			}

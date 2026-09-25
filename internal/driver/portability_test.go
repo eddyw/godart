@@ -24,7 +24,7 @@ func main() {
 	var out bytes.Buffer
 	code, err := driver.Run(driver.Options{
 		Dir: dir, Patterns: []string{"./..."}, Out: t.TempDir(), Runtime: runtimeDir(t),
-	}, nil, &out)
+	}, nil, &out, &out)
 	if err != nil || code != 0 {
 		t.Fatalf("portable math failed: code %d, error %v\n%s", code, err, out.String())
 	}

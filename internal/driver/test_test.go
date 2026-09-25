@@ -542,7 +542,7 @@ func TestRun(t *testing.T) {
 		Out:      t.TempDir(),
 		Runtime:  runtimeDir(t),
 		Format:   false,
-	}, []string{"one", "two"}, out)
+	}, []string{"one", "two"}, out, out)
 	if err != nil {
 		t.Fatalf("the run failed:\n%v", err)
 	}
@@ -567,7 +567,7 @@ func TestRunReportsTheExitCode(t *testing.T) {
 		Out:      t.TempDir(),
 		Runtime:  runtimeDir(t),
 		Format:   false,
-	}, nil, &bytes.Buffer{})
+	}, nil, &bytes.Buffer{}, &bytes.Buffer{})
 	if err != nil {
 		t.Fatalf("the run failed:\n%v", err)
 	}
