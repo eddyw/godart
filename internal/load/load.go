@@ -88,13 +88,13 @@ type Filter map[string][]byte
 // The load runs 2 times. The first load finds the files of each standard
 // library package, and the second load replaces those files with the overlay.
 func Load(dir string, patterns ...string) (*Result, error) {
-	return load(dir, false, false, nil, patterns, "", nil, false)
+	return load(dir, false, false, nil, patterns, "", nil, false, false)
 }
 
 // LoadTests reads the packages and also each test variant of them. It replaces
 // the test entry point of the go command with the entry point of the compiler.
 func LoadTests(dir string, patterns ...string) (*Result, error) {
-	return load(dir, true, false, nil, patterns, "", nil, false)
+	return load(dir, true, false, nil, patterns, "", nil, false, false)
 }
 
 // Options configures package loading and an optional overlay-discovery cache.
@@ -108,13 +108,15 @@ type Options struct {
 	Filter    Filter
 	// Complete requires bodies for root-package functions without external declarations.
 	Complete bool
+	// LimitErrors reports at most 10 errors per package.
+	LimitErrors bool
 }
 
 func LoadWithOptions(opt Options) (*Result, error) {
-	return load(opt.Dir, opt.Tests, opt.Cover, opt.Filter, opt.Patterns, opt.CacheDir, opt.BuildTags, opt.Complete)
+	return load(opt.Dir, opt.Tests, opt.Cover, opt.Filter, opt.Patterns, opt.CacheDir, opt.BuildTags, opt.Complete, opt.LimitErrors)
 }
 
-func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string, tags []string, complete bool) (*Result, error) {
+func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string, tags []string, complete, limitErrors bool) (*Result, error) {
 	var timings []PhaseTiming
 	phase := time.Now()
 	sdk, err := prepareGoSDK(dir)
@@ -215,7 +217,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	if len(pkgs) == 0 {
 		return nil, fmt.Errorf("no package matches %v in %s", patterns, dir)
 	}
-	if err := collectErrors(pkgs, files, &rangeExtras, complete); err != nil {
+	if err := collectErrors(pkgs, files, &rangeExtras, complete, limitErrors); err != nil {
 		return nil, err
 	}
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
@@ -483,7 +485,7 @@ func patchFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
 // overlay of another package gives such an error, and the verifier reports the
 // real cause with a source position: a compiled package imports a package
 // outside the surface.
-func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeExtras *sync.Map, complete bool) error {
+func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeExtras *sync.Map, complete, limitErrors bool) error {
 	root := map[string]bool{}
 	for _, p := range roots {
 		root[p.ID] = true
@@ -493,29 +495,39 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeEx
 		if !root[p.ID] && p.Module == nil && p.PkgPath != "command-line-arguments" && overlay.Outside(p.PkgPath) {
 			return
 		}
+		d := diagnostics{limit: limitErrors}
+		defer func() {
+			if err := d.err(); err != nil {
+				errs = append(errs, err)
+			}
+		}()
 		parsed, err := compilerParseErrors(p, sources)
 		if err != nil {
-			errs = append(errs, err)
+			d.add(err)
 			return
 		}
 		if len(parsed) != 0 {
 			// The compiler reports parse errors before type analysis.
 			for _, err := range parsed {
-				errs = append(errs, err)
+				d.add(err)
 			}
 			return
 		}
 		for _, err := range rangeClauseErrors(p, rangeExtras) {
-			errs = append(errs, err)
+			d.add(err)
 		}
 		for _, file := range p.Syntax {
 			if file.Name.Name == "_" {
-				errs = append(errs, fmt.Errorf("%s: invalid package name _", p.Fset.Position(file.Name.Pos())))
+				d.add(fmt.Errorf("%s: invalid package name _", p.Fset.Position(file.Name.Pos())))
 			}
 		}
 		if !p.IllTyped {
-			errs = append(errs, interfaceCycles(p)...)
-			errs = append(errs, directiveContracts(p, complete && root[p.ID])...)
+			for _, err := range interfaceCycles(p) {
+				d.add(err)
+			}
+			for _, err := range directiveContracts(p, complete && root[p.ID]) {
+				d.add(err)
+			}
 		}
 		syntaxError := false
 		for _, e := range p.Errors {
@@ -524,7 +536,6 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeEx
 				syntaxError = true
 			}
 		}
-		start := len(errs)
 		for _, e := range p.Errors {
 			if syntaxError && e.Kind != packages.ParseError {
 				continue
@@ -533,22 +544,9 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeEx
 				continue
 			}
 			e = compilerVersionDiagnostic(p, compilerImportDiagnostic(p, e))
-			if strings.HasPrefix(e.Msg, "\t") && len(errs) > start {
-				errs[len(errs)-1] = fmt.Errorf("%w\n\t%s: %s", errs[len(errs)-1], e.Pos, strings.TrimPrefix(e.Msg, "\t"))
-			} else {
-				errs = append(errs, e)
-			}
+			d.add(e)
 		}
 	})
-	sort.SliceStable(errs, func(i, j int) bool {
-		a, b := diagnosticPosition(errs[i]), diagnosticPosition(errs[j])
-		if a.Filename != b.Filename {
-			return a.Filename < b.Filename
-		}
-		if a.Line != b.Line {
-			return a.Line < b.Line
-		}
-		return a.Column < b.Column
-	})
+	sortDiagnostics(errs)
 	return errors.Join(errs...)
 }

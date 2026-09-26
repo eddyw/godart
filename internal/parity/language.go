@@ -185,7 +185,7 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				}
 			} else if recipe == "build" {
 				c.Adapter = "build-file"
-			} else if recipe == "errorcheck" || recipe == "errorcheck -d=panic" || recipe == "errorcheck -e" || recipe == "errorcheck -t 10" || recipe == "errorcheck -complete" {
+			} else if recipe == "errorcheck" || recipe == "errorcheck -d=panic" || recipe == "errorcheck -e" || recipe == "errorcheck -e=0" || recipe == "errorcheck -t 10" || recipe == "errorcheck -complete" {
 				c.Adapter = "reject-file"
 			} else if files, ok := languageGeneratorFiles(recipe); ok {
 				c.Adapter = "generated-file"

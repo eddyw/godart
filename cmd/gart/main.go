@@ -44,6 +44,7 @@ The build, run, test, and watch commands take these flags:
 	-timings       report phase durations on stderr
 	-tags list     add comma-separated Go build tags
 	-complete      require function bodies or external declarations in root packages
+	-e=false       report at most 10 errors per package (default: all errors)
 
 The run and test commands also take this flag:
 
@@ -107,27 +108,29 @@ func run(args []string) error {
 
 // buildFlags holds the flags that each compile command shares.
 type buildFlags struct {
-	set      *flag.FlagSet
-	out      *string
-	runtime  *string
-	trimpath *bool
-	format   *bool
-	timings  *bool
-	tags     *string
-	complete *bool
+	set       *flag.FlagSet
+	out       *string
+	runtime   *string
+	trimpath  *bool
+	format    *bool
+	timings   *bool
+	tags      *string
+	complete  *bool
+	allErrors *bool
 }
 
 func newBuildFlags(name string) *buildFlags {
 	set := flag.NewFlagSet(name, flag.ContinueOnError)
 	return &buildFlags{
-		set:      set,
-		out:      set.String("o", "dartout", "the output directory"),
-		runtime:  set.String("runtime", "", "override the bundled goruntime package"),
-		trimpath: set.Bool("trimpath", false, "remove absolute source paths from the output"),
-		format:   set.Bool("format", true, "run dart format on the output"),
-		timings:  set.Bool("timings", false, "report phase durations on stderr"),
-		tags:     set.String("tags", "", "comma-separated Go build tags"),
-		complete: set.Bool("complete", false, "require function bodies or external declarations in root packages"),
+		set:       set,
+		out:       set.String("o", "dartout", "the output directory"),
+		runtime:   set.String("runtime", "", "override the bundled goruntime package"),
+		trimpath:  set.Bool("trimpath", false, "remove absolute source paths from the output"),
+		format:    set.Bool("format", true, "run dart format on the output"),
+		timings:   set.Bool("timings", false, "report phase durations on stderr"),
+		tags:      set.String("tags", "", "comma-separated Go build tags"),
+		complete:  set.Bool("complete", false, "require function bodies or external declarations in root packages"),
+		allErrors: set.Bool("e", true, "report all errors per package"),
 	}
 }
 
@@ -145,14 +148,15 @@ func (f *buildFlags) options(args []string) (driver.Options, error) {
 		patterns = []string{"./..."}
 	}
 	options := driver.Options{
-		Dir:       dir,
-		Patterns:  patterns,
-		Out:       *f.out,
-		Runtime:   *f.runtime,
-		TrimPath:  *f.trimpath,
-		Format:    *f.format,
-		Complete:  *f.complete,
-		BuildTags: strings.FieldsFunc(*f.tags, func(r rune) bool { return r == ',' || r == ' ' }),
+		Dir:         dir,
+		Patterns:    patterns,
+		Out:         *f.out,
+		Runtime:     *f.runtime,
+		TrimPath:    *f.trimpath,
+		Format:      *f.format,
+		Complete:    *f.complete,
+		LimitErrors: !*f.allErrors,
+		BuildTags:   strings.FieldsFunc(*f.tags, func(r rune) bool { return r == ',' || r == ' ' }),
 	}
 	if *f.timings {
 		options.Trace = func(phase string, elapsed time.Duration) {

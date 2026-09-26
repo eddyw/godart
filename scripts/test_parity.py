@@ -826,7 +826,7 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
-    def test_complete_rejection_requires_both_compiler_flags(self):
+    def test_compiler_rejection_requires_both_flags(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             diagnostic = "missing function body"
@@ -864,6 +864,24 @@ class ParityTest(unittest.TestCase):
                 lambda c: c["fixture"].update(recipe="errorcheck -complete -e=0"),
             ]:
                 changed = copy.deepcopy(outcome)
+                mutate(changed)
+                assess(changed, "failed")
+
+            limited = copy.deepcopy(outcome)
+            limited["fixture"]["recipe"] = "errorcheck -e=0"
+            limited["native"]["command"][6] = "-e=0"
+            limited["native"]["command"].pop(10)
+            limited["gart"]["command"][7] = "-e=0"
+            assess(limited, "passed")
+            for mutate in [
+                lambda c: c["native"]["command"].__setitem__(6, "-e"),
+                lambda c: c["native"]["command"].insert(7, "-e"),
+                lambda c: c["gart"]["command"].__setitem__(7, "-e"),
+                lambda c: c["gart"]["command"].insert(8, "-e"),
+                lambda c: c["gart"].pop("command"),
+                lambda c: c["fixture"].update(recipe="errorcheck -e=0 -complete"),
+            ]:
+                changed = copy.deepcopy(limited)
                 mutate(changed)
                 assess(changed, "failed")
 

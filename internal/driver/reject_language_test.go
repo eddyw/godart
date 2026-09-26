@@ -138,7 +138,7 @@ func TestDiagnostics(t *testing.T) {
 	var compiler string
 	timedLimit := 10 * time.Second
 	for _, result := range outcomes {
-		if result.Fixture.Recipe == "errorcheck -t 10" || result.Fixture.Recipe == "errorcheck -complete" {
+		if result.Fixture.Recipe == "errorcheck -t 10" || result.Fixture.Recipe == "errorcheck -complete" || result.Fixture.Recipe == "errorcheck -e=0" {
 			if compiler == "" {
 				compiler = filepath.Join(matcherDir, "gart.exe")
 				run(t, "", "go", "build", "-o", compiler, "../../cmd/gart")
@@ -201,6 +201,8 @@ func TestDiagnostics(t *testing.T) {
 			args := []string{"tool", "compile", "-p=p", "-d=panic", "-C", "-e", "-importcfg=" + config, "-o", "native.o"}
 			if c.Recipe == "errorcheck -complete" {
 				args = append(args, "-complete")
+			} else if c.Recipe == "errorcheck -e=0" {
+				args[5] = "-e=0"
 			}
 			language := "1.27"
 			if c.ModuleGoVersion != "" {
@@ -227,10 +229,12 @@ func TestDiagnostics(t *testing.T) {
 				if c.ModuleGoVersion != "" {
 					pattern = "."
 				}
-				if c.Recipe == "errorcheck -t 10" || c.Recipe == "errorcheck -complete" {
+				if c.Recipe == "errorcheck -t 10" || c.Recipe == "errorcheck -complete" || c.Recipe == "errorcheck -e=0" {
 					args := []string{"build", "-format=false", "-runtime", runtimeDir(t), "-o", t.TempDir()}
 					if c.Recipe == "errorcheck -complete" {
 						args = append(args, "-complete")
+					} else if c.Recipe == "errorcheck -e=0" {
+						args = append(args, "-e=0")
 					}
 					text := recordLanguage(t, &result.Gart, dir, limit, compiler, append(args, pattern)...)
 					result.BuildError = strings.TrimSpace(strings.TrimPrefix(text, "gart: "))

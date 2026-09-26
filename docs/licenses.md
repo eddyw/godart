@@ -15,7 +15,7 @@ The compiler notice bundle includes these terms.
 Go-derived overlays and upstream test excerpts use the notice in
 [`internal/overlay/std/LICENSE`](../internal/overlay/std/LICENSE).
 The anonymous-interface cycle detector and compiler directive validation
-adapt `irgen.go`, `lex.go`, `noder.go`, and `writer.go` from Go compiler
+adapt `irgen.go`, `lex.go`, `noder.go`, `unified.go`, and `writer.go` from Go compiler
 `src/cmd/compile/internal/noder/`. Their BSD notice resides in
 [`internal/load/LICENSE-Go`](../internal/load/LICENSE-Go).
 Language-version diagnostics and embed validation follow Go `noder/irgen.go`

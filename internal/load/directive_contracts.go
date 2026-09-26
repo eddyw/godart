@@ -11,6 +11,7 @@ import (
 	"go/token"
 	"go/types"
 	"go/version"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -43,11 +44,6 @@ func directiveContracts(p *packages.Package, complete bool) []error {
 							continue
 						}
 						if fn, ok := decl.(*ast.FuncDecl); ok && comment.End() < fn.Pos() && fn.Body != nil && !noescape[fn] {
-							pos := fn.Name.Pos()
-							if fn.Recv != nil {
-								pos = fn.Recv.Pos()
-							}
-							reject(pos, "can only use //go:noescape with external func implementations")
 							noescape[fn] = true
 						}
 						break
@@ -97,19 +93,28 @@ func directiveContracts(p *packages.Package, complete bool) []error {
 			}
 		}
 	}
+	var functions []*ast.FuncDecl
 	for _, file := range p.Syntax {
 		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body != nil || !complete && fn.Name.Name != "init" {
-				continue
+			if fn, ok := decl.(*ast.FuncDecl); ok {
+				functions = append(functions, fn)
 			}
-			if !seen[p.TypesInfo.Defs[fn.Name]] && ir.DartMarker(fn.Doc) == nil {
-				pos := fn.Name.Pos()
-				if fn.Recv != nil {
-					pos = fn.Recv.Pos()
-				}
-				reject(pos, "missing function body")
-			}
+		}
+	}
+	// The native compiler writes package-scope function objects in name order.
+	sort.SliceStable(functions, func(i, j int) bool {
+		return functions[i].Name.Name < functions[j].Name.Name
+	})
+	for _, fn := range functions {
+		pos := fn.Name.Pos()
+		if fn.Recv != nil {
+			pos = fn.Recv.Pos()
+		}
+		if noescape[fn] {
+			reject(pos, "can only use //go:noescape with external func implementations")
+		}
+		if fn.Body == nil && (complete || fn.Name.Name == "init") && !seen[p.TypesInfo.Defs[fn.Name]] && ir.DartMarker(fn.Doc) == nil {
+			reject(pos, "missing function body")
 		}
 	}
 	return errs

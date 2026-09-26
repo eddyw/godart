@@ -456,19 +456,23 @@ def timed_rejection_valid(case):
             and target[7].endswith("/" + Path(source).name))
 
 
-def complete_rejection_valid(case):
+def compiler_rejection_valid(case):
     source = case["fixture"].get("file", "")
     command = case["native"].get("command", [])
     target = case["gart"].get("command", [])
-    return (source and len(command) == 12
-            and command[:7] == ["go", "tool", "compile", "-p=p", "-d=panic", "-C", "-e"]
+    limited = case["fixture"]["recipe"] == "errorcheck -e=0"
+    native_flag = "-e=0" if limited else "-e"
+    target_flag = "-e=0" if limited else "-complete"
+    output = ["-o", "native.o"] + ([] if limited else ["-complete"])
+    return (source and len(command) == 9 + len(output)
+            and command[:7] == ["go", "tool", "compile", "-p=p", "-d=panic", "-C", native_flag]
             and command[7].startswith("-importcfg=")
-            and command[8:11] == ["-o", "native.o", "-complete"]
-            and command[11].endswith("/" + source)
+            and command[8:-1] == output
+            and command[-1].endswith("/" + source)
             and len(target) == 9 and Path(target[0]).name == "gart.exe"
             and target[1:4] == ["build", "-format=false", "-runtime"]
             and target[4] and target[5] == "-o" and target[6]
-            and target[7] == "-complete"
+            and target[7] == target_flag
             and target[8].endswith("/" + Path(source).name))
 
 
@@ -608,8 +612,8 @@ def language_behavior(paths):
                                          and case.get("module_sha256") == hashlib.sha256(module.encode()).hexdigest())
                             elif recipe == "errorcheck -t 10":
                                 valid = valid and not successful and timed_rejection_valid(case)
-                            elif recipe == "errorcheck -complete":
-                                valid = valid and not successful and complete_rejection_valid(case)
+                            elif recipe in {"errorcheck -complete", "errorcheck -e=0"}:
+                                valid = valid and not successful and compiler_rejection_valid(case)
                             else:
                                 command = case["native"].get("command", [])
                                 error_flags = [arg for arg in command if arg == "-e" or arg.startswith("-e=")]

@@ -203,7 +203,7 @@ func TestLanguageInventory(t *testing.T) {
 	if !cases["reject"].ExpectedFailure {
 		t.Fatal("upstream expected failure lost")
 	}
-	if cases["rejectall"].Adapter != "reject-file" || cases["rejectlimited"].Adapter != "missing" {
+	if cases["rejectall"].Adapter != "reject-file" || cases["rejectlimited"].Adapter != "reject-file" {
 		t.Fatal("the rejection adapter must preserve the diagnostic limit")
 	}
 	if cases["rejectcomplete"].Adapter != "reject-file" {
