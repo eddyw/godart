@@ -85,18 +85,20 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/groupsrun.go", "// rundir\npackage ignored\n")
 	write("test/groupsrun.dir/a.go", "package a\n")
 	compileRecipes := map[string]string{
-		"compileflags":     "compile -N",
-		"compilebounds":    "compile -B",
-		"compileworkers2":  "compile -c=2",
-		"compileworkers4":  "compile -c=4",
-		"compileinline":    "compile -l",
-		"compilessa":       "compile -d=ssa/check/on",
-		"compilesoftfloat": "compile -N -d=softfloat",
-		"compilecheckptr":  "compile -d=checkptr",
-		"compilefuzzer":    "compile -d=libfuzzer",
-		"compileseed":      "compile -d=ssa/check/seed",
-		"compileseed1":     "compile -d=ssa/check/seed=1",
-		"compiledynlink":   "compile -dynlink",
+		"compileflags":      "compile -N",
+		"compilebounds":     "compile -B",
+		"compileworkers2":   "compile -c=2",
+		"compileworkers4":   "compile -c=4",
+		"compileinline":     "compile -l",
+		"compilessa":        "compile -d=ssa/check/on",
+		"compilesoftfloat":  "compile -N -d=softfloat",
+		"compilecheckptr":   "compile -d=checkptr",
+		"compilefuzzer":     "compile -d=libfuzzer",
+		"compileseed":       "compile -d=ssa/check/seed",
+		"compileseed1":      "compile -d=ssa/check/seed=1",
+		"compiledynlink":    "compile -dynlink",
+		"compilealias":      "compile -godebug gotypesalias=1",
+		"compilefieldtrack": "compile -goexperiment fieldtrack",
 	}
 	for name, recipe := range compileRecipes {
 		write("test/"+name+".go", "// "+recipe+"\npackage p\n")
@@ -141,8 +143,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 80 {
-		t.Fatalf("got %d cases, want 80", len(inv.Cases))
+	if len(inv.Cases) != 82 {
+		t.Fatalf("got %d cases, want 82", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {

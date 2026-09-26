@@ -45,6 +45,14 @@ func runCompilationCases(t *testing.T, adapter string) {
 	config := filepath.Join(t.TempDir(), "importcfg")
 	imports := run(t, "", "go", "list", "-export", "-f", "{{if .Export}}packagefile {{.ImportPath}}={{.Export}}{{end}}", "std")
 	writeFile(t, config, imports)
+	var compiler string
+	for _, result := range outcomes {
+		if compileEnvironment(result.Fixture.Recipe) != nil {
+			compiler = filepath.Join(t.TempDir(), "gart.exe")
+			run(t, "", "go", "build", "-o", compiler, "../../cmd/gart")
+			break
+		}
+	}
 	for _, result := range outcomes {
 		t.Run(result.Fixture.Name, func(t *testing.T) {
 			t.Parallel()
@@ -59,6 +67,11 @@ func runCompilationCases(t *testing.T, adapter string) {
 				}
 			})
 			c := result.Fixture
+			if env := compileEnvironment(c.Recipe); env != nil {
+				result.Native.Environment = env
+				result.Gart.Environment = env
+				result.GartBuild = &languageExecution{Environment: env}
+			}
 			if !c.NativeEligible || !c.GartEligible {
 				t.Skipf("upstream build constraints: native=%t Gart=%t", c.NativeEligible, c.GartEligible)
 			}
@@ -76,7 +89,7 @@ func runCompilationCases(t *testing.T, adapter string) {
 					packageOption = "-p=main"
 				}
 				command := []string{"go", "tool", "compile", "-e", packageOption, "-importcfg=" + config}
-				if c.Recipe != "compile -p=p" && c.Recipe != "compile -p=main" {
+				if c.Recipe != "compile -p=p" && c.Recipe != "compile -p=main" && result.GartBuild == nil {
 					command = append(command, strings.Fields(c.Recipe)[1:]...)
 				}
 				command = append(command, "-o", "native.o", sourcePath)
@@ -99,7 +112,11 @@ func runCompilationCases(t *testing.T, adapter string) {
 			}
 			writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 			out := t.TempDir()
-			err = driver.Build(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t)})
+			if result.GartBuild != nil {
+				runLanguage(t, result.GartBuild, dir, runLimit, compiler, "build", "-format=false", "-runtime", runtimeDir(t), "-o", out, ".")
+			} else {
+				err = driver.Build(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t)})
+			}
 			if err != nil {
 				result.BuildError = err.Error()
 			}
@@ -140,4 +157,20 @@ func runCompilationCases(t *testing.T, adapter string) {
 			runLanguage(t, &result.Gart, out, runLimit, "dart", "compile", "kernel", entry, "-o", "compile.dill")
 		})
 	}
+}
+
+func compileEnvironment(recipe string) map[string]string {
+	var key, value string
+	switch recipe {
+	case "compile -godebug gotypesalias=1":
+		key, value = "GODEBUG", "gotypesalias=1"
+	case "compile -goexperiment fieldtrack":
+		key, value = "GOEXPERIMENT", "fieldtrack"
+	default:
+		return nil
+	}
+	if previous := os.Getenv(key); previous != "" {
+		value = previous + "," + value
+	}
+	return map[string]string{key: value}
 }

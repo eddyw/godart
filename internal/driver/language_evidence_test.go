@@ -24,6 +24,7 @@ type languageExecution struct {
 }
 
 type languageOutcome struct {
+	GartBuild          *languageExecution         `json:"gart_build,omitempty"`
 	WrapperSource      string                     `json:"wrapper_source,omitempty"`
 	NativeLink         languageExecution          `json:"native_link"`
 	DirectoryPackages  []languageDirectoryPackage `json:"directory_packages,omitempty"`

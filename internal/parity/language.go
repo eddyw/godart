@@ -174,6 +174,7 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				"compile -d=checkptr", "compile -d=libfuzzer",
 				"compile -d=ssa/check/seed", "compile -d=ssa/check/seed=1",
 				"compile -dynlink",
+				"compile -godebug gotypesalias=1", "compile -goexperiment fieldtrack",
 			}, recipe) {
 				c.Adapter = "compile-file"
 			} else if match := errorcheckVersionRecipe.FindStringSubmatch(recipe); match != nil {

@@ -684,6 +684,54 @@ class ParityTest(unittest.TestCase):
                 outcome["gart"]["command"] = ["dart", "analyze", "compile.dart"]
                 assess("failed")
 
+    def test_compile_environment_reaches_both_compilers(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / "language.json"
+            execution = dict(ran=True, exit=0, timed_out=False)
+            for option, key, value in [("-godebug", "GODEBUG", "gotypesalias=1"),
+                                       ("-goexperiment", "GOEXPERIMENT", "fieldtrack")]:
+                for previous in ["", "existing=1"]:
+                    environment = {key: previous + "," + value if previous else value}
+                    command = ["go", "tool", "compile", "-e", "-p=p", "-importcfg=config", "-o", "native.o", "sdk/p.go"]
+                    build_command = ["/tmp/gart.exe", "build", "-format=false", "-runtime", "/runtime", "-o", "/output", "."]
+                    outcome = dict(fixture=dict(name="p", file="p.go", recipe="compile " + option + " " + value),
+                                   contract="compile", status="passed", wrapper_sha256="wrapper",
+                                   native=dict(execution, command=command, environment=environment),
+                                   gart_build=dict(execution, command=build_command, environment=environment),
+                                   gart=dict(execution, environment=environment,
+                                             command=["dart", "compile", "kernel", "compile.dart", "-o", "compile.dill"]))
+                    report = dict(kind="language", complete=True, outcomes=[outcome], shard=0, shards=1,
+                                  environment={key: previous})
+
+                    def assess(status):
+                        parity.save(path, report)
+                        self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+                    assess("passed")
+                    for process in ["native", "gart_build", "gart"]:
+                        for changed in [{}, {key: value + ",override"}]:
+                            outcome[process]["environment"] = changed
+                            assess("failed")
+                        outcome[process]["environment"] = environment
+                    for field, changed in [("ran", False), ("exit", 1), ("timed_out", True),
+                                           ("command", ["gart.exe", "version"])]:
+                        original = outcome["gart_build"][field]
+                        outcome["gart_build"][field] = changed
+                        assess("failed")
+                        outcome["gart_build"][field] = original
+                    outcome["native"]["command"] = command[:6] + [option, value] + command[6:]
+                    assess("failed")
+                    outcome["native"]["command"] = command
+                    del report["environment"][key]
+                    assess("failed")
+                    report["environment"][key] = previous
+                    del outcome["gart_build"]["timed_out"]
+                    assess("failed")
+                    outcome["gart_build"]["timed_out"] = False
+                    del outcome["gart_build"]
+                    assess("failed")
+
     def test_rejection_requires_original_assertions_and_diagnostics(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
