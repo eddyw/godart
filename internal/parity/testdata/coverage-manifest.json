@@ -1047,9 +1047,9 @@
   {
     "package": "net",
     "status": "compile-blocked",
-    "diagnostic": "undefined: conf",
+    "diagnostic": "undefined: dnsWaitGroup",
     "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The complete suite requires private resolver configuration and native DNS hooks."
+    "blocker_reason": "The complete suite requires private DNS lifecycle and native resolver hooks."
   },
   {
     "package": "net/http",

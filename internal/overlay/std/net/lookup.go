@@ -7,29 +7,18 @@ import (
 	"errors"
 	"math/rand/v2"
 	"net/netip"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"syscall/dart"
 	"time"
 )
 
-// This file holds the Lookup family. The real source of Go reads the resolver
-// of the platform through cgo, or its own resolver over the vendored package
-// `golang.org/x/net/dns/dnsmessage`. The overlay always reads its own
-// resolver, and `dnsmsg.go` holds the message format.
-//
-// The resolver reads /etc/hosts first, and then each server of
-// /etc/resolv.conf over UDP. A truncated answer takes a second exchange over
-// TCP.
-
-// The texts that a DNSError carries. Go holds the same 3.
 const (
 	errNoSuchHost      = "no such host"
 	errServerMisbehave = "server misbehaving"
-	errNoAnswer        = "no answer from the server"
 )
 
 // DNSError reports a failure of a lookup.
@@ -82,11 +71,7 @@ type SRV struct {
 	Weight   uint16
 }
 
-// A Resolver reads names through the DNS.
-//
-// PreferGo reads no field of the overlay, because the resolver of this package
-// is always the resolver of Go. StrictErrors reads no field either.
-// `docs/parity.md` names the 2.
+// A Resolver resolves host names and service names.
 type Resolver struct {
 	PreferGo     bool
 	StrictErrors bool
@@ -99,109 +84,12 @@ type Resolver struct {
 // reads.
 var DefaultResolver = &Resolver{}
 
-// dnsConfig holds the servers, the search list, and the limits of the
-// resolver.
-type dnsConfig struct {
-	servers  []string
-	search   []string
-	ndots    int
-	timeout  time.Duration
-	attempts int
-}
-
-var (
-	configOnce sync.Once
-	config     *dnsConfig
-)
-
-// resolvConf reads /etc/resolv.conf 1 time for each process. Go reads the file
-// again after 5 seconds, and a client of the subset holds 1 configuration for
-// its whole run.
-func resolvConf() *dnsConfig {
-	configOnce.Do(func() {
-		c := &dnsConfig{ndots: 1, timeout: 5 * time.Second, attempts: 2}
-		text, cause := dart.ReadFile("/etc/resolv.conf")
-		if cause == "" {
-			readResolvConf(c, string(text))
-		}
-		if len(c.servers) == 0 {
-			c.servers = []string{"127.0.0.1:53", "[::1]:53"}
-		}
-		config = c
-	})
-	return config
-}
-
-func readResolvConf(c *dnsConfig, text string) {
-	for _, line := range strings.Split(text, "\n") {
-		if i := strings.IndexAny(line, "#;"); i >= 0 {
-			line = line[:i]
-		}
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			continue
-		}
-		switch fields[0] {
-		case "nameserver":
-			if ip := ParseIP(fields[1]); ip != nil {
-				c.servers = append(c.servers, JoinHostPort(fields[1], "53"))
-			}
-		case "search":
-			c.search = nil
-			for _, name := range fields[1:] {
-				c.search = append(c.search, absName(name))
-			}
-		case "options":
-			for _, opt := range fields[1:] {
-				switch {
-				case strings.HasPrefix(opt, "ndots:"):
-					if n, err := strconv.Atoi(opt[6:]); err == nil && n >= 0 {
-						c.ndots = min(n, 15)
-					}
-				case strings.HasPrefix(opt, "timeout:"):
-					if n, err := strconv.Atoi(opt[8:]); err == nil && n > 0 {
-						c.timeout = time.Duration(n) * time.Second
-					}
-				case strings.HasPrefix(opt, "attempts:"):
-					if n, err := strconv.Atoi(opt[9:]); err == nil && n > 0 {
-						c.attempts = n
-					}
-				}
-			}
-		}
-	}
-}
-
 // absName gives the name with a trailing dot.
 func absName(name string) string {
 	if strings.HasSuffix(name, ".") {
 		return name
 	}
 	return name + "."
-}
-
-// candidates gives the names that a lookup tries, in order. A name that holds
-// a trailing dot is absolute, thus it stands alone. A name with fewer dots
-// than ndots reads the search list first, as the go command does.
-func candidates(name string) []string {
-	c := resolvConf()
-	if strings.HasSuffix(name, ".") {
-		return []string{name}
-	}
-	dots := strings.Count(name, ".")
-	abs := absName(name)
-	if dots >= c.ndots || len(c.search) == 0 {
-		out := []string{abs}
-		for _, s := range c.search {
-			out = append(out, absName(name+"."+strings.TrimSuffix(s, ".")))
-		}
-		return out
-	}
-	out := make([]string, 0, len(c.search)+1)
-	for _, s := range c.search {
-		out = append(out, absName(name+"."+strings.TrimSuffix(s, ".")))
-	}
-	return append(out, abs)
 }
 
 // hostsFile holds the map of /etc/hosts, from a name to each address.
@@ -294,7 +182,7 @@ func (r *Resolver) roundTrip(ctx context.Context, network, server string, query 
 	if deadline, ok := ctx.Deadline(); ok {
 		c.SetDeadline(deadline)
 	} else {
-		c.SetDeadline(time.Now().Add(resolvConf().timeout))
+		c.SetDeadline(time.Now().Add(getSystemDNSConfig().timeout))
 	}
 	body := query
 	if network == "tcp" {
@@ -361,10 +249,10 @@ func readFull(c Conn, b []byte) error {
 // query asks each candidate name at each server, and it gives the answers of
 // the first name that holds one.
 func (r *Resolver) query(ctx context.Context, name string, qtype uint16) ([]dnsRecord, string, error) {
-	c := resolvConf()
+	c := getSystemDNSConfig()
 	var lastErr error
 	lastServer := ""
-	for _, candidate := range candidates(name) {
+	for _, candidate := range c.nameList(name) {
 		for _, server := range c.servers {
 			lastServer = server
 			var m *dnsMessage
@@ -398,7 +286,7 @@ func (r *Resolver) query(ctx context.Context, name string, qtype uint16) ([]dnsR
 		}
 	}
 	if lastErr == nil {
-		lastErr = errors.New(errNoAnswer)
+		lastErr = errors.New(errNoSuchHost)
 	}
 	notFound := lastErr.Error() == errNoSuchHost
 	return nil, lastServer, &DNSError{
@@ -418,9 +306,6 @@ func dnsError(text, name, server string, cause error) *DNSError {
 func (r *Resolver) LookupHost(ctx context.Context, host string) ([]string, error) {
 	if ip := ParseIP(host); ip != nil {
 		return []string{host}, nil
-	}
-	if held := lookupStaticHost(host); len(held) > 0 {
-		return held, nil
 	}
 	addrs, err := r.LookupIPAddr(ctx, host)
 	if err != nil {
@@ -469,8 +354,9 @@ func (r *Resolver) LookupIP(ctx context.Context, network, host string) ([]IP, er
 	}
 	trace := traceOf(ctx)
 	traceDNSStart(trace, host)
-	out, err := r.lookupIP(ctx, types, network, host)
-	if !r.readsSystem() && len(out) > 1 {
+	order, _ := systemConf().hostLookupOrder(r, host)
+	out, err := r.lookupIP(ctx, types, network, host, order)
+	if order != hostLookupCgo && len(out) > 1 {
 		addrs := make([]IPAddr, len(out))
 		for i, ip := range out {
 			addrs[i] = IPAddr{IP: ip}
@@ -494,22 +380,7 @@ func (r *Resolver) LookupIP(ctx context.Context, network, host string) ([]IP, er
 //gart:dart package:goruntime/goruntime.dart $lookupAddrs blocking
 func lookupAddrs(host string, family int) string
 
-// readsSystem reports whether Go reads the resolver of the platform for a
-// lookup of a host name.
-//
-// Go reads it on darwin, on ios, on android, and on windows, and it reads the
-// resolver of Go on each other platform. A Resolver that names PreferGo or its
-// own Dial always reads the resolver of Go, exactly as in Go.
-func (r *Resolver) readsSystem() bool {
-	if r != nil && (r.PreferGo || r.Dial != nil) {
-		return false
-	}
-	switch runtime.GOOS {
-	case "darwin", "ios", "android", "windows":
-		return true
-	}
-	return false
-}
+func (r *Resolver) preferGo() bool { return r != nil && r.PreferGo }
 
 // familyOf gives the number of the family of a network of the lookup.
 func familyOf(network string) int {
@@ -549,21 +420,16 @@ func systemLookupIP(network, host string) ([]IP, error) {
 	return out, nil
 }
 
-// lookupIP reads the file of the hosts first, and then each server of the
-// resolver.
-func (r *Resolver) lookupIP(ctx context.Context, types []uint16, network, host string) ([]IP, error) {
-	if r.readsSystem() {
+func (r *Resolver) lookupIP(ctx context.Context, types []uint16, network, host string, order hostLookupOrder) ([]IP, error) {
+	if order == hostLookupCgo {
 		return systemLookupIP(network, host)
 	}
-	if held := lookupStaticHost(host); len(held) > 0 {
-		var out []IP
-		for _, text := range held {
-			if ip := ParseIP(text); ip != nil && keepIP(network, ip) {
-				out = append(out, ip)
-			}
-		}
-		if len(out) > 0 {
+	if order == hostLookupFilesDNS || order == hostLookupFiles {
+		if out := lookupStaticIPs(network, host); len(out) > 0 {
 			return out, nil
+		}
+		if order == hostLookupFiles {
+			return nil, &DNSError{Err: errNoSuchHost, Name: host, IsNotFound: true}
 		}
 	}
 	var out []IP
@@ -581,12 +447,27 @@ func (r *Resolver) lookupIP(ctx context.Context, types []uint16, network, host s
 		}
 	}
 	if len(out) == 0 {
+		if order == hostLookupDNSFiles {
+			if out := lookupStaticIPs(network, host); len(out) > 0 {
+				return out, nil
+			}
+		}
 		if lastErr != nil {
 			return nil, lastErr
 		}
 		return nil, &DNSError{Err: errNoSuchHost, Name: host, IsNotFound: true}
 	}
 	return out, nil
+}
+
+func lookupStaticIPs(network, host string) []IP {
+	var out []IP
+	for _, text := range lookupStaticHost(host) {
+		if ip := ParseIP(text); ip != nil && keepIP(network, ip) {
+			out = append(out, ip)
+		}
+	}
+	return out
 }
 
 // keepIP reports whether the address fits the network.
@@ -771,13 +652,16 @@ func (r *Resolver) LookupPort(ctx context.Context, network, service string) (int
 		var ok bool
 		port, ok = servicePort(network, service)
 		if !ok {
-			if r != nil && r.PreferGo {
+			if systemConf().mustUseGoResolver(r) {
 				switch network {
 				case "tcp4", "tcp6", "udp4", "udp6":
 					network = network[:3]
 				}
 			}
 			name := network + "/" + service
+			if !systemConf().mustUseGoResolver(r) && strings.IndexByte(service, 0) >= 0 {
+				return 0, &DNSError{Err: syscall.EINVAL.Error(), Name: name}
+			}
 			return 0, &DNSError{Err: "unknown port", Name: name, IsNotFound: true}
 		}
 	}

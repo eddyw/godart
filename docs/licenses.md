@@ -118,6 +118,9 @@ The generated fixture preserves its BSD notice.
 Internet address selection adapts Go `src/net/ipsock.go` and `lookup.go`.
 RFC 6724 address order retains Go `src/net/addrselect.go` with its BSD notice.
 The address overlay retains their BSD notice.
+Resolver configuration retains Go `src/net/conf.go`, `nss.go`, `dnsconfig.go`,
+`dnsconfig_unix.go`, and selected `dnsclient_unix.go` and `parse.go` declarations.
+The resolver source preserves their BSD notices.
 IP protocol validation adapts Go `src/net/dial.go`, `parse.go`,
 `lookup.go`, and `lookup_unix.go` with their BSD notice.
 Network interface types, flags, and native address filters adapt Go
