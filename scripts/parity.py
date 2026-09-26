@@ -290,11 +290,12 @@ def directory_language_valid(case, go_version):
     contract = case["contract"]
     reject = contract == "errorcheckdir"
     separate = contract in ("compiledir", "errorcheckdir") and fixture.get("recipe") == contract + " -s"
+    compiler_flags = {"compiledir -c=2": ["-c=2"], "compiledir -c=4": ["-c=4"]}.get(fixture.get("recipe"), [])
     packages = case.get("directory_packages") or []
     adapted = case.get("adapted_sources") or {}
     compiled = case.get("native_compile") or []
     module = case.get("module_source", "")
-    if ((fixture.get("recipe") != contract and not separate) or fixture.get("adapter") != "directory-packages"
+    if ((fixture.get("recipe") != contract and not separate and not (contract == "compiledir" and compiler_flags)) or fixture.get("adapter") != "directory-packages"
             or not packages or len(compiled) != len(packages) or (not reject and case.get("build_error"))
             or not case.get("importcfg_sha256") or not go_version
             or module != "module test\n\ngo " + go_version.removeprefix("go") + "\n"
@@ -332,6 +333,8 @@ def directory_language_valid(case, go_version):
         imports.append("import " + json.dumps(library, ensure_ascii=False) + ";")
         command = execution.get("command", [])
         if command[:4] != ["go", "tool", "compile", "-e"] or [Path(p).name for p in command[-len(files):]] != files:
+            return False
+        if compiler_flags and command[-len(files)-len(compiler_flags):-len(files)] != compiler_flags:
             return False
         if reject and "-d=panic" not in command:
             return False
