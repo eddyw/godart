@@ -92,58 +92,6 @@ func absName(name string) string {
 	return name + "."
 }
 
-// hostsFile holds the map of /etc/hosts, from a name to each address.
-var (
-	hostsOnce   sync.Once
-	hostsByName map[string][]string
-	hostsByAddr map[string][]string
-)
-
-func readHosts() {
-	hostsOnce.Do(func() {
-		hostsByName = map[string][]string{}
-		hostsByAddr = map[string][]string{}
-		text, cause := dart.ReadFile("/etc/hosts")
-		if cause != "" {
-			return
-		}
-		for _, line := range strings.Split(string(text), "\n") {
-			if i := strings.IndexByte(line, '#'); i >= 0 {
-				line = line[:i]
-			}
-			fields := strings.Fields(line)
-			if len(fields) < 2 {
-				continue
-			}
-			ip := ParseIP(fields[0])
-			if ip == nil {
-				continue
-			}
-			for _, name := range fields[1:] {
-				key := strings.ToLower(name)
-				hostsByName[key] = append(hostsByName[key], fields[0])
-				hostsByAddr[ip.String()] = append(hostsByAddr[ip.String()], absName(name))
-			}
-		}
-	})
-}
-
-// lookupStaticHost gives each address of a name of /etc/hosts.
-func lookupStaticHost(name string) []string {
-	readHosts()
-	return hostsByName[strings.ToLower(strings.TrimSuffix(name, "."))]
-}
-
-// lookupStaticAddr gives each name of an address of /etc/hosts.
-func lookupStaticAddr(addr string) []string {
-	readHosts()
-	ip := ParseIP(addr)
-	if ip == nil {
-		return nil
-	}
-	return hostsByAddr[ip.String()]
-}
-
 // dialServer opens the connection to 1 server.
 func (r *Resolver) dialServer(ctx context.Context, network, server string) (Conn, error) {
 	if r != nil && r.Dial != nil {
@@ -462,7 +410,8 @@ func (r *Resolver) lookupIP(ctx context.Context, types []uint16, network, host s
 
 func lookupStaticIPs(network, host string) []IP {
 	var out []IP
-	for _, text := range lookupStaticHost(host) {
+	addresses, _ := lookupStaticHost(host)
+	for _, text := range addresses {
 		if ip := ParseIP(text); ip != nil && keepIP(network, ip) {
 			out = append(out, ip)
 		}

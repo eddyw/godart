@@ -40,8 +40,11 @@ final _errno = _libc
     name.asTypedList(path.length + 1)
       ..setRange(0, path.length, path.bytes)
       ..[path.length] = 0;
-    final fd = _open(name, flags, mode);
-    return (fd, fd < 0 ? _errno().value : 0);
+    // Resolve native bindings before open can set errno.
+    final open = _open;
+    final errorAddress = _errno();
+    final fd = open(name, flags, mode);
+    return (fd, fd < 0 ? errorAddress.value : 0);
   } finally {
     _free(name);
   }

@@ -22,6 +22,7 @@ func TestResolverConfiguration(t *testing.T) {
 	dir := filepath.Join(runtime.GOROOT(), "src/net")
 	names := map[string][]string{
 		"conf_test.go":           nil,
+		"hosts_test.go":          nil,
 		"lookup_test.go":         {"TestLookupPort", "TestLookupPort_Minimal", "TestLookupPortNotFound", "TestLookupPortDifferentNetwork", "TestLookupPortEmptyNetworkString", "TestLookupPortIPNetworkString", "tcpOnlyService"},
 		"error_test.go":          {"parseLookupPortError"},
 		"main_conf_test.go":      {"forceGoDNS", "forceCgoDNS", "TestForceGoDNS", "TestForceCgoDNS", "allResolvers"},
@@ -67,14 +68,14 @@ func TestResolverConfiguration(t *testing.T) {
 	if err := json.Unmarshal(data, &inventory); err != nil {
 		t.Fatal(err)
 	}
-	tests := []string{"TestConfHostLookupOrder", "TestAddrLookupOrder", "TestSystemConf", "TestForceGoDNS", "TestForceCgoDNS", "TestParseNSSConf", "TestReadLine", "TestDtoi", "TestDNSReadConfig", "TestDNSReadMissingFile", "TestDNSDefaultSearch", "TestDNSNameLength", "TestAvoidDNSName", "TestNameListAvoidDNS", "TestLookupPort", "TestLookupPort_Minimal", "TestLookupPortNotFound", "TestLookupPortDifferentNetwork", "TestLookupPortEmptyNetworkString", "TestLookupPortIPNetworkString"}
+	tests := []string{"TestLookupStaticHost", "TestLookupStaticAddr", "TestHostCacheModification", "TestLookupStaticHostAliases", "TestConfHostLookupOrder", "TestAddrLookupOrder", "TestSystemConf", "TestForceGoDNS", "TestForceCgoDNS", "TestParseNSSConf", "TestReadLine", "TestDtoi", "TestDNSReadConfig", "TestDNSReadMissingFile", "TestDNSDefaultSearch", "TestDNSNameLength", "TestAvoidDNSName", "TestNameListAvoidDNS", "TestLookupPort", "TestLookupPort_Minimal", "TestLookupPortNotFound", "TestLookupPortDifferentNetwork", "TestLookupPortEmptyNetworkString", "TestLookupPortIPNetworkString"}
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			selected := slices.Clone(tests)
 			var exclusions map[string]string
 			if target == "js" || target == "wasm" {
 				exclusions = map[string]string{}
-				for _, name := range []string{"TestConfHostLookupOrder", "TestAddrLookupOrder", "TestParseNSSConf", "TestReadLine", "TestDNSReadConfig", "TestDNSReadMissingFile", "TestDNSNameLength"} {
+				for _, name := range []string{"TestLookupStaticHost", "TestLookupStaticAddr", "TestHostCacheModification", "TestLookupStaticHostAliases", "TestConfHostLookupOrder", "TestAddrLookupOrder", "TestParseNSSConf", "TestReadLine", "TestDNSReadConfig", "TestDNSReadMissingFile", "TestDNSNameLength"} {
 					exclusions[name] = "The Dart web target has no host file access."
 				}
 				selected = slices.DeleteFunc(selected, func(name string) bool { return exclusions[name] != "" })

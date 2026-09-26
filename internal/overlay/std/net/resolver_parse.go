@@ -82,6 +82,14 @@ func open(name string) (*file, error) {
 	return &file{fd, make([]byte, 0, 64*1024), false}, nil
 }
 
+func stat(name string) (mtime time.Time, size int64, err error) {
+	st, err := os.Stat(name)
+	if err != nil {
+		return time.Time{}, 0, err
+	}
+	return st.ModTime(), st.Size(), nil
+}
+
 // Count occurrences in s of any bytes in t.
 func countAnyByte(s string, t string) int {
 	n := 0

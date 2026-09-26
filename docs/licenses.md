@@ -121,6 +121,8 @@ The address overlay retains their BSD notice.
 Resolver configuration retains Go `src/net/conf.go`, `nss.go`, `dnsconfig.go`,
 `dnsconfig_unix.go`, and selected `dnsclient_unix.go` and `parse.go` declarations.
 The resolver source preserves their BSD notices.
+The host cache retains Go `src/net/hosts.go` and selected `dnsclient.go` declarations.
+Its source preserves the Go BSD notice.
 IP protocol validation adapts Go `src/net/dial.go`, `parse.go`,
 `lookup.go`, and `lookup_unix.go` with their BSD notice.
 Network interface types, flags, and native address filters adapt Go

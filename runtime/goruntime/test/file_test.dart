@@ -4,6 +4,13 @@ import 'package:goruntime/goruntime.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('Native open preserves errors on the first failure', () {
+    final result = Process.runSync(Platform.resolvedExecutable, [
+      'test/fixtures/native_open_errors.dart',
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+  }, skip: !(Platform.isLinux || Platform.isMacOS));
+
   test('Rename preserves raw source and destination bytes', () {
     final root = Directory.systemTemp.createTempSync('gart-rename-');
     addTearDown(() => root.deleteSync(recursive: true));
