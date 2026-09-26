@@ -63,6 +63,7 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/rejectpanic.go", "// errorcheck -d=panic\npackage p\n")
 	write("test/rejectall.go", "// errorcheck -e\npackage p\n")
 	write("test/rejectlimited.go", "// errorcheck -e=0\npackage p\n")
+	write("test/rejectcomplete.go", "// errorcheck -complete\npackage p\n")
 	write("test/rejecttimed.go", "// errorcheck -t 10\npackage p\n")
 	write("test/rejecttimedflags.go", "// errorcheck -t 10 -e=0\npackage p\n")
 	write("test/build.go", "// build\npackage main\n")
@@ -143,8 +144,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 82 {
-		t.Fatalf("got %d cases, want 82", len(inv.Cases))
+	if len(inv.Cases) != 83 {
+		t.Fatalf("got %d cases, want 83", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -204,6 +205,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["rejectall"].Adapter != "reject-file" || cases["rejectlimited"].Adapter != "missing" {
 		t.Fatal("the rejection adapter must preserve the diagnostic limit")
+	}
+	if cases["rejectcomplete"].Adapter != "reject-file" {
+		t.Fatal("complete-package diagnostics need the rejection adapter")
 	}
 	if cases["rejecttimed"].Adapter != "reject-file" || cases["rejecttimedflags"].Adapter != "missing" {
 		t.Fatal("the timed rejection adapter must preserve extra recipe options")

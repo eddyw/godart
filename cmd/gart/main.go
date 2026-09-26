@@ -43,6 +43,7 @@ The build, run, test, and watch commands take these flags:
 	-format=false  do not run dart format on the output
 	-timings       report phase durations on stderr
 	-tags list     add comma-separated Go build tags
+	-complete      require function bodies or external declarations in root packages
 
 The run and test commands also take this flag:
 
@@ -113,6 +114,7 @@ type buildFlags struct {
 	format   *bool
 	timings  *bool
 	tags     *string
+	complete *bool
 }
 
 func newBuildFlags(name string) *buildFlags {
@@ -125,6 +127,7 @@ func newBuildFlags(name string) *buildFlags {
 		format:   set.Bool("format", true, "run dart format on the output"),
 		timings:  set.Bool("timings", false, "report phase durations on stderr"),
 		tags:     set.String("tags", "", "comma-separated Go build tags"),
+		complete: set.Bool("complete", false, "require function bodies or external declarations in root packages"),
 	}
 }
 
@@ -148,6 +151,7 @@ func (f *buildFlags) options(args []string) (driver.Options, error) {
 		Runtime:   *f.runtime,
 		TrimPath:  *f.trimpath,
 		Format:    *f.format,
+		Complete:  *f.complete,
 		BuildTags: strings.FieldsFunc(*f.tags, func(r rune) bool { return r == ',' || r == ' ' }),
 	}
 	if *f.timings {

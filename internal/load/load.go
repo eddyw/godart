@@ -88,13 +88,13 @@ type Filter map[string][]byte
 // The load runs 2 times. The first load finds the files of each standard
 // library package, and the second load replaces those files with the overlay.
 func Load(dir string, patterns ...string) (*Result, error) {
-	return load(dir, false, false, nil, patterns, "", nil)
+	return load(dir, false, false, nil, patterns, "", nil, false)
 }
 
 // LoadTests reads the packages and also each test variant of them. It replaces
 // the test entry point of the go command with the entry point of the compiler.
 func LoadTests(dir string, patterns ...string) (*Result, error) {
-	return load(dir, true, false, nil, patterns, "", nil)
+	return load(dir, true, false, nil, patterns, "", nil, false)
 }
 
 // Options configures package loading and an optional overlay-discovery cache.
@@ -106,13 +106,15 @@ type Options struct {
 	Tests     bool
 	Cover     bool
 	Filter    Filter
+	// Complete requires bodies for root-package functions without external declarations.
+	Complete bool
 }
 
 func LoadWithOptions(opt Options) (*Result, error) {
-	return load(opt.Dir, opt.Tests, opt.Cover, opt.Filter, opt.Patterns, opt.CacheDir, opt.BuildTags)
+	return load(opt.Dir, opt.Tests, opt.Cover, opt.Filter, opt.Patterns, opt.CacheDir, opt.BuildTags, opt.Complete)
 }
 
-func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string, tags []string) (*Result, error) {
+func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string, tags []string, complete bool) (*Result, error) {
 	var timings []PhaseTiming
 	phase := time.Now()
 	sdk, err := prepareGoSDK(dir)
@@ -213,7 +215,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	if len(pkgs) == 0 {
 		return nil, fmt.Errorf("no package matches %v in %s", patterns, dir)
 	}
-	if err := collectErrors(pkgs, files, &rangeExtras); err != nil {
+	if err := collectErrors(pkgs, files, &rangeExtras, complete); err != nil {
 		return nil, err
 	}
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
@@ -481,7 +483,7 @@ func patchFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
 // overlay of another package gives such an error, and the verifier reports the
 // real cause with a source position: a compiled package imports a package
 // outside the surface.
-func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeExtras *sync.Map) error {
+func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeExtras *sync.Map, complete bool) error {
 	root := map[string]bool{}
 	for _, p := range roots {
 		root[p.ID] = true
@@ -513,7 +515,7 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeEx
 		}
 		if !p.IllTyped {
 			errs = append(errs, interfaceCycles(p)...)
-			errs = append(errs, directiveContracts(p)...)
+			errs = append(errs, directiveContracts(p, complete && root[p.ID])...)
 		}
 		syntaxError := false
 		for _, e := range p.Errors {
@@ -538,6 +540,15 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeEx
 			}
 		}
 	})
-	sort.Slice(errs, func(i, j int) bool { return errs[i].Error() < errs[j].Error() })
+	sort.SliceStable(errs, func(i, j int) bool {
+		a, b := diagnosticPosition(errs[i]), diagnosticPosition(errs[j])
+		if a.Filename != b.Filename {
+			return a.Filename < b.Filename
+		}
+		if a.Line != b.Line {
+			return a.Line < b.Line
+		}
+		return a.Column < b.Column
+	})
 	return errors.Join(errs...)
 }

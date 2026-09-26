@@ -15,9 +15,11 @@ import (
 	"strings"
 
 	"golang.org/x/tools/go/packages"
+
+	"github.com/eddyw/godart/internal/ir"
 )
 
-func directiveContracts(p *packages.Package) []error {
+func directiveContracts(p *packages.Package, complete bool) []error {
 	var errs []error
 	seen := make(map[types.Object]bool)
 	noescape := make(map[*ast.FuncDecl]bool)
@@ -92,6 +94,21 @@ func directiveContracts(p *packages.Package) []error {
 						}
 					}
 				}
+			}
+		}
+	}
+	for _, file := range p.Syntax {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body != nil || !complete && fn.Name.Name != "init" {
+				continue
+			}
+			if !seen[p.TypesInfo.Defs[fn.Name]] && ir.DartMarker(fn.Doc) == nil {
+				pos := fn.Name.Pos()
+				if fn.Recv != nil {
+					pos = fn.Recv.Pos()
+				}
+				reject(pos, "missing function body")
 			}
 		}
 	}
