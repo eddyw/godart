@@ -793,6 +793,21 @@ class ParityTest(unittest.TestCase):
                 mutate(changed)
                 assess(changed, "failed")
 
+            flagged = copy.deepcopy(outcome)
+            flagged["fixture"].update(recipe="build -gcflags=-l=4", native_flags=["-gcflags=-l=4"])
+            flagged["native"]["command"].insert(3, "-gcflags=-l=4")
+            assess(flagged, "passed")
+            for mutate in [
+                lambda c: c["native"]["command"].pop(3),
+                lambda c: c["native"]["command"].__setitem__(3, "-gcflags=-l"),
+                lambda c: c["native"]["command"].insert(4, "-gcflags=-l"),
+                lambda c: c["fixture"].pop("native_flags"),
+                lambda c: c["fixture"].update(recipe="build -gcflags=-l=4 -race"),
+            ]:
+                changed = copy.deepcopy(flagged)
+                mutate(changed)
+                assess(changed, "failed")
+
     def test_rejection_recipe_preserves_panic_flag(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

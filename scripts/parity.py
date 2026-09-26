@@ -517,6 +517,8 @@ def language_behavior(paths):
                         valid = executed and directory_language_valid(case, report.get("go_version"))
                     elif case.get("contract") in {"compile", "build"}:
                         recipe = case["fixture"]["recipe"] == case["contract"]
+                        if case["contract"] == "build" and case["fixture"]["recipe"] == "build -gcflags=-l=4":
+                            recipe = True
                         environment_option = {
                             "compile -godebug gotypesalias=1": ("GODEBUG", "gotypesalias=1"),
                             "compile -goexperiment fieldtrack": ("GOEXPERIMENT", "fieldtrack"),
@@ -561,11 +563,13 @@ def language_behavior(paths):
                             entry = case.get("wrapper_source", "")
                             native = case["native"].get("command", [])
                             gart = case["gart"].get("command", [])
+                            flags = ["-gcflags=-l=4"] if case["fixture"]["recipe"] == "build -gcflags=-l=4" else []
                             valid = (valid and entry and hashlib.sha256(entry.encode()).hexdigest() == case["wrapper_sha256"]
                                      and native[:2] == ["go", "build"]
-                                     and len(native) == 6 and native[2].startswith("-gcflags=all=")
-                                     and native[3:5] == ["-o", "native.o"]
-                                     and native[5].endswith("/" + case["fixture"].get("file", ""))
+                                     and case["fixture"].get("native_flags", []) == flags
+                                     and len(native) == 6 + len(flags) and native[2].startswith("-gcflags=all=")
+                                     and native[3:-3] == flags and native[-3:-1] == ["-o", "native.o"]
+                                     and native[-1].endswith("/" + case["fixture"].get("file", ""))
                                      and gart[:3] == ["dart", "compile", "kernel"]
                                      and gart[3:] in [["bin/main.dart", "-o", "compile.dill"], ["compile.dart", "-o", "compile.dill"]])
                     elif case.get("contract") in {"reject", "errorcheckoutput", "diagnostics", "errorcheckdir"}:

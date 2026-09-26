@@ -82,7 +82,9 @@ func runCompilationCases(t *testing.T, adapter string) {
 			}
 			dir := t.TempDir()
 			if c.Action == "build" {
-				runLanguage(t, &result.Native, dir, runLimit, "go", "build", "-gcflags=all="+inv.GCFlags, "-o", "native.o", sourcePath)
+				args := append([]string{"build", "-gcflags=all=" + inv.GCFlags}, c.NativeFlags...)
+				args = append(args, "-o", "native.o", sourcePath)
+				runLanguage(t, &result.Native, dir, runLimit, "go", args...)
 			} else {
 				packageOption := "-p=p"
 				if c.Recipe == "compile -p=main" {
