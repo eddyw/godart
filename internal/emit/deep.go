@@ -2,13 +2,68 @@ package emit
 
 import (
 	"fmt"
+	"go/token"
 	"go/types"
 	"strings"
 
 	"github.com/eddyw/godart/internal/ir"
+	"github.com/eddyw/godart/internal/typeset"
 )
 
 const deepSliceLevels = 32
+
+// Keep large data literals out of a single Dart optimizer graph.
+func (e *emitter) largeSlice(elem types.Type, parts []string) string {
+	var text strings.Builder
+	text.WriteString("(() {\n")
+	var calls []string
+	for start := 0; start < len(parts); start += 128 {
+		name := fmt.Sprintf("$chunk%d", start/128)
+		fmt.Fprintf(&text, "@pragma('dart2js:noInline')\nList<%s> %s() => <%s>[%s];\n",
+			e.dartType(elem), name, e.dartType(elem), strings.Join(parts[start:min(start+128, len(parts))], ", "))
+		calls = append(calls, "..."+name+"()")
+	}
+	fmt.Fprintf(&text, "return %s;\n})()", e.sliceLiteral(elem, calls))
+	return text.String()
+}
+
+// A helper must not add a source frame for a Go call or a recoverable panic.
+func literalData(x ir.Expr) bool {
+	switch x := x.(type) {
+	case *ir.Const, *ir.Zero:
+		return true
+	case *ir.Ident:
+		return !x.Boxed
+	case *ir.Unary:
+		return x.Op == token.SUB && literalData(x.X)
+	case *ir.Builtin:
+		if x.Name != "complex" || x.Results != nil {
+			return false
+		}
+		for _, arg := range x.Args {
+			if !literalData(arg) {
+				return false
+			}
+		}
+		return true
+	case *ir.Composite:
+		if x.Results != nil {
+			return false
+		}
+		switch typeset.Core(x.Type).(type) {
+		case *types.Array, *types.Slice, *types.Struct:
+		default:
+			return false
+		}
+		for _, elem := range x.Elems {
+			if !literalData(elem) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
 
 // Separate helpers bound Dart parser depth without a change to operand order.
 func (e *emitter) deepSlice(x *ir.Composite) string {

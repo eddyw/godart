@@ -88,15 +88,7 @@ func TestRunRecipeTargets(t *testing.T) {
 	}
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
-			selected := slices.Clone(cases)
-			if target == "js" || target == "wasm" {
-				for i, c := range selected {
-					if c.Name == "inline_caller" || c.Name == "inline_callers" {
-						selected[i].Exclusion = &parity.Omission{Classification: "implementation-gap", Reason: "JavaScript and Wasm stack traces lack generated Dart source positions for runtime.Caller and runtime.Callers."}
-					}
-				}
-			}
-			runLanguageCases(t, target, inv, selected)
+			runLanguageCases(t, target, inv, cases)
 		})
 	}
 }

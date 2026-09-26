@@ -23,7 +23,7 @@ SDK versions, modes, and exclusions.
 | Runtime metrics | `runtime/metrics` exposes GODEBUG event counters and value accessors. Unknown metrics return `KindBad`. Native Go heap, scheduler, and collector measurements remain unavailable. |
 | Deep calls | Recursive call cycles use resumable frames. Synchronous callbacks execute those frames without scheduler waits. Actual channel and I/O waits remain invalid in synchronous callbacks. |
 | Linkname | Module variable aliases share storage with variables of the same type in imported packages. Module function aliases resolve to functions of the same type in the program import graph. Alias initializers, function alias bodies, and aliases to other aliases remain unsupported. |
-| Stack traces | Go source positions, without native instruction offsets. `-trimpath` selects portable paths. Runtime initialization and panic frames use their Dart source locations. |
+| Stack traces | Go source positions, without native instruction offsets. `-trimpath` selects portable paths. Synthetic runtime frames use Dart implementation paths and can report line 0. |
 | Zero-size arrays and slices | Zero-size elements use virtual storage. Logical lengths remain 64-bit values on VM, AOT, JS, and Wasm. |
 | Numbers | Target representations differ. JavaScript conversion boundaries need particular care. |
 | Time | Monotonic values support elapsed-time operations. Time-zone behavior can differ from Go's own database. |
@@ -32,8 +32,8 @@ SDK versions, modes, and exclusions.
 | GODEBUG | Executables use the Go toolchain's module, workspace, and source defaults. Environment values override these defaults for library readers and `panicnil`. Other runtime controls and bisect patterns remain incomplete. The FIPS module rejects non-default modes. |
 
 The verifier reports unsupported source constructs with source positions.
-`runtime.Caller` and `runtime.Callers` retain Go source frames on VM and AOT.
-JavaScript and Wasm still lack source positions for these frames.
+`runtime.Caller` and `runtime.Callers` retain Go source frames on VM, AOT,
+JavaScript, and Wasm.
 The verifier tests define precise rejection cases. Runtime and target limits
 can still produce errors after compilation.
 

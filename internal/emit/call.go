@@ -15,9 +15,9 @@ import (
 func (e *emitter) call(x *ir.Call) string {
 	text := e.callText(x)
 	if x.Sync {
-		return "$syncCall(() => " + text + ")"
+		text = "$syncCall(() => " + text + ")"
 	}
-	return text
+	return e.sourceCall(x.Pos, text, x.GoType())
 }
 
 func (e *emitter) callText(x *ir.Call) string {

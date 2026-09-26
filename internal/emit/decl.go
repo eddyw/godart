@@ -659,6 +659,7 @@ func (e *emitter) body(f *ir.Func) {
 // writes the result variables and leaves a labeled block. The function reads
 // the variables after the block.
 func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block, end token.Pos) {
+	defer e.openSourceFrame()()
 	// A function that names 1 result declares each result. The return path
 	// writes each one and reads them together, thus a blank result also needs
 	// its variable.
@@ -693,10 +694,12 @@ func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block, end t
 		e.list(body.List)
 	}
 	e.mark(end)
+	e.sourcePosition(end)
 	e.line("$defer.run();")
 	e.line("} catch ($e) {")
 	e.line("final ChainState $chain = $chainOpen($e);")
 	e.mark(end)
+	e.sourcePosition(end)
 	e.line("if (!$defer.runRecovered()) { $chainClose($chain); rethrow; }")
 	e.line("$chainClose($chain);")
 	e.line("}")

@@ -58,6 +58,10 @@ func (e *emitter) openCaptures(mark int) {
 
 func (e *emitter) stmtOne(s ir.Stmt) {
 	e.mark(ir.PosOf(s))
+	if !e.sourceLabel {
+		e.sourcePosition(ir.PosOf(s))
+	}
+	e.sourceLabel = false
 	switch s := s.(type) {
 	case *ir.Block:
 		e.line("{")
@@ -92,9 +96,13 @@ func (e *emitter) stmtOne(s ir.Stmt) {
 		}
 		e.line("continue %s;", s.Label)
 	case *ir.Labeled:
+		e.sourceLabel = true
 		e.line("%s:", s.Label)
 		e.stmt(s.Stmt)
 	case *ir.Defer:
+		previous := e.sourceFrame
+		e.sourceFrame = false
+		defer func() { e.sourceFrame = previous }()
 		// Go resolves the method of an interface receiver at the statement,
 		// and a nil receiver panics there. A function value keeps its check
 		// for the run of the deferred call.

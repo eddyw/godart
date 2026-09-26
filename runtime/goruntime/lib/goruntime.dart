@@ -38,6 +38,7 @@ export 'src/reflect.dart';
 export 'src/sched.dart';
 export 'src/select.dart';
 export 'src/slice.dart';
+export 'src/source.dart';
 export 'src/srcmap.dart';
 export 'src/string.dart';
 export 'src/test.dart';

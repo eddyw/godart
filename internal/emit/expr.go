@@ -1139,6 +1139,9 @@ func (e *emitter) composite(x *ir.Composite) string {
 		}
 		return fmt.Sprintf("<%s>[%s]", e.dartType(u.Elem()), strings.Join(parts, ", "))
 	case *types.Slice:
+		if len(parts) > 128 && literalData(x) {
+			return e.largeSlice(u.Elem(), parts)
+		}
 		return e.sliceLiteral(u.Elem(), parts)
 	case *types.Map:
 		var text strings.Builder

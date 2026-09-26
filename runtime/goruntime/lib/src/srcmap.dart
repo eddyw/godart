@@ -9,6 +9,7 @@ import 'funcpc.dart';
 import 'panic.dart';
 import 'sched.dart';
 import 'slice.dart';
+import 'source.dart';
 import 'string.dart';
 
 /// A source position and its Go function identity.
@@ -175,7 +176,12 @@ int _floor(List<int> list, int value) {
 /// "function|file|line". The count of skip drops the first frames, and frame 0
 /// is the function that calls this one.
 Slice<GoString> $stack(int skip) {
-  var frames = $goStack(StackTrace.current);
+  var frames = $webSourceFrames
+      ? [
+          for (final (name, file, line) in $sourceFrames)
+            GoPos(name, file, line),
+        ]
+      : $goStack(StackTrace.current);
   for (final frame in $activeCallerFrames) {
     frames.add(GoPos(frame.$name, frame.$goFile, frame.$goLine));
   }
@@ -208,7 +214,16 @@ Slice<GoString> $stack(int skip) {
 }
 
 List<GoPos> _panicOrigin(GoPanic panic, {bool panicFrames = true}) {
-  final origin = $goStack(panic.trace, panicFrames: panicFrames);
+  final origin = $webSourceFrames
+      ? <GoPos>[
+          if (panicFrames)
+            const GoPos(
+              'runtime.gopanic',
+              'package:goruntime/src/panic.dart',
+              0,
+            ),
+        ]
+      : $goStack(panic.trace, panicFrames: panicFrames);
   for (final (name, file, line) in panic.callers) {
     origin.add(GoPos(name, file, line));
   }

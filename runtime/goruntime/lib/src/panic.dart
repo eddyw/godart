@@ -8,6 +8,7 @@ import 'godebug.dart';
 import 'iface.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'sched.dart' show $activeCallerFrames, $current;
+import 'source.dart';
 import 'string.dart';
 
 String $defaultGODEBUG = '';
@@ -76,6 +77,7 @@ final class GoPanic implements Exception {
     : goroutineID = $current?.id ?? 1,
       trace = StackTrace.current,
       callers = [
+        ...$sourceFrames,
         for (final frame in $activeCallerFrames)
           (frame.$name, frame.$goFile, frame.$goLine),
       ],

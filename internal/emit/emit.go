@@ -280,8 +280,10 @@ type emitter struct {
 	funcLine int
 	// curGoName holds the Go name of the current function. The frame class of
 	// a local function reads it.
-	curGoName string
-	inLiteral bool
+	curGoName   string
+	inLiteral   bool
+	sourceFrame bool
+	sourceLabel bool
 	// extra holds each import that the emitter added. Read addImport.
 	extra []Import
 	// lits holds the string constants of the file that the emitter writes.
@@ -890,6 +892,7 @@ func (e *emitter) writeInit(imports []Import) {
 			e.line("});")
 		} else {
 			e.markFunc(&ir.Func{Name: "init", Pos: g.Pos})
+			closeSource := e.openSourceFrame()
 			e.mark(g.Pos)
 			e.list(g.Pending)
 			value := e.zero(g.Var.Type)
@@ -897,6 +900,7 @@ func (e *emitter) writeInit(imports []Import) {
 				value = e.expr(g.Init)
 			}
 			e.initAssign(g, value)
+			closeSource()
 		}
 		e.markDrop()
 		e.line("},")

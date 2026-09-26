@@ -1,4 +1,5 @@
 import 'sched.dart';
+import 'source.dart';
 
 /// Runs initialization steps in order, including their saved continuations.
 void $initSequence(List<void Function()> steps) {
@@ -20,24 +21,33 @@ final class _InitSequence implements NestedFrame {
 
   @override
   Object? resume() {
-    if (child != null) {
-      $resumeFrame(child!);
-      if ($blocked != null) {
-        child = $blocked;
-        $block(this);
-        return null;
+    final source = $sourceEnter(
+      'runtime.doInit',
+      'package:goruntime/src/init.dart',
+      0,
+    );
+    try {
+      if (child != null) {
+        $resumeFrame(child!);
+        if ($blocked != null) {
+          child = $blocked;
+          $block(this);
+          return null;
+        }
+        child = null;
       }
-      child = null;
-    }
-    while (index < steps.length) {
-      steps[index++]();
-      if ($blocked != null) {
-        child = $blocked;
-        $block(this);
-        return null;
+      while (index < steps.length) {
+        steps[index++]();
+        if ($blocked != null) {
+          child = $blocked;
+          $block(this);
+          return null;
+        }
       }
+      return null;
+    } finally {
+      $sourceLeave(source);
     }
-    return null;
   }
 }
 

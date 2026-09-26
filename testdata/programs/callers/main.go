@@ -36,6 +36,7 @@ func main() {
 	outer()
 	walk()
 	identity()
+	callSites()
 }
 
 //go:noinline
@@ -54,4 +55,18 @@ func identity() {
 	a, more := frames.Next()
 	b, last := frames.Next()
 	fmt.Println("entries", a.Entry == entry, b.Entry == entry, a.Func == b.Func, more, last)
+}
+
+func sourceSite(label string, value int) int {
+	pc, _, line, _ := runtime.Caller(1)
+	fmt.Println(label, runtime.FuncForPC(pc).Name(), line)
+	return value
+}
+
+func callSites() {
+	sourceSite("outer",
+		sourceSite("inner", 1))
+	for i := 0; sourceSite("condition", i) < 2; i = sourceSite("post", i+1) {
+		sourceSite("body", i)
+	}
 }

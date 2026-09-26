@@ -249,6 +249,7 @@ func (e *emitter) frameArgs(tps []*types.TypeParam, params []*ir.Var) []string {
 
 // machineBody writes the body of a function whose form is a state machine.
 func (e *emitter) machineBody(f *ir.Func, fn string) {
+	defer e.openSourceFrame()()
 	m := f.Machine
 	prev := e.machine
 	locals := make(map[string]bool, len(m.Locals))
@@ -348,6 +349,7 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 		e.line("} catch ($e) {")
 		e.line("final ChainState $chain = $chainOpen($e);")
 		e.mark(f.End)
+		e.sourcePosition(f.End)
 		e.line("if (!$defer.runRecovered()) { $chainClose($chain); rethrow; }")
 		e.line("$chainClose($chain);")
 		if hasNamedResults(f.Results) {
@@ -377,6 +379,7 @@ func (e *emitter) deferNext(s *ir.DeferNext) {
 	// statement when the exit is a return, and the shared state cannot.
 	if e.machine != nil {
 		e.mark(e.machine.end)
+		e.sourcePosition(e.machine.end)
 	}
 	e.line("$defer.runNext();")
 	e.line("$s = %d;", s.Body)
@@ -469,6 +472,7 @@ func (e *emitter) machineReturn(s *ir.Return) {
 		// A return that stage 4 built for a fall off the end holds no
 		// position, and Go names the closing brace there.
 		e.mark(ctx.end)
+		e.sourcePosition(ctx.end)
 	}
 	if named {
 		if runs {
