@@ -196,6 +196,15 @@
     "$DIR/fixture.go:14:29: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "$DIR/fixture.go:14:33: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
+  "fixedbugs/issue35027": [
+    "$DIR/issue35027.go:18:30: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue35027.go:18:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue35027.go:19:15: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue35027.go:19:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
+  ],
+  "fixedbugs/issue35073a": [
+    "$DIR/issue35073a.go:21:48: reflect.ValueOf(&n).Elem().UnsafeAddr undefined (type reflect.Value has no field or method UnsafeAddr)"
+  ],
   "fixedbugs/issue36723": [
     "$DIR/fixture.go:21:10: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
     "$DIR/fixture.go:21:23: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
@@ -204,6 +213,15 @@
   ],
   "fixedbugs/issue38093": [
     "no package matches [./...] in $DIR"
+  ],
+  "fixedbugs/issue40917": [
+    "$DIR/issue40917.go:13:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40917.go:16:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40917.go:16:6: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40917.go:17:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40917.go:17:6: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40917.go:18:21: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue40917.go:18:6: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue40954": [
     "$DIR/issue40954.go:12:2: the package runtime/cgo is outside the supported surface (the standard library surface is curated)",
@@ -262,6 +280,10 @@
   ],
   "fixedbugs/issue46903": [
     "$DIR/issue46903.go:10:8: the package runtime/cgo is outside the supported surface (the standard library surface is curated)"
+  ],
+  "fixedbugs/issue46938": [
+    "$DIR/issue46938.go:25:7: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "$DIR/issue46938.go:28:6: the compiler rejects the package unsafe conversion (only nil pointer values are supported)"
   ],
   "fixedbugs/issue48536": [
     "$DIR/issue48536.go:15:8: the compiler rejects the package unsafe conversion (only nil pointer values are supported)",

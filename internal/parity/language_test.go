@@ -34,15 +34,17 @@ func TestLanguageInventory(t *testing.T) {
 		recipe string
 		flags  []string
 	}{
-		"runcheckptr":     {"run -gcflags=all=-d=checkptr", []string{"-gcflags=all=-d=checkptr"}},
-		"runpurecheckptr": {"run -tags=purego -gcflags=all=-d=checkptr", []string{"-tags=purego", "-gcflags=all=-d=checkptr"}},
-		"runcallersplit":  {"run -gcflags -l=4", []string{"-gcflags", "-l=4"}},
-		"runnoinline":     {`run -gcflags="-l"`, []string{"-gcflags=-l"}},
-		"runnoopt":        {"run -gcflags='all=-N -l'", []string{"-gcflags=all=-N -l"}},
-		"runconvert":      {"run -gcflags=-d=converthash=qy", []string{"-gcflags=-d=converthash=qy"}},
-		"runsoftfloat":    {"run -gcflags=-d=softfloat", []string{"-gcflags=-d=softfloat"}},
-		"runssa":          {"run -gcflags=-d=ssa/check/on", []string{"-gcflags=-d=ssa/check/on"}},
-		"runcaller":       {"run -gcflags=-l=4", []string{"-gcflags=-l=4"}},
+		"runlocalcheckptr":  {"run -gcflags=-d=checkptr", []string{"-gcflags=-d=checkptr"}},
+		"runquotedcheckptr": {`run -gcflags="-d=checkptr"`, []string{"-gcflags=-d=checkptr"}},
+		"runcheckptr":       {"run -gcflags=all=-d=checkptr", []string{"-gcflags=all=-d=checkptr"}},
+		"runpurecheckptr":   {"run -tags=purego -gcflags=all=-d=checkptr", []string{"-tags=purego", "-gcflags=all=-d=checkptr"}},
+		"runcallersplit":    {"run -gcflags -l=4", []string{"-gcflags", "-l=4"}},
+		"runnoinline":       {`run -gcflags="-l"`, []string{"-gcflags=-l"}},
+		"runnoopt":          {"run -gcflags='all=-N -l'", []string{"-gcflags=all=-N -l"}},
+		"runconvert":        {"run -gcflags=-d=converthash=qy", []string{"-gcflags=-d=converthash=qy"}},
+		"runsoftfloat":      {"run -gcflags=-d=softfloat", []string{"-gcflags=-d=softfloat"}},
+		"runssa":            {"run -gcflags=-d=ssa/check/on", []string{"-gcflags=-d=ssa/check/on"}},
+		"runcaller":         {"run -gcflags=-l=4", []string{"-gcflags=-l=4"}},
 	}
 	for name, recipe := range runCompilerRecipes {
 		write("test/"+name+".go", "// "+recipe.recipe+"\npackage main\nfunc main() {}\n")
@@ -162,8 +164,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 95 {
-		t.Fatalf("got %d cases, want 95", len(inv.Cases))
+	if len(inv.Cases) != 97 {
+		t.Fatalf("got %d cases, want 97", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -405,7 +407,7 @@ func TestLanguagePolicy(t *testing.T) {
 		}
 	}
 	for name, diagnostics := range policy.Rejections {
-		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "compile-file" && cases[name].Adapter != "build-file" && (cases[name].Adapter != "directory-packages" || cases[name].Action == "errorcheckdir")) || len(diagnostics) == 0 {
+		if (cases[name].Adapter != "single-file" && cases[name].Adapter != "run-recipe" && cases[name].Adapter != "compile-file" && cases[name].Adapter != "build-file" && (cases[name].Adapter != "directory-packages" || cases[name].Action == "errorcheckdir")) || len(diagnostics) == 0 {
 			t.Errorf("invalid language rejection: %s", name)
 		}
 	}

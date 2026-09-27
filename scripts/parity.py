@@ -541,6 +541,8 @@ def run_recipe_valid(case, target):
     recipe = fixture.get("recipe", "")
     flags = {
         "run -gcflags=all=-d=checkptr": ["-gcflags=all=-d=checkptr"],
+        "run -gcflags=-d=checkptr": ["-gcflags=-d=checkptr"],
+        'run -gcflags="-d=checkptr"': ["-gcflags=-d=checkptr"],
         "run -tags=purego -gcflags=all=-d=checkptr": ["-tags=purego", "-gcflags=all=-d=checkptr"],
         "run -gcflags -l=4": ["-gcflags", "-l=4"],
         'run -gcflags="-l"': ["-gcflags=-l"],

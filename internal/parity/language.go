@@ -323,6 +323,8 @@ var errorcheckVersionRecipe = regexp.MustCompile(`^errorcheck(\s+-0)?\s+-lang=(g
 var directoryRecipe = regexp.MustCompile(`^runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?$`)
 
 var languageRunCompilerFlags = map[string][]string{
+	"run -gcflags=-d=checkptr":                  {"-gcflags=-d=checkptr"},
+	`run -gcflags="-d=checkptr"`:                {"-gcflags=-d=checkptr"},
 	"run -gcflags=all=-d=checkptr":              {"-gcflags=all=-d=checkptr"},
 	"run -tags=purego -gcflags=all=-d=checkptr": {"-tags=purego", "-gcflags=all=-d=checkptr"},
 	"run -gcflags -l=4":                         {"-gcflags", "-l=4"},

@@ -83,8 +83,8 @@ func TestRunRecipeTargets(t *testing.T) {
 			cases = append(cases, c)
 		}
 	}
-	if len(cases) != 15 {
-		t.Fatalf("the original run recipes changed: got %d, want 15", len(cases))
+	if len(cases) != 19 {
+		t.Fatalf("the original run recipes changed: got %d, want 19", len(cases))
 	}
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
