@@ -478,7 +478,7 @@ import . "os/signal"
 					if err != nil {
 						t.Fatal(err)
 					}
-					writeFile(t, filepath.Join(fixture, "000_zone_test.go"), "package time_test\nimport \"time\"\nvar _ = func() bool { loc, err := time.LoadLocationFromTZData(\"Local\", []byte("+strconv.Quote(string(data))+")); if err != nil { panic(err) }; *time.Local = *loc; return true }()\n")
+					writeFile(t, filepath.Join(fixture, "000_zone_test.go"), "package time_test\nimport (\"time\"; _ \"time/tzdata\")\nvar _ = func() bool { loc, err := time.LoadLocationFromTZData(\"Local\", []byte("+strconv.Quote(string(data))+")); if err != nil { panic(err) }; *time.Local = *loc; return true }()\n")
 				}
 			}
 
@@ -528,7 +528,7 @@ import . "os/signal"
 				name = pkg + "-content-type"
 			}
 			compareUpstreamInputs(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates, resolver)
-			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "runtime/metrics" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "encoding/json" || pkg == "encoding/gob" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" || pkg == "testing" {
+			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "runtime/metrics" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "encoding/json" || pkg == "encoding/gob" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" || pkg == "testing" || pkg == "time" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
