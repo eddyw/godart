@@ -208,8 +208,8 @@ int $testSocketOption(int fd,int level,int option) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	replace(descriptorPath, `(?s)GoInt _descriptor\([^\n]*\) \{.*?\n\}`, "GoInt _descriptor($testing.T$? t, $net.TCPConn$? c) { return $net.$testSocketDescriptor(c!); }")
-	replace(optionsPath, `(?s)\(GoInt, Iface\?\) GetsockoptInt\([^\n]*\) \{.*?\n\}`, "(GoInt, Iface?) GetsockoptInt(GoInt fd, GoInt level, GoInt option) { return ($gi($testSocketOption($ix(fd),$ix(level),$ix(option))), null); }")
+	replace(descriptorPath, `(?s)GoInt _descriptor\([^\n]*\) \{.*?\n\}(?:\n|$)`, "GoInt _descriptor($pkg$testing.T$? t, $pkg$net.TCPConn$? c) { return $pkg$net.$testSocketDescriptor(c!); }")
+	replace(optionsPath, `(?s)\(GoInt, Iface\?\) GetsockoptInt\([^\n]*\) \{.*?\n\}(?:\n|$)`, "(GoInt, Iface?) GetsockoptInt(GoInt fd, GoInt level, GoInt option) { return ($gi($testSocketOption($ix(fd),$ix(level),$ix(option))), null); }")
 	run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v")
 	executable := filepath.Join(out, "keepalive")
 	run(t, out, "dart", "compile", "exe", stats.Binaries[0].Entry, "-o", executable)

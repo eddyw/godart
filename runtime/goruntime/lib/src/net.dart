@@ -1111,6 +1111,8 @@ int? _sockOptionNumber(String name) {
       return bsd ? 0x1002 : 8;
     case 'sndbuf':
       return bsd ? 0x1001 : 7;
+    case 'linger':
+      return bsd ? 0x0080 : 13;
   }
   return null;
 }
@@ -1149,7 +1151,7 @@ GoString _optionCause(String name) => GoString.fromString(
 
 /// Writes a socket option of a connection. The name holds `nodelay`,
 /// `keepalive`, `keepidle`, `keepinterval`, `keepcount`, `rcvbuf`, or
-/// `sndbuf`. A flag reads the value 0 or 1.
+/// `sndbuf`, or `linger`. A flag reads the value 0 or 1.
 (GoString, int) $connOption(int handle, GoString name, int value) {
   final _Conn? c = _at(handle);
   if (c == null) return (_closed(), 0);
@@ -1162,6 +1164,24 @@ GoString _optionCause(String name) => GoString.fromString(
     final int? tcpOption = _tcpOptionNumber(key);
     final int? option = tcpOption ?? _sockOptionNumber(key);
     if (option == null) return (_optionCause(key), 0);
+    if (key == 'linger') {
+      final data = ByteData(Platform.isWindows ? 4 : 8);
+      if (Platform.isWindows) {
+        data.setUint16(0, value >= 0 ? 1 : 0, Endian.host);
+        data.setUint16(2, value >= 0 ? value.toUnsigned(16) : 0, Endian.host);
+      } else {
+        data.setInt32(0, value >= 0 ? 1 : 0, Endian.host);
+        data.setInt32(4, value >= 0 ? value.toSigned(32) : 0, Endian.host);
+      }
+      c.setRaw(
+        RawSocketOption(
+          RawSocketOption.levelSocket,
+          option,
+          data.buffer.asUint8List(),
+        ),
+      );
+      return (_empty, 0);
+    }
     c.setRaw(
       RawSocketOption.fromInt(
         tcpOption == null

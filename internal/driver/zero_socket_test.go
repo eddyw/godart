@@ -37,6 +37,7 @@ func TestZeroSockets(t *testing.T) {
   })
  }
  for _,op:=range []struct{name string;call func()error}{
+  {"tcp-linger",func()error{return tcp.SetLinger(0)}},
   {"tcp-no-delay",func()error{return tcp.SetNoDelay(true)}},
   {"tcp-keepalive",func()error{return tcp.SetKeepAlive(true)}},
   {"tcp-keepalive-period",func()error{return tcp.SetKeepAlivePeriod(-1)}},

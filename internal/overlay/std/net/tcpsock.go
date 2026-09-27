@@ -23,7 +23,7 @@ import (
 // program that names the type in an assertion reads it.
 //
 // `dart:io` owns the socket. It gives no file descriptor. The methods
-// `SetLinger`, `MultipathTCP`,
+// `MultipathTCP`,
 // `SyscallConn`, and `File` each need it, thus the overlay holds none of them.
 // `CloseWrite` and `CloseRead` each ride `RawSocket.shutdown`, which ends 1
 // direction of the socket, exactly as the same call of Go does.
@@ -52,6 +52,13 @@ func (c *TCPConn) SetKeepAlive(keepalive bool) error {
 		return syscall.EINVAL
 	}
 	return c.c.setOption("keepalive", flagValue(keepalive))
+}
+
+// SetLinger controls how the socket handles unsent data after Close.
+// A negative value disables linger. Zero discards unsent data.
+// A positive value sets the operating system timeout in seconds.
+func (c *TCPConn) SetLinger(sec int) error {
+	return c.c.setOption("linger", sec)
 }
 
 // SetReadBuffer writes the size of the receive buffer of the socket.
