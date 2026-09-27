@@ -65,6 +65,7 @@ func TestUDPQueuedDatagrams(t *testing.T){
  })}
 }
 func TestUDPConcurrentReads(t *testing.T){
+ for attempt:=0;attempt<100;attempt++ {t.Run(fmt.Sprint(attempt),func(t *testing.T){
  p,e:=net.ListenPacket("udp","127.0.0.1:0");if e!=nil{t.Fatal(e)};defer p.Close()
  c,e:=net.Dial("udp",p.LocalAddr().String());if e!=nil{t.Fatal(e)};defer c.Close()
  p.SetReadDeadline(time.Now().Add(2*time.Second))
@@ -75,6 +76,7 @@ func TestUDPConcurrentReads(t *testing.T){
   if _,e:=c.Write([]byte(message));e!=nil{t.Fatal(e)}
   r:=<-done;if r.data!=message||r.err!=nil{t.Fatalf("read = %q %v, want %q",r.data,r.err,message)}
  }
+ })}
 }
 
 func TestUDPBlockedReads(t *testing.T){

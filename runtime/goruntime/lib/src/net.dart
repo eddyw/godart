@@ -1591,18 +1591,13 @@ Future<(int, GoString, int, GoString, int)> _readPacket(
   }
   Timer? errors;
   if (Platform.isLinux || Platform.isMacOS) {
-    // Dart omits empty datagrams and remote UDP errors from its event stream.
+    // Dart can omit read events, empty datagrams, and remote UDP errors.
     errors = Timer.periodic(const Duration(milliseconds: 10), (_) {
+      if (s.waiter == null) return;
+      s._event(RawSocketEvent.read);
       final waiter = s.waiter;
-      if (waiter == null) return;
+      if (waiter == null || s.nativeFD < 0) return;
       try {
-        final empty = receiveEmptyDatagram(s.socket);
-        if (empty != null) {
-          s.held.add(empty);
-          s._wake(0);
-          return;
-        }
-        if (s.nativeFD < 0) return;
         final code = datagramPendingError(s.socket);
         if (code != 0) {
           s.waiter = null;
