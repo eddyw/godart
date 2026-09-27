@@ -238,57 +238,57 @@
       "suite": "language-targets",
       "shard": 0,
       "shards": 8,
-      "timeout": 24,
-      "job_timeout": 29
+      "timeout": 22,
+      "job_timeout": 27
     },
     {
       "suite": "language-targets",
       "shard": 1,
+      "shards": 8,
+      "timeout": 18,
+      "job_timeout": 23
+    },
+    {
+      "suite": "language-targets",
+      "shard": 2,
       "shards": 8,
       "timeout": 16,
       "job_timeout": 21
     },
     {
       "suite": "language-targets",
-      "shard": 2,
-      "shards": 8,
-      "timeout": 15,
-      "job_timeout": 20
-    },
-    {
-      "suite": "language-targets",
       "shard": 3,
       "shards": 8,
-      "timeout": 15,
-      "job_timeout": 20
+      "timeout": 20,
+      "job_timeout": 25
     },
     {
       "suite": "language-targets",
       "shard": 4,
       "shards": 8,
-      "timeout": 14,
-      "job_timeout": 19
+      "timeout": 15,
+      "job_timeout": 20
     },
     {
       "suite": "language-targets",
       "shard": 5,
-      "shards": 8,
-      "timeout": 12,
-      "job_timeout": 17
-    },
-    {
-      "suite": "language-targets",
-      "shard": 6,
       "shards": 8,
       "timeout": 13,
       "job_timeout": 18
     },
     {
       "suite": "language-targets",
+      "shard": 6,
+      "shards": 8,
+      "timeout": 14,
+      "job_timeout": 19
+    },
+    {
+      "suite": "language-targets",
       "shard": 7,
       "shards": 8,
-      "timeout": 11,
-      "job_timeout": 16
+      "timeout": 13,
+      "job_timeout": 18
     },
     {
       "suite": "upstream-targets",
