@@ -80,7 +80,13 @@ def provenance(path):
         manifest = parent / "run.json"
         if manifest.is_file():
             data = read(manifest)
-            return {"manifest": str(manifest), "compiler_snapshot": data.get("source")}
+            source = data.get("source")
+            archive = parent / "source.tar"
+            if source is None and "tree" in data and "source_sha256" in data and archive.is_file():
+                source = digest(archive)
+                if source != data["source_sha256"]:
+                    raise ValueError(f"compiler source archive differs from {manifest}")
+            return {"manifest": str(manifest), "compiler_snapshot": source}
     return {"manifest": None, "compiler_snapshot": None, "unattributed_directory": str(path.parent)}
 
 

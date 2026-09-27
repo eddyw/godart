@@ -13,6 +13,34 @@ spec.loader.exec_module(parity)
 
 
 class ParityTest(unittest.TestCase):
+    def test_provenance_preserves_legacy_source_identity(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = {"head": "revision", "source_sha256": "tracked files"}
+            parity.save(root / "run.json", {"source": source})
+            self.assertEqual(parity.provenance(root / "report.json")["compiler_snapshot"], source)
+
+    def test_provenance_verifies_the_compiler_archive(self):
+        for archive_state in ("matching", "missing", "changed"):
+            with self.subTest(archive_state=archive_state), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                archive = root / "source.tar"
+                archive.write_bytes(b"compiler source archive")
+                stamp = parity.digest(archive)
+                parity.save(root / "run.json", {"tree": "tree", "source_sha256": stamp})
+                report = root / "reports" / "0" / "case.json"
+                if archive_state == "missing":
+                    archive.unlink()
+                elif archive_state == "changed":
+                    archive.write_bytes(b"different compiler archive")
+                if archive_state == "changed":
+                    with self.assertRaisesRegex(ValueError, "compiler source archive differs"):
+                        parity.provenance(report)
+                else:
+                    origin = parity.provenance(report)
+                    self.assertEqual(origin["compiler_snapshot"], stamp if archive_state == "matching" else None)
+                    self.assertEqual(origin["manifest"], str(root / "run.json"))
+
     def test_supplied_binary_has_no_assumed_source_revision(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
