@@ -78,6 +78,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -242,7 +243,32 @@ func runDialErrors(base string) {
   tr.CloseIdleConnections()
  }
 }
-func main() { runRequests(os.Args[1], "context"); runRequests(os.Args[2], "channel"); runRequests(os.Args[3], "transport"); runHeaderRequests(os.Args[4]); runProtocolFallback(os.Args[5]); runDialErrors(os.Args[5]) }
+type body struct {started,closed chan struct{};start,close sync.Once}
+func (b *body) Read([]byte)(int,error){
+ b.start.Do(func(){close(b.started)})
+ select {case <-b.closed:return 0,errors.New("body closed");case <-time.After(2*time.Second):return 0,errors.New("body read timeout")}
+}
+func (b *body) Close()error{b.close.Do(func(){close(b.closed)});return nil}
+func runBodyCancellation(base string){
+ for _,kind:=range []string{"context","channel"}{
+  b:=&body{started:make(chan struct{}),closed:make(chan struct{})}
+  req,_:=http.NewRequest("POST",base,b)
+  cause:=errors.New("caller canceled")
+  var cancel func()
+  if kind=="context" {ctx,c:=context.WithCancelCause(context.Background());req=req.WithContext(ctx);cancel=func(){c(cause)}} else {ch:=make(chan struct{});req.Cancel=ch;cancel=func(){close(ch)}}
+  result:=make(chan error,1)
+  go func(){res,err:=http.DefaultClient.Do(req);if res!=nil {io.Copy(io.Discard,res.Body);res.Body.Close()};result<-err}()
+  <-b.started
+  cancel()
+  err:=<-result
+  closed:=false
+  select{case <-b.closed:closed=true;case <-time.After(time.Second):}
+  match:=errors.Is(err,cause)
+  if kind=="channel" {match=err!=nil&&strings.Contains(err.Error(),"net/http: request canceled")}
+  fmt.Println(kind,match,closed)
+ }
+}
+func main() { runRequests(os.Args[1], "context"); runRequests(os.Args[2], "channel"); runRequests(os.Args[3], "transport"); runHeaderRequests(os.Args[4]); runProtocolFallback(os.Args[5]); runDialErrors(os.Args[5]); runBodyCancellation(os.Args[5]) }
 `)
 	want := runProgram(t, dir, "go", "run", ".", server(), server(), server(), headerServer.URL, protocolServer.URL)
 	const expected = `context headers true
@@ -275,7 +301,9 @@ protocol unrewindable true true true
 dial dial true true true
 dial context true true true
 dial tls true true true
-dial tls-context true true true`
+dial tls-context true true true
+context true true
+channel true true`
 	if want != expected {
 		t.Fatalf("native fetch result: %q", want)
 	}

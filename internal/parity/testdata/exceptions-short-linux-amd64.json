@@ -13467,6 +13467,126 @@
       "native": "skip",
       "reason": "The original upstream test skips HTTP/2 for Go issue 56019.",
       "test": "TestIdentityResponse/h2"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequest/h1/ContextCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequest/h1/RequestCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequest/h1/TransportCancel/TransportCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequest/h2/ContextCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequest/h2/RequestCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestInDo/h1/ContextCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestInDo/h1/RequestCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestInDo/h1/TransportCancel/TransportCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestInDo/h2/ContextCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestInDo/h2/RequestCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBody/h1/ContextCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBody/h1/RequestCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBody/h1/TransportCancel/TransportCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBody/h2/ContextCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBody/h2/RequestCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBodyInDo/h1/ContextCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBodyInDo/h1/RequestCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBodyInDo/h1/TransportCancel/TransportCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBodyInDo/h2/ContextCancel"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips cancellation assertions in short mode.",
+      "test": "TestTransportCancelRequestWithBodyInDo/h2/RequestCancel"
     }
   ],
   "net/textproto": [

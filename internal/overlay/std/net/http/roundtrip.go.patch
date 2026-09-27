@@ -20,7 +20,7 @@ The source retains the original Go BSD header.
  
  // RoundTrip should be an internal detail,
  // but widely used packages access it using linkname.
-@@ -30,5 +40,208 @@
+@@ -30,5 +40,212 @@
  	if t == nil {
  		panic("transport is nil")
  	}
@@ -101,6 +101,10 @@ The source retains the original Go BSD header.
 +	if req.Body != nil {
 +		read, err := io.ReadAll(req.Body)
 +		req.Body.Close()
++		if cause := context.Cause(ctx); cause != nil {
++			cancel(cause)
++			return nil, cause
++		}
 +		if err != nil {
 +			cancel(err)
 +			return nil, err

@@ -42,8 +42,10 @@ func newClientServerTest(t *testing.T,mode testMode,h Handler,opts ...any) *clie
 
 var http3SkippedMode=[]testMode{http1Mode,http2Mode}
 
-func run(t *testing.T,f func(*testing.T,testMode),modes ...[]testMode) {
- for _,mode:=range http3SkippedMode {
+func run(t *testing.T,f func(*testing.T,testMode),opts ...any) {
+ modes:=http3SkippedMode
+ if len(opts)>0 {modes=opts[0].([]testMode)}
+ for _,mode:=range modes {
   t.Run(string(mode),func(t *testing.T) { f(t,mode) })
  }
 }
