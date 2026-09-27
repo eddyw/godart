@@ -51,6 +51,10 @@ func TestHTTPFetchRequests(t *testing.T) {
 		return s.URL
 	}
 	headerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/method" {
+			io.WriteString(w, r.Method)
+			return
+		}
 		value := r.Header.Get("X-Bytes")
 		if r.URL.Path == "/response" {
 			value = "ascii \xc3\xa9 \xe4\xb8\xad \x80\xff"
@@ -70,6 +74,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -84,6 +89,9 @@ func runRequests(base, kind string) {
 			ctx, cancel := context.WithCancelCause(context.Background())
 			return req.WithContext(ctx), func() { cancel(cause) }
 		}
+		if kind == "transport" {
+			return req, func() { http.DefaultTransport.(*http.Transport).CancelRequest(req) }
+		}
 		cancelc := make(chan struct{})
 		req.Cancel = cancelc
 		return req, func() { close(cancelc) }
@@ -94,23 +102,26 @@ func runRequests(base, kind string) {
 		}
 		return err != nil && strings.Contains(err.Error(), "net/http: request canceled")
 	}
-	req, cancel := newRequest("/headers")
-	result := make(chan error, 1)
-	go func() {
-		res, err := http.DefaultClient.Do(req)
-		if res != nil {
-			res.Body.Close()
+	if kind != "transport" {
+		req, cancel := newRequest("/headers")
+		result := make(chan error, 1)
+		go func() {
+			res, err := http.DefaultClient.Do(req)
+			if res != nil {
+				res.Body.Close()
+			}
+			result <- err
+		}()
+		ready, err := http.Get(base + "/ready")
+		if err != nil {
+			panic(err)
 		}
-		result <- err
-	}()
-	ready, err := http.Get(base + "/ready")
-	if err != nil {
-		panic(err)
+		ready.Body.Close()
+		cancel()
+		fmt.Println(kind, "headers", isCanceled(<-result))
 	}
-	ready.Body.Close()
-	cancel()
-	fmt.Println(kind, "headers", isCanceled(<-result))
-	req, cancel = newRequest("/body")
+
+	req, cancel := newRequest("/body")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		panic(err)
@@ -169,6 +180,13 @@ func runHeaderRequests(base string) {
  res.Body.Close()
  want:="ascii \xc3\xa9 \xe4\xb8\xad \x80\xff"
  fmt.Println("headers response",string(body)==fmt.Sprintf("%x",[]byte(want)),res.Header.Get("X-Bytes")==want,err==nil)
+ req,_:=http.NewRequest("GET",base+"/method",nil)
+ req.Method=""
+ res,err=http.DefaultTransport.RoundTrip(req)
+ if err!=nil {panic(err)}
+ body,err=io.ReadAll(res.Body)
+ res.Body.Close()
+ fmt.Println("empty method",string(body)=="GET",req.Method=="",res.Request==req,err==nil)
 }
 type protocolFunc func(*http.Request) (*http.Response, error)
 func (f protocolFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
@@ -203,9 +221,30 @@ func runProtocolFallback(base string) {
   tr.CloseIdleConnections()
  }
 }
-func main() { runRequests(os.Args[1], "context"); runRequests(os.Args[2], "channel"); runHeaderRequests(os.Args[3]); runProtocolFallback(os.Args[4]) }
+func runDialErrors(base string) {
+ cause := errors.New("custom dial error")
+ for _, kind := range []string{"dial", "context", "tls", "tls-context"} {
+  tr := &http.Transport{}
+  called := false
+  dial := func(string, string) (net.Conn, error) { called = true; return nil, cause }
+  dialContext := func(context.Context, string, string) (net.Conn, error) { called = true; return nil, cause }
+  switch kind {
+  case "dial": tr.Dial = dial
+  case "context": tr.DialContext = dialContext
+  case "tls": tr.DialTLS = dial
+  case "tls-context": tr.DialTLSContext = dialContext
+  }
+  req, _ := http.NewRequest("GET", base, nil)
+  if strings.HasPrefix(kind, "tls") { req.URL.Scheme = "https" }
+  res, err := tr.RoundTrip(req)
+  if res != nil { res.Body.Close() }
+  fmt.Println("dial", kind, called, errors.Is(err, cause), res == nil)
+  tr.CloseIdleConnections()
+ }
+}
+func main() { runRequests(os.Args[1], "context"); runRequests(os.Args[2], "channel"); runRequests(os.Args[3], "transport"); runHeaderRequests(os.Args[4]); runProtocolFallback(os.Args[5]); runDialErrors(os.Args[5]) }
 `)
-	want := runProgram(t, dir, "go", "run", ".", server(), server(), headerServer.URL, protocolServer.URL)
+	want := runProgram(t, dir, "go", "run", ".", server(), server(), server(), headerServer.URL, protocolServer.URL)
 	const expected = `context headers true
 context body true
 context read true
@@ -218,15 +257,25 @@ channel read true
 channel normal ok
 channel eof true
 channel failure true
+transport body true
+transport read true
+transport normal ok
+transport eof true
+transport failure true
 headers request 0 true true true
 headers request 1 true true true
 headers request 2 true true true
 headers request 3 true true true
 headers response true true true
+empty method true true true true
 protocol unread true true true
 protocol read true true true
 protocol closed true true true
-protocol unrewindable true true true`
+protocol unrewindable true true true
+dial dial true true true
+dial context true true true
+dial tls true true true
+dial tls-context true true true`
 	if want != expected {
 		t.Fatalf("native fetch result: %q", want)
 	}
@@ -238,9 +287,9 @@ protocol unrewindable true true true`
 		t.Run(target, func(t *testing.T) {
 			var got programResult
 			if target == "vm" {
-				got = programOutcome(t, dir, "dart", filepath.Join(out, "bin/main.dart"), server(), server(), headerServer.URL, protocolServer.URL)
+				got = programOutcome(t, dir, "dart", filepath.Join(out, "bin/main.dart"), server(), server(), server(), headerServer.URL, protocolServer.URL)
 			} else {
-				got = runUpstreamTarget(t, target, out, "bin/main.dart", dir, []string{server(), server(), headerServer.URL, protocolServer.URL})
+				got = runUpstreamTarget(t, target, out, "bin/main.dart", dir, []string{server(), server(), server(), headerServer.URL, protocolServer.URL})
 			}
 			if got.Exit != 0 || got.Text != want {
 				t.Fatalf("native: %s\nGart: %s\nexit: %d", want, got.Text, got.Exit)

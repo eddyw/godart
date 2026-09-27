@@ -20,11 +20,14 @@ The source retains the original Go BSD header.
  
  // RoundTrip should be an internal detail,
  // but widely used packages access it using linkname.
-@@ -30,5 +40,200 @@
+@@ -30,5 +40,208 @@
  	if t == nil {
  		panic("transport is nil")
  	}
-+	if runtime.GOOS == "js" { return t.fetchRoundTrip(req) }
++	if runtime.GOOS == "js" && t.Dial == nil && t.DialContext == nil &&
++		t.DialTLS == nil && t.DialTLSContext == nil {
++		return t.fetchRoundTrip(req)
++	}
  	return t.roundTrip(req)
  }
 +
@@ -93,6 +96,7 @@ The source retains the original Go BSD header.
 +	if req.Cancel != nil {
 +		go awaitLegacyCancel(ctx, cancel, req)
 +	}
++	cancel = t.prepareTransportCancel(origReq, cancel)
 +	var body []byte
 +	if req.Body != nil {
 +		read, err := io.ReadAll(req.Body)
@@ -115,8 +119,12 @@ The source retains the original Go BSD header.
 +		stopAbort()
 +		cancel(errRequestDone)
 +	}
++	method := req.Method
++	if method == "" {
++		method = MethodGet
++	}
 +	_, code, head, moved, cause := dart.FetchStart(
-+		handle, req.Method, req.URL.String(), fields, body, fetchDeadline(req))
++		handle, method, req.URL.String(), fields, body, fetchDeadline(req))
 +	if cause != "" {
 +		err := context.Cause(ctx)
 +		stop()

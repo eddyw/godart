@@ -1,0 +1,18 @@
+Use fetch for the web default transport and preserve custom dial hooks.
+The source retains the original Go BSD header.
+
+--- transport_default_other.go
++++ transport_default_other.go
+@@ -9,8 +9,12 @@
+ import (
+ 	"context"
+ 	"net"
++	"runtime"
+ )
+ 
+ func defaultTransportDialContext(dialer *net.Dialer) func(context.Context, string, string) (net.Conn, error) {
++	if runtime.GOOS == "js" {
++		return nil
++	}
+ 	return dialer.DialContext
+ }
