@@ -83,5 +83,14 @@
   "shift3",
   "string_lit",
   "utf",
-  "zerodivide"
+  "zerodivide",
+  "append",
+  "complit2",
+  "range",
+  "range3",
+  "range4",
+  "closure1",
+  "closure4",
+  "closure7",
+  "switch"
 ]
