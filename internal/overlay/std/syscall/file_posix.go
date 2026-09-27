@@ -118,3 +118,19 @@ func Ftruncate(fd int, length int64) error {
 	}
 	return nil
 }
+
+func Pread(fd int, p []byte, offset int64) (int, error) {
+	n, errno := dart.NativePread(fd, p, offset)
+	if errno != 0 {
+		return -1, Errno(errno)
+	}
+	return n, nil
+}
+
+func Pwrite(fd int, p []byte, offset int64) (int, error) {
+	n, errno := dart.NativePwrite(fd, p, offset)
+	if errno != 0 {
+		return -1, Errno(errno)
+	}
+	return n, nil
+}

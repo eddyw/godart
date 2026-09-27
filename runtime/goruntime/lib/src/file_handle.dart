@@ -124,11 +124,13 @@ FileSystemException _failure(int code) =>
       code = count < 0 ? errno().value : 0;
     } while (code == 4);
     if (code != 0) return (0, code);
-    bytes.array.setRange(
-      bytes.off,
-      bytes.off + count,
-      buffer.asTypedList(count),
-    );
+    if (count > 0) {
+      bytes.array.setRange(
+        bytes.off,
+        bytes.off + count,
+        buffer.asTypedList(count),
+      );
+    }
     return (count, 0);
   } finally {
     _free(buffer);
