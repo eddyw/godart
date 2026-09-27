@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -40,7 +41,7 @@ func TestGoResolverPortErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
-	t.Log(run(t, dir, "go", "test", "-run", "^TestGoResolverPortErrors$", "-v", "."))
+	t.Log(run(t, dir, "go", "test", "-short="+strconv.FormatBool(testing.Short()), "-run", "^TestGoResolverPortErrors$", "-v", "."))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TrimPath: true})
 	if err != nil {
 		t.Fatal(err)
@@ -57,13 +58,13 @@ func TestGoResolverPortErrors(t *testing.T) {
 				}
 				return runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			result := runTarget(dir, []string{"-test.v", "-test.run=^TestGoResolverPortErrors$"})
+			result := runTarget(dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^TestGoResolverPortErrors$"})
 			t.Log(result.Text)
 			if result.Exit != 0 {
 				t.Fatal(result.Text)
 			}
 			const filter = "^TestLookupPort_Minimal$"
-			result = runTarget(netDir, []string{"-test.v", "-test.run=" + filter})
+			result = runTarget(netDir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter})
 			compareUpstream(t, "net-lookup-port", "net", filter, target, netDir, result.Text, result.Exit)
 		})
 	}

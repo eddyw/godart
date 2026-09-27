@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -202,7 +203,7 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 }
 `)
 
-	t.Log(run(t, dir, "go", "test", "-v", "."))
+	t.Log(run(t, dir, "go", "test", "-short="+strconv.FormatBool(testing.Short()), "-v", "."))
 	stats, e := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
 	if e != nil {
 		t.Fatal(e)
@@ -210,7 +211,7 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 	prepareDart(t, out)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
-			args := []string{"-test.v"}
+			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short())}
 			var result programResult
 			if target == "vm" {
 				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
@@ -223,9 +224,9 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 			}
 			var original programResult
 			if target == "vm" {
-				original = programOutcome(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.run=^TestNotTemporaryRead$")
+				original = programOutcome(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^TestNotTemporaryRead$")
 			} else {
-				original = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.run=^TestNotTemporaryRead$"})
+				original = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^TestNotTemporaryRead$"})
 			}
 			compareUpstream(t, "net-linger", "net", "^TestNotTemporaryRead$", target, dir, original.Text, original.Exit)
 		})

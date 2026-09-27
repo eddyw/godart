@@ -109,7 +109,7 @@ func TestHTTPUpstream(t *testing.T) {
 		t.Fatalf("got %d HTTP test binaries", len(stats.Binaries))
 	}
 	prepareDart(t, outDir)
-	out, runErr, finished := output(dir, nil, runLimit, "dart", filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()))
+	out, runErr, finished := output(dir, nil, runLimit, "dart", filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run="+filter)
 	code := 0
 	if runErr != nil {
 		code = 1
