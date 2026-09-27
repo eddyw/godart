@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 )
@@ -45,18 +46,24 @@ func table() {
 func lookupErrors() {
 	_, err := net.InterfaceByName("")
 	fmt.Println("empty name:", err)
+	errorDetails(err)
 	_, err = net.InterfaceByName("gart-no-such-interface")
 	fmt.Println("unknown name:", err)
+	errorDetails(err)
 	_, err = net.InterfaceByIndex(0)
 	fmt.Println("index 0:", err)
+	errorDetails(err)
 	_, err = net.InterfaceByIndex(-1)
 	fmt.Println("index -1:", err)
+	errorDetails(err)
 	_, err = net.InterfaceByIndex(1 << 20)
 	fmt.Println("unknown index:", err)
+	errorDetails(err)
 
 	var none *net.Interface
 	_, err = none.Addrs()
 	fmt.Println("nil interface:", err)
+	errorDetails(err)
 }
 
 // addresses proves the shape of each address of each interface.
@@ -105,6 +112,19 @@ func addresses() {
 		}
 	}
 	fmt.Println("loopback:", loopback)
+}
+
+func errorDetails(err error) {
+	var op *net.OpError
+	var network net.Error
+	fmt.Printf("error type: %T op=%v network=%v\n", err, errors.As(err, &op), errors.As(err, &network))
+	if op != nil {
+		fmt.Println("operation:", op.Op, op.Net, op.Source == nil, op.Addr == nil, op.Err.Error())
+		fmt.Println("unwrap:", errors.Unwrap(err) == op.Err, errors.Is(err, op.Err))
+	}
+	if network != nil {
+		fmt.Println("flags:", network.Timeout(), network.Temporary())
+	}
 }
 
 func main() {

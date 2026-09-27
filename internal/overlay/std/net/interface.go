@@ -14,14 +14,11 @@ import (
 	"syscall/dart"
 )
 
-// The 4 errors of the interface table. Go wraps each 1 in an OpError. That
-// error holds the operation "route" and the network "ip+net", thus each text
-// below matches the text of Go.
 var (
-	errInvalidInterface      = errors.New("route ip+net: invalid network interface")
-	errInvalidInterfaceIndex = errors.New("route ip+net: invalid network interface index")
-	errInvalidInterfaceName  = errors.New("route ip+net: invalid network interface name")
-	errNoSuchInterface       = errors.New("route ip+net: no such network interface")
+	errInvalidInterface      = errors.New("invalid network interface")
+	errInvalidInterfaceIndex = errors.New("invalid network interface index")
+	errInvalidInterfaceName  = errors.New("invalid network interface name")
+	errNoSuchInterface       = errors.New("no such network interface")
 )
 
 // Interface describes a network interface of the host.
@@ -36,17 +33,20 @@ type Interface struct {
 // Interfaces gives each network interface of the host.
 func Interfaces() ([]Interface, error) {
 	table, err := interfaceTable()
-	return table, err
+	if err != nil {
+		return nil, &OpError{Op: "route", Net: "ip+net", Err: err}
+	}
+	return table, nil
 }
 
 // InterfaceByIndex gives the interface with the requested index.
 func InterfaceByIndex(index int) (*Interface, error) {
 	if index <= 0 {
-		return nil, errInvalidInterfaceIndex
+		return nil, &OpError{Op: "route", Net: "ip+net", Err: errInvalidInterfaceIndex}
 	}
 	table, err := interfaceTable()
 	if err != nil {
-		return nil, err
+		return nil, &OpError{Op: "route", Net: "ip+net", Err: err}
 	}
 	for i := range table {
 		if table[i].Index == index {
@@ -54,17 +54,17 @@ func InterfaceByIndex(index int) (*Interface, error) {
 			return &out, nil
 		}
 	}
-	return nil, errNoSuchInterface
+	return nil, &OpError{Op: "route", Net: "ip+net", Err: errNoSuchInterface}
 }
 
 // InterfaceByName gives the interface of a name.
 func InterfaceByName(name string) (*Interface, error) {
 	if name == "" {
-		return nil, errInvalidInterfaceName
+		return nil, &OpError{Op: "route", Net: "ip+net", Err: errInvalidInterfaceName}
 	}
 	table, err := interfaceTable()
 	if err != nil {
-		return nil, err
+		return nil, &OpError{Op: "route", Net: "ip+net", Err: err}
 	}
 	for i := range table {
 		if table[i].Name == name {
@@ -72,7 +72,7 @@ func InterfaceByName(name string) (*Interface, error) {
 			return &out, nil
 		}
 	}
-	return nil, errNoSuchInterface
+	return nil, &OpError{Op: "route", Net: "ip+net", Err: errNoSuchInterface}
 }
 
 // Addrs gives each unicast address of the interface. Each address holds the
@@ -80,11 +80,11 @@ func InterfaceByName(name string) (*Interface, error) {
 // length that Dart reports.
 func (ifi *Interface) Addrs() ([]Addr, error) {
 	if ifi == nil {
-		return nil, errInvalidInterface
+		return nil, &OpError{Op: "route", Net: "ip+net", Err: errInvalidInterface}
 	}
 	addrs, err := interfaceAddresses()
 	if err != nil {
-		return nil, err
+		return nil, &OpError{Op: "route", Net: "ip+net", Err: err}
 	}
 	var out []Addr
 	for _, a := range addrs {
@@ -101,7 +101,7 @@ func (ifi *Interface) Addrs() ([]Addr, error) {
 func InterfaceAddrs() ([]Addr, error) {
 	addrs, err := interfaceAddresses()
 	if err != nil {
-		return nil, err
+		return nil, &OpError{Op: "route", Net: "ip+net", Err: err}
 	}
 	out := make([]Addr, 0, len(addrs))
 	for _, a := range addrs {
@@ -120,19 +120,19 @@ type interfaceAddr struct {
 func interfaceTable() ([]Interface, error) {
 	names, cause := dart.InterfaceTable()
 	if cause != "" {
-		return nil, errors.New("route ip+net: " + cause)
+		return nil, errors.New(cause)
 	}
 	var table []Interface
 	for _, item := range names {
 		fields := strings.SplitN(item, "|", 5)
 		if len(fields) != 5 {
-			return nil, errors.New("route ip+net: invalid interface metadata")
+			return nil, errors.New("invalid interface metadata")
 		}
 		index, indexErr := strconv.Atoi(fields[0])
 		mtu, mtuErr := strconv.Atoi(fields[1])
 		flags, flagsErr := strconv.ParseUint(fields[2], 10, 32)
 		if indexErr != nil || mtuErr != nil || flagsErr != nil || index <= 0 || mtu < 0 {
-			return nil, errors.New("route ip+net: invalid interface metadata")
+			return nil, errors.New("invalid interface metadata")
 		}
 		var hardware HardwareAddr
 		if fields[3] != "" {
@@ -150,13 +150,13 @@ func interfaceTable() ([]Interface, error) {
 func interfaceAddresses() ([]interfaceAddr, error) {
 	_, addrs, cause := dart.Interfaces()
 	if cause != "" {
-		return nil, errors.New("route ip+net: " + cause)
+		return nil, errors.New(cause)
 	}
 	list := make([]interfaceAddr, 0, len(addrs))
 	for _, item := range addrs {
 		index, text, ok := splitIndex(item)
 		if !ok {
-			return nil, errors.New("route ip+net: the host gave the address " + item)
+			return nil, errors.New("the host gave the address " + item)
 		}
 		network, err := interfaceIPNet(text)
 		if err != nil {
@@ -186,7 +186,7 @@ func splitIndex(item string) (int, string, bool) {
 func interfaceIPNet(text string) (*IPNet, error) {
 	i := strings.LastIndexByte(text, '/')
 	if i < 0 {
-		return nil, errors.New("route ip+net: the address " + text + " holds no prefix")
+		return nil, errors.New("the address " + text + " holds no prefix")
 	}
 	host, prefix := text[:i], text[i+1:]
 	if z := strings.IndexByte(host, '%'); z >= 0 {
@@ -194,11 +194,11 @@ func interfaceIPNet(text string) (*IPNet, error) {
 	}
 	ip := ParseIP(host)
 	if ip == nil {
-		return nil, errors.New("route ip+net: the address " + text + " holds no IP")
+		return nil, errors.New("the address " + text + " holds no IP")
 	}
 	ones, err := strconv.Atoi(prefix)
 	if err != nil {
-		return nil, errors.New("route ip+net: the address " + text + " holds no prefix")
+		return nil, errors.New("the address " + text + " holds no prefix")
 	}
 	bits := 8 * IPv6len
 	if ip.To4() != nil {
@@ -206,7 +206,7 @@ func interfaceIPNet(text string) (*IPNet, error) {
 	}
 	mask := CIDRMask(ones, bits)
 	if mask == nil {
-		return nil, errors.New("route ip+net: the address " + text + " holds no prefix")
+		return nil, errors.New("the address " + text + " holds no prefix")
 	}
 	return &IPNet{IP: ip, Mask: mask}, nil
 }
