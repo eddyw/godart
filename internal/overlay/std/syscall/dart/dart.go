@@ -1459,6 +1459,10 @@ func PacketDeadline(handle int, read, write int64) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func InterfaceMulticastAddrs(index int) ([]string, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func InterfaceTable() ([]string, string) {
 	panic("syscall/dart needs the gart compiler")
 }

@@ -194,3 +194,79 @@ List<GoString> _table() {
     if (fd >= 0) _close(fd);
   }
 }
+
+final class _Ifmaddrs extends Struct {
+  external Pointer<_Ifmaddrs> next;
+  external Pointer<Uint8> name;
+  external Pointer<Uint8> address;
+  external Pointer<Uint8> linkAddress;
+}
+
+final _getifmaddrs = _libc
+    .lookupFunction<
+      Int Function(Pointer<Pointer<_Ifmaddrs>>),
+      int Function(Pointer<Pointer<_Ifmaddrs>>)
+    >("getifmaddrs");
+final _freeifmaddrs = _libc
+    .lookupFunction<
+      Void Function(Pointer<_Ifmaddrs>),
+      void Function(Pointer<_Ifmaddrs>)
+    >("freeifmaddrs");
+
+(Slice<GoString>, GoString) $interfaceMulticastAddrs(int index) {
+  if (!Platform.isMacOS) {
+    return (
+      Slice<GoString>.nil(),
+      GoString.fromString('multicast interface metadata is not supported'),
+    );
+  }
+  try {
+    return (Slice.of(_multicastAddresses(index)), GoString.empty);
+  } catch (e) {
+    return (
+      Slice<GoString>.nil(),
+      GoString.fromString(e is OSError ? e.message : e.toString()),
+    );
+  }
+}
+
+List<GoString> _multicastAddresses(int index) {
+  final head = _allocate(sizeOf<Pointer<_Ifmaddrs>>())
+      .cast<Pointer<_Ifmaddrs>>();
+  head.value = nullptr;
+  try {
+    if (_getifmaddrs(head) != 0) _failure('getifmaddrs');
+    final addresses = <GoString>[];
+    for (var cursor = head.value; cursor != nullptr; cursor = cursor.ref.next) {
+      final name = cursor.ref.name;
+      if (name == nullptr || name[0] < 8 || name[1] != 18) {
+        throw const FormatException('invalid multicast interface address');
+      }
+      if ((name + 2).cast<Uint16>().value != index) continue;
+      final address = cursor.ref.address;
+      if (address == nullptr) continue;
+      final family = address[1];
+      if (family != 2 && family != 30) continue;
+      final offset = family == 2 ? 4 : 8;
+      final length = family == 2 ? 4 : 16;
+      if (address[0] < offset + length) {
+        throw const FormatException('invalid multicast address length');
+      }
+      final bytes = Uint8List.fromList((address + offset).asTypedList(length));
+      if (family == 30 &&
+          (bytes[0] == 0xfe && bytes[1] & 0xc0 == 0x80 ||
+              bytes[0] == 0xff &&
+                  (bytes[1] & 0x0f == 1 || bytes[1] & 0x0f == 2))) {
+        // The kernel embeds the interface index in local IPv6 addresses.
+        bytes[2] = bytes[3] = 0;
+      }
+      addresses.add(
+        GoString.fromString(InternetAddress.fromRawAddress(bytes).address),
+      );
+    }
+    return addresses;
+  } finally {
+    if (head.value != nullptr) _freeifmaddrs(head.value);
+    _free(head.cast());
+  }
+}

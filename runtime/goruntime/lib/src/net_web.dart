@@ -136,3 +136,6 @@ GoString $packetDeadline(int handle, int read, int write) => _noNet;
 
 (Slice<GoString>, GoString) $interfaceTable() =>
     (Slice<GoString>.nil(), _empty);
+
+(Slice<GoString>, GoString) $interfaceMulticastAddrs(int index) =>
+    (Slice<GoString>.nil(), _empty);

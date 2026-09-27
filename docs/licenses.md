@@ -207,3 +207,6 @@ Notice collection does not establish permission to distribute arbitrary
 source or assets. Asset terms, platform plugins, and native dependencies
 still need review before distribution. Preserve licenses for files that
 use unconventional notice locations.
+
+Multicast interface enumeration adapts Go `net/interface_linux.go` and
+`internal/routebsd/address.go`. The overlay and native adapter retain their Go BSD notices.

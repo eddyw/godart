@@ -64,6 +64,13 @@ func lookupErrors() {
 	_, err = none.Addrs()
 	fmt.Println("nil interface:", err)
 	errorDetails(err)
+	_, err = none.MulticastAddrs()
+	fmt.Println("nil multicast interface:", err)
+	errorDetails(err)
+	missing := &net.Interface{Index: 1 << 20, Name: "gart-no-such-interface"}
+	groups, err := missing.MulticastAddrs()
+	fmt.Println("missing multicast interface:", len(groups), groups == nil, err)
+
 }
 
 // addresses proves the shape of each address of each interface.
