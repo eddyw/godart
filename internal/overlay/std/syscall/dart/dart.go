@@ -1766,12 +1766,15 @@ func WeakTarget(r *Object) any {
 // needs a twin file and an alias of its own.
 type Object struct{ _ [0]func() }
 
-func Getuid() int      { panic("syscall/dart needs the gart compiler") }
-func Geteuid() int     { panic("syscall/dart needs the gart compiler") }
-func Getgid() int      { panic("syscall/dart needs the gart compiler") }
-func Getegid() int     { panic("syscall/dart needs the gart compiler") }
-func Getppid() int     { panic("syscall/dart needs the gart compiler") }
-func Getpagesize() int { panic("syscall/dart needs the gart compiler") }
+func Getuid() int                { panic("syscall/dart needs the gart compiler") }
+func Geteuid() int               { panic("syscall/dart needs the gart compiler") }
+func Getgid() int                { panic("syscall/dart needs the gart compiler") }
+func Getegid() int               { panic("syscall/dart needs the gart compiler") }
+func Getppid() int               { panic("syscall/dart needs the gart compiler") }
+func Getpgrp() int               { panic("syscall/dart needs the gart compiler") }
+func Getpgid(pid int) (int, int) { panic("syscall/dart needs the gart compiler") }
+func Getsid(pid int) (int, int)  { panic("syscall/dart needs the gart compiler") }
+func Getpagesize() int           { panic("syscall/dart needs the gart compiler") }
 
 func Getgroups() ([]int, int) { panic("syscall/dart needs the gart compiler") }
 

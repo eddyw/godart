@@ -35,6 +35,29 @@ final _getppid = _libc.lookupFunction<Int Function(), int Function()>(
 );
 int $getppid() => _posix ? _getppid() : 0;
 
+final _getpgrp = _libc.lookupFunction<Int Function(), int Function()>(
+  'getpgrp',
+);
+int $getpgrp() => _posix ? _getpgrp() : -1;
+
+final _getpgid = _libc.lookupFunction<Int Function(Int), int Function(int)>(
+  'getpgid',
+);
+(int, int) $getpgid(int pid) {
+  if (!_posix) return (-1, -1);
+  final group = _getpgid(pid);
+  return (group, group < 0 ? _errno().value : 0);
+}
+
+final _getsid = _libc.lookupFunction<Int Function(Int), int Function(int)>(
+  'getsid',
+);
+(int, int) $getsid(int pid) {
+  if (!_posix) return (-1, -1);
+  final session = _getsid(pid);
+  return (session, session < 0 ? _errno().value : 0);
+}
+
 final _getpagesize = _libc.lookupFunction<Int Function(), int Function()>(
   'getpagesize',
 );

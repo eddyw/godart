@@ -1291,12 +1291,12 @@
   {
     "package": "syscall",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.Getpgid",
+    "diagnostic": "cmd.proc.SysProcAttr undefined (type *exec.Cmd has no field or method SysProcAttr)",
     "platform_diagnostics": {
       "linux-amd64": "undefined: syscall.Socketpair"
     },
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The complete suite requires native process groups, socket pairs, and raw file descriptors."
+    "blocker_reason": "The complete suite requires process attributes, socket pairs, and raw file descriptors."
   },
   {
     "package": "testing",
