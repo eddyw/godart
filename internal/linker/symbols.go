@@ -17,9 +17,12 @@ type Symbols struct {
 	Digest  string
 }
 
-func Resolve(roots []*packages.Package) (*Symbols, error) {
-	var pkgs []*packages.Package
-	packages.Visit(roots, nil, func(p *packages.Package) { pkgs = append(pkgs, p) })
+// Resolve links symbols only within the packages that the driver emits.
+func Resolve(pkgs []*packages.Package) (*Symbols, error) {
+	emitted := map[*packages.Package]bool{}
+	for _, p := range pkgs {
+		emitted[p] = true
+	}
 	available := map[string]*packages.Package{}
 	for _, p := range pkgs {
 		available[p.PkgPath] = p
@@ -33,11 +36,14 @@ func Resolve(roots []*packages.Package) (*Symbols, error) {
 	redirected := map[types.Object]bool{}
 	aliases := map[types.Object]types.Object{}
 	for _, p := range pkgs {
-		if p.Module == nil {
-			continue
-		}
 		reachable := map[string]*packages.Package{}
-		packages.Visit([]*packages.Package{p}, nil, func(d *packages.Package) { reachable[d.PkgPath] = d })
+		packages.Visit([]*packages.Package{p}, func(d *packages.Package) bool {
+			if !emitted[d] {
+				return false
+			}
+			reachable[d.PkgPath] = d
+			return true
+		}, nil)
 		for _, file := range p.Syntax {
 			for _, group := range file.Comments {
 				for _, comment := range group.List {

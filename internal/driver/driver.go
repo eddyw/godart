@@ -118,7 +118,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 	roots := result.Packages
 	module := moduleOf(roots)
 	pkgs := order(roots, module)
-	links, err := linker.Resolve(roots)
+	links, err := linker.Resolve(pkgs)
 	if err != nil {
 		return nil, err
 	}
