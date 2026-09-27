@@ -579,25 +579,29 @@ def language_behavior(paths):
                         environment_option = {
                             "compile -godebug gotypesalias=1": ("GODEBUG", "gotypesalias=1"),
                             "compile -goexperiment fieldtrack": ("GOEXPERIMENT", "fieldtrack"),
+                            "build -goexperiment regabi,regabiargs": ("GOEXPERIMENT", "regabi,regabiargs"),
                         }.get(case["fixture"]["recipe"])
-                        if case["contract"] == "compile" and environment_option:
+                        if environment_option:
                             key, value = environment_option
                             previous = (report.get("environment") or {}).get(key, "")
                             environment = {key: previous + "," + value if previous else value}
                             native = case["native"].get("command", [])
                             build = case.get("gart_build") or {}
                             build_command = build.get("command", [])
-                            recipe = (key in (report.get("environment") or {})
-                                      and len(native) == 9 and native[:5] == ["go", "tool", "compile", "-e", "-p=p"]
-                                      and native[5].startswith("-importcfg=") and native[6:8] == ["-o", "native.o"]
-                                      and native[8].endswith("/" + case["fixture"].get("file", ""))
+                            recipe = (case["fixture"]["recipe"].split()[0] == case["contract"]
+                                      and key in (report.get("environment") or {})
                                       and build.get("ran") is True and build.get("exit") == 0 and build.get("timed_out") is False
                                       and len(build_command) == 8 and Path(build_command[0]).name == "gart.exe"
                                       and build_command[1:4] == ["build", "-format=false", "-runtime"]
                                       and build_command[4] and build_command[5] == "-o"
                                       and build_command[6] and build_command[7] == "."
-                                      and all(process.get("environment") == environment for process in [case["native"], build, case["gart"]])
-                                      and case["gart"].get("command") == ["dart", "compile", "kernel", "compile.dart", "-o", "compile.dill"])
+                                      and all(process.get("environment") == environment for process in [case["native"], build, case["gart"]]))
+                            if case["contract"] == "compile":
+                                recipe = (recipe and len(native) == 9
+                                          and native[:5] == ["go", "tool", "compile", "-e", "-p=p"]
+                                          and native[5].startswith("-importcfg=") and native[6:8] == ["-o", "native.o"]
+                                          and native[8].endswith("/" + case["fixture"].get("file", ""))
+                                          and case["gart"].get("command") == ["dart", "compile", "kernel", "compile.dart", "-o", "compile.dill"])
                         elif case["contract"] == "compile" and case["fixture"]["recipe"] in {"compile -p=p", "compile -p=main"}:
                             native = case["native"].get("command", [])
                             recipe = (len(native) == 9 and native[:5] == ["go", "tool", "compile", "-e", case["fixture"]["recipe"].split()[1]]

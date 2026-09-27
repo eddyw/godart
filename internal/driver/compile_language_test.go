@@ -166,6 +166,8 @@ func compileEnvironment(recipe string) map[string]string {
 	switch recipe {
 	case "compile -godebug gotypesalias=1":
 		key, value = "GODEBUG", "gotypesalias=1"
+	case "build -goexperiment regabi,regabiargs":
+		key, value = "GOEXPERIMENT", "regabi,regabiargs"
 	case "compile -goexperiment fieldtrack":
 		key, value = "GOEXPERIMENT", "fieldtrack"
 	default:

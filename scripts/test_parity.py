@@ -741,18 +741,25 @@ class ParityTest(unittest.TestCase):
             root = Path(temporary)
             path = root / "language.json"
             execution = dict(ran=True, exit=0, timed_out=False)
-            for option, key, value in [("-godebug", "GODEBUG", "gotypesalias=1"),
-                                       ("-goexperiment", "GOEXPERIMENT", "fieldtrack")]:
+            for action, option, key, value in [("compile", "-godebug", "GODEBUG", "gotypesalias=1"),
+                                               ("compile", "-goexperiment", "GOEXPERIMENT", "fieldtrack"),
+                                               ("build", "-goexperiment", "GOEXPERIMENT", "regabi,regabiargs")]:
                 for previous in ["", "existing=1"]:
                     environment = {key: previous + "," + value if previous else value}
                     command = ["go", "tool", "compile", "-e", "-p=p", "-importcfg=config", "-o", "native.o", "sdk/p.go"]
                     build_command = ["/tmp/gart.exe", "build", "-format=false", "-runtime", "/runtime", "-o", "/output", "."]
-                    outcome = dict(fixture=dict(name="p", file="p.go", recipe="compile " + option + " " + value),
-                                   contract="compile", status="passed", wrapper_sha256="wrapper",
+                    outcome = dict(fixture=dict(name="p", file="p.go", recipe=action + " " + option + " " + value),
+                                   contract=action, status="passed", wrapper_sha256="wrapper",
                                    native=dict(execution, command=command, environment=environment),
                                    gart_build=dict(execution, command=build_command, environment=environment),
                                    gart=dict(execution, environment=environment,
                                              command=["dart", "compile", "kernel", "compile.dart", "-o", "compile.dill"]))
+                    if action == "build":
+                        command = ["go", "build", "-gcflags=all=", "-o", "native.o", "sdk/p.go"]
+                        outcome["native"]["command"] = command
+                        outcome["wrapper_source"] = "void main() {}\n"
+                        outcome["wrapper_sha256"] = parity.hashlib.sha256(outcome["wrapper_source"].encode()).hexdigest()
+                        outcome["gart"]["command"] = ["dart", "compile", "kernel", "bin/main.dart", "-o", "compile.dill"]
                     report = dict(kind="language", complete=True, outcomes=[outcome], shard=0, shards=1,
                                   environment={key: previous})
 

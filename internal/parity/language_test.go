@@ -70,6 +70,7 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/rejecttimedflags.go", "// errorcheck -t 10 -e=0\npackage p\n")
 	write("test/build.go", "// build\npackage main\n")
 	write("test/buildinline.go", "// build -gcflags=-l=4\npackage p\n")
+	write("test/buildexperiment.go", "// build -goexperiment regabi,regabiargs\npackage main\n")
 	write("test/buildflags.go", "// build -race\npackage main\n")
 	write("test/rejectflags.go", "// errorcheck -0\npackage p\n")
 	write("test/rejectdirectory.go", "// errorcheckdir\npackage ignored\n")
@@ -151,8 +152,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 87 {
-		t.Fatalf("got %d cases, want 87", len(inv.Cases))
+	if len(inv.Cases) != 88 {
+		t.Fatalf("got %d cases, want 88", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -227,6 +228,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["build"].Adapter != "build-file" || cases["buildflags"].Adapter != "missing" {
 		t.Fatal("the build adapter must preserve recipe flags")
+	}
+	if c := cases["buildexperiment"]; c.Adapter != "build-file" || len(c.NativeFlags) != 0 {
+		t.Fatalf("build experiment recipe changed: %+v", c)
 	}
 	if c := cases["buildinline"]; c.Adapter != "build-file" || !slices.Equal(c.NativeFlags, []string{"-gcflags=-l=4"}) {
 		t.Fatal("the build adapter must preserve its compiler flag")
