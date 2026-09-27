@@ -526,23 +526,22 @@ func (d *Dialer) dialOne(network, address string) (Conn, error) {
 			return nil, errors.New("dial unix " + address + ": " + cause)
 		}
 		return newUnixConn(handle), nil
-	case "udp":
+	case "udp", "udp4", "udp6":
 		host, port, err := hostPort(address)
 		if err != nil {
 			return nil, err
 		}
+		var local *UDPAddr
+		if d.LocalAddr != nil {
+			local = d.LocalAddr.(*UDPAddr)
+		}
 		if host == "" {
 			host = "127.0.0.1"
+			if network == "udp6" || local != nil && local.IP.To4() == nil && len(local.IP) != 0 {
+				host = "::1"
+			}
 		}
-		handle, localIP, local, cause := dart.DialUDP(host, port, "", 0)
-		if cause != "" {
-			return nil, errors.New("dial udp " + address + ": " + cause)
-		}
-		return newDialedUDPConn(
-			&packet{handle: handle, network: network, local: udpAddrOf(localIP, local)},
-			host,
-			port,
-		), nil
+		return DialUDP(network, local, udpAddrOf(host, port))
 	}
 	return nil, errors.New("dial " + network + ": the subset holds tcp, udp, and unix")
 }
@@ -613,7 +612,7 @@ type Dialer struct {
 	// FallbackDelay sets the delay before the other address family starts.
 	// A zero value selects 300 ms. A negative value disables fast fallback.
 	FallbackDelay time.Duration
-	// LocalAddr selects the local TCP address. Other networks return an error.
+	// LocalAddr selects the local TCP or UDP address. Other networks return an error.
 	LocalAddr       Addr
 	KeepAlive       time.Duration
 	KeepAliveConfig KeepAliveConfig
@@ -710,25 +709,39 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 		return nil, err
 	}
 	if d.LocalAddr != nil {
-		if network != "tcp" && network != "tcp4" && network != "tcp6" {
+		var localIP IP
+		var valid bool
+		switch network {
+		case "tcp", "tcp4", "tcp6":
+			local, ok := d.LocalAddr.(*TCPAddr)
+			valid = ok
+			if local != nil {
+				localIP = local.IP
+			}
+		case "udp", "udp4", "udp6":
+			local, ok := d.LocalAddr.(*UDPAddr)
+			valid = ok
+			if local != nil {
+				localIP = local.IP
+			}
+		default:
 			return nil, &OpError{Op: "dial", Net: network, Err: errors.New("local addresses for this network are not supported")}
 		}
-		local, ok := d.LocalAddr.(*TCPAddr)
-		if !ok {
+		if !valid {
 			return nil, &OpError{Op: "dial", Net: network, Err: &AddrError{Err: "mismatched local address type", Addr: d.LocalAddr.String()}}
 		}
-		if local != nil && len(local.IP) != 0 && !local.IP.IsUnspecified() {
+		if len(localIP) != 0 && !localIP.IsUnspecified() {
 			filtered := list[:0]
 			for _, address := range list {
 				host, _, _ := SplitHostPort(address)
 				remote := tcpAddrOf(host, 0)
-				if len(remote.IP) == 0 || remote.IP.IsUnspecified() || (remote.IP.To4() == nil) == (local.IP.To4() == nil) {
+				if len(remote.IP) == 0 || remote.IP.IsUnspecified() || (remote.IP.To4() == nil) == (localIP.To4() == nil) {
 					filtered = append(filtered, address)
 				}
 			}
 			list = filtered
 			if len(list) == 0 {
-				return nil, &OpError{Op: "dial", Net: network, Err: &AddrError{Err: "no suitable address found", Addr: local.String()}}
+				return nil, &OpError{Op: "dial", Net: network, Err: &AddrError{Err: "no suitable address found", Addr: d.LocalAddr.String()}}
 			}
 		}
 	}
@@ -785,7 +798,7 @@ func (d *Dialer) addrList(ctx context.Context, network, address string) ([]strin
 	if err != nil {
 		return nil, err
 	}
-	if network == "tcp" || network == "tcp4" || network == "tcp6" {
+	if network == "tcp" || network == "tcp4" || network == "tcp6" || network == "udp" || network == "udp4" || network == "udp6" {
 		number, err := d.resolver().LookupPort(ctx, network, port)
 		if err != nil {
 			return nil, err
@@ -794,7 +807,7 @@ func (d *Dialer) addrList(ctx context.Context, network, address string) ([]strin
 		address = JoinHostPort(host, port)
 	}
 	family := "ip"
-	if network == "tcp4" || network == "tcp6" {
+	if network == "tcp4" || network == "tcp6" || network == "udp4" || network == "udp6" {
 		family += network[3:]
 	}
 	if host == "" {
@@ -802,7 +815,7 @@ func (d *Dialer) addrList(ctx context.Context, network, address string) ([]strin
 	}
 	if addr, err := netip.ParseAddr(host); err == nil {
 		ip := IP(addr.AsSlice())
-		if network == "tcp4" && ip.Equal(IPv6unspecified) {
+		if (network == "tcp4" || network == "udp4") && ip.Equal(IPv6unspecified) {
 			return []string{JoinHostPort(IPv4zero.String(), port)}, nil
 		}
 		if !keepIP(family, ip) {
@@ -839,6 +852,10 @@ func (d *Dialer) dialOneAddr(ctx context.Context, network, address string) (Conn
 			host, port, _ := hostPort(address)
 			return nil, &OpError{Op: "dial", Net: network, Source: d.LocalAddr, Addr: tcpAddrOf(host, port), Err: err}
 		}
+		if network == "udp" || network == "udp4" || network == "udp6" {
+			host, port, _ := hostPort(address)
+			return nil, &OpError{Op: "dial", Net: network, Source: d.LocalAddr, Addr: udpAddrOf(host, port), Err: err}
+		}
 		return nil, err
 	}
 	select {
@@ -873,37 +890,26 @@ func (d *Dialer) DialTCP(ctx context.Context, network string, laddr, raddr netip
 	return dialTCPAddr(ctx, *d, network, TCPAddrFromAddrPort(laddr), TCPAddrFromAddrPort(raddr))
 }
 
-// DialUDP opens a datagram socket of the network udp with the context. The
-// network is udp, udp4, or udp6.
-//
-// Dart binds no local address of a dial, thus a laddr that holds a value
-// gives an error.
+// DialUDP opens a UDP connection with the context and explicit local address.
 func (d *Dialer) DialUDP(ctx context.Context, network string, laddr, raddr netip.AddrPort) (*UDPConn, error) {
 	switch network {
 	case "udp", "udp4", "udp6":
 	default:
 		return nil, UnknownNetworkError(network)
 	}
-	if laddr.IsValid() {
-		return nil, errors.New("dial " + network +
-			": a local address of a dial stays outside the subset")
-	}
 	if !raddr.IsValid() {
 		return nil, errors.New("dial " + network + ": the address is missing")
 	}
 	dialer := *d
 	dialer.LocalAddr = nil
-	c, err := dialer.DialContext(ctx, "udp", UDPAddrFromAddrPort(raddr).String())
+	if laddr.IsValid() {
+		dialer.LocalAddr = UDPAddrFromAddrPort(laddr)
+	}
+	c, err := dialer.DialContext(ctx, network, UDPAddrFromAddrPort(raddr).String())
 	if err != nil {
 		return nil, err
 	}
-	uc, ok := c.(*UDPConn)
-	if !ok {
-		c.Close()
-		return nil, errors.New("dial " + network + ": the dial gave no UDP socket")
-	}
-	uc.p.network = network
-	return uc, nil
+	return c.(*UDPConn), nil
 }
 
 // DialUnix opens a connection of the Unix domain with the context. The
