@@ -21,7 +21,7 @@ package rand
 
 import (
 	"internal/godebug"
-	"syscall/dart"
+	randv2 "math/rand/v2"
 )
 
 // A Source represents a source of uniformly-distributed
@@ -300,14 +300,24 @@ var randseednop = godebug.New("randseednop")
 // functions.
 func globalRand() *Rand {
 	if globalRandGenerator == nil {
-		seed := dart.NowNanos()
 		if randautoseed.Value() == "0" {
-			seed = 1
 			randautoseed.IncNonDefault()
+			globalRandGenerator = New(NewSource(1))
+		} else {
+			globalRandGenerator = New(runtimeSource{})
 		}
-		globalRandGenerator = New(NewSource(seed))
 	}
 	return globalRandGenerator
+}
+
+type runtimeSource struct{}
+
+func (runtimeSource) Int63() int64 { return int64(randv2.Uint64() & rngMask) }
+
+func (runtimeSource) Uint64() uint64 { return randv2.Uint64() }
+
+func (runtimeSource) Seed(int64) {
+	panic("internal error: call to runtimeSource.Seed")
 }
 
 // Seed uses the provided seed value to initialize the default Source to a
@@ -334,7 +344,7 @@ func Seed(seed int64) {
 		return
 	}
 	randseednop.IncNonDefault()
-	globalRand().Seed(seed)
+	globalRandGenerator = New(NewSource(seed))
 }
 
 // Int63 returns a non-negative pseudo-random 63-bit integer as an int64

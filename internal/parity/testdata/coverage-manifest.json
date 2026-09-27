@@ -1038,7 +1038,12 @@
   },
   {
     "package": "math/rand",
-    "status": "vm-suite"
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "math/rand/v2",
