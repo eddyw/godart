@@ -63,5 +63,15 @@
   "chan/select6",
   "chan/select7",
   "chan/sendstmt",
-  "chan/zerosize"
+  "chan/zerosize",
+  "chan/doubleselect",
+  "chan/fifo",
+  "chan/goroutines",
+  "chan/nonblock",
+  "chan/powser1",
+  "chan/powser2",
+  "chan/select",
+  "chan/select8",
+  "chan/sieve1",
+  "chan/sieve2"
 ]
