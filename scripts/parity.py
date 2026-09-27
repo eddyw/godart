@@ -401,26 +401,36 @@ def child_buildrun_valid(case, go_version, gcflags):
     return True
 
 
-def directory_language_valid(case, go_version):
+def directory_language_valid(case, go_version, target="vm"):
     fixture = case["fixture"]
     contract = case["contract"]
     combined = contract == "errorcheckandrundir"
-    reject = contract == "errorcheckdir" or combined
+    native_flags = {
+        "errorcheckandrundir -0 -m -d=inlfuncswithclosures=1": ["-m", "-d=inlfuncswithclosures=1"],
+        "errorcheckandrundir -0 -m": ["-m"],
+        "errorcheckandrundir -0 -d=ssa/intrinsics/debug": ["-d=ssa/intrinsics/debug"],
+        "errorcheckandrundir -0 -m -l=4": ["-m", "-l=4"],
+    }.get(fixture.get("recipe"))
+    native_diagnostics = combined and native_flags is not None
+    reject = contract == "errorcheckdir" or combined and not native_diagnostics
     separate = contract in ("compiledir", "errorcheckdir") and fixture.get("recipe") == contract + " -s"
     compiler_flags = {
         ("compiledir", "compiledir -c=2"): ["-c=2"],
         ("compiledir", "compiledir -c=4"): ["-c=4"],
         ("rundir", "rundir -l=4"): ["-l=4"],
     }.get((contract, fixture.get("recipe")), [])
+    if native_diagnostics:
+        compiler_flags = native_flags + ["-d=panic"]
     linker_flags = ["-strictdups=2", "-w=0"] if (contract, fixture.get("recipe")) == ("rundir", "rundir -ldflags -strictdups=2 -w=0") else []
     packages = case.get("directory_packages") or []
     adapted = case.get("adapted_sources") or {}
     compiled = case.get("native_compile") or []
     module = case.get("module_source", "")
+    module_path = "bootstrap/test" if native_diagnostics and fixture.get("name") == "intrinsic" else "test"
     if ((fixture.get("recipe") != contract and not separate and not compiler_flags and not linker_flags and not (combined and fixture.get("recipe") == "errorcheckandrundir -1")) or fixture.get("adapter") != "directory-packages"
             or not packages or len(compiled) != len(packages) or (not reject and case.get("build_error"))
             or not case.get("importcfg_sha256") or not go_version
-            or module != "module test\n\ngo " + go_version.removeprefix("go") + "\n"
+            or module != "module " + module_path + "\n\ngo " + go_version.removeprefix("go") + "\n"
             or hashlib.sha256(module.encode()).hexdigest() != case.get("module_sha256")):
         return False
     original = {f["path"] for f in fixture.get("files", [])}
@@ -430,7 +440,7 @@ def directory_language_valid(case, go_version):
     imports = []
     remap = any(not p.get("path", "").isascii() for p in packages)
     reject_index = len(packages) - (2 if combined else 1)
-    if combined and (len(packages) < 2 or fixture.get("recipe") != "errorcheckandrundir -1"):
+    if combined and not native_diagnostics and (len(packages) < 2 or fixture.get("recipe") != "errorcheckandrundir -1"):
         return False
     for index, (package, execution) in enumerate(zip(packages, compiled)):
         files = package.get("files") or []
@@ -467,7 +477,41 @@ def directory_language_valid(case, go_version):
     source_files = {p for p in original if p.startswith(prefix) and "/" not in p[len(prefix):] and p.endswith(".go")}
     if consumed != source_files or set(adapted) != expected or any(not isinstance(s, str) or not s for s in adapted.values()):
         return False
-    if combined:
+    if native_diagnostics:
+        reason = {"classification": "target-limit", "reason": "Gart delegates native optimization to Dart and does not reproduce Go compiler optimization diagnostics."}
+        outputs = case.get("native_diagnostic_outputs") or []
+        repeated = case.get("native_recompile") or []
+        matcher = case.get("native_match") or {}
+        wrapper = case.get("wrapper_source", "")
+        if (case.get("diagnostic_exclusion") != reason or case.get("status") != "partial"
+                or fixture.get("native_flags") != native_flags or case.get("build_error")
+                or case.get("gart_reject") or (case.get("gart_match") or {}).get("ran")
+                or len(outputs) != len(compiled) or len(repeated) != len(compiled)
+                or "".join(outputs) != case.get("native_diagnostics")
+                or not matcher.get("ran") or matcher.get("exit") != 0 or matcher.get("timed_out")
+                or not wrapper or hashlib.sha256(wrapper.encode()).hexdigest() != case.get("wrapper_sha256")):
+            return False
+        command = case["gart"].get("command", [])
+        if target == "vm":
+            if len(command) != 3 or command[0] != "dart" or not command[1].startswith("--packages=") or not command[2].endswith("/bin/main.dart"):
+                return False
+        elif target == "aot":
+            if len(command) != 1 or Path(command[0]).name != "app":
+                return False
+        elif target in {"js", "wasm"}:
+            if len(command) != 2 or command[0] != "node" or Path(command[1]).name != ("run.js" if target == "js" else "run.mjs"):
+                return False
+        else:
+            return False
+        for output, first, repeat in zip(outputs, compiled, repeated):
+            if (hashlib.sha256(output.encode()).hexdigest() != first.get("output_sha256")
+                    or not repeat.get("ran") or repeat.get("timed_out") or repeat.get("exit") != 0
+                    or repeat.get("command") != first.get("command")
+                    or repeat.get("output_sha256") != first.get("output_sha256")):
+                return False
+    elif case.get("diagnostic_exclusion"):
+        return False
+    elif combined:
         repeated = case.get("native_recompile") or []
         rejection = case.get("gart_reject") or {}
         empty = hashlib.sha256(b"").hexdigest()
@@ -669,12 +713,12 @@ def language_behavior(paths):
                 else:
                     status = case["status"] if report["complete"] else "unobserved"
                 local.add(name)
-                if status in {"passed", "upstream-expected-failure"}:
+                if status in {"passed", "upstream-expected-failure", "partial"}:
                     expected = case.get("expected_sha256")
                     executed = all(case[k]["ran"] and case[k]["exit"] == 0 and not case[k]["timed_out"]
                                    for k in ("native", "gart"))
                     if case.get("contract") in {"compiledir", "rundir", "errorcheckandrundir"}:
-                        valid = executed and directory_language_valid(case, report.get("go_version"))
+                        valid = executed and directory_language_valid(case, report.get("go_version"), report.get("target") or "vm")
                     elif case.get("contract") == "buildrun":
                         valid = executed and child_buildrun_valid(case, report.get("go_version", ""), (report.get("environment") or {}).get("GO_GCFLAGS", ""))
                     elif case.get("contract") in {"compile", "build"}:
@@ -768,7 +812,7 @@ def language_behavior(paths):
                                      and not generator.get("timed_out")
                                      and hashlib.sha256(source).hexdigest() == generator.get("output_sha256"))
                         elif case.get("contract") == "errorcheckdir":
-                            valid = valid and directory_language_valid(case, report.get("go_version"))
+                            valid = valid and directory_language_valid(case, report.get("go_version"), report.get("target") or "vm")
                         else:
                             recipe = case["fixture"]["recipe"]
                             valid = valid and (recipe == "errorcheck -std" or not case.get("gart_standard_library"))
@@ -825,7 +869,7 @@ def language_behavior(paths):
                                      and case["native"].get("environment", {}).get("GOPATH")
                                      and case["native"]["environment"] == case["gart"].get("environment")
                                      and not case.get("build_error"))
-                    valid = valid and (status == "passed" or case.get("contract") in {"reject", "errorcheckoutput", "errorcheckdir"})
+                    valid = valid and (status == "passed" or status == "partial" and case.get("contract") == "errorcheckandrundir" and case.get("diagnostic_exclusion") or status == "upstream-expected-failure" and case.get("contract") in {"reject", "errorcheckoutput", "errorcheckdir"})
                     valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "errorcheckandrundir", "compile", "build", "buildrun", "reject", "errorcheckoutput", "diagnostics", "errorcheckdir"} and case.get("contract", "run") == config["contract"]
 
                     if case["fixture"].get("host_tools"):
@@ -839,6 +883,8 @@ def language_behavior(paths):
                         group["problems"].append(f"{path}: invalid pass for {name}")
                 record = group["outcomes"].setdefault(name, dict(name=name, fixture=case["fixture"], statuses=set()))
                 record["statuses"].add(status)
+                if status == "partial":
+                    record["diagnostic_exclusion"] = case["diagnostic_exclusion"]
                 if config["contract"] in {"reject", "errorcheckoutput", "errorcheckdir"}:
                     record.setdefault("rejection_results", set()).add(rejection_result(case, status))
             group["reports"].append(dict(path=str(path), manifest=origin["manifest"], sha256=stamp, complete=report["complete"],

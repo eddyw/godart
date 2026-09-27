@@ -46,14 +46,18 @@ func matchDirectoryDiagnostics(t *testing.T, result *languageOutcome, executable
 			paths = append(paths, filepath.Join(sourceDir, name))
 		}
 	}
-	for _, match := range []struct {
+	matches := []struct {
 		name, diagnostics string
 		execution         *languageExecution
 		mismatch          *string
 	}{
 		{"native", result.NativeDiagnostics, &result.NativeMatch, &result.NativeMismatch},
 		{"gart", result.GartDiagnostics, &result.GartMatch, &result.GartMismatch},
-	} {
+	}
+	if result.DiagnosticExclusion != nil {
+		matches = matches[:1]
+	}
+	for _, match := range matches {
 		path := filepath.Join(dir, match.name+".txt")
 		writeFile(t, path, match.diagnostics)
 		*match.mismatch = recordLanguage(t, match.execution, dir, runLimit, "env", "GART_ERRORCHECK_SOURCES="+strings.Join(paths, "\n"), "GART_ERRORCHECK_DIAGNOSTICS="+path, executable, "-test.run=^TestDiagnostics$")

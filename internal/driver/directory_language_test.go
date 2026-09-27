@@ -82,9 +82,33 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	runDirectoryLanguageCases(t, "vm", inv, inv.Cases)
+}
+
+func TestDirectoryDiagnosticTargets(t *testing.T) {
+	inv, err := parity.DiscoverLanguage(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []parity.LanguageCase
+	for _, c := range inv.Cases {
+		if c.Adapter == "directory-packages" && c.Action == "errorcheckandrundir" && len(c.NativeFlags) > 0 {
+			cases = append(cases, c)
+		}
+	}
+	if len(cases) != 4 {
+		t.Fatalf("the original directory diagnostic recipes changed: got %d, want 4", len(cases))
+	}
+	for _, target := range []string{"aot", "js", "wasm"} {
+		t.Run(target, func(t *testing.T) { runDirectoryLanguageCases(t, target, inv, cases) })
+	}
+}
+
+func runDirectoryLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory, fixtures []parity.LanguageCase) {
+	t.Helper()
 	var cases []parity.LanguageCase
 	var names []string
-	for _, c := range inv.Cases {
+	for _, c := range fixtures {
 		if c.Adapter == "directory-packages" {
 			cases = append(cases, c)
 			names = append(names, c.Name)
@@ -93,6 +117,9 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 	selected := testShard(t, names)
 	standard := run(t, "", "go", "list", "-export", "-f", "{{if .Export}}packagefile {{.ImportPath}}={{.Export}}{{end}}", "std")
 	for _, action := range []string{"compiledir", "rundir", "errorcheckdir", "errorcheckandrundir"} {
+		if !slices.ContainsFunc(cases, func(c parity.LanguageCase) bool { return c.Action == action && selected[c.Name] }) {
+			continue
+		}
 		t.Run(action, func(t *testing.T) {
 			diagnostics := action == "errorcheckdir" || action == "errorcheckandrundir"
 			runPackages := action == "rundir" || action == "errorcheckandrundir"
@@ -106,7 +133,7 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 					outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: action, Status: "unobserved"})
 				}
 			}
-			retainLanguageEvidence(t, "vm", inv, outcomes)
+			retainLanguageEvidence(t, target, inv, outcomes)
 			for _, result := range outcomes {
 				t.Run(result.Fixture.Name, func(t *testing.T) {
 					t.Parallel()
@@ -116,6 +143,8 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 							result.Status = "failed"
 						case t.Skipped():
 							result.Status = "excluded"
+						case result.DiagnosticExclusion != nil:
+							result.Status = "partial"
 						case action == "errorcheckdir" && result.Fixture.ExpectedFailure:
 							result.Status = "upstream-expected-failure"
 						default:
@@ -123,6 +152,10 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 						}
 					})
 					c := result.Fixture
+					nativeDiagnostics := action == "errorcheckandrundir" && len(c.NativeFlags) > 0
+					if nativeDiagnostics {
+						result.DiagnosticExclusion = &parity.Omission{Classification: "target-limit", Reason: "Gart delegates native optimization to Dart and does not reproduce Go compiler optimization diagnostics."}
+					}
 					if !c.NativeEligible || !c.GartEligible {
 						t.Skipf("upstream build constraints: native=%t Gart=%t", c.NativeEligible, c.GartEligible)
 					}
@@ -175,6 +208,7 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 							args = append(args, "-o", pkg.Path+".a", "-p", pkg.Path)
 						}
 						args = append(args, strings.Fields(inv.GCFlags)...)
+						args = append(args, c.NativeFlags...)
 						if diagnostics {
 							args = append(args, "-d=panic")
 						}
@@ -187,8 +221,12 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 						result.NativeCompile = append(result.NativeCompile, languageExecution{})
 						execution := &result.NativeCompile[len(result.NativeCompile)-1]
 						if diagnostics {
-							result.NativeDiagnostics += recordLanguage(t, execution, nativeDir, runLimit, "go", args...)
-							last := index == rejectIndex
+							output := recordLanguage(t, execution, nativeDir, runLimit, "go", args...)
+							result.NativeDiagnostics += output
+							if nativeDiagnostics {
+								result.NativeDiagnosticOutputs = append(result.NativeDiagnosticOutputs, output)
+							}
+							last := index == rejectIndex && !nativeDiagnostics
 							if execution.TimedOut || last && execution.Exit <= 0 || !last && execution.Exit != 0 {
 								t.Fatalf("package %s: native exit %d, expected rejection=%t, timeout=%t", pkg.Path, execution.Exit, last, execution.TimedOut)
 							}
@@ -201,10 +239,16 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 							result.NativeRecompile = append(result.NativeRecompile, languageExecution{})
 							execution := &result.NativeRecompile[len(result.NativeRecompile)-1]
 							recordLanguage(t, execution, nativeDir, runLimit, first.Command[0], first.Command[1:]...)
-							if execution.TimedOut || index == rejectIndex && execution.Exit <= 0 || index != rejectIndex && execution.Exit != 0 {
+							rejects := index == rejectIndex && !nativeDiagnostics
+							if execution.TimedOut || rejects && execution.Exit <= 0 || !rejects && execution.Exit != 0 {
 								t.Fatalf("native repeat package %d: exit %d, timeout=%t", index, execution.Exit, execution.TimedOut)
 							}
 						}
+					}
+					if nativeDiagnostics {
+						result.WrapperSource = matcherSource
+						result.WrapperSHA256 = languageDigest([]byte(matcherSource))
+						matchDirectoryDiagnostics(t, result, matcher, sourceDir, dir)
 					}
 					if runPackages {
 						last := result.DirectoryPackages[len(result.DirectoryPackages)-1]
@@ -230,7 +274,12 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 						t.Skip(c.Exclusion.Classification + ": " + c.Exclusion.Reason)
 					}
 
-					result.ModuleSource = "module test\n\ngo " + strings.TrimPrefix(inv.GoVersion, "go") + "\n"
+					module := "test"
+					if c.Name == "intrinsic" {
+						// The Go command permits standard-library internal imports in bootstrap modules.
+						module = "bootstrap/test"
+					}
+					result.ModuleSource = "module " + module + "\n\ngo " + strings.TrimPrefix(inv.GoVersion, "go") + "\n"
 					result.ModuleSHA256 = languageDigest([]byte(result.ModuleSource))
 					writeFile(t, filepath.Join(dir, "go.mod"), result.ModuleSource)
 					license, err := os.ReadFile(filepath.Join(build.Default.GOROOT, "LICENSE"))
@@ -291,7 +340,7 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 					}
 					start := time.Now()
 					err = driver.Build(driver.Options{Dir: dir, Patterns: patterns, Out: out, Runtime: runtimeDir(t), Format: false})
-					if diagnostics {
+					if diagnostics && !nativeDiagnostics {
 						result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
 						if err != nil {
 							result.Gart.Exit = 1
@@ -349,7 +398,28 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 						runLanguage(t, &result.Gart, out, runLimit, "dart", "compile", "kernel", "compile.dart", "-o", "compile.dill")
 					} else {
 						entry := filepath.Join(out, "bin", "main.dart")
-						got := runLanguage(t, &result.Gart, nativeDir, runLimit, "dart", "--packages="+filepath.Join(out, ".dart_tool/package_config.json"), entry)
+						command := "dart"
+						args := []string{"--packages=" + filepath.Join(out, ".dart_tool/package_config.json"), entry}
+						switch target {
+						case "aot":
+							run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", "app")
+							command = filepath.Join(out, "app")
+							args = nil
+						case "js":
+							run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
+							writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
+							command = "node"
+							args = []string{filepath.Join(out, "run.js")}
+						case "wasm":
+							compiled := programOutcomeWithLimit(t, out, 9*time.Minute, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
+							if compiled.Exit != 0 {
+								t.Fatalf("Wasm compilation failed:\n%s", compiled.Text)
+							}
+							writeFile(t, filepath.Join(out, "run.mjs"), wasmRunner)
+							command = "node"
+							args = []string{filepath.Join(out, "run.mjs")}
+						}
+						got := runLanguage(t, &result.Gart, nativeDir, runLimit, command, args...)
 						if languageDigest([]byte(got)) != result.ExpectedSHA256 {
 							t.Fatalf("Gart output differs from upstream fixture: %s", got)
 						}

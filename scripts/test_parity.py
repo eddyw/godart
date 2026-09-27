@@ -361,6 +361,69 @@ class ParityTest(unittest.TestCase):
                 mutate(changed)
                 assess(changed, "failed")
 
+    def test_directory_runtime_keeps_native_diagnostics_separate(self):
+        recipes = {
+            "errorcheckandrundir -0 -m -d=inlfuncswithclosures=1": ["-m", "-d=inlfuncswithclosures=1"],
+            "errorcheckandrundir -0 -m": ["-m"],
+            "errorcheckandrundir -0 -d=ssa/intrinsics/debug": ["-d=ssa/intrinsics/debug"],
+            "errorcheckandrundir -0 -m -l=4": ["-m", "-l=4"],
+        }
+        digest = lambda text: parity.hashlib.sha256(text.encode()).hexdigest()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for recipe, flags in recipes.items():
+                module = "module test\n\ngo 1.27.1\n"
+                diagnostic = "main.go:2: can inline main"
+                execution = dict(ran=True, exit=0, timed_out=False, output_sha256=digest(""))
+                compiled = dict(execution, command=["go", "tool", "compile", "-e"] + flags + ["-d=panic", "sdk/p.dir/main.go"], output_sha256=digest(diagnostic))
+                case = dict(fixture=dict(name="p", recipe=recipe, adapter="directory-packages", native_flags=flags,
+                                         files=[dict(path="p.dir/main.go", sha256="a")]),
+                            contract="errorcheckandrundir", status="partial", expected_sha256=digest(""),
+                            native=dict(execution), gart=dict(execution, command=["dart", "--packages=out/.dart_tool/package_config.json", "out/bin/main.dart"]), native_match=dict(execution),
+                            diagnostic_exclusion=dict(classification="target-limit", reason="Gart delegates native optimization to Dart and does not reproduce Go compiler optimization diagnostics."),
+                            native_diagnostics=diagnostic, native_diagnostic_outputs=[diagnostic],
+                            wrapper_source="original matcher", wrapper_sha256=digest("original matcher"),
+                            module_source=module, module_sha256=digest(module), importcfg_sha256="config",
+                            directory_packages=[dict(name="main", path="test/main", files=["main.go"])],
+                            adapted_sources={"main/main.go": "package main\n"}, native_compile=[compiled],
+                            native_recompile=[copy.deepcopy(compiled)], native_link=dict(execution, command=["go", "tool", "link", "main.o"]))
+                path = root / "language.json"
+                def assess(value, status, target="vm"):
+                    parity.save(path, dict(kind="language", go_version="go1.27.1", target=target, contract="errorcheckandrundir", complete=True, outcomes=[value], shard=0, shards=1))
+                    group = parity.language_behavior([root])[0]
+                    self.assertEqual(group["counts"], {status: 1})
+                    if status == "partial":
+                        self.assertEqual(group["outcomes"][0]["diagnostic_exclusion"], case["diagnostic_exclusion"])
+                assess(case, "partial")
+                for target, command in [("aot", ["out/app"]), ("js", ["node", "out/run.js"]), ("wasm", ["node", "out/run.mjs"])]:
+                    changed = copy.deepcopy(case)
+                    changed["gart"]["command"] = command
+                    assess(changed, "partial", target)
+                    changed["gart"]["command"] = ["wrong"]
+                    assess(changed, "failed", target)
+                for mutate in [
+                    lambda c: c.update(status="passed"),
+                    lambda c: c.pop("diagnostic_exclusion"),
+                    lambda c: c["diagnostic_exclusion"].update(classification="passed"),
+                    lambda c: c["fixture"].update(native_flags=[]),
+                    lambda c: c["fixture"].update(recipe=recipe + " -race"),
+                    lambda c: c["native_compile"][0]["command"].remove(flags[0]),
+                    lambda c: c["native_compile"][0]["command"].remove("-d=panic"),
+                    lambda c: c.update(native_diagnostic_outputs=[]),
+                    lambda c: c.update(native_diagnostics="changed"),
+                    lambda c: c["native_compile"][0].update(output_sha256="changed"),
+                    lambda c: c["native_recompile"][0].update(exit=1),
+                    lambda c: c["native_match"].update(exit=1),
+                    lambda c: c.update(gart_match=dict(execution)),
+                    lambda c: c.update(wrapper_source="changed"),
+                    lambda c: c.update(build_error="error"),
+                    lambda c: c["gart"].update(exit=1),
+                    lambda c: c["gart"].update(output_sha256="changed"),
+                ]:
+                    changed = copy.deepcopy(case)
+                    mutate(changed)
+                    assess(changed, "failed")
+
     def test_combined_directory_requires_rejection_recompile_and_runtime(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -30,6 +30,19 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/module.dir/main.go", "package main\nfunc main() {}\n")
 	write("test/runarguments.go", "// run arg1 arg2\npackage main\nfunc main() {}\n")
 	write("test/runfiles.go", "// run ./extra.go\npackage main\nfunc main() {}\n")
+	directoryDiagnosticRecipes := map[string]struct {
+		recipe string
+		flags  []string
+	}{
+		"dirclosure":   {"errorcheckandrundir -0 -m -d=inlfuncswithclosures=1", []string{"-m", "-d=inlfuncswithclosures=1"}},
+		"dirinline":    {"errorcheckandrundir -0 -m", []string{"-m"}},
+		"dirintrinsic": {"errorcheckandrundir -0 -d=ssa/intrinsics/debug", []string{"-d=ssa/intrinsics/debug"}},
+		"dirlinkname":  {"errorcheckandrundir -0 -m -l=4", []string{"-m", "-l=4"}},
+	}
+	for name, recipe := range directoryDiagnosticRecipes {
+		write("test/"+name+".go", "// "+recipe.recipe+"\npackage ignored\n")
+		write("test/"+name+".dir/main.go", "package main\nfunc main() {}\n")
+	}
 	runCompilerRecipes := map[string]struct {
 		recipe string
 		flags  []string
@@ -164,8 +177,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 97 {
-		t.Fatalf("got %d cases, want 97", len(inv.Cases))
+	if len(inv.Cases) != 101 {
+		t.Fatalf("got %d cases, want 101", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -267,6 +280,11 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["compile"].Adapter != "compile-file" || cases["compileextra"].Adapter != "missing" || cases["compileunknown"].Adapter != "missing" {
 		t.Fatal("the compile adapter must not discard recipe flags")
+	}
+	for name, recipe := range directoryDiagnosticRecipes {
+		if c := cases[name]; c.Adapter != "directory-packages" || !slices.Equal(c.NativeFlags, recipe.flags) || c.Recipe != recipe.recipe {
+			t.Fatalf("directory diagnostic recipe changed: %+v", c)
+		}
 	}
 	for name, recipe := range compileRecipes {
 		if c := cases[name]; c.Adapter != "compile-file" || c.Recipe != recipe {

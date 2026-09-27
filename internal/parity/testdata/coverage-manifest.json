@@ -1503,5 +1503,14 @@
     "diagnostic": "undefined: runtime.SetFinalizer",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite requires Go finalizer semantics through runtime.SetFinalizer."
+  },
+  {
+    "package": "internal/runtime/sys",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   }
 ]

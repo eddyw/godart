@@ -297,5 +297,13 @@
     "targets": [
       "aot"
     ]
+  },
+  {
+    "package": "internal/runtime/sys",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   }
 ]

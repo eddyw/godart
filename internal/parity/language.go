@@ -169,6 +169,9 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 					}
 					c.Files = append(c.Files, SourceFile{Path: name, SHA256: digest(data)})
 				}
+			} else if flags := languageDirectoryDiagnosticFlags[recipe]; flags != nil {
+				c.Adapter = "directory-packages"
+				c.NativeFlags = slices.Clone(flags)
 			} else if recipe == "errorcheckandrundir -1" || recipe == "rundir" || recipe == "rundir -l=4" || recipe == "rundir -ldflags -strictdups=2 -w=0" || recipe == "compiledir" || recipe == "errorcheckdir" || recipe == "compiledir -s" || recipe == "compiledir -c=2" || recipe == "compiledir -c=4" || recipe == "errorcheckdir -s" {
 				c.Adapter = "directory-packages"
 			} else if slices.Contains([]string{
@@ -321,6 +324,13 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 var errorcheckVersionRecipe = regexp.MustCompile(`^errorcheck(\s+-0)?\s+-lang=(go[0-9]+\.[0-9]+)$`)
 
 var directoryRecipe = regexp.MustCompile(`^runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?$`)
+
+var languageDirectoryDiagnosticFlags = map[string][]string{
+	"errorcheckandrundir -0 -m -d=inlfuncswithclosures=1": {"-m", "-d=inlfuncswithclosures=1"},
+	"errorcheckandrundir -0 -m":                           {"-m"},
+	"errorcheckandrundir -0 -d=ssa/intrinsics/debug":      {"-d=ssa/intrinsics/debug"},
+	"errorcheckandrundir -0 -m -l=4":                      {"-m", "-l=4"},
+}
 
 var languageRunCompilerFlags = map[string][]string{
 	"run -gcflags=-d=checkptr":                  {"-gcflags=-d=checkptr"},

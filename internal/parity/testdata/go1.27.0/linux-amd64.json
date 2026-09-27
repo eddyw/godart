@@ -29072,6 +29072,78 @@
       "seeds": null
     },
     {
+      "path": "internal/runtime/sys",
+      "tests": [
+        {
+          "name": "TestBswap32",
+          "file": "intrinsics_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestBswap64",
+          "file": "intrinsics_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTrailingZeros32",
+          "file": "intrinsics_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTrailingZeros64",
+          "file": "intrinsics_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "consts.go",
+          "sha256": "c3ae3566bde7c7eb00d06996ce28080c6e2ef2d1d6517538e9d27bbd07a3474d"
+        },
+        {
+          "path": "consts_norace.go",
+          "sha256": "f813bc3694d70c2f77b868cb52789fec13efe5c1308f71674ef16edd54e9c058"
+        },
+        {
+          "path": "consts_race.go",
+          "sha256": "562f15026c1a55141edba8ae8b5e8099b0ea4dd60824cd69553a805d23acbe8e"
+        },
+        {
+          "path": "dit_arm64.go",
+          "sha256": "b6546a2e46ad4c9056d59c19d9be2c69013e42ce9114fffd5e458ff6b5c73a88"
+        },
+        {
+          "path": "intrinsics.go",
+          "sha256": "b7e4af48817954e8b86ff1a0c48b8c94b42e6d7c70230cf2c9ee3ad4d8f80be7"
+        },
+        {
+          "path": "intrinsics_test.go",
+          "sha256": "d08e2911b1c500e3c39b867fcc575c77fd06c5aa4e474f8b736c2e057d573ea4"
+        },
+        {
+          "path": "nih.go",
+          "sha256": "62b649628d68a23ecd28ac18c01de4a7117b0edbec150cb33bc99abdd7d01ab9"
+        },
+        {
+          "path": "no_dit.go",
+          "sha256": "144597c72d957b854ca514bd0f1e47893f5fb76c62fabc2e95162c32067e90d4"
+        },
+        {
+          "path": "sys.go",
+          "sha256": "15c88e2f32c3e0cd3a04a273c89372b2382430a6093741dbd03122f7f38eadf2"
+        },
+        {
+          "path": "zversion.go",
+          "sha256": "f69c03727973664529c2e6fa2d2c53b2d3440c887938d0d9b22254f7984052f2"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "internal/saferio",
       "tests": [
         {
