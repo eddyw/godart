@@ -221,8 +221,9 @@ func (b *builder) litCaptures(lit *ast.FuncLit) []*ir.Var {
 
 // machineBoxes adds the box of each captured variable when a function of the
 // declaration can block.
-func (b *builder) machineBoxes(body *ast.BlockStmt, blocking bool) {
-	assigned := b.assignedVars(body)
+func (b *builder) machineBoxes(decl *ast.FuncDecl, blocking bool) {
+	body := decl.Body
+	assigned := b.assignedVars(decl)
 	if blocking {
 		for v := range b.captured(body, assigned) {
 			b.boxes[v] = true
@@ -314,6 +315,15 @@ func (b *builder) assignedVars(body ast.Node) map[*types.Var]bool {
 	}
 	ast.Inspect(body, func(n ast.Node) bool {
 		switch n := n.(type) {
+		case *ast.FuncType:
+			// An explicit return assigns named results without an AssignStmt.
+			if n.Results != nil {
+				for _, field := range n.Results.List {
+					for _, name := range field.Names {
+						mark(name)
+					}
+				}
+			}
 		case *ast.AssignStmt:
 			for _, l := range n.Lhs {
 				mark(l)

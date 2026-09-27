@@ -51,5 +51,9 @@
   "fixedbugs/issue44830",
   "iota",
   "typeparam/cons",
-  "fixedbugs/bug328"
+  "fixedbugs/bug328",
+  "defer",
+  "closure2",
+  "abi/named_results",
+  "abi/defer_recover_results"
 ]

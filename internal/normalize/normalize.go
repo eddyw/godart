@@ -434,7 +434,7 @@ func (b *builder) funcDecl(d *ast.FuncDecl) *ir.Func {
 	for v := range b.globalBoxes {
 		b.boxes[v] = true
 	}
-	b.machineBoxes(d.Body, f.Async)
+	b.machineBoxes(d, f.Async)
 	b.retFlag = ""
 	b.retVars = nil
 	b.branchFlags = nil
