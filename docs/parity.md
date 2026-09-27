@@ -27,8 +27,8 @@ SDK versions, modes, and exclusions.
 | Zero-size arrays and slices | Zero-size elements use virtual storage. Logical lengths remain 64-bit values on VM, AOT, JS, and Wasm. |
 | Numbers | Target representations differ. JavaScript conversion boundaries need particular care. |
 | Time | Monotonic values support elapsed-time operations. Time-zone behavior can differ from Go's own database. |
-| Environment | `os` and `syscall` share environment values. Child processes receive this state through `os/exec`. |
-| Source tools | `go/build` accepts the `gart` compiler and `dart64` suffixes without a native archive path. `runtime.GOROOT` reads the process-start `GOROOT` value. No SDK path travels with the Dart output. |
+| Environment | `os` and `syscall` share environment values. Node supplies the initial JS and Wasm environment. Browsers start with an empty environment. Child processes receive this state through `os/exec`. |
+| Source tools | `go/build` accepts the `gart` compiler and `dart64` suffixes without a native archive path. `runtime.GOROOT` reads the process-start `GOROOT` value, or the selected build SDK path when that value is empty. `-trimpath` omits the default SDK path. |
 | GODEBUG | Executables use the Go toolchain's module, workspace, and source defaults. Environment values override these defaults for library readers and `panicnil`. Other runtime controls and bisect patterns remain incomplete. The FIPS module rejects non-default modes. |
 
 The verifier reports unsupported source constructs with source positions.

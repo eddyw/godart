@@ -3,6 +3,7 @@ library;
 
 import 'dart:convert';
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
 import 'process_exit.dart';
@@ -11,6 +12,7 @@ import 'process_exit.dart';
 external _Process? get _process;
 
 extension type _Process._(JSObject _) implements JSObject {
+  external JSObject get env;
   external void exit(int code);
   external _Output get stdout;
   external _Output get stderr;
@@ -20,7 +22,22 @@ extension type _Output._(JSObject _) implements JSObject {
   external bool write(JSAny value, [JSFunction? callback]);
 }
 
-String $platformGODEBUG() => '';
+@JS('Object.keys')
+external JSArray<JSString> _keys(JSObject object);
+
+final Map<String, String> $platformEnvironment = _environment();
+
+Map<String, String> _environment() {
+  final process = _process;
+  if (process == null) return const {};
+  final env = process.env;
+  return Map<String, String>.unmodifiable({
+    for (final key in _keys(env).toDart)
+      key.toDart: env.getProperty<JSString>(key).toDart,
+  });
+}
+
+String $platformGODEBUG() => $platformEnvironment['GODEBUG'] ?? '';
 
 String _outBuffer = '';
 String _errBuffer = '';

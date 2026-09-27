@@ -280,13 +280,32 @@ func main() {
 		t.Fatal(err)
 	}
 	prepareDart(t, out)
-	for _, value := range []string{"", "panicnil=0", "panicnil=1", "panicnil=1,panicnil=0", "panicnil=0,panicnil=1", "panicnil=1,panicnil=invalid"} {
-		t.Run(value, func(t *testing.T) {
-			t.Setenv("GODEBUG", value)
-			want := programOutcome(t, dir, native)
-			got := programOutcome(t, out, "dart", "bin/main.dart")
-			if want.Exit != 0 || got != want {
-				t.Fatalf("panic(nil): Gart=%+v Go=%+v", got, want)
+	for _, target := range []string{"vm", "aot", "js", "wasm"} {
+		t.Run(target, func(t *testing.T) {
+			command := []string{"dart", "bin/main.dart"}
+			switch target {
+			case "aot":
+				path := filepath.Join(out, "program")
+				run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", path)
+				command = []string{path}
+			case "js":
+				run(t, out, "dart", "compile", "js", "bin/main.dart", "-o", "main.js")
+				writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
+				command = []string{"node", "run.js"}
+			case "wasm":
+				run(t, out, "dart", "compile", "wasm", "bin/main.dart", "-o", "main.wasm")
+				writeFile(t, filepath.Join(out, "run.mjs"), wasmRunner)
+				command = []string{"node", "run.mjs"}
+			}
+			for _, value := range []string{"", "panicnil=0", "panicnil=1", "panicnil=1,panicnil=0", "panicnil=0,panicnil=1", "panicnil=1,panicnil=invalid"} {
+				t.Run(value, func(t *testing.T) {
+					t.Setenv("GODEBUG", value)
+					want := programOutcome(t, dir, native)
+					got := programOutcome(t, out, command[0], command[1:]...)
+					if want.Exit != 0 || got != want {
+						t.Fatalf("panic(nil): Gart=%+v Go=%+v", got, want)
+					}
+				})
 			}
 		})
 	}

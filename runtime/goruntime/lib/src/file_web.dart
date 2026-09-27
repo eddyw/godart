@@ -130,11 +130,18 @@ GoString $rename(GoString from, GoString to) => _noSys;
 (Slice<GoString>, GoString) $readDir(GoString path) =>
     (Slice<GoString>.nil(), _noSys);
 
-/// The environment of the web target is empty. A browser holds no such table,
-/// and Go gives the same answer under GOOS=js.
-(GoString, bool) $getenv(GoString name) => (GoString.empty, false);
+/// Node supplies the initial environment. A browser has no environment table.
+(GoString, bool) $getenv(GoString name) {
+  final value = $platformEnvironment[name.toDartString()];
+  return value == null
+      ? (GoString.empty, false)
+      : (GoString.fromString(value), true);
+}
 
-Slice<GoString> $environ() => Slice<GoString>.nil();
+Slice<GoString> $environ() => Slice<GoString>.of([
+  for (final entry in $platformEnvironment.entries)
+    GoString.fromString('${entry.key}=${entry.value}'),
+]);
 
 /// The working directory of the web target. Go gives the root under GOOS=js,
 /// because the file system of that target starts there.

@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
@@ -53,14 +52,25 @@ func TestOSEnvironment(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/oscompat\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "env_test.go"), string(source))
-	want := goTest(t, dir, true)
-	got := gartTest(t, dir, driver.TestOptions{Verbose: true})
-	if got != want {
-		t.Errorf("os environment output differs:\ngot:\n%s\nwant:\n%s", got, want)
+	out := t.TempDir()
+	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, name := range []string{"TestExpand", "TestUnsetenv", "TestClearenv", "TestLookupEnv", "TestEnvironConsistency"} {
-		if !strings.Contains(got, "--- PASS: "+name) {
-			t.Errorf("missing result for %s", name)
-		}
+	if len(stats.Binaries) != 1 {
+		t.Fatalf("test binaries: %v", stats.Binaries)
+	}
+	prepareDart(t, out)
+	const filter = "^(TestExpand|TestConsistentEnviron|TestUnsetenv|TestClearenv|TestLookupEnv|TestEnvironConsistency)$"
+	for _, target := range []string{"vm", "aot", "js", "wasm"} {
+		t.Run(target, func(t *testing.T) {
+			var got programResult
+			if target == "vm" {
+				got = programOutcome(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v")
+			} else {
+				got = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v"})
+			}
+			compareUpstream(t, "os-environment", "os", filter, target, filepath.Join(runtime.GOROOT(), "src/os"), got.Text, got.Exit)
+		})
 	}
 }

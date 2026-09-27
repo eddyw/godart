@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"go/constant"
 	"go/types"
 	"io/fs"
 	"os"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/eddyw/godart/internal/analyze"
 	"github.com/eddyw/godart/internal/emit"
+	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/linker"
 	"github.com/eddyw/godart/internal/load"
 	"github.com/eddyw/godart/internal/meta"
@@ -156,6 +158,11 @@ func BuildWithStats(opt Options) (*Stats, error) {
 			return nil, err
 		}
 		flags := fmt.Sprintf("%s\x00trimpath=%t\x00go=%s", dartPkg, opt.TrimPath, p.Types.GoVersion())
+		goroot := ""
+		if p.PkgPath == "runtime" && !opt.TrimPath {
+			goroot = result.GOROOT
+			flags += "\x00goroot=" + goroot
+		}
 		defaults := result.DefaultGODEBUG[p.PkgPath]
 		flags += "\x00godebug=" + defaults + "\x00links=" + links.Digest
 		if !opt.TrimPath {
@@ -179,7 +186,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 				continue
 			}
 		}
-		out, err := compile(p, module, dartPkg, blocks, bin, opt.TrimPath, defaults, links)
+		out, err := compile(p, module, dartPkg, blocks, bin, opt.TrimPath, defaults, goroot, links)
 		if err != nil {
 			return nil, err
 		}
@@ -405,10 +412,19 @@ func outputExists(out string, files []string) bool {
 }
 
 func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result,
-	bin *load.Binary, trimpath bool, defaults string, links *linker.Symbols) (*emit.Result, error) {
+	bin *load.Binary, trimpath bool, defaults, goroot string, links *linker.Symbols) (*emit.Result, error) {
 	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks, links.Targets)
 	if err != nil {
 		return nil, err
+	}
+	if p.PkgPath == "runtime" {
+		for _, file := range tree.Files {
+			for _, decl := range file.Decls {
+				if g, ok := decl.(*ir.Global); ok && g.Var.Name == "defaultGOROOT" {
+					g.Init = &ir.Const{Type: g.Var.Type, Value: constant.MakeString(goroot)}
+				}
+			}
+		}
 	}
 	if bin != nil {
 		for _, f := range tree.Files {

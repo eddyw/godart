@@ -13,8 +13,9 @@ import (
 )
 
 type goSDK struct {
-	root string
-	env  []string
+	root      string
+	buildRoot string
+	env       []string
 }
 
 func prepareGoSDK(dir string) (goSDK, error) {
@@ -31,7 +32,7 @@ func prepareGoSDK(dir string) (goSDK, error) {
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return goSDK{}, err
 	}
-	sdk := goSDK{root: selected.GOROOT, env: cmd.Env}
+	sdk := goSDK{root: selected.GOROOT, buildRoot: selected.GOROOT, env: cmd.Env}
 	rel, err := filepath.Rel(selected.GOMODCACHE, selected.GOROOT)
 	if err != nil || !filepath.IsLocal(rel) {
 		return sdk, nil

@@ -33,11 +33,16 @@ func NumCPU() int { return 1 }
 // scheduler holds each one, and the count holds the goroutine that calls.
 func NumGoroutine() int { return len(dart.Parked()) + 1 }
 
-// GOROOT gives the process-start GOROOT environment value.
-// The Dart output contains no fallback Go SDK path.
+var defaultGOROOT string
+
+// GOROOT gives the process-start GOROOT environment value, or the build SDK path.
+// A build with -trimpath omits the default SDK path.
 func GOROOT() string {
 	root, _ := dart.Getenv("GOROOT")
-	return root
+	if root != "" {
+		return root
+	}
+	return defaultGOROOT
 }
 
 // GOOS names the operating system that runs the program. The value comes from

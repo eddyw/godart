@@ -117,6 +117,9 @@ func TestLoadWithSDKInModuleCache(t *testing.T) {
 	if len(result.Binaries) != 1 || len(result.Binaries[0].Cover) != 1 {
 		t.Fatal("SDK test or coverage source is absent")
 	}
+	if result.GOROOT != source {
+		t.Fatalf("build SDK root: %q, want %q", result.GOROOT, source)
+	}
 	for name := range result.Sources {
 		if rel, err := filepath.Rel(moduleCache, name); err == nil && filepath.IsLocal(rel) {
 			t.Fatalf("overlay remains in the module cache: %s", name)
