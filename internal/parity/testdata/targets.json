@@ -243,5 +243,13 @@
       "js",
       "wasm"
     ]
+  },
+  {
+    "package": "math/rand/v2",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   }
 ]

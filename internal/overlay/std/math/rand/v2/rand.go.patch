@@ -1,10 +1,5 @@
-The file patches the real Go source of math/rand/v2/rand.go.
-
-The real file reads runtime.rand through a go:linkname directive, and that
-function holds no body. The top-level functions read it, and Go seeds that
-generator with a random value of the operating system. This file seeds a
-ChaCha8 with the clock instead. No program can depend on the values of either
-generator, thus the meaning stays equal.
+The patch seeds the default ChaCha8 generator from the platform random source.
+Explicit seeds retain the native Go sequence.
 
 @@ -22,7 +34,7 @@
  
@@ -15,7 +10,7 @@ generator, thus the meaning stays equal.
  )
  
  // A Source is a source of uniformly-distributed
-@@ -266,16 +278,20 @@
+@@ -266,16 +278,12 @@
  
  // globalRand is the source of random numbers for the top-level
  // convenience functions.
@@ -31,17 +26,9 @@ generator, thus the meaning stays equal.
 -	return runtime_rand()
 +var globalRand = &Rand{src: runtimeSource()}
 +
-+// runtimeSource gives the source that the top-level functions read. Go reads
-+// the generator of its runtime, and the operating system seeds that generator.
-+// The seed here comes from the clock, thus the values stay unpredictable and no
-+// program can depend on them.
 +func runtimeSource() Source {
 +	var seed [32]byte
-+	x := uint64(dart.NowNanos())
-+	for i := range seed {
-+		x = x*6364136223846793005 + 1442695040888963407
-+		seed[i] = byte(x >> 56)
-+	}
++	copy(seed[:], dart.RandomBytes(len(seed)))
 +	return NewChaCha8(seed)
  }
  
