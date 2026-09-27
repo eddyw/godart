@@ -88,13 +88,13 @@ type Filter map[string][]byte
 // The load runs 2 times. The first load finds the files of each standard
 // library package, and the second load replaces those files with the overlay.
 func Load(dir string, patterns ...string) (*Result, error) {
-	return load(dir, false, false, nil, patterns, "", nil, false, false)
+	return load(dir, false, false, nil, patterns, "", nil, false, false, false)
 }
 
 // LoadTests reads the packages and also each test variant of them. It replaces
 // the test entry point of the go command with the entry point of the compiler.
 func LoadTests(dir string, patterns ...string) (*Result, error) {
-	return load(dir, true, false, nil, patterns, "", nil, false, false)
+	return load(dir, true, false, nil, patterns, "", nil, false, false, false)
 }
 
 // Options configures package loading and an optional overlay-discovery cache.
@@ -108,15 +108,17 @@ type Options struct {
 	Filter    Filter
 	// Complete requires bodies for root-package functions without external declarations.
 	Complete bool
+	// StandardLibrary applies standard-library directive rules to root packages.
+	StandardLibrary bool
 	// LimitErrors reports at most 10 errors per package.
 	LimitErrors bool
 }
 
 func LoadWithOptions(opt Options) (*Result, error) {
-	return load(opt.Dir, opt.Tests, opt.Cover, opt.Filter, opt.Patterns, opt.CacheDir, opt.BuildTags, opt.Complete, opt.LimitErrors)
+	return load(opt.Dir, opt.Tests, opt.Cover, opt.Filter, opt.Patterns, opt.CacheDir, opt.BuildTags, opt.Complete, opt.LimitErrors, opt.StandardLibrary)
 }
 
-func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string, tags []string, complete, limitErrors bool) (*Result, error) {
+func load(dir string, tests, cover bool, filter Filter, patterns []string, cacheDir string, tags []string, complete, limitErrors, standardLibrary bool) (*Result, error) {
 	var timings []PhaseTiming
 	phase := time.Now()
 	sdk, err := prepareGoSDK(dir)
@@ -217,7 +219,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 	if len(pkgs) == 0 {
 		return nil, fmt.Errorf("no package matches %v in %s", patterns, dir)
 	}
-	if err := collectErrors(pkgs, files, &rangeExtras, complete, limitErrors); err != nil {
+	if err := collectErrors(pkgs, files, &rangeExtras, complete, limitErrors, standardLibrary); err != nil {
 		return nil, err
 	}
 	sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
@@ -485,7 +487,7 @@ func patchFiles(out map[string][]byte, o overlay.Package, p *packages.Package) {
 // overlay of another package gives such an error, and the verifier reports the
 // real cause with a source position: a compiled package imports a package
 // outside the surface.
-func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeExtras *sync.Map, complete, limitErrors bool) error {
+func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeExtras *sync.Map, complete, limitErrors, standardLibrary bool) error {
 	root := map[string]bool{}
 	for _, p := range roots {
 		root[p.ID] = true
@@ -525,7 +527,7 @@ func collectErrors(roots []*packages.Package, sources map[string][]byte, rangeEx
 			for _, err := range interfaceCycles(p) {
 				d.add(err)
 			}
-			for _, err := range directiveContracts(p, complete && root[p.ID]) {
+			for _, err := range directiveContracts(p, complete && root[p.ID], standardLibrary && root[p.ID]) {
 				d.add(err)
 			}
 		}

@@ -704,6 +704,7 @@ def language_behavior(paths):
                             valid = valid and directory_language_valid(case, report.get("go_version"))
                         else:
                             recipe = case["fixture"]["recipe"]
+                            valid = valid and (recipe == "errorcheck -std" or not case.get("gart_standard_library"))
                             version = re.fullmatch(r"errorcheck(\s+-0)?\s+-lang=(go[0-9]+\.[0-9]+)", recipe)
                             if version:
                                 language = version.group(2)
@@ -713,6 +714,10 @@ def language_behavior(paths):
                                          and "-lang="+language in case["native"].get("command", [])
                                          and case.get("module_source") == module
                                          and case.get("module_sha256") == hashlib.sha256(module.encode()).hexdigest())
+                            elif recipe == "errorcheck -std":
+                                valid = (valid and not successful and case.get("gart_standard_library") is True
+                                         and [arg for arg in case["native"].get("command", [])
+                                              if arg == "-std" or arg.startswith("-std=")] == ["-std"])
                             elif recipe == "errorcheck -t 10":
                                 valid = valid and not successful and timed_rejection_valid(case)
                             elif recipe in {"errorcheck -complete", "errorcheck -e=0"}:

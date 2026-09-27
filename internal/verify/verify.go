@@ -358,6 +358,15 @@ func (v *verifier) checkCall(call *ast.CallExpr) {
 	switch b.Name() {
 	case "len", "cap", "print", "println":
 		v.checkTypeParamBuiltin(call, b.Name())
+		if b.Name() == "print" || b.Name() == "println" {
+			for _, arg := range call.Args {
+				t := v.info.TypeOf(arg)
+				switch types.Unalias(t).Underlying().(type) {
+				case *types.Array, *types.Struct:
+					v.reject(call.Pos(), "", "illegal types for operand: %s\n\t%s", b.Name(), t)
+				}
+			}
+		}
 	}
 }
 

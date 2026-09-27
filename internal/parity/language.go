@@ -194,7 +194,7 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				if recipe == "build -gcflags=-l=4" {
 					c.NativeFlags = []string{"-gcflags=-l=4"}
 				}
-			} else if recipe == "errorcheck" || recipe == "errorcheck -d=panic" || recipe == "errorcheck -e" || recipe == "errorcheck -e=0" || recipe == "errorcheck -t 10" || recipe == "errorcheck -complete" {
+			} else if recipe == "errorcheck" || recipe == "errorcheck -std" || recipe == "errorcheck -d=panic" || recipe == "errorcheck -e" || recipe == "errorcheck -e=0" || recipe == "errorcheck -t 10" || recipe == "errorcheck -complete" {
 				c.Adapter = "reject-file"
 			} else if files, ok := languageGeneratorFiles(recipe); ok {
 				c.Adapter = "generated-file"

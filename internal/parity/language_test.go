@@ -67,6 +67,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/rejectpanic.go", "// errorcheck -d=panic\npackage p\n")
 	write("test/rejectall.go", "// errorcheck -e\npackage p\n")
 	write("test/rejectlimited.go", "// errorcheck -e=0\npackage p\n")
+	write("test/rejectstd.go", "// errorcheck -std\npackage p\n")
+	write("test/rejectstdextra.go", "// errorcheck -std -race\npackage p\n")
 	write("test/rejectcomplete.go", "// errorcheck -complete\npackage p\n")
 	write("test/rejecttimed.go", "// errorcheck -t 10\npackage p\n")
 	write("test/rejecttimedflags.go", "// errorcheck -t 10 -e=0\npackage p\n")
@@ -160,8 +162,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 93 {
-		t.Fatalf("got %d cases, want 93", len(inv.Cases))
+	if len(inv.Cases) != 95 {
+		t.Fatalf("got %d cases, want 95", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -192,6 +194,12 @@ func TestLanguageInventory(t *testing.T) {
 		if c := cases[name]; c.Exclusion != nil {
 			t.Fatalf("an unclassified diagnostic contract became a limit: %+v", c)
 		}
+	}
+	if c := cases["rejectstd"]; c.Adapter != "reject-file" || c.Recipe != "errorcheck -std" || c.Exclusion != nil {
+		t.Fatalf("standard-library diagnostic recipe lost: %+v", c)
+	}
+	if c := cases["rejectstdextra"]; c.Adapter != "missing" {
+		t.Fatalf("unsupported standard-library flags lost: %+v", c)
 	}
 	if cases["groups"].Adapter != "directory-packages" || cases["groupsrun"].Adapter != "directory-packages" {
 		t.Fatal("plain package directory recipes have no adapter")

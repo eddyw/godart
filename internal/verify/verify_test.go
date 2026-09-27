@@ -640,3 +640,14 @@ func TestResolvedImportPaths(t *testing.T) {
 		}
 	}
 }
+
+func TestPrintOperands(t *testing.T) {
+	for _, builtin := range []string{"print", "println"} {
+		for _, operand := range []string{"[1]byte{}", "struct{}{}", "point{}"} {
+			reject(t, builtin+operand, "illegal types for operand: "+builtin, "func f() { "+builtin+"("+operand+") }")
+		}
+		accept(t, builtin+" legal operands", "func f() { "+builtin+"(true, 1, 1.0, 1i, `a`, new(int), []int{}, map[int]int{}, make(chan int), func(){}, any(1)) }")
+		accept(t, builtin+" shadowed", "func f() { "+builtin+" := func(p point) {}; "+builtin+"(point{}) }")
+		accept(t, builtin+" tuple", "func values() (int, string) { return 1, `a` }; func f() { "+builtin+"(values()) }")
+	}
+}

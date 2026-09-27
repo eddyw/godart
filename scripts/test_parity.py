@@ -986,6 +986,40 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"failed": 1})
 
+    def test_standard_library_rejection_requires_both_modes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            diagnostic = "//go:unknown is not allowed in the standard library"
+            execution = dict(ran=True, exit=1, timed_out=False,
+                             output_sha256=parity.hashlib.sha256(diagnostic.encode()).hexdigest())
+            match = dict(ran=True, exit=0, timed_out=False)
+            outcome = dict(fixture=dict(name="p", recipe="errorcheck -std"), contract="reject", status="passed",
+                           wrapper_sha256="original matcher", build_error=diagnostic, gart_standard_library=True,
+                           native={**execution, "command": ["go", "tool", "compile", "-std", "p.go"]},
+                           gart=dict(execution), native_match=dict(match), gart_match=dict(match),
+                           native_diagnostics=diagnostic, gart_diagnostics=diagnostic)
+
+            def assess(case, status):
+                parity.save(root / "language.json", dict(kind="language", complete=True,
+                            outcomes=[case], shard=0, shards=1))
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            assess(outcome, "passed")
+            for mutate in [
+                lambda c: c.pop("gart_standard_library"),
+                lambda c: c.update(gart_standard_library=False),
+                lambda c: c.update(gart_standard_library="true"),
+                lambda c: c["native"]["command"].remove("-std"),
+                lambda c: c["native"]["command"].insert(3, "-std"),
+                lambda c: c["native"]["command"].insert(3, "-std=false"),
+                lambda c: c["fixture"].update(recipe="errorcheck -std -race"),
+                lambda c: c["fixture"].update(recipe="errorcheck"),
+                lambda c: c.update(contract="diagnostics"),
+            ]:
+                changed = copy.deepcopy(outcome)
+                mutate(changed)
+                assess(changed, "failed")
+
     def test_compiler_rejection_requires_both_flags(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

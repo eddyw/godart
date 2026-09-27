@@ -42,6 +42,8 @@ type Options struct {
 	Frontend     string
 	// Complete requires bodies for root-package functions without external declarations.
 	Complete bool
+	// StandardLibrary applies standard-library directive rules to root packages.
+	StandardLibrary bool
 	// LimitErrors reports at most 10 errors per package.
 	LimitErrors bool
 	// Trace receives the elapsed duration of each build or execution phase.
@@ -279,7 +281,7 @@ func loadModule(opt Options) (*load.Result, error) {
 	if !opt.NoCache {
 		cacheDir = filepath.Join(opt.Out, ".gart", "load")
 	}
-	return load.LoadWithOptions(load.Options{Dir: opt.Dir, Patterns: opt.Patterns, BuildTags: opt.BuildTags, CacheDir: cacheDir, Tests: opt.Tests, Cover: opt.Cover, Filter: filter, Complete: opt.Complete, LimitErrors: opt.LimitErrors})
+	return load.LoadWithOptions(load.Options{Dir: opt.Dir, Patterns: opt.Patterns, BuildTags: opt.BuildTags, CacheDir: cacheDir, Tests: opt.Tests, Cover: opt.Cover, Filter: filter, Complete: opt.Complete, LimitErrors: opt.LimitErrors, StandardLibrary: opt.StandardLibrary})
 }
 
 // testBinaries names the Dart entry point of each test binary of the build.

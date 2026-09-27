@@ -199,7 +199,10 @@ func TestDiagnostics(t *testing.T) {
 				writeFile(t, sourcePath, string(source))
 			}
 			args := []string{"tool", "compile", "-p=p", "-d=panic", "-C", "-e", "-importcfg=" + config, "-o", "native.o"}
-			if c.Recipe == "errorcheck -complete" {
+			if c.Recipe == "errorcheck -std" {
+				args = append(args, "-std")
+				result.GartStandardLibrary = true
+			} else if c.Recipe == "errorcheck -complete" {
 				args = append(args, "-complete")
 			} else if c.Recipe == "errorcheck -e=0" {
 				args[5] = "-e=0"
@@ -240,7 +243,7 @@ func TestDiagnostics(t *testing.T) {
 					result.BuildError = strings.TrimSpace(strings.TrimPrefix(text, "gart: "))
 					result.GartDiagnostics = column.ReplaceAllString(strings.ReplaceAll(result.BuildError, copyPath, sourcePath), "$1:")
 				} else {
-					err = driver.Build(driver.Options{Dir: dir, Patterns: []string{pattern}, Out: t.TempDir(), Runtime: runtimeDir(t)})
+					err = driver.Build(driver.Options{Dir: dir, Patterns: []string{pattern}, Out: t.TempDir(), Runtime: runtimeDir(t), StandardLibrary: result.GartStandardLibrary})
 					result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
 					if err != nil {
 						result.Gart.Exit = 1

@@ -20,8 +20,9 @@ import (
 	"github.com/eddyw/godart/internal/ir"
 )
 
-func directiveContracts(p *packages.Package, complete bool) []error {
+func directiveContracts(p *packages.Package, complete, standardLibrary bool) []error {
 	var errs []error
+	invalidStandardPragma := false
 	seen := make(map[types.Object]bool)
 	noescape := make(map[*ast.FuncDecl]bool)
 	reject := func(pos token.Pos, message string) {
@@ -89,9 +90,26 @@ func directiveContracts(p *packages.Package, complete bool) []error {
 							reject(comment.Pos()+2, verb+" must refer to declared function or variable")
 						}
 					}
+				default:
+					if !standardLibrary || !strings.HasPrefix(verb, "//go:") {
+						continue
+					}
+					switch verb {
+					case "//go:build", "//go:norace", "//go:nosplit", "//go:noinline", "//go:nocheckptr",
+						"//go:cgo_unsafe_args", "//go:uintptrkeepalive", "//go:uintptrescapes", "//go:registerparams",
+						"//go:cgo_export_static", "//go:cgo_export_dynamic", "//go:cgo_import_static", "//go:cgo_import_dynamic",
+						"//go:cgo_dynamic_linker", "//go:embed", "//go:fix", "//go:generate", "//go:debug",
+						"//go:wasmimport", "//go:wasmexport":
+					default:
+						invalidStandardPragma = true
+						reject(comment.Pos()+2, verb+" is not allowed in the standard library")
+					}
 				}
 			}
 		}
+	}
+	if invalidStandardPragma {
+		return errs
 	}
 	var functions []*ast.FuncDecl
 	for _, file := range p.Syntax {
@@ -109,6 +127,23 @@ func directiveContracts(p *packages.Package, complete bool) []error {
 		pos := fn.Name.Pos()
 		if fn.Recv != nil {
 			pos = fn.Recv.Pos()
+		}
+		if standardLibrary && fn.Body != nil && fn.Doc != nil {
+			keepalive, escapes, nosplit := false, false, false
+			for _, comment := range fn.Doc.List {
+				verb, _, _ := strings.Cut(comment.Text, " ")
+				switch verb {
+				case "//go:uintptrkeepalive":
+					keepalive = true
+				case "//go:uintptrescapes":
+					escapes = true
+				case "//go:nosplit":
+					nosplit = true
+				}
+			}
+			if keepalive && !escapes && !nosplit {
+				reject(pos, "go:uintptrkeepalive requires go:nosplit")
+			}
 		}
 		if noescape[fn] {
 			reject(pos, "can only use //go:noescape with external func implementations")
