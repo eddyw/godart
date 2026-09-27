@@ -210,3 +210,6 @@ use unconventional notice locations.
 
 Multicast interface enumeration adapts Go `net/interface_linux.go` and
 `internal/routebsd/address.go`. The overlay and native adapter retain their Go BSD notices.
+
+Time text marshaling retains Go `src/time/time.go`.
+Its source preserves the Go BSD notice.

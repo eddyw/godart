@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 package time
@@ -158,21 +162,24 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AppendText writes the RFC 3339 text of t after b.
-//
-// Go reports an error when the year stands outside the range 0 to 9999.
-func (t Time) AppendText(b []byte) ([]byte, error) {
-	n0 := len(b)
+func (t Time) appendTo(b []byte, errPrefix string) ([]byte, error) {
 	b, err := t.appendStrictRFC3339(b)
 	if err != nil {
-		return b[:n0], errors.New("Time.MarshalText: " + err.Error())
+		return nil, errors.New(errPrefix + err.Error())
 	}
 	return b, nil
 }
 
+// AppendText writes the RFC 3339 text of t after b.
+//
+// Go reports an error when the year stands outside the range 0 to 9999.
+func (t Time) AppendText(b []byte) ([]byte, error) {
+	return t.appendTo(b, "Time.AppendText: ")
+}
+
 // MarshalText gives the RFC 3339 text of t.
 func (t Time) MarshalText() ([]byte, error) {
-	return t.AppendText(make([]byte, 0, len(RFC3339Nano)))
+	return t.appendTo(make([]byte, 0, len(RFC3339Nano)), "Time.MarshalText: ")
 }
 
 // UnmarshalText reads an RFC 3339 text into t.
