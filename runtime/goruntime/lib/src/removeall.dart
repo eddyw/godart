@@ -97,6 +97,14 @@ int _unlink(int parent, Uint8List name, int flags) {
   }
 }
 
+int $syscallUnlink(GoString path, bool directory) {
+  try {
+    return _unlink(_cwd, path.bytes, directory ? _removeDirectory : 0);
+  } on _RemovalError catch (error) {
+    return error.errno;
+  }
+}
+
 GoString removeDescriptors(GoString path) {
   try {
     int fileError;

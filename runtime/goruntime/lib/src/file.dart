@@ -16,6 +16,7 @@ export 'file_links.dart';
 export 'file_readlink.dart';
 export 'file_rename.dart';
 export 'file_stat.dart';
+export 'removeall.dart' show $syscallUnlink;
 export 'syscall_directory.dart';
 export 'working_directory.dart';
 

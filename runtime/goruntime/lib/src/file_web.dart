@@ -188,3 +188,5 @@ int $syscallClose(int fd) => 38;
     (Slice<int>.nil(), 38);
 
 (GoString, int) $syscallGetwd() => (GoString.empty, 38);
+
+int $syscallUnlink(GoString path, bool directory) => 38;

@@ -134,3 +134,24 @@ func Pwrite(fd int, p []byte, offset int64) (int, error) {
 	}
 	return n, nil
 }
+
+func Mkdir(path string, mode uint32) error {
+	if errno := dart.DirectoryCreate(path, int(mode)); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Unlink(path string) error {
+	if errno := dart.SyscallUnlink(path, false); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Rmdir(path string) error {
+	if errno := dart.SyscallUnlink(path, true); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
