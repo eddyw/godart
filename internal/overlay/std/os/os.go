@@ -864,13 +864,25 @@ func (f *File) Readdir(n int) ([]FileInfo, error) {
 	if f == nil {
 		return nil, ErrInvalid
 	}
-	entries, err := f.ReadDir(n)
-	if err != nil {
-		return []FileInfo{}, err
+	out := make([]FileInfo, 0)
+	remaining := n
+	if remaining <= 0 {
+		remaining = -1
 	}
-	out := make([]FileInfo, 0, len(entries))
-	for _, e := range entries {
-		info, err := f.directoryInfo(e.Name())
+	for remaining != 0 {
+		names, _, err := f.readDirNames(1)
+		if err != nil {
+			if err == io.EOF && (n <= 0 || len(out) != 0) {
+				return out, nil
+			}
+			return out, err
+		}
+		// Darwin counts successful metadata reads. Other Unix systems count
+		// directory entries, including entries that disappear before stat.
+		if dart.OS() != "darwin" && remaining > 0 {
+			remaining--
+		}
+		info, err := f.directoryInfo(names[0])
 		if IsNotExist(err) {
 			continue
 		}
@@ -878,6 +890,9 @@ func (f *File) Readdir(n int) ([]FileInfo, error) {
 			return out, err
 		}
 		out = append(out, info)
+		if dart.OS() == "darwin" && remaining > 0 {
+			remaining--
+		}
 	}
 	return out, nil
 }

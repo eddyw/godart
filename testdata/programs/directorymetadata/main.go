@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -38,6 +39,47 @@ func main() {
 	}
 	removed, err := g.Readdir(-1)
 	fmt.Println("removed-buffered-entries", len(removed), err == nil)
+
+	for _, partial := range []bool{false, true} {
+		for _, n := range []int{1, 2, 3, 10, 0, -1} {
+			path := filepath.Join(root, fmt.Sprintf("deleted-%t-%d", partial, n))
+			if err := os.Mkdir(path, 0700); err != nil {
+				panic(err)
+			}
+			for _, name := range []string{"a", "b", "c"} {
+				if err := os.WriteFile(filepath.Join(path, name), nil, 0600); err != nil {
+					panic(err)
+				}
+			}
+			f, err := os.Open(path)
+			if err != nil {
+				panic(err)
+			}
+			first, err := f.Readdirnames(1)
+			if err != nil {
+				panic(err)
+			}
+			keep := "a"
+			if first[0] == keep {
+				keep = "b"
+			}
+			for _, name := range []string{"a", "b", "c"} {
+				if partial && name == keep {
+					continue
+				}
+				if err := os.Remove(filepath.Join(path, name)); err != nil {
+					panic(err)
+				}
+			}
+			infos, err := f.Readdir(n)
+			fmt.Println("deleted-bounded", partial, n, len(infos), err == nil, err == io.EOF)
+			infos, err = f.Readdir(10)
+			fmt.Println("deleted-exhausted", partial, n, len(infos), err == io.EOF)
+			if err := f.Close(); err != nil {
+				panic(err)
+			}
+		}
+	}
 	before := filepath.Join(root, "before")
 	if err := os.Mkdir(before, 0700); err != nil {
 		panic(err)
