@@ -24,6 +24,8 @@ type languageExecution struct {
 }
 
 type languageOutcome struct {
+	NativeChild        *languageExecution         `json:"native_child,omitempty"`
+	GartChild          *languageExecution         `json:"gart_child,omitempty"`
 	GartBuild          *languageExecution         `json:"gart_build,omitempty"`
 	WrapperSource      string                     `json:"wrapper_source,omitempty"`
 	NativeLink         languageExecution          `json:"native_link"`

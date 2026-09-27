@@ -355,6 +355,48 @@ class ParityTest(unittest.TestCase):
             case["gart"]["output_sha256"] = "wrong"
             assess("failed")
 
+    def test_child_buildrun_requires_original_source_and_real_child_execution(self):
+        digest = lambda value: parity.hashlib.sha256(value.encode()).hexdigest()
+        child = "package main\nfunc main() { panic(1) }\n"
+        source = "// buildrun\npackage main\nconst prog = `" + child + "`\n"
+        module = "module example.com/buildrunfixture\n\ngo 1.27.1\n"
+        execution = dict(ran=True, exit=0, timed_out=False, output_sha256=digest(""))
+        environment = {"PATH": "/proxy:/tools"}
+        case = dict(
+            fixture=dict(name="fixedbugs/issue46234", recipe="buildrun", adapter="child-buildrun",
+                         files=[dict(path="fixedbugs/issue46234.go", sha256=digest(source))]),
+            adapted_sources={"fixture.go": source}, generated_source=child,
+            module_source=module, module_sha256=digest(module),
+            wrapper_source="proxy", wrapper_sha256=digest("proxy"),
+            expected_sha256=digest(""),
+            native_compile=[dict(execution, command=["go", "build", "-gcflags=all=", "-o", "/native", "fixture.go"])],
+            native=dict(execution, command=["/native"], environment=environment),
+            gart=dict(execution, command=["dart", "/output/bin/main.dart"], environment=environment),
+            native_child=dict(execution, exit=1, command=["/tools/go", "run", "/first/main.go"], output_sha256=digest("native panic")),
+            gart_child=dict(execution, exit=2, command=["/tools/gart.exe", "run", "-frontend=source", "-format=false", "-o", "/child", "-runtime", "/runtime", "/second/main.go"], output_sha256=digest("gart panic")),
+            native_diagnostics="native panic", gart_diagnostics="gart panic")
+        self.assertTrue(parity.child_buildrun_valid(case, "go1.27.1", ""))
+        for path, value in [
+                (("gart_child",), None),
+                (("gart_child", "ran"), False),
+                (("gart_child", "timed_out"), True),
+                (("gart_child", "exit"), 0),
+                (("gart_child", "command"), ["go", "run", "/second/main.go"]),
+                (("generated_source",), "package main"),
+                (("adapted_sources", "fixture.go"), source + "// changed\n"),
+                (("gart_diagnostics",), "different output"),
+                (("native_compile",), []),
+                (("fixture", "name"), "another-fixture"),
+                (("wrapper_sha256",), "wrong")]:
+            changed = copy.deepcopy(case)
+            parent = changed
+            for key in path[:-1]:
+                parent = parent[key]
+            parent[path[-1]] = value
+            with self.subTest(path=path):
+                self.assertFalse(parity.child_buildrun_valid(changed, "go1.27.1", ""))
+        self.assertFalse(parity.child_buildrun_valid(case, "go1.27.1", "-N"))
+
     def test_directory_compiler_options_reach_all_packages(self):
         module = "module test\n\ngo 1.27.1\n"
         wrapper = 'import "package:test/a.dart";\nimport "package:test/b.dart";\nvoid main() {}\n'

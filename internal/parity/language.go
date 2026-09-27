@@ -183,6 +183,8 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				if match[1] != "" {
 					c.Adapter = "diagnostic-file"
 				}
+			} else if recipe == "buildrun" && c.Name == "fixedbugs/issue46234" {
+				c.Adapter = "child-buildrun"
 			} else if recipe == "build" || recipe == "build -gcflags=-l=4" {
 				c.Adapter = "build-file"
 				if recipe == "build -gcflags=-l=4" {

@@ -285,6 +285,57 @@ def rejection_result(case, status):
     return "incomplete-evidence"
 
 
+def child_buildrun_valid(case, go_version, gcflags):
+    fixture = case.get("fixture") or {}
+    sources = case.get("adapted_sources") or {}
+    source = sources.get("fixture.go", "")
+    match = re.search(r"(?s)const prog = `(.*?)`", source)
+    module = "module example.com/buildrunfixture\n\ngo " + go_version.removeprefix("go") + "\n"
+    builds = case.get("native_compile") or []
+    if (fixture.get("name") != "fixedbugs/issue46234" or fixture.get("recipe") != "buildrun"
+            or fixture.get("adapter") != "child-buildrun" or set(sources) != {"fixture.go"}
+            or len(fixture.get("files", [])) != 1
+            or fixture["files"][0].get("sha256") != hashlib.sha256(source.encode()).hexdigest()
+            or fixture["files"][0].get("path") != "fixedbugs/issue46234.go"
+            or not match or match[1] != case.get("generated_source")
+            or case.get("build_error") or len(builds) != 1
+            or builds[0].get("ran") is not True or builds[0].get("exit") != 0 or builds[0].get("timed_out") is not False
+            or case.get("module_source") != module
+            or case.get("module_sha256") != hashlib.sha256(module.encode()).hexdigest()
+            or not case.get("wrapper_source")
+            or case.get("wrapper_sha256") != hashlib.sha256(case["wrapper_source"].encode()).hexdigest()):
+        return False
+    command = builds[0].get("command", [])
+    if (len(command) != 6 or command[:4] != ["go", "build", "-gcflags=all=" + gcflags, "-o"]
+            or command[-1] != "fixture.go" or case["native"].get("command") != [command[4]]
+            or len(case["gart"].get("command", [])) != 2 or case["gart"]["command"][0] != "dart"
+            or not case["gart"]["command"][1].endswith("/bin/main.dart")):
+        return False
+    empty = hashlib.sha256(b"").hexdigest()
+    if (case.get("expected_sha256") != empty
+            or any(case[k].get("output_sha256") != empty for k in ["native", "gart"])
+            or not case["native"].get("environment", {}).get("PATH")
+            or case["native"].get("environment") != case["gart"].get("environment")):
+        return False
+    for target in ["native", "gart"]:
+        child = case.get(target + "_child") or {}
+        output = case.get(target + "_diagnostics", "")
+        command = child.get("command", [])
+        if (child.get("ran") is not True or child.get("exit") in [None, 0] or child.get("timed_out") is not False
+                or child.get("output_sha256") != hashlib.sha256(output.encode()).hexdigest()):
+            return False
+        if target == "native":
+            if len(command) != 3 or Path(command[0]).name != "go" or command[1] != "run":
+                return False
+        elif (len(command) != 9 or Path(command[0]).name != "gart.exe"
+              or command[1:5] != ["run", "-frontend=source", "-format=false", "-o"]
+              or not command[5] or command[6] != "-runtime" or not command[7]):
+            return False
+        if Path(command[-1]).name != "main.go":
+            return False
+    return True
+
+
 def directory_language_valid(case, go_version):
     fixture = case["fixture"]
     contract = case["contract"]
@@ -519,6 +570,8 @@ def language_behavior(paths):
                                    for k in ("native", "gart"))
                     if case.get("contract") in {"compiledir", "rundir"}:
                         valid = executed and directory_language_valid(case, report.get("go_version"))
+                    elif case.get("contract") == "buildrun":
+                        valid = executed and child_buildrun_valid(case, report.get("go_version", ""), (report.get("environment") or {}).get("GO_GCFLAGS", ""))
                     elif case.get("contract") in {"compile", "build"}:
                         recipe = case["fixture"]["recipe"] == case["contract"]
                         if case["contract"] == "build" and case["fixture"]["recipe"] == "build -gcflags=-l=4":
@@ -659,7 +712,7 @@ def language_behavior(paths):
                                      and case["native"]["environment"] == case["gart"].get("environment")
                                      and not case.get("build_error"))
                     valid = valid and (status == "passed" or case.get("contract") in {"reject", "errorcheckoutput", "errorcheckdir"})
-                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "build", "reject", "errorcheckoutput", "diagnostics", "errorcheckdir"} and case.get("contract", "run") == config["contract"]
+                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "build", "buildrun", "reject", "errorcheckoutput", "diagnostics", "errorcheckdir"} and case.get("contract", "run") == config["contract"]
 
                     if case["fixture"].get("host_tools"):
                         native_env = case["native"].get("environment") or {}

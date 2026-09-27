@@ -21,7 +21,7 @@ func TestLanguageInventory(t *testing.T) {
 		}
 	}
 	write("VERSION", "go1.27.1\n")
-	write("src/cmd/internal/testdir/testdir_test.go", `package testdir_test; var dirs=[]string{".","other"}; var types2Failures=setOf("reject.go"); var types2Failures32Bit=setOf("compile.go"); func recipe() { switch "" { case "runindir": if modVersion == "" { modVersion = "1.14" } } }`)
+	write("src/cmd/internal/testdir/testdir_test.go", `package testdir_test; var dirs=[]string{".","other","fixedbugs"}; var types2Failures=setOf("reject.go"); var types2Failures32Bit=setOf("compile.go"); func recipe() { switch "" { case "runindir": if modVersion == "" { modVersion = "1.14" } } }`)
 	write("test/module.go", "// runindir\npackage ignored\n")
 	write("test/moduleflags.go", "// runindir -gomodversion 1.27\npackage ignored\n")
 	write("test/moduleextra.go", "// runindir -gomodversion 1.27 -goexperiment fieldtrack\npackage ignored\n")
@@ -119,6 +119,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/extra.go", "// skip\npackage main\n")
 	write("test/suffix_windows.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/constraints.go", "//go:build dart\n\n// run\npackage main\nfunc main() {}\n")
+	write("test/fixedbugs/issue46234.go", "// buildrun\npackage main\n")
+	write("test/buildrununknown.go", "// buildrun\npackage main\n")
 	write("test/inline.go", "// rundir -l=4\npackage ignored\n")
 	write("test/inline.dir/main.go", "package main\nfunc main() {}\n")
 	write("test/other/directory.go", "// rundir -G=3\npackage ignored\n")
@@ -147,8 +149,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 85 {
-		t.Fatalf("got %d cases, want 85", len(inv.Cases))
+	if len(inv.Cases) != 87 {
+		t.Fatalf("got %d cases, want 87", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -258,6 +260,12 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if c := cases["constraints"]; c.NativeEligible || !c.GartEligible || c.Adapter != "single-file" {
 		t.Fatalf("constraint distinction lost: %+v", c)
+	}
+	if c := cases["fixedbugs/issue46234"]; c.Adapter != "child-buildrun" || c.Recipe != "buildrun" || len(c.Files) != 1 {
+		t.Fatalf("child build recipe lost: %+v", c)
+	}
+	if c := cases["buildrununknown"]; c.Adapter != "missing" {
+		t.Fatalf("unrecognized child recipe accepted: %+v", c)
 	}
 	if c := cases["inline"]; c.Adapter != "directory-packages" || c.Recipe != "rundir -l=4" || len(c.Files) != 2 {
 		t.Fatalf("directory inline option lost: %+v", c)
