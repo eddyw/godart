@@ -681,6 +681,8 @@ class ParityTest(unittest.TestCase):
 
     def test_run_recipe_preserves_compiler_options(self):
         recipes = {
+            "run -gcflags=all=-d=checkptr": ["-gcflags=all=-d=checkptr"],
+            "run -tags=purego -gcflags=all=-d=checkptr": ["-tags=purego", "-gcflags=all=-d=checkptr"],
             "run -gcflags -l=4": ["-gcflags", "-l=4"],
             'run -gcflags="-l"': ["-gcflags=-l"],
             "run -gcflags='all=-N -l'": ["-gcflags=all=-N -l"],
@@ -698,6 +700,9 @@ class ParityTest(unittest.TestCase):
                             contract="run", status="passed", expected_sha256="expected",
                             native=dict(execution, command=["go", "run", "-gcflags=all="] + flags + ["main.go"]),
                             gart=dict(execution, command=["dart", "run", "main.dart"]))
+                tags = ["purego"] if "-tags=purego" in flags else []
+                case["fixture"]["build_tags"] = tags
+                case["gart_build_tags"] = list(tags)
                 path = root / "language.json"
 
                 def assess(value, status, target):
@@ -707,6 +712,8 @@ class ParityTest(unittest.TestCase):
                 for target in ["vm", "aot", "js", "wasm"]:
                     assess(case, "passed", target)
                     for mutate in [
+                        lambda c: c["fixture"].update(build_tags=["changed"]),
+                        lambda c: c.update(gart_build_tags=["changed"]),
                         lambda c: c["fixture"].update(native_flags=[]),
                         lambda c: c["fixture"].update(recipe=recipe + " -race"),
                         lambda c: c["fixture"].update(recipe="run -gcflags=-unknown"),

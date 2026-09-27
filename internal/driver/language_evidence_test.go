@@ -24,6 +24,7 @@ type languageExecution struct {
 }
 
 type languageOutcome struct {
+	GartBuildTags      []string                   `json:"gart_build_tags,omitempty"`
 	NativeRecompile    []languageExecution        `json:"native_recompile,omitempty"`
 	GartReject         *languageExecution         `json:"gart_reject,omitempty"`
 	NativeChild        *languageExecution         `json:"native_child,omitempty"`

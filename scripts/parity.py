@@ -475,6 +475,8 @@ def run_recipe_valid(case, target):
     fixture = case["fixture"]
     recipe = fixture.get("recipe", "")
     flags = {
+        "run -gcflags=all=-d=checkptr": ["-gcflags=all=-d=checkptr"],
+        "run -tags=purego -gcflags=all=-d=checkptr": ["-tags=purego", "-gcflags=all=-d=checkptr"],
         "run -gcflags -l=4": ["-gcflags", "-l=4"],
         'run -gcflags="-l"': ["-gcflags=-l"],
         "run -gcflags='all=-N -l'": ["-gcflags=all=-N -l"],
@@ -499,6 +501,9 @@ def run_recipe_valid(case, target):
             arguments.append(value)
     if (files != fixture.get("run_files", []) or arguments != fixture.get("arguments", [])
             or flags != fixture.get("native_flags", [])):
+        return False
+    tags = ["purego"] if recipe == "run -tags=purego -gcflags=all=-d=checkptr" else []
+    if fixture.get("build_tags", []) != tags or case.get("gart_build_tags", []) != tags:
         return False
     recorded = {f["path"]: f["sha256"] for f in fixture.get("files", [])}
     if not all(re.fullmatch(r"[0-9a-f]{64}", recorded.get(f, "")) for f in [fixture.get("file", "")] + files):

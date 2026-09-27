@@ -264,14 +264,17 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 			if len(c.Companions) > 0 || c.Adapter == "directory-module" {
 				patterns = []string{file}
 			}
-			err = driver.Build(driver.Options{
-				Trace:    traceBuild(t),
-				Dir:      dir,
-				Patterns: patterns,
-				Out:      out,
-				Runtime:  runtime,
-				Format:   false,
-			})
+			options := driver.Options{
+				BuildTags: slices.Clone(c.BuildTags),
+				Trace:     traceBuild(t),
+				Dir:       dir,
+				Patterns:  patterns,
+				Out:       out,
+				Runtime:   runtime,
+				Format:    false,
+			}
+			outcome.GartBuildTags = slices.Clone(options.BuildTags)
+			err = driver.Build(options)
 			if err != nil {
 				outcome.BuildError = err.Error()
 			}

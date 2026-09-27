@@ -46,6 +46,7 @@ func ReadLanguagePolicy() (*LanguagePolicy, error) {
 }
 
 type LanguageCase struct {
+	BuildTags       []string     `json:"build_tags,omitempty"`
 	NativeFlags     []string     `json:"native_flags,omitempty"`
 	RunFiles        []string     `json:"run_files,omitempty"`
 	Arguments       []string     `json:"arguments,omitempty"`
@@ -155,6 +156,9 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 			} else if flags := languageRunCompilerFlags[recipe]; flags != nil {
 				c.Adapter = "run-recipe"
 				c.NativeFlags = slices.Clone(flags)
+				if recipe == "run -tags=purego -gcflags=all=-d=checkptr" {
+					c.BuildTags = []string{"purego"}
+				}
 			} else if files, args, ok := languageRunRecipe(recipe); ok {
 				c.Adapter = "run-recipe"
 				c.RunFiles, c.Arguments = files, args
@@ -319,13 +323,15 @@ var errorcheckVersionRecipe = regexp.MustCompile(`^errorcheck(\s+-0)?\s+-lang=(g
 var directoryRecipe = regexp.MustCompile(`^runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?$`)
 
 var languageRunCompilerFlags = map[string][]string{
-	"run -gcflags -l=4":              {"-gcflags", "-l=4"},
-	`run -gcflags="-l"`:              {"-gcflags=-l"},
-	"run -gcflags='all=-N -l'":       {"-gcflags=all=-N -l"},
-	"run -gcflags=-d=converthash=qy": {"-gcflags=-d=converthash=qy"},
-	"run -gcflags=-d=softfloat":      {"-gcflags=-d=softfloat"},
-	"run -gcflags=-d=ssa/check/on":   {"-gcflags=-d=ssa/check/on"},
-	"run -gcflags=-l=4":              {"-gcflags=-l=4"},
+	"run -gcflags=all=-d=checkptr":              {"-gcflags=all=-d=checkptr"},
+	"run -tags=purego -gcflags=all=-d=checkptr": {"-tags=purego", "-gcflags=all=-d=checkptr"},
+	"run -gcflags -l=4":                         {"-gcflags", "-l=4"},
+	`run -gcflags="-l"`:                         {"-gcflags=-l"},
+	"run -gcflags='all=-N -l'":                  {"-gcflags=all=-N -l"},
+	"run -gcflags=-d=converthash=qy":            {"-gcflags=-d=converthash=qy"},
+	"run -gcflags=-d=softfloat":                 {"-gcflags=-d=softfloat"},
+	"run -gcflags=-d=ssa/check/on":              {"-gcflags=-d=ssa/check/on"},
+	"run -gcflags=-l=4":                         {"-gcflags=-l=4"},
 }
 
 func languageRunRecipe(recipe string) ([]string, []string, bool) {

@@ -34,13 +34,15 @@ func TestLanguageInventory(t *testing.T) {
 		recipe string
 		flags  []string
 	}{
-		"runcallersplit": {"run -gcflags -l=4", []string{"-gcflags", "-l=4"}},
-		"runnoinline":    {`run -gcflags="-l"`, []string{"-gcflags=-l"}},
-		"runnoopt":       {"run -gcflags='all=-N -l'", []string{"-gcflags=all=-N -l"}},
-		"runconvert":     {"run -gcflags=-d=converthash=qy", []string{"-gcflags=-d=converthash=qy"}},
-		"runsoftfloat":   {"run -gcflags=-d=softfloat", []string{"-gcflags=-d=softfloat"}},
-		"runssa":         {"run -gcflags=-d=ssa/check/on", []string{"-gcflags=-d=ssa/check/on"}},
-		"runcaller":      {"run -gcflags=-l=4", []string{"-gcflags=-l=4"}},
+		"runcheckptr":     {"run -gcflags=all=-d=checkptr", []string{"-gcflags=all=-d=checkptr"}},
+		"runpurecheckptr": {"run -tags=purego -gcflags=all=-d=checkptr", []string{"-tags=purego", "-gcflags=all=-d=checkptr"}},
+		"runcallersplit":  {"run -gcflags -l=4", []string{"-gcflags", "-l=4"}},
+		"runnoinline":     {`run -gcflags="-l"`, []string{"-gcflags=-l"}},
+		"runnoopt":        {"run -gcflags='all=-N -l'", []string{"-gcflags=all=-N -l"}},
+		"runconvert":      {"run -gcflags=-d=converthash=qy", []string{"-gcflags=-d=converthash=qy"}},
+		"runsoftfloat":    {"run -gcflags=-d=softfloat", []string{"-gcflags=-d=softfloat"}},
+		"runssa":          {"run -gcflags=-d=ssa/check/on", []string{"-gcflags=-d=ssa/check/on"}},
+		"runcaller":       {"run -gcflags=-l=4", []string{"-gcflags=-l=4"}},
 	}
 	for name, recipe := range runCompilerRecipes {
 		write("test/"+name+".go", "// "+recipe.recipe+"\npackage main\nfunc main() {}\n")
@@ -158,8 +160,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 91 {
-		t.Fatalf("got %d cases, want 91", len(inv.Cases))
+	if len(inv.Cases) != 93 {
+		t.Fatalf("got %d cases, want 93", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -243,6 +245,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if c := cases["buildinline"]; c.Adapter != "build-file" || !slices.Equal(c.NativeFlags, []string{"-gcflags=-l=4"}) {
 		t.Fatal("the build adapter must preserve its compiler flag")
+	}
+	if !slices.Equal(cases["runpurecheckptr"].BuildTags, []string{"purego"}) || len(cases["runcheckptr"].BuildTags) != 0 {
+		t.Fatal("run recipe build tags changed")
 	}
 	if cases["rejectrun"].Adapter != "directory-packages" || cases["rejectrunflags"].Adapter != "missing" {
 		t.Fatal("combined diagnostic and runtime recipes must preserve their flags")
