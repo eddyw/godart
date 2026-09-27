@@ -181,7 +181,8 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
   r.headers.forEach(
     ((JSString value, JSString name, JSAny parent) {
       fields.add(GoString.fromString(name.toDart));
-      fields.add(GoString.fromString(value.toDart));
+      // Fetch represents each header byte as 1 string code unit.
+      fields.add(GoString.fromBytes(value.toDart.codeUnits));
     }).toJS,
   );
   final _Stream? stream = r.body;
@@ -220,7 +221,10 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
   }
   final _Headers fields = _Headers();
   for (int i = 0; i + 1 < header.len; i += 2) {
-    fields.append(header[i].toDartString(), header[i + 1].toDartString());
+    fields.append(
+      header[i].toDartString(),
+      String.fromCharCodes(header[i + 1].bytes),
+    );
   }
   final _Request request = _requests[handle]!;
   final _Abort? stop = request.stop;

@@ -1,6 +1,7 @@
 package driver_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +12,7 @@ import (
 	"github.com/eddyw/godart/internal/driver"
 )
 
-func TestHTTPFetchContextCancellation(t *testing.T) {
+func TestHTTPFetchRequests(t *testing.T) {
 	server := func() string {
 		started := make(chan struct{})
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -49,6 +50,17 @@ func TestHTTPFetchContextCancellation(t *testing.T) {
 		t.Cleanup(s.Close)
 		return s.URL
 	}
+	headerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		value := r.Header.Get("X-Bytes")
+		if r.URL.Path == "/response" {
+			value = "ascii \xc3\xa9 \xe4\xb8\xad \x80\xff"
+		}
+		w.Header().Set("X-Bytes", value)
+		fmt.Fprintf(w, "%x", []byte(value))
+	}))
+	defer headerServer.Close()
+	protocolServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { io.Copy(w, r.Body) }))
+	defer protocolServer.Close()
 	dir, out := t.TempDir(), t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/fetchcancel\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
@@ -141,9 +153,59 @@ func runRequests(base, kind string) {
 	}
 	fmt.Println(kind, "failure", err != nil && !errors.Is(err, cause) && !strings.Contains(err.Error(), "request completed"))
 }
-func main() { runRequests(os.Args[1], "context"); runRequests(os.Args[2], "channel") }
+func runHeaderRequests(base string) {
+ for i, value := range []string{"ascii", "café", "中", "\x80\xff"} {
+  req,_ := http.NewRequest("GET",base+"/echo",nil)
+  req.Header.Set("X-Bytes",value)
+  res,err := http.DefaultClient.Do(req)
+  if err != nil {fmt.Println("headers request",i,"error",err);continue}
+  body,err := io.ReadAll(res.Body)
+  res.Body.Close()
+  fmt.Println("headers request",i,string(body)==fmt.Sprintf("%x",[]byte(value)),res.Header.Get("X-Bytes")==value,err==nil)
+ }
+ res,err:=http.Get(base+"/response")
+ if err!=nil {panic(err)}
+ body,err:=io.ReadAll(res.Body)
+ res.Body.Close()
+ want:="ascii \xc3\xa9 \xe4\xb8\xad \x80\xff"
+ fmt.Println("headers response",string(body)==fmt.Sprintf("%x",[]byte(want)),res.Header.Get("X-Bytes")==want,err==nil)
+}
+type protocolFunc func(*http.Request) (*http.Response, error)
+func (f protocolFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
+func runProtocolFallback(base string) {
+ for _, mode := range []string{"unread", "read", "closed", "unrewindable"} {
+  tr := &http.Transport{}
+  seen := ""
+  tr.RegisterProtocol("http", protocolFunc(func(req *http.Request) (*http.Response, error) {
+   if mode != "unread" {
+    data, err := io.ReadAll(req.Body)
+    if err != nil { return nil, err }
+    seen = string(data)
+   }
+   if mode == "closed" { req.Body.Close() }
+   return nil, http.ErrSkipAltProtocol
+  }))
+  req, err := http.NewRequest("POST", base, strings.NewReader("body"))
+  if err != nil { panic(err) }
+  if mode == "unrewindable" { req.GetBody = nil }
+  res, err := tr.RoundTrip(req)
+  if mode == "unrewindable" {
+   fmt.Println("protocol", mode, seen=="body", err!=nil && strings.Contains(err.Error(),"cannot rewind body"), res==nil)
+  } else {
+   if err != nil { panic(err) }
+   data, err := io.ReadAll(res.Body)
+   res.Body.Close()
+   if err != nil { panic(err) }
+   wantSeen := "body"
+   if mode == "unread" { wantSeen = "" }
+   fmt.Println("protocol", mode, seen==wantSeen, string(data)=="body", res.Request==req)
+  }
+  tr.CloseIdleConnections()
+ }
+}
+func main() { runRequests(os.Args[1], "context"); runRequests(os.Args[2], "channel"); runHeaderRequests(os.Args[3]); runProtocolFallback(os.Args[4]) }
 `)
-	want := runProgram(t, dir, "go", "run", ".", server(), server())
+	want := runProgram(t, dir, "go", "run", ".", server(), server(), headerServer.URL, protocolServer.URL)
 	const expected = `context headers true
 context body true
 context read true
@@ -155,9 +217,18 @@ channel body true
 channel read true
 channel normal ok
 channel eof true
-channel failure true`
+channel failure true
+headers request 0 true true true
+headers request 1 true true true
+headers request 2 true true true
+headers request 3 true true true
+headers response true true true
+protocol unread true true true
+protocol read true true true
+protocol closed true true true
+protocol unrewindable true true true`
 	if want != expected {
-		t.Fatalf("native cancellation result: %q", want)
+		t.Fatalf("native fetch result: %q", want)
 	}
 	if err := driver.Build(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t)}); err != nil {
 		t.Fatal(err)
@@ -167,9 +238,9 @@ channel failure true`
 		t.Run(target, func(t *testing.T) {
 			var got programResult
 			if target == "vm" {
-				got = programOutcome(t, dir, "dart", filepath.Join(out, "bin/main.dart"), server(), server())
+				got = programOutcome(t, dir, "dart", filepath.Join(out, "bin/main.dart"), server(), server(), headerServer.URL, protocolServer.URL)
 			} else {
-				got = runUpstreamTarget(t, target, out, "bin/main.dart", dir, []string{server(), server()})
+				got = runUpstreamTarget(t, target, out, "bin/main.dart", dir, []string{server(), server(), headerServer.URL, protocolServer.URL})
 			}
 			if got.Exit != 0 || got.Text != want {
 				t.Fatalf("native: %s\nGart: %s\nexit: %d", want, got.Text, got.Exit)

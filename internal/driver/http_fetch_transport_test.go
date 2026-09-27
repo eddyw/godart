@@ -10,10 +10,10 @@ import (
 	"github.com/eddyw/godart/internal/driver"
 )
 
-func TestHTTPFetchValidation(t *testing.T) {
+func TestHTTPFetchTransport(t *testing.T) {
 	dir, out := t.TempDir(), t.TempDir()
 	origin := filepath.Join(runtime.GOROOT(), "src/net/http")
-	source := selectedUpstreamSource(t, filepath.Join(origin, "transport_test.go"), []string{"doneContext", "doneContext.Done", "doneContext.Err", "TestTransportCheckContextDoneEarly", "bodyCloser", "TestTransportClosesBodyOnInvalidRequests", "testTransportClosesBodyOnInvalidRequests"})
+	source := selectedUpstreamSource(t, filepath.Join(origin, "transport_test.go"), []string{"doneContext", "doneContext.Done", "doneContext.Err", "TestTransportCheckContextDoneEarly", "bodyCloser", "TestTransportClosesBodyOnInvalidRequests", "testTransportClosesBodyOnInvalidRequests", "fooProto", "cancelProto", "errCancelProto", "TestTransportAltProto", "TestAltProtoCancellation"})
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/httpvalidation\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "invalid_test.go"), source)
 	license, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "LICENSE"))
@@ -42,6 +42,8 @@ func run(t *testing.T,f func(*testing.T,testMode)) {
  for _,mode:=range []testMode{"h1","h2"} {t.Run(string(mode),func(t *testing.T){f(t,mode)})}
 }
 `)
+	helpers := selectedUpstreamSource(t, filepath.Join(origin, "main_test.go"), []string{"afterTest", "leakReported", "interestingGoroutines"})
+	writeFile(t, filepath.Join(dir, "helpers_test.go"), helpers)
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +54,7 @@ func run(t *testing.T,f func(*testing.T,testMode)) {
 	prepareDart(t, out)
 	prelude := filepath.Join(out, "fetch-denied.mjs")
 	writeFile(t, prelude, "globalThis.fetch = () => { console.error('unexpected fetch'); process.exit(97); };\n")
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests)$/^(h1|h2)$"}
+	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests|TestTransportAltProto|TestAltProtoCancellation)$/^(h1|h2)$"}
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			var result programResult
@@ -61,7 +63,7 @@ func run(t *testing.T,f func(*testing.T,testMode)) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args, "--import", prelude)
 			}
-			compareUpstream(t, "http-fetch-validation", "net/http", "^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests)$/^(h1|h2)$", target, origin, result.Text, result.Exit)
+			compareUpstream(t, "http-fetch-transport", "net/http", "^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests|TestTransportAltProto|TestAltProtoCancellation)$/^(h1|h2)$", target, origin, result.Text, result.Exit)
 		})
 	}
 }

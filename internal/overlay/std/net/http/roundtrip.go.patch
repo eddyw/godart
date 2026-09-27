@@ -20,7 +20,7 @@ The source retains the original Go BSD header.
  
  // RoundTrip should be an internal detail,
  // but widely used packages access it using linkname.
-@@ -30,5 +40,187 @@
+@@ -30,5 +40,200 @@
  	if t == nil {
  		panic("transport is nil")
  	}
@@ -57,6 +57,18 @@ The source retains the original Go BSD header.
 +		if err := validateHeaders(req.Trailer); err != "" {
 +			req.closeBody()
 +			return nil, errors.New("net/http: invalid trailer " + err)
++		}
++	}
++	origReq := req
++	if altRT := t.alternateRoundTripper(req); altRT != nil {
++		req = setupRewindBody(req)
++		if resp, err := altRT.RoundTrip(req); err != ErrSkipAltProtocol {
++			return resp, err
++		}
++		var err error
++		req, err = rewindBody(req)
++		if err != nil {
++			return nil, err
 +		}
 +	}
 +	if !isHTTP {
@@ -137,6 +149,7 @@ The source retains the original Go BSD header.
 +		length = -1
 +		uncompressed = true
 +	}
++	req = origReq
 +	if moved != "" {
 +		if target, err := url.Parse(moved); err == nil {
 +			req = req.WithContext(req.Context())
