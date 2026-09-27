@@ -13534,5 +13534,85 @@
       "gart": "skip",
       "reason": "The original Go suite requires an installed gccgo compiler."
     }
+  ],
+  "go/internal/gcimporter": [
+    {
+      "test": "TestImportTypeparamTests/issue47896.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/issue48604.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/issue48711.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/issue48962.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/issue50317.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/issue51232.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/issue51233.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/issue51245.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/issue54497.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/issue54765.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/mincheck.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/pragma.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    },
+    {
+      "test": "TestImportTypeparamTests/tparam1.go",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
+    }
   ]
 }
