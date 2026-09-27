@@ -13441,6 +13441,12 @@
       "native": "skip",
       "reason": "The original upstream test skips this case in short mode.",
       "test": "TestCancelAfterDial"
+    },
+    {
+      "test": "TestLookupOrderFilesNoSuchHost",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original assertion skips Darwin because its resolver does not select hostLookupFiles."
     }
   ],
   "net/http": [

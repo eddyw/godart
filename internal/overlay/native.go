@@ -32,6 +32,7 @@ var native = []string{
 	"internal/gate",
 	"internal/godebugs",
 	"vendor/golang.org/x/net/http2/hpack",
+	"vendor/golang.org/x/net/dns/dnsmessage",
 	"vendor/golang.org/x/net/http/httpproxy",
 
 	"flag",

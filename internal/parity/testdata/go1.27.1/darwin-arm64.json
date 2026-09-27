@@ -75468,6 +75468,21 @@
       "seeds": null
     },
     {
+      "path": "vendor/golang.org/x/net/dns/dnsmessage",
+      "tests": null,
+      "files": [
+        {
+          "path": "message.go",
+          "sha256": "a3c6296242f4a3b0ea376ce05cab3d800f5977355196b609a4293c816a670ae4"
+        },
+        {
+          "path": "svcb.go",
+          "sha256": "2a6051c720262a3ebb63c191f6886dd26b5b049a823345a4c15586395f69b4f2"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "vendor/golang.org/x/net/http/httpguts",
       "tests": null,
       "files": [

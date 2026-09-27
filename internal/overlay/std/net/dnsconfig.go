@@ -8,6 +8,7 @@ package net
 
 import (
 	"os"
+	"sync/atomic"
 	"time"
 	_ "unsafe"
 )
@@ -50,4 +51,15 @@ type dnsConfig struct {
 	useTCP        bool          // force usage of TCP for DNS resolutions
 	trustAD       bool          // add AD flag to queries
 	noReload      bool          // do not check for config file updates
+}
+
+// serverOffset returns an offset that can be used to determine
+// indices of servers in c.servers when making queries.
+// When the rotate option is enabled, this offset increases.
+// Otherwise it is always 0.
+func (c *dnsConfig) serverOffset() uint32 {
+	if c.rotate {
+		return atomic.AddUint32(&c.soffset, 1) - 1 // return 0 to start
+	}
+	return 0
 }

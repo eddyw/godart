@@ -13504,5 +13504,13 @@
       "reason": "The original test requires the Go race detector. Both ordinary runs retain its upstream skip.",
       "test": "TestPanicNilRace"
     }
+  ],
+  "net": [
+    {
+      "test": "TestLookupOrderFilesNoSuchHost",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original assertion skips Darwin because its resolver does not select hostLookupFiles."
+    }
   ]
 }

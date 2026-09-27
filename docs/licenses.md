@@ -121,6 +121,9 @@ The address overlay retains their BSD notice.
 Resolver configuration retains Go `src/net/conf.go`, `nss.go`, `dnsconfig.go`,
 `dnsconfig_unix.go`, and selected `dnsclient_unix.go` and `parse.go` declarations.
 The resolver source preserves their BSD notices.
+DNS transport and record validation retain Go `src/net/dnsclient_unix.go`,
+`dnsclient.go`, `lookup.go`, and `net.go` declarations with their BSD notices.
+The DNS message codec uses the SDK vendored `golang.org/x/net/dns/dnsmessage` source.
 The host cache retains Go `src/net/hosts.go` and selected `dnsclient.go` declarations.
 Its source preserves the Go BSD notice.
 IP protocol validation adapts Go `src/net/dial.go`, `parse.go`,

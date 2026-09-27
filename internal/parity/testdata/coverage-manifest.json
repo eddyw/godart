@@ -1047,7 +1047,7 @@
   {
     "package": "net",
     "status": "compile-blocked",
-    "diagnostic": "undefined: dnsWaitGroup",
+    "diagnostic": "undefined: cgoLookupIP",
     "blocker_cause": "private-test-dependency",
     "blocker_reason": "The complete suite requires private DNS lifecycle and native resolver hooks."
   },
@@ -1396,6 +1396,10 @@
   },
   {
     "package": "vendor/golang.org/x/crypto/internal/poly1305",
+    "status": "no-runnable-tests"
+  },
+  {
+    "package": "vendor/golang.org/x/net/dns/dnsmessage",
     "status": "no-runnable-tests"
   },
   {
