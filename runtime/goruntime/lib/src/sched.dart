@@ -612,10 +612,23 @@ final class _FakeTimer {
 /// bubble and no body, thus the timer runs never.
 const Object _endedTimer = Object();
 
+void _armTimer(int handle, Duration delay, void Function() run) {
+  // JavaScript timers cannot represent more than 2^31-1 milliseconds.
+  const limit = Duration(milliseconds: 0x7fffffff);
+  if (delay > limit) {
+    final clock = Stopwatch()..start();
+    _timers[handle] = Timer(limit, () {
+      _armTimer(handle, delay - clock.elapsed, run);
+    });
+  } else {
+    _timers[handle] = Timer(delay, run);
+  }
+}
+
 void $wakeAfter(Goroutine g, int nanoseconds) {
   final handle = _timerHandle(false);
   $holdEvent();
-  _timers[handle] = Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
+  _armTimer(handle, Duration(microseconds: nanoseconds ~/ 1000), () {
     _timers.remove(handle);
     $freeEvent();
     $wake(g);
@@ -644,7 +657,7 @@ int $startTimer(int nanoseconds, void Function()? body) {
   }
   final int handle = _timerHandle(false);
   $holdEvent();
-  _timers[handle] = Timer(Duration(microseconds: nanoseconds ~/ 1000), () {
+  _armTimer(handle, Duration(microseconds: nanoseconds ~/ 1000), () {
     _timers.remove(handle);
     $freeEvent();
     $go(run);

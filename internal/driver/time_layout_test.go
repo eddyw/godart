@@ -20,9 +20,10 @@ func TestTimeLayout(t *testing.T) {
 	dir := filepath.Join(runtime.GOROOT(), "src/time")
 	names := map[string][]string{
 		"mono_test.go":     nil,
+		"sleep_test.go":    {"TestAfterFunc", "TestTickerStress", "TestTickerConcurrentStress", "TestOverflowSleep", "TestZeroTimerResetPanics", "TestZeroTimerStopPanics", "checkZeroPanicString"},
 		"zoneinfo_test.go": {"TestTzset", "TestTzsetName", "TestTzsetOffset", "TestMalformedTZData", "TestLocationNames"},
 		"format_test.go":   {"nextStdChunkTests", "TestNextStdChunk", "TestAppendInt", "ParseTimeZoneTest", "parseTimeZoneTests", "TestParseTimeZone", "TestQuote"},
-		"time_test.go":     {"TestTimeAddSecOverflow", "TestUnmarshalInvalidTimes", "minDuration", "maxDuration", "subTests", "TestSub", "daysInTests", "TestDaysIn"},
+		"time_test.go":     {"TestTimeAddSecOverflow", "TestUnmarshalInvalidTimes", "minDuration", "maxDuration", "subTests", "TestSub", "daysInTests", "TestDaysIn", "TestConcurrentTimerReset", "TestConcurrentTimerResetStop"},
 		"export_test.go":   {"SetMono", "GetMono", "UnixToInternal", "NextStdChunk", "StdChunkNames", "AppendInt", "ParseTimeZone", "Quote", "Tzset", "TzsetName", "TzsetOffset"},
 		"internal_test.go": {"NotMonoNegativeTime", "MinMonoTime", "MaxMonoTime", "DaysIn"},
 	}
@@ -55,7 +56,7 @@ func TestTimeLayout(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestHasMonotonicClock|TestMonotonicAdd|TestMonotonicSub|TestMonotonicOverflow|TestMonotonicString|TestTimeAddSecOverflow|TestUnmarshalInvalidTimes|TestNextStdChunk|TestAppendInt|TestParseTimeZone|TestQuote|TestSub|TestDaysIn|TestTzset|TestTzsetName|TestTzsetOffset|TestMalformedTZData|TestLocationNames)$"
+	const filter = "^(TestHasMonotonicClock|TestMonotonicAdd|TestMonotonicSub|TestMonotonicOverflow|TestMonotonicString|TestTimeAddSecOverflow|TestUnmarshalInvalidTimes|TestNextStdChunk|TestAppendInt|TestParseTimeZone|TestQuote|TestSub|TestDaysIn|TestTzset|TestTzsetName|TestTzsetOffset|TestMalformedTZData|TestLocationNames|TestAfterFunc|TestTickerStress|TestTickerConcurrentStress|TestOverflowSleep|TestZeroTimerResetPanics|TestZeroTimerStopPanics|TestConcurrentTimerReset|TestConcurrentTimerResetStop)$"
 	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
