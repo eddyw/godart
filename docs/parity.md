@@ -64,7 +64,6 @@ Filesystem timestamp limits still apply.
 `SameFile` compares native identity on these targets and rejects external `FileInfo` implementations.
 `FileInfo.Sys` returns the native SDK `*syscall.Stat_t` on these targets.
 Other native hosts retain approximate metadata and a nil `FileInfo.Sys`.
-Directory enumeration still uses paths.
 Other native hosts and browsers do not support `os.File.Fd`.
 
 `net/http/fcgi` supports supplied listeners. `Serve` with a nil listener
@@ -92,7 +91,7 @@ Address enumeration remains separate. Browsers return an empty interface table.
 
 TCP dials accept `tcp4` and `tcp6` and restrict numeric addresses and DNS results to the requested family.
 Typed TCP dials reject malformed IP values and IPv6 addresses with `tcp4`.
-`Dialer.LocalAddr` supports TCP source addresses and ports, including native bind errors.
+`Dialer.LocalAddr` supports TCP and UDP source addresses and ports, including native bind errors.
 `LocalAddr` for other networks returns an explicit unsupported error.
 Both `DialTCP` forms accept explicit local addresses and ports.
 TCP dials resolve service names and validate remote ports before socket creation.
@@ -102,7 +101,8 @@ System service resolver selection and some resolver error details still differ.
 
 On Linux and macOS, `net.DialUDP` supports an explicit local address and port.
 Connected UDP sockets report the local address that the operating system selects.
-UDP network-family selection and the context-based UDP dialer still have gaps.
+The context-based UDP dialer supports `udp`, `udp4`, and `udp6`.
+UDP zones, mapped addresses, and some error details remain incomplete.
 On Linux and macOS, TCP connection failures and socket-option failures retain available native error codes through `net.OpError` and `os.SyscallError`.
 Closed sockets retain `net.ErrClosed`.
 
