@@ -20,7 +20,7 @@ func TestTimeLayout(t *testing.T) {
 	dir := filepath.Join(runtime.GOROOT(), "src/time")
 	names := map[string][]string{
 		"mono_test.go":     nil,
-		"time_test.go":     {"TestTimeAddSecOverflow"},
+		"time_test.go":     {"TestTimeAddSecOverflow", "TestUnmarshalInvalidTimes"},
 		"export_test.go":   {"SetMono", "GetMono", "UnixToInternal"},
 		"internal_test.go": {"NotMonoNegativeTime"},
 	}
@@ -53,7 +53,7 @@ func TestTimeLayout(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestHasMonotonicClock|TestMonotonicAdd|TestMonotonicSub|TestMonotonicOverflow|TestMonotonicString|TestTimeAddSecOverflow)$"
+	const filter = "^(TestHasMonotonicClock|TestMonotonicAdd|TestMonotonicSub|TestMonotonicOverflow|TestMonotonicString|TestTimeAddSecOverflow|TestUnmarshalInvalidTimes)$"
 	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
