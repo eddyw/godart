@@ -8,6 +8,10 @@ import re
 
 
 CASE = re.compile(r"^    --- PASS: (TestTestsOfGoroot|TestSelectedUpstream|TestUpstreamTargets)/(\S+) \(([0-9]+(?:\.[0-9]+)?)s\)$", re.MULTILINE)
+LANGUAGE = re.compile(
+    r"^[ \t]+--- (?:PASS|SKIP): ((?:TestLanguageTargets|TestGeneratedSelectTargets|"
+    r"TestRunRecipeTargets|TestLanguageHostTargets|TestRunDirectoryFilesOfGoTest)/"
+    r"(?:vm|aot|js|wasm)/\S+) \(([0-9]+(?:\.[0-9]+)?)s\)$", re.MULTILINE)
 DRIVER = re.compile(r"^--- (?:PASS|SKIP): ((?:Test|Example|Fuzz)\w*) \(([0-9]+(?:\.[0-9]+)?)s\)$", re.MULTILINE)
 
 
@@ -38,6 +42,7 @@ def measurements(directory):
     logs.extend(sorted(directory.glob("upstream-priority-*/attempt-*/ci.log")))
     logs.extend(sorted(directory.glob("upstream-targets-*/attempt-*/ci.log")))
     logs.extend(sorted(directory.glob("driver-*/attempt-*/ci.log")))
+    logs.extend(sorted(directory.glob("language-targets-*/attempt-*/ci.log")))
     if (directory / "ci.log").is_file():
         logs.append(directory / "ci.log")
     weights = {}
@@ -56,6 +61,12 @@ def measurements(directory):
             if duration <= 0:
                 continue
             key = suite + "/" + ("short/" if mode == "short" else "") + package
+            weights[key] = max(weights.get(key, 0), duration)
+            accepted[key] = max(accepted.get(key, 0), duration)
+        for key, elapsed in LANGUAGE.findall(data.decode()):
+            duration = float(elapsed)
+            if duration <= 0:
+                continue
             weights[key] = max(weights.get(key, 0), duration)
             accepted[key] = max(accepted.get(key, 0), duration)
         if result.get("suite") == "driver" or path.parent.parent.name.startswith("driver-"):

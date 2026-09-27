@@ -10,6 +10,36 @@ spec.loader.exec_module(module)
 
 
 class DurationTest(unittest.TestCase):
+    def test_language_weights_use_completed_target_fixtures(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "run.json").write_text(json.dumps(dict(mode="short", source="snapshot")))
+            attempt = root / "language-targets-0/attempt-001"
+            attempt.mkdir(parents=True)
+            (attempt / "result.json").write_text(json.dumps(dict(exit=1, mode="short")))
+            (attempt / "ci.log").write_text(
+                "--- PASS: TestLanguageTargets (2.00s)\n"
+                "    --- PASS: TestLanguageTargets/js (1.00s)\n"
+                "        --- PASS: TestLanguageTargets/js/chan/select3 (8.00s)\n"
+                "        --- PASS: TestLanguageTargets/js/chan/select3 (7.00s)\n"
+                "        --- PASS: TestGeneratedSelectTargets/wasm/chan/select5 (30.00s)\n"
+                "        --- SKIP: TestRunDirectoryFilesOfGoTest/aot/fixedbugs/native (4.00s)\n"
+                "        --- PASS: TestRunRecipeTargets/vm/fixedbugs/recipe (5.00s)\n"
+                "        --- PASS: TestLanguageHostTargets/vm/link (6.00s)\n"
+                "        --- FAIL: TestLanguageTargets/aot/failed (9.00s)\n"
+                "        --- PASS: TestOther/js/child (99.00s)\n"
+                "=== RUN   TestLanguageTargets/wasm/active\n")
+            weights, evidence = module.measurements(root)
+            self.assertEqual(weights, {
+                "TestLanguageTargets/js/chan/select3": 8.0,
+                "TestGeneratedSelectTargets/wasm/chan/select5": 30.0,
+                "TestRunDirectoryFilesOfGoTest/aot/fixedbugs/native": 4.0,
+                "TestRunRecipeTargets/vm/fixedbugs/recipe": 5.0,
+                "TestLanguageHostTargets/vm/link": 6.0,
+            })
+            self.assertEqual(evidence["logs"][0]["exit"], 1)
+            self.assertEqual(evidence["logs"][0]["durations"], weights)
+
     def test_driver_costs_include_parallel_children_without_double_count(self):
         log = ("=== PAUSE TestParallel/paused\n"
                "=== PAUSE TestParallel/paused/nested\n"
