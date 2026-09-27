@@ -92,3 +92,22 @@ func TestRunRecipeTargets(t *testing.T) {
 		})
 	}
 }
+
+func TestGeneratedSelectTargets(t *testing.T) {
+	inv, err := parity.DiscoverLanguage(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []parity.LanguageCase
+	for _, c := range inv.Cases {
+		if c.Name == "chan/select5" {
+			cases = append(cases, c)
+		}
+	}
+	if len(cases) != 1 || cases[0].Adapter != "generated-file" {
+		t.Fatal("the original select generator recipe changed")
+	}
+	for _, target := range []string{"vm", "aot", "js", "wasm"} {
+		t.Run(target, func(t *testing.T) { runLanguageCases(t, target, inv, cases) })
+	}
+}
