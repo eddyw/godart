@@ -172,7 +172,7 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 						if action == "errorcheckdir" {
 							args = append(args, "-d=panic")
 						}
-						if c.Recipe == "compiledir -c=2" || c.Recipe == "compiledir -c=4" {
+						if c.Recipe == "compiledir -c=2" || c.Recipe == "compiledir -c=4" || c.Recipe == "rundir -l=4" {
 							args = append(args, strings.Fields(c.Recipe)[1])
 						}
 						for _, name := range pkg.Files {

@@ -358,27 +358,37 @@ class ParityTest(unittest.TestCase):
     def test_directory_compiler_options_reach_all_packages(self):
         module = "module test\n\ngo 1.27.1\n"
         wrapper = 'import "package:test/a.dart";\nimport "package:test/b.dart";\nvoid main() {}\n'
-        for flag in ("-c=2", "-c=4"):
+        for contract, flag in (("compiledir", "-c=2"), ("compiledir", "-c=4"), ("rundir", "-l=4")):
             packages = [dict(name=name, path="test/" + name, files=[name + ".go"])
                         for name in ("a", "b")]
+            if contract == "rundir":
+                packages[-1]["name"] = "main"
             compiled = [dict(ran=True, exit=0, timed_out=False,
                              command=["go", "tool", "compile", "-e", flag, p["files"][0]])
                         for p in packages]
-            case = dict(fixture=dict(name="p", recipe="compiledir " + flag, adapter="directory-packages",
+            case = dict(fixture=dict(name="p", recipe=contract + " " + flag, adapter="directory-packages",
                                      files=[dict(path="p.dir/" + p["files"][0]) for p in packages]),
-                        contract="compiledir", directory_packages=packages, native_compile=compiled,
+                        contract=contract, directory_packages=packages, native_compile=compiled,
                         adapted_sources={"a/a.go": "package a\n", "b/b.go": "package b\n"},
                         module_source=module, module_sha256=parity.hashlib.sha256(module.encode()).hexdigest(),
                         importcfg_sha256="config", wrapper_source=wrapper,
                         wrapper_sha256=parity.hashlib.sha256(wrapper.encode()).hexdigest())
+            if contract == "rundir":
+                execution = dict(ran=True, exit=0, timed_out=False, output_sha256="expected")
+                case.update(native_link=dict(execution, command=["go", "tool", "link"]),
+                            native=dict(execution), gart=dict(execution), expected_sha256="expected")
             self.assertTrue(parity.directory_language_valid(case, "go1.27.1"))
             for execution in compiled:
                 original = execution["command"]
-                for flags in ([], ["-c=1"], [flag, "-c=8"]):
+                for flags in ([], [flag[:3] + "1"], [flag, flag[:3] + "8"]):
                     execution["command"] = original[:4] + flags + original[-1:]
                     self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
                 execution["command"] = original
-            case["fixture"]["recipe"] = "compiledir -c=8"
+            case["fixture"]["recipe"] = contract + " " + flag[:3] + "8"
+            self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
+
+            case["fixture"]["recipe"] = contract + " " + flag
+            case["contract"] = "compiledir" if contract == "rundir" else "rundir"
             self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
 
     def test_separate_directory_packages_preserve_file_identity(self):

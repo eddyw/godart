@@ -119,6 +119,8 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/extra.go", "// skip\npackage main\n")
 	write("test/suffix_windows.go", "// run\npackage main\nfunc main() {}\n")
 	write("test/constraints.go", "//go:build dart\n\n// run\npackage main\nfunc main() {}\n")
+	write("test/inline.go", "// rundir -l=4\npackage ignored\n")
+	write("test/inline.dir/main.go", "package main\nfunc main() {}\n")
 	write("test/other/directory.go", "// rundir -G=3\npackage ignored\n")
 	write("test/other/directory.dir/main.go", "package main\nfunc main() {}\n")
 	write("test/linkx_run.go", "// run\npackage main\nfunc main() {}\n")
@@ -145,8 +147,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 84 {
-		t.Fatalf("got %d cases, want 84", len(inv.Cases))
+	if len(inv.Cases) != 85 {
+		t.Fatalf("got %d cases, want 85", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -256,6 +258,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if c := cases["constraints"]; c.NativeEligible || !c.GartEligible || c.Adapter != "single-file" {
 		t.Fatalf("constraint distinction lost: %+v", c)
+	}
+	if c := cases["inline"]; c.Adapter != "directory-packages" || c.Recipe != "rundir -l=4" || len(c.Files) != 2 {
+		t.Fatalf("directory inline option lost: %+v", c)
 	}
 	if c := cases["other/directory"]; c.Action != "rundir" || c.Recipe != "rundir -G=3" || len(c.Files) != 2 || c.Adapter != "missing" {
 		t.Fatalf("companion or recipe lost: %+v", c)
