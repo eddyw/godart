@@ -8,7 +8,7 @@ import re
 
 
 CASE = re.compile(r"^    --- PASS: (TestTestsOfGoroot|TestSelectedUpstream|TestUpstreamTargets)/(\S+) \(([0-9]+(?:\.[0-9]+)?)s\)$", re.MULTILINE)
-DRIVER = re.compile(r"^--- PASS: ((?:Test|Example|Fuzz)\w*) \(([0-9]+(?:\.[0-9]+)?)s\)$", re.MULTILINE)
+DRIVER = re.compile(r"^--- (?:PASS|SKIP): ((?:Test|Example|Fuzz)\w*) \(([0-9]+(?:\.[0-9]+)?)s\)$", re.MULTILINE)
 
 
 def driver_costs(text):

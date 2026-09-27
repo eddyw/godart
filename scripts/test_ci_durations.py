@@ -35,6 +35,7 @@ class DurationTest(unittest.TestCase):
                 "    --- PASS: TestSlow/aot (90.00s)\n"
                 "--- PASS: TestInstant (0.00s)\n"
                 "--- PASS: Example (0.01s)\n"
+                "--- SKIP: TestHostOnly (0.02s)\n"
                 "--- FAIL: TestFailure (60.00s)\n"
                 "=== RUN   TestActive\n")
             active = root / "driver-3/attempt-001"
@@ -43,7 +44,8 @@ class DurationTest(unittest.TestCase):
             weights, evidence = module.measurements(root)
             self.assertEqual(weights, {"driver/short/TestSlow": 120.0,
                                        "driver/short/TestInstant": 0.0,
-                                       "driver/short/Example": 0.01})
+                                       "driver/short/Example": 0.01,
+                                       "driver/short/TestHostOnly": 0.02})
             self.assertEqual(len(evidence["logs"]), 1)
             self.assertEqual(evidence["logs"][0]["exit"], 1)
 
