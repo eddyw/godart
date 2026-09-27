@@ -155,3 +155,11 @@ func Rmdir(path string) error {
 	}
 	return nil
 }
+
+func Readlink(path string, buf []byte) (int, error) {
+	n, errno := dart.SyscallReadlink(path, buf)
+	if errno != 0 {
+		return n, Errno(errno)
+	}
+	return n, nil
+}

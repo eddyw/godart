@@ -45,6 +45,29 @@ func main() {
   result("mkdir exists", syscall.Mkdir(name, mode))
   result("rmdir mode", syscall.Rmdir(name))
  }
+ links := []string{"abc", "unicode-世界", "raw-\xff", "absent/path"}
+ paths := []string{root, filepath.Join(root, "missing"), filepath.Join(root, "bad\x00")}
+ regular := filepath.Join(root, "readlink-regular")
+ if err := os.WriteFile(regular, nil, 0600); err != nil { panic(err) }
+ paths = append(paths, regular)
+ for i, target := range links {
+  path := filepath.Join(root, fmt.Sprint("readlink-", i))
+  err := syscall.Symlink(target, path)
+  result("readlink fixture", err)
+  if err == nil { paths = append(paths, path) }
+ }
+ for _, path := range paths {
+  for _, size := range []int{0, 1, 2, 3, 5, 15, 100} {
+   data := make([]byte, size + 4)
+   for i := range data { data[i] = 0xCD }
+   n, err := syscall.Readlink(path, data[2:2+size])
+   code, typed := err.(syscall.Errno)
+   fmt.Printf("readlink %d %d %t %x\n", n, code, typed, data)
+  }
+  n, err := syscall.Readlink(path, nil)
+  code, typed := err.(syscall.Errno)
+  fmt.Printf("readlink nil %d %d %t\n", n, code, typed)
+ }
  for _, directory := range []bool{false, true} {
   for i, kind := range []string{"file", "directory", "nonempty", "symlink", "dangling", "missing", "nul", "file/child", "directory/"} {
    base := filepath.Join(root, fmt.Sprintf("remove-%t-%d", directory, i))

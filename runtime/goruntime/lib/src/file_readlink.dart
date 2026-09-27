@@ -6,6 +6,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'string.dart';
+import 'slice.dart';
 
 final _libc = DynamicLibrary.process();
 final _malloc = _libc
@@ -54,6 +55,32 @@ final _errno = _libc
         _free(buffer);
       }
     }
+  } finally {
+    _free(name);
+  }
+}
+
+(int, int) $syscallReadlink(GoString path, Slice<int> bytes) {
+  if (path.bytes.contains(0)) return (0, 22);
+  final readlink = _readlink;
+  final errno = _errno;
+  final name = _malloc(path.length + 1 + bytes.len);
+  if (name == nullptr) return (-1, 12);
+  try {
+    name.asTypedList(path.length + 1)
+      ..setRange(0, path.length, path.bytes)
+      ..[path.length] = 0;
+    final buffer = name + path.length + 1;
+    final count = readlink(name, buffer, bytes.len);
+    if (count < 0) return (count, errno().value);
+    if (count > 0) {
+      bytes.array.setRange(
+        bytes.off,
+        bytes.off + count,
+        buffer.asTypedList(count),
+      );
+    }
+    return (count, 0);
   } finally {
     _free(name);
   }

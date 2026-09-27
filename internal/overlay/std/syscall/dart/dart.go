@@ -1816,3 +1816,7 @@ func SyscallReadDirent(fd int, data []byte) (int, int) {
 func SyscallUnlink(path string, directory bool) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallReadlink(path string, buf []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}

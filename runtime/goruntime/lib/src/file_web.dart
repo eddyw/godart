@@ -190,3 +190,5 @@ int $syscallClose(int fd) => 38;
 (GoString, int) $syscallGetwd() => (GoString.empty, 38);
 
 int $syscallUnlink(GoString path, bool directory) => 38;
+
+(int, int) $syscallReadlink(GoString path, Slice<GoInt> bytes) => (-1, 38);
